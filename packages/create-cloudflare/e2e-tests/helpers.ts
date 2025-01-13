@@ -28,6 +28,13 @@ import type { Writable } from "stream";
 import type { RunnerTask, RunnerTestSuite } from "vitest";
 
 export const C3_E2E_PREFIX = "tmp-e2e-c3";
+export const TEST_TIMEOUT = 1000 * 60 * 5;
+export const LONG_TIMEOUT = 1000 * 60 * 10;
+export const TEST_PM = process.env.TEST_PM ?? "";
+export const NO_DEPLOY = process.env.E2E_NO_DEPLOY ?? true;
+export const TEST_RETRIES = process.env.E2E_RETRIES
+	? parseInt(process.env.E2E_RETRIES)
+	: 1;
 
 export const keys = {
 	enter: "\x0d",
