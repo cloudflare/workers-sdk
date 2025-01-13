@@ -66,27 +66,6 @@ function getFrameworkTests(opts: {
 }): Record<string, FrameworkTestConfig> {
 	if (opts.experimental) {
 		return {
-			docusaurus: {
-				unsupportedPms: ["bun"],
-				testCommitMessage: true,
-				unsupportedOSs: ["win32"],
-				timeout: LONG_TIMEOUT,
-				verifyDeploy: {
-					route: "/",
-					expectedText: "Dinosaurs are cool",
-				},
-				verifyPreview: {
-					route: "/",
-					expectedText: "Dinosaurs are cool",
-				},
-				flags: [`--package-manager`, pm],
-				promptHandlers: [
-					{
-						matcher: /Which language do you want to use\?/,
-						input: [keys.enter],
-					},
-				],
-			},
 			angular: {
 				testCommitMessage: true,
 				timeout: LONG_TIMEOUT,
@@ -357,7 +336,34 @@ function getFrameworkTests(opts: {
 					"strict",
 				],
 			},
-			docusaurus: {
+			["docusaurus:pages"]: {
+				argv: ["--platform", "pages"],
+				unsupportedPms: ["bun"],
+				testCommitMessage: true,
+				unsupportedOSs: ["win32"],
+				timeout: LONG_TIMEOUT,
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Dinosaurs are cool",
+				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Dinosaurs are cool",
+				},
+				flags: [`--package-manager`, pm],
+				promptHandlers: [
+					// {
+					// 	matcher: /Which platform do you want to deploy to\?/,
+					// 	input: [keys.enter],
+					// },
+					{
+						matcher: /Which language do you want to use\?/,
+						input: [keys.enter],
+					},
+				],
+			},
+			["docusaurus:workers"]: {
+				argv: ["--platform", "workers"],
 				unsupportedPms: ["bun"],
 				testCommitMessage: true,
 				unsupportedOSs: ["win32"],
