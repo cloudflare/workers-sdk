@@ -292,7 +292,7 @@ export const Handler = async (args: PagesDevArguments) => {
 		path.resolve(process.cwd(), args.config[0]) !== config.configPath
 	) {
 		throw new FatalError(
-			"The first `--config` argument must point to your pages config file: " +
+			"The first `--config` argument must point to your Pages configuration file: " +
 				path.relative(process.cwd(), config.configPath)
 		);
 	}
