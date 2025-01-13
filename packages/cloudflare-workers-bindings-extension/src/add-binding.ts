@@ -131,25 +131,31 @@ export async function addBindingFlow(context: ExtensionContext) {
 
 		const wrangler = importWrangler(workspaceFolder.uri.fsPath);
 
-		workspace.openTextDocument(configUri).then((doc) => {
-			window.showTextDocument(doc);
-			try {
-				wrangler.experimental_patchConfig(configUri.path, {
-					[state.bindingType?.configKey!]: [{ binding: state.name! }],
-				});
-				window.showInformationMessage(`Created binding '${state.name}'`);
-			} catch {
-				window.showErrorMessage(
-					`Unable to directly add binding to config file. A snippet has been copied to clipboard - please paste this into your config file.`
-				);
-
-				const patch = `[[${state.bindingType?.configKey!}]]
-binding = "${state.name}"
-`;
-
-				env.clipboard.writeText(patch);
-			}
-		});
+		const doc = await workspace.openTextDocument(state.configUri);
+		window.showTextDocument(doc);
+		let openDocs: string | undefined;
+		try {
+			wrangler.experimental_patchConfig(state.configUri.path, {
+				[state.bindingType.configKey]: [{ binding: state.name }],
+			});
+			openDocs = await window.showInformationMessage(
+				`Created binding '${state.name}'`,
+				`Open ${state.bindingType.label} documentation`
+			);
+		} catch {
+			const patch = `[[${state.bindingType?.configKey!}]]
+			binding = "${state.name}"
+			`;
+			env.clipboard.writeText(patch);
+			const configFileName = state.configUri.path.split("/").at(-1);
+			openDocs = await window.showInformationMessage(
+				`A snippet has been copied to clipboard - please paste this into your ${configFileName}.`,
+				`Open ${state.bindingType.label} documentation`
+			);
+		}
+		if (openDocs) {
+			env.openExternal(Uri.parse(bindingDocs[state.bindingType.label]));
+		}
 	}
 
 	async function validateNameIsUnique(name: string, allBindingNames: string[]) {
@@ -409,3 +415,9 @@ const isRecord = (
 	value: unknown
 ): value is Record<string | number | symbol, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
+
+const bindingDocs: Record<BindingLabel, string> = {
+	KV: "https://developers.cloudflare.com/kv/get-started/#5-access-your-kv-namespace-from-your-worker",
+	D1: "https://developers.cloudflare.com/d1/get-started/#write-queries-within-your-worker",
+	R2: "https://developers.cloudflare.com/r2/api/workers/workers-api-usage/#4-access-your-r2-bucket-from-your-worker",
+};
