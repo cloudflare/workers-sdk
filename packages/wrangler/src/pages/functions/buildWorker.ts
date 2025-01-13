@@ -1,7 +1,7 @@
+import crypto from "node:crypto";
 import { access, cp, lstat, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { build as esBuild } from "esbuild";
-import { nanoid } from "nanoid";
 import { bundleWorker } from "../../deployment-bundle/bundle";
 import { findAdditionalModules } from "../../deployment-bundle/find-additional-modules";
 import {
@@ -404,7 +404,7 @@ function assetsPlugin(buildOutputDirectory: string | undefined): Plugin {
 				}
 
 				// TODO: Consider hashing the contents rather than using a unique identifier every time?
-				identifiers.set(directory, nanoid());
+				identifiers.set(directory, crypto.randomUUID());
 				if (!buildOutputDirectory) {
 					console.warn(
 						"You're attempting to import static assets as part of your Pages Functions, but have not specified a directory in which to put them. You must use 'wrangler pages dev <directory>' rather than 'wrangler pages dev -- <command>' to import static assets in Functions."
