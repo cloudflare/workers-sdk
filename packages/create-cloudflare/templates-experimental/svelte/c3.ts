@@ -4,13 +4,10 @@ import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { runFrameworkGenerator } from "frameworks/index";
 import { transformFile } from "helpers/codemod";
 import { usesTypescript } from "helpers/files";
-import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context, PackageJson } from "types";
-
-const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, ["create", ctx.project.name]);
@@ -108,8 +105,8 @@ const config: TemplateConfig = {
 	configure,
 	transformPackageJson: async (original: PackageJson, ctx: C3Context) => {
 		let scripts: Record<string, string> = {
-			preview: `${npm} run build && wrangler dev`,
-			deploy: `${npm} run build && wrangler deploy`,
+			preview: `${ctx.packageManager.npm} run build && wrangler dev`,
+			deploy: `${ctx.packageManager.npm} run build && wrangler deploy`,
 		};
 
 		if (usesTypescript(ctx)) {

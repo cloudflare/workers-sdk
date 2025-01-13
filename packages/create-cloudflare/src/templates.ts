@@ -18,6 +18,7 @@ import {
 	writeFile,
 	writeJSON,
 } from "helpers/files";
+import { detectPackageManager } from "helpers/packageManagers";
 import angularTemplateExperimental from "templates-experimental/angular/c3";
 import astroTemplateExperimental from "templates-experimental/astro/c3";
 import docusaurusTemplateExperimental from "templates-experimental/docusaurus/c3";
@@ -532,6 +533,7 @@ export const createContext = async (
 		originalCWD,
 		gitRepoAlreadyExisted: await isInsideGitRepo(directory),
 		deployment: {},
+		packageManager: detectPackageManager(),
 	};
 };
 

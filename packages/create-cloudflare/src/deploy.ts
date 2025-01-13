@@ -8,7 +8,6 @@ import { processArgument } from "helpers/args";
 import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
 import { quoteShellArgs, runCommand } from "helpers/command";
 import { readFile } from "helpers/files";
-import { detectPackageManager } from "helpers/packageManagers";
 import { poll } from "helpers/poll";
 import { parse as jsoncParse } from "jsonc-parser";
 import { isInsideGitRepo } from "./git";
@@ -21,7 +20,7 @@ import {
 import type { C3Context } from "types";
 
 export const offerToDeploy = async (ctx: C3Context) => {
-	const { npm } = detectPackageManager();
+	const { npm } = ctx.packageManager;
 
 	startSection(`Deploy with Cloudflare`, `Step 3 of 3`);
 
@@ -91,7 +90,7 @@ const readWranglerConfig = (ctx: C3Context) => {
 };
 
 export const runDeploy = async (ctx: C3Context) => {
-	const { npm, name: pm } = detectPackageManager();
+	const { npm, name: pm } = ctx.packageManager;
 
 	if (!ctx.account?.id) {
 		throw new Error("Failed to read Cloudflare account.");

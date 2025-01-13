@@ -1,3 +1,4 @@
+import { detectPackageManager } from "helpers/packageManagers";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 import { collectCLIOutput, normalizeOutput } from "../../../cli/test-util";
 import { printSummary, printWelcomeMessage } from "../dialog";
@@ -101,6 +102,7 @@ describe("dialog helpers", () => {
 			},
 			originalCWD: "./workspace",
 			gitRepoAlreadyExisted: false,
+			packageManager: detectPackageManager(),
 		};
 
 		let originalStdoutColumns: number;

@@ -61,7 +61,7 @@ export const npmInstall = async (ctx: C3Context) => {
 		return;
 	}
 
-	const { npm } = detectPackageManager();
+	const { npm } = ctx.packageManager;
 
 	await runCommand([npm, "install"], {
 		silent: true,

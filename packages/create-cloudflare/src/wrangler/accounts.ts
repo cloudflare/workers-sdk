@@ -54,7 +54,7 @@ export const wranglerLogin = async (ctx: C3Context) => {
 			args: ctx.args,
 		},
 		async promise() {
-			const { npx } = detectPackageManager();
+			const { npx } = ctx.packageManager;
 
 			const s = spinner();
 			s.start(

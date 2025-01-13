@@ -5,7 +5,6 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, usesTypescript, writeFile } from "helpers/files";
-import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import * as jsonc from "jsonc-parser";
 import type { C3Context } from "types";
@@ -15,7 +14,7 @@ import type { C3Context } from "types";
  * and updates the .tsconfig file to use the latest entrypoint version.
  */
 export async function installWorkersTypes(ctx: C3Context) {
-	const { npm } = detectPackageManager();
+	const { npm } = ctx.packageManager;
 
 	if (!usesTypescript(ctx)) {
 		return;

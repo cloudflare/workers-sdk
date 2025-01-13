@@ -3,11 +3,8 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { transformFile } from "helpers/codemod";
-import { detectPackageManager } from "helpers/packageManagers";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
-
-const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [
@@ -53,10 +50,10 @@ const config: TemplateConfig = {
 	},
 	generate,
 	configure,
-	transformPackageJson: async () => ({
+	transformPackageJson: async (_, ctx) => ({
 		scripts: {
-			deploy: `${npm} run build && wrangler pages deploy`,
-			preview: `${npm} run build && wrangler pages dev`,
+			deploy: `${ctx.packageManager.npm} run build && wrangler pages deploy`,
+			preview: `${ctx.packageManager.npm} run build && wrangler pages dev`,
 			"cf-typegen": `wrangler types`,
 		},
 	}),

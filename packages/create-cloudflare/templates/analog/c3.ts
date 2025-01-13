@@ -5,13 +5,10 @@ import { runFrameworkGenerator } from "frameworks/index";
 import { loadTemplateSnippets, transformFile } from "helpers/codemod";
 import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
-import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
-
-const { npm, name: pm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [
@@ -24,6 +21,7 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
+	const { npm, name: pm } = ctx.packageManager;
 	// Fix hoisting issues with pnpm, yarn and bun
 	if (pm === "pnpm" || pm === "yarn" || pm === "bun") {
 		const packages = [];
@@ -121,10 +119,10 @@ const config: TemplateConfig = {
 	},
 	generate,
 	configure,
-	transformPackageJson: async () => ({
+	transformPackageJson: async (_, ctx) => ({
 		scripts: {
-			preview: `${npm} run build && wrangler pages dev`,
-			deploy: `${npm} run build && wrangler pages deploy`,
+			preview: `${ctx.packageManager.npm} run build && wrangler pages dev`,
+			deploy: `${ctx.packageManager.npm} run build && wrangler pages deploy`,
 			"cf-typegen": `wrangler types`,
 		},
 	}),

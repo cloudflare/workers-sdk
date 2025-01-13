@@ -5,12 +5,9 @@ import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { compatDateFlag } from "helpers/compatDate";
 import { readFile, readJSON, writeFile } from "helpers/files";
-import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
-
-const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [
@@ -24,14 +21,14 @@ const generate = async (ctx: C3Context) => {
 const configure = async (ctx: C3Context) => {
 	updateAngularJson(ctx);
 	await updateAppCode();
-	await installCFWorker();
+	await installCFWorker(ctx);
 };
 
-async function installCFWorker() {
+async function installCFWorker(ctx: C3Context) {
 	await installPackages(["xhr2"], {
 		dev: true,
 		startText: "Installing additional dependencies",
-		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
+		doneText: `${brandColor("installed")} ${dim(`via \`${ctx.packageManager.npm} install\``)}`,
 	});
 }
 async function updateAppCode() {
@@ -102,12 +99,12 @@ const config: TemplateConfig = {
 	previewScript: "start",
 	generate,
 	configure,
-	transformPackageJson: async () => ({
+	transformPackageJson: async (_, ctx) => ({
 		scripts: {
-			start: `${npm} run build && wrangler pages dev dist/cloudflare ${await compatDateFlag()}`,
-			build: `ng build && ${npm} run process`,
+			start: `${ctx.packageManager.npm} run build && wrangler pages dev dist/cloudflare ${await compatDateFlag()}`,
+			build: `ng build && ${ctx.packageManager.npm} run process`,
 			process: "node ./tools/copy-files.mjs",
-			deploy: `${npm} run build && wrangler pages deploy dist/cloudflare`,
+			deploy: `${ctx.packageManager.npm} run build && wrangler pages deploy dist/cloudflare`,
 		},
 	}),
 };

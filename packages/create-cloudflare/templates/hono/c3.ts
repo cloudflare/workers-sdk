@@ -3,13 +3,12 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { loadTemplateSnippets, transformFile } from "helpers/codemod";
-import { detectPackageManager } from "helpers/packageManagers";
 import type { TemplateConfig } from "../../src/templates";
 import type * as recast from "recast";
 import type { C3Context } from "types";
 
 const generate = async (ctx: C3Context) => {
-	const { name: pm } = detectPackageManager();
+	const { name: pm } = ctx.packageManager;
 
 	await runFrameworkGenerator(ctx, [
 		ctx.project.name,

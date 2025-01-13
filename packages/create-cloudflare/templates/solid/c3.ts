@@ -3,12 +3,9 @@ import { blue } from "@cloudflare/cli/colors";
 import { runFrameworkGenerator } from "frameworks/index";
 import { mergeObjectProperties, transformFile } from "helpers/codemod";
 import { usesTypescript } from "helpers/files";
-import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
-
-const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	// Run the create-solid command
@@ -73,10 +70,10 @@ const config: TemplateConfig = {
 	},
 	generate,
 	configure,
-	transformPackageJson: async () => ({
+	transformPackageJson: async (_, ctx) => ({
 		scripts: {
-			preview: `${npm} run build && npx wrangler pages dev`,
-			deploy: `${npm} run build && wrangler pages deploy`,
+			preview: `${ctx.packageManager.npm} run build && npx wrangler pages dev`,
+			deploy: `${ctx.packageManager.npm} run build && wrangler pages deploy`,
 		},
 	}),
 	compatibilityFlags: ["nodejs_compat"],

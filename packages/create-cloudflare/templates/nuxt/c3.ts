@@ -5,13 +5,10 @@ import { runFrameworkGenerator } from "frameworks/index";
 import { mergeObjectProperties, transformFile } from "helpers/codemod";
 import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
-import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
-
-const { npm, name: pm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	const gitFlag = ctx.args.git ? `--gitInit` : `--no-gitInit`;
@@ -20,7 +17,7 @@ const generate = async (ctx: C3Context) => {
 		"init",
 		ctx.project.name,
 		"--packageManager",
-		npm,
+		ctx.packageManager.npm,
 		gitFlag,
 	]);
 
@@ -120,10 +117,10 @@ const config: TemplateConfig = {
 	},
 	generate,
 	configure,
-	transformPackageJson: async () => ({
+	transformPackageJson: async (_, ctx) => ({
 		scripts: {
-			deploy: `${npm} run build && wrangler pages deploy`,
-			preview: `${npm} run build && wrangler pages dev`,
+			deploy: `${ctx.packageManager.npm} run build && wrangler pages deploy`,
+			preview: `${ctx.packageManager.npm} run build && wrangler pages dev`,
 			"cf-typegen": `wrangler types`,
 		},
 	}),

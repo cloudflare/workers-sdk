@@ -38,8 +38,6 @@ import { installWorkersTypes } from "./workers";
 import { updateWranglerConfig } from "./wrangler/config";
 import type { C3Args, C3Context } from "types";
 
-const { npm } = detectPackageManager();
-
 export const main = async (argv: string[]) => {
 	const result = await parseArgs(argv);
 
@@ -90,6 +88,7 @@ export const main = async (argv: string[]) => {
 // Spawn a separate process running the most recent version of c3
 export const runLatest = async () => {
 	const args = process.argv.slice(2);
+	const { npm } = detectPackageManager();
 
 	// the parsing logic of `npm create` requires `--` to be supplied
 	// before any flags intended for the target command.

@@ -13,13 +13,10 @@ import {
 	writeFile,
 	writeJSON,
 } from "helpers/files";
-import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import { getTemplatePath } from "../../src/templates";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
-
-const { npm, npx } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	const projectName = ctx.project.name;
@@ -211,6 +208,8 @@ export default {
 		},
 	},
 	transformPackageJson: async (_, ctx) => {
+		const { npm, npx } = ctx.packageManager;
+
 		const isNpm = npm === "npm";
 		const isBun = npm === "bun";
 		const isNpmOrBun = isNpm || isBun;

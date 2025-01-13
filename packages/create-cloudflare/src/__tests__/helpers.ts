@@ -1,4 +1,5 @@
 import { C3_DEFAULTS } from "helpers/cli";
+import { detectPackageManager } from "helpers/packageManagers";
 import type { TemplateConfig } from "../templates";
 import type { C3Args, C3Context } from "types";
 
@@ -18,6 +19,7 @@ export const createTestContext = (name = "test", args?: C3Args): C3Context => {
 		gitRepoAlreadyExisted: false,
 		template: createTestTemplate(),
 		deployment: {},
+		packageManager: detectPackageManager(),
 	};
 };
 
