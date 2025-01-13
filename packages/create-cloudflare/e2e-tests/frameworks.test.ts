@@ -182,7 +182,7 @@ function getFrameworkTests(opts: {
 			next: {
 				testCommitMessage: false,
 				verifyBuildCfTypes: {
-					outputFile: "env.d.ts",
+					outputFile: "cloudflare-env.d.ts",
 					envInterfaceName: "CloudflareEnv",
 				},
 				verifyPreview: {
