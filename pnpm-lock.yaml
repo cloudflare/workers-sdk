@@ -2012,62 +2012,41 @@ importers:
 
   packages/wrangler:
     dependencies:
-      '@aws-sdk/client-s3':
-        specifier: ^3.721.0
-        version: 3.721.0
       '@cloudflare/kv-asset-handler':
         specifier: workspace:*
         version: link:../kv-asset-handler
       '@esbuild-plugins/node-globals-polyfill':
-        specifier: ^0.2.3
+        specifier: 0.2.3
         version: 0.2.3(esbuild@0.17.19)
       '@esbuild-plugins/node-modules-polyfill':
-        specifier: ^0.2.2
+        specifier: 0.2.2
         version: 0.2.2(esbuild@0.17.19)
       blake3-wasm:
-        specifier: ^2.1.5
+        specifier: 2.1.5
         version: 2.1.5
-      date-fns:
-        specifier: ^4.1.0
-        version: 4.1.0
       esbuild:
         specifier: 0.17.19
         version: 0.17.19
-      itty-time:
-        specifier: ^1.0.6
-        version: 1.0.6
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
-      nanoid:
-        specifier: ^3.3.3
-        version: 3.3.7
       path-to-regexp:
-        specifier: ^6.3.0
+        specifier: 6.3.0
         version: 6.3.0
-      resolve:
-        specifier: ^1.22.8
-        version: 1.22.8
-      selfsigned:
-        specifier: ^2.0.1
-        version: 2.1.1
-      source-map:
-        specifier: ^0.6.1
-        version: 0.6.1
       unenv:
         specifier: npm:unenv-nightly@2.0.0-20241218-183400-5d6aec3
         version: unenv-nightly@2.0.0-20241218-183400-5d6aec3
       workerd:
         specifier: 1.20241230.0
         version: 1.20241230.0
-      xxhash-wasm:
-        specifier: ^1.0.1
-        version: 1.0.1
     optionalDependencies:
       fsevents:
         specifier: ~2.3.2
         version: 2.3.3
     devDependencies:
+      '@aws-sdk/client-s3':
+        specifier: ^3.721.0
+        version: 3.721.0
       '@cloudflare/cli':
         specifier: workspace:*
         version: link:../cli
@@ -2170,6 +2149,9 @@ importers:
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.1.0
       devtools-protocol:
         specifier: ^0.0.1182435
         version: 0.0.1182435
@@ -2197,6 +2179,9 @@ importers:
       is-ci:
         specifier: ^3.0.1
         version: 3.0.1
+      itty-time:
+        specifier: ^1.0.6
+        version: 1.0.6
       javascript-time-ago:
         specifier: ^2.5.4
         version: 2.5.7
@@ -2230,9 +2215,15 @@ importers:
       prompts:
         specifier: ^2.4.2
         version: 2.4.2
+      resolve:
+        specifier: ^1.22.8
+        version: 1.22.8
       rimraf:
         specifier: catalog:default
         version: 5.0.10
+      selfsigned:
+        specifier: ^2.0.1
+        version: 2.1.1
       semiver:
         specifier: ^1.1.0
         version: 1.1.0
@@ -2242,6 +2233,9 @@ importers:
       signal-exit:
         specifier: ^3.0.7
         version: 3.0.7
+      source-map:
+        specifier: ^0.6.1
+        version: 0.6.1
       strip-ansi:
         specifier: ^7.1.0
         version: 7.1.0
@@ -2275,6 +2269,9 @@ importers:
       xdg-app-paths:
         specifier: ^8.3.0
         version: 8.3.0
+      xxhash-wasm:
+        specifier: ^1.0.1
+        version: 1.0.1
       yargs:
         specifier: ^17.7.2
         version: 17.7.2
