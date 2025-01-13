@@ -49,7 +49,7 @@ export default {
 		scripts: {
 			deploy: `opennextjs-cloudflare && wrangler deploy`,
 			preview: `opennextjs-cloudflare && wrangler dev`,
-			"cf-typegen": `wrangler types --env-interface CloudflareEnv env.d.ts`,
+			"cf-typegen": `wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts`,
 		},
 	}),
 	devScript: "dev",
