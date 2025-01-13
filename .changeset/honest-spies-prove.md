@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Send error cause to Sentry when available
+Unwrap the error cause when available to send to Sentry
