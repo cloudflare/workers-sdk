@@ -469,6 +469,41 @@ compatibility_date = "2023-01-01"
 		`);
 	});
 
+	it("should use the method specified on the X-CF-Http-Method header", async () => {
+		const token = randomBytes(4096).toString("hex");
+		const resp = await worker.fetch(
+			`https://0000.rawhttp.devprod.cloudflare.dev/method`,
+			{
+				method: "POST",
+				headers: {
+					origin: "https://cloudflare.dev",
+					"X-CF-Token": token,
+					"X-CF-Remote": `http://127.0.0.1:${remote.port}`,
+					"X-CF-Http-Method": "PUT",
+				},
+			}
+		);
+
+		expect(await resp.text()).toEqual("PUT");
+	});
+
+	it("should fallback to the request method if the X-CF-Http-Method header is missing", async () => {
+		const token = randomBytes(4096).toString("hex");
+		const resp = await worker.fetch(
+			`https://0000.rawhttp.devprod.cloudflare.dev/method`,
+			{
+				method: "PUT",
+				headers: {
+					origin: "https://cloudflare.dev",
+					"X-CF-Token": token,
+					"X-CF-Remote": `http://127.0.0.1:${remote.port}`,
+				},
+			}
+		);
+
+		expect(await resp.text()).toEqual("PUT");
+	});
+
 	it("should strip cf-ew-raw- prefix from headers which have it before hitting the user-worker", async () => {
 		const token = randomBytes(4096).toString("hex");
 		const resp = await worker.fetch(
