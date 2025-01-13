@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import {
 	Disposable,
 	env,
@@ -18,9 +19,10 @@ import {
 } from "./show-bindings";
 import { importWrangler } from "./wrangler";
 
+type BindingLabel = "KV" | "R2" | "D1";
 class BindingType implements QuickPickItem {
 	constructor(
-		public label: string,
+		public label: BindingLabel,
 		public configKey?: string,
 		public detail?: string,
 		public iconPath?: Uri
@@ -50,32 +52,48 @@ export async function addBindingFlow(context: ExtensionContext) {
 	];
 
 	interface State {
-		title: string;
-		step: number;
-		totalSteps: number;
+		config: Config;
+		configUri: Uri;
 		bindingType: BindingType;
 		name: string;
-		runtime: QuickPickItem;
-		id: string;
 	}
 
+	/** Partial, except for K */
+	type Optional<T, K extends keyof T> = Partial<Omit<T, K>> & Pick<T, K>;
 	async function collectInputs() {
-		const state = {} as Partial<State>;
+		const config = await getWranglerConfig();
+		const configUri = await getConfigUri();
+		if (!config || !configUri) {
+			const docs = await window.showErrorMessage(
+				"Unable to locate Wrangler configuration file — have you opened a project with a wrangler.json(c) or wrangler.toml file?",
+				"Learn more"
+			);
+			if (docs) {
+				env.openExternal(
+					Uri.parse(
+						"https://developers.cloudflare.com/workers/wrangler/configuration/"
+					)
+				);
+			}
+			return;
+		}
+		const state = { config, configUri };
 		await MultiStepInput.run((input) => pickBindingType(input, state));
 		return state as State;
 	}
 
 	const title = "Add binding";
 
-	async function pickBindingType(input: MultiStepInput, state: Partial<State>) {
+	async function pickBindingType(
+		input: MultiStepInput,
+		state: Optional<State, "config" | "configUri">
+	) {
 		const pick = await input.showQuickPick({
 			title,
 			step: 1,
 			totalSteps: 2,
 			placeholder: "Choose a binding type",
 			items: bindingTypes,
-			activeItem:
-				typeof state.bindingType !== "string" ? state.bindingType : undefined,
 		});
 		state.bindingType = pick as BindingType;
 		return (input: MultiStepInput) => inputBindingName(input, state);
@@ -83,13 +101,9 @@ export async function addBindingFlow(context: ExtensionContext) {
 
 	async function inputBindingName(
 		input: MultiStepInput,
-		state: Partial<State>
+		state: Optional<State, "config" | "configUri">
 	) {
-		const config = await getWranglerConfig();
-		if (!config) {
-			throw new Error("No config found");
-		}
-		const allBindingNames = getAllBindingNames(config);
+		const allBindingNames = getAllBindingNames(state.config);
 
 		let name = await input.showInputBox({
 			title,
@@ -107,17 +121,9 @@ export async function addBindingFlow(context: ExtensionContext) {
 		return () => addToConfig(state);
 	}
 
-	async function addToConfig(state: Partial<State>) {
-		const configUri = await getConfigUri();
-		if (!configUri) {
-			// for some reason, if we just throw an error it doesn't surface properly when triggered by the button in the welcome view
-			window.showErrorMessage(
-				"Unable to locate Wrangler configuration file — have you opened a project with a wrangler.json(c) or wrangler.toml file?",
-				{}
-			);
-			return null;
-		}
-		const workspaceFolder = workspace.getWorkspaceFolder(configUri);
+	async function addToConfig(state: Optional<State, "config" | "configUri">) {
+		assert(state.bindingType?.configKey && state.name);
+		const workspaceFolder = workspace.getWorkspaceFolder(state.configUri);
 
 		if (!workspaceFolder) {
 			return null;
@@ -170,7 +176,6 @@ interface QuickPickParameters<T extends QuickPickItem> {
 	step: number;
 	totalSteps: number;
 	items: T[];
-	activeItem?: T;
 	ignoreFocusOut?: boolean;
 	placeholder: string;
 	buttons?: QuickInputButton[];
@@ -238,7 +243,6 @@ export class MultiStepInput {
 		step,
 		totalSteps,
 		items,
-		activeItem,
 		ignoreFocusOut,
 		placeholder,
 		buttons,
@@ -255,9 +259,6 @@ export class MultiStepInput {
 				input.ignoreFocusOut = ignoreFocusOut ?? false;
 				input.placeholder = placeholder;
 				input.items = items;
-				if (activeItem) {
-					input.activeItems = [activeItem];
-				}
 				input.buttons = [
 					...(this.steps.length > 1 ? [QuickInputButtons.Back] : []),
 					...(buttons || []),
