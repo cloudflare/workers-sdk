@@ -41,7 +41,7 @@ describe.runIf(process.platform !== "win32")("c3 integration", () => {
 
 		expect(
 			readFileSync(
-				path.join(helper.tmpPath, workerName, "wrangler.toml"),
+				path.join(helper.tmpPath, workerName, "wrangler.json"),
 				"utf8"
 			)
 		).not.toContain("<TBD>");
