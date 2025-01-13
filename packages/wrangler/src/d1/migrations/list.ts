@@ -1,9 +1,9 @@
 import path from "path";
-import { printWranglerBanner } from "../..";
 import { configFileName, withConfig } from "../../config";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
+import { printWranglerBanner } from "../../wrangler-banner";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { getDatabaseInfoFromConfig } from "../utils";
 import {

@@ -1,8 +1,8 @@
-import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
 import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
+import { printWranglerBanner } from "../wrangler-banner";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,

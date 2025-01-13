@@ -33,7 +33,6 @@ import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
-import { getRules, getScriptName, isLegacyEnv } from "../index";
 import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";
 import { getMetricsUsageHeaders } from "../metrics";
@@ -50,6 +49,9 @@ import {
 } from "../sourcemap";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
+import { getRules } from "../utils/getRules";
+import { getScriptName } from "../utils/getScriptName";
+import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { printBindings } from "../utils/print-bindings";
 import { retryOnError } from "../utils/retry";
 import type { AssetsOptions } from "../assets";

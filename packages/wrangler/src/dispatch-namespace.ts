@@ -3,7 +3,7 @@ import { readConfig } from "./config";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
-import { printWranglerBanner } from ".";
+import { printWranglerBanner } from "./wrangler-banner";
 import type { CommonYargsArgv, CommonYargsOptions } from "./yargs-types";
 import type { CommandModule } from "yargs";
 

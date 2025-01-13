@@ -1,10 +1,10 @@
-import { printWranglerBanner } from "../..";
 import { fetchResult } from "../../cfetch";
 import { withConfig } from "../../config";
 import { confirm } from "../../dialogs";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
+import { printWranglerBanner } from "../../wrangler-banner";
 import { Database } from "../options";
 import { getDatabaseByNameOrBinding } from "../utils";
 import { getBookmarkIdFromTimestamp, throwIfDatabaseIsAlpha } from "./utils";

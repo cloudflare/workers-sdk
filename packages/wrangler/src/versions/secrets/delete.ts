@@ -3,9 +3,10 @@ import { configFileName } from "../../config";
 import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
 import { UserError } from "../../errors";
-import { getLegacyScriptName, isLegacyEnv } from "../../index";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
+import { getLegacyScriptName } from "../../utils/getLegacyScriptName";
+import { isLegacyEnv } from "../../utils/isLegacyEnv";
 import { copyWorkerVersionWithNewSecrets } from "./index";
 import type { VersionDetails, WorkerVersion } from "./index";
 

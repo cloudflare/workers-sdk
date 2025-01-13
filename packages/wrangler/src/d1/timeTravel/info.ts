@@ -1,7 +1,7 @@
-import { printWranglerBanner } from "../..";
 import { withConfig } from "../../config";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
+import { printWranglerBanner } from "../../wrangler-banner";
 import { Database } from "../options";
 import { getDatabaseByNameOrBinding } from "../utils";
 import { getBookmarkIdFromTimestamp, throwIfDatabaseIsAlpha } from "./utils";

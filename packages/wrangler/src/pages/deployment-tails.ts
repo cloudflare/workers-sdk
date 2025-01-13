@@ -1,6 +1,5 @@
 import { setTimeout } from "node:timers/promises";
 import onExit from "signal-exit";
-import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { getConfigCache } from "../config-cache";
@@ -15,6 +14,7 @@ import {
 } from "../tail/createTail";
 import { translateCLICommandToFilterMessage } from "../tail/filters";
 import { requireAuth } from "../user";
+import { printWranglerBanner } from "../wrangler-banner";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
 import { isUrl } from "./utils";
