@@ -1,0 +1,8 @@
+name = "worker"
+main = "./src/index.ts"
+compatibility_date = "2024-12-30"
+
+[[workflows]]
+name = "workflow"
+binding = "MY_WORKFLOW"
+class_name = "MyWorkflow"

@@ -1,0 +1,59 @@
+{
+	"name": "@flarelabs-net/vite-plugin-cloudflare",
+	"version": "0.0.0",
+	"description": "Cloudflare plugin for Vite",
+	"keywords": [
+		"cloudflare",
+		"workers",
+		"cloudflare-workers",
+		"vite",
+		"vite-plugin"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/flarelabs-net/vite-plugin-cloudflare",
+		"directory": "packages/vite-plugin-cloudflare"
+	},
+	"license": "MIT",
+	"sideEffects": false,
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "tsup",
+		"check:types": "tsc --build",
+		"test": "vitest run",
+		"watch": "tsup --watch"
+	},
+	"dependencies": {
+		"@hattip/adapter-node": "^0.0.49",
+		"miniflare": "3.20241230.1",
+		"unenv": "catalog:default",
+		"ws": "^8.18.0"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-shared": "^0.7.0",
+		"@cloudflare/workers-types": "catalog:default",
+		"@types/node": "catalog:default",
+		"@types/ws": "^8.5.13",
+		"@vite-plugin-cloudflare/typescript-config": "workspace:*",
+		"magic-string": "^0.30.12",
+		"tsup": "^8.3.0",
+		"typescript": "catalog:default",
+		"vite": "catalog:default",
+		"wrangler": "catalog:default"
+	},
+	"peerDependencies": {
+		"vite": "catalog:default",
+		"wrangler": "catalog:default"
+	}
+}

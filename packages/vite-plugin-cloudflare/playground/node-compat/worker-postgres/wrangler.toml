@@ -1,0 +1,14 @@
+name = "worker"
+main = "./index.ts"
+compatibility_date = "2024-12-30"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# These DB connection values are to a public database containing information about
+# RNA, genes, etc. See https://rnacentral.org/help/public-database.
+# In case GitGuardian complains in future PRs, this is public information so a false positive.
+DB_HOSTNAME = "hh-pgsql-public.ebi.ac.uk"
+DB_PORT = "5432"
+DB_NAME = "pfmegrnargs"
+DB_USERNAME = "reader"
+DB_PASSWORD = "NWDMCE5xdipIjRrp"
