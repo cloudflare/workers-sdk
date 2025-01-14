@@ -359,7 +359,9 @@ async function runProvisioningFlow(
 					selected = await select(
 						`Would you like to connect an existing ${friendlyBindingName} or create a new one?`,
 						{
-							choices: options.concat([{ title: "Create new", value: "new" }]),
+							choices: options.concat([
+								{ title: "Create new", value: NEW_OPTION_VALUE },
+							]),
 							defaultOption: options.length,
 						}
 					);
