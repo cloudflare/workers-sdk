@@ -1,6 +1,7 @@
 import { vi } from "vitest";
 import { applyConfigurationDefaults } from "../src/configuration";
 import { handleRequest } from "../src/handler";
+import { mockJaegerBinding } from "../src/utils/mocks";
 import type { AssetConfig } from "../../utils/types";
 
 describe("[Asset Worker] `handleRequest`", () => {
@@ -17,8 +18,14 @@ describe("[Asset Worker] `handleRequest`", () => {
 			contentType: "text/html",
 		});
 
+		const mockEnv = {
+			JAEGER: mockJaegerBinding(),
+		};
+
 		const response = await handleRequest(
 			new Request("https://example.com/"),
+			// @ts-expect-error Empty config default to using mocked jaeger
+			mockEnv,
 			configuration,
 			exists,
 			getByETag
@@ -40,10 +47,16 @@ describe("[Asset Worker] `handleRequest`", () => {
 			contentType: "text/html",
 		});
 
+		const mockEnv = {
+			JAEGER: mockJaegerBinding(),
+		};
+
 		const response = await handleRequest(
 			new Request("https://example.com/", {
 				headers: { "If-None-Match": `"${eTag}"` },
 			}),
+			// @ts-expect-error Empty config default to using mocked jaeger
+			mockEnv,
 			configuration,
 			exists,
 			getByETag
@@ -65,10 +78,16 @@ describe("[Asset Worker] `handleRequest`", () => {
 			contentType: "text/html",
 		});
 
+		const mockEnv = {
+			JAEGER: mockJaegerBinding(),
+		};
+
 		const response = await handleRequest(
 			new Request("https://example.com/", {
 				headers: { "If-None-Match": `W/"${eTag}"` },
 			}),
+			// @ts-expect-error Empty config default to using mocked jaeger
+			mockEnv,
 			configuration,
 			exists,
 			getByETag
@@ -90,10 +109,16 @@ describe("[Asset Worker] `handleRequest`", () => {
 			contentType: "text/html",
 		});
 
+		const mockEnv = {
+			JAEGER: mockJaegerBinding(),
+		};
+
 		const response = await handleRequest(
 			new Request("https://example.com/", {
 				headers: { "If-None-Match": "a fake etag!" },
 			}),
+			// @ts-expect-error Empty config default to using mocked jaeger
+			mockEnv,
 			configuration,
 			exists,
 			getByETag
@@ -110,9 +135,15 @@ describe("[Asset Worker] `handleRequest`", () => {
 			"/test.html": "dddddddddd",
 		};
 
+		const mockEnv = {
+			JAEGER: mockJaegerBinding(),
+		};
+
 		// Attempt to path traverse down to the root /test within asset-server
 		let response = await handleRequest(
 			new Request("https://example.com/blog/../test"),
+			// @ts-expect-error Empty config default to using mocked jaeger
+			mockEnv,
 			applyConfigurationDefaults({}),
 			async (pathname: string) => {
 				if (pathname.startsWith("/blog/")) {
@@ -133,6 +164,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 		// Attempt to path traverse down to the root /test within asset-server
 		response = await handleRequest(
 			new Request("https://example.com/blog/%2E%2E/test"),
+			// @ts-expect-error Empty config default to using mocked jaeger
+			mockEnv,
 			applyConfigurationDefaults({}),
 			async (pathname: string) => {
 				if (pathname.startsWith("/blog/")) {
@@ -170,9 +203,15 @@ describe("[Asset Worker] `handleRequest`", () => {
 			contentType: "text/html",
 		});
 
+		const mockEnv = {
+			JAEGER: mockJaegerBinding(),
+		};
+
 		// first malformed URL should return 404 as no match above
 		const response = await handleRequest(
 			new Request("https://example.com/%A0"),
+			// @ts-expect-error Empty config default to using mocked jaeger
+			mockEnv,
 			configuration,
 			exists,
 			getByEtag
@@ -182,6 +221,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 		// but second malformed URL should return 307 as it matches and then redirects
 		const response2 = await handleRequest(
 			new Request("https://example.com/%A0%A0"),
+			// @ts-expect-error Empty config default to using mocked jaeger
+			{},
 			configuration,
 			exists,
 			getByEtag

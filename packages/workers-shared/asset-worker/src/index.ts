@@ -7,10 +7,15 @@ import { applyConfigurationDefaults } from "./configuration";
 import { decodePath, getIntent, handleRequest } from "./handler";
 import { InternalServerErrorResponse } from "./responses";
 import { getAssetWithMetadataFromKV } from "./utils/kv";
-import type { AssetConfig, UnsafePerformanceTimer } from "../../utils/types";
+import { mockJaegerBinding } from "./utils/mocks";
+import type {
+	AssetConfig,
+	JaegerTracing,
+	UnsafePerformanceTimer,
+} from "../../utils/types";
 import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
 
-type Env = {
+export type Env = {
 	/*
 	 * ASSETS_MANIFEST is a pipeline binding to an ArrayBuffer containing the
 	 * binary-encoded site manifest
@@ -26,9 +31,10 @@ type Env = {
 	CONFIG: AssetConfig;
 
 	SENTRY_DSN: string;
-
 	SENTRY_ACCESS_CLIENT_ID: string;
 	SENTRY_ACCESS_CLIENT_SECRET: string;
+
+	JAEGER: JaegerTracing;
 
 	ENVIRONMENT: Environment;
 	ANALYTICS: ReadyAnalytics;
@@ -56,6 +62,11 @@ export default class extends WorkerEntrypoint<Env> {
 		const startTimeMs = performance.now();
 
 		try {
+			if (!this.env.JAEGER) {
+				// For wrangler tests, if we don't have a jaeger binding, default to a mocked binding
+				this.env.JAEGER = mockJaegerBinding();
+			}
+
 			sentry = setupSentry(
 				request,
 				this.ctx,
@@ -74,8 +85,8 @@ export default class extends WorkerEntrypoint<Env> {
 				sentry.setUser({ userAgent: userAgent, colo: colo });
 			}
 
+			const url = new URL(request.url);
 			if (this.env.COLO_METADATA && this.env.VERSION_METADATA) {
-				const url = new URL(request.url);
 				analytics.setData({
 					coloId: this.env.COLO_METADATA.coloId,
 					metalId: this.env.COLO_METADATA.metalId,
@@ -89,12 +100,21 @@ export default class extends WorkerEntrypoint<Env> {
 				});
 			}
 
-			return handleRequest(
-				request,
-				config,
-				this.unstable_exists.bind(this),
-				this.unstable_getByETag.bind(this)
-			);
+			return await this.env.JAEGER.enterSpan("handleRequest", async (span) => {
+				span.setTags({
+					hostname: url.hostname,
+					eyeballPath: url.pathname,
+					env: this.env.ENVIRONMENT,
+				});
+
+				return handleRequest(
+					request,
+					this.env,
+					config,
+					this.unstable_exists.bind(this),
+					this.unstable_getByETag.bind(this)
+				);
+			});
 		} catch (err) {
 			const response = new InternalServerErrorResponse(err as Error);
 

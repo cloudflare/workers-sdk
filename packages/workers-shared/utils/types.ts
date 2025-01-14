@@ -27,3 +27,40 @@ export interface UnsafePerformanceTimer {
 	readonly timeOrigin: number;
 	now: () => number;
 }
+
+export interface JaegerTracing {
+	enterSpan<T extends unknown[], R = void>(
+		name: string,
+		span: (s: Span, ...args: T) => R,
+		...args: T
+	): R;
+	getSpanContext(): SpanContext | null;
+	runWithSpanContext<T extends unknown[]>(
+		spanContext: SpanContext | null,
+		callback: (...args: T) => unknown,
+		...args: T
+	): unknown;
+
+	readonly traceId: string | null;
+	readonly spanId: string | null;
+	readonly parentSpanId: string | null;
+	readonly cfTraceIdHeader: string | null;
+}
+
+export interface Span {
+	addLogs(logs: JaegerRecord): void;
+	setTags(tags: JaegerRecord): void;
+	end(): void;
+
+	isRecording: boolean;
+}
+
+export interface SpanContext {
+	traceId: string;
+	spanId: string;
+	parentSpanId: string;
+	traceFlags: number;
+}
+
+export type JaegerValue = string | number | boolean;
+export type JaegerRecord = Record<string, JaegerValue>;
