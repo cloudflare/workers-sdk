@@ -1,5 +1,52 @@
 # create-cloudflare
 
+## 2.37.0
+
+### Minor Changes
+
+- [#7676](https://github.com/cloudflare/workers-sdk/pull/7676) [`ab92f83`](https://github.com/cloudflare/workers-sdk/commit/ab92f837a995b2d3229609ba798dfc322a8ed171) Thanks [@penalosa](https://github.com/penalosa)! - Output the `wrangler.json` config format when running `create-cloudflare`
+
+### Patch Changes
+
+- [#7746](https://github.com/cloudflare/workers-sdk/pull/7746) [`836b316`](https://github.com/cloudflare/workers-sdk/commit/836b3165e416312d246e67c28a43345339da9485) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.1.3 | 15.1.4 |
+
+- [#7747](https://github.com/cloudflare/workers-sdk/pull/7747) [`e747ddf`](https://github.com/cloudflare/workers-sdk/commit/e747ddf6a47319dbb6d361e6d0046749759949c0) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.0.6 | 19.0.7 |
+
+- [#7748](https://github.com/cloudflare/workers-sdk/pull/7748) [`d13e288`](https://github.com/cloudflare/workers-sdk/commit/d13e288428c675ffb27860502749adb12664cb48) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.6.10 | 0.6.11 |
+
+- [#7749](https://github.com/cloudflare/workers-sdk/pull/7749) [`7f94b9d`](https://github.com/cloudflare/workers-sdk/commit/7f94b9dc1b36d782b8853a4b8e9170cc15689a3e) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.17.2 | 3.20.0 |
+
+- [#7743](https://github.com/cloudflare/workers-sdk/pull/7743) [`5955dac`](https://github.com/cloudflare/workers-sdk/commit/5955dac5ef2c6a0b6eea6dc28d11491966c07c2b) Thanks [@vicb](https://github.com/vicb)! - Update the Next.js experimental template
+
+  - Use create-next-app@^14.2.23
+  - Rename wrangler types output to cloudflare-env.d.ts
+
+- [#7742](https://github.com/cloudflare/workers-sdk/pull/7742) [`8fb0f25`](https://github.com/cloudflare/workers-sdk/commit/8fb0f25e70cd43ffc947ded9a0d7c0ce88e7b359) Thanks [@threepointone](https://github.com/threepointone)! - chore: update wrangler versions in templates
+
 ## 2.36.0
 
 ### Minor Changes

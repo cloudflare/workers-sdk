@@ -1,5 +1,11 @@
 # @cloudflare/unenv-preset
 
+## 0.1.1
+
+### Patch Changes
+
+- [#7721](https://github.com/cloudflare/workers-sdk/pull/7721) [`5c2c55a`](https://github.com/cloudflare/workers-sdk/commit/5c2c55a2b79863cedf701f9b7e49439ca7d70cea) Thanks [@vicb](https://github.com/vicb)! - chore(unenv-preset): Add .cjs output for the preset
+
 ## 0.1.0
 
 ### Minor Changes
