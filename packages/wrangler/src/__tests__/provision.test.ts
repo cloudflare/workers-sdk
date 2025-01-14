@@ -24,6 +24,7 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
+import type { DatabaseInfo } from "../d1/types";
 import type { Settings } from "../deployment-bundle/bindings";
 
 describe("--x-provision", () => {
@@ -556,6 +557,131 @@ describe("--x-provision", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
+		it("can inherit d1 binding when the database name is provided", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				d1_databases: [{ binding: "D1", database_name: "prefilled-d1-name" }],
+			});
+			mockGetSettings({
+				result: {
+					bindings: [
+						{
+							type: "d1",
+							name: "D1",
+							id: "d1-id",
+						},
+					],
+				},
+			});
+			mockGetD1Database("d1-id", { name: "prefilled-d1-name" });
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "D1",
+						type: "inherit",
+					},
+				],
+			});
+
+			await runWrangler("deploy --x-provision");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- D1 Databases:
+				  - D1: prefilled-d1-name
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+
+		it("will not inherit d1 binding when the database name is provided but has changed", async () => {
+			// first deploy used old-d1-name/old-d1-id
+			// now we provide a different database_name that doesn't match
+			writeWranglerConfig({
+				main: "index.js",
+				d1_databases: [{ binding: "D1", database_name: "new-d1-name" }],
+			});
+			mockGetSettings({
+				result: {
+					bindings: [
+						{
+							type: "d1",
+							name: "D1",
+							id: "old-d1-id",
+						},
+					],
+				},
+			});
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database", async () => {
+					return HttpResponse.json(
+						createFetchResult([
+							{
+								name: "old-d1-name",
+								uuid: "old-d1-id",
+							},
+						])
+					);
+				})
+			);
+
+			mockGetD1Database("old-d1-id", { name: "old-d1-name" });
+
+			// no name prompt
+			mockCreateD1Database({
+				assertName: "new-d1-name",
+				resultId: "new-d1-id",
+			});
+
+			mockConfirm({
+				text: `Would you like to create a new D1 Database named "new-d1-name"?`,
+				result: true,
+			});
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "D1",
+						type: "d1",
+						id: "new-d1-id",
+					},
+				],
+			});
+
+			await runWrangler("deploy --x-provision");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+
+				The following bindings need to be provisioned:
+				- D1 Databases:
+				  - D1
+
+				Provisioning D1 (D1 Database)...
+				Resource name found in config: new-d1-name
+				No pre-existing resource found with that name
+				🌀 Creating new D1 Database \\"new-d1-name\\"...
+				✨ D1 provisioned with new-d1-name
+
+				--------------------------------------
+
+				🎉 All resources provisioned, continuing with deployment...
+
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- D1 Databases:
+				  - D1: new-d1-name (new-d1-id)
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
 		it("can prefill r2 bucket name from config file if provided", async () => {
 			writeWranglerConfig({
 				main: "index.js",
@@ -810,13 +936,16 @@ function mockGetR2Bucket(bucketName: string, missing: boolean = false) {
 	);
 }
 
-function mockGetD1Database(databaseId: string) {
+function mockGetD1Database(
+	databaseId: string,
+	databaseInfo: Partial<DatabaseInfo>
+) {
 	msw.use(
 		http.get(
 			`*/accounts/:accountId/d1/database/:database_id`,
 			({ params }) => {
 				expect(params.database_id).toEqual(databaseId);
-				return HttpResponse.json(createFetchResult({}));
+				return HttpResponse.json(createFetchResult(databaseInfo));
 			},
 			{ once: true }
 		)

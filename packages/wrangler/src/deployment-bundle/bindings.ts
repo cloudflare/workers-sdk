@@ -3,7 +3,6 @@ import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
-import { DatabaseInfo } from "../d1/types";
 import { getDatabaseInfoFromId } from "../d1/utils";
 import { confirm, prompt, select } from "../dialogs";
 import { UserError } from "../errors";
