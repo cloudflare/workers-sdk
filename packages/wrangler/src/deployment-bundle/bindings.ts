@@ -13,7 +13,6 @@ import { createR2Bucket, getR2Bucket, listR2Buckets } from "../r2/helpers";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { printBindings } from "../utils/print-bindings";
 import type { Config } from "../config";
-import type { R2BucketInfo } from "../r2/helpers";
 import type { WorkerMetadataBinding } from "./create-worker-upload-form";
 import type {
 	CfD1Database,
@@ -129,7 +128,6 @@ export async function provisionBindings(
 		}
 	}
 
-	let preExistingR2: R2BucketInfo[] | undefined;
 	for (const r2 of bindings.r2_buckets ?? []) {
 		assert(typeof r2.bucket_name !== "symbol");
 		if (
@@ -240,7 +238,7 @@ export async function provisionBindings(
 			);
 		}
 		if (pendingResources.r2_buckets?.length) {
-			const preExisting = preExistingR2 ?? (await listR2Buckets(accountId));
+			const preExisting = await listR2Buckets(accountId);
 			await runProvisioningFlow(
 				pendingResources.r2_buckets,
 				preExisting.map((bucket) => ({
@@ -326,23 +324,22 @@ async function runProvisioningFlow(
 
 			if (name) {
 				logger.log("Resource name found in config:", name);
+				// this would be a d1 database where the name is provided but
+				// not the id, which must be connected to an existing resource
+				// of that name (or a new one with that name). This should hit a
+				// 'getDbByName' endpoint, as preExisting does not contain all
+				// resources on the account. But that doesn't exist yet.
 				const foundResourceId = preExisting.find(
 					(r) => r.title === name
 				)?.value;
 				if (foundResourceId) {
-					const proceed = autoCreate
-						? true
-						: await confirm(
-								`Would you like to connect to the existing ${friendlyBindingName} named "${name}"?`
-							);
-					if (!proceed) {
-						throw new UserError(
-							"Resource provisioning cancelled. If you want to connect a different or new resource, please specifiy a unique name in your config file."
-						);
-					}
+					logger.log("Existing resource found with that name.");
 					item.updateId(foundResourceId);
 				} else {
 					logger.log("No pre-existing resource found with that name");
+					logger.debug(
+						"If you have many resources, we may not have searched through them all. Please provide the id in that case. This is a temporary limitation."
+					);
 					const proceed = autoCreate
 						? true
 						: await confirm(
