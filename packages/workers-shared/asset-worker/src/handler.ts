@@ -9,9 +9,11 @@ import {
 import { getHeaders } from "./utils/headers";
 import type { AssetConfig } from "../../utils/types";
 import type EntrypointType from "./index";
+import type { Env } from "./index";
 
 export const handleRequest = async (
 	request: Request,
+	env: Env,
 	configuration: Required<AssetConfig>,
 	exists: typeof EntrypointType.prototype.unstable_exists,
 	getByETag: typeof EntrypointType.prototype.unstable_getByETag
@@ -52,7 +54,16 @@ export const handleRequest = async (
 		return new InternalServerErrorResponse(new Error("Unknown action"));
 	}
 
-	const asset = await getByETag(intent.asset.eTag);
+	const asset = await env.JAEGER.enterSpan("getByETag", async (span) => {
+		span.setTags({
+			pathname,
+			eTag: intent.asset.eTag,
+			status: intent.asset.status,
+		});
+
+		return await getByETag(intent.asset.eTag);
+	});
+
 	const headers = getHeaders(intent.asset.eTag, asset.contentType, request);
 
 	const strongETag = `"${intent.asset.eTag}"`;
