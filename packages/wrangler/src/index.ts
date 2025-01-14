@@ -1087,7 +1087,7 @@ export async function main(argv: string[]): Promise<void> {
 		cliHandlerThrew = true;
 		let mayReport = true;
 		let errorType: string | undefined;
-		let loggableException: Error | undefined = e as Error;
+		let loggableException = e;
 
 		logger.log(""); // Just adds a bit of space
 		if (e instanceof CommandLineArgsError) {
