@@ -99,14 +99,7 @@ export function sha256(s: string): string {
 	return createHash("sha256").update(s).digest("hex");
 }
 
-export type PermissionGroup = {
-	id: string;
-	name: string;
-	description: string;
-	scopes: string[];
-};
-
-interface S3AccessKey {
+export interface S3AccessKey {
 	accessKeyId: string;
 	secretAccessKey: string;
 }
