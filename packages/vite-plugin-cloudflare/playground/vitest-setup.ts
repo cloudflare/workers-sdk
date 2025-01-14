@@ -1,6 +1,6 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { chromium } from 'playwright-chromium';
+import fs from "node:fs";
+import path from "node:path";
+import { chromium } from "playwright-chromium";
 import {
 	createBuilder,
 	createServer,
@@ -8,10 +8,10 @@ import {
 	mergeConfig,
 	preview,
 	Rollup,
-} from 'vite';
-import { beforeAll, beforeEach, inject } from 'vitest';
-import type * as http from 'node:http';
-import type { Browser, Page } from 'playwright-chromium';
+} from "vite";
+import { beforeAll, beforeEach, inject } from "vitest";
+import type * as http from "node:http";
+import type { Browser, Page } from "playwright-chromium";
 import type {
 	ConfigEnv,
 	InlineConfig,
@@ -20,13 +20,13 @@ import type {
 	ResolvedConfig,
 	UserConfig,
 	ViteDevServer,
-} from 'vite';
-import type { RunnerTestFile } from 'vitest';
+} from "vite";
+import type { RunnerTestFile } from "vitest";
 
-export const workspaceRoot = path.resolve(__dirname, '../');
+export const workspaceRoot = path.resolve(__dirname, "../");
 
 export const isBuild = !!process.env.VITE_TEST_BUILD;
-export const isWindows = process.platform === 'win32';
+export const isWindows = process.platform === "win32";
 
 let server: ViteDevServer | http.Server;
 
@@ -67,7 +67,7 @@ export let resolvedConfig: ResolvedConfig = undefined!;
 
 export let page: Page = undefined!;
 export let browser: Browser = undefined!;
-export let viteTestUrl: string = '';
+export let viteTestUrl: string = "";
 export let watcher: Rollup.RollupWatcher | undefined = undefined;
 
 export function setViteUrl(url: string): void {
@@ -87,12 +87,12 @@ beforeAll(async (s) => {
 	testName = slash(testPath).match(/playground\/([\w-]+)\//)?.[1]!;
 	testDir = path.dirname(testPath);
 	if (testName) {
-		testDir = path.resolve(workspaceRoot, 'playground-temp', testName);
+		testDir = path.resolve(workspaceRoot, "playground-temp", testName);
 	}
 
-	const wsEndpoint = inject('wsEndpoint');
+	const wsEndpoint = inject("wsEndpoint");
 	if (!wsEndpoint) {
-		throw new Error('wsEndpoint not found');
+		throw new Error("wsEndpoint not found");
 	}
 
 	browser = await chromium.connect(wsEndpoint);
@@ -101,23 +101,23 @@ beforeAll(async (s) => {
 	const globalConsole = console;
 	const warn = globalConsole.warn;
 	globalConsole.warn = (msg: string, ...args: unknown[]) => {
-		if (msg.includes('Generated an empty chunk')) return;
+		if (msg.includes("Generated an empty chunk")) return;
 		warn.call(globalConsole, msg, ...args);
 	};
 
 	try {
-		page.on('console', (msg) => {
+		page.on("console", (msg) => {
 			// ignore favicon requests in headed browser
 			if (
 				process.env.VITE_DEBUG_SERVE &&
-				msg.text().includes('Failed to load resource:') &&
-				msg.location().url.includes('favicon.ico')
+				msg.text().includes("Failed to load resource:") &&
+				msg.location().url.includes("favicon.ico")
 			) {
 				return;
 			}
 			browserLogs.push(msg.text());
 		});
-		page.on('pageerror', (error) => {
+		page.on("pageerror", (error) => {
 			browserErrors.push(error);
 		});
 
@@ -125,21 +125,21 @@ beforeAll(async (s) => {
 		// start a vite server in that directory.
 		if (testName) {
 			// when `root` dir is present, use it as vite's root
-			const testCustomRoot = path.resolve(testDir, 'root');
+			const testCustomRoot = path.resolve(testDir, "root");
 			rootDir = fs.existsSync(testCustomRoot) ? testCustomRoot : testDir;
 
 			// separate rootDir for variant
 			const variantName = path.basename(path.dirname(testPath));
-			if (variantName !== '__tests__') {
-				const variantTestDir = testDir + '__' + variantName;
+			if (variantName !== "__tests__") {
+				const variantTestDir = testDir + "__" + variantName;
 				if (fs.existsSync(variantTestDir)) {
 					rootDir = testDir = variantTestDir;
 				}
 			}
 
 			const testCustomServe = [
-				path.resolve(path.dirname(testPath), 'serve.ts'),
-				path.resolve(path.dirname(testPath), 'serve.js'),
+				path.resolve(path.dirname(testPath), "serve.ts"),
+				path.resolve(path.dirname(testPath), "serve.js"),
 			].find((i) => fs.existsSync(i));
 
 			if (testCustomServe) {
@@ -186,16 +186,16 @@ beforeEach(async () => {
 
 async function loadConfig(configEnv: ConfigEnv) {
 	let config: UserConfig | null = null;
-	let cacheDir = 'node_modules/.vite';
+	let cacheDir = "node_modules/.vite";
 
 	// config file named by convention as the *.spec.ts folder
 	const variantName = path.basename(path.dirname(testPath));
-	if (variantName !== '__tests__') {
-		cacheDir += '/' + variantName;
-		for (const extension of ['js', 'ts', 'mjs', 'cjs', 'mts', 'cts']) {
+	if (variantName !== "__tests__") {
+		cacheDir += "/" + variantName;
+		for (const extension of ["js", "ts", "mjs", "cjs", "mts", "cts"]) {
 			const configVariantPath = path.resolve(
 				rootDir,
-				`vite.config.${variantName}.${extension}`,
+				`vite.config.${variantName}.${extension}`
 			);
 			if (fs.existsSync(configVariantPath)) {
 				const res = await loadConfigFromFile(configEnv, configVariantPath);
@@ -217,7 +217,7 @@ async function loadConfig(configEnv: ConfigEnv) {
 	const options: InlineConfig = {
 		cacheDir,
 		root: rootDir,
-		logLevel: 'silent',
+		logLevel: "silent",
 		configFile: false,
 		server: {
 			watch: {
@@ -233,14 +233,14 @@ async function loadConfig(configEnv: ConfigEnv) {
 		build: {
 			// esbuild do not minify ES lib output since that would remove pure annotations and break tree-shaking
 			// skip transpilation during tests to make it faster
-			target: 'esnext',
+			target: "esnext",
 			// tests are flaky when `emptyOutDir` is `true`
 			emptyOutDir: false,
 		},
 		customLogger: createInMemoryLogger(
 			serverLogs.info,
 			serverLogs.warns,
-			serverLogs.errors,
+			serverLogs.errors
 		),
 	};
 	return mergeConfig(options, config || {});
@@ -250,47 +250,50 @@ export async function startDefaultServe(): Promise<void> {
 	setupConsoleWarnCollector(serverLogs.warns);
 
 	if (!isBuild) {
-		process.env.VITE_INLINE = 'inline-serve';
-		const config = await loadConfig({ command: 'serve', mode: 'development' });
+		process.env.VITE_INLINE = "inline-serve";
+		const config = await loadConfig({ command: "serve", mode: "development" });
 		viteServer = server = await (await createServer(config)).listen();
 		viteTestUrl = server!.resolvedUrls!.local[0]!;
-		if (server.config.base === '/') {
-			viteTestUrl = viteTestUrl.replace(/\/$/, '');
+		if (server.config.base === "/") {
+			viteTestUrl = viteTestUrl.replace(/\/$/, "");
 		}
 		await page.goto(viteTestUrl);
 	} else {
-		process.env.VITE_INLINE = 'inline-build';
+		process.env.VITE_INLINE = "inline-build";
 		// determine build watch
 		const resolvedPlugin: () => PluginOption = () => ({
-			name: 'vite-plugin-watcher',
+			name: "vite-plugin-watcher",
 			configResolved(config) {
 				resolvedConfig = config;
 			},
 		});
 		const buildConfig = mergeConfig(
 			await loadConfig({
-				command: 'build',
-				mode: 'production',
+				command: "build",
+				mode: "production",
 			}),
 			{
 				plugins: [resolvedPlugin()],
-			},
+			}
 		);
 		const builder = await createBuilder(buildConfig);
 		await builder.buildApp();
 
 		const previewConfig = await loadConfig({
-			command: 'serve',
-			mode: 'development',
+			command: "serve",
+			mode: "development",
 			isPreview: true,
 		});
 		const _nodeEnv = process.env.NODE_ENV;
+		// Make sure we are running from within the playground-temp directory rather than playground.
+		// Otherwise workerd will error with messages about not being allowed to escape the starting directory with `..`.
+		process.chdir(previewConfig.root);
 		const previewServer = await preview(previewConfig);
 		// prevent preview change NODE_ENV
 		process.env.NODE_ENV = _nodeEnv;
 		viteTestUrl = previewServer!.resolvedUrls!.local[0]!;
-		if (previewServer.config.base === '/') {
-			viteTestUrl = viteTestUrl.replace(/\/$/, '');
+		if (previewServer.config.base === "/") {
+			viteTestUrl = viteTestUrl.replace(/\/$/, "");
 		}
 		await page.goto(viteTestUrl);
 	}
@@ -300,25 +303,25 @@ export async function startDefaultServe(): Promise<void> {
  * Send the rebuild complete message in build watch
  */
 export async function notifyRebuildComplete(
-	watcher: Rollup.RollupWatcher,
+	watcher: Rollup.RollupWatcher
 ): Promise<Rollup.RollupWatcher> {
 	let resolveFn: undefined | (() => void);
 	const callback = (event: Rollup.RollupWatcherEvent): void => {
-		if (event.code === 'END') {
+		if (event.code === "END") {
 			resolveFn?.();
 		}
 	};
-	watcher.on('event', callback);
+	watcher.on("event", callback);
 	await new Promise<void>((resolve) => {
 		resolveFn = resolve;
 	});
-	return watcher.off('event', callback);
+	return watcher.off("event", callback);
 }
 
 export function createInMemoryLogger(
 	info: string[],
 	warns: string[],
-	errors: string[],
+	errors: string[]
 ): Logger {
 	const loggedErrors = new WeakSet<Error | Rollup.RollupError>();
 	const warnedMessages = new Set<string>();
@@ -354,16 +357,16 @@ export function createInMemoryLogger(
 function setupConsoleWarnCollector(logs: string[]) {
 	const warn = console.warn;
 	console.warn = (...args: unknown[]) => {
-		logs.push(args.join(' '));
+		logs.push(args.join(" "));
 		return warn.call(console, ...args);
 	};
 }
 
 export function slash(p: string): string {
-	return p.replace(/\\/g, '/');
+	return p.replace(/\\/g, "/");
 }
 
-declare module 'vitest' {
+declare module "vitest" {
 	export interface ProvidedContext {
 		wsEndpoint: string;
 	}

@@ -1,4 +1,4 @@
-import nodeCrypto from 'crypto';
+import nodeCrypto from "crypto";
 
 export default {
 	async fetch() {

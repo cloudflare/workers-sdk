@@ -1,5 +1,5 @@
 {
-	"extends": ["@vite-plugin-cloudflare/typescript-config/worker.json"],
+	"extends": ["@cloudflare/workers-tsconfig/worker.json"],
 	"include": [
 		"worker-basic",
 		"worker-cross-env",

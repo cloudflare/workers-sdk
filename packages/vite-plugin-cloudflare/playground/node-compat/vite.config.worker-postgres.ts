@@ -1,13 +1,13 @@
-import { cloudflare } from '@flarelabs-net/vite-plugin-cloudflare';
-import { defineConfig } from 'vite';
+import { cloudflare } from "@flarelabs-net/vite-plugin-cloudflare";
+import { defineConfig } from "vite";
 
 export default defineConfig({
 	build: {
-		outDir: 'dist/worker-postgres',
+		outDir: "dist/worker-postgres",
 	},
 	plugins: [
 		cloudflare({
-			configPath: './worker-postgres/wrangler.toml',
+			configPath: "./worker-postgres/wrangler.toml",
 			persistState: false,
 		}),
 	],

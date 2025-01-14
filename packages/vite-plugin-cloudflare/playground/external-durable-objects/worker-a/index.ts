@@ -1,4 +1,4 @@
-import type { Counter } from '../worker-b';
+import type { Counter } from "../worker-b";
 
 interface Env {
 	COUNTERS: DurableObjectNamespace<Counter>;
@@ -7,11 +7,11 @@ interface Env {
 export default {
 	async fetch(request, env) {
 		let url = new URL(request.url);
-		let name = url.searchParams.get('name');
+		let name = url.searchParams.get("name");
 
 		if (!name) {
 			throw new Error(
-				'Select a Durable Object to contact by using the `name` URL query string parameter, for example, ?name=A',
+				"Select a Durable Object to contact by using the `name` URL query string parameter, for example, ?name=A"
 			);
 		}
 
@@ -20,14 +20,14 @@ export default {
 		let count = null;
 
 		switch (url.pathname) {
-			case '/increment':
+			case "/increment":
 				count = await stub.increment();
 				break;
-			case '/':
+			case "/":
 				count = await stub.getCounterValue();
 				break;
 			default:
-				throw new Error('Unhandled route');
+				throw new Error("Unhandled route");
 		}
 
 		return new Response(`From worker-a: ${JSON.stringify({ name, count })}`);

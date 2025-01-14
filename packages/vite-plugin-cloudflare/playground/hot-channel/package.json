@@ -8,11 +8,11 @@
 		"dev": "vite dev"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "catalog:default",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:vite-plugin",
 		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",
-		"@vite-plugin-cloudflare/typescript-config": "workspace:*",
-		"typescript": "catalog:default",
-		"vite": "catalog:default",
-		"wrangler": "catalog:default"
+		"typescript": "catalog:vite-plugin",
+		"vite": "catalog:vite-plugin",
+		"wrangler": "workspace:*"
 	}
 }

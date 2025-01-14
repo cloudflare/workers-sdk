@@ -1,7 +1,7 @@
-import { expect, test } from 'vitest';
-import { getTextResponse } from '../../../__test-utils__';
+import { expect, test } from "vitest";
+import { getTextResponse } from "../../../__test-utils__";
 
-test('crypto.X509Certificate is implemented', async () => {
+test("crypto.X509Certificate is implemented", async () => {
 	const result = await getTextResponse();
 	expect(result).toMatchInlineSnapshot(`
 		""OK!": -----BEGIN CERTIFICATE-----

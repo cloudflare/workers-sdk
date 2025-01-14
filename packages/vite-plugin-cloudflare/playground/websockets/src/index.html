@@ -16,44 +16,44 @@
 	</body>
 	<script type="module">
 		let ws;
-		const openButton = document.querySelector('#open');
-		const closeButton = document.querySelector('#close');
-		const sendButton = document.querySelector('#send');
-		const statusText = document.querySelector('#status');
-		const messageText = document.querySelector('#message');
+		const openButton = document.querySelector("#open");
+		const closeButton = document.querySelector("#close");
+		const sendButton = document.querySelector("#send");
+		const statusText = document.querySelector("#status");
+		const messageText = document.querySelector("#message");
 
-		openButton.addEventListener('click', () => open());
-		closeButton.addEventListener('click', () => close());
-		sendButton.addEventListener('click', () => send('Client event'));
+		openButton.addEventListener("click", () => open());
+		closeButton.addEventListener("click", () => close());
+		sendButton.addEventListener("click", () => send("Client event"));
 
 		function open() {
 			if (ws) {
-				console.log('WebSocket already open');
+				console.log("WebSocket already open");
 
 				return;
 			}
 
-			ws = new WebSocket(`${location.origin.replace(/^http/, 'ws')}/websocket`);
+			ws = new WebSocket(`${location.origin.replace(/^http/, "ws")}/websocket`);
 
-			ws.addEventListener('message', (event) => {
-				console.log('Received server event', event.data);
+			ws.addEventListener("message", (event) => {
+				console.log("Received server event", event.data);
 				messageText.textContent = event.data;
 			});
 
-			ws.addEventListener('open', (event) => {
-				console.log('Client open');
-				statusText.textContent = 'WebSocket open';
+			ws.addEventListener("open", (event) => {
+				console.log("Client open");
+				statusText.textContent = "WebSocket open";
 			});
 
-			ws.addEventListener('close', (event) => {
-				console.log('Client close');
-				statusText.textContent = 'WebSocket closed';
+			ws.addEventListener("close", (event) => {
+				console.log("Client close");
+				statusText.textContent = "WebSocket closed";
 			});
 		}
 
 		function close() {
 			if (!ws) {
-				console.log('WebSocket already closed');
+				console.log("WebSocket already closed");
 
 				return;
 			}

@@ -53,6 +53,7 @@
 		"eslint": "^8.49.0",
 		"tsx": "^3.12.8",
 		"undici": "catalog:default",
+		"vite": "catalog:default",
 		"wrangler": "workspace:^"
 	},
 	"volta": {

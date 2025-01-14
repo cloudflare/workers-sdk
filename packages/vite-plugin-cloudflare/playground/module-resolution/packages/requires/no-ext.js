@@ -1,1 +1,1 @@
-exports.helloWorldNoExt = `${require('./hello').default} ${require('./world').default}`;
+exports.helloWorldNoExt = `${require("./hello").default} ${require("./world").default}`;

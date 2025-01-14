@@ -1,17 +1,17 @@
-import { describe, expect, test } from 'vitest';
-import { getWarningForWorkersConfigs } from '../workers-configs';
-import type { WorkerConfig } from '../plugin-config';
-import type { Unstable_Config as RawWorkerConfig } from 'wrangler';
+import { describe, expect, test } from "vitest";
+import { getWarningForWorkersConfigs } from "../workers-configs";
+import type { WorkerConfig } from "../plugin-config";
+import type { Unstable_Config as RawWorkerConfig } from "wrangler";
 
-describe('getWarningForWorkersConfigs', () => {
-	describe('no warning needed', () => {
-		test('entry worker only', () => {
+describe("getWarningForWorkersConfigs", () => {
+	describe("no warning needed", () => {
+		test("entry worker only", () => {
 			const warning = getWarningForWorkersConfigs({
 				entryWorker: {
-					type: 'worker',
+					type: "worker",
 					config: {
-						name: 'entry-worker',
-						configPath: './wrangler.json',
+						name: "entry-worker",
+						configPath: "./wrangler.json",
 					} as Partial<WorkerConfig> as WorkerConfig,
 					nonApplicable: getEmptyNotApplicableMap(),
 					raw: getEmptyRawConfig(),
@@ -21,31 +21,31 @@ describe('getWarningForWorkersConfigs', () => {
 			expect(warning).toBeUndefined();
 		});
 
-		test('multi workers', () => {
+		test("multi workers", () => {
 			const warning = getWarningForWorkersConfigs({
 				entryWorker: {
-					type: 'worker',
+					type: "worker",
 					config: {
-						name: 'entry-worker',
-						configPath: './wrangler.json',
+						name: "entry-worker",
+						configPath: "./wrangler.json",
 					} as Partial<WorkerConfig> as WorkerConfig,
 					nonApplicable: getEmptyNotApplicableMap(),
 					raw: getEmptyRawConfig(),
 				},
 				auxiliaryWorkers: [
 					{
-						type: 'worker',
+						type: "worker",
 						config: {
-							name: 'worker-a',
-							configPath: './a/wrangler.json',
+							name: "worker-a",
+							configPath: "./a/wrangler.json",
 						} as Partial<WorkerConfig> as WorkerConfig,
 						nonApplicable: getEmptyNotApplicableMap(),
 						raw: getEmptyRawConfig(),
 					},
 					{
-						type: 'worker',
+						type: "worker",
 						config: {
-							configPath: './b/wrangler.json',
+							configPath: "./b/wrangler.json",
 						} as Partial<WorkerConfig> as WorkerConfig,
 						nonApplicable: getEmptyNotApplicableMap(),
 						raw: getEmptyRawConfig(),
@@ -56,22 +56,22 @@ describe('getWarningForWorkersConfigs', () => {
 		});
 	});
 
-	test('entry worker only', () => {
+	test("entry worker only", () => {
 		const warning = getWarningForWorkersConfigs({
 			entryWorker: {
-				type: 'worker',
+				type: "worker",
 				config: {
-					name: 'entry-worker',
-					configPath: './wrangler.json',
+					name: "entry-worker",
+					configPath: "./wrangler.json",
 				} as Partial<WorkerConfig> as WorkerConfig,
 				nonApplicable: {
-					replacedByVite: new Set(['alias', 'minify']),
+					replacedByVite: new Set(["alias", "minify"]),
 					notRelevant: new Set([
-						'build',
-						'find_additional_modules',
-						'no_bundle',
+						"build",
+						"find_additional_modules",
+						"no_bundle",
 					]),
-					overridden: new Set(['rules']),
+					overridden: new Set(["rules"]),
 				},
 				raw: getEmptyRawConfig(),
 			},
@@ -90,43 +90,43 @@ describe('getWarningForWorkersConfigs', () => {
 		`);
 	});
 
-	test('multi workers', () => {
+	test("multi workers", () => {
 		const warning = getWarningForWorkersConfigs({
 			entryWorker: {
-				type: 'worker',
+				type: "worker",
 				config: {
-					name: 'entry-worker',
-					configPath: './wrangler.json',
+					name: "entry-worker",
+					configPath: "./wrangler.json",
 				} as Partial<WorkerConfig> as WorkerConfig,
 				nonApplicable: {
-					replacedByVite: new Set(['alias']),
-					notRelevant: new Set(['build']),
+					replacedByVite: new Set(["alias"]),
+					notRelevant: new Set(["build"]),
 					overridden: new Set(),
 				},
 				raw: getEmptyRawConfig(),
 			},
 			auxiliaryWorkers: [
 				{
-					type: 'worker',
+					type: "worker",
 					config: {
-						name: 'worker-a',
-						configPath: './a/wrangler.json',
+						name: "worker-a",
+						configPath: "./a/wrangler.json",
 					} as Partial<WorkerConfig> as WorkerConfig,
 					nonApplicable: {
 						replacedByVite: new Set([]),
-						notRelevant: new Set(['find_additional_modules', 'no_bundle']),
+						notRelevant: new Set(["find_additional_modules", "no_bundle"]),
 						overridden: new Set(),
 					},
 					raw: getEmptyRawConfig(),
 				},
 				{
-					type: 'worker',
+					type: "worker",
 					config: {
-						configPath: './b/wrangler.json',
+						configPath: "./b/wrangler.json",
 					} as Partial<WorkerConfig> as WorkerConfig,
 					nonApplicable: {
 						replacedByVite: new Set([]),
-						notRelevant: new Set(['site']),
+						notRelevant: new Set(["site"]),
 						overridden: new Set(),
 					},
 					raw: getEmptyRawConfig(),
@@ -135,8 +135,8 @@ describe('getWarningForWorkersConfigs', () => {
 		});
 		// Note: to make the snapshot work on windows we need to replace path backslashes into normal forward ones
 		const normalizedWarning = warning?.replaceAll(
-			'\\wrangler.json',
-			'/wrangler.json',
+			"\\wrangler.json",
+			"/wrangler.json"
 		);
 		expect(normalizedWarning).toMatchInlineSnapshot(`
 				"

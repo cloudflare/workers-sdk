@@ -1,26 +1,26 @@
-import assert from 'node:assert';
-import { builtinModules } from 'node:module';
-import * as vite from 'vite';
-import { getNodeCompatExternals } from './node-js-compat';
-import { INIT_PATH, UNKNOWN_HOST } from './shared';
-import { getOutputDirectory } from './utils';
-import type { ResolvedPluginConfig, WorkerConfig } from './plugin-config';
-import type { Fetcher } from '@cloudflare/workers-types/experimental';
+import assert from "node:assert";
+import { builtinModules } from "node:module";
+import * as vite from "vite";
+import { getNodeCompatExternals } from "./node-js-compat";
+import { INIT_PATH, UNKNOWN_HOST } from "./shared";
+import { getOutputDirectory } from "./utils";
+import type { ResolvedPluginConfig, WorkerConfig } from "./plugin-config";
+import type { Fetcher } from "@cloudflare/workers-types/experimental";
 import type {
 	MessageEvent,
 	Miniflare,
 	ReplaceWorkersTypes,
 	WebSocket,
-} from 'miniflare';
+} from "miniflare";
 
 interface WebSocketContainer {
 	webSocket?: WebSocket;
 }
 
-const webSocketUndefinedError = 'The WebSocket is undefined';
+const webSocketUndefinedError = "The WebSocket is undefined";
 
 function createHotChannel(
-	webSocketContainer: WebSocketContainer,
+	webSocketContainer: WebSocketContainer
 ): vite.HotChannel {
 	const listenersMap = new Map<string, Set<vite.HotChannelListener>>();
 
@@ -62,13 +62,13 @@ function createHotChannel(
 			const webSocket = webSocketContainer.webSocket;
 			assert(webSocket, webSocketUndefinedError);
 
-			webSocket.addEventListener('message', onMessage);
+			webSocket.addEventListener("message", onMessage);
 		},
 		close() {
 			const webSocket = webSocketContainer.webSocket;
 			assert(webSocket, webSocketUndefinedError);
 
-			webSocket.removeEventListener('message', onMessage);
+			webSocket.removeEventListener("message", onMessage);
 		},
 	};
 }
@@ -94,15 +94,15 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 			new URL(INIT_PATH, UNKNOWN_HOST),
 			{
 				headers: {
-					upgrade: 'websocket',
+					upgrade: "websocket",
 				},
-			},
+			}
 		);
 
-		assert(response.ok, 'Failed to initialize module runner');
+		assert(response.ok, "Failed to initialize module runner");
 
 		const webSocket = response.webSocket;
-		assert(webSocket, 'Failed to establish WebSocket');
+		assert(webSocket, "Failed to establish WebSocket");
 
 		webSocket.accept();
 
@@ -111,16 +111,16 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 }
 
 const cloudflareBuiltInModules = [
-	'cloudflare:email',
-	'cloudflare:sockets',
-	'cloudflare:workers',
-	'cloudflare:workflows',
+	"cloudflare:email",
+	"cloudflare:sockets",
+	"cloudflare:workers",
+	"cloudflare:workflows",
 ];
 
 export function createCloudflareEnvironmentOptions(
 	workerConfig: WorkerConfig,
 	userConfig: vite.UserConfig,
-	environmentName: string,
+	environmentName: string
 ): vite.EnvironmentOptions {
 	return {
 		resolve: {
@@ -128,7 +128,7 @@ export function createCloudflareEnvironmentOptions(
 			//       dependencies as not external
 			noExternal: true,
 			// We want to use `workerd` package exports if available (e.g. for postgres).
-			conditions: ['workerd', 'module', 'browser', 'development|production'],
+			conditions: ["workerd", "module", "browser", "development|production"],
 		},
 		dev: {
 			createEnvironment(name, config) {
@@ -159,18 +159,18 @@ export function createCloudflareEnvironmentOptions(
 				...builtinModules.concat(builtinModules.map((m) => `node:${m}`)),
 			],
 			esbuildOptions: {
-				platform: 'neutral',
+				platform: "neutral",
 				resolveExtensions: [
-					'.mjs',
-					'.js',
-					'.mts',
-					'.ts',
-					'.jsx',
-					'.tsx',
-					'.json',
-					'.cjs',
-					'.cts',
-					'.ctx',
+					".mjs",
+					".js",
+					".mts",
+					".ts",
+					".jsx",
+					".tsx",
+					".json",
+					".cjs",
+					".cts",
+					".ctx",
 				],
 			},
 		},
@@ -181,9 +181,9 @@ export function createCloudflareEnvironmentOptions(
 export function initRunners(
 	resolvedPluginConfig: ResolvedPluginConfig,
 	viteDevServer: vite.ViteDevServer,
-	miniflare: Miniflare,
+	miniflare: Miniflare
 ): Promise<void[]> | undefined {
-	if (resolvedPluginConfig.type === 'assets-only') {
+	if (resolvedPluginConfig.type === "assets-only") {
 		return;
 	}
 
@@ -197,7 +197,7 @@ export function initRunners(
 						environmentName
 					] as CloudflareDevEnvironment
 				).initRunner(worker);
-			},
-		),
+			}
+		)
 	);
 }

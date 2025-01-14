@@ -1,13 +1,13 @@
-import * as path from 'node:path';
-import { Request as MiniflareRequest } from 'miniflare';
-import * as vite from 'vite';
-import type { IncomingHttpHeaders } from 'node:http';
+import * as path from "node:path";
+import { Request as MiniflareRequest } from "miniflare";
+import * as vite from "vite";
+import type { IncomingHttpHeaders } from "node:http";
 
 export function getOutputDirectory(
 	userConfig: vite.UserConfig,
-	environmentName: string,
+	environmentName: string
 ) {
-	const rootOutputDirectory = userConfig.build?.outDir ?? 'dist';
+	const rootOutputDirectory = userConfig.build?.outDir ?? "dist";
 
 	return (
 		userConfig.environments?.[environmentName]?.build?.outDir ??
@@ -18,19 +18,19 @@ export function getOutputDirectory(
 export function toMiniflareRequest(request: Request): MiniflareRequest {
 	return new MiniflareRequest(request.url, {
 		method: request.method,
-		headers: [['accept-encoding', 'identity'], ...request.headers],
+		headers: [["accept-encoding", "identity"], ...request.headers],
 		body: request.body,
-		duplex: 'half',
+		duplex: "half",
 	});
 }
 
 export function nodeHeadersToWebHeaders(
-	nodeHeaders: IncomingHttpHeaders,
+	nodeHeaders: IncomingHttpHeaders
 ): Headers {
 	const headers = new Headers();
 
 	for (const [key, value] of Object.entries(nodeHeaders)) {
-		if (typeof value === 'string') {
+		if (typeof value === "string") {
 			headers.append(key, value);
 		} else if (Array.isArray(value)) {
 			for (const item of value) {

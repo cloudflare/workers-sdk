@@ -1,22 +1,22 @@
-import { WorkflowEntrypoint } from 'cloudflare:workers';
-import type { WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
+import { WorkflowEntrypoint } from "cloudflare:workers";
+import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
 export class MyWorkflow extends WorkflowEntrypoint {
 	override async run(event: WorkflowEvent<Params>, step: WorkflowStep) {
-		await step.do('first step', async () => {
+		await step.do("first step", async () => {
 			return {
-				output: 'First step result',
+				output: "First step result",
 			};
 		});
 
-		await step.sleep('sleep', '1 second');
+		await step.sleep("sleep", "1 second");
 
-		await step.do('second step', async () => {
+		await step.do("second step", async () => {
 			return {
-				output: 'Second step result',
+				output: "Second step result",
 			};
 		});
 
-		return 'Workflow output';
+		return "Workflow output";
 	}
 }

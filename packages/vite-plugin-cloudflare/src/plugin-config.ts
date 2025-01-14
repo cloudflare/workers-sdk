@@ -1,13 +1,13 @@
-import assert from 'node:assert';
-import * as path from 'node:path';
-import * as vite from 'vite';
-import { findWranglerConfig, getWorkerConfig } from './workers-configs';
+import assert from "node:assert";
+import * as path from "node:path";
+import * as vite from "vite";
+import { findWranglerConfig, getWorkerConfig } from "./workers-configs";
 import type {
 	AssetsOnlyWorkerResolvedConfig,
 	SanitizedWorkerConfig,
 	WorkerResolvedConfig,
 	WorkerWithServerLogicResolvedConfig,
-} from './workers-configs';
+} from "./workers-configs";
 
 export type PersistState = boolean | { path: string };
 
@@ -31,17 +31,17 @@ export interface PluginConfig extends EntryWorkerConfig {
 type Defined<T> = Exclude<T, undefined>;
 
 interface BaseConfig extends SanitizedWorkerConfig {
-	topLevelName: Defined<SanitizedWorkerConfig['topLevelName']>;
-	name: Defined<SanitizedWorkerConfig['name']>;
-	compatibility_date: Defined<SanitizedWorkerConfig['compatibility_date']>;
+	topLevelName: Defined<SanitizedWorkerConfig["topLevelName"]>;
+	name: Defined<SanitizedWorkerConfig["name"]>;
+	compatibility_date: Defined<SanitizedWorkerConfig["compatibility_date"]>;
 }
 
 export interface AssetsOnlyConfig extends BaseConfig {
-	assets: Defined<SanitizedWorkerConfig['assets']>;
+	assets: Defined<SanitizedWorkerConfig["assets"]>;
 }
 
 export interface WorkerConfig extends BaseConfig {
-	main: Defined<SanitizedWorkerConfig['main']>;
+	main: Defined<SanitizedWorkerConfig["main"]>;
 }
 
 interface BasePluginConfig {
@@ -50,7 +50,7 @@ interface BasePluginConfig {
 }
 
 interface AssetsOnlyPluginConfig extends BasePluginConfig {
-	type: 'assets-only';
+	type: "assets-only";
 	config: AssetsOnlyConfig;
 	rawConfigs: {
 		entryWorker: AssetsOnlyWorkerResolvedConfig;
@@ -58,7 +58,7 @@ interface AssetsOnlyPluginConfig extends BasePluginConfig {
 }
 
 interface WorkerPluginConfig extends BasePluginConfig {
-	type: 'workers';
+	type: "workers";
 	workers: Record<string, WorkerConfig>;
 	entryWorkerEnvironmentName: string;
 	rawConfigs: {
@@ -71,18 +71,18 @@ export type ResolvedPluginConfig = AssetsOnlyPluginConfig | WorkerPluginConfig;
 
 // Worker names can only contain alphanumeric characters and '-' whereas environment names can only contain alphanumeric characters and '$', '_'
 function workerNameToEnvironmentName(workerName: string) {
-	return workerName.replaceAll('-', '_');
+	return workerName.replaceAll("-", "_");
 }
 
 export function resolvePluginConfig(
 	pluginConfig: PluginConfig,
 	userConfig: vite.UserConfig,
-	viteEnv: vite.ConfigEnv,
+	viteEnv: vite.ConfigEnv
 ): ResolvedPluginConfig {
 	const configPaths = new Set<string>();
 	const persistState = pluginConfig.persistState ?? true;
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
-	const { CLOUDFLARE_ENV } = vite.loadEnv(viteEnv.mode, root, '');
+	const { CLOUDFLARE_ENV } = vite.loadEnv(viteEnv.mode, root, "");
 
 	const configPath = pluginConfig.configPath
 		? path.resolve(root, pluginConfig.configPath)
@@ -90,7 +90,7 @@ export function resolvePluginConfig(
 
 	assert(
 		configPath,
-		`Config not found. Have you created a wrangler.json(c) or wrangler.toml file?`,
+		`Config not found. Have you created a wrangler.json(c) or wrangler.toml file?`
 	);
 
 	const entryWorkerResolvedConfig = getWorkerConfig(
@@ -99,12 +99,12 @@ export function resolvePluginConfig(
 		{
 			visitedConfigPaths: configPaths,
 			isEntryWorker: true,
-		},
+		}
 	);
 
-	if (entryWorkerResolvedConfig.type === 'assets-only') {
+	if (entryWorkerResolvedConfig.type === "assets-only") {
 		return {
-			type: 'assets-only',
+			type: "assets-only",
 			config: entryWorkerResolvedConfig.config,
 			configPaths,
 			persistState,
@@ -132,14 +132,14 @@ export function resolvePluginConfig(
 			CLOUDFLARE_ENV,
 			{
 				visitedConfigPaths: configPaths,
-			},
+			}
 		);
 
 		auxiliaryWorkersResolvedConfigs.push(workerResolvedConfig);
 
 		assert(
-			workerResolvedConfig.type === 'worker',
-			'Unexpected error: received AssetsOnlyResult with auxiliary workers.',
+			workerResolvedConfig.type === "worker",
+			"Unexpected error: received AssetsOnlyResult with auxiliary workers."
 		);
 
 		const workerConfig = workerResolvedConfig.config;
@@ -150,7 +150,7 @@ export function resolvePluginConfig(
 
 		if (workers[workerEnvironmentName]) {
 			throw new Error(
-				`Duplicate Vite environment name found: ${workerEnvironmentName}`,
+				`Duplicate Vite environment name found: ${workerEnvironmentName}`
 			);
 		}
 
@@ -158,7 +158,7 @@ export function resolvePluginConfig(
 	}
 
 	return {
-		type: 'workers',
+		type: "workers",
 		configPaths,
 		persistState,
 		workers,

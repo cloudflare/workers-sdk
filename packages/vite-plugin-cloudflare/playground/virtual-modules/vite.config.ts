@@ -1,17 +1,17 @@
-import { cloudflare } from '@flarelabs-net/vite-plugin-cloudflare';
-import { defineConfig } from 'vite';
+import { cloudflare } from "@flarelabs-net/vite-plugin-cloudflare";
+import { defineConfig } from "vite";
 
 export default defineConfig({
 	plugins: [
 		{
-			name: 'virtual-module-plugin',
+			name: "virtual-module-plugin",
 			resolveId(id) {
-				if (id === 'virtual:module') {
+				if (id === "virtual:module") {
 					return `\0virtual:module`;
 				}
 			},
 			load(id) {
-				if (id === '\0virtual:module') {
+				if (id === "\0virtual:module") {
 					return `export default 'virtual module'`;
 				}
 			},

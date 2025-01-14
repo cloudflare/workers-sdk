@@ -1,13 +1,13 @@
-import { expect, test, vi } from 'vitest';
-import { getJsonResponse } from '../../__test-utils__';
+import { expect, test, vi } from "vitest";
+import { getJsonResponse } from "../../__test-utils__";
 
-test('creates a Workflow with an ID', async () => {
-	const instanceId = 'test-id';
+test("creates a Workflow with an ID", async () => {
+	const instanceId = "test-id";
 
 	expect(await getJsonResponse(`/create?id=${instanceId}`)).toEqual({
 		id: instanceId,
 		status: {
-			status: 'running',
+			status: "running",
 			__LOCAL_DEV_STEP_OUTPUTS: [],
 			output: null,
 		},
@@ -16,25 +16,25 @@ test('creates a Workflow with an ID', async () => {
 	await vi.waitFor(
 		async () => {
 			expect(await getJsonResponse(`/get?id=${instanceId}`)).toEqual({
-				status: 'running',
-				__LOCAL_DEV_STEP_OUTPUTS: [{ output: 'First step result' }],
+				status: "running",
+				__LOCAL_DEV_STEP_OUTPUTS: [{ output: "First step result" }],
 				output: null,
 			});
 		},
-		{ timeout: 5000 },
+		{ timeout: 5000 }
 	);
 
 	await vi.waitFor(
 		async () => {
 			expect(await getJsonResponse(`/get?id=${instanceId}`)).toEqual({
-				status: 'complete',
+				status: "complete",
 				__LOCAL_DEV_STEP_OUTPUTS: [
-					{ output: 'First step result' },
-					{ output: 'Second step result' },
+					{ output: "First step result" },
+					{ output: "Second step result" },
 				],
-				output: 'Workflow output',
+				output: "Workflow output",
 			});
 		},
-		{ timeout: 5000 },
+		{ timeout: 5000 }
 	);
 });

@@ -1,5 +1,5 @@
 {
-	"extends": ["@vite-plugin-cloudflare/typescript-config/worker.json"],
+	"extends": ["@cloudflare/workers-tsconfig/worker.json"],
 	"compilerOptions": {
 		"paths": {
 			"@alias/test": ["./src/aliasing.ts"]

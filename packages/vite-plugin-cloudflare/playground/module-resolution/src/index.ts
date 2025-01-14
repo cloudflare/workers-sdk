@@ -1,19 +1,19 @@
-const modules = import.meta.glob('../src/**/*.ts');
+const modules = import.meta.glob("../src/**/*.ts");
 
 export default {
 	async fetch(request) {
 		const url = new URL(request.url);
 		const path = url.pathname;
 
-		const filePath = `${path.replace(/^\//, './')}.ts`;
+		const filePath = `${path.replace(/^\//, "./")}.ts`;
 
 		if (modules[filePath]) {
 			const mod = await modules[filePath]();
 			return Response.json((mod as { default: unknown }).default);
 		}
 
-		if (path === '/@alias/test') {
-			const { test } = await import('@alias/test');
+		if (path === "/@alias/test") {
+			const { test } = await import("@alias/test");
 			return test();
 		}
 
@@ -26,19 +26,19 @@ export default {
               <hr />
               <h2>Available Routes</h2>
               <ul>
-              ${[...Object.keys(modules), '/@alias/test']
-								.map((path) => path.replace(/^\.\//, '/').replace(/\.ts$/, ''))
+              ${[...Object.keys(modules), "/@alias/test"]
+								.map((path) => path.replace(/^\.\//, "/").replace(/\.ts$/, ""))
 								.map(
 									(route) =>
-										`                <li><a href="${route}">${route}</a></li>`,
+										`                <li><a href="${route}">${route}</a></li>`
 								)
-								.join('\n')}
+								.join("\n")}
               </ul>
             </body>`;
 
 		return new Response(html, {
 			headers: {
-				'content-type': 'text/html;charset=UTF-8',
+				"content-type": "text/html;charset=UTF-8",
 			},
 		});
 	},

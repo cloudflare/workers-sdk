@@ -5,11 +5,11 @@ interface Env {
 export default {
 	async fetch(request, env) {
 		const url = new URL(request.url);
-		const id = url.searchParams.get('id');
+		const id = url.searchParams.get("id");
 
-		if (url.pathname === '/create') {
+		if (url.pathname === "/create") {
 			const instance = await env.MY_WORKFLOW.create(
-				id === null ? undefined : { id },
+				id === null ? undefined : { id }
 			);
 
 			return Response.json({
@@ -18,10 +18,10 @@ export default {
 			});
 		}
 
-		if (url.pathname === '/get') {
+		if (url.pathname === "/get") {
 			if (id === null) {
 				return new Response(
-					'Please provide an id (`/get?id=unique-instance-id`)',
+					"Please provide an id (`/get?id=unique-instance-id`)"
 				);
 			}
 
@@ -31,7 +31,7 @@ export default {
 		}
 
 		return new Response(
-			'Create a new Workflow instance (`/create` or `/create?id=unique-instance-id`) or inspect an existing instance (`/get?id=unique-instance-id`).',
+			"Create a new Workflow instance (`/create` or `/create?id=unique-instance-id`) or inspect an existing instance (`/get?id=unique-instance-id`)."
 		);
 	},
 } satisfies ExportedHandler<Env>;

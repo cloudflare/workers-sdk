@@ -1,6 +1,6 @@
-import { expect, test } from 'vitest';
-import { getTextResponse } from '../../../__test-utils__';
+import { expect, test } from "vitest";
+import { getTextResponse } from "../../../__test-utils__";
 
-test('returns the correct var when CLOUDFLARE_ENV is provided in a .env.[mode] file', async () => {
-	expect(await getTextResponse()).toEqual('Custom env var');
+test("returns the correct var when CLOUDFLARE_ENV is provided in a .env.[mode] file", async () => {
+	expect(await getTextResponse()).toEqual("Custom env var");
 });

@@ -1,4 +1,4 @@
-import { Client } from 'pg';
+import { Client } from "pg";
 
 interface Env {
 	DB_HOSTNAME: string;
@@ -19,7 +19,7 @@ export default {
 		});
 
 		const url = new URL(request.url);
-		if (url.pathname == '/send-query') {
+		if (url.pathname == "/send-query") {
 			return testPostgresLibrary(client, ctx);
 		} else {
 			return new Response(client.host);

@@ -1,13 +1,13 @@
-import { cloudflare } from '@flarelabs-net/vite-plugin-cloudflare';
-import { defineConfig } from 'vite';
+import { cloudflare } from "@flarelabs-net/vite-plugin-cloudflare";
+import { defineConfig } from "vite";
 
 export default defineConfig({
 	build: {
-		outDir: 'dist/worker-basic',
+		outDir: "dist/worker-basic",
 	},
 	plugins: [
 		cloudflare({
-			configPath: './worker-basic/wrangler.toml',
+			configPath: "./worker-basic/wrangler.toml",
 			persistState: false,
 		}),
 	],

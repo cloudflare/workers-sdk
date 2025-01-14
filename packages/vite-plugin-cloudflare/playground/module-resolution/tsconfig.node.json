@@ -1,4 +1,4 @@
 {
-	"extends": ["@vite-plugin-cloudflare/typescript-config/base.json"],
+	"extends": ["@cloudflare/workers-tsconfig/base.json"],
 	"include": ["vite.config.ts", "vite.config.*.ts", "__tests__"]
 }

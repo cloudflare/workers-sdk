@@ -1,3 +1,3 @@
-exports.packageName = `${require('./package.json').name}`;
+exports.packageName = `${require("./package.json").name}`;
 
-exports.packageVersion = `${require('./package.json').version}`;
+exports.packageVersion = `${require("./package.json").version}`;

@@ -1,61 +1,61 @@
-import assert from 'node:assert';
-import * as fs from 'node:fs';
-import * as fsp from 'node:fs/promises';
-import * as path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { Log, LogLevel, Response as MiniflareResponse } from 'miniflare';
-import * as vite from 'vite';
+import assert from "node:assert";
+import * as fs from "node:fs";
+import * as fsp from "node:fs/promises";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+import { Log, LogLevel, Response as MiniflareResponse } from "miniflare";
+import * as vite from "vite";
 import {
 	unstable_getMiniflareWorkerOptions,
 	unstable_readConfig,
-} from 'wrangler';
+} from "wrangler";
 import {
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
 	ROUTER_WORKER_NAME,
-} from './constants';
-import { getWorkerConfigPaths } from './deploy-config';
-import type { CloudflareDevEnvironment } from './cloudflare-environment';
+} from "./constants";
+import { getWorkerConfigPaths } from "./deploy-config";
+import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
 	PersistState,
 	ResolvedPluginConfig,
 	WorkerConfig,
-} from './plugin-config';
-import type { MiniflareOptions, SharedOptions, WorkerOptions } from 'miniflare';
-import type { FetchFunctionOptions } from 'vite/module-runner';
+} from "./plugin-config";
+import type { MiniflareOptions, SharedOptions, WorkerOptions } from "miniflare";
+import type { FetchFunctionOptions } from "vite/module-runner";
 
 type PersistOptions = Pick<
 	SharedOptions,
-	| 'cachePersist'
-	| 'd1Persist'
-	| 'durableObjectsPersist'
-	| 'kvPersist'
-	| 'r2Persist'
-	| 'workflowsPersist'
+	| "cachePersist"
+	| "d1Persist"
+	| "durableObjectsPersist"
+	| "kvPersist"
+	| "r2Persist"
+	| "workflowsPersist"
 >;
 
 function getPersistence(
 	root: string,
-	persistState: PersistState,
+	persistState: PersistState
 ): PersistOptions {
 	if (persistState === false) {
 		return {};
 	}
 
-	const defaultPersistPath = '.wrangler/state';
+	const defaultPersistPath = ".wrangler/state";
 	const persistPath = path.resolve(
 		root,
-		typeof persistState === 'object' ? persistState.path : defaultPersistPath,
-		'v3',
+		typeof persistState === "object" ? persistState.path : defaultPersistPath,
+		"v3"
 	);
 
 	return {
-		cachePersist: path.join(persistPath, 'cache'),
-		d1Persist: path.join(persistPath, 'd1'),
-		durableObjectsPersist: path.join(persistPath, 'do'),
-		kvPersist: path.join(persistPath, 'kv'),
-		r2Persist: path.join(persistPath, 'r2'),
-		workflowsPersist: path.join(persistPath, 'workflows'),
+		cachePersist: path.join(persistPath, "cache"),
+		d1Persist: path.join(persistPath, "d1"),
+		durableObjectsPersist: path.join(persistPath, "do"),
+		kvPersist: path.join(persistPath, "kv"),
+		r2Persist: path.join(persistPath, "r2"),
+		workflowsPersist: path.join(persistPath, "workflows"),
 	};
 }
 
@@ -64,23 +64,23 @@ function missingWorkerErrorMessage(workerName: string) {
 }
 
 function getWorkerToWorkerEntrypointNamesMap(
-	workers: Array<Pick<WorkerOptions, 'serviceBindings'> & { name: string }>,
+	workers: Array<Pick<WorkerOptions, "serviceBindings"> & { name: string }>
 ) {
 	const workerToWorkerEntrypointNamesMap = new Map(
-		workers.map((workerOptions) => [workerOptions.name, new Set<string>()]),
+		workers.map((workerOptions) => [workerOptions.name, new Set<string>()])
 	);
 
 	for (const worker of workers) {
 		for (const value of Object.values(worker.serviceBindings ?? {})) {
 			if (
-				typeof value === 'object' &&
-				'name' in value &&
-				typeof value.name === 'string' &&
+				typeof value === "object" &&
+				"name" in value &&
+				typeof value.name === "string" &&
 				value.entrypoint !== undefined &&
-				value.entrypoint !== 'default'
+				value.entrypoint !== "default"
 			) {
 				const entrypointNames = workerToWorkerEntrypointNamesMap.get(
-					value.name,
+					value.name
 				);
 				assert(entrypointNames, missingWorkerErrorMessage(value.name));
 
@@ -93,30 +93,30 @@ function getWorkerToWorkerEntrypointNamesMap(
 }
 
 function getWorkerToDurableObjectClassNamesMap(
-	workers: Array<Pick<WorkerOptions, 'durableObjects'> & { name: string }>,
+	workers: Array<Pick<WorkerOptions, "durableObjects"> & { name: string }>
 ) {
 	const workerToDurableObjectClassNamesMap = new Map(
-		workers.map((workerOptions) => [workerOptions.name, new Set<string>()]),
+		workers.map((workerOptions) => [workerOptions.name, new Set<string>()])
 	);
 
 	for (const worker of workers) {
 		for (const value of Object.values(worker.durableObjects ?? {})) {
-			if (typeof value === 'string') {
+			if (typeof value === "string") {
 				const classNames = workerToDurableObjectClassNamesMap.get(worker.name);
 				assert(classNames, missingWorkerErrorMessage(worker.name));
 
 				classNames.add(value);
-			} else if (typeof value === 'object') {
+			} else if (typeof value === "object") {
 				if (value.scriptName) {
 					const classNames = workerToDurableObjectClassNamesMap.get(
-						value.scriptName,
+						value.scriptName
 					);
 					assert(classNames, missingWorkerErrorMessage(value.scriptName));
 
 					classNames.add(value.className);
 				} else {
 					const classNames = workerToDurableObjectClassNamesMap.get(
-						worker.name,
+						worker.name
 					);
 					assert(classNames, missingWorkerErrorMessage(worker.name));
 
@@ -130,24 +130,24 @@ function getWorkerToDurableObjectClassNamesMap(
 }
 
 function getWorkerToWorkflowEntrypointClassNamesMap(
-	workers: Array<Pick<WorkerOptions, 'workflows'> & { name: string }>,
+	workers: Array<Pick<WorkerOptions, "workflows"> & { name: string }>
 ) {
 	const workerToWorkflowEntrypointClassNamesMap = new Map(
-		workers.map((workerOptions) => [workerOptions.name, new Set<string>()]),
+		workers.map((workerOptions) => [workerOptions.name, new Set<string>()])
 	);
 
 	for (const worker of workers) {
 		for (const value of Object.values(worker.workflows ?? {})) {
 			if (value.scriptName) {
 				const classNames = workerToWorkflowEntrypointClassNamesMap.get(
-					value.scriptName,
+					value.scriptName
 				);
 				assert(classNames, missingWorkerErrorMessage(value.scriptName));
 
 				classNames.add(value.className);
 			} else {
 				const classNames = workerToWorkflowEntrypointClassNamesMap.get(
-					worker.name,
+					worker.name
 				);
 				assert(classNames, missingWorkerErrorMessage(worker.name));
 
@@ -166,16 +166,16 @@ function getWorkerToWorkflowEntrypointClassNamesMap(
 // module names. Setting `modulesRoot` to a drive letter and prepending this
 // to paths ensures correct names. This requires us to specify `contents` in
 // the miniflare module definitions though, as the new paths don't exist.
-const miniflareModulesRoot = process.platform === 'win32' ? 'Z:\\' : '/';
-const ROUTER_WORKER_PATH = './asset-workers/router-worker.js';
-const ASSET_WORKER_PATH = './asset-workers/asset-worker.js';
-const WRAPPER_PATH = '__VITE_WORKER_ENTRY__';
-const RUNNER_PATH = './runner-worker/index.js';
+const miniflareModulesRoot = process.platform === "win32" ? "Z:\\" : "/";
+const ROUTER_WORKER_PATH = "./asset-workers/router-worker.js";
+const ASSET_WORKER_PATH = "./asset-workers/asset-worker.js";
+const WRAPPER_PATH = "__VITE_WORKER_ENTRY__";
+const RUNNER_PATH = "./runner-worker/index.js";
 
 function getEntryWorkerConfig(
-	resolvedPluginConfig: ResolvedPluginConfig,
+	resolvedPluginConfig: ResolvedPluginConfig
 ): WorkerConfig | undefined {
-	if (resolvedPluginConfig.type === 'assets-only') {
+	if (resolvedPluginConfig.type === "assets-only") {
 		return;
 	}
 
@@ -186,12 +186,12 @@ function getEntryWorkerConfig(
 
 export function getDevMiniflareOptions(
 	resolvedPluginConfig: ResolvedPluginConfig,
-	viteDevServer: vite.ViteDevServer,
+	viteDevServer: vite.ViteDevServer
 ): MiniflareOptions {
 	const resolvedViteConfig = viteDevServer.config;
 	const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
 	const assetsConfig =
-		resolvedPluginConfig.type === 'assets-only'
+		resolvedPluginConfig.type === "assets-only"
 			? resolvedPluginConfig.config.assets
 			: entryWorkerConfig?.assets;
 
@@ -202,16 +202,16 @@ export function getDevMiniflareOptions(
 			modulesRoot: miniflareModulesRoot,
 			modules: [
 				{
-					type: 'ESModule',
+					type: "ESModule",
 					path: path.join(miniflareModulesRoot, ROUTER_WORKER_PATH),
 					contents: fs.readFileSync(
-						fileURLToPath(new URL(ROUTER_WORKER_PATH, import.meta.url)),
+						fileURLToPath(new URL(ROUTER_WORKER_PATH, import.meta.url))
 					),
 				},
 			],
 			bindings: {
 				CONFIG: {
-					has_user_worker: resolvedPluginConfig.type === 'workers',
+					has_user_worker: resolvedPluginConfig.type === "workers",
 				},
 			},
 			serviceBindings: {
@@ -225,10 +225,10 @@ export function getDevMiniflareOptions(
 			modulesRoot: miniflareModulesRoot,
 			modules: [
 				{
-					type: 'ESModule',
+					type: "ESModule",
 					path: path.join(miniflareModulesRoot, ASSET_WORKER_PATH),
 					contents: fs.readFileSync(
-						fileURLToPath(new URL(ASSET_WORKER_PATH, import.meta.url)),
+						fileURLToPath(new URL(ASSET_WORKER_PATH, import.meta.url))
 					),
 				},
 			],
@@ -262,11 +262,11 @@ export function getDevMiniflareOptions(
 					const filePath = path.join(resolvedViteConfig.root, pathname);
 
 					try {
-						let html = await fsp.readFile(filePath, 'utf-8');
+						let html = await fsp.readFile(filePath, "utf-8");
 						html = await viteDevServer.transformIndexHtml(pathname, html);
 
 						return new MiniflareResponse(html, {
-							headers: { 'Content-Type': 'text/html' },
+							headers: { "Content-Type": "text/html" },
 						});
 					} catch (error) {
 						throw new Error(`Unexpected error. Failed to load ${pathname}`);
@@ -277,7 +277,7 @@ export function getDevMiniflareOptions(
 	];
 
 	const userWorkers =
-		resolvedPluginConfig.type === 'workers'
+		resolvedPluginConfig.type === "workers"
 			? Object.entries(resolvedPluginConfig.workers).map(
 					([environmentName, workerConfig]) => {
 						const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions({
@@ -293,7 +293,7 @@ export function getDevMiniflareOptions(
 							// We have to add the name again because `unstable_getMiniflareWorkerOptions` sets it to `undefined`
 							name: workerConfig.name,
 							modulesRoot: miniflareModulesRoot,
-							unsafeEvalBinding: '__VITE_UNSAFE_EVAL__',
+							unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
 							bindings: {
 								...workerOptions.bindings,
 								__VITE_ROOT__: resolvedViteConfig.root,
@@ -317,18 +317,18 @@ export function getDevMiniflareOptions(
 									};
 
 									assert(
-										invokePayloadData.name === 'fetchModule',
-										`Invalid invoke event: ${invokePayloadData.name}`,
+										invokePayloadData.name === "fetchModule",
+										`Invalid invoke event: ${invokePayloadData.name}`
 									);
 
 									const [moduleId] = invokePayloadData.data;
 
 									// For some reason we need this here for cloudflare built-ins (e.g. `cloudflare:workers`) but not for node built-ins (e.g. `node:path`)
 									// See https://github.com/flarelabs-net/vite-plugin-cloudflare/issues/46
-									if (moduleId.startsWith('cloudflare:')) {
+									if (moduleId.startsWith("cloudflare:")) {
 										const result = {
 											externalize: moduleId,
-											type: 'builtin',
+											type: "builtin",
 										} satisfies vite.FetchResult;
 
 										return new MiniflareResponse(JSON.stringify({ result }));
@@ -344,7 +344,7 @@ export function getDevMiniflareOptions(
 								},
 							},
 						} satisfies Partial<WorkerOptions>;
-					},
+					}
 				)
 			: [];
 
@@ -363,12 +363,12 @@ export function getDevMiniflareOptions(
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));
 			stderr.forEach((error) =>
-				logger.logWithLevel(LogLevel.ERROR, decoder.decode(error)),
+				logger.logWithLevel(LogLevel.ERROR, decoder.decode(error))
 			);
 		},
 		...getPersistence(
 			resolvedViteConfig.root,
-			resolvedPluginConfig.persistState,
+			resolvedPluginConfig.persistState
 		),
 		workers: [
 			...assetWorkers,
@@ -379,30 +379,30 @@ export function getDevMiniflareOptions(
 				];
 
 				const workerEntrypointNames = workerToWorkerEntrypointNamesMap.get(
-					workerOptions.name,
+					workerOptions.name
 				);
 				assert(
 					workerEntrypointNames,
-					`WorkerEntrypoint names not found for worker ${workerOptions.name}`,
+					`WorkerEntrypoint names not found for worker ${workerOptions.name}`
 				);
 
 				for (const entrypointName of [...workerEntrypointNames].sort()) {
 					wrappers.push(
-						`export const ${entrypointName} = createWorkerEntrypointWrapper('${entrypointName}');`,
+						`export const ${entrypointName} = createWorkerEntrypointWrapper('${entrypointName}');`
 					);
 				}
 
 				const durableObjectClassNames = workerToDurableObjectClassNamesMap.get(
-					workerOptions.name,
+					workerOptions.name
 				);
 				assert(
 					durableObjectClassNames,
-					`DurableObject class names not found for worker ${workerOptions.name}`,
+					`DurableObject class names not found for worker ${workerOptions.name}`
 				);
 
 				for (const className of [...durableObjectClassNames].sort()) {
 					wrappers.push(
-						`export const ${className} = createDurableObjectWrapper('${className}');`,
+						`export const ${className} = createDurableObjectWrapper('${className}');`
 					);
 				}
 
@@ -410,12 +410,12 @@ export function getDevMiniflareOptions(
 					workerToWorkflowEntrypointClassNamesMap.get(workerOptions.name);
 				assert(
 					workflowEntrypointClassNames,
-					`WorkflowEntrypoint class names not found for worker ${workerOptions.name}`,
+					`WorkflowEntrypoint class names not found for worker ${workerOptions.name}`
 				);
 
 				for (const className of [...workflowEntrypointClassNames].sort()) {
 					wrappers.push(
-						`export const ${className} = createWorkflowEntrypointWrapper('${className}');`,
+						`export const ${className} = createWorkflowEntrypointWrapper('${className}');`
 					);
 				}
 
@@ -423,15 +423,15 @@ export function getDevMiniflareOptions(
 					...workerOptions,
 					modules: [
 						{
-							type: 'ESModule',
+							type: "ESModule",
 							path: path.join(miniflareModulesRoot, WRAPPER_PATH),
-							contents: wrappers.join('\n'),
+							contents: wrappers.join("\n"),
 						},
 						{
-							type: 'ESModule',
+							type: "ESModule",
 							path: path.join(miniflareModulesRoot, RUNNER_PATH),
 							contents: fs.readFileSync(
-								fileURLToPath(new URL(RUNNER_PATH, import.meta.url)),
+								fileURLToPath(new URL(RUNNER_PATH, import.meta.url))
 							),
 						},
 					],
@@ -443,12 +443,12 @@ export function getDevMiniflareOptions(
 
 export function getPreviewMiniflareOptions(
 	vitePreviewServer: vite.PreviewServer,
-	persistState: PersistState,
+	persistState: PersistState
 ): MiniflareOptions {
 	const resolvedViteConfig = vitePreviewServer.config;
 	const configPaths = getWorkerConfigPaths(resolvedViteConfig.root);
 	const workerConfigs = configPaths.map((configPath) =>
-		unstable_readConfig({ config: configPath }),
+		unstable_readConfig({ config: configPath })
 	);
 
 	const workers: Array<WorkerOptions> = workerConfigs.map((config) => {
@@ -464,7 +464,7 @@ export function getPreviewMiniflareOptions(
 			modules: true,
 			...(miniflareWorkerOptions.main
 				? { scriptPath: miniflareWorkerOptions.main }
-				: { script: '' }),
+				: { script: "" }),
 		};
 	});
 
@@ -476,7 +476,7 @@ export function getPreviewMiniflareOptions(
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));
 			stderr.forEach((error) =>
-				logger.logWithLevel(LogLevel.ERROR, decoder.decode(error)),
+				logger.logWithLevel(LogLevel.ERROR, decoder.decode(error))
 			);
 		},
 		...getPersistence(resolvedViteConfig.root, persistState),
@@ -510,16 +510,16 @@ class ViteMiniflareLogger extends Log {
 }
 
 function miniflareLogLevelFromViteLogLevel(
-	level: vite.LogLevel = 'info',
+	level: vite.LogLevel = "info"
 ): LogLevel {
 	switch (level) {
-		case 'error':
+		case "error":
 			return LogLevel.ERROR;
-		case 'warn':
+		case "warn":
 			return LogLevel.WARN;
-		case 'info':
+		case "info":
 			return LogLevel.INFO;
-		case 'silent':
+		case "silent":
 			return LogLevel.NONE;
 	}
 }

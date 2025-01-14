@@ -1,5 +1,5 @@
-import nodeCrypto, { getRandomValues, webcrypto } from 'crypto';
-import assert from 'node:assert';
+import nodeCrypto, { getRandomValues, webcrypto } from "crypto";
+import assert from "node:assert";
 
 export default {
 	async fetch() {
@@ -10,11 +10,11 @@ export default {
 function testGetRandomValues() {
 	assert(
 		webcrypto.getRandomValues === getRandomValues,
-		'Unexpected identity for webcrypto.getRandomValues',
+		"Unexpected identity for webcrypto.getRandomValues"
 	);
 	assert(
 		nodeCrypto.getRandomValues === getRandomValues,
-		'Unexpected identity for nodeCrypto.getRandomValues',
+		"Unexpected identity for nodeCrypto.getRandomValues"
 	);
 	return Response.json([
 		crypto.getRandomValues(new Uint8Array(6)).toString(), // global

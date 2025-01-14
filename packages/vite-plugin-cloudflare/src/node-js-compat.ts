@@ -1,13 +1,13 @@
-import { createRequire } from 'node:module';
-import MagicString from 'magic-string';
-import { getNodeCompat } from 'miniflare';
-import * as unenv from 'unenv';
-import type { WorkerConfig } from './plugin-config';
-import type { Environment } from 'vite';
+import { createRequire } from "node:module";
+import MagicString from "magic-string";
+import { getNodeCompat } from "miniflare";
+import * as unenv from "unenv";
+import type { WorkerConfig } from "./plugin-config";
+import type { Environment } from "vite";
 
 const require = createRequire(import.meta.url);
 const preset = unenv.env(unenv.nodeless, unenv.cloudflare);
-const CLOUDFLARE_VIRTUAL_PREFIX = '\0cloudflare-';
+const CLOUDFLARE_VIRTUAL_PREFIX = "\0cloudflare-";
 
 /**
  * Returns true if the given combination of compat dates and flags means that we need Node.js compatibility.
@@ -18,19 +18,19 @@ export function isNodeCompat({
 }: WorkerConfig): boolean {
 	const nodeCompatMode = getNodeCompat(
 		compatibility_date,
-		compatibility_flags ?? [],
+		compatibility_flags ?? []
 	).mode;
-	if (nodeCompatMode === 'v2') {
+	if (nodeCompatMode === "v2") {
 		return true;
 	}
-	if (nodeCompatMode === 'legacy') {
+	if (nodeCompatMode === "legacy") {
 		throw new Error(
-			'Unsupported Node.js compat mode (legacy). Remove the `node_compat` setting and add the `nodejs_compat` flag instead.',
+			"Unsupported Node.js compat mode (legacy). Remove the `node_compat` setting and add the `nodejs_compat` flag instead."
 		);
 	}
-	if (nodeCompatMode === 'v1') {
+	if (nodeCompatMode === "v1") {
 		throw new Error(
-			`Unsupported Node.js compat mode (v1). Only the v2 mode is supported, either change your compat date to "2024-09-23" or later, or set the "nodejs_compat_v2" compatibility flag`,
+			`Unsupported Node.js compat mode (v1). Only the v2 mode is supported, either change your compat date to "2024-09-23" or later, or set the "nodejs_compat_v2" compatibility flag`
 		);
 	}
 	return false;
@@ -43,7 +43,7 @@ export function isNodeCompat({
 export function injectGlobalCode(
 	id: string,
 	code: string,
-	workerConfig: WorkerConfig,
+	workerConfig: WorkerConfig
 ) {
 	if (!isNodeCompat(workerConfig)) {
 		return;
@@ -51,7 +51,7 @@ export function injectGlobalCode(
 
 	const injectedCode = Object.entries(preset.inject)
 		.map(([globalName, globalInject]) => {
-			if (typeof globalInject === 'string') {
+			if (typeof globalInject === "string") {
 				const moduleSpecifier = globalInject;
 				// the mapping is a simple string, indicating a default export, so the string is just the module specifier.
 				return `import var_${globalName} from "${moduleSpecifier}";\nglobalThis.${globalName} = var_${globalName};\n`;
@@ -61,13 +61,13 @@ export function injectGlobalCode(
 			const [moduleSpecifier, exportName] = globalInject;
 			return `import var_${globalName} from "${moduleSpecifier}";\nglobalThis.${globalName} = var_${globalName}.${exportName};\n`;
 		})
-		.join('\n');
+		.join("\n");
 
 	const modified = new MagicString(code);
 	modified.prepend(injectedCode);
 	return {
 		code: modified.toString(),
-		map: modified.generateMap({ hires: 'boundary', source: id }),
+		map: modified.generateMap({ hires: "boundary", source: id }),
 	};
 }
 
@@ -93,16 +93,16 @@ export function getNodeCompatAliases() {
 export function resolveNodeCompatId(
 	environment: Environment,
 	workerConfig: WorkerConfig,
-	id: string,
+	id: string
 ) {
 	const aliased = resolveNodeAliases(id, workerConfig) ?? id;
 
-	if (aliased.startsWith('unenv/')) {
-		const resolvedDep = require.resolve(aliased).replace(/\.cjs$/, '.mjs');
-		if (environment.mode === 'dev' && environment.depsOptimizer) {
+	if (aliased.startsWith("unenv/")) {
+		const resolvedDep = require.resolve(aliased).replace(/\.cjs$/, ".mjs");
+		if (environment.mode === "dev" && environment.depsOptimizer) {
 			const dep = environment.depsOptimizer.registerMissingImport(
 				aliased,
-				resolvedDep,
+				resolvedDep
 			);
 			return dep.id;
 		} else {

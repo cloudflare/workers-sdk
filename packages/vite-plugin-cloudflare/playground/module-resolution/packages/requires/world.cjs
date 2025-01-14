@@ -1,1 +1,1 @@
-exports.default = 'world (.cjs)';
+exports.default = "world (.cjs)";

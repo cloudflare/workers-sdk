@@ -1,1 +1,1 @@
-exports.default = 'hello (.js)';
+exports.default = "hello (.js)";

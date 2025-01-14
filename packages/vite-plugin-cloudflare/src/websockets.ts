@@ -1,29 +1,29 @@
-import ws from 'ws';
-import { UNKNOWN_HOST } from './shared';
-import { nodeHeadersToWebHeaders } from './utils';
-import type { Fetcher } from '@cloudflare/workers-types/experimental';
-import type { ReplaceWorkersTypes } from 'miniflare';
-import type { IncomingMessage } from 'node:http';
-import type { Duplex } from 'node:stream';
-import type * as vite from 'vite';
+import ws from "ws";
+import { UNKNOWN_HOST } from "./shared";
+import { nodeHeadersToWebHeaders } from "./utils";
+import type { Fetcher } from "@cloudflare/workers-types/experimental";
+import type { ReplaceWorkersTypes } from "miniflare";
+import type { IncomingMessage } from "node:http";
+import type { Duplex } from "node:stream";
+import type * as vite from "vite";
 
 /**
  * This function handles 'upgrade' requests to the Vite HTTP server and forwards WebSocket events between the client and Worker environments.
  */
 export function handleWebSocket(
 	httpServer: vite.HttpServer,
-	fetcher: ReplaceWorkersTypes<Fetcher>['fetch'],
-	logger: vite.Logger,
+	fetcher: ReplaceWorkersTypes<Fetcher>["fetch"],
+	logger: vite.Logger
 ) {
 	const nodeWebSocket = new ws.Server({ noServer: true });
 
 	httpServer.on(
-		'upgrade',
+		"upgrade",
 		async (request: IncomingMessage, socket: Duplex, head: Buffer) => {
-			const url = new URL(request.url ?? '', UNKNOWN_HOST);
+			const url = new URL(request.url ?? "", UNKNOWN_HOST);
 
 			// Ignore Vite HMR WebSockets
-			if (request.headers['sec-websocket-protocol']?.startsWith('vite')) {
+			if (request.headers["sec-websocket-protocol"]?.startsWith("vite")) {
 				return;
 			}
 
@@ -47,35 +47,35 @@ export function handleWebSocket(
 					workerWebSocket.accept();
 
 					// Forward Worker events to client
-					workerWebSocket.addEventListener('message', (event) => {
+					workerWebSocket.addEventListener("message", (event) => {
 						clientWebSocket.send(event.data);
 					});
-					workerWebSocket.addEventListener('error', (event) => {
+					workerWebSocket.addEventListener("error", (event) => {
 						logger.error(
 							`WebSocket error:\n${event.error?.stack || event.error?.message}`,
-							{ error: event.error },
+							{ error: event.error }
 						);
 					});
-					workerWebSocket.addEventListener('close', () => {
+					workerWebSocket.addEventListener("close", () => {
 						clientWebSocket.close();
 					});
 
 					// Forward client events to Worker
-					clientWebSocket.on('message', (event: ArrayBuffer | string) => {
+					clientWebSocket.on("message", (event: ArrayBuffer | string) => {
 						workerWebSocket.send(event);
 					});
-					clientWebSocket.on('error', (error) => {
+					clientWebSocket.on("error", (error) => {
 						logger.error(`WebSocket error:\n${error.stack || error.message}`, {
 							error,
 						});
 					});
-					clientWebSocket.on('close', () => {
+					clientWebSocket.on("close", () => {
 						workerWebSocket.close();
 					});
 
-					nodeWebSocket.emit('connection', clientWebSocket, request);
-				},
+					nodeWebSocket.emit("connection", clientWebSocket, request);
+				}
 			);
-		},
+		}
 	);
 }

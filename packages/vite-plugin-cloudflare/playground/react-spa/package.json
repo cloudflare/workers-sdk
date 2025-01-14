@@ -13,14 +13,14 @@
 		"react-dom": "^19.0.0"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "catalog:default",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:vite-plugin",
 		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",
 		"@types/react": "^19.0.0",
 		"@types/react-dom": "^19.0.0",
-		"@vite-plugin-cloudflare/typescript-config": "workspace:*",
 		"@vitejs/plugin-react": "^4.3.4",
-		"typescript": "catalog:default",
-		"vite": "catalog:default",
-		"wrangler": "catalog:default"
+		"typescript": "catalog:vite-plugin",
+		"vite": "catalog:vite-plugin",
+		"wrangler": "workspace:*"
 	}
 }
