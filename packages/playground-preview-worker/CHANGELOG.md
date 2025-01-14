@@ -1,5 +1,11 @@
 # playground-preview-worker
 
+## 0.1.2
+
+### Patch Changes
+
+- [#7630](https://github.com/cloudflare/workers-sdk/pull/7630) [`b687dff`](https://github.com/cloudflare/workers-sdk/commit/b687dffa7cf9f77e553f475d6a400c3560a360e9) Thanks [@edmundhung](https://github.com/edmundhung)! - fix OPTIONS raw http request support by overriding raw request method with the X-CF-Http-Method header
+
 ## 0.1.1
 
 ### Patch Changes

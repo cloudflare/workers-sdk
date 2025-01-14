@@ -1,5 +1,11 @@
 # miniflare
 
+## 3.20241230.2
+
+### Patch Changes
+
+- [#7738](https://github.com/cloudflare/workers-sdk/pull/7738) [`8e9aa40`](https://github.com/cloudflare/workers-sdk/commit/8e9aa40a6c914a3a9804dccdca7202aecda45ba7) Thanks [@penalosa](https://github.com/penalosa)! - Use TEXT bindings for plain text values in Miniflare. This is an internal detail that should have no user facing impact.
+
 ## 3.20241230.1
 
 ### Minor Changes

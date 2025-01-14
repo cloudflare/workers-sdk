@@ -1,5 +1,22 @@
 # wrangler
 
+## 3.102.0
+
+### Minor Changes
+
+- [#7592](https://github.com/cloudflare/workers-sdk/pull/7592) [`f613276`](https://github.com/cloudflare/workers-sdk/commit/f6132761c80d90c3521c93d48d0f0aed62bb360a) Thanks [@garrettgu10](https://github.com/garrettgu10)! - New filter validation logic supporting set and range queries in Vectorize CLI
+
+### Patch Changes
+
+- [#7750](https://github.com/cloudflare/workers-sdk/pull/7750) [`df0e5be`](https://github.com/cloudflare/workers-sdk/commit/df0e5bef817c09754471ac4842531a1e14e5576a) Thanks [@andyjessop](https://github.com/andyjessop)! - bug: Removes the (local) tag on Vectorize bindings in the console output of `wrangler dev`, and adds-in the same tag for Durable Objects (which are emulated locally in `wrangler dev`).
+
+- [#7732](https://github.com/cloudflare/workers-sdk/pull/7732) [`d102b60`](https://github.com/cloudflare/workers-sdk/commit/d102b60238c1dddfdd829ffee62c451cb526717a) Thanks [@Ankcorn](https://github.com/Ankcorn)! - fix pages secret bulk copy
+
+- [#7706](https://github.com/cloudflare/workers-sdk/pull/7706) [`c63f1b0`](https://github.com/cloudflare/workers-sdk/commit/c63f1b0790d7487074152c958ad10a910d4eae34) Thanks [@penalosa](https://github.com/penalosa)! - Remove the server-based dev registry in favour of the more stable file-based dev registry. There should be no user-facing impact.
+
+- Updated dependencies [[`8e9aa40`](https://github.com/cloudflare/workers-sdk/commit/8e9aa40a6c914a3a9804dccdca7202aecda45ba7)]:
+  - miniflare@3.20241230.2
+
 ## 3.101.0
 
 ### Minor Changes
