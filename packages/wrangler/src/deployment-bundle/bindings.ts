@@ -132,7 +132,11 @@ export async function provisionBindings(
 	let preExistingR2: R2BucketInfo[] | undefined;
 	for (const r2 of bindings.r2_buckets ?? []) {
 		assert(typeof r2.bucket_name !== "symbol");
-		if (inBindingSettings(settings, "r2_bucket", r2.binding, r2.bucket_name)) {
+		if (
+			inBindingSettings(settings, "r2_bucket", r2.binding, {
+				bucket_name: r2.bucket_name,
+			})
+		) {
 			// does not inherit if the bucket name has changed
 			r2.bucket_name = INHERIT_SYMBOL;
 		} else {
@@ -245,21 +249,23 @@ export async function provisionBindings(
 }
 
 /** checks whether the binding id can be inherited from a prev deployment */
+type ExtractedBinding<T> = Extract<WorkerMetadataBinding, { type: T }>;
 function inBindingSettings<Type extends WorkerMetadataBinding["type"]>(
 	settings: Settings | undefined,
 	type: Type,
 	bindingName: string,
-	bucket_name?: string | undefined
-): Extract<WorkerMetadataBinding, { type: Type }> | undefined {
+	other?: Partial<Record<keyof ExtractedBinding<Type>, unknown>>
+): ExtractedBinding<Type> | undefined {
 	return settings?.bindings.find(
-		(binding): binding is Extract<WorkerMetadataBinding, { type: Type }> => {
-			return (
-				binding.type === type &&
-				binding.name === bindingName &&
-				(binding.type === "r2_bucket" && bucket_name
-					? binding.bucket_name === bucket_name
-					: true)
-			);
+		(binding): binding is ExtractedBinding<Type> => {
+			if (other) {
+				for (const [k, v] of Object.entries(other)) {
+					if (other[k as keyof ExtractedBinding<Type>] !== v) {
+						return false;
+					}
+				}
+			}
+			return binding.type === type && binding.name === bindingName;
 		}
 	);
 }
