@@ -91,7 +91,6 @@ describe("--x-provision", () => {
 			],
 		});
 
-		mockGetD1Database("d1-id");
 		await runWrangler("deploy --x-provision");
 		expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB

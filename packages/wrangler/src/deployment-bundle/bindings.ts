@@ -3,6 +3,7 @@ import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
+import { DatabaseInfo } from "../d1/types";
 import { getDatabaseInfoFromId } from "../d1/utils";
 import { confirm, prompt, select } from "../dialogs";
 import { UserError } from "../errors";
@@ -176,12 +177,21 @@ export async function provisionBindings(
 		if (!d1.database_id) {
 			const maybeInherited = inBindingSettings(settings, "d1", d1.binding);
 			if (maybeInherited) {
-				const db = await getDatabaseInfoFromId(accountId, maybeInherited.id);
-				if (db.name === d1.database_name) {
+				if (!d1.database_name) {
 					d1.database_id = INHERIT_SYMBOL;
 					continue;
+				} else {
+					// check that the database name matches the id of the inherited binding
+					const dbFromId = await getDatabaseInfoFromId(
+						accountId,
+						maybeInherited.id
+					);
+					if (d1.database_name === dbFromId.name) {
+						d1.database_id = INHERIT_SYMBOL;
+						continue;
+					}
 				}
-				// db has *changed* - re-provision?
+				// otherwise, db name has *changed* - re-provision
 			}
 			pendingResources.d1_databases?.push({
 				binding: d1.binding,
