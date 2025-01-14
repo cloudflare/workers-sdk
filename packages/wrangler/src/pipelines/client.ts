@@ -26,6 +26,9 @@ export type HttpSource = {
 	format: string;
 	schema?: string;
 	authentication?: boolean;
+	cors?: {
+		origins: ["*"] | string[];
+	};
 };
 export type BindingSource = {
 	type: "binding";
