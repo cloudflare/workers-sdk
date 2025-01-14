@@ -48,7 +48,7 @@
 	"devDependencies": {
 		"@types/node": "*",
 		"typescript": "catalog:default",
-		"unbuild": "^2.0.0",
+		"unbuild": "^3.2.0",
 		"undici": "catalog:default",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
