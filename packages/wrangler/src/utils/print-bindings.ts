@@ -137,7 +137,7 @@ export function printBindings(
 
 					return {
 						key: name,
-						value,
+						value: addLocalSuffix(value, context.local),
 					};
 				}
 			),
@@ -233,7 +233,7 @@ export function printBindings(
 			entries: vectorize.map(({ binding, index_name }) => {
 				return {
 					key: binding,
-					value: addLocalSuffix(index_name, context.local),
+					value: index_name,
 				};
 			}),
 		});

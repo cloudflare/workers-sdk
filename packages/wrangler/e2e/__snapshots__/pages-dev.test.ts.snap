@@ -9,9 +9,9 @@ exports[`Pages 'wrangler pages dev' > should merge (with override) \`wrangler.to
   - {"name":"DO_BINDING_2_TOML","class_name":"DO_2_TOML","script_name":"DO_SCRIPT_2_TOML"}
 Your worker has access to the following bindings:
 - Durable Objects:
-  - DO_BINDING_1_TOML: NEW_DO_1 (defined in NEW_DO_SCRIPT_1 [not connected])
-  - DO_BINDING_2_TOML: DO_2_TOML (defined in DO_SCRIPT_2_TOML [not connected])
-  - DO_BINDING_3_ARGS: DO_3_ARGS (defined in DO_SCRIPT_3_ARGS [not connected])
+  - DO_BINDING_1_TOML: NEW_DO_1 (defined in NEW_DO_SCRIPT_1 [not connected]) (local)
+  - DO_BINDING_2_TOML: DO_2_TOML (defined in DO_SCRIPT_2_TOML [not connected]) (local)
+  - DO_BINDING_3_ARGS: DO_3_ARGS (defined in DO_SCRIPT_3_ARGS [not connected]) (local)
 - KV Namespaces:
   - KV_BINDING_1_TOML: NEW_KV_ID_1 (local)
   - KV_BINDING_2_TOML: KV_ID_2_TOML (local)
