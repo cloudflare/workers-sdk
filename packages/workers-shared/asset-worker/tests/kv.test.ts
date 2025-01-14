@@ -65,11 +65,38 @@ describe("[Asset Worker] Fetching assets from KV", () => {
 			spy.mockReturnValue(Promise.reject("Oeps! Something went wrong"));
 
 			await expect(() =>
-				getAssetWithMetadataFromKV(mockKVNamespace, "abcd", 2)
+				getAssetWithMetadataFromKV(mockKVNamespace, "abcd", undefined, 2)
 			).rejects.toThrowError(
 				"Requested asset abcd could not be fetched from KV namespace."
 			);
 			expect(spy).toHaveBeenCalledTimes(3);
+		});
+
+		it("should retry on 404 and cache with 30s ttl", async () => {
+			let attempts = 0;
+			spy.mockImplementation(() => {
+				if (attempts++ === 0) {
+					return Promise.resolve({
+						value: null,
+					}) as unknown as Promise<
+						KVNamespaceGetWithMetadataResult<ReadableStream, AssetMetadata>
+					>;
+				} else {
+					return Promise.resolve({
+						value: "<html>Hello world</html>",
+						metadata: {
+							contentType: "text/html",
+						},
+					}) as unknown as Promise<
+						KVNamespaceGetWithMetadataResult<ReadableStream, AssetMetadata>
+					>;
+				}
+			});
+
+			const asset = await getAssetWithMetadataFromKV(mockKVNamespace, "abcd");
+			expect(asset?.value).toBeTruthy();
+			// Once for the initial call, once for the 404
+			expect(spy).toHaveBeenCalledTimes(2);
 		});
 	});
 });
