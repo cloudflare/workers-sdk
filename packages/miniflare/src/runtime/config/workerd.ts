@@ -1,15 +1,16 @@
-// TODO: auto-generate this file
 import type {
 	HttpOptions_Style,
 	TlsOptions_Version,
 	Worker_Binding_CryptoKey_Usage,
-} from "./workerd.capnp.js";
+} from "./generated";
+
+// TODO: auto-generate this file
 
 export {
 	HttpOptions_Style,
 	TlsOptions_Version,
 	Worker_Binding_CryptoKey_Usage,
-} from "./workerd.capnp.js";
+} from "./generated";
 
 export const kVoid = Symbol("kVoid");
 export type Void = typeof kVoid;
