@@ -87,7 +87,7 @@ beforeAll(async (s) => {
 	testName = slash(testPath).match(/playground\/([\w-]+)\//)?.[1]!;
 	testDir = path.dirname(testPath);
 	if (testName) {
-		testDir = path.resolve(workspaceRoot, "playground-temp", testName);
+		testDir = path.resolve(workspaceRoot, "playground", testName);
 	}
 
 	const wsEndpoint = inject("wsEndpoint");
@@ -285,7 +285,7 @@ export async function startDefaultServe(): Promise<void> {
 			isPreview: true,
 		});
 		const _nodeEnv = process.env.NODE_ENV;
-		// Make sure we are running from within the playground-temp directory rather than playground.
+		// Make sure we are running from within the playground.
 		// Otherwise workerd will error with messages about not being allowed to escape the starting directory with `..`.
 		process.chdir(previewConfig.root);
 		const previewServer = await preview(previewConfig);
