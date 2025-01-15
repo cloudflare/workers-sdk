@@ -3413,6 +3413,7 @@ const validateMigrations: ValidatorFn = (diagnostics, field, value) => {
 			new_sqlite_classes,
 			renamed_classes,
 			deleted_classes,
+			transferred_classes,
 			...rest
 		} = rawMigrations[i];
 
@@ -3473,6 +3474,33 @@ const validateMigrations: ValidatorFn = (diagnostics, field, value) => {
 				valid = false;
 			}
 		}
+
+		if (transferred_classes !== undefined) {
+			if (!Array.isArray(transferred_classes)) {
+				diagnostics.errors.push(
+					`Expected "migrations[${i}].transferred_classes" to be an array of "{from: string, from_script: string, to: string}" objects but got ${JSON.stringify(
+						transferred_classes
+					)}.`
+				);
+				valid = false;
+			} else if (
+				transferred_classes.some(
+					(c) =>
+						typeof c !== "object" ||
+						!isRequiredProperty(c, "from", "string") ||
+						!isRequiredProperty(c, "from_script", "string") ||
+						!isRequiredProperty(c, "to", "string")
+				)
+			) {
+				diagnostics.errors.push(
+					`Expected "migrations[${i}].transferred_classes" to be an array of "{from: string, from_script: string, to: string}" objects but got ${JSON.stringify(
+						transferred_classes
+					)}.`
+				);
+				valid = false;
+			}
+		}
+
 		valid =
 			validateOptionalTypedArray(
 				diagnostics,
