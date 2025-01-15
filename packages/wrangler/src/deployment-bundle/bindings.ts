@@ -1,12 +1,15 @@
+import assert from "node:assert";
 import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
-import { prompt, select } from "../dialogs";
-import { FatalError, UserError } from "../errors";
+import { getDatabaseInfoFromId } from "../d1/utils";
+import { confirm, prompt, select } from "../dialogs";
+import { UserError } from "../errors";
 import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
-import { createR2Bucket, listR2Buckets } from "../r2/helpers";
+import { APIError } from "../parse";
+import { createR2Bucket, getR2Bucket, listR2Buckets } from "../r2/helpers";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { printBindings } from "../utils/print-bindings";
 import type { Config } from "../config";
@@ -76,6 +79,8 @@ export type Settings = {
 };
 
 type PendingResourceOperations = {
+	// name may be provided in config without the resource having been provisioned
+	name?: string | undefined;
 	create: (name: string) => Promise<string>;
 	updateId: (id: string) => void;
 };
@@ -113,7 +118,6 @@ export async function provisionBindings(
 					binding: kv.binding,
 					async create(title) {
 						const id = await createKVNamespace(accountId, title);
-						kv.id = id;
 						return id;
 					},
 					updateId(id) {
@@ -125,42 +129,78 @@ export async function provisionBindings(
 	}
 
 	for (const r2 of bindings.r2_buckets ?? []) {
-		if (!r2.bucket_name) {
-			if (inBindingSettings(settings, "r2_bucket", r2.binding)) {
-				r2.bucket_name = INHERIT_SYMBOL;
-			} else {
-				pendingResources.r2_buckets?.push({
-					binding: r2.binding,
-					async create(bucketName) {
-						await createR2Bucket(accountId, bucketName);
-						r2.bucket_name = bucketName;
-						return bucketName;
-					},
-					updateId(bucketName) {
-						r2.bucket_name = bucketName;
-					},
-				});
+		assert(typeof r2.bucket_name !== "symbol");
+		if (
+			inBindingSettings(settings, "r2_bucket", r2.binding, {
+				bucket_name: r2.bucket_name,
+			})
+		) {
+			// does not inherit if the bucket name has changed
+			r2.bucket_name = INHERIT_SYMBOL;
+		} else {
+			if (r2.bucket_name) {
+				try {
+					await getR2Bucket(accountId, r2.bucket_name);
+					// don't provision
+					continue;
+				} catch (e) {
+					// bucket not found - provision
+					if (!(e instanceof APIError && e.code === 10006)) {
+						throw e;
+					}
+				}
 			}
+			pendingResources.r2_buckets?.push({
+				binding: r2.binding,
+				name: r2.bucket_name,
+				async create(bucketName) {
+					await createR2Bucket(
+						accountId,
+						bucketName,
+						undefined,
+						// respect jurisdiction if it has been specified in the config, but don't prompt
+						r2.jurisdiction
+					);
+					return bucketName;
+				},
+				updateId(bucketName) {
+					r2.bucket_name = bucketName;
+				},
+			});
 		}
 	}
 
 	for (const d1 of bindings.d1_databases ?? []) {
 		if (!d1.database_id) {
-			if (inBindingSettings(settings, "d1", d1.binding)) {
-				d1.database_id = INHERIT_SYMBOL;
-			} else {
-				pendingResources.d1_databases?.push({
-					binding: d1.binding,
-					async create(name) {
-						const db = await createD1Database(accountId, name);
-						d1.database_id = db.uuid;
-						return db.uuid;
-					},
-					updateId(id) {
-						d1.database_id = id;
-					},
-				});
+			const maybeInherited = inBindingSettings(settings, "d1", d1.binding);
+			if (maybeInherited) {
+				if (!d1.database_name) {
+					d1.database_id = INHERIT_SYMBOL;
+					continue;
+				} else {
+					// check that the database name matches the id of the inherited binding
+					const dbFromId = await getDatabaseInfoFromId(
+						accountId,
+						maybeInherited.id
+					);
+					if (d1.database_name === dbFromId.name) {
+						d1.database_id = INHERIT_SYMBOL;
+						continue;
+					}
+				}
+				// otherwise, db name has *changed* - re-provision
 			}
+			pendingResources.d1_databases?.push({
+				binding: d1.binding,
+				name: d1.database_name,
+				async create(name) {
+					const db = await createD1Database(accountId, name);
+					return db.uuid;
+				},
+				updateId(id) {
+					d1.database_id = id;
+				},
+			});
 		}
 	}
 
@@ -216,14 +256,24 @@ export async function provisionBindings(
 }
 
 /** checks whether the binding id can be inherited from a prev deployment */
+type ExtractedBinding<T> = Extract<WorkerMetadataBinding, { type: T }>;
 function inBindingSettings<Type extends WorkerMetadataBinding["type"]>(
 	settings: Settings | undefined,
 	type: Type,
-	bindingName: string
-): Extract<WorkerMetadataBinding, { type: Type }> | undefined {
+	bindingName: string,
+	other?: Partial<Record<keyof ExtractedBinding<Type>, unknown>>
+): ExtractedBinding<Type> | undefined {
 	return settings?.bindings.find(
-		(binding): binding is Extract<WorkerMetadataBinding, { type: Type }> =>
-			binding.type === type && binding.name === bindingName
+		(binding): binding is ExtractedBinding<Type> => {
+			if (other) {
+				for (const [k, v] of Object.entries(other)) {
+					if (other[k as keyof ExtractedBinding<Type>] !== v) {
+						return false;
+					}
+				}
+			}
+			return binding.type === type && binding.name === bindingName;
+		}
 	);
 }
 
@@ -258,6 +308,7 @@ async function runProvisioningFlow(
 	const SEARCH_OPTION_VALUE = "__WRANGLER_INTERNAL_SEARCH";
 	const MAX_OPTIONS = 4;
 	if (pending.length) {
+		// NB preExisting does not actually contain all resources on the account - we max out at ~100
 		const options = preExisting.slice(0, MAX_OPTIONS - 1);
 		if (options.length < preExisting.length) {
 			options.push({
@@ -268,67 +319,91 @@ async function runProvisioningFlow(
 
 		for (const item of pending) {
 			logger.log("Provisioning", item.binding, `(${friendlyBindingName})...`);
-			let name: string = "";
+			let name = item.name;
 			let selected: string;
 
-			if (options.length === 0 || autoCreate) {
-				selected = NEW_OPTION_VALUE;
-			} else {
-				selected = await select(
-					`Would you like to connect an existing ${friendlyBindingName} or create a new one?`,
-					{
-						choices: options.concat([{ title: "Create new", value: "new" }]),
-						defaultOption: options.length,
-					}
-				);
-			}
-
-			if (selected === NEW_OPTION_VALUE) {
-				const defaultValue = `${scriptName}-${item.binding.toLowerCase().replace("_", "-")}`;
-				name = autoCreate
-					? defaultValue
-					: await prompt(`Enter a name for your new ${friendlyBindingName}`, {
-							defaultValue,
-						});
-				logger.log(`🌀 Creating new ${friendlyBindingName} "${name}"...`);
-				// creates new resource and mutates `bindings` to update id
-				await item.create(name);
-			} else if (selected === SEARCH_OPTION_VALUE) {
-				let searchedResource: NormalisedResourceInfo | undefined;
-				while (searchedResource === undefined) {
-					const input = await prompt(
-						`Enter the ${resourceKeyDescriptor} for an existing ${friendlyBindingName}`
+			if (name) {
+				logger.log("Resource name found in config:", name);
+				// this would be a d1 database where the name is provided but
+				// not the id, which must be connected to an existing resource
+				// of that name (or a new one with that name). This should hit a
+				// 'getDbByName' endpoint, as preExisting does not contain all
+				// resources on the account. But that doesn't exist yet.
+				const foundResourceId = preExisting.find(
+					(r) => r.title === name
+				)?.value;
+				if (foundResourceId) {
+					logger.log("Existing resource found with that name.");
+					item.updateId(foundResourceId);
+				} else {
+					logger.log("No pre-existing resource found with that name");
+					logger.debug(
+						"If you have many resources, we may not have searched through them all. Please provide the id in that case. This is a temporary limitation."
 					);
-					searchedResource = preExisting.find((r) => {
-						if (r.title === input || r.value === input) {
-							name = r.title;
-							item.updateId(r.value);
-							return true;
-						} else {
-							return false;
-						}
-					});
-					if (!searchedResource) {
-						logger.log(
-							`No ${friendlyBindingName} with that ${resourceKeyDescriptor} "${input}" found. Please try again.`
-						);
+					const proceed = autoCreate
+						? true
+						: await confirm(
+								`Would you like to create a new ${friendlyBindingName} named "${name}"?`
+							);
+					if (!proceed) {
+						throw new UserError("Resource provisioning cancelled.");
 					}
+					logger.log(`🌀 Creating new ${friendlyBindingName} "${name}"...`);
+					const id = await item.create(name);
+					item.updateId(id);
 				}
 			} else {
-				const selectedResource = preExisting.find((r) => {
-					if (r.value === selected) {
-						name = r.title;
-						item.updateId(selected);
-						return true;
-					} else {
-						return false;
-					}
-				});
-				// we shouldn't get here
-				if (!selectedResource) {
-					throw new FatalError(
-						`${friendlyBindingName} with id ${selected} not found`
+				if (options.length === 0 || autoCreate) {
+					selected = NEW_OPTION_VALUE;
+				} else {
+					selected = await select(
+						`Would you like to connect an existing ${friendlyBindingName} or create a new one?`,
+						{
+							choices: options.concat([
+								{ title: "Create new", value: NEW_OPTION_VALUE },
+							]),
+							defaultOption: options.length,
+						}
 					);
+				}
+				if (selected === NEW_OPTION_VALUE) {
+					const defaultValue = `${scriptName}-${item.binding.toLowerCase().replace("_", "-")}`;
+					name = autoCreate
+						? defaultValue
+						: await prompt(`Enter a name for your new ${friendlyBindingName}`, {
+								defaultValue,
+							});
+					logger.log(`🌀 Creating new ${friendlyBindingName} "${name}"...`);
+					const id = await item.create(name);
+					item.updateId(id);
+				} else if (selected === SEARCH_OPTION_VALUE) {
+					// search through pre-existing resources that weren't listed
+					let foundResource: NormalisedResourceInfo | undefined;
+					while (foundResource === undefined) {
+						const input = await prompt(
+							`Enter the ${resourceKeyDescriptor} for an existing ${friendlyBindingName}`
+						);
+						foundResource = preExisting.find(
+							(r) => r.title === input || r.value === input
+						);
+						if (foundResource) {
+							name = foundResource.title;
+							item.updateId(foundResource.value);
+						} else {
+							logger.log(
+								`No ${friendlyBindingName} with that ${resourceKeyDescriptor} "${input}" found. Please try again.`
+							);
+						}
+					}
+				} else {
+					// directly select a listed, pre-existing resource
+					const selectedResource = preExisting.find(
+						(r) => r.value === selected
+					);
+					if (selectedResource) {
+						name = selectedResource.title;
+						item.updateId(selected);
+					}
 				}
 			}
 
