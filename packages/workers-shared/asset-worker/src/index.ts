@@ -14,6 +14,7 @@ import type {
 	UnsafePerformanceTimer,
 } from "../../utils/types";
 import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
+import type { Toucan } from "toucan-js";
 
 export type Env = {
 	/*
@@ -100,7 +101,7 @@ export default class extends WorkerEntrypoint<Env> {
 				});
 			}
 
-			return await this.env.JAEGER.enterSpan("handleRequest", async (span) => {
+			return this.env.JAEGER.enterSpan("handleRequest", async (span) => {
 				span.setTags({
 					hostname: url.hostname,
 					eyeballPath: url.pathname,
@@ -114,8 +115,22 @@ export default class extends WorkerEntrypoint<Env> {
 					this.unstable_exists.bind(this),
 					this.unstable_getByETag.bind(this)
 				);
-			});
+			}).catch((err) =>
+				this.handleError(sentry, analytics, performance, startTimeMs, err)
+			);
 		} catch (err) {
+			return this.handleError(sentry, analytics, performance, startTimeMs, err);
+		}
+	}
+
+	handleError(
+		sentry: Toucan | undefined,
+		analytics: Analytics,
+		performance: PerformanceTimer,
+		startTimeMs: number,
+		err: unknown
+	) {
+		try {
 			const response = new InternalServerErrorResponse(err as Error);
 
 			// Log to Sentry if we can
