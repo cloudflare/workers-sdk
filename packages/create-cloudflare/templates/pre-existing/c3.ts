@@ -49,14 +49,14 @@ export async function copyExistingWorkerFiles(ctx: C3Context) {
 		},
 	);
 
-	// copy src/* files from the downloaded worker
+	// copy src/* files from the downloaded Worker
 	await cp(
 		join(tempdir, ctx.args.existingScript, "src"),
 		join(ctx.project.path, "src"),
 		{ recursive: true },
 	);
 
-	// copy wrangler.toml from the downloaded worker
+	// copy wrangler.toml from the downloaded Worker
 	await cp(
 		join(tempdir, ctx.args.existingScript, "wrangler.toml"),
 		join(ctx.project.path, "wrangler.toml"),
@@ -96,7 +96,7 @@ export function buildConfigure(params: ConfigureParams) {
 		await params.chooseAccount(ctx);
 		await params.copyFiles(ctx);
 
-		// Force no-deploy since the worker is already deployed
+		// Force no-deploy since the Worker is already deployed
 		ctx.args.deploy = false;
 	};
 }
