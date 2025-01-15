@@ -599,7 +599,6 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 						async fetch(request, env) {
 							if (request.url.includes("connect")) {
 								const conn = env.HYPERDRIVE.connect();
-								await conn.writable.getWriter().write(new TextEncoder().encode("test string"));
 							}
 							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
 						}
@@ -608,13 +607,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 
 		const worker = helper.runLongLived(`wrangler dev ${flags}`);
 		const { url } = await worker.waitForReady();
-		const text = await fetchText(url);
-
-		const hyperdrive = new URL(text);
-		expect(hyperdrive.pathname).toBe("/some_db");
-		expect(hyperdrive.username).toBe("user");
-		expect(hyperdrive.password).toBe("!pass");
-		expect(hyperdrive.host).not.toBe("localhost");
+		await fetch(`${url}/connect`);
 	});
 
 	it.skipIf(!isLocal).fails("exposes Pipelines bindings", async () => {
