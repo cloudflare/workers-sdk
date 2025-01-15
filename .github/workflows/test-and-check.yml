@@ -101,7 +101,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-13]
-        filter: ["./packages/*", "./fixtures/*"]
+        filter:
+          [
+            "./packages/*",
+            "./fixtures/*",
+            "./packages/vite-plugin-cloudflare/playground",
+          ]
         # Things in the tools folder are for running in CI, and so only need to run on linux
         include:
           - os: ubuntu-latest
