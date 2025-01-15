@@ -1006,6 +1006,7 @@ export async function main(argv: string[]): Promise<void> {
 		cliHandlerThrew = true;
 		let mayReport = true;
 		let errorType: string | undefined;
+		let loggableException = e;
 
 		logger.log(""); // Just adds a bit of space
 		if (e instanceof CommandLineArgsError) {
@@ -1071,7 +1072,6 @@ export async function main(argv: string[]): Promise<void> {
 			errorType = "BuildFailure";
 			logBuildFailure(e.cause.errors, e.cause.warnings);
 		} else {
-			let loggableException = e;
 			if (
 				// Is this a StartDevEnv error event? If so, unwrap the cause, which is usually the user-recognisable error
 				e &&
@@ -1102,13 +1102,12 @@ export async function main(argv: string[]): Promise<void> {
 			// Only report the error if we didn't just handle it
 			mayReport &&
 			// ...and it's not a user error
-			!(e instanceof UserError) &&
+			!(loggableException instanceof UserError) &&
 			// ...and it's not an un-reportable API error
-			!(e instanceof APIError && !e.reportable)
+			!(loggableException instanceof APIError && !loggableException.reportable)
 		) {
-			await captureGlobalException(e);
+			await captureGlobalException(loggableException);
 		}
-
 		const durationMs = Date.now() - startTime;
 
 		dispatcher?.sendCommandEvent(
