@@ -32,9 +32,9 @@
 		"random:test": "vitest run -c ../vitest.config.e2e.ts worker-random"
 	},
 	"devDependencies": {
+		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:vite-plugin",
-		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",
 		"@types/node": "catalog:vite-plugin",
 		"@types/pg": "^8.11.2",
 		"cross-fetch": "^4.0.0",

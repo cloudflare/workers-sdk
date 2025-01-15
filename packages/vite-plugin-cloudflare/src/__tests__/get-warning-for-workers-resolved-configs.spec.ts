@@ -85,7 +85,7 @@ describe("getWarningForWorkersConfigs", () => {
 			  - \`alias\` which is replaced by Vite's \`resolve.alias\` (docs: https://vite.dev/config/shared-options.html#resolve-alias)
 			  - \`minify\` which is replaced by Vite's \`build.minify\` (docs: https://vite.dev/config/build-options.html#build-minify)
 			  - \`build\`, \`find_additional_modules\`, \`no_bundle\` which are not relevant in the context of a Vite project
-			  - \`rules\` which is overridden by \`@flarelabs-net/vite-plugin-cloudflare\`
+			  - \`rules\` which is overridden by \`@cloudflare/vite-plugin\`
 			"
 		`);
 	});

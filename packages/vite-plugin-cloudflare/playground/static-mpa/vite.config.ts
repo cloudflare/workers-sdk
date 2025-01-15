@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import { cloudflare } from "@flarelabs-net/vite-plugin-cloudflare";
+import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
 
 export default defineConfig({

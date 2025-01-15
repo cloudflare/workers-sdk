@@ -1,5 +1,5 @@
 {
-	"name": "@flarelabs-net/vite-plugin-cloudflare",
+	"name": "@cloudflare/vite-plugin",
 	"version": "0.0.0",
 	"description": "Cloudflare plugin for Vite",
 	"keywords": [
@@ -55,5 +55,11 @@
 	"peerDependencies": {
 		"vite": "^6.0.3",
 		"wrangler": "^3.94.0"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"workers-sdk": {
+		"prerelease": true
 	}
 }

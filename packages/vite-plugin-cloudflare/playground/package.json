@@ -11,7 +11,7 @@
 		"test:serve": "vitest run -c vitest.config.e2e.ts"
 	},
 	"devDependencies": {
-		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",
+		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"playwright-chromium": "^1.48.1",
 		"typescript": "catalog:vite-plugin"

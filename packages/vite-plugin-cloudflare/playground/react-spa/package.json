@@ -13,9 +13,9 @@
 		"react-dom": "^19.0.0"
 	},
 	"devDependencies": {
+		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:vite-plugin",
-		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",
 		"@types/react": "^19.0.0",
 		"@types/react-dom": "^19.0.0",
 		"@vitejs/plugin-react": "^4.3.4",

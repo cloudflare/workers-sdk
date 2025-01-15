@@ -9,9 +9,9 @@
 		"preview": "vite preview"
 	},
 	"devDependencies": {
+		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:vite-plugin",
-		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",
 		"typescript": "catalog:vite-plugin",
 		"vite": "catalog:vite-plugin",
 		"wrangler": "workspace:*"

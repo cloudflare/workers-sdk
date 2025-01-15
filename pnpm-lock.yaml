@@ -1742,12 +1742,12 @@ importers:
 
   packages/vite-plugin-cloudflare/playground:
     devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:..
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../workers-tsconfig
-      '@flarelabs-net/vite-plugin-cloudflare':
-        specifier: workspace:*
-        version: link:..
       playwright-chromium:
         specifier: ^1.48.1
         version: 1.49.1
@@ -1757,15 +1757,15 @@ importers:
 
   packages/vite-plugin-cloudflare/playground/cloudflare-env:
     devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:vite-plugin
         version: 4.20241230.0
-      '@flarelabs-net/vite-plugin-cloudflare':
-        specifier: workspace:*
-        version: link:../..
       typescript:
         specifier: catalog:vite-plugin
         version: 5.7.3
@@ -1778,15 +1778,15 @@ importers:
 
   packages/vite-plugin-cloudflare/playground/durable-objects:
     devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:vite-plugin
         version: 4.20241230.0
-      '@flarelabs-net/vite-plugin-cloudflare':
-        specifier: workspace:*
-        version: link:../..
       typescript:
         specifier: catalog:vite-plugin
         version: 5.7.3
@@ -1799,15 +1799,15 @@ importers:
 
   packages/vite-plugin-cloudflare/playground/external-durable-objects:
     devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:vite-plugin
         version: 4.20241230.0
-      '@flarelabs-net/vite-plugin-cloudflare':
-        specifier: workspace:*
-        version: link:../..
       typescript:
         specifier: catalog:vite-plugin
         version: 5.7.3
@@ -1820,15 +1820,15 @@ importers:
 
   packages/vite-plugin-cloudflare/playground/external-workflows:
     devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:vite-plugin
         version: 4.20241230.0
-      '@flarelabs-net/vite-plugin-cloudflare':
-        specifier: workspace:*
-        version: link:../..
       typescript:
         specifier: catalog:vite-plugin
         version: 5.7.3
@@ -1841,15 +1841,15 @@ importers:
 
   packages/vite-plugin-cloudflare/playground/hot-channel:
     devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:vite-plugin
         version: 4.20241230.0
-      '@flarelabs-net/vite-plugin-cloudflare':
-        specifier: workspace:*
-        version: link:../..
       typescript:
         specifier: catalog:vite-plugin
         version: 5.7.3
@@ -1868,15 +1868,15 @@ importers:
       '@cloudflare-dev-module-resolution/requires':
         specifier: file:./packages/requires
         version: '@playground/module-resolution-requires@file:packages/vite-plugin-cloudflare/playground/module-resolution/packages/requires'
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:vite-plugin
         version: 4.20241230.0
-      '@flarelabs-net/vite-plugin-cloudflare':
-        specifier: workspace:*
-        version: link:../..
       '@remix-run/cloudflare':
         specifier: 2.12.0
         version: 2.12.0(@cloudflare/workers-types@4.20241230.0)(typescript@5.7.3)
@@ -1904,15 +1904,15 @@ importers:
 
   packages/vite-plugin-cloudflare/playground/multi-worker:
     devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:vite-plugin
         version: 4.20241230.0
-      '@flarelabs-net/vite-plugin-cloudflare':
-        specifier: workspace:*
-        version: link:../..
       typescript:
         specifier: catalog:vite-plugin
         version: 5.7.3
@@ -1925,15 +1925,15 @@ importers:
 
   packages/vite-plugin-cloudflare/playground/node-compat:
     devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:vite-plugin
         version: 4.20241230.0
-      '@flarelabs-net/vite-plugin-cloudflare':
-        specifier: workspace:*
-        version: link:../..
       '@types/node':
         specifier: ^18.19.59
         version: 18.19.59
@@ -1968,15 +1968,15 @@ importers:
         specifier: ^19.0.0
         version: 19.0.0(react@19.0.0)
     devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:vite-plugin
         version: 4.20241230.0
-      '@flarelabs-net/vite-plugin-cloudflare':
-        specifier: workspace:*
-        version: link:../..
       '@types/react':
         specifier: ^19.0.0
         version: 19.0.7
@@ -2005,15 +2005,15 @@ importers:
         specifier: ^19.0.0
         version: 19.0.0(react@19.0.0)
     devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:vite-plugin
         version: 4.20241230.0
-      '@flarelabs-net/vite-plugin-cloudflare':
-        specifier: workspace:*
-        version: link:../..
       '@types/react':
         specifier: ^19.0.0
         version: 19.0.7
@@ -2035,15 +2035,15 @@ importers:
 
   packages/vite-plugin-cloudflare/playground/static-mpa:
     devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:vite-plugin
         version: 4.20241230.0
-      '@flarelabs-net/vite-plugin-cloudflare':
-        specifier: workspace:*
-        version: link:../..
       typescript:
         specifier: catalog:vite-plugin
         version: 5.7.3
@@ -2056,15 +2056,15 @@ importers:
 
   packages/vite-plugin-cloudflare/playground/virtual-modules:
     devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:vite-plugin
         version: 4.20241230.0
-      '@flarelabs-net/vite-plugin-cloudflare':
-        specifier: workspace:*
-        version: link:../..
       typescript:
         specifier: catalog:vite-plugin
         version: 5.7.3
@@ -2077,15 +2077,15 @@ importers:
 
   packages/vite-plugin-cloudflare/playground/websockets:
     devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:vite-plugin
         version: 4.20241230.0
-      '@flarelabs-net/vite-plugin-cloudflare':
-        specifier: workspace:*
-        version: link:../..
       typescript:
         specifier: catalog:vite-plugin
         version: 5.7.3
@@ -2098,15 +2098,15 @@ importers:
 
   packages/vite-plugin-cloudflare/playground/worker:
     devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:vite-plugin
         version: 4.20241230.0
-      '@flarelabs-net/vite-plugin-cloudflare':
-        specifier: workspace:*
-        version: link:../..
       typescript:
         specifier: catalog:vite-plugin
         version: 5.7.3
@@ -2119,15 +2119,15 @@ importers:
 
   packages/vite-plugin-cloudflare/playground/workflows:
     devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:vite-plugin
         version: 4.20241230.0
-      '@flarelabs-net/vite-plugin-cloudflare':
-        specifier: workspace:*
-        version: link:../..
       typescript:
         specifier: catalog:vite-plugin
         version: 5.7.3

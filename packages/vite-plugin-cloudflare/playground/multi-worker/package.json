@@ -14,9 +14,9 @@
 		"preview:with-worker-configs-warning": "vite preview -c vite.config.with-worker-configs-warning.ts"
 	},
 	"devDependencies": {
+		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:vite-plugin",
-		"@flarelabs-net/vite-plugin-cloudflare": "workspace:*",
 		"typescript": "catalog:vite-plugin",
 		"vite": "catalog:vite-plugin",
 		"wrangler": "workspace:*"
