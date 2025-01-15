@@ -21,9 +21,9 @@ export const EXTERNAL_DEPENDENCIES = [
 	// @cloudflare/workers-types is an optional peer dependency of wrangler, so users can
 	// get the types by installing the package (to what version they prefer) themselves
 	"@cloudflare/workers-types",
-
-	// unenv must be external because it contains unenv/runtime code which needs to be resolved
-	// and read when we are bundling the worker application
+	// `@cloudflare/unenv-preset` and  `unenv` must be external because they contain code
+	// which needs to be resolved and read when we are bundling the worker application
+	"@cloudflare/unenv-preset",
 	"unenv",
 
 	// path-to-regexp must be external because it contains runtime code which needs to be resolved
