@@ -221,6 +221,7 @@ async function parseCustomPoolOptions(
 		options.miniflare.assets = {
 			...options.miniflare.assets,
 			routingConfig: {
+				...options.miniflare.assets.routingConfig,
 				has_user_worker: Boolean(options.main),
 			},
 		};
