@@ -475,7 +475,6 @@ function getFrameworkTests(opts: {
 					},
 				],
 				testCommitMessage: true,
-				quarantine: true,
 				verifyBuildCfTypes: {
 					outputFile: "env.d.ts",
 					envInterfaceName: "CloudflareEnv",

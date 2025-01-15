@@ -89,7 +89,14 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
    * Service Bindings (communicate between multiple Workers)
    * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
    */
-  // "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
+  // "services": [{ "binding": "MY_SERVICE", "service": "my-service" }],
+
+  /**
+   * KV Example:
+   * Bind a KV Namespace. Use KV as persistent storage for small key-value pairs.
+   * Docs: https://developers.cloudflare.com/pages/functions/bindings/#kv-namespaces
+   */
+  // "kv_namespaces": [{ "binding": "MY_KV_NAMESPACE", "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" }],
 }
 `,
 		);
@@ -142,6 +149,13 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 # [[services]]
 # binding = "MY_SERVICE"
 # service = "my-service"
+
+# KV Example:
+# Bind a KV Namespace. Use KV as persistent storage for small key-value pairs.
+# Docs: https://developers.cloudflare.com/pages/functions/bindings/#kv-namespaces
+# [[kv_namespaces]]
+# binding = "MY_KV_NAMESPACE"
+# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 `,
 		);
 	}
