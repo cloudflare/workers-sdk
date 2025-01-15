@@ -32,6 +32,12 @@
 # Workflows ownership
 /packages/workflows-shared/ @cloudflare/workflows @cloudflare/wrangler
 
+# unenv-preset ownership
+/packages/unenv-preset/ @cloudflare/workers-frameworks @cloudflare/wrangler
+
+# vite-plugin-cloudflare ownership
+/packages/vite-plugin-cloudflare/ @cloudflare/workers-frameworks @cloudflare/wrangler
+
 # Owners intentionally left blank on these shared directories / files
 # to avoid noisy review requests
 /.changeset/
