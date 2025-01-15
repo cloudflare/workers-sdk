@@ -79,6 +79,11 @@
 					"name": "Bindings",
 					"icon": "media/cloudflare-workers-outline.svg",
 					"contextualTitle": "Cloudflare Workers Bindings"
+				},
+				{
+					"type": "webview",
+					"id": "cloudflare-workers-bindings.reference",
+					"name": "Reference"
 				}
 			]
 		},
