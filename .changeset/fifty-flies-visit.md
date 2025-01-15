@@ -1,6 +1,5 @@
 ---
-"@cloudflare/unenv-preset": patch
 "wrangler": patch
 ---
 
-chore: update unenv depency version
+chore: update unenv dependency version

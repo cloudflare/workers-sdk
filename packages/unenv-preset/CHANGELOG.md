@@ -1,5 +1,15 @@
 # @cloudflare/unenv-preset
 
+## 1.0.0
+
+### Major Changes
+
+- Initial release of the Cloudflare unenv preset for Workers
+
+### Patch Changes
+
+- [#7760](https://github.com/cloudflare/workers-sdk/pull/7760) [`19228e5`](https://github.com/cloudflare/workers-sdk/commit/19228e50f3bd7ed5d32f8132bd02abc9999585ea) Thanks [@vicb](https://github.com/vicb)! - chore: update unenv dependency version
+
 ## 0.1.1
 
 ### Patch Changes
