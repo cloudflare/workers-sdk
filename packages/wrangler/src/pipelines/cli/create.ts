@@ -1,4 +1,3 @@
-import dedent from "ts-dedent";
 import { formatConfigSnippet, readConfig } from "../../config";
 import { FatalError, UserError } from "../../errors";
 import { logger } from "../../logger";
@@ -294,11 +293,11 @@ export async function createPipelineHandler(
 	);
 	logger.log("🎉 You can now send data to your pipeline!");
 	if (args.enableWorkerBinding) {
-		logger.log(dedent`
-		
-			To start interacting with this Pipeline from a Worker, open your Worker’s config file and add the following binding configuration:
-	
-			${formatConfigSnippet(
+		logger.log(
+			`\nTo start interacting with this Pipeline from a Worker, open your Worker’s config file and add the following binding configuration:\n`
+		);
+		logger.log(
+			formatConfigSnippet(
 				{
 					pipelines: [
 						{
@@ -308,14 +307,11 @@ export async function createPipelineHandler(
 					],
 				},
 				config.configPath
-			)}
-		`);
+			)
+		);
 	}
 	if (args.enableHttp) {
-		logger.log(dedent`
-			Send data to your pipelines HTTP endpoint:
-					
-				curl "${pipeline.endpoint}" -d '[{"foo": "bar"}]'
-		`);
+		logger.log(`\nSend data to your pipelines HTTP endpoint:\n`);
+		logger.log(`	curl "${pipeline.endpoint}" -d '[{"foo": "bar"}]'\n`);
 	}
 }

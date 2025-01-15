@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { describe, expect, it } from "vitest";
 import { normalizeOutput } from "../../e2e/helpers/normalize";
 import { __testSkipDelays } from "../pipelines";
 import { endEventLoop } from "./helpers/end-event-loop";
@@ -320,6 +321,27 @@ describe("pipelines", () => {
 				"pipelines create my-pipeline --r2-bucket test-bucket --r2-access-key-id my-key --r2-secret-access-key my-secret"
 			);
 			expect(requests.count).toEqual(1);
+			expect(std.out).toMatchInlineSnapshot(`
+				"🌀 Creating pipeline named \\"my-pipeline\\"
+				✅ Successfully created pipeline \\"my-pipeline\\" with id 0001
+				🎉 You can now send data to your pipeline!
+
+				To start interacting with this Pipeline from a Worker, open your Worker’s config file and add the following binding configuration:
+
+				{
+				  \\"pipelines\\": [
+				    {
+				      \\"pipeline\\": \\"my-pipeline\\",
+				      \\"binding\\": \\"PIPELINE\\"
+				    }
+				  ]
+				}
+
+				Send data to your pipelines HTTP endpoint:
+
+					curl \\"foo\\" -d '[{\\"foo\\": \\"bar\\"}]'
+				"
+			`);
 		});
 
 		it("should fail a missing bucket", async () => {
