@@ -1,5 +1,15 @@
 # create-cloudflare
 
+## 2.37.1
+
+### Patch Changes
+
+- [#7774](https://github.com/cloudflare/workers-sdk/pull/7774) [`f9344a0`](https://github.com/cloudflare/workers-sdk/commit/f9344a076de5904ac073a3bee33c582c53a2dadc) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Fix regression in C3's `next` template
+
+  [#7676](https://github.com/cloudflare/workers-sdk/pull/7676) switched C3 templates to default to `wrangler.json` instead of `wrangler.toml`. Unfortunately, this unintendedly broke the `next` template, which was still attempting to read `wrangler.toml` specifically. This commit fixes the regression.
+
+  Fixes #7770
+
 ## 2.37.0
 
 ### Minor Changes

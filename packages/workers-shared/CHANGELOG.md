@@ -1,5 +1,15 @@
 # @cloudflare/workers-shared
 
+## 0.12.0
+
+### Minor Changes
+
+- [#7761](https://github.com/cloudflare/workers-sdk/pull/7761) [`bb85c9a`](https://github.com/cloudflare/workers-sdk/commit/bb85c9ac10d23407085ff8cd479bd0469835c60f) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Adds jaeger tracing for asset-worker.
+
+### Patch Changes
+
+- [#7768](https://github.com/cloudflare/workers-sdk/pull/7768) [`97603f0`](https://github.com/cloudflare/workers-sdk/commit/97603f031b30b8a289519ff48f2c2c39b1396656) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: on a 404 from KV, we do not want the asset to stay in cache for the normal 1 year TTL. Instead we want to re-insert with a 60s TTL to revalidate and prevent a bad 404 from persisting.
+
 ## 0.11.2
 
 ### Patch Changes

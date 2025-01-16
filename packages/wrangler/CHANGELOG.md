@@ -1,5 +1,100 @@
 # wrangler
 
+## 3.103.0
+
+### Minor Changes
+
+- [#5086](https://github.com/cloudflare/workers-sdk/pull/5086) [`8faf2c0`](https://github.com/cloudflare/workers-sdk/commit/8faf2c07415030a3c8d9e5fc0e122a59141b3786) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add `--strict-vars` option to `wrangler types`
+
+  add a new `--strict-vars` option to `wrangler types` that developers can (by setting the
+  flag to `false`) use to disable the default strict/literal types generation for their variables
+
+  opting out of strict variables can be useful when developers change often their `vars` values,
+  even more so when multiple environments are involved
+
+  ## Example
+
+  With a toml containing:
+
+  ```toml
+  [vars]
+  MY_VARIABLE = "production_value"
+  MY_NUMBERS = [1, 2, 3]
+
+  [env.staging.vars]
+  MY_VARIABLE = "staging_value"
+  MY_NUMBERS = [7, 8, 9]
+  ```
+
+  the `wrangler types` command would generate the following interface:
+
+  ```
+  interface Env {
+          MY_VARIABLE: "production_value" | "staging_value";
+          MY_NUMBERS: [1,2,3] | [7,8,9];
+  }
+  ```
+
+  while `wrangler types --strict-vars=false` would instead generate:
+
+  ```
+  interface Env {
+          MY_VARIABLE: string;
+          MY_NUMBERS: number[];
+  }
+  ```
+
+  (allowing the developer to easily change their toml variables without the
+  risk of breaking typescript types)
+
+### Patch Changes
+
+- [#7720](https://github.com/cloudflare/workers-sdk/pull/7720) [`902e3af`](https://github.com/cloudflare/workers-sdk/commit/902e3af15d014fe37f5789ce4bb9c4be2aecb23a) Thanks [@vicb](https://github.com/vicb)! - chore(wrangler): use the unenv preset from `@cloudflare/unenv-preset`
+
+- [#7760](https://github.com/cloudflare/workers-sdk/pull/7760) [`19228e5`](https://github.com/cloudflare/workers-sdk/commit/19228e50f3bd7ed5d32f8132bd02abc9999585ea) Thanks [@vicb](https://github.com/vicb)! - chore: update unenv dependency version
+
+- [#7735](https://github.com/cloudflare/workers-sdk/pull/7735) [`e8aaa39`](https://github.com/cloudflare/workers-sdk/commit/e8aaa39307f44e974c3ab966e7880f50a5ff6bc9) Thanks [@penalosa](https://github.com/penalosa)! - Unwrap the error cause when available to send to Sentry
+
+- [#5086](https://github.com/cloudflare/workers-sdk/pull/5086) [`8faf2c0`](https://github.com/cloudflare/workers-sdk/commit/8faf2c07415030a3c8d9e5fc0e122a59141b3786) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: widen multi-env `vars` types in `wrangler types`
+
+  Currently, the type generated for `vars` is a string literal consisting of the value of the variable in the top level environment. If multiple environments
+  are specified this wrongly restricts the type, since the variable could contain any of the values from each of the environments.
+
+  For example, given a `wrangler.toml` containing the following:
+
+  ```
+  [vars]
+  MY_VAR = "dev value"
+
+  [env.production.vars]
+  MY_VAR = "prod value"
+  ```
+
+  running `wrangler types` would generate:
+
+  ```ts
+  interface Env {
+    MY_VAR: "dev value";
+  }
+  ```
+
+  making typescript incorrectly assume that `MY_VAR` is always going to be `"dev value"`
+
+  after these changes, the generated interface would instead be:
+
+  ```ts
+  interface Env {
+    MY_VAR: "dev value" | "prod value";
+  }
+  ```
+
+- [#7733](https://github.com/cloudflare/workers-sdk/pull/7733) [`dceb196`](https://github.com/cloudflare/workers-sdk/commit/dceb19608798c2080dc3aa6cfac6f499473f6fb1) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: pull resource names for provisioning from config if provided
+
+  Uses `database_name` and `bucket_name` for provisioning if specified. For R2, this only happens if there is not a bucket with that name already. Also respects R2 `jurisdiction` if provided.
+
+- Updated dependencies []:
+  - miniflare@3.20241230.2
+
 ## 3.102.0
 
 ### Minor Changes
