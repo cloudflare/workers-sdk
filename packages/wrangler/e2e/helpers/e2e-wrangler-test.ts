@@ -124,4 +124,27 @@ export class WranglerE2ETestHelper {
 
 		return name;
 	}
+
+	async hyperdrive(isLocal: boolean): Promise<{ id: string; name: string }> {
+		const name = generateResourceName("hyperdrive");
+
+		if (isLocal) {
+			return { id: crypto.randomUUID(), name };
+		}
+
+		const result = await this.run(
+			`wrangler hyperdrive create ${name} --connection-string="${process.env.HYPERDRIVE_DATABASE_URL}"`
+		);
+		const tomlMatch = /id = "([0-9a-f]{32})"/.exec(result.stdout);
+		const jsonMatch = /"id": "([0-9a-f]{32})"/.exec(result.stdout);
+		const match = jsonMatch ?? tomlMatch;
+		assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
+		const id = match[1];
+
+		onTestFinished(async () => {
+			await this.run(`wrangler hyperdrive delete ${name}`);
+		});
+
+		return { id, name };
+	}
 }
