@@ -11,7 +11,7 @@
 	],
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/flarelabs-net/vite-plugin-cloudflare",
+		"url": "https://github.com/cloudflare/workers-sdk",
 		"directory": "packages/vite-plugin-cloudflare"
 	},
 	"license": "MIT",
@@ -49,12 +49,12 @@
 		"magic-string": "^0.30.12",
 		"tsup": "^8.3.0",
 		"typescript": "catalog:vite-plugin",
-		"vite": "^6.0.3",
+		"vite": "catalog:vite-plugin",
 		"wrangler": "workspace:*"
 	},
 	"peerDependencies": {
-		"vite": "^6.0.3",
-		"wrangler": "^3.94.0"
+		"vite": "catalog:vite-plugin",
+		"wrangler": "workspace:^"
 	},
 	"publishConfig": {
 		"access": "public"
