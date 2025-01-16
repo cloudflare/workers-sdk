@@ -1,8 +1,7 @@
 import { builtinModules } from "node:module";
 import nodePath from "node:path";
-import { cloudflare } from "@cloudflare/unenv-preset";
 import dedent from "ts-dedent";
-import { defineEnv } from "unenv";
+import { cloudflare, defineEnv } from "unenv";
 import { getBasePath } from "../../paths";
 import type { Plugin, PluginBuild } from "esbuild";
 
