@@ -82,8 +82,8 @@
 				},
 				{
 					"type": "webview",
-					"id": "cloudflare-workers-bindings.reference",
-					"name": "Reference"
+					"id": "cloudflare-workers-bindings.home",
+					"name": "Home"
 				}
 			]
 		},
