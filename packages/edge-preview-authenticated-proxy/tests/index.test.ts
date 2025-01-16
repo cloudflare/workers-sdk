@@ -48,7 +48,9 @@ describe("Preview Worker", () => {
 							return Response.redirect("https://example.com", 302)
 						}
 						if(url.pathname === "/method") {
-							return new Response(request.method)
+							return new Response(request.method, {
+								headers: { "X-Test-Http-Method": request.method },
+							});
 						}
 						if(url.pathname === "/status") {
 							return new Response(407)
@@ -504,7 +506,9 @@ compatibility_date = "2023-01-01"
 				}
 			);
 
-			expect(await resp.text()).toEqual(method);
+			// HEAD request does not return any body. So we will confirm by asserting the response header
+			expect(await resp.text()).toEqual(method === "HEAD" ? "" : method);
+			expect(resp.headers.get("X-Test-Http-Method")).toEqual(method);
 		}
 	);
 

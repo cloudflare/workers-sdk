@@ -24,7 +24,9 @@ export default {
 			return Response.redirect("https://example.com", 302)
 		}
 		if(url.pathname === "/method") {
-			return new Response(request.method)
+			return new Response(request.method, {
+				headers: { "X-Test-Http-Method": request.method },
+			})
 		}
 		if(url.pathname === "/status") {
 			return new Response(407)
@@ -270,7 +272,9 @@ describe("Preview Worker", () => {
 				redirect: "manual",
 			});
 
-			expect(await resp.text()).toEqual(method);
+			// HEAD request does not return any body. So we will confirm by asserting the response header
+			expect(await resp.text()).toEqual(method === "HEAD" ? "" : method);
+			expect(resp.headers.get("X-Test-Http-Method")).toEqual(method);
 		}
 	);
 	it("should fallback to the request method if the X-CF-Http-Method header is missing", async () => {
