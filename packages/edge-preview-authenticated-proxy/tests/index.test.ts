@@ -48,9 +48,7 @@ describe("Preview Worker", () => {
 							return Response.redirect("https://example.com", 302)
 						}
 						if(url.pathname === "/method") {
-							return new Response(request.method, {
-								headers: { "X-Test-Http-Method": request.method },
-							});
+							return new Response(request.method)
 						}
 						if(url.pathname === "/status") {
 							return new Response(407)
@@ -337,7 +335,9 @@ describe("Raw HTTP preview", () => {
 							return Response.redirect("https://example.com", 302)
 						}
 						if(url.pathname === "/method") {
-							return new Response(request.method)
+							return new Response(request.method, {
+								headers: { "Test-Http-Method": request.method },
+							})
 						}
 						if(url.pathname === "/status") {
 							return new Response(407)
@@ -508,7 +508,8 @@ compatibility_date = "2023-01-01"
 
 			// HEAD request does not return any body. So we will confirm by asserting the response header
 			expect(await resp.text()).toEqual(method === "HEAD" ? "" : method);
-			expect(resp.headers.get("X-Test-Http-Method")).toEqual(method);
+			// Header from the client response will be prefixed with "cf-ew-raw-"
+			expect(resp.headers.get("cf-ew-raw-Test-Http-Method")).toEqual(method);
 		}
 	);
 
