@@ -8,7 +8,7 @@
 		"strict": true,
 		"declaration": true,
 		"resolveJsonModule": true,
-		"types": ["node"]
+		"types": ["node-unenv"]
 	},
 	"include": ["src/**/*"]
 }
