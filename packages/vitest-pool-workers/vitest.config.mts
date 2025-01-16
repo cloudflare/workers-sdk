@@ -5,7 +5,5 @@ export default defineConfig({
 		globalSetup: ["./test/global-setup.ts"],
 		exclude: [...configDefaults.exclude, "**/*.worker.test.ts"],
 		testTimeout: 30_000,
-		poolOptions: { forks: { singleFork: true } },
-		retry: 2,
 	},
 });
