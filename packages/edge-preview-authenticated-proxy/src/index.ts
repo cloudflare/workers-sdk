@@ -230,14 +230,12 @@ async function handleRawHttp(request: Request, url: URL) {
 		}
 	}
 
-	const workerResponse = await fetch(
-		switchRemote(url, remote),
-		new Request(request, {
-			method,
-			headers: requestHeaders,
-			redirect: "manual",
-		})
-	);
+	const workerResponse = await fetch(switchRemote(url, remote), {
+		method,
+		headers: requestHeaders,
+		body: method === "GET" || method === "HEAD" ? null : request.body,
+		redirect: "manual",
+	});
 
 	const responseHeaders = new Headers(workerResponse.headers);
 
