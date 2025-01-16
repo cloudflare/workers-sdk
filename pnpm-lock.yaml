@@ -38,8 +38,8 @@ catalogs:
       specifier: npm:unenv-nightly@2.0.0-20241218-183400-5d6aec3
       version: 2.0.0-20241218-183400-5d6aec3
     vite:
-      specifier: 6.0.3
-      version: 6.0.3
+      specifier: ^6.0.7
+      version: 6.0.7
 
 overrides:
   '@types/react-dom@18>@types/react': ^18
@@ -1732,7 +1732,7 @@ importers:
         version: 5.7.3
       vite:
         specifier: catalog:vite-plugin
-        version: 6.0.3(@types/node@18.19.59)(jiti@2.4.2)
+        version: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -1768,7 +1768,7 @@ importers:
         version: 5.7.3
       vite:
         specifier: catalog:vite-plugin
-        version: 6.0.3(@types/node@18.19.59)(jiti@2.4.2)
+        version: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
       wrangler:
         specifier: workspace:*
         version: link:../../../wrangler
@@ -1789,7 +1789,7 @@ importers:
         version: 5.7.3
       vite:
         specifier: catalog:vite-plugin
-        version: 6.0.3(@types/node@18.19.59)(jiti@2.4.2)
+        version: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
       wrangler:
         specifier: workspace:*
         version: link:../../../wrangler
@@ -1810,7 +1810,7 @@ importers:
         version: 5.7.3
       vite:
         specifier: catalog:vite-plugin
-        version: 6.0.3(@types/node@18.19.59)(jiti@2.4.2)
+        version: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
       wrangler:
         specifier: workspace:*
         version: link:../../../wrangler
@@ -1831,7 +1831,7 @@ importers:
         version: 5.7.3
       vite:
         specifier: catalog:vite-plugin
-        version: 6.0.3(@types/node@18.19.59)(jiti@2.4.2)
+        version: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
       wrangler:
         specifier: workspace:*
         version: link:../../../wrangler
@@ -1852,7 +1852,7 @@ importers:
         version: 5.7.3
       vite:
         specifier: catalog:vite-plugin
-        version: 6.0.3(@types/node@18.19.59)(jiti@2.4.2)
+        version: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
       wrangler:
         specifier: workspace:*
         version: link:../../../wrangler
@@ -1894,7 +1894,7 @@ importers:
         version: 5.7.3
       vite:
         specifier: catalog:vite-plugin
-        version: 6.0.3(@types/node@18.19.59)(jiti@2.4.2)
+        version: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
       wrangler:
         specifier: workspace:*
         version: link:../../../wrangler
@@ -1915,7 +1915,7 @@ importers:
         version: 5.7.3
       vite:
         specifier: catalog:vite-plugin
-        version: 6.0.3(@types/node@18.19.59)(jiti@2.4.2)
+        version: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
       wrangler:
         specifier: workspace:*
         version: link:../../../wrangler
@@ -1951,7 +1951,7 @@ importers:
         version: 5.7.3
       vite:
         specifier: catalog:vite-plugin
-        version: 6.0.3(@types/node@18.19.59)(jiti@2.4.2)
+        version: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
       wrangler:
         specifier: workspace:*
         version: link:../../../wrangler
@@ -1982,13 +1982,13 @@ importers:
         version: 19.0.3(@types/react@19.0.7)
       '@vitejs/plugin-react':
         specifier: ^4.3.4
-        version: 4.3.4(vite@6.0.3(@types/node@18.19.59)(jiti@2.4.2))
+        version: 4.3.4(vite@6.0.7(@types/node@18.19.59)(jiti@2.4.2))
       typescript:
         specifier: catalog:vite-plugin
         version: 5.7.3
       vite:
         specifier: catalog:vite-plugin
-        version: 6.0.3(@types/node@18.19.59)(jiti@2.4.2)
+        version: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
       wrangler:
         specifier: workspace:*
         version: link:../../../wrangler
@@ -2019,13 +2019,13 @@ importers:
         version: 19.0.3(@types/react@19.0.7)
       '@vitejs/plugin-react':
         specifier: ^4.3.4
-        version: 4.3.4(vite@6.0.3(@types/node@18.19.59)(jiti@2.4.2))
+        version: 4.3.4(vite@6.0.7(@types/node@18.19.59)(jiti@2.4.2))
       typescript:
         specifier: catalog:vite-plugin
         version: 5.7.3
       vite:
         specifier: catalog:vite-plugin
-        version: 6.0.3(@types/node@18.19.59)(jiti@2.4.2)
+        version: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
       wrangler:
         specifier: workspace:*
         version: link:../../../wrangler
@@ -2046,7 +2046,7 @@ importers:
         version: 5.7.3
       vite:
         specifier: catalog:vite-plugin
-        version: 6.0.3(@types/node@18.19.59)(jiti@2.4.2)
+        version: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
       wrangler:
         specifier: workspace:*
         version: link:../../../wrangler
@@ -2067,7 +2067,7 @@ importers:
         version: 5.7.3
       vite:
         specifier: catalog:vite-plugin
-        version: 6.0.3(@types/node@18.19.59)(jiti@2.4.2)
+        version: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
       wrangler:
         specifier: workspace:*
         version: link:../../../wrangler
@@ -2088,7 +2088,7 @@ importers:
         version: 5.7.3
       vite:
         specifier: catalog:vite-plugin
-        version: 6.0.3(@types/node@18.19.59)(jiti@2.4.2)
+        version: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
       wrangler:
         specifier: workspace:*
         version: link:../../../wrangler
@@ -2109,7 +2109,7 @@ importers:
         version: 5.7.3
       vite:
         specifier: catalog:vite-plugin
-        version: 6.0.3(@types/node@18.19.59)(jiti@2.4.2)
+        version: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
       wrangler:
         specifier: workspace:*
         version: link:../../../wrangler
@@ -2130,7 +2130,7 @@ importers:
         version: 5.7.3
       vite:
         specifier: catalog:vite-plugin
-        version: 6.0.3(@types/node@18.19.59)(jiti@2.4.2)
+        version: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
       wrangler:
         specifier: workspace:*
         version: link:../../../wrangler
@@ -10526,8 +10526,8 @@ packages:
       terser:
         optional: true
 
-  vite@6.0.3:
-    resolution: {integrity: sha512-Cmuo5P0ENTN6HxLSo6IHsjCLn/81Vgrp81oaiFFMRa8gGDj5xEjIcEpf2ZymZtZR8oU0P2JX5WuUp/rlXcHkAw==}
+  vite@6.0.7:
+    resolution: {integrity: sha512-RDt8r/7qx9940f8FcOIAH9PTViRrghKaK2K1jY3RaAURrEUbm9Du1mJ72G+jlhtG3WwodnfzY8ORQZbBavZEAQ==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
     hasBin: true
     peerDependencies:
@@ -14226,14 +14226,14 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@vitejs/plugin-react@4.3.4(vite@6.0.3(@types/node@18.19.59)(jiti@2.4.2))':
+  '@vitejs/plugin-react@4.3.4(vite@6.0.7(@types/node@18.19.59)(jiti@2.4.2))':
     dependencies:
       '@babel/core': 7.26.0
       '@babel/plugin-transform-react-jsx-self': 7.25.9(@babel/core@7.26.0)
       '@babel/plugin-transform-react-jsx-source': 7.25.9(@babel/core@7.26.0)
       '@types/babel__core': 7.20.5
       react-refresh: 0.14.2
-      vite: 6.0.3(@types/node@18.19.59)(jiti@2.4.2)
+      vite: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -19831,7 +19831,7 @@ snapshots:
       '@types/node': 18.19.59
       fsevents: 2.3.3
 
-  vite@6.0.3(@types/node@18.19.59)(jiti@2.4.2):
+  vite@6.0.7(@types/node@18.19.59)(jiti@2.4.2):
     dependencies:
       esbuild: 0.24.2
       postcss: 8.4.49
