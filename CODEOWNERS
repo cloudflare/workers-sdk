@@ -37,6 +37,7 @@
 
 # vite-plugin-cloudflare ownership
 /packages/vite-plugin-cloudflare/ @cloudflare/workers-frameworks @cloudflare/wrangler
+/packages/workers-tsconfig/ @cloudflare/workers-frameworks @cloudflare/wrangler
 
 # Owners intentionally left blank on these shared directories / files
 # to avoid noisy review requests
