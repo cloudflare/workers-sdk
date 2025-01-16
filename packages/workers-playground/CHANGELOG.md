@@ -1,5 +1,11 @@
 # workers-playground
 
+## 0.2.1
+
+### Patch Changes
+
+- [#7639](https://github.com/cloudflare/workers-sdk/pull/7639) [`99f27df`](https://github.com/cloudflare/workers-sdk/commit/99f27df059c211428d4cf3cc07bb99c164d22369) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: sends raw request method through the X-CF-HTTP-Method header
+
 ## 0.2.0
 
 ### Minor Changes
