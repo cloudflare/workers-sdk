@@ -51,9 +51,7 @@ export function findWranglerConfig(
 	{ useRedirectIfAvailable = false } = {}
 ): ConfigPaths {
 	const userConfigPath =
-		findUpSync(`wrangler.json`, { cwd: referencePath }) ??
-		findUpSync(`wrangler.jsonc`, { cwd: referencePath }) ??
-		findUpSync(`wrangler.toml`, { cwd: referencePath });
+		findUpSync([`wrangler.json`, `wrangler.jsonc`, `wrangler.toml`], { cwd: referencePath });
 
 	return {
 		userConfigPath,
