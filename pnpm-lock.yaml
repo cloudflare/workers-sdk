@@ -1464,8 +1464,8 @@ importers:
         specifier: ^6.0.1
         version: 6.1.1(@ava/typescript@4.1.0)(encoding@0.1.13)
       capnp-es:
-        specifier: ^0.0.4
-        version: link:../../../capnp-es
+        specifier: ^0.0.6
+        version: 0.0.6(typescript@5.7.3)
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
@@ -6225,6 +6225,15 @@ packages:
 
   caniuse-lite@1.0.30001669:
     resolution: {integrity: sha512-DlWzFDJqstqtIVx1zeSpIMLjunf5SmwOw0N2Ck/QSQdS8PLS4+9HrLaYei4w8BIAL7IB/UEDu889d8vhCTPA0w==}
+
+  capnp-es@0.0.6:
+    resolution: {integrity: sha512-2SRqH3nCAnN2KaB4Aj5fytxNTRExIgB5A8Za2f8hdPsi+R4lD+NXHjrOpF7ALDJmcw5Zqtj9uPOvf9UESJ7aog==}
+    hasBin: true
+    peerDependencies:
+      typescript: ^5.7.3
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   capnp-ts@0.5.1:
     resolution: {integrity: sha512-Bg68xRboJiEyUqOaxAM5Xbozadqkc/Q7Lu01Qv6CoF4wCtf8fCsm0uh/OzgcTJCa8d0dTm8+ELfm9WR95XcOmA==}
@@ -15321,6 +15330,12 @@ snapshots:
       lodash.uniq: 4.5.0
 
   caniuse-lite@1.0.30001669: {}
+
+  capnp-es@0.0.6(typescript@5.7.3):
+    dependencies:
+      hex2dec: 1.1.2
+    optionalDependencies:
+      typescript: 5.7.3
 
   capnp-ts@0.5.1:
     dependencies:

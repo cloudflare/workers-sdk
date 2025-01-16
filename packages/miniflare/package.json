@@ -72,7 +72,7 @@
 		"@typescript-eslint/eslint-plugin": "^6.9.0",
 		"@typescript-eslint/parser": "^6.9.0",
 		"ava": "^6.0.1",
-		"capnp-es": "^0.0.4",
+		"capnp-es": "^0.0.6",
 		"concurrently": "^8.2.2",
 		"devalue": "^4.3.0",
 		"devtools-protocol": "^0.0.1182435",
