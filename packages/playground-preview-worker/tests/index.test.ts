@@ -257,19 +257,22 @@ describe("Preview Worker", () => {
 
 		expect(await resp.text()).toEqual("PUT");
 	});
-	it("should handle GET method specified on the X-CF-Http-Method header", async () => {
-		const resp = await fetch(`${PREVIEW_REMOTE}/method`, {
-			method: "POST",
-			headers: {
-				"X-CF-Token": defaultUserToken,
-				"X-CF-Http-Method": "GET",
-				"CF-Raw-HTTP": "true",
-			},
-			redirect: "manual",
-		});
+	it.each(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])(
+		"should handle %s method specified on the X-CF-Http-Method header",
+		async (method) => {
+			const resp = await fetch(`${PREVIEW_REMOTE}/method`, {
+				method: "POST",
+				headers: {
+					"X-CF-Token": defaultUserToken,
+					"X-CF-Http-Method": method,
+					"CF-Raw-HTTP": "true",
+				},
+				redirect: "manual",
+			});
 
-		expect(await resp.text()).toEqual("GET");
-	});
+			expect(await resp.text()).toEqual(method);
+		}
+	);
 	it("should fallback to the request method if the X-CF-Http-Method header is missing", async () => {
 		const resp = await fetch(`${PREVIEW_REMOTE}/method`, {
 			method: "PUT",

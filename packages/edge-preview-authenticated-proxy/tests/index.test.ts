@@ -487,23 +487,26 @@ compatibility_date = "2023-01-01"
 		expect(await resp.text()).toEqual("PUT");
 	});
 
-	it("should support GET method specified on the X-CF-Http-Method header", async () => {
-		const token = randomBytes(4096).toString("hex");
-		const resp = await worker.fetch(
-			`https://0000.rawhttp.devprod.cloudflare.dev/method`,
-			{
-				method: "POST",
-				headers: {
-					origin: "https://cloudflare.dev",
-					"X-CF-Token": token,
-					"X-CF-Remote": `http://127.0.0.1:${remote.port}`,
-					"X-CF-Http-Method": "GET",
-				},
-			}
-		);
+	it.each(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])(
+		"should support %s method specified on the X-CF-Http-Method header",
+		async (method) => {
+			const token = randomBytes(4096).toString("hex");
+			const resp = await worker.fetch(
+				`https://0000.rawhttp.devprod.cloudflare.dev/method`,
+				{
+					method: "POST",
+					headers: {
+						origin: "https://cloudflare.dev",
+						"X-CF-Token": token,
+						"X-CF-Remote": `http://127.0.0.1:${remote.port}`,
+						"X-CF-Http-Method": method,
+					},
+				}
+			);
 
-		expect(await resp.text()).toEqual("GET");
-	});
+			expect(await resp.text()).toEqual(method);
+		}
+	);
 
 	it("should fallback to the request method if the X-CF-Http-Method header is missing", async () => {
 		const token = randomBytes(4096).toString("hex");
