@@ -1731,8 +1731,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 5.7.3
       vite:
-        specifier: ^6.0.3
-        version: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
+        specifier: catalog:vite-plugin
+        version: 6.0.3(@types/node@18.19.59)(jiti@2.4.2)
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -10528,46 +10528,6 @@ packages:
 
   vite@6.0.3:
     resolution: {integrity: sha512-Cmuo5P0ENTN6HxLSo6IHsjCLn/81Vgrp81oaiFFMRa8gGDj5xEjIcEpf2ZymZtZR8oU0P2JX5WuUp/rlXcHkAw==}
-    engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
-    hasBin: true
-    peerDependencies:
-      '@types/node': ^18.19.59
-      jiti: '>=1.21.0'
-      less: '*'
-      lightningcss: ^1.21.0
-      sass: '*'
-      sass-embedded: '*'
-      stylus: '*'
-      sugarss: '*'
-      terser: ^5.16.0
-      tsx: ^4.8.1
-      yaml: ^2.4.2
-    peerDependenciesMeta:
-      '@types/node':
-        optional: true
-      jiti:
-        optional: true
-      less:
-        optional: true
-      lightningcss:
-        optional: true
-      sass:
-        optional: true
-      sass-embedded:
-        optional: true
-      stylus:
-        optional: true
-      sugarss:
-        optional: true
-      terser:
-        optional: true
-      tsx:
-        optional: true
-      yaml:
-        optional: true
-
-  vite@6.0.7:
-    resolution: {integrity: sha512-RDt8r/7qx9940f8FcOIAH9PTViRrghKaK2K1jY3RaAURrEUbm9Du1mJ72G+jlhtG3WwodnfzY8ORQZbBavZEAQ==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
     hasBin: true
     peerDependencies:
@@ -19872,16 +19832,6 @@ snapshots:
       fsevents: 2.3.3
 
   vite@6.0.3(@types/node@18.19.59)(jiti@2.4.2):
-    dependencies:
-      esbuild: 0.24.2
-      postcss: 8.4.49
-      rollup: 4.30.1
-    optionalDependencies:
-      '@types/node': 18.19.59
-      fsevents: 2.3.3
-      jiti: 2.4.2
-
-  vite@6.0.7(@types/node@18.19.59)(jiti@2.4.2):
     dependencies:
       esbuild: 0.24.2
       postcss: 8.4.49
