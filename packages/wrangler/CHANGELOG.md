@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.103.1
+
+### Patch Changes
+
+- [#7798](https://github.com/cloudflare/workers-sdk/pull/7798) [`a1ff045`](https://github.com/cloudflare/workers-sdk/commit/a1ff045cfc89f216e19c94e7c4b5d190e27ef5bf) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Reverts #7720 as it introduced breakage in some of the C3 templates (eg. Nuxt)
+
 ## 3.103.0
 
 ### Minor Changes

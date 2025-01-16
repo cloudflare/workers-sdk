@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "3.103.0",
+	"version": "3.103.1",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -70,7 +70,6 @@
 	},
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "workspace:*",
-		"@cloudflare/unenv-preset": "1.x",
 		"@esbuild-plugins/node-globals-polyfill": "0.2.3",
 		"@esbuild-plugins/node-modules-polyfill": "0.2.2",
 		"blake3-wasm": "2.1.5",
