@@ -31,6 +31,7 @@
 	"scripts": {
 		"build": "tsup",
 		"check:type": "tsc --build",
+		"test": "vitest",
 		"test:ci": "vitest run",
 		"watch": "tsup --watch"
 	},
