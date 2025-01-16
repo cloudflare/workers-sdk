@@ -1,5 +1,13 @@
 # workers-playground
 
+## 0.2.2
+
+### Patch Changes
+
+- [#7791](https://github.com/cloudflare/workers-sdk/pull/7791) [`f8c11d7`](https://github.com/cloudflare/workers-sdk/commit/f8c11d7418c6feeac673c7bad909050f1b56b476) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Reverts #7639
+
+  Seems like our prev release of the workers-playground broke things. We are seeing a spike of related errors. We are therefore reverting the changes
+
 ## 0.2.1
 
 ### Patch Changes
