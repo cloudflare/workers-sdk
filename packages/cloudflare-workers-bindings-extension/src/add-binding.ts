@@ -52,20 +52,19 @@ export async function addBindingFlow(context: ExtensionContext) {
 	];
 
 	interface State {
-		config: Config;
+		config?: Config;
 		configUri: Uri;
-		bindingType: BindingType;
-		name: string;
+		bindingType?: BindingType;
+		name?: string;
 	}
 
-	/** Partial, except for K */
-	type Optional<T, K extends keyof T> = Partial<Omit<T, K>> & Pick<T, K>;
+	const title = "Add binding";
+
 	async function collectInputs() {
-		const config = await getWranglerConfig();
 		const configUri = await getConfigUri();
-		if (!config || !configUri) {
+		if (!configUri) {
 			const docs = await window.showErrorMessage(
-				"Unable to locate Wrangler configuration file — have you opened a project with a wrangler.json(c) or wrangler.toml file?",
+				"Unable to locate Wrangler configuration file — please open or create a project with a wrangler.json(c) or wrangler.toml file. You can run `npx create cloudflare@latest` to get started with a template.",
 				"Learn more"
 			);
 			if (docs) {
@@ -77,17 +76,26 @@ export async function addBindingFlow(context: ExtensionContext) {
 			}
 			return;
 		}
+		// if we didn't successfully read the config, it's probably because of an old wrangler version
+		// import wrangler will already have warned the user (prbs at the view binding stage) - do we want to error again?
+		// should we just hide the add buttons if wrangler is old?
+		let config: Config | undefined;
+		try {
+			config = await getWranglerConfig();
+		} catch {}
+		if (!config) {
+			window.showErrorMessage(
+				"Please update wrangler to at least 3.99.0 to use this extension."
+			);
+			return;
+		}
+
 		const state = { config, configUri };
 		await MultiStepInput.run((input) => pickBindingType(input, state));
-		return state as State;
+		return state;
 	}
 
-	const title = "Add binding";
-
-	async function pickBindingType(
-		input: MultiStepInput,
-		state: Optional<State, "config" | "configUri">
-	) {
+	async function pickBindingType(input: MultiStepInput, state: State) {
 		const pick = await input.showQuickPick({
 			title,
 			step: 1,
@@ -99,11 +107,8 @@ export async function addBindingFlow(context: ExtensionContext) {
 		return (input: MultiStepInput) => inputBindingName(input, state);
 	}
 
-	async function inputBindingName(
-		input: MultiStepInput,
-		state: Optional<State, "config" | "configUri">
-	) {
-		const allBindingNames = getAllBindingNames(state.config);
+	async function inputBindingName(input: MultiStepInput, state: State) {
+		const allBindingNames = getAllBindingNames(state.config ?? {});
 
 		let name = await input.showInputBox({
 			title,
@@ -121,7 +126,7 @@ export async function addBindingFlow(context: ExtensionContext) {
 		return () => addToConfig(state);
 	}
 
-	async function addToConfig(state: Optional<State, "config" | "configUri">) {
+	async function addToConfig(state: State) {
 		assert(state.bindingType?.configKey && state.name);
 		const workspaceFolder = workspace.getWorkspaceFolder(state.configUri);
 
@@ -134,15 +139,23 @@ export async function addBindingFlow(context: ExtensionContext) {
 		const doc = await workspace.openTextDocument(state.configUri);
 		window.showTextDocument(doc);
 		let openDocs: string | undefined;
-		try {
-			wrangler.experimental_patchConfig(state.configUri.path, {
-				[state.bindingType.configKey]: [{ binding: state.name }],
-			});
-			openDocs = await window.showInformationMessage(
-				`Created binding '${state.name}'`,
-				`Open ${state.bindingType.label} documentation`
-			);
-		} catch {
+		let useClipboard = false;
+		if (!wrangler) {
+			useClipboard = true;
+		} else {
+			try {
+				wrangler.experimental_patchConfig(state.configUri.path, {
+					[state.bindingType.configKey]: [{ binding: state.name }],
+				});
+				openDocs = await window.showInformationMessage(
+					`Created binding '${state.name}'`,
+					`Open ${state.bindingType.label} documentation`
+				);
+			} catch {
+				useClipboard = true;
+			}
+		}
+		if (useClipboard) {
 			const patch = `[[${state.bindingType?.configKey!}]]
 			binding = "${state.name}"
 			`;
