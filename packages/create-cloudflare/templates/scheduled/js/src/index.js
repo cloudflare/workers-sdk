@@ -20,7 +20,7 @@ export default {
 		return new Response(`To test the scheduled handler, ensure you have used the "--test-scheduled" then try running "curl ${url.href}".`);
 	},
 
-	// The scheduled handler is invoked at the interval set in our wrangler.toml's
+	// The scheduled handler is invoked at the interval set in our wrangler.json's
 	// [[triggers]] configuration.
 	async scheduled(event, env, ctx) {
 		// A Cron Trigger can make requests to other endpoints on the Internet,

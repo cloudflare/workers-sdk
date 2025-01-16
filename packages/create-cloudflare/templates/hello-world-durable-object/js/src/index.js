@@ -11,7 +11,7 @@ import { DurableObject } from "cloudflare:workers";
  */
 
 /**
- * Env provides a mechanism to reference bindings declared in wrangler.toml within JavaScript
+ * Env provides a mechanism to reference bindings declared in wrangler.json within JavaScript
  *
  * @typedef {Object} Env
  * @property {DurableObjectNamespace} MY_DURABLE_OBJECT - The Durable Object namespace binding
@@ -24,7 +24,7 @@ export class MyDurableObject extends DurableObject {
 	 * 	`DurableObjectStub::get` for a given identifier (no-op constructors can be omitted)
 	 *
 	 * @param {DurableObjectState} ctx - The interface for interacting with Durable Object state
-	 * @param {Env} env - The interface to reference bindings declared in wrangler.toml
+	 * @param {Env} env - The interface to reference bindings declared in wrangler.json
 	 */
 	constructor(ctx, env) {
 		super(ctx, env);
@@ -47,7 +47,7 @@ export default {
 	 * This is the standard fetch handler for a Cloudflare Worker
 	 *
 	 * @param {Request} request - The request submitted to the Worker from the client
-	 * @param {Env} env - The interface to reference bindings declared in wrangler.toml
+	 * @param {Env} env - The interface to reference bindings declared in wrangler.json
 	 * @param {ExecutionContext} ctx - The execution context of the Worker
 	 * @returns {Promise<Response>} The response to be sent back to the client
 	 */

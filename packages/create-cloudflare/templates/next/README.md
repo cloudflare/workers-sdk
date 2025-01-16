@@ -47,10 +47,9 @@ In order to enable the example:
   // KV Example:
   ```
   and uncomment the commented lines below it (also uncomment the relevant imports).
-- Do the same in the `wrangler.toml` file, where
-  the comment is:
+- In the `wrangler.json` file add the following configuration line:
   ```
-  # KV Example:
+  "kv_namespaces": [{ "binding": "MY_KV_NAMESPACE", "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" }],
   ```
 - If you're using TypeScript run the `cf-typegen` script to update the `env.d.ts` file:
   ```bash

@@ -193,6 +193,7 @@ function getFrameworkTests(opts: {
 					route: "/",
 					expectedText: "Create Next App",
 				},
+				// see https://github.com/cloudflare/next-on-pages/blob/main/packages/next-on-pages/docs/supported.md#operating-systems
 				unsupportedOSs: ["win32"],
 				unsupportedPms: [
 					// bun and yarn are failing in CI
@@ -475,7 +476,6 @@ function getFrameworkTests(opts: {
 					},
 				],
 				testCommitMessage: true,
-				quarantine: true,
 				verifyBuildCfTypes: {
 					outputFile: "env.d.ts",
 					envInterfaceName: "CloudflareEnv",
@@ -484,6 +484,8 @@ function getFrameworkTests(opts: {
 					route: "/",
 					expectedText: "Create Next App",
 				},
+				// see https://github.com/cloudflare/next-on-pages/blob/main/packages/next-on-pages/docs/supported.md#operating-systems
+				unsupportedOSs: ["win32"],
 				verifyPreview: {
 					route: "/",
 					expectedText: "Create Next App",

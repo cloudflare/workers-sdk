@@ -26,27 +26,9 @@ const generate = async (ctx: C3Context) => {
 
 	await runFrameworkGenerator(ctx, [projectName]);
 
-	const wranglerToml = readFile(join(getTemplatePath(ctx), "wrangler.toml"));
-
-	// Note: here we add `# KV Example:` to the toml file for the KV example, we don't actually
-	//       include the comment in the template wrangler.toml file just so to keep it identical
-	//       and consistent with that of all the other frameworks
-	//       (instead of making it a special case which needs extra care)
-	const newTomlContent = wranglerToml.replace(
-		/#\s+\[\[kv_namespaces\]\]\n#\s+binding\s+=\s+"MY_KV_NAMESPACE"\n#\s+id\s+=\s+"[a-zA-Z0-9]+?"/,
-		($1) => `# KV Example:\n${$1}`,
-	);
-
-	if (!/# KV Example/.test(newTomlContent)) {
-		// This should never happen to users, it is a check mostly so that
-		// if the toml file is changed in a way that breaks the "KV Example" addition
-		// the C3 Next.js e2e runs will fail with this
-		throw new Error("Failed to properly generate the wrangler.toml file");
-	}
-
-	writeFile(join(ctx.project.path, "wrangler.toml"), newTomlContent);
-
-	updateStatus("Created wrangler.toml file");
+	const wranglerConfig = readFile(join(getTemplatePath(ctx), "wrangler.json"));
+	writeFile(join(ctx.project.path, "wrangler.json"), wranglerConfig);
+	updateStatus("Created wrangler.json file");
 };
 
 const updateNextConfig = (usesTs: boolean) => {

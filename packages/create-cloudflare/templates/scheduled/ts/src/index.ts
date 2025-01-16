@@ -6,17 +6,17 @@
  * https://developers.cloudflare.com/workers/platform/triggers/cron-triggers/
  *
  * - Run `npm run dev` in your terminal to start a development server
- * - Run `curl "http://localhost:8787/__scheduled?cron=*+*+*+*+*"` to see your worker in action
- * - Run `npm run deploy` to publish your worker
+ * - Run `curl "http://localhost:8787/__scheduled?cron=*+*+*+*+*"` to see your Worker in action
+ * - Run `npm run deploy` to publish your Worker
  *
- * Bind resources to your worker in `wrangler.toml`. After adding bindings, a type definition for the
+ * Bind resources to your Worker in `wrangler.json`. After adding bindings, a type definition for the
  * `Env` object can be regenerated with `npm run cf-typegen`.
  *
  * Learn more at https://developers.cloudflare.com/workers/
  */
 
 export default {
-	// The scheduled handler is invoked at the interval set in our wrangler.toml's
+	// The scheduled handler is invoked at the interval set in our wrangler.json's
 	// [[triggers]] configuration.
 	async scheduled(event, env, ctx): Promise<void> {
 		// A Cron Trigger can make requests to other endpoints on the Internet,
