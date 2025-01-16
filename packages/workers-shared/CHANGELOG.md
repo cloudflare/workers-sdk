@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.12.1
+
+### Patch Changes
+
+- [#7790](https://github.com/cloudflare/workers-sdk/pull/7790) [`c588c8a`](https://github.com/cloudflare/workers-sdk/commit/c588c8a79592979ef62489516593df7ca5b96901) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: remove `--experimental-versions` flag from the Asset/Router Workers `deploy` scripts, now that Wrangler has removed the flag.
+
 ## 0.12.0
 
 ### Minor Changes
