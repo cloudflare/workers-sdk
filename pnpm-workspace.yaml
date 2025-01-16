@@ -19,7 +19,6 @@ catalog:
 
 catalogs:
   vite-plugin:
-    "@cloudflare/workers-types": "^4.20241205.0"
     "typescript": "^5.7.2"
     "vite": "6.0.3"
     "@types/node": "^22.10.1"

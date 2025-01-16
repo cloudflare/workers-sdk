@@ -31,9 +31,6 @@ catalogs:
       specifier: ~2.1.8
       version: 2.1.8
   vite-plugin:
-    '@cloudflare/workers-types':
-      specifier: ^4.20241205.0
-      version: 4.20241230.0
     typescript:
       specifier: ^5.7.2
       version: 5.7.3
@@ -1716,7 +1713,7 @@ importers:
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: catalog:vite-plugin
+        specifier: ^4.20241230.0
         version: 4.20241230.0
       '@types/node':
         specifier: ^18.19.59
@@ -1764,7 +1761,7 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: catalog:vite-plugin
+        specifier: ^4.20241230.0
         version: 4.20241230.0
       typescript:
         specifier: catalog:vite-plugin
@@ -1785,7 +1782,7 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: catalog:vite-plugin
+        specifier: ^4.20241230.0
         version: 4.20241230.0
       typescript:
         specifier: catalog:vite-plugin
@@ -1806,7 +1803,7 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: catalog:vite-plugin
+        specifier: ^4.20241230.0
         version: 4.20241230.0
       typescript:
         specifier: catalog:vite-plugin
@@ -1827,7 +1824,7 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: catalog:vite-plugin
+        specifier: ^4.20241230.0
         version: 4.20241230.0
       typescript:
         specifier: catalog:vite-plugin
@@ -1848,7 +1845,7 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: catalog:vite-plugin
+        specifier: ^4.20241230.0
         version: 4.20241230.0
       typescript:
         specifier: catalog:vite-plugin
@@ -1875,7 +1872,7 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: catalog:vite-plugin
+        specifier: ^4.20241230.0
         version: 4.20241230.0
       '@remix-run/cloudflare':
         specifier: 2.12.0
@@ -1911,7 +1908,7 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: catalog:vite-plugin
+        specifier: ^4.20241230.0
         version: 4.20241230.0
       typescript:
         specifier: catalog:vite-plugin
@@ -1932,7 +1929,7 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: catalog:vite-plugin
+        specifier: ^4.20241230.0
         version: 4.20241230.0
       '@types/node':
         specifier: ^18.19.59
@@ -1975,7 +1972,7 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: catalog:vite-plugin
+        specifier: ^4.20241230.0
         version: 4.20241230.0
       '@types/react':
         specifier: ^19.0.0
@@ -2012,7 +2009,7 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: catalog:vite-plugin
+        specifier: ^4.20241230.0
         version: 4.20241230.0
       '@types/react':
         specifier: ^19.0.0
@@ -2042,7 +2039,7 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: catalog:vite-plugin
+        specifier: ^4.20241230.0
         version: 4.20241230.0
       typescript:
         specifier: catalog:vite-plugin
@@ -2063,7 +2060,7 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: catalog:vite-plugin
+        specifier: ^4.20241230.0
         version: 4.20241230.0
       typescript:
         specifier: catalog:vite-plugin
@@ -2084,7 +2081,7 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: catalog:vite-plugin
+        specifier: ^4.20241230.0
         version: 4.20241230.0
       typescript:
         specifier: catalog:vite-plugin
@@ -2105,7 +2102,7 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: catalog:vite-plugin
+        specifier: ^4.20241230.0
         version: 4.20241230.0
       typescript:
         specifier: catalog:vite-plugin
@@ -2126,7 +2123,7 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: catalog:vite-plugin
+        specifier: ^4.20241230.0
         version: 4.20241230.0
       typescript:
         specifier: catalog:vite-plugin

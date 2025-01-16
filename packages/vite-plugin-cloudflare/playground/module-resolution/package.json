@@ -16,7 +16,7 @@
 		"@cloudflare-dev-module-resolution/requires": "file:./packages/requires",
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "catalog:vite-plugin",
+		"@cloudflare/workers-types": "^4.20241230.0",
 		"@remix-run/cloudflare": "2.12.0",
 		"@types/react": "^18.3.11",
 		"discord-api-types": "0.37.98",
