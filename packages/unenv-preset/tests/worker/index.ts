@@ -9,6 +9,7 @@ export const TESTS = {
 	testUtilImplements,
 	testPath,
 	testDns,
+	testTimers,
 };
 
 export default {
@@ -140,4 +141,12 @@ async function testDns() {
 	assert.strictEqual(typeof results[0].critical, "number");
 	assert.strictEqual(results[0].critical, 0);
 	assert.strictEqual(results[0].issue, "pki.goog");
+}
+
+async function testTimers() {
+	const timers = await import("node:timers");
+	const timeout = timers.setTimeout(() => null, 1000);
+	// active is deprecated and no more in the type
+	(timers as any).active(timeout);
+	timers.clearTimeout(timeout);
 }

@@ -54,7 +54,7 @@
 		"wrangler": "workspace:*"
 	},
 	"peerDependencies": {
-		"unenv": "npm:unenv-nightly@*",
+		"unenv": ">=2.0.0-rc.0",
 		"workerd": "^1.20241230.0"
 	},
 	"peerDependenciesMeta": {

@@ -1666,8 +1666,8 @@ importers:
   packages/unenv-preset:
     dependencies:
       unenv:
-        specifier: npm:unenv-nightly@*
-        version: unenv-nightly@2.0.0-20250109-100802-88ad671
+        specifier: '>=2.0.0-rc.0'
+        version: 2.0.0-rc.0
       workerd:
         specifier: ^1.20241230.0
         version: 1.20241230.0
@@ -2502,8 +2502,8 @@ importers:
         specifier: 6.3.0
         version: 6.3.0
       unenv:
-        specifier: npm:unenv-nightly@2.0.0-20250109-100802-88ad671
-        version: unenv-nightly@2.0.0-20250109-100802-88ad671
+        specifier: 2.0.0-rc.0
+        version: 2.0.0-rc.0
       workerd:
         specifier: 1.20241230.0
         version: 1.20241230.0
@@ -10366,8 +10366,8 @@ packages:
   unenv-nightly@2.0.0-20241218-183400-5d6aec3:
     resolution: {integrity: sha512-7Xpi29CJRbOV1/IrC03DawMJ0hloklDLq/cigSe+J2jkcC+iDres2Cy0r4ltj5f0x7DqsaGaB4/dLuCPPFZnZA==}
 
-  unenv-nightly@2.0.0-20250109-100802-88ad671:
-    resolution: {integrity: sha512-Uij6gODNNNNsNBoDlnaMvZI99I6YlVJLRfYH8AOLMlbFrW7k2w872v9VLuIdch2vF8QBeSC4EftIh5sG4ibzdA==}
+  unenv@2.0.0-rc.0:
+    resolution: {integrity: sha512-H0kl2w8jFL/FAk0xvjVing4bS3jd//mbg1QChDnn58l9Sc5RtduaKmLAL8n+eBw5jJo8ZjYV7CrEGage5LAOZQ==}
 
   unicorn-magic@0.1.0:
     resolution: {integrity: sha512-lRfVq8fE8gz6QMBuDM6a+LO3IAzTi05H6gCVaUpir2E1Rwpo4ZUog45KpNXKC/Mn3Yb9UDuHumeFTo9iV/D9FQ==}
@@ -19659,10 +19659,10 @@ snapshots:
       pathe: 1.1.2
       ufo: 1.5.4
 
-  unenv-nightly@2.0.0-20250109-100802-88ad671:
+  unenv@2.0.0-rc.0:
     dependencies:
       defu: 6.1.4
-      mlly: 1.7.3
+      mlly: 1.7.4
       ohash: 1.1.4
       pathe: 1.1.2
       ufo: 1.5.4
