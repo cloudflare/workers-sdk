@@ -46,8 +46,8 @@
 		"test:watch": "vitest"
 	},
 	"devDependencies": {
-		"@types/node": "*",
-		"typescript": "catalog:default",
+		"@types/node-unenv": "npm:@types/node@^22.10.5",
+		"typescript": "^5.7.3",
 		"unbuild": "^3.2.0",
 		"undici": "catalog:default",
 		"vitest": "catalog:default",

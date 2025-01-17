@@ -5,9 +5,11 @@
 ## Usage
 
 ```ts
-import { cloudflare, env, nodeless } from "@cloudflare/unenv-preset";
+import { cloudflare } from "@cloudflare/unenv-preset";
+import { defineEnv } from "unenv";
 
-const {
-	/* ... */
-} = env(nodeless, cloudflare);
+const { env } = defineEnv({
+	nodeCompat: true,
+	presets: [cloudflare],
+});
 ```
