@@ -49,7 +49,7 @@
 		"tree-kill": "^1.2.2",
 		"turbo": "^2.2.3",
 		"typescript": "catalog:default",
-		"vite": "^5.0.12",
+		"vite": "catalog:default",
 		"vitest": "catalog:default"
 	},
 	"packageManager": "pnpm@9.12.0",

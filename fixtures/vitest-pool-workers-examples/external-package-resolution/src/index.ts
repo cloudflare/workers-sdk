@@ -1,4 +1,10 @@
 import { Toucan } from "toucan-js";
+// Test pre-bundling dependency relies on exports field without a default entrypoint
+// @see https://github.com/cloudflare/workers-sdk/issues/6591
+import "discord-api-types/v10";
+// Test pre-bundling dependencies with browser field mapping
+// @see https://github.com/cloudflare/workers-sdk/issues/6581
+import "@microlabs/otel-cf-workers";
 
 export default {
 	async fetch(): Promise<Response> {

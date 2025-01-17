@@ -41,6 +41,19 @@ function trimSuffix(suffix: string, value: string) {
 	return value.substring(0, value.length - suffix.length);
 }
 
+/**
+ * When pre-bundling is enabled, Vite will add a hash to the end of the file path
+ * e.g. `/node_modules/.vite/deps/my-dep.js?v=f3sf2ebd`
+ *
+ * @see https://vite.dev/guide/features.html#npm-dependency-resolving-and-pre-bundling
+ * @see https://github.com/cloudflare/workers-sdk/pull/5673
+ */
+const versionHashRegExp = /\?v=[0-9a-f]+$/;
+
+function trimViteVersionHash(filePath: string) {
+	return filePath.replace(versionHashRegExp, "");
+}
+
 // RegExp for path suffix to force loading module as specific type.
 // (e.g. `/path/to/module.wasm?mf_vitest_force=CompiledWasm`)
 // This suffix will be added by the pool when fetching a module that matches a
@@ -323,7 +336,8 @@ async function viteResolve(
 		//       (Specifically, the "tinyrainbow" module imports `node:tty` as `tty`)
 		return id;
 	}
-	return resolved.id;
+
+	return trimViteVersionHash(resolved.id);
 }
 
 type ResolveMethod = "import" | "require";
