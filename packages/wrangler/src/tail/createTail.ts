@@ -198,6 +198,18 @@ export async function createTail(
 	return { tail, expiration, deleteTail };
 }
 
+export type TailEventMessageType =
+	| RequestEvent
+	| ScheduledEvent
+	| AlarmEvent
+	| EmailEvent
+	| TailEvent
+	| TailInfo
+	| QueueEvent
+	| RpcEvent
+	| undefined
+	| null;
+
 /**
  * Everything captured by the trace worker and sent to us via
  * `wrangler tail` is structured JSON that deserializes to this type.
@@ -212,6 +224,11 @@ export type TailEventMessage = {
 	 * The name of the script we're tailing
 	 */
 	scriptName?: string;
+
+	/**
+	 * The name of the entrypoint invoked by the Worker
+	 */
+	entrypoint?: string;
 
 	/**
 	 * Any exceptions raised by the worker
@@ -250,29 +267,19 @@ export type TailEventMessage = {
 	/**
 	 * The event that triggered the worker. In the case of an HTTP request,
 	 * this will be a RequestEvent. If it's a cron trigger, it'll be a
-	 * ScheduledEvent. If it's a durable object alarm, it's an AlarmEvent.
+	 * ScheduledEvent. If it's a Durable Object alarm, it's an AlarmEvent.
 	 * If it's a email, it'a an EmailEvent. If it's a Queue consumer event,
 	 * it's a QueueEvent.
 	 *
 	 * Until workers-types exposes individual types for export, we'll have
 	 * to just re-define these types ourselves.
 	 */
-	event:
-		| RequestEvent
-		| ScheduledEvent
-		| AlarmEvent
-		| EmailEvent
-		| TailEvent
-		| TailInfo
-		| QueueEvent
-		| undefined
-		| null;
+	event: TailEventMessageType;
 };
 
 /**
  * A request that triggered worker execution
  */
-
 export type RequestEvent = {
 	request: Pick<Request, "url" | "method" | "headers"> & {
 		/**
@@ -386,7 +393,7 @@ export type ScheduledEvent = {
 };
 
 /**
- * A event that was triggered from a durable object alarm
+ * An event that was triggered from a Durable Object alarm
  */
 export type AlarmEvent = {
 	/**
@@ -442,8 +449,8 @@ export type TailInfo = {
 	type: string;
 };
 
-/*
- * A event that was triggered by receiving a batch of messages from a Queue for consumption.
+/**
+ * An event that was triggered by receiving a batch of messages from a Queue for consumption.
  */
 export type QueueEvent = {
 	/**
@@ -455,4 +462,14 @@ export type QueueEvent = {
 	 * The number of messages in the batch.
 	 */
 	batchSize: number;
+};
+
+/**
+ * An RPC method that was invoked
+ */
+export type RpcEvent = {
+	/**
+	 * The name of the RPC method that was invoked
+	 */
+	rpcMethod: string;
 };
