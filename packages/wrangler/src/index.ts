@@ -138,7 +138,7 @@ import {
 	closeSentry,
 	setupSentry,
 } from "./sentry";
-import { tailHandler, tailOptions } from "./tail";
+import { tailCommand } from "./tail";
 import registerTriggersSubcommands from "./triggers";
 import { typesHandler, typesOptions } from "./type-generation";
 import { getAuthFromEnv } from "./user";
@@ -460,12 +460,8 @@ export function createCLIParser(argv: string[]) {
 	);
 
 	// tail
-	wrangler.command(
-		"tail [worker]",
-		"🦚 Start a log tailing session for a Worker",
-		tailOptions,
-		tailHandler
-	);
+	registry.define([{ command: "wrangler tail", definition: tailCommand }]);
+	registry.registerNamespace("tail");
 
 	// secret
 	wrangler.command(
