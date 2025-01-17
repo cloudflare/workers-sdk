@@ -106,6 +106,7 @@ export default class extends WorkerEntrypoint<Env> {
 					hostname: url.hostname,
 					eyeballPath: url.pathname,
 					env: this.env.ENVIRONMENT,
+					version: this.env.VERSION_METADATA?.id,
 				});
 
 				return handleRequest(
