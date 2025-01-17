@@ -1,5 +1,15 @@
 # @cloudflare/unenv-preset
 
+## 1.0.1
+
+### Patch Changes
+
+- [#7789](https://github.com/cloudflare/workers-sdk/pull/7789) [`facb3ff`](https://github.com/cloudflare/workers-sdk/commit/facb3ffc9b1973b16b8c3d30de790505c03e1554) Thanks [@vicb](https://github.com/vicb)! - refactor(unenv-preset): misc minor changes
+
+  - Bump the Typescript dependency to ^5.7.3 as required by unbuild
+  - Install a local version of `@types/node` (`@types/node-unenv`)
+  - Add more details to the README
+
 ## 1.0.0
 
 ### Major Changes

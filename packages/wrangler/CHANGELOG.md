@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.103.2
+
+### Patch Changes
+
+- [#7804](https://github.com/cloudflare/workers-sdk/pull/7804) [`16a9460`](https://github.com/cloudflare/workers-sdk/commit/16a9460ea6c7daaadcdf2f2e921c66521549bc58) Thanks [@vicb](https://github.com/vicb)! - fix(wrangler): use require.resolve to resolve unenv path
+
 ## 3.103.1
 
 ### Patch Changes
