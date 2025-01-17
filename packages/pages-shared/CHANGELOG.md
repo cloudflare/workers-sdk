@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.13.2
+
+### Patch Changes
+
+- [#7564](https://github.com/cloudflare/workers-sdk/pull/7564) [`147ab7d`](https://github.com/cloudflare/workers-sdk/commit/147ab7dda6af0546c9ba7b589390aa590e4d6d02) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Key the Early Hints cache entries off of the asset key rather than the request path
+
 ## 0.13.1
 
 ### Patch Changes
