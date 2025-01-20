@@ -42,6 +42,6 @@
 		"pg-cloudflare": "^1.1.1",
 		"typescript": "catalog:vite-plugin",
 		"vite": "catalog:vite-plugin",
-		"wrangler": "workspace:*"
+		"wrangler": "catalog:vite-plugin"
 	}
 }

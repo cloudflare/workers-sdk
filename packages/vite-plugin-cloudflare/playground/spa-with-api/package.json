@@ -23,6 +23,6 @@
 		"@vitejs/plugin-react": "^4.3.4",
 		"typescript": "catalog:vite-plugin",
 		"vite": "catalog:vite-plugin",
-		"wrangler": "workspace:*"
+		"wrangler": "catalog:vite-plugin"
 	}
 }
