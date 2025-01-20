@@ -49,7 +49,7 @@ import {
 } from "../sourcemap";
 import triggersDeploy from "../triggers/deploy";
 import { printBindings } from "../utils/print-bindings";
-import { retryOnError } from "../utils/retry";
+import { retryOnAPIFailure } from "../utils/retry";
 import {
 	createDeployment,
 	patchNonVersionedScriptSettings,
@@ -826,7 +826,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				// If we're using the new APIs, first upload the version
 				if (canUseNewVersionsDeploymentsApi) {
 					// Upload new version
-					const versionResult = await retryOnError(async () =>
+					const versionResult = await retryOnAPIFailure(async () =>
 						fetchResult<ApiVersion>(
 							`/accounts/${accountId}/workers/scripts/${scriptName}/versions`,
 							{
@@ -861,7 +861,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						startup_time_ms: versionResult.startup_time_ms,
 					};
 				} else {
-					result = await retryOnError(async () =>
+					result = await retryOnAPIFailure(async () =>
 						fetchResult<{
 							id: string | null;
 							etag: string | null;

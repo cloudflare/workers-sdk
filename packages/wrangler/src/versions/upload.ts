@@ -53,7 +53,7 @@ import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { printBindings } from "../utils/print-bindings";
-import { retryOnError } from "../utils/retry";
+import { retryOnAPIFailure } from "../utils/retry";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type { Rule } from "../config/environment";
@@ -741,7 +741,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			try {
 				const body = createWorkerUploadForm(worker);
 
-				const result = await retryOnError(async () =>
+				const result = await retryOnAPIFailure(async () =>
 					fetchResult<{
 						id: string;
 						startup_time_ms: number;

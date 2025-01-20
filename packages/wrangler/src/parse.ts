@@ -88,6 +88,10 @@ export class APIError extends ParseError {
 		return false;
 	}
 
+	isRetryable() {
+		return String(this.#status).startsWith("5");
+	}
+
 	// Allow `APIError`s to be marked as handled.
 	#reportable = true;
 	get reportable() {
