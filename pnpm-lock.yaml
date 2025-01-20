@@ -1464,8 +1464,8 @@ importers:
         specifier: ^6.0.1
         version: 6.1.1(@ava/typescript@4.1.0)(encoding@0.1.13)
       capnp-es:
-        specifier: ^0.0.6
-        version: 0.0.6(typescript@5.7.3)
+        specifier: ^0.0.7
+        version: 0.0.7(typescript@5.7.3)
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
@@ -6226,8 +6226,8 @@ packages:
   caniuse-lite@1.0.30001669:
     resolution: {integrity: sha512-DlWzFDJqstqtIVx1zeSpIMLjunf5SmwOw0N2Ck/QSQdS8PLS4+9HrLaYei4w8BIAL7IB/UEDu889d8vhCTPA0w==}
 
-  capnp-es@0.0.6:
-    resolution: {integrity: sha512-2SRqH3nCAnN2KaB4Aj5fytxNTRExIgB5A8Za2f8hdPsi+R4lD+NXHjrOpF7ALDJmcw5Zqtj9uPOvf9UESJ7aog==}
+  capnp-es@0.0.7:
+    resolution: {integrity: sha512-gjDJBgNbdPA2PilGjAixf5op2HTI7jaBGc5Gs0zrAjfG9/6hqPwjTIC7dGPxrU4Y0a3WnzX1I5r/XUa9jVRSWw==}
     hasBin: true
     peerDependencies:
       typescript: ^5.7.3
@@ -15331,9 +15331,7 @@ snapshots:
 
   caniuse-lite@1.0.30001669: {}
 
-  capnp-es@0.0.6(typescript@5.7.3):
-    dependencies:
-      hex2dec: 1.1.2
+  capnp-es@0.0.7(typescript@5.7.3):
     optionalDependencies:
       typescript: 5.7.3
 
