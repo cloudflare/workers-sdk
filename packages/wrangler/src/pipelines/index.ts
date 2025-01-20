@@ -5,7 +5,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { APIError } from "../parse";
 import { requireAuth } from "../user";
-import { retryOnError } from "../utils/retry";
+import { retryOnAPIFailure } from "../utils/retry";
 import { printWranglerBanner } from "../wrangler-banner";
 import {
 	createPipeline,
@@ -63,7 +63,7 @@ async function authorizeR2Bucket(
 
 	// Wait for token to settle/propagate, retry up to 10 times, with 1s waits in-between errors
 	!__testSkipDelaysFlag &&
-		(await retryOnError(
+		(await retryOnAPIFailure(
 			async () => {
 				await r2.send(
 					new HeadBucketCommand({
