@@ -363,7 +363,7 @@ We use the following guidelines to determine the kind of change for a PR:
 
 ### Styleguide
 
-When contributing to Wrangler, please refer to the [`STYLEGUIDE.md file`](https://github.com/STYLEGUIDE.md) file where possible to help maintain consistent patterns throughout Wrangler.
+When contributing to Wrangler, please refer to the [`STYLEGUIDE.md file`](STYLEGUIDE.md) file where possible to help maintain consistent patterns throughout Wrangler.
 
 ## Releases
 
