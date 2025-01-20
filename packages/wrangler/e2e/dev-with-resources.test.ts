@@ -691,11 +691,11 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		await expect(res.text()).resolves.toBe("env.WORKFLOW is available");
 	});
 
-	it("exposes Images bindings", async () => {
-		describe.sequential.each([
-			{ imagesMode: "remote", extraFlags: "" },
-			{ imagesMode: "local", extraFlags: "--experimental-images-local-mode" },
-		] as const)("Images Binding Mode: $imagesMode", async ({ extraFlags }) => {
+	describe.sequential.each([
+		{ imagesMode: "remote", extraFlags: "" },
+		{ imagesMode: "local", extraFlags: "--experimental-images-local-mode" },
+	] as const)("Images Binding Mode: $imagesMode", async ({ extraFlags }) => {
+		it("exposes Images bindings", async () => {
 			await helper.seed({
 				"wrangler.toml": dedent`
 					name = "my-images-demo"
