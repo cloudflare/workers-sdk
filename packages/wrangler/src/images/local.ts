@@ -1,17 +1,30 @@
 import { File } from "buffer";
 import sharp from "sharp";
-import { z } from "zod";
 import type { ImageInfoResponse } from "@cloudflare/workers-types/experimental";
 import type { Sharp } from "sharp";
 
-const Transform = z.object({
-	imageIndex: z.number().optional(),
-	rotate: z.number().optional(),
-	width: z.number().optional(),
-	height: z.number().optional(),
-});
+type Transform = {
+	imageIndex?: number;
+	rotate?: number;
+	width?: number;
+	height?: number;
+};
 
-const Transforms = z.array(Transform);
+function validateTransforms(inputTransforms: unknown): Transform[] | null {
+	if (!Array.isArray(inputTransforms)) {
+		return null;
+	}
+
+	for (const transform of inputTransforms) {
+		for (const key of ["imageIndex", "rotate", "width", "height"]) {
+			if (transform[key] !== undefined && typeof transform[key] != "number") {
+				return null;
+			}
+		}
+	}
+
+	return inputTransforms as Transform[];
+}
 
 export async function imagesLocalFetcher(request: Request): Promise<Response> {
 	const data = await request.formData();
@@ -44,9 +57,9 @@ export async function imagesLocalFetcher(request: Request): Promise<Response> {
 				return badTransformsResponse;
 			}
 
-			const transforms = Transforms.safeParse(JSON.parse(transformsJson));
+			const transforms = validateTransforms(JSON.parse(transformsJson));
 
-			if (!transforms.success) {
+			if (transforms === null) {
 				return badTransformsResponse;
 			}
 
@@ -60,7 +73,7 @@ export async function imagesLocalFetcher(request: Request): Promise<Response> {
 				);
 			}
 
-			return runTransform(transformer, transforms.data, outputFormat);
+			return runTransform(transformer, transforms, outputFormat);
 		} catch (e) {
 			return badTransformsResponse;
 		}
@@ -121,7 +134,7 @@ async function runInfo(transformer: Sharp): Promise<Response> {
 
 async function runTransform(
 	transformer: Sharp,
-	transforms: z.infer<typeof Transforms>,
+	transforms: Transform[],
 	outputFormat: string | null
 ): Promise<Response> {
 	for (const transform of transforms) {

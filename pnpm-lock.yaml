@@ -2513,9 +2513,6 @@ importers:
       workerd:
         specifier: 1.20241230.0
         version: 1.20241230.0
-      zod:
-        specifier: ^3.22.3
-        version: 3.22.3
     optionalDependencies:
       fsevents:
         specifier: ~2.3.2
