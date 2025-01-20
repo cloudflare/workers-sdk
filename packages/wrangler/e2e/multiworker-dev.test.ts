@@ -361,4 +361,89 @@ describe("multiworker", () => {
 			);
 		});
 	});
+
+	describe("pages", () => {
+		beforeEach(async () => {
+			await baseSeed(a, {
+				"wrangler.toml": dedent`
+					name = "${workerName}"
+					pages_build_output_dir = "./public"
+					compatibility_date = "2024-11-01"
+
+                    [[services]]
+					binding = "CEE"
+					service = '${workerName3}'
+
+					[[services]]
+					binding = "BEE"
+					service = '${workerName2}'
+				`,
+				"functions/cee.ts": dedent/* javascript */ `
+				export async function onRequest(context) {
+					return context.env.CEE.fetch("https://example.com");
+				}`,
+				"functions/bee.ts": dedent/* javascript */ `
+				export async function onRequest(context) {
+					return context.env.BEE.fetch("https://example.com");
+				}`,
+				"public/index.html": `<h1>hello pages assets</h1>`,
+			});
+		});
+
+		it("pages project assets", async () => {
+			const pages = helper.runLongLived(
+				`wrangler pages dev -c wrangler.toml -c ${b}/wrangler.toml -c ${c}/wrangler.toml`,
+				{ cwd: a }
+			);
+			const { url } = await pages.waitForReady(5_000);
+
+			await vi.waitFor(
+				async () =>
+					await expect(fetchText(`${url}`)).resolves.toBe(
+						"<h1>hello pages assets</h1>"
+					),
+				{ interval: 1000, timeout: 10_000 }
+			);
+		});
+
+		it("pages project fetching service worker", async () => {
+			const pages = helper.runLongLived(
+				`wrangler pages dev -c wrangler.toml -c ${b}/wrangler.toml -c ${c}/wrangler.toml`,
+				{ cwd: a }
+			);
+			const { url } = await pages.waitForReady(5_000);
+
+			await vi.waitFor(
+				async () =>
+					await expect(fetchText(`${url}/cee`)).resolves.toBe(
+						"Hello from service worker"
+					),
+				{ interval: 1000, timeout: 10_000 }
+			);
+		});
+
+		it("pages project fetching module worker", async () => {
+			const pages = helper.runLongLived(
+				`wrangler pages dev -c wrangler.toml -c ${b}/wrangler.toml -c ${c}/wrangler.toml`,
+				{ cwd: a }
+			);
+			const { url } = await pages.waitForReady(5_000);
+
+			await vi.waitFor(
+				async () =>
+					await expect(fetchText(`${url}/bee`)).resolves.toBe("hello world"),
+				{ interval: 1000, timeout: 10_000 }
+			);
+		});
+
+		it("should error if multiple pages configs are provided", async () => {
+			const pages = helper.runLongLived(
+				`wrangler pages dev -c wrangler.toml -c wrangler.toml`,
+				{ cwd: a }
+			);
+			await pages.readUntil(
+				/You cannot use a Pages project as a service binding target/
+			);
+		});
+	});
 });

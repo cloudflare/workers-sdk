@@ -227,6 +227,14 @@ async function resolveConfig(
 	config: Config,
 	input: StartDevWorkerInput
 ): Promise<StartDevWorkerOptions> {
+	if (
+		config.pages_build_output_dir &&
+		input.dev?.multiworkerPrimary === false
+	) {
+		throw new UserError(
+			`You cannot use a Pages project as a service binding target.\nIf you are trying to develop Pages and Workers together, please use \`wrangler pages dev\`. Note the first config file specified must be for the Pages project`
+		);
+	}
 	const legacySite = unwrapHook(input.legacy?.site, config);
 
 	const legacyAssets = unwrapHook(input.legacy?.legacyAssets, config);
