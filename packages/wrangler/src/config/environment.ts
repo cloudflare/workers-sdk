@@ -119,11 +119,11 @@ interface EnvironmentInheritable {
 
 	/**
 	 * A list of flags that enable features from upcoming features of
-	 * the Workers runtime, usually used together with compatibility_flags.
+	 * the Workers runtime, usually used together with compatibility_date.
 	 *
-	 * More details at https://developers.cloudflare.com/workers/platform/compatibility-dates
+	 * More details at https://developers.cloudflare.com/workers/platform/compatibility-flags
 	 *
-	 * @default `[]`
+	 * @default []
 	 * @inheritable
 	 */
 	compatibility_flags: string[];
@@ -162,23 +162,27 @@ interface EnvironmentInheritable {
 	 */
 	base_dir: string | undefined;
 
+	// Carmen according to our tests the default is undefined
+	// warning: you must force "workers_dev: true" in tests to match expected behavior
 	/**
 	 * Whether we use <name>.<subdomain>.workers.dev to
 	 * test and deploy your Worker.
 	 *
-	 * // Carmen according to our tests the default is undefined
-	 * // warning: you must force "workers_dev: true" in tests to match expected behavior
-	 * @default `true` (This is a breaking change from Wrangler v1)
+	 *
+	 * NOTE: (This is a breaking change from Wrangler v1)
+	 *
+	 * @default true
 	 * @breaking
 	 * @inheritable
 	 */
+
 	workers_dev: boolean | undefined;
 
 	/**
 	 * Whether we use <version>-<name>.<subdomain>.workers.dev to
 	 * serve Preview URLs for your Worker.
 	 *
-	 * @default `true`
+	 * @default true
 	 * @inheritable
 	 */
 	preview_urls: boolean | undefined;
@@ -214,7 +218,7 @@ interface EnvironmentInheritable {
 	/**
 	 * The function to use to replace jsx syntax.
 	 *
-	 * @default `"React.createElement"`
+	 * @default "React.createElement"
 	 * @inheritable
 	 */
 	jsx_factory: string;
@@ -222,7 +226,7 @@ interface EnvironmentInheritable {
 	/**
 	 * The function to use to replace jsx fragment syntax.
 	 *
-	 * @default `"React.Fragment"`
+	 * @default "React.Fragment"
 	 * @inheritable
 	 */
 	jsx_fragment: string;
@@ -246,7 +250,7 @@ interface EnvironmentInheritable {
 	 *
 	 * More details here https://developers.cloudflare.com/workers/platform/cron-triggers
 	 *
-	 * @default `{crons:[]}`
+	 * @default {crons:[]}
 	 * @inheritable
 	 */
 	triggers: { crons: string[] };
@@ -340,7 +344,7 @@ interface EnvironmentInheritable {
 	/**
 	 * List of bindings that you will send to logfwdr
 	 *
-	 * @default `{bindings:[]}`
+	 * @default {bindings:[]}
 	 * @inheritable
 	 */
 	logfwdr: {
@@ -432,7 +436,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `{}`
+	 * @default {}
 	 * @nonInheritable
 	 */
 	define: Record<string, string>;
@@ -442,7 +446,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `{}`
+	 * @default {}
 	 * @nonInheritable
 	 */
 	vars: Record<string, string | Json>;
@@ -456,7 +460,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `{bindings:[]}`
+	 * @default {bindings:[]}
 	 * @nonInheritable
 	 */
 	durable_objects: {
@@ -469,7 +473,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `[]`
+	 * @default []
 	 * @nonInheritable
 	 */
 	workflows: WorkflowBinding[];
@@ -480,7 +484,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `{}`
+	 * @default {}
 	 * @nonInheritable
 	 */
 	cloudchamber: CloudchamberConfig;
@@ -495,7 +499,7 @@ export interface EnvironmentNonInheritable {
 		 * NOTE: This field is not automatically inherited from the top level environment,
 		 * and so must be specified in every named environment.
 		 *
-		 * @default `{}`
+		 * @default {}
 		 * @nonInheritable
 		 */
 		app: ContainerApp[];
@@ -511,7 +515,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `[]`
+	 * @default []
 	 * @nonInheritable
 	 */
 	kv_namespaces: {
@@ -529,7 +533,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `[]`
+	 * @default []
 	 * @nonInheritable
 	 */
 	send_email: {
@@ -547,7 +551,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `{consumers:[],producers:[]}`
+	 * @default {consumers:[],producers:[]}
 	 * @nonInheritable
 	 */
 	queues: {
@@ -600,7 +604,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `[]`
+	 * @default []
 	 * @nonInheritable
 	 */
 	r2_buckets: {
@@ -620,7 +624,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `[]`
+	 * @default []
 	 * @nonInheritable
 	 */
 	d1_databases: {
@@ -646,7 +650,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `[]`
+	 * @default []
 	 * @nonInheritable
 	 */
 	vectorize: {
@@ -662,7 +666,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `[]`
+	 * @default []
 	 * @nonInheritable
 	 */
 	hyperdrive: {
@@ -680,7 +684,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `[]`
+	 * @default []
 	 * @nonInheritable
 	 */
 	services:
@@ -702,7 +706,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `[]`
+	 * @default []
 	 * @nonInheritable
 	 */
 	analytics_engine_datasets: {
@@ -718,7 +722,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `{}`
+	 * @default {}
 	 * @nonInheritable
 	 */
 	browser:
@@ -733,7 +737,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `{}`
+	 * @default {}
 	 * @nonInheritable
 	 */
 	ai:
@@ -758,7 +762,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `{}`
+	 * @default {}
 	 * @nonInheritable
 	 */
 	unsafe: {
@@ -803,7 +807,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `[]`
+	 * @default []
 	 * @nonInheritable
 	 */
 	mtls_certificates: {
@@ -819,7 +823,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `[]`
+	 * @default []
 	 * @nonInheritable
 	 */
 	tail_consumers?: TailConsumer[];
@@ -830,7 +834,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `[]`
+	 * @default []
 	 * @nonInheritable
 	 */
 	dispatch_namespaces: {
@@ -848,7 +852,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `[]`
+	 * @default []
 	 * @nonInheritable
 	 */
 	pipelines: {
@@ -882,7 +886,7 @@ interface EnvironmentDeprecated {
 	/**
 	 * A list of services that your Worker should be bound to.
 	 *
-	 * @default `[]`
+	 * @default []
 	 * @deprecated DO NOT USE. We'd added this to test the new service binding system, but the proper way to test experimental features is to use `unsafe.bindings` configuration.
 	 */
 	experimental_services?: {
