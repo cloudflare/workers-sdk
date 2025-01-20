@@ -31,7 +31,29 @@ type WorkerTestConfig = RunnerConfig & {
 
 function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 	if (opts.experimental) {
-		return [];
+		return [
+			{
+				template: "hello-world-with-assets",
+				variants: ["TypeScript", "JavaScript"],
+				verifyDeploy: {
+					route: "/message",
+					expectedText: "Hello, World!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+				verifyTest: true,
+			},
+			{
+				template: "hello-world-durable-object-with-assets",
+				variants: ["TypeScript", "JavaScript"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello, World!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+			},
+		];
 	} else {
 		return [
 			{
@@ -203,6 +225,7 @@ const runCli = async (
 		projectPath,
 		"--type",
 		template,
+		experimental ? "--experimental" : "",
 		"--no-open",
 		"--no-git",
 		NO_DEPLOY ? "--no-deploy" : "--deploy",
