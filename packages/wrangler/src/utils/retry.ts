@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { setTimeout } from "node:timers/promises";
 import chalk from "chalk";
 import { logger } from "../logger";
