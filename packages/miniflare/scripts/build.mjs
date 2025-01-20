@@ -1,4 +1,3 @@
-import { execSync } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import esbuild from "esbuild";
@@ -151,13 +150,6 @@ const embedWorkersPlugin = {
 };
 
 async function buildPackage() {
-	execSync("capnp-es node_modules/workerd/workerd.capnp -ots");
-
-	await fs.copyFile(
-		"node_modules/workerd/workerd.ts",
-		"src/runtime/config/generated.ts"
-	);
-
 	const pkg = getPackage(pkgRoot);
 
 	const indexPath = path.join(pkgRoot, "src", "index.ts");

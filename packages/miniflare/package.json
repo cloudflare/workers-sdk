@@ -31,6 +31,7 @@
 	],
 	"scripts": {
 		"build": "node scripts/build.mjs && pnpm run types:build",
+		"capnp:workerd": "node scripts/build-capnp.mjs",
 		"check:lint": "eslint --max-warnings=0 \"{src,test}/**/*.ts\" \"scripts/**/*.{js,mjs}\" \"types/**/*.ts\"",
 		"check:type": "tsc",
 		"clean": "rimraf ./dist ./dist-types",
