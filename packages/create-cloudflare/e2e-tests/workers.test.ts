@@ -14,6 +14,7 @@ import {
 	runC3,
 	spawnWithLogging,
 	test,
+	waitForExit,
 } from "./helpers";
 import type { RunnerConfig } from "./helpers";
 import type { Writable } from "stream";
@@ -35,7 +36,20 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 		return [
 			{
 				template: "hello-world",
-				variants: ["TypeScript", "JavaScript", "Python"],
+				variants: ["TypeScript", "JavaScript"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello World!",
+				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Hello World!",
+				},
+				verifyTest: true,
+			},
+			{
+				template: "hello-world",
+				variants: ["Python"],
 				verifyDeploy: {
 					route: "/",
 					expectedText: "Hello World!",
@@ -159,13 +173,17 @@ describe
 								expect(join(project.path, config.main)).toExist();
 							}
 
-							const { verifyDeploy } = testConfig;
+							const { verifyDeploy, verifyTest } = testConfig;
 							if (verifyDeploy) {
 								if (deployedUrl) {
 									await verifyDeployment(deployedUrl, verifyDeploy);
 								} else {
 									await verifyLocalDev(testConfig, project.path, logStream);
 								}
+							}
+
+							if (verifyTest) {
+								await verifyTestScript(project.path, logStream);
 							}
 						} finally {
 							await deleteWorker(project.name);
@@ -279,3 +297,18 @@ const verifyLocalDev = async (
 		await sleep(1000);
 	}
 };
+
+async function verifyTestScript(projectPath: string, logStream: Writable) {
+	const proc = spawnWithLogging(
+		[pm, "run", "test"],
+		{
+			cwd: projectPath,
+			env: {
+				VITEST: undefined,
+			},
+		},
+		logStream,
+	);
+
+	return await waitForExit(proc);
+}

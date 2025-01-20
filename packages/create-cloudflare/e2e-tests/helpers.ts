@@ -79,6 +79,7 @@ export type RunnerConfig = {
 		route: string;
 		expectedText: string;
 	};
+	verifyTest?: boolean;
 };
 
 export const runC3 = async (
