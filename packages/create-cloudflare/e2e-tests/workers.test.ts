@@ -245,7 +245,7 @@ const runCli = async (
 		projectPath,
 		"--type",
 		template,
-		experimental ? "--experimental" : "",
+		...(experimental ? ["--experimental"] : []),
 		"--no-open",
 		"--no-git",
 		NO_DEPLOY ? "--no-deploy" : "--deploy",
