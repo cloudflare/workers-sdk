@@ -15,7 +15,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/cloudflare/workers-sdk",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/vite-plugin-cloudflare"
 	},
 	"license": "MIT",
