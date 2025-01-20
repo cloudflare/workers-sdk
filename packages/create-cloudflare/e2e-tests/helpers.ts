@@ -71,14 +71,23 @@ export type RunnerConfig = {
 	argv?: string[];
 	quarantine?: boolean;
 	timeout?: number;
+	/**
+	 * Specifies whether to assert the response from the specified route after deployment.
+	 */
 	verifyDeploy: null | {
 		route: string;
 		expectedText: string;
 	};
+	/**
+	 * Specifies whether to run the preview script for the project and assert the response from the specified route.
+	 */
 	verifyPreview: null | {
 		route: string;
 		expectedText: string;
 	};
+	/**
+	 * Specifies whether to run the test script for the project and verify the exit code.
+	 */
 	verifyTest?: boolean;
 };
 
