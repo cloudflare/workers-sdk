@@ -446,7 +446,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			// services support JSRPC over HTTP CONNECT using a special hostname.
 			// Refer to https://github.com/cloudflare/workerd/pull/1757 for details.
 			let address: `${string}:${number}`;
-			let style = HttpOptions_Style.PROXY;
+			let style: HttpOptions_Style = HttpOptions_Style.PROXY;
 			if (service.entrypoint !== undefined) {
 				// If the user has requested a named entrypoint...
 				if (target.entrypointAddresses === undefined) {
