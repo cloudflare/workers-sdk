@@ -106,6 +106,7 @@ export default class extends WorkerEntrypoint<Env> {
 					hostname: url.hostname,
 					eyeballPath: url.pathname,
 					env: this.env.ENVIRONMENT,
+					version: this.env.VERSION_METADATA?.id,
 				});
 
 				return handleRequest(
@@ -115,21 +116,17 @@ export default class extends WorkerEntrypoint<Env> {
 					this.unstable_exists.bind(this),
 					this.unstable_getByETag.bind(this)
 				);
-			}).catch((err) =>
-				this.handleError(sentry, analytics, performance, startTimeMs, err)
-			);
+			})
+				.catch((err) => this.handleError(sentry, analytics, err))
+				.finally(() => this.submitMetrics(analytics, performance, startTimeMs));
 		} catch (err) {
-			return this.handleError(sentry, analytics, performance, startTimeMs, err);
+			const errorResponse = this.handleError(sentry, analytics, err);
+			this.submitMetrics(analytics, performance, startTimeMs);
+			return errorResponse;
 		}
 	}
 
-	handleError(
-		sentry: Toucan | undefined,
-		analytics: Analytics,
-		performance: PerformanceTimer,
-		startTimeMs: number,
-		err: unknown
-	) {
+	handleError(sentry: Toucan | undefined, analytics: Analytics, err: unknown) {
 		try {
 			const response = new InternalServerErrorResponse(err as Error);
 
@@ -143,9 +140,22 @@ export default class extends WorkerEntrypoint<Env> {
 			}
 
 			return response;
-		} finally {
+		} catch (e) {
+			console.error("Error handling error", e);
+			return new InternalServerErrorResponse(e as Error);
+		}
+	}
+
+	submitMetrics(
+		analytics: Analytics,
+		performance: PerformanceTimer,
+		startTimeMs: number
+	) {
+		try {
 			analytics.setData({ requestTime: performance.now() - startTimeMs });
 			analytics.write();
+		} catch (e) {
+			console.error("Error submitting metrics", e);
 		}
 	}
 
