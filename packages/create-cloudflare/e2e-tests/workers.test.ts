@@ -44,8 +44,28 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 				verifyTest: true,
 			},
 			{
+				template: "hello-world-with-assets",
+				variants: ["Python"],
+				verifyDeploy: {
+					route: "/message",
+					expectedText: "Hello, World!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+			},
+			{
 				template: "hello-world-durable-object-with-assets",
 				variants: ["TypeScript", "JavaScript"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello, World!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+			},
+			{
+				template: "hello-world-assets-only",
+				variants: [],
 				verifyDeploy: {
 					route: "/",
 					expectedText: "Hello, World!",
