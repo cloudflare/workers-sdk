@@ -170,6 +170,7 @@ async function resolveBindings(
 		{
 			registry: input.dev?.registry,
 			local: !input.dev?.remote,
+			imagesLocalMode: input.dev?.imagesLocalMode,
 			name: config.name,
 		}
 	);

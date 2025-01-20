@@ -54,6 +54,7 @@ export function printBindings(
 	context: {
 		registry?: WorkerRegistry | null;
 		local?: boolean;
+		imagesLocalMode?: boolean;
 		name?: string;
 		provisioning?: boolean;
 	} = {}
@@ -349,7 +350,12 @@ export function printBindings(
 	if (images !== undefined) {
 		output.push({
 			name: friendlyBindingNames.images,
-			entries: [{ key: "Name", value: images.binding }],
+			entries: [
+				{
+					key: "Name",
+					value: addLocalSuffix(images.binding, !!context.imagesLocalMode),
+				},
+			],
 		});
 	}
 
