@@ -105,22 +105,16 @@ describe("config findWranglerConfig()", () => {
 				Object {
 				  "debug": "",
 				  "err": "",
-				  "info": "",
+				  "info": "Using redirected Wrangler configuration.
+				 - Configuration being used: \\"dist/wrangler.json\\"
+				 - Original user's configuration: \\"<no user config found>\\"
+				 - Deploy configuration file: \\".wrangler/deploy/config.json\\"
+				Using redirected Wrangler configuration.
+				 - Configuration being used: \\"dist/wrangler.json\\"
+				 - Original user's configuration: \\"<no user config found>\\"
+				 - Deploy configuration file: \\".wrangler/deploy/config.json\\"",
 				  "out": "",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing redirected Wrangler configuration.[0m
-
-				  Configuration being used: \\"dist/wrangler.json\\"
-				  Original user's configuration: \\"<no user config found>\\"
-				  Deploy configuration file: \\".wrangler/deploy/config.json\\"
-
-
-				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing redirected Wrangler configuration.[0m
-
-				  Configuration being used: \\"dist/wrangler.json\\"
-				  Original user's configuration: \\"<no user config found>\\"
-				  Deploy configuration file: \\".wrangler/deploy/config.json\\"
-
-				",
+				  "warn": "",
 				}
 			`);
 		});
@@ -148,22 +142,16 @@ describe("config findWranglerConfig()", () => {
 				Object {
 				  "debug": "",
 				  "err": "",
-				  "info": "",
+				  "info": "Using redirected Wrangler configuration.
+				 - Configuration being used: \\"dist/wrangler.json\\"
+				 - Original user's configuration: \\"wrangler.toml\\"
+				 - Deploy configuration file: \\".wrangler/deploy/config.json\\"
+				Using redirected Wrangler configuration.
+				 - Configuration being used: \\"dist/wrangler.json\\"
+				 - Original user's configuration: \\"wrangler.toml\\"
+				 - Deploy configuration file: \\".wrangler/deploy/config.json\\"",
 				  "out": "",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing redirected Wrangler configuration.[0m
-
-				  Configuration being used: \\"dist/wrangler.json\\"
-				  Original user's configuration: \\"wrangler.toml\\"
-				  Deploy configuration file: \\".wrangler/deploy/config.json\\"
-
-
-				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing redirected Wrangler configuration.[0m
-
-				  Configuration being used: \\"dist/wrangler.json\\"
-				  Original user's configuration: \\"wrangler.toml\\"
-				  Deploy configuration file: \\".wrangler/deploy/config.json\\"
-
-				",
+				  "warn": "",
 				}
 			`);
 		});

@@ -128,11 +128,11 @@ function findRedirectedWranglerConfig(
 			}
 		}
 
-		logger.warn(dedent`
+		logger.info(dedent`
 			Using redirected Wrangler configuration.
-			Configuration being used: "${path.relative(".", redirectedConfigPath)}"
-			Original user's configuration: "${userConfigPath ? path.relative(".", userConfigPath) : "<no user config found>"}"
-			Deploy configuration file: "${path.relative(".", deployConfigPath)}"
+			 - Configuration being used: "${path.relative(".", redirectedConfigPath)}"
+			 - Original user's configuration: "${userConfigPath ? path.relative(".", userConfigPath) : "<no user config found>"}"
+			 - Deploy configuration file: "${path.relative(".", deployConfigPath)}"
 		`);
 		return redirectedConfigPath;
 	}
