@@ -153,7 +153,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					return;
 				}
 
-				return resolveNodeCompatId(this.environment, workerConfig, source);
+				const res = resolveNodeCompatId(this.environment, workerConfig, source);
+				if (res) {
+					return await this.resolve(res, import.meta.url);
+				}
 			},
 			async transform(code, id) {
 				if (resolvedPluginConfig.type === "assets-only") {

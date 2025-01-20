@@ -21,6 +21,5 @@ catalogs:
   vite-plugin:
     "vite": "^6.0.7"
     "@types/node": "^22.10.1"
-    "unenv": "npm:unenv-nightly@2.0.0-20241218-183400-5d6aec3"
     # This is the minimum Wrangler peer dependency for Vite
     "wrangler": "^3.101.0"
