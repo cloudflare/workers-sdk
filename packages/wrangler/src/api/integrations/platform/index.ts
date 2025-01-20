@@ -158,6 +158,14 @@ async function getMiniflareOptionsFromConfig(
 		migrations: rawConfig.migrations,
 	});
 
+	const processedAssetOptions = getAssetsOptions(
+		{ assets: undefined },
+		rawConfig
+	);
+	const assetOptions = processedAssetOptions
+		? buildAssetOptions({ assets: processedAssetOptions })
+		: {};
+
 	const persistOptions = getMiniflarePersistOptions(options.persist);
 
 	const serviceBindings = await getServiceBindings(bindings.services);
@@ -172,6 +180,7 @@ async function getMiniflareOptionsFromConfig(
 					...serviceBindings,
 					...bindingOptions.serviceBindings,
 				},
+				...assetOptions,
 			},
 			...externalWorkers,
 		],
