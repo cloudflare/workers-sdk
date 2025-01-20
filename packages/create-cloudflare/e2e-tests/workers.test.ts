@@ -42,6 +42,7 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 				// There is no preview script
 				verifyPreview: null,
 				verifyTest: true,
+				argv: ["--category", "hello-world"],
 			},
 			{
 				template: "hello-world-with-assets",
@@ -52,6 +53,7 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 				},
 				// There is no preview script
 				verifyPreview: null,
+				argv: ["--category", "hello-world"],
 			},
 			{
 				template: "hello-world-durable-object-with-assets",
@@ -62,6 +64,7 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 				},
 				// There is no preview script
 				verifyPreview: null,
+				argv: ["--category", "hello-world"],
 			},
 			{
 				template: "hello-world-assets-only",
@@ -72,6 +75,7 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 				},
 				// There is no preview script
 				verifyPreview: null,
+				argv: ["--category", "hello-world"],
 			},
 		];
 	} else {
