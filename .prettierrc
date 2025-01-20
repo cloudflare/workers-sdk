@@ -30,7 +30,6 @@
 			"files": "packages/vite-plugin-cloudflare/README.md",
 			"options": {
 				"useTabs": false,
-				"semi": false,
 				"singleQuote": true,
 				"plugins": []
 			}
