@@ -14,7 +14,7 @@ describe('Hello World worker', () => {
 	});
 
 	it('responds with Hello World! (integration style)', async () => {
-		const response = await SELF.fetch(request, env, ctx); // Break the test to verify the CI pipeline
+		const response = await SELF.fetch('http://example.com');
 		expect(await response.text()).toMatchInlineSnapshot(`"Hello World!"`);
 	});
 });
