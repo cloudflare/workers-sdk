@@ -140,7 +140,7 @@ import {
 } from "./sentry";
 import { tailCommand } from "./tail";
 import registerTriggersSubcommands from "./triggers";
-import { typesHandler, typesOptions } from "./type-generation";
+import { typesCommand } from "./type-generation";
 import { getAuthFromEnv } from "./user";
 import { loginCommand, logoutCommand, whoamiCommand } from "./user/commands";
 import { whoami } from "./user/whoami";
@@ -473,12 +473,8 @@ export function createCLIParser(argv: string[]) {
 	);
 
 	// types
-	wrangler.command(
-		"types [path]",
-		"📝 Generate types from bindings and module rules in configuration\n",
-		typesOptions,
-		typesHandler
-	);
+	registry.define([{ command: "wrangler types", definition: typesCommand }]);
+	registry.registerNamespace("types");
 
 	/******************** CMD GROUP ***********************/
 	registry.define([
