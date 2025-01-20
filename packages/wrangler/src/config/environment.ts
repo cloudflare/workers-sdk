@@ -169,8 +169,6 @@ interface EnvironmentInheritable {
 	 * test and deploy your Worker.
 	 *
 	 *
-	 * NOTE: (This is a breaking change from Wrangler v1)
-	 *
 	 * @default true
 	 * @breaking
 	 * @inheritable
