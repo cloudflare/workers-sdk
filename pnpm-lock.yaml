@@ -135,7 +135,7 @@ importers:
         version: 5.0.12(@types/node@18.19.59)
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
 
   fixtures/additional-modules:
     devDependencies:
@@ -153,7 +153,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -171,7 +171,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -198,7 +198,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -219,7 +219,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -237,7 +237,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -258,7 +258,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -282,7 +282,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -306,7 +306,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
 
   fixtures/isomorphic-random-example: {}
 
@@ -331,7 +331,7 @@ importers:
         version: 5.6.3
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -343,7 +343,7 @@ importers:
         version: 7.0.0
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -368,7 +368,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -386,7 +386,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -413,7 +413,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -431,7 +431,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -452,7 +452,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -480,7 +480,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -498,7 +498,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -516,7 +516,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -537,7 +537,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -555,7 +555,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -592,7 +592,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -613,7 +613,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -628,7 +628,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -649,7 +649,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -667,7 +667,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -685,7 +685,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -703,7 +703,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -721,7 +721,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -739,7 +739,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -757,7 +757,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -775,7 +775,7 @@ importers:
         version: 5.6.3
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -796,7 +796,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -811,7 +811,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -836,7 +836,7 @@ importers:
     devDependencies:
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -878,7 +878,7 @@ importers:
         version: 5.6.3
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -905,7 +905,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -937,7 +937,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -958,7 +958,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -979,7 +979,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -997,7 +997,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1015,7 +1015,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1168,10 +1168,10 @@ importers:
         version: 17.0.24
       '@typescript-eslint/eslint-plugin':
         specifier: ^6.9.0
-        version: 6.10.0(@typescript-eslint/parser@6.10.0(eslint@8.57.0)(typescript@5.7.3))(eslint@8.57.0)(typescript@5.7.3)
+        version: 6.10.0(@typescript-eslint/parser@6.10.0(eslint@8.57.0)(typescript@5.6.3))(eslint@8.57.0)(typescript@5.6.3)
       '@typescript-eslint/parser':
         specifier: ^6.9.0
-        version: 6.10.0(eslint@8.57.0)(typescript@5.7.3)
+        version: 6.10.0(eslint@8.57.0)(typescript@5.6.3)
       chalk:
         specifier: ^5.2.0
         version: 5.3.0
@@ -1231,10 +1231,44 @@ importers:
         version: 5.0.12(@types/node@18.19.59)
       vite-tsconfig-paths:
         specifier: ^4.0.8
+<<<<<<< HEAD
+||||||| parent of 6b52df682 (fix lockfile)
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+||||||| parent of 47ba5eb3a (fix lockfile)
+<<<<<<< HEAD
+        version: 4.2.0(typescript@5.7.3)(vite@5.0.12(@types/node@18.19.59))
+||||||| e8aaa3930
+        version: 4.2.0(typescript@5.6.3)(vite@5.0.12(@types/node@18.19.59))
+=======
+=======
+>>>>>>> 47ba5eb3a (fix lockfile)
+>>>>>>> 6b52df682 (fix lockfile)
         version: 4.2.0(typescript@5.6.3)(vite@5.0.12(@types/node@18.19.59))
       vitest:
         specifier: catalog:default
         version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
+<<<<<<< HEAD
+||||||| parent of 6b52df682 (fix lockfile)
+||||||| parent of 5f6745796 (initial commit)
+        version: 4.2.0(typescript@5.6.3)(vite@5.0.12(@types/node@18.19.59))
+=======
+        version: 4.2.0(typescript@5.7.3)(vite@5.0.12(@types/node@18.19.59))
+>>>>>>> 5f6745796 (initial commit)
+=======
+<<<<<<< HEAD
+||||||| parent of 5f6745796 (initial commit)
+        version: 4.2.0(typescript@5.6.3)(vite@5.0.12(@types/node@18.19.59))
+=======
+        version: 4.2.0(typescript@5.7.3)(vite@5.0.12(@types/node@18.19.59))
+>>>>>>> 5f6745796 (initial commit)
+||||||| parent of 47ba5eb3a (fix lockfile)
+>>>>>>> origin/main
+=======
+>>>>>>> 47ba5eb3a (fix lockfile)
+>>>>>>> 6b52df682 (fix lockfile)
       which-pm-runs:
         specifier: ^1.1.0
         version: 1.1.0
@@ -1728,8 +1762,16 @@ importers:
         specifier: ^0.30.12
         version: 0.30.17
       tsup:
+<<<<<<< HEAD
         specifier: 8.3.0
         version: 8.3.0(@microsoft/api-extractor@7.47.4(@types/node@18.19.59))(jiti@2.4.2)(postcss@8.4.49)(typescript@5.7.3)
+||||||| parent of 6b52df682 (fix lockfile)
+        specifier: ^8.3.0
+        version: 8.3.5(@microsoft/api-extractor@7.47.4(@types/node@18.19.59))(jiti@2.4.2)(postcss@8.4.49)(typescript@5.7.3)
+=======
+        specifier: ^8.3.0
+        version: 8.3.5(@microsoft/api-extractor@7.49.1(@types/node@18.19.59))(jiti@2.4.2)(postcss@8.4.49)(typescript@5.7.3)
+>>>>>>> 6b52df682 (fix lockfile)
       typescript:
         specifier: catalog:vite-plugin
         version: 5.7.3
@@ -2203,7 +2245,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
 
   packages/workers-editor-shared:
     dependencies:
@@ -2413,7 +2455,7 @@ importers:
         version: 5.6.3
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
 
   packages/workers-tsconfig: {}
 
@@ -2436,7 +2478,7 @@ importers:
         version: 5.6.3
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -2479,7 +2521,7 @@ importers:
         version: 5.6.3
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
 
   packages/wrangler:
     dependencies:
@@ -2676,10 +2718,16 @@ importers:
         version: 9.3.1
       msw:
         specifier: 2.4.3
+<<<<<<< HEAD
         version: 2.4.3(typescript@5.6.3)
       node-forge:
         specifier: ^1.3.1
         version: 1.3.1
+||||||| parent of 6b52df682 (fix lockfile)
+        version: 2.4.3(typescript@5.7.3)
+=======
+        version: 2.4.3(typescript@5.6.3)
+>>>>>>> 6b52df682 (fix lockfile)
       open:
         specifier: ^8.4.0
         version: 8.4.0
@@ -2742,7 +2790,7 @@ importers:
         version: 1.5.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       vitest-websocket-mock:
         specifier: ^0.4.0
         version: 0.4.0(vitest@2.1.8)
@@ -10556,11 +10604,64 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
+<<<<<<< HEAD
+||||||| parent of 6b52df682 (fix lockfile)
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> 6b52df682 (fix lockfile)
   typescript@5.7.3:
     resolution: {integrity: sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw==}
     engines: {node: '>=14.17'}
     hasBin: true
 
+<<<<<<< HEAD
+||||||| parent of 6b52df682 (fix lockfile)
+||||||| parent of 5f6745796 (initial commit)
+=======
+  typescript@5.7.2:
+    resolution: {integrity: sha512-i5t66RHxDvVN40HfDd1PsEThGNnlMCMT3jMUuoh9/0TaqWevNontacunWyN02LA9/fIbEWlcHZcgTKb9QoaLfg==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
+  typescript@5.7.3:
+    resolution: {integrity: sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
+>>>>>>> 5f6745796 (initial commit)
+=======
+||||||| parent of 5f6745796 (initial commit)
+=======
+||||||| parent of 47ba5eb3a (fix lockfile)
+<<<<<<< HEAD
+=======
+>>>>>>> 47ba5eb3a (fix lockfile)
+  typescript@5.7.2:
+    resolution: {integrity: sha512-i5t66RHxDvVN40HfDd1PsEThGNnlMCMT3jMUuoh9/0TaqWevNontacunWyN02LA9/fIbEWlcHZcgTKb9QoaLfg==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
+  typescript@5.7.3:
+    resolution: {integrity: sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
+<<<<<<< HEAD
+>>>>>>> 5f6745796 (initial commit)
+||||||| parent of 47ba5eb3a (fix lockfile)
+||||||| e8aaa3930
+=======
+  typescript@5.7.3:
+    resolution: {integrity: sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
+>>>>>>> origin/main
+=======
+>>>>>>> 47ba5eb3a (fix lockfile)
+>>>>>>> 6b52df682 (fix lockfile)
   uc.micro@1.0.6:
     resolution: {integrity: sha512-8Y75pvTYkLJW2hWQHXxoqRgV7qb9B+9vFEtidML+7koHUFapnVJAZ6cKs+Qjz5Aw3aZWHMC6u0wJE3At+nSGwA==}
 
@@ -11773,7 +11874,7 @@ snapshots:
       '@babel/traverse': 7.25.9
       '@babel/types': 7.26.3
       convert-source-map: 2.0.0
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       gensync: 1.0.0-beta.2
       json5: 2.2.3
       semver: 6.3.1
@@ -11863,7 +11964,7 @@ snapshots:
       '@babel/parser': 7.26.3
       '@babel/template': 7.25.9
       '@babel/types': 7.26.3
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       globals: 11.12.0
     transitivePeerDependencies:
       - supports-color
@@ -12325,8 +12426,16 @@ snapshots:
       esbuild: 0.17.19
       miniflare: 3.20241106.1
       semver: 7.6.3
+<<<<<<< HEAD
       vitest: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
       wrangler: 3.90.0(@cloudflare/workers-types@4.20250121.0)
+||||||| parent of 6b52df682 (fix lockfile)
+      vitest: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+      wrangler: 3.90.0(@cloudflare/workers-types@4.20241230.0)
+=======
+      vitest: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
+      wrangler: 3.90.0(@cloudflare/workers-types@4.20241230.0)
+>>>>>>> 6b52df682 (fix lockfile)
       zod: 3.22.3
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
@@ -12845,7 +12954,7 @@ snapshots:
   '@eslint/eslintrc@2.1.4':
     dependencies:
       ajv: 6.12.6
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       espree: 9.6.1
       globals: 13.24.0
       ignore: 5.3.1
@@ -12892,7 +13001,7 @@ snapshots:
   '@humanwhocodes/config-array@0.11.14':
     dependencies:
       '@humanwhocodes/object-schema': 2.0.3
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       minimatch: 3.1.2
     transitivePeerDependencies:
       - supports-color
@@ -13040,7 +13149,7 @@ snapshots:
   '@mapbox/node-pre-gyp@1.0.11(encoding@0.1.13)':
     dependencies:
       detect-libc: 2.0.2
-      https-proxy-agent: 5.0.1
+      https-proxy-agent: 5.0.1(supports-color@9.2.2)
       make-dir: 3.1.0
       node-fetch: 2.6.11(encoding@0.1.13)
       nopt: 5.0.0
@@ -13054,8 +13163,8 @@ snapshots:
 
   '@microsoft/api-extractor-model@7.29.4(@types/node@18.19.59)':
     dependencies:
-      '@microsoft/tsdoc': 0.15.1
-      '@microsoft/tsdoc-config': 0.17.1
+      '@microsoft/tsdoc': 0.15.0
+      '@microsoft/tsdoc-config': 0.17.0
       '@rushstack/node-core-library': 5.5.1(@types/node@18.19.59)
     transitivePeerDependencies:
       - '@types/node'
@@ -14373,23 +14482,23 @@ snapshots:
     dependencies:
       '@types/yargs-parser': 20.2.1
 
-  '@typescript-eslint/eslint-plugin@6.10.0(@typescript-eslint/parser@6.10.0(eslint@8.57.0)(typescript@5.7.3))(eslint@8.57.0)(typescript@5.7.3)':
+  '@typescript-eslint/eslint-plugin@6.10.0(@typescript-eslint/parser@6.10.0(eslint@8.57.0)(typescript@5.6.3))(eslint@8.57.0)(typescript@5.6.3)':
     dependencies:
       '@eslint-community/regexpp': 4.10.1
-      '@typescript-eslint/parser': 6.10.0(eslint@8.57.0)(typescript@5.7.3)
+      '@typescript-eslint/parser': 6.10.0(eslint@8.57.0)(typescript@5.6.3)
       '@typescript-eslint/scope-manager': 6.10.0
-      '@typescript-eslint/type-utils': 6.10.0(eslint@8.57.0)(typescript@5.7.3)
-      '@typescript-eslint/utils': 6.10.0(eslint@8.57.0)(typescript@5.7.3)
+      '@typescript-eslint/type-utils': 6.10.0(eslint@8.57.0)(typescript@5.6.3)
+      '@typescript-eslint/utils': 6.10.0(eslint@8.57.0)(typescript@5.6.3)
       '@typescript-eslint/visitor-keys': 6.10.0
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       eslint: 8.57.0
       graphemer: 1.4.0
       ignore: 5.3.1
       natural-compare: 1.4.0
       semver: 7.6.3
-      ts-api-utils: 1.4.3(typescript@5.7.3)
+      ts-api-utils: 1.4.3(typescript@5.6.3)
     optionalDependencies:
-      typescript: 5.7.3
+      typescript: 5.6.3
     transitivePeerDependencies:
       - supports-color
 
@@ -14431,16 +14540,16 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/parser@6.10.0(eslint@8.57.0)(typescript@5.7.3)':
+  '@typescript-eslint/parser@6.10.0(eslint@8.57.0)(typescript@5.6.3)':
     dependencies:
       '@typescript-eslint/scope-manager': 6.10.0
       '@typescript-eslint/types': 6.10.0
-      '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.7.3)
+      '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.6.3)
       '@typescript-eslint/visitor-keys': 6.10.0
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       eslint: 8.57.0
     optionalDependencies:
-      typescript: 5.7.3
+      typescript: 5.6.3
     transitivePeerDependencies:
       - supports-color
 
@@ -14463,7 +14572,7 @@ snapshots:
       '@typescript-eslint/types': 7.18.0
       '@typescript-eslint/typescript-estree': 7.18.0(typescript@5.6.3)
       '@typescript-eslint/visitor-keys': 7.18.0
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       eslint: 8.57.0
     optionalDependencies:
       typescript: 5.6.3
@@ -14480,15 +14589,15 @@ snapshots:
       '@typescript-eslint/types': 7.18.0
       '@typescript-eslint/visitor-keys': 7.18.0
 
-  '@typescript-eslint/type-utils@6.10.0(eslint@8.57.0)(typescript@5.7.3)':
+  '@typescript-eslint/type-utils@6.10.0(eslint@8.57.0)(typescript@5.6.3)':
     dependencies:
-      '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.7.3)
-      '@typescript-eslint/utils': 6.10.0(eslint@8.57.0)(typescript@5.7.3)
-      debug: 4.3.7(supports-color@8.1.1)
+      '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.6.3)
+      '@typescript-eslint/utils': 6.10.0(eslint@8.57.0)(typescript@5.6.3)
+      debug: 4.3.7(supports-color@9.2.2)
       eslint: 8.57.0
-      ts-api-utils: 1.4.3(typescript@5.7.3)
+      ts-api-utils: 1.4.3(typescript@5.6.3)
     optionalDependencies:
-      typescript: 5.7.3
+      typescript: 5.6.3
     transitivePeerDependencies:
       - supports-color
 
@@ -14508,7 +14617,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/typescript-estree': 7.18.0(typescript@5.6.3)
       '@typescript-eslint/utils': 7.18.0(eslint@8.57.0)(typescript@5.6.3)
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       eslint: 8.57.0
       ts-api-utils: 1.4.3(typescript@5.6.3)
     optionalDependencies:
@@ -14520,17 +14629,17 @@ snapshots:
 
   '@typescript-eslint/types@7.18.0': {}
 
-  '@typescript-eslint/typescript-estree@6.10.0(typescript@5.7.3)':
+  '@typescript-eslint/typescript-estree@6.10.0(typescript@5.6.3)':
     dependencies:
       '@typescript-eslint/types': 6.10.0
       '@typescript-eslint/visitor-keys': 6.10.0
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       globby: 11.1.0
       is-glob: 4.0.3
       semver: 7.6.3
-      ts-api-utils: 1.4.3(typescript@5.7.3)
+      ts-api-utils: 1.4.3(typescript@5.6.3)
     optionalDependencies:
-      typescript: 5.7.3
+      typescript: 5.6.3
     transitivePeerDependencies:
       - supports-color
 
@@ -14552,7 +14661,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/types': 7.18.0
       '@typescript-eslint/visitor-keys': 7.18.0
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       globby: 11.1.0
       is-glob: 4.0.3
       minimatch: 9.0.5
@@ -14563,14 +14672,14 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/utils@6.10.0(eslint@8.57.0)(typescript@5.7.3)':
+  '@typescript-eslint/utils@6.10.0(eslint@8.57.0)(typescript@5.6.3)':
     dependencies:
       '@eslint-community/eslint-utils': 4.4.0(eslint@8.57.0)
       '@types/json-schema': 7.0.13
       '@types/semver': 7.5.1
       '@typescript-eslint/scope-manager': 6.10.0
       '@typescript-eslint/types': 6.10.0
-      '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.7.3)
+      '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.6.3)
       eslint: 8.57.0
       semver: 7.6.3
     transitivePeerDependencies:
@@ -14661,13 +14770,13 @@ snapshots:
       chai: 5.1.2
       tinyrainbow: 1.2.0
 
-  '@vitest/mocker@2.1.8(msw@2.4.3(typescript@5.7.3))(vite@5.0.12(@types/node@18.19.59))':
+  '@vitest/mocker@2.1.8(msw@2.4.3(typescript@5.6.3))(vite@5.0.12(@types/node@18.19.59))':
     dependencies:
       '@vitest/spy': 2.1.8
       estree-walker: 3.0.3
       magic-string: 0.30.17
     optionalDependencies:
-      msw: 2.4.3(typescript@5.7.3)
+      msw: 2.4.3(typescript@5.6.3)
       vite: 5.0.12(@types/node@18.19.59)
 
   '@vitest/pretty-format@2.1.8':
@@ -14698,7 +14807,7 @@ snapshots:
       sirv: 3.0.0
       tinyglobby: 0.2.10
       tinyrainbow: 1.2.0
-      vitest: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)
+      vitest: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
 
   '@vitest/utils@2.1.8':
     dependencies:
@@ -14858,12 +14967,6 @@ snapshots:
   acorn-walk@8.3.2: {}
 
   acorn@8.14.0: {}
-
-  agent-base@6.0.2:
-    dependencies:
-      debug: 4.3.7(supports-color@8.1.1)
-    transitivePeerDependencies:
-      - supports-color
 
   agent-base@6.0.2(supports-color@9.2.2):
     dependencies:
@@ -15116,7 +15219,7 @@ snapshots:
       common-path-prefix: 3.0.0
       concordance: 5.0.4
       currently-unhandled: 0.4.1
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       emittery: 1.0.1
       figures: 6.0.1
       globby: 14.0.1
@@ -15337,7 +15440,7 @@ snapshots:
 
   capnp-ts@0.5.1:
     dependencies:
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       format: 0.2.2
       tslib: 2.8.1
       utf8-encoding: 0.1.2
@@ -15346,7 +15449,7 @@ snapshots:
 
   capnp-ts@0.7.0(patch_hash=l4yimnxyvkiyj6alnps2ec3sii):
     dependencies:
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       tslib: 2.8.1
     transitivePeerDependencies:
       - supports-color
@@ -15354,7 +15457,7 @@ snapshots:
   capnpc-ts@0.7.0:
     dependencies:
       capnp-ts: 0.5.1
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       hex2dec: 1.1.2
       mkdirp: 1.0.4
       tslib: 2.8.1
@@ -16164,7 +16267,7 @@ snapshots:
 
   esbuild-register@3.5.0(esbuild@0.17.19):
     dependencies:
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       esbuild: 0.17.19
     transitivePeerDependencies:
       - supports-color
@@ -16477,7 +16580,7 @@ snapshots:
       ajv: 6.12.6
       chalk: 4.1.2
       cross-spawn: 7.0.3
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       doctrine: 3.0.0
       escape-string-regexp: 4.0.0
       eslint-scope: 7.2.2
@@ -16884,7 +16987,7 @@ snapshots:
     dependencies:
       basic-ftp: 5.0.3
       data-uri-to-buffer: 5.0.1
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       fs-extra: 8.1.0
     transitivePeerDependencies:
       - supports-color
@@ -17095,7 +17198,7 @@ snapshots:
   http-proxy-agent@7.0.2:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -17104,24 +17207,10 @@ snapshots:
       quick-lru: 5.1.1
       resolve-alpn: 1.2.1
 
-  https-proxy-agent@5.0.1:
-    dependencies:
-      agent-base: 6.0.2
-      debug: 4.3.7(supports-color@8.1.1)
-    transitivePeerDependencies:
-      - supports-color
-
   https-proxy-agent@5.0.1(supports-color@9.2.2):
     dependencies:
       agent-base: 6.0.2(supports-color@9.2.2)
       debug: 4.3.7(supports-color@9.2.2)
-    transitivePeerDependencies:
-      - supports-color
-
-  https-proxy-agent@7.0.2:
-    dependencies:
-      agent-base: 7.1.3
-      debug: 4.3.7(supports-color@8.1.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -17135,7 +17224,7 @@ snapshots:
   https-proxy-agent@7.0.6:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -17988,7 +18077,7 @@ snapshots:
 
   ms@2.1.3: {}
 
-  msw@2.4.3(typescript@5.7.3):
+  msw@2.4.3(typescript@5.6.3):
     dependencies:
       '@bundled-es-modules/cookie': 2.0.0
       '@bundled-es-modules/statuses': 1.0.1
@@ -18008,7 +18097,7 @@ snapshots:
       type-fest: 4.26.1
       yargs: 17.7.2
     optionalDependencies:
-      typescript: 5.7.3
+      typescript: 5.6.3
 
   muggle-string@0.4.1: {}
 
@@ -18335,10 +18424,10 @@ snapshots:
     dependencies:
       '@tootallnate/quickjs-emscripten': 0.23.0
       agent-base: 7.1.3
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       get-uri: 6.0.1
       http-proxy-agent: 7.0.2
-      https-proxy-agent: 7.0.2
+      https-proxy-agent: 7.0.2(supports-color@9.2.2)
       pac-resolver: 7.0.0
       socks-proxy-agent: 8.0.2
     transitivePeerDependencies:
@@ -18873,9 +18962,9 @@ snapshots:
   proxy-agent@6.3.1:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       http-proxy-agent: 7.0.2
-      https-proxy-agent: 7.0.2
+      https-proxy-agent: 7.0.2(supports-color@9.2.2)
       lru-cache: 7.18.3
       pac-proxy-agent: 7.0.1
       proxy-from-env: 1.1.0
@@ -19460,7 +19549,7 @@ snapshots:
   socks-proxy-agent@8.0.2:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       socks: 2.7.1
     transitivePeerDependencies:
       - supports-color
@@ -19889,9 +19978,9 @@ snapshots:
       lodash: 4.17.21
       prettier: 2.7.1
 
-  tsconfck@2.1.1(typescript@5.7.3):
+  tsconfck@2.1.1(typescript@5.6.3):
     optionalDependencies:
-      typescript: 5.7.3
+      typescript: 5.6.3
 
   tsconfig-paths@3.14.1:
     dependencies:
@@ -19911,7 +20000,13 @@ snapshots:
 
   tslib@2.8.1: {}
 
+<<<<<<< HEAD
   tsup@8.3.0(@microsoft/api-extractor@7.47.4(@types/node@18.19.59))(jiti@2.4.2)(postcss@8.4.49)(typescript@5.7.3):
+||||||| parent of 6b52df682 (fix lockfile)
+  tsup@8.3.5(@microsoft/api-extractor@7.47.4(@types/node@18.19.59))(jiti@2.4.2)(postcss@8.4.49)(typescript@5.7.3):
+=======
+  tsup@8.3.5(@microsoft/api-extractor@7.49.1(@types/node@18.19.59))(jiti@2.4.2)(postcss@8.4.49)(typescript@5.7.3):
+>>>>>>> 6b52df682 (fix lockfile)
     dependencies:
       bundle-require: 5.1.0(esbuild@0.23.1)
       cac: 6.7.14
@@ -19930,7 +20025,7 @@ snapshots:
       tinyglobby: 0.2.10
       tree-kill: 1.2.2
     optionalDependencies:
-      '@microsoft/api-extractor': 7.47.4(@types/node@18.19.59)
+      '@microsoft/api-extractor': 7.49.1(@types/node@18.19.59)
       postcss: 8.4.49
       typescript: 5.7.3
     transitivePeerDependencies:
@@ -20072,8 +20167,46 @@ snapshots:
 
   typescript@5.6.3: {}
 
+<<<<<<< HEAD
+||||||| parent of 6b52df682 (fix lockfile)
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> 6b52df682 (fix lockfile)
   typescript@5.7.3: {}
 
+<<<<<<< HEAD
+||||||| parent of 6b52df682 (fix lockfile)
+||||||| parent of 5f6745796 (initial commit)
+=======
+  typescript@5.7.2: {}
+
+  typescript@5.7.3: {}
+
+>>>>>>> 5f6745796 (initial commit)
+=======
+||||||| parent of 5f6745796 (initial commit)
+=======
+||||||| parent of 47ba5eb3a (fix lockfile)
+<<<<<<< HEAD
+=======
+>>>>>>> 47ba5eb3a (fix lockfile)
+  typescript@5.7.2: {}
+
+  typescript@5.7.3: {}
+
+<<<<<<< HEAD
+>>>>>>> 5f6745796 (initial commit)
+||||||| parent of 47ba5eb3a (fix lockfile)
+||||||| e8aaa3930
+=======
+  typescript@5.7.3: {}
+
+>>>>>>> origin/main
+=======
+>>>>>>> 47ba5eb3a (fix lockfile)
+>>>>>>> 6b52df682 (fix lockfile)
   uc.micro@1.0.6: {}
 
   ufo@1.5.4: {}
@@ -20279,23 +20412,6 @@ snapshots:
     dependencies:
       builtins: 5.0.1
 
-  vite-node@2.1.8(@types/node@18.19.59):
-    dependencies:
-      cac: 6.7.14
-      debug: 4.3.7(supports-color@8.1.1)
-      es-module-lexer: 1.5.4
-      pathe: 1.1.2
-      vite: 5.0.12(@types/node@18.19.59)
-    transitivePeerDependencies:
-      - '@types/node'
-      - less
-      - lightningcss
-      - sass
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-
   vite-node@2.1.8(@types/node@18.19.59)(supports-color@9.2.2):
     dependencies:
       cac: 6.7.14
@@ -20313,19 +20429,203 @@ snapshots:
       - supports-color
       - terser
 
+<<<<<<< HEAD
+||||||| parent of 6b52df682 (fix lockfile)
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+||||||| parent of 47ba5eb3a (fix lockfile)
+<<<<<<< HEAD
+  vite-node@2.1.8(@types/node@22.10.6):
+    dependencies:
+      cac: 6.7.14
+      debug: 4.3.7(supports-color@8.1.1)
+      es-module-lexer: 1.5.4
+      pathe: 1.1.2
+      vite: 5.0.12(@types/node@22.10.6)
+    transitivePeerDependencies:
+      - '@types/node'
+      - less
+      - lightningcss
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+=======
+>>>>>>> 47ba5eb3a (fix lockfile)
+>>>>>>> 6b52df682 (fix lockfile)
   vite-plugin-dts@4.0.1(@types/node@18.19.59)(rollup@4.30.1)(typescript@5.7.3)(vite@5.0.12(@types/node@18.19.59)):
+<<<<<<< HEAD
+||||||| parent of 6b52df682 (fix lockfile)
+||||||| parent of 5f6745796 (initial commit)
+  vite-node@2.1.8(@types/node@22.10.6):
+    dependencies:
+      cac: 6.7.14
+      debug: 4.3.7(supports-color@9.2.2)
+      es-module-lexer: 1.5.4
+      pathe: 1.1.2
+      vite: 5.0.12(@types/node@22.10.6)
+    transitivePeerDependencies:
+      - '@types/node'
+      - less
+      - lightningcss
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+  vite-plugin-dts@4.0.1(@types/node@18.19.59)(rollup@4.30.1)(typescript@5.6.3)(vite@5.0.12(@types/node@18.19.59)):
+=======
+  vite-node@2.1.8(@types/node@22.10.6):
+    dependencies:
+      cac: 6.7.14
+      debug: 4.3.7(supports-color@8.1.1)
+      es-module-lexer: 1.5.4
+      pathe: 1.1.2
+      vite: 5.0.12(@types/node@22.10.6)
+    transitivePeerDependencies:
+      - '@types/node'
+      - less
+      - lightningcss
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+  vite-plugin-dts@4.0.1(@types/node@18.19.59)(rollup@4.30.1)(typescript@5.7.3)(vite@5.0.12(@types/node@18.19.59)):
+>>>>>>> 5f6745796 (initial commit)
+=======
+<<<<<<< HEAD
+||||||| parent of 5f6745796 (initial commit)
+  vite-node@2.1.8(@types/node@22.10.6):
+    dependencies:
+      cac: 6.7.14
+      debug: 4.3.7(supports-color@9.2.2)
+      es-module-lexer: 1.5.4
+      pathe: 1.1.2
+      vite: 5.0.12(@types/node@22.10.6)
+    transitivePeerDependencies:
+      - '@types/node'
+      - less
+      - lightningcss
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+  vite-plugin-dts@4.0.1(@types/node@18.19.59)(rollup@4.30.1)(typescript@5.6.3)(vite@5.0.12(@types/node@18.19.59)):
+=======
+  vite-node@2.1.8(@types/node@22.10.6):
+    dependencies:
+      cac: 6.7.14
+      debug: 4.3.7(supports-color@8.1.1)
+      es-module-lexer: 1.5.4
+      pathe: 1.1.2
+      vite: 5.0.12(@types/node@22.10.6)
+    transitivePeerDependencies:
+      - '@types/node'
+      - less
+      - lightningcss
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+  vite-plugin-dts@4.0.1(@types/node@18.19.59)(rollup@4.30.1)(typescript@5.7.3)(vite@5.0.12(@types/node@18.19.59)):
+>>>>>>> 5f6745796 (initial commit)
+||||||| parent of 47ba5eb3a (fix lockfile)
+||||||| e8aaa3930
+  vite-node@2.1.8(@types/node@22.10.6):
+    dependencies:
+      cac: 6.7.14
+      debug: 4.3.7(supports-color@9.2.2)
+      es-module-lexer: 1.5.4
+      pathe: 1.1.2
+      vite: 5.0.12(@types/node@22.10.6)
+    transitivePeerDependencies:
+      - '@types/node'
+      - less
+      - lightningcss
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+  vite-plugin-dts@4.0.1(@types/node@18.19.59)(rollup@4.30.1)(typescript@5.6.3)(vite@5.0.12(@types/node@18.19.59)):
+=======
+  vite-plugin-dts@4.0.1(@types/node@18.19.59)(rollup@4.30.1)(typescript@5.7.3)(vite@5.0.12(@types/node@18.19.59)):
+>>>>>>> origin/main
+=======
+>>>>>>> 47ba5eb3a (fix lockfile)
+>>>>>>> 6b52df682 (fix lockfile)
     dependencies:
       '@microsoft/api-extractor': 7.47.4(@types/node@18.19.59)
       '@rollup/pluginutils': 5.1.0(rollup@4.30.1)
       '@volar/typescript': 2.3.4
       '@vue/language-core': 2.0.29(typescript@5.7.3)
       compare-versions: 6.1.1
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       kolorist: 1.8.0
       local-pkg: 0.5.0
+<<<<<<< HEAD
+||||||| parent of 6b52df682 (fix lockfile)
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+>>>>>>> 6b52df682 (fix lockfile)
       magic-string: 0.30.17
       typescript: 5.7.3
       vue-tsc: 2.0.29(typescript@5.7.3)
+<<<<<<< HEAD
+||||||| parent of 6b52df682 (fix lockfile)
+||||||| parent of 5f6745796 (initial commit)
+      magic-string: 0.30.14
+      typescript: 5.6.3
+      vue-tsc: 2.0.29(typescript@5.6.3)
+=======
+      magic-string: 0.30.14
+      typescript: 5.7.3
+      vue-tsc: 2.0.29(typescript@5.7.3)
+>>>>>>> 5f6745796 (initial commit)
+=======
+||||||| parent of 5f6745796 (initial commit)
+      magic-string: 0.30.14
+      typescript: 5.6.3
+      vue-tsc: 2.0.29(typescript@5.6.3)
+=======
+      magic-string: 0.30.14
+||||||| parent of 47ba5eb3a (fix lockfile)
+<<<<<<< HEAD
+      magic-string: 0.30.14
+      typescript: 5.7.3
+      vue-tsc: 2.0.29(typescript@5.7.3)
+||||||| e8aaa3930
+      magic-string: 0.30.14
+      typescript: 5.6.3
+      vue-tsc: 2.0.29(typescript@5.6.3)
+=======
+      magic-string: 0.30.17
+=======
+      magic-string: 0.30.17
+>>>>>>> 47ba5eb3a (fix lockfile)
+      typescript: 5.7.3
+      vue-tsc: 2.0.29(typescript@5.7.3)
+<<<<<<< HEAD
+>>>>>>> 5f6745796 (initial commit)
+||||||| parent of 47ba5eb3a (fix lockfile)
+>>>>>>> origin/main
+=======
+>>>>>>> 47ba5eb3a (fix lockfile)
+>>>>>>> 6b52df682 (fix lockfile)
     optionalDependencies:
       vite: 5.0.12(@types/node@18.19.59)
     transitivePeerDependencies:
@@ -20333,11 +20633,11 @@ snapshots:
       - rollup
       - supports-color
 
-  vite-tsconfig-paths@4.2.0(typescript@5.7.3)(vite@5.0.12(@types/node@18.19.59)):
+  vite-tsconfig-paths@4.2.0(typescript@5.6.3)(vite@5.0.12(@types/node@18.19.59)):
     dependencies:
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       globrex: 0.1.2
-      tsconfck: 2.1.1(typescript@5.7.3)
+      tsconfck: 2.1.1(typescript@5.6.3)
     optionalDependencies:
       vite: 5.0.12(@types/node@18.19.59)
     transitivePeerDependencies:
@@ -20367,47 +20667,12 @@ snapshots:
     dependencies:
       '@vitest/utils': 2.1.8
       mock-socket: 9.3.1
-      vitest: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+      vitest: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
 
-  vitest@2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8):
+  vitest@2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2):
     dependencies:
       '@vitest/expect': 2.1.8
-      '@vitest/mocker': 2.1.8(msw@2.4.3(typescript@5.7.3))(vite@5.0.12(@types/node@18.19.59))
-      '@vitest/pretty-format': 2.1.8
-      '@vitest/runner': 2.1.8
-      '@vitest/snapshot': 2.1.8
-      '@vitest/spy': 2.1.8
-      '@vitest/utils': 2.1.8
-      chai: 5.1.2
-      debug: 4.3.7(supports-color@8.1.1)
-      expect-type: 1.1.0
-      magic-string: 0.30.14
-      pathe: 1.1.2
-      std-env: 3.8.0
-      tinybench: 2.9.0
-      tinyexec: 0.3.1
-      tinypool: 1.0.1
-      tinyrainbow: 1.2.0
-      vite: 5.0.12(@types/node@18.19.59)
-      vite-node: 2.1.8(@types/node@18.19.59)
-      why-is-node-running: 2.3.0
-    optionalDependencies:
-      '@types/node': 18.19.59
-      '@vitest/ui': 2.1.8(vitest@2.1.8)
-    transitivePeerDependencies:
-      - less
-      - lightningcss
-      - msw
-      - sass
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-
-  vitest@2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2):
-    dependencies:
-      '@vitest/expect': 2.1.8
-      '@vitest/mocker': 2.1.8(msw@2.4.3(typescript@5.7.3))(vite@5.0.12(@types/node@18.19.59))
+      '@vitest/mocker': 2.1.8(msw@2.4.3(typescript@5.6.3))(vite@5.0.12(@types/node@18.19.59))
       '@vitest/pretty-format': 2.1.8
       '@vitest/runner': 2.1.8
       '@vitest/snapshot': 2.1.8
@@ -20439,6 +20704,236 @@ snapshots:
       - supports-color
       - terser
 
+<<<<<<< HEAD
+||||||| parent of 6b52df682 (fix lockfile)
+<<<<<<< HEAD
+||||||| parent of 5f6745796 (initial commit)
+  vitest@2.1.8(@types/node@22.10.6)(@vitest/ui@2.1.8):
+    dependencies:
+      '@vitest/expect': 2.1.8
+      '@vitest/mocker': 2.1.8(msw@2.4.3(typescript@5.6.3))(vite@5.0.12(@types/node@18.19.59))
+      '@vitest/pretty-format': 2.1.8
+      '@vitest/runner': 2.1.8
+      '@vitest/snapshot': 2.1.8
+      '@vitest/spy': 2.1.8
+      '@vitest/utils': 2.1.8
+      chai: 5.1.2
+      debug: 4.3.7(supports-color@9.2.2)
+      expect-type: 1.1.0
+      magic-string: 0.30.14
+      pathe: 1.1.2
+      std-env: 3.8.0
+      tinybench: 2.9.0
+      tinyexec: 0.3.1
+      tinypool: 1.0.1
+      tinyrainbow: 1.2.0
+      vite: 5.0.12(@types/node@22.10.6)
+      vite-node: 2.1.8(@types/node@22.10.6)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 22.10.6
+      '@vitest/ui': 2.1.8(vitest@2.1.8)
+    transitivePeerDependencies:
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+=======
+  vitest@2.1.8(@types/node@22.10.6)(@vitest/ui@2.1.8):
+    dependencies:
+      '@vitest/expect': 2.1.8
+      '@vitest/mocker': 2.1.8(msw@2.4.3(typescript@5.7.3))(vite@5.0.12(@types/node@18.19.59))
+      '@vitest/pretty-format': 2.1.8
+      '@vitest/runner': 2.1.8
+      '@vitest/snapshot': 2.1.8
+      '@vitest/spy': 2.1.8
+      '@vitest/utils': 2.1.8
+      chai: 5.1.2
+      debug: 4.3.7(supports-color@8.1.1)
+      expect-type: 1.1.0
+      magic-string: 0.30.14
+      pathe: 1.1.2
+      std-env: 3.8.0
+      tinybench: 2.9.0
+      tinyexec: 0.3.1
+      tinypool: 1.0.1
+      tinyrainbow: 1.2.0
+      vite: 5.0.12(@types/node@22.10.6)
+      vite-node: 2.1.8(@types/node@22.10.6)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 22.10.6
+      '@vitest/ui': 2.1.8(vitest@2.1.8)
+    transitivePeerDependencies:
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+>>>>>>> 5f6745796 (initial commit)
+=======
+<<<<<<< HEAD
+<<<<<<< HEAD
+||||||| parent of 5f6745796 (initial commit)
+  vitest@2.1.8(@types/node@22.10.6)(@vitest/ui@2.1.8):
+    dependencies:
+      '@vitest/expect': 2.1.8
+      '@vitest/mocker': 2.1.8(msw@2.4.3(typescript@5.6.3))(vite@5.0.12(@types/node@18.19.59))
+      '@vitest/pretty-format': 2.1.8
+      '@vitest/runner': 2.1.8
+      '@vitest/snapshot': 2.1.8
+      '@vitest/spy': 2.1.8
+      '@vitest/utils': 2.1.8
+      chai: 5.1.2
+      debug: 4.3.7(supports-color@9.2.2)
+      expect-type: 1.1.0
+      magic-string: 0.30.14
+      pathe: 1.1.2
+      std-env: 3.8.0
+      tinybench: 2.9.0
+      tinyexec: 0.3.1
+      tinypool: 1.0.1
+      tinyrainbow: 1.2.0
+      vite: 5.0.12(@types/node@22.10.6)
+      vite-node: 2.1.8(@types/node@22.10.6)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 22.10.6
+      '@vitest/ui': 2.1.8(vitest@2.1.8)
+    transitivePeerDependencies:
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+=======
+  vitest@2.1.8(@types/node@22.10.6)(@vitest/ui@2.1.8):
+    dependencies:
+      '@vitest/expect': 2.1.8
+      '@vitest/mocker': 2.1.8(msw@2.4.3(typescript@5.7.3))(vite@5.0.12(@types/node@18.19.59))
+      '@vitest/pretty-format': 2.1.8
+      '@vitest/runner': 2.1.8
+      '@vitest/snapshot': 2.1.8
+      '@vitest/spy': 2.1.8
+      '@vitest/utils': 2.1.8
+      chai: 5.1.2
+      debug: 4.3.7(supports-color@8.1.1)
+      expect-type: 1.1.0
+      magic-string: 0.30.14
+      pathe: 1.1.2
+      std-env: 3.8.0
+      tinybench: 2.9.0
+      tinyexec: 0.3.1
+      tinypool: 1.0.1
+      tinyrainbow: 1.2.0
+      vite: 5.0.12(@types/node@22.10.6)
+      vite-node: 2.1.8(@types/node@22.10.6)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 22.10.6
+      '@vitest/ui': 2.1.8(vitest@2.1.8)
+    transitivePeerDependencies:
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+>>>>>>> 5f6745796 (initial commit)
+||||||| parent of 47ba5eb3a (fix lockfile)
+<<<<<<< HEAD
+  vitest@2.1.8(@types/node@22.10.6)(@vitest/ui@2.1.8):
+    dependencies:
+      '@vitest/expect': 2.1.8
+      '@vitest/mocker': 2.1.8(msw@2.4.3(typescript@5.7.3))(vite@5.0.12(@types/node@18.19.59))
+      '@vitest/pretty-format': 2.1.8
+      '@vitest/runner': 2.1.8
+      '@vitest/snapshot': 2.1.8
+      '@vitest/spy': 2.1.8
+      '@vitest/utils': 2.1.8
+      chai: 5.1.2
+      debug: 4.3.7(supports-color@8.1.1)
+      expect-type: 1.1.0
+      magic-string: 0.30.14
+      pathe: 1.1.2
+      std-env: 3.8.0
+      tinybench: 2.9.0
+      tinyexec: 0.3.1
+      tinypool: 1.0.1
+      tinyrainbow: 1.2.0
+      vite: 5.0.12(@types/node@22.10.6)
+      vite-node: 2.1.8(@types/node@22.10.6)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 22.10.6
+      '@vitest/ui': 2.1.8(vitest@2.1.8)
+    transitivePeerDependencies:
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+||||||| e8aaa3930
+  vitest@2.1.8(@types/node@22.10.6)(@vitest/ui@2.1.8):
+    dependencies:
+      '@vitest/expect': 2.1.8
+      '@vitest/mocker': 2.1.8(msw@2.4.3(typescript@5.6.3))(vite@5.0.12(@types/node@18.19.59))
+      '@vitest/pretty-format': 2.1.8
+      '@vitest/runner': 2.1.8
+      '@vitest/snapshot': 2.1.8
+      '@vitest/spy': 2.1.8
+      '@vitest/utils': 2.1.8
+      chai: 5.1.2
+      debug: 4.3.7(supports-color@9.2.2)
+      expect-type: 1.1.0
+      magic-string: 0.30.14
+      pathe: 1.1.2
+      std-env: 3.8.0
+      tinybench: 2.9.0
+      tinyexec: 0.3.1
+      tinypool: 1.0.1
+      tinyrainbow: 1.2.0
+      vite: 5.0.12(@types/node@22.10.6)
+      vite-node: 2.1.8(@types/node@22.10.6)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 22.10.6
+      '@vitest/ui': 2.1.8(vitest@2.1.8)
+    transitivePeerDependencies:
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+=======
+>>>>>>> origin/main
+=======
+>>>>>>> 47ba5eb3a (fix lockfile)
+>>>>>>> 6b52df682 (fix lockfile)
   vsce@2.15.0:
     dependencies:
       azure-devops-node-api: 11.2.0
