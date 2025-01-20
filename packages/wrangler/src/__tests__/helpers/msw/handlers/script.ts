@@ -15,13 +15,13 @@ const scripts: Record<string, string> = {
 	websocket: `new WebSocket("ws://dummy")`,
 	response: `return new Response("ok")`,
 };
-function getBindings(scriptName: string | readonly string[]) {
+function getBindings(scriptName: string | readonly string[] | undefined) {
 	if (typeof scriptName !== "string") {
 		return "";
 	}
 	return scriptName.split("--").flatMap((part) => bindings[part] ?? []);
 }
-function getScript(scriptName: string | readonly string[]): string {
+function getScript(scriptName: string | readonly string[] | undefined): string {
 	if (typeof scriptName !== "string") {
 		return "";
 	}

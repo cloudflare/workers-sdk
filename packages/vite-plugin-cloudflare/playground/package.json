@@ -1,0 +1,19 @@
+{
+	"name": "@vite-plugin-cloudflare/playground",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"check:types": "tsc --build",
+		"test:build": "cross-env VITE_TEST_BUILD=1 vitest run -c vitest.config.e2e.ts",
+		"pretest:ci": "pnpm exec playwright install-deps && pnpm exec playwright install",
+		"test:ci": "pnpm test:serve && pnpm test:build",
+		"test:serve": "vitest run -c vitest.config.e2e.ts"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"playwright-chromium": "^1.48.1",
+		"typescript": "catalog:vite-plugin"
+	}
+}

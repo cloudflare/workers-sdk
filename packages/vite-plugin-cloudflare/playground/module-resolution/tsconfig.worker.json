@@ -1,0 +1,9 @@
+{
+	"extends": ["@cloudflare/workers-tsconfig/worker.json"],
+	"compilerOptions": {
+		"paths": {
+			"@alias/test": ["./src/aliasing.ts"]
+		}
+	},
+	"include": ["src"]
+}

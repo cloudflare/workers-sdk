@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	</head>
+	<body>
+		<main>
+			<h1>WebSockets playground</h1>
+			<button id="open" aria-label="Open WebSocket">Open</button>
+			<button id="close" aria-label="Close WebSocket">Close</button>
+			<button id="send" aria-label="Send message">Send</button>
+			<h2 id="status">WebSocket closed</h2>
+			<p id="message"></p>
+		</main>
+	</body>
+	<script type="module">
+		let ws;
+		const openButton = document.querySelector("#open");
+		const closeButton = document.querySelector("#close");
+		const sendButton = document.querySelector("#send");
+		const statusText = document.querySelector("#status");
+		const messageText = document.querySelector("#message");
+
+		openButton.addEventListener("click", () => open());
+		closeButton.addEventListener("click", () => close());
+		sendButton.addEventListener("click", () => send("Client event"));
+
+		function open() {
+			if (ws) {
+				console.log("WebSocket already open");
+
+				return;
+			}
+
+			ws = new WebSocket(`${location.origin.replace(/^http/, "ws")}/websocket`);
+
+			ws.addEventListener("message", (event) => {
+				console.log("Received server event", event.data);
+				messageText.textContent = event.data;
+			});
+
+			ws.addEventListener("open", (event) => {
+				console.log("Client open");
+				statusText.textContent = "WebSocket open";
+			});
+
+			ws.addEventListener("close", (event) => {
+				console.log("Client close");
+				statusText.textContent = "WebSocket closed";
+			});
+		}
+
+		function close() {
+			if (!ws) {
+				console.log("WebSocket already closed");
+
+				return;
+			}
+
+			ws.close();
+			ws = undefined;
+		}
+
+		function send(message) {
+			ws.send(message);
+		}
+	</script>
+</html>

@@ -1,0 +1,70 @@
+{
+	"name": "@cloudflare/vite-plugin",
+	"version": "0.0.0",
+	"description": "Cloudflare plugin for Vite",
+	"keywords": [
+		"cloudflare",
+		"workers",
+		"cloudflare-workers",
+		"vite",
+		"vite-plugin"
+	],
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/vite-plugin-cloudflare#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/vite-plugin-cloudflare"
+	},
+	"license": "MIT",
+	"sideEffects": false,
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "tsup",
+		"check:type": "tsc --build",
+		"test": "vitest",
+		"test:ci": "vitest run",
+		"watch": "tsup --watch"
+	},
+	"dependencies": {
+		"@hattip/adapter-node": "^0.0.49",
+		"miniflare": "workspace:*",
+		"unenv": "catalog:vite-plugin",
+		"ws": "^8.18.0"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-shared": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20241230.0",
+		"@types/node": "catalog:vite-plugin",
+		"@types/ws": "^8.5.13",
+		"magic-string": "^0.30.12",
+		"tsup": "^8.3.0",
+		"typescript": "catalog:vite-plugin",
+		"vite": "catalog:vite-plugin",
+		"wrangler": "workspace:*"
+	},
+	"peerDependencies": {
+		"vite": "catalog:vite-plugin",
+		"wrangler": "workspace:^"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"workers-sdk": {
+		"prerelease": true
+	}
+}

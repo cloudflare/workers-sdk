@@ -35,6 +35,7 @@ jobs:
           node .github/version-script.js create-cloudflare
           node .github/version-script.js workers-shared
           node .github/version-script.js unenv-preset
+          node .github/version-script.js vite-plugin-cloudflare
 
       - name: Build
         run: pnpm run build
@@ -76,6 +77,11 @@ jobs:
 
       - name: Publish unenv-preset@beta to NPM
         run: pnpm --filter unenv-preset publish --tag beta
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+
+      - name: Publish vite-plugin-cloudflare@beta to NPM
+        run: pnpm --filter vite-plugin-cloudflare publish --tag beta
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
 

@@ -1,5 +1,7 @@
 packages:
   - "packages/*"
+  - "packages/vite-plugin-cloudflare/playground/*"
+  - "packages/vite-plugin-cloudflare/playground"
   - "fixtures/*"
   - "tools"
 
@@ -12,4 +14,12 @@ catalog:
   rimraf: "^5.0.10"
   typescript: "~5.6.3"
   undici: "^5.28.4"
-  vitest: ~2.1.8
+  vitest: "~2.1.8"
+  vite: "^5.0.12"
+
+catalogs:
+  vite-plugin:
+    "typescript": "^5.7.2"
+    "vite": "^6.0.7"
+    "@types/node": "^22.10.1"
+    "unenv": "npm:unenv-nightly@2.0.0-20241218-183400-5d6aec3"

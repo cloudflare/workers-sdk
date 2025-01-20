@@ -1,0 +1,11 @@
+{
+	"extends": ["@cloudflare/workers-tsconfig/worker.json"],
+	"include": [
+		"worker-basic",
+		"worker-cross-env",
+		"worker-crypto",
+		"worker-postgres",
+		"worker-process",
+		"worker-random"
+	]
+}

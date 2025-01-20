@@ -1,0 +1,37 @@
+name = "my-worker"
+main = "./index.ts"
+compatibility_date = "2024-12-30"
+
+base_dir = "./src"
+
+define = { define-a = "a", define-b = "b" }
+
+find_additional_modules = false
+
+minify = true
+
+no_bundle = false
+
+node_compat = false
+
+preserve_file_names = true
+
+rules = [{ type = "Text", globs = ["**/*.md"], fallthrough = true }]
+
+tsconfig = "./tsconfig.custom.json"
+
+upload_source_maps = false
+
+[alias]
+"my-test" = "./my-test.ts"
+"my-test-a" = "./my-test-a.ts"
+
+[build]
+command = "npm run build"
+cwd = "build_cwd"
+watch_dir = "build_watch_dir"
+
+[site]
+bucket = "./public"
+include = ["upload_dir"]
+exclude = ["ignore_dir"]
