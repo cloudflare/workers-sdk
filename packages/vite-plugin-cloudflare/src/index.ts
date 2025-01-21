@@ -26,12 +26,19 @@ import { getWarningForWorkersConfigs } from "./workers-configs";
 import type { PluginConfig, ResolvedPluginConfig } from "./plugin-config";
 import type { Unstable_RawConfig } from "wrangler";
 
+/**
+ * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
+ *
+ * See the [README](https://github.com/cloudflare/workers-sdk/tree/main/packages/vite-plugin-cloudflare#readme) for more details.
+ *
+ * @param pluginConfig An optional {@link PluginConfig} object.
+ */
 export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
 	let resolvedPluginConfig: ResolvedPluginConfig;
 	let resolvedViteConfig: vite.ResolvedConfig;
 	let miniflare: Miniflare | undefined;
 
-	// this flag is used to shown the workers configs warning only once
+	// this flag is used to show the workers configs warning only once
 	let workersConfigsWarningShown = false;
 
 	return {
