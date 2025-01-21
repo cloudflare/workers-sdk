@@ -44,7 +44,7 @@
 	],
 	"scripts": {
 		"build": "node scripts/bundle.mjs && tsc -p tsconfig.emit.json",
-		"capnp:rtti": "capnpc -o ts scripts/rtti/rtti.capnp",
+		"capnp:rtti": "capnp-es scripts/rtti/rtti.capnp -ots && esbuild --bundle --platform=node scripts/rtti/rtti.ts --outfile=scripts/rtti/rtti.js",
 		"check:lint": "eslint .  --max-warnings=0",
 		"check:type": "tsc && tsc -p src/worker/tsconfig.json && tsc -p types/tsconfig.json",
 		"dev": "node scripts/bundle.mjs watch",
@@ -69,8 +69,7 @@
 		"@types/semver": "^7.5.1",
 		"@vitest/runner": "catalog:default",
 		"@vitest/snapshot": "catalog:default",
-		"capnp-ts": "^0.7.0",
-		"capnpc-ts": "^0.7.0",
+		"capnp-es": "^0.0.7",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",

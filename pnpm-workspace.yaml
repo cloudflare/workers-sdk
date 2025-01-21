@@ -6,20 +6,19 @@ packages:
   - "tools"
 
 catalog:
-  "@types/node": "^18.19.59"
+  "@types/node": "^18.19.71"
   "@vitest/runner": ~2.1.8
   "@vitest/snapshot": ~2.1.8
   "@vitest/ui": ~2.1.8
   # rimraf@6 requires node 20 or >=22
   rimraf: "^5.0.10"
-  typescript: "5.6.3"
+  typescript: "^5.7.2"
   undici: "^5.28.4"
   vitest: "~2.1.8"
   vite: "^5.0.12"
 
 catalogs:
   vite-plugin:
-    "typescript": "^5.7.2"
     "vite": "^6.0.7"
     "@types/node": "^22.10.1"
     "unenv": "npm:unenv-nightly@2.0.0-20241218-183400-5d6aec3"

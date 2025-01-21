@@ -91,7 +91,7 @@
 		"pretty-bytes": "^6.0.0",
 		"rimraf": "catalog:default",
 		"source-map": "^0.6.1",
-		"typescript": "^5.7.3",
+		"typescript": "catalog:default",
 		"which": "^2.0.2"
 	},
 	"engines": {
