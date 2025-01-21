@@ -44,7 +44,7 @@
 	],
 	"scripts": {
 		"build": "node scripts/bundle.mjs && tsc -p tsconfig.emit.json",
-		"capnp:rtti": "capnp-es scripts/rtti/rtti.capnp -ots && esbuild --bundle --platform=node scripts/rtti/rtti.ts --outfile=scripts/rtti/rtti.js",
+		"capnp:rtti": "node scripts/build-capnp.mjs",
 		"check:lint": "eslint .  --max-warnings=0",
 		"check:type": "tsc && tsc -p src/worker/tsconfig.json && tsc -p types/tsconfig.json",
 		"dev": "node scripts/bundle.mjs watch",
