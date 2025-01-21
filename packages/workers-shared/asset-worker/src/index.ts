@@ -9,11 +9,12 @@ import { InternalServerErrorResponse } from "./responses";
 import { getAssetWithMetadataFromKV } from "./utils/kv";
 import { mockJaegerBinding } from "./utils/mocks";
 import type {
-	AssetConfig,
+	AssetWorkerConfig,
+	ColoMetadata,
 	JaegerTracing,
 	UnsafePerformanceTimer,
 } from "../../utils/types";
-import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
+import type { Environment, ReadyAnalytics } from "./types";
 import type { Toucan } from "toucan-js";
 
 export type Env = {
@@ -29,7 +30,7 @@ export type Env = {
 	 */
 	ASSETS_KV_NAMESPACE: KVNamespace;
 
-	CONFIG: AssetConfig;
+	CONFIG: AssetWorkerConfig;
 
 	SENTRY_DSN: string;
 	SENTRY_ACCESS_CLIENT_ID: string;
@@ -73,25 +74,29 @@ export default class extends WorkerEntrypoint<Env> {
 				this.ctx,
 				this.env.SENTRY_DSN,
 				this.env.SENTRY_ACCESS_CLIENT_ID,
-				this.env.SENTRY_ACCESS_CLIENT_SECRET
+				this.env.SENTRY_ACCESS_CLIENT_SECRET,
+				this.env.COLO_METADATA,
+				this.env.CONFIG?.account_id,
+				this.env.CONFIG?.script_id
 			);
 
 			const config = applyConfigurationDefaults(this.env.CONFIG);
 			const userAgent = request.headers.get("user-agent") ?? "UA UNKNOWN";
 
-			if (sentry) {
-				const colo = this.env.COLO_METADATA.coloId;
-				sentry.setTag("colo", this.env.COLO_METADATA.coloId);
-				sentry.setTag("metal", this.env.COLO_METADATA.metalId);
-				sentry.setUser({ userAgent: userAgent, colo: colo });
-			}
-
 			const url = new URL(request.url);
-			if (this.env.COLO_METADATA && this.env.VERSION_METADATA) {
+			if (
+				this.env.COLO_METADATA &&
+				this.env.VERSION_METADATA &&
+				this.env.CONFIG
+			) {
 				analytics.setData({
+					accountId: this.env.CONFIG.account_id,
+					scriptId: this.env.CONFIG.script_id,
+
 					coloId: this.env.COLO_METADATA.coloId,
 					metalId: this.env.COLO_METADATA.metalId,
 					coloTier: this.env.COLO_METADATA.coloTier,
+
 					coloRegion: this.env.COLO_METADATA.coloRegion,
 					version: this.env.VERSION_METADATA.id,
 					hostname: url.hostname,

@@ -34,21 +34,23 @@ export default {
 				ctx,
 				env.SENTRY_DSN,
 				env.SENTRY_ACCESS_CLIENT_ID,
-				env.SENTRY_ACCESS_CLIENT_SECRET
+				env.SENTRY_ACCESS_CLIENT_SECRET,
+				env.COLO_METADATA,
+				env.CONFIG?.account_id,
+				env.CONFIG?.script_id
 			);
 
 			const url = new URL(request.url);
-			if (sentry) {
-				sentry.setUser({ username: url.hostname });
-				sentry.setTag("colo", env.COLO_METADATA.coloId);
-				sentry.setTag("metal", env.COLO_METADATA.metalId);
-			}
 
 			if (env.COLO_METADATA && env.VERSION_METADATA && env.CONFIG) {
 				analytics.setData({
+					accountId: env.CONFIG.account_id,
+					scriptId: env.CONFIG.script_id,
+
 					coloId: env.COLO_METADATA.coloId,
 					metalId: env.COLO_METADATA.metalId,
 					coloTier: env.COLO_METADATA.coloTier,
+
 					coloRegion: env.COLO_METADATA.coloRegion,
 					hostname: url.hostname,
 					version: env.VERSION_METADATA.id,
