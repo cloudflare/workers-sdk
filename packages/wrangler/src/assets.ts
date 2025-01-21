@@ -77,7 +77,8 @@ export const syncAssets = async (
 		if (!initializeAssetsResponse.jwt) {
 			throw new FatalError(
 				"Could not find assets information to attach to deployment. Please try again.",
-				1
+				1,
+				{ cleanMessage: "*" }
 			);
 		}
 		logger.info(`No files to upload. Proceeding with deployment...`);
@@ -102,7 +103,11 @@ export const syncAssets = async (
 			if (manifestEntry === undefined) {
 				throw new FatalError(
 					`A file was requested that does not appear to exist.`,
-					1
+					1,
+					{
+						cleanMessage:
+							"A file was requested that does not appear to exist. (asset manifest upload)",
+					}
 				);
 			}
 			// just logging file uploads at the moment...
@@ -182,7 +187,9 @@ export const syncAssets = async (
 					throw new FatalError(
 						`Upload took too long.\n` +
 							`Asset upload took too long on bucket ${bucketIndex + 1}/${initializeAssetsResponse.buckets.length}. Please try again.\n` +
-							`Assets already uploaded have been saved, so the next attempt will automatically resume from this point.`
+							`Assets already uploaded have been saved, so the next attempt will automatically resume from this point.`,
+						undefined,
+						{ cleanMessage: "Asset upload took too long" }
 					);
 				} else {
 					throw e;
@@ -207,7 +214,8 @@ export const syncAssets = async (
 	if (!completionJwt) {
 		throw new FatalError(
 			"Failed to complete asset upload. Please try again.",
-			1
+			1,
+			{ cleanMessage: "*" }
 		);
 	}
 
@@ -249,7 +257,8 @@ const buildAssetManifest = async (dir: string) => {
 					throw new UserError(
 						`Maximum number of assets exceeded.\n` +
 							`Cloudflare Workers supports up to ${MAX_ASSET_COUNT.toLocaleString()} assets in a version. We found ${counter.toLocaleString()} files in the specified assets directory "${dir}".\n` +
-							`Ensure your assets directory contains a maximum of ${MAX_ASSET_COUNT.toLocaleString()} files, and that you have specified your assets directory correctly.`
+							`Ensure your assets directory contains a maximum of ${MAX_ASSET_COUNT.toLocaleString()} files, and that you have specified your assets directory correctly.`,
+						{ cleanMessage: "Maximum number of assets exceeded" }
 					);
 				}
 
@@ -267,7 +276,8 @@ const buildAssetManifest = async (dir: string) => {
 									binary: true,
 								}
 							)}.\n` +
-							`Ensure all assets in your assets directory "${dir}" conform with the Workers maximum size requirement.`
+							`Ensure all assets in your assets directory "${dir}" conform with the Workers maximum size requirement.`,
+						{ cleanMessage: "Asset too large" }
 					);
 				}
 				manifest[normalizeFilePath(relativeFilepath)] = {
@@ -335,12 +345,15 @@ export function getAssetsOptions(
 
 	if (directory === undefined) {
 		throw new UserError(
-			"The `assets` property in your configuration is missing the required `directory` property."
+			"The `assets` property in your configuration is missing the required `directory` property.",
+			{ cleanMessage: "*" }
 		);
 	}
 
 	if (directory === "") {
-		throw new UserError("`The assets directory cannot be an empty string.");
+		throw new UserError("`The assets directory cannot be an empty string.", {
+			cleanMessage: "*",
+		});
 	}
 
 	const assetsBasePath = getAssetsBasePath(config, args.assets);
@@ -353,7 +366,11 @@ export function getAssetsOptions(
 
 		throw new UserError(
 			`The directory specified by the ${sourceOfTruthMessage} does not exist:\n` +
-				`${resolvedAssetsPath}`
+				`${resolvedAssetsPath}`,
+
+			{
+				cleanMessage: `The directory specified by the ${sourceOfTruthMessage} does not exist`,
+			}
 		);
 	}
 
@@ -413,7 +430,8 @@ export function validateAssetsArgsAndConfig(
 	) {
 		throw new UserError(
 			"Cannot use assets and legacy assets in the same Worker.\n" +
-				"Please remove either the `legacy_assets` or `assets` field from your configuration file."
+				"Please remove either the `legacy_assets` or `assets` field from your configuration file.",
+			{ cleanMessage: "Cannot use assets and legacy assets in the same Worker" }
 		);
 	}
 

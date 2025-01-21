@@ -1143,6 +1143,7 @@ export async function main(argv: string[]): Promise<void> {
 				durationMinutes: durationMs / 1000 / 60,
 				errorType:
 					errorType ?? (e instanceof Error ? e.constructor.name : undefined),
+				errorMessage: e instanceof UserError ? e.cleanMessage : undefined,
 			},
 			argv
 		);

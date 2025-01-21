@@ -125,5 +125,6 @@ export type Events =
 				 * Type of error, e.g. UserError, APIError. Does not include stack trace or error message.
 				 */
 				errorType: string | undefined;
+				errorMessage: string | undefined;
 			};
 	  };

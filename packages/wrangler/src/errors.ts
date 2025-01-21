@@ -5,11 +5,26 @@
  * messaging.
  */
 export class UserError extends Error {
-	constructor(...args: ConstructorParameters<typeof Error>) {
-		super(...args);
+	cleanMessage: string | undefined;
+	constructor(
+		message?: string | undefined,
+		options?:
+			| (ErrorOptions & {
+					/**
+					 * This is used to provide telemetry with a sanitised error
+					 *  message that could not have any user-identifying information.
+					 * Use "*" as shorthand to duplicate `message`.
+					 *  */
+					cleanMessage?: string;
+			  })
+			| undefined
+	) {
+		super(message, options);
 		// Restore prototype chain:
 		// https://www.typescriptlang.org/docs/handbook/release-notes/typescript-2-2.html#support-for-newtarget
 		Object.setPrototypeOf(this, new.target.prototype);
+		this.cleanMessage =
+			options?.cleanMessage === "*" ? message : options?.cleanMessage;
 	}
 }
 
@@ -22,9 +37,10 @@ export class DeprecationError extends UserError {
 export class FatalError extends UserError {
 	constructor(
 		message?: string,
-		readonly code?: number
+		readonly code?: number | undefined,
+		options?: { cleanMessage?: string }
 	) {
-		super(message);
+		super(message, options);
 	}
 }
 
