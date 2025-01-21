@@ -1,6 +1,6 @@
 # `@cloudflare/vite-plugin`
 
-[Intro](#intro) | [Quick start](#quick-start) | [Tutorial](#tutorial) | [API](#api) | [Cloudflare environments](#worker-environments) | [Migrating from `wrangler dev`](#migrating-from-wrangler-dev)
+[Intro](#intro) | [Quick start](#quick-start) | [Tutorial](#tutorial) | [API](#api) | [Cloudflare environments](#cloudflare-environments) | [Migrating from `wrangler dev`](#migrating-from-wrangler-dev)
 
 ## Intro
 
@@ -27,12 +27,12 @@ npm install @cloudflare/vite-plugin wrangler --save-dev
 ```ts
 // vite.config.ts
 
-import { defineConfig } from 'vite'
-import { cloudflare } from '@cloudflare/vite-plugin'
+import { defineConfig } from "vite";
+import { cloudflare } from "@cloudflare/vite-plugin";
 
 export default defineConfig({
   plugins: [cloudflare()],
-})
+});
 ```
 
 ### Create your Worker config file
@@ -52,9 +52,9 @@ main = "./src/index.ts"
 
 export default {
   fetch() {
-    return new Response(`Running in ${navigator.userAgent}!`)
+    return new Response(`Running in ${navigator.userAgent}!`);
   },
-}
+};
 ```
 
 You can now develop (`vite dev`), build (`vite build`), preview (`vite preview`), and deploy (`wrangler deploy`) your application.
@@ -88,13 +88,13 @@ npm install @cloudflare/vite-plugin wrangler --save-dev
 ```ts
 // vite.config.ts
 
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { cloudflare } from '@cloudflare/vite-plugin'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { cloudflare } from "@cloudflare/vite-plugin";
 
 export default defineConfig({
   plugins: [react(), cloudflare()],
-})
+});
 ```
 
 #### Create your Worker config file
@@ -181,22 +181,22 @@ The assets `binding` defined here will allow you to access the assets functional
 // api/index.ts
 
 interface Env {
-  ASSETS: Fetcher
+  ASSETS: Fetcher;
 }
 
 export default {
   fetch(request, env) {
-    const url = new URL(request.url)
+    const url = new URL(request.url);
 
-    if (url.pathname.startsWith('/api/')) {
+    if (url.pathname.startsWith("/api/")) {
       return Response.json({
-        name: 'Cloudflare',
-      })
+        name: "Cloudflare",
+      });
     }
 
-    return env.ASSETS.fetch(request)
+    return env.ASSETS.fetch(request);
   },
-} satisfies ExportedHandler<Env>
+} satisfies ExportedHandler<Env>;
 ```
 
 The Worker above will be invoked for any request not matching a static asset.
@@ -211,14 +211,14 @@ Replace the file contents with the following code:
 ```tsx
 // src/App.tsx
 
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from "react";
+import reactLogo from "./assets/react.svg";
+import viteLogo from "/vite.svg";
+import "./App.css";
 
 function App() {
-  const [count, setCount] = useState(0)
-  const [name, setName] = useState('unknown')
+  const [count, setCount] = useState(0);
+  const [name, setName] = useState("unknown");
 
   return (
     <>
@@ -245,9 +245,9 @@ function App() {
       <div className="card">
         <button
           onClick={() => {
-            fetch('/api/')
+            fetch("/api/")
               .then((res) => res.json() as Promise<{ name: string }>)
-              .then((data) => setName(data.name))
+              .then((data) => setName(data.name));
           }}
           aria-label="get name"
         >
@@ -261,10 +261,10 @@ function App() {
         Click on the Vite and React logos to learn more
       </p>
     </>
-  )
+  );
 }
 
-export default App
+export default App;
 ```
 
 Now, if you click the button, it will display 'Name from API is: Cloudflare'.
@@ -310,12 +310,12 @@ The `cloudflare` plugin should be included in the Vite `plugins` array:
 ```ts
 // vite.config.ts
 
-import { defineConfig } from 'vite'
-import { cloudflare } from '@cloudflare/vite-plugin'
+import { defineConfig } from "vite";
+import { cloudflare } from "@cloudflare/vite-plugin";
 
 export default defineConfig({
   plugins: [cloudflare()],
-})
+});
 ```
 
 It accepts an optional `PluginConfig` parameter.
