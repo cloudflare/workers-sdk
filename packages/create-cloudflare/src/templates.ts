@@ -450,21 +450,22 @@ export const createContext = async (
 			const platform = await processArgument(args, "platform", {
 				type: "select",
 				label: "platform",
-				question: "Which platform do you want to deploy to?",
+				question: "Select your deployment platform",
 				options: [
-					{
-						label: "Pages",
-						value: "pages",
-						description: "Create the application as a Pages project.",
-					},
 					{
 						label: "Workers with Assets (BETA)",
 						value: "workers",
-						description: "Create the application as a Workers project.",
+						description:
+							"Take advantage of the full Developer Platform, including R2, Queues, Durable Objects and more.",
+					},
+					{
+						label: "Pages",
+						value: "pages",
+						description: "Great for simple websites and applications.",
 					},
 					backOption,
 				],
-				defaultValue: "pages",
+				defaultValue: "workers",
 			});
 			linesPrinted += 3;
 			if ((platform as string) === BACK_VALUE) {
