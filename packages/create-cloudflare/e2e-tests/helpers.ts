@@ -25,9 +25,7 @@ import type {
 import type { Writable } from "stream";
 import type { RunnerTestCase, Suite, Test } from "vitest";
 
-// Project Name prefix
-// Note: Project name can only be up to 58 characters long
-export const C3_E2E_PREFIX = "tmp-c3";
+export const C3_E2E_PREFIX = "tmp-e2e-c3";
 
 export const keys = {
 	enter: "\x0d",
@@ -384,9 +382,18 @@ export const testProjectDir = (suite: string, test: string) => {
 	const randomSuffix = crypto.randomBytes(4).toString("hex");
 	const baseProjectName = `${C3_E2E_PREFIX}${randomSuffix}`;
 
-	const getName = () =>
+	const getName = () => {
 		// Worker project names cannot be longer than 58 characters
-		`${baseProjectName}-${test.substring(0, 57 - baseProjectName.length)}`;
+		const projectName = `${baseProjectName}-${test.substring(0, 57 - baseProjectName.length)}`;
+
+		// Project name cannot start/end with a dash
+		if (projectName.endsWith("-")) {
+			return projectName.slice(0, -1);
+		}
+
+		return projectName;
+	};
+
 	const getPath = () => path.join(tmpDirPath, getName());
 	const clean = () => {
 		try {
