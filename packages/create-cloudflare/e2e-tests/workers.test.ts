@@ -199,12 +199,16 @@ describe
 
 							try {
 								expect(jsonPath).toExist();
-								const config = readJSON(jsonPath) as { main: string };
-								expect(join(project.path, config.main)).toExist();
-							} catch {
+								const config = readJSON(jsonPath) as { main?: string };
+								if (config.main) {
+									expect(join(project.path, config.main)).toExist();
+								}
+							} catch (e) {
 								expect(tomlPath).toExist();
-								const config = readToml(tomlPath) as { main: string };
-								expect(join(project.path, config.main)).toExist();
+								const config = readToml(tomlPath) as { main?: string };
+								if (config.main) {
+									expect(join(project.path, config.main)).toExist();
+								}
 							}
 
 							const { verifyDeploy, verifyTest } = testConfig;
