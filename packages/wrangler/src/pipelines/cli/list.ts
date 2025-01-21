@@ -2,6 +2,7 @@ import { readConfig } from "../../config";
 import { logger } from "../../logger";
 import * as metrics from "../../metrics";
 import { requireAuth } from "../../user";
+import { printWranglerBanner } from "../../wrangler-banner";
 import { listPipelines } from "../client";
 import type { CommonYargsOptions } from "../../yargs-types";
 import type { ArgumentsCamelCase } from "yargs";
@@ -9,6 +10,7 @@ import type { ArgumentsCamelCase } from "yargs";
 export async function listPipelinesHandler(
 	args: ArgumentsCamelCase<CommonYargsOptions>
 ) {
+	await printWranglerBanner();
 	const config = readConfig(args);
 	const accountId = await requireAuth(config);
 

@@ -1,4 +1,5 @@
 import { HeadBucketCommand, S3Client } from "@aws-sdk/client-s3";
+import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import { APIError } from "../parse";
@@ -49,7 +50,7 @@ export async function authorizeR2Bucket(
 		endpoint: getAccountR2Endpoint(accountId),
 	});
 
-	// Wait for token to settle/propagate, retry up to 10 times, with 1s waits in-between errors
+	// Wait for token to settle/propagate, retry up to 10 times, with 2s waits in-between errors
 	!__testSkipDelaysFlag &&
 		(await retryOnAPIFailure(
 			async () => {
@@ -59,7 +60,7 @@ export async function authorizeR2Bucket(
 					})
 				);
 			},
-			1000,
+			2000,
 			10
 		));
 
@@ -67,6 +68,10 @@ export async function authorizeR2Bucket(
 }
 
 export function getAccountR2Endpoint(accountId: string) {
+	const env = getCloudflareApiEnvironmentFromEnv();
+	if (env === "staging") {
+		return `https://${accountId}.r2-staging.cloudflarestorage.com`;
+	}
 	return `https://${accountId}.r2.cloudflarestorage.com`;
 }
 
