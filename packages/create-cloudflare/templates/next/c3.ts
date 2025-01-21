@@ -8,6 +8,7 @@ import {
 	probePaths,
 	readFile,
 	readJSON,
+	removeFile,
 	usesEslint,
 	usesTypescript,
 	writeFile,
@@ -31,29 +32,55 @@ const generate = async (ctx: C3Context) => {
 	updateStatus("Created wrangler.json file");
 };
 
-const updateNextConfig = (usesTs: boolean) => {
+const setupDevPlatformCode =
+	`import { setupDevPlatform } from '@cloudflare/next-on-pages/next-dev';
+
+	// Here we use the @cloudflare/next-on-pages next-dev module to allow us to
+	// use bindings during local development (when running the application with \`next dev\`).
+	// For more information see:
+	// https://github.com/cloudflare/next-on-pages/blob/main/internal-packages/next-dev/README.md
+	if (process.env.NODE_ENV === 'development') {
+		await setupDevPlatform();
+	}
+
+	`.replace(/\n\t*/g, "\n");
+
+const updateNextJsConfig = () => {
 	const s = spinner();
 
-	const configFile = `next.config.${usesTs ? "ts" : "mjs"}`;
+	const configFile = `next.config.mjs`;
 	s.start(`Updating \`${configFile}\``);
 
 	const configContent = readFile(configFile);
 
-	const updatedConfigFile =
-		`import { setupDevPlatform } from '@cloudflare/next-on-pages/next-dev';
-
-		// Here we use the @cloudflare/next-on-pages next-dev module to allow us to use bindings during local development
-		// (when running the application with \`next dev\`), for more information see:
-		// https://github.com/cloudflare/next-on-pages/blob/main/internal-packages/next-dev/README.md
-		if (process.env.NODE_ENV === 'development') {
-		  await setupDevPlatform();
-		}
-
-		`.replace(/\n\t*/g, "\n") + configContent;
+	const updatedConfigFile = setupDevPlatformCode + configContent;
 
 	writeFile(configFile, updatedConfigFile);
 
-	s.stop(`${brandColor(`updated`)} ${dim(`\`${configFile}\``)}`);
+	s.stop(`${brandColor(`Updated`)} ${dim(`\`${configFile}\``)}`);
+};
+
+const updateNextTsConfig = () => {
+	const s = spinner();
+
+	const oldConfigFile = `next.config.ts`;
+	const newConfigFile = `next.config.mjs`;
+
+	s.start(`Removing \`${oldConfigFile}\``);
+
+	const updatedConfigFile = setupDevPlatformCode +
+	`/** @type {import('next').NextConfig} */
+	const nextConfig = {
+	  /* config options here */
+	};
+
+	export default nextConfig;
+	`.replace(/\n\t*/g, "\n");
+
+	removeFile(oldConfigFile);
+	writeFile(newConfigFile, updatedConfigFile);
+
+	s.stop(`${brandColor(`Created`)} ${dim(`\`${newConfigFile}\``)}`);
 };
 
 const configure = async (ctx: C3Context) => {
@@ -89,7 +116,11 @@ const configure = async (ctx: C3Context) => {
 		await writeEslintrc(ctx);
 	}
 
-	updateNextConfig(usesTs);
+	if (usesTs) {
+		updateNextTsConfig();
+	} else {
+		updateNextJsConfig();
+	}
 
 	copyFile(
 		join(getTemplatePath(ctx), "README.md"),
