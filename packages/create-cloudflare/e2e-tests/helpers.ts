@@ -71,14 +71,24 @@ export type RunnerConfig = {
 	argv?: string[];
 	quarantine?: boolean;
 	timeout?: number;
+	/**
+	 * Specifies whether to assert the response from the specified route after deployment.
+	 */
 	verifyDeploy: null | {
 		route: string;
 		expectedText: string;
 	};
+	/**
+	 * Specifies whether to run the preview script for the project and assert the response from the specified route.
+	 */
 	verifyPreview: null | {
 		route: string;
 		expectedText: string;
 	};
+	/**
+	 * Specifies whether to run the test script for the project and verify the exit code.
+	 */
+	verifyTest?: boolean;
 };
 
 export const runC3 = async (
@@ -372,9 +382,18 @@ export const testProjectDir = (suite: string, test: string) => {
 	const randomSuffix = crypto.randomBytes(4).toString("hex");
 	const baseProjectName = `${C3_E2E_PREFIX}${randomSuffix}`;
 
-	const getName = () =>
+	const getName = () => {
 		// Worker project names cannot be longer than 58 characters
-		`${baseProjectName}-${test.substring(0, 57 - baseProjectName.length)}`;
+		const projectName = `${baseProjectName}-${test.substring(0, 57 - baseProjectName.length)}`;
+
+		// Project name cannot start/end with a dash
+		if (projectName.endsWith("-")) {
+			return projectName.slice(0, -1);
+		}
+
+		return projectName;
+	};
+
 	const getPath = () => path.join(tmpDirPath, getName());
 	const clean = () => {
 		try {

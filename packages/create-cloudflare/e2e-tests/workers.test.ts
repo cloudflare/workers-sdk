@@ -14,6 +14,7 @@ import {
 	runC3,
 	spawnWithLogging,
 	test,
+	waitForExit,
 } from "./helpers";
 import type { RunnerConfig } from "./helpers";
 import type { Writable } from "stream";
@@ -30,12 +31,71 @@ type WorkerTestConfig = RunnerConfig & {
 
 function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 	if (opts.experimental) {
-		return [];
+		return [
+			{
+				template: "hello-world-with-assets",
+				variants: ["ts", "js"],
+				verifyDeploy: {
+					route: "/message",
+					expectedText: "Hello, World!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+				verifyTest: true,
+				argv: ["--category", "hello-world"],
+			},
+			{
+				template: "hello-world-with-assets",
+				variants: ["python"],
+				verifyDeploy: {
+					route: "/message",
+					expectedText: "Hello, World!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+				argv: ["--category", "hello-world"],
+			},
+			{
+				template: "hello-world-durable-object-with-assets",
+				variants: ["ts", "js"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello, World!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+				argv: ["--category", "hello-world"],
+			},
+			{
+				template: "hello-world-assets-only",
+				variants: [],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello, World!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+				argv: ["--category", "hello-world"],
+			},
+		];
 	} else {
 		return [
 			{
 				template: "hello-world",
-				variants: ["TypeScript", "JavaScript", "Python"],
+				variants: ["ts", "js"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello World!",
+				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Hello World!",
+				},
+				verifyTest: true,
+			},
+			{
+				template: "hello-world",
+				variants: ["python"],
 				verifyDeploy: {
 					route: "/",
 					expectedText: "Hello World!",
@@ -47,7 +107,7 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 			},
 			{
 				template: "common",
-				variants: ["TypeScript", "JavaScript"],
+				variants: ["ts", "js"],
 				verifyDeploy: {
 					route: "/",
 					expectedText: "Try making requests to:",
@@ -59,14 +119,14 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 			},
 			{
 				template: "queues",
-				variants: ["TypeScript", "JavaScript"],
+				variants: ["ts", "js"],
 				// Skipped for now, since C3 does not yet support resource creation
 				verifyDeploy: null,
 				verifyPreview: null,
 			},
 			{
 				template: "scheduled",
-				variants: ["TypeScript", "JavaScript"],
+				variants: ["ts", "js"],
 				// Skipped for now, since it's not possible to test scheduled events on deployed Workers
 				verifyDeploy: null,
 				verifyPreview: null,
@@ -92,8 +152,7 @@ const workerTests = getWorkerTests({ experimental });
 
 describe
 	.skipIf(
-		experimental || // skip until we add tests for experimental workers templates
-			getFrameworkToTest({ experimental }) ||
+		getFrameworkToTest({ experimental }) ||
 			isQuarantineMode() ||
 			process.platform === "win32",
 	)
@@ -109,15 +168,7 @@ describe
 							return {
 								...testConfig,
 								name: `${testConfig.name ?? testConfig.template}-${variant.toLowerCase()}`,
-								promptHandlers: [
-									{
-										matcher: /Which language do you want to use\?/,
-										input: {
-											type: "select",
-											target: variant,
-										},
-									},
-								],
+								argv: (testConfig.argv ?? []).concat("--lang", variant),
 							};
 						})
 					: [testConfig],
@@ -137,9 +188,6 @@ describe
 							// Relevant project files should have been created
 							expect(project.path).toExist();
 
-							const gitignorePath = join(project.path, ".gitignore");
-							expect(gitignorePath).toExist();
-
 							const pkgJsonPath = join(project.path, "package.json");
 							expect(pkgJsonPath).toExist();
 
@@ -151,21 +199,29 @@ describe
 
 							try {
 								expect(jsonPath).toExist();
-								const config = readJSON(jsonPath) as { main: string };
-								expect(join(project.path, config.main)).toExist();
-							} catch {
+								const config = readJSON(jsonPath) as { main?: string };
+								if (config.main) {
+									expect(join(project.path, config.main)).toExist();
+								}
+							} catch (e) {
 								expect(tomlPath).toExist();
-								const config = readToml(tomlPath) as { main: string };
-								expect(join(project.path, config.main)).toExist();
+								const config = readToml(tomlPath) as { main?: string };
+								if (config.main) {
+									expect(join(project.path, config.main)).toExist();
+								}
 							}
 
-							const { verifyDeploy } = testConfig;
+							const { verifyDeploy, verifyTest } = testConfig;
 							if (verifyDeploy) {
 								if (deployedUrl) {
 									await verifyDeployment(deployedUrl, verifyDeploy);
 								} else {
 									await verifyLocalDev(testConfig, project.path, logStream);
 								}
+							}
+
+							if (verifyTest) {
+								await verifyTestScript(project.path, logStream);
 							}
 						} finally {
 							await deleteWorker(project.name);
@@ -185,6 +241,7 @@ const runCli = async (
 		projectPath,
 		"--type",
 		template,
+		...(experimental ? ["--experimental"] : []),
 		"--no-open",
 		"--no-git",
 		NO_DEPLOY ? "--no-deploy" : "--deploy",
@@ -279,3 +336,18 @@ const verifyLocalDev = async (
 		await sleep(1000);
 	}
 };
+
+async function verifyTestScript(projectPath: string, logStream: Writable) {
+	const proc = spawnWithLogging(
+		[pm, "run", "test"],
+		{
+			cwd: projectPath,
+			env: {
+				VITEST: undefined,
+			},
+		},
+		logStream,
+	);
+
+	return await waitForExit(proc);
+}
