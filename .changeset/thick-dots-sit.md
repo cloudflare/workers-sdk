@@ -1,5 +1,5 @@
 ---
-"wrangler": patch
+"wrangler": minor
 ---
 
 add support for assets bindings to `getPlatformProxy`
@@ -26,14 +26,12 @@ example:
 ```js
 import { getPlatformProxy } from "wrangler";
 
-const { env } = await getPlatformProxy();
+const { env, dispose } = await getPlatformProxy();
 
 if (env.ASSETS) {
-	const text = await (
-		await p.env.ASSETS.fetch("http://0.0.0.0/file.txt")
-	).text();
+	const text = await (await env.ASSETS.fetch("http://0.0.0.0/file.txt")).text();
 	console.log(text); // logs the content of file.txt
 }
 
-p.dispose();
+await dispose();
 ```
