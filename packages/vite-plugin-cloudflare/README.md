@@ -27,8 +27,8 @@ npm install @cloudflare/vite-plugin wrangler --save-dev
 ```ts
 // vite.config.ts
 
-import { defineConfig } from 'vite';
-import { cloudflare } from '@cloudflare/vite-plugin';
+import { defineConfig } from "vite";
+import { cloudflare } from "@cloudflare/vite-plugin";
 
 export default defineConfig({
   plugins: [cloudflare()],
@@ -88,9 +88,9 @@ npm install @cloudflare/vite-plugin wrangler --save-dev
 ```ts
 // vite.config.ts
 
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import { cloudflare } from '@cloudflare/vite-plugin';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { cloudflare } from "@cloudflare/vite-plugin";
 
 export default defineConfig({
   plugins: [react(), cloudflare()],
@@ -188,9 +188,9 @@ export default {
   fetch(request, env) {
     const url = new URL(request.url);
 
-    if (url.pathname.startsWith('/api/')) {
+    if (url.pathname.startsWith("/api/")) {
       return Response.json({
-        name: 'Cloudflare',
+        name: "Cloudflare",
       });
     }
 
@@ -211,14 +211,14 @@ Replace the file contents with the following code:
 ```tsx
 // src/App.tsx
 
-import { useState } from 'react';
-import reactLogo from './assets/react.svg';
-import viteLogo from '/vite.svg';
-import './App.css';
+import { useState } from "react";
+import reactLogo from "./assets/react.svg";
+import viteLogo from "/vite.svg";
+import "./App.css";
 
 function App() {
   const [count, setCount] = useState(0);
-  const [name, setName] = useState('unknown');
+  const [name, setName] = useState("unknown");
 
   return (
     <>
@@ -245,7 +245,7 @@ function App() {
       <div className="card">
         <button
           onClick={() => {
-            fetch('/api/')
+            fetch("/api/")
               .then((res) => res.json() as Promise<{ name: string }>)
               .then((data) => setName(data.name));
           }}
@@ -310,8 +310,8 @@ The `cloudflare` plugin should be included in the Vite `plugins` array:
 ```ts
 // vite.config.ts
 
-import { defineConfig } from 'vite';
-import { cloudflare } from '@cloudflare/vite-plugin';
+import { defineConfig } from "vite";
+import { cloudflare } from "@cloudflare/vite-plugin";
 
 export default defineConfig({
   plugins: [cloudflare()],
