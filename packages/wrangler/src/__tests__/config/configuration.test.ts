@@ -1923,6 +1923,18 @@ describe("normalizeAndValidateConfig()", () => {
 								},
 							],
 							deleted_classes: ["CLASS_3", "CLASS_4"],
+							new_sqlite_classes: ["CLASS_5", "CLASS_6"],
+							transferred_classes: [
+								{
+									from: "FROM_CLASS",
+									from_script: "FROM_SCRIPT",
+									to: "TO_CLASS",
+								},
+								{
+									from: "FROM_CLASS",
+									to: "TO_CLASS",
+								},
+							],
 							unrecognized_field: "FOO",
 						},
 					],
@@ -1943,7 +1955,8 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
-			            - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":\\"FROM_CLASS\\",\\"to\\":\\"TO_CLASS\\"},{\\"a\\":\\"something\\",\\"b\\":\\"someone\\"}]."
+			            - Expected \\"migrations[0].renamed_classes\\" to be an array of \\"{from: string, to: string}\\" objects but got [{\\"from\\":\\"FROM_CLASS\\",\\"to\\":\\"TO_CLASS\\"},{\\"a\\":\\"something\\",\\"b\\":\\"someone\\"}].
+			            - Expected \\"migrations[0].transferred_classes\\" to be an array of \\"{from: string, from_script: string, to: string}\\" objects but got [{\\"from\\":\\"FROM_CLASS\\",\\"from_script\\":\\"FROM_SCRIPT\\",\\"to\\":\\"TO_CLASS\\"},{\\"from\\":\\"FROM_CLASS\\",\\"to\\":\\"TO_CLASS\\"}]."
 		        `);
 			});
 		});
