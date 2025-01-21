@@ -16,13 +16,32 @@ Your Worker code runs inside [workerd](https://github.com/cloudflare/workerd), m
 
 ## Quick start
 
+### Start with a basic `package.json`
+
+```json
+{
+  "name": "cloudflare-vite-quick-start",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  }
+}
+```
+
+> [!NOTE]
+> Ensure that you include `"type": "module"` in order to use ES modules by default.
+
 ### Install the dependencies
 
 ```sh
-npm install @cloudflare/vite-plugin wrangler --save-dev
+npm install vite @cloudflare/vite-plugin wrangler --save-dev
 ```
 
-### Add the plugin to your Vite config
+### Create your Vite config file and include the Cloudflare plugin
 
 ```ts
 // vite.config.ts
@@ -40,7 +59,7 @@ export default defineConfig({
 ```toml
 # wrangler.toml
 
-name = "my-worker"
+name = "cloudflare-vite-quick-start"
 compatibility_date = "2024-12-30"
 main = "./src/index.ts"
 ```
@@ -57,7 +76,7 @@ export default {
 };
 ```
 
-You can now develop (`vite dev`), build (`vite build`), preview (`vite preview`), and deploy (`wrangler deploy`) your application.
+You can now develop (`npm run dev`), build (`npm run build`), preview (`npm run preview`), and deploy (`npm exec wrangler deploy`) your application.
 
 ## Tutorial
 
