@@ -39,7 +39,7 @@
 		"test:e2e:yarn": "pnpm run build && cross-env TEST_PM=yarn vitest run --config ./vitest-e2e.config.mts",
 		"test:unit": "vitest run --config ./vitest.config.mts",
 		"test:unit:watch": "vitest --config ./vitest.config.mts",
-		"watch": "node -r esbuild-register scripts/build.ts --watch",
+		"dev": "node -r esbuild-register scripts/build.ts --watch",
 		"test:ci": "vitest run --config ./vitest.config.mts"
 	},
 	"devDependencies": {
