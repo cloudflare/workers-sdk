@@ -4,7 +4,7 @@ import type { Preset } from "unenv";
 // Built-in APIs provided by workerd.
 // https://developers.cloudflare.com/workers/runtime-apis/nodejs/
 // https://github.com/cloudflare/workerd/tree/main/src/node
-// Last checked: 2024-10-22
+// Last checked: 2025-01-24
 const cloudflareNodeCompatModules = [
 	"_stream_duplex",
 	"_stream_passthrough",
@@ -18,6 +18,7 @@ const cloudflareNodeCompatModules = [
 	"dns",
 	"dns/promises",
 	"events",
+	"net",
 	"path",
 	"path/posix",
 	"path/win32",
@@ -27,6 +28,8 @@ const cloudflareNodeCompatModules = [
 	"stream/promises",
 	"stream/web",
 	"string_decoder",
+	"timers",
+	"timers/promises",
 	"url",
 	"util/types",
 	"zlib",
@@ -39,7 +42,6 @@ const hybridNodeCompatModules = [
 	"crypto",
 	"module",
 	"process",
-	"timers",
 	"util",
 ];
 

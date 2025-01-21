@@ -10,6 +10,7 @@ export const TESTS = {
 	testPath,
 	testDns,
 	testTimers,
+	testNet,
 };
 
 export default {
@@ -86,6 +87,7 @@ async function testModules() {
 		"dns",
 		"dns/promises",
 		"events",
+		"net",
 		"path",
 		"path/posix",
 		"path/win32",
@@ -95,6 +97,8 @@ async function testModules() {
 		"stream/promises",
 		"stream/web",
 		"string_decoder",
+		"timers",
+		"timers/promises",
 		"url",
 		"util/types",
 		"zlib",
@@ -149,4 +153,11 @@ async function testTimers() {
 	// active is deprecated and no more in the type
 	(timers as any).active(timeout);
 	timers.clearTimeout(timeout);
+}
+
+export async function testNet() {
+	const net = await import("node:net");
+	assert.strictEqual(typeof net, "object");
+	assert.strictEqual(typeof net.createConnection, "function");
+	assert.throws(() => net.createServer(), /not implemented/);
 }
