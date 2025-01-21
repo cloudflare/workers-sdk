@@ -6,7 +6,6 @@ import { Agent, fetch } from "undici";
 import { beforeEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
-import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
 
 const port = await getPort();
