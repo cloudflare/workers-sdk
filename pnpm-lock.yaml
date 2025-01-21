@@ -1226,6 +1226,7 @@ importers:
       vite-tsconfig-paths:
         specifier: ^4.0.8
 <<<<<<< HEAD
+<<<<<<< HEAD
 ||||||| parent of 6b52df682 (fix lockfile)
 <<<<<<< HEAD
 =======
@@ -1245,10 +1246,28 @@ importers:
 ||||||| parent of 851ee8a1d (Update TS)
         version: 4.2.0(typescript@5.6.3)(vite@5.0.12(@types/node@18.19.59))
 =======
+||||||| parent of 95d7afbf6 (fix lockfile)
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+||||||| parent of 47ba5eb3a (fix lockfile)
+<<<<<<< HEAD
+        version: 4.2.0(typescript@5.7.3)(vite@5.0.12(@types/node@18.19.59))
+||||||| e8aaa3930
+        version: 4.2.0(typescript@5.6.3)(vite@5.0.12(@types/node@18.19.59))
+=======
+=======
+>>>>>>> 47ba5eb3a (fix lockfile)
+        version: 4.2.0(typescript@5.6.3)(vite@5.0.12(@types/node@18.19.59))
+||||||| parent of 851ee8a1d (Update TS)
+        version: 4.2.0(typescript@5.6.3)(vite@5.0.12(@types/node@18.19.59))
+=======
+=======
+>>>>>>> 95d7afbf6 (fix lockfile)
         version: 4.2.0(typescript@5.7.3)(vite@5.0.12(@types/node@18.19.71))
->>>>>>> 851ee8a1d (Update TS)
       vitest:
         specifier: catalog:default
+<<<<<<< HEAD
 <<<<<<< HEAD
         version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
 <<<<<<< HEAD
@@ -1276,9 +1295,32 @@ importers:
 ||||||| parent of 851ee8a1d (Update TS)
         version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
 =======
+||||||| parent of 95d7afbf6 (fix lockfile)
+<<<<<<< HEAD
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
+<<<<<<< HEAD
+||||||| parent of 5f6745796 (initial commit)
+        version: 4.2.0(typescript@5.6.3)(vite@5.0.12(@types/node@18.19.59))
+=======
+        version: 4.2.0(typescript@5.7.3)(vite@5.0.12(@types/node@18.19.59))
+>>>>>>> 5f6745796 (initial commit)
+||||||| parent of 47ba5eb3a (fix lockfile)
+>>>>>>> origin/main
+=======
+>>>>>>> 47ba5eb3a (fix lockfile)
+||||||| parent of 851ee8a1d (Update TS)
+        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
+=======
+=======
+>>>>>>> 95d7afbf6 (fix lockfile)
         version: 2.1.8(@types/node@18.19.71)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+<<<<<<< HEAD
 >>>>>>> 851ee8a1d (Update TS)
 >>>>>>> b46b1b81c (Update TS)
+||||||| parent of 95d7afbf6 (fix lockfile)
+>>>>>>> 851ee8a1d (Update TS)
+=======
+>>>>>>> 95d7afbf6 (fix lockfile)
       which-pm-runs:
         specifier: ^1.1.0
         version: 1.1.0
@@ -10610,6 +10652,7 @@ packages:
     hasBin: true
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 ||||||| parent of 6b52df682 (fix lockfile)
 <<<<<<< HEAD
 =======
@@ -10643,6 +10686,22 @@ packages:
 <<<<<<< HEAD
 =======
 >>>>>>> 47ba5eb3a (fix lockfile)
+||||||| parent of 95d7afbf6 (fix lockfile)
+<<<<<<< HEAD
+<<<<<<< HEAD
+  typescript@5.7.3:
+    resolution: {integrity: sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
+||||||| parent of 5f6745796 (initial commit)
+=======
+||||||| parent of 47ba5eb3a (fix lockfile)
+<<<<<<< HEAD
+=======
+>>>>>>> 47ba5eb3a (fix lockfile)
+=======
+>>>>>>> 95d7afbf6 (fix lockfile)
   typescript@5.7.2:
     resolution: {integrity: sha512-i5t66RHxDvVN40HfDd1PsEThGNnlMCMT3jMUuoh9/0TaqWevNontacunWyN02LA9/fIbEWlcHZcgTKb9QoaLfg==}
     engines: {node: '>=14.17'}
@@ -10653,6 +10712,7 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 >>>>>>> 5f6745796 (initial commit)
 ||||||| parent of 47ba5eb3a (fix lockfile)
@@ -10667,6 +10727,22 @@ packages:
 =======
 >>>>>>> 47ba5eb3a (fix lockfile)
 >>>>>>> 6b52df682 (fix lockfile)
+||||||| parent of 95d7afbf6 (fix lockfile)
+<<<<<<< HEAD
+>>>>>>> 5f6745796 (initial commit)
+||||||| parent of 47ba5eb3a (fix lockfile)
+||||||| e8aaa3930
+=======
+  typescript@5.7.3:
+    resolution: {integrity: sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
+>>>>>>> origin/main
+=======
+>>>>>>> 47ba5eb3a (fix lockfile)
+=======
+>>>>>>> 95d7afbf6 (fix lockfile)
   uc.micro@1.0.6:
     resolution: {integrity: sha512-8Y75pvTYkLJW2hWQHXxoqRgV7qb9B+9vFEtidML+7koHUFapnVJAZ6cKs+Qjz5Aw3aZWHMC6u0wJE3At+nSGwA==}
 
@@ -17841,7 +17917,7 @@ snapshots:
       '@cspotcode/source-map-support': 0.8.1
       acorn: 8.14.0
       acorn-walk: 8.3.2
-      capnp-ts: 0.7.0(patch_hash=l4yimnxyvkiyj6alnps2ec3sii)
+      capnp-ts: 0.7.0
       exit-hook: 2.2.1
       glob-to-regexp: 0.4.1
       stoppable: 1.1.0
@@ -20067,6 +20143,7 @@ snapshots:
   typescript@5.6.3: {}
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 ||||||| parent of 6b52df682 (fix lockfile)
 <<<<<<< HEAD
 =======
@@ -20091,10 +20168,24 @@ snapshots:
 <<<<<<< HEAD
 =======
 >>>>>>> 47ba5eb3a (fix lockfile)
+||||||| parent of 95d7afbf6 (fix lockfile)
+<<<<<<< HEAD
+<<<<<<< HEAD
+  typescript@5.7.3: {}
+
+||||||| parent of 5f6745796 (initial commit)
+=======
+||||||| parent of 47ba5eb3a (fix lockfile)
+<<<<<<< HEAD
+=======
+>>>>>>> 47ba5eb3a (fix lockfile)
+=======
+>>>>>>> 95d7afbf6 (fix lockfile)
   typescript@5.7.2: {}
 
   typescript@5.7.3: {}
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 >>>>>>> 5f6745796 (initial commit)
 ||||||| parent of 47ba5eb3a (fix lockfile)
@@ -20106,6 +20197,19 @@ snapshots:
 =======
 >>>>>>> 47ba5eb3a (fix lockfile)
 >>>>>>> 6b52df682 (fix lockfile)
+||||||| parent of 95d7afbf6 (fix lockfile)
+<<<<<<< HEAD
+>>>>>>> 5f6745796 (initial commit)
+||||||| parent of 47ba5eb3a (fix lockfile)
+||||||| e8aaa3930
+=======
+  typescript@5.7.3: {}
+
+>>>>>>> origin/main
+=======
+>>>>>>> 47ba5eb3a (fix lockfile)
+=======
+>>>>>>> 95d7afbf6 (fix lockfile)
   uc.micro@1.0.6: {}
 
   ufo@1.5.4: {}
@@ -20325,6 +20429,7 @@ snapshots:
       - terser
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 ||||||| parent of 6b52df682 (fix lockfile)
 <<<<<<< HEAD
 =======
@@ -20468,9 +20573,110 @@ snapshots:
 ||||||| parent of 851ee8a1d (Update TS)
   vite-plugin-dts@4.0.1(@types/node@18.19.59)(rollup@4.30.1)(typescript@5.7.3)(vite@5.0.12(@types/node@18.19.59)):
 =======
+||||||| parent of 95d7afbf6 (fix lockfile)
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+||||||| parent of 47ba5eb3a (fix lockfile)
+<<<<<<< HEAD
+  vite-node@2.1.8(@types/node@22.10.6):
+    dependencies:
+      cac: 6.7.14
+      debug: 4.3.7(supports-color@8.1.1)
+      es-module-lexer: 1.5.4
+      pathe: 1.1.2
+      vite: 5.0.12(@types/node@22.10.6)
+    transitivePeerDependencies:
+      - '@types/node'
+      - less
+      - lightningcss
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+=======
+>>>>>>> 47ba5eb3a (fix lockfile)
+  vite-plugin-dts@4.0.1(@types/node@18.19.59)(rollup@4.30.1)(typescript@5.7.3)(vite@5.0.12(@types/node@18.19.59)):
+<<<<<<< HEAD
+||||||| parent of 5f6745796 (initial commit)
+  vite-node@2.1.8(@types/node@22.10.6):
+    dependencies:
+      cac: 6.7.14
+      debug: 4.3.7(supports-color@9.2.2)
+      es-module-lexer: 1.5.4
+      pathe: 1.1.2
+      vite: 5.0.12(@types/node@22.10.6)
+    transitivePeerDependencies:
+      - '@types/node'
+      - less
+      - lightningcss
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+  vite-plugin-dts@4.0.1(@types/node@18.19.59)(rollup@4.30.1)(typescript@5.6.3)(vite@5.0.12(@types/node@18.19.59)):
+=======
+  vite-node@2.1.8(@types/node@22.10.6):
+    dependencies:
+      cac: 6.7.14
+      debug: 4.3.7(supports-color@8.1.1)
+      es-module-lexer: 1.5.4
+      pathe: 1.1.2
+      vite: 5.0.12(@types/node@22.10.6)
+    transitivePeerDependencies:
+      - '@types/node'
+      - less
+      - lightningcss
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+  vite-plugin-dts@4.0.1(@types/node@18.19.59)(rollup@4.30.1)(typescript@5.7.3)(vite@5.0.12(@types/node@18.19.59)):
+>>>>>>> 5f6745796 (initial commit)
+||||||| parent of 47ba5eb3a (fix lockfile)
+||||||| e8aaa3930
+  vite-node@2.1.8(@types/node@22.10.6):
+    dependencies:
+      cac: 6.7.14
+      debug: 4.3.7(supports-color@9.2.2)
+      es-module-lexer: 1.5.4
+      pathe: 1.1.2
+      vite: 5.0.12(@types/node@22.10.6)
+    transitivePeerDependencies:
+      - '@types/node'
+      - less
+      - lightningcss
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+  vite-plugin-dts@4.0.1(@types/node@18.19.59)(rollup@4.30.1)(typescript@5.6.3)(vite@5.0.12(@types/node@18.19.59)):
+=======
+  vite-plugin-dts@4.0.1(@types/node@18.19.59)(rollup@4.30.1)(typescript@5.7.3)(vite@5.0.12(@types/node@18.19.59)):
+>>>>>>> origin/main
+=======
+>>>>>>> 47ba5eb3a (fix lockfile)
+||||||| parent of 851ee8a1d (Update TS)
+  vite-plugin-dts@4.0.1(@types/node@18.19.59)(rollup@4.30.1)(typescript@5.7.3)(vite@5.0.12(@types/node@18.19.59)):
+=======
+=======
+>>>>>>> 95d7afbf6 (fix lockfile)
   vite-plugin-dts@4.0.1(@types/node@18.19.71)(rollup@4.30.1)(typescript@5.7.3)(vite@5.0.12(@types/node@18.19.71)):
+<<<<<<< HEAD
 >>>>>>> 851ee8a1d (Update TS)
 >>>>>>> b46b1b81c (Update TS)
+||||||| parent of 95d7afbf6 (fix lockfile)
+>>>>>>> 851ee8a1d (Update TS)
+=======
+>>>>>>> 95d7afbf6 (fix lockfile)
     dependencies:
       '@microsoft/api-extractor': 7.47.4(@types/node@18.19.71)
       '@rollup/pluginutils': 5.1.0(rollup@4.30.1)
@@ -20481,15 +20687,22 @@ snapshots:
       kolorist: 1.8.0
       local-pkg: 0.5.0
 <<<<<<< HEAD
+<<<<<<< HEAD
 ||||||| parent of 6b52df682 (fix lockfile)
 <<<<<<< HEAD
 =======
 <<<<<<< HEAD
 <<<<<<< HEAD
 >>>>>>> 6b52df682 (fix lockfile)
+||||||| parent of 95d7afbf6 (fix lockfile)
+<<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 95d7afbf6 (fix lockfile)
       magic-string: 0.30.17
       typescript: 5.7.3
       vue-tsc: 2.0.29(typescript@5.7.3)
+<<<<<<< HEAD
 <<<<<<< HEAD
 ||||||| parent of 6b52df682 (fix lockfile)
 ||||||| parent of 5f6745796 (initial commit)
@@ -20531,6 +20744,37 @@ snapshots:
 =======
 >>>>>>> 47ba5eb3a (fix lockfile)
 >>>>>>> 6b52df682 (fix lockfile)
+||||||| parent of 95d7afbf6 (fix lockfile)
+||||||| parent of 5f6745796 (initial commit)
+      magic-string: 0.30.14
+      typescript: 5.6.3
+      vue-tsc: 2.0.29(typescript@5.6.3)
+=======
+      magic-string: 0.30.14
+||||||| parent of 47ba5eb3a (fix lockfile)
+<<<<<<< HEAD
+      magic-string: 0.30.14
+      typescript: 5.7.3
+      vue-tsc: 2.0.29(typescript@5.7.3)
+||||||| e8aaa3930
+      magic-string: 0.30.14
+      typescript: 5.6.3
+      vue-tsc: 2.0.29(typescript@5.6.3)
+=======
+      magic-string: 0.30.17
+=======
+      magic-string: 0.30.17
+>>>>>>> 47ba5eb3a (fix lockfile)
+      typescript: 5.7.3
+      vue-tsc: 2.0.29(typescript@5.7.3)
+<<<<<<< HEAD
+>>>>>>> 5f6745796 (initial commit)
+||||||| parent of 47ba5eb3a (fix lockfile)
+>>>>>>> origin/main
+=======
+>>>>>>> 47ba5eb3a (fix lockfile)
+=======
+>>>>>>> 95d7afbf6 (fix lockfile)
     optionalDependencies:
       vite: 5.0.12(@types/node@18.19.71)
     transitivePeerDependencies:
@@ -20610,6 +20854,7 @@ snapshots:
       - terser
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 ||||||| parent of 6b52df682 (fix lockfile)
 <<<<<<< HEAD
 ||||||| parent of 5f6745796 (initial commit)
@@ -20839,6 +21084,161 @@ snapshots:
 =======
 >>>>>>> 47ba5eb3a (fix lockfile)
 >>>>>>> 6b52df682 (fix lockfile)
+||||||| parent of 95d7afbf6 (fix lockfile)
+<<<<<<< HEAD
+<<<<<<< HEAD
+||||||| parent of 5f6745796 (initial commit)
+  vitest@2.1.8(@types/node@22.10.6)(@vitest/ui@2.1.8):
+    dependencies:
+      '@vitest/expect': 2.1.8
+      '@vitest/mocker': 2.1.8(msw@2.4.3(typescript@5.6.3))(vite@5.0.12(@types/node@18.19.59))
+      '@vitest/pretty-format': 2.1.8
+      '@vitest/runner': 2.1.8
+      '@vitest/snapshot': 2.1.8
+      '@vitest/spy': 2.1.8
+      '@vitest/utils': 2.1.8
+      chai: 5.1.2
+      debug: 4.3.7(supports-color@9.2.2)
+      expect-type: 1.1.0
+      magic-string: 0.30.14
+      pathe: 1.1.2
+      std-env: 3.8.0
+      tinybench: 2.9.0
+      tinyexec: 0.3.1
+      tinypool: 1.0.1
+      tinyrainbow: 1.2.0
+      vite: 5.0.12(@types/node@22.10.6)
+      vite-node: 2.1.8(@types/node@22.10.6)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 22.10.6
+      '@vitest/ui': 2.1.8(vitest@2.1.8)
+    transitivePeerDependencies:
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+=======
+  vitest@2.1.8(@types/node@22.10.6)(@vitest/ui@2.1.8):
+    dependencies:
+      '@vitest/expect': 2.1.8
+      '@vitest/mocker': 2.1.8(msw@2.4.3(typescript@5.7.3))(vite@5.0.12(@types/node@18.19.59))
+      '@vitest/pretty-format': 2.1.8
+      '@vitest/runner': 2.1.8
+      '@vitest/snapshot': 2.1.8
+      '@vitest/spy': 2.1.8
+      '@vitest/utils': 2.1.8
+      chai: 5.1.2
+      debug: 4.3.7(supports-color@8.1.1)
+      expect-type: 1.1.0
+      magic-string: 0.30.14
+      pathe: 1.1.2
+      std-env: 3.8.0
+      tinybench: 2.9.0
+      tinyexec: 0.3.1
+      tinypool: 1.0.1
+      tinyrainbow: 1.2.0
+      vite: 5.0.12(@types/node@22.10.6)
+      vite-node: 2.1.8(@types/node@22.10.6)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 22.10.6
+      '@vitest/ui': 2.1.8(vitest@2.1.8)
+    transitivePeerDependencies:
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+>>>>>>> 5f6745796 (initial commit)
+||||||| parent of 47ba5eb3a (fix lockfile)
+<<<<<<< HEAD
+  vitest@2.1.8(@types/node@22.10.6)(@vitest/ui@2.1.8):
+    dependencies:
+      '@vitest/expect': 2.1.8
+      '@vitest/mocker': 2.1.8(msw@2.4.3(typescript@5.7.3))(vite@5.0.12(@types/node@18.19.59))
+      '@vitest/pretty-format': 2.1.8
+      '@vitest/runner': 2.1.8
+      '@vitest/snapshot': 2.1.8
+      '@vitest/spy': 2.1.8
+      '@vitest/utils': 2.1.8
+      chai: 5.1.2
+      debug: 4.3.7(supports-color@8.1.1)
+      expect-type: 1.1.0
+      magic-string: 0.30.14
+      pathe: 1.1.2
+      std-env: 3.8.0
+      tinybench: 2.9.0
+      tinyexec: 0.3.1
+      tinypool: 1.0.1
+      tinyrainbow: 1.2.0
+      vite: 5.0.12(@types/node@22.10.6)
+      vite-node: 2.1.8(@types/node@22.10.6)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 22.10.6
+      '@vitest/ui': 2.1.8(vitest@2.1.8)
+    transitivePeerDependencies:
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+||||||| e8aaa3930
+  vitest@2.1.8(@types/node@22.10.6)(@vitest/ui@2.1.8):
+    dependencies:
+      '@vitest/expect': 2.1.8
+      '@vitest/mocker': 2.1.8(msw@2.4.3(typescript@5.6.3))(vite@5.0.12(@types/node@18.19.59))
+      '@vitest/pretty-format': 2.1.8
+      '@vitest/runner': 2.1.8
+      '@vitest/snapshot': 2.1.8
+      '@vitest/spy': 2.1.8
+      '@vitest/utils': 2.1.8
+      chai: 5.1.2
+      debug: 4.3.7(supports-color@9.2.2)
+      expect-type: 1.1.0
+      magic-string: 0.30.14
+      pathe: 1.1.2
+      std-env: 3.8.0
+      tinybench: 2.9.0
+      tinyexec: 0.3.1
+      tinypool: 1.0.1
+      tinyrainbow: 1.2.0
+      vite: 5.0.12(@types/node@22.10.6)
+      vite-node: 2.1.8(@types/node@22.10.6)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 22.10.6
+      '@vitest/ui': 2.1.8(vitest@2.1.8)
+    transitivePeerDependencies:
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+=======
+>>>>>>> origin/main
+=======
+>>>>>>> 47ba5eb3a (fix lockfile)
+=======
+>>>>>>> 95d7afbf6 (fix lockfile)
   vsce@2.15.0:
     dependencies:
       azure-devops-node-api: 11.2.0
