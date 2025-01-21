@@ -177,9 +177,7 @@ export function createWorkerEntrypointWrapper(
 						await createModuleRunner(this.env, server);
 					} catch (e) {
 						return new Response(
-							JSON.stringify(
-								e instanceof Error ? e.message : JSON.stringify(e)
-							),
+							e instanceof Error ? e.message : JSON.stringify(e),
 							{ status: 500 }
 						);
 					}
