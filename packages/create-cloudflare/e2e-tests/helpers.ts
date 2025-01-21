@@ -25,7 +25,9 @@ import type {
 import type { Writable } from "stream";
 import type { RunnerTestCase, Suite, Test } from "vitest";
 
-export const C3_E2E_PREFIX = "tmp-e2e-c3";
+// Project Name prefix
+// Note: Project name can only be up to 58 characters long
+export const C3_E2E_PREFIX = "tmp-c3";
 
 export const keys = {
 	enter: "\x0d",
