@@ -18,6 +18,41 @@ describe("Extension Test Suite", () => {
 	});
 
 	describe("BindingsProvider", () => {
+		it("should not return wrangler if the version of wrangler is too old", async () => {
+			const pkgJsonPath = path
+				.resolve(__dirname, "..", "..", "..", "..", "wrangler", "package.json")
+				.toString();
+
+			const originalPkgJson = JSON.parse(
+				await fs.readFile(pkgJsonPath, "utf8")
+			);
+
+			const modifiedPkgJson = { ...originalPkgJson, version: "3.98.0" };
+			await fs.writeFile(pkgJsonPath, JSON.stringify(modifiedPkgJson));
+
+			const cleanup = await seed({
+				"wrangler.json": generateWranglerConfig({
+					r2_buckets: [
+						{
+							binding: "r2",
+							bucket_name: "something else",
+						},
+					],
+				}),
+			});
+
+			try {
+				const extension = getExtension();
+				const { bindingsProvider } = await extension.activate();
+
+				const children = await bindingsProvider.getChildren();
+
+				assert.deepEqual(children, []);
+			} finally {
+				await cleanup();
+				await fs.writeFile(pkgJsonPath, JSON.stringify(originalPkgJson));
+			}
+		});
 		it("shows no bindings if there is no wrangler config", async () => {
 			const extension = getExtension();
 			const { bindingsProvider } = await extension.activate();
@@ -176,86 +211,173 @@ describe("Extension Test Suite", () => {
 						{
 							label: friendlyBindingNames.kv_namespaces,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							contextValue: "binding",
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/kv_namespaces.svg"
+							),
 						},
 						{
 							label: friendlyBindingNames.r2_buckets,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							contextValue: "binding",
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/r2_buckets.svg"
+							),
 						},
 						{
 							label: friendlyBindingNames.d1_databases,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							contextValue: "binding",
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/d1_databases.svg"
+							),
 						},
 						{
 							label: friendlyBindingNames.durable_objects,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/durable_objects.svg"
+							),
 						},
 						{
 							label: friendlyBindingNames.ai,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/ai.svg"
+							),
 						},
 						{
 							label: friendlyBindingNames.analytics_engine_datasets,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/analytics_engine_datasets.svg"
+							),
 						},
 						{
 							label: friendlyBindingNames.browser,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/browser.svg"
+							),
 						},
 						{
 							label: friendlyBindingNames.hyperdrive,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/hyperdrive.svg"
+							),
 						},
 						{
 							label: friendlyBindingNames.mtls_certificates,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/mtls_certificates.svg"
+							),
 						},
 						{
 							label: friendlyBindingNames.services,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/services.svg"
+							),
 						},
 						{
 							label: friendlyBindingNames.assets,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/assets.svg"
+							),
 						},
 						{
 							label: friendlyBindingNames.vectorize,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/vectorize.svg"
+							),
 						},
 						{
 							label: friendlyBindingNames.version_metadata,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/version_metadata.svg"
+							),
 						},
 						{
 							label: friendlyBindingNames.dispatch_namespaces,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/dispatch_namespaces.svg"
+							),
 						},
 						{
 							label: friendlyBindingNames.queues,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/queues.svg"
+							),
 						},
 						{
 							label: friendlyBindingNames.workflows,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/workflows.svg"
+							),
 						},
 						{
 							label: friendlyBindingNames.send_email,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/send_email.svg"
+							),
 						},
 						{
 							label: friendlyBindingNames.logfwdr,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/logfwdr.svg"
+							),
 						},
 						{
 							label: friendlyBindingNames.pipelines,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/pipelines.svg"
+							),
 						},
 						{
 							label: friendlyBindingNames.vars,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/vars.svg"
+							),
 						},
 						{
 							label: friendlyBindingNames.unsafe,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/unsafe.svg"
+							),
 						},
 					]
 				);
@@ -528,6 +650,11 @@ describe("Extension Test Suite", () => {
 						{
 							label: friendlyBindingNames.d1_databases,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							contextValue: "binding",
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/d1_databases.svg"
+							),
 						},
 					]
 				);
@@ -539,6 +666,11 @@ describe("Extension Test Suite", () => {
 						{
 							label: friendlyBindingNames.kv_namespaces,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							contextValue: "binding",
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/kv_namespaces.svg"
+							),
 						},
 					]
 				);
@@ -553,6 +685,11 @@ describe("Extension Test Suite", () => {
 						{
 							label: friendlyBindingNames.r2_buckets,
 							collapsibleState: vscode.TreeItemCollapsibleState.Expanded,
+							contextValue: "binding",
+							iconPath: path.join(
+								__filename,
+								"../../../../resources/icons/r2_buckets.svg"
+							),
 						},
 					]
 				);

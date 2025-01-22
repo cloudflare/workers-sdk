@@ -21,7 +21,6 @@ export const bindingKeys = [
 	"hyperdrive",
 	"mtls_certificates",
 	"services",
-	// missing an icon
 	"tail_consumers",
 	"vectorize",
 	"version_metadata",
