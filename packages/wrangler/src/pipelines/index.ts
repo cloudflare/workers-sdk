@@ -1,9 +1,9 @@
+import { setTimeout } from "node:timers/promises";
 import { HeadBucketCommand, S3Client } from "@aws-sdk/client-s3";
 import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import { APIError } from "../parse";
-import { retryOnAPIFailure } from "../utils/retry";
 import { addCreateOptions, createPipelineHandler } from "./cli/create";
 import { addDeleteOptions, deletePipelineHandler } from "./cli/delete";
 import { listPipelinesHandler } from "./cli/list";
@@ -16,6 +16,38 @@ export const BYTES_PER_MB = 1000 * 1000;
 
 // flag to skip delays for tests
 let __testSkipDelaysFlag = false;
+
+/**
+ * Verify the credentials used by the S3Client can access a R2 bucket by performing the
+ * HeadBucket operation. It will retry up to 10 times over 10s to handle newly
+ * created credentials that might not be active yet (can take a few seconds to propagate).
+ *
+ * @param r2
+ * @param bucketName
+ */
+async function verifyBucketAccess(r2: S3Client, bucketName: string) {
+	const MAX_ATTEMPTS = 10;
+	const DELAY_MS = 1000;
+
+	const checkCredentials = async () => {
+		logger.debug(`Checking if credentials are active`);
+		await r2.send(new HeadBucketCommand({ Bucket: bucketName }));
+	};
+
+	for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+		try {
+			logger.debug(`Attempt ${attempt} of ${MAX_ATTEMPTS}`);
+			await checkCredentials();
+			return;
+		} catch (error) {
+			logger.debug("HeadBucket request failed", error);
+			if (attempt === MAX_ATTEMPTS) {
+				throw error;
+			}
+			await setTimeout(DELAY_MS);
+		}
+	}
+}
 
 export async function authorizeR2Bucket(
 	pipelineName: string,
@@ -41,28 +73,25 @@ export async function authorizeR2Bucket(
 		pipelineName
 	);
 
+	// return immediately if running in a test
+	if (__testSkipDelaysFlag) {
+		return serviceToken;
+	}
+
+	const endpoint = getAccountR2Endpoint(accountId);
+	logger.debug(`Using R2 Endpoint ${endpoint}`);
 	const r2 = new S3Client({
 		region: "auto",
 		credentials: {
 			accessKeyId: serviceToken.accessKeyId,
 			secretAccessKey: serviceToken.secretAccessKey,
 		},
-		endpoint: getAccountR2Endpoint(accountId),
+		endpoint,
 	});
 
 	// Wait for token to settle/propagate, retry up to 10 times, with 2s waits in-between errors
-	!__testSkipDelaysFlag &&
-		(await retryOnAPIFailure(
-			async () => {
-				await r2.send(
-					new HeadBucketCommand({
-						Bucket: bucketName,
-					})
-				);
-			},
-			2000,
-			10
-		));
+	logger.log(`🌀 Checking access to R2 bucket "${bucketName}"`);
+	await verifyBucketAccess(r2, bucketName);
 
 	return serviceToken;
 }
