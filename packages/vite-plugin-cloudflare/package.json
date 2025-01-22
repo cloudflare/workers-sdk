@@ -35,9 +35,9 @@
 	"scripts": {
 		"build": "tsup",
 		"check:type": "tsc --build",
+		"dev": "tsup --watch",
 		"test": "vitest",
-		"test:ci": "vitest run",
-		"watch": "tsup --watch"
+		"test:ci": "vitest run"
 	},
 	"dependencies": {
 		"@hattip/adapter-node": "^0.0.49",
