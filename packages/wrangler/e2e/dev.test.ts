@@ -653,6 +653,44 @@ describe("hyperdrive dev tests", () => {
 		await socketMsgPromise;
 	});
 
+	it("does not require local connection string when running `wrangler dev --remote`", async () => {
+		const helper = new WranglerE2ETestHelper();
+		const { id } = await helper.hyperdrive(false);
+
+		await helper.seed({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-10-25"
+
+					[[hyperdrive]]
+					binding = "HYPERDRIVE"
+					id = "${id}"
+			`,
+			"src/index.ts": dedent`
+					export default {
+						async fetch(request, env) {
+							if (request.url.includes("connect")) {
+								const conn = env.HYPERDRIVE.connect();
+							}
+							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
+						}
+					}`,
+			"package.json": dedent`
+					{
+						"name": "worker",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+		});
+
+		const worker = helper.runLongLived("wrangler dev --remote");
+
+		const { url } = await worker.waitForReady();
+		await fetch(`${url}/connect`);
+	});
+
 	afterEach(() => {
 		if (server.listening) {
 			server.close();
