@@ -258,7 +258,8 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string
 ): Unstable_MiniflareWorkerOptions;
 export function unstable_getMiniflareWorkerOptions(
-	config: Config
+	config: Config,
+	env?: string
 ): Unstable_MiniflareWorkerOptions;
 export function unstable_getMiniflareWorkerOptions(
 	configOrConfigPath: string | Config,

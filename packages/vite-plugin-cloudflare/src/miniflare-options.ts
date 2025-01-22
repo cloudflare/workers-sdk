@@ -280,10 +280,13 @@ export function getDevMiniflareOptions(
 		resolvedPluginConfig.type === "workers"
 			? Object.entries(resolvedPluginConfig.workers).map(
 					([environmentName, workerConfig]) => {
-						const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions({
-							...workerConfig,
-							assets: undefined,
-						});
+						const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
+							{
+								...workerConfig,
+								assets: undefined,
+							},
+							resolvedPluginConfig.cloudflareEnv
+						);
 
 						const { ratelimits, ...workerOptions } =
 							miniflareWorkerOptions.workerOptions;
@@ -443,7 +446,8 @@ export function getDevMiniflareOptions(
 
 export function getPreviewMiniflareOptions(
 	vitePreviewServer: vite.PreviewServer,
-	persistState: PersistState
+	persistState: PersistState,
+	resolvedPluginConfig: ResolvedPluginConfig
 ): MiniflareOptions {
 	const resolvedViteConfig = vitePreviewServer.config;
 	const configPaths = getWorkerConfigPaths(resolvedViteConfig.root);
@@ -452,7 +456,10 @@ export function getPreviewMiniflareOptions(
 	);
 
 	const workers: Array<WorkerOptions> = workerConfigs.map((config) => {
-		const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(config);
+		const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
+			config,
+			resolvedPluginConfig.cloudflareEnv
+		);
 
 		const { ratelimits, ...workerOptions } =
 			miniflareWorkerOptions.workerOptions;
