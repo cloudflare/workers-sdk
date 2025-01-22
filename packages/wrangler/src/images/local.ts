@@ -34,7 +34,7 @@ export async function imagesLocalFetcher(request: Request): Promise<Response> {
 		return errorResponse(
 			400,
 			9523,
-			`ERROR: Expected image in request, got ${body}`
+			`ERROR: Internal Images binding error: expected image in request, got ${body}`
 		);
 	}
 
@@ -48,7 +48,7 @@ export async function imagesLocalFetcher(request: Request): Promise<Response> {
 		const badTransformsResponse = errorResponse(
 			400,
 			9523,
-			"ERROR: Expected JSON array of valid transforms in transforms field"
+			"ERROR: Internal Images binding error: Expected JSON array of valid transforms in transforms field"
 		);
 		try {
 			const transformsJson = data.get("transforms");
@@ -69,7 +69,7 @@ export async function imagesLocalFetcher(request: Request): Promise<Response> {
 				return errorResponse(
 					400,
 					9523,
-					"ERROR: Expected output format to be a string if provided"
+					"ERROR: Internal Images binding error: Expected output format to be a string if provided"
 				);
 			}
 
@@ -104,7 +104,11 @@ async function runInfo(transformer: Sharp): Promise<Response> {
 			mime = "image/avif";
 			break;
 		default:
-			return errorResponse(415, 9520, "ERROR: Unsupported image type");
+			return errorResponse(
+				415,
+				9520,
+				`ERROR: Unsupported image type ${metadata.format}, expected one of: JPEG, SVG, PNG, WebP, GIF or AVIF`
+			);
 	}
 
 	let resp: ImageInfoResponse;
@@ -117,7 +121,7 @@ async function runInfo(transformer: Sharp): Promise<Response> {
 			return errorResponse(
 				500,
 				9523,
-				"ERROR: Expected size, width and height for bitmap input"
+				"ERROR: Internal Images binding error: Expected size, width and height for bitmap input"
 			);
 		}
 
