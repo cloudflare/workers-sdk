@@ -35,11 +35,15 @@ export function importWrangler(
 	if (major < 3 || (major === 3 && minor < 99 && !isPreRelease)) {
 		vscode.commands.executeCommand(
 			"setContext",
-			"ext.supportedWrangler",
-			false
+			"ext.unsupportedWrangler",
+			true
 		);
 		return;
 	}
-	vscode.commands.executeCommand("setContext", "ext.supportedWrangler", true);
+	vscode.commands.executeCommand(
+		"setContext",
+		"ext.unsupportedWrangler",
+		false
+	);
 	return require(wrangler);
 }
