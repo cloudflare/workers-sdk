@@ -148,18 +148,15 @@ export type PackageJSON = {
 /**
  * A typed version of `parseJSON()`.
  */
-export function parsePackageJSON<T extends PackageJSON = PackageJSON>(
-	input: string,
-	file?: string
-): T {
-	return parseJSON<T>(input, file);
+export function parsePackageJSON(input: string, file?: string): PackageJSON {
+	return parseJSON(input, file) as PackageJSON;
 }
 
 /**
  * Parses JSON and throws a `ParseError`.
  */
-export function parseJSON<T>(input: string, file?: string): T {
-	return parseJSONC<T>(input, file, {
+export function parseJSON(input: string, file?: string): unknown {
+	return parseJSONC(input, file, {
 		allowEmptyContent: false,
 		allowTrailingComma: false,
 		disallowComments: true,
@@ -169,11 +166,11 @@ export function parseJSON<T>(input: string, file?: string): T {
 /**
  * A wrapper around `JSONC.parse` that throws a `ParseError`.
  */
-export function parseJSONC<T>(
+export function parseJSONC(
 	input: string,
 	file?: string,
 	options: jsoncParser.ParseOptions = { allowTrailingComma: true }
-): T {
+): unknown {
 	const errors: JsoncParseError[] = [];
 	const data = jsoncParser.parse(input, errors, options);
 	if (errors.length) {
