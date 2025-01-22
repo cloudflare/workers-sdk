@@ -35,19 +35,19 @@ export async function addBindingFlow(context: ExtensionContext) {
 			"KV",
 			"kv_namespaces",
 			"Global, low-latency, key-value data storage",
-			Uri.file(context.asAbsolutePath("resources/icons/kv.svg"))
+			Uri.file(context.asAbsolutePath("resources/icons/kv_namespaces.svg"))
 		),
 		new BindingType(
 			"R2",
 			"r2_buckets",
 			"Object storage for all your data",
-			Uri.file(context.asAbsolutePath("resources/icons/r2.svg"))
+			Uri.file(context.asAbsolutePath("resources/icons/r2_buckets.svg"))
 		),
 		new BindingType(
 			"D1",
 			"d1_databases",
 			"Serverless SQL databases",
-			Uri.file(context.asAbsolutePath("resources/icons/d1.svg"))
+			Uri.file(context.asAbsolutePath("resources/icons/d1_databases.svg"))
 		),
 	];
 

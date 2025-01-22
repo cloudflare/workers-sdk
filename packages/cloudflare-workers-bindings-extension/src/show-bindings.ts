@@ -1,3 +1,4 @@
+import path from "path";
 import * as vscode from "vscode";
 import { importWrangler } from "./wrangler";
 
@@ -20,6 +21,7 @@ export const bindingKeys = [
 	"hyperdrive",
 	"mtls_certificates",
 	"services",
+	// missing an icon
 	"tail_consumers",
 	"vectorize",
 	"version_metadata",
@@ -93,6 +95,13 @@ export class BindingsProvider implements vscode.TreeDataProvider<Node> {
 				if (enabledBindings.includes(node.name)) {
 					item.contextValue = "binding";
 				}
+				item.iconPath = path.join(
+					__dirname,
+					"../",
+					"resources",
+					"icons",
+					`${node.name}.svg`
+				);
 				return item;
 			}
 			case "resource": {
