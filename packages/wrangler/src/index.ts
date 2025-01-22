@@ -237,7 +237,7 @@ export function createCLIParser(argv: string[]) {
 		)
 		.option("env", {
 			alias: "e",
-			describe: "Environment to use for operations and .env files",
+			describe: "Environment to use for operations, .env and .dev.vars files",
 			type: "string",
 			requiresArg: true,
 		})

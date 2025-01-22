@@ -263,7 +263,7 @@ describe("pipelines", () => {
 
 			GLOBAL FLAGS
 			  -c, --config   Path to Wrangler configuration file  [string]
-			  -e, --env      Environment to use for operations and .env files  [string]
+			  -e, --env      Environment to use for operations, .env and .dev.vars files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
 		`);
@@ -285,7 +285,7 @@ describe("pipelines", () => {
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
-				  -e, --env      Environment to use for operations and .env files  [string]
+				  -e, --env      Environment to use for operations, .env and .dev.vars files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]
 
