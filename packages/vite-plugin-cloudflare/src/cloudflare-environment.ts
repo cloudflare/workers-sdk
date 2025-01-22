@@ -99,7 +99,10 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 			}
 		);
 
-		assert(response.ok, "Failed to initialize module runner");
+		assert(
+			response.ok,
+			`Failed to initialize module runner, error: ${await response.text()}`
+		);
 
 		const webSocket = response.webSocket;
 		assert(webSocket, "Failed to establish WebSocket");

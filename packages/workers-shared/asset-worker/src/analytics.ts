@@ -5,6 +5,10 @@ const VERSION = 1;
 
 // When adding new columns please update the schema
 type Data = {
+	// -- Indexes --
+	accountId?: number;
+	scriptId?: number;
+
 	// -- Doubles --
 	// double1 - The time it takes for the whole request to complete in milliseconds
 	requestTime?: number;
@@ -55,8 +59,8 @@ export class Analytics {
 
 		this.readyAnalytics.logEvent({
 			version: VERSION,
-			accountId: 0, // TODO: need to plumb through
-			indexId: this.data.hostname?.substring(0, 96),
+			accountId: this.data.accountId,
+			indexId: this.data.scriptId?.toString(),
 			doubles: [
 				this.data.requestTime ?? -1, // double1
 				this.data.coloId ?? -1, // double2

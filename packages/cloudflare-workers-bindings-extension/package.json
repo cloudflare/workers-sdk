@@ -14,7 +14,7 @@
 	"scripts": {
 		"vscode:prepublish": "pnpm run package",
 		"compile": "pnpm run check:type && pnpm run check:lint && node esbuild.js",
-		"watch": "npm-run-all -p watch:*",
+		"dev": "npm-run-all -p watch:*",
 		"watch:esbuild": "node esbuild.js --watch",
 		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
 		"package": "pnpm run check:type && pnpm run check:lint && node esbuild.js --production",

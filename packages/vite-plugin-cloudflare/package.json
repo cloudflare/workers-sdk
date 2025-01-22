@@ -35,9 +35,9 @@
 	"scripts": {
 		"build": "tsup",
 		"check:type": "tsc --build",
+		"dev": "tsup --watch",
 		"test": "vitest",
-		"test:ci": "vitest run",
-		"watch": "tsup --watch"
+		"test:ci": "vitest run"
 	},
 	"dependencies": {
 		"@hattip/adapter-node": "^0.0.49",
@@ -52,7 +52,7 @@
 		"@types/node": "catalog:vite-plugin",
 		"@types/ws": "^8.5.13",
 		"magic-string": "^0.30.12",
-		"tsup": "^8.3.0",
+		"tsup": "8.3.0",
 		"typescript": "catalog:vite-plugin",
 		"vite": "catalog:vite-plugin",
 		"wrangler": "workspace:*"
