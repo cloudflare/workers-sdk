@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.12.2
+
+### Patch Changes
+
+- [#7808](https://github.com/cloudflare/workers-sdk/pull/7808) [`7faabeb`](https://github.com/cloudflare/workers-sdk/commit/7faabeb1d1534818d0e93fe4e4710e9b77af1bfb) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: fix analytics not being logged for `asset-worker` in the case of a successful request.
+
 ## 0.12.1
 
 ### Patch Changes

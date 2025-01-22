@@ -1,5 +1,19 @@
 # @cloudflare/unenv-preset
 
+## 1.0.2
+
+### Patch Changes
+
+- [#7806](https://github.com/cloudflare/workers-sdk/pull/7806) [`d7adb50`](https://github.com/cloudflare/workers-sdk/commit/d7adb50fcc9e3c509365fed8a86df485ea9f739b) Thanks [@vicb](https://github.com/vicb)! - chore: update unenv to 2.0.0-rc.0
+
+  Pull a couple changes in node:timers
+
+  - unjs/unenv#384 fix function bindings in node:timer
+  - unjs/unenv#385 implement active and \_unrefActive in node:timer
+
+  The unenv update also includes #unjs/unenv/381 which implements
+  `stdout`, `stderr` and `stdin` of `node:process` with `node:tty`
+
 ## 1.0.1
 
 ### Patch Changes

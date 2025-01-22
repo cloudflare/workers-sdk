@@ -1,5 +1,37 @@
 # create-cloudflare
 
+## 2.37.2
+
+### Patch Changes
+
+- [#7822](https://github.com/cloudflare/workers-sdk/pull/7822) [`c6e8a1c`](https://github.com/cloudflare/workers-sdk/commit/c6e8a1cccd6355fc2c4864fb1bc7b6da1c97704d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.6.11 | 0.6.13 |
+
+- [#7823](https://github.com/cloudflare/workers-sdk/pull/7823) [`4f84172`](https://github.com/cloudflare/workers-sdk/commit/4f84172314d217cce94f1e071bb0a300f8d787c1) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.1.4 | 15.1.5 |
+
+- [#7824](https://github.com/cloudflare/workers-sdk/pull/7824) [`794b446`](https://github.com/cloudflare/workers-sdk/commit/794b44606dc1e157ad2447a9e580578b79567678) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.0.7 | 19.1.2 |
+
+- [#7827](https://github.com/cloudflare/workers-sdk/pull/7827) [`6c2e943`](https://github.com/cloudflare/workers-sdk/commit/6c2e94318dd079f9cba3f763e67ba6698ef597f6) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: bump `vitest-pool-workers` version range in templates
+
+  This resolves [#7815](https://github.com/cloudflare/workers-sdk/issues/7815), where users encountered an error about missing `nodejs_compat` or `nodejs_compat_v2` compatibility flags when running Vitest on a fresh Hello World project created with `create-cloudflare`.
+
 ## 2.37.1
 
 ### Patch Changes
