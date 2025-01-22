@@ -382,6 +382,17 @@ It accepts an optional `PluginConfig` parameter.
   By default, the environment name is the Worker name with `-` characters replaced with `_`.
   Setting the name here will override this.
 
+## Secrets
+
+The vite plugin supports local development via secrets using the [`.dev.vars` file convention](https://developers.cloudflare.com/workers/configuration/secrets/#local-development-with-secrets).
+
+Meaning that when you run `vite dev` or `vite preview` the plugin picks up secrets set in your `.dev.vars` files and makes them available to your application.
+
+> [!NOTE]
+> The `vite build` command copies the potential `.dev.vars` target file into the same output directory in which it creates the build output `wrangler.json`, this copied file is the one that `vite preview` will then use
+
+To instead make such secrets available to deployed applications follow the [relative Cloudflare documentation](https://developers.cloudflare.com/workers/configuration/secrets/#secrets-on-deployed-workers).
+
 ## Cloudflare environments
 
 A Worker config file may contain configuration for multiple [Cloudflare environments](https://developers.cloudflare.com/workers/wrangler/environments/).
@@ -413,6 +424,11 @@ This is because the environment name is automatically appended to the top-level 
 > [!NOTE]
 > The default Vite environment name for a Worker is always the top-level Worker name.
 > This enables you to reference the Worker consistently in your Vite config when using multiple Cloudflare environments.
+
+> [!NOTE]
+> Setting `CLOUDFLARE_ENV` also effects the `.dev.vars` being read, as files ending with a dot and the environment
+> name get prioritized over the standard `.dev.vars` ones (e.g. if I run `CLOUDFLARE_ENV=staging vite dev`, the vite plugin will
+> look for a `.dev.vars.staging` file to gather the secrets from, falling back to `.dev.vars` in case the file doesn't exist)
 
 Cloudflare environments can also be used in development.
 For example, you could run `CLOUDFLARE_ENV=development vite dev`.

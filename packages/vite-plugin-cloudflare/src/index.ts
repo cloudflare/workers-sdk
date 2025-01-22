@@ -198,15 +198,25 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
 				}
 
 				config = workerConfig;
+
+				if (workerConfig.configPath) {
+					copyDotDevDotVarsFileToOutputDir(
+						workerConfig.configPath,
+						resolvedPluginConfig.cloudflareEnv,
+						this.emitFile
+					);
+				}
 			} else if (this.environment.name === "client") {
 				const assetsOnlyConfig = resolvedPluginConfig.config;
 
 				assetsOnlyConfig.assets.directory = ".";
 
+				const filesToAssetsIgnore = ["wrangler.json", ".dev.vars"];
+
 				this.emitFile({
 					type: "asset",
 					fileName: ".assetsignore",
-					source: "wrangler.json",
+					source: `${filesToAssetsIgnore.join("\n")}\n`,
 				});
 
 				config = assetsOnlyConfig;
@@ -298,4 +308,42 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
 			};
 		},
 	};
+}
+
+/**
+ * Copies a potential `.dev.vars` target over to the worker's output directory
+ * (so that it can get picked up by `vite preview`)
+ *
+ * Note: This resolves the .dev.vars file path following the same logic
+ *       as `loadDotEnv` in `/packages/wrangler/src/config/index.ts`
+ *       the two need to be kept in sync
+ *
+ * @param configPath the path to the worker's wrangler config file
+ * @param cloudflareEnv the target cloudflare environment
+ * @param emitFile vite's emitFile function (for saving the file)
+ */
+function copyDotDevDotVarsFileToOutputDir(
+	configPath: string,
+	cloudflareEnv: string | undefined,
+	emitFile: vite.Rollup.PluginContext["emitFile"]
+) {
+	const configDir = path.dirname(configPath);
+
+	const defaultDotDevDotVarsPath = `${configDir}/.dev.vars`;
+	const inputDotDevDotVarsPath = `${defaultDotDevDotVarsPath}${!cloudflareEnv ? "" : `.${cloudflareEnv}`}`;
+
+	const targetPath = fs.existsSync(inputDotDevDotVarsPath)
+		? inputDotDevDotVarsPath
+		: fs.existsSync(defaultDotDevDotVarsPath)
+			? defaultDotDevDotVarsPath
+			: null;
+
+	if (targetPath) {
+		const dotDevDotVarsContent = fs.readFileSync(targetPath);
+		emitFile({
+			type: "asset",
+			fileName: ".dev.vars",
+			source: dotDevDotVarsContent,
+		});
+	}
 }
