@@ -9,7 +9,6 @@ import { runWrangler } from "../../helpers/run-wrangler";
 import { mockPostVersion, mockSetupApiCalls } from "./utils";
 import type { Interface } from "node:readline";
 
-
 describe("versions secret bulk", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
