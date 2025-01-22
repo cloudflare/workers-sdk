@@ -1,5 +1,5 @@
 ---
-"create-cloudflare": major
+"create-cloudflare": patch
 ---
 
 # Typescript transpilation error with clean Next.js template #7665
