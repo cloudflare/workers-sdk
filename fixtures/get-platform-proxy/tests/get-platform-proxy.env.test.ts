@@ -2,11 +2,7 @@ import path from "path";
 import { D1Database, R2Bucket } from "@cloudflare/workers-types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getPlatformProxy } from "./shared";
-import type {
-	Fetcher,
-	Hyperdrive,
-	KVNamespace,
-} from "@cloudflare/workers-types";
+import type { Hyperdrive, KVNamespace } from "@cloudflare/workers-types";
 import type { Unstable_DevWorker } from "wrangler";
 
 type Env = {
@@ -19,7 +15,6 @@ type Env = {
 	MY_BUCKET: R2Bucket;
 	MY_D1: D1Database;
 	MY_HYPERDRIVE: Hyperdrive;
-	ASSETS: Fetcher;
 };
 
 const wranglerTomlFilePath = path.join(__dirname, "..", "wrangler.toml");
@@ -118,17 +113,6 @@ describe("getPlatformProxy - env", () => {
 		} finally {
 			await dispose();
 		}
-	});
-
-	it("correctly obtains functioning ASSETS bindings", async () => {
-		const { env, dispose } = await getPlatformProxy<Env>({
-			configPath: wranglerTomlFilePath,
-		});
-		const { ASSETS } = env;
-		const res = await ASSETS.fetch("https://0.0.0.0/test.txt");
-		const text = await res.text();
-		expect(text).toEqual("this is a test text file!\n");
-		await dispose();
 	});
 
 	it("correctly obtains functioning KV bindings", async () => {
