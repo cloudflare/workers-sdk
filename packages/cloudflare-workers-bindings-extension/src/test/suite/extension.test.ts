@@ -44,9 +44,11 @@ describe("Extension Test Suite", () => {
 			try {
 				const extension = getExtension();
 				const { bindingsProvider } = await extension.activate();
-
+				// Bindings provider uses wrangler to read config.
+				// If that doesn't work, but we have provided a wrangler.json,
+				// this means wrangler wasn't imported. Which should be
+				// because its an old version. (not the best test :/)
 				const children = await bindingsProvider.getChildren();
-
 				assert.deepEqual(children, []);
 			} finally {
 				await cleanup();
@@ -840,6 +842,8 @@ async function symlinkWranglerNodeModule() {
 		"wrangler"
 	);
 
+	console.log("wranglerNodeModulePath", wranglerNodeModulePath);
+	console.log("nodeModulesPath", nodeModulesPath);
 	await fs.mkdir(nodeModulesPath, { recursive: true });
 	await fs.symlink(
 		wranglerNodeModulePath,
