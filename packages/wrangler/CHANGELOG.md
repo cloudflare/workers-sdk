@@ -1,5 +1,73 @@
 # wrangler
 
+## 3.104.0
+
+### Minor Changes
+
+- [#7715](https://github.com/cloudflare/workers-sdk/pull/7715) [`26fa9e8`](https://github.com/cloudflare/workers-sdk/commit/26fa9e80279401ba5eea4e1522597953441402f2) Thanks [@penalosa](https://github.com/penalosa)! - Support service bindings from Pages projects to Workers in a single `workerd` instance. To try it out, pass multiple `-c` flags to Wrangler: i.e. `wrangler pages dev -c wrangler.toml -c ../other-worker/wrangler.toml`. The first `-c` flag must point to your Pages config file, and the rest should point to Workers that are bound to your Pages project.
+
+- [#7816](https://github.com/cloudflare/workers-sdk/pull/7816) [`f6cc029`](https://github.com/cloudflare/workers-sdk/commit/f6cc0293d3a6bf45a323b6d9718b7162149cc84f) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add support for assets bindings to `getPlatformProxy`
+
+  this change makes sure that that `getPlatformProxy`, when the input configuration
+  file contains an assets field, correctly returns the appropriate asset binding proxy
+
+  example:
+
+  ```json
+  // wrangler.json
+  {
+    "name": "my-worker",
+    "assets": {
+      "directory": "./public/",
+      "binding": "ASSETS"
+    },
+    "vars": {
+      "MY_VAR": "my-var"
+    }
+  }
+  ```
+
+  ```js
+  import { getPlatformProxy } from "wrangler";
+
+  const { env, dispose } = await getPlatformProxy();
+
+  if (env.ASSETS) {
+    const text = await (
+      await env.ASSETS.fetch("http://0.0.0.0/file.txt")
+    ).text();
+    console.log(text); // logs the content of file.txt
+  }
+
+  await dispose();
+  ```
+
+### Patch Changes
+
+- [#7785](https://github.com/cloudflare/workers-sdk/pull/7785) [`cccfe51`](https://github.com/cloudflare/workers-sdk/commit/cccfe51ca6a18a2a69bb6c7fa7066c92c9d704af) Thanks [@joshthoward](https://github.com/joshthoward)! - Fix Durable Objects transfer migration validation
+
+- [#7821](https://github.com/cloudflare/workers-sdk/pull/7821) [`fcaa02c`](https://github.com/cloudflare/workers-sdk/commit/fcaa02cdf4f3f648d7218e8f7fb411a2324eebb5) Thanks [@vicb](https://github.com/vicb)! - fix(wrangler): fix wrangler config schema defaults
+
+- [#7832](https://github.com/cloudflare/workers-sdk/pull/7832) [`97d2a1b`](https://github.com/cloudflare/workers-sdk/commit/97d2a1bb56ea0bb94531f9c41b737ba43ed5996f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Relax the messaging when Wrangler uses redirected configuration
+
+  Previously the messaging was rendered as a warning, which implied that the user
+  had done something wrong. Now it is just a regular info message.
+
+- [#7806](https://github.com/cloudflare/workers-sdk/pull/7806) [`d7adb50`](https://github.com/cloudflare/workers-sdk/commit/d7adb50fcc9e3c509365fed8a86df485ea9f739b) Thanks [@vicb](https://github.com/vicb)! - chore: update unenv to 2.0.0-rc.0
+
+  Pull a couple changes in node:timers
+
+  - unjs/unenv#384 fix function bindings in node:timer
+  - unjs/unenv#385 implement active and \_unrefActive in node:timer
+
+  The unenv update also includes #unjs/unenv/381 which implements
+  `stdout`, `stderr` and `stdin` of `node:process` with `node:tty`
+
+- [#7828](https://github.com/cloudflare/workers-sdk/pull/7828) [`9077a67`](https://github.com/cloudflare/workers-sdk/commit/9077a6748a30d5f24c9b7cbdc3a6514fec5aa66c) Thanks [@edmundhung](https://github.com/edmundhung)! - improve multi account error message in non-interactive mode
+
+- Updated dependencies []:
+  - miniflare@3.20241230.2
+
 ## 3.103.2
 
 ### Patch Changes

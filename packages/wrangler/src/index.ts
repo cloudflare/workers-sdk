@@ -5,6 +5,14 @@ import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import { ai } from "./ai";
+import {
+	certDeleteCommand,
+	certListCommand,
+	certNamespace,
+	certUploadCaCertCommand,
+	certUploadMtlsCommand,
+	certUploadNamespace,
+} from "./cert/cert";
 import { cloudchamber } from "./cloudchamber";
 import { experimental_readRawConfig, loadDotEnv } from "./config";
 import { demandSingleValue } from "./core";
@@ -700,6 +708,23 @@ export function createCLIParser(argv: string[]) {
 			return hyperdrive(hyperdriveYargs.command(subHelp));
 		}
 	);
+
+	// cert - includes mtls-certificates and CA cert management
+	registry.define([
+		{ command: "wrangler cert", definition: certNamespace },
+		{ command: "wrangler cert upload", definition: certUploadNamespace },
+		{
+			command: "wrangler cert upload mtls-certificate",
+			definition: certUploadMtlsCommand,
+		},
+		{
+			command: "wrangler cert upload certificate-authority",
+			definition: certUploadCaCertCommand,
+		},
+		{ command: "wrangler cert list", definition: certListCommand },
+		{ command: "wrangler cert delete", definition: certDeleteCommand },
+	]);
+	registry.registerNamespace("cert");
 
 	// pages
 	wrangler.command("pages", "⚡️ Configure Cloudflare Pages", (pagesYargs) => {
