@@ -52,7 +52,7 @@
 		"@types/node": "catalog:vite-plugin",
 		"@types/ws": "^8.5.13",
 		"magic-string": "^0.30.12",
-		"tsup": "8.3.0",
+		"tsup": "^8.3.0",
 		"typescript": "catalog:vite-plugin",
 		"vite": "catalog:vite-plugin",
 		"wrangler": "workspace:*"
