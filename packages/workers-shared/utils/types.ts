@@ -3,6 +3,10 @@ import { z } from "zod";
 export const RoutingConfigSchema = z.object({
 	has_user_worker: z.boolean().optional(),
 	invoke_user_worker_ahead_of_assets: z.boolean().optional(),
+
+	// Used for analytics and reporting
+	account_id: z.number().optional(),
+	script_id: z.number().optional(),
 });
 
 export const AssetConfigSchema = z.object({
@@ -20,8 +24,20 @@ export const AssetConfigSchema = z.object({
 	serve_directly: z.boolean().optional(),
 });
 
+export const InternalConfigSchema = z.object({
+	// Used for analytics and reporting
+	account_id: z.number().optional(),
+	script_id: z.number().optional(),
+});
+
+export const AssetWorkerConfigShema = z.object({
+	...AssetConfigSchema.shape,
+	...InternalConfigSchema.shape,
+});
+
 export type RoutingConfig = z.infer<typeof RoutingConfigSchema>;
 export type AssetConfig = z.infer<typeof AssetConfigSchema>;
+export type AssetWorkerConfig = z.infer<typeof AssetWorkerConfigShema>;
 
 export interface UnsafePerformanceTimer {
 	readonly timeOrigin: number;
@@ -64,3 +80,10 @@ export interface SpanContext {
 
 export type JaegerValue = string | number | boolean;
 export type JaegerRecord = Record<string, JaegerValue>;
+
+export interface ColoMetadata {
+	metalId: number;
+	coloId: number;
+	coloRegion: string;
+	coloTier: number;
+}
