@@ -76,9 +76,9 @@
 		"vitest": "catalog:default"
 	},
 	"peerDependencies": {
-		"@vitest/runner": "2.0.x - 2.1.x",
-		"@vitest/snapshot": "2.0.x - 2.1.x",
-		"vitest": "2.0.x - 2.1.x"
+		"@vitest/runner": "3.0.x",
+		"@vitest/snapshot": "3.0.x",
+		"vitest": "3.0.x"
 	},
 	"volta": {
 		"extends": "../../package.json"

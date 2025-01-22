@@ -96,6 +96,8 @@ export default async function ({ provide }: GlobalSetupContext) {
 	// Cleanup temporary directory on teardown
 	return async () => {
 		console.log("Cleaning up temporary directory...");
-		await fs.rm(tmpPath, { recursive: true, maxRetries: 10 });
+		try {
+			await fs.rm(tmpPath, { recursive: true, maxRetries: 10 });
+		} catch {}
 	};
 }

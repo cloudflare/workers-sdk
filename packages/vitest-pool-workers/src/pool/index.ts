@@ -63,7 +63,12 @@ import type {
 	SerializedConfig,
 	WorkerContext,
 } from "vitest";
-import type { ProcessPool, Vitest, WorkspaceProject } from "vitest/node";
+import type {
+	ProcessPool,
+	TestSpecification,
+	Vitest,
+	WorkspaceProject,
+} from "vitest/node";
 
 interface SerializedOptions {
 	main?: string;
@@ -532,6 +537,7 @@ function getModuleFallbackService(ctx: Vitest): ModuleFallbackService {
 	if (service !== undefined) {
 		return service;
 	}
+	// @ts-expect-error ctx.vitenode is marked as internal
 	service = handleModuleFallbackRequest.bind(undefined, ctx.vitenode.server);
 	moduleFallbackServices.set(ctx, service);
 	return service;
@@ -648,7 +654,8 @@ async function runTests(
 	project: Project,
 	config: SerializedConfig,
 	files: string[],
-	invalidates: string[] = []
+	invalidates: string[] = [],
+	method: "run" | "collect"
 ) {
 	let workerPath = path.join(ctx.distPath, "worker.js");
 	let threadsWorkerPath = path.join(ctx.distPath, "workers", "threads.js");
@@ -699,7 +706,7 @@ async function runTests(
 			Upgrade: "websocket",
 			"MF-Vitest-Worker-Data": structuredSerializableStringify({
 				filePath: workerPath,
-				name: "run",
+				name: method,
 				data,
 				cwd: process.cwd(),
 			}),
@@ -864,7 +871,180 @@ function assertCompatibleVitestVersion(ctx: Vitest) {
 		log.warn(message);
 	}
 }
+async function executeMethod(
+	ctx: Vitest,
+	specs: TestSpecification[],
+	invalidates: string[] | undefined,
+	method: "run" | "collect"
+) {
+	// Vitest waits for the previous `runTests()` to complete before calling
+	// `runTests()` again:
+	// https://github.com/vitest-dev/vitest/blob/v1.0.4/packages/vitest/src/node/core.ts#L458-L459
+	// This behaviour is required for stacked storage to work correctly.
+	// If we had concurrent runs, stack pushes/pops would interfere. We should
+	// always have an empty, fully-popped stacked at the end of a run.
 
+	// 1. Collect new specs
+	const parsedProjectOptions = new Set<WorkspaceProject>();
+	for (const [project, testFile] of specs) {
+		// Vitest validates all project names are unique
+		const projectName = project.getName();
+		let workersProject = allProjects.get(projectName);
+		// Parse project options once per project per re-run
+		if (workersProject === undefined) {
+			workersProject = {
+				project,
+				options: await parseProjectOptions(project),
+				testFiles: new Set(),
+				relativePath: getRelativeProjectPath(project),
+			};
+			allProjects.set(projectName, workersProject);
+		} else if (!parsedProjectOptions.has(project)) {
+			workersProject.project = project;
+			workersProject.options = await parseProjectOptions(project);
+			workersProject.relativePath = getRelativeProjectPath(project);
+		}
+		workersProject.testFiles.add(testFile);
+
+		parsedProjectOptions.add(project);
+	}
+
+	// 2. Run just the required tests
+	const resultPromises: Promise<void>[] = [];
+	const filesByProject = new Map<WorkspaceProject, string[]>();
+	for (const [project, file] of specs) {
+		let group = filesByProject.get(project);
+		if (group === undefined) {
+			filesByProject.set(project, (group = []));
+		}
+		group.push(file);
+	}
+	for (const [workspaceProject, files] of filesByProject) {
+		const project = allProjects.get(workspaceProject.getName());
+		assert(project !== undefined); // Defined earlier in this function
+		const options = project.options;
+
+		const config = workspaceProject.getSerializableConfig();
+
+		// Use our custom test runner. We don't currently support custom
+		// runners, since we need our own for isolated storage/fetch mock resets
+		// to work properly. There aren't many use cases where a user would need
+		// to control this.
+		config.runner = "cloudflare:test-runner";
+
+		// Make sure `setImmediate` and `clearImmediate` are never faked as they
+		// don't exist on the workers global scope
+		config.fakeTimers.toFake = config.fakeTimers.toFake?.filter(
+			(timerMethod) =>
+				timerMethod !== "setImmediate" && timerMethod !== "clearImmediate"
+		);
+
+		// We don't need all pool options from the config at runtime.
+		// Additionally, users may set symbols in the config which aren't
+		// serialisable. `getSerializableConfig()` may also return references to
+		// the same objects, so override it with a new object.
+		config.poolOptions = {
+			// @ts-expect-error Vitest provides no way to extend this type
+			threads: {
+				// Allow workers to be re-used by removing the isolation requirement
+				isolate: false,
+			},
+			workers: {
+				// Include resolved `main` if defined, and the names of Durable Object
+				// bindings that point to classes in the current isolate in the
+				// serialized config
+				main: maybeGetResolvedMainPath(project),
+				// Include designators of all Durable Object namespaces bound in the
+				// runner worker. We'll use this to list IDs in a namespace. We'll
+				// also use this to check Durable Object test runner helpers are
+				// only used with classes defined in the current worker, as these
+				// helpers rely on wrapping the object.
+				durableObjectBindingDesignators: getDurableObjectDesignators(
+					project.options
+				),
+				// Include whether isolated storage has been enabled for this
+				// project, so we know whether to call out to the loopback service
+				// to push/pop the storage stack between tests.
+				isolatedStorage: project.options.isolatedStorage,
+			} satisfies SerializedOptions,
+		};
+
+		const mf = await getProjectMiniflare(ctx, project);
+		if (options.singleWorker) {
+			// Single Worker, Isolated or Shared Storage
+			//  --> single instance with single runner worker
+			assert(mf instanceof Miniflare, "Expected single instance");
+			const name = getRunnerName(workspaceProject);
+			resultPromises.push(
+				runTests(ctx, mf, name, project, config, files, invalidates, method)
+			);
+		} else if (options.isolatedStorage) {
+			// Multiple Workers, Isolated Storage:
+			//  --> multiple instances each with single runner worker
+			assert(mf instanceof Map, "Expected multiple isolated instances");
+			const name = getRunnerName(workspaceProject);
+			for (const file of files) {
+				const fileMf = mf.get(file);
+				assert(fileMf !== undefined);
+				resultPromises.push(
+					runTests(
+						ctx,
+						fileMf,
+						name,
+						project,
+						config,
+						[file],
+						invalidates,
+						method
+					)
+				);
+			}
+		} else {
+			// Multiple Workers, Shared Storage:
+			//  --> single instance with multiple runner workers
+			assert(mf instanceof Miniflare, "Expected single instance");
+			for (const file of files) {
+				const name = getRunnerName(workspaceProject, file);
+				resultPromises.push(
+					runTests(ctx, mf, name, project, config, [file], invalidates, method)
+				);
+			}
+		}
+	}
+
+	// 3. Wait for all tests to complete, and throw if any failed
+	const results = await Promise.allSettled(resultPromises);
+	const errors = results
+		.filter((r): r is PromiseRejectedResult => r.status === "rejected")
+		.map((r) => r.reason);
+
+	// 4. Clean up persistence directories. Note we do this in the background
+	//    at the end of tests as opposed to before tests start, so re-runs
+	//    start quickly, and results are displayed as soon as they're ready.
+	for (const project of allProjects.values()) {
+		if (project.mf !== undefined) {
+			void forEachMiniflare(project.mf, async (mf) => scheduleStorageReset(mf));
+		}
+	}
+
+	if (errors.length > 0) {
+		throw new AggregateError(
+			errors,
+			"Errors occurred while running tests. For more information, see serialized error."
+		);
+	}
+
+	// TODO(soon): something like this is required for watching non-statically imported deps,
+	//   `vitest/dist/vendor/node.c-kzGvOB.js:handleFileChanged` is interesting,
+	//   could also use `forceRerunTriggers`
+	//   (Vite statically analyses imports here: https://github.com/vitejs/vite/blob/2649f40733bad131bc94b06d370bedc8f57853e2/packages/vite/src/node/plugins/importAnalysis.ts#L770)
+	// const project = specs[0][0];
+	// const moduleGraph = project.server.moduleGraph;
+	// const testModule = moduleGraph.getModuleById(".../packages/vitest-pool-workers/test/kv/store.test.ts");
+	// const thingModule = moduleGraph.getModuleById(".../packages/vitest-pool-workers/test/kv/thing.ts");
+	// assert(testModule && thingModule);
+	// thingModule.importers.add(testModule);
+}
 export default function (ctx: Vitest): ProcessPool {
 	// This function is called when config changes and may be called on re-runs
 	assertCompatibleVitestVersion(ctx);
@@ -872,171 +1052,10 @@ export default function (ctx: Vitest): ProcessPool {
 	return {
 		name: "vitest-pool-workers",
 		async runTests(specs, invalidates) {
-			// Vitest waits for the previous `runTests()` to complete before calling
-			// `runTests()` again:
-			// https://github.com/vitest-dev/vitest/blob/v1.0.4/packages/vitest/src/node/core.ts#L458-L459
-			// This behaviour is required for stacked storage to work correctly.
-			// If we had concurrent runs, stack pushes/pops would interfere. We should
-			// always have an empty, fully-popped stacked at the end of a run.
-
-			// 1. Collect new specs
-			const parsedProjectOptions = new Set<WorkspaceProject>();
-			for (const [project, testFile] of specs) {
-				// Vitest validates all project names are unique
-				const projectName = project.getName();
-				let workersProject = allProjects.get(projectName);
-				// Parse project options once per project per re-run
-				if (workersProject === undefined) {
-					workersProject = {
-						project,
-						options: await parseProjectOptions(project),
-						testFiles: new Set(),
-						relativePath: getRelativeProjectPath(project),
-					};
-					allProjects.set(projectName, workersProject);
-				} else if (!parsedProjectOptions.has(project)) {
-					workersProject.project = project;
-					workersProject.options = await parseProjectOptions(project);
-					workersProject.relativePath = getRelativeProjectPath(project);
-				}
-				workersProject.testFiles.add(testFile);
-
-				parsedProjectOptions.add(project);
-			}
-
-			// 2. Run just the required tests
-			const resultPromises: Promise<void>[] = [];
-			const filesByProject = new Map<WorkspaceProject, string[]>();
-			for (const [project, file] of specs) {
-				let group = filesByProject.get(project);
-				if (group === undefined) {
-					filesByProject.set(project, (group = []));
-				}
-				group.push(file);
-			}
-			for (const [workspaceProject, files] of filesByProject) {
-				const project = allProjects.get(workspaceProject.getName());
-				assert(project !== undefined); // Defined earlier in this function
-				const options = project.options;
-
-				const config = workspaceProject.getSerializableConfig();
-
-				// Use our custom test runner. We don't currently support custom
-				// runners, since we need our own for isolated storage/fetch mock resets
-				// to work properly. There aren't many use cases where a user would need
-				// to control this.
-				config.runner = "cloudflare:test-runner";
-
-				// Make sure `setImmediate` and `clearImmediate` are never faked as they
-				// don't exist on the workers global scope
-				config.fakeTimers.toFake = config.fakeTimers.toFake?.filter(
-					(method) => method !== "setImmediate" && method !== "clearImmediate"
-				);
-
-				// We don't need all pool options from the config at runtime.
-				// Additionally, users may set symbols in the config which aren't
-				// serialisable. `getSerializableConfig()` may also return references to
-				// the same objects, so override it with a new object.
-				config.poolOptions = {
-					// @ts-expect-error Vitest provides no way to extend this type
-					threads: {
-						// Allow workers to be re-used by removing the isolation requirement
-						isolate: false,
-					},
-					workers: {
-						// Include resolved `main` if defined, and the names of Durable Object
-						// bindings that point to classes in the current isolate in the
-						// serialized config
-						main: maybeGetResolvedMainPath(project),
-						// Include designators of all Durable Object namespaces bound in the
-						// runner worker. We'll use this to list IDs in a namespace. We'll
-						// also use this to check Durable Object test runner helpers are
-						// only used with classes defined in the current worker, as these
-						// helpers rely on wrapping the object.
-						durableObjectBindingDesignators: getDurableObjectDesignators(
-							project.options
-						),
-						// Include whether isolated storage has been enabled for this
-						// project, so we know whether to call out to the loopback service
-						// to push/pop the storage stack between tests.
-						isolatedStorage: project.options.isolatedStorage,
-					} satisfies SerializedOptions,
-				};
-
-				const mf = await getProjectMiniflare(ctx, project);
-				if (options.singleWorker) {
-					// Single Worker, Isolated or Shared Storage
-					//  --> single instance with single runner worker
-					assert(mf instanceof Miniflare, "Expected single instance");
-					const name = getRunnerName(workspaceProject);
-					resultPromises.push(
-						runTests(ctx, mf, name, project, config, files, invalidates)
-					);
-				} else if (options.isolatedStorage) {
-					// Multiple Workers, Isolated Storage:
-					//  --> multiple instances each with single runner worker
-					assert(mf instanceof Map, "Expected multiple isolated instances");
-					const name = getRunnerName(workspaceProject);
-					for (const file of files) {
-						const fileMf = mf.get(file);
-						assert(fileMf !== undefined);
-						resultPromises.push(
-							runTests(ctx, fileMf, name, project, config, [file], invalidates)
-						);
-					}
-				} else {
-					// Multiple Workers, Shared Storage:
-					//  --> single instance with multiple runner workers
-					assert(mf instanceof Miniflare, "Expected single instance");
-					for (const file of files) {
-						const name = getRunnerName(workspaceProject, file);
-						resultPromises.push(
-							runTests(ctx, mf, name, project, config, [file], invalidates)
-						);
-					}
-				}
-			}
-
-			// 3. Wait for all tests to complete, and throw if any failed
-			const results = await Promise.allSettled(resultPromises);
-			const errors = results
-				.filter((r): r is PromiseRejectedResult => r.status === "rejected")
-				.map((r) => r.reason);
-
-			// 4. Clean up persistence directories. Note we do this in the background
-			//    at the end of tests as opposed to before tests start, so re-runs
-			//    start quickly, and results are displayed as soon as they're ready.
-			for (const project of allProjects.values()) {
-				if (project.mf !== undefined) {
-					void forEachMiniflare(project.mf, async (mf) =>
-						scheduleStorageReset(mf)
-					);
-				}
-			}
-
-			if (errors.length > 0) {
-				throw new AggregateError(
-					errors,
-					"Errors occurred while running tests. For more information, see serialized error."
-				);
-			}
-
-			// TODO(soon): something like this is required for watching non-statically imported deps,
-			//   `vitest/dist/vendor/node.c-kzGvOB.js:handleFileChanged` is interesting,
-			//   could also use `forceRerunTriggers`
-			//   (Vite statically analyses imports here: https://github.com/vitejs/vite/blob/2649f40733bad131bc94b06d370bedc8f57853e2/packages/vite/src/node/plugins/importAnalysis.ts#L770)
-			// const project = specs[0][0];
-			// const moduleGraph = project.server.moduleGraph;
-			// const testModule = moduleGraph.getModuleById(".../packages/vitest-pool-workers/test/kv/store.test.ts");
-			// const thingModule = moduleGraph.getModuleById(".../packages/vitest-pool-workers/test/kv/thing.ts");
-			// assert(testModule && thingModule);
-			// thingModule.importers.add(testModule);
+			await executeMethod(ctx, specs, invalidates, "run");
 		},
-		async collectTests(_specs, _invalidates) {
-			// TODO: This is a new API introduced in Vitest v2+ which we should consider supporting at some point
-			throw new Error(
-				"The Cloudflare Workers Vitest integration does not support the `.collect()` or `vitest list` APIs"
-			);
+		async collectTests(specs, invalidates) {
+			await executeMethod(ctx, specs, invalidates, "collect");
 		},
 		async close() {
 			// `close()` will be called when shutting down Vitest or updating config

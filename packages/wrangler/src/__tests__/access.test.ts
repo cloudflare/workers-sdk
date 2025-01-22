@@ -1,3 +1,4 @@
+import { UserError } from "../errors";
 import { domainUsesAccess, getAccessToken } from "../user/access";
 import { msw, mswAccessHandlers } from "./helpers/msw";
 
@@ -16,7 +17,7 @@ describe("access", () => {
 		});
 		it("should error without cloudflared installed on an access protected domain", async () => {
 			await expect(getAccessToken("access-protected.com")).rejects.toEqual(
-				new Error(
+				new UserError(
 					"To use Wrangler with Cloudflare Access, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation"
 				)
 			);

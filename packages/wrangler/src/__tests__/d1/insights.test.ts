@@ -12,7 +12,7 @@ import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("getDurationDates()", () => {
 	beforeAll(() => {
-		vi.useFakeTimers();
+		vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
 		//lock time to 2023-08-01 UTC
 		vi.setSystemTime(new Date(2023, 7, 1));
 	});

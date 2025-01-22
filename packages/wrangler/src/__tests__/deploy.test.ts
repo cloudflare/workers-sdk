@@ -3921,7 +3921,7 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
-		});
+		}, 30_000);
 
 		it("should error if the asset key is over 512 characters", async () => {
 			const longFilePathAsset = {

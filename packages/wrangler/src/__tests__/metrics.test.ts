@@ -67,6 +67,7 @@ describe("metrics", () => {
 			vi.mocked(getPlatform).mockReturnValue("mock platform");
 			vi.mocked(sniffUserAgent).mockReturnValue("npm");
 			vi.useFakeTimers({
+				toFake: ["setTimeout", "clearTimeout", "Date"],
 				now: new Date(2024, 11, 12),
 			});
 			writeMetricsConfig({
@@ -661,7 +662,9 @@ describe("metrics", () => {
 			});
 
 			it("should print a message if the permission date is older than the current metrics date", async () => {
-				vi.useFakeTimers();
+				vi.useFakeTimers({
+					toFake: ["setTimeout", "clearTimeout", "Date"],
+				});
 				vi.setSystemTime(new Date(2024, 11, 12));
 				const OLD_DATE = new Date(2000);
 				writeMetricsConfig({
@@ -711,7 +714,9 @@ describe("metrics", () => {
 
 	describe.each(["metrics", "telemetry"])("%s commands", (cmd) => {
 		beforeEach(() => {
-			vi.useFakeTimers();
+			vi.useFakeTimers({
+				toFake: ["setTimeout", "clearTimeout", "Date"],
+			});
 			vi.setSystemTime(new Date(2024, 11, 12));
 		});
 		afterEach(() => {

@@ -216,8 +216,8 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		}
 
 		resetMockAgent(fetchMock);
-		return super.onBeforeRunFiles();
 	}
+
 	async onAfterRunFiles() {
 		if (DEBUG) {
 			__console.log("onAfterRunFiles");

@@ -60,7 +60,7 @@
 		"rimraf": "catalog:default",
 		"toucan-js": "^3.3.1",
 		"typescript": "catalog:default",
-		"vitest": "catalog:default"
+		"vitest": "~2.1.0"
 	},
 	"engines": {
 		"node": ">=16.7.0"

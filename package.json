@@ -22,7 +22,7 @@
 		"gen:package": "turbo gen package",
 		"prettify": "prettier . --write --ignore-unknown",
 		"test": "vitest run --no-file-parallelism && dotenv -- turbo test --filter=wrangler --filter=miniflare --filter=kv-asset-handler --filter=@cloudflare/vitest-pool-workers --filter=@cloudflare/vitest-pool-workers-examples",
-		"test:ci": "dotenv -- turbo test:ci",
+		"test:ci": "dotenv -- turbo test:ci --concurrency 1 ",
 		"test:e2e": "dotenv -- turbo test:e2e",
 		"test:e2e:wrangler": "node -r esbuild-register tools/e2e/runIndividualE2EFiles.ts",
 		"test:watch": "turbo test:watch",
@@ -49,7 +49,7 @@
 		"tree-kill": "^1.2.2",
 		"turbo": "^2.2.3",
 		"typescript": "catalog:default",
-		"vite": "^5.0.12",
+		"vite": "catalog:default",
 		"vitest": "catalog:default"
 	},
 	"packageManager": "pnpm@9.12.0",

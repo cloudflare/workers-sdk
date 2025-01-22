@@ -23,7 +23,7 @@ import type {
 	SpawnOptionsWithoutStdio,
 } from "child_process";
 import type { Writable } from "stream";
-import type { RunnerTestCase, Suite, Test } from "vitest";
+import type { RunnerTask, RunnerTestSuite } from "vitest";
 
 export const C3_E2E_PREFIX = "tmp-e2e-c3";
 
@@ -325,7 +325,7 @@ export const waitForExit = async (
 
 export const createTestLogStream = (
 	opts: { experimental: boolean },
-	task: RunnerTestCase,
+	task: RunnerTask,
 ) => {
 	// The .ansi extension allows for editor extensions that format ansi terminal codes
 	const fileName = `${normalizeTestName(task)}.ansi`;
@@ -337,7 +337,7 @@ export const createTestLogStream = (
 
 export const recreateLogFolder = (
 	opts: { experimental: boolean },
-	suite: Suite,
+	suite: RunnerTestSuite,
 ) => {
 	// Clean the old folder if exists (useful for dev)
 	rmSync(getLogPath(opts, suite), {
@@ -348,7 +348,10 @@ export const recreateLogFolder = (
 	mkdirSync(getLogPath(opts, suite), { recursive: true });
 };
 
-const getLogPath = (opts: { experimental: boolean }, suite: Suite) => {
+const getLogPath = (
+	opts: { experimental: boolean },
+	suite: RunnerTestSuite,
+) => {
 	const { file } = suite;
 
 	const suiteFilename = file
@@ -362,7 +365,7 @@ const getLogPath = (opts: { experimental: boolean }, suite: Suite) => {
 	);
 };
 
-const normalizeTestName = (task: Test) => {
+const normalizeTestName = (task: RunnerTask) => {
 	const baseName = task.name
 		.toLowerCase()
 		.replace(/\s+/g, "_") // replace any whitespace with `_`
