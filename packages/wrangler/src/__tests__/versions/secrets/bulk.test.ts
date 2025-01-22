@@ -9,6 +9,7 @@ import { runWrangler } from "../../helpers/run-wrangler";
 import { mockPostVersion, mockSetupApiCalls } from "./utils";
 import type { Interface } from "node:readline";
 
+
 describe("versions secret bulk", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
@@ -148,7 +149,9 @@ describe("versions secret bulk", () => {
 
 		await expect(
 			runWrangler(`versions secret bulk secrets.json --name script-name`)
-		).rejects.toThrowError(`The contents of "secrets.json" is not valid JSON`);
+		).rejects.toThrowError(
+			`The contents of "secrets.json" is not valid JSON: "ParseError: InvalidSymbol"`
+		);
 	});
 
 	test("should error on invalid json stdin", async () => {

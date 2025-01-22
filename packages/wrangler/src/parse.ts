@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import { resolve } from "node:path";
 import TOML from "@iarna/toml";
 import { formatMessagesSync } from "esbuild";
-import { parse as jsoncParse, printParseErrorCode } from "jsonc-parser";
+import * as jsoncParser from "jsonc-parser";
 import { UserError } from "./errors";
 import { logger } from "./logger";
 import type { ParseError as JsoncParseError } from "jsonc-parser";
@@ -136,8 +136,6 @@ export function parseTOML(input: string, file?: string): TOML.JsonMap | never {
 	}
 }
 
-const JSON_ERROR_SUFFIX = " in JSON at position ";
-
 /**
  * A minimal type describing a package.json file.
  */
@@ -158,35 +156,29 @@ export function parsePackageJSON<T extends PackageJSON = PackageJSON>(
 }
 
 /**
- * A wrapper around `JSON.parse` that throws a `ParseError`.
+ * Parses JSON and throws a `ParseError`.
  */
 export function parseJSON<T>(input: string, file?: string): T {
-	try {
-		return JSON.parse(input);
-	} catch (err) {
-		const { message } = err as Error;
-		const index = message.lastIndexOf(JSON_ERROR_SUFFIX);
-		if (index < 0) {
-			throw err;
-		}
-		const text = message.substring(0, index);
-		const position = parseInt(
-			message.substring(index + JSON_ERROR_SUFFIX.length)
-		);
-		const location = indexLocation({ file, fileText: input }, position);
-		throw new ParseError({ text, location });
-	}
+	return parseJSONC<T>(input, file, {
+		allowEmptyContent: false,
+		allowTrailingComma: false,
+		disallowComments: true,
+	});
 }
 
 /**
  * A wrapper around `JSONC.parse` that throws a `ParseError`.
  */
-export function parseJSONC<T>(input: string, file?: string): T {
+export function parseJSONC<T>(
+	input: string,
+	file?: string,
+	options: jsoncParser.ParseOptions = { allowTrailingComma: true }
+): T {
 	const errors: JsoncParseError[] = [];
-	const data = jsoncParse(input, errors, { allowTrailingComma: true });
+	const data = jsoncParser.parse(input, errors, options);
 	if (errors.length) {
 		throw new ParseError({
-			text: printParseErrorCode(errors[0].error),
+			text: jsoncParser.printParseErrorCode(errors[0].error),
 			location: {
 				...indexLocation({ file, fileText: input }, errors[0].offset + 1),
 				length: errors[0].length,

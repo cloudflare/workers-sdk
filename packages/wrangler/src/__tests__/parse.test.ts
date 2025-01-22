@@ -225,17 +225,15 @@ describe("parseJSON", () => {
 				kind: "error",
 				location: {
 					line: 3,
-					column: 9,
+					column: 10,
+					length: 2,
 					lineText: '"version" "1',
 					file: undefined,
 					fileText: `\n{\n"version" "1\n}\n`,
 				},
 				notes: [],
 			});
-			expect(text).oneOf([
-				/* Node.js v16/v18 */ "Unexpected string",
-				/* Node.js v20+ */ "Expected ':' after property name",
-			]);
+			expect(text).toEqual("UnexpectedEndOfString");
 		}
 	});
 
@@ -248,13 +246,14 @@ describe("parseJSON", () => {
 		} catch (err) {
 			expect({ ...(err as Error) }).toStrictEqual({
 				name: "ParseError",
-				text: "Unexpected number",
+				text: "CommaExpected",
 				kind: "error",
 				location: {
 					file,
 					fileText,
 					line: 4,
-					column: 8,
+					column: 9,
+					length: 5,
 					lineText: `\t\t\t"c":[012345]`,
 				},
 				notes: [],
