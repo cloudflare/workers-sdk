@@ -46,7 +46,7 @@ export const experimental_patchConfig = (
 	configString = applyEdits(configString, formatEdit);
 
 	if (configPath.endsWith(".toml")) {
-		configString = TOML.stringify(parseJSONC(configString));
+		configString = TOML.stringify(parseJSONC(configString) as JsonMap);
 	}
 	writeFileSync(configPath, configString);
 	return configString;
