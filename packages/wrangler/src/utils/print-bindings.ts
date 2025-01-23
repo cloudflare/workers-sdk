@@ -34,6 +34,7 @@ export const friendlyBindingNames: Record<
 	text_blobs: "Text Blobs",
 	browser: "Browser",
 	ai: "AI",
+	images: "Images",
 	version_metadata: "Worker Version Metadata",
 	unsafe: "Unsafe Metadata",
 	vars: "Vars",
@@ -53,6 +54,7 @@ export function printBindings(
 	context: {
 		registry?: WorkerRegistry | null;
 		local?: boolean;
+		imagesLocalMode?: boolean;
 		name?: string;
 		provisioning?: boolean;
 	} = {}
@@ -90,6 +92,7 @@ export function printBindings(
 		text_blobs,
 		browser,
 		ai,
+		images,
 		version_metadata,
 		unsafe,
 		vars,
@@ -341,6 +344,18 @@ export function printBindings(
 		output.push({
 			name: friendlyBindingNames.browser,
 			entries: [{ key: "Name", value: browser.binding }],
+		});
+	}
+
+	if (images !== undefined) {
+		output.push({
+			name: friendlyBindingNames.images,
+			entries: [
+				{
+					key: "Name",
+					value: addLocalSuffix(images.binding, !!context.imagesLocalMode),
+				},
+			],
 		});
 	}
 
