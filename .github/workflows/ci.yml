@@ -21,17 +21,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: node_modules
-        uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          name: ${{ github.sha }}-${{ matrix.os }}-ci-cache
-          path: node_modules
-
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
         with:
-          install: true
           turbo-api: ${{ secrets.TURBO_API }}
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
@@ -64,13 +56,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: node_modules
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ github.sha }}-${{ matrix.os }}-ci-cache
-          path: node_modules
-      - run: ls node_modules
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
@@ -105,12 +90,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: node_modules
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ github.sha }}-${{ matrix.os }}-ci-cache
-          path: node_modules
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
@@ -155,12 +134,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: node_modules
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ github.sha }}-${{ matrix.os }}-ci-cache
-          path: node_modules
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
