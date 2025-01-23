@@ -20,8 +20,10 @@ jobs:
         uses: actions/cache@v3
         id: cache-repo
         with:
-          key: ${{ github.sha }}-${{ matrix.os }}-built-repo
-          path: .
+          key: ${{ github.sha }}-${{ matrix.os }}-ci-cache
+          path: |
+            node_modules
+            .turbo
 
       - name: Checkout Repo
         if: ${{ steps.cache-repo.outputs.cache-hit != 'true' }}
@@ -53,8 +55,10 @@ jobs:
         uses: actions/cache@v3
         id: cache-repo
         with:
-          key: ${{ github.sha }}-${{ matrix.os }}-built-repo
-          path: .
+          key: ${{ github.sha }}-${{ matrix.os }}-ci-cache
+          path: |
+            node_modules
+            .turbo
 
       - name: Check for errors
         run: pnpm run check
@@ -80,8 +84,10 @@ jobs:
         uses: actions/cache@v3
         id: cache-repo
         with:
-          key: ${{ github.sha }}-${{ matrix.os }}-built-repo
-          path: .
+          key: ${{ github.sha }}-${{ matrix.os }}-ci-cache
+          path: |
+            node_modules
+            .turbo
 
       - name: Check for errors
         run: pnpm run check
