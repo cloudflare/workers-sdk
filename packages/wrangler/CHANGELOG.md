@@ -1,5 +1,30 @@
 # wrangler
 
+## 3.105.0
+
+### Minor Changes
+
+- [#7466](https://github.com/cloudflare/workers-sdk/pull/7466) [`e5ebdb1`](https://github.com/cloudflare/workers-sdk/commit/e5ebdb143788728d8b364fcafc0b36bda4ceb625) Thanks [@Ltadrian](https://github.com/Ltadrian)! - feat: implement the `wrangler cert upload` command
+
+  This command allows users to upload a mTLS certificate/private key or certificate-authority certificate chain.
+
+  For uploading mTLS certificate, run:
+
+  - `wrangler cert upload mtls-certificate --cert cert.pem --key key.pem --name MY_CERT`
+
+  For uploading CA certificate chain, run:
+
+  - `wrangler cert upload certificate-authority --ca-cert server-ca.pem --name SERVER_CA`
+
+### Patch Changes
+
+- [#7867](https://github.com/cloudflare/workers-sdk/pull/7867) [`bdc7958`](https://github.com/cloudflare/workers-sdk/commit/bdc7958f22bbbb9ce2608fefd295054121a92441) Thanks [@penalosa](https://github.com/penalosa)! - Revert https://github.com/cloudflare/workers-sdk/pull/7816. This feature added support for the ASSETS bindings to the `getPlatformProxy()` API, but caused a regression when running `npm run preview` in newly generated Workers Assets projects.
+
+- [#7868](https://github.com/cloudflare/workers-sdk/pull/7868) [`78a9a2d`](https://github.com/cloudflare/workers-sdk/commit/78a9a2db485fefb0038ea9d97cc547a9218b7afa) Thanks [@penalosa](https://github.com/penalosa)! - Revert "Hyperdrive dev remote fix". This PR includes e2e tests that were not run before merging, and are currently failing.
+
+- Updated dependencies []:
+  - miniflare@3.20241230.2
+
 ## 3.104.0
 
 ### Minor Changes

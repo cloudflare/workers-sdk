@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.12.3
+
+### Patch Changes
+
+- [#7844](https://github.com/cloudflare/workers-sdk/pull/7844) [`92ed81e`](https://github.com/cloudflare/workers-sdk/commit/92ed81e9f35c4bc951da79be7fb08e7e60fb1f48) Thanks [@WalshyDev](https://github.com/WalshyDev)! - chore: plumb through account ID and Worker ID into the asset-worker and router-worker for use in analytics and error reporting.
+
 ## 0.12.2
 
 ### Patch Changes
