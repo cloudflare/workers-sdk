@@ -1,7 +1,7 @@
 import { vi } from "vitest";
+import { mockJaegerBinding } from "../../utils/tracing";
 import { applyConfigurationDefaults } from "../src/configuration";
 import { handleRequest } from "../src/handler";
-import { mockJaegerBinding } from "../../utils/tracing";
 import type { AssetConfig } from "../../utils/types";
 
 describe("[Asset Worker] `handleRequest`", () => {

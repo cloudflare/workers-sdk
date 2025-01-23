@@ -1,13 +1,13 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { PerformanceTimer } from "../../utils/performance";
 import { setupSentry } from "../../utils/sentry";
+import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics } from "./analytics";
 import { AssetsManifest } from "./assets-manifest";
 import { applyConfigurationDefaults } from "./configuration";
 import { decodePath, getIntent, handleRequest } from "./handler";
 import { InternalServerErrorResponse } from "./responses";
 import { getAssetWithMetadataFromKV } from "./utils/kv";
-import { mockJaegerBinding } from "./utils/mocks";
 import type {
 	AssetWorkerConfig,
 	ColoMetadata,
