@@ -68,6 +68,7 @@ jobs:
         with:
           name: ${{ github.sha }}-${{ matrix.os }}-ci-cache
           path: node_modules
+      - run: ls node_modules
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
@@ -168,7 +169,6 @@ jobs:
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
       - name: Run tests
-        if: steps.changes.outputs.everything_but_markdown == 'true'
         run: pnpm run test:ci --concurrency 1 --filter=${{ matrix.filter }}
         env:
           TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

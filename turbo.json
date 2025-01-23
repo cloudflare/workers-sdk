@@ -19,17 +19,14 @@
 			"persistent": true,
 			"cache": false
 		},
-		"topological": {
-			"dependsOn": ["^topological"]
-		},
 		"check:lint": {
-			"dependsOn": ["topological"]
+			"dependsOn": ["build"]
 		},
 		"check:type": {
-			"dependsOn": ["topological"]
+			"dependsOn": ["build"]
 		},
 		"type:tests": {
-			"dependsOn": ["topological"]
+			"dependsOn": ["build"]
 		},
 		"test:ci": {
 			"dependsOn": ["build"]
