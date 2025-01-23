@@ -40,4 +40,4 @@ runs:
 
     - name: Install NPM Dependencies
       shell: bash
-      run: pnpm install --frozen-lockfile --ignore-scripts
+      run: pnpm install --frozen-lockfile --ignore-scripts --prefer-offline
