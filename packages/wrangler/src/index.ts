@@ -1161,6 +1161,8 @@ export async function main(argv: string[]): Promise<void> {
 				process.disconnect?.();
 			}
 
+			await closeSentry();
+
 			const controller = new AbortController();
 
 			await Promise.race([
