@@ -23,7 +23,6 @@ jobs:
           key: ${{ github.sha }}-${{ matrix.os }}-ci-cache
           path: |
             node_modules
-            .turbo
 
       - name: Checkout Repo
         if: ${{ steps.cache-repo.outputs.cache-hit != 'true' }}
@@ -51,6 +50,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: ["build"]
     steps:
+      - name: Checkout Repo
+        if: ${{ steps.cache-repo.outputs.cache-hit != 'true' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Cache repository
         uses: actions/cache@v3
         id: cache-repo
@@ -58,7 +63,6 @@ jobs:
           key: ${{ github.sha }}-${{ matrix.os }}-ci-cache
           path: |
             node_modules
-            .turbo
 
       - name: Check for errors
         run: pnpm run check
@@ -80,6 +84,12 @@ jobs:
         os: [windows-latest, macos-13]
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Checkout Repo
+        if: ${{ steps.cache-repo.outputs.cache-hit != 'true' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Cache repository
         uses: actions/cache@v3
         id: cache-repo
@@ -87,7 +97,6 @@ jobs:
           key: ${{ github.sha }}-${{ matrix.os }}-ci-cache
           path: |
             node_modules
-            .turbo
 
       - name: Check for errors
         run: pnpm run check
