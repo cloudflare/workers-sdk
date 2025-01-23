@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import * as vscode from "vscode";
 import { addBindingFlow } from "./add-binding";
 
@@ -41,7 +42,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
 		);
 
 		// Use a nonce to only allow a specific script to be run.
-		const nonce = getNonce();
+		const nonce = randomBytes(16).toString("base64");
 
 		return `<!DOCTYPE html>
 			<html lang="en">
@@ -90,14 +91,4 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
 			</body>
 			</html>`;
 	}
-}
-
-function getNonce() {
-	let text = "";
-	const possible =
-		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-	for (let i = 0; i < 32; i++) {
-		text += possible.charAt(Math.floor(Math.random() * possible.length));
-	}
-	return text;
 }
