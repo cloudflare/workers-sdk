@@ -48,6 +48,7 @@ jobs:
           name: ${{ github.sha }}-${{ matrix.os }}-ci-cache
           path: node_modules
           include-hidden-files: true
+          compression-level: 0
   check:
     timeout-minutes: 30
     name: "Checks"
