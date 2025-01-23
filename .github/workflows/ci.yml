@@ -21,6 +21,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: node_modules
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ github.sha }}-${{ matrix.os }}-ci-cache
+          path: node_modules
+
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
         with:
