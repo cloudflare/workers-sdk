@@ -2,10 +2,11 @@ import { execSync } from "child_process";
 import dedent from "ts-dedent";
 import { beforeEach, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
+import { ALLOW_REMOTE } from "./helpers/allow-remote";
 import { makeRoot, seed } from "./helpers/setup";
 import { WRANGLER_IMPORT } from "./helpers/wrangler";
 
-describe("switching runtimes", () => {
+describe.runIf(ALLOW_REMOTE)("switching runtimes", () => {
 	let root: string;
 	beforeEach(async () => {
 		root = await makeRoot();

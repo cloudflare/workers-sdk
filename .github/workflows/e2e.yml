@@ -1,11 +1,7 @@
 name: E2E tests
 
 on:
-  push:
-    branches:
-      - changeset-release/main
   pull_request:
-    types: [synchronize, opened, reopened, labeled, unlabeled]
   repository_dispatch:
 
 jobs:
@@ -14,7 +10,6 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}
       cancel-in-progress: true
     timeout-minutes: 40
-    if: (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'e2e' ) && github.event.pull_request.head.repo.owner.login == 'cloudflare'))
     name: "E2E Test"
     strategy:
       fail-fast: false
@@ -54,6 +49,7 @@ jobs:
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           CI_OS: ${{ matrix.os }}
+          WRANGLER_E2E_ALLOW_REMOTE: ${{ github.head_ref == 'changeset-release/main' || contains(github.event.*.labels.*.name, 'e2e' ) }}
 
       - name: Upload debug logs
         if: always()

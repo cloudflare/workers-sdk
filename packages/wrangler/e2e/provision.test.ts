@@ -3,6 +3,7 @@ import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
+import { ALLOW_REMOTE } from "./helpers/allow-remote";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -17,7 +18,7 @@ const normalize = (str: string) => {
 };
 const workerName = generateResourceName();
 
-describe("provisioning", { timeout: TIMEOUT }, () => {
+describe.runIf(ALLOW_REMOTE)("provisioning", { timeout: TIMEOUT }, () => {
 	let deployedUrl: string;
 	let kvId: string;
 	let d1Id: string;

@@ -3,6 +3,7 @@ import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
+import { ALLOW_REMOTE } from "./helpers/allow-remote";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { normalizeOutput } from "./helpers/normalize";
@@ -17,7 +18,7 @@ const workerName = generateResourceName();
 const dispatchNamespaceName = generateResourceName("dispatch");
 const dispatchWorkerName = generateResourceName();
 
-describe("deployments", { timeout: TIMEOUT }, () => {
+describe.runIf(ALLOW_REMOTE)("deployments", { timeout: TIMEOUT }, () => {
 	let deployedUrl: string;
 	const helper = new WranglerE2ETestHelper();
 
@@ -252,7 +253,7 @@ const checkAssets = async (testCases: AssetTestCase[], deployedUrl: string) => {
 	}
 };
 
-describe.each([
+describe.runIf(ALLOW_REMOTE).each([
 	{
 		name: "regular Worker",
 		flags: "",

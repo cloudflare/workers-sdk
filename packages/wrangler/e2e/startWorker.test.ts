@@ -7,10 +7,13 @@ import dedent from "ts-dedent";
 import undici from "undici";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
+import { ALLOW_REMOTE } from "./helpers/allow-remote";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import type { DevToolsEvent } from "../src/api";
 
-const OPTIONS = [{ remote: false }, { remote: true }] as const;
+const OPTIONS = ALLOW_REMOTE
+	? [{ remote: false }, { remote: true }]
+	: [{ remote: false }];
 
 type Wrangler = Awaited<ReturnType<WranglerE2ETestHelper["importWrangler"]>>;
 

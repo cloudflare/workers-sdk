@@ -39,7 +39,7 @@ export class WranglerE2ETestHelper {
 			...options,
 		});
 		onTestFinished(async () => {
-			await wrangler.stop();
+			wrangler.stop();
 		});
 		return wrangler;
 	}

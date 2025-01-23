@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import * as forge from "node-forge";
 import { describe, expect, it } from "vitest";
+import { ALLOW_REMOTE } from "./helpers/allow-remote";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { normalizeOutput } from "./helpers/normalize";
 
@@ -111,7 +112,7 @@ function generateRootCaCert() {
 	return { certificate: pemCert, privateKey: pemPrivateKey };
 }
 
-describe("cert", () => {
+describe.runIf(ALLOW_REMOTE)("cert", () => {
 	const normalize = (str: string) =>
 		normalizeOutput(str, {
 			[process.env.CLOUDFLARE_ACCOUNT_ID as string]: "CLOUDFLARE_ACCOUNT_ID",

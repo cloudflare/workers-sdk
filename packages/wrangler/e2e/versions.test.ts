@@ -3,6 +3,7 @@ import path from "path";
 import dedent from "ts-dedent";
 import { beforeAll, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
+import { ALLOW_REMOTE } from "./helpers/allow-remote";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { normalizeOutput } from "./helpers/normalize";
@@ -21,7 +22,7 @@ const normalize = (str: string) =>
 		[CLOUDFLARE_ACCOUNT_ID]: "CLOUDFLARE_ACCOUNT_ID",
 	}).replaceAll(/^Author:(\s+).+@.+$/gm, "Author:$1person@example.com");
 
-describe("versions deploy", { timeout: TIMEOUT }, () => {
+describe.runIf(ALLOW_REMOTE)("versions deploy", { timeout: TIMEOUT }, () => {
 	let versionId0: string;
 	let versionId1: string;
 	let versionId2: string;
