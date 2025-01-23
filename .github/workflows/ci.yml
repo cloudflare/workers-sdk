@@ -26,6 +26,7 @@ jobs:
         with:
           name: ${{ github.sha }}-${{ matrix.os }}-ci-cache
           path: node_modules
+          if-no-files-found: ignore
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
