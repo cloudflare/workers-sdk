@@ -1,7 +1,7 @@
 /**
  * This is used to provide telemetry with a sanitised error
- *  message that could not have any user-identifying information.
- * Use "*" as shorthand to duplicate `message`.
+ * message that could not have any user-identifying information.
+ * Set to `true` to duplicate `message`.
  *  */
 export type TelemetryMessage = {
 	telemetryMessage?: string | true;
@@ -28,8 +28,8 @@ export class UserError extends Error {
 }
 
 export class DeprecationError extends UserError {
-	constructor(message: string) {
-		super(`Deprecation:\n${message}`);
+	constructor(message: string, options?: TelemetryMessage) {
+		super(`Deprecation:\n${message}`, options);
 	}
 }
 
@@ -43,11 +43,7 @@ export class FatalError extends UserError {
 	}
 }
 
-export class CommandLineArgsError extends UserError {
-	constructor(message: string, options?: { telemetryMessage?: string | true }) {
-		super(message, options);
-	}
-}
+export class CommandLineArgsError extends UserError {}
 
 /**
  * JsonFriendlyFatalError is used to output JSON when wrangler crashes, useful for --json mode.
