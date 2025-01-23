@@ -23,10 +23,10 @@ jobs:
 
       - name: node_modules
         uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: ${{ github.sha }}-${{ matrix.os }}-ci-cache
           path: node_modules
-          if-no-files-found: ignore
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
