@@ -164,6 +164,7 @@ export default class extends WorkerEntrypoint<Env> {
 		}
 	}
 
+	// TODO: Trace unstable methods
 	async unstable_canFetch(request: Request): Promise<boolean> {
 		const url = new URL(request.url);
 		const decodedPathname = decodePath(url.pathname);

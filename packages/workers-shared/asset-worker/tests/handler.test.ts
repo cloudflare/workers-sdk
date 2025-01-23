@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import { applyConfigurationDefaults } from "../src/configuration";
 import { handleRequest } from "../src/handler";
-import { mockJaegerBinding } from "../src/utils/mocks";
+import { mockJaegerBinding } from "../../utils/tracing";
 import type { AssetConfig } from "../../utils/types";
 
 describe("[Asset Worker] `handleRequest`", () => {
@@ -222,7 +222,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 		const response2 = await handleRequest(
 			new Request("https://example.com/%A0%A0"),
 			// @ts-expect-error Empty config default to using mocked jaeger
-			{},
+			mockEnv,
 			configuration,
 			exists,
 			getByEtag
