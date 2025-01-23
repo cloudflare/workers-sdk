@@ -142,6 +142,7 @@ describe("parseTOML", () => {
 					lineText: "name = 'fail\"",
 				},
 				notes: [],
+				telemetryMessage: "TOML parse error",
 			});
 		}
 	});
@@ -163,6 +164,7 @@ describe("parseTOML", () => {
 					fileText: "\n[name",
 				},
 				notes: [],
+				telemetryMessage: "TOML parse error",
 			});
 		}
 	});
@@ -232,6 +234,7 @@ describe("parseJSON", () => {
 					fileText: `\n{\n"version" "1\n}\n`,
 				},
 				notes: [],
+				telemetryMessage: "JSON parse error",
 			});
 			expect(text).toEqual("UnexpectedEndOfString");
 		}
@@ -257,6 +260,7 @@ describe("parseJSON", () => {
 					lineText: `\t\t\t"c":[012345]`,
 				},
 				notes: [],
+				telemetryMessage: "JSON parse error",
 			});
 		}
 	});
@@ -339,6 +343,7 @@ describe("parseJSONC", () => {
 					fileText: `\n{\n"version" "1\n}\n`,
 				},
 				notes: [],
+				telemetryMessage: "JSONC parse error",
 			});
 		}
 	});
@@ -363,6 +368,7 @@ describe("parseJSONC", () => {
 					lineText: `\t\t\t"c":[012345]`,
 				},
 				notes: [],
+				telemetryMessage: "JSONC parse error",
 			});
 		}
 	});

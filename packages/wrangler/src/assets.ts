@@ -78,7 +78,7 @@ export const syncAssets = async (
 			throw new FatalError(
 				"Could not find assets information to attach to deployment. Please try again.",
 				1,
-				{ cleanMessage: "*" }
+				{ telemetryMessage: true }
 			);
 		}
 		logger.info(`No files to upload. Proceeding with deployment...`);
@@ -105,7 +105,7 @@ export const syncAssets = async (
 					`A file was requested that does not appear to exist.`,
 					1,
 					{
-						cleanMessage:
+						telemetryMessage:
 							"A file was requested that does not appear to exist. (asset manifest upload)",
 					}
 				);
@@ -189,7 +189,7 @@ export const syncAssets = async (
 							`Asset upload took too long on bucket ${bucketIndex + 1}/${initializeAssetsResponse.buckets.length}. Please try again.\n` +
 							`Assets already uploaded have been saved, so the next attempt will automatically resume from this point.`,
 						undefined,
-						{ cleanMessage: "Asset upload took too long" }
+						{ telemetryMessage: "Asset upload took too long" }
 					);
 				} else {
 					throw e;
@@ -215,7 +215,7 @@ export const syncAssets = async (
 		throw new FatalError(
 			"Failed to complete asset upload. Please try again.",
 			1,
-			{ cleanMessage: "*" }
+			{ telemetryMessage: true }
 		);
 	}
 
@@ -258,7 +258,7 @@ const buildAssetManifest = async (dir: string) => {
 						`Maximum number of assets exceeded.\n` +
 							`Cloudflare Workers supports up to ${MAX_ASSET_COUNT.toLocaleString()} assets in a version. We found ${counter.toLocaleString()} files in the specified assets directory "${dir}".\n` +
 							`Ensure your assets directory contains a maximum of ${MAX_ASSET_COUNT.toLocaleString()} files, and that you have specified your assets directory correctly.`,
-						{ cleanMessage: "Maximum number of assets exceeded" }
+						{ telemetryMessage: "Maximum number of assets exceeded" }
 					);
 				}
 
@@ -277,7 +277,7 @@ const buildAssetManifest = async (dir: string) => {
 								}
 							)}.\n` +
 							`Ensure all assets in your assets directory "${dir}" conform with the Workers maximum size requirement.`,
-						{ cleanMessage: "Asset too large" }
+						{ telemetryMessage: "Asset too large" }
 					);
 				}
 				manifest[normalizeFilePath(relativeFilepath)] = {
@@ -346,13 +346,13 @@ export function getAssetsOptions(
 	if (directory === undefined) {
 		throw new UserError(
 			"The `assets` property in your configuration is missing the required `directory` property.",
-			{ cleanMessage: "*" }
+			{ telemetryMessage: true }
 		);
 	}
 
 	if (directory === "") {
 		throw new UserError("`The assets directory cannot be an empty string.", {
-			cleanMessage: "*",
+			telemetryMessage: true,
 		});
 	}
 
@@ -369,7 +369,7 @@ export function getAssetsOptions(
 				`${resolvedAssetsPath}`,
 
 			{
-				cleanMessage: `The directory specified by the ${sourceOfTruthMessage} does not exist`,
+				telemetryMessage: `The assets directory specified does not exist`,
 			}
 		);
 	}
@@ -431,7 +431,10 @@ export function validateAssetsArgsAndConfig(
 		throw new UserError(
 			"Cannot use assets and legacy assets in the same Worker.\n" +
 				"Please remove either the `legacy_assets` or `assets` field from your configuration file.",
-			{ cleanMessage: "Cannot use assets and legacy assets in the same Worker" }
+			{
+				telemetryMessage:
+					"Cannot use assets and legacy assets in the same Worker",
+			}
 		);
 	}
 
@@ -458,7 +461,8 @@ export function validateAssetsArgsAndConfig(
 	) {
 		throw new UserError(
 			"Cannot use assets with a binding in an assets-only Worker.\n" +
-				"Please remove the asset binding from your configuration file, or provide a Worker script in your configuration file (`main`)."
+				"Please remove the asset binding from your configuration file, or provide a Worker script in your configuration file (`main`).",
+			{ telemetryMessage: true }
 		);
 	}
 
@@ -499,7 +503,8 @@ export function validateAssetsArgsAndConfig(
 	) {
 		throw new UserError(
 			"Cannot set experimental_serve_directly=false without a Worker script.\n" +
-				"Please remove experimental_serve_directly from your configuration file, or provide a Worker script in your configuration file (`main`)."
+				"Please remove experimental_serve_directly from your configuration file, or provide a Worker script in your configuration file (`main`).",
+			{ telemetryMessage: true }
 		);
 	}
 }
@@ -544,12 +549,15 @@ function errorOnLegacyPagesWorkerJSAsset(
 					? "directory"
 					: null;
 		if (workerJsType !== null) {
-			throw new UserError(dedent`
+			throw new UserError(
+				dedent`
 			Uploading a Pages _worker.js ${workerJsType} as an asset.
 			This could expose your private server-side code to the public Internet. Is this intended?
 			If you do not want to upload this ${workerJsType}, either remove it or add an "${CF_ASSETS_IGNORE_FILENAME}" file, to the root of your asset directory, containing "_worker.js" to avoid uploading.
 			If you do want to upload this ${workerJsType}, you can add an empty "${CF_ASSETS_IGNORE_FILENAME}" file, to the root of your asset directory, to hide this error.
-		`);
+		`,
+				{ telemetryMessage: true }
+			);
 		}
 	}
 }
