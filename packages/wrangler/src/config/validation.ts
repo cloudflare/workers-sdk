@@ -1512,7 +1512,7 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			envName,
 			"browser",
-			validateNamedSimpleBinding(envName),
+			validateBrowserBinding(envName),
 			undefined
 		),
 		ai: notInheritable(
@@ -1523,16 +1523,6 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"ai",
 			validateAIBinding(envName),
-			undefined
-		),
-		images: notInheritable(
-			diagnostics,
-			topLevelEnv,
-			rawConfig,
-			rawEnv,
-			envName,
-			"images",
-			validateNamedSimpleBinding(envName),
 			undefined
 		),
 		pipelines: notInheritable(
@@ -2230,7 +2220,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
-const validateNamedSimpleBinding =
+const validateBrowserBinding =
 	(envName: string): ValidatorFn =>
 	(diagnostics, field, value, config) => {
 		const fieldPath =

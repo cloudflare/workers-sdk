@@ -163,9 +163,6 @@ export interface StartDevWorkerInput {
 		/** Whether to use Vectorize mixed mode -- the worker is run locally but accesses to Vectorize are made remotely */
 		bindVectorizeToProd?: boolean;
 
-		/** Whether to use Images local mode -- this is lower fidelity, but doesn't require network access */
-		imagesLocalMode?: boolean;
-
 		/** Treat this as the primary worker in a multiworker setup (i.e. the first Worker in Miniflare's options) */
 		multiworkerPrimary?: boolean;
 	};
@@ -244,7 +241,6 @@ export type Binding =
 	| { type: "text_blob"; source: File }
 	| { type: "browser" }
 	| { type: "ai" }
-	| { type: "images" }
 	| { type: "version_metadata" }
 	| { type: "data_blob"; source: BinaryFile }
 	| ({ type: "durable_object_namespace" } & NameOmit<CfDurableObject>)
