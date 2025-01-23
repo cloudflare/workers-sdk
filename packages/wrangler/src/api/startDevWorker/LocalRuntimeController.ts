@@ -118,7 +118,6 @@ export async function convertToConfigBundle(
 		services: bindings.services,
 		serviceBindings: fetchers,
 		bindVectorizeToProd: event.config.dev?.bindVectorizeToProd ?? false,
-		imagesLocalMode: event.config.dev?.imagesLocalMode ?? false,
 		testScheduled: !!event.config.dev.testScheduled,
 	};
 }

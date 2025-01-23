@@ -76,7 +76,6 @@
 		"esbuild": "0.17.19",
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
-		"sharp": "^0.33.5",
 		"unenv": "2.0.0-rc.0",
 		"workerd": "1.20241230.0"
 	},

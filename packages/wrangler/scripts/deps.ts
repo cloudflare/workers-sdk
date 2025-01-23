@@ -38,9 +38,6 @@ export const EXTERNAL_DEPENDENCIES = [
 
 	// workerd contains a native binary, so must be external. Wrangler depends on a pinned version.
 	"workerd",
-
-	// sharp contains native libraries
-	"sharp",
 ];
 
 const pathToPackageJson = path.resolve(__dirname, "..", "package.json");
