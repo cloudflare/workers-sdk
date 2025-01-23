@@ -88,9 +88,13 @@ export async function getLatestPackageVersion(packageSpecifier: string) {
  */
 export const installWrangler = async () => {
 	const { npm } = detectPackageManager();
+	// force `wrangler@beta` in case peer deps are deined that
+	// conflict with the version we want
+	// (see remix experimental tests)
+	const wrangler = process.env.CI ? `wrangler@beta` : "wrangler@latest";
 
 	// Even if Wrangler is already installed, make sure we install the latest version, as some framework CLIs are pinned to an older version
-	await installPackages([`wrangler@latest`], {
+	await installPackages([`${wrangler}`], {
 		dev: true,
 		startText: `Installing wrangler ${dim(
 			"A command line tool for building Cloudflare Workers",

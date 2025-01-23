@@ -18,7 +18,9 @@ describe("Package Helpers", () => {
 		vi.mocked(existsSync).mockImplementation(() => false);
 	});
 
-	afterEach(() => {});
+	afterEach(() => {
+		vi.unstubAllEnvs();
+	});
 
 	describe("npmInstall", () => {
 		test("npm", async () => {
@@ -87,12 +89,25 @@ describe("Package Helpers", () => {
 		);
 	});
 
-	test("installWrangler", async () => {
-		await installWrangler();
+	describe("installWrangler", async () => {
+		test("install wrangler@beta if in CI", async () => {
+			vi.stubEnv("CI", "true");
+			await installWrangler();
 
-		expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
-			["npm", "install", "--save-dev", "wrangler@latest"],
-			expect.anything(),
-		);
+			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
+				["npm", "install", "--save-dev", "wrangler@beta"],
+				expect.anything(),
+			);
+		});
+
+		test("install wrangler@latest if not in CI", async () => {
+			vi.stubEnv("CI", undefined);
+			await installWrangler();
+
+			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
+				["npm", "install", "--save-dev", "wrangler@latest"],
+				expect.anything(),
+			);
+		});
 	});
 });
