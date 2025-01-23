@@ -32,7 +32,7 @@ export function importWrangler(
 	const minor = parseInt(wranglerVersion.split(".")[1]);
 	// min version is 3.99.0 (and there were no patches for 3.99.0)
 	// will probably need to update this to whatever one --x-provision is released on :')
-	if (major < 3 || (major === 3 && minor < 99 && !isPreRelease)) {
+	if ((major < 3 && !isPreRelease) || (major === 3 && minor < 99)) {
 		vscode.commands.executeCommand(
 			"setContext",
 			"ext.unsupportedWrangler",

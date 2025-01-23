@@ -27,9 +27,6 @@ describe("Extension Test Suite", () => {
 				await fs.readFile(pkgJsonPath, "utf8")
 			);
 
-			const modifiedPkgJson = { ...originalPkgJson, version: "3.98.0" };
-			await fs.writeFile(pkgJsonPath, JSON.stringify(modifiedPkgJson));
-
 			const cleanup = await seed({
 				"wrangler.json": generateWranglerConfig({
 					r2_buckets: [
@@ -44,17 +41,70 @@ describe("Extension Test Suite", () => {
 			try {
 				const extension = getExtension();
 				const { bindingsProvider } = await extension.activate();
-				// Bindings provider uses wrangler to read config.
+
+				await fs.writeFile(
+					pkgJsonPath,
+					JSON.stringify({ ...originalPkgJson, version: "3.98.0" })
+				);
+				// bindingsProvider uses wrangler to read config.
 				// If that doesn't work, but we have provided a wrangler.json,
 				// this means wrangler wasn't imported. Which should be
 				// because its an old version. (not the best test :/)
-				const children = await bindingsProvider.getChildren();
+				let children = await bindingsProvider.getChildren();
 				assert.deepEqual(children, []);
+
+				await fs.writeFile(
+					pkgJsonPath,
+					JSON.stringify({ ...originalPkgJson, version: "3.99.0" })
+				);
+				children = await bindingsProvider.getChildren();
+				assert.deepEqual(children, [
+					{
+						config: [
+							{
+								binding: "r2",
+								bucket_name: "something else",
+							},
+						],
+						name: "r2_buckets",
+						type: "binding",
+					},
+				]);
+
+				await fs.writeFile(
+					pkgJsonPath,
+					JSON.stringify({ ...originalPkgJson, version: "2.99.0" })
+				);
+				children = await bindingsProvider.getChildren();
+				assert.deepEqual(children, []);
+
+				// pre-releases should work
+				await fs.writeFile(
+					pkgJsonPath,
+					JSON.stringify({ ...originalPkgJson, version: "0.0.0-something" })
+				);
+				children = await bindingsProvider.getChildren();
+				assert.deepEqual(children, [
+					{
+						config: [
+							{
+								binding: "r2",
+								bucket_name: "something else",
+							},
+						],
+						name: "r2_buckets",
+						type: "binding",
+					},
+				]);
 			} finally {
 				await cleanup();
-				await fs.writeFile(pkgJsonPath, JSON.stringify(originalPkgJson));
+				await fs.writeFile(
+					pkgJsonPath,
+					JSON.stringify(originalPkgJson, null, "\t") + "\n"
+				);
 			}
 		});
+
 		it("shows no bindings if there is no wrangler config", async () => {
 			const extension = getExtension();
 			const { bindingsProvider } = await extension.activate();

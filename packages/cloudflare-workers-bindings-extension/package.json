@@ -37,7 +37,7 @@
 				"command": "cloudflare-workers-bindings.addBinding",
 				"title": "Cloudflare Workers: Add binding",
 				"icon": "$(add)",
-				"enablement": "ext.supportedWrangler"
+				"enablement": "!ext.unsupportedWrangler"
 			},
 			{
 				"command": "cloudflare-workers-bindings.openDocs",

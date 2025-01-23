@@ -76,9 +76,6 @@ export async function addBindingFlow(context: ExtensionContext) {
 			}
 			return;
 		}
-		// if we didn't successfully read the config, it's probably because of an old wrangler version
-		// import wrangler will already have warned the user (prbs at the view binding stage) - do we want to error again?
-		// should we just hide the add buttons if wrangler is old?
 		let config: Config | undefined;
 		try {
 			config = await getWranglerConfig();
@@ -144,11 +141,12 @@ export async function addBindingFlow(context: ExtensionContext) {
 			useClipboard = true;
 		} else {
 			try {
+				const configFileName = state.configUri.path.split("/").at(-1);
 				wrangler.experimental_patchConfig(state.configUri.path, {
 					[state.bindingType.configKey]: [{ binding: state.name }],
 				});
 				openDocs = await window.showInformationMessage(
-					`Created binding '${state.name}'`,
+					`🎉 The ${state.bindingType.label} binding '${state.name}' has been added to your ${configFileName}`,
 					`Open ${state.bindingType.label} documentation`
 				);
 			} catch {
@@ -160,9 +158,8 @@ export async function addBindingFlow(context: ExtensionContext) {
 			binding = "${state.name}"
 			`;
 			env.clipboard.writeText(patch);
-			const configFileName = state.configUri.path.split("/").at(-1);
 			openDocs = await window.showInformationMessage(
-				`A snippet has been copied to clipboard - please paste this into your ${configFileName}.`,
+				`✨ A snippet has been copied to clipboard - please paste this into your wrangler.toml`,
 				`Open ${state.bindingType.label} documentation`
 			);
 		}
