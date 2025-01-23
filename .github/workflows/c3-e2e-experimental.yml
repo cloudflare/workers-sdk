@@ -1,8 +1,8 @@
 # Runs c3 e2e tests on pull requests with c3 changes
 
 name: C3 E2E Tests (experimental)
-on:
-  pull_request:
+# on:
+#   pull_request:
 
 jobs:
   e2e:

@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-ci
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: "Builds"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-13]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Cache repository
+        uses: actions/cache@v3
+        id: cache-repo
+        with:
+          key: ${{ github.sha }}-${{ matrix.os }}-built-repo
+          path: .
+
+      - name: Checkout Repo
+        if: ${{ steps.cache-repo.outputs.cache-hit != 'true' }}
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        if: ${{ steps.cache-repo.outputs.cache-hit != 'true' }}
+        uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: Run builds
+        if: ${{ steps.cache-repo.outputs.cache-hit != 'true' }}
+        run: pnpm run build
+        env:
+          CI_OS: ${{ runner.os }}
+  check:
+    timeout-minutes: 30
+    name: "Checks"
+    runs-on: ubuntu-latest
+    needs: ["build"]
+    steps:
+      - name: Cache repository
+        uses: actions/cache@v3
+        id: cache-repo
+        with:
+          key: ${{ github.sha }}-${{ matrix.os }}-built-repo
+          path: .
+
+      - name: Check for errors
+        run: pnpm run check
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          CI_OS: ${{ matrix.os }}
+
+      - name: Check the changesets
+        run: node -r esbuild-register tools/deployments/validate-changesets.ts
+
+  check-non-linux:
+    if: github.head_ref == 'changeset-release/main'
+    timeout-minutes: 30
+    name: "Checks"
+    needs: ["build"]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-13]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Cache repository
+        uses: actions/cache@v3
+        id: cache-repo
+        with:
+          key: ${{ github.sha }}-${{ matrix.os }}-built-repo
+          path: .
+
+      - name: Check for errors
+        run: pnpm run check
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          CI_OS: ${{ matrix.os }}
+
+      - name: Check the changesets
+        run: node -r esbuild-register tools/deployments/validate-changesets.ts

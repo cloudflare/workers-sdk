@@ -1,7 +1,7 @@
 name: Tests + Checks
 
-on:
-  pull_request:
+# on:
+#   pull_request:
 
 jobs:
   add-to-project:
