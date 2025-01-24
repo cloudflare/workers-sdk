@@ -5,7 +5,7 @@ import {
 	NotModifiedResponse,
 	OkResponse,
 	TemporaryRedirectResponse,
-} from "./responses";
+} from "../../utils/responses";
 import { getHeaders } from "./utils/headers";
 import type { AssetConfig } from "../../utils/types";
 import type EntrypointType from "./index";

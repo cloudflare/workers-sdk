@@ -1,4 +1,5 @@
 import { PerformanceTimer } from "../../utils/performance";
+import { InternalServerErrorResponse } from "../../utils/responses";
 import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics, DISPATCH_TYPE } from "./analytics";
@@ -9,6 +10,7 @@ import type {
 	UnsafePerformanceTimer,
 } from "../../utils/types";
 import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
+import type { Toucan } from "toucan-js";
 
 interface Env {
 	ASSET_WORKER: Service<AssetWorker>;
@@ -73,19 +75,22 @@ export default {
 			// User's configuration indicates they want user-Worker to run ahead of any
 			// assets. Do not provide any fallback logic.
 			if (env.CONFIG.invoke_user_worker_ahead_of_assets) {
-				return env.JAEGER.enterSpan("invoke_user_worker_first", async () => {
-					if (!env.CONFIG.has_user_worker) {
-						throw new Error(
-							"Fetch for user worker without having a user worker binding"
-						);
+				return await env.JAEGER.enterSpan(
+					"invoke_user_worker_first",
+					async () => {
+						if (!env.CONFIG.has_user_worker) {
+							throw new Error(
+								"Fetch for user worker without having a user worker binding"
+							);
+						}
+						return env.USER_WORKER.fetch(maybeSecondRequest);
 					}
-					return env.USER_WORKER.fetch(maybeSecondRequest);
-				});
+				);
 			}
 
 			// Otherwise, we try to first fetch assets, falling back to user-Worker.
 			if (env.CONFIG.has_user_worker) {
-				return env.JAEGER.enterSpan("has_user_worker", async (span) => {
+				return await env.JAEGER.enterSpan("has_user_worker", async (span) => {
 					if (await env.ASSET_WORKER.unstable_canFetch(request)) {
 						span.setTags({
 							asset: true,
@@ -106,7 +111,7 @@ export default {
 				});
 			}
 
-			return env.JAEGER.enterSpan("assets_only", async (span) => {
+			return await env.JAEGER.enterSpan("assets_only", async (span) => {
 				span.setTags({
 					asset: true,
 					dispatchType: DISPATCH_TYPE.ASSETS,

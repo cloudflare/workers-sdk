@@ -1,12 +1,12 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { PerformanceTimer } from "../../utils/performance";
+import { InternalServerErrorResponse } from "../../utils/responses";
 import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics } from "./analytics";
 import { AssetsManifest } from "./assets-manifest";
 import { applyConfigurationDefaults } from "./configuration";
 import { decodePath, getIntent, handleRequest } from "./handler";
-import { InternalServerErrorResponse } from "./responses";
 import { getAssetWithMetadataFromKV } from "./utils/kv";
 import type {
 	AssetWorkerConfig,
@@ -106,7 +106,7 @@ export default class extends WorkerEntrypoint<Env> {
 				});
 			}
 
-			return this.env.JAEGER.enterSpan("handleRequest", async (span) => {
+			return await this.env.JAEGER.enterSpan("handleRequest", async (span) => {
 				span.setTags({
 					hostname: url.hostname,
 					eyeballPath: url.pathname,
@@ -121,9 +121,7 @@ export default class extends WorkerEntrypoint<Env> {
 					this.unstable_exists.bind(this),
 					this.unstable_getByETag.bind(this)
 				);
-			})
-				.catch((err) => this.handleError(sentry, analytics, err))
-				.finally(() => this.submitMetrics(analytics, performance, startTimeMs));
+			});
 		} catch (err) {
 			const errorResponse = this.handleError(sentry, analytics, err);
 			this.submitMetrics(analytics, performance, startTimeMs);
