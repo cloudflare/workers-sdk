@@ -1,12 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import {
-	clearDialogs,
-	mockConfirm,
-	mockPrompt,
-	mockSelect,
-} from "./helpers/mock-dialogs";
+import { clearDialogs, mockPrompt, mockSelect } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import {
 	mockCreateKVNamespace,
@@ -190,19 +185,13 @@ describe("--x-provision", () => {
 				  - R2
 
 				Provisioning KV (KV Namespace)...
-				✨ KV provisioned with test-kv
-
-				--------------------------------------
+				✨ KV provisioned 🎉
 
 				Provisioning D1 (D1 Database)...
-				✨ D1 provisioned with db-name
-
-				--------------------------------------
+				✨ D1 provisioned 🎉
 
 				Provisioning R2 (R2 Bucket)...
-				✨ R2 provisioned with existing-bucket-name
-
-				--------------------------------------
+				✨ R2 provisioned 🎉
 
 				🎉 All resources provisioned, continuing with deployment...
 
@@ -315,19 +304,13 @@ describe("--x-provision", () => {
 				  - R2
 
 				Provisioning KV (KV Namespace)...
-				✨ KV provisioned with test-kv-1
-
-				--------------------------------------
+				✨ KV provisioned 🎉
 
 				Provisioning D1 (D1 Database)...
-				✨ D1 provisioned with test-d1-1
-
-				--------------------------------------
+				✨ D1 provisioned 🎉
 
 				Provisioning R2 (R2 Bucket)...
-				✨ R2 provisioned with existing-bucket-1
-
-				--------------------------------------
+				✨ R2 provisioned 🎉
 
 				🎉 All resources provisioned, continuing with deployment...
 
@@ -451,21 +434,15 @@ describe("--x-provision", () => {
 
 				Provisioning KV (KV Namespace)...
 				🌀 Creating new KV Namespace \\"new-kv\\"...
-				✨ KV provisioned with new-kv
-
-				--------------------------------------
+				✨ KV provisioned 🎉
 
 				Provisioning D1 (D1 Database)...
 				🌀 Creating new D1 Database \\"new-d1\\"...
-				✨ D1 provisioned with new-d1
-
-				--------------------------------------
+				✨ D1 provisioned 🎉
 
 				Provisioning R2 (R2 Bucket)...
 				🌀 Creating new R2 Bucket \\"new-r2\\"...
-				✨ R2 provisioned with new-r2
-
-				--------------------------------------
+				✨ R2 provisioned 🎉
 
 				🎉 All resources provisioned, continuing with deployment...
 
@@ -532,11 +509,8 @@ describe("--x-provision", () => {
 
 				Provisioning D1 (D1 Database)...
 				Resource name found in config: prefilled-d1-name
-				No pre-existing resource found with that name
 				🌀 Creating new D1 Database \\"prefilled-d1-name\\"...
-				✨ D1 provisioned with prefilled-d1-name
-
-				--------------------------------------
+				✨ D1 provisioned 🎉
 
 				🎉 All resources provisioned, continuing with deployment...
 
@@ -653,11 +627,8 @@ describe("--x-provision", () => {
 
 				Provisioning D1 (D1 Database)...
 				Resource name found in config: new-d1-name
-				No pre-existing resource found with that name
 				🌀 Creating new D1 Database \\"new-d1-name\\"...
-				✨ D1 provisioned with new-d1-name
-
-				--------------------------------------
+				✨ D1 provisioned 🎉
 
 				🎉 All resources provisioned, continuing with deployment...
 
@@ -730,9 +701,7 @@ describe("--x-provision", () => {
 				Provisioning BUCKET (R2 Bucket)...
 				Resource name found in config: prefilled-r2-name
 				🌀 Creating new R2 Bucket \\"prefilled-r2-name\\"...
-				✨ BUCKET provisioned with prefilled-r2-name
-
-				--------------------------------------
+				✨ BUCKET provisioned 🎉
 
 				🎉 All resources provisioned, continuing with deployment...
 
@@ -749,8 +718,7 @@ describe("--x-provision", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		// to maintain current behaviour
-		it("wont prompt to provision if an r2 bucket name belongs to an existing bucket", async () => {
+		it("won't prompt to provision if an r2 bucket name belongs to an existing bucket", async () => {
 			writeWranglerConfig({
 				main: "index.js",
 				r2_buckets: [
@@ -795,6 +763,58 @@ describe("--x-provision", () => {
 				Your worker has access to the following bindings:
 				- R2 Buckets:
 				  - BUCKET: existing-bucket-name (eu)
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("won't prompt to provision if a D1 database name belongs to an existing database", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				d1_databases: [
+					{
+						binding: "DB_NAME",
+						database_name: "existing-db-name",
+					},
+				],
+			});
+			mockGetSettings();
+
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database", async () => {
+					return HttpResponse.json(
+						createFetchResult([
+							{
+								name: "existing-db-name",
+								uuid: "existing-d1-id",
+							},
+						])
+					);
+				})
+			);
+
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "DB_NAME",
+						type: "d1",
+						id: "existing-d1-id",
+					},
+				],
+			});
+
+			await runWrangler("deploy --x-provision");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- D1 Databases:
+				  - DB_NAME: existing-db-name (existing-d1-id)
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -871,9 +891,7 @@ describe("--x-provision", () => {
 				Provisioning BUCKET (R2 Bucket)...
 				Resource name found in config: existing-bucket-name
 				🌀 Creating new R2 Bucket \\"existing-bucket-name\\"...
-				✨ BUCKET provisioned with existing-bucket-name
-
-				--------------------------------------
+				✨ BUCKET provisioned 🎉
 
 				🎉 All resources provisioned, continuing with deployment...
 

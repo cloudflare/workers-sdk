@@ -46,7 +46,7 @@ export const getDatabaseByNameOrBinding = async (
 		return dbFromConfig;
 	}
 
-	const allDBs = await listDatabases(accountId);
+	const allDBs = await listDatabases(accountId, true);
 	const matchingDB = allDBs.find((db) => db.name === name);
 	if (!matchingDB) {
 		throw new UserError(`Couldn't find DB with name '${name}'`);
