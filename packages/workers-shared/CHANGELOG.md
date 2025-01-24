@@ -1,5 +1,13 @@
 # @cloudflare/workers-shared
 
+## 0.12.4
+
+### Patch Changes
+
+- [#7887](https://github.com/cloudflare/workers-sdk/pull/7887) [`cab3e37`](https://github.com/cloudflare/workers-sdk/commit/cab3e37f66e8cbcf0f16898eff1827db1126901b) Thanks [@WalshyDev](https://github.com/WalshyDev)! - chore: add more observability into asset-worker for the Workers team to better insight into how requests are handled.
+
+- [#7887](https://github.com/cloudflare/workers-sdk/pull/7887) [`cab3e37`](https://github.com/cloudflare/workers-sdk/commit/cab3e37f66e8cbcf0f16898eff1827db1126901b) Thanks [@WalshyDev](https://github.com/WalshyDev)! - chore: add tracing into router-worker so the Workers team can have a better insight into into how requests are handled.
+
 ## 0.12.3
 
 ### Patch Changes
