@@ -2,8 +2,7 @@
 "wrangler": minor
 ---
 
-allow `unstable_getMiniflareWorkerOptions` to always accept an `env` argument
+Update the `unstable_getMiniflareWorkerOptions` types to always include an `env` parameter.
 
-the `unstable_getMiniflareWorkerOptions` utility, when accepting a config object as its first argument,
-doesn't accept an `env` one, the changes here make sure it does since even if a config object is passed
-the `env` one is still relevant for picking up variables from potential `.dev.vars` files
+The `unstable_getMiniflareWorkerOptions` types, when accepting a config object as the first argument,
+didn't accept a second `env` argument. The changes here make sure they do, since the `env` is still relevant for picking up variables from potential `.dev.vars` files.
