@@ -42,6 +42,7 @@ type Data = {
 export class Analytics {
 	private data: Data = {};
 	private readyAnalytics?: ReadyAnalytics;
+	private hasWritten: boolean = false;
 
 	constructor(readyAnalytics?: ReadyAnalytics) {
 		this.readyAnalytics = readyAnalytics;
@@ -56,9 +57,15 @@ export class Analytics {
 	}
 
 	write() {
-		if (!this.readyAnalytics) {
+		if (this.hasWritten) {
+			// We've already written analytics, don't double send
+			return;
+		} else if (!this.readyAnalytics) {
+			// Local environment, no-op
 			return;
 		}
+
+		this.hasWritten = true;
 
 		this.readyAnalytics.logEvent({
 			version: VERSION,
