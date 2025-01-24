@@ -551,6 +551,32 @@ describe("pipelines", () => {
 			);
 		});
 
+		it("should update a pipeline cors headers", async () => {
+			const pipeline: Pipeline = samplePipeline;
+			mockShowRequest(pipeline.name, pipeline);
+
+			const update = JSON.parse(JSON.stringify(pipeline));
+			update.source = [
+				{
+					type: "http",
+					format: "json",
+					authenticated: true,
+				},
+			];
+			const updateReq = mockUpdateRequest(update.name, update);
+
+			await runWrangler(
+				"pipelines update my-pipeline --enable-worker-binding=false --enable-http --cors-origins http://localhost:8787"
+			);
+
+			expect(updateReq.count).toEqual(1);
+			expect(updateReq.body?.source.length).toEqual(1);
+			expect(updateReq.body?.source[0].type).toEqual("http");
+			expect((updateReq.body?.source[0] as HttpSource).cors?.origins).toEqual([
+				"http://localhost:8787",
+			]);
+		});
+
 		it("should fail a missing pipeline", async () => {
 			const requests = mockShowRequest("bad-pipeline", null, 404, {
 				code: 1000,
