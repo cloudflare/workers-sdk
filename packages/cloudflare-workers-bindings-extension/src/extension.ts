@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { addBindingFlow } from "./add-binding";
+import { HomeViewProvider } from "./home";
 import { BindingsProvider, Node } from "./show-bindings";
 
 export type Result = {
@@ -55,13 +56,20 @@ export async function activate(
 		}
 	);
 
+	const webviewProvider = new HomeViewProvider(context);
+	const homeWebView = vscode.window.registerWebviewViewProvider(
+		HomeViewProvider.viewType,
+		webviewProvider
+	);
+
 	//  Cleanup when the extension is deactivated
 	context.subscriptions.push(
 		bindingsView,
 		watcher,
 		refreshCommand,
 		addBindingCommand,
-		openDocsCommand
+		openDocsCommand,
+		homeWebView
 	);
 
 	return {

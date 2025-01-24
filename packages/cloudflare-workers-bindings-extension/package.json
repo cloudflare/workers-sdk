@@ -75,6 +75,11 @@
 		"views": {
 			"cloudflare-workers": [
 				{
+					"type": "webview",
+					"id": "cloudflare-workers-bindings.home",
+					"name": "Home"
+				},
+				{
 					"id": "cloudflare-workers-bindings",
 					"name": "Bindings",
 					"icon": "media/cloudflare-workers-outline.svg",
