@@ -82,13 +82,13 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
 				<h3>🚀 Get started</h3>
 				<p>To get started with a template, run:</p>
 				<p class="code-wrapper"><code>npm create cloudflare@latest</code></p>
-				<p>Develop your project locally:</p>
+				<pTo develop your project locally, run:</p>
 				<p class="code-wrapper"><code>npx wrangler dev</code></p>
 				<p>When you're ready to deploy, run:</p>
 				<p class="code-wrapper"><code>npx wrangler deploy</code></p>
 
-				<h3 class="binding-heading">🔗 Bind to resources</h3>
-				<p>Connect your Worker to compute, storage and AI resources on the Developer Platform by configuring a <a href="https://developers.cloudflare.com/workers/runtime-apis/bindings/">binding</a>.</p>
+				<h3 class="binding-heading">🔗 Bind to Cloudflare resources</h3>
+				<p>Connect your Worker to compute, storage and AI resources on the Cloudflare Developer Platform by configuring a <a href="https://developers.cloudflare.com/workers/runtime-apis/bindings/">binding</a>.</p>
 				<button class="add-binding">Add new binding</button>
 
 				<script nonce="${nonce}" src="${scriptUri}"></script>
