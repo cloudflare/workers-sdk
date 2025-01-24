@@ -6,7 +6,6 @@
 		"build": "vite build --app",
 		"check:types": "tsc --build",
 		"dev": "vite dev",
-		"prepreview": "node ./copy-dev-vars-to-dist.mjs",
 		"preview": "vite preview"
 	},
 	"devDependencies": {
