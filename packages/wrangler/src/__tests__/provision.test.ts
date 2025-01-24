@@ -511,10 +511,6 @@ describe("--x-provision", () => {
 				resultId: "new-d1-id",
 			});
 
-			mockConfirm({
-				text: `Would you like to create a new D1 Database named "prefilled-d1-name"?`,
-				result: true,
-			});
 			mockUploadWorkerRequest({
 				expectedBindings: [
 					{
@@ -636,10 +632,6 @@ describe("--x-provision", () => {
 				resultId: "new-d1-id",
 			});
 
-			mockConfirm({
-				text: `Would you like to create a new D1 Database named "new-d1-name"?`,
-				result: true,
-			});
 			mockUploadWorkerRequest({
 				expectedBindings: [
 					{
@@ -715,10 +707,6 @@ describe("--x-provision", () => {
 				assertJurisdiction: "eu",
 			});
 
-			mockConfirm({
-				text: `Would you like to create a new R2 Bucket named "prefilled-r2-name"?`,
-				result: true,
-			});
 			mockUploadWorkerRequest({
 				expectedBindings: [
 					{
@@ -741,7 +729,6 @@ describe("--x-provision", () => {
 
 				Provisioning BUCKET (R2 Bucket)...
 				Resource name found in config: prefilled-r2-name
-				No pre-existing resource found with that name
 				🌀 Creating new R2 Bucket \\"prefilled-r2-name\\"...
 				✨ BUCKET provisioned with prefilled-r2-name
 
@@ -804,6 +791,92 @@ describe("--x-provision", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- R2 Buckets:
+				  - BUCKET: existing-bucket-name (eu)
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		// because buckets with the same name can exist in different jurisdictions
+		it("will provision if the jurisdiction changes", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				r2_buckets: [
+					{
+						binding: "BUCKET",
+						bucket_name: "existing-bucket-name",
+						jurisdiction: "eu",
+					},
+				],
+			});
+			mockGetSettings({
+				result: {
+					bindings: [
+						{
+							type: "r2_bucket",
+							name: "BUCKET",
+							bucket_name: "existing-bucket-name",
+							jurisdiction: "fedramp",
+						},
+					],
+				},
+			});
+			// list r2 buckets
+			msw.use(
+				http.get("*/accounts/:accountId/r2/buckets", async () => {
+					return HttpResponse.json(
+						createFetchResult({
+							buckets: [
+								{
+									name: "existing-bucket-name",
+								},
+							],
+						})
+					);
+				})
+			);
+			// since the jurisdiction doesn't match, it should return not found
+			mockGetR2Bucket("existing-bucket-name", true);
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "BUCKET",
+						type: "r2_bucket",
+						bucket_name: "existing-bucket-name",
+						jurisdiction: "eu",
+					},
+				],
+			});
+			mockCreateR2Bucket({
+				assertJurisdiction: "eu",
+				assertBucketName: "existing-bucket-name",
+			});
+
+			await runWrangler("deploy --x-provision");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+
+				The following bindings need to be provisioned:
+				- R2 Buckets:
+				  - BUCKET
+
+				Provisioning BUCKET (R2 Bucket)...
+				Resource name found in config: existing-bucket-name
+				🌀 Creating new R2 Bucket \\"existing-bucket-name\\"...
+				✨ BUCKET provisioned with existing-bucket-name
+
+				--------------------------------------
+
+				🎉 All resources provisioned, continuing with deployment...
+
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- R2 Buckets:
@@ -932,8 +1005,8 @@ function mockGetR2Bucket(bucketName: string, missing: boolean = false) {
 					);
 				}
 				return HttpResponse.json(createFetchResult({}));
-			},
-			{ once: true }
+			}
+			// { once: true }
 		)
 	);
 }

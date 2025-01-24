@@ -4,7 +4,7 @@ import { fetchResult } from "../cfetch";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
 import { getDatabaseInfoFromId } from "../d1/utils";
-import { confirm, prompt, select } from "../dialogs";
+import { prompt, select } from "../dialogs";
 import { UserError } from "../errors";
 import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
@@ -133,6 +133,7 @@ export async function provisionBindings(
 		if (
 			inBindingSettings(settings, "r2_bucket", r2.binding, {
 				bucket_name: r2.bucket_name,
+				jurisdiction: r2.jurisdiction,
 			})
 		) {
 			// does not inherit if the bucket name has changed
@@ -140,12 +141,14 @@ export async function provisionBindings(
 		} else {
 			if (r2.bucket_name) {
 				try {
-					await getR2Bucket(accountId, r2.bucket_name);
+					await getR2Bucket(accountId, r2.bucket_name, r2.jurisdiction);
 					// don't provision
 					continue;
 				} catch (e) {
+					console.dir("here?");
 					// bucket not found - provision
 					if (!(e instanceof APIError && e.code === 10006)) {
+						// this is an error that is not "bucket not found", so we do want to throw
 						throw e;
 					}
 				}
@@ -220,19 +223,17 @@ export async function provisionBindings(
 				pendingResources.kv_namespaces,
 				preExistingKV.map((ns) => ({ title: ns.title, value: ns.id })),
 				"KV Namespace",
-				"title or id",
 				scriptName,
 				autoCreate
 			);
 		}
 
 		if (pendingResources.d1_databases?.length) {
-			const preExisting = await listDatabases(accountId, true);
+			const preExisting = await listDatabases(accountId, true, 1000);
 			await runProvisioningFlow(
 				pendingResources.d1_databases,
 				preExisting.map((db) => ({ title: db.name, value: db.uuid })),
 				"D1 Database",
-				"name or id",
 				scriptName,
 				autoCreate
 			);
@@ -246,7 +247,6 @@ export async function provisionBindings(
 					value: bucket.name,
 				})),
 				"R2 Bucket",
-				"name",
 				scriptName,
 				autoCreate
 			);
@@ -267,7 +267,11 @@ function inBindingSettings<Type extends WorkerMetadataBinding["type"]>(
 		(binding): binding is ExtractedBinding<Type> => {
 			if (other) {
 				for (const [k, v] of Object.entries(other)) {
-					if (other[k as keyof ExtractedBinding<Type>] !== v) {
+					// @ts-expect-error
+					if (v && binding[k] !== v) {
+						console.dir(k);
+						console.dir(v);
+						console.dir(binding);
 						return false;
 					}
 				}
@@ -296,11 +300,12 @@ type NormalisedResourceInfo = {
 	value: string;
 };
 
+type FriendlyBindingNames = "KV Namespace" | "D1 Database" | "R2 Bucket";
+
 async function runProvisioningFlow(
 	pending: PendingResources[keyof PendingResources],
 	preExisting: NormalisedResourceInfo[],
-	friendlyBindingName: string,
-	resourceKeyDescriptor: string,
+	friendlyBindingName: FriendlyBindingNames,
 	scriptName: string,
 	autoCreate: boolean
 ) {
@@ -324,30 +329,30 @@ async function runProvisioningFlow(
 
 			if (name) {
 				logger.log("Resource name found in config:", name);
+				// TODO: tidy this up :///
 				// this would be a d1 database where the name is provided but
 				// not the id, which must be connected to an existing resource
 				// of that name (or a new one with that name). This should hit a
 				// 'getDbByName' endpoint, as preExisting does not contain all
 				// resources on the account. But that doesn't exist yet.
-				const foundResourceId = preExisting.find(
-					(r) => r.title === name
-				)?.value;
-				if (foundResourceId) {
-					logger.log("Existing resource found with that name.");
-					item.updateId(foundResourceId);
-				} else {
-					logger.log("No pre-existing resource found with that name");
-					logger.debug(
-						"If you have many resources, we may not have searched through them all. Please provide the id in that case. This is a temporary limitation."
-					);
-					const proceed = autoCreate
-						? true
-						: await confirm(
-								`Would you like to create a new ${friendlyBindingName} named "${name}"?`
-							);
-					if (!proceed) {
-						throw new UserError("Resource provisioning cancelled.");
+				// this could also be an r2 bucket where the name is provided, and the jurisidiction has changed.
+				// todo, check if the bucket exists and if it does, update the jurisdiction.
+				// unfortunately, preExisting does not contain the jurisdiction for buckets
+				if (friendlyBindingName === "D1 Database") {
+					const foundResourceId = preExisting.find(
+						(r) => r.title === name
+					)?.value;
+					if (foundResourceId) {
+						logger.log("Existing resource found with that name.");
+						item.updateId(foundResourceId);
+					} else {
+						logger.log("No pre-existing resource found with that name");
+						logger.log(`🌀 Creating new ${friendlyBindingName} "${name}"...`);
+						const id = await item.create(name);
+						item.updateId(id);
 					}
+				} else {
+					// r2 bucket
 					logger.log(`🌀 Creating new ${friendlyBindingName} "${name}"...`);
 					const id = await item.create(name);
 					item.updateId(id);
@@ -381,7 +386,7 @@ async function runProvisioningFlow(
 					let foundResource: NormalisedResourceInfo | undefined;
 					while (foundResource === undefined) {
 						const input = await prompt(
-							`Enter the ${resourceKeyDescriptor} for an existing ${friendlyBindingName}`
+							`Enter the ${resourceKeyDescriptors.get(friendlyBindingName)} for an existing ${friendlyBindingName}`
 						);
 						foundResource = preExisting.find(
 							(r) => r.title === input || r.value === input
@@ -391,7 +396,7 @@ async function runProvisioningFlow(
 							item.updateId(foundResource.value);
 						} else {
 							logger.log(
-								`No ${friendlyBindingName} with that ${resourceKeyDescriptor} "${input}" found. Please try again.`
+								`No ${friendlyBindingName} with that ${resourceKeyDescriptors.get(friendlyBindingName)} "${input}" found. Please try again.`
 							);
 						}
 					}
@@ -412,3 +417,8 @@ async function runProvisioningFlow(
 		}
 	}
 }
+const resourceKeyDescriptors = new Map<FriendlyBindingNames, string>([
+	["KV Namespace", "title or id"],
+	["D1 Database", "name or id"],
+	["R2 Bucket", "name"],
+]);
