@@ -204,8 +204,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
 						workerConfig.configPath,
 						resolvedPluginConfig.cloudflareEnv
 					);
-					// if present we save a .dev.vars file onto the worker's build output
-					// directory so that it will be then detected by `vite preview`
+					// Save a .dev.vars file to the worker's build output directory 
+					// when it exists so that it will be then detected by `vite preview`
 					if (dotDevDotVarsContent) {
 						this.emitFile({
 							type: "asset",

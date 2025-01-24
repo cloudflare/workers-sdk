@@ -468,10 +468,10 @@ The value of `MY_VAR` will therefore be `'Staging var'`.
 
 ## Secrets
 
-Secrets can be provided to your Worker in local development using the [`.dev.vars`](https://developers.cloudflare.com/workers/configuration/secrets/#local-development-with-secrets) file convention. If you are using [Cloudflare Environments](#cloudflare-environments) then the relevant `.dev.vars` file will be selected. For example, `CLOUDFLARE_ENV=staging vite dev` will load `.dev.vars.staging` if it exists and otherwise fall back to `.dev.vars`.
+Secrets can be provided to your Worker in local development using a [`.dev.vars`](https://developers.cloudflare.com/workers/configuration/secrets/#local-development-with-secrets) file. If you are using [Cloudflare Environments](#cloudflare-environments) then the relevant `.dev.vars` file will be selected. For example, `CLOUDFLARE_ENV=staging vite dev` will load `.dev.vars.staging` if it exists and fall back to `.dev.vars`.
 
 > [!NOTE]
-> The `vite build` command copies the relevant `.dev.vars` file to the output directory. This is only used when running `vite preview` and is not deployed with your Worker.
+> The `vite build` command copies the relevant `.dev.vars[.env-name]` file to the output directory. This is only used when running `vite preview` and is not deployed with your Worker.
 
 ## Migrating from `wrangler dev`
 
