@@ -1,5 +1,16 @@
 # wrangler
 
+## 3.105.1
+
+### Patch Changes
+
+- [#7884](https://github.com/cloudflare/workers-sdk/pull/7884) [`fd5a455`](https://github.com/cloudflare/workers-sdk/commit/fd5a45520e92e0fe60c457a6ae54caef67d7bbcf) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: make experiemntal auto-provisioning non-interactive by default.
+
+- [#7811](https://github.com/cloudflare/workers-sdk/pull/7811) [`7d138d9`](https://github.com/cloudflare/workers-sdk/commit/7d138d92c3cbfb84bccb84a3e93f41ad5549d604) Thanks [@joshthoward](https://github.com/joshthoward)! - Fix RPC method invocations showing up as unknown events
+
+- Updated dependencies [[`40f89a9`](https://github.com/cloudflare/workers-sdk/commit/40f89a90d93f57294e49a6b5ed8ba8cc38e0da77)]:
+  - miniflare@3.20250124.0
+
 ## 3.105.0
 
 ### Minor Changes

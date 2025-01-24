@@ -1,5 +1,13 @@
 # create-cloudflare
 
+## 2.37.3
+
+### Patch Changes
+
+- [#7891](https://github.com/cloudflare/workers-sdk/pull/7891) [`a7965c7`](https://github.com/cloudflare/workers-sdk/commit/a7965c7c1c4b74a9e7415bbb3b086e8849ed2f3b) Thanks [@jahands](https://github.com/jahands)! - fix: Use today's date for compat date when the latest workerd release date is in the future
+
+  Fixes an issue where deployments would fail when there is a workerd release on the same day due to workerd releases having a date in the future because Workers does not allow using a compat date in the future.
+
 ## 2.37.2
 
 ### Patch Changes
