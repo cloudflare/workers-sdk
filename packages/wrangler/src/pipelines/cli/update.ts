@@ -105,7 +105,6 @@ export function addUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 				type: "string",
 				describe:
 					"PipelineTransform worker and entrypoint (<worker>.<entrypoint>)",
-				default: undefined,
 				demandOption: false,
 			})
 

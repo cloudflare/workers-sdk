@@ -157,16 +157,15 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 			})
 			.option("partition-template", {
 				type: "string",
-				describe: "Path template for partitioned files in the bucket",
-				default: "event_date=${date}/hr=${hour}",
+				describe:
+					"Path template for partitioned files in the bucket. If not specified, the default will be used",
 				demandOption: false,
 			})
 			.option("file-template", {
 				type: "string",
 				describe: "Template for individual file names (must include ${slug})",
-				default: "${slug}${extension}",
 				demandOption: false,
-				coerce: (val: string) => {
+				coerce: (val) => {
 					if (!val.includes("${slug}")) {
 						throw new Error("filename must contain ${slug}");
 					}

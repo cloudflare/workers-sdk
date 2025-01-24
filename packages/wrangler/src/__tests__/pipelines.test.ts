@@ -304,8 +304,8 @@ describe("pipelines", () => {
 				      --r2-secret-access-key  R2 service Secret Access Key for authentication. Leave empty for OAuth confirmation.  [string]
 				      --r2-prefix             Prefix for storing files in the destination bucket  [string] [default: \\"\\"]
 				      --compression           Compression format for output files  [string] [choices: \\"none\\", \\"gzip\\", \\"deflate\\"] [default: \\"gzip\\"]
-				      --file-template         Template for individual file names (must include \${slug})  [string] [default: \\"\${slug}\${extension}\\"]
-				      --partition-template    Path template for partitioned files in the bucket  [string] [default: \\"event_date=\${date}/hr=\${hr}\\"]
+				      --file-template         Template for individual file names (must include \${slug})  [string]
+				      --partition-template    Path template for partitioned files in the bucket. If not specified, the default will be used  [string]
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
