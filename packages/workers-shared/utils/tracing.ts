@@ -1,4 +1,4 @@
-import type { JaegerTracing, Span } from "../../../utils/types";
+import type { JaegerTracing, Span } from "./types";
 
 export function mockJaegerBindingSpan(): Span {
 	return {
