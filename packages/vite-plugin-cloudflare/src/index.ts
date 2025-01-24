@@ -200,11 +200,19 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
 				config = workerConfig;
 
 				if (workerConfig.configPath) {
-					copyDotDevDotVarsFileToOutputDir(
+					const dotDevDotVarsContent = getDotDevDotVarsContent(
 						workerConfig.configPath,
-						resolvedPluginConfig.cloudflareEnv,
-						this.emitFile
+						resolvedPluginConfig.cloudflareEnv
 					);
+					// if present we save a .dev.vars file onto the worker's build output
+					// directory so that it will be then detected by `vite preview`
+					if (dotDevDotVarsContent) {
+						this.emitFile({
+							type: "asset",
+							fileName: ".dev.vars",
+							source: dotDevDotVarsContent,
+						});
+					}
 				}
 			} else if (this.environment.name === "client") {
 				const assetsOnlyConfig = resolvedPluginConfig.config;
@@ -311,8 +319,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
 }
 
 /**
- * Copies a potential `.dev.vars` target over to the worker's output directory
- * (so that it can get picked up by `vite preview`)
+ * Gets the content of a the potential `.dev.vars` target file
  *
  * Note: This resolves the .dev.vars file path following the same logic
  *       as `loadDotEnv` in `/packages/wrangler/src/config/index.ts`
@@ -320,12 +327,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
  *
  * @param configPath the path to the worker's wrangler config file
  * @param cloudflareEnv the target cloudflare environment
- * @param emitFile vite's emitFile function (for saving the file)
  */
-function copyDotDevDotVarsFileToOutputDir(
+function getDotDevDotVarsContent(
 	configPath: string,
-	cloudflareEnv: string | undefined,
-	emitFile: vite.Rollup.PluginContext["emitFile"]
+	cloudflareEnv: string | undefined
 ) {
 	const configDir = path.dirname(configPath);
 
@@ -340,10 +345,8 @@ function copyDotDevDotVarsFileToOutputDir(
 
 	if (targetPath) {
 		const dotDevDotVarsContent = fs.readFileSync(targetPath);
-		emitFile({
-			type: "asset",
-			fileName: ".dev.vars",
-			source: dotDevDotVarsContent,
-		});
+		return dotDevDotVarsContent;
 	}
+
+	return null;
 }
