@@ -230,7 +230,7 @@ export function deployOptions(yargs: CommonYargsArgv) {
 			.option("experimental-auto-create", {
 				describe: "Automatically provision draft bindings with new resources",
 				type: "boolean",
-				default: false,
+				default: true,
 				hidden: true,
 				alias: "x-auto-create",
 			})

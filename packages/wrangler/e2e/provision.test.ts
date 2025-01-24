@@ -67,9 +67,7 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 	});
 
 	it("can provision resources and deploy worker", async () => {
-		const worker = helper.runLongLived(
-			`wrangler deploy --x-provision --x-auto-create`
-		);
+		const worker = helper.runLongLived(`wrangler deploy --x-provision`);
 		await worker.exitCode;
 		const output = await worker.output;
 		expect(normalize(output)).toMatchInlineSnapshot(`

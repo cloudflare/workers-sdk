@@ -92,7 +92,7 @@ describe("--x-provision", () => {
 			],
 		});
 
-		await runWrangler("deploy --x-provision");
+		await runWrangler("deploy --x-provision --x-auto-create=false");
 		expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -176,7 +176,7 @@ describe("--x-provision", () => {
 				],
 			});
 
-			await runWrangler("deploy --x-provision");
+			await runWrangler("deploy --x-provision --x-auto-create=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
@@ -301,7 +301,7 @@ describe("--x-provision", () => {
 				],
 			});
 
-			await runWrangler("deploy --x-provision");
+			await runWrangler("deploy --x-provision --x-auto-create=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
@@ -436,7 +436,7 @@ describe("--x-provision", () => {
 				],
 			});
 
-			await runWrangler("deploy --x-provision");
+			await runWrangler("deploy --x-provision --x-auto-create=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
@@ -525,7 +525,7 @@ describe("--x-provision", () => {
 				],
 			});
 
-			await runWrangler("deploy --x-provision");
+			await runWrangler("deploy --x-provision --x-auto-create=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
@@ -583,7 +583,7 @@ describe("--x-provision", () => {
 				],
 			});
 
-			await runWrangler("deploy --x-provision");
+			await runWrangler("deploy --x-provision --x-auto-create=false");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -650,7 +650,7 @@ describe("--x-provision", () => {
 				],
 			});
 
-			await runWrangler("deploy --x-provision");
+			await runWrangler("deploy --x-provision --x-auto-create=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
@@ -730,7 +730,7 @@ describe("--x-provision", () => {
 				],
 			});
 
-			await runWrangler("deploy --x-provision");
+			await runWrangler("deploy --x-provision --x-auto-create=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
@@ -800,7 +800,7 @@ describe("--x-provision", () => {
 				],
 			});
 
-			await runWrangler("deploy --x-provision");
+			await runWrangler("deploy --x-provision --x-auto-create=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
@@ -825,7 +825,9 @@ describe("--x-provision", () => {
 			legacy_env: false,
 			kv_namespaces: [{ binding: "KV" }],
 		});
-		await expect(runWrangler("deploy --x-provision")).rejects.toThrow(
+		await expect(
+			runWrangler("deploy --x-provision --x-auto-create=false")
+		).rejects.toThrow(
 			"Provisioning resources is not supported with a service environment"
 		);
 	});
