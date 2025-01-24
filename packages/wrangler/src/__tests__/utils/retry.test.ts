@@ -38,7 +38,7 @@ describe("retryOnAPIFailure", () => {
 		expect(attempts).toBe(1);
 	});
 
-	it("should not retry TypeError", async () => {
+	it("should retry TypeError", async () => {
 		let attempts = 0;
 
 		await expect(() =>
@@ -47,7 +47,7 @@ describe("retryOnAPIFailure", () => {
 				throw new TypeError("type error");
 			})
 		).rejects.toMatchInlineSnapshot(`[TypeError: type error]`);
-		expect(attempts).toBe(1);
+		expect(attempts).toBe(3);
 	});
 
 	it("should retry custom APIError implementation with non-5xx error", async () => {

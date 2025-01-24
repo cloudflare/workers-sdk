@@ -22,8 +22,9 @@ export async function retryOnAPIFailure<T>(
 		return await action();
 	} catch (err) {
 		if (
-			(err instanceof APIError && !err.isRetryable()) ||
-			err instanceof TypeError
+			err instanceof APIError &&
+			!err.isRetryable() &&
+			!(err instanceof TypeError)
 		) {
 			throw err;
 		}
