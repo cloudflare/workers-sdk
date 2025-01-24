@@ -260,17 +260,25 @@ export async function updatePipelineHandler(
 		);
 		// add back if specified
 		if (args.enableHttp) {
-			pipelineConfig.source.push({
+			const update = {
 				type: "http",
 				format: "json",
 				...source,
-				authentication:
-					args.requireHttpAuth !== undefined
-						? // if auth specified, use it
-							args.requireHttpAuth
-						: // if auth not specified, use previous value or default(false)
-							source?.authentication,
-			} satisfies HttpSource);
+			} satisfies HttpSource;
+
+			pipelineConfig.source.push(update);
+		}
+	}
+
+	const httpSource = pipelineConfig.source.find(
+		(s: Source) => s.type === "http"
+	);
+	if (httpSource) {
+		if (args.requireHttpAuth) {
+			httpSource.authentication = args.requireHttpAuth;
+		}
+		if (args.corsOrigins && args.corsOrigins.length > 0) {
+			httpSource.cors = { origins: args.corsOrigins };
 		}
 	}
 
