@@ -580,8 +580,8 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		);
 	});
 
-	it("exposes Hyperdrive bindings", async () => {
-		const { id } = await helper.hyperdrive(false);
+	it.skipIf(isLocal)("exposes Hyperdrive bindings", async () => {
+		const { id } = await helper.hyperdrive(isLocal);
 
 		await helper.seed({
 			"wrangler.toml": dedent`
