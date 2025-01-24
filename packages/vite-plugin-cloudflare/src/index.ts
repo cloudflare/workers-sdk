@@ -330,7 +330,7 @@ function copyDotDevDotVarsFileToOutputDir(
 	const configDir = path.dirname(configPath);
 
 	const defaultDotDevDotVarsPath = `${configDir}/.dev.vars`;
-	const inputDotDevDotVarsPath = `${defaultDotDevDotVarsPath}${cloudflareEnv ? `.${cloudflareEnv} : ""`}`;
+	const inputDotDevDotVarsPath = `${defaultDotDevDotVarsPath}${cloudflareEnv ? `.${cloudflareEnv}` : ""}`;
 
 	const targetPath = fs.existsSync(inputDotDevDotVarsPath)
 		? inputDotDevDotVarsPath

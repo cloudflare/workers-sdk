@@ -112,6 +112,7 @@ export function resolvePluginConfig(
 			rawConfigs: {
 				entryWorker: entryWorkerResolvedConfig,
 			},
+			cloudflareEnv,
 		};
 	}
 
