@@ -963,7 +963,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
-  fixtures/workers-with-assets-serve-directly:
+  fixtures/workers-with-assets-run-worker-first:
     devDependencies:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*

@@ -5,3 +5,4 @@ compatibility_date = "2024-01-01"
 [assets]
 directory = "./public"
 binding="ASSETS"
+experimental_serve_directly = true

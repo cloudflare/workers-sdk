@@ -1849,7 +1849,7 @@ Update them to point to this script instead?`,
 				`);
 			});
 
-			it("should not warn on mounted paths if serve_directly = true", async () => {
+			it("should not warn on mounted paths if run_worker_first = false", async () => {
 				writeWranglerConfig({
 					routes: [
 						"simple.co.uk/path/*",
@@ -1862,7 +1862,7 @@ Update them to point to this script instead?`,
 					],
 					assets: {
 						directory: "assets",
-						experimental_serve_directly: true,
+						run_worker_first: false,
 					},
 				});
 				await mockAUSRequest([]);
@@ -1872,7 +1872,7 @@ Update them to point to this script instead?`,
 					expectedAssets: {
 						jwt: "<<aus-completion-token>>",
 						config: {
-							serve_directly: true,
+							run_worker_first: false,
 						},
 					},
 					expectedType: "none",
@@ -4702,7 +4702,7 @@ addEventListener('fetch', event => {});`
 				main: "index.js",
 				assets: {
 					directory: "assets",
-					experimental_serve_directly: false,
+					run_worker_first: true,
 					binding: "ASSETS",
 				},
 				placement: {
@@ -4716,7 +4716,7 @@ addEventListener('fetch', event => {});`
 				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: {
-						serve_directly: false,
+						run_worker_first: true,
 					},
 				},
 				expectedMainModule: "index.js",
@@ -4726,7 +4726,7 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy");
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTurning on Smart Placement in a Worker that is using assets and serve_directly set to false means that your entire Worker could be moved to run closer to your data source, and all requests will go to that Worker before serving assets.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mTurning on Smart Placement in a Worker that is using assets and run_worker_first set to true means that your entire Worker could be moved to run closer to your data source, and all requests will go to that Worker before serving assets.[0m
 
 				  This could result in poor performance as round trip times could increase when serving assets.
 
@@ -4736,7 +4736,7 @@ addEventListener('fetch', event => {});`
 			`);
 		});
 
-		it("should warn if experimental_serve_directly=false but no binding is provided", async () => {
+		it("should warn if run_worker_first=true but no binding is provided", async () => {
 			const assets = [
 				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
 				{ filePath: "file-1.txt", content: "Content of file-1" },
@@ -4751,7 +4751,7 @@ addEventListener('fetch', event => {});`
 				main: "index.js",
 				assets: {
 					directory: "assets",
-					experimental_serve_directly: false,
+					run_worker_first: true,
 				},
 			});
 			const bodies: AssetManifest[] = [];
@@ -4761,7 +4761,7 @@ addEventListener('fetch', event => {});`
 				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
 					config: {
-						serve_directly: false,
+						run_worker_first: true,
 					},
 				},
 				expectedMainModule: "index.js",
@@ -4770,9 +4770,9 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy");
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mexperimental_serve_directly=false set without an assets binding[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mrun_worker_first=true set without an assets binding[0m
 
-				  Setting experimental_serve_directly to false will always invoke your Worker script.
+				  Setting run_worker_first to true will always invoke your Worker script.
 				  To fetch your assets from your Worker, please set the [assets.binding] key in your configuration
 				  file.
 
@@ -4782,18 +4782,103 @@ addEventListener('fetch', event => {});`
 			`);
 		});
 
-		it("should error if experimental_serve_directly is false and no user Worker is provided", async () => {
+		it("should warn if using experimental_serve_directly", async () => {
+			const assets = [
+				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "file-2.bak", content: "Content of file-2" },
+				{ filePath: "file-3.txt", content: "Content of file-3" },
+				{ filePath: "sub-dir/file-4.bak", content: "Content of file-4" },
+				{ filePath: "sub-dir/file-5.txt", content: "Content of file-5" },
+			];
+			writeAssets(assets, "assets");
+			writeWorkerSource({ format: "js" });
+			writeWranglerConfig({
+				main: "index.js",
+				assets: {
+					directory: "assets",
+					experimental_serve_directly: true,
+				},
+			});
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {
+						run_worker_first: false,
+					},
+				},
+				expectedMainModule: "index.js",
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.warn).toMatchInlineSnapshot(
+				`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+				    - [1mDeprecation[0m: \\"assets.experimental_serve_directly\\":
+				      The \\"experimental_serve_directly\\" field is not longer supported. Please use run_worker_first.
+				      Read more: [4mhttps://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first[0m
+
+				"
+			`
+			);
+		});
+
+		it("should error if using experimental_serve_directly and run_worker_first", async () => {
+			const assets = [
+				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "file-2.bak", content: "Content of file-2" },
+				{ filePath: "file-3.txt", content: "Content of file-3" },
+				{ filePath: "sub-dir/file-4.bak", content: "Content of file-4" },
+				{ filePath: "sub-dir/file-5.txt", content: "Content of file-5" },
+			];
+			writeAssets(assets, "assets");
+			writeWorkerSource({ format: "js" });
+			writeWranglerConfig({
+				main: "index.js",
+				assets: {
+					directory: "assets",
+					experimental_serve_directly: true,
+					run_worker_first: false,
+				},
+			});
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {
+						run_worker_first: true,
+					},
+				},
+				expectedMainModule: "index.js",
+			});
+
+			await expect(runWrangler("deploy")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: run_worker_first and experimental_serve_directly specified.
+				Only one of these configuration options may be provided.]
+			`);
+		});
+
+		it("should error if run_worker_first is true and no user Worker is provided", async () => {
 			writeWranglerConfig({
 				assets: {
 					directory: "xyz",
-					experimental_serve_directly: false,
+					run_worker_first: true,
 				},
 			});
 
 			await expect(runWrangler("deploy")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Cannot set experimental_serve_directly=false without a Worker script.
-				Please remove experimental_serve_directly from your configuration file, or provide a Worker script in your configuration file (\`main\`).]
+				[Error: Cannot set run_worker_first=true without a Worker script.
+				Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (\`main\`).]
 			`);
 		});
 
@@ -5291,7 +5376,6 @@ addEventListener('fetch', event => {});`
 					["Q29udGVudCBvZiBmaWxlLTI="],
 					"7574a8cd3094a050388ac9663af1c1d6",
 					{
-						// TODO: this should be "text/plain; charset=utf-8", but msw? is stripping the charset part
 						type: "text/plain",
 					}
 				)
@@ -5353,7 +5437,45 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy");
 		});
 
-		it("serve_directly correctly overrides default if set to false", async () => {
+		it("run_worker_first correctly overrides default if set to true", async () => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
+			];
+			writeAssets(assets);
+			writeWorkerSource({ format: "js" });
+			writeWranglerConfig({
+				main: "index.js",
+				compatibility_date: "2024-09-27",
+				compatibility_flags: ["nodejs_compat"],
+				assets: {
+					directory: "assets",
+					binding: "ASSETS",
+					html_handling: "none",
+					not_found_handling: "404-page",
+					run_worker_first: true,
+				},
+			});
+			await mockAUSRequest();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {
+						html_handling: "none",
+						not_found_handling: "404-page",
+						run_worker_first: true,
+					},
+				},
+				expectedBindings: [{ name: "ASSETS", type: "assets" }],
+				expectedMainModule: "index.js",
+				expectedCompatibilityDate: "2024-09-27",
+				expectedCompatibilityFlags: ["nodejs_compat"],
+			});
+			await runWrangler("deploy");
+		});
+
+		it("experimental_serve_directly=false maps run_worker_first=true", async () => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
@@ -5380,7 +5502,7 @@ addEventListener('fetch', event => {});`
 					config: {
 						html_handling: "none",
 						not_found_handling: "404-page",
-						serve_directly: false,
+						run_worker_first: true,
 					},
 				},
 				expectedBindings: [{ name: "ASSETS", type: "assets" }],
@@ -5391,43 +5513,7 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy");
 		});
 
-		it("serve_directly omitted when not provided in config", async () => {
-			const assets = [
-				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
-			];
-			writeAssets(assets);
-			writeWorkerSource({ format: "js" });
-			writeWranglerConfig({
-				main: "index.js",
-				compatibility_date: "2024-09-27",
-				compatibility_flags: ["nodejs_compat"],
-				assets: {
-					directory: "assets",
-					binding: "ASSETS",
-					html_handling: "none",
-					not_found_handling: "404-page",
-				},
-			});
-			await mockAUSRequest();
-			mockSubDomainRequest();
-			mockUploadWorkerRequest({
-				expectedAssets: {
-					jwt: "<<aus-completion-token>>",
-					config: {
-						html_handling: "none",
-						not_found_handling: "404-page",
-					},
-				},
-				expectedBindings: [{ name: "ASSETS", type: "assets" }],
-				expectedMainModule: "index.js",
-				expectedCompatibilityDate: "2024-09-27",
-				expectedCompatibilityFlags: ["nodejs_compat"],
-			});
-			await runWrangler("deploy");
-		});
-
-		it("serve_directly provided if set to true", async () => {
+		it("experimental_serve_directly=true maps run_worker_first=false", async () => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
@@ -5454,7 +5540,81 @@ addEventListener('fetch', event => {});`
 					config: {
 						html_handling: "none",
 						not_found_handling: "404-page",
-						serve_directly: true,
+						run_worker_first: false,
+					},
+				},
+				expectedBindings: [{ name: "ASSETS", type: "assets" }],
+				expectedMainModule: "index.js",
+				expectedCompatibilityDate: "2024-09-27",
+				expectedCompatibilityFlags: ["nodejs_compat"],
+			});
+			await runWrangler("deploy");
+		});
+
+		it("run_worker_first provided when in config", async () => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
+			];
+			writeAssets(assets);
+			writeWorkerSource({ format: "js" });
+			writeWranglerConfig({
+				main: "index.js",
+				compatibility_date: "2024-09-27",
+				compatibility_flags: ["nodejs_compat"],
+				assets: {
+					directory: "assets",
+					binding: "ASSETS",
+					html_handling: "none",
+					not_found_handling: "404-page",
+					run_worker_first: true,
+				},
+			});
+			await mockAUSRequest();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {
+						html_handling: "none",
+						not_found_handling: "404-page",
+						run_worker_first: true,
+					},
+				},
+				expectedBindings: [{ name: "ASSETS", type: "assets" }],
+				expectedMainModule: "index.js",
+				expectedCompatibilityDate: "2024-09-27",
+				expectedCompatibilityFlags: ["nodejs_compat"],
+			});
+			await runWrangler("deploy");
+		});
+
+		it("run_worker_first omitted when not provided in config", async () => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
+			];
+			writeAssets(assets);
+			writeWorkerSource({ format: "js" });
+			writeWranglerConfig({
+				main: "index.js",
+				compatibility_date: "2024-09-27",
+				compatibility_flags: ["nodejs_compat"],
+				assets: {
+					directory: "assets",
+					binding: "ASSETS",
+					html_handling: "none",
+					not_found_handling: "404-page",
+				},
+			});
+			await mockAUSRequest();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {
+						html_handling: "none",
+						not_found_handling: "404-page",
 					},
 				},
 				expectedBindings: [{ name: "ASSETS", type: "assets" }],

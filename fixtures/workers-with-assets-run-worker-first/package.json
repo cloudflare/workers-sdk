@@ -1,5 +1,5 @@
 {
-	"name": "workers-assets-with-user-worker-serve-directly",
+	"name": "workers-assets-with-user-worker-run-worker-first",
 	"private": true,
 	"scripts": {
 		"check:type": "tsc",

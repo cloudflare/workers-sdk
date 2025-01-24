@@ -22,6 +22,7 @@ export const AssetConfigSchema = z.object({
 		.enum(["single-page-application", "404-page", "none"])
 		.optional(),
 	serve_directly: z.boolean().optional(),
+	run_worker_first: z.boolean().optional(),
 });
 
 export const InternalConfigSchema = z.object({

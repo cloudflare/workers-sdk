@@ -193,10 +193,10 @@ export const validateRoutes = (routes: Route[], assets?: AssetsOptions) => {
 					`Paths are not allowed in Custom Domains`
 				);
 			}
-			// If we have Assets but we're not always hitting the Worker then validate
 		} else if (
+			// If we have Assets but we're not always hitting the Worker then validate
 			assets?.directory !== undefined &&
-			assets.assetConfig.serve_directly !== true
+			assets.assetConfig.run_worker_first !== true
 		) {
 			const pattern = typeof route === "string" ? route : route.pattern;
 			const components = pattern.split("/");

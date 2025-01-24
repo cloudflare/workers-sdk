@@ -490,7 +490,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 		);
 		expect(text).toContain("<h1>404.html</h1>");
 	});
-	it("runs user worker ahead of matching assets when serve_directly = false", async () => {
+	it("runs user worker ahead of matching assets when run_worker_first = true", async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
 						name = "${workerName}"
@@ -501,7 +501,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 						binding = "ASSETS"
 						html_handling = "none"
 						not_found_handling = "404-page"
-						experimental_serve_directly = false
+						run_worker_first = true
 				`,
 			"src/index.ts": dedent`
 						export default {

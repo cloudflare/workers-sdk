@@ -193,10 +193,17 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		observability,
 	} = worker;
 
+	let runWorkerFirst = undefined;
+	if (assets?.assetConfig?.run_worker_first !== undefined) {
+		runWorkerFirst = assets.assetConfig?.run_worker_first;
+	} else if (assets?.assetConfig?.serve_directly !== undefined) {
+		runWorkerFirst = !assets?.assetConfig?.serve_directly;
+	}
+
 	const assetConfig = {
 		html_handling: assets?.assetConfig?.html_handling,
 		not_found_handling: assets?.assetConfig?.not_found_handling,
-		serve_directly: assets?.assetConfig?.serve_directly,
+		run_worker_first: runWorkerFirst,
 	};
 
 	// short circuit if static assets upload only
