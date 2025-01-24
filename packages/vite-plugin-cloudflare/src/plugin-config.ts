@@ -47,7 +47,7 @@ export interface WorkerConfig extends BaseConfig {
 interface BasePluginConfig {
 	configPaths: Set<string>;
 	persistState: PersistState;
-	cloudflareEnv?: string;
+	cloudflareEnv: string | undefined;
 }
 
 interface AssetsOnlyPluginConfig extends BasePluginConfig {
