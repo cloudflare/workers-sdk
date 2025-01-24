@@ -82,7 +82,7 @@ export class HomeViewProvider implements vscode.WebviewViewProvider {
 				<h3>🚀 Get started</h3>
 				<p>To get started with a template, run:</p>
 				<p class="code-wrapper"><code>npm create cloudflare@latest</code></p>
-				<pTo develop your project locally, run:</p>
+				<p>To develop your project locally, run:</p>
 				<p class="code-wrapper"><code>npx wrangler dev</code></p>
 				<p>When you're ready to deploy, run:</p>
 				<p class="code-wrapper"><code>npx wrangler deploy</code></p>
