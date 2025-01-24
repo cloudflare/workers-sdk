@@ -1,5 +1,6 @@
 import assert from "node:assert";
 
+
 // List all the test functions.
 // The test can be executing by fetching the `/${testName}` url.
 export const TESTS = {
@@ -153,6 +154,9 @@ async function testTimers() {
 	// active is deprecated and no more in the type
 	(timers as any).active(timeout);
 	timers.clearTimeout(timeout);
+
+	const timersPromises = await import("node:timers/promises");
+	assert.strictEqual(await timersPromises.setTimeout(1, "timeout"), "timeout");
 }
 
 export async function testNet() {
