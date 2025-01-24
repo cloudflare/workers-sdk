@@ -1,8 +1,13 @@
 import { PerformanceTimer } from "../../utils/performance";
 import { setupSentry } from "../../utils/sentry";
+import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics, DISPATCH_TYPE } from "./analytics";
 import type AssetWorker from "../../asset-worker/src/index";
-import type { RoutingConfig, UnsafePerformanceTimer } from "../../utils/types";
+import type {
+	JaegerTracing,
+	RoutingConfig,
+	UnsafePerformanceTimer,
+} from "../../utils/types";
 import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
 
 interface Env {
@@ -16,6 +21,7 @@ interface Env {
 	COLO_METADATA: ColoMetadata;
 	UNSAFE_PERFORMANCE: UnsafePerformanceTimer;
 	VERSION_METADATA: WorkerVersionMetadata;
+	JAEGER: JaegerTracing;
 
 	SENTRY_ACCESS_CLIENT_ID: string;
 	SENTRY_ACCESS_CLIENT_SECRET: string;
@@ -29,6 +35,10 @@ export default {
 		const startTimeMs = performance.now();
 
 		try {
+			if (!env.JAEGER) {
+				env.JAEGER = mockJaegerBinding();
+			}
+
 			sentry = setupSentry(
 				request,
 				ctx,
@@ -63,27 +73,48 @@ export default {
 			// User's configuration indicates they want user-Worker to run ahead of any
 			// assets. Do not provide any fallback logic.
 			if (env.CONFIG.invoke_user_worker_ahead_of_assets) {
-				if (!env.CONFIG.has_user_worker) {
-					throw new Error(
-						"Fetch for user worker without having a user worker binding"
-					);
-				}
-				return env.USER_WORKER.fetch(maybeSecondRequest);
+				return env.JAEGER.enterSpan("invoke_user_worker_first", async () => {
+					if (!env.CONFIG.has_user_worker) {
+						throw new Error(
+							"Fetch for user worker without having a user worker binding"
+						);
+					}
+					return env.USER_WORKER.fetch(maybeSecondRequest);
+				});
 			}
 
 			// Otherwise, we try to first fetch assets, falling back to user-Worker.
 			if (env.CONFIG.has_user_worker) {
-				if (await env.ASSET_WORKER.unstable_canFetch(request)) {
-					analytics.setData({ dispatchtype: DISPATCH_TYPE.ASSETS });
-					return env.ASSET_WORKER.fetch(maybeSecondRequest);
-				} else {
-					analytics.setData({ dispatchtype: DISPATCH_TYPE.WORKER });
-					return env.USER_WORKER.fetch(maybeSecondRequest);
-				}
+				return env.JAEGER.enterSpan("has_user_worker", async (span) => {
+					if (await env.ASSET_WORKER.unstable_canFetch(request)) {
+						span.setTags({
+							asset: true,
+							dispatchType: DISPATCH_TYPE.ASSETS,
+						});
+
+						analytics.setData({ dispatchtype: DISPATCH_TYPE.ASSETS });
+						return env.ASSET_WORKER.fetch(maybeSecondRequest);
+					} else {
+						span.setTags({
+							asset: false,
+							dispatchType: DISPATCH_TYPE.WORKER,
+						});
+
+						analytics.setData({ dispatchtype: DISPATCH_TYPE.WORKER });
+						return env.USER_WORKER.fetch(maybeSecondRequest);
+					}
+				});
 			}
 
-			analytics.setData({ dispatchtype: DISPATCH_TYPE.ASSETS });
-			return env.ASSET_WORKER.fetch(request);
+			return env.JAEGER.enterSpan("assets_only", async (span) => {
+				span.setTags({
+					asset: true,
+					dispatchType: DISPATCH_TYPE.ASSETS,
+				});
+
+				analytics.setData({ dispatchtype: DISPATCH_TYPE.ASSETS });
+				return env.ASSET_WORKER.fetch(request);
+			});
 		} catch (err) {
 			if (err instanceof Error) {
 				analytics.setData({ error: err.message });
