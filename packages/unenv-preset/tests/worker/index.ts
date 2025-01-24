@@ -1,6 +1,5 @@
 import assert from "node:assert";
 
-
 // List all the test functions.
 // The test can be executing by fetching the `/${testName}` url.
 export const TESTS = {
