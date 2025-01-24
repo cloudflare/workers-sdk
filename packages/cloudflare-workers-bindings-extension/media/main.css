@@ -78,8 +78,7 @@ button.secondary:hover {
 }
 
 .code-wrapper {
-	text-align: center;
-	margin: 0.8rem auto;
+	margin: -0.25rem auto 0.8rem 1rem;
 }
 
 code {
@@ -92,4 +91,8 @@ h3 {
 
 .cf-logo {
 	margin-bottom: -2px;
+}
+
+.binding-heading {
+	margin-top: 1.4rem;
 }
