@@ -21,11 +21,11 @@ export async function retryOnAPIFailure<T>(
 	try {
 		return await action();
 	} catch (err) {
-		if (
-			err instanceof APIError &&
-			!err.isRetryable() &&
-			!(err instanceof TypeError)
-		) {
+		if (err instanceof APIError) {
+			if (!err.isRetryable()) {
+				throw err;
+			}
+		} else if (!(err instanceof TypeError)) {
 			throw err;
 		}
 

@@ -50,6 +50,18 @@ describe("retryOnAPIFailure", () => {
 		expect(attempts).toBe(3);
 	});
 
+	it("should not retry other errors", async () => {
+		let attempts = 0;
+
+		await expect(() =>
+			retryOnAPIFailure(() => {
+				attempts++;
+				throw new Error("some error");
+			})
+		).rejects.toMatchInlineSnapshot(`[Error: some error]`);
+		expect(attempts).toBe(1);
+	});
+
 	it("should retry custom APIError implementation with non-5xx error", async () => {
 		let checkedCustomIsRetryable = false;
 		class CustomAPIError extends APIError {
