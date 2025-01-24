@@ -31,7 +31,7 @@
 		"dev:codemod": "node -r esbuild-register scripts/codemodDev.ts",
 		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc",
-		"prepublishOnly": "pnpm -w run build",
+		"prepublishOnly": "pnpm exec turbo build -F create-cloudflare",
 		"test:e2e": "vitest run --config ./vitest-e2e.config.mts",
 		"test:e2e:npm": "pnpm run build && cross-env TEST_PM=npm vitest run --config ./vitest-e2e.config.mts",
 		"test:e2e:pnpm": "pnpm run build && cross-env TEST_PM=pnpm vitest run --config ./vitest-e2e.config.mts",
