@@ -158,7 +158,7 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 			.option("partition-template", {
 				type: "string",
 				describe: "Path template for partitioned files in the bucket",
-				default: "event_date=${date}/hr=${hr}",
+				default: "event_date=${date}/hr=${hour}",
 				demandOption: false,
 			})
 			.option("file-template", {
