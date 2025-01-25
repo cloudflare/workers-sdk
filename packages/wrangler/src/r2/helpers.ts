@@ -1196,7 +1196,9 @@ export async function deleteCORSPolicy(
  * R2 bucket names must only contain alphanumeric and - characters.
  */
 export function isValidR2BucketName(name: string | undefined): name is string {
-	return typeof name === "string" && /^[a-zA-Z][a-zA-Z0-9-]*$/.test(name);
+	return (
+		typeof name === "string" && /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(name)
+	);
 }
 
 const CHUNK_SIZE = 1024;
