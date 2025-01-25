@@ -87,9 +87,7 @@ async function runLongLivedWrangler(
 		chunks.push(chunk);
 	});
 	wranglerProcess.stderr?.on("data", (chunk) => {
-		if (process.env.WRANGLER_LOG === "debug") {
-			console.log(`[${command}]`, chunk.toString());
-		}
+		console.log(`[${command}]`, chunk.toString());
 		chunks.push(chunk);
 	});
 	const getOutput = () => Buffer.concat(chunks).toString();
