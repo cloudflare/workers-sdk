@@ -5,7 +5,7 @@ import assert from "node:assert";
 export const TESTS = {
 	testCryptoGetRandomValues,
 	testImplementsBuffer,
-	testModules,
+	testNodeCompatModules,
 	testUtilImplements,
 	testPath,
 	testDns,
@@ -75,7 +75,7 @@ async function testImplementsBuffer() {
 	assert.strictEqual(typeof buffer.resolveObjectURL, "function");
 }
 
-async function testModules() {
+async function testNodeCompatModules() {
 	const module = await import("node:module");
 	// @ts-expect-error exposed by workerd
 	const require = module.createRequire("/");

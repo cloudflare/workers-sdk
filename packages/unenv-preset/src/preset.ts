@@ -2,10 +2,14 @@ import { version } from "../package.json";
 import type { Preset } from "unenv";
 
 // Built-in APIs provided by workerd.
+//
 // https://developers.cloudflare.com/workers/runtime-apis/nodejs/
 // https://github.com/cloudflare/workerd/tree/main/src/node
+//
 // Last checked: 2025-01-24
-const cloudflareNodeCompatModules = [
+//
+// NOTE: Please sync any changes to `testNodeCompatModules`.
+const nodeCompatModules = [
 	"_stream_duplex",
 	"_stream_passthrough",
 	"_stream_readable",
@@ -53,7 +57,7 @@ export const cloudflare: Preset = {
 	},
 	alias: {
 		...Object.fromEntries(
-			cloudflareNodeCompatModules.flatMap((p) => [
+			nodeCompatModules.flatMap((p) => [
 				[p, p],
 				[`node:${p}`, `node:${p}`],
 			])
@@ -92,5 +96,5 @@ export const cloudflare: Preset = {
 		],
 	},
 	polyfill: [],
-	external: cloudflareNodeCompatModules.flatMap((p) => [p, `node:${p}`]),
+	external: nodeCompatModules.flatMap((p) => [p, `node:${p}`]),
 };
