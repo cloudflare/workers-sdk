@@ -218,8 +218,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
 
 			config.no_bundle = true;
 			config.rules = [{ type: "ESModule", globs: ["**/*.js"] }];
-			// Setting this to `undefined` for now because `readConfig` will error when reading the output file if it's set to an empty object. This needs to be fixed in Wrangler.
-			config.unsafe = undefined;
+			// Set to `undefined` if it's an empty object because `readConfig` will error when reading the output file if it's set to an empty object. This needs to be fixed in Wrangler.
+			if (config.unsafe && Object.keys(config.unsafe).length === 0) {
+				config.unsafe = undefined;
+			}
 
 			this.emitFile({
 				type: "asset",
