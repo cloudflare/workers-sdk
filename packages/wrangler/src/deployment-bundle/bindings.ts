@@ -88,7 +88,9 @@ abstract class ProvisionResourceHandler<
 		public accountId: string
 	) {}
 
-	abstract alreadyPresent(
+	// Does this resource already exist in the currently deployed version of the Worker?
+	// If it does, that means we can inherit from it.
+	abstract canInherit(
 		settings: Settings | undefined
 	): boolean | Promise<boolean>;
 
@@ -119,19 +121,25 @@ abstract class ProvisionResourceHandler<
 	// Does this binding need to be provisioned?
 	// Some bindings are not fully specified, but don't need provisioning
 	// (e.g. R2 binding, with a bucket_name that already exists)
-	// This
 	async isConnectedToExistingResource(): Promise<boolean | string> {
 		return false;
 	}
 
+	// Should this resource be provisioned?
 	async shouldProvision(settings: Settings | undefined) {
+		// If the resource is fully specified, don't provision
 		if (!this.isFullySpecified()) {
-			if (await this.alreadyPresent(settings)) {
+			// If we can inherit, do that and don't provision
+			if (await this.canInherit(settings)) {
 				this.inherit();
 			} else {
+				// If the resource is connected to a remote resource that _exists_
+				// (see comments on the individual functions for why this is different to isFullySpecified())
 				const connected = await this.isConnectedToExistingResource();
 				if (connected) {
 					if (typeof connected === "string") {
+						// Basically a special case for D1: the resource is specified by name in config
+						// and exists, but needs to be specified by ID for the first deploy to work
 						this.connect(connected);
 					}
 					return false;
@@ -139,6 +147,7 @@ abstract class ProvisionResourceHandler<
 				return true;
 			}
 		}
+		return false;
 	}
 }
 
@@ -158,7 +167,7 @@ class R2Handler extends ProvisionResourceHandler<"r2_bucket", CfR2Bucket> {
 	constructor(binding: CfR2Bucket, accountId: string) {
 		super("r2_bucket", binding, "bucket_name", accountId);
 	}
-	alreadyPresent(settings: Settings | undefined): boolean {
+	canInherit(settings: Settings | undefined): boolean {
 		return !!settings?.bindings.find(
 			(existing) =>
 				existing.type === this.type &&
@@ -206,7 +215,7 @@ class KVHandler extends ProvisionResourceHandler<
 	constructor(binding: CfKvNamespace, accountId: string) {
 		super("kv_namespace", binding, "id", accountId);
 	}
-	alreadyPresent(settings: Settings | undefined): boolean {
+	canInherit(settings: Settings | undefined): boolean {
 		return !!settings?.bindings.find(
 			(existing) =>
 				existing.type === this.type && existing.name === this.binding.binding
@@ -228,7 +237,7 @@ class D1Handler extends ProvisionResourceHandler<"d1", CfD1Database> {
 	constructor(binding: CfD1Database, accountId: string) {
 		super("d1", binding, "database_id", accountId);
 	}
-	async alreadyPresent(settings: Settings | undefined): Promise<boolean> {
+	async canInherit(settings: Settings | undefined): Promise<boolean> {
 		const maybeInherited = settings?.bindings.find(
 			(existing) =>
 				existing.type === this.type && existing.name === this.binding.binding
