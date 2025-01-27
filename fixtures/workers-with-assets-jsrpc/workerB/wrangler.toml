@@ -7,6 +7,6 @@ compatibility_date = "2025-01-01"
 # service = "worker-a"
 # entrypoint = "WorkerA"
 
-[[services]]
-binding = "WORKER_A_FETCHER"
-service = "worker-a"
+# [[services]]
+# binding = "WORKER_A_FETCHER"
+# service = "worker-a"
