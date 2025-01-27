@@ -13,7 +13,7 @@ import type { RequestInfo, RequestInit, Response } from "undici";
 
 export interface Unstable_DevOptions {
 	config?: string; // Path to .toml configuration file, relative to cwd
-	env?: string; // Environment to use for operations and .env files
+	env?: string; // Environment to use for operations, and for selecting .env and .dev.vars files
 	ip?: string; // IP address to listen on
 	port?: number; // Port to listen on
 	bundle?: boolean; // Set to false to skip internal build steps and directly deploy script
