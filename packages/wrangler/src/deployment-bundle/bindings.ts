@@ -457,7 +457,7 @@ async function runProvisioningFlow(
 	const NEW_OPTION_VALUE = "__WRANGLER_INTERNAL_NEW";
 	const SEARCH_OPTION_VALUE = "__WRANGLER_INTERNAL_SEARCH";
 	const MAX_OPTIONS = 4;
-	// NB preExisting does not actually contain all resources on the account - we max out at ~100
+	// NB preExisting does not actually contain all resources on the account - we max out at ~30 d1 databases, ~100 kv, and ~20 r2.
 	const options = preExisting.slice(0, MAX_OPTIONS - 1);
 	if (options.length < preExisting.length) {
 		options.push({
