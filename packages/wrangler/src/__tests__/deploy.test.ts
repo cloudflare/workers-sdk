@@ -9786,7 +9786,7 @@ addEventListener('fetch', event => {});`
 					)
 				)
 			).resolves.toMatchInlineSnapshot(`
-				"X [ERROR] Unexpected external import of \\"node:events\\", \\"node:net\\", \\"node:stream\\", \\"node:timers/promises\\", and \\"node:tty\\".
+				"X [ERROR] Unexpected external import of \\"node:net\\", \\"node:stream\\", \\"node:timers/promises\\", and \\"node:tty\\".
 				Your worker has no default export, which means it is assumed to be a Service Worker format Worker.
 				Did you mean to create a ES Module format Worker?
 				If so, try adding \`export default { ... }\` in your entry-point.

@@ -2505,8 +2505,8 @@ importers:
         specifier: 6.3.0
         version: 6.3.0
       unenv:
-        specifier: 2.0.0-rc.0
-        version: 2.0.0-rc.0
+        specifier: 2.0.0-rc.1
+        version: 2.0.0-rc.1
       workerd:
         specifier: 1.20250124.0
         version: 1.20250124.0
