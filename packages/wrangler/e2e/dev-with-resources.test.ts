@@ -580,6 +580,35 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		);
 	});
 
+	it.skipIf(isLocal)("exposes Hyperdrive bindings", async () => {
+		const { id } = await helper.hyperdrive(isLocal);
+
+		await helper.seed({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-10-25"
+
+					[[hyperdrive]]
+					binding = "HYPERDRIVE"
+					id = "${id}"
+			`,
+			"src/index.ts": dedent`
+					export default {
+						async fetch(request, env) {
+							if (request.url.includes("connect")) {
+								const conn = env.HYPERDRIVE.connect();
+							}
+							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
+						}
+					}`,
+		});
+
+		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const { url } = await worker.waitForReady();
+		await fetch(`${url}/connect`);
+	});
+
 	it.skipIf(!isLocal).fails("exposes Pipelines bindings", async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
@@ -692,7 +721,6 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 	});
 
 	// TODO(soon): implement E2E tests for other bindings
-	it.todo("exposes hyperdrive bindings");
 	it.skipIf(isLocal).todo("exposes send email bindings");
 	it.skipIf(isLocal).todo("exposes browser bindings");
 	it.skipIf(isLocal).todo("exposes Workers AI bindings");
