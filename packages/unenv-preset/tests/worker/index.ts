@@ -5,11 +5,12 @@ import assert from "node:assert";
 export const TESTS = {
 	testCryptoGetRandomValues,
 	testImplementsBuffer,
-	testModules,
+	testNodeCompatModules,
 	testUtilImplements,
 	testPath,
 	testDns,
 	testTimers,
+	testNet,
 };
 
 export default {
@@ -74,7 +75,7 @@ async function testImplementsBuffer() {
 	assert.strictEqual(typeof buffer.resolveObjectURL, "function");
 }
 
-async function testModules() {
+async function testNodeCompatModules() {
 	const module = await import("node:module");
 	// @ts-expect-error exposed by workerd
 	const require = module.createRequire("/");
@@ -86,6 +87,7 @@ async function testModules() {
 		"dns",
 		"dns/promises",
 		"events",
+		"net",
 		"path",
 		"path/posix",
 		"path/win32",
@@ -95,6 +97,8 @@ async function testModules() {
 		"stream/promises",
 		"stream/web",
 		"string_decoder",
+		"timers",
+		"timers/promises",
 		"url",
 		"util/types",
 		"zlib",
@@ -149,4 +153,14 @@ async function testTimers() {
 	// active is deprecated and no more in the type
 	(timers as any).active(timeout);
 	timers.clearTimeout(timeout);
+
+	const timersPromises = await import("node:timers/promises");
+	assert.strictEqual(await timersPromises.setTimeout(1, "timeout"), "timeout");
+}
+
+export async function testNet() {
+	const net = await import("node:net");
+	assert.strictEqual(typeof net, "object");
+	assert.strictEqual(typeof net.createConnection, "function");
+	assert.throws(() => net.createServer(), /not implemented/);
 }
