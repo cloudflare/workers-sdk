@@ -86,7 +86,7 @@ export function resolvePluginConfig(
 	const { CLOUDFLARE_ENV: cloudflareEnv } = vite.loadEnv(
 		viteEnv.mode,
 		root,
-		""
+		/* prefixes */ ""
 	);
 
 	const configPath = pluginConfig.configPath
