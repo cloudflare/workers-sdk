@@ -673,7 +673,8 @@ describe.concurrent(
 						const wranglerPath = join(project.path, "node_modules/wrangler");
 						expect(wranglerPath).toExist();
 
-						await addTestVarsToWranglerToml(project.path);
+						assertEitherTomlOrJson(project.path);
+						await addTestVarsToWranglerConfig(project.path);
 
 						// Make a request to the deployed project and verify it was successful
 						await verifyDeployment(
@@ -765,12 +766,12 @@ const runCli = async (
 };
 
 /**
- * Either update or create a wrangler.toml to include a `TEST` var.
+ * Either update or create a wrangler config file to include a `TEST` var.
  *
- * This is rather than having a wrangler.toml in the e2e test's fixture folder,
+ * This is rather than having a wrangler config file in the e2e test's fixture folder,
  * which overwrites any that comes from the framework's template.
  */
-const addTestVarsToWranglerToml = async (projectPath: string) => {
+const addTestVarsToWranglerConfig = async (projectPath: string) => {
 	const wranglerTomlPath = join(projectPath, "wrangler.toml");
 	const wranglerJsonPath = join(projectPath, "wrangler.json");
 	if (existsSync(wranglerTomlPath)) {
@@ -787,6 +788,18 @@ const addTestVarsToWranglerToml = async (projectPath: string) => {
 		wranglerJson.vars.TEST = "C3_TEST";
 
 		writeJSON(wranglerJsonPath, wranglerJson);
+	}
+};
+
+const assertEitherTomlOrJson = (projectPath: string) => {
+	const wranglerTomlPath = join(projectPath, "wrangler.toml");
+	const wranglerJsonPath = join(projectPath, "wrangler.json");
+
+	if (existsSync(wranglerTomlPath) && existsSync(wranglerJsonPath)) {
+		expect(
+			false,
+			"Either wrangler.toml or wrangler.json should exist, but not both",
+		).toBe(true);
 	}
 };
 
