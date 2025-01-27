@@ -222,6 +222,10 @@ function tryLoadDotEnv(basePath: string): DotEnv | undefined {
 /**
  * Loads a dotenv file from `envPath`, preferring to read `${envPath}.${env}` if
  * `env` is defined and that file exists.
+ *
+ * Note: The `getDotDevDotVarsContent` function in the `packages/vite-plugin-cloudflare/src/index.ts` file
+ *       follows the same logic implemented here, the two need to be kept in sync, so if you modify some logic
+ *       here make sure that, if applicable, the same change is reflected there
  */
 export function loadDotEnv(envPath: string, env?: string): DotEnv | undefined {
 	if (env === undefined) {
