@@ -10,7 +10,7 @@ import {
 	PerformanceObserverEntryList,
 	PerformanceResourceTiming,
 	performance as unenvPerformance,
-} from "unenv/runtime/node/perf_hooks/index";
+} from "unenv/runtime/node/perf_hooks";
 import type nodePerfHooks from "node:perf_hooks";
 
 export {
@@ -24,7 +24,7 @@ export {
 	constants,
 	createHistogram,
 	monitorEventLoopDelay,
-} from "unenv/runtime/node/perf_hooks/index";
+} from "unenv/runtime/node/perf_hooks";
 
 // The following is an unusual way to access the original/unpatched globalThis.performance.
 // This is needed to get hold of the real performance object before any of the unenv polyfills are

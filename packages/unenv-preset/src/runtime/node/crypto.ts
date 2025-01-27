@@ -27,7 +27,7 @@ import {
 	webcrypto as unenvCryptoWebcrypto,
 	Verify,
 	verify,
-} from "unenv/runtime/node/crypto/index";
+} from "unenv/runtime/node/crypto";
 import type nodeCrypto from "node:crypto";
 
 export {
@@ -53,7 +53,7 @@ export {
 	publicEncrypt,
 	sign,
 	verify,
-} from "unenv/runtime/node/crypto/index";
+} from "unenv/runtime/node/crypto";
 
 const workerdCrypto = process.getBuiltinModule("node:crypto");
 

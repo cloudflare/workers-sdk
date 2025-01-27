@@ -25,7 +25,7 @@ import {
 	SourceMap,
 	syncBuiltinESMExports,
 	wrap,
-} from "unenv/runtime/node/module/index";
+} from "unenv/runtime/node/module";
 import type nodeModule from "node:module";
 
 export {
@@ -53,7 +53,7 @@ export {
 	runMain,
 	syncBuiltinESMExports,
 	wrap,
-} from "unenv/runtime/node/module/index";
+} from "unenv/runtime/node/module";
 
 const workerdModule = process.getBuiltinModule("node:module");
 

@@ -20,7 +20,7 @@ import {
 	isUndefined,
 	parseEnv,
 	styleText,
-} from "unenv/runtime/node/util/index";
+} from "unenv/runtime/node/util";
 import type nodeUtil from "node:util";
 
 export {
@@ -44,7 +44,7 @@ export {
 	isUndefined,
 	parseEnv,
 	styleText,
-} from "unenv/runtime/node/util/index";
+} from "unenv/runtime/node/util";
 
 const workerdUtil = process.getBuiltinModule("node:util");
 

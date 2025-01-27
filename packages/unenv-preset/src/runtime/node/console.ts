@@ -6,7 +6,7 @@ import {
 	_stdoutErrorHandler,
 	_times,
 	Console,
-} from "unenv/runtime/node/console/index";
+} from "unenv/runtime/node/console";
 import type nodeConsole from "node:console";
 
 export {
@@ -17,7 +17,7 @@ export {
 	_stdout,
 	_stdoutErrorHandler,
 	_times,
-} from "unenv/runtime/node/console/index";
+} from "unenv/runtime/node/console";
 
 // The following is an unusual way to access the original/unpatched globalThis.console.
 // This is needed to get hold of the real console object before any of the unenv polyfills are
