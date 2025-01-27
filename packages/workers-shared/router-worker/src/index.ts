@@ -30,6 +30,7 @@ interface Env {
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext) {
 		let sentry: ReturnType<typeof setupSentry> | undefined;
+		let userWorkerInvocation = false;
 		const analytics = new Analytics(env.ANALYTICS);
 		const performance = new PerformanceTimer(env.UNSAFE_PERFORMANCE);
 		const startTimeMs = performance.now();
@@ -73,50 +74,59 @@ export default {
 			// User's configuration indicates they want user-Worker to run ahead of any
 			// assets. Do not provide any fallback logic.
 			if (env.CONFIG.invoke_user_worker_ahead_of_assets) {
-				return env.JAEGER.enterSpan("invoke_user_worker_first", async () => {
-					if (!env.CONFIG.has_user_worker) {
-						throw new Error(
-							"Fetch for user worker without having a user worker binding"
-						);
-					}
+				if (!env.CONFIG.has_user_worker) {
+					throw new Error(
+						"Fetch for user worker without having a user worker binding"
+					);
+				}
+
+				analytics.setData({ dispatchtype: DISPATCH_TYPE.WORKER });
+				return await env.JAEGER.enterSpan("dispatch_worker", async (span) => {
+					span.setTags({
+						hasUserWorker: true,
+						asset: "ignored",
+						dispatchType: DISPATCH_TYPE.WORKER,
+					});
+
+					userWorkerInvocation = true;
 					return env.USER_WORKER.fetch(maybeSecondRequest);
 				});
 			}
 
-			// Otherwise, we try to first fetch assets, falling back to user-Worker.
-			if (env.CONFIG.has_user_worker) {
-				return env.JAEGER.enterSpan("has_user_worker", async (span) => {
-					if (await env.ASSET_WORKER.unstable_canFetch(request)) {
-						span.setTags({
-							asset: true,
-							dispatchType: DISPATCH_TYPE.ASSETS,
-						});
+			// If we have a user-Worker, but no assets, dispatch to Worker script
+			const assetsExist = await env.ASSET_WORKER.unstable_canFetch(request);
+			if (env.CONFIG.has_user_worker && !assetsExist) {
+				analytics.setData({ dispatchtype: DISPATCH_TYPE.WORKER });
 
-						analytics.setData({ dispatchtype: DISPATCH_TYPE.ASSETS });
-						return env.ASSET_WORKER.fetch(maybeSecondRequest);
-					} else {
-						span.setTags({
-							asset: false,
-							dispatchType: DISPATCH_TYPE.WORKER,
-						});
+				return await env.JAEGER.enterSpan("dispatch_worker", async (span) => {
+					span.setTags({
+						hasUserWorker: env.CONFIG.has_user_worker || false,
+						asset: assetsExist,
+						dispatchType: DISPATCH_TYPE.WORKER,
+					});
 
-						analytics.setData({ dispatchtype: DISPATCH_TYPE.WORKER });
-						return env.USER_WORKER.fetch(maybeSecondRequest);
-					}
+					userWorkerInvocation = true;
+					return env.USER_WORKER.fetch(maybeSecondRequest);
 				});
 			}
 
-			return env.JAEGER.enterSpan("assets_only", async (span) => {
+			// Otherwise, we either don't have a user worker, OR we have matching assets and should fetch from the assets binding
+			analytics.setData({ dispatchtype: DISPATCH_TYPE.ASSETS });
+			return await env.JAEGER.enterSpan("dispatch_assets", async (span) => {
 				span.setTags({
-					asset: true,
+					hasUserWorker: env.CONFIG.has_user_worker || false,
+					asset: assetsExist,
 					dispatchType: DISPATCH_TYPE.ASSETS,
 				});
 
-				analytics.setData({ dispatchtype: DISPATCH_TYPE.ASSETS });
-				return env.ASSET_WORKER.fetch(request);
+				return env.ASSET_WORKER.fetch(maybeSecondRequest);
 			});
 		} catch (err) {
-			if (err instanceof Error) {
+			if (userWorkerInvocation) {
+				// Don't send user Worker errors to sentry; we have no way to distinguish between
+				// CF errors and errors from the user's code.
+				return;
+			} else if (err instanceof Error) {
 				analytics.setData({ error: err.message });
 			}
 
