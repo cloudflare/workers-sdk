@@ -94,7 +94,7 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 			.option("transform-worker", {
 				type: "string",
 				describe:
-					"PipelineTransform worker and entrypoint (<worker>.<entrypoint>)",
+					"Pipeline transform Worker and entrypoint (<worker>.<entrypoint>)",
 				demandOption: false,
 			})
 
@@ -281,16 +281,16 @@ export async function createPipelineHandler(
 		pipelineConfig.destination.path.filename = args.fileTemplate;
 	}
 
-	logger.log(`🌀 Creating pipeline named "${name}"`);
+	logger.log(`🌀 Creating Pipeline named "${name}"`);
 	const pipeline = await createPipeline(accountId, pipelineConfig);
 	metrics.sendMetricsEvent("create pipeline", {
 		sendMetrics: config.send_metrics,
 	});
 
 	logger.log(
-		`✅ Successfully created pipeline "${pipeline.name}" with id ${pipeline.id}`
+		`✅ Successfully created Pipeline "${pipeline.name}" with id ${pipeline.id}`
 	);
-	logger.log("🎉 You can now send data to your pipeline!");
+	logger.log("🎉 You can now send data to your Pipeline!");
 	if (args.enableWorkerBinding) {
 		logger.log(
 			`\nTo start interacting with this Pipeline from a Worker, open your Worker’s config file and add the following binding configuration:\n`
@@ -310,7 +310,7 @@ export async function createPipelineHandler(
 		);
 	}
 	if (args.enableHttp) {
-		logger.log(`\nSend data to your pipelines HTTP endpoint:\n`);
+		logger.log(`\nSend data to your Pipeline's HTTP endpoint:\n`);
 		logger.log(`	curl "${pipeline.endpoint}" -d '[{"foo": "bar"}]'\n`);
 	}
 }

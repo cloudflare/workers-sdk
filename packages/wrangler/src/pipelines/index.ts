@@ -122,31 +122,31 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 	return pipelineYargs
 		.command(
 			"create <pipeline>",
-			"Create a new pipeline",
+			"Create a new Pipeline",
 			addCreateOptions,
 			createPipelineHandler
 		)
 		.command(
 			"list",
-			"List current pipelines",
+			"List current Pipelines",
 			(yargs) => yargs,
 			listPipelinesHandler
 		)
 		.command(
 			"show <pipeline>",
-			"Show a pipeline configuration",
+			"Show a Pipeline configuration",
 			addShowOptions,
 			showPipelineHandler
 		)
 		.command(
 			"update <pipeline>",
-			"Update a pipeline",
+			"Update a Pipeline",
 			addUpdateOptions,
 			updatePipelineHandler
 		)
 		.command(
 			"delete <pipeline>",
-			"Delete a pipeline",
+			"Delete a Pipeline",
 			addDeleteOptions,
 			deletePipelineHandler
 		);

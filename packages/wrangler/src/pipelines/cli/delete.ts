@@ -14,7 +14,7 @@ import type { Argv } from "yargs";
 export function addDeleteOptions(yargs: Argv<CommonYargsOptions>) {
 	return yargs.positional("pipeline", {
 		type: "string",
-		describe: "The name of the pipeline to show",
+		describe: "The name of the Pipeline to show",
 		demandOption: true,
 	});
 }
@@ -29,9 +29,9 @@ export async function deletePipelineHandler(
 
 	validateName("pipeline name", name);
 
-	logger.log(`Deleting pipeline ${name}.`);
+	logger.log(`Deleting Pipeline ${name}.`);
 	await deletePipeline(accountId, name);
-	logger.log(`Deleted pipeline ${name}.`);
+	logger.log(`Deleted Pipeline ${name}.`);
 	metrics.sendMetricsEvent("delete pipeline", {
 		sendMetrics: config.send_metrics,
 	});

@@ -2,7 +2,7 @@
 "wrangler": minor
 ---
 
-Rename wrangler pipelines <create|update> flags, add `--cors-origins` flag
+Rename wrangler pipelines <create|update> flags
 
 The following parameters have been renamed:
 
@@ -18,9 +18,3 @@ The following parameters have been renamed:
 | authentication    | require-http-auth     |
 | filename          | file-template         |
 | filepath          | partition-template    |
-
-Adds the following new option for `create` and `update` commands:
-
-```
---cors-origins           CORS origin allowlist for HTTP endpoint (use * for any origin)  [array]
-```

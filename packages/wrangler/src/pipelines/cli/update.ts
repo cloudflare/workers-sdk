@@ -32,7 +32,7 @@ export function addUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 	return (
 		yargs
 			.positional("pipeline", {
-				describe: "The name of the pipeline to update",
+				describe: "The name of the Pipeline to update",
 				type: "string",
 				demandOption: true,
 			})
@@ -104,7 +104,7 @@ export function addUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 			.option("transform-worker", {
 				type: "string",
 				describe:
-					"PipelineTransform worker and entrypoint (<worker>.<entrypoint>)",
+					"Pipeline transform Worker and entrypoint (<worker>.<entrypoint>)",
 				demandOption: false,
 			})
 
@@ -295,13 +295,13 @@ export async function updatePipelineHandler(
 		pipelineConfig.destination.path.filename = args.fileTemplate;
 	}
 
-	logger.log(`🌀 Updating pipeline "${name}"`);
+	logger.log(`🌀 Updating Pipeline "${name}"`);
 	const pipeline = await updatePipeline(accountId, name, pipelineConfig);
 	metrics.sendMetricsEvent("update pipeline", {
 		sendMetrics: config.send_metrics,
 	});
 
 	logger.log(
-		`✅ Successfully updated pipeline "${pipeline.name}" with ID ${pipeline.id}\n`
+		`✅ Successfully updated Pipeline "${pipeline.name}" with ID ${pipeline.id}\n`
 	);
 }

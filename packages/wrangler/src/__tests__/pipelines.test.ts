@@ -256,11 +256,11 @@ describe("pipelines", () => {
 			"wrangler pipelines
 
 			COMMANDS
-			  wrangler pipelines create <pipeline>  Create a new pipeline
-			  wrangler pipelines list               List current pipelines
-			  wrangler pipelines show <pipeline>    Show a pipeline configuration
-			  wrangler pipelines update <pipeline>  Update a pipeline
-			  wrangler pipelines delete <pipeline>  Delete a pipeline
+			  wrangler pipelines create <pipeline>  Create a new Pipeline
+			  wrangler pipelines list               List current Pipelines
+			  wrangler pipelines show <pipeline>    Show a Pipeline configuration
+			  wrangler pipelines update <pipeline>  Update a Pipeline
+			  wrangler pipelines delete <pipeline>  Delete a Pipeline
 
 			GLOBAL FLAGS
 			  -c, --config   Path to Wrangler configuration file  [string]
@@ -279,7 +279,7 @@ describe("pipelines", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"wrangler pipelines create <pipeline>
 
-				Create a new pipeline
+				Create a new Pipeline
 
 				POSITIONALS
 				  pipeline  The name of the new pipeline  [string] [required]
@@ -296,7 +296,7 @@ describe("pipelines", () => {
 				      --batch-max-seconds  Maximum age of batch in seconds before flushing  [number]
 
 				Transformations:
-				      --transform-worker  PipelineTransform worker and entrypoint (<worker>.<entrypoint>)  [string]
+				      --transform-worker  Pipeline transform Worker and entrypoint (<worker>.<entrypoint>)  [string]
 
 				Destination settings:
 				      --r2-bucket             Destination R2 bucket name  [string] [required]
@@ -322,9 +322,9 @@ describe("pipelines", () => {
 			);
 			expect(requests.count).toEqual(1);
 			expect(std.out).toMatchInlineSnapshot(`
-				"🌀 Creating pipeline named \\"my-pipeline\\"
-				✅ Successfully created pipeline \\"my-pipeline\\" with id 0001
-				🎉 You can now send data to your pipeline!
+				"🌀 Creating Pipeline named \\"my-pipeline\\"
+				✅ Successfully created Pipeline \\"my-pipeline\\" with id 0001
+				🎉 You can now send data to your Pipeline!
 
 				To start interacting with this Pipeline from a Worker, open your Worker’s config file and add the following binding configuration:
 
@@ -337,7 +337,7 @@ describe("pipelines", () => {
 				  ]
 				}
 
-				Send data to your pipelines HTTP endpoint:
+				Send data to your Pipeline's HTTP endpoint:
 
 					curl \\"foo\\" -d '[{\\"foo\\": \\"bar\\"}]'
 				"
@@ -414,7 +414,7 @@ describe("pipelines", () => {
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Retrieving config for pipeline \\"foo\\".
+				"Retrieving config for Pipeline \\"foo\\".
 				{
 				  \\"id\\": \\"0001\\",
 				  \\"version\\": 1,
@@ -462,7 +462,7 @@ describe("pipelines", () => {
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-				"Retrieving config for pipeline \\"bad-pipeline\\".
+				"Retrieving config for Pipeline \\"bad-pipeline\\".
 				X [ERROR] A request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.
 				  Pipeline does not exist [code: 1000]
 				  If you think this is a bug, please open an issue at:
@@ -608,8 +608,8 @@ describe("pipelines", () => {
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Deleting pipeline foo.
-				Deleted pipeline foo."
+				"Deleting Pipeline foo.
+				Deleted Pipeline foo."
 			`);
 			expect(requests.count).toEqual(1);
 		});
@@ -627,7 +627,7 @@ describe("pipelines", () => {
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-				"Deleting pipeline bad-pipeline.
+				"Deleting Pipeline bad-pipeline.
 				X [ERROR] A request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.
 				  Pipeline does not exist [code: 1000]
 				  If you think this is a bug, please open an issue at:

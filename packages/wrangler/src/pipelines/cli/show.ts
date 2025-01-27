@@ -14,7 +14,7 @@ import type { Argv } from "yargs";
 export function addShowOptions(yargs: Argv<CommonYargsOptions>) {
 	return yargs.positional("pipeline", {
 		type: "string",
-		describe: "The name of the pipeline to show",
+		describe: "The name of the Pipeline to show",
 		demandOption: true,
 	});
 }
@@ -29,7 +29,7 @@ export async function showPipelineHandler(
 
 	validateName("pipeline name", name);
 
-	logger.log(`Retrieving config for pipeline "${name}".`);
+	logger.log(`Retrieving config for Pipeline "${name}".`);
 	const pipeline = await getPipeline(accountId, name);
 	metrics.sendMetricsEvent("show pipeline", {
 		sendMetrics: config.send_metrics,
