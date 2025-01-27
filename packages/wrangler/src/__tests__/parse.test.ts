@@ -234,7 +234,7 @@ describe("parseJSON", () => {
 					fileText: `\n{\n"version" "1\n}\n`,
 				},
 				notes: [],
-				telemetryMessage: "JSON parse error",
+				telemetryMessage: "JSON(C) parse error",
 			});
 			expect(text).toEqual("UnexpectedEndOfString");
 		}
@@ -260,7 +260,7 @@ describe("parseJSON", () => {
 					lineText: `\t\t\t"c":[012345]`,
 				},
 				notes: [],
-				telemetryMessage: "JSON parse error",
+				telemetryMessage: "JSON(C) parse error",
 			});
 		}
 	});
@@ -343,7 +343,7 @@ describe("parseJSONC", () => {
 					fileText: `\n{\n"version" "1\n}\n`,
 				},
 				notes: [],
-				telemetryMessage: "JSONC parse error",
+				telemetryMessage: "JSON(C) parse error",
 			});
 		}
 	});
@@ -368,7 +368,7 @@ describe("parseJSONC", () => {
 					lineText: `\t\t\t"c":[012345]`,
 				},
 				notes: [],
-				telemetryMessage: "JSONC parse error",
+				telemetryMessage: "JSON(C) parse error",
 			});
 		}
 	});
