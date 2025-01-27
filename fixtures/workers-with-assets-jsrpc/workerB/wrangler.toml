@@ -1,0 +1,12 @@
+name = "worker-b"
+main = "./src/index.ts"
+compatibility_date = "2025-01-01"
+
+# [[services]]
+# binding = "WORKER_A"
+# service = "worker-a"
+# entrypoint = "WorkerA"
+
+[[services]]
+binding = "WORKER_A_FETCHER"
+service = "worker-a"
