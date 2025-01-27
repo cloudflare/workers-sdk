@@ -1,7 +1,3 @@
 name = "worker-ts"
 main = "src/index.ts"
 compatibility_date = "2023-05-04"
-
-[[d1_databases]]
-binding = "HELLO_D2"
-database_name = "lolkbhj"
