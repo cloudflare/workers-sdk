@@ -149,7 +149,7 @@ describe("versions secret bulk", () => {
 		await expect(
 			runWrangler(`versions secret bulk secrets.json --name script-name`)
 		).rejects.toThrowError(
-			`The contents of "secrets.json" is not valid JSON: "ParseError: Unexpected token o"`
+			`The contents of "secrets.json" is not valid JSON: "ParseError: InvalidSymbol"`
 		);
 	});
 

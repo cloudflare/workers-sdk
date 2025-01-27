@@ -180,7 +180,7 @@ export const experimental_readRawConfig = (
 	if (configPath?.endsWith("toml")) {
 		rawConfig = parseTOML(readFileSync(configPath), configPath);
 	} else if (configPath?.endsWith("json") || configPath?.endsWith("jsonc")) {
-		rawConfig = parseJSONC(readFileSync(configPath), configPath);
+		rawConfig = parseJSONC(readFileSync(configPath), configPath) as RawConfig;
 	}
 	return { rawConfig, configPath, userConfigPath };
 };

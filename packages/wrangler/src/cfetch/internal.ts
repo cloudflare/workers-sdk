@@ -96,11 +96,11 @@ export async function fetchInternal<ResponseType>(
 	// as otherwise parseJSON will throw an error back to the user.
 	if (!jsonText && (response.status === 204 || response.status === 205)) {
 		const emptyBody = `{"result": {}, "success": true, "errors": [], "messages": []}`;
-		return parseJSON<ResponseType>(emptyBody);
+		return parseJSON(emptyBody) as ResponseType;
 	}
 
 	try {
-		return parseJSON<ResponseType>(jsonText);
+		return parseJSON(jsonText) as ResponseType;
 	} catch (err) {
 		throw new APIError({
 			text: "Received a malformed response from the API",

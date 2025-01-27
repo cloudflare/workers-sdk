@@ -190,11 +190,11 @@ export async function createPreviewSession(
 
 	logger.debug("-- END EXCHANGE API RESPONSE");
 	try {
-		const { inspector_websocket, prewarm, token } = parseJSON<{
+		const { inspector_websocket, prewarm, token } = parseJSON(bodyText) as {
 			inspector_websocket: string;
 			token: string;
 			prewarm: string;
-		}>(bodyText);
+		};
 		const inspector = new URL(inspector_websocket);
 		inspector.searchParams.append("cf_workers_preview_token", token);
 

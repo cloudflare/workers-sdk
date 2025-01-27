@@ -82,10 +82,9 @@ function findRedirectedWranglerConfig(
 	let redirectedConfigPath: string | undefined;
 	const deployConfigFile = readFileSync(deployConfigPath);
 	try {
-		const deployConfig: { configPath?: string } = parseJSONC(
-			deployConfigFile,
-			deployConfigPath
-		);
+		const deployConfig = parseJSONC(deployConfigFile, deployConfigPath) as {
+			configPath?: string;
+		};
 		redirectedConfigPath =
 			deployConfig.configPath &&
 			path.resolve(path.dirname(deployConfigPath), deployConfig.configPath);

@@ -544,7 +544,7 @@ export async function parseBulkInputToObject(input?: string) {
 		try {
 			const fileContent = readFileSync(jsonFilePath);
 			try {
-				content = parseJSON<Record<string, string>>(fileContent);
+				content = parseJSON(fileContent) as Record<string, string>;
 			} catch (e) {
 				content = dotenvParse(fileContent);
 				// dotenvParse does not error unless fileContent is undefined, no keys === error
@@ -566,7 +566,7 @@ export async function parseBulkInputToObject(input?: string) {
 				pipedInput += line;
 			}
 			try {
-				content = parseJSON<Record<string, string>>(pipedInput);
+				content = parseJSON(pipedInput) as Record<string, string>;
 			} catch (e) {
 				content = dotenvParse(pipedInput);
 				// dotenvParse does not error unless fileContent is undefined, no keys === error
