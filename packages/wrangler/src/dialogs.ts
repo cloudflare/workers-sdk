@@ -9,7 +9,9 @@ export class NoDefaultValueProvided extends UserError {
 		// This is user-facing, so make the message something understandable
 		// It _should_ always be caught and replaced with a more descriptive error
 		// but this is fine as a fallback.
-		super("This command cannot be run in a non-interactive context");
+		super("This command cannot be run in a non-interactive context", {
+			telemetryMessage: true,
+		});
 		Object.setPrototypeOf(this, new.target.prototype);
 	}
 }
