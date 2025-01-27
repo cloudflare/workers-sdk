@@ -65,17 +65,38 @@ async function authorizeR2Bucket(
 	!__testSkipDelaysFlag &&
 		(await retryOnAPIFailure(
 			async () => {
-				await r2.send(
-					new HeadBucketCommand({
-						Bucket: bucketName,
-					})
-				);
+				try {
+					await r2.send(
+						new HeadBucketCommand({
+							Bucket: bucketName,
+						})
+					);
+				} catch (err) {
+					if (err instanceof Error && err.name === "401") {
+						throw new AuthAPIError({
+							status: 401,
+							text: "R2 HeadBucket request failed with status: 401",
+						});
+					}
+					throw err;
+				}
 			},
 			1000,
 			10
 		));
 
 	return serviceToken;
+}
+
+/**
+ * AuthAPIError always retries errors so that
+ * we always retry auth errors while waiting for an
+ * API token to propegate and start working.
+ */
+class AuthAPIError extends APIError {
+	override isRetryable(): boolean {
+		return true;
+	}
 }
 
 function getAccountR2Endpoint(accountId: string) {
