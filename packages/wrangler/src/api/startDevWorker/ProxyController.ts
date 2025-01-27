@@ -20,7 +20,7 @@ import { logger } from "../../logger";
 import { getSourceMappedStack } from "../../sourcemap";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
-import { assertNever, createDeferred, stripHeader } from "./utils";
+import { assertNever, createDeferred } from "./utils";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { ControllerEventMap } from "./BaseController";
 import type {
@@ -162,8 +162,6 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 			}),
 			handleRuntimeStdio,
 			liveReload: false,
-
-			outboundService: stripHeader("cf-connecting-ip"),
 		};
 
 		const proxyWorkerOptionsChanged = didMiniflareOptionsChange(

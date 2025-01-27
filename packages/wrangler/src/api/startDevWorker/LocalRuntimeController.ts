@@ -6,7 +6,7 @@ import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import { convertBindingsToCfWorkerInitBindings } from "./utils";
+import { convertBindingsToCfWorkerInitBindings, stripHeader } from "./utils";
 import type { WorkerEntrypointsDefinition } from "../../dev-registry";
 import type {
 	BundleCompleteEvent,
@@ -154,6 +154,11 @@ export class LocalRuntimeController extends RuntimeController {
 					await convertToConfigBundle(data),
 					this.#proxyToUserWorkerAuthenticationSecret
 				);
+
+			for (const worker of options.workers) {
+				worker.outboundService = stripHeader("cf-connecting-ip");
+			}
+
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
 			if (this.#mf === undefined) {
 				logger.log(chalk.dim("⎔ Starting local server..."));
