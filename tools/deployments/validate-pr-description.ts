@@ -11,7 +11,14 @@ if (require.main === module) {
 		for (const error of errors) {
 			console.error("- ", error);
 		}
-		process.exit(1);
+		if (process.env.DRAFT !== "true") {
+			process.exit(1);
+		} else {
+			console.error("These errors must be fixed before you can merge this PR.");
+			console.error(
+				"When you mark this PR as ready for review the CI check will start failing."
+			);
+		}
 	}
 }
 
