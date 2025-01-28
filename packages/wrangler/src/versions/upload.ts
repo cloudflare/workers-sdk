@@ -32,6 +32,7 @@ import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
+import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";
@@ -339,7 +340,17 @@ export const versionsUploadCommand = createCommand({
 		const cliAlias = collectKeyValues(args.alias);
 
 		const accountId = args.dryRun ? undefined : await requireAuth(config);
-		const name = getScriptName(args, config);
+		let name = getScriptName(args, config);
+
+		const ciOverrideName = getCIOverrideName();
+		let workerNameOverridden = false;
+		if (ciOverrideName !== undefined && ciOverrideName !== name) {
+			logger.warn(
+				`Failed to match Worker name. Your config file is using the Worker name "${name}", but the CI system expected "${ciOverrideName}". Overriding using the CI provided Worker name. Workers Builds connected builds will attempt to open a pull request to resolve this config name mismatch.`
+			);
+			name = ciOverrideName;
+			workerNameOverridden = true;
+		}
 
 		assert(
 			name,
@@ -393,6 +404,8 @@ export const versionsUploadCommand = createCommand({
 			worker_tag: workerTag,
 			version_id: versionId,
 			preview_url: versionPreviewUrl,
+			wrangler_environment: args.env,
+			worker_name_overridden: workerNameOverridden,
 		});
 	},
 });

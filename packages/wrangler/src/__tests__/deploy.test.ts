@@ -14,6 +14,7 @@ import {
 	printBundleSize,
 	printOffendingDependencies,
 } from "../deployment-bundle/bundle-reporter";
+import { clearOutputFilePath } from "../output";
 import { writeAuthConfigFile } from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockAuthDomain } from "./helpers/mock-auth-domain";
@@ -90,6 +91,7 @@ describe("deploy", () => {
 	afterEach(() => {
 		vi.unstubAllGlobals();
 		clearDialogs();
+		clearOutputFilePath();
 	});
 
 	it("should output log file with deployment details", async () => {
@@ -173,6 +175,85 @@ describe("deploy", () => {
 			Current Version ID: Galaxy-Class"
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	it("should successfully override name with WRANGLER_CI_OVERRIDE_NAME", async () => {
+		vi.stubEnv("WRANGLER_CI_OVERRIDE_NAME", "test-name");
+		writeWorkerSource();
+		writeWranglerConfig({
+			name: "name-to-override",
+			workers_dev: true,
+		});
+		mockServiceScriptData({
+			scriptName: "test-name",
+			script: { id: "test-name", tag: "abc123" },
+		});
+		mockUploadWorkerRequest();
+		mockSubDomainRequest();
+		mockGetWorkerSubdomain({ enabled: false });
+		mockUpdateWorkerSubdomain({ enabled: true });
+
+		await runWrangler("deploy ./index.js");
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	it("should successfully override name with WRANGLER_CI_OVERRIDE_NAME and outputs the correct output file", async () => {
+		vi.stubEnv("WRANGLER_OUTPUT_FILE_DIRECTORY", "override-output");
+		vi.stubEnv("WRANGLER_OUTPUT_FILE_PATH", "");
+		vi.stubEnv("WRANGLER_CI_OVERRIDE_NAME", "test-name");
+		writeWorkerSource();
+		writeWranglerConfig({
+			name: "override-name",
+			workers_dev: true,
+		});
+		mockUploadWorkerRequest();
+		mockSubDomainRequest();
+		mockGetWorkerSubdomain({ enabled: true });
+
+		await runWrangler("deploy ./index.js --env staging");
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+
+		const outputFilePaths = fs.readdirSync("override-output");
+
+		expect(outputFilePaths.length).toEqual(1);
+		expect(outputFilePaths[0]).toMatch(/wrangler-output-.+\.json/);
+		const outputFile = fs.readFileSync(
+			path.join("override-output", outputFilePaths[0]),
+			"utf8"
+		);
+		const entries = outputFile
+			.split("\n")
+			.filter(Boolean)
+			.map((e) => JSON.parse(e));
+
+		expect(entries.find((e) => e.type === "deploy")).toMatchObject({
+			targets: ["https://test-name.test-sub-domain.workers.dev"],
+			// Omitting timestamp for matching
+			// timestamp: ...
+			type: "deploy",
+			version: 1,
+			version_id: "Galaxy-Class",
+			worker_name: "test-name",
+			worker_tag: "tag:test-name",
+			worker_name_overridden: true,
+			wrangler_environment: "staging",
+		});
 	});
 
 	it("should resolve wrangler.toml relative to the entrypoint", async () => {
