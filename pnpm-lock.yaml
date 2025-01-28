@@ -1782,11 +1782,11 @@ importers:
         specifier: ^4.20241230.0
         version: 4.20250121.0
       typescript:
-        specifier: catalog:vite-plugin
+        specifier: catalog:default
         version: 5.7.3
       vite:
         specifier: catalog:vite-plugin
-        version: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
+        version: 6.0.7(@types/node@18.19.74)(jiti@2.4.2)
       wrangler:
         specifier: catalog:vite-plugin
         version: 3.103.2(@cloudflare/workers-types@4.20250121.0)
@@ -10604,9 +10604,6 @@ packages:
 
   unenv-nightly@2.0.0-20250109-100802-88ad671:
     resolution: {integrity: sha512-Uij6gODNNNNsNBoDlnaMvZI99I6YlVJLRfYH8AOLMlbFrW7k2w872v9VLuIdch2vF8QBeSC4EftIh5sG4ibzdA==}
-
-  unenv@2.0.0-rc.0:
-    resolution: {integrity: sha512-H0kl2w8jFL/FAk0xvjVing4bS3jd//mbg1QChDnn58l9Sc5RtduaKmLAL8n+eBw5jJo8ZjYV7CrEGage5LAOZQ==}
 
   unenv@2.0.0-rc.1:
     resolution: {integrity: sha512-PU5fb40H8X149s117aB4ytbORcCvlASdtF97tfls4BPIyj4PeVxvpSuy1jAptqYHqB0vb2w2sHvzM0XWcp2OKg==}
@@ -20008,14 +20005,6 @@ snapshots:
       ufo: 1.5.4
 
   unenv-nightly@2.0.0-20250109-100802-88ad671:
-    dependencies:
-      defu: 6.1.4
-      mlly: 1.7.4
-      ohash: 1.1.4
-      pathe: 1.1.2
-      ufo: 1.5.4
-
-  unenv@2.0.0-rc.0:
     dependencies:
       defu: 6.1.4
       mlly: 1.7.4
