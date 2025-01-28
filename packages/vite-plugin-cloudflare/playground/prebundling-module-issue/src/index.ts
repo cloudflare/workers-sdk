@@ -1,6 +1,6 @@
-import * as libA from "@packages/lib-a";
+import { setup } from "@packages/lib-a";
 
-(globalThis as unknown as { context: {} }).context = libA.context;
+setup();
 
 export default {
 	async fetch() {
