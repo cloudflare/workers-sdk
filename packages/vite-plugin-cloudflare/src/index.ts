@@ -198,15 +198,33 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
 				}
 
 				config = workerConfig;
+
+				if (workerConfig.configPath) {
+					const dotDevDotVarsContent = getDotDevDotVarsContent(
+						workerConfig.configPath,
+						resolvedPluginConfig.cloudflareEnv
+					);
+					// Save a .dev.vars file to the worker's build output directory
+					// when it exists so that it will be then detected by `vite preview`
+					if (dotDevDotVarsContent) {
+						this.emitFile({
+							type: "asset",
+							fileName: ".dev.vars",
+							source: dotDevDotVarsContent,
+						});
+					}
+				}
 			} else if (this.environment.name === "client") {
 				const assetsOnlyConfig = resolvedPluginConfig.config;
 
 				assetsOnlyConfig.assets.directory = ".";
 
+				const filesToAssetsIgnore = ["wrangler.json", ".dev.vars"];
+
 				this.emitFile({
 					type: "asset",
 					fileName: ".assetsignore",
-					source: "wrangler.json",
+					source: `${filesToAssetsIgnore.join("\n")}\n`,
 				});
 
 				config = assetsOnlyConfig;
@@ -298,4 +316,37 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
 			};
 		},
 	};
+}
+
+/**
+ * Gets the content of a the potential `.dev.vars` target file
+ *
+ * Note: This resolves the .dev.vars file path following the same logic
+ *       as `loadDotEnv` in `/packages/wrangler/src/config/index.ts`
+ *       the two need to be kept in sync
+ *
+ * @param configPath the path to the worker's wrangler config file
+ * @param cloudflareEnv the target cloudflare environment
+ */
+function getDotDevDotVarsContent(
+	configPath: string,
+	cloudflareEnv: string | undefined
+) {
+	const configDir = path.dirname(configPath);
+
+	const defaultDotDevDotVarsPath = `${configDir}/.dev.vars`;
+	const inputDotDevDotVarsPath = `${defaultDotDevDotVarsPath}${cloudflareEnv ? `.${cloudflareEnv}` : ""}`;
+
+	const targetPath = fs.existsSync(inputDotDevDotVarsPath)
+		? inputDotDevDotVarsPath
+		: fs.existsSync(defaultDotDevDotVarsPath)
+			? defaultDotDevDotVarsPath
+			: null;
+
+	if (targetPath) {
+		const dotDevDotVarsContent = fs.readFileSync(targetPath);
+		return dotDevDotVarsContent;
+	}
+
+	return null;
 }

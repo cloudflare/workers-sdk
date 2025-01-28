@@ -1770,6 +1770,27 @@ importers:
         specifier: catalog:vite-plugin
         version: 3.103.2(@cloudflare/workers-types@4.20250121.0)
 
+  packages/vite-plugin-cloudflare/playground/dev-vars:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20241230.0
+        version: 4.20250121.0
+      typescript:
+        specifier: catalog:vite-plugin
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
+      wrangler:
+        specifier: catalog:vite-plugin
+        version: 3.103.2(@cloudflare/workers-types@4.20250121.0)
+
   packages/vite-plugin-cloudflare/playground/durable-objects:
     devDependencies:
       '@cloudflare/vite-plugin':
