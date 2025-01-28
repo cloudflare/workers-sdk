@@ -5,7 +5,6 @@ import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
 import { getBoundRegisteredWorkers } from "../../../dev-registry";
 import { getClassNamesWhichUseSQLite } from "../../../dev/class-names-sqlite";
-import { getVarsForDev } from "../../../dev/dev-vars";
 import {
 	buildAssetOptions,
 	buildMiniflareBindingOptions,
@@ -118,16 +117,11 @@ export async function getPlatformProxy<
 
 	const bindings: Env = await mf.getBindings();
 
-	const vars = getVarsForDev(rawConfig, env);
-
 	const cf = await mf.getCf();
 	deepFreeze(cf);
 
 	return {
-		env: {
-			...vars,
-			...bindings,
-		},
+		env: bindings,
 		cf: cf as CfProperties,
 		ctx: new ExecutionContext(),
 		caches: new CacheStorage(),
