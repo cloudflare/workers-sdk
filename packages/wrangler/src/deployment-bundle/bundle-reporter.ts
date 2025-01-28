@@ -7,6 +7,7 @@ import type { Metafile } from "esbuild";
 
 const ONE_KIB_BYTES = 1024;
 // Current max is 3 MiB for free accounts, 10 MiB for paid accounts.
+// See https://developers.cloudflare.com/workers/platform/limits/#worker-size
 const MAX_GZIP_SIZE_BYTES = 3 * ONE_KIB_BYTES * ONE_KIB_BYTES;
 
 async function getSize(modules: Pick<CfModule, "content">[]) {
