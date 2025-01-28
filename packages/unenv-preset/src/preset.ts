@@ -86,14 +86,6 @@ export const cloudflare: Preset = {
 		global: false,
 		console: "@cloudflare/unenv-preset/runtime/node/console/index",
 		process: "@cloudflare/unenv-preset/runtime/node/process/index",
-		setImmediate: [
-			"@cloudflare/unenv-preset/runtime/node/timers/index",
-			"setImmediate",
-		],
-		clearImmediate: [
-			"@cloudflare/unenv-preset/runtime/node/timers/index",
-			"clearImmediate",
-		],
 	},
 	polyfill: [],
 	external: nodeCompatModules.flatMap((p) => [p, `node:${p}`]),
