@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.12.5
+
+### Patch Changes
+
+- [#7906](https://github.com/cloudflare/workers-sdk/pull/7906) [`f5eaf4b`](https://github.com/cloudflare/workers-sdk/commit/f5eaf4bd2fcfdf19a40dd3056fc9b36c2654605c) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Fixes bug in router-worker that prevents unexpected errors from being captured.
+
 ## 0.12.4
 
 ### Patch Changes

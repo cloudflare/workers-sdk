@@ -1,5 +1,14 @@
 # @cloudflare/unenv-preset
 
+## 1.1.0
+
+### Minor Changes
+
+- [#7853](https://github.com/cloudflare/workers-sdk/pull/7853) [`061587d`](https://github.com/cloudflare/workers-sdk/commit/061587d81deaa5274f04fa0a39f1c8373b828a42) Thanks [@anonrig](https://github.com/anonrig)! - Use the workerd implementation for Node `net`, `timers`, and `timers/promises` modules
+
+  - drop the polyfills
+  - update `unenv` to 2.0.0-rc.1
+
 ## 1.0.2
 
 ### Patch Changes
