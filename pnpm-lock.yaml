@@ -1959,6 +1959,33 @@ importers:
         specifier: catalog:vite-plugin
         version: 3.103.2(@cloudflare/workers-types@4.20250121.0)
 
+  packages/vite-plugin-cloudflare/playground/prebundling-module-issue:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250121.0
+        version: 4.20250121.0
+      '@packages/lib-a':
+        specifier: file:./packages/lib-a
+        version: '@playground/prebundling-module-issue-lib-a@file:packages/vite-plugin-cloudflare/playground/prebundling-module-issue/packages/lib-a'
+      '@packages/lib-b':
+        specifier: file:./packages/lib-b
+        version: '@playground/prebundling-module-issue-lib-b@file:packages/vite-plugin-cloudflare/playground/prebundling-module-issue/packages/lib-b'
+      typescript:
+        specifier: catalog:vite-plugin
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.0.7(@types/node@18.19.59)(jiti@2.4.2)
+      wrangler:
+        specifier: catalog:vite-plugin
+        version: 3.103.2(@cloudflare/workers-types@4.20250121.0)
+
   packages/vite-plugin-cloudflare/playground/react-spa:
     dependencies:
       react:
@@ -4603,6 +4630,12 @@ packages:
 
   '@playground/module-resolution-requires@file:packages/vite-plugin-cloudflare/playground/module-resolution/packages/requires':
     resolution: {directory: packages/vite-plugin-cloudflare/playground/module-resolution/packages/requires, type: directory}
+
+  '@playground/prebundling-module-issue-lib-a@file:packages/vite-plugin-cloudflare/playground/prebundling-module-issue/packages/lib-a':
+    resolution: {directory: packages/vite-plugin-cloudflare/playground/prebundling-module-issue/packages/lib-a, type: directory}
+
+  '@playground/prebundling-module-issue-lib-b@file:packages/vite-plugin-cloudflare/playground/prebundling-module-issue/packages/lib-b':
+    resolution: {directory: packages/vite-plugin-cloudflare/playground/prebundling-module-issue/packages/lib-b, type: directory}
 
   '@pnpm/config.env-replace@1.1.0':
     resolution: {integrity: sha512-htyl8TWnKL7K/ESFa1oW2UB5lVDxuF5DpM7tBi6Hu2LNL3mWkIzNLG6N4zoCUP1lCKNxWy/3iu8mS8MvToGd6w==}
@@ -8499,9 +8532,6 @@ packages:
       vue-tsc:
         optional: true
 
-  mlly@1.7.3:
-    resolution: {integrity: sha512-xUsx5n/mN0uQf4V548PKQ+YShA4/IW0KI1dZhrNrPCLG+xizETbHTkOa1f8/xut9JRPp8kQuMnz0oqwkTiLo/A==}
-
   mlly@1.7.4:
     resolution: {integrity: sha512-qmdSIPC4bDJXgZTCR7XosJiNKySV7O215tsPtDN9iEO/7q/76b/ijtgRu/+epFXSJhijtTCCGp3DWS549P3xKw==}
 
@@ -10568,9 +10598,6 @@ packages:
 
   unenv-nightly@2.0.0-20250109-100802-88ad671:
     resolution: {integrity: sha512-Uij6gODNNNNsNBoDlnaMvZI99I6YlVJLRfYH8AOLMlbFrW7k2w872v9VLuIdch2vF8QBeSC4EftIh5sG4ibzdA==}
-
-  unenv@2.0.0-rc.0:
-    resolution: {integrity: sha512-H0kl2w8jFL/FAk0xvjVing4bS3jd//mbg1QChDnn58l9Sc5RtduaKmLAL8n+eBw5jJo8ZjYV7CrEGage5LAOZQ==}
 
   unenv@2.0.0-rc.1:
     resolution: {integrity: sha512-PU5fb40H8X149s117aB4ytbORcCvlASdtF97tfls4BPIyj4PeVxvpSuy1jAptqYHqB0vb2w2sHvzM0XWcp2OKg==}
@@ -13232,6 +13259,10 @@ snapshots:
   '@playground/module-resolution-imports@file:packages/vite-plugin-cloudflare/playground/module-resolution/packages/imports': {}
 
   '@playground/module-resolution-requires@file:packages/vite-plugin-cloudflare/playground/module-resolution/packages/requires': {}
+
+  '@playground/prebundling-module-issue-lib-a@file:packages/vite-plugin-cloudflare/playground/prebundling-module-issue/packages/lib-a': {}
+
+  '@playground/prebundling-module-issue-lib-b@file:packages/vite-plugin-cloudflare/playground/prebundling-module-issue/packages/lib-b': {}
 
   '@pnpm/config.env-replace@1.1.0': {}
 
@@ -17471,7 +17502,7 @@ snapshots:
 
   local-pkg@0.5.0:
     dependencies:
-      mlly: 1.7.3
+      mlly: 1.7.4
       pkg-types: 1.2.1
 
   localforage@1.10.0:
@@ -17813,13 +17844,6 @@ snapshots:
     optionalDependencies:
       typescript: 5.6.3
       vue-tsc: 2.0.29(typescript@5.6.3)
-
-  mlly@1.7.3:
-    dependencies:
-      acorn: 8.14.0
-      pathe: 1.1.2
-      pkg-types: 1.2.1
-      ufo: 1.5.4
 
   mlly@1.7.4:
     dependencies:
@@ -20020,14 +20044,6 @@ snapshots:
       ufo: 1.5.4
 
   unenv-nightly@2.0.0-20250109-100802-88ad671:
-    dependencies:
-      defu: 6.1.4
-      mlly: 1.7.4
-      ohash: 1.1.4
-      pathe: 1.1.2
-      ufo: 1.5.4
-
-  unenv@2.0.0-rc.0:
     dependencies:
       defu: 6.1.4
       mlly: 1.7.4

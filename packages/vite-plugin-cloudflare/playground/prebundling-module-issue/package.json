@@ -1,0 +1,21 @@
+{
+	"name": "@playground/prebundling-module-issue",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "vite build --app",
+		"check:types": "tsc --build",
+		"dev": "vite dev",
+		"preview": "vite preview"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250121.0",
+		"@packages/lib-a": "file:./packages/lib-a",
+		"@packages/lib-b": "file:./packages/lib-b",
+		"typescript": "catalog:vite-plugin",
+		"vite": "catalog:vite-plugin",
+		"wrangler": "catalog:vite-plugin"
+	}
+}

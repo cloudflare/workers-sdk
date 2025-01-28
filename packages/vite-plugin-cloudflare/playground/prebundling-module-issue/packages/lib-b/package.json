@@ -1,0 +1,11 @@
+{
+	"name": "@playground/prebundling-module-issue-lib-b",
+	"version": "1.0.0",
+	"type": "module",
+	"exports": {
+		".": {
+			"default": "./index.js",
+			"types": "./index.d.ts"
+		}
+	}
+}
