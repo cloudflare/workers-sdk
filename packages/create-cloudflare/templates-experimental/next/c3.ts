@@ -1,8 +1,13 @@
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { runFrameworkGenerator } from "frameworks/index";
+import { runCommand } from "helpers/command";
+import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
+
+// Script used to generate the cloudflare types.
+const NPM_TYPE_GEN_SCRIPT = "cf-typegen";
 
 const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [
@@ -17,7 +22,7 @@ const generate = async (ctx: C3Context) => {
 	]);
 };
 
-const configure = async () => {
+const configure = async (ctx: C3Context) => {
 	const packages = [
 		"@opennextjs/cloudflare@0.3.x",
 		"@cloudflare/workers-types",
@@ -26,6 +31,14 @@ const configure = async () => {
 		dev: true,
 		startText: "Adding the Cloudflare adapter",
 		doneText: `${brandColor(`installed`)} ${dim(packages.join(", "))}`,
+	});
+
+	const { npm } = detectPackageManager();
+	await runCommand([npm, "run", NPM_TYPE_GEN_SCRIPT], {
+		cwd: ctx.project.path,
+		silent: true,
+		startText: "Generating the types",
+		doneText: `${brandColor(`added`)} ${dim("cloudflare-env.d.ts")}`,
 	});
 };
 
@@ -49,7 +62,7 @@ export default {
 		scripts: {
 			deploy: `opennextjs-cloudflare && wrangler deploy`,
 			preview: `opennextjs-cloudflare && wrangler dev`,
-			"cf-typegen": `wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts`,
+			[NPM_TYPE_GEN_SCRIPT]: `wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts`,
 		},
 	}),
 	devScript: "dev",

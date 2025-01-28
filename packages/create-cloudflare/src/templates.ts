@@ -125,6 +125,8 @@ export type TemplateConfig = {
 	/**
 	 * A transformer that is run on the project's `package.json` during the creation step.
 	 *
+	 * This is called before `configure`.
+	 *
 	 * The object returned from this function will be deep merged with the original.
 	 * */
 	transformPackageJson?: (
