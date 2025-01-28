@@ -583,6 +583,26 @@ function normalizeAndValidateDev(
 	return { ip, port, inspector_port, local_protocol, upstream_protocol, host };
 }
 
+function normalizeAndValidateAssets(
+	diagnostics: Diagnostics,
+	topLevelEnv: Environment | undefined,
+	rawEnv: RawEnvironment
+): Config["assets"] {
+	if (rawEnv?.assets !== undefined) {
+		deprecated(
+			diagnostics,
+			rawEnv,
+			"assets.experimental_serve_directly",
+			`The "experimental_serve_directly" field is not longer supported. Please use run_worker_first.\nRead more: https://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first`,
+			false // Leave in for the moment, to be removed in a future release
+		);
+
+		validateAssetsConfig(diagnostics, "assets", rawEnv.assets, topLevelEnv);
+		return rawEnv.assets;
+	}
+	return undefined;
+}
+
 /**
  * Validate the `site` configuration and return the normalized values.
  */
@@ -1283,14 +1303,7 @@ function normalizeAndValidateEnvironment(
 			isObjectWith("crons"),
 			{ crons: [] }
 		),
-		assets: inheritable(
-			diagnostics,
-			topLevelEnv,
-			rawEnv,
-			"assets",
-			validateAssetsConfig,
-			undefined
-		),
+		assets: normalizeAndValidateAssets(diagnostics, topLevelEnv, rawEnv),
 		usage_model: inheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2203,6 +2216,15 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 		validateOptionalProperty(
 			diagnostics,
 			field,
+			"run_worker_first",
+			(value as Assets).run_worker_first,
+			"boolean"
+		) && isValid;
+
+	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
 			"experimental_serve_directly",
 			(value as Assets).experimental_serve_directly,
 			"boolean"
@@ -2214,6 +2236,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			"binding",
 			"html_handling",
 			"not_found_handling",
+			"run_worker_first",
 			"experimental_serve_directly",
 		]) && isValid;
 

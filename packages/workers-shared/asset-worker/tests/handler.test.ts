@@ -9,6 +9,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 		const configuration: Required<AssetConfig> = {
 			html_handling: "none",
 			not_found_handling: "none",
+			run_worker_first: false,
 			serve_directly: true,
 		};
 		const eTag = "some-etag";
@@ -38,6 +39,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 		const configuration: Required<AssetConfig> = {
 			html_handling: "none",
 			not_found_handling: "none",
+			run_worker_first: false,
 			serve_directly: true,
 		};
 		const eTag = "some-etag";
@@ -69,6 +71,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 		const configuration: Required<AssetConfig> = {
 			html_handling: "none",
 			not_found_handling: "none",
+			run_worker_first: false,
 			serve_directly: true,
 		};
 		const eTag = "some-etag";
@@ -100,6 +103,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 		const configuration: Required<AssetConfig> = {
 			html_handling: "none",
 			not_found_handling: "none",
+			run_worker_first: false,
 			serve_directly: true,
 		};
 		const eTag = "some-etag";
@@ -192,6 +196,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 		const configuration: Required<AssetConfig> = {
 			html_handling: "drop-trailing-slash",
 			not_found_handling: "none",
+			run_worker_first: false,
 			serve_directly: true,
 		};
 

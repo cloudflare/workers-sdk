@@ -376,14 +376,15 @@ export function getAssetsOptions(
 
 	const routingConfig = {
 		has_user_worker: Boolean(args.script || config.main),
-		invoke_user_worker_ahead_of_assets: !(
-			config.assets?.experimental_serve_directly ?? true
-		),
+		invoke_user_worker_ahead_of_assets:
+			config.assets?.run_worker_first || false,
 	};
+
 	// defaults are set in asset worker
 	const assetConfig = {
 		html_handling: config.assets?.html_handling,
 		not_found_handling: config.assets?.not_found_handling,
+		run_worker_first: config.assets?.run_worker_first,
 		serve_directly: config.assets?.experimental_serve_directly,
 	};
 
@@ -469,42 +470,54 @@ export function validateAssetsArgsAndConfig(
 	// Smart placement turned on when using assets
 	if (
 		config?.placement?.mode === "smart" &&
-		config?.assets?.experimental_serve_directly === false
+		config?.assets?.run_worker_first === true
 	) {
 		logger.warn(
-			"Turning on Smart Placement in a Worker that is using assets and serve_directly set to false means that your entire Worker could be moved to run closer to your data source, and all requests will go to that Worker before serving assets.\n" +
+			"Turning on Smart Placement in a Worker that is using assets and run_worker_first set to true means that your entire Worker could be moved to run closer to your data source, and all requests will go to that Worker before serving assets.\n" +
 				"This could result in poor performance as round trip times could increase when serving assets.\n\n" +
 				"Read more: https://developers.cloudflare.com/workers/static-assets/binding/#smart-placement"
+		);
+	}
+
+	// Provided both the run_worker_first and experimental_serve_directly options
+	if (
+		"legacy" in args
+			? args.assets?.assetConfig?.run_worker_first !== undefined &&
+				args.assets?.assetConfig.serve_directly !== undefined
+			: config?.assets?.run_worker_first !== undefined &&
+				config?.assets?.experimental_serve_directly !== undefined
+	) {
+		throw new UserError(
+			"run_worker_first and experimental_serve_directly specified.\n" +
+				"Only one of these configuration options may be provided."
 		);
 	}
 
 	// User Worker ahead of assets, but no assets binding provided
 	if (
 		"legacy" in args
-			? args.assets?.assetConfig?.serve_directly === false &&
+			? args.assets?.assetConfig?.run_worker_first === true &&
 				!args.assets?.binding
-			: config?.assets?.experimental_serve_directly === false &&
-				!config?.assets?.binding
+			: config?.assets?.run_worker_first === true && !config?.assets?.binding
 	) {
 		logger.warn(
-			"experimental_serve_directly=false set without an assets binding\n" +
-				"Setting experimental_serve_directly to false will always invoke your Worker script.\n" +
+			"run_worker_first=true set without an assets binding\n" +
+				"Setting run_worker_first to true will always invoke your Worker script.\n" +
 				"To fetch your assets from your Worker, please set the [assets.binding] key in your configuration file.\n\n" +
 				"Read more: https://developers.cloudflare.com/workers/static-assets/binding/#binding"
 		);
 	}
 
-	// Using serve_directly=false, but didn't provide a Worker script
+	// Using run_worker_first=true, but didn't provide a Worker script
 	if (
 		"legacy" in args
 			? args.entrypoint === noOpEntrypoint &&
-				args.assets?.assetConfig?.serve_directly === false
-			: !config?.main && config?.assets?.experimental_serve_directly === false
+				args.assets?.assetConfig?.run_worker_first === true
+			: !config?.main && config?.assets?.run_worker_first === true
 	) {
 		throw new UserError(
-			"Cannot set experimental_serve_directly=false without a Worker script.\n" +
-				"Please remove experimental_serve_directly from your configuration file, or provide a Worker script in your configuration file (`main`).",
-			{ telemetryMessage: true }
+			"Cannot set run_worker_first=true without a Worker script.\n" +
+				"Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (`main`)."
 		);
 	}
 }

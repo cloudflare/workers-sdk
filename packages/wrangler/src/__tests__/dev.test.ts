@@ -1678,12 +1678,12 @@ describe.sequential("wrangler dev", () => {
 			);
 		});
 
-		it("should warn if experimental_serve_directly=false but no binding is provided", async () => {
+		it("should warn if run_worker_first=true but no binding is provided", async () => {
 			writeWranglerConfig({
 				main: "index.js",
 				assets: {
 					directory: "assets",
-					experimental_serve_directly: false,
+					run_worker_first: true,
 				},
 			});
 			fs.mkdirSync("assets");
@@ -1692,9 +1692,9 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev");
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mexperimental_serve_directly=false set without an assets binding[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mrun_worker_first=true set without an assets binding[0m
 
-				  Setting experimental_serve_directly to false will always invoke your Worker script.
+				  Setting run_worker_first to true will always invoke your Worker script.
 				  To fetch your assets from your Worker, please set the [assets.binding] key in your configuration
 				  file.
 
@@ -1704,17 +1704,62 @@ describe.sequential("wrangler dev", () => {
 			`);
 		});
 
-		it("should error if experimental_serve_directly is false and no user Worker is provided", async () => {
+		it("should error if using experimental_serve_directly and run_worker_first", async () => {
 			writeWranglerConfig({
-				assets: { directory: "assets", experimental_serve_directly: false },
+				assets: {
+					directory: "assets",
+					run_worker_first: true,
+					experimental_serve_directly: true,
+				},
 			});
 			fs.mkdirSync("assets");
 			await expect(
 				runWrangler("dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`
-				[Error: Cannot set experimental_serve_directly=false without a Worker script.
-				Please remove experimental_serve_directly from your configuration file, or provide a Worker script in your configuration file (\`main\`).]
+				[Error: run_worker_first and experimental_serve_directly specified.
+				Only one of these configuration options may be provided.]
+				`
+			);
+		});
+
+		it("should warn if using experimental_serve_directly", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				assets: {
+					directory: "assets",
+					experimental_serve_directly: true,
+				},
+			});
+			fs.mkdirSync("assets");
+			fs.writeFileSync("index.js", `export default {};`);
+
+			await runWranglerUntilConfig("dev");
+
+			expect(std.warn).toMatchInlineSnapshot(
+				`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+				    - [1mDeprecation[0m: \\"assets.experimental_serve_directly\\":
+				      The \\"experimental_serve_directly\\" field is not longer supported. Please use run_worker_first.
+				      Read more: [4mhttps://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first[0m
+
+				"
+			`
+			);
+		});
+
+		it("should error if run_worker_first is true and no user Worker is provided", async () => {
+			writeWranglerConfig({
+				assets: { directory: "assets", run_worker_first: true },
+			});
+			fs.mkdirSync("assets");
+			await expect(
+				runWrangler("dev")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`
+				[Error: Cannot set run_worker_first=true without a Worker script.
+				Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (\`main\`).]
 			`
 			);
 		});
