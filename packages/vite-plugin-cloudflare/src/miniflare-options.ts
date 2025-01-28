@@ -374,6 +374,7 @@ export function getDevMiniflareOptions(
 
 	return {
 		log: logger,
+		inspectorPort: resolvedPluginConfig.inspectorPort,
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));
@@ -489,7 +490,8 @@ export function getDevMiniflareOptions(
 
 export function getPreviewMiniflareOptions(
 	vitePreviewServer: vite.PreviewServer,
-	persistState: PersistState
+	persistState: PersistState,
+	inspectorPort: number | undefined
 ): MiniflareOptions {
 	const resolvedViteConfig = vitePreviewServer.config;
 	const configPaths = getWorkerConfigPaths(resolvedViteConfig.root);
@@ -518,6 +520,7 @@ export function getPreviewMiniflareOptions(
 
 	return {
 		log: logger,
+		inspectorPort,
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));
