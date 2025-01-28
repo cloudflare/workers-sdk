@@ -8,5 +8,5 @@ export default defineConfig({
 			"@alias/test": resolve(__dirname, "./src/aliasing.ts"),
 		},
 	},
-	plugins: [cloudflare({ persistState: false })],
+	plugins: [cloudflare({ inspectorPort: 0, persistState: false })],
 });

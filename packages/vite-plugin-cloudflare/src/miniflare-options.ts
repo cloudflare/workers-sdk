@@ -18,6 +18,7 @@ import {
 import {
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
+	DEFAULT_INSPECTOR_PORT,
 	ROUTER_WORKER_NAME,
 } from "./constants";
 import { getWorkerConfigPaths } from "./deploy-config";
@@ -376,6 +377,7 @@ export function getDevMiniflareOptions(
 
 	return {
 		log: logger,
+		inspectorPort: resolvedPluginConfig.inspectorPort,
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));
@@ -532,7 +534,8 @@ function getPreviewModules(
 
 export function getPreviewMiniflareOptions(
 	vitePreviewServer: vite.PreviewServer,
-	persistState: PersistState
+	persistState: PersistState,
+	inspectorPort = DEFAULT_INSPECTOR_PORT
 ): MiniflareOptions {
 	const resolvedViteConfig = vitePreviewServer.config;
 	const configPaths = getWorkerConfigPaths(resolvedViteConfig.root);
@@ -564,6 +567,7 @@ export function getPreviewMiniflareOptions(
 
 	return {
 		log: logger,
+		inspectorPort,
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));
