@@ -1023,8 +1023,8 @@ function mockGetR2Bucket(bucketName: string, missing: boolean = false) {
 					);
 				}
 				return HttpResponse.json(createFetchResult({}));
-			}
-			// { once: true }
+			},
+			{ once: true }
 		)
 	);
 }
