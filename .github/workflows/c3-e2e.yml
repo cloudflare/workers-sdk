@@ -8,6 +8,7 @@ jobs:
   turbo-ignore:
     outputs:
       skip: ${{ steps.skip.outputs.ignore }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -28,7 +29,7 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
       cancel-in-progress: true
-    name: ${{ format('Run tests for {0}@{1} on {2} (experimental: {3})', matrix.pm.name, matrix.pm.version, matrix.os, matrix.experimental) }}
+    name: ${{ format('Run tests for {0}@{1} on {2} (experimental:{3})', matrix.pm.name, matrix.pm.version, matrix.os, matrix.experimental) }}
     strategy:
       fail-fast: false
       matrix:
