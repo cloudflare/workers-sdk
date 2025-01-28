@@ -21,7 +21,7 @@
 		"@types/react": "^19.0.0",
 		"@types/react-dom": "^19.0.0",
 		"@vitejs/plugin-react": "^4.3.4",
-		"typescript": "catalog:vite-plugin",
+		"typescript": "catalog:default",
 		"vite": "catalog:vite-plugin",
 		"wrangler": "catalog:vite-plugin"
 	}

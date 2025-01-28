@@ -26,6 +26,8 @@ packages/create-cloudflare/templates*/**/*.*
 packages/create-cloudflare/templates*/hello-world/**/worker-configuration.d.ts
 packages/chrome-devtools-patches/devtools-frontend
 
+packages/vitest-pool-workers/scripts/rtti/rtti.js
+
 # dist-functions are generated in the fixtures/vitest-pool-workers-examples/pages-functions-unit-integration-self folder
 dist-functions
 

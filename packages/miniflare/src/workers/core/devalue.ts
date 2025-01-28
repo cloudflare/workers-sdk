@@ -20,7 +20,7 @@ export type ReducerReviver = (value: unknown) => unknown;
 export type ReducersRevivers = Record<string, ReducerReviver>;
 
 const ALLOWED_ARRAY_BUFFER_VIEW_CONSTRUCTORS = [
-	DataView,
+	DataView<ArrayBuffer>,
 	Int8Array,
 	Uint8Array,
 	Uint8ClampedArray,
@@ -95,7 +95,7 @@ export const structuredSerializableRevivers: ReducersRevivers = {
 		assert(ALLOWED_ARRAY_BUFFER_VIEW_CONSTRUCTORS.includes(ctor));
 		let length = byteLength;
 		if ("BYTES_PER_ELEMENT" in ctor) length /= ctor.BYTES_PER_ELEMENT;
-		return new ctor(buffer, byteOffset, length);
+		return new ctor(buffer as ArrayBuffer, byteOffset, length);
 	},
 	Error(value) {
 		assert(Array.isArray(value));

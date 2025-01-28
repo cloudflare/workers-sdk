@@ -305,7 +305,7 @@ const encodeManifest = (manifest: ManifestEntry[]) => {
 	return assetManifestBytes;
 };
 
-const bytesToHex = (buffer: ArrayBufferLike) => {
+const bytesToHex = (buffer: Uint8Array<ArrayBuffer>) => {
 	return [...new Uint8Array(buffer)]
 		.map((b) => b.toString(16).padStart(2, "0"))
 		.join("");
@@ -314,6 +314,9 @@ const bytesToHex = (buffer: ArrayBufferLike) => {
 const hashPath = async (path: string) => {
 	const encoder = new TextEncoder();
 	const data = encoder.encode(path);
-	const hashBuffer = await crypto.subtle.digest("SHA-256", data.buffer);
+	const hashBuffer = await crypto.subtle.digest(
+		"SHA-256",
+		data.buffer as ArrayBuffer
+	);
 	return new Uint8Array(hashBuffer, 0, PATH_HASH_SIZE);
 };

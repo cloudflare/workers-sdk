@@ -247,7 +247,7 @@ async function parseModules(
 		const mainModule: CfModule = {
 			name: entrypointPart.name,
 			filePath: "",
-			content: Buffer.from(await entrypointPart.arrayBuffer()),
+			content: Buffer.from<ArrayBuffer>(await entrypointPart.arrayBuffer()),
 			type: fromMimeType(entrypointPart.type),
 		};
 
