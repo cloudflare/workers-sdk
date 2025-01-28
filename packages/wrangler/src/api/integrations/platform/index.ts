@@ -1,11 +1,9 @@
-import { kCurrentWorker, Miniflare } from "miniflare";
+import { kCurrentWorker } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
 import { readConfig } from "../../../config";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
-import { getBoundRegisteredWorkers } from "../../../dev-registry";
 import { getClassNamesWhichUseSQLite } from "../../../dev/class-names-sqlite";
-import { getVarsForDev } from "../../../dev/dev-vars";
 import {
 	buildAssetOptions,
 	buildMiniflareBindingOptions,
@@ -13,12 +11,13 @@ import {
 } from "../../../dev/miniflare";
 import { run } from "../../../experimental-flags";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "../../../sites";
+import { startWorker } from "../../startDevWorker";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
-import { getServiceBindings } from "./services";
 import type { Config, RawConfig, RawEnvironment } from "../../../config";
+import type { StartDevWorkerInput, Worker } from "../../startDevWorker";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
-import type { MiniflareOptions, ModuleRule, WorkerOptions } from "miniflare";
+import type { ModuleRule, WorkerOptions } from "miniflare";
 
 export { readConfig as unstable_readConfig };
 export type {
@@ -82,6 +81,11 @@ export type PlatformProxy<
 };
 
 /**
+ * The running worker instances with their reference count
+ */
+const workers = new Map<Worker, number>();
+
+/**
  * By reading from a Wrangler configuration file this function generates proxy objects that can be
  * used to simulate the interaction with the Cloudflare platform during local development
  * in a Node.js environment
@@ -95,131 +99,75 @@ export async function getPlatformProxy<
 >(
 	options: GetPlatformProxyOptions = {}
 ): Promise<PlatformProxy<Env, CfProperties>> {
-	const env = options.environment;
+	// TODO: Allow skipping custom build
 
-	const rawConfig = readConfig({
-		config: options.configPath,
-		env,
-	});
-
-	const miniflareOptions = await run(
+	return await run(
 		{
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: false,
 		},
-		() => getMiniflareOptionsFromConfig(rawConfig, env, options)
-	);
-
-	const mf = new Miniflare({
-		script: "",
-		modules: true,
-		...(miniflareOptions as Record<string, unknown>),
-	});
-
-	const bindings: Env = await mf.getBindings();
-
-	const vars = getVarsForDev(rawConfig, env);
-
-	const cf = await mf.getCf();
-	deepFreeze(cf);
-
-	return {
-		env: {
-			...vars,
-			...bindings,
-		},
-		cf: cf as CfProperties,
-		ctx: new ExecutionContext(),
-		caches: new CacheStorage(),
-		dispose: () => mf.dispose(),
-	};
-}
-
-async function getMiniflareOptionsFromConfig(
-	rawConfig: Config,
-	env: string | undefined,
-	options: GetPlatformProxyOptions
-): Promise<Partial<MiniflareOptions>> {
-	const bindings = getBindings(rawConfig, env, true, {});
-
-	const workerDefinitions = await getBoundRegisteredWorkers({
-		name: rawConfig.name,
-		services: bindings.services,
-		durableObjects: rawConfig["durable_objects"],
-	});
-
-	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
-		name: undefined,
-		bindings,
-		workerDefinitions,
-		queueConsumers: undefined,
-		services: rawConfig.services,
-		serviceBindings: {},
-		migrations: rawConfig.migrations,
-	});
-
-	const persistOptions = getMiniflarePersistOptions(options.persist);
-
-	const serviceBindings = await getServiceBindings(bindings.services);
-
-	const miniflareOptions: MiniflareOptions = {
-		workers: [
-			{
-				script: "",
-				modules: true,
-				...bindingOptions,
-				serviceBindings: {
-					...serviceBindings,
-					...bindingOptions.serviceBindings,
+		async () => {
+			const input: StartDevWorkerInput = {
+				config: options.configPath,
+				env: options.environment,
+				dev: {
+					inspector: {
+						port: 0,
+					},
+					server: {
+						port: 0,
+					},
+					logLevel: "error",
+					liveReload: false,
+					persist:
+						typeof options.persist === "object"
+							? options.persist.path
+							: options.persist
+								? ".wrangler/state/v3"
+								: undefined,
 				},
-			},
-			...externalWorkers,
-		],
-		...persistOptions,
-	};
+			};
 
-	return miniflareOptions;
-}
+			// Find an existing worker with the same input
+			let worker = Array.from(workers.keys()).find((w) => {
+				return JSON.stringify(w.input) === JSON.stringify(input);
+			});
 
-/**
- * Get the persist option properties to pass to miniflare
- *
- * @param persist The user provided persistence option
- * @returns an object containing the properties to pass to miniflare
- */
-function getMiniflarePersistOptions(
-	persist: GetPlatformProxyOptions["persist"]
-): Pick<
-	MiniflareOptions,
-	| "kvPersist"
-	| "durableObjectsPersist"
-	| "r2Persist"
-	| "d1Persist"
-	| "workflowsPersist"
-> {
-	if (persist === false) {
-		// the user explicitly asked for no persistance
-		return {
-			kvPersist: false,
-			durableObjectsPersist: false,
-			r2Persist: false,
-			d1Persist: false,
-			workflowsPersist: false,
-		};
-	}
+			// Start a new worker if none was found
+			if (!worker) {
+				worker = await startWorker(input);
+			}
 
-	const defaultPersistPath = ".wrangler/state/v3";
+			// Update the reference count
+			workers.set(worker, (workers.get(worker) ?? 0) + 1);
 
-	const persistPath =
-		typeof persist === "object" ? persist.path : defaultPersistPath;
+			const { env, cf } = await worker.getPlatformProxy();
+			deepFreeze(cf);
 
-	return {
-		kvPersist: `${persistPath}/kv`,
-		durableObjectsPersist: `${persistPath}/do`,
-		r2Persist: `${persistPath}/r2`,
-		d1Persist: `${persistPath}/d1`,
-		workflowsPersist: `${persistPath}/workflows`,
-	};
+			return {
+				env: env as Env,
+				cf: cf as CfProperties,
+				ctx: new ExecutionContext(),
+				caches: new CacheStorage(),
+				dispose: async () => {
+					const count = workers.get(worker);
+
+					if (count !== undefined) {
+						// Don't dispose the worker if it's still in use
+						if (count > 1) {
+							workers.set(worker, count - 1);
+							return;
+						}
+
+						// Remove the worker from the map before disposing it
+						workers.delete(worker);
+					}
+
+					await worker.dispose();
+				},
+			};
+		}
+	);
 }
 
 function deepFreeze<T extends Record<string | number | symbol, unknown>>(
