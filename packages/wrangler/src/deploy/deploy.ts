@@ -800,15 +800,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		} else {
 			assert(accountId, "Missing accountId");
 
-			getFlag("RESOURCES_PROVISION")
-				? await provisionBindings(
-						bindings,
-						accountId,
-						scriptName,
-						props.experimentalAutoCreate,
-						props.config
-					)
-				: null;
+			if (getFlag("RESOURCES_PROVISION")) {
+				await provisionBindings(
+					bindings,
+					accountId,
+					scriptName,
+					props.experimentalAutoCreate,
+					props.config
+				);
+			}
 			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;
 

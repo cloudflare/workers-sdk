@@ -481,6 +481,7 @@ describe("--x-provision", () => {
 					);
 				})
 			);
+			mockGetD1Database("prefilled-d1-name", {}, true);
 
 			// no name prompt
 			mockCreateD1Database({
@@ -597,6 +598,7 @@ describe("--x-provision", () => {
 					);
 				})
 			);
+			mockGetD1Database("new-d1-name", {}, true);
 
 			mockGetD1Database("old-d1-id", { name: "old-d1-name" });
 
@@ -784,18 +786,10 @@ describe("--x-provision", () => {
 			});
 			mockGetSettings();
 
-			msw.use(
-				http.get("*/accounts/:accountId/d1/database", async () => {
-					return HttpResponse.json(
-						createFetchResult([
-							{
-								name: "existing-db-name",
-								uuid: "existing-d1-id",
-							},
-						])
-					);
-				})
-			);
+			mockGetD1Database("existing-db-name", {
+				name: "existing-db-name",
+				uuid: "existing-d1-id",
+			});
 
 			mockUploadWorkerRequest({
 				expectedBindings: [
@@ -1030,14 +1024,22 @@ function mockGetR2Bucket(bucketName: string, missing: boolean = false) {
 }
 
 function mockGetD1Database(
-	databaseId: string,
-	databaseInfo: Partial<DatabaseInfo>
+	databaseIdOrName: string,
+	databaseInfo: Partial<DatabaseInfo>,
+	missing: boolean = false
 ) {
 	msw.use(
 		http.get(
 			`*/accounts/:accountId/d1/database/:database_id`,
 			({ params }) => {
-				expect(params.database_id).toEqual(databaseId);
+				expect(params.database_id).toEqual(databaseIdOrName);
+				if (missing) {
+					return HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 7404, message: "database not found" },
+						])
+					);
+				}
 				return HttpResponse.json(createFetchResult(databaseInfo));
 			},
 			{ once: true }

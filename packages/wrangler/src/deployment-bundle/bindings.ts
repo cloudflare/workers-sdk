@@ -2,7 +2,10 @@ import assert from "node:assert";
 import { fetchResult } from "../cfetch";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
-import { getDatabaseByNameOrBinding, getDatabaseInfoFromId } from "../d1/utils";
+import {
+	getDatabaseByNameOrBinding,
+	getDatabaseInfoFromIdOrName,
+} from "../d1/utils";
 import { prompt, select } from "../dialogs";
 import { UserError } from "../errors";
 import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
@@ -251,7 +254,7 @@ class D1Handler extends ProvisionResourceHandler<"d1", CfD1Database> {
 
 			// ...and the user HAS specified a name in their config, so we need to check if the database_name they provided
 			// matches the database_name of the existing binding (which isn't present in settings, so we'll need to make an API call to check)
-			const dbFromId = await getDatabaseInfoFromId(
+			const dbFromId = await getDatabaseInfoFromIdOrName(
 				this.accountId,
 				maybeInherited.id
 			);
@@ -269,21 +272,15 @@ class D1Handler extends ProvisionResourceHandler<"d1", CfD1Database> {
 			return false;
 		}
 		try {
-			// TODO: Use https://jira.cfdata.org/browse/CFSQL-1180 once ready
-			const db = await getDatabaseByNameOrBinding(
-				{ d1_databases: [] } as unknown as Config,
+			const db = await getDatabaseInfoFromIdOrName(
 				this.accountId,
 				this.binding.database_name
 			);
+
 			// This database_name exists! We don't need to provision it
 			return db.uuid;
 		} catch (e) {
-			if (
-				!(
-					e instanceof Error &&
-					e.message.startsWith("Couldn't find DB with name")
-				)
-			) {
+			if (!(e instanceof APIError && e.code === 7404)) {
 				// this is an error that is not "database not found", so we do want to throw
 				throw e;
 			}

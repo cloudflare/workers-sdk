@@ -46,7 +46,7 @@ export const getDatabaseByNameOrBinding = async (
 		return dbFromConfig;
 	}
 
-	const allDBs = await listDatabases(accountId, true);
+	const allDBs = await listDatabases(accountId);
 	const matchingDB = allDBs.find((db) => db.name === name);
 	if (!matchingDB) {
 		throw new UserError(`Couldn't find DB with name '${name}'`);
@@ -54,12 +54,12 @@ export const getDatabaseByNameOrBinding = async (
 	return matchingDB;
 };
 
-export const getDatabaseInfoFromId = async (
+export const getDatabaseInfoFromIdOrName = async (
 	accountId: string,
-	databaseId: string
+	databaseIdOrName: string
 ): Promise<DatabaseInfo> => {
 	return await fetchResult<DatabaseInfo>(
-		`/accounts/${accountId}/d1/database/${databaseId}`,
+		`/accounts/${accountId}/d1/database/${databaseIdOrName}`,
 		{
 			headers: {
 				"Content-Type": "application/json",
