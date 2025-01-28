@@ -139,7 +139,6 @@ export const secretPutCommand = createCommand({
 	metadata: {
 		description: "Create or update a secret variable for a Worker",
 		status: "stable",
-		// no idea who owns secrets
 		owner: "Workers: Deploy and Config",
 	},
 	positionalArgs: ["key"],
@@ -147,6 +146,7 @@ export const secretPutCommand = createCommand({
 		key: {
 			describe: "The variable name to be accessible in the Worker",
 			type: "string",
+			demandOption: true,
 		},
 		name: {
 			describe: "Name of the Worker",
@@ -252,7 +252,6 @@ export const secretDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete a secret variable from a Worker",
 		status: "stable",
-		// no idea who owns secrets
 		owner: "Workers: Deploy and Config",
 	},
 	positionalArgs: ["key"],
@@ -260,6 +259,7 @@ export const secretDeleteCommand = createCommand({
 		key: {
 			describe: "The variable name to be accessible in the Worker",
 			type: "string",
+			demandOption: true,
 		},
 		name: {
 			describe: "Name of the Worker",
@@ -322,7 +322,6 @@ export const secretListCommand = createCommand({
 	metadata: {
 		description: "List all secrets for a Worker",
 		status: "stable",
-		// no idea who owns secrets
 		owner: "Workers: Deploy and Config",
 	},
 	args: {
@@ -383,7 +382,6 @@ export const secretBulkCommand = createCommand({
 	metadata: {
 		description: "Bulk upload secrets for a Worker",
 		status: "stable",
-		// no idea who owns secrets
 		owner: "Workers: Deploy and Config",
 	},
 	positionalArgs: ["json"],
