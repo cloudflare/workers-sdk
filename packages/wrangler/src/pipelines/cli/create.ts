@@ -36,7 +36,7 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 					"require-http-auth",
 					"cors-origins",
 				],
-				"Source settings:"
+				`${chalk.bold("Source settings")}`
 			)
 			.option("enable-worker-binding", {
 				type: "boolean",
@@ -68,7 +68,7 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 			// Batching
 			.group(
 				["batch-max-mb", "batch-max-rows", "batch-max-seconds"],
-				"Batch hints:"
+				`${chalk.bold("Batch hints")}`
 			)
 			.option("batch-max-mb", {
 				type: "number",
@@ -90,7 +90,7 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 			})
 
 			// Transform options
-			.group(["transform-worker"], "Transformations:")
+			.group(["transform-worker"], `${chalk.bold("Transformations")}`)
 			.option("transform-worker", {
 				type: "string",
 				describe:
@@ -109,7 +109,7 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 					"file-template",
 					"partition-template",
 				],
-				"Destination settings:"
+				`${chalk.bold("Destination settings")}`
 			)
 			.option("r2-bucket", {
 				type: "string",
