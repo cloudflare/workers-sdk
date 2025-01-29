@@ -1199,6 +1199,9 @@ importers:
       execa:
         specifier: ^7.1.1
         version: 7.1.1
+      find-up:
+        specifier: ^6.3.0
+        version: 6.3.0
       glob:
         specifier: ^10.3.3
         version: 10.4.5

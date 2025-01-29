@@ -13,10 +13,12 @@ import { retry } from "helpers/retry";
 import { sleep } from "helpers/sleep";
 import { fetch } from "undici";
 import { beforeAll, describe, expect } from "vitest";
+import { resolveWranglerConfigPath } from "wrangler/src/config/config-helpers";
 import { deleteProject, deleteWorker } from "../scripts/common";
 import { getFrameworkMap } from "../src/templates";
 import { getFrameworkToTest } from "./frameworkToTest";
 import {
+	countAllWranglerConfigPaths,
 	isQuarantineMode,
 	keys,
 	kill,
@@ -673,7 +675,11 @@ describe.concurrent(
 						const wranglerPath = join(project.path, "node_modules/wrangler");
 						expect(wranglerPath).toExist();
 
-						assertEitherTomlOrJson(project.path);
+						expect(
+							countAllWranglerConfigPaths(project.path) === 1,
+							"Only one of wrangler.toml, wrangler.json, and wrangler.jsonc should exist.",
+						).toBe(true);
+
 						await addTestVarsToWranglerConfig(project.path);
 
 						// Make a request to the deployed project and verify it was successful
@@ -788,18 +794,6 @@ const addTestVarsToWranglerConfig = async (projectPath: string) => {
 		wranglerJson.vars.TEST = "C3_TEST";
 
 		writeJSON(wranglerJsonPath, wranglerJson);
-	}
-};
-
-const assertEitherTomlOrJson = (projectPath: string) => {
-	const wranglerTomlPath = join(projectPath, "wrangler.toml");
-	const wranglerJsonPath = join(projectPath, "wrangler.json");
-
-	if (existsSync(wranglerTomlPath) && existsSync(wranglerJsonPath)) {
-		expect(
-			false,
-			"Either wrangler.toml or wrangler.json should exist, but not both",
-		).toBe(true);
 	}
 };
 

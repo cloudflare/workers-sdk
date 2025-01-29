@@ -12,6 +12,7 @@ import path from "path";
 import { setTimeout } from "timers/promises";
 import { stripAnsi } from "@cloudflare/cli";
 import { spawn } from "cross-spawn";
+import { findUpSync } from "find-up";
 import { retry } from "helpers/retry";
 import treeKill from "tree-kill";
 import { fetch } from "undici";
@@ -507,4 +508,21 @@ export function kill(proc: ChildProcess) {
 	return new Promise<void>(
 		(resolve) => proc.pid && treeKill(proc.pid, "SIGINT", () => resolve()),
 	);
+}
+
+export function countAllWranglerConfigPaths(referencePath?: string) {
+	return Object.keys(findAllWranglerConfigPaths(referencePath)).length;
+}
+
+export function findAllWranglerConfigPaths(referencePath?: string) {
+	const cwd = referencePath ?? process.cwd();
+	const wranglerTomlPath = findUpSync("wrangler.toml", { cwd });
+	const wranglerJsonPath = findUpSync("wrangler.json", { cwd });
+	const wranglerJsoncPath = findUpSync("wrangler.jsonc", { cwd });
+
+	return {
+		wranglerTomlPath,
+		wranglerJsonPath,
+		wranglerJsoncPath,
+	};
 }
