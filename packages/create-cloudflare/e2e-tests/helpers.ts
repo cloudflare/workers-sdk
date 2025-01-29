@@ -511,11 +511,12 @@ export function kill(proc: ChildProcess) {
 }
 
 export function countAllWranglerConfigPaths(referencePath?: string) {
-	return Object.keys(findAllWranglerConfigPaths(referencePath)).length;
+	return Object.values(findAllWranglerConfigPaths(referencePath)).filter(
+		(configPath) => configPath !== undefined,
+	).length;
 }
 
-export function findAllWranglerConfigPaths(referencePath?: string) {
-	const cwd = referencePath ?? process.cwd();
+export function findAllWranglerConfigPaths(cwd = process.cwd()) {
 	const wranglerTomlPath = findUpSync("wrangler.toml", { cwd });
 	const wranglerJsonPath = findUpSync("wrangler.json", { cwd });
 	const wranglerJsoncPath = findUpSync("wrangler.jsonc", { cwd });
