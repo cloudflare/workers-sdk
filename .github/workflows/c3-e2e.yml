@@ -7,7 +7,7 @@ on:
 jobs:
   turbo-ignore:
     outputs:
-      skip: ${{ steps.skip.outputs.ignore }}
+      skip: ${{ steps.skip.outcome }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
@@ -16,16 +16,15 @@ jobs:
           fetch-depth: 0
       - shell: bash
         id: skip
+        continue-on-error: true
         run: |
           npx turbo-ignore create-cloudflare --task="test:e2e" --fallback=$(git merge-base origin/main HEAD)
-          echo "ignore=$?" >> $GITHUB_OUTPUT;
-          exit 0
 
   e2e:
     # Note: please keep this job in sync with the e2e-only-dependabot-bumped-framework one
     #       in .github/workflows/c3-e2e-dependabot.yml
     needs: ["turbo-ignore"]
-    if: ${{ needs.turbo-ignore.outputs.skip == '1' }}
+    if: ${{ needs.turbo-ignore.outputs.skip == 'failure' }}
     timeout-minutes: 45
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
