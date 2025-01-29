@@ -1,6 +1,5 @@
 import { readConfig } from "../../config";
 import { logger } from "../../logger";
-import * as metrics from "../../metrics";
 import { requireAuth } from "../../user";
 import { printWranglerBanner } from "../../wrangler-banner";
 import { listPipelines } from "../client";
@@ -16,9 +15,6 @@ export async function listPipelinesHandler(
 
 	// TODO: we should show bindings & transforms if they exist for given ids
 	const list = await listPipelines(accountId);
-	metrics.sendMetricsEvent("list pipelines", {
-		sendMetrics: config.send_metrics,
-	});
 
 	logger.table(
 		list.map((pipeline) => ({

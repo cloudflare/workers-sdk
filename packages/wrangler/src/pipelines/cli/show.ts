@@ -1,6 +1,5 @@
 import { readConfig } from "../../config";
 import { logger } from "../../logger";
-import * as metrics from "../../metrics";
 import { requireAuth } from "../../user";
 import { printWranglerBanner } from "../../wrangler-banner";
 import { getPipeline } from "../client";
@@ -31,9 +30,6 @@ export async function showPipelineHandler(
 
 	logger.log(`Retrieving config for Pipeline "${name}".`);
 	const pipeline = await getPipeline(accountId, name);
-	metrics.sendMetricsEvent("show pipeline", {
-		sendMetrics: config.send_metrics,
-	});
 
 	logger.log(JSON.stringify(pipeline, null, 2));
 }

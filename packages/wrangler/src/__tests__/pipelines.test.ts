@@ -284,21 +284,21 @@ describe("pipelines", () => {
 				POSITIONALS
 				  pipeline  The name of the new pipeline  [string] [required]
 
-				Source settings:
+				Source settings
 				      --enable-worker-binding  Send data from a Worker to a Pipeline using a Binding  [boolean] [default: true]
 				      --enable-http            Generate an endpoint to ingest data via HTTP  [boolean] [default: true]
 				      --require-http-auth      Require Cloudflare API Token for HTTPS endpoint authentication  [boolean] [default: false]
 				      --cors-origins           CORS origin allowlist for HTTP endpoint (use * for any origin)  [array]
 
-				Batch hints:
+				Batch hints
 				      --batch-max-mb       Maximum batch size in megabytes before flushing  [number]
 				      --batch-max-rows     Maximum number of rows per batch before flushing  [number]
 				      --batch-max-seconds  Maximum age of batch in seconds before flushing  [number]
 
-				Transformations:
+				Transformations
 				      --transform-worker  Pipeline transform Worker and entrypoint (<worker>.<entrypoint>)  [string]
 
-				Destination settings:
+				Destination settings
 				      --r2-bucket             Destination R2 bucket name  [string] [required]
 				      --r2-access-key-id      R2 service Access Key ID for authentication. Leave empty for OAuth confirmation.  [string]
 				      --r2-secret-access-key  R2 service Secret Access Key for authentication. Leave empty for OAuth confirmation.  [string]

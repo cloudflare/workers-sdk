@@ -1,7 +1,7 @@
+import chalk from "chalk";
 import { formatConfigSnippet, readConfig } from "../../config";
 import { FatalError, UserError } from "../../errors";
 import { logger } from "../../logger";
-import * as metrics from "../../metrics";
 import { requireAuth } from "../../user";
 import { getValidBindingName } from "../../utils/getValidBindingName";
 import { printWranglerBanner } from "../../wrangler-banner";
@@ -136,7 +136,7 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 					(argv["r2-access-key-id"] && !argv["r2-secret-access-key"]) ||
 					(!argv["r2-access-key-id"] && argv["r2-secret-access-key"])
 				) {
-					throw new Error(
+					throw new UserError(
 						"--r2-access-key-id and --r2-secret-access-key must be provided together"
 					);
 				}
@@ -167,7 +167,7 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 				demandOption: false,
 				coerce: (val) => {
 					if (!val.includes("${slug}")) {
-						throw new Error("filename must contain ${slug}");
+						throw new UserError("filename must contain ${slug}");
 					}
 					return val;
 				},
@@ -283,9 +283,6 @@ export async function createPipelineHandler(
 
 	logger.log(`🌀 Creating Pipeline named "${name}"`);
 	const pipeline = await createPipeline(accountId, pipelineConfig);
-	metrics.sendMetricsEvent("create pipeline", {
-		sendMetrics: config.send_metrics,
-	});
 
 	logger.log(
 		`✅ Successfully created Pipeline "${pipeline.name}" with id ${pipeline.id}`

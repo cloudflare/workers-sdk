@@ -1,7 +1,7 @@
+import chalk from "chalk";
 import { readConfig } from "../../config";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
-import * as metrics from "../../metrics";
 import { requireAuth } from "../../user";
 import { printWranglerBanner } from "../../wrangler-banner";
 import { getPipeline, updatePipeline } from "../client";
@@ -49,7 +49,7 @@ export function addUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 					"require-http-auth",
 					"cors-origins",
 				],
-				"Source settings:"
+				`${chalk.bold("Source settings")}`
 			)
 			.option("enable-worker-binding", {
 				type: "boolean",
@@ -78,7 +78,7 @@ export function addUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 			// Batching
 			.group(
 				["batch-max-mb", "batch-max-rows", "batch-max-seconds"],
-				"Batch definition:"
+				`${chalk.bold("Batch hints")}`
 			)
 			.option("batch-max-mb", {
 				type: "number",
@@ -100,7 +100,7 @@ export function addUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 			})
 
 			// Transform options
-			.group(["transform-worker"], "Transformations:")
+			.group(["transform-worker"], `${chalk.bold("Transformations")}`)
 			.option("transform-worker", {
 				type: "string",
 				describe:
@@ -119,7 +119,7 @@ export function addUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 					"file-template",
 					"partition-template",
 				],
-				"Destination settings:"
+				`${chalk.bold("Destination settings")}`
 			)
 			.option("r2-access-key-id", {
 				type: "string",
@@ -297,9 +297,6 @@ export async function updatePipelineHandler(
 
 	logger.log(`🌀 Updating Pipeline "${name}"`);
 	const pipeline = await updatePipeline(accountId, name, pipelineConfig);
-	metrics.sendMetricsEvent("update pipeline", {
-		sendMetrics: config.send_metrics,
-	});
 
 	logger.log(
 		`✅ Successfully updated Pipeline "${pipeline.name}" with ID ${pipeline.id}\n`

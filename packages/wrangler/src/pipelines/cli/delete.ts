@@ -1,6 +1,5 @@
 import { readConfig } from "../../config";
 import { logger } from "../../logger";
-import * as metrics from "../../metrics";
 import { requireAuth } from "../../user";
 import { printWranglerBanner } from "../../wrangler-banner";
 import { deletePipeline } from "../client";
@@ -31,8 +30,6 @@ export async function deletePipelineHandler(
 
 	logger.log(`Deleting Pipeline ${name}.`);
 	await deletePipeline(accountId, name);
+
 	logger.log(`Deleted Pipeline ${name}.`);
-	metrics.sendMetricsEvent("delete pipeline", {
-		sendMetrics: config.send_metrics,
-	});
 }
