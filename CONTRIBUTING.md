@@ -202,6 +202,7 @@ Tests in a workspace are executed, by [Vitest](https://vitest.dev/), which is co
 
 Every change you make should be stored in a [git commit](https://github.com/git-guides/git-commit).
 Changes should be committed to a new local branch, which then gets pushed to your fork of the repository on GitHub.
+In general, we discourage force pushing to branches, so please try and make your changes in additive commits. This makes reviewing easier, and is especially helpful when a PR goes through multiple rounds of review for a reviewer to be able to quickly see what's changed.
 
 - Ensure your `main` branch is up to date
   ```sh
