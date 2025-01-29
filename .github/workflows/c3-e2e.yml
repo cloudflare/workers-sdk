@@ -17,7 +17,7 @@ jobs:
       - shell: bash
         id: skip
         run: |
-          npx turbo-ignore create-cloudflare --task="test:e2e"
+          npx turbo-ignore create-cloudflare --task="test:e2e" --fallback=$(git merge-base main HEAD)
           echo "ignore=$?" >> $GITHUB_OUTPUT;
 
   e2e:
