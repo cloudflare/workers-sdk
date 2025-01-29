@@ -1,7 +1,10 @@
 import { APIError } from "../../parse";
 import { retryOnAPIFailure } from "../../utils/retry";
+import { mockConsoleMethods } from "../helpers/mock-console";
 
 describe("retryOnAPIFailure", () => {
+	const std = mockConsoleMethods();
+
 	it("should retry 5xx errors and succeed if the 3rd try succeeds", async () => {
 		let attempts = 0;
 
@@ -12,6 +15,16 @@ describe("retryOnAPIFailure", () => {
 			}
 		});
 		expect(attempts).toBe(3);
+		expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "Retrying API call after error...
+			Retrying API call after error...",
+			  "out": "",
+			  "warn": "",
+			}
+		`);
 	});
 
 	it("should throw 5xx error after all retries fail", async () => {
@@ -24,6 +37,17 @@ describe("retryOnAPIFailure", () => {
 			})
 		).rejects.toMatchInlineSnapshot(`[APIError: 500 error]`);
 		expect(attempts).toBe(3);
+		expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "Retrying API call after error...
+			Retrying API call after error...
+			Retrying API call after error...",
+			  "out": "",
+			  "warn": "",
+			}
+		`);
 	});
 
 	it("should not retry non-5xx errors", async () => {
@@ -36,6 +60,15 @@ describe("retryOnAPIFailure", () => {
 			})
 		).rejects.toMatchInlineSnapshot(`[APIError: 401 error]`);
 		expect(attempts).toBe(1);
+		expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "",
+			  "warn": "",
+			}
+		`);
 	});
 
 	it("should retry TypeError", async () => {
@@ -48,6 +81,17 @@ describe("retryOnAPIFailure", () => {
 			})
 		).rejects.toMatchInlineSnapshot(`[TypeError: type error]`);
 		expect(attempts).toBe(3);
+		expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "Retrying API call after error...
+			Retrying API call after error...
+			Retrying API call after error...",
+			  "out": "",
+			  "warn": "",
+			}
+		`);
 	});
 
 	it("should not retry other errors", async () => {
@@ -60,6 +104,15 @@ describe("retryOnAPIFailure", () => {
 			})
 		).rejects.toMatchInlineSnapshot(`[Error: some error]`);
 		expect(attempts).toBe(1);
+		expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "",
+			  "warn": "",
+			}
+		`);
 	});
 
 	it("should retry custom APIError implementation with non-5xx error", async () => {
@@ -81,5 +134,16 @@ describe("retryOnAPIFailure", () => {
 		).rejects.toMatchInlineSnapshot(`[CustomAPIError: 401 error]`);
 		expect(attempts).toBe(3);
 		expect(checkedCustomIsRetryable).toBe(true);
+		expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "Retrying API call after error...
+			Retrying API call after error...
+			Retrying API call after error...",
+			  "out": "",
+			  "warn": "",
+			}
+		`);
 	});
 });
