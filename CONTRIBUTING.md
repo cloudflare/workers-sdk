@@ -227,6 +227,16 @@ Changes should be committed to a new local branch, which then gets pushed to you
 - The format for Pull Request titles is `[package name] description`, where the package name should indicate which package of the `workers-sdk` monorepo your PR pertains to (e.g. `wrangler`/`pages-shared`/`chrome-devtools-patches`), and the description should be a succinct summary of the change you're making.
 - GitHub will insert a template for the body of your Pull Request—it's important to carefully fill out all the fields, giving as much detail as possible to reviewers.
 
+### Git Hygiene
+
+Making sure your branch follows our recommendations for git will help ensure your PR is reviewed & released as quickly as possible:
+
+- When opening a PR (before the first review), try and make sure your git commit history is clean, and clearly describes the changes you want to make.
+  - For instance, here's an example of a PR where the commit history is quite messy, and doesn't help reviewers: https://github.com/cloudflare/workers-sdk/pull/2409/commits
+  - And here's an example of where this has been done well: https://github.com/cloudflare/workers-sdk/pull/4795/commits
+- Once your PR has been reviewed, when addressing feedback try not to modify already reviewed commits with force pushes. This slows down the review process and makes it hard to keep track of what changes have been made. Instead, add aditional commits to your PR to address any feedback (`git commit --fixup` is a helpful tool here).
+- When merging your PR into `main`, `workers-sdk` enforces squash merges. As such, please try and make sure that the commit message associated with the merge clearly describes the entire change your PR makes.
+
 ## PR Review
 
 PR review is a critical and required step in the process for landing changes. This is an opportunity to catch potential issues, improve the quality of the work, celebrate good design, and learn from each other. As a reviewer, it's important to be thoughtful about the proposed changes and communicate any feedback.
