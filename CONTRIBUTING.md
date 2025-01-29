@@ -202,7 +202,6 @@ Tests in a workspace are executed, by [Vitest](https://vitest.dev/), which is co
 
 Every change you make should be stored in a [git commit](https://github.com/git-guides/git-commit).
 Changes should be committed to a new local branch, which then gets pushed to your fork of the repository on GitHub.
-In general, we discourage force pushing to branches, so please try and make your changes in additive commits. This makes reviewing easier, and is especially helpful when a PR goes through multiple rounds of review for a reviewer to be able to quickly see what's changed.
 
 - Ensure your `main` branch is up to date
   ```sh
@@ -227,6 +226,16 @@ In general, we discourage force pushing to branches, so please try and make your
 - Once you are happy with your changes, create a Pull Request on GitHub
 - The format for Pull Request titles is `[package name] description`, where the package name should indicate which package of the `workers-sdk` monorepo your PR pertains to (e.g. `wrangler`/`pages-shared`/`chrome-devtools-patches`), and the description should be a succinct summary of the change you're making.
 - GitHub will insert a template for the body of your Pull Request—it's important to carefully fill out all the fields, giving as much detail as possible to reviewers.
+
+### Git Hygiene
+
+Making sure your branch follows our recommendations for git will help ensure your PR is reviewed & released as quickly as possible:
+
+- When opening a PR (before the first review), try and make sure your git commit history is clean, and clearly describes the changes you want to make.
+  - For instance, here's an example of a PR where the commit history is quite messy, and doesn't help reviewers: https://github.com/cloudflare/workers-sdk/pull/2409/commits
+  - And here's an example of where this has been done well: https://github.com/cloudflare/workers-sdk/pull/4795/commits
+- Once your PR has been reviewed, when addressing feedback try not to modify already reviewed commits with force pushes. This slows down the review process and makes it hard to keep track of what changes have been made. Instead, add aditional commits to your PR to address any feedback (`git commit --fixup` is a helpful tool here).
+- When merging your PR into `main`, `workers-sdk` enforces squash merges. As such, please try and make sure that the commit message associated with the merge clearly describes the entire change your PR makes.
 
 ## PR Review
 
