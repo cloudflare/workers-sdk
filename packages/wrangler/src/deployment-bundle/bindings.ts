@@ -2,10 +2,7 @@ import assert from "node:assert";
 import { fetchResult } from "../cfetch";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
-import {
-	getDatabaseByNameOrBinding,
-	getDatabaseInfoFromIdOrName,
-} from "../d1/utils";
+import { getDatabaseInfoFromIdOrName } from "../d1/utils";
 import { prompt, select } from "../dialogs";
 import { UserError } from "../errors";
 import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
