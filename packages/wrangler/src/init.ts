@@ -9,7 +9,7 @@ import { assertNever } from "./api/startDevWorker/utils";
 import { fetchResult } from "./cfetch";
 import { fetchWorker } from "./cfetch/internal";
 import { readConfig } from "./config";
-import { getDatabaseInfoFromId } from "./d1/utils";
+import { getDatabaseInfoFromIdOrName } from "./d1/utils";
 import { confirm, select } from "./dialogs";
 import { getC3CommandFromEnv } from "./environment-variables/misc-variables";
 import { CommandLineArgsError, FatalError, UserError } from "./errors";
@@ -993,7 +993,7 @@ export async function mapBindings(
 		bindings
 			.filter((binding) => binding.type === "d1")
 			.map(async (binding) => {
-				const dbInfo = await getDatabaseInfoFromId(accountId, binding.id);
+				const dbInfo = await getDatabaseInfoFromIdOrName(accountId, binding.id);
 				d1BindingsWithInfo[binding.id] = dbInfo;
 			})
 	);

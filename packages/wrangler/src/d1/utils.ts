@@ -54,12 +54,12 @@ export const getDatabaseByNameOrBinding = async (
 	return matchingDB;
 };
 
-export const getDatabaseInfoFromId = async (
+export const getDatabaseInfoFromIdOrName = async (
 	accountId: string,
-	databaseId: string
+	databaseIdOrName: string
 ): Promise<DatabaseInfo> => {
 	return await fetchResult<DatabaseInfo>(
-		`/accounts/${accountId}/d1/database/${databaseId}`,
+		`/accounts/${accountId}/d1/database/${databaseIdOrName}`,
 		{
 			headers: {
 				"Content-Type": "application/json",

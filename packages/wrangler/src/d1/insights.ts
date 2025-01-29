@@ -3,7 +3,10 @@ import { withConfig } from "../config";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { printWranglerBanner } from "../wrangler-banner";
-import { getDatabaseByNameOrBinding, getDatabaseInfoFromId } from "./utils";
+import {
+	getDatabaseByNameOrBinding,
+	getDatabaseInfoFromIdOrName,
+} from "./utils";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -114,7 +117,7 @@ export const Handler = withConfig<HandlerOptions>(
 			name
 		);
 
-		const result = await getDatabaseInfoFromId(accountId, db.uuid);
+		const result = await getDatabaseInfoFromIdOrName(accountId, db.uuid);
 
 		const output: Record<string, string | number>[] = [];
 

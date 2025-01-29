@@ -10,7 +10,7 @@ import {
 import { fetchResult } from "../cfetch";
 import { configFileName, formatConfigSnippet } from "../config";
 import { createCommand } from "../core/create-command";
-import { getBindings } from "../deployment-bundle/bindings";
+import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import {
 	printBundleSize,
@@ -33,6 +33,7 @@ import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
+import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";
 import { getMetricsUsageHeaders } from "../metrics";
@@ -87,6 +88,7 @@ type Props = {
 	noBundle: boolean | undefined;
 	keepVars: boolean | undefined;
 	projectRoot: string | undefined;
+	experimentalAutoCreate: boolean;
 
 	tag: string | undefined;
 	message: string | undefined;
@@ -282,9 +284,20 @@ export const versionsUploadCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
+		"experimental-auto-create": {
+			describe: "Automatically provision draft bindings with new resources",
+			type: "boolean",
+			default: true,
+			hidden: true,
+			alias: "x-auto-create",
+		},
 	},
 	behaviour: {
 		useConfigRedirectIfAvailable: true,
+		overrideExperimentalFlags: (args) => ({
+			MULTIWORKER: false,
+			RESOURCES_PROVISION: args.experimentalProvision ?? false,
+		}),
 	},
 	handler: async function versionsUploadHandler(args, { config }) {
 		const entry = await getEntry(args, config, "versions upload");
@@ -384,6 +397,7 @@ export const versionsUploadCommand = createCommand({
 			projectRoot: entry.projectRoot,
 			tag: args.tag,
 			message: args.message,
+			experimentalAutoCreate: args.experimentalAutoCreate,
 		});
 
 		writeOutput({
@@ -734,6 +748,17 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		if (props.dryRun) {
 			printBindings({ ...bindings, vars: maskedVars });
 		} else {
+			assert(accountId, "Missing accountId");
+			if (getFlag("RESOURCES_PROVISION")) {
+				await provisionBindings(
+					bindings,
+					accountId,
+					scriptName,
+					props.experimentalAutoCreate,
+					props.config
+				);
+			}
+
 			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;
 

@@ -11,7 +11,10 @@ import { printWranglerBanner } from "../../wrangler-banner";
 import { createBackup } from "../backups";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { executeSql } from "../execute";
-import { getDatabaseInfoFromConfig, getDatabaseInfoFromId } from "../utils";
+import {
+	getDatabaseInfoFromConfig,
+	getDatabaseInfoFromIdOrName,
+} from "../utils";
 import {
 	getMigrationsPath,
 	getUnappliedMigrations,
@@ -130,7 +133,10 @@ Your database may not be available to serve requests during the migration, conti
 				"In non-local mode `databaseInfo` should be defined."
 			);
 			const accountId = await requireAuth(config);
-			const dbInfo = await getDatabaseInfoFromId(accountId, databaseInfo?.uuid);
+			const dbInfo = await getDatabaseInfoFromIdOrName(
+				accountId,
+				databaseInfo?.uuid
+			);
 			if (dbInfo.version === "alpha") {
 				logger.log("🕒 Creating backup...");
 				await createBackup(accountId, databaseInfo.uuid);
