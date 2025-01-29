@@ -10,7 +10,8 @@
 			"cache": false
 		},
 		"build": {
-			"dependsOn": ["^build"]
+			"dependsOn": ["^build"],
+			"outputLogs": "new-only"
 		},
 		"test": {
 			"dependsOn": ["build"]
@@ -32,9 +33,12 @@
 			"dependsOn": ["topological"]
 		},
 		"test:ci": {
-			"dependsOn": ["build"]
+			"dependsOn": ["build"],
+			"outputLogs": "new-only"
 		},
-		"test:e2e": {},
+		"test:e2e": {
+			"outputLogs": "new-only"
+		},
 		"//#check:format": {
 			"cache": true
 		}
