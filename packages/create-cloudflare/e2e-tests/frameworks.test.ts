@@ -676,9 +676,9 @@ describe.concurrent(
 						const wranglerPath = join(project.path, "node_modules/wrangler");
 						expect(wranglerPath).toExist();
 
-						expect(
+						console.log(
 							JSON.stringify(findAllWranglerConfigPaths(project.path)),
-						).toBe("");
+						);
 						expect(
 							countAllWranglerConfigPaths(project.path) === 1,
 							"Only one of wrangler.toml, wrangler.json, and wrangler.jsonc should exist.",
