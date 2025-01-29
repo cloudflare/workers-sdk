@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-feat: add resource auto-provisioning to versions upload
+feat: add experimental resource auto-provisioning to versions upload
