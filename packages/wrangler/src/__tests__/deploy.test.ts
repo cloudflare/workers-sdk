@@ -11903,6 +11903,37 @@ export default{
 		});
 	});
 
+	describe("images", () => {
+		it("should upload images bindings", async () => {
+			writeWranglerConfig({
+				images: { binding: "IMAGES_BIND" },
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "images",
+						name: "IMAGES_BIND",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- Images:
+				  - Name: IMAGES_BIND
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+	});
+
 	describe("python", () => {
 		it("should upload python module defined in wrangler.toml", async () => {
 			writeWranglerConfig({

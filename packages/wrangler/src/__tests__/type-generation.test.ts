@@ -163,6 +163,9 @@ const bindingsConfigMock: Omit<
 	ai: {
 		binding: "AI_BINDING",
 	},
+	images: {
+		binding: "IMAGES_BINDING",
+	},
 	version_metadata: {
 		binding: "VERSION_METADATA_BINDING",
 	},
