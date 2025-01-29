@@ -19,6 +19,7 @@ jobs:
         run: |
           npx turbo-ignore create-cloudflare --task="test:e2e" --fallback=$(git merge-base origin/main HEAD)
           echo "ignore=$?" >> $GITHUB_OUTPUT;
+          exit 0
 
   e2e:
     # Note: please keep this job in sync with the e2e-only-dependabot-bumped-framework one
