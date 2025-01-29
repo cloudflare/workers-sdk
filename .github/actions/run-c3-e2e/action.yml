@@ -39,7 +39,7 @@ runs:
         git config --global user.email wrangler@cloudflare.com
         git config --global user.name 'Wrangler automated PR updater'
 
-    - name: E2E Tests ${{inputs.experimental && '(experimental)' || ''}}
+    - name: E2E Tests ${{inputs.experimental == 'true' && '(experimental)' || ''}}
       id: run-e2e
       shell: bash
       run: pnpm run test:e2e --filter create-cloudflare
@@ -57,8 +57,8 @@ runs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: e2e-logs${{inputs.quarantine && '-quarantine' || ''}}${{inputs.experimental && '-experimental' || ''}}-${{runner.os}}-${{inputs.packageManager}}
-        path: packages/create-cloudflare/.e2e-logs${{inputs.experimental && '-experimental' || ''}}
+        name: e2e-logs${{inputs.quarantine == 'true' && '-quarantine' || ''}}${{inputs.experimental == 'true' && '-experimental' || ''}}-${{runner.os}}-${{inputs.packageManager}}
+        path: packages/create-cloudflare/.e2e-logs${{inputs.experimental == 'true' && '-experimental' || ''}}
         include-hidden-files: true
 
     - name: Fail if errors detected
