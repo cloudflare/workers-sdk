@@ -1121,6 +1121,9 @@ importers:
       '@cloudflare/eslint-config-worker':
         specifier: workspace:*
         version: link:../eslint-config-worker
+      '@cloudflare/mock-npm-registry':
+        specifier: workspace:*
+        version: link:../mock-npm-registry
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
