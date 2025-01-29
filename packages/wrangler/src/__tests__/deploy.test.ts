@@ -12347,6 +12347,66 @@ export default{
 				Current Version ID: Galaxy-Class"
 			`);
 		});
+
+		it("should not call Workflow's API if the workflow binds to another script", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				name: "this-script",
+				workflows: [
+					{
+						binding: "WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						script_name: "another-script",
+					},
+				],
+			});
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedScriptName: "this-script",
+				expectedBindings: [
+					{
+						type: "workflow",
+						name: "WORKFLOW",
+						workflow_name: "my-workflow",
+						class_name: "MyWorkflow",
+						script_name: "another-script",
+					},
+				],
+			});
+
+			const handler = http.put(
+				"*/accounts/:accountId/workflows/:workflowName",
+				() => {
+					expect(
+						false,
+						"Workflows API should not be called at all, in this case."
+					);
+				}
+			);
+			msw.use(handler);
+			await fs.promises.writeFile(
+				"index.js",
+				`
+                export default {};
+            `
+			);
+
+			await runWrangler("deploy");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- Workflows:
+				  - WORKFLOW: MyWorkflow (defined in another-script)
+				Uploaded this-script (TIMINGS)
+				Deployed this-script triggers (TIMINGS)
+				  https://this-script.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
 	});
 });
 
