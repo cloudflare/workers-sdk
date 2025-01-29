@@ -19,6 +19,7 @@ import { getFrameworkMap } from "../src/templates";
 import { getFrameworkToTest } from "./frameworkToTest";
 import {
 	countAllWranglerConfigPaths,
+	findAllWranglerConfigPaths,
 	isQuarantineMode,
 	keys,
 	kill,
@@ -778,22 +779,24 @@ const runCli = async (
  * which overwrites any that comes from the framework's template.
  */
 const addTestVarsToWranglerConfig = async (projectPath: string) => {
-	const wranglerTomlPath = join(projectPath, "wrangler.toml");
-	const wranglerJsonPath = join(projectPath, "wrangler.json");
-	if (existsSync(wranglerTomlPath)) {
+	const { wranglerTomlPath, wranglerJsonPath, wranglerJsoncPath } =
+		findAllWranglerConfigPaths(projectPath);
+
+	const jsonPath = wranglerJsonPath ?? wranglerJsoncPath;
+
+	if (wranglerTomlPath) {
 		const wranglerToml = readToml(wranglerTomlPath);
 		// Add a TEST var to the wrangler.toml
 		wranglerToml.vars ??= {};
 		(wranglerToml.vars as JsonMap).TEST = "C3_TEST";
 
 		writeToml(wranglerTomlPath, wranglerToml);
-	} else if (existsSync(wranglerJsonPath)) {
-		const wranglerJson = readJSON(wranglerJsonPath);
-		// Add a TEST var to the wrangler.toml
+	} else if (jsonPath) {
+		const wranglerJson = readJSON(jsonPath);
 		wranglerJson.vars ??= {};
 		wranglerJson.vars.TEST = "C3_TEST";
 
-		writeJSON(wranglerJsonPath, wranglerJson);
+		writeJSON(jsonPath, wranglerJson);
 	}
 };
 
