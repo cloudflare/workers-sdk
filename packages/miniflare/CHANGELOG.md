@@ -1,5 +1,11 @@
 # miniflare
 
+## 3.20250124.1
+
+### Patch Changes
+
+- [#7788](https://github.com/cloudflare/workers-sdk/pull/7788) [`cf4f47a`](https://github.com/cloudflare/workers-sdk/commit/cf4f47a8af2dc476f8a0e61f0d22f080f191de1f) Thanks [@penalosa](https://github.com/penalosa)! - Switch to `capnp-es` over `capnp-ts`
+
 ## 3.20250124.0
 
 ### Patch Changes

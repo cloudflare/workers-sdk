@@ -1,5 +1,13 @@
 # create-cloudflare
 
+## 2.37.4
+
+### Patch Changes
+
+- [#7903](https://github.com/cloudflare/workers-sdk/pull/7903) [`ce8bfbd`](https://github.com/cloudflare/workers-sdk/commit/ce8bfbdada90d1eac99f3a35dfdf1707e88eb73f) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - update experimental Next.js template to work on `@opennextjs/cloudflare@0.4.x`
+
+- [#7972](https://github.com/cloudflare/workers-sdk/pull/7972) [`7112347`](https://github.com/cloudflare/workers-sdk/commit/7112347e7de80857d2515892e9620700486b7a84) Thanks [@andyjessop](https://github.com/andyjessop)! - chore: bumps create-hono version to ensure correct Wrangler config file. Fixes the issue where C3 was generating both a `wrangler.toml` and a `wrangler.json` file.
+
 ## 2.37.3
 
 ### Patch Changes
