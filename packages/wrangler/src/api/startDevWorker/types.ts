@@ -1,3 +1,4 @@
+import { DevEnv } from "./DevEnv";
 import type { AssetsOptions } from "../../assets";
 import type { Config } from "../../config";
 import type {
@@ -53,6 +54,7 @@ export interface Worker {
 	scheduled: MiniflareWorker["scheduled"];
 	queue: MiniflareWorker["queue"];
 	dispose(): Promise<void>;
+	raw: DevEnv;
 }
 
 export interface StartDevWorkerInput {
