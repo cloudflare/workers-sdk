@@ -1,0 +1,9 @@
+name = "worker"
+main = "./src/index.ts"
+compatibility_date = "2024-12-30"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "prisma-demo-db"
+database_id = "cb62ec19-23af-4755-b3ea-f18fcf13ab14"

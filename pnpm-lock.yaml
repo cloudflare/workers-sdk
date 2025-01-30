@@ -129,7 +129,7 @@ importers:
         version: 5.0.12(@types/node@18.19.74)
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
 
   fixtures/additional-modules:
     devDependencies:
@@ -147,7 +147,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -165,7 +165,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -192,7 +192,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -213,7 +213,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -231,7 +231,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -252,7 +252,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -276,7 +276,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -300,7 +300,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
 
   fixtures/isomorphic-random-example: {}
 
@@ -325,7 +325,7 @@ importers:
         version: 5.7.3
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -337,7 +337,7 @@ importers:
         version: 7.0.0
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -362,7 +362,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -380,7 +380,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -407,7 +407,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -425,7 +425,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -446,7 +446,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -474,7 +474,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -492,7 +492,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -510,7 +510,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -531,7 +531,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -549,7 +549,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -586,7 +586,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -607,7 +607,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -622,7 +622,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -643,7 +643,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -661,7 +661,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -679,7 +679,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -697,7 +697,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -715,7 +715,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -733,7 +733,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -751,7 +751,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -769,7 +769,7 @@ importers:
         version: 5.7.3
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -790,7 +790,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -805,7 +805,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -830,7 +830,7 @@ importers:
     devDependencies:
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -872,7 +872,7 @@ importers:
         version: 5.7.3
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -899,7 +899,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -931,7 +931,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -952,7 +952,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -973,7 +973,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -991,7 +991,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1009,7 +1009,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1231,7 +1231,7 @@ importers:
         version: 4.2.0(typescript@5.7.3)(vite@5.0.12(@types/node@18.19.74))
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       which-pm-runs:
         specifier: ^1.1.0
         version: 1.1.0
@@ -1707,7 +1707,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -1998,6 +1998,36 @@ importers:
         specifier: catalog:vite-plugin
         version: 3.103.2(@cloudflare/workers-types@4.20250204.0)
 
+  packages/vite-plugin-cloudflare/playground/prisma:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250121.0
+        version: 4.20250121.0
+      '@prisma/adapter-d1':
+        specifier: ^6.3.0
+        version: 6.3.0
+      '@prisma/client':
+        specifier: ^6.3.0
+        version: 6.3.0(prisma@6.3.0(typescript@5.7.3))(typescript@5.7.3)
+      prisma:
+        specifier: ^6.3.0
+        version: 6.3.0(typescript@5.7.3)
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.0.7(@types/node@18.19.74)(jiti@2.4.2)
+      wrangler:
+        specifier: catalog:vite-plugin
+        version: 3.103.2(@cloudflare/workers-types@4.20250129.0)
+
   packages/vite-plugin-cloudflare/playground/react-spa:
     dependencies:
       react:
@@ -2263,7 +2293,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
 
   packages/workers-editor-shared:
     dependencies:
@@ -2473,7 +2503,7 @@ importers:
         version: 5.7.3
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
 
   packages/workers-tsconfig: {}
 
@@ -2496,7 +2526,7 @@ importers:
         version: 5.7.3
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -2539,7 +2569,7 @@ importers:
         version: 5.7.3
       vitest:
         specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
 
   packages/wrangler:
     dependencies:
@@ -4836,6 +4866,39 @@ packages:
 
   '@polka/url@1.0.0-next.25':
     resolution: {integrity: sha512-j7P6Rgr3mmtdkeDGTe0E/aYyWEWVtc5yFXtHCRHs28/jptDEWfaVOc5T7cblqy1XKPPfCxJc/8DwQ5YgLOZOVQ==}
+
+  '@prisma/adapter-d1@6.3.0':
+    resolution: {integrity: sha512-Ncp9rWFo1murPORuv5vi3fgiBdH/Cq3m4BRwosHICQ2D1vzOXlrxSaFykwN1abYmucZyX+KUhJjNevdQj5dhfA==}
+
+  '@prisma/client@6.3.0':
+    resolution: {integrity: sha512-BY3Fi28PUSk447Bpv22LhZp4HgNPo7NsEN+EteM1CLDnLjig5863jpW+3c3HHLFmml+nB/eJv1CjSriFZ8z7Cg==}
+    engines: {node: '>=18.18'}
+    peerDependencies:
+      prisma: '*'
+      typescript: '>=5.1.0'
+    peerDependenciesMeta:
+      prisma:
+        optional: true
+      typescript:
+        optional: true
+
+  '@prisma/debug@6.3.0':
+    resolution: {integrity: sha512-m1lQv//0Rc5RG8TBpNUuLCxC35Ghi5XfpPmL83Gh04/GICHD2J5H2ndMlaljrUNaQDF9dOxIuFAYP1rE9wkXkg==}
+
+  '@prisma/driver-adapter-utils@6.3.0':
+    resolution: {integrity: sha512-6qs9kLqRGsqDp+rsIJIUYfWX0BSRYMeOU/sKxZsCWsElchsz6Majc1rMxeWdDOKQvPrgtmKACwKwTodgoyph6g==}
+
+  '@prisma/engines-version@6.3.0-17.acc0b9dd43eb689cbd20c9470515d719db10d0b0':
+    resolution: {integrity: sha512-R/ZcMuaWZT2UBmgX3Ko6PAV3f8//ZzsjRIG1eKqp3f2rqEqVtCv+mtzuH2rBPUC9ujJ5kCb9wwpxeyCkLcHVyA==}
+
+  '@prisma/engines@6.3.0':
+    resolution: {integrity: sha512-RXqYhlZb9sx/xkUfYIZuEPn7sT0WgTxNOuEYQ7AGw3IMpP9QGVEDVsluc/GcNkM8NTJszeqk8AplJzI9lm7Jxw==}
+
+  '@prisma/fetch-engine@6.3.0':
+    resolution: {integrity: sha512-GBy0iT4f1mH31ePzfcpVSUa7JLRTeq4914FG2vR3LqDwRweSm4ja1o5flGDz+eVIa/BNYfkBvRRxv4D6ve6Eew==}
+
+  '@prisma/get-platform@6.3.0':
+    resolution: {integrity: sha512-V8zZ1d0xfyi6FjpNP4AcYuwSpGcdmu35OXWnTPm8IW594PYALzKXHwIa9+o0f+Lo9AecFWrwrwaoYe56UNfTtQ==}
 
   '@protobuf-ts/plugin-framework@2.9.3':
     resolution: {integrity: sha512-iqdkhAu7fGPvBCVOoAEEFJ1/oaGIBoNIMgSv2WonTNJVHxv5FvvAfWFn6nG/eta34fHRZT38ZXTaYcMUkv8AiQ==}
@@ -10117,6 +10180,16 @@ packages:
     peerDependencies:
       react: '>=0.14.9'
 
+  prisma@6.3.0:
+    resolution: {integrity: sha512-y+Zh3Qg+xGCWyyrNUUNaFW/OltaV/yXYuTa0WRgYkz5LGyifmAsgpv94I47+qGRocZrMGcbF2A/78/oO2zgifA==}
+    engines: {node: '>=18.18'}
+    hasBin: true
+    peerDependencies:
+      typescript: '>=5.1.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   process-nextick-args@2.0.1:
     resolution: {integrity: sha512-3ouUOpQhtgrbOa17J7+uxOTpITYWaGP7/AhoR3+A+/1e9skrzelGi/dXzEYyvbxubEF6Wn2ypscTKiKJFFn1ag==}
 
@@ -14020,7 +14093,7 @@ snapshots:
   '@mapbox/node-pre-gyp@1.0.11(encoding@0.1.13)':
     dependencies:
       detect-libc: 2.0.2
-      https-proxy-agent: 5.0.1(supports-color@9.2.2)
+      https-proxy-agent: 5.0.1
       make-dir: 3.1.0
       node-fetch: 2.7.0(encoding@0.1.13)
       nopt: 5.0.0
@@ -14302,6 +14375,41 @@ snapshots:
       config-chain: 1.1.13
 
   '@polka/url@1.0.0-next.25': {}
+
+  '@prisma/adapter-d1@6.3.0':
+    dependencies:
+      '@cloudflare/workers-types': 4.20240614.0
+      '@prisma/driver-adapter-utils': 6.3.0
+
+  '@prisma/client@6.3.0(prisma@6.3.0(typescript@5.7.3))(typescript@5.7.3)':
+    optionalDependencies:
+      prisma: 6.3.0(typescript@5.7.3)
+      typescript: 5.7.3
+
+  '@prisma/debug@6.3.0': {}
+
+  '@prisma/driver-adapter-utils@6.3.0':
+    dependencies:
+      '@prisma/debug': 6.3.0
+
+  '@prisma/engines-version@6.3.0-17.acc0b9dd43eb689cbd20c9470515d719db10d0b0': {}
+
+  '@prisma/engines@6.3.0':
+    dependencies:
+      '@prisma/debug': 6.3.0
+      '@prisma/engines-version': 6.3.0-17.acc0b9dd43eb689cbd20c9470515d719db10d0b0
+      '@prisma/fetch-engine': 6.3.0
+      '@prisma/get-platform': 6.3.0
+
+  '@prisma/fetch-engine@6.3.0':
+    dependencies:
+      '@prisma/debug': 6.3.0
+      '@prisma/engines-version': 6.3.0-17.acc0b9dd43eb689cbd20c9470515d719db10d0b0
+      '@prisma/get-platform': 6.3.0
+
+  '@prisma/get-platform@6.3.0':
+    dependencies:
+      '@prisma/debug': 6.3.0
 
   '@protobuf-ts/plugin-framework@2.9.3':
     dependencies:
@@ -15769,7 +15877,7 @@ snapshots:
       sirv: 3.0.0
       tinyglobby: 0.2.10
       tinyrainbow: 1.2.0
-      vitest: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+      vitest: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)
 
   '@vitest/utils@2.1.8':
     dependencies:
@@ -15929,6 +16037,12 @@ snapshots:
   acorn-walk@8.3.2: {}
 
   acorn@8.14.0: {}
+
+  agent-base@6.0.2:
+    dependencies:
+      debug: 4.3.7(supports-color@8.1.1)
+    transitivePeerDependencies:
+      - supports-color
 
   agent-base@6.0.2(supports-color@9.2.2):
     dependencies:
@@ -18444,6 +18558,13 @@ snapshots:
       quick-lru: 5.1.1
       resolve-alpn: 1.2.1
 
+  https-proxy-agent@5.0.1:
+    dependencies:
+      agent-base: 6.0.2
+      debug: 4.3.7(supports-color@8.1.1)
+    transitivePeerDependencies:
+      - supports-color
+
   https-proxy-agent@5.0.1(supports-color@9.2.2):
     dependencies:
       agent-base: 6.0.2(supports-color@9.2.2)
@@ -20309,6 +20430,13 @@ snapshots:
     dependencies:
       react: 18.3.1
 
+  prisma@6.3.0(typescript@5.7.3):
+    dependencies:
+      '@prisma/engines': 6.3.0
+    optionalDependencies:
+      fsevents: 2.3.3
+      typescript: 5.7.3
+
   process-nextick-args@2.0.1: {}
 
   process-warning@1.0.0: {}
@@ -22101,6 +22229,41 @@ snapshots:
       '@vitest/utils': 2.1.8
       mock-socket: 9.3.1
       vitest: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+
+  vitest@2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8):
+    dependencies:
+      '@vitest/expect': 2.1.8
+      '@vitest/mocker': 2.1.8(msw@2.4.3(typescript@5.7.3))(vite@5.0.12(@types/node@18.19.74))
+      '@vitest/pretty-format': 2.1.8
+      '@vitest/runner': 2.1.8
+      '@vitest/snapshot': 2.1.8
+      '@vitest/spy': 2.1.8
+      '@vitest/utils': 2.1.8
+      chai: 5.1.2
+      debug: 4.3.7(supports-color@8.1.1)
+      expect-type: 1.1.0
+      magic-string: 0.30.17
+      pathe: 1.1.2
+      std-env: 3.8.0
+      tinybench: 2.9.0
+      tinyexec: 0.3.1
+      tinypool: 1.0.1
+      tinyrainbow: 1.2.0
+      vite: 5.0.12(@types/node@18.19.74)
+      vite-node: 2.1.8(@types/node@18.19.74)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 18.19.74
+      '@vitest/ui': 2.1.8(vitest@2.1.8)
+    transitivePeerDependencies:
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
 
   vitest@2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2):
     dependencies:

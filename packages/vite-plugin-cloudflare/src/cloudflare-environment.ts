@@ -120,6 +120,8 @@ const cloudflareBuiltInModules = [
 	"cloudflare:workflows",
 ];
 
+const conditions = ["workerd", "module", "browser", "development|production"];
+
 export function createCloudflareEnvironmentOptions(
 	workerConfig: WorkerConfig,
 	userConfig: vite.UserConfig,
@@ -131,7 +133,7 @@ export function createCloudflareEnvironmentOptions(
 			//       dependencies as not external
 			noExternal: true,
 			// We want to use `workerd` package exports if available (e.g. for postgres).
-			conditions: ["workerd", "module", "browser", "development|production"],
+			conditions,
 		},
 		dev: {
 			createEnvironment(name, config) {
@@ -163,6 +165,7 @@ export function createCloudflareEnvironmentOptions(
 			],
 			esbuildOptions: {
 				platform: "neutral",
+				// conditions,
 				resolveExtensions: [
 					".mjs",
 					".js",
