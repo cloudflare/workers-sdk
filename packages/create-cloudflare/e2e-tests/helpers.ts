@@ -1,6 +1,7 @@
 import assert from "assert";
 import {
 	createWriteStream,
+	existsSync,
 	mkdirSync,
 	mkdtempSync,
 	realpathSync,
@@ -510,7 +511,7 @@ export function kill(proc: ChildProcess) {
 	);
 }
 
-export function countAllWranglerConfigPaths(referencePath?: string) {
+export function countAllWranglerConfigPaths(referencePath: string) {
 	return Object.values(findAllWranglerConfigPaths(referencePath)).filter(
 		(configPath) => configPath !== undefined,
 	).length;
@@ -522,8 +523,14 @@ export function findAllWranglerConfigPaths(projectPath: string) {
 	const wranglerJsoncPath = join(projectPath, "wrangler.jsonc");
 
 	return {
-		wranglerTomlPath,
-		wranglerJsonPath,
-		wranglerJsoncPath,
+		wranglerTomlPath: existsSync(wranglerTomlPath)
+			? wranglerTomlPath
+			: undefined,
+		wranglerJsonPath: existsSync(wranglerJsonPath)
+			? wranglerJsonPath
+			: undefined,
+		wranglerJsoncPath: existsSync(wranglerJsoncPath)
+			? wranglerJsoncPath
+			: undefined,
 	};
 }
