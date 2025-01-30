@@ -1,5 +1,5 @@
 ---
-"wrangler": minor
+"wrangler": patch
 ---
 
 Update the `unstable_getMiniflareWorkerOptions` types to always include an `env` parameter.
