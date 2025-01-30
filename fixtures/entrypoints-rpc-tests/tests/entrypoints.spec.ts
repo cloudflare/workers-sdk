@@ -5,6 +5,7 @@ import path from "node:path";
 import dedent from "ts-dedent";
 import { Agent, fetch, setGlobalDispatcher } from "undici";
 import { test as baseTest, expect, vi } from "vitest";
+import { unstable_startWorkerRegistryServer } from "wrangler";
 import {
 	runWranglerDev,
 	runWranglerPagesDev,
