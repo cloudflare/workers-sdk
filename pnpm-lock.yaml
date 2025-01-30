@@ -826,19 +826,6 @@ importers:
         specifier: workspace:*
         version: link:../../packages/kv-asset-handler
 
-  fixtures/t:
-    dependencies:
-      hono:
-        specifier: ^4.6.19
-        version: 4.6.19
-    devDependencies:
-      '@cloudflare/workers-types':
-        specifier: ^4.20250109.0
-        version: 4.20250121.0
-      wrangler:
-        specifier: ^3.101.0
-        version: 3.103.2(@cloudflare/workers-types@4.20250121.0)
-
   fixtures/type-generation:
     devDependencies:
       vitest:
@@ -7760,10 +7747,6 @@ packages:
   hono@3.12.11:
     resolution: {integrity: sha512-LSpxVgIMR3UzyFiXZaPvqBUGqyOKG0LMZqgMn2RXz9f+YAdkHSfFQQX0dtU72fPm5GnEMh5AYXs0ek5NYgMOmA==}
     engines: {node: '>=16.0.0'}
-
-  hono@4.6.19:
-    resolution: {integrity: sha512-Xw5DwU2cewEsQ1DkDCdy6aBJkEBARl5loovoL1gL3/gw81RdaPbXrNJYp3LoQpzpJ7ECC/1OFi/vn3UZTLHFEw==}
-    engines: {node: '>=16.9.0'}
 
   hookable@5.5.3:
     resolution: {integrity: sha512-Yc+BQe8SvoXH1643Qez1zqLRmbA5rCL+sSmk6TVos0LWVfNIB7PGncdlId77WzLGSIB5KaWgTaNTs2lNVEI6VQ==}
@@ -17185,8 +17168,6 @@ snapshots:
   heap-js@2.5.0: {}
 
   hono@3.12.11: {}
-
-  hono@4.6.19: {}
 
   hookable@5.5.3: {}
 
