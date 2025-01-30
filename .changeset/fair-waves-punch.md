@@ -2,4 +2,4 @@
 "create-cloudflare": patch
 ---
 
-bump create-hono version
+chore: bumps create-hono version to ensure correct Wrangler config file
