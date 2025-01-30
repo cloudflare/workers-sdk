@@ -3,7 +3,13 @@
 	"remoteCache": {
 		"signature": true
 	},
-	"globalEnv": ["CI_OS", "NODE_VERSION", "VITEST"],
+	"globalEnv": [
+		"CI_OS",
+		"NODE_VERSION",
+		"VITEST",
+		"NODE_DEBUG",
+		"NODE_EXTRA_CA_CERTS"
+	],
 	"tasks": {
 		"dev": {
 			"persistent": true,
