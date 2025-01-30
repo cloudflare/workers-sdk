@@ -7,12 +7,12 @@ import {
 	rmSync,
 } from "fs";
 import crypto from "node:crypto";
+import { join } from "node:path";
 import { tmpdir } from "os";
 import path from "path";
 import { setTimeout } from "timers/promises";
 import { stripAnsi } from "@cloudflare/cli";
 import { spawn } from "cross-spawn";
-import { findUpSync } from "find-up";
 import { retry } from "helpers/retry";
 import treeKill from "tree-kill";
 import { fetch } from "undici";
@@ -516,10 +516,10 @@ export function countAllWranglerConfigPaths(referencePath?: string) {
 	).length;
 }
 
-export function findAllWranglerConfigPaths(cwd = process.cwd()) {
-	const wranglerTomlPath = findUpSync("wrangler.toml", { cwd });
-	const wranglerJsonPath = findUpSync("wrangler.json", { cwd });
-	const wranglerJsoncPath = findUpSync("wrangler.jsonc", { cwd });
+export function findAllWranglerConfigPaths(projectPath: string) {
+	const wranglerTomlPath = join(projectPath, "wrangler.toml");
+	const wranglerJsonPath = join(projectPath, "wrangler.json");
+	const wranglerJsoncPath = join(projectPath, "wrangler.jsonc");
 
 	return {
 		wranglerTomlPath,
