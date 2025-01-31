@@ -596,11 +596,16 @@ function normalizeAndValidateAssets(
 			`The "experimental_serve_directly" field is not longer supported. Please use run_worker_first.\nRead more: https://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first`,
 			false // Leave in for the moment, to be removed in a future release
 		);
-
-		validateAssetsConfig(diagnostics, "assets", rawEnv.assets, topLevelEnv);
-		return rawEnv.assets;
 	}
-	return undefined;
+
+	return inheritable(
+		diagnostics,
+		topLevelEnv,
+		rawEnv,
+		"assets",
+		validateAssetsConfig,
+		undefined
+	);
 }
 
 /**
