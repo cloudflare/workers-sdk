@@ -95,7 +95,7 @@ describe("versions upload", () => {
 			Worker Startup Time: 500 ms
 			Your worker has access to the following bindings:
 			- KV Namespaces:
-			  - KV: xxxx-xxxx-xxxx-xxxx
+			  - KV: xxxx-xxxx-xxxx-xxxx [Connected to Remote Resource]
 			- Vars:
 			  - TEST: \\"test-string\\"
 			  - JSON: {

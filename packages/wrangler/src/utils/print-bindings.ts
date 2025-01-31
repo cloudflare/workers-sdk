@@ -4,14 +4,15 @@ import { logger } from "../logger";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 
-function addLocalSuffix(
-	id: string | symbol | undefined,
-	local: boolean = false
-) {
+function normalizeId(id: string | symbol | undefined) {
 	if (!id || typeof id === "symbol") {
-		id = "";
+		return "";
 	}
 
+	return id;
+}
+
+function addLocalSuffix(id: string, local: boolean = false) {
 	return `${id}${local ? " [Simulated Locally]" : " [Connected to Remote Resource]"}`;
 }
 
@@ -138,9 +139,12 @@ export function printBindings(
 						}
 					}
 
+					const normalizedId = normalizeId(value);
 					return {
 						key: name,
-						value: addLocalSuffix(value, context.local),
+						value: context.provisioning
+							? normalizedId
+							: addLocalSuffix(normalizedId, context.local),
 					};
 				}
 			),
@@ -168,9 +172,13 @@ export function printBindings(
 		output.push({
 			name: friendlyBindingNames.kv_namespaces,
 			entries: kv_namespaces.map(({ binding, id }) => {
+				const normalizedId = normalizeId(id);
+
 				return {
 					key: binding,
-					value: addLocalSuffix(id, context.local),
+					value: context.provisioning
+						? normalizedId
+						: addLocalSuffix(normalizedId, context.local),
 				};
 			}),
 		});
@@ -197,9 +205,13 @@ export function printBindings(
 		output.push({
 			name: friendlyBindingNames.queues,
 			entries: queues.map(({ binding, queue_name }) => {
+				const normalizedId = normalizeId(queue_name);
+
 				return {
 					key: binding,
-					value: addLocalSuffix(queue_name, context.local),
+					value: context.provisioning
+						? normalizedId
+						: addLocalSuffix(normalizedId, context.local),
 				};
 			}),
 		});
@@ -221,9 +233,14 @@ export function printBindings(
 					if (preview_database_id && database_id !== "local") {
 						databaseValue = `${databaseValue ? `${databaseValue}, ` : ""}Preview: (${preview_database_id})`;
 					}
+
+					const normalizedId = normalizeId(databaseValue);
+
 					return {
 						key: binding,
-						value: addLocalSuffix(databaseValue, context.local),
+						value: context.provisioning
+							? normalizedId
+							: addLocalSuffix(normalizedId, context.local),
 					};
 				}
 			),
@@ -246,9 +263,13 @@ export function printBindings(
 		output.push({
 			name: friendlyBindingNames.hyperdrive,
 			entries: hyperdrive.map(({ binding, id }) => {
+				const normalizedId = normalizeId(id);
+
 				return {
 					key: binding,
-					value: addLocalSuffix(id, context.local),
+					value: context.provisioning
+						? normalizedId
+						: addLocalSuffix(normalizedId, context.local),
 				};
 			}),
 		});
@@ -264,9 +285,13 @@ export function printBindings(
 					name += ` (${jurisdiction})`;
 				}
 
+				const normalizedId = normalizeId(name);
+
 				return {
 					key: binding,
-					value: addLocalSuffix(name, context.local),
+					value: context.provisioning
+						? normalizedId
+						: addLocalSuffix(normalizedId, context.local),
 				};
 			}),
 		});
@@ -348,12 +373,16 @@ export function printBindings(
 	}
 
 	if (images !== undefined) {
+		const normalizedId = normalizeId(images.binding);
+
 		output.push({
 			name: friendlyBindingNames.images,
 			entries: [
 				{
 					key: "Name",
-					value: addLocalSuffix(images.binding, !!context.imagesLocalMode),
+					value: context.provisioning
+						? normalizedId
+						: addLocalSuffix(normalizedId, !!context.imagesLocalMode),
 				},
 			],
 		});

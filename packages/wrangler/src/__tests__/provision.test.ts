@@ -764,7 +764,7 @@ describe("--x-provision", () => {
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- R2 Buckets:
-				  - BUCKET: existing-bucket-name (eu)
+				  - BUCKET: existing-bucket-name (eu) [Connected to Remote Resource]
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -892,7 +892,7 @@ describe("--x-provision", () => {
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- R2 Buckets:
-				  - BUCKET: existing-bucket-name (eu)
+				  - BUCKET: existing-bucket-name (eu) [Connected to Remote Resource]
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
