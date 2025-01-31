@@ -369,6 +369,7 @@ async function collectPendingResources(
 	summary: Record<string, number>;
 }> {
 	let settings: Settings | undefined;
+	// summarises what happens to the resources to send as one telemetry event
 	const summary: Record<string, number> = {};
 
 	try {
@@ -457,9 +458,12 @@ export async function provisionBindings(
 
 		logger.log(`🎉 All resources provisioned, continuing with deployment...\n`);
 	}
-	metrics.sendMetricsEvent("provision resources", summary, {
-		sendMetrics: config.send_metrics,
-	});
+	if (Object.keys(summary).length) {
+		metrics.sendMetricsEvent("provision resources", summary, {
+			sendMetrics: config.send_metrics,
+		});
+		logger.debug("Provisioning summary:", JSON.stringify(summary, null, 2));
+	}
 }
 
 function getSettings(accountId: string, scriptName: string) {

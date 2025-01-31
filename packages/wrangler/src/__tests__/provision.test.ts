@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { logger } from "../logger";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockPrompt, mockSelect } from "./helpers/mock-dialogs";
@@ -30,6 +31,7 @@ describe("--x-provision", () => {
 	const { setIsTTY } = useMockIsTTY();
 
 	beforeEach(() => {
+		logger.loggerLevel = "debug";
 		setIsTTY(true);
 		msw.use(
 			...mswSuccessDeploymentScriptMetadata,
@@ -103,6 +105,18 @@ describe("--x-provision", () => {
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
+
+		expect(std.debug).toContain(
+			JSON.stringify(
+				{
+					"kv_namespace inherited": 1,
+					"d1 inherited": 1,
+					"r2_bucket inherited": 1,
+				},
+				undefined,
+				2
+			)
+		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 	});
@@ -208,6 +222,17 @@ describe("--x-provision", () => {
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
+			expect(std.debug).toContain(
+				JSON.stringify(
+					{
+						"kv_namespace connected": 1,
+						"d1 connected": 1,
+						"r2_bucket connected": 1,
+					},
+					undefined,
+					2
+				)
+			);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -327,6 +352,17 @@ describe("--x-provision", () => {
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
+			expect(std.debug).toContain(
+				JSON.stringify(
+					{
+						"kv_namespace connected": 1,
+						"d1 connected": 1,
+						"r2_bucket connected": 1,
+					},
+					undefined,
+					2
+				)
+			);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -459,6 +495,17 @@ describe("--x-provision", () => {
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
+			expect(std.debug).toContain(
+				JSON.stringify(
+					{
+						"kv_namespace created": 1,
+						"d1 created": 1,
+						"r2_bucket created": 1,
+					},
+					undefined,
+					2
+				)
+			);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -524,6 +571,9 @@ describe("--x-provision", () => {
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
+			expect(std.debug).toContain(
+				JSON.stringify({ "d1 created": 1 }, undefined, 2)
+			);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -566,6 +616,9 @@ describe("--x-provision", () => {
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
+			expect(std.debug).toContain(
+				JSON.stringify({ "d1 inherited": 1 }, undefined, 2)
+			);
 		});
 
 		it("will not inherit d1 binding when the database name is provided but has changed", async () => {
@@ -643,6 +696,9 @@ describe("--x-provision", () => {
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
+			expect(std.debug).toContain(
+				JSON.stringify({ "d1 created": 1 }, undefined, 2)
+			);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -716,6 +772,9 @@ describe("--x-provision", () => {
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
+			expect(std.debug).toContain(
+				JSON.stringify({ "r2_bucket created": 1 }, undefined, 2)
+			);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -770,6 +829,7 @@ describe("--x-provision", () => {
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
+			expect(std.debug).not.toContain("Provisioning summary");
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -814,6 +874,9 @@ describe("--x-provision", () => {
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
+			expect(std.debug).toContain(
+				JSON.stringify({ "d1 connected": 1 }, undefined, 2)
+			);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
@@ -898,6 +961,9 @@ describe("--x-provision", () => {
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
+			expect(std.debug).toContain(
+				JSON.stringify({ "r2_bucket created": 1 }, undefined, 2)
+			);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
