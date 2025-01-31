@@ -97,7 +97,6 @@ async function createDraftWorker({
 					wasm_modules: {},
 					browser: undefined,
 					ai: undefined,
-					images: undefined,
 					version_metadata: undefined,
 					text_blobs: {},
 					data_blobs: {},
