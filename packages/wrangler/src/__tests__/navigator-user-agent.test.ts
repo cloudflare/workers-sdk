@@ -7,6 +7,7 @@ import { noopModuleCollector } from "../deployment-bundle/module-collection";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
+import type { BundleOptions } from "../deployment-bundle/bundle";
 
 /*
  * This file contains inline comments with the word "javascript"
@@ -83,6 +84,21 @@ describe("defineNavigatorUserAgent is respected", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 
+	const commonBundleOptions = {
+		bundle: true,
+		moduleCollector: noopModuleCollector,
+		serveLegacyAssetsFromWorker: false,
+		doBindings: [],
+		workflowBindings: [],
+		define: {},
+		alias: {},
+		mockAnalyticsEngineDatasets: [],
+		checkFetch: false,
+		targetConsumer: "deploy",
+		local: true,
+		projectRoot: process.cwd(),
+	} as unknown as BundleOptions;
+
 	it("defineNavigatorUserAgent = false, navigator preserved", async () => {
 		await seedFs({
 			"src/index.js": dedent/* javascript */ `
@@ -110,21 +126,8 @@ describe("defineNavigatorUserAgent is respected", () => {
 				exports: [],
 			},
 			path.resolve("dist"),
-			// @ts-expect-error Ignore the requirement for passing undefined values
 			{
-				bundle: true,
-				additionalModules: [],
-				moduleCollector: noopModuleCollector,
-				serveLegacyAssetsFromWorker: false,
-				mockAnalyticsEngineDatasets: [],
-				doBindings: [],
-				workflowBindings: [],
-				define: {},
-				alias: {},
-				checkFetch: false,
-				targetConsumer: "deploy",
-				local: true,
-				projectRoot: process.cwd(),
+				...commonBundleOptions,
 				defineNavigatorUserAgent: false,
 			}
 		);
@@ -173,21 +176,8 @@ describe("defineNavigatorUserAgent is respected", () => {
 				exports: [],
 			},
 			path.resolve("dist"),
-			// @ts-expect-error Ignore the requirement for passing undefined values
 			{
-				bundle: true,
-				additionalModules: [],
-				moduleCollector: noopModuleCollector,
-				serveLegacyAssetsFromWorker: false,
-				doBindings: [],
-				workflowBindings: [],
-				define: {},
-				alias: {},
-				mockAnalyticsEngineDatasets: [],
-				checkFetch: false,
-				targetConsumer: "deploy",
-				local: true,
-				projectRoot: process.cwd(),
+				...commonBundleOptions,
 				defineNavigatorUserAgent: true,
 			}
 		);
