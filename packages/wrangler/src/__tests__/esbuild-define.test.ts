@@ -34,6 +34,14 @@ describe("ESBuild defines are applied to the source code", () => {
 		expect(code).toContain(`nodeEnv = "development";`);
 	});
 
+	it("Replaces defined values when process.env.NODE_ENV is undefined", async () => {
+		const code = await getBundledWorker(undefined);
+
+		expect(code).toContain(`userAgent = "Cloudflare-Workers";`);
+		expect(code).toContain(`g = global;`);
+		expect(code).toContain(`nodeEnv = "development";`);
+	});
+
 	it("Replaces defined values when process.env.NODE_ENV == development", async () => {
 		const code = await getBundledWorker("development");
 
