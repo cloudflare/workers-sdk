@@ -12,7 +12,7 @@ function addLocalSuffix(
 		id = "";
 	}
 
-	return `${id}${local ? " (local)" : ""}`;
+	return `${id}${local ? " [Simulated Locally]" : " [Connected to Remote Resource]"}`;
 }
 
 export const friendlyBindingNames: Record<
@@ -470,6 +470,12 @@ export function printBindings(
 		return;
 	}
 
+	if (context.local) {
+		logger.log(
+			`Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.\n`
+		);
+	}
+
 	let title: string;
 	if (context.provisioning) {
 		title = "The following bindings need to be provisioned:";
@@ -498,6 +504,12 @@ export function printBindings(
 	if (hasConnectionStatus) {
 		logger.once.info(
 			`\nService bindings & durable object bindings connect to other \`wrangler dev\` processes running locally, with their connection status indicated by ${chalk.green("[connected]")} or ${chalk.red("[not connected]")}. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development\n`
+		);
+	}
+
+	if (context.local) {
+		logger.log(
+			`\nUse "wrangler dev --remote" to run both your Worker and all bindings remotely (https://developers.cloudflare.com/workers/testing/local-development/#develop-using-remote-resources-and-bindings).\n`
 		);
 	}
 }
