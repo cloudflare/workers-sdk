@@ -6396,6 +6396,154 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(result2.diagnostics.hasWarnings()).toBe(false);
 			});
 		});
+
+		describe("[assets]", () => {
+			it("should inherit from top-level assets", () => {
+				const rawConfig: RawConfig = {
+					assets: {
+						directory: "dist",
+						binding: "ASSETS",
+					},
+					env: {
+						ENV1: {},
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(config).toEqual(
+					expect.objectContaining({
+						assets: {
+							directory: "dist",
+							binding: "ASSETS",
+						},
+					})
+				);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should resolve assets in named env with top-level env also including assets", () => {
+				const rawConfig: RawConfig = {
+					assets: {
+						directory: "dist",
+						binding: "ASSETS",
+					},
+					env: {
+						ENV1: {
+							assets: {
+								directory: "public",
+								binding: "ASSETS",
+								run_worker_first: true,
+							},
+						},
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(config).toEqual(
+					expect.objectContaining({
+						assets: {
+							directory: "public",
+							binding: "ASSETS",
+							run_worker_first: true,
+						},
+					})
+				);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should warn about experimental_serve_directly deprecation from inherited top-level env", () => {
+				const rawConfig: RawConfig = {
+					assets: {
+						directory: "dist",
+						binding: "ASSETS",
+						experimental_serve_directly: false,
+					},
+					env: {
+						ENV1: {},
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(config).toEqual(
+					expect.objectContaining({
+						assets: {
+							directory: "dist",
+							binding: "ASSETS",
+							experimental_serve_directly: false,
+						},
+					})
+				);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - [1mDeprecation[0m: \\"assets.experimental_serve_directly\\":
+					    The \\"experimental_serve_directly\\" field is not longer supported. Please use run_worker_first.
+					    Read more: https://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first"
+				`);
+			});
+
+			it("should warn about experimental_serve_directly deprecation from named env", () => {
+				const rawConfig: RawConfig = {
+					env: {
+						ENV1: {
+							assets: {
+								directory: "dist",
+								binding: "ASSETS",
+								experimental_serve_directly: false,
+							},
+						},
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(config).toEqual(
+					expect.objectContaining({
+						assets: {
+							directory: "dist",
+							binding: "ASSETS",
+							experimental_serve_directly: false,
+						},
+					})
+				);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+
+					  - \\"env.ENV1\\" environment configuration
+					    - [1mDeprecation[0m: \\"assets.experimental_serve_directly\\":
+					      The \\"experimental_serve_directly\\" field is not longer supported. Please use run_worker_first.
+					      Read more: https://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first"
+				`);
+			});
+		});
 	});
 });
 
