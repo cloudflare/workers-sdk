@@ -43,9 +43,9 @@ export async function getAssetWithMetadataFromKV(
 			return asset;
 		} catch (err) {
 			if (attempts >= retries) {
-				let message = `Requested asset ${assetKey} could not be fetched from KV namespace.`;
+				let message = `KV GET ${assetKey} failed.`;
 				if (err instanceof Error) {
-					message = `Requested asset ${assetKey} could not be fetched from KV namespace: ${err.message}`;
+					message = `KV GET ${assetKey} failed: ${err.message}`;
 				}
 				throw new Error(message);
 			}
