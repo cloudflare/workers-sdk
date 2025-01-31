@@ -324,12 +324,6 @@ export const dev = createCommand({
 				"Bind to production Vectorize indexes in local development mode",
 			default: false,
 		},
-		"experimental-images-local-mode": {
-			type: "boolean",
-			describe:
-				"Use a local lower-fidelity implementation of the Images binding",
-			default: false,
-		},
 	},
 	async validateArgs(args) {
 		if (args.liveReload && args.remote) {
@@ -557,7 +551,6 @@ async function setupDevEnv(
 					text_blobs: undefined,
 					browser: undefined,
 					ai: args.ai,
-					images: undefined,
 					version_metadata: args.version_metadata,
 					data_blobs: undefined,
 					durable_objects: { bindings: args.durableObjects ?? [] },
@@ -608,7 +601,6 @@ async function setupDevEnv(
 					? null
 					: devEnv.config.latestConfig?.dev.registry,
 				bindVectorizeToProd: args.experimentalVectorizeBindToProd,
-				imagesLocalMode: args.experimentalImagesLocalMode,
 				multiworkerPrimary: args.multiworkerPrimary,
 			},
 			legacy: {
@@ -1092,7 +1084,6 @@ export function getBindings(
 		analytics_engine_datasets: configParam.analytics_engine_datasets,
 		browser: configParam.browser,
 		ai: args.ai || configParam.ai,
-		images: configParam.images,
 		version_metadata: args.version_metadata || configParam.version_metadata,
 		unsafe: {
 			bindings: configParam.unsafe.bindings,

@@ -209,11 +209,6 @@ export function convertCfWorkerInitBindingstoBindings(
 				output[binding] = { type: "ai", ...x };
 				break;
 			}
-			case "images": {
-				const { binding, ...x } = info;
-				output[binding] = { type: "images", ...x };
-				break;
-			}
 			case "version_metadata": {
 				const { binding, ...x } = info;
 				output[binding] = { type: "version_metadata", ...x };
@@ -270,7 +265,6 @@ export async function convertBindingsToCfWorkerInitBindings(
 		text_blobs: undefined,
 		browser: undefined,
 		ai: undefined,
-		images: undefined,
 		version_metadata: undefined,
 		data_blobs: undefined,
 		durable_objects: undefined,
@@ -326,8 +320,6 @@ export async function convertBindingsToCfWorkerInitBindings(
 			bindings.browser = { binding: name };
 		} else if (binding.type === "ai") {
 			bindings.ai = { binding: name };
-		} else if (binding.type === "images") {
-			bindings.images = { binding: name };
 		} else if (binding.type === "version_metadata") {
 			bindings.version_metadata = { binding: name };
 		} else if (binding.type === "durable_object_namespace") {

@@ -82,7 +82,6 @@ export interface Unstable_DevOptions {
 		devEnv?: boolean;
 		fileBasedRegistry?: boolean;
 		vectorizeBindToProd?: boolean;
-		imagesLocalMode?: boolean;
 		enableIpc?: boolean;
 	};
 }
@@ -127,7 +126,6 @@ export async function unstable_dev(
 		testMode,
 		testScheduled,
 		vectorizeBindToProd,
-		imagesLocalMode,
 		// 2. options for alpha/beta products/libs
 		d1Databases,
 		enablePagesAssetsServiceBinding,
@@ -220,7 +218,6 @@ export async function unstable_dev(
 		port: options?.port ?? 0,
 		experimentalProvision: undefined,
 		experimentalVectorizeBindToProd: vectorizeBindToProd ?? false,
-		experimentalImagesLocalMode: imagesLocalMode ?? false,
 		enableIpc: options?.experimental?.enableIpc,
 	};
 

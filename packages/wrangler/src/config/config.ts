@@ -340,7 +340,6 @@ export const defaultWranglerConfig: Config = {
 	services: [],
 	analytics_engine_datasets: [],
 	ai: undefined,
-	images: undefined,
 	version_metadata: undefined,
 
 	/*====================================================*/
