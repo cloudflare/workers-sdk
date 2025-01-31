@@ -1,5 +1,4 @@
 import { File } from "buffer";
-import sharp from "sharp";
 import type { ImageInfoResponse } from "@cloudflare/workers-types/experimental";
 import type { Sharp } from "sharp";
 
@@ -27,6 +26,20 @@ function validateTransforms(inputTransforms: unknown): Transform[] | null {
 }
 
 export async function imagesLocalFetcher(request: Request): Promise<Response> {
+	let sharp;
+	try {
+		const { default: importedSharp } = await import("sharp");
+		sharp = importedSharp;
+	} catch {
+		// This should be unreachable, as we should have errored by now
+		// if sharp isn't installed
+		return errorResponse(
+			503,
+			9523,
+			"Sharp is not available, ensure you are using Node >=18"
+		);
+	}
+
 	const data = await request.formData();
 
 	const body = data.get("image");
