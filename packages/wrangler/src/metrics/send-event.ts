@@ -81,7 +81,8 @@ export type EventNames =
 	| "list pipelines"
 	| "delete pipeline"
 	| "update pipeline"
-	| "show pipeline";
+	| "show pipeline"
+	| "provision resources";
 
 /**
  * Send a metrics event, with no extra properties, to Cloudflare, if usage tracking is enabled.

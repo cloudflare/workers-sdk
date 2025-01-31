@@ -7,6 +7,7 @@ import { prompt, select } from "../dialogs";
 import { UserError } from "../errors";
 import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
+import * as metrics from "../metrics";
 import { APIError } from "../parse";
 import { createR2Bucket, getR2Bucket, listR2Buckets } from "../r2/helpers";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
@@ -85,7 +86,9 @@ abstract class ProvisionResourceHandler<
 		public type: T,
 		public binding: B,
 		public idField: keyof B,
-		public accountId: string
+		public accountId: string,
+		/** For telemetry */
+		public summary: Record<string, number>
 	) {}
 
 	// Does this resource already exist in the currently deployed version of the Worker?
@@ -95,10 +98,16 @@ abstract class ProvisionResourceHandler<
 	): boolean | Promise<boolean>;
 
 	inherit(): void {
+		this.summary[`${this.type} inherited`] =
+			(this.summary[`${this.type} inherited`] ?? 0) + 1;
 		// @ts-expect-error idField is a key of this.binding
 		this.binding[this.idField] = INHERIT_SYMBOL;
 	}
-	connect(id: string): void {
+	connect(id: string, record: boolean = true): void {
+		if (record) {
+			this.summary[`${this.type} connected`] =
+				(this.summary[`${this.type} connected`] ?? 0) + 1;
+		}
 		// @ts-expect-error idField is a key of this.binding
 		this.binding[this.idField] = id;
 	}
@@ -108,8 +117,10 @@ abstract class ProvisionResourceHandler<
 	abstract get name(): string | undefined;
 
 	async provision(name: string): Promise<void> {
+		this.summary[`${this.type} created`] =
+			(this.summary[`${this.type} created`] ?? 0) + 1;
 		const id = await this.create(name);
-		this.connect(id);
+		this.connect(id, false);
 	}
 
 	// This binding is fully specified and can't/shouldn't be provisioned
@@ -164,8 +175,12 @@ class R2Handler extends ProvisionResourceHandler<"r2_bucket", CfR2Bucket> {
 		);
 		return name;
 	}
-	constructor(binding: CfR2Bucket, accountId: string) {
-		super("r2_bucket", binding, "bucket_name", accountId);
+	constructor(
+		binding: CfR2Bucket,
+		accountId: string,
+		summary: Record<string, number>
+	) {
+		super("r2_bucket", binding, "bucket_name", accountId, summary);
 	}
 	canInherit(settings: Settings | undefined): boolean {
 		return !!settings?.bindings.find(
@@ -212,8 +227,12 @@ class KVHandler extends ProvisionResourceHandler<
 	async create(name: string) {
 		return await createKVNamespace(this.accountId, name);
 	}
-	constructor(binding: CfKvNamespace, accountId: string) {
-		super("kv_namespace", binding, "id", accountId);
+	constructor(
+		binding: CfKvNamespace,
+		accountId: string,
+		summary: Record<string, number>
+	) {
+		super("kv_namespace", binding, "id", accountId, summary);
 	}
 	canInherit(settings: Settings | undefined): boolean {
 		return !!settings?.bindings.find(
@@ -234,8 +253,12 @@ class D1Handler extends ProvisionResourceHandler<"d1", CfD1Database> {
 		const db = await createD1Database(this.accountId, name);
 		return db.uuid;
 	}
-	constructor(binding: CfD1Database, accountId: string) {
-		super("d1", binding, "database_id", accountId);
+	constructor(
+		binding: CfD1Database,
+		accountId: string,
+		summary: Record<string, number>
+	) {
+		super("d1", binding, "database_id", accountId, summary);
 	}
 	async canInherit(settings: Settings | undefined): Promise<boolean> {
 		const maybeInherited = settings?.bindings.find(
@@ -341,8 +364,12 @@ async function collectPendingResources(
 	accountId: string,
 	scriptName: string,
 	bindings: CfWorkerInit["bindings"]
-): Promise<PendingResource[]> {
+): Promise<{
+	pendingResources: PendingResource[];
+	summary: Record<string, number>;
+}> {
 	let settings: Settings | undefined;
+	const summary: Record<string, number> = {};
 
 	try {
 		settings = await getSettings(accountId, scriptName);
@@ -361,7 +388,11 @@ async function collectPendingResources(
 		HANDLERS
 	) as (keyof typeof HANDLERS)[]) {
 		for (const resource of bindings[resourceType] ?? []) {
-			const h = new HANDLERS[resourceType].Handler(resource, accountId);
+			const h = new HANDLERS[resourceType].Handler(
+				resource,
+				accountId,
+				summary
+			);
 
 			if (await h.shouldProvision(settings)) {
 				pendingResources.push({
@@ -373,10 +404,14 @@ async function collectPendingResources(
 		}
 	}
 
-	return pendingResources.sort(
-		(a, b) => HANDLERS[a.resourceType].sort - HANDLERS[b.resourceType].sort
-	);
+	return {
+		pendingResources: pendingResources.sort(
+			(a, b) => HANDLERS[a.resourceType].sort - HANDLERS[b.resourceType].sort
+		),
+		summary,
+	};
 }
+
 export async function provisionBindings(
 	bindings: CfWorkerInit["bindings"],
 	accountId: string,
@@ -384,7 +419,7 @@ export async function provisionBindings(
 	autoCreate: boolean,
 	config: Config
 ): Promise<void> {
-	const pendingResources = await collectPendingResources(
+	const { pendingResources, summary } = await collectPendingResources(
 		accountId,
 		scriptName,
 		bindings
@@ -422,6 +457,9 @@ export async function provisionBindings(
 
 		logger.log(`🎉 All resources provisioned, continuing with deployment...\n`);
 	}
+	metrics.sendMetricsEvent("provision resources", summary, {
+		sendMetrics: config.send_metrics,
+	});
 }
 
 function getSettings(accountId: string, scriptName: string) {
