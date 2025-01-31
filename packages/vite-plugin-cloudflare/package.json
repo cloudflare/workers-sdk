@@ -48,7 +48,7 @@
 	"devDependencies": {
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250121.0",
+		"@cloudflare/workers-types": "^4.20250129.0",
 		"@types/node": "catalog:vite-plugin",
 		"@types/ws": "^8.5.13",
 		"magic-string": "^0.30.12",
