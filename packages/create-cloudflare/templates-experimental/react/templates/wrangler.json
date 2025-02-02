@@ -1,0 +1,11 @@
+{
+  "name": "<TBD>",
+  "compatibility_date": "<TBD>",
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./dist"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
