@@ -451,7 +451,7 @@ describe("multiworker", () => {
 		let workerName4: string;
 		let aw: string;
 		let d: string;
-		describe("worker through worker with assets", () => {
+		describe("-> worker with assets -> regular worker", () => {
 			beforeEach(async () => {
 				aw = await makeRoot();
 				workerNameAW = generateResourceName("worker-aw");
@@ -639,7 +639,7 @@ describe("multiworker", () => {
 			});
 		});
 
-		describe("assets through regular worker", () => {
+		describe("-> regular worker -> worker with assets", () => {
 			beforeEach(async () => {
 				await baseSeed(aw, {
 					"wrangler.toml": dedent`
@@ -659,6 +659,7 @@ describe("multiworker", () => {
 									}
 									return new Response("hello world from a worker with assets")
 								},
+								add(a, b) { return a + b; }
 							};
 							`,
 				});
@@ -674,13 +675,17 @@ describe("multiworker", () => {
 					"src/index.ts": dedent/* javascript */ `
 						export default{
 							async fetch(req, env) {
+								const url = new URL(req.url)
+								if (url.pathname === "/rpc") {
+									return env.AW.add(1,2);
+								}
 								return env.AW.fetch(req);
 							}
 						};`,
 				});
 			});
 
-			it("can fetch assets and asset worker through a regular worker", async () => {
+			it("can fetch assets through a regular worker", async () => {
 				const worker = helper.runLongLived(
 					`wrangler dev -c wrangler.toml -c ${aw}/wrangler.toml`,
 					{ cwd: d }
@@ -690,6 +695,15 @@ describe("multiworker", () => {
 				await expect(fetchText(`${url}/asset`)).resolves.toBe(
 					"<p>have an asset directly</p>"
 				);
+			});
+
+			it("can fall back to user worker", async () => {
+				const worker = helper.runLongLived(
+					`wrangler dev -c wrangler.toml -c ${aw}/wrangler.toml`,
+					{ cwd: d }
+				);
+
+				const { url } = await worker.waitForReady(5_000);
 				await expect(fetchText(`${url}/worker`)).resolves.toBe(
 					"hello world from a worker with assets"
 				);
@@ -698,8 +712,90 @@ describe("multiworker", () => {
 				);
 			});
 
-			it.todo("RPC to a worker with assets");
-			// doesn't work yet, will be added as part of assets GA
+			it("rpc will not work", async () => {
+				// because it hits the router worker not the user worker, and add is not implemented there
+				// proxy/filter worker will fix this
+				const worker = helper.runLongLived(
+					`wrangler dev -c wrangler.toml -c ${aw}/wrangler.toml`,
+					{ cwd: d }
+				);
+
+				const { url } = await worker.waitForReady(5_000);
+				await expect(fetchText(`${url}/rpc`)).resolves.toContain(
+					`TypeError: The RPC receiver does not implement the method`
+				);
+			});
+			// wrangler dev just crashses because the named entrypoint does not exist on the router worker
+			// expected behaviour: you should be able to hit the user worker only on named entrypoints
+			// and never get assets (currently this does in production but is a bug)
+			it("named entrypoints will not work", async () => {
+				await baseSeed(aw, {
+					"wrangler.toml": dedent`
+								name = "${workerNameAW}"
+								main = "src/index.ts"
+								compatibility_date = "2024-11-01"
+								[assets]
+								directory = "./public/"
+								binding = "ASSETS"
+						`,
+					"src/index.ts": dedent/* javascript */ `
+							import { WorkerEntrypoint } from "cloudflare:workers";
+							export class NamedEntrypoint extends WorkerEntrypoint {
+								async add(a, b) {
+									return a + b;
+								}
+								async fetch(req) {
+									return new Response("hello world from the fetch handler of a named entrypoint")
+								}
+							}
+							export default {
+								async fetch(req, env) {
+									return new Response("hello world from a worker with assets")
+								},
+							};
+							`,
+				});
+				await baseSeed(d, {
+					"wrangler.toml": dedent`
+						name = "${workerName4}"
+						main = "src/index.ts"
+						compatibility_date = "2024-11-01"
+						[[services]]
+						binding = "NAMED"
+						service = '${workerNameAW}'
+						entrypoint = "NamedEntrypoint"
+				`,
+					"src/index.ts": dedent/* javascript */ `
+						export default{
+							async fetch(req, env) {
+								const url = new URL(req.url)
+								if (url.pathname === "/named-rpc") {
+									return env.NAMED.add(1,2);
+								}
+								if (url.pathname === "/named-fetch") {
+									return env.NAMED.fetch(req);
+								}
+								return new Response("hello world");
+							}
+						};`,
+				});
+
+				const worker = helper.runLongLived(
+					`wrangler dev -c wrangler.toml -c ${aw}/wrangler.toml`,
+					{ cwd: d }
+				);
+
+				const { url } = await worker.waitForReady(5_000);
+				await expect(fetchText(`${url}/named-rpc`)).rejects.toThrowError(
+					"fetch failed"
+				);
+				await worker.readUntil(
+					new RegExp(
+						// eslint-disable-next-line no-useless-escape
+						`Socket \"direct:1:NamedEntrypoint\" refers to service \"assets:router-`
+					)
+				);
+			});
 		});
 	});
 });
