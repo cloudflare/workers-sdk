@@ -121,13 +121,13 @@ describe.sequential.each([{ cmd: "wrangler pages dev" }])(
 			expect(normalizeOutput(worker.currentOutput)).toContain(
 				dedent`Your worker has access to the following bindings:
 					- Durable Objects:
-					  - TEST_DO: TestDurableObject (defined in a [not connected]) (local)
+					  - TEST_DO: TestDurableObject (defined in a [not connected])
 					- KV Namespaces:
-					  - TEST_KV: TEST_KV (local)
+					  - TEST_KV: TEST_KV [simulated locally]
 					- D1 Databases:
-					  - TEST_D1: local-TEST_D1 (TEST_D1) (local)
+					  - TEST_D1: local-TEST_D1 (TEST_D1) [simulated locally]
 					- R2 Buckets:
-					  - TEST_R2: TEST_R2 (local)
+					  - TEST_R2: TEST_R2 [simulated locally]
 					- Services:
 					  - TEST_SERVICE: test-worker [not connected]
 		`
