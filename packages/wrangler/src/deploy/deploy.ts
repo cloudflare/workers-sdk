@@ -240,9 +240,9 @@ export const validateRoutes = (routes: Route[], assets?: AssetsOptions) => {
 export function renderRoute(route: Route): string {
 	let result = "https://";
 	if (typeof route === "string") {
-		result = route;
+		result += route;
 	} else {
-		result = route.pattern;
+		result += route.pattern;
 		const isCustomDomain = Boolean(
 			"custom_domain" in route && route.custom_domain
 		);
