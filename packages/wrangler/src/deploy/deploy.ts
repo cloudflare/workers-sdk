@@ -238,7 +238,7 @@ export const validateRoutes = (routes: Route[], assets?: AssetsOptions) => {
 };
 
 export function renderRoute(route: Route): string {
-	let result = "";
+	let result = "https://";
 	if (typeof route === "string") {
 		result = route;
 	} else {
