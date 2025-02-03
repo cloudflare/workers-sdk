@@ -1130,14 +1130,6 @@ export class Miniflare {
 			innerBindings: Worker_Binding[];
 		}[] = [];
 
-		if (this.#workerOpts[0].assets.assets) {
-			// This will be the UserWorker, or the vitest pool worker wrapping the UserWorker
-			// The asset plugin needs this so that it can set the binding between the RouterWorker and the UserWorker
-			// TODO: apply this to ever this.#workerOpts, not just the first (i.e this.#workerOpts[0])
-			this.#workerOpts[0].assets.assets.workerName =
-				this.#workerOpts[0].core.name;
-		}
-
 		for (let i = 0; i < allWorkerOpts.length; i++) {
 			const previousWorkerOpts = allPreviousWorkerOpts?.[i];
 			const workerOpts = allWorkerOpts[i];
@@ -1150,6 +1142,12 @@ export class Miniflare {
 					// The workflows plugin needs this so that it can set the binding between the Engine and the UserWorker
 					workflow.scriptName ??= workerOpts.core.name;
 				}
+			}
+
+			if (workerOpts.assets.assets) {
+				// This will be the UserWorker, or the vitest pool worker wrapping the UserWorker
+				// The asset plugin needs this so that it can set the binding between the RouterWorker and the UserWorker
+				workerOpts.assets.assets.workerName = workerOpts.core.name;
 			}
 
 			// Collect all bindings from this worker
@@ -1283,7 +1281,9 @@ export class Miniflare {
 					name,
 					address,
 					service: {
-						name: getUserServiceName(workerName),
+						name: workerOpts.assets.assets
+							? `${ROUTER_SERVICE_NAME}-${workerName}`
+							: getUserServiceName(workerName),
 						entrypoint: entrypoint === "default" ? undefined : entrypoint,
 					},
 					http: {
@@ -1305,7 +1305,7 @@ export class Miniflare {
 				!this.#workerOpts[0].core.name?.startsWith(
 					"vitest-pool-workers-runner-"
 				)
-					? ROUTER_SERVICE_NAME
+					? `${ROUTER_SERVICE_NAME}-${this.#workerOpts[0].core.name}`
 					: getUserServiceName(this.#workerOpts[0].core.name),
 			loopbackPort,
 			log: this.#log,
@@ -1340,7 +1340,39 @@ export class Miniflare {
 					"Ensure wrapped bindings don't have bindings to themselves."
 			);
 		}
-
+		// correct the bindings for bindings to workers with assets
+		// doing this here because all services + bindings will have been set up and because we need the config for all workers
+		for (const service of servicesArray) {
+			// only need to check user worker to user worker bindings - ( has "core:user" prefix)
+			if ("worker" in service && service.name?.startsWith("core:user")) {
+				for (const binding of service.worker?.bindings ?? []) {
+					if (
+						"service" in binding &&
+						binding.service?.name?.startsWith("core:user")
+					) {
+						// check if target worker has assets
+						const targetService = servicesArray.find(
+							(s) => s.name === binding.service?.name
+						);
+						if (!targetService || !("worker" in targetService)) continue;
+						if (
+							targetService.worker?.bindings?.some((binding) => {
+								if ("service" in binding) {
+									return binding.service?.name?.startsWith(
+										"assets:assets-service"
+									);
+								}
+							})
+						) {
+							// if target worker does have assets, set binding to point to router worker for that worker ("assets:router-targetWorkerName"), not the user worker itself ("core:user:targetWorkerName")
+							binding.service = {
+								name: `${ROUTER_SERVICE_NAME}-${targetService.name?.replace("core:user:", "")}`,
+							};
+						}
+					}
+				}
+			}
+		}
 		return { services: servicesArray, sockets, extensions };
 	}
 

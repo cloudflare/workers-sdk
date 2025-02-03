@@ -39,7 +39,9 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			{
 				// binding between User Worker and Asset Worker
 				name: options.assets.binding,
-				service: { name: ASSETS_SERVICE_NAME },
+				service: {
+					name: `${ASSETS_SERVICE_NAME}-${options.assets.workerName}`,
+				},
 			},
 		];
 	},
@@ -69,7 +71,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		);
 
 		const namespaceService: Service = {
-			name: ASSETS_KV_SERVICE_NAME,
+			name: `${ASSETS_KV_SERVICE_NAME}-${options.assets.workerName}`,
 			worker: {
 				compatibilityDate: "2023-07-24",
 				compatibilityFlags: ["nodejs_compat"],
@@ -93,7 +95,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		};
 
 		const assetService: Service = {
-			name: ASSETS_SERVICE_NAME,
+			name: `${ASSETS_SERVICE_NAME}-${options.assets.workerName}`,
 			worker: {
 				compatibilityDate: "2024-08-01",
 				modules: [
@@ -105,7 +107,9 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 				bindings: [
 					{
 						name: "ASSETS_KV_NAMESPACE",
-						kvNamespace: { name: ASSETS_KV_SERVICE_NAME },
+						kvNamespace: {
+							name: `${ASSETS_KV_SERVICE_NAME}-${options.assets.workerName}`,
+						},
 					},
 					{
 						name: "ASSETS_MANIFEST",
@@ -120,7 +124,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		};
 
 		const routerService: Service = {
-			name: ROUTER_SERVICE_NAME,
+			name: `${ROUTER_SERVICE_NAME}-${options.assets.workerName}`,
 			worker: {
 				compatibilityDate: "2024-08-01",
 				modules: [
@@ -132,7 +136,9 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 				bindings: [
 					{
 						name: "ASSET_WORKER",
-						service: { name: ASSETS_SERVICE_NAME },
+						service: {
+							name: `${ASSETS_SERVICE_NAME}-${options.assets.workerName}`,
+						},
 					},
 					{
 						name: "USER_WORKER",

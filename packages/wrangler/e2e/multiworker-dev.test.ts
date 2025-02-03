@@ -35,7 +35,6 @@ describe("multiworker", () => {
 	let b: string;
 	let c: string;
 	let helper: WranglerE2ETestHelper;
-
 	beforeEach(async () => {
 		workerName = generateResourceName("worker");
 		workerName2 = generateResourceName("worker");
@@ -444,6 +443,263 @@ describe("multiworker", () => {
 			await pages.readUntil(
 				/You cannot use a Pages project as a service binding target/
 			);
+		});
+	});
+
+	describe("workers with assets", async () => {
+		let workerNameAW: string;
+		let workerName4: string;
+		let aw: string;
+		let d: string;
+		describe("worker through worker with assets", () => {
+			beforeEach(async () => {
+				aw = await makeRoot();
+				workerNameAW = generateResourceName("worker-aw");
+				workerName4 = generateResourceName("worker");
+				await baseSeed(aw, {
+					"wrangler.toml": dedent`
+							name = "${workerNameAW}"
+							main = "src/index.ts"
+							compatibility_date = "2024-11-01"
+
+							[assets]
+							directory = "./public/"
+							binding = "ASSETS"
+
+							[[services]]
+							binding = "DEE"
+							service = '${workerName4}'
+
+							[[services]]
+							binding = "COUNTER"
+							service = '${workerName4}'
+							entrypoint = 'CounterService'
+
+							[durable_objects]
+							bindings = [
+								{ name = "REFERENCED_DO", class_name = "MyDurableObject", script_name = "${workerName4}" }
+							]
+						`,
+					"public/asset-binding.html": "<p>have an asset via a binding</p>",
+					"public/asset.html": "<p>have an asset directly</p>",
+					"src/index.ts": dedent/* javascript */ `
+							export default {
+								async fetch(req, env) {
+									const url = new URL(req.url)
+									if (url.pathname === "/asset-via-binding") {
+										return env.ASSETS.fetch(new URL("asset-binding.html", req.url));
+									}
+									if (url.pathname === "/worker") {
+										return new Response("hello world from a worker with assets");
+									}
+									if (url.pathname === "/count") {
+										const counter = await env.COUNTER.newCounter()
+										await counter.increment(1)
+										await counter.increment(2)
+										await counter.increment(3)
+										return new Response(String(await counter.value))
+									}
+									if (url.pathname === "/do") {
+										const id = env.REFERENCED_DO.idFromName(url.pathname);
+										const stub = env.REFERENCED_DO.get(id);
+										return stub.fetch(req);
+									}
+									if (url.pathname === "/do-rpc") {
+										const id = env.REFERENCED_DO.idFromName(url.pathname);
+										const stub = env.REFERENCED_DO.get(id);
+										return new Response(await stub.sayHello("through DO RPC"));
+									}
+									return env.DEE.fetch(req);
+								},
+							};
+							`,
+					"package.json": dedent`
+								{
+									"name": "aw",
+									"version": "0.0.0",
+									"private": true
+								}
+								`,
+				});
+
+				d = await makeRoot();
+				await baseSeed(d, {
+					"wrangler.toml": dedent`
+						name = "${workerName4}"
+						main = "src/index.ts"
+						compatibility_date = "2024-11-01"
+				`,
+					"src/index.ts": dedent/* javascript */ `
+						import { DurableObject, WorkerEntrypoint, RpcTarget } from "cloudflare:workers";
+						export default{
+							async fetch(req, env) {
+								return new Response("hello world from dee");
+							}
+						};
+						class Counter extends RpcTarget {
+							#value = 0;
+
+							increment(amount) {
+								this.#value += amount;
+								return this.#value;
+							}
+
+							get value() {
+								return this.#value;
+							}
+						}
+
+						export class CounterService extends WorkerEntrypoint {
+							async newCounter() {
+								return new Counter();
+							}
+						}
+
+						export class MyDurableObject extends DurableObject {
+							async fetch(request: Request) {
+								if (request.headers.has("X-Reset-Count")) {
+									await this.ctx.storage.put("count", 0);
+								}
+								let count: number = (await this.ctx.storage.get("count")) || 0;
+								await this.ctx.storage.put("count", ++count);
+								return Response.json({ count });
+							}
+
+							sayHello(name: string) {
+								return "Hello " + name;
+							}
+						}
+						`,
+				});
+			});
+
+			it("can fetch a worker with assets", async () => {
+				const worker = helper.runLongLived(
+					`wrangler dev -c wrangler.toml -c ${d}/wrangler.toml`,
+					{ cwd: aw }
+				);
+
+				const { url } = await worker.waitForReady(5_000);
+				await expect(fetchText(`${url}/asset`)).resolves.toBe(
+					"<p>have an asset directly</p>"
+				);
+				await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
+					"<p>have an asset via a binding</p>"
+				);
+				await expect(
+					fetch(`${url}/worker`).then((r) => r.text())
+				).resolves.toBe("hello world from a worker with assets");
+			});
+
+			it("can fetch a regular worker through a worker with assets, including with rpc", async () => {
+				const worker = helper.runLongLived(
+					`wrangler dev -c wrangler.toml -c ${d}/wrangler.toml`,
+					{ cwd: aw }
+				);
+
+				const { url } = await worker.waitForReady(5_000);
+
+				await expect(
+					fetch(`${url}/hello-from-dee`).then((r) => r.text())
+				).resolves.toBe("hello world from dee");
+
+				await vi.waitFor(
+					async () =>
+						await expect(fetchText(`${url}/count`)).resolves.toBe("6"),
+					{ interval: 1000, timeout: 10_000 }
+				);
+			});
+
+			it("can fetch a DO through a worker with assets, including with rpc", async () => {
+				const worker = helper.runLongLived(
+					`wrangler dev -c wrangler.toml -c ${d}/wrangler.toml`,
+					{ cwd: aw }
+				);
+
+				const { url } = await worker.waitForReady(5_000);
+
+				await vi.waitFor(
+					async () =>
+						await expect(fetchText(`${url}/do-rpc`)).resolves.toBe(
+							"Hello through DO RPC"
+						),
+					{ interval: 1000, timeout: 10_000 }
+				);
+				await vi.waitFor(
+					async () =>
+						await expect(
+							fetchJson(`${url}/do`, {
+								headers: {
+									"X-Reset-Count": "true",
+								},
+							})
+						).resolves.toMatchObject({ count: 1 }),
+					{ interval: 1000, timeout: 10_000 }
+				);
+			});
+		});
+
+		describe("assets through regular worker", () => {
+			beforeEach(async () => {
+				await baseSeed(aw, {
+					"wrangler.toml": dedent`
+								name = "${workerNameAW}"
+								main = "src/index.ts"
+								compatibility_date = "2024-11-01"
+								[assets]
+								directory = "./public/"
+								binding = "ASSETS"
+						`,
+					"src/index.ts": dedent/* javascript */ `
+							export default {
+								async fetch(req, env) {
+									const url = new URL(req.url)
+									if (url.pathname === "/asset-via-binding") {
+										return env.ASSETS.fetch(new URL("asset-binding.html", req.url));
+									}
+									return new Response("hello world from a worker with assets")
+								},
+							};
+							`,
+				});
+				await baseSeed(d, {
+					"wrangler.toml": dedent`
+						name = "${workerName4}"
+						main = "src/index.ts"
+						compatibility_date = "2024-11-01"
+						[[services]]
+						binding = "AW"
+						service = '${workerNameAW}'
+				`,
+					"src/index.ts": dedent/* javascript */ `
+						export default{
+							async fetch(req, env) {
+								return env.AW.fetch(req);
+							}
+						};`,
+				});
+			});
+
+			it("can fetch assets and asset worker through a regular worker", async () => {
+				const worker = helper.runLongLived(
+					`wrangler dev -c wrangler.toml -c ${aw}/wrangler.toml`,
+					{ cwd: d }
+				);
+
+				const { url } = await worker.waitForReady(5_000);
+				await expect(fetchText(`${url}/asset`)).resolves.toBe(
+					"<p>have an asset directly</p>"
+				);
+				await expect(fetchText(`${url}/worker`)).resolves.toBe(
+					"hello world from a worker with assets"
+				);
+				await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
+					"<p>have an asset via a binding</p>"
+				);
+			});
+
+			it.todo("RPC to a worker with assets");
+			// doesn't work yet, will be added as part of assets GA
 		});
 	});
 });
