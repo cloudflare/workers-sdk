@@ -223,6 +223,19 @@ export function createCLIParser(argv: string[]) {
 			alias: "version",
 			type: "boolean",
 		})
+		.option("cwd", {
+			describe:
+				"Run as if Wrangler was started in the specified directory instead of the current working directory",
+			alias: "C",
+			type: "string",
+			requiresArg: true,
+		})
+		.check(demandSingleValue("cwd"))
+		.middleware((_argv) => {
+			if (_argv.cwd) {
+				process.chdir(_argv.cwd);
+			}
+		})
 		.option("config", {
 			alias: "c",
 			describe: "Path to Wrangler configuration file",
@@ -301,7 +314,7 @@ export function createCLIParser(argv: string[]) {
 		"Examples:": `${chalk.bold("EXAMPLES")}`,
 	});
 	wrangler.group(
-		["config", "env", "help", "version"],
+		["config", "cwd", "env", "help", "version"],
 		`${chalk.bold("GLOBAL FLAGS")}`
 	);
 	wrangler.help("help", "Show help").alias("h", "help");

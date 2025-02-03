@@ -895,6 +895,7 @@ export const Handler = async (args: PagesDevArguments) => {
 				processEntrypoint: true,
 				additionalModules: modules,
 				v: undefined,
+				cwd: undefined,
 				assets: undefined,
 				name: undefined,
 				noBundle: false,
