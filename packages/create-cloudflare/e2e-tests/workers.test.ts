@@ -147,7 +147,7 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 	}
 }
 
-const experimental = Boolean(process.env.E2E_EXPERIMENTAL);
+const experimental = process.env.E2E_EXPERIMENTAL === "true";
 const workerTests = getWorkerTests({ experimental });
 
 describe
