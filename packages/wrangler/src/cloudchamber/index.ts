@@ -1,4 +1,5 @@
 import { applyCommand, applyCommandOptionalYargs } from "./apply";
+import { buildCommand, buildYargs, pushCommand, pushYargs } from "./build";
 import { handleFailure } from "./common";
 import { createCommand, createCommandOptionalYargs } from "./create";
 import { curlCommand, yargsCurl } from "./curl";
@@ -68,5 +69,17 @@ export const cloudchamber = (
 			"apply the changes in the container applications to deploy",
 			(args) => applyCommandOptionalYargs(args),
 			(args) => handleFailure(applyCommand)(args)
+		)
+		.command(
+			"build [PATH]",
+			"build a dockerfile",
+			(args) => buildYargs(args),
+			(args) => handleFailure(buildCommand)(args)
+		)
+		.command(
+			"push [TAG]",
+			"push a tagged image to a Cloudflare managed registry, which is automatically integrated with your account",
+			(args) => pushYargs(args),
+			(args) => handleFailure(pushCommand)(args)
 		);
 };
