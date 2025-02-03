@@ -1,9 +1,9 @@
 import fs, { existsSync, statSync } from "fs";
 import { join } from "path";
 import TOML from "@iarna/toml";
-import { parse } from "jsonc-parser";
+import { parse, stringify } from "comment-json";
 import type { JsonMap } from "@iarna/toml";
-import type { C3Context } from "types";
+import type { C3Context, PackageJson } from "types";
 
 export const copyFile = (path: string, dest: string) => {
 	try {
@@ -57,7 +57,7 @@ export const directoryExists = (path: string): boolean => {
 	}
 };
 
-export const readJSON = (path: string) => {
+export const readJSON = (path: string): unknown => {
 	const contents = readFile(path);
 	return contents ? parse(contents) : contents;
 };
@@ -69,10 +69,10 @@ export const readToml = (path: string) => {
 
 export const writeJSON = (
 	path: string,
-	object: object,
+	object: unknown,
 	stringifySpace = "\t",
 ) => {
-	writeFile(path, JSON.stringify(object, null, stringifySpace));
+	writeFile(path, stringify(object, null, stringifySpace));
 };
 
 export const writeToml = (path: string, object: JsonMap) => {
@@ -136,8 +136,8 @@ export const usesEslint = (ctx: C3Context): EslintUsageInfo => {
 	}
 
 	try {
-		const pkgJson = readJSON(`${ctx.project.path}/package.json`);
-		if (pkgJson.eslintConfig) {
+		const pkgJson = readJSON(`${ctx.project.path}/package.json`) as PackageJson;
+		if (pkgJson?.eslintConfig) {
 			return {
 				used: true,
 				configType: "package.json",
