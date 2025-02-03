@@ -7,6 +7,7 @@ import {
 	rmSync,
 } from "fs";
 import crypto from "node:crypto";
+import { readFileSync } from "node:fs";
 import { tmpdir } from "os";
 import path from "path";
 import { setTimeout } from "timers/promises";
@@ -323,16 +324,21 @@ export const waitForExit = async (
 	};
 };
 
-export const createTestLogStream = (
+const createTestLogStream = (
 	opts: { experimental: boolean },
 	task: RunnerTestCase,
 ) => {
 	// The .ansi extension allows for editor extensions that format ansi terminal codes
 	const fileName = `${normalizeTestName(task)}.ansi`;
 	assert(task.suite, "Expected task.suite to be defined");
-	return createWriteStream(path.join(getLogPath(opts, task.suite), fileName), {
+	const logPath = path.join(getLogPath(opts, task.suite), fileName);
+	const logStream = createWriteStream(logPath, {
 		flags: "a",
 	});
+	return {
+		logPath,
+		logStream,
+	};
 };
 
 export const recreateLogFolder = (
@@ -374,7 +380,7 @@ const normalizeTestName = (task: Test) => {
 	return baseName + suffix;
 };
 
-export const testProjectDir = (suite: string, test: string) => {
+const testProjectDir = (suite: string, test: string) => {
 	const tmpDirPath =
 		process.env.E2E_PROJECT_PATH ??
 		realpathSync(mkdtempSync(path.join(tmpdir(), `c3-tests-${suite}`)));
@@ -496,9 +502,21 @@ export const test = (opts: { experimental: boolean }) =>
 			await use({ path: getPath(), name: getName() });
 			clean();
 		},
-		async logStream({ task }, use) {
-			const logStream = createTestLogStream(opts, task);
+		async logStream({ task, onTestFailed }, use) {
+			const { logPath, logStream } = createTestLogStream(opts, task);
+
+			onTestFailed(() => {
+				console.error("##[group]Logs from failed test:", logPath);
+				try {
+					console.error(readFileSync(logPath, "utf8"));
+				} catch {
+					console.error("Unable to read log file");
+				}
+				console.error("##[endgroup]");
+			});
+
 			await use(logStream);
+
 			logStream.close();
 		},
 	});
