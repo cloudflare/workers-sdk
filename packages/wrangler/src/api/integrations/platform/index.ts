@@ -236,6 +236,7 @@ export interface Unstable_MiniflareWorkerOptions {
 	workerOptions: SourcelessWorkerOptions;
 	define: Record<string, string>;
 	main?: string;
+	externalWorkers: WorkerOptions[];
 }
 
 export function unstable_getMiniflareWorkerOptions(
@@ -264,7 +265,7 @@ export function unstable_getMiniflareWorkerOptions(
 		}));
 
 	const bindings = getBindings(config, env, true, {});
-	const { bindingOptions } = buildMiniflareBindingOptions({
+	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
 		name: undefined,
 		bindings,
 		workerDefinitions: undefined,
@@ -330,5 +331,10 @@ export function unstable_getMiniflareWorkerOptions(
 		...assetOptions,
 	};
 
-	return { workerOptions, define: config.define, main: config.main };
+	return {
+		workerOptions,
+		define: config.define,
+		main: config.main,
+		externalWorkers,
+	};
 }
