@@ -36,7 +36,7 @@ export async function imagesLocalFetcher(request: Request): Promise<Response> {
 		return errorResponse(
 			503,
 			9523,
-			"Sharp is not available, ensure you are using Node >=18"
+			"The Sharp library is not available, check your version of Node is compatible"
 		);
 	}
 

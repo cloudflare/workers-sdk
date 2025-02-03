@@ -989,7 +989,7 @@ export async function buildMiniflareOptions(
 				await import("sharp");
 			} catch {
 				const msg =
-					"Sharp must be installed to use the Images binding local mode; check you are using Node >= 18";
+					"Sharp must be installed to use the Images binding local mode; check your version of Node is compatible";
 				throw createFatalError(msg, false);
 			}
 
