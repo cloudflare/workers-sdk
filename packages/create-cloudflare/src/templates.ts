@@ -717,7 +717,7 @@ export const updatePackageName = async (ctx: C3Context) => {
 	// Update package.json with project name
 	const placeholderNames = ["<TBD>", "TBD", ""];
 	const pkgJsonPath = resolve(ctx.project.path, "package.json");
-	const pkgJson = readJSON(pkgJsonPath);
+	const pkgJson = readJSON(pkgJsonPath) as PackageJson;
 
 	if (!placeholderNames.includes(pkgJson.name)) {
 		return;
@@ -741,11 +741,11 @@ export const updatePackageScripts = async (ctx: C3Context) => {
 	s.start("Updating `package.json` scripts");
 
 	const pkgJsonPath = resolve(ctx.project.path, "package.json");
-	let pkgJson = readJSON(pkgJsonPath);
+	let pkgJson = readJSON(pkgJsonPath) as PackageJson;
 
 	// Run any transformers defined by the template
 	const transformed = await ctx.template.transformPackageJson(pkgJson, ctx);
-	pkgJson = deepmerge(pkgJson, transformed);
+	pkgJson = deepmerge(pkgJson, transformed as PackageJson);
 
 	writeJSON(pkgJsonPath, pkgJson);
 	s.stop(`${brandColor("updated")} ${dim("`package.json`")}`);

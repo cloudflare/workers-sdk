@@ -799,12 +799,14 @@ const addTestVarsToWranglerToml = async (projectPath: string) => {
 
 		writeToml(wranglerTomlPath, wranglerToml);
 	} else if (existsSync(wranglerJsoncPath)) {
-		const wranglerJson = readJSON(wranglerJsoncPath);
+		const wranglerJsonc = readJSON(wranglerJsoncPath) as {
+			vars: Record<string, string>;
+		};
 		// Add a TEST var to the wrangler.toml
-		wranglerJson.vars ??= {};
-		wranglerJson.vars.TEST = "C3_TEST";
+		wranglerJsonc.vars ??= {};
+		wranglerJsonc.vars.TEST = "C3_TEST";
 
-		writeJSON(wranglerJsoncPath, wranglerJson);
+		writeJSON(wranglerJsoncPath, wranglerJsonc);
 	}
 };
 
