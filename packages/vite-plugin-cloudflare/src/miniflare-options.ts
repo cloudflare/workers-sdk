@@ -294,6 +294,7 @@ export function getDevMiniflareOptions(
 							miniflareWorkerOptions.workerOptions;
 
 						return {
+							externalWorkers,
 							worker: {
 								...workerOptions,
 								// We have to add the name again because `unstable_getMiniflareWorkerOptions` sets it to `undefined`
@@ -352,7 +353,6 @@ export function getDevMiniflareOptions(
 									},
 								},
 							} satisfies Partial<WorkerOptions>,
-							externalWorkers,
 						};
 					}
 				)
