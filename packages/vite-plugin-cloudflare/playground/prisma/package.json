@@ -6,7 +6,9 @@
 		"build": "vite build --app",
 		"check:types": "tsc --build",
 		"dev": "vite dev",
-		"preview": "vite preview"
+		"migrate-db": "pnpm wrangler d1 migrations apply prisma-demo-db --local",
+		"preview": "vite preview",
+		"seed-db": "pnpm wrangler d1 execute prisma-demo-db --command \"INSERT INTO  \"User\" (\"email\", \"name\") VALUES ('jane@prisma.io', 'Jane Doe (Local)');\" --local"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",

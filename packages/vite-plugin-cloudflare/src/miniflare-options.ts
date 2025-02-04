@@ -15,6 +15,7 @@ import {
 	ROUTER_WORKER_NAME,
 } from "./constants";
 import { getWorkerConfigPaths } from "./deploy-config";
+import { MODULE_PATTERN } from "./shared";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
 	PersistState,
@@ -325,6 +326,18 @@ export function getDevMiniflareOptions(
 									);
 
 									const [moduleId] = invokePayloadData.data;
+									const moduleRE = new RegExp(MODULE_PATTERN);
+									const match = moduleRE.exec(moduleId);
+
+									// Externalize Worker modules (CompiledWasm, Text, Data)
+									if (match) {
+										const result = {
+											externalize: moduleId,
+											type: "module",
+										} satisfies vite.FetchResult;
+
+										return new MiniflareResponse(JSON.stringify({ result }));
+									}
 
 									// For some reason we need this here for cloudflare built-ins (e.g. `cloudflare:workers`) but not for node built-ins (e.g. `node:path`)
 									// See https://github.com/flarelabs-net/vite-plugin-cloudflare/issues/46
@@ -438,9 +451,31 @@ export function getDevMiniflareOptions(
 							),
 						},
 					],
+					unsafeUseModuleFallbackService: true,
 				} satisfies WorkerOptions;
 			}),
 		],
+		unsafeModuleFallbackService(request) {
+			const url = new URL(request.url);
+			const specifier = url.searchParams.get("specifier");
+
+			assert(
+				specifier,
+				`Unexpected error: no specifier in request to module fallback service.`
+			);
+
+			const moduleRE = new RegExp(MODULE_PATTERN);
+			const match = moduleRE.exec(specifier);
+			assert(match);
+			const [_, moduleType, modulePath] = match;
+			assert(modulePath);
+			const source = fs.readFileSync(modulePath);
+
+			return MiniflareResponse.json({
+				// Cap'n Proto expects byte arrays for `:Data` typed fields from JSON
+				wasm: source instanceof Uint8Array ? Array.from(source) : source,
+			});
+		},
 	};
 }
 

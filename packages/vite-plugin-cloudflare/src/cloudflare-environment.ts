@@ -120,7 +120,7 @@ const cloudflareBuiltInModules = [
 	"cloudflare:workflows",
 ];
 
-const conditions = ["workerd", "module", "browser", "development|production"];
+const defaultConditions = ["workerd", "module", "browser"];
 
 export function createCloudflareEnvironmentOptions(
 	workerConfig: WorkerConfig,
@@ -133,7 +133,7 @@ export function createCloudflareEnvironmentOptions(
 			//       dependencies as not external
 			noExternal: true,
 			// We want to use `workerd` package exports if available (e.g. for postgres).
-			conditions,
+			conditions: [...defaultConditions, "development|production"],
 		},
 		dev: {
 			createEnvironment(name, config) {
@@ -166,7 +166,7 @@ export function createCloudflareEnvironmentOptions(
 			],
 			esbuildOptions: {
 				platform: "neutral",
-				// conditions,
+				conditions: [...defaultConditions, "development"],
 				resolveExtensions: [
 					".mjs",
 					".js",

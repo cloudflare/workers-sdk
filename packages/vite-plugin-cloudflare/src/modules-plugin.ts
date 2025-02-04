@@ -3,15 +3,9 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import MagicString from "magic-string";
 import * as vite from "vite";
+import { MODULE_PATTERN } from "./shared";
 import type { ResolvedPluginConfigContainer } from ".";
-
-const moduleTypes = ["CompiledWasm"] as const;
-type ModuleType = (typeof moduleTypes)[number];
-
-const moduleRE = new RegExp(
-	`__CLOUDFLARE_MODULE__${moduleTypes.join("|")}__(.*?)__`,
-	"g"
-);
+import type { ModuleType } from "./constants";
 
 function createModuleReference(type: ModuleType, id: string) {
 	return `__CLOUDFLARE_MODULE__${type}__${id}__`;
@@ -51,15 +45,15 @@ export function modulesPlugin(
 				id: createModuleReference("CompiledWasm", resolved.id),
 			};
 		},
-		renderChunk(code, chunk, options) {
+		renderChunk(code, chunk) {
 			const replacementMap = new Map<string, string>();
 			let match: RegExpExecArray | null;
 			let s: MagicString | undefined;
 
-			moduleRE.lastIndex = 0;
+			const moduleRE = new RegExp(MODULE_PATTERN, "g");
 			while ((match = moduleRE.exec(code))) {
 				s ||= new MagicString(code);
-				const [full, id] = match;
+				const [full, _, id] = match;
 
 				assert(
 					id,
