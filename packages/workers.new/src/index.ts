@@ -138,7 +138,7 @@ const worker: ExportedHandler = {
 		const { pathname } = new URL(request.url);
 
 		if (pathname === "/templates") {
-			return new  Response.redirect("https://github.com/cloudflare/templates", 302);
+			return Response.redirect("https://github.com/cloudflare/templates", 302);
 		}
 
 		const redirectUrl = getRedirectUrlForPathname(pathname);
