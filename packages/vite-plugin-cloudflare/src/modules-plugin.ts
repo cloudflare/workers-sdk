@@ -40,7 +40,7 @@ export function modulesPlugin(): vite.Plugin {
 				id: createModuleReference("CompiledWasm", resolved.id),
 			};
 		},
-		renderChunk(code, chunk) {
+		renderChunk(code, chunk, options) {
 			const replacementMap = new Map<string, string>();
 			let match: RegExpExecArray | null;
 			let s: MagicString | undefined;
@@ -70,9 +70,16 @@ export function modulesPlugin(): vite.Plugin {
 					source,
 				});
 
-				const emittedFileName = `./${this.getFileName(referenceId)}`;
+				const emittedFileName = this.getFileName(referenceId);
+				const relativePath = path.relative(
+					path.dirname(chunk.fileName),
+					emittedFileName
+				);
+				const importPath = relativePath.startsWith(".")
+					? relativePath
+					: `./${relativePath}`;
 
-				s.update(match.index, match.index + full.length, emittedFileName);
+				s.update(match.index, match.index + full.length, importPath);
 				replacementMap.set(full, emittedFileName);
 			}
 

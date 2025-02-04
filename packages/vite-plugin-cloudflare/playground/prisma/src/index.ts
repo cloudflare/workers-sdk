@@ -1,5 +1,5 @@
 import { PrismaD1 } from "@prisma/adapter-d1";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client-generated";
 
 interface Env {
 	DB: D1Database;
