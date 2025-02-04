@@ -101,6 +101,24 @@ function getFrameworkTests(opts: {
 				},
 				flags: ["--style", "sass"],
 			},
+			react: {
+				promptHandlers: [
+					{
+						matcher: /Select a variant:/,
+						input: [keys.enter],
+					},
+				],
+				testCommitMessage: true,
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Vite + React",
+				},
+				verifyPreview: {
+					route: "/",
+					previewArgs: ["--host=127.0.0.1"],
+					expectedText: "Vite + React",
+				},
+			},
 			gatsby: {
 				unsupportedPms: ["bun", "pnpm"],
 				promptHandlers: [
@@ -544,7 +562,6 @@ function getFrameworkTests(opts: {
 				],
 				testCommitMessage: true,
 				unsupportedOSs: ["win32"],
-				unsupportedPms: ["yarn"],
 				timeout: LONG_TIMEOUT,
 				verifyDeploy: {
 					route: "/",
@@ -858,6 +875,7 @@ const verifyPreviewScript = async (
 			...(pm === "npm" ? ["--"] : []),
 			"--port",
 			`${TEST_PORT}`,
+			...(verifyPreview.previewArgs ?? []),
 		],
 		{
 			cwd: projectPath,

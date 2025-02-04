@@ -179,6 +179,7 @@ const config: TemplateConfig = {
 	transformPackageJson: async () => ({
 		scripts: {
 			deploy: `${npm} run build && wrangler deploy`,
+			preview: `${npm} run build && vite preview`,
 		},
 	}),
 	devScript: "dev",

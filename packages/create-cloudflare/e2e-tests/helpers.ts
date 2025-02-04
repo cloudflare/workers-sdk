@@ -84,6 +84,7 @@ export type RunnerConfig = {
 	 * Specifies whether to run the preview script for the project and assert the response from the specified route.
 	 */
 	verifyPreview: null | {
+		previewArgs?: string[];
 		route: string;
 		expectedText: string;
 	};
