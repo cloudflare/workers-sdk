@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import MagicString from "magic-string";
 import * as vite from "vite";
+import type { ResolvedPluginConfigContainer } from ".";
 
 const moduleTypes = ["CompiledWasm"] as const;
 type ModuleType = (typeof moduleTypes)[number];
@@ -16,13 +17,23 @@ function createModuleReference(type: ModuleType, id: string) {
 	return `__CLOUDFLARE_MODULE__${type}__${id}__`;
 }
 
-export function modulesPlugin(): vite.Plugin {
+export function modulesPlugin(
+	resolvedPluginConfigContainer: ResolvedPluginConfigContainer
+): vite.Plugin {
 	return {
 		name: "vite-plugin-cloudflare:modules",
 		enforce: "pre",
 		applyToEnvironment(environment) {
-			// TODO: apply only to Worker environments
-			return true;
+			if (
+				resolvedPluginConfigContainer.resolvedPluginConfig.type ===
+				"assets-only"
+			) {
+				return false;
+			}
+
+			return Object.keys(
+				resolvedPluginConfigContainer.resolvedPluginConfig.workers
+			).includes(environment.name);
 		},
 		async resolveId(source, importer) {
 			if (!source.endsWith(".wasm")) {

@@ -13,7 +13,5 @@ export default {
 		const result = JSON.stringify(users);
 
 		return new Response(result);
-
-		// return new Response("Hello world");
 	},
 } satisfies ExportedHandler<Env>;
