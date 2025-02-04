@@ -609,7 +609,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		await fetch(`${url}/connect`);
 	});
 
-	it.skipIf(!isLocal).fails("exposes Pipelines bindings", async () => {
+	it("exposes Pipelines bindings", async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
