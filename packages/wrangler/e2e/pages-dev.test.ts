@@ -327,7 +327,7 @@ describe.sequential.each([{ cmd: "wrangler pages dev" }])(
 			expect(normalizeOutput(worker.currentOutput)).toContain(
 				dedent`Your worker has access to the following bindings:
 					- KV Namespaces:
-					  - KV_BINDING_TOML: KV_ID_TOML (local)
+					  - KV_BINDING_TOML: KV_ID_TOML [simulated locally]
 					- Vars:
 					  - PAGES: "⚡️ Pages ⚡️"
 				`
