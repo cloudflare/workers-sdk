@@ -327,16 +327,16 @@ export function getDevMiniflareOptions(
 
 									const [moduleId] = invokePayloadData.data;
 									const moduleRE = new RegExp(MODULE_PATTERN);
-									const match = moduleRE.exec(moduleId);
+									const isModule = moduleRE.test(moduleId);
 
 									// Externalize Worker modules (CompiledWasm, Text, Data)
-									if (match) {
+									if (isModule) {
 										const result = {
 											externalize: moduleId,
 											type: "module",
 										} satisfies vite.FetchResult;
 
-										return new MiniflareResponse(JSON.stringify({ result }));
+										return MiniflareResponse.json({ result });
 									}
 
 									// For some reason we need this here for cloudflare built-ins (e.g. `cloudflare:workers`) but not for node built-ins (e.g. `node:path`)
@@ -347,7 +347,7 @@ export function getDevMiniflareOptions(
 											type: "builtin",
 										} satisfies vite.FetchResult;
 
-										return new MiniflareResponse(JSON.stringify({ result }));
+										return MiniflareResponse.json({ result });
 									}
 
 									const devEnvironment = viteDevServer.environments[
@@ -356,7 +356,7 @@ export function getDevMiniflareOptions(
 
 									const result = await devEnvironment.hot.handleInvoke(payload);
 
-									return new MiniflareResponse(JSON.stringify(result));
+									return MiniflareResponse.json(result);
 								},
 							},
 						} satisfies Partial<WorkerOptions>;

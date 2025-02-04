@@ -77,7 +77,7 @@ export async function createModuleRunner(
 				const moduleRE = new RegExp(MODULE_PATTERN);
 
 				if (
-					!moduleRE.exec(filepath) &&
+					!moduleRE.test(filepath) &&
 					filepath.includes("/node_modules") &&
 					!filepath.includes("/node_modules/.vite")
 				) {
