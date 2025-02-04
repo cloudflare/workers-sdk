@@ -46,11 +46,10 @@ export function modulesPlugin(
 			};
 		},
 		renderChunk(code, chunk) {
-			const replacementMap = new Map<string, string>();
+			const moduleRE = new RegExp(MODULE_PATTERN, "g");
 			let match: RegExpExecArray | null;
 			let s: MagicString | undefined;
 
-			const moduleRE = new RegExp(MODULE_PATTERN, "g");
 			while ((match = moduleRE.exec(code))) {
 				s ||= new MagicString(code);
 				const [full, _, id] = match;
@@ -85,18 +84,9 @@ export function modulesPlugin(
 					: `./${relativePath}`;
 
 				s.update(match.index, match.index + full.length, importPath);
-				replacementMap.set(full, emittedFileName);
 			}
 
 			if (s) {
-				chunk.imports = chunk.imports.map((id) => replacementMap.get(id) ?? id);
-				chunk.importedBindings = Object.fromEntries(
-					Object.entries(chunk.importedBindings).map(([id, bindings]) => [
-						replacementMap.get(id) ?? id,
-						bindings,
-					])
-				);
-
 				return {
 					code: s.toString(),
 					map: this.environment.config.build.sourcemap
