@@ -52,25 +52,27 @@ export function modulesPlugin(
 
 			while ((match = moduleRE.exec(code))) {
 				s ||= new MagicString(code);
-				const [full, _, id] = match;
+				const [full, moduleType, modulePath] = match;
 
 				assert(
-					id,
-					`Unexpected error: module id not found in reference ${full}.`
+					modulePath,
+					`Unexpected error: module path not found in reference ${full}.`
 				);
 
 				let source: Buffer;
 
 				try {
-					source = fs.readFileSync(id);
+					source = fs.readFileSync(modulePath);
 				} catch (error) {
-					throw new Error(`Import ${id} not found. Does the file exist?`);
+					throw new Error(
+						`Import ${modulePath} not found. Does the file exist?`
+					);
 				}
 
 				const referenceId = this.emitFile({
 					type: "asset",
-					name: path.basename(id),
-					originalFileName: id,
+					name: path.basename(modulePath),
+					originalFileName: modulePath,
 					source,
 				});
 

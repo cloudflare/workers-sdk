@@ -465,9 +465,12 @@ export function getDevMiniflareOptions(
 
 			const moduleRE = new RegExp(MODULE_PATTERN);
 			const match = moduleRE.exec(specifier);
-			assert(match, `Unexpected error: no match for module`);
-			const [_, moduleType, modulePath] = match;
-			assert(modulePath, `Unexpected error: no path for module`);
+			assert(match, `Unexpected error: no match for module ${specifier}.`);
+			const [full, moduleType, modulePath] = match;
+			assert(
+				modulePath,
+				`Unexpected error: module path not found in reference ${full}.`
+			);
 
 			let source: Buffer;
 
