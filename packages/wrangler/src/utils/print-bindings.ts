@@ -452,6 +452,7 @@ export function printBindings(
 	}
 
 	if (output.length === 0) {
+		logger.log("No bindings found.");
 		return;
 	}
 
