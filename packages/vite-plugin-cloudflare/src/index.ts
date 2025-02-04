@@ -14,6 +14,7 @@ import {
 	getDevMiniflareOptions,
 	getPreviewMiniflareOptions,
 } from "./miniflare-options";
+import { modulesPlugin } from "./modules-plugin";
 import {
 	getNodeCompatAliases,
 	injectGlobalCode,
@@ -33,7 +34,7 @@ import type { Unstable_RawConfig } from "wrangler";
  *
  * @param pluginConfig An optional {@link PluginConfig} object.
  */
-export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
+export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	let resolvedPluginConfig: ResolvedPluginConfig;
 	let resolvedViteConfig: vite.ResolvedConfig;
 	let miniflare: Miniflare | undefined;
@@ -41,7 +42,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
 	// this flag is used to show the workers configs warning only once
 	let workersConfigsWarningShown = false;
 
-	return {
+	const plugin: vite.Plugin = {
 		name: "vite-plugin-cloudflare",
 		config(userConfig, env) {
 			if (env.isPreview) {
@@ -316,6 +317,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin {
 			};
 		},
 	};
+
+	return [modulesPlugin(), plugin];
 }
 
 /**
