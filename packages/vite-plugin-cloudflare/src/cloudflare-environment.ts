@@ -144,6 +144,7 @@ export function createCloudflareEnvironmentOptions(
 			createEnvironment(name, config) {
 				return new vite.BuildEnvironment(name, config);
 			},
+			target: "es2022",
 			emitAssets: true,
 			outDir: getOutputDirectory(userConfig, environmentName),
 			ssr: true,
