@@ -6,4 +6,4 @@ compatibility_flags = ["nodejs_compat"]
 [[d1_databases]]
 binding = "DB"
 database_name = "prisma-demo-db"
-database_id = "cb62ec19-23af-4755-b3ea-f18fcf13ab14"
+database_id = "local"
