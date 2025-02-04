@@ -143,29 +143,13 @@ function handleUnenvAliasedPackages(
 		};
 	});
 
-	build.initialOptions.banner = { js: "", ...build.initialOptions.banner };
-	build.initialOptions.banner.js += dedent`
-		function __cf_cjs(esm) {
-		  const cjs = 'default' in esm ? esm.default : {};
-			for (const [k, v] of Object.entries(esm)) {
-				if (k !== 'default') {
-					Object.defineProperty(cjs, k, {
-						enumerable: true,
-						value: v,
-					});
-				}
-			}
-			return cjs;
-		}
-		`;
-
 	build.onLoad(
 		{ filter: /.*/, namespace: REQUIRED_UNENV_ALIAS_NAMESPACE },
 		({ path }) => {
 			return {
 				contents: dedent`
 					import * as esm from '${path}';
-					module.exports = __cf_cjs(esm);
+					module.exports = Object.assign(esm.default || {}, ...Object.entries(esm).filter(([k,]) => k !== 'default'));
 				`,
 				loader: "js",
 			};
