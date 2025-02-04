@@ -64,6 +64,11 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				type: "string",
 				requiresArg: true,
 			})
+			.option("outfile", {
+				describe: "Output file for the bundled worker",
+				type: "string",
+				requiresArg: true,
+			})
 			.option("compatibility-date", {
 				describe: "Date to use for compatibility checks",
 				type: "string",
@@ -306,6 +311,10 @@ async function deployWorker(args: DeployArgs) {
 		);
 	}
 
+	if (args.outfile && args.outdir) {
+		throw new UserError("Cannot use `--outfile` and `--outdir` together");
+	}
+
 	if (config.workflows?.length) {
 		logger.once.warn("Workflows is currently in open beta.");
 	}
@@ -390,6 +399,7 @@ async function deployWorker(args: DeployArgs) {
 		nodeCompat: args.nodeCompat,
 		isWorkersSite: Boolean(args.site || config.site),
 		outDir: args.outdir,
+		outFile: args.outfile,
 		dryRun: args.dryRun,
 		noBundle: !(args.bundle ?? !config.no_bundle),
 		keepVars: args.keepVars,
