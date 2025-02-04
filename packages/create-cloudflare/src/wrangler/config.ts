@@ -1,4 +1,4 @@
-import { existsSync } from "fs";
+import { existsSync, mkdirSync } from "fs";
 import { resolve } from "path";
 import TOML from "@iarna/toml";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
@@ -206,6 +206,9 @@ export const addVscodeConfig = (ctx: C3Context) => {
 	// as this is just a quick stop gap we'll just not bother if the file exists
 	if (existsSync(settingsPath)) {
 		return;
+	}
+	if (!existsSync(`${ctx.project.path}/.vscode`)) {
+		mkdirSync(`${ctx.project.path}/.vscode`);
 	}
 
 	writeJSON(settingsPath, {
