@@ -5,7 +5,7 @@ export default {
 		const instance = await WebAssembly.instantiate(wasm);
 		const result = instance.exports.add(3, 4);
 
-		return new Response(result);
+		return Response.json({ result });
 		// return new Response("Hello World!");
 	},
 } satisfies ExportedHandler;
