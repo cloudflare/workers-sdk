@@ -479,6 +479,24 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/pages-functions-unenv-alias:
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:^
+        version: link:../../packages/workers-tsconfig
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      undici:
+        specifier: catalog:default
+        version: 5.28.4
+      vitest:
+        specifier: catalog:default
+        version: 2.1.8(@types/node@18.19.74)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/pages-functions-wasm-app:
     devDependencies:
       '@cloudflare/workers-tsconfig':
@@ -8568,9 +8586,6 @@ packages:
       vue-tsc:
         optional: true
 
-  mlly@1.7.3:
-    resolution: {integrity: sha512-xUsx5n/mN0uQf4V548PKQ+YShA4/IW0KI1dZhrNrPCLG+xizETbHTkOa1f8/xut9JRPp8kQuMnz0oqwkTiLo/A==}
-
   mlly@1.7.4:
     resolution: {integrity: sha512-qmdSIPC4bDJXgZTCR7XosJiNKySV7O215tsPtDN9iEO/7q/76b/ijtgRu/+epFXSJhijtTCCGp3DWS549P3xKw==}
 
@@ -13541,7 +13556,7 @@ snapshots:
 
   '@rollup/pluginutils@5.1.0(rollup@4.30.1)':
     dependencies:
-      '@types/estree': 1.0.5
+      '@types/estree': 1.0.6
       estree-walker: 2.0.2
       picomatch: 2.3.1
     optionalDependencies:
@@ -13549,7 +13564,7 @@ snapshots:
 
   '@rollup/pluginutils@5.1.4(rollup@4.30.1)':
     dependencies:
-      '@types/estree': 1.0.5
+      '@types/estree': 1.0.6
       estree-walker: 2.0.2
       picomatch: 4.0.2
     optionalDependencies:
@@ -17275,7 +17290,7 @@ snapshots:
 
   is-reference@1.2.1:
     dependencies:
-      '@types/estree': 1.0.5
+      '@types/estree': 1.0.6
 
   is-regex@1.1.4:
     dependencies:
@@ -17508,7 +17523,7 @@ snapshots:
 
   local-pkg@0.5.0:
     dependencies:
-      mlly: 1.7.3
+      mlly: 1.7.4
       pkg-types: 1.2.1
 
   localforage@1.10.0:
@@ -17850,13 +17865,6 @@ snapshots:
     optionalDependencies:
       typescript: 5.7.3
       vue-tsc: 2.0.29(typescript@5.7.3)
-
-  mlly@1.7.3:
-    dependencies:
-      acorn: 8.14.0
-      pathe: 1.1.2
-      pkg-types: 1.2.1
-      ufo: 1.5.4
 
   mlly@1.7.4:
     dependencies:
