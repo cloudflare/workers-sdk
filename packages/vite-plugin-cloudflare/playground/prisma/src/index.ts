@@ -10,8 +10,7 @@ export default {
 		const adapter = new PrismaD1(env.DB);
 		const prisma = new PrismaClient({ adapter });
 		const users = await prisma.user.findMany();
-		const result = JSON.stringify(users);
 
-		return new Response(result);
+		return Response.json(users);
 	},
 } satisfies ExportedHandler<Env>;

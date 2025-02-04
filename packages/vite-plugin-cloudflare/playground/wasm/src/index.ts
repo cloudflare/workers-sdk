@@ -6,6 +6,5 @@ export default {
 		const result = instance.exports.add(3, 4);
 
 		return Response.json({ result });
-		// return new Response("Hello World!");
 	},
 } satisfies ExportedHandler;
