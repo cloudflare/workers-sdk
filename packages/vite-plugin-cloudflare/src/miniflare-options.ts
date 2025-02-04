@@ -458,7 +458,6 @@ export function getDevMiniflareOptions(
 		unsafeModuleFallbackService(request) {
 			const url = new URL(request.url);
 			const specifier = url.searchParams.get("specifier");
-
 			assert(
 				specifier,
 				`Unexpected error: no specifier in request to module fallback service.`
@@ -466,10 +465,17 @@ export function getDevMiniflareOptions(
 
 			const moduleRE = new RegExp(MODULE_PATTERN);
 			const match = moduleRE.exec(specifier);
-			assert(match);
+			assert(match, `Unexpected error: no match for module`);
 			const [_, moduleType, modulePath] = match;
-			assert(modulePath);
-			const source = fs.readFileSync(modulePath);
+			assert(modulePath, `Unexpected error: no path for module`);
+
+			let source: Buffer;
+
+			try {
+				source = fs.readFileSync(modulePath);
+			} catch (error) {
+				throw new Error(`Import ${modulePath} not found. Does the file exist?`);
+			}
 
 			return MiniflareResponse.json({
 				// Cap'n Proto expects byte arrays for `:Data` typed fields from JSON
