@@ -358,42 +358,43 @@ async function deployWorker(args: DeployArgs) {
 		assert(accountId, "Missing account ID");
 		await verifyWorkerMatchesCITag(accountId, name, config.configPath);
 	}
-	const { sourceMapSize, versionId, workerTag, targets } = await deploy({
-		config,
-		accountId,
-		name,
-		rules: getRules(config),
-		entry,
-		env: args.env,
-		compatibilityDate: args.latest
-			? new Date().toISOString().substring(0, 10)
-			: args.compatibilityDate,
-		compatibilityFlags: args.compatibilityFlags,
-		vars: cliVars,
-		defines: cliDefines,
-		alias: cliAlias,
-		triggers: args.triggers,
-		jsxFactory: args.jsxFactory,
-		jsxFragment: args.jsxFragment,
-		tsconfig: args.tsconfig,
-		routes: args.routes,
-		assetsOptions,
-		legacyAssetPaths,
-		legacyEnv: isLegacyEnv(config),
-		minify: args.minify,
-		nodeCompat: args.nodeCompat,
-		isWorkersSite: Boolean(args.site || config.site),
-		outDir: args.outdir,
-		dryRun: args.dryRun,
-		noBundle: !(args.bundle ?? !config.no_bundle),
-		keepVars: args.keepVars,
-		logpush: args.logpush,
-		uploadSourceMaps: args.uploadSourceMaps,
-		oldAssetTtl: args.oldAssetTtl,
-		projectRoot,
-		dispatchNamespace: args.dispatchNamespace,
-		experimentalAutoCreate: args.experimentalAutoCreate,
-	});
+	const { sourceMapSize, versionId, workerTag, targets, workerUrl } =
+		await deploy({
+			config,
+			accountId,
+			name,
+			rules: getRules(config),
+			entry,
+			env: args.env,
+			compatibilityDate: args.latest
+				? new Date().toISOString().substring(0, 10)
+				: args.compatibilityDate,
+			compatibilityFlags: args.compatibilityFlags,
+			vars: cliVars,
+			defines: cliDefines,
+			alias: cliAlias,
+			triggers: args.triggers,
+			jsxFactory: args.jsxFactory,
+			jsxFragment: args.jsxFragment,
+			tsconfig: args.tsconfig,
+			routes: args.routes,
+			assetsOptions,
+			legacyAssetPaths,
+			legacyEnv: isLegacyEnv(config),
+			minify: args.minify,
+			nodeCompat: args.nodeCompat,
+			isWorkersSite: Boolean(args.site || config.site),
+			outDir: args.outdir,
+			dryRun: args.dryRun,
+			noBundle: !(args.bundle ?? !config.no_bundle),
+			keepVars: args.keepVars,
+			logpush: args.logpush,
+			uploadSourceMaps: args.uploadSourceMaps,
+			oldAssetTtl: args.oldAssetTtl,
+			projectRoot,
+			dispatchNamespace: args.dispatchNamespace,
+			experimentalAutoCreate: args.experimentalAutoCreate,
+		});
 
 	writeOutput({
 		type: "deploy",
@@ -404,6 +405,7 @@ async function deployWorker(args: DeployArgs) {
 		targets,
 		wrangler_environment: args.env,
 		worker_name_overridden: workerNameOverridden,
+		worker_url: workerUrl,
 	});
 
 	metrics.sendMetricsEvent(

@@ -97,6 +97,8 @@ interface OutputEntryDeployment extends OutputEntryBase<"deploy"> {
 	worker_name_overridden: boolean;
 	/** wrangler environment used */
 	wrangler_environment: string | undefined;
+	/** The worker URL associated with this deploy */
+	worker_url: string | undefined;
 }
 
 interface OutputEntryPagesDeployment extends OutputEntryBase<"pages-deploy"> {

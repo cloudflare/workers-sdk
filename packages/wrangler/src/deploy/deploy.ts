@@ -383,6 +383,7 @@ export default async function deploy(props: Props): Promise<{
 	versionId: string | null;
 	workerTag: string | null;
 	targets?: string[];
+	workerUrl?: string;
 }> {
 	// TODO: warn if git/hg has uncommitted changes
 	const { config, accountId, name } = props;
@@ -516,7 +517,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const yes = await confirmLatestDeploymentOverwrite(accountId, scriptName);
 		if (!yes) {
 			cancel("Aborting deploy...");
-			return { versionId, workerTag };
+			return { versionId, workerTag, workerUrl };
 		}
 	}
 
@@ -977,7 +978,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (props.dryRun) {
 		logger.log(`--dry-run: exiting now.`);
-		return { versionId, workerTag };
+		return { versionId, workerTag, workerUrl };
 	}
 
 	const uploadMs = Date.now() - start;
@@ -987,7 +988,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	// Early exit for WfP since it doesn't need the below code
 	if (props.dispatchNamespace !== undefined) {
 		deployWfpUserWorker(props.dispatchNamespace, versionId);
-		return { versionId, workerTag };
+		return { versionId, workerTag, workerUrl };
 	}
 
 	// deploy triggers
@@ -1000,6 +1001,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		versionId,
 		workerTag,
 		targets: targets ?? [],
+		workerUrl,
 	};
 }
 

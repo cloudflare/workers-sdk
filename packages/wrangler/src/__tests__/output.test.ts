@@ -88,6 +88,7 @@ describe("writeOutput()", () => {
 			targets: undefined,
 			worker_name_overridden: false,
 			wrangler_environment: undefined,
+			worker_url: "mock-worker-url",
 		});
 
 		const outputFile = readFileSync(WRANGLER_OUTPUT_FILE_PATH, "utf8");
@@ -108,6 +109,7 @@ describe("writeOutput()", () => {
 				targets: undefined,
 				worker_name_overridden: false,
 				wrangler_environment: undefined,
+				worker_url: "mock-worker-url",
 			},
 		]);
 	});
@@ -157,6 +159,7 @@ describe("writeOutput()", () => {
 			targets: undefined,
 			worker_name_overridden: false,
 			wrangler_environment: undefined,
+			worker_url: "mock-worker-url",
 		});
 
 		const outputFilePaths = readdirSync("output");
@@ -180,6 +183,7 @@ describe("writeOutput()", () => {
 				targets: undefined,
 				worker_name_overridden: false,
 				wrangler_environment: undefined,
+				worker_url: "mock-worker-url",
 			},
 		]);
 	});
