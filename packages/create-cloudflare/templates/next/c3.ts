@@ -26,9 +26,9 @@ const generate = async (ctx: C3Context) => {
 
 	await runFrameworkGenerator(ctx, [projectName]);
 
-	const wranglerConfig = readFile(join(getTemplatePath(ctx), "wrangler.json"));
-	writeFile(join(ctx.project.path, "wrangler.json"), wranglerConfig);
-	updateStatus("Created wrangler.json file");
+	const wranglerConfig = readFile(join(getTemplatePath(ctx), "wrangler.jsonc"));
+	writeFile(join(ctx.project.path, "wrangler.jsonc"), wranglerConfig);
+	updateStatus("Created wrangler.jsonc file");
 };
 
 const updateNextConfig = (usesTs: boolean) => {
