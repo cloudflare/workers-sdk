@@ -522,8 +522,93 @@ async function sendUpcomingMeetingMessage(webhookUrl: string, ai: Ai) {
 
 export default {
 	async fetch(request, env): Promise<Response> {
-		console.log(env.AI);
 		const url = new URL(request.url);
+		if (url.pathname === "/release-failure") {
+			if (request.headers.get("X-Auth-Header") !== env.PRESHARED_SECRET) {
+				return new Response("Not allowed", { status: 401 });
+			}
+			const body = await request.json<{
+				status: { label: string; details: string }[];
+				url: string;
+			}>();
+			await sendMessage(
+				env.PROD_WEBHOOK,
+				{
+					cardsV2: [
+						{
+							cardId: "unique-card-id",
+							card: {
+								header: {
+									title: "🚨 A workers-sdk release failed!",
+								},
+								sections: [
+									{
+										widgets: [
+											{
+												columns: {
+													columnItems: [
+														{
+															horizontalSizeStyle: "FILL_MINIMUM_SPACE",
+															horizontalAlignment: "START",
+															verticalAlignment: "TOP",
+															widgets: [
+																{
+																	buttonList: {
+																		buttons: [
+																			{
+																				text: "Open Workflow run",
+																				onClick: {
+																					openLink: {
+																						url: body.url,
+																					},
+																				},
+																			},
+																		],
+																	},
+																},
+															],
+														},
+													],
+												},
+											},
+										],
+									},
+									{
+										collapsible: true,
+										uncollapsibleWidgetsCount: 3,
+										widgets: body.status.map(({ label, details }) => {
+											let emoji = "🔴";
+
+											return [
+												{
+													columns: {
+														columnItems: [
+															{
+																horizontalSizeStyle: "FILL_AVAILABLE_SPACE",
+																horizontalAlignment: "START",
+																verticalAlignment: "CENTER",
+																widgets: [
+																	{
+																		textParagraph: {
+																			text: `${emoji} <b>${label}:</b> ${details}`,
+																		},
+																	},
+																],
+															},
+														],
+													},
+												},
+											];
+										}),
+									},
+								],
+							},
+						},
+					],
+				},
+				crypto.randomUUID()
+			);
+		}
 		if (url.pathname === "/github") {
 			const body = await request.json<WebhookEvent>();
 			await sendReviewMessage(env.PROD_WEBHOOK, body);
