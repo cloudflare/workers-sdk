@@ -207,9 +207,8 @@ export const addVscodeConfig = (ctx: C3Context) => {
 	if (existsSync(settingsPath)) {
 		return;
 	}
-	if (!existsSync(`${ctx.project.path}/.vscode`)) {
-		mkdirSync(`${ctx.project.path}/.vscode`);
-	}
+
+	mkdirSync(`${ctx.project.path}/.vscode`, { recursive: true });
 
 	writeJSON(settingsPath, {
 		"files.associations": {
