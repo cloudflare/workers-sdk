@@ -720,6 +720,40 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		await expect(res.text()).resolves.toBe("env.WORKFLOW is available");
 	});
 
+	describe.sequential.each([
+		{ imagesMode: "remote", extraFlags: "" },
+		{ imagesMode: "local", extraFlags: "--experimental-images-local-mode" },
+	] as const)("Images Binding Mode: $imagesMode", async ({ extraFlags }) => {
+		it("exposes Images bindings", async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
+					name = "my-images-demo"
+					main = "src/index.ts"
+					compatibility_date = "2024-12-27"
+
+					[images]
+					binding = "IMAGES"
+				`,
+				"src/index.ts": dedent`
+					export default {
+						async fetch(request, env, ctx) {
+							if (env.IMAGES === undefined) {
+								return new Response("env.IMAGES is undefined");
+							}
+
+							return new Response("env.IMAGES is available");
+						}
+					}
+				`,
+			});
+			const worker = helper.runLongLived(`wrangler dev ${flags} ${extraFlags}`);
+			const { url } = await worker.waitForReady();
+			const res = await fetch(url);
+
+			await expect(res.text()).resolves.toBe("env.IMAGES is available");
+		});
+	});
+
 	// TODO(soon): implement E2E tests for other bindings
 	it.skipIf(isLocal).todo("exposes send email bindings");
 	it.skipIf(isLocal).todo("exposes browser bindings");

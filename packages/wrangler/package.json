@@ -171,7 +171,8 @@
 		}
 	},
 	"optionalDependencies": {
-		"fsevents": "~2.3.2"
+		"fsevents": "~2.3.2",
+		"sharp": "^0.33.5"
 	},
 	"engines": {
 		"node": ">=16.17.0"
