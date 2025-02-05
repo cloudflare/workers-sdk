@@ -78,6 +78,8 @@ interface ScriptSettings {
 	observability: Observability;
 }
 
+type CfUnsafeMetadata = Record<string, unknown>;
+
 interface CopyLatestWorkerVersionArgs {
 	accountId: string;
 	scriptName: string;
@@ -87,6 +89,7 @@ interface CopyLatestWorkerVersionArgs {
 	versionTag?: string;
 	sendMetrics?: boolean;
 	overrideAllSecrets?: boolean; // Used for delete - this will make sure we do not inherit any
+	unsafeMetadata?: CfUnsafeMetadata | undefined;
 }
 
 // TODO: This is a naive implementation, replace later
@@ -98,6 +101,7 @@ export async function copyWorkerVersionWithNewSecrets({
 	versionMessage,
 	versionTag,
 	sendMetrics,
+	unsafeMetadata,
 	overrideAllSecrets,
 }: CopyLatestWorkerVersionArgs) {
 	// Grab the specific version info
@@ -157,7 +161,9 @@ export async function copyWorkerVersionWithNewSecrets({
 	const worker: CfWorkerInit = {
 		name: scriptName,
 		main: mainModule,
-		bindings: {} as CfWorkerInit["bindings"], // handled in rawBindings
+		bindings: {
+			unsafe: { metadata: unsafeMetadata }, // pass along unsafe metadata
+		} as CfWorkerInit["bindings"], // handled in rawBindings
 		rawBindings: bindings,
 		modules,
 		sourceMaps: sourceMaps,
