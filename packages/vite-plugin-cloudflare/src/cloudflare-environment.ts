@@ -145,6 +145,7 @@ export function createCloudflareEnvironmentOptions(
 				return new vite.BuildEnvironment(name, config);
 			},
 			target: "es2022",
+			// We need to enable `emitAssets` in order to support additional modules defined by `rules`
 			emitAssets: true,
 			outDir: getOutputDirectory(userConfig, environmentName),
 			ssr: true,
