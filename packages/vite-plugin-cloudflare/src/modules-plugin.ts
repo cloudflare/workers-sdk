@@ -16,6 +16,8 @@ export function modulesPlugin(
 ): vite.Plugin {
 	return {
 		name: "vite-plugin-cloudflare:modules",
+		// We set `enforce: "pre"` so that this plugin runs before the Vite core plugins.
+		// Otherwise the `.wasm` extension cannot be used for module imports
 		enforce: "pre",
 		applyToEnvironment(environment) {
 			if (
@@ -35,10 +37,10 @@ export function modulesPlugin(
 			}
 
 			const resolved = await this.resolve(source, importer);
-
-			if (!resolved) {
-				return;
-			}
+			assert(
+				resolved,
+				`Unexpected error: could not resolve Wasm module ${source}`
+			);
 
 			return {
 				external: true,
