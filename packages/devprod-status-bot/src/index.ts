@@ -532,7 +532,7 @@ export default {
 				url: string;
 			}>();
 			await sendMessage(
-				env.PROD_WEBHOOK,
+				env.PROD_TEAM_ONLY_WEBHOOK,
 				{
 					cardsV2: [
 						{
