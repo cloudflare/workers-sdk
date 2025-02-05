@@ -33,10 +33,6 @@ export const installPackages = async (
 			cmd = "add";
 			saveFlag = config.dev ? "-D" : "";
 			break;
-		case "bun":
-			cmd = "add";
-			saveFlag = config.dev ? "-d" : "";
-			break;
 		case "npm":
 		case "pnpm":
 		default:

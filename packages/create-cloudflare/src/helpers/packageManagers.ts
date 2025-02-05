@@ -6,7 +6,7 @@ import whichPmRuns from "which-pm-runs";
 import { runCommand } from "./command";
 import type { C3Context } from "types";
 
-export type PmName = "pnpm" | "npm" | "yarn" | "bun";
+export type PmName = "pnpm" | "npm" | "yarn";
 
 /**
  * Detects the package manager which was used to invoke C3 and provides a map of its associated commands.
@@ -62,14 +62,6 @@ export const detectPackageManager = () => {
 				npm: "yarn",
 				npx: "yarn",
 				dlx: ["yarn"],
-			};
-		case "bun":
-			return {
-				name,
-				version,
-				npm: "bun",
-				npx: "bunx",
-				dlx: ["bunx"],
 			};
 
 		case "npm":
@@ -130,10 +122,5 @@ export const detectPmMismatch = (ctx: C3Context) => {
 			return !existsSync(path.join(projectPath, "yarn.lock"));
 		case "pnpm":
 			return !existsSync(path.join(projectPath, "pnpm-lock.yaml"));
-		case "bun":
-			return (
-				!existsSync(path.join(projectPath, "bun.lockb")) &&
-				!existsSync(path.join(projectPath, "bun.lock"))
-			);
 	}
 };

@@ -35,7 +35,6 @@
 		"test:e2e": "vitest run --config ./vitest-e2e.config.mts",
 		"test:e2e:npm": "pnpm run build && cross-env TEST_PM=npm vitest run --config ./vitest-e2e.config.mts",
 		"test:e2e:pnpm": "pnpm run build && cross-env TEST_PM=pnpm vitest run --config ./vitest-e2e.config.mts",
-		"test:e2e:bun": "pnpm run build && cross-env TEST_PM=bun vitest run --config ./vitest-e2e.config.mts",
 		"test:e2e:yarn": "pnpm run build && cross-env TEST_PM=yarn vitest run --config ./vitest-e2e.config.mts",
 		"test:unit": "vitest run --config ./vitest.config.mts",
 		"test:unit:watch": "vitest --config ./vitest.config.mts",

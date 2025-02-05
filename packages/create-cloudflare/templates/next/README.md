@@ -10,8 +10,6 @@ npm run dev
 yarn dev
 # or
 pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
@@ -58,8 +56,6 @@ In order to enable the example:
   yarn cf-typegen
   # or
   pnpm cf-typegen
-  # or
-  bun cf-typegen
   ```
 
 After doing this you can run the `dev` or `preview` script and visit the `/api/hello` route to see the example in action.

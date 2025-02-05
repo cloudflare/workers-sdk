@@ -50,7 +50,6 @@ describe("Package Helpers", () => {
 		const cases: TestCase[] = [
 			{ pm: "npm", initialArgs: ["npm", "install"] },
 			{ pm: "pnpm", initialArgs: ["pnpm", "install"] },
-			{ pm: "bun", initialArgs: ["bun", "add"] },
 			{ pm: "yarn", initialArgs: ["yarn", "add"] },
 		];
 
@@ -68,7 +67,6 @@ describe("Package Helpers", () => {
 		const devCases: TestCase[] = [
 			{ pm: "npm", initialArgs: ["npm", "install", "--save-dev"] },
 			{ pm: "pnpm", initialArgs: ["pnpm", "install", "--save-dev"] },
-			{ pm: "bun", initialArgs: ["bun", "add", "-d"] },
 			{ pm: "yarn", initialArgs: ["yarn", "add", "-D"] },
 		];
 
