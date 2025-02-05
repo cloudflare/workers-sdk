@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import fs, { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { beforeAll, describe, expect } from "vitest";
 import { version } from "../package.json";
@@ -238,6 +238,14 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 					`Cloning template from: cloudflare/templates/multiplayer-globe-template`,
 				);
 				expect(output).toContain(`template cloned and validated`);
+				expect(readFileSync(`${project.path}/.vscode/settings.json`, "utf8"))
+					.toMatchInlineSnapshot(`
+					"{
+					  "files.associations": {
+					    "wrangler.json": "jsonc"
+					  }
+					}"
+				`);
 			},
 		);
 
