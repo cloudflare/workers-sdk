@@ -79,13 +79,12 @@ export function modulesPlugin(
 				});
 
 				const emittedFileName = this.getFileName(referenceId);
-				const relativePath = path.relative(
-					path.dirname(chunk.fileName),
-					emittedFileName
+				const relativePath = vite.normalizePath(
+					path.relative(path.dirname(chunk.fileName), emittedFileName)
 				);
-				const importPath = vite.normalizePath(
-					relativePath.startsWith(".") ? relativePath : `./${relativePath}`
-				);
+				const importPath = relativePath.startsWith(".")
+					? relativePath
+					: `./${relativePath}`;
 
 				s.update(match.index, match.index + full.length, importPath);
 			}
