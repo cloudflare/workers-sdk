@@ -241,9 +241,9 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 				expect(readFileSync(`${project.path}/.vscode/settings.json`, "utf8"))
 					.toMatchInlineSnapshot(`
 					"{
-					  "files.associations": {
-					    "wrangler.json": "jsonc"
-					  }
+						"files.associations": {
+							"wrangler.json": "jsonc"
+						}
 					}"
 				`);
 			},
