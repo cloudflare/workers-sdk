@@ -28,6 +28,16 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
 		return;
 	}
 
+	if (process.versions.bun) {
+		console.error(
+			`Wrangler does not support Bun. Please try this command again using Node.js.
+
+Consider using a Node.js version manager such as https://volta.sh/ or https://github.com/nvm-sh/nvm.`
+		);
+		process.exitCode = 1;
+		return;
+	}
+
 	return spawn(
 		process.execPath,
 		[
