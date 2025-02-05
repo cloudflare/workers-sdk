@@ -1,6 +1,6 @@
 /* eslint-disable turbo/no-undeclared-env-vars */
 if (require.main === module) {
-	let status = [];
+	const status = [];
 	if (process.env.PUBLISH_STATUS === "failure") {
 		status.push({
 			label: "NPM publish",
@@ -17,12 +17,15 @@ if (require.main === module) {
 	}
 
 	if (status.length > 0) {
-		fetch("https://devprod-status-bot.devprod.workers.dev/release-failure", {
-			body: JSON.stringify({ status, url: process.env.RUN_URL }),
-			headers: {
-				"X-Auth-Header": process.env.TOKEN as string,
-			},
-		});
+		void fetch(
+			"https://devprod-status-bot.devprod.workers.dev/release-failure",
+			{
+				body: JSON.stringify({ status, url: process.env.RUN_URL }),
+				headers: {
+					"X-Auth-Header": process.env.TOKEN as string,
+				},
+			}
+		);
 		process.exitCode = 1;
 	}
 }

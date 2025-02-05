@@ -23,7 +23,7 @@ export function deployNonNpmPackages(
 ) {
 	let deployedPackageCount = 0;
 	console.log("Checking for non-npm packages to deploy...");
-	let deploymentErrors = new Map<string, string>();
+	const deploymentErrors = new Map<string, string>();
 	for (const pkg of updatedPackages) {
 		if (deployablePackageNames.has(pkg.name)) {
 			console.log(`Package "${pkg.name}@${pkg.version}": deploying...`);

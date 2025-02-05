@@ -577,7 +577,7 @@ export default {
 										collapsible: true,
 										uncollapsibleWidgetsCount: 3,
 										widgets: body.status.map(({ label, details }) => {
-											let emoji = "🔴";
+											const emoji = "🔴";
 
 											return [
 												{
