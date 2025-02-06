@@ -33,7 +33,7 @@ export const PIPELINE_PLUGIN: Plugin<typeof PipelineOptionsSchema> = {
 		const pipelines = bindingEntries(options.pipelines);
 		return pipelines.map<Service>(([name, id]) => ({
 			name,
-			service: { name: `SERVICE_PIPELINE_PREFIX:${id}` },
+			service: { name: `${SERVICE_PIPELINE_PREFIX}:${id}` },
 		}));
 	},
 	getNodeBindings(options) {
