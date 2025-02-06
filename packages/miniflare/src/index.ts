@@ -1200,6 +1200,20 @@ export class Miniflare {
 								});
 							}
 						}
+						if ("service" in binding) {
+							const targetWorkerName = binding.service?.name?.replace(
+								"core:user:",
+								""
+							);
+							const maybeAssetTargetService = allWorkerOpts.find(
+								(worker) =>
+									worker.core.name === targetWorkerName && worker.assets.assets
+							);
+							if (maybeAssetTargetService) {
+								assert(binding.service?.name);
+								binding.service.name = `${ROUTER_SERVICE_NAME}:${targetWorkerName}`;
+							}
+						}
 					}
 				}
 			}
@@ -1282,6 +1296,7 @@ export class Miniflare {
 					address,
 					service: {
 						name: workerOpts.assets.assets
+							? `${ROUTER_SERVICE_NAME}:${workerName}`
 							: getUserServiceName(workerName),
 						entrypoint: entrypoint === "default" ? undefined : entrypoint,
 					},
@@ -1338,39 +1353,6 @@ export class Miniflare {
 				"Generated workerd config contains cycles. " +
 					"Ensure wrapped bindings don't have bindings to themselves."
 			);
-		}
-		// correct the bindings for bindings to workers with assets
-		// doing this here because all services + bindings will have been set up and because we need the config for all workers
-		for (const service of servicesArray) {
-			// only need to check user worker to user worker bindings - ( has "core:user" prefix)
-			if ("worker" in service && service.name?.startsWith("core:user")) {
-				for (const binding of service.worker?.bindings ?? []) {
-					if (
-						"service" in binding &&
-						binding.service?.name?.startsWith("core:user")
-					) {
-						// check if target worker has assets
-						const targetService = servicesArray.find(
-							(s) => s.name === binding.service?.name
-						);
-						if (!targetService || !("worker" in targetService)) continue;
-						if (
-							targetService.worker?.bindings?.some((binding) => {
-								if ("service" in binding) {
-									return binding.service?.name?.startsWith(
-										"assets:assets-service"
-									);
-								}
-							})
-						) {
-							// if target worker does have assets, set binding to point to router worker for that worker ("assets:router-targetWorkerName"), not the user worker itself ("core:user:targetWorkerName")
-							binding.service = {
-								name: `${ROUTER_SERVICE_NAME}-${targetService.name?.replace("core:user:", "")}`,
-							};
-						}
-					}
-				}
-			}
 		}
 		return { services: servicesArray, sockets, extensions };
 	}
