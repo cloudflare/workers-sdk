@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import dedent from "ts-dedent";
+import { vi } from "vitest";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { noopModuleCollector } from "../deployment-bundle/module-collection";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -21,7 +22,6 @@ async function seedFs(files: Record<string, string>): Promise<void> {
 	}
 }
 
-// Does bundleWorker respect the value of `defineNavigatorUserAgent`?
 describe("ESBuild defines are applied to the source code", () => {
 	runInTempDir();
 	mockConsoleMethods();
@@ -60,9 +60,8 @@ describe("ESBuild defines are applied to the source code", () => {
 });
 
 async function getBundledWorker(nodeEnv: string | undefined) {
-	const startNodeEnv = process.env.NODE_ENV;
 	try {
-		setNodeEnv(nodeEnv);
+		vi.stubEnv("NODE_ENV", nodeEnv);
 
 		await seedFs({
 			"src/index.js": dedent/* javascript */ `
@@ -105,14 +104,6 @@ async function getBundledWorker(nodeEnv: string | undefined) {
 
 		return readFile("dist/index.js", "utf8");
 	} finally {
-		setNodeEnv(startNodeEnv);
-	}
-}
-
-function setNodeEnv(nodeEnv: string | undefined) {
-	if (nodeEnv === undefined) {
-		delete process.env.NODE_ENV;
-	} else {
-		process.env.NODE_ENV = nodeEnv;
+		vi.unstubAllEnvs();
 	}
 }
