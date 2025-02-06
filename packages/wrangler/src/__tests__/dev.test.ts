@@ -11,6 +11,7 @@ import registerDevHotKeys from "../dev/hotkeys";
 import { getWorkerAccountAndContext } from "../dev/remote";
 import { FatalError } from "../errors";
 import { CI } from "../is-ci";
+import { logger } from "../logger";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -129,6 +130,7 @@ describe.sequential("wrangler dev", () => {
 			...mswSuccessOauthHandlers,
 			...mswSuccessUserHandlers
 		);
+		logger.clearHistory();
 	});
 
 	runInTempDir();
@@ -1208,12 +1210,14 @@ describe.sequential("wrangler dev", () => {
 				process.platform === "win32" ? "127.0.0.1" : "localhost"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Your worker has access to the following bindings:
+				"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+				
+				Your worker has access to the following bindings:
 				- Durable Objects:
-				  - NAME_1: CLASS_1 (local)
-				  - NAME_2: CLASS_2 (defined in SCRIPT_A [not connected]) (local)
-				  - NAME_3: CLASS_3 (local)
-				  - NAME_4: CLASS_4 (defined in SCRIPT_B [not connected]) (local)
+				  - NAME_1: CLASS_1
+				  - NAME_2: CLASS_2 (defined in SCRIPT_A [not connected])
+				  - NAME_3: CLASS_3
+				  - NAME_4: CLASS_4 (defined in SCRIPT_B [not connected])
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -1299,6 +1303,8 @@ describe.sequential("wrangler dev", () => {
 			});
 			expect(std.out).toMatchInlineSnapshot(`
 				"Using vars defined in .dev.vars
+				Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+				
 				Your worker has access to the following bindings:
 				- Vars:
 				  - VAR_1: \\"(hidden)\\"
@@ -1333,6 +1339,8 @@ describe.sequential("wrangler dev", () => {
 			expect(varBindings).toEqual({ CUSTOM_VAR: "custom" });
 			expect(std.out).toMatchInlineSnapshot(`
 				"Using vars defined in .dev.vars.custom
+				Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+				
 				Your worker has access to the following bindings:
 				- Vars:
 				  - CUSTOM_VAR: \\"(hidden)\\"
@@ -1853,7 +1861,9 @@ describe.sequential("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWranglerUntilConfig("dev index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Your worker has access to the following bindings:
+				"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+				
+				Your worker has access to the following bindings:
 				- Services:
 				  - WorkerA: A [not connected]
 				  - WorkerB: B [not connected]
@@ -1874,7 +1884,9 @@ describe.sequential("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWranglerUntilConfig("dev index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Your worker has access to the following bindings:
+				"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+				
+				Your worker has access to the following bindings:
 				- Services:
 				  - WorkerA: A [not connected]
 				  - WorkerB: B [not connected]
@@ -1901,6 +1913,8 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Using vars defined in .dev.vars
+				Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+				
 				Your worker has access to the following bindings:
 				- Vars:
 				  - variable: 123
