@@ -1,12 +1,19 @@
 import { builtinModules } from "node:module";
 import nodePath from "node:path";
+import { cloudflare } from "@cloudflare/unenv-preset";
+import { resolvePathSync } from "mlly";
 import dedent from "ts-dedent";
-import { cloudflare, env, nodeless } from "unenv";
+import { defineEnv } from "unenv";
 import { getBasePath } from "../../paths";
 import type { Plugin, PluginBuild } from "esbuild";
 
 const REQUIRED_NODE_BUILT_IN_NAMESPACE = "node-built-in-modules";
 const REQUIRED_UNENV_ALIAS_NAMESPACE = "required-unenv-alias";
+
+const preset = defineEnv({
+	nodeCompat: true,
+	presets: [cloudflare],
+});
 
 /**
  * ESBuild plugin to apply the unenv preset.
@@ -15,14 +22,13 @@ const REQUIRED_UNENV_ALIAS_NAMESPACE = "required-unenv-alias";
  * @returns ESBuild plugin
  */
 export function nodejsHybridPlugin(_unenvResolvePaths?: string[]): Plugin {
-	const { alias, inject, external } = env(nodeless, cloudflare);
 	return {
 		name: "hybrid-nodejs_compat",
 		setup(build) {
 			errorOnServiceWorkerFormat(build);
 			handleRequireCallsToNodeJSBuiltins(build);
-			handleUnenvAliasedPackages(build, alias, external);
-			handleNodeJSGlobals(build, inject);
+			handleUnenvAliasedPackages(build, preset.env.alias, preset.env.external);
+			handleNodeJSGlobals(build, preset.env.inject);
 		},
 	};
 }
@@ -98,38 +104,26 @@ function handleRequireCallsToNodeJSBuiltins(build: PluginBuild) {
  *
  * @param build ESBuild PluginBuild.
  * @param alias Aliases resolved to absolute paths.
- * @param external external modules.
+ * @param externals external modules.
  */
 function handleUnenvAliasedPackages(
 	build: PluginBuild,
 	alias: Record<string, string>,
-	external: string[]
+	externals: string[]
 ) {
-	// esbuild expects alias paths to be absolute
-	const aliasAbsolute: Record<string, string> = {};
-	for (const [module, unresolvedAlias] of Object.entries(alias)) {
-		try {
-			aliasAbsolute[module] = require
-				.resolve(unresolvedAlias)
-				.replace(/\.cjs$/, ".mjs");
-		} catch (e) {
-			// this is an alias for package that is not installed in the current app => ignore
-		}
-	}
-
-	const UNENV_ALIAS_RE = new RegExp(
-		`^(${Object.keys(aliasAbsolute).join("|")})$`
-	);
-
-	build.onResolve({ filter: UNENV_ALIAS_RE }, (args) => {
+	build.onResolve({ filter: /.*/ }, (args) => {
 		const unresolvedAlias = alias[args.path];
-		// Convert `require()` calls for NPM packages to a virtual ES Module that can be imported avoiding the require calls.
-		// Note: Does not apply to Node.js packages that are handled in `handleRequireCallsToNodeJSBuiltins`
+		if (unresolvedAlias === undefined) {
+			return;
+		}
+
 		if (
 			args.kind === "require-call" &&
 			(unresolvedAlias.startsWith("unenv/runtime/npm/") ||
 				unresolvedAlias.startsWith("unenv/runtime/mock/"))
 		) {
+			// Convert `require()` calls for NPM packages to a virtual ES Module that can be imported avoiding the require calls.
+			// Note: Does not apply to Node.js packages that are handled in `handleRequireCallsToNodeJSBuiltins`
 			return {
 				path: args.path,
 				namespace: REQUIRED_UNENV_ALIAS_NAMESPACE,
@@ -137,10 +131,11 @@ function handleUnenvAliasedPackages(
 		}
 
 		// Resolve the alias to its absolute path and potentially mark it as external
-		return {
-			path: aliasAbsolute[args.path],
-			external: external.includes(unresolvedAlias),
-		};
+		const external = externals.includes(unresolvedAlias);
+		const path = external
+			? unresolvedAlias
+			: resolvePathSync(unresolvedAlias, { url: [getBasePath()] });
+		return { path, external };
 	});
 
 	build.initialOptions.banner = { js: "", ...build.initialOptions.banner };

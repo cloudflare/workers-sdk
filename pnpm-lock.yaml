@@ -2576,6 +2576,9 @@ importers:
       '@cloudflare/kv-asset-handler':
         specifier: workspace:*
         version: link:../kv-asset-handler
+      '@cloudflare/unenv-preset':
+        specifier: ~1.1.1
+        version: 1.1.1(unenv@2.0.0-rc.1)(workerd@1.20250204.0)
       '@esbuild-plugins/node-globals-polyfill':
         specifier: 0.2.3
         version: 0.2.3(esbuild@0.17.19)
@@ -2764,6 +2767,9 @@ importers:
       minimatch:
         specifier: ^5.1.0
         version: 5.1.6
+      mlly:
+        specifier: ^1.7.4
+        version: 1.7.4
       mock-socket:
         specifier: ^9.3.1
         version: 9.3.1
@@ -3421,6 +3427,15 @@ packages:
     resolution: {integrity: sha512-4JbJv5cbtGeo7Vpg2Sx3LXAhkvDJeJV/9FLFm2u3MkyxXb9SXdjxoanO5bOripQThTrzB1a8Ctw/ghweSA91Cw==}
     peerDependencies:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
+
+  '@cloudflare/unenv-preset@1.1.1':
+    resolution: {integrity: sha512-8y7gFmXnOF9kycm8eIaL0rNBd5np3a/aLaG04pfFG4aEF0rIHAMiGFxQfg1ZIV77ApLHzPomr9/ixLbZWXwX3w==}
+    peerDependencies:
+      unenv: 2.0.0-rc.1
+      workerd: ^1.20250124.0
+    peerDependenciesMeta:
+      workerd:
+        optional: true
 
   '@cloudflare/util-en-garde@8.0.10':
     resolution: {integrity: sha512-qdCFf90hoZzT4o4xEmxOKUf9+bEJNGh4ANnRYApo6BMyVnHoHEHAQ3nWmGSHBmo+W9hOk2Ik7r1oHLbI0O/RRg==}
@@ -9867,9 +9882,6 @@ packages:
     resolution: {integrity: sha512-HRDzbaKjC+AOWVXxAU/x54COGeIv9eb+6CkDSQoNTt4XyWoIJvuPsXizxu/Fr23EiekbtZwmh1IcIG/l/a10GQ==}
     engines: {node: '>=8'}
 
-  pkg-types@1.2.1:
-    resolution: {integrity: sha512-sQoqa8alT3nHjGuTjuKgOnvjo4cljkufdtLMnO2LBP/wRwuDlo1tkaEdMxCRhyGRPacv/ztlZgDPm2b7FAmEvw==}
-
   pkg-types@1.3.1:
     resolution: {integrity: sha512-/Jm5M4RvtBFVkKWRu2BLUTNP8/M2a+UwuAX+ae4770q1qVGtfjG+WTCupoZixokjmHiry8uI+dlY8KXYV5HVVQ==}
 
@@ -13240,6 +13252,12 @@ snapshots:
       '@cloudflare/util-en-garde': 8.0.10
       react: 18.3.1
 
+  '@cloudflare/unenv-preset@1.1.1(unenv@2.0.0-rc.1)(workerd@1.20250204.0)':
+    dependencies:
+      unenv: 2.0.0-rc.1
+    optionalDependencies:
+      workerd: 1.20250204.0
+
   '@cloudflare/util-en-garde@8.0.10':
     dependencies:
       fp-ts: 2.13.1
@@ -13828,7 +13846,7 @@ snapshots:
   '@eslint/eslintrc@2.1.4':
     dependencies:
       ajv: 6.12.6
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       espree: 9.6.1
       globals: 13.24.0
       ignore: 5.3.1
@@ -13875,7 +13893,7 @@ snapshots:
   '@humanwhocodes/config-array@0.11.14':
     dependencies:
       '@humanwhocodes/object-schema': 2.0.3
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       minimatch: 3.1.2
     transitivePeerDependencies:
       - supports-color
@@ -15474,7 +15492,7 @@ snapshots:
       '@typescript-eslint/type-utils': 6.10.0(eslint@8.57.0)(typescript@5.7.3)
       '@typescript-eslint/utils': 6.10.0(eslint@8.57.0)(typescript@5.7.3)
       '@typescript-eslint/visitor-keys': 6.10.0
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       eslint: 8.57.0
       graphemer: 1.4.0
       ignore: 5.3.1
@@ -15510,7 +15528,7 @@ snapshots:
       '@typescript-eslint/types': 6.10.0
       '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.7.3)
       '@typescript-eslint/visitor-keys': 6.10.0
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       eslint: 8.57.0
     optionalDependencies:
       typescript: 5.7.3
@@ -15523,7 +15541,7 @@ snapshots:
       '@typescript-eslint/types': 7.18.0
       '@typescript-eslint/typescript-estree': 7.18.0(typescript@5.6.3)
       '@typescript-eslint/visitor-keys': 7.18.0
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       eslint: 8.57.0
     optionalDependencies:
       typescript: 5.6.3
@@ -15544,7 +15562,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.7.3)
       '@typescript-eslint/utils': 6.10.0(eslint@8.57.0)(typescript@5.7.3)
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       eslint: 8.57.0
       ts-api-utils: 1.4.3(typescript@5.7.3)
     optionalDependencies:
@@ -15556,7 +15574,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/typescript-estree': 7.18.0(typescript@5.6.3)
       '@typescript-eslint/utils': 7.18.0(eslint@8.57.0)(typescript@5.6.3)
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       eslint: 8.57.0
       ts-api-utils: 1.4.3(typescript@5.6.3)
     optionalDependencies:
@@ -15572,7 +15590,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/types': 6.10.0
       '@typescript-eslint/visitor-keys': 6.10.0
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       globby: 11.1.0
       is-glob: 4.0.3
       semver: 7.6.3
@@ -15586,7 +15604,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/types': 7.18.0
       '@typescript-eslint/visitor-keys': 7.18.0
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       globby: 11.1.0
       is-glob: 4.0.3
       minimatch: 9.0.5
@@ -15709,7 +15727,7 @@ snapshots:
 
   '@verdaccio/loaders@8.0.0-next-8.4':
     dependencies:
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       lodash: 4.17.21
     transitivePeerDependencies:
       - supports-color
@@ -15770,7 +15788,7 @@ snapshots:
 
   '@verdaccio/signature@8.0.0-next-8.1':
     dependencies:
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       jsonwebtoken: 9.0.2
     transitivePeerDependencies:
       - supports-color
@@ -16317,7 +16335,7 @@ snapshots:
       common-path-prefix: 3.0.0
       concordance: 5.0.4
       currently-unhandled: 0.4.1
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       emittery: 1.0.1
       figures: 6.0.1
       globby: 14.0.1
@@ -17498,7 +17516,7 @@ snapshots:
 
   esbuild-register@3.5.0(esbuild@0.17.19):
     dependencies:
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       esbuild: 0.17.19
     transitivePeerDependencies:
       - supports-color
@@ -17813,7 +17831,7 @@ snapshots:
       ajv: 6.12.6
       chalk: 4.1.2
       cross-spawn: 7.0.3
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       doctrine: 3.0.0
       escape-string-regexp: 4.0.0
       eslint-scope: 7.2.2
@@ -18538,7 +18556,7 @@ snapshots:
   http-proxy-agent@7.0.2:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -18564,6 +18582,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  https-proxy-agent@7.0.2:
+    dependencies:
+      agent-base: 7.1.3
+      debug: 4.3.7(supports-color@8.1.1)
+    transitivePeerDependencies:
+      - supports-color
+
   https-proxy-agent@7.0.2(supports-color@9.2.2):
     dependencies:
       agent-base: 7.1.3
@@ -18574,7 +18599,7 @@ snapshots:
   https-proxy-agent@7.0.6:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -19092,7 +19117,7 @@ snapshots:
   local-pkg@0.5.0:
     dependencies:
       mlly: 1.7.4
-      pkg-types: 1.2.1
+      pkg-types: 1.3.1
 
   localforage@1.10.0:
     dependencies:
@@ -19870,7 +19895,7 @@ snapshots:
       debug: 4.4.0(supports-color@9.2.2)
       get-uri: 6.0.1
       http-proxy-agent: 7.0.2
-      https-proxy-agent: 7.0.2(supports-color@9.2.2)
+      https-proxy-agent: 7.0.2
       pac-resolver: 7.0.0
       socks-proxy-agent: 8.0.2
     transitivePeerDependencies:
@@ -20141,12 +20166,6 @@ snapshots:
   pkg-dir@4.2.0:
     dependencies:
       find-up: 4.1.0
-
-  pkg-types@1.2.1:
-    dependencies:
-      confbox: 0.1.8
-      mlly: 1.7.4
-      pathe: 1.1.2
 
   pkg-types@1.3.1:
     dependencies:
@@ -20462,7 +20481,7 @@ snapshots:
       agent-base: 7.1.3
       debug: 4.4.0(supports-color@9.2.2)
       http-proxy-agent: 7.0.2
-      https-proxy-agent: 7.0.2(supports-color@9.2.2)
+      https-proxy-agent: 7.0.2
       lru-cache: 7.18.3
       pac-proxy-agent: 7.0.1
       proxy-from-env: 1.1.0
@@ -21706,7 +21725,7 @@ snapshots:
       cac: 6.7.14
       chokidar: 3.6.0
       consola: 3.3.3
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       esbuild: 0.23.1
       execa: 5.1.1
       joycon: 3.1.1
@@ -22173,7 +22192,7 @@ snapshots:
       '@volar/typescript': 2.3.4
       '@vue/language-core': 2.0.29(typescript@5.7.3)
       compare-versions: 6.1.1
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       kolorist: 1.8.0
       local-pkg: 0.5.0
       magic-string: 0.30.17
@@ -22188,7 +22207,7 @@ snapshots:
 
   vite-tsconfig-paths@4.2.0(typescript@5.7.3)(vite@5.0.12(@types/node@18.19.74)):
     dependencies:
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       globrex: 0.1.2
       tsconfck: 2.1.1(typescript@5.7.3)
     optionalDependencies:
