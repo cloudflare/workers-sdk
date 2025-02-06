@@ -314,12 +314,14 @@ export const versionsUploadCommand = createCommand({
 
 		if (args.site || config.site) {
 			throw new UserError(
-				"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
+				"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead.",
+				{ telemetryMessage: true }
 			);
 		}
 		if (args.legacyAssets || config.legacy_assets) {
 			throw new UserError(
-				"Legacy assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
+				"Legacy assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead.",
+				{ telemetryMessage: true }
 			);
 		}
 

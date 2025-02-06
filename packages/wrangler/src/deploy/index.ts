@@ -272,7 +272,8 @@ async function deployWorker(args: DeployArgs) {
 	if (config.pages_build_output_dir) {
 		throw new UserError(
 			"It looks like you've run a Workers-specific command in a Pages project.\n" +
-				"For Pages, please run `wrangler pages deploy` instead."
+				"For Pages, please run `wrangler pages deploy` instead.",
+			{ telemetryMessage: true }
 		);
 	}
 	// We use the `userConfigPath` to compute the root of a project,
@@ -284,12 +285,14 @@ async function deployWorker(args: DeployArgs) {
 
 	if (args.public) {
 		throw new UserError(
-			"The --public field has been deprecated, try --legacy-assets instead."
+			"The --public field has been deprecated, try --legacy-assets instead.",
+			{ telemetryMessage: true }
 		);
 	}
 	if (args.experimentalPublic) {
 		throw new UserError(
-			"The --experimental-public field has been deprecated, try --legacy-assets instead."
+			"The --experimental-public field has been deprecated, try --legacy-assets instead.",
+			{ telemetryMessage: true }
 		);
 	}
 
@@ -298,7 +301,8 @@ async function deployWorker(args: DeployArgs) {
 		(args.site || config.site)
 	) {
 		throw new UserError(
-			"Cannot use legacy assets and Workers Sites in the same Worker."
+			"Cannot use legacy assets and Workers Sites in the same Worker.",
+			{ telemetryMessage: true }
 		);
 	}
 
