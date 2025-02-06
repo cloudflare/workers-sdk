@@ -84,8 +84,8 @@ export function printBindings(
 		analytics_engine_datasets,
 		text_blobs,
 		browser,
-		ai,
 		images,
+		ai,
 		version_metadata,
 		unsafe,
 		vars,
@@ -133,11 +133,7 @@ export function printBindings(
 
 					return {
 						key: name,
-						value: script_name
-							? value
-							: addSuffix(value, {
-									isSimulatedLocally: true,
-								}),
+						value: value,
 					};
 				}
 			),
@@ -356,12 +352,16 @@ export function printBindings(
 	}
 
 	if (images !== undefined) {
+		const addImagesSuffix = createAddSuffix({
+			isProvisioning: context.provisioning,
+			isLocalDev: !!context.imagesLocalMode,
+		});
 		output.push({
 			name: friendlyBindingNames.images,
 			entries: [
 				{
 					key: "Name",
-					value: addLocalSuffix(images.binding, !!context.imagesLocalMode),
+					value: addImagesSuffix(images.binding),
 				},
 			],
 		});
@@ -487,7 +487,7 @@ export function printBindings(
 	}
 
 	if (context.local) {
-		logger.log(
+		logger.once.log(
 			`Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.\n`
 		);
 	}
@@ -522,12 +522,6 @@ export function printBindings(
 			`\nService bindings & durable object bindings connect to other \`wrangler dev\` processes running locally, with their connection status indicated by ${chalk.green("[connected]")} or ${chalk.red("[not connected]")}. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development\n`
 		);
 	}
-
-	if (context.local) {
-		logger.log(
-			`\nUse "wrangler dev --remote" to run both your Worker and all bindings remotely (https://developers.cloudflare.com/workers/testing/local-development/#develop-using-remote-resources-and-bindings).\n`
-		);
-	}
 }
 
 function normalizeValue(value: string | symbol | undefined) {
@@ -543,8 +537,6 @@ function normalizeValue(value: string | symbol | undefined) {
  *
  * The suffix is only for local dev so it can be used to determine whether a binding is
  * simulated locally or connected to a remote resource.
- *
- * We don't show the suffix when provisioning because the bindings are not yet available in local dev.
  */
 function createAddSuffix({
 	isProvisioning = false,

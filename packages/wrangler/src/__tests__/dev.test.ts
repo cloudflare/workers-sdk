@@ -11,6 +11,7 @@ import registerDevHotKeys from "../dev/hotkeys";
 import { getWorkerAccountAndContext } from "../dev/remote";
 import { FatalError } from "../errors";
 import { CI } from "../is-ci";
+import { logger } from "../logger";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -129,6 +130,7 @@ describe.sequential("wrangler dev", () => {
 			...mswSuccessOauthHandlers,
 			...mswSuccessUserHandlers
 		);
+		logger.clearHistory();
 	});
 
 	runInTempDir();
@@ -1212,13 +1214,10 @@ describe.sequential("wrangler dev", () => {
 				
 				Your worker has access to the following bindings:
 				- Durable Objects:
-				  - NAME_1: CLASS_1 [simulated locally]
+				  - NAME_1: CLASS_1
 				  - NAME_2: CLASS_2 (defined in SCRIPT_A [not connected])
-				  - NAME_3: CLASS_3 [simulated locally]
+				  - NAME_3: CLASS_3
 				  - NAME_4: CLASS_4 (defined in SCRIPT_B [not connected])
-
-				Use \\"wrangler dev --remote\\" to run both your Worker and all bindings remotely (https://developers.cloudflare.com/workers/testing/local-development/#develop-using-remote-resources-and-bindings).
-				
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -1315,9 +1314,6 @@ describe.sequential("wrangler dev", () => {
 				  - VAR_MULTI_LINE_2: \\"(hidden)\\"
 				  - EMPTY: \\"(hidden)\\"
 				  - UNQUOTED: \\"(hidden)\\"
-				
-				Use \\"wrangler dev --remote\\" to run both your Worker and all bindings remotely (https://developers.cloudflare.com/workers/testing/local-development/#develop-using-remote-resources-and-bindings).
-				
 				"
 			`);
 		});
@@ -1348,9 +1344,6 @@ describe.sequential("wrangler dev", () => {
 				Your worker has access to the following bindings:
 				- Vars:
 				  - CUSTOM_VAR: \\"(hidden)\\"
-				
-				Use \\"wrangler dev --remote\\" to run both your Worker and all bindings remotely (https://developers.cloudflare.com/workers/testing/local-development/#develop-using-remote-resources-and-bindings).
-				
 				"
 			`);
 		});
@@ -1874,9 +1867,6 @@ describe.sequential("wrangler dev", () => {
 				- Services:
 				  - WorkerA: A [not connected]
 				  - WorkerB: B [not connected]
-				
-				Use \\"wrangler dev --remote\\" to run both your Worker and all bindings remotely (https://developers.cloudflare.com/workers/testing/local-development/#develop-using-remote-resources-and-bindings).
-				
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1900,9 +1890,6 @@ describe.sequential("wrangler dev", () => {
 				- Services:
 				  - WorkerA: A [not connected]
 				  - WorkerB: B [not connected]
-				
-				Use \\"wrangler dev --remote\\" to run both your Worker and all bindings remotely (https://developers.cloudflare.com/workers/testing/local-development/#develop-using-remote-resources-and-bindings).
-				
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1933,9 +1920,6 @@ describe.sequential("wrangler dev", () => {
 				  - variable: 123
 				  - overriden: \\"(hidden)\\"
 				  - SECRET: \\"(hidden)\\"
-
-				Use \\"wrangler dev --remote\\" to run both your Worker and all bindings remotely (https://developers.cloudflare.com/workers/testing/local-development/#develop-using-remote-resources-and-bindings).
-				
 				"
 			`);
 		});
