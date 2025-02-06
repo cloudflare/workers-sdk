@@ -349,10 +349,12 @@ async function deployWorker(args: DeployArgs) {
 		workerNameOverridden = true;
 	}
 
-	assert(
-		name,
-		'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
-	);
+	if (!name) {
+		throw new UserError(
+			'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
+			{ telemetryMessage: true }
+		);
+	}
 
 	if (!args.dryRun) {
 		assert(accountId, "Missing account ID");
