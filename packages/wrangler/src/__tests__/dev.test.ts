@@ -836,6 +836,7 @@ describe.sequential("wrangler dev", () => {
 			expect(std.out).toMatchInlineSnapshot(
 				`
 				"Running custom build: node -e \\"4+4; require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\"
+				No bindings found.
 				"
 			`
 			);
@@ -860,6 +861,7 @@ describe.sequential("wrangler dev", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`
 					"Running custom build: echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js
+					No bindings found.
 					"
 				`
 				);

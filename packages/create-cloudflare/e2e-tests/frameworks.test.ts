@@ -624,7 +624,7 @@ function getFrameworkTests(opts: {
 	}
 }
 
-const experimental = Boolean(process.env.E2E_EXPERIMENTAL);
+const experimental = process.env.E2E_EXPERIMENTAL === "true";
 const frameworkMap = getFrameworkMap({ experimental });
 const frameworkTests = getFrameworkTests({ experimental });
 

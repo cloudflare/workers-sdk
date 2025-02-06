@@ -1,5 +1,31 @@
 # wrangler
 
+## 3.107.3
+
+### Patch Changes
+
+- [#7378](https://github.com/cloudflare/workers-sdk/pull/7378) [`59c7c8e`](https://github.com/cloudflare/workers-sdk/commit/59c7c8ee177d9345948a416377c6625269d58925) Thanks [@IRCody](https://github.com/IRCody)! - Add build and push helper sub-commands under the cloudchamber command.
+
+- Updated dependencies []:
+  - miniflare@3.20250129.0
+
+## 3.107.2
+
+### Patch Changes
+
+- [#7988](https://github.com/cloudflare/workers-sdk/pull/7988) [`444a630`](https://github.com/cloudflare/workers-sdk/commit/444a6302f194150b0678da5b564cfd2de8a3dad6) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix #7985.
+
+  This reverts the changes on #7945 that caused compatibility issues with Node 16 due to the introduction of `sharp`.
+
+## 3.107.1
+
+### Patch Changes
+
+- [#7981](https://github.com/cloudflare/workers-sdk/pull/7981) [`e2b3306`](https://github.com/cloudflare/workers-sdk/commit/e2b3306e1721dbc0ba8e0eb2025a519b80adbd01) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Fixes a regression introduced in Wrangler 3.107.0 in which `[assets]` was not being inherited from the top-level environment.
+
+- Updated dependencies [[`ab49886`](https://github.com/cloudflare/workers-sdk/commit/ab498862b96551774f601403d3e93d2105a18a91)]:
+  - miniflare@3.20250129.0
+
 ## 3.107.0
 
 ### Minor Changes

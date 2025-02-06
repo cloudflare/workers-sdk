@@ -7,17 +7,17 @@
 	"dependencies": {
 		"create-astro": "4.11.0",
 		"create-analog": "1.8.1",
-		"@angular/create": "19.1.2",
+		"@angular/create": "19.1.5",
 		"create-docusaurus": "3.7.0",
-		"create-hono": "0.15.2",
+		"create-hono": "0.15.3",
 		"create-next-app": "15.1.6",
 		"create-qwik": "1.12.0",
 		"create-vite": "6.1.1",
-		"create-remix": "2.15.2",
+		"create-remix": "2.15.3",
 		"create-solid": "0.5.14",
 		"create-vue": "3.13.0",
 		"gatsby": "5.14.1",
 		"sv": "0.6.13",
-		"nuxi": "3.20.0"
+		"nuxi": "3.21.1"
 	}
 }

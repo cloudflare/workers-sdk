@@ -147,7 +147,7 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 	}
 }
 
-const experimental = Boolean(process.env.E2E_EXPERIMENTAL);
+const experimental = process.env.E2E_EXPERIMENTAL === "true";
 const workerTests = getWorkerTests({ experimental });
 
 describe
@@ -344,6 +344,9 @@ async function verifyTestScript(projectPath: string, logStream: Writable) {
 			cwd: projectPath,
 			env: {
 				VITEST: undefined,
+				// We need to fake that we are inside a CI
+				// so that the `vitest` commands do not go into watch mode and hang.
+				CI: "true",
 			},
 		},
 		logStream,

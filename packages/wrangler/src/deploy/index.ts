@@ -3,6 +3,7 @@ import path from "node:path";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
 import { configFileName, readConfig } from "../config";
 import { getEntry } from "../deployment-bundle/entry";
+import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
@@ -271,7 +272,8 @@ async function deployWorker(args: DeployArgs) {
 	if (config.pages_build_output_dir) {
 		throw new UserError(
 			"It looks like you've run a Workers-specific command in a Pages project.\n" +
-				"For Pages, please run `wrangler pages deploy` instead."
+				"For Pages, please run `wrangler pages deploy` instead.",
+			{ telemetryMessage: true }
 		);
 	}
 	// We use the `userConfigPath` to compute the root of a project,
@@ -283,12 +285,14 @@ async function deployWorker(args: DeployArgs) {
 
 	if (args.public) {
 		throw new UserError(
-			"The --public field has been deprecated, try --legacy-assets instead."
+			"The --public field has been deprecated, try --legacy-assets instead.",
+			{ telemetryMessage: true }
 		);
 	}
 	if (args.experimentalPublic) {
 		throw new UserError(
-			"The --experimental-public field has been deprecated, try --legacy-assets instead."
+			"The --experimental-public field has been deprecated, try --legacy-assets instead.",
+			{ telemetryMessage: true }
 		);
 	}
 
@@ -297,7 +301,8 @@ async function deployWorker(args: DeployArgs) {
 		(args.site || config.site)
 	) {
 		throw new UserError(
-			"Cannot use legacy assets and Workers Sites in the same Worker."
+			"Cannot use legacy assets and Workers Sites in the same Worker.",
+			{ telemetryMessage: true }
 		);
 	}
 
@@ -336,11 +341,24 @@ async function deployWorker(args: DeployArgs) {
 	}
 
 	const beforeUpload = Date.now();
-	const name = getScriptName(args, config);
-	assert(
-		name,
-		'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
-	);
+	let name = getScriptName(args, config);
+
+	const ciOverrideName = getCIOverrideName();
+	let workerNameOverridden = false;
+	if (ciOverrideName !== undefined && ciOverrideName !== name) {
+		logger.warn(
+			`Failed to match Worker name. Your config file is using the Worker name "${name}", but the CI system expected "${ciOverrideName}". Overriding using the CI provided Worker name. Workers Builds connected builds will attempt to open a pull request to resolve this config name mismatch.`
+		);
+		name = ciOverrideName;
+		workerNameOverridden = true;
+	}
+
+	if (!name) {
+		throw new UserError(
+			'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
+			{ telemetryMessage: true }
+		);
+	}
 
 	if (!args.dryRun) {
 		assert(accountId, "Missing account ID");
@@ -390,6 +408,8 @@ async function deployWorker(args: DeployArgs) {
 		worker_tag: workerTag,
 		version_id: versionId,
 		targets,
+		wrangler_environment: args.env,
+		worker_name_overridden: workerNameOverridden,
 	});
 
 	metrics.sendMetricsEvent(
