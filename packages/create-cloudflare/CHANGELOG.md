@@ -1,5 +1,33 @@
 # create-cloudflare
 
+## 2.37.5
+
+### Patch Changes
+
+- [#8005](https://github.com/cloudflare/workers-sdk/pull/8005) [`b889b16`](https://github.com/cloudflare/workers-sdk/commit/b889b1655bdcc1888e0558307bee3f7490827edc) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.20.0 | 3.21.1 |
+
+- [#8006](https://github.com/cloudflare/workers-sdk/pull/8006) [`4ecabf1`](https://github.com/cloudflare/workers-sdk/commit/4ecabf17784ea696662cbe1c0821ca21abe70e05) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-hono | 0.15.2 | 0.15.3 |
+
+- [#8007](https://github.com/cloudflare/workers-sdk/pull/8007) [`76156a4`](https://github.com/cloudflare/workers-sdk/commit/76156a4950ed6ac71f6b745a9deeb09e919a09fb) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.15.2 | 2.15.3 |
+
 ## 2.37.4
 
 ### Patch Changes

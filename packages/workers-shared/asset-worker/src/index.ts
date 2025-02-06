@@ -123,9 +123,9 @@ export default class extends WorkerEntrypoint<Env> {
 				);
 			});
 		} catch (err) {
-			const errorResponse = this.handleError(sentry, analytics, err);
+			return this.handleError(sentry, analytics, err);
+		} finally {
 			this.submitMetrics(analytics, performance, startTimeMs);
-			return errorResponse;
 		}
 	}
 

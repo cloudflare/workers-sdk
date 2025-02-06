@@ -109,9 +109,12 @@ async function testNodeCompatModules() {
 }
 
 async function testUtilImplements() {
-	const { types } = await import("node:util");
+	const util = await import("node:util");
+	const { types } = util;
 	assert.strictEqual(types.isExternal("hello world"), false);
 	assert.strictEqual(types.isAnyArrayBuffer(new ArrayBuffer(0)), true);
+	assert.strictEqual(util.isArray([]), true);
+	assert.strictEqual(util.isDeepStrictEqual(0, 0), true);
 }
 
 async function testPath() {

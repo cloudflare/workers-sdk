@@ -836,6 +836,7 @@ describe.sequential("wrangler dev", () => {
 			expect(std.out).toMatchInlineSnapshot(
 				`
 				"Running custom build: node -e \\"4+4; require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\"
+				No bindings found.
 				"
 			`
 			);
@@ -860,6 +861,7 @@ describe.sequential("wrangler dev", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`
 					"Running custom build: echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js
+					No bindings found.
 					"
 				`
 				);
@@ -1399,7 +1401,8 @@ describe.sequential("wrangler dev", () => {
 				      --test-scheduled                             Test scheduled events by visiting /__scheduled in browser  [boolean] [default: false]
 				      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"] [default: \\"log\\"]
 				      --show-interactive-dev-session               Show interactive dev session (defaults to true if the terminal supports interactivity)  [boolean]
-				      --experimental-vectorize-bind-to-prod        Bind to production Vectorize indexes in local development mode  [boolean] [default: false]",
+				      --experimental-vectorize-bind-to-prod        Bind to production Vectorize indexes in local development mode  [boolean] [default: false]
+				      --experimental-images-local-mode             Use a local lower-fidelity implementation of the Images binding  [boolean] [default: false]",
 				  "warn": "",
 				}
 			`);

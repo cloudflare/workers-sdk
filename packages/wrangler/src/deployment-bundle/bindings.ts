@@ -38,6 +38,7 @@ export function getBindings(
 		wasm_modules: options?.pages ? undefined : config?.wasm_modules,
 		browser: config?.browser,
 		ai: config?.ai,
+		images: config?.images,
 		version_metadata: config?.version_metadata,
 		text_blobs: options?.pages ? undefined : config?.text_blobs,
 		data_blobs: options?.pages ? undefined : config?.data_blobs,

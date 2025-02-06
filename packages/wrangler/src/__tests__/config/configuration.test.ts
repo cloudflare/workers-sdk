@@ -2302,6 +2302,69 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		// Images
+		describe("[images]", () => {
+			it("should error if images is an array", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ images: [] } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"images\\" should be an object but got []."
+		`);
+			});
+
+			it("should error if images is a string", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ images: "BAD" } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"images\\" should be an object but got \\"BAD\\"."
+		`);
+			});
+
+			it("should error if images is a number", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ images: 999 } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"images\\" should be an object but got 999."
+		`);
+			});
+
+			it("should error if ai is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ images: null } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"images\\" should be an object but got null."
+		`);
+			});
+		});
+
 		// Worker Version Metadata
 		describe("[version_metadata]", () => {
 			it("should error if version_metadata is an array", () => {

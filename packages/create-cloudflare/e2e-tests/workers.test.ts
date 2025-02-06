@@ -344,6 +344,9 @@ async function verifyTestScript(projectPath: string, logStream: Writable) {
 			cwd: projectPath,
 			env: {
 				VITEST: undefined,
+				// We need to fake that we are inside a CI
+				// so that the `vitest` commands do not go into watch mode and hang.
+				CI: "true",
 			},
 		},
 		logStream,

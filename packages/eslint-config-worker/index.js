@@ -9,7 +9,7 @@ module.exports = {
 		"**/node_modules/**",
 		"examples",
 		"**/templates/**/*.*",
-		".eslintrc.js",
+		".eslintrc.*js",
 		"**/dist/**",
 	],
 	parser: "@typescript-eslint/parser",

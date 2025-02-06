@@ -1,4 +1,4 @@
-import { fetchResult } from "../cfetch";
+import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { requireAuth } from "../user";
 import type { Config } from "../config";
 
@@ -111,9 +111,12 @@ export async function getConfig(
 
 export async function listConfigs(config: Config): Promise<HyperdriveConfig[]> {
 	const accountId = await requireAuth(config);
-	return await fetchResult(`/accounts/${accountId}/hyperdrive/configs`, {
-		method: "GET",
-	});
+	return await fetchPagedListResult(
+		`/accounts/${accountId}/hyperdrive/configs`,
+		{
+			method: "GET",
+		}
+	);
 }
 
 export async function patchConfig(

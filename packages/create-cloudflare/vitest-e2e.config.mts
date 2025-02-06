@@ -9,6 +9,7 @@ export default defineConfig({
 		root: ".",
 		testTimeout: 1000 * 60 * 10, // 10 min for lengthy installs
 		maxConcurrency: 3,
+		globalSetup: ["e2e-tests/global-setup.ts"],
 		setupFiles: ["e2e-tests/setup.ts", "dotenv/config"],
 		reporters: ["json", "verbose", "hanging-process"],
 		outputFile: {
