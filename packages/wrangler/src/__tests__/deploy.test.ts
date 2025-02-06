@@ -12140,8 +12140,8 @@ export default{
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
-        - Images:
-          - Name: IMAGES_BIND
+				- Images:
+				  - Name: IMAGES_BIND
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
