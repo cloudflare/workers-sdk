@@ -1282,7 +1282,6 @@ export class Miniflare {
 					address,
 					service: {
 						name: workerOpts.assets.assets
-							? `${ROUTER_SERVICE_NAME}-${workerName}`
 							: getUserServiceName(workerName),
 						entrypoint: entrypoint === "default" ? undefined : entrypoint,
 					},
@@ -1305,7 +1304,7 @@ export class Miniflare {
 				!this.#workerOpts[0].core.name?.startsWith(
 					"vitest-pool-workers-runner-"
 				)
-					? `${ROUTER_SERVICE_NAME}-${this.#workerOpts[0].core.name}`
+					? `${ROUTER_SERVICE_NAME}:${this.#workerOpts[0].core.name}`
 					: getUserServiceName(this.#workerOpts[0].core.name),
 			loopbackPort,
 			log: this.#log,

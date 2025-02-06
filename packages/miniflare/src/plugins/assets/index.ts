@@ -40,7 +40,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 				// binding between User Worker and Asset Worker
 				name: options.assets.binding,
 				service: {
-					name: `${ASSETS_SERVICE_NAME}-${options.assets.workerName}`,
+					name: `${ASSETS_SERVICE_NAME}:${options.assets.workerName}`,
 				},
 			},
 		];
@@ -70,8 +70,10 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			options.assets.directory
 		);
 
+		const id = options.assets.workerName;
+
 		const namespaceService: Service = {
-			name: `${ASSETS_KV_SERVICE_NAME}-${options.assets.workerName}`,
+			name: `${ASSETS_KV_SERVICE_NAME}:${id}`,
 			worker: {
 				compatibilityDate: "2023-07-24",
 				compatibilityFlags: ["nodejs_compat"],
@@ -95,7 +97,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		};
 
 		const assetService: Service = {
-			name: `${ASSETS_SERVICE_NAME}-${options.assets.workerName}`,
+			name: `${ASSETS_SERVICE_NAME}:${id}`,
 			worker: {
 				compatibilityDate: "2024-08-01",
 				modules: [
@@ -108,7 +110,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 					{
 						name: "ASSETS_KV_NAMESPACE",
 						kvNamespace: {
-							name: `${ASSETS_KV_SERVICE_NAME}-${options.assets.workerName}`,
+							name: `${ASSETS_KV_SERVICE_NAME}:${id}`,
 						},
 					},
 					{
@@ -124,7 +126,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		};
 
 		const routerService: Service = {
-			name: `${ROUTER_SERVICE_NAME}-${options.assets.workerName}`,
+			name: `${ROUTER_SERVICE_NAME}:${id}`,
 			worker: {
 				compatibilityDate: "2024-08-01",
 				modules: [
@@ -137,12 +139,12 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 					{
 						name: "ASSET_WORKER",
 						service: {
-							name: `${ASSETS_SERVICE_NAME}-${options.assets.workerName}`,
+							name: `${ASSETS_SERVICE_NAME}:${id}`,
 						},
 					},
 					{
 						name: "USER_WORKER",
-						service: { name: getUserServiceName(options.assets.workerName) },
+						service: { name: getUserServiceName(id) },
 					},
 					{
 						name: "CONFIG",

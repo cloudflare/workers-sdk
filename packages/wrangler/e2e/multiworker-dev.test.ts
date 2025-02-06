@@ -712,7 +712,7 @@ describe("multiworker", () => {
 				);
 			});
 
-			it("rpc will not work", async () => {
+			it.fails("call rpc on a worker with assets", async () => {
 				// because it hits the router worker not the user worker, and add is not implemented there
 				// proxy/filter worker will fix this
 				const worker = helper.runLongLived(
@@ -721,16 +721,14 @@ describe("multiworker", () => {
 				);
 
 				const { url } = await worker.waitForReady(5_000);
-				await expect(fetchText(`${url}/rpc`)).resolves.toContain(
-					`TypeError: The RPC receiver does not implement the method`
-				);
+				await expect(fetchText(`${url}/rpc`)).resolves.toEqual(3);
 			});
 			// wrangler dev just crashses because the named entrypoint does not exist on the router worker
-			// expected behaviour: you should be able to hit the user worker only on named entrypoints
-			// and never get assets (currently this does in production but is a bug)
-			it("named entrypoints will not work", async () => {
-				await baseSeed(aw, {
-					"wrangler.toml": dedent`
+			it.fails(
+				"binding to named entrypoint on a worker with assets",
+				async () => {
+					await baseSeed(aw, {
+						"wrangler.toml": dedent`
 								name = "${workerNameAW}"
 								main = "src/index.ts"
 								compatibility_date = "2024-11-01"
@@ -738,7 +736,7 @@ describe("multiworker", () => {
 								directory = "./public/"
 								binding = "ASSETS"
 						`,
-					"src/index.ts": dedent/* javascript */ `
+						"src/index.ts": dedent/* javascript */ `
 							import { WorkerEntrypoint } from "cloudflare:workers";
 							export class NamedEntrypoint extends WorkerEntrypoint {
 								async add(a, b) {
@@ -754,9 +752,9 @@ describe("multiworker", () => {
 								},
 							};
 							`,
-				});
-				await baseSeed(d, {
-					"wrangler.toml": dedent`
+					});
+					await baseSeed(d, {
+						"wrangler.toml": dedent`
 						name = "${workerName4}"
 						main = "src/index.ts"
 						compatibility_date = "2024-11-01"
@@ -765,7 +763,7 @@ describe("multiworker", () => {
 						service = '${workerNameAW}'
 						entrypoint = "NamedEntrypoint"
 				`,
-					"src/index.ts": dedent/* javascript */ `
+						"src/index.ts": dedent/* javascript */ `
 						export default{
 							async fetch(req, env) {
 								const url = new URL(req.url)
@@ -778,24 +776,17 @@ describe("multiworker", () => {
 								return new Response("hello world");
 							}
 						};`,
-				});
+					});
 
-				const worker = helper.runLongLived(
-					`wrangler dev -c wrangler.toml -c ${aw}/wrangler.toml`,
-					{ cwd: d }
-				);
+					const worker = helper.runLongLived(
+						`wrangler dev -c wrangler.toml -c ${aw}/wrangler.toml`,
+						{ cwd: d }
+					);
 
-				const { url } = await worker.waitForReady(5_000);
-				await expect(fetchText(`${url}/named-rpc`)).rejects.toThrowError(
-					"fetch failed"
-				);
-				await worker.readUntil(
-					new RegExp(
-						// eslint-disable-next-line no-useless-escape
-						`Socket \"direct:1:NamedEntrypoint\" refers to service \"assets:router-`
-					)
-				);
-			});
+					const { url } = await worker.waitForReady(5_000);
+					await expect(fetchText(`${url}/named-rpc`)).resolves.toEqual(3);
+				}
+			);
 		});
 	});
 });
