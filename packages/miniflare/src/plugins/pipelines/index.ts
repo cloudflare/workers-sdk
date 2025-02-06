@@ -44,43 +44,60 @@ export const PIPELINE_PLUGIN: Plugin<typeof PipelineOptionsSchema> = {
 	},
 	async getServices({ options, unsafeStickyBlobs }) {
 		const pipelines = bindingEntries(options.pipelines);
-		const services = pipelines.map<Service>(([_, id]) => ({
-			name: `${SERVICE_PIPELINE_PREFIX}:${id}`,
-			worker: objectEntryWorker(PIPELINE_OBJECT, id),
-		}));
+		// const services = pipelines.map<Service>(([_, id]) => ({
+		// 	name: `${SERVICE_PIPELINE_PREFIX}:${id}`,
+		// 	worker: objectEntryWorker(PIPELINE_OBJECT, id),
+		// }));
 
+		const services: Service[] = [];
 		if (pipelines.length > 0) {
-			const uniqueKey = `miniflare-${PIPELINE_OBJECT_CLASS_NAME}`;
-			const pipelineService: Service = {
-				name: SERVICE_PIPELINE_PREFIX,
-				worker: {
-					compatibilityDate: "2024-12-30",
-					compatibilityFlags: ["nodejs_compat"],
-					modules: [
-						{
-							name: "pipeline.worker.js",
-							esModule: SCRIPT_PIPELINE_OBJECT(),
-						},
-					],
-					durableObjectNamespaces: [
-						{
-							className: PIPELINE_OBJECT_CLASS_NAME,
-							uniqueKey,
-						},
-					],
-					durableObjectStorage: { inMemory: kVoid },
-					bindings: [
-						{
-							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
-							service: { name: SERVICE_LOOPBACK },
-						},
-						...getMiniflareObjectBindings(unsafeStickyBlobs),
-					],
-				},
-			};
-			services.push(pipelineService);
+			// const uniqueKey = `miniflare-${PIPELINE_OBJECT_CLASS_NAME}`;
+			for (const pipeline of pipelines) {
+				services.push({
+					name: `${SERVICE_PIPELINE_PREFIX}:${pipeline[1]}`,
+					worker: {
+						compatibilityDate: "2024-12-30",
+						compatibilityFlags: ["nodejs_compat"],
+						modules: [
+							{
+								name: "pipeline.worker.js",
+								esModule: SCRIPT_PIPELINE_OBJECT(),
+							},
+						],
+					},
+				});
+			}
 		}
 
+		// 	return{
+
+		// 	name: `${SERVICE_PIPELINE_PREFIX}:${id}`,
+		// 	worker: {
+		// 		compatibilityDate: "2024-12-30",
+		// 		compatibilityFlags: ["nodejs_compat"],
+		// 		modules: [
+		// 			{
+		// 				name: "pipeline.worker.js",
+		// 				esModule: SCRIPT_PIPELINE_OBJECT(),
+		// 			},
+		// 		],
+		// 		durableObjectNamespaces: [
+		// 			{
+		// 				className: PIPELINE_OBJECT_CLASS_NAME,
+		// 				uniqueKey,
+		// 			},
+		// 		],
+		// 		durableObjectStorage: { inMemory: kVoid },
+		// 		bindings: [
+		// 			{
+		// 				name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
+		// 				service: { name: SERVICE_LOOPBACK },
+		// 			},
+		// 			...getMiniflareObjectBindings(unsafeStickyBlobs),
+		// 		],
+		// 	},
+		// };
+		// services.push(pipelineService);
 		return services;
 	},
 };
