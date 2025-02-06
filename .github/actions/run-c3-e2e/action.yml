@@ -1,5 +1,5 @@
 name: "Run C3 E2E Tests"
-description: "Runs the C3 E2E tests on npm, pnpm, and bun"
+description: "Runs the C3 E2E tests on npm & pnpm"
 inputs:
   packageManager:
     description: "Which package manager to run the tests with"
@@ -26,12 +26,6 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - if: ${{ inputs.packageManager == 'bun' }}
-      name: Install Bun ${{ inputs.packageManagerVersion }}
-      uses: oven-sh/setup-bun@v1
-      with:
-        bun-version: ${{ inputs.packageManagerVersion }}
-
     # Needed because gatsby requires git
     - name: Configure Git
       shell: bash
