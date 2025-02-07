@@ -456,15 +456,15 @@ export function getDevMiniflareOptions(
 		],
 		unsafeModuleFallbackService(request) {
 			const url = new URL(request.url);
-			const specifier = url.searchParams.get("specifier");
+			const rawSpecifier = url.searchParams.get("rawSpecifier");
 			assert(
-				specifier,
+				rawSpecifier,
 				`Unexpected error: no specifier in request to module fallback service.`
 			);
 
 			const moduleRE = new RegExp(MODULE_PATTERN);
-			const match = moduleRE.exec(specifier);
-			assert(match, `Unexpected error: no match for module ${specifier}.`);
+			const match = moduleRE.exec(rawSpecifier);
+			assert(match, `Unexpected error: no match for module ${rawSpecifier}.`);
 			const [full, moduleType, modulePath] = match;
 			assert(
 				modulePath,
