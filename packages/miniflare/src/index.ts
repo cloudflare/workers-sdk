@@ -1295,9 +1295,7 @@ export class Miniflare {
 					name,
 					address,
 					service: {
-						name: workerOpts.assets.assets
-							? `${ROUTER_SERVICE_NAME}:${workerName}`
-							: getUserServiceName(workerName),
+						name: getUserServiceName(workerName),
 						entrypoint: entrypoint === "default" ? undefined : entrypoint,
 					},
 					http: {
