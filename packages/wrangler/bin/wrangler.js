@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 const { spawn } = require("child_process");
 const path = require("path");
-const fs = require("fs");
-const os = require("os");
 
 const MIN_NODE_VERSION = "16.13.0";
 
