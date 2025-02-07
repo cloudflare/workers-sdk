@@ -2008,7 +2008,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20250121.0
-        version: 4.20250129.0
+        version: 4.20250204.0
       '@prisma/adapter-d1':
         specifier: ^6.3.0
         version: 6.3.1
@@ -2026,7 +2026,7 @@ importers:
         version: 6.0.7(@types/node@18.19.74)(jiti@2.4.2)
       wrangler:
         specifier: catalog:vite-plugin
-        version: 3.103.2(@cloudflare/workers-types@4.20250129.0)
+        version: 3.103.2(@cloudflare/workers-types@4.20250204.0)
 
   packages/vite-plugin-cloudflare/playground/react-spa:
     dependencies:
@@ -2154,7 +2154,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20250121.0
-        version: 4.20250129.0
+        version: 4.20250204.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -2163,7 +2163,7 @@ importers:
         version: 6.0.7(@types/node@18.19.74)(jiti@2.4.2)
       wrangler:
         specifier: catalog:vite-plugin
-        version: 3.103.2(@cloudflare/workers-types@4.20250129.0)
+        version: 3.103.2(@cloudflare/workers-types@4.20250204.0)
 
   packages/vite-plugin-cloudflare/playground/websockets:
     devDependencies:
@@ -3563,6 +3563,9 @@ packages:
   '@cloudflare/workers-shared@0.8.0':
     resolution: {integrity: sha512-1OvFkNtslaMZAJsaocTmbACApgmWv55uLpNj50Pn2MGcxdAjpqykXJFQw5tKc+lGV9TDZh9oO3Rsk17IEQDzIg==}
     engines: {node: '>=16.7.0'}
+
+  '@cloudflare/workers-types@4.20240614.0':
+    resolution: {integrity: sha512-fnV3uXD1Hpq5EWnY7XYb+smPcjzIoUFiZpTSV/Tk8qKL3H+w6IqcngZwXQBZ/2U/DwYkDilXHW3FfPhnyD7FZA==}
 
   '@cloudflare/workers-types@4.20250204.0':
     resolution: {integrity: sha512-mWoQbYaP+nYztx9I7q9sgaiNlT54Cypszz0RfzMxYnT5W3NXDuwGcjGB+5B5H5VB8tEC2dYnBRpa70lX94ueaQ==}
@@ -13335,6 +13338,8 @@ snapshots:
     dependencies:
       mime: 3.0.0
       zod: 3.22.3
+
+  '@cloudflare/workers-types@4.20240614.0': {}
 
   '@cloudflare/workers-types@4.20250204.0': {}
 
