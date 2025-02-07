@@ -332,10 +332,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				};
 			},
 		},
+		// Plugin to support `CompiledWasm` modules
 		{
 			name: "vite-plugin-cloudflare:modules",
 			// We set `enforce: "pre"` so that this plugin runs before the Vite core plugins.
-			// Otherwise the `.wasm` extension cannot be used for module imports
+			// Otherwise the `vite:wasm-fallback` plugin prevents the `.wasm` extension being used for module imports.
 			enforce: "pre",
 			applyToEnvironment(environment) {
 				if (resolvedPluginConfig.type === "assets-only") {
