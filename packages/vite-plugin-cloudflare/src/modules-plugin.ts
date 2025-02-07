@@ -50,10 +50,10 @@ export function modulesPlugin(
 		renderChunk(code, chunk) {
 			const moduleRE = new RegExp(MODULE_PATTERN, "g");
 			let match: RegExpExecArray | null;
-			let s: MagicString | undefined;
+			let magicString: MagicString | undefined;
 
 			while ((match = moduleRE.exec(code))) {
-				s ||= new MagicString(code);
+				magicString ||= new MagicString(code);
 				const [full, moduleType, modulePath] = match;
 
 				assert(
@@ -86,14 +86,14 @@ export function modulesPlugin(
 					? relativePath
 					: `./${relativePath}`;
 
-				s.update(match.index, match.index + full.length, importPath);
+				magicString.update(match.index, match.index + full.length, importPath);
 			}
 
-			if (s) {
+			if (magicString) {
 				return {
-					code: s.toString(),
+					code: magicString.toString(),
 					map: this.environment.config.build.sourcemap
-						? s.generateMap({ hires: "boundary" })
+						? magicString.generateMap({ hires: "boundary" })
 						: null,
 				};
 			}
