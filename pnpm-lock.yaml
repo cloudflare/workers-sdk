@@ -856,8 +856,8 @@ importers:
         specifier: 0.37.98
         version: 0.37.98
       ext-dep:
-        specifier: file:./internal-module-resolution/vendor/ext-dep
-        version: file:fixtures/vitest-pool-workers-examples/internal-module-resolution/vendor/ext-dep
+        specifier: file:./module-resolution/vendor/ext-dep
+        version: file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/ext-dep
       jose:
         specifier: ^5.2.2
         version: 5.9.3
@@ -7772,8 +7772,8 @@ packages:
     resolution: {integrity: sha512-28HqgMZAmih1Czt9ny7qr6ek2qddF4FclbMzwhCREB6OFfH+rXAnuNCwo1/wFvrtbgsQDb4kSbX9de9lFbrXnA==}
     engines: {node: '>= 0.10.0'}
 
-  ext-dep@file:fixtures/vitest-pool-workers-examples/internal-module-resolution/vendor/ext-dep:
-    resolution: {directory: fixtures/vitest-pool-workers-examples/internal-module-resolution/vendor/ext-dep, type: directory}
+  ext-dep@file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/ext-dep:
+    resolution: {directory: fixtures/vitest-pool-workers-examples/module-resolution/vendor/ext-dep, type: directory}
 
   extend@3.0.2:
     resolution: {integrity: sha512-fjquC59cD7CyW6urNXK0FBufkZcoiGG80wTuPujX590cB5Ttln20E2UB4S/WARVqhXffZl2LNgS+gQdPIIim/g==}
@@ -18033,7 +18033,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  ext-dep@file:fixtures/vitest-pool-workers-examples/internal-module-resolution/vendor/ext-dep: {}
+  ext-dep@file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/ext-dep: {}
 
   extend@3.0.2: {}
 

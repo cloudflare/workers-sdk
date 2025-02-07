@@ -16,7 +16,7 @@
 		"@microlabs/otel-cf-workers": "1.0.0-rc.45",
 		"@types/node": "catalog:default",
 		"discord-api-types": "0.37.98",
-		"ext-dep": "file:./internal-module-resolution/vendor/ext-dep",
+		"ext-dep": "file:./module-resolution/vendor/ext-dep",
 		"jose": "^5.2.2",
 		"miniflare": "workspace:*",
 		"run-script-os": "^1.1.6",
