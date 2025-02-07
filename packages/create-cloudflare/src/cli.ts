@@ -9,6 +9,7 @@ import {
 	logRaw,
 	startSection,
 } from "@cloudflare/cli";
+import { bgYellow, yellow } from "@cloudflare/cli/colors";
 import { CancelError } from "@cloudflare/cli/error";
 import { isInteractive } from "@cloudflare/cli/interactive";
 import { cliDefinition, parseArgs } from "helpers/args";
@@ -41,6 +42,13 @@ import type { C3Args, C3Context } from "types";
 const { npm } = detectPackageManager();
 
 export const main = async (argv: string[]) => {
+	if (process.versions.bun || npm === "bun") {
+		console.warn(
+			bgYellow(
+				`Create Cloudflare does not support Bun. Please try this command again using npm, pnpm, or yarn (e.g. \`npm create cloudflare\`). If you continue to use Bun, things may work, but any issues you encounter will not necessarily be fixed by Cloudflare. Please report any incompatibilities or bugs to Bun: https://github.com/oven-sh/bun/issues/new`,
+			),
+		);
+	}
 	const result = await parseArgs(argv);
 
 	if (result.type === "unknown") {
