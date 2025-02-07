@@ -579,6 +579,11 @@ export async function handleModuleFallbackRequest(
 		return await load(vite, logBase, method, target, specifier, filePath);
 	} catch (e) {
 		debuglog(logBase, "error:", e);
+		console.error(
+			`[vitest-pool-workers] Failed to ${method} ${JSON.stringify(target)} from ${JSON.stringify(referrer)}.`,
+			"To resolve this, try bundling the relevant dependency with Vite.",
+			"For more details, see: https://developers.cloudflare.com/workers/testing/vitest-integration/known-issues/#module-resolution"
+		);
 	}
 
 	return new Response(null, { status: 404 });
