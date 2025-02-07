@@ -15,7 +15,7 @@
 		"directory": "packages/create-cloudflare"
 	},
 	"license": "MIT OR Apache-2.0",
-	"author": "wrangler@cloudflare.com",
+	"author": "workers-devprod@cloudflare.com",
 	"exports": {
 		".": "./dist/cli.js"
 	},
