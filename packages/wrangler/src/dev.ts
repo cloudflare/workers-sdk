@@ -50,7 +50,6 @@ import type {
 } from "./deployment-bundle/worker";
 import type { WorkerRegistry } from "./dev-registry";
 import type { CfAccount } from "./dev/create-worker-preview";
-import type { LoggerLevel } from "./logger";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type { watch } from "chokidar";
 import type { Json } from "miniflare";
@@ -310,8 +309,6 @@ export const dev = createCommand({
 		"log-level": {
 			choices: ["debug", "info", "log", "warn", "error", "none"] as const,
 			describe: "Specify logging level",
-			// Yargs requires this to type log-level properly
-			default: "log" as LoggerLevel,
 		},
 		"show-interactive-dev-session": {
 			describe:
