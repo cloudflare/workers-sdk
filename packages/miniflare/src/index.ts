@@ -767,17 +767,17 @@ export class Miniflare {
 		});
 		// Add custom headers included in response to WebSocket upgrade requests
 		this.#webSocketExtraHeaders = new WeakMap();
-		// this.#webSocketServer.on("headers", (headers, req) => {
-		// 	const extra = this.#webSocketExtraHeaders.get(req);
-		// 	this.#webSocketExtraHeaders.delete(req);
-		// 	if (extra) {
-		// 		for (const [key, value] of extra) {
-		// 			if (!restrictedWebSocketUpgradeHeaders.includes(key.toLowerCase())) {
-		// 				headers.push(`${key}: ${value}`);
-		// 			}
-		// 		}
-		// 	}
-		// });
+		this.#webSocketServer.on("headers", (headers, req) => {
+			const extra = this.#webSocketExtraHeaders.get(req);
+			this.#webSocketExtraHeaders.delete(req);
+			if (extra) {
+				for (const [key, value] of extra) {
+					if (!restrictedWebSocketUpgradeHeaders.includes(key.toLowerCase())) {
+						headers.push(`${key}: ${value}`);
+					}
+				}
+			}
+		});
 
 		// Build path for temporary directory. We don't actually want to create this
 		// unless it's needed (i.e. we have Durable Objects enabled). This means we
@@ -1046,7 +1046,7 @@ export class Miniflare {
 				http.createServer(this.#handleLoopback),
 				/* grace */ 0
 			);
-			// server.on("upgrade", this.#handleLoopbackUpgrade);
+			server.on("upgrade", this.#handleLoopbackUpgrade);
 			server.listen(0, hostname, () => resolve(server));
 		});
 	}

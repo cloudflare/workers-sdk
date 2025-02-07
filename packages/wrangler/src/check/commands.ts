@@ -4,7 +4,7 @@ import events from "node:events";
 import { writeFile } from "node:fs/promises";
 import path from "path";
 import { log } from "@cloudflare/cli";
-import { spinner, spinnerWhile } from "@cloudflare/cli/interactive";
+import { spinnerWhile } from "@cloudflare/cli/interactive";
 import chalk from "chalk";
 import { Miniflare } from "miniflare";
 import { WebSocket } from "ws";

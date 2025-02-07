@@ -311,10 +311,6 @@ async function deployWorker(args: DeployArgs) {
 		);
 	}
 
-	if (args.outfile && args.outdir) {
-		throw new UserError("Cannot use `--outfile` and `--outdir` together");
-	}
-
 	if (config.workflows?.length) {
 		logger.once.warn("Workflows is currently in open beta.");
 	}

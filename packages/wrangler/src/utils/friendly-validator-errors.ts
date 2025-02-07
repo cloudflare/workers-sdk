@@ -66,9 +66,9 @@ export async function helpIfErrorIsSizeOrScriptStartup(
 		await writeFile(profile, JSON.stringify(cpuProfile));
 		throw new UserError(dedent`
 			Your Worker failed validation because it exceeded startup limits.
-			To ensure fast responses, we place constraints on Worker startup—like how much CPU it can use, or how long it can take. Your Worker failed validation, which means it hit one of these startup limits. Try reducing the amount of work done during startup (outside the event handler), either by removing code or relocating it inside the event handler.
+			To ensure fast responses, there are constraints on Worker startup, such as how much CPU it can use, or how long it can take. Your Worker has hit one of these startup limits. Try reducing the amount of work done during startup (outside the event handler), either by removing code or relocating it inside the event handler.
 
-			A CPU Profile of your Worker's startup phase has been written to ${profile} Load it into the Chrome DevTools profiler (or directly in VSCode) to view a flamegraph.
+			A CPU Profile of your Worker's startup phase has been written to ${profile} - load it into the Chrome DevTools profiler (or directly in VSCode) to view a flamegraph.
 
 			Refer to https://developers.cloudflare.com/workers/platform/limits/#worker-startup-time for more details`);
 	}

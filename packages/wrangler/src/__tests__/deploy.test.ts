@@ -10,7 +10,6 @@ import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { File } from "undici";
 import { vi } from "vitest";
-import * as checkCommand from "../check/commands";
 import {
 	printBundleSize,
 	printOffendingDependencies,

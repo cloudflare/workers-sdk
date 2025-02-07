@@ -3,7 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
-import { FormData, Response } from "undici";
+import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { configFileName, formatConfigSnippet } from "../config";
@@ -74,6 +74,7 @@ import type { PostQueueBody, PostTypedConsumerBody } from "../queues/client";
 import type { LegacyAssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 import type { ApiVersion, Percentage, VersionId } from "../versions/types";
+import type { FormData } from "undici";
 
 type Props = {
 	config: Config;

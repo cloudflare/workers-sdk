@@ -2,7 +2,6 @@ import assert from "node:assert";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { blue, gray } from "@cloudflare/cli/colors";
-import { FormData } from "undici";
 import {
 	getAssetsOptions,
 	syncAssets,
@@ -61,6 +60,7 @@ import type { Rule } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
+import type { FormData } from "undici";
 
 type Props = {
 	config: Config;
