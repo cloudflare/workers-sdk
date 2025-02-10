@@ -48,7 +48,7 @@ export const checkStartupCommand = createCommand({
 		deployArgs: {
 			alias: "args",
 			describe:
-				"Additional arguments passed to `wrangler deploy` i.e. `--no-bundle`",
+				"Additional arguments passed to `wrangler deploy` or `wrangler pages functions build` i.e. `--no-bundle`",
 			type: "string",
 		},
 	},
@@ -70,22 +70,39 @@ export const checkStartupCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "alpha",
 	},
-	async handler({ outfile, deployArgs, workerBundle }) {
+	async handler({ outfile, deployArgs, workerBundle }, { config }) {
 		if (workerBundle === undefined) {
 			const tmpDir = getWranglerTmpDir(undefined, "startup-profile");
 			workerBundle = path.join(tmpDir.path, "worker.bundle");
 
-			// Hide build logs,
-			logger.loggerLevel = "error";
+			if (config.pages_build_output_dir) {
+				log("Pages project detected");
+				log("");
+			}
+
+			if (logger.loggerLevel !== "debug") {
+				// Hide build logs
+				logger.loggerLevel = "error";
+			}
 
 			await spinnerWhile({
 				promise: async () =>
-					await createCLIParser([
-						"deploy",
-						...(deployArgs?.split(" ") ?? []),
-						"--dry-run",
-						`--outfile=${workerBundle}`,
-					]).parse(),
+					await createCLIParser(
+						config.pages_build_output_dir
+							? [
+									"pages",
+									"functions",
+									"build",
+									...(deployArgs?.split(" ") ?? []),
+									`--outfile=${workerBundle}`,
+								]
+							: [
+									"deploy",
+									...(deployArgs?.split(" ") ?? []),
+									"--dry-run",
+									`--outfile=${workerBundle}`,
+								]
+					).parse(),
 				startMessage: "Building your Worker",
 				endMessage: chalk.green("Worker Built! 🎉"),
 			});
