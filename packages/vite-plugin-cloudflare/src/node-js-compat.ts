@@ -115,7 +115,7 @@ const { env } = defineEnv({
 	presets: [cloudflare],
 });
 
-const CLOUDFLARE_VIRTUAL_PREFIX = "\0cloudflare-";
+const CLOUDFLARE_VIRTUAL_PREFIX = "\0__CLOUDFLARE_NODEJS_COMPAT__";
 
 /**
  * Returns true if the given combination of compat dates and flags means that we need Node.js compatibility.
