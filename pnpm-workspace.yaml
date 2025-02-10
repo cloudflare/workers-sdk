@@ -15,7 +15,7 @@ catalog:
   typescript: "^5.7.2"
   undici: "^5.28.4"
   vitest: "~2.1.8"
-  vite: "^5.0.12"
+  vite: "^6.1.0"
 
 catalogs:
   vite-plugin:
