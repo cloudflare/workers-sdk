@@ -55,7 +55,7 @@ export interface CfModule {
 	 *   }
 	 * }
 	 */
-	content: string | Buffer;
+	content: string | Buffer<ArrayBuffer>;
 	/**
 	 * An optional sourcemap for this module if it's of a ESM or CJS type, this will only be present
 	 * if we're deploying with sourcemaps enabled. Since we copy extra modules that aren't bundled
@@ -99,7 +99,7 @@ export interface CfSendEmailBindings {
  */
 
 export interface CfWasmModuleBindings {
-	[key: string]: string | Uint8Array;
+	[key: string]: string | Uint8Array<ArrayBuffer>;
 }
 
 /**
@@ -128,6 +128,13 @@ export interface CfAIBinding {
 }
 
 /**
+ * A binding to Cloudflare Images
+ */
+export interface CfImagesBinding {
+	binding: string;
+}
+
+/**
  * A binding to the Worker Version's metadata
  */
 
@@ -140,7 +147,7 @@ export interface CfVersionMetadataBinding {
  */
 
 export interface CfDataBlobBindings {
-	[key: string]: string | Uint8Array;
+	[key: string]: string | Uint8Array<ArrayBuffer>;
 }
 
 /**
@@ -328,6 +335,7 @@ export interface CfWorkerInit {
 		text_blobs: CfTextBlobBindings | undefined;
 		browser: CfBrowserBinding | undefined;
 		ai: CfAIBinding | undefined;
+		images: CfImagesBinding | undefined;
 		version_metadata: CfVersionMetadataBinding | undefined;
 		data_blobs: CfDataBlobBindings | undefined;
 		durable_objects: { bindings: CfDurableObject[] } | undefined;

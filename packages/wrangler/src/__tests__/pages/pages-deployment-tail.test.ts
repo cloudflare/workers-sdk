@@ -15,9 +15,8 @@ import type {
 	QueueEvent,
 	RequestEvent,
 	ScheduledEvent,
-	TailEvent,
 	TailEventMessage,
-	TailInfo,
+	TailEventMessageType,
 } from "../../tail/createTail";
 import type { RequestInit } from "undici";
 import type WebSocket from "ws";
@@ -807,18 +806,7 @@ function serialize(message: TailEventMessage): WebSocket.RawData {
  * @param event A TailEvent
  * @returns true if `event` is a RequestEvent
  */
-function isRequest(
-	event:
-		| ScheduledEvent
-		| RequestEvent
-		| AlarmEvent
-		| EmailEvent
-		| TailEvent
-		| TailInfo
-		| QueueEvent
-		| undefined
-		| null
-): event is RequestEvent {
+function isRequest(event: TailEventMessageType): event is RequestEvent {
 	return Boolean(event && "request" in event);
 }
 

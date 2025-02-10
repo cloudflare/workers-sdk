@@ -55,7 +55,8 @@ export default async function triggersDeploy(
 
 	if (!scriptName) {
 		throw new UserError(
-			'You need to provide a name when uploading a Worker Version. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
+			'You need to provide a name when uploading a Worker Version. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
+			{ telemetryMessage: true }
 		);
 	}
 
@@ -86,7 +87,7 @@ export default async function triggersDeploy(
 	}
 
 	if (!accountId) {
-		throw new UserError("Missing accountId");
+		throw new UserError("Missing accountId", { telemetryMessage: true });
 	}
 
 	const uploadMs = Date.now() - start;
@@ -256,6 +257,15 @@ export default async function triggersDeploy(
 		logger.once.warn("Workflows is currently in open beta.");
 
 		for (const workflow of config.workflows) {
+			// NOTE: if the user provides a script_name thats not this script (aka bounds to another worker)
+			// we don't want to send this worker's config.
+			if (
+				workflow.script_name !== undefined &&
+				workflow.script_name !== scriptName
+			) {
+				continue;
+			}
+
 			deployments.push(
 				fetchResult(`/accounts/${accountId}/workflows/${workflow.name}`, {
 					method: "PUT",

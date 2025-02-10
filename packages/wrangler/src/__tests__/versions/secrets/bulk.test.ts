@@ -6,6 +6,7 @@ import { mockConsoleMethods } from "../../helpers/mock-console";
 import { clearDialogs } from "../../helpers/mock-dialogs";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
+import { writeWranglerConfig } from "../../helpers/write-wrangler-config";
 import { mockPostVersion, mockSetupApiCalls } from "./utils";
 import type { Interface } from "node:readline";
 
@@ -48,6 +49,7 @@ describe("versions secret bulk", () => {
 		mockSetupApiCalls();
 		mockPostVersion((metadata) => {
 			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
 				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
 				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
@@ -118,6 +120,7 @@ describe("versions secret bulk", () => {
 		mockSetupApiCalls();
 		mockPostVersion((metadata) => {
 			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
 				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
 				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
@@ -149,7 +152,7 @@ describe("versions secret bulk", () => {
 		await expect(
 			runWrangler(`versions secret bulk secrets.json --name script-name`)
 		).rejects.toThrowError(
-			`The contents of "secrets.json" is not valid JSON: "ParseError: Unexpected token o"`
+			`The contents of "secrets.json" is not valid JSON: "ParseError: InvalidSymbol"`
 		);
 	});
 
@@ -163,6 +166,7 @@ describe("versions secret bulk", () => {
 		mockSetupApiCalls();
 		mockPostVersion((metadata) => {
 			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
 				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
 				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
@@ -183,5 +187,96 @@ describe("versions secret bulk", () => {
 
 			"
 		`);
+	});
+
+	test("unsafe metadata is provided", async () => {
+		writeWranglerConfig({
+			name: "script-name",
+			unsafe: { metadata: { build_options: { stable_id: "foo/bar" } } },
+		});
+
+		await writeFile(
+			"secrets.json",
+			JSON.stringify({
+				SECRET_1: "secret-1",
+				SECRET_2: "secret-2",
+				SECRET_3: "secret-3",
+			}),
+			{ encoding: "utf8" }
+		);
+
+		mockSetupApiCalls();
+		mockPostVersion((metadata) => {
+			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
+				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
+				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
+				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
+			]);
+			expect(metadata.keep_bindings).toStrictEqual([
+				"secret_key",
+				"secret_text",
+			]);
+			expect(metadata.keep_assets).toBeTruthy();
+			expect(metadata["build_options"]).toStrictEqual({ stable_id: "foo/bar" });
+		});
+
+		await runWrangler(`versions secret bulk secrets.json --name script-name`);
+		expect(std.out).toMatchInlineSnapshot(
+			`
+			"🌀 Creating the secrets for the Worker \\"script-name\\"
+			✨ Successfully created secret for key: SECRET_1
+			✨ Successfully created secret for key: SECRET_2
+			✨ Successfully created secret for key: SECRET_3
+			✨ Success! Created version id with 3 secrets.
+			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy\\"."
+		`
+		);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	test("unsafe metadata not included if not in wrangler.toml", async () => {
+		writeWranglerConfig({
+			name: "script-name",
+		});
+
+		await writeFile(
+			"secrets.json",
+			JSON.stringify({
+				SECRET_1: "secret-1",
+				SECRET_2: "secret-2",
+				SECRET_3: "secret-3",
+			}),
+			{ encoding: "utf8" }
+		);
+
+		mockSetupApiCalls();
+		mockPostVersion((metadata) => {
+			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
+				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
+				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
+				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
+			]);
+			expect(metadata.keep_bindings).toStrictEqual([
+				"secret_key",
+				"secret_text",
+			]);
+			expect(metadata.keep_assets).toBeTruthy();
+			expect(metadata["build_options"]).toBeUndefined();
+		});
+
+		await runWrangler(`versions secret bulk secrets.json --name script-name`);
+		expect(std.out).toMatchInlineSnapshot(
+			`
+			"🌀 Creating the secrets for the Worker \\"script-name\\"
+			✨ Successfully created secret for key: SECRET_1
+			✨ Successfully created secret for key: SECRET_2
+			✨ Successfully created secret for key: SECRET_3
+			✨ Success! Created version id with 3 secrets.
+			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy\\"."
+		`
+		);
+		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 });

@@ -50,5 +50,10 @@ pnpm-lock.yaml
 **/CHANGELOG.md @cloudflare/wrangler-admins
 **/package.json @cloudflare/wrangler
 
+# Require admin review on changes to dependencies & dependency bundling
+/packages/wrangler/scripts/deps.ts
+/packages/wrangler/package.json
+/packages/miniflare/package.json
+
 # To allow dependabot updates to C3 frameworks to be approved by C3 team
 /packages/create-cloudflare/**/package.json @cloudflare/wrangler @cloudflare/c3

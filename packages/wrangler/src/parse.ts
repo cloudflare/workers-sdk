@@ -2,9 +2,10 @@ import * as fs from "node:fs";
 import { resolve } from "node:path";
 import TOML from "@iarna/toml";
 import { formatMessagesSync } from "esbuild";
-import { parse as jsoncParse, printParseErrorCode } from "jsonc-parser";
+import * as jsoncParser from "jsonc-parser";
 import { UserError } from "./errors";
 import { logger } from "./logger";
+import type { TelemetryMessage } from "./errors";
 import type { ParseError as JsoncParseError } from "jsonc-parser";
 
 export type Message = {
@@ -12,7 +13,7 @@ export type Message = {
 	location?: Location;
 	notes?: Message[];
 	kind?: "warning" | "error";
-};
+} & TelemetryMessage;
 
 export type Location = File & {
 	line: number;
@@ -56,8 +57,8 @@ export class ParseError extends UserError implements Message {
 	readonly location?: Location;
 	readonly kind: "warning" | "error";
 
-	constructor({ text, notes, location, kind }: Message) {
-		super(text);
+	constructor({ text, notes, location, kind, telemetryMessage }: Message) {
+		super(text, { telemetryMessage });
 		this.name = this.constructor.name;
 		this.text = text;
 		this.notes = notes ?? [];
@@ -132,11 +133,13 @@ export function parseTOML(input: string, file?: string): TOML.JsonMap | never {
 			file,
 			fileText: input,
 		};
-		throw new ParseError({ text, location });
+		throw new ParseError({
+			text,
+			location,
+			telemetryMessage: "TOML parse error",
+		});
 	}
 }
-
-const JSON_ERROR_SUFFIX = " in JSON at position ";
 
 /**
  * A minimal type describing a package.json file.
@@ -150,47 +153,39 @@ export type PackageJSON = {
 /**
  * A typed version of `parseJSON()`.
  */
-export function parsePackageJSON<T extends PackageJSON = PackageJSON>(
-	input: string,
-	file?: string
-): T {
-	return parseJSON<T>(input, file);
+export function parsePackageJSON(input: string, file?: string): PackageJSON {
+	return parseJSON(input, file) as PackageJSON;
 }
 
 /**
- * A wrapper around `JSON.parse` that throws a `ParseError`.
+ * Parses JSON and throws a `ParseError`.
  */
-export function parseJSON<T>(input: string, file?: string): T {
-	try {
-		return JSON.parse(input);
-	} catch (err) {
-		const { message } = err as Error;
-		const index = message.lastIndexOf(JSON_ERROR_SUFFIX);
-		if (index < 0) {
-			throw err;
-		}
-		const text = message.substring(0, index);
-		const position = parseInt(
-			message.substring(index + JSON_ERROR_SUFFIX.length)
-		);
-		const location = indexLocation({ file, fileText: input }, position);
-		throw new ParseError({ text, location });
-	}
+export function parseJSON(input: string, file?: string): unknown {
+	return parseJSONC(input, file, {
+		allowEmptyContent: false,
+		allowTrailingComma: false,
+		disallowComments: true,
+	});
 }
 
 /**
  * A wrapper around `JSONC.parse` that throws a `ParseError`.
  */
-export function parseJSONC<T>(input: string, file?: string): T {
+export function parseJSONC(
+	input: string,
+	file?: string,
+	options: jsoncParser.ParseOptions = { allowTrailingComma: true }
+): unknown {
 	const errors: JsoncParseError[] = [];
-	const data = jsoncParse(input, errors, { allowTrailingComma: true });
+	const data = jsoncParser.parse(input, errors, options);
 	if (errors.length) {
 		throw new ParseError({
-			text: printParseErrorCode(errors[0].error),
+			text: jsoncParser.printParseErrorCode(errors[0].error),
 			location: {
 				...indexLocation({ file, fileText: input }, errors[0].offset + 1),
 				length: errors[0].length,
 			},
+			telemetryMessage: "JSON(C) parse error",
 		});
 	}
 	return data;
@@ -230,6 +225,7 @@ export function readFileSync(file: string): string {
 					text: message.replace(file, resolve(file)),
 				},
 			],
+			telemetryMessage: "Could not read file",
 		});
 	}
 }

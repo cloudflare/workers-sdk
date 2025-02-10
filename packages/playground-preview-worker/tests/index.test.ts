@@ -24,7 +24,9 @@ export default {
 			return Response.redirect("https://example.com", 302)
 		}
 		if(url.pathname === "/method") {
-			return new Response(request.method)
+			return new Response(request.method, {
+				headers: { "Test-Http-Method": request.method },
+			})
 		}
 		if(url.pathname === "/status") {
 			return new Response(407)
@@ -257,6 +259,25 @@ describe("Preview Worker", () => {
 
 		expect(await resp.text()).toEqual("PUT");
 	});
+	it.each(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])(
+		"should handle %s method specified on the X-CF-Http-Method header",
+		async (method) => {
+			const resp = await fetch(`${PREVIEW_REMOTE}/method`, {
+				method: "POST",
+				headers: {
+					"X-CF-Token": defaultUserToken,
+					"X-CF-Http-Method": method,
+					"CF-Raw-HTTP": "true",
+				},
+				redirect: "manual",
+			});
+
+			// HEAD request does not return any body. So we will confirm by asserting the response header
+			expect(await resp.text()).toEqual(method === "HEAD" ? "" : method);
+			// Header from the client response will be prefixed with "cf-ew-raw-"
+			expect(resp.headers.get("cf-ew-raw-Test-Http-Method")).toEqual(method);
+		}
+	);
 	it("should fallback to the request method if the X-CF-Http-Method header is missing", async () => {
 		const resp = await fetch(`${PREVIEW_REMOTE}/method`, {
 			method: "PUT",

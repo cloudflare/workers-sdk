@@ -78,6 +78,8 @@ interface ScriptSettings {
 	observability: Observability;
 }
 
+type CfUnsafeMetadata = Record<string, unknown>;
+
 interface CopyLatestWorkerVersionArgs {
 	accountId: string;
 	scriptName: string;
@@ -87,6 +89,7 @@ interface CopyLatestWorkerVersionArgs {
 	versionTag?: string;
 	sendMetrics?: boolean;
 	overrideAllSecrets?: boolean; // Used for delete - this will make sure we do not inherit any
+	unsafeMetadata?: CfUnsafeMetadata | undefined;
 }
 
 // TODO: This is a naive implementation, replace later
@@ -98,6 +101,7 @@ export async function copyWorkerVersionWithNewSecrets({
 	versionMessage,
 	versionTag,
 	sendMetrics,
+	unsafeMetadata,
 	overrideAllSecrets,
 }: CopyLatestWorkerVersionArgs) {
 	// Grab the specific version info
@@ -118,18 +122,15 @@ export async function copyWorkerVersionWithNewSecrets({
 	);
 
 	// Filter out secrets because we're gonna inherit them
-	const bindings: WorkerMetadataBinding[] =
-		versionInfo.resources.bindings.filter(
-			(binding) => binding.type !== "secret_text"
-		);
-
-	// We cannot upload a DO with a namespace_id so remove it
-	for (const binding of bindings) {
-		if (binding.type === "durable_object_namespace") {
-			// @ts-expect-error - it doesn't exist within wrangler but does in the API
-			delete binding.namespace_id;
-		}
-	}
+	const bindings: WorkerMetadataBinding[] = versionInfo.resources.bindings
+		.filter((binding) => binding.type !== "secret_text")
+		.map((binding) => {
+			// Inherit all of the existing bindings
+			return {
+				name: binding.name,
+				type: "inherit",
+			};
+		});
 
 	// Add the new secrets
 	for (const secret of secrets) {
@@ -157,7 +158,9 @@ export async function copyWorkerVersionWithNewSecrets({
 	const worker: CfWorkerInit = {
 		name: scriptName,
 		main: mainModule,
-		bindings: {} as CfWorkerInit["bindings"], // handled in rawBindings
+		bindings: {
+			unsafe: { metadata: unsafeMetadata }, // pass along unsafe metadata
+		} as CfWorkerInit["bindings"], // handled in rawBindings
 		rawBindings: bindings,
 		modules,
 		sourceMaps: sourceMaps,
@@ -247,7 +250,7 @@ async function parseModules(
 		const mainModule: CfModule = {
 			name: entrypointPart.name,
 			filePath: "",
-			content: Buffer.from(await entrypointPart.arrayBuffer()),
+			content: Buffer.from<ArrayBuffer>(await entrypointPart.arrayBuffer()),
 			type: fromMimeType(entrypointPart.type),
 		};
 

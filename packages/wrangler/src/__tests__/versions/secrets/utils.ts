@@ -59,6 +59,11 @@ export function mockGetVersion(versionInfo?: VersionDetails) {
 										name: "YET_ANOTHER_SECRET",
 										text: "Yet another secret shhhhh",
 									},
+									{
+										name: "do-binding",
+										type: "durable_object_namespace",
+										namespace_id: "some-namespace-id",
+									},
 								],
 								script: {
 									etag: "etag",

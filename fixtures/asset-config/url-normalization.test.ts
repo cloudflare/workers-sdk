@@ -41,7 +41,8 @@ describe("[Asset Worker] `test slash normalization`", () => {
 			return {
 				html_handling: "none",
 				not_found_handling: "none",
-				serve_directly: true,
+				run_worker_first: true,
+				serve_directly: false,
 			};
 		});
 	});

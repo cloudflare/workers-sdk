@@ -163,6 +163,9 @@ export interface StartDevWorkerInput {
 		/** Whether to use Vectorize mixed mode -- the worker is run locally but accesses to Vectorize are made remotely */
 		bindVectorizeToProd?: boolean;
 
+		/** Whether to use Images local mode -- this is lower fidelity, but doesn't require network access */
+		imagesLocalMode?: boolean;
+
 		/** Treat this as the primary worker in a multiworker setup (i.e. the first Worker in Miniflare's options) */
 		multiworkerPrimary?: boolean;
 	};
@@ -241,21 +244,22 @@ export type Binding =
 	| { type: "text_blob"; source: File }
 	| { type: "browser" }
 	| { type: "ai" }
+	| { type: "images" }
 	| { type: "version_metadata" }
 	| { type: "data_blob"; source: BinaryFile }
 	| ({ type: "durable_object_namespace" } & NameOmit<CfDurableObject>)
 	| ({ type: "workflow" } & BindingOmit<CfWorkflow>)
 	| ({ type: "queue" } & BindingOmit<CfQueue>)
 	| ({ type: "r2_bucket" } & BindingOmit<CfR2Bucket>)
-	| ({ type: "d1" } & Omit<CfD1Database, "binding">)
-	| ({ type: "vectorize" } & Omit<CfVectorize, "binding">)
-	| ({ type: "hyperdrive" } & Omit<CfHyperdrive, "binding">)
-	| ({ type: "service" } & Omit<CfService, "binding">)
+	| ({ type: "d1" } & BindingOmit<CfD1Database>)
+	| ({ type: "vectorize" } & BindingOmit<CfVectorize>)
+	| ({ type: "hyperdrive" } & BindingOmit<CfHyperdrive>)
+	| ({ type: "service" } & BindingOmit<CfService>)
 	| { type: "fetcher"; fetcher: ServiceFetch }
-	| ({ type: "analytics_engine" } & Omit<CfAnalyticsEngineDataset, "binding">)
-	| ({ type: "dispatch_namespace" } & Omit<CfDispatchNamespace, "binding">)
-	| ({ type: "mtls_certificate" } & Omit<CfMTlsCertificate, "binding">)
-	| ({ type: "pipeline" } & Omit<CfPipeline, "binding">)
+	| ({ type: "analytics_engine" } & BindingOmit<CfAnalyticsEngineDataset>)
+	| ({ type: "dispatch_namespace" } & BindingOmit<CfDispatchNamespace>)
+	| ({ type: "mtls_certificate" } & BindingOmit<CfMTlsCertificate>)
+	| ({ type: "pipeline" } & BindingOmit<CfPipeline>)
 	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
 	| { type: `unsafe_${string}` }
 	| { type: "assets" };

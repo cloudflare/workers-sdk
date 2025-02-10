@@ -5,7 +5,7 @@ import {
 	NotModifiedResponse,
 	OkResponse,
 	TemporaryRedirectResponse,
-} from "./responses";
+} from "../../utils/responses";
 import { getHeaders } from "./utils/headers";
 import type { AssetConfig } from "../../utils/types";
 import type EntrypointType from "./index";
@@ -27,7 +27,15 @@ export const handleRequest = async (
 	const intent = await getIntent(decodedPathname, configuration, exists);
 
 	if (!intent) {
-		return new NotFoundResponse();
+		return env.JAEGER.enterSpan("no_intent", (span) => {
+			span.setTags({
+				decodedPathname,
+				configuration: JSON.stringify(configuration),
+				status: 404,
+			});
+
+			return new NotFoundResponse();
+		});
 	}
 
 	// if there was a POST etc. to a route without an asset
@@ -35,7 +43,14 @@ export const handleRequest = async (
 	// so prioritise returning a 404 over 405?
 	const method = request.method.toUpperCase();
 	if (!["GET", "HEAD"].includes(method)) {
-		return new MethodNotAllowedResponse();
+		return env.JAEGER.enterSpan("method_not_allowed", (span) => {
+			span.setTags({
+				method,
+				status: 405,
+			});
+
+			return new MethodNotAllowedResponse();
+		});
 	}
 
 	const decodedDestination = intent.redirect ?? decodedPathname;
@@ -47,11 +62,29 @@ export const handleRequest = async (
 	 * We combine this with other redirects (e.g. for html_handling) to avoid multiple redirects.
 	 */
 	if ((encodedDestination !== pathname && intent.asset) || intent.redirect) {
-		return new TemporaryRedirectResponse(encodedDestination + search);
+		return env.JAEGER.enterSpan("redirect", (span) => {
+			span.setTags({
+				originalPath: pathname,
+				location:
+					encodedDestination !== pathname
+						? encodedDestination
+						: intent.redirect ?? "<unknown>",
+				status: 307,
+			});
+
+			return new TemporaryRedirectResponse(encodedDestination + search);
+		});
 	}
 
 	if (!intent.asset) {
-		return new InternalServerErrorResponse(new Error("Unknown action"));
+		return env.JAEGER.enterSpan("unknown_action", (span) => {
+			span.setTags({
+				pathname,
+				status: 500,
+			});
+
+			return new InternalServerErrorResponse(new Error("Unknown action"));
+		});
 	}
 
 	const asset = await env.JAEGER.enterSpan("getByETag", async (span) => {
@@ -70,16 +103,31 @@ export const handleRequest = async (
 	const weakETag = `W/${strongETag}`;
 	const ifNoneMatch = request.headers.get("If-None-Match") || "";
 	if ([weakETag, strongETag].includes(ifNoneMatch)) {
-		return new NotModifiedResponse(null, { headers });
+		return env.JAEGER.enterSpan("matched_etag", (span) => {
+			span.setTags({
+				matchedEtag: ifNoneMatch,
+				status: 304,
+			});
+
+			return new NotModifiedResponse(null, { headers });
+		});
 	}
 
-	const body = method === "HEAD" ? null : asset.readableStream;
-	switch (intent.asset.status) {
-		case 404:
-			return new NotFoundResponse(body, { headers });
-		case 200:
-			return new OkResponse(body, { headers });
-	}
+	return env.JAEGER.enterSpan("response", (span) => {
+		span.setTags({
+			etag: intent.asset.eTag,
+			status: intent.asset.status,
+			head: method === "HEAD",
+		});
+
+		const body = method === "HEAD" ? null : asset.readableStream;
+		switch (intent.asset.status) {
+			case 404:
+				return new NotFoundResponse(body, { headers });
+			case 200:
+				return new OkResponse(body, { headers });
+		}
+	});
 };
 
 type Intent =
@@ -90,6 +138,7 @@ type Intent =
 	| { asset: null; redirect: string }
 	| null;
 
+// TODO: Trace this
 export const getIntent = async (
 	pathname: string,
 	configuration: Required<AssetConfig>,

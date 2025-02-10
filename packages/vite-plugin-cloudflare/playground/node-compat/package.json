@@ -34,13 +34,13 @@
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20241230.0",
+		"@cloudflare/workers-types": "^4.20250204.0",
 		"@types/node": "catalog:vite-plugin",
 		"@types/pg": "^8.11.2",
 		"cross-fetch": "^4.0.0",
 		"pg": "^8.13.0",
 		"pg-cloudflare": "^1.1.1",
-		"typescript": "catalog:vite-plugin",
+		"typescript": "catalog:default",
 		"vite": "catalog:vite-plugin",
 		"wrangler": "catalog:vite-plugin"
 	}

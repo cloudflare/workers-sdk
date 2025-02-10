@@ -746,6 +746,21 @@ export interface EnvironmentNonInheritable {
 		| undefined;
 
 	/**
+	 * Binding to Cloudflare Images
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default {}
+	 * @nonInheritable
+	 */
+	images:
+		| {
+				binding: string;
+		  }
+		| undefined;
+
+	/**
 	 * Binding to the Worker Version's metadata
 	 */
 	version_metadata:
@@ -996,9 +1011,12 @@ export type Assets = {
 	/** How to handle requests that do not match an asset. */
 	not_found_handling?: "single-page-application" | "404-page" | "none";
 	/**
-	 * If true, then respond to requests that match an asset with that asset directly.
-	 * If false, route every request to the User Worker, whether or not it matches an asset.
+	 * If true, route every request to the User Worker, whether or not it matches an asset.
+	 * If false, then respond to requests that match an asset with that asset directly.
 	 * */
+	run_worker_first?: boolean;
+
+	/** Deprecated; Inverse of run_worker_first. Should use run_worker_first instead */
 	experimental_serve_directly?: boolean;
 };
 

@@ -321,6 +321,7 @@ describe("metrics", () => {
 						durationSeconds: 6,
 						durationMinutes: 0.1,
 						errorType: "TypeError",
+						errorMessage: undefined,
 					},
 				};
 
@@ -443,6 +444,34 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(2);
 				expect(std.debug).toContain('"isInteractive":false,');
+			});
+
+			it("should include an error message if the specific error has been allow-listed with {telemetryMessage:true}", async () => {
+				setIsTTY(false);
+				const requests = mockMetricRequest();
+
+				await expect(
+					runWrangler("docs arg -j=false")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Wrangler now supports wrangler.json configuration files by default and ignores the value of the \`--experimental-json-config\` flag.]`
+				);
+				expect(requests.count).toBe(2);
+				expect(std.debug).toContain(
+					'"errorMessage":"Wrangler now supports wrangler.json configuration files by default and ignores the value of the `--experimental-json-config` flag."'
+				);
+			});
+
+			it("should include an error message if the specific error has been allow-listed with a custom telemetry message", async () => {
+				setIsTTY(false);
+				const requests = mockMetricRequest();
+
+				await expect(
+					runWrangler("bloop")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Unknown argument: bloop]`
+				);
+				expect(requests.count).toBe(2);
+				expect(std.debug).toContain('"errorMessage":"yargs validation error"');
 			});
 
 			describe("banner", () => {

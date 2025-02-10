@@ -157,7 +157,9 @@ async function matchFiles(
 					continue;
 				}
 				const absoluteFilePath = path.join(relativeTo, filePath);
-				const fileContent = await readFile(absoluteFilePath);
+				const fileContent = (await readFile(
+					absoluteFilePath
+				)) as Buffer<ArrayBuffer>;
 
 				const module = {
 					name: filePath,

@@ -62,6 +62,7 @@ export type WorkerMetadataBinding =
 	| { type: "text_blob"; name: string; part: string }
 	| { type: "browser"; name: string }
 	| { type: "ai"; name: string; staging?: boolean }
+	| { type: "images"; name: string }
 	| { type: "version_metadata"; name: string }
 	| { type: "data_blob"; name: string; part: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string }
@@ -193,10 +194,17 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		observability,
 	} = worker;
 
+	let runWorkerFirst = undefined;
+	if (assets?.assetConfig?.run_worker_first !== undefined) {
+		runWorkerFirst = assets.assetConfig?.run_worker_first;
+	} else if (assets?.assetConfig?.serve_directly !== undefined) {
+		runWorkerFirst = !assets?.assetConfig?.serve_directly;
+	}
+
 	const assetConfig = {
 		html_handling: assets?.assetConfig?.html_handling,
 		not_found_handling: assets?.assetConfig?.not_found_handling,
-		serve_directly: assets?.assetConfig?.serve_directly,
+		run_worker_first: runWorkerFirst,
 	};
 
 	// short circuit if static assets upload only
@@ -441,6 +449,13 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			name: bindings.ai.binding,
 			staging: bindings.ai.staging,
 			type: "ai",
+		});
+	}
+
+	if (bindings.images !== undefined) {
+		metadataBindings.push({
+			name: bindings.images.binding,
+			type: "images",
 		});
 	}
 

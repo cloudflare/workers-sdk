@@ -2302,6 +2302,69 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		// Images
+		describe("[images]", () => {
+			it("should error if images is an array", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ images: [] } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"images\\" should be an object but got []."
+		`);
+			});
+
+			it("should error if images is a string", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ images: "BAD" } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"images\\" should be an object but got \\"BAD\\"."
+		`);
+			});
+
+			it("should error if images is a number", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ images: 999 } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"images\\" should be an object but got 999."
+		`);
+			});
+
+			it("should error if ai is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ images: null } as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"images\\" should be an object but got null."
+		`);
+			});
+		});
+
 		// Worker Version Metadata
 		describe("[version_metadata]", () => {
 			it("should error if version_metadata is an array", () => {
@@ -6331,6 +6394,154 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(result2.config).toEqual(expect.objectContaining(environment2));
 				expect(result2.diagnostics.hasErrors()).toBe(false);
 				expect(result2.diagnostics.hasWarnings()).toBe(false);
+			});
+		});
+
+		describe("[assets]", () => {
+			it("should inherit from top-level assets", () => {
+				const rawConfig: RawConfig = {
+					assets: {
+						directory: "dist",
+						binding: "ASSETS",
+					},
+					env: {
+						ENV1: {},
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(config).toEqual(
+					expect.objectContaining({
+						assets: {
+							directory: "dist",
+							binding: "ASSETS",
+						},
+					})
+				);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should resolve assets in named env with top-level env also including assets", () => {
+				const rawConfig: RawConfig = {
+					assets: {
+						directory: "dist",
+						binding: "ASSETS",
+					},
+					env: {
+						ENV1: {
+							assets: {
+								directory: "public",
+								binding: "ASSETS",
+								run_worker_first: true,
+							},
+						},
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(config).toEqual(
+					expect.objectContaining({
+						assets: {
+							directory: "public",
+							binding: "ASSETS",
+							run_worker_first: true,
+						},
+					})
+				);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(false);
+			});
+
+			it("should warn about experimental_serve_directly deprecation from inherited top-level env", () => {
+				const rawConfig: RawConfig = {
+					assets: {
+						directory: "dist",
+						binding: "ASSETS",
+						experimental_serve_directly: false,
+					},
+					env: {
+						ENV1: {},
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(config).toEqual(
+					expect.objectContaining({
+						assets: {
+							directory: "dist",
+							binding: "ASSETS",
+							experimental_serve_directly: false,
+						},
+					})
+				);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - [1mDeprecation[0m: \\"assets.experimental_serve_directly\\":
+					    The \\"experimental_serve_directly\\" field is not longer supported. Please use run_worker_first.
+					    Read more: https://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first"
+				`);
+			});
+
+			it("should warn about experimental_serve_directly deprecation from named env", () => {
+				const rawConfig: RawConfig = {
+					env: {
+						ENV1: {
+							assets: {
+								directory: "dist",
+								binding: "ASSETS",
+								experimental_serve_directly: false,
+							},
+						},
+					},
+				};
+
+				const { config, diagnostics } = normalizeAndValidateConfig(
+					rawConfig,
+					undefined,
+					undefined,
+					{ env: "ENV1" }
+				);
+
+				expect(config).toEqual(
+					expect.objectContaining({
+						assets: {
+							directory: "dist",
+							binding: "ASSETS",
+							experimental_serve_directly: false,
+						},
+					})
+				);
+				expect(diagnostics.hasErrors()).toBe(false);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+
+					  - \\"env.ENV1\\" environment configuration
+					    - [1mDeprecation[0m: \\"assets.experimental_serve_directly\\":
+					      The \\"experimental_serve_directly\\" field is not longer supported. Please use run_worker_first.
+					      Read more: https://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first"
+				`);
 			});
 		});
 	});

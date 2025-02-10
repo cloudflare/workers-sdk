@@ -98,7 +98,8 @@ export async function deleteHandler(args: DeleteArgs) {
 	if (config.pages_build_output_dir) {
 		throw new UserError(
 			"It looks like you've run a Workers-specific command in a Pages project.\n" +
-				"For Pages, please run `wrangler pages project delete` instead."
+				"For Pages, please run `wrangler pages project delete` instead.",
+			{ telemetryMessage: true }
 		);
 	}
 	metrics.sendMetricsEvent(
@@ -112,7 +113,11 @@ export async function deleteHandler(args: DeleteArgs) {
 	const scriptName = getScriptName(args, config);
 	if (!scriptName) {
 		throw new UserError(
-			`A worker name must be defined, either via --name, or in your ${configFileName(config.configPath)} file`
+			`A worker name must be defined, either via --name, or in your ${configFileName(config.configPath)} file`,
+			{
+				telemetryMessage:
+					"`A worker name must be defined, either via --name, or in your config file",
+			}
 		);
 	}
 

@@ -1,5 +1,7 @@
 import { brandColor, dim } from "@cloudflare/cli/colors";
+import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
+import { readFile, writeFile } from "helpers/files";
 import { installPackages } from "helpers/packages";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
@@ -19,7 +21,7 @@ const generate = async (ctx: C3Context) => {
 
 const configure = async () => {
 	const packages = [
-		"@opennextjs/cloudflare@0.3.x",
+		"@opennextjs/cloudflare@0.4.x",
 		"@cloudflare/workers-types",
 	];
 	await installPackages(packages, {
@@ -27,6 +29,29 @@ const configure = async () => {
 		startText: "Adding the Cloudflare adapter",
 		doneText: `${brandColor(`installed`)} ${dim(packages.join(", "))}`,
 	});
+
+	updateNextConfig();
+};
+
+const updateNextConfig = () => {
+	const s = spinner();
+
+	const configFile = "next.config.mjs";
+	s.start(`Updating \`${configFile}\``);
+
+	const configContent = readFile(configFile);
+
+	const updatedConfigFile =
+		configContent +
+		`
+		// added by create cloudflare to enable calling \`getCloudflareContext()\` in \`next dev\`
+		import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare';
+		initOpenNextCloudflareForDev();
+		`.replace(/\n\t*/g, "\n");
+
+	writeFile(configFile, updatedConfigFile);
+
+	s.stop(`${brandColor(`updated`)} ${dim(`\`${configFile}\``)}`);
 };
 
 export default {

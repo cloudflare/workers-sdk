@@ -5,7 +5,6 @@ import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
 import { getBoundRegisteredWorkers } from "../../../dev-registry";
 import { getClassNamesWhichUseSQLite } from "../../../dev/class-names-sqlite";
-import { getVarsForDev } from "../../../dev/dev-vars";
 import {
 	buildAssetOptions,
 	buildMiniflareBindingOptions,
@@ -118,16 +117,11 @@ export async function getPlatformProxy<
 
 	const bindings: Env = await mf.getBindings();
 
-	const vars = getVarsForDev(rawConfig, env);
-
 	const cf = await mf.getCf();
 	deepFreeze(cf);
 
 	return {
-		env: {
-			...vars,
-			...bindings,
-		},
+		env: bindings,
 		cf: cf as CfProperties,
 		ctx: new ExecutionContext(),
 		caches: new CacheStorage(),
@@ -156,6 +150,7 @@ async function getMiniflareOptionsFromConfig(
 		services: rawConfig.services,
 		serviceBindings: {},
 		migrations: rawConfig.migrations,
+		imagesLocalMode: false,
 	});
 
 	const persistOptions = getMiniflarePersistOptions(options.persist);
@@ -249,7 +244,8 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string
 ): Unstable_MiniflareWorkerOptions;
 export function unstable_getMiniflareWorkerOptions(
-	config: Config
+	config: Config,
+	env?: string
 ): Unstable_MiniflareWorkerOptions;
 export function unstable_getMiniflareWorkerOptions(
 	configOrConfigPath: string | Config,
@@ -277,6 +273,7 @@ export function unstable_getMiniflareWorkerOptions(
 		services: [],
 		serviceBindings: {},
 		migrations: config.migrations,
+		imagesLocalMode: false,
 	});
 
 	// This function is currently only exported for the Workers Vitest pool.

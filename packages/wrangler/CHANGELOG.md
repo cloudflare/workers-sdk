@@ -1,5 +1,105 @@
 # wrangler
 
+## 3.107.3
+
+### Patch Changes
+
+- [#7378](https://github.com/cloudflare/workers-sdk/pull/7378) [`59c7c8e`](https://github.com/cloudflare/workers-sdk/commit/59c7c8ee177d9345948a416377c6625269d58925) Thanks [@IRCody](https://github.com/IRCody)! - Add build and push helper sub-commands under the cloudchamber command.
+
+- Updated dependencies []:
+  - miniflare@3.20250129.0
+
+## 3.107.2
+
+### Patch Changes
+
+- [#7988](https://github.com/cloudflare/workers-sdk/pull/7988) [`444a630`](https://github.com/cloudflare/workers-sdk/commit/444a6302f194150b0678da5b564cfd2de8a3dad6) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix #7985.
+
+  This reverts the changes on #7945 that caused compatibility issues with Node 16 due to the introduction of `sharp`.
+
+## 3.107.1
+
+### Patch Changes
+
+- [#7981](https://github.com/cloudflare/workers-sdk/pull/7981) [`e2b3306`](https://github.com/cloudflare/workers-sdk/commit/e2b3306e1721dbc0ba8e0eb2025a519b80adbd01) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Fixes a regression introduced in Wrangler 3.107.0 in which `[assets]` was not being inherited from the top-level environment.
+
+- Updated dependencies [[`ab49886`](https://github.com/cloudflare/workers-sdk/commit/ab498862b96551774f601403d3e93d2105a18a91)]:
+  - miniflare@3.20250129.0
+
+## 3.107.0
+
+### Minor Changes
+
+- [#7897](https://github.com/cloudflare/workers-sdk/pull/7897) [`34f9797`](https://github.com/cloudflare/workers-sdk/commit/34f9797822836b98edc4d8ddc6e2fb0ab322b864) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - chore: provides `run_worker_first` for Worker-script-first configuration. Deprecates `experimental_serve_directly`.
+
+### Patch Changes
+
+- [#7945](https://github.com/cloudflare/workers-sdk/pull/7945) [`d758215`](https://github.com/cloudflare/workers-sdk/commit/d7582150a5dc6568ac1d1ebcdf24667c83c6a5eb) Thanks [@ns476](https://github.com/ns476)! - Add Images binding (in private beta for the time being)
+
+- [#7947](https://github.com/cloudflare/workers-sdk/pull/7947) [`f57bc4e`](https://github.com/cloudflare/workers-sdk/commit/f57bc4e059b19334783f8f8f7d46c5a710a589ae) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: avoid `getPlatformProxy` logging twice that it is using vars defined in `.dev.vars` files
+
+  when `getPlatformProxy` is called and it retrieves values from `.dev.vars` files, it logs twice
+  a message like: `Using vars defined in .dev.vars`, the changes here make sure that in such cases
+  this log only appears once
+
+- [#7889](https://github.com/cloudflare/workers-sdk/pull/7889) [`38db4ed`](https://github.com/cloudflare/workers-sdk/commit/38db4ed4de3bed0b4c33d23ee035882a71fbb26b) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: add experimental resource auto-provisioning to versions upload
+
+- [#7864](https://github.com/cloudflare/workers-sdk/pull/7864) [`de6fa18`](https://github.com/cloudflare/workers-sdk/commit/de6fa1846ac793a86356a319a09482f08819b632) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update the `unstable_getMiniflareWorkerOptions` types to always include an `env` parameter.
+
+  The `unstable_getMiniflareWorkerOptions` types, when accepting a config object as the first argument,
+  didn't accept a second `env` argument. The changes here make sure they do, since the `env` is still
+  relevant for picking up variables from `.dev.vars` files.
+
+- [#7964](https://github.com/cloudflare/workers-sdk/pull/7964) [`bc4d6c8`](https://github.com/cloudflare/workers-sdk/commit/bc4d6c8d25f40308231e9109dc643df68bc72b52) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Fix scripts binding to a workflow in a different script overriding workflow config
+
+- Updated dependencies [[`cf4f47a`](https://github.com/cloudflare/workers-sdk/commit/cf4f47a8af2dc476f8a0e61f0d22f080f191de1f)]:
+  - miniflare@3.20250124.1
+
+## 3.106.0
+
+### Minor Changes
+
+- [#7856](https://github.com/cloudflare/workers-sdk/pull/7856) [`2b6f149`](https://github.com/cloudflare/workers-sdk/commit/2b6f1496685b23b6734c3001db49d3086005582e) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: add sanitised error messages to Wrangler telemetry
+
+  Error messages that have been audited for potential inclusion of personal information, and explicitly opted-in, are now included in Wrangler's telemetry collection. Collected error messages will not include any filepaths, user input or any other potentially private content.
+
+- [#7900](https://github.com/cloudflare/workers-sdk/pull/7900) [`bd9228e`](https://github.com/cloudflare/workers-sdk/commit/bd9228e855c25b2f5d94e298d6d1128484019f83) Thanks [@vicb](https://github.com/vicb)! - chore(wrangler): update unenv dependency version
+
+  `unenv@2.0.0-rc.1` allows using the workerd implementation for
+  the Node modules `net`, `timers`, and `timers/promises`.
+  See `unjs/unenv#396`.
+
+### Patch Changes
+
+- [#7904](https://github.com/cloudflare/workers-sdk/pull/7904) [`50b13f6`](https://github.com/cloudflare/workers-sdk/commit/50b13f60af0eac176a000caf7cc799b21fe3f3c5) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: validation for R2 bucket names, the regex was wrongly rejecting buckets starting with a number and the message wasn't as clear as it could be on what was going wrong.
+
+- [#7895](https://github.com/cloudflare/workers-sdk/pull/7895) [`134d61d`](https://github.com/cloudflare/workers-sdk/commit/134d61d97bb96337220e530f4af2ec2c8236f383) Thanks [@jahands](https://github.com/jahands)! - Fix regression in retryOnAPIFailure preventing any requests from being retried
+
+  Also fixes a regression in pipelines that prevented 401 errors from being retried when waiting for an API token to become active.
+
+- [#7879](https://github.com/cloudflare/workers-sdk/pull/7879) [`5c02e46`](https://github.com/cloudflare/workers-sdk/commit/5c02e46c89cce24d81d696173b0e52ce04a8ba59) Thanks [@andyjessop](https://github.com/andyjessop)! - Fix to not require local connection string when using Hyperdrive and wrangler dev --remote
+
+- [#7860](https://github.com/cloudflare/workers-sdk/pull/7860) [`13ab591`](https://github.com/cloudflare/workers-sdk/commit/13ab5916058e8e834f3e13fb9b5b9d9addc0f930) Thanks [@vicb](https://github.com/vicb)! - refactor(wrangler): make JSON parsing independent of Node
+
+  Switch `jsonc-parser` to parse json:
+
+  - `JSON.parse()` exception messages are not stable across Node versions
+  - While `jsonc-parser` is used, JSONC specific syntax is disabled
+
+- Updated dependencies []:
+  - miniflare@3.20250124.0
+
+## 3.105.1
+
+### Patch Changes
+
+- [#7884](https://github.com/cloudflare/workers-sdk/pull/7884) [`fd5a455`](https://github.com/cloudflare/workers-sdk/commit/fd5a45520e92e0fe60c457a6ae54caef67d7bbcf) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: make experiemntal auto-provisioning non-interactive by default.
+
+- [#7811](https://github.com/cloudflare/workers-sdk/pull/7811) [`7d138d9`](https://github.com/cloudflare/workers-sdk/commit/7d138d92c3cbfb84bccb84a3e93f41ad5549d604) Thanks [@joshthoward](https://github.com/joshthoward)! - Fix RPC method invocations showing up as unknown events
+
+- Updated dependencies [[`40f89a9`](https://github.com/cloudflare/workers-sdk/commit/40f89a90d93f57294e49a6b5ed8ba8cc38e0da77)]:
+  - miniflare@3.20250124.0
+
 ## 3.105.0
 
 ### Minor Changes

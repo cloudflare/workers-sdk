@@ -200,7 +200,9 @@ export function createModuleCollector(props: {
 								props.wrangler1xLegacyModuleReferences!.rootDirectory,
 								args.path
 							);
-							const fileContent = await readFile(filePath);
+							const fileContent = (await readFile(
+								filePath
+							)) as Buffer<ArrayBuffer>;
 							const fileHash = crypto
 								.createHash("sha1")
 								.update(fileContent)
@@ -296,7 +298,9 @@ export function createModuleCollector(props: {
 
 								// Finally, load the file and hash it
 								// If we didn't do any smart resolution above, this will attempt to load as an absolute path
-								const fileContent = await readFile(filePath);
+								const fileContent = (await readFile(
+									filePath
+								)) as Buffer<ArrayBuffer>;
 								const fileHash = crypto
 									.createHash("sha1")
 									.update(fileContent)

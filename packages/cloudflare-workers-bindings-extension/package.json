@@ -1,7 +1,7 @@
 {
 	"name": "cloudflare-workers-bindings-extension",
 	"displayName": "Cloudflare Workers",
-	"version": "0.0.9",
+	"version": "0.0.10",
 	"private": true,
 	"description": "Manage your Cloudflare Worker's bindings",
 	"categories": [
@@ -36,7 +36,13 @@
 			{
 				"command": "cloudflare-workers-bindings.addBinding",
 				"title": "Cloudflare Workers: Add binding",
-				"icon": "$(add)"
+				"icon": "$(add)",
+				"enablement": "!ext.unsupportedWrangler"
+			},
+			{
+				"command": "cloudflare-workers-bindings.openDocs",
+				"title": "Cloudflare Workers: Open Documentation",
+				"icon": "$(book)"
 			}
 		],
 		"jsonValidation": [
@@ -57,10 +63,22 @@
 					"when": "view == cloudflare-workers-bindings",
 					"group": "navigation"
 				}
+			],
+			"view/item/context": [
+				{
+					"command": "cloudflare-workers-bindings.openDocs",
+					"when": "view == cloudflare-workers-bindings && viewItem == binding",
+					"group": "inline"
+				}
 			]
 		},
 		"views": {
 			"cloudflare-workers": [
+				{
+					"type": "webview",
+					"id": "cloudflare-workers-bindings.home",
+					"name": "Home"
+				},
 				{
 					"id": "cloudflare-workers-bindings",
 					"name": "Bindings",
@@ -81,7 +99,13 @@
 		"viewsWelcome": [
 			{
 				"view": "cloudflare-workers-bindings",
-				"contents": "Welcome to Cloudflare Workers! [Learn more](https://workers.cloudflare.com).\n[Add a binding](command:cloudflare-workers-bindings.addBinding)"
+				"contents": "Welcome to Cloudflare Workers! [Learn more](https://workers.cloudflare.com).\n[Add a binding](command:cloudflare-workers-bindings.addBinding)",
+				"when": "!ext.unsupportedWrangler"
+			},
+			{
+				"view": "cloudflare-workers-bindings",
+				"contents": "Please upgrade Wrangler to at least 3.99.0 in order to use the Cloudflare Workers Extension. You can install the latest Wrangler version by running `npm i wrangler@latest`",
+				"when": "ext.unsupportedWrangler"
 			}
 		]
 	},

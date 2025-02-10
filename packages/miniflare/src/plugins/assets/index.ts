@@ -39,7 +39,9 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			{
 				// binding between User Worker and Asset Worker
 				name: options.assets.binding,
-				service: { name: ASSETS_SERVICE_NAME },
+				service: {
+					name: `${ASSETS_SERVICE_NAME}:${options.assets.workerName}`,
+				},
 			},
 		];
 	},
@@ -68,8 +70,10 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			options.assets.directory
 		);
 
+		const id = options.assets.workerName;
+
 		const namespaceService: Service = {
-			name: ASSETS_KV_SERVICE_NAME,
+			name: `${ASSETS_KV_SERVICE_NAME}:${id}`,
 			worker: {
 				compatibilityDate: "2023-07-24",
 				compatibilityFlags: ["nodejs_compat"],
@@ -93,7 +97,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		};
 
 		const assetService: Service = {
-			name: ASSETS_SERVICE_NAME,
+			name: `${ASSETS_SERVICE_NAME}:${id}`,
 			worker: {
 				compatibilityDate: "2024-08-01",
 				modules: [
@@ -105,7 +109,9 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 				bindings: [
 					{
 						name: "ASSETS_KV_NAMESPACE",
-						kvNamespace: { name: ASSETS_KV_SERVICE_NAME },
+						kvNamespace: {
+							name: `${ASSETS_KV_SERVICE_NAME}:${id}`,
+						},
 					},
 					{
 						name: "ASSETS_MANIFEST",
@@ -120,7 +126,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		};
 
 		const routerService: Service = {
-			name: ROUTER_SERVICE_NAME,
+			name: `${ROUTER_SERVICE_NAME}:${id}`,
 			worker: {
 				compatibilityDate: "2024-08-01",
 				modules: [
@@ -132,11 +138,13 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 				bindings: [
 					{
 						name: "ASSET_WORKER",
-						service: { name: ASSETS_SERVICE_NAME },
+						service: {
+							name: `${ASSETS_SERVICE_NAME}:${id}`,
+						},
 					},
 					{
 						name: "USER_WORKER",
-						service: { name: getUserServiceName(options.assets.workerName) },
+						service: { name: getUserServiceName(id) },
 					},
 					{
 						name: "CONFIG",
@@ -305,7 +313,7 @@ const encodeManifest = (manifest: ManifestEntry[]) => {
 	return assetManifestBytes;
 };
 
-const bytesToHex = (buffer: ArrayBufferLike) => {
+const bytesToHex = (buffer: Uint8Array<ArrayBuffer>) => {
 	return [...new Uint8Array(buffer)]
 		.map((b) => b.toString(16).padStart(2, "0"))
 		.join("");
@@ -314,6 +322,9 @@ const bytesToHex = (buffer: ArrayBufferLike) => {
 const hashPath = async (path: string) => {
 	const encoder = new TextEncoder();
 	const data = encoder.encode(path);
-	const hashBuffer = await crypto.subtle.digest("SHA-256", data.buffer);
+	const hashBuffer = await crypto.subtle.digest(
+		"SHA-256",
+		data.buffer as ArrayBuffer
+	);
 	return new Uint8Array(hashBuffer, 0, PATH_HASH_SIZE);
 };

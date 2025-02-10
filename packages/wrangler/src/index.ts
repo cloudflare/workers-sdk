@@ -139,7 +139,14 @@ import {
 	r2BucketSippyGetCommand,
 	r2BucketSippyNamespace,
 } from "./r2/sippy";
-import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
+import {
+	secretBulkAlias,
+	secretBulkCommand,
+	secretDeleteCommand,
+	secretListCommand,
+	secretNamespace,
+	secretPutCommand,
+} from "./secret";
 import {
 	addBreadcrumb,
 	captureGlobalException,
@@ -206,7 +213,9 @@ export function createCLIParser(argv: string[]) {
 			if (!error || error.name === "YError") {
 				// If there is no error or the error is a "YError", then this came from yargs own validation
 				// Wrap it in a `CommandLineArgsError` so that we can handle it appropriately further up.
-				error = new CommandLineArgsError(msg);
+				error = new CommandLineArgsError(msg, {
+					telemetryMessage: "yargs validation error",
+				});
 			}
 			throw error;
 		})
@@ -237,7 +246,8 @@ export function createCLIParser(argv: string[]) {
 		)
 		.option("env", {
 			alias: "e",
-			describe: "Environment to use for operations and .env files",
+			describe:
+				"Environment to use for operations, and for selecting .env and .dev.vars files",
 			type: "string",
 			requiresArg: true,
 		})
@@ -253,7 +263,8 @@ export function createCLIParser(argv: string[]) {
 		.check((args) => {
 			if (args["experimental-json-config"] === false) {
 				throw new CommandLineArgsError(
-					`Wrangler now supports wrangler.json configuration files by default and ignores the value of the \`--experimental-json-config\` flag.`
+					`Wrangler now supports wrangler.json configuration files by default and ignores the value of the \`--experimental-json-config\` flag.`,
+					{ telemetryMessage: true }
 				);
 			}
 			return true;
@@ -477,13 +488,15 @@ export function createCLIParser(argv: string[]) {
 	registry.registerNamespace("tail");
 
 	// secret
-	wrangler.command(
-		"secret",
-		"🤫 Generate a secret that can be referenced in a Worker",
-		(secretYargs) => {
-			return secret(secretYargs.command(subHelp));
-		}
-	);
+	registry.define([
+		{ command: "wrangler secret", definition: secretNamespace },
+		{ command: "wrangler secret put", definition: secretPutCommand },
+		{ command: "wrangler secret delete", definition: secretDeleteCommand },
+		{ command: "wrangler secret list", definition: secretListCommand },
+		{ command: "wrangler secret bulk", definition: secretBulkCommand },
+		{ command: "wrangler secret:bulk", definition: secretBulkAlias },
+	]);
+	registry.registerNamespace("secret");
 
 	// types
 	registry.define([{ command: "wrangler types", definition: typesCommand }]);
@@ -913,14 +926,6 @@ export function createCLIParser(argv: string[]) {
 		subdomainHandler
 	);
 
-	// [DEPRECATED] secret:bulk
-	wrangler.command(
-		"secret:bulk [json]",
-		false,
-		secretBulkOptions,
-		secretBulkHandler
-	);
-
 	// [DEPRECATED] generate
 	wrangler.command(
 		"generate [name] [template]",
@@ -1142,6 +1147,7 @@ export async function main(argv: string[]): Promise<void> {
 				durationMinutes: durationMs / 1000 / 60,
 				errorType:
 					errorType ?? (e instanceof Error ? e.constructor.name : undefined),
+				errorMessage: e instanceof UserError ? e.telemetryMessage : undefined,
 			},
 			argv
 		);

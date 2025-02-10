@@ -3,7 +3,12 @@ import readline from "node:readline";
 import { parse as dotenvParse } from "dotenv";
 import { FormData } from "undici";
 import { fetchResult } from "../cfetch";
-import { configFileName, readConfig } from "../config";
+import { configFileName } from "../config";
+import {
+	createAlias,
+	createCommand,
+	createNamespace,
+} from "../core/create-command";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { confirm, prompt } from "../dialogs";
 import { FatalError, UserError } from "../errors";
@@ -14,13 +19,8 @@ import { requireAuth } from "../user";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
-import { printWranglerBanner } from "../wrangler-banner";
 import type { Config } from "../config";
 import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 
 export const VERSION_NOT_DEPLOYED_ERR_CODE = 10215;
 
@@ -97,6 +97,7 @@ async function createDraftWorker({
 					wasm_modules: {},
 					browser: undefined,
 					ai: undefined,
+					images: undefined,
 					version_metadata: undefined,
 					text_blobs: {},
 					data_blobs: {},
@@ -128,395 +129,409 @@ async function createDraftWorker({
 		}
 	);
 }
-
-export const secret = (secretYargs: CommonYargsArgv) => {
-	return secretYargs
-		.option("legacy-env", {
-			type: "boolean",
-			describe: "Use legacy environments",
-			hidden: true,
-		})
-		.command(
-			"put <key>",
-			"Create or update a secret variable for a Worker",
-			(yargs) => {
-				return yargs
-					.positional("key", {
-						describe: "The variable name to be accessible in the Worker",
-						type: "string",
-					})
-					.option("name", {
-						describe: "Name of the Worker",
-						type: "string",
-						requiresArg: true,
-					});
-			},
-			async (args) => {
-				await printWranglerBanner();
-				const config = readConfig(args);
-				if (config.pages_build_output_dir) {
-					throw new UserError(
-						"It looks like you've run a Workers-specific command in a Pages project.\n" +
-							"For Pages, please run `wrangler pages secret put` instead."
-					);
-				}
-
-				const scriptName = getLegacyScriptName(args, config);
-				if (!scriptName) {
-					throw new UserError(
-						`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``
-					);
-				}
-
-				const accountId = await requireAuth(config);
-
-				const isInteractive = process.stdin.isTTY;
-				const secretValue = trimTrailingWhitespace(
-					isInteractive
-						? await prompt("Enter a secret value:", { isSecret: true })
-						: await readFromStdin()
-				);
-
-				logger.log(
-					`🌀 Creating the secret for the Worker "${scriptName}" ${
-						args.env && !isLegacyEnv(config) ? `(${args.env})` : ""
-					}`
-				);
-
-				async function submitSecret() {
-					const url =
-						!args.env || isLegacyEnv(config)
-							? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
-							: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
-
-					try {
-						return await fetchResult(url, {
-							method: "PUT",
-							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({
-								name: args.key,
-								text: secretValue,
-								type: "secret_text",
-							}),
-						});
-					} catch (e) {
-						if (
-							e instanceof APIError &&
-							e.code === VERSION_NOT_DEPLOYED_ERR_CODE
-						) {
-							throw new UserError(
-								"Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed. " +
-									"Please ensure that the latest version of your Worker is fully deployed " +
-									"(wrangler versions deploy) before modifying secrets. " +
-									"Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version." +
-									"\n\nNote: This limitation will be addressed in an upcoming release."
-							);
-						} else {
-							throw e;
-						}
-					}
-				}
-
-				try {
-					await submitSecret();
-					metrics.sendMetricsEvent("create encrypted variable", {
-						sendMetrics: config.send_metrics,
-					});
-				} catch (e) {
-					if (isMissingWorkerError(e)) {
-						// create a draft worker and try again
-						const result = await createDraftWorker({
-							config,
-							args,
-							accountId,
-							scriptName,
-						});
-						if (result === null) {
-							return;
-						}
-						await submitSecret();
-						// TODO: delete the draft worker if this failed too?
-					} else {
-						throw e;
-					}
-				}
-
-				logger.log(`✨ Success! Uploaded secret ${args.key}`);
-			}
-		)
-		.command(
-			"delete <key>",
-			"Delete a secret variable from a Worker",
-			async (yargs) => {
-				return yargs
-					.positional("key", {
-						describe: "The variable name to be accessible in the Worker",
-						type: "string",
-					})
-					.option("name", {
-						describe: "Name of the Worker",
-						type: "string",
-						requiresArg: true,
-					});
-			},
-			async (args) => {
-				await printWranglerBanner();
-				const config = readConfig(args);
-				if (config.pages_build_output_dir) {
-					throw new UserError(
-						"It looks like you've run a Workers-specific command in a Pages project.\n" +
-							"For Pages, please run `wrangler pages secret delete` instead."
-					);
-				}
-
-				const scriptName = getLegacyScriptName(args, config);
-				if (!scriptName) {
-					throw new UserError(
-						`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``
-					);
-				}
-
-				const accountId = await requireAuth(config);
-
-				if (
-					await confirm(
-						`Are you sure you want to permanently delete the secret ${
-							args.key
-						} on the Worker ${scriptName}${
-							args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
-						}?`
-					)
-				) {
-					logger.log(
-						`🌀 Deleting the secret ${args.key} on the Worker ${scriptName}${
-							args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
-						}`
-					);
-
-					const url =
-						!args.env || isLegacyEnv(config)
-							? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
-							: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
-
-					await fetchResult(`${url}/${args.key}`, { method: "DELETE" });
-					metrics.sendMetricsEvent("delete encrypted variable", {
-						sendMetrics: config.send_metrics,
-					});
-					logger.log(`✨ Success! Deleted secret ${args.key}`);
-				}
-			}
-		)
-		.command(
-			"list",
-			"List all secrets for a Worker",
-			(yargs) => {
-				return yargs
-					.option("name", {
-						describe: "Name of the Worker",
-						type: "string",
-						requiresArg: true,
-					})
-					.option("format", {
-						default: "json",
-						choices: ["json", "pretty"],
-						describe: "The format to print the secrets in",
-					});
-			},
-			async (args) => {
-				const config = readConfig(args);
-				if (config.pages_build_output_dir) {
-					throw new UserError(
-						"It looks like you've run a Workers-specific command in a Pages project.\n" +
-							"For Pages, please run `wrangler pages secret list` instead."
-					);
-				}
-
-				const scriptName = getLegacyScriptName(args, config);
-				if (!scriptName) {
-					throw new UserError(
-						`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``
-					);
-				}
-
-				const accountId = await requireAuth(config);
-
-				const url =
-					!args.env || isLegacyEnv(config)
-						? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
-						: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
-
-				const secrets =
-					await fetchResult<{ name: string; type: string }[]>(url);
-
-				if (args.pretty) {
-					for (const workerSecret of secrets) {
-						logger.log(`Secret Name: ${workerSecret.name}\n`);
-					}
-				} else {
-					logger.log(JSON.stringify(secrets, null, "  "));
-				}
-
-				metrics.sendMetricsEvent("list encrypted variables", {
-					sendMetrics: config.send_metrics,
-				});
-			}
-		)
-		.command(
-			"bulk [json]",
-			"Bulk upload secrets for a Worker",
-			secretBulkOptions,
-			secretBulkHandler
-		);
-};
-
-// *** Secret Bulk Section Below ***
-/**
- * @description Options for the `secret bulk` command.
- */
-export const secretBulkOptions = (yargs: CommonYargsArgv) => {
-	return yargs
-		.positional("json", {
-			describe: `The file of key-value pairs to upload, as JSON in form {"key": value, ...} or .dev.vars file in the form KEY=VALUE`,
+export const secretNamespace = createNamespace({
+	metadata: {
+		description: "🤫 Generate a secret that can be referenced in a Worker",
+		status: "stable",
+		owner: "Workers: Deploy and Config",
+	},
+});
+export const secretPutCommand = createCommand({
+	metadata: {
+		description: "Create or update a secret variable for a Worker",
+		status: "stable",
+		owner: "Workers: Deploy and Config",
+	},
+	positionalArgs: ["key"],
+	args: {
+		key: {
+			describe: "The variable name to be accessible in the Worker",
 			type: "string",
-		})
-		.option("name", {
+			demandOption: true,
+		},
+		name: {
 			describe: "Name of the Worker",
 			type: "string",
 			requiresArg: true,
-		});
-};
+		},
+		"legacy-env": {
+			type: "boolean",
+			describe: "Use legacy environments",
+			hidden: true,
+		},
+	},
+	async handler(args, { config }) {
+		if (config.pages_build_output_dir) {
+			throw new UserError(
+				"It looks like you've run a Workers-specific command in a Pages project.\n" +
+					"For Pages, please run `wrangler pages secret put` instead."
+			);
+		}
 
-type SecretBulkArgs = StrictYargsOptionsToInterface<typeof secretBulkOptions>;
+		const scriptName = getLegacyScriptName(args, config);
+		if (!scriptName) {
+			throw new UserError(
+				`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``
+			);
+		}
 
-export const secretBulkHandler = async (secretBulkArgs: SecretBulkArgs) => {
-	await printWranglerBanner();
-	const config = readConfig(secretBulkArgs);
-	if (config.pages_build_output_dir) {
-		throw new UserError(
-			"It looks like you've run a Workers-specific command in a Pages project.\n" +
-				"For Pages, please run `wrangler pages secret bulk` instead."
+		const accountId = await requireAuth(config);
+
+		const isInteractive = process.stdin.isTTY;
+		const secretValue = trimTrailingWhitespace(
+			isInteractive
+				? await prompt("Enter a secret value:", { isSecret: true })
+				: await readFromStdin()
 		);
-	}
 
-	if (secretBulkArgs._.includes("secret:bulk")) {
-		logger.warn(
-			"`wrangler secret:bulk` is deprecated and will be removed in a future major version.\nPlease use `wrangler secret bulk` instead, which accepts exactly the same arguments."
+		logger.log(
+			`🌀 Creating the secret for the Worker "${scriptName}" ${
+				args.env && !isLegacyEnv(config) ? `(${args.env})` : ""
+			}`
 		);
-	}
 
-	const scriptName = getLegacyScriptName(secretBulkArgs, config);
-	if (!scriptName) {
-		const error = new UserError(
-			`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``
-		);
-		logger.error(error.message);
-		throw error;
-	}
+		async function submitSecret() {
+			const url =
+				!args.env || isLegacyEnv(config)
+					? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
+					: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
-	const accountId = await requireAuth(config);
-
-	logger.log(
-		`🌀 Creating the secrets for the Worker "${scriptName}" ${
-			secretBulkArgs.env && !isLegacyEnv(config)
-				? `(${secretBulkArgs.env})`
-				: ""
-		}`
-	);
-
-	const content = await parseBulkInputToObject(secretBulkArgs.json);
-
-	if (!content) {
-		return logger.error(`🚨 No content found in file, or piped input.`);
-	}
-
-	function getSettings() {
-		const url =
-			!secretBulkArgs.env || isLegacyEnv(config)
-				? `/accounts/${accountId}/workers/scripts/${scriptName}/settings`
-				: `/accounts/${accountId}/workers/services/${scriptName}/environments/${secretBulkArgs.env}/settings`;
-
-		return fetchResult<{
-			bindings: Array<WorkerMetadataBinding | SecretBindingRedacted>;
-		}>(url);
-	}
-
-	function putBindingsSettings(
-		bindings: Array<SecretBindingUpload | InheritBindingUpload>
-	) {
-		const url =
-			!secretBulkArgs.env || isLegacyEnv(config)
-				? `/accounts/${accountId}/workers/scripts/${scriptName}/settings`
-				: `/accounts/${accountId}/workers/services/${scriptName}/environments/${secretBulkArgs.env}/settings`;
-
-		const data = new FormData();
-		data.set("settings", JSON.stringify({ bindings }));
-		return fetchResult(url, {
-			method: "PATCH",
-			body: data,
-		});
-	}
-
-	let existingBindings: Array<WorkerMetadataBinding | SecretBindingRedacted>;
-	try {
-		const settings = await getSettings();
-		existingBindings = settings.bindings;
-	} catch (e) {
-		if (isMissingWorkerError(e)) {
-			// create a draft worker before patching
-			const result = await createDraftWorker({
-				config,
-				args: secretBulkArgs,
-				accountId,
-				scriptName,
-			});
-			if (result === null) {
-				return;
+			try {
+				return await fetchResult(url, {
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						name: args.key,
+						text: secretValue,
+						type: "secret_text",
+					}),
+				});
+			} catch (e) {
+				if (e instanceof APIError && e.code === VERSION_NOT_DEPLOYED_ERR_CODE) {
+					throw new UserError(
+						"Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed. " +
+							"Please ensure that the latest version of your Worker is fully deployed " +
+							"(wrangler versions deploy) before modifying secrets. " +
+							"Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version." +
+							"\n\nNote: This limitation will be addressed in an upcoming release."
+					);
+				} else {
+					throw e;
+				}
 			}
-			existingBindings = [];
-		} else {
-			throw e;
 		}
-	}
-	// any existing bindings can be "inherited" from the previous deploy via the PATCH settings api
-	// by just providing the "name" and "type" fields for the binding.
-	// so after fetching the bindings in the script settings, we can map over and just pick out those fields
-	const inheritBindings = existingBindings
-		.filter((binding) => {
-			// secrets that currently exist for the worker but are not provided for bulk update
-			// are inherited over with other binding types
-			return (
-				binding.type !== "secret_text" || content[binding.name] === undefined
+
+		try {
+			await submitSecret();
+			metrics.sendMetricsEvent("create encrypted variable", {
+				sendMetrics: config.send_metrics,
+			});
+		} catch (e) {
+			if (isMissingWorkerError(e)) {
+				// create a draft worker and try again
+				const result = await createDraftWorker({
+					config,
+					args,
+					accountId,
+					scriptName,
+				});
+				if (result === null) {
+					return;
+				}
+				await submitSecret();
+				// TODO: delete the draft worker if this failed too?
+			} else {
+				throw e;
+			}
+		}
+
+		logger.log(`✨ Success! Uploaded secret ${args.key}`);
+	},
+});
+
+export const secretDeleteCommand = createCommand({
+	metadata: {
+		description: "Delete a secret variable from a Worker",
+		status: "stable",
+		owner: "Workers: Deploy and Config",
+	},
+	positionalArgs: ["key"],
+	args: {
+		key: {
+			describe: "The variable name to be accessible in the Worker",
+			type: "string",
+			demandOption: true,
+		},
+		name: {
+			describe: "Name of the Worker",
+			type: "string",
+			requiresArg: true,
+		},
+		"legacy-env": {
+			type: "boolean",
+			describe: "Use legacy environments",
+			hidden: true,
+		},
+	},
+	async handler(args, { config }) {
+		if (config.pages_build_output_dir) {
+			throw new UserError(
+				"It looks like you've run a Workers-specific command in a Pages project.\n" +
+					"For Pages, please run `wrangler pages secret delete` instead."
 			);
-		})
-		.map((binding) => ({ type: binding.type, name: binding.name }));
-	// secrets to upload are provided as bindings in their full form
-	// so when we PATCH, we patch in [...current bindings, ...updated / new secrets]
-	const upsertBindings: Array<SecretBindingUpload> = Object.entries(
-		content
-	).map(([key, value]) => {
-		return {
-			type: "secret_text",
-			name: key,
-			text: value,
-		};
-	});
-	try {
-		await putBindingsSettings(inheritBindings.concat(upsertBindings));
-		for (const upsertedBinding of upsertBindings) {
+		}
+
+		const scriptName = getLegacyScriptName(args, config);
+		if (!scriptName) {
+			throw new UserError(
+				`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``
+			);
+		}
+
+		const accountId = await requireAuth(config);
+
+		if (
+			await confirm(
+				`Are you sure you want to permanently delete the secret ${
+					args.key
+				} on the Worker ${scriptName}${
+					args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
+				}?`
+			)
+		) {
 			logger.log(
-				`✨ Successfully created secret for key: ${upsertedBinding.name}`
+				`🌀 Deleting the secret ${args.key} on the Worker ${scriptName}${
+					args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
+				}`
+			);
+
+			const url =
+				!args.env || isLegacyEnv(config)
+					? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
+					: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
+
+			await fetchResult(`${url}/${args.key}`, { method: "DELETE" });
+			metrics.sendMetricsEvent("delete encrypted variable", {
+				sendMetrics: config.send_metrics,
+			});
+			logger.log(`✨ Success! Deleted secret ${args.key}`);
+		}
+	},
+});
+
+export const secretListCommand = createCommand({
+	metadata: {
+		description: "List all secrets for a Worker",
+		status: "stable",
+		owner: "Workers: Deploy and Config",
+	},
+	args: {
+		name: {
+			describe: "Name of the Worker",
+			type: "string",
+			requiresArg: true,
+		},
+		format: {
+			default: "json",
+			choices: ["json", "pretty"],
+			describe: "The format to print the secrets in",
+		},
+		"legacy-env": {
+			type: "boolean",
+			describe: "Use legacy environments",
+			hidden: true,
+		},
+	},
+	async handler(args, { config }) {
+		if (config.pages_build_output_dir) {
+			throw new UserError(
+				"It looks like you've run a Workers-specific command in a Pages project.\n" +
+					"For Pages, please run `wrangler pages secret list` instead."
 			);
 		}
-		logger.log("");
-		logger.log("Finished processing secrets file:");
-		logger.log(`✨ ${upsertBindings.length} secrets successfully uploaded`);
-	} catch (err) {
-		logger.log("");
-		logger.log("Finished processing secrets JSON file:");
-		logger.log(`✨ 0 secrets successfully uploaded`);
-		throw new Error(`🚨 ${upsertBindings.length} secrets failed to upload`);
-	}
-};
+
+		const scriptName = getLegacyScriptName(args, config);
+		if (!scriptName) {
+			throw new UserError(
+				`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``
+			);
+		}
+
+		const accountId = await requireAuth(config);
+
+		const url =
+			!args.env || isLegacyEnv(config)
+				? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
+				: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
+
+		const secrets = await fetchResult<{ name: string; type: string }[]>(url);
+
+		if (args.format === "pretty") {
+			for (const workerSecret of secrets) {
+				logger.log(`Secret Name: ${workerSecret.name}\n`);
+			}
+		} else {
+			logger.log(JSON.stringify(secrets, null, "  "));
+		}
+		metrics.sendMetricsEvent("list encrypted variables", {
+			sendMetrics: config.send_metrics,
+		});
+	},
+});
+
+export const secretBulkCommand = createCommand({
+	metadata: {
+		description: "Bulk upload secrets for a Worker",
+		status: "stable",
+		owner: "Workers: Deploy and Config",
+	},
+	positionalArgs: ["json"],
+	args: {
+		json: {
+			describe: `The file of key-value pairs to upload, as JSON in form {"key": value, ...} or .dev.vars file in the form KEY=VALUE`,
+			type: "string",
+		},
+		name: {
+			describe: "Name of the Worker",
+			type: "string",
+			requiresArg: true,
+		},
+		"legacy-env": {
+			type: "boolean",
+			describe: "Use legacy environments",
+			hidden: true,
+		},
+	},
+	async handler(args, { config }) {
+		if (config.pages_build_output_dir) {
+			throw new UserError(
+				"It looks like you've run a Workers-specific command in a Pages project.\n" +
+					"For Pages, please run `wrangler pages secret bulk` instead."
+			);
+		}
+
+		const scriptName = getLegacyScriptName(args, config);
+		if (!scriptName) {
+			const error = new UserError(
+				`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name <worker-name>\``
+			);
+			logger.error(error.message);
+			throw error;
+		}
+
+		const accountId = await requireAuth(config);
+
+		logger.log(
+			`🌀 Creating the secrets for the Worker "${scriptName}" ${
+				args.env && !isLegacyEnv(config) ? `(${args.env})` : ""
+			}`
+		);
+
+		const content = await parseBulkInputToObject(args.json);
+
+		if (!content) {
+			return logger.error(`🚨 No content found in file, or piped input.`);
+		}
+
+		function getSettings() {
+			const url =
+				!args.env || isLegacyEnv(config)
+					? `/accounts/${accountId}/workers/scripts/${scriptName}/settings`
+					: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/settings`;
+
+			return fetchResult<{
+				bindings: Array<WorkerMetadataBinding | SecretBindingRedacted>;
+			}>(url);
+		}
+
+		function putBindingsSettings(
+			bindings: Array<SecretBindingUpload | InheritBindingUpload>
+		) {
+			const url =
+				!args.env || isLegacyEnv(config)
+					? `/accounts/${accountId}/workers/scripts/${scriptName}/settings`
+					: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/settings`;
+
+			const data = new FormData();
+			data.set("settings", JSON.stringify({ bindings }));
+			return fetchResult(url, {
+				method: "PATCH",
+				body: data,
+			});
+		}
+
+		let existingBindings: Array<WorkerMetadataBinding | SecretBindingRedacted>;
+		try {
+			const settings = await getSettings();
+			existingBindings = settings.bindings;
+		} catch (e) {
+			if (isMissingWorkerError(e)) {
+				// create a draft worker before patching
+				const result = await createDraftWorker({
+					config,
+					args: args,
+					accountId,
+					scriptName,
+				});
+				if (result === null) {
+					return;
+				}
+				existingBindings = [];
+			} else {
+				throw e;
+			}
+		}
+		// any existing bindings can be "inherited" from the previous deploy via the PATCH settings api
+		// by just providing the "name" and "type" fields for the binding.
+		// so after fetching the bindings in the script settings, we can map over and just pick out those fields
+		const inheritBindings = existingBindings
+			.filter((binding) => {
+				// secrets that currently exist for the worker but are not provided for bulk update
+				// are inherited over with other binding types
+				return (
+					binding.type !== "secret_text" || content[binding.name] === undefined
+				);
+			})
+			.map((binding) => ({ type: binding.type, name: binding.name }));
+		// secrets to upload are provided as bindings in their full form
+		// so when we PATCH, we patch in [...current bindings, ...updated / new secrets]
+		const upsertBindings: Array<SecretBindingUpload> = Object.entries(
+			content
+		).map(([key, value]) => {
+			return {
+				type: "secret_text",
+				name: key,
+				text: value,
+			};
+		});
+		try {
+			await putBindingsSettings(inheritBindings.concat(upsertBindings));
+			for (const upsertedBinding of upsertBindings) {
+				logger.log(
+					`✨ Successfully created secret for key: ${upsertedBinding.name}`
+				);
+			}
+			logger.log("");
+			logger.log("Finished processing secrets file:");
+			logger.log(`✨ ${upsertBindings.length} secrets successfully uploaded`);
+		} catch (err) {
+			logger.log("");
+			logger.log("Finished processing secrets JSON file:");
+			logger.log(`✨ 0 secrets successfully uploaded`);
+			throw new Error(`🚨 ${upsertBindings.length} secrets failed to upload`);
+		}
+	},
+});
+
+export const secretBulkAlias = createAlias({
+	aliasOf: "wrangler secret bulk",
+	metadata: {
+		deprecated: true,
+		deprecatedMessage:
+			"`wrangler secret:bulk` is deprecated and will be removed in a future major version.\nPlease use `wrangler secret bulk` instead, which accepts exactly the same arguments.",
+		hidden: true,
+	},
+});
 
 export function validateFileSecrets(
 	content: unknown,
@@ -544,7 +559,7 @@ export async function parseBulkInputToObject(input?: string) {
 		try {
 			const fileContent = readFileSync(jsonFilePath);
 			try {
-				content = parseJSON<Record<string, string>>(fileContent);
+				content = parseJSON(fileContent) as Record<string, string>;
 			} catch (e) {
 				content = dotenvParse(fileContent);
 				// dotenvParse does not error unless fileContent is undefined, no keys === error
@@ -566,7 +581,7 @@ export async function parseBulkInputToObject(input?: string) {
 				pipedInput += line;
 			}
 			try {
-				content = parseJSON<Record<string, string>>(pipedInput);
+				content = parseJSON(pipedInput) as Record<string, string>;
 			} catch (e) {
 				content = dotenvParse(pipedInput);
 				// dotenvParse does not error unless fileContent is undefined, no keys === error

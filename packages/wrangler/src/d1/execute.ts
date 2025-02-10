@@ -116,7 +116,9 @@ export const Handler = async (args: HandlerOptions): Promise<void> => {
 	if (file && command) {
 		throw createFatalError(
 			`Error: can't provide both --command and --file.`,
-			json
+			json,
+			undefined,
+			{ telemetryMessage: true }
 		);
 	}
 

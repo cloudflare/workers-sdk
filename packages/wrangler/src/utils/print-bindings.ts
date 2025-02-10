@@ -4,17 +4,6 @@ import { logger } from "../logger";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 
-function addLocalSuffix(
-	id: string | symbol | undefined,
-	local: boolean = false
-) {
-	if (!id || typeof id === "symbol") {
-		id = "";
-	}
-
-	return `${id}${local ? " (local)" : ""}`;
-}
-
 export const friendlyBindingNames: Record<
 	keyof CfWorkerInit["bindings"],
 	string
@@ -34,6 +23,7 @@ export const friendlyBindingNames: Record<
 	text_blobs: "Text Blobs",
 	browser: "Browser",
 	ai: "AI",
+	images: "Images",
 	version_metadata: "Worker Version Metadata",
 	unsafe: "Unsafe Metadata",
 	vars: "Vars",
@@ -53,11 +43,16 @@ export function printBindings(
 	context: {
 		registry?: WorkerRegistry | null;
 		local?: boolean;
+		imagesLocalMode?: boolean;
 		name?: string;
 		provisioning?: boolean;
 	} = {}
 ) {
 	let hasConnectionStatus = false;
+	const addSuffix = createAddSuffix({
+		isProvisioning: context.provisioning,
+		isLocalDev: context.local,
+	});
 	const truncate = (item: string | Record<string, unknown>) => {
 		const s = typeof item === "string" ? item : JSON.stringify(item);
 		const maxLength = 40;
@@ -89,6 +84,7 @@ export function printBindings(
 		analytics_engine_datasets,
 		text_blobs,
 		browser,
+		images,
 		ai,
 		version_metadata,
 		unsafe,
@@ -137,7 +133,7 @@ export function printBindings(
 
 					return {
 						key: name,
-						value: addLocalSuffix(value, context.local),
+						value: value,
 					};
 				}
 			),
@@ -155,7 +151,7 @@ export function printBindings(
 
 				return {
 					key: binding,
-					value,
+					value: script_name ? value : addSuffix(value),
 				};
 			}),
 		});
@@ -167,7 +163,9 @@ export function printBindings(
 			entries: kv_namespaces.map(({ binding, id }) => {
 				return {
 					key: binding,
-					value: addLocalSuffix(id, context.local),
+					value: addSuffix(id, {
+						isSimulatedLocally: true,
+					}),
 				};
 			}),
 		});
@@ -180,10 +178,11 @@ export function printBindings(
 				({ name, destination_address, allowed_destination_addresses }) => {
 					return {
 						key: name,
-						value:
+						value: addSuffix(
 							destination_address ||
-							allowed_destination_addresses?.join(", ") ||
-							"unrestricted",
+								allowed_destination_addresses?.join(", ") ||
+								"unrestricted"
+						),
 					};
 				}
 			),
@@ -196,7 +195,9 @@ export function printBindings(
 			entries: queues.map(({ binding, queue_name }) => {
 				return {
 					key: binding,
-					value: addLocalSuffix(queue_name, context.local),
+					value: addSuffix(queue_name, {
+						isSimulatedLocally: true,
+					}),
 				};
 			}),
 		});
@@ -220,7 +221,9 @@ export function printBindings(
 					}
 					return {
 						key: binding,
-						value: addLocalSuffix(databaseValue, context.local),
+						value: addSuffix(databaseValue, {
+							isSimulatedLocally: true,
+						}),
 					};
 				}
 			),
@@ -233,7 +236,7 @@ export function printBindings(
 			entries: vectorize.map(({ binding, index_name }) => {
 				return {
 					key: binding,
-					value: index_name,
+					value: addSuffix(index_name),
 				};
 			}),
 		});
@@ -245,7 +248,9 @@ export function printBindings(
 			entries: hyperdrive.map(({ binding, id }) => {
 				return {
 					key: binding,
-					value: addLocalSuffix(id, context.local),
+					value: addSuffix(id, {
+						isSimulatedLocally: true,
+					}),
 				};
 			}),
 		});
@@ -263,7 +268,9 @@ export function printBindings(
 
 				return {
 					key: binding,
-					value: addLocalSuffix(name, context.local),
+					value: addSuffix(name, {
+						isSimulatedLocally: true,
+					}),
 				};
 			}),
 		});
@@ -275,7 +282,7 @@ export function printBindings(
 			entries: logfwdr.bindings.map((binding) => {
 				return {
 					key: binding.name,
-					value: binding.destination,
+					value: addSuffix(binding.destination),
 				};
 			}),
 		});
@@ -321,7 +328,7 @@ export function printBindings(
 			entries: analytics_engine_datasets.map(({ binding, dataset }) => {
 				return {
 					key: binding,
-					value: dataset ?? binding,
+					value: addSuffix(dataset ?? binding),
 				};
 			}),
 		});
@@ -332,7 +339,7 @@ export function printBindings(
 			name: friendlyBindingNames.text_blobs,
 			entries: Object.entries(text_blobs).map(([key, value]) => ({
 				key,
-				value: truncate(value),
+				value: addSuffix(truncate(value)),
 			})),
 		});
 	}
@@ -344,12 +351,31 @@ export function printBindings(
 		});
 	}
 
+	if (images !== undefined) {
+		const addImagesSuffix = createAddSuffix({
+			isProvisioning: context.provisioning,
+			isLocalDev: !!context.imagesLocalMode,
+		});
+		output.push({
+			name: friendlyBindingNames.images,
+			entries: [
+				{
+					key: "Name",
+					value: addImagesSuffix(images.binding),
+				},
+			],
+		});
+	}
+
 	if (ai !== undefined) {
 		const entries: [{ key: string; value: string | boolean }] = [
-			{ key: "Name", value: ai.binding },
+			{ key: "Name", value: addSuffix(ai.binding) },
 		];
 		if (ai.staging) {
-			entries.push({ key: "Staging", value: ai.staging });
+			entries.push({
+				key: "Staging",
+				value: addSuffix(ai.staging.toString()),
+			});
 		}
 
 		output.push({
@@ -363,7 +389,7 @@ export function printBindings(
 			name: friendlyBindingNames.pipelines,
 			entries: pipelines.map(({ binding, pipeline }) => ({
 				key: binding,
-				value: pipeline,
+				value: addSuffix(pipeline),
 			})),
 		});
 	}
@@ -371,7 +397,7 @@ export function printBindings(
 	if (version_metadata !== undefined) {
 		output.push({
 			name: friendlyBindingNames.version_metadata,
-			entries: [{ key: "Name", value: version_metadata.binding }],
+			entries: [{ key: "Name", value: addSuffix(version_metadata.binding) }],
 		});
 	}
 
@@ -380,7 +406,7 @@ export function printBindings(
 			name: friendlyBindingNames.unsafe,
 			entries: unsafe.bindings.map(({ name, type }) => ({
 				key: type,
-				value: name,
+				value: addSuffix(name),
 			})),
 		});
 	}
@@ -410,7 +436,9 @@ export function printBindings(
 			name: friendlyBindingNames.wasm_modules,
 			entries: Object.entries(wasm_modules).map(([key, value]) => ({
 				key,
-				value: typeof value === "string" ? truncate(value) : "<Wasm>",
+				value: addSuffix(
+					typeof value === "string" ? truncate(value) : "<Wasm>"
+				),
 			})),
 		});
 	}
@@ -421,9 +449,11 @@ export function printBindings(
 			entries: dispatch_namespaces.map(({ binding, namespace, outbound }) => {
 				return {
 					key: binding,
-					value: outbound
-						? `${namespace} (outbound -> ${outbound.service})`
-						: namespace,
+					value: addSuffix(
+						outbound
+							? `${namespace} (outbound -> ${outbound.service})`
+							: namespace
+					),
 				};
 			}),
 		});
@@ -435,7 +465,7 @@ export function printBindings(
 			entries: mtls_certificates.map(({ binding, certificate_id }) => {
 				return {
 					key: binding,
-					value: certificate_id,
+					value: addSuffix(certificate_id),
 				};
 			}),
 		});
@@ -446,13 +476,20 @@ export function printBindings(
 			name: friendlyBindingNames.unsafe,
 			entries: Object.entries(unsafe.metadata).map(([key, value]) => ({
 				key,
-				value: JSON.stringify(value),
+				value: addSuffix(JSON.stringify(value)),
 			})),
 		});
 	}
 
 	if (output.length === 0) {
+		logger.log("No bindings found.");
 		return;
+	}
+
+	if (context.local) {
+		logger.once.log(
+			`Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.\n`
+		);
 	}
 
 	let title: string;
@@ -485,4 +522,45 @@ export function printBindings(
 			`\nService bindings & durable object bindings connect to other \`wrangler dev\` processes running locally, with their connection status indicated by ${chalk.green("[connected]")} or ${chalk.red("[not connected]")}. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development\n`
 		);
 	}
+}
+
+function normalizeValue(value: string | symbol | undefined) {
+	if (!value || typeof value === "symbol") {
+		return "";
+	}
+
+	return value;
+}
+
+/**
+ * Creates a function for adding a suffix to the value of a binding in the console.
+ *
+ * The suffix is only for local dev so it can be used to determine whether a binding is
+ * simulated locally or connected to a remote resource.
+ */
+function createAddSuffix({
+	isProvisioning = false,
+	isLocalDev = false,
+}: {
+	isProvisioning?: boolean;
+	isLocalDev?: boolean;
+}) {
+	return function addSuffix(
+		value: string | symbol | undefined,
+		{
+			isSimulatedLocally = false,
+		}: {
+			isSimulatedLocally?: boolean;
+		} = {}
+	) {
+		const normalizedValue = normalizeValue(value);
+
+		if (isProvisioning || !isLocalDev) {
+			return normalizedValue;
+		}
+
+		return isSimulatedLocally
+			? `${normalizedValue} [simulated locally]`
+			: `${normalizedValue} [connected to remote resource]`;
+	};
 }

@@ -272,6 +272,7 @@ Uploaded 2 of 3 assets
 Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
+No bindings found.
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -282,6 +283,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 🌀 Starting asset upload...
 No files to upload. Proceeding with deployment...
 Total Upload: xx KiB / gzip: xx KiB
+No bindings found.
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -342,6 +344,7 @@ Uploaded 2 of 3 assets
 Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
+No bindings found.
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
   Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
@@ -351,6 +354,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 🌀 Starting asset upload...
 No files to upload. Proceeding with deployment...
 Total Upload: xx KiB / gzip: xx KiB
+No bindings found.
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
   Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
@@ -490,7 +494,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 		);
 		expect(text).toContain("<h1>404.html</h1>");
 	});
-	it("runs user worker ahead of matching assets when serve_directly = false", async () => {
+	it("runs user worker ahead of matching assets when run_worker_first = true", async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
 						name = "${workerName}"
@@ -501,7 +505,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 						binding = "ASSETS"
 						html_handling = "none"
 						not_found_handling = "404-page"
-						experimental_serve_directly = false
+						run_worker_first = true
 				`,
 			"src/index.ts": dedent`
 						export default {

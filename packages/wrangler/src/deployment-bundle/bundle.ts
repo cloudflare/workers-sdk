@@ -393,7 +393,7 @@ export async function bundleWorker(
 
 	const unenvResolvePaths = getUnenvResolvePathsFromEnv()?.split(",");
 
-	const buildOptions: esbuild.BuildOptions & { metafile: true } = {
+	const buildOptions = {
 		// Don't use entryFile here as the file may have been changed when applying the middleware
 		entryPoints: [entry.file],
 		bundle,
@@ -460,7 +460,7 @@ export async function bundleWorker(
 		// logging, we disable esbuild's default logging, and log build failures
 		// ourselves.
 		logLevel: "silent",
-	};
+	} satisfies esbuild.BuildOptions;
 
 	let result: esbuild.BuildResult<typeof buildOptions>;
 	let stop: BundleResult["stop"];

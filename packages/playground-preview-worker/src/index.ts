@@ -79,17 +79,14 @@ async function handleRawHttp(request: Request, url: URL, env: Env) {
 		}
 	}
 
-	const workerResponse = await userObject.fetch(
-		url,
-		new Request(request, {
-			method,
-			headers: {
-				...Object.fromEntries(headers),
-				"cf-run-user-worker": "true",
-			},
-			redirect: "manual",
-		})
-	);
+	headers.append("cf-run-user-worker", "true");
+
+	const workerResponse = await userObject.fetch(url, {
+		method,
+		headers,
+		body: method === "GET" || method === "HEAD" ? null : request.body,
+		redirect: "manual",
+	});
 
 	const responseHeaders = new Headers(workerResponse.headers);
 

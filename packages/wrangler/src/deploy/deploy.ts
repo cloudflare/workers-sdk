@@ -193,10 +193,10 @@ export const validateRoutes = (routes: Route[], assets?: AssetsOptions) => {
 					`Paths are not allowed in Custom Domains`
 				);
 			}
-			// If we have Assets but we're not always hitting the Worker then validate
 		} else if (
+			// If we have Assets but we're not always hitting the Worker then validate
 			assets?.directory !== undefined &&
-			assets.assetConfig.serve_directly !== true
+			assets.assetConfig.run_worker_first !== true
 		) {
 			const pattern = typeof route === "string" ? route : route.pattern;
 			const components = pattern.split("/");
@@ -800,15 +800,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		} else {
 			assert(accountId, "Missing accountId");
 
-			getFlag("RESOURCES_PROVISION")
-				? await provisionBindings(
-						bindings,
-						accountId,
-						scriptName,
-						props.experimentalAutoCreate,
-						props.config
-					)
-				: null;
+			if (getFlag("RESOURCES_PROVISION")) {
+				await provisionBindings(
+					bindings,
+					accountId,
+					scriptName,
+					props.experimentalAutoCreate,
+					props.config
+				);
+			}
 			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;
 

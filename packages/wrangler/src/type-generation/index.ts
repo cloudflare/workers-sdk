@@ -561,9 +561,9 @@ function readTsconfigTypes(tsconfigPath: string): string[] {
 	}
 
 	try {
-		const tsconfig = parseJSONC<TSConfig>(
+		const tsconfig = parseJSONC(
 			fs.readFileSync(tsconfigPath, "utf-8")
-		);
+		) as TSConfig;
 		return tsconfig.compilerOptions?.types || [];
 	} catch (e) {
 		return [];

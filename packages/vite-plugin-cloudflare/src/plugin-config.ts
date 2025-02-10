@@ -47,6 +47,7 @@ export interface WorkerConfig extends BaseConfig {
 interface BasePluginConfig {
 	configPaths: Set<string>;
 	persistState: PersistState;
+	cloudflareEnv: string | undefined;
 }
 
 interface AssetsOnlyPluginConfig extends BasePluginConfig {
@@ -82,7 +83,11 @@ export function resolvePluginConfig(
 	const configPaths = new Set<string>();
 	const persistState = pluginConfig.persistState ?? true;
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
-	const { CLOUDFLARE_ENV } = vite.loadEnv(viteEnv.mode, root, "");
+	const { CLOUDFLARE_ENV: cloudflareEnv } = vite.loadEnv(
+		viteEnv.mode,
+		root,
+		/* prefixes */ ""
+	);
 
 	const configPath = pluginConfig.configPath
 		? path.resolve(root, pluginConfig.configPath)
@@ -93,14 +98,10 @@ export function resolvePluginConfig(
 		`Config not found. Have you created a wrangler.json(c) or wrangler.toml file?`
 	);
 
-	const entryWorkerResolvedConfig = getWorkerConfig(
-		configPath,
-		CLOUDFLARE_ENV,
-		{
-			visitedConfigPaths: configPaths,
-			isEntryWorker: true,
-		}
-	);
+	const entryWorkerResolvedConfig = getWorkerConfig(configPath, cloudflareEnv, {
+		visitedConfigPaths: configPaths,
+		isEntryWorker: true,
+	});
 
 	if (entryWorkerResolvedConfig.type === "assets-only") {
 		return {
@@ -111,6 +112,7 @@ export function resolvePluginConfig(
 			rawConfigs: {
 				entryWorker: entryWorkerResolvedConfig,
 			},
+			cloudflareEnv,
 		};
 	}
 
@@ -129,7 +131,7 @@ export function resolvePluginConfig(
 	for (const auxiliaryWorker of pluginConfig.auxiliaryWorkers ?? []) {
 		const workerResolvedConfig = getWorkerConfig(
 			path.resolve(root, auxiliaryWorker.configPath),
-			CLOUDFLARE_ENV,
+			cloudflareEnv,
 			{
 				visitedConfigPaths: configPaths,
 			}
@@ -167,5 +169,6 @@ export function resolvePluginConfig(
 			entryWorker: entryWorkerResolvedConfig,
 			auxiliaryWorkers: auxiliaryWorkersResolvedConfigs,
 		},
+		cloudflareEnv,
 	};
 }

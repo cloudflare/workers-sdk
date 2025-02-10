@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vitest-pool-workers",
-	"version": "0.6.6",
+	"version": "0.6.12",
 	"description": "Workers Vitest integration for writing Vitest unit and integration tests that run inside the Workers runtime",
 	"keywords": [
 		"cloudflare",
@@ -44,7 +44,7 @@
 	],
 	"scripts": {
 		"build": "node scripts/bundle.mjs && tsc -p tsconfig.emit.json",
-		"capnp:rtti": "capnpc -o ts scripts/rtti/rtti.capnp",
+		"capnp:rtti": "node scripts/build-capnp.mjs",
 		"check:lint": "eslint .  --max-warnings=0",
 		"check:type": "tsc && tsc -p src/worker/tsconfig.json && tsc -p types/tsconfig.json",
 		"dev": "node scripts/bundle.mjs watch",
@@ -63,14 +63,14 @@
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
+		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20241230.0",
+		"@cloudflare/workers-types": "^4.20250204.0",
 		"@types/node": "catalog:default",
 		"@types/semver": "^7.5.1",
 		"@vitest/runner": "catalog:default",
 		"@vitest/snapshot": "catalog:default",
-		"capnp-ts": "^0.7.0",
-		"capnpc-ts": "^0.7.0",
+		"capnp-es": "^0.0.7",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",

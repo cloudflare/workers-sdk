@@ -5,14 +5,31 @@ on:
   pull_request:
 
 jobs:
+  turbo-ignore:
+    outputs:
+      skip: ${{ steps.skip.outcome }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - shell: bash
+        id: skip
+        continue-on-error: true
+        run: |
+          npx turbo-ignore create-cloudflare --task="test:e2e" --fallback=$(git merge-base origin/main HEAD)
+
   e2e:
     # Note: please keep this job in sync with the e2e-only-dependabot-bumped-framework one
     #       in .github/workflows/c3-e2e-dependabot.yml
+    needs: ["turbo-ignore"]
+    if: ${{ needs.turbo-ignore.outputs.skip == 'failure' }}
     timeout-minutes: 45
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}-${{ matrix.experimental }}
       cancel-in-progress: true
-    name: ${{ format('Run tests for {0}@{1} on {2}', matrix.pm.name, matrix.pm.version, matrix.os) }}
+    name: ${{ format('Run tests for {0}@{1} on {2} (experimental:{3})', matrix.pm.name, matrix.pm.version, matrix.os, matrix.experimental) }}
     strategy:
       fail-fast: false
       matrix:
@@ -24,10 +41,15 @@ jobs:
             { name: bun, version: "1.0.3" },
             { name: yarn, version: "1.0.0" },
           ]
+        experimental: [true, false]
         # include a single windows test with pnpm
         include:
           - os: windows-latest
             pm: { name: pnpm, version: "9.12.0" }
+            experimental: true
+          - os: windows-latest
+            pm: { name: pnpm, version: "9.12.0" }
+            experimental: false
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -58,5 +80,6 @@ jobs:
           packageManager: ${{ matrix.pm.name }}
           packageManagerVersion: ${{ matrix.pm.version }}
           quarantine: false
+          experimental: ${{ matrix.experimental }}
           accountId: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}

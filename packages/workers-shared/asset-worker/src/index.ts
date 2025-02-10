@@ -1,13 +1,14 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { PerformanceTimer } from "../../utils/performance";
+import { InternalServerErrorResponse } from "../../utils/responses";
 import { setupSentry } from "../../utils/sentry";
+import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics } from "./analytics";
 import { AssetsManifest } from "./assets-manifest";
 import { applyConfigurationDefaults } from "./configuration";
+import { ExperimentAnalytics } from "./experiment-analytics";
 import { decodePath, getIntent, handleRequest } from "./handler";
-import { InternalServerErrorResponse } from "./responses";
 import { getAssetWithMetadataFromKV } from "./utils/kv";
-import { mockJaegerBinding } from "./utils/mocks";
 import type {
 	AssetWorkerConfig,
 	ColoMetadata,
@@ -39,6 +40,7 @@ export type Env = {
 	JAEGER: JaegerTracing;
 
 	ENVIRONMENT: Environment;
+	EXPERIMENT_ANALYTICS: ReadyAnalytics;
 	ANALYTICS: ReadyAnalytics;
 	COLO_METADATA: ColoMetadata;
 	UNSAFE_PERFORMANCE: UnsafePerformanceTimer;
@@ -106,7 +108,7 @@ export default class extends WorkerEntrypoint<Env> {
 				});
 			}
 
-			return this.env.JAEGER.enterSpan("handleRequest", async (span) => {
+			return await this.env.JAEGER.enterSpan("handleRequest", async (span) => {
 				span.setTags({
 					hostname: url.hostname,
 					eyeballPath: url.pathname,
@@ -121,13 +123,11 @@ export default class extends WorkerEntrypoint<Env> {
 					this.unstable_exists.bind(this),
 					this.unstable_getByETag.bind(this)
 				);
-			})
-				.catch((err) => this.handleError(sentry, analytics, err))
-				.finally(() => this.submitMetrics(analytics, performance, startTimeMs));
+			});
 		} catch (err) {
-			const errorResponse = this.handleError(sentry, analytics, err);
+			return this.handleError(sentry, analytics, err);
+		} finally {
 			this.submitMetrics(analytics, performance, startTimeMs);
-			return errorResponse;
 		}
 	}
 
@@ -164,6 +164,7 @@ export default class extends WorkerEntrypoint<Env> {
 		}
 	}
 
+	// TODO: Trace unstable methods
 	async unstable_canFetch(request: Request): Promise<boolean> {
 		const url = new URL(request.url);
 		const decodedPathname = decodePath(url.pathname);
@@ -213,7 +214,38 @@ export default class extends WorkerEntrypoint<Env> {
 	}
 
 	async unstable_exists(pathname: string): Promise<string | null> {
-		const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
-		return await assetsManifest.get(pathname);
+		const analytics = new ExperimentAnalytics(this.env.EXPERIMENT_ANALYTICS);
+		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
+
+		const INTERPOLATION_EXPERIMENT_SAMPLE_RATE = 0;
+		let searchMethod: "binary" | "interpolation" = "binary";
+		if (Math.random() < INTERPOLATION_EXPERIMENT_SAMPLE_RATE) {
+			searchMethod = "interpolation";
+		}
+		analytics.setData({ manifestReadMethod: searchMethod });
+
+		if (
+			this.env.COLO_METADATA &&
+			this.env.VERSION_METADATA &&
+			this.env.CONFIG
+		) {
+			analytics.setData({
+				accountId: this.env.CONFIG.account_id,
+				experimentName: "manifest-read-timing",
+			});
+		}
+
+		const startTimeMs = performance.now();
+		try {
+			const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
+			if (searchMethod === "interpolation") {
+				return await assetsManifest.getWithInterpolationSearch(pathname);
+			} else {
+				return await assetsManifest.getWithBinarySearch(pathname);
+			}
+		} finally {
+			analytics.setData({ manifestReadTime: performance.now() - startTimeMs });
+			analytics.write();
+		}
 	}
 }

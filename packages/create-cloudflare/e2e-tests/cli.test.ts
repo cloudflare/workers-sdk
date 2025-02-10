@@ -12,7 +12,7 @@ import {
 } from "./helpers";
 import type { Suite } from "vitest";
 
-const experimental = Boolean(process.env.E2E_EXPERIMENTAL);
+const experimental = process.env.E2E_EXPERIMENTAL === "true";
 const frameworkToTest = getFrameworkToTest({ experimental: false });
 
 // Note: skipIf(frameworkToTest) makes it so that all the basic C3 functionality

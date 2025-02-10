@@ -324,6 +324,12 @@ export const dev = createCommand({
 				"Bind to production Vectorize indexes in local development mode",
 			default: false,
 		},
+		"experimental-images-local-mode": {
+			type: "boolean",
+			describe:
+				"Use a local lower-fidelity implementation of the Images binding",
+			default: false,
+		},
 	},
 	async validateArgs(args) {
 		if (args.liveReload && args.remote) {
@@ -551,6 +557,7 @@ async function setupDevEnv(
 					text_blobs: undefined,
 					browser: undefined,
 					ai: args.ai,
+					images: undefined,
 					version_metadata: args.version_metadata,
 					data_blobs: undefined,
 					durable_objects: { bindings: args.durableObjects ?? [] },
@@ -601,6 +608,7 @@ async function setupDevEnv(
 					? null
 					: devEnv.config.latestConfig?.dev.registry,
 				bindVectorizeToProd: args.experimentalVectorizeBindToProd,
+				imagesLocalMode: args.experimentalImagesLocalMode,
 				multiworkerPrimary: args.multiworkerPrimary,
 			},
 			legacy: {
@@ -1020,7 +1028,12 @@ export function getBindings(
 			process.env[
 				`WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}`
 			];
-		if (!connectionStringFromEnv && !hyperdrive.localConnectionString) {
+		// only require a local connection string in the wrangler file or the env if not using dev --remote
+		if (
+			local &&
+			connectionStringFromEnv === undefined &&
+			hyperdrive.localConnectionString === undefined
+		) {
 			throw new UserError(
 				`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the 'WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`
 			);
@@ -1079,6 +1092,7 @@ export function getBindings(
 		analytics_engine_datasets: configParam.analytics_engine_datasets,
 		browser: configParam.browser,
 		ai: args.ai || configParam.ai,
+		images: configParam.images,
 		version_metadata: args.version_metadata || configParam.version_metadata,
 		unsafe: {
 			bindings: configParam.unsafe.bindings,

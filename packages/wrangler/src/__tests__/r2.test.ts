@@ -38,7 +38,7 @@ describe("r2", () => {
 
 			GLOBAL FLAGS
 			  -c, --config   Path to Wrangler configuration file  [string]
-			  -e, --env      Environment to use for operations and .env files  [string]
+			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
 		`);
@@ -66,7 +66,7 @@ describe("r2", () => {
 
 			GLOBAL FLAGS
 			  -c, --config   Path to Wrangler configuration file  [string]
-			  -e, --env      Environment to use for operations and .env files  [string]
+			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
 		`);
@@ -99,7 +99,7 @@ describe("r2", () => {
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
-				  -e, --env      Environment to use for operations and .env files  [string]
+				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
 			`);
@@ -137,7 +137,7 @@ describe("r2", () => {
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
-				  -e, --env      Environment to use for operations and .env files  [string]
+				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
 			`);
@@ -244,7 +244,7 @@ describe("r2", () => {
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
-					  -e, --env      Environment to use for operations and .env files  [string]
+					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]
 
@@ -277,7 +277,7 @@ describe("r2", () => {
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
-					  -e, --env      Environment to use for operations and .env files  [string]
+					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]
 
@@ -301,14 +301,14 @@ describe("r2", () => {
 							async ({ request, params }) => {
 								const { accountId } = params;
 								expect(accountId).toEqual("some-account-id");
-								expect(await request.json()).toEqual({ name: "testBucket" });
+								expect(await request.json()).toEqual({ name: "test-bucket" });
 								return HttpResponse.json(createFetchResult({}));
 							},
 							{ once: true }
 						)
 					);
 					writeWranglerConfig({}, configPath);
-					await runWrangler("r2 bucket create testBucket");
+					await runWrangler("r2 bucket create test-bucket");
 					expect(std.out).toMatchSnapshot();
 				});
 
@@ -320,20 +320,20 @@ describe("r2", () => {
 								const { accountId } = params;
 								expect(accountId).toEqual("some-account-id");
 								expect(request.headers.get("cf-r2-jurisdiction")).toEqual("eu");
-								expect(await request.json()).toEqual({ name: "testBucket" });
+								expect(await request.json()).toEqual({ name: "test-bucket" });
 								return HttpResponse.json(createFetchResult({}));
 							},
 							{ once: true }
 						)
 					);
 					writeWranglerConfig({}, configPath);
-					await runWrangler("r2 bucket create testBucket -J eu");
+					await runWrangler("r2 bucket create test-bucket -J eu");
 					expect(std.out).toMatchSnapshot();
 				});
 
 				it("should create a bucket with the expected default storage class", async () => {
 					writeWranglerConfig({}, configPath);
-					await runWrangler("r2 bucket create testBucket -s InfrequentAccess");
+					await runWrangler("r2 bucket create test-bucket -s InfrequentAccess");
 					expect(std.out).toMatchSnapshot();
 				});
 
@@ -345,7 +345,7 @@ describe("r2", () => {
 								const { accountId } = params;
 								expect(accountId).toEqual("some-account-id");
 								expect(await request.json()).toEqual({
-									name: "testBucket",
+									name: "test-bucket",
 									locationHint: "weur",
 								});
 								return HttpResponse.json(createFetchResult({}));
@@ -355,29 +355,29 @@ describe("r2", () => {
 					);
 					writeWranglerConfig({}, configPath);
 
-					await runWrangler("r2 bucket create testBucket --location weur");
+					await runWrangler("r2 bucket create test-bucket --location weur");
 					expect(std.out).toMatchSnapshot();
 				});
 			});
 
 			it("should error if storage class is invalid", async () => {
 				await expect(
-					runWrangler("r2 bucket create testBucket -s Foo")
+					runWrangler("r2 bucket create test-bucket -s Foo")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[APIError: A request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.]`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"Creating bucket 'testBucket'...
+					"Creating bucket 'test-bucket'...
 
-			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.[0m
+					[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/r2/buckets) failed.[0m
 
-			  The JSON you provided was not well formed. [code: 10040]
+					  The JSON you provided was not well formed. [code: 10040]
 
-			  If you think this is a bug, please open an issue at:
-			  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+					  If you think this is a bug, please open an issue at:
+					  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
-			"
-	`);
+					"
+				`);
 			});
 		});
 
@@ -399,7 +399,7 @@ describe("r2", () => {
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
-					  -e, --env      Environment to use for operations and .env files  [string]
+					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]"
 				`);
@@ -428,7 +428,7 @@ describe("r2", () => {
 
 						GLOBAL FLAGS
 						  -c, --config   Path to Wrangler configuration file  [string]
-						  -e, --env      Environment to use for operations and .env files  [string]
+						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
 
@@ -493,7 +493,7 @@ describe("r2", () => {
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
-					  -e, --env      Environment to use for operations and .env files  [string]
+					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]
 
@@ -511,7 +511,31 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket create abc_def")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: The bucket name "abc_def" is invalid. Bucket names can only have alphanumeric and - characters.]`
+					`[Error: The bucket name "abc_def" is invalid. Bucket names must begin and end with an alphanumeric and can only contain letters (a-z), numbers (0-9), and hyphens (-).]`
+				);
+			});
+
+			it("should error if the bucket name starts with a dash", async () => {
+				await expect(
+					runWrangler("r2 bucket create -abc")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Not enough non-option arguments: got 0, need at least 1]`
+				);
+			});
+
+			it("should error if the bucket name ends with a dash", async () => {
+				await expect(
+					runWrangler("r2 bucket create abc-")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: The bucket name "abc-" is invalid. Bucket names must begin and end with an alphanumeric and can only contain letters (a-z), numbers (0-9), and hyphens (-).]`
+				);
+			});
+
+			it("should error if the bucket name is over 63 characters", async () => {
+				await expect(
+					runWrangler("r2 bucket create " + "a".repeat(64))
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: The bucket name "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" is invalid. Bucket names must begin and end with an alphanumeric and can only contain letters (a-z), numbers (0-9), and hyphens (-).]`
 				);
 			});
 
@@ -532,7 +556,7 @@ describe("r2", () => {
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
-					  -e, --env      Environment to use for operations and .env files  [string]
+					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]
 
@@ -599,7 +623,7 @@ describe("r2", () => {
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
-					  -e, --env      Environment to use for operations and .env files  [string]
+					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]"
 				`);
@@ -690,7 +714,7 @@ describe("r2", () => {
 
 						GLOBAL FLAGS
 						  -c, --config   Path to Wrangler configuration file  [string]
-						  -e, --env      Environment to use for operations and .env files  [string]
+						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
 
@@ -733,7 +757,7 @@ describe("r2", () => {
 
 						GLOBAL FLAGS
 						  -c, --config   Path to Wrangler configuration file  [string]
-						  -e, --env      Environment to use for operations and .env files  [string]
+						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
 
@@ -784,7 +808,7 @@ describe("r2", () => {
 
 						GLOBAL FLAGS
 						  -c, --config   Path to Wrangler configuration file  [string]
-						  -e, --env      Environment to use for operations and .env files  [string]
+						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
 
@@ -965,7 +989,7 @@ describe("r2", () => {
 
 						GLOBAL FLAGS
 						  -c, --config   Path to Wrangler configuration file  [string]
-						  -e, --env      Environment to use for operations and .env files  [string]
+						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
 
@@ -1325,7 +1349,7 @@ describe("r2", () => {
 
 						GLOBAL FLAGS
 						  -c, --config   Path to Wrangler configuration file  [string]
-						  -e, --env      Environment to use for operations and .env files  [string]
+						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
 
@@ -1483,7 +1507,7 @@ describe("r2", () => {
 
 						GLOBAL FLAGS
 						  -c, --config   Path to Wrangler configuration file  [string]
-						  -e, --env      Environment to use for operations and .env files  [string]
+						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
 
@@ -2271,7 +2295,7 @@ describe("r2", () => {
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
-				  -e, --env      Environment to use for operations and .env files  [string]
+				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
 			`);

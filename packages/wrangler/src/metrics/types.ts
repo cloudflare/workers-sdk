@@ -125,5 +125,9 @@ export type Events =
 				 * Type of error, e.g. UserError, APIError. Does not include stack trace or error message.
 				 */
 				errorType: string | undefined;
+				/**
+				 * Sanitised error messages that will not include user information like filepaths or stack traces (e.g. `Asset too large`).
+				 */
+				errorMessage: string | undefined;
 			};
 	  };

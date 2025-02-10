@@ -11,6 +11,7 @@ import registerDevHotKeys from "../dev/hotkeys";
 import { getWorkerAccountAndContext } from "../dev/remote";
 import { FatalError } from "../errors";
 import { CI } from "../is-ci";
+import { logger } from "../logger";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -129,6 +130,7 @@ describe.sequential("wrangler dev", () => {
 			...mswSuccessOauthHandlers,
 			...mswSuccessUserHandlers
 		);
+		logger.clearHistory();
 	});
 
 	runInTempDir();
@@ -836,6 +838,7 @@ describe.sequential("wrangler dev", () => {
 			expect(std.out).toMatchInlineSnapshot(
 				`
 				"Running custom build: node -e \\"4+4; require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\"
+				No bindings found.
 				"
 			`
 			);
@@ -860,6 +863,7 @@ describe.sequential("wrangler dev", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`
 					"Running custom build: echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js
+					No bindings found.
 					"
 				`
 				);
@@ -1206,12 +1210,14 @@ describe.sequential("wrangler dev", () => {
 				process.platform === "win32" ? "127.0.0.1" : "localhost"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Your worker has access to the following bindings:
+				"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+				
+				Your worker has access to the following bindings:
 				- Durable Objects:
-				  - NAME_1: CLASS_1 (local)
-				  - NAME_2: CLASS_2 (defined in SCRIPT_A [not connected]) (local)
-				  - NAME_3: CLASS_3 (local)
-				  - NAME_4: CLASS_4 (defined in SCRIPT_B [not connected]) (local)
+				  - NAME_1: CLASS_1
+				  - NAME_2: CLASS_2 (defined in SCRIPT_A [not connected])
+				  - NAME_3: CLASS_3
+				  - NAME_4: CLASS_4 (defined in SCRIPT_B [not connected])
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -1297,6 +1303,8 @@ describe.sequential("wrangler dev", () => {
 			});
 			expect(std.out).toMatchInlineSnapshot(`
 				"Using vars defined in .dev.vars
+				Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+				
 				Your worker has access to the following bindings:
 				- Vars:
 				  - VAR_1: \\"(hidden)\\"
@@ -1331,6 +1339,8 @@ describe.sequential("wrangler dev", () => {
 			expect(varBindings).toEqual({ CUSTOM_VAR: "custom" });
 			expect(std.out).toMatchInlineSnapshot(`
 				"Using vars defined in .dev.vars.custom
+				Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+				
 				Your worker has access to the following bindings:
 				- Vars:
 				  - CUSTOM_VAR: \\"(hidden)\\"
@@ -1364,7 +1374,7 @@ describe.sequential("wrangler dev", () => {
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
-				  -e, --env      Environment to use for operations and .env files  [string]
+				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]
 
@@ -1399,7 +1409,8 @@ describe.sequential("wrangler dev", () => {
 				      --test-scheduled                             Test scheduled events by visiting /__scheduled in browser  [boolean] [default: false]
 				      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"] [default: \\"log\\"]
 				      --show-interactive-dev-session               Show interactive dev session (defaults to true if the terminal supports interactivity)  [boolean]
-				      --experimental-vectorize-bind-to-prod        Bind to production Vectorize indexes in local development mode  [boolean] [default: false]",
+				      --experimental-vectorize-bind-to-prod        Bind to production Vectorize indexes in local development mode  [boolean] [default: false]
+				      --experimental-images-local-mode             Use a local lower-fidelity implementation of the Images binding  [boolean] [default: false]",
 				  "warn": "",
 				}
 			`);
@@ -1678,12 +1689,12 @@ describe.sequential("wrangler dev", () => {
 			);
 		});
 
-		it("should warn if experimental_serve_directly=false but no binding is provided", async () => {
+		it("should warn if run_worker_first=true but no binding is provided", async () => {
 			writeWranglerConfig({
 				main: "index.js",
 				assets: {
 					directory: "assets",
-					experimental_serve_directly: false,
+					run_worker_first: true,
 				},
 			});
 			fs.mkdirSync("assets");
@@ -1692,9 +1703,9 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev");
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mexperimental_serve_directly=false set without an assets binding[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mrun_worker_first=true set without an assets binding[0m
 
-				  Setting experimental_serve_directly to false will always invoke your Worker script.
+				  Setting run_worker_first to true will always invoke your Worker script.
 				  To fetch your assets from your Worker, please set the [assets.binding] key in your configuration
 				  file.
 
@@ -1704,17 +1715,62 @@ describe.sequential("wrangler dev", () => {
 			`);
 		});
 
-		it("should error if experimental_serve_directly is false and no user Worker is provided", async () => {
+		it("should error if using experimental_serve_directly and run_worker_first", async () => {
 			writeWranglerConfig({
-				assets: { directory: "assets", experimental_serve_directly: false },
+				assets: {
+					directory: "assets",
+					run_worker_first: true,
+					experimental_serve_directly: true,
+				},
 			});
 			fs.mkdirSync("assets");
 			await expect(
 				runWrangler("dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`
-				[Error: Cannot set experimental_serve_directly=false without a Worker script.
-				Please remove experimental_serve_directly from your configuration file, or provide a Worker script in your configuration file (\`main\`).]
+				[Error: run_worker_first and experimental_serve_directly specified.
+				Only one of these configuration options may be provided.]
+				`
+			);
+		});
+
+		it("should warn if using experimental_serve_directly", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				assets: {
+					directory: "assets",
+					experimental_serve_directly: true,
+				},
+			});
+			fs.mkdirSync("assets");
+			fs.writeFileSync("index.js", `export default {};`);
+
+			await runWranglerUntilConfig("dev");
+
+			expect(std.warn).toMatchInlineSnapshot(
+				`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+				    - [1mDeprecation[0m: \\"assets.experimental_serve_directly\\":
+				      The \\"experimental_serve_directly\\" field is not longer supported. Please use run_worker_first.
+				      Read more: [4mhttps://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first[0m
+
+				"
+			`
+			);
+		});
+
+		it("should error if run_worker_first is true and no user Worker is provided", async () => {
+			writeWranglerConfig({
+				assets: { directory: "assets", run_worker_first: true },
+			});
+			fs.mkdirSync("assets");
+			await expect(
+				runWrangler("dev")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`
+				[Error: Cannot set run_worker_first=true without a Worker script.
+				Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (\`main\`).]
 			`
 			);
 		});
@@ -1805,7 +1861,9 @@ describe.sequential("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWranglerUntilConfig("dev index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Your worker has access to the following bindings:
+				"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+				
+				Your worker has access to the following bindings:
 				- Services:
 				  - WorkerA: A [not connected]
 				  - WorkerB: B [not connected]
@@ -1826,7 +1884,9 @@ describe.sequential("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWranglerUntilConfig("dev index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Your worker has access to the following bindings:
+				"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+				
+				Your worker has access to the following bindings:
 				- Services:
 				  - WorkerA: A [not connected]
 				  - WorkerB: B [not connected]
@@ -1853,6 +1913,8 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Using vars defined in .dev.vars
+				Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+				
 				Your worker has access to the following bindings:
 				- Vars:
 				  - variable: 123

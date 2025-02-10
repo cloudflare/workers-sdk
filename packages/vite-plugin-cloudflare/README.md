@@ -466,6 +466,13 @@ The value of `MY_VAR` will therefore be `'Production var'`.
 If you run `vite build --mode staging` then the 'staging' Vite mode will be used and the 'staging' Cloudflare environment will be selected.
 The value of `MY_VAR` will therefore be `'Staging var'`.
 
+## Secrets
+
+Secrets can be provided to your Worker in local development using a [`.dev.vars`](https://developers.cloudflare.com/workers/configuration/secrets/#local-development-with-secrets) file. If you are using [Cloudflare Environments](#cloudflare-environments) then the relevant `.dev.vars` file will be selected. For example, `CLOUDFLARE_ENV=staging vite dev` will load `.dev.vars.staging` if it exists and fall back to `.dev.vars`.
+
+> [!NOTE]
+> The `vite build` command copies the relevant `.dev.vars[.env-name]` file to the output directory. This is only used when running `vite preview` and is not deployed with your Worker.
+
 ## Migrating from `wrangler dev`
 
 Migrating from `wrangler dev` is a simple process and you can follow the instructions in the [Quick start](#quick-start) to get started.

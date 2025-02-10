@@ -1,7 +1,10 @@
 import { Buffer } from "node:buffer";
 
 export function viewToBuffer(view: ArrayBufferView): ArrayBuffer {
-	return view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength);
+	return view.buffer.slice(
+		view.byteOffset,
+		view.byteOffset + view.byteLength
+	) as ArrayBuffer;
 }
 
 export function base64Encode(value: string): string {

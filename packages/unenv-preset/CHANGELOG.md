@@ -1,5 +1,22 @@
 # @cloudflare/unenv-preset
 
+## 1.1.1
+
+### Patch Changes
+
+- [#7939](https://github.com/cloudflare/workers-sdk/pull/7939) [`17ce7f5`](https://github.com/cloudflare/workers-sdk/commit/17ce7f5661d6db913a3fd35a636b34988b22b131) Thanks [@anonrig](https://github.com/anonrig)! - Remove `clearImmediate()` and `setImmediate()` injects
+
+  These globals are now available in workerd (as of [v1.20240815 - cloudflare/workerd@f07cd8e](https://github.com/cloudflare/workerd/commit/f07cd8e40f53f1607fb1502916a7fe1f9f2b2862)).
+
+## 1.1.0
+
+### Minor Changes
+
+- [#7853](https://github.com/cloudflare/workers-sdk/pull/7853) [`061587d`](https://github.com/cloudflare/workers-sdk/commit/061587d81deaa5274f04fa0a39f1c8373b828a42) Thanks [@anonrig](https://github.com/anonrig)! - Use the workerd implementation for Node `net`, `timers`, and `timers/promises` modules
+
+  - drop the polyfills
+  - update `unenv` to 2.0.0-rc.1
+
 ## 1.0.2
 
 ### Patch Changes
