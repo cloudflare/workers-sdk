@@ -17,7 +17,7 @@ import type { Plugin } from "vite";
 export function nodejsCompatPlugin(pluginConfig: PluginConfig): Plugin {
 	let resolvedPluginConfig: ResolvedPluginConfig;
 	return {
-		name: "vite-plugin-nodejs-compat",
+		name: "vite-plugin-cloudflare:nodejs-compat",
 		config(userConfig, env) {
 			// Capture the configuration of the Cloudflare Workers for use in other hooks, below.
 			resolvedPluginConfig = resolvePluginConfig(pluginConfig, userConfig, env);
