@@ -16,7 +16,6 @@ import { chooseAccount, wranglerLogin } from "./wrangler/accounts";
 import {
 	readWranglerJson,
 	readWranglerToml,
-	wranglerJsoncExists,
 	wranglerJsonExists,
 } from "./wrangler/config";
 import type { C3Context } from "types";
@@ -83,7 +82,7 @@ const isDeployable = async (ctx: C3Context) => {
 };
 
 const readWranglerConfig = (ctx: C3Context) => {
-	if (wranglerJsonExists(ctx) || wranglerJsoncExists(ctx)) {
+	if (wranglerJsonExists(ctx)) {
 		const wranglerJsonStr = readWranglerJson(ctx);
 		return jsoncParse(wranglerJsonStr, undefined, { allowTrailingComma: true });
 	}

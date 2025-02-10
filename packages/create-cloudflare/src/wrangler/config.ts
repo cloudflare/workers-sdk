@@ -35,7 +35,7 @@ async function ensureCompatDateExists(
  * to the selected project name and adding the latest compatibility date.
  */
 export const updateWranglerConfig = async (ctx: C3Context) => {
-	if (wranglerJsonExists(ctx) || wranglerJsoncExists(ctx)) {
+	if (wranglerJsonExists(ctx)) {
 		const wranglerJsonStr = readWranglerJson(ctx);
 		const parsed = jsoncParse(wranglerJsonStr, undefined, {
 			allowTrailingComma: true,
@@ -93,9 +93,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 }
 `,
 		);
-		if (wranglerJsonExists(ctx)) {
-			addVscodeConfig(ctx);
-		}
+		addVscodeConfig(ctx);
 	} else if (wranglerTomlExists(ctx)) {
 		const wranglerTomlStr = readWranglerToml(ctx);
 		const parsed = TOML.parse(wranglerTomlStr);
@@ -167,14 +165,11 @@ export const wranglerTomlExists = (ctx: C3Context) => {
 	return existsSync(wranglerTomlPath);
 };
 
+/** Checks for wrangler.json and wrangler.jsonc */
 export const wranglerJsonExists = (ctx: C3Context) => {
 	const wranglerJsonPath = getWranglerJsonPath(ctx);
-	return existsSync(wranglerJsonPath);
-};
-
-export const wranglerJsoncExists = (ctx: C3Context) => {
 	const wranglerJsoncPath = getWranglerJsoncPath(ctx);
-	return existsSync(wranglerJsoncPath);
+	return existsSync(wranglerJsonPath) || existsSync(wranglerJsoncPath);
 };
 
 export const readWranglerToml = (ctx: C3Context) => {
