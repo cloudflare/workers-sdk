@@ -127,8 +127,8 @@ function handleUnenvAliasedPackages(
 		// Note: Does not apply to Node.js packages that are handled in `handleRequireCallsToNodeJSBuiltins`
 		if (
 			args.kind === "require-call" &&
-			(unresolvedAlias.startsWith("unenv/runtime/npm/") ||
-				unresolvedAlias.startsWith("unenv/runtime/mock/"))
+			(unresolvedAlias.startsWith("unenv/npm/") ||
+				unresolvedAlias.startsWith("unenv/mock/"))
 		) {
 			return {
 				path: args.path,
