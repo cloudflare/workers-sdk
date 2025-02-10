@@ -61,9 +61,12 @@ export const createRequire: typeof nodeModule.createRequire = (
 	file: string | URL
 ) => {
 	return Object.assign(workerdModule.createRequire(file), {
-		resolve: Object.assign(notImplemented("module.require.resolve"), {
-			paths: notImplemented("module.require.resolve.paths"),
-		}),
+		resolve: Object.assign(
+			/*@__PURE__*/ notImplemented("module.require.resolve"),
+			{
+				paths: /*@__PURE__*/ notImplemented("module.require.resolve.paths"),
+			}
+		),
 		cache: Object.create(null),
 		extensions: _extensions,
 		main: undefined,
