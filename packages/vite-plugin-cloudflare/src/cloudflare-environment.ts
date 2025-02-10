@@ -161,6 +161,7 @@ export function createCloudflareEnvironmentOptions(
 		optimizeDeps: {
 			// Note: ssr pre-bundling is opt-in and we need to enable it by setting `noDiscovery` to false
 			noDiscovery: false,
+			entries: workerConfig.main,
 			exclude: [
 				...cloudflareBuiltInModules,
 				// we have to exclude all node modules to work in dev-mode not just the unenv externals...
