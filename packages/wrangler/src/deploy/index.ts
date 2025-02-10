@@ -36,12 +36,12 @@ export const deployCommand = createCommand({
 	positionalArgs: ["script"],
 	args: {
 		script: {
-			describe: "The path to an entry point for your worker",
+			describe: "The path to an entry point for your Worker",
 			type: "string",
 			requiresArg: true,
 		},
 		name: {
-			describe: "Name of the worker",
+			describe: "Name of the Worker",
 			type: "string",
 			requiresArg: true,
 		},
@@ -50,7 +50,7 @@ export const deployCommand = createCommand({
 		// So we make a --bundle flag, but hide it, and then add a --no-bundle flag
 		// that's visible to the user but doesn't "do" anything.
 		bundle: {
-			describe: "Run wrangler's compilation step before publishing",
+			describe: "Run Wrangler's compilation step before publishing",
 			type: "boolean",
 			hidden: true,
 		},
@@ -60,7 +60,7 @@ export const deployCommand = createCommand({
 			default: false,
 		},
 		outdir: {
-			describe: "Output directory for the bundled worker",
+			describe: "Output directory for the bundled Worker",
 			type: "string",
 			requiresArg: true,
 		},
@@ -77,7 +77,7 @@ export const deployCommand = createCommand({
 			array: true,
 		},
 		latest: {
-			describe: "Use the latest version of the worker runtime",
+			describe: "Use the latest version of the Workers runtime",
 			type: "boolean",
 			default: false,
 		},
@@ -199,7 +199,7 @@ export const deployCommand = createCommand({
 		},
 		"keep-vars": {
 			describe:
-				"Stop wrangler from deleting vars that are not present in the Wrangler configuration file\nBy default Wrangler will remove all vars and replace them with those found in the Wrangler configuration.\nIf your development approach is to modify vars after deployment via the dashboard you may wish to set this flag.",
+				"Stop Wrangler from deleting vars that are not present in the Wrangler configuration file\nBy default Wrangler will remove all vars and replace them with those found in the Wrangler configuration.\nIf your development approach is to modify vars after deployment via the dashboard you may wish to set this flag.",
 			default: false,
 			type: "boolean",
 		},
@@ -211,11 +211,11 @@ export const deployCommand = createCommand({
 		logpush: {
 			type: "boolean",
 			describe:
-				"Send Trace Events from this worker to Workers Logpush.\nThis will not configure a corresponding Logpush job automatically.",
+				"Send Trace Events from this Worker to Workers Logpush.\nThis will not configure a corresponding Logpush job automatically.",
 		},
 		"upload-source-maps": {
 			type: "boolean",
-			describe: "Include source maps when uploading this worker.",
+			describe: "Include source maps when uploading this Worker.",
 		},
 		"old-asset-ttl": {
 			describe:
