@@ -10,7 +10,7 @@ import {
 	PerformanceObserverEntryList,
 	PerformanceResourceTiming,
 	performance as unenvPerformance,
-} from "unenv/runtime/node/perf_hooks";
+} from "unenv/node/perf_hooks";
 import type nodePerfHooks from "node:perf_hooks";
 
 export {
@@ -24,7 +24,7 @@ export {
 	constants,
 	createHistogram,
 	monitorEventLoopDelay,
-} from "unenv/runtime/node/perf_hooks";
+} from "unenv/node/perf_hooks";
 
 // The following is an unusual way to access the original/unpatched globalThis.performance.
 // This is needed to get hold of the real performance object before any of the unenv polyfills are
@@ -32,7 +32,7 @@ export {
 //
 // This code relies on the that rollup/esbuild/webpack don't evaluate string concatenation
 // so they don't recognize the below as `globalThis.performance` which they would try to rewrite
-// into unenv/runtime/node/perf_hooks, thus creating a circular dependency, and breaking this polyfill.
+// into unenv/node/perf_hooks, thus creating a circular dependency, and breaking this polyfill.
 const workerdGlobalPerformance = (globalThis as any)[
 	"perf" + "ormance"
 ] as typeof nodePerfHooks.performance;

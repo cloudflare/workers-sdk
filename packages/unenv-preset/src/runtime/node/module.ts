@@ -1,5 +1,5 @@
 // https://nodejs.org/api/module.html
-import { notImplemented } from "unenv/runtime/_internal/utils";
+import { notImplemented } from "unenv/_internal/utils";
 import {
 	_cache,
 	_debug,
@@ -25,7 +25,7 @@ import {
 	SourceMap,
 	syncBuiltinESMExports,
 	wrap,
-} from "unenv/runtime/node/module";
+} from "unenv/node/module";
 import type nodeModule from "node:module";
 
 export {
@@ -53,7 +53,7 @@ export {
 	runMain,
 	syncBuiltinESMExports,
 	wrap,
-} from "unenv/runtime/node/module";
+} from "unenv/node/module";
 
 const workerdModule = process.getBuiltinModule("node:module");
 

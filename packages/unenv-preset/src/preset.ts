@@ -64,14 +64,14 @@ export const cloudflare: Preset = {
 		),
 
 		// The `node:sys` module is just a deprecated alias for `node:util` which we implemented using a hybrid polyfill
-		sys: "@cloudflare/unenv-preset/runtime/node/util",
-		"node:sys": "@cloudflare/unenv-preset/runtime/node/util",
+		sys: "@cloudflare/unenv-preset/node/util",
+		"node:sys": "@cloudflare/unenv-preset/node/util",
 
 		// define aliases for hybrid modules
 		...Object.fromEntries(
 			hybridNodeCompatModules.flatMap((m) => [
-				[m, `@cloudflare/unenv-preset/runtime/node/${m}`],
-				[`node:${m}`, `@cloudflare/unenv-preset/runtime/node/${m}`],
+				[m, `@cloudflare/unenv-preset/node/${m}`],
+				[`node:${m}`, `@cloudflare/unenv-preset/node/${m}`],
 			])
 		),
 	},
@@ -80,8 +80,8 @@ export const cloudflare: Preset = {
 		// override the previous presets so that we use the native implementation
 		Buffer: false,
 		global: false,
-		console: "@cloudflare/unenv-preset/runtime/node/console",
-		process: "@cloudflare/unenv-preset/runtime/node/process",
+		console: "@cloudflare/unenv-preset/node/console",
+		process: "@cloudflare/unenv-preset/node/process",
 	},
 	polyfill: [],
 	external: nodeCompatModules.flatMap((p) => [p, `node:${p}`]),
