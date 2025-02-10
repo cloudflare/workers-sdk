@@ -1,25 +1,124 @@
+import assert from "node:assert";
 import { cloudflare } from "@cloudflare/unenv-preset";
 import MagicString from "magic-string";
 import { getNodeCompat } from "miniflare";
 import { defineEnv } from "unenv";
-import type { WorkerConfig } from "./plugin-config";
-import type { Environment } from "vite";
+import { resolvePluginConfig } from "./plugin-config";
+import type {
+	PluginConfig,
+	ResolvedPluginConfig,
+	WorkerConfig,
+} from "./plugin-config";
+import type { Plugin } from "vite";
 
-const preset = defineEnv({
+/**
+ * A Vite plugin that can provide Node.js compatibility support for Vite Environments that are hosted in Cloudflare Workers.
+ */
+export function nodejsCompatPlugin(pluginConfig: PluginConfig): Plugin {
+	let resolvedPluginConfig: ResolvedPluginConfig;
+	return {
+		name: "vite-plugin-nodejs-compat",
+		config(userConfig, env) {
+			// Capture the configuration of the Cloudflare Workers for use in other hooks, below.
+			resolvedPluginConfig = resolvePluginConfig(pluginConfig, userConfig, env);
+
+			// Configure Vite with the Node.js polyfill aliases
+			// We have to do this across the whole Vite config because it is not possible to do it per Environment.
+			return {
+				resolve: {
+					alias: getNodeCompatAliases(),
+				},
+			};
+		},
+		configEnvironment(environmentName) {
+			if (resolvedPluginConfig.type === "assets-only") {
+				return;
+			}
+
+			const workerConfig = resolvedPluginConfig.workers[environmentName];
+			if (!workerConfig) {
+				return;
+			}
+
+			if (!isNodeCompat(workerConfig)) {
+				return;
+			}
+
+			// Ignore the Node.js external modules when building.
+			return {
+				build: {
+					rollupOptions: {
+						external: getNodeCompatExternals(),
+					},
+				},
+			};
+		},
+		async resolveId(source) {
+			if (resolvedPluginConfig.type === "assets-only") {
+				return;
+			}
+
+			const workerConfig = resolvedPluginConfig.workers[this.environment.name];
+			if (!workerConfig) {
+				return;
+			}
+
+			const unresolvedAlias = dealiasVirtualNodeJSImports(source, workerConfig);
+			if (!unresolvedAlias) {
+				return;
+			}
+
+			const resolvedAlias = await this.resolve(
+				unresolvedAlias,
+				import.meta.url
+			);
+			if (!resolvedAlias) {
+				return;
+			}
+
+			if (this.environment.mode === "dev" && this.environment.depsOptimizer) {
+				// Make sure the dependency optimizer is aware of this aliased import
+				this.environment.depsOptimizer.registerMissingImport(
+					unresolvedAlias,
+					resolvedAlias.id
+				);
+			}
+
+			return resolvedAlias;
+		},
+		async transform(code, id) {
+			if (resolvedPluginConfig.type === "assets-only") {
+				return;
+			}
+
+			const workerConfig = resolvedPluginConfig.workers[this.environment.name];
+			if (!workerConfig) {
+				return;
+			}
+
+			if (!isNodeCompat(workerConfig)) {
+				return;
+			}
+
+			const resolvedId = await this.resolve(workerConfig.main);
+			if (id === resolvedId?.id) {
+				return injectGlobalCode(id, code);
+			}
+		},
+	};
+}
+
+const { env } = defineEnv({
 	nodeCompat: true,
 	presets: [cloudflare],
 });
-const resolvedAliases = defineEnv({
-	nodeCompat: true,
-	presets: [cloudflare],
-	resolve: true,
-}).env.alias;
+
 const CLOUDFLARE_VIRTUAL_PREFIX = "\0cloudflare-";
 
 /**
  * Returns true if the given combination of compat dates and flags means that we need Node.js compatibility.
  */
-export function isNodeCompat({
+function isNodeCompat({
 	compatibility_date,
 	compatibility_flags,
 }: WorkerConfig): boolean {
@@ -47,16 +146,8 @@ export function isNodeCompat({
  * If the current environment needs Node.js compatibility,
  * then inject the necessary global polyfills into the code.
  */
-export function injectGlobalCode(
-	id: string,
-	code: string,
-	workerConfig: WorkerConfig
-) {
-	if (!isNodeCompat(workerConfig)) {
-		return;
-	}
-
-	const injectedCode = Object.entries(preset.env.inject)
+function injectGlobalCode(id: string, code: string) {
+	const injectedCode = Object.entries(env.inject)
 		.map(([globalName, globalInject]) => {
 			if (typeof globalInject === "string") {
 				const moduleSpecifier = globalInject;
@@ -64,7 +155,7 @@ export function injectGlobalCode(
 				return `import var_${globalName} from "${moduleSpecifier}";\nglobalThis.${globalName} = var_${globalName};\n`;
 			}
 
-			// the mapping is a 2 item tuple, indicating a named export, made up of a module specifier and an export name.
+			// the mapping is a 2 item tuple, indicating a named export, made up of a module specifier and an name.
 			const [moduleSpecifier, exportName] = globalInject;
 			return `import var_${globalName} from "${moduleSpecifier}";\nglobalThis.${globalName} = var_${globalName}.${exportName};\n`;
 		})
@@ -83,11 +174,11 @@ export function injectGlobalCode(
  * But Vite only allows us to configure aliases at the shared options level, not per environment.
  * So instead we alias these to a virtual module, which are then handled with environment specific code in the `resolveId` handler
  */
-export function getNodeCompatAliases() {
+function getNodeCompatAliases() {
 	const aliases: Record<string, string> = {};
-	Object.keys(preset.env.alias).forEach((key) => {
+	Object.keys(env.alias).forEach((key) => {
 		// Don't create aliases for modules that are already marked as external
-		if (!preset.env.external.includes(key)) {
+		if (!env.external.includes(key)) {
 			aliases[key] = CLOUDFLARE_VIRTUAL_PREFIX + key;
 		}
 	});
@@ -95,34 +186,10 @@ export function getNodeCompatAliases() {
 }
 
 /**
- * Attempt to resolve the `id` to an unenv alias or polyfill.
- */
-export function resolveNodeCompatId(
-	environment: Environment,
-	workerConfig: WorkerConfig,
-	id: string
-) {
-	const result = dealiasVirtualNodeJSImports(id, workerConfig);
-	if (!result) {
-		return;
-	}
-	const { resolvedAlias, unresolvedAlias } = result;
-	if (environment.mode === "dev" && environment.depsOptimizer) {
-		const dep = environment.depsOptimizer.registerMissingImport(
-			unresolvedAlias,
-			resolvedAlias
-		);
-		return dep.id;
-	} else {
-		return resolvedAlias;
-	}
-}
-
-/**
  * Get an array of modules that should be considered external.
  */
-export function getNodeCompatExternals(): string[] {
-	return preset.env.external;
+function getNodeCompatExternals(): string[] {
+	return env.external;
 }
 
 /**
@@ -133,19 +200,24 @@ function dealiasVirtualNodeJSImports(
 	source: string,
 	workerConfig: WorkerConfig
 ) {
-	if (
-		!source.startsWith(CLOUDFLARE_VIRTUAL_PREFIX) ||
-		!isNodeCompat(workerConfig)
-	) {
+	if (!source.startsWith(CLOUDFLARE_VIRTUAL_PREFIX)) {
 		return;
 	}
 
 	const from = source.slice(CLOUDFLARE_VIRTUAL_PREFIX.length);
-	const unresolvedAlias = preset.env.alias[from];
-	const resolvedAlias = resolvedAliases[from];
-
-	if (resolvedAlias && preset.env.external.includes(resolvedAlias)) {
-		throw new Error(`Alias to external: ${source} -> ${resolvedAlias}`);
+	if (!isNodeCompat(workerConfig)) {
+		// We are not in node compat mode so just return the original module specifier
+		return from;
 	}
-	return resolvedAlias && unresolvedAlias && { resolvedAlias, unresolvedAlias };
+
+	const alias = env.alias[from];
+	if (!alias) {
+		return;
+	}
+
+	assert(
+		!env.external.includes(alias),
+		`Unexpected unenv alias to external module: ${source} -> ${alias}`
+	);
+	return alias;
 }

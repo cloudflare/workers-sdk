@@ -15,11 +15,7 @@ import {
 	getDevMiniflareOptions,
 	getPreviewMiniflareOptions,
 } from "./miniflare-options";
-import {
-	getNodeCompatAliases,
-	injectGlobalCode,
-	resolveNodeCompatId,
-} from "./node-js-compat";
+import { nodejsCompatPlugin } from "./node-js-compat";
 import { resolvePluginConfig } from "./plugin-config";
 import { MODULE_PATTERN } from "./shared";
 import { getOutputDirectory, toMiniflareRequest } from "./utils";
@@ -70,9 +66,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				return {
 					appType: "custom",
-					resolve: {
-						alias: getNodeCompatAliases(),
-					},
 					environments:
 						resolvedPluginConfig.type === "workers"
 							? {
@@ -141,40 +134,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			},
 			configResolved(config) {
 				resolvedViteConfig = config;
-			},
-			async resolveId(source) {
-				if (resolvedPluginConfig.type === "assets-only") {
-					return;
-				}
-
-				const workerConfig =
-					resolvedPluginConfig.workers[this.environment.name];
-				if (!workerConfig) {
-					return;
-				}
-
-				const res = resolveNodeCompatId(this.environment, workerConfig, source);
-				if (res) {
-					return await this.resolve(res, import.meta.url);
-				}
-			},
-			async transform(code, id) {
-				if (resolvedPluginConfig.type === "assets-only") {
-					return;
-				}
-
-				const workerConfig =
-					resolvedPluginConfig.workers[this.environment.name];
-
-				if (!workerConfig) {
-					return;
-				}
-
-				const resolvedId = await this.resolve(workerConfig.main);
-
-				if (id === resolvedId?.id) {
-					return injectGlobalCode(id, code, workerConfig);
-				}
 			},
 			generateBundle(_, bundle) {
 				let config: Unstable_RawConfig | undefined;
@@ -422,6 +381,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 			},
 		},
+		nodejsCompatPlugin(pluginConfig),
 	];
 }
 
