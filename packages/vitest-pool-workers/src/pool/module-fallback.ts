@@ -582,7 +582,7 @@ export async function handleModuleFallbackRequest(
 		console.error(
 			`[vitest-pool-workers] Failed to ${method} ${JSON.stringify(target)} from ${JSON.stringify(referrer)}.`,
 			"To resolve this, try bundling the relevant dependency with Vite.",
-			"For more details, see: https://developers.cloudflare.com/workers/testing/vitest-integration/known-issues/#module-resolution"
+			"For more details, refer to https://developers.cloudflare.com/workers/testing/vitest-integration/known-issues/#module-resolution"
 		);
 	}
 
