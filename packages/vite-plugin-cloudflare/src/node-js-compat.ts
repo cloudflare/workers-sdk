@@ -157,7 +157,7 @@ function injectGlobalCode(id: string, code: string) {
 				return `import var_${globalName} from "${moduleSpecifier}";\nglobalThis.${globalName} = var_${globalName};\n`;
 			}
 
-			// the mapping is a 2 item tuple, indicating a named export, made up of a module specifier and an name.
+			// the mapping is a 2 item tuple, indicating a named export, made up of a module specifier and a name.
 			const [moduleSpecifier, exportName] = globalInject;
 			return `import var_${globalName} from "${moduleSpecifier}";\nglobalThis.${globalName} = var_${globalName}.${exportName};\n`;
 		})
