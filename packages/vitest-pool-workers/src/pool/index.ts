@@ -586,10 +586,10 @@ function buildProjectMiniflareOptions(
 		};
 	}
 }
-async function getProjectMiniflare(
+async function updateProjectMiniflare(
 	ctx: Vitest,
 	project: Project
-): Promise<SingleOrPerTestFileMiniflare> {
+): Promise<MiniflareOptions> {
 	const mfOptions = buildProjectMiniflareOptions(ctx, project);
 	const changed = !util.isDeepStrictEqual(project.previousMfOptions, mfOptions);
 	project.previousMfOptions = mfOptions;
@@ -606,18 +606,7 @@ async function getProjectMiniflare(
 	}
 
 	if (project.mf === undefined) {
-		// If `mf` is now `undefined`, create new instances
-		if (singleInstance) {
-			log.info(`Starting single runtime for ${project.relativePath}...`);
-			project.mf = new Miniflare(mfOptions);
-		} else {
-			log.info(`Starting isolated runtimes for ${project.relativePath}...`);
-			project.mf = new Map();
-			for (const testFile of project.testFiles) {
-				project.mf.set(testFile, new Miniflare(mfOptions));
-			}
-		}
-		await forEachMiniflare(project.mf, (mf) => mf.ready);
+		// Do nothing
 	} else if (changed) {
 		// Otherwise, update the existing instances if options have changed
 		log.info(`Options changed for ${project.relativePath}, updating...`);
@@ -626,7 +615,7 @@ async function getProjectMiniflare(
 		log.debug(`Reusing runtime for ${project.relativePath}...`);
 	}
 
-	return project.mf;
+	return mfOptions;
 }
 
 function maybeGetResolvedMainPath(project: Project): string | undefined {
@@ -649,13 +638,8 @@ async function runTests(
 	project: Project,
 	config: SerializedConfig,
 	files: string[],
-	invalidates: string[] = [],
-	delayMs: number = 0
+	invalidates: string[] = []
 ) {
-	if (delayMs) {
-		await setTimeout(delayMs);
-	}
-
 	let workerPath = path.join(ctx.distPath, "worker.js");
 	let threadsWorkerPath = path.join(ctx.distPath, "workers", "threads.js");
 	if (process.platform === "win32") {
@@ -969,49 +953,110 @@ export default function (ctx: Vitest): ProcessPool {
 					} satisfies SerializedOptions,
 				};
 
-				const mf = await getProjectMiniflare(ctx, project);
+				const mfOptions = await updateProjectMiniflare(ctx, project);
+
 				if (options.singleWorker) {
+					// If `mf` is now `undefined`, create new instances
+					if (!project.mf) {
+						log.info(`Starting single runtime for ${project.relativePath}...`);
+						project.mf = new Miniflare(mfOptions);
+					}
+
 					// Single Worker, Isolated or Shared Storage
 					//  --> single instance with single runner worker
-					assert(mf instanceof Miniflare, "Expected single instance");
+					assert(project.mf instanceof Miniflare, "Expected single instance");
 					const name = getRunnerName(workspaceProject);
 					resultPromises.push(
-						runTests(ctx, mf, name, project, config, files, invalidates)
+						runTests(ctx, project.mf, name, project, config, files, invalidates)
 					);
 				} else if (options.isolatedStorage) {
 					// Multiple Workers, Isolated Storage:
 					//  --> multiple instances each with single runner worker
-					assert(mf instanceof Map, "Expected multiple isolated instances");
+					const getMiniflare = async (file: string) => {
+						if (!project.mf) {
+							log.info(
+								`Starting isolated runtimes for ${project.relativePath}...`
+							);
+							project.mf = new Map();
+							for (const testFile of project.testFiles) {
+								project.mf.set(testFile, new Miniflare(mfOptions));
+							}
+						}
+
+						assert(
+							project.mf instanceof Map,
+							"Expected multiple isolated instances"
+						);
+
+						let mf = project.mf.get(file);
+
+						if (!mf) {
+							mf = new Miniflare(mfOptions);
+
+							project.mf.set(file, mf);
+							await mf.ready;
+						}
+
+						return mf;
+					};
+
+					const processInBatches = async (
+						testFiles: string[],
+						batchSize: number
+					) => {
+						for (let i = 0; i < testFiles.length; i += batchSize) {
+							// Get the current batch of files.
+							const batch = testFiles.slice(i, i + batchSize);
+
+							await Promise.all(
+								batch.map((file) =>
+									getMiniflare(file).then((mf) =>
+										runTests(
+											ctx,
+											mf,
+											name,
+											project,
+											config,
+											[file],
+											invalidates
+										)
+									)
+								)
+							);
+						}
+					};
+
+					assert(
+						project.mf instanceof Map,
+						"Expected multiple isolated instances"
+					);
 					const name = getRunnerName(workspaceProject);
+					const promise = processInBatches(files, 5);
 
-					let mfCount = 0;
+					resultPromises.push(promise);
+				} else {
+					// Multiple Workers, Shared Storage:
+					//  --> single instance with multiple runner workers
 
+					// If `mf` is now `undefined`, create new instances
+					if (!project.mf) {
+						log.info(`Starting single runtime for ${project.relativePath}...`);
+						project.mf = new Miniflare(mfOptions);
+					}
+
+					assert(project.mf instanceof Miniflare, "Expected single instance");
 					for (const file of files) {
-						const fileMf = mf.get(file);
-						assert(fileMf !== undefined);
-
-						mfCount++;
+						const name = getRunnerName(workspaceProject, file);
 						resultPromises.push(
 							runTests(
 								ctx,
-								fileMf,
+								project.mf,
 								name,
 								project,
 								config,
 								[file],
-								invalidates,
-								Math.floor(mfCount / 5) * 500 // Batch 5 tests per 500ms
+								invalidates
 							)
-						);
-					}
-				} else {
-					// Multiple Workers, Shared Storage:
-					//  --> single instance with multiple runner workers
-					assert(mf instanceof Miniflare, "Expected single instance");
-					for (const file of files) {
-						const name = getRunnerName(workspaceProject, file);
-						resultPromises.push(
-							runTests(ctx, mf, name, project, config, [file], invalidates)
 						);
 					}
 				}
