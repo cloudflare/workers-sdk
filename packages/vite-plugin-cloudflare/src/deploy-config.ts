@@ -94,7 +94,7 @@ export function writeDeployConfig(
 
 		assert(
 			entryWorkerConfigPath,
-			`Unexpected error: ${resolvedPluginConfig.entryWorkerEnvironmentName} environment output directory is undefined`
+			`Unexpected error: entryWorkerConfigPath is undefined`
 		);
 
 		const deployConfig: DeployConfig = {
