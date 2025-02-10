@@ -149,7 +149,12 @@ function handleUnenvAliasedPackages(
 			return {
 				contents: dedent`
 					import * as esm from '${path}';
-					module.exports = Object.assign(esm.default || {}, ...Object.entries(esm).filter(([k,]) => k !== 'default'));
+					module.exports = Object.entries(esm)
+								.filter(([k,]) => k !== 'default')
+								.reduce((cjs, [k, value]) =>
+									Object.defineProperty(cjs, k, { value, enumerable: true }),
+									"default" in esm ? esm.default : {}
+								);
 				`,
 				loader: "js",
 			};
