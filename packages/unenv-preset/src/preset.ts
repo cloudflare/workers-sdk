@@ -74,10 +74,6 @@ export const cloudflare: Preset = {
 				[`node:${m}`, `@cloudflare/unenv-preset/runtime/node/${m}`],
 			])
 		),
-
-		// TODO: this is a hotfix and breaks unenv/fetch
-		// https://github.com/unjs/unenv/issues/364
-		"unenv/runtime/node/stream": "node:stream",
 	},
 	inject: {
 		// workerd already defines `global` and `Buffer`
