@@ -213,9 +213,10 @@ function dealiasVirtualNodeJSImports(
 	}
 
 	const alias = env.alias[from];
-	if (!alias) {
-		return;
-	}
+	assert(
+		alias,
+		`Expected "${from}" to have a Node.js compat alias, but none was found`
+	);
 
 	assert(
 		!env.external.includes(alias),
