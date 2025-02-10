@@ -73,7 +73,9 @@ export function nodejsCompatPlugin(pluginConfig: PluginConfig): Plugin {
 				import.meta.url
 			);
 			if (!resolvedAlias) {
-				return;
+				throw new Error(
+					"Failed to resolve aliased nodejs import: " + unresolvedAlias
+				);
 			}
 
 			if (this.environment.mode === "dev" && this.environment.depsOptimizer) {
