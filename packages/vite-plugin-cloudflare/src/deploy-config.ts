@@ -67,42 +67,40 @@ export function writeDeployConfig(
 
 		fs.writeFileSync(deployConfigPath, JSON.stringify(deployConfig));
 	} else {
-		const workerConfigPaths = Object.fromEntries(
-			Object.keys(resolvedPluginConfig.workers).map((environmentName) => {
-				const outputDirectory =
-					resolvedViteConfig.environments[environmentName]?.build.outDir;
+		let entryWorkerConfigPath: string | undefined;
+		const auxiliaryWorkers: DeployConfig["auxiliaryWorkers"] = [];
 
-				assert(
-					outputDirectory,
-					`Unexpected error: ${environmentName} environment output directory is undefined`
-				);
+		for (const environmentName of Object.keys(resolvedPluginConfig.workers)) {
+			const outputDirectory =
+				resolvedViteConfig.environments[environmentName]?.build.outDir;
 
-				return [
-					environmentName,
-					getRelativePathToWorkerConfig(
-						deployConfigDirectory,
-						resolvedViteConfig.root,
-						outputDirectory
-					),
-				];
-			})
-		);
+			assert(
+				outputDirectory,
+				`Unexpected error: ${environmentName} environment output directory is undefined`
+			);
 
-		const { entryWorkerEnvironmentName } = resolvedPluginConfig;
-		const configPath = workerConfigPaths[entryWorkerEnvironmentName];
+			const configPath = getRelativePathToWorkerConfig(
+				deployConfigDirectory,
+				resolvedViteConfig.root,
+				outputDirectory
+			);
+
+			if (environmentName === resolvedPluginConfig.entryWorkerEnvironmentName) {
+				entryWorkerConfigPath = configPath;
+			} else {
+				auxiliaryWorkers.push({ configPath });
+			}
+		}
 
 		assert(
-			configPath,
-			`Unexpected error: ${entryWorkerEnvironmentName} environment output directory is undefined`
+			entryWorkerConfigPath,
+			`Unexpected error: ${resolvedPluginConfig.entryWorkerEnvironmentName} environment output directory is undefined`
 		);
 
-		const auxiliaryWorkers = Object.entries(workerConfigPaths)
-			.filter(
-				([environmentName]) => environmentName !== entryWorkerEnvironmentName
-			)
-			.map(([_, configPath]) => ({ configPath }));
-
-		const deployConfig: DeployConfig = { configPath, auxiliaryWorkers };
+		const deployConfig: DeployConfig = {
+			configPath: entryWorkerConfigPath,
+			auxiliaryWorkers,
+		};
 
 		fs.writeFileSync(deployConfigPath, JSON.stringify(deployConfig));
 	}

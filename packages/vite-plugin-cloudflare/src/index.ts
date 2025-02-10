@@ -134,8 +134,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 									)
 								);
 							}
-
-							writeDeployConfig(resolvedPluginConfig, resolvedViteConfig);
 						},
 					},
 				};
@@ -229,6 +227,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					fileName: "wrangler.json",
 					source: JSON.stringify(config),
 				});
+			},
+			writeBundle() {
+				if (
+					this.environment.name ===
+					(resolvedPluginConfig.type === "assets-only"
+						? "client"
+						: resolvedPluginConfig.entryWorkerEnvironmentName)
+				) {
+					writeDeployConfig(resolvedPluginConfig, resolvedViteConfig);
+				}
 			},
 			handleHotUpdate(options) {
 				if (resolvedPluginConfig.configPaths.has(options.file)) {
