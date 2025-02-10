@@ -13,7 +13,7 @@ The following selections do not need to be completed if this PR only contains ch
   - [ ] TODO (before merge)
   - [ ] Tests included
   - [ ] Tests not necessary because:
-- E2E Tests CI Job required? (Use "e2e" label or ask maintainer to run separately)
+- Wrangler E2E Tests CI Job required? (Use "e2e" label or ask maintainer to run separately)
   - [ ] I don't know
   - [ ] Required
   - [ ] Not required because:
