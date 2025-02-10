@@ -120,6 +120,8 @@ const cloudflareBuiltInModules = [
 	"cloudflare:workflows",
 ];
 
+const defaultConditions = ["workerd", "module", "browser"];
+
 export function createCloudflareEnvironmentOptions(
 	workerConfig: WorkerConfig,
 	userConfig: vite.UserConfig,
@@ -131,7 +133,7 @@ export function createCloudflareEnvironmentOptions(
 			//       dependencies as not external
 			noExternal: true,
 			// We want to use `workerd` package exports if available (e.g. for postgres).
-			conditions: ["workerd", "module", "browser", "development|production"],
+			conditions: [...defaultConditions, "development|production"],
 		},
 		dev: {
 			createEnvironment(name, config) {
@@ -142,6 +144,9 @@ export function createCloudflareEnvironmentOptions(
 			createEnvironment(name, config) {
 				return new vite.BuildEnvironment(name, config);
 			},
+			target: "es2022",
+			// We need to enable `emitAssets` in order to support additional modules defined by `rules`
+			emitAssets: true,
 			outDir: getOutputDirectory(userConfig, environmentName),
 			ssr: true,
 			rollupOptions: {
@@ -163,6 +168,7 @@ export function createCloudflareEnvironmentOptions(
 			],
 			esbuildOptions: {
 				platform: "neutral",
+				conditions: [...defaultConditions, "development"],
 				resolveExtensions: [
 					".mjs",
 					".js",
