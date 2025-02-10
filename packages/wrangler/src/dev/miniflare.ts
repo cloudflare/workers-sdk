@@ -9,7 +9,7 @@ import {
 } from "../ai/fetcher";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
-import { UserError } from "../errors";
+import { createFatalError, UserError } from "../errors";
 import {
 	EXTERNAL_IMAGES_WORKER_NAME,
 	EXTERNAL_IMAGES_WORKER_SCRIPT,
@@ -986,6 +986,14 @@ export async function buildMiniflareOptions(
 
 	if (config.bindings.images && config.imagesLocalMode) {
 		if (!didWarnImagesLocalModeUsage) {
+			try {
+				await import("sharp");
+			} catch {
+				const msg =
+					"Sharp must be installed to use the Images binding local mode; check your version of Node is compatible";
+				throw createFatalError(msg, false);
+			}
+
 			didWarnImagesLocalModeUsage = true;
 			logger.info(
 				"You are using Images local mode. This only supports resizing, rotating and transcoding."

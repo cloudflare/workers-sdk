@@ -1,5 +1,24 @@
 # miniflare
 
+## 3.20250129.0
+
+### Patch Changes
+
+- [#7971](https://github.com/cloudflare/workers-sdk/pull/7971) [`ab49886`](https://github.com/cloudflare/workers-sdk/commit/ab498862b96551774f601403d3e93d2105a18a91) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250124.0  | 1.20250129.0  |
+  | @cloudflare/workers-types | ^4.20250121.0 | ^4.20250129.0 |
+
+## 3.20250124.1
+
+### Patch Changes
+
+- [#7788](https://github.com/cloudflare/workers-sdk/pull/7788) [`cf4f47a`](https://github.com/cloudflare/workers-sdk/commit/cf4f47a8af2dc476f8a0e61f0d22f080f191de1f) Thanks [@penalosa](https://github.com/penalosa)! - Switch to `capnp-es` over `capnp-ts`
+
 ## 3.20250124.0
 
 ### Patch Changes

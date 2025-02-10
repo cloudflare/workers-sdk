@@ -1,5 +1,19 @@
 # @cloudflare/workers-shared
 
+## 0.13.1
+
+### Patch Changes
+
+- [#7989](https://github.com/cloudflare/workers-sdk/pull/7989) [`cf09cfa`](https://github.com/cloudflare/workers-sdk/commit/cf09cfa33db317740a54c8b6b035a7e84b95c6ec) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Adds additional error messaging for errors from KV.
+
+- [#7996](https://github.com/cloudflare/workers-sdk/pull/7996) [`f9fd9df`](https://github.com/cloudflare/workers-sdk/commit/f9fd9df8f6e11d87bb34ed5005730de1d593989a) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Provide shorter message for KV GET errors.
+
+## 0.13.0
+
+### Minor Changes
+
+- [#7897](https://github.com/cloudflare/workers-sdk/pull/7897) [`34f9797`](https://github.com/cloudflare/workers-sdk/commit/34f9797822836b98edc4d8ddc6e2fb0ab322b864) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - chore: provides `run_worker_first` for Worker-script-first configuration. Deprecates `experimental_serve_directly`.
+
 ## 0.12.5
 
 ### Patch Changes

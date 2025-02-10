@@ -1,5 +1,41 @@
 # create-cloudflare
 
+## 2.37.5
+
+### Patch Changes
+
+- [#8005](https://github.com/cloudflare/workers-sdk/pull/8005) [`b889b16`](https://github.com/cloudflare/workers-sdk/commit/b889b1655bdcc1888e0558307bee3f7490827edc) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.20.0 | 3.21.1 |
+
+- [#8006](https://github.com/cloudflare/workers-sdk/pull/8006) [`4ecabf1`](https://github.com/cloudflare/workers-sdk/commit/4ecabf17784ea696662cbe1c0821ca21abe70e05) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-hono | 0.15.2 | 0.15.3 |
+
+- [#8007](https://github.com/cloudflare/workers-sdk/pull/8007) [`76156a4`](https://github.com/cloudflare/workers-sdk/commit/76156a4950ed6ac71f6b745a9deeb09e919a09fb) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.15.2 | 2.15.3 |
+
+## 2.37.4
+
+### Patch Changes
+
+- [#7903](https://github.com/cloudflare/workers-sdk/pull/7903) [`ce8bfbd`](https://github.com/cloudflare/workers-sdk/commit/ce8bfbdada90d1eac99f3a35dfdf1707e88eb73f) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - update experimental Next.js template to work on `@opennextjs/cloudflare@0.4.x`
+
+- [#7972](https://github.com/cloudflare/workers-sdk/pull/7972) [`7112347`](https://github.com/cloudflare/workers-sdk/commit/7112347e7de80857d2515892e9620700486b7a84) Thanks [@andyjessop](https://github.com/andyjessop)! - chore: bumps create-hono version to ensure correct Wrangler config file. Fixes the issue where C3 was generating both a `wrangler.toml` and a `wrangler.json` file.
+
 ## 2.37.3
 
 ### Patch Changes

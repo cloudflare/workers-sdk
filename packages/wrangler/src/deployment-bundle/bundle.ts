@@ -393,11 +393,6 @@ export async function bundleWorker(
 
 	const unenvResolvePaths = getUnenvResolvePathsFromEnv()?.split(",");
 
-	// Use `process.env["NODE_ENV" + ""]` to get the runtime value when wranler is executed.
-	// Esbuild would replace `process.env.NODE_ENV` with the value it has when wrangler gets bundled.
-	// See: https://github.com/cloudflare/workers-sdk/issues/1477)
-	const runtimeProcessEnv = process.env["NODE_ENV" + ""];
-
 	const buildOptions = {
 		// Don't use entryFile here as the file may have been changed when applying the middleware
 		entryPoints: [entry.file],
@@ -427,16 +422,18 @@ export async function bundleWorker(
 		metafile: true,
 		conditions: getBuildConditions(),
 		platform: getBuildPlatform(),
-		define: {
-			...(defineNavigatorUserAgent
-				? { "navigator.userAgent": `"Cloudflare-Workers"` }
-				: {}),
-			...(runtimeProcessEnv
-				? { "process.env.NODE_ENV": `"${runtimeProcessEnv}"` }
-				: {}),
-			...(nodejsCompatMode === "legacy" ? { global: "globalThis" } : {}),
-			...define,
-		},
+		...(process.env.NODE_ENV && {
+			define: {
+				...(defineNavigatorUserAgent
+					? { "navigator.userAgent": `"Cloudflare-Workers"` }
+					: {}),
+				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
+				// when we do a build of wrangler. (re: https://github.com/cloudflare/workers-sdk/issues/1477)
+				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
+				...(nodejsCompatMode === "legacy" ? { global: "globalThis" } : {}),
+				...define,
+			},
+		}),
 		loader: COMMON_ESBUILD_OPTIONS.loader,
 		plugins: [
 			aliasPlugin,

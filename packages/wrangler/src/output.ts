@@ -93,6 +93,10 @@ interface OutputEntryDeployment extends OutputEntryBase<"deploy"> {
 	version_id: string | null;
 	/** A list of URLs that represent the HTTP triggers associated with this deployment */
 	targets: string[] | undefined;
+	/** set if the worker's name was overridden */
+	worker_name_overridden: boolean;
+	/** wrangler environment used */
+	wrangler_environment: string | undefined;
 }
 
 interface OutputEntryPagesDeployment extends OutputEntryBase<"pages-deploy"> {
@@ -138,6 +142,10 @@ interface OutputEntryVersionUpload extends OutputEntryBase<"version-upload"> {
 	version_id: string | null;
 	/** The preview URL associated with this version upload */
 	preview_url: string | undefined;
+	/** set if the worker's name was overridden */
+	worker_name_overridden: boolean;
+	/** wrangler environment used */
+	wrangler_environment: string | undefined;
 }
 
 interface OutputEntryVersionDeployment

@@ -1,6 +1,6 @@
 {
 	"name": "create-cloudflare",
-	"version": "2.37.3",
+	"version": "2.37.5",
 	"description": "A CLI for creating and deploying new applications to Cloudflare.",
 	"keywords": [
 		"cloudflare",
@@ -48,8 +48,9 @@
 		"@clack/prompts": "^0.6.3",
 		"@cloudflare/cli": "workspace:*",
 		"@cloudflare/eslint-config-worker": "workspace:*",
+		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250121.0",
+		"@cloudflare/workers-types": "^4.20250204.0",
 		"@iarna/toml": "^3.0.0",
 		"@types/command-exists": "^1.2.0",
 		"@types/cross-spawn": "^6.0.2",

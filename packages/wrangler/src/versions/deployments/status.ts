@@ -52,14 +52,17 @@ export const deploymentsStatusCommand = createCommand({
 
 		if (workerName === undefined) {
 			throw new UserError(
-				'You need to provide a name for your Worker. Either pass it as a cli arg with `--name <name>` or in your configuration file as `name = "<name>"`'
+				'You need to provide a name for your Worker. Either pass it as a cli arg with `--name <name>` or in your configuration file as `name = "<name>"`',
+				{ telemetryMessage: true }
 			);
 		}
 
 		const latestDeployment = await fetchLatestDeployment(accountId, workerName);
 
 		if (!latestDeployment) {
-			throw new UserError(`The Worker ${workerName} has no deployments.`);
+			throw new UserError(`The Worker ${workerName} has no deployments.`, {
+				telemetryMessage: "The Worker has no deployments",
+			});
 		}
 
 		if (args.json) {

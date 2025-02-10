@@ -1,5 +1,60 @@
 # wrangler
 
+## 3.107.3
+
+### Patch Changes
+
+- [#7378](https://github.com/cloudflare/workers-sdk/pull/7378) [`59c7c8e`](https://github.com/cloudflare/workers-sdk/commit/59c7c8ee177d9345948a416377c6625269d58925) Thanks [@IRCody](https://github.com/IRCody)! - Add build and push helper sub-commands under the cloudchamber command.
+
+- Updated dependencies []:
+  - miniflare@3.20250129.0
+
+## 3.107.2
+
+### Patch Changes
+
+- [#7988](https://github.com/cloudflare/workers-sdk/pull/7988) [`444a630`](https://github.com/cloudflare/workers-sdk/commit/444a6302f194150b0678da5b564cfd2de8a3dad6) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix #7985.
+
+  This reverts the changes on #7945 that caused compatibility issues with Node 16 due to the introduction of `sharp`.
+
+## 3.107.1
+
+### Patch Changes
+
+- [#7981](https://github.com/cloudflare/workers-sdk/pull/7981) [`e2b3306`](https://github.com/cloudflare/workers-sdk/commit/e2b3306e1721dbc0ba8e0eb2025a519b80adbd01) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Fixes a regression introduced in Wrangler 3.107.0 in which `[assets]` was not being inherited from the top-level environment.
+
+- Updated dependencies [[`ab49886`](https://github.com/cloudflare/workers-sdk/commit/ab498862b96551774f601403d3e93d2105a18a91)]:
+  - miniflare@3.20250129.0
+
+## 3.107.0
+
+### Minor Changes
+
+- [#7897](https://github.com/cloudflare/workers-sdk/pull/7897) [`34f9797`](https://github.com/cloudflare/workers-sdk/commit/34f9797822836b98edc4d8ddc6e2fb0ab322b864) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - chore: provides `run_worker_first` for Worker-script-first configuration. Deprecates `experimental_serve_directly`.
+
+### Patch Changes
+
+- [#7945](https://github.com/cloudflare/workers-sdk/pull/7945) [`d758215`](https://github.com/cloudflare/workers-sdk/commit/d7582150a5dc6568ac1d1ebcdf24667c83c6a5eb) Thanks [@ns476](https://github.com/ns476)! - Add Images binding (in private beta for the time being)
+
+- [#7947](https://github.com/cloudflare/workers-sdk/pull/7947) [`f57bc4e`](https://github.com/cloudflare/workers-sdk/commit/f57bc4e059b19334783f8f8f7d46c5a710a589ae) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: avoid `getPlatformProxy` logging twice that it is using vars defined in `.dev.vars` files
+
+  when `getPlatformProxy` is called and it retrieves values from `.dev.vars` files, it logs twice
+  a message like: `Using vars defined in .dev.vars`, the changes here make sure that in such cases
+  this log only appears once
+
+- [#7889](https://github.com/cloudflare/workers-sdk/pull/7889) [`38db4ed`](https://github.com/cloudflare/workers-sdk/commit/38db4ed4de3bed0b4c33d23ee035882a71fbb26b) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: add experimental resource auto-provisioning to versions upload
+
+- [#7864](https://github.com/cloudflare/workers-sdk/pull/7864) [`de6fa18`](https://github.com/cloudflare/workers-sdk/commit/de6fa1846ac793a86356a319a09482f08819b632) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update the `unstable_getMiniflareWorkerOptions` types to always include an `env` parameter.
+
+  The `unstable_getMiniflareWorkerOptions` types, when accepting a config object as the first argument,
+  didn't accept a second `env` argument. The changes here make sure they do, since the `env` is still
+  relevant for picking up variables from `.dev.vars` files.
+
+- [#7964](https://github.com/cloudflare/workers-sdk/pull/7964) [`bc4d6c8`](https://github.com/cloudflare/workers-sdk/commit/bc4d6c8d25f40308231e9109dc643df68bc72b52) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Fix scripts binding to a workflow in a different script overriding workflow config
+
+- Updated dependencies [[`cf4f47a`](https://github.com/cloudflare/workers-sdk/commit/cf4f47a8af2dc476f8a0e61f0d22f080f191de1f)]:
+  - miniflare@3.20250124.1
+
 ## 3.106.0
 
 ### Minor Changes

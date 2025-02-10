@@ -1,5 +1,38 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.6.12
+
+### Patch Changes
+
+- Updated dependencies [[`59c7c8e`](https://github.com/cloudflare/workers-sdk/commit/59c7c8ee177d9345948a416377c6625269d58925)]:
+  - wrangler@3.107.3
+  - miniflare@3.20250129.0
+
+## 0.6.11
+
+### Patch Changes
+
+- Updated dependencies [[`444a630`](https://github.com/cloudflare/workers-sdk/commit/444a6302f194150b0678da5b564cfd2de8a3dad6)]:
+  - wrangler@3.107.2
+
+## 0.6.10
+
+### Patch Changes
+
+- Updated dependencies [[`ab49886`](https://github.com/cloudflare/workers-sdk/commit/ab498862b96551774f601403d3e93d2105a18a91), [`e2b3306`](https://github.com/cloudflare/workers-sdk/commit/e2b3306e1721dbc0ba8e0eb2025a519b80adbd01)]:
+  - miniflare@3.20250129.0
+  - wrangler@3.107.1
+
+## 0.6.9
+
+### Patch Changes
+
+- [#7773](https://github.com/cloudflare/workers-sdk/pull/7773) [`aa3ee63`](https://github.com/cloudflare/workers-sdk/commit/aa3ee63880c34ba81605aa19868beb2c993de135) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: respect `run_worker_first` when testing worker with assets
+
+- Updated dependencies [[`d758215`](https://github.com/cloudflare/workers-sdk/commit/d7582150a5dc6568ac1d1ebcdf24667c83c6a5eb), [`34f9797`](https://github.com/cloudflare/workers-sdk/commit/34f9797822836b98edc4d8ddc6e2fb0ab322b864), [`f57bc4e`](https://github.com/cloudflare/workers-sdk/commit/f57bc4e059b19334783f8f8f7d46c5a710a589ae), [`cf4f47a`](https://github.com/cloudflare/workers-sdk/commit/cf4f47a8af2dc476f8a0e61f0d22f080f191de1f), [`38db4ed`](https://github.com/cloudflare/workers-sdk/commit/38db4ed4de3bed0b4c33d23ee035882a71fbb26b), [`de6fa18`](https://github.com/cloudflare/workers-sdk/commit/de6fa1846ac793a86356a319a09482f08819b632), [`bc4d6c8`](https://github.com/cloudflare/workers-sdk/commit/bc4d6c8d25f40308231e9109dc643df68bc72b52)]:
+  - wrangler@3.107.0
+  - miniflare@3.20250124.1
+
 ## 0.6.8
 
 ### Patch Changes
