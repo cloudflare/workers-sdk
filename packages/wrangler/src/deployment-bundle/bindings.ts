@@ -7,6 +7,7 @@ import { prompt, select } from "../dialogs";
 import { UserError } from "../errors";
 import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
+import * as metrics from "../metrics";
 import { APIError } from "../parse";
 import { createR2Bucket, getR2Bucket, listR2Buckets } from "../r2/helpers";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
@@ -421,7 +422,18 @@ export async function provisionBindings(
 			);
 		}
 
+		const resourceCount = pendingResources.reduce(
+			(acc, resource) => {
+				acc[resource.resourceType] ??= 0;
+				acc[resource.resourceType]++;
+				return acc;
+			},
+			{} as Record<string, number>
+		);
 		logger.log(`🎉 All resources provisioned, continuing with deployment...\n`);
+		metrics.sendMetricsEvent("provision resources", resourceCount, {
+			sendMetrics: config.send_metrics,
+		});
 	}
 }
 
