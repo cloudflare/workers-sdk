@@ -80,8 +80,8 @@ export const cloudflare: Preset = {
 		// override the previous presets so that we use the native implementation
 		Buffer: false,
 		global: false,
-		console: "@cloudflare/unenv-preset/runtime/node/console/index",
-		process: "@cloudflare/unenv-preset/runtime/node/process/index",
+		console: "@cloudflare/unenv-preset/runtime/node/console",
+		process: "@cloudflare/unenv-preset/runtime/node/process",
 	},
 	polyfill: [],
 	external: nodeCompatModules.flatMap((p) => [p, `node:${p}`]),
