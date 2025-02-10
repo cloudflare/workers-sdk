@@ -369,7 +369,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				let magicString: MagicString | undefined;
 
 				while ((match = moduleRE.exec(code))) {
-					magicString ||= new MagicString(code);
+					magicString ??= new MagicString(code);
 					const [full, moduleType, modulePath] = match;
 
 					assert(
