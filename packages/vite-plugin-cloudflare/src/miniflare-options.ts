@@ -481,7 +481,7 @@ export function getDevMiniflareOptions(
 
 			return MiniflareResponse.json({
 				// Cap'n Proto expects byte arrays for `:Data` typed fields from JSON
-				wasm: source instanceof Uint8Array ? Array.from(source) : source,
+				wasm: Array.from(source),
 			});
 		},
 	};
