@@ -122,18 +122,15 @@ export async function copyWorkerVersionWithNewSecrets({
 	);
 
 	// Filter out secrets because we're gonna inherit them
-	const bindings: WorkerMetadataBinding[] =
-		versionInfo.resources.bindings.filter(
-			(binding) => binding.type !== "secret_text"
-		);
-
-	// We cannot upload a DO with a namespace_id so remove it
-	for (const binding of bindings) {
-		if (binding.type === "durable_object_namespace") {
-			// @ts-expect-error - it doesn't exist within wrangler but does in the API
-			delete binding.namespace_id;
-		}
-	}
+	const bindings: WorkerMetadataBinding[] = versionInfo.resources.bindings
+		.filter((binding) => binding.type !== "secret_text")
+		.map((binding) => {
+			// Inherit all of the existing bindings
+			return {
+				name: binding.name,
+				type: "inherit",
+			};
+		});
 
 	// Add the new secrets
 	for (const secret of secrets) {

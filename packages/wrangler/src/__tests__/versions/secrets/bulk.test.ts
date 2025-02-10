@@ -49,6 +49,7 @@ describe("versions secret bulk", () => {
 		mockSetupApiCalls();
 		mockPostVersion((metadata) => {
 			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
 				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
 				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
@@ -119,6 +120,7 @@ describe("versions secret bulk", () => {
 		mockSetupApiCalls();
 		mockPostVersion((metadata) => {
 			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
 				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
 				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
@@ -164,6 +166,7 @@ describe("versions secret bulk", () => {
 		mockSetupApiCalls();
 		mockPostVersion((metadata) => {
 			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
 				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
 				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
@@ -205,6 +208,7 @@ describe("versions secret bulk", () => {
 		mockSetupApiCalls();
 		mockPostVersion((metadata) => {
 			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
 				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
 				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
@@ -249,6 +253,7 @@ describe("versions secret bulk", () => {
 		mockSetupApiCalls();
 		mockPostVersion((metadata) => {
 			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
 				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
 				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
