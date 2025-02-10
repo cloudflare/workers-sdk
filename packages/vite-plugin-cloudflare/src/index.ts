@@ -15,7 +15,14 @@ import {
 	getDevMiniflareOptions,
 	getPreviewMiniflareOptions,
 } from "./miniflare-options";
-import { nodejsCompatPlugin } from "./node-js-compat";
+import {
+	dealiasVirtualNodeJSImport,
+	getNodeCompatAliases,
+	getNodeCompatExternals,
+	injectGlobalCode,
+	isNodeCompat,
+	maybeStripNodeJsVirtualPrefix,
+} from "./node-js-compat";
 import { resolvePluginConfig } from "./plugin-config";
 import { MODULE_PATTERN } from "./shared";
 import { getOutputDirectory, toMiniflareRequest } from "./utils";
@@ -44,17 +51,13 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		{
 			name: "vite-plugin-cloudflare",
 			config(userConfig, env) {
-				if (env.isPreview) {
-					return { appType: "custom" };
-				}
-
 				resolvedPluginConfig = resolvePluginConfig(
 					pluginConfig,
 					userConfig,
 					env
 				);
 
-				if (!workersConfigsWarningShown) {
+				if (!workersConfigsWarningShown && !env.isPreview) {
 					workersConfigsWarningShown = true;
 					const workersConfigsWarning = getWarningForWorkersConfigs(
 						resolvedPluginConfig.rawConfigs
@@ -381,8 +384,84 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 			},
 		},
-		nodejsCompatPlugin(pluginConfig),
+		// Plugin that can provide Node.js compatibility support for Vite Environments that are hosted in Cloudflare Workers.
+		{
+			name: "vite-plugin-cloudflare:nodejs-compat",
+			config() {
+				// Configure Vite with the Node.js polyfill aliases
+				// We have to do this across the whole Vite config because it is not possible to do it per Environment.
+				// These aliases are to virtual modules that then get Environment specific handling in the resolveId hook.
+				return {
+					resolve: {
+						alias: getNodeCompatAliases(),
+					},
+				};
+			},
+			configEnvironment(environmentName) {
+				// Ignore Node.js external modules when building environments that use Node.js compat.
+				const workerConfig = getWorkerConfig(environmentName);
+				if (isNodeCompat(workerConfig)) {
+					return {
+						build: {
+							rollupOptions: {
+								external: getNodeCompatExternals(),
+							},
+						},
+					};
+				}
+			},
+			async resolveId(source, importer, options) {
+				// Handle the virtual modules that come from Node.js compat aliases.
+				const from = maybeStripNodeJsVirtualPrefix(source);
+				if (!from) {
+					return;
+				}
+
+				const workerConfig = getWorkerConfig(this.environment.name);
+				if (!isNodeCompat(workerConfig)) {
+					return this.resolve(from, importer, options);
+				}
+
+				const unresolvedAlias = dealiasVirtualNodeJSImport(from);
+				const resolvedAlias = await this.resolve(
+					unresolvedAlias,
+					import.meta.url
+				);
+				assert(
+					resolvedAlias,
+					"Failed to resolve aliased nodejs import: " + unresolvedAlias
+				);
+
+				if (this.environment.mode === "dev" && this.environment.depsOptimizer) {
+					// Make sure the dependency optimizer is aware of this aliased import
+					this.environment.depsOptimizer.registerMissingImport(
+						unresolvedAlias,
+						resolvedAlias.id
+					);
+				}
+
+				return resolvedAlias;
+			},
+			async transform(code, id) {
+				// Inject the Node.js compat globals into the entry module for Node.js compat environments.
+				const workerConfig = getWorkerConfig(this.environment.name);
+				if (!isNodeCompat(workerConfig)) {
+					return;
+				}
+
+				const resolvedId = await this.resolve(workerConfig.main);
+				if (id === resolvedId?.id) {
+					return injectGlobalCode(id, code);
+				}
+			},
+		},
 	];
+
+	function getWorkerConfig(environmentName: string) {
+		return resolvedPluginConfig.type !== "assets-only"
+			? resolvedPluginConfig.workers[environmentName]
+			: undefined;
+	}
 }
 
 /**
