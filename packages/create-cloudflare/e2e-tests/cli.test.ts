@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { basename } from "node:path";
 import { beforeAll, describe, expect } from "vitest";
 import { version } from "../package.json";
-import { getFrameworkToTest } from "./frameworkToTest";
+import { getFrameworkToTest } from "./frameworks/framework-to-test";
 import {
 	isQuarantineMode,
 	keys,
