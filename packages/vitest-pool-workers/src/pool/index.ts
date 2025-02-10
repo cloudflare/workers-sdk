@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import events from "node:events";
 import fs from "node:fs";
 import path from "node:path";
+import { setTimeout } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import util from "node:util";
 import { createBirpc } from "birpc";
@@ -648,8 +649,13 @@ async function runTests(
 	project: Project,
 	config: SerializedConfig,
 	files: string[],
-	invalidates: string[] = []
+	invalidates: string[] = [],
+	delayMs: number = 0
 ) {
+	if (delayMs) {
+		await setTimeout(delayMs);
+	}
+
 	let workerPath = path.join(ctx.distPath, "worker.js");
 	let threadsWorkerPath = path.join(ctx.distPath, "workers", "threads.js");
 	if (process.platform === "win32") {
@@ -977,11 +983,25 @@ export default function (ctx: Vitest): ProcessPool {
 					//  --> multiple instances each with single runner worker
 					assert(mf instanceof Map, "Expected multiple isolated instances");
 					const name = getRunnerName(workspaceProject);
+
+					let mfCount = 0;
+
 					for (const file of files) {
 						const fileMf = mf.get(file);
 						assert(fileMf !== undefined);
+
+						mfCount++;
 						resultPromises.push(
-							runTests(ctx, fileMf, name, project, config, [file], invalidates)
+							runTests(
+								ctx,
+								fileMf,
+								name,
+								project,
+								config,
+								[file],
+								invalidates,
+								Math.floor(mfCount / 5) * 500 // Batch 5 tests per 500ms
+							)
 						);
 					}
 				} else {
