@@ -424,7 +424,8 @@ export async function provisionBindings(
 
 		const resourceCount = pendingResources.reduce(
 			(acc, resource) => {
-				acc[resource.resourceType] = acc[resource.resourceType] + 1 || 1;
+				acc[resource.resourceType] ??= 0;
+				acc[resource.resourceType]++;
 				return acc;
 			},
 			{} as Record<string, number>
