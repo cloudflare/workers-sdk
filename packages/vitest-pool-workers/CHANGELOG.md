@@ -1,5 +1,39 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.6.14
+
+### Patch Changes
+
+- [#7810](https://github.com/cloudflare/workers-sdk/pull/7810) [`ac4f30b`](https://github.com/cloudflare/workers-sdk/commit/ac4f30b0532f2559ecf1739ba12aa5155cd0a62e) Thanks [@edmundhung](https://github.com/edmundhung)! - Added [Vite dependency pre-bundling](https://vite.dev/guide/dep-pre-bundling) support. If you encounter module resolution issues—such as: `Error: Cannot use require() to import an ES Module` or `Error: No such module`—you can now bundle these dependencies using the [deps.optimizer](https://vitest.dev/config/#deps-optimizer) option:
+
+  ```tsx
+  import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
+
+  export default defineWorkersConfig({
+    test: {
+      deps: {
+        optimizer: {
+          ssr: {
+            enabled: true,
+            include: ["your-package-name"],
+          },
+        },
+      },
+      poolOptions: {
+        workers: {
+          // ...
+        },
+      },
+    },
+  });
+  ```
+
+  Fixed #6591, #6581, #6405.
+
+- Updated dependencies [[`a025ad2`](https://github.com/cloudflare/workers-sdk/commit/a025ad2ecb086cb4bcee6b9dfd8cf06eb2102ade)]:
+  - wrangler@3.108.1
+  - miniflare@3.20250204.0
+
 ## 0.6.13
 
 ### Patch Changes

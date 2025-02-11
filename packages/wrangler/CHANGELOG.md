@@ -1,5 +1,14 @@
 # wrangler
 
+## 3.108.1
+
+### Patch Changes
+
+- [#8103](https://github.com/cloudflare/workers-sdk/pull/8103) [`a025ad2`](https://github.com/cloudflare/workers-sdk/commit/a025ad2ecb086cb4bcee6b9dfd8cf06eb2102ade) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: fix bug where `wrangler secret list --format=json` was printing the wrangler banner.
+
+- Updated dependencies []:
+  - miniflare@3.20250204.0
+
 ## 3.108.0
 
 ### Minor Changes
