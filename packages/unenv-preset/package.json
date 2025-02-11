@@ -31,7 +31,8 @@
 		"./*": {
 			"types": "./dist/runtime/*.d.mts",
 			"default": "./dist/runtime/*.mjs"
-		}
+		},
+		"./package.json": "./package.json"
 	},
 	"main": "./dist/index.cjs",
 	"types": "./dist/index.d.ts",
