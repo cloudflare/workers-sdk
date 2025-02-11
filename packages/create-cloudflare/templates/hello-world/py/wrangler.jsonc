@@ -4,6 +4,6 @@
 	"compatibility_date": "<TBD>",
 	"compatibility_flags": ["python_workers"],
 	"observability": {
-		"enabled": true
-	}
+		"enabled": true,
+	},
 }
