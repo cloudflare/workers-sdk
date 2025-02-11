@@ -9,6 +9,7 @@ import chalk from "chalk";
 import { Miniflare } from "miniflare";
 import { WebSocket } from "ws";
 import { createCLIParser } from "..";
+import { Config } from "../config";
 import { createCommand, createNamespace } from "../core/create-command";
 import { moduleTypeMimeType } from "../deployment-bundle/create-worker-upload-form";
 import {
@@ -32,6 +33,65 @@ export const checkNamespace = createNamespace({
 	},
 });
 
+async function checkStartupHandler(
+	{
+		outfile,
+		args,
+		workerBundle,
+		pages,
+	}: { outfile: string; args?: string; workerBundle?: string; pages?: boolean },
+	{ config }: { config: Config }
+) {
+	if (workerBundle === undefined) {
+		const tmpDir = getWranglerTmpDir(undefined, "startup-profile");
+		workerBundle = path.join(tmpDir.path, "worker.bundle");
+
+		if (config.pages_build_output_dir || pages) {
+			log("Pages project detected");
+			log("");
+		}
+
+		if (logger.loggerLevel !== "debug") {
+			// Hide build logs
+			logger.loggerLevel = "error";
+		}
+
+		await spinnerWhile({
+			promise: async () =>
+				await createCLIParser(
+					config.pages_build_output_dir || pages
+						? [
+								"pages",
+								"functions",
+								"build",
+								...(args?.split(" ") ?? []),
+								`--outfile=${workerBundle}`,
+							]
+						: [
+								"deploy",
+								...(args?.split(" ") ?? []),
+								"--dry-run",
+								`--outfile=${workerBundle}`,
+							]
+				).parse(),
+			startMessage: "Building your Worker",
+			endMessage: chalk.green("Worker Built! 🎉"),
+		});
+		logger.resetLoggerLevel();
+	}
+	const cpuProfileResult = await spinnerWhile({
+		promise: analyseBundle(workerBundle),
+		startMessage: "Analysing",
+		endMessage: chalk.green("Startup phase analysed"),
+	});
+
+	await writeFile(outfile, JSON.stringify(await cpuProfileResult));
+
+	log(
+		`CPU Profile written to ${outfile}. Load it into the Chrome DevTools profiler (or directly in VSCode) to view a flamegraph.`
+	);
+}
+
 export const checkStartupCommand = createCommand({
 	args: {
 		outfile: {
@@ -45,23 +105,26 @@ export const checkStartupCommand = createCommand({
 				"Path to a prebuilt worker bundle i.e the output of `wrangler deploy --outfile worker.bundle",
 			type: "string",
 		},
-		deployArgs: {
-			alias: "args",
+		pages: {
+			describe: "Force this project to be treated as a Pages project",
+			type: "boolean",
+		},
+		args: {
 			describe:
 				"Additional arguments passed to `wrangler deploy` or `wrangler pages functions build` i.e. `--no-bundle`",
 			type: "string",
 		},
 	},
-	validateArgs({ deployArgs, workerBundle }) {
-		if (workerBundle && deployArgs) {
+	validateArgs({ args, workerBundle }) {
+		if (workerBundle && args) {
 			throw new UserError(
-				"`--deploy-args` and `--worker` are mutually exclusive—please only specify one"
+				"`--args` and `--worker` are mutually exclusive—please only specify one"
 			);
 		}
 
-		if (deployArgs?.includes("outfile") || deployArgs?.includes("outdir")) {
+		if (args?.includes("outfile") || args?.includes("outdir")) {
 			throw new UserError(
-				"`--deploy-args` should not contain `--outfile` or `--outdir`"
+				"`--args` should not contain `--outfile` or `--outdir`"
 			);
 		}
 	},
@@ -70,56 +133,7 @@ export const checkStartupCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "alpha",
 	},
-	async handler({ outfile, deployArgs, workerBundle }, { config }) {
-		if (workerBundle === undefined) {
-			const tmpDir = getWranglerTmpDir(undefined, "startup-profile");
-			workerBundle = path.join(tmpDir.path, "worker.bundle");
-
-			if (config.pages_build_output_dir) {
-				log("Pages project detected");
-				log("");
-			}
-
-			if (logger.loggerLevel !== "debug") {
-				// Hide build logs
-				logger.loggerLevel = "error";
-			}
-
-			await spinnerWhile({
-				promise: async () =>
-					await createCLIParser(
-						config.pages_build_output_dir
-							? [
-									"pages",
-									"functions",
-									"build",
-									...(deployArgs?.split(" ") ?? []),
-									`--outfile=${workerBundle}`,
-								]
-							: [
-									"deploy",
-									...(deployArgs?.split(" ") ?? []),
-									"--dry-run",
-									`--outfile=${workerBundle}`,
-								]
-					).parse(),
-				startMessage: "Building your Worker",
-				endMessage: chalk.green("Worker Built! 🎉"),
-			});
-			logger.resetLoggerLevel();
-		}
-		const cpuProfileResult = await spinnerWhile({
-			promise: analyseBundle(workerBundle),
-			startMessage: "Analysing",
-			endMessage: chalk.green("Startup phase analysed"),
-		});
-
-		await writeFile(outfile, JSON.stringify(await cpuProfileResult));
-
-		log(
-			`CPU Profile written to ${outfile}. Load it into the Chrome DevTools profiler (or directly in VSCode) to view a flamegraph.`
-		);
-	},
+	handler: checkStartupHandler,
 });
 
 async function getEntryValue(
