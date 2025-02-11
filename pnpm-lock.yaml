@@ -1606,8 +1606,8 @@ importers:
   packages/playground-preview-worker:
     dependencies:
       hono:
-        specifier: ^3.12.11
-        version: 3.12.11
+        specifier: ^4.7.0
+        version: 4.7.0
       zod:
         specifier: ^3.22.3
         version: 3.22.3
@@ -1698,11 +1698,11 @@ importers:
   packages/turbo-r2-archive:
     dependencies:
       '@hono/zod-validator':
-        specifier: ^0.1.8
-        version: 0.1.8(hono@3.12.11)(zod@3.22.3)
+        specifier: ^0.4.2
+        version: 0.4.2(hono@4.7.0)(zod@3.22.3)
       hono:
-        specifier: ^3.12.11
-        version: 3.12.11
+        specifier: ^4.7.0
+        version: 4.7.0
       zod:
         specifier: ^3.22.3
         version: 3.22.3
@@ -4398,10 +4398,10 @@ packages:
     resolution: {integrity: sha512-AgJgKLooZyQnzMfoFg5Mo/aHM+HGBC9ExpXIjNqGimYTRgNbL/K7X5EM1kR2JY90BNKk9lo6Usq1T/nWFdT7TQ==}
     hasBin: true
 
-  '@hono/zod-validator@0.1.8':
-    resolution: {integrity: sha512-/Kd/p/dUVKM7/1TY3jafTV+ngwEh3fOLmXCJQKb9esWsCom5WOJaNmZYv8jeRhyipu1xBvmN5jceRA3Ev3rmQw==}
+  '@hono/zod-validator@0.4.2':
+    resolution: {integrity: sha512-1rrlBg+EpDPhzOV4hT9pxr5+xDVmKuz6YJl+la7VCwK6ass5ldyKm5fD+umJdV2zhHD6jROoCCv8NbTwyfhT0g==}
     peerDependencies:
-      hono: 3.*
+      hono: '>=3.9.0'
       zod: ^3.19.1
 
   '@humanwhocodes/config-array@0.11.14':
@@ -8309,9 +8309,9 @@ packages:
     resolution: {integrity: sha512-kUGoI3p7u6B41z/dp33G6OaL7J4DRqRYwVmeIlwLClx7yaaAy7hoDExnuejTKtuDwfcatGmddHDEOjf6EyIxtQ==}
     engines: {node: '>=10.0.0'}
 
-  hono@3.12.11:
-    resolution: {integrity: sha512-LSpxVgIMR3UzyFiXZaPvqBUGqyOKG0LMZqgMn2RXz9f+YAdkHSfFQQX0dtU72fPm5GnEMh5AYXs0ek5NYgMOmA==}
-    engines: {node: '>=16.0.0'}
+  hono@4.7.0:
+    resolution: {integrity: sha512-hV97aIR4WYbG30k234sD9B3VNr1ZWdQRmrVF76LKFlmI7O9Yo70mG9+mFwyQ6Sjrz4wH71GfnBxv6CPjcx3QNw==}
+    engines: {node: '>=16.9.0'}
 
   hookable@5.5.3:
     resolution: {integrity: sha512-Yc+BQe8SvoXH1643Qez1zqLRmbA5rCL+sSmk6TVos0LWVfNIB7PGncdlId77WzLGSIB5KaWgTaNTs2lNVEI6VQ==}
@@ -13951,9 +13951,9 @@ snapshots:
       cac: 6.7.14
       mime-types: 2.1.35
 
-  '@hono/zod-validator@0.1.8(hono@3.12.11)(zod@3.22.3)':
+  '@hono/zod-validator@0.4.2(hono@4.7.0)(zod@3.22.3)':
     dependencies:
-      hono: 3.12.11
+      hono: 4.7.0
       zod: 3.22.3
 
   '@humanwhocodes/config-array@0.11.14':
@@ -18778,7 +18778,7 @@ snapshots:
 
   heap-js@2.5.0: {}
 
-  hono@3.12.11: {}
+  hono@4.7.0: {}
 
   hookable@5.5.3: {}
 
