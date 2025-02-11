@@ -2,7 +2,7 @@
 "create-cloudflare": minor
 ---
 
-Output wrangler.jsonc instead of wrangler.json by default
+Output wrangler.jsonc instead of wrangler.json
 
 The JSONC format allows comments, but otherwise uses standard JSON syntax.
 
