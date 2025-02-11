@@ -119,6 +119,10 @@ const cloudflareBuiltInModules = [
 	"cloudflare:workflows",
 ];
 
+const nodeBuiltInModules = builtinModules.concat(
+	builtinModules.map((m) => `node:${m}`)
+);
+
 const defaultConditions = ["workerd", "module", "browser"];
 
 export function createCloudflareEnvironmentOptions(
@@ -133,6 +137,10 @@ export function createCloudflareEnvironmentOptions(
 			noExternal: true,
 			// We want to use `workerd` package exports if available (e.g. for postgres).
 			conditions: [...defaultConditions, "development|production"],
+			// The Cloudflare ones are proper builtins in the environment
+			builtins: [...cloudflareBuiltInModules],
+			// The Node.js ones are no proper builtins in the environment since we also polyfill them using unenv
+			external: [...nodeBuiltInModules],
 		},
 		dev: {
 			createEnvironment(name, config) {
@@ -155,7 +163,6 @@ export function createCloudflareEnvironmentOptions(
 				//       dev pre-bundling crawling (were we not to set this input field we'd have to appropriately set
 				//       optimizeDeps.entries in the dev config)
 				input: workerConfig.main,
-				external: [...cloudflareBuiltInModules],
 			},
 		},
 		optimizeDeps: {
@@ -163,9 +170,8 @@ export function createCloudflareEnvironmentOptions(
 			noDiscovery: false,
 			entries: workerConfig.main,
 			exclude: [
-				...cloudflareBuiltInModules,
 				// we have to exclude all node modules to work in dev-mode not just the unenv externals...
-				...builtinModules.concat(builtinModules.map((m) => `node:${m}`)),
+				...nodeBuiltInModules,
 			],
 			esbuildOptions: {
 				platform: "neutral",
