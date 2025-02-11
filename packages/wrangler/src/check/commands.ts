@@ -9,7 +9,6 @@ import chalk from "chalk";
 import { Miniflare } from "miniflare";
 import { WebSocket } from "ws";
 import { createCLIParser } from "..";
-import { Config } from "../config";
 import { createCommand, createNamespace } from "../core/create-command";
 import { moduleTypeMimeType } from "../deployment-bundle/create-worker-upload-form";
 import {
@@ -19,6 +18,7 @@ import {
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getWranglerTmpDir } from "../paths";
+import type { Config } from "../config";
 import type { ModuleDefinition } from "miniflare";
 import type { FormData, FormDataEntryValue } from "undici";
 
