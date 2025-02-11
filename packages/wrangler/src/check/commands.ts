@@ -111,7 +111,7 @@ export const checkStartupCommand = createCommand({
 		},
 		args: {
 			describe:
-				"Additional arguments passed to `wrangler deploy` or `wrangler pages functions build` i.e. `--no-bundle`",
+				"Additional arguments passed to `wrangler deploy` or `wrangler pages functions build` e.g. `--no-bundle`",
 			type: "string",
 		},
 	},
