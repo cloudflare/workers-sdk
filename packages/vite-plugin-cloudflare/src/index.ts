@@ -51,13 +51,18 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		{
 			name: "vite-plugin-cloudflare",
 			config(userConfig, env) {
+				if (env.isPreview) {
+					// Short-circuit the whole configuration if we are in preview mode
+					return { appType: "custom" };
+				}
+
 				resolvedPluginConfig = resolvePluginConfig(
 					pluginConfig,
 					userConfig,
 					env
 				);
 
-				if (!workersConfigsWarningShown && !env.isPreview) {
+				if (!workersConfigsWarningShown) {
 					workersConfigsWarningShown = true;
 					const workersConfigsWarning = getWarningForWorkersConfigs(
 						resolvedPluginConfig.rawConfigs
@@ -304,13 +309,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			// Otherwise the `vite:wasm-fallback` plugin prevents the `.wasm` extension being used for module imports.
 			enforce: "pre",
 			applyToEnvironment(environment) {
-				if (resolvedPluginConfig.type === "assets-only") {
-					return false;
-				}
-
-				return Object.keys(resolvedPluginConfig.workers).includes(
-					environment.name
-				);
+				// Note that this hook does not get called in preview mode.
+				return getWorkerConfig(environment.name) !== undefined;
 			},
 			async resolveId(source, importer) {
 				if (!source.endsWith(".wasm")) {
@@ -387,6 +387,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		// Plugin that can provide Node.js compatibility support for Vite Environments that are hosted in Cloudflare Workers.
 		{
 			name: "vite-plugin-cloudflare:nodejs-compat",
+			apply(_config, env) {
+				// Skip this whole plugin if we are in preview mode
+				return !env.isPreview;
+			},
 			config() {
 				// Configure Vite with the Node.js polyfill aliases
 				// We have to do this across the whole Vite config because it is not possible to do it per Environment.
@@ -458,6 +462,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	];
 
 	function getWorkerConfig(environmentName: string) {
+		assert(resolvedPluginConfig, "Expected resolvedPluginConfig to be defined");
 		return resolvedPluginConfig.type !== "assets-only"
 			? resolvedPluginConfig.workers[environmentName]
 			: undefined;
