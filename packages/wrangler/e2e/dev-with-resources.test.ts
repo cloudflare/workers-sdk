@@ -626,7 +626,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 						if (env.PIPELINE === undefined) {
 							return new Response("env.PIPELINE is undefined");
 						}
-
+						env.PIPELINE.send([{hello: "world"}]);
 						return new Response("env.PIPELINE is available");
 					}
 				}
@@ -640,6 +640,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		const res = await fetch(url);
 
 		await expect(res.text()).resolves.toBe("env.PIPELINE is available");
+		expect(worker.currentOutput).toMatchInlineSnapshot(`Request received`);
 	});
 
 	it.skipIf(!isLocal)("exposes queue producer/consumer bindings", async () => {

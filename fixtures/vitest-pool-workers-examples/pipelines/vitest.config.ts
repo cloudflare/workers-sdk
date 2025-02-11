@@ -5,9 +5,6 @@ export default defineWorkersProject({
 		poolOptions: {
 			workers: {
 				singleWorker: true,
-				miniflare: {
-					pipelines: ["PIPELINE"],
-				},
 				wrangler: {
 					configPath: "./wrangler.toml",
 				},

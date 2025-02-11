@@ -34,7 +34,6 @@ export const PIPELINE_PLUGIN: Plugin<typeof PipelineOptionsSchema> = {
 				name: `${SERVICE_PIPELINE_PREFIX}:${pipeline[1]}`,
 				worker: {
 					compatibilityDate: "2024-12-30",
-					compatibilityFlags: ["nodejs_compat"],
 					modules: [
 						{
 							name: "pipeline.worker.js",
