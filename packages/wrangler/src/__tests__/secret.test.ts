@@ -710,6 +710,35 @@ describe("wrangler secret", () => {
 				`[Error: Required Worker name missing. Please specify the Worker name in your Wrangler configuration file, or pass it as an argument with \`--name <worker-name>\`]`
 			);
 		});
+
+		describe("banner tests", () => {
+			beforeEach(() => {
+				vi.unmock("../wrangler-banner");
+			});
+			it("banner if pretty", async () => {
+				mockListRequest({ scriptName: "script-name" });
+				await runWrangler("secret list --name script-name  --format=pretty");
+				expect(std.out).toMatchInlineSnapshot(`
+					"Secret Name: the-secret-name
+					"
+				`);
+			});
+			it("no banner if json", async () => {
+				mockListRequest({ scriptName: "script-name" });
+				await runWrangler("secret list --name script-name  --format=json");
+				expect(std.out).toMatchInlineSnapshot(`
+					"[
+					  {
+					    \\"name\\": \\"the-secret-name\\",
+					    \\"type\\": \\"secret_text\\"
+					  }
+					]"
+				`);
+			});
+			afterEach(() => {
+				vi.mock("../wrangler-banner");
+			});
+		});
 	});
 
 	describe("bulk", () => {
