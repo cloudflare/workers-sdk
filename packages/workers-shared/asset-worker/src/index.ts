@@ -78,6 +78,7 @@ export default class extends WorkerEntrypoint<Env> {
 				this.env.SENTRY_ACCESS_CLIENT_ID,
 				this.env.SENTRY_ACCESS_CLIENT_SECRET,
 				this.env.COLO_METADATA,
+				this.env.VERSION_METADATA,
 				this.env.CONFIG?.account_id,
 				this.env.CONFIG?.script_id
 			);
