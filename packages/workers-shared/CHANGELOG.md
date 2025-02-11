@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.13.2
+
+### Patch Changes
+
+- [#8044](https://github.com/cloudflare/workers-sdk/pull/8044) [`7006630`](https://github.com/cloudflare/workers-sdk/commit/7006630cfe307da4840651bc8b6da102660e3f1a) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Adds analytics and code (zero-percent gated) for a new asset manifest search algorithm
+
 ## 0.13.1
 
 ### Patch Changes
