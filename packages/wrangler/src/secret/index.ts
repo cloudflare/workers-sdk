@@ -19,7 +19,6 @@ import { requireAuth } from "../user";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
-import { printWranglerBanner } from "../wrangler-banner";
 import type { Config } from "../config";
 import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
 
