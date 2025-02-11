@@ -1,0 +1,12 @@
+name = "rpc-client"
+compatibility_date = "2025-02-10"
+main = "./src/index.ts"
+
+[[services]]
+binding = "DEFAULT_BINDING"
+service = "worker-with-assets"
+
+[[services]]
+binding = "NAMED_EXPORT_BINDING"
+service = "worker-with-assets"
+entrypoint = "MyNamedExport"

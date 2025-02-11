@@ -63,7 +63,10 @@ import {
 	WorkerOptions,
 	WrappedBindingNames,
 } from "./plugins";
-import { ROUTER_SERVICE_NAME } from "./plugins/assets/constants";
+import {
+	ROUTER_SERVICE_NAME,
+	RPC_PROXY_SERVICE_NAME,
+} from "./plugins/assets/constants";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
@@ -1211,7 +1214,7 @@ export class Miniflare {
 							);
 							if (maybeAssetTargetService) {
 								assert(binding.service?.name);
-								binding.service.name = `${ROUTER_SERVICE_NAME}:${targetWorkerName}`;
+								binding.service.name = `${RPC_PROXY_SERVICE_NAME}:${targetWorkerName}`;
 							}
 						}
 					}
@@ -1291,19 +1294,34 @@ export class Miniflare {
 					directSocket.host,
 					directSocket.port
 				);
-				sockets.push({
-					name,
-					address,
-					service: {
-						name: getUserServiceName(workerName),
-						entrypoint: entrypoint === "default" ? undefined : entrypoint,
-					},
-					http: {
-						style: directSocket.proxy ? HttpOptions_Style.PROXY : undefined,
-						cfBlobHeader: CoreHeaders.CF_BLOB,
-						capnpConnectHost: HOST_CAPNP_CONNECT,
-					},
-				});
+				if (this.#workerOpts[0].assets.assets && entrypoint === "default") {
+					sockets.push({
+						name,
+						address,
+						service: {
+							name: `${RPC_PROXY_SERVICE_NAME}:${this.#workerOpts[0].core.name}`,
+						},
+						http: {
+							style: directSocket.proxy ? HttpOptions_Style.PROXY : undefined,
+							cfBlobHeader: CoreHeaders.CF_BLOB,
+							capnpConnectHost: HOST_CAPNP_CONNECT,
+						},
+					});
+				} else {
+					sockets.push({
+						name,
+						address,
+						service: {
+							name: getUserServiceName(workerName),
+							entrypoint: entrypoint === "default" ? undefined : entrypoint,
+						},
+						http: {
+							style: directSocket.proxy ? HttpOptions_Style.PROXY : undefined,
+							cfBlobHeader: CoreHeaders.CF_BLOB,
+							capnpConnectHost: HOST_CAPNP_CONNECT,
+						},
+					});
+				}
 			}
 		}
 
@@ -1317,7 +1335,7 @@ export class Miniflare {
 				!this.#workerOpts[0].core.name?.startsWith(
 					"vitest-pool-workers-runner-"
 				)
-					? `${ROUTER_SERVICE_NAME}:${this.#workerOpts[0].core.name}`
+					? `${RPC_PROXY_SERVICE_NAME}:${this.#workerOpts[0].core.name}`
 					: getUserServiceName(this.#workerOpts[0].core.name),
 			loopbackPort,
 			log: this.#log,

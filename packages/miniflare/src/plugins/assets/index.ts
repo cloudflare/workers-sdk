@@ -16,6 +16,7 @@ import prettyBytes from "pretty-bytes";
 import SCRIPT_ASSETS from "worker:assets/assets";
 import SCRIPT_ASSETS_KV from "worker:assets/assets-kv";
 import SCRIPT_ROUTER from "worker:assets/router";
+import SCRIPT_RPC_PROXY from "worker:assets/rpc-proxy";
 import { z } from "zod";
 import { Service } from "../../runtime";
 import { SharedBindings } from "../../workers";
@@ -26,6 +27,7 @@ import {
 	ASSETS_PLUGIN_NAME,
 	ASSETS_SERVICE_NAME,
 	ROUTER_SERVICE_NAME,
+	RPC_PROXY_SERVICE_NAME,
 } from "./constants";
 import { AssetsOptionsSchema } from "./schema";
 
@@ -154,7 +156,36 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			},
 		};
 
-		return [storageService, namespaceService, assetService, routerService];
+		const rpcProxyService: Service = {
+			name: `${RPC_PROXY_SERVICE_NAME}:${id}`,
+			worker: {
+				compatibilityDate: "2025-02-04",
+				modules: [
+					{
+						name: "rpc-proxy.worker.mjs",
+						esModule: SCRIPT_RPC_PROXY(),
+					},
+				],
+				bindings: [
+					{
+						name: "ROUTER_WORKER",
+						service: { name: `${ROUTER_SERVICE_NAME}:${id}` },
+					},
+					{
+						name: "USER_WORKER",
+						service: { name: getUserServiceName(id) },
+					},
+				],
+			},
+		};
+
+		return [
+			storageService,
+			namespaceService,
+			assetService,
+			routerService,
+			rpcProxyService,
+		];
 	},
 };
 
