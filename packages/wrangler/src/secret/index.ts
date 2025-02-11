@@ -19,6 +19,7 @@ import { requireAuth } from "../user";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
+import { printWranglerBanner } from "../wrangler-banner";
 import type { Config } from "../config";
 import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
 
@@ -342,7 +343,13 @@ export const secretListCommand = createCommand({
 			hidden: true,
 		},
 	},
+	behaviour: {
+		printBanner: false,
+	},
 	async handler(args, { config }) {
+		if (args.format === "pretty") {
+			await printWranglerBanner();
+		}
 		if (config.pages_build_output_dir) {
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
