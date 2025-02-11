@@ -1,5 +1,17 @@
 # create-cloudflare
 
+## 2.38.0
+
+### Minor Changes
+
+- [#8024](https://github.com/cloudflare/workers-sdk/pull/8024) [`e8272b0`](https://github.com/cloudflare/workers-sdk/commit/e8272b08ee54894af3e5e33fb86380908d3ff68a) Thanks [@emily-shen](https://github.com/emily-shen)! - Output wrangler.jsonc instead of wrangler.json
+
+  The JSONC format allows comments, but otherwise uses standard JSON syntax.
+
+  Note that Wrangler is still happy to parse `.json` files with comments (along the lines of `tsconfig.json`), but to prevent confusion and for default compatibility with all IDEs, create-cloudflare will now output `wrangler.jsonc`.
+
+- [#8024](https://github.com/cloudflare/workers-sdk/pull/8024) [`e8272b0`](https://github.com/cloudflare/workers-sdk/commit/e8272b08ee54894af3e5e33fb86380908d3ff68a) Thanks [@emily-shen](https://github.com/emily-shen)! - Include a .vscode/settings.json file with a 'jsonc' file association for templates that use `wrangler.json`
+
 ## 2.37.6
 
 ### Patch Changes
