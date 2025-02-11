@@ -344,12 +344,9 @@ export const secretListCommand = createCommand({
 		},
 	},
 	behaviour: {
-		printBanner: false,
+		printBanner: (args) => args.format === "pretty",
 	},
 	async handler(args, { config }) {
-		if (args.format === "pretty") {
-			await printWranglerBanner();
-		}
 		if (config.pages_build_output_dir) {
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
