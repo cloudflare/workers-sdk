@@ -95,7 +95,7 @@ export const detectPackageManager = () => {
  *
  */
 export const rectifyPmMismatch = async (ctx: C3Context) => {
-	const { npm } = detectPackageManager();
+	const { npm } = ctx.packageManager;
 
 	if (!detectPmMismatch(ctx)) {
 		return;

@@ -1,3 +1,4 @@
+import { type detectPackageManager } from "helpers/packageManagers";
 import type { TemplateConfig } from "./templates";
 
 export type C3Args = {
@@ -38,6 +39,8 @@ export type C3Context = {
 	commitMessage?: string;
 	originalCWD: string;
 	gitRepoAlreadyExisted: boolean;
+	// Information about the detected package manager.
+	packageManager: Readonly<ReturnType<typeof detectPackageManager>>;
 };
 
 type DeploymentInfo = {

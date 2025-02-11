@@ -4,13 +4,10 @@ import { runFrameworkGenerator } from "frameworks/index";
 import { mergeObjectProperties, transformFile } from "helpers/codemod";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { usesTypescript } from "helpers/files";
-import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
-
-const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	// Run the create-solid command
@@ -25,7 +22,7 @@ const configure = async (ctx: C3Context) => {
 	await installPackages(packages, {
 		dev: true,
 		startText: "Installing nitro module `nitropack`",
-		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
+		doneText: `${brandColor("installed")} ${dim(`via \`${ctx.packageManager.npm} install\``)}`,
 	});
 
 	usesTypescript(ctx);
@@ -80,10 +77,10 @@ const config: TemplateConfig = {
 	path: "templates-experimental/solid",
 	generate,
 	configure,
-	transformPackageJson: async () => ({
+	transformPackageJson: async (_, ctx) => ({
 		scripts: {
-			preview: `${npm} run build && npx wrangler dev`,
-			deploy: `${npm} run build && wrangler deploy`,
+			preview: `${ctx.packageManager.npm} run build && npx wrangler dev`,
+			deploy: `${ctx.packageManager.npm} run build && wrangler deploy`,
 		},
 	}),
 	compatibilityFlags: ["nodejs_compat"],

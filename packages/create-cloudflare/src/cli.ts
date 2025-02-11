@@ -38,8 +38,6 @@ import { installWorkersTypes } from "./workers";
 import { updateWranglerConfig } from "./wrangler/config";
 import type { C3Args, C3Context } from "types";
 
-const { npm } = detectPackageManager();
-
 export const main = async (argv: string[]) => {
 	const result = await parseArgs(argv);
 
@@ -90,6 +88,7 @@ export const main = async (argv: string[]) => {
 // Spawn a separate process running the most recent version of c3
 export const runLatest = async () => {
 	const args = process.argv.slice(2);
+	const { npm } = detectPackageManager();
 
 	// the parsing logic of `npm create` requires `--` to be supplied
 	// before any flags intended for the target command.
@@ -132,13 +131,9 @@ export const setupProjectDirectory = (ctx: C3Context) => {
 };
 
 const create = async (ctx: C3Context) => {
-	const { template } = ctx;
-
 	setupProjectDirectory(ctx);
 
-	if (template.generate) {
-		await template.generate(ctx);
-	}
+	await ctx.template.generate?.({ ...ctx });
 
 	await copyTemplateFiles(ctx);
 	await updatePackageName(ctx);
@@ -160,10 +155,7 @@ const configure = async (ctx: C3Context) => {
 	//       pre-existing workers assume its presence in their configure phase
 	await updateWranglerConfig(ctx);
 
-	const { template } = ctx;
-	if (template.configure) {
-		await template.configure({ ...ctx });
-	}
+	await ctx.template.configure?.({ ...ctx });
 
 	addWranglerToGitIgnore(ctx);
 

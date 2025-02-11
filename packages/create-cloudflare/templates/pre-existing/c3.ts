@@ -4,12 +4,11 @@ import { join } from "path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { processArgument } from "helpers/args";
 import { runCommand } from "helpers/command";
-import { detectPackageManager } from "helpers/packageManagers";
 import { chooseAccount, wranglerLogin } from "../../src/wrangler/accounts";
 import type { C3Context } from "types";
 
 export async function copyExistingWorkerFiles(ctx: C3Context) {
-	const { dlx } = detectPackageManager();
+	const { dlx } = ctx.packageManager;
 
 	if (ctx.args.existingScript === undefined) {
 		ctx.args.existingScript = await processArgument(

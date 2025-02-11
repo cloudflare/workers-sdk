@@ -1,7 +1,6 @@
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { dim } from "@cloudflare/cli/colors";
 import { quoteShellArgs, runCommand } from "helpers/command";
-import { detectPackageManager } from "helpers/packageManagers";
 import frameworksPackageJson from "./package.json";
 import type { C3Context } from "types";
 
@@ -27,7 +26,7 @@ export const getFrameworkCli = (ctx: C3Context, withVersion = true) => {
  */
 export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 	const cli = getFrameworkCli(ctx, true);
-	const { npm, dlx } = detectPackageManager();
+	const { npm, dlx } = ctx.packageManager;
 	// yarn cannot `yarn create@some-version` and doesn't have an npx equivalent
 	// So to retain the ability to lock versions we run it with `npx` and spoof
 	// the user agent so scaffolding tools treat the invocation like yarn

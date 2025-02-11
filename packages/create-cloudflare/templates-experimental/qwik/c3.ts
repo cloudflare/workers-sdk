@@ -5,12 +5,9 @@ import { runFrameworkGenerator } from "frameworks/index";
 import { loadTemplateSnippets, transformFile } from "helpers/codemod";
 import { quoteShellArgs, runCommand } from "helpers/command";
 import { removeFile, usesTypescript } from "helpers/files";
-import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
-
-const { npm, npx } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, ["playground", ctx.project.name]);
@@ -18,7 +15,7 @@ const generate = async (ctx: C3Context) => {
 
 const configure = async (ctx: C3Context) => {
 	// Add the pages integration
-	const cmd = [npx, "qwik", "add", "cloudflare-pages"];
+	const cmd = [ctx.packageManager.npx, "qwik", "add", "cloudflare-pages"];
 	endSection(`Running ${quoteShellArgs(cmd)}`);
 	await runCommand(cmd);
 
@@ -139,10 +136,10 @@ const config: TemplateConfig = {
 	path: "templates-experimental/qwik",
 	generate,
 	configure,
-	transformPackageJson: async () => ({
+	transformPackageJson: async (_, ctx) => ({
 		scripts: {
-			deploy: `${npm} run build && wrangler deploy`,
-			preview: `${npm} run build && wrangler dev`,
+			deploy: `${ctx.packageManager.npm} run build && wrangler deploy`,
+			preview: `${ctx.packageManager.npm} run build && wrangler dev`,
 			"cf-typegen": `wrangler types`,
 		},
 	}),

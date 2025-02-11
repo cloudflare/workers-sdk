@@ -58,8 +58,10 @@ export const runCommand = async (
 			if (args[0] === "wrangler") {
 				const metrics = readMetricsConfig();
 				if (metrics.c3permission?.enabled === false) {
-					opts.env ??= {};
-					opts.env["WRANGLER_SEND_METRICS"] = "false";
+					opts.env = {
+						...opts.env,
+						WRANGLER_SEND_METRICS: "false",
+					};
 				}
 			}
 			const abortController = new AbortController();

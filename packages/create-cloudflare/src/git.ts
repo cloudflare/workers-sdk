@@ -5,7 +5,6 @@ import { getFrameworkCli } from "frameworks/index";
 import { processArgument } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";
 import { runCommand } from "helpers/command";
-import { detectPackageManager } from "helpers/packageManagers";
 import { version as wranglerVersion } from "wrangler/package.json";
 import { version } from "../package.json";
 import type { C3Context } from "types";
@@ -104,7 +103,7 @@ const createCommitMessage = async (ctx: C3Context) => {
 		? "Initialize web application via create-cloudflare CLI"
 		: "Initial commit (by create-cloudflare CLI)";
 
-	const packageManager = detectPackageManager();
+	const { packageManager } = ctx;
 
 	const gitVersion = await getGitVersion();
 	const insideRepo = await isInsideGitRepo(ctx.project.path);

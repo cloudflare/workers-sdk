@@ -5,13 +5,10 @@ import { runFrameworkGenerator } from "frameworks/index";
 import { mergeObjectProperties, transformFile } from "helpers/codemod";
 import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
-import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
-
-const { npm, name: pm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	const gitFlag = ctx.args.git ? `--gitInit` : `--no-gitInit`;
@@ -20,7 +17,7 @@ const generate = async (ctx: C3Context) => {
 		"init",
 		ctx.project.name,
 		"--packageManager",
-		npm,
+		ctx.packageManager.npm,
 		gitFlag,
 	]);
 
@@ -31,6 +28,7 @@ const generate = async (ctx: C3Context) => {
 
 const configure = async (ctx: C3Context) => {
 	const packages = ["nitro-cloudflare-dev", "nitropack"];
+	const { npm, name: pm } = ctx.packageManager;
 
 	// When using pnpm, explicitly add h3 package so the H3Event type declaration can be updated.
 	// Package managers other than pnpm will hoist the dependency, as will pnpm with `--shamefully-hoist`
@@ -121,10 +119,10 @@ const config: TemplateConfig = {
 	path: "templates-experimental/nuxt",
 	generate,
 	configure,
-	transformPackageJson: async () => ({
+	transformPackageJson: async (_, ctx) => ({
 		scripts: {
-			deploy: `${npm} run build && wrangler deploy`,
-			preview: `${npm} run build && wrangler dev`,
+			deploy: `${ctx.packageManager.npm} run build && wrangler deploy`,
+			preview: `${ctx.packageManager.npm} run build && wrangler dev`,
 			"cf-typegen": `wrangler types`,
 		},
 	}),

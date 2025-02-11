@@ -1,6 +1,5 @@
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { quoteShellArgs, runCommand } from "helpers/command";
-import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import { getProductionBranch } from "./git";
 import type { C3Context } from "types";
@@ -11,8 +10,6 @@ const CREATE_PROJECT_RETRIES = 3;
 /** How many times to verify the project creation before failing. */
 const VERIFY_PROJECT_RETRIES = 3;
 
-const { npx } = detectPackageManager();
-
 export const createProject = async (ctx: C3Context) => {
 	if (ctx.template.platform === "workers") {
 		return;
@@ -21,6 +18,8 @@ export const createProject = async (ctx: C3Context) => {
 		throw new Error("Failed to read Cloudflare account.");
 	}
 	const CLOUDFLARE_ACCOUNT_ID = ctx.account.id;
+
+	const { npx } = ctx.packageManager;
 
 	try {
 		const compatFlags = ctx.template.compatibilityFlags ?? [];

@@ -1,12 +1,9 @@
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { runFrameworkGenerator } from "frameworks/index";
-import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
-
-const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [
@@ -38,10 +35,10 @@ const config: TemplateConfig = {
 	path: "templates-experimental/remix",
 	generate,
 	configure,
-	transformPackageJson: async () => ({
+	transformPackageJson: async (_, ctx) => ({
 		scripts: {
-			deploy: `${npm} run build && wrangler deploy`,
-			preview: `${npm} run build && wrangler dev`,
+			deploy: `${ctx.packageManager.npm} run build && wrangler deploy`,
+			preview: `${ctx.packageManager.npm} run build && wrangler dev`,
 			"cf-typegen": `wrangler types`,
 		},
 	}),
