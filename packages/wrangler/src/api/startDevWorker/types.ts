@@ -1,4 +1,3 @@
-import { DevEnv } from "./DevEnv";
 import type { AssetsOptions } from "../../assets";
 import type { Config } from "../../config";
 import type {
@@ -32,6 +31,7 @@ import type { WorkerRegistry } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { ConfigController } from "./ConfigController";
+import type { DevEnv } from "./DevEnv";
 import type {
 	DispatchFetch,
 	Json,

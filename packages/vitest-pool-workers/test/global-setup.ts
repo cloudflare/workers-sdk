@@ -26,7 +26,10 @@ export default async function ({ provide }: GlobalSetupContext) {
 		await stop();
 
 		console.log("Cleaning up temporary directory...");
-		await fs.rm(projectPath, { recursive: true, maxRetries: 10 });
+		try {
+			await fs.rm(projectPath, { recursive: true, maxRetries: 10 });
+			// This sometimes fails on Windows with EBUSY
+		} catch {}
 	};
 }
 
