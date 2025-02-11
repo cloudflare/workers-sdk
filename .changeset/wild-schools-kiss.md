@@ -1,5 +1,5 @@
 ---
-"@cloudflare/vite-plugin": minor
+"@cloudflare/vite-plugin": patch
 ---
 
 Add support for Wasm (WebAssembly) modules.
