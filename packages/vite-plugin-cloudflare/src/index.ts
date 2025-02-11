@@ -16,9 +16,12 @@ import {
 	getPreviewMiniflareOptions,
 } from "./miniflare-options";
 import {
+	dealiasVirtualNodeJSImport,
 	getNodeCompatAliases,
+	getNodeCompatExternals,
 	injectGlobalCode,
-	resolveNodeCompatId,
+	isNodeCompat,
+	maybeStripNodeJsVirtualPrefix,
 } from "./node-js-compat";
 import { resolvePluginConfig } from "./plugin-config";
 import { MODULE_PATTERN } from "./shared";
@@ -49,6 +52,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			name: "vite-plugin-cloudflare",
 			config(userConfig, env) {
 				if (env.isPreview) {
+					// Short-circuit the whole configuration if we are in preview mode
 					return { appType: "custom" };
 				}
 
@@ -70,9 +74,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				return {
 					appType: "custom",
-					resolve: {
-						alias: getNodeCompatAliases(),
-					},
 					environments:
 						resolvedPluginConfig.type === "workers"
 							? {
@@ -141,37 +142,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			},
 			configResolved(config) {
 				resolvedViteConfig = config;
-			},
-			async resolveId(source) {
-				if (resolvedPluginConfig.type === "assets-only") {
-					return;
-				}
-
-				const workerConfig =
-					resolvedPluginConfig.workers[this.environment.name];
-				if (!workerConfig) {
-					return;
-				}
-
-				return resolveNodeCompatId(this.environment, workerConfig, source);
-			},
-			async transform(code, id) {
-				if (resolvedPluginConfig.type === "assets-only") {
-					return;
-				}
-
-				const workerConfig =
-					resolvedPluginConfig.workers[this.environment.name];
-
-				if (!workerConfig) {
-					return;
-				}
-
-				const resolvedId = await this.resolve(workerConfig.main);
-
-				if (id === resolvedId?.id) {
-					return injectGlobalCode(id, code, workerConfig);
-				}
 			},
 			generateBundle(_, bundle) {
 				let config: Unstable_RawConfig | undefined;
@@ -339,13 +309,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			// Otherwise the `vite:wasm-fallback` plugin prevents the `.wasm` extension being used for module imports.
 			enforce: "pre",
 			applyToEnvironment(environment) {
-				if (resolvedPluginConfig.type === "assets-only") {
-					return false;
-				}
-
-				return Object.keys(resolvedPluginConfig.workers).includes(
-					environment.name
-				);
+				// Note that this hook does not get called in preview mode.
+				return getWorkerConfig(environment.name) !== undefined;
 			},
 			async resolveId(source, importer) {
 				if (!source.endsWith(".wasm")) {
@@ -419,7 +384,89 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 			},
 		},
+		// Plugin that can provide Node.js compatibility support for Vite Environments that are hosted in Cloudflare Workers.
+		{
+			name: "vite-plugin-cloudflare:nodejs-compat",
+			apply(_config, env) {
+				// Skip this whole plugin if we are in preview mode
+				return !env.isPreview;
+			},
+			config() {
+				// Configure Vite with the Node.js polyfill aliases
+				// We have to do this across the whole Vite config because it is not possible to do it per Environment.
+				// These aliases are to virtual modules that then get Environment specific handling in the resolveId hook.
+				return {
+					resolve: {
+						alias: getNodeCompatAliases(),
+					},
+				};
+			},
+			configEnvironment(environmentName) {
+				// Ignore Node.js external modules when building environments that use Node.js compat.
+				const workerConfig = getWorkerConfig(environmentName);
+				if (isNodeCompat(workerConfig)) {
+					return {
+						build: {
+							rollupOptions: {
+								external: getNodeCompatExternals(),
+							},
+						},
+					};
+				}
+			},
+			async resolveId(source, importer, options) {
+				// Handle the virtual modules that come from Node.js compat aliases.
+				const from = maybeStripNodeJsVirtualPrefix(source);
+				if (!from) {
+					return;
+				}
+
+				const workerConfig = getWorkerConfig(this.environment.name);
+				if (!isNodeCompat(workerConfig)) {
+					return this.resolve(from, importer, options);
+				}
+
+				const unresolvedAlias = dealiasVirtualNodeJSImport(from);
+				const resolvedAlias = await this.resolve(
+					unresolvedAlias,
+					import.meta.url
+				);
+				assert(
+					resolvedAlias,
+					"Failed to resolve aliased nodejs import: " + unresolvedAlias
+				);
+
+				if (this.environment.mode === "dev" && this.environment.depsOptimizer) {
+					// Make sure the dependency optimizer is aware of this aliased import
+					this.environment.depsOptimizer.registerMissingImport(
+						unresolvedAlias,
+						resolvedAlias.id
+					);
+				}
+
+				return resolvedAlias;
+			},
+			async transform(code, id) {
+				// Inject the Node.js compat globals into the entry module for Node.js compat environments.
+				const workerConfig = getWorkerConfig(this.environment.name);
+				if (!isNodeCompat(workerConfig)) {
+					return;
+				}
+
+				const resolvedId = await this.resolve(workerConfig.main);
+				if (id === resolvedId?.id) {
+					return injectGlobalCode(id, code);
+				}
+			},
+		},
 	];
+
+	function getWorkerConfig(environmentName: string) {
+		assert(resolvedPluginConfig, "Expected resolvedPluginConfig to be defined");
+		return resolvedPluginConfig.type !== "assets-only"
+			? resolvedPluginConfig.workers[environmentName]
+			: undefined;
+	}
 }
 
 /**
