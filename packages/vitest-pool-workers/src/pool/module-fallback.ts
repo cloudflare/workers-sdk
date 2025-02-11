@@ -8,6 +8,7 @@ import util from "node:util";
 import * as cjsModuleLexer from "cjs-module-lexer";
 import { buildSync } from "esbuild";
 import { ModuleRuleTypeSchema, Response } from "miniflare";
+import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { isFileNotFoundError } from "./helpers";
 import type { ModuleRuleType, Request, Worker_Module } from "miniflare";
 import type { ViteDevServer } from "vite";
@@ -66,12 +67,6 @@ function trimViteVersionHash(filePath: string) {
 const forceModuleTypeRegexp = new RegExp(
 	`\\?mf_vitest_force=(${ModuleRuleTypeSchema.options.join("|")})$`
 );
-
-// Node.js built-in modules provided by `workerd`
-export const workerdBuiltinModules = new Set([
-	...VITEST_POOL_WORKERS_DEFINE_BUILTIN_MODULES,
-	"__STATIC_CONTENT_MANIFEST",
-]);
 
 // `chai` contains circular `require()`s which aren't supported by `workerd`
 // TODO(someday): support circular `require()` in `workerd`

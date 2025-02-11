@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import { builtinModules } from "node:module";
 import path from "node:path";
 import { MessageChannel, receiveMessageOnPort } from "node:worker_threads";
+import { workerdBuiltinModules } from "../shared/builtin-modules";
 import type {
 	WorkersConfigPluginAPI,
 	WorkersPoolOptions,
@@ -111,13 +112,6 @@ function ensureArrayExcludes<T>(array: T[], items: T[]) {
 const requiredConditions = ["workerd", "worker", "browser"];
 const requiredMainFields = ["browser", "module", "jsnext:main", "jsnext"];
 
-const cloudflareBuiltInModules = [
-	"cloudflare:email",
-	"cloudflare:sockets",
-	"cloudflare:workers",
-	"cloudflare:workflows",
-];
-
 function createConfigPlugin(): Plugin<WorkersConfigPluginAPI> {
 	// Use a unique ID for each `cloudflare:test` module so updates in one `main`
 	// don't trigger re-runs in all other projects, just the one that changed.
@@ -162,7 +156,7 @@ function createConfigPlugin(): Plugin<WorkersConfigPluginAPI> {
 			config.test.deps.optimizer.ssr.enabled ??= true;
 			config.test.deps.optimizer.ssr.exclude ??= [];
 			ensureArrayIncludes(config.test.deps.optimizer.ssr.exclude, [
-				...cloudflareBuiltInModules,
+				...workerdBuiltinModules,
 				...builtinModules.concat(builtinModules.map((m) => `node:${m}`)),
 			]);
 
