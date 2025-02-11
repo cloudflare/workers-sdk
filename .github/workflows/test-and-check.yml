@@ -130,14 +130,9 @@ jobs:
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
-      - name: Build
-        run: pnpm run build
-        env:
-          CI_OS: ${{ runner.os }}
-
       - name: Run tests
         if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm run test:ci ${{ matrix.filter }}
+        run: pnpm run test:ci --concurrency 1 ${{ matrix.filter }}
         env:
           TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
