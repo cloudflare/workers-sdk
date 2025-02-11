@@ -148,6 +148,7 @@ export function createCloudflareEnvironmentOptions(
 			// We need to enable `emitAssets` in order to support additional modules defined by `rules`
 			emitAssets: true,
 			outDir: getOutputDirectory(userConfig, environmentName),
+			copyPublicDir: false,
 			ssr: true,
 			rollupOptions: {
 				// Note: vite starts dev pre-bundling crawling from either optimizeDeps.entries or rollupOptions.input
