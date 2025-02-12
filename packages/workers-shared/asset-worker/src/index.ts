@@ -101,7 +101,7 @@ export default class extends WorkerEntrypoint<Env> {
 					coloTier: this.env.COLO_METADATA.coloTier,
 
 					coloRegion: this.env.COLO_METADATA.coloRegion,
-					version: this.env.VERSION_METADATA.id,
+					version: this.env.VERSION_METADATA.tag,
 					hostname: url.hostname,
 					htmlHandling: config.html_handling,
 					notFoundHandling: config.not_found_handling,
