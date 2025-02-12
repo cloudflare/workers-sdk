@@ -328,6 +328,17 @@ describe("wrangler", () => {
 
 				expect(requests.count).toEqual(0);
 			});
+
+			it("should show an error when invalid delivery delay is set", async () => {
+				const requests = mockCreateRequest("testQueue", { delivery_delay: 10 });
+				await expect(
+					runWrangler("queues create testQueue --delivery-delay-secs=99999")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Invalid --delivery-delay-secs value: 99999. Must be between 0 and 42300]`
+				);
+
+				expect(requests.count).toEqual(0);
+			});
 		});
 
 		describe("delete", () => {
@@ -714,12 +725,12 @@ describe("wrangler", () => {
 				"Adding consumer to queue testQueue.
 				Queues is not currently enabled on this account. Go to https://dash.cloudflare.com/some-account-id/workers/queues to enable it.
 
-				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/queues/testQueue/consumers) failed.[0m
+				�[31mX �[41;31m[�[41;97mERROR�[41;31m]�[0m �[1mA request to the Cloudflare API (/accounts/some-account-id/queues/testQueue/consumers) failed.�[0m
 
 				  workers.api.error.unauthorized [code: 10023]
 
 				  If you think this is a bug, please open an issue at:
-				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+				  �[4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose�[0m
 
 				"
 			`);

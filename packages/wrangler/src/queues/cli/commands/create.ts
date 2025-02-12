@@ -4,6 +4,10 @@ import { CommandLineArgsError } from "../../../errors";
 import { logger } from "../../../logger";
 import { getValidBindingName } from "../../../utils/getValidBindingName";
 import { createQueue } from "../../client";
+import {
+	MAX_DELIVERY_DELAY_SECS,
+	MIN_DELIVERY_DELAY_SECS,
+} from "../../constants";
 import { handleFetchError } from "../../utils";
 import type {
 	CommonYargsArgv,
@@ -22,7 +26,8 @@ export function options(yargs: CommonYargsArgv) {
 			"delivery-delay-secs": {
 				type: "number",
 				describe:
-					"How long a published message should be delayed for, in seconds. Must be a positive integer",
+					"How long a published message should be delayed for, in seconds. Must be between 0 and 42300",
+				default: 0,
 			},
 		});
 }
@@ -40,10 +45,22 @@ function createBody(
 		);
 	}
 
+	body.settings = {};
+
 	if (args.deliveryDelaySecs != undefined) {
-		body.settings = {
-			delivery_delay: args.deliveryDelaySecs,
-		};
+		if (
+			args.deliveryDelaySecs < MIN_DELIVERY_DELAY_SECS ||
+			args.deliveryDelaySecs > MAX_DELIVERY_DELAY_SECS
+		) {
+			throw new CommandLineArgsError(
+				`Invalid --delivery-delay-secs value: ${args.deliveryDelaySecs}. Must be between ${MIN_DELIVERY_DELAY_SECS} and ${MAX_DELIVERY_DELAY_SECS}`
+			);
+		}
+		body.settings.delivery_delay = args.deliveryDelaySecs;
+	}
+
+	if (Object.keys(body.settings).length === 0) {
+		body.settings = undefined;
 	}
 
 	return body;
