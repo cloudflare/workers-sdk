@@ -47,6 +47,7 @@ export default {
 				env.SENTRY_ACCESS_CLIENT_ID,
 				env.SENTRY_ACCESS_CLIENT_SECRET,
 				env.COLO_METADATA,
+				env.VERSION_METADATA,
 				env.CONFIG?.account_id,
 				env.CONFIG?.script_id
 			);
