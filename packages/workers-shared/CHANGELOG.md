@@ -1,5 +1,13 @@
 # @cloudflare/workers-shared
 
+## 0.14.0
+
+### Minor Changes
+
+- [#8094](https://github.com/cloudflare/workers-sdk/pull/8094) [`d83dd19`](https://github.com/cloudflare/workers-sdk/commit/d83dd1912baf680df45cea4bbdeae77d2d7013aa) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Provides sentry sourcemap generation and upload on production deploys.
+
+- [#8084](https://github.com/cloudflare/workers-sdk/pull/8084) [`2547c0f`](https://github.com/cloudflare/workers-sdk/commit/2547c0fcca80ac3fde9fed292c3c477218fbd096) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Rollout interpolation search method for asset manifests (1 / 20,000 requests)
+
 ## 0.13.2
 
 ### Patch Changes
