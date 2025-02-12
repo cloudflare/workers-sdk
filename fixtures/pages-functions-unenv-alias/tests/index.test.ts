@@ -13,6 +13,6 @@ describe("Pages functions with unenv aliased packages", () => {
         onTestFinished(stop);
         const response = await fetch(`http://${ip}:${port}/`);
         const body = await response.text();
-        expect(body).toMatchInlineSnapshot(`"OK!"`);
+        expect(body).toEqual(`OK!`);
     });
 });
