@@ -142,7 +142,7 @@ describe.sequential("wrangler dev", () => {
 		msw.resetHandlers();
 		spy.mockClear();
 		setSpy.mockClear();
-		logger.loggerLevel = "log";
+		logger.resetLoggerLevel();
 	});
 
 	async function runWranglerUntilConfig(

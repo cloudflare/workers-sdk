@@ -56,6 +56,7 @@ describe("metrics", () => {
 	afterEach(() => {
 		vi.unstubAllEnvs();
 		isCISpy.mockClear();
+		logger.resetLoggerLevel();
 	});
 
 	describe("getMetricsDispatcher()", () => {
