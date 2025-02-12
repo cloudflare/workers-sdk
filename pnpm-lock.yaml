@@ -173,8 +173,14 @@ importers:
         version: 5.4.14(@types/node@18.19.75)
 =======
         specifier: catalog:default
+<<<<<<< HEAD
         version: 5.0.12(@types/node@18.19.75)
 >>>>>>> 3ff911614 (vite + vitest)
+||||||| parent of b42095b2f (vite + vitest)
+        version: 5.0.12(@types/node@18.19.75)
+=======
+        version: 5.4.14(@types/node@18.19.75)
+>>>>>>> b42095b2f (vite + vitest)
       vitest:
         specifier: catalog:default
 <<<<<<< HEAD
@@ -3096,12 +3102,18 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^4.3.3
 <<<<<<< HEAD
+<<<<<<< HEAD
         version: 4.3.3(vite@5.4.14(@types/node@18.19.74))
 ||||||| parent of a791679e4 (update dompurify and eliminate cross-spawn)
         version: 4.3.3(vite@5.0.12(@types/node@18.19.74))
 =======
         version: 4.3.3(vite@5.0.12(@types/node@18.19.75))
 >>>>>>> a791679e4 (update dompurify and eliminate cross-spawn)
+||||||| parent of b42095b2f (vite + vitest)
+        version: 4.3.3(vite@5.0.12(@types/node@18.19.75))
+=======
+        version: 4.3.3(vite@5.4.14(@types/node@18.19.75))
+>>>>>>> b42095b2f (vite + vitest)
       eslint:
         specifier: ^8.49.0
         version: 8.57.0
@@ -3114,12 +3126,18 @@ importers:
       vite:
         specifier: catalog:default
 <<<<<<< HEAD
+<<<<<<< HEAD
         version: 5.4.14(@types/node@18.19.74)
 ||||||| parent of a791679e4 (update dompurify and eliminate cross-spawn)
         version: 5.0.12(@types/node@18.19.74)
 =======
         version: 5.0.12(@types/node@18.19.75)
 >>>>>>> a791679e4 (update dompurify and eliminate cross-spawn)
+||||||| parent of b42095b2f (vite + vitest)
+        version: 5.0.12(@types/node@18.19.75)
+=======
+        version: 5.4.14(@types/node@18.19.75)
+>>>>>>> b42095b2f (vite + vitest)
       wrangler:
         specifier: workspace:^
         version: link:../wrangler
@@ -10510,11 +10528,6 @@ packages:
   nan@2.18.0:
     resolution: {integrity: sha512-W7tfG7vMOGtD30sHoZSSc/JVYiyDPEyQVso/Zz+/uQd0B0L46gtC+pHha5FFMRpil6fm/AoEcRWyOVi4+E/f8w==}
 
-  nanoid@3.3.7:
-    resolution: {integrity: sha512-eSRppjcPIatRIMC1U6UngP8XFcz8MQWGQdt1MTBQ7NaAmvXDfvNxbvWV3x2y6CdEUciCSsDHDQZbhYaB8QEo2g==}
-    engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
-    hasBin: true
-
   nanoid@3.3.8:
     resolution: {integrity: sha512-WNLf5Sd8oZxOm+TzppcYk8gVOgP+l58xNy58D0nbUnOxOWRWvlcCV4kUF7ltmI6PsrLl/BgKEyS4mqsGChFN0w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
@@ -17615,6 +17628,17 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@vitejs/plugin-react@4.3.3(vite@5.4.14(@types/node@18.19.75))':
+    dependencies:
+      '@babel/core': 7.26.0
+      '@babel/plugin-transform-react-jsx-self': 7.25.9(@babel/core@7.26.0)
+      '@babel/plugin-transform-react-jsx-source': 7.25.9(@babel/core@7.26.0)
+      '@types/babel__core': 7.20.5
+      react-refresh: 0.14.2
+      vite: 5.4.14(@types/node@18.19.75)
+    transitivePeerDependencies:
+      - supports-color
+
   '@vitejs/plugin-react@4.3.4(vite@6.1.0(@types/node@18.19.75)(jiti@2.4.2))':
     dependencies:
       '@babel/core': 7.26.0
@@ -17633,6 +17657,7 @@ snapshots:
       chai: 5.1.2
       tinyrainbow: 1.2.0
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
   '@vitest/expect@3.0.5':
@@ -17654,6 +17679,11 @@ snapshots:
       tinyrainbow: 2.0.0
 
   '@vitest/mocker@2.1.9(vite@5.4.14(@types/node@18.19.74))':
+||||||| parent of b42095b2f (vite + vitest)
+  '@vitest/mocker@2.1.9(msw@2.4.3(typescript@5.7.3))(vite@5.4.14(@types/node@18.19.74))':
+=======
+  '@vitest/mocker@2.1.9(msw@2.4.3(typescript@5.7.3))(vite@5.4.14(@types/node@18.19.75))':
+>>>>>>> b42095b2f (vite + vitest)
     dependencies:
       '@vitest/spy': 2.1.9
       estree-walker: 3.0.3
@@ -17675,6 +17705,7 @@ snapshots:
       msw: 2.4.3(typescript@5.7.3)
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
       vite: 5.4.14(@types/node@18.19.74)
 ||||||| parent of a791679e4 (update dompurify and eliminate cross-spawn)
       vite: 5.0.12(@types/node@18.19.74)
@@ -17690,6 +17721,17 @@ snapshots:
       magic-string: 0.30.17
     optionalDependencies:
 >>>>>>> 3ff911614 (vite + vitest)
+||||||| parent of b42095b2f (vite + vitest)
+      vite: 5.4.14(@types/node@18.19.74)
+
+  '@vitest/mocker@2.1.9(vite@5.4.14(@types/node@18.19.75))':
+    dependencies:
+      '@vitest/spy': 2.1.9
+      estree-walker: 3.0.3
+      magic-string: 0.30.17
+    optionalDependencies:
+=======
+>>>>>>> b42095b2f (vite + vitest)
       vite: 5.4.14(@types/node@18.19.75)
 >>>>>>> a791679e4 (update dompurify and eliminate cross-spawn)
 
@@ -21408,8 +21450,6 @@ snapshots:
   nan@2.18.0:
     optional: true
 
-  nanoid@3.3.7: {}
-
   nanoid@3.3.8: {}
 
   napi-build-utils@1.0.2: {}
@@ -24119,6 +24159,7 @@ snapshots:
       - supports-color
       - typescript
 
+<<<<<<< HEAD
   vite@5.4.14(@types/node@18.19.74):
     dependencies:
 <<<<<<< HEAD
@@ -24138,6 +24179,18 @@ snapshots:
       '@types/node': 18.19.74
       fsevents: 2.3.3
 
+||||||| parent of b42095b2f (vite + vitest)
+  vite@5.0.12(@types/node@18.19.74):
+    dependencies:
+      esbuild: 0.19.12
+      postcss: 8.5.2
+      rollup: 4.34.6
+    optionalDependencies:
+      '@types/node': 18.19.74
+      fsevents: 2.3.3
+
+=======
+>>>>>>> b42095b2f (vite + vitest)
   vite@5.0.12(@types/node@18.19.75):
     dependencies:
       esbuild: 0.19.12
@@ -24220,7 +24273,13 @@ snapshots:
 <<<<<<< HEAD
 <<<<<<< HEAD
       '@vitest/expect': 2.1.9
+<<<<<<< HEAD
       '@vitest/mocker': 2.1.9(vite@5.4.14(@types/node@18.19.74))
+||||||| parent of b42095b2f (vite + vitest)
+      '@vitest/mocker': 2.1.9(msw@2.4.3(typescript@5.7.3))(vite@5.4.14(@types/node@18.19.74))
+=======
+      '@vitest/mocker': 2.1.9(msw@2.4.3(typescript@5.7.3))(vite@5.4.14(@types/node@18.19.75))
+>>>>>>> b42095b2f (vite + vitest)
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9
@@ -24346,7 +24405,7 @@ snapshots:
   vitest@2.1.9(@types/node@18.19.75)(@vitest/ui@2.1.9):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(vite@5.4.14(@types/node@18.19.75))
+      '@vitest/mocker': 2.1.9(msw@2.4.3(typescript@5.7.3))(vite@5.4.14(@types/node@18.19.75))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9
@@ -24574,7 +24633,7 @@ snapshots:
       esbuild: 0.17.19
       itty-time: 1.0.6
       miniflare: 3.20241106.1
-      nanoid: 3.3.7
+      nanoid: 3.3.8
       path-to-regexp: 6.3.0
       resolve: 1.22.8
       resolve.exports: 2.0.3
