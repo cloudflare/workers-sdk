@@ -18,9 +18,11 @@ const makeSentry10Transport = (options: BaseTransportOptions) => {
 	let eventQueue: [string, RequestInit][] = [];
 
 	const transportSentry10 = async (request: TransportRequest) => {
-		/* Adds helpful properties to the request body before we send it to our
-    proxy Worker. These properties can be parsed out from the NDJSON in
-    `request.body`, but it's easier and safer to just attach them here. */
+		/**
+		 * Adds helpful properties to the request body before we send it to our
+		 * proxy Worker. These properties can be parsed out from the NDJSON in
+		 * `request.body`, but it's easier and safer to just attach them here.
+		 */
 		const sentryWorkerPayload = {
 			envelope: request.body,
 			url: options.url,
@@ -84,7 +86,6 @@ const makeSentry10Transport = (options: BaseTransportOptions) => {
 };
 
 const disabledDefaultIntegrations = [
-	"Console", // Console logs may contain PII
 	"LocalVariables", // Local variables may contain tokens and PII
 	"Http", // Only captures method/URL/response status, but URL may contain PII
 	"Undici", // Same as "Http"
