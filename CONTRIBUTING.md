@@ -163,7 +163,7 @@ For TypeScript to work properly in the Monorepo the version used in VSCode must 
 
 4. A submenu will appear with a list of available TypeScript versions. Choose the desired version you want to use for this project. If you have multiple versions installed, they will be listed here.
 
-	- Selecting "Use Workspace Version" will use the version of TypeScript installed in the project's `node_modules` directory.
+   - Selecting "Use Workspace Version" will use the version of TypeScript installed in the project's `node_modules` directory.
 
 5. After selecting the TypeScript version, VSCode will reload the workspace using the chosen version.
 
@@ -203,11 +203,27 @@ The code is checked for formatting errors by [Prettier](https://prettier.io/).
 
 Tests in a workspace are executed, by [Vitest](https://vitest.dev/), which is configured to automatically compile and bundle the TypeScript before running the tests.
 
+- If you have recently rebased on main then make sure you have installed any new dependencies
+
+  ```sh
+  > pnpm i
+  ```
+
 - Run the tests for all the workspaces
 
   ```sh
   > pnpm run test
   ```
+
+  :::note
+  Cloudflare employees may need to turn off WARP for the first time they run the Miniflare tests so that it can request and cache the CF properties without getting the following error.
+
+  ```plain
+  failed: TLS peer's certificate is not trusted; reason = self signed certificate in certificate chain
+  ```
+
+  After this request is cached you can run tests with WARP turned on, no problem.
+  :::
 
 - Run the tests for a specific workspace (e.g. wrangler)
 
@@ -242,6 +258,7 @@ Changes should be committed to a new local branch, which then gets pushed to you
   ```
 
 - Stage files to include in a commit
+
   - Use [VS Code](https://code.visualstudio.com/docs/editor/versioncontrol#_git-support)
   - Or add and commit files via the command line
 
