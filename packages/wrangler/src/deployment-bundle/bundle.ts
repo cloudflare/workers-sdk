@@ -438,10 +438,10 @@ export async function bundleWorker(
 		plugins: [
 			aliasPlugin,
 			moduleCollector.plugin,
-			...getNodeJSCompatPlugins({
+			...(await getNodeJSCompatPlugins({
 				mode: nodejsCompatMode ?? null,
 				unenvResolvePaths,
-			}),
+			})),
 			cloudflareInternalPlugin,
 			buildResultPlugin,
 			...(plugins || []),

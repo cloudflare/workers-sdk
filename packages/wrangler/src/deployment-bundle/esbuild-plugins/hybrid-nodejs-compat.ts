@@ -1,7 +1,6 @@
 import { builtinModules } from "node:module";
 import nodePath from "node:path";
 import dedent from "ts-dedent";
-import { cloudflare, env, nodeless } from "unenv";
 import { getBasePath } from "../../paths";
 import type { Plugin, PluginBuild } from "esbuild";
 
@@ -14,15 +13,22 @@ const REQUIRED_UNENV_ALIAS_NAMESPACE = "required-unenv-alias";
  * @param _unenvResolvePaths Root paths used to resolve absolute paths.
  * @returns ESBuild plugin
  */
-export function nodejsHybridPlugin(_unenvResolvePaths?: string[]): Plugin {
-	const { alias, inject, external } = env(nodeless, cloudflare);
+export async function nodejsHybridPlugin(
+	_unenvResolvePaths?: string[]
+): Promise<Plugin> {
+	// `unenv` and `@cloudflare/unenv-preset` only publish esm
+	const { defineEnv } = await import("unenv");
+	const { cloudflare } = await import("@cloudflare/unenv-preset");
+	const { alias, inject, external } = defineEnv({ presets: [cloudflare] }).env;
+
 	return {
 		name: "hybrid-nodejs_compat",
 		setup(build) {
 			errorOnServiceWorkerFormat(build);
 			handleRequireCallsToNodeJSBuiltins(build);
 			handleUnenvAliasedPackages(build, alias, external);
-			handleNodeJSGlobals(build, inject);
+			// TODO: remove cast when https://github.com/unjs/unenv/issues/442 is fixed
+			handleNodeJSGlobals(build, inject as Record<string, string | string[]>);
 		},
 	};
 }
@@ -103,15 +109,13 @@ function handleRequireCallsToNodeJSBuiltins(build: PluginBuild) {
 function handleUnenvAliasedPackages(
 	build: PluginBuild,
 	alias: Record<string, string>,
-	external: string[]
+	external: readonly string[]
 ) {
 	// esbuild expects alias paths to be absolute
 	const aliasAbsolute: Record<string, string> = {};
 	for (const [module, unresolvedAlias] of Object.entries(alias)) {
 		try {
-			aliasAbsolute[module] = require
-				.resolve(unresolvedAlias)
-				.replace(/\.cjs$/, ".mjs");
+			aliasAbsolute[module] = require.resolve(unresolvedAlias);
 		} catch (e) {
 			// this is an alias for package that is not installed in the current app => ignore
 		}
