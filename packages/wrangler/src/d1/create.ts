@@ -1,4 +1,3 @@
-import TOML from "@iarna/toml";
 import { fetchResult } from "../cfetch";
 import { formatConfigSnippet, withConfig } from "../config";
 import { UserError } from "../errors";
