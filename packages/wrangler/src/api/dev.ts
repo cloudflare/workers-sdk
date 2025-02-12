@@ -185,6 +185,7 @@ export async function unstable_dev(
 		ip: "127.0.0.1",
 		inspectorPort: options?.inspectorPort ?? 0,
 		v: undefined,
+		cwd: undefined,
 		localProtocol: options?.localProtocol,
 		httpsKeyPath: options?.httpsKeyPath,
 		httpsCertPath: options?.httpsCertPath,

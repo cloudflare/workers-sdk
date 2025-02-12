@@ -53,6 +53,7 @@ export async function generateHandler(args: GenerateArgs) {
 			delegateC3: false,
 			v: undefined,
 			config: undefined,
+			cwd: undefined,
 			env: undefined,
 			type: undefined,
 			_: args._,
