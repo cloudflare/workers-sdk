@@ -236,6 +236,18 @@ describe("search methods", async () => {
 				expect(foundEntry).toBe(false);
 			}
 		});
+
+		it("throws an error if the search value is longer than the current value", async () => {
+			const { manifest } = await makeManifestOfLength(10);
+			expect(() => {
+				binarySearch(
+					new Uint8Array(manifest, HEADER_SIZE),
+					new Uint8Array(PATH_HASH_SIZE + 1).fill(127)
+				);
+			}).toThrowErrorMatchingInlineSnapshot(
+				`[TypeError: Search value and current value are of different lengths]`
+			);
+		});
 	});
 
 	describe("interpolation search", () => {
@@ -337,6 +349,57 @@ describe("search methods", async () => {
 				);
 				expect(foundEntry).toBe(false);
 			}
+		});
+
+		it("throws an error if the search value is longer than the current value", async () => {
+			const { manifest } = await makeManifestOfLength(10);
+			expect(() => {
+				interpolationSearch(
+					new Uint8Array(manifest, HEADER_SIZE),
+					new Uint8Array(PATH_HASH_SIZE + 1).fill(127)
+				);
+			}).toThrowErrorMatchingInlineSnapshot(
+				`[TypeError: Search value and current value are of different lengths]`
+			);
+		});
+
+		it("throws an error if the search space is out of order", async () => {
+			const smallEntry = {
+				path: "/small",
+				pathHashBytes: new Uint8Array(PATH_HASH_SIZE),
+				contentHash: "00000000000000000000000000000000",
+			};
+			const largeEntry = {
+				path: "/large",
+				pathHashBytes: new Uint8Array(PATH_HASH_SIZE).fill(255),
+				contentHash: "ffffffffffffffffffffffffffffffff",
+			};
+			const entries = [smallEntry, largeEntry];
+			entries.sort((a, b) => 0 - compare(a.pathHashBytes, b.pathHashBytes)); // inverted order!
+
+			const assetManifestBytes = new Uint8Array(
+				HEADER_SIZE + entries.length * ENTRY_SIZE
+			);
+
+			for (const [i, { pathHashBytes, contentHash }] of entries.entries()) {
+				const contentHashBytes = hexToBytes(contentHash);
+				const entryOffset = HEADER_SIZE + i * ENTRY_SIZE;
+
+				assetManifestBytes.set(pathHashBytes, entryOffset + PATH_HASH_OFFSET);
+				assetManifestBytes.set(
+					contentHashBytes,
+					entryOffset + CONTENT_HASH_OFFSET
+				);
+			}
+
+			expect(() => {
+				interpolationSearch(
+					new Uint8Array(assetManifestBytes.buffer, HEADER_SIZE),
+					smallEntry.pathHashBytes
+				);
+			}).toThrowErrorMatchingInlineSnapshot(
+				`[TypeError: Search space is unordered]`
+			);
 		});
 
 		it("doesn't throw 'RangeError: Division by zero' with extreme manifests", async () => {
