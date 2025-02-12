@@ -25,7 +25,6 @@
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
-			"require": "./dist/index.cjs",
 			"import": "./dist/index.mjs"
 		},
 		"./*": {
@@ -34,7 +33,6 @@
 		},
 		"./package.json": "./package.json"
 	},
-	"main": "./dist/index.cjs",
 	"types": "./dist/index.d.ts",
 	"files": [
 		"dist"
