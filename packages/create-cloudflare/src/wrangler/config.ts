@@ -1,8 +1,8 @@
-import { existsSync } from "fs";
+import { existsSync, mkdirSync } from "fs";
 import { resolve } from "path";
 import TOML from "@iarna/toml";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
-import { readFile, writeFile } from "helpers/files";
+import { readFile, writeFile, writeJSON } from "helpers/files";
 import { parse as jsoncParse } from "jsonc-parser";
 import type { JsonMap } from "@iarna/toml";
 import type { C3Context } from "types";
@@ -93,6 +93,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 }
 `,
 		);
+		addVscodeConfig(ctx);
 	} else if (wranglerTomlExists(ctx)) {
 		const wranglerTomlStr = readWranglerToml(ctx);
 		const parsed = TOML.parse(wranglerTomlStr);
@@ -164,6 +165,7 @@ export const wranglerTomlExists = (ctx: C3Context) => {
 	return existsSync(wranglerTomlPath);
 };
 
+/** Checks for wrangler.json and wrangler.jsonc */
 export const wranglerJsonExists = (ctx: C3Context) => {
 	const wranglerJsonPath = getWranglerJsonPath(ctx);
 	const wranglerJsoncPath = getWranglerJsoncPath(ctx);
@@ -196,4 +198,22 @@ export const writeWranglerJson = (ctx: C3Context, contents: string) => {
 	}
 	const wranglerJsoncPath = getWranglerJsoncPath(ctx);
 	return writeFile(wranglerJsoncPath, contents);
+};
+
+export const addVscodeConfig = (ctx: C3Context) => {
+	const settingsPath = `${ctx.project.path}/.vscode/settings.json`;
+
+	// don't override a user's existing settings
+	// as this is just a quick stop gap we'll just not bother if the file exists
+	if (existsSync(settingsPath)) {
+		return;
+	}
+
+	mkdirSync(`${ctx.project.path}/.vscode`, { recursive: true });
+
+	writeJSON(settingsPath, {
+		"files.associations": {
+			"wrangler.json": "jsonc",
+		},
+	});
 };

@@ -15,12 +15,11 @@ catalog:
   typescript: "^5.7.2"
   undici: "^5.28.4"
   vitest: "~3.0.5"
-  vite: "^5.0.12"
+  vite: "^5.4.14"
 
 catalogs:
   vite-plugin:
-    "vite": "^6.0.7"
+    "vite": "^6.1.0"
     "@types/node": "^22.10.1"
-    "unenv": "npm:unenv-nightly@2.0.0-20241218-183400-5d6aec3"
     # This is the minimum Wrangler peer dependency for Vite
     "wrangler": "^3.101.0"

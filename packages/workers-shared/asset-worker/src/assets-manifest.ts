@@ -116,14 +116,22 @@ export const interpolationSearch = (
 			arr.byteOffset + high * ENTRY_SIZE,
 			PATH_HASH_SIZE
 		);
+		const lowValueNumber = uint8ArrayToNumber(lowValue);
+		const highValueNumber = uint8ArrayToNumber(highValue);
+		const denominator = highValueNumber - lowValueNumber;
+		if (denominator < 0n) {
+			return false;
+		}
+		const numerator = searchValueNumber - lowValueNumber;
+		if (numerator < 0n) {
+			return false;
+		}
 		const mid = Math.floor(
-			Number(
-				BigInt(low) +
-					(BigInt(high - low) *
-						(searchValueNumber - uint8ArrayToNumber(lowValue))) /
-						(uint8ArrayToNumber(highValue) - uint8ArrayToNumber(lowValue))
-			)
+			Number(BigInt(low) + (BigInt(high - low) * numerator) / denominator)
 		);
+		if (mid < low || mid > high) {
+			return false;
+		}
 		const current = new Uint8Array(
 			arr.buffer,
 			arr.byteOffset + mid * ENTRY_SIZE,

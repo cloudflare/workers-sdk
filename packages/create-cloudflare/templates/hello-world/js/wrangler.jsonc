@@ -3,6 +3,6 @@
 	"main": "src/index.js",
 	"compatibility_date": "<TBD>",
 	"observability": {
-		"enabled": true
-	}
+		"enabled": true,
+	},
 }

@@ -20,7 +20,7 @@ import { CommandRegistry } from "./core/CommandRegistry";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
-import { deployHandler, deployOptions } from "./deploy";
+import { deployCommand, publishAlias } from "./deploy";
 import { isAuthenticationError } from "./deploy/deploy";
 import {
 	isBuildFailure,
@@ -393,13 +393,17 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("dev");
 
-	// deploy
-	wrangler.command(
-		["deploy [script]", "publish [script]"],
-		"🆙 Deploy a Worker to Cloudflare",
-		deployOptions,
-		deployHandler
-	);
+	registry.define([
+		{
+			command: "wrangler deploy",
+			definition: deployCommand,
+		},
+		{
+			command: "wrangler publish",
+			definition: publishAlias,
+		},
+	]);
+	registry.registerNamespace("deploy");
 
 	registry.define([
 		{ command: "wrangler deployments", definition: deploymentsNamespace },

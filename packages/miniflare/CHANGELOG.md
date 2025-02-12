@@ -1,5 +1,24 @@
 # miniflare
 
+## 3.20250204.0
+
+### Patch Changes
+
+- [#8032](https://github.com/cloudflare/workers-sdk/pull/8032) [`c80dbd8`](https://github.com/cloudflare/workers-sdk/commit/c80dbd8d5e53a081cf600e250f1ddda860be1a12) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250129.0  | 1.20250204.0  |
+  | @cloudflare/workers-types | ^4.20250129.0 | ^4.20250204.0 |
+
+- [#7290](https://github.com/cloudflare/workers-sdk/pull/7290) [`0c0374c`](https://github.com/cloudflare/workers-sdk/commit/0c0374cce3908a47f7459ba4810855c1ce124349) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: add support for workers with assets when running multiple workers in one `wrangler dev` instance
+
+  https://github.com/cloudflare/workers-sdk/pull/7251 added support for running multiple Workers in one `wrangler dev`/miniflare session. e.g. `wrangler dev -c wrangler.toml -c ../worker2/wrangler.toml`, which among other things, allowed cross-service RPC to Durable Objects.
+
+  However this did not work in the same way as production when there was a Worker with assets - this PR should fix that.
+
 ## 3.20250129.0
 
 ### Patch Changes

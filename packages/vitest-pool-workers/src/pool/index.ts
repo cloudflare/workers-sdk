@@ -23,6 +23,7 @@ import {
 } from "miniflare";
 import semverSatisfies from "semver/functions/satisfies.js";
 import { createMethodsRPC } from "vitest/node";
+import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { createChunkingSocket } from "../shared/chunking-socket";
 import { CompatibilityFlagAssertions } from "./compatibility-flag-assertions";
 import { OPTIONS_PATH, parseProjectOptions } from "./config";
@@ -41,7 +42,6 @@ import {
 import {
 	ensurePosixLikePath,
 	handleModuleFallbackRequest,
-	workerdBuiltinModules,
 } from "./module-fallback";
 import type {
 	SourcelessWorkerOptions,

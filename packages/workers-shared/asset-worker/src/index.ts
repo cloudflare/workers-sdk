@@ -78,6 +78,7 @@ export default class extends WorkerEntrypoint<Env> {
 				this.env.SENTRY_ACCESS_CLIENT_ID,
 				this.env.SENTRY_ACCESS_CLIENT_SECRET,
 				this.env.COLO_METADATA,
+				this.env.VERSION_METADATA,
 				this.env.CONFIG?.account_id,
 				this.env.CONFIG?.script_id
 			);
@@ -100,7 +101,7 @@ export default class extends WorkerEntrypoint<Env> {
 					coloTier: this.env.COLO_METADATA.coloTier,
 
 					coloRegion: this.env.COLO_METADATA.coloRegion,
-					version: this.env.VERSION_METADATA.id,
+					version: this.env.VERSION_METADATA.tag,
 					hostname: url.hostname,
 					htmlHandling: config.html_handling,
 					notFoundHandling: config.not_found_handling,
@@ -217,7 +218,7 @@ export default class extends WorkerEntrypoint<Env> {
 		const analytics = new ExperimentAnalytics(this.env.EXPERIMENT_ANALYTICS);
 		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
 
-		const INTERPOLATION_EXPERIMENT_SAMPLE_RATE = 0;
+		const INTERPOLATION_EXPERIMENT_SAMPLE_RATE = 1 / 20_000; // 0.00005 = 0.005%
 		let searchMethod: "binary" | "interpolation" = "binary";
 		if (Math.random() < INTERPOLATION_EXPERIMENT_SAMPLE_RATE) {
 			searchMethod = "interpolation";

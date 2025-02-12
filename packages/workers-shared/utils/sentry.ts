@@ -8,6 +8,7 @@ export function setupSentry(
 	clientId: string,
 	clientSecret: string,
 	coloMetadata?: ColoMetadata,
+	versionMetadata?: WorkerVersionMetadata,
 	accountId?: number,
 	scriptId?: number
 ): Toucan | undefined {
@@ -20,6 +21,7 @@ export function setupSentry(
 		request,
 		context,
 		sampleRate: 1.0,
+		release: versionMetadata?.tag,
 		requestDataOptions: {
 			allowedHeaders: [
 				"user-agent",

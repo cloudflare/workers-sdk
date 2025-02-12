@@ -1,5 +1,11 @@
 # @cloudflare/unenv-preset
 
+## 1.1.2
+
+### Patch Changes
+
+- [#7998](https://github.com/cloudflare/workers-sdk/pull/7998) [`576d931`](https://github.com/cloudflare/workers-sdk/commit/576d931d1a1ac59fb777966d3bddd4a4ce9acd92) Thanks [@vicb](https://github.com/vicb)! - Use builtin implementation for isArray and isDeepStrictEqual
+
 ## 1.1.1
 
 ### Patch Changes

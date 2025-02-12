@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import { builtinModules } from "node:module";
 import * as vite from "vite";
-import { getNodeCompatExternals } from "./node-js-compat";
 import { INIT_PATH, UNKNOWN_HOST } from "./shared";
 import { getOutputDirectory } from "./utils";
 import type { ResolvedPluginConfig, WorkerConfig } from "./plugin-config";
@@ -148,6 +147,7 @@ export function createCloudflareEnvironmentOptions(
 			// We need to enable `emitAssets` in order to support additional modules defined by `rules`
 			emitAssets: true,
 			outDir: getOutputDirectory(userConfig, environmentName),
+			copyPublicDir: false,
 			ssr: true,
 			rollupOptions: {
 				// Note: vite starts dev pre-bundling crawling from either optimizeDeps.entries or rollupOptions.input
@@ -155,7 +155,7 @@ export function createCloudflareEnvironmentOptions(
 				//       dev pre-bundling crawling (were we not to set this input field we'd have to appropriately set
 				//       optimizeDeps.entries in the dev config)
 				input: workerConfig.main,
-				external: [...cloudflareBuiltInModules, ...getNodeCompatExternals()],
+				external: [...cloudflareBuiltInModules],
 			},
 		},
 		optimizeDeps: {
