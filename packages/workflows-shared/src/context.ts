@@ -330,7 +330,11 @@ export class Context extends RpcTarget {
 					type: "timeout",
 				});
 
-				if (e instanceof Error && error.name === "NonRetryableError") {
+				if (
+					e instanceof Error &&
+					(error.name === "NonRetryableError" ||
+						error.message.startsWith("NonRetryableError:"))
+				) {
 					this.#engine.writeLog(
 						InstanceEvent.ATTEMPT_FAILURE,
 						cacheKey,
@@ -354,13 +358,7 @@ export class Context extends RpcTarget {
 						),
 					});
 
-					await this.#engine.setStatus(
-						accountId,
-						instance.id,
-						InstanceStatus.Errored
-					);
-					await this.#engine.timeoutHandler.release(this.#engine);
-					return this.#engine.abort(`Step "${name}" threw a NonRetryableError`);
+					throw error;
 				}
 
 				this.#engine.writeLog(
