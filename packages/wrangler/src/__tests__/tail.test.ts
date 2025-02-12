@@ -52,8 +52,8 @@ vi.mock("ws", async (importOriginal) => {
 	return module;
 });
 
-// we want to include the banner to make sure it doesn't show up in
-// the output of json mode
+// we want to include the banner to make sure it doesn't show up in the output when
+// when --format=json
 vi.unmock("../wrangler-banner");
 
 describe("tail", () => {
