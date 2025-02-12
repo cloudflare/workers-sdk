@@ -240,7 +240,12 @@ export default class extends WorkerEntrypoint<Env> {
 		try {
 			const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
 			if (searchMethod === "interpolation") {
-				return await assetsManifest.getWithInterpolationSearch(pathname);
+				try {
+					return await assetsManifest.getWithInterpolationSearch(pathname);
+				} catch (e) {
+					analytics.setData({ manifestReadMethod: "binary-fallback" });
+					return await assetsManifest.getWithBinarySearch(pathname);
+				}
 			} else {
 				return await assetsManifest.getWithBinarySearch(pathname);
 			}
