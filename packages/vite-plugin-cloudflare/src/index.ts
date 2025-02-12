@@ -134,8 +134,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 									)
 								);
 							}
-
-							writeDeployConfig(resolvedPluginConfig, resolvedViteConfig);
 						},
 					},
 				};
@@ -229,6 +227,18 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					fileName: "wrangler.json",
 					source: JSON.stringify(config),
 				});
+			},
+			writeBundle() {
+				// These conditions ensure the deploy config is emitted once per application build as `writeBundle` is called for each environment.
+				// If Vite introduces an additional hook that runs after the application has built then we could use that instead.
+				if (
+					this.environment.name ===
+					(resolvedPluginConfig.type === "assets-only"
+						? "client"
+						: resolvedPluginConfig.entryWorkerEnvironmentName)
+				) {
+					writeDeployConfig(resolvedPluginConfig, resolvedViteConfig);
+				}
 			},
 			handleHotUpdate(options) {
 				if (resolvedPluginConfig.configPaths.has(options.file)) {
