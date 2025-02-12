@@ -115,6 +115,18 @@ export async function createQueue(
 	});
 }
 
+export async function updateQueue(
+	config: Config,
+	body: PostQueueBody,
+	queue_id: string
+): Promise<QueueResponse> {
+	const accountId = await requireAuth(config);
+	return fetchResult(queuesUrl(accountId, queue_id), {
+		method: "PATCH",
+		body: JSON.stringify(body),
+	});
+}
+
 export async function deleteQueue(
 	config: Config,
 	queueName: string
