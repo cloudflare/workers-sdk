@@ -151,7 +151,7 @@ export function addBreadcrumb(
 export async function captureGlobalException(e: unknown) {
 	if (typeof SENTRY_DSN !== "undefined") {
 		sentryReportingAllowed = await confirm(
-			"Would you like to report this error to Cloudflare?",
+			"Would you like to report this error to Cloudflare? Wrangler's output and the error details will be shared with the Wrangler team to help us diagnose and fix the issue.",
 			{ fallbackValue: false }
 		);
 
