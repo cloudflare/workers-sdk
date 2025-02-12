@@ -65,7 +65,7 @@ export default {
 
 					coloRegion: env.COLO_METADATA.coloRegion,
 					hostname: url.hostname,
-					version: env.VERSION_METADATA.id,
+					version: env.VERSION_METADATA.tag,
 					userWorkerAhead: env.CONFIG.invoke_user_worker_ahead_of_assets,
 				});
 			}
