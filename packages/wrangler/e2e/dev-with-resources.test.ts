@@ -640,7 +640,9 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		const res = await fetch(url);
 
 		await expect(res.text()).resolves.toBe("env.PIPELINE is available");
-		expect(worker.currentOutput).toMatchInlineSnapshot(`Request received`);
+		// worker.currentOutput is sometimes racey, worker.output will hang
+		const match = await worker.readUntil(/Request received/);
+		expect(match[0]).not.toBeNull();
 	});
 
 	it.skipIf(!isLocal)("exposes queue producer/consumer bindings", async () => {
