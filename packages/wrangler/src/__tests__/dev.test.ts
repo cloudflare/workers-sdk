@@ -1774,6 +1774,17 @@ describe.sequential("wrangler dev", () => {
 				"
 			`);
 		});
+
+		it("should also set log level using WRANGLER_LOG'", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			vi.stubEnv("WRANGLER_LOG", "none");
+			await runWranglerUntilConfig("dev index.js --inspect");
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+
+			vi.stubEnv("WRANGLER_LOG", "debug");
+			await runWranglerUntilConfig("dev index.js");
+			expect(std.debug).toContain(".env file not found at");
+		});
 	});
 
 	describe("--show-interactive-dev-session", () => {
