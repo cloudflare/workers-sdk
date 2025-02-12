@@ -19,6 +19,7 @@ interface WorkerService {
 
 export interface QueueSettings {
 	delivery_delay?: number;
+	message_retention_period?: number;
 }
 
 export interface PostQueueResponse {

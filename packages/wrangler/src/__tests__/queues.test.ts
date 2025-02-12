@@ -196,7 +196,9 @@ describe("wrangler", () => {
 		describe("create", () => {
 			function mockCreateRequest(
 				queueName: string,
-				queueSettings: { delivery_delay?: number } | undefined = undefined
+				queueSettings:
+					| { delivery_delay?: number; message_retention_period?: number }
+					| undefined = undefined
 			) {
 				const requests = { count: 0 };
 
@@ -210,6 +212,7 @@ describe("wrangler", () => {
 								queue_name: string;
 								settings: {
 									delivery_delay: number;
+									message_retention_period: number;
 								};
 							};
 							expect(body.queue_name).toEqual(queueName);
@@ -249,7 +252,8 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --delivery-delay-secs  How long a published message should be delayed for, in seconds. Must be a positive integer  [number]"
+					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 42300  [number]
+					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be between 60 and 1209600  [number]"
 				`);
 			});
 			describe.each(["wrangler.json", "wrangler.toml"])("%s", (configPath) => {
@@ -301,18 +305,18 @@ describe("wrangler", () => {
 					runWrangler(`queues create ${queueName}`)
 				).rejects.toThrowError();
 				expect(std.out).toMatchInlineSnapshot(`
-		"🌀 Creating queue 'testQueue'
-		Queues is not currently enabled on this account. Go to https://dash.cloudflare.com/some-account-id/workers/queues to enable it.
+          "🌀 Creating queue 'testQueue'
+          Queues is not currently enabled on this account. Go to https://dash.cloudflare.com/some-account-id/workers/queues to enable it.
 
-		[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/queues) failed.[0m
+          [31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/queues) failed.[0m
 
-		  workers.api.error.unauthorized [code: 10023]
+            workers.api.error.unauthorized [code: 10023]
 
-		  If you think this is a bug, please open an issue at:
-		  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+            If you think this is a bug, please open an issue at:
+            [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
-		"
-	`);
+          "
+        `);
 			});
 
 			it("should show an error when two delivery delays are set", async () => {
@@ -339,6 +343,76 @@ describe("wrangler", () => {
 
 				expect(requests.count).toEqual(0);
 			});
+
+			it("should send queue settings with message retention period", async () => {
+				const requests = mockCreateRequest("testQueue", {
+					message_retention_period: 100,
+				});
+				await runWrangler(
+					"queues create testQueue --message-retention-period-secs=100"
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+          "🌀 Creating queue 'testQueue'
+          ✅ Created queue 'testQueue'
+
+          Configure your Worker to send messages to this queue:
+
+          {
+            \\"queues\\": {
+              \\"producers\\": [
+                {
+                  \\"queue\\": \\"testQueue\\",
+                  \\"binding\\": \\"testQueue\\"
+                }
+              ]
+            }
+          }
+          Configure your Worker to consume messages from this queue:
+
+          {
+            \\"queues\\": {
+              \\"consumers\\": [
+                {
+                  \\"queue\\": \\"testQueue\\"
+                }
+              ]
+            }
+          }"
+        `);
+				expect(requests.count).toEqual(1);
+			});
+
+			it("should show an error when two message retention periods are set", async () => {
+				const requests = mockCreateRequest("testQueue", {
+					message_retention_period: 60,
+				});
+
+				await expect(
+					runWrangler(
+						"queues create testQueue --message-retention-period-secs=70 --message-retention-period-secs=80"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Cannot specify --message-retention-period-secs multiple times]`
+				);
+
+				expect(requests.count).toEqual(0);
+			});
+
+			it("should show an error when invalid message retention period is set", async () => {
+				const requests = mockCreateRequest("testQueue", {
+					message_retention_period: 100,
+				});
+				await expect(
+					runWrangler(
+						"queues create testQueue --message-retention-period-secs=0"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Invalid --message-retention-period-secs value: 0. Must be between 60 and 1209600]`
+				);
+
+				expect(requests.count).toEqual(0);
+			});
+		});
 		});
 
 		describe("delete", () => {
