@@ -65,6 +65,10 @@ export class Logger {
 		this.overrideLoggerLevel = val;
 	}
 
+	resetLoggerLevel() {
+		this.overrideLoggerLevel = undefined;
+	}
+
 	columns = process.stdout.columns;
 
 	debug = (...args: unknown[]) => this.doLog("debug", args);
