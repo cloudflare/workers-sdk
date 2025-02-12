@@ -1299,8 +1299,8 @@ importers:
         specifier: ^0.6.0
         version: 0.6.0
       cookie:
-        specifier: ^0.6.0
-        version: 0.6.0
+        specifier: ^0.7.0
+        version: 0.7.1
       promjs:
         specifier: ^0.4.2
         version: 0.4.2
@@ -1321,7 +1321,13 @@ importers:
         version: 8.57.0
       eslint-config-turbo:
         specifier: latest
+<<<<<<< HEAD
         version: 2.4.2(eslint@8.57.0)(turbo@2.2.3)
+||||||| parent of 172b50119 (Update cookie)
+        version: 2.4.0(eslint@8.57.0)(turbo@2.2.3)
+=======
+        version: 2.4.1(eslint@8.57.0)(turbo@2.2.3)
+>>>>>>> 172b50119 (Update cookie)
       eslint-plugin-import:
         specifier: 2.26.x
         version: 2.26.0(@typescript-eslint/parser@6.10.0(eslint@8.57.0)(typescript@5.7.3))(eslint@8.57.0)
@@ -1622,8 +1628,8 @@ importers:
         specifier: ^0.6.0
         version: 0.6.0
       cookie:
-        specifier: ^0.6.0
-        version: 0.6.0
+        specifier: ^0.7.0
+        version: 0.7.1
       itty-router:
         specifier: ^4.0.13
         version: 4.0.17
@@ -7653,8 +7659,16 @@ packages:
     peerDependencies:
       eslint: '>=7.0.0'
 
+<<<<<<< HEAD
   eslint-config-turbo@2.4.2:
     resolution: {integrity: sha512-yPiW5grffSWETp/3bVPUXWQkHfiLoOBb3wuBbM90HlKkLOhggySn9C6/yUccprqRguMgR5OzXIuzDuUnX6bulw==}
+||||||| parent of 172b50119 (Update cookie)
+  eslint-config-turbo@2.4.0:
+    resolution: {integrity: sha512-AiRdy83iwyG4+iMSxXQGUbEClxkGxSlXYH8E2a+0972ao75OWnlDBiiuLMOzDpJubR+QVGC4zonn29AIFCSbFw==}
+=======
+  eslint-config-turbo@2.4.1:
+    resolution: {integrity: sha512-IFlqpBrWgVG1VJO34H2X2IgxU363CB67Bzsd/MekcD7gPAcRtNIyn8cQXibZL/+jZxdbacp1JLm26iHPg8XqgQ==}
+>>>>>>> 172b50119 (Update cookie)
     peerDependencies:
       eslint: '>6.6.0'
       turbo: '>2.0.0'
@@ -7729,8 +7743,16 @@ packages:
     peerDependencies:
       eslint: ^3 || ^4 || ^5 || ^6 || ^7 || ^8
 
+<<<<<<< HEAD
   eslint-plugin-turbo@2.4.2:
     resolution: {integrity: sha512-67IZtvOFaWDnUmYMV3luRIE1kqL+ok5MxPEsIPUqH2vQggML7jmZFZx/P9jhXAoFH+pViEz5QEzDa2DBLHqzQg==}
+||||||| parent of 172b50119 (Update cookie)
+  eslint-plugin-turbo@2.4.0:
+    resolution: {integrity: sha512-qCgoRi/OTc1VMxab7+sdKiV1xlkY4qjK9sM+kS7+WogrB1DxLguJSQXvk4HA13SD5VmJsq+8FYOw5q4EUk6Ixg==}
+=======
+  eslint-plugin-turbo@2.4.1:
+    resolution: {integrity: sha512-sTJZrgn7G1rF7RHZcj367g2cT0+E5v0lt9LD+nBpTnCyDA/yB0PwSm/QM+aXQ39vxuK9sqlUL2LyPXyGFvUXsg==}
+>>>>>>> 172b50119 (Update cookie)
     peerDependencies:
       eslint: '>6.6.0'
       turbo: '>2.0.0'
@@ -17954,10 +17976,22 @@ snapshots:
     dependencies:
       eslint: 8.57.0
 
+<<<<<<< HEAD
   eslint-config-turbo@2.4.2(eslint@8.57.0)(turbo@2.2.3):
+||||||| parent of 172b50119 (Update cookie)
+  eslint-config-turbo@2.4.0(eslint@8.57.0)(turbo@2.2.3):
+=======
+  eslint-config-turbo@2.4.1(eslint@8.57.0)(turbo@2.2.3):
+>>>>>>> 172b50119 (Update cookie)
     dependencies:
       eslint: 8.57.0
+<<<<<<< HEAD
       eslint-plugin-turbo: 2.4.2(eslint@8.57.0)(turbo@2.2.3)
+||||||| parent of 172b50119 (Update cookie)
+      eslint-plugin-turbo: 2.4.0(eslint@8.57.0)(turbo@2.2.3)
+=======
+      eslint-plugin-turbo: 2.4.1(eslint@8.57.0)(turbo@2.2.3)
+>>>>>>> 172b50119 (Update cookie)
       turbo: 2.2.3
 
   eslint-import-resolver-node@0.3.7:
@@ -18042,7 +18076,13 @@ snapshots:
       semver: 6.3.1
       string.prototype.matchall: 4.0.8
 
+<<<<<<< HEAD
   eslint-plugin-turbo@2.4.2(eslint@8.57.0)(turbo@2.2.3):
+||||||| parent of 172b50119 (Update cookie)
+  eslint-plugin-turbo@2.4.0(eslint@8.57.0)(turbo@2.2.3):
+=======
+  eslint-plugin-turbo@2.4.1(eslint@8.57.0)(turbo@2.2.3):
+>>>>>>> 172b50119 (Update cookie)
     dependencies:
       dotenv: 16.0.3
       eslint: 8.57.0
