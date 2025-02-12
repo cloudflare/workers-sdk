@@ -4,7 +4,7 @@ import {
 	_stderrErrorHandler,
 	_stdout,
 	_stdoutErrorHandler,
-	_times,
+	// TODO _times,
 	Console,
 } from "unenv/node/console";
 import type nodeConsole from "node:console";
@@ -16,7 +16,7 @@ export {
 	_stderrErrorHandler,
 	_stdout,
 	_stdoutErrorHandler,
-	_times,
+	//_times,
 } from "unenv/node/console";
 
 // The following is an unusual way to access the original/unpatched globalThis.console.
@@ -69,7 +69,7 @@ Object.assign(workerdConsole, {
 	_stderrErrorHandler,
 	_stdout,
 	_stdoutErrorHandler,
-	_times,
+	//_times,
 });
 
 // export the monkey-patched console to satisfy the following node behavior:
