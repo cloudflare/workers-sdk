@@ -218,7 +218,7 @@ export default class extends WorkerEntrypoint<Env> {
 		const analytics = new ExperimentAnalytics(this.env.EXPERIMENT_ANALYTICS);
 		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
 
-		const INTERPOLATION_EXPERIMENT_SAMPLE_RATE = 1 / 20_000; // 0.00005 = 0.005%
+		const INTERPOLATION_EXPERIMENT_SAMPLE_RATE = 1 / 100; // 0.01 = 1%
 		let searchMethod: "binary" | "interpolation" = "binary";
 		if (Math.random() < INTERPOLATION_EXPERIMENT_SAMPLE_RATE) {
 			searchMethod = "interpolation";
@@ -240,7 +240,12 @@ export default class extends WorkerEntrypoint<Env> {
 		try {
 			const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
 			if (searchMethod === "interpolation") {
-				return await assetsManifest.getWithInterpolationSearch(pathname);
+				try {
+					return await assetsManifest.getWithInterpolationSearch(pathname);
+				} catch (e) {
+					analytics.setData({ manifestReadMethod: "binary-fallback" });
+					return await assetsManifest.getWithBinarySearch(pathname);
+				}
 			} else {
 				return await assetsManifest.getWithBinarySearch(pathname);
 			}
