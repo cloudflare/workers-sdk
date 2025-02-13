@@ -1,8 +1,8 @@
-import * as dep from "../functions-deps/dep.cjs";
+const fetch = require("cross-fetch");
 
 export const onRequest = () => {
-	const supportsDefaultExports = typeof dep.default === "function" && dep.default() === "OK!";
-	const supportsNamedExports = typeof dep.fetch === "function" && typeof dep.fetch.Headers === "function";
+	const supportsDefaultExports = typeof fetch === "function";
+	const supportsNamedExports = typeof fetch.Headers === "function";
 
 	return new Response(
 		supportsDefaultExports && supportsNamedExports ? "OK!" : "KO!",
