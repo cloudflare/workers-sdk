@@ -1,9 +1,7 @@
-import dedent from "ts-dedent";
-import { formatConfigSnippet, readConfig } from "../../../config";
+import { readConfig } from "../../../config";
 import { CommandLineArgsError } from "../../../errors";
 import { logger } from "../../../logger";
-import { getValidBindingName } from "../../../utils/getValidBindingName";
-import { createQueue } from "../../client";
+import { getQueue, updateQueue } from "../../client";
 import {
 	MAX_DELIVERY_DELAY_SECS,
 	MAX_MESSAGE_RETENTION_PERIOD_SECS,
@@ -15,7 +13,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../../../yargs-types";
-import type { PostQueueBody } from "../../client";
+import type { PostQueueBody, QueueSettings } from "../../client";
 
 export function options(yargs: CommonYargsArgv) {
 	return yargs
@@ -29,19 +27,18 @@ export function options(yargs: CommonYargsArgv) {
 				type: "number",
 				describe:
 					"How long a published message should be delayed for, in seconds. Must be between 0 and 42300",
-				default: 0,
 			},
 			"message-retention-period-secs": {
 				type: "number",
 				describe:
 					"How long to retain a message in the queue, in seconds. Must be between 60 and 1209600",
-				default: 345600,
 			},
 		});
 }
 
-function createBody(
-	args: StrictYargsOptionsToInterface<typeof options>
+function updateBody(
+	args: StrictYargsOptionsToInterface<typeof options>,
+	currentSettings?: QueueSettings
 ): PostQueueBody {
 	const body: PostQueueBody = {
 		queue_name: args.name,
@@ -71,6 +68,8 @@ function createBody(
 			);
 		}
 		body.settings.delivery_delay = args.deliveryDelaySecs;
+	} else if (currentSettings?.delivery_delay != undefined) {
+		body.settings.delivery_delay = currentSettings.delivery_delay;
 	}
 
 	if (args.messageRetentionPeriodSecs != undefined) {
@@ -83,6 +82,9 @@ function createBody(
 			);
 		}
 		body.settings.message_retention_period = args.messageRetentionPeriodSecs;
+	} else if (currentSettings?.message_retention_period != undefined) {
+		body.settings.message_retention_period =
+			currentSettings.message_retention_period;
 	}
 
 	if (Object.keys(body.settings).length === 0) {
@@ -96,42 +98,12 @@ export async function handler(
 	args: StrictYargsOptionsToInterface<typeof options>
 ) {
 	const config = readConfig(args);
-	const body = createBody(args);
 	try {
-		logger.log(`🌀 Creating queue '${args.name}'`);
-		await createQueue(config, body);
-		logger.log(dedent`
-			✅ Created queue '${args.name}'
-
-			Configure your Worker to send messages to this queue:
-
-			${formatConfigSnippet(
-				{
-					queues: {
-						producers: [
-							{
-								queue: args.name,
-								binding: getValidBindingName(args.name, "queue"),
-							},
-						],
-					},
-				},
-				config.configPath
-			)}
-			Configure your Worker to consume messages from this queue:
-
-			${formatConfigSnippet(
-				{
-					queues: {
-						consumers: [
-							{
-								queue: args.name,
-							},
-						],
-					},
-				},
-				config.configPath
-			)}`);
+		const currentQueue = await getQueue(config, args.name);
+		const body = updateBody(args, currentQueue.settings);
+		logger.log(`Updating queue ${args.name}.`);
+		await updateQueue(config, body, currentQueue.queue_id);
+		logger.log(`Updated queue ${args.name}.`);
 	} catch (e) {
 		handleFetchError(e as { code?: number });
 	}
