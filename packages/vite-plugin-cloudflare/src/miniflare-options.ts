@@ -289,77 +289,23 @@ export function getDevMiniflareOptions(
 							resolvedPluginConfig.cloudflareEnv
 						);
 
-						const { externalWorkers } = miniflareWorkerOptions;
-
 						const { ratelimits, ...workerOptions } =
 							miniflareWorkerOptions.workerOptions;
+
+						const { externalWorkers } = miniflareWorkerOptions;
 
 						return {
 							externalWorkers,
 							worker: {
-							...workerOptions,
-							// We have to add the name again because `unstable_getMiniflareWorkerOptions` sets it to `undefined`
-							name: workerConfig.name,
-							modulesRoot: miniflareModulesRoot,
-							unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
-							bindings: {
-								...workerOptions.bindings,
-								__VITE_ROOT__: resolvedViteConfig.root,
-								__VITE_ENTRY_PATH__: workerConfig.main,
-							},
-							serviceBindings: {
-								...workerOptions.serviceBindings,
-								...(environmentName ===
-									resolvedPluginConfig.entryWorkerEnvironmentName &&
-								workerConfig.assets?.binding
-									? {
-											[workerConfig.assets.binding]: ASSET_WORKER_NAME,
-										}
-									: {}),
-								__VITE_INVOKE_MODULE__: async (request) => {
-									const payload = (await request.json()) as vite.CustomPayload;
-									const invokePayloadData = payload.data as {
-										id: string;
-										name: string;
-										data: [string, string, FetchFunctionOptions];
-									};
-
-									assert(
-										invokePayloadData.name === "fetchModule",
-										`Invalid invoke event: ${invokePayloadData.name}`
-									);
-
-									const [moduleId] = invokePayloadData.data;
-									const moduleRE = new RegExp(MODULE_PATTERN);
-
-									// Externalize Worker modules (CompiledWasm, Text, Data)
-									if (moduleRE.test(moduleId)) {
-										const result = {
-											externalize: moduleId,
-											type: "module",
-										} satisfies vite.FetchResult;
-
-										return MiniflareResponse.json({ result });
-									}
-
-									// For some reason we need this here for cloudflare built-ins (e.g. `cloudflare:workers`) but not for node built-ins (e.g. `node:path`)
-									// See https://github.com/flarelabs-net/vite-plugin-cloudflare/issues/46
-									if (moduleId.startsWith("cloudflare:")) {
-										const result = {
-											externalize: moduleId,
-											type: "builtin",
-										} satisfies vite.FetchResult;
-
-										return MiniflareResponse.json({ result });
-									}
-
-									const devEnvironment = viteDevServer.environments[
-										environmentName
-									] as CloudflareDevEnvironment;
-
-									const result = await devEnvironment.hot.handleInvoke(payload);
-
-									return MiniflareResponse.json(result);
+								...workerOptions,
+								// We have to add the name again because `unstable_getMiniflareWorkerOptions` sets it to `undefined`
+								name: workerConfig.name,
+								modulesRoot: miniflareModulesRoot,
+								unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
+								bindings: {
+									...workerOptions.bindings,
+									__VITE_ROOT__: resolvedViteConfig.root,
+									__VITE_ENTRY_PATH__: workerConfig.main,
 								},
 								serviceBindings: {
 									...workerOptions.serviceBindings,
@@ -385,6 +331,17 @@ export function getDevMiniflareOptions(
 										);
 
 										const [moduleId] = invokePayloadData.data;
+										const moduleRE = new RegExp(MODULE_PATTERN);
+
+										// Externalize Worker modules (CompiledWasm, Text, Data)
+										if (moduleRE.test(moduleId)) {
+											const result = {
+												externalize: moduleId,
+												type: "module",
+											} satisfies vite.FetchResult;
+
+											return MiniflareResponse.json({ result });
+										}
 
 										// For some reason we need this here for cloudflare built-ins (e.g. `cloudflare:workers`) but not for node built-ins (e.g. `node:path`)
 										// See https://github.com/flarelabs-net/vite-plugin-cloudflare/issues/46
@@ -394,7 +351,7 @@ export function getDevMiniflareOptions(
 												type: "builtin",
 											} satisfies vite.FetchResult;
 
-											return new MiniflareResponse(JSON.stringify({ result }));
+											return MiniflareResponse.json({ result });
 										}
 
 										const devEnvironment = viteDevServer.environments[
@@ -404,12 +361,11 @@ export function getDevMiniflareOptions(
 										const result =
 											await devEnvironment.hot.handleInvoke(payload);
 
-										return new MiniflareResponse(JSON.stringify(result));
+										return MiniflareResponse.json(result);
 									},
 								},
 							} satisfies Partial<WorkerOptions>,
 						};
-					}
 					}
 				)
 			: [];
