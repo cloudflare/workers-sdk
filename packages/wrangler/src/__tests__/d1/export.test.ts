@@ -141,11 +141,16 @@ describe("export", () => {
 
 		msw.use(
 			http.get("https://example.com/xxxx-yyyy.sql", async () => {
-				return HttpResponse.text(`<?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>`, { status: 403 });
+				return HttpResponse.text(
+					`<?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>`,
+					{ status: 403 }
+				);
 			})
 		);
 
-		await expect(runWrangler("d1 export db --remote --output test-remote.sql")).rejects.toThrowError(
+		await expect(
+			runWrangler("d1 export db --remote --output test-remote.sql")
+		).rejects.toThrowError(
 			/There was an error while downloading from the presigned URL with status code: 403/
 		);
 	});
@@ -153,62 +158,62 @@ describe("export", () => {
 
 function mockResponses() {
 	msw.use(
-			http.post(
-				"*/accounts/:accountId/d1/database/:databaseId/export",
-				async ({ request }) => {
-					// This endpoint is polled recursively. If we respond immediately,
-					// the callstack builds up quickly leading to a hard-to-debug OOM error.
-					// This timeout ensures that if the endpoint is accidently polled infinitely
-					// the test will timeout before breaching available memory
-					await setTimeout(10);
+		http.post(
+			"*/accounts/:accountId/d1/database/:databaseId/export",
+			async ({ request }) => {
+				// This endpoint is polled recursively. If we respond immediately,
+				// the callstack builds up quickly leading to a hard-to-debug OOM error.
+				// This timeout ensures that if the endpoint is accidently polled infinitely
+				// the test will timeout before breaching available memory
+				await setTimeout(10);
 
-					const body = (await request.json()) as Record<string, unknown>;
+				const body = (await request.json()) as Record<string, unknown>;
 
-					// First request, initiates a new task
-					if (!body.current_bookmark) {
-						return HttpResponse.json(
-							{
+				// First request, initiates a new task
+				if (!body.current_bookmark) {
+					return HttpResponse.json(
+						{
+							success: true,
+							result: {
 								success: true,
-								result: {
-									success: true,
-									type: "export",
-									at_bookmark: "yyyy",
-									status: "active",
-									messages: [
-										"Generating xxxx-yyyy.sql",
-										"Uploaded part 2", // out-of-order uploads ok
-										"Uploaded part 1",
-									],
-								},
+								type: "export",
+								at_bookmark: "yyyy",
+								status: "active",
+								messages: [
+									"Generating xxxx-yyyy.sql",
+									"Uploaded part 2", // out-of-order uploads ok
+									"Uploaded part 1",
+								],
 							},
-							{ status: 202 }
-						);
-					}
-					// Subsequent request, sees that it is complete
-					else {
-						return HttpResponse.json(
-							{
-								success: true,
-								result: {
-									success: true,
-									type: "export",
-									at_bookmark: "yyyy",
-									status: "complete",
-									result: {
-										filename: "xxxx-yyyy.sql",
-										signed_url: "https://example.com/xxxx-yyyy.sql",
-									},
-									messages: [
-										"Uploaded part 3",
-										"Uploaded part 4",
-										"Finished uploading xxxx-yyyy.sql in 4 parts.",
-									],
-								},
-							},
-							{ status: 200 }
-						);
-					}
+						},
+						{ status: 202 }
+					);
 				}
-			)
-		);
+				// Subsequent request, sees that it is complete
+				else {
+					return HttpResponse.json(
+						{
+							success: true,
+							result: {
+								success: true,
+								type: "export",
+								at_bookmark: "yyyy",
+								status: "complete",
+								result: {
+									filename: "xxxx-yyyy.sql",
+									signed_url: "https://example.com/xxxx-yyyy.sql",
+								},
+								messages: [
+									"Uploaded part 3",
+									"Uploaded part 4",
+									"Finished uploading xxxx-yyyy.sql in 4 parts.",
+								],
+							},
+						},
+						{ status: 200 }
+					);
+				}
+			}
+		)
+	);
 }
