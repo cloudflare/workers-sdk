@@ -53,9 +53,6 @@ async function generateRelease(worker: string, release: string) {
 	console.log("Finalizing release");
 	await sentryCli.releases.finalize(release);
 
-	console.log("Inject debug ids");
-	await sentryCli.execute(["sourcemaps", "inject", dir], true);
-
 	console.log("Uploading sourcemaps");
 	await sentryCli.releases.uploadSourceMaps(release, {
 		include: [dir],
