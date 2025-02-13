@@ -145,7 +145,7 @@ describe("export", () => {
 			})
 		);
 
-		expect(async () => await runWrangler("d1 export db --remote --output test-remote.sql")).toThrowError(
+		await expect(runWrangler("d1 export db --remote --output test-remote.sql")).rejects.toThrowError(
 			/There was an error while downloading from the presigned URL with status code: 403/
 		);
 	});

@@ -194,7 +194,9 @@ async function exportRemotely(
 		async promise() {
 			const contents = await fetch(finalResponse.result.signed_url);
 			if (!contents.ok) {
-				throw new Error(`There was an error while downloading from the presigned URL with status code: ${contents.status}`);
+				throw new Error(
+					`There was an error while downloading from the presigned URL with status code: ${contents.status}`
+				);
 			}
 			await fs.writeFile(output, contents.body || "");
 		},
