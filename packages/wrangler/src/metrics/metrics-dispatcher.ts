@@ -261,10 +261,7 @@ const getAllowedArgs = (
 	allowList: Record<string, AllowedValues> & { "*": AllowedValues },
 	key: string
 ) => {
-	logger.debug(allowList);
 	const commandSpecific = allowList[key] ?? [];
-	logger.debug("key", key);
-	logger.debug({ ...commandSpecific, ...allowList["*"] });
 	return { ...commandSpecific, ...allowList["*"] };
 };
 export const redactArgValues = (
@@ -275,13 +272,11 @@ export const redactArgValues = (
 
 	for (let [key, value] of Object.entries(args)) {
 		key = normalise(key);
-		logger.debug(key, value);
 		// the default is not set by yargs :/
 		if (key === "xIncludeRuntime" && value === "") {
 			value = ".wrangler/types/runtime.d.ts";
 		}
 		const allowedValuesForArg = allowedValues[key] ?? [];
-		logger.debug(allowedValuesForArg);
 		if (exclude.has(key)) {
 			continue;
 		}
