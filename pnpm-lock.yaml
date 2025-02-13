@@ -1731,7 +1731,7 @@ importers:
         version: 5.28.5
       unenv:
         specifier: 2.0.0-rc.5
-        version: 2.0.0-rc.5
+        version: link:../../../unenv
       vitest:
         specifier: catalog:default
         version: 3.0.5(@types/node@18.19.76)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
@@ -2644,7 +2644,7 @@ importers:
         version: 6.3.0
       unenv:
         specifier: 2.0.0-rc.5
-        version: 2.0.0-rc.5
+        version: link:../../../unenv
       workerd:
         specifier: 1.20250204.0
         version: 1.20250204.0
@@ -11531,9 +11531,6 @@ packages:
 
   unenv@2.0.0-rc.1:
     resolution: {integrity: sha512-PU5fb40H8X149s117aB4ytbORcCvlASdtF97tfls4BPIyj4PeVxvpSuy1jAptqYHqB0vb2w2sHvzM0XWcp2OKg==}
-
-  unenv@2.0.0-rc.5:
-    resolution: {integrity: sha512-4OcgxJtjQ/rDI3ldgG8GRy08Omi95/760JS0Js+FzyN2MYSaxdu8e/FhKTNIKj5XTw6xWHqi1rqRbbcHiEGajA==}
 
   unicorn-magic@0.1.0:
     resolution: {integrity: sha512-lRfVq8fE8gz6QMBuDM6a+LO3IAzTi05H6gCVaUpir2E1Rwpo4ZUog45KpNXKC/Mn3Yb9UDuHumeFTo9iV/D9FQ==}
@@ -22050,14 +22047,6 @@ snapshots:
       ufo: 1.5.4
 
   unenv@2.0.0-rc.1:
-    dependencies:
-      defu: 6.1.4
-      mlly: 1.7.4
-      ohash: 1.1.4
-      pathe: 1.1.2
-      ufo: 1.5.4
-
-  unenv@2.0.0-rc.5:
     dependencies:
       defu: 6.1.4
       mlly: 1.7.4
