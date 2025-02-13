@@ -272,7 +272,6 @@ export const redactArgValues = (
 
 	for (let [key, value] of Object.entries(args)) {
 		key = normalise(key);
-		// the default is not set by yargs :/
 		if (key === "xIncludeRuntime" && value === "") {
 			value = ".wrangler/types/runtime.d.ts";
 		}
@@ -283,16 +282,20 @@ export const redactArgValues = (
 		if (
 			typeof value === "number" ||
 			typeof value === "boolean" ||
-			allowedValuesForArg.includes(normalise(key))
+			allowedValuesForArg.includes(key)
 		) {
 			result[key] = value;
 		} else if (
+			// redact if its a string, unless the value is in the allow list
+			// * is a special value that allows all values for that arg
 			typeof value === "string" &&
 			!(allowedValuesForArg === "*" || allowedValuesForArg.includes(value))
 		) {
 			result[key] = "<REDACTED>";
 		} else if (Array.isArray(value)) {
 			result[key] = value.map((v) =>
+				// redact if its a string, unless the value is in the allow list
+				// * is a special value that allows all values for that arg
 				typeof v === "string" &&
 				!(allowedValuesForArg === "*" || allowedValuesForArg.includes(v))
 					? "<REDACTED>"
