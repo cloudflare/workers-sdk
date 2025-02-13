@@ -1130,14 +1130,6 @@ export class Miniflare {
 			innerBindings: Worker_Binding[];
 		}[] = [];
 
-		if (this.#workerOpts[0].assets.assets) {
-			// This will be the UserWorker, or the vitest pool worker wrapping the UserWorker
-			// The asset plugin needs this so that it can set the binding between the RouterWorker and the UserWorker
-			// TODO: apply this to ever this.#workerOpts, not just the first (i.e this.#workerOpts[0])
-			this.#workerOpts[0].assets.assets.workerName =
-				this.#workerOpts[0].core.name;
-		}
-
 		for (let i = 0; i < allWorkerOpts.length; i++) {
 			const previousWorkerOpts = allPreviousWorkerOpts?.[i];
 			const workerOpts = allWorkerOpts[i];
@@ -1150,6 +1142,12 @@ export class Miniflare {
 					// The workflows plugin needs this so that it can set the binding between the Engine and the UserWorker
 					workflow.scriptName ??= workerOpts.core.name;
 				}
+			}
+
+			if (workerOpts.assets.assets) {
+				// This will be the UserWorker, or the vitest pool worker wrapping the UserWorker
+				// The asset plugin needs this so that it can set the binding between the RouterWorker and the UserWorker
+				workerOpts.assets.assets.workerName = workerOpts.core.name;
 			}
 
 			// Collect all bindings from this worker
@@ -1200,6 +1198,20 @@ export class Miniflare {
 									workerName,
 									innerBindings: binding.wrapped.innerBindings,
 								});
+							}
+						}
+						if ("service" in binding) {
+							const targetWorkerName = binding.service?.name?.replace(
+								"core:user:",
+								""
+							);
+							const maybeAssetTargetService = allWorkerOpts.find(
+								(worker) =>
+									worker.core.name === targetWorkerName && worker.assets.assets
+							);
+							if (maybeAssetTargetService) {
+								assert(binding.service?.name);
+								binding.service.name = `${ROUTER_SERVICE_NAME}:${targetWorkerName}`;
 							}
 						}
 					}
@@ -1305,7 +1317,7 @@ export class Miniflare {
 				!this.#workerOpts[0].core.name?.startsWith(
 					"vitest-pool-workers-runner-"
 				)
-					? ROUTER_SERVICE_NAME
+					? `${ROUTER_SERVICE_NAME}:${this.#workerOpts[0].core.name}`
 					: getUserServiceName(this.#workerOpts[0].core.name),
 			loopbackPort,
 			log: this.#log,
@@ -1340,7 +1352,6 @@ export class Miniflare {
 					"Ensure wrapped bindings don't have bindings to themselves."
 			);
 		}
-
 		return { services: servicesArray, sockets, extensions };
 	}
 

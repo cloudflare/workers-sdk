@@ -14,6 +14,7 @@ import {
 	printBundleSize,
 	printOffendingDependencies,
 } from "../deployment-bundle/bundle-reporter";
+import { clearOutputFilePath } from "../output";
 import { writeAuthConfigFile } from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockAuthDomain } from "./helpers/mock-auth-domain";
@@ -90,6 +91,7 @@ describe("deploy", () => {
 	afterEach(() => {
 		vi.unstubAllGlobals();
 		clearDialogs();
+		clearOutputFilePath();
 	});
 
 	it("should output log file with deployment details", async () => {
@@ -109,6 +111,7 @@ describe("deploy", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
+			No bindings found.
 			Uploaded test-name (TIMINGS)
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
@@ -166,6 +169,7 @@ describe("deploy", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
+			No bindings found.
 			Uploaded test-name (TIMINGS)
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
@@ -173,6 +177,87 @@ describe("deploy", () => {
 			Current Version ID: Galaxy-Class"
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	it("should successfully override name with WRANGLER_CI_OVERRIDE_NAME", async () => {
+		vi.stubEnv("WRANGLER_CI_OVERRIDE_NAME", "test-name");
+		writeWorkerSource();
+		writeWranglerConfig({
+			name: "name-to-override",
+			workers_dev: true,
+		});
+		mockServiceScriptData({
+			scriptName: "test-name",
+			script: { id: "test-name", tag: "abc123" },
+		});
+		mockUploadWorkerRequest();
+		mockSubDomainRequest();
+		mockGetWorkerSubdomain({ enabled: false });
+		mockUpdateWorkerSubdomain({ enabled: true });
+
+		await runWrangler("deploy ./index.js");
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			No bindings found.
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	it("should successfully override name with WRANGLER_CI_OVERRIDE_NAME and outputs the correct output file", async () => {
+		vi.stubEnv("WRANGLER_OUTPUT_FILE_DIRECTORY", "override-output");
+		vi.stubEnv("WRANGLER_OUTPUT_FILE_PATH", "");
+		vi.stubEnv("WRANGLER_CI_OVERRIDE_NAME", "test-name");
+		writeWorkerSource();
+		writeWranglerConfig({
+			name: "override-name",
+			workers_dev: true,
+		});
+		mockUploadWorkerRequest();
+		mockSubDomainRequest();
+		mockGetWorkerSubdomain({ enabled: true });
+
+		await runWrangler("deploy ./index.js --env staging");
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			No bindings found.
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+
+		const outputFilePaths = fs.readdirSync("override-output");
+
+		expect(outputFilePaths.length).toEqual(1);
+		expect(outputFilePaths[0]).toMatch(/wrangler-output-.+\.json/);
+		const outputFile = fs.readFileSync(
+			path.join("override-output", outputFilePaths[0]),
+			"utf8"
+		);
+		const entries = outputFile
+			.split("\n")
+			.filter(Boolean)
+			.map((e) => JSON.parse(e));
+
+		expect(entries.find((e) => e.type === "deploy")).toMatchObject({
+			targets: ["https://test-name.test-sub-domain.workers.dev"],
+			// Omitting timestamp for matching
+			// timestamp: ...
+			type: "deploy",
+			version: 1,
+			version_id: "Galaxy-Class",
+			worker_name: "test-name",
+			worker_tag: "tag:test-name",
+			worker_name_overridden: true,
+			wrangler_environment: "staging",
+		});
 	});
 
 	it("should resolve wrangler.toml relative to the entrypoint", async () => {
@@ -429,6 +514,7 @@ describe("deploy", () => {
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Worker ID:  abc12345
 				Worker ETag:  etag98765
 				Worker PipelineHash:  hash9999
@@ -469,6 +555,7 @@ describe("deploy", () => {
 				Successfully logged in.
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -510,6 +597,7 @@ describe("deploy", () => {
 					Successfully logged in.
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
+					No bindings found.
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
@@ -534,6 +622,7 @@ describe("deploy", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -568,6 +657,7 @@ describe("deploy", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
+					No bindings found.
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
@@ -592,6 +682,7 @@ describe("deploy", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
+					No bindings found.
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
@@ -771,6 +862,7 @@ describe("deploy", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name-some-env (TIMINGS)
 				Deployed test-name-some-env triggers (TIMINGS)
 				  https://test-name-some-env.test-sub-domain.workers.dev
@@ -793,6 +885,7 @@ describe("deploy", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
+					No bindings found.
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
@@ -815,6 +908,7 @@ describe("deploy", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
+					No bindings found.
 					Uploaded test-name-some-env (TIMINGS)
 					Deployed test-name-some-env triggers (TIMINGS)
 					  https://test-name-some-env.test-sub-domain.workers.dev
@@ -837,6 +931,7 @@ describe("deploy", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
+					No bindings found.
 					Uploaded test-name-some-env (TIMINGS)
 					Deployed test-name-some-env triggers (TIMINGS)
 					  https://test-name-some-env.test-sub-domain.workers.dev
@@ -910,6 +1005,7 @@ describe("deploy", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
+					No bindings found.
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
@@ -940,6 +1036,7 @@ describe("deploy", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
+					No bindings found.
 					Uploaded test-name (some-env) (TIMINGS)
 					Deployed test-name (some-env) triggers (TIMINGS)
 					  https://some-env.test-name.test-sub-domain.workers.dev
@@ -1025,6 +1122,7 @@ describe("deploy", () => {
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -1074,6 +1172,7 @@ describe("deploy", () => {
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  some-example.com/some-route/*
@@ -1118,6 +1217,7 @@ describe("deploy", () => {
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  partner.com/* (zone name: owned-zone.com)
@@ -1158,6 +1258,7 @@ describe("deploy", () => {
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  subdomain.partner.com/* (zone name: owned-zone.com)
@@ -1219,6 +1320,7 @@ describe("deploy", () => {
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (staging) (TIMINGS)
 				Deployed test-name (staging) triggers (TIMINGS)
 				  some-example.com/some-route/*
@@ -1331,6 +1433,7 @@ describe("deploy", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  example.com/some-route/*
@@ -1708,6 +1811,7 @@ Update them to point to this script instead?`,
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
+					No bindings found.
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  simple.co.uk/path/*
@@ -1774,6 +1878,7 @@ Update them to point to this script instead?`,
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
+					No bindings found.
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  example.com/blog/* (zone id: asdfadsf)
@@ -1840,6 +1945,7 @@ Update them to point to this script instead?`,
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
+					No bindings found.
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  example.com/blog/* (zone id: asdfadsf)
@@ -1919,6 +2025,7 @@ Update them to point to this script instead?`,
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
+					No bindings found.
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  simple.co.uk/path/*
@@ -1947,6 +2054,7 @@ Update them to point to this script instead?`,
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -1969,6 +2077,7 @@ Update them to point to this script instead?`,
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -1988,6 +2097,7 @@ Update them to point to this script instead?`,
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -2009,6 +2119,7 @@ Update them to point to this script instead?`,
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -2028,6 +2139,7 @@ Update them to point to this script instead?`,
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -2066,6 +2178,7 @@ Update them to point to this script instead?`,
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -2118,6 +2231,7 @@ Update them to point to this script instead?`,
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -2140,6 +2254,7 @@ Update them to point to this script instead?`,
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -2173,6 +2288,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -2200,6 +2316,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -2219,6 +2336,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -2256,15 +2374,16 @@ export default {};`
 		      `);
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			--dry-run: exiting now.",
-			  "warn": "",
-			}
-		`);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				No bindings found.
+				--dry-run: exiting now.",
+				  "warn": "",
+				}
+			`);
 		});
 
 		it("should not preserve exports on a service-worker format worker", async () => {
@@ -2290,17 +2409,18 @@ addEventListener('fetch', event => {});`
 			).toMatchInlineSnapshot(`Array []`);
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			--dry-run: exiting now.",
-			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe entrypoint index.js has exports like an ES Module, but hasn't defined a default export like a module worker normally would. Building the worker using \\"service-worker\\" format...[0m
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				No bindings found.
+				--dry-run: exiting now.",
+				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe entrypoint index.js has exports like an ES Module, but hasn't defined a default export like a module worker normally would. Building the worker using \\"service-worker\\" format...[0m
 
-			",
-			}
-		`);
+				",
+				}
+			`);
 		});
 
 		it("should be able to transpile entry-points in sub-directories (sw)", async () => {
@@ -2318,6 +2438,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -2401,6 +2522,7 @@ addEventListener('fetch', event => {});`
 				  "out": "↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -2459,6 +2581,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -2561,6 +2684,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -2719,6 +2843,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -2762,6 +2887,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -2942,6 +3068,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -2995,6 +3122,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -3051,6 +3179,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -3115,6 +3244,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -3229,6 +3359,7 @@ addEventListener('fetch', event => {});`
 				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -3285,6 +3416,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (some-env) (TIMINGS)
 				Deployed test-name (some-env) triggers (TIMINGS)
 				  https://some-env.test-name.test-sub-domain.workers.dev
@@ -3341,6 +3473,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name-some-env (TIMINGS)
 				Deployed test-name-some-env triggers (TIMINGS)
 				  https://test-name-some-env.test-sub-domain.workers.dev
@@ -3382,6 +3515,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -3429,6 +3563,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -3476,6 +3611,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -3524,6 +3660,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -3572,6 +3709,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -3620,6 +3758,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -3668,6 +3807,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -3718,6 +3858,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -3772,6 +3913,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -3882,6 +4024,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -4021,6 +4164,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -4081,6 +4225,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -4126,6 +4271,7 @@ addEventListener('fetch', event => {});`
 				  "out": "↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -4179,6 +4325,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -4392,6 +4539,7 @@ addEventListener('fetch', event => {});`
 					  "out": "↗️  Done syncing assets
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
+					No bindings found.
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
@@ -5699,6 +5847,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -5722,6 +5871,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -5744,6 +5894,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -5767,6 +5918,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -5791,6 +5943,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -5813,6 +5966,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				No deploy targets for test-name (TIMINGS)
 				Current Version ID: Galaxy-Class"
@@ -5835,6 +5989,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				No deploy targets for test-name (TIMINGS)
 				Current Version ID: Galaxy-Class"
@@ -5856,6 +6011,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				No deploy targets for test-name (TIMINGS)
 				Current Version ID: Galaxy-Class"
@@ -5878,6 +6034,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				No deploy targets for test-name (TIMINGS)
 				Current Version ID: Galaxy-Class"
@@ -5906,6 +6063,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (dev) (TIMINGS)
 				No deploy targets for test-name (dev) (TIMINGS)
 				Current Version ID: Galaxy-Class"
@@ -5934,6 +6092,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (dev) (TIMINGS)
 				No deploy targets for test-name (dev) (TIMINGS)
 				Current Version ID: undefined"
@@ -5963,6 +6122,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (dev) (TIMINGS)
 				Deployed test-name (dev) triggers (TIMINGS)
 				  https://dev.test-name.test-sub-domain.workers.dev
@@ -5994,6 +6154,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (dev) (TIMINGS)
 				Deployed test-name (dev) triggers (TIMINGS)
 				  https://dev.test-name.test-sub-domain.workers.dev
@@ -6025,6 +6186,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (dev) (TIMINGS)
 				Deployed test-name (dev) triggers (TIMINGS)
 				  https://dev.test-name.test-sub-domain.workers.dev
@@ -6059,6 +6221,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (dev) (TIMINGS)
 				Deployed test-name (dev) triggers (TIMINGS)
 				  https://dev.test-name.test-sub-domain.workers.dev
@@ -6094,6 +6257,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (dev) (TIMINGS)
 				Deployed test-name (dev) triggers (TIMINGS)
 				  https://dev.test-name.test-sub-domain.workers.dev
@@ -6157,6 +6321,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -6178,6 +6343,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -6257,6 +6423,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  http://example.com/*
@@ -6294,6 +6461,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name-production (TIMINGS)
 				Deployed test-name-production triggers (TIMINGS)
 				  http://production.example.com/*
@@ -6331,6 +6499,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name-production (TIMINGS)
 				Deployed test-name-production triggers (TIMINGS)
 				  http://production.example.com/*
@@ -6362,6 +6531,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -6404,6 +6574,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name-production (TIMINGS)
 				Deployed test-name-production triggers (TIMINGS)
 				  https://test-name-production.test-sub-domain.workers.dev
@@ -6446,6 +6617,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name-production (TIMINGS)
 				Deployed test-name-production triggers (TIMINGS)
 				  https://test-name-production.test-sub-domain.workers.dev
@@ -6485,6 +6657,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name-production (TIMINGS)
 				Deployed test-name-production triggers (TIMINGS)
 				  http://production.example.com/*
@@ -6523,6 +6696,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name-production (TIMINGS)
 				Deployed test-name-production triggers (TIMINGS)
 				  http://production.example.com/*
@@ -6675,6 +6849,7 @@ addEventListener('fetch', event => {});`
 				"Running custom build: node -e \\"4+4; require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\"
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -6702,6 +6877,7 @@ addEventListener('fetch', event => {});`
 					"Running custom build: echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
+					No bindings found.
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
@@ -6810,6 +6986,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -6851,6 +7028,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (testEnv) (TIMINGS)
 				Deployed test-name (testEnv) triggers (TIMINGS)
 				  https://testEnv.test-name.test-sub-domain.workers.dev
@@ -7475,6 +7653,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -7499,6 +7678,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -8285,6 +8465,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
+					No bindings found.
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
@@ -9403,6 +9584,7 @@ addEventListener('fetch', event => {});`
 					expect(std.out).toMatchInlineSnapshot(`
 						"Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
+						No bindings found.
 						Uploaded test-name (TIMINGS)
 						Deployed test-name triggers (TIMINGS)
 						  https://test-name.test-sub-domain.workers.dev
@@ -9507,6 +9689,7 @@ addEventListener('fetch', event => {});`
 					expect(std.out).toMatchInlineSnapshot(`
 						"Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
+						No bindings found.
 						Uploaded test-name (TIMINGS)
 						Deployed test-name triggers (TIMINGS)
 						  https://test-name.test-sub-domain.workers.dev
@@ -9552,6 +9735,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -9583,6 +9767,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -9618,6 +9803,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -9669,6 +9855,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -9770,6 +9957,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -9801,6 +9989,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -9833,6 +10022,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
+					No bindings found.
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
@@ -9976,6 +10166,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -10007,6 +10198,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -10040,6 +10232,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -10071,6 +10264,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -10115,6 +10309,7 @@ addEventListener('fetch', event => {});`
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -10167,6 +10362,7 @@ addEventListener('fetch', event => {});`
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -10193,6 +10389,7 @@ addEventListener('fetch', event => {});`
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -10236,6 +10433,7 @@ addEventListener('fetch', event => {});`
 				"↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -10291,6 +10489,7 @@ export default{
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -10349,6 +10548,7 @@ export default{
 				  "err": "",
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				No bindings found.
 				--dry-run: exiting now.",
 				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are using \`node_compat\`, which is a legacy Node.js compatibility option. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.[0m
 
@@ -10509,6 +10709,7 @@ export default{
 				  "err": "",
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				No bindings found.
 				--dry-run: exiting now.",
 				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are using \`node_compat\`, which is a legacy Node.js compatibility option. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.[0m
 
@@ -10559,15 +10760,16 @@ export default{
 			);
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			--dry-run: exiting now.",
-			  "warn": "",
-			}
-		`);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				No bindings found.
+				--dry-run: exiting now.",
+				  "warn": "",
+				}
+			`);
 			expect(fs.readFileSync("dist/index.js", { encoding: "utf-8" })).toContain(
 				`import path from "node:path";`
 			);
@@ -10591,15 +10793,16 @@ export default{
 			);
 
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			--dry-run: exiting now.",
-			  "warn": "",
-			}
-		`);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				No bindings found.
+				--dry-run: exiting now.",
+				  "warn": "",
+				}
+			`);
 			expect(fs.readFileSync("dist/index.js", { encoding: "utf-8" })).toContain(
 				`import path from "node:path";`
 			);
@@ -10670,6 +10873,7 @@ export default{
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -10734,6 +10938,7 @@ export default{
 				  "err": "",
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				No bindings found.
 
 				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
@@ -10806,6 +11011,7 @@ export default{
 				  "err": "",
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				No bindings found.
 
 				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
@@ -10873,6 +11079,7 @@ export default{
 				  "err": "",
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				No bindings found.
 
 				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
 
@@ -11204,6 +11411,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -11257,6 +11465,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded command-line-arg-script-name (TIMINGS)
 				Deployed command-line-arg-script-name triggers (TIMINGS)
 				  https://command-line-arg-script-name.test-sub-domain.workers.dev
@@ -11317,6 +11526,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -11382,6 +11592,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -11434,6 +11645,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -11494,6 +11706,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -11554,6 +11767,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -11615,6 +11829,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -11676,6 +11891,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -11903,6 +12119,37 @@ export default{
 		});
 	});
 
+	describe("images", () => {
+		it("should upload images bindings", async () => {
+			writeWranglerConfig({
+				images: { binding: "IMAGES_BIND" },
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "images",
+						name: "IMAGES_BIND",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- Images:
+				  - Name: IMAGES_BIND
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+	});
+
 	describe("python", () => {
 		it("should upload python module defined in wrangler.toml", async () => {
 			writeWranglerConfig({
@@ -11934,6 +12181,7 @@ export default{
 				└──────────────────────────────────────┴────────┴──────────┘
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -11970,6 +12218,7 @@ export default{
 				└──────────────────────────────────────┴────────┴──────────┘
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -12101,6 +12350,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -12125,6 +12375,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -12151,6 +12402,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -12182,6 +12434,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				  Dispatch Namespace: test-dispatch-namespace
 				Current Version ID: undefined"
@@ -12210,6 +12463,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -12247,6 +12501,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -12270,6 +12525,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				No bindings found.
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev

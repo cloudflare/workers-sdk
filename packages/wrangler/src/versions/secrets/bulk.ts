@@ -86,6 +86,7 @@ export const versionsSecretBulkCommand = createCommand({
 			versionMessage: args.message ?? `Bulk updated ${secrets.length} secrets`,
 			versionTag: args.tag,
 			sendMetrics: config.send_metrics,
+			unsafeMetadata: config.unsafe.metadata,
 		});
 
 		for (const secret of secrets) {

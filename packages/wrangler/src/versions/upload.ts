@@ -32,6 +32,7 @@ import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
+import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
@@ -313,12 +314,14 @@ export const versionsUploadCommand = createCommand({
 
 		if (args.site || config.site) {
 			throw new UserError(
-				"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
+				"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead.",
+				{ telemetryMessage: true }
 			);
 		}
 		if (args.legacyAssets || config.legacy_assets) {
 			throw new UserError(
-				"Legacy assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
+				"Legacy assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead.",
+				{ telemetryMessage: true }
 			);
 		}
 
@@ -352,12 +355,24 @@ export const versionsUploadCommand = createCommand({
 		const cliAlias = collectKeyValues(args.alias);
 
 		const accountId = args.dryRun ? undefined : await requireAuth(config);
-		const name = getScriptName(args, config);
+		let name = getScriptName(args, config);
 
-		assert(
-			name,
-			'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
-		);
+		const ciOverrideName = getCIOverrideName();
+		let workerNameOverridden = false;
+		if (ciOverrideName !== undefined && ciOverrideName !== name) {
+			logger.warn(
+				`Failed to match Worker name. Your config file is using the Worker name "${name}", but the CI system expected "${ciOverrideName}". Overriding using the CI provided Worker name. Workers Builds connected builds will attempt to open a pull request to resolve this config name mismatch.`
+			);
+			name = ciOverrideName;
+			workerNameOverridden = true;
+		}
+
+		if (!name) {
+			throw new UserError(
+				'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
+				{ telemetryMessage: true }
+			);
+		}
 
 		if (!args.dryRun) {
 			assert(accountId, "Missing account ID");
@@ -407,6 +422,8 @@ export const versionsUploadCommand = createCommand({
 			worker_tag: workerTag,
 			version_id: versionId,
 			preview_url: versionPreviewUrl,
+			wrangler_environment: args.env,
+			worker_name_overridden: workerNameOverridden,
 		});
 	},
 });

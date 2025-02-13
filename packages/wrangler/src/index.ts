@@ -20,7 +20,7 @@ import { CommandRegistry } from "./core/CommandRegistry";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
-import { deployHandler, deployOptions } from "./deploy";
+import { deployCommand, publishAlias } from "./deploy";
 import { isAuthenticationError } from "./deploy/deploy";
 import {
 	isBuildFailure,
@@ -139,7 +139,14 @@ import {
 	r2BucketSippyGetCommand,
 	r2BucketSippyNamespace,
 } from "./r2/sippy";
-import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
+import {
+	secretBulkAlias,
+	secretBulkCommand,
+	secretDeleteCommand,
+	secretListCommand,
+	secretNamespace,
+	secretPutCommand,
+} from "./secret";
 import {
 	addBreadcrumb,
 	captureGlobalException,
@@ -386,13 +393,17 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("dev");
 
-	// deploy
-	wrangler.command(
-		["deploy [script]", "publish [script]"],
-		"🆙 Deploy a Worker to Cloudflare",
-		deployOptions,
-		deployHandler
-	);
+	registry.define([
+		{
+			command: "wrangler deploy",
+			definition: deployCommand,
+		},
+		{
+			command: "wrangler publish",
+			definition: publishAlias,
+		},
+	]);
+	registry.registerNamespace("deploy");
 
 	registry.define([
 		{ command: "wrangler deployments", definition: deploymentsNamespace },
@@ -481,13 +492,15 @@ export function createCLIParser(argv: string[]) {
 	registry.registerNamespace("tail");
 
 	// secret
-	wrangler.command(
-		"secret",
-		"🤫 Generate a secret that can be referenced in a Worker",
-		(secretYargs) => {
-			return secret(secretYargs.command(subHelp));
-		}
-	);
+	registry.define([
+		{ command: "wrangler secret", definition: secretNamespace },
+		{ command: "wrangler secret put", definition: secretPutCommand },
+		{ command: "wrangler secret delete", definition: secretDeleteCommand },
+		{ command: "wrangler secret list", definition: secretListCommand },
+		{ command: "wrangler secret bulk", definition: secretBulkCommand },
+		{ command: "wrangler secret:bulk", definition: secretBulkAlias },
+	]);
+	registry.registerNamespace("secret");
 
 	// types
 	registry.define([{ command: "wrangler types", definition: typesCommand }]);
@@ -915,14 +928,6 @@ export function createCLIParser(argv: string[]) {
 		// "👷 Create or change your workers.dev subdomain.",
 		subdomainOptions,
 		subdomainHandler
-	);
-
-	// [DEPRECATED] secret:bulk
-	wrangler.command(
-		"secret:bulk [json]",
-		false,
-		secretBulkOptions,
-		secretBulkHandler
 	);
 
 	// [DEPRECATED] generate

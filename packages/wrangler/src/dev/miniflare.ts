@@ -9,7 +9,13 @@ import {
 } from "../ai/fetcher";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
-import { UserError } from "../errors";
+import { createFatalError, UserError } from "../errors";
+import {
+	EXTERNAL_IMAGES_WORKER_NAME,
+	EXTERNAL_IMAGES_WORKER_SCRIPT,
+	imagesLocalFetcher,
+	imagesRemoteFetcher,
+} from "../images/fetcher";
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
@@ -187,6 +193,7 @@ export interface ConfigBundle {
 	services: Config["services"] | undefined;
 	serviceBindings: Record<string, ServiceFetch>;
 	bindVectorizeToProd: boolean;
+	imagesLocalMode: boolean;
 	testScheduled: boolean;
 }
 
@@ -384,6 +391,7 @@ type MiniflareBindingsConfig = Pick<
 	| "name"
 	| "services"
 	| "serviceBindings"
+	| "imagesLocalMode"
 > &
 	Partial<Pick<ConfigBundle, "format" | "bundle" | "assets">>;
 
@@ -604,6 +612,28 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 
 		wrappedBindings[bindings.ai.binding] = {
 			scriptName: EXTERNAL_AI_WORKER_NAME,
+		};
+	}
+
+	if (bindings.images?.binding) {
+		externalWorkers.push({
+			name: EXTERNAL_IMAGES_WORKER_NAME,
+			modules: [
+				{
+					type: "ESModule",
+					path: "index.mjs",
+					contents: EXTERNAL_IMAGES_WORKER_SCRIPT,
+				},
+			],
+			serviceBindings: {
+				FETCHER: config.imagesLocalMode
+					? imagesLocalFetcher
+					: imagesRemoteFetcher,
+			},
+		});
+
+		wrappedBindings[bindings.images?.binding] = {
+			scriptName: EXTERNAL_IMAGES_WORKER_NAME,
 		};
 	}
 
@@ -906,6 +936,7 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 let didWarnMiniflareCronSupport = false;
 let didWarnMiniflareVectorizeSupport = false;
 let didWarnAiAccountUsage = false;
+let didWarnImagesLocalModeUsage = false;
 
 export type Options = Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
 
@@ -948,6 +979,23 @@ export async function buildMiniflareOptions(
 			didWarnMiniflareVectorizeSupport = true;
 			logger.warn(
 				"You are using a mixed-mode binding for Vectorize (through `--experimental-vectorize-bind-to-prod`). It may incur usage charges and modify your databases even in local development. "
+			);
+		}
+	}
+
+	if (config.bindings.images && config.imagesLocalMode) {
+		if (!didWarnImagesLocalModeUsage) {
+			try {
+				await import("sharp");
+			} catch {
+				const msg =
+					"Sharp must be installed to use the Images binding local mode; check your version of Node is compatible";
+				throw createFatalError(msg, false);
+			}
+
+			didWarnImagesLocalModeUsage = true;
+			logger.info(
+				"You are using Images local mode. This only supports resizing, rotating and transcoding."
 			);
 		}
 	}

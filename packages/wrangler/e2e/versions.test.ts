@@ -64,6 +64,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 		expect(normalize(upload.stdout)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: (TIMINGS)
+			No bindings found.
 			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 			Worker Version ID: 00000000-0000-0000-0000-000000000000
 			Version Preview URL: https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev
@@ -180,6 +181,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 		expect(normalize(upload.stdout)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: (TIMINGS)
+			No bindings found.
 			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 			Worker Version ID: 00000000-0000-0000-0000-000000000000
 			Version Preview URL: https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev
@@ -614,6 +616,7 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 			✨ Success! Uploaded 1 file (TIMINGS)
 			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: (TIMINGS)
+			No bindings found.
 			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 			Worker Version ID: 00000000-0000-0000-0000-000000000000
 			Version Preview URL: https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev

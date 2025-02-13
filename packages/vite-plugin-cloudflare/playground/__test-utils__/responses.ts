@@ -9,7 +9,12 @@ export async function getJsonResponse(
 	path = "/"
 ): Promise<null | Record<string, unknown>> {
 	const response = await getResponse(path);
-	return response.json();
+	const text = await response.text();
+	try {
+		return JSON.parse(text);
+	} catch (e) {
+		throw new Error("Invalid JSON response:\n" + text);
+	}
 }
 
 async function getResponse(path = "/") {
