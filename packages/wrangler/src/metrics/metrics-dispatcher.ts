@@ -21,6 +21,9 @@ import type { MetricsConfigOptions } from "./metrics-config";
 import type { CommonEventProperties, Events } from "./types";
 
 const SPARROW_URL = "https://sparrow.cloudflare.com";
+type AllowedValues = Record<string, string[] | "*">;
+export type AllowList = Record<string, AllowedValues> & { "*": AllowedValues };
+export type Properties = Record<string, unknown>;
 
 export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	// The SPARROW_SOURCE_KEY will be provided at build time through esbuild's `define` option
@@ -32,12 +35,14 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	let amplitude_event_id = 0;
 
 	/** We redact strings in arg values, unless they are named here */
-	const allowList = {
-		// applies to all commands
-		// use camelCase version
-		"*": ["format", "logLevel"],
-		// specific commands
-		tail: ["status"],
+	const allowList: AllowList = {
+		"*": { format: "*", logLevel: "*" }, // applies to all commands
+		"wrangler tail": { status: "*" },
+		"wrangler types": {
+			xIncludeRuntime: [".wrangler/types/runtime.d.ts"],
+			path: ["worker-configuration.d.ts"],
+			envInterface: ["Env"],
+		},
 	};
 
 	return {
@@ -94,8 +99,12 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				) {
 					printMetricsBanner();
 				}
-
-				const argsUsed = sanitiseUserInput(properties.args ?? {}, argv);
+				const processedArgs = processArgsAndValues(
+					properties.args ?? {},
+					allowList,
+					properties.command ?? ""
+				);
+				const argsUsed = sanitiseUserInput(processedArgs, argv ?? []);
 				const argsCombination = argsUsed.sort().join(", ");
 				const commonEventProperties: CommonEventProperties = {
 					amplitude_session_id,
@@ -115,14 +124,12 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					argsUsed,
 					argsCombination,
 				};
-				// get the args where we don't want to redact their values
-				const allowedArgs = getAllowedArgs(allowList, properties.command ?? "");
-				properties.args = redactArgValues(properties.args ?? {}, allowedArgs);
 				dispatch({
 					name,
 					properties: {
 						...commonEventProperties,
 						...properties,
+						args: processedArgs,
 					},
 				});
 			} catch (err) {
@@ -211,80 +218,81 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	}
 }
 
-export type Properties = Record<string, unknown>;
+const exclude = new Set(["$0", "_"]);
+
+export const processArgsAndValues = (
+	args: Record<string, unknown>,
+	allowList: AllowList,
+	command: string
+) => {
+	const processed: Record<string, unknown> = {};
+	const seenArgs = new Set<string>();
+	for (let [arg, value] of Object.entries(args)) {
+		arg = normalise(arg);
+		if (exclude.has(arg) || seenArgs.has(arg)) {
+			continue;
+		}
+		seenArgs.add(arg);
+		// hardcoding because the default isn't set by yargs
+		if (arg === "xIncludeRuntime" && value === "") {
+			value = ".wrangler/types/runtime.d.ts";
+		}
+		const commandSpecificAllowList = {
+			...(allowList[command] ?? []),
+			...allowList["*"],
+		};
+		const allowedValues = commandSpecificAllowList[arg] ?? [];
+		processed[arg] = redactArgValues(value, allowedValues);
+	}
+	return processed;
+};
 
 const normalise = (arg: string) => {
-	const camelize = (str: string) =>
-		str.replace(/-./g, (x) => x[1].toUpperCase());
-	return camelize(arg.replace("experimental", "x"));
+	const stripFlag = arg.replace(/^--?/, "");
+	const normaliseExperimental = stripFlag.replace("experimental", "x");
+	const camel = normaliseExperimental.replace(/-./g, (x) => x[1].toUpperCase());
+	return camel;
 };
 
-const exclude = new Set(["$0", "_"]);
+const redactArgValues = (
+	value: unknown,
+	allowedValues: string[] | "*"
+): unknown => {
+	if (
+		typeof value === "number" ||
+		typeof value === "boolean" ||
+		allowedValues === "*" ||
+		(typeof value === "string" && allowedValues.includes(value))
+	) {
+		return value;
+	} else if (
+		// redact if its a string, unless the value is in the allow list
+		typeof value === "string"
+	) {
+		return "<REDACTED>";
+	} else if (Array.isArray(value)) {
+		return value.map((v) => redactArgValues(v, allowedValues));
+	}
+	return "<REDACTED_UNK>"; // shouldn't get here
+};
+
 /**
- * just some pretty naive cleaning so we don't send duplicates of "experimental-versions", "experimentalVersions", "x-versions" and "xVersions" etc.
- * optionally, if an argv is provided remove all args that were not specified in argv (which means that default values will be filtered out)
+ * We use argv to get the user-provided args only. However, argv is args AND
+ * values, so we cross-reference with argsWithValues to make sure only args are sent.
  */
 const sanitiseUserInput = (
+	// processed already
 	argsWithValues: Record<string, unknown>,
-	argv?: string[]
+	argv: string[]
 ) => {
 	const result: string[] = [];
-	const args = Object.keys(argsWithValues);
-	for (const arg of args) {
-		if (Array.isArray(argv) && !argv.some((a) => a.includes(arg))) {
-			continue;
-		}
-		if (exclude.has(arg)) {
-			continue;
-		}
+	const normalisedArgv = argv.map((arg) => normalise(arg)) ?? [];
+	for (const arg of Object.keys(argsWithValues)) {
 		if (
-			typeof argsWithValues[arg] === "boolean" &&
-			argsWithValues[arg] === false
+			normalisedArgv.some((a) => a.includes(arg)) &&
+			argsWithValues[arg] !== false
 		) {
-			continue;
-		}
-
-		const normalisedArg = normalise(arg);
-		if (result.includes(normalisedArg)) {
-			continue;
-		}
-		result.push(normalisedArg);
-	}
-	return result;
-};
-
-const getAllowedArgs = (
-	allowList: Record<string, string[]> & { "*": string[] },
-	key: string
-) => {
-	const commandSpecific = allowList[key] ?? [];
-	return [...commandSpecific, ...allowList["*"]];
-};
-export const redactArgValues = (
-	args: Record<string, unknown>,
-	allowedKeys: string[]
-) => {
-	const result: Record<string, unknown> = {};
-
-	for (const [k, value] of Object.entries(args)) {
-		const key = normalise(k);
-		if (exclude.has(key)) {
-			continue;
-		}
-		if (
-			typeof value === "number" ||
-			typeof value === "boolean" ||
-			allowedKeys.includes(normalise(key))
-		) {
-			result[key] = value;
-		} else if (typeof value === "string") {
-			result[key] = "<REDACTED>";
-		} else if (Array.isArray(value)) {
-			result[key] = value.map((v) =>
-				typeof v === "string" ? "<REDACTED>" : v
-			);
-		} else {
-			result[key] = value;
+			result.push(arg);
 		}
 	}
 	return result;
