@@ -45,15 +45,15 @@
 		"test:watch": "vitest"
 	},
 	"devDependencies": {
-		"@types/node-unenv": "npm:@types/node@^22.10.5",
+		"@types/node-unenv": "npm:@types/node@^22.13.1",
 		"typescript": "catalog:default",
 		"unbuild": "^3.2.0",
 		"undici": "catalog:default",
+		"unenv": "2.0.0-rc.5",
 		"vitest": "catalog:default",
-		"wrangler": "workspace:*"
+		"wrangler": "^3.107"
 	},
 	"peerDependencies": {
-		"unenv": "2.0.0-rc.3",
 		"workerd": "^1.20250124.0"
 	},
 	"peerDependenciesMeta": {

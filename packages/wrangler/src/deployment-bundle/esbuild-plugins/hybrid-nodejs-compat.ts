@@ -19,7 +19,10 @@ export async function nodejsHybridPlugin(
 	// `unenv` and `@cloudflare/unenv-preset` only publish esm
 	const { defineEnv } = await import("unenv");
 	const { cloudflare } = await import("@cloudflare/unenv-preset");
-	const { alias, inject, external } = defineEnv({ presets: [cloudflare] }).env;
+	const { alias, inject, external } = defineEnv({
+		presets: [cloudflare],
+		npmShims: true,
+	}).env;
 
 	return {
 		name: "hybrid-nodejs_compat",
@@ -27,7 +30,6 @@ export async function nodejsHybridPlugin(
 			errorOnServiceWorkerFormat(build);
 			handleRequireCallsToNodeJSBuiltins(build);
 			handleUnenvAliasedPackages(build, alias, external);
-			// TODO: remove cast when https://github.com/unjs/unenv/issues/442 is fixed
 			handleNodeJSGlobals(build, inject as Record<string, string | string[]>);
 		},
 	};
