@@ -1300,7 +1300,7 @@ importers:
         version: 8.57.0
       eslint-config-turbo:
         specifier: latest
-        version: 2.4.1(eslint@8.57.0)(turbo@2.2.3)
+        version: 2.4.2(eslint@8.57.0)(turbo@2.2.3)
       eslint-plugin-import:
         specifier: 2.26.x
         version: 2.26.0(@typescript-eslint/parser@6.10.0(eslint@8.57.0)(typescript@5.7.3))(eslint@8.57.0)
@@ -1736,6 +1736,9 @@ importers:
         specifier: ^8.18.0
         version: 8.18.0
     devDependencies:
+      '@cloudflare/mock-npm-registry':
+        specifier: workspace:*
+        version: link:../mock-npm-registry
       '@cloudflare/workers-shared':
         specifier: workspace:*
         version: link:../workers-shared
@@ -1763,9 +1766,15 @@ importers:
       typescript:
         specifier: catalog:default
         version: 5.7.3
+      undici:
+        specifier: catalog:default
+        version: 5.28.4
       vite:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.74)(jiti@2.4.2)
+      vitest:
+        specifier: catalog:default
+        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -7571,8 +7580,8 @@ packages:
     peerDependencies:
       eslint: '>=7.0.0'
 
-  eslint-config-turbo@2.4.1:
-    resolution: {integrity: sha512-IFlqpBrWgVG1VJO34H2X2IgxU363CB67Bzsd/MekcD7gPAcRtNIyn8cQXibZL/+jZxdbacp1JLm26iHPg8XqgQ==}
+  eslint-config-turbo@2.4.2:
+    resolution: {integrity: sha512-yPiW5grffSWETp/3bVPUXWQkHfiLoOBb3wuBbM90HlKkLOhggySn9C6/yUccprqRguMgR5OzXIuzDuUnX6bulw==}
     peerDependencies:
       eslint: '>6.6.0'
       turbo: '>2.0.0'
@@ -7647,8 +7656,8 @@ packages:
     peerDependencies:
       eslint: ^3 || ^4 || ^5 || ^6 || ^7 || ^8
 
-  eslint-plugin-turbo@2.4.1:
-    resolution: {integrity: sha512-sTJZrgn7G1rF7RHZcj367g2cT0+E5v0lt9LD+nBpTnCyDA/yB0PwSm/QM+aXQ39vxuK9sqlUL2LyPXyGFvUXsg==}
+  eslint-plugin-turbo@2.4.2:
+    resolution: {integrity: sha512-67IZtvOFaWDnUmYMV3luRIE1kqL+ok5MxPEsIPUqH2vQggML7jmZFZx/P9jhXAoFH+pViEz5QEzDa2DBLHqzQg==}
     peerDependencies:
       eslint: '>6.6.0'
       turbo: '>2.0.0'
@@ -17754,10 +17763,10 @@ snapshots:
     dependencies:
       eslint: 8.57.0
 
-  eslint-config-turbo@2.4.1(eslint@8.57.0)(turbo@2.2.3):
+  eslint-config-turbo@2.4.2(eslint@8.57.0)(turbo@2.2.3):
     dependencies:
       eslint: 8.57.0
-      eslint-plugin-turbo: 2.4.1(eslint@8.57.0)(turbo@2.2.3)
+      eslint-plugin-turbo: 2.4.2(eslint@8.57.0)(turbo@2.2.3)
       turbo: 2.2.3
 
   eslint-import-resolver-node@0.3.7:
@@ -17842,7 +17851,7 @@ snapshots:
       semver: 6.3.1
       string.prototype.matchall: 4.0.8
 
-  eslint-plugin-turbo@2.4.1(eslint@8.57.0)(turbo@2.2.3):
+  eslint-plugin-turbo@2.4.2(eslint@8.57.0)(turbo@2.2.3):
     dependencies:
       dotenv: 16.0.3
       eslint: 8.57.0
@@ -18894,7 +18903,7 @@ snapshots:
 
   is-reference@1.2.1:
     dependencies:
-      '@types/estree': 1.0.5
+      '@types/estree': 1.0.6
 
   is-regex@1.1.4:
     dependencies:
