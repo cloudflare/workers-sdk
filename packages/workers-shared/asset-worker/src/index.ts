@@ -218,7 +218,7 @@ export default class extends WorkerEntrypoint<Env> {
 		const analytics = new ExperimentAnalytics(this.env.EXPERIMENT_ANALYTICS);
 		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
 
-		const INTERPOLATION_EXPERIMENT_SAMPLE_RATE = 1 / 100; // 0.01 = 1%
+		const INTERPOLATION_EXPERIMENT_SAMPLE_RATE = 0.5;
 		let searchMethod: "binary" | "interpolation" = "binary";
 		if (Math.random() < INTERPOLATION_EXPERIMENT_SAMPLE_RATE) {
 			searchMethod = "interpolation";
