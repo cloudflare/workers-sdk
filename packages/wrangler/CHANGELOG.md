@@ -1,5 +1,47 @@
 # wrangler
 
+## 3.109.0
+
+### Minor Changes
+
+- [#8120](https://github.com/cloudflare/workers-sdk/pull/8120) [`3fb801f`](https://github.com/cloudflare/workers-sdk/commit/3fb801f734632c165685799cb1b752c4dad0445a) Thanks [@sdnts](https://github.com/sdnts)! - Add a new `update` subcommand for Queues to allow updating Queue settings
+
+- [#8120](https://github.com/cloudflare/workers-sdk/pull/8120) [`3fb801f`](https://github.com/cloudflare/workers-sdk/commit/3fb801f734632c165685799cb1b752c4dad0445a) Thanks [@sdnts](https://github.com/sdnts)! - Allow overriding message retention duration when creating Queues
+
+- [#8026](https://github.com/cloudflare/workers-sdk/pull/8026) [`542c6ea`](https://github.com/cloudflare/workers-sdk/commit/542c6ead5d7c7e64a103abd5572ec7b8aea96c90) Thanks [@penalosa](https://github.com/penalosa)! - Add `--outfile` to `wrangler deploy` for generating a worker bundle.
+
+  This is an advanced feature that most users won't need to use. When set, Wrangler will output your built Worker bundle in a Cloudflare specific format that captures all information needed to deploy a Worker using the [Worker Upload API](https://developers.cloudflare.com/api/resources/workers/subresources/scripts/methods/update/)
+
+- [#8026](https://github.com/cloudflare/workers-sdk/pull/8026) [`542c6ea`](https://github.com/cloudflare/workers-sdk/commit/542c6ead5d7c7e64a103abd5572ec7b8aea96c90) Thanks [@penalosa](https://github.com/penalosa)! - Add a `wrangler check startup` command to generate a CPU profile of your Worker's startup phase.
+
+  This can be imported into Chrome DevTools or opened directly in VSCode to view a flamegraph of your Worker's startup phase. Additionally, when a Worker deployment fails with a startup time error Wrangler will automatically generate a CPU profile for easy investigation.
+
+  Advanced usage:
+
+  - `--args`: to customise the way `wrangler check startup` builds your Worker for analysis, provide the exact arguments you use when deploying your Worker with `wrangler deploy`. For instance, if you deploy your Worker with `wrangler deploy --no-bundle`, you should use `wrangler check startup --args="--no-bundle"` to profile the startup phase.
+  - `--worker-bundle`: if you don't use Wrangler to deploy your Worker, you can use this argument to provide a Worker bundle to analyse. This should be a file path to a serialised multipart upload, with the exact same format as the API expects: https://developers.cloudflare.com/api/resources/workers/subresources/scripts/methods/update/
+
+### Patch Changes
+
+- [#8112](https://github.com/cloudflare/workers-sdk/pull/8112) [`fff677e`](https://github.com/cloudflare/workers-sdk/commit/fff677e35f67c28275262c1d19f7eb4d6c6ab071) Thanks [@penalosa](https://github.com/penalosa)! - When reporting errors to Sentry, Wrangler will now include the console output as additional metadata
+
+- [#8120](https://github.com/cloudflare/workers-sdk/pull/8120) [`3fb801f`](https://github.com/cloudflare/workers-sdk/commit/3fb801f734632c165685799cb1b752c4dad0445a) Thanks [@sdnts](https://github.com/sdnts)! - Check bounds when overriding delivery delay when creating Queues
+
+- [#7950](https://github.com/cloudflare/workers-sdk/pull/7950) [`4db1fb5`](https://github.com/cloudflare/workers-sdk/commit/4db1fb5696412c6666589a778184e10386294d71) Thanks [@cmackenzie1](https://github.com/cmackenzie1)! - Add local binding support for Worker Pipelines
+
+- [#8119](https://github.com/cloudflare/workers-sdk/pull/8119) [`1bc60d7`](https://github.com/cloudflare/workers-sdk/commit/1bc60d761ebf67a64ac248e3e2c826407bc26252) Thanks [@penalosa](https://github.com/penalosa)! - Output correct config format from `wrangler d1 create`. Previously, this command would always output TOML, regardless of the config file format
+
+- [#8130](https://github.com/cloudflare/workers-sdk/pull/8130) [`1aa2a91`](https://github.com/cloudflare/workers-sdk/commit/1aa2a9198578f8eb106f19c8475a63ff4eef26aa) Thanks [@emily-shen](https://github.com/emily-shen)! - Include default values for wrangler types --path and --x-include-runtime in telemetry
+
+  User provided strings are still left redacted as always.
+
+- [#8061](https://github.com/cloudflare/workers-sdk/pull/8061) [`35710e5`](https://github.com/cloudflare/workers-sdk/commit/35710e590f20e5c83fb25138ba4ae7890b780a08) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: respect `WRANGLER_LOG` in `wrangler dev`
+
+  Previously, `--log-level=debug` was the only way to see debug logs in `wrangler dev`, which was unlike all other commands.
+
+- Updated dependencies [[`4db1fb5`](https://github.com/cloudflare/workers-sdk/commit/4db1fb5696412c6666589a778184e10386294d71)]:
+  - miniflare@3.20250204.1
+
 ## 3.108.1
 
 ### Patch Changes
