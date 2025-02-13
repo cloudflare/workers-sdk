@@ -456,10 +456,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						).id;
 					// We must pass the id from the depsOptimizer through the rest of the
 					// resolving pipeline to ensure that the optimized version gets used.
-					return this.resolve(optimized);
+					return this.resolve(optimized, importer, options);
 				}
 
-				return resolved;
+				return this.resolve(resolved, importer, options);
 			},
 			async transform(code, id) {
 				// Inject the Node.js compat globals into the entry module for Node.js compat environments.

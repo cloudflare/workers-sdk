@@ -110,6 +110,8 @@ export function maybeStripNodeJsVirtualPrefix(
 export function resolveNodeJSImport(source: string) {
 	const alias = env.alias[source];
 	if (alias) {
+		// If `alias` is `undefined` then `source` was injected in the `transform` hook and we can resolve it directly.
+		// Else we resolve the `alias` instead of the `source`.
 		assert(
 			!env.external.includes(alias),
 			`Unexpected unenv alias to external module: ${source} -> ${alias}`
