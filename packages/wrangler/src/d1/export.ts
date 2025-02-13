@@ -193,6 +193,9 @@ async function exportRemotely(
 		startMessage: `Downloading SQL to ${output}`,
 		async promise() {
 			const contents = await fetch(finalResponse.result.signed_url);
+			if (!contents.ok) {
+				throw new Error(`Erroneous response while downloading from the presigned URL with status code: ${contents.status}`);
+			}
 			await fs.writeFile(output, contents.body || "");
 		},
 	});

@@ -114,7 +114,45 @@ describe("export", () => {
 		]);
 		const mockSqlContent = "PRAGMA defer_foreign_keys=TRUE;";
 
+		mockResponses();
+
 		msw.use(
+			http.get("https://example.com/xxxx-yyyy.sql", async () => {
+				return HttpResponse.text(mockSqlContent, { status: 200 });
+			})
+		);
+
+		await runWrangler("d1 export db --remote --output test-remote.sql");
+		expect(fs.readFileSync("test-remote.sql", "utf8")).toBe(mockSqlContent);
+	});
+
+	it("should handle remote presigned URL errors", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+		mockGetMemberships([
+			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+		]);
+
+		mockResponses();
+
+		msw.use(
+			http.get("https://example.com/xxxx-yyyy.sql", async () => {
+				return HttpResponse.text(`<?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>`, { status: 403 });
+			})
+		);
+
+		expect(async () => await runWrangler("d1 export db --remote --output test-remote.sql")).toThrowError(
+			/Erroneous response while downloading from the presigned URL with status code: 403/
+		);
+	});
+});
+
+function mockResponses() {
+	msw.use(
 			http.post(
 				"*/accounts/:accountId/d1/database/:databaseId/export",
 				async ({ request }) => {
@@ -173,13 +211,4 @@ describe("export", () => {
 				}
 			)
 		);
-		msw.use(
-			http.get("https://example.com/xxxx-yyyy.sql", async () => {
-				return HttpResponse.text(mockSqlContent, { status: 200 });
-			})
-		);
-
-		await runWrangler("d1 export db --remote --output test-remote.sql");
-		expect(fs.readFileSync("test-remote.sql", "utf8")).toBe(mockSqlContent);
-	});
-});
+}
