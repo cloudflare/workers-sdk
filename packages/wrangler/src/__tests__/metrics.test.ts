@@ -18,7 +18,7 @@ import {
 } from "../metrics/metrics-config";
 import {
 	getMetricsDispatcher,
-	redactArgValues,
+	processArgsAndValues,
 } from "../metrics/metrics-dispatcher";
 import { sniffUserAgent } from "../package-manager";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -27,6 +27,7 @@ import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
+import type { AllowList } from "../metrics/metrics-dispatcher";
 import type { MockInstance } from "vitest";
 
 vi.mock("../metrics/helpers");
@@ -577,36 +578,125 @@ describe("metrics", () => {
 			});
 		});
 
-		describe("redactArgValues()", () => {
+		describe("processArgs()", () => {
+			it("should normalise args", () => {
+				const args = {
+					nothing: true,
+					"beep-boop": true,
+					beepBoop: true,
+					"experimental-beep-boop": true,
+					experimentalBeepBoop: true,
+					xBeepBoop: true,
+					"x-beep-boop": true,
+				};
+				expect(
+					processArgsAndValues(
+						args,
+						{ "*": { wontMatch: "*" } },
+						"wrangler fake"
+					)
+				).toEqual({
+					nothing: true,
+					beepBoop: true,
+					xBeepBoop: true,
+				});
+			});
+
 			it("should redact sensitive values", () => {
 				const args = {
-					default: false,
-					array: ["beep", "boop"],
-					// Note how this is normalised
-					"secret-array": ["beep", "boop"],
-					number: 42,
-					string: "secret",
-					secretString: "secret",
-					flagOne: "default",
-					// Note how this is normalised
-					experimentalIncludeRuntime: "",
+					any: "allowed",
+					semiPublicString: "not-allowed",
+					anyString: "allowed",
+					random: "not-allowed",
 				};
-
-				const redacted = redactArgValues(args, {
-					string: "*",
-					array: "*",
-					flagOne: ["default"],
-					xIncludeRuntime: [".wrangler/types/runtime.d.ts"],
+				const allowList: AllowList = {
+					"*": { any: "*" },
+					"wrangler fake": { semiPublicString: ["allowed"], anyString: "*" },
+				};
+				const processedArgs = processArgsAndValues(
+					args,
+					allowList,
+					"wrangler fake"
+				);
+				expect(processedArgs).toEqual({
+					any: "allowed",
+					anyString: "allowed",
+					random: "<REDACTED>",
+					semiPublicString: "<REDACTED>",
 				});
-				expect(redacted).toEqual({
-					default: false,
-					array: ["beep", "boop"],
-					secretArray: ["<REDACTED>", "<REDACTED>"],
-					number: 42,
-					string: "secret",
-					secretString: "<REDACTED>",
-					flagOne: "default",
+			});
+
+			it("should redact sensitive values in arrays", () => {
+				const args = {
+					any: ["allowed"],
+					semiPublicString: ["not-allowed", "allowed"],
+					anyString: ["allowed", "also-allowed"],
+					random: ["not-allowed"],
+				};
+				const allowList: AllowList = {
+					"*": { any: "*" },
+					"wrangler fake": { semiPublicString: ["allowed"], anyString: "*" },
+				};
+				const processedArgs = processArgsAndValues(
+					args,
+					allowList,
+					"wrangler fake"
+				);
+				expect(processedArgs).toEqual({
+					any: ["allowed"],
+					anyString: ["allowed", "also-allowed"],
+					random: ["<REDACTED>"],
+					semiPublicString: ["<REDACTED>", "allowed"],
+				});
+			});
+
+			it("should not redact defaults for wrangler types", () => {
+				const args = {
+					experimentalIncludeRuntime: "",
+					"experimental-include-runtime": "",
+					path: "worker-configuration.d.ts",
+				};
+				const allowList: AllowList = {
+					"*": { format: "*", logLevel: "*" },
+					"wrangler tail": { status: "*" },
+					"wrangler types": {
+						xIncludeRuntime: [".wrangler/types/runtime.d.ts"],
+						path: ["worker-configuration.d.ts"],
+					},
+				};
+				const processedArgs = processArgsAndValues(
+					args,
+					allowList,
+					"wrangler types"
+				);
+				expect(processedArgs).toEqual({
+					path: "worker-configuration.d.ts",
 					xIncludeRuntime: ".wrangler/types/runtime.d.ts",
+				});
+			});
+
+			it("should redact user input for wrangler types", () => {
+				const args = {
+					experimentalIncludeRuntime: "beep.d.ts",
+					"experimental-include-runtime": "beep.d.ts",
+					path: "boop.d.ts",
+				};
+				const allowList: AllowList = {
+					"*": { format: "*", logLevel: "*" },
+					"wrangler tail": { status: "*" },
+					"wrangler types": {
+						xIncludeRuntime: [".wrangler/types/runtime.d.ts"],
+						path: ["worker-configuration.d.ts"],
+					},
+				};
+				const processedArgs = processArgsAndValues(
+					args,
+					allowList,
+					"wrangler types"
+				);
+				expect(processedArgs).toEqual({
+					path: "<REDACTED>",
+					xIncludeRuntime: "<REDACTED>",
 				});
 			});
 		});
