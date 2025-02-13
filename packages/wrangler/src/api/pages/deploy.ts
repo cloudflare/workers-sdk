@@ -447,7 +447,7 @@ export async function deploy({
 					body: formData,
 				}
 			);
-			return deploymentResponse;
+			return { deploymentResponse, formData };
 		} catch (e) {
 			lastErr = e;
 			if (
