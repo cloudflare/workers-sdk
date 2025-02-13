@@ -267,11 +267,14 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					miniflare
 				);
 
-				const middleware = createMiddleware(({ request }) => {
-					return entryWorker.fetch(toMiniflareRequest(request), {
-						redirect: "manual",
-					}) as any;
-				});
+				const middleware = createMiddleware(
+					({ request }) => {
+						return entryWorker.fetch(toMiniflareRequest(request), {
+							redirect: "manual",
+						}) as any;
+					},
+					{ alwaysCallNext: false }
+				);
 
 				handleWebSocket(
 					viteDevServer.httpServer,
@@ -293,11 +296,14 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					)
 				);
 
-				const middleware = createMiddleware(({ request }) => {
-					return miniflare.dispatchFetch(toMiniflareRequest(request), {
-						redirect: "manual",
-					}) as any;
-				});
+				const middleware = createMiddleware(
+					({ request }) => {
+						return miniflare.dispatchFetch(toMiniflareRequest(request), {
+							redirect: "manual",
+						}) as any;
+					},
+					{ alwaysCallNext: false }
+				);
 
 				handleWebSocket(
 					vitePreviewServer.httpServer,
