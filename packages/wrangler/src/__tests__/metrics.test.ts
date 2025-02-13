@@ -582,15 +582,22 @@ describe("metrics", () => {
 				const args = {
 					default: false,
 					array: ["beep", "boop"],
-					secretArray: ["beep", "boop"],
-					// Note how
+					// Note how this is normalised
 					"secret-array": ["beep", "boop"],
 					number: 42,
 					string: "secret",
 					secretString: "secret",
+					flagOne: "default",
+					// Note how this is normalised
+					experimentalIncludeRuntime: "",
 				};
 
-				const redacted = redactArgValues(args, ["string", "array"]);
+				const redacted = redactArgValues(args, {
+					string: "*",
+					array: "*",
+					flagOne: ["default"],
+					xIncludeRuntime: [".wrangler/types/runtime.d.ts"],
+				});
 				expect(redacted).toEqual({
 					default: false,
 					array: ["beep", "boop"],
@@ -598,6 +605,8 @@ describe("metrics", () => {
 					number: 42,
 					string: "secret",
 					secretString: "<REDACTED>",
+					flagOne: "default",
+					xIncludeRuntime: ".wrangler/types/runtime.d.ts",
 				});
 			});
 		});
