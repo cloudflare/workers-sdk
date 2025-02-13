@@ -80,6 +80,8 @@ export const cloudflare: Preset = {
 		// override the previous presets so that we use the native implementation
 		Buffer: false,
 		global: false,
+		Performance: ["@cloudflare/unenv/node/perf_hooks", "Performance"],
+		performance: ["@cloudflare/unenv/node/perf_hooks", "performance"],
 		console: "@cloudflare/unenv-preset/node/console",
 		process: "@cloudflare/unenv-preset/node/process",
 	},
