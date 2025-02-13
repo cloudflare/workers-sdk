@@ -117,13 +117,17 @@ export default class extends WorkerEntrypoint<Env> {
 					version: this.env.VERSION_METADATA?.id,
 				});
 
-				return handleRequest(
+				const response = await handleRequest(
 					request,
 					this.env,
 					config,
 					this.unstable_exists.bind(this),
 					this.unstable_getByETag.bind(this)
 				);
+
+				analytics.setData({ status: response.status });
+
+				return response;
 			});
 		} catch (err) {
 			return this.handleError(sentry, analytics, err);
