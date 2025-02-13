@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vite-plugin",
-	"version": "0.0.6",
+	"version": "0.0.8",
 	"description": "Cloudflare plugin for Vite",
 	"keywords": [
 		"cloudflare",
@@ -40,9 +40,10 @@
 		"test:ci": "vitest run"
 	},
 	"dependencies": {
+		"@cloudflare/unenv-preset": "1.1.1",
 		"@hattip/adapter-node": "^0.0.49",
 		"miniflare": "workspace:*",
-		"unenv": "catalog:vite-plugin",
+		"unenv": "2.0.0-rc.1",
 		"ws": "^8.18.0"
 	},
 	"devDependencies": {

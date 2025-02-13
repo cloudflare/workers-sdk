@@ -214,3 +214,9 @@ vi.mock("@cloudflare/cli/streams", async () => {
 		stderr,
 	};
 });
+
+vi.mock("../../package.json", () => {
+	return {
+		version: "x.x.x",
+	};
+});

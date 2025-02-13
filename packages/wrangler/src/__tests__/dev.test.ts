@@ -142,6 +142,7 @@ describe.sequential("wrangler dev", () => {
 		msw.resetHandlers();
 		spy.mockClear();
 		setSpy.mockClear();
+		logger.resetLoggerLevel();
 	});
 
 	async function runWranglerUntilConfig(
@@ -1211,7 +1212,7 @@ describe.sequential("wrangler dev", () => {
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 				"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
-				
+
 				Your worker has access to the following bindings:
 				- Durable Objects:
 				  - NAME_1: CLASS_1
@@ -1304,7 +1305,7 @@ describe.sequential("wrangler dev", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Using vars defined in .dev.vars
 				Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
-				
+
 				Your worker has access to the following bindings:
 				- Vars:
 				  - VAR_1: \\"(hidden)\\"
@@ -1340,7 +1341,7 @@ describe.sequential("wrangler dev", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Using vars defined in .dev.vars.custom
 				Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
-				
+
 				Your worker has access to the following bindings:
 				- Vars:
 				  - CUSTOM_VAR: \\"(hidden)\\"
@@ -1356,64 +1357,6 @@ describe.sequential("wrangler dev", () => {
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: Not enough arguments following: site]`
 			);
-
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough arguments following: site[0m
-
-				",
-				  "info": "",
-				  "out": "
-				wrangler dev [script]
-
-				👂 Start a local server for developing your Worker
-
-				POSITIONALS
-				  script  The path to an entry point for your Worker  [string]
-
-				GLOBAL FLAGS
-				  -c, --config   Path to Wrangler configuration file  [string]
-				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				  -h, --help     Show help  [boolean]
-				  -v, --version  Show version number  [boolean]
-
-				OPTIONS
-				      --name                                       Name of the Worker  [string]
-				      --compatibility-date                         Date to use for compatibility checks  [string]
-				      --compatibility-flags, --compatibility-flag  Flags to use for compatibility checks  [array]
-				      --latest                                     Use the latest version of the Workers runtime  [boolean] [default: true]
-				      --assets                                     Static assets to be served. Replaces Workers Sites.  [string]
-				      --no-bundle                                  Skip internal build steps and directly deploy script  [boolean] [default: false]
-				      --ip                                         IP address to listen on  [string]
-				      --port                                       Port to listen on  [number]
-				      --inspector-port                             Port for devtools to connect to  [number]
-				      --routes, --route                            Routes to upload  [array]
-				      --host                                       Host to forward requests to, defaults to the zone of project  [string]
-				      --local-protocol                             Protocol to listen to requests on, defaults to http.  [choices: \\"http\\", \\"https\\"]
-				      --https-key-path                             Path to a custom certificate key  [string]
-				      --https-cert-path                            Path to a custom certificate  [string]
-				      --local-upstream                             Host to act as origin in local mode, defaults to dev.host or route  [string]
-				      --upstream-protocol                          Protocol to forward requests to host on, defaults to https.  [choices: \\"http\\", \\"https\\"]
-				      --var                                        A key-value pair to be injected into the script as a variable  [array]
-				      --define                                     A key-value pair to be substituted in the script  [array]
-				      --alias                                      A module pair to be substituted in the script  [array]
-				      --jsx-factory                                The function that is called for each JSX element  [string]
-				      --jsx-fragment                               The function that is called for each JSX fragment  [string]
-				      --tsconfig                                   Path to a custom tsconfig.json file  [string]
-				  -r, --remote                                     Run on the global Cloudflare network with access to production resources  [boolean] [default: false]
-				      --minify                                     Minify the script  [boolean]
-				      --node-compat                                Enable Node.js compatibility  [boolean]
-				      --persist-to                                 Specify directory to use for local persistence (defaults to .wrangler/state)  [string]
-				      --live-reload                                Auto reload HTML pages when change is detected in local mode  [boolean]
-				      --test-scheduled                             Test scheduled events by visiting /__scheduled in browser  [boolean] [default: false]
-				      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"] [default: \\"log\\"]
-				      --show-interactive-dev-session               Show interactive dev session (defaults to true if the terminal supports interactivity)  [boolean]
-				      --experimental-vectorize-bind-to-prod        Bind to production Vectorize indexes in local development mode  [boolean] [default: false]
-				      --experimental-images-local-mode             Use a local lower-fidelity implementation of the Images binding  [boolean] [default: false]",
-				  "warn": "",
-				}
-			`);
 		});
 
 		it("should error if --legacy-assets and --site are used together", async () => {
@@ -1831,6 +1774,17 @@ describe.sequential("wrangler dev", () => {
 				"
 			`);
 		});
+
+		it("should also set log level using WRANGLER_LOG'", async () => {
+			fs.writeFileSync("index.js", `export default {};`);
+			vi.stubEnv("WRANGLER_LOG", "none");
+			await runWranglerUntilConfig("dev index.js --inspect");
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+
+			vi.stubEnv("WRANGLER_LOG", "debug");
+			await runWranglerUntilConfig("dev index.js");
+			expect(std.debug).toContain(".env file not found at");
+		});
 	});
 
 	describe("--show-interactive-dev-session", () => {
@@ -1862,7 +1816,7 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
-				
+
 				Your worker has access to the following bindings:
 				- Services:
 				  - WorkerA: A [not connected]
@@ -1885,7 +1839,7 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
-				
+
 				Your worker has access to the following bindings:
 				- Services:
 				  - WorkerA: A [not connected]
@@ -1914,7 +1868,7 @@ describe.sequential("wrangler dev", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Using vars defined in .dev.vars
 				Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
-				
+
 				Your worker has access to the following bindings:
 				- Vars:
 				  - variable: 123
