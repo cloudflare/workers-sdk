@@ -1,7 +1,6 @@
 import { execSync } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
-import { File } from "undici";
 import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
 import { configFileName, readPagesConfig } from "../config";
@@ -34,6 +33,7 @@ import type {
 	Project,
 	UnifiedDeploymentLogMessages,
 } from "@cloudflare/types";
+import type { File } from "undici";
 
 type PagesDeployArgs = StrictYargsOptionsToInterface<typeof Options>;
 

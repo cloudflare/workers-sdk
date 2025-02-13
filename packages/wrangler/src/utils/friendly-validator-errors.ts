@@ -73,6 +73,6 @@ export async function helpIfErrorIsSizeOrScriptStartup(
 	if (errIsScriptSize(err)) {
 		printOffendingDependencies(dependencies);
 	} else if (errIsStartupErr(err)) {
-		handleStartupError(workerBundle, projectRoot);
+		await handleStartupError(workerBundle, projectRoot);
 	}
 }
