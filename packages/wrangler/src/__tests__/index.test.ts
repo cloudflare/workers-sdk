@@ -40,7 +40,7 @@ describe("wrangler", () => {
 
 				  wrangler init [name]            📥 Initialize a basic Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
-				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare  [aliases: publish]
+				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
 				  wrangler versions               🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
@@ -97,7 +97,7 @@ describe("wrangler", () => {
 
 				  wrangler init [name]            📥 Initialize a basic Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
-				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare  [aliases: publish]
+				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
 				  wrangler versions               🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
@@ -290,16 +290,17 @@ describe("wrangler", () => {
 		await runWrangler("build");
 		await endEventLoop();
 		expect(std.out).toMatchInlineSnapshot(`
-		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: \`wrangler build\` has been deprecated.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: \`wrangler build\` has been deprecated.[0m
 
-		  Please refer to [4mhttps://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build[0m
-		  for more information.
-		  Attempting to run \`wrangler deploy --dry-run --outdir=dist\` for you instead:
+			  Please refer to [4mhttps://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build[0m
+			  for more information.
+			  Attempting to run \`wrangler deploy --dry-run --outdir=dist\` for you instead:
 
 
-		Total Upload: xx KiB / gzip: xx KiB
-		--dry-run: exiting now."
-	`);
+			Total Upload: xx KiB / gzip: xx KiB
+			No bindings found.
+			--dry-run: exiting now."
+		`);
 	});
 
 	describe("logPossibleBugMessage()", () => {

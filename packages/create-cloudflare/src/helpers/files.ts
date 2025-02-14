@@ -67,7 +67,11 @@ export const readToml = (path: string) => {
 	return contents ? TOML.parse(contents) : {};
 };
 
-export const writeJSON = (path: string, object: object, stringifySpace = 2) => {
+export const writeJSON = (
+	path: string,
+	object: object,
+	stringifySpace = "\t",
+) => {
 	writeFile(path, JSON.stringify(object, null, stringifySpace));
 };
 

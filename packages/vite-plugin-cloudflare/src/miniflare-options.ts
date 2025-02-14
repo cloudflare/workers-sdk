@@ -15,6 +15,7 @@ import {
 	ROUTER_WORKER_NAME,
 } from "./constants";
 import { getWorkerConfigPaths } from "./deploy-config";
+import { MODULE_PATTERN } from "./shared";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
 	PersistState,
@@ -325,6 +326,17 @@ export function getDevMiniflareOptions(
 									);
 
 									const [moduleId] = invokePayloadData.data;
+									const moduleRE = new RegExp(MODULE_PATTERN);
+
+									// Externalize Worker modules (CompiledWasm, Text, Data)
+									if (moduleRE.test(moduleId)) {
+										const result = {
+											externalize: moduleId,
+											type: "module",
+										} satisfies vite.FetchResult;
+
+										return MiniflareResponse.json({ result });
+									}
 
 									// For some reason we need this here for cloudflare built-ins (e.g. `cloudflare:workers`) but not for node built-ins (e.g. `node:path`)
 									// See https://github.com/flarelabs-net/vite-plugin-cloudflare/issues/46
@@ -334,7 +346,7 @@ export function getDevMiniflareOptions(
 											type: "builtin",
 										} satisfies vite.FetchResult;
 
-										return new MiniflareResponse(JSON.stringify({ result }));
+										return MiniflareResponse.json({ result });
 									}
 
 									const devEnvironment = viteDevServer.environments[
@@ -343,7 +355,7 @@ export function getDevMiniflareOptions(
 
 									const result = await devEnvironment.hot.handleInvoke(payload);
 
-									return new MiniflareResponse(JSON.stringify(result));
+									return MiniflareResponse.json(result);
 								},
 							},
 						} satisfies Partial<WorkerOptions>;
@@ -438,9 +450,40 @@ export function getDevMiniflareOptions(
 							),
 						},
 					],
+					unsafeUseModuleFallbackService: true,
 				} satisfies WorkerOptions;
 			}),
 		],
+		unsafeModuleFallbackService(request) {
+			const url = new URL(request.url);
+			const rawSpecifier = url.searchParams.get("rawSpecifier");
+			assert(
+				rawSpecifier,
+				`Unexpected error: no specifier in request to module fallback service.`
+			);
+
+			const moduleRE = new RegExp(MODULE_PATTERN);
+			const match = moduleRE.exec(rawSpecifier);
+			assert(match, `Unexpected error: no match for module ${rawSpecifier}.`);
+			const [full, moduleType, modulePath] = match;
+			assert(
+				modulePath,
+				`Unexpected error: module path not found in reference ${full}.`
+			);
+
+			let source: Buffer;
+
+			try {
+				source = fs.readFileSync(modulePath);
+			} catch (error) {
+				throw new Error(`Import ${modulePath} not found. Does the file exist?`);
+			}
+
+			return MiniflareResponse.json({
+				// Cap'n Proto expects byte arrays for `:Data` typed fields from JSON
+				wasm: Array.from(source),
+			});
+		},
 	};
 }
 

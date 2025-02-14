@@ -102,6 +102,15 @@ export const getCIMatchTag = getEnvironmentVariableFactory({
 });
 
 /**
+ * `WRANGLER_CI_OVERRIDE_TAG` specifies a worker tag
+ *
+ * If this is set, Wrangler will override the worker name with this tag
+ */
+export const getCIOverrideName = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_CI_OVERRIDE_NAME",
+});
+
+/**
  * `WRANGLER_BUILD_CONDITIONS` specifies the "build conditions" to use when importing packages at build time.
  *
  * See https://nodejs.org/api/packages.html#conditional-exports

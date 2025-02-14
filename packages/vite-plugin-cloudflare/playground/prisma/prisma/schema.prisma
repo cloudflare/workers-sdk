@@ -1,0 +1,20 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+	previewFeatures = ["driverAdapters"]
+	// Default output directory does not work with Vite. See https://github.com/vitejs/vite/issues/19036#issuecomment-2558791944
+	output          = "../node_modules/@prisma/client-generated"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id    Int     @id @default(autoincrement())
+  email String  @unique
+  name  String?
+}

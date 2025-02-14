@@ -1,6 +1,5 @@
-import TOML from "@iarna/toml";
 import { fetchResult } from "../cfetch";
-import { withConfig } from "../config";
+import { formatConfigSnippet, withConfig } from "../config";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
@@ -83,11 +82,14 @@ export const Handler = withConfig<HandlerOptions>(
 		);
 		logger.log("Created your new D1 database.\n");
 		logger.log(
-			TOML.stringify({
-				d1_databases: [
-					{ binding: "DB", database_name: db.name, database_id: db.uuid },
-				],
-			})
+			formatConfigSnippet(
+				{
+					d1_databases: [
+						{ binding: "DB", database_name: db.name, database_id: db.uuid },
+					],
+				},
+				config.configPath
+			)
 		);
 	}
 );

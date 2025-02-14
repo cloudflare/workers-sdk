@@ -1,8 +1,10 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
+import { builtinModules } from "node:module";
 import path from "node:path";
 import { MessageChannel, receiveMessageOnPort } from "node:worker_threads";
+import { workerdBuiltinModules } from "../shared/builtin-modules";
 import type {
 	WorkersConfigPluginAPI,
 	WorkersPoolOptions,
@@ -146,6 +148,17 @@ function createConfigPlugin(): Plugin<WorkersConfigPluginAPI> {
 			// Apply `package.json` `browser` field remapping in SSR mode:
 			// https://github.com/vitejs/vite/blob/v5.1.4/packages/vite/src/node/plugins/resolve.ts#L175
 			config.ssr.target = "webworker";
+
+			// Pre-bundling dependencies with vite
+			config.test.deps ??= {};
+			config.test.deps.optimizer ??= {};
+			config.test.deps.optimizer.ssr ??= {};
+			config.test.deps.optimizer.ssr.enabled ??= true;
+			config.test.deps.optimizer.ssr.exclude ??= [];
+			ensureArrayIncludes(config.test.deps.optimizer.ssr.exclude, [
+				...workerdBuiltinModules,
+				...builtinModules.concat(builtinModules.map((m) => `node:${m}`)),
+			]);
 
 			// Ideally, we would force `pool` to be @cloudflare/vitest-pool-workers here,
 			// but the tests in `packages/vitest-pool-workers` define `pool` as "../..".
