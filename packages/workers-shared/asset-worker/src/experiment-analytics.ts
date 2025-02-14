@@ -14,8 +14,6 @@ type Data = {
 	manifestReadTime?: number;
 
 	// -- Blobs --
-	// blob1 - Manifest read method
-	manifestReadMethod?: string;
 };
 
 export class ExperimentAnalytics {
@@ -46,9 +44,7 @@ export class ExperimentAnalytics {
 			doubles: [
 				this.data.manifestReadTime ?? -1, // double1
 			],
-			blobs: [
-				this.data.manifestReadMethod, // blob1
-			],
+			blobs: [],
 		});
 	}
 }

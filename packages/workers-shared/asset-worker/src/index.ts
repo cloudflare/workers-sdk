@@ -222,13 +222,6 @@ export default class extends WorkerEntrypoint<Env> {
 		const analytics = new ExperimentAnalytics(this.env.EXPERIMENT_ANALYTICS);
 		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
 
-		const INTERPOLATION_EXPERIMENT_SAMPLE_RATE = 0.5;
-		let searchMethod: "binary" | "interpolation" = "binary";
-		if (Math.random() < INTERPOLATION_EXPERIMENT_SAMPLE_RATE) {
-			searchMethod = "interpolation";
-		}
-		analytics.setData({ manifestReadMethod: searchMethod });
-
 		if (
 			this.env.COLO_METADATA &&
 			this.env.VERSION_METADATA &&
@@ -243,16 +236,7 @@ export default class extends WorkerEntrypoint<Env> {
 		const startTimeMs = performance.now();
 		try {
 			const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
-			if (searchMethod === "interpolation") {
-				try {
-					return await assetsManifest.getWithInterpolationSearch(pathname);
-				} catch (e) {
-					analytics.setData({ manifestReadMethod: "binary-fallback" });
-					return await assetsManifest.getWithBinarySearch(pathname);
-				}
-			} else {
-				return await assetsManifest.getWithBinarySearch(pathname);
-			}
+			return await assetsManifest.get(pathname);
 		} finally {
 			analytics.setData({ manifestReadTime: performance.now() - startTimeMs });
 			analytics.write();
