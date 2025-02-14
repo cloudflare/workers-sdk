@@ -1,6 +1,6 @@
 export default {
 	async fetch(request, env) {
-		let response;
+		let response: Response;
 
 		// test fetch requests to asset routes
 		response = await env.WORKER_B.fetch(request);
