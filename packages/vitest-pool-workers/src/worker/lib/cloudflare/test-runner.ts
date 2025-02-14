@@ -216,6 +216,11 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		}
 
 		resetMockAgent(fetchMock);
+		// @ts-expect-error Support Vitest v2
+		if (super.onBeforeRunFiles) {
+			// @ts-expect-error Support Vitest v2
+			return super.onBeforeRunFiles();
+		}
 	}
 
 	async onAfterRunFiles() {
