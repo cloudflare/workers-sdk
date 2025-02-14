@@ -1,7 +1,12 @@
+import { builtinModules } from "node:module";
 import * as path from "node:path";
 import { Request as MiniflareRequest } from "miniflare";
 import * as vite from "vite";
 import type { IncomingHttpHeaders } from "node:http";
+
+export const nodeBuiltInModules = new Set(
+	builtinModules.concat(builtinModules.map((m) => `node:${m}`))
+);
 
 export function getOutputDirectory(
 	userConfig: vite.UserConfig,

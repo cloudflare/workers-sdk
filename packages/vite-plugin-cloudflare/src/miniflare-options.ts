@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
-import { builtinModules } from "node:module";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Log, LogLevel, Response as MiniflareResponse } from "miniflare";
@@ -17,6 +16,7 @@ import {
 } from "./constants";
 import { getWorkerConfigPaths } from "./deploy-config";
 import { MODULE_PATTERN } from "./shared";
+import { nodeBuiltInModules } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
 	PersistState,
@@ -25,10 +25,6 @@ import type {
 } from "./plugin-config";
 import type { MiniflareOptions, SharedOptions, WorkerOptions } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
-
-const nodeBuiltInModules = new Set(
-	builtinModules.concat(builtinModules.map((m) => `node:${m}`))
-);
 
 type PersistOptions = Pick<
 	SharedOptions,

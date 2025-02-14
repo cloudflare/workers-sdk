@@ -1,8 +1,7 @@
 import assert from "node:assert";
-import { builtinModules } from "node:module";
 import * as vite from "vite";
 import { INIT_PATH, UNKNOWN_HOST } from "./shared";
-import { getOutputDirectory } from "./utils";
+import { getOutputDirectory, nodeBuiltInModules } from "./utils";
 import type { ResolvedPluginConfig, WorkerConfig } from "./plugin-config";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
 import type {
@@ -118,10 +117,6 @@ const cloudflareBuiltInModules = [
 	"cloudflare:workers",
 	"cloudflare:workflows",
 ];
-
-const nodeBuiltInModules = builtinModules.concat(
-	builtinModules.map((m) => `node:${m}`)
-);
 
 const defaultConditions = ["workerd", "module", "browser"];
 
