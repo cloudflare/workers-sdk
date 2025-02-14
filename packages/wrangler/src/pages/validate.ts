@@ -5,7 +5,7 @@ import { Minimatch } from "minimatch";
 import prettyBytes from "pretty-bytes";
 import { FatalError } from "../errors";
 import { MAX_ASSET_COUNT, MAX_ASSET_SIZE } from "./constants";
-import { hashFile } from "./hash";
+import { contentAndTypeHashFile } from "./hash";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -107,7 +107,7 @@ export const validate = async (args: {
 						path: filepath,
 						contentType: getType(name) || "application/octet-stream",
 						sizeInBytes: filestat.size,
-						hash: hashFile(filepath),
+						hash: contentAndTypeHashFile(filepath),
 					});
 				}
 			})

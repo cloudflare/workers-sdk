@@ -137,7 +137,12 @@ export async function createRemoteWorkerInit(props: {
 	}
 
 	const assetsJwt = props.assets
-		? await syncAssets(props.accountId, props.assets.directory, props.name)
+		? await syncAssets(
+				props.accountId,
+				props.assets.directory,
+				props.name,
+				props.assets
+			)
 		: undefined;
 
 	const init: CfWorkerInitWithName = {

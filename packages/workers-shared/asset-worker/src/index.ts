@@ -236,7 +236,22 @@ export default class extends WorkerEntrypoint<Env> {
 		const startTimeMs = performance.now();
 		try {
 			const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
-			return await assetsManifest.get(pathname);
+			const assetKey = await assetsManifest.get(pathname);
+			if (
+				assetKey === null &&
+				this.env.CONFIG.not_found_handling === "single-page-application"
+			) {
+				const hashBuffer = await crypto.subtle.digest(
+					"SHA-256",
+					new TextEncoder().encode(pathname)
+				);
+				const hash = [...new Uint8Array(hashBuffer)]
+					.map((x) => x.toString(16).padStart(2, "0"))
+					.join("");
+
+				return hash.substring(0, 32);
+			}
+			return assetKey;
 		} finally {
 			analytics.setData({ manifestReadTime: performance.now() - startTimeMs });
 			analytics.write();
