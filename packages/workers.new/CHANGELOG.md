@@ -1,5 +1,11 @@
 # workers.new
 
+## 0.0.3
+
+### Patch Changes
+
+- [`98781db`](https://github.com/cloudflare/workers-sdk/commit/98781db674c5fac775e4c843bdcc869f0d49c918) Thanks [@penalosa](https://github.com/penalosa)! - trigger fake release
+
 ## 0.0.2
 
 ### Patch Changes
