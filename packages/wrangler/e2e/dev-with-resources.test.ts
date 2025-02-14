@@ -609,7 +609,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		await fetch(`${url}/connect`);
 	});
 
-	it.skipIf(!isLocal).fails("exposes Pipelines bindings", async () => {
+	it.skipIf(!isLocal)("exposes Pipelines bindings", async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -626,7 +626,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 						if (env.PIPELINE === undefined) {
 							return new Response("env.PIPELINE is undefined");
 						}
-
+						env.PIPELINE.send([{hello: "world"}]);
 						return new Response("env.PIPELINE is available");
 					}
 				}
@@ -640,6 +640,9 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		const res = await fetch(url);
 
 		await expect(res.text()).resolves.toBe("env.PIPELINE is available");
+		// worker.currentOutput is sometimes racey, worker.output will hang
+		const match = await worker.readUntil(/Request received/);
+		expect(match[0]).not.toBeNull();
 	});
 
 	it.skipIf(!isLocal)("exposes queue producer/consumer bindings", async () => {

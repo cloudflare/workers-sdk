@@ -117,13 +117,17 @@ export default class extends WorkerEntrypoint<Env> {
 					version: this.env.VERSION_METADATA?.id,
 				});
 
-				return handleRequest(
+				const response = await handleRequest(
 					request,
 					this.env,
 					config,
 					this.unstable_exists.bind(this),
 					this.unstable_getByETag.bind(this)
 				);
+
+				analytics.setData({ status: response.status });
+
+				return response;
 			});
 		} catch (err) {
 			return this.handleError(sentry, analytics, err);
@@ -218,13 +222,6 @@ export default class extends WorkerEntrypoint<Env> {
 		const analytics = new ExperimentAnalytics(this.env.EXPERIMENT_ANALYTICS);
 		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
 
-		const INTERPOLATION_EXPERIMENT_SAMPLE_RATE = 1 / 20_000; // 0.00005 = 0.005%
-		let searchMethod: "binary" | "interpolation" = "binary";
-		if (Math.random() < INTERPOLATION_EXPERIMENT_SAMPLE_RATE) {
-			searchMethod = "interpolation";
-		}
-		analytics.setData({ manifestReadMethod: searchMethod });
-
 		if (
 			this.env.COLO_METADATA &&
 			this.env.VERSION_METADATA &&
@@ -239,11 +236,7 @@ export default class extends WorkerEntrypoint<Env> {
 		const startTimeMs = performance.now();
 		try {
 			const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
-			if (searchMethod === "interpolation") {
-				return await assetsManifest.getWithInterpolationSearch(pathname);
-			} else {
-				return await assetsManifest.getWithBinarySearch(pathname);
-			}
+			return await assetsManifest.get(pathname);
 		} finally {
 			analytics.setData({ manifestReadTime: performance.now() - startTimeMs });
 			analytics.write();

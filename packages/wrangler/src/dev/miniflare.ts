@@ -33,6 +33,7 @@ import type {
 	CfDurableObject,
 	CfHyperdrive,
 	CfKvNamespace,
+	CfPipeline,
 	CfQueue,
 	CfR2Bucket,
 	CfScriptFormat,
@@ -334,6 +335,9 @@ function queueProducerEntry(
 		{ queueName: queue.queue_name, deliveryDelay: queue.delivery_delay },
 	];
 }
+function pipelineEntry(pipeline: CfPipeline): [string, string] {
+	return [pipeline.binding, pipeline.pipeline];
+}
 function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
 }
@@ -375,6 +379,7 @@ type WorkerOptionsBindings = Pick<
 	| "d1Databases"
 	| "queueProducers"
 	| "queueConsumers"
+	| "pipelines"
 	| "hyperdrives"
 	| "durableObjects"
 	| "serviceBindings"
@@ -695,6 +700,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		queueConsumers: Object.fromEntries(
 			config.queueConsumers?.map(queueConsumerEntry) ?? []
 		),
+		pipelines: Object.fromEntries(bindings.pipelines?.map(pipelineEntry) ?? []),
 		hyperdrives: Object.fromEntries(
 			bindings.hyperdrive?.map(hyperdriveEntry) ?? []
 		),

@@ -13,6 +13,7 @@ import {
 	certUploadMtlsCommand,
 	certUploadNamespace,
 } from "./cert/cert";
+import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
 import { experimental_readRawConfig, loadDotEnv } from "./config";
 import { demandSingleValue } from "./core";
@@ -892,6 +893,18 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("telemetry");
+
+	registry.define([
+		{
+			command: "wrangler check",
+			definition: checkNamespace,
+		},
+		{
+			command: "wrangler check startup",
+			definition: checkStartupCommand,
+		},
+	]);
+	registry.registerNamespace("check");
 
 	/******************************************************/
 	/*               DEPRECATED COMMANDS                  */

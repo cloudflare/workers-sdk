@@ -64,7 +64,7 @@ describe("sentry", () => {
 				"Getting User settings...
 
 				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-				? Would you like to report this error to Cloudflare?
+				? Would you like to report this error to Cloudflare? Wrangler's output and the error details will be shared with the Wrangler team to help us diagnose and fix the issue.
 				🤖 Using fallback value in non-interactive context: no"
 			`);
 			expect(sentryRequests?.length).toEqual(0);
@@ -103,7 +103,7 @@ describe("sentry", () => {
 				)
 			);
 			mockConfirm({
-				text: "Would you like to report this error to Cloudflare?",
+				text: "Would you like to report this error to Cloudflare? Wrangler's output and the error details will be shared with the Wrangler team to help us diagnose and fix the issue.",
 				result: false,
 			});
 			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(
@@ -129,7 +129,7 @@ describe("sentry", () => {
 				)
 			);
 			mockConfirm({
-				text: "Would you like to report this error to Cloudflare?",
+				text: "Would you like to report this error to Cloudflare? Wrangler's output and the error details will be shared with the Wrangler team to help us diagnose and fix the issue.",
 				result: true,
 			});
 			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(
@@ -381,6 +381,7 @@ describe("sentry", () => {
 				        "InboundFilters",
 				        "FunctionToString",
 				        "LinkedErrors",
+				        "Console",
 				        "OnUncaughtException",
 				        "OnUnhandledRejection",
 				        "ContextLines",

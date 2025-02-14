@@ -1,5 +1,11 @@
 # miniflare
 
+## 3.20250204.1
+
+### Patch Changes
+
+- [#7950](https://github.com/cloudflare/workers-sdk/pull/7950) [`4db1fb5`](https://github.com/cloudflare/workers-sdk/commit/4db1fb5696412c6666589a778184e10386294d71) Thanks [@cmackenzie1](https://github.com/cmackenzie1)! - Add local binding support for Worker Pipelines
+
 ## 3.20250204.0
 
 ### Patch Changes

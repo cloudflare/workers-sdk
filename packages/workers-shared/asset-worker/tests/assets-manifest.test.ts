@@ -8,12 +8,7 @@ import {
 	PATH_HASH_OFFSET,
 	PATH_HASH_SIZE,
 } from "../../utils/constants";
-import {
-	binarySearch,
-	compare,
-	hashPath,
-	interpolationSearch,
-} from "../src/assets-manifest";
+import { binarySearch, compare, hashPath } from "../src/assets-manifest";
 
 const encoder = new TextEncoder();
 
@@ -236,175 +231,17 @@ describe("search methods", async () => {
 				expect(foundEntry).toBe(false);
 			}
 		});
-	});
 
-	describe("interpolation search", () => {
-		it("doesn't error for an empty manifest", async () => {
-			const { manifest } = await makeManifestOfLength(0);
-			const foundEntry = interpolationSearch(
-				new Uint8Array(manifest, HEADER_SIZE),
-				await hashPath("/path")
-			);
-			expect(foundEntry).toBe(false);
-		});
-
-		it("works for a single entry manifest", async () => {
-			const { manifest, entries } = await makeManifestOfLength(1);
-			for (const searchEntry of entries) {
-				const path = await hashPath(searchEntry.path);
-				const foundEntry = interpolationSearch(
-					new Uint8Array(manifest, HEADER_SIZE),
-					path
-				) as Uint8Array;
-				expect(foundEntry).not.toBe(false);
-				expect(
-					new Uint8Array(
-						foundEntry.buffer,
-						CONTENT_HASH_OFFSET + foundEntry.byteOffset,
-						CONTENT_HASH_SIZE
-					)
-				).toEqual(hexToBytes(searchEntry.contentHash));
-			}
-		});
-
-		it("works for a two entry manifest", async () => {
-			const { manifest, entries } = await makeManifestOfLength(2);
-			for (const searchEntry of entries) {
-				const path = await hashPath(searchEntry.path);
-				const foundEntry = interpolationSearch(
-					new Uint8Array(manifest, HEADER_SIZE),
-					path
-				) as Uint8Array;
-				expect(foundEntry).not.toBe(false);
-				expect(
-					new Uint8Array(
-						foundEntry.buffer,
-						CONTENT_HASH_OFFSET + foundEntry.byteOffset,
-						CONTENT_HASH_SIZE
-					)
-				).toEqual(hexToBytes(searchEntry.contentHash));
-			}
-		});
-
-		it("works for a three entry manifest", async () => {
-			const { manifest, entries } = await makeManifestOfLength(3);
-			for (const searchEntry of entries) {
-				const path = await hashPath(searchEntry.path);
-				const foundEntry = interpolationSearch(
-					new Uint8Array(manifest, HEADER_SIZE),
-					path
-				) as Uint8Array;
-				expect(foundEntry).not.toBe(false);
-				expect(
-					new Uint8Array(
-						foundEntry.buffer,
-						CONTENT_HASH_OFFSET + foundEntry.byteOffset,
-						CONTENT_HASH_SIZE
-					)
-				).toEqual(hexToBytes(searchEntry.contentHash));
-			}
-		});
-
-		it("works for a 20,000 entry manifest", async () => {
-			const { manifest, entries } = await makeManifestOfLength(20_000);
-			for (const searchEntry of entries) {
-				const path = await hashPath(searchEntry.path);
-				const foundEntry = interpolationSearch(
-					new Uint8Array(manifest, HEADER_SIZE),
-					path
-				) as Uint8Array;
-				expect(foundEntry).not.toBe(false);
-				expect(
-					new Uint8Array(
-						foundEntry.buffer,
-						CONTENT_HASH_OFFSET + foundEntry.byteOffset,
-						CONTENT_HASH_SIZE
-					)
-				).toEqual(hexToBytes(searchEntry.contentHash));
-			}
-		});
-
-		it("returns false for non-existent paths", async () => {
+		it("throws an error if the search value is longer than the current value", async () => {
 			const { manifest } = await makeManifestOfLength(10);
-			for (const searchEntry of [
-				new Uint8Array(PATH_HASH_SIZE),
-				new Uint8Array(PATH_HASH_SIZE).fill(127),
-				new Uint8Array(PATH_HASH_SIZE).fill(255),
-			]) {
-				const foundEntry = interpolationSearch(
+			expect(() => {
+				binarySearch(
 					new Uint8Array(manifest, HEADER_SIZE),
-					searchEntry
+					new Uint8Array(PATH_HASH_SIZE + 1).fill(127)
 				);
-				expect(foundEntry).toBe(false);
-			}
-		});
-
-		it("doesn't throw 'RangeError: Division by zero' with extreme manifests", async () => {
-			const smallEntry = {
-				path: "/small",
-				pathHashBytes: new Uint8Array(PATH_HASH_SIZE),
-				contentHash: "00000000000000000000000000000000",
-			};
-			const largeEntry = {
-				path: "/large",
-				pathHashBytes: new Uint8Array(PATH_HASH_SIZE).fill(255),
-				contentHash: "ffffffffffffffffffffffffffffffff",
-			};
-			const entries = [smallEntry, largeEntry];
-			entries.sort((a, b) => compare(a.pathHashBytes, b.pathHashBytes));
-
-			const assetManifestBytes = new Uint8Array(
-				HEADER_SIZE + entries.length * ENTRY_SIZE
+			}).toThrowErrorMatchingInlineSnapshot(
+				`[TypeError: Search value and current value are of different lengths]`
 			);
-
-			for (const [i, { pathHashBytes, contentHash }] of entries.entries()) {
-				const contentHashBytes = hexToBytes(contentHash);
-				const entryOffset = HEADER_SIZE + i * ENTRY_SIZE;
-
-				assetManifestBytes.set(pathHashBytes, entryOffset + PATH_HASH_OFFSET);
-				assetManifestBytes.set(
-					contentHashBytes,
-					entryOffset + CONTENT_HASH_OFFSET
-				);
-			}
-
-			const foundSmallEntry = interpolationSearch(
-				new Uint8Array(assetManifestBytes.buffer, HEADER_SIZE),
-				smallEntry.pathHashBytes
-			) as Uint8Array;
-			expect(foundSmallEntry).not.toBe(false);
-			expect(
-				new Uint8Array(
-					foundSmallEntry.buffer,
-					CONTENT_HASH_OFFSET + foundSmallEntry.byteOffset,
-					CONTENT_HASH_SIZE
-				)
-			).toEqual(hexToBytes(smallEntry.contentHash));
-
-			const foundLargeEntry = interpolationSearch(
-				new Uint8Array(assetManifestBytes.buffer, HEADER_SIZE),
-				largeEntry.pathHashBytes
-			) as Uint8Array;
-			expect(foundLargeEntry).not.toBe(false);
-			expect(
-				new Uint8Array(
-					foundLargeEntry.buffer,
-					CONTENT_HASH_OFFSET + foundLargeEntry.byteOffset,
-					CONTENT_HASH_SIZE
-				)
-			).toEqual(hexToBytes(largeEntry.contentHash));
-
-			for (const searchEntry of [
-				new Uint8Array(PATH_HASH_SIZE).fill(1),
-				new Uint8Array(PATH_HASH_SIZE).fill(127),
-				new Uint8Array(PATH_HASH_SIZE).fill(254),
-			]) {
-				const foundEntry = interpolationSearch(
-					new Uint8Array(assetManifestBytes.buffer, HEADER_SIZE),
-					searchEntry
-				);
-				expect(foundEntry).toBe(false);
-			}
 		});
 	});
 });
