@@ -5,6 +5,6 @@ export const onRequest = () => {
 	const supportsNamedExports = typeof fetch.Headers === "function";
 
 	return new Response(
-		supportsDefaultExports && supportsNamedExports ? "OK!" : "KO!",
+		supportsDefaultExports && supportsNamedExports ? "OK!" : "KO!"
 	);
 };
