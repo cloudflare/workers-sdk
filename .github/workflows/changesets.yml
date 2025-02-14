@@ -53,7 +53,10 @@ jobs:
           SPARROW_SOURCE_KEY: "50598e014ed44c739ec8074fdc16057c"
 
       - name: Deploy non-NPM Packages
-        run: node -r esbuild-register tools/deployments/deploy-non-npm-packages.ts
+        id: deploy
+        run: |
+          node -r esbuild-register tools/deployments/deploy-non-npm-packages.ts
+          echo "status=$(cat deployment-status.json)" >> $GITHUB_OUTPUT;
         env:
           PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -64,3 +67,12 @@ jobs:
           WORKERS_SHARED_SENTRY_ACCESS_SECRET: ${{ secrets.WORKERS_SHARED_SENTRY_ACCESS_SECRET }}
           WORKERS_SHARED_SENTRY_AUTH_TOKEN: ${{ secrets.WORKERS_SHARED_SENTRY_AUTH_TOKEN }}
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      - name: Send Alert
+        if: always()
+        run: node -r esbuild-register tools/deployments/alert-on-error.ts
+        env:
+          PUBLISH_STATUS: ${{ steps.changesets.outcome }}
+          DEPLOYMENT_STATUS: ${{ steps.deploy.outputs.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TOKEN: ${{ secrets.STATUS_BOT_SECRET }}
