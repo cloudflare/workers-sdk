@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.14.2
+
+### Patch Changes
+
+- [#8138](https://github.com/cloudflare/workers-sdk/pull/8138) [`f465840`](https://github.com/cloudflare/workers-sdk/commit/f46584035cc18eef3bc40b26131cc00666ab4e11) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Remove the interpolation search experiment for asset manifest reading
+
 ## 0.14.1
 
 ### Patch Changes
