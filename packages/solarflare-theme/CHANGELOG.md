@@ -1,5 +1,11 @@
 # solarflare-theme
 
+## 0.0.3
+
+### Patch Changes
+
+- [`6d31db7`](https://github.com/cloudflare/workers-sdk/commit/6d31db7097b49645854a4e8cbfb066c497a3e7b8) Thanks [@penalosa](https://github.com/penalosa)! - trigger fake release
+
 ## 0.0.2
 
 ### Patch Changes
