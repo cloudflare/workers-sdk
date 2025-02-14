@@ -24,6 +24,7 @@ if (require.main === module) {
 				headers: {
 					"X-Auth-Header": process.env.TOKEN as string,
 				},
+				method: "POST",
 			}
 		);
 		process.exitCode = 1;
