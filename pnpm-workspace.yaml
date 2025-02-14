@@ -13,7 +13,7 @@ catalog:
   # rimraf@6 requires node 20 or >=22
   rimraf: "^5.0.10"
   typescript: "^5.7.2"
-  undici: "^5.28.4"
+  undici: "^5.28.5"
   vitest: "~3.0.5"
   vite: "^5.4.14"
 
