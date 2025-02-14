@@ -1185,10 +1185,12 @@ export async function main(argv: string[]): Promise<void> {
 			}
 
 			await closeSentry();
+			const controller = new AbortController();
+
 			await Promise.race([
-				await Promise.allSettled(dispatcher?.requests ?? []),
-				setTimeout(1000), // Ensure we don't hang indefinitely
-			]);
+				Promise.allSettled(dispatcher?.requests ?? []),
+				setTimeout(1000, undefined, controller), // Ensure we don't hang indefinitely
+			]).then(() => controller.abort()); // Ensure the Wrangler process doesn't hang waiting for setTimeout(1000) to complete
 		} catch (e) {
 			logger.error(e);
 			// Only re-throw if we haven't already re-thrown an exception from a

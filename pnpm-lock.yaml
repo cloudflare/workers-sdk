@@ -7,14 +7,14 @@ settings:
 catalogs:
   default:
     '@vitest/runner':
-      specifier: ~2.1.9
-      version: 2.1.9
+      specifier: ~3.0.5
+      version: 3.0.5
     '@vitest/snapshot':
-      specifier: ~2.1.9
-      version: 2.1.9
+      specifier: ~3.0.5
+      version: 3.0.5
     '@vitest/ui':
-      specifier: ~2.1.9
-      version: 2.1.9
+      specifier: ~3.0.5
+      version: 3.0.5
     rimraf:
       specifier: ^5.0.10
       version: 5.0.10
@@ -28,8 +28,8 @@ catalogs:
       specifier: ^5.4.14
       version: 5.4.14
     vitest:
-      specifier: ~2.1.9
-      version: 2.1.9
+      specifier: ~3.0.5
+      version: 3.0.5
   vite-plugin:
     vite:
       specifier: ^6.1.0
@@ -129,7 +129,7 @@ importers:
         version: 5.4.14(@types/node@18.19.74)
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
 
   fixtures/additional-modules:
     devDependencies:
@@ -147,7 +147,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -165,7 +165,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -192,7 +192,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -213,7 +213,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -231,7 +231,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -252,7 +252,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -276,7 +276,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -300,7 +300,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
 
   fixtures/isomorphic-random-example: {}
 
@@ -325,7 +325,7 @@ importers:
         version: 5.7.3
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -337,7 +337,7 @@ importers:
         version: 7.0.0
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -362,7 +362,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -380,7 +380,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -407,7 +407,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -425,7 +425,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -446,7 +446,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -474,7 +474,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -492,7 +492,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -510,7 +510,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -528,7 +528,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -549,7 +549,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -567,7 +567,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -604,7 +604,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -625,7 +625,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -640,7 +640,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -661,7 +661,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -679,7 +679,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -697,7 +697,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -715,7 +715,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -733,7 +733,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -751,7 +751,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -769,7 +769,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -787,7 +787,7 @@ importers:
         version: 5.7.3
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -808,7 +808,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -823,7 +823,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -848,7 +848,7 @@ importers:
     devDependencies:
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -899,7 +899,7 @@ importers:
         version: 5.4.14(@types/node@18.19.74)
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -926,7 +926,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -958,7 +958,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -979,7 +979,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1000,7 +1000,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1018,7 +1018,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1036,7 +1036,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1258,7 +1258,7 @@ importers:
         version: 4.2.0(typescript@5.7.3)(vite@5.4.14(@types/node@18.19.74))
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       which-pm-runs:
         specifier: ^1.1.0
         version: 1.1.0
@@ -1599,6 +1599,9 @@ importers:
       glob:
         specifier: ^10.4.5
         version: 10.4.5
+      vitest:
+        specifier: ~2.1.0
+        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)
 
   packages/playground-preview-worker:
     dependencies:
@@ -1734,7 +1737,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -1795,7 +1798,7 @@ importers:
         version: 6.1.0(@types/node@18.19.74)(jiti@2.4.2)
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -2317,10 +2320,10 @@ importers:
         version: 7.5.1
       '@vitest/runner':
         specifier: catalog:default
-        version: 2.1.9
+        version: 3.0.5
       '@vitest/snapshot':
         specifier: catalog:default
-        version: 2.1.9
+        version: 3.0.5
       capnp-es:
         specifier: ^0.0.7
         version: 0.0.7(typescript@5.7.3)
@@ -2335,7 +2338,7 @@ importers:
         version: 5.28.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
 
   packages/workers-editor-shared:
     dependencies:
@@ -2518,7 +2521,7 @@ importers:
         version: link:../eslint-config-worker
       '@cloudflare/vitest-pool-workers':
         specifier: ^0.5.31
-        version: 0.5.31(@cloudflare/workers-types@4.20250204.0)(@vitest/runner@2.1.9)(@vitest/snapshot@2.1.9)(vitest@2.1.9)
+        version: 0.5.31(@cloudflare/workers-types@4.20250204.0)(@vitest/runner@3.0.5)(@vitest/snapshot@3.0.5)(vitest@2.1.9)
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
@@ -2547,8 +2550,8 @@ importers:
         specifier: catalog:default
         version: 5.7.3
       vitest:
-        specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        specifier: ~2.1.0
+        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)
 
   packages/workers-tsconfig: {}
 
@@ -2571,7 +2574,7 @@ importers:
         version: 5.7.3
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -2614,7 +2617,7 @@ importers:
         version: 5.7.3
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
 
   packages/wrangler:
     dependencies:
@@ -2742,7 +2745,7 @@ importers:
         version: 17.0.24
       '@vitest/ui':
         specifier: catalog:default
-        version: 2.1.9(vitest@2.1.9)
+        version: 3.0.5(vitest@3.0.5)
       '@webcontainer/env':
         specifier: ^1.1.0
         version: 1.1.0
@@ -2880,10 +2883,10 @@ importers:
         version: 1.5.4
       vitest:
         specifier: catalog:default
-        version: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       vitest-websocket-mock:
         specifier: ^0.4.0
-        version: 0.4.0(vitest@2.1.9)
+        version: 0.4.0(vitest@3.0.5)
       ws:
         specifier: ^8.18.0
         version: 8.18.0
@@ -3495,121 +3498,121 @@ packages:
       vitest: 2.0.x - 2.1.x
 
   '@cloudflare/workerd-darwin-64@1.20241106.1':
-    resolution: {integrity: sha512-zxvaToi1m0qzAScrxFt7UvFVqU8DxrCO2CinM1yQkv5no7pA1HolpIrwZ0xOhR3ny64Is2s/J6BrRjpO5dM9Zw==, tarball: https://registry.npmjs.org/@cloudflare/workerd-darwin-64/-/workerd-darwin-64-1.20241106.1.tgz}
+    resolution: {integrity: sha512-zxvaToi1m0qzAScrxFt7UvFVqU8DxrCO2CinM1yQkv5no7pA1HolpIrwZ0xOhR3ny64Is2s/J6BrRjpO5dM9Zw==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [darwin]
 
   '@cloudflare/workerd-darwin-64@1.20241230.0':
-    resolution: {integrity: sha512-BZHLg4bbhNQoaY1Uan81O3FV/zcmWueC55juhnaI7NAobiQth9RppadPNpxNAmS9fK2mR5z8xrwMQSQrHmztyQ==, tarball: https://registry.npmjs.org/@cloudflare/workerd-darwin-64/-/workerd-darwin-64-1.20241230.0.tgz}
+    resolution: {integrity: sha512-BZHLg4bbhNQoaY1Uan81O3FV/zcmWueC55juhnaI7NAobiQth9RppadPNpxNAmS9fK2mR5z8xrwMQSQrHmztyQ==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [darwin]
 
   '@cloudflare/workerd-darwin-64@1.20250124.0':
-    resolution: {integrity: sha512-P5Z5KfVAuoCidIc0o2JPQZFLNTXDjtxN8vhtreCUr6V+xF5pqDNwQqeBDnDDF0gcszFQOYi2OZAB9e1MwssTwA==, tarball: https://registry.npmjs.org/@cloudflare/workerd-darwin-64/-/workerd-darwin-64-1.20250124.0.tgz}
+    resolution: {integrity: sha512-P5Z5KfVAuoCidIc0o2JPQZFLNTXDjtxN8vhtreCUr6V+xF5pqDNwQqeBDnDDF0gcszFQOYi2OZAB9e1MwssTwA==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [darwin]
 
   '@cloudflare/workerd-darwin-64@1.20250204.0':
-    resolution: {integrity: sha512-HpsgbWEfvdcwuZ8WAZhi1TlSCyyHC3tbghpKsOqGDaQNltyAFAWqa278TPNfcitYf/FmV4961v3eqUE+RFdHNQ==, tarball: https://registry.npmjs.org/@cloudflare/workerd-darwin-64/-/workerd-darwin-64-1.20250204.0.tgz}
+    resolution: {integrity: sha512-HpsgbWEfvdcwuZ8WAZhi1TlSCyyHC3tbghpKsOqGDaQNltyAFAWqa278TPNfcitYf/FmV4961v3eqUE+RFdHNQ==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [darwin]
 
   '@cloudflare/workerd-darwin-arm64@1.20241106.1':
-    resolution: {integrity: sha512-j3dg/42D/bPgfNP3cRUBxF+4waCKO/5YKwXNj+lnVOwHxDu+ne5pFw9TIkKYcWTcwn0ZUkbNZNM5rhJqRn4xbg==, tarball: https://registry.npmjs.org/@cloudflare/workerd-darwin-arm64/-/workerd-darwin-arm64-1.20241106.1.tgz}
+    resolution: {integrity: sha512-j3dg/42D/bPgfNP3cRUBxF+4waCKO/5YKwXNj+lnVOwHxDu+ne5pFw9TIkKYcWTcwn0ZUkbNZNM5rhJqRn4xbg==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [darwin]
 
   '@cloudflare/workerd-darwin-arm64@1.20241230.0':
-    resolution: {integrity: sha512-lllxycj7EzYoJ0VOJh8M3palUgoonVrILnzGrgsworgWlIpgjfXGS7b41tEGCw6AxSxL9prmTIGtfSPUvn/rjg==, tarball: https://registry.npmjs.org/@cloudflare/workerd-darwin-arm64/-/workerd-darwin-arm64-1.20241230.0.tgz}
+    resolution: {integrity: sha512-lllxycj7EzYoJ0VOJh8M3palUgoonVrILnzGrgsworgWlIpgjfXGS7b41tEGCw6AxSxL9prmTIGtfSPUvn/rjg==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [darwin]
 
   '@cloudflare/workerd-darwin-arm64@1.20250124.0':
-    resolution: {integrity: sha512-lVxf6qIfmJ5rS6rmGKV7lt6ApY6nhD4kAQTK4vKYm/npk2sXod6LASIY0U4WBCwy4N+S75a8hP2QtmQf+KV3Iw==, tarball: https://registry.npmjs.org/@cloudflare/workerd-darwin-arm64/-/workerd-darwin-arm64-1.20250124.0.tgz}
+    resolution: {integrity: sha512-lVxf6qIfmJ5rS6rmGKV7lt6ApY6nhD4kAQTK4vKYm/npk2sXod6LASIY0U4WBCwy4N+S75a8hP2QtmQf+KV3Iw==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [darwin]
 
   '@cloudflare/workerd-darwin-arm64@1.20250204.0':
-    resolution: {integrity: sha512-AJ8Tk7KMJqePlch3SH8oL41ROtsrb07hKRHD6M+FvGC3tLtf26rpteAAMNYKMDYKzFNFUIKZNijYDFZjBFndXQ==, tarball: https://registry.npmjs.org/@cloudflare/workerd-darwin-arm64/-/workerd-darwin-arm64-1.20250204.0.tgz}
+    resolution: {integrity: sha512-AJ8Tk7KMJqePlch3SH8oL41ROtsrb07hKRHD6M+FvGC3tLtf26rpteAAMNYKMDYKzFNFUIKZNijYDFZjBFndXQ==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [darwin]
 
   '@cloudflare/workerd-linux-64@1.20241106.1':
-    resolution: {integrity: sha512-Ih+Ye8E1DMBXcKrJktGfGztFqHKaX1CeByqshmTbODnWKHt6O65ax3oTecUwyC0+abuyraOpAtdhHNpFMhUkmw==, tarball: https://registry.npmjs.org/@cloudflare/workerd-linux-64/-/workerd-linux-64-1.20241106.1.tgz}
+    resolution: {integrity: sha512-Ih+Ye8E1DMBXcKrJktGfGztFqHKaX1CeByqshmTbODnWKHt6O65ax3oTecUwyC0+abuyraOpAtdhHNpFMhUkmw==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [linux]
 
   '@cloudflare/workerd-linux-64@1.20241230.0':
-    resolution: {integrity: sha512-Y3mHcW0KghOmWdNZyHYpEOG4Ba/ga8tht5vj1a+WXfagEjMO8Y98XhZUlCaYa9yB7Wh5jVcK5LM2jlO/BLgqpA==, tarball: https://registry.npmjs.org/@cloudflare/workerd-linux-64/-/workerd-linux-64-1.20241230.0.tgz}
+    resolution: {integrity: sha512-Y3mHcW0KghOmWdNZyHYpEOG4Ba/ga8tht5vj1a+WXfagEjMO8Y98XhZUlCaYa9yB7Wh5jVcK5LM2jlO/BLgqpA==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [linux]
 
   '@cloudflare/workerd-linux-64@1.20250124.0':
-    resolution: {integrity: sha512-5S4GzN08vW/CfzaM1rVAkRhPPSDX1O1t7u0pj+xdbGl4GcazBzE4ZLre+y9OMplZ9PBCkxXkRWqHXzabWA1x4A==, tarball: https://registry.npmjs.org/@cloudflare/workerd-linux-64/-/workerd-linux-64-1.20250124.0.tgz}
+    resolution: {integrity: sha512-5S4GzN08vW/CfzaM1rVAkRhPPSDX1O1t7u0pj+xdbGl4GcazBzE4ZLre+y9OMplZ9PBCkxXkRWqHXzabWA1x4A==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [linux]
 
   '@cloudflare/workerd-linux-64@1.20250204.0':
-    resolution: {integrity: sha512-RIUfUSnDC8h73zAa+u1K2Frc7nc+eeQoBBP7SaqsRe6JdX8jfIv/GtWjQWCoj8xQFgLvhpJKZ4sTTTV+AilQbw==, tarball: https://registry.npmjs.org/@cloudflare/workerd-linux-64/-/workerd-linux-64-1.20250204.0.tgz}
+    resolution: {integrity: sha512-RIUfUSnDC8h73zAa+u1K2Frc7nc+eeQoBBP7SaqsRe6JdX8jfIv/GtWjQWCoj8xQFgLvhpJKZ4sTTTV+AilQbw==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [linux]
 
   '@cloudflare/workerd-linux-arm64@1.20241106.1':
-    resolution: {integrity: sha512-mdQFPk4+14Yywn7n1xIzI+6olWM8Ybz10R7H3h+rk0XulMumCWUCy1CzIDauOx6GyIcSgKIibYMssVHZR30ObA==, tarball: https://registry.npmjs.org/@cloudflare/workerd-linux-arm64/-/workerd-linux-arm64-1.20241106.1.tgz}
+    resolution: {integrity: sha512-mdQFPk4+14Yywn7n1xIzI+6olWM8Ybz10R7H3h+rk0XulMumCWUCy1CzIDauOx6GyIcSgKIibYMssVHZR30ObA==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [linux]
 
   '@cloudflare/workerd-linux-arm64@1.20241230.0':
-    resolution: {integrity: sha512-IAjhsWPlHzhhkJ6I49sDG6XfMnhPvv0szKGXxTWQK/IWMrbGdHm4RSfNKBSoLQm67jGMIzbmcrX9UIkms27Y1g==, tarball: https://registry.npmjs.org/@cloudflare/workerd-linux-arm64/-/workerd-linux-arm64-1.20241230.0.tgz}
+    resolution: {integrity: sha512-IAjhsWPlHzhhkJ6I49sDG6XfMnhPvv0szKGXxTWQK/IWMrbGdHm4RSfNKBSoLQm67jGMIzbmcrX9UIkms27Y1g==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [linux]
 
   '@cloudflare/workerd-linux-arm64@1.20250124.0':
-    resolution: {integrity: sha512-CHSYnutDfXgUWL9WcP0GbzIb5OyC9RZVCJGhKbDTQy6/uH7AivNcLzXtOhNdqetKjERmOxUbL9Us7vcMQLztog==, tarball: https://registry.npmjs.org/@cloudflare/workerd-linux-arm64/-/workerd-linux-arm64-1.20250124.0.tgz}
+    resolution: {integrity: sha512-CHSYnutDfXgUWL9WcP0GbzIb5OyC9RZVCJGhKbDTQy6/uH7AivNcLzXtOhNdqetKjERmOxUbL9Us7vcMQLztog==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [linux]
 
   '@cloudflare/workerd-linux-arm64@1.20250204.0':
-    resolution: {integrity: sha512-8Ql8jDjoIgr2J7oBD01kd9kduUz60njofrBpAOkjCPed15He8e8XHkYaYow3g0xpae4S2ryrPOeoD3M64sRxeg==, tarball: https://registry.npmjs.org/@cloudflare/workerd-linux-arm64/-/workerd-linux-arm64-1.20250204.0.tgz}
+    resolution: {integrity: sha512-8Ql8jDjoIgr2J7oBD01kd9kduUz60njofrBpAOkjCPed15He8e8XHkYaYow3g0xpae4S2ryrPOeoD3M64sRxeg==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [linux]
 
   '@cloudflare/workerd-windows-64@1.20241106.1':
-    resolution: {integrity: sha512-4rtcss31E/Rb/PeFocZfr+B9i1MdrkhsTBWizh8siNR4KMmkslU2xs2wPaH1z8+ErxkOsHrKRa5EPLh5rIiFeg==, tarball: https://registry.npmjs.org/@cloudflare/workerd-windows-64/-/workerd-windows-64-1.20241106.1.tgz}
+    resolution: {integrity: sha512-4rtcss31E/Rb/PeFocZfr+B9i1MdrkhsTBWizh8siNR4KMmkslU2xs2wPaH1z8+ErxkOsHrKRa5EPLh5rIiFeg==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
 
   '@cloudflare/workerd-windows-64@1.20241230.0':
-    resolution: {integrity: sha512-y5SPIk9iOb2gz+yWtHxoeMnjPnkYQswiCJ480oHC6zexnJLlKTpcmBCjDH1nWCT4pQi8F25gaH8thgElf4NvXQ==, tarball: https://registry.npmjs.org/@cloudflare/workerd-windows-64/-/workerd-windows-64-1.20241230.0.tgz}
+    resolution: {integrity: sha512-y5SPIk9iOb2gz+yWtHxoeMnjPnkYQswiCJ480oHC6zexnJLlKTpcmBCjDH1nWCT4pQi8F25gaH8thgElf4NvXQ==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
 
   '@cloudflare/workerd-windows-64@1.20250124.0':
-    resolution: {integrity: sha512-5TunEy5x4pNUQ10Z47qP5iF6m3X9uB2ZScKDLkNaWtbQ7EcMCapOWzuynVkTKIMBgDeKw6DAB8nbbkybPyMS9w==, tarball: https://registry.npmjs.org/@cloudflare/workerd-windows-64/-/workerd-windows-64-1.20250124.0.tgz}
+    resolution: {integrity: sha512-5TunEy5x4pNUQ10Z47qP5iF6m3X9uB2ZScKDLkNaWtbQ7EcMCapOWzuynVkTKIMBgDeKw6DAB8nbbkybPyMS9w==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
 
   '@cloudflare/workerd-windows-64@1.20250204.0':
-    resolution: {integrity: sha512-RpDJO3+to+e17X3EWfRCagboZYwBz2fowc+jL53+fd7uD19v3F59H48lw2BDpHJMRyhg6ouWcpM94OhsHv8ecA==, tarball: https://registry.npmjs.org/@cloudflare/workerd-windows-64/-/workerd-windows-64-1.20250204.0.tgz}
+    resolution: {integrity: sha512-RpDJO3+to+e17X3EWfRCagboZYwBz2fowc+jL53+fd7uD19v3F59H48lw2BDpHJMRyhg6ouWcpM94OhsHv8ecA==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
@@ -6106,11 +6109,25 @@ packages:
   '@vitest/expect@2.1.9':
     resolution: {integrity: sha512-UJCIkTBenHeKT1TTlKMJWy1laZewsRIzYighyYiJKZreqtdxSos/S1t+ktRMQWu2CKqaarrkeszJx1cgC5tGZw==}
 
+  '@vitest/expect@3.0.5':
+    resolution: {integrity: sha512-nNIOqupgZ4v5jWuQx2DSlHLEs7Q4Oh/7AYwNyE+k0UQzG7tSmjPXShUikn1mpNGzYEN2jJbTvLejwShMitovBA==}
+
   '@vitest/mocker@2.1.9':
     resolution: {integrity: sha512-tVL6uJgoUdi6icpxmdrn5YNo3g3Dxv+IHJBr0GXHaEdTcw3F+cPKnsXFhli6nO+f/6SDKPHEK1UN+k+TQv0Ehg==}
     peerDependencies:
       msw: ^2.4.9
       vite: ^5.0.0
+    peerDependenciesMeta:
+      msw:
+        optional: true
+      vite:
+        optional: true
+
+  '@vitest/mocker@3.0.5':
+    resolution: {integrity: sha512-CLPNBFBIE7x6aEGbIjaQAX03ZZlBMaWwAjBdMkIf/cAn6xzLTiM3zYqO/WAbieEjsAZir6tO71mzeHZoodThvw==}
+    peerDependencies:
+      msw: ^2.4.9
+      vite: ^5.0.0 || ^6.0.0
     peerDependenciesMeta:
       msw:
         optional: true
@@ -6123,25 +6140,45 @@ packages:
   '@vitest/pretty-format@2.1.9':
     resolution: {integrity: sha512-KhRIdGV2U9HOUzxfiHmY8IFHTdqtOhIzCpd8WRdJiE7D/HUcZVD0EgQCVjm+Q9gkUXWgBvMmTtZgIG48wq7sOQ==}
 
+  '@vitest/pretty-format@3.0.5':
+    resolution: {integrity: sha512-CjUtdmpOcm4RVtB+up8r2vVDLR16Mgm/bYdkGFe3Yj/scRfCpbSi2W/BDSDcFK7ohw8UXvjMbOp9H4fByd/cOA==}
+
   '@vitest/runner@2.1.9':
     resolution: {integrity: sha512-ZXSSqTFIrzduD63btIfEyOmNcBmQvgOVsPNPe0jYtESiXkhd8u2erDLnMxmGrDCwHCCHE7hxwRDCT3pt0esT4g==}
+
+  '@vitest/runner@3.0.5':
+    resolution: {integrity: sha512-BAiZFityFexZQi2yN4OX3OkJC6scwRo8EhRB0Z5HIGGgd2q+Nq29LgHU/+ovCtd0fOfXj5ZI6pwdlUmC5bpi8A==}
 
   '@vitest/snapshot@2.1.9':
     resolution: {integrity: sha512-oBO82rEjsxLNJincVhLhaxxZdEtV0EFHMK5Kmx5sJ6H9L183dHECjiefOAdnqpIgT5eZwT04PoggUnW88vOBNQ==}
 
+  '@vitest/snapshot@3.0.5':
+    resolution: {integrity: sha512-GJPZYcd7v8QNUJ7vRvLDmRwl+a1fGg4T/54lZXe+UOGy47F9yUfE18hRCtXL5aHN/AONu29NGzIXSVFh9K0feA==}
+
   '@vitest/spy@2.1.9':
     resolution: {integrity: sha512-E1B35FwzXXTs9FHNK6bDszs7mtydNi5MIfUWpceJ8Xbfb1gBMscAnwLbEu+B44ed6W3XjL9/ehLPHR1fkf1KLQ==}
+
+  '@vitest/spy@3.0.5':
+    resolution: {integrity: sha512-5fOzHj0WbUNqPK6blI/8VzZdkBlQLnT25knX0r4dbZI9qoZDf3qAdjoMmDcLG5A83W6oUUFJgUd0EYBc2P5xqg==}
 
   '@vitest/ui@2.1.9':
     resolution: {integrity: sha512-izzd2zmnk8Nl5ECYkW27328RbQ1nKvkm6Bb5DAaz1Gk59EbLkiCMa6OLT0NoaAYTjOFS6N+SMYW1nh4/9ljPiw==}
     peerDependencies:
       vitest: 2.1.9
 
+  '@vitest/ui@3.0.5':
+    resolution: {integrity: sha512-gw2noso6WI+2PeMVCZFntdATS6xl9qhQcbhkPQ9sOmx/Xn0f4Bx4KDSbD90jpJPF0l5wOzSoGCmKyVR3W612mg==}
+    peerDependencies:
+      vitest: 3.0.5
+
   '@vitest/utils@2.1.8':
     resolution: {integrity: sha512-dwSoui6djdwbfFmIgbIjX2ZhIoG7Ex/+xpxyiEgIGzjliY8xGkcpITKTlp6B4MgtGkF2ilvm97cPM96XZaAgcA==}
 
   '@vitest/utils@2.1.9':
     resolution: {integrity: sha512-v0psaMSkNJ3A2NMrUEHFRzJtDPFn+/VWZ5WxImB21T9fjucJRmS7xCS3ppEnARb9y11OAzaD+P2Ps+b+BGX5iQ==}
+
+  '@vitest/utils@3.0.5':
+    resolution: {integrity: sha512-N9AX0NUoUtVwKwy21JtwzaqR5L5R5A99GAbrHfCCXK1lp593i/3AZAXhSP43wRQuxYsflrdzEfXZFo1reR1Nkg==}
 
   '@volar/language-core@2.3.4':
     resolution: {integrity: sha512-wXBhY11qG6pCDAqDnbBRFIDSIwbqkWI7no+lj5+L7IlA7HRIjRP7YQLGzT0LF4lS6eHkMSsclXqy9DwYJasZTQ==}
@@ -7531,6 +7568,9 @@ packages:
   es-module-lexer@1.5.4:
     resolution: {integrity: sha512-MVNK56NiMrOwitFB7cqDwq0CQutbw+0BvLshJSse0MUNU+y1FC3bUS/AQg7oUng+/wKrrki7JfmwtVHkVfPLlw==}
 
+  es-module-lexer@1.6.0:
+    resolution: {integrity: sha512-qqnD1yMU6tk/jnaMosogGySTZP8YtUgAffA9nMN+E/rjxcfRQ6IEk7IiozUjgxKoFHBGjTLnrHB/YC45r/59EQ==}
+
   es-object-atoms@1.0.0:
     resolution: {integrity: sha512-MZ4iQ6JwHOBQjahnjwaC1ZtIBH+2ohjamzAO3oaHcXYup7qxjF2fixyH+Q71voWHeOkI2q/TnJao/KfXYIZWbw==}
     engines: {node: '>= 0.4'}
@@ -7985,6 +8025,9 @@ packages:
 
   flatted@3.3.1:
     resolution: {integrity: sha512-X8cqMLLie7KsNUDSdzeN8FYK9rEt4Dt67OsG/DNGnYTSDBG4uFAJFBnUeiV+zCVAvwFy56IjM9sH51jVaEhNxw==}
+
+  flatted@3.3.2:
+    resolution: {integrity: sha512-AiwGJM8YcNOaobumgtng+6NHuOqC3A7MixFeDafM3X9cIUM+xUXoS5Vfgf+OihAYe20fxqNM9yPBXJzRtZ/4eA==}
 
   for-each@0.3.3:
     resolution: {integrity: sha512-jqYfLp7mo9vIyQf8ykW2v7A+2N4QjeCeI5+Dz9XraiO1ign81wjiH7Fb9vSOWvQfNtmSa4H2RoQTrrXivdUZmw==}
@@ -9790,6 +9833,9 @@ packages:
   pathe@2.0.1:
     resolution: {integrity: sha512-6jpjMpOth5S9ITVu5clZ7NOgHNsv5vRQdheL9ztp2vZmM6fRbLvyua1tiBIL4lk8SAe3ARzeXEly6siXCjDHDw==}
 
+  pathe@2.0.3:
+    resolution: {integrity: sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==}
+
   pathval@2.0.0:
     resolution: {integrity: sha512-vE7JKRyES09KiunauX7nd2Q9/L7lhok4smP9RZTDeD4MVs72Dp2qNFVz39Nz5a0FVEW0BJR6C0DYrq6unoziZA==}
     engines: {node: '>= 14.16'}
@@ -11201,6 +11247,9 @@ packages:
   tinyexec@0.3.1:
     resolution: {integrity: sha512-WiCJLEECkO18gwqIp6+hJg0//p23HXp4S+gGtAKu3mI2F2/sXC4FvHvXvB0zJVVaTPhx1/tOwdbRsa1sOBIKqQ==}
 
+  tinyexec@0.3.2:
+    resolution: {integrity: sha512-KQQR9yN7R5+OSwaK0XQoj22pwHoTlgYqmUscPYoknOoWCWfj/5/ABTMRi69FrKU5ffPVh5QcFikpWJI/P1ocHA==}
+
   tinyglobby@0.2.10:
     resolution: {integrity: sha512-Zc+8eJlFMvgatPZTl6A9L/yht8QqdmUNtURHaKZLmKBE12hNPSrqNkUp2cs3M/UKmNVVAMFQYSjYIVHDjW5zew==}
     engines: {node: '>=12.0.0'}
@@ -11212,8 +11261,16 @@ packages:
     resolution: {integrity: sha512-URZYihUbRPcGv95En+sz6MfghfIc2OJ1sv/RmhWZLouPY0/8Vo80viwPvg3dlaS9fuq7fQMEfgRRK7BBZThBEA==}
     engines: {node: ^18.0.0 || >=20.0.0}
 
+  tinypool@1.0.2:
+    resolution: {integrity: sha512-al6n+QEANGFOMf/dmUMsuS5/r9B06uwlyNjZZql/zv8J7ybHCgoihBNORZCY2mzUuAnomQa2JdhyHKzZxPCrFA==}
+    engines: {node: ^18.0.0 || >=20.0.0}
+
   tinyrainbow@1.2.0:
     resolution: {integrity: sha512-weEDEq7Z5eTHPDh4xjX789+fHfF+P8boiFB+0vbWzpbnbsEr/GRaohi/uMKxg8RZMXnl1ItAi/IUHWMsjDV7kQ==}
+    engines: {node: '>=14.0.0'}
+
+  tinyrainbow@2.0.0:
+    resolution: {integrity: sha512-op4nsTR47R6p0vMUUoYl/a+ljLFVtlfaXkLQmqfLR1qHma1h/ysYk4hEXZ880bf2CYgTskvTa/e196Vd5dDQXw==}
     engines: {node: '>=14.0.0'}
 
   tinyspy@3.0.2:
@@ -11716,6 +11773,11 @@ packages:
     engines: {node: ^18.0.0 || >=20.0.0}
     hasBin: true
 
+  vite-node@3.0.5:
+    resolution: {integrity: sha512-02JEJl7SbtwSDJdYS537nU6l+ktdvcREfLksk/NDAqtdKWGqHl+joXzEubHROmS3E6pip+Xgu2tFezMu75jH7A==}
+    engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
+    hasBin: true
+
   vite-plugin-dts@4.0.1:
     resolution: {integrity: sha512-JFbAKMjJdJbeXJVwQNoi8M26lP+5Ene4/ryv9w0Z7Ca5N0DdxYEak9V3C0tqwHO7WZ9JLbwMsuUZOqYIyBRwSQ==}
     engines: {node: ^14.18.0 || >=16.0.0}
@@ -11823,6 +11885,34 @@ packages:
       jsdom: '*'
     peerDependenciesMeta:
       '@edge-runtime/vm':
+        optional: true
+      '@types/node':
+        optional: true
+      '@vitest/browser':
+        optional: true
+      '@vitest/ui':
+        optional: true
+      happy-dom:
+        optional: true
+      jsdom:
+        optional: true
+
+  vitest@3.0.5:
+    resolution: {integrity: sha512-4dof+HvqONw9bvsYxtkfUp2uHsTN9bV2CZIi1pWgoFpL1Lld8LA1ka9q/ONSsoScAKG7NVGf2stJTI7XRkXb2Q==}
+    engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
+    hasBin: true
+    peerDependencies:
+      '@edge-runtime/vm': '*'
+      '@types/debug': ^4.1.12
+      '@types/node': ^18.19.71
+      '@vitest/browser': 3.0.5
+      '@vitest/ui': 3.0.5
+      happy-dom: '*'
+      jsdom: '*'
+    peerDependenciesMeta:
+      '@edge-runtime/vm':
+        optional: true
+      '@types/debug':
         optional: true
       '@types/node':
         optional: true
@@ -13318,17 +13408,17 @@ snapshots:
       lodash.memoize: 4.1.2
       marked: 0.3.19
 
-  '@cloudflare/vitest-pool-workers@0.5.31(@cloudflare/workers-types@4.20250204.0)(@vitest/runner@2.1.9)(@vitest/snapshot@2.1.9)(vitest@2.1.9)':
+  '@cloudflare/vitest-pool-workers@0.5.31(@cloudflare/workers-types@4.20250204.0)(@vitest/runner@3.0.5)(@vitest/snapshot@3.0.5)(vitest@2.1.9)':
     dependencies:
-      '@vitest/runner': 2.1.9
-      '@vitest/snapshot': 2.1.9
+      '@vitest/runner': 3.0.5
+      '@vitest/snapshot': 3.0.5
       birpc: 0.2.14
       cjs-module-lexer: 1.2.3
       devalue: 4.3.2
       esbuild: 0.17.19
       miniflare: 3.20241106.1
       semver: 7.6.3
-      vitest: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+      vitest: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)
       wrangler: 3.90.0(@cloudflare/workers-types@4.20250204.0)
       zod: 3.22.3
     transitivePeerDependencies:
@@ -13822,7 +13912,7 @@ snapshots:
   '@eslint/eslintrc@2.1.4':
     dependencies:
       ajv: 6.12.6
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       espree: 9.6.1
       globals: 13.24.0
       ignore: 5.3.1
@@ -13869,7 +13959,7 @@ snapshots:
   '@humanwhocodes/config-array@0.11.14':
     dependencies:
       '@humanwhocodes/object-schema': 2.0.3
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       minimatch: 3.1.2
     transitivePeerDependencies:
       - supports-color
@@ -15616,7 +15706,7 @@ snapshots:
       '@typescript-eslint/type-utils': 6.10.0(eslint@8.57.0)(typescript@5.7.3)
       '@typescript-eslint/utils': 6.10.0(eslint@8.57.0)(typescript@5.7.3)
       '@typescript-eslint/visitor-keys': 6.10.0
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       eslint: 8.57.0
       graphemer: 1.4.0
       ignore: 5.3.1
@@ -15652,7 +15742,7 @@ snapshots:
       '@typescript-eslint/types': 6.10.0
       '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.7.3)
       '@typescript-eslint/visitor-keys': 6.10.0
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       eslint: 8.57.0
     optionalDependencies:
       typescript: 5.7.3
@@ -15665,7 +15755,7 @@ snapshots:
       '@typescript-eslint/types': 7.18.0
       '@typescript-eslint/typescript-estree': 7.18.0(typescript@5.6.3)
       '@typescript-eslint/visitor-keys': 7.18.0
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       eslint: 8.57.0
     optionalDependencies:
       typescript: 5.6.3
@@ -15686,7 +15776,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.7.3)
       '@typescript-eslint/utils': 6.10.0(eslint@8.57.0)(typescript@5.7.3)
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       eslint: 8.57.0
       ts-api-utils: 1.4.3(typescript@5.7.3)
     optionalDependencies:
@@ -15698,7 +15788,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/typescript-estree': 7.18.0(typescript@5.6.3)
       '@typescript-eslint/utils': 7.18.0(eslint@8.57.0)(typescript@5.6.3)
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       eslint: 8.57.0
       ts-api-utils: 1.4.3(typescript@5.6.3)
     optionalDependencies:
@@ -15714,7 +15804,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/types': 6.10.0
       '@typescript-eslint/visitor-keys': 6.10.0
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       globby: 11.1.0
       is-glob: 4.0.3
       semver: 7.6.3
@@ -15728,7 +15818,7 @@ snapshots:
     dependencies:
       '@typescript-eslint/types': 7.18.0
       '@typescript-eslint/visitor-keys': 7.18.0
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       globby: 11.1.0
       is-glob: 4.0.3
       minimatch: 9.0.5
@@ -15851,7 +15941,7 @@ snapshots:
 
   '@verdaccio/loaders@8.0.0-next-8.4':
     dependencies:
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       lodash: 4.17.21
     transitivePeerDependencies:
       - supports-color
@@ -15912,7 +16002,7 @@ snapshots:
 
   '@verdaccio/signature@8.0.0-next-8.1':
     dependencies:
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       jsonwebtoken: 9.0.2
     transitivePeerDependencies:
       - supports-color
@@ -15987,9 +16077,24 @@ snapshots:
       chai: 5.1.2
       tinyrainbow: 1.2.0
 
-  '@vitest/mocker@2.1.9(msw@2.4.3(typescript@5.7.3))(vite@5.4.14(@types/node@18.19.74))':
+  '@vitest/expect@3.0.5':
+    dependencies:
+      '@vitest/spy': 3.0.5
+      '@vitest/utils': 3.0.5
+      chai: 5.1.2
+      tinyrainbow: 2.0.0
+
+  '@vitest/mocker@2.1.9(vite@5.4.14(@types/node@18.19.74))':
     dependencies:
       '@vitest/spy': 2.1.9
+      estree-walker: 3.0.3
+      magic-string: 0.30.17
+    optionalDependencies:
+      vite: 5.4.14(@types/node@18.19.74)
+
+  '@vitest/mocker@3.0.5(msw@2.4.3(typescript@5.7.3))(vite@5.4.14(@types/node@18.19.74))':
+    dependencies:
+      '@vitest/spy': 3.0.5
       estree-walker: 3.0.3
       magic-string: 0.30.17
     optionalDependencies:
@@ -16004,10 +16109,19 @@ snapshots:
     dependencies:
       tinyrainbow: 1.2.0
 
+  '@vitest/pretty-format@3.0.5':
+    dependencies:
+      tinyrainbow: 2.0.0
+
   '@vitest/runner@2.1.9':
     dependencies:
       '@vitest/utils': 2.1.9
       pathe: 1.1.2
+
+  '@vitest/runner@3.0.5':
+    dependencies:
+      '@vitest/utils': 3.0.5
+      pathe: 2.0.3
 
   '@vitest/snapshot@2.1.9':
     dependencies:
@@ -16015,7 +16129,17 @@ snapshots:
       magic-string: 0.30.17
       pathe: 1.1.2
 
+  '@vitest/snapshot@3.0.5':
+    dependencies:
+      '@vitest/pretty-format': 3.0.5
+      magic-string: 0.30.17
+      pathe: 2.0.3
+
   '@vitest/spy@2.1.9':
+    dependencies:
+      tinyspy: 3.0.2
+
+  '@vitest/spy@3.0.5':
     dependencies:
       tinyspy: 3.0.2
 
@@ -16023,12 +16147,24 @@ snapshots:
     dependencies:
       '@vitest/utils': 2.1.9
       fflate: 0.8.2
-      flatted: 3.3.1
+      flatted: 3.3.2
       pathe: 1.1.2
       sirv: 3.0.0
       tinyglobby: 0.2.10
       tinyrainbow: 1.2.0
-      vitest: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+      vitest: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)
+    optional: true
+
+  '@vitest/ui@3.0.5(vitest@3.0.5)':
+    dependencies:
+      '@vitest/utils': 3.0.5
+      fflate: 0.8.2
+      flatted: 3.3.2
+      pathe: 2.0.3
+      sirv: 3.0.0
+      tinyglobby: 0.2.10
+      tinyrainbow: 2.0.0
+      vitest: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
 
   '@vitest/utils@2.1.8':
     dependencies:
@@ -16041,6 +16177,12 @@ snapshots:
       '@vitest/pretty-format': 2.1.9
       loupe: 3.1.2
       tinyrainbow: 1.2.0
+
+  '@vitest/utils@3.0.5':
+    dependencies:
+      '@vitest/pretty-format': 3.0.5
+      loupe: 3.1.2
+      tinyrainbow: 2.0.0
 
   '@volar/language-core@2.3.4':
     dependencies:
@@ -16469,7 +16611,7 @@ snapshots:
       common-path-prefix: 3.0.0
       concordance: 5.0.4
       currently-unhandled: 0.4.1
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       emittery: 1.0.1
       figures: 6.0.1
       globby: 14.0.1
@@ -17626,6 +17768,8 @@ snapshots:
 
   es-module-lexer@1.5.4: {}
 
+  es-module-lexer@1.6.0: {}
+
   es-object-atoms@1.0.0:
     dependencies:
       es-errors: 1.3.0
@@ -17650,7 +17794,7 @@ snapshots:
 
   esbuild-register@3.5.0(esbuild@0.17.19):
     dependencies:
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       esbuild: 0.17.19
     transitivePeerDependencies:
       - supports-color
@@ -17939,7 +18083,7 @@ snapshots:
       ajv: 6.12.6
       chalk: 4.1.2
       cross-spawn: 7.0.3
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       doctrine: 3.0.0
       escape-string-regexp: 4.0.0
       eslint-scope: 7.2.2
@@ -18289,6 +18433,8 @@ snapshots:
   flat@5.0.2: {}
 
   flatted@3.3.1: {}
+
+  flatted@3.3.2: {}
 
   for-each@0.3.3:
     dependencies:
@@ -18664,7 +18810,7 @@ snapshots:
   http-proxy-agent@7.0.2:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -18690,13 +18836,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  https-proxy-agent@7.0.2:
-    dependencies:
-      agent-base: 7.1.3
-      debug: 4.3.7(supports-color@8.1.1)
-    transitivePeerDependencies:
-      - supports-color
-
   https-proxy-agent@7.0.2(supports-color@9.2.2):
     dependencies:
       agent-base: 7.1.3
@@ -18707,7 +18846,7 @@ snapshots:
   https-proxy-agent@7.0.6:
     dependencies:
       agent-base: 7.1.3
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
     transitivePeerDependencies:
       - supports-color
 
@@ -20007,7 +20146,7 @@ snapshots:
       debug: 4.4.0(supports-color@9.2.2)
       get-uri: 6.0.1
       http-proxy-agent: 7.0.2
-      https-proxy-agent: 7.0.2
+      https-proxy-agent: 7.0.2(supports-color@9.2.2)
       pac-resolver: 7.0.0
       socks-proxy-agent: 8.0.2
     transitivePeerDependencies:
@@ -20155,6 +20294,8 @@ snapshots:
   pathe@1.1.2: {}
 
   pathe@2.0.1: {}
+
+  pathe@2.0.3: {}
 
   pathval@2.0.0: {}
 
@@ -20616,7 +20757,7 @@ snapshots:
       agent-base: 7.1.3
       debug: 4.4.0(supports-color@9.2.2)
       http-proxy-agent: 7.0.2
-      https-proxy-agent: 7.0.2
+      https-proxy-agent: 7.0.2(supports-color@9.2.2)
       lru-cache: 7.18.3
       pac-proxy-agent: 7.0.1
       proxy-from-env: 1.1.0
@@ -21695,6 +21836,8 @@ snapshots:
 
   tinyexec@0.3.1: {}
 
+  tinyexec@0.3.2: {}
+
   tinyglobby@0.2.10:
     dependencies:
       fdir: 6.4.2(picomatch@4.0.2)
@@ -21707,7 +21850,11 @@ snapshots:
 
   tinypool@1.0.1: {}
 
+  tinypool@1.0.2: {}
+
   tinyrainbow@1.2.0: {}
+
+  tinyrainbow@2.0.0: {}
 
   tinyspy@3.0.2: {}
 
@@ -21854,7 +22001,7 @@ snapshots:
       cac: 6.7.14
       chokidar: 3.6.0
       consola: 3.3.3
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       esbuild: 0.23.1
       execa: 5.1.1
       joycon: 3.1.1
@@ -22289,12 +22436,30 @@ snapshots:
       core-util-is: 1.0.2
       extsprintf: 1.3.0
 
-  vite-node@2.1.9(@types/node@18.19.74)(supports-color@9.2.2):
+  vite-node@2.1.9(@types/node@18.19.74):
     dependencies:
       cac: 6.7.14
       debug: 4.4.0(supports-color@9.2.2)
       es-module-lexer: 1.5.4
       pathe: 1.1.2
+      vite: 5.4.14(@types/node@18.19.74)
+    transitivePeerDependencies:
+      - '@types/node'
+      - less
+      - lightningcss
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+  vite-node@3.0.5(@types/node@18.19.74)(supports-color@9.2.2):
+    dependencies:
+      cac: 6.7.14
+      debug: 4.4.0(supports-color@9.2.2)
+      es-module-lexer: 1.6.0
+      pathe: 2.0.3
       vite: 5.4.14(@types/node@18.19.74)
     transitivePeerDependencies:
       - '@types/node'
@@ -22314,7 +22479,7 @@ snapshots:
       '@volar/typescript': 2.3.4
       '@vue/language-core': 2.0.29(typescript@5.7.3)
       compare-versions: 6.1.1
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       kolorist: 1.8.0
       local-pkg: 0.5.0
       magic-string: 0.30.17
@@ -22329,7 +22494,7 @@ snapshots:
 
   vite-tsconfig-paths@4.2.0(typescript@5.7.3)(vite@5.4.14(@types/node@18.19.74)):
     dependencies:
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       globrex: 0.1.2
       tsconfck: 2.1.1(typescript@5.7.3)
     optionalDependencies:
@@ -22357,16 +22522,16 @@ snapshots:
       fsevents: 2.3.3
       jiti: 2.4.2
 
-  vitest-websocket-mock@0.4.0(vitest@2.1.9):
+  vitest-websocket-mock@0.4.0(vitest@3.0.5):
     dependencies:
       '@vitest/utils': 2.1.8
       mock-socket: 9.3.1
-      vitest: 2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+      vitest: 3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
 
-  vitest@2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2):
+  vitest@2.1.9(@types/node@18.19.74)(@vitest/ui@2.1.9):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(msw@2.4.3(typescript@5.7.3))(vite@5.4.14(@types/node@18.19.74))
+      '@vitest/mocker': 2.1.9(vite@5.4.14(@types/node@18.19.74))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9
@@ -22383,11 +22548,47 @@ snapshots:
       tinypool: 1.0.1
       tinyrainbow: 1.2.0
       vite: 5.4.14(@types/node@18.19.74)
-      vite-node: 2.1.9(@types/node@18.19.74)(supports-color@9.2.2)
+      vite-node: 2.1.9(@types/node@18.19.74)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 18.19.74
       '@vitest/ui': 2.1.9(vitest@2.1.9)
+    transitivePeerDependencies:
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+
+  vitest@3.0.5(@types/node@18.19.74)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2):
+    dependencies:
+      '@vitest/expect': 3.0.5
+      '@vitest/mocker': 3.0.5(msw@2.4.3(typescript@5.7.3))(vite@5.4.14(@types/node@18.19.74))
+      '@vitest/pretty-format': 3.0.5
+      '@vitest/runner': 3.0.5
+      '@vitest/snapshot': 3.0.5
+      '@vitest/spy': 3.0.5
+      '@vitest/utils': 3.0.5
+      chai: 5.1.2
+      debug: 4.4.0(supports-color@9.2.2)
+      expect-type: 1.1.0
+      magic-string: 0.30.17
+      pathe: 2.0.3
+      std-env: 3.8.0
+      tinybench: 2.9.0
+      tinyexec: 0.3.2
+      tinypool: 1.0.2
+      tinyrainbow: 2.0.0
+      vite: 5.4.14(@types/node@18.19.74)
+      vite-node: 3.0.5(@types/node@18.19.74)(supports-color@9.2.2)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 18.19.74
+      '@vitest/ui': 3.0.5(vitest@3.0.5)
     transitivePeerDependencies:
       - less
       - lightningcss

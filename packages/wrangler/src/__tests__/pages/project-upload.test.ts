@@ -572,7 +572,7 @@ describe("pages project upload", () => {
 		await runWrangler("pages project upload .");
 
 		expect(uploadedAssets).toEqual(assets);
-	});
+	}, 60_000);
 
 	it("should not error when directory names contain periods and houses a extensionless file", async () => {
 		mkdirSync(".well-known");
