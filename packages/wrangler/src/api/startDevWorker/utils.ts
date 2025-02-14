@@ -417,3 +417,16 @@ export function extractBindingsOfType<
 		/* ugh why durable objects :( */ name: string;
 	})[];
 }
+
+export function stripHeader(headerKey: string) {
+	return async function stripHeaderService(request: Request) {
+		const modifiedHeaders = new Headers(request.headers);
+		modifiedHeaders.delete(headerKey);
+
+		const newRequest = new Request(request, {
+			headers: modifiedHeaders,
+		});
+
+		return fetch(newRequest);
+	};
+}
