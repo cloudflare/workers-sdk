@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.14.3
+
+### Patch Changes
+
+- [`07613d3`](https://github.com/cloudflare/workers-sdk/commit/07613d3b231779466ca2528ce07385552ec73501) Thanks [@penalosa](https://github.com/penalosa)! - Trigger release after testing release process
+
 ## 0.14.2
 
 ### Patch Changes
