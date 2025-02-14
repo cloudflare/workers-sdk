@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.109.1
+
+### Patch Changes
+
+- [#8021](https://github.com/cloudflare/workers-sdk/pull/8021) [`28b1dc7`](https://github.com/cloudflare/workers-sdk/commit/28b1dc7c6f213de336d58ce93308575de8f42f06) Thanks [@0xD34DC0DE](https://github.com/0xD34DC0DE)! - fix: prevent \_\_cf_cjs name collision in the hybrid Nodejs compat plugin
+
 ## 3.109.0
 
 ### Minor Changes
