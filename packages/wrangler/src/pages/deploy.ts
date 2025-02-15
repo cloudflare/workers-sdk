@@ -1,4 +1,6 @@
 import { execSync } from "node:child_process";
+import { writeFile } from "node:fs/promises";
+import path from "node:path";
 import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
 import { configFileName, readPagesConfig } from "../config";
@@ -10,6 +12,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
+import { handleStartupError } from "../utils/friendly-validator-errors";
 import {
 	MAX_DEPLOYMENT_STATUS_ATTEMPTS,
 	PAGES_CONFIG_CACHE_FILENAME,
@@ -17,6 +20,7 @@ import {
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "./errors";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
+import { getPagesProjectRoot, getPagesTmpDir } from "./utils";
 import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
@@ -29,6 +33,7 @@ import type {
 	Project,
 	UnifiedDeploymentLogMessages,
 } from "@cloudflare/types";
+import type { File } from "undici";
 
 type PagesDeployArgs = StrictYargsOptionsToInterface<typeof Options>;
 
@@ -340,7 +345,7 @@ export const Handler = async (args: PagesDeployArgs) => {
 		}
 	}
 
-	const deploymentResponse = await deploy({
+	const { deploymentResponse, formData } = await deploy({
 		directory,
 		accountId,
 		projectName,
@@ -424,6 +429,13 @@ export const Handler = async (args: PagesDeployArgs) => {
 		const failureMessage = logs.data[logs.total - 1].line
 			.replace("Error:", "")
 			.trim();
+
+		if (failureMessage.includes("Script startup exceeded CPU time limit")) {
+			const workerBundle = formData.get("_worker.bundle") as File;
+			const filePath = path.join(getPagesTmpDir(), "_worker.bundle");
+			await writeFile(filePath, workerBundle.stream());
+			await handleStartupError(filePath, getPagesProjectRoot());
+		}
 
 		throw new FatalError(
 			`Deployment failed!

@@ -13,6 +13,7 @@ import {
 	certUploadMtlsCommand,
 	certUploadNamespace,
 } from "./cert/cert";
+import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
 import { experimental_readRawConfig, loadDotEnv } from "./config";
 import { demandSingleValue } from "./core";
@@ -20,7 +21,7 @@ import { CommandRegistry } from "./core/CommandRegistry";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
-import { deployHandler, deployOptions } from "./deploy";
+import { deployCommand, publishAlias } from "./deploy";
 import { isAuthenticationError } from "./deploy/deploy";
 import {
 	isBuildFailure,
@@ -139,7 +140,14 @@ import {
 	r2BucketSippyGetCommand,
 	r2BucketSippyNamespace,
 } from "./r2/sippy";
-import { secret, secretBulkHandler, secretBulkOptions } from "./secret";
+import {
+	secretBulkAlias,
+	secretBulkCommand,
+	secretDeleteCommand,
+	secretListCommand,
+	secretNamespace,
+	secretPutCommand,
+} from "./secret";
 import {
 	addBreadcrumb,
 	captureGlobalException,
@@ -386,13 +394,17 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("dev");
 
-	// deploy
-	wrangler.command(
-		["deploy [script]", "publish [script]"],
-		"🆙 Deploy a Worker to Cloudflare",
-		deployOptions,
-		deployHandler
-	);
+	registry.define([
+		{
+			command: "wrangler deploy",
+			definition: deployCommand,
+		},
+		{
+			command: "wrangler publish",
+			definition: publishAlias,
+		},
+	]);
+	registry.registerNamespace("deploy");
 
 	registry.define([
 		{ command: "wrangler deployments", definition: deploymentsNamespace },
@@ -481,13 +493,15 @@ export function createCLIParser(argv: string[]) {
 	registry.registerNamespace("tail");
 
 	// secret
-	wrangler.command(
-		"secret",
-		"🤫 Generate a secret that can be referenced in a Worker",
-		(secretYargs) => {
-			return secret(secretYargs.command(subHelp));
-		}
-	);
+	registry.define([
+		{ command: "wrangler secret", definition: secretNamespace },
+		{ command: "wrangler secret put", definition: secretPutCommand },
+		{ command: "wrangler secret delete", definition: secretDeleteCommand },
+		{ command: "wrangler secret list", definition: secretListCommand },
+		{ command: "wrangler secret bulk", definition: secretBulkCommand },
+		{ command: "wrangler secret:bulk", definition: secretBulkAlias },
+	]);
+	registry.registerNamespace("secret");
 
 	// types
 	registry.define([{ command: "wrangler types", definition: typesCommand }]);
@@ -880,6 +894,18 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("telemetry");
 
+	registry.define([
+		{
+			command: "wrangler check",
+			definition: checkNamespace,
+		},
+		{
+			command: "wrangler check startup",
+			definition: checkStartupCommand,
+		},
+	]);
+	registry.registerNamespace("check");
+
 	/******************************************************/
 	/*               DEPRECATED COMMANDS                  */
 	/******************************************************/
@@ -915,14 +941,6 @@ export function createCLIParser(argv: string[]) {
 		// "👷 Create or change your workers.dev subdomain.",
 		subdomainOptions,
 		subdomainHandler
-	);
-
-	// [DEPRECATED] secret:bulk
-	wrangler.command(
-		"secret:bulk [json]",
-		false,
-		secretBulkOptions,
-		secretBulkHandler
 	);
 
 	// [DEPRECATED] generate
@@ -1167,10 +1185,12 @@ export async function main(argv: string[]): Promise<void> {
 			}
 
 			await closeSentry();
+			const controller = new AbortController();
+
 			await Promise.race([
-				await Promise.allSettled(dispatcher?.requests ?? []),
-				setTimeout(1000), // Ensure we don't hang indefinitely
-			]);
+				Promise.allSettled(dispatcher?.requests ?? []),
+				setTimeout(1000, undefined, controller), // Ensure we don't hang indefinitely
+			]).then(() => controller.abort()); // Ensure the Wrangler process doesn't hang waiting for setTimeout(1000) to complete
 		} catch (e) {
 			logger.error(e);
 			// Only re-throw if we haven't already re-thrown an exception from a

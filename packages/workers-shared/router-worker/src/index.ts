@@ -47,6 +47,7 @@ export default {
 				env.SENTRY_ACCESS_CLIENT_ID,
 				env.SENTRY_ACCESS_CLIENT_SECRET,
 				env.COLO_METADATA,
+				env.VERSION_METADATA,
 				env.CONFIG?.account_id,
 				env.CONFIG?.script_id
 			);
@@ -64,7 +65,7 @@ export default {
 
 					coloRegion: env.COLO_METADATA.coloRegion,
 					hostname: url.hostname,
-					version: env.VERSION_METADATA.id,
+					version: env.VERSION_METADATA.tag,
 					userWorkerAhead: env.CONFIG.invoke_user_worker_ahead_of_assets,
 				});
 			}

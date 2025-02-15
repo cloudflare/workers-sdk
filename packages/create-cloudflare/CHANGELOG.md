@@ -1,5 +1,102 @@
 # create-cloudflare
 
+## 2.38.0
+
+### Minor Changes
+
+- [#8024](https://github.com/cloudflare/workers-sdk/pull/8024) [`e8272b0`](https://github.com/cloudflare/workers-sdk/commit/e8272b08ee54894af3e5e33fb86380908d3ff68a) Thanks [@emily-shen](https://github.com/emily-shen)! - Output wrangler.jsonc instead of wrangler.json
+
+  The JSONC format allows comments, but otherwise uses standard JSON syntax.
+
+  Note that Wrangler is still happy to parse `.json` files with comments (along the lines of `tsconfig.json`), but to prevent confusion and for default compatibility with all IDEs, create-cloudflare will now output `wrangler.jsonc`.
+
+- [#8024](https://github.com/cloudflare/workers-sdk/pull/8024) [`e8272b0`](https://github.com/cloudflare/workers-sdk/commit/e8272b08ee54894af3e5e33fb86380908d3ff68a) Thanks [@emily-shen](https://github.com/emily-shen)! - Include a .vscode/settings.json file with a 'jsonc' file association for templates that use `wrangler.json`
+
+## 2.37.6
+
+### Patch Changes
+
+- [#7917](https://github.com/cloudflare/workers-sdk/pull/7917) [`6a500d6`](https://github.com/cloudflare/workers-sdk/commit/6a500d6bb81a8d1355dcc91ca73bbd19a5cd6769) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.1.2 | 19.1.5 |
+  | create-hono     | 0.15.2 | 0.15.3 |
+  | create-remix    | 2.15.2 | 2.15.3 |
+  | nuxi            | 3.20.0 | 3.21.1 |
+
+- [#7918](https://github.com/cloudflare/workers-sdk/pull/7918) [`88ea196`](https://github.com/cloudflare/workers-sdk/commit/88ea196b274ce2ec72a05a30385f303e8ca30a6c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.13.0 | 3.14.0 |
+
+- [#7919](https://github.com/cloudflare/workers-sdk/pull/7919) [`5ed2744`](https://github.com/cloudflare/workers-sdk/commit/5ed27444da2de4614856c29dd4e1e1d595e43ea2) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.1.2 | 19.1.5 |
+  | create-hono     | 0.15.2 | 0.15.3 |
+  | create-remix    | 2.15.2 | 2.15.3 |
+  | nuxi            | 3.20.0 | 3.21.1 |
+
+- [#7978](https://github.com/cloudflare/workers-sdk/pull/7978) [`5bcb204`](https://github.com/cloudflare/workers-sdk/commit/5bcb20463e359ed86cd9eeee3ad9c1b3f3958098) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.1.2 | 19.1.5 |
+
+- [#8076](https://github.com/cloudflare/workers-sdk/pull/8076) [`9cfe0d8`](https://github.com/cloudflare/workers-sdk/commit/9cfe0d8ed883eb1df275f9bd0137b96e1263c43b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.1.5 | 19.1.6 |
+
+- [#7854](https://github.com/cloudflare/workers-sdk/pull/7854) [`bff209d`](https://github.com/cloudflare/workers-sdk/commit/bff209d853ae081ec692c41a080071956bf4ae2d) Thanks [@beratbayram](https://github.com/beratbayram)! - Update the Next.js template
+
+  - Removed top-level `await` in `next.config.ts` as it is not allowed there and not required.
+  - Improved `setupDevPlatform()` comment
+
+- [#8033](https://github.com/cloudflare/workers-sdk/pull/8033) [`e62b097`](https://github.com/cloudflare/workers-sdk/commit/e62b097bb202e91452c2f87b1cec2bd84bd56400) Thanks [@edmundhung](https://github.com/edmundhung)! - update vitest version in templates to ~2.1.9
+
+## 2.37.5
+
+### Patch Changes
+
+- [#8005](https://github.com/cloudflare/workers-sdk/pull/8005) [`b889b16`](https://github.com/cloudflare/workers-sdk/commit/b889b1655bdcc1888e0558307bee3f7490827edc) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.20.0 | 3.21.1 |
+
+- [#8006](https://github.com/cloudflare/workers-sdk/pull/8006) [`4ecabf1`](https://github.com/cloudflare/workers-sdk/commit/4ecabf17784ea696662cbe1c0821ca21abe70e05) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-hono | 0.15.2 | 0.15.3 |
+
+- [#8007](https://github.com/cloudflare/workers-sdk/pull/8007) [`76156a4`](https://github.com/cloudflare/workers-sdk/commit/76156a4950ed6ac71f6b745a9deeb09e919a09fb) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.15.2 | 2.15.3 |
+
 ## 2.37.4
 
 ### Patch Changes

@@ -7,6 +7,7 @@ export default mergeConfig(
 		test: {
 			include: ["tests/**.{test,spec}.{ts,js}"],
 			globals: true,
+			setupFiles: [import.meta.resolve("./crypto-polyfill.ts")],
 		},
 	})
 );

@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-shared",
-	"version": "0.13.0",
+	"version": "0.14.3",
 	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workers.",
 	"keywords": [
 		"cloudflare",
@@ -32,18 +32,24 @@
 		"check:type": "pnpm run check:type:tests && tsc",
 		"check:type:tests": "tsc -p ./asset-worker/tests/tsconfig.json && tsc -p ./router-worker/tests/tsconfig.json",
 		"clean": "rimraf dist",
-		"deploy": "pnpm run deploy:router-worker && pnpm run deploy:asset-worker",
-		"deploy:asset-worker": "CLOUDFLARE_API_TOKEN=$WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN pnpx wrangler versions upload -c asset-worker/wrangler.toml",
+		"deploy": "pnpm run generate-sourcemaps && pnpm run deploy:router-worker && pnpm run deploy:asset-worker && pnpm run upload-sourcemaps",
+		"deploy:asset-worker": "CLOUDFLARE_API_TOKEN=$WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN pnpx wrangler versions upload -c asset-worker/wrangler.toml --tag aw-$(node -r esbuild-register ./scripts/get-version-tag.ts)",
 		"deploy:asset-worker-staging": "CLOUDFLARE_API_TOKEN=$WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN pnpx wrangler deploy -c asset-worker/wrangler.toml -e staging",
-		"deploy:router-worker": "CLOUDFLARE_API_TOKEN=$WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN pnpx wrangler versions upload -c router-worker/wrangler.toml",
+		"deploy:router-worker": "CLOUDFLARE_API_TOKEN=$WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN pnpx wrangler versions upload -c router-worker/wrangler.toml --tag rw-$(node -r esbuild-register ./scripts/get-version-tag.ts)",
 		"deploy:router-worker-staging": "CLOUDFLARE_API_TOKEN=$WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN pnpx wrangler deploy -c router-worker/wrangler.toml -e staging",
 		"deploy:staging": "pnpm run deploy:router-worker-staging && pnpm run deploy:asset-worker-staging",
 		"dev": "pnpm run clean && concurrently -n bundle:asset-worker,bundle:router-worker -c blue,magenta \"pnpm run bundle:asset-worker --watch\" \"pnpm run bundle:router-worker --watch\"",
+		"generate-sourcemaps": "pnpm run generate-sourcemaps:asset-worker && pnpm generate-sourcemaps:router-worker",
+		"generate-sourcemaps:asset-worker": "pnpx wrangler versions upload -c asset-worker/wrangler.toml --dry-run --outdir=./dist",
+		"generate-sourcemaps:router-worker": "pnpx wrangler versions upload -c router-worker/wrangler.toml --dry-run --outdir=./dist",
 		"test": "concurrently --group -n router-worker,asset-worker \"pnpm run test:router-worker\" \"pnpm run test:asset-worker\"",
 		"test:asset-worker": "vitest -c asset-worker/vitest.config.mts --dir asset-worker",
 		"test:ci": "concurrently --group -n router-worker,asset-worker \"pnpm run test:router-worker --run\" \"pnpm run test:asset-worker --run\"",
 		"test:router-worker": "vitest -c router-worker/vitest.config.mts --dir router-worker",
-		"types:emit": "tsc index.ts --declaration --emitDeclarationOnly --declarationDir ./dist"
+		"types:emit": "tsc index.ts --declaration --emitDeclarationOnly --declarationDir ./dist",
+		"upload-sourcemaps": "pnpm run upload-sourcemaps:asset-worker && pnpm run upload-sourcemaps:router-worker",
+		"upload-sourcemaps:asset-worker": "node -r esbuild-register ./scripts/upload-sourcemaps.ts --worker asset-worker --tag aw-$(node -r esbuild-register ./scripts/get-version-tag.ts)",
+		"upload-sourcemaps:router-worker": "node -r esbuild-register ./scripts/upload-sourcemaps.ts --worker router-worker --tag rw-$(node -r esbuild-register ./scripts/get-version-tag.ts)"
 	},
 	"dependencies": {
 		"mime": "^3.0.0",
@@ -53,14 +59,15 @@
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/vitest-pool-workers": "^0.5.31",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250129.0",
+		"@cloudflare/workers-types": "^4.20250204.0",
+		"@sentry/cli": "^2.37.0",
 		"@types/mime": "^3.0.4",
 		"concurrently": "^8.2.2",
 		"esbuild": "0.17.19",
 		"rimraf": "catalog:default",
-		"toucan-js": "^3.3.1",
+		"toucan-js": "4.0.0",
 		"typescript": "catalog:default",
-		"vitest": "catalog:default"
+		"vitest": "~2.1.0"
 	},
 	"engines": {
 		"node": ">=16.7.0"

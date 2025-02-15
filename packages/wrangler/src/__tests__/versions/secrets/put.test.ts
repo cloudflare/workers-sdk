@@ -35,6 +35,7 @@ describe("versions secret put", () => {
 		mockSetupApiCalls();
 		mockPostVersion((metadata) => {
 			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "NEW_SECRET", text: "the-secret" },
 			]);
 			expect(metadata.keep_bindings).toStrictEqual([
@@ -42,6 +43,69 @@ describe("versions secret put", () => {
 				"secret_text",
 			]);
 			expect(metadata.keep_assets).toBeTruthy();
+		});
+		await runWrangler("versions secret put NEW_SECRET --name script-name");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"🌀 Creating the secret for the Worker \\"script-name\\"
+			✨ Success! Created version id with secret NEW_SECRET.
+			➡️  To deploy this version with secret NEW_SECRET to production traffic use the command \\"wrangler versions deploy\\"."
+		`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	test("unsafe metadata is provided", async () => {
+		writeWranglerConfig({
+			name: "script-name",
+			unsafe: { metadata: { build_options: { stable_id: "foo/bar" } } },
+		});
+
+		setIsTTY(true);
+
+		mockPrompt({
+			text: "Enter a secret value:",
+			options: { isSecret: true },
+			result: "the-secret",
+		});
+
+		mockSetupApiCalls();
+		mockPostVersion((metadata) => {
+			expect(metadata["build_options"]).toStrictEqual({ stable_id: "foo/bar" });
+		});
+		await runWrangler("versions secret put NEW_SECRET --name script-name");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"🌀 Creating the secret for the Worker \\"script-name\\"
+			✨ Success! Created version id with secret NEW_SECRET.
+			➡️  To deploy this version with secret NEW_SECRET to production traffic use the command \\"wrangler versions deploy\\"."
+		`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	test("unsafe metadata not included if not in wrangler.toml", async () => {
+		writeWranglerConfig({
+			name: "script-name",
+		});
+
+		setIsTTY(true);
+
+		mockPrompt({
+			text: "Enter a secret value:",
+			options: { isSecret: true },
+			result: "the-secret",
+		});
+
+		mockSetupApiCalls();
+		mockPostVersion((metadata) => {
+			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
+				{ type: "secret_text", name: "NEW_SECRET", text: "the-secret" },
+			]);
+			expect(metadata.keep_bindings).toStrictEqual([
+				"secret_key",
+				"secret_text",
+			]);
+			expect(metadata["build_options"]).toBeUndefined();
 		});
 		await runWrangler("versions secret put NEW_SECRET --name script-name");
 
@@ -76,6 +140,7 @@ describe("versions secret put", () => {
 			mockSetupApiCalls();
 			mockPostVersion((metadata) => {
 				expect(metadata.bindings).toStrictEqual([
+					{ type: "inherit", name: "do-binding" },
 					{ type: "secret_text", name: "NEW_SECRET", text: "the-secret" },
 				]);
 				expect(metadata.keep_bindings).toStrictEqual([
@@ -116,6 +181,7 @@ describe("versions secret put", () => {
 		mockSetupApiCalls();
 		mockPostVersion((metadata) => {
 			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "NEW_SECRET", text: "the-secret" },
 			]);
 			expect(metadata.keep_bindings).toStrictEqual([
@@ -146,6 +212,7 @@ describe("versions secret put", () => {
 		mockSetupApiCalls();
 		mockPostVersion((metadata) => {
 			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "NEW_SECRET", text: "the-secret" },
 			]);
 			expect(metadata.keep_bindings).toStrictEqual([
@@ -183,6 +250,7 @@ describe("versions secret put", () => {
 		mockSetupApiCalls();
 		mockPostVersion((metadata) => {
 			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "NEW_SECRET", text: "the-secret" },
 			]);
 			expect(metadata.keep_bindings).toStrictEqual([
@@ -211,6 +279,38 @@ describe("versions secret put", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
+	test("all non-secret bindings are inherited", async () => {
+		setIsTTY(true);
+
+		mockSetupApiCalls();
+
+		mockPrompt({
+			text: "Enter a secret value:",
+			options: { isSecret: true },
+			result: "the-secret",
+		});
+
+		mockPostVersion((metadata) => {
+			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
+				{ type: "secret_text", name: "SECRET", text: "the-secret" },
+			]);
+			expect(metadata.keep_bindings).toStrictEqual([
+				"secret_key",
+				"secret_text",
+			]);
+			expect(metadata.annotations).not.toBeUndefined();
+		});
+		await runWrangler("versions secret put SECRET --name script-name");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"🌀 Creating the secret for the Worker \\"script-name\\"
+			✨ Success! Created version id with secret SECRET.
+			➡️  To deploy this version with secret SECRET to production traffic use the command \\"wrangler versions deploy\\"."
+		`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
 	test("can update an existing secret", async () => {
 		setIsTTY(true);
 
@@ -223,6 +323,7 @@ describe("versions secret put", () => {
 		mockSetupApiCalls();
 		mockPostVersion((metadata) => {
 			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "SECRET", text: "the-secret" },
 			]);
 			expect(metadata.keep_bindings).toStrictEqual([
@@ -299,6 +400,7 @@ describe("versions secret put", () => {
 			expect((formData.get("module.wasm") as File).size).equal(10);
 
 			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "SECRET", text: "the-secret" },
 			]);
 			expect(metadata.keep_bindings).toStrictEqual([

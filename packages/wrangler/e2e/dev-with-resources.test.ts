@@ -609,7 +609,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		await fetch(`${url}/connect`);
 	});
 
-	it.skipIf(!isLocal).fails("exposes Pipelines bindings", async () => {
+	it.skipIf(!isLocal)("exposes Pipelines bindings", async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -626,7 +626,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 						if (env.PIPELINE === undefined) {
 							return new Response("env.PIPELINE is undefined");
 						}
-
+						env.PIPELINE.send([{hello: "world"}]);
 						return new Response("env.PIPELINE is available");
 					}
 				}
@@ -640,6 +640,9 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		const res = await fetch(url);
 
 		await expect(res.text()).resolves.toBe("env.PIPELINE is available");
+		// worker.currentOutput is sometimes racey, worker.output will hang
+		const match = await worker.readUntil(/Request received/);
+		expect(match[0]).not.toBeNull();
 	});
 
 	it.skipIf(!isLocal)("exposes queue producer/consumer bindings", async () => {
@@ -718,6 +721,40 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		const res = await fetch(url);
 
 		await expect(res.text()).resolves.toBe("env.WORKFLOW is available");
+	});
+
+	describe.sequential.each([
+		{ imagesMode: "remote", extraFlags: "" },
+		{ imagesMode: "local", extraFlags: "--experimental-images-local-mode" },
+	] as const)("Images Binding Mode: $imagesMode", async ({ extraFlags }) => {
+		it("exposes Images bindings", async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
+					name = "my-images-demo"
+					main = "src/index.ts"
+					compatibility_date = "2024-12-27"
+
+					[images]
+					binding = "IMAGES"
+				`,
+				"src/index.ts": dedent`
+					export default {
+						async fetch(request, env, ctx) {
+							if (env.IMAGES === undefined) {
+								return new Response("env.IMAGES is undefined");
+							}
+
+							return new Response("env.IMAGES is available");
+						}
+					}
+				`,
+			});
+			const worker = helper.runLongLived(`wrangler dev ${flags} ${extraFlags}`);
+			const { url } = await worker.waitForReady();
+			const res = await fetch(url);
+
+			await expect(res.text()).resolves.toBe("env.IMAGES is available");
+		});
 	});
 
 	// TODO(soon): implement E2E tests for other bindings

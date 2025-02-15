@@ -624,7 +624,7 @@ function getFrameworkTests(opts: {
 	}
 }
 
-const experimental = Boolean(process.env.E2E_EXPERIMENTAL);
+const experimental = process.env.E2E_EXPERIMENTAL === "true";
 const frameworkMap = getFrameworkMap({ experimental });
 const frameworkTests = getFrameworkTests({ experimental });
 
@@ -772,7 +772,7 @@ const runCli = async (
  */
 const addTestVarsToWranglerToml = async (projectPath: string) => {
 	const wranglerTomlPath = join(projectPath, "wrangler.toml");
-	const wranglerJsonPath = join(projectPath, "wrangler.json");
+	const wranglerJsoncPath = join(projectPath, "wrangler.jsonc");
 	if (existsSync(wranglerTomlPath)) {
 		const wranglerToml = readToml(wranglerTomlPath);
 		// Add a TEST var to the wrangler.toml
@@ -780,13 +780,13 @@ const addTestVarsToWranglerToml = async (projectPath: string) => {
 		(wranglerToml.vars as JsonMap).TEST = "C3_TEST";
 
 		writeToml(wranglerTomlPath, wranglerToml);
-	} else if (existsSync(wranglerJsonPath)) {
-		const wranglerJson = readJSON(wranglerJsonPath);
+	} else if (existsSync(wranglerJsoncPath)) {
+		const wranglerJson = readJSON(wranglerJsoncPath);
 		// Add a TEST var to the wrangler.toml
 		wranglerJson.vars ??= {};
 		wranglerJson.vars.TEST = "C3_TEST";
 
-		writeJSON(wranglerJsonPath, wranglerJson);
+		writeJSON(wranglerJsoncPath, wranglerJson);
 	}
 };
 

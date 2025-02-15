@@ -9,7 +9,13 @@ import {
 } from "../ai/fetcher";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
-import { UserError } from "../errors";
+import { createFatalError, UserError } from "../errors";
+import {
+	EXTERNAL_IMAGES_WORKER_NAME,
+	EXTERNAL_IMAGES_WORKER_SCRIPT,
+	imagesLocalFetcher,
+	imagesRemoteFetcher,
+} from "../images/fetcher";
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
@@ -27,6 +33,7 @@ import type {
 	CfDurableObject,
 	CfHyperdrive,
 	CfKvNamespace,
+	CfPipeline,
 	CfQueue,
 	CfR2Bucket,
 	CfScriptFormat,
@@ -187,6 +194,7 @@ export interface ConfigBundle {
 	services: Config["services"] | undefined;
 	serviceBindings: Record<string, ServiceFetch>;
 	bindVectorizeToProd: boolean;
+	imagesLocalMode: boolean;
 	testScheduled: boolean;
 }
 
@@ -327,6 +335,9 @@ function queueProducerEntry(
 		{ queueName: queue.queue_name, deliveryDelay: queue.delivery_delay },
 	];
 }
+function pipelineEntry(pipeline: CfPipeline): [string, string] {
+	return [pipeline.binding, pipeline.pipeline];
+}
 function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
 }
@@ -368,6 +379,7 @@ type WorkerOptionsBindings = Pick<
 	| "d1Databases"
 	| "queueProducers"
 	| "queueConsumers"
+	| "pipelines"
 	| "hyperdrives"
 	| "durableObjects"
 	| "serviceBindings"
@@ -384,6 +396,7 @@ type MiniflareBindingsConfig = Pick<
 	| "name"
 	| "services"
 	| "serviceBindings"
+	| "imagesLocalMode"
 > &
 	Partial<Pick<ConfigBundle, "format" | "bundle" | "assets">>;
 
@@ -434,6 +447,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		}
 
 		const target = config.workerDefinitions?.[service.service];
+
 		if (target?.host === undefined || target.port === undefined) {
 			// If the target isn't in the registry, always return an error response
 			notFoundServices.add(service.service);
@@ -607,6 +621,28 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		};
 	}
 
+	if (bindings.images?.binding) {
+		externalWorkers.push({
+			name: EXTERNAL_IMAGES_WORKER_NAME,
+			modules: [
+				{
+					type: "ESModule",
+					path: "index.mjs",
+					contents: EXTERNAL_IMAGES_WORKER_SCRIPT,
+				},
+			],
+			serviceBindings: {
+				FETCHER: config.imagesLocalMode
+					? imagesLocalFetcher
+					: imagesRemoteFetcher,
+			},
+		});
+
+		wrappedBindings[bindings.images?.binding] = {
+			scriptName: EXTERNAL_IMAGES_WORKER_NAME,
+		};
+	}
+
 	if (bindings.vectorize) {
 		for (const vectorizeBinding of bindings.vectorize) {
 			const bindingName = vectorizeBinding.binding;
@@ -664,6 +700,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		queueConsumers: Object.fromEntries(
 			config.queueConsumers?.map(queueConsumerEntry) ?? []
 		),
+		pipelines: Object.fromEntries(bindings.pipelines?.map(pipelineEntry) ?? []),
 		hyperdrives: Object.fromEntries(
 			bindings.hyperdrive?.map(hyperdriveEntry) ?? []
 		),
@@ -906,6 +943,7 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 let didWarnMiniflareCronSupport = false;
 let didWarnMiniflareVectorizeSupport = false;
 let didWarnAiAccountUsage = false;
+let didWarnImagesLocalModeUsage = false;
 
 export type Options = Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
 
@@ -948,6 +986,23 @@ export async function buildMiniflareOptions(
 			didWarnMiniflareVectorizeSupport = true;
 			logger.warn(
 				"You are using a mixed-mode binding for Vectorize (through `--experimental-vectorize-bind-to-prod`). It may incur usage charges and modify your databases even in local development. "
+			);
+		}
+	}
+
+	if (config.bindings.images && config.imagesLocalMode) {
+		if (!didWarnImagesLocalModeUsage) {
+			try {
+				await import("sharp");
+			} catch {
+				const msg =
+					"Sharp must be installed to use the Images binding local mode; check your version of Node is compatible";
+				throw createFatalError(msg, false);
+			}
+
+			didWarnImagesLocalModeUsage = true;
+			logger.info(
+				"You are using Images local mode. This only supports resizing, rotating and transcoding."
 			);
 		}
 	}

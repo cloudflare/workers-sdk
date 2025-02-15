@@ -1,4 +1,3 @@
-import { vi } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockUploadWorkerRequest } from "./helpers/mock-upload-worker";
@@ -15,16 +14,6 @@ describe("deprecated-usage-model", () => {
 	mockApiToken();
 	runInTempDir();
 	const std = mockConsoleMethods();
-
-	// TODO: remove the fake timers and irrelevant tests after March 1st
-	beforeAll(() => {
-		vi.useFakeTimers();
-		vi.setSystemTime(new Date(2024, 2, 2));
-	});
-
-	afterAll(() => {
-		vi.useRealTimers();
-	});
 
 	it("should warn user about ignored usage model if usage_model specified", async () => {
 		msw.use(
@@ -63,6 +52,7 @@ describe("deprecated-usage-model", () => {
 			  "info": "",
 			  "out": "Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
+			No bindings found.
 			Uploaded test-name (TIMINGS)
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev

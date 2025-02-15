@@ -16,11 +16,15 @@ import type { Entry } from "./entry";
 import type { CfModule, CfModuleType } from "./worker";
 import type esbuild from "esbuild";
 
-function flipObject<
+export function flipObject<
 	K extends string | number | symbol,
-	V extends string | number | symbol,
->(obj: Record<K, V>): Record<V, K> {
-	return Object.fromEntries(Object.entries(obj).map(([k, v]) => [v, k]));
+	V extends string | number | symbol | undefined,
+>(obj: Record<K, V>): Record<NonNullable<V>, K> {
+	return Object.fromEntries(
+		Object.entries(obj)
+			.filter(([_, v]) => !!v)
+			.map(([k, v]) => [v, k])
+	);
 }
 
 export const RuleTypeToModuleType: Record<ConfigModuleRuleType, CfModuleType> =

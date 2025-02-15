@@ -5,6 +5,8 @@ import { join, resolve } from "path";
 import { beforeEach, describe, it } from "vitest";
 import { wranglerEntryPath } from "../../shared/src/run-wrangler-long-lived";
 
+const basePath = resolve(__dirname, "..");
+
 describe("'wrangler dev' with WRANGLER_BUILD_CONDITIONS", () => {
 	let tempDir: string;
 
@@ -23,6 +25,7 @@ describe("'wrangler dev' with WRANGLER_BUILD_CONDITIONS", () => {
 					...process.env,
 					WRANGLER_BUILD_CONDITIONS: "other,node,browser",
 				},
+				cwd: basePath,
 			}
 		);
 		expect(readFileSync(resolve(tempDir, "index.js"), "utf8")).toContain(
@@ -41,6 +44,7 @@ describe("'wrangler dev' with WRANGLER_BUILD_CONDITIONS", () => {
 					...process.env,
 					WRANGLER_BUILD_CONDITIONS: "",
 				},
+				cwd: basePath,
 			}
 		);
 		expect(readFileSync(resolve(tempDir, "index.js"), "utf8")).toContain(
@@ -61,6 +65,7 @@ describe("'wrangler build' with WRANGLER_BUILD_PLATFORM", () => {
 					...process.env,
 					WRANGLER_BUILD_PLATFORM: "node",
 				},
+				cwd: basePath,
 			}
 		);
 		expect(
@@ -79,6 +84,7 @@ describe("'wrangler build' with WRANGLER_BUILD_PLATFORM", () => {
 					...process.env,
 					WRANGLER_BUILD_PLATFORM: "browser",
 				},
+				cwd: basePath,
 			}
 		);
 		expect(

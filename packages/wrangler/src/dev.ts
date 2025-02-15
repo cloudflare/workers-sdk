@@ -50,7 +50,6 @@ import type {
 } from "./deployment-bundle/worker";
 import type { WorkerRegistry } from "./dev-registry";
 import type { CfAccount } from "./dev/create-worker-preview";
-import type { LoggerLevel } from "./logger";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type { watch } from "chokidar";
 import type { Json } from "miniflare";
@@ -310,8 +309,6 @@ export const dev = createCommand({
 		"log-level": {
 			choices: ["debug", "info", "log", "warn", "error", "none"] as const,
 			describe: "Specify logging level",
-			// Yargs requires this to type log-level properly
-			default: "log" as LoggerLevel,
 		},
 		"show-interactive-dev-session": {
 			describe:
@@ -322,6 +319,12 @@ export const dev = createCommand({
 			type: "boolean",
 			describe:
 				"Bind to production Vectorize indexes in local development mode",
+			default: false,
+		},
+		"experimental-images-local-mode": {
+			type: "boolean",
+			describe:
+				"Use a local lower-fidelity implementation of the Images binding",
 			default: false,
 		},
 	},
@@ -551,6 +554,7 @@ async function setupDevEnv(
 					text_blobs: undefined,
 					browser: undefined,
 					ai: args.ai,
+					images: undefined,
 					version_metadata: args.version_metadata,
 					data_blobs: undefined,
 					durable_objects: { bindings: args.durableObjects ?? [] },
@@ -601,6 +605,7 @@ async function setupDevEnv(
 					? null
 					: devEnv.config.latestConfig?.dev.registry,
 				bindVectorizeToProd: args.experimentalVectorizeBindToProd,
+				imagesLocalMode: args.experimentalImagesLocalMode,
 				multiworkerPrimary: args.multiworkerPrimary,
 			},
 			legacy: {
@@ -1084,6 +1089,7 @@ export function getBindings(
 		analytics_engine_datasets: configParam.analytics_engine_datasets,
 		browser: configParam.browser,
 		ai: args.ai || configParam.ai,
+		images: configParam.images,
 		version_metadata: args.version_metadata || configParam.version_metadata,
 		unsafe: {
 			bindings: configParam.unsafe.bindings,

@@ -15,7 +15,10 @@ jobs:
         uses: ./.github/actions/install-dependencies
 
       - name: Deploy
-        run: pnpm deploy
+        run: pnpm run deploy
         working-directory: packages/workers-shared
         env:
           WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN: ${{ secrets.WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN }}
+          WORKERS_SHARED_SENTRY_ACCESS_ID: ${{ secrets.WORKERS_SHARED_SENTRY_ACCESS_ID }}
+          WORKERS_SHARED_SENTRY_ACCESS_SECRET: ${{ secrets.WORKERS_SHARED_SENTRY_ACCESS_SECRET }}
+          WORKERS_SHARED_SENTRY_AUTH_TOKEN: ${{ secrets.WORKERS_SHARED_SENTRY_AUTH_TOKEN }}

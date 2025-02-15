@@ -19,7 +19,8 @@ test.skipIf(process.platform === "win32")(
 		});
 		const result = vitestDev();
 		await waitFor(() => {
-			expect(result.stdout).toMatch("stdout | index.test.ts\nglobal\ndescribe");
+			expect(result.stdout).toMatch("stdout | index.test.ts\nglobal");
+			expect(result.stdout).toMatch("stdout | index.test.ts\ndescribe");
 			expect(result.stdout).toMatch(
 				"stdout | index.test.ts > thing > does something\ntest"
 			);
@@ -41,9 +42,8 @@ test.skipIf(process.platform === "win32")(
 		`,
 		});
 		await waitFor(() => {
-			expect(result.stdout).toMatch(
-				"stdout | index.test.ts\nnew global\nnew describe"
-			);
+			expect(result.stdout).toMatch("stdout | index.test.ts\nnew global");
+			expect(result.stdout).toMatch("stdout | index.test.ts\nnew describe");
 
 			expect(result.stdout).toMatch(
 				"stdout | index.test.ts > new thing > does something else\nnew test"
@@ -116,6 +116,6 @@ test("console.logs() inside `export default`ed handlers with SELF", async ({
 	});
 	const result = await vitestRun();
 	expect(result.stdout).toMatch(
-		"stdout | index.test.ts > sends request\none\ntwo\n"
+		"stdout | index.test.ts > sends request\none\ntwo"
 	);
 });

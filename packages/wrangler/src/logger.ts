@@ -55,6 +55,7 @@ export class Logger {
 	constructor() {}
 
 	private overrideLoggerLevel?: LoggerLevel;
+	private onceHistory = new Set<string>();
 
 	get loggerLevel() {
 		return this.overrideLoggerLevel ?? getLoggerLevel();
@@ -62,6 +63,10 @@ export class Logger {
 
 	set loggerLevel(val) {
 		this.overrideLoggerLevel = val;
+	}
+
+	resetLoggerLevel() {
+		this.overrideLoggerLevel = undefined;
 	}
 
 	columns = process.stdout.columns;
@@ -107,7 +112,6 @@ export class Logger {
 		Logger.#afterLogHook?.();
 	}
 
-	static onceHistory = new Set();
 	get once() {
 		return {
 			info: (...args: unknown[]) => this.doLogOnce("info", args),
@@ -116,14 +120,16 @@ export class Logger {
 			error: (...args: unknown[]) => this.doLogOnce("error", args),
 		};
 	}
-	doLogOnce(messageLevel: Exclude<LoggerLevel, "none">, args: unknown[]) {
-		// using this.constructor.onceHistory, instead of hard-coding Logger.onceHistory, allows for subclassing
-		const { onceHistory } = this.constructor as typeof Logger;
 
+	clearHistory() {
+		this.onceHistory.clear();
+	}
+
+	doLogOnce(messageLevel: Exclude<LoggerLevel, "none">, args: unknown[]) {
 		const cacheKey = `${messageLevel}: ${args.join(" ")}`;
 
-		if (!onceHistory.has(cacheKey)) {
-			onceHistory.add(cacheKey);
+		if (!this.onceHistory.has(cacheKey)) {
+			this.onceHistory.add(cacheKey);
 			this.doLog(messageLevel, args);
 		}
 	}
