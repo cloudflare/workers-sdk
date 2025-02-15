@@ -342,6 +342,9 @@ export const secretListCommand = createCommand({
 			hidden: true,
 		},
 	},
+	behaviour: {
+		printBanner: (args) => args.format === "pretty",
+	},
 	async handler(args, { config }) {
 		if (config.pages_build_output_dir) {
 			throw new UserError(

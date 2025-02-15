@@ -32,12 +32,15 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	let amplitude_event_id = 0;
 
 	/** We redact strings in arg values, unless they are named here */
-	const allowList = {
+	const allowList: Record<string, AllowedValues> & { "*": AllowedValues } = {
 		// applies to all commands
 		// use camelCase version
-		"*": ["format", "logLevel"],
-		// specific commands
-		tail: ["status"],
+		"*": { format: "*", logLevel: "*" },
+		"wrangler tail": { status: "*" },
+		"wrangler types": {
+			xIncludeRuntime: [".wrangler/types/runtime.d.ts"],
+			path: ["worker-configuration.d.ts"],
+		},
 	};
 
 	return {
@@ -253,35 +256,50 @@ const sanitiseUserInput = (
 	return result;
 };
 
+type AllowedValues = Record<string, string[] | "*">;
 const getAllowedArgs = (
-	allowList: Record<string, string[]> & { "*": string[] },
+	allowList: Record<string, AllowedValues> & { "*": AllowedValues },
 	key: string
 ) => {
 	const commandSpecific = allowList[key] ?? [];
-	return [...commandSpecific, ...allowList["*"]];
+	return { ...commandSpecific, ...allowList["*"] };
 };
 export const redactArgValues = (
 	args: Record<string, unknown>,
-	allowedKeys: string[]
+	allowedValues: AllowedValues
 ) => {
 	const result: Record<string, unknown> = {};
 
-	for (const [k, value] of Object.entries(args)) {
-		const key = normalise(k);
+	for (let [key, value] of Object.entries(args)) {
+		key = normalise(key);
+		if (key === "xIncludeRuntime" && value === "") {
+			value = ".wrangler/types/runtime.d.ts";
+		}
+		const allowedValuesForArg = allowedValues[key] ?? [];
 		if (exclude.has(key)) {
 			continue;
 		}
 		if (
 			typeof value === "number" ||
 			typeof value === "boolean" ||
-			allowedKeys.includes(normalise(key))
+			allowedValuesForArg.includes(key)
 		) {
 			result[key] = value;
-		} else if (typeof value === "string") {
+		} else if (
+			// redact if its a string, unless the value is in the allow list
+			// * is a special value that allows all values for that arg
+			typeof value === "string" &&
+			!(allowedValuesForArg === "*" || allowedValuesForArg.includes(value))
+		) {
 			result[key] = "<REDACTED>";
 		} else if (Array.isArray(value)) {
 			result[key] = value.map((v) =>
-				typeof v === "string" ? "<REDACTED>" : v
+				// redact if its a string, unless the value is in the allow list
+				// * is a special value that allows all values for that arg
+				typeof v === "string" &&
+				!(allowedValuesForArg === "*" || allowedValuesForArg.includes(v))
+					? "<REDACTED>"
+					: v
 			);
 		} else {
 			result[key] = value;

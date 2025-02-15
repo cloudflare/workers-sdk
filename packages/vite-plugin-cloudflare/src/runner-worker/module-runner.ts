@@ -2,7 +2,7 @@ import {
 	createWebSocketModuleRunnerTransport,
 	ModuleRunner,
 } from "vite/module-runner";
-import { UNKNOWN_HOST } from "../shared";
+import { MODULE_PATTERN, UNKNOWN_HOST } from "../shared";
 import type { WrapperEnv } from "./env";
 
 let moduleRunner: ModuleRunner;
@@ -74,7 +74,10 @@ export async function createModuleRunner(
 				}
 			},
 			async runExternalModule(filepath) {
+				const moduleRE = new RegExp(MODULE_PATTERN);
+
 				if (
+					!moduleRE.test(filepath) &&
 					filepath.includes("/node_modules") &&
 					!filepath.includes("/node_modules/.vite")
 				) {
@@ -83,6 +86,7 @@ export async function createModuleRunner(
 							"\n\n(have you externalized the module via `resolve.external`?)"
 					);
 				}
+
 				filepath = filepath.replace(/^file:\/\//, "");
 				return import(filepath);
 			},

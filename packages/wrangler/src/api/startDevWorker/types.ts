@@ -31,6 +31,7 @@ import type { WorkerRegistry } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { ConfigController } from "./ConfigController";
+import type { DevEnv } from "./DevEnv";
 import type {
 	DispatchFetch,
 	Json,
@@ -53,6 +54,7 @@ export interface Worker {
 	scheduled: MiniflareWorker["scheduled"];
 	queue: MiniflareWorker["queue"];
 	dispose(): Promise<void>;
+	raw: DevEnv;
 }
 
 export interface StartDevWorkerInput {

@@ -1,4 +1,4 @@
-import { Toucan } from "toucan-js";
+import { rewriteFramesIntegration, Toucan } from "toucan-js";
 import type { ColoMetadata } from "./types";
 
 export function setupSentry(
@@ -8,6 +8,7 @@ export function setupSentry(
 	clientId: string,
 	clientSecret: string,
 	coloMetadata?: ColoMetadata,
+	versionMetadata?: WorkerVersionMetadata,
 	accountId?: number,
 	scriptId?: number
 ): Toucan | undefined {
@@ -20,6 +21,15 @@ export function setupSentry(
 		request,
 		context,
 		sampleRate: 1.0,
+		release: versionMetadata?.tag,
+		integrations: [
+			rewriteFramesIntegration({
+				iteratee(frame) {
+					frame.filename = "/index.js";
+					return frame;
+				},
+			}),
+		],
 		requestDataOptions: {
 			allowedHeaders: [
 				"user-agent",

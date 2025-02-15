@@ -1,5 +1,62 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.6.16
+
+### Patch Changes
+
+- Updated dependencies [[`28b1dc7`](https://github.com/cloudflare/workers-sdk/commit/28b1dc7c6f213de336d58ce93308575de8f42f06)]:
+  - wrangler@3.109.1
+
+## 0.6.15
+
+### Patch Changes
+
+- Updated dependencies [[`3fb801f`](https://github.com/cloudflare/workers-sdk/commit/3fb801f734632c165685799cb1b752c4dad0445a), [`fff677e`](https://github.com/cloudflare/workers-sdk/commit/fff677e35f67c28275262c1d19f7eb4d6c6ab071), [`3fb801f`](https://github.com/cloudflare/workers-sdk/commit/3fb801f734632c165685799cb1b752c4dad0445a), [`542c6ea`](https://github.com/cloudflare/workers-sdk/commit/542c6ead5d7c7e64a103abd5572ec7b8aea96c90), [`3fb801f`](https://github.com/cloudflare/workers-sdk/commit/3fb801f734632c165685799cb1b752c4dad0445a), [`4db1fb5`](https://github.com/cloudflare/workers-sdk/commit/4db1fb5696412c6666589a778184e10386294d71), [`542c6ea`](https://github.com/cloudflare/workers-sdk/commit/542c6ead5d7c7e64a103abd5572ec7b8aea96c90), [`1bc60d7`](https://github.com/cloudflare/workers-sdk/commit/1bc60d761ebf67a64ac248e3e2c826407bc26252), [`1aa2a91`](https://github.com/cloudflare/workers-sdk/commit/1aa2a9198578f8eb106f19c8475a63ff4eef26aa), [`35710e5`](https://github.com/cloudflare/workers-sdk/commit/35710e590f20e5c83fb25138ba4ae7890b780a08)]:
+  - wrangler@3.109.0
+  - miniflare@3.20250204.1
+
+## 0.6.14
+
+### Patch Changes
+
+- [#7810](https://github.com/cloudflare/workers-sdk/pull/7810) [`ac4f30b`](https://github.com/cloudflare/workers-sdk/commit/ac4f30b0532f2559ecf1739ba12aa5155cd0a62e) Thanks [@edmundhung](https://github.com/edmundhung)! - Added [Vite dependency pre-bundling](https://vite.dev/guide/dep-pre-bundling) support. If you encounter module resolution issues—such as: `Error: Cannot use require() to import an ES Module` or `Error: No such module`—you can now bundle these dependencies using the [deps.optimizer](https://vitest.dev/config/#deps-optimizer) option:
+
+  ```tsx
+  import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
+
+  export default defineWorkersConfig({
+    test: {
+      deps: {
+        optimizer: {
+          ssr: {
+            enabled: true,
+            include: ["your-package-name"],
+          },
+        },
+      },
+      poolOptions: {
+        workers: {
+          // ...
+        },
+      },
+    },
+  });
+  ```
+
+  Fixed #6591, #6581, #6405.
+
+- Updated dependencies [[`a025ad2`](https://github.com/cloudflare/workers-sdk/commit/a025ad2ecb086cb4bcee6b9dfd8cf06eb2102ade)]:
+  - wrangler@3.108.1
+  - miniflare@3.20250204.0
+
+## 0.6.13
+
+### Patch Changes
+
+- Updated dependencies [[`b1966df`](https://github.com/cloudflare/workers-sdk/commit/b1966dfe57713f3ddcaa781d0551a1088a22424e), [`c80dbd8`](https://github.com/cloudflare/workers-sdk/commit/c80dbd8d5e53a081cf600e250f1ddda860be1a12), [`1f80d69`](https://github.com/cloudflare/workers-sdk/commit/1f80d69f566d240428ddec0c7b62a23c6f5af3c1), [`88514c8`](https://github.com/cloudflare/workers-sdk/commit/88514c82d447903e48d9f782446a6b502e553631), [`9d08af8`](https://github.com/cloudflare/workers-sdk/commit/9d08af81893df499d914b890d784a9554ebf9507), [`6abe69c`](https://github.com/cloudflare/workers-sdk/commit/6abe69c3fe1fb2e762153a3094119ed83038a50b), [`0c0374c`](https://github.com/cloudflare/workers-sdk/commit/0c0374cce3908a47f7459ba4810855c1ce124349), [`b2dca9a`](https://github.com/cloudflare/workers-sdk/commit/b2dca9a2fb885cb4da87a959fefa035c0974d15c), [`6abe69c`](https://github.com/cloudflare/workers-sdk/commit/6abe69c3fe1fb2e762153a3094119ed83038a50b), [`c412a31`](https://github.com/cloudflare/workers-sdk/commit/c412a31985f3c622e5e3cf366699f9e6977184a2), [`60310cd`](https://github.com/cloudflare/workers-sdk/commit/60310cd796468e96571a4d0520f92af54da62630), [`71fd250`](https://github.com/cloudflare/workers-sdk/commit/71fd250f67a02feab7a2f66623ac8bd52b7f7f21)]:
+  - wrangler@3.108.0
+  - miniflare@3.20250204.0
+
 ## 0.6.12
 
 ### Patch Changes

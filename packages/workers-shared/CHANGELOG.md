@@ -1,5 +1,49 @@
 # @cloudflare/workers-shared
 
+## 0.14.3
+
+### Patch Changes
+
+- [`07613d3`](https://github.com/cloudflare/workers-sdk/commit/07613d3b231779466ca2528ce07385552ec73501) Thanks [@penalosa](https://github.com/penalosa)! - Trigger release after testing release process
+
+## 0.14.2
+
+### Patch Changes
+
+- [#8138](https://github.com/cloudflare/workers-sdk/pull/8138) [`f465840`](https://github.com/cloudflare/workers-sdk/commit/f46584035cc18eef3bc40b26131cc00666ab4e11) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Remove the interpolation search experiment for asset manifest reading
+
+## 0.14.1
+
+### Patch Changes
+
+- [#8116](https://github.com/cloudflare/workers-sdk/pull/8116) [`ee4873c`](https://github.com/cloudflare/workers-sdk/commit/ee4873c963b89b0091a2ff0952c274ef9dbf05ad) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Adds a RewriteFrames integration for workers-shared Sentry source-mappings.
+
+- [#8122](https://github.com/cloudflare/workers-sdk/pull/8122) [`e8829e3`](https://github.com/cloudflare/workers-sdk/commit/e8829e3b152cdec6f5bf75713a98297f45bd60fe) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: interpolation search method now checks for a single match at the beginning of every iteration
+
+- [#8115](https://github.com/cloudflare/workers-sdk/pull/8115) [`dba3f21`](https://github.com/cloudflare/workers-sdk/commit/dba3f21587ad294c7e45737e7c776d033cd80dd8) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Bump interpolation search method for asset manifest reading to 1%
+
+- [#8117](https://github.com/cloudflare/workers-sdk/pull/8117) [`08e37f6`](https://github.com/cloudflare/workers-sdk/commit/08e37f6e28c38e064aeca95de1b3d63d8cacbb2d) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Change asset-worker and router-worker analytics to using version tag rather than version UUID.
+
+- [#8126](https://github.com/cloudflare/workers-sdk/pull/8126) [`59eda4a`](https://github.com/cloudflare/workers-sdk/commit/59eda4af54f8eada5324bbd3014c41c934e566ac) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Add status code analytics to router-worker
+
+- [#8105](https://github.com/cloudflare/workers-sdk/pull/8105) [`f2e6e74`](https://github.com/cloudflare/workers-sdk/commit/f2e6e748989e283642e8b1496a789ca2bcd15757) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Handles a divide by zero error that could occur when searching large manifests
+
+- [#8127](https://github.com/cloudflare/workers-sdk/pull/8127) [`d4d5987`](https://github.com/cloudflare/workers-sdk/commit/d4d5987c9f567901542c22cb1df13e56cb286887) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Bump interpoplation search method for asset manifest reads to 50%
+
+## 0.14.0
+
+### Minor Changes
+
+- [#8094](https://github.com/cloudflare/workers-sdk/pull/8094) [`d83dd19`](https://github.com/cloudflare/workers-sdk/commit/d83dd1912baf680df45cea4bbdeae77d2d7013aa) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Provides sentry sourcemap generation and upload on production deploys.
+
+- [#8084](https://github.com/cloudflare/workers-sdk/pull/8084) [`2547c0f`](https://github.com/cloudflare/workers-sdk/commit/2547c0fcca80ac3fde9fed292c3c477218fbd096) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Rollout interpolation search method for asset manifests (1 / 20,000 requests)
+
+## 0.13.2
+
+### Patch Changes
+
+- [#8044](https://github.com/cloudflare/workers-sdk/pull/8044) [`7006630`](https://github.com/cloudflare/workers-sdk/commit/7006630cfe307da4840651bc8b6da102660e3f1a) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Adds analytics and code (zero-percent gated) for a new asset manifest search algorithm
+
 ## 0.13.1
 
 ### Patch Changes

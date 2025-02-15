@@ -49,7 +49,7 @@
 		"tree-kill": "^1.2.2",
 		"turbo": "^2.2.3",
 		"typescript": "catalog:default",
-		"vite": "^5.0.12",
+		"vite": "catalog:default",
 		"vitest": "catalog:default"
 	},
 	"packageManager": "pnpm@9.12.0",
@@ -81,7 +81,8 @@
 		"patchedDependencies": {
 			"@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch",
 			"pg@8.11.3": "patches/pg@8.11.3.patch",
-			"toucan-js@3.3.1": "patches/toucan-js@3.3.1.patch"
+			"toucan-js@3.3.1": "patches/toucan-js@3.3.1.patch",
+			"toucan-js@4.0.0": "patches/toucan-js@4.0.0.patch"
 		}
 	}
 }
