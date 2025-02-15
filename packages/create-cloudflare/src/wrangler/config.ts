@@ -50,7 +50,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 		if (!modified["observability"]) {
 			modified["observability"] = { enabled: true };
 		}
-		const stringified = comment + JSON.stringify(modified, null, '\t').slice(1);
+		const stringified = comment + JSON.stringify(modified, null, "\t").slice(1);
 
 		writeWranglerJson(
 			ctx,
