@@ -23,7 +23,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250204.0",
+		"@cloudflare/workers-types": "^4.20250214.0",
 		"@miniflare/cache": "^2.14.4",
 		"@miniflare/core": "^2.14.4",
 		"@miniflare/html-rewriter": "^2.14.4",
