@@ -100,13 +100,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-13]
-        filter:
-          - '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
-        # Things in the tools folder are for running in CI, and so only need to run on linux
         include:
-          - os: ubuntu-latest
-            filter: '--filter="./tools"'
+          - os: ubuntu-24.04-arm
+            filter: '--filter="./tools" --filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
+          - os: macos-latest
+            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
+          - os: windows-latest
+            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
