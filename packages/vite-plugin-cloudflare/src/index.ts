@@ -16,16 +16,19 @@ import {
 	getPreviewMiniflareOptions,
 } from "./miniflare-options";
 import {
-	getNodeCompatAliases,
+	getNodeCompatEntries,
 	getNodeCompatExternals,
 	injectGlobalCode,
 	isNodeCompat,
-	maybeStripNodeJsVirtualPrefix,
 	resolveNodeJSImport,
 } from "./node-js-compat";
 import { resolvePluginConfig } from "./plugin-config";
 import { MODULE_PATTERN } from "./shared";
-import { getOutputDirectory, toMiniflareRequest } from "./utils";
+import {
+	getOutputDirectory,
+	nodeBuiltInModules,
+	toMiniflareRequest,
+} from "./utils";
 import { handleWebSocket } from "./websockets";
 import { getWarningForWorkersConfigs } from "./workers-configs";
 import type { ModuleType } from "./constants";
@@ -407,67 +410,53 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				// Skip this whole plugin if we are in preview mode
 				return !env.isPreview;
 			},
-			config() {
-				// Configure Vite with the Node.js polyfill aliases
-				// We have to do this across the whole Vite config because it is not possible to do it per Environment.
-				// These aliases are to virtual modules that then get Environment specific handling in the resolveId hook.
+			applyToEnvironment(environment) {
+				const workerConfig = getWorkerConfig(environment.name);
+				return isNodeCompat(workerConfig);
+			},
+			// We need the resolver from this plugin to run before built-in ones, otherwise Vite's built-in
+			// resolver will try to externalize the Node.js module imports (e.g. `perf_hooks` and `node:tty`)
+			// rather than allowing the resolve hook here to alias then to polyfills.
+			enforce: "pre",
+			configEnvironment() {
 				return {
 					resolve: {
-						alias: getNodeCompatAliases(),
+						builtins: getNodeCompatExternals(),
+					},
+					optimizeDeps: {
+						// We don't want to follow any `node:*` type imports when optimizing deps,
+						// whether or not they are built-in to workerd or polyfilled here.
+						// The ones that are not built-in will just get resolved to their polyfill on demand.
+						exclude: [...nodeBuiltInModules],
+						// But we do want to ensure that all the possible entry-points for the polyfills get pre-bundled
+						// so that they are ready for the first request to the dev server.
+						include: [...getNodeCompatEntries()],
 					},
 				};
 			},
-			configEnvironment(environmentName) {
-				// Ignore Node.js external modules when building environments that use Node.js compat.
-				const workerConfig = getWorkerConfig(environmentName);
-				if (isNodeCompat(workerConfig)) {
-					return {
-						build: {
-							rollupOptions: {
-								external: getNodeCompatExternals(),
-							},
-						},
-					};
-				}
-			},
 			async resolveId(source, importer, options) {
-				// Handle the virtual modules that come from Node.js compat aliases.
-				const strippedSource = maybeStripNodeJsVirtualPrefix(source);
-				if (!strippedSource) {
-					return;
+				// See if we can map the `source` to a Node.js compat alias.
+				const result = resolveNodeJSImport(source);
+				if (!result) {
+					// The source is not a Node.js compat alias so just pass it through
+					return this.resolve(source, importer, options);
 				}
-
-				const workerConfig = getWorkerConfig(this.environment.name);
-				if (!isNodeCompat(workerConfig)) {
-					// We are not in Node.js compat mode, so we must not try to apply any unenv aliases.
-					// Just resolve the module id as normal.
-					return this.resolve(strippedSource, importer, options);
-				}
-
-				// Resolve this id following any unenv aliases.
-				const { unresolved, resolved } = resolveNodeJSImport(strippedSource);
 
 				if (this.environment.mode === "dev" && this.environment.depsOptimizer) {
-					// Make sure the dependency optimizer is aware of this aliased import
-					const optimized =
-						this.environment.depsOptimizer.registerMissingImport(
-							unresolved,
-							resolved
-						).id;
-					// We must pass the id from the depsOptimizer through the rest of the
-					// resolving pipeline to ensure that the optimized version gets used.
-					return this.resolve(optimized, importer, options);
+					// We are in dev mode (rather than build).
+					// Node.js compat polyfill modules have already been pre-bundled,
+					// so we can use the unresolved path to the polyfill
+					// and let the dependency optimizer resolve the path to the cached version.
+					return this.resolve(result.unresolved, importer, options);
 				}
 
-				return this.resolve(resolved, importer, options);
+				// We are in build mode so return the absolute path to the polyfill.
+				return this.resolve(result.resolved, importer, options);
 			},
 			async transform(code, id) {
 				// Inject the Node.js compat globals into the entry module for Node.js compat environments.
 				const workerConfig = getWorkerConfig(this.environment.name);
-				if (!isNodeCompat(workerConfig)) {
-					return;
-				}
-
+				assert(workerConfig, "Expected a worker config");
 				const resolvedId = await this.resolve(workerConfig.main);
 				if (id === resolvedId?.id) {
 					return injectGlobalCode(id, code);
