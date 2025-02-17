@@ -362,11 +362,6 @@ export class Context extends RpcTarget {
 						stepNameWithCounter,
 						{}
 					);
-					this.#engine.writeLog(InstanceEvent.WORKFLOW_FAILURE, null, null, {
-						error: new WorkflowFatalError(
-							`The execution of the Workflow instance was terminated, as the step "${name}" threw a NonRetryableError`
-						),
-					});
 
 					throw error;
 				}

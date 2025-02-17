@@ -30,7 +30,7 @@
 		"clean": "rimraf dist",
 		"deploy": "echo 'no deploy'",
 		"dev": "pnpm run bundle:local-binding --watch",
-		"test:ci": "echo 'no tests'"
+		"test:ci": "vitest"
 	},
 	"dependencies": {
 		"heap-js": "^2.5.0",
@@ -40,13 +40,14 @@
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
+		"@cloudflare/vitest-pool-workers": "^0.6.16",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20250204.0",
 		"@types/mime": "^3.0.4",
 		"esbuild": "0.17.19",
 		"rimraf": "catalog:default",
 		"typescript": "catalog:default",
-		"vitest": "catalog:default"
+		"vitest": "^2.1.0"
 	},
 	"engines": {
 		"node": ">=16.7.0"
