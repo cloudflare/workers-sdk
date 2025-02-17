@@ -11336,8 +11336,8 @@ packages:
     resolution: {integrity: sha512-eL/8PlhLcMmlMDtNPKhyyz9kEBDS3Uk4yMu/ewlkT2WFbtzScjHWPJLdQLmaGPUKjXzwe9MumOtOgc4Fro96Kg==}
     hasBin: true
 
-  unzip-stream@0.3.1:
-    resolution: {integrity: sha512-RzaGXLNt+CW+T41h1zl6pGz3EaeVhYlK+rdAap+7DxW5kqsqePO8kRtWPaCiVqdhZc86EctSPVYNix30YOMzmw==}
+  unzip-stream@0.3.4:
+    resolution: {integrity: sha512-PyofABPVv+d7fL7GOpusx7eRT9YETY2X04PhwbSipdj6bMxVCFJrr+nm0Mxqbf9hUiTin/UsnuFWBXlDZFy0Cw==}
 
   update-browserslist-db@1.1.1:
     resolution: {integrity: sha512-R8UzCaa9Az+38REPiJ1tXlImTJXlVfgHZsglwBD/k6nj76ctsH1E3q4doGrukiLQd3sGQYu56r5+lo5r94l29A==}
@@ -11876,7 +11876,7 @@ snapshots:
       archiver: 7.0.1
       jwt-decode: 3.1.2
       twirp-ts: 2.5.0(@protobuf-ts/plugin@2.9.3)
-      unzip-stream: 0.3.1
+      unzip-stream: 0.3.4
     transitivePeerDependencies:
       - encoding
       - ts-proto
@@ -21541,7 +21541,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  unzip-stream@0.3.1:
+  unzip-stream@0.3.4:
     dependencies:
       binary: 0.3.0
       mkdirp: 0.5.6
