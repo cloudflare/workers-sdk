@@ -10,7 +10,7 @@ import WebSocket from "ws";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import type { DevToolsEvent } from "../src/api";
 
-const OPTIONS = [{ remote: true }, { remote: false }] as const;
+const OPTIONS = [{ remote: false }, { remote: true }] as const;
 
 type Wrangler = Awaited<ReturnType<WranglerE2ETestHelper["importWrangler"]>>;
 
