@@ -30,7 +30,7 @@
 		"clean": "rimraf dist",
 		"deploy": "echo 'no deploy'",
 		"dev": "pnpm run bundle:local-binding --watch",
-		"test:ci": "echo 'no tests'"
+		"test:ci": "vitest"
 	},
 	"dependencies": {
 		"heap-js": "^2.5.0",
@@ -40,6 +40,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
+		"@cloudflare/vitest-pool-workers": "^0.7.0",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20250214.0",
 		"@types/mime": "^3.0.4",
