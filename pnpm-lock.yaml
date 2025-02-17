@@ -7344,8 +7344,8 @@ packages:
     resolution: {integrity: sha512-cgwlv/1iFQiFnU96XXgROh8xTeetsnJiDsTc7TYCLFd9+/WNkIqPTxiM/8pSd8VIrhXGTf1Ny1q1hquVqDJB5w==}
     engines: {node: '>= 4'}
 
-  dompurify@2.4.7:
-    resolution: {integrity: sha512-kxxKlPEDa6Nc5WJi+qRgPbOAbgTpSULL+vI3NUXsZMlkJxTqYI9wg5ZTay2sFrdZRWHPWNi+EdAhcJf81WtoMQ==}
+  dompurify@2.5.8:
+    resolution: {integrity: sha512-o1vSNgrmYMQObbSSvF/1brBYEQPHhV1+gsmrusO7/GXtp1T9rCS8cXFqVxK/9crT1jA6Ccv+5MTSjBNqr7Sovw==}
 
   domutils@3.1.0:
     resolution: {integrity: sha512-H78uMmQtI2AhgDJjWeQmHwJJ2bLPD3GMmO7Zja/ZZh84wkm+4ut+IUnUdRa8uCGX88DiVx1j6FRe1XfxEgjEZA==}
@@ -12962,7 +12962,7 @@ snapshots:
       '@cloudflare/intl-core': 1.15.0(react@18.3.1)(regenerator-runtime@0.14.1)
       '@cloudflare/types': 6.23.6(react@18.3.1)
       '@cloudflare/util-markdown': 1.2.15
-      dompurify: 2.4.7
+      dompurify: 2.5.8
       lodash: 4.17.21
       react: 18.3.1
     transitivePeerDependencies:
@@ -17121,7 +17121,7 @@ snapshots:
     dependencies:
       domelementtype: 2.3.0
 
-  dompurify@2.4.7: {}
+  dompurify@2.5.8: {}
 
   domutils@3.1.0:
     dependencies:
