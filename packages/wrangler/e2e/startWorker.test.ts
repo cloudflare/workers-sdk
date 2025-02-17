@@ -207,9 +207,9 @@ describe.each(OPTIONS)("DevEnv (remote: $remote)", ({ remote }) => {
 		const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
 		t.onTestFinished(() => {
-			worker?.dispose();
 			consoleInfoSpy.mockRestore();
 			consoleLogSpy.mockRestore();
+			return worker?.dispose();
 		});
 
 		const LARGE_STRING = "This is a large string" + "z".repeat(2 ** 20);
