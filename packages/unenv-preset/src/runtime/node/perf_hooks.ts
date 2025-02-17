@@ -2,14 +2,12 @@ import {
 	constants,
 	createHistogram,
 	monitorEventLoopDelay,
-	Performance,
 	PerformanceEntry,
 	PerformanceMark,
 	PerformanceMeasure,
 	PerformanceObserver,
 	PerformanceObserverEntryList,
 	PerformanceResourceTiming,
-	performance as unenvPerformance,
 } from "unenv/node/perf_hooks";
 import type nodePerfHooks from "node:perf_hooks";
 
@@ -26,71 +24,75 @@ export {
 	monitorEventLoopDelay,
 } from "unenv/node/perf_hooks";
 
-// The following is an unusual way to access the original/unpatched globalThis.performance.
-// This is needed to get hold of the real performance object before any of the unenv polyfills are
-// applied via `inject` or `polyfill` config in presets.
+// `unenvPerf` is lazyly instantiated to worakround a circuler dependency.
+// `Performance` is undefined at this point.
+let unenvPerf: nodePerfHooks.Performance | undefined;
+
+function createPropertyDescriptor<T extends keyof nodePerfHooks.Performance>(
+	prop: T
+): PropertyDescriptor {
+	return {
+		get: () => {
+			unenvPerf ??= new Performance() as unknown as nodePerfHooks.Performance;
+			if (typeof unenvPerf?.[prop] === "function") {
+				return unenvPerf[prop].bind(unenvPerf);
+			}
+			return unenvPerf[prop];
+		},
+		enumerable: true,
+	};
+}
+
+export const performance = Object.defineProperties(globalThis.performance, {
+	clearMarks: createPropertyDescriptor("clearMarks"),
+	clearMeasures: createPropertyDescriptor("clearMeasures"),
+	clearResourceTimings: createPropertyDescriptor("clearResourceTimings"),
+	eventLoopUtilization: createPropertyDescriptor("eventLoopUtilization"),
+	getEntries: createPropertyDescriptor("getEntries"),
+	getEntriesByName: createPropertyDescriptor("getEntriesByName"),
+	getEntriesByType: createPropertyDescriptor("getEntriesByType"),
+	mark: createPropertyDescriptor("mark"),
+	markResourceTiming: createPropertyDescriptor("markResourceTiming"),
+	measure: createPropertyDescriptor("measure"),
+	nodeTiming: createPropertyDescriptor("nodeTiming"),
+	setResourceTimingBufferSize: createPropertyDescriptor(
+		"setResourceTimingBufferSize"
+	),
+	timerify: createPropertyDescriptor("timerify"),
+	toJSON: createPropertyDescriptor("toJSON"),
+}) as unknown as nodePerfHooks.Performance;
+
+// Note, ideally performance should be in the preset `inject`s
 //
-// This code relies on the that rollup/esbuild/webpack don't evaluate string concatenation
-// so they don't recognize the below as `globalThis.performance` which they would try to rewrite
-// into unenv/node/perf_hooks, thus creating a circular dependency, and breaking this polyfill.
-const workerdGlobalPerformance = (globalThis as any)[
-	"perf" + "ormance"
-] as typeof nodePerfHooks.performance;
+// 	  inject: {
+//      Performance: ["@cloudflare/unenv-preset/node/perf_hooks", "Performance"],
+//      performance: ["@cloudflare/unenv-preset/node/perf_hooks", "performance"],
+//    }
+//
+// But does so would create 2 virtual modules with a circular dependency.
+// Then we directly assign to `globalThis.performance` at the same time `Performance`
+// is injected.
+globalThis.performance = performance;
 
-// reuse unenv's polyfill, but since preserve globalThis.performance identity
-// we use `.bind(unenvPerformance)` here to preserve the `this` for all delegated method calls
-export const performance = Object.assign(workerdGlobalPerformance, {
-	// @ts-expect-error undocumented public API
-	addEventListener: unenvPerformance.addEventListener.bind(unenvPerformance),
-	clearMarks: unenvPerformance.clearMarks.bind(unenvPerformance),
-	clearMeasures: unenvPerformance.clearMeasures.bind(unenvPerformance),
-	clearResourceTimings:
-		unenvPerformance.clearResourceTimings.bind(unenvPerformance),
-	// @ts-expect-error undocumented public API
-	dispatchEvent: unenvPerformance.dispatchEvent.bind(unenvPerformance),
-	eventLoopUtilization:
-		unenvPerformance.eventLoopUtilization.bind(unenvPerformance),
-	getEntries: unenvPerformance.getEntries.bind(unenvPerformance),
-	getEntriesByName: unenvPerformance.getEntriesByName.bind(unenvPerformance),
-	getEntriesByType: unenvPerformance.getEntriesByType.bind(unenvPerformance),
-	mark: unenvPerformance.mark.bind(unenvPerformance),
-	markResourceTiming:
-		unenvPerformance.markResourceTiming.bind(unenvPerformance),
-	measure: unenvPerformance.measure.bind(unenvPerformance),
-	nodeTiming: { ...unenvPerformance.nodeTiming },
-	onresourcetimingbufferfull:
-		// @ts-expect-error undocumented public API
-		typeof unenvPerformance.onresourcetimingbufferfull === "function"
-			? // @ts-expect-error undocumented public API
-				unenvPerformance.onresourcetimingbufferfull.bind(unenvPerformance)
-			: // @ts-expect-error undocumented public API
-				unenvPerformance.onresourcetimingbufferfull,
-	removeEventListener:
-		// @ts-expect-error undocumented public API
-		unenvPerformance.removeEventListener.bind(unenvPerformance),
-	setResourceTimingBufferSize:
-		unenvPerformance.setResourceTimingBufferSize.bind(unenvPerformance),
-	timerify: unenvPerformance.timerify.bind(unenvPerformance),
-	toJSON: unenvPerformance.toJSON.bind(unenvPerformance),
-});
-
+// TODO: resolve type-mismatch between web and node
 export default {
 	/**
 	 * manually unroll unenv-polyfilled-symbols to make it tree-shakeable
 	 */
 	Performance,
+	// @ts-expect-error
 	PerformanceEntry,
 	PerformanceMark,
+	// @ts-expect-error
 	PerformanceMeasure,
-	// @ts-expect-error TODO: resolve type-mismatch between web and node PerformanceObserverEntryList
+	// @ts-expect-error
 	PerformanceObserverEntryList,
 	PerformanceObserver,
-	// @ts-expect-error TODO: resolve type-mismatch between web and node PerformanceObserverEntryList
+	// @ts-expect-error
 	PerformanceResourceTiming,
 	constants,
 	createHistogram,
 	monitorEventLoopDelay,
-
 	/**
 	 * manually unroll workerd-polyfilled-symbols to make it tree-shakeable
 	 */

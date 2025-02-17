@@ -118,6 +118,9 @@ function testBasicNodejsProperties() {
 		globalThis.Performance !== undefined,
 		"globalThis.Performance is missing"
 	);
+
+	assert.strictEqual(typeof performance.measure, "function");
+	assert.strictEqual(typeof performance.clearMarks, "function");
 }
 
 function testProcessBehaviour() {
