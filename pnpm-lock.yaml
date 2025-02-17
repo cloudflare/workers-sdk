@@ -7811,8 +7811,8 @@ packages:
   fast-levenshtein@2.0.6:
     resolution: {integrity: sha512-DCXu6Ifhqcks7TZKY3Hxp3y6qphY5SJZmrWMDrKcERSOXWQdMhU9Ig/PYrzyw/ul9jOIyh0N4M0tbC5hodg8dw==}
 
-  fast-loops@1.1.3:
-    resolution: {integrity: sha512-8EZzEP0eKkEEVX+drtd9mtuQ+/QrlfW/5MlwcwK5Nds6EkZ/tRzEexkzUY2mIssnAyVLT+TKHuRXmFNNXYUd6g==}
+  fast-loops@1.1.4:
+    resolution: {integrity: sha512-8dbd3XWoKCTms18ize6JmQF1SFnnfj5s0B7rRry22EofgMu7B6LKHVh+XfFqFGsqnbH54xgeO83PzpKI+ODhlg==}
 
   fast-querystring@1.1.2:
     resolution: {integrity: sha512-g6KuKWmFXc0fID8WWH0jit4g0AGBoJhCkJMb1RmbsSEUNvQ+ZC8D6CUZ+GtF8nMzSPXnhiePyyqqipzNNEnHjg==}
@@ -17810,7 +17810,7 @@ snapshots:
 
   fast-levenshtein@2.0.6: {}
 
-  fast-loops@1.1.3: {}
+  fast-loops@1.1.4: {}
 
   fast-querystring@1.1.2:
     dependencies:
@@ -17840,7 +17840,7 @@ snapshots:
 
   fela-bindings@11.7.0(fela@11.7.0):
     dependencies:
-      fast-loops: 1.1.3
+      fast-loops: 1.1.4
       fela: 11.7.0
       fela-dom: 11.7.0
       fela-tools: 11.7.0(fela@11.7.0)
@@ -17850,13 +17850,13 @@ snapshots:
   fela-dom@11.7.0:
     dependencies:
       css-in-js-utils: 3.1.0
-      fast-loops: 1.1.3
+      fast-loops: 1.1.4
       fela-utils: 11.7.0
       sort-css-media-queries: 1.5.4
 
   fela-plugin-embedded@11.7.0:
     dependencies:
-      fast-loops: 1.1.3
+      fast-loops: 1.1.4
       isobject: 3.0.1
 
   fela-plugin-fallback-value@11.7.0:
@@ -17872,7 +17872,7 @@ snapshots:
   fela-plugin-prefixer@11.7.0:
     dependencies:
       css-in-js-utils: 3.1.0
-      fast-loops: 1.1.3
+      fast-loops: 1.1.4
       fela-plugin-fallback-value: 11.7.0
       inline-style-prefixer: 5.1.2
       isobject: 3.0.1
@@ -17893,20 +17893,20 @@ snapshots:
   fela-tools@11.7.0(fela@11.7.0):
     dependencies:
       css-in-js-utils: 3.1.0
-      fast-loops: 1.1.3
+      fast-loops: 1.1.4
       fela: 11.7.0
       fela-utils: 11.7.0
 
   fela-utils@11.7.0:
     dependencies:
       css-in-js-utils: 3.1.0
-      fast-loops: 1.1.3
+      fast-loops: 1.1.4
 
   fela@11.7.0:
     dependencies:
       css-in-js-utils: 3.1.0
       csstype: 3.1.2
-      fast-loops: 1.1.3
+      fast-loops: 1.1.4
       fela-utils: 11.7.0
       isobject: 3.0.1
 
