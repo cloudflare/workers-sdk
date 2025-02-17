@@ -78,7 +78,7 @@
 		"devalue": "^4.3.0",
 		"devtools-protocol": "^0.0.1182435",
 		"esbuild": "0.17.19",
-		"eslint": "^8.49.0",
+		"eslint": "^8.57.1",
 		"eslint-config-prettier": "^9.0.0",
 		"eslint-plugin-es": "^4.1.0",
 		"eslint-plugin-import": "2.26.x",
