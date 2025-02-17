@@ -21,6 +21,8 @@ export const typesCommand = createCommand({
 			"📝 Generate types from bindings and module rules in configuration\n",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
+		epilogue:
+			"📖 Learn more at https://developers.cloudflare.com/workers/languages/typescript/",
 	},
 	positionalArgs: ["path"],
 	args: {
