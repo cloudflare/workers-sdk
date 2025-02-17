@@ -863,15 +863,6 @@ importers:
         specifier: workspace:*
         version: link:../../packages/kv-asset-handler
 
-  fixtures/type-generation:
-    devDependencies:
-      vitest:
-        specifier: catalog:default
-        version: 3.0.5(@types/node@18.19.76)(@vitest/ui@3.0.5)(jiti@2.4.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../packages/wrangler
-
   fixtures/unstable_dev:
     devDependencies:
       wrangler:

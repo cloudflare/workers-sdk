@@ -14,6 +14,7 @@ import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
+import { checkTypesDiff } from "../../type-generation/helpers";
 import { requireApiToken, requireAuth } from "../../user";
 import {
 	DEFAULT_INSPECTOR_PORT,
@@ -368,6 +369,9 @@ async function resolveConfig(
 	) {
 		logger.warn("SQLite in Durable Objects is only supported in local mode.");
 	}
+
+	// prompt user to update their types if we detect that it is out of date
+	await checkTypesDiff(config, entry);
 
 	return resolved;
 }
