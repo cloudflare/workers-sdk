@@ -16,6 +16,7 @@ import {
 } from "./constants";
 import { getWorkerConfigPaths } from "./deploy-config";
 import { MODULE_PATTERN } from "./shared";
+import { nodeBuiltInModules } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
 	PersistState,
@@ -328,22 +329,16 @@ export function getDevMiniflareOptions(
 									const [moduleId] = invokePayloadData.data;
 									const moduleRE = new RegExp(MODULE_PATTERN);
 
-									// Externalize Worker modules (CompiledWasm, Text, Data)
-									if (moduleRE.test(moduleId)) {
+									const shouldExternalize =
+										// Worker modules (CompiledWasm, Text, Data)
+										moduleRE.test(moduleId) ||
+										// Node.js builtin node modules (they will be resolved to unenv aliases)
+										nodeBuiltInModules.has(moduleId);
+
+									if (shouldExternalize) {
 										const result = {
 											externalize: moduleId,
 											type: "module",
-										} satisfies vite.FetchResult;
-
-										return MiniflareResponse.json({ result });
-									}
-
-									// For some reason we need this here for cloudflare built-ins (e.g. `cloudflare:workers`) but not for node built-ins (e.g. `node:path`)
-									// See https://github.com/flarelabs-net/vite-plugin-cloudflare/issues/46
-									if (moduleId.startsWith("cloudflare:")) {
-										const result = {
-											externalize: moduleId,
-											type: "builtin",
 										} satisfies vite.FetchResult;
 
 										return MiniflareResponse.json({ result });
