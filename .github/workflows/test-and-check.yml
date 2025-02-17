@@ -1,4 +1,4 @@
-name: Tests + Checks
+name: CI
 
 on:
   pull_request:
@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macos-13]
+        os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -62,7 +62,7 @@ jobs:
       cancel-in-progress: true
 
     name: "Checks"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -96,17 +96,20 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.filter }}-test
       cancel-in-progress: true
 
-    name: "Tests"
+    name: ${{ format('Tests ({0})', matrix.os_name) }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-13]
-        filter:
-          - '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
-        # Things in the tools folder are for running in CI, and so only need to run on linux
         include:
-          - os: ubuntu-latest
-            filter: '--filter="./tools"'
+          - os: ubuntu-24.04-arm
+            os_name: Linux
+            filter: '--filter="./tools" --filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
+          - os: macos-latest
+            os_name: macOS
+            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
+          - os: windows-latest
+            os_name: Windows
+            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
