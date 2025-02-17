@@ -112,13 +112,12 @@ describe("splitSqlQuery()", () => {
         AND "col;name" = \`other;col\`; -- or identifiers (Postgres or MySQL style)`
 			)
 		).toMatchInlineSnapshot(`
-		Array [
-		  "SELECT * FROM my_table -- semicolons; in; comments; don't count;
-		        WHERE val = 'foo;bar'
-		        AND \\"col;name\\" = \`other;col\`",
-		  "-- or identifiers (Postgres or MySQL style)",
-		]
-	`);
+			Array [
+			  "SELECT * FROM my_table 
+			        WHERE val = 'foo;bar'
+			        AND \\"col;name\\" = \`other;col\`",
+			]
+		`);
 	});
 
 	it("should handle block comments", () => {
@@ -131,14 +130,11 @@ describe("splitSqlQuery()", () => {
         WHERE val = 'foo;bar' AND count / 2 > 0`
 			)
 		).toMatchInlineSnapshot(`
-		Array [
-		  "/****
-		        * Block comments are ignored;
-		        ****/
-					SELECT * FROM my_table /* semicolons; in; comments; don't count; */
-		        WHERE val = 'foo;bar' AND count / 2 > 0",
-		]
-	`);
+			Array [
+			  "SELECT * FROM my_table 
+			        WHERE val = 'foo;bar' AND count / 2 > 0",
+			]
+		`);
 	});
 
 	it("should split multiple statements", () => {
@@ -155,6 +151,22 @@ describe("splitSqlQuery()", () => {
 		  "SELECT * FROM my_table WHERE id = 42 - 10",
 		]
 	`);
+	});
+
+	it("should ignore comment at the end", () => {
+		expect(
+			splitSqlQuery(
+				`
+		-- This is a comment
+        SELECT * FROM my_table WHERE id = 42 - 10;
+		-- This is a comment
+      `
+			)
+		).toMatchInlineSnapshot(`
+			Array [
+			  "SELECT * FROM my_table WHERE id = 42 - 10",
+			]
+		`);
 	});
 
 	it("should handle whitespace between statements", () => {
