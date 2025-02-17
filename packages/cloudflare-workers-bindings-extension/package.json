@@ -122,7 +122,7 @@
 		"@vscode/test-electron": "^2.4.1",
 		"concurrently": "^8.2.2",
 		"esbuild": "^0.21.5",
-		"eslint": "^8.57.0",
+		"eslint": "^8.57.1",
 		"glob": "^7.1.4",
 		"mocha": "^10.2.0",
 		"typescript": "^5.4.5",
