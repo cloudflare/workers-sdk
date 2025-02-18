@@ -2,4 +2,4 @@
 "@cloudflare/vitest-pool-workers": patch
 ---
 
-Support file paths with spaces on Windows
+Support scoped names (e.g. `@scoped/durable-objects`) when using `runInDurableObject()`
