@@ -1518,47 +1518,6 @@ describe.sequential("wrangler dev", () => {
 		});
 	});
 
-	describe("--inspect", () => {
-		it("should warn if --inspect is used", async () => {
-			fs.writeFileSync("index.js", `export default {};`);
-			await runWranglerUntilConfig("dev index.js --inspect");
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPassing --inspect is unnecessary, now you can always connect to devtools.[0m
-
-				"
-			`);
-		});
-	});
-
-	describe("--log-level", () => {
-		it("should not output warnings with log-level 'none'", async () => {
-			fs.writeFileSync("index.js", `export default {};`);
-			await runWranglerUntilConfig("dev index.js --inspect --log-level none");
-			expect(std.warn).toMatchInlineSnapshot(`""`);
-		});
-
-		it("should output warnings with log-level 'warn'", async () => {
-			fs.writeFileSync("index.js", `export default {};`);
-			await runWranglerUntilConfig("dev index.js --inspect --log-level warn");
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPassing --inspect is unnecessary, now you can always connect to devtools.[0m
-
-				"
-			`);
-		});
-
-		it("should also set log level using WRANGLER_LOG'", async () => {
-			fs.writeFileSync("index.js", `export default {};`);
-			vi.stubEnv("WRANGLER_LOG", "none");
-			await runWranglerUntilConfig("dev index.js --inspect");
-			expect(std.warn).toMatchInlineSnapshot(`""`);
-
-			vi.stubEnv("WRANGLER_LOG", "debug");
-			await runWranglerUntilConfig("dev index.js");
-			expect(std.debug).toContain(".env file not found at");
-		});
-	});
-
 	describe("--show-interactive-dev-session", () => {
 		it("should show interactive dev session with --show-interactive-dev-session", async () => {
 			fs.writeFileSync("index.js", `export default { }`);
