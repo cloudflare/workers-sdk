@@ -1148,6 +1148,17 @@ function normalizeAndValidateEnvironment(
 		false // We need to leave this in-place for the moment since `route` commands might use it.
 	);
 
+	deprecated(
+		diagnostics,
+		rawEnv,
+		// @ts-expect-error Removed from the config type
+		"node_compat",
+		`The "node_compat" field is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`,
+		true,
+		"Removed",
+		"error"
+	);
+
 	// The field "experimental_services" doesn't exist anymore in the config, but we still want to error about any older usage.
 
 	deprecated(
@@ -1597,14 +1608,6 @@ function normalizeAndValidateEnvironment(
 			topLevelEnv,
 			rawEnv,
 			"minify",
-			isBoolean,
-			undefined
-		),
-		node_compat: inheritable(
-			diagnostics,
-			topLevelEnv,
-			rawEnv,
-			"node_compat",
 			isBoolean,
 			undefined
 		),

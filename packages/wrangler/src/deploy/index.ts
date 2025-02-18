@@ -197,6 +197,8 @@ export const deployCommand = createCommand({
 		"node-compat": {
 			describe: "Enable Node.js compatibility",
 			type: "boolean",
+			hidden: true,
+			deprecated: true,
 		},
 		"dry-run": {
 			describe: "Don't actually deploy",
@@ -248,6 +250,11 @@ export const deployCommand = createCommand({
 		}),
 	},
 	validateArgs(args) {
+		if (args.nodeCompat) {
+			throw new UserError(
+				`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`
+			);
+		}
 		if (args.legacyAssets) {
 			logger.warn(
 				`The --legacy-assets argument has been deprecated. Please use --assets instead.\n` +
@@ -373,7 +380,6 @@ export const deployCommand = createCommand({
 			legacyAssetPaths,
 			legacyEnv: isLegacyEnv(config),
 			minify: args.minify,
-			nodeCompat: args.nodeCompat,
 			isWorkersSite: Boolean(args.site || config.site),
 			outDir: args.outdir,
 			outFile: args.outfile,
