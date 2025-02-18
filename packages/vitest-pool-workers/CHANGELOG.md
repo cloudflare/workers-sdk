@@ -1,5 +1,17 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.7.0
+
+### Minor Changes
+
+- [#7923](https://github.com/cloudflare/workers-sdk/pull/7923) [`aaa9cca`](https://github.com/cloudflare/workers-sdk/commit/aaa9cca4deeaab3155dcedeca0177339b24246af) Thanks [@penalosa](https://github.com/penalosa)! - Support Vitest v3. While this drops testing for Vitest v2, we expect Vitest v2 will continue to work as well.
+
+### Patch Changes
+
+- Updated dependencies [[`5e06177`](https://github.com/cloudflare/workers-sdk/commit/5e06177861b29aa9b114f9ecb50093190af94f4b), [`cc853cf`](https://github.com/cloudflare/workers-sdk/commit/cc853cf0dcefc35c9d9022b9a1641d2d77c19da8), [`efd7f97`](https://github.com/cloudflare/workers-sdk/commit/efd7f9764199ef67dff14155bd3dd249c4dff5c7)]:
+  - miniflare@3.20250214.0
+  - wrangler@3.109.2
+
 ## 0.6.16
 
 ### Patch Changes
@@ -25,21 +37,21 @@
   import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 
   export default defineWorkersConfig({
-    test: {
-      deps: {
-        optimizer: {
-          ssr: {
-            enabled: true,
-            include: ["your-package-name"],
-          },
-        },
-      },
-      poolOptions: {
-        workers: {
-          // ...
-        },
-      },
-    },
+  	test: {
+  		deps: {
+  			optimizer: {
+  				ssr: {
+  					enabled: true,
+  					include: ["your-package-name"],
+  				},
+  			},
+  		},
+  		poolOptions: {
+  			workers: {
+  				// ...
+  			},
+  		},
+  	},
   });
   ```
 
@@ -913,16 +925,16 @@
   import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 
   export default defineWorkersConfig({
-    test: {
-      poolOptions: {
-        workers: {
-          wrangler: {
-            configPath: "./wrangler.toml",
-            environment: "production",
-          },
-        },
-      },
-    },
+  	test: {
+  		poolOptions: {
+  			workers: {
+  				wrangler: {
+  					configPath: "./wrangler.toml",
+  					environment: "production",
+  				},
+  			},
+  		},
+  	},
   });
   ```
 
