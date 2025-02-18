@@ -93,11 +93,11 @@ describe("BundleController", () => {
 			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 				.toMatchInlineSnapshot(`
 					"// index.ts
-					var src_exports = {};
-					__export(src_exports, {
-					  default: () => src_default
+					var index_exports = {};
+					__export(index_exports, {
+					  default: () => index_default
 					});
-					var src_default = {
+					var index_default = {
 					  fetch(request, env, ctx) {
 					    return new Response(\\"hello world\\");
 					  }
@@ -118,11 +118,11 @@ describe("BundleController", () => {
 			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 				.toMatchInlineSnapshot(`
 					"// index.ts
-					var src_exports = {};
-					__export(src_exports, {
-					  default: () => src_default
+					var index_exports = {};
+					__export(index_exports, {
+					  default: () => index_default
 					});
-					var src_default = {
+					var index_default = {
 					  fetch(request, env, ctx) {
 					    return new Response(\\"hello world 2\\");
 					  }
@@ -180,9 +180,9 @@ describe("BundleController", () => {
 			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 				.toMatchInlineSnapshot(`
 					"// index.ts
-					var src_exports = {};
-					__export(src_exports, {
-					  default: () => src_default
+					var index_exports = {};
+					__export(index_exports, {
+					  default: () => index_default
 					});
 					"
 				`);
@@ -390,11 +390,11 @@ describe("BundleController", () => {
 			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 				.toMatchInlineSnapshot(`
 					"// index.ts
-					var src_exports = {};
-					__export(src_exports, {
-					  default: () => src_default
+					var index_exports = {};
+					__export(index_exports, {
+					  default: () => index_default
 					});
-					var src_default = {
+					var index_default = {
 					  fetch(request, env, ctx) {
 					    return new Response(\\"hello world\\");
 					  }
@@ -574,11 +574,11 @@ describe("BundleController", () => {
 			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 				.toMatchInlineSnapshot(`
 					"// index.ts
-					var src_exports = {};
-					__export(src_exports, {
-					  default: () => src_default
+					var index_exports = {};
+					__export(index_exports, {
+					  default: () => index_default
 					});
-					var src_default = {
+					var index_default = {
 					  fetch(request, env, ctx) {
 					    return new Response(\\"hello world\\");
 					  }
@@ -599,11 +599,11 @@ describe("BundleController", () => {
 			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 				.toMatchInlineSnapshot(`
 					"// index.ts
-					var src_exports = {};
-					__export(src_exports, {
-					  default: () => src_default
+					var index_exports = {};
+					__export(index_exports, {
+					  default: () => index_default
 					});
-					var src_default = {
+					var index_default = {
 					  fetch(request, env, ctx) {
 					    return new Response(\\"hello world 2\\");
 					  }
