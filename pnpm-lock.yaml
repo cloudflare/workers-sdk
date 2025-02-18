@@ -15,6 +15,9 @@ catalogs:
     '@vitest/ui':
       specifier: ~3.0.5
       version: 3.0.5
+    esbuild:
+      specifier: 0.24.2
+      version: 0.24.2
     rimraf:
       specifier: ^5.0.10
       version: 5.0.10
@@ -102,11 +105,11 @@ importers:
         specifier: ^7.3.0
         version: 7.3.0
       esbuild:
-        specifier: 0.17.19
-        version: 0.17.19
+        specifier: catalog:default
+        version: 0.24.2
       esbuild-register:
         specifier: ^3.5.0
-        version: 3.5.0(esbuild@0.17.19)
+        version: 3.5.0(esbuild@0.24.2)
       jsonc-parser:
         specifier: ^3.2.0
         version: 3.2.0
@@ -922,6 +925,21 @@ importers:
 
   fixtures/wasm-app: {}
 
+  fixtures/wildcard-modules:
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20240925.0
+        version: 4.20250214.0
+      undici:
+        specifier: ^5.28.4
+        version: 5.28.4
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/worker-app:
     dependencies:
       cookie:
@@ -1087,8 +1105,8 @@ importers:
         specifier: ^5.2.0
         version: 5.3.0
       esbuild:
-        specifier: 0.17.19
-        version: 0.17.19
+        specifier: catalog:default
+        version: 0.24.2
       log-update:
         specifier: ^5.0.1
         version: 5.0.1
@@ -1123,8 +1141,8 @@ importers:
         specifier: ^8.2.2
         version: 8.2.2
       esbuild:
-        specifier: ^0.21.5
-        version: 0.21.5
+        specifier: catalog:default
+        version: 0.24.2
       eslint:
         specifier: ^8.57.1
         version: 8.57.1
@@ -1231,8 +1249,8 @@ importers:
         specifier: ^16.0.0
         version: 16.3.1
       esbuild:
-        specifier: 0.17.19
-        version: 0.17.19
+        specifier: catalog:default
+        version: 0.24.2
       execa:
         specifier: ^7.1.1
         version: 7.1.1
@@ -1513,8 +1531,8 @@ importers:
         specifier: ^0.0.1182435
         version: 0.0.1182435
       esbuild:
-        specifier: 0.17.19
-        version: 0.17.19
+        specifier: catalog:default
+        version: 0.24.2
       eslint:
         specifier: ^8.57.1
         version: 8.57.1
@@ -1691,11 +1709,11 @@ importers:
         specifier: ^4.20250214.0
         version: 4.20250214.0
       esbuild:
-        specifier: 0.17.19
-        version: 0.17.19
+        specifier: catalog:default
+        version: 0.24.2
       esbuild-register:
         specifier: ^3.5.0
-        version: 3.5.0(esbuild@0.17.19)
+        version: 3.5.0(esbuild@0.24.2)
 
   packages/solarflare-theme: {}
 
@@ -2374,8 +2392,8 @@ importers:
         specifier: ^4.3.0
         version: 4.3.2
       esbuild:
-        specifier: 0.17.19
-        version: 0.17.19
+        specifier: catalog:default
+        version: 0.24.2
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
@@ -2627,8 +2645,8 @@ importers:
         specifier: ^8.2.2
         version: 8.2.2
       esbuild:
-        specifier: 0.17.19
-        version: 0.17.19
+        specifier: catalog:default
+        version: 0.24.2
       rimraf:
         specifier: catalog:default
         version: 5.0.10
@@ -2696,8 +2714,8 @@ importers:
         specifier: ^3.0.4
         version: 3.0.4
       esbuild:
-        specifier: 0.17.19
-        version: 0.17.19
+        specifier: catalog:default
+        version: 0.24.2
       rimraf:
         specifier: catalog:default
         version: 5.0.10
@@ -2717,8 +2735,8 @@ importers:
         specifier: 2.1.5
         version: 2.1.5
       esbuild:
-        specifier: 0.17.19
-        version: 0.17.19
+        specifier: catalog:default
+        version: 0.24.2
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
@@ -16910,10 +16928,10 @@ snapshots:
 
   es6-object-assign@1.1.0: {}
 
-  esbuild-register@3.5.0(esbuild@0.17.19):
+  esbuild-register@3.5.0(esbuild@0.24.2):
     dependencies:
       debug: 4.3.7(supports-color@9.2.2)
-      esbuild: 0.17.19
+      esbuild: 0.24.2
     transitivePeerDependencies:
       - supports-color
 
