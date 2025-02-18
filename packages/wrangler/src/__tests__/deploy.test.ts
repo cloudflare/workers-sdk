@@ -9848,14 +9848,14 @@ export default{
 				// index.js
 				import txt from \\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\";
 				import hello from \\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\";
-				var wrangler_default = {
+				var index_default = {
 				  async fetch() {
 				    const module = await WebAssembly.instantiate(hello);
 				    return new Response(txt + module.exports.hello);
 				  }
 				};
 				export {
-				  wrangler_default as default
+				  index_default as default
 				};
 				//# sourceMappingURL=index.js.map
 
@@ -9940,14 +9940,14 @@ export default{
 				// index.js
 				import txt from \\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\";
 				import hello from \\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\";
-				var wrangler_default = {
+				var index_default = {
 				  async fetch() {
 				    const module = await WebAssembly.instantiate(hello);
 				    return new Response(txt + module.exports.hello);
 				  }
 				};
 				export {
-				  wrangler_default as default
+				  index_default as default
 				};
 				//# sourceMappingURL=index.js.map
 
@@ -10058,14 +10058,14 @@ export default{
 				// index.js
 				import txt from \\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\";
 				import hello from \\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\";
-				var wrangler_default = {
+				var index_default = {
 				  async fetch() {
 				    const module = await WebAssembly.instantiate(hello);
 				    return new Response(txt + module.exports.hello);
 				  }
 				};
 				export {
-				  wrangler_default as default
+				  index_default as default
 				};
 				//# sourceMappingURL=index.js.map
 
@@ -10150,14 +10150,14 @@ export default{
 				// index.js
 				import txt from \\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\";
 				import hello from \\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\";
-				var wrangler_default = {
+				var index_default = {
 				  async fetch() {
 				    const module = await WebAssembly.instantiate(hello);
 				    return new Response(txt + module.exports.hello);
 				  }
 				};
 				export {
-				  wrangler_default as default
+				  index_default as default
 				};
 				//# sourceMappingURL=index.js.map
 
