@@ -1879,21 +1879,6 @@ describe.sequential("wrangler dev", () => {
 		});
 	});
 
-	describe("`nodejs_compat` compatibility flag", () => {
-		it("should conflict with the --node-compat option", async () => {
-			writeWranglerConfig();
-			fs.writeFileSync("index.js", `export default {};`);
-
-			await expect(
-				runWrangler(
-					"dev index.js --compatibility-flag=nodejs_compat --node-compat"
-				)
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: The \`nodejs_compat\` compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers \`nodejs_compat\` compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.]`
-			);
-		});
-	});
-
 	describe("`browser rendering binding", () => {
 		it("should show error when running locally", async () => {
 			writeWranglerConfig({
