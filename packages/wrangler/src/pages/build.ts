@@ -13,7 +13,7 @@ import { findWranglerConfig } from "../config/config-helpers";
 import { shouldCheckFetch } from "../deployment-bundle/bundle";
 import { writeAdditionalModules } from "../deployment-bundle/find-additional-modules";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
-import { FatalError } from "../errors";
+import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -107,6 +107,7 @@ export function Options(yargs: CommonYargsArgv) {
 				default: false,
 				type: "boolean",
 				hidden: true,
+				deprecated: true,
 			},
 			"compatibility-date": {
 				describe: "Date to use for compatibility checks",
@@ -387,6 +388,12 @@ type ValidatedArgs = WorkerBundleArgs | PluginArgs;
 const validateArgs = async (args: PagesBuildArgs): Promise<ValidatedArgs> => {
 	const config = await maybeReadPagesConfig(args);
 
+	if (args.nodeCompat) {
+		throw new UserError(
+			`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`
+		);
+	}
+
 	if (args.outdir && args.outfile) {
 		throw new FatalError(
 			"Cannot specify both an `--outdir` and an `--outfile`.",
@@ -446,12 +453,10 @@ const validateArgs = async (args: PagesBuildArgs): Promise<ValidatedArgs> => {
 		args.outfile = resolvePath(args.outfile);
 	}
 
-	const { nodeCompat: node_compat, ...argsExceptNodeCompat } = args;
 	const nodejsCompatMode = validateNodeCompatMode(
 		args.compatibilityDate ?? config?.compatibility_date,
 		args.compatibilityFlags ?? config?.compatibility_flags ?? [],
 		{
-			nodeCompat: node_compat,
 			noBundle: config?.no_bundle,
 		}
 	);
@@ -503,7 +508,7 @@ We looked for the Functions directory (${basename(
 	}
 
 	return {
-		...argsExceptNodeCompat,
+		...args,
 		workerScriptPath,
 		nodejsCompatMode,
 		defineNavigatorUserAgent,

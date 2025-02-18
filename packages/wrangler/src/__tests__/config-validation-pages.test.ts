@@ -232,7 +232,6 @@ describe("validatePagesConfig()", () => {
 					build: {
 						command: "npm run build",
 					},
-					node_compat: true,
 				},
 			};
 			diagnostics = validatePagesConfig(
@@ -247,7 +246,6 @@ describe("validatePagesConfig()", () => {
 			  - Configuration file for Pages projects does not support \\"triggers\\"
 			  - Configuration file for Pages projects does not support \\"usage_model\\"
 			  - Configuration file for Pages projects does not support \\"build\\"
-			  - Configuration file for Pages projects does not support \\"node_compat\\""
 		`);
 
 			// test with non-inheritable environment config fields

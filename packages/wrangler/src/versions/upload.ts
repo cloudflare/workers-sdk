@@ -82,7 +82,6 @@ type Props = {
 	isWorkersSite: boolean;
 	minify: boolean | undefined;
 	uploadSourceMaps: boolean | undefined;
-	nodeCompat: boolean | undefined;
 	outDir: string | undefined;
 	outFile: string | undefined;
 	dryRun: boolean | undefined;
@@ -237,6 +236,8 @@ export const versionsUploadCommand = createCommand({
 		"node-compat": {
 			describe: "Enable Node.js compatibility",
 			type: "boolean",
+			hidden: true,
+			deprecated: true,
 		},
 		"dry-run": {
 			describe: "Don't actually deploy",
@@ -280,6 +281,12 @@ export const versionsUploadCommand = createCommand({
 				sendMetrics: config.send_metrics,
 			}
 		);
+
+		if (args.nodeCompat) {
+			throw new UserError(
+				`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`
+			);
+		}
 
 		if (args.site || config.site) {
 			throw new UserError(
@@ -372,7 +379,6 @@ export const versionsUploadCommand = createCommand({
 			assetsOptions,
 			minify: args.minify,
 			uploadSourceMaps: args.uploadSourceMaps,
-			nodeCompat: args.nodeCompat,
 			isWorkersSite: Boolean(args.site || config.site),
 			outDir: args.outdir,
 			dryRun: args.dryRun,
@@ -487,7 +493,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		props.compatibilityDate ?? config.compatibility_date,
 		props.compatibilityFlags ?? config.compatibility_flags,
 		{
-			nodeCompat: props.nodeCompat ?? config.node_compat,
 			noBundle: props.noBundle ?? config.no_bundle,
 		}
 	);

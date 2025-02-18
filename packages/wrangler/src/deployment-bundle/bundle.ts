@@ -430,7 +430,6 @@ export async function bundleWorker(
 				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
 				// when we do a build of wrangler. (re: https://github.com/cloudflare/workers-sdk/issues/1477)
 				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
-				...(nodejsCompatMode === "legacy" ? { global: "globalThis" } : {}),
 				...define,
 			},
 		}),
