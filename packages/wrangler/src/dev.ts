@@ -274,6 +274,8 @@ export const dev = createCommand({
 		"node-compat": {
 			describe: "Enable Node.js compatibility",
 			type: "boolean",
+			hidden: true,
+			deprecated: true,
 		},
 		"experimental-enable-local-persistence": {
 			describe: "Enable persistence for local mode (deprecated, use --persist)",
@@ -337,6 +339,11 @@ export const dev = createCommand({
 		},
 	},
 	async validateArgs(args) {
+		if (args.nodeCompat) {
+			throw new UserError(
+				`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`
+			);
+		}
 		if (args.liveReload && args.remote) {
 			throw new UserError(
 				"--live-reload is only supported in local mode. Please just use one of either --remote or --live-reload."
@@ -546,7 +553,6 @@ async function setupDevEnv(
 						args.compatibilityDate ?? parsedConfig.compatibility_date,
 						args.compatibilityFlags ?? parsedConfig.compatibility_flags ?? [],
 						{
-							nodeCompat: args.nodeCompat ?? parsedConfig.node_compat,
 							noBundle: args.noBundle ?? parsedConfig.no_bundle,
 						}
 					),
