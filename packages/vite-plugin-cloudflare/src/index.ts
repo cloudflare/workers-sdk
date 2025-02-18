@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
+import { builtinModules } from "node:module";
 import * as path from "node:path";
 import { createMiddleware } from "@hattip/adapter-node";
 import MagicString from "magic-string";
@@ -24,11 +25,7 @@ import {
 } from "./node-js-compat";
 import { resolvePluginConfig } from "./plugin-config";
 import { MODULE_PATTERN } from "./shared";
-import {
-	getOutputDirectory,
-	nodeBuiltInModules,
-	toMiniflareRequest,
-} from "./utils";
+import { getOutputDirectory, toMiniflareRequest } from "./utils";
 import { handleWebSocket } from "./websockets";
 import { getWarningForWorkersConfigs } from "./workers-configs";
 import type { ModuleType } from "./constants";
@@ -410,30 +407,41 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				// Skip this whole plugin if we are in preview mode
 				return !env.isPreview;
 			},
+			configEnvironment(name) {
+				// Only configure this environment if it is a Worker using Node.js compatibility.
+				if (isNodeCompat(getWorkerConfig(name))) {
+					return {
+						resolve: {
+							builtins: getNodeCompatExternals(),
+						},
+						optimizeDeps: {
+							// This is a list of dependency entry-points that should be pre-bundled.
+							// In this case we provide a list of all the possible polyfills so that they are pre-bundled,
+							// ready ahead the first request to the dev server.
+							// Without this the dependency optimizer will try to bundle them on-the-fly in the middle of the first request,
+							// which can potentially cause problems if it leads to previous pre-bundling to become stale and needing to be reloaded.
+							include: [...getNodeCompatEntries()],
+							// This is a list of module specifiers that the dependency optimizer should not follow when doing import analysis.
+							// In this case we provide a list of all the Node.js modules, both those built-in to workerd and those that will be polyfilled.
+							// Obviously we don't want/need the optimizer to try to process modules that are built-in;
+							// But also we want to avoid following the ones that are polyfilled since the dependency-optimizer import analyzer does not
+							// resolve these imports using our `resolveId()` hook causing the optimization step to fail.
+							exclude: [
+								...builtinModules,
+								...builtinModules.map((m) => `node:${m}`),
+							],
+						},
+					};
+				}
+			},
 			applyToEnvironment(environment) {
-				const workerConfig = getWorkerConfig(environment.name);
-				return isNodeCompat(workerConfig);
+				// Only run this plugin's runtime hooks if it is a Worker using Node.js compatibility.
+				return isNodeCompat(getWorkerConfig(environment.name));
 			},
 			// We need the resolver from this plugin to run before built-in ones, otherwise Vite's built-in
 			// resolver will try to externalize the Node.js module imports (e.g. `perf_hooks` and `node:tty`)
 			// rather than allowing the resolve hook here to alias then to polyfills.
 			enforce: "pre",
-			configEnvironment() {
-				return {
-					resolve: {
-						builtins: getNodeCompatExternals(),
-					},
-					optimizeDeps: {
-						// We don't want to follow any `node:*` type imports when optimizing deps,
-						// whether or not they are built-in to workerd or polyfilled here.
-						// The ones that are not built-in will just get resolved to their polyfill on demand.
-						exclude: [...nodeBuiltInModules],
-						// But we do want to ensure that all the possible entry-points for the polyfills get pre-bundled
-						// so that they are ready for the first request to the dev server.
-						include: [...getNodeCompatEntries()],
-					},
-				};
-			},
 			async resolveId(source, importer, options) {
 				// See if we can map the `source` to a Node.js compat alias.
 				const result = resolveNodeJSImport(source);
@@ -442,11 +450,15 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					return this.resolve(source, importer, options);
 				}
 
-				if (this.environment.mode === "dev" && this.environment.depsOptimizer) {
+				if (this.environment.mode === "dev") {
+					assert(
+						this.environment.depsOptimizer,
+						"depsOptimizer is required in dev mode"
+					);
 					// We are in dev mode (rather than build).
 					// Node.js compat polyfill modules have already been pre-bundled,
 					// so we can use the unresolved path to the polyfill
-					// and let the dependency optimizer resolve the path to the cached version.
+					// and let the dependency optimizer resolve the path to the pre-bundled version.
 					return this.resolve(result.unresolved, importer, options);
 				}
 

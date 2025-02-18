@@ -41,7 +41,7 @@ export function isNodeCompat(
 }
 
 /**
- * Get a set of module specifiers for all possible Node.js compat polyfill entry-points
+ * Gets a set of module specifiers for all possible Node.js compat polyfill entry-points
  */
 export function getNodeCompatEntries() {
 	const entries = new Set<string>(Object.values(env.alias));
@@ -49,7 +49,11 @@ export function getNodeCompatEntries() {
 		if (typeof globInject === "string") {
 			entries.add(globInject);
 		} else {
-			entries.add(globInject[0] as string);
+			assert(
+				globInject[0] !== undefined,
+				"Expected first element of globInject to be defined"
+			);
+			entries.add(globInject[0]);
 		}
 	}
 	for (const external of env.external) {
@@ -59,7 +63,7 @@ export function getNodeCompatEntries() {
 }
 
 /**
- * Get the necessary global polyfills to inject into the entry-point of the user's code.
+ * Gets the necessary global polyfills to inject into the entry-point of the user's code.
  */
 export function injectGlobalCode(id: string, code: string) {
 	const injectedCode = Object.entries(env.inject)
@@ -85,18 +89,18 @@ export function injectGlobalCode(id: string, code: string) {
 }
 
 /**
- * Get an array of modules that should be considered external.
+ * Gets an array of modules that should be considered external.
  */
 export function getNodeCompatExternals(): string[] {
 	return env.external;
 }
 
 /**
- * Resolve the `source` to a Node.js compat alias if possible.
+ * Resolves the `source` to a Node.js compat alias if possible.
  *
  * If there is an alias, the return value is an object with:
  * - `unresolved`: a bare import path to the polyfill (e.g. `unenv/runtime/node/crypto`)
- * - `resolved` an absolute path to the polyfill (e.g. `/path/to/project/node_modules/unenv/runtime/node/child_process/index.mjs`)
+ * - `resolved`: an absolute path to the polyfill (e.g. `/path/to/project/node_modules/unenv/runtime/node/child_process/index.mjs`)
  */
 export function resolveNodeJSImport(source: string) {
 	const alias = env.alias[source];
