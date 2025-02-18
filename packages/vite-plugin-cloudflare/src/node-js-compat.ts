@@ -76,6 +76,11 @@ export function injectGlobalCode(id: string, code: string) {
 
 			// the mapping is a 2 item tuple, indicating a named export, made up of a module specifier and an export name.
 			const [moduleSpecifier, exportName] = globalInject;
+			assert(
+				moduleSpecifier !== undefined,
+				"Expected moduleSpecifier to be defined"
+			);
+			assert(exportName !== undefined, "Expected exportName to be defined");
 			return `import var_${globalName} from "${moduleSpecifier}";\nglobalThis.${globalName} = var_${globalName}.${exportName};\n`;
 		})
 		.join("\n");
