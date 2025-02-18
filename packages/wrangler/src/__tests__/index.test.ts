@@ -278,7 +278,7 @@ describe("wrangler", () => {
 		});
 	});
 
-	it("should print a deprecation message for 'build' and then try to run `deploy --dry-run --outdir`", async () => {
+	it("build should run `deploy --dry-run --outdir`", async () => {
 		writeWranglerConfig({
 			main: "index.js",
 		});
@@ -287,6 +287,7 @@ describe("wrangler", () => {
 		await endEventLoop();
 		expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
+			No bindings found.
 			--dry-run: exiting now."
 		`);
 	});
