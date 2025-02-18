@@ -1023,9 +1023,29 @@ async function executeMethod(
 	//    start quickly, and results are displayed as soon as they're ready.
 	for (const project of allProjects.values()) {
 		if (project.mf !== undefined) {
-			void forEachMiniflare(project.mf, async (mf) => scheduleStorageReset(mf));
+			void forEachMiniflare(project.mf, async (mf) => );
 		}
 	}
+
+	const promises: Promise<unknown>[] = [];
+	for (const project of allProjects.values()) {
+		if (project.mf !== undefined) {
+			promises.push(
+				forEachMiniflare(project.mf, async (mf) => {
+					scheduleStorageReset(mf)
+
+					// Finish in-progress storage resets before disposing
+					await waitForStorageReset(mf);
+					await mf.dispose();
+
+					// Clean up minifalre
+					project.mf = undefined;
+				})
+			);
+		}
+	}
+
+	await Promise.all(promises);
 
 	if (errors.length > 0) {
 		throw new AggregateError(
