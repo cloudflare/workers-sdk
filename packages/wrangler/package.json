@@ -71,7 +71,7 @@
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"blake3-wasm": "2.1.5",
-		"esbuild": "0.17.19",
+		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
 		"unenv": "2.0.0-rc.1",
