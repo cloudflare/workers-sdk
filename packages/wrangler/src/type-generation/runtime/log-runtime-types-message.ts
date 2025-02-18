@@ -62,7 +62,7 @@ export function logRuntimeTypesMessage(
 
 	logger.log(
 		`📖 Read about runtime types\n` +
-			`${chalk.dim("https://developers.cloudflare.com/workers/languages/typescript/#generate-runtime-types")}`
+			`${chalk.dim("https://developers.cloudflare.com/workers/languages/typescript/#generate-types")}`
 	);
 }
 

@@ -6,11 +6,13 @@ import {
 	generateImportSpecifier,
 	isValidIdentifier,
 } from "../type-generation";
+import * as generateRuntime from "../type-generation/runtime";
 import { dedent } from "../utils/dedent";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { EnvironmentNonInheritable } from "../config/environment";
+import type { MockInstance } from "vitest";
 
 describe("isValidIdentifier", () => {
 	it("should return true for valid identifiers", () => {
@@ -208,17 +210,28 @@ const bindingsConfigMock: Omit<
 	},
 };
 
-describe("generateTypes()", () => {
+describe("generate types", () => {
+	let spy: MockInstance;
 	const std = mockConsoleMethods();
 	runInTempDir();
-
-	it("should show a warning when no config file is detected", async () => {
-		await runWrangler("types");
-		expect(std.warn).toMatchInlineSnapshot(`
-		"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo config file detected, aborting[0m
-
-		"
-	`);
+	beforeEach(() => {
+		spy = vi
+			.spyOn(generateRuntime, "generateRuntimeTypes")
+			.mockImplementation(async () => ({
+				runtimeHeader: "// Runtime types generated with workerd@",
+				runtimeTypes: "<runtime types go here>",
+			}));
+		fs.writeFileSync(
+			"./tsconfig.json",
+			JSON.stringify({
+				compilerOptions: { types: ["worker-configuration.d.ts"] },
+			})
+		);
+	});
+	it("should error when no config file is detected", async () => {
+		await expect(runWrangler("types")).rejects.toMatchInlineSnapshot(
+			`[Error: No config file detected. This command requires a Wrangler configuration file.]`
+		);
 	});
 
 	it("should error when a specified custom config file is missing", async () => {
@@ -233,6 +246,8 @@ describe("generateTypes()", () => {
 		fs.writeFileSync(
 			"./wrangler.toml",
 			TOML.stringify({
+				compatibility_date: "2022-01-12",
+				compatibility_flags: ["fake-compat-1"],
 				vars: {
 					var: "from wrangler toml",
 				},
@@ -243,6 +258,8 @@ describe("generateTypes()", () => {
 		fs.writeFileSync(
 			"./my-wrangler-config-a.toml",
 			TOML.stringify({
+				compatibility_date: "2023-01-12",
+				compatibility_flags: ["fake-compat-2"],
 				vars: {
 					var: "from my-wrangler-config-a",
 				},
@@ -253,6 +270,8 @@ describe("generateTypes()", () => {
 		fs.writeFileSync(
 			"./my-wrangler-config-b.toml",
 			TOML.stringify({
+				compatibility_date: "2024-01-12",
+				compatibility_flags: ["fake-compat-3"],
 				vars: {
 					var: "from my-wrangler-config-b",
 				},
@@ -261,29 +280,81 @@ describe("generateTypes()", () => {
 		);
 
 		await runWrangler("types");
+		expect(spy).toHaveBeenNthCalledWith(1, {
+			config: expect.objectContaining({
+				compatibility_date: "2022-01-12",
+				compatibility_flags: ["fake-compat-1"],
+			}),
+			outFile: "worker-configuration.d.ts",
+		});
+
 		await runWrangler("types --config ./my-wrangler-config-a.toml");
+		expect(spy).toHaveBeenNthCalledWith(2, {
+			config: expect.objectContaining({
+				compatibility_date: "2023-01-12",
+				compatibility_flags: ["fake-compat-2"],
+			}),
+			outFile: "worker-configuration.d.ts",
+		});
+
 		await runWrangler("types -c my-wrangler-config-b.toml");
-
+		expect(spy).toHaveBeenNthCalledWith(3, {
+			config: expect.objectContaining({
+				compatibility_date: "2024-01-12",
+				compatibility_flags: ["fake-compat-3"],
+			}),
+			outFile: "worker-configuration.d.ts",
+		});
 		expect(std.out).toMatchInlineSnapshot(`
-		"Generating project types...
+			"Generating project types...
 
-		interface Env {
-			var: \\"from wrangler toml\\";
-		}
+			interface Env {
+				var: \\"from wrangler toml\\";
+			}
 
-		Generating project types...
+			Generating runtime types...
 
-		interface Env {
-			var: \\"from my-wrangler-config-a\\";
-		}
+			Runtime types generated.
 
-		Generating project types...
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
 
-		interface Env {
-			var: \\"from my-wrangler-config-b\\";
-		}
-		"
-	`);
+			📖 Read about runtime types
+			https://developers.cloudflare.com/workers/languages/typescript/#generate-types
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+			Generating project types...
+
+			interface Env {
+				var: \\"from my-wrangler-config-a\\";
+			}
+
+			Generating runtime types...
+
+			Runtime types generated.
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📖 Read about runtime types
+			https://developers.cloudflare.com/workers/languages/typescript/#generate-types
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+			Generating project types...
+
+			interface Env {
+				var: \\"from my-wrangler-config-b\\";
+			}
+
+			Generating runtime types...
+
+			Runtime types generated.
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📖 Read about runtime types
+			https://developers.cloudflare.com/workers/languages/typescript/#generate-types
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file."
+		`);
 	});
 
 	it("should log the interface type generated and declare modules", async () => {
@@ -308,55 +379,59 @@ describe("generateTypes()", () => {
 			"utf-8"
 		);
 
-		await runWrangler("types");
+		await runWrangler("types --include-runtime=false");
 		expect(std.out).toMatchInlineSnapshot(`
-		"Generating project types...
+			"Generating project types...
 
-		interface Env {
-			TEST_KV_NAMESPACE: KVNamespace;
-			SOMETHING: \\"asdasdfasdf\\";
-			ANOTHER: \\"thing\\";
-			\\"some-other-var\\": \\"some-other-value\\";
-			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
-			DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
-			DURABLE_RE_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableReexport>;
-			DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
-			DURABLE_EXTERNAL: DurableObjectNamespace /* DurableExternal from external-worker */;
-			R2_BUCKET_BINDING: R2Bucket;
-			D1_TESTING_SOMETHING: D1Database;
-			SERVICE_BINDING: Fetcher;
-			AE_DATASET_BINDING: AnalyticsEngineDataset;
-			NAMESPACE_BINDING: DispatchNamespace;
-			LOGFWDR_SCHEMA: any;
-			SOME_DATA_BLOB1: ArrayBuffer;
-			SOME_DATA_BLOB2: ArrayBuffer;
-			SOME_TEXT_BLOB1: string;
-			SOME_TEXT_BLOB2: string;
-			testing_unsafe: any;
-			UNSAFE_RATELIMIT: RateLimit;
-			TEST_QUEUE_BINDING: Queue;
-			SEND_EMAIL_BINDING: SendEmail;
-			VECTORIZE_BINDING: VectorizeIndex;
-			HYPERDRIVE_BINDING: Hyperdrive;
-			MTLS_BINDING: Fetcher;
-			BROWSER_BINDING: Fetcher;
-			AI_BINDING: Ai;
-			VERSION_METADATA_BINDING: { id: string; tag: string };
-			ASSETS_BINDING: Fetcher;
-		}
-		declare module \\"*.txt\\" {
-			const value: string;
-			export default value;
-		}
-		declare module \\"*.webp\\" {
-			const value: ArrayBuffer;
-			export default value;
-		}
-		declare module \\"*.wasm\\" {
-			const value: WebAssembly.Module;
-			export default value;
-		}"
-	`);
+			interface Env {
+				TEST_KV_NAMESPACE: KVNamespace;
+				SOMETHING: \\"asdasdfasdf\\";
+				ANOTHER: \\"thing\\";
+				\\"some-other-var\\": \\"some-other-value\\";
+				OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+				DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
+				DURABLE_RE_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableReexport>;
+				DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
+				DURABLE_EXTERNAL: DurableObjectNamespace /* DurableExternal from external-worker */;
+				R2_BUCKET_BINDING: R2Bucket;
+				D1_TESTING_SOMETHING: D1Database;
+				SERVICE_BINDING: Fetcher;
+				AE_DATASET_BINDING: AnalyticsEngineDataset;
+				NAMESPACE_BINDING: DispatchNamespace;
+				LOGFWDR_SCHEMA: any;
+				SOME_DATA_BLOB1: ArrayBuffer;
+				SOME_DATA_BLOB2: ArrayBuffer;
+				SOME_TEXT_BLOB1: string;
+				SOME_TEXT_BLOB2: string;
+				testing_unsafe: any;
+				UNSAFE_RATELIMIT: RateLimit;
+				TEST_QUEUE_BINDING: Queue;
+				SEND_EMAIL_BINDING: SendEmail;
+				VECTORIZE_BINDING: VectorizeIndex;
+				HYPERDRIVE_BINDING: Hyperdrive;
+				MTLS_BINDING: Fetcher;
+				BROWSER_BINDING: Fetcher;
+				AI_BINDING: Ai;
+				VERSION_METADATA_BINDING: { id: string; tag: string };
+				ASSETS_BINDING: Fetcher;
+			}
+			declare module \\"*.txt\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.webp\\" {
+				const value: ArrayBuffer;
+				export default value;
+			}
+			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file."
+		`);
 	});
 
 	it("should create a DTS file at the location that the command is executed from", async () => {
@@ -374,10 +449,51 @@ describe("generateTypes()", () => {
 		);
 		await runWrangler("types");
 		expect(fs.existsSync("./worker-configuration.d.ts")).toBe(true);
+		expect(fs.readFileSync("./worker-configuration.d.ts", "utf-8"))
+			.toMatchInlineSnapshot(`
+			"// Generated by Wrangler by running \`wrangler\`
+			// Runtime types generated with workerd@
+			interface Env {
+				SOMETHING: \\"asdasdfasdf\\";
+				ANOTHER: \\"thing\\";
+				\\"some-other-var\\": \\"some-other-value\\";
+				OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+			}
+
+			// Begin runtime types
+			<runtime types go here>"
+		`);
 	});
 
 	describe("when nothing was found", () => {
-		it("should not create DTS file for service syntax workers", async () => {
+		it("should not create DTS file for service syntax workers if env only", async () => {
+			fs.writeFileSync(
+				"./index.ts",
+				'addEventListener("fetch", event => { event.respondWith(() => new Response("")); })'
+			);
+			fs.writeFileSync(
+				"./wrangler.toml",
+				TOML.stringify({
+					compatibility_date: "2022-01-12",
+					name: "test-name",
+					main: "./index.ts",
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+			expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
+			expect(std.out).toMatchInlineSnapshot(`
+				"Generating project types...
+
+				No project types to add.
+
+				────────────────────────────────────────────────────────────
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file."
+			`);
+		});
+
+		it("should create DTS file for service syntax workers with runtime types only", async () => {
 			fs.writeFileSync(
 				"./index.ts",
 				'addEventListener("fetch", event => { event.respondWith(() => new Response("")); })'
@@ -393,8 +509,28 @@ describe("generateTypes()", () => {
 			);
 
 			await runWrangler("types");
-			expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
-			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(fs.readFileSync("./worker-configuration.d.ts", "utf8"))
+				.toMatchInlineSnapshot(`
+					"// Runtime types generated with workerd@
+					// Begin runtime types
+					<runtime types go here>"
+				`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"Generating project types...
+
+				No project types to add.
+
+				Generating runtime types...
+
+				Runtime types generated.
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📖 Read about runtime types
+				https://developers.cloudflare.com/workers/languages/typescript/#generate-types
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file."
+			`);
 		});
 
 		it("should create a DTS file with an empty env interface for module syntax workers", async () => {
@@ -409,18 +545,22 @@ describe("generateTypes()", () => {
 				"utf-8"
 			);
 
-			await runWrangler("types");
+			await runWrangler("types --include-runtime=false");
 
 			expect(fs.readFileSync("./worker-configuration.d.ts", "utf-8")).toContain(
 				`// eslint-disable-next-line @typescript-eslint/no-empty-interface,@typescript-eslint/no-empty-object-type\ninterface Env {\n}`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Generating project types...
+				"Generating project types...
 
-			interface Env {
-			}
-			"
-		`);
+				interface Env {
+				}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file."
+			`);
 		});
 	});
 
@@ -442,7 +582,7 @@ describe("generateTypes()", () => {
 		);
 
 		await expect(runWrangler("types")).rejects.toMatchInlineSnapshot(
-			`[Error: A non-wrangler worker-configuration.d.ts already exists, please rename and try again.]`
+			`[Error: A non-Wrangler worker-configuration.d.ts already exists, please rename and try again.]`
 		);
 		expect(fs.existsSync("./worker-configuration.d.ts")).toBe(true);
 	});
@@ -469,23 +609,28 @@ describe("generateTypes()", () => {
 			"utf-8"
 		);
 
-		await runWrangler("types");
+		await runWrangler("types --include-runtime=false");
 		expect(std.out).toMatchInlineSnapshot(`
-		"Generating project types...
+			"Generating project types...
 
-		export {};
-		declare global {
-			const testing_unsafe: any;
-			const UNSAFE_RATELIMIT: RateLimit;
-		}
-		"
-	`);
+			export {};
+			declare global {
+				const testing_unsafe: any;
+				const UNSAFE_RATELIMIT: RateLimit;
+			}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file."
+		`);
 	});
 
 	it("should accept a toml file without an entrypoint and fallback to the standard modules declarations", async () => {
 		fs.writeFileSync(
 			"./wrangler.toml",
 			TOML.stringify({
+				compatibility_date: "2022-01-12",
 				vars: bindingsConfigMock.vars,
 			} as unknown as TOML.JsonMap),
 			"utf-8"
@@ -493,16 +638,26 @@ describe("generateTypes()", () => {
 
 		await runWrangler("types");
 		expect(std.out).toMatchInlineSnapshot(`
-		"Generating project types...
+			"Generating project types...
 
-		interface Env {
-			SOMETHING: \\"asdasdfasdf\\";
-			ANOTHER: \\"thing\\";
-			\\"some-other-var\\": \\"some-other-value\\";
-			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
-		}
-		"
-	`);
+			interface Env {
+				SOMETHING: \\"asdasdfasdf\\";
+				ANOTHER: \\"thing\\";
+				\\"some-other-var\\": \\"some-other-value\\";
+				OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+			}
+
+			Generating runtime types...
+
+			Runtime types generated.
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📖 Read about runtime types
+			https://developers.cloudflare.com/workers/languages/typescript/#generate-types
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file."
+		`);
 	});
 
 	it("should not error if expected entrypoint is not found and assume module worker", async () => {
@@ -516,18 +671,22 @@ describe("generateTypes()", () => {
 		);
 		expect(fs.existsSync("index.ts")).toEqual(false);
 
-		await runWrangler("types");
+		await runWrangler("types --include-runtime=false");
 		expect(std.out).toMatchInlineSnapshot(`
-		"Generating project types...
+			"Generating project types...
 
-		interface Env {
-			SOMETHING: \\"asdasdfasdf\\";
-			ANOTHER: \\"thing\\";
-			\\"some-other-var\\": \\"some-other-value\\";
-			OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
-		}
-		"
-	`);
+			interface Env {
+				SOMETHING: \\"asdasdfasdf\\";
+				ANOTHER: \\"thing\\";
+				\\"some-other-var\\": \\"some-other-value\\";
+				OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+			}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file."
+		`);
 	});
 
 	it("should include secret keys from .dev.vars", async () => {
@@ -551,20 +710,24 @@ describe("generateTypes()", () => {
 		`;
 		fs.writeFileSync(".dev.vars", localVarsEnvContent, "utf8");
 
-		await runWrangler("types");
+		await runWrangler("types --include-runtime=false");
 
 		expect(std.out).toMatchInlineSnapshot(`
-		"Generating project types...
+			"Generating project types...
 
-		interface Env {
-			myTomlVarA: \\"A from wrangler toml\\";
-			myTomlVarB: \\"B from wrangler toml\\";
-			SECRET_A: string;
-			MULTI_LINE_SECRET: string;
-			UNQUOTED_SECRET: string;
-		}
-		"
-	`);
+			interface Env {
+				myTomlVarA: \\"A from wrangler toml\\";
+				myTomlVarB: \\"B from wrangler toml\\";
+				SECRET_A: string;
+				MULTI_LINE_SECRET: string;
+				UNQUOTED_SECRET: string;
+			}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file."
+		`);
 	});
 
 	it("should allow opting out of strict-vars", async () => {
@@ -581,19 +744,23 @@ describe("generateTypes()", () => {
 			"utf-8"
 		);
 
-		await runWrangler("types --strict-vars=false");
+		await runWrangler("types --strict-vars=false --include-runtime=false");
 
 		expect(std.out).toMatchInlineSnapshot(`
-		"Generating project types...
+			"Generating project types...
 
-		interface Env {
-			varStr: string;
-			varArrNum: number[];
-			varArrMix: (boolean|number|string)[];
-			varObj: object;
-		}
-		"
-	`);
+			interface Env {
+				varStr: string;
+				varArrNum: number[];
+				varArrMix: (boolean|number|string)[];
+				varObj: object;
+			}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file."
+		`);
 	});
 
 	it("should override vars with secrets", async () => {
@@ -615,17 +782,21 @@ describe("generateTypes()", () => {
 		`;
 		fs.writeFileSync(".dev.vars", localVarsEnvContent, "utf8");
 
-		await runWrangler("types");
+		await runWrangler("types --include-runtime=false");
 
 		expect(std.out).toMatchInlineSnapshot(`
-		"Generating project types...
+			"Generating project types...
 
-		interface Env {
-			MY_VARIABLE_A: string;
-			MY_VARIABLE_B: string;
-		}
-		"
-	`);
+			interface Env {
+				MY_VARIABLE_A: string;
+				MY_VARIABLE_B: string;
+			}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file."
+		`);
 	});
 
 	it("various different types of vars", async () => {
@@ -646,7 +817,7 @@ describe("generateTypes()", () => {
 			} as TOML.JsonMap),
 			"utf-8"
 		);
-		await runWrangler("types");
+		await runWrangler("types --include-runtime=false");
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"Generating project types...
@@ -664,7 +835,11 @@ describe("generateTypes()", () => {
 			line
 			var\\": \\"this/nis/na/nmulti/nline/nvariable!\\";
 			}
-			"
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file."
 		`);
 	});
 
@@ -700,35 +875,43 @@ describe("generateTypes()", () => {
 		});
 
 		it("should produce string and union types for variables (default)", async () => {
-			await runWrangler("types");
+			await runWrangler("types --include-runtime=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Generating project types...
+				"Generating project types...
 
-			interface Env {
-				MY_VAR: \\"a var\\";
-				MY_VAR_A: \\"A (dev)\\" | \\"A (prod)\\" | \\"A (stag)\\";
-				MY_VAR_C: [\\"a\\",\\"b\\",\\"c\\"] | [1,2,3];
-				MY_VAR_B: {\\"value\\":\\"B (dev)\\"} | {\\"value\\":\\"B (prod)\\"};
-			}
-			"
-		`);
+				interface Env {
+					MY_VAR: \\"a var\\";
+					MY_VAR_A: \\"A (dev)\\" | \\"A (prod)\\" | \\"A (stag)\\";
+					MY_VAR_C: [\\"a\\",\\"b\\",\\"c\\"] | [1,2,3];
+					MY_VAR_B: {\\"value\\":\\"B (dev)\\"} | {\\"value\\":\\"B (prod)\\"};
+				}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file."
+			`);
 		});
 
 		it("should produce non-strict types for variables (with --strict-vars=false)", async () => {
-			await runWrangler("types --strict-vars=false");
+			await runWrangler("types --strict-vars=false --include-runtime=false");
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"Generating project types...
+				"Generating project types...
 
-			interface Env {
-				MY_VAR: string;
-				MY_VAR_A: string;
-				MY_VAR_C: string[] | number[];
-				MY_VAR_B: object;
-			}
-			"
-		`);
+				interface Env {
+					MY_VAR: string;
+					MY_VAR_A: string;
+					MY_VAR_C: string[] | number[];
+					MY_VAR_B: object;
+				}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file."
+			`);
 		});
 	});
 
@@ -743,18 +926,24 @@ describe("generateTypes()", () => {
 					"utf-8"
 				);
 
-				await runWrangler("types --env-interface CloudflareEnv");
+				await runWrangler(
+					"types --include-runtime=false --env-interface CloudflareEnv"
+				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"Generating project types...
+					"Generating project types...
 
-			interface CloudflareEnv {
-				SOMETHING: \\"asdasdfasdf\\";
-				ANOTHER: \\"thing\\";
-				\\"some-other-var\\": \\"some-other-value\\";
-				OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
-			}
-			"
-		`);
+					interface CloudflareEnv {
+						SOMETHING: \\"asdasdfasdf\\";
+						ANOTHER: \\"thing\\";
+						\\"some-other-var\\": \\"some-other-value\\";
+						OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+					}
+
+					────────────────────────────────────────────────────────────
+					✨ Types written to worker-configuration.d.ts
+
+					📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file."
+				`);
 			});
 
 			it("should error if --env-interface is specified with no argument", async () => {
@@ -798,7 +987,7 @@ describe("generateTypes()", () => {
 				}
 			});
 
-			it("should warn if --env-interface is used with a service-syntax worker", async () => {
+			it("should error if --env-interface is used with a service-syntax worker", async () => {
 				fs.writeFileSync(
 					"./index.ts",
 					`addEventListener('fetch', event => {  event.respondWith(handleRequest(event.request));
@@ -827,6 +1016,7 @@ describe("generateTypes()", () => {
 				fs.writeFileSync(
 					"./wrangler.toml",
 					TOML.stringify({
+						compatibility_date: "2022-01-12",
 						vars: bindingsConfigMock.vars,
 					} as TOML.JsonMap),
 					"utf-8"
@@ -836,9 +1026,20 @@ describe("generateTypes()", () => {
 
 				expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
 
-				expect(fs.readFileSync("./cloudflare-env.d.ts", "utf-8")).toMatch(
-					/interface Env \{[\s\S]*SOMETHING: "asdasdfasdf";[\s\S]*ANOTHER: "thing";[\s\S]*"some-other-var": "some-other-value";[\s\S]*OBJECT_VAR: \{"enterprise":"1701-D","activeDuty":true,"captian":"Picard"\};[\s\S]*}/
-				);
+				expect(fs.readFileSync("./cloudflare-env.d.ts", "utf-8"))
+					.toMatchInlineSnapshot(`
+					"// Generated by Wrangler by running \`wrangler\`
+					// Runtime types generated with workerd@
+					interface Env {
+						SOMETHING: \\"asdasdfasdf\\";
+						ANOTHER: \\"thing\\";
+						\\"some-other-var\\": \\"some-other-value\\";
+						OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+					}
+
+					// Begin runtime types
+					<runtime types go here>"
+				`);
 			});
 
 			it("should error if the user points to a non-d.ts file", async () => {
@@ -860,7 +1061,7 @@ describe("generateTypes()", () => {
 
 				for (const path of invalidPaths) {
 					await expect(runWrangler(`types ${path}`)).rejects.toThrowError(
-						/The provided path value .*? does not point to a declaration file/
+						/The provided output path '.*?' does not point to a declaration file/
 					);
 				}
 			});
@@ -879,10 +1080,253 @@ describe("generateTypes()", () => {
 				"types --env-interface MyCloudflareEnvInterface my-cloudflare-env-interface.d.ts"
 			);
 
-			expect(
-				fs.readFileSync("./my-cloudflare-env-interface.d.ts", "utf-8")
-			).toMatch(
-				/interface MyCloudflareEnvInterface \{[\s\S]*SOMETHING: "asdasdfasdf";[\s\S]*ANOTHER: "thing";[\s\S]*"some-other-var": "some-other-value";[\s\S]*OBJECT_VAR: \{"enterprise":"1701-D","activeDuty":true,"captian":"Picard"\};[\s\S]*}/
+			expect(fs.readFileSync("./my-cloudflare-env-interface.d.ts", "utf-8"))
+				.toMatchInlineSnapshot(`
+				"// Generated by Wrangler by running \`wrangler\`
+				// Runtime types generated with workerd@
+				interface MyCloudflareEnvInterface {
+					SOMETHING: \\"asdasdfasdf\\";
+					ANOTHER: \\"thing\\";
+					\\"some-other-var\\": \\"some-other-value\\";
+					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+				}
+
+				// Begin runtime types
+				<runtime types go here>"
+			`);
+		});
+	});
+
+	describe("runtime types output", () => {
+		beforeEach(() => {
+			fs.writeFileSync(
+				"./wrangler.toml",
+				TOML.stringify({
+					compatibility_date: "2022-12-12",
+					vars: {
+						"var-a": "a",
+					},
+				} as TOML.JsonMap),
+				"utf-8"
+			);
+		});
+		it("errors helpfully if you use --experimental-include-runtime", async () => {
+			await expect(runWrangler("types --experimental-include-runtime")).rejects
+				.toMatchInlineSnapshot(`
+				[Error: You no longer need to use --experimental-include-runtime.
+				\`wrangler types\` will now generate runtime types in the same file as the Env types.
+				You should delete the old runtime types file, and remove it from your tsconfig.json.
+				Then rerun \`wrangler types\`.]
+			`);
+		});
+		it("prints something helpful if you have @cloudflare/workers-types", async () => {
+			fs.writeFileSync(
+				"./tsconfig.json",
+				JSON.stringify({
+					compilerOptions: { types: ["@cloudflare/workers-types"] },
+				})
+			);
+			await runWrangler("types --include-env=false");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Generating runtime types...
+
+				Runtime types generated.
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				Action required Migrate from @cloudflare/workers-types to generated runtime types
+				\`wrangler types\` now generates runtime types and supersedes @cloudflare/workers-types.
+				You should now uninstall @cloudflare/workers-types and remove it from your tsconfig.json.
+
+				Action required Update your tsconfig.json to include the generated types
+				{
+					\\"compilerOptions\\": {
+						\\"types\\": [\\"worker-configuration.d.ts\\"]
+					}
+				}
+
+				📖 Read about runtime types
+				https://developers.cloudflare.com/workers/languages/typescript/#generate-types
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file."
+			`);
+		});
+		it("prints something helpful if you have a runtime file at the old default location", async () => {
+			fs.writeFileSync(
+				"./tsconfig.json",
+				JSON.stringify({
+					compilerOptions: {
+						types: [
+							"./wrangler/types/runtime.d.ts",
+							"worker-configuration.d.ts",
+						],
+					},
+				})
+			);
+			fs.mkdirSync("./.wrangler/types", { recursive: true });
+			fs.writeFileSync("./.wrangler/types/runtime.d.ts", "blah");
+			await runWrangler("types --include-env=false");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Generating runtime types...
+
+				Runtime types generated.
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				Action required Remove the old runtime.d.ts file
+				\`wrangler types\` now outputs runtime and Env types in one file.
+				You can now delete the ./.wrangler/types/runtime.d.ts and update your tsconfig.json\`
+
+				📖 Read about runtime types
+				https://developers.cloudflare.com/workers/languages/typescript/#generate-types
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file."
+			`);
+		});
+		it("prints something helpful about node compat", async () => {
+			fs.writeFileSync(
+				"./wrangler.toml",
+				TOML.stringify({
+					compatibility_date: "2022-12-12",
+					compatibility_flags: ["nodejs_compat"],
+					vars: {
+						"var-a": "a",
+					},
+				} as TOML.JsonMap),
+				"utf-8"
+			);
+			fs.writeFileSync(
+				"./tsconfig.json",
+				JSON.stringify({
+					compilerOptions: {
+						types: ["worker-configuration.d.ts"],
+					},
+				})
+			);
+			await runWrangler("types --include-env=false");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Generating runtime types...
+
+				Runtime types generated.
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				Action required Install types@node
+				Since you have the \`nodejs_compat\` flag, you should install Node.js types by running \\"npm i --save-dev @types/node\\".
+
+				📖 Read about runtime types
+				https://developers.cloudflare.com/workers/languages/typescript/#generate-types
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file."
+			`);
+		});
+		it("prints specific node version if you have node compat and workers types", async () => {
+			fs.writeFileSync(
+				"./wrangler.toml",
+				TOML.stringify({
+					compatibility_date: "2022-12-12",
+					compatibility_flags: ["nodejs_compat"],
+					vars: {
+						"var-a": "a",
+					},
+				} as TOML.JsonMap),
+				"utf-8"
+			);
+			fs.writeFileSync(
+				"./tsconfig.json",
+				JSON.stringify({
+					compilerOptions: {
+						types: ["worker-configuration.d.ts", "@cloudflare/workers-types"],
+					},
+				})
+			);
+			await runWrangler("types --include-env=false");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Generating runtime types...
+
+				Runtime types generated.
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				Action required Migrate from @cloudflare/workers-types to generated runtime types
+				\`wrangler types\` now generates runtime types and supersedes @cloudflare/workers-types.
+				You should now uninstall @cloudflare/workers-types and remove it from your tsconfig.json.
+
+				Action required Install types@node
+				Since you have the \`nodejs_compat\` flag, you should install Node.js types by running \\"npm i --save-dev @types/node@20.8.3\\".
+				For more details: https://developers.cloudflare.com/workers/languages/typescript/#known-issues
+
+				📖 Read about runtime types
+				https://developers.cloudflare.com/workers/languages/typescript/#generate-types
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file."
+			`);
+		});
+		it("prints all the relevant stuff if you having nothing set up", async () => {
+			fs.writeFileSync(
+				"./wrangler.toml",
+				TOML.stringify({
+					compatibility_date: "2022-12-12",
+					compatibility_flags: ["nodejs_compat"],
+					vars: {
+						"var-a": "a",
+					},
+				} as TOML.JsonMap),
+				"utf-8"
+			);
+			fs.writeFileSync(
+				"./tsconfig.json",
+				JSON.stringify({
+					compilerOptions: {
+						types: ["irrelevant.d.ts"],
+					},
+				})
+			);
+			await runWrangler("types --path=custom.d.ts --include-env=false");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Generating runtime types...
+
+				Runtime types generated.
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to custom.d.ts
+
+				Action required Update your tsconfig.json to include the generated types
+				{
+					\\"compilerOptions\\": {
+						\\"types\\": [\\"irrelevant.d.ts\\",\\"custom.d.ts\\"]
+					}
+				}
+
+				Action required Install types@node
+				Since you have the \`nodejs_compat\` flag, you should install Node.js types by running \\"npm i --save-dev @types/node\\".
+
+				📖 Read about runtime types
+				https://developers.cloudflare.com/workers/languages/typescript/#generate-types
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file."
+			`);
+		});
+		it("should not recommend to install @types/node if 'node' exists in types array", async () => {
+			fs.writeFileSync(
+				"./wrangler.toml",
+				TOML.stringify({
+					compatibility_date: "2022-12-12",
+					compatibility_flags: ["nodejs_compat"],
+				} as TOML.JsonMap),
+				"utf-8"
+			);
+			fs.writeFileSync(
+				"./tsconfig.json",
+				JSON.stringify({
+					compilerOptions: {
+						types: ["node"],
+					},
+				})
+			);
+			await runWrangler(`types`);
+
+			expect(std.out).not.toContain(
+				`Since you have the \`nodejs_compat\` flag, you should install Node.js`
 			);
 		});
 	});

@@ -28,7 +28,7 @@ describe("`wrangler types` - file comment", () => {
 			"packages",
 			"wrangler"
 		);
-		execSync(`npx ${wranglerPath} types ${args}`, {
+		execSync(`npx ${wranglerPath} types ${args} --include-runtime=false`, {
 			cwd: tempDir,
 		});
 		const typesFile = join(tempDir, expectedOutputFile);
@@ -38,7 +38,9 @@ describe("`wrangler types` - file comment", () => {
 	describe("includes a comment specifying the command run", () => {
 		it("(base command)", async ({ expect }) => {
 			const typesCommandOutput = runWranglerTypesCommand();
-			expect(typesCommandOutput).toContain("by running `wrangler types`");
+			expect(typesCommandOutput).toContain(
+				"by running `wrangler types --include-runtime=false`"
+			);
 		});
 
 		it("(with types customization)", async ({ expect }) => {
@@ -47,14 +49,14 @@ describe("`wrangler types` - file comment", () => {
 				"./cflare-env.d.ts"
 			);
 			expect(typesCommandOutput).toContain(
-				"by running `wrangler types --env-interface MyCloudflareEnv ./cflare-env.d.ts`"
+				"by running `wrangler types --env-interface MyCloudflareEnv ./cflare-env.d.ts --include-runtime=false`"
 			);
 		});
 
 		it("(with wrangler top level options)", async ({ expect }) => {
 			const typesCommandOutput = runWranglerTypesCommand("-c wranglerA.toml");
 			expect(typesCommandOutput).toContain(
-				"by running `wrangler types -c wranglerA.toml`"
+				"by running `wrangler types -c wranglerA.toml --include-runtime=false`"
 			);
 		});
 	});
