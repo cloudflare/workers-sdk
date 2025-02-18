@@ -804,7 +804,7 @@ describe("wrangler", () => {
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
-					  -e, --env      Environment to use for operations and .env files  [string]
+					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]
 
@@ -1751,7 +1751,7 @@ describe("wrangler", () => {
 					keys.map((k) => k.name)
 				);
 				await runWrangler(
-					`kv bulk delete --namespace-id some-namespace-id keys.json`
+					`kv bulk delete --remote --namespace-id some-namespace-id keys.json`
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(`"Success!"`);
