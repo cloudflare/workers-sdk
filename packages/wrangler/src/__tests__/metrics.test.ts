@@ -68,6 +68,7 @@ describe("metrics", () => {
 			vi.mocked(getPlatform).mockReturnValue("mock platform");
 			vi.mocked(sniffUserAgent).mockReturnValue("npm");
 			vi.useFakeTimers({
+				toFake: ["setTimeout", "clearTimeout", "Date"],
 				now: new Date(2024, 11, 12),
 			});
 			writeMetricsConfig({
@@ -582,15 +583,22 @@ describe("metrics", () => {
 				const args = {
 					default: false,
 					array: ["beep", "boop"],
-					secretArray: ["beep", "boop"],
-					// Note how
+					// Note how this is normalised
 					"secret-array": ["beep", "boop"],
 					number: 42,
 					string: "secret",
 					secretString: "secret",
+					flagOne: "default",
+					// Note how this is normalised
+					experimentalIncludeRuntime: "",
 				};
 
-				const redacted = redactArgValues(args, ["string", "array"]);
+				const redacted = redactArgValues(args, {
+					string: "*",
+					array: "*",
+					flagOne: ["default"],
+					xIncludeRuntime: [".wrangler/types/runtime.d.ts"],
+				});
 				expect(redacted).toEqual({
 					default: false,
 					array: ["beep", "boop"],
@@ -598,6 +606,8 @@ describe("metrics", () => {
 					number: 42,
 					string: "secret",
 					secretString: "<REDACTED>",
+					flagOne: "default",
+					xIncludeRuntime: ".wrangler/types/runtime.d.ts",
 				});
 			});
 		});
@@ -662,7 +672,9 @@ describe("metrics", () => {
 			});
 
 			it("should print a message if the permission date is older than the current metrics date", async () => {
-				vi.useFakeTimers();
+				vi.useFakeTimers({
+					toFake: ["setTimeout", "clearTimeout", "Date"],
+				});
 				vi.setSystemTime(new Date(2024, 11, 12));
 				const OLD_DATE = new Date(2000);
 				writeMetricsConfig({
@@ -712,7 +724,9 @@ describe("metrics", () => {
 
 	describe.each(["metrics", "telemetry"])("%s commands", (cmd) => {
 		beforeEach(() => {
-			vi.useFakeTimers();
+			vi.useFakeTimers({
+				toFake: ["setTimeout", "clearTimeout", "Date"],
+			});
 			vi.setSystemTime(new Date(2024, 11, 12));
 		});
 		afterEach(() => {

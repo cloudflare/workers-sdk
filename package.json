@@ -19,7 +19,6 @@
 		"check:type": "dotenv -- turbo check:type type:tests",
 		"dev": "dotenv -- turbo dev",
 		"fix": "dotenv -- turbo check:lint -- --fix && pnpm run prettify",
-		"gen:package": "turbo gen package",
 		"prettify": "prettier . --write --ignore-unknown",
 		"test": "vitest run --no-file-parallelism && dotenv -- turbo test --filter=wrangler --filter=miniflare --filter=kv-asset-handler --filter=@cloudflare/vitest-pool-workers --filter=@cloudflare/vitest-pool-workers-examples",
 		"test:ci": "dotenv -- turbo test:ci",
@@ -29,14 +28,13 @@
 		"type:tests": "dotenv -- turbo type:tests"
 	},
 	"dependencies": {
-		"@actions/artifact": "^2.0.1",
+		"@actions/artifact": "^2.2.1",
 		"@changesets/changelog-github": "^0.5.0",
-		"@changesets/cli": "^2.27.1",
+		"@changesets/cli": "^2.28.0",
 		"@changesets/parse": "^0.4.0",
-		"@cloudflare/workers-types": "^4.20250204.0",
+		"@cloudflare/workers-types": "^4.20250214.0",
 		"@ianvs/prettier-plugin-sort-imports": "4.2.1",
-		"@manypkg/cli": "^0.21.4",
-		"@turbo/gen": "^1.10.13",
+		"@manypkg/cli": "^0.23.0",
 		"@types/node": "catalog:default",
 		"@vue/compiler-sfc": "^3.3.4",
 		"cross-env": "^7.0.3",
@@ -81,7 +79,8 @@
 		"patchedDependencies": {
 			"@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch",
 			"pg@8.11.3": "patches/pg@8.11.3.patch",
-			"toucan-js@3.3.1": "patches/toucan-js@3.3.1.patch"
+			"toucan-js@3.3.1": "patches/toucan-js@3.3.1.patch",
+			"toucan-js@4.0.0": "patches/toucan-js@4.0.0.patch"
 		}
 	}
 }

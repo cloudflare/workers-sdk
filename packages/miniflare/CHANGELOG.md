@@ -1,5 +1,24 @@
 # miniflare
 
+## 3.20250214.0
+
+### Patch Changes
+
+- [#8171](https://github.com/cloudflare/workers-sdk/pull/8171) [`5e06177`](https://github.com/cloudflare/workers-sdk/commit/5e06177861b29aa9b114f9ecb50093190af94f4b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250204.0  | 1.20250214.0  |
+  | @cloudflare/workers-types | ^4.20250204.0 | ^4.20250214.0 |
+
+## 3.20250204.1
+
+### Patch Changes
+
+- [#7950](https://github.com/cloudflare/workers-sdk/pull/7950) [`4db1fb5`](https://github.com/cloudflare/workers-sdk/commit/4db1fb5696412c6666589a778184e10386294d71) Thanks [@cmackenzie1](https://github.com/cmackenzie1)! - Add local binding support for Worker Pipelines
+
 ## 3.20250204.0
 
 ### Patch Changes
@@ -561,20 +580,20 @@
   import { Miniflare } from "miniflare";
 
   const mf = new Miniflare({
-    workers: [
-      {
-        wrappedBindings: {
-          Greeter: {
-            scriptName: "impl",
-          },
-        },
-        modules: true,
-        script: `export default { fetch(){ return new Response(''); } }`,
-      },
-      {
-        modules: true,
-        name: "impl",
-        script: `
+  	workers: [
+  		{
+  			wrappedBindings: {
+  				Greeter: {
+  					scriptName: "impl",
+  				},
+  			},
+  			modules: true,
+  			script: `export default { fetch(){ return new Response(''); } }`,
+  		},
+  		{
+  			modules: true,
+  			name: "impl",
+  			script: `
   				class Greeter {
   					sayHello(name) {
   						return "Hello " + name;
@@ -585,8 +604,8 @@
   					return new Greeter();
   				}
   			`,
-      },
-    ],
+  		},
+  	],
   });
 
   const { Greeter } = await mf.getBindings();
@@ -606,21 +625,21 @@
   import { Miniflare } from "miniflare";
 
   const mf = new Miniflare({
-    workers: [
-      {
-        modules: true,
-        script: `export default { fetch() { return new Response(''); } }`,
-        serviceBindings: {
-          SUM: {
-            name: "sum-worker",
-            entrypoint: "SumEntrypoint",
-          },
-        },
-      },
-      {
-        modules: true,
-        name: "sum-worker",
-        script: `
+  	workers: [
+  		{
+  			modules: true,
+  			script: `export default { fetch() { return new Response(''); } }`,
+  			serviceBindings: {
+  				SUM: {
+  					name: "sum-worker",
+  					entrypoint: "SumEntrypoint",
+  				},
+  			},
+  		},
+  		{
+  			modules: true,
+  			name: "sum-worker",
+  			script: `
   				import { WorkerEntrypoint } from 'cloudflare:workers';
   
   				export default { fetch() { return new Response(''); } }
@@ -631,8 +650,8 @@
   					}
   				}
   			`,
-      },
-    ],
+  		},
+  	],
   });
 
   const { SUM } = await mf.getBindings();
@@ -698,17 +717,17 @@
   import { kCurrentWorker, Miniflare } from "miniflare";
 
   const mf = new Miniflare({
-    workers: [
-      {
-        name: "a",
-        serviceBindings: {
-          A_RPC_SERVICE: { name: kCurrentWorker, entrypoint: "RpcEntrypoint" },
-          A_NAMED_SERVICE: { name: "a", entrypoint: "namedEntrypoint" },
-          B_NAMED_SERVICE: { name: "b", entrypoint: "anotherNamedEntrypoint" },
-        },
-        compatibilityFlags: ["rpc"],
-        modules: true,
-        script: `
+  	workers: [
+  		{
+  			name: "a",
+  			serviceBindings: {
+  				A_RPC_SERVICE: { name: kCurrentWorker, entrypoint: "RpcEntrypoint" },
+  				A_NAMED_SERVICE: { name: "a", entrypoint: "namedEntrypoint" },
+  				B_NAMED_SERVICE: { name: "b", entrypoint: "anotherNamedEntrypoint" },
+  			},
+  			compatibilityFlags: ["rpc"],
+  			modules: true,
+  			script: `
   			import { WorkerEntrypoint } from "cloudflare:workers";
   
   			export class RpcEntrypoint extends WorkerEntrypoint {
@@ -721,17 +740,17 @@
   
   			...
   			`,
-      },
-      {
-        name: "b",
-        modules: true,
-        script: `
+  		},
+  		{
+  			name: "b",
+  			modules: true,
+  			script: `
   			export const anotherNamedEntrypoint = {
   				fetch(request, env, ctx) { return new Response("b:named:pong"); }
   			};
   			`,
-      },
-    ],
+  		},
+  	],
   });
   ```
 
@@ -849,12 +868,12 @@
   import { Miniflare, Response } from "miniflare";
 
   const mf = new Miniflare({
-    serviceBindings: {
-      SERVICE(request, instance) {
-        assert(instance === mf);
-        return new Response();
-      },
-    },
+  	serviceBindings: {
+  		SERVICE(request, instance) {
+  			assert(instance === mf);
+  			return new Response();
+  		},
+  	},
   });
   ```
 
@@ -874,27 +893,27 @@
   import { Miniflare } from "miniflare";
 
   const mf1 = new Miniflare({
-    scriptPath: "index.mjs",
+  	scriptPath: "index.mjs",
   });
 
   const mf2 = new Miniflare({
-    rootPath: "a/b",
-    scriptPath: "c/index.mjs",
+  	rootPath: "a/b",
+  	scriptPath: "c/index.mjs",
   });
 
   const mf3 = new Miniflare({
-    rootPath: "/a/b",
-    workers: [
-      {
-        name: "1",
-        rootPath: "c",
-        scriptPath: "index.mjs",
-      },
-      {
-        name: "2",
-        scriptPath: "index.mjs",
-      },
-    ],
+  	rootPath: "/a/b",
+  	workers: [
+  		{
+  			name: "1",
+  			rootPath: "c",
+  			scriptPath: "index.mjs",
+  		},
+  		{
+  			name: "2",
+  			scriptPath: "index.mjs",
+  		},
+  	],
   });
   ```
 
@@ -910,11 +929,11 @@
   import { kCurrentWorker, Miniflare } from "miniflare";
 
   const mf = new Miniflare({
-    serviceBindings: {
-      SELF: kCurrentWorker,
-    },
-    modules: true,
-    script: `export default {
+  	serviceBindings: {
+  		SELF: kCurrentWorker,
+  	},
+  	modules: true,
+  	script: `export default {
       fetch(request, env, ctx) {
         const { pathname } = new URL(request.url);
         if (pathname === "/recurse") {
@@ -939,9 +958,9 @@
 
   ```js
   const mf = new Miniflare({
-    modules: true,
-    modulesRoot: "..",
-    scriptPath: "../worker.mjs",
+  	modules: true,
+  	modulesRoot: "..",
+  	scriptPath: "../worker.mjs",
   });
   ```
 
@@ -999,15 +1018,15 @@
 
   ```js
   const mf = new Miniflare({
-    modules: [
-      {
-        type: "PythonModule",
-        path: "index",
-        contents:
-          "from js import Response;\ndef fetch(request):\n  return Response.new('hello')",
-      },
-    ],
-    compatibilityFlags: ["experimental"],
+  	modules: [
+  		{
+  			type: "PythonModule",
+  			path: "index",
+  			contents:
+  				"from js import Response;\ndef fetch(request):\n  return Response.new('hello')",
+  		},
+  	],
+  	compatibilityFlags: ["experimental"],
   });
   ```
 
@@ -1144,9 +1163,9 @@
 
   ```ts
   const mf = new Miniflare({
-    log,
-    modules: true,
-    script: `
+  	log,
+  	modules: true,
+  	script: `
         export default {
             fetch(req, env, ctx) {
                 const two = env.UNSAFE_EVAL.eval('1+1');
@@ -1154,7 +1173,7 @@
             }
         }
     `,
-    unsafeEvalBinding: "UNSAFE_EVAL",
+  	unsafeEvalBinding: "UNSAFE_EVAL",
   });
   ```
 

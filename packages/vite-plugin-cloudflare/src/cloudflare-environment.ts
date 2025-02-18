@@ -1,8 +1,7 @@
 import assert from "node:assert";
-import { builtinModules } from "node:module";
 import * as vite from "vite";
 import { INIT_PATH, UNKNOWN_HOST } from "./shared";
-import { getOutputDirectory } from "./utils";
+import { getOutputDirectory, nodeBuiltInModules } from "./utils";
 import type { ResolvedPluginConfig, WorkerConfig } from "./plugin-config";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
 import type {
@@ -133,6 +132,10 @@ export function createCloudflareEnvironmentOptions(
 			noExternal: true,
 			// We want to use `workerd` package exports if available (e.g. for postgres).
 			conditions: [...defaultConditions, "development|production"],
+			// The Cloudflare ones are proper builtins in the environment
+			builtins: [...cloudflareBuiltInModules],
+			// The Node.js ones are no proper builtins in the environment since we also polyfill them using unenv
+			external: [...nodeBuiltInModules],
 		},
 		dev: {
 			createEnvironment(name, config) {
@@ -155,16 +158,15 @@ export function createCloudflareEnvironmentOptions(
 				//       dev pre-bundling crawling (were we not to set this input field we'd have to appropriately set
 				//       optimizeDeps.entries in the dev config)
 				input: workerConfig.main,
-				external: [...cloudflareBuiltInModules],
 			},
 		},
 		optimizeDeps: {
 			// Note: ssr pre-bundling is opt-in and we need to enable it by setting `noDiscovery` to false
 			noDiscovery: false,
+			entries: workerConfig.main,
 			exclude: [
-				...cloudflareBuiltInModules,
 				// we have to exclude all node modules to work in dev-mode not just the unenv externals...
-				...builtinModules.concat(builtinModules.map((m) => `node:${m}`)),
+				...nodeBuiltInModules,
 			],
 			esbuildOptions: {
 				platform: "neutral",

@@ -16,12 +16,12 @@ import {
 	getPreviewMiniflareOptions,
 } from "./miniflare-options";
 import {
-	dealiasVirtualNodeJSImport,
 	getNodeCompatAliases,
 	getNodeCompatExternals,
 	injectGlobalCode,
 	isNodeCompat,
 	maybeStripNodeJsVirtualPrefix,
+	resolveNodeJSImport,
 } from "./node-js-compat";
 import { resolvePluginConfig } from "./plugin-config";
 import { MODULE_PATTERN } from "./shared";
@@ -267,11 +267,14 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					miniflare
 				);
 
-				const middleware = createMiddleware(({ request }) => {
-					return entryWorker.fetch(toMiniflareRequest(request), {
-						redirect: "manual",
-					}) as any;
-				});
+				const middleware = createMiddleware(
+					({ request }) => {
+						return entryWorker.fetch(toMiniflareRequest(request), {
+							redirect: "manual",
+						}) as any;
+					},
+					{ alwaysCallNext: false }
+				);
 
 				handleWebSocket(
 					viteDevServer.httpServer,
@@ -293,11 +296,14 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					)
 				);
 
-				const middleware = createMiddleware(({ request }) => {
-					return miniflare.dispatchFetch(toMiniflareRequest(request), {
-						redirect: "manual",
-					}) as any;
-				});
+				const middleware = createMiddleware(
+					({ request }) => {
+						return miniflare.dispatchFetch(toMiniflareRequest(request), {
+							redirect: "manual",
+						}) as any;
+					},
+					{ alwaysCallNext: false }
+				);
 
 				handleWebSocket(
 					vitePreviewServer.httpServer,
@@ -426,35 +432,34 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			},
 			async resolveId(source, importer, options) {
 				// Handle the virtual modules that come from Node.js compat aliases.
-				const from = maybeStripNodeJsVirtualPrefix(source);
-				if (!from) {
+				const strippedSource = maybeStripNodeJsVirtualPrefix(source);
+				if (!strippedSource) {
 					return;
 				}
 
 				const workerConfig = getWorkerConfig(this.environment.name);
 				if (!isNodeCompat(workerConfig)) {
-					return this.resolve(from, importer, options);
+					// We are not in Node.js compat mode, so we must not try to apply any unenv aliases.
+					// Just resolve the module id as normal.
+					return this.resolve(strippedSource, importer, options);
 				}
 
-				const unresolvedAlias = dealiasVirtualNodeJSImport(from);
-				const resolvedAlias = await this.resolve(
-					unresolvedAlias,
-					import.meta.url
-				);
-				assert(
-					resolvedAlias,
-					"Failed to resolve aliased nodejs import: " + unresolvedAlias
-				);
+				// Resolve this id following any unenv aliases.
+				const { unresolved, resolved } = resolveNodeJSImport(strippedSource);
 
 				if (this.environment.mode === "dev" && this.environment.depsOptimizer) {
 					// Make sure the dependency optimizer is aware of this aliased import
-					this.environment.depsOptimizer.registerMissingImport(
-						unresolvedAlias,
-						resolvedAlias.id
-					);
+					const optimized =
+						this.environment.depsOptimizer.registerMissingImport(
+							unresolved,
+							resolved
+						).id;
+					// We must pass the id from the depsOptimizer through the rest of the
+					// resolving pipeline to ensure that the optimized version gets used.
+					return this.resolve(optimized, importer, options);
 				}
 
-				return resolvedAlias;
+				return this.resolve(resolved, importer, options);
 			},
 			async transform(code, id) {
 				// Inject the Node.js compat globals into the entry module for Node.js compat environments.

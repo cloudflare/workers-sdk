@@ -194,9 +194,9 @@ app.post(`${rootDomain}/api/worker`, async (c) => {
 	const userObject = c.env.UserSession.get(userObjectId);
 
 	return userObject.fetch("https://example.com", {
-		body: c.req.body,
+		body: c.req.raw.body,
 		method: "POST",
-		headers: c.req.headers,
+		headers: c.req.raw.headers,
 	});
 });
 
@@ -272,18 +272,19 @@ app.all(`${previewDomain}/*`, async (c) => {
 	if (c.req.method === "OPTIONS") {
 		return new Response(null, {
 			headers: {
-				"Access-Control-Allow-Origin": c.req.headers.get("Origin") ?? "",
+				"Access-Control-Allow-Origin": c.req.raw.headers.get("Origin") ?? "",
 				"Access-Control-Allow-Methods": "*",
 				"Access-Control-Allow-Credentials": "true",
 				"Access-Control-Allow-Headers":
-					c.req.headers.get("Access-Control-Request-Headers") ?? "x-cf-token",
+					c.req.raw.headers.get("Access-Control-Request-Headers") ??
+					"x-cf-token",
 				"Access-Control-Expose-Headers": "*",
 				Vary: "Origin, Access-Control-Request-Headers",
 			},
 		});
 	}
 	const url = new URL(c.req.url);
-	if (c.req.headers.has("cf-raw-http")) {
+	if (c.req.raw.headers.has("cf-raw-http")) {
 		return handleRawHttp(c.req.raw, url, c.env);
 	}
 	const token = getCookie(c, "token");
@@ -302,7 +303,7 @@ app.all(`${previewDomain}/*`, async (c) => {
 		url,
 		new Request(c.req.raw, {
 			headers: {
-				...Object.fromEntries(c.req.headers),
+				...Object.fromEntries(c.req.raw.headers),
 				"cf-run-user-worker": "true",
 			},
 			redirect: "manual",

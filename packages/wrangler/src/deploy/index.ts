@@ -64,6 +64,11 @@ export const deployCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
+		outfile: {
+			describe: "Output file for the bundled worker",
+			type: "string",
+			requiresArg: true,
+		},
 		"compatibility-date": {
 			describe: "Date to use for compatibility checks",
 			type: "string",
@@ -371,6 +376,7 @@ export const deployCommand = createCommand({
 			nodeCompat: args.nodeCompat,
 			isWorkersSite: Boolean(args.site || config.site),
 			outDir: args.outdir,
+			outFile: args.outfile,
 			dryRun: args.dryRun,
 			noBundle: !(args.bundle ?? !config.no_bundle),
 			keepVars: args.keepVars,

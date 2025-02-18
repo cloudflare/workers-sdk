@@ -13,6 +13,7 @@ import {
 	certUploadMtlsCommand,
 	certUploadNamespace,
 } from "./cert/cert";
+import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
 import { experimental_readRawConfig, loadDotEnv } from "./config";
 import { demandSingleValue } from "./core";
@@ -893,6 +894,18 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("telemetry");
 
+	registry.define([
+		{
+			command: "wrangler check",
+			definition: checkNamespace,
+		},
+		{
+			command: "wrangler check startup",
+			definition: checkStartupCommand,
+		},
+	]);
+	registry.registerNamespace("check");
+
 	/******************************************************/
 	/*               DEPRECATED COMMANDS                  */
 	/******************************************************/
@@ -1172,10 +1185,12 @@ export async function main(argv: string[]): Promise<void> {
 			}
 
 			await closeSentry();
+			const controller = new AbortController();
+
 			await Promise.race([
-				await Promise.allSettled(dispatcher?.requests ?? []),
-				setTimeout(1000), // Ensure we don't hang indefinitely
-			]);
+				Promise.allSettled(dispatcher?.requests ?? []),
+				setTimeout(1000, undefined, controller), // Ensure we don't hang indefinitely
+			]).then(() => controller.abort()); // Ensure the Wrangler process doesn't hang waiting for setTimeout(1000) to complete
 		} catch (e) {
 			logger.error(e);
 			// Only re-throw if we haven't already re-thrown an exception from a

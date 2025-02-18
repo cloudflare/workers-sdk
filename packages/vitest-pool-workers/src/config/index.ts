@@ -125,7 +125,7 @@ function createConfigPlugin(): Plugin<WorkersConfigPluginAPI> {
 			},
 		},
 		// Run after `vitest:project` plugin:
-		// https://github.com/vitest-dev/vitest/blob/v2.1.1/packages/vitest/src/node/plugins/workspace.ts#L34
+		// https://github.com/vitest-dev/vitest/blob/v3.0.5/packages/vitest/src/node/plugins/workspace.ts#L37
 		config(config) {
 			config.resolve ??= {};
 			config.resolve.conditions ??= [];
@@ -142,7 +142,7 @@ function createConfigPlugin(): Plugin<WorkersConfigPluginAPI> {
 			ensureArrayIncludes(config.resolve.conditions, requiredConditions);
 
 			// Vitest sets this to an empty array if unset, so restore Vite defaults:
-			// https://github.com/vitest-dev/vitest/blob/v2.1.1/packages/vitest/src/node/plugins/index.ts#L93
+			// https://github.com/vitest-dev/vitest/blob/v3.0.5/packages/vitest/src/node/plugins/utils.ts#L156
 			ensureArrayIncludes(config.resolve.mainFields, requiredMainFields);
 
 			// Apply `package.json` `browser` field remapping in SSR mode:

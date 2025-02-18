@@ -1,4 +1,4 @@
-import { RewriteFrames, Toucan } from "toucan-js";
+import { rewriteFramesIntegration, Toucan } from "toucan-js";
 import type { ColoMetadata } from "./types";
 
 export function setupSentry(
@@ -23,7 +23,7 @@ export function setupSentry(
 		sampleRate: 1.0,
 		release: versionMetadata?.tag,
 		integrations: [
-			new RewriteFrames({
+			rewriteFramesIntegration({
 				iteratee(frame) {
 					frame.filename = "/index.js";
 					return frame;

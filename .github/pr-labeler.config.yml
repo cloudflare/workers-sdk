@@ -4,6 +4,11 @@ e2e:
       - changed-files:
           - any-glob-to-any-file: "packages/wrangler/e2e/**/*"
 
+c3-e2e:
+  - all:
+      - changed-files:
+          - any-glob-to-any-file: "packages/create-cloudflare/**/*"
+
 # add 'skip-pr-description-validation' label to Version Packages PRs
 skip-pr-description-validation:
   - all:

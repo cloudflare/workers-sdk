@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { chdir } from "node:process";
+import { execa } from "execa";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { version } from "../../../package.json";
@@ -9,6 +10,7 @@ import { isRoutesJSONSpec } from "../../pages/functions/routes-validation";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
+import { mockPrompt } from "../helpers/mock-dialogs";
 import { mockGetUploadTokenRequest } from "../helpers/mock-get-pages-upload-token";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockSetTimeout } from "../helpers/mock-set-timeout";
@@ -1734,6 +1736,207 @@ describe("pages deploy", () => {
 
 		expect(getProjectRequestCount).toEqual(2);
 		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	// regression test for issue #3629
+	it("should not error when deploying a new project with a new repo", async () => {
+		vi.stubEnv("CI", "false");
+		setIsTTY(true);
+		await execa("git", ["init"]);
+		writeFileSync("logo.png", "foobar");
+		mockGetUploadTokenRequest(
+			"<<funfetti-auth-jwt>>",
+			"some-account-id",
+			"foo"
+		);
+
+		let getProjectRequestCount = 0;
+		msw.use(
+			http.post(
+				"*/pages/assets/check-missing",
+				async ({ request }) => {
+					const body = (await request.json()) as { hashes: string[] };
+
+					expect(request.headers.get("Authorization")).toBe(
+						"Bearer <<funfetti-auth-jwt>>"
+					);
+					expect(body).toMatchObject({
+						hashes: ["2082190357cfd3617ccfe04f340c6247"],
+					});
+
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: body.hashes,
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post(
+				"*/pages/assets/upload",
+				async ({ request }) => {
+					expect(request.headers.get("Authorization")).toMatchInlineSnapshot(
+						`"Bearer <<funfetti-auth-jwt>>"`
+					);
+					expect(await request.json()).toMatchObject([
+						{
+							key: "2082190357cfd3617ccfe04f340c6247",
+							value: Buffer.from("foobar").toString("base64"),
+							metadata: {
+								contentType: "image/png",
+							},
+							base64: true,
+						},
+					]);
+					return HttpResponse.json(
+						{ success: true, errors: [], messages: [], result: null },
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.post(
+				"*/accounts/:accountId/pages/projects/foo/deployments",
+				async ({ request, params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(await request.formData()).toMatchInlineSnapshot(`
+						FormData {
+						  Symbol(state): Array [
+						    Object {
+						      "name": "manifest",
+						      "value": "{\\"/logo.png\\":\\"2082190357cfd3617ccfe04f340c6247\\"}",
+						    },
+						    Object {
+						      "name": "commit_dirty",
+						      "value": "true",
+						    },
+						  ],
+						}
+					`);
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "123-456-789",
+								url: "https://abcxyz.foo.pages.dev/",
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+				async ({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					expect(params.deploymentId).toEqual("123-456-789");
+
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								id: "123-456-789",
+								latest_stage: {
+									name: "deploy",
+									status: "success",
+								},
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.get("*/accounts/:accountId/pages/projects", async ({ params }) => {
+				getProjectRequestCount++;
+
+				expect(params.accountId).toEqual("some-account-id");
+
+				return HttpResponse.json(
+					{
+						success: true,
+						errors: [],
+						messages: [],
+						result: [],
+					},
+					{ status: 200 }
+				);
+			}),
+			http.post(
+				"*/accounts/:accountId/pages/projects",
+				async ({ request, params }) => {
+					const body = (await request.json()) as Record<string, unknown>;
+
+					expect(params.accountId).toEqual("some-account-id");
+					console.dir(body);
+					expect(body).toEqual({
+						name: "foo",
+						production_branch: "main",
+					});
+
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								...body,
+								subdomain: "foo.pages.dev",
+							},
+						},
+						{ status: 200 }
+					);
+				},
+				{ once: true }
+			),
+			http.get(
+				"*/accounts/:accountId/pages/projects/foo",
+				async ({ params }) => {
+					getProjectRequestCount++;
+
+					expect(params.accountId).toEqual("some-account-id");
+
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								deployment_configs: { production: {}, preview: {} },
+							},
+						},
+						{ status: 200 }
+					);
+				}
+			)
+		);
+		mockPrompt({
+			text: "Enter the name of your new project:",
+			result: "foo",
+		});
+		mockPrompt({
+			text: "Enter the production branch name:",
+			result: "main",
+		});
+		await runWrangler("pages deploy .");
+
+		expect(getProjectRequestCount).toBe(2);
+		expect(normalizeProgressSteps(std.out)).toMatchInlineSnapshot(`
+			"✨ Successfully created the 'foo' project.
+			✨ Success! Uploaded 1 files (TIMINGS)
+
+			🌎 Deploying...
+			✨ Deployment complete! Take a peek over at https://abcxyz.foo.pages.dev/"
+		`);
 	});
 
 	describe("with Pages Functions", () => {
