@@ -8,6 +8,7 @@ import {
 	registerHandlerAndGlobalWaitUntil,
 	waitForGlobalWaitUntil,
 } from "cloudflare:test-internal";
+import { vi } from "vitest";
 import { VitestTestRunner } from "vitest/runners";
 import workerdUnsafe from "workerd:unsafe";
 import type { CancelReason, Suite, Test } from "@vitest/runner";
@@ -252,6 +253,10 @@ export default class WorkersTestRunner extends VitestTestRunner {
 			await scheduler.wait(100);
 		}
 		await this.updateStackedStorage("pop", suite);
+
+		// Reset the module graphs so module mock will be re-evalated on watch mode
+		// See https://github.com/cloudflare/workers-sdk/issues/6844
+		vi.resetModules();
 
 		return super.onAfterRunSuite(suite);
 	}
