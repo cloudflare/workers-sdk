@@ -70,8 +70,6 @@
 	},
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "workspace:*",
-		"@esbuild-plugins/node-globals-polyfill": "0.2.3",
-		"@esbuild-plugins/node-modules-polyfill": "0.2.2",
 		"blake3-wasm": "2.1.5",
 		"esbuild": "0.17.19",
 		"miniflare": "workspace:*",
