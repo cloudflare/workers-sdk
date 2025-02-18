@@ -1,8 +1,9 @@
 import * as fs from "node:fs";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
+import chalk from "chalk";
 import { findUpSync } from "find-up";
 import { getNodeCompat } from "miniflare";
-import { experimental_readRawConfig } from "../config";
+import { configFileName, experimental_readRawConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
 import { getVarsForDev } from "../dev/dev-vars";
@@ -13,7 +14,6 @@ import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type { Config, RawEnvironment } from "../config";
 import type { Entry } from "../deployment-bundle/entry";
-import type { CfScriptFormat } from "../deployment-bundle/worker";
 
 export const typesCommand = createCommand({
 	metadata: {
@@ -27,7 +27,7 @@ export const typesCommand = createCommand({
 	positionalArgs: ["path"],
 	args: {
 		path: {
-			describe: "The path to the declaration file to generate",
+			describe: "The path to the declaration file for the generated types",
 			type: "string",
 			default: "worker-configuration.d.ts",
 			demandOption: false,
@@ -38,32 +38,72 @@ export const typesCommand = createCommand({
 			describe: "The name of the generated environment interface",
 			requiresArg: true,
 		},
-		"experimental-include-runtime": {
-			alias: "x-include-runtime",
-			type: "string",
-			describe: "The path of the generated runtime types file",
-			demandOption: false,
+		"include-runtime": {
+			type: "boolean",
+			default: true,
+			describe: "Include runtime types in the generated types",
+		},
+		"include-env": {
+			type: "boolean",
+			default: true,
+			describe: "Include Env types in the generated types",
 		},
 		"strict-vars": {
 			type: "boolean",
 			default: true,
 			describe: "Generate literal and union types for variables",
 		},
+		"experimental-include-runtime": {
+			alias: "x-include-runtime",
+			type: "string",
+			describe: "The path of the generated runtime types file",
+			demandOption: false,
+			hidden: true,
+			deprecated: true,
+		},
 	},
 	validateArgs(args) {
-		const { envInterface, path: outputPath } = args;
-
-		const validInterfaceRegex = /^[a-zA-Z][a-zA-Z0-9_]*$/;
-
-		if (!validInterfaceRegex.test(envInterface)) {
+		// args.xRuntime will be a string if the user passes "--x-include-runtime" or "--x-include-runtime=..."
+		if (typeof args.experimentalIncludeRuntime === "string") {
 			throw new CommandLineArgsError(
-				`The provided env-interface value ("${envInterface}") does not satisfy the validation regex: ${validInterfaceRegex}`
+				"You no longer need to use --experimental-include-runtime.\n" +
+					"`wrangler types` will now generate runtime types in the same file as the Env types.\n" +
+					"You should delete the old runtime types file, and remove it from your tsconfig.json.\n" +
+					"Then rerun `wrangler types`.",
+				{ telemetryMessage: true }
 			);
 		}
 
-		if (!outputPath.endsWith(".d.ts")) {
+		const validInterfaceRegex = /^[a-zA-Z][a-zA-Z0-9_]*$/;
+
+		if (!validInterfaceRegex.test(args.envInterface)) {
 			throw new CommandLineArgsError(
-				`The provided path value ("${outputPath}") does not point to a declaration file (please use the 'd.ts' extension)`
+				`The provided env-interface value ("${args.envInterface}") does not satisfy the validation regex: ${validInterfaceRegex}`,
+				{
+					telemetryMessage:
+						"The provided env-interface value does not satisfy the validation regex",
+				}
+			);
+		}
+
+		if (!args.path.endsWith(".d.ts")) {
+			throw new CommandLineArgsError(
+				`The provided output path '${args.path}' does not point to a declaration file - please use the '.d.ts' extension`,
+				{
+					telemetryMessage:
+						"The provided path does not point to a declaration file",
+				}
+			);
+		}
+
+		checkPath(args.path);
+
+		if (!args.includeEnv && !args.includeRuntime) {
+			throw new CommandLineArgsError(
+				`You cannot run this command without including either Env or Runtime types`,
+				{
+					telemetryMessage: true,
+				}
 			);
 		}
 	},
@@ -75,83 +115,120 @@ export const typesCommand = createCommand({
 			!fs.existsSync(config.configPath) ||
 			fs.statSync(config.configPath).isDirectory()
 		) {
-			logger.warn(
-				`No config file detected${
-					args.config ? ` (at ${args.config})` : ""
-				}, aborting`
+			throw new UserError(
+				`No config file detected${args.config ? ` (at ${args.config})` : ""}. This command requires a Wrangler configuration file.`,
+				{ telemetryMessage: "No config file detected" }
 			);
-			return;
+		}
+		const configContainsEntrypoint =
+			config.main !== undefined || !!config.site?.["entry-point"];
+
+		let entrypoint: Entry | undefined;
+		if (configContainsEntrypoint) {
+			// this will throw if an entrypoint is expected, but doesn't exist
+			// e.g. before building. however someone might still want to generate types
+			// so we default to module worker
+			try {
+				entrypoint = await getEntry({}, config, "types");
+			} catch {
+				entrypoint = undefined;
+			}
+		}
+		const entrypointFormat = entrypoint?.format ?? "modules";
+
+		const header = [];
+		const types = [];
+		if (args.includeEnv) {
+			logger.log(`Generating project types...\n`);
+			const secrets = getVarsForDev(
+				// We do not want `getVarsForDev()` to merge in the standard vars into the dev vars
+				// because we want to be able to work with secrets differently to vars.
+				// So we pass in a fake vars object here.
+				{ ...config, vars: {} },
+				args.env,
+				true
+			) as Record<string, string>;
+
+			const configBindingsWithSecrets = {
+				kv_namespaces: config.kv_namespaces ?? [],
+				vars: collectAllVars(args),
+				wasm_modules: config.wasm_modules,
+				text_blobs: {
+					...config.text_blobs,
+				},
+				data_blobs: config.data_blobs,
+				durable_objects: config.durable_objects,
+				r2_buckets: config.r2_buckets,
+				d1_databases: config.d1_databases,
+				services: config.services,
+				analytics_engine_datasets: config.analytics_engine_datasets,
+				dispatch_namespaces: config.dispatch_namespaces,
+				logfwdr: config.logfwdr,
+				unsafe: config.unsafe,
+				rules: config.rules,
+				queues: config.queues,
+				send_email: config.send_email,
+				vectorize: config.vectorize,
+				hyperdrive: config.hyperdrive,
+				mtls_certificates: config.mtls_certificates,
+				browser: config.browser,
+				ai: config.ai,
+				version_metadata: config.version_metadata,
+				secrets,
+				assets: config.assets,
+				workflows: config.workflows,
+			};
+
+			const { envHeader, envTypes } = await generateEnvTypes(
+				configBindingsWithSecrets,
+				envInterface,
+				outputPath,
+				entrypoint
+			);
+			if (envHeader && envTypes) {
+				header.push(envHeader);
+				types.push(envTypes);
+			}
 		}
 
-		// args.xRuntime will be a string if the user passes "--x-include-runtime" or "--x-include-runtime=..."
-		if (typeof args.experimentalIncludeRuntime === "string") {
-			logger.log(`Generating runtime types...`);
-
-			const { outFile } = await generateRuntimeTypes({
+		if (args.includeRuntime) {
+			logger.log("Generating runtime types...\n");
+			const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
 				config,
-				outFile: args.experimentalIncludeRuntime || undefined,
+				outFile: outputPath || undefined,
 			});
-
-			const tsconfigPath =
-				config.tsconfig ?? join(dirname(config.configPath), "tsconfig.json");
-			const tsconfigTypes = readTsconfigTypes(tsconfigPath);
-			const { mode } = getNodeCompat(
-				config.compatibility_date,
-				config.compatibility_flags
-			);
-
-			logRuntimeTypesMessage(
-				outFile,
-				tsconfigTypes,
-				mode !== null,
-				config.configPath
-			);
+			header.push(runtimeHeader);
+			types.push(`// Begin runtime types\n${runtimeTypes}`);
+			logger.log(chalk.dim("Runtime types generated.\n"));
 		}
 
-		const secrets = getVarsForDev(
-			// We do not want `getVarsForDev()` to merge in the standard vars into the dev vars
-			// because we want to be able to work with secrets differently to vars.
-			// So we pass in a fake vars object here.
-			{ ...config, vars: {} },
-			args.env,
-			true
-		) as Record<string, string>;
+		logger.log(
+			chalk.dim("────────────────────────────────────────────────────────────")
+		);
 
-		const configBindingsWithSecrets = {
-			kv_namespaces: config.kv_namespaces ?? [],
-			vars: collectAllVars(args),
-			wasm_modules: config.wasm_modules,
-			text_blobs: {
-				...config.text_blobs,
-			},
-			data_blobs: config.data_blobs,
-			durable_objects: config.durable_objects,
-			r2_buckets: config.r2_buckets,
-			d1_databases: config.d1_databases,
-			services: config.services,
-			analytics_engine_datasets: config.analytics_engine_datasets,
-			dispatch_namespaces: config.dispatch_namespaces,
-			logfwdr: config.logfwdr,
-			unsafe: config.unsafe,
-			rules: config.rules,
-			queues: config.queues,
-			send_email: config.send_email,
-			vectorize: config.vectorize,
-			hyperdrive: config.hyperdrive,
-			mtls_certificates: config.mtls_certificates,
-			browser: config.browser,
-			ai: config.ai,
-			version_metadata: config.version_metadata,
-			secrets,
-			assets: config.assets,
-			workflows: config.workflows,
-		};
-
-		await generateTypes(
-			configBindingsWithSecrets,
-			config,
-			envInterface,
-			outputPath
+		if ((header.length && types.length) || entrypointFormat === "modules") {
+			fs.writeFileSync(
+				outputPath,
+				`${header.join("\n")}\n${types.join("\n")}`,
+				"utf-8"
+			);
+			logger.log(`✨ Types written to ${outputPath}\n`);
+		}
+		const tsconfigPath =
+			config.tsconfig ?? join(dirname(config.configPath), "tsconfig.json");
+		const tsconfigTypes = readTsconfigTypes(tsconfigPath);
+		const { mode } = getNodeCompat(
+			config.compatibility_date,
+			config.compatibility_flags,
+			{
+				nodeCompat: config.node_compat,
+			}
+		);
+		if (args.includeRuntime) {
+			logRuntimeTypesMessage(outputPath, tsconfigTypes, mode !== null);
+		}
+		logger.log(
+			`📣 Remember to rerun 'wrangler types' after you change your ${configFileName(config.configPath)} file.`
 		);
 	},
 });
@@ -210,26 +287,12 @@ type ConfigToDTS = Partial<Omit<Config, "vars">> & { vars: VarTypes } & {
 	secrets: Secrets;
 };
 
-async function generateTypes(
+async function generateEnvTypes(
 	configToDTS: ConfigToDTS,
-	config: Config,
 	envInterface: string,
-	outputPath: string
-) {
-	const configContainsEntrypoint =
-		config.main !== undefined || !!config.site?.["entry-point"];
-
-	let entrypoint: Entry | undefined;
-	if (configContainsEntrypoint) {
-		// this will throw if an entrypoint is expected, but doesn't exist
-		// e.g. before building. however someone might still want to generate types
-		// so we default to module worker
-		try {
-			entrypoint = await getEntry({}, config, "types");
-		} catch {
-			entrypoint = undefined;
-		}
-	}
+	outputPath: string,
+	entrypoint?: Entry
+): Promise<{ envHeader?: string; envTypes?: string }> {
 	const entrypointFormat = entrypoint?.format ?? "modules";
 	const fullOutputPath = resolve(outputPath);
 
@@ -276,7 +339,7 @@ async function generateTypes(
 	}
 
 	if (configToDTS.durable_objects?.bindings) {
-		const importPath = entrypoint
+		const importPath = entrypoint?.file
 			? generateImportSpecifier(fullOutputPath, entrypoint.file)
 			: undefined;
 
@@ -457,38 +520,45 @@ async function generateTypes(
 		}
 	}
 
-	writeDTSFile({
-		envTypeStructure,
-		modulesTypeStructure,
-		formatType: entrypointFormat,
-		envInterface,
-		path: fullOutputPath,
-	});
+	const wranglerCommandUsed = ["wrangler", ...process.argv.slice(2)].join(" ");
+
+	const typesHaveBeenFound =
+		envTypeStructure.length || modulesTypeStructure.length;
+	if (entrypointFormat === "modules" || typesHaveBeenFound) {
+		const { fileContent, consoleOutput } = generateTypeStrings(
+			entrypointFormat,
+			envInterface,
+			envTypeStructure.map(([key, value]) => `${key}: ${value};`),
+			modulesTypeStructure
+		);
+		const envHeader = `// Generated by Wrangler by running \`${wranglerCommandUsed}\``;
+
+		logger.log(chalk.dim(consoleOutput));
+
+		return { envHeader, envTypes: fileContent };
+	} else {
+		logger.log(chalk.dim("No project types to add.\n"));
+		return {
+			envHeader: undefined,
+			envTypes: undefined,
+		};
+	}
 }
 
-function writeDTSFile({
-	envTypeStructure,
-	modulesTypeStructure,
-	formatType,
-	envInterface,
-	path,
-}: {
-	envTypeStructure: [string, string][];
-	modulesTypeStructure: string[];
-	formatType: CfScriptFormat;
-	envInterface: string;
-	path: string;
-}) {
+const checkPath = (path: string) => {
 	const wranglerOverrideDTSPath = findUpSync(path);
+	if (wranglerOverrideDTSPath === undefined) {
+		return;
+	}
 	try {
+		const fileContent = fs.readFileSync(wranglerOverrideDTSPath, "utf8");
 		if (
-			wranglerOverrideDTSPath !== undefined &&
-			!fs
-				.readFileSync(wranglerOverrideDTSPath, "utf8")
-				.includes("Generated by Wrangler")
+			!fileContent.includes("Generated by Wrangler") &&
+			!fileContent.includes("Runtime types generated with workerd")
 		) {
 			throw new UserError(
-				`A non-wrangler ${basename(path)} already exists, please rename and try again.`
+				`A non-Wrangler ${basename(path)} already exists, please rename and try again.`,
+				{ telemetryMessage: "A non-Wrangler .d.ts file already exists" }
 			);
 		}
 	} catch (error) {
@@ -496,33 +566,7 @@ function writeDTSFile({
 			throw error;
 		}
 	}
-
-	const wranglerCommandUsed = ["wrangler", ...process.argv.slice(2)].join(" ");
-
-	const typesHaveBeenFound =
-		envTypeStructure.length || modulesTypeStructure.length;
-
-	if (formatType === "modules" || typesHaveBeenFound) {
-		const { fileContent, consoleOutput } = generateTypeStrings(
-			formatType,
-			envInterface,
-			envTypeStructure.map(([key, value]) => `${key}: ${value};`),
-			modulesTypeStructure
-		);
-
-		fs.writeFileSync(
-			path,
-			[
-				`// Generated by Wrangler by running \`${wranglerCommandUsed}\``,
-				"",
-				fileContent,
-			].join("\n")
-		);
-
-		logger.log(`Generating project types...\n`);
-		logger.log(consoleOutput);
-	}
-}
+};
 
 function generateTypeStrings(
 	formatType: string,
