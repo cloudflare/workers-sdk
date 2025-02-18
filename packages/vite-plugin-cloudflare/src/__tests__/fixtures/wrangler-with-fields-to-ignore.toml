@@ -12,8 +12,6 @@ minify = true
 
 no_bundle = false
 
-node_compat = false
-
 preserve_file_names = true
 
 rules = [{ type = "Text", globs = ["**/*.md"], fallthrough = true }]
