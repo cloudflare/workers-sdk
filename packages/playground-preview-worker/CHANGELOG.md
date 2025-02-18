@@ -1,5 +1,11 @@
 # playground-preview-worker
 
+## 0.1.4
+
+### Patch Changes
+
+- [#8114](https://github.com/cloudflare/workers-sdk/pull/8114) [`0322d08`](https://github.com/cloudflare/workers-sdk/commit/0322d085f634c1a0a12a59b4db293088d0cadb62) Thanks [@penalosa](https://github.com/penalosa)! - Upgrade to Hono v4
+
 ## 0.1.3
 
 ### Patch Changes
