@@ -45,15 +45,15 @@ export function isNodeCompat(
  */
 export function getNodeCompatEntries() {
 	const entries = new Set<string>(Object.values(env.alias));
-	for (const globInject of Object.values(env.inject)) {
-		if (typeof globInject === "string") {
-			entries.add(globInject);
+	for (const globalInject of Object.values(env.inject)) {
+		if (typeof globalInject === "string") {
+			entries.add(globalInject);
 		} else {
 			assert(
-				globInject[0] !== undefined,
-				"Expected first element of globInject to be defined"
+				globalInject[0] !== undefined,
+				"Expected first element of globalInject to be defined"
 			);
-			entries.add(globInject[0]);
+			entries.add(globalInject[0]);
 		}
 	}
 	for (const external of env.external) {
