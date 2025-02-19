@@ -800,17 +800,17 @@ const runCli = async (
 };
 
 /**
- * Either update or create a wrangler.toml to include a `TEST` var.
+ * Either update or create a wrangler configuration file to include a `TEST` var.
  *
- * This is rather than having a wrangler.toml in the e2e test's fixture folder,
+ * This is rather than having a wrangler configuration file in the e2e test's fixture folder,
  * which overwrites any that comes from the framework's template.
  */
 const addTestVarsToWranglerToml = async (projectPath: string) => {
 	const wranglerTomlPath = join(projectPath, "wrangler.toml");
 	const wranglerJsoncPath = join(projectPath, "wrangler.jsonc");
+
 	if (existsSync(wranglerTomlPath)) {
 		const wranglerToml = readToml(wranglerTomlPath);
-		// Add a TEST var to the wrangler.toml
 		wranglerToml.vars ??= {};
 		(wranglerToml.vars as JsonMap).TEST = "C3_TEST";
 
@@ -819,7 +819,6 @@ const addTestVarsToWranglerToml = async (projectPath: string) => {
 		const wranglerJsonc = readJSON(wranglerJsoncPath) as {
 			vars: Record<string, string>;
 		};
-		// Add a TEST var to the wrangler.toml
 		wranglerJsonc.vars ??= {};
 		wranglerJsonc.vars.TEST = "C3_TEST";
 
