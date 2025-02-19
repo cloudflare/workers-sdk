@@ -77,6 +77,7 @@ export async function loadDeployments(
 		image?: string;
 		state?: string;
 		ipv4?: string;
+		labels?: string[];
 	}
 ): Promise<DeploymentV2[]> {
 	const { start, stop } = spinner();
@@ -87,7 +88,8 @@ export async function loadDeployments(
 			deploymentsParams?.location,
 			deploymentsParams?.image,
 			deploymentsParams?.state as DeploymentPlacementState | undefined,
-			deploymentsParams?.state
+			deploymentsParams?.state,
+			deploymentsParams?.labels
 		)
 	);
 
