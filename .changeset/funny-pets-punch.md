@@ -2,4 +2,4 @@
 "wrangler": major
 ---
 
-Use `--local` by default for KV & R2
+Use `--local` by default for `wrangler kv key` and `wrangler r2 object` commands
