@@ -1021,25 +1021,11 @@ async function executeMethod(
 	// 4. Clean up persistence directories. Note we do this in the background
 	//    at the end of tests as opposed to before tests start, so re-runs
 	//    start quickly, and results are displayed as soon as they're ready.
-	const promises: Promise<unknown>[] = [];
 	for (const project of allProjects.values()) {
 		if (project.mf !== undefined) {
-			promises.push(
-				forEachMiniflare(project.mf, async (mf) => {
-					scheduleStorageReset(mf);
-
-					// Finish in-progress storage resets before disposing
-					await waitForStorageReset(mf);
-					await mf.dispose();
-
-					// Clean up minifalre
-					project.mf = undefined;
-				})
-			);
+			void forEachMiniflare(project.mf, async (mf) => scheduleStorageReset(mf));
 		}
 	}
-
-	await Promise.all(promises);
 
 	if (errors.length > 0) {
 		throw new AggregateError(
