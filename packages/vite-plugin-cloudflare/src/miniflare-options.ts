@@ -16,7 +16,6 @@ import {
 } from "./constants";
 import { getWorkerConfigPaths } from "./deploy-config";
 import { MODULE_PATTERN } from "./shared";
-import { nodeBuiltInModules } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
 	PersistState,
@@ -331,9 +330,7 @@ export function getDevMiniflareOptions(
 
 									const shouldExternalize =
 										// Worker modules (CompiledWasm, Text, Data)
-										moduleRE.test(moduleId) ||
-										// Node.js builtin node modules (they will be resolved to unenv aliases)
-										nodeBuiltInModules.has(moduleId);
+										moduleRE.test(moduleId);
 
 									if (shouldExternalize) {
 										const result = {
