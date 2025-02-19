@@ -194,7 +194,7 @@ describe("wrangler", () => {
 				  wrangler secret put <key>     Create or update a secret variable for a Worker
 				  wrangler secret delete <key>  Delete a secret variable from a Worker
 				  wrangler secret list          List all secrets for a Worker
-				  wrangler secret bulk [json]   Bulk upload secrets for a Worker
+				  wrangler secret bulk [file]   Bulk upload secrets for a Worker
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
