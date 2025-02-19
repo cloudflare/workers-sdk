@@ -48,7 +48,7 @@ describe("list", () => {
 			})
 		);
 	});
-	it("should print as json if specified, without wrangler banner", async () => {
+	it("should print as json if `--json` flag is specified, without wrangler banner", async () => {
 		await runWrangler("d1 list --json");
 		expect(std.out).toMatchInlineSnapshot(`
 			"[
