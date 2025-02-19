@@ -210,7 +210,7 @@ describe
 								}
 							} else {
 								expect.fail(
-									`Expected at least one of "${jsoncPath}" and "${tomlPath}" to exist.`,
+									`Expected at least one of "${jsoncPath}" or "${tomlPath}" to exist.`,
 								);
 							}
 
