@@ -2,11 +2,6 @@ import { readFile, writeFile } from "node:fs/promises";
 import lzstring from "lz-string";
 import { FormData, Response } from "undici";
 
-const today = new Date();
-const year = String(today.getUTCFullYear());
-const month = String(today.getUTCMonth() + 1).padStart(2, "0");
-const date = String(today.getUTCDate()).padStart(2, "0");
-
 async function serialiseHashes(
 	workers: Record<string, FormData>
 ): Promise<Record<string, string>> {
@@ -28,7 +23,6 @@ const pythonWorker = async () => {
 
 	const metadata = {
 		main_module: "index.py",
-		compatibility_date: `${year}-${month}-${date}`,
 		compatibility_flags: ["python_workers"],
 	};
 
@@ -57,7 +51,6 @@ const defaultWorker = async () => {
 
 	const metadata = {
 		main_module: "index.js",
-		compatibility_date: `${year}-${month}-${date}`,
 		compatibility_flags: ["nodejs_compat"],
 	};
 
