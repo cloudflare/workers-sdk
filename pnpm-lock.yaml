@@ -1585,33 +1585,27 @@ importers:
         specifier: workspace:*
         version: link:../miniflare
     devDependencies:
+      '@cloudflare/vitest-pool-workers':
+        specifier: workspace:*
+        version: link:../vitest-pool-workers
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20250214.0
         version: 4.20250214.0
-      '@miniflare/cache':
-        specifier: ^2.14.4
-        version: 2.14.4
-      '@miniflare/core':
-        specifier: ^2.14.4
-        version: 2.14.4
-      '@miniflare/html-rewriter':
-        specifier: ^2.14.4
-        version: 2.14.4
-      '@miniflare/storage-memory':
-        specifier: ^2.14.4
-        version: 2.14.4
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
       glob:
         specifier: ^10.4.5
         version: 10.4.5
+      html-rewriter-wasm:
+        specifier: ^0.4.1
+        version: 0.4.1
       vitest:
-        specifier: ~2.1.0
-        version: 2.1.9(@types/node@18.19.76)(@vitest/ui@2.1.9)
+        specifier: catalog:default
+        version: 3.0.5(@types/node@18.19.76)(@vitest/ui@3.0.5)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
 
   packages/playground-preview-worker:
     dependencies:
@@ -4480,9 +4474,6 @@ packages:
       '@vue/compiler-sfc':
         optional: true
 
-  '@iarna/toml@2.2.5':
-    resolution: {integrity: sha512-trnsAYxU3xnS1gPHPyU961coFyLkh4gAD/0zQ5mymY4yOZ+CYvsPqUbOFSw0aDM4y0tV7tiFxL/1XfXPNC6IPg==}
-
   '@iarna/toml@3.0.0':
     resolution: {integrity: sha512-td6ZUkz2oS3VeleBcN+m//Q6HlCFCPrnI0FZhrt/h4XqLEdOyYp2u21nd8MdsR+WJy5r9PTDaHTDDfhf4H4l6Q==}
 
@@ -4700,34 +4691,6 @@ packages:
 
   '@microsoft/tsdoc@0.15.1':
     resolution: {integrity: sha512-4aErSrCR/On/e5G2hDP0wjooqDdauzEbIq8hIkIe5pXV0rtWJZvdCEKL0ykZxex+IxIwBp0eGeV48hQN07dXtw==}
-
-  '@miniflare/cache@2.14.4':
-    resolution: {integrity: sha512-ayzdjhcj+4mjydbNK7ZGDpIXNliDbQY4GPcY2KrYw0v1OSUdj5kZUkygD09fqoGRfAks0d91VelkyRsAXX8FQA==}
-    engines: {node: '>=16.13'}
-
-  '@miniflare/core@2.14.4':
-    resolution: {integrity: sha512-FMmZcC1f54YpF4pDWPtdQPIO8NXfgUxCoR9uyrhxKJdZu7M6n8QKopPVNuaxR40jcsdxb7yKoQoFWnHfzJD9GQ==}
-    engines: {node: '>=16.13'}
-
-  '@miniflare/html-rewriter@2.14.4':
-    resolution: {integrity: sha512-GB/vZn7oLbnhw+815SGF+HU5EZqSxbhIa3mu2L5MzZ2q5VOD5NHC833qG8c2GzDPhIaZ99ITY+ZJmbR4d+4aNQ==}
-    engines: {node: '>=16.13'}
-
-  '@miniflare/queues@2.14.4':
-    resolution: {integrity: sha512-aXQ5Ik8Iq1KGMBzGenmd6Js/jJgqyYvjom95/N9GptCGpiVWE5F0XqC1SL5rCwURbHN+aWY191o8XOFyY2nCUA==}
-    engines: {node: '>=16.7'}
-
-  '@miniflare/shared@2.14.4':
-    resolution: {integrity: sha512-upl4RSB3hyCnITOFmRZjJj4A72GmkVrtfZTilkdq5Qe5TTlzsjVeDJp7AuNUM9bM8vswRo+N5jOiot6O4PVwwQ==}
-    engines: {node: '>=16.13'}
-
-  '@miniflare/storage-memory@2.14.4':
-    resolution: {integrity: sha512-9jB5BqNkMZ3SFjbPFeiVkLi1BuSahMhc/W1Y9H0W89qFDrrD+z7EgRgDtHTG1ZRyi9gIlNtt9qhkO1B6W2qb2A==}
-    engines: {node: '>=16.13'}
-
-  '@miniflare/watcher@2.14.4':
-    resolution: {integrity: sha512-PYn05ET2USfBAeXF6NZfWl0O32KVyE8ncQ/ngysrh3hoIV7l3qGGH7ubeFx+D8VWQ682qYhwGygUzQv2j1tGGg==}
-    engines: {node: '>=16.13'}
 
   '@mswjs/interceptors@0.29.1':
     resolution: {integrity: sha512-3rDakgJZ77+RiQUuSK69t1F0m8BQKA8Vh5DCS5V0DWvNY67zob2JhhQrhCO0AKLGINTRSFd1tBaHcJTkhefoSw==}
@@ -5709,9 +5672,6 @@ packages:
   '@types/babel__traverse@7.20.6':
     resolution: {integrity: sha512-r1bzfrm0tomOI8g1SzvCaQHo6Lcv6zu0EA+W2kHrt8dyrHQxGzBBL4kdkzIS+jBMV+EYcMAEAqXqYaLJq5rOZg==}
 
-  '@types/better-sqlite3@7.6.8':
-    resolution: {integrity: sha512-ASndM4rdGrzk7iXXqyNC4fbwt4UEjpK0i3j4q4FyeQrLAthfB6s7EF135ZJE0qQxtKIMFwmyT6x0switET7uIw==}
-
   '@types/command-exists@1.2.0':
     resolution: {integrity: sha512-ugsxEJfsCuqMLSuCD4PIJkp5Uk2z6TCMRCgYVuhRo5cYQY3+1xXTQkSlPtkpGHuvWMjS2KTeVQXxkXRACMbM6A==}
 
@@ -6639,9 +6599,6 @@ packages:
     resolution: {integrity: sha512-9q/rDEGSb/Qsvv2qvzIzdluL5k7AaJOTrw23z9reQthrbF7is4CtlT0DXyO1oei2DCp4uojjzQ7igaSHp1kAEQ==}
     engines: {node: '>=0.2.0'}
 
-  builtins@5.0.1:
-    resolution: {integrity: sha512-qwVpFEHNfhYJIzNRBvd2C1kyo6jz3ZSMPyyuR47OPdiKWlbYnZNyDWuyR175qDnAJLiCo5fBBqPb3RiXgWlkOQ==}
-
   bundle-name@3.0.0:
     resolution: {integrity: sha512-PKA4BeSvBpQKQ8iPOGCSiell+N8P+Tf1DlwqmYhpe2gAhKPHn8EYOxVT+ShuGmhg8lN8XiSlS80yiExKXrURlw==}
     engines: {node: '>=12'}
@@ -7312,10 +7269,6 @@ packages:
   dotenv-expand@10.0.0:
     resolution: {integrity: sha512-GopVGCpVS1UKH75VKHGuQFqS1Gusej0z4FyQkPdwjil2gNIv+LNsqBlboOzpJFZKVT95GkCyWJbBSdFEFUWI2A==}
     engines: {node: '>=12'}
-
-  dotenv@10.0.0:
-    resolution: {integrity: sha512-rlBi9d8jpv9Sf1klPjNfFAuWDjKLwTIJJ/VxtoTwIR6hnZxcEOQCZg2oIL3MWBYw5GpUDKOEnND7LXTbIpQ03Q==}
-    engines: {node: '>=10'}
 
   dotenv@16.0.3:
     resolution: {integrity: sha512-7GO6HghkA5fYG9TYnNxi14/7K9f5occMlp3zXAuSxn7CKCxt9xbNWG7yF8hTCSUchlfWSe3uLmlPfigevRItzQ==}
@@ -9186,9 +9139,6 @@ packages:
     resolution: {integrity: sha512-AqZtDUWOMKs1G/8lwylVjrdYgqA4d9nu8hc+0gzRxlDb1I10+FHBGMXs6aiQHFdCUUlqH99MUMuLfzWDNDtfxw==}
     deprecated: This package is no longer supported.
 
-  npx-import@1.1.4:
-    resolution: {integrity: sha512-3ShymTWOgqGyNlh5lMJAejLuIv3W1K3fbI5Ewc6YErZU3Sp0PqsNs8UIU1O8z5+KVl/Du5ag56Gza9vdorGEoA==}
-
   nth-check@2.1.1:
     resolution: {integrity: sha512-lqjrjmaOoAnWfMmBPL+XNnynZh2+swxiX3WUE0s4yEHI6m+AwrK2UZOimIRl3X/4QctVqS8AiZjFqyOGrMXb/w==}
 
@@ -9369,9 +9319,6 @@ packages:
   parse-ms@4.0.0:
     resolution: {integrity: sha512-TXfryirbmq34y8QBwgqCVLi+8oA3oWx2eAnSn62ITyEhEYaWRlVZ2DvMM9eZbMs/RfxPu/PK/aBLyGj4IrqMHw==}
     engines: {node: '>=18'}
-
-  parse-package-name@1.0.0:
-    resolution: {integrity: sha512-kBeTUtcj+SkyfaW4+KBe0HtsloBJ/mKTPoxpVdA57GZiPerREsUWJOhVj9anXweFiJkm5y8FG1sxFZkZ0SN6wg==}
 
   parse-semver@1.1.1:
     resolution: {integrity: sha512-Eg1OuNntBMH0ojvEKSrvDSnwLmvVuUOSdylH/pSCPNMIspLlweJyIWXCE+k/5hm3cj/EBUYwmWkjhBALNP4LXQ==}
@@ -11162,9 +11109,6 @@ packages:
   urlpattern-polyfill@10.0.0:
     resolution: {integrity: sha512-H/A06tKD7sS1O1X2SshBVeA5FLycRpjqiBeqGKmBwBDBy28EnRjORxTNe269KSSr5un5qyWi1iL61wLxpd+ZOg==}
 
-  urlpattern-polyfill@4.0.3:
-    resolution: {integrity: sha512-DOE84vZT2fEcl9gqCUTcnAw5ZY5Id55ikUcziSUntuEFL3pRvavg5kwDmTEUJkeCHInTlV/HexFomgYnzO5kdQ==}
-
   use-sync-external-store@1.2.0:
     resolution: {integrity: sha512-eEgnFxGQ1Ife9bzYs6VLi8/4X6CObHMw9Qr9tPY43iKwsPw8xE8+EFsf/2cFZ5S3esXgpWgtSCtLNS41F+sKPA==}
     peerDependencies:
@@ -11187,10 +11131,6 @@ packages:
   uuid@9.0.1:
     resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
     hasBin: true
-
-  validate-npm-package-name@4.0.0:
-    resolution: {integrity: sha512-mzR0L8ZDktZjpX4OB46KT+56MAhl4EIazWP/+G/HPGuvfdaqg4YsCdtOm6U9+LOFyYDoh4dpnpxZRB9MQQns5Q==}
-    engines: {node: ^12.13.0 || ^14.15.0 || >=16.0.0}
 
   validate-npm-package-name@5.0.1:
     resolution: {integrity: sha512-OljLrQ9SQdOUqTaQxqL5dEfZWrXExyyWsozYlAWFawPVNuD83igl7uJD2RTkNMbniIYgt8l81eCJGIdQF7avLQ==}
@@ -13400,8 +13340,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@iarna/toml@2.2.5': {}
-
   '@iarna/toml@3.0.0': {}
 
   '@img/sharp-darwin-arm64@0.33.5':
@@ -13690,52 +13628,6 @@ snapshots:
   '@microsoft/tsdoc@0.15.0': {}
 
   '@microsoft/tsdoc@0.15.1': {}
-
-  '@miniflare/cache@2.14.4':
-    dependencies:
-      '@miniflare/core': 2.14.4
-      '@miniflare/shared': 2.14.4
-      http-cache-semantics: 4.1.1
-      undici: 5.28.4
-
-  '@miniflare/core@2.14.4':
-    dependencies:
-      '@iarna/toml': 2.2.5
-      '@miniflare/queues': 2.14.4
-      '@miniflare/shared': 2.14.4
-      '@miniflare/watcher': 2.14.4
-      busboy: 1.6.0
-      dotenv: 10.0.0
-      kleur: 4.1.5
-      set-cookie-parser: 2.6.0
-      undici: 5.28.4
-      urlpattern-polyfill: 4.0.3
-
-  '@miniflare/html-rewriter@2.14.4':
-    dependencies:
-      '@miniflare/core': 2.14.4
-      '@miniflare/shared': 2.14.4
-      html-rewriter-wasm: 0.4.1
-      undici: 5.28.4
-
-  '@miniflare/queues@2.14.4':
-    dependencies:
-      '@miniflare/shared': 2.14.4
-
-  '@miniflare/shared@2.14.4':
-    dependencies:
-      '@types/better-sqlite3': 7.6.8
-      kleur: 4.1.5
-      npx-import: 1.1.4
-      picomatch: 2.3.1
-
-  '@miniflare/storage-memory@2.14.4':
-    dependencies:
-      '@miniflare/shared': 2.14.4
-
-  '@miniflare/watcher@2.14.4':
-    dependencies:
-      '@miniflare/shared': 2.14.4
 
   '@mswjs/interceptors@0.29.1':
     dependencies:
@@ -14872,10 +14764,6 @@ snapshots:
   '@types/babel__traverse@7.20.6':
     dependencies:
       '@babel/types': 7.26.3
-
-  '@types/better-sqlite3@7.6.8':
-    dependencies:
-      '@types/node': 18.19.76
 
   '@types/command-exists@1.2.0': {}
 
@@ -16102,10 +15990,6 @@ snapshots:
 
   buffers@0.1.1: {}
 
-  builtins@5.0.1:
-    dependencies:
-      semver: 7.7.1
-
   bundle-name@3.0.0:
     dependencies:
       run-applescript: 5.0.0
@@ -16774,8 +16658,6 @@ snapshots:
       minimist: 1.2.6
 
   dotenv-expand@10.0.0: {}
-
-  dotenv@10.0.0: {}
 
   dotenv@16.0.3: {}
 
@@ -18845,13 +18727,6 @@ snapshots:
       gauge: 3.0.2
       set-blocking: 2.0.0
 
-  npx-import@1.1.4:
-    dependencies:
-      execa: 6.1.0
-      parse-package-name: 1.0.0
-      semver: 7.7.1
-      validate-npm-package-name: 4.0.0
-
   nth-check@2.1.1:
     dependencies:
       boolbase: 1.0.0
@@ -19035,8 +18910,6 @@ snapshots:
   parse-github-url@1.0.2: {}
 
   parse-ms@4.0.0: {}
-
-  parse-package-name@1.0.0: {}
 
   parse-semver@1.1.1:
     dependencies:
@@ -20940,8 +20813,6 @@ snapshots:
 
   urlpattern-polyfill@10.0.0: {}
 
-  urlpattern-polyfill@4.0.3: {}
-
   use-sync-external-store@1.2.0(react@18.3.1):
     dependencies:
       react: 18.3.1
@@ -20961,10 +20832,6 @@ snapshots:
   uuid@8.3.2: {}
 
   uuid@9.0.1: {}
-
-  validate-npm-package-name@4.0.0:
-    dependencies:
-      builtins: 5.0.1
 
   validate-npm-package-name@5.0.1: {}
 
