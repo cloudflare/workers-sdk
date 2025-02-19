@@ -19,7 +19,7 @@ npx wrangler init my-worker -y
 For more info, visit our [Getting Started](https://developers.cloudflare.com/workers/get-started/guide/) guide.
 
 <details><summary>Wrangler System Requirements</summary>
-	
+
 
 We support running the Wrangler CLI with the [Current, Active, and Maintenance](https://nodejs.org/en/about/previous-releases) versions of Node.js. Your Worker will always be executed in `workerd`, the open source Cloudflare Workers runtime.
 
