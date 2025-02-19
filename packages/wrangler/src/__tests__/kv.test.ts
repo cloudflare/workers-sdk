@@ -194,7 +194,7 @@ describe("wrangler", () => {
 			describe.each(["wrangler.json", "wrangler.toml"])("%s", (configPath) => {
 				it("should create a namespace", async () => {
 					writeWranglerConfig({ name: "worker" }, configPath);
-					mockCreateRequest("worker-UnitTestNamespace");
+					mockCreateRequest("UnitTestNamespace");
 					await runWrangler("kv namespace create UnitTestNamespace");
 					expect(std.out).toMatchSnapshot();
 				});
@@ -202,7 +202,7 @@ describe("wrangler", () => {
 				it("should create a preview namespace if configured to do so", async () => {
 					writeWranglerConfig({ name: "worker" }, configPath);
 
-					mockCreateRequest("worker-UnitTestNamespace_preview");
+					mockCreateRequest("UnitTestNamespace_preview");
 					await runWrangler("kv namespace create UnitTestNamespace --preview");
 					expect(std.out).toMatchSnapshot();
 				});
@@ -210,7 +210,7 @@ describe("wrangler", () => {
 				it("should create a namespace using configured worker name", async () => {
 					writeWranglerConfig({ name: "other-worker" }, configPath);
 
-					mockCreateRequest("other-worker-UnitTestNamespace");
+					mockCreateRequest("UnitTestNamespace");
 					await runWrangler("kv namespace create UnitTestNamespace");
 					expect(std.out).toMatchSnapshot();
 				});
@@ -228,7 +228,7 @@ describe("wrangler", () => {
 						configPath
 					);
 
-					mockCreateRequest("worker-customEnv-UnitTestNamespace");
+					mockCreateRequest("customEnv-UnitTestNamespace");
 					await runWrangler(
 						"kv namespace create UnitTestNamespace --env customEnv"
 					);
