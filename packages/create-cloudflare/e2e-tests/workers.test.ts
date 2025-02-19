@@ -178,6 +178,7 @@ describe
 				const name = testConfig.name ?? testConfig.template;
 				test({ experimental })(
 					name,
+					{ retry: 1, timeout: testConfig.timeout || TEST_TIMEOUT },
 					async ({ project, logStream }) => {
 						try {
 							const deployedUrl = await runCli(
@@ -230,7 +231,6 @@ describe
 							await deleteWorker(project.name);
 						}
 					},
-					{ retry: 1, timeout: testConfig.timeout || TEST_TIMEOUT },
 				);
 			});
 	});
