@@ -102,15 +102,15 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04-arm
-            os_name: v18, Linux
+            os_name: Linux
             node_version: 18.20.6
             filter: '--filter="./tools" --filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
           - os: macos-latest
-            os_name: v18, macOS
+            os_name: macOS
             node_version: 18.20.6
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
           - os: windows-latest
-            os_name: v18, Windows
+            os_name: Windows
             node_version: 18.20.6
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
           - os: ubuntu-24.04-arm
@@ -120,7 +120,7 @@ jobs:
           - os: ubuntu-24.04-arm
             os_name: v22, Linux
             node_version: 22
-            filter: '--filter="./packages/*" --filter="!./packages/kv-asset-handler"'
+            filter: '--filter="./packages/*" --filter="\!./packages/kv-asset-handler"'
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
