@@ -170,7 +170,7 @@ describe("time-travel", () => {
 			vi.useRealTimers();
 		});
 		describe("restore", () => {
-			it("should print as json if specified, without wrangler banner", async () => {
+			it("should print as json, without wrangler banner", async () => {
 				await runWrangler(
 					`d1 time-travel restore db --timestamp=2011-09-05T14:48:00.000Z --json`
 				);
@@ -205,7 +205,7 @@ describe("time-travel", () => {
 			});
 		});
 		describe("info", () => {
-			it("should print as json if specified, without wrangler banner", async () => {
+			it("should print as json, without wrangler banner", async () => {
 				await runWrangler(
 					`d1 time-travel info db --timestamp=2011-09-05T14:48:00.000Z --json`
 				);
