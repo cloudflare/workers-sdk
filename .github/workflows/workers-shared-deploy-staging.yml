@@ -23,3 +23,7 @@ jobs:
         working-directory: packages/workers-shared
         env:
           WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN: ${{ secrets.WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN }}
+
+      - name: Publish deployment summary
+        run: echo "# Deployment summary\n\n| Service | Version |\n| --- | --- |\n| Asset Worker [STAGING] | \`aw-$(node -r esbuild-register ./scripts/get-version-tag.ts)\` |\n| Router Worker [STAGING] | \`rw-$(node -r esbuild-register ./scripts/get-version-tag.ts)\` |\n" >> $GITHUB_STEP_SUMMARY
+        working-directory: packages/workers-shared
