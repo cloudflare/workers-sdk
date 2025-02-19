@@ -1,4 +1,3 @@
-// @ts-ignore
-import routerWorker from "@cloudflare/workers-shared/dist/router-worker.mjs";
+import routerWorker from "@cloudflare/workers-shared/router-worker/src/index";
 
 export default routerWorker;

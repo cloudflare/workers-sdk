@@ -76,10 +76,14 @@ export const compare = (a: Uint8Array, b: Uint8Array) => {
 	}
 
 	for (const [i, v] of a.entries()) {
-		if (v < b[i]) {
+		const other = b[i];
+		if (other === undefined) {
+			return 1;
+		}
+		if (v < other) {
 			return -1;
 		}
-		if (v > b[i]) {
+		if (v > other) {
 			return 1;
 		}
 	}

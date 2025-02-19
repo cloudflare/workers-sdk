@@ -59,7 +59,7 @@ export type Env = {
  * they are still in flux and that they are not an established API contract.
  */
 export default class extends WorkerEntrypoint<Env> {
-	async fetch(request: Request): Promise<Response> {
+	override async fetch(request: Request): Promise<Response> {
 		let sentry: ReturnType<typeof setupSentry> | undefined;
 		const analytics = new Analytics(this.env.ANALYTICS);
 		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
