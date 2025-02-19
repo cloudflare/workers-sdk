@@ -107,6 +107,8 @@ function getFrameworkTests(opts: {
 						input: [keys.enter],
 					},
 				],
+				unsupportedOSs: ["win32"],
+				unsupportedPms: ["yarn"],
 				testCommitMessage: true,
 				verifyDeploy: {
 					route: "/",
@@ -552,6 +554,7 @@ function getFrameworkTests(opts: {
 				],
 				testCommitMessage: true,
 				unsupportedOSs: ["win32"],
+				unsupportedPms: ["yarn"],
 				timeout: LONG_TIMEOUT,
 				verifyDeploy: {
 					route: "/",
@@ -759,6 +762,7 @@ const runCli = async (
 		NO_DEPLOY ? "--no-deploy" : "--deploy",
 		"--no-open",
 		"--no-git",
+		"--no-auto-update",
 	];
 
 	args.push(...argv);
