@@ -66,7 +66,7 @@ describe("list", () => {
 		`);
 	});
 
-	it("should pretty print by default", async () => {
+	it("should pretty print by default, including the wrangler banner", async () => {
 		await runWrangler("d1 list");
 		expect(std.out).toMatchInlineSnapshot(`
 			"
