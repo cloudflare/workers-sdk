@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import events from "node:events";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import util from "node:util";
 import { createBirpc } from "birpc";
 import * as devalue from "devalue";
@@ -39,10 +39,7 @@ import {
 	scheduleStorageReset,
 	waitForStorageReset,
 } from "./loopback";
-import {
-	ensurePosixLikePath,
-	handleModuleFallbackRequest,
-} from "./module-fallback";
+import { handleModuleFallbackRequest } from "./module-fallback";
 import type {
 	SourcelessWorkerOptions,
 	WorkersConfigPluginAPI,
@@ -657,17 +654,13 @@ async function runTests(
 	invalidates: string[] = [],
 	method: "run" | "collect"
 ) {
-	let workerPath = path.join(ctx.distPath, "worker.js");
-	let threadsWorkerPath = path.join(ctx.distPath, "workers", "threads.js");
-	if (process.platform === "win32") {
-		workerPath = `/${ensurePosixLikePath(workerPath)}`;
-		threadsWorkerPath = `/${ensurePosixLikePath(threadsWorkerPath)}`;
-	}
+	const workerPath = path.join(ctx.distPath, "worker.js");
+	const threadsWorkerPath = path.join(ctx.distPath, "workers", "threads.js");
 
 	ctx.state.clearFiles(project.project, files);
 	const data: WorkerContext = {
 		pool: "threads",
-		worker: threadsWorkerPath,
+		worker: pathToFileURL(threadsWorkerPath).href,
 		port: undefined as unknown as MessagePort,
 		config,
 		files,
@@ -705,7 +698,7 @@ async function runTests(
 		headers: {
 			Upgrade: "websocket",
 			"MF-Vitest-Worker-Data": structuredSerializableStringify({
-				filePath: workerPath,
+				filePath: pathToFileURL(workerPath).href,
 				name: method,
 				data,
 				cwd: process.cwd(),
