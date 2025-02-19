@@ -8,6 +8,7 @@ import {
 	registerHandlerAndGlobalWaitUntil,
 	waitForGlobalWaitUntil,
 } from "cloudflare:test-internal";
+import { vi } from "vitest";
 import { VitestTestRunner } from "vitest/runners";
 import workerdUnsafe from "workerd:unsafe";
 import type { CancelReason, Suite, Test } from "@vitest/runner";
@@ -228,6 +229,29 @@ export default class WorkersTestRunner extends VitestTestRunner {
 			__console.log("onAfterRunFiles");
 			await scheduler.wait(100);
 		}
+
+		// Reset the module graphs so module mock will be re-evalated on watch mode
+		// See https://github.com/cloudflare/workers-sdk/issues/6844
+		// This is basically `vi.resetModules()`
+		// From https://github.com/vitest-dev/vitest/blob/9584be337f00e22475895360cb5cfa5dc0775e79/packages/vitest/src/runtime/utils.ts#L50-L68
+		// const skipPaths = [
+		// 	// Vitest
+		// 	/\/vitest\/dist\//,
+		// 	/\/vite-node\/dist\//,
+		// 	// yarn's .store folder
+		// 	/vitest-virtual-\w+\/dist/,
+		// 	// cnpm
+		// 	/@vitest\/dist/,
+		// 	// don't clear mocks
+		// 	/^mock:/,
+		// ];
+		// this.state.moduleCache.forEach((mod, path) => {
+		// 	if (skipPaths.some((re) => re.test(path))) {
+		// 		return;
+		// 	}
+		// 	this.state.moduleCache.invalidateModule(mod);
+		// });
+		vi.resetModules();
 
 		// Ensure all `ctx.waitUntil()` calls complete before disposing the runtime
 		// (if using `vitest run`) and aborting all objects. `ctx.waitUntil()`s may
