@@ -100,6 +100,23 @@ function getFrameworkTests(opts: {
 				},
 				flags: ["--style", "sass"],
 			},
+			react: {
+				promptHandlers: [
+					{
+						matcher: /Select a variant:/,
+						input: [keys.enter],
+					},
+				],
+				testCommitMessage: true,
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Vite + React",
+				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Vite + React",
+				},
+			},
 			gatsby: {
 				unsupportedPms: ["bun", "pnpm"],
 				promptHandlers: [
@@ -534,7 +551,6 @@ function getFrameworkTests(opts: {
 				],
 				testCommitMessage: true,
 				unsupportedOSs: ["win32"],
-				unsupportedPms: ["yarn"],
 				timeout: LONG_TIMEOUT,
 				verifyDeploy: {
 					route: "/",
@@ -781,12 +797,14 @@ const addTestVarsToWranglerToml = async (projectPath: string) => {
 
 		writeToml(wranglerTomlPath, wranglerToml);
 	} else if (existsSync(wranglerJsoncPath)) {
-		const wranglerJson = readJSON(wranglerJsoncPath);
+		const wranglerJsonc = readJSON(wranglerJsoncPath) as {
+			vars: Record<string, string>;
+		};
 		// Add a TEST var to the wrangler.toml
-		wranglerJson.vars ??= {};
-		wranglerJson.vars.TEST = "C3_TEST";
+		wranglerJsonc.vars ??= {};
+		wranglerJsonc.vars.TEST = "C3_TEST";
 
-		writeJSON(wranglerJsoncPath, wranglerJson);
+		writeJSON(wranglerJsoncPath, wranglerJsonc);
 	}
 };
 

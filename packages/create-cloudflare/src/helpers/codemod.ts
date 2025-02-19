@@ -155,7 +155,9 @@ export const mergeObjectProperties = (
 	});
 };
 
-const getPropertyName = (newProp: recast.types.namedTypes.ObjectProperty) => {
+export const getPropertyName = (
+	newProp: recast.types.namedTypes.ObjectProperty,
+) => {
 	return newProp.key.type === "Identifier"
 		? newProp.key.name
 		: newProp.key.type === "StringLiteral"
