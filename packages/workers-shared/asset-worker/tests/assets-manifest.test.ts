@@ -11,6 +11,13 @@ import { binarySearch, compare, hashPath } from "../src/assets-manifest";
 
 const encoder = new TextEncoder();
 
+beforeAll(() => {
+	if (!("crypto" in globalThis)) {
+		// @ts-expect-error will go away once Node.js is bumped
+		globalThis.crypto = crypto;
+	}
+});
+
 async function SHA_256(value: string, length: number) {
 	const data = encoder.encode(value);
 	const hashBuffer = await crypto.subtle.digest(
