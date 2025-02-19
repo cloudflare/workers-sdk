@@ -102,23 +102,23 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04-arm
-            os_name: Linux
+            os_name: v18, Linux
             node_version: 18.20.6
             filter: '--filter="./tools" --filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
           - os: macos-latest
-            os_name: macOS
+            os_name: v18, macOS
             node_version: 18.20.6
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
           - os: windows-latest
-            os_name: Windows
+            os_name: v18, Windows
             node_version: 18.20.6
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
           - os: ubuntu-24.04-arm
-            os_name: Linux
+            os_name: v20, Linux
             node_version: 20
             filter: '--filter="./packages/*"'
           - os: ubuntu-24.04-arm
-            os_name: Linux
+            os_name: v22, Linux
             node_version: 22
             filter: '--filter="./packages/*"'
     runs-on: ${{ matrix.os }}
@@ -154,4 +154,4 @@ jobs:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
-          CI_OS: ${{ runner.os }}
+          CI_OS: ${{ matrix.os_name }}
