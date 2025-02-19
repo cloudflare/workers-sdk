@@ -1,0 +1,22 @@
+version = 1
+requires-python = ">=3.12"
+
+[[package]]
+name = "<TBD>"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "webtypy" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "webtypy", specifier = ">=0.1.7" }]
+
+[[package]]
+name = "webtypy"
+version = "0.1.7"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/5e/89/c7a0311fdc73809fc2415be97767f085ff3e00c86546430034dc8465fee7/webtypy-0.1.7.tar.gz", hash = "sha256:1b7212719a949c802f3d60fac5f0d952eb503a92121409cf1ad9847d7c76a336", size = 104505 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/61/91/c731bdaa605279e00b28bfd2bf0ae67f48061d16890fb1c026924bfbd242/webtypy-0.1.7-py3-none-any.whl", hash = "sha256:f35e6d73a4e08783e23adfac271a11cda3a2bd1105499db70e4819244efed0ae", size = 103519 },
+]
