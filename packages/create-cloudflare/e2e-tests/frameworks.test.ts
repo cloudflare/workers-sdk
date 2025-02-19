@@ -658,6 +658,10 @@ describe.concurrent(
 
 			test({ experimental }).runIf(shouldRunTest(frameworkId, testConfig))(
 				frameworkId,
+				{
+					retry: TEST_RETRIES,
+					timeout: testConfig.timeout || TEST_TIMEOUT,
+				},
 				async ({ logStream, project }) => {
 					if (!testConfig.verifyDeploy) {
 						expect(
@@ -731,10 +735,6 @@ describe.concurrent(
 							await deleteProject(project.name);
 						}
 					}
-				},
-				{
-					retry: TEST_RETRIES,
-					timeout: testConfig.timeout || TEST_TIMEOUT,
 				},
 			);
 		});
