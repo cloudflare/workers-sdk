@@ -31,6 +31,7 @@ import {
 	getProjectPath,
 	getRelativeProjectPath,
 	isFileNotFoundError,
+	log,
 	WORKER_NAME_PREFIX,
 } from "./helpers";
 import {
@@ -110,8 +111,6 @@ let debuglog: util.DebugLoggerFunction = util.debuglog(
 	"vitest-pool-workers:index",
 	(fn) => (debuglog = fn)
 );
-// Log for informational pool messages
-const log = new Log(LogLevel.VERBOSE, { prefix: "vpw" });
 // Log for Miniflare instances, used for user code warnings/errors
 const mfLog = new Log(LogLevel.WARN);
 
@@ -561,8 +560,15 @@ function buildProjectMiniflareOptions(
 		//  --> single instance with single runner worker
 		// Multiple Workers, Isolated Storage:
 		//  --> multiple instances each with single runner worker
+
+		const inspectorPort = project.options.inspectorPort;
+
+		// We enforce Single worker when the inspectorPort is set
+		assert(inspectorPort === undefined || project.options.singleWorker);
+
 		return {
 			...SHARED_MINIFLARE_OPTIONS,
+			inspectorPort,
 			unsafeModuleFallbackService: moduleFallbackService,
 			workers: [runnerWorker, ABORT_ALL_WORKER, ...auxiliaryWorkers],
 		};
