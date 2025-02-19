@@ -22,41 +22,50 @@ const PLUGIN_VALUES = Object.values(PLUGINS);
 const OPTIONS_PATH_ARRAY = ["test", "poolOptions", "workers"];
 export const OPTIONS_PATH = OPTIONS_PATH_ARRAY.join(".");
 
-const WorkersPoolOptionsSchema = z.object({
-	/**
-	 * Entrypoint to Worker run in the same isolate/context as tests. This is
-	 * required to use `import { SELF } from "cloudflare:test"`, or Durable
-	 * Objects without an explicit `scriptName`. Note this goes through Vite
-	 * transforms and can be a TypeScript file. Note also
-	 * `import module from "<path-to-main>"` inside tests gives exactly the same
-	 * `module` instance as is used internally for the `SELF` and Durable Object
-	 * bindings.
-	 */
-	main: z.ostring(),
-	/**
-	 * Enables per-test isolated storage. If enabled, any writes to storage
-	 * performed in a test will be undone at the end of the test. The test storage
-	 * environment is copied from the containing suite, meaning `beforeAll()`
-	 * hooks can be used to seed data. If this is disabled, all tests will share
-	 * the same storage.
-	 */
-	isolatedStorage: z.boolean().default(true),
-	/**
-	 * Runs all tests in this project serially in the same worker, using the same
-	 * module cache. This can significantly speed up tests if you've got lots of
-	 * small test files.
-	 */
-	singleWorker: z.boolean().default(false),
-	miniflare: z
-		.object({
-			workers: z.array(z.object({}).passthrough()).optional(),
-		})
-		.passthrough()
-		.optional(),
-	wrangler: z
-		.object({ configPath: z.ostring(), environment: z.ostring() })
-		.optional(),
-});
+const WorkersPoolOptionsSchema = z
+	.object({
+		/**
+		 * Entrypoint to Worker run in the same isolate/context as tests. This is
+		 * required to use `import { SELF } from "cloudflare:test"`, or Durable
+		 * Objects without an explicit `scriptName`. Note this goes through Vite
+		 * transforms and can be a TypeScript file. Note also
+		 * `import module from "<path-to-main>"` inside tests gives exactly the same
+		 * `module` instance as is used internally for the `SELF` and Durable Object
+		 * bindings.
+		 */
+		main: z.ostring(),
+		/**
+		 * Enables per-test isolated storage. If enabled, any writes to storage
+		 * performed in a test will be undone at the end of the test. The test storage
+		 * environment is copied from the containing suite, meaning `beforeAll()`
+		 * hooks can be used to seed data. If this is disabled, all tests will share
+		 * the same storage.
+		 */
+		isolatedStorage: z.boolean().default(true),
+		/**
+		 * Runs all tests in this project serially in the same worker, using the same
+		 * module cache. This can significantly speed up tests if you've got lots of
+		 * small test files.
+		 */
+		singleWorker: z.boolean().default(false),
+		inspectorPort: z.number().optional(),
+		miniflare: z
+			.object({
+				workers: z.array(z.object({}).passthrough()).optional(),
+			})
+			.passthrough()
+			.optional(),
+		wrangler: z
+			.object({ configPath: z.ostring(), environment: z.ostring() })
+			.optional(),
+	})
+	.refine(
+		(options) =>
+			options.inspectorPort === undefined ||
+			options.singleWorker ||
+			!options.isolatedStorage,
+		"The inspectorPort option requires `singleWorker: true` or `isolatedStorage: false`"
+	);
 export type SourcelessWorkerOptions = Omit<
 	WorkerOptions,
 	"script" | "scriptPath" | "modules" | "modulesRoot"

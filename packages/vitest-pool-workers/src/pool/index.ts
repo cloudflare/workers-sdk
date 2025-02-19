@@ -556,6 +556,8 @@ function buildProjectMiniflareOptions(
 	assert(runnerWorker.name !== undefined);
 	assert(runnerWorker.name.startsWith(WORKER_NAME_PREFIX));
 
+	const inspectorPort = project.options.inspectorPort;
+
 	if (project.options.singleWorker || project.options.isolatedStorage) {
 		// Single Worker, Isolated or Shared Storage
 		//  --> single instance with single runner worker
@@ -563,6 +565,7 @@ function buildProjectMiniflareOptions(
 		//  --> multiple instances each with single runner worker
 		return {
 			...SHARED_MINIFLARE_OPTIONS,
+			inspectorPort,
 			unsafeModuleFallbackService: moduleFallbackService,
 			workers: [runnerWorker, ABORT_ALL_WORKER, ...auxiliaryWorkers],
 		};
@@ -583,6 +586,7 @@ function buildProjectMiniflareOptions(
 		}
 		return {
 			...SHARED_MINIFLARE_OPTIONS,
+			inspectorPort,
 			unsafeModuleFallbackService: moduleFallbackService,
 			workers: [...testWorkers, ABORT_ALL_WORKER, ...auxiliaryWorkers],
 		};
