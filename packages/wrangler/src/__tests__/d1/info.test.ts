@@ -122,7 +122,7 @@ describe("info", () => {
 	`);
 	});
 
-	it("should print banner in pretty mode", async () => {
+	it("should pretty print by default, incl. the wrangler banner", async () => {
 		msw.use(
 			http.get("*/accounts/:accountId/d1/database/*", async () => {
 				return HttpResponse.json(
