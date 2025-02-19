@@ -83,16 +83,9 @@ export const kvNamespaceCreateCommand = createCommand({
 
 	async handler(args) {
 		const config = readConfig(args);
-		if (!config.name) {
-			logger.warn(
-				"No configured name present, using `worker` as a prefix for the title"
-			);
-		}
-
-		const name = config.name || "worker";
-		const environment = args.env ? `-${args.env}` : "";
+		const environment = args.env ? `${args.env}-` : "";
 		const preview = args.preview ? "_preview" : "";
-		const title = `${name}${environment}-${args.namespace}${preview}`;
+		const title = `${environment}${args.namespace}${preview}`;
 
 		const accountId = await requireAuth(config);
 
