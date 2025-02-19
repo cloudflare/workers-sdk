@@ -120,7 +120,7 @@ jobs:
           - os: ubuntu-24.04-arm
             os_name: v22, Linux
             node_version: 22
-            filter: '--filter="./packages/*" --filter="\!./packages/kv-asset-handler"'
+            filter: '--filter="./packages/*" --filter="!./packages/kv-asset-handler"'
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
