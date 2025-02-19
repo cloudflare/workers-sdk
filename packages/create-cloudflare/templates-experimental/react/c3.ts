@@ -43,17 +43,15 @@ const variantsOptions = [
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "react",
+	// React's documentation now recommends using create-vite.
 	frameworkCli: "create-vite",
 	displayName: "React",
-	platform: "workers",
-	copyFiles: {
-		path: "./templates",
-	},
+	platform: "pages",
 	generate,
 	transformPackageJson: async () => ({
 		scripts: {
-			deploy: `${npm} run build && wrangler deploy`,
-			preview: `${npm} run build && wrangler deploy`,
+			deploy: `${npm} run build && wrangler pages deploy ./dist`,
+			preview: `${npm} run build && wrangler pages dev ./dist`,
 		},
 	}),
 	devScript: "dev",
