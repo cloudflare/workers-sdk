@@ -154,6 +154,8 @@ function createConfigPlugin(): Plugin<WorkersConfigPluginAPI> {
 			config.test.deps.optimizer ??= {};
 			config.test.deps.optimizer.ssr ??= {};
 			config.test.deps.optimizer.ssr.enabled ??= true;
+			config.test.deps.optimizer.ssr.include ??= [];
+			ensureArrayIncludes(config.test.deps.optimizer.ssr.include, ["chai"]);
 			config.test.deps.optimizer.ssr.exclude ??= [];
 			ensureArrayIncludes(config.test.deps.optimizer.ssr.exclude, [
 				...workerdBuiltinModules,
