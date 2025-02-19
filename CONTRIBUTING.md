@@ -32,15 +32,15 @@ Any contributions you make will be via [Pull Requests](https://docs.github.com/e
 - Clone your fork to your local machine
 
   ```sh
-  > git clone https://github.com/<your-github-username>/workers-sdk
-  > cd workers-sdk
+  git clone https://github.com/<your-github-username>/workers-sdk
+  cd workers-sdk
   ```
 
   You can see that your fork is setup as the `origin` remote repository.
   Any changes you wish to make should be in a local branch that is then pushed to this origin remote.
 
   ```sh
-  > git remote -v
+  git remote -v
   origin	https://github.com/<your-github-username>/workers-sdk (fetch)
   origin	https://github.com/<your-github-username>/workers-sdk (push)
   ```
@@ -48,8 +48,8 @@ Any contributions you make will be via [Pull Requests](https://docs.github.com/e
 - Add `cloudflare/workers-sdk` as the `upstream` remote repository.
 
   ```sh
-  > git remote add upstream https://github.com/cloudflare/workers-sdk
-  > git remote -v
+  git remote add upstream https://github.com/cloudflare/workers-sdk
+  git remote -v
   origin	https://github.com/<your-github-username>/workers-sdk (fetch)
   origin	https://github.com/<your-github-username>/workers-sdk (push)
   upstream	https://github.com/cloudflare/workers-sdk (fetch)
@@ -59,8 +59,8 @@ Any contributions you make will be via [Pull Requests](https://docs.github.com/e
 - You should regularly pull from the `main` branch of the `upstream` repository to keep up to date with the latest changes to the project.
 
   ```sh
-  > git switch main
-  > git pull upstream main
+  git switch main
+  git pull upstream main
   From https://github.com/cloudflare/workers-sdk
   * branch            main       -> FETCH_HEAD
   Already up to date.
@@ -107,8 +107,8 @@ While each workspace has its own dependencies, you install the dependencies usin
 - Install all the dependencies
 
   ```sh
-  > cd workers-sdk
-  > pnpm install
+  cd workers-sdk
+  pnpm install
   ```
 
 ## Building and running
@@ -118,13 +118,13 @@ Workspaces in this project are mostly written in [TypeScript](https://www.typesc
 - Run a distributable for a specific workspace (e.g. wrangler)
 
   ```sh
-  > pnpm run --filter wrangler start
+  pnpm run --filter wrangler start
   ```
 
 - Build a distributable for a specific workspace (e.g. wrangler)
 
   ```sh
-  > pnpm run build --filter wrangler
+  pnpm run build --filter wrangler
   ```
 
 ## Checking the code
@@ -134,7 +134,7 @@ The code in the repository is checked for type checking, formatting, linting and
 - Run all checks in all the workspaces
 
   ```sh
-  > pnpm run check
+  pnpm run check
   ```
 
 When doing normal development, you may want to run these checks individually.
@@ -146,7 +146,7 @@ The code is checked for type errors by [TypeScript](https://www.typescriptlang.o
 - Type check all the code in the repository
 
   ```sh
-  > pnpm run check:type
+  pnpm run check:type
   ```
 
 - VS Code will also run type-checking while editing source code, providing immediate feedback.
@@ -177,7 +177,7 @@ The code is checked for linting errors by [ESLint](https://eslint.org/).
 - Run the linting checks
 
   ```sh
-  > pnpm run check:lint
+  pnpm run check:lint
   ```
 
 - The repository has a recommended VS Code plugin to run ESLint checks while editing source code, providing immediate feedback.
@@ -189,30 +189,30 @@ The code is checked for formatting errors by [Prettier](https://prettier.io/).
 - Run the formatting checks
 
   ```sh
-  > pnpm run check:format
+  pnpm run check:format
   ```
 
 - The repository has a recommended VS Code plugin to run Prettier checks, and to automatically format using Prettier, while editing source code, providing immediate feedback
 - Use the following command to run prettier on the codebase
 
   ```sh
-  > pnpm run prettify
+  pnpm run prettify
   ```
 
 ### Testing
 
 Tests in a workspace are executed, by [Vitest](https://vitest.dev/), which is configured to automatically compile and bundle the TypeScript before running the tests.
 
-- If you have recently rebased on main then make sure you have installed any new dependencies
+- If you have recently rebased on `main` then make sure you have installed any new dependencies
 
   ```sh
-  > pnpm i
+  pnpm i
   ```
 
 - Run the tests for all the workspaces
 
   ```sh
-  > pnpm run test
+  pnpm run test
   ```
 
   :::note
@@ -228,13 +228,13 @@ Tests in a workspace are executed, by [Vitest](https://vitest.dev/), which is co
 - Run the tests for a specific workspace (e.g. wrangler)
 
   ```sh
-  > pnpm run test --filter wrangler
+  pnpm run test --filter wrangler
   ```
 
 - Watch the files in a specific workspace (e.g. wrangler), and run the tests when anything changes
 
   ```sh
-  > pnpm run --filter wrangler test:watch
+  pnpm run --filter wrangler test:watch
   ```
 
   This will also run all the tests in a single process (rather than in parallel shards) and will increase the test-timeout to 50 seconds, which is helpful when debugging.
@@ -247,14 +247,14 @@ Changes should be committed to a new local branch, which then gets pushed to you
 - Ensure your `main` branch is up to date
 
   ```sh
-  > git switch main
-  > git pull upstream main
+  git switch main
+  git pull upstream main
   ```
 
 - Create a new branch, based off the `main` branch
 
   ```sh
-  > git checkout -b <new-branch-name> main
+  git checkout -b <new-branch-name> main
   ```
 
 - Stage files to include in a commit
@@ -263,8 +263,8 @@ Changes should be committed to a new local branch, which then gets pushed to you
   - Or add and commit files via the command line
 
   ```sh
-  > git add <paths-to-changes-files>
-  > git commit
+  git add <paths-to-changes-files>
+  git commit
   ```
 
 - Push changes to your fork
@@ -374,7 +374,7 @@ We use the [`changesets`](https://github.com/changesets/changesets/blob/main/REA
 - Create a changeset for the current change.
 
   ```sh
-  > pnpm changeset
+  pnpm changeset
   ```
 
 - Select which workspaces are affected by the change and whether the version requires a major, minor or patch release.
@@ -382,7 +382,7 @@ We use the [`changesets`](https://github.com/changesets/changesets/blob/main/REA
 - Include the generate changeset in the current commit.
 
   ```sh
-  > git add ./changeset/*.md
+  git add ./changeset/*.md
   ```
 
 ### Changeset message format
