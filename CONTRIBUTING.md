@@ -30,30 +30,37 @@ Any contributions you make will be via [Pull Requests](https://docs.github.com/e
 - Ensure you have [created an account](https://docs.github.com/en/get-started/onboarding/getting-started-with-your-github-account) on GitHub.
 - [Create your own fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) of [this repository](https://github.com/cloudflare/workers-sdk).
 - Clone your fork to your local machine
+
   ```sh
-  > git clone https://github.com/<your-github-username>/workers-sdk
-  > cd workers-sdk
+  git clone https://github.com/<your-github-username>/workers-sdk
+  cd workers-sdk
   ```
+
   You can see that your fork is setup as the `origin` remote repository.
   Any changes you wish to make should be in a local branch that is then pushed to this origin remote.
+
   ```sh
-  > git remote -v
+  git remote -v
   origin	https://github.com/<your-github-username>/workers-sdk (fetch)
   origin	https://github.com/<your-github-username>/workers-sdk (push)
   ```
+
 - Add `cloudflare/workers-sdk` as the `upstream` remote repository.
+
   ```sh
-  > git remote add upstream https://github.com/cloudflare/workers-sdk
-  > git remote -v
+  git remote add upstream https://github.com/cloudflare/workers-sdk
+  git remote -v
   origin	https://github.com/<your-github-username>/workers-sdk (fetch)
   origin	https://github.com/<your-github-username>/workers-sdk (push)
   upstream	https://github.com/cloudflare/workers-sdk (fetch)
   upstream	https://github.com/cloudflare/workers-sdk (push)
   ```
+
 - You should regularly pull from the `main` branch of the `upstream` repository to keep up to date with the latest changes to the project.
+
   ```sh
-  > git switch main
-  > git pull upstream main
+  git switch main
+  git pull upstream main
   From https://github.com/cloudflare/workers-sdk
   * branch            main       -> FETCH_HEAD
   Already up to date.
@@ -98,9 +105,10 @@ While each workspace has its own dependencies, you install the dependencies usin
 > If you haven't used `pnpm` before, you can install it with `npm install -g pnpm`
 
 - Install all the dependencies
+
   ```sh
-  > cd workers-sdk
-  > pnpm install
+  cd workers-sdk
+  pnpm install
   ```
 
 ## Building and running
@@ -108,12 +116,15 @@ While each workspace has its own dependencies, you install the dependencies usin
 Workspaces in this project are mostly written in [TypeScript](https://www.typescriptlang.org/) and compiled, by [esbuild](https://github.com/evanw/esbuild), into JavaScript bundles for distribution.
 
 - Run a distributable for a specific workspace (e.g. wrangler)
+
   ```sh
-  > pnpm run --filter wrangler start
+  pnpm run --filter wrangler start
   ```
+
 - Build a distributable for a specific workspace (e.g. wrangler)
+
   ```sh
-  > pnpm run build --filter wrangler
+  pnpm run build --filter wrangler
   ```
 
 ## Checking the code
@@ -121,8 +132,9 @@ Workspaces in this project are mostly written in [TypeScript](https://www.typesc
 The code in the repository is checked for type checking, formatting, linting and testing errors.
 
 - Run all checks in all the workspaces
+
   ```sh
-  > pnpm run check
+  pnpm run check
   ```
 
 When doing normal development, you may want to run these checks individually.
@@ -132,9 +144,11 @@ When doing normal development, you may want to run these checks individually.
 The code is checked for type errors by [TypeScript](https://www.typescriptlang.org/).
 
 - Type check all the code in the repository
+
   ```sh
-  > pnpm run check:type
+  pnpm run check:type
   ```
+
 - VS Code will also run type-checking while editing source code, providing immediate feedback.
 
 #### Changing TypeScript Version in VS Code's Command Palette
@@ -149,7 +163,7 @@ For TypeScript to work properly in the Monorepo the version used in VSCode must 
 
 4. A submenu will appear with a list of available TypeScript versions. Choose the desired version you want to use for this project. If you have multiple versions installed, they will be listed here.
 
-- Selecting "Use Workspace Version" will use the version of TypeScript installed in the project's `node_modules` directory.
+   - Selecting "Use Workspace Version" will use the version of TypeScript installed in the project's `node_modules` directory.
 
 5. After selecting the TypeScript version, VSCode will reload the workspace using the chosen version.
 
@@ -161,9 +175,11 @@ Remember that this change is specific to the current project and will not affect
 The code is checked for linting errors by [ESLint](https://eslint.org/).
 
 - Run the linting checks
+
   ```sh
-  > pnpm run check:lint
+  pnpm run check:lint
   ```
+
 - The repository has a recommended VS Code plugin to run ESLint checks while editing source code, providing immediate feedback.
 
 ### Formatting
@@ -171,31 +187,56 @@ The code is checked for linting errors by [ESLint](https://eslint.org/).
 The code is checked for formatting errors by [Prettier](https://prettier.io/).
 
 - Run the formatting checks
+
   ```sh
-  > pnpm run check:format
+  pnpm run check:format
   ```
+
 - The repository has a recommended VS Code plugin to run Prettier checks, and to automatically format using Prettier, while editing source code, providing immediate feedback
 - Use the following command to run prettier on the codebase
+
   ```sh
-  > pnpm run prettify
+  pnpm run prettify
   ```
 
 ### Testing
 
 Tests in a workspace are executed, by [Vitest](https://vitest.dev/), which is configured to automatically compile and bundle the TypeScript before running the tests.
 
+- If you have recently rebased on `main` then make sure you have installed any new dependencies
+
+  ```sh
+  pnpm i
+  ```
+
 - Run the tests for all the workspaces
+
   ```sh
-  > pnpm run test
+  pnpm run test
   ```
+
+  :::note
+  Cloudflare employees may need to turn off WARP for the first time they run the Miniflare tests so that it can request and cache the CF properties without getting the following error.
+
+  ```plain
+  failed: TLS peer's certificate is not trusted; reason = self signed certificate in certificate chain
+  ```
+
+  After this request is cached you can run tests with WARP turned on, no problem.
+  :::
+
 - Run the tests for a specific workspace (e.g. wrangler)
+
   ```sh
-  > pnpm run test --filter wrangler
+  pnpm run test --filter wrangler
   ```
+
 - Watch the files in a specific workspace (e.g. wrangler), and run the tests when anything changes
+
   ```sh
-  > pnpm run --filter wrangler test:watch
+  pnpm run --filter wrangler test:watch
   ```
+
   This will also run all the tests in a single process (rather than in parallel shards) and will increase the test-timeout to 50 seconds, which is helpful when debugging.
 
 ## Steps For Making Changes
@@ -204,25 +245,34 @@ Every change you make should be stored in a [git commit](https://github.com/git-
 Changes should be committed to a new local branch, which then gets pushed to your fork of the repository on GitHub.
 
 - Ensure your `main` branch is up to date
+
   ```sh
-  > git switch main
-  > git pull upstream main
+  git switch main
+  git pull upstream main
   ```
+
 - Create a new branch, based off the `main` branch
+
   ```sh
-  > git checkout -b <new-branch-name> main
+  git checkout -b <new-branch-name> main
   ```
+
 - Stage files to include in a commit
+
   - Use [VS Code](https://code.visualstudio.com/docs/editor/versioncontrol#_git-support)
   - Or add and commit files via the command line
+
   ```sh
-  > git add <paths-to-changes-files>
-  > git commit
+  git add <paths-to-changes-files>
+  git commit
   ```
+
 - Push changes to your fork
+
   ```sh
   git push -u origin <new-branch-name>
   ```
+
 - Once you are happy with your changes, create a Pull Request on GitHub
 - The format for Pull Request titles is `[package name] description`, where the package name should indicate which package of the `workers-sdk` monorepo your PR pertains to (e.g. `wrangler`/`pages-shared`/`chrome-devtools-patches`), and the description should be a succinct summary of the change you're making.
 - GitHub will insert a template for the body of your Pull Request—it's important to carefully fill out all the fields, giving as much detail as possible to reviewers.
@@ -232,9 +282,9 @@ Changes should be committed to a new local branch, which then gets pushed to you
 Making sure your branch follows our recommendations for git will help ensure your PR is reviewed & released as quickly as possible:
 
 - When opening a PR (before the first review), try and make sure your git commit history is clean, and clearly describes the changes you want to make.
-  - For instance, here's an example of a PR where the commit history is quite messy, and doesn't help reviewers: https://github.com/cloudflare/workers-sdk/pull/2409/commits
-  - And here's an example of where this has been done well: https://github.com/cloudflare/workers-sdk/pull/4795/commits
-- Once your PR has been reviewed, when addressing feedback try not to modify already reviewed commits with force pushes. This slows down the review process and makes it hard to keep track of what changes have been made. Instead, add aditional commits to your PR to address any feedback (`git commit --fixup` is a helpful tool here).
+  - For instance, here's an example of a PR where the commit history is quite messy, and doesn't help reviewers: <https://github.com/cloudflare/workers-sdk/pull/2409/commits>
+  - And here's an example of where this has been done well: <https://github.com/cloudflare/workers-sdk/pull/4795/commits>
+- Once your PR has been reviewed, when addressing feedback try not to modify already reviewed commits with force pushes. This slows down the review process and makes it hard to keep track of what changes have been made. Instead, add additional commits to your PR to address any feedback (`git commit --fixup` is a helpful tool here).
 - When merging your PR into `main`, `workers-sdk` enforces squash merges. As such, please try and make sure that the commit message associated with the merge clearly describes the entire change your PR makes.
 
 ## PR Review
@@ -243,7 +293,7 @@ PR review is a critical and required step in the process for landing changes. Th
 
 ## PR Previews
 
-Every PR will have an associated pre-release build for all releaseable packages within the repository, powered by our [prerelease registry](packages/prerelease-registry). You can find links to prereleases for each package in a comment automatically posted by GitHub Actions on each opened PR ([for example](https://github.com/cloudflare/workers-sdk/pull/7172#issuecomment-2457244715)).
+Every PR will have an associated pre-release build for all releasable packages within the repository, powered by our [prerelease registry](packages/prerelease-registry). You can find links to prereleases for each package in a comment automatically posted by GitHub Actions on each opened PR ([for example](https://github.com/cloudflare/workers-sdk/pull/7172#issuecomment-2457244715)).
 
 It's also possible to generate preview builds for the applications in the repository. These aren't generated automatically because they're pretty slow CI jobs, but you can trigger preview builds by adding one of the following labels to your PR:
 
@@ -257,8 +307,8 @@ Once built, you can find the preview link for these applications in the [Deploy 
 
 Every PR should include tests for the functionality that's being added. Most changes will be to [Wrangler](packages/wrangler/src/__tests__) (using Vitest), [Miniflare](packages/miniflare/test) (using Ava), or [C3](packages/create-cloudflare/src/__tests__) (using Vitest), and should include unit tests within the testing harness of those packages. For documentation on how these testing frameworks work, see:
 
-- Vitest: https://vitest.dev/guide
-- Ava: https://github.com/avajs/ava?tab=readme-ov-file#documentation
+- Vitest: <https://vitest.dev/guide>
+- Ava: <https://github.com/avajs/ava?tab=readme-ov-file#documentation>
 
 If your PR includes functionality that's difficult to unit test, you can add a fixture test by creating a new package in the `fixtures/` folder. This allows for adding a test that requires a specific filesystem or worker setup (for instance, `fixtures/no-bundle-import` tests the interaction of Wrangler with a specific set of JS, WASM, text, and binary modules on the filesystem). When adding a fixture test, include a `vitest.config.mts` file within the new package, which will ensure it's run as part of the `workers-sdk` CI. You should merge your own configuration with the default config from the root of the repo.
 
@@ -289,13 +339,13 @@ A summary of this repositories actions can be found [here](.github/workflows/REA
 To run the e2e tests locally, you'll need a Cloudflare API Token and run:
 
 ```sh
-$ WRANGLER="node ~/path/to/workers-sdk/packages/wrangler/wrangler-dist/cli.js" CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_TESTING_ACCOUNT_ID CLOUDFLARE_API_TOKEN=$CLOUDFLARE_TESTING_API_TOKEN pnpm run test:e2e
+WRANGLER="node ~/path/to/workers-sdk/packages/wrangler/wrangler-dist/cli.js" CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_TESTING_ACCOUNT_ID CLOUDFLARE_API_TOKEN=$CLOUDFLARE_TESTING_API_TOKEN pnpm run test:e2e
 ```
 
 You may optionally want to append a filename pattern to limit which e2e tests are run. Also you may want to set `--bail=n` to limit the number of fails tests to show the error before the rest of the tests finish running and to limit the noise in that output:
 
 ```sh
-$ WRANGLER="node ~/path/to/workers-sdk/packages/wrangler/wrangler-dist/cli.js" CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_TESTING_ACCOUNT_ID CLOUDFLARE_API_TOKEN=$CLOUDFLARE_TESTING_API_TOKEN pnpm run test:e2e [file-pattern] --bail=1
+WRANGLER="node ~/path/to/workers-sdk/packages/wrangler/wrangler-dist/cli.js" CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_TESTING_ACCOUNT_ID CLOUDFLARE_API_TOKEN=$CLOUDFLARE_TESTING_API_TOKEN pnpm run test:e2e [file-pattern] --bail=1
 ```
 
 ### Creating an API Token
@@ -322,14 +372,17 @@ Every non-trivial change to the project - those that should appear in the change
 We use the [`changesets`](https://github.com/changesets/changesets/blob/main/README.md) tool for creating changesets, publishing versions and updating the changelog.
 
 - Create a changeset for the current change.
+
   ```sh
-  > pnpm changeset
+  pnpm changeset
   ```
+
 - Select which workspaces are affected by the change and whether the version requires a major, minor or patch release.
 - Update the generated changeset with a description of the change.
 - Include the generate changeset in the current commit.
+
   ```sh
-  > git add ./changeset/*.md
+  git add ./changeset/*.md
   ```
 
 ### Changeset message format
@@ -338,7 +391,7 @@ Each changeset is a file that describes the change being merged. This file is us
 
 To help maintain consistency in the changelog, changesets should have the following format:
 
-```
+```plain
 <TITLE>
 
 <BODY>
@@ -353,7 +406,7 @@ The generated changeset file will contain the package name and type of change (e
 
 Here's an example of a `patch` to the `wrangler` package:
 
-```
+```plain
 ---
 "wrangler": patch
 ---
