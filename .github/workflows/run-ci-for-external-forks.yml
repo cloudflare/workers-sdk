@@ -34,7 +34,7 @@ jobs:
       - name: Stop workflow if user is not a team member
         if: ${{ steps.teamAffiliation.outputs.isTeamMember == false }}
         run: |
-          echo "You have must be on the "wrangler" team to trigger this job."
+          echo "You must be on the "wrangler" team to trigger this job."
           exit 1
 
       - name: "Checkout PR"
