@@ -11,8 +11,6 @@ const { env } = defineEnv({
 	presets: [cloudflare],
 });
 
-const CLOUDFLARE_VIRTUAL_PREFIX = "\0__CLOUDFLARE_NODEJS_COMPAT__";
-
 /**
  * Returns true if the given combination of compat dates and flags means that we need Node.js compatibility.
  */
@@ -43,8 +41,29 @@ export function isNodeCompat(
 }
 
 /**
- * If the current environment needs Node.js compatibility,
- * then inject the necessary global polyfills into the code.
+ * Gets a set of module specifiers for all possible Node.js compat polyfill entry-points
+ */
+export function getNodeCompatEntries() {
+	const entries = new Set<string>(Object.values(env.alias));
+	for (const globalInject of Object.values(env.inject)) {
+		if (typeof globalInject === "string") {
+			entries.add(globalInject);
+		} else {
+			assert(
+				globalInject[0] !== undefined,
+				"Expected first element of globalInject to be defined"
+			);
+			entries.add(globalInject[0]);
+		}
+	}
+	for (const external of env.external) {
+		entries.delete(external);
+	}
+	return entries;
+}
+
+/**
+ * Gets the necessary global polyfills to inject into the entry-point of the user's code.
  */
 export function injectGlobalCode(id: string, code: string) {
 	const injectedCode = Object.entries(env.inject)
@@ -52,12 +71,17 @@ export function injectGlobalCode(id: string, code: string) {
 			if (typeof globalInject === "string") {
 				const moduleSpecifier = globalInject;
 				// the mapping is a simple string, indicating a default export, so the string is just the module specifier.
-				return `import var_${globalName} from "${CLOUDFLARE_VIRTUAL_PREFIX}${moduleSpecifier}";\nglobalThis.${globalName} = var_${globalName};\n`;
+				return `import var_${globalName} from "${moduleSpecifier}";\nglobalThis.${globalName} = var_${globalName};\n`;
 			}
 
 			// the mapping is a 2 item tuple, indicating a named export, made up of a module specifier and an export name.
 			const [moduleSpecifier, exportName] = globalInject;
-			return `import var_${globalName} from "${CLOUDFLARE_VIRTUAL_PREFIX}${moduleSpecifier}";\nglobalThis.${globalName} = var_${globalName}.${exportName};\n`;
+			assert(
+				moduleSpecifier !== undefined,
+				"Expected moduleSpecifier to be defined"
+			);
+			assert(exportName !== undefined, "Expected exportName to be defined");
+			return `import var_${globalName} from "${moduleSpecifier}";\nglobalThis.${globalName} = var_${globalName}.${exportName};\n`;
 		})
 		.join("\n");
 
@@ -70,63 +94,29 @@ export function injectGlobalCode(id: string, code: string) {
 }
 
 /**
- * We only want to alias Node.js built-ins if the environment has Node.js compatibility turned on.
- * But Vite only allows us to configure aliases at the shared options level, not per environment.
- * So instead we alias these to a virtual module, which are then handled with environment specific code in the `resolveId` handler
- */
-export function getNodeCompatAliases() {
-	const aliases: Record<string, string> = {};
-	Object.keys(env.alias).forEach((key) => {
-		// Don't create aliases for modules that are already marked as external
-		if (!env.external.includes(key)) {
-			aliases[key] = CLOUDFLARE_VIRTUAL_PREFIX + key;
-		}
-	});
-	return aliases;
-}
-
-/**
- * Get an array of modules that should be considered external.
+ * Gets an array of modules that should be considered external.
  */
 export function getNodeCompatExternals(): string[] {
 	return env.external;
 }
 
 /**
- * If the `source` module id starts with the virtual prefix then strip it and return the rest of the id.
- * Otherwise return undefined.
- */
-export function maybeStripNodeJsVirtualPrefix(
-	source: string
-): string | undefined {
-	return source.startsWith(CLOUDFLARE_VIRTUAL_PREFIX)
-		? source.slice(CLOUDFLARE_VIRTUAL_PREFIX.length)
-		: undefined;
-}
-
-/**
- * Resolve the source import to an absolute path, potentially via its alias.
+ * Resolves the `source` to a Node.js compat alias if possible.
+ *
+ * If there is an alias, the return value is an object with:
+ * - `unresolved`: a bare import path to the polyfill (e.g. `unenv/runtime/node/crypto`)
+ * - `resolved`: an absolute path to the polyfill (e.g. `/path/to/project/node_modules/unenv/runtime/node/child_process/index.mjs`)
  */
 export function resolveNodeJSImport(source: string) {
 	const alias = env.alias[source];
-	if (alias) {
-		// If `alias` is `undefined` then `source` was injected in the `transform` hook and we can resolve it directly.
-		// Else we resolve the `alias` instead of the `source`.
-		assert(
-			!env.external.includes(alias),
-			`Unexpected unenv alias to external module: ${source} -> ${alias}`
-		);
-		source = alias;
-	}
-	// Resolve to an absolute path using the path to this file as the resolution starting point.
-	// This is essential so that we can find the `@cloudflare/unenv-preset` and `unenv` packages,
-	// which are dependencies of this package but may not be direct dependencies of the user's project.
-	const resolved = resolvePathSync(source, {
-		url: import.meta.url,
-	});
 
-	return {
-		unresolved: source,
-		resolved,
-	};
+	// These aliases must be resolved from the context of this plugin since the alias will refer to one of the
+	// `@cloudflare/unenv-preset` or the `unenv` packages, which are direct dependencies of this package,
+	// and not the user's project.
+	if (alias) {
+		return {
+			unresolved: alias,
+			resolved: resolvePathSync(alias, { url: import.meta.url }),
+		};
+	}
 }

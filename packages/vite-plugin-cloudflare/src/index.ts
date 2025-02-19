@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
+import { builtinModules } from "node:module";
 import * as path from "node:path";
 import { createMiddleware } from "@hattip/adapter-node";
 import MagicString from "magic-string";
@@ -16,11 +17,10 @@ import {
 	getPreviewMiniflareOptions,
 } from "./miniflare-options";
 import {
-	getNodeCompatAliases,
+	getNodeCompatEntries,
 	getNodeCompatExternals,
 	injectGlobalCode,
 	isNodeCompat,
-	maybeStripNodeJsVirtualPrefix,
 	resolveNodeJSImport,
 } from "./node-js-compat";
 import { resolvePluginConfig } from "./plugin-config";
@@ -407,67 +407,68 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				// Skip this whole plugin if we are in preview mode
 				return !env.isPreview;
 			},
-			config() {
-				// Configure Vite with the Node.js polyfill aliases
-				// We have to do this across the whole Vite config because it is not possible to do it per Environment.
-				// These aliases are to virtual modules that then get Environment specific handling in the resolveId hook.
-				return {
-					resolve: {
-						alias: getNodeCompatAliases(),
-					},
-				};
-			},
-			configEnvironment(environmentName) {
-				// Ignore Node.js external modules when building environments that use Node.js compat.
-				const workerConfig = getWorkerConfig(environmentName);
-				if (isNodeCompat(workerConfig)) {
+			configEnvironment(name) {
+				// Only configure this environment if it is a Worker using Node.js compatibility.
+				if (isNodeCompat(getWorkerConfig(name))) {
 					return {
-						build: {
-							rollupOptions: {
-								external: getNodeCompatExternals(),
-							},
+						resolve: {
+							builtins: getNodeCompatExternals(),
+						},
+						optimizeDeps: {
+							// This is a list of dependency entry-points that should be pre-bundled.
+							// In this case we provide a list of all the possible polyfills so that they are pre-bundled,
+							// ready ahead the first request to the dev server.
+							// Without this the dependency optimizer will try to bundle them on-the-fly in the middle of the first request,
+							// which can potentially cause problems if it leads to previous pre-bundling to become stale and needing to be reloaded.
+							include: [...getNodeCompatEntries()],
+							// This is a list of module specifiers that the dependency optimizer should not follow when doing import analysis.
+							// In this case we provide a list of all the Node.js modules, both those built-in to workerd and those that will be polyfilled.
+							// Obviously we don't want/need the optimizer to try to process modules that are built-in;
+							// But also we want to avoid following the ones that are polyfilled since the dependency-optimizer import analyzer does not
+							// resolve these imports using our `resolveId()` hook causing the optimization step to fail.
+							exclude: [
+								...builtinModules,
+								...builtinModules.map((m) => `node:${m}`),
+							],
 						},
 					};
 				}
 			},
+			applyToEnvironment(environment) {
+				// Only run this plugin's runtime hooks if it is a Worker using Node.js compatibility.
+				return isNodeCompat(getWorkerConfig(environment.name));
+			},
+			// We need the resolver from this plugin to run before built-in ones, otherwise Vite's built-in
+			// resolver will try to externalize the Node.js module imports (e.g. `perf_hooks` and `node:tty`)
+			// rather than allowing the resolve hook here to alias then to polyfills.
+			enforce: "pre",
 			async resolveId(source, importer, options) {
-				// Handle the virtual modules that come from Node.js compat aliases.
-				const strippedSource = maybeStripNodeJsVirtualPrefix(source);
-				if (!strippedSource) {
-					return;
+				// See if we can map the `source` to a Node.js compat alias.
+				const result = resolveNodeJSImport(source);
+				if (!result) {
+					// The source is not a Node.js compat alias so just pass it through
+					return this.resolve(source, importer, options);
 				}
 
-				const workerConfig = getWorkerConfig(this.environment.name);
-				if (!isNodeCompat(workerConfig)) {
-					// We are not in Node.js compat mode, so we must not try to apply any unenv aliases.
-					// Just resolve the module id as normal.
-					return this.resolve(strippedSource, importer, options);
+				if (this.environment.mode === "dev") {
+					assert(
+						this.environment.depsOptimizer,
+						"depsOptimizer is required in dev mode"
+					);
+					// We are in dev mode (rather than build).
+					// Node.js compat polyfill modules have already been pre-bundled,
+					// so we can use the unresolved path to the polyfill
+					// and let the dependency optimizer resolve the path to the pre-bundled version.
+					return this.resolve(result.unresolved, importer, options);
 				}
 
-				// Resolve this id following any unenv aliases.
-				const { unresolved, resolved } = resolveNodeJSImport(strippedSource);
-
-				if (this.environment.mode === "dev" && this.environment.depsOptimizer) {
-					// Make sure the dependency optimizer is aware of this aliased import
-					const optimized =
-						this.environment.depsOptimizer.registerMissingImport(
-							unresolved,
-							resolved
-						).id;
-					// We must pass the id from the depsOptimizer through the rest of the
-					// resolving pipeline to ensure that the optimized version gets used.
-					return this.resolve(optimized, importer, options);
-				}
-
-				return this.resolve(resolved, importer, options);
+				// We are in build mode so return the absolute path to the polyfill.
+				return this.resolve(result.resolved, importer, options);
 			},
 			async transform(code, id) {
 				// Inject the Node.js compat globals into the entry module for Node.js compat environments.
 				const workerConfig = getWorkerConfig(this.environment.name);
-				if (!isNodeCompat(workerConfig)) {
-					return;
-				}
-
+				assert(workerConfig, "Expected a worker config");
 				const resolvedId = await this.resolve(workerConfig.main);
 				if (id === resolvedId?.id) {
 					return injectGlobalCode(id, code);

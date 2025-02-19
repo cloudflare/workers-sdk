@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import * as vite from "vite";
 import { INIT_PATH, UNKNOWN_HOST } from "./shared";
-import { getOutputDirectory, nodeBuiltInModules } from "./utils";
+import { getOutputDirectory } from "./utils";
 import type { ResolvedPluginConfig, WorkerConfig } from "./plugin-config";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
 import type {
@@ -134,8 +134,6 @@ export function createCloudflareEnvironmentOptions(
 			conditions: [...defaultConditions, "development|production"],
 			// The Cloudflare ones are proper builtins in the environment
 			builtins: [...cloudflareBuiltInModules],
-			// The Node.js ones are no proper builtins in the environment since we also polyfill them using unenv
-			external: [...nodeBuiltInModules],
 		},
 		dev: {
 			createEnvironment(name, config) {
@@ -164,10 +162,6 @@ export function createCloudflareEnvironmentOptions(
 			// Note: ssr pre-bundling is opt-in and we need to enable it by setting `noDiscovery` to false
 			noDiscovery: false,
 			entries: workerConfig.main,
-			exclude: [
-				// we have to exclude all node modules to work in dev-mode not just the unenv externals...
-				...nodeBuiltInModules,
-			],
 			esbuildOptions: {
 				platform: "neutral",
 				conditions: [...defaultConditions, "development"],
