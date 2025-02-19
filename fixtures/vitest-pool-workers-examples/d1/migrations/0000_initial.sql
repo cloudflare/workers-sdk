@@ -10,3 +10,4 @@ CREATE TABLE posts (
 	body TEXT NOT NULL,
 	FOREIGN KEY (author) REFERENCES users(username)
 );
+-- Migration ends here
