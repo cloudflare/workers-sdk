@@ -384,9 +384,9 @@ export const secretBulkCommand = createCommand({
 		status: "stable",
 		owner: "Workers: Deploy and Config",
 	},
-	positionalArgs: ["json"],
+	positionalArgs: ["file"],
 	args: {
-		json: {
+		file: {
 			describe: `The file of key-value pairs to upload, as JSON in form {"key": value, ...} or .dev.vars file in the form KEY=VALUE`,
 			type: "string",
 		},
@@ -426,7 +426,7 @@ export const secretBulkCommand = createCommand({
 			}`
 		);
 
-		const content = await parseBulkInputToObject(args.json);
+		const content = await parseBulkInputToObject(args.file);
 
 		if (!content) {
 			return logger.error(`🚨 No content found in file, or piped input.`);
