@@ -734,24 +734,10 @@ describe("asset-server handler", () => {
 				findAssetEntryForPath,
 				fetchAsset: () =>
 					Promise.resolve(Object.assign(new Response("hello world!"))),
+				// @ts-expect-error Create a dummy fake cache to simulate a fresh cache
 				caches: {
 					open(cacheName) {
 						return caches.open("fresh" + cacheName);
-					},
-					delete: function (cacheName: string): Promise<boolean> {
-						throw new Error("Function not implemented.");
-					},
-					has: function (cacheName: string): Promise<boolean> {
-						throw new Error("Function not implemented.");
-					},
-					keys: function (): Promise<string[]> {
-						throw new Error("Function not implemented.");
-					},
-					match: function (
-						request: RequestInfo | URL,
-						options?: MultiCacheQueryOptions
-					): Promise<Response | undefined> {
-						throw new Error("Function not implemented.");
 					},
 				},
 			});
