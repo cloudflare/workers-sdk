@@ -8,7 +8,7 @@ import { watch } from "chokidar";
 import { getType } from "mime";
 import { fetch, Request, Response } from "miniflare";
 import { Dispatcher, getGlobalDispatcher } from "undici";
-import { hashFile } from "../pages/hash";
+import { contentAndTypeHashFile } from "../pages/hash";
 import type { Logger } from "../logger";
 import type { Metadata } from "@cloudflare/pages-shared/asset-server/metadata";
 import type {
@@ -219,7 +219,7 @@ async function generateAssetsFetch(
 					lstatSync(filepath).isFile() &&
 					!ignoredFiles.includes(filepath)
 				) {
-					const hash = hashFile(filepath);
+					const hash = contentAndTypeHashFile(filepath);
 					assetKeyEntryMap.set(hash, filepath);
 					return hash;
 				}

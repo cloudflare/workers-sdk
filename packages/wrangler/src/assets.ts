@@ -16,7 +16,7 @@ import { fetchResult } from "./cfetch";
 import { formatTime } from "./deploy/deploy";
 import { FatalError, UserError } from "./errors";
 import { logger, LOGGER_LEVELS } from "./logger";
-import { hashFile } from "./pages/hash";
+import { contentAndTypeHashFile, pathHashFile } from "./pages/hash";
 import { isJwtExpired } from "./pages/upload";
 import { APIError } from "./parse";
 import { getBasePath } from "./paths";
@@ -49,13 +49,16 @@ export const syncAssets = async (
 	accountId: string | undefined,
 	assetDirectory: string,
 	scriptName: string,
+	assetOptions: AssetsOptions,
 	dispatchNamespace?: string
 ): Promise<string> => {
 	assert(accountId, "Missing accountId");
 
 	// 1. generate asset manifest
 	logger.info("🌀 Building list of assets...");
-	const manifest = await buildAssetManifest(assetDirectory);
+	const manifest = await buildAssetManifest(assetDirectory, assetOptions);
+
+	console.log(manifest);
 
 	const url = dispatchNamespace
 		? `/accounts/${accountId}/workers/dispatch/namespaces/${dispatchNamespace}/scripts/${scriptName}/assets-upload-session`
@@ -230,7 +233,7 @@ export const syncAssets = async (
 	return completionJwt;
 };
 
-const buildAssetManifest = async (dir: string) => {
+const buildAssetManifest = async (dir: string, assetOptions: AssetsOptions) => {
 	const files = await readdir(dir, { recursive: true });
 	const manifest: AssetManifest = {};
 	let counter = 0;
@@ -281,7 +284,11 @@ const buildAssetManifest = async (dir: string) => {
 					);
 				}
 				manifest[normalizeFilePath(relativeFilepath)] = {
-					hash: hashFile(filepath),
+					hash:
+						assetOptions.assetConfig.not_found_handling ===
+						"single-page-application"
+							? pathHashFile(normalizeFilePath(relativeFilepath))
+							: contentAndTypeHashFile(filepath),
 					size: filestat.size,
 				};
 				counter++;

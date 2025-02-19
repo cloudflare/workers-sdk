@@ -629,6 +629,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						accountId,
 						props.assetsOptions.directory,
 						scriptName,
+						props.assetsOptions,
 						props.dispatchNamespace
 					)
 				: undefined;
