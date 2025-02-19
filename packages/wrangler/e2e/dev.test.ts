@@ -485,6 +485,47 @@ describe.each([{ cmd: "wrangler dev" }])(
 
 			expect(text).toBe("py hello world 5");
 		});
+
+		it(`can print during ${cmd}`, async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "index.py"
+					compatibility_date = "2023-01-01"
+					compatibility_flags = ["python_workers"]
+			`,
+				"arithmetic.py": dedent`
+					def mul(a,b):
+						return a*b`,
+				"index.py": dedent`
+					from arithmetic import mul
+
+					from js import Response, console
+					def on_fetch(request):
+						console.log(f"hello {mul(2,3)}")
+						# TODO: Test print too once it's fixed.
+						console.log(f"end")
+						return Response.new(f"py hello world {mul(2,3)}")`,
+				"package.json": dedent`
+					{
+						"name": "worker",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+			});
+			const worker = helper.runLongLived(cmd);
+
+			const { url } = await worker.waitForReady();
+
+			await expect(fetchText(url)).resolves.toBe("py hello world 6");
+
+			await worker.readUntil(/end/);
+
+			const allOutput = await worker.output;
+			expect(allOutput).contain("hello 6\nend");
+		});
 	}
 );
 
