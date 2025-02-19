@@ -18,6 +18,17 @@ npx wrangler init my-worker -y
 
 For more info, visit our [Getting Started](https://developers.cloudflare.com/workers/get-started/guide/) guide.
 
+<details><summary>Wrangler System Requirements</summary>
+	
+
+We support running the Wrangler CLI with the [Current, Active, and Maintenance](https://nodejs.org/en/about/previous-releases) versions of Node.js. Your Worker will always be executed in `workerd`, the open source Cloudflare Workers runtime.
+
+Wrangler is only supported on macOS 13.5+, Windows 11, and Linux distros that support glib 2.35. This follows [`workerd`'s OS support policy](https://github.com/cloudflare/workerd?tab=readme-ov-file#running-workerd).
+
+</details>
+
+</Details>
+
 ## Documentation
 
 For the latest Wrangler documentation, [click here](https://developers.cloudflare.com/workers/wrangler/).
