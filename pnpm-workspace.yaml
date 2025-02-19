@@ -22,4 +22,4 @@ catalogs:
     "vite": "^6.1.0"
     "@types/node": "^22.10.1"
     # This is the minimum Wrangler peer dependency for Vite
-    "wrangler": "^3.101.0"
+    "wrangler": "^3.109.2"
