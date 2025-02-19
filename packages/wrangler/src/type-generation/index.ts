@@ -17,12 +17,11 @@ import type { Entry } from "../deployment-bundle/entry";
 
 export const typesCommand = createCommand({
 	metadata: {
-		description:
-			"📝 Generate types from bindings and module rules in configuration\n",
+		description: "📝 Generate types from your Worker configuration\n",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
 		epilogue:
-			"📖 Learn more at https://developers.cloudflare.com/workers/languages/typescript/",
+			"📖 Learn more at https://developers.cloudflare.com/workers/languages/typescript/#generate-types",
 	},
 	positionalArgs: ["path"],
 	args: {
