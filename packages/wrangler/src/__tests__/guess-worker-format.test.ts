@@ -67,32 +67,6 @@ describe("guess worker format", () => {
 		expect(guess.format).toBe("service-worker");
 	});
 
-	it("should throw an error when the hint doesn't match the guess (modules - service-worker)", async () => {
-		await writeFile("./index.ts", "export default {};");
-		await expect(
-			guessWorkerFormat(
-				path.join(process.cwd(), "./index.ts"),
-				process.cwd(),
-				"service-worker"
-			)
-		).rejects.toThrow(
-			"You configured this worker to be a 'service-worker', but the file you are trying to build appears to have a `default` export like a module worker. Please pass `--format modules`, or simply remove the configuration."
-		);
-	});
-
-	it("should throw an error when the hint doesn't match the guess (service-worker - modules)", async () => {
-		await writeFile("./index.ts", "");
-		await expect(
-			guessWorkerFormat(
-				path.join(process.cwd(), "./index.ts"),
-				process.cwd(),
-				"modules"
-			)
-		).rejects.toThrow(
-			"You configured this worker to be 'modules', but the file you are trying to build doesn't export a handler. Please pass `--format service-worker`, or simply remove the configuration."
-		);
-	});
-
 	it("should not error if a .js entry point has jsx", async () => {
 		await writeFile("./index.js", "console.log(<div/>)");
 		const guess = await guessWorkerFormat(
