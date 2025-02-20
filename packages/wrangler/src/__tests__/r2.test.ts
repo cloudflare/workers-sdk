@@ -60,6 +60,28 @@ function mockBucketLockPutWithExistingRules(
 	);
 }
 
+function mockBucketLockGetExistingRules(
+	bucketName: string,
+	existingRules: BucketLockRule[]
+) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/r2/buckets/:bucketName/lock",
+			async ({ params }) => {
+				const { accountId, bucketName: bucketParam } = params;
+				expect(accountId).toEqual("some-account-id");
+				expect(bucketParam).toEqual(bucketName);
+				return HttpResponse.json(
+					createFetchResult({
+						rules: existingRules,
+					})
+				);
+			},
+			{ once: true }
+		)
+	);
+}
+
 describe("r2", () => {
 	const std = mockConsoleMethods();
 	beforeEach(() => msw.use(...mswR2handlers));
@@ -2469,18 +2491,15 @@ describe("r2", () => {
 			});
 			describe("add", () => {
 				it("it should add a lock rule without prefix using command-line arguments", async () => {
-					setIsTTY(false);
+					setIsTTY(true);
 					const bucketName = "my-bucket";
-					const ruleId = "rule-no-prefix";
-					const conditionTypeAge = "Age";
-					const conditionValueAge = 1;
 
 					mockBucketLockPutNew(bucketName, [
 						{
-							id: ruleId,
+							id: "rule-no-prefix",
 							enabled: true,
 							condition: {
-								type: conditionTypeAge,
+								type: "Age",
 								maxAgeSeconds: 86400,
 							},
 						},
@@ -2493,63 +2512,87 @@ describe("r2", () => {
 					});
 					mockConfirm({
 						text:
-							`Are you sure you want to add lock rule '${ruleId}' to bucket '${bucketName}' without a prefix? ` +
+							`Are you sure you want to add lock rule 'rule-no-prefix' to bucket '${bucketName}' without a prefix? ` +
 							`The lock rule will apply to all objects in your bucket.`,
 						result: true,
 					});
 					await runWrangler(
-						`r2 bucket lock add ${bucketName} --id ${ruleId} --lock-days ${conditionValueAge}`
+						`r2 bucket lock add ${bucketName} --id "rule-no-prefix" --lock-days 1`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"? Enter a prefix for the bucket lock rule (set to \\"\\" for all prefixes)
-						🤖 Using default value in non-interactive context:
-						Adding lock rule 'rule-no-prefix' to bucket 'my-bucket'...
+						"Adding lock rule 'rule-no-prefix' to bucket 'my-bucket'...
 						✨ Added lock rule 'rule-no-prefix' to bucket 'my-bucket'."
+					  `);
+				});
+				it("it should fail to add lock rule using command-line arguments without condition", async () => {
+					setIsTTY(true);
+					const bucketName = "my-bucket";
+
+					mockBucketLockGetExistingRules(bucketName, []);
+
+					mockConfirm({
+						text:
+							`Are you sure you want to add lock rule 'rule-not-indefinite' to bucket '${bucketName}' without an expiration? ` +
+							`The lock rule will apply to all matching objects indefinitely.`,
+						result: false,
+					});
+
+					await runWrangler(
+						`r2 bucket lock add ${bucketName} --id 'rule-not-indefinite' --prefix prefix-not-indefinite`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Add cancelled."
 					  `);
 				});
 				it("it should add an age lock rule using command-line arguments", async () => {
 					setIsTTY(true);
 					const bucketName = "my-bucket";
-					const ruleIdAge = "rule-age";
-					const prefixAge = "prefix-age";
-					const conditionTypeAge = "Age";
-					const conditionValueAge = 1;
 
 					mockBucketLockPutNew(bucketName, [
 						{
-							id: ruleIdAge,
+							id: "rule-age",
 							enabled: true,
-							prefix: prefixAge,
+							prefix: "prefix-age",
 							condition: {
-								type: conditionTypeAge,
+								type: "Age",
 								maxAgeSeconds: 86400,
 							},
 						},
 					]);
 					// age
 					await runWrangler(
-						`r2 bucket lock add ${bucketName} --id ${ruleIdAge} --prefix ${prefixAge} --lock-days ${conditionValueAge}`
+						`r2 bucket lock add ${bucketName} --id rule-age --prefix prefix-age --lock-days 1`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding lock rule 'rule-age' to bucket 'my-bucket'...
 						✨ Added lock rule 'rule-age' to bucket 'my-bucket'."
 					  `);
 				});
-				it("it should fail an age lock rule using command-line arguments with invalid age", async () => {
+				it("it should fail an age lock rule using command-line arguments with invalid age string", async () => {
 					setIsTTY(true);
 					const bucketName = "my-bucket";
-					const ruleIdAge = "rule-age";
-					const prefixAge = "prefix-age";
-					const conditionTypeAge = "Age";
-					const conditionValueAge = "one";
+
+					mockBucketLockGetExistingRules(bucketName, []);
+					// age
+					await expect(() =>
+						runWrangler(
+							`r2 bucket lock add ${bucketName} --id rule-age --prefix prefix-age --lock-days one`
+						)
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: Days must be a number.]`
+					);
+				});
+				it("it should fail an age lock rule using command-line arguments with invalid negative age", async () => {
+					setIsTTY(true);
+					const bucketName = "my-bucket";
 
 					mockBucketLockPutNew(bucketName, [
 						{
-							id: ruleIdAge,
+							id: "rule-age",
 							enabled: true,
-							prefix: prefixAge,
+							prefix: "prefix-age",
 							condition: {
-								type: conditionTypeAge,
+								type: "Age",
 								maxAgeSeconds: 86400,
 							},
 						},
@@ -2557,95 +2600,74 @@ describe("r2", () => {
 					// age
 					await expect(() =>
 						runWrangler(
-							`r2 bucket lock add ${bucketName} --id ${ruleIdAge} --prefix ${prefixAge} --lock-days ${conditionValueAge}`
+							`r2 bucket lock add ${bucketName} --id rule-age --prefix prefix-age --lock-days -10`
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`[Error: Must be a positive number: ${conditionValueAge}]`
+						`[Error: Days must be a positive number: -10]`
 					);
 				});
 				it("it should add a date lock rule using command-line arguments", async () => {
 					setIsTTY(true);
 					const bucketName = "my-bucket";
-					const ruleIdDate = "rule-date";
-					const prefixDate = "prefix-date";
-					const conditionTypeDate = "Date";
-					const conditionValueDate = "2025-01-30";
 
 					mockBucketLockPutNew(bucketName, [
 						{
-							id: ruleIdDate,
+							id: "rule-date",
 							enabled: true,
-							prefix: prefixDate,
+							prefix: "prefix-date",
 							condition: {
-								type: conditionTypeDate,
+								type: "Date",
 								date: "2025-01-30T00:00:00.000Z",
 							},
 						},
 					]);
 					// date
 					await runWrangler(
-						`r2 bucket lock add ${bucketName} --id ${ruleIdDate} --prefix ${prefixDate} --lock-date ${conditionValueDate}`
+						`r2 bucket lock add ${bucketName} --id rule-date --prefix prefix-date --lock-date 2025-01-30`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding lock rule 'rule-date' to bucket 'my-bucket'...
 						✨ Added lock rule 'rule-date' to bucket 'my-bucket'."
 					  `);
 				});
-				it("it should add a date lock rule using command-line arguments", async () => {
+				it("it should fail to add an invalid date lock rule using command-line arguments", async () => {
 					setIsTTY(true);
 					const bucketName = "my-bucket";
-					const ruleIdDate = "rule-date";
-					const prefixDate = "prefix-date";
-					const conditionTypeDate = "Date";
-					const conditionValueDate = "January 30, 2025";
 
-					mockBucketLockPutNew(bucketName, [
-						{
-							id: ruleIdDate,
-							enabled: true,
-							prefix: prefixDate,
-							condition: {
-								type: conditionTypeDate,
-								date: "2025-01-30T00:00:00.000Z",
-							},
-						},
-					]);
+					mockBucketLockGetExistingRules(bucketName, []);
 					// date
 					await expect(() =>
 						runWrangler(
-							`r2 bucket lock add ${bucketName} --id ${ruleIdDate} --prefix ${prefixDate} --lock-date '${conditionValueDate}'`
+							`r2 bucket lock add ${bucketName} --id "rule-date" --prefix "prefix-date" --lock-date "January 30, 2025"`
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`[Error: Must be a valid date in the YYYY-MM-DD format: ${conditionValueDate}]`
+						`[Error: Date must be a valid date in the YYYY-MM-DD format: January 30, 2025]`
 					);
 				});
 				it("it should add an indefinite lock rule using command-line arguments", async () => {
 					setIsTTY(false);
 					const bucketName = "my-bucket";
-					const ruleIdIndefinite = "rule-indefinite";
-					const prefixIndefinite = "prefix-indefinite";
-					const conditionTypeIndefinite = "Indefinite";
 
 					mockBucketLockPutNew(bucketName, [
 						{
-							id: ruleIdIndefinite,
+							id: "rule-indefinite",
 							enabled: true,
-							prefix: prefixIndefinite,
+							prefix: "prefix-indefinite",
 							condition: {
-								type: conditionTypeIndefinite,
+								type: "Indefinite",
 							},
 						},
 					]);
 
 					mockConfirm({
 						text:
-							`Are you sure you want to add lock rule '${ruleIdIndefinite}' to bucket '${bucketName}' without an expiration? ` +
+							`Are you sure you want to add lock rule 'rule-indefinite' to bucket '${bucketName}' without an expiration? ` +
 							`The lock rule will apply to all matching objects indefinitely.`,
 						result: true,
 					});
 
 					await runWrangler(
-						`r2 bucket lock add ${bucketName} --id ${ruleIdIndefinite} --prefix ${prefixIndefinite}`
+						`r2 bucket lock add ${bucketName} --id rule-indefinite --prefix prefix-indefinite`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"? Are you sure you want to add lock rule 'rule-indefinite' to bucket 'my-bucket' without an expiration? The lock rule will apply to all matching objects indefinitely.
@@ -2653,6 +2675,18 @@ describe("r2", () => {
 						Adding lock rule 'rule-indefinite' to bucket 'my-bucket'...
 						✨ Added lock rule 'rule-indefinite' to bucket 'my-bucket'."
 					  `);
+				});
+				it("it should fail a lock rule without any command-line arguments", async () => {
+					setIsTTY(false);
+					const bucketName = "my-bucket";
+
+					mockBucketLockGetExistingRules(bucketName, []);
+					// date
+					await expect(() =>
+						runWrangler(`r2 bucket lock add ${bucketName}`)
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: Must specify a rule ID.]`
+					);
 				});
 			});
 			describe("remove", () => {
