@@ -2,6 +2,7 @@ import assert from "node:assert";
 import {
 	DurableObject as DurableObjectClass,
 	WorkerEntrypoint,
+	WorkflowEntrypoint,
 } from "cloudflare:workers";
 import { maybeHandleRunRequest, runInRunnerObject } from "./durable-objects";
 import { getResolvedMainPath, stripInternalEnv } from "./env";
@@ -40,7 +41,10 @@ function importModule(
  * things a little trickier for us...
  */
 function createProxyPrototypeClass<
-	T extends typeof WorkerEntrypoint | typeof DurableObjectClass,
+	T extends
+		| typeof WorkerEntrypoint
+		| typeof DurableObjectClass
+		| typeof WorkflowEntrypoint,
 	ExtraPrototype = unknown,
 >(
 	superClass: T,
@@ -486,6 +490,70 @@ export function createDurableObjectWrapper(
 			}
 		};
 	}
+
+	return Wrapper;
+}
+
+// =============================================================================
+// `WorkflowEntrypoint` wrappers
+// =============================================================================
+
+type WorkflowEntrypointConstructor = {
+	new (
+		...args: ConstructorParameters<typeof WorkflowEntrypoint>
+	): WorkflowEntrypoint;
+};
+
+export function createWorkflowEntrypointWrapper(entrypoint: string) {
+	const Wrapper = createProxyPrototypeClass(
+		WorkflowEntrypoint,
+		function (this: WorkflowEntrypoint<InternalUserEnv>, key) {
+			// only Workflow `run` should be exposed over RPC
+			if (!["run"].includes(key)) {
+				return;
+			}
+
+			const property = getWorkerEntrypointRPCProperty(
+				this as unknown as WorkerEntrypoint<InternalUserEnv>,
+				entrypoint,
+				key
+			);
+			return getRPCPropertyCallableThenable(key, property);
+		}
+	);
+
+	Wrapper.prototype.run = async function (
+		this: WorkflowEntrypoint<InternalUserEnv>,
+		...args
+	) {
+		const { mainPath, entrypointValue } = await getWorkerEntrypointExport(
+			this.env,
+			entrypoint
+		);
+		const userEnv = stripInternalEnv(this.env);
+		// entrypoint value should always be an object, worker entrypoint only supports this
+		if (typeof entrypointValue === "function") {
+			// Assuming the user has defined a `WorkflowEntrypoint` subclass
+			const ctor = entrypointValue as WorkflowEntrypointConstructor;
+			const instance = new ctor(this.ctx, userEnv);
+			// noinspection SuspiciousTypeOfGuard
+			if (!(instance instanceof WorkflowEntrypoint)) {
+				const message = `Expected ${entrypoint} export of ${mainPath} to be a subclass of \`WorkerEntrypoint\``;
+				throw new TypeError(message);
+			}
+			const maybeFn = instance["run"];
+			if (typeof maybeFn === "function") {
+				return maybeFn.call(instance, ...args);
+			} else {
+				const message = `Expected ${entrypoint} export of ${mainPath} to define a \`run()\` method`;
+				throw new TypeError(message);
+			}
+		} else {
+			// Assuming the user has messed up
+			const message = `Expected ${entrypoint} export of ${mainPath}to be an object or a class, got ${entrypointValue}`;
+			throw new TypeError(message);
+		}
+	};
 
 	return Wrapper;
 }
