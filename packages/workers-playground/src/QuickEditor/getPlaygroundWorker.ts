@@ -52,10 +52,6 @@ async function parseSerialisedPlaygroundWorker(
 				])
 		)
 	);
-	worker.modules["metadata.json"] = {
-		contents: new TextEncoder().encode(JSON.stringify(worker.metadata)),
-		type: "text/plain",
-	};
 
 	return worker;
 }
