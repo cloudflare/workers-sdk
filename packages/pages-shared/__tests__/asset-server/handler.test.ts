@@ -8,7 +8,6 @@ import { createMetadataObject } from "../../metadata-generator/createMetadataObj
 import type { HandlerContext } from "../../asset-server/handler";
 import type { Metadata } from "../../asset-server/metadata";
 import type { RedirectRule } from "../../metadata-generator/types";
-import type { Cache as WorkersCache } from "@cloudflare/workers-types/experimental";
 
 describe("asset-server handler", () => {
 	test("Returns appropriate status codes", async () => {

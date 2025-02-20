@@ -1,11 +1,13 @@
-// Vendored from Miniflare v2: https://github.com/cloudflare/miniflare/blob/master/packages/html-rewriter/src/rewriter.ts
-import { ReadableStream, TransformStream } from "stream/web";
+import { TransformStream } from "stream/web";
 import { Response } from "miniflare";
 import type {
 	HTMLRewriter as BaseHTMLRewriter,
 	DocumentHandlers,
 	ElementHandlers,
 } from "html-rewriter-wasm";
+import type { ReadableStream } from "stream/web";
+
+// Vendored from Miniflare v2: https://github.com/cloudflare/miniflare/blob/master/packages/html-rewriter/src/rewriter.ts
 
 type SelectorElementHandlers = [selector: string, handlers: ElementHandlers];
 
@@ -27,7 +29,9 @@ export class HTMLRewriter {
 		const body = response.body as ReadableStream<Uint8Array> | null;
 		// HTMLRewriter doesn't run the end handler if the body is null, so it's
 		// pointless to setup the transform stream.
-		if (body === null) return new Response(body, response);
+		if (body === null) {
+			return new Response(body, response);
+		}
 
 		// Make sure we validate chunks are BufferSources and convert them to
 		// Uint8Arrays as required by the Rust glue code.
@@ -44,10 +48,15 @@ export class HTMLRewriter {
 				// TODO: async compile the WebAssembly module
 				const {
 					HTMLRewriter: BaseHTMLRewriter,
-				}: typeof import("html-rewriter-wasm") = require("html-rewriter-wasm");
+					// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+				}: typeof import("html-rewriter-wasm") = await import(
+					"html-rewriter-wasm"
+				);
 				rewriter = new BaseHTMLRewriter((output) => {
 					// enqueue will throw on empty chunks
-					if (output.length !== 0) controller.enqueue(output);
+					if (output.length !== 0) {
+						controller.enqueue(output);
+					}
 				});
 				// Add all registered handlers
 				for (const [selector, handlers] of this.#elementHandlers) {
