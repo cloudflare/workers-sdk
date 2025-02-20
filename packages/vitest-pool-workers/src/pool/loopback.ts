@@ -327,7 +327,7 @@ function checkAllStorageOperationsResolved(
 			separator,
 			`Failed to ${action} isolated storage stack frame in ${source}.`,
 			`In particular, we were unable to ${action} ${LIST_FORMAT.format(failedProducts)} storage.`,
-			"This usually means your Worker access storage outside of a test, or some resources have not been disposed of properly.",
+			"This usually means your Worker tried to access storage outside of a test, or some resources have not been disposed of properly.",
 			"See https://developers.cloudflare.com/workers/testing/vitest-integration/known-issues/#isolated-storage for common causes and suggested solution.",
 			"\x1b[2m"
 		);
