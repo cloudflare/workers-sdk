@@ -32,7 +32,7 @@ jobs:
           username: ${{ github.actor }}
           team: wrangler
 
-      - name: Stop workflow if user is not a team member
+      - name: Stop workflow if user is not a wrangler team member
         if: ${{ steps.teamAffiliation.outputs.isTeamMember == false }}
         run: |
           echo "You must be on the "wrangler" team to trigger this job."
