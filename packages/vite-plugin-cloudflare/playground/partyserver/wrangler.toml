@@ -1,0 +1,11 @@
+name = "api"
+main = "./worker/index.ts"
+compatibility_date = "2024-12-30"
+assets = { not_found_handling = "single-page-application", binding = "Assets" }
+
+[durable_objects]
+bindings = [{ name = "MyServer", class_name = "MyServer" }]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["MyServer"]
