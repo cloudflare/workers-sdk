@@ -182,10 +182,7 @@ export const typesCommand = createCommand({
 		const tsconfigTypes = readTsconfigTypes(tsconfigPath);
 		const { mode } = getNodeCompat(
 			config.compatibility_date,
-			config.compatibility_flags,
-			{
-				nodeCompat: config.node_compat,
-			}
+			config.compatibility_flags
 		);
 		if (args.includeRuntime) {
 			logRuntimeTypesMessage(outputPath, tsconfigTypes, mode !== null);
