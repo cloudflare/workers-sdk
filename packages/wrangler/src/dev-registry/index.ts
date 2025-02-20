@@ -69,7 +69,7 @@ export async function getBoundRegisteredWorkers(
 	existingWorkerDefinitions?: WorkerRegistry | undefined
 ): Promise<WorkerRegistry | undefined> {
 	const serviceNames = (services || []).map(
-		(serviceBinding) => serviceBinding.service
+		(serviceBinding) => serviceBinding.environment ? `${serviceBinding.service}-${serviceBinding.environment}` : serviceBinding.service
 	);
 	const durableObjectServices = (
 		durableObjects || { bindings: [] }
