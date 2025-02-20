@@ -381,7 +381,7 @@ We generally cut Wrangler releases on Tuesday & Thursday each week. If you need 
 
 ### Hotfix releases
 
-Only members of `@cloudflare/wrangler` can trigger a hotfix. In general, a hotfix release should be treated as a solution of last resort—before use, please first check whether the fix can be applied and released using the regular Version Packages release flow.
+Only members of `@cloudflare/wrangler` can trigger a hotfix release. In general, a hotfix release should be treated as a solution of last resort—before use, please first check whether the fix can be applied and released using the regular Version Packages release flow.
 
 If a hotfix release of Wrangler, Miniflare, or C3 is required, you should:
 
