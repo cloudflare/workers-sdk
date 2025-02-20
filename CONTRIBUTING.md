@@ -389,5 +389,5 @@ If a hotfix release of Wrangler, Miniflare, or C3 is required, you should:
 
 - Get approvals for that PR, and make sure CI checks are passing
 - Manually trigger a hotfix release from that PR using the "Release a hotfix" GitHub action. Optionally, you can first publish it to the `hotfix` tag on NPM in order to verify the release.
-- _[CRUCIAL]_ Once the hotfix release is out and verified, merge the fixes into main before the next regular release of `workers-sdk`. 
+- _[CRUCIAL]_ Once the hotfix release is out and verified, merge the fixes into main before the next regular release of `workers-sdk`.
 - Make sure that the version number of the next changesets-based release of Wrangler/Miniflare/C3 is greater than the version used for the hotfix: add a dummy `minor` changeset entry for each of the packages that had a hotfix published.
