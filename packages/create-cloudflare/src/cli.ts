@@ -34,7 +34,7 @@ import {
 	updatePackageScripts,
 } from "./templates";
 import { validateProjectDirectory } from "./validators";
-import { installWorkersTypes } from "./workers";
+import { generateWorkersTypes } from "./workers";
 import { updateWranglerConfig } from "./wrangler/config";
 import type { C3Args, C3Context } from "types";
 
@@ -154,7 +154,6 @@ const configure = async (ctx: C3Context) => {
 	startSection("Configuring your application for Cloudflare", "Step 2 of 3");
 
 	await installWrangler();
-	await installWorkersTypes(ctx);
 
 	// Note: This _must_ be called before the configure phase since
 	//       pre-existing workers assume its presence in their configure phase
@@ -168,6 +167,7 @@ const configure = async (ctx: C3Context) => {
 	addWranglerToGitIgnore(ctx);
 
 	await updatePackageScripts(ctx);
+	await generateWorkersTypes(ctx);
 
 	await offerGit(ctx);
 	await gitCommit(ctx);
