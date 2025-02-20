@@ -16,11 +16,11 @@ function App() {
 			<h1>Vite + React + PartyServer</h1>
 			<button
 				onClick={() => socket.send("Hello from the client!")}
-				aria-label="get-name"
+				aria-label="send message"
 			>
 				Send message
 			</button>
-			<p>Message from the server: {message}</p>
+			<p>{message}</p>
 		</main>
 	);
 }

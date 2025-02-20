@@ -8,7 +8,7 @@ interface Env extends Record<string, unknown> {
 
 export class MyServer extends Server<Env> {
 	override onMessage(connection: Connection<unknown>, message: string) {
-		connection.send(`Received '${message}'`);
+		connection.send(`Message from the server: received '${message}'`);
 	}
 }
 
