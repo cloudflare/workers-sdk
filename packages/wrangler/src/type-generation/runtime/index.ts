@@ -46,7 +46,7 @@ export async function generateRuntimeTypes({
 		throw new Error("Config must have a compatibility date.");
 	}
 
-	const header = `// Runtime types generated with workerd@${version} ${compatibility_date} ${compatibility_flags.join(",")}`;
+	const header = `// Runtime types generated with workerd@${version} ${compatibility_date} ${compatibility_flags.sort().join(",")}`;
 
 	try {
 		const file = (await readFile(outFile, "utf8")).split("\n");
