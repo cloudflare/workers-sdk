@@ -1,7 +1,7 @@
 import { polyfill } from ".";
 
 export default async () => {
-	const { HTMLRewriter } = await import("html-rewriter-wasm");
+	const { HTMLRewriter } = await import("./html-rewriter");
 	const mf = await import("miniflare");
 	polyfill({
 		fetch: mf.fetch,
