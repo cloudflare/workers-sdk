@@ -8,7 +8,6 @@ import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
 import {
 	getBucketLockRules,
-	isNonNegativeNumber,
 	isValidDate,
 	putBucketLockRules,
 	tableFromBucketLockRulesResponse,
@@ -87,7 +86,7 @@ export const r2BucketLockAddCommand = createCommand({
 		},
 		"lock-days": {
 			describe: "Number of days after which objects expire",
-			type: "string",
+			type: "number",
 			conflicts: "lock-date",
 		},
 		"lock-date": {
@@ -136,7 +135,7 @@ export const r2BucketLockAddCommand = createCommand({
 				'Enter a prefix for the bucket lock rule (set to "" for all prefixes)',
 				{ defaultValue: "" }
 			);
-			if (prefix === undefined) {
+			if (prefix === "") {
 				const confirmedAdd = await confirm(
 					`Are you sure you want to add lock rule '${id}' to bucket '${bucket}' without a prefix? ` +
 						`The lock rule will apply to all objects in your bucket.`
@@ -152,16 +151,34 @@ export const r2BucketLockAddCommand = createCommand({
 			newRule.prefix = prefix;
 		}
 
+		if (lockDays === undefined && lockDate === undefined && !force) {
+			const confirmIndefinite = await confirm(
+				`Are you sure you want to add lock rule '${id}' to bucket '${bucket}' without an expiration? ` +
+					`The lock rule will apply to all matching objects indefinitely.`,
+				{ defaultValue: true }
+			);
+			if (confirmIndefinite !== true) {
+				logger.log("Add cancelled.");
+				return;
+			}
+		}
+
 		if (lockDays !== undefined) {
-			if (isNonNegativeNumber(lockDays)) {
-				const conditionDaysValue = Number(lockDays) * 86400; // Convert days to seconds
-				newRule.condition = {
-					type: "Age",
-					maxAgeSeconds: conditionDaysValue,
-				};
+			if (!isNaN(lockDays)) {
+				if (lockDays > 0) {
+					const conditionDaysValue = Number(lockDays) * 86400; // Convert days to seconds
+					newRule.condition = {
+						type: "Age",
+						maxAgeSeconds: conditionDaysValue,
+					};
+				} else {
+					throw new UserError(`Days must be a positive number: ${lockDays}`, {
+						telemetryMessage: "Lock days not a positive number.",
+					});
+				}
 			} else {
-				throw new UserError(`Must be a positive number: ${String(lockDays)}`, {
-					telemetryMessage: true,
+				throw new UserError(`Days must be a number.`, {
+					telemetryMessage: "Lock days not a positive number.",
 				});
 			}
 		} else if (lockDate !== undefined) {
@@ -174,26 +191,17 @@ export const r2BucketLockAddCommand = createCommand({
 				};
 			} else {
 				throw new UserError(
-					`Must be a valid date in the YYYY-MM-DD format: ${String(lockDate)}`,
-					{ telemetryMessage: true }
+					`Date must be a valid date in the YYYY-MM-DD format: ${String(lockDate)}`,
+					{
+						telemetryMessage:
+							"Lock date not a valid date in the YYYY-MM-DD format.",
+					}
 				);
 			}
 		} else {
 			newRule.condition = {
 				type: "Indefinite",
 			};
-		}
-
-		if (lockDays === undefined && lockDate === undefined && !force) {
-			const confirmIndefinite = confirm(
-				`Are you sure you want to add lock rule '${id}' to bucket '${bucket}' without an expiration? ` +
-					`The lock rule will apply to all matching objects indefinitely.`,
-				{ defaultValue: true }
-			);
-			if (!confirmIndefinite) {
-				logger.log("Add cancelled.");
-				return;
-			}
 		}
 		rules.push(newRule);
 		logger.log(`Adding lock rule '${id}' to bucket '${bucket}'...`);
@@ -244,7 +252,10 @@ export const r2BucketLockRemoveCommand = createCommand({
 		if (index === -1) {
 			throw new UserError(
 				`Lock rule with ID '${id}' not found in configuration for '${bucket}'.`,
-				{ telemetryMessage: true }
+				{
+					telemetryMessage:
+						"Lock rule with ID not found in configuration for bucket.",
+				}
 			);
 		}
 
@@ -300,7 +311,7 @@ export const r2BucketLockSetCommand = createCommand({
 				throw new ParseError({
 					text: `Failed to read or parse the lock configuration config file: '${e.message}'`,
 					telemetryMessage:
-						"Failed to read or parse the lock configuration config file",
+						"Failed to read or parse the lock configuration config file.",
 				});
 			} else {
 				throw e;
