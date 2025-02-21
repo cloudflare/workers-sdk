@@ -162,6 +162,7 @@ export function createCloudflareEnvironmentOptions(
 			// Note: ssr pre-bundling is opt-in and we need to enable it by setting `noDiscovery` to false
 			noDiscovery: false,
 			entries: workerConfig.main,
+			exclude: [...cloudflareBuiltInModules],
 			esbuildOptions: {
 				platform: "neutral",
 				conditions: [...defaultConditions, "development"],
