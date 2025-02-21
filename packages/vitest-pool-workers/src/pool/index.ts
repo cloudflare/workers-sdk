@@ -610,7 +610,11 @@ async function getProjectMiniflare(
 	if (project.mf === undefined) {
 		// If `mf` is now `undefined`, create new instances
 		if (singleInstance) {
-			log.info(`Starting single runtime for ${project.relativePath}...`);
+			log.info(
+				`Starting single runtime for ${project.relativePath}` +
+					`${mfOptions.inspectorPort !== undefined ? `with inspector on port ${mfOptions.inspectorPort}` : ""}` +
+					`...`
+			);
 			project.mf = new Miniflare(mfOptions);
 		} else {
 			log.info(`Starting isolated runtimes for ${project.relativePath}...`);
