@@ -20,10 +20,7 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async () => {
-	const packages = [
-		"@opennextjs/cloudflare@0.4.x",
-		"@cloudflare/workers-types",
-	];
+	const packages = ["@opennextjs/cloudflare@0.4.x"];
 	await installPackages(packages, {
 		dev: true,
 		startText: "Adding the Cloudflare adapter",
@@ -80,5 +77,6 @@ export default {
 	devScript: "dev",
 	previewScript: "preview",
 	deployScript: "deploy",
+	typesPath: "cloudflare-env.d.ts",
 	compatibilityFlags: ["nodejs_compat"],
 } as TemplateConfig;

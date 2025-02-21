@@ -125,5 +125,6 @@ const config: TemplateConfig = {
 	devScript: "dev",
 	deployScript: "deploy",
 	previewScript: "preview",
+	typesPath: "src/worker-configuration.d.ts",
 };
 export default config;

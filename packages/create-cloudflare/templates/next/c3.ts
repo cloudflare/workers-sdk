@@ -75,14 +75,6 @@ const configure = async (ctx: C3Context) => {
 
 	const usesTs = usesTypescript(ctx);
 
-	if (usesTs) {
-		copyFile(
-			join(getTemplatePath(ctx), "env.d.ts"),
-			join(projectPath, "env.d.ts"),
-		);
-		updateStatus("Created an env.d.ts file");
-	}
-
 	const installEslintPlugin = await shouldInstallNextOnPagesEslintPlugin(ctx);
 
 	if (installEslintPlugin) {
@@ -142,7 +134,6 @@ export const writeEslintrc = async (ctx: C3Context): Promise<void> => {
 const addDevDependencies = async (installEslintPlugin: boolean) => {
 	const packages = [
 		"@cloudflare/next-on-pages@1",
-		"@cloudflare/workers-types",
 		"vercel",
 		...(installEslintPlugin ? ["eslint-plugin-next-on-pages"] : []),
 	];
@@ -217,4 +208,5 @@ export default {
 	previewScript: "preview",
 	deployScript: "deploy",
 	compatibilityFlags: ["nodejs_compat"],
+	typesPath: "env.d.ts",
 } as TemplateConfig;

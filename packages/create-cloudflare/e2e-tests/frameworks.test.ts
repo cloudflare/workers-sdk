@@ -47,6 +47,10 @@ type FrameworkTestConfig = RunnerConfig & {
 	verifyBuildCfTypes?: {
 		outputFile: string;
 		envInterfaceName: string;
+		/** The command used to generate types. We expect to see this in types file header. */
+		command: string;
+		/** Compat flag in project config. We expect to see this in types file header. */
+		compatFlags?: string[];
 	};
 	verifyBuild?: {
 		outputDir: string;
@@ -130,6 +134,12 @@ function getFrameworkTests(opts: {
 					route: "/",
 					expectedText: "Hello Hono!",
 				},
+				verifyBuildCfTypes: {
+					outputFile: "worker-configuration.d.ts",
+					envInterfaceName: "CloudflareBindings",
+					command: "wrangler types --env-interface CloudflareBindings",
+					compatFlags: [],
+				},
 				promptHandlers: [
 					{
 						matcher: /Do you want to install project dependencies\?/,
@@ -158,6 +168,8 @@ function getFrameworkTests(opts: {
 				verifyBuildCfTypes: {
 					outputFile: "worker-configuration.d.ts",
 					envInterfaceName: "Env",
+					command: "wrangler types",
+					compatFlags: ["nodejs_compat"],
 				},
 			},
 			remix: {
@@ -176,6 +188,8 @@ function getFrameworkTests(opts: {
 				verifyBuildCfTypes: {
 					outputFile: "worker-configuration.d.ts",
 					envInterfaceName: "Env",
+					command: "wrangler types",
+					compatFlags: [],
 				},
 				flags: ["--typescript", "--no-install", "--no-git-init"],
 			},
@@ -184,6 +198,9 @@ function getFrameworkTests(opts: {
 				verifyBuildCfTypes: {
 					outputFile: "cloudflare-env.d.ts",
 					envInterfaceName: "CloudflareEnv",
+					command:
+						"wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+					compatFlags: ["nodejs_compat"],
 				},
 				verifyPreview: {
 					route: "/test",
@@ -216,6 +233,8 @@ function getFrameworkTests(opts: {
 				verifyBuildCfTypes: {
 					outputFile: "worker-configuration.d.ts",
 					envInterfaceName: "Env",
+					command: "wrangler types",
+					compatFlags: [],
 				},
 			},
 			solid: {
@@ -272,6 +291,12 @@ function getFrameworkTests(opts: {
 				verifyPreview: {
 					route: "/test",
 					expectedText: "C3_TEST",
+				},
+				verifyBuildCfTypes: {
+					outputFile: "./src/worker-configuration.d.ts",
+					envInterfaceName: "Env",
+					command: "wrangler types",
+					compatFlags: [],
 				},
 			},
 			vue: {
@@ -359,6 +384,8 @@ function getFrameworkTests(opts: {
 				verifyBuildCfTypes: {
 					outputFile: "worker-configuration.d.ts",
 					envInterfaceName: "Env",
+					command: "wrangler types",
+					compatFlags: [],
 				},
 				verifyBuild: {
 					outputDir: "./dist/analog/public",
@@ -413,6 +440,12 @@ function getFrameworkTests(opts: {
 					route: "/",
 					expectedText: "Hello Hono!",
 				},
+				verifyBuildCfTypes: {
+					outputFile: "worker-configuration.d.ts",
+					envInterfaceName: "CloudflareBindings",
+					command: "wrangler types --env-interface CloudflareBindings",
+					compatFlags: [],
+				},
 				promptHandlers: [
 					{
 						matcher: /Do you want to install project dependencies\?/,
@@ -441,6 +474,8 @@ function getFrameworkTests(opts: {
 				verifyBuildCfTypes: {
 					outputFile: "worker-configuration.d.ts",
 					envInterfaceName: "Env",
+					command: "wrangler types",
+					compatFlags: ["nodejs_compat"],
 				},
 			},
 			remix: {
@@ -459,6 +494,8 @@ function getFrameworkTests(opts: {
 				verifyBuildCfTypes: {
 					outputFile: "worker-configuration.d.ts",
 					envInterfaceName: "Env",
+					command: "wrangler types",
+					compatFlags: [],
 				},
 				verifyBuild: {
 					outputDir: "./build/client",
@@ -479,6 +516,8 @@ function getFrameworkTests(opts: {
 				verifyBuildCfTypes: {
 					outputFile: "env.d.ts",
 					envInterfaceName: "CloudflareEnv",
+					command: "wrangler types --env-interface CloudflareEnv env.d.ts",
+					compatFlags: ["nodejs_compat"],
 				},
 				verifyDeploy: {
 					route: "/",
@@ -517,6 +556,8 @@ function getFrameworkTests(opts: {
 				verifyBuildCfTypes: {
 					outputFile: "worker-configuration.d.ts",
 					envInterfaceName: "Env",
+					command: "wrangler types",
+					compatFlags: ["nodejs_compat"],
 				},
 				verifyBuild: {
 					outputDir: "./dist",
@@ -605,6 +646,12 @@ function getFrameworkTests(opts: {
 					script: "build",
 					route: "/test",
 					expectedText: "C3_TEST",
+				},
+				verifyBuildCfTypes: {
+					outputFile: "./src/worker-configuration.d.ts",
+					envInterfaceName: "Env",
+					command: "wrangler types",
+					compatFlags: [],
 				},
 			},
 			vue: {
@@ -699,7 +746,7 @@ describe.concurrent(
 							project.path,
 							logStream,
 						);
-						await verifyBuildCfTypesScript(testConfig, project.path, logStream);
+						await verifyBuildCfTypesScript(testConfig, project.path);
 						await verifyBuildScript(testConfig, project.path, logStream);
 					} catch (e) {
 						console.error("ERROR", e);
@@ -873,42 +920,34 @@ const verifyPreviewScript = async (
 const verifyBuildCfTypesScript = async (
 	{ verifyBuildCfTypes }: FrameworkTestConfig,
 	projectPath: string,
-	logStream: Writable,
 ) => {
 	if (!verifyBuildCfTypes) {
 		return;
 	}
 
-	const { outputFile, envInterfaceName } = verifyBuildCfTypes;
+	const { outputFile, envInterfaceName, command, compatFlags } =
+		verifyBuildCfTypes;
 
 	const outputFileContentPre = readFile(join(projectPath, outputFile));
 	const outputFileContentPreLines = outputFileContentPre.split("\n");
 
 	// the file contains the "Generated by Wrangler" comment without a timestamp
-	expect(outputFileContentPreLines).toContain("// Generated by Wrangler");
+	expect(outputFileContentPreLines[0]).toContain(
+		`// Generated by Wrangler by running \`${command}\``,
+		// `"// Generated by Wrangler by running \`wrangler types\` (hash: e82ba4d7b995dd9ca6fb0332d81f889b)"`,
+	);
 
 	// the file contains the env interface
 	expect(outputFileContentPreLines).toContain(
 		`interface ${envInterfaceName} {`,
 	);
 
-	// Run the `cf-typegen` script to generate types for bindings in fixture
-	const buildTypesProc = spawnWithLogging(
-		[pm, "run", "cf-typegen"],
-		{ cwd: projectPath },
-		logStream,
+	// output contains runtime types too
+	expect(outputFileContentPreLines[1]).toContain(
+		`"// Runtime types generated with workerd@`,
 	);
-	await waitForExit(buildTypesProc);
-
-	const outputFileContentPost = readFile(join(projectPath, outputFile));
-	const outputFileContentPostLines = outputFileContentPost.split("\n");
-
-	// the file doesn't contain the "Generated by Wrangler" comment anymore
-	expect(outputFileContentPostLines).not.toContain("// Generated by Wrangler");
-
-	// the file still contains the env interface
-	expect(outputFileContentPostLines).toContain(
-		`interface ${envInterfaceName} {`,
+	expect(outputFileContentPreLines[1]).toContain(
+		compatFlags?.sort().join(", "),
 	);
 };
 
