@@ -26,7 +26,7 @@ import { createMethodsRPC } from "vitest/node";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { createChunkingSocket } from "../shared/chunking-socket";
 import { CompatibilityFlagAssertions } from "./compatibility-flag-assertions";
-import { OPTIONS_PATH, parseProjectOptions, setupInspector } from "./config";
+import { OPTIONS_PATH, parseProjectOptions } from "./config";
 import {
 	getProjectPath,
 	getRelativeProjectPath,
@@ -891,15 +891,14 @@ async function executeMethod(
 		if (workersProject === undefined) {
 			workersProject = {
 				project,
-				options: await parseProjectOptions(project),
+				options: await parseProjectOptions(project, ctx),
 				testFiles: new Set(),
 				relativePath: getRelativeProjectPath(project),
 			};
-			setupInspector(workersProject.options, ctx);
 			allProjects.set(projectName, workersProject);
 		} else if (!parsedProjectOptions.has(project)) {
 			workersProject.project = project;
-			workersProject.options = await parseProjectOptions(project);
+			workersProject.options = await parseProjectOptions(project, ctx);
 			workersProject.relativePath = getRelativeProjectPath(project);
 		}
 		workersProject.testFiles.add(testFile);

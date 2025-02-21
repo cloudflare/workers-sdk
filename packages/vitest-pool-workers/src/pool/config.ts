@@ -231,7 +231,8 @@ async function parseCustomPoolOptions(
 }
 
 export async function parseProjectOptions(
-	project: WorkspaceProject
+	project: WorkspaceProject,
+	ctx: Vitest
 ): Promise<WorkersPoolOptionsWithDefines> {
 	// Make sure the user hasn't specified a custom environment. This was how
 	// users enabled Miniflare 2's Vitest environment, so it's likely users will
@@ -271,9 +272,28 @@ export async function parseProjectOptions(
 			};
 			workersPoolOptions = await workersPoolOptions({ inject });
 		}
-		return await parseCustomPoolOptions(rootPath, workersPoolOptions, {
+		const options = await parseCustomPoolOptions(rootPath, workersPoolOptions, {
 			path: OPTIONS_PATH_ARRAY,
 		});
+
+		if (!ctx.config.inspector.enabled) {
+			// If the inspector isn't enabled, unset the "inspectorPort" option
+			options.inspectorPort = undefined;
+		} else {
+			if (!options.singleWorker) {
+				log.warn(`Tests run in a single worker when the inspector is open.`);
+
+				options.singleWorker = true;
+			}
+
+			// Fallback to the vitest inspector port if not specified
+			options.inspectorPort ??= ctx.config.inspector.port ?? 9229;
+
+			// Disable the default node inspector
+			ctx.config.inspector.enabled = false;
+		}
+
+		return options;
 	} catch (e) {
 		if (!isZodErrorLike(e)) {
 			throw e;
@@ -291,27 +311,4 @@ export async function parseProjectOptions(
 			`Unexpected pool options in project ${relativePath}:\n${formatted}`
 		);
 	}
-}
-
-export function setupInspector(
-	options: WorkersPoolOptionsWithDefines,
-	ctx: Vitest
-): void {
-	if (!ctx.config.inspector.enabled) {
-		// If the inspector isn't enabled, unset the "inspectorPort" option
-		options.inspectorPort = undefined;
-		return;
-	}
-
-	if (!options.singleWorker) {
-		log.warn(`Tests run in a single worker when the inspector is open.`);
-
-		options.singleWorker = true;
-	}
-
-	// Fallback to the vitest inspector port if not specified
-	options.inspectorPort ??= ctx.config.inspector.port ?? 9229;
-
-	// Disable the default node inspector
-	ctx.config.inspector.enabled = false;
 }
