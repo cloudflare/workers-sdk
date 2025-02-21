@@ -334,7 +334,7 @@ export async function parseProjectOptions(
 }
 
 // Vitest Inspector port
-let vitestInspectorPort: number | null;
+let vitestInspectorPort: number | null = null;
 
 function getNodeInspectorPort(): number | null {
 	const url = inspector.url();

@@ -612,7 +612,7 @@ async function getProjectMiniflare(
 		if (singleInstance) {
 			log.info(
 				`Starting single runtime for ${project.relativePath}` +
-					`${mfOptions.inspectorPort !== undefined ? `with inspector on port ${mfOptions.inspectorPort}` : ""}` +
+					`${mfOptions.inspectorPort !== undefined ? ` with inspector on port ${mfOptions.inspectorPort}` : ""}` +
 					`...`
 			);
 			project.mf = new Miniflare(mfOptions);
