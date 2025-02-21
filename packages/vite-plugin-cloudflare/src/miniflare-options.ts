@@ -17,6 +17,7 @@ import {
 import {
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
+	DEFAULT_INSPECTOR_PORT,
 	ROUTER_WORKER_NAME,
 } from "./constants";
 import { getWorkerConfigPaths } from "./deploy-config";
@@ -490,7 +491,7 @@ export function getDevMiniflareOptions(
 export function getPreviewMiniflareOptions(
 	vitePreviewServer: vite.PreviewServer,
 	persistState: PersistState,
-	inspectorPort: number | undefined
+	inspectorPort = DEFAULT_INSPECTOR_PORT
 ): MiniflareOptions {
 	const resolvedViteConfig = vitePreviewServer.config;
 	const configPaths = getWorkerConfigPaths(resolvedViteConfig.root);
