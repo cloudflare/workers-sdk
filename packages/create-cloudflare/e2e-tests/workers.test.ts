@@ -1,3 +1,4 @@
+import { existsSync } from "fs";
 import { join } from "path";
 import { readJSON, readToml } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
@@ -177,6 +178,7 @@ describe
 				const name = testConfig.name ?? testConfig.template;
 				test({ experimental })(
 					name,
+					{ retry: 1, timeout: testConfig.timeout || TEST_TIMEOUT },
 					async ({ project, logStream }) => {
 						try {
 							const deployedUrl = await runCli(
@@ -197,18 +199,20 @@ describe
 							const tomlPath = join(project.path, "wrangler.toml");
 							const jsoncPath = join(project.path, "wrangler.jsonc");
 
-							try {
-								expect(jsoncPath).toExist();
+							if (existsSync(jsoncPath)) {
 								const config = readJSON(jsoncPath) as { main?: string };
 								if (config.main) {
 									expect(join(project.path, config.main)).toExist();
 								}
-							} catch (e) {
-								expect(tomlPath).toExist();
+							} else if (existsSync(tomlPath)) {
 								const config = readToml(tomlPath) as { main?: string };
 								if (config.main) {
 									expect(join(project.path, config.main)).toExist();
 								}
+							} else {
+								expect.fail(
+									`Expected at least one of "${jsoncPath}" or "${tomlPath}" to exist.`,
+								);
 							}
 
 							const { verifyDeploy, verifyTest } = testConfig;
@@ -227,7 +231,6 @@ describe
 							await deleteWorker(project.name);
 						}
 					},
-					{ retry: 1, timeout: testConfig.timeout || TEST_TIMEOUT },
 				);
 			});
 	});
