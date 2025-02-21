@@ -16,6 +16,7 @@ catalog:
   undici: "^5.28.5"
   vitest: "~3.0.5"
   vite: "^5.4.14"
+  esbuild: "0.24.2"
 
 catalogs:
   vite-plugin:

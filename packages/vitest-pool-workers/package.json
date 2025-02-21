@@ -55,7 +55,7 @@
 		"birpc": "0.2.14",
 		"cjs-module-lexer": "^1.2.3",
 		"devalue": "^4.3.0",
-		"esbuild": "0.17.19",
+		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"semver": "^7.7.1",
 		"wrangler": "workspace:*",

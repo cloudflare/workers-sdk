@@ -239,11 +239,8 @@ async function resolveConfig(
 	}
 	const legacySite = unwrapHook(input.legacy?.site, config);
 
-	const legacyAssets = unwrapHook(input.legacy?.legacyAssets, config);
-
 	const entry = await getEntry(
 		{
-			legacyAssets: Boolean(legacyAssets),
 			script: input.entrypoint,
 			moduleRoot: input.build?.moduleRoot,
 			// getEntry only needs to know if assets was specified.
@@ -308,7 +305,6 @@ async function resolveConfig(
 		dev: await resolveDevConfig(config, input),
 		legacy: {
 			site: legacySite,
-			legacyAssets: legacyAssets,
 			enableServiceEnvironments:
 				input.legacy?.enableServiceEnvironments ?? !isLegacyEnv(config),
 		},
@@ -318,12 +314,6 @@ async function resolveConfig(
 		},
 		assets: assetsOptions,
 	} satisfies StartDevWorkerOptions;
-
-	if (resolved.legacy.legacyAssets && resolved.legacy.site) {
-		throw new UserError(
-			"Cannot use legacy assets and Workers Sites in the same Worker."
-		);
-	}
 
 	if (
 		extractBindingsOfType("browser", resolved.bindings).length &&

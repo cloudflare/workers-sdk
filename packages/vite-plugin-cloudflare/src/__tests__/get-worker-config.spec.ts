@@ -24,7 +24,6 @@ describe("getWorkerConfig", () => {
 		expect(raw.main).toMatch(/index\.ts$/);
 		expect(raw.minify).toBeUndefined();
 		expect(raw.name).toEqual("my-worker");
-		expect(raw.node_compat).toBeUndefined();
 		expect(raw.no_bundle).toBeUndefined();
 		expect(raw.preserve_file_names).toBeUndefined();
 		expect(raw.rules).toEqual([]);
@@ -72,7 +71,6 @@ describe("getWorkerConfig", () => {
 		expect(config.main).toMatch(/index\.ts$/);
 		expect(config.minify).toBeUndefined();
 		expect(config.name).toEqual("my-worker");
-		expect(config.node_compat).toBeUndefined();
 		expect(config.no_bundle).toBeUndefined();
 		expect(config.preserve_file_names).toBeUndefined();
 		expect(config.rules).toEqual([]);
@@ -123,8 +121,6 @@ describe("getWorkerConfig", () => {
 		expect("minify" in config).toBeFalsy();
 		expect(raw.minify).toBe(true);
 		expect(config.name).toEqual("my-worker");
-		expect("node_compat" in config).toBeFalsy();
-		expect(raw.node_compat).toEqual(false);
 		expect("no_bundle" in config).toBeFalsy();
 		expect(raw.no_bundle).toEqual(false);
 		expect("preserve_file_names" in config).toBeFalsy();
@@ -153,7 +149,6 @@ describe("getWorkerConfig", () => {
 				"build",
 				"find_additional_modules",
 				"no_bundle",
-				"node_compat",
 				"preserve_file_names",
 				"site",
 				"tsconfig",

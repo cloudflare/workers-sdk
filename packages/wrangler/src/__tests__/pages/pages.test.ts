@@ -161,7 +161,7 @@ describe("pages", () => {
 
 			COMMANDS
 			  wrangler pages secret put <key>     Create or update a secret variable for a Pages project
-			  wrangler pages secret bulk [json]   Bulk upload secrets for a Pages project
+			  wrangler pages secret bulk [file]   Bulk upload secrets for a Pages project
 			  wrangler pages secret delete <key>  Delete a secret variable from a Pages project
 			  wrangler pages secret list          List all secrets for a Pages project
 

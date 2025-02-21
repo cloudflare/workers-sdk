@@ -254,19 +254,6 @@ interface EnvironmentInheritable {
 	triggers: { crons: string[] };
 
 	/**
-	 * Specifies the Usage Model for your Worker. There are two options -
-	 * [bundled](https://developers.cloudflare.com/workers/platform/limits#bundled-usage-model) and
-	 * [unbound](https://developers.cloudflare.com/workers/platform/limits#unbound-usage-model).
-	 * For newly created Workers, if the Usage Model is omitted
-	 * it will be set to the [default Usage Model set on the account](https://dash.cloudflare.com/?account=workers/default-usage-model).
-	 * For existing Workers, if the Usage Model is omitted, it will be
-	 * set to the Usage Model configured in the dashboard for that Worker.
-	 *
-	 * @inheritable
-	 */
-	usage_model: "bundled" | "unbound" | undefined;
-
-	/**
 	 * Specify limits for runtime behavior.
 	 * Only supported for the "standard" Usage Model
 	 *
@@ -299,11 +286,6 @@ interface EnvironmentInheritable {
 		cwd?: string;
 		/** The directory to watch for changes while using wrangler dev, defaults to the current working directory */
 		watch_dir?: string | string[];
-		/**
-		 * Deprecated field previously used to configure the build and upload of the script.
-		 * @deprecated
-		 */
-		upload?: DeprecatedUpload;
 	};
 
 	/**
@@ -319,25 +301,11 @@ interface EnvironmentInheritable {
 	minify: boolean | undefined;
 
 	/**
-	 * Add polyfills for node builtin modules and globals
-	 * @inheritable
-	 */
-	node_compat: boolean | undefined;
-
-	/**
 	 * Designates this Worker as an internal-only "first-party" Worker.
 	 *
 	 * @inheritable
 	 */
 	first_party_worker: boolean | undefined;
-
-	/**
-	 * TODO: remove this as it has been deprecated.
-	 *
-	 * This is just here for now because the `route` commands use it.
-	 * So we need to include it in this type so it is available.
-	 */
-	zone_id?: string;
 
 	/**
 	 * List of bindings that you will send to logfwdr
@@ -878,81 +846,12 @@ export interface EnvironmentNonInheritable {
 }
 
 /**
- * The environment configuration properties that have been deprecated.
- */
-interface EnvironmentDeprecated {
-	/**
-	 * The zone ID of the zone you want to deploy to. You can find this
-	 * in your domain page on the dashboard.
-	 *
-	 * @deprecated This is unnecessary since we can deduce this from routes directly.
-	 */
-	zone_id?: string;
-
-	/**
-	 * Legacy way of defining KVNamespaces that is no longer supported.
-	 *
-	 * @deprecated DO NOT USE. This was a legacy bug from Wrangler v1, that we do not want to support.
-	 */
-	"kv-namespaces"?: string;
-
-	/**
-	 * A list of services that your Worker should be bound to.
-	 *
-	 * @default []
-	 * @deprecated DO NOT USE. We'd added this to test the new service binding system, but the proper way to test experimental features is to use `unsafe.bindings` configuration.
-	 */
-	experimental_services?: {
-		/** The binding name used to refer to the Service */
-		name: string;
-		/** The name of the Service being bound */
-		service: string;
-		/** The Service's environment */
-		environment: string;
-	}[];
-}
-
-/**
- * Deprecated upload configuration.
- */
-export interface DeprecatedUpload {
-	/**
-	 * The format of the Worker script.
-	 *
-	 * @deprecated We infer the format automatically now.
-	 */
-	format?: "modules" | "service-worker";
-
-	/**
-	 * The directory you wish to upload your Worker from,
-	 * relative to the Wrangler configuration file.
-	 *
-	 * Defaults to the directory containing the Wrangler configuration file.
-	 *
-	 * @deprecated
-	 */
-	dir?: string;
-
-	/**
-	 * The path to the Worker script, relative to `upload.dir`.
-	 *
-	 * @deprecated This will be replaced by a command line argument.
-	 */
-	main?: string;
-
-	/**
-	 * @deprecated This is now defined at the top level `rules` field.
-	 */
-	rules?: Environment["rules"];
-}
-
-/**
  * The raw environment configuration that we read from the config file.
  *
  * All the properties are optional, and will be replaced with defaults in the configuration that
  * is used in the rest of the codebase.
  */
-export type RawEnvironment = Partial<Environment> & EnvironmentDeprecated;
+export type RawEnvironment = Partial<Environment>;
 
 /**
  * A bundling resolver rule, defining the modules type for paths that match the specified globs.
@@ -1015,9 +914,6 @@ export type Assets = {
 	 * If false, then respond to requests that match an asset with that asset directly.
 	 * */
 	run_worker_first?: boolean;
-
-	/** Deprecated; Inverse of run_worker_first. Should use run_worker_first instead */
-	experimental_serve_directly?: boolean;
 };
 
 export interface Observability {
