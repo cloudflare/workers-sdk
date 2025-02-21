@@ -45,6 +45,7 @@ overrides:
   '@cloudflare/elements>@types/react': ^18
   capnpc-ts>typescript: 4.2.4
   '@types/node': ^18.19.75
+  vitest>vite: ^5.0.0
 
 patchedDependencies:
   '@cloudflare/component-listbox@1.10.6':
@@ -196,6 +197,21 @@ importers:
 
   fixtures/d1-worker-app:
     devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250214.0
+        version: 4.20250214.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      undici:
+        specifier: catalog:default
+        version: 5.28.5
+      vitest:
+        specifier: catalog:default
+        version: 3.0.5(@types/node@18.19.76)(@vitest/ui@3.0.5)(jiti@2.4.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -11658,7 +11674,7 @@ snapshots:
   '@actions/http-client@2.2.0':
     dependencies:
       tunnel: 0.0.6
-      undici: 5.28.4
+      undici: 5.28.5
 
   '@ampproject/remapping@2.2.0':
     dependencies:
@@ -19204,7 +19220,7 @@ snapshots:
     dependencies:
       confbox: 0.1.8
       mlly: 1.7.4
-      pathe: 2.0.1
+      pathe: 2.0.3
 
   pkginfo@0.4.1: {}
 
@@ -20138,7 +20154,7 @@ snapshots:
       eventemitter3: 5.0.1
       lodash.isequal: 4.5.0
       tweetnacl: 1.0.3
-      undici: 5.28.4
+      undici: 5.28.5
     optionalDependencies:
       express: 4.21.2
 

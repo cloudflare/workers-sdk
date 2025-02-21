@@ -1,17 +1,22 @@
 {
 	"name": "d1-worker-app",
 	"private": true,
-	"description": "",
-	"license": "ISC",
-	"author": "",
-	"main": "src/index.js",
 	"scripts": {
+		"check:type": "tsc",
 		"db:query": "wrangler d1 execute UPDATE_THIS_FOR_REMOTE_USE --local --command='SELECT * FROM Customers'",
 		"db:query-json": "wrangler d1 execute UPDATE_THIS_FOR_REMOTE_USE --local --command='SELECT * FROM Customers' --json",
 		"db:reset": "wrangler d1 execute UPDATE_THIS_FOR_REMOTE_USE --local --file=./schema.sql",
-		"start": "wrangler dev --local"
+		"start": "wrangler dev --local",
+		"test:ci": "vitest run",
+		"test:watch": "vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250214.0",
+		"typescript": "catalog:default",
+		"undici": "catalog:default",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {
