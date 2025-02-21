@@ -292,7 +292,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				const miniflare = new Miniflare(
 					getPreviewMiniflareOptions(
 						vitePreviewServer,
-						pluginConfig.persistState ?? true
+						pluginConfig.persistState ?? true,
+						pluginConfig.inspectorPort
 					)
 				);
 
