@@ -3,11 +3,7 @@ import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
-import {
-	getPropertyName,
-	mergeObjectProperties,
-	transformFile,
-} from "helpers/codemod";
+import { transformFile } from "helpers/codemod";
 import { readJSON, usesTypescript, writeJSON } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
@@ -17,6 +13,7 @@ import type { types } from "recast";
 import type { C3Context } from "types";
 
 const b = recast.types.builders;
+const t = recast.types.namedTypes;
 const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
@@ -26,7 +23,7 @@ const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [
 		ctx.project.name,
 		"--template",
-		variant?.value,
+		variant.value,
 	]);
 
 	logRaw("");
@@ -36,7 +33,7 @@ const configure = async (ctx: C3Context) => {
 	await installPackages(["@cloudflare/vite-plugin"], {
 		dev: true,
 		startText: "Installing the Cloudflare Vite plugin",
-		doneText: `${brandColor(`updated`)} ${dim("wrangler@latest")}`,
+		doneText: `${brandColor(`installed`)} ${dim("@cloudflare/vite-plugin")}`,
 	});
 
 	await transformViteConfig(ctx);
@@ -56,7 +53,7 @@ function transformViteConfig(ctx: C3Context) {
 			// import {cloudflare} from "@cloudflare/vite-plugin";
 			// ```
 			const lastImportIndex = n.node.body.findLastIndex(
-				(t) => t.type === "ImportDeclaration",
+				(statement) => statement.type === "ImportDeclaration",
 			);
 			const lastImport = n.get("body", lastImportIndex);
 			const importAst = b.importDeclaration(
@@ -78,31 +75,27 @@ function transformViteConfig(ctx: C3Context) {
 				return this.traverse(n);
 			}
 
-			const config = n.node.arguments[0] as types.namedTypes.ObjectExpression;
-
-			const pluginsProp = config.properties.find(
-				(prop) =>
-					prop.type === "ObjectProperty" && getPropertyName(prop) === "plugins",
-			) as types.namedTypes.ObjectProperty;
-			const pluginsArray =
-				pluginsProp.value as types.namedTypes.ArrayExpression;
-
-			mergeObjectProperties(
-				n.node.arguments[0] as types.namedTypes.ObjectExpression,
-				[
-					b.objectProperty(
-						b.identifier("plugins"),
-						b.arrayExpression([
-							...pluginsArray.elements,
-							b.callExpression(b.identifier("cloudflare"), []),
-						]),
-					),
-				],
+			const config = n.node.arguments[0];
+			assert(t.ObjectExpression.check(config));
+			const pluginsProp = config.properties.find((prop) => isPluginsProp(prop));
+			assert(pluginsProp && t.ArrayExpression.check(pluginsProp.value));
+			pluginsProp.value.elements.push(
+				b.callExpression(b.identifier("cloudflare"), []),
 			);
 
 			return false;
 		},
 	});
+}
+
+function isPluginsProp(
+	prop: unknown,
+): prop is types.namedTypes.ObjectProperty | types.namedTypes.Property {
+	return (
+		(t.Property.check(prop) || t.ObjectProperty.check(prop)) &&
+		t.Identifier.check(prop.key) &&
+		prop.key.name === "plugins"
+	);
 }
 
 function updateTsconfigJson() {
@@ -118,7 +111,7 @@ function updateTsconfigJson() {
 		tsconfig.references.push({ path: "./tsconfig.worker.json" });
 	}
 	writeJSON("tsconfig.json", tsconfig);
-	s.stop(`${brandColor(`updated`)} ${dim(`\`angular.json\``)}`);
+	s.stop(`${brandColor(`updated`)} ${dim(`\`tsconfig.json\``)}`);
 }
 
 async function getVariant() {
