@@ -44,6 +44,15 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	let resolvedViteConfig: vite.ResolvedConfig;
 	let miniflare: Miniflare | undefined;
 
+	const nodejsBuiltins = new Set([
+		...builtinModules,
+		...builtinModules.map((m) => `node:${m}`),
+	]);
+	const nodeJsCompatWarnings = new Map<
+		vite.Environment,
+		Map<string, Set<string>>
+	>();
+
 	// this flag is used to show the workers configs warning only once
 	let workersConfigsWarningShown = false;
 
@@ -475,6 +484,50 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 			},
 		},
+		// Plugin to warn if Node.js APIs are being used without nodejs_compat turned on
+		{
+			name: "vite-plugin-cloudflare:nodejs-compat-warnings",
+			apply(_config, env) {
+				// Skip this whole plugin if we are in preview mode
+				return !env.isPreview;
+			},
+			applyToEnvironment(environment) {
+				// Activate this plugin if it is a Worker environment.
+				// We don't check for Node.js compatibility because if it was turned on then no Node.js APIs will appear here;
+				// they will have been mapped to polyfills or marked as external/built-in.
+				const workerConfig = getWorkerConfig(environment.name);
+				return workerConfig !== undefined;
+			},
+			// We need the resolver from this plugin to run before built-in ones, otherwise Vite's built-in
+			// resolver will try to externalize the Node.js module imports.
+			enforce: "pre",
+			configureServer(viteDevServer) {
+				viteDevServer.middlewares.use((req, res, next) => {
+					res.addListener("finish", () =>
+						logNodeJsCompatWarnings(
+							viteDevServer.config.logger.warn,
+							viteDevServer.config.root
+						)
+					);
+					next();
+				});
+			},
+			async resolveId(source, importer) {
+				if (nodejsBuiltins.has(source)) {
+					debugger;
+					const map = nodeJsCompatWarnings.get(this.environment) ?? new Map();
+					nodeJsCompatWarnings.set(this.environment, map);
+
+					const importers = map.get(source) ?? new Set();
+					map.set(source, importers);
+
+					importers.add(importer ?? "<unknown>");
+				}
+			},
+			buildEnd() {
+				logNodeJsCompatWarnings(this.warn, this.environment.config.root);
+			},
+		},
 	];
 
 	function getWorkerConfig(environmentName: string) {
@@ -482,6 +535,26 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		return resolvedPluginConfig.type !== "assets-only"
 			? resolvedPluginConfig.workers[environmentName]
 			: undefined;
+	}
+
+	function logNodeJsCompatWarnings(warn: vite.Logger["warn"], root: string) {
+		debugger;
+		if (nodeJsCompatWarnings.size > 0) {
+			nodeJsCompatWarnings.forEach((modules, env) => {
+				warn(
+					`\n\nFound unexpected imports of Node.js built-in modules in the "${env.name}" environment.\nDo you need to enable the "nodejs_compat" compatibility flag?\nRefer to https://developers.cloudflare.com/workers/runtime-apis/nodejs/ for more details.`
+				);
+				modules.forEach((importers, module) => {
+					warn(
+						` - "${module}" imported in:\n` +
+							Array.from(importers)
+								.map((i) => `   - ${path.relative(root, i)}`)
+								.join("\n")
+					);
+				});
+			});
+		}
+		nodeJsCompatWarnings.clear();
 	}
 }
 

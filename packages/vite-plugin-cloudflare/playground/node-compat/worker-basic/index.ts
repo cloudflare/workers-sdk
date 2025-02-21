@@ -39,3 +39,9 @@ function testBasicNodejsProperties() {
 
 	return new Response(`"OK!"`);
 }
+
+// export default {
+// 	fetch() {
+// 		return new Response("OK");
+// 	},
+// };
