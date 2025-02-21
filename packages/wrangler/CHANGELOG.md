@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.109.3
+
+### Patch Changes
+
+- [#8175](https://github.com/cloudflare/workers-sdk/pull/8175) [`eb46f98`](https://github.com/cloudflare/workers-sdk/commit/eb46f987ccd215e95a9d56c60841c7c996931b2f) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: `unstable_splitSqlQuery` should ignore comments when splitting sql into statements
+
 ## 3.109.2
 
 ### Patch Changes
