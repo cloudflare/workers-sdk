@@ -1,3 +1,4 @@
+import inspector from "node:inspector";
 import path from "node:path";
 import {
 	formatZodError,
@@ -232,7 +233,7 @@ async function parseCustomPoolOptions(
 
 export async function parseProjectOptions(
 	project: WorkspaceProject,
-	inspectorPort: number | null
+	ctx: Vitest
 ): Promise<WorkersPoolOptionsWithDefines> {
 	// Make sure the user hasn't specified a custom environment. This was how
 	// users enabled Miniflare 2's Vitest environment, so it's likely users will
@@ -257,6 +258,13 @@ export async function parseProjectOptions(
 		throw new TypeError(message);
 	}
 
+	if (ctx.config.inspector.enabled) {
+		// Remember vitest inspector port before disabling it
+		vitestInspectorPort = ctx.config.inspector.port ?? 9229;
+		// Disable the default node inspector
+		ctx.config.inspector = {};
+	}
+
 	const projectPath = getProjectPath(project);
 	const rootPath =
 		typeof projectPath === "string" ? path.dirname(projectPath) : "";
@@ -276,18 +284,33 @@ export async function parseProjectOptions(
 			path: OPTIONS_PATH_ARRAY,
 		});
 
-		if (inspectorPort === null) {
-			// If the inspector isn't enabled, unset the "inspectorPort" option
-			options.inspectorPort = undefined;
+		// If vitest inspector is enabled
+		if (vitestInspectorPort !== null) {
+			options.inspectorPort ??= vitestInspectorPort;
 		} else {
-			if (!options.singleWorker) {
-				log.warn(`Tests run in a single worker when the inspector is open.`);
+			const nodeInspectorPort = getNodeInspectorPort();
+			const inspectorPort = options.inspectorPort ?? 9229;
 
-				options.singleWorker = true;
+			if (nodeInspectorPort === null || nodeInspectorPort === inspectorPort) {
+				if (inspectorPort === nodeInspectorPort) {
+					log.warn(
+						`The inspector port ${inspectorPort} is already in use by the Node inspector. ` +
+							`Update "inspectorPort" in the vitest poolOptions to debug your Workers tests.`
+					);
+				}
+
+				// If the inspector isn't enabled, unset the "inspectorPort" option
+				options.inspectorPort = undefined;
+			} else {
+				options.inspectorPort = inspectorPort;
 			}
+		}
 
-			// Fallback to the vitest inspector port if not specified
-			options.inspectorPort ??= inspectorPort;
+		// If the inspectorPort is not set, check if the Node inspector is running
+		if (options.inspectorPort && !options.singleWorker) {
+			log.warn(`Tests run in a single worker when the inspector is open.`);
+
+			options.singleWorker = true;
 		}
 
 		return options;
@@ -308,4 +331,19 @@ export async function parseProjectOptions(
 			`Unexpected pool options in project ${relativePath}:\n${formatted}`
 		);
 	}
+}
+
+// Vitest Inspector port
+let vitestInspectorPort: number | null;
+
+function getNodeInspectorPort(): number | null {
+	const url = inspector.url();
+
+	if (!url) {
+		return null;
+	}
+
+	const port = new URL(url).port;
+
+	return Number(port);
 }
