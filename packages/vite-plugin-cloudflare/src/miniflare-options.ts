@@ -325,22 +325,6 @@ export function getDevMiniflareOptions(
 										`Invalid invoke event: ${invokePayloadData.name}`
 									);
 
-									const [moduleId] = invokePayloadData.data;
-									const moduleRE = new RegExp(MODULE_PATTERN);
-
-									const shouldExternalize =
-										// Worker modules (CompiledWasm, Text, Data)
-										moduleRE.test(moduleId);
-
-									if (shouldExternalize) {
-										const result = {
-											externalize: moduleId,
-											type: "module",
-										} satisfies vite.FetchResult;
-
-										return MiniflareResponse.json({ result });
-									}
-
 									const devEnvironment = viteDevServer.environments[
 										environmentName
 									] as CloudflareDevEnvironment;
