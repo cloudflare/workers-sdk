@@ -560,15 +560,9 @@ function buildProjectMiniflareOptions(
 		//  --> single instance with single runner worker
 		// Multiple Workers, Isolated Storage:
 		//  --> multiple instances each with single runner worker
-
-		const inspectorPort = project.options.inspectorPort;
-
-		// We enforce Single worker when the inspectorPort is set
-		assert(inspectorPort === undefined || project.options.singleWorker);
-
 		return {
 			...SHARED_MINIFLARE_OPTIONS,
-			inspectorPort,
+			inspectorPort: project.options.inspectorPort,
 			unsafeModuleFallbackService: moduleFallbackService,
 			workers: [runnerWorker, ABORT_ALL_WORKER, ...auxiliaryWorkers],
 		};

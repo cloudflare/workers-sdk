@@ -1,3 +1,4 @@
+import inspector from "node:inspector";
 import path from "node:path";
 import {
 	formatZodError,
@@ -22,57 +23,45 @@ const PLUGIN_VALUES = Object.values(PLUGINS);
 const OPTIONS_PATH_ARRAY = ["test", "poolOptions", "workers"];
 export const OPTIONS_PATH = OPTIONS_PATH_ARRAY.join(".");
 
-const WorkersPoolOptionsSchema = z
-	.object({
-		/**
-		 * Entrypoint to Worker run in the same isolate/context as tests. This is
-		 * required to use `import { SELF } from "cloudflare:test"`, or Durable
-		 * Objects without an explicit `scriptName`. Note this goes through Vite
-		 * transforms and can be a TypeScript file. Note also
-		 * `import module from "<path-to-main>"` inside tests gives exactly the same
-		 * `module` instance as is used internally for the `SELF` and Durable Object
-		 * bindings.
-		 */
-		main: z.ostring(),
-		/**
-		 * Enables per-test isolated storage. If enabled, any writes to storage
-		 * performed in a test will be undone at the end of the test. The test storage
-		 * environment is copied from the containing suite, meaning `beforeAll()`
-		 * hooks can be used to seed data. If this is disabled, all tests will share
-		 * the same storage.
-		 */
-		isolatedStorage: z.boolean().default(true),
-		/**
-		 * Runs all tests in this project serially in the same worker, using the same
-		 * module cache. This can significantly speed up tests if you've got lots of
-		 * small test files.
-		 */
-		singleWorker: z.boolean().default(false),
-		inspectorPort: z.number().optional(),
-		miniflare: z
-			.object({
-				workers: z.array(z.object({}).passthrough()).optional(),
-			})
-			.passthrough()
-			.optional(),
-		wrangler: z
-			.object({ configPath: z.ostring(), environment: z.ostring() })
-			.optional(),
-	})
-	.transform((options) => {
-		if (options.inspectorPort !== undefined && !options.singleWorker) {
-			log.warn(
-				`Tests will run in a single worker because the "inspectorPort" option is set to ${options.inspectorPort}.`
-			);
-
-			return {
-				...options,
-				singleWorker: true,
-			};
-		}
-
-		return options;
-	});
+const WorkersPoolOptionsSchema = z.object({
+	/**
+	 * Entrypoint to Worker run in the same isolate/context as tests. This is
+	 * required to use `import { SELF } from "cloudflare:test"`, or Durable
+	 * Objects without an explicit `scriptName`. Note this goes through Vite
+	 * transforms and can be a TypeScript file. Note also
+	 * `import module from "<path-to-main>"` inside tests gives exactly the same
+	 * `module` instance as is used internally for the `SELF` and Durable Object
+	 * bindings.
+	 */
+	main: z.ostring(),
+	/**
+	 * Enables per-test isolated storage. If enabled, any writes to storage
+	 * performed in a test will be undone at the end of the test. The test storage
+	 * environment is copied from the containing suite, meaning `beforeAll()`
+	 * hooks can be used to seed data. If this is disabled, all tests will share
+	 * the same storage.
+	 */
+	isolatedStorage: z.boolean().default(true),
+	/**
+	 * Runs all tests in this project serially in the same worker, using the same
+	 * module cache. This can significantly speed up tests if you've got lots of
+	 * small test files.
+	 */
+	singleWorker: z.boolean().default(false),
+	/**
+	 * Specifies the inspector port to use for debugging. Defaults to 9229.
+	 */
+	inspectorPort: z.number().default(9229),
+	miniflare: z
+		.object({
+			workers: z.array(z.object({}).passthrough()).optional(),
+		})
+		.passthrough()
+		.optional(),
+	wrangler: z
+		.object({ configPath: z.ostring(), environment: z.ostring() })
+		.optional(),
+});
 export type SourcelessWorkerOptions = Omit<
 	WorkerOptions,
 	"script" | "scriptPath" | "modules" | "modulesRoot"
@@ -151,6 +140,18 @@ function parseWorkerOptions(
 	return result;
 }
 
+function getNodeInspectorPort(): number | null {
+	const url = inspector.url();
+
+	if (!url) {
+		return null;
+	}
+
+	const port = new URL(url).port;
+
+	return Number(port);
+}
+
 async function parseCustomPoolOptions(
 	rootPath: string,
 	value: unknown,
@@ -202,6 +203,27 @@ async function parseCustomPoolOptions(
 
 	if (errorRef.value !== undefined) {
 		throw errorRef.value;
+	}
+
+	const nodeInspectorPort = getNodeInspectorPort();
+
+	if (
+		nodeInspectorPort === null ||
+		options.inspectorPort === nodeInspectorPort
+	) {
+		if (options.inspectorPort === nodeInspectorPort) {
+			console.warn(
+				`The inspector port ${nodeInspectorPort} is already in use by the Node inspector. ` +
+					`Update the "inspectorPort" option in the vitest config to debug your Workers tests.`
+			);
+		}
+
+		// Unset the inspector port so Miniflare doesn't try to use it
+		options.inspectorPort = undefined;
+	} else if (!options.singleWorker) {
+		log.warn(`Tests run in a single worker when the inspector is open.`);
+
+		options.singleWorker = true;
 	}
 
 	// Try to parse Wrangler config if any
