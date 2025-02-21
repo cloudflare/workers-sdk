@@ -49,11 +49,11 @@ export async function generateRuntimeTypes({
 	const header = `// Runtime types generated with workerd@${version} ${compatibility_date} ${compatibility_flags.sort().join(",")}`;
 
 	try {
-		const file = (await readFile(outFile, "utf8")).split("\n");
-		const existingHeader = file.find((line) =>
+		const lines = (await readFile(outFile, "utf8")).split("\n");
+		const existingHeader = lines.find((line) =>
 			line.startsWith("// Runtime types generated with workerd@")
 		);
-		const existingTypesStart = file.findIndex(
+		const existingTypesStart = lines.findIndex(
 			(line) => line === "// Begin runtime types"
 		);
 		if (existingHeader === header && existingTypesStart !== -1) {
@@ -61,7 +61,7 @@ export async function generateRuntimeTypes({
 
 			return {
 				runtimeHeader: header,
-				runtimeTypes: file.slice(existingTypesStart + 1).join("\n"),
+				runtimeTypes: lines.slice(existingTypesStart + 1).join("\n"),
 			};
 		}
 	} catch (e) {

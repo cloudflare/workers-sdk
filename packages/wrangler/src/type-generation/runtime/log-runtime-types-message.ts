@@ -54,7 +54,7 @@ export function logRuntimeTypesMessage(
 		logAction("Install types@node");
 		logger.log(
 			chalk.dim(
-				`Since you have the \`nodejs_compat\` flag, you should install Node.js types by running "npm i --save-dev @types/node${isWorkersTypesInstalled ? '@20.8.3".\nFor more details: https://developers.cloudflare.com/workers/languages/typescript/#known-issues' : '".'}`
+				`Since you have the \`nodejs_compat\` flag, you should install Node.js types by running "npm i --save-dev ${isWorkersTypesInstalled ? '@types/node@20.8.3".\nFor more details: https://developers.cloudflare.com/workers/languages/typescript/#known-issues' : '@types/node".'}`
 			)
 		);
 		logger.log("");
