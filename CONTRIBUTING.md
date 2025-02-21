@@ -431,3 +431,16 @@ When contributing to Wrangler, please refer to the [`STYLEGUIDE.md file`](STYLEG
 ## Releases
 
 We generally cut Wrangler releases on Tuesday & Thursday each week. If you need a release cut outside of the regular cadence, please reach out to the [@cloudflare/wrangler-admins](https://github.com/orgs/cloudflare/teams/wrangler-admins) team.
+
+### Hotfix releases
+
+Only members of `@cloudflare/wrangler` can trigger a hotfix release. In general, a hotfix release should be treated as a solution of last resort—before use, please first check whether the fix can be applied and released using the regular Version Packages release flow.
+
+If a hotfix release of Wrangler, Miniflare, or C3 is required, you should:
+
+- Prepare a hotfix release PR: checkout the previous release of `workers-sdk`, apply the changes that should be in the hotfix, and then increment the patch version of the packages that should be released as part of the hotfix
+
+- Get approvals for that PR, and make sure CI checks are passing
+- Manually trigger a hotfix release from that PR using the "Release a hotfix" GitHub action. Optionally, you can first publish it to the `hotfix` tag on NPM in order to verify the release.
+- _[CRUCIAL]_ Once the hotfix release is out and verified, merge the fixes into main before the next regular release of `workers-sdk`.
+- Make sure that the version number of the next changesets-based release of Wrangler/Miniflare/C3 is greater than the version used for the hotfix: add a dummy `minor` changeset entry for each of the packages that had a hotfix published.
