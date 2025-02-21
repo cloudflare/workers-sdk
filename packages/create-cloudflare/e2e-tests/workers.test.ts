@@ -195,11 +195,11 @@ describe
 							expect(wranglerPath).toExist();
 
 							const tomlPath = join(project.path, "wrangler.toml");
-							const jsonPath = join(project.path, "wrangler.json");
+							const jsoncPath = join(project.path, "wrangler.jsonc");
 
 							try {
-								expect(jsonPath).toExist();
-								const config = readJSON(jsonPath) as { main?: string };
+								expect(jsoncPath).toExist();
+								const config = readJSON(jsoncPath) as { main?: string };
 								if (config.main) {
 									expect(join(project.path, config.main)).toExist();
 								}

@@ -14,7 +14,6 @@
 		"testenv": "make testenv"
 	},
 	"devDependencies": {
-		"patch-package": "^6.5.1",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

@@ -599,6 +599,13 @@ parameter in module format Workers.
 - `assetOptions?: { html_handling?: HTMLHandlingOptions, not_found_handling?: NotFoundHandlingOptions}`
   Configuration for file-based asset routing - see [docs](https://developers.cloudflare.com/workers/static-assets/routing/#routing-configuration) for options
 
+#### Pipelines
+
+- `pipelines?: Record<string, PipelineOptions> | string[]`
+
+  Record mapping binding name to a Pipeline. Different workers may bind to the same Pipeline with different bindings
+  names. If a `string[]` of pipeline names, the binding and Pipeline name are assumed to be the same.
+
 #### Workflows
 
 - `workflows?: WorkflowOptions[]`

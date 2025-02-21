@@ -18,9 +18,11 @@ const makeSentry10Transport = (options: BaseTransportOptions) => {
 	let eventQueue: [string, RequestInit][] = [];
 
 	const transportSentry10 = async (request: TransportRequest) => {
-		/* Adds helpful properties to the request body before we send it to our
-    proxy Worker. These properties can be parsed out from the NDJSON in
-    `request.body`, but it's easier and safer to just attach them here. */
+		/**
+		 * Adds helpful properties to the request body before we send it to our
+		 * proxy Worker. These properties can be parsed out from the NDJSON in
+		 * `request.body`, but it's easier and safer to just attach them here.
+		 */
 		const sentryWorkerPayload = {
 			envelope: request.body,
 			url: options.url,
@@ -84,7 +86,6 @@ const makeSentry10Transport = (options: BaseTransportOptions) => {
 };
 
 const disabledDefaultIntegrations = [
-	"Console", // Console logs may contain PII
 	"LocalVariables", // Local variables may contain tokens and PII
 	"Http", // Only captures method/URL/response status, but URL may contain PII
 	"Undici", // Same as "Http"
@@ -150,7 +151,7 @@ export function addBreadcrumb(
 export async function captureGlobalException(e: unknown) {
 	if (typeof SENTRY_DSN !== "undefined") {
 		sentryReportingAllowed = await confirm(
-			"Would you like to report this error to Cloudflare?",
+			"Would you like to report this error to Cloudflare? Wrangler's output and the error details will be shared with the Wrangler team to help us diagnose and fix the issue.",
 			{ fallbackValue: false }
 		);
 

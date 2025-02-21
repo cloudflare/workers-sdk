@@ -26,7 +26,10 @@ export default async function ({ provide }: GlobalSetupContext) {
 		await stop();
 
 		console.log("Cleaning up temporary directory...");
-		await fs.rm(projectPath, { recursive: true, maxRetries: 10 });
+		try {
+			await fs.rm(projectPath, { recursive: true, maxRetries: 10 });
+			// This sometimes fails on Windows with EBUSY
+		} catch {}
 	};
 }
 
@@ -34,8 +37,10 @@ export default async function ({ provide }: GlobalSetupContext) {
  * Create a temporary package that contains vitest-pool-workers and vitest.
  */
 async function createTestProject() {
+	// Create temporary directory containing a space to avoid regressing on
+	// https://github.com/cloudflare/workers-sdk/issues/5268
 	const projectPath = await fs.realpath(
-		await fs.mkdtemp(path.join(os.tmpdir(), "vitest-pool-workers-"))
+		await fs.mkdtemp(path.join(os.tmpdir(), "vitest-pool-workers temp-"))
 	);
 	const packageJsonPath = path.join(projectPath, "package.json");
 	const packageJson = {

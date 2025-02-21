@@ -1,5 +1,74 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.7.1
+
+### Patch Changes
+
+- [#7084](https://github.com/cloudflare/workers-sdk/pull/7084) [`82a8937`](https://github.com/cloudflare/workers-sdk/commit/82a89371250a1ec3e56fa5a518c685d362bde0ad) Thanks [@penalosa](https://github.com/penalosa)! - Support scoped names (e.g. `@scoped/durable-objects`) when using `runInDurableObject()`
+
+- [#8179](https://github.com/cloudflare/workers-sdk/pull/8179) [`b10483c`](https://github.com/cloudflare/workers-sdk/commit/b10483cca7d58257afd6e97ee66551d2279b8168) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: support running in directories that contain spaces
+
+## 0.7.0
+
+### Minor Changes
+
+- [#7923](https://github.com/cloudflare/workers-sdk/pull/7923) [`aaa9cca`](https://github.com/cloudflare/workers-sdk/commit/aaa9cca4deeaab3155dcedeca0177339b24246af) Thanks [@penalosa](https://github.com/penalosa)! - Support Vitest v3. While this drops testing for Vitest v2, we expect Vitest v2 will continue to work as well.
+
+### Patch Changes
+
+- Updated dependencies [[`5e06177`](https://github.com/cloudflare/workers-sdk/commit/5e06177861b29aa9b114f9ecb50093190af94f4b), [`cc853cf`](https://github.com/cloudflare/workers-sdk/commit/cc853cf0dcefc35c9d9022b9a1641d2d77c19da8), [`efd7f97`](https://github.com/cloudflare/workers-sdk/commit/efd7f9764199ef67dff14155bd3dd249c4dff5c7)]:
+  - miniflare@3.20250214.0
+  - wrangler@3.109.2
+
+## 0.6.16
+
+### Patch Changes
+
+- Updated dependencies [[`28b1dc7`](https://github.com/cloudflare/workers-sdk/commit/28b1dc7c6f213de336d58ce93308575de8f42f06)]:
+  - wrangler@3.109.1
+
+## 0.6.15
+
+### Patch Changes
+
+- Updated dependencies [[`3fb801f`](https://github.com/cloudflare/workers-sdk/commit/3fb801f734632c165685799cb1b752c4dad0445a), [`fff677e`](https://github.com/cloudflare/workers-sdk/commit/fff677e35f67c28275262c1d19f7eb4d6c6ab071), [`3fb801f`](https://github.com/cloudflare/workers-sdk/commit/3fb801f734632c165685799cb1b752c4dad0445a), [`542c6ea`](https://github.com/cloudflare/workers-sdk/commit/542c6ead5d7c7e64a103abd5572ec7b8aea96c90), [`3fb801f`](https://github.com/cloudflare/workers-sdk/commit/3fb801f734632c165685799cb1b752c4dad0445a), [`4db1fb5`](https://github.com/cloudflare/workers-sdk/commit/4db1fb5696412c6666589a778184e10386294d71), [`542c6ea`](https://github.com/cloudflare/workers-sdk/commit/542c6ead5d7c7e64a103abd5572ec7b8aea96c90), [`1bc60d7`](https://github.com/cloudflare/workers-sdk/commit/1bc60d761ebf67a64ac248e3e2c826407bc26252), [`1aa2a91`](https://github.com/cloudflare/workers-sdk/commit/1aa2a9198578f8eb106f19c8475a63ff4eef26aa), [`35710e5`](https://github.com/cloudflare/workers-sdk/commit/35710e590f20e5c83fb25138ba4ae7890b780a08)]:
+  - wrangler@3.109.0
+  - miniflare@3.20250204.1
+
+## 0.6.14
+
+### Patch Changes
+
+- [#7810](https://github.com/cloudflare/workers-sdk/pull/7810) [`ac4f30b`](https://github.com/cloudflare/workers-sdk/commit/ac4f30b0532f2559ecf1739ba12aa5155cd0a62e) Thanks [@edmundhung](https://github.com/edmundhung)! - Added [Vite dependency pre-bundling](https://vite.dev/guide/dep-pre-bundling) support. If you encounter module resolution issues—such as: `Error: Cannot use require() to import an ES Module` or `Error: No such module`—you can now bundle these dependencies using the [deps.optimizer](https://vitest.dev/config/#deps-optimizer) option:
+
+  ```tsx
+  import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
+
+  export default defineWorkersConfig({
+  	test: {
+  		deps: {
+  			optimizer: {
+  				ssr: {
+  					enabled: true,
+  					include: ["your-package-name"],
+  				},
+  			},
+  		},
+  		poolOptions: {
+  			workers: {
+  				// ...
+  			},
+  		},
+  	},
+  });
+  ```
+
+  Fixed #6591, #6581, #6405.
+
+- Updated dependencies [[`a025ad2`](https://github.com/cloudflare/workers-sdk/commit/a025ad2ecb086cb4bcee6b9dfd8cf06eb2102ade)]:
+  - wrangler@3.108.1
+  - miniflare@3.20250204.0
+
 ## 0.6.13
 
 ### Patch Changes
@@ -864,16 +933,16 @@
   import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 
   export default defineWorkersConfig({
-    test: {
-      poolOptions: {
-        workers: {
-          wrangler: {
-            configPath: "./wrangler.toml",
-            environment: "production",
-          },
-        },
-      },
-    },
+  	test: {
+  		poolOptions: {
+  			workers: {
+  				wrangler: {
+  					configPath: "./wrangler.toml",
+  					environment: "production",
+  				},
+  			},
+  		},
+  	},
   });
   ```
 

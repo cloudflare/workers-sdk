@@ -43,6 +43,7 @@
 			"outputLogs": "new-only"
 		},
 		"test:e2e": {
+			"dependsOn": ["build"],
 			"outputLogs": "new-only"
 		},
 		"//#check:format": {

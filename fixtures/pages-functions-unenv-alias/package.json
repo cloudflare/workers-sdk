@@ -1,0 +1,25 @@
+{
+	"name": "pages-functions-unenv-alias",
+	"private": true,
+	"sideEffects": false,
+	"scripts": {
+		"check:type": "tsc",
+		"dev:functions-app": "wrangler pages dev --port 8792",
+		"test:ci": "vitest run",
+		"test:watch": "vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:^",
+		"typescript": "catalog:default",
+		"undici": "catalog:default",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	},
+	"engines": {
+		"node": ">=16.13"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

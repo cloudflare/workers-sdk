@@ -1,0 +1,7 @@
+name = "pipelines"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+[[pipelines]]
+binding = "PIPELINE"
+pipeline = "my-pipeline"

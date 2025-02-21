@@ -1,0 +1,11 @@
+{
+	"exclude": ["fixtures/**/*"],
+	"compilerOptions": {
+		"skipDefaultLibCheck": true,
+		"skipLibCheck": true,
+		"types": ["node", "vitest"],
+		"target": "ESNext",
+		"moduleResolution": "NodeNext",
+		"module": "NodeNext"
+	}
+}

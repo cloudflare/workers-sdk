@@ -8,6 +8,7 @@ interface Env {
 	PROD_WRANGLER_CONTRIBUTORS_WEBHOOK: string;
 	TEST_WEBHOOK: string;
 	AI: Ai;
+	PRESHARED_SECRET: string;
 }
 declare module "*.png" {
 	const value: ArrayBuffer;

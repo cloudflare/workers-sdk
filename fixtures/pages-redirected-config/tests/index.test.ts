@@ -1,5 +1,5 @@
 import { rmSync, writeFileSync } from "fs";
-import { resolve } from "path";
+import path, { resolve } from "path";
 import { fetch } from "undici";
 import { describe, it } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
@@ -29,7 +29,7 @@ describe("wrangler pages dev", () => {
 		onTestFinished,
 	}) => {
 		writeFileSync(
-			"wrangler.toml",
+			path.join(basePath, "wrangler.toml"),
 			[
 				`name = "redirected-config-worker"`,
 				`compatibility_date = "2024-12-01"`,
@@ -41,7 +41,7 @@ describe("wrangler pages dev", () => {
 			"--inspector-port=0",
 		]);
 		onTestFinished(async () => {
-			rmSync("wrangler.toml", { force: true });
+			rmSync(path.join(basePath, "wrangler.toml"), { force: true });
 			await stop?.();
 		});
 

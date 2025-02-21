@@ -1,6 +1,6 @@
 {
 	"name": "miniflare",
-	"version": "3.20250204.0",
+	"version": "3.20250214.0",
 	"description": "Fun, full-featured, fully-local simulator for Cloudflare Workers",
 	"keywords": [
 		"cloudflare",
@@ -49,7 +49,7 @@
 		"glob-to-regexp": "0.4.1",
 		"stoppable": "1.1.0",
 		"undici": "catalog:default",
-		"workerd": "1.20250204.0",
+		"workerd": "1.20250214.0",
 		"ws": "8.18.0",
 		"youch": "3.2.3",
 		"zod": "3.22.3"
@@ -58,7 +58,7 @@
 		"@ava/typescript": "^4.1.0",
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250204.0",
+		"@cloudflare/workers-types": "^4.20250214.0",
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@microsoft/api-extractor": "7.49.1",
 		"@types/debug": "^4.1.7",
@@ -78,10 +78,9 @@
 		"devalue": "^4.3.0",
 		"devtools-protocol": "^0.0.1182435",
 		"esbuild": "0.17.19",
-		"eslint": "^8.49.0",
+		"eslint": "^8.57.1",
 		"eslint-config-prettier": "^9.0.0",
 		"eslint-plugin-es": "^4.1.0",
-		"eslint-plugin-import": "2.26.x",
 		"eslint-plugin-prettier": "^5.0.1",
 		"expect-type": "^0.15.0",
 		"heap-js": "^2.5.0",

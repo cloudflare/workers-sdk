@@ -17,7 +17,9 @@ import type {
 import type { AssetConfig } from "@cloudflare/workers-shared";
 import type { Json } from "miniflare";
 
-const moduleTypeMimeType: { [type in CfModuleType]: string | undefined } = {
+export const moduleTypeMimeType: {
+	[type in CfModuleType]: string | undefined;
+} = {
 	esm: "application/javascript+module",
 	commonjs: "application/javascript",
 	"compiled-wasm": "application/wasm",

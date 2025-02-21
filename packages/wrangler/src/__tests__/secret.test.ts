@@ -81,6 +81,8 @@ function mockNoWorkerFound(isBulk = false) {
 	}
 }
 
+vi.unmock("../wrangler-banner");
+
 describe("wrangler secret", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
@@ -163,9 +165,13 @@ describe("wrangler secret", () => {
 				mockPutRequest({ name: `secret-name`, text: `hunter2` });
 				await runWrangler("secret put secret-name --name script-name");
 				expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secret for the Worker \\"script-name\\"
-			✨ Success! Uploaded secret secret-name"
-		`);
+					"
+					 ⛅️ wrangler x.x.x
+					------------------
+
+					🌀 Creating the secret for the Worker \\"script-name\\"
+					✨ Success! Uploaded secret secret-name"
+				`);
 			});
 
 			it("should create a secret", async () => {
@@ -179,9 +185,13 @@ describe("wrangler secret", () => {
 				await runWrangler("secret put the-key --name script-name");
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secret for the Worker \\"script-name\\"
-			✨ Success! Uploaded secret the-key"
-		`);
+					"
+					 ⛅️ wrangler x.x.x
+					------------------
+
+					🌀 Creating the secret for the Worker \\"script-name\\"
+					✨ Success! Uploaded secret the-key"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
@@ -202,9 +212,13 @@ describe("wrangler secret", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secret for the Worker \\"script-name-some-env\\"
-			✨ Success! Uploaded secret the-key"
-		`);
+					"
+					 ⛅️ wrangler x.x.x
+					------------------
+
+					🌀 Creating the secret for the Worker \\"script-name-some-env\\"
+					✨ Success! Uploaded secret the-key"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
@@ -225,9 +239,13 @@ describe("wrangler secret", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secret for the Worker \\"script-name\\" (some-env)
-			✨ Success! Uploaded secret the-key"
-		`);
+					"
+					 ⛅️ wrangler x.x.x
+					------------------
+
+					🌀 Creating the secret for the Worker \\"script-name\\" (some-env)
+					✨ Success! Uploaded secret the-key"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
@@ -238,7 +256,13 @@ describe("wrangler secret", () => {
 				} catch (e) {
 					error = e as Error;
 				}
-				expect(std.out).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					------------------
+
+					"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`
 					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mRequired Worker name missing. Please specify the Worker name in your Wrangler configuration file, or pass it as an argument with \`--name <worker-name>\`[0m
 
@@ -264,7 +288,11 @@ describe("wrangler secret", () => {
 					await runWrangler("secret put the-key --name non-existent-worker")
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-					"🌀 Creating the secret for the Worker \\"non-existent-worker\\"
+					"
+					 ⛅️ wrangler x.x.x
+					------------------
+
+					🌀 Creating the secret for the Worker \\"non-existent-worker\\"
 					Aborting. No secrets added."
 				`);
 			});
@@ -288,9 +316,13 @@ describe("wrangler secret", () => {
 				await runWrangler("secret put the-key --name script-name");
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secret for the Worker \\"script-name\\"
-			✨ Success! Uploaded secret the-key"
-		`);
+					"
+					 ⛅️ wrangler x.x.x
+					------------------
+
+					🌀 Creating the secret for the Worker \\"script-name\\"
+					✨ Success! Uploaded secret the-key"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -302,9 +334,13 @@ describe("wrangler secret", () => {
 				await runWrangler("secret put the-key --name script-name");
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secret for the Worker \\"script-name\\"
-			✨ Success! Uploaded secret the-key"
-		`);
+					"
+					 ⛅️ wrangler x.x.x
+					------------------
+
+					🌀 Creating the secret for the Worker \\"script-name\\"
+					✨ Success! Uploaded secret the-key"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -319,9 +355,13 @@ describe("wrangler secret", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			          "
-			          [32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		        `);
+					"
+					 ⛅️ wrangler x.x.x
+					------------------
+
+
+					[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
@@ -349,7 +389,11 @@ describe("wrangler secret", () => {
 					await runWrangler("secret put the-key --name non-existent-worker")
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-					"🌀 Creating the secret for the Worker \\"non-existent-worker\\"
+					"
+					 ⛅️ wrangler x.x.x
+					------------------
+
+					🌀 Creating the secret for the Worker \\"non-existent-worker\\"
 					✨ Success! Uploaded secret the-key"
 				`);
 			});
@@ -387,9 +431,13 @@ describe("wrangler secret", () => {
 					mockPutRequest({ name: "the-key", text: "the-secret" });
 					await runWrangler("secret put the-key --name script-name");
 					expect(std.out).toMatchInlineSnapshot(`
-				"🌀 Creating the secret for the Worker \\"script-name\\"
-				✨ Success! Uploaded secret the-key"
-			`);
+						"
+						 ⛅️ wrangler x.x.x
+						------------------
+
+						🌀 Creating the secret for the Worker \\"script-name\\"
+						✨ Success! Uploaded secret the-key"
+					`);
 					expect(std.warn).toMatchInlineSnapshot(`""`);
 					expect(std.err).toMatchInlineSnapshot(`""`);
 				});
@@ -526,9 +574,13 @@ describe("wrangler secret", () => {
 			});
 			await runWrangler("secret delete the-key --name script-name");
 			expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Deleting the secret the-key on the Worker script-name
-			✨ Success! Deleted secret the-key"
-		`);
+				"
+				 ⛅️ wrangler x.x.x
+				------------------
+
+				🌀 Deleting the secret the-key on the Worker script-name
+				✨ Success! Deleted secret the-key"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -546,9 +598,13 @@ describe("wrangler secret", () => {
 				"secret delete the-key --name script-name --env some-env --legacy-env"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Deleting the secret the-key on the Worker script-name-some-env
-			✨ Success! Deleted secret the-key"
-		`);
+				"
+				 ⛅️ wrangler x.x.x
+				------------------
+
+				🌀 Deleting the secret the-key on the Worker script-name-some-env
+				✨ Success! Deleted secret the-key"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -565,9 +621,13 @@ describe("wrangler secret", () => {
 				"secret delete the-key --name script-name --env some-env --legacy-env false"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Deleting the secret the-key on the Worker script-name (some-env)
-			✨ Success! Deleted secret the-key"
-		`);
+				"
+				 ⛅️ wrangler x.x.x
+				------------------
+
+				🌀 Deleting the secret the-key on the Worker script-name (some-env)
+				✨ Success! Deleted secret the-key"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -579,7 +639,13 @@ describe("wrangler secret", () => {
 			} catch (e) {
 				error = e as Error;
 			}
-			expect(std.out).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				------------------
+
+				"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mRequired Worker name missing. Please specify the Worker name in your Wrangler configuration file, or pass it as an argument with \`--name <worker-name>\`[0m
 
@@ -710,6 +776,33 @@ describe("wrangler secret", () => {
 				`[Error: Required Worker name missing. Please specify the Worker name in your Wrangler configuration file, or pass it as an argument with \`--name <worker-name>\`]`
 			);
 		});
+
+		describe("banner tests", () => {
+			it("banner if pretty", async () => {
+				mockListRequest({ scriptName: "script-name" });
+				await runWrangler("secret list --name script-name  --format=pretty");
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					------------------
+
+					Secret Name: the-secret-name
+					"
+				`);
+			});
+			it("no banner if json", async () => {
+				mockListRequest({ scriptName: "script-name" });
+				await runWrangler("secret list --name script-name  --format=json");
+				expect(std.out).toMatchInlineSnapshot(`
+					"[
+					  {
+					    \\"name\\": \\"the-secret-name\\",
+					    \\"type\\": \\"secret_text\\"
+					  }
+					]"
+				`);
+			});
+		});
 	});
 
 	describe("bulk", () => {
@@ -759,7 +852,13 @@ describe("wrangler secret", () => {
 			);
 			await runWrangler(`secret bulk --name script-name`);
 			expect(std.out).toMatchInlineSnapshot(
-				`"🌀 Creating the secrets for the Worker \\"script-name\\" "`
+				`
+				"
+				 ⛅️ wrangler x.x.x
+				------------------
+
+				🌀 Creating the secrets for the Worker \\"script-name\\" "
+			`
 			);
 			expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 No content found in file, or piped input.[0m
@@ -782,7 +881,11 @@ describe("wrangler secret", () => {
 
 			await runWrangler(`secret bulk --name script-name`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"🌀 Creating the secrets for the Worker \\"script-name\\"
+				"
+				 ⛅️ wrangler x.x.x
+				------------------
+
+				🌀 Creating the secrets for the Worker \\"script-name\\"
 				✨ Successfully created secret for key: secret1
 				✨ Successfully created secret for key: password
 
@@ -807,7 +910,11 @@ describe("wrangler secret", () => {
 			await runWrangler("secret bulk ./secret.json --name script-name");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"🌀 Creating the secrets for the Worker \\"script-name\\"
+				"
+				 ⛅️ wrangler x.x.x
+				------------------
+
+				🌀 Creating the secrets for the Worker \\"script-name\\"
 				✨ Successfully created secret for key: secret-name-1
 				✨ Successfully created secret for key: secret-name-2
 
@@ -829,7 +936,11 @@ describe("wrangler secret", () => {
 			await runWrangler("secret bulk ./.env --name script-name");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"🌀 Creating the secrets for the Worker \\"script-name\\"
+				"
+				 ⛅️ wrangler x.x.x
+				------------------
+
+				🌀 Creating the secrets for the Worker \\"script-name\\"
 				✨ Successfully created secret for key: SECRET_NAME_1
 				✨ Successfully created secret for key: SECRET_NAME_2
 
@@ -887,13 +998,17 @@ describe("wrangler secret", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secrets for the Worker \\"script-name\\"
+				"
+				 ⛅️ wrangler x.x.x
+				------------------
 
-			Finished processing secrets JSON file:
-			✨ 0 secrets successfully uploaded
+				🌀 Creating the secrets for the Worker \\"script-name\\"
 
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		`);
+				Finished processing secrets JSON file:
+				✨ 0 secrets successfully uploaded
+
+				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 7 secrets failed to upload[0m
 
@@ -919,13 +1034,17 @@ describe("wrangler secret", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secrets for the Worker \\"script-name\\"
+				"
+				 ⛅️ wrangler x.x.x
+				------------------
 
-			Finished processing secrets JSON file:
-			✨ 0 secrets successfully uploaded
+				🌀 Creating the secrets for the Worker \\"script-name\\"
 
-			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-		`);
+				Finished processing secrets JSON file:
+				✨ 0 secrets successfully uploaded
+
+				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 2 secrets failed to upload[0m
 
@@ -1011,7 +1130,11 @@ describe("wrangler secret", () => {
 			await runWrangler("secret bulk ./secret.json --name script-name");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"🌀 Creating the secrets for the Worker \\"script-name\\"
+				"
+				 ⛅️ wrangler x.x.x
+				------------------
+
+				🌀 Creating the secrets for the Worker \\"script-name\\"
 				✨ Successfully created secret for key: secret-name-2
 				✨ Successfully created secret for key: secret-name-3
 				✨ Successfully created secret for key: secret-name-4
@@ -1040,7 +1163,11 @@ describe("wrangler secret", () => {
 
 			await runWrangler("secret bulk ./secret.json --name non-existent-worker");
 			expect(std.out).toMatchInlineSnapshot(`
-				"🌀 Creating the secrets for the Worker \\"non-existent-worker\\"
+				"
+				 ⛅️ wrangler x.x.x
+				------------------
+
+				🌀 Creating the secrets for the Worker \\"non-existent-worker\\"
 				Aborting. No secrets added."
 			`);
 		});
@@ -1068,7 +1195,11 @@ describe("wrangler secret", () => {
 
 			await runWrangler("secret bulk ./secret.json --name script-name");
 			expect(std.out).toMatchInlineSnapshot(`
-				"🌀 Creating the secrets for the Worker \\"script-name\\"
+				"
+				 ⛅️ wrangler x.x.x
+				------------------
+
+				🌀 Creating the secrets for the Worker \\"script-name\\"
 				✨ Successfully created secret for key: secret-name-1
 				✨ Successfully created secret for key: secret-name-2
 

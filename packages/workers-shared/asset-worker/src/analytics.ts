@@ -18,6 +18,8 @@ type Data = {
 	metalId?: number;
 	// double4 - Colo tier (e.g. tier 1, tier 2, tier 3)
 	coloTier?: number;
+	// double5 - Response status code
+	status?: number;
 
 	// -- Blobs --
 	// blob1 - Hostname of the request
@@ -66,6 +68,7 @@ export class Analytics {
 				this.data.coloId ?? -1, // double2
 				this.data.metalId ?? -1, // double3
 				this.data.coloTier ?? -1, // double4
+				this.data.status ?? -1, // double5
 			],
 			blobs: [
 				this.data.hostname?.substring(0, 256), // blob1 - trim to 256 bytes

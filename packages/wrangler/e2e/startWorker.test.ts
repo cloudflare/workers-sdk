@@ -201,18 +201,16 @@ describe.each(OPTIONS)("DevEnv (remote: $remote)", ({ remote }) => {
 	// through a worker (InspectorProxyWorker) which hits the limit (without the fix, compatibilityFlags:["increase_websocket_message_size"])
 	// By logging a large string we can verify that the inspector messages are being proxied successfully.
 	it("InspectorProxyWorker can proxy messages > 1MB", async (t) => {
-		t.onTestFinished(() => worker?.dispose());
+		const consoleInfoSpy = vi
+			.spyOn(console, "info")
+			.mockImplementation(() => {});
+		const consoleLogSpy = vi.spyOn(console, "log").mockImplementation(() => {});
 
-		const originalConsoleLog = console.log;
-		const mockConsoleLogImpl = (message: unknown, ...args: unknown[]) => {
-			if (typeof message === "string" && /z+/.test(message)) {
-				return; // don't log chunks of the large string
-			}
-
-			originalConsoleLog(message, ...args);
-		};
-		vi.spyOn(console, "info").mockImplementation(mockConsoleLogImpl);
-		vi.spyOn(console, "log").mockImplementation(mockConsoleLogImpl);
+		t.onTestFinished(() => {
+			consoleInfoSpy.mockRestore();
+			consoleLogSpy.mockRestore();
+			return worker?.dispose();
+		});
 
 		const LARGE_STRING = "This is a large string" + "z".repeat(2 ** 20);
 
@@ -250,9 +248,7 @@ describe.each(OPTIONS)("DevEnv (remote: $remote)", ({ remote }) => {
 				expect(consoleApiMessages).toContainMatchingObject({
 					method: "Runtime.consoleAPICalled",
 					params: expect.objectContaining({
-						args: [
-							{ type: "string", value: expect.stringContaining("zzzzzzzzz") },
-						],
+						args: [{ type: "string", value: LARGE_STRING }],
 					}),
 				});
 			},

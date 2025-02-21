@@ -29,6 +29,7 @@ body:
         - Miniflare
         - KV Asset Handler
         - Workers Vitest Integration
+        - Vite Plugin
         - Other
     validations:
       required: true

@@ -50,7 +50,7 @@
 		"@typescript-eslint/eslint-plugin": "^6.9.0",
 		"@typescript-eslint/parser": "^6.9.0",
 		"@vitejs/plugin-react": "^4.3.3",
-		"eslint": "^8.49.0",
+		"eslint": "^8.57.1",
 		"tsx": "^3.12.8",
 		"undici": "catalog:default",
 		"vite": "catalog:default",

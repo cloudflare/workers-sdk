@@ -1,12 +1,8 @@
-# Runs c3 e2e tests for quarantined frameworks on merges to main
-
 name: C3 E2E (Quarantine)
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - packages/create-cloudflare/**
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
 
 jobs:
   e2e:

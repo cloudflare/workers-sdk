@@ -47,7 +47,7 @@ In order to enable the example:
   // KV Example:
   ```
   and uncomment the commented lines below it (also uncomment the relevant imports).
-- In the `wrangler.json` file add the following configuration line:
+- In the `wrangler.jsonc` file add the following configuration line:
   ```
   "kv_namespaces": [{ "binding": "MY_KV_NAMESPACE", "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" }],
   ```

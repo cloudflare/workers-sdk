@@ -4,6 +4,7 @@ import { handler as createHandler, options as createOptions } from "./create";
 import { handler as deleteHandler, options as deleteOptions } from "./delete";
 import { handler as infoHandler, options as infoOptions } from "./info";
 import { handler as listHandler, options as listOptions } from "./list";
+import { handler as updateHandler, options as updateOptions } from "./update";
 import type { CommonYargsArgv } from "../../../yargs-types";
 
 export function queues(yargs: CommonYargsArgv) {
@@ -14,6 +15,13 @@ export function queues(yargs: CommonYargsArgv) {
 		"Create a Queue",
 		createOptions,
 		createHandler
+	);
+
+	yargs.command(
+		"update <name>",
+		"Update a Queue",
+		updateOptions,
+		updateHandler
 	);
 
 	yargs.command(

@@ -65,6 +65,14 @@ import type { FormData } from "undici";
 import type { Mock } from "vitest";
 
 vi.mock("command-exists");
+vi.mock("../check/commands", async (importOriginal) => {
+	return {
+		...(await importOriginal()),
+		analyseBundle() {
+			return `{}`;
+		},
+	};
+});
 
 describe("deploy", () => {
 	mockAccountId();
@@ -4064,7 +4072,7 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
-		});
+		}, 30_000);
 
 		it("should error if the asset key is over 512 characters", async () => {
 			const longFilePathAsset = {
@@ -10500,6 +10508,426 @@ export default{
 		});
 	});
 
+	describe("--outfile", () => {
+		it("should generate worker bundle at --outfile if specified", async () => {
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			await runWrangler("deploy index.js --outfile some-dir/worker.bundle");
+			expect(fs.existsSync("some-dir/worker.bundle")).toBe(true);
+			expect(std).toMatchInlineSnapshot(`
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				No bindings found.
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class",
+				  "warn": "",
+				}
+			`);
+		});
+
+		it("should include any module imports related assets in the worker bundle", async () => {
+			writeWranglerConfig();
+			fs.writeFileSync(
+				"./index.js",
+				`
+import txt from './textfile.txt';
+import hello from './hello.wasm';
+export default{
+  async fetch(){
+		const module = await WebAssembly.instantiate(hello);
+    return new Response(txt + module.exports.hello);
+  }
+}
+`
+			);
+			fs.writeFileSync("./textfile.txt", "Hello, World!");
+			fs.writeFileSync("./hello.wasm", "Hello wasm World!");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedModules: {
+					"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt":
+						"Hello, World!",
+					"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm":
+						"Hello wasm World!",
+				},
+			});
+			await runWrangler("deploy index.js --outfile some-dir/worker.bundle");
+
+			expect(fs.existsSync("some-dir/worker.bundle")).toBe(true);
+			expect(
+				fs
+					.readFileSync("some-dir/worker.bundle", "utf8")
+					.replace(
+						/------formdata-undici-0.[0-9]*/g,
+						"------formdata-undici-0.test"
+					)
+					.replace(/wrangler_(.+?)_default/g, "wrangler_default")
+			).toMatchInlineSnapshot(`
+				"------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"metadata\\"
+
+				{\\"main_module\\":\\"index.js\\",\\"bindings\\":[],\\"compatibility_date\\":\\"2022-01-12\\",\\"compatibility_flags\\":[]}
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"index.js\\"; filename=\\"index.js\\"
+				Content-Type: application/javascript+module
+
+				// index.js
+				import txt from \\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\";
+				import hello from \\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\";
+				var wrangler_default = {
+				  async fetch() {
+				    const module = await WebAssembly.instantiate(hello);
+				    return new Response(txt + module.exports.hello);
+				  }
+				};
+				export {
+				  wrangler_default as default
+				};
+				//# sourceMappingURL=index.js.map
+
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\"; filename=\\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\"
+				Content-Type: text/plain
+
+				Hello, World!
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\"; filename=\\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\"
+				Content-Type: application/wasm
+
+				Hello wasm World!
+				------formdata-undici-0.test--"
+			`);
+
+			expect(std).toMatchInlineSnapshot(`
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				No bindings found.
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class",
+				  "warn": "",
+				}
+			`);
+		});
+
+		it("should include bindings in the worker bundle", async () => {
+			writeWranglerConfig({
+				kv_namespaces: [{ binding: "KV", id: "kv-namespace-id" }],
+			});
+			fs.writeFileSync(
+				"./index.js",
+				`
+import txt from './textfile.txt';
+import hello from './hello.wasm';
+export default{
+  async fetch(){
+		const module = await WebAssembly.instantiate(hello);
+    return new Response(txt + module.exports.hello);
+  }
+}
+`
+			);
+			fs.writeFileSync("./textfile.txt", "Hello, World!");
+			fs.writeFileSync("./hello.wasm", "Hello wasm World!");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedModules: {
+					"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt":
+						"Hello, World!",
+					"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm":
+						"Hello wasm World!",
+				},
+			});
+			await runWrangler("deploy index.js --outfile some-dir/worker.bundle");
+
+			expect(fs.existsSync("some-dir/worker.bundle")).toBe(true);
+			expect(
+				fs
+					.readFileSync("some-dir/worker.bundle", "utf8")
+					.replace(
+						/------formdata-undici-0.[0-9]*/g,
+						"------formdata-undici-0.test"
+					)
+					.replace(/wrangler_(.+?)_default/g, "wrangler_default")
+			).toMatchInlineSnapshot(`
+				"------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"metadata\\"
+
+				{\\"main_module\\":\\"index.js\\",\\"bindings\\":[{\\"name\\":\\"KV\\",\\"type\\":\\"kv_namespace\\",\\"namespace_id\\":\\"kv-namespace-id\\"}],\\"compatibility_date\\":\\"2022-01-12\\",\\"compatibility_flags\\":[]}
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"index.js\\"; filename=\\"index.js\\"
+				Content-Type: application/javascript+module
+
+				// index.js
+				import txt from \\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\";
+				import hello from \\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\";
+				var wrangler_default = {
+				  async fetch() {
+				    const module = await WebAssembly.instantiate(hello);
+				    return new Response(txt + module.exports.hello);
+				  }
+				};
+				export {
+				  wrangler_default as default
+				};
+				//# sourceMappingURL=index.js.map
+
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\"; filename=\\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\"
+				Content-Type: text/plain
+
+				Hello, World!
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\"; filename=\\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\"
+				Content-Type: application/wasm
+
+				Hello wasm World!
+				------formdata-undici-0.test--"
+			`);
+
+			expect(std).toMatchInlineSnapshot(`
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- KV Namespaces:
+				  - KV: kv-namespace-id
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class",
+				  "warn": "",
+				}
+			`);
+		});
+	});
+
+	describe("--outfile", () => {
+		it("should generate worker bundle at --outfile if specified", async () => {
+			writeWranglerConfig();
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			await runWrangler("deploy index.js --outfile some-dir/worker.bundle");
+			expect(fs.existsSync("some-dir/worker.bundle")).toBe(true);
+			expect(std).toMatchInlineSnapshot(`
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				No bindings found.
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class",
+				  "warn": "",
+				}
+			`);
+		});
+
+		it("should include any module imports related assets in the worker bundle", async () => {
+			writeWranglerConfig();
+			fs.writeFileSync(
+				"./index.js",
+				`
+import txt from './textfile.txt';
+import hello from './hello.wasm';
+export default{
+  async fetch(){
+		const module = await WebAssembly.instantiate(hello);
+    return new Response(txt + module.exports.hello);
+  }
+}
+`
+			);
+			fs.writeFileSync("./textfile.txt", "Hello, World!");
+			fs.writeFileSync("./hello.wasm", "Hello wasm World!");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedModules: {
+					"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt":
+						"Hello, World!",
+					"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm":
+						"Hello wasm World!",
+				},
+			});
+			await runWrangler("deploy index.js --outfile some-dir/worker.bundle");
+
+			expect(fs.existsSync("some-dir/worker.bundle")).toBe(true);
+			expect(
+				fs
+					.readFileSync("some-dir/worker.bundle", "utf8")
+					.replace(
+						/------formdata-undici-0.[0-9]*/g,
+						"------formdata-undici-0.test"
+					)
+					.replace(/wrangler_(.+?)_default/g, "wrangler_default")
+			).toMatchInlineSnapshot(`
+				"------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"metadata\\"
+
+				{\\"main_module\\":\\"index.js\\",\\"bindings\\":[],\\"compatibility_date\\":\\"2022-01-12\\",\\"compatibility_flags\\":[]}
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"index.js\\"; filename=\\"index.js\\"
+				Content-Type: application/javascript+module
+
+				// index.js
+				import txt from \\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\";
+				import hello from \\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\";
+				var wrangler_default = {
+				  async fetch() {
+				    const module = await WebAssembly.instantiate(hello);
+				    return new Response(txt + module.exports.hello);
+				  }
+				};
+				export {
+				  wrangler_default as default
+				};
+				//# sourceMappingURL=index.js.map
+
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\"; filename=\\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\"
+				Content-Type: text/plain
+
+				Hello, World!
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\"; filename=\\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\"
+				Content-Type: application/wasm
+
+				Hello wasm World!
+				------formdata-undici-0.test--"
+			`);
+
+			expect(std).toMatchInlineSnapshot(`
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				No bindings found.
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class",
+				  "warn": "",
+				}
+			`);
+		});
+
+		it("should include bindings in the worker bundle", async () => {
+			writeWranglerConfig({
+				kv_namespaces: [{ binding: "KV", id: "kv-namespace-id" }],
+			});
+			fs.writeFileSync(
+				"./index.js",
+				`
+import txt from './textfile.txt';
+import hello from './hello.wasm';
+export default{
+  async fetch(){
+		const module = await WebAssembly.instantiate(hello);
+    return new Response(txt + module.exports.hello);
+  }
+}
+`
+			);
+			fs.writeFileSync("./textfile.txt", "Hello, World!");
+			fs.writeFileSync("./hello.wasm", "Hello wasm World!");
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedModules: {
+					"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt":
+						"Hello, World!",
+					"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm":
+						"Hello wasm World!",
+				},
+			});
+			await runWrangler("deploy index.js --outfile some-dir/worker.bundle");
+
+			expect(fs.existsSync("some-dir/worker.bundle")).toBe(true);
+			expect(
+				fs
+					.readFileSync("some-dir/worker.bundle", "utf8")
+					.replace(
+						/------formdata-undici-0.[0-9]*/g,
+						"------formdata-undici-0.test"
+					)
+					.replace(/wrangler_(.+?)_default/g, "wrangler_default")
+			).toMatchInlineSnapshot(`
+				"------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"metadata\\"
+
+				{\\"main_module\\":\\"index.js\\",\\"bindings\\":[{\\"name\\":\\"KV\\",\\"type\\":\\"kv_namespace\\",\\"namespace_id\\":\\"kv-namespace-id\\"}],\\"compatibility_date\\":\\"2022-01-12\\",\\"compatibility_flags\\":[]}
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"index.js\\"; filename=\\"index.js\\"
+				Content-Type: application/javascript+module
+
+				// index.js
+				import txt from \\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\";
+				import hello from \\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\";
+				var wrangler_default = {
+				  async fetch() {
+				    const module = await WebAssembly.instantiate(hello);
+				    return new Response(txt + module.exports.hello);
+				  }
+				};
+				export {
+				  wrangler_default as default
+				};
+				//# sourceMappingURL=index.js.map
+
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\"; filename=\\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\"
+				Content-Type: text/plain
+
+				Hello, World!
+				------formdata-undici-0.test
+				Content-Disposition: form-data; name=\\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\"; filename=\\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\"
+				Content-Type: application/wasm
+
+				Hello wasm World!
+				------formdata-undici-0.test--"
+			`);
+
+			expect(std).toMatchInlineSnapshot(`
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your worker has access to the following bindings:
+				- KV Namespaces:
+				  - KV: kv-namespace-id
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class",
+				  "warn": "",
+				}
+			`);
+		});
+	});
+
 	describe("--dry-run", () => {
 		it("should not deploy the worker if --dry-run is specified", async () => {
 			writeWranglerConfig({
@@ -11070,36 +11498,9 @@ export default{
 				main: "index.js",
 			});
 
-			await expect(runWrangler("deploy")).rejects.toMatchInlineSnapshot(
-				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.]`
+			await expect(runWrangler("deploy")).rejects.toThrowError(
+				`Your Worker failed validation because it exceeded startup limits.`
 			);
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
-				No bindings found.
-
-				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
-
-				  Error: Script startup exceeded CPU time limit. [code: 10021]
-
-				  If you think this is a bug, please open an issue at:
-				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-
-				",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYour Worker failed validation because it exceeded startup limits.[0m
-
-				  To ensure fast responses, we place constraints on Worker startup -- like how much CPU it can use,
-				  or how long it can take.
-				  Your Worker failed validation, which means it hit one of these startup limits.
-				  Try reducing the amount of work done during startup (outside the event handler), either by
-				  removing code or relocating it inside the event handler.
-
-				",
-				}
-			`);
 		});
 
 		describe("unit tests", () => {

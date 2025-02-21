@@ -119,7 +119,7 @@ describe("deployPackage", () => {
 	it("should run `pnpm deploy` for the given package via `execSync`", ({
 		expect,
 	}) => {
-		deployPackage("foo");
+		deployPackage("foo", new Map());
 		expect(execSync).toHaveBeenCalledWith(
 			"pnpm -F foo run deploy",
 			expect.any(Object)
@@ -132,7 +132,7 @@ describe("deployPackage", () => {
 		});
 		const logs: string[] = [];
 		vitest.spyOn(console, "error").mockImplementation((v) => logs.push(v));
-		deployPackage("foo");
+		deployPackage("foo", new Map());
 		expect(logs[0]).toMatchInlineSnapshot(`"::error::Failed to deploy "foo"."`);
 	});
 });
