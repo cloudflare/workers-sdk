@@ -119,6 +119,7 @@ function getUserRequest(
 
 function getTargetService(request: Request, url: URL, env: Env) {
 	let service: Fetcher | undefined = env[CoreBindings.SERVICE_USER_FALLBACK];
+	console.log("getTargetService", service, request);
 
 	const override = request.headers.get(CoreHeaders.ROUTE_OVERRIDE);
 	request.headers.delete(CoreHeaders.ROUTE_OVERRIDE);
