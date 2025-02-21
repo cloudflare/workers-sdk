@@ -1,5 +1,16 @@
 # wrangler
 
+## 3.109.2
+
+### Patch Changes
+
+- [#7687](https://github.com/cloudflare/workers-sdk/pull/7687) [`cc853cf`](https://github.com/cloudflare/workers-sdk/commit/cc853cf0dcefc35c9d9022b9a1641d2d77c19da8) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: bug where Pages deployments that create new projects were failing with a new repo
+
+- [#8131](https://github.com/cloudflare/workers-sdk/pull/8131) [`efd7f97`](https://github.com/cloudflare/workers-sdk/commit/efd7f9764199ef67dff14155bd3dd249c4dff5c7) Thanks [@lambrospetrou](https://github.com/lambrospetrou)! - D1 export will now show an error when the presigned URL is invalid
+
+- Updated dependencies [[`5e06177`](https://github.com/cloudflare/workers-sdk/commit/5e06177861b29aa9b114f9ecb50093190af94f4b)]:
+  - miniflare@3.20250214.0
+
 ## 3.109.1
 
 ### Patch Changes
@@ -256,14 +267,14 @@
   ```json
   // wrangler.json
   {
-    "name": "my-worker",
-    "assets": {
-      "directory": "./public/",
-      "binding": "ASSETS"
-    },
-    "vars": {
-      "MY_VAR": "my-var"
-    }
+  	"name": "my-worker",
+  	"assets": {
+  		"directory": "./public/",
+  		"binding": "ASSETS"
+  	},
+  	"vars": {
+  		"MY_VAR": "my-var"
+  	}
   }
   ```
 
@@ -273,10 +284,10 @@
   const { env, dispose } = await getPlatformProxy();
 
   if (env.ASSETS) {
-    const text = await (
-      await env.ASSETS.fetch("http://0.0.0.0/file.txt")
-    ).text();
-    console.log(text); // logs the content of file.txt
+  	const text = await (
+  		await env.ASSETS.fetch("http://0.0.0.0/file.txt")
+  	).text();
+  	console.log(text); // logs the content of file.txt
   }
 
   await dispose();
@@ -394,7 +405,7 @@
 
   ```ts
   interface Env {
-    MY_VAR: "dev value";
+  	MY_VAR: "dev value";
   }
   ```
 
@@ -404,7 +415,7 @@
 
   ```ts
   interface Env {
-    MY_VAR: "dev value" | "prod value";
+  	MY_VAR: "dev value" | "prod value";
   }
   ```
 
@@ -517,11 +528,11 @@
 
     ```json
     {
-      "name": "my-worker",
-      "main": "./index.js",
-      "kv_namespaces": [
-        { "binding": "<BINDING_NAME1>", "id": "<NAMESPACE_ID1>" }
-      ]
+    	"name": "my-worker",
+    	"main": "./index.js",
+    	"kv_namespaces": [
+    		{ "binding": "<BINDING_NAME1>", "id": "<NAMESPACE_ID1>" }
+    	]
     }
     ```
 
@@ -529,7 +540,7 @@
 
     ```json
     {
-      "configPath": "../../dist/wrangler.json"
+    	"configPath": "../../dist/wrangler.json"
     }
     ```
 
@@ -827,9 +838,9 @@
 
   ```json
   {
-    "name": "worker-ts",
-    "main": "src/index.ts",
-    "compatibility_date": "2023-05-04"
+  	"name": "worker-ts",
+  	"main": "src/index.ts",
+  	"compatibility_date": "2023-05-04"
   }
   ```
 
@@ -1547,15 +1558,15 @@
   const { env, dispose } = await getPlatformProxy();
 
   try {
-    const sql = postgres(
-      // Note: connectionString points to `postgres://user:pass@127.0.0.1:1234/db` not to the actual hyperdrive
-      //       connection string, for more details see the explanation below
-      env.MY_HYPERDRIVE.connectionString,
-    );
-    const results = await sql`SELECT * FROM pg_tables`;
-    await sql.end();
+  	const sql = postgres(
+  		// Note: connectionString points to `postgres://user:pass@127.0.0.1:1234/db` not to the actual hyperdrive
+  		//       connection string, for more details see the explanation below
+  		env.MY_HYPERDRIVE.connectionString
+  	);
+  	const results = await sql`SELECT * FROM pg_tables`;
+  	await sql.end();
   } catch (e) {
-    console.error(e);
+  	console.error(e);
   }
 
   await dispose();
@@ -1891,7 +1902,7 @@
 
   ```ts
   interface Env {
-    OBJECT: DurableObjectNamespace<import("./src/index").MyDurableObject>;
+  	OBJECT: DurableObjectNamespace<import("./src/index").MyDurableObject>;
   }
   ```
 
@@ -1946,10 +1957,10 @@
 
   ```js
   export default {
-    async fetch(_request, _env, { waitUntil }) {
-      waitUntil(() => {}); // <-- throws an illegal invocation error
-      return new Response("Hello World!");
-    },
+  	async fetch(_request, _env, { waitUntil }) {
+  		waitUntil(() => {}); // <-- throws an illegal invocation error
+  		return new Response("Hello World!");
+  	},
   };
   ```
 
@@ -2443,7 +2454,7 @@
 
   ```typescript
   interface Env {
-    "some-var": "foobar";
+  	"some-var": "foobar";
   }
   ```
 
@@ -2465,7 +2476,7 @@
 
   ```js
   const { env } = await getPlatformProxy({
-    environment: "production",
+  	environment: "production",
   });
   ```
 
@@ -2642,21 +2653,21 @@
   import { WorkerEntrypoint } from "cloudflare:workers";
 
   export class EntrypointA extends WorkerEntrypoint {
-    fetch(request) {
-      return new Response("Hello from entrypoint A!");
-    }
+  	fetch(request) {
+  		return new Response("Hello from entrypoint A!");
+  	}
   }
 
   export const entrypointB: ExportedHandler = {
-    fetch(request, env, ctx) {
-      return new Response("Hello from entrypoint B!");
-    },
+  	fetch(request, env, ctx) {
+  		return new Response("Hello from entrypoint B!");
+  	},
   };
 
   export default <ExportedHandler>{
-    fetch(request, env, ctx) {
-      return new Response("Hello from the default entrypoint!");
-    },
+  	fetch(request, env, ctx) {
+  		return new Response("Hello from the default entrypoint!");
+  	},
   };
   ```
 
@@ -3016,12 +3027,12 @@
 
   ```ts
   interface Env {
-    SEND_EMAIL: SendEmail;
-    VECTORIZE: VectorizeIndex;
-    HYPERDRIVE: Hyperdrive;
-    MTLS: Fetcher;
-    BROWSER: Fetcher;
-    AI: Fetcher;
+  	SEND_EMAIL: SendEmail;
+  	VECTORIZE: VectorizeIndex;
+  	HYPERDRIVE: Hyperdrive;
+  	MTLS: Fetcher;
+  	BROWSER: Fetcher;
+  	AI: Fetcher;
   }
   ```
 
@@ -3044,7 +3055,7 @@
 
   ```js
   const worker = await unstable_dev("path/to/script.js", {
-    logLevel: "none",
+  	logLevel: "none",
   });
   ```
 
@@ -3279,11 +3290,11 @@
 
   ```ts
   export function randomBytes(length: number) {
-    if (navigator.userAgent !== "Cloudflare-Workers") {
-      return new Uint8Array(require("node:crypto").randomBytes(length));
-    } else {
-      return crypto.getRandomValues(new Uint8Array(length));
-    }
+  	if (navigator.userAgent !== "Cloudflare-Workers") {
+  		return new Uint8Array(require("node:crypto").randomBytes(length));
+  	} else {
+  		return crypto.getRandomValues(new Uint8Array(length));
+  	}
   }
   ```
 
@@ -3408,17 +3419,17 @@
 
   ```json
   {
-    "error": {
-      "text": "A request to the Cloudflare API (/accounts/xxxx/d1/database/xxxxxxx/query) failed.",
-      "notes": [
-        {
-          "text": "no such column: asdf at offset 7 [code: 7500]"
-        }
-      ],
-      "kind": "error",
-      "name": "APIError",
-      "code": 7500
-    }
+  	"error": {
+  		"text": "A request to the Cloudflare API (/accounts/xxxx/d1/database/xxxxxxx/query) failed.",
+  		"notes": [
+  			{
+  				"text": "no such column: asdf at offset 7 [code: 7500]"
+  			}
+  		],
+  		"kind": "error",
+  		"name": "APIError",
+  		"code": 7500
+  	}
   }
   ```
 
@@ -3582,12 +3593,12 @@
   const { bindings, dispose } = await getBindingsProxy();
 
   try {
-    const myKv = bindings.MY_KV;
-    const kvValue = await myKv.get("my-kv-key");
+  	const myKv = bindings.MY_KV;
+  	const kvValue = await myKv.get("my-kv-key");
 
-    console.log(`KV Value = ${kvValue}`);
+  	console.log(`KV Value = ${kvValue}`);
   } finally {
-    await dispose();
+  	await dispose();
   }
   ```
 
@@ -3978,17 +3989,17 @@
 
   ```jsonc
   {
-    "configurations": [
-      {
-        "name": "Wrangler",
-        "type": "node",
-        "request": "attach",
-        "port": 9229,
-        // These can be omitted, but doing so causes silent errors in the runtime
-        "attachExistingChildren": false,
-        "autoAttachChildProcesses": false,
-      },
-    ],
+  	"configurations": [
+  		{
+  			"name": "Wrangler",
+  			"type": "node",
+  			"request": "attach",
+  			"port": 9229,
+  			// These can be omitted, but doing so causes silent errors in the runtime
+  			"attachExistingChildren": false,
+  			"autoAttachChildProcesses": false,
+  		},
+  	],
   }
   ```
 
@@ -4246,18 +4257,18 @@
 
   ```json
   {
-    "configurations": [
-      {
-        "name": "Wrangler",
-        "type": "node",
-        "request": "attach",
-        "port": 9229,
-        "cwd": "/",
-        "resolveSourceMapLocations": null,
-        "attachExistingChildren": false,
-        "autoAttachChildProcesses": false
-      }
-    ]
+  	"configurations": [
+  		{
+  			"name": "Wrangler",
+  			"type": "node",
+  			"request": "attach",
+  			"port": 9229,
+  			"cwd": "/",
+  			"resolveSourceMapLocations": null,
+  			"attachExistingChildren": false,
+  			"autoAttachChildProcesses": false
+  		}
+  	]
   }
   ```
 
@@ -4859,11 +4870,11 @@
 
   ```js
   export default {
-    fetch(req) {
-      const url = new URL(req.url);
-      const name = url.searchParams.get("name");
-      return new Response("Hello, " + name);
-    },
+  	fetch(req) {
+  		const url = new URL(req.url);
+  		const name = url.searchParams.get("name");
+  		return new Response("Hello, " + name);
+  	},
   };
   ```
 
@@ -5530,9 +5541,9 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```js
   worker = await unstable_dev(
-    "src/index.js",
-    {},
-    { disableExperimentalWarning: true },
+  	"src/index.js",
+  	{},
+  	{ disableExperimentalWarning: true }
   );
   ```
 
@@ -5540,7 +5551,7 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```js
   worker = await unstable_dev("src/index.js", {
-    experimental: { disableExperimentalWarning: true },
+  	experimental: { disableExperimentalWarning: true },
   });
   ```
 
@@ -5813,9 +5824,9 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```ts
   export const onRequest = ({ passThroughOnException }) => {
-    passThroughOnException();
+  	passThroughOnException();
 
-    x; // Would ordinarily throw an error, but instead, static assets are served.
+  	x; // Would ordinarily throw an error, but instead, static assets are served.
   };
   ```
 
@@ -5834,8 +5845,8 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```ts
   declare module "**/*.wasm" {
-    const value: WebAssembly.Module;
-    export default value;
+  	const value: WebAssembly.Module;
+  	export default value;
   }
   ```
 
@@ -5843,8 +5854,8 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```ts
   declare module "**/*.webp" {
-    const value: ArrayBuffer;
-    export default value;
+  	const value: ArrayBuffer;
+  	export default value;
   }
   ```
 
@@ -5852,8 +5863,8 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```ts
   declare module "**/*.text" {
-    const value: string;
-    export default value;
+  	const value: string;
+  	export default value;
   }
   ```
 
@@ -6048,7 +6059,7 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```js
   await unstable_dev("src/index.ts", {
-    local: false,
+  	local: false,
   });
   ```
 
@@ -6160,42 +6171,42 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
   import { unstable_dev } from "wrangler";
 
   describe("multi-worker testing", () => {
-    let childWorker;
-    let parentWorker;
+  	let childWorker;
+  	let parentWorker;
 
-    beforeAll(async () => {
-      childWorker = await unstable_dev(
-        "src/child-worker.js",
-        { config: "src/child-wrangler.toml" },
-        { disableExperimentalWarning: true },
-      );
-      parentWorker = await unstable_dev(
-        "src/parent-worker.js",
-        { config: "src/parent-wrangler.toml" },
-        { disableExperimentalWarning: true },
-      );
-    });
+  	beforeAll(async () => {
+  		childWorker = await unstable_dev(
+  			"src/child-worker.js",
+  			{ config: "src/child-wrangler.toml" },
+  			{ disableExperimentalWarning: true }
+  		);
+  		parentWorker = await unstable_dev(
+  			"src/parent-worker.js",
+  			{ config: "src/parent-wrangler.toml" },
+  			{ disableExperimentalWarning: true }
+  		);
+  	});
 
-    afterAll(async () => {
-      await childWorker.stop();
-      await parentWorker.stop();
-    });
+  	afterAll(async () => {
+  		await childWorker.stop();
+  		await parentWorker.stop();
+  	});
 
-    it("childWorker should return Hello World itself", async () => {
-      const resp = await childWorker.fetch();
-      if (resp) {
-        const text = await resp.text();
-        expect(text).toMatchInlineSnapshot(`"Hello World!"`);
-      }
-    });
+  	it("childWorker should return Hello World itself", async () => {
+  		const resp = await childWorker.fetch();
+  		if (resp) {
+  			const text = await resp.text();
+  			expect(text).toMatchInlineSnapshot(`"Hello World!"`);
+  		}
+  	});
 
-    it("parentWorker should return Hello World by invoking the child worker", async () => {
-      const resp = await parentWorker.fetch();
-      if (resp) {
-        const parsedResp = await resp.text();
-        expect(parsedResp).toEqual("Parent worker sees: Hello World!");
-      }
-    });
+  	it("parentWorker should return Hello World by invoking the child worker", async () => {
+  		const resp = await parentWorker.fetch();
+  		if (resp) {
+  			const parsedResp = await resp.text();
+  			expect(parsedResp).toEqual("Parent worker sees: Hello World!");
+  		}
+  	});
   });
   ```
 
@@ -6684,9 +6695,9 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```js
   export default {
-    fetch(req, env) {
-      return env.Bee.fetch(req);
-    },
+  	fetch(req, env) {
+  		return env.Bee.fetch(req);
+  	},
   };
   ```
 
@@ -6700,9 +6711,9 @@ rozenmd@cflaptop test1 % npx wrangler d1 execute test --command="select * from c
 
   ```js
   export default {
-    fetch(req, env) {
-      return new Response("Hello World");
-    },
+  	fetch(req, env) {
+  		return new Response("Hello World");
+  	},
   };
   ```
 
@@ -7681,9 +7692,9 @@ And in your worker, you can call it like so:
 
 ```js
 export default {
-  fetch(req, env, ctx) {
-    return env.MYWORKER.fetch(new Request("http://domain/some-path"));
-  },
+	fetch(req, env, ctx) {
+		return env.MYWORKER.fetch(new Request("http://domain/some-path"));
+	},
 };
 ```
 

@@ -1,14 +1,11 @@
 name: C3 E2E Tests
 on:
-  push:
-    branches:
-      - changeset-release/main
   pull_request:
     types: [synchronize, opened, reopened, labeled, unlabeled]
 
 jobs:
   turbo-ignore:
-    if: (github.event_name != 'pull_request' || (github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'c3-e2e' ) && github.event.pull_request.head.repo.owner.login == 'cloudflare'))
+    if: contains(github.event.*.labels.*.name, 'c3-e2e' ) && github.event.pull_request.head.repo.owner.login == 'cloudflare'
     outputs:
       skip: ${{ steps.skip.outcome }}
     runs-on: ubuntu-latest

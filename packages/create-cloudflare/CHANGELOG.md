@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.38.1
+
+### Patch Changes
+
+- [#8152](https://github.com/cloudflare/workers-sdk/pull/8152) [`ed3bc2f`](https://github.com/cloudflare/workers-sdk/commit/ed3bc2f3be45be55d20299ed3f481e75c63ba285) Thanks [@Cherry](https://github.com/Cherry)! - fix: generated wrangler.json and wrangler.jsonc files will now be formatted with tabs, to match the rest of the generated files
+
 ## 2.38.0
 
 ### Minor Changes

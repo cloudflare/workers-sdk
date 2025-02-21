@@ -192,9 +192,12 @@ async function sendStartThreadMessage(pat: string, webhookUrl: string, ai: Ai) {
 					"lrapoport-cf",
 					"petebacondarwin",
 					"CarmenPopoviciu",
-					"andyjessop",
 					"edmundhung",
 					"emily-shen",
+					"dario-piotrowicz",
+					"jculvey",
+					"vicb",
+					"jamesopstad",
 				].includes(pr.user.login)
 		)
 		.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));

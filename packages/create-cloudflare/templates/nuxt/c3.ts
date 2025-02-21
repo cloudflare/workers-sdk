@@ -3,8 +3,7 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { mergeObjectProperties, transformFile } from "helpers/codemod";
-import { getLatestTypesEntrypoint } from "helpers/compatDate";
-import { readFile, writeFile } from "helpers/files";
+import { writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import * as recast from "recast";
@@ -29,7 +28,7 @@ const generate = async (ctx: C3Context) => {
 	logRaw(""); // newline
 };
 
-const configure = async (ctx: C3Context) => {
+const configure = async () => {
 	const packages = ["nitro-cloudflare-dev"];
 
 	// When using pnpm, explicitly add h3 package so the H3Event type declaration can be updated.
@@ -44,29 +43,6 @@ const configure = async (ctx: C3Context) => {
 		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
 	});
 	updateNuxtConfig();
-
-	updateEnvTypes(ctx);
-};
-
-const updateEnvTypes = (ctx: C3Context) => {
-	const filepath = "env.d.ts";
-
-	const s = spinner();
-	s.start(`Updating ${filepath}`);
-
-	let file = readFile(filepath);
-
-	let typesEntrypoint = `@cloudflare/workers-types`;
-	const latestEntrypoint = getLatestTypesEntrypoint(ctx);
-	if (latestEntrypoint) {
-		typesEntrypoint += `/${latestEntrypoint}`;
-	}
-
-	// Replace placeholder with actual types entrypoint
-	file = file.replace("WORKERS_TYPES_ENTRYPOINT", typesEntrypoint);
-	writeFile("env.d.ts", file);
-
-	s.stop(`${brandColor(`updated`)} ${dim(`\`${filepath}\``)}`);
 };
 
 const updateNuxtConfig = () => {

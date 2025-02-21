@@ -1,5 +1,19 @@
 # @cloudflare/vite-plugin
 
+## 0.1.3
+
+### Patch Changes
+
+- [#8176](https://github.com/cloudflare/workers-sdk/pull/8176) [`693d63e`](https://github.com/cloudflare/workers-sdk/commit/693d63eda629400fffcb4de35da282c66bc2e645) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: refactor Node.js compat support to ensure all polyfills are pre-bundled before the first request
+
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies [[`5e06177`](https://github.com/cloudflare/workers-sdk/commit/5e06177861b29aa9b114f9ecb50093190af94f4b)]:
+  - miniflare@3.20250214.0
+  - @cloudflare/unenv-preset@1.1.2
+
 ## 0.1.1
 
 ### Patch Changes

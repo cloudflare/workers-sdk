@@ -90,13 +90,18 @@ export const installWrangler = async () => {
 	const { npm } = detectPackageManager();
 
 	// Even if Wrangler is already installed, make sure we install the latest version, as some framework CLIs are pinned to an older version
-	await installPackages([`wrangler@latest`], {
-		dev: true,
-		startText: `Installing wrangler ${dim(
-			"A command line tool for building Cloudflare Workers",
-		)}`,
-		doneText: `${brandColor("installed")} ${dim(
-			`via \`${npm} install wrangler --save-dev\``,
-		)}`,
-	});
+	await installPackages(
+		[
+			`https://prerelease-registry.devprod.cloudflare.dev/workers-sdk/runs/13439225900/npm-package-wrangler-8166`,
+		],
+		{
+			dev: true,
+			startText: `Installing wrangler ${dim(
+				"A command line tool for building Cloudflare Workers",
+			)}`,
+			doneText: `${brandColor("installed")} ${dim(
+				`via \`${npm} install wrangler --save-dev\``,
+			)}`,
+		},
+	);
 };
