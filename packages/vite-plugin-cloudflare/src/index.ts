@@ -341,7 +341,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				return {
 					external: true,
-					id: createModuleReference("CompiledWasm", resolved.id),
+					id: createModuleReference(
+						"CompiledWasm",
+						resolved.id,
+						this.environment.mode === "dev"
+					),
 				};
 			},
 			renderChunk(code, chunk) {
@@ -518,6 +522,13 @@ function getDotDevDotVarsContent(
 	return null;
 }
 
-function createModuleReference(type: ModuleType, id: string) {
-	return `__CLOUDFLARE_MODULE__${type}__${id}__`;
+function createModuleReference(type: ModuleType, id: string, devMode: boolean) {
+	// Note: in dev we need to add a prefix such as `external://` to signal
+	//       to the default vite DevEnvironment `fetchModule`
+	//       logic that this is a reference for an external module
+	//       (source: https://github.com/vitejs/vite/blob/e01573a575/packages/vite/src/node/ssr/fetchModule.ts#L41-L43)
+	//       (`fetchModule` doesn't try to resolve the module so `resolveId` hooks aren't taken into account here,
+	//        meaning that returning a resolved id with `external: true` is not sufficient)
+	const prefix = devMode ? "external://" : "";
+	return `${prefix}__CLOUDFLARE_MODULE__${type}__${id}__`;
 }
