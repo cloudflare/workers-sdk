@@ -1,4 +1,3 @@
-import inspector from "node:inspector";
 import path from "node:path";
 import {
 	formatZodError,
@@ -11,7 +10,7 @@ import { z } from "zod";
 import { getProjectPath, getRelativeProjectPath, log } from "./helpers";
 import type { ModuleRule, WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
-import type { WorkspaceProject } from "vitest/node";
+import type { Vitest, WorkspaceProject } from "vitest/node";
 import type { ParseParams, ZodError } from "zod";
 
 export interface WorkersConfigPluginAPI {
@@ -49,9 +48,9 @@ const WorkersPoolOptionsSchema = z.object({
 	 */
 	singleWorker: z.boolean().default(false),
 	/**
-	 * Specifies the inspector port to use for debugging. Defaults to 9229.
+	 * Specifies the inspector port used to open the inspector. Defaults to 9229.
 	 */
-	inspectorPort: z.number().default(9229),
+	inspectorPort: z.number().optional(),
 	miniflare: z
 		.object({
 			workers: z.array(z.object({}).passthrough()).optional(),
@@ -140,18 +139,6 @@ function parseWorkerOptions(
 	return result;
 }
 
-function getNodeInspectorPort(): number | null {
-	const url = inspector.url();
-
-	if (!url) {
-		return null;
-	}
-
-	const port = new URL(url).port;
-
-	return Number(port);
-}
-
 async function parseCustomPoolOptions(
 	rootPath: string,
 	value: unknown,
@@ -203,27 +190,6 @@ async function parseCustomPoolOptions(
 
 	if (errorRef.value !== undefined) {
 		throw errorRef.value;
-	}
-
-	const nodeInspectorPort = getNodeInspectorPort();
-
-	if (
-		nodeInspectorPort === null ||
-		options.inspectorPort === nodeInspectorPort
-	) {
-		if (options.inspectorPort === nodeInspectorPort) {
-			console.warn(
-				`The inspector port ${nodeInspectorPort} is already in use by the Node inspector. ` +
-					`Update the "inspectorPort" option in the vitest config to debug your Workers tests.`
-			);
-		}
-
-		// Unset the inspector port so Miniflare doesn't try to use it
-		options.inspectorPort = undefined;
-	} else if (!options.singleWorker) {
-		log.warn(`Tests run in a single worker when the inspector is open.`);
-
-		options.singleWorker = true;
 	}
 
 	// Try to parse Wrangler config if any
@@ -325,4 +291,27 @@ export async function parseProjectOptions(
 			`Unexpected pool options in project ${relativePath}:\n${formatted}`
 		);
 	}
+}
+
+export function setupInspector(
+	options: WorkersPoolOptionsWithDefines,
+	ctx: Vitest
+): void {
+	if (!ctx.config.inspector.enabled) {
+		// If the inspector isn't enabled, unset the "inspectorPort" option
+		options.inspectorPort = undefined;
+		return;
+	}
+
+	if (!options.singleWorker) {
+		log.warn(`Tests run in a single worker when the inspector is open.`);
+
+		options.singleWorker = true;
+	}
+
+	// Fallback to the vitest inspector port if not specified
+	options.inspectorPort ??= ctx.config.inspector.port ?? 9229;
+
+	// Disable the default node inspector
+	ctx.config.inspector.enabled = false;
 }
