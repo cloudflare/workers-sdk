@@ -1,3 +1,4 @@
+import inspector from "node:inspector";
 import path from "node:path";
 import {
 	formatZodError,
@@ -7,10 +8,10 @@ import {
 	PLUGINS,
 } from "miniflare";
 import { z } from "zod";
-import { getProjectPath, getRelativeProjectPath } from "./helpers";
+import { getProjectPath, getRelativeProjectPath, log } from "./helpers";
 import type { ModuleRule, WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
-import type { WorkspaceProject } from "vitest/node";
+import type { Vitest, WorkspaceProject } from "vitest/node";
 import type { ParseParams, ZodError } from "zod";
 
 export interface WorkersConfigPluginAPI {
@@ -47,6 +48,10 @@ const WorkersPoolOptionsSchema = z.object({
 	 * small test files.
 	 */
 	singleWorker: z.boolean().default(false),
+	/**
+	 * Specifies the inspector port used to open the inspector. Defaults to 9229.
+	 */
+	inspectorPort: z.number().optional(),
 	miniflare: z
 		.object({
 			workers: z.array(z.object({}).passthrough()).optional(),
@@ -227,7 +232,8 @@ async function parseCustomPoolOptions(
 }
 
 export async function parseProjectOptions(
-	project: WorkspaceProject
+	project: WorkspaceProject,
+	ctx: Vitest
 ): Promise<WorkersPoolOptionsWithDefines> {
 	// Make sure the user hasn't specified a custom environment. This was how
 	// users enabled Miniflare 2's Vitest environment, so it's likely users will
@@ -252,6 +258,13 @@ export async function parseProjectOptions(
 		throw new TypeError(message);
 	}
 
+	if (ctx.config.inspector.enabled) {
+		// Remember vitest inspector port before disabling it
+		vitestInspectorPort = ctx.config.inspector.port ?? 9229;
+		// Disable the default node inspector
+		ctx.config.inspector = {};
+	}
+
 	const projectPath = getProjectPath(project);
 	const rootPath =
 		typeof projectPath === "string" ? path.dirname(projectPath) : "";
@@ -267,9 +280,40 @@ export async function parseProjectOptions(
 			};
 			workersPoolOptions = await workersPoolOptions({ inject });
 		}
-		return await parseCustomPoolOptions(rootPath, workersPoolOptions, {
+		const options = await parseCustomPoolOptions(rootPath, workersPoolOptions, {
 			path: OPTIONS_PATH_ARRAY,
 		});
+
+		// If vitest inspector is enabled
+		if (vitestInspectorPort !== null) {
+			options.inspectorPort ??= vitestInspectorPort;
+		} else {
+			const nodeInspectorPort = getNodeInspectorPort();
+			const inspectorPort = options.inspectorPort ?? 9229;
+
+			if (nodeInspectorPort === null || nodeInspectorPort === inspectorPort) {
+				if (inspectorPort === nodeInspectorPort) {
+					log.warn(
+						`The inspector port ${inspectorPort} is already in use by the Node inspector. ` +
+							`Update "inspectorPort" in the vitest poolOptions to debug your Workers tests.`
+					);
+				}
+
+				// If the inspector isn't enabled, unset the "inspectorPort" option
+				options.inspectorPort = undefined;
+			} else {
+				options.inspectorPort = inspectorPort;
+			}
+		}
+
+		// If the inspectorPort is not set, check if the Node inspector is running
+		if (options.inspectorPort && !options.singleWorker) {
+			log.warn(`Tests run in a single worker when the inspector is open.`);
+
+			options.singleWorker = true;
+		}
+
+		return options;
 	} catch (e) {
 		if (!isZodErrorLike(e)) {
 			throw e;
@@ -287,4 +331,19 @@ export async function parseProjectOptions(
 			`Unexpected pool options in project ${relativePath}:\n${formatted}`
 		);
 	}
+}
+
+// Vitest Inspector port
+let vitestInspectorPort: number | null = null;
+
+function getNodeInspectorPort(): number | null {
+	const url = inspector.url();
+
+	if (!url) {
+		return null;
+	}
+
+	const port = new URL(url).port;
+
+	return Number(port);
 }

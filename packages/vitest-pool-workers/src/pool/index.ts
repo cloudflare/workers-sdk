@@ -31,6 +31,7 @@ import {
 	getProjectPath,
 	getRelativeProjectPath,
 	isFileNotFoundError,
+	log,
 	WORKER_NAME_PREFIX,
 } from "./helpers";
 import {
@@ -110,8 +111,6 @@ let debuglog: util.DebugLoggerFunction = util.debuglog(
 	"vitest-pool-workers:index",
 	(fn) => (debuglog = fn)
 );
-// Log for informational pool messages
-const log = new Log(LogLevel.VERBOSE, { prefix: "vpw" });
 // Log for Miniflare instances, used for user code warnings/errors
 const mfLog = new Log(LogLevel.WARN);
 
@@ -563,6 +562,7 @@ function buildProjectMiniflareOptions(
 		//  --> multiple instances each with single runner worker
 		return {
 			...SHARED_MINIFLARE_OPTIONS,
+			inspectorPort: project.options.inspectorPort,
 			unsafeModuleFallbackService: moduleFallbackService,
 			workers: [runnerWorker, ABORT_ALL_WORKER, ...auxiliaryWorkers],
 		};
@@ -610,7 +610,11 @@ async function getProjectMiniflare(
 	if (project.mf === undefined) {
 		// If `mf` is now `undefined`, create new instances
 		if (singleInstance) {
-			log.info(`Starting single runtime for ${project.relativePath}...`);
+			log.info(
+				`Starting single runtime for ${project.relativePath}` +
+					`${mfOptions.inspectorPort !== undefined ? ` with inspector on port ${mfOptions.inspectorPort}` : ""}` +
+					`...`
+			);
 			project.mf = new Miniflare(mfOptions);
 		} else {
 			log.info(`Starting isolated runtimes for ${project.relativePath}...`);
@@ -887,14 +891,14 @@ async function executeMethod(
 		if (workersProject === undefined) {
 			workersProject = {
 				project,
-				options: await parseProjectOptions(project),
+				options: await parseProjectOptions(project, ctx),
 				testFiles: new Set(),
 				relativePath: getRelativeProjectPath(project),
 			};
 			allProjects.set(projectName, workersProject);
 		} else if (!parsedProjectOptions.has(project)) {
 			workersProject.project = project;
-			workersProject.options = await parseProjectOptions(project);
+			workersProject.options = await parseProjectOptions(project, ctx);
 			workersProject.relativePath = getRelativeProjectPath(project);
 		}
 		workersProject.testFiles.add(testFile);

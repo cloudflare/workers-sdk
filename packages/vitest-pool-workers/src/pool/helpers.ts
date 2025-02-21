@@ -1,4 +1,5 @@
 import path from "node:path";
+import { Log, LogLevel } from "miniflare";
 import type { WorkspaceProject } from "vitest/node";
 
 // User worker names must not start with this
@@ -24,3 +25,6 @@ export function getRelativeProjectPath(
 		return path.relative("", projectPath);
 	}
 }
+
+// Log for informational pool messages
+export const log = new Log(LogLevel.VERBOSE, { prefix: "vpw" });
