@@ -1,5 +1,4 @@
-// @ts-ignore
-import AssetWorker from "@cloudflare/workers-shared/dist/asset-worker.mjs";
+import AssetWorker from "@cloudflare/workers-shared/asset-worker/src/index";
 import { UNKNOWN_HOST } from "../shared";
 import type { WorkerEntrypoint } from "cloudflare:workers";
 
@@ -8,7 +7,7 @@ interface Env {
 	__VITE_FETCH_ASSET__: Fetcher;
 }
 
-export default class CustomAssetWorker extends (AssetWorker as typeof WorkerEntrypoint<Env>) {
+export default class CustomAssetWorker extends (AssetWorker as typeof WorkerEntrypoint as typeof WorkerEntrypoint<Env>) {
 	override async fetch(request: Request): Promise<Response> {
 		const response = await super.fetch!(request);
 		const modifiedResponse = new Response(response.body, response);

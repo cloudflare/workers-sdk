@@ -23,11 +23,7 @@
 		"dist"
 	],
 	"scripts": {
-		"build": "pnpm run clean && pnpm run bundle:asset-worker:prod && pnpm run bundle:router-worker:prod && pnpm run types:emit",
-		"bundle:asset-worker": "esbuild asset-worker/src/index.ts --format=esm --bundle --outfile=dist/asset-worker.mjs --sourcemap=external --external:cloudflare:*",
-		"bundle:asset-worker:prod": "pnpm run bundle:asset-worker --minify && node -r esbuild-register scripts/copy-config-file.ts",
-		"bundle:router-worker": "esbuild router-worker/src/index.ts --format=esm --bundle --outfile=dist/router-worker.mjs --sourcemap=external",
-		"bundle:router-worker:prod": "pnpm run bundle:router-worker --minify",
+		"build": "pnpm run clean && pnpm run types:emit",
 		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "pnpm run check:type:tests && tsc",
 		"check:type:tests": "tsc -p ./asset-worker/tests/tsconfig.json && tsc -p ./router-worker/tests/tsconfig.json",
