@@ -881,6 +881,16 @@ async function executeMethod(
 	// If we had concurrent runs, stack pushes/pops would interfere. We should
 	// always have an empty, fully-popped stacked at the end of a run.
 
+	let inspectorPort: number | null = null;
+
+	if (ctx.config.inspector.enabled) {
+		// Remember the inspector port for the first run
+		inspectorPort = ctx.config.inspector.port ?? 9229;
+
+		// Disable the default node inspector
+		ctx.config.inspector = {};
+	}
+
 	// 1. Collect new specs
 	const parsedProjectOptions = new Set<WorkspaceProject>();
 	for (const [project, testFile] of specs) {
@@ -891,14 +901,17 @@ async function executeMethod(
 		if (workersProject === undefined) {
 			workersProject = {
 				project,
-				options: await parseProjectOptions(project, ctx),
+				options: await parseProjectOptions(project, inspectorPort),
 				testFiles: new Set(),
 				relativePath: getRelativeProjectPath(project),
 			};
 			allProjects.set(projectName, workersProject);
 		} else if (!parsedProjectOptions.has(project)) {
 			workersProject.project = project;
-			workersProject.options = await parseProjectOptions(project, ctx);
+			workersProject.options = await parseProjectOptions(
+				project,
+				inspectorPort
+			);
 			workersProject.relativePath = getRelativeProjectPath(project);
 		}
 		workersProject.testFiles.add(testFile);

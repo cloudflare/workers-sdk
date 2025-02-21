@@ -232,7 +232,7 @@ async function parseCustomPoolOptions(
 
 export async function parseProjectOptions(
 	project: WorkspaceProject,
-	ctx: Vitest
+	inspectorPort: number | null
 ): Promise<WorkersPoolOptionsWithDefines> {
 	// Make sure the user hasn't specified a custom environment. This was how
 	// users enabled Miniflare 2's Vitest environment, so it's likely users will
@@ -276,7 +276,7 @@ export async function parseProjectOptions(
 			path: OPTIONS_PATH_ARRAY,
 		});
 
-		if (!ctx.config.inspector.enabled) {
+		if (inspectorPort === null) {
 			// If the inspector isn't enabled, unset the "inspectorPort" option
 			options.inspectorPort = undefined;
 		} else {
@@ -287,10 +287,7 @@ export async function parseProjectOptions(
 			}
 
 			// Fallback to the vitest inspector port if not specified
-			options.inspectorPort ??= ctx.config.inspector.port ?? 9229;
-
-			// Disable the default node inspector
-			ctx.config.inspector.enabled = false;
+			options.inspectorPort ??= inspectorPort;
 		}
 
 		return options;
