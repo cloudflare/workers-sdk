@@ -194,14 +194,10 @@ export default {
 	},
 	transformPackageJson: async (_, ctx) => {
 		const isNpm = npm === "npm";
-		const isBun = npm === "bun";
-		const isNpmOrBun = isNpm || isBun;
-		const nextOnPagesScope = isNpmOrBun ? "@cloudflare/" : "";
+		const nextOnPagesScope = isNpm ? "@cloudflare/" : "";
 		const nextOnPagesCommand = `${nextOnPagesScope}next-on-pages`;
-		const pmCommand = isNpmOrBun ? npx : npm;
-		const pagesBuildRunCommand = `${
-			isNpm ? "npm run" : isBun ? "bun" : pmCommand
-		} pages:build`;
+		const pmCommand = isNpm ? npx : npm;
+		const pagesBuildRunCommand = `${isNpm ? "npm run" : pmCommand} pages:build`;
 		return {
 			scripts: {
 				"pages:build": `${pmCommand} ${nextOnPagesCommand}`,

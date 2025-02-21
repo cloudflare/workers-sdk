@@ -1,4 +1,4 @@
-name: Test old Node.js version
+name: Wrangler startup
 
 on:
   push:
@@ -6,8 +6,8 @@ on:
       - changeset-release/main
 
 jobs:
-  check:
-    name: "Checks"
+  old-node:
+    name: "Prevents old Node versions"
     timeout-minutes: 10
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
@@ -26,3 +26,21 @@ jobs:
 
       - name: Check for error message
         run: node packages/wrangler/src/__tests__/test-old-node-version.js
+  bun:
+    name: "Prevents Bun"
+    timeout-minutes: 10
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
+
+      - name: Check for error message
+        run: node packages/wrangler/src/__tests__/test-bun.js
