@@ -331,6 +331,8 @@ export type AssetsOptions = {
 	assetConfig: AssetConfig;
 };
 
+export class NonExistentAssetsDirError extends UserError {}
+
 export function getAssetsOptions(
 	args: { assets: string | undefined; script?: string },
 	config: Config
@@ -364,7 +366,7 @@ export function getAssetsOptions(
 			? '"--assets" command line argument'
 			: '"assets.directory" field in your configuration file';
 
-		throw new UserError(
+		throw new NonExistentAssetsDirError(
 			`The directory specified by the ${sourceOfTruthMessage} does not exist:\n` +
 				`${resolvedAssetsPath}`,
 
