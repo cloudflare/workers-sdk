@@ -235,6 +235,10 @@ const buildAssetManifest = async (dir: string) => {
 	const manifest: AssetManifest = {};
 	let counter = 0;
 
+	console.log('DEBUG: buildAssetManifest');
+	console.log(`reading dir: ${dir}`);
+	console.log('Files', files);
+
 	const ignoreFn = await createAssetIgnoreFunction(dir);
 
 	await Promise.all(
@@ -247,6 +251,8 @@ const buildAssetManifest = async (dir: string) => {
 
 			const filepath = path.join(dir, relativeFilepath);
 			const filestat = await stat(filepath);
+
+			console.log(`  Found file: ${relativeFilepath} - filepath: ${filepath} - symlink: ${filestat.isSymbolicLink()}, directory: ${filestat.isDirectory()}`);
 
 			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
 				return;
