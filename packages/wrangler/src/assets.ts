@@ -230,8 +230,27 @@ export const syncAssets = async (
 	return completionJwt;
 };
 
+async function recursiveReaddir(dir: string) {
+	const files = await readdir(dir);
+
+	const result: string[] = [];
+
+	for (const file of files) {
+		const fullPath = `${dir}/${file}`;
+		const stats = await stat(fullPath);
+
+		if (stats.isDirectory()) {
+			result.push(...await recursiveReaddir(fullPath));
+		} else {
+			result.push(fullPath);
+		}
+	}
+
+	return result;
+}
+
 const buildAssetManifest = async (dir: string) => {
-	const files = await readdir(dir, { recursive: true });
+	const files = await recursiveReaddir(dir);
 	const manifest: AssetManifest = {};
 	let counter = 0;
 
