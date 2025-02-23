@@ -3,7 +3,7 @@
 	"extends": ["//"],
 	"tasks": {
 		"build": {
-			"inputs": ["src/**"],
+			"inputs": ["src/**", "*.ts"],
 			"outputs": ["dist/**"]
 		},
 		"test:e2e": {
