@@ -230,7 +230,7 @@ export const syncAssets = async (
 	return completionJwt;
 };
 
-async function recursiveReaddir(dir: string) {
+async function recursiveReaddir(dir: string, relativeOf: string = "") {
 	const files = await readdir(dir);
 
 	const result: string[] = [];
@@ -240,9 +240,9 @@ async function recursiveReaddir(dir: string) {
 		const stats = await stat(fullPath);
 
 		if (stats.isDirectory()) {
-			result.push(...await recursiveReaddir(fullPath));
+			result.push(...await recursiveReaddir(fullPath, dir));
 		} else {
-			result.push(fullPath);
+			result.push(path.relative(relativeOf, fullPath));
 		}
 	}
 
