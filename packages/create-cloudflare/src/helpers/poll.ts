@@ -22,7 +22,7 @@ export const poll = async (url: string): Promise<boolean> => {
 	const domain = new URL(url).host;
 	const s = spinner();
 
-	s.start("Waiting for DNS to propagate. This might take up to two minutes.");
+	s.start("Waiting for DNS to propagate. This might take a few minutes.");
 
 	// Start out by sleeping for 10 seconds since it's unlikely DNS changes will
 	// have propogated before then
