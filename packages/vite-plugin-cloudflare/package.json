@@ -46,7 +46,7 @@
 		"@hattip/adapter-node": "^0.0.49",
 		"miniflare": "workspace:*",
 		"unenv": "2.0.0-rc.1",
-		"ws": "^8.18.0"
+		"ws": "catalog:default"
 	},
 	"devDependencies": {
 		"@cloudflare/mock-npm-registry": "workspace:*",
