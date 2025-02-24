@@ -16,7 +16,7 @@ catalog:
   undici: "^5.28.5"
   vitest: "~3.0.5"
   vite: "^5.4.14"
-  "ws": "^8.18.0"
+  "ws": "8.18.0"
 
 catalogs:
   vite-plugin:
