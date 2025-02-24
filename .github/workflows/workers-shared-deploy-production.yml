@@ -22,3 +22,7 @@ jobs:
           WORKERS_SHARED_SENTRY_ACCESS_ID: ${{ secrets.WORKERS_SHARED_SENTRY_ACCESS_ID }}
           WORKERS_SHARED_SENTRY_ACCESS_SECRET: ${{ secrets.WORKERS_SHARED_SENTRY_ACCESS_SECRET }}
           WORKERS_SHARED_SENTRY_AUTH_TOKEN: ${{ secrets.WORKERS_SHARED_SENTRY_AUTH_TOKEN }}
+
+      - name: Publish deployment summary
+        run: echo "# Deployment summary\n\n| Service | Version | Release link |\n| --- | --- | --- |\n| Asset Worker | \`aw-$(node -r esbuild-register ./scripts/get-version-tag.ts)\` | https://cflare.co/release-asset-worker |\n| Router Worker | \`rw-$(node -r esbuild-register ./scripts/get-version-tag.ts)\` | https://cflare.co/release-router-worker |\n" >> $GITHUB_STEP_SUMMARY
+        working-directory: packages/workers-shared

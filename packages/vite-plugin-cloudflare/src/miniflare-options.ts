@@ -16,7 +16,6 @@ import {
 } from "./constants";
 import { getWorkerConfigPaths } from "./deploy-config";
 import { MODULE_PATTERN } from "./shared";
-import { nodeBuiltInModules } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
 	PersistState,
@@ -290,11 +289,11 @@ export function getDevMiniflareOptions(
 							resolvedPluginConfig.cloudflareEnv
 						);
 
+						const { externalWorkers } = miniflareWorkerOptions
+
 						const { ratelimits, ...workerOptions } =
 							miniflareWorkerOptions.workerOptions;
-
-						const { externalWorkers } = miniflareWorkerOptions;
-
+						
 						return {
 							externalWorkers,
 							worker: {
@@ -312,10 +311,10 @@ export function getDevMiniflareOptions(
 									...workerOptions.serviceBindings,
 									...(environmentName ===
 										resolvedPluginConfig.entryWorkerEnvironmentName &&
-									workerConfig.assets?.binding
+										workerConfig.assets?.binding
 										? {
-												[workerConfig.assets.binding]: ASSET_WORKER_NAME,
-											}
+											[workerConfig.assets.binding]: ASSET_WORKER_NAME,
+										}
 										: {}),
 									__VITE_INVOKE_MODULE__: async (request) => {
 										const payload = (await request.json()) as vite.CustomPayload;
@@ -324,41 +323,39 @@ export function getDevMiniflareOptions(
 											name: string;
 											data: [string, string, FetchFunctionOptions];
 										};
-	
+
 										assert(
 											invokePayloadData.name === "fetchModule",
 											`Invalid invoke event: ${invokePayloadData.name}`
 										);
-	
+
 										const [moduleId] = invokePayloadData.data;
 										const moduleRE = new RegExp(MODULE_PATTERN);
-	
+
 										const shouldExternalize =
 											// Worker modules (CompiledWasm, Text, Data)
-											moduleRE.test(moduleId) ||
-											// Node.js builtin node modules (they will be resolved to unenv aliases)
-											nodeBuiltInModules.has(moduleId);
-	
+											moduleRE.test(moduleId);
+
 										if (shouldExternalize) {
 											const result = {
 												externalize: moduleId,
 												type: "module",
 											} satisfies vite.FetchResult;
-	
+
 											return MiniflareResponse.json({ result });
 										}
-	
+
 										const devEnvironment = viteDevServer.environments[
 											environmentName
 										] as CloudflareDevEnvironment;
-	
+
 										const result = await devEnvironment.hot.handleInvoke(payload);
-	
+
 										return MiniflareResponse.json(result);
 									},
 								},
 							} satisfies Partial<WorkerOptions>
-						};
+						}
 					})
 			: [];
 

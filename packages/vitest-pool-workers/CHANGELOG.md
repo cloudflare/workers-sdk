@@ -1,5 +1,20 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.7.2
+
+### Patch Changes
+
+- Updated dependencies [[`eb46f98`](https://github.com/cloudflare/workers-sdk/commit/eb46f987ccd215e95a9d56c60841c7c996931b2f)]:
+  - wrangler@3.109.3
+
+## 0.7.1
+
+### Patch Changes
+
+- [#7084](https://github.com/cloudflare/workers-sdk/pull/7084) [`82a8937`](https://github.com/cloudflare/workers-sdk/commit/82a89371250a1ec3e56fa5a518c685d362bde0ad) Thanks [@penalosa](https://github.com/penalosa)! - Support scoped names (e.g. `@scoped/durable-objects`) when using `runInDurableObject()`
+
+- [#8179](https://github.com/cloudflare/workers-sdk/pull/8179) [`b10483c`](https://github.com/cloudflare/workers-sdk/commit/b10483cca7d58257afd6e97ee66551d2279b8168) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: support running in directories that contain spaces
+
 ## 0.7.0
 
 ### Minor Changes
