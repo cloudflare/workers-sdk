@@ -1,5 +1,14 @@
 # @cloudflare/vite-plugin
 
+## 0.1.4
+
+### Patch Changes
+
+- [#8209](https://github.com/cloudflare/workers-sdk/pull/8209) [`1427535`](https://github.com/cloudflare/workers-sdk/commit/14275353664ab484014d421b4686e87c4eba72a0) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Fix bug with usage of Cloudflare builtins in dependencies. These are now externalized during dependency optimization.
+
+- Updated dependencies []:
+  - @cloudflare/unenv-preset@1.1.2
+
 ## 0.1.3
 
 ### Patch Changes
