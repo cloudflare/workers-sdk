@@ -21,7 +21,7 @@ const generate = async (ctx: C3Context) => {
 
 const configure = async () => {
 	const packages = [
-		"@opennextjs/cloudflare@0.4.x",
+		"@opennextjs/cloudflare@0.5.x",
 		"@cloudflare/workers-types",
 	];
 	await installPackages(packages, {
