@@ -11,6 +11,9 @@ const { env } = defineEnv({
 	presets: [cloudflare],
 });
 
+export const nodeCompatExternals = new Set(env.external);
+export const nodeCompatEntries = getNodeCompatEntries();
+
 /**
  * Returns true if the given combination of compat dates and flags means that we need Node.js compatibility.
  */
@@ -38,28 +41,6 @@ export function isNodeCompat(
 		);
 	}
 	return false;
-}
-
-/**
- * Gets a set of module specifiers for all possible Node.js compat polyfill entry-points
- */
-export function getNodeCompatEntries() {
-	const entries = new Set<string>(Object.values(env.alias));
-	for (const globalInject of Object.values(env.inject)) {
-		if (typeof globalInject === "string") {
-			entries.add(globalInject);
-		} else {
-			assert(
-				globalInject[0] !== undefined,
-				"Expected first element of globalInject to be defined"
-			);
-			entries.add(globalInject[0]);
-		}
-	}
-	for (const external of env.external) {
-		entries.delete(external);
-	}
-	return entries;
 }
 
 /**
@@ -94,13 +75,6 @@ export function injectGlobalCode(id: string, code: string) {
 }
 
 /**
- * Gets an array of modules that should be considered external.
- */
-export function getNodeCompatExternals(): string[] {
-	return env.external;
-}
-
-/**
  * Resolves the `source` to a Node.js compat alias if possible.
  *
  * If there is an alias, the return value is an object with:
@@ -119,4 +93,33 @@ export function resolveNodeJSImport(source: string) {
 			resolved: resolvePathSync(alias, { url: import.meta.url }),
 		};
 	}
+	if (nodeCompatEntries.has(source)) {
+		return {
+			unresolved: source,
+			resolved: resolvePathSync(source, { url: import.meta.url }),
+		};
+	}
+}
+
+/**
+ * Gets a set of module specifiers for all possible Node.js compat polyfill entry-points
+ */
+function getNodeCompatEntries() {
+	const entries = new Set<string>(Object.values(env.alias));
+
+	for (const globalInject of Object.values(env.inject)) {
+		if (typeof globalInject === "string") {
+			entries.add(globalInject);
+		} else {
+			assert(
+				globalInject[0] !== undefined,
+				"Expected first element of globalInject to be defined"
+			);
+			entries.add(globalInject[0]);
+		}
+	}
+
+	nodeCompatExternals.forEach((external) => entries.delete(external));
+
+	return entries;
 }
