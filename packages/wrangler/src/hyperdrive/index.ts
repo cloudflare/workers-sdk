@@ -69,7 +69,7 @@ export function upsertOptions<T>(yargs: Argv<T>) {
 			"origin-scheme": {
 				alias: "scheme",
 				type: "string",
-				choices: ["postgres", "postgresql"],
+				choices: ["postgres", "postgresql", "mysql"],
 				describe: "The scheme used to connect to the origin database",
 			},
 			database: {
@@ -159,15 +159,21 @@ export function getOriginFromArgs<
 			(url.protocol == "postgresql:" || url.protocol == "postgres:")
 		) {
 			url.port = "5432";
+		} else if (url.port === "" && url.protocol == "mysql:") {
+			url.port = "3306";
 		}
 
 		if (url.protocol === "") {
 			throw new UserError(
-				"You must specify the database protocol - e.g. 'postgresql'."
+				"You must specify the database protocol - e.g. 'postgresql'/'mysql'."
 			);
-		} else if (url.protocol !== "postgresql:" && url.protocol !== "postgres:") {
+		} else if (
+			url.protocol !== "postgresql:" &&
+			url.protocol !== "postgres:" &&
+			url.protocol !== "mysql:"
+		) {
 			throw new UserError(
-				"Only PostgreSQL or PostgreSQL compatible databases are currently supported."
+				"Only PostgreSQL or MySQL compatible databases are currently supported."
 			);
 		} else if (url.host === "") {
 			throw new UserError(
@@ -179,7 +185,7 @@ export function getOriginFromArgs<
 			);
 		} else if (url.pathname === "") {
 			throw new UserError(
-				"You must provide a database name as the path component - e.g. example.com:port/postgres"
+				"You must provide a database name as the path component - e.g. example.com:port/databasename"
 			);
 		} else if (url.username === "") {
 			throw new UserError(
