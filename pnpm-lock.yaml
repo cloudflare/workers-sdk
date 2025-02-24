@@ -30,6 +30,9 @@ catalogs:
     vitest:
       specifier: ~3.0.5
       version: 3.0.5
+    ws:
+      specifier: 8.18.0
+      version: 8.18.0
   vite-plugin:
     vite:
       specifier: ^6.1.0
@@ -1434,7 +1437,7 @@ importers:
         specifier: 1.20250214.0
         version: 1.20250214.0
       ws:
-        specifier: 8.18.0
+        specifier: catalog:default
         version: 8.18.0
       youch:
         specifier: 3.2.3
@@ -1764,7 +1767,7 @@ importers:
         specifier: 2.0.0-rc.1
         version: 2.0.0-rc.1
       ws:
-        specifier: ^8.18.0
+        specifier: catalog:default
         version: 8.18.0
     devDependencies:
       '@cloudflare/mock-npm-registry':
@@ -2938,7 +2941,7 @@ importers:
         specifier: ^0.4.0
         version: 0.4.0(vitest@3.0.5)
       ws:
-        specifier: ^8.18.0
+        specifier: catalog:default
         version: 8.18.0
       xdg-app-paths:
         specifier: ^8.3.0
@@ -7890,6 +7893,9 @@ packages:
   flatted@3.3.2:
     resolution: {integrity: sha512-AiwGJM8YcNOaobumgtng+6NHuOqC3A7MixFeDafM3X9cIUM+xUXoS5Vfgf+OihAYe20fxqNM9yPBXJzRtZ/4eA==}
 
+  flatted@3.3.3:
+    resolution: {integrity: sha512-GX+ysw4PBCz0PzosHDepZGANEuFCMLrnRTiEy9McGjmkCQYwRq4A/X786G/fjM/+OjsWSU1ZrY5qyARZmO/uwg==}
+
   for-each@0.3.3:
     resolution: {integrity: sha512-jqYfLp7mo9vIyQf8ykW2v7A+2N4QjeCeI5+Dz9XraiO1ign81wjiH7Fb9vSOWvQfNtmSa4H2RoQTrrXivdUZmw==}
 
@@ -10755,8 +10761,8 @@ packages:
     resolution: {integrity: sha512-Zc+8eJlFMvgatPZTl6A9L/yht8QqdmUNtURHaKZLmKBE12hNPSrqNkUp2cs3M/UKmNVVAMFQYSjYIVHDjW5zew==}
     engines: {node: '>=12.0.0'}
 
-  tinyglobby@0.2.11:
-    resolution: {integrity: sha512-32TmKeeKUahv0Go8WmQgiEp9Y21NuxjwjqiRC1nrUB51YacfSwuB44xgXD+HdIppmMRgjQNPdrHyA6vIybYZ+g==}
+  tinyglobby@0.2.12:
+    resolution: {integrity: sha512-qkf4trmKSIiMTs/E63cxH+ojC2unam7rJ0WrauAzpT3ECNTxGRMlaXxVbfxMUC/w0LaYk6jQ4y/nGR9uBO3tww==}
     engines: {node: '>=12.0.0'}
 
   tinypool@1.0.1:
@@ -15492,10 +15498,10 @@ snapshots:
     dependencies:
       '@vitest/utils': 2.1.9
       fflate: 0.8.2
-      flatted: 3.3.2
+      flatted: 3.3.3
       pathe: 1.1.2
       sirv: 3.0.1
-      tinyglobby: 0.2.11
+      tinyglobby: 0.2.12
       tinyrainbow: 1.2.0
       vitest: 2.1.9(@types/node@18.19.76)(@vitest/ui@2.1.9)
     optional: true
@@ -17590,6 +17596,9 @@ snapshots:
   flatted@3.3.1: {}
 
   flatted@3.3.2: {}
+
+  flatted@3.3.3:
+    optional: true
 
   for-each@0.3.3:
     dependencies:
@@ -20508,7 +20517,7 @@ snapshots:
       fdir: 6.4.2(picomatch@4.0.2)
       picomatch: 4.0.2
 
-  tinyglobby@0.2.11:
+  tinyglobby@0.2.12:
     dependencies:
       fdir: 6.4.3(picomatch@4.0.2)
       picomatch: 4.0.2

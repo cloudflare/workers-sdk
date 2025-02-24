@@ -1,3 +1,7 @@
+import crypto from "node:crypto";
+
+// This just ensures that the import doesn't get tree shaken
+console.log(typeof crypto);
 interface Env {
 	ASSETS: Fetcher;
 }
