@@ -34,13 +34,15 @@ export const test = baseTest.extend<{
 			projectPaths.push(projectPath);
 			return projectPath;
 		});
-		for (const projectPath of projectPaths) {
-			debuglog("Deleting project path", projectPath);
-			await fs.rm(projectPath, {
-				force: true,
-				recursive: true,
-				maxRetries: 10,
-			});
+		if (!process.env.CLOUDFLARE_VITE_E2E_KEEP_TEMP_DIRS) {
+			for (const projectPath of projectPaths) {
+				debuglog("Deleting project path", projectPath);
+				await fs.rm(projectPath, {
+					force: true,
+					recursive: true,
+					maxRetries: 10,
+				});
+			}
 		}
 	},
 	/** Start a `vite dev` command and wraps its outputs. */
