@@ -1,9 +1,11 @@
+import { existsSync } from "fs";
 import { cp, mkdtemp } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { processArgument } from "helpers/args";
 import { runCommand } from "helpers/command";
+import { removeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { chooseAccount, wranglerLogin } from "../../src/wrangler/accounts";
 import type { C3Context } from "types";
@@ -49,6 +51,14 @@ export async function copyExistingWorkerFiles(ctx: C3Context) {
 		},
 	);
 
+	// dash hello-world template generates unused files:
+	// we only want to remove the wrangler.toml in src/ if another one exists in the project root
+	// ./src/wrangler.toml does NOT have user configuration from the dash
+	// ./wrangler.toml DOES have user bindings.
+	if (existsSync(join(tempdir, ctx.args.existingScript, "wrangler.toml"))) {
+		removeFile(join(tempdir, ctx.args.existingScript, "./src/wrangler.toml"));
+	}
+
 	// copy src/* files from the downloaded Worker
 	await cp(
 		join(tempdir, ctx.args.existingScript, "src"),
@@ -56,7 +66,7 @@ export async function copyExistingWorkerFiles(ctx: C3Context) {
 		{ recursive: true },
 	);
 
-	// copy wrangler.toml from the downloaded Worker
+	// copy ./wrangler.toml from the downloaded Worker
 	await cp(
 		join(tempdir, ctx.args.existingScript, "wrangler.toml"),
 		join(ctx.project.path, "wrangler.toml"),
