@@ -84,15 +84,20 @@ export const r2BucketLockAddCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
-		"lock-days": {
-			describe: "Number of days after which objects expire",
+		"retention-days": {
+			describe: "Number of days which objects will be retained for",
 			type: "number",
-			conflicts: "lock-date",
+			conflicts: ["retention-date", "retention-indefinite"],
 		},
-		"lock-date": {
-			describe: "Date after which objects expire (YYYY-MM-DD)",
+		"retention-date": {
+			describe: "Date after which objects will be retained until (YYYY-MM-DD)",
 			type: "string",
-			conflicts: "lock-days",
+			conflicts: ["retention-days", "retention-indefinite"],
+		},
+		"retention-indefinite": {
+			describe: "Retain objects indefinitely",
+			type: "boolean",
+			conflicts: ["retention-date", "retention-days"],
 		},
 		jurisdiction: {
 			describe: "The jurisdiction where the bucket exists",
@@ -108,7 +113,16 @@ export const r2BucketLockAddCommand = createCommand({
 		},
 	},
 	async handler(
-		{ bucket, lockDays, lockDate, jurisdiction, force, id, prefix },
+		{
+			bucket,
+			retentionDays,
+			retentionDate,
+			retentionIndefinite,
+			jurisdiction,
+			force,
+			id,
+			prefix,
+		},
 		{ config }
 	) {
 		const accountId = await requireAuth(config);
@@ -138,7 +152,8 @@ export const r2BucketLockAddCommand = createCommand({
 			if (prefix === "") {
 				const confirmedAdd = await confirm(
 					`Are you sure you want to add lock rule '${id}' to bucket '${bucket}' without a prefix? ` +
-						`The lock rule will apply to all objects in your bucket.`
+						`The lock rule will apply to all objects in your bucket.`,
+					{ defaultValue: false }
 				);
 				if (!confirmedAdd) {
 					logger.log("Add cancelled.");
@@ -151,39 +166,47 @@ export const r2BucketLockAddCommand = createCommand({
 			newRule.prefix = prefix;
 		}
 
-		if (lockDays === undefined && lockDate === undefined && !force) {
-			const confirmIndefinite = await confirm(
-				`Are you sure you want to add lock rule '${id}' to bucket '${bucket}' without an expiration? ` +
+		if (
+			retentionDays === undefined &&
+			retentionDate === undefined &&
+			retentionIndefinite === undefined &&
+			!force
+		) {
+			retentionIndefinite = await confirm(
+				`Are you sure you want to add lock rule '${id}' to bucket '${bucket}' without retention? ` +
 					`The lock rule will apply to all matching objects indefinitely.`,
-				{ defaultValue: true }
+				{ defaultValue: false }
 			);
-			if (confirmIndefinite !== true) {
+			if (retentionIndefinite !== true) {
 				logger.log("Add cancelled.");
 				return;
 			}
 		}
 
-		if (lockDays !== undefined) {
-			if (!isNaN(lockDays)) {
-				if (lockDays > 0) {
-					const conditionDaysValue = Number(lockDays) * 86400; // Convert days to seconds
+		if (retentionDays !== undefined) {
+			if (!isNaN(retentionDays)) {
+				if (retentionDays > 0) {
+					const conditionDaysValue = Number(retentionDays) * 86400; // Convert days to seconds
 					newRule.condition = {
 						type: "Age",
 						maxAgeSeconds: conditionDaysValue,
 					};
 				} else {
-					throw new UserError(`Days must be a positive number: ${lockDays}`, {
-						telemetryMessage: "Lock days not a positive number.",
-					});
+					throw new UserError(
+						`Days must be a positive number: ${retentionDays}`,
+						{
+							telemetryMessage: "Retention days not a positive number.",
+						}
+					);
 				}
 			} else {
 				throw new UserError(`Days must be a number.`, {
-					telemetryMessage: "Lock days not a positive number.",
+					telemetryMessage: "Retention days not a positive number.",
 				});
 			}
-		} else if (lockDate !== undefined) {
-			if (isValidDate(lockDate)) {
-				const date = new Date(`${lockDate}T00:00:00.000Z`);
+		} else if (retentionDate !== undefined) {
+			if (isValidDate(retentionDate)) {
+				const date = new Date(`${retentionDate}T00:00:00.000Z`);
 				const conditionDateValue = date.toISOString();
 				newRule.condition = {
 					type: "Date",
@@ -191,17 +214,24 @@ export const r2BucketLockAddCommand = createCommand({
 				};
 			} else {
 				throw new UserError(
-					`Date must be a valid date in the YYYY-MM-DD format: ${String(lockDate)}`,
+					`Date must be a valid date in the YYYY-MM-DD format: ${String(retentionDate)}`,
 					{
 						telemetryMessage:
-							"Lock date not a valid date in the YYYY-MM-DD format.",
+							"Retention date not a valid date in the YYYY-MM-DD format.",
 					}
 				);
 			}
-		} else {
+		} else if (
+			retentionIndefinite !== undefined &&
+			retentionIndefinite === true
+		) {
 			newRule.condition = {
 				type: "Indefinite",
 			};
+		} else {
+			throw new UserError(`Retention must be specified.`, {
+				telemetryMessage: "Lock retention not specified.",
+			});
 		}
 		rules.push(newRule);
 		logger.log(`Adding lock rule '${id}' to bucket '${bucket}'...`);

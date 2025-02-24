@@ -2517,7 +2517,7 @@ describe("r2", () => {
 						result: true,
 					});
 					await runWrangler(
-						`r2 bucket lock add ${bucketName} --id "rule-no-prefix" --lock-days 1`
+						`r2 bucket lock add ${bucketName} --id "rule-no-prefix" --retention-days 1`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding lock rule 'rule-no-prefix' to bucket 'my-bucket'...
@@ -2532,7 +2532,7 @@ describe("r2", () => {
 
 					mockConfirm({
 						text:
-							`Are you sure you want to add lock rule 'rule-not-indefinite' to bucket '${bucketName}' without an expiration? ` +
+							`Are you sure you want to add lock rule 'rule-not-indefinite' to bucket '${bucketName}' without retention? ` +
 							`The lock rule will apply to all matching objects indefinitely.`,
 						result: false,
 					});
@@ -2561,7 +2561,7 @@ describe("r2", () => {
 					]);
 					// age
 					await runWrangler(
-						`r2 bucket lock add ${bucketName} --id rule-age --prefix prefix-age --lock-days 1`
+						`r2 bucket lock add ${bucketName} --id rule-age --prefix prefix-age --retention-days 1`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding lock rule 'rule-age' to bucket 'my-bucket'...
@@ -2576,7 +2576,7 @@ describe("r2", () => {
 					// age
 					await expect(() =>
 						runWrangler(
-							`r2 bucket lock add ${bucketName} --id rule-age --prefix prefix-age --lock-days one`
+							`r2 bucket lock add ${bucketName} --id rule-age --prefix prefix-age --retention-days one`
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						`[Error: Days must be a number.]`
@@ -2600,7 +2600,7 @@ describe("r2", () => {
 					// age
 					await expect(() =>
 						runWrangler(
-							`r2 bucket lock add ${bucketName} --id rule-age --prefix prefix-age --lock-days -10`
+							`r2 bucket lock add ${bucketName} --id rule-age --prefix prefix-age --retention-days -10`
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						`[Error: Days must be a positive number: -10]`
@@ -2623,14 +2623,14 @@ describe("r2", () => {
 					]);
 					// date
 					await runWrangler(
-						`r2 bucket lock add ${bucketName} --id rule-date --prefix prefix-date --lock-date 2025-01-30`
+						`r2 bucket lock add ${bucketName} --id rule-date --prefix prefix-date --retention-date 2025-01-30`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding lock rule 'rule-date' to bucket 'my-bucket'...
 						✨ Added lock rule 'rule-date' to bucket 'my-bucket'."
 					  `);
 				});
-				it("it should fail to add an invalid date lock rule using command-line arguments", async () => {
+				it("it should fail to add an invalid date lock rule using command-line arguments if retention is not", async () => {
 					setIsTTY(true);
 					const bucketName = "my-bucket";
 
@@ -2638,7 +2638,7 @@ describe("r2", () => {
 					// date
 					await expect(() =>
 						runWrangler(
-							`r2 bucket lock add ${bucketName} --id "rule-date" --prefix "prefix-date" --lock-date "January 30, 2025"`
+							`r2 bucket lock add ${bucketName} --id "rule-date" --prefix "prefix-date" --retention-date "January 30, 2025"`
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						`[Error: Date must be a valid date in the YYYY-MM-DD format: January 30, 2025]`
@@ -2659,9 +2659,32 @@ describe("r2", () => {
 						},
 					]);
 
+					await runWrangler(
+						`r2 bucket lock add ${bucketName} --id rule-indefinite --prefix prefix-indefinite --retention-indefinite`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Adding lock rule 'rule-indefinite' to bucket 'my-bucket'...
+						✨ Added lock rule 'rule-indefinite' to bucket 'my-bucket'."
+					  `);
+				});
+				it("it should add an indefinite lock rule using command-line arguments and prompt if not initially specified", async () => {
+					setIsTTY(false);
+					const bucketName = "my-bucket";
+
+					mockBucketLockPutNew(bucketName, [
+						{
+							id: "rule-indefinite",
+							enabled: true,
+							prefix: "prefix-indefinite",
+							condition: {
+								type: "Indefinite",
+							},
+						},
+					]);
+
 					mockConfirm({
 						text:
-							`Are you sure you want to add lock rule 'rule-indefinite' to bucket '${bucketName}' without an expiration? ` +
+							`Are you sure you want to add lock rule 'rule-indefinite' to bucket '${bucketName}' without retention? ` +
 							`The lock rule will apply to all matching objects indefinitely.`,
 						result: true,
 					});
@@ -2670,11 +2693,34 @@ describe("r2", () => {
 						`r2 bucket lock add ${bucketName} --id rule-indefinite --prefix prefix-indefinite`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
-						"? Are you sure you want to add lock rule 'rule-indefinite' to bucket 'my-bucket' without an expiration? The lock rule will apply to all matching objects indefinitely.
+						"? Are you sure you want to add lock rule 'rule-indefinite' to bucket 'my-bucket' without retention? The lock rule will apply to all matching objects indefinitely.
 						🤖 Using fallback value in non-interactive context: yes
 						Adding lock rule 'rule-indefinite' to bucket 'my-bucket'...
 						✨ Added lock rule 'rule-indefinite' to bucket 'my-bucket'."
 					  `);
+				});
+				it("it should fail to add a lock rule if retenion is indefinite but false", async () => {
+					setIsTTY(true);
+					const bucketName = "my-bucket";
+
+					mockBucketLockPutNew(bucketName, [
+						{
+							id: "rule-indefinite",
+							enabled: true,
+							prefix: "prefix-indefinite",
+							condition: {
+								type: "Indefinite",
+							},
+						},
+					]);
+
+					await expect(() =>
+						runWrangler(
+							`r2 bucket lock add ${bucketName} --id rule-indefinite --prefix prefix-indefinite --retention-indefinite false`
+						)
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: Retention must be specified.]`
+					);
 				});
 				it("it should fail a lock rule without any command-line arguments", async () => {
 					setIsTTY(false);
