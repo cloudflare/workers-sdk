@@ -48,7 +48,7 @@ const pollDns = async (
 ) => {
 	while (Date.now() - start < TIMEOUT) {
 		s.update(
-			`Waiting for DNS to propagate. This might take up to two minutes. (${secondsSince(start)}s)`,
+			`Waiting for DNS to propagate. This might take a few minutes. (${secondsSince(start)}s)`,
 		);
 		if (await isDomainResolvable(domain)) {
 			s.stop(`${brandColor("DNS propagation")} ${dim("complete")}.`);
