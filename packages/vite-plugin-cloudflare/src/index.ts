@@ -457,14 +457,14 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						this.environment.depsOptimizer,
 						"depsOptimizer is required in dev mode"
 					);
+					// We are in dev mode (rather than build).
+					// So let's pre-bundle this polyfill entry-point using the dependency optimizer.
 					const { id } = this.environment.depsOptimizer.registerMissingImport(
 						result.unresolved,
 						result.resolved
 					);
-					// We are in dev mode (rather than build).
-					// Node.js compat polyfill modules have already been pre-bundled,
-					// so we can use the unresolved path to the polyfill
-					// and let the dependency optimizer resolve the path to the pre-bundled version.
+					// We use the unresolved path to the polyfill and let the dependency optimizer's
+					// resolver find the resolved path to the bundled version.
 					return this.resolve(id, importer, options);
 				}
 
