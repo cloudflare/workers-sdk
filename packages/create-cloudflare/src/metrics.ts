@@ -188,7 +188,7 @@ export function createReporter() {
 		// Create a new promise that will reject when the user interrupts the process
 		const cancelDeferred = promiseWithResolvers<never>();
 		const cancel = async (signal?: NodeJS.Signals) => {
-			// Let subtasks handles the signals first with a short timeout
+			// Let subtasks handle the signals first with a short timeout
 			await setTimeout(10);
 
 			cancelDeferred.reject(new CancelError(`Operation cancelled`, signal));

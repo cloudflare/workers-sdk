@@ -201,4 +201,9 @@ main(process.argv)
 	})
 	.finally(async () => {
 		await reporter.waitForAllEventsSettled();
+
+		// ensure we explicitly exit the process, otherwise any ongoing async
+		// calls or leftover tasks in the stack queue will keep running until
+		// completed
+		process.exit();
 	});
