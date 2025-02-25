@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Optimize module injection in node compat mode
+Optimize global injection in node compat mode
