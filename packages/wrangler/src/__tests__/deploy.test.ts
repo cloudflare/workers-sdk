@@ -5038,6 +5038,59 @@ addEventListener('fetch', event => {});`
 			`);
 		});
 
+		it("should attach an 'application/null' content-type header when uploading files with an unknown extension", async () => {
+			const assets = [{ filePath: "foobar.greg", content: "something-binary" }];
+			writeAssets(assets);
+			writeWranglerConfig({
+				assets: { directory: "assets" },
+			});
+
+			const manifestBodies: AssetManifest[] = [];
+			const mockBuckets = [["80e40c1f2422528cb2fba3f9389ce315"]];
+			await mockAUSRequest(manifestBodies, mockBuckets, "<<aus-token>>");
+			const uploadBodies: FormData[] = [];
+			const uploadAuthHeaders: (string | null)[] = [];
+			const uploadContentTypeHeaders: (string | null)[] = [];
+			await mockAssetUploadRequest(
+				mockBuckets.length,
+				uploadBodies,
+				uploadAuthHeaders,
+				uploadContentTypeHeaders
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
+				expectedType: "none",
+			});
+			await runWrangler("deploy");
+			expect(manifestBodies.length).toBe(1);
+			expect(manifestBodies[0]).toEqual({
+				manifest: {
+					"/foobar.greg": {
+						hash: "80e40c1f2422528cb2fba3f9389ce315",
+						size: 16,
+					},
+				},
+			});
+			const flatBodies = Object.fromEntries(
+				uploadBodies.flatMap((b) => [...b.entries()])
+			);
+			await expect(
+				flatBodies["80e40c1f2422528cb2fba3f9389ce315"]
+			).toBeAFileWhichMatches(
+				new File(
+					["c29tZXRoaW5nLWJpbmFyeQ=="],
+					"80e40c1f2422528cb2fba3f9389ce315",
+					{
+						type: "application/null",
+					}
+				)
+			);
+		});
+
 		it("should be able to upload files with special characters in filepaths", async () => {
 			// NB windows will disallow these characters in file paths anyway < > : " / \ | ? *
 			const assets = [
