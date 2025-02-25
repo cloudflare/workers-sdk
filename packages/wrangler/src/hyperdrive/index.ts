@@ -173,7 +173,7 @@ export function getOriginFromArgs<
 			url.protocol !== "mysql:"
 		) {
 			throw new UserError(
-				"Only PostgreSQL or MySQL compatible databases are currently supported."
+				"Only PostgreSQL-compatible or MySQL-compatible databases are currently supported."
 			);
 		} else if (url.host === "") {
 			throw new UserError(
