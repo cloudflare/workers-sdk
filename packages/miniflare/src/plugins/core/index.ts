@@ -163,6 +163,11 @@ export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {
 				"Only one of `outboundService` or `fetchMock` may be specified per worker"
 			);
 		}
+
+		// The `fetchMock` option is used to construct the `outboundService` only
+		// Removing it from the output allows us to re-parse the options later
+		// This allows us to validate the options and then feed them into Miniflare without issue.
+		value.fetchMock = undefined;
 		value.outboundService = (req) => fetch(req, { dispatcher: fetchMock });
 	}
 	return value;
