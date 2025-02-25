@@ -43,6 +43,7 @@
 			"outputLogs": "new-only"
 		},
 		"test:e2e": {
+			"env": ["WRANGLER", "CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"],
 			"dependsOn": ["build"],
 			"outputLogs": "new-only"
 		},

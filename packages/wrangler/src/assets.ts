@@ -138,7 +138,7 @@ export const syncAssets = async (
 						[(await readFile(absFilePath)).toString("base64")],
 						manifestEntry[1].hash,
 						{
-							type: getContentType(absFilePath),
+							type: getContentType(absFilePath) || "application/octet-stream",
 						}
 					),
 					manifestEntry[1].hash

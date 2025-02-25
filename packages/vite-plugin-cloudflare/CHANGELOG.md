@@ -1,5 +1,25 @@
 # @cloudflare/vite-plugin
 
+## 0.1.6
+
+### Patch Changes
+
+- Updated dependencies [[`a9a4c33`](https://github.com/cloudflare/workers-sdk/commit/a9a4c33143b9f58673ac0cdd251957997275fa10), [`6cae13a`](https://github.com/cloudflare/workers-sdk/commit/6cae13aa5f338cee18ec2e43a5dadda0c7d8dc2e)]:
+  - miniflare@3.20250214.1
+  - @cloudflare/unenv-preset@1.1.2
+
+## 0.1.5
+
+### Patch Changes
+
+- [#8231](https://github.com/cloudflare/workers-sdk/pull/8231) [`51a2fd3`](https://github.com/cloudflare/workers-sdk/commit/51a2fd398b26bb922b798b3aa6a51e5457ab0273) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: use ESM WebSocketServer import to avoid crashing vite dev
+
+  It appears that if there are multiple versions of the `ws` package in a user's project
+  then the Node.js resolution picks up the ESM "import" package export rather than the "require" package export.
+  This results in the entry-point having different JS exports:
+  In particular the default export no longer contains a `Server` property; instead one must import the `WebSocketServer` named JS export.
+  While it is not clear why the Node.js behaviour changes in this way, the cleanest fix is to import the `WebSocketServer` directly.
+
 ## 0.1.4
 
 ### Patch Changes

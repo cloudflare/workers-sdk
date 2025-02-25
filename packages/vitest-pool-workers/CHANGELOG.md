@@ -1,5 +1,15 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.7.3
+
+### Patch Changes
+
+- [#8182](https://github.com/cloudflare/workers-sdk/pull/8182) [`085a37a`](https://github.com/cloudflare/workers-sdk/commit/085a37abe68d4b14e2e9e5dbe00a6437d5b9c566) Thanks [@edmundhung](https://github.com/edmundhung)! - fix mock modules not re-evaluated in watch mode
+
+- Updated dependencies [[`968c3d9`](https://github.com/cloudflare/workers-sdk/commit/968c3d9c068fa895b30f0198d7c8873a00709e62), [`a9a4c33`](https://github.com/cloudflare/workers-sdk/commit/a9a4c33143b9f58673ac0cdd251957997275fa10), [`6cae13a`](https://github.com/cloudflare/workers-sdk/commit/6cae13aa5f338cee18ec2e43a5dadda0c7d8dc2e), [`6dd1e23`](https://github.com/cloudflare/workers-sdk/commit/6dd1e2300ec393e210bfdb6d0a7cf4ade17b6ad4)]:
+  - wrangler@3.110.0
+  - miniflare@3.20250214.1
+
 ## 0.7.2
 
 ### Patch Changes

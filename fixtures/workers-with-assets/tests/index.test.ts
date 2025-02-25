@@ -76,6 +76,10 @@ describe("[Workers + Assets] dynamic site", () => {
 		response = await fetch(`http://${ip}:${port}/lava-lamps.jpg`);
 		expect(response.status).toBe(200);
 		expect(response.headers.get("Content-Type")).toBe("image/jpeg");
+
+		response = await fetch(`http://${ip}:${port}/totallyinvalidextension.greg`);
+		expect(response.status).toBe(200);
+		expect(response.headers.has("Content-Type")).toBeFalsy();
 	});
 
 	it("should return 405 for non-GET or HEAD requests on routes where assets exist", async ({

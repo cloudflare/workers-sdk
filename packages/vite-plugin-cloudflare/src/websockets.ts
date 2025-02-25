@@ -1,4 +1,4 @@
-import ws from "ws";
+import { WebSocketServer } from "ws";
 import { UNKNOWN_HOST } from "./shared";
 import { nodeHeadersToWebHeaders } from "./utils";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
@@ -15,7 +15,7 @@ export function handleWebSocket(
 	fetcher: ReplaceWorkersTypes<Fetcher>["fetch"],
 	logger: vite.Logger
 ) {
-	const nodeWebSocket = new ws.Server({ noServer: true });
+	const nodeWebSocket = new WebSocketServer({ noServer: true });
 
 	httpServer.on(
 		"upgrade",

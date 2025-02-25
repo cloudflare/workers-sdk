@@ -10,8 +10,12 @@ export const normalizeFilePath = (relativeFilepath: string) => {
 };
 
 export const getContentType = (absFilePath: string) => {
-	let contentType = getType(absFilePath) || "application/octet-stream";
-	if (contentType.startsWith("text/") && !contentType.includes("charset")) {
+	let contentType = getType(absFilePath);
+	if (
+		contentType &&
+		contentType.startsWith("text/") &&
+		!contentType.includes("charset")
+	) {
 		contentType = `${contentType}; charset=utf-8`;
 	}
 	return contentType;

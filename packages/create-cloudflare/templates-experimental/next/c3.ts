@@ -7,21 +7,12 @@ import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
 const generate = async (ctx: C3Context) => {
-	await runFrameworkGenerator(ctx, [
-		ctx.project.name,
-		"--ts",
-		"--tailwind",
-		"--eslint",
-		"--app",
-		"--import-alias",
-		"@/*",
-		"--src-dir",
-	]);
+	await runFrameworkGenerator(ctx, [ctx.project.name]);
 };
 
 const configure = async () => {
 	const packages = [
-		"@opennextjs/cloudflare@0.4.x",
+		"@opennextjs/cloudflare@0.5.x",
 		"@cloudflare/workers-types",
 	];
 	await installPackages(packages, {
