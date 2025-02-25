@@ -1,5 +1,20 @@
 # wrangler
 
+## 3.110.0
+
+### Minor Changes
+
+- [#8253](https://github.com/cloudflare/workers-sdk/pull/8253) [`6dd1e23`](https://github.com/cloudflare/workers-sdk/commit/6dd1e2300ec393e210bfdb6d0a7cf4ade17b6ad4) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Add `--cwd` global argument to the `wrangler` CLI to allow changing the current working directory before running any command.
+
+### Patch Changes
+
+- [#8191](https://github.com/cloudflare/workers-sdk/pull/8191) [`968c3d9`](https://github.com/cloudflare/workers-sdk/commit/968c3d9c068fa895b30f0198d7c8873a00709e62) Thanks [@vicb](https://github.com/vicb)! - Optimize global injection in node compat mode
+
+- [#8247](https://github.com/cloudflare/workers-sdk/pull/8247) [`a9a4c33`](https://github.com/cloudflare/workers-sdk/commit/a9a4c33143b9f58673ac0cdd251957997275fa10) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Omits Content-Type header for files of an unknown extension in Workers Assets
+
+- Updated dependencies [[`a9a4c33`](https://github.com/cloudflare/workers-sdk/commit/a9a4c33143b9f58673ac0cdd251957997275fa10), [`6cae13a`](https://github.com/cloudflare/workers-sdk/commit/6cae13aa5f338cee18ec2e43a5dadda0c7d8dc2e)]:
+  - miniflare@3.20250214.1
+
 ## 3.109.3
 
 ### Patch Changes
