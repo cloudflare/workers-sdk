@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/rules-of-hooks */
 import events from "node:events";
 import fs, { readFileSync } from "node:fs";
+import http from "node:http";
 import net from "node:net";
 import path from "node:path";
 import util from "node:util";
