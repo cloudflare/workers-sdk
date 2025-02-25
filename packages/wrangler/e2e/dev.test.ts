@@ -504,7 +504,7 @@ describe.each([{ cmd: "wrangler dev" }])(
 					from js import Response, console
 					def on_fetch(request):
 						console.log(f"hello {mul(2,3)}")
-						# TODO: Test print too once it's fixed.
+						print(f"foobar {mul(4,3)}")
 						console.log(f"end")
 						return Response.new(f"py hello world {mul(2,3)}")`,
 				"package.json": dedent`
@@ -524,7 +524,7 @@ describe.each([{ cmd: "wrangler dev" }])(
 			await worker.readUntil(/end/);
 
 			const allOutput = await worker.output;
-			expect(allOutput).contain("hello 6\nend");
+			expect(allOutput).contain("hello 6\nfoobar 12\nend");
 		});
 	}
 );
