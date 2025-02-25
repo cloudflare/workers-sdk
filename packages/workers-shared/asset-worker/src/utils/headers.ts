@@ -8,13 +8,16 @@ import { CACHE_CONTROL_BROWSER } from "../constants";
  */
 export function getHeaders(
 	eTag: string,
-	contentType: string,
+	contentType: string | undefined,
 	request: Request
 ) {
 	const headers = new Headers({
-		"Content-Type": contentType,
 		ETag: `"${eTag}"`,
 	});
+
+	if (contentType !== undefined) {
+		headers.append("Content-Type", contentType);
+	}
 
 	if (isCacheable(request)) {
 		headers.append("Cache-Control", CACHE_CONTROL_BROWSER);

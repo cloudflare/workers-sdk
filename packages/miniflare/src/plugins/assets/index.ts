@@ -181,7 +181,7 @@ export type ManifestEntry = {
 };
 
 export type AssetReverseMap = {
-	[pathHash: string]: { filePath: string; contentType: string };
+	[pathHash: string]: { filePath: string; contentType: string | null };
 };
 
 /**
