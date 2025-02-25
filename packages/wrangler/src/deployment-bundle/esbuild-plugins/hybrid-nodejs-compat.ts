@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { builtinModules } from "node:module";
 import nodePath from "node:path";
 import dedent from "ts-dedent";
@@ -169,71 +170,65 @@ function handleNodeJSGlobals(
 	build: PluginBuild,
 	inject: Record<string, string | string[]>
 ) {
-	const UNENV_GLOBALS_RE = /_virtual_unenv_global_polyfill-([^.]+)\.js$/;
+	const UNENV_GLOBALS_RE = /_virtual_unenv_global_polyfill-(.+)$/;
 	const prefix = nodePath.resolve(
 		getBasePath(),
 		"_virtual_unenv_global_polyfill-"
 	);
 
+	/**
+	 * Map of module identifiers to
+	 * - `injectedName`: the name injected on `globalThis`
+	 * - `exportName`: the export name from the module
+	 * - `importName`: the imported name
+	 */
+	const injectsByModule = new Map<
+		string,
+		{ injectedName: string; exportName: string; importName: string }[]
+	>();
+
+	// Module specifier (i.e. `/unenv/runtime/node/...`) keyed by path (i.e. `/prefix/_virtual_unenv_global_polyfill-...`)
+	const virtualModulePathToSpecifier = new Map<string, string>();
+
+	for (const [injectedName, moduleSpecifier] of Object.entries(inject)) {
+		const [module, exportName, importName] = Array.isArray(moduleSpecifier)
+			? [moduleSpecifier[0], moduleSpecifier[1], moduleSpecifier[1]]
+			: [moduleSpecifier, "default", "defaultExport"];
+
+		if (!injectsByModule.has(module)) {
+			injectsByModule.set(module, []);
+			virtualModulePathToSpecifier.set(
+				prefix + module.replaceAll("/", "-"),
+				module
+			);
+		}
+		// eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
+		injectsByModule.get(module)!.push({ injectedName, exportName, importName });
+	}
+
+	// Inject the virtual modules
 	build.initialOptions.inject = [
 		...(build.initialOptions.inject ?? []),
-		//convert unenv's inject keys to absolute specifiers of custom virtual modules that will be provided via a custom onLoad
-		...Object.keys(inject).map(
-			(globalName) => `${prefix}${encodeToLowerCase(globalName)}.js`
-		),
+		...virtualModulePathToSpecifier.keys(),
 	];
 
 	build.onResolve({ filter: UNENV_GLOBALS_RE }, ({ path }) => ({ path }));
 
 	build.onLoad({ filter: UNENV_GLOBALS_RE }, ({ path }) => {
-		// eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
-		const globalName = decodeFromLowerCase(path.match(UNENV_GLOBALS_RE)![1]);
-		const { importStatement, exportName } = getGlobalInject(inject[globalName]);
+		const module = virtualModulePathToSpecifier.get(path);
+		assert(module, `Expected ${path} to be mapped to a module specifier`);
+		const injects = injectsByModule.get(module);
+		assert(injects, `Expected ${module} to inject values`);
+
+		const imports = injects.map(({ exportName, importName }) =>
+			importName === exportName ? exportName : `${exportName} as ${importName}`
+		);
 
 		return {
 			contents: dedent`
-				${importStatement}
-				globalThis.${globalName} = ${exportName};
+				import { ${imports.join(", ")} } from "${module}";
+				${injects.map(({ injectedName, importName }) => `globalThis.${injectedName} = ${importName};`).join("\n")}
 			`,
 		};
 	});
-}
-
-/**
- * Get the import statement and export name to be used for the given global inject setting.
- */
-function getGlobalInject(globalInject: string | string[]) {
-	if (typeof globalInject === "string") {
-		// the mapping is a simple string, indicating a default export, so the string is just the module specifier.
-		return {
-			importStatement: `import globalVar from "${globalInject}";`,
-			exportName: "globalVar",
-		};
-	}
-	// the mapping is a 2 item tuple, indicating a named export, made up of a module specifier and an export name.
-	const [moduleSpecifier, exportName] = globalInject;
-	return {
-		importStatement: `import { ${exportName} } from "${moduleSpecifier}";`,
-		exportName,
-	};
-}
-
-/**
- * Encodes a case sensitive string to lowercase string.
- *
- * - Escape $ with another $ ("$" -> "$$")
- * - Escape uppercase letters with $ and turn them into lowercase letters ("L" -> "$L")
- *
- * This function exists because ESBuild requires that all resolved paths are case insensitive.
- * Without this transformation, ESBuild will clobber /foo/bar.js with /foo/Bar.js
- */
-export function encodeToLowerCase(str: string): string {
-	return str.replace(/[A-Z$]/g, (escape) => `$${escape.toLowerCase()}`);
-}
-
-/**
- * Decodes a string lowercased using `encodeToLowerCase` to the original strings
- */
-export function decodeFromLowerCase(str: string): string {
-	return str.replace(/\$[a-z$]/g, (escaped) => escaped[1].toUpperCase());
 }
