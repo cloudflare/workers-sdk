@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-add mysql configuration options to hyperdrive
+Enable the creation of MySQL Hypedrive configs via the Wrangler CLI.

@@ -154,6 +154,8 @@ export function getOriginFromArgs<
 ): PartialUpdate extends true ? OriginConfig | undefined : OriginConfig {
 	if (args.connectionString) {
 		const url = new URL(args.connectionString);
+		url.protocol = url.protocol.toLowerCase();
+
 		if (
 			url.port === "" &&
 			(url.protocol == "postgresql:" || url.protocol == "postgres:")
@@ -168,9 +170,9 @@ export function getOriginFromArgs<
 				"You must specify the database protocol - e.g. 'postgresql'/'mysql'."
 			);
 		} else if (
-			url.protocol !== "postgresql:" &&
-			url.protocol !== "postgres:" &&
-			url.protocol !== "mysql:"
+			!url.protocol.startsWith("postgresql") &&
+			!url.protocol.startsWith("postgres") &&
+			!url.protocol.startsWith("mysql")
 		) {
 			throw new UserError(
 				"Only PostgreSQL-compatible or MySQL-compatible databases are currently supported."
@@ -183,7 +185,7 @@ export function getOriginFromArgs<
 			throw new UserError(
 				"You must provide a port number - e.g. 'user:password@database.example.com:port/databasename"
 			);
-		} else if (url.pathname === "") {
+		} else if (!url.pathname || url.pathname === "") {
 			throw new UserError(
 				"You must provide a database name as the path component - e.g. example.com:port/databasename"
 			);
