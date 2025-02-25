@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { builtinModules } from "node:module";
 import nodePath from "node:path";
 import dedent from "ts-dedent";
@@ -186,7 +187,8 @@ function handleNodeJSGlobals(
 		{ injectedName: string; exportName: string; importName: string }[]
 	>();
 
-	const moduleIdSpecifier = new Map<string, string>();
+	// Module specifier (i.e. `/unenv/runtime/node/...`) keyed by path (i.e. `/prefix/_virtual_unenv_global_polyfill-...`)
+	const virtualModulePathToSpecifier = new Map<string, string>();
 
 	for (const [injectedName, moduleSpecifier] of Object.entries(inject)) {
 		const [module, exportName, importName] = Array.isArray(moduleSpecifier)
@@ -195,25 +197,28 @@ function handleNodeJSGlobals(
 
 		if (!injectsByModule.has(module)) {
 			injectsByModule.set(module, []);
-			moduleIdSpecifier.set(module.replaceAll("/", "-"), module);
+			virtualModulePathToSpecifier.set(
+				prefix + module.replaceAll("/", "-"),
+				module
+			);
 		}
 		// eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
 		injectsByModule.get(module)!.push({ injectedName, exportName, importName });
 	}
 
+	// Inject the virtual modules
 	build.initialOptions.inject = [
 		...(build.initialOptions.inject ?? []),
-		//convert unenv's inject keys to absolute specifiers of custom virtual modules that will be provided via a custom onLoad
-		...[...moduleIdSpecifier.keys()].map((id) => `${prefix}${id}`),
+		...virtualModulePathToSpecifier.keys(),
 	];
 
 	build.onResolve({ filter: UNENV_GLOBALS_RE }, ({ path }) => ({ path }));
 
 	build.onLoad({ filter: UNENV_GLOBALS_RE }, ({ path }) => {
-		// eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
-		const module = moduleIdSpecifier.get(path.match(UNENV_GLOBALS_RE)![1])!;
-		// eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
-		const injects = injectsByModule.get(module)!;
+		const module = virtualModulePathToSpecifier.get(path);
+		assert(module, `Expected ${path} to be mapped to a module specifier`);
+		const injects = injectsByModule.get(module);
+		assert(injects, `Expected ${module} to inject values`);
 
 		const imports = injects.map(({ exportName, importName }) =>
 			importName === exportName ? exportName : `${exportName} as ${importName}`
