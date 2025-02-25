@@ -187,9 +187,10 @@ export default class extends WorkerEntrypoint<Env> {
 		return true;
 	}
 
-	async unstable_getByETag(
-		eTag: string
-	): Promise<{ readableStream: ReadableStream; contentType: string }> {
+	async unstable_getByETag(eTag: string): Promise<{
+		readableStream: ReadableStream;
+		contentType: string | undefined;
+	}> {
 		const asset = await getAssetWithMetadataFromKV(
 			this.env.ASSETS_KV_NAMESPACE,
 			eTag
@@ -203,13 +204,14 @@ export default class extends WorkerEntrypoint<Env> {
 
 		return {
 			readableStream: asset.value,
-			contentType: asset.metadata?.contentType ?? "application/octet-stream",
+			contentType: asset.metadata?.contentType,
 		};
 	}
 
-	async unstable_getByPathname(
-		pathname: string
-	): Promise<{ readableStream: ReadableStream; contentType: string } | null> {
+	async unstable_getByPathname(pathname: string): Promise<{
+		readableStream: ReadableStream;
+		contentType: string | undefined;
+	} | null> {
 		const eTag = await this.unstable_exists(pathname);
 		if (!eTag) {
 			return null;
