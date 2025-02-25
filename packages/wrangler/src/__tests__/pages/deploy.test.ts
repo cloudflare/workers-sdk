@@ -63,6 +63,7 @@ describe("pages deploy", () => {
 			  directory  The directory of static files to upload  [string]
 
 			GLOBAL FLAGS
+			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]
 
