@@ -230,7 +230,7 @@ export default class WorkersTestRunner extends VitestTestRunner {
 			await scheduler.wait(100);
 		}
 
-		// Unlike the official threads and forks pool, we do not recycle the miniflare instances to maintains the module cache.
+		// Unlike the official threads and forks pool, we do not recycle the miniflare instances to maintain the module cache.
 		// However, this creates a side effect where the module mock will not be re-evaluated on watch mode.
 		// This fixes https://github.com/cloudflare/workers-sdk/issues/6844 by resetting the module graph.
 		vi.resetModules();
