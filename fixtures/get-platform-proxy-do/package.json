@@ -1,0 +1,22 @@
+{
+	"name": "get-platform-proxy-do",
+	"private": true,
+	"description": "A test for the getPlatformProxy utility",
+	"type": "module",
+	"scripts": {
+		"test:ci": "vitest run",
+		"test:watch": "vitest",
+		"type:tests": "tsc --noEmit -p tests/tsconfig.json"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250214.0",
+		"typescript": "catalog:default",
+		"undici": "catalog:default",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}
