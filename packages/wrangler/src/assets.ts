@@ -21,7 +21,7 @@ import { isJwtExpired } from "./pages/upload";
 import { APIError } from "./parse";
 import { getBasePath } from "./paths";
 import { dedent } from "./utils/dedent";
-import { createPatternMatcher } from "./utils/filesystem";
+import { createPatternMatcher, maybeGetFile } from "./utils/filesystem";
 import type { StartDevWorkerOptions } from "./api";
 import type { Config } from "./config";
 import type { DeployArgs } from "./deploy";
@@ -235,11 +235,12 @@ const buildAssetManifest = async (dir: string) => {
 	const manifest: AssetManifest = {};
 	let counter = 0;
 
-	const ignoreFn = await createAssetIgnoreFunction(dir);
+	const { assetsIgnoreFunction, assetsIgnoreFilePresent } =
+		await createAssetsIgnoreFunction(dir);
 
 	await Promise.all(
 		files.map(async (relativeFilepath) => {
-			if (ignoreFn?.(relativeFilepath)) {
+			if (assetsIgnoreFunction(relativeFilepath)) {
 				logger.debug("Ignoring asset:", relativeFilepath);
 				// This file should not be included in the manifest.
 				return;
@@ -251,7 +252,10 @@ const buildAssetManifest = async (dir: string) => {
 			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
 				return;
 			} else {
-				errorOnLegacyPagesWorkerJSAsset(relativeFilepath, !!ignoreFn);
+				errorOnLegacyPagesWorkerJSAsset(
+					relativeFilepath,
+					assetsIgnoreFilePresent
+				);
 
 				if (counter >= MAX_ASSET_COUNT) {
 					throw new UserError(
@@ -329,6 +333,8 @@ export type AssetsOptions = {
 	binding?: string;
 	routerConfig: RouterConfig;
 	assetConfig: AssetConfig;
+	_redirects?: string;
+	_headers?: string;
 };
 
 export function getAssetsOptions(
@@ -423,10 +429,14 @@ export function getAssetsOptions(
 		}
 	}
 
+	const redirects = maybeGetFile(path.join(directory, "_redirects"));
+	const headers = maybeGetFile(path.join(directory, "_headers"));
+
 	// defaults are set in asset worker
 	const assetConfig: AssetConfig = {
 		html_handling: config.assets?.html_handling,
 		not_found_handling: config.assets?.not_found_handling,
+		// TODO: Parse redirects and headers
 	};
 
 	return {
@@ -434,6 +444,8 @@ export function getAssetsOptions(
 		binding,
 		routerConfig,
 		assetConfig,
+		_redirects: redirects,
+		_headers: headers,
 	};
 }
 
@@ -522,6 +534,8 @@ export function validateAssetsArgsAndConfig(
 }
 
 const CF_ASSETS_IGNORE_FILENAME = ".assetsignore";
+const REDIRECTS_FILENAME = "_redirects";
+const HEADERS_FILENAME = "_headers";
 
 /**
  * Create a function for filtering out ignored assets.
@@ -529,22 +543,31 @@ const CF_ASSETS_IGNORE_FILENAME = ".assetsignore";
  * The generated function takes an asset path, relative to the asset directory,
  * and returns true if the asset should not be ignored.
  */
-async function createAssetIgnoreFunction(dir: string) {
+export async function createAssetsIgnoreFunction(dir: string) {
 	const cfAssetIgnorePath = path.resolve(dir, CF_ASSETS_IGNORE_FILENAME);
 
-	if (!existsSync(cfAssetIgnorePath)) {
-		return null;
+	const ignorePatterns = [
+		// Ignore the `.assetsignore` file and other metafiles by default.
+		// The ignore lib expects unix-style paths for its patterns
+		`/${CF_ASSETS_IGNORE_FILENAME}`,
+		`/${REDIRECTS_FILENAME}`,
+		`/${HEADERS_FILENAME}`,
+	];
+
+	let assetsIgnoreFilePresent = false;
+	const assetsIgnore = maybeGetFile(cfAssetIgnorePath);
+	if (assetsIgnore !== undefined) {
+		assetsIgnoreFilePresent = true;
+		ignorePatterns.push(...assetsIgnore.split("\n"));
 	}
 
-	const ignorePatterns = (
-		await readFile(cfAssetIgnorePath, { encoding: "utf8" })
-	).split("\n");
-
-	// Always ignore the `.assetsignore` file.
-	ignorePatterns.push(CF_ASSETS_IGNORE_FILENAME);
-
-	return createPatternMatcher(ignorePatterns, true);
+	return {
+		assetsIgnoreFunction: createPatternMatcher(ignorePatterns, true),
+		assetsIgnoreFilePresent,
+	};
 }
+
+const WORKER_JS_FILENAME = "_worker.js";
 
 /**
  * Creates a function that logs a warning (only once) if the project has no `.assetsIgnore` file and is uploading _worker.js code as an asset.
@@ -555,17 +578,17 @@ function errorOnLegacyPagesWorkerJSAsset(
 ) {
 	if (!hasAssetsIgnoreFile) {
 		const workerJsType: "file" | "directory" | null =
-			file === "_worker.js"
+			file === WORKER_JS_FILENAME
 				? "file"
-				: file.startsWith("_worker.js")
+				: file.startsWith(WORKER_JS_FILENAME)
 					? "directory"
 					: null;
 		if (workerJsType !== null) {
 			throw new UserError(
 				dedent`
-			Uploading a Pages _worker.js ${workerJsType} as an asset.
+			Uploading a Pages ${WORKER_JS_FILENAME} ${workerJsType} as an asset.
 			This could expose your private server-side code to the public Internet. Is this intended?
-			If you do not want to upload this ${workerJsType}, either remove it or add an "${CF_ASSETS_IGNORE_FILENAME}" file, to the root of your asset directory, containing "_worker.js" to avoid uploading.
+			If you do not want to upload this ${workerJsType}, either remove it or add an "${CF_ASSETS_IGNORE_FILENAME}" file, to the root of your asset directory, containing "${WORKER_JS_FILENAME}" to avoid uploading.
 			If you do want to upload this ${workerJsType}, you can add an empty "${CF_ASSETS_IGNORE_FILENAME}" file, to the root of your asset directory, to hide this error.
 		`,
 				{ telemetryMessage: true }

@@ -5176,6 +5176,8 @@ addEventListener('fetch', event => {});`
 		it("should ignore assets that match patterns in an .assetsignore file in the root of the assets directory", async () => {
 			const assets = [
 				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
+				{ filePath: "_redirects", content: "/foo /bar" },
+				{ filePath: "_headers", content: "/some-path\nX-Header: Custom-Value" },
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.bak", content: "Content of file-2" },
 				{ filePath: "file-3.txt", content: "Content of file-3" },
@@ -5358,6 +5360,45 @@ addEventListener('fetch', event => {});`
 				}
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should upload _redirects and _headers", async () => {
+			const redirectsContent = "/foo /bar";
+			const headersContent = "/some-path\nX-Header: Custom-Value";
+			const assets = [
+				{ filePath: "_redirects", content: redirectsContent },
+				{ filePath: "_headers", content: headersContent },
+				{ filePath: "index.html", content: "<html></html>" },
+			];
+			writeAssets(assets);
+			writeWranglerConfig({
+				assets: { directory: "assets" },
+			});
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {
+						_redirects: redirectsContent,
+						_headers: headersContent,
+					},
+				},
+				expectedType: "none",
+			});
+			await runWrangler("deploy");
+			expect(bodies.length).toBe(1);
+			expect(bodies[0]).toMatchInlineSnapshot(`
+				Object {
+				  "manifest": Object {
+				    "/index.html": Object {
+				      "hash": "4752155c2c0c0320b40bca1d83e8380a",
+				      "size": 13,
+				    },
+				  },
+				}
+			`);
 		});
 
 		it("should resolve assets directory relative to cwd if using cli", async () => {

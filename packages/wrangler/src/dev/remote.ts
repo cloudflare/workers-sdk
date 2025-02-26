@@ -177,6 +177,8 @@ export async function createRemoteWorkerInit(props: {
 						jwt: assetsJwt,
 						routerConfig: props.assets.routerConfig,
 						assetConfig: props.assets.assetConfig,
+						_redirects: props.assets._redirects,
+						_headers: props.assets._headers,
 					}
 				: undefined,
 		placement: undefined, // no placement in dev

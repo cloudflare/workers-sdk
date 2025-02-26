@@ -373,6 +373,8 @@ export interface CfWorkerInit {
 				jwt: string;
 				routerConfig: RouterConfig;
 				assetConfig: AssetConfig;
+				_redirects?: string;
+				_headers?: string;
 		  }
 		| undefined;
 	observability: Observability | undefined;

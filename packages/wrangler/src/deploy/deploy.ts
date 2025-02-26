@@ -708,6 +708,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							jwt: assetsJwt,
 							routerConfig: props.assetsOptions.routerConfig,
 							assetConfig: props.assetsOptions.assetConfig,
+							_redirects: props.assetsOptions._redirects,
+							_headers: props.assetsOptions._headers,
 						}
 					: undefined,
 			observability: config.observability,

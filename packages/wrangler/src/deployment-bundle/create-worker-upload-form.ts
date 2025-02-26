@@ -136,6 +136,8 @@ export type AssetConfigMetadata = {
 	html_handling?: AssetConfig["html_handling"];
 	not_found_handling?: AssetConfig["not_found_handling"];
 	run_worker_first?: boolean;
+	_redirects?: string;
+	_headers?: string;
 };
 
 // for PUT /accounts/:accountId/workers/scripts/:scriptName
@@ -206,6 +208,8 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		html_handling: assets?.assetConfig?.html_handling,
 		not_found_handling: assets?.assetConfig?.not_found_handling,
 		run_worker_first: assets?.routerConfig.invoke_user_worker_ahead_of_assets,
+		_redirects: assets?._redirects,
+		_headers: assets?._headers,
 	};
 
 	// short circuit if static assets upload only
