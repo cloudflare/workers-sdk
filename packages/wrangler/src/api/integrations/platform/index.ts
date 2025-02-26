@@ -143,7 +143,7 @@ async function getMiniflareOptionsFromConfig(
 	});
 
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
-		name: undefined,
+		name: rawConfig.name,
 		bindings,
 		workerDefinitions,
 		queueConsumers: undefined,
@@ -160,6 +160,7 @@ async function getMiniflareOptionsFromConfig(
 	const miniflareOptions: MiniflareOptions = {
 		workers: [
 			{
+				name: rawConfig.name,
 				script: "",
 				modules: true,
 				...bindingOptions,
