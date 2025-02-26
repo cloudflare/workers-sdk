@@ -1,7 +1,12 @@
 import assert from "node:assert";
+import path from "node:path";
 import { kCurrentWorker, Miniflare } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
 import { readConfig } from "../../../config";
+import { bundleWorker } from "../../../deployment-bundle/bundle";
+import { getEntry } from "../../../deployment-bundle/entry";
+import { createModuleCollector } from "../../../deployment-bundle/module-collection";
+import { validateNodeCompatMode } from "../../../deployment-bundle/node-compat";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
 import { getBoundRegisteredWorkers } from "../../../dev-registry";
@@ -12,6 +17,7 @@ import {
 	buildSitesOptions,
 } from "../../../dev/miniflare";
 import { run } from "../../../experimental-flags";
+import { getWranglerTmpDir } from "../../../paths";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "../../../sites";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
@@ -169,11 +175,68 @@ async function getMiniflareOptionsFromConfig(
 
 	const serviceBindings = await getServiceBindings(bindings.services);
 
+	assert(rawConfig.configPath);
+	const projectRoot = path.dirname(rawConfig.configPath);
+	const tmpDir = getWranglerTmpDir(
+		path.dirname(rawConfig.configPath),
+		"get-platform-proxy"
+	);
+
+	const entry = await getEntry({}, rawConfig, "dev");
+	const moduleCollector = createModuleCollector({
+		entry,
+		findAdditionalModules: false,
+		rules: [],
+	});
+	const nodejsCompatMode = validateNodeCompatMode(
+		rawConfig.compatibility_date,
+		rawConfig.compatibility_flags,
+		{ nodeCompat: false, noBundle: false }
+	);
+	const bundle = await bundleWorker(entry, tmpDir.path, {
+		bundle: true,
+		moduleCollector,
+		additionalModules: [],
+		serveLegacyAssetsFromWorker: false,
+		jsxFactory: undefined,
+		jsxFragment: undefined,
+		watch: false,
+		tsconfig: undefined,
+		minify: false,
+		nodejsCompatMode,
+		// think this is just for a warning?
+		doBindings: [],
+		// think this is just for a warning?
+		workflowBindings: [],
+		alias: {},
+		define: {},
+		mockAnalyticsEngineDatasets: [],
+		legacyAssets: undefined,
+		// disable the cache in dev
+		bypassAssetCache: true,
+		targetConsumer: "dev",
+		testScheduled: false,
+		plugins: [],
+		local: true,
+		projectRoot,
+		defineNavigatorUserAgent: true,
+
+		// Pages specific options used by wrangler pages commands
+		entryName: undefined,
+		inject: undefined,
+		isOutfile: undefined,
+		external: undefined,
+
+		// sourcemap defaults to true in dev
+		sourcemap: undefined,
+		checkFetch: false,
+	});
+
 	const miniflareOptions: MiniflareOptions = {
 		workers: [
 			{
 				name: rawConfig.name,
-				scriptPath: main,
+				scriptPath: bundle.resolvedEntryPointPath,
 				modules: true,
 				...bindingOptions,
 				serviceBindings: {
