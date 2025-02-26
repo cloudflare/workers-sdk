@@ -30,8 +30,10 @@ jobs:
 
       - name: Modify package.json version
         run: |
-          node .github/version-script.js wrangler
-          node .github/version-script.js miniflare
+          node .github/changeset-version.js
+
+          node .github/version-script.js wrangler next
+          node .github/version-script.js miniflare next
 
       - name: Build
         run: pnpm run build

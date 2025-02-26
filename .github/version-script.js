@@ -18,7 +18,7 @@ try {
 	const packageJsonPath = `./packages/${packageName}/package.json`;
 	const pkg = JSON.parse(readFileSync(packageJsonPath, "utf-8"));
 	const stdout = execSync("git rev-parse --short HEAD", { encoding: "utf8" });
-	pkg.version = "0.0.0-" + stdout.trim();
+	pkg.version = `${pkg.version}-${getArgs()[1] ?? "beta"}.` + stdout.trim();
 	writeFileSync(packageJsonPath, JSON.stringify(pkg, null, "\t") + "\n");
 } catch (error) {
 	console.error(error);
