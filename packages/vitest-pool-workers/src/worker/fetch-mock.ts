@@ -170,18 +170,14 @@ globalThis.fetch = async (input, init) => {
 					statusText: responseStatusText,
 					headers: responseHeaders,
 				});
-				const throwImmutableHeaderError = () => {
+				const throwImmutableHeadersError = () => {
 					throw new TypeError("Can't modify immutable headers");
 				};
 				Object.defineProperty(response, "url", { value: url.href });
-				Object.defineProperty(response.headers, "set", {
-					value: throwImmutableHeaderError,
-				});
-				Object.defineProperty(response.headers, "append", {
-					value: throwImmutableHeaderError,
-				});
-				Object.defineProperty(response.headers, "delete", {
-					value: throwImmutableHeaderError,
+				Object.defineProperties(response.headers, {
+					set: { value: throwImmutableHeadersError },
+					append: { value: throwImmutableHeadersError },
+					delete: { value: throwImmutableHeadersError },
 				});
 				responseResolve(response);
 			} else {
