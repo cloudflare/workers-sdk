@@ -1,5 +1,5 @@
 {
-	"name": "@playground/worker",
+	"name": "@playground/custom-build-app",
 	"private": true,
 	"type": "module",
 	"scripts": {
