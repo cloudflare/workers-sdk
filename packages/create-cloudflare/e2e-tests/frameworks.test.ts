@@ -121,7 +121,10 @@ function getFrameworkTests(opts: {
 				verifyPreview: {
 					route: "/",
 					previewArgs: ["--host=127.0.0.1"],
-					expectedText: "Vite + React + Cloudflare",
+					// Note that this is the text in the static HTML that is returned
+					// This React SPA will change this at runtime but we are only making a fetch request
+					// not actually running the client side JS.
+					expectedText: "Vite + React + TS",
 				},
 			},
 			gatsby: {
@@ -168,6 +171,7 @@ function getFrameworkTests(opts: {
 						input: [keys.enter],
 					},
 				],
+				flags: [],
 				testCommitMessage: true,
 				unsupportedOSs: ["win32"],
 				unsupportedPms: ["yarn"],
