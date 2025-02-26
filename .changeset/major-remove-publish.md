@@ -4,7 +4,7 @@
 
 Remove the deprecated `wrangler publish` command. Instead, use `wrangler deploy`, which takes exactly the same arguments.
 
-Remove the following deprecated commands:
+Additionally, remove the following deprecated commands, which are no longer supported.
 
 - `wrangler config`
 - `wrangler preview`
@@ -13,5 +13,5 @@ Remove the following deprecated commands:
 
 Remove the following deprecated command aliases:
 
-- `wrangler secret:*`
-- `wrangler kv:*`
+- `wrangler secret:*`, replaced by `wrangler secret *`
+- `wrangler kv:*`, replaced by `wrangler kv *`
