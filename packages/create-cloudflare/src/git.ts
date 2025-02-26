@@ -29,7 +29,28 @@ export const offerGit = async (ctx: C3Context) => {
 	const insideGitRepo = await isInsideGitRepo(ctx.project.path);
 
 	if (insideGitRepo) {
-		ctx.args.git = true;
+		// Store that we're in an existing git repo for later reference
+		ctx.gitRepoAlreadyExisted = true;
+
+		// If git flag was explicitly set to false, respect that
+		if (ctx.args.git === false) {
+			return;
+		}
+
+		// If git flag was explicitly set to true, respect that
+		if (ctx.args.git === true) {
+			return;
+		}
+
+		// Otherwise, ask the user if they want to use git
+		ctx.args.git = await processArgument(ctx.args, "git", {
+			type: "confirm",
+			question:
+				"You're in an existing git repository. Do you want to use git for version control?",
+			label: "git",
+			defaultValue: C3_DEFAULTS.git,
+		});
+
 		return;
 	}
 
@@ -55,7 +76,10 @@ export const offerGit = async (ctx: C3Context) => {
 		return;
 	}
 
-	await initializeGit(ctx.project.path);
+	// Only initialize git if we're not in an existing git repository
+	if (!ctx.gitRepoAlreadyExisted) {
+		await initializeGit(ctx.project.path);
+	}
 };
 
 export const gitCommit = async (ctx: C3Context) => {

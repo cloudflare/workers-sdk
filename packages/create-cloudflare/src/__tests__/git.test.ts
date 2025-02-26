@@ -199,10 +199,19 @@ describe("git helpers", () => {
 			mockGitConfig();
 			mockInsideGitRepo(true);
 
+			// Mock user selecting true
+			vi.mocked(processArgument).mockResolvedValueOnce(true);
+
 			await offerGit(ctx);
 
-			expect(processArgument).not.toHaveBeenCalledOnce();
+			expect(processArgument).toHaveBeenCalledOnce();
 			expect(ctx.args.git).toBe(true);
+			expect(ctx.gitRepoAlreadyExisted).toBe(true);
+			// Should not initialize git since we're in an existing repo
+			expect(vi.mocked(runCommand)).not.toHaveBeenCalledWith(
+				["git", "init", "--initial-branch", "main"],
+				expect.any(Object),
+			);
 		});
 
 		test("user selects no git", async () => {
