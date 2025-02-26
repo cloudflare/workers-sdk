@@ -116,6 +116,13 @@ import {
 	r2BucketLifecycleSetCommand,
 } from "./r2/lifecycle";
 import {
+	r2BucketLockAddCommand,
+	r2BucketLockListCommand,
+	r2BucketLockNamespace,
+	r2BucketLockRemoveCommand,
+	r2BucketLockSetCommand,
+} from "./r2/lock";
+import {
 	r2BucketNotificationCreateCommand,
 	r2BucketNotificationDeleteCommand,
 	r2BucketNotificationGetAlias,
@@ -712,6 +719,26 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler r2 bucket cors set",
 			definition: r2BucketCORSSetCommand,
+		},
+		{
+			command: "wrangler r2 bucket lock",
+			definition: r2BucketLockNamespace,
+		},
+		{
+			command: "wrangler r2 bucket lock list",
+			definition: r2BucketLockListCommand,
+		},
+		{
+			command: "wrangler r2 bucket lock add",
+			definition: r2BucketLockAddCommand,
+		},
+		{
+			command: "wrangler r2 bucket lock remove",
+			definition: r2BucketLockRemoveCommand,
+		},
+		{
+			command: "wrangler r2 bucket lock set",
+			definition: r2BucketLockSetCommand,
 		},
 	]);
 	registry.registerNamespace("r2");
