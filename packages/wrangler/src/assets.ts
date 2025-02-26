@@ -138,7 +138,11 @@ export const syncAssets = async (
 						[(await readFile(absFilePath)).toString("base64")],
 						manifestEntry[1].hash,
 						{
-							type: getContentType(absFilePath) || "application/octet-stream",
+							// Most formdata body encoders (incl. undici's) will override with "application/octet-stream" if you use a falsy value here
+							// Additionally, it appears that undici doesn't support non-standard main types (e.g. "null")
+							// So, to make it easier for any other clients, we'll just parse "application/null" on the API
+							// to mean actually null (signal to not send a Content-Type header with the response)
+							type: getContentType(absFilePath) ?? "application/null",
 						}
 					),
 					manifestEntry[1].hash

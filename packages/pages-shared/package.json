@@ -22,15 +22,13 @@
 		"miniflare": "workspace:*"
 	},
 	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "0.7.0",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20250214.0",
-		"@miniflare/cache": "^2.14.4",
-		"@miniflare/core": "^2.14.4",
-		"@miniflare/html-rewriter": "^2.14.4",
-		"@miniflare/storage-memory": "^2.14.4",
 		"concurrently": "^8.2.2",
 		"glob": "^10.4.5",
-		"vitest": "~2.1.0"
+		"html-rewriter-wasm": "^0.4.1",
+		"vitest": "catalog:default"
 	},
 	"volta": {
 		"extends": "../../package.json"

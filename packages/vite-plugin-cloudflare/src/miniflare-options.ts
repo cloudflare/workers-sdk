@@ -3,7 +3,12 @@ import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { Log, LogLevel, Response as MiniflareResponse } from "miniflare";
+import {
+	kCurrentWorker,
+	Log,
+	LogLevel,
+	Response as MiniflareResponse,
+} from "miniflare";
 import * as vite from "vite";
 import {
 	unstable_getMiniflareWorkerOptions,
@@ -76,14 +81,14 @@ function getWorkerToWorkerEntrypointNamesMap(
 			if (
 				typeof value === "object" &&
 				"name" in value &&
-				typeof value.name === "string" &&
 				value.entrypoint !== undefined &&
 				value.entrypoint !== "default"
 			) {
-				const entrypointNames = workerToWorkerEntrypointNamesMap.get(
-					value.name
-				);
-				assert(entrypointNames, missingWorkerErrorMessage(value.name));
+				const targetWorkerName =
+					value.name === kCurrentWorker ? worker.name : value.name;
+				const entrypointNames =
+					workerToWorkerEntrypointNamesMap.get(targetWorkerName);
+				assert(entrypointNames, missingWorkerErrorMessage(targetWorkerName));
 
 				entrypointNames.add(value.entrypoint);
 			}

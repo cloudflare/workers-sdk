@@ -98,42 +98,44 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 								}
 							: undefined,
 					builder: {
-						async buildApp(builder) {
-							const clientEnvironment = builder.environments.client;
-							const defaultHtmlPath = path.resolve(
-								builder.config.root,
-								"index.html"
-							);
-
-							if (
-								clientEnvironment &&
-								(clientEnvironment.config.build.rollupOptions.input ||
-									fs.existsSync(defaultHtmlPath))
-							) {
-								await builder.build(clientEnvironment);
-							}
-
-							if (resolvedPluginConfig.type === "workers") {
-								const workerEnvironments = Object.keys(
-									resolvedPluginConfig.workers
-								).map((environmentName) => {
-									const environment = builder.environments[environmentName];
-
-									assert(
-										environment,
-										`${environmentName} environment not found`
-									);
-
-									return environment;
-								});
-
-								await Promise.all(
-									workerEnvironments.map((environment) =>
-										builder.build(environment)
-									)
+						buildApp:
+							userConfig.builder?.buildApp ??
+							(async (builder) => {
+								const clientEnvironment = builder.environments.client;
+								const defaultHtmlPath = path.resolve(
+									builder.config.root,
+									"index.html"
 								);
-							}
-						},
+
+								if (
+									clientEnvironment &&
+									(clientEnvironment.config.build.rollupOptions.input ||
+										fs.existsSync(defaultHtmlPath))
+								) {
+									await builder.build(clientEnvironment);
+								}
+
+								if (resolvedPluginConfig.type === "workers") {
+									const workerEnvironments = Object.keys(
+										resolvedPluginConfig.workers
+									).map((environmentName) => {
+										const environment = builder.environments[environmentName];
+
+										assert(
+											environment,
+											`${environmentName} environment not found`
+										);
+
+										return environment;
+									});
+
+									await Promise.all(
+										workerEnvironments.map((environment) =>
+											builder.build(environment)
+										)
+									);
+								}
+							}),
 					},
 				};
 			},
