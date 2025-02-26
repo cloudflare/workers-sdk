@@ -1,5 +1,6 @@
 {
 	"name": "unstable_dev",
+	"version": "0.0.1",
 	"private": true,
 	"description": "",
 	"license": "ISC",

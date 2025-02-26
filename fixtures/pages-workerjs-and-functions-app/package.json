@@ -1,5 +1,6 @@
 {
 	"name": "pages-workerjs-and-functions-app",
+	"version": "0.0.1",
 	"private": true,
 	"sideEffects": false,
 	"scripts": {

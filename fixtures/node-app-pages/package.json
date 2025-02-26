@@ -1,5 +1,6 @@
 {
 	"name": "node-app-pages",
+	"version": "0.0.1",
 	"private": true,
 	"sideEffects": false,
 	"main": "dist/worker.js",

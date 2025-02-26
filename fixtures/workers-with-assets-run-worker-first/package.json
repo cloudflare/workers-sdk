@@ -1,5 +1,6 @@
 {
 	"name": "workers-assets-with-user-worker-run-worker-first",
+	"version": "0.0.1",
 	"private": true,
 	"scripts": {
 		"check:type": "tsc",

@@ -1,5 +1,6 @@
 {
 	"name": "d1-worker-app",
+	"version": "0.0.1",
 	"private": true,
 	"scripts": {
 		"check:type": "tsc",

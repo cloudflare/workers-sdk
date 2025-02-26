@@ -1,5 +1,6 @@
 {
 	"name": "@cloudflare/vitest-pool-workers-examples",
+	"version": "0.0.1",
 	"private": true,
 	"type": "module",
 	"scripts": {

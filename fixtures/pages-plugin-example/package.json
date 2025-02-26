@@ -1,5 +1,6 @@
 {
 	"name": "pages-plugin-example",
+	"version": "0.0.1",
 	"private": true,
 	"main": "dist/index.js",
 	"types": "index.d.ts",

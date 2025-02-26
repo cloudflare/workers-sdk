@@ -1,5 +1,6 @@
 {
 	"name": "pages-proxy-app",
+	"version": "0.0.1",
 	"private": true,
 	"sideEffects": false,
 	"main": "server/index.js",
