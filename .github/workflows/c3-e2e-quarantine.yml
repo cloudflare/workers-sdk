@@ -42,5 +42,5 @@ jobs:
           packageManager: ${{ matrix.pm.name}}
           packageManagerVersion: ${{ matrix.pm.version }}
           quarantine: true
-          accountId: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
-          apiToken: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
