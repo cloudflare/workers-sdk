@@ -198,7 +198,7 @@ describe("git helpers", () => {
 			mockGitInstalled(true);
 			mockGitConfig();
 			mockInsideGitRepo(true);
-			
+
 			// Mock user selecting true
 			vi.mocked(processArgument).mockResolvedValueOnce(true);
 
