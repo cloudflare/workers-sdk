@@ -1,3 +1,4 @@
+import assert from "assert";
 import { existsSync } from "fs";
 import { cp } from "fs/promises";
 import { join } from "path";
@@ -112,7 +113,10 @@ function getFrameworkTests(opts: {
 				testCommitMessage: true,
 				verifyDeploy: {
 					route: "/",
-					expectedText: "Vite + React + Cloudflare",
+					// Note that this is the text in the static HTML that is returned
+					// This React SPA will change this at runtime but we are only making a fetch request
+					// not actually running the client side JS.
+					expectedText: "Vite + React + TS",
 				},
 				verifyPreview: {
 					route: "/",
@@ -861,9 +865,15 @@ const verifyPreviewScript = async (
 	projectPath: string,
 	logStream: Writable,
 ) => {
-	if (!verifyPreview || !previewScript) {
+	if (!verifyPreview) {
 		return;
 	}
+
+	assert(
+		previewScript,
+		"Expected a preview script is we are verifying the preview in " +
+			projectPath,
+	);
 
 	// Run the dev-server on a random port to avoid colliding with other tests
 	const TEST_PORT = Math.ceil(Math.random() * 1000) + 20000;
