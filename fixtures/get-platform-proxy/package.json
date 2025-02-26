@@ -1,6 +1,5 @@
 {
 	"name": "get-platform-proxy-fixture",
-	"version": "0.0.1",
 	"private": true,
 	"description": "A test for the getPlatformProxy utility",
 	"scripts": {

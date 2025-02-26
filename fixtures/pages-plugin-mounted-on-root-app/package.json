@@ -1,6 +1,5 @@
 {
 	"name": "pages-plugin-mounted-on-root-app",
-	"version": "0.0.1",
 	"private": true,
 	"sideEffects": false,
 	"main": "dist/worker.js",

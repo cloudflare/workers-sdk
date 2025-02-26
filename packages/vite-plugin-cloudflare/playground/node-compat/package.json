@@ -1,6 +1,5 @@
 {
 	"name": "@playground/integration-node-compat",
-	"version": "0.0.1",
 	"private": true,
 	"description": "",
 	"type": "module",

@@ -1,6 +1,5 @@
 {
 	"name": "type-generation-fixture",
-	"version": "0.0.1",
 	"private": true,
 	"description": "A test for the `wrangler types` utility",
 	"scripts": {

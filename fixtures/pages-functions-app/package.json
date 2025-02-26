@@ -1,6 +1,5 @@
 {
 	"name": "pages-functions-app",
-	"version": "0.0.1",
 	"private": true,
 	"sideEffects": false,
 	"main": "dist/worker.js",

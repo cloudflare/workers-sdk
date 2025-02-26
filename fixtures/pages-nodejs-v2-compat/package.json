@@ -1,6 +1,5 @@
 {
 	"name": "pages-nodejs-v2-compat",
-	"version": "0.0.1",
 	"private": true,
 	"sideEffects": false,
 	"scripts": {
