@@ -560,7 +560,6 @@ function buildProjectMiniflareOptions(
 		? ctx.config.inspector.port ?? 9229
 		: undefined;
 
-	// If the inspectorPort is not set, check if the Node inspector is running
 	if (inspectorPort !== undefined && !project.options.singleWorker) {
 		log.warn(`Tests run in a single worker when the inspector is open.`);
 
