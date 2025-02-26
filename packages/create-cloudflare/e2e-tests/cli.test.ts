@@ -421,5 +421,22 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 				expect(output).toContain(`lang JavaScript`);
 			},
 		);
+		test({ experimental }).skipIf(process.platform === "win32")(
+			"--existing-script",
+			async ({ logStream, project }) => {
+				const { output } = await runC3(
+					[
+						project.path,
+						"--existing-script=existing-script-test-do-not-delete",
+						"--git=false",
+						"--no-deploy",
+					],
+					[],
+					logStream,
+				);
+				expect(output).toContain("Pre-existing Worker (from Dashboard)");
+				expect(output).toContain("Application created successfully!");
+			},
+		);
 	},
 );
