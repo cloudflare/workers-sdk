@@ -32,7 +32,10 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 	// So to retain the ability to lock versions we run it with `npx` and spoof
 	// the user agent so scaffolding tools treat the invocation like yarn
 	const cmd = [...(npm === "yarn" ? ["npx"] : dlx), cli, ...args];
-	const env = npm === "yarn" ? { npm_config_user_agent: "yarn/1.22.22" } : {};
+	const env =
+		npm === "yarn" && !process.env.npm_config_user_agent?.startsWith("yarn")
+			? { npm_config_user_agent: "yarn/1.22.22" }
+			: {};
 
 	if (ctx.args.additionalArgs?.length) {
 		cmd.push(...ctx.args.additionalArgs);
