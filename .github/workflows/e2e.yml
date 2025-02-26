@@ -40,7 +40,17 @@ jobs:
           NODE_ENV: "production"
           CI_OS: ${{ runner.os }}
 
-      - name: Run tests
+      - name: Run Vite E2E tests
+        run: pnpm test:e2e -F @cloudflare/vite-plugin
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
+          CI_OS: ${{ matrix.os }}
+
+      - name: Run Wrangler E2E tests
         run: pnpm run test:e2e:wrangler
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}

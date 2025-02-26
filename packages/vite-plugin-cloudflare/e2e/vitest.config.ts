@@ -8,6 +8,5 @@ export default defineConfig({
 		testTimeout: 1000 * 60 * 10, // 10 min for lengthy installs
 		maxConcurrency: 3,
 		globalSetup: ["global-setup.ts"],
-		reporters: ["dot", "hanging-process"],
 	},
 });

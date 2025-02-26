@@ -37,7 +37,7 @@
 		"check:type": "tsc --build",
 		"dev": "tsup --watch",
 		"test": "vitest run",
-		"test:ci": "pnpm test && pnpm test:e2e",
+		"test:ci": "pnpm test",
 		"test:e2e": "vitest run -c e2e/vitest.config.ts",
 		"test:watch": "vitest"
 	},
