@@ -872,7 +872,7 @@ export function getBindings(
 				// TODO: This error has to be a _lot_ better, ideally just asking
 				// to create a preview namespace for the user automatically
 				throw new UserError(
-					`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your ${configFileName(configParam.configPath)} file`
+					`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your ${configFileName(configParam.configPath)} file`
 				); // Ugh, I really don't like this message very much
 			}
 			return {
