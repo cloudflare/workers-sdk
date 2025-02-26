@@ -12,7 +12,7 @@ export function getPlatformProxy(options = {}) {
 
 const proxy = await getPlatformProxy({
 	configPath: "./wrangler.toml",
-	exportsPath: "./src/worker.ts",
+	exportsPath: { useMain: true },
 });
 console.log(proxy.env);
 const id = proxy.env.DO.idFromName("foo");

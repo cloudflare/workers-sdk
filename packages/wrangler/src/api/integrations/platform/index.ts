@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import path from "node:path";
 import { kCurrentWorker, Miniflare } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
@@ -56,8 +55,9 @@ export type GetPlatformProxyOptions = {
 	 * e.g. durable objects, workflows, named entrypoints
 	 * NOT anything on the default export which can (sort of) be run in node
 	 * (TODO: re-export to override a default export if provided)
+	 * useMain just means we use `main` as specified in the config file
 	 */
-	exportsPath?: string;
+	exportsPath?: string | { useMain: true };
 	/**
 	 * Indicates if and where to persist the bindings data, if not present or `true` it defaults to the same location
 	 * used by wrangler v3: `.wrangler/state/v3` (so that the same data can be easily used by the caller and wrangler).
@@ -111,7 +111,7 @@ export async function getPlatformProxy<
 ): Promise<PlatformProxy<Env, CfProperties>> {
 	const env = options.environment;
 
-	const rawConfig = readConfig({
+	const config = readConfig({
 		config: options.configPath,
 		env,
 	});
@@ -121,7 +121,7 @@ export async function getPlatformProxy<
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: false,
 		},
-		() => getMiniflareOptionsFromConfig(rawConfig, env, options)
+		() => getMiniflareOptionsFromConfig(config, env, options)
 	);
 
 	const mf = new Miniflare({
@@ -145,52 +145,83 @@ export async function getPlatformProxy<
 }
 
 async function getMiniflareOptionsFromConfig(
-	rawConfig: Config,
+	config: Config,
 	env: string | undefined,
 	options: GetPlatformProxyOptions
 ): Promise<Partial<MiniflareOptions>> {
-	const bindings = getBindings(rawConfig, env, true, {});
+	const bindings = getBindings(config, env, true, {});
 
 	const workerDefinitions = await getBoundRegisteredWorkers({
-		name: rawConfig.name,
+		name: config.name,
 		services: bindings.services,
-		durableObjects: rawConfig["durable_objects"],
+		durableObjects: config["durable_objects"],
 	});
 
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
-		name: rawConfig.name,
+		name: config.name,
 		bindings,
 		workerDefinitions,
 		queueConsumers: undefined,
-		services: rawConfig.services,
+		services: config.services,
 		serviceBindings: {},
-		migrations: rawConfig.migrations,
+		migrations: config.migrations,
 		imagesLocalMode: false,
 	});
 
-	// make frameworks specify the fallback explicitly?
-	const main = options.exportsPath ?? rawConfig.main;
-	assert(main);
+	let main: string | undefined;
+	if (typeof options.exportsPath === "string") {
+		main = options.exportsPath;
+	} else {
+		main = options.exportsPath?.useMain ? config.main : undefined;
+	}
+
 	const persistOptions = getMiniflarePersistOptions(options.persist);
 
 	const serviceBindings = await getServiceBindings(bindings.services);
 
-	assert(rawConfig.configPath);
-	const projectRoot = path.dirname(rawConfig.configPath);
-	const tmpDir = getWranglerTmpDir(
-		path.dirname(rawConfig.configPath),
-		"get-platform-proxy"
-	);
+	const bundle = main ? await runBundle(main, config) : undefined;
+	const miniflareOptions = {
+		workers: [
+			{
+				name: config.name,
+				...(bundle && { scriptPath: bundle?.resolvedEntryPointPath }),
+				...(!bundle && { script: "" }),
+				modules: true,
+				...bindingOptions,
+				serviceBindings: {
+					...serviceBindings,
+					...bindingOptions.serviceBindings,
+				},
+			},
+			...externalWorkers,
+		],
+		...persistOptions,
+	};
 
-	const entry = await getEntry({}, rawConfig, "dev");
+	return miniflareOptions;
+}
+const runBundle = async (main: string, config: Config) => {
+	const projectRoot = config.configPath
+		? path.dirname(config?.configPath)
+		: undefined;
+
+	// are we sure there's always a config path?
+	if (!projectRoot) {
+		return;
+	}
+	const tmpDir = getWranglerTmpDir(projectRoot, "get-platform-proxy");
+
+	// override main using "args"
+	const entry = await getEntry({ script: main }, config, "dev");
+
 	const moduleCollector = createModuleCollector({
 		entry,
 		findAdditionalModules: false,
 		rules: [],
 	});
 	const nodejsCompatMode = validateNodeCompatMode(
-		rawConfig.compatibility_date,
-		rawConfig.compatibility_flags,
+		config.compatibility_date,
+		config.compatibility_flags,
 		{ nodeCompat: false, noBundle: false }
 	);
 	const bundle = await bundleWorker(entry, tmpDir.path, {
@@ -231,27 +262,8 @@ async function getMiniflareOptionsFromConfig(
 		sourcemap: undefined,
 		checkFetch: false,
 	});
-
-	const miniflareOptions: MiniflareOptions = {
-		workers: [
-			{
-				name: rawConfig.name,
-				scriptPath: bundle.resolvedEntryPointPath,
-				modules: true,
-				...bindingOptions,
-				serviceBindings: {
-					...serviceBindings,
-					...bindingOptions.serviceBindings,
-				},
-			},
-			...externalWorkers,
-		],
-		...persistOptions,
-	};
-
-	return miniflareOptions;
-}
-
+	return bundle;
+};
 /**
  * Get the persist option properties to pass to miniflare
  *
