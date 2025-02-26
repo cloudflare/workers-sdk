@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { kCurrentWorker, Miniflare } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
 import { readConfig } from "../../../config";
@@ -43,6 +44,14 @@ export type GetPlatformProxyOptions = {
 	 *       point to a valid file on the filesystem
 	 */
 	configPath?: string;
+
+	/**
+	 * stuff that we do want to run in workerd
+	 * e.g. durable objects, workflows, named entrypoints
+	 * NOT anything on the default export which can (sort of) be run in node
+	 * (TODO: re-export to override a default export if provided)
+	 */
+	exportsPath?: string;
 	/**
 	 * Indicates if and where to persist the bindings data, if not present or `true` it defaults to the same location
 	 * used by wrangler v3: `.wrangler/state/v3` (so that the same data can be easily used by the caller and wrangler).
@@ -153,6 +162,9 @@ async function getMiniflareOptionsFromConfig(
 		imagesLocalMode: false,
 	});
 
+	// make frameworks specify the fallback explicitly?
+	const main = options.exportsPath ?? rawConfig.main;
+	assert(main);
 	const persistOptions = getMiniflarePersistOptions(options.persist);
 
 	const serviceBindings = await getServiceBindings(bindings.services);
@@ -161,7 +173,7 @@ async function getMiniflareOptionsFromConfig(
 		workers: [
 			{
 				name: rawConfig.name,
-				script: "",
+				scriptPath: main,
 				modules: true,
 				...bindingOptions,
 				serviceBindings: {
