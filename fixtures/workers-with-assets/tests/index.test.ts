@@ -201,4 +201,13 @@ describe("[Workers + Assets] dynamic site", () => {
 		);
 		expect(text).toContain("<h1>✨This is from a user Worker binding✨</h1>");
 	});
+
+	it("should be able to use a binding to a named entrypoint", async ({
+		expect,
+	}) => {
+		let response = await fetch(`http://${ip}:${port}/named-entrypoint`);
+		let text = await response.text();
+		expect(response.status).toBe(200);
+		expect(text).toContain("hello from a named entrypoint");
+	});
 });
