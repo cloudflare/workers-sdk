@@ -132,6 +132,12 @@ export type WorkerMetadataBinding =
 	  }
 	| { type: "assets"; name: string };
 
+export type AssetConfigMetadata = {
+	html_handling?: AssetConfig["html_handling"];
+	not_found_handling?: AssetConfig["not_found_handling"];
+	run_worker_first?: boolean;
+};
+
 // for PUT /accounts/:accountId/workers/scripts/:scriptName
 type WorkerMetadataPut = {
 	/** The name of the entry point module. Only exists when the worker is in the ES module format */
@@ -156,7 +162,7 @@ type WorkerMetadataPut = {
 
 	assets?: {
 		jwt: string;
-		config?: AssetConfig;
+		config?: AssetConfigMetadata;
 	};
 	observability?: Observability | undefined;
 	// Allow unsafe.metadata to add arbitrary properties at runtime
@@ -196,21 +202,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		observability,
 	} = worker;
 
-	let runWorkerFirst = undefined;
-	if (assets?.assetConfig?.run_worker_first !== undefined) {
-		runWorkerFirst = assets.assetConfig?.run_worker_first;
-	} else if (assets?.assetConfig?.serve_directly !== undefined) {
-		runWorkerFirst = !assets?.assetConfig?.serve_directly;
-	}
-
-	const assetConfig = {
+	const assetConfig: AssetConfigMetadata = {
 		html_handling: assets?.assetConfig?.html_handling,
 		not_found_handling: assets?.assetConfig?.not_found_handling,
-		run_worker_first: runWorkerFirst,
+		run_worker_first: assets?.routerConfig.invoke_user_worker_ahead_of_assets,
 	};
 
 	// short circuit if static assets upload only
-	if (assets && !assets.routingConfig.has_user_worker) {
+	if (assets && !assets.routerConfig.has_user_worker) {
 		formData.set(
 			"metadata",
 			JSON.stringify({

@@ -707,7 +707,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				props.assetsOptions && assetsJwt
 					? {
 							jwt: assetsJwt,
-							routingConfig: props.assetsOptions.routingConfig,
+							routerConfig: props.assetsOptions.routerConfig,
 							assetConfig: props.assetsOptions.assetConfig,
 						}
 					: undefined,

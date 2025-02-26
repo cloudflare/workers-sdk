@@ -38,9 +38,6 @@ export const handleRequest = async (
 		});
 	}
 
-	// if there was a POST etc. to a route without an asset
-	// this should be passed onto a user worker if one exists
-	// so prioritise returning a 404 over 405?
 	const method = request.method.toUpperCase();
 	if (!["GET", "HEAD"].includes(method)) {
 		return env.JAEGER.enterSpan("method_not_allowed", (span) => {
@@ -721,7 +718,7 @@ const safeRedirect = async (
  * +===========================================+===========+======================+
  * | unreserved ASCII e.g. a-z                 | unchanged | unchanged            |
  * +-------------------------------------------+-----------+----------------------+
- * | reserved (sometimes encoded)			   | unchanged | encoded			  |
+ * | reserved (sometimes encoded)              | unchanged | encoded              |
  * | e.g. [ ] @ $ ! ' ( ) * + , ; = : ? # & %  |           |                      |
  * +-------------------------------------------+-----------+----------------------+
  * | non-ASCII e.g. ü. and space               | encoded   | encoded              |

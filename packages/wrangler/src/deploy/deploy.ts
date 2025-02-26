@@ -156,7 +156,7 @@ export const validateRoutes = (routes: Route[], assets?: AssetsOptions) => {
 		} else if (
 			// If we have Assets but we're not always hitting the Worker then validate
 			assets?.directory !== undefined &&
-			assets.assetConfig.run_worker_first !== true
+			assets.routerConfig.invoke_user_worker_ahead_of_assets !== true
 		) {
 			const pattern = typeof route === "string" ? route : route.pattern;
 			const components = pattern.split("/");
@@ -190,7 +190,7 @@ export const validateRoutes = (routes: Route[], assets?: AssetsOptions) => {
 					return `  • ${route} (Will match assets: ${assetPath})`;
 				})
 				.join("\n")}` +
-				(assets?.routingConfig.has_user_worker
+				(assets?.routerConfig.has_user_worker
 					? "\n\nRequests not matching an asset will be forwarded to the Worker's code."
 					: "")
 		);
@@ -706,7 +706,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				props.assetsOptions && assetsJwt
 					? {
 							jwt: assetsJwt,
-							routingConfig: props.assetsOptions.routingConfig,
+							routerConfig: props.assetsOptions.routerConfig,
 							assetConfig: props.assetsOptions.assetConfig,
 						}
 					: undefined,

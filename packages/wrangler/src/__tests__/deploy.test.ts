@@ -5024,9 +5024,18 @@ addEventListener('fetch', event => {});`
 		});
 
 		it("should error if run_worker_first is true and no user Worker is provided", async () => {
+			const assets = [
+				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "file-2.bak", content: "Content of file-2" },
+				{ filePath: "file-3.txt", content: "Content of file-3" },
+				{ filePath: "sub-dir/file-4.bak", content: "Content of file-4" },
+				{ filePath: "sub-dir/file-5.txt", content: "Content of file-5" },
+			];
+			writeAssets(assets, "assets");
 			writeWranglerConfig({
 				assets: {
-					directory: "xyz",
+					directory: "assets",
 					run_worker_first: true,
 				},
 			});

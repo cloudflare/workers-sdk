@@ -175,7 +175,7 @@ export async function createRemoteWorkerInit(props: {
 			props.assets && assetsJwt
 				? {
 						jwt: assetsJwt,
-						routingConfig: props.assets.routingConfig,
+						routerConfig: props.assets.routerConfig,
 						assetConfig: props.assets.assetConfig,
 					}
 				: undefined,
