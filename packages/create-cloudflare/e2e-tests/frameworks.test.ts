@@ -556,11 +556,11 @@ function getFrameworkTests(opts: {
 				timeout: LONG_TIMEOUT,
 				verifyDeploy: {
 					route: "/",
-					expectedText: "Vite + React + Cloudflare",
+					expectedText: "Vite + React",
 				},
 				verifyPreview: {
 					route: "/",
-					expectedText: "Vite + React + Cloudflare",
+					expectedText: "Vite + React",
 				},
 			},
 			solid: {
