@@ -112,12 +112,12 @@ function getFrameworkTests(opts: {
 				testCommitMessage: true,
 				verifyDeploy: {
 					route: "/",
-					expectedText: "Vite + React",
+					expectedText: "Vite + React + Cloudflare",
 				},
 				verifyPreview: {
 					route: "/",
 					previewArgs: ["--host=127.0.0.1"],
-					expectedText: "Vite + React",
+					expectedText: "Vite + React + Cloudflare",
 				},
 			},
 			gatsby: {
@@ -566,11 +566,11 @@ function getFrameworkTests(opts: {
 				timeout: LONG_TIMEOUT,
 				verifyDeploy: {
 					route: "/",
-					expectedText: "Vite + React",
+					expectedText: "Vite + React + Cloudflare",
 				},
 				verifyPreview: {
 					route: "/",
-					expectedText: "Vite + React",
+					expectedText: "Vite + React + Cloudflare",
 				},
 			},
 			solid: {
