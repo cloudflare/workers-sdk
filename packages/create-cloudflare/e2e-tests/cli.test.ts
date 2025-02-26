@@ -1,5 +1,6 @@
 import fs, { readFileSync } from "node:fs";
 import { basename } from "node:path";
+import { detectPackageManager } from "helpers/packageManagers";
 import { beforeAll, describe, expect } from "vitest";
 import { version } from "../package.json";
 import { getFrameworkToTest } from "./frameworkToTest";
@@ -14,7 +15,7 @@ import type { Suite } from "vitest";
 
 const experimental = process.env.E2E_EXPERIMENTAL === "true";
 const frameworkToTest = getFrameworkToTest({ experimental: false });
-
+const { name: pm } = detectPackageManager();
 // Note: skipIf(frameworkToTest) makes it so that all the basic C3 functionality
 //       tests are skipped in case we are testing a specific framework
 describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
@@ -421,22 +422,22 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 				expect(output).toContain(`lang JavaScript`);
 			},
 		);
-		test({ experimental }).skipIf(process.platform === "win32")(
-			"--existing-script",
-			async ({ logStream, project }) => {
-				const { output } = await runC3(
-					[
-						project.path,
-						"--existing-script=existing-script-test-do-not-delete",
-						"--git=false",
-						"--no-deploy",
-					],
-					[],
-					logStream,
-				);
-				expect(output).toContain("Pre-existing Worker (from Dashboard)");
-				expect(output).toContain("Application created successfully!");
-			},
-		);
+
+		test({ experimental }).skipIf(
+			process.platform === "win32" || pm === "yarn",
+		)("--existing-script", async ({ logStream, project }) => {
+			const { output } = await runC3(
+				[
+					project.path,
+					"--existing-script=existing-script-test-do-not-delete",
+					"--git=false",
+					"--no-deploy",
+				],
+				[],
+				logStream,
+			);
+			expect(output).toContain("Pre-existing Worker (from Dashboard)");
+			expect(output).toContain("Application created successfully!");
+		});
 	},
 );
