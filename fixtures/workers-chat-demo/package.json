@@ -1,8 +1,0 @@
-{
-	"name": "workers-chat-demo",
-	"private": true,
-	"description": "An edge chat service that runs on Cloudflare Workers using Durable Objects",
-	"volta": {
-		"extends": "../../package.json"
-	}
-}
