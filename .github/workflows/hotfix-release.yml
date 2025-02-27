@@ -9,13 +9,14 @@ on:
         description: "Confirm that the PR is up to date with the last published release, with the specific additional changes that should be released as part of this hotfix and the relevant package patch versions bumped"
         type: boolean
         required: true
-      prerelease:
-        description: "Publish to the hotfix tag on NPM for testing?"
-        type: boolean
+      label:
+        description: "Which dist-tag should this release have?"
+        type: string
+        default: hotfix
         required: true
 jobs:
   hotfix-release:
-    name: Create Draft PR
+    name: Hotfix Release
     if: ${{ inputs.confirm == true }}
     runs-on: ubuntu-latest
     steps:
@@ -56,10 +57,5 @@ jobs:
         env:
           CI_OS: ${{ runner.os }}
 
-      - name: Publish packages (prerelease)
-        if: ${{ inputs.prerelease == true }}
-        run: pnpm publish -r --tag hotfix --filter wrangler --filter miniflare --filter create-cloudflare --dry-run
-
       - name: Publish packages
-        if: ${{ inputs.prerelease == false }}
-        run: pnpm publish -r --filter wrangler --filter miniflare --filter create-cloudflare --dry-run
+        run: pnpm publish -r --tag ${{ inputs.label }} --filter wrangler --filter miniflare --filter create-cloudflare --dry-run
