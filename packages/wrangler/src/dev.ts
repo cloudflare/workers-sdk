@@ -20,6 +20,7 @@ import { getVarsForDev } from "./dev/dev-vars";
 import registerDevHotKeys from "./dev/hotkeys";
 import { maybeRegisterLocalWorker } from "./dev/local";
 import { UserError } from "./errors";
+import { getFlag } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "./sites";
@@ -60,6 +61,7 @@ export const dev = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
+			ASSETS_RPC: args.experimentalAssetsRpc,
 		}),
 	},
 	metadata: {
@@ -326,6 +328,13 @@ export const dev = createCommand({
 			describe:
 				"Use a local lower-fidelity implementation of the Images binding",
 			default: false,
+		},
+		"experimental-assets-rpc": {
+			alias: "x-assets-rpc",
+			type: "boolean",
+			describe: "Support JSRPC bindings to Workers + Assets projects",
+			default: false,
+			hidden: true,
 		},
 	},
 	async validateArgs(args) {

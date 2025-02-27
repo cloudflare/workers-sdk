@@ -266,6 +266,7 @@ export const versionsUploadCommand = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
+			ASSETS_RPC: false,
 		}),
 	},
 	handler: async function versionsUploadHandler(args, { config }) {
