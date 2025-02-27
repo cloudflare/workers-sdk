@@ -1,5 +1,5 @@
 // https://nodejs.org/api/module.html
-import { notImplemented } from "unenv/runtime/_internal/utils";
+import { notImplemented } from "unenv/_internal/utils";
 import {
 	_cache,
 	_debug,
@@ -25,7 +25,7 @@ import {
 	SourceMap,
 	syncBuiltinESMExports,
 	wrap,
-} from "unenv/runtime/node/module/index";
+} from "unenv/node/module";
 import type nodeModule from "node:module";
 
 export {
@@ -53,7 +53,7 @@ export {
 	runMain,
 	syncBuiltinESMExports,
 	wrap,
-} from "unenv/runtime/node/module/index";
+} from "unenv/node/module";
 
 const workerdModule = process.getBuiltinModule("node:module");
 
@@ -61,9 +61,12 @@ export const createRequire: typeof nodeModule.createRequire = (
 	file: string | URL
 ) => {
 	return Object.assign(workerdModule.createRequire(file), {
-		resolve: Object.assign(notImplemented("module.require.resolve"), {
-			paths: notImplemented("module.require.resolve.paths"),
-		}),
+		resolve: Object.assign(
+			/*@__PURE__*/ notImplemented("module.require.resolve"),
+			{
+				paths: /*@__PURE__*/ notImplemented("module.require.resolve.paths"),
+			}
+		),
 		cache: Object.create(null),
 		extensions: _extensions,
 		main: undefined,

@@ -77,7 +77,6 @@ async function testImplementsBuffer() {
 
 async function testNodeCompatModules() {
 	const module = await import("node:module");
-	// @ts-expect-error exposed by workerd
 	const require = module.createRequire("/");
 	const modules = [
 		"assert",

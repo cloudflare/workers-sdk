@@ -27,7 +27,7 @@ import {
 	webcrypto as unenvCryptoWebcrypto,
 	Verify,
 	verify,
-} from "unenv/runtime/node/crypto/index";
+} from "unenv/node/crypto";
 import type nodeCrypto from "node:crypto";
 
 export {
@@ -53,7 +53,7 @@ export {
 	publicEncrypt,
 	sign,
 	verify,
-} from "unenv/runtime/node/crypto/index";
+} from "unenv/node/crypto";
 
 const workerdCrypto = process.getBuiltinModule("node:crypto");
 
@@ -111,6 +111,7 @@ export const getRandomValues = workerdCrypto.getRandomValues.bind(
 );
 
 export const webcrypto = {
+	// @ts-expect-error unenv has unknown type
 	CryptoKey: unenvCryptoWebcrypto.CryptoKey,
 	getRandomValues,
 	randomUUID,
@@ -136,26 +137,43 @@ export default {
 	X509Certificate,
 	// @ts-expect-error @types/node is out of date - this is a bug in typings
 	constants,
+	// @ts-expect-error unenv has unknown type
 	createCipheriv,
+	// @ts-expect-error unenv has unknown type
 	createDecipheriv,
+	// @ts-expect-error unenv has unknown type
 	createECDH,
+	// @ts-expect-error unenv has unknown type
 	createSign,
+	// @ts-expect-error unenv has unknown type
 	createVerify,
+	// @ts-expect-error unenv has unknown type
 	diffieHellman,
+	// @ts-expect-error unenv has unknown type
 	getCipherInfo,
+	// @ts-expect-error unenv has unknown type
 	hash,
+	// @ts-expect-error unenv has unknown type
 	privateDecrypt,
+	// @ts-expect-error unenv has unknown type
 	privateEncrypt,
+	// @ts-expect-error unenv has unknown type
 	publicDecrypt,
+	// @ts-expect-error unenv has unknown type
 	publicEncrypt,
 	scrypt,
 	scryptSync,
+	// @ts-expect-error unenv has unknown type
 	sign,
+	// @ts-expect-error unenv has unknown type
 	verify,
 
 	// default-only export from unenv
+	// @ts-expect-error unenv has unknown type
 	createCipher,
+	// @ts-expect-error unenv has unknown type
 	createDecipher,
+	// @ts-expect-error unenv has unknown type
 	pseudoRandomBytes,
 
 	/**

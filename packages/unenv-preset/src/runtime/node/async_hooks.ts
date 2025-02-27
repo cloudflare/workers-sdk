@@ -5,7 +5,7 @@ import {
 	executionAsyncId,
 	executionAsyncResource,
 	triggerAsyncId,
-} from "unenv/runtime/node/async_hooks/index";
+} from "unenv/node/async_hooks";
 import type nodeAsyncHooks from "node:async_hooks";
 
 export {
@@ -14,7 +14,7 @@ export {
 	executionAsyncId,
 	executionAsyncResource,
 	triggerAsyncId,
-} from "unenv/runtime/node/async_hooks/index";
+} from "unenv/node/async_hooks";
 
 // @ts-ignore typings are not up to date, but this API exists, see: https://github.com/cloudflare/workerd/pull/2147
 const workerdAsyncHooks = process.getBuiltinModule("node:async_hooks");
