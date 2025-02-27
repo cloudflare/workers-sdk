@@ -1,5 +1,15 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.7.5
+
+### Patch Changes
+
+- [#8173](https://github.com/cloudflare/workers-sdk/pull/8173) [`a9c0159`](https://github.com/cloudflare/workers-sdk/commit/a9c0159f85ab69e9f071d0c56f5658d92d4f8a69) Thanks [@edmundhung](https://github.com/edmundhung)! - improve error message with isolated storage
+
+- Updated dependencies [[`fce642d`](https://github.com/cloudflare/workers-sdk/commit/fce642d59264b1b6e7df8a6c9a015519b7574637), [`a4909cb`](https://github.com/cloudflare/workers-sdk/commit/a4909cbe552eae72b901cd78bf1f814f818085a0)]:
+  - miniflare@3.20250214.2
+  - wrangler@3.111.1
+
 ## 0.7.4
 
 ### Patch Changes
