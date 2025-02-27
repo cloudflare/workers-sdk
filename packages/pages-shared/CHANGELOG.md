@@ -1,5 +1,11 @@
 # @cloudflare/pages-shared
 
+## 0.13.10
+
+### Patch Changes
+
+- [#8200](https://github.com/cloudflare/workers-sdk/pull/8200) [`62f5429`](https://github.com/cloudflare/workers-sdk/commit/62f54293a24a7494d9c468ab36fa9d009826e721) Thanks [@penalosa](https://github.com/penalosa)! - Remove Miniflare 2
+
 ## 0.13.9
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.7.4
+
+### Patch Changes
+
+- [#8254](https://github.com/cloudflare/workers-sdk/pull/8254) [`2b92a65`](https://github.com/cloudflare/workers-sdk/commit/2b92a65fe6ec500c16c20c46bf91c2d5f3e4ceba) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: responses from `fetchMock` should have immutable headers
+
+- Updated dependencies [[`36ef9c6`](https://github.com/cloudflare/workers-sdk/commit/36ef9c6209c937570711ff407fd29de6fb7cf267), [`1cb2d34`](https://github.com/cloudflare/workers-sdk/commit/1cb2d3418b21b4d54d1c8debbfc91a5efc8f5708), [`36ef9c6`](https://github.com/cloudflare/workers-sdk/commit/36ef9c6209c937570711ff407fd29de6fb7cf267)]:
+  - wrangler@3.111.0
+
 ## 0.7.3
 
 ### Patch Changes
