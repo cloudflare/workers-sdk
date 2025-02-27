@@ -341,6 +341,7 @@ describe("generateTypes()", () => {
 			MTLS_BINDING: Fetcher;
 			BROWSER_BINDING: Fetcher;
 			AI_BINDING: Ai;
+			IMAGES_BINDING: ImagesBinding;
 			VERSION_METADATA_BINDING: { id: string; tag: string };
 			ASSETS_BINDING: Fetcher;
 		}
