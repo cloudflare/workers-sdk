@@ -25,6 +25,7 @@ import {
 	spawnWithLogging,
 	test,
 	testDeploymentCommitMessage,
+	testGitCommitMessage,
 	waitForExit,
 } from "./helpers";
 import type { TemplateConfig } from "../src/templates";
@@ -120,7 +121,7 @@ function getFrameworkTests(opts: {
 				},
 			},
 			hono: {
-				testCommitMessage: false,
+				testCommitMessage: true,
 				unsupportedOSs: ["win32"],
 				verifyDeploy: {
 					route: "/",
@@ -180,7 +181,16 @@ function getFrameworkTests(opts: {
 				flags: ["--typescript", "--no-install", "--no-git-init"],
 			},
 			next: {
-				testCommitMessage: false,
+				testCommitMessage: true,
+				flags: [
+					"--ts",
+					"--tailwind",
+					"--eslint",
+					"--app",
+					"--import-alias",
+					"@/*",
+					"--src-dir",
+				],
 				verifyBuildCfTypes: {
 					outputFile: "cloudflare-env.d.ts",
 					envInterfaceName: "CloudflareEnv",
@@ -403,7 +413,7 @@ function getFrameworkTests(opts: {
 				},
 			},
 			hono: {
-				testCommitMessage: false,
+				testCommitMessage: true,
 				unsupportedOSs: ["win32"],
 				verifyDeploy: {
 					route: "/",
@@ -658,6 +668,7 @@ describe.concurrent(
 							{
 								argv: [
 									...(experimental ? ["--experimental"] : []),
+									...(testConfig.testCommitMessage ? ["--git"] : ["--no-git"]),
 									...(testConfig.flags ? ["--", ...testConfig.flags] : []),
 								],
 								promptHandlers: testConfig.promptHandlers,
@@ -674,6 +685,14 @@ describe.concurrent(
 						expect(wranglerPath).toExist();
 
 						await addTestVarsToWranglerToml(project.path);
+
+						if (testConfig.testCommitMessage) {
+							await testGitCommitMessage(
+								project.name,
+								frameworkId,
+								project.path,
+							);
+						}
 
 						// Make a request to the deployed project and verify it was successful
 						await verifyDeployment(
@@ -741,7 +760,6 @@ const runCli = async (
 		framework,
 		NO_DEPLOY ? "--no-deploy" : "--deploy",
 		"--no-open",
-		"--no-git",
 	];
 
 	args.push(...argv);

@@ -147,9 +147,8 @@ describe("git helpers", () => {
 
 	describe("offerGit", async () => {
 		test("happy path", async () => {
-			const ctx = createTestContext();
+			const ctx = createTestContext("test", { projectName: "test" });
 			mockGitInstalled(true);
-			mockInsideGitRepo(false);
 			mockGitConfig();
 			mockDefaultBranchName();
 
@@ -163,11 +162,23 @@ describe("git helpers", () => {
 				["git", "init", "--initial-branch", "main"],
 				expect.any(Object),
 			);
+			expect(ctx.gitRepoAlreadyExisted).toBe(false);
 			expect(ctx.args.git).toBe(true);
 		});
 
 		test("git not installed", async () => {
-			const ctx = createTestContext();
+			const ctx = createTestContext("test", { projectName: "test" });
+			mockGitInstalled(false);
+
+			await offerGit(ctx);
+
+			expect(updateStatus).not.toHaveBeenCalled();
+			expect(processArgument).not.toHaveBeenCalled();
+			expect(ctx.args.git).toBe(false);
+		});
+
+		test("git not installed, but requested", async () => {
+			const ctx = createTestContext("test", { projectName: "test", git: true });
 			mockGitInstalled(false);
 
 			await offerGit(ctx);
@@ -180,9 +191,19 @@ describe("git helpers", () => {
 		});
 
 		test("git not configured", async () => {
-			const ctx = createTestContext();
+			const ctx = createTestContext("test", { projectName: "test" });
 			mockGitInstalled(false);
-			vi.mocked(runCommand).mockRejectedValue(new Error("git not found"));
+
+			await offerGit(ctx);
+
+			expect(updateStatus).not.toHaveBeenCalled();
+			expect(processArgument).not.toHaveBeenCalled();
+			expect(ctx.args.git).toBe(false);
+		});
+
+		test("git not configured, but requested", async () => {
+			const ctx = createTestContext("test", { projectName: "test", git: true });
+			mockGitInstalled(false);
 
 			await offerGit(ctx);
 
@@ -195,9 +216,10 @@ describe("git helpers", () => {
 
 		test("inside existing git repo", async () => {
 			const ctx = createTestContext("test", { projectName: "test" });
+			// This property is set in the normal ctx creation helper.
+			ctx.gitRepoAlreadyExisted = true;
 			mockGitInstalled(true);
 			mockGitConfig();
-			mockInsideGitRepo(true);
 
 			// Mock user selecting true
 			vi.mocked(processArgument).mockResolvedValueOnce(true);
@@ -215,11 +237,8 @@ describe("git helpers", () => {
 		});
 
 		test("user selects no git", async () => {
-			const ctx = createTestContext();
+			const ctx = createTestContext("test", { projectName: "test" });
 			mockGitInstalled(true);
-			mockGitConfig();
-			mockInsideGitRepo(false);
-			mockDefaultBranchName();
 
 			// Mock user selecting true
 			vi.mocked(processArgument).mockResolvedValueOnce(false);
@@ -227,10 +246,34 @@ describe("git helpers", () => {
 			await offerGit(ctx);
 
 			expect(processArgument).toHaveBeenCalledOnce();
-			expect(vi.mocked(runCommand)).not.toHaveBeenCalledWith(
-				["git", "init", "--initial-branch", "main"],
+
+			expect(vi.mocked(runCommand)).toHaveBeenCalledOnce();
+			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
+				expect.arrayContaining(["git", "--version"]),
 				expect.any(Object),
 			);
+
+			expect(ctx.args.git).toBe(false);
+		});
+
+		test("user selects no git, inside a git repository", async () => {
+			const ctx = createTestContext("test", { projectName: "test" });
+			ctx.gitRepoAlreadyExisted = true;
+			mockGitInstalled(true);
+
+			// Mock user selecting true
+			vi.mocked(processArgument).mockResolvedValueOnce(false);
+
+			await offerGit(ctx);
+
+			expect(processArgument).toHaveBeenCalledOnce();
+
+			expect(vi.mocked(runCommand)).toHaveBeenCalledOnce();
+			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
+				expect.arrayContaining(["git", "--version"]),
+				expect.any(Object),
+			);
+
 			expect(ctx.args.git).toBe(false);
 		});
 	});
@@ -240,21 +283,21 @@ describe("git helpers", () => {
 
 		beforeEach(() => {
 			spinner = mockSpinner();
-			// Mocks for `createCommitMessage`
 			mockGitInstalled(true);
-			mockInsideGitRepo(true);
 		});
 
 		test("happy path", async () => {
-			const ctx = createTestContext();
-			ctx.gitRepoAlreadyExisted = false;
-
-			mockGitInstalled(true);
-			mockInsideGitRepo(true);
+			const ctx = createTestContext("test", { projectName: "test" });
+			ctx.args.git = true;
 
 			await gitCommit(ctx);
 
 			expect(spinner.start).toHaveBeenCalledOnce();
+			// This is called when creating the git commit message
+			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
+				expect.arrayContaining(["git", "--version"]),
+				expect.any(Object),
+			);
 			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
 				["git", "add", "."],
 				expect.any(Object),
@@ -264,46 +307,46 @@ describe("git helpers", () => {
 				expect.any(Object),
 			);
 			expect(spinner.stop).toHaveBeenCalledOnce();
+			expect(ctx.commitMessage).toBeDefined();
 		});
 
-		test("git repo already existed (early exit)", async () => {
-			const ctx = createTestContext();
+		test("git not selected", async () => {
+			const ctx = createTestContext("test", { projectName: "test" });
+			ctx.args.git = false;
+
+			await gitCommit(ctx);
+
+			expect(spinner.start).not.toHaveBeenCalled();
+			expect(spinner.stop).not.toHaveBeenCalled();
+
+			expect(vi.mocked(runCommand)).toHaveBeenCalledOnce();
+			// This is called when creating the git commit message
+			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
+				expect.arrayContaining(["git", "--version"]),
+				expect.any(Object),
+			);
+
+			expect(ctx.commitMessage).toBeDefined();
+		});
+
+		test("git repo already existed", async () => {
+			const ctx = createTestContext("test", { projectName: "test" });
+			ctx.args.git = true;
 			ctx.gitRepoAlreadyExisted = true;
 
 			await gitCommit(ctx);
 
 			expect(spinner.start).not.toHaveBeenCalled();
 			expect(spinner.stop).not.toHaveBeenCalled();
-			expect(vi.mocked(runCommand)).not.toHaveBeenCalledWith(
-				["git", "commit", "-m", expect.any(String)],
+
+			expect(vi.mocked(runCommand)).toHaveBeenCalledOnce();
+			// This is called when creating the git commit message
+			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
+				expect.arrayContaining(["git", "--version"]),
 				expect.any(Object),
 			);
+
+			expect(ctx.commitMessage).toBeDefined();
 		});
-
-		const cases = [
-			[true, false],
-			[false, true],
-			[false, false],
-		];
-
-		test.each(cases)(
-			"early exit (git installed: %s, git initialized: %s)",
-			async (gitInstalled, gitInitialized) => {
-				const ctx = createTestContext();
-				ctx.gitRepoAlreadyExisted = true;
-
-				mockGitInstalled(gitInstalled);
-				mockInsideGitRepo(gitInitialized);
-
-				await gitCommit(ctx);
-
-				expect(spinner.start).not.toHaveBeenCalled();
-				expect(spinner.stop).not.toHaveBeenCalled();
-				expect(vi.mocked(runCommand)).not.toHaveBeenCalledWith(
-					["git", "commit", "-m", expect.any(String)],
-					expect.any(Object),
-				);
-			},
-		);
 	});
 });
