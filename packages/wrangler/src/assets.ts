@@ -27,6 +27,7 @@ import type { Config } from "./config";
 import type { DeployArgs } from "./deploy";
 import type { StartDevOptions } from "./dev";
 import type { AssetConfig, RoutingConfig } from "@cloudflare/workers-shared";
+import { dirname, join, relative } from "node:path";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
 
@@ -44,6 +45,8 @@ type UploadResponse = {
 const BULK_UPLOAD_CONCURRENCY = 3;
 const MAX_UPLOAD_ATTEMPTS = 5;
 const MAX_UPLOAD_GATEWAY_ERRORS = 5;
+
+const MAX_DIFF_LINES = 100;
 
 export const syncAssets = async (
 	accountId: string | undefined,
@@ -132,6 +135,7 @@ export const syncAssets = async (
 			const payload = new FormData();
 			for (const manifestEntry of bucket) {
 				const absFilePath = path.join(assetDirectory, manifestEntry[0]);
+				logger.info(`Appending ${absFilePath} to upload payload ...`)
 				payload.append(
 					manifestEntry[1].hash,
 					new File(
@@ -235,7 +239,10 @@ export const syncAssets = async (
 };
 
 const buildAssetManifest = async (dir: string) => {
-	const files = await readdir(dir, { recursive: true });
+	// const files = await readdir(dir, { recursive: true });
+	logger.info(`✨ Read the following contents of the assets directory ${dir}:`);
+	const files = await readDirectory(dir, true, true);
+
 	const manifest: AssetManifest = {};
 	let counter = 0;
 
@@ -295,7 +302,79 @@ const buildAssetManifest = async (dir: string) => {
 	return manifest;
 };
 
-const MAX_DIFF_LINES = 100;
+async function readDirectory(dir: string, recursive = true, prettyPrintFileTree = false): Promise<string[]> {
+	return await _readDir(dir, 0, [], recursive, prettyPrintFileTree, false);
+}
+
+async function _readDir(currentDir: string, depth: number, files: string[], recursive: boolean, prettyPrintFileTree: boolean, isLastChild: boolean): Promise<string[]> {
+	if(prettyPrintFileTree) {
+		printFileTreeLine(relative(dirname(currentDir), currentDir), depth, true, isLastChild);
+	}
+
+	const readFiles = await readdir(currentDir);
+
+	// await Promise.all(
+		for(const [index, file] of readFiles.entries()) {
+			const filepath = join(currentDir, file);
+			const relativeFilepath = relative(currentDir, filepath);
+			const filestat = await stat(filepath);
+
+			if (filestat.isSymbolicLink()) {
+				if(prettyPrintFileTree) {
+					printFileTreeLine(file, depth, false, index === readFiles.length - 1);
+				}
+				files.push(relativeFilepath);
+			}
+
+			if (filestat.isDirectory()) {
+				if(recursive) {
+					files = await _readDir(filepath, depth+1, files, true, prettyPrintFileTree, index === readFiles.length - 1);
+				} else {
+					files.push(relativeFilepath);
+
+					if(prettyPrintFileTree) {
+						printFileTreeLine(relativeFilepath, depth, true, index === readFiles.length - 1);
+					}
+				}
+			} else {
+				files.push(relativeFilepath);
+
+				if(prettyPrintFileTree) {
+					printFileTreeLine(relativeFilepath, depth+1, false, index === readFiles.length - 1);
+				}
+			}
+		}
+	// );
+
+	return files;
+}
+
+function printFileTreeLine(filename: string, depth: number, isDirectory = false, isLastChild = false): void {
+	if(depth === 0) {
+		let line = isDirectory ? "📁" : "";
+		line += filename;
+		line += isDirectory ? "/" : "";
+		logger.info(line);
+		return;
+	}
+
+	let line = "";
+
+	// append indentation
+	line += ' '.repeat((depth-1) * 4);
+	// append tee
+	line += isLastChild ? "└─ " : "├─ "
+	// append file/directory emoji
+	line += isDirectory ? "📁" : "";
+	// append file/directory name
+	line += `${filename}`;
+
+	if(isDirectory) {
+		line += "/";
+	}
+
+	logger.info(line);
+}
 
 function logAssetUpload(line: string, diffCount: number) {
 	const level = logger.loggerLevel;
