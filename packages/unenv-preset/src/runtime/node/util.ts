@@ -20,7 +20,7 @@ import {
 	isUndefined,
 	parseEnv,
 	styleText,
-} from "unenv/runtime/node/util/index";
+} from "unenv/node/util";
 import type nodeUtil from "node:util";
 
 export {
@@ -44,7 +44,7 @@ export {
 	isUndefined,
 	parseEnv,
 	styleText,
-} from "unenv/runtime/node/util/index";
+} from "unenv/node/util";
 
 const workerdUtil = process.getBuiltinModule("node:util");
 
@@ -64,6 +64,7 @@ export const {
 	deprecate,
 	format,
 	formatWithOptions,
+	// @ts-expect-error unknown type
 	getCallSite,
 	inherits,
 	inspect,
@@ -84,10 +85,11 @@ export default {
 	/**
 	 * manually unroll unenv-polyfilled-symbols to make it tree-shakeable
 	 */
-	// @ts-expect-error undocumented public API
 	_errnoException,
 	_exceptionWithHostPort,
+	// @ts-expect-error unenv has unknown type
 	getSystemErrorMap,
+	// @ts-expect-error unenv has unknown type
 	getSystemErrorName,
 	isBoolean,
 	isBuffer,
@@ -103,7 +105,9 @@ export default {
 	isString,
 	isSymbol,
 	isUndefined,
+	// @ts-expect-error unenv has unknown type
 	parseEnv,
+	// @ts-expect-error unenv has unknown type
 	styleText,
 
 	/**

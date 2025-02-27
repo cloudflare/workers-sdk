@@ -1721,15 +1721,15 @@ importers:
   packages/unenv-preset:
     dependencies:
       unenv:
-        specifier: 2.0.0-rc.1
-        version: 2.0.0-rc.1
+        specifier: 2.0.0-rc.8
+        version: 2.0.0-rc.8
       workerd:
         specifier: ^1.20250124.0
         version: 1.20250124.0
     devDependencies:
       '@types/node-unenv':
-        specifier: npm:@types/node@^22.10.5
-        version: '@types/node@22.10.6'
+        specifier: npm:@types/node@^22.13.1
+        version: '@types/node@22.13.5'
       typescript:
         specifier: catalog:default
         version: 5.7.3
@@ -5803,8 +5803,8 @@ packages:
   '@types/node@18.19.76':
     resolution: {integrity: sha512-yvR7Q9LdPz2vGpmpJX5LolrgRdWvB67MJKDPSgIIzpFbaf9a1j/f5DnLp5VDyHGMR0QZHlTr1afsD87QCXFHKw==}
 
-  '@types/node@22.10.6':
-    resolution: {integrity: sha512-qNiuwC4ZDAUNcY47xgaSuS92cjf8JbSUoaKS77bmLG1rU7MlATVSiw/IlrjtIyyskXBZ8KkNfjK/P5na7rgXbQ==}
+  '@types/node@22.13.5':
+    resolution: {integrity: sha512-+lTU0PxZXn0Dr1NBtC7Y8cR21AJr87dLLU953CWA6pMxxv/UDc7jYAY90upcrie1nRcD6XNG5HOYEDtgW5TxAg==}
 
   '@types/pg@8.11.6':
     resolution: {integrity: sha512-/2WmmBXHLsfRqzfHW7BNZ8SbYzE8OSk7i3WjFYvfgRHj7S1xj+16Je5fUKv3lVdVzk/zn9TXOqf+avFCFIE0yQ==}
@@ -7721,6 +7721,9 @@ packages:
     resolution: {integrity: sha512-28HqgMZAmih1Czt9ny7qr6ek2qddF4FclbMzwhCREB6OFfH+rXAnuNCwo1/wFvrtbgsQDb4kSbX9de9lFbrXnA==}
     engines: {node: '>= 0.10.0'}
 
+  exsolve@1.0.1:
+    resolution: {integrity: sha512-Smf0iQtkQVJLaph8r/qS8C8SWfQkaq9Q/dFcD44MLbJj6DNhlWefVuaS21SjfqOsBbjVlKtbCj6L9ekXK6EZUg==}
+
   ext-dep@file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/ext-dep:
     resolution: {directory: fixtures/vitest-pool-workers-examples/module-resolution/vendor/ext-dep, type: directory}
 
@@ -9232,6 +9235,9 @@ packages:
 
   ohash@1.1.4:
     resolution: {integrity: sha512-FlDryZAahJmEF3VR3w1KogSEdWX3WhA5GPakFx4J81kEAiHyLMpdLLElS8n8dfNadMgAne/MywcvmogzscVt4g==}
+
+  ohash@2.0.5:
+    resolution: {integrity: sha512-3k3APZwRRPYyohdIDmPTpe5i0AY5lm7gvu/Oip7tZrTaEGfSlKX+7kXUoWLd9sHX0GDRVwVvlW18yEcD7qS1zw==}
 
   on-exit-leak-free@2.1.2:
     resolution: {integrity: sha512-0eJJY6hXLGf1udHwfNftBqH+g73EU4B504nZeKpz1sYRKafAghwxEJunB2O7rDZkL4PGfsMVnTXZ2EjibbqcsA==}
@@ -11093,6 +11099,9 @@ packages:
 
   unenv@2.0.0-rc.1:
     resolution: {integrity: sha512-PU5fb40H8X149s117aB4ytbORcCvlASdtF97tfls4BPIyj4PeVxvpSuy1jAptqYHqB0vb2w2sHvzM0XWcp2OKg==}
+
+  unenv@2.0.0-rc.8:
+    resolution: {integrity: sha512-wj/lN45LvZ4Uz95rti6DC5wg56eocAwA8KYzExk2SN01iuAb9ayzMwN13Kd3EG2eBXu27PzgMIXLTwWfSczKfw==}
 
   unicorn-magic@0.1.0:
     resolution: {integrity: sha512-lRfVq8fE8gz6QMBuDM6a+LO3IAzTi05H6gCVaUpir2E1Rwpo4ZUog45KpNXKC/Mn3Yb9UDuHumeFTo9iV/D9FQ==}
@@ -14914,7 +14923,7 @@ snapshots:
     dependencies:
       undici-types: 5.26.5
 
-  '@types/node@22.10.6':
+  '@types/node@22.13.5':
     dependencies:
       undici-types: 6.20.0
 
@@ -17351,6 +17360,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  exsolve@1.0.1: {}
+
   ext-dep@file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/ext-dep: {}
 
   extend@3.0.2: {}
@@ -18859,6 +18870,8 @@ snapshots:
   obuf@1.1.2: {}
 
   ohash@1.1.4: {}
+
+  ohash@2.0.5: {}
 
   on-exit-leak-free@2.1.2: {}
 
@@ -20831,6 +20844,14 @@ snapshots:
       mlly: 1.7.4
       ohash: 1.1.4
       pathe: 1.1.2
+      ufo: 1.5.4
+
+  unenv@2.0.0-rc.8:
+    dependencies:
+      defu: 6.1.4
+      exsolve: 1.0.1
+      ohash: 2.0.5
+      pathe: 2.0.3
       ufo: 1.5.4
 
   unicorn-magic@0.1.0: {}

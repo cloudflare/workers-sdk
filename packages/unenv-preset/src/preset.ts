@@ -45,6 +45,7 @@ const hybridNodeCompatModules = [
 	"console",
 	"crypto",
 	"module",
+	"perf_hooks",
 	"process",
 	"util",
 ];
@@ -64,29 +65,25 @@ export const cloudflare: Preset = {
 		),
 
 		// The `node:sys` module is just a deprecated alias for `node:util` which we implemented using a hybrid polyfill
-		sys: "@cloudflare/unenv-preset/runtime/node/util/index",
-		"node:sys": "@cloudflare/unenv-preset/runtime/node/util/index",
+		sys: "@cloudflare/unenv-preset/node/util",
+		"node:sys": "@cloudflare/unenv-preset/node/util",
 
 		// define aliases for hybrid modules
 		...Object.fromEntries(
 			hybridNodeCompatModules.flatMap((m) => [
-				[m, `@cloudflare/unenv-preset/runtime/node/${m}/index`],
-				[`node:${m}`, `@cloudflare/unenv-preset/runtime/node/${m}/index`],
+				[m, `@cloudflare/unenv-preset/node/${m}`],
+				[`node:${m}`, `@cloudflare/unenv-preset/node/${m}`],
 			])
 		),
-
-		// TODO: this is a hotfix and breaks unenv/fetch
-		// https://github.com/unjs/unenv/issues/364
-		"unenv/runtime/node/stream/index": "node:stream",
 	},
 	inject: {
-		// workerd already defines `global` and `Buffer`
-		// override the previous presets so that we use the native implementation
 		Buffer: false,
 		global: false,
-		console: "@cloudflare/unenv-preset/runtime/node/console/index",
-		process: "@cloudflare/unenv-preset/runtime/node/process/index",
+		clearImmediate: false,
+		setImmediate: false,
+		console: "@cloudflare/unenv-preset/node/console",
+		process: "@cloudflare/unenv-preset/node/process",
 	},
-	polyfill: [],
+	polyfill: ["@cloudflare/unenv-preset/polyfill/performance"],
 	external: nodeCompatModules.flatMap((p) => [p, `node:${p}`]),
 };
