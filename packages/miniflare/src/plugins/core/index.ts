@@ -33,7 +33,7 @@ import {
 	CoreHeaders,
 	viewToBuffer,
 } from "../../workers";
-import { ROUTER_SERVICE_NAME } from "../assets/constants";
+import { ASSETS_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
@@ -256,7 +256,7 @@ function getCustomServiceDesignator(
 		// Worker with entrypoint
 		if ("name" in service) {
 			if (service.name === kCurrentWorker) {
-				// TODO when fetch on WorkerEntrypoints with assets is fixed in dev: point this router worker if assets are present.
+				// TODO when fetch on WorkerEntrypoints with assets is fixed in dev: point this Router Worker if assets are present.
 				serviceName = getUserServiceName(refererName);
 			} else {
 				serviceName = getUserServiceName(service.name);
@@ -267,9 +267,9 @@ function getCustomServiceDesignator(
 			serviceName = getBuiltinServiceName(workerIndex, kind, name);
 		}
 	} else if (service === kCurrentWorker) {
-		// Sets SELF binding to point to router worker instead if assets are present.
+		// Sets SELF binding to point to (internal) Assets Proxy Worker instead if assets are present.
 		serviceName = hasAssetsAndIsVitest
-			? `${ROUTER_SERVICE_NAME}:${refererName}`
+			? `${ASSETS_PROXY_SERVICE_NAME}:${refererName}`
 			: getUserServiceName(refererName);
 	} else {
 		// Regular user worker

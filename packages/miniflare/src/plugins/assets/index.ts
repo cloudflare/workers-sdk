@@ -15,6 +15,7 @@ import {
 import prettyBytes from "pretty-bytes";
 import SCRIPT_ASSETS from "worker:assets/assets";
 import SCRIPT_ASSETS_KV from "worker:assets/assets-kv";
+import SCRIPT_ASSETS_PROXY from "worker:assets/proxy";
 import SCRIPT_ROUTER from "worker:assets/router";
 import { z } from "zod";
 import { Service } from "../../runtime";
@@ -24,6 +25,7 @@ import { Plugin, ProxyNodeBinding } from "../shared";
 import {
 	ASSETS_KV_SERVICE_NAME,
 	ASSETS_PLUGIN_NAME,
+	ASSETS_PROXY_SERVICE_NAME,
 	ASSETS_SERVICE_NAME,
 	ROUTER_SERVICE_NAME,
 } from "./constants";
@@ -154,7 +156,34 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			},
 		};
 
-		return [storageService, namespaceService, assetService, routerService];
+		const assetsProxyService: Service = {
+			name: `${ASSETS_PROXY_SERVICE_NAME}:${id}`,
+			worker: {
+				compatibilityDate: "2024-08-01",
+				modules: [
+					{
+						name: "assets-proxy-worker.mjs",
+						esModule: SCRIPT_ASSETS_PROXY(),
+					},
+				],
+				bindings: [
+					{
+						name: "ROUTER_WORKER",
+						service: {
+							name: `${ROUTER_SERVICE_NAME}:${id}`,
+						},
+					},
+				],
+			},
+		};
+
+		return [
+			storageService,
+			namespaceService,
+			assetService,
+			routerService,
+			assetsProxyService,
+		];
 	},
 };
 
