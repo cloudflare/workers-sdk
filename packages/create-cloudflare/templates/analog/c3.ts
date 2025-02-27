@@ -24,8 +24,8 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	// Fix hoisting issues with pnpm, yarn and bun
-	if (pm === "pnpm" || pm === "yarn" || pm === "bun") {
+	// Fix hoisting issues with pnpm & yarn
+	if (pm === "pnpm" || pm === "yarn") {
 		const packages = [];
 		packages.push("nitropack");
 		packages.push("h3");
