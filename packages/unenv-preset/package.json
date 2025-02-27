@@ -50,7 +50,7 @@
 		"unbuild": "^3.2.0",
 		"undici": "catalog:default",
 		"vitest": "catalog:default",
-		"wrangler": "workspace:*"
+		"wrangler": "^3.111"
 	},
 	"peerDependencies": {
 		"unenv": "2.0.0-rc.8",
