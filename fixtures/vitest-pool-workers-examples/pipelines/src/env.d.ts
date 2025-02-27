@@ -1,3 +1,3 @@
 interface Env {
-	PIPELINE: Pipeline;
+	PIPELINE: Pipeline<PipelineRecord>;
 }
