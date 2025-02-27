@@ -148,6 +148,10 @@ function createWorkerObject(devEnv: DevEnv): Worker {
 			assert(devEnv.config.latestConfig);
 			return devEnv.config.latestConfig;
 		},
+		get input() {
+			assert(devEnv.config.latestInput);
+			return devEnv.config.latestInput;
+		},
 		setConfig(config) {
 			return devEnv.config.set(config);
 		},
@@ -177,6 +181,25 @@ function createWorkerObject(devEnv: DevEnv): Worker {
 			const { proxyWorker } = await devEnv.proxy.ready.promise;
 			const w = await proxyWorker.getWorker(this.config.name);
 			return w.scheduled(...args);
+		},
+		async getPlatformProxy() {
+			const local = devEnv.runtimes.find(
+				(ctrl) => ctrl instanceof LocalRuntimeController
+			);
+
+			if (!local) {
+				throw new Error("The platform proxy is only available in local mode");
+			}
+
+			const [env, cf] = await Promise.all([
+				local.getBindingsProxy(),
+				local.getCfProxy(),
+			]);
+
+			return {
+				env,
+				cf,
+			};
 		},
 		async dispose() {
 			await devEnv.teardown();
