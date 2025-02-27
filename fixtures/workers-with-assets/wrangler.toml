@@ -1,8 +1,13 @@
 name = "worker-with-assets"
 main = "src/index.ts"
-compatibility_date = "2024-01-01"
+compatibility_date = "2024-12-12"
 
 [assets]
 directory = "./public"
 binding="ASSETS"
-experimental_serve_directly = true
+run_worker_first = false
+
+[[services]]
+binding = "NAMED"
+service = "worker-with-assets"
+entrypoint ="NamedEntrypoint"
