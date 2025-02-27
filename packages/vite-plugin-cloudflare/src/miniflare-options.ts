@@ -282,7 +282,7 @@ export function getDevMiniflareOptions(
 		},
 	];
 
-	const userWorkers =
+	const workersFromConfig =
 		resolvedPluginConfig.type === "workers"
 			? Object.entries(resolvedPluginConfig.workers).map(
 					([environmentName, workerConfig]) => {
@@ -294,71 +294,98 @@ export function getDevMiniflareOptions(
 							resolvedPluginConfig.cloudflareEnv
 						);
 
+						const { externalWorkers } = miniflareWorkerOptions
+
 						const { ratelimits, ...workerOptions } =
 							miniflareWorkerOptions.workerOptions;
-
+						
 						return {
-							...workerOptions,
-							// We have to add the name again because `unstable_getMiniflareWorkerOptions` sets it to `undefined`
-							name: workerConfig.name,
-							modulesRoot: miniflareModulesRoot,
-							unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
-							bindings: {
-								...workerOptions.bindings,
-								__VITE_ROOT__: resolvedViteConfig.root,
-								__VITE_ENTRY_PATH__: workerConfig.main,
-							},
-							serviceBindings: {
-								...workerOptions.serviceBindings,
-								...(environmentName ===
-									resolvedPluginConfig.entryWorkerEnvironmentName &&
-								workerConfig.assets?.binding
-									? {
+							externalWorkers,
+							worker: {
+								...workerOptions,
+								// We have to add the name again because `unstable_getMiniflareWorkerOptions` sets it to `undefined`
+								name: workerConfig.name,
+								modulesRoot: miniflareModulesRoot,
+								unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
+								bindings: {
+									...workerOptions.bindings,
+									__VITE_ROOT__: resolvedViteConfig.root,
+									__VITE_ENTRY_PATH__: workerConfig.main,
+								},
+								serviceBindings: {
+									...workerOptions.serviceBindings,
+									...(environmentName ===
+										resolvedPluginConfig.entryWorkerEnvironmentName &&
+										workerConfig.assets?.binding
+										? {
 											[workerConfig.assets.binding]: ASSET_WORKER_NAME,
 										}
-									: {}),
-								__VITE_INVOKE_MODULE__: async (request) => {
-									const payload = (await request.json()) as vite.CustomPayload;
-									const invokePayloadData = payload.data as {
-										id: string;
-										name: string;
-										data: [string, string, FetchFunctionOptions];
-									};
+										: {}),
+									__VITE_INVOKE_MODULE__: async (request) => {
+										const payload = (await request.json()) as vite.CustomPayload;
+										const invokePayloadData = payload.data as {
+											id: string;
+											name: string;
+											data: [string, string, FetchFunctionOptions];
+										};
 
-									assert(
-										invokePayloadData.name === "fetchModule",
-										`Invalid invoke event: ${invokePayloadData.name}`
-									);
+										assert(
+											invokePayloadData.name === "fetchModule",
+											`Invalid invoke event: ${invokePayloadData.name}`
+										);
 
-									const [moduleId] = invokePayloadData.data;
-									const moduleRE = new RegExp(MODULE_PATTERN);
+										const [moduleId] = invokePayloadData.data;
+										const moduleRE = new RegExp(MODULE_PATTERN);
 
-									const shouldExternalize =
-										// Worker modules (CompiledWasm, Text, Data)
-										moduleRE.test(moduleId);
+										const shouldExternalize =
+											// Worker modules (CompiledWasm, Text, Data)
+											moduleRE.test(moduleId);
 
-									if (shouldExternalize) {
-										const result = {
-											externalize: moduleId,
-											type: "module",
-										} satisfies vite.FetchResult;
+										if (shouldExternalize) {
+											const result = {
+												externalize: moduleId,
+												type: "module",
+											} satisfies vite.FetchResult;
 
-										return MiniflareResponse.json({ result });
-									}
+											return MiniflareResponse.json({ result });
+										}
 
-									const devEnvironment = viteDevServer.environments[
-										environmentName
-									] as CloudflareDevEnvironment;
+										const devEnvironment = viteDevServer.environments[
+											environmentName
+										] as CloudflareDevEnvironment;
 
-									const result = await devEnvironment.hot.handleInvoke(payload);
+										const result = await devEnvironment.hot.handleInvoke(payload);
 
-									return MiniflareResponse.json(result);
+										return MiniflareResponse.json(result);
+									},
 								},
-							},
-						} satisfies Partial<WorkerOptions>;
-					}
-				)
+							} satisfies Partial<WorkerOptions>
+						}
+					})
 			: [];
+
+	const userWorkers = workersFromConfig.map((worker) => worker.worker);
+
+	const resolvedExternalWorkersMap = new Map(
+		workersFromConfig
+			.flatMap((worker) => worker.externalWorkers)
+			.map((worker) => [worker.name, worker])
+	);
+
+	const externalWorkersMap = new Map<string, WorkerOptions>();
+
+	for (const worker of userWorkers) {
+		for (const binding of Object.values(worker.wrappedBindings ?? {})) {
+			const scriptName =
+				typeof binding === "string" ? binding : binding.scriptName;
+
+			const externalWorker = resolvedExternalWorkersMap.get(scriptName);
+
+			if (externalWorker) {
+				externalWorkersMap.set(scriptName, externalWorker);
+			}
+		}
+	}
 
 	const workerToWorkerEntrypointNamesMap =
 		getWorkerToWorkerEntrypointNamesMap(userWorkers);
@@ -384,6 +411,7 @@ export function getDevMiniflareOptions(
 		),
 		workers: [
 			...assetWorkers,
+			...externalWorkersMap.values(),
 			...userWorkers.map((workerOptions) => {
 				const wrappers = [
 					`import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from '${RUNNER_PATH}';`,
