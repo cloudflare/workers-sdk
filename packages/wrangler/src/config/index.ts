@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import path from "node:path";
 import TOML from "@iarna/toml";
 import dotenv from "dotenv";
@@ -6,6 +5,7 @@ import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
+import { maybeGetFile } from "../utils/filesystem";
 import { resolveWranglerConfigPath } from "./config-helpers";
 import { isPagesConfig, normalizeAndValidateConfig } from "./validation";
 import { validatePagesConfig } from "./validation-pages";
@@ -203,19 +203,21 @@ export interface DotEnv {
 
 function tryLoadDotEnv(basePath: string): DotEnv | undefined {
 	try {
-		const parsed = dotenv.parse(fs.readFileSync(basePath));
-		return { path: basePath, parsed };
-	} catch (e) {
-		if ((e as { code: string }).code === "ENOENT") {
+		const contents = maybeGetFile(basePath);
+		if (contents === undefined) {
 			logger.debug(
 				`.env file not found at "${path.relative(".", basePath)}". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/`
 			);
-		} else {
-			logger.debug(
-				`Failed to load .env file "${path.relative(".", basePath)}":`,
-				e
-			);
+			return;
 		}
+
+		const parsed = dotenv.parse(contents);
+		return { path: basePath, parsed };
+	} catch (e) {
+		logger.debug(
+			`Failed to load .env file "${path.relative(".", basePath)}":`,
+			e
+		);
 	}
 }
 

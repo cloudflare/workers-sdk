@@ -99,7 +99,9 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		const assetService: Service = {
 			name: `${ASSETS_SERVICE_NAME}:${id}`,
 			worker: {
-				compatibilityDate: "2024-08-01",
+				// TODO: read these from the wrangler.toml
+				compatibilityDate: "2024-07-31",
+				compatibilityFlags: ["nodejs_compat"],
 				modules: [
 					{
 						name: "asset-worker.mjs",
@@ -128,7 +130,9 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		const routerService: Service = {
 			name: `${ROUTER_SERVICE_NAME}:${id}`,
 			worker: {
-				compatibilityDate: "2024-08-01",
+				// TODO: read these from the wrangler.toml
+				compatibilityDate: "2024-07-31",
+				compatibilityFlags: ["nodejs_compat", "no_nodejs_compat_v2"],
 				modules: [
 					{
 						name: "router-worker.mjs",
@@ -148,7 +152,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 					},
 					{
 						name: "CONFIG",
-						json: JSON.stringify(options.assets.routingConfig),
+						json: JSON.stringify(options.assets.routerConfig),
 					},
 				],
 			},
