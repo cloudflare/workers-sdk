@@ -1,15 +1,26 @@
 import {
+	generateRulesMatcher,
+	replacer,
+} from "@cloudflare/pages-shared/asset-server/rulesEngine";
+import {
+	FoundResponse,
 	InternalServerErrorResponse,
 	MethodNotAllowedResponse,
+	MovedPermanentlyResponse,
 	NotFoundResponse,
 	NotModifiedResponse,
 	OkResponse,
+	PermanentRedirectResponse,
+	SeeOtherResponse,
 	TemporaryRedirectResponse,
 } from "../../utils/responses";
 import { getHeaders } from "./utils/headers";
 import type { AssetConfig } from "../../utils/types";
 import type EntrypointType from "./index";
 import type { Env } from "./index";
+
+const REDIRECTS_VERSION = 1;
+export const HEADERS_VERSION = 2;
 
 export const handleRequest = async (
 	request: Request,
@@ -18,7 +29,75 @@ export const handleRequest = async (
 	exists: typeof EntrypointType.prototype.unstable_exists,
 	getByETag: typeof EntrypointType.prototype.unstable_getByETag
 ) => {
-	const { pathname, search } = new URL(request.url);
+	const url = new URL(request.url);
+	const { host, search } = url;
+	let { pathname } = url;
+
+	const staticRedirectsMatcher = () => {
+		const withHostMatch =
+			configuration.redirects.staticRules[`https://${host}${pathname}`];
+		const withoutHostMatch = configuration.redirects.staticRules[pathname];
+
+		if (withHostMatch && withoutHostMatch) {
+			if (withHostMatch.lineNumber < withoutHostMatch.lineNumber) {
+				return withHostMatch;
+			} else {
+				return withoutHostMatch;
+			}
+		}
+
+		return withHostMatch || withoutHostMatch;
+	};
+
+	const generateRedirectsMatcher = () =>
+		generateRulesMatcher(
+			configuration.redirects.version === REDIRECTS_VERSION
+				? configuration.redirects.rules
+				: {},
+			({ status, to }, replacements) => ({
+				status,
+				to: replacer(to, replacements),
+			})
+		);
+
+	const redirectMatch =
+		staticRedirectsMatcher() || generateRedirectsMatcher()({ request })[0];
+
+	if (redirectMatch) {
+		if (redirectMatch.status === 200) {
+			// A 200 redirect means that we are proxying to a different asset, for example,
+			// a request with url /users/12345 could be pointed to /users/id.html. In order to
+			// do this, we overwrite the pathname, and instead match for assets with that url,
+			// and importantly, do not use the regular redirect handler - as the url visible to
+			// the user does not change
+			pathname = new URL(redirectMatch.to, request.url).pathname;
+		} else {
+			const { status, to } = redirectMatch;
+			const destination = new URL(to, request.url);
+			const location =
+				destination.origin === new URL(request.url).origin
+					? `${destination.pathname}${destination.search || search}${
+							destination.hash
+						}`
+					: `${destination.href.slice(0, destination.href.length - (destination.search.length + destination.hash.length))}${
+							destination.search ? destination.search : search
+						}${destination.hash}`;
+
+			switch (status) {
+				case 301:
+					return new MovedPermanentlyResponse(location, undefined);
+				case 303:
+					return new SeeOtherResponse(location, undefined);
+				case 307:
+					return new TemporaryRedirectResponse(location, undefined);
+				case 308:
+					return new PermanentRedirectResponse(location, undefined);
+				case 302:
+				default:
+					return new FoundResponse(location, undefined);
+			}
+		}
+	}
 
 	let decodedPathname = decodePath(pathname);
 	// normalize the path; remove multiple slashes which could lead to same-schema redirects
@@ -94,7 +173,12 @@ export const handleRequest = async (
 		return await getByETag(intent.asset.eTag);
 	});
 
-	const headers = getHeaders(intent.asset.eTag, asset.contentType, request);
+	const headers = getHeaders(
+		intent.asset.eTag,
+		asset.contentType,
+		request,
+		configuration
+	);
 
 	const strongETag = `"${intent.asset.eTag}"`;
 	const weakETag = `W/${strongETag}`;

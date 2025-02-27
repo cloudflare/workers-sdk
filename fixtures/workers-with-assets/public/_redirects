@@ -1,0 +1,3 @@
+/foo /bar
+/pic /lava-lamps.jpg 200
+/other-pic /lava-lamps.jpg 200 # won't work

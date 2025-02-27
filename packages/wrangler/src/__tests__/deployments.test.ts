@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { thrownIsDoesNotExistError } from "../utils/filesystem";
+import { thrownIsDoesNotExistError } from "@cloudflare/workers-shared/utils/helpers";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs } from "./helpers/mock-dialogs";

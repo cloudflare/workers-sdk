@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
+import { createPatternMatcher } from "@cloudflare/workers-shared/utils/helpers";
 import chalk from "chalk";
 import xxhash from "xxhash-wasm";
 import { UserError } from "./errors";
@@ -16,7 +17,6 @@ import {
 	putKVKeyValue,
 } from "./kv/helpers";
 import { logger, LOGGER_LEVELS } from "./logger";
-import { createPatternMatcher } from "./utils/filesystem";
 import type { Config } from "./config";
 import type { KeyValue } from "./kv/helpers";
 import type { XXHashAPI } from "xxhash-wasm";

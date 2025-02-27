@@ -1,6 +1,10 @@
 import assert from "assert";
 import { readFileSync, realpathSync, writeFileSync } from "fs";
-import path from "path";
+import path, { join } from "path";
+import {
+	HEADERS_FILENAME,
+	REDIRECTS_FILENAME,
+} from "@cloudflare/workers-shared/utils/constants";
 import { watch } from "chokidar";
 import { noBundleWorker } from "../../deploy/deploy";
 import { bundleWorker, shouldCheckFetch } from "../../deployment-bundle/bundle";
@@ -319,9 +323,17 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				persistent: true,
 				ignoreInitial: true,
 			}).on("all", async (eventName, filePath) => {
-				const message = getAssetChangeMessage(eventName, filePath);
-				logger.debug(`🌀 ${message}...`);
-				debouncedRefreshBundle();
+				if (
+					config.assets &&
+					![
+						join(config.assets.directory, REDIRECTS_FILENAME),
+						join(config.assets.directory, HEADERS_FILENAME),
+					].includes(filePath)
+				) {
+					const message = getAssetChangeMessage(eventName, filePath);
+					logger.debug(`🌀 ${message}...`);
+					debouncedRefreshBundle();
+				}
 			});
 		}
 	}

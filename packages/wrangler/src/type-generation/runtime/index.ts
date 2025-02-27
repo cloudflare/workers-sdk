@@ -1,9 +1,10 @@
 import { readFileSync } from "fs";
 import { writeFile } from "fs/promises";
+import { maybeGetFile } from "@cloudflare/workers-shared/utils/helpers";
 import { Miniflare } from "miniflare";
 import { version } from "workerd";
 import { logger } from "../../logger";
-import { ensureDirectoryExists, maybeGetFile } from "../../utils/filesystem";
+import { ensureDirectoryExists } from "../../utils/filesystem";
 import type { Config } from "../../config/config";
 
 const DEFAULT_OUTFILE_RELATIVE_PATH = "./.wrangler/types/runtime.d.ts";

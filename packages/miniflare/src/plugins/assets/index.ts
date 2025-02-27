@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import {
 	CONTENT_HASH_OFFSET,
+	createAssetsIgnoreFunction,
 	ENTRY_SIZE,
 	getContentType,
 	HEADER_SIZE,
@@ -197,9 +198,13 @@ const walk = async (dir: string) => {
 	const files = await fs.readdir(dir, { recursive: true });
 	const manifest: ManifestEntry[] = [];
 	const assetsReverseMap: AssetReverseMap = {};
+	const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(dir);
 	let counter = 0;
 	await Promise.all(
 		files.map(async (file) => {
+			if (assetsIgnoreFunction(file)) {
+				return;
+			}
 			/** absolute file path */
 			const filepath = path.join(dir, file);
 			const relativeFilepath = path.relative(dir, filepath);
@@ -209,6 +214,8 @@ const walk = async (dir: string) => {
 			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
 				return;
 			} else {
+				// TODO: Warn about _worker.js
+
 				if (filestat.size > MAX_ASSET_SIZE) {
 					throw new Error(
 						`Asset too large.\n` +
