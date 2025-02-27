@@ -892,7 +892,7 @@ function validateInspectorConfig(config: SerializedConfig) {
 	if (config.inspector.enabled && !warnedUnsupportedInspectorOptions) {
 		if (config.inspectBrk) {
 			log.warn(
-				`The "--inspect-brk" flag is not supported. Fallback to "--inspect".`
+				`The "--inspect-brk" flag is not supported. Use "--inspect" instead.`
 			);
 		} else if (config.inspector.waitForDebugger) {
 			log.warn(
