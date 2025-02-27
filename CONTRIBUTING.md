@@ -386,12 +386,13 @@ Only members of `@cloudflare/wrangler` can trigger a hotfix release. A hotfix re
 If a hotfix release of Wrangler, Miniflare, or C3 is required, you should:
 
 - Prepare a hotfix release PR:
-	- Checkout the previous release of `workers-sdk`
+
+  - Checkout the previous release of `workers-sdk`
   - Apply the changes that should be in the hotfix
-	- Increment the patch version of the packages that should be released as part of the hotfix
+  - Increment the patch version of the packages that should be released as part of the hotfix
 
 - Get approvals for that PR, and make sure CI checks are passing
 - Manually trigger a hotfix release from that PR using the ["Release a hotfix"](https://github.com/cloudflare/workers-sdk/actions/workflows/hotfix-release.yml) GitHub action.
-	- Optionally, you can first publish it to the `hotfix` tag on NPM in order to verify the release.
+  - Optionally, you can first publish it to the `hotfix` tag on NPM in order to verify the release.
 - **[CRUCIAL]** Once the hotfix release is out and verified, merge the fixes into main before the next regular release of `workers-sdk`.
 - Make sure that the version number of the next changesets-based release of Wrangler/Miniflare/C3 is greater than the version used for the hotfix by adding a dummy `minor` changeset entry for each of the packages that had a hotfix published.
