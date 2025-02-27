@@ -48,7 +48,7 @@ describe("wrangler", () => {
 				  wrangler delete [script]        🗑  Delete a Worker from Cloudflare
 				  wrangler tail [worker]          🦚 Start a log tailing session for a Worker
 				  wrangler secret                 🤫 Generate a secret that can be referenced in a Worker
-				  wrangler types [path]           📝 Generate types from bindings and module rules in configuration
+				  wrangler types [path]           📝 Generate types from your Worker configuration
 
 				  wrangler kv                     🗂️  Manage Workers KV Namespaces
 				  wrangler queues                 🇶  Manage Workers Queues
@@ -106,7 +106,7 @@ describe("wrangler", () => {
 				  wrangler delete [script]        🗑  Delete a Worker from Cloudflare
 				  wrangler tail [worker]          🦚 Start a log tailing session for a Worker
 				  wrangler secret                 🤫 Generate a secret that can be referenced in a Worker
-				  wrangler types [path]           📝 Generate types from bindings and module rules in configuration
+				  wrangler types [path]           📝 Generate types from your Worker configuration
 
 				  wrangler kv                     🗂️  Manage Workers KV Namespaces
 				  wrangler queues                 🇶  Manage Workers Queues

@@ -33,7 +33,7 @@ export function createRegisterYargsCommand(
 				if (def.type === "command") {
 					const args = def.args ?? {};
 
-					yargs.options(args);
+					yargs.options(args).epilogue(def.metadata?.epilogue ?? "");
 
 					// Ensure non-array arguments receive a single value
 					for (const [key, opt] of Object.entries(args)) {
