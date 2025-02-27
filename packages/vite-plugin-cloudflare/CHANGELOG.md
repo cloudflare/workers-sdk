@@ -1,5 +1,16 @@
 # @cloudflare/vite-plugin
 
+## 0.1.7
+
+### Patch Changes
+
+- [#8206](https://github.com/cloudflare/workers-sdk/pull/8206) [`477f8d9`](https://github.com/cloudflare/workers-sdk/commit/477f8d935baac1eca1545fed8585e5a09a28258f) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add support for binding to named entrypoints in the same worker
+
+- [#8266](https://github.com/cloudflare/workers-sdk/pull/8266) [`9f05e8f`](https://github.com/cloudflare/workers-sdk/commit/9f05e8fcfbf1308689a7c88c78f39a500b895857) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Make it possible to override `builder.buildApp` in the user config or prior plugins
+
+- Updated dependencies []:
+  - @cloudflare/unenv-preset@1.1.2
+
 ## 0.1.6
 
 ### Patch Changes
