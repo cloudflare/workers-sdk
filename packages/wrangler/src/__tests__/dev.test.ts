@@ -1359,62 +1359,6 @@ describe.sequential("wrangler dev", () => {
 			);
 		});
 
-		it("should error if --legacy-assets and --site are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-			await expect(
-				runWrangler("dev --legacy-assets abc --site xyz")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
-			);
-		});
-
-		it("should error if --legacy-assets and config.site are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				site: {
-					bucket: "xyz",
-				},
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-			await expect(
-				runWrangler("dev --legacy-assets abc")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
-			);
-		});
-
-		it("should error if config.legacy_assets and --site are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				legacy_assets: "abc",
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-			await expect(
-				runWrangler("dev --site xyz")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
-			);
-		});
-
-		it("should error if config.legacy_assets and config.site are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				legacy_assets: "abc",
-				site: {
-					bucket: "xyz",
-				},
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-			await expect(
-				runWrangler("dev --legacy-assets abc")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
-			);
-		});
-
 		describe("should indicate whether Sites is being used", () => {
 			it("no use", async () => {
 				writeWranglerConfig({
@@ -1434,51 +1378,6 @@ describe.sequential("wrangler dev", () => {
 				const config = await runWranglerUntilConfig("dev --site abc");
 				expect(config.legacy.site).toBeTruthy();
 			});
-			it("--legacy-assets arg", async () => {
-				writeWranglerConfig({
-					main: "index.js",
-				});
-				fs.writeFileSync("index.js", `export default {};`);
-
-				const config = await runWranglerUntilConfig("dev --legacy-assets abc");
-				expect(config.legacy.site).toBeFalsy();
-			});
-		});
-
-		it("should warn if --legacy-assets is used", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-
-			await runWranglerUntilConfig('dev --legacy-assets "./assets"');
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
-
-				  To learn more about Workers with assets, visit our documentation at
-				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
-
-				"
-			`);
-		});
-
-		it("should warn if config.legacy_assets is used", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				legacy_assets: "./assets",
-			});
-
-			fs.writeFileSync("index.js", `export default {};`);
-
-			await runWranglerUntilConfig("dev");
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-				    - [1mDeprecation[0m: \\"legacy_assets\\":
-				      The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead.
-
-				"
-			`);
 		});
 	});
 
@@ -1535,88 +1434,6 @@ describe.sequential("wrangler dev", () => {
 			);
 		});
 
-		it("should error if config.assets and config.legacy_assets are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				assets: { directory: "assets" },
-				legacy_assets: {
-					bucket: "xyz",
-					include: [],
-					exclude: [],
-					browser_TTL: undefined,
-					serve_single_page_app: true,
-				},
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-			fs.mkdirSync("assets");
-			fs.mkdirSync("xyz");
-
-			await expect(
-				runWrangler("dev")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`
-				[Error: Cannot use assets and legacy assets in the same Worker.
-				Please remove either the \`legacy_assets\` or \`assets\` field from your configuration file.]
-			`
-			);
-		});
-
-		it("should error if --assets and --legacy-assets are used together", async () => {
-			fs.writeFileSync("index.js", `export default {};`);
-			fs.mkdirSync("assets");
-			await expect(
-				runWrangler("dev --assets assets --legacy-assets assets")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`
-				[Error: Cannot use assets and legacy assets in the same Worker.
-				Please remove either the \`legacy_assets\` or \`assets\` field from your configuration file.]
-			`
-			);
-		});
-
-		it("should error if --assets and config.legacy_assets are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				legacy_assets: {
-					bucket: "xyz",
-					include: [],
-					exclude: [],
-					browser_TTL: undefined,
-					serve_single_page_app: true,
-				},
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-			fs.mkdirSync("assets");
-			fs.mkdirSync("xyz");
-			await expect(
-				runWrangler("dev --assets assets")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`
-				[Error: Cannot use assets and legacy assets in the same Worker.
-				Please remove either the \`legacy_assets\` or \`assets\` field from your configuration file.]
-			`
-			);
-		});
-
-		it("should error if config.assets and --legacy-assets are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				assets: {
-					directory: "xyz",
-				},
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-			fs.mkdirSync("xyz");
-			await expect(
-				runWrangler("dev --legacy-assets xyz")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`
-				[Error: Cannot use assets and legacy assets in the same Worker.
-				Please remove either the \`legacy_assets\` or \`assets\` field from your configuration file.]
-			`
-			);
-		});
-
 		it("should error if an ASSET binding is provided without a user Worker", async () => {
 			writeWranglerConfig({
 				assets: { directory: "assets", binding: "ASSETS" },
@@ -1656,51 +1473,6 @@ describe.sequential("wrangler dev", () => {
 
 				"
 			`);
-		});
-
-		it("should error if using experimental_serve_directly and run_worker_first", async () => {
-			writeWranglerConfig({
-				assets: {
-					directory: "assets",
-					run_worker_first: true,
-					experimental_serve_directly: true,
-				},
-			});
-			fs.mkdirSync("assets");
-			await expect(
-				runWrangler("dev")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`
-				[Error: run_worker_first and experimental_serve_directly specified.
-				Only one of these configuration options may be provided.]
-				`
-			);
-		});
-
-		it("should warn if using experimental_serve_directly", async () => {
-			writeWranglerConfig({
-				main: "index.js",
-				assets: {
-					directory: "assets",
-					experimental_serve_directly: true,
-				},
-			});
-			fs.mkdirSync("assets");
-			fs.writeFileSync("index.js", `export default {};`);
-
-			await runWranglerUntilConfig("dev");
-
-			expect(std.warn).toMatchInlineSnapshot(
-				`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-				    - [1mDeprecation[0m: \\"assets.experimental_serve_directly\\":
-				      The \\"experimental_serve_directly\\" field is not longer supported. Please use run_worker_first.
-				      Read more: [4mhttps://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first[0m
-
-				"
-			`
-			);
 		});
 
 		it("should error if run_worker_first is true and no user Worker is provided", async () => {
@@ -1743,47 +1515,6 @@ describe.sequential("wrangler dev", () => {
 					'^The directory specified by the "assets.directory" field in your configuration file does not exist:[Ss]*'
 				)
 			);
-		});
-	});
-
-	describe("--inspect", () => {
-		it("should warn if --inspect is used", async () => {
-			fs.writeFileSync("index.js", `export default {};`);
-			await runWranglerUntilConfig("dev index.js --inspect");
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPassing --inspect is unnecessary, now you can always connect to devtools.[0m
-
-				"
-			`);
-		});
-	});
-
-	describe("--log-level", () => {
-		it("should not output warnings with log-level 'none'", async () => {
-			fs.writeFileSync("index.js", `export default {};`);
-			await runWranglerUntilConfig("dev index.js --inspect --log-level none");
-			expect(std.warn).toMatchInlineSnapshot(`""`);
-		});
-
-		it("should output warnings with log-level 'warn'", async () => {
-			fs.writeFileSync("index.js", `export default {};`);
-			await runWranglerUntilConfig("dev index.js --inspect --log-level warn");
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mPassing --inspect is unnecessary, now you can always connect to devtools.[0m
-
-				"
-			`);
-		});
-
-		it("should also set log level using WRANGLER_LOG'", async () => {
-			fs.writeFileSync("index.js", `export default {};`);
-			vi.stubEnv("WRANGLER_LOG", "none");
-			await runWranglerUntilConfig("dev index.js --inspect");
-			expect(std.warn).toMatchInlineSnapshot(`""`);
-
-			vi.stubEnv("WRANGLER_LOG", "debug");
-			await runWranglerUntilConfig("dev index.js");
-			expect(std.debug).toContain(".env file not found at");
 		});
 	});
 
@@ -1876,21 +1607,6 @@ describe.sequential("wrangler dev", () => {
 				  - SECRET: \\"(hidden)\\"
 				"
 			`);
-		});
-	});
-
-	describe("`nodejs_compat` compatibility flag", () => {
-		it("should conflict with the --node-compat option", async () => {
-			writeWranglerConfig();
-			fs.writeFileSync("index.js", `export default {};`);
-
-			await expect(
-				runWrangler(
-					"dev index.js --compatibility-flag=nodejs_compat --node-compat"
-				)
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: The \`nodejs_compat\` compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers \`nodejs_compat\` compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.]`
-			);
 		});
 	});
 

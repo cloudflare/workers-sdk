@@ -389,7 +389,6 @@ export function getAssetsOptions(
 		html_handling: config.assets?.html_handling,
 		not_found_handling: config.assets?.not_found_handling,
 		run_worker_first: config.assets?.run_worker_first,
-		serve_directly: config.assets?.experimental_serve_directly,
 	};
 
 	return {
@@ -412,37 +411,17 @@ export function validateAssetsArgsAndConfig(
 ): void;
 export function validateAssetsArgsAndConfig(
 	args:
-		| Pick<StartDevOptions, "legacyAssets" | "site" | "assets" | "script">
-		| Pick<DeployArgs, "legacyAssets" | "site" | "assets" | "script">,
+		| Pick<StartDevOptions, "site" | "assets" | "script">
+		| Pick<DeployArgs, "site" | "assets" | "script">,
 	config: Config
 ): void;
 export function validateAssetsArgsAndConfig(
 	args:
-		| Pick<StartDevOptions, "legacyAssets" | "site" | "assets" | "script">
-		| Pick<DeployArgs, "legacyAssets" | "site" | "assets" | "script">
+		| Pick<StartDevOptions, "site" | "assets" | "script">
+		| Pick<DeployArgs, "site" | "assets" | "script">
 		| Pick<StartDevWorkerOptions, "legacy" | "assets" | "entrypoint">,
 	config?: Config
 ): void {
-	/*
-	 * - `config.legacy_assets` conflates `legacy_assets` and `assets`
-	 * - `args.legacyAssets` conflates `legacy-assets` and `assets`
-	 */
-	if (
-		"legacy" in args
-			? args.assets && args.legacy.legacyAssets
-			: (args.assets || config?.assets) &&
-				(args?.legacyAssets || config?.legacy_assets)
-	) {
-		throw new UserError(
-			"Cannot use assets and legacy assets in the same Worker.\n" +
-				"Please remove either the `legacy_assets` or `assets` field from your configuration file.",
-			{
-				telemetryMessage:
-					"Cannot use assets and legacy assets in the same Worker",
-			}
-		);
-	}
-
 	if (
 		"legacy" in args
 			? args.assets && args.legacy.site
@@ -480,20 +459,6 @@ export function validateAssetsArgsAndConfig(
 			"Turning on Smart Placement in a Worker that is using assets and run_worker_first set to true means that your entire Worker could be moved to run closer to your data source, and all requests will go to that Worker before serving assets.\n" +
 				"This could result in poor performance as round trip times could increase when serving assets.\n\n" +
 				"Read more: https://developers.cloudflare.com/workers/static-assets/binding/#smart-placement"
-		);
-	}
-
-	// Provided both the run_worker_first and experimental_serve_directly options
-	if (
-		"legacy" in args
-			? args.assets?.assetConfig?.run_worker_first !== undefined &&
-				args.assets?.assetConfig.serve_directly !== undefined
-			: config?.assets?.run_worker_first !== undefined &&
-				config?.assets?.experimental_serve_directly !== undefined
-	) {
-		throw new UserError(
-			"run_worker_first and experimental_serve_directly specified.\n" +
-				"Only one of these configuration options may be provided."
 		);
 	}
 

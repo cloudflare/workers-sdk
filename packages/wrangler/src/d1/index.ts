@@ -1,4 +1,3 @@
-import * as Backups from "./backups";
 import * as Create from "./create";
 import * as Delete from "./delete";
 import * as Execute from "./execute";
@@ -37,34 +36,6 @@ export function d1(yargs: CommonYargsArgv) {
 				"Delete D1 database",
 				Delete.Options,
 				Delete.Handler
-			)
-			.command("backup", "Interact with D1 backups", (backupArgs) =>
-				backupArgs
-					.demandCommand()
-					.command(
-						"list <name>",
-						"List your D1 backups",
-						Backups.ListOptions,
-						Backups.ListHandler
-					)
-					.command(
-						"create <name>",
-						"Create a new D1 backup",
-						Backups.CreateOptions,
-						Backups.CreateHandler
-					)
-					.command(
-						"restore <name> <backup-id>",
-						"Restore a DB backup",
-						Backups.RestoreOptions,
-						Backups.RestoreHandler
-					)
-					.command(
-						"download <name> <backup-id>",
-						"Download a DB backup",
-						Backups.DownloadOptions,
-						Backups.DownloadHandler
-					)
 			)
 			// .command(
 			//   "console <name>",

@@ -11,7 +11,7 @@ import {
 	buildSitesOptions,
 } from "../../../dev/miniflare";
 import { run } from "../../../experimental-flags";
-import { getLegacyAssetPaths, getSiteAssetPaths } from "../../../sites";
+import { getSiteAssetPaths } from "../../../sites";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import { getServiceBindings } from "./services";
@@ -313,10 +313,8 @@ export function unstable_getMiniflareWorkerOptions(
 		);
 	}
 
-	const legacyAssetPaths = config.legacy_assets
-		? getLegacyAssetPaths(config, undefined)
-		: getSiteAssetPaths(config);
-	const sitesOptions = buildSitesOptions({ legacyAssetPaths });
+	const sitesAssetPaths = getSiteAssetPaths(config);
+	const sitesOptions = buildSitesOptions({ legacyAssetPaths: sitesAssetPaths });
 	const processedAssetOptions = getAssetsOptions({ assets: undefined }, config);
 	const assetOptions = processedAssetOptions
 		? buildAssetOptions({ assets: processedAssetOptions })

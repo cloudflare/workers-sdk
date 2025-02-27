@@ -161,7 +161,7 @@ describe("find_additional_modules deploy", () => {
 
 			// src/index.ts
 			import text from "./text.txt";
-			var src_default = {
+			var index_default = {
 			  async fetch(request) {
 			    const url = new URL(request.url);
 			    if (url.pathname === "/dep") {
@@ -184,7 +184,7 @@ describe("find_additional_modules deploy", () => {
 			  }
 			};
 			export {
-			  src_default as default
+			  index_default as default
 			};
 			//# sourceMappingURL=index.js.map
 			"

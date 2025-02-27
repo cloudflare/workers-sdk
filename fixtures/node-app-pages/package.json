@@ -5,7 +5,7 @@
 	"main": "dist/worker.js",
 	"scripts": {
 		"check:type": "tsc",
-		"dev": "wrangler pages dev public --port 12345 --node-compat",
+		"dev": "wrangler pages dev public --port 12345",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
@@ -22,7 +22,7 @@
 		"wrangler": "workspace:*"
 	},
 	"engines": {
-		"node": ">=16.13"
+		"node": ">=18.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

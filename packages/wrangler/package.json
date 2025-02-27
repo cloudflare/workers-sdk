@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "3.111.0",
+	"version": "4.0.0-rc.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -70,10 +70,8 @@
 	},
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "workspace:*",
-		"@esbuild-plugins/node-globals-polyfill": "0.2.3",
-		"@esbuild-plugins/node-modules-polyfill": "0.2.2",
 		"blake3-wasm": "2.1.5",
-		"esbuild": "0.17.19",
+		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
 		"unenv": "2.0.0-rc.1",
@@ -175,7 +173,7 @@
 		"sharp": "^0.33.5"
 	},
 	"engines": {
-		"node": ">=16.17.0"
+		"node": ">=18.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

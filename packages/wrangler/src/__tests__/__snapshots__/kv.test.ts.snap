@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`wrangler > kv namespace > create > wrangler.json > should create a namespace 1`] = `
-"🌀 Creating namespace with title \\"worker-UnitTestNamespace\\"
+"🌀 Creating namespace with title \\"UnitTestNamespace\\"
 ✨ Success!
 Add the following to your configuration file in your kv_namespaces array:
 {
@@ -15,7 +15,7 @@ Add the following to your configuration file in your kv_namespaces array:
 `;
 
 exports[`wrangler > kv namespace > create > wrangler.json > should create a namespace in an environment if configured to do so 1`] = `
-"🌀 Creating namespace with title \\"worker-customEnv-UnitTestNamespace\\"
+"🌀 Creating namespace with title \\"customEnv-UnitTestNamespace\\"
 ✨ Success!
 Add the following to your configuration file in your kv_namespaces array under [env.customEnv]:
 {
@@ -29,7 +29,7 @@ Add the following to your configuration file in your kv_namespaces array under [
 `;
 
 exports[`wrangler > kv namespace > create > wrangler.json > should create a namespace using configured worker name 1`] = `
-"🌀 Creating namespace with title \\"other-worker-UnitTestNamespace\\"
+"🌀 Creating namespace with title \\"UnitTestNamespace\\"
 ✨ Success!
 Add the following to your configuration file in your kv_namespaces array:
 {
@@ -43,7 +43,7 @@ Add the following to your configuration file in your kv_namespaces array:
 `;
 
 exports[`wrangler > kv namespace > create > wrangler.json > should create a preview namespace if configured to do so 1`] = `
-"🌀 Creating namespace with title \\"worker-UnitTestNamespace_preview\\"
+"🌀 Creating namespace with title \\"UnitTestNamespace_preview\\"
 ✨ Success!
 Add the following to your configuration file in your kv_namespaces array:
 {
@@ -57,7 +57,7 @@ Add the following to your configuration file in your kv_namespaces array:
 `;
 
 exports[`wrangler > kv namespace > create > wrangler.toml > should create a namespace 1`] = `
-"🌀 Creating namespace with title \\"worker-UnitTestNamespace\\"
+"🌀 Creating namespace with title \\"UnitTestNamespace\\"
 ✨ Success!
 Add the following to your configuration file in your kv_namespaces array:
 [[kv_namespaces]]
@@ -67,7 +67,7 @@ id = \\"some-namespace-id\\"
 `;
 
 exports[`wrangler > kv namespace > create > wrangler.toml > should create a namespace in an environment if configured to do so 1`] = `
-"🌀 Creating namespace with title \\"worker-customEnv-UnitTestNamespace\\"
+"🌀 Creating namespace with title \\"customEnv-UnitTestNamespace\\"
 ✨ Success!
 Add the following to your configuration file in your kv_namespaces array under [env.customEnv]:
 [[kv_namespaces]]
@@ -77,7 +77,7 @@ id = \\"some-namespace-id\\"
 `;
 
 exports[`wrangler > kv namespace > create > wrangler.toml > should create a namespace using configured worker name 1`] = `
-"🌀 Creating namespace with title \\"other-worker-UnitTestNamespace\\"
+"🌀 Creating namespace with title \\"UnitTestNamespace\\"
 ✨ Success!
 Add the following to your configuration file in your kv_namespaces array:
 [[kv_namespaces]]
@@ -87,7 +87,7 @@ id = \\"some-namespace-id\\"
 `;
 
 exports[`wrangler > kv namespace > create > wrangler.toml > should create a preview namespace if configured to do so 1`] = `
-"🌀 Creating namespace with title \\"worker-UnitTestNamespace_preview\\"
+"🌀 Creating namespace with title \\"UnitTestNamespace_preview\\"
 ✨ Success!
 Add the following to your configuration file in your kv_namespaces array:
 [[kv_namespaces]]
