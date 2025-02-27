@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.39.0
+
+### Minor Changes
+
+- [#8264](https://github.com/cloudflare/workers-sdk/pull/8264) [`1f3af77`](https://github.com/cloudflare/workers-sdk/commit/1f3af77c7920189b9360357bf3dc054b2cebdf00) Thanks [@dcartertwo](https://github.com/dcartertwo)! - Create Cloudflare will no longer ask if the developer would like to use git if already in a git repository.
+
 ## 2.38.2
 
 ### Patch Changes

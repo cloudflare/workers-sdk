@@ -61,6 +61,19 @@ it("intercepts URLs with query parameters with repeated keys", async () => {
 	expect(await response3.text()).toBe("baz");
 });
 
+it("throws if you try to mutate the headers", async () => {
+	fetchMock
+		.get("https://example.com")
+		.intercept({ path: "/" })
+		.reply(200, "body");
+
+	let response = await fetch("https://example.com");
+
+	expect(() => response.headers.set("foo", "bar")).toThrowError();
+	expect(() => response.headers.append("foo", "baz")).toThrowError();
+	expect(() => response.headers.delete("foo")).toThrowError();
+});
+
 describe("AbortSignal", () => {
 	let abortSignalTimeoutMock: MockInstance;
 

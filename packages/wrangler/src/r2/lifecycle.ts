@@ -97,7 +97,7 @@ export const r2BucketLifecycleAddCommand = createCommand({
 		},
 		"expire-date": {
 			describe: "Date after which objects expire (YYYY-MM-DD)",
-			type: "number",
+			type: "string",
 			requiresArg: true,
 		},
 		"ia-transition-days": {
