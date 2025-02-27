@@ -58,4 +58,4 @@ jobs:
           CI_OS: ${{ runner.os }}
 
       - name: Publish packages
-        run: pnpm publish -r --tag ${{ inputs.label }} --filter wrangler --filter miniflare --filter create-cloudflare --dry-run
+        run: pnpm publish -r --tag ${{ inputs.label }} --filter wrangler --filter miniflare --filter create-cloudflare
