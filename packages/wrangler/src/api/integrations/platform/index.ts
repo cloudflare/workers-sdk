@@ -1,14 +1,11 @@
-import path from "node:path";
-import { kCurrentWorker, Miniflare } from "miniflare";
+import assert from "node:assert";
+import { writeFileSync } from "node:fs";
+import path, { join } from "node:path";
+import { kCurrentWorker } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
 import { readConfig } from "../../../config";
-import { bundleWorker } from "../../../deployment-bundle/bundle";
-import { getEntry } from "../../../deployment-bundle/entry";
-import { createModuleCollector } from "../../../deployment-bundle/module-collection";
-import { validateNodeCompatMode } from "../../../deployment-bundle/node-compat";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
-import { getBoundRegisteredWorkers } from "../../../dev-registry";
 import { getClassNamesWhichUseSQLite } from "../../../dev/class-names-sqlite";
 import {
 	buildAssetOptions,
@@ -18,10 +15,11 @@ import {
 import { run } from "../../../experimental-flags";
 import { getWranglerTmpDir } from "../../../paths";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "../../../sites";
+import { startWorker } from "../../startDevWorker";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
-import { getServiceBindings } from "./services";
 import type { Config, RawConfig, RawEnvironment } from "../../../config";
+import type { StartDevWorkerInput, Worker } from "../../startDevWorker";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, ModuleRule, WorkerOptions } from "miniflare";
 
@@ -103,167 +101,114 @@ export type PlatformProxy<
  * @param options The various options that can tweak this function's behavior
  * @returns An Object containing the generated proxies alongside other related utilities
  */
+
+/**
+ * The running worker instances with their reference count
+ */
+const workers = new Map<Worker, number>();
+
 export async function getPlatformProxy<
 	Env = Record<string, unknown>,
 	CfProperties extends Record<string, unknown> = IncomingRequestCfProperties,
 >(
 	options: GetPlatformProxyOptions = {}
 ): Promise<PlatformProxy<Env, CfProperties>> {
-	const env = options.environment;
-
 	const config = readConfig({
 		config: options.configPath,
-		env,
+		env: options.environment,
 	});
 
-	const miniflareOptions = await run(
-		{
-			MULTIWORKER: false,
-			RESOURCES_PROVISION: false,
-		},
-		() => getMiniflareOptionsFromConfig(config, env, options)
-	);
-
-	const mf = new Miniflare({
-		script: "",
-		modules: true,
-		...(miniflareOptions as Record<string, unknown>),
-	});
-
-	const bindings: Env = await mf.getBindings();
-
-	const cf = await mf.getCf();
-	deepFreeze(cf);
-
-	return {
-		env: bindings,
-		cf: cf as CfProperties,
-		ctx: new ExecutionContext(),
-		caches: new CacheStorage(),
-		dispose: () => mf.dispose(),
-	};
-}
-
-async function getMiniflareOptionsFromConfig(
-	config: Config,
-	env: string | undefined,
-	options: GetPlatformProxyOptions
-): Promise<Partial<MiniflareOptions>> {
-	const bindings = getBindings(config, env, true, {});
-
-	const workerDefinitions = await getBoundRegisteredWorkers({
-		name: config.name,
-		services: bindings.services,
-		durableObjects: config["durable_objects"],
-	});
-
-	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
-		name: config.name,
-		bindings,
-		workerDefinitions,
-		queueConsumers: undefined,
-		services: config.services,
-		serviceBindings: {},
-		migrations: config.migrations,
-		imagesLocalMode: false,
-	});
+	assert(config.configPath);
 
 	let main: string | undefined;
 	if (typeof options.exportsPath === "string") {
 		main = options.exportsPath;
+	} else if (options.exportsPath?.useMain) {
+		main = config.main;
 	} else {
-		main = options.exportsPath?.useMain ? config.main : undefined;
+		const tmpDir = getWranglerTmpDir(
+			path.dirname(config.configPath),
+			"get-platform-proxy"
+		);
+		// write a no-op file to preserve old behavior where no script is used
+		main = join(tmpDir.path, "/index.js");
+		writeFileSync(main, "");
 	}
 
-	const persistOptions = getMiniflarePersistOptions(options.persist);
-
-	const serviceBindings = await getServiceBindings(bindings.services);
-
-	const bundle = main ? await runBundle(main, config) : undefined;
-	const miniflareOptions = {
-		workers: [
-			{
-				name: config.name,
-				...(bundle && { scriptPath: bundle?.resolvedEntryPointPath }),
-				...(!bundle && { script: "" }),
-				modules: true,
-				...bindingOptions,
-				serviceBindings: {
-					...serviceBindings,
-					...bindingOptions.serviceBindings,
+	return await run(
+		{
+			MULTIWORKER: false,
+			RESOURCES_PROVISION: false,
+		},
+		async () => {
+			const input: StartDevWorkerInput = {
+				config: options.configPath,
+				entrypoint: main,
+				env: options.environment,
+				dev: {
+					watch: false,
+					inspector: {
+						port: 0,
+					},
+					server: {
+						port: 0,
+					},
+					logLevel: "error",
+					liveReload: false,
+					persist:
+						typeof options.persist === "object"
+							? options.persist.path
+							: options.persist
+								? ".wrangler/state/v3"
+								: undefined,
 				},
-			},
-			...externalWorkers,
-		],
-		...persistOptions,
-	};
+				build: {
+					custom: {},
+				},
+			};
 
-	return miniflareOptions;
-}
-const runBundle = async (main: string, config: Config) => {
-	const projectRoot = config.configPath
-		? path.dirname(config?.configPath)
-		: undefined;
+			// Find an existing worker with the same input
+			let worker = Array.from(workers.keys()).find((w) => {
+				return JSON.stringify(w.input) === JSON.stringify(input);
+			});
 
-	// are we sure there's always a config path?
-	if (!projectRoot) {
-		return;
-	}
-	const tmpDir = getWranglerTmpDir(projectRoot, "get-platform-proxy");
+			// Start a new worker if none was found
+			if (!worker) {
+				worker = await startWorker(input);
+			}
 
-	// override main using "args"
-	const entry = await getEntry({ script: main }, config, "dev");
+			// Update the reference count
+			workers.set(worker, (workers.get(worker) ?? 0) + 1);
 
-	const moduleCollector = createModuleCollector({
-		entry,
-		findAdditionalModules: false,
-		rules: [],
-	});
-	const nodejsCompatMode = validateNodeCompatMode(
-		config.compatibility_date,
-		config.compatibility_flags,
-		{ nodeCompat: false, noBundle: false }
+			const { env, cf } = await worker.getPlatformProxy();
+			deepFreeze(cf);
+			return {
+				env: env as Env,
+				cf: cf as CfProperties,
+				ctx: new ExecutionContext(),
+				caches: new CacheStorage(),
+				dispose: async () => {
+					const count = workers.get(worker);
+
+					if (count !== undefined) {
+						// Don't dispose the worker if it's still in use
+						if (count > 1) {
+							workers.set(worker, count - 1);
+							return;
+						}
+
+						// Remove the worker from the map before disposing it
+						workers.delete(worker);
+					}
+
+					await worker.dispose();
+				},
+			};
+		}
 	);
-	const bundle = await bundleWorker(entry, tmpDir.path, {
-		bundle: true,
-		moduleCollector,
-		additionalModules: [],
-		serveLegacyAssetsFromWorker: false,
-		jsxFactory: undefined,
-		jsxFragment: undefined,
-		watch: false,
-		tsconfig: undefined,
-		minify: false,
-		nodejsCompatMode,
-		// think this is just for a warning?
-		doBindings: [],
-		// think this is just for a warning?
-		workflowBindings: [],
-		alias: {},
-		define: {},
-		mockAnalyticsEngineDatasets: [],
-		legacyAssets: undefined,
-		// disable the cache in dev
-		bypassAssetCache: true,
-		targetConsumer: "dev",
-		testScheduled: false,
-		plugins: [],
-		local: true,
-		projectRoot,
-		defineNavigatorUserAgent: true,
+}
 
-		// Pages specific options used by wrangler pages commands
-		entryName: undefined,
-		inject: undefined,
-		isOutfile: undefined,
-		external: undefined,
-
-		// sourcemap defaults to true in dev
-		sourcemap: undefined,
-		checkFetch: false,
-	});
-	return bundle;
-};
+// TODO: figure out how to get this back in
 /**
  * Get the persist option properties to pass to miniflare
  *

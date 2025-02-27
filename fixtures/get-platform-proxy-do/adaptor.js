@@ -14,8 +14,9 @@ const proxy = await getPlatformProxy({
 	configPath: "./wrangler.toml",
 	exportsPath: { useMain: true },
 });
-console.log(proxy.env);
 const id = proxy.env.DO.idFromName("foo");
 const stub = proxy.env.DO.get(id);
 const response = await stub.sayHello();
-console.log(response);
+console.log("adapter:", response);
+const myvar = proxy.env.MY_VAR;
+console.log("adapter:", myvar);
