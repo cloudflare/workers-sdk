@@ -1,5 +1,5 @@
 import fs, { readFileSync } from "node:fs";
-import { basename } from "node:path";
+import { basename, join } from "node:path";
 import { detectPackageManager } from "helpers/packageManagers";
 import { beforeAll, describe, expect } from "vitest";
 import { version } from "../package.json";
@@ -438,6 +438,11 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 			);
 			expect(output).toContain("Pre-existing Worker (from Dashboard)");
 			expect(output).toContain("Application created successfully!");
+			expect(fs.existsSync(join(project.path, "wrangler.jsonc"))).toBe(false);
+			expect(fs.existsSync(join(project.path, "wrangler.json"))).toBe(false);
+			expect(
+				fs.readFileSync(join(project.path, "wrangler.toml"), "utf8"),
+			).toContain('FOO = "bar"');
 		});
 	},
 );
