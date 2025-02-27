@@ -45,6 +45,30 @@ test("parseRedirects should ignore comments", () => {
 	});
 });
 
+test("parseRedirects should ignore fragments and search on source", () => {
+	const input = `
+  /a?search#fragment /b 301
+`;
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [{ from: "/a", status: 301, to: "/b", lineNumber: 2 }],
+		invalid: [],
+	});
+});
+
+test("parseRedirects respect fragments and search on target", () => {
+	const input = `
+  /a /b?search#fragment 301
+`;
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [
+			{ from: "/a", status: 301, to: "/b?search#fragment", lineNumber: 2 },
+		],
+		invalid: [],
+	});
+});
+
 test("parseRedirects should default to 302", () => {
 	const input = `
   /a /b 302
