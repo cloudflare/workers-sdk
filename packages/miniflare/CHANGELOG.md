@@ -1,5 +1,13 @@
 # miniflare
 
+## 3.20250214.2
+
+### Patch Changes
+
+- [#8274](https://github.com/cloudflare/workers-sdk/pull/8274) [`fce642d`](https://github.com/cloudflare/workers-sdk/commit/fce642d59264b1b6e7df8a6c9a015519b7574637) Thanks [@emily-shen](https://github.com/emily-shen)! - fix bindings to entrypoints on the same worker in workers with assets
+
+- [#8289](https://github.com/cloudflare/workers-sdk/pull/8289) [`a4909cb`](https://github.com/cloudflare/workers-sdk/commit/a4909cbe552eae72b901cd78bf1f814f818085a0) Thanks [@penalosa](https://github.com/penalosa)! - Add the experimental `--x-assets-rpc` flag to gate feature work to support JSRPC with Workers + Assets projects.
+
 ## 3.20250214.1
 
 ### Patch Changes
