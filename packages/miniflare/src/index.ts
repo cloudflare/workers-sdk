@@ -63,7 +63,7 @@ import {
 	WorkerOptions,
 	WrappedBindingNames,
 } from "./plugins";
-import { ROUTER_SERVICE_NAME } from "./plugins/assets/constants";
+import { ASSETS_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
@@ -1211,7 +1211,7 @@ export class Miniflare {
 							);
 							if (maybeAssetTargetService && !binding.service?.entrypoint) {
 								assert(binding.service?.name);
-								binding.service.name = `${ROUTER_SERVICE_NAME}:${targetWorkerName}`;
+								binding.service.name = `${ASSETS_PROXY_SERVICE_NAME}:${targetWorkerName}`;
 							}
 						}
 					}
@@ -1310,14 +1310,14 @@ export class Miniflare {
 		const globalServices = getGlobalServices({
 			sharedOptions: sharedOpts.core,
 			allWorkerRoutes,
-			// if Workers + Assets project but NOT Vitest, point to router Worker instead
+			// if Workers + Assets project but NOT Vitest, point to Proxy Worker instead
 			// if Vitest with assets, the self binding on the test runner will point to RW
 			fallbackWorkerName:
 				this.#workerOpts[0].assets.assets &&
 				!this.#workerOpts[0].core.name?.startsWith(
 					"vitest-pool-workers-runner-"
 				)
-					? `${ROUTER_SERVICE_NAME}:${this.#workerOpts[0].core.name}`
+					? `${ASSETS_PROXY_SERVICE_NAME}:${this.#workerOpts[0].core.name}`
 					: getUserServiceName(this.#workerOpts[0].core.name),
 			loopbackPort,
 			log: this.#log,
