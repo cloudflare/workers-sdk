@@ -594,13 +594,23 @@ export const addCloudflareSystemPrompt = async (ctx: C3Context) => {
 	// and save it to .cursor/rules/cloudflare.mdc
 	const path = ctx.project.path;
 	const systemPromptPath = path + "/.cursor/rules/cloudflare.mdc";
-	mkdirSync(path + "/.cursor/rules", { recursive: true });
+
+	// recursive: true might not be available in the version of node we are using
+	mkdirSync(path + "/.cursor");
+	mkdirSync(path + "/.cursor/rules");
 	if (!existsSync(systemPromptPath)) {
-		const systemPromptResponse = await fetch(
-			"https://developers.cloudflare.com/workers/prompt.txt",
-		);
-		const systemPrompt = await systemPromptResponse.text();
-		writeFile(systemPromptPath, systemPrompt);
+		try {
+			const systemPromptResponse = await fetch(
+				"https://developers.cloudflare.com/workers/prompt.txt",
+			);
+			const systemPrompt = await systemPromptResponse.text();
+			writeFile(systemPromptPath, systemPrompt);
+		} catch (error) {
+			console.warn(
+				"Could not download system prompt from cloudflare docs",
+				error,
+			);
+		}
 	}
 };
 

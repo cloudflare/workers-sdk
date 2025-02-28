@@ -337,7 +337,6 @@ describe("addCloudflareSystemPrompt", () => {
 	beforeEach(() => {
 		vi.mocked(existsSync).mockReset();
 		vi.mocked(readFile).mockReset();
-		vi.mocked(directoryExists).mockReset();
 
 		writeFileResults.file = undefined;
 		writeFileResults.content = undefined;
