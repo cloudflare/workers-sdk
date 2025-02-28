@@ -45,6 +45,7 @@ const hybridNodeCompatModules = [
 	"console",
 	"crypto",
 	"module",
+	"perf_hooks",
 	"process",
 	"util",
 ];
@@ -56,6 +57,8 @@ export const cloudflare: Preset = {
 		url: __filename,
 	},
 	alias: {
+		// `nodeCompatModules` are implemented in workerd.
+		// Create aliases to override polyfills defined in based environments.
 		...Object.fromEntries(
 			nodeCompatModules.flatMap((p) => [
 				[p, p],
@@ -64,29 +67,26 @@ export const cloudflare: Preset = {
 		),
 
 		// The `node:sys` module is just a deprecated alias for `node:util` which we implemented using a hybrid polyfill
-		sys: "@cloudflare/unenv-preset/runtime/node/util/index",
-		"node:sys": "@cloudflare/unenv-preset/runtime/node/util/index",
+		sys: "@cloudflare/unenv-preset/node/util",
+		"node:sys": "@cloudflare/unenv-preset/node/util",
 
-		// define aliases for hybrid modules
+		// `hybridNodeCompatModules` are implemented by the cloudflare preset.
 		...Object.fromEntries(
 			hybridNodeCompatModules.flatMap((m) => [
-				[m, `@cloudflare/unenv-preset/runtime/node/${m}/index`],
-				[`node:${m}`, `@cloudflare/unenv-preset/runtime/node/${m}/index`],
+				[m, `@cloudflare/unenv-preset/node/${m}`],
+				[`node:${m}`, `@cloudflare/unenv-preset/node/${m}`],
 			])
 		),
-
-		// TODO: this is a hotfix and breaks unenv/fetch
-		// https://github.com/unjs/unenv/issues/364
-		"unenv/runtime/node/stream/index": "node:stream",
 	},
 	inject: {
-		// workerd already defines `global` and `Buffer`
-		// override the previous presets so that we use the native implementation
+		// Setting symbols implemented by workerd to `false` so that `inject`s defined in base presets are not used.
 		Buffer: false,
 		global: false,
-		console: "@cloudflare/unenv-preset/runtime/node/console/index",
-		process: "@cloudflare/unenv-preset/runtime/node/process/index",
+		clearImmediate: false,
+		setImmediate: false,
+		console: "@cloudflare/unenv-preset/node/console",
+		process: "@cloudflare/unenv-preset/node/process",
 	},
-	polyfill: [],
+	polyfill: ["@cloudflare/unenv-preset/polyfill/performance"],
 	external: nodeCompatModules.flatMap((p) => [p, `node:${p}`]),
 };
