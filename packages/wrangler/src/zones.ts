@@ -152,7 +152,10 @@ async function getZoneIdFromHost(from: {
 	const hostPieces = from.host.split(".");
 
 	while (hostPieces.length > 1) {
-		const cacheKey = hostPieces.join(".") + from.accountId;
+		const cacheKey =
+			hostPieces.join(".") +
+			from.accountId +
+			(process.env.VITEST ? process.env.VITEST_CACHE_BUST ?? "" : "");
 		const queue = getQueue(cacheKey);
 
 		const existing = zoneIdCache.get(cacheKey);
