@@ -1,43 +1,54 @@
+import path from "path";
 import { describe, expect, it } from "vitest";
 import { getPlatformProxy } from "./shared";
 
-describe("getPlatformProxy - cf", () => {
+const tomlWithDO = path.join(__dirname, "..", "wrangler.do.toml");
+
+describe.each([
+	{ name: "script with no exports", configPath: undefined },
+	{ name: "script with DO, useMain = true ", configPath: tomlWithDO },
+])("cf: $name", ({ configPath }) => {
 	it("should provide mock data", async () => {
-		const { cf, dispose } = await getPlatformProxy();
+		const proxy = configPath
+			? await getPlatformProxy({ configPath, exportsPath: { useMain: true } })
+			: await getPlatformProxy();
 		try {
-			expect(cf).toMatchObject({
+			expect(proxy.cf).toMatchObject({
 				colo: "DFW",
 				city: "Austin",
 				regionCode: "TX",
 			});
 		} finally {
-			await dispose();
+			await proxy.dispose();
 		}
 	});
 
 	it("should match the production runtime cf object", async () => {
-		const { cf, dispose } = await getPlatformProxy();
+		const proxy = configPath
+			? await getPlatformProxy({ configPath, exportsPath: { useMain: true } })
+			: await getPlatformProxy();
+
 		try {
-			expect(cf.constructor.name).toBe("Object");
+			expect(proxy.cf.constructor.name).toBe("Object");
 
 			expect(() => {
-				cf.city = "test city";
+				proxy.cf.city = "test city";
 			}).toThrowError(
 				"Cannot assign to read only property 'city' of object '#<Object>'"
 			);
-			expect(cf.city).not.toBe("test city");
+			expect(proxy.cf.city).not.toBe("test city");
 
 			expect(() => {
-				cf.newField = "test new field";
+				proxy.cf.newField = "test new field";
 			}).toThrowError("Cannot add property newField, object is not extensible");
-			expect("newField" in cf).toBe(false);
+			expect("newField" in proxy.cf).toBe(false);
 
-			expect(cf.botManagement).toMatchObject({
+			expect(proxy.cf.botManagement).toMatchObject({
 				score: 99,
 			});
-			expect(Object.isFrozen(cf.botManagement)).toBe(true);
+			expect(Object.isFrozen(proxy.cf.botManagement)).toBe(true);
 		} finally {
-			await dispose();
+			await proxy.dispose();
 		}
 	});
 });

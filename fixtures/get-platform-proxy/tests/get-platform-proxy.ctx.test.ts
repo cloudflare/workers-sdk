@@ -1,9 +1,17 @@
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { getPlatformProxy } from "./shared";
 
-describe("getPlatformProxy - ctx", () => {
+const tomlWithDO = path.join(__dirname, "..", "wrangler.do.toml");
+
+describe.each([
+	{ name: "with exported DO", configPath: tomlWithDO },
+	{ name: "no config", configPath: undefined },
+])("$name", ({ configPath }) => {
 	it("should provide a no-op waitUntil method", async () => {
-		const { ctx, dispose } = await getPlatformProxy();
+		const { ctx, dispose } = configPath
+			? await getPlatformProxy({ configPath, exportsPath: { useMain: true } })
+			: await getPlatformProxy();
 		try {
 			let value = 4;
 			ctx.waitUntil(
@@ -19,16 +27,22 @@ describe("getPlatformProxy - ctx", () => {
 	});
 
 	it("should provide a no-op passThroughOnException method", async () => {
-		const { ctx, dispose } = await getPlatformProxy();
+		const proxy = configPath
+			? await getPlatformProxy({ configPath, exportsPath: { useMain: true } })
+			: await getPlatformProxy();
+
 		try {
-			expect(ctx.passThroughOnException()).toBe(undefined);
+			expect(proxy.ctx.passThroughOnException()).toBe(undefined);
 		} finally {
-			await dispose();
+			await proxy.dispose();
 		}
 	});
 
 	it("should match the production runtime ctx object", async () => {
-		const { ctx, dispose } = await getPlatformProxy();
+		const { ctx, dispose } = configPath
+			? await getPlatformProxy({ configPath, exportsPath: { useMain: true } })
+			: await getPlatformProxy();
+
 		try {
 			expect(ctx.constructor.name).toBe("ExecutionContext");
 			expect(typeof ctx.waitUntil).toBe("function");
@@ -58,7 +72,9 @@ describe("getPlatformProxy - ctx", () => {
 			const {
 				ctx: { waitUntil, passThroughOnException },
 				dispose,
-			} = await getPlatformProxy();
+			} = configPath
+				? await getPlatformProxy({ configPath, exportsPath: { useMain: true } })
+				: await getPlatformProxy();
 			try {
 				expect(() => {
 					waitUntil(new Promise(() => {}));
