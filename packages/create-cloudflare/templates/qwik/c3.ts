@@ -10,7 +10,7 @@ import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
-const { npm, npx } = detectPackageManager();
+const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, ["playground", ctx.project.name]);
@@ -18,7 +18,7 @@ const generate = async (ctx: C3Context) => {
 
 const configure = async (ctx: C3Context) => {
 	// Add the pages integration
-	const cmd = [npx, "qwik", "add", "cloudflare-pages"];
+	const cmd = [npm, "qwik", "add", "cloudflare-pages"];
 	endSection(`Running ${quoteShellArgs(cmd)}`);
 	await runCommand(cmd);
 
