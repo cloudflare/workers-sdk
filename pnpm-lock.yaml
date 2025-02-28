@@ -2720,8 +2720,8 @@ importers:
         specifier: workspace:*
         version: link:../kv-asset-handler
       '@cloudflare/unenv-preset':
-        specifier: 0.0.0-a8e20bd8e
-        version: 0.0.0-a8e20bd8e(unenv@2.0.0-rc.8)(workerd@1.20250214.0)
+        specifier: 0.0.0-8ae084f9e
+        version: 0.0.0-8ae084f9e(unenv@2.0.0-rc.8)(workerd@1.20250214.0)
       '@esbuild-plugins/node-globals-polyfill':
         specifier: 0.2.3
         version: 0.2.3(esbuild@0.17.19)
@@ -3573,8 +3573,8 @@ packages:
     peerDependencies:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
-  '@cloudflare/unenv-preset@0.0.0-a8e20bd8e':
-    resolution: {integrity: sha512-KNBXpoOJKNJPilAlhGDRhF5GQnouK0DA9f1Ui1W1LvFL549yF13GWcmu/K4EIxp4ZNQwIVflgCk1k+7VFSqnQQ==}
+  '@cloudflare/unenv-preset@0.0.0-8ae084f9e':
+    resolution: {integrity: sha512-sSf9zhfV4z6vv1VRtrJPQ1FgVVY3cUKurdpBHsbogAg3PlDZJQAdy//pXYem1hCiO8vad9vlQ6j9wPtJp+ZEoQ==}
     peerDependencies:
       unenv: 2.0.0-rc.8
       workerd: ^1.20250124.0
@@ -12820,7 +12820,7 @@ snapshots:
       '@cloudflare/util-en-garde': 8.0.10
       react: 18.3.1
 
-  '@cloudflare/unenv-preset@0.0.0-a8e20bd8e(unenv@2.0.0-rc.8)(workerd@1.20250214.0)':
+  '@cloudflare/unenv-preset@0.0.0-8ae084f9e(unenv@2.0.0-rc.8)(workerd@1.20250214.0)':
     dependencies:
       unenv: 2.0.0-rc.8
     optionalDependencies:
