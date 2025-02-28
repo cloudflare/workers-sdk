@@ -164,12 +164,16 @@ export class LocalRuntimeController extends RuntimeController {
 			const mf = await this.getMiniflareInstance();
 			this.#bindings = await mf.getBindings();
 		}
-
-		return new Proxy({} as Record<string, unknown>, {
-			get: (_, prop, receiver) => {
-				return Reflect.get(this.#bindings ?? {}, prop, receiver);
-			},
-		});
+		return this.#bindings ?? {};
+		// Need to check why edmund added this
+		// access to the whole object fails with this (single property access is fine)
+		// return new Proxy({} as Record<string, unknown>, {
+		// 	get: (boop, prop, receiver) => {
+		// 		// console.log("youve hit my trap!!",boop,prop,receiver, this.#bindings);
+		// 		// console.log("youve hit my trap!!");
+		// 		return Reflect.get(this.#bindings ?? {}, prop, receiver);
+		// 	},
+		// });
 	}
 
 	async getCfProxy() {
@@ -179,11 +183,14 @@ export class LocalRuntimeController extends RuntimeController {
 			this.#cf = await mf.getCf();
 		}
 
-		return new Proxy({} as Record<string, unknown>, {
-			get: (_, prop, receiver) => {
-				return Reflect.get(this.#cf ?? {}, prop, receiver);
-			},
-		});
+		return this.#cf ?? {};
+		// need to check with edmund why this is needed as above
+		// return new Proxy({} as Record<string, unknown>, {
+		// 	get: (_, prop, receiver) => {
+		// 		console.log("trap!!");
+		// 		return Reflect.get(this.#cf ?? {}, prop, receiver);
+		// 	},
+		// });
 	}
 
 	onBundleStart(_: BundleStartEvent) {

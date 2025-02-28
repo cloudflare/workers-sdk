@@ -21,7 +21,7 @@ import { ExecutionContext } from "./executionContext";
 import type { Config, RawConfig, RawEnvironment } from "../../../config";
 import type { StartDevWorkerInput, Worker } from "../../startDevWorker";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
-import type { MiniflareOptions, ModuleRule, WorkerOptions } from "miniflare";
+import type { ModuleRule, WorkerOptions } from "miniflare";
 
 export { readConfig as unstable_readConfig };
 export type {
@@ -132,7 +132,14 @@ export async function getPlatformProxy<
 		);
 		// write a no-op file to preserve old behavior where no script is used
 		main = join(tmpDir.path, "/index.js");
-		writeFileSync(main, "");
+		writeFileSync(
+			main,
+			`
+			export default {
+			async fetch() {
+			return new Response("no-op")
+			}};`
+		);
 	}
 
 	return await run(
@@ -141,6 +148,7 @@ export async function getPlatformProxy<
 			RESOURCES_PROVISION: false,
 		},
 		async () => {
+			// todo investigate middleware and whether we should load it
 			const input: StartDevWorkerInput = {
 				config: options.configPath,
 				entrypoint: main,
@@ -153,14 +161,14 @@ export async function getPlatformProxy<
 					server: {
 						port: 0,
 					},
-					logLevel: "error",
+					logLevel: "none",
 					liveReload: false,
 					persist:
 						typeof options.persist === "object"
 							? options.persist.path
 							: options.persist
 								? ".wrangler/state/v3"
-								: undefined,
+								: null,
 				},
 				build: {
 					custom: {},
@@ -206,48 +214,6 @@ export async function getPlatformProxy<
 			};
 		}
 	);
-}
-
-// TODO: figure out how to get this back in
-/**
- * Get the persist option properties to pass to miniflare
- *
- * @param persist The user provided persistence option
- * @returns an object containing the properties to pass to miniflare
- */
-function getMiniflarePersistOptions(
-	persist: GetPlatformProxyOptions["persist"]
-): Pick<
-	MiniflareOptions,
-	| "kvPersist"
-	| "durableObjectsPersist"
-	| "r2Persist"
-	| "d1Persist"
-	| "workflowsPersist"
-> {
-	if (persist === false) {
-		// the user explicitly asked for no persistance
-		return {
-			kvPersist: false,
-			durableObjectsPersist: false,
-			r2Persist: false,
-			d1Persist: false,
-			workflowsPersist: false,
-		};
-	}
-
-	const defaultPersistPath = ".wrangler/state/v3";
-
-	const persistPath =
-		typeof persist === "object" ? persist.path : defaultPersistPath;
-
-	return {
-		kvPersist: `${persistPath}/kv`,
-		durableObjectsPersist: `${persistPath}/do`,
-		r2Persist: `${persistPath}/r2`,
-		d1Persist: `${persistPath}/d1`,
-		workflowsPersist: `${persistPath}/workflows`,
-	};
 }
 
 function deepFreeze<T extends Record<string | number | symbol, unknown>>(
