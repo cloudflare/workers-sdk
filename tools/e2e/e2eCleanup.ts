@@ -3,6 +3,7 @@ import {
 	deleteKVNamespace,
 	deleteProject,
 	deleteWorker,
+	listHyperdriveConfigs,
 	listTmpDatabases,
 	listTmpE2EProjects,
 	listTmpE2EWorkers,
@@ -78,6 +79,19 @@ async function run() {
 	} else {
 		console.log(
 			`Successfully deleted ${d1DatabasesToDelete.length} D1 databases`
+		);
+	}
+
+	const hyperdriveConfigsToDelete = await listHyperdriveConfigs();
+	for (const config of hyperdriveConfigsToDelete) {
+		console.log("Deleting Hyperdrive configs: " + config.id);
+		await deleteDatabase(config.id);
+	}
+	if (hyperdriveConfigsToDelete.length === 0) {
+		console.log(`No Hyperdrive configs to delete.`);
+	} else {
+		console.log(
+			`Successfully deleted ${hyperdriveConfigsToDelete.length} hyperdrive configs`
 		);
 	}
 }
