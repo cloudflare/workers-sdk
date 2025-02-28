@@ -57,6 +57,8 @@ export const cloudflare: Preset = {
 		url: __filename,
 	},
 	alias: {
+		// `nodeCompatModules` are implemented in workerd.
+		// Create aliases to override polyfills defined in based environments.
 		...Object.fromEntries(
 			nodeCompatModules.flatMap((p) => [
 				[p, p],
@@ -68,7 +70,7 @@ export const cloudflare: Preset = {
 		sys: "@cloudflare/unenv-preset/node/util",
 		"node:sys": "@cloudflare/unenv-preset/node/util",
 
-		// define aliases for hybrid modules
+		// `hybridNodeCompatModules` are implemented by the cloudflare preset.
 		...Object.fromEntries(
 			hybridNodeCompatModules.flatMap((m) => [
 				[m, `@cloudflare/unenv-preset/node/${m}`],
@@ -77,6 +79,7 @@ export const cloudflare: Preset = {
 		),
 	},
 	inject: {
+		// Setting symbols implemented by workerd to `false` so that `inject`s defined in base presets are not used.
 		Buffer: false,
 		global: false,
 		clearImmediate: false,
