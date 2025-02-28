@@ -13,6 +13,7 @@ import path from "path";
 import { setTimeout } from "timers/promises";
 import { stripAnsi } from "@cloudflare/cli";
 import { spawn } from "cross-spawn";
+import { runCommand } from "helpers/command";
 import { retry } from "helpers/retry";
 import treeKill from "tree-kill";
 import { fetch } from "undici";
@@ -439,6 +440,9 @@ const testProjectDir = (suite: string, test: string) => {
 	return { getName, getPath, clean };
 };
 
+/**
+ * Test that we pushed the commit message to the deployment correctly.
+ */
 export const testDeploymentCommitMessage = async (
 	projectName: string,
 	framework: string,
@@ -489,6 +493,27 @@ export const testDeploymentCommitMessage = async (
 	expect(projectLatestCommitMessage).toContain(`project name = ${projectName}`);
 	expect(projectLatestCommitMessage).toContain(`framework = ${framework}`);
 };
+
+/**
+ * Test that C3 added a git commit with the correct message.
+ */
+export async function testGitCommitMessage(
+	projectName: string,
+	framework: string,
+	projectPath: string,
+) {
+	const commitMessage = await runCommand(["git", "log", "-1"], {
+		silent: true,
+		cwd: projectPath,
+	});
+
+	expect(commitMessage).toMatch(
+		/Initialize web application via create-cloudflare CLI/,
+	);
+	expect(commitMessage).toContain(`C3 = create-cloudflare@${version}`);
+	expect(commitMessage).toContain(`project name = ${projectName}`);
+	expect(commitMessage).toContain(`framework = ${framework}`);
+}
 
 export const isQuarantineMode = () => {
 	return process.env.E2E_QUARANTINE === "true";
