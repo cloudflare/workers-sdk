@@ -147,6 +147,9 @@ describe("git helpers", () => {
 
 	describe("offerGit", async () => {
 		test("happy path", async () => {
+			// The testCreateContext() helper sets up the ctx.args to be all the C3_DEFAULT_ARGS values, which undermines the idea that the user has not provided any command line args.
+			// By providing an args object here (and elsewhere in this file) we ensure that none of the CLI args are set so that we have control over them in the tests.
+
 			const ctx = createTestContext("test", { projectName: "test" });
 			mockGitInstalled(true);
 			mockGitConfig();
