@@ -169,7 +169,7 @@ describe("git helpers", () => {
 			expect(ctx.args.git).toBe(true);
 		});
 
-		test("git not installed", async () => {
+		test("git not installed will not ask the user whether to use git and will not use git", async () => {
 			const ctx = createTestContext("test", { projectName: "test" });
 			mockGitInstalled(false);
 
