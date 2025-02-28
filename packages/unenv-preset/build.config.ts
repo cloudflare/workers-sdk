@@ -2,5 +2,8 @@ import { defineBuildConfig } from "unbuild";
 
 export default defineBuildConfig({
 	declaration: true,
-	entries: [{ input: "src/", outDir: "dist/", format: "esm" }],
+	entries: [
+		"src/index",
+		{ input: "src/runtime/", outDir: "dist/runtime", format: "esm" },
+	],
 });
