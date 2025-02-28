@@ -150,11 +150,11 @@ function getFrameworkTests(opts: {
 				testCommitMessage: true,
 				unsupportedOSs: ["win32"],
 				verifyDeploy: {
-					route: "/",
+					route: "/message",
 					expectedText: "Hello Hono!",
 				},
 				verifyPreview: {
-					route: "/",
+					route: "/message",
 					expectedText: "Hello Hono!",
 				},
 				promptHandlers: [
