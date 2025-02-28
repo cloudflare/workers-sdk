@@ -171,5 +171,35 @@ describe("Zones", () => {
 				id: "example-id",
 			});
 		});
+		test("zone_name route (subdomain, subsequent fetches are cached)", async () => {
+			mockGetZones("example.com", [{ id: "example-id" }]);
+			expect(
+				await getZoneForRoute({
+					route: {
+						pattern: "subdomain.example.com/*",
+						zone_name: "example.com",
+					},
+					accountId: "some-account-id",
+				})
+			).toEqual({
+				host: "subdomain.example.com",
+				id: "example-id",
+			});
+
+			// This will fail if we don't cache the response
+			// due to a "mock not found" error
+			expect(
+				await getZoneForRoute({
+					route: {
+						pattern: "subdomain.example.com/*",
+						zone_name: "example.com",
+					},
+					accountId: "some-account-id",
+				})
+			).toEqual({
+				host: "subdomain.example.com",
+				id: "example-id",
+			});
+		});
 	});
 });

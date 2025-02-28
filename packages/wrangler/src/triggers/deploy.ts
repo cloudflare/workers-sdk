@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import PQueue from "p-queue";
 import { fetchListResult, fetchResult } from "../cfetch";
 import {
 	formatTime,
@@ -155,28 +156,66 @@ export default async function triggersDeploy(
 		// except here we know we have a good API token or whatever so we don't need
 		// to bother with all the error handling tomfoolery.
 		const routesWithOtherBindings: Record<string, string[]> = {};
+
+		/**
+		 * Create a map of queues to ensure we only ever fetch
+		 * a specific zone's routes once. The key should be
+		 * the zone id.
+		 */
+		const getZoneQueues = new Map<string, PQueue>();
+		function getQueue(key: string): PQueue {
+			const existing = getZoneQueues.get(key);
+			if (existing) return existing;
+			const queue = new PQueue({ concurrency: 1 });
+			getZoneQueues.set(key, queue);
+			return queue;
+		}
+
+		/**
+		 * This queue ensures we limit how many concurrent fetch
+		 * requests we're making to the Zones API.
+		 */
+		const queue = new PQueue({ concurrency: 10 });
+		const zoneRoutesCache = new Map<
+			string,
+			Array<{ pattern: string; script: string }>
+		>();
+
 		for (const route of routes) {
-			const zone = await getZoneForRoute({ route, accountId });
-			if (!zone) {
-				continue;
-			}
-
-			const routePattern = typeof route === "string" ? route : route.pattern;
-			const routesInZone = await fetchListResult<{
-				pattern: string;
-				script: string;
-			}>(`/zones/${zone.id}/workers/routes`);
-
-			routesInZone.forEach(({ script, pattern }) => {
-				if (pattern === routePattern && script !== scriptName) {
-					if (!(script in routesWithOtherBindings)) {
-						routesWithOtherBindings[script] = [];
-					}
-
-					routesWithOtherBindings[script].push(pattern);
+			void queue.add(async () => {
+				const zone = await getZoneForRoute({ route, accountId });
+				if (!zone) {
+					return;
 				}
+
+				// Processing each zone in a single thread ensures
+				// we only ever fetch a zone's routes once.
+				await getQueue(zone.id).add(async () => {
+					const routePattern =
+						typeof route === "string" ? route : route.pattern;
+
+					const routesInZone =
+						zoneRoutesCache.get(zone.id) ??
+						(await fetchListResult<{
+							pattern: string;
+							script: string;
+						}>(`/zones/${zone.id}/workers/routes`));
+
+					zoneRoutesCache.set(zone.id, routesInZone);
+
+					routesInZone.forEach(({ script, pattern }) => {
+						if (pattern === routePattern && script !== scriptName) {
+							if (!(script in routesWithOtherBindings)) {
+								routesWithOtherBindings[script] = [];
+							}
+
+							routesWithOtherBindings[script].push(pattern);
+						}
+					});
+				});
 			});
 		}
+		await queue.onIdle();
 
 		if (Object.keys(routesWithOtherBindings).length > 0) {
 			let errorMessage =

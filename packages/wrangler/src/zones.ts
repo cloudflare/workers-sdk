@@ -1,3 +1,4 @@
+import PQueue from "p-queue";
 import { fetchListResult } from "./cfetch";
 import { configFileName } from "./config";
 import { UserError } from "./errors";
@@ -117,6 +118,26 @@ export async function getZoneIdForPreview(from: {
 	}
 	return zoneId;
 }
+
+/**
+ * Create a map of queues to ensure we only ever
+ * fetch a specific zone for a given account once.
+ * The string should be a cache key derived from
+ * the zone we're searching for and the account id.
+ */
+const getZoneQueues = new Map<string, PQueue>();
+function getQueue(key: string): PQueue {
+	const existing = getZoneQueues.get(key);
+	if (existing) {
+		return existing;
+	}
+	const queue = new PQueue({ concurrency: 1 });
+	getZoneQueues.set(key, queue);
+	return queue;
+}
+
+const zoneIdCache = new Map<string, string>();
+
 /**
  * Given something that resembles a host, try to infer a zone id from it.
  *
@@ -131,17 +152,34 @@ async function getZoneIdFromHost(from: {
 	const hostPieces = from.host.split(".");
 
 	while (hostPieces.length > 1) {
-		const zones = await fetchListResult<{ id: string }>(
-			`/zones`,
-			{},
-			new URLSearchParams({
-				name: hostPieces.join("."),
-				"account.id": from.accountId,
-			})
-		);
-		if (zones.length > 0) {
-			return zones[0].id;
+		const cacheKey = hostPieces.join(".") + from.accountId;
+		const queue = getQueue(cacheKey);
+
+		const existing = zoneIdCache.get(cacheKey);
+		if (existing) return existing;
+
+		const maybeZoneId = await queue.add(async () => {
+			const existing = zoneIdCache.get(cacheKey);
+			if (existing) return existing;
+
+			const zones = await fetchListResult<{ id: string }>(
+				`/zones`,
+				{},
+				new URLSearchParams({
+					name: hostPieces.join("."),
+					"account.id": from.accountId,
+				})
+			);
+			if (zones.length > 0) {
+				const id = zones[0].id;
+				zoneIdCache.set(cacheKey, id);
+				return id;
+			}
+		});
+		if (maybeZoneId) {
+			return maybeZoneId;
 		}
+
 		hostPieces.shift();
 	}
 
