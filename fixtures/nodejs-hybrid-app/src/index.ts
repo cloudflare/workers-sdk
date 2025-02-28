@@ -105,6 +105,9 @@ function testBasicNodejsProperties() {
 	assert.notEqual(Performance, undefined);
 	assert.strictEqual(global.Performance, Performance);
 	assert.strictEqual(globalThis.Performance, Performance);
+
+	assert.strictEqual(typeof performance.measure, "function");
+	assert.strictEqual(typeof performance.clearMarks, "function");
 }
 
 function testProcessBehaviour() {

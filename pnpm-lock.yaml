@@ -2719,6 +2719,9 @@ importers:
       '@cloudflare/kv-asset-handler':
         specifier: workspace:*
         version: link:../kv-asset-handler
+      '@cloudflare/unenv-preset':
+        specifier: 0.0.0-0630d9ba4
+        version: 0.0.0-0630d9ba4(unenv@2.0.0-rc.8)(workerd@1.20250214.0)
       '@esbuild-plugins/node-globals-polyfill':
         specifier: 0.2.3
         version: 0.2.3(esbuild@0.17.19)
@@ -2738,8 +2741,8 @@ importers:
         specifier: 6.3.0
         version: 6.3.0
       unenv:
-        specifier: 2.0.0-rc.1
-        version: 2.0.0-rc.1
+        specifier: 2.0.0-rc.8
+        version: 2.0.0-rc.8
       workerd:
         specifier: 1.20250224.0
         version: 1.20250224.0
@@ -3569,6 +3572,15 @@ packages:
     resolution: {integrity: sha512-4JbJv5cbtGeo7Vpg2Sx3LXAhkvDJeJV/9FLFm2u3MkyxXb9SXdjxoanO5bOripQThTrzB1a8Ctw/ghweSA91Cw==}
     peerDependencies:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
+
+  '@cloudflare/unenv-preset@0.0.0-0630d9ba4':
+    resolution: {integrity: sha512-R5YAj+mxU3uNRnFidt4B2F+eTmtTTjYB0JjZxtM9DHvsRb0PnNK0pp2XCp6F8t80WtSBzbLHXG9Z6vrRIAx9kA==}
+    peerDependencies:
+      unenv: 2.0.0-rc.8
+      workerd: ^1.20250124.0
+    peerDependenciesMeta:
+      workerd:
+        optional: true
 
   '@cloudflare/unenv-preset@1.1.1':
     resolution: {integrity: sha512-8y7gFmXnOF9kycm8eIaL0rNBd5np3a/aLaG04pfFG4aEF0rIHAMiGFxQfg1ZIV77ApLHzPomr9/ixLbZWXwX3w==}
@@ -12807,6 +12819,12 @@ snapshots:
       '@cloudflare/intl-types': 1.5.1(react@18.3.1)
       '@cloudflare/util-en-garde': 8.0.10
       react: 18.3.1
+
+  '@cloudflare/unenv-preset@0.0.0-0630d9ba4(unenv@2.0.0-rc.8)(workerd@1.20250214.0)':
+    dependencies:
+      unenv: 2.0.0-rc.8
+    optionalDependencies:
+      workerd: 1.20250214.0
 
   '@cloudflare/unenv-preset@1.1.1(unenv@2.0.0-rc.1)(workerd@1.20250224.0)':
     dependencies:
