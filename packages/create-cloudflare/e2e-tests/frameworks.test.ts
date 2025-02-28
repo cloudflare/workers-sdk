@@ -1,3 +1,4 @@
+import assert from "assert";
 import { existsSync } from "fs";
 import { cp } from "fs/promises";
 import { join } from "path";
@@ -101,6 +102,31 @@ function getFrameworkTests(opts: {
 				},
 				flags: ["--style", "sass"],
 			},
+			react: {
+				promptHandlers: [
+					{
+						matcher: /Select a variant:/,
+						input: [keys.enter],
+					},
+				],
+				unsupportedOSs: ["win32"],
+				testCommitMessage: true,
+				verifyDeploy: {
+					route: "/",
+					// Note that this is the text in the static HTML that is returned
+					// This React SPA will change this at runtime but we are only making a fetch request
+					// not actually running the client side JS.
+					expectedText: "Vite + React + TS",
+				},
+				verifyPreview: {
+					route: "/",
+					previewArgs: ["--host=127.0.0.1"],
+					// Note that this is the text in the static HTML that is returned
+					// This React SPA will change this at runtime but we are only making a fetch request
+					// not actually running the client side JS.
+					expectedText: "Vite + React + TS",
+				},
+			},
 			gatsby: {
 				unsupportedPms: ["bun", "pnpm"],
 				promptHandlers: [
@@ -124,11 +150,11 @@ function getFrameworkTests(opts: {
 				testCommitMessage: true,
 				unsupportedOSs: ["win32"],
 				verifyDeploy: {
-					route: "/",
+					route: "/message",
 					expectedText: "Hello Hono!",
 				},
 				verifyPreview: {
-					route: "/",
+					route: "/message",
 					expectedText: "Hello Hono!",
 				},
 				promptHandlers: [
@@ -145,6 +171,7 @@ function getFrameworkTests(opts: {
 						input: [keys.enter],
 					},
 				],
+				flags: [],
 				testCommitMessage: true,
 				unsupportedOSs: ["win32"],
 				unsupportedPms: ["yarn"],
@@ -544,7 +571,6 @@ function getFrameworkTests(opts: {
 				],
 				testCommitMessage: true,
 				unsupportedOSs: ["win32"],
-				unsupportedPms: ["yarn"],
 				timeout: LONG_TIMEOUT,
 				verifyDeploy: {
 					route: "/",
@@ -651,6 +677,10 @@ describe.concurrent(
 
 			test({ experimental }).runIf(shouldRunTest(frameworkId, testConfig))(
 				frameworkId,
+				{
+					retry: TEST_RETRIES,
+					timeout: testConfig.timeout || TEST_TIMEOUT,
+				},
 				async ({ logStream, project }) => {
 					if (!testConfig.verifyDeploy) {
 						expect(
@@ -734,10 +764,6 @@ describe.concurrent(
 						}
 					}
 				},
-				{
-					retry: TEST_RETRIES,
-					timeout: testConfig.timeout || TEST_TIMEOUT,
-				},
 			);
 		});
 	},
@@ -760,6 +786,7 @@ const runCli = async (
 		framework,
 		NO_DEPLOY ? "--no-deploy" : "--deploy",
 		"--no-open",
+		"--no-auto-update",
 	];
 
 	args.push(...argv);
@@ -783,28 +810,29 @@ const runCli = async (
 };
 
 /**
- * Either update or create a wrangler.toml to include a `TEST` var.
+ * Either update or create a wrangler configuration file to include a `TEST` var.
  *
- * This is rather than having a wrangler.toml in the e2e test's fixture folder,
+ * This is rather than having a wrangler configuration file in the e2e test's fixture folder,
  * which overwrites any that comes from the framework's template.
  */
 const addTestVarsToWranglerToml = async (projectPath: string) => {
 	const wranglerTomlPath = join(projectPath, "wrangler.toml");
 	const wranglerJsoncPath = join(projectPath, "wrangler.jsonc");
+
 	if (existsSync(wranglerTomlPath)) {
 		const wranglerToml = readToml(wranglerTomlPath);
-		// Add a TEST var to the wrangler.toml
 		wranglerToml.vars ??= {};
 		(wranglerToml.vars as JsonMap).TEST = "C3_TEST";
 
 		writeToml(wranglerTomlPath, wranglerToml);
 	} else if (existsSync(wranglerJsoncPath)) {
-		const wranglerJson = readJSON(wranglerJsoncPath);
-		// Add a TEST var to the wrangler.toml
-		wranglerJson.vars ??= {};
-		wranglerJson.vars.TEST = "C3_TEST";
+		const wranglerJsonc = readJSON(wranglerJsoncPath) as {
+			vars: Record<string, string>;
+		};
+		wranglerJsonc.vars ??= {};
+		wranglerJsonc.vars.TEST = "C3_TEST";
 
-		writeJSON(wranglerJsoncPath, wranglerJson);
+		writeJSON(wranglerJsoncPath, wranglerJsonc);
 	}
 };
 
@@ -841,9 +869,15 @@ const verifyPreviewScript = async (
 	projectPath: string,
 	logStream: Writable,
 ) => {
-	if (!verifyPreview || !previewScript) {
+	if (!verifyPreview) {
 		return;
 	}
+
+	assert(
+		previewScript,
+		"Expected a preview script is we are verifying the preview in " +
+			projectPath,
+	);
 
 	// Run the dev-server on a random port to avoid colliding with other tests
 	const TEST_PORT = Math.ceil(Math.random() * 1000) + 20000;
@@ -856,6 +890,7 @@ const verifyPreviewScript = async (
 			...(pm === "npm" ? ["--"] : []),
 			"--port",
 			`${TEST_PORT}`,
+			...(verifyPreview.previewArgs ?? []),
 		],
 		{
 			cwd: projectPath,

@@ -65,5 +65,6 @@ const config: TemplateConfig = {
 	}),
 	devScript: "dev",
 	deployScript: "deploy",
+	previewScript: "dev",
 };
 export default config;
