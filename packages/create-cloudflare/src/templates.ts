@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync } from "fs";
 import { cp, mkdtemp, rename } from "fs/promises";
 import { tmpdir } from "os";
 import { basename, dirname, join, resolve } from "path";
@@ -600,7 +600,7 @@ export const addCloudflareSystemPrompt = async (ctx: C3Context) => {
 			"https://developers.cloudflare.com/workers/prompt.txt",
 		);
 		const systemPrompt = await systemPromptResponse.text();
-		writeFileSync(systemPromptPath, systemPrompt);
+		writeFile(systemPromptPath, systemPrompt);
 	}
 };
 

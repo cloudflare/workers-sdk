@@ -10,10 +10,12 @@ import {
 } from "helpers/files";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
+	addCloudflareSystemPrompt,
 	addWranglerToGitIgnore,
 	deriveCorrelatedArgs,
 	downloadRemoteTemplate,
 } from "../templates";
+import { createTestContext } from "./helpers";
 import type { PathLike } from "fs";
 import type { C3Args, C3Context } from "types";
 
@@ -316,5 +318,34 @@ describe("deriveCorrelatedArgs", () => {
 		).toThrow(
 			"The `--ts` argument cannot be specified in conjunction with the `--lang` argument",
 		);
+	});
+});
+
+describe("addCloudflareSystemPrompt", () => {
+	const writeFileResults: {
+		file: string | undefined;
+		content: string | undefined;
+	} = { file: undefined, content: undefined };
+
+	beforeEach(() => {
+		vi.mocked(writeFile).mockImplementation((file: string, content: string) => {
+			writeFileResults.file = file;
+			writeFileResults.content = content;
+		});
+	});
+
+	beforeEach(() => {
+		vi.mocked(existsSync).mockReset();
+		vi.mocked(readFile).mockReset();
+		vi.mocked(directoryExists).mockReset();
+
+		writeFileResults.file = undefined;
+		writeFileResults.content = undefined;
+	});
+	test("it should add the system prompt to the project", async () => {
+		const ctx = createTestContext();
+		await addCloudflareSystemPrompt(ctx);
+		expect(writeFileResults.file).toContain(".cursor");
+		expect(writeFileResults.content).toContain("cloudflare");
 	});
 });
