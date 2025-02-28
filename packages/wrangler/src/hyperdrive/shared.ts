@@ -1,12 +1,11 @@
 export function capitalizeScheme(scheme: string | undefined) {
-	let ret = "";
-
-	if (scheme === "mysql") {
-		ret = "MySQL";
+	switch (scheme) {
+	  case "mysql":
+		 return "MySQL";
+	  case "postgres":
+	  case "postgresql":
+		  return "PostgreSQL";
+		default:
+		  return "";
 	}
-	if (scheme === "postgres" || scheme === "postgresql") {
-		ret = "PostgreSQL";
-	}
-
-	return ret;
 }

@@ -185,7 +185,7 @@ export function getOriginFromArgs<
 			throw new UserError(
 				"You must provide a port number - e.g. 'user:password@database.example.com:port/databasename"
 			);
-		} else if (!url.pathname || url.pathname === "") {
+		} else if (!url.pathname) {
 			throw new UserError(
 				"You must provide a database name as the path component - e.g. example.com:port/databasename"
 			);
