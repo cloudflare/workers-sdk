@@ -912,6 +912,8 @@ export function readAuthConfigFile(): UserAuthConfig {
 type LoginProps = {
 	scopes?: Scope[];
 	browser: boolean;
+	ip: string;
+	port: number;
 };
 
 export async function loginOrRefreshIfRequired(
@@ -950,6 +952,8 @@ export async function getOauthToken(options: {
 	granted: {
 		url: string;
 	};
+	host: string;
+	port: number;
 }): Promise<AccessContext> {
 	const urlToOpen = await getAuthURL(options.scopes, options.clientId);
 	let server: http.Server;
@@ -1026,7 +1030,10 @@ export async function getOauthToken(options: {
 			}
 		});
 
-		server.listen(8976, "localhost");
+		console.log(
+			`Temporary login server listening on ${options.host}:${options.port}`
+		);
+		server.listen(options.port, options.host);
 	});
 	if (options.browser) {
 		logger.log(`Opening a link in your default browser: ${urlToOpen}`);
@@ -1039,7 +1046,7 @@ export async function getOauthToken(options: {
 }
 
 export async function login(
-	props: LoginProps = { browser: true }
+	props: LoginProps = { browser: true, ip: "localhost", port: 8976 }
 ): Promise<boolean> {
 	const authFromEnv = getAuthFromEnv();
 	if (authFromEnv) {
@@ -1066,6 +1073,8 @@ export async function login(
 		granted: {
 			url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-granted",
 		},
+		host: props.ip,
+		port: props.port,
 	});
 
 	writeAuthConfigFile({

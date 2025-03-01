@@ -28,6 +28,18 @@ export const loginCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
+		ip: {
+			describe: "Use the IP address for the temporary login server.",
+			type: "string",
+			requiresArg: false,
+			default: "localhost",
+		},
+		port: {
+			describe: "Use the port for the temporary login server.",
+			type: "number",
+			requiresArg: false,
+			default: 8976,
+		},
 	},
 	async handler(args, { config }) {
 		if (args.scopesList) {
@@ -45,10 +57,15 @@ export const loginCommand = createCommand({
 					`One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --scopes-list" to see the valid scopes.`
 				);
 			}
-			await login({ scopes: args.scopes, browser: args.browser });
+			await login({
+				scopes: args.scopes,
+				browser: args.browser,
+				ip: args.ip,
+				port: args.port,
+			});
 			return;
 		}
-		await login({ browser: args.browser });
+		await login({ browser: args.browser, ip: args.ip, port: args.port });
 		metrics.sendMetricsEvent("login user", {
 			sendMetrics: config.send_metrics,
 		});
