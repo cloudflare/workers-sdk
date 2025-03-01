@@ -1032,7 +1032,7 @@ export async function getOauthToken(options: {
 			}
 		});
 
-		console.log(
+		logger.log(
 			`Temporary login server listening on ${options.host}:${options.port}`
 		);
 		server.listen(options.port, options.host);
