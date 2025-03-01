@@ -141,6 +141,7 @@ export const typesCommand = createCommand({
 			hyperdrive: config.hyperdrive,
 			mtls_certificates: config.mtls_certificates,
 			browser: config.browser,
+			images: config.images,
 			ai: config.ai,
 			version_metadata: config.version_metadata,
 			secrets,
@@ -415,6 +416,13 @@ async function generateTypes(
 
 	if (configToDTS.ai) {
 		envTypeStructure.push([constructTypeKey(configToDTS.ai.binding), "Ai"]);
+	}
+
+	if (configToDTS.images) {
+		envTypeStructure.push([
+			constructTypeKey(configToDTS.images.binding),
+			"ImagesBinding",
+		]);
 	}
 
 	if (configToDTS.version_metadata) {
