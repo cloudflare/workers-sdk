@@ -789,7 +789,7 @@ export function buildAssetOptions(config: Pick<ConfigBundle, "assets">) {
 			assets: {
 				directory: config.assets.directory,
 				binding: config.assets.binding,
-				routerConfig: config.assets.routerConfig,
+				routingConfig: config.assets.routingConfig,
 				assetConfig: config.assets.assetConfig,
 			},
 		};

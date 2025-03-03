@@ -1,19 +1,15 @@
 import { z } from "zod";
 
-const InternalConfigSchema = z.object({
+export const RoutingConfigSchema = z.object({
+	has_user_worker: z.boolean().optional(),
+	invoke_user_worker_ahead_of_assets: z.boolean().optional(),
+
+	// Used for analytics and reporting
 	account_id: z.number().optional(),
 	script_id: z.number().optional(),
 });
 
-export const RouterConfigSchema = z.object({
-	invoke_user_worker_ahead_of_assets: z.boolean().optional(),
-	has_user_worker: z.boolean().optional(),
-	...InternalConfigSchema.shape,
-});
-
 export const AssetConfigSchema = z.object({
-	compatibility_date: z.string().optional(),
-	compatibility_flags: z.array(z.string()).optional(),
 	html_handling: z
 		.enum([
 			"auto-trailing-slash",
@@ -25,11 +21,24 @@ export const AssetConfigSchema = z.object({
 	not_found_handling: z
 		.enum(["single-page-application", "404-page", "none"])
 		.optional(),
+	serve_directly: z.boolean().optional(),
+	run_worker_first: z.boolean().optional(),
+});
+
+export const InternalConfigSchema = z.object({
+	// Used for analytics and reporting
+	account_id: z.number().optional(),
+	script_id: z.number().optional(),
+});
+
+export const AssetWorkerConfigShema = z.object({
+	...AssetConfigSchema.shape,
 	...InternalConfigSchema.shape,
 });
 
-export type RouterConfig = z.infer<typeof RouterConfigSchema>;
+export type RoutingConfig = z.infer<typeof RoutingConfigSchema>;
 export type AssetConfig = z.infer<typeof AssetConfigSchema>;
+export type AssetWorkerConfig = z.infer<typeof AssetWorkerConfigShema>;
 
 export interface UnsafePerformanceTimer {
 	readonly timeOrigin: number;

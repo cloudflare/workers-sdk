@@ -3,12 +3,19 @@ import type { AssetConfig } from "../../utils/types";
 export const applyConfigurationDefaults = (
 	configuration?: AssetConfig
 ): Required<AssetConfig> => {
+	let runWorkerFirst = undefined;
+	if (configuration?.run_worker_first !== undefined) {
+		runWorkerFirst = configuration?.run_worker_first;
+	} else if (configuration?.serve_directly !== undefined) {
+		runWorkerFirst = !configuration.serve_directly;
+	} else {
+		runWorkerFirst = false;
+	}
+
 	return {
-		compatibility_date: configuration?.compatibility_date ?? "2021-11-02",
-		compatibility_flags: configuration?.compatibility_flags ?? [],
 		html_handling: configuration?.html_handling ?? "auto-trailing-slash",
 		not_found_handling: configuration?.not_found_handling ?? "none",
-		account_id: configuration?.account_id ?? -1,
-		script_id: configuration?.script_id ?? -1,
+		run_worker_first: runWorkerFirst,
+		serve_directly: !runWorkerFirst,
 	};
 };

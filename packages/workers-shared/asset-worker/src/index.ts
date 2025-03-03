@@ -10,7 +10,7 @@ import { ExperimentAnalytics } from "./experiment-analytics";
 import { decodePath, getIntent, handleRequest } from "./handler";
 import { getAssetWithMetadataFromKV } from "./utils/kv";
 import type {
-	AssetConfig,
+	AssetWorkerConfig,
 	ColoMetadata,
 	JaegerTracing,
 	UnsafePerformanceTimer,
@@ -31,7 +31,7 @@ export type Env = {
 	 */
 	ASSETS_KV_NAMESPACE: KVNamespace;
 
-	CONFIG: AssetConfig;
+	CONFIG: AssetWorkerConfig;
 
 	SENTRY_DSN: string;
 	SENTRY_ACCESS_CLIENT_ID: string;
