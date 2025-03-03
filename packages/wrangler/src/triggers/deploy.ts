@@ -163,13 +163,15 @@ export default async function triggersDeploy(
 		 * the zone id.
 		 */
 		const getZoneQueues = new Map<string, PQueue>();
-		function getQueue(key: string): PQueue {
+		const getQueue = (key: string): PQueue => {
 			const existing = getZoneQueues.get(key);
-			if (existing) return existing;
+			if (existing) {
+				return existing;
+			}
 			const queue = new PQueue({ concurrency: 1 });
 			getZoneQueues.set(key, queue);
 			return queue;
-		}
+		};
 
 		/**
 		 * This queue ensures we limit how many concurrent fetch

@@ -159,11 +159,15 @@ async function getZoneIdFromHost(from: {
 		const queue = getQueue(cacheKey);
 
 		const existing = zoneIdCache.get(cacheKey);
-		if (existing) return existing;
+		if (existing) {
+			return existing;
+		}
 
 		const maybeZoneId = await queue.add(async () => {
-			const existing = zoneIdCache.get(cacheKey);
-			if (existing) return existing;
+			const existing2 = zoneIdCache.get(cacheKey);
+			if (existing2) {
+				return existing2;
+			}
 
 			const zones = await fetchListResult<{ id: string }>(
 				`/zones`,
