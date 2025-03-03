@@ -104,7 +104,7 @@ test("customize inspector config", async ({ expect, seed, vitestDev }) => {
 
 	await waitFor(() => {
 		expect(result.stdout).toMatch(
-			"Tests run in a single worker when the inspector is open."
+			"Tests run in singleWorker mode when the inspector is open."
 		);
 		expect(result.stdout).toMatch(`The "--inspect-brk" flag is not supported.`);
 		expect(result.stdout).toMatch("Starting single runtime");
