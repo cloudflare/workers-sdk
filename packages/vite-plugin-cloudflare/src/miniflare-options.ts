@@ -294,11 +294,11 @@ export function getDevMiniflareOptions(
 							resolvedPluginConfig.cloudflareEnv
 						);
 
-						const { externalWorkers } = miniflareWorkerOptions
+						const { externalWorkers } = miniflareWorkerOptions;
 
 						const { ratelimits, ...workerOptions } =
 							miniflareWorkerOptions.workerOptions;
-						
+
 						return {
 							externalWorkers,
 							worker: {
@@ -316,13 +316,14 @@ export function getDevMiniflareOptions(
 									...workerOptions.serviceBindings,
 									...(environmentName ===
 										resolvedPluginConfig.entryWorkerEnvironmentName &&
-										workerConfig.assets?.binding
+									workerConfig.assets?.binding
 										? {
-											[workerConfig.assets.binding]: ASSET_WORKER_NAME,
-										}
+												[workerConfig.assets.binding]: ASSET_WORKER_NAME,
+											}
 										: {}),
 									__VITE_INVOKE_MODULE__: async (request) => {
-										const payload = (await request.json()) as vite.CustomPayload;
+										const payload =
+											(await request.json()) as vite.CustomPayload;
 										const invokePayloadData = payload.data as {
 											id: string;
 											name: string;
@@ -354,14 +355,16 @@ export function getDevMiniflareOptions(
 											environmentName
 										] as CloudflareDevEnvironment;
 
-										const result = await devEnvironment.hot.handleInvoke(payload);
+										const result =
+											await devEnvironment.hot.handleInvoke(payload);
 
 										return MiniflareResponse.json(result);
 									},
 								},
-							} satisfies Partial<WorkerOptions>
-						}
-					})
+							} satisfies Partial<WorkerOptions>,
+						};
+					}
+				)
 			: [];
 
 	const userWorkers = workersFromConfig.map((worker) => worker.worker);
