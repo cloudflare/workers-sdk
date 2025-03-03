@@ -8,7 +8,7 @@ import { readFile, readJSON, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import type { TemplateConfig } from "../../src/templates";
-import type { C3Context } from "types";
+import type { C3Context, PackageJson } from "types";
 
 const { npm } = detectPackageManager();
 
@@ -64,10 +64,10 @@ async function updateAppCode() {
 	// Remove unwanted dependencies
 	s.start(`Updating package.json`);
 	const packageJsonPath = resolve("package.json");
-	const packageManifest = readJSON(packageJsonPath);
+	const packageManifest = readJSON(packageJsonPath) as PackageJson;
 
-	delete packageManifest["dependencies"]["express"];
-	delete packageManifest["devDependencies"]["@types/express"];
+	delete packageManifest["dependencies"]?.["express"];
+	delete packageManifest["devDependencies"]?.["@types/express"];
 
 	writeFile(packageJsonPath, JSON.stringify(packageManifest, null, 2));
 	s.stop(`${brandColor(`updated`)} ${dim(`\`package.json\``)}`);
@@ -76,7 +76,8 @@ async function updateAppCode() {
 function updateAngularJson(ctx: C3Context) {
 	const s = spinner();
 	s.start(`Updating angular.json config`);
-	const angularJson = readJSON(resolve("angular.json"));
+	const angularJson = readJSON("angular.json") as AngularJson;
+
 	// Update builder
 	const architectSection = angularJson.projects[ctx.project.name].architect;
 	architectSection.build.options.outputPath = "dist";
@@ -112,3 +113,21 @@ const config: TemplateConfig = {
 	}),
 };
 export default config;
+
+type AngularJson = {
+	projects: Record<
+		string,
+		{
+			architect: {
+				build: {
+					options: {
+						outputPath: string;
+						outputMode: string;
+						ssr: Record<string, unknown>;
+						assets: string[];
+					};
+				};
+			};
+		}
+	>;
+};

@@ -1,6 +1,6 @@
 {
 	"name": "create-cloudflare",
-	"version": "2.38.2",
+	"version": "2.39.0",
 	"description": "A CLI for creating and deploying new applications to Cloudflare.",
 	"keywords": [
 		"cloudflare",
@@ -66,6 +66,7 @@
 		"@typescript-eslint/parser": "^6.9.0",
 		"chalk": "^5.2.0",
 		"command-exists": "^1.2.9",
+		"comment-json": "^4.2.5",
 		"cross-spawn": "^7.0.3",
 		"deepmerge": "^4.3.1",
 		"degit": "^2.8.4",

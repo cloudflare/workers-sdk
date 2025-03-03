@@ -1,4 +1,4 @@
-import { mkdirSync } from "fs";
+import { mkdirSync, readFileSync } from "fs";
 import { mkdir } from "fs/promises";
 import path from "path";
 import ignore from "ignore";
@@ -27,5 +27,23 @@ export function createPatternMatcher(
 	} else {
 		const ignorer = ignore().add(patterns);
 		return (filePath) => ignorer.test(filePath).ignored;
+	}
+}
+
+export function thrownIsDoesNotExistError(
+	thrown: unknown
+): thrown is Error & { code: "ENOENT" } {
+	return (
+		thrown instanceof Error && "code" in thrown && thrown.code === "ENOENT"
+	);
+}
+
+export function maybeGetFile(filePath: string | URL) {
+	try {
+		return readFileSync(filePath, "utf8");
+	} catch (e: unknown) {
+		if (!thrownIsDoesNotExistError(e)) {
+			throw e;
+		}
 	}
 }

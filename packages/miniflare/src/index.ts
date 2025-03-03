@@ -1209,7 +1209,7 @@ export class Miniflare {
 								(worker) =>
 									worker.core.name === targetWorkerName && worker.assets.assets
 							);
-							if (maybeAssetTargetService) {
+							if (maybeAssetTargetService && !binding.service?.entrypoint) {
 								assert(binding.service?.name);
 								binding.service.name = `${ROUTER_SERVICE_NAME}:${targetWorkerName}`;
 							}

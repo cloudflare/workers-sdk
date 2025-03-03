@@ -880,6 +880,7 @@ export const Handler = async (args: PagesDevArguments) => {
 		{
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: false,
+			ASSETS_RPC: false,
 		},
 		() =>
 			startDev({
@@ -959,6 +960,7 @@ export const Handler = async (args: PagesDevArguments) => {
 				siteInclude: undefined,
 				siteExclude: undefined,
 				inspect: undefined,
+				experimentalAssetsRpc: false,
 			})
 	);
 

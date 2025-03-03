@@ -60,6 +60,7 @@ export const dev = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
+			ASSETS_RPC: args.experimentalAssetsRpc,
 		}),
 	},
 	metadata: {
@@ -326,6 +327,13 @@ export const dev = createCommand({
 			describe:
 				"Use a local lower-fidelity implementation of the Images binding",
 			default: false,
+		},
+		"experimental-assets-rpc": {
+			alias: "x-assets-rpc",
+			type: "boolean",
+			describe: "Support JSRPC bindings to Workers + Assets projects",
+			default: false,
+			hidden: true,
 		},
 	},
 	async validateArgs(args) {

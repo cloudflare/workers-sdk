@@ -4,7 +4,7 @@ import type {
 	WorkerMetadata,
 	WorkerMetadataBinding,
 } from "./create-worker-upload-form";
-import type { AssetConfig, RoutingConfig } from "@cloudflare/workers-shared";
+import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 import type { Json } from "miniflare";
 
 /**
@@ -299,11 +299,6 @@ export interface CfUserLimits {
 	cpu_ms?: number;
 }
 
-export interface CfAssets {
-	jwt: string;
-	routingConfig: RoutingConfig;
-	assetConfig?: AssetConfig;
-}
 /**
  * Options for creating a `CfWorker`.
  */
@@ -373,7 +368,15 @@ export interface CfWorkerInit {
 	limits: CfUserLimits | undefined;
 	annotations?: Record<string, string | undefined>;
 	keep_assets?: boolean | undefined;
-	assets: CfAssets | undefined;
+	assets:
+		| {
+				jwt: string;
+				routerConfig: RouterConfig;
+				assetConfig: AssetConfig;
+				_redirects?: string;
+				_headers?: string;
+		  }
+		| undefined;
 	observability: Observability | undefined;
 }
 

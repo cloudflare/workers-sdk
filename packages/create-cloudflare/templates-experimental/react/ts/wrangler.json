@@ -1,0 +1,9 @@
+{
+	"name": "<TBD>",
+	"main": "api/index.ts",
+	"compatibility_date": "<TBD>",
+	"assets": { "not_found_handling": "single-page-application", "binding": "ASSETS" },
+	"observability": {
+		"enabled": true
+	}
+}

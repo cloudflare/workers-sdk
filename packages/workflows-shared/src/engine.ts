@@ -6,6 +6,7 @@ import {
 	InstanceStatus,
 	InstanceTrigger,
 } from "./instance";
+import { WorkflowFatalError } from "./lib/errors";
 import {
 	ENGINE_TIMEOUT,
 	GracePeriodSemaphore,
@@ -271,6 +272,21 @@ export class Engine extends DurableObject<Env> {
 		} catch (err) {
 			let error;
 			if (err instanceof Error) {
+				if (
+					err.name === "NonRetryableError" ||
+					err.message.startsWith("NonRetryableError")
+				) {
+					this.writeLog(InstanceEvent.WORKFLOW_FAILURE, null, null, {
+						error: new WorkflowFatalError(
+							`The execution of the Workflow instance was terminated, as a step threw an NonRetryableError and it was not handled`
+						),
+					});
+
+					await this.setStatus(accountId, instance.id, InstanceStatus.Errored);
+					await this.abort(`A step threw a NonRetryableError`);
+					this.isRunning = false;
+					return;
+				}
 				error = {
 					message: err.message,
 					name: err.name,

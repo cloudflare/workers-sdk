@@ -1,5 +1,17 @@
 # wrangler
 
+## 3.111.0
+
+### Minor Changes
+
+- [#7977](https://github.com/cloudflare/workers-sdk/pull/7977) [`36ef9c6`](https://github.com/cloudflare/workers-sdk/commit/36ef9c6209c937570711ff407fd29de6fb7cf267) Thanks [@jkoe-cf](https://github.com/jkoe-cf)! - Added wrangler r2 commands for bucket lock configuration
+
+### Patch Changes
+
+- [#8248](https://github.com/cloudflare/workers-sdk/pull/8248) [`1cb2d34`](https://github.com/cloudflare/workers-sdk/commit/1cb2d3418b21b4d54d1c8debbfc91a5efc8f5708) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Omits Content-Type header for files of an unknown extension in Workers Assets
+
+- [#7977](https://github.com/cloudflare/workers-sdk/pull/7977) [`36ef9c6`](https://github.com/cloudflare/workers-sdk/commit/36ef9c6209c937570711ff407fd29de6fb7cf267) Thanks [@jkoe-cf](https://github.com/jkoe-cf)! - fixing the format of the R2 lifecycle rule date input to be parsed as string instead of number
+
 ## 3.110.0
 
 ### Minor Changes
