@@ -1825,27 +1825,6 @@ importers:
         specifier: catalog:default
         version: 5.7.3
 
-  packages/vite-plugin-cloudflare/playground/ai:
-    devDependencies:
-      '@cloudflare/vite-plugin':
-        specifier: workspace:*
-        version: link:../..
-      '@cloudflare/workers-tsconfig':
-        specifier: workspace:*
-        version: link:../../../workers-tsconfig
-      '@cloudflare/workers-types':
-        specifier: ^4.20250204.0
-        version: 4.20250214.0
-      typescript:
-        specifier: catalog:default
-        version: 5.7.3
-      vite:
-        specifier: catalog:vite-plugin
-        version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
-      wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.1(@cloudflare/workers-types@4.20250214.0)
-
   packages/vite-plugin-cloudflare/playground/cloudflare-env:
     devDependencies:
       '@cloudflare/vite-plugin':
@@ -1940,6 +1919,27 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20250214.0
+        version: 4.20250214.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
+      wrangler:
+        specifier: catalog:vite-plugin
+        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+
+  packages/vite-plugin-cloudflare/playground/external-workers:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250204.0
         version: 4.20250214.0
       typescript:
         specifier: catalog:default
