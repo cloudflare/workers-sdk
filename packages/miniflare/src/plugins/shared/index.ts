@@ -81,6 +81,7 @@ export interface PluginServicesOptions<
 	unsafeEphemeralDurableObjects: boolean;
 	queueProducers: QueueProducers;
 	queueConsumers: QueueConsumers;
+	unsafeEnableAssetsRpc: boolean;
 }
 
 export interface ServicesExtensions {
