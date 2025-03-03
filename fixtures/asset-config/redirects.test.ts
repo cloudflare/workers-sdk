@@ -24,7 +24,7 @@ describe("[Asset Worker] `test location rewrite`", () => {
 	afterEach(() => {
 		vi.mocked(getAssetWithMetadataFromKV).mockRestore();
 	});
-	beforeEach(() => {
+	beforeEach(async () => {
 		vi.mocked(getAssetWithMetadataFromKV).mockImplementation(
 			() =>
 				Promise.resolve({
@@ -37,14 +37,16 @@ describe("[Asset Worker] `test location rewrite`", () => {
 				>
 		);
 
-		vi.mocked(applyConfigurationDefaults).mockImplementation(() => {
-			return {
-				html_handling: "none",
-				not_found_handling: "none",
-				run_worker_first: true,
-				serve_directly: false,
-			};
-		});
+		const originalApplyConfigurationDefaults = (
+			await vi.importActual<
+				typeof import("../../packages/workers-shared/asset-worker/src/configuration")
+			>("../../packages/workers-shared/asset-worker/src/configuration")
+		).applyConfigurationDefaults;
+		vi.mocked(applyConfigurationDefaults).mockImplementation(() => ({
+			...originalApplyConfigurationDefaults({}),
+			html_handling: "none",
+			not_found_handling: "none",
+		}));
 	});
 
 	it("returns 404 for non matched encoded url", async () => {

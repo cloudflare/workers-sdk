@@ -1,5 +1,5 @@
-import fs from "node:fs";
 import path from "node:path";
+import { maybeGetFile } from "@cloudflare/workers-shared/utils/helpers";
 import TOML from "@iarna/toml";
 import dotenv from "dotenv";
 import { FatalError, UserError } from "../errors";
@@ -203,19 +203,21 @@ export interface DotEnv {
 
 function tryLoadDotEnv(basePath: string): DotEnv | undefined {
 	try {
-		const parsed = dotenv.parse(fs.readFileSync(basePath));
-		return { path: basePath, parsed };
-	} catch (e) {
-		if ((e as { code: string }).code === "ENOENT") {
+		const contents = maybeGetFile(basePath);
+		if (contents === undefined) {
 			logger.debug(
 				`.env file not found at "${path.relative(".", basePath)}". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/`
 			);
-		} else {
-			logger.debug(
-				`Failed to load .env file "${path.relative(".", basePath)}":`,
-				e
-			);
+			return;
 		}
+
+		const parsed = dotenv.parse(contents);
+		return { path: basePath, parsed };
+	} catch (e) {
+		logger.debug(
+			`Failed to load .env file "${path.relative(".", basePath)}":`,
+			e
+		);
 	}
 }
 

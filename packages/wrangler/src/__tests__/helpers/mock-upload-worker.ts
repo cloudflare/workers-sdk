@@ -2,10 +2,12 @@ import { http, HttpResponse } from "msw";
 import { mockGetWorkerSubdomain } from "./mock-workers-subdomain";
 import { createFetchResult, msw } from "./msw";
 import { serialize, toString } from "./serialize-form-data-entry";
-import type { WorkerMetadata } from "../../deployment-bundle/create-worker-upload-form";
+import type {
+	AssetConfigMetadata,
+	WorkerMetadata,
+} from "../../deployment-bundle/create-worker-upload-form";
 import type { CfWorkerInit } from "../../deployment-bundle/worker";
 import type { NonVersionedScriptSettings } from "../../versions/api";
-import type { AssetConfig } from "@cloudflare/workers-shared";
 import type { HttpResponseResolver } from "msw";
 
 /** Create a mock handler for the request to upload a worker script. */
@@ -32,7 +34,7 @@ export function mockUploadWorkerRequest(
 		expectedScriptName?: string;
 		expectedAssets?: {
 			jwt: string;
-			config: AssetConfig;
+			config: AssetConfigMetadata;
 		};
 		useOldUploadApi?: boolean;
 		expectedObservability?: CfWorkerInit["observability"];

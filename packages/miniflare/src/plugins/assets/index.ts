@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import {
 	CONTENT_HASH_OFFSET,
+	createAssetsIgnoreFunction,
 	ENTRY_SIZE,
 	getContentType,
 	HEADER_SIZE,
@@ -99,7 +100,9 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		const assetService: Service = {
 			name: `${ASSETS_SERVICE_NAME}:${id}`,
 			worker: {
-				compatibilityDate: "2024-08-01",
+				// TODO: read these from the wrangler.toml
+				compatibilityDate: "2024-07-31",
+				compatibilityFlags: ["nodejs_compat"],
 				modules: [
 					{
 						name: "asset-worker.mjs",
@@ -128,7 +131,9 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		const routerService: Service = {
 			name: `${ROUTER_SERVICE_NAME}:${id}`,
 			worker: {
-				compatibilityDate: "2024-08-01",
+				// TODO: read these from the wrangler.toml
+				compatibilityDate: "2024-07-31",
+				compatibilityFlags: ["nodejs_compat", "no_nodejs_compat_v2"],
 				modules: [
 					{
 						name: "router-worker.mjs",
@@ -148,7 +153,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 					},
 					{
 						name: "CONFIG",
-						json: JSON.stringify(options.assets.routingConfig),
+						json: JSON.stringify(options.assets.routerConfig),
 					},
 				],
 			},
@@ -193,9 +198,13 @@ const walk = async (dir: string) => {
 	const files = await fs.readdir(dir, { recursive: true });
 	const manifest: ManifestEntry[] = [];
 	const assetsReverseMap: AssetReverseMap = {};
+	const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(dir);
 	let counter = 0;
 	await Promise.all(
 		files.map(async (file) => {
+			if (assetsIgnoreFunction(file)) {
+				return;
+			}
 			/** absolute file path */
 			const filepath = path.join(dir, file);
 			const relativeFilepath = path.relative(dir, filepath);
@@ -205,6 +214,8 @@ const walk = async (dir: string) => {
 			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
 				return;
 			} else {
+				// TODO: Warn about _worker.js
+
 				if (filestat.size > MAX_ASSET_SIZE) {
 					throw new Error(
 						`Asset too large.\n` +

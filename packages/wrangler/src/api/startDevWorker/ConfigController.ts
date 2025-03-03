@@ -1,5 +1,9 @@
 import assert from "node:assert";
-import path from "node:path";
+import path, { join } from "node:path";
+import {
+	HEADERS_FILENAME,
+	REDIRECTS_FILENAME,
+} from "@cloudflare/workers-shared/utils/constants";
 import { watch } from "chokidar";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
 import { readConfig } from "../../config";
@@ -386,6 +390,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	latestConfig?: StartDevWorkerOptions;
 
 	#configWatcher?: ReturnType<typeof watch>;
+	#assetsMetafilesWatcher?: ReturnType<typeof watch>;
 	#abortController?: AbortController;
 
 	async #ensureWatchingConfig(configPath: string | undefined) {
@@ -401,6 +406,29 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 					"Cannot be watching config without having first set an input"
 				);
 				void this.#updateConfig(this.latestInput);
+			});
+		}
+	}
+
+	async #ensureWatchingAssetsMetafiles() {
+		await this.#assetsMetafilesWatcher?.close();
+		if (this.latestConfig?.assets?.directory) {
+			this.#assetsMetafilesWatcher = watch(
+				[
+					join(this.latestConfig.assets.directory, REDIRECTS_FILENAME),
+					join(this.latestConfig.assets.directory, HEADERS_FILENAME),
+				],
+				{
+					persistent: true,
+					ignoreInitial: true,
+				}
+			).on("change", (filePath) => {
+				logger.log(`${path.basename(filePath)} changed...`);
+				assert(
+					this.latestInput,
+					"Cannot be watching assets metafiles without having first set an input"
+				);
+				void this.#updateAssetsMetafiles(this.latestInput);
 			});
 		}
 	}
@@ -463,6 +491,10 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 			this.latestConfig = resolvedConfig;
 			this.emitConfigUpdateEvent(resolvedConfig);
 
+			if (typeof vitest === "undefined") {
+				void this.#ensureWatchingAssetsMetafiles();
+			}
+
 			return this.latestConfig;
 		} catch (err) {
 			if (throwErrors) {
@@ -479,6 +511,12 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 		}
 	}
 
+	async #updateAssetsMetafiles(input: StartDevWorkerInput) {
+		// Eventually this could be a ligher-weight update which just patches latestConfig.assets
+		// but for now, let's just update the whole config
+		return await this.#updateConfig(input);
+	}
+
 	// ******************
 	//   Event Handlers
 	// ******************
@@ -486,6 +524,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	async teardown() {
 		logger.debug("ConfigController teardown beginning...");
 		await this.#configWatcher?.close();
+		await this.#assetsMetafilesWatcher?.close();
 		logger.debug("ConfigController teardown complete");
 	}
 

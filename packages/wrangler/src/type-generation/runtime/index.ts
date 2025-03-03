@@ -1,5 +1,6 @@
 import { readFileSync } from "fs";
-import { readFile, writeFile } from "fs/promises";
+import { writeFile } from "fs/promises";
+import { maybeGetFile } from "@cloudflare/workers-shared/utils/helpers";
 import { Miniflare } from "miniflare";
 import { version } from "workerd";
 import { logger } from "../../logger";
@@ -51,16 +52,10 @@ export async function generateRuntimeTypes({
 
 	const header = `// Runtime types generated with workerd@${version} ${compatibility_date} ${compatibility_flags.join(",")}`;
 
-	try {
-		const existingTypes = await readFile(outFile, "utf8");
-		if (existingTypes.split("\n")[0] === header) {
-			logger.debug("Using cached runtime types: ", header);
-			return { outFile };
-		}
-	} catch (e) {
-		if ((e as { code: string }).code !== "ENOENT") {
-			throw e;
-		}
+	const existingTypes = maybeGetFile(outFile);
+	if (existingTypes !== undefined && existingTypes.split("\n")[0] === header) {
+		logger.debug("Using cached runtime types: ", header);
+		return { outFile };
 	}
 
 	const types = await generate({

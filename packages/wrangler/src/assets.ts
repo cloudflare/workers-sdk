@@ -3,11 +3,28 @@ import { existsSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
 import {
+	constructHeaders,
+	constructRedirects,
+} from "@cloudflare/pages-shared/metadata-generator/createMetadataObject";
+import { parseHeaders } from "@cloudflare/pages-shared/metadata-generator/parseHeaders";
+import { parseRedirects } from "@cloudflare/pages-shared/metadata-generator/parseRedirects";
+import {
 	getContentType,
+	HeadersSchema,
 	MAX_ASSET_COUNT,
 	MAX_ASSET_SIZE,
 	normalizeFilePath,
+	RedirectsSchema,
 } from "@cloudflare/workers-shared";
+import {
+	CF_ASSETS_IGNORE_FILENAME,
+	HEADERS_FILENAME,
+	REDIRECTS_FILENAME,
+} from "@cloudflare/workers-shared/utils/constants";
+import {
+	createAssetsIgnoreFunction,
+	maybeGetFile,
+} from "@cloudflare/workers-shared/utils/helpers";
 import chalk from "chalk";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
@@ -21,12 +38,11 @@ import { isJwtExpired } from "./pages/upload";
 import { APIError } from "./parse";
 import { getBasePath } from "./paths";
 import { dedent } from "./utils/dedent";
-import { createPatternMatcher } from "./utils/filesystem";
 import type { StartDevWorkerOptions } from "./api";
 import type { Config } from "./config";
 import type { DeployArgs } from "./deploy";
 import type { StartDevOptions } from "./dev";
-import type { AssetConfig, RoutingConfig } from "@cloudflare/workers-shared";
+import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
 
@@ -239,11 +255,12 @@ const buildAssetManifest = async (dir: string) => {
 	const manifest: AssetManifest = {};
 	let counter = 0;
 
-	const ignoreFn = await createAssetIgnoreFunction(dir);
+	const { assetsIgnoreFunction, assetsIgnoreFilePresent } =
+		await createAssetsIgnoreFunction(dir);
 
 	await Promise.all(
 		files.map(async (relativeFilepath) => {
-			if (ignoreFn?.(relativeFilepath)) {
+			if (assetsIgnoreFunction(relativeFilepath)) {
 				logger.debug("Ignoring asset:", relativeFilepath);
 				// This file should not be included in the manifest.
 				return;
@@ -255,7 +272,10 @@ const buildAssetManifest = async (dir: string) => {
 			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
 				return;
 			} else {
-				errorOnLegacyPagesWorkerJSAsset(relativeFilepath, !!ignoreFn);
+				errorOnLegacyPagesWorkerJSAsset(
+					relativeFilepath,
+					assetsIgnoreFilePresent
+				);
 
 				if (counter >= MAX_ASSET_COUNT) {
 					throw new UserError(
@@ -331,8 +351,10 @@ function getAssetsBasePath(
 export type AssetsOptions = {
 	directory: string;
 	binding?: string;
-	routingConfig: RoutingConfig;
+	routerConfig: RouterConfig;
 	assetConfig: AssetConfig;
+	_redirects?: string;
+	_headers?: string;
 };
 
 export function getAssetsOptions(
@@ -378,25 +400,100 @@ export function getAssetsOptions(
 		);
 	}
 
-	const routingConfig = {
+	const routerConfig: RouterConfig = {
 		has_user_worker: Boolean(args.script || config.main),
-		invoke_user_worker_ahead_of_assets:
-			config.assets?.run_worker_first || false,
+		invoke_user_worker_ahead_of_assets: config.assets?.run_worker_first,
 	};
 
+	if (config.assets?.experimental_serve_directly !== undefined) {
+		if (routerConfig.invoke_user_worker_ahead_of_assets === undefined) {
+			routerConfig.invoke_user_worker_ahead_of_assets =
+				!config.assets?.experimental_serve_directly;
+		} else {
+			// Provided both the run_worker_first and experimental_serve_directly options
+			throw new UserError(
+				"run_worker_first and experimental_serve_directly specified.\n" +
+					"Only one of these configuration options may be provided."
+			);
+		}
+	}
+
+	// User Worker ahead of assets, but no assets binding provided
+	if (
+		routerConfig.invoke_user_worker_ahead_of_assets &&
+		!config?.assets?.binding
+	) {
+		logger.warn(
+			"run_worker_first=true set without an assets binding\n" +
+				"Setting run_worker_first to true will always invoke your Worker script.\n" +
+				"To fetch your assets from your Worker, please set the [assets.binding] key in your configuration file.\n\n" +
+				"Read more: https://developers.cloudflare.com/workers/static-assets/binding/#binding"
+		);
+	}
+
+	// Using run_worker_first=true or experimental_serve_directly=false, but didn't provide a Worker script
+	if (
+		!routerConfig.has_user_worker &&
+		routerConfig.invoke_user_worker_ahead_of_assets === true
+	) {
+		if (config.assets?.experimental_serve_directly !== undefined) {
+			throw new UserError(
+				"Cannot set experimental_serve_directly=false without a Worker script.\n" +
+					"Please remove experimental_serve_directly from your configuration file, or provide a Worker script in your configuration file (`main`)."
+			);
+		} else {
+			throw new UserError(
+				"Cannot set run_worker_first=true without a Worker script.\n" +
+					"Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (`main`)."
+			);
+		}
+	}
+
+	const redirectsFile = path.join(directory, REDIRECTS_FILENAME);
+	const headersFile = path.join(directory, HEADERS_FILENAME);
+
+	const redirectsContents = maybeGetFile(redirectsFile);
+	const headersContents = maybeGetFile(headersFile);
+
+	let parsedRedirects: AssetConfig["redirects"] | undefined;
+	if (redirectsContents !== undefined) {
+		const redirects = parseRedirects(redirectsContents);
+		parsedRedirects = RedirectsSchema.parse(
+			constructRedirects({
+				redirects,
+				redirectsFile,
+				logger,
+			}).redirects
+		);
+	}
+
+	let parsedHeaders: AssetConfig["headers"] | undefined;
+	if (headersContents !== undefined) {
+		const headers = parseHeaders(headersContents);
+		parsedHeaders = HeadersSchema.parse(
+			constructHeaders({
+				headers,
+				headersFile,
+				logger,
+			}).headers
+		);
+	}
+
 	// defaults are set in asset worker
-	const assetConfig = {
+	const assetConfig: AssetConfig = {
 		html_handling: config.assets?.html_handling,
 		not_found_handling: config.assets?.not_found_handling,
-		run_worker_first: config.assets?.run_worker_first,
-		serve_directly: config.assets?.experimental_serve_directly,
+		redirects: parsedRedirects,
+		headers: parsedHeaders,
 	};
 
 	return {
 		directory: resolvedAssetsPath,
 		binding,
-		routingConfig,
+		routerConfig,
 		assetConfig,
+		_redirects: redirectsContents,
+		_headers: headersContents,
 	};
 }
 
@@ -482,74 +579,9 @@ export function validateAssetsArgsAndConfig(
 				"Read more: https://developers.cloudflare.com/workers/static-assets/binding/#smart-placement"
 		);
 	}
-
-	// Provided both the run_worker_first and experimental_serve_directly options
-	if (
-		"legacy" in args
-			? args.assets?.assetConfig?.run_worker_first !== undefined &&
-				args.assets?.assetConfig.serve_directly !== undefined
-			: config?.assets?.run_worker_first !== undefined &&
-				config?.assets?.experimental_serve_directly !== undefined
-	) {
-		throw new UserError(
-			"run_worker_first and experimental_serve_directly specified.\n" +
-				"Only one of these configuration options may be provided."
-		);
-	}
-
-	// User Worker ahead of assets, but no assets binding provided
-	if (
-		"legacy" in args
-			? args.assets?.assetConfig?.run_worker_first === true &&
-				!args.assets?.binding
-			: config?.assets?.run_worker_first === true && !config?.assets?.binding
-	) {
-		logger.warn(
-			"run_worker_first=true set without an assets binding\n" +
-				"Setting run_worker_first to true will always invoke your Worker script.\n" +
-				"To fetch your assets from your Worker, please set the [assets.binding] key in your configuration file.\n\n" +
-				"Read more: https://developers.cloudflare.com/workers/static-assets/binding/#binding"
-		);
-	}
-
-	// Using run_worker_first=true, but didn't provide a Worker script
-	if (
-		"legacy" in args
-			? args.entrypoint === noOpEntrypoint &&
-				args.assets?.assetConfig?.run_worker_first === true
-			: !config?.main && config?.assets?.run_worker_first === true
-	) {
-		throw new UserError(
-			"Cannot set run_worker_first=true without a Worker script.\n" +
-				"Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (`main`)."
-		);
-	}
 }
 
-const CF_ASSETS_IGNORE_FILENAME = ".assetsignore";
-
-/**
- * Create a function for filtering out ignored assets.
- *
- * The generated function takes an asset path, relative to the asset directory,
- * and returns true if the asset should not be ignored.
- */
-async function createAssetIgnoreFunction(dir: string) {
-	const cfAssetIgnorePath = path.resolve(dir, CF_ASSETS_IGNORE_FILENAME);
-
-	if (!existsSync(cfAssetIgnorePath)) {
-		return null;
-	}
-
-	const ignorePatterns = (
-		await readFile(cfAssetIgnorePath, { encoding: "utf8" })
-	).split("\n");
-
-	// Always ignore the `.assetsignore` file.
-	ignorePatterns.push(CF_ASSETS_IGNORE_FILENAME);
-
-	return createPatternMatcher(ignorePatterns, true);
-}
+const WORKER_JS_FILENAME = "_worker.js";
 
 /**
  * Creates a function that logs a warning (only once) if the project has no `.assetsIgnore` file and is uploading _worker.js code as an asset.
@@ -560,17 +592,17 @@ function errorOnLegacyPagesWorkerJSAsset(
 ) {
 	if (!hasAssetsIgnoreFile) {
 		const workerJsType: "file" | "directory" | null =
-			file === "_worker.js"
+			file === WORKER_JS_FILENAME
 				? "file"
-				: file.startsWith("_worker.js")
+				: file.startsWith(WORKER_JS_FILENAME)
 					? "directory"
 					: null;
 		if (workerJsType !== null) {
 			throw new UserError(
 				dedent`
-			Uploading a Pages _worker.js ${workerJsType} as an asset.
+			Uploading a Pages ${WORKER_JS_FILENAME} ${workerJsType} as an asset.
 			This could expose your private server-side code to the public Internet. Is this intended?
-			If you do not want to upload this ${workerJsType}, either remove it or add an "${CF_ASSETS_IGNORE_FILENAME}" file, to the root of your asset directory, containing "_worker.js" to avoid uploading.
+			If you do not want to upload this ${workerJsType}, either remove it or add an "${CF_ASSETS_IGNORE_FILENAME}" file, to the root of your asset directory, containing "${WORKER_JS_FILENAME}" to avoid uploading.
 			If you do want to upload this ${workerJsType}, you can add an empty "${CF_ASSETS_IGNORE_FILENAME}" file, to the root of your asset directory, to hide this error.
 		`,
 				{ telemetryMessage: true }

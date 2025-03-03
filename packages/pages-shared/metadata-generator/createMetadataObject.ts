@@ -52,7 +52,7 @@ export function createMetadataObject({
 	};
 }
 
-function constructRedirects({
+export function constructRedirects({
 	redirects,
 	redirectsFile,
 	logger,
@@ -132,7 +132,7 @@ function constructRedirects({
 	};
 }
 
-function constructHeaders({
+export function constructHeaders({
 	headers,
 	headersFile,
 	logger,

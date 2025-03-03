@@ -46,12 +46,68 @@ export class NotModifiedResponse extends Response {
 	}
 }
 
+export class MovedPermanentlyResponse extends Response {
+	constructor(location: string, init?: ResponseInit) {
+		super(null, {
+			...init,
+			status: 301,
+			statusText: "Moved Permanently",
+			headers: {
+				...init?.headers,
+				Location: location,
+			},
+		});
+	}
+}
+
+export class FoundResponse extends Response {
+	constructor(location: string, init?: ResponseInit) {
+		super(null, {
+			...init,
+			status: 302,
+			statusText: "Found",
+			headers: {
+				...init?.headers,
+				Location: location,
+			},
+		});
+	}
+}
+
+export class SeeOtherResponse extends Response {
+	constructor(location: string, init?: ResponseInit) {
+		super(null, {
+			...init,
+			status: 303,
+			statusText: "See Other",
+			headers: {
+				...init?.headers,
+				Location: location,
+			},
+		});
+	}
+}
+
 export class TemporaryRedirectResponse extends Response {
 	constructor(location: string, init?: ResponseInit) {
 		super(null, {
 			...init,
 			status: 307,
 			statusText: "Temporary Redirect",
+			headers: {
+				...init?.headers,
+				Location: location,
+			},
+		});
+	}
+}
+
+export class PermanentRedirectResponse extends Response {
+	constructor(location: string, init?: ResponseInit) {
+		super(null, {
+			...init,
+			status: 308,
+			statusText: "Permanent Redirect",
 			headers: {
 				...init?.headers,
 				Location: location,
