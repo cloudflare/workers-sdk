@@ -367,28 +367,11 @@ export function getDevMiniflareOptions(
 				)
 			: [];
 
-	const userWorkers = workersFromConfig.map((worker) => worker.worker);
+	const userWorkers = workersFromConfig.map((options) => options.worker);
 
-	const resolvedExternalWorkersMap = new Map(
-		workersFromConfig
-			.flatMap((worker) => worker.externalWorkers)
-			.map((worker) => [worker.name, worker])
+	const externalWorkers = workersFromConfig.flatMap(
+		(options) => options.externalWorkers
 	);
-
-	const externalWorkersMap = new Map<string, WorkerOptions>();
-
-	for (const worker of userWorkers) {
-		for (const binding of Object.values(worker.wrappedBindings ?? {})) {
-			const scriptName =
-				typeof binding === "string" ? binding : binding.scriptName;
-
-			const externalWorker = resolvedExternalWorkersMap.get(scriptName);
-
-			if (externalWorker) {
-				externalWorkersMap.set(scriptName, externalWorker);
-			}
-		}
-	}
 
 	const workerToWorkerEntrypointNamesMap =
 		getWorkerToWorkerEntrypointNamesMap(userWorkers);
@@ -414,7 +397,7 @@ export function getDevMiniflareOptions(
 		),
 		workers: [
 			...assetWorkers,
-			...externalWorkersMap.values(),
+			...externalWorkers,
 			...userWorkers.map((workerOptions) => {
 				const wrappers = [
 					`import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from '${RUNNER_PATH}';`,
