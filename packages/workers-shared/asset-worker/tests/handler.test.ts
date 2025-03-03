@@ -6,10 +6,12 @@ import type { AssetConfig } from "../../utils/types";
 
 describe("[Asset Worker] `handleRequest`", () => {
 	it("attaches ETag headers to responses", async () => {
-		const configuration: AssetConfig = applyConfigurationDefaults({
+		const configuration: Required<AssetConfig> = {
 			html_handling: "none",
 			not_found_handling: "none",
-		});
+			run_worker_first: false,
+			serve_directly: true,
+		};
 		const eTag = "some-etag";
 		const exists = vi.fn().mockReturnValue(eTag);
 		const getByETag = vi.fn().mockReturnValue({
@@ -34,10 +36,12 @@ describe("[Asset Worker] `handleRequest`", () => {
 	});
 
 	it("returns 304 Not Modified responses for a valid strong ETag in If-None-Match", async () => {
-		const configuration: AssetConfig = applyConfigurationDefaults({
+		const configuration: Required<AssetConfig> = {
 			html_handling: "none",
 			not_found_handling: "none",
-		});
+			run_worker_first: false,
+			serve_directly: true,
+		};
 		const eTag = "some-etag";
 		const exists = vi.fn().mockReturnValue(eTag);
 		const getByETag = vi.fn().mockReturnValue({
@@ -64,10 +68,12 @@ describe("[Asset Worker] `handleRequest`", () => {
 	});
 
 	it("returns 304 Not Modified responses for a valid weak ETag in If-None-Match", async () => {
-		const configuration: AssetConfig = applyConfigurationDefaults({
+		const configuration: Required<AssetConfig> = {
 			html_handling: "none",
 			not_found_handling: "none",
-		});
+			run_worker_first: false,
+			serve_directly: true,
+		};
 		const eTag = "some-etag";
 		const exists = vi.fn().mockReturnValue(eTag);
 		const getByETag = vi.fn().mockReturnValue({
@@ -94,10 +100,12 @@ describe("[Asset Worker] `handleRequest`", () => {
 	});
 
 	it("returns 200 OK responses for an invalid ETag in If-None-Match", async () => {
-		const configuration: AssetConfig = applyConfigurationDefaults({
+		const configuration: Required<AssetConfig> = {
 			html_handling: "none",
 			not_found_handling: "none",
-		});
+			run_worker_first: false,
+			serve_directly: true,
+		};
 		const eTag = "some-etag";
 		const exists = vi.fn().mockReturnValue(eTag);
 		const getByETag = vi.fn().mockReturnValue({
@@ -185,10 +193,12 @@ describe("[Asset Worker] `handleRequest`", () => {
 			"/index.html": "aaaaaaaaaa",
 			"/%A0%A0.html": "bbbbbbbbbb",
 		};
-		const configuration: AssetConfig = applyConfigurationDefaults({
+		const configuration: Required<AssetConfig> = {
 			html_handling: "drop-trailing-slash",
 			not_found_handling: "none",
-		});
+			run_worker_first: false,
+			serve_directly: true,
+		};
 
 		const exists = async (pathname: string) => {
 			return assets[pathname] ?? null;

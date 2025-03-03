@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import { thrownIsDoesNotExistError } from "../utils/filesystem";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs } from "./helpers/mock-dialogs";
@@ -15,6 +14,12 @@ import {
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
+
+function isFileNotFound(e: unknown) {
+	return (
+		typeof e === "object" && e !== null && "code" in e && e.code === "ENOENT"
+	);
+}
 
 // This is testing the old deployments behaviour, which is now deprecated
 // and replaced by the versions one - see the new tests in versions/deployments/...
@@ -42,7 +47,7 @@ describe("deployments", () => {
 		try {
 			fs.unlinkSync("wrangler.toml");
 		} catch (e) {
-			if (!thrownIsDoesNotExistError(e)) {
+			if (!isFileNotFound(e)) {
 				throw e;
 			}
 		}

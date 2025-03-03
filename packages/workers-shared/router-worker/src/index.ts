@@ -2,11 +2,10 @@ import { PerformanceTimer } from "../../utils/performance";
 import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics, DISPATCH_TYPE } from "./analytics";
-import { applyConfigurationDefaults } from "./configuration";
 import type AssetWorker from "../../asset-worker/src/index";
 import type {
 	JaegerTracing,
-	RouterConfig,
+	RoutingConfig,
 	UnsafePerformanceTimer,
 } from "../../utils/types";
 import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
@@ -14,7 +13,7 @@ import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
 interface Env {
 	ASSET_WORKER: Service<AssetWorker>;
 	USER_WORKER: Fetcher;
-	CONFIG: RouterConfig;
+	CONFIG: RoutingConfig;
 
 	SENTRY_DSN: string;
 	ENVIRONMENT: Environment;
@@ -53,8 +52,6 @@ export default {
 				env.CONFIG?.script_id
 			);
 
-			const config = applyConfigurationDefaults(env.CONFIG);
-
 			const url = new URL(request.url);
 
 			if (env.COLO_METADATA && env.VERSION_METADATA && env.CONFIG) {
@@ -69,7 +66,7 @@ export default {
 					coloRegion: env.COLO_METADATA.coloRegion,
 					hostname: url.hostname,
 					version: env.VERSION_METADATA.tag,
-					userWorkerAhead: config.invoke_user_worker_ahead_of_assets,
+					userWorkerAhead: env.CONFIG.invoke_user_worker_ahead_of_assets,
 				});
 			}
 
@@ -77,8 +74,8 @@ export default {
 
 			// User's configuration indicates they want user-Worker to run ahead of any
 			// assets. Do not provide any fallback logic.
-			if (config.invoke_user_worker_ahead_of_assets) {
-				if (!config.has_user_worker) {
+			if (env.CONFIG.invoke_user_worker_ahead_of_assets) {
+				if (!env.CONFIG.has_user_worker) {
 					throw new Error(
 						"Fetch for user worker without having a user worker binding"
 					);
@@ -99,12 +96,12 @@ export default {
 
 			// If we have a user-Worker, but no assets, dispatch to Worker script
 			const assetsExist = await env.ASSET_WORKER.unstable_canFetch(request);
-			if (config.has_user_worker && !assetsExist) {
+			if (env.CONFIG.has_user_worker && !assetsExist) {
 				analytics.setData({ dispatchtype: DISPATCH_TYPE.WORKER });
 
 				return await env.JAEGER.enterSpan("dispatch_worker", async (span) => {
 					span.setTags({
-						hasUserWorker: config.has_user_worker,
+						hasUserWorker: env.CONFIG.has_user_worker || false,
 						asset: assetsExist,
 						dispatchType: DISPATCH_TYPE.WORKER,
 					});
@@ -118,7 +115,7 @@ export default {
 			analytics.setData({ dispatchtype: DISPATCH_TYPE.ASSETS });
 			return await env.JAEGER.enterSpan("dispatch_assets", async (span) => {
 				span.setTags({
-					hasUserWorker: config.has_user_worker,
+					hasUserWorker: env.CONFIG.has_user_worker || false,
 					asset: assetsExist,
 					dispatchType: DISPATCH_TYPE.ASSETS,
 				});

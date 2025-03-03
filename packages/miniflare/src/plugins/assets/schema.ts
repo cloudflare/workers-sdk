@@ -1,6 +1,6 @@
 import {
 	AssetConfigSchema,
-	RouterConfigSchema,
+	RoutingConfigSchema,
 } from "@cloudflare/workers-shared";
 import { z } from "zod";
 import { PathSchema } from "../../shared";
@@ -13,7 +13,7 @@ export const AssetsOptionsSchema = z.object({
 			workerName: z.string().optional(),
 			directory: PathSchema,
 			binding: z.string().optional(),
-			routerConfig: RouterConfigSchema.optional(),
+			routingConfig: RoutingConfigSchema.optional(),
 			assetConfig: AssetConfigSchema.optional(),
 		})
 		.optional(),

@@ -1,9 +1,21 @@
 import assert from "node:assert";
+import fs from "node:fs";
 import url from "node:url";
 import { getFreshSourceMapSupport } from "miniflare";
-import { maybeGetFile } from "./utils/filesystem";
 import type { Options } from "@cspotcode/source-map-support";
 import type Protocol from "devtools-protocol";
+
+function maybeGetFile(filePath: string | URL) {
+	try {
+		return fs.readFileSync(filePath, "utf8");
+	} catch (e: unknown) {
+		const notFound =
+			typeof e === "object" && e !== null && "code" in e && e.code === "ENOENT";
+		if (!notFound) {
+			throw e;
+		}
+	}
+}
 
 export type RetrieveSourceMapFunction = NonNullable<
 	Options["retrieveSourceMap"]

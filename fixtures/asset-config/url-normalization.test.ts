@@ -1,5 +1,5 @@
 import { SELF } from "cloudflare:test";
-import { afterEach, beforeEach, describe, expect, it, Mock, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyConfigurationDefaults } from "../../packages/workers-shared/asset-worker/src/configuration";
 import Worker from "../../packages/workers-shared/asset-worker/src/index";
 import { getAssetWithMetadataFromKV } from "../../packages/workers-shared/asset-worker/src/utils/kv";
@@ -24,7 +24,7 @@ describe("[Asset Worker] `test slash normalization`", () => {
 	afterEach(() => {
 		vi.mocked(getAssetWithMetadataFromKV).mockRestore();
 	});
-	beforeEach(async () => {
+	beforeEach(() => {
 		vi.mocked(getAssetWithMetadataFromKV).mockImplementation(
 			() =>
 				Promise.resolve({
@@ -37,16 +37,14 @@ describe("[Asset Worker] `test slash normalization`", () => {
 				>
 		);
 
-		const originalApplyConfigurationDefaults = (
-			await vi.importActual<
-				typeof import("../../packages/workers-shared/asset-worker/src/configuration")
-			>("../../packages/workers-shared/asset-worker/src/configuration")
-		).applyConfigurationDefaults;
-		vi.mocked(applyConfigurationDefaults).mockImplementation(() => ({
-			...originalApplyConfigurationDefaults({}),
-			html_handling: "none",
-			not_found_handling: "none",
-		}));
+		vi.mocked(applyConfigurationDefaults).mockImplementation(() => {
+			return {
+				html_handling: "none",
+				not_found_handling: "none",
+				run_worker_first: true,
+				serve_directly: false,
+			};
+		});
 	});
 
 	it("returns 200 leading encoded double slash", async () => {
