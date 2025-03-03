@@ -170,7 +170,7 @@ describe("types", () => {
 			`;
 		await helper.seed(seed);
 		const worker = helper.runLongLived("wrangler dev");
-		await worker.readUntil(/❓ It looks like your types might be out of date./);
+		await worker.readUntil(/❓ Your types might be out of date./);
 		seed["wrangler.toml"] = dedent`
 			name = "test-worker"
 			main = "src/index.ts"
@@ -181,6 +181,6 @@ describe("types", () => {
 			ASDf = "ADSfadsf"
 		`;
 		await helper.seed(seed);
-		await worker.readUntil(/❓ It looks like your types might be out of date./);
+		await worker.readUntil(/❓ Your types might be out of date./);
 	});
 });

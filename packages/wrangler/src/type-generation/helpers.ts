@@ -62,9 +62,5 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 	const runtimeOutOfDate =
 		existingRuntimeHeader && existingRuntimeHeader !== newRuntimeHeader;
 
-	if (envOutOfDate || runtimeOutOfDate) {
-		logger.log(
-			"❓ It looks like your types might be out of date. Have you updated your config file since last running `wrangler types`?"
-		);
-	}
+	return envOutOfDate || runtimeOutOfDate;
 };

@@ -1,19 +1,20 @@
 import { existsSync } from "node:fs";
+import { join } from "node:path";
 import chalk from "chalk";
+import { findUpMultipleSync } from "find-up";
 import { logger } from "../../logger";
 
 /**
  * Constructs a comprehensive log message for the user after generating runtime types.
  */
 export function logRuntimeTypesMessage(
-	outFile: string,
 	tsconfigTypes: string[],
 	isNodeCompat = false
 ) {
 	const isWorkersTypesInstalled = tsconfigTypes.find((type) =>
 		type.startsWith("@cloudflare/workers-types")
 	);
-	const isNodeTypesInstalled = tsconfigTypes.find((type) => type === "node");
+
 	const maybeHasOldRuntimeFile = existsSync("./.wrangler/types/runtime.d.ts");
 	if (maybeHasOldRuntimeFile) {
 		logAction("Remove the old runtime.d.ts file");
@@ -36,6 +37,21 @@ export function logRuntimeTypesMessage(
 		logger.log("");
 	}
 
+	let isNodeTypesInstalled = Boolean(
+		tsconfigTypes.find((type) => type === "node")
+	);
+
+	if (!isNodeTypesInstalled && isNodeCompat) {
+		const nodeModules = findUpMultipleSync("node_modules", {
+			type: "directory",
+		});
+		for (const folder of nodeModules) {
+			if (nodeModules && existsSync(join(folder, "@types/node"))) {
+				isNodeTypesInstalled = true;
+				break;
+			}
+		}
+	}
 	if (isNodeCompat && !isNodeTypesInstalled) {
 		logAction("Install @types/node");
 		logger.log(

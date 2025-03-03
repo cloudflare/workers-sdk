@@ -167,6 +167,7 @@ export const typesCommand = createCommand({
 
 		logHorizontalRule();
 
+		// don't write an empty Env type for service worker syntax
 		if ((header.length && content.length) || entrypointFormat === "modules") {
 			fs.writeFileSync(
 				outputPath,
@@ -183,7 +184,7 @@ export const typesCommand = createCommand({
 			config.compatibility_flags
 		);
 		if (args.includeRuntime) {
-			logRuntimeTypesMessage(outputPath, tsconfigTypes, mode !== null);
+			logRuntimeTypesMessage(tsconfigTypes, mode !== null);
 		}
 		logger.log(
 			`📣 Remember to rerun 'wrangler types' after you change your ${configFileName(config.configPath)} file.\n`
