@@ -1,6 +1,6 @@
 import assert from "node:assert";
-import { writeFileSync } from "node:fs";
-import path, { join } from "node:path";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import path, { join, resolve } from "node:path";
 import { kCurrentWorker } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
 import { readConfig } from "../../../config";
@@ -120,28 +120,35 @@ export async function getPlatformProxy<
 
 	assert(config.configPath);
 
-	let main: string | undefined;
-	if (typeof options.exportsPath === "string") {
-		main = options.exportsPath;
-	} else if (options.exportsPath?.useMain) {
-		main = config.main;
-	} else {
-		const tmpDir = getWranglerTmpDir(
-			path.dirname(config.configPath),
-			"get-platform-proxy"
-		);
-		// write a no-op file to preserve old behavior where no script is used
-		main = join(tmpDir.path, "/index.js");
-		writeFileSync(
-			main,
-			`
-			export default {
-			async fetch() {
-			return new Response("no-op")
-			}};`
-		);
+	// Ensure the assets directory exists D:
+	// temp fix not good
+	if (config.assets?.directory && !existsSync(config.assets?.directory)) {
+		mkdirSync(config.assets?.directory, { recursive: true });
 	}
 
+	const tmpDir = getWranglerTmpDir(
+		path.dirname(config.configPath),
+		"get-platform-proxy"
+	);
+	const entrypoint = join(tmpDir.path, "/index.js");
+	let namedExports = "";
+	if (typeof options.exportsPath === "string") {
+		const exportsToEntrypoint = resolve(entrypoint, options.exportsPath);
+		namedExports = `export * from "${exportsToEntrypoint}";`;
+	} else if (options.exportsPath?.useMain) {
+		assert(config.main);
+		const mainToEntrypoint = resolve(entrypoint, config.main);
+		namedExports = `export * from "${mainToEntrypoint}";`;
+	}
+	// write a no-op file to preserve old behavior where no script is used
+	writeFileSync(
+		entrypoint,
+		`${namedExports}
+		export default {
+		async fetch() {
+		return new Response("no-op")
+		}};`
+	);
 	return await run(
 		{
 			MULTIWORKER: false,
@@ -151,7 +158,7 @@ export async function getPlatformProxy<
 			// todo investigate middleware and whether we should load it
 			const input: StartDevWorkerInput = {
 				config: options.configPath,
-				entrypoint: main,
+				entrypoint,
 				env: options.environment,
 				dev: {
 					watch: false,
