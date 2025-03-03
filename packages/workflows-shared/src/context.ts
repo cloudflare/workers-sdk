@@ -105,6 +105,7 @@ export class Context extends RpcTarget {
 
 		const valueKey = `${cacheKey}-value`;
 		const configKey = `${cacheKey}-config`;
+		const errorKey = `${cacheKey}-error`;
 		const stepNameWithCounter = `${name}-${count}`;
 		const stepStateKey = `${cacheKey}-metadata`;
 
@@ -116,6 +117,15 @@ export class Context extends RpcTarget {
 		if (maybeResult) {
 			// console.log(`Cache hit for ${cacheKey}`);
 			return (maybeResult as { value: T }).value;
+		}
+
+		const maybeError: (Error & UserErrorField) | undefined = maybeMap.get(
+			errorKey
+		) as Error | undefined;
+
+		if (maybeError) {
+			maybeError.isUserError = true;
+			throw maybeError;
 		}
 
 		// Persist initial config because user can pass in dynamic config
@@ -330,7 +340,11 @@ export class Context extends RpcTarget {
 					type: "timeout",
 				});
 
-				if (e instanceof Error && error.name === "NonRetryableError") {
+				if (
+					e instanceof Error &&
+					(error.name === "NonRetryableError" ||
+						error.message.startsWith("NonRetryableError:"))
+				) {
 					this.#engine.writeLog(
 						InstanceEvent.ATTEMPT_FAILURE,
 						cacheKey,
@@ -348,19 +362,8 @@ export class Context extends RpcTarget {
 						stepNameWithCounter,
 						{}
 					);
-					this.#engine.writeLog(InstanceEvent.WORKFLOW_FAILURE, null, null, {
-						error: new WorkflowFatalError(
-							`The execution of the Workflow instance was terminated, as the step "${name}" threw a NonRetryableError`
-						),
-					});
 
-					await this.#engine.setStatus(
-						accountId,
-						instance.id,
-						InstanceStatus.Errored
-					);
-					await this.#engine.timeoutHandler.release(this.#engine);
-					return this.#engine.abort(`Step "${name}" threw a NonRetryableError`);
+					throw error;
 				}
 
 				this.#engine.writeLog(
@@ -411,17 +414,8 @@ export class Context extends RpcTarget {
 						stepNameWithCounter,
 						{}
 					);
-					this.#engine.writeLog(
-						InstanceEvent.WORKFLOW_FAILURE,
-						cacheKey,
-						null,
-						{}
-					);
-					await this.#engine.setStatus(
-						accountId,
-						instance.id,
-						InstanceStatus.Errored
-					);
+
+					await this.#state.storage.put(errorKey, error);
 					throw error;
 				}
 			}
