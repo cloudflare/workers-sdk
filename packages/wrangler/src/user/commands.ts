@@ -28,14 +28,15 @@ export const loginCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
-		ip: {
-			describe: "Use the IP address for the temporary login server.",
+		"callback-host": {
+			describe:
+				"Use the ip or host address for the temporary login callback server.",
 			type: "string",
 			requiresArg: false,
 			default: "localhost",
 		},
-		port: {
-			describe: "Use the port for the temporary login server.",
+		"callback-port": {
+			describe: "Use the port for the temporary login callback server.",
 			type: "number",
 			requiresArg: false,
 			default: 8976,
@@ -60,12 +61,16 @@ export const loginCommand = createCommand({
 			await login({
 				scopes: args.scopes,
 				browser: args.browser,
-				ip: args.ip,
-				port: args.port,
+				callbackHost: args.callbackHost,
+				callbackPort: args.callbackPort,
 			});
 			return;
 		}
-		await login({ browser: args.browser, ip: args.ip, port: args.port });
+		await login({
+			browser: args.browser,
+			callbackHost: args.callbackHost,
+			callbackPort: args.callbackPort,
+		});
 		metrics.sendMetricsEvent("login user", {
 			sendMetrics: config.send_metrics,
 		});
