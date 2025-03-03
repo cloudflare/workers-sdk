@@ -422,7 +422,7 @@ export function getDevMiniflareOptions(
 					workerToWorkflowEntrypointClassNamesMap.get(workerOptions.name);
 				assert(
 					workflowEntrypointClassNames,
-					`WorkflowEntrypoint class names not found for worker ${workerOptions.name}`
+					`WorkflowEntrypoint class names not found for worker: ${workerOptions.name}`
 				);
 
 				for (const className of [...workflowEntrypointClassNames].sort()) {
@@ -461,11 +461,11 @@ export function getDevMiniflareOptions(
 
 			const moduleRE = new RegExp(MODULE_PATTERN);
 			const match = moduleRE.exec(rawSpecifier);
-			assert(match, `Unexpected error: no match for module ${rawSpecifier}.`);
+			assert(match, `Unexpected error: no match for module: ${rawSpecifier}.`);
 			const [full, moduleType, modulePath] = match;
 			assert(
 				modulePath,
-				`Unexpected error: module path not found in reference ${full}.`
+				`Unexpected error: module path not found in reference: ${full}.`
 			);
 
 			let source: Buffer;
@@ -473,7 +473,9 @@ export function getDevMiniflareOptions(
 			try {
 				source = fs.readFileSync(modulePath);
 			} catch (error) {
-				throw new Error(`Import ${modulePath} not found. Does the file exist?`);
+				throw new Error(
+					`Import "${modulePath}" not found. Does the file exist?`
+				);
 			}
 
 			return MiniflareResponse.json({

@@ -93,9 +93,9 @@ function createHandler(def: CommandDefinition) {
 			const experimentalFlags = def.behaviour?.overrideExperimentalFlags
 				? def.behaviour?.overrideExperimentalFlags(args)
 				: {
-						FILE_BASED_REGISTRY: false,
 						MULTIWORKER: false,
 						RESOURCES_PROVISION: args.experimentalProvision ?? false,
+						ASSETS_RPC: false,
 					};
 
 			await run(experimentalFlags, () =>

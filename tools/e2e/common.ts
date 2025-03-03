@@ -30,6 +30,12 @@ export type Database = {
 	name: string;
 };
 
+export type HyperdriveConfig = {
+	id: string;
+	name: string;
+	created_on: string;
+};
+
 class ApiError extends Error {
 	constructor(
 		readonly url: string,
@@ -215,6 +221,44 @@ export const listTmpDatabases = async () => {
 export const deleteDatabase = async (id: string) => {
 	await apiFetch(
 		`/d1/database/${id}`,
+		{
+			method: "DELETE",
+		},
+		true
+	);
+};
+
+export const listHyperdriveConfigs = async () => {
+	const pageSize = 100;
+	let page = 1;
+	const results: HyperdriveConfig[] = [];
+	while (results.length % pageSize === 0) {
+		const res = (await apiFetch(
+			`/hyperdrive/configs`,
+			{ method: "GET" },
+			false,
+			new URLSearchParams({
+				per_page: pageSize.toString(),
+				page: page.toString(),
+			})
+		)) as HyperdriveConfig[];
+		page++;
+		results.push(...res);
+
+		if (res.length < pageSize || page > 5) {
+			break;
+		}
+	}
+	return results.filter(
+		(config) =>
+			config.name.includes("tmp-e2e") && // Databases are more than an hour old
+			Date.now() - new Date(config.created_on).valueOf() > 1000 * 60 * 60
+	);
+};
+
+export const deleteHyperdriveConfig = async (id: string) => {
+	await apiFetch(
+		`/hyperdrive/configs/${id}`,
 		{
 			method: "DELETE",
 		},

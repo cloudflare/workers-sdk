@@ -10,6 +10,7 @@ import {
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { createFatalError, UserError } from "../errors";
+import { getFlag } from "../experimental-flags";
 import {
 	EXTERNAL_IMAGES_WORKER_NAME,
 	EXTERNAL_IMAGES_WORKER_SCRIPT,
@@ -1026,6 +1027,8 @@ export async function buildMiniflareOptions(
 		liveReload: config.liveReload,
 		upstream,
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
+
+		unsafeEnableAssetsRpc: getFlag("ASSETS_RPC"),
 
 		log,
 		verbose: logger.loggerLevel === "debug",

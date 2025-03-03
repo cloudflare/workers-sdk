@@ -6,7 +6,7 @@ import {
 	_stdoutErrorHandler,
 	_times,
 	Console,
-} from "unenv/runtime/node/console/index";
+} from "unenv/node/console";
 import type nodeConsole from "node:console";
 
 export {
@@ -17,7 +17,7 @@ export {
 	_stdout,
 	_stdoutErrorHandler,
 	_times,
-} from "unenv/runtime/node/console/index";
+} from "unenv/node/console";
 
 // The following is an unusual way to access the original/unpatched globalThis.console.
 // This is needed to get hold of the real console object before any of the unenv polyfills are
@@ -25,7 +25,7 @@ export {
 //
 // This code relies on the that rollup/esbuild/webpack don't evaluate string concatenation
 // so they don't recognize the below as `globalThis.console` which they would try to rewrite
-// into unenv/runtime/node/console, thus creating a circular dependency, and breaking this polyfill.
+// into unenv/node/console, thus creating a circular dependency, and breaking this polyfill.
 const workerdConsole = (globalThis as any)[
 	"con" + "sole"
 ] as typeof nodeConsole;
