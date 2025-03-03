@@ -561,7 +561,7 @@ function buildProjectMiniflareOptions(
 		: undefined;
 
 	if (inspectorPort !== undefined && !project.options.singleWorker) {
-		log.warn(`Tests run in a single worker when the inspector is open.`);
+		log.warn(`Tests run in singleWorker mode when the inspector is open.`);
 
 		project.options.singleWorker = true;
 	}
