@@ -27,12 +27,14 @@ describe("wrangler", () => {
 				🇶  Manage Workers Queues
 
 				COMMANDS
-				  wrangler queues list           List Queues
-				  wrangler queues create <name>  Create a Queue
-				  wrangler queues update <name>  Update a Queue
-				  wrangler queues delete <name>  Delete a Queue
-				  wrangler queues info <name>    Get Queue information
-				  wrangler queues consumer       Configure Queue consumers
+				  wrangler queues list                    List Queues
+				  wrangler queues create <name>           Create a Queue
+				  wrangler queues update <name>           Update a Queue
+				  wrangler queues delete <name>           Delete a Queue
+				  wrangler queues info <name>             Get Queue information
+				  wrangler queues consumer                Configure Queue consumers
+				  wrangler queues pause-delivery <name>   Pause message delivery for a Queue
+				  wrangler queues resume-delivery <name>  Resume message delivery for a Queue
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
@@ -1842,6 +1844,226 @@ describe("wrangler", () => {
 					Consumers: r2_bucket:bucket-consumer"
 				`);
 			});
+		});
+	});
+
+	describe("pause-delivery", () => {
+		function mockUpdateRequest(queueName: string) {
+			const requests = { count: 0 };
+
+			msw.use(
+				http.patch(
+					"*/accounts/:accountId/queues/:queueId",
+					async ({ request }) => {
+						requests.count += 1;
+
+						const body = (await request.json()) as {
+							queue_name: string;
+							settings: {
+								delivery_paused: boolean;
+							};
+						};
+						expect(body.queue_name).toEqual(queueName);
+						expect(body.settings.delivery_paused).toEqual(true);
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								queue_name: queueName,
+								created_on: "01-01-2001",
+								modified_on: "01-01-2001",
+							},
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
+		function mockGetQueueRequest(
+			queueName: string,
+			queueSettings: {
+				delivery_paused: boolean;
+			}
+		) {
+			const requests = { count: 0 };
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/queues?*",
+					async () => {
+						requests.count += 1;
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: [
+								{
+									queue_name: queueName,
+									created_on: "",
+									producers: [],
+									consumers: [],
+									producers_total_count: 1,
+									consumers_total_count: 0,
+									modified_on: "",
+									queue_id: "queueId",
+									settings: {
+										delivery_paused: queueSettings.delivery_paused,
+									},
+								},
+							],
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
+
+		it("should show the correct help text", async () => {
+			await runWrangler("queues pause-delivery --help");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"wrangler queues pause-delivery <name>
+
+				Pause message delivery for a Queue
+
+				POSITIONALS
+				  name  The name of the queue  [string] [required]
+
+				GLOBAL FLAGS
+				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
+			`);
+		});
+
+		it("should update the queue's delivery_paused setting", async () => {
+			const getrequests = mockGetQueueRequest("testQueue", {
+				delivery_paused: false,
+			});
+			const requests = mockUpdateRequest("testQueue");
+			await runWrangler("queues pause-delivery testQueue");
+
+			expect(requests.count).toEqual(1);
+			expect(getrequests.count).toEqual(1);
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Pausing message delivery for queue testQueue.
+				Paused message delivery for queue testQueue."
+			`);
+		});
+	});
+
+	describe("resume-delivery", () => {
+		function mockUpdateRequest(queueName: string) {
+			const requests = { count: 0 };
+
+			msw.use(
+				http.patch(
+					"*/accounts/:accountId/queues/:queueId",
+					async ({ request }) => {
+						requests.count += 1;
+
+						const body = (await request.json()) as {
+							queue_name: string;
+							settings: {
+								delivery_paused: boolean;
+							};
+						};
+						expect(body.queue_name).toEqual(queueName);
+						expect(body.settings.delivery_paused).toEqual(false);
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								queue_name: queueName,
+								created_on: "01-01-2001",
+								modified_on: "01-01-2001",
+							},
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
+		function mockGetQueueRequest(
+			queueName: string,
+			queueSettings: {
+				delivery_paused: boolean;
+			}
+		) {
+			const requests = { count: 0 };
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/queues?*",
+					async () => {
+						requests.count += 1;
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: [
+								{
+									queue_name: queueName,
+									created_on: "",
+									producers: [],
+									consumers: [],
+									producers_total_count: 1,
+									consumers_total_count: 0,
+									modified_on: "",
+									queue_id: "queueId",
+									settings: {
+										delivery_paused: queueSettings.delivery_paused,
+									},
+								},
+							],
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
+
+		it("should show the correct help text", async () => {
+			await runWrangler("queues resume-delivery --help");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"wrangler queues resume-delivery <name>
+
+				Resume message delivery for a Queue
+
+				POSITIONALS
+				  name  The name of the queue  [string] [required]
+
+				GLOBAL FLAGS
+				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
+			`);
+		});
+
+		it("should update the queue's delivery_paused setting to false", async () => {
+			const getrequests = mockGetQueueRequest("testQueue", {
+				delivery_paused: false,
+			});
+			const requests = mockUpdateRequest("testQueue");
+			await runWrangler("queues resume-delivery testQueue");
+
+			expect(requests.count).toEqual(1);
+			expect(getrequests.count).toEqual(1);
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Resuming message delivery for queue testQueue.
+				Resumed message delivery for queue testQueue."
+			`);
 		});
 	});
 });
