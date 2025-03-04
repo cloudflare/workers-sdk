@@ -15,6 +15,7 @@ import {
 import { run } from "../../../experimental-flags";
 import { getWranglerTmpDir } from "../../../paths";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "../../../sites";
+import { dedent } from "../../../utils/dedent";
 import { startWorker } from "../../startDevWorker";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
@@ -143,7 +144,7 @@ export async function getPlatformProxy<
 	// write a no-op file to preserve old behavior where no script is used
 	writeFileSync(
 		entrypoint,
-		`${namedExports}
+		dedent`${namedExports}
 		export default {
 		async fetch() {
 		return new Response("no-op")
@@ -168,7 +169,7 @@ export async function getPlatformProxy<
 					server: {
 						port: 0,
 					},
-					logLevel: "none",
+					logLevel: "error",
 					liveReload: false,
 					persist:
 						typeof options.persist === "object"
