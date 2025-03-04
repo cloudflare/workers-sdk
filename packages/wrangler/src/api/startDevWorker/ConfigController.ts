@@ -14,6 +14,7 @@ import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
+import { checkTypesDiff } from "../../type-generation/helpers";
 import { requireApiToken, requireAuth } from "../../user";
 import {
 	DEFAULT_INSPECTOR_PORT,
@@ -367,6 +368,14 @@ async function resolveConfig(
 		Array.from(classNamesWhichUseSQLite.values()).some((v) => v)
 	) {
 		logger.warn("SQLite in Durable Objects is only supported in local mode.");
+	}
+
+	// prompt user to update their types if we detect that it is out of date
+	const typesChanged = await checkTypesDiff(config, entry);
+	if (typesChanged) {
+		logger.log(
+			"❓ Your types might be out of date. Re-run `wrangler types` to ensure your types are correct."
+		);
 	}
 
 	return resolved;
