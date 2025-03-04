@@ -1,0 +1,24 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "<TBD>"
+# https://developers.cloudflare.com/workers/platform/compatibility-dates
+compatibility_date = "<TBD>"
+# nodejs_als is required for Waku server-side request context
+# It can be removed if only building static pages
+compatibility_flags = [ "nodejs_als" ]
+main = "./dist/worker/serve-cloudflare.js"
+
+[assets]
+# https://developers.cloudflare.com/workers/static-assets/binding/
+directory = "./dist/assets"
+binding = "ASSETS"
+html_handling = "drop-trailing-slash" # "single-page-application" | "404-page" | "none"
+not_found_handling = "404-page"
+
+[vars]
+MAX_ITEMS=10
+
+# Workers Logs
+# Docs: https://developers.cloudflare.com/workers/observability/logs/workers-logs/
+# Configuration: https://developers.cloudflare.com/workers/observability/logs/workers-logs/#enable-workers-logs
+[observability]
+enabled = true
