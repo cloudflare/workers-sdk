@@ -18,6 +18,43 @@ import type {
 import type { Environment, ReadyAnalytics } from "./types";
 import type { Toucan } from "toucan-js";
 
+function handleError(
+	sentry: Toucan | undefined,
+	analytics: Analytics,
+	err: unknown
+) {
+	try {
+		const response = new InternalServerErrorResponse(err as Error);
+
+		// Log to Sentry if we can
+		if (sentry) {
+			sentry.captureException(err);
+		}
+
+		if (err instanceof Error) {
+			analytics.setData({ error: err.message });
+		}
+
+		return response;
+	} catch (e) {
+		console.error("Error handling error", e);
+		return new InternalServerErrorResponse(e as Error);
+	}
+}
+
+function submitMetrics(
+	analytics: Analytics,
+	performance: PerformanceTimer,
+	startTimeMs: number
+) {
+	try {
+		analytics.setData({ requestTime: performance.now() - startTimeMs });
+		analytics.write();
+	} catch (e) {
+		console.error("Error submitting metrics", e);
+	}
+}
+
 export type Env = {
 	/*
 	 * ASSETS_MANIFEST is a pipeline binding to an ArrayBuffer containing the
@@ -130,42 +167,9 @@ export default class extends WorkerEntrypoint<Env> {
 				return response;
 			});
 		} catch (err) {
-			return this.handleError(sentry, analytics, err);
+			return handleError(sentry, analytics, err);
 		} finally {
-			this.submitMetrics(analytics, performance, startTimeMs);
-		}
-	}
-
-	handleError(sentry: Toucan | undefined, analytics: Analytics, err: unknown) {
-		try {
-			const response = new InternalServerErrorResponse(err as Error);
-
-			// Log to Sentry if we can
-			if (sentry) {
-				sentry.captureException(err);
-			}
-
-			if (err instanceof Error) {
-				analytics.setData({ error: err.message });
-			}
-
-			return response;
-		} catch (e) {
-			console.error("Error handling error", e);
-			return new InternalServerErrorResponse(e as Error);
-		}
-	}
-
-	submitMetrics(
-		analytics: Analytics,
-		performance: PerformanceTimer,
-		startTimeMs: number
-	) {
-		try {
-			analytics.setData({ requestTime: performance.now() - startTimeMs });
-			analytics.write();
-		} catch (e) {
-			console.error("Error submitting metrics", e);
+			submitMetrics(analytics, performance, startTimeMs);
 		}
 	}
 
