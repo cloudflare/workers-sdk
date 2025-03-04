@@ -1,0 +1,13 @@
+name = "worker"
+main = "./src/index.ts"
+compatibility_date = "2024-12-30"
+
+[ai]
+binding = "AI"
+
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "dummy-index"
+
+[images]
+binding = "IMAGES"
