@@ -451,13 +451,18 @@ describe("multiworker", () => {
 		let workerName4: string;
 		let aw: string;
 		let d: string;
-		describe("-> worker with assets -> regular worker", () => {
-			beforeEach(async () => {
-				aw = await makeRoot();
-				workerNameAW = generateResourceName("worker-aw");
-				workerName4 = generateResourceName("worker");
-				await baseSeed(aw, {
-					"wrangler.toml": dedent`
+
+		const devCmds = [{ args: [] }, { args: ["--x-assets-rpc"] }];
+
+		describe.each(devCmds)(
+			"[wrangler dev $args]-> worker with assets -> regular worker",
+			({ args }) => {
+				beforeEach(async () => {
+					aw = await makeRoot();
+					workerNameAW = generateResourceName("worker-aw");
+					workerName4 = generateResourceName("worker");
+					await baseSeed(aw, {
+						"wrangler.toml": dedent`
 							name = "${workerNameAW}"
 							main = "src/index.ts"
 							compatibility_date = "2024-11-01"
@@ -480,9 +485,9 @@ describe("multiworker", () => {
 								{ name = "REFERENCED_DO", class_name = "MyDurableObject", script_name = "${workerName4}" }
 							]
 						`,
-					"public/asset-binding.html": "<p>have an asset via a binding</p>",
-					"public/asset.html": "<p>have an asset directly</p>",
-					"src/index.ts": dedent/* javascript */ `
+						"public/asset-binding.html": "<p>have an asset via a binding</p>",
+						"public/asset.html": "<p>have an asset directly</p>",
+						"src/index.ts": dedent/* javascript */ `
 							export default {
 								async fetch(req, env) {
 									const url = new URL(req.url)
@@ -513,23 +518,23 @@ describe("multiworker", () => {
 								},
 							};
 							`,
-					"package.json": dedent`
+						"package.json": dedent`
 								{
 									"name": "aw",
 									"version": "0.0.0",
 									"private": true
 								}
 								`,
-				});
+					});
 
-				d = await makeRoot();
-				await baseSeed(d, {
-					"wrangler.toml": dedent`
+					d = await makeRoot();
+					await baseSeed(d, {
+						"wrangler.toml": dedent`
 						name = "${workerName4}"
 						main = "src/index.ts"
 						compatibility_date = "2024-11-01"
 				`,
-					"src/index.ts": dedent/* javascript */ `
+						"src/index.ts": dedent/* javascript */ `
 						import { DurableObject, WorkerEntrypoint, RpcTarget } from "cloudflare:workers";
 						export default{
 							async fetch(req, env) {
@@ -570,79 +575,82 @@ describe("multiworker", () => {
 							}
 						}
 						`,
+					});
 				});
-			});
 
-			it("can fetch a worker with assets", async () => {
-				const worker = helper.runLongLived(
-					`wrangler dev -c wrangler.toml -c ${d}/wrangler.toml`,
-					{ cwd: aw }
-				);
+				it("can fetch a worker with assets", async () => {
+					const worker = helper.runLongLived(
+						`wrangler dev -c wrangler.toml -c ${d}/wrangler.toml ${args.join(" ")}`,
+						{ cwd: aw }
+					);
 
-				const { url } = await worker.waitForReady(5_000);
-				await expect(fetchText(`${url}/asset`)).resolves.toBe(
-					"<p>have an asset directly</p>"
-				);
-				await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
-					"<p>have an asset via a binding</p>"
-				);
-				await expect(
-					fetch(`${url}/worker`).then((r) => r.text())
-				).resolves.toBe("hello world from a worker with assets");
-			});
+					const { url } = await worker.waitForReady(5_000);
+					await expect(fetchText(`${url}/asset`)).resolves.toBe(
+						"<p>have an asset directly</p>"
+					);
+					await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
+						"<p>have an asset via a binding</p>"
+					);
+					await expect(
+						fetch(`${url}/worker`).then((r) => r.text())
+					).resolves.toBe("hello world from a worker with assets");
+				});
 
-			it("can fetch a regular worker through a worker with assets, including with rpc", async () => {
-				const worker = helper.runLongLived(
-					`wrangler dev -c wrangler.toml -c ${d}/wrangler.toml`,
-					{ cwd: aw }
-				);
+				it("can fetch a regular worker through a worker with assets, including with rpc", async () => {
+					const worker = helper.runLongLived(
+						`wrangler dev -c wrangler.toml -c ${d}/wrangler.toml ${args.join(" ")}`,
+						{ cwd: aw }
+					);
 
-				const { url } = await worker.waitForReady(5_000);
+					const { url } = await worker.waitForReady(5_000);
 
-				await expect(
-					fetch(`${url}/hello-from-dee`).then((r) => r.text())
-				).resolves.toBe("hello world from dee");
+					await expect(
+						fetch(`${url}/hello-from-dee`).then((r) => r.text())
+					).resolves.toBe("hello world from dee");
 
-				await vi.waitFor(
-					async () =>
-						await expect(fetchText(`${url}/count`)).resolves.toBe("6"),
-					{ interval: 1000, timeout: 10_000 }
-				);
-			});
+					await vi.waitFor(
+						async () =>
+							await expect(fetchText(`${url}/count`)).resolves.toBe("6"),
+						{ interval: 1000, timeout: 10_000 }
+					);
+				});
 
-			it("can fetch a DO through a worker with assets, including with rpc", async () => {
-				const worker = helper.runLongLived(
-					`wrangler dev -c wrangler.toml -c ${d}/wrangler.toml`,
-					{ cwd: aw }
-				);
+				it("can fetch a DO through a worker with assets, including with rpc", async () => {
+					const worker = helper.runLongLived(
+						`wrangler dev -c wrangler.toml -c ${d}/wrangler.toml ${args.join(" ")}`,
+						{ cwd: aw }
+					);
 
-				const { url } = await worker.waitForReady(5_000);
+					const { url } = await worker.waitForReady(5_000);
 
-				await vi.waitFor(
-					async () =>
-						await expect(fetchText(`${url}/do-rpc`)).resolves.toBe(
-							"Hello through DO RPC"
-						),
-					{ interval: 1000, timeout: 10_000 }
-				);
-				await vi.waitFor(
-					async () =>
-						await expect(
-							fetchJson(`${url}/do`, {
-								headers: {
-									"X-Reset-Count": "true",
-								},
-							})
-						).resolves.toMatchObject({ count: 1 }),
-					{ interval: 1000, timeout: 10_000 }
-				);
-			});
-		});
+					await vi.waitFor(
+						async () =>
+							await expect(fetchText(`${url}/do-rpc`)).resolves.toBe(
+								"Hello through DO RPC"
+							),
+						{ interval: 1000, timeout: 10_000 }
+					);
+					await vi.waitFor(
+						async () =>
+							await expect(
+								fetchJson(`${url}/do`, {
+									headers: {
+										"X-Reset-Count": "true",
+									},
+								})
+							).resolves.toMatchObject({ count: 1 }),
+						{ interval: 1000, timeout: 10_000 }
+					);
+				});
+			}
+		);
 
-		describe("-> regular worker -> worker with assets", () => {
-			beforeEach(async () => {
-				await baseSeed(aw, {
-					"wrangler.toml": dedent`
+		describe.each(devCmds)(
+			"[wrangler dev $args]-> regular worker -> worker with assets",
+			({ args }) => {
+				beforeEach(async () => {
+					await baseSeed(aw, {
+						"wrangler.toml": dedent`
 								name = "${workerNameAW}"
 								main = "src/index.ts"
 								compatibility_date = "2024-11-01"
@@ -650,7 +658,7 @@ describe("multiworker", () => {
 								directory = "./public/"
 								binding = "ASSETS"
 						`,
-					"src/index.ts": dedent/* javascript */ `
+						"src/index.ts": dedent/* javascript */ `
 							export default {
 								async fetch(req, env) {
 									const url = new URL(req.url)
@@ -662,9 +670,9 @@ describe("multiworker", () => {
 								add(a, b) { return a + b; }
 							};
 							`,
-				});
-				await baseSeed(d, {
-					"wrangler.toml": dedent`
+					});
+					await baseSeed(d, {
+						"wrangler.toml": dedent`
 						name = "${workerName4}"
 						main = "src/index.ts"
 						compatibility_date = "2024-11-01"
@@ -672,7 +680,7 @@ describe("multiworker", () => {
 						binding = "AW"
 						service = '${workerNameAW}'
 				`,
-					"src/index.ts": dedent/* javascript */ `
+						"src/index.ts": dedent/* javascript */ `
 						export default{
 							async fetch(req, env) {
 								const url = new URL(req.url)
@@ -682,53 +690,53 @@ describe("multiworker", () => {
 								return env.AW.fetch(req);
 							}
 						};`,
+					});
 				});
-			});
 
-			it("can fetch assets through a regular worker", async () => {
-				const worker = helper.runLongLived(
-					`wrangler dev -c wrangler.toml -c ${aw}/wrangler.toml`,
-					{ cwd: d }
-				);
+				it("can fetch assets through a regular worker", async () => {
+					const worker = helper.runLongLived(
+						`wrangler dev -c wrangler.toml -c ${aw}/wrangler.toml ${args.join(" ")}`,
+						{ cwd: d }
+					);
 
-				const { url } = await worker.waitForReady(5_000);
-				await expect(fetchText(`${url}/asset`)).resolves.toBe(
-					"<p>have an asset directly</p>"
-				);
-			});
+					const { url } = await worker.waitForReady(5_000);
+					await expect(fetchText(`${url}/asset`)).resolves.toBe(
+						"<p>have an asset directly</p>"
+					);
+				});
 
-			it("can fall back to user worker", async () => {
-				const worker = helper.runLongLived(
-					`wrangler dev -c wrangler.toml -c ${aw}/wrangler.toml`,
-					{ cwd: d }
-				);
+				it("can fall back to user worker", async () => {
+					const worker = helper.runLongLived(
+						`wrangler dev -c wrangler.toml -c ${aw}/wrangler.toml ${args.join(" ")}`,
+						{ cwd: d }
+					);
 
-				const { url } = await worker.waitForReady(5_000);
-				await expect(fetchText(`${url}/worker`)).resolves.toBe(
-					"hello world from a worker with assets"
-				);
-				await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
-					"<p>have an asset via a binding</p>"
-				);
-			});
+					const { url } = await worker.waitForReady(5_000);
+					await expect(fetchText(`${url}/worker`)).resolves.toBe(
+						"hello world from a worker with assets"
+					);
+					await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
+						"<p>have an asset via a binding</p>"
+					);
+				});
 
-			it.fails("call rpc on a worker with assets", async () => {
-				// because it hits the router worker not the user worker, and add is not implemented there
-				// proxy/filter worker will fix this
-				const worker = helper.runLongLived(
-					`wrangler dev -c wrangler.toml -c ${aw}/wrangler.toml`,
-					{ cwd: d }
-				);
+				it.fails("call rpc on a worker with assets", async () => {
+					// because it hits the router worker not the user worker, and add is not implemented there
+					// proxy/filter worker will fix this
+					const worker = helper.runLongLived(
+						`wrangler dev -c wrangler.toml -c ${aw}/wrangler.toml ${args.join(" ")}`,
+						{ cwd: d }
+					);
 
-				const { url } = await worker.waitForReady(5_000);
-				await expect(fetchText(`${url}/rpc`)).resolves.toEqual(3);
-			});
-			// wrangler dev just crashses because the named entrypoint does not exist on the router worker
-			it.fails(
-				"binding to named entrypoint on a worker with assets",
-				async () => {
-					await baseSeed(aw, {
-						"wrangler.toml": dedent`
+					const { url } = await worker.waitForReady(5_000);
+					await expect(fetchText(`${url}/rpc`)).resolves.toEqual(3);
+				});
+				// wrangler dev just crashses because the named entrypoint does not exist on the router worker
+				it.fails(
+					"binding to named entrypoint on a worker with assets",
+					async () => {
+						await baseSeed(aw, {
+							"wrangler.toml": dedent`
 								name = "${workerNameAW}"
 								main = "src/index.ts"
 								compatibility_date = "2024-11-01"
@@ -736,7 +744,7 @@ describe("multiworker", () => {
 								directory = "./public/"
 								binding = "ASSETS"
 						`,
-						"src/index.ts": dedent/* javascript */ `
+							"src/index.ts": dedent/* javascript */ `
 							import { WorkerEntrypoint } from "cloudflare:workers";
 							export class NamedEntrypoint extends WorkerEntrypoint {
 								async add(a, b) {
@@ -752,9 +760,9 @@ describe("multiworker", () => {
 								},
 							};
 							`,
-					});
-					await baseSeed(d, {
-						"wrangler.toml": dedent`
+						});
+						await baseSeed(d, {
+							"wrangler.toml": dedent`
 						name = "${workerName4}"
 						main = "src/index.ts"
 						compatibility_date = "2024-11-01"
@@ -763,7 +771,7 @@ describe("multiworker", () => {
 						service = '${workerNameAW}'
 						entrypoint = "NamedEntrypoint"
 				`,
-						"src/index.ts": dedent/* javascript */ `
+							"src/index.ts": dedent/* javascript */ `
 						export default{
 							async fetch(req, env) {
 								const url = new URL(req.url)
@@ -776,17 +784,18 @@ describe("multiworker", () => {
 								return new Response("hello world");
 							}
 						};`,
-					});
+						});
 
-					const worker = helper.runLongLived(
-						`wrangler dev -c wrangler.toml -c ${aw}/wrangler.toml`,
-						{ cwd: d }
-					);
+						const worker = helper.runLongLived(
+							`wrangler dev -c wrangler.toml -c ${aw}/wrangler.toml ${args.join(" ")}`,
+							{ cwd: d }
+						);
 
-					const { url } = await worker.waitForReady(5_000);
-					await expect(fetchText(`${url}/named-rpc`)).resolves.toEqual(3);
-				}
-			);
-		});
+						const { url } = await worker.waitForReady(5_000);
+						await expect(fetchText(`${url}/named-rpc`)).resolves.toEqual(3);
+					}
+				);
+			}
+		);
 	});
 });
