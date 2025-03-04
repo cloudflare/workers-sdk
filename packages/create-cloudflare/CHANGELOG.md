@@ -1,5 +1,29 @@
 # create-cloudflare
 
+## 2.40.0
+
+### Minor Changes
+
+- [#8197](https://github.com/cloudflare/workers-sdk/pull/8197) [`acd42a8`](https://github.com/cloudflare/workers-sdk/commit/acd42a849b31b0d2ef30b0443678e775ebe69fa2) Thanks [@dom96](https://github.com/dom96)! - Python Workers template now includes package for autocomplete and type hints
+
+### Patch Changes
+
+- [#8324](https://github.com/cloudflare/workers-sdk/pull/8324) [`94729a6`](https://github.com/cloudflare/workers-sdk/commit/94729a6916e2a8b2bb8177d322cd8c8916f57d10) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.6.16 | 0.6.23 |
+
+- [#8290](https://github.com/cloudflare/workers-sdk/pull/8290) [`5b047e4`](https://github.com/cloudflare/workers-sdk/commit/5b047e4af0ffaab65b9fb0a491982727cd1232bd) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - ensure that git commits are generated
+
+- [#8013](https://github.com/cloudflare/workers-sdk/pull/8013) [`bc62d24`](https://github.com/cloudflare/workers-sdk/commit/bc62d2405c42bf41666983f13dfac2f75506b82c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - add experimental React templates using the Cloudflare Vite plugin
+
+- [#8232](https://github.com/cloudflare/workers-sdk/pull/8232) [`59cb914`](https://github.com/cloudflare/workers-sdk/commit/59cb914ee4c0939d1b29421e857e16b8e4599300) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: stop c3 adding a duplicate `./wrangler.jsonc` when using --existing-script
+
+  This should mean dev and deploy on projects initialised using `create-cloudflare --existing-script` start working again. Note there will still be an extraneous `./src/wrangler.toml`, which will require a separate fix in the dashboard. This file can be manually deleted in the meantime.
+
 ## 2.39.0
 
 ### Minor Changes
