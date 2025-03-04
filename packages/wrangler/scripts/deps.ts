@@ -25,6 +25,7 @@ export const EXTERNAL_DEPENDENCIES = [
 	// unenv must be external because it contains unenv/runtime code which needs to be resolved
 	// and read when we are bundling the worker application
 	"unenv",
+	"@cloudflare/unenv-preset",
 
 	// path-to-regexp must be external because it contains runtime code which needs to be resolved
 	// and read when we are bundling the worker application.
