@@ -1064,7 +1064,12 @@ export async function buildMiniflareOptions(
 						request.headers.delete("CF-Connecting-IP");
 					}
 
-					return config.outboundService?.(request) ?? fetch(request);
+					return (
+						config.outboundService?.(request) ??
+						fetch(request, {
+							redirect: "manual",
+						})
+					);
 				},
 			},
 			...externalWorkers,
