@@ -1,14 +1,10 @@
-import { execSync } from "child_process";
-import getPort from "get-port";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
-import { normalizeOutput } from "./helpers/normalize";
-import { seed as baseSeed, makeRoot, seed } from "./helpers/setup";
-import { WRANGLER_IMPORT } from "./helpers/wrangler";
+import { seed as baseSeed, makeRoot } from "./helpers/setup";
 import type { RequestInit } from "undici";
 
 async function fetchJson<T>(url: string, info?: RequestInit): Promise<T> {
@@ -31,17 +27,18 @@ async function fetchJson<T>(url: string, info?: RequestInit): Promise<T> {
 }
 
 async function startWorkersDevRegistry(
+	wranglerDev: string,
 	helper: WranglerE2ETestHelper,
 	assetWorker: string,
 	regularWorker: string,
 	regularWorkerFirst = true
 ) {
-	const workerA = helper.runLongLived("wrangler dev", {
+	const workerA = helper.runLongLived(wranglerDev, {
 		cwd: regularWorkerFirst ? assetWorker : regularWorker,
 	});
 	await workerA.waitForReady(5_000);
 
-	const workerB = helper.runLongLived("wrangler dev", {
+	const workerB = helper.runLongLived(wranglerDev, {
 		cwd: regularWorkerFirst ? regularWorker : assetWorker,
 	});
 	const { url } = await workerB.waitForReady(5_000);
@@ -50,13 +47,14 @@ async function startWorkersDevRegistry(
 }
 
 async function startWorkersMultiworker(
+	wranglerDev: string,
 	helper: WranglerE2ETestHelper,
 	assetWorker: string,
 	regularWorker: string,
 	regularWorkerFirst = true
 ) {
 	const worker = helper.runLongLived(
-		`wrangler dev -c wrangler.toml -c ${regularWorkerFirst ? assetWorker : regularWorker}/wrangler.toml`,
+		`${wranglerDev} -c wrangler.toml -c ${regularWorkerFirst ? assetWorker : regularWorker}/wrangler.toml`,
 		{ cwd: regularWorkerFirst ? regularWorker : assetWorker }
 	);
 	const { url } = await worker.waitForReady(5_000);
@@ -70,26 +68,47 @@ const failsIf = (condition: boolean) => {
 type MultiworkerStyle = "dev registry" | "in process";
 
 describe.each([
-	{ style: "dev registry", start: startWorkersDevRegistry },
-	{ style: "in process", start: startWorkersMultiworker },
+	{
+		style: "dev registry",
+		start: startWorkersDevRegistry,
+		wranglerDev: "wrangler dev",
+	},
+	{
+		style: "in process",
+		start: startWorkersMultiworker,
+		wranglerDev: "wrangler dev",
+	},
+	{
+		style: "dev registry",
+		start: startWorkersDevRegistry,
+		wranglerDev: "wrangler dev --x-assets-rpc",
+	},
+	{
+		style: "in process",
+		start: startWorkersMultiworker,
+		wranglerDev: "wrangler dev --x-assets-rpc",
+	},
 ] as {
 	style: MultiworkerStyle;
 	start: typeof startWorkersDevRegistry | typeof startWorkersMultiworker;
-}[])("workers with assets ($style)", async ({ start, style }) => {
-	let assetWorkerName: string;
-	let regularWorkerName: string;
-	let assetWorker: string;
-	let regularWorker: string;
-	let helper: WranglerE2ETestHelper;
+	wranglerDev: string;
+}[])(
+	"workers with assets ($style, $wranglerDev) ",
+	async ({ start, style, wranglerDev }) => {
+		let assetWorkerName: string;
+		let regularWorkerName: string;
+		let assetWorker: string;
+		let regularWorker: string;
+		let helper: WranglerE2ETestHelper;
 
-	beforeEach(async () => {
-		helper = new WranglerE2ETestHelper();
+		beforeEach(async () => {
+			helper = new WranglerE2ETestHelper();
 
-		assetWorker = await makeRoot();
-		assetWorkerName = generateResourceName("worker-aw");
-		regularWorkerName = generateResourceName("worker");
-		await baseSeed(assetWorker, {
-			"wrangler.toml": dedent`
+			assetWorker = await makeRoot();
+			assetWorkerName = generateResourceName("worker-aw");
+			regularWorkerName = generateResourceName("worker");
+			await baseSeed(assetWorker, {
+				"wrangler.toml": dedent`
 						name = "${assetWorkerName}"
 						main = "src/index.ts"
 						compatibility_date = "2024-11-01"
@@ -112,9 +131,9 @@ describe.each([
 							{ name = "REFERENCED_DO", class_name = "MyDurableObject", script_name = "${regularWorkerName}" }
 						]
 					`,
-			"public/asset-binding.html": "<p>have an asset via a binding</p>",
-			"public/asset.html": "<p>have an asset directly</p>",
-			"src/index.ts": dedent/* javascript */ `
+				"public/asset-binding.html": "<p>have an asset via a binding</p>",
+				"public/asset.html": "<p>have an asset directly</p>",
+				"src/index.ts": dedent/* javascript */ `
 						export default {
 							async fetch(req, env) {
 								const url = new URL(req.url)
@@ -145,23 +164,23 @@ describe.each([
 							},
 						};
 						`,
-			"package.json": dedent`
+				"package.json": dedent`
 							{
 								"name": "aw",
 								"version": "0.0.0",
 								"private": true
 							}
 							`,
-		});
+			});
 
-		regularWorker = await makeRoot();
-		await baseSeed(regularWorker, {
-			"wrangler.toml": dedent`
+			regularWorker = await makeRoot();
+			await baseSeed(regularWorker, {
+				"wrangler.toml": dedent`
 					name = "${regularWorkerName}"
 					main = "src/index.ts"
 					compatibility_date = "2024-11-01"
 			`,
-			"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent/* javascript */ `
 					import { DurableObject, WorkerEntrypoint, RpcTarget } from "cloudflare:workers";
 					export default{
 						async fetch(req, env) {
@@ -202,67 +221,86 @@ describe.each([
 						}
 					}
 					`,
+			});
 		});
-	});
-	describe("worker with assets -> regular worker", () => {
-		it("can fetch a worker with assets", async () => {
-			const url = await start(helper, assetWorker, regularWorker, false);
+		describe("worker with assets -> regular worker", () => {
+			it("can fetch a worker with assets", async () => {
+				const url = await start(
+					wranglerDev,
+					helper,
+					assetWorker,
+					regularWorker,
+					false
+				);
 
-			await expect(fetchText(`${url}/asset`)).resolves.toBe(
-				"<p>have an asset directly</p>"
-			);
-			await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
-				"<p>have an asset via a binding</p>"
-			);
-			await expect(fetch(`${url}/worker`).then((r) => r.text())).resolves.toBe(
-				"hello world from a worker with assets"
-			);
-		});
+				await expect(fetchText(`${url}/asset`)).resolves.toBe(
+					"<p>have an asset directly</p>"
+				);
+				await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
+					"<p>have an asset via a binding</p>"
+				);
+				await expect(
+					fetch(`${url}/worker`).then((r) => r.text())
+				).resolves.toBe("hello world from a worker with assets");
+			});
 
-		it("can fetch a regular worker through a worker with assets, including with rpc", async () => {
-			const url = await start(helper, assetWorker, regularWorker, false);
+			it("can fetch a regular worker through a worker with assets, including with rpc", async () => {
+				const url = await start(
+					wranglerDev,
+					helper,
+					assetWorker,
+					regularWorker,
+					false
+				);
 
-			await expect(
-				fetch(`${url}/hello-from-dee`).then((r) => r.text())
-			).resolves.toBe("hello world from dee");
-
-			await vi.waitFor(
-				async () => await expect(fetchText(`${url}/count`)).resolves.toBe("6"),
-				{ interval: 1000, timeout: 10_000 }
-			);
-		});
-
-		it.skipIf(style === "dev registry")(
-			"can fetch a DO through a worker with assets, including with rpc",
-			async () => {
-				const url = await start(helper, assetWorker, regularWorker, false);
+				await expect(
+					fetch(`${url}/hello-from-dee`).then((r) => r.text())
+				).resolves.toBe("hello world from dee");
 
 				await vi.waitFor(
 					async () =>
-						await expect(fetchText(`${url}/do-rpc`)).resolves.toBe(
-							"Hello through DO RPC"
-						),
+						await expect(fetchText(`${url}/count`)).resolves.toBe("6"),
 					{ interval: 1000, timeout: 10_000 }
 				);
-				await vi.waitFor(
-					async () =>
-						await expect(
-							fetchJson(`${url}/do`, {
-								headers: {
-									"X-Reset-Count": "true",
-								},
-							})
-						).resolves.toMatchObject({ count: 1 }),
-					{ interval: 1000, timeout: 10_000 }
-				);
-			}
-		);
-	});
+			});
 
-	describe("regular worker -> assets-only", () => {
-		beforeEach(async () => {
-			await baseSeed(regularWorker, {
-				"wrangler.toml": dedent`
+			it.skipIf(style === "dev registry")(
+				"can fetch a DO through a worker with assets, including with rpc",
+				async () => {
+					const url = await start(
+						wranglerDev,
+						helper,
+						assetWorker,
+						regularWorker,
+						false
+					);
+
+					await vi.waitFor(
+						async () =>
+							await expect(fetchText(`${url}/do-rpc`)).resolves.toBe(
+								"Hello through DO RPC"
+							),
+						{ interval: 1000, timeout: 10_000 }
+					);
+					await vi.waitFor(
+						async () =>
+							await expect(
+								fetchJson(`${url}/do`, {
+									headers: {
+										"X-Reset-Count": "true",
+									},
+								})
+							).resolves.toMatchObject({ count: 1 }),
+						{ interval: 1000, timeout: 10_000 }
+					);
+				}
+			);
+		});
+
+		describe("regular worker -> assets-only", () => {
+			beforeEach(async () => {
+				await baseSeed(regularWorker, {
+					"wrangler.toml": dedent`
 						name = "${regularWorkerName}"
 						main = "src/index.ts"
 						compatibility_date = "2024-11-01"
@@ -270,7 +308,7 @@ describe.each([
 						binding = "AW"
 						service = '${assetWorkerName}'
 				`,
-				"src/index.ts": dedent/* javascript */ `
+					"src/index.ts": dedent/* javascript */ `
 						export default {
 							async fetch(req, env) {
 								const url = new URL(req.url)
@@ -280,45 +318,60 @@ describe.each([
 								return env.AW.fetch(req);
 							}
 						};`,
-			});
-			await baseSeed(assetWorker, {
-				"wrangler.toml": dedent`
+				});
+				await baseSeed(assetWorker, {
+					"wrangler.toml": dedent`
 								name = "${assetWorkerName}"
 								compatibility_date = "2024-11-01"
 
 								[assets]
 								directory = "./public/"
 						`,
+				});
+			});
+
+			failsIf(style === "dev registry")(".fetch() existing asset", async () => {
+				const url = await start(
+					wranglerDev,
+					helper,
+					assetWorker,
+					regularWorker
+				);
+				await expect(fetchText(`${url}/asset`)).resolves.toBe(
+					"<p>have an asset directly</p>"
+				);
+			});
+
+			it(".fetch() non-existing asset", async () => {
+				const url = await start(
+					wranglerDev,
+					helper,
+					assetWorker,
+					regularWorker
+				);
+				await expect(fetch(`${url}/not-an-asset`)).resolves.toMatchObject({
+					status: 404,
+				});
+			});
+
+			it(".increment()", async () => {
+				const url = await start(
+					wranglerDev,
+					helper,
+					assetWorker,
+					regularWorker
+				);
+				await expect(fetchText(`${url}/rpc`)).resolves.toContain(
+					// Cannot call RPC methods on assets-only workers
+					"The RPC receiver does not implement the method"
+				);
 			});
 		});
 
-		failsIf(style === "dev registry")(".fetch() existing asset", async () => {
-			const url = await start(helper, assetWorker, regularWorker);
-			await expect(fetchText(`${url}/asset`)).resolves.toBe(
-				"<p>have an asset directly</p>"
-			);
-		});
-
-		it(".fetch() non-existing asset", async () => {
-			const url = await start(helper, assetWorker, regularWorker);
-			await expect(fetch(`${url}/not-an-asset`)).resolves.toMatchObject({
-				status: 404,
-			});
-		});
-
-		it(".increment()", async () => {
-			const url = await start(helper, assetWorker, regularWorker);
-			await expect(fetchText(`${url}/rpc`)).resolves.toContain(
-				// Cannot call RPC methods on assets-only workers
-				"The RPC receiver does not implement the method"
-			);
-		});
-	});
-
-	describe("regular worker -> worker + assets", () => {
-		beforeEach(async () => {
-			await baseSeed(regularWorker, {
-				"wrangler.toml": dedent`
+		describe("regular worker -> worker + assets", () => {
+			beforeEach(async () => {
+				await baseSeed(regularWorker, {
+					"wrangler.toml": dedent`
 							name = "${regularWorkerName}"
 							main = "src/index.ts"
 							compatibility_date = "2024-11-01"
@@ -327,7 +380,7 @@ describe.each([
 							binding = "AW"
 							service = '${assetWorkerName}'
 					`,
-				"src/index.ts": dedent/* javascript */ `
+					"src/index.ts": dedent/* javascript */ `
 							export default {
 								async fetch(req, env) {
 									const url = new URL(req.url)
@@ -337,9 +390,9 @@ describe.each([
 									return env.AW.fetch(req);
 								}
 							};`,
-			});
-			await baseSeed(assetWorker, {
-				"wrangler.toml": dedent`
+				});
+				await baseSeed(assetWorker, {
+					"wrangler.toml": dedent`
 								name = "${assetWorkerName}"
 								compatibility_date = "2024-11-01"
 								main = "src/index.ts"
@@ -348,7 +401,7 @@ describe.each([
 								directory = "./public/"
 								binding = "ASSETS"
 						`,
-				"src/index.ts": dedent/* javascript */ `
+					"src/index.ts": dedent/* javascript */ `
 							import { WorkerEntrypoint } from "cloudflare:workers"
 
 							export default {
@@ -373,13 +426,13 @@ describe.each([
 								increment(a) { return a + 1; }
 							};
 							`,
+				});
 			});
-		});
 
-		describe("default export object", () => {
-			beforeEach(async () => {
-				await baseSeed(assetWorker, {
-					"src/index.ts": dedent/* javascript */ `
+			describe("default export object", () => {
+				beforeEach(async () => {
+					await baseSeed(assetWorker, {
+						"src/index.ts": dedent/* javascript */ `
 									import { WorkerEntrypoint } from "cloudflare:workers"
 
 									export default {
@@ -393,39 +446,62 @@ describe.each([
 										increment(a) { return a + 1; }
 									};
 									`,
+					});
+				});
+				failsIf(style === "dev registry")(
+					".fetch() existing asset",
+					async () => {
+						const url = await start(
+							wranglerDev,
+							helper,
+							assetWorker,
+							regularWorker
+						);
+						await expect(fetchText(`${url}/asset`)).resolves.toBe(
+							"<p>have an asset directly</p>"
+						);
+					}
+				);
+
+				it(".fetch() non-existing asset", async () => {
+					const url = await start(
+						wranglerDev,
+						helper,
+						assetWorker,
+						regularWorker
+					);
+					await expect(fetchText(`${url}/not-an-asset`)).resolves.toBe(
+						"hello world from a worker with assets"
+					);
+				});
+
+				it(".fetch() asset via binding", async () => {
+					const url = await start(
+						wranglerDev,
+						helper,
+						assetWorker,
+						regularWorker
+					);
+					await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
+						"<p>have an asset via a binding</p>"
+					);
+				});
+
+				failsIf(style === "in process")(".increment()", async () => {
+					const url = await start(
+						wranglerDev,
+						helper,
+						assetWorker,
+						regularWorker
+					);
+					await expect(fetchText(`${url}/rpc`)).resolves.toBe("2");
 				});
 			});
-			failsIf(style === "dev registry")(".fetch() existing asset", async () => {
-				const url = await start(helper, assetWorker, regularWorker);
-				await expect(fetchText(`${url}/asset`)).resolves.toBe(
-					"<p>have an asset directly</p>"
-				);
-			});
 
-			it(".fetch() non-existing asset", async () => {
-				const url = await start(helper, assetWorker, regularWorker);
-				await expect(fetchText(`${url}/not-an-asset`)).resolves.toBe(
-					"hello world from a worker with assets"
-				);
-			});
-
-			it(".fetch() asset via binding", async () => {
-				const url = await start(helper, assetWorker, regularWorker);
-				await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
-					"<p>have an asset via a binding</p>"
-				);
-			});
-
-			failsIf(style === "in process")(".increment()", async () => {
-				const url = await start(helper, assetWorker, regularWorker);
-				await expect(fetchText(`${url}/rpc`)).resolves.toBe("2");
-			});
-		});
-
-		describe("default export WorkerEntrypoint class", () => {
-			beforeEach(async () => {
-				await baseSeed(assetWorker, {
-					"src/index.ts": dedent/* javascript */ `
+			describe("default export WorkerEntrypoint class", () => {
+				beforeEach(async () => {
+					await baseSeed(assetWorker, {
+						"src/index.ts": dedent/* javascript */ `
 									import { WorkerEntrypoint } from "cloudflare:workers"
 
 									export default class Worker extends WorkerEntrypoint {
@@ -439,39 +515,62 @@ describe.each([
 										increment(a) { return a + 1; }
 									};
 									`,
+					});
+				});
+				failsIf(style === "dev registry")(
+					".fetch() existing asset",
+					async () => {
+						const url = await start(
+							wranglerDev,
+							helper,
+							assetWorker,
+							regularWorker
+						);
+						await expect(fetchText(`${url}/asset`)).resolves.toBe(
+							"<p>have an asset directly</p>"
+						);
+					}
+				);
+
+				it(".fetch() non-existing asset", async () => {
+					const url = await start(
+						wranglerDev,
+						helper,
+						assetWorker,
+						regularWorker
+					);
+					await expect(fetchText(`${url}/not-an-asset`)).resolves.toBe(
+						"hello world from a worker with assets"
+					);
+				});
+
+				it(".fetch() asset via binding", async () => {
+					const url = await start(
+						wranglerDev,
+						helper,
+						assetWorker,
+						regularWorker
+					);
+					await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
+						"<p>have an asset via a binding</p>"
+					);
+				});
+
+				failsIf(style === "in process")(".increment()", async () => {
+					const url = await start(
+						wranglerDev,
+						helper,
+						assetWorker,
+						regularWorker
+					);
+					await expect(fetchText(`${url}/rpc`)).resolves.toBe("2");
 				});
 			});
-			failsIf(style === "dev registry")(".fetch() existing asset", async () => {
-				const url = await start(helper, assetWorker, regularWorker);
-				await expect(fetchText(`${url}/asset`)).resolves.toBe(
-					"<p>have an asset directly</p>"
-				);
-			});
 
-			it(".fetch() non-existing asset", async () => {
-				const url = await start(helper, assetWorker, regularWorker);
-				await expect(fetchText(`${url}/not-an-asset`)).resolves.toBe(
-					"hello world from a worker with assets"
-				);
-			});
-
-			it(".fetch() asset via binding", async () => {
-				const url = await start(helper, assetWorker, regularWorker);
-				await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
-					"<p>have an asset via a binding</p>"
-				);
-			});
-
-			failsIf(style === "in process")(".increment()", async () => {
-				const url = await start(helper, assetWorker, regularWorker);
-				await expect(fetchText(`${url}/rpc`)).resolves.toBe("2");
-			});
-		});
-
-		describe("named export WorkerEntrypoint class", () => {
-			beforeEach(async () => {
-				await baseSeed(assetWorker, {
-					"src/index.ts": dedent/* javascript */ `
+			describe("named export WorkerEntrypoint class", () => {
+				beforeEach(async () => {
+					await baseSeed(assetWorker, {
+						"src/index.ts": dedent/* javascript */ `
 									import { WorkerEntrypoint } from "cloudflare:workers"
 
 									export default {fetch() {}}
@@ -487,9 +586,9 @@ describe.each([
 										async increment(a) { return a + 1; }
 									};
 									`,
-				});
-				await baseSeed(regularWorker, {
-					"wrangler.toml": dedent`
+					});
+					await baseSeed(regularWorker, {
+						"wrangler.toml": dedent`
 									name = "${regularWorkerName}"
 									main = "src/index.ts"
 									compatibility_date = "2024-11-01"
@@ -499,26 +598,42 @@ describe.each([
 									service = '${assetWorkerName}'
 									entrypoint = "NamedEntrypoint"
 							`,
+					});
+				});
+				it(".fetch()", async () => {
+					const url = await start(
+						wranglerDev,
+						helper,
+						assetWorker,
+						regularWorker
+					);
+					await expect(fetchText(`${url}/asset`)).resolves.toBe(
+						"hello world from a worker with assets"
+					);
+				});
+
+				it(".fetch() asset via binding", async () => {
+					const url = await start(
+						wranglerDev,
+						helper,
+						assetWorker,
+						regularWorker
+					);
+					await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
+						"<p>have an asset via a binding</p>"
+					);
+				});
+
+				it(".increment()", async () => {
+					const url = await start(
+						wranglerDev,
+						helper,
+						assetWorker,
+						regularWorker
+					);
+					await expect(fetchText(`${url}/rpc`)).resolves.toBe("2");
 				});
 			});
-			it(".fetch()", async () => {
-				const url = await start(helper, assetWorker, regularWorker);
-				await expect(fetchText(`${url}/asset`)).resolves.toBe(
-					"hello world from a worker with assets"
-				);
-			});
-
-			it(".fetch() asset via binding", async () => {
-				const url = await start(helper, assetWorker, regularWorker);
-				await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
-					"<p>have an asset via a binding</p>"
-				);
-			});
-
-			it(".increment()", async () => {
-				const url = await start(helper, assetWorker, regularWorker);
-				await expect(fetchText(`${url}/rpc`)).resolves.toBe("2");
-			});
 		});
-	});
-});
+	}
+);
