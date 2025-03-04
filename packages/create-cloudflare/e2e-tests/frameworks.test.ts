@@ -126,6 +126,10 @@ function getFrameworkTests(opts: {
 					// not actually running the client side JS.
 					expectedText: "Vite + React + TS",
 				},
+				verifyBuildCfTypes: {
+					outputFile: "worker-configuration.d.ts",
+					envInterfaceName: "Env",
+				},
 			},
 			gatsby: {
 				unsupportedPms: ["bun", "pnpm"],
