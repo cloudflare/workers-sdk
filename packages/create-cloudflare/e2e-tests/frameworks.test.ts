@@ -330,9 +330,10 @@ const verifyPreviewScript = async (
 	);
 
 	try {
-		// Wait for the dev-server to be ready
+		// Some frameworks take quite a long time to build the application (e.g. Docusaurus)
+		// so wait up to 5 mins for the dev-server to be ready.
 		await retry(
-			{ times: 20, sleepMs: 5000 },
+			{ times: 300, sleepMs: 5000 },
 			async () =>
 				await fetch(`http://127.0.0.1:${TEST_PORT}${verifyPreview.route}`),
 		);
