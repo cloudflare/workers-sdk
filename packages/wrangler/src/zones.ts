@@ -1,4 +1,3 @@
-import PQueue from "p-queue";
 import { fetchListResult } from "./cfetch";
 import { configFileName } from "./config";
 import { UserError } from "./errors";
@@ -51,10 +50,13 @@ export function getHostFromRoute(route: Route): string | undefined {
  * - We try to extract a host from it
  * - We try to get a zone id from the host
  */
-export async function getZoneForRoute(from: {
-	route: Route;
-	accountId: string;
-}): Promise<Zone | undefined> {
+export async function getZoneForRoute(
+	from: {
+		route: Route;
+		accountId: string;
+	},
+	zoneIdCache: ZoneIdCache = new Map()
+): Promise<Zone | undefined> {
 	const { route, accountId } = from;
 	const host = getHostFromRoute(route);
 	let id: string | undefined;
@@ -62,9 +64,15 @@ export async function getZoneForRoute(from: {
 	if (typeof route === "object" && "zone_id" in route) {
 		id = route.zone_id;
 	} else if (typeof route === "object" && "zone_name" in route) {
-		id = await getZoneIdFromHost({ host: route.zone_name, accountId });
+		id = await getZoneIdFromHost(
+			{
+				host: route.zone_name,
+				accountId,
+			},
+			zoneIdCache
+		);
 	} else if (host) {
-		id = await getZoneIdFromHost({ host, accountId });
+		id = await getZoneIdFromHost({ host, accountId }, zoneIdCache);
 	}
 
 	return id && host ? { id, host } : undefined;
@@ -104,14 +112,21 @@ export async function getZoneIdForPreview(from: {
 	routes: Route[] | undefined;
 	accountId: string;
 }) {
+	const zoneIdCache: ZoneIdCache = new Map();
 	const { host, routes, accountId } = from;
 	let zoneId: string | undefined;
 	if (host) {
-		zoneId = await getZoneIdFromHost({ host, accountId });
+		zoneId = await getZoneIdFromHost({ host, accountId }, zoneIdCache);
 	}
 	if (!zoneId && routes) {
 		const firstRoute = routes[0];
-		const zone = await getZoneForRoute({ route: firstRoute, accountId });
+		const zone = await getZoneForRoute(
+			{
+				route: firstRoute,
+				accountId,
+			},
+			zoneIdCache
+		);
 		if (zone) {
 			zoneId = zone.id;
 		}
@@ -120,23 +135,9 @@ export async function getZoneIdForPreview(from: {
 }
 
 /**
- * Create a map of queues to ensure we only ever
- * fetch a specific zone for a given account once.
- * The string should be a cache key derived from
- * the zone we're searching for and the account id.
+ * A mapping from account:host to zone id.
  */
-const getZoneQueues = new Map<string, PQueue>();
-function getQueue(key: string): PQueue {
-	const existing = getZoneQueues.get(key);
-	if (existing) {
-		return existing;
-	}
-	const queue = new PQueue({ concurrency: 1 });
-	getZoneQueues.set(key, queue);
-	return queue;
-}
-
-const zoneIdCache = new Map<string, string>();
+export type ZoneIdCache = Map<string, Promise<string | null>>;
 
 /**
  * Given something that resembles a host, try to infer a zone id from it.
@@ -145,46 +146,34 @@ const zoneIdCache = new Map<string, string>();
  * For each domain-like part of the host (e.g. w.x.y.z) try to get a zone id for it by
  * lopping off subdomains until we get a hit from the API.
  */
-async function getZoneIdFromHost(from: {
-	host: string;
-	accountId: string;
-}): Promise<string> {
+async function getZoneIdFromHost(
+	from: {
+		host: string;
+		accountId: string;
+	},
+	zoneIdCache: ZoneIdCache
+): Promise<string> {
 	const hostPieces = from.host.split(".");
 
 	while (hostPieces.length > 1) {
-		const cacheKey =
-			hostPieces.join(".") +
-			from.accountId +
-			(process.env.VITEST ? process.env.VITEST_CACHE_BUST ?? "" : "");
-		const queue = getQueue(cacheKey);
-
-		const existing = zoneIdCache.get(cacheKey);
-		if (existing) {
-			return existing;
+		const cacheKey = `${from.accountId}:${hostPieces.join(".")}`;
+		if (!zoneIdCache.has(cacheKey)) {
+			zoneIdCache.set(
+				cacheKey,
+				fetchListResult<{ id: string }>(
+					`/zones`,
+					{},
+					new URLSearchParams({
+						name: hostPieces.join("."),
+						"account.id": from.accountId,
+					})
+				).then((zones) => zones[0]?.id ?? null)
+			);
 		}
 
-		const maybeZoneId = await queue.add(async () => {
-			const existing2 = zoneIdCache.get(cacheKey);
-			if (existing2) {
-				return existing2;
-			}
-
-			const zones = await fetchListResult<{ id: string }>(
-				`/zones`,
-				{},
-				new URLSearchParams({
-					name: hostPieces.join("."),
-					"account.id": from.accountId,
-				})
-			);
-			if (zones.length > 0) {
-				const id = zones[0].id;
-				zoneIdCache.set(cacheKey, id);
-				return id;
-			}
-		});
-		if (maybeZoneId) {
-			return maybeZoneId;
+		const cachedZone = await zoneIdCache.get(cacheKey);
+		if (cachedZone) {
+			return cachedZone;
 		}
 
 		hostPieces.shift();

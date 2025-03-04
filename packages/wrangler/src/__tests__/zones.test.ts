@@ -173,29 +173,40 @@ describe("Zones", () => {
 		});
 		test("zone_name route (subdomain, subsequent fetches are cached)", async () => {
 			mockGetZones("example.com", [{ id: "example-id" }]);
+			const zoneIdCache = new Map();
 			expect(
-				await getZoneForRoute({
-					route: {
-						pattern: "subdomain.example.com/*",
-						zone_name: "example.com",
+				await getZoneForRoute(
+					{
+						route: {
+							pattern: "subdomain.example.com/*",
+							zone_name: "example.com",
+						},
+						accountId: "some-account-id",
 					},
-					accountId: "some-account-id",
-				})
+					zoneIdCache
+				)
 			).toEqual({
 				host: "subdomain.example.com",
 				id: "example-id",
 			});
 
+			expect(await zoneIdCache.get("some-account-id:example.com")).toEqual(
+				"example-id"
+			);
+
 			// This will fail if we don't cache the response
 			// due to a "mock not found" error
 			expect(
-				await getZoneForRoute({
-					route: {
-						pattern: "subdomain.example.com/*",
-						zone_name: "example.com",
+				await getZoneForRoute(
+					{
+						route: {
+							pattern: "subdomain.example.com/*",
+							zone_name: "example.com",
+						},
+						accountId: "some-account-id",
 					},
-					accountId: "some-account-id",
-				})
+					zoneIdCache
+				)
 			).toEqual({
 				host: "subdomain.example.com",
 				id: "example-id",

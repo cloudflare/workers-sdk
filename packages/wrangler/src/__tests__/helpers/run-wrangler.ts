@@ -11,11 +11,7 @@ export async function runWrangler(
 ) {
 	const originalEnv = process.env;
 	try {
-		process.env = {
-			...originalEnv,
-			...env,
-			VITEST_CACHE_BUST: new Date().toISOString(),
-		};
+		process.env = { ...originalEnv, ...env };
 		const argv = shellquote.parse(cmd);
 		await main(argv);
 	} catch (err) {

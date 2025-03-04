@@ -183,9 +183,10 @@ export default async function triggersDeploy(
 			Array<{ pattern: string; script: string }>
 		>();
 
+		const zoneIdCache = new Map();
 		for (const route of routes) {
 			void queue.add(async () => {
-				const zone = await getZoneForRoute({ route, accountId });
+				const zone = await getZoneForRoute({ route, accountId }, zoneIdCache);
 				if (!zone) {
 					return;
 				}

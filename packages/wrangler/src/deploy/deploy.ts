@@ -1072,13 +1072,14 @@ async function publishRoutesFallback(
 	const deployedRoutes: string[] = [];
 
 	const queue = new PQueue({ concurrency: 10 });
+	const zoneIdCache = new Map();
 
 	// Collect the routes (and their zones) that will be deployed.
 	const activeZones = new Map<string, string>();
 	const routesToDeploy = new Map<string, string>();
 	for (const route of routes) {
 		void queue.add(async () => {
-			const zone = await getZoneForRoute({ route, accountId });
+			const zone = await getZoneForRoute({ route, accountId }, zoneIdCache);
 			if (zone) {
 				activeZones.set(zone.id, zone.host);
 				routesToDeploy.set(
