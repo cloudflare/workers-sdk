@@ -12,7 +12,7 @@ set up autocomplete and type hints for this Python Workers project.
 To get these installed you'll need `uv`, which you can install by following
 https://docs.astral.sh/uv/getting-started/installation/.
 
-One `uv` is installed, you can run the following:
+Once `uv` is installed, you can run the following:
 
 ```
 uv venv
