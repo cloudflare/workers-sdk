@@ -9,6 +9,7 @@ import {
 	LogLevel,
 	Response as MiniflareResponse,
 } from "miniflare";
+import { globSync } from "tinyglobby";
 import * as vite from "vite";
 import {
 	unstable_getMiniflareWorkerOptions,
@@ -29,6 +30,7 @@ import type {
 } from "./plugin-config";
 import type { MiniflareOptions, SharedOptions, WorkerOptions } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
+import type { SourcelessWorkerOptions } from "wrangler";
 
 type PersistOptions = Pick<
 	SharedOptions,
@@ -486,6 +488,31 @@ export function getDevMiniflareOptions(
 	};
 }
 
+function getPreviewModules(
+	main: string,
+	modulesRules: SourcelessWorkerOptions["modulesRules"]
+) {
+	assert(modulesRules, `Unexpected error: 'modulesRules' is undefined`);
+	const rootPath = path.dirname(main);
+	const entryPath = path.basename(main);
+
+	return {
+		rootPath,
+		modules: [
+			{
+				type: "ESModule",
+				path: entryPath,
+			},
+			...modulesRules.flatMap(({ type, include }) =>
+				globSync(include, { cwd: rootPath, ignore: entryPath }).map((path) => ({
+					type,
+					path,
+				}))
+			),
+		],
+	} satisfies Pick<WorkerOptions, "rootPath" | "modules">;
+}
+
 export function getPreviewMiniflareOptions(
 	vitePreviewServer: vite.PreviewServer,
 	persistState: PersistState
@@ -499,17 +526,16 @@ export function getPreviewMiniflareOptions(
 	const workers: Array<WorkerOptions> = workerConfigs.map((config) => {
 		const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(config);
 
-		const { ratelimits, ...workerOptions } =
+		const { ratelimits, modulesRules, ...workerOptions } =
 			miniflareWorkerOptions.workerOptions;
 
 		return {
 			...workerOptions,
 			// We have to add the name again because `unstable_getMiniflareWorkerOptions` sets it to `undefined`
 			name: config.name,
-			modules: true,
 			...(miniflareWorkerOptions.main
-				? { scriptPath: miniflareWorkerOptions.main }
-				: { script: "" }),
+				? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
+				: { modules: true, script: "" }),
 		};
 	});
 
