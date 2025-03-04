@@ -1,0 +1,6 @@
+{
+  "name": "<TBD>",
+  "main": "src/index.js",
+  "compatibility_date": "<TBD>",
+  "compatibility_flags": ["nodejs_compat"]
+}
