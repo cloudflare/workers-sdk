@@ -169,10 +169,11 @@ const config: TemplateConfig = {
 	},
 	generate,
 	configure,
-	transformPackageJson: async () => ({
+	transformPackageJson: async (_, ctx) => ({
 		scripts: {
 			deploy: `${npm} run build && wrangler deploy`,
 			preview: `${npm} run build && vite preview`,
+			...(usesTypescript(ctx) && { "cf-typegen": `wrangler types` }),
 		},
 	}),
 	devScript: "dev",
