@@ -7,7 +7,7 @@ import { sleep } from "helpers/sleep";
 import { fetch } from "undici";
 import { beforeAll, describe, expect } from "vitest";
 import { deleteWorker } from "../scripts/common";
-import { getFrameworkToTest } from "./frameworkToTest";
+import { getFrameworkToTest } from "./frameworks/framework-to-test";
 import {
 	isQuarantineMode,
 	kill,

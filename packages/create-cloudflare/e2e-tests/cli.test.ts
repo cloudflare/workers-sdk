@@ -3,7 +3,7 @@ import { basename, join } from "node:path";
 import { detectPackageManager } from "helpers/packageManagers";
 import { beforeAll, describe, expect } from "vitest";
 import { version } from "../package.json";
-import { getFrameworkToTest } from "./frameworkToTest";
+import { getFrameworkToTest } from "./frameworks/framework-to-test";
 import {
 	isQuarantineMode,
 	keys,
