@@ -35,6 +35,7 @@ describe("wrangler", () => {
 				  wrangler queues consumer                Configure Queue consumers
 				  wrangler queues pause-delivery <name>   Pause message delivery for a Queue
 				  wrangler queues resume-delivery <name>  Resume message delivery for a Queue
+				  wrangler queues purge <name>            Purge messages from a Queue
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
@@ -2064,6 +2065,99 @@ describe("wrangler", () => {
 				"Resuming message delivery for queue testQueue.
 				Resumed message delivery for queue testQueue."
 			`);
+		});
+	});
+
+	describe("purge", () => {
+		function mockPurgeRequest() {
+			const requests = { count: 0 };
+
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/queues/:queueId/purge",
+					async ({ request }) => {
+						requests.count += 1;
+
+						const body = (await request.json()) as {
+							delete_messages_permanently: boolean;
+						};
+						expect(body.delete_messages_permanently).toEqual(true);
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								started_on: "01-01-2001",
+								complete: false,
+							},
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
+		function mockGetQueueRequest(queueName: string) {
+			const requests = { count: 0 };
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/queues?*",
+					async () => {
+						requests.count += 1;
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: [
+								{
+									queue_name: queueName,
+									created_on: "",
+									producers: [],
+									consumers: [],
+									producers_total_count: 1,
+									consumers_total_count: 0,
+									modified_on: "",
+									queue_id: "queueId",
+								},
+							],
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
+
+		it("should show the correct help text", async () => {
+			await runWrangler("queues purge --help");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"wrangler queues purge <name>
+
+				Purge messages from a Queue
+
+				POSITIONALS
+				  name  The name of the queue  [string] [required]
+
+				GLOBAL FLAGS
+				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
+			`);
+		});
+
+		it("should call the /purge API endpoint", async () => {
+			const getrequests = mockGetQueueRequest("testQueue");
+			const requests = mockPurgeRequest();
+
+			await runWrangler("queues purge testQueue");
+
+			expect(requests.count).toEqual(1);
+			expect(getrequests.count).toEqual(1);
+
+			expect(std.out).toMatchInlineSnapshot(`"Started a purge operation for Queue 'testQueue'"`);
 		});
 	});
 });
