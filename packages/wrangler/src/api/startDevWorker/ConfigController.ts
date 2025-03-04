@@ -130,6 +130,7 @@ async function resolveDevConfig(
 		bindVectorizeToProd: input.dev?.bindVectorizeToProd ?? false,
 		multiworkerPrimary: input.dev?.multiworkerPrimary,
 		imagesLocalMode: input.dev?.imagesLocalMode ?? false,
+		outboundService: input.dev?.outboundService,
 	} satisfies StartDevWorkerOptions["dev"];
 }
 

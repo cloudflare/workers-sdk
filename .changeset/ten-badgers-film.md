@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Strip cf-connecting-ip from outbound requests from Miniflare
+Strip `cf-connecting-ip` header from all outbound requests when running `wrangler dev`

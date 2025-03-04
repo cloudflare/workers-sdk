@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import chalk from "chalk";
-import { Miniflare, Mutex } from "miniflare";
+import { fetch, Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import { convertBindingsToCfWorkerInitBindings, stripHeader } from "./utils";
+import { convertBindingsToCfWorkerInitBindings } from "./utils";
 import type { WorkerEntrypointsDefinition } from "../../dev-registry";
 import type {
 	BundleCompleteEvent,
@@ -155,8 +155,19 @@ export class LocalRuntimeController extends RuntimeController {
 					this.#proxyToUserWorkerAuthenticationSecret
 				);
 
+			const userOutboundService = data.config.dev?.outboundService;
+
 			for (const worker of options.workers) {
-				worker.outboundService = stripHeader("cf-connecting-ip");
+				worker.outboundService = (request) => {
+					// The dev server adds the CF-Connecting-IP header to incoming requests.
+					// Occasionally, this header is inadvertently forwarded in outbound requests.
+					// This strips it out to avoid issue when proxying to Cloudflare related domains.
+					if (request.headers.has("CF-Connecting-IP")) {
+						request.headers.delete("CF-Connecting-IP");
+					}
+
+					return userOutboundService?.(request) ?? fetch(request);
+				};
 			}
 
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
