@@ -270,7 +270,7 @@ export function unstable_getMiniflareWorkerOptions(
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
 		name: config.name,
 		bindings,
-		workerDefinitions: undefined,
+		workerDefinitions: null,
 		queueConsumers: config.queues.consumers,
 		services: [],
 		serviceBindings: {},
