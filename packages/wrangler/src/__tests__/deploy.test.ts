@@ -5024,9 +5024,18 @@ addEventListener('fetch', event => {});`
 		});
 
 		it("should error if run_worker_first is true and no user Worker is provided", async () => {
+			const assets = [
+				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "file-2.bak", content: "Content of file-2" },
+				{ filePath: "file-3.txt", content: "Content of file-3" },
+				{ filePath: "sub-dir/file-4.bak", content: "Content of file-4" },
+				{ filePath: "sub-dir/file-5.txt", content: "Content of file-5" },
+			];
+			writeAssets(assets, "assets");
 			writeWranglerConfig({
 				assets: {
-					directory: "xyz",
+					directory: "assets",
 					run_worker_first: true,
 				},
 			});
@@ -5036,6 +5045,59 @@ addEventListener('fetch', event => {});`
 				[Error: Cannot set run_worker_first=true without a Worker script.
 				Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (\`main\`).]
 			`);
+		});
+
+		it("should attach an 'application/null' content-type header when uploading files with an unknown extension", async () => {
+			const assets = [{ filePath: "foobar.greg", content: "something-binary" }];
+			writeAssets(assets);
+			writeWranglerConfig({
+				assets: { directory: "assets" },
+			});
+
+			const manifestBodies: AssetManifest[] = [];
+			const mockBuckets = [["80e40c1f2422528cb2fba3f9389ce315"]];
+			await mockAUSRequest(manifestBodies, mockBuckets, "<<aus-token>>");
+			const uploadBodies: FormData[] = [];
+			const uploadAuthHeaders: (string | null)[] = [];
+			const uploadContentTypeHeaders: (string | null)[] = [];
+			await mockAssetUploadRequest(
+				mockBuckets.length,
+				uploadBodies,
+				uploadAuthHeaders,
+				uploadContentTypeHeaders
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {},
+				},
+				expectedType: "none",
+			});
+			await runWrangler("deploy");
+			expect(manifestBodies.length).toBe(1);
+			expect(manifestBodies[0]).toEqual({
+				manifest: {
+					"/foobar.greg": {
+						hash: "80e40c1f2422528cb2fba3f9389ce315",
+						size: 16,
+					},
+				},
+			});
+			const flatBodies = Object.fromEntries(
+				uploadBodies.flatMap((b) => [...b.entries()])
+			);
+			await expect(
+				flatBodies["80e40c1f2422528cb2fba3f9389ce315"]
+			).toBeAFileWhichMatches(
+				new File(
+					["c29tZXRoaW5nLWJpbmFyeQ=="],
+					"80e40c1f2422528cb2fba3f9389ce315",
+					{
+						type: "application/null",
+					}
+				)
+			);
 		});
 
 		it("should be able to upload files with special characters in filepaths", async () => {
@@ -5167,6 +5229,8 @@ addEventListener('fetch', event => {});`
 		it("should ignore assets that match patterns in an .assetsignore file in the root of the assets directory", async () => {
 			const assets = [
 				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
+				{ filePath: "_redirects", content: "/foo /bar" },
+				{ filePath: "_headers", content: "/some-path\nX-Header: Custom-Value" },
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.bak", content: "Content of file-2" },
 				{ filePath: "file-3.txt", content: "Content of file-3" },
@@ -5349,6 +5413,45 @@ addEventListener('fetch', event => {});`
 				}
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should upload _redirects and _headers", async () => {
+			const redirectsContent = "/foo /bar";
+			const headersContent = "/some-path\nX-Header: Custom-Value";
+			const assets = [
+				{ filePath: "_redirects", content: redirectsContent },
+				{ filePath: "_headers", content: headersContent },
+				{ filePath: "index.html", content: "<html></html>" },
+			];
+			writeAssets(assets);
+			writeWranglerConfig({
+				assets: { directory: "assets" },
+			});
+			const bodies: AssetManifest[] = [];
+			await mockAUSRequest(bodies);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {
+						_redirects: redirectsContent,
+						_headers: headersContent,
+					},
+				},
+				expectedType: "none",
+			});
+			await runWrangler("deploy");
+			expect(bodies.length).toBe(1);
+			expect(bodies[0]).toMatchInlineSnapshot(`
+				Object {
+				  "manifest": Object {
+				    "/index.html": Object {
+				      "hash": "4752155c2c0c0320b40bca1d83e8380a",
+				      "size": 13,
+				    },
+				  },
+				}
+			`);
 		});
 
 		it("should resolve assets directory relative to cwd if using cli", async () => {

@@ -24,5 +24,6 @@ const config: TemplateConfig = {
 	}),
 	devScript: "preview",
 	deployScript: "deploy",
+	previewScript: "preview",
 };
 export default config;

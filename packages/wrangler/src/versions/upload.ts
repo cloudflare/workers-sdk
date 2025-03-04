@@ -266,6 +266,7 @@ export const versionsUploadCommand = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
+			ASSETS_RPC: false,
 		}),
 	},
 	handler: async function versionsUploadHandler(args, { config }) {
@@ -707,8 +708,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				props.assetsOptions && assetsJwt
 					? {
 							jwt: assetsJwt,
-							routingConfig: props.assetsOptions.routingConfig,
+							routerConfig: props.assetsOptions.routerConfig,
 							assetConfig: props.assetsOptions.assetConfig,
+							_redirects: props.assetsOptions._redirects,
+							_headers: props.assetsOptions._headers,
 						}
 					: undefined,
 			logpush: undefined, // both logpush and observability are not supported in versions upload

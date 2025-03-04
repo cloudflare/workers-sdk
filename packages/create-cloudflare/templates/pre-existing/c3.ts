@@ -56,7 +56,7 @@ export async function copyExistingWorkerFiles(ctx: C3Context) {
 		{ recursive: true },
 	);
 
-	// copy wrangler.toml from the downloaded Worker
+	// copy ./wrangler.toml from the downloaded Worker
 	await cp(
 		join(tempdir, ctx.args.existingScript, "wrangler.toml"),
 		join(ctx.project.path, "wrangler.toml"),

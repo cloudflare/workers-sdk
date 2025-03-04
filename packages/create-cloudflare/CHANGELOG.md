@@ -1,5 +1,64 @@
 # create-cloudflare
 
+## 2.40.0
+
+### Minor Changes
+
+- [#8197](https://github.com/cloudflare/workers-sdk/pull/8197) [`acd42a8`](https://github.com/cloudflare/workers-sdk/commit/acd42a849b31b0d2ef30b0443678e775ebe69fa2) Thanks [@dom96](https://github.com/dom96)! - Python Workers template now includes package for autocomplete and type hints
+
+### Patch Changes
+
+- [#8324](https://github.com/cloudflare/workers-sdk/pull/8324) [`94729a6`](https://github.com/cloudflare/workers-sdk/commit/94729a6916e2a8b2bb8177d322cd8c8916f57d10) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.6.16 | 0.6.23 |
+
+- [#8290](https://github.com/cloudflare/workers-sdk/pull/8290) [`5b047e4`](https://github.com/cloudflare/workers-sdk/commit/5b047e4af0ffaab65b9fb0a491982727cd1232bd) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - ensure that git commits are generated
+
+- [#8013](https://github.com/cloudflare/workers-sdk/pull/8013) [`bc62d24`](https://github.com/cloudflare/workers-sdk/commit/bc62d2405c42bf41666983f13dfac2f75506b82c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - add experimental React templates using the Cloudflare Vite plugin
+
+- [#8232](https://github.com/cloudflare/workers-sdk/pull/8232) [`59cb914`](https://github.com/cloudflare/workers-sdk/commit/59cb914ee4c0939d1b29421e857e16b8e4599300) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: stop c3 adding a duplicate `./wrangler.jsonc` when using --existing-script
+
+  This should mean dev and deploy on projects initialised using `create-cloudflare --existing-script` start working again. Note there will still be an extraneous `./src/wrangler.toml`, which will require a separate fix in the dashboard. This file can be manually deleted in the meantime.
+
+## 2.39.0
+
+### Minor Changes
+
+- [#8264](https://github.com/cloudflare/workers-sdk/pull/8264) [`1f3af77`](https://github.com/cloudflare/workers-sdk/commit/1f3af77c7920189b9360357bf3dc054b2cebdf00) Thanks [@dcartertwo](https://github.com/dcartertwo)! - Create Cloudflare will no longer ask if the developer would like to use git if already in a git repository.
+
+## 2.38.2
+
+### Patch Changes
+
+- [#8233](https://github.com/cloudflare/workers-sdk/pull/8233) [`74a808f`](https://github.com/cloudflare/workers-sdk/commit/74a808f0a7bdd2af7526b3c73d1c7c27c03b85a3) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.14.0 | 3.14.2 |
+
+- [#8241](https://github.com/cloudflare/workers-sdk/pull/8241) [`708de7f`](https://github.com/cloudflare/workers-sdk/commit/708de7f0cb1cd6bd2488922f129ca26b6690b962) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - update experimental Next.js template to work on `@opennextjs/cloudflare@0.5.x`
+
+- [#8240](https://github.com/cloudflare/workers-sdk/pull/8240) [`47f56a2`](https://github.com/cloudflare/workers-sdk/commit/47f56a2a4dcfa216d768fec974c2fa8c5bb3c21c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: remove unnecessary flags passed to `create-next-app` when creating Next.js apps in experimental mode
+
+  This change removes a set of flags that get passed to `create-next-app` that force the generated Next.js
+  application to have specific settings (e.g. typescript, tailwind, src directory, etc...) which are not
+  actually mandatory/recommended for the use of the open-next Cloudflare adapter
+
+- [#8215](https://github.com/cloudflare/workers-sdk/pull/8215) [`eb0912d`](https://github.com/cloudflare/workers-sdk/commit/eb0912d54abe7c7dd192ccc5b5de738dfb2bfadf) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - This change makes the user facing message C3 displays while waiting for DNS propagation, more friendly/informative. The idea is to inform users that DNS propagation might sometimes take even up to 2 minutes. This will hopefully prevent confusion around whether how long the process will take, or whether the process is stuck, etc.
+
+- [#8243](https://github.com/cloudflare/workers-sdk/pull/8243) [`c62973b`](https://github.com/cloudflare/workers-sdk/commit/c62973b4cc148a8bf9616008f9c0f8176db9408f) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Ensure we exit the process on "SIGINT" and "SIGTERM"
+
+  Currently C3 does not explicitly exit the process if an error is thrown, or if a "SIGINT" or "SIGTERM" signal is received. This leads to situations when, if `ctrl+C` is pressed while there are still tasks in the stack/microtask queues (think in flight async xhr calls, or polling, or long running
+  `while` loops), the current process will continue running until all those tasks are run to completion, and the queues are empty.
+
+  This commit fixes this by explicitly calling `process.exit()` when an error is thrown (our internal "SIGINT"/"SIGTERM" handlers will throw a `CancelError`), thus ensuring we always exit the process.
+
 ## 2.38.1
 
 ### Patch Changes

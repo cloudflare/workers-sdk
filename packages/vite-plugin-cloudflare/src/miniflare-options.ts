@@ -3,7 +3,12 @@ import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { Log, LogLevel, Response as MiniflareResponse } from "miniflare";
+import {
+	kCurrentWorker,
+	Log,
+	LogLevel,
+	Response as MiniflareResponse,
+} from "miniflare";
 import * as vite from "vite";
 import {
 	unstable_getMiniflareWorkerOptions,
@@ -76,14 +81,14 @@ function getWorkerToWorkerEntrypointNamesMap(
 			if (
 				typeof value === "object" &&
 				"name" in value &&
-				typeof value.name === "string" &&
 				value.entrypoint !== undefined &&
 				value.entrypoint !== "default"
 			) {
-				const entrypointNames = workerToWorkerEntrypointNamesMap.get(
-					value.name
-				);
-				assert(entrypointNames, missingWorkerErrorMessage(value.name));
+				const targetWorkerName =
+					value.name === kCurrentWorker ? worker.name : value.name;
+				const entrypointNames =
+					workerToWorkerEntrypointNamesMap.get(targetWorkerName);
+				assert(entrypointNames, missingWorkerErrorMessage(targetWorkerName));
 
 				entrypointNames.add(value.entrypoint);
 			}
@@ -417,7 +422,7 @@ export function getDevMiniflareOptions(
 					workerToWorkflowEntrypointClassNamesMap.get(workerOptions.name);
 				assert(
 					workflowEntrypointClassNames,
-					`WorkflowEntrypoint class names not found for worker ${workerOptions.name}`
+					`WorkflowEntrypoint class names not found for worker: ${workerOptions.name}`
 				);
 
 				for (const className of [...workflowEntrypointClassNames].sort()) {
@@ -456,11 +461,11 @@ export function getDevMiniflareOptions(
 
 			const moduleRE = new RegExp(MODULE_PATTERN);
 			const match = moduleRE.exec(rawSpecifier);
-			assert(match, `Unexpected error: no match for module ${rawSpecifier}.`);
+			assert(match, `Unexpected error: no match for module: ${rawSpecifier}.`);
 			const [full, moduleType, modulePath] = match;
 			assert(
 				modulePath,
-				`Unexpected error: module path not found in reference ${full}.`
+				`Unexpected error: module path not found in reference: ${full}.`
 			);
 
 			let source: Buffer;
@@ -468,7 +473,9 @@ export function getDevMiniflareOptions(
 			try {
 				source = fs.readFileSync(modulePath);
 			} catch (error) {
-				throw new Error(`Import ${modulePath} not found. Does the file exist?`);
+				throw new Error(
+					`Import "${modulePath}" not found. Does the file exist?`
+				);
 			}
 
 			return MiniflareResponse.json({

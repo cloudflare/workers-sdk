@@ -1,5 +1,44 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.7.5
+
+### Patch Changes
+
+- [#8173](https://github.com/cloudflare/workers-sdk/pull/8173) [`a9c0159`](https://github.com/cloudflare/workers-sdk/commit/a9c0159f85ab69e9f071d0c56f5658d92d4f8a69) Thanks [@edmundhung](https://github.com/edmundhung)! - improve error message with isolated storage
+
+- [#8199](https://github.com/cloudflare/workers-sdk/pull/8199) [`60d2bc6`](https://github.com/cloudflare/workers-sdk/commit/60d2bc61ad62fc023e356b7c4e5a72cbea9f56fb) Thanks [@edmundhung](https://github.com/edmundhung)! - Added step-through debugging support with Vitest.
+
+  To start debugging, run Vitest with the following command and attach a debugger to port 9229:
+
+  ```sh
+  vitest --inspect=9229 --no-file-parallelism
+  ```
+
+  For more details, check out our [Vitest Debugging guide](https://developers.cloudflare.com/workers/testing/vitest-integration/debugging).
+
+- Updated dependencies [[`fce642d`](https://github.com/cloudflare/workers-sdk/commit/fce642d59264b1b6e7df8a6c9a015519b7574637), [`2cad136`](https://github.com/cloudflare/workers-sdk/commit/2cad136e99c48c2bf64c0010a8ecc7465be79b03), [`f59d95b`](https://github.com/cloudflare/workers-sdk/commit/f59d95b6f48ee2ea902202af2778a1598596ebbd), [`a4909cb`](https://github.com/cloudflare/workers-sdk/commit/a4909cbe552eae72b901cd78bf1f814f818085a0)]:
+  - miniflare@3.20250214.2
+  - wrangler@3.112.0
+
+## 0.7.4
+
+### Patch Changes
+
+- [#8254](https://github.com/cloudflare/workers-sdk/pull/8254) [`2b92a65`](https://github.com/cloudflare/workers-sdk/commit/2b92a65fe6ec500c16c20c46bf91c2d5f3e4ceba) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: responses from `fetchMock` should have immutable headers
+
+- Updated dependencies [[`36ef9c6`](https://github.com/cloudflare/workers-sdk/commit/36ef9c6209c937570711ff407fd29de6fb7cf267), [`1cb2d34`](https://github.com/cloudflare/workers-sdk/commit/1cb2d3418b21b4d54d1c8debbfc91a5efc8f5708), [`36ef9c6`](https://github.com/cloudflare/workers-sdk/commit/36ef9c6209c937570711ff407fd29de6fb7cf267)]:
+  - wrangler@3.111.0
+
+## 0.7.3
+
+### Patch Changes
+
+- [#8182](https://github.com/cloudflare/workers-sdk/pull/8182) [`085a37a`](https://github.com/cloudflare/workers-sdk/commit/085a37abe68d4b14e2e9e5dbe00a6437d5b9c566) Thanks [@edmundhung](https://github.com/edmundhung)! - fix mock modules not re-evaluated in watch mode
+
+- Updated dependencies [[`968c3d9`](https://github.com/cloudflare/workers-sdk/commit/968c3d9c068fa895b30f0198d7c8873a00709e62), [`a9a4c33`](https://github.com/cloudflare/workers-sdk/commit/a9a4c33143b9f58673ac0cdd251957997275fa10), [`6cae13a`](https://github.com/cloudflare/workers-sdk/commit/6cae13aa5f338cee18ec2e43a5dadda0c7d8dc2e), [`6dd1e23`](https://github.com/cloudflare/workers-sdk/commit/6dd1e2300ec393e210bfdb6d0a7cf4ade17b6ad4)]:
+  - wrangler@3.110.0
+  - miniflare@3.20250214.1
+
 ## 0.7.2
 
 ### Patch Changes

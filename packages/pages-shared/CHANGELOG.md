@@ -1,5 +1,25 @@
 # @cloudflare/pages-shared
 
+## 0.13.11
+
+### Patch Changes
+
+- Updated dependencies [[`fce642d`](https://github.com/cloudflare/workers-sdk/commit/fce642d59264b1b6e7df8a6c9a015519b7574637), [`a4909cb`](https://github.com/cloudflare/workers-sdk/commit/a4909cbe552eae72b901cd78bf1f814f818085a0)]:
+  - miniflare@3.20250214.2
+
+## 0.13.10
+
+### Patch Changes
+
+- [#8200](https://github.com/cloudflare/workers-sdk/pull/8200) [`62f5429`](https://github.com/cloudflare/workers-sdk/commit/62f54293a24a7494d9c468ab36fa9d009826e721) Thanks [@penalosa](https://github.com/penalosa)! - Remove Miniflare 2
+
+## 0.13.9
+
+### Patch Changes
+
+- Updated dependencies [[`a9a4c33`](https://github.com/cloudflare/workers-sdk/commit/a9a4c33143b9f58673ac0cdd251957997275fa10), [`6cae13a`](https://github.com/cloudflare/workers-sdk/commit/6cae13aa5f338cee18ec2e43a5dadda0c7d8dc2e)]:
+  - miniflare@3.20250214.1
+
 ## 0.13.8
 
 ### Patch Changes

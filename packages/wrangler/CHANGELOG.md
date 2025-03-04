@@ -1,5 +1,51 @@
 # wrangler
 
+## 3.112.0
+
+### Minor Changes
+
+- [#8256](https://github.com/cloudflare/workers-sdk/pull/8256) [`f59d95b`](https://github.com/cloudflare/workers-sdk/commit/f59d95b6f48ee2ea902202af2778a1598596ebbd) Thanks [@jbwcloudflare](https://github.com/jbwcloudflare)! - Add two new Queues commands: pause-delivery and resume-delivery
+
+  These new commands allow users to pause and resume the delivery of messages to Queue Consumers
+
+### Patch Changes
+
+- [#8274](https://github.com/cloudflare/workers-sdk/pull/8274) [`fce642d`](https://github.com/cloudflare/workers-sdk/commit/fce642d59264b1b6e7df8a6c9a015519b7574637) Thanks [@emily-shen](https://github.com/emily-shen)! - fix bindings to entrypoints on the same worker in workers with assets
+
+- [#8201](https://github.com/cloudflare/workers-sdk/pull/8201) [`2cad136`](https://github.com/cloudflare/workers-sdk/commit/2cad136e99c48c2bf64c0010a8ecc7465be79b03) Thanks [@ichernetsky-cf](https://github.com/ichernetsky-cf)! - fix: interactively list Cloudchamber deployments using labels
+
+- [#8289](https://github.com/cloudflare/workers-sdk/pull/8289) [`a4909cb`](https://github.com/cloudflare/workers-sdk/commit/a4909cbe552eae72b901cd78bf1f814f818085a0) Thanks [@penalosa](https://github.com/penalosa)! - Add the experimental `--x-assets-rpc` flag to gate feature work to support JSRPC with Workers + Assets projects.
+
+- Updated dependencies [[`fce642d`](https://github.com/cloudflare/workers-sdk/commit/fce642d59264b1b6e7df8a6c9a015519b7574637), [`a4909cb`](https://github.com/cloudflare/workers-sdk/commit/a4909cbe552eae72b901cd78bf1f814f818085a0)]:
+  - miniflare@3.20250214.2
+
+## 3.111.0
+
+### Minor Changes
+
+- [#7977](https://github.com/cloudflare/workers-sdk/pull/7977) [`36ef9c6`](https://github.com/cloudflare/workers-sdk/commit/36ef9c6209c937570711ff407fd29de6fb7cf267) Thanks [@jkoe-cf](https://github.com/jkoe-cf)! - Added wrangler r2 commands for bucket lock configuration
+
+### Patch Changes
+
+- [#8248](https://github.com/cloudflare/workers-sdk/pull/8248) [`1cb2d34`](https://github.com/cloudflare/workers-sdk/commit/1cb2d3418b21b4d54d1c8debbfc91a5efc8f5708) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Omits Content-Type header for files of an unknown extension in Workers Assets
+
+- [#7977](https://github.com/cloudflare/workers-sdk/pull/7977) [`36ef9c6`](https://github.com/cloudflare/workers-sdk/commit/36ef9c6209c937570711ff407fd29de6fb7cf267) Thanks [@jkoe-cf](https://github.com/jkoe-cf)! - fixing the format of the R2 lifecycle rule date input to be parsed as string instead of number
+
+## 3.110.0
+
+### Minor Changes
+
+- [#8253](https://github.com/cloudflare/workers-sdk/pull/8253) [`6dd1e23`](https://github.com/cloudflare/workers-sdk/commit/6dd1e2300ec393e210bfdb6d0a7cf4ade17b6ad4) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Add `--cwd` global argument to the `wrangler` CLI to allow changing the current working directory before running any command.
+
+### Patch Changes
+
+- [#8191](https://github.com/cloudflare/workers-sdk/pull/8191) [`968c3d9`](https://github.com/cloudflare/workers-sdk/commit/968c3d9c068fa895b30f0198d7c8873a00709e62) Thanks [@vicb](https://github.com/vicb)! - Optimize global injection in node compat mode
+
+- [#8247](https://github.com/cloudflare/workers-sdk/pull/8247) [`a9a4c33`](https://github.com/cloudflare/workers-sdk/commit/a9a4c33143b9f58673ac0cdd251957997275fa10) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Omits Content-Type header for files of an unknown extension in Workers Assets
+
+- Updated dependencies [[`a9a4c33`](https://github.com/cloudflare/workers-sdk/commit/a9a4c33143b9f58673ac0cdd251957997275fa10), [`6cae13a`](https://github.com/cloudflare/workers-sdk/commit/6cae13aa5f338cee18ec2e43a5dadda0c7d8dc2e)]:
+  - miniflare@3.20250214.1
+
 ## 3.109.3
 
 ### Patch Changes

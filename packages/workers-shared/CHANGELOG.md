@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.14.4
+
+### Patch Changes
+
+- [#8247](https://github.com/cloudflare/workers-sdk/pull/8247) [`a9a4c33`](https://github.com/cloudflare/workers-sdk/commit/a9a4c33143b9f58673ac0cdd251957997275fa10) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Omits Content-Type header for files of an unknown extension in Workers Assets
+
 ## 0.14.3
 
 ### Patch Changes

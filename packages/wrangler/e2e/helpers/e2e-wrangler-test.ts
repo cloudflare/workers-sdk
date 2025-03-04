@@ -142,7 +142,7 @@ export class WranglerE2ETestHelper {
 		const id = match[1];
 
 		onTestFinished(async () => {
-			await this.run(`wrangler hyperdrive delete ${name}`);
+			await this.run(`wrangler hyperdrive delete ${id}`);
 		});
 
 		return { id, name };
