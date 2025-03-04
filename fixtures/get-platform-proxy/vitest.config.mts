@@ -5,6 +5,6 @@ export default defineConfig({
 		testTimeout: 25_000,
 		hookTimeout: 25_000,
 		teardownTimeout: 25_000,
-		useAtomics: true,
+		// useAtomics: true,
 	},
 });
