@@ -1,6 +1,6 @@
 /** @type {import("eslint").Linter.Config} */
 module.exports = {
-	extends: ["turbo", "@cloudflare/eslint-config-worker"],
+	extends: ["plugin:turbo/recommended", "@cloudflare/eslint-config-worker"],
 	plugins: ["eslint-plugin-react", "eslint-plugin-react-hooks"],
 	overrides: [
 		{
