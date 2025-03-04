@@ -1,5 +1,13 @@
 # @cloudflare/vite-plugin
 
+## 0.1.9
+
+### Patch Changes
+
+- Updated dependencies [[`2d40989`](https://github.com/cloudflare/workers-sdk/commit/2d409892f1cf08f07f84d25dcab023bc20ada374), [`cf14e17`](https://github.com/cloudflare/workers-sdk/commit/cf14e17d40b9e51475ba4d9ee6b4e3ef5ae5e841)]:
+  - miniflare@3.20250214.3
+  - @cloudflare/unenv-preset@2.0.0
+
 ## 0.1.8
 
 ### Patch Changes

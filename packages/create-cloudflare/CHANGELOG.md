@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.40.1
+
+### Patch Changes
+
+- [#8311](https://github.com/cloudflare/workers-sdk/pull/8311) [`f379635`](https://github.com/cloudflare/workers-sdk/commit/f379635a338f546f72fe8208df00cb7801b1263f) Thanks [@p-glynn](https://github.com/p-glynn)! - use tabs for indentation in generated wrangler.json
+
 ## 2.40.0
 
 ### Minor Changes
