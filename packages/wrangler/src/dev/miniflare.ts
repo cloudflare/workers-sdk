@@ -1,7 +1,13 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { CoreHeaders, HttpOptions_Style, Log, LogLevel } from "miniflare";
+import {
+	CoreHeaders,
+	fetch,
+	HttpOptions_Style,
+	Log,
+	LogLevel,
+} from "miniflare";
 import {
 	AIFetcher,
 	EXTERNAL_AI_WORKER_NAME,
@@ -197,6 +203,7 @@ export interface ConfigBundle {
 	bindVectorizeToProd: boolean;
 	imagesLocalMode: boolean;
 	testScheduled: boolean;
+	outboundService: ServiceFetch | undefined;
 }
 
 export class WranglerLog extends Log {
@@ -1052,6 +1059,13 @@ export async function buildMiniflareOptions(
 					entrypoint: name,
 					proxy: true,
 				})),
+				outboundService(request) {
+					if (request.headers.has("CF-Connecting-IP")) {
+						request.headers.delete("CF-Connecting-IP");
+					}
+
+					return config.outboundService?.(request) ?? fetch(request);
+				},
 			},
 			...externalWorkers,
 		],
