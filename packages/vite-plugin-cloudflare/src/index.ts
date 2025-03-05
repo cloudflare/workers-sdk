@@ -20,6 +20,7 @@ import {
 	injectGlobalCode,
 	isNodeCompat,
 	nodeCompatExternals,
+	nodeJSCompatHasSideEffect,
 	resolveNodeJSImport,
 } from "./node-js-compat";
 import { resolvePluginConfig } from "./plugin-config";
@@ -412,6 +413,15 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				// Only configure this environment if it is a Worker using Node.js compatibility.
 				if (isNodeCompat(getWorkerConfig(name))) {
 					return {
+						build: {
+							rollupOptions: {
+								treeshake: {
+									// We need to ensure that all the Node.js polyfill files that are simply imported with no exports
+									// are considered to have side-effects to avoid them being tree-shaken.
+									moduleSideEffects: nodeJSCompatHasSideEffect,
+								},
+							},
+						},
 						resolve: {
 							builtins: [...nodeCompatExternals],
 						},

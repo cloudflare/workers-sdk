@@ -66,8 +66,14 @@ export function injectGlobalCode(id: string, code: string) {
 		})
 		.join("\n");
 
+	// Some globals are not injected using the approach above but are added to globalThis via side-effect imports of polyfills from the unenv-preset.
+	const polyfillCode = env.polyfill
+		.map((polyfillPath) => `import "${polyfillPath}";\n`)
+		.join("");
+
 	const modified = new MagicString(code);
 	modified.prepend(injectedCode);
+	modified.prepend(polyfillCode);
 	return {
 		code: modified.toString(),
 		map: modified.generateMap({ hires: "boundary", source: id }),
@@ -105,8 +111,10 @@ export function resolveNodeJSImport(source: string) {
  * Gets a set of module specifiers for all possible Node.js compat polyfill entry-points
  */
 function getNodeCompatEntries() {
+	// Include all the alias targets
 	const entries = new Set<string>(Object.values(env.alias));
 
+	// Include all the injection targets
 	for (const globalInject of Object.values(env.inject)) {
 		if (typeof globalInject === "string") {
 			entries.add(globalInject);
@@ -119,7 +127,20 @@ function getNodeCompatEntries() {
 		}
 	}
 
+	// Include all the polyfills
+	env.polyfill.forEach((polyfill) => entries.add(polyfill));
+
+	// Exclude all the externals
 	nodeCompatExternals.forEach((external) => entries.delete(external));
 
 	return entries;
+}
+
+const nodeCompatPolyfills = new Set(
+	env.polyfill.map((source) =>
+		resolvePathSync(source, { url: import.meta.url })
+	)
+);
+export function nodeJSCompatHasSideEffect(source: string) {
+	return nodeCompatPolyfills.has(source);
 }
