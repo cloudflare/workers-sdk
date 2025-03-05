@@ -241,6 +241,7 @@ function getFrameworkTests(opts: {
 			nuxt: {
 				testCommitMessage: true,
 				timeout: LONG_TIMEOUT,
+				unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
 				unsupportedOSs: ["win32"],
 				verifyDeploy: {
 					route: "/",
@@ -542,6 +543,7 @@ function getFrameworkTests(opts: {
 			nuxt: {
 				testCommitMessage: true,
 				timeout: LONG_TIMEOUT,
+				unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
 				unsupportedOSs: ["win32"],
 				verifyDeploy: {
 					route: "/",

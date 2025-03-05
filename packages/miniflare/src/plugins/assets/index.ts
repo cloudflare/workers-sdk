@@ -154,7 +154,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 					},
 					{
 						name: "CONFIG",
-						json: JSON.stringify(options.assets.routerConfig),
+						json: JSON.stringify(options.assets.routerConfig ?? {}),
 					},
 				],
 			},
