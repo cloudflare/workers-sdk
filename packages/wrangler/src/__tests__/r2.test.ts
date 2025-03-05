@@ -2016,7 +2016,7 @@ describe("r2", () => {
 					await runWrangler(`r2 bucket lifecycle list ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
 					"Listing lifecycle rules for bucket 'my-bucket'...
-					id:       rule-1
+					name:     rule-1
 					enabled:  Yes
 					prefix:   images/
 					action:   Expire objects after 30 days"
@@ -2074,7 +2074,7 @@ describe("r2", () => {
 						)
 					);
 					await runWrangler(
-						`r2 bucket lifecycle add ${bucketName} --id ${ruleId} --prefix ${prefix} --expire-days ${conditionValue}`
+						`r2 bucket lifecycle add ${bucketName} --name ${ruleId} --prefix ${prefix} --expire-days ${conditionValue}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding lifecycle rule 'my-rule' to bucket 'my-bucket'...
@@ -2132,7 +2132,7 @@ describe("r2", () => {
 						)
 					);
 					await runWrangler(
-						`r2 bucket lifecycle add ${bucketName} --id ${ruleId} --prefix ${prefix} --expire-date ${conditionValue}`
+						`r2 bucket lifecycle add ${bucketName} --name ${ruleId} --prefix ${prefix} --expire-date ${conditionValue}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding lifecycle rule 'my-rule' to bucket 'my-bucket'...
@@ -2180,7 +2180,7 @@ describe("r2", () => {
 						)
 					);
 					await runWrangler(
-						`r2 bucket lifecycle remove ${bucketName} --id ${ruleId}`
+						`r2 bucket lifecycle remove ${bucketName} --name ${ruleId}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Removing lifecycle rule 'my-rule' from bucket 'my-bucket'...
@@ -2207,7 +2207,7 @@ describe("r2", () => {
 					);
 					await expect(() =>
 						runWrangler(
-							`r2 bucket lifecycle remove ${bucketName} --id ${ruleId}`
+							`r2 bucket lifecycle remove ${bucketName} --name ${ruleId}`
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						"[Error: Lifecycle rule with ID 'my-rule' not found in configuration for 'my-bucket'.]"
@@ -2472,17 +2472,17 @@ describe("r2", () => {
 					await runWrangler(`r2 bucket lock list ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
 					"Listing lock rules for bucket 'my-bucket'...
-					id:         rule-age
+					name:       rule-age
 					enabled:    Yes
 					prefix:     images/age
 					condition:  after 1 day
 
-					id:         rule-date
+					name:       rule-date
 					enabled:    Yes
 					prefix:     images/date
 					condition:  on 2025-01-30
 
-					id:         rule-indefinite
+					name:       rule-indefinite
 					enabled:    Yes
 					prefix:     images/indefinite
 					condition:  indefinitely"
@@ -2517,7 +2517,7 @@ describe("r2", () => {
 						result: true,
 					});
 					await runWrangler(
-						`r2 bucket lock add ${bucketName} --id "rule-no-prefix" --retention-days 1`
+						`r2 bucket lock add ${bucketName} --name "rule-no-prefix" --retention-days 1`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding lock rule 'rule-no-prefix' to bucket 'my-bucket'...
@@ -2538,7 +2538,7 @@ describe("r2", () => {
 					});
 
 					await runWrangler(
-						`r2 bucket lock add ${bucketName} --id 'rule-not-indefinite' --prefix prefix-not-indefinite`
+						`r2 bucket lock add ${bucketName} --name 'rule-not-indefinite' --prefix prefix-not-indefinite`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Add cancelled."
@@ -2561,7 +2561,7 @@ describe("r2", () => {
 					]);
 					// age
 					await runWrangler(
-						`r2 bucket lock add ${bucketName} --id rule-age --prefix prefix-age --retention-days 1`
+						`r2 bucket lock add ${bucketName} --name rule-age --prefix prefix-age --retention-days 1`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding lock rule 'rule-age' to bucket 'my-bucket'...
@@ -2576,7 +2576,7 @@ describe("r2", () => {
 					// age
 					await expect(() =>
 						runWrangler(
-							`r2 bucket lock add ${bucketName} --id rule-age --prefix prefix-age --retention-days one`
+							`r2 bucket lock add ${bucketName} --name rule-age --prefix prefix-age --retention-days one`
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						`[Error: Days must be a number.]`
@@ -2600,7 +2600,7 @@ describe("r2", () => {
 					// age
 					await expect(() =>
 						runWrangler(
-							`r2 bucket lock add ${bucketName} --id rule-age --prefix prefix-age --retention-days -10`
+							`r2 bucket lock add ${bucketName} --name rule-age --prefix prefix-age --retention-days -10`
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						`[Error: Days must be a positive number: -10]`
@@ -2623,7 +2623,7 @@ describe("r2", () => {
 					]);
 					// date
 					await runWrangler(
-						`r2 bucket lock add ${bucketName} --id rule-date --prefix prefix-date --retention-date 2025-01-30`
+						`r2 bucket lock add ${bucketName} --name rule-date --prefix prefix-date --retention-date 2025-01-30`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding lock rule 'rule-date' to bucket 'my-bucket'...
@@ -2638,7 +2638,7 @@ describe("r2", () => {
 					// date
 					await expect(() =>
 						runWrangler(
-							`r2 bucket lock add ${bucketName} --id "rule-date" --prefix "prefix-date" --retention-date "January 30, 2025"`
+							`r2 bucket lock add ${bucketName} --name "rule-date" --prefix "prefix-date" --retention-date "January 30, 2025"`
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						`[Error: Date must be a valid date in the YYYY-MM-DD format: January 30, 2025]`
@@ -2660,7 +2660,7 @@ describe("r2", () => {
 					]);
 
 					await runWrangler(
-						`r2 bucket lock add ${bucketName} --id rule-indefinite --prefix prefix-indefinite --retention-indefinite`
+						`r2 bucket lock add ${bucketName} --name rule-indefinite --prefix prefix-indefinite --retention-indefinite`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding lock rule 'rule-indefinite' to bucket 'my-bucket'...
@@ -2690,7 +2690,7 @@ describe("r2", () => {
 					});
 
 					await runWrangler(
-						`r2 bucket lock add ${bucketName} --id rule-indefinite --prefix prefix-indefinite`
+						`r2 bucket lock add ${bucketName} --name rule-indefinite --prefix prefix-indefinite`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"? Are you sure you want to add lock rule 'rule-indefinite' to bucket 'my-bucket' without retention? The lock rule will apply to all matching objects indefinitely.
@@ -2716,7 +2716,7 @@ describe("r2", () => {
 
 					await expect(() =>
 						runWrangler(
-							`r2 bucket lock add ${bucketName} --id rule-indefinite --prefix prefix-indefinite --retention-indefinite false`
+							`r2 bucket lock add ${bucketName} --name rule-indefinite --prefix prefix-indefinite --retention-indefinite false`
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						`[Error: Retention must be specified.]`
@@ -2731,7 +2731,7 @@ describe("r2", () => {
 					await expect(() =>
 						runWrangler(`r2 bucket lock add ${bucketName}`)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
-						`[Error: Must specify a rule ID.]`
+						`[Error: Must specify a rule name.]`
 					);
 				});
 			});
@@ -2751,7 +2751,7 @@ describe("r2", () => {
 					];
 					mockBucketLockPutWithExistingRules(bucketName, lockRules, []);
 					await runWrangler(
-						`r2 bucket lock remove ${bucketName} --id ${ruleId}`
+						`r2 bucket lock remove ${bucketName} --name ${ruleId}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Removing lock rule 'my-rule' from bucket 'my-bucket'...
@@ -2764,7 +2764,7 @@ describe("r2", () => {
 
 					mockBucketLockPutWithExistingRules(bucketName, [], []);
 					await expect(() =>
-						runWrangler(`r2 bucket lock remove ${bucketName} --id ${ruleId}`)
+						runWrangler(`r2 bucket lock remove ${bucketName} --name ${ruleId}`)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						"[Error: Lock rule with ID 'my-rule' not found in configuration for 'my-bucket'.]"
 					);
