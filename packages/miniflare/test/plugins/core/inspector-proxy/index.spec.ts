@@ -1,0 +1,440 @@
+import events from "node:events";
+import { setTimeout } from "node:timers/promises";
+import test from "ava";
+import { fetch, Miniflare } from "miniflare";
+import WebSocket from "ws";
+
+const nullScript =
+	'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));';
+
+test.serial(
+	"InspectorProxy: /json/version should provide details about the inspector version",
+	async (t) => {
+		const mf = new Miniflare({
+			inspectorPort: 9212,
+			unsafeInspectorProxy: true,
+			workers: [
+				{
+					script: nullScript,
+					unsafeInspectorProxy: true,
+				},
+			],
+		});
+		t.teardown(() => mf.dispose());
+
+		await mf.ready;
+
+		const res = await fetch("http://localhost:9212/json/version");
+		const versionDetails = (await res.json()) as Record<string, string>;
+
+		t.regex(versionDetails["Browser"], /^miniflare\/v\d\.\d{8}\.\d+$/);
+		t.regex(versionDetails["Protocol-Version"], /^\d+\.\d+$/);
+	}
+);
+
+test.serial(
+	"InspectorProxy: /json should provide a list of a single worker inspector",
+	async (t) => {
+		const mf = new Miniflare({
+			inspectorPort: 9212,
+			unsafeInspectorProxy: true,
+			workers: [
+				{
+					script: nullScript,
+					unsafeInspectorProxy: true,
+				},
+			],
+		});
+		t.teardown(() => mf.dispose());
+
+		await mf.ready;
+
+		const res = await fetch("http://localhost:9212/json");
+		const inspectors = (await res.json()) as Record<string, string>[];
+
+		t.is(inspectors.length, 1);
+
+		t.is(inspectors[0]["description"], "workers");
+		t.is(inspectors[0]["title"], "Cloudflare Worker");
+		t.is(inspectors[0]["webSocketDebuggerUrl"], "ws://localhost:9212/");
+	}
+);
+
+test.serial(
+	"InspectorProxy: /json should provide a list of a multiple worker inspector",
+	async (t) => {
+		const mf = new Miniflare({
+			inspectorPort: 9212,
+			unsafeInspectorProxy: true,
+			workers: [
+				{
+					script: nullScript,
+					unsafeInspectorProxy: true,
+				},
+				{
+					name: "extra-worker-a",
+					script: nullScript,
+					unsafeInspectorProxy: true,
+				},
+				{
+					name: "extra-worker-b",
+					script: nullScript,
+					unsafeInspectorProxy: true,
+				},
+			],
+		});
+		t.teardown(() => mf.dispose());
+
+		await mf.ready;
+
+		const res = await fetch("http://localhost:9212/json");
+		const inspectors = (await res.json()) as Record<string, string>[];
+
+		t.is(inspectors.length, 3);
+
+		t.is(inspectors[0]["description"], "workers");
+		t.is(inspectors[0]["title"], "Cloudflare Worker");
+		t.is(inspectors[0]["webSocketDebuggerUrl"], "ws://localhost:9212/");
+		t.is(inspectors[1]["description"], "workers");
+		t.is(inspectors[1]["title"], "Cloudflare Worker: extra-worker-a");
+		t.is(
+			inspectors[1]["webSocketDebuggerUrl"],
+			"ws://localhost:9212/extra-worker-a"
+		);
+		t.is(inspectors[2]["description"], "workers");
+		t.is(inspectors[2]["title"], "Cloudflare Worker: extra-worker-b");
+		t.is(
+			inspectors[2]["webSocketDebuggerUrl"],
+			"ws://localhost:9212/extra-worker-b"
+		);
+	}
+);
+
+test.serial(
+	"InspectorProxy: /json should provide a list of a multiple worker inspector with some filtered out",
+	async (t) => {
+		const mf = new Miniflare({
+			inspectorPort: 9212,
+			unsafeInspectorProxy: true,
+			workers: [
+				{
+					script: nullScript,
+					unsafeInspectorProxy: true,
+				},
+				{
+					name: "extra-worker-a",
+					script: nullScript,
+				},
+				{
+					name: "extra-worker-b",
+					script: nullScript,
+					unsafeInspectorProxy: true,
+				},
+			],
+		});
+		t.teardown(() => mf.dispose());
+
+		await mf.ready;
+
+		const res = await fetch("http://localhost:9212/json");
+		const inspectors = (await res.json()) as Record<string, string>[];
+
+		t.is(inspectors.length, 2);
+
+		t.is(inspectors[0]["description"], "workers");
+		t.is(inspectors[0]["title"], "Cloudflare Worker");
+		t.is(inspectors[0]["webSocketDebuggerUrl"], "ws://localhost:9212/");
+		t.is(inspectors[1]["description"], "workers");
+		t.is(inspectors[1]["title"], "Cloudflare Worker: extra-worker-b");
+		t.is(
+			inspectors[1]["webSocketDebuggerUrl"],
+			"ws://localhost:9212/extra-worker-b"
+		);
+	}
+);
+
+test.serial(
+	"InspectorProxy: should allow debugging a single worker",
+	async (t) => {
+		const mf = new Miniflare({
+			inspectorPort: 9212,
+			unsafeInspectorProxy: true,
+			workers: [
+				{
+					script: `
+						export default {
+							fetch(request, env, ctx) {
+								debugger;
+								return new Response("body");
+							}
+						}
+					`,
+					modules: true,
+					unsafeInspectorProxy: true,
+				},
+			],
+		});
+		t.teardown(() => mf.dispose());
+
+		await mf.ready;
+
+		// when the inspector proxy is created there are some ws message exchanges between it
+		// and the runtime, these can interfere with testing and make tests flaky, so we just
+		// wait a bit here to avoid such problems
+		await setTimeout(30);
+
+		// Connect inspector WebSocket
+		const ws = new WebSocket("ws://localhost:9212");
+		const messages = events.on(ws, "message");
+		async function nextMessage() {
+			const messageEvent = (await messages.next()).value;
+			return JSON.parse(messageEvent[0].toString());
+		}
+
+		await events.once(ws, "open");
+
+		ws.send(JSON.stringify({ id: 0, method: "Debugger.enable" }));
+
+		t.like(await nextMessage(), {
+			method: "Debugger.scriptParsed",
+		});
+
+		t.like(await nextMessage(), { id: 0 });
+
+		// Send request and hit `debugger;` statement
+		const originalAssertConsumed = process.env.MINIFLARE_ASSERT_BODIES_CONSUMED;
+		process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = undefined;
+		const resPromise = mf.dispatchFetch("http://localhost");
+		process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = originalAssertConsumed;
+		t.like(await nextMessage(), { method: "Debugger.paused" });
+
+		// Resume execution
+		ws.send(JSON.stringify({ id: 1, method: "Debugger.resume" }));
+
+		t.like(await nextMessage(), { id: 1 });
+
+		t.like(await nextMessage(), { method: "Debugger.resumed" });
+
+		const res = await resPromise;
+		t.is(await res.text(), "body");
+	}
+);
+
+test.serial(
+	"InspectorProxy: should allow debugging multiple workers",
+	async (t) => {
+		const mf = new Miniflare({
+			inspectorPort: 9212,
+			unsafeInspectorProxy: true,
+			workers: [
+				{
+					name: "worker-a",
+					script: `
+						export default {
+							async fetch(request, env, ctx) {
+								debugger;
+								const workerBText = await env['WORKER_B'].fetch(request).then(resp => resp.text());
+								debugger;
+								return new Response(\`worker-a -> \${workerBText}\`);
+							}
+						}
+					`,
+					modules: true,
+					serviceBindings: {
+						WORKER_B: "worker-b",
+					},
+					unsafeInspectorProxy: true,
+				},
+				{
+					name: "worker-b",
+					script: `
+						export default {
+							fetch(request, env, ctx) {
+								debugger;
+								return new Response("worker-b");
+							}
+						}
+					`,
+					modules: true,
+					unsafeInspectorProxy: true,
+				},
+			],
+		});
+		t.teardown(() => mf.dispose());
+
+		await mf.ready;
+
+		// when the inspector proxy is created there are some ws message exchanges between it
+		// and the runtime, these can interfere with testing and make tests flaky, so we just
+		// wait a bit here to avoid such problems
+		await setTimeout(30);
+
+		// Connect inspector WebSockets
+		const webSockets = {
+			["worker-a"]: new WebSocket("ws://localhost:9212/worker-a"),
+			["worker-b"]: new WebSocket("ws://localhost:9212/worker-b"),
+		};
+		const messages = {
+			["worker-a"]: events.on(webSockets["worker-a"], "message"),
+			["worker-b"]: events.on(webSockets["worker-b"], "message"),
+		};
+
+		type Worker = keyof typeof webSockets;
+
+		async function nextMessage(worker: Worker) {
+			const messageEvent = (await messages[worker].next()).value;
+			return JSON.parse(messageEvent[0].toString());
+		}
+
+		await Promise.all([
+			events.once(webSockets["worker-a"], "open"),
+			events.once(webSockets["worker-b"], "open"),
+		]);
+
+		Object.values(webSockets).forEach((ws) =>
+			ws.send(JSON.stringify({ id: 0, method: "Debugger.enable" }))
+		);
+
+		const waitForScriptParsed = async (worker: Worker) => {
+			t.like(await nextMessage(worker), {
+				method: "Debugger.scriptParsed",
+			});
+
+			t.like(await nextMessage(worker), { id: 0 });
+		};
+
+		await waitForScriptParsed("worker-a");
+		await waitForScriptParsed("worker-b");
+
+		// Send request and hit `debugger;` statements
+		const originalAssertConsumed = process.env.MINIFLARE_ASSERT_BODIES_CONSUMED;
+		process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = undefined;
+		const resPromise = mf.dispatchFetch("http://localhost");
+		process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = originalAssertConsumed;
+		t.like(await nextMessage("worker-a"), { method: "Debugger.paused" });
+
+		const resumeWorker = async (worker: Worker) => {
+			const id = Math.floor(Math.random() * 50_000);
+			webSockets[worker].send(
+				JSON.stringify({ id, method: "Debugger.resume" })
+			);
+			t.like(await nextMessage(worker), { id });
+			t.like(await nextMessage(worker), { method: "Debugger.resumed" });
+		};
+
+		// Resume execution (first worker-a debugger)
+		await resumeWorker("worker-a");
+
+		t.like(await nextMessage("worker-b"), { method: "Debugger.paused" });
+
+		// Resume execution (worker-b debugger)
+		await resumeWorker("worker-b");
+
+		// There are a few network messages send due to the communication from worker-b back
+		// to worker-a, these are not too relevant to test, so we just consume them until we
+		// hit the next worker-a debugger
+		while (true) {
+			const nextMessageWorkerA = await nextMessage("worker-a");
+			const messageMethod = nextMessageWorkerA.method;
+			if (
+				typeof messageMethod === "string" &&
+				messageMethod.startsWith("Network.")
+			) {
+				continue;
+			}
+
+			t.like(nextMessageWorkerA, { method: "Debugger.paused" });
+			break;
+		}
+
+		// Resume execution (second worker-a debugger)
+		await resumeWorker("worker-a");
+
+		const res = await resPromise;
+		t.is(await res.text(), "worker-a -> worker-b");
+	}
+);
+
+// The runtime inspector can send messages larger than 1MB limit websocket message permitted by UserWorkers.
+// In the real-world, this is encountered when debugging large source files (source maps)
+// or inspecting a variable that serializes to a large string.
+// Connecting devtools directly to the inspector would work fine, but we proxy the inspector messages
+// through the InspectorProxy, we need to make sure that such proxying does not hit the limit.
+// By logging a large string we can verify that the inspector messages are being proxied successfully.
+// (This issue was encountered with the wrangler inspector proxy worker: https://github.com/cloudflare/workers-sdk/issues/5297)
+test.serial("InspectorProxy: can proxy messages > 1MB", async (t) => {
+	const LARGE_STRING = "This is a large string => " + "z".repeat(2 ** 20);
+
+	const originalConsoleLog = console.log;
+	console.log = () => {};
+
+	const mf = new Miniflare({
+		inspectorPort: 9212,
+		unsafeInspectorProxy: true,
+		workers: [
+			{
+				script: `
+						export default {
+							fetch(request, env, ctx) {
+								console.log("${LARGE_STRING}");
+								return new Response(\`body:${LARGE_STRING}\`);
+							}
+						}
+					`,
+				modules: true,
+				unsafeInspectorProxy: true,
+			},
+		],
+	});
+	t.teardown(() => mf.dispose());
+
+	await mf.ready;
+
+	// when the inspector proxy is created there are some ws message exchanges between it
+	// and the runtime, these can interfere with testing and make tests flaky, so we just
+	// wait a bit here to avoid such problems
+	await setTimeout(30);
+
+	// Connect inspector WebSocket
+	const ws = new WebSocket("ws://localhost:9212");
+	const messages = events.on(ws, "message");
+	async function nextMessage() {
+		const messageEvent = (await messages.next()).value;
+		return JSON.parse(messageEvent[0].toString());
+	}
+
+	await events.once(ws, "open");
+
+	ws.send(JSON.stringify({ id: 0, method: "Debugger.enable" }));
+
+	t.like(await nextMessage(), {
+		method: "Debugger.scriptParsed",
+	});
+
+	t.like(await nextMessage(), { id: 0 });
+
+	// Send request and hit `debugger;` statement
+	const originalAssertConsumed = process.env.MINIFLARE_ASSERT_BODIES_CONSUMED;
+	process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = undefined;
+	const resPromise = mf.dispatchFetch("http://localhost");
+	process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = originalAssertConsumed;
+
+	const msg: {
+		method: string;
+		params: {
+			type: string;
+			args: { type: string; value: unknown }[];
+		};
+	} = await nextMessage();
+
+	t.is(msg.method, "Runtime.consoleAPICalled");
+	t.is(msg.params.type, "log");
+	t.is(msg.params.args.length, 1);
+	t.is(msg.params.args[0].type, "string");
+	t.is(msg.params.args[0].value, LARGE_STRING);
+
+	const res = await resPromise;
+	t.is(await res.text(), `body:${LARGE_STRING}`);
+
+	console.log = originalConsoleLog;
+});
