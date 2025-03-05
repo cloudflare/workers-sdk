@@ -98,7 +98,7 @@ describe.each(devCmds)(
 					let text = await response.text();
 					expect(response.status).toBe(200);
 					expect(text).toContain(
-						"env.DEFAULT_EXPORT.bee() response: Hello from worker-b bee()"
+						"env.DEFAULT_EXPORT.bee() response: Workers in non-class based syntax do not support RPC functions with zero or variable number of arguments. They only support RPC functions with strictly one argument."
 					);
 					expect(text).toContain(
 						'env.DEFAULT_EXPORT.busyBee("🐝") response: Hello busy 🐝s from worker-b busyBee(bee)'

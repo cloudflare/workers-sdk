@@ -6,7 +6,9 @@ export async function getWorkerBResponses(request: Request, env) {
 	const fetchResponse = await response.text();
 
 	// test named functions without parameters
-	const beeResult = await env.DEFAULT_EXPORT.bee();
+	// this is not supported in non-class based syntax
+	const beeResult =
+		"Workers in non-class based syntax do not support RPC functions with zero or variable number of arguments. They only support RPC functions with strictly one argument.";
 
 	// test named functions with strictly one parameter
 	const busyBeeResult = await env.DEFAULT_EXPORT.busyBee("🐝");

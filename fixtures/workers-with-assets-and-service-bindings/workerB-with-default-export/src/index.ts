@@ -12,15 +12,11 @@ export default {
 	},
 
 	/*
-	 * Named functions without parameters
-	 */
-	bee() {
-		return `Hello from worker-b bee()`;
-	},
-
-	/*
-	 * Named method with strictly one parameter. Multiple fn parameters are
-	 * not supported in non-class default export syntax
+	 * Named method with strictly one parameter
+	 *
+	 * Workers in the non-class default export syntax support strictly
+	 * one argument. Variable numbers of arguments are supported only
+	 * in class-based syntax Workers
 	 */
 	busyBee(bee: string) {
 		return `Hello busy ${bee}s from worker-b busyBee(bee)`;
