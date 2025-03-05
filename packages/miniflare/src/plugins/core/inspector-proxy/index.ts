@@ -4,7 +4,12 @@ import { createServer, IncomingMessage, Server } from "node:http";
 import { DeferredPromise } from "miniflare:shared";
 import WebSocket, { WebSocketServer } from "ws";
 import { version as miniflareVersion } from "../../../../package.json";
-import type Protocol from "devtools-protocol/types/protocol-mapping";
+import { isDevToolsEvent } from "./devtools";
+import type {
+	DevToolsCommandRequests,
+	DevToolsEvent,
+	DevToolsEvents,
+} from "./devtools";
 
 export class InspectorProxy {
 	#server: Server;
@@ -263,8 +268,7 @@ export class InspectorProxy {
 		return this.#sendMessageToDevtools(msg);
 	}
 
-	// TODO: improve msg type
-	#sendMessageToDevtools(msg: any) {
+	#sendMessageToDevtools(msg: DevToolsEvents) {
 		assert(this.#devtoolsWs);
 
 		if (!this.#devtoolsWs.OPEN) {
@@ -278,8 +282,7 @@ export class InspectorProxy {
 		this.#devtoolsWs.send(JSON.stringify(msg));
 	}
 
-	// TODO: improve msg type
-	#sendMessageToRuntime(msg: any) {
+	#sendMessageToRuntime(msg: DevToolsCommandRequests) {
 		assert(this.#runtimeWs?.OPEN);
 
 		this.#runtimeWs.send(JSON.stringify(msg));
@@ -350,28 +353,3 @@ const ALLOWED_ORIGIN_HOSTNAMES = [
 	"[::1]",
 	"localhost",
 ];
-
-type _Params<ParamsArray extends [unknown?]> = ParamsArray extends [infer P]
-	? P
-	: undefined;
-
-type _EventMethods = keyof Protocol.Events;
-
-type DevToolsEvent<Method extends _EventMethods> = Method extends unknown
-	? {
-			method: Method;
-			params: _Params<Protocol.Events[Method]>;
-		}
-	: never;
-
-function isDevToolsEvent<Method extends DevToolsEvent<_EventMethods>["method"]>(
-	event: unknown,
-	name: Method
-): event is DevToolsEvent<Method> {
-	return (
-		typeof event === "object" &&
-		event !== null &&
-		"method" in event &&
-		event.method === name
-	);
-}
