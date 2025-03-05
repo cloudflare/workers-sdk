@@ -1,5 +1,5 @@
 ---
-"wrangler": minor
+"wrangler": patch
 "@cloudflare/vitest-pool-workers": patch
 "@cloudflare/workers-shared": patch
 "miniflare": patch
