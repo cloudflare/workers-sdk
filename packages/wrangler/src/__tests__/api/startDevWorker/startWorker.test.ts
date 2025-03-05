@@ -8,11 +8,15 @@ import { seed } from "../../helpers/seed";
 describe("startWorker", () => {
 	runInTempDir();
 
-	it("strips the CF-Connecting-IP header from all outbound requests", async (t) => {
-		t.onTestFinished(() => worker?.dispose());
+	// We do not inject the `CF-Connecting-IP` header on Windows at the moment.
+	// See https://github.com/cloudflare/workerd/issues/3310
+	it.skipIf(process.platform === "win32")(
+		"strips the CF-Connecting-IP header from all outbound requests",
+		async (t) => {
+			t.onTestFinished(() => worker?.dispose());
 
-		await seed({
-			"src/index.ts": dedent`
+			await seed({
+				"src/index.ts": dedent`
 					export default {
 						fetch(request) {
 							if (request.headers.has('CF-Connecting-IP')) {
@@ -23,25 +27,25 @@ describe("startWorker", () => {
 						}
 					}
 				`,
-		});
+			});
 
-		const worker = await startWorker({
-			name: "test-worker",
-			entrypoint: path.resolve("src/index.ts"),
-			dev: {
-				remote: false,
-				outboundService(request) {
-					return new Response(
-						request.headers.get("CF-Connecting-IP") ??
-							"CF-Connecting-IP header stripped"
-					);
+			const worker = await startWorker({
+				name: "test-worker",
+				entrypoint: path.resolve("src/index.ts"),
+				dev: {
+					outboundService(request) {
+						return new Response(
+							request.headers.get("CF-Connecting-IP") ??
+								"CF-Connecting-IP header stripped"
+						);
+					},
 				},
-			},
-		});
+			});
 
-		const response = await worker.fetch("http://example.com");
-		await expect(response.text()).resolves.toEqual(
-			"CF-Connecting-IP header stripped"
-		);
-	});
+			const response = await worker.fetch("http://example.com");
+			await expect(response.text()).resolves.toEqual(
+				"CF-Connecting-IP header stripped"
+			);
+		}
+	);
 });
