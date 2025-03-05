@@ -1,7 +1,7 @@
 export default {
 	async fetch() {
 		const staticPathImport = await import("./another");
-		const dynamicPath = new URL("./another.js", import.meta.url).href;
+		const dynamicPath = "/another";
 		const dynamicPathImport = await import(/* @vite-ignore */ dynamicPath);
 
 		return Response.json({
