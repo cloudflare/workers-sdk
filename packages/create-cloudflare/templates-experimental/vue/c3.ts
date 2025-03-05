@@ -17,7 +17,12 @@ const t = recast.types.namedTypes;
 const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
-	await runFrameworkGenerator(ctx, [ctx.project.name]);
+	await runFrameworkGenerator(ctx, [
+		ctx.project.name,
+		ctx.args.ts ? "--ts" : "",
+		"--jsx",
+		"--router",
+	]);
 	logRaw("");
 };
 
