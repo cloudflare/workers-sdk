@@ -20,7 +20,9 @@
 		"directory": "packages/unenv-preset"
 	},
 	"license": "MIT OR Apache-2.0",
-	"sideEffects": false,
+	"sideEffects": [
+		"./dist/runtime/polyfill/**"
+	],
 	"type": "module",
 	"exports": {
 		".": {
@@ -53,7 +55,7 @@
 		"wrangler": "workspace:*"
 	},
 	"peerDependencies": {
-		"unenv": "2.0.0-rc.14",
+		"unenv": "catalog:default",
 		"workerd": "^1.20250124.0"
 	},
 	"peerDependenciesMeta": {
