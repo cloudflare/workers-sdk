@@ -12,10 +12,18 @@ export default {
 	},
 
 	/*
-	 * Named functions
+	 * Named functions without parameters
 	 */
-	bee(request) {
-		return new Response("Hello from worker-b bee()");
+	bee() {
+		return `Hello from worker-b bee()`;
+	},
+
+	/*
+	 * Named method with strictly one parameter. Multiple fn parameters are
+	 * not supported in non-class default export syntax
+	 */
+	busyBee(bee: string) {
+		return `Hello busy ${bee}s from worker-b busyBee(bee)`;
 	},
 
 	/*

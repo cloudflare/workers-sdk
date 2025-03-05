@@ -24,7 +24,7 @@ export class EntrypointD extends WorkerEntrypoint {
 
 	/*
 	 * Cron Triggers/ Queues / etc can only be defined on a default
-	 * export, be it a default object or entrypoint
+	 * exports, class or non-class based
 	 */
 }
 

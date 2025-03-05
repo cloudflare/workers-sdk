@@ -10,9 +10,9 @@ export async function getWorkerCResponses(request: Request, env) {
 	const busyBeeResult = await env.DEFAULT_ENTRYPOINT.busyBee("🐝");
 
 	// tests Cron Triggers
-	const scheduledRequest = new Request("http://fakehost/cdn-cgi/mf/scheduled");
-	const scheduledResponse =
-		await env.DEFAULT_ENTRYPOINT.scheduled(scheduledRequest);
+	const scheduledResponse = await env.DEFAULT_ENTRYPOINT.scheduled({
+		cron: "* * * * *",
+	});
 
 	return {
 		fetchResponse,
