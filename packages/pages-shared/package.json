@@ -19,6 +19,7 @@
 		"test:ci": "vitest run"
 	},
 	"dependencies": {
+		"@cloudflare/workers-shared": "workspace:*",
 		"miniflare": "workspace:*"
 	},
 	"devDependencies": {
