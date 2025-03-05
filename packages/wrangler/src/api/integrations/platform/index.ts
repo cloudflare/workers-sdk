@@ -275,7 +275,8 @@ export function unstable_getMiniflareWorkerOptions(
 		services: [],
 		serviceBindings: {},
 		migrations: config.migrations,
-		imagesLocalMode: false,
+		// Hardcode imagesLocalMode: true for tests, as we don't want tests to hit the API
+		imagesLocalMode: true,
 	});
 
 	// This function is currently only exported for the Workers Vitest pool.
