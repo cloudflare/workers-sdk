@@ -89,6 +89,7 @@ export async function getLatestPackageVersion(packageSpecifier: string) {
 export const installWrangler = async () => {
 	const { npm } = detectPackageManager();
 
+	// test
 	// Even if Wrangler is already installed, make sure we install the latest version, as some framework CLIs are pinned to an older version
 	await installPackages([`wrangler@latest`], {
 		dev: true,
