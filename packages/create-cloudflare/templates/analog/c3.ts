@@ -14,11 +14,7 @@ import type { C3Context } from "types";
 const { npm, name: pm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
-	await runFrameworkGenerator(ctx, [
-		ctx.project.name,
-		"--template",
-		"angular-v17",
-	]);
+	await runFrameworkGenerator(ctx, [ctx.project.name, "--template", "latest"]);
 
 	logRaw(""); // newline
 };
@@ -29,8 +25,6 @@ const configure = async (ctx: C3Context) => {
 		const packages = [];
 		packages.push("nitropack");
 		packages.push("h3");
-		packages.push("@ngtools/webpack");
-		packages.push("@angular-devkit/build-angular");
 
 		await installPackages(packages, {
 			dev: true,
