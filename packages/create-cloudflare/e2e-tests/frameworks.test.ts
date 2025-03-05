@@ -67,7 +67,6 @@ function getFrameworkTests(opts: {
 	if (opts.experimental) {
 		return {
 			docusaurus: {
-				unsupportedPms: ["bun"],
 				testCommitMessage: true,
 				unsupportedOSs: ["win32"],
 				timeout: LONG_TIMEOUT,
@@ -91,7 +90,6 @@ function getFrameworkTests(opts: {
 				testCommitMessage: true,
 				timeout: LONG_TIMEOUT,
 				unsupportedOSs: ["win32"],
-				unsupportedPms: ["bun"],
 				verifyDeploy: {
 					route: "/",
 					expectedText: "Congratulations! Your app is running.",
@@ -128,7 +126,7 @@ function getFrameworkTests(opts: {
 				},
 			},
 			gatsby: {
-				unsupportedPms: ["bun", "pnpm"],
+				unsupportedPms: ["pnpm"],
 				promptHandlers: [
 					{
 						matcher: /Would you like to use a template\?/,
@@ -233,8 +231,7 @@ function getFrameworkTests(opts: {
 				// see https://github.com/cloudflare/next-on-pages/blob/main/packages/next-on-pages/docs/supported.md#operating-systems
 				unsupportedOSs: ["win32"],
 				unsupportedPms: [
-					// bun and yarn are failing in CI
-					"bun",
+					// yarn is failing in CI
 					"yarn",
 				],
 			},
@@ -358,7 +355,6 @@ function getFrameworkTests(opts: {
 				],
 			},
 			docusaurus: {
-				unsupportedPms: ["bun"],
 				testCommitMessage: true,
 				unsupportedOSs: ["win32"],
 				timeout: LONG_TIMEOUT,
@@ -385,7 +381,7 @@ function getFrameworkTests(opts: {
 				unsupportedOSs: ["win32"],
 				// The analog template works with yarn, but the build takes so long that it
 				// becomes flaky in CI
-				unsupportedPms: ["yarn", "bun"],
+				unsupportedPms: ["yarn"],
 				verifyDeploy: {
 					route: "/",
 					expectedText: "The fullstack meta-framework for Angular!",
@@ -410,7 +406,6 @@ function getFrameworkTests(opts: {
 				testCommitMessage: true,
 				timeout: LONG_TIMEOUT,
 				unsupportedOSs: ["win32"],
-				unsupportedPms: ["bun"],
 				verifyDeploy: {
 					route: "/",
 					expectedText: "Congratulations! Your app is running.",
@@ -422,7 +417,7 @@ function getFrameworkTests(opts: {
 				flags: ["--style", "sass"],
 			},
 			gatsby: {
-				unsupportedPms: ["bun", "pnpm"],
+				unsupportedPms: ["pnpm"],
 				promptHandlers: [
 					{
 						matcher: /Would you like to use a template\?/,

@@ -34,11 +34,6 @@ describe("frameworks", () => {
 					npm_config_user_agent: "yarn/1.22.22",
 				},
 			},
-			{
-				pm: "bun",
-				pmCmd: "bunx",
-				env: {},
-			},
 		];
 
 		test.each(cases)("$pm", async ({ pm, pmCmd, env }) => {
