@@ -354,6 +354,8 @@ const DefaultScopes = {
 	"queues:write": "See and change Cloudflare Queues settings and data",
 	"pipelines:write":
 		"See and change Cloudflare Pipelines configurations and data",
+	"secrets_store:write":
+		"See and change secrets + stores within the Secrets Store",
 } as const;
 
 const OptionalScopes = {
