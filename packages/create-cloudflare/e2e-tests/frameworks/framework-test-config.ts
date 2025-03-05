@@ -107,7 +107,24 @@ export default function getFrameworkTestConfig(pm: string) {
 			},
 			flags: ["--skipTailwind"],
 		},
-		angular: {
+		["angular:pages"]: {
+			argv: ["--platform", "pages"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			unsupportedPms: ["bun"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Congratulations! Your app is running.",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Congratulations! Your app is running.",
+			},
+			flags: ["--style", "sass"],
+		},
+		["angular:workers"]: {
+			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],

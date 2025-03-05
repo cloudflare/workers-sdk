@@ -18,7 +18,6 @@ import {
 	writeFile,
 	writeJSON,
 } from "helpers/files";
-import angularTemplateExperimental from "templates-experimental/angular/c3";
 import astroTemplateExperimental from "templates-experimental/astro/c3";
 import gatsbyTemplateExperimental from "templates-experimental/gatsby/c3";
 import assetsOnlyTemplateExperimental from "templates-experimental/hello-world-assets-only/c3";
@@ -180,7 +179,6 @@ export type TemplateMap = Record<
 export function getFrameworkMap({ experimental = false }): TemplateMap {
 	if (experimental) {
 		return {
-			angular: angularTemplateExperimental,
 			astro: astroTemplateExperimental,
 			gatsby: gatsbyTemplateExperimental,
 			hono: honoTemplateExperimental,

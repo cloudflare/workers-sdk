@@ -3,10 +3,11 @@ import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
+import { compatDateFlag } from "helpers/compatDate";
 import { readFile, readJSON, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
-import type { TemplateConfig } from "../../src/templates";
+import type { TemplateConfig } from "../../../src/templates";
 import type { C3Context, PackageJson } from "types";
 
 const { npm } = detectPackageManager();
@@ -75,12 +76,14 @@ async function updateAppCode() {
 function updateAngularJson(ctx: C3Context) {
 	const s = spinner();
 	s.start(`Updating angular.json config`);
-	const angularJson = readJSON(resolve("angular.json")) as AngularJson;
+	const angularJson = readJSON("angular.json") as AngularJson;
+
 	// Update builder
 	const architectSection = angularJson.projects[ctx.project.name].architect;
 	architectSection.build.options.outputPath = "dist";
 	architectSection.build.options.outputMode = "server";
 	architectSection.build.options.ssr.experimentalPlatform = "neutral";
+	architectSection.build.options.assets.push("src/_routes.json");
 
 	writeFile(resolve("angular.json"), JSON.stringify(angularJson, null, 2));
 	s.stop(`${brandColor(`updated`)} ${dim(`\`angular.json\``)}`);
@@ -91,11 +94,11 @@ const config: TemplateConfig = {
 	id: "angular",
 	frameworkCli: "@angular/create",
 	displayName: "Angular",
-	platform: "workers",
+	platform: "pages",
 	copyFiles: {
 		path: "./templates",
 	},
-	path: "templates-experimental/angular",
+	path: "templates/angular/pages",
 	devScript: "start",
 	deployScript: "deploy",
 	previewScript: "start",
@@ -103,9 +106,10 @@ const config: TemplateConfig = {
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			start: `${npm} run build && wrangler dev`,
-			build: `ng build`,
-			deploy: `${npm} run build && wrangler deploy`,
+			start: `${npm} run build && wrangler pages dev dist/cloudflare ${await compatDateFlag()}`,
+			build: `ng build && ${npm} run process`,
+			process: "node ./tools/copy-files.mjs",
+			deploy: `${npm} run build && wrangler pages deploy dist/cloudflare`,
 		},
 	}),
 };

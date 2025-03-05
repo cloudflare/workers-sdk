@@ -2,21 +2,6 @@ import { keys, LONG_TIMEOUT } from "../helpers";
 
 export default function getFrameworkTestConfigExperimental() {
 	return {
-		angular: {
-			testCommitMessage: true,
-			timeout: LONG_TIMEOUT,
-			unsupportedOSs: ["win32"],
-			unsupportedPms: ["bun"],
-			verifyDeploy: {
-				route: "/",
-				expectedText: "Congratulations! Your app is running.",
-			},
-			verifyPreview: {
-				route: "/",
-				expectedText: "Congratulations! Your app is running.",
-			},
-			flags: ["--style", "sass"],
-		},
 		gatsby: {
 			unsupportedPms: ["bun", "pnpm"],
 			promptHandlers: [
