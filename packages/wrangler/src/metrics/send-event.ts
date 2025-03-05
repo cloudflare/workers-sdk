@@ -82,7 +82,15 @@ export type EventNames =
 	| "delete pipeline"
 	| "update pipeline"
 	| "show pipeline"
-	| "provision resources";
+	| "provision resources"
+	| "create secrets-store store"
+	| "list secrets-store stores"
+	| "list secrets-store secrets"
+	| "get secrets-store secret"
+	| "delete secrets-store secret"
+	| "create secrets-store secret"
+	| "update secrets-store secret"
+	| "duplicate secrets-store secret";
 
 /**
  * Send a metrics event, with no extra properties, to Cloudflare, if usage tracking is enabled.
