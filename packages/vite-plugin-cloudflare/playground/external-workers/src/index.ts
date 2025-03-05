@@ -5,7 +5,10 @@ export interface Env {
 }
 
 async function waitForMutation(env: Env, mutationId: string) {
-	while ((await env.VECTORIZE.describe()).processedUpToMutation != mutationId) {
+	while (
+		(await env.VECTORIZE.describe()).processedUpToMutation.toString() !=
+		mutationId
+	) {
 		await new Promise((resolve) => setTimeout(resolve, 2000));
 	}
 }

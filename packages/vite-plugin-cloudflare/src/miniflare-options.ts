@@ -303,8 +303,7 @@ export function getDevMiniflareOptions(
 							externalWorkers,
 							worker: {
 								...workerOptions,
-								// We have to add the name again because `unstable_getMiniflareWorkerOptions` sets it to `undefined`
-								name: workerConfig.name,
+								name: workerOptions.name ?? workerConfig.name,
 								modulesRoot: miniflareModulesRoot,
 								unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
 								bindings: {

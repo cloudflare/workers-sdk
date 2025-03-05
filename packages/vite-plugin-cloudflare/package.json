@@ -46,6 +46,7 @@
 		"@hattip/adapter-node": "^0.0.49",
 		"miniflare": "workspace:*",
 		"unenv": "2.0.0-rc.1",
+		"wrangler": "workspace:*",
 		"ws": "catalog:default"
 	},
 	"devDependencies": {
@@ -61,12 +62,10 @@
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
 		"vite": "catalog:vite-plugin",
-		"vitest": "catalog:default",
-		"wrangler": "workspace:*"
+		"vitest": "catalog:default"
 	},
 	"peerDependencies": {
-		"vite": "catalog:vite-plugin",
-		"wrangler": "workspace:*"
+		"vite": "catalog:vite-plugin"
 	},
 	"publishConfig": {
 		"access": "public"
