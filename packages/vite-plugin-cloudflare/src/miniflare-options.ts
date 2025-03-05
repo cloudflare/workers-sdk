@@ -509,21 +509,25 @@ export function getPreviewMiniflareOptions(
 		unstable_readConfig({ config: configPath })
 	);
 
-	const workers: Array<WorkerOptions> = workerConfigs.map((config) => {
+	const workers: Array<WorkerOptions> = workerConfigs.flatMap((config) => {
 		const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(config);
+
+		const { externalWorkers } = miniflareWorkerOptions;
 
 		const { ratelimits, ...workerOptions } =
 			miniflareWorkerOptions.workerOptions;
 
-		return {
-			...workerOptions,
-			// We have to add the name again because `unstable_getMiniflareWorkerOptions` sets it to `undefined`
-			name: config.name,
-			modules: true,
-			...(miniflareWorkerOptions.main
-				? { scriptPath: miniflareWorkerOptions.main }
-				: { script: "" }),
-		};
+		return [
+			...externalWorkers,
+			{
+				...workerOptions,
+				name: workerOptions.name ?? config.name,
+				modules: true,
+				...(miniflareWorkerOptions.main
+					? { scriptPath: miniflareWorkerOptions.main }
+					: { script: "" }),
+			},
+		];
 	});
 
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
