@@ -1807,8 +1807,8 @@ importers:
   packages/vite-plugin-cloudflare:
     dependencies:
       '@cloudflare/unenv-preset':
-        specifier: 1.1.1
-        version: 1.1.1(unenv@2.0.0-rc.1)(workerd@1.20250317.0)
+        specifier: workspace:*
+        version: link:../unenv-preset
       '@hattip/adapter-node':
         specifier: ^0.0.49
         version: 0.0.49
@@ -1819,8 +1819,8 @@ importers:
         specifier: ^0.2.12
         version: 0.2.12
       unenv:
-        specifier: 2.0.0-rc.1
-        version: 2.0.0-rc.1
+        specifier: 2.0.0-rc.15
+        version: 2.0.0-rc.15
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -3666,15 +3666,6 @@ packages:
     resolution: {integrity: sha512-4JbJv5cbtGeo7Vpg2Sx3LXAhkvDJeJV/9FLFm2u3MkyxXb9SXdjxoanO5bOripQThTrzB1a8Ctw/ghweSA91Cw==}
     peerDependencies:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
-
-  '@cloudflare/unenv-preset@1.1.1':
-    resolution: {integrity: sha512-8y7gFmXnOF9kycm8eIaL0rNBd5np3a/aLaG04pfFG4aEF0rIHAMiGFxQfg1ZIV77ApLHzPomr9/ixLbZWXwX3w==}
-    peerDependencies:
-      unenv: 2.0.0-rc.1
-      workerd: ^1.20250124.0
-    peerDependenciesMeta:
-      workerd:
-        optional: true
 
   '@cloudflare/unenv-preset@2.2.0':
     resolution: {integrity: sha512-U5/TQBjJN/HQ1JA4mzt5sTbvdT9aoucHYGbokY2JWwDkYbgoaTygYBshZpXHUo8lDppsAGdUf3pGlOc6U09HAg==}
@@ -9311,9 +9302,6 @@ packages:
   obuf@1.1.2:
     resolution: {integrity: sha512-PX1wu0AmAdPqOL1mWhqmlOd8kOIZQwGZw6rh7uby9fTc5lhaOWFLX3I6R1hrF9k3zUY40e6igsLGkDXK92LJNg==}
 
-  ohash@1.1.4:
-    resolution: {integrity: sha512-FlDryZAahJmEF3VR3w1KogSEdWX3WhA5GPakFx4J81kEAiHyLMpdLLElS8n8dfNadMgAne/MywcvmogzscVt4g==}
-
   ohash@1.1.6:
     resolution: {integrity: sha512-TBu7PtV8YkAZn0tSxobKY2n2aAQva936lhRrj6957aDaCf9IEtqsKbgMzXE/F/sjqYOwmrukeORHNLe5glk7Cg==}
 
@@ -12873,12 +12861,6 @@ snapshots:
       '@cloudflare/intl-types': 1.5.1(react@18.3.1)
       '@cloudflare/util-en-garde': 8.0.10
       react: 18.3.1
-
-  '@cloudflare/unenv-preset@1.1.1(unenv@2.0.0-rc.1)(workerd@1.20250317.0)':
-    dependencies:
-      unenv: 2.0.0-rc.1
-    optionalDependencies:
-      workerd: 1.20250317.0
 
   '@cloudflare/unenv-preset@2.2.0(unenv@2.0.0-rc.15)(workerd@1.20250317.0)':
     dependencies:
@@ -18921,8 +18903,6 @@ snapshots:
 
   obuf@1.1.2: {}
 
-  ohash@1.1.4: {}
-
   ohash@1.1.6: {}
 
   ohash@2.0.11: {}
@@ -20885,7 +20865,7 @@ snapshots:
     dependencies:
       defu: 6.1.4
       mlly: 1.7.4
-      ohash: 1.1.4
+      ohash: 1.1.6
       pathe: 1.1.2
       ufo: 1.5.4
 
