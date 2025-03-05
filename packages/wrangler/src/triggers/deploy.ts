@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import PQueue from "p-queue";
 import { fetchListResult, fetchResult } from "../cfetch";
 import {
 	formatTime,
@@ -155,28 +156,48 @@ export default async function triggersDeploy(
 		// except here we know we have a good API token or whatever so we don't need
 		// to bother with all the error handling tomfoolery.
 		const routesWithOtherBindings: Record<string, string[]> = {};
+
+		/**
+		 * This queue ensures we limit how many concurrent fetch
+		 * requests we're making to the Zones API.
+		 */
+		const queue = new PQueue({ concurrency: 10 });
+		const zoneRoutesCache = new Map<
+			string,
+			Promise<Array<{ pattern: string; script: string }>>
+		>();
+
+		const zoneIdCache = new Map();
 		for (const route of routes) {
-			const zone = await getZoneForRoute({ route, accountId });
-			if (!zone) {
-				continue;
-			}
-
-			const routePattern = typeof route === "string" ? route : route.pattern;
-			const routesInZone = await fetchListResult<{
-				pattern: string;
-				script: string;
-			}>(`/zones/${zone.id}/workers/routes`);
-
-			routesInZone.forEach(({ script, pattern }) => {
-				if (pattern === routePattern && script !== scriptName) {
-					if (!(script in routesWithOtherBindings)) {
-						routesWithOtherBindings[script] = [];
-					}
-
-					routesWithOtherBindings[script].push(pattern);
+			void queue.add(async () => {
+				const zone = await getZoneForRoute({ route, accountId }, zoneIdCache);
+				if (!zone) {
+					return;
 				}
+
+				const routePattern = typeof route === "string" ? route : route.pattern;
+
+				let routesInZone = zoneRoutesCache.get(zone.id);
+				if (!routesInZone) {
+					routesInZone = fetchListResult<{
+						pattern: string;
+						script: string;
+					}>(`/zones/${zone.id}/workers/routes`);
+					zoneRoutesCache.set(zone.id, routesInZone);
+				}
+
+				(await routesInZone).forEach(({ script, pattern }) => {
+					if (pattern === routePattern && script !== scriptName) {
+						if (!(script in routesWithOtherBindings)) {
+							routesWithOtherBindings[script] = [];
+						}
+
+						routesWithOtherBindings[script].push(pattern);
+					}
+				});
 			});
 		}
+		await queue.onIdle();
 
 		if (Object.keys(routesWithOtherBindings).length > 0) {
 			let errorMessage =

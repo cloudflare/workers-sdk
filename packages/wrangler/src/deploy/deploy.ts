@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
+import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
@@ -1070,42 +1071,51 @@ async function publishRoutesFallback(
 
 	const deployedRoutes: string[] = [];
 
+	const queue = new PQueue({ concurrency: 10 });
+	const zoneIdCache = new Map();
+
 	// Collect the routes (and their zones) that will be deployed.
 	const activeZones = new Map<string, string>();
 	const routesToDeploy = new Map<string, string>();
 	for (const route of routes) {
-		const zone = await getZoneForRoute({ route, accountId });
-		if (zone) {
-			activeZones.set(zone.id, zone.host);
-			routesToDeploy.set(
-				typeof route === "string" ? route : route.pattern,
-				zone.id
-			);
-		}
+		void queue.add(async () => {
+			const zone = await getZoneForRoute({ route, accountId }, zoneIdCache);
+			if (zone) {
+				activeZones.set(zone.id, zone.host);
+				routesToDeploy.set(
+					typeof route === "string" ? route : route.pattern,
+					zone.id
+				);
+			}
+		});
 	}
+	await queue.onIdle();
 
 	// Collect the routes that are already deployed.
 	const allRoutes = new Map<string, string>();
 	const alreadyDeployedRoutes = new Set<string>();
 	for (const [zone, host] of activeZones) {
-		try {
-			for (const { pattern, script } of await fetchListResult<{
-				pattern: string;
-				script: string;
-			}>(`/zones/${zone}/workers/routes`)) {
-				allRoutes.set(pattern, script);
-				if (script === scriptName) {
-					alreadyDeployedRoutes.add(pattern);
+		void queue.add(async () => {
+			try {
+				for (const { pattern, script } of await fetchListResult<{
+					pattern: string;
+					script: string;
+				}>(`/zones/${zone}/workers/routes`)) {
+					allRoutes.set(pattern, script);
+					if (script === scriptName) {
+						alreadyDeployedRoutes.add(pattern);
+					}
 				}
+			} catch (e) {
+				if (isAuthenticationError(e)) {
+					e.notes.push({
+						text: `This could be because the API token being used does not have permission to access the zone "${host}" (${zone}).`,
+					});
+				}
+				throw e;
 			}
-		} catch (e) {
-			if (isAuthenticationError(e)) {
-				e.notes.push({
-					text: `This could be because the API token being used does not have permission to access the zone "${host}" (${zone}).`,
-				});
-			}
-			throw e;
-		}
+		});
+		await queue.onIdle();
 	}
 
 	// Deploy each route that is not already deployed.
