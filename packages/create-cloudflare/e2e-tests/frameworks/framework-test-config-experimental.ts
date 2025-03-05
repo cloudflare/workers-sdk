@@ -238,7 +238,12 @@ export default function getFrameworkTestConfigExperimental() {
 				route: "/",
 				expectedText: "Vite App",
 			},
-			flags: ["--ts"],
+			promptHandlers: [
+				{
+					matcher: /Would you like to use TypeScript/,
+					input: [keys.enter],
+				},
+			],
 		},
 	};
 }
