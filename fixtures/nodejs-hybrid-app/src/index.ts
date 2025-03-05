@@ -21,13 +21,15 @@ export default {
 			case "/test-random":
 				return testGetRandomValues();
 			case "/test-process":
-				return testProcessBehaviour();
+				return testProcessBehavior();
 			case "/query":
 				return testPostgresLibrary(env, ctx);
 			case "/test-x509-certificate":
 				return testX509Certificate();
 			case "/test-require-alias":
-				return testRequireUenvAliasedPackages();
+				return testRequireUnenvAliasedPackages();
+			case "/test-immediate":
+				return await testImmediate();
 		}
 
 		return new Response(
@@ -36,13 +38,34 @@ export default {
 <a href="test-random">Test getRandomValues()</a>
 <a href="test-x509-certificate">Test X509Certificate</a>
 <a href="test-require-alias">Test require unenv aliased packages</a>
+<a href="test-immediate">Test setImmediate</a>
 `,
 			{ headers: { "Content-Type": "text/html; charset=utf-8" } }
 		);
 	},
 };
 
-function testRequireUenvAliasedPackages() {
+async function testImmediate() {
+	try {
+		await new Promise((resolve, reject) => {
+			// Give it a whole second otherwise it times-out
+			setTimeout(reject, 1000);
+
+			// This setImmediate should never trigger the reject if the clearImmediate is working
+			const id = setImmediate(reject);
+			// clearImmediate should cancel reject callback
+			clearImmediate(id);
+			// This setImmediate should trigger the resolve callback
+			setImmediate(resolve);
+		});
+
+		return new Response("OK");
+	} catch (e) {
+		return new Response(`NOT OK: ${e}`);
+	}
+}
+
+function testRequireUnenvAliasedPackages() {
 	const fetch = require("cross-fetch");
 	const supportsDefaultExports = typeof fetch === "function";
 	const supportsNamedExports = typeof fetch.Headers === "function";
@@ -105,9 +128,12 @@ function testBasicNodejsProperties() {
 	assert.notEqual(Performance, undefined);
 	assert.strictEqual(global.Performance, Performance);
 	assert.strictEqual(globalThis.Performance, Performance);
+
+	assert.strictEqual(typeof performance.measure, "function");
+	assert.strictEqual(typeof performance.clearMarks, "function");
 }
 
-function testProcessBehaviour() {
+function testProcessBehavior() {
 	const originalProcess = process;
 	try {
 		assert.notEqual(process, undefined);

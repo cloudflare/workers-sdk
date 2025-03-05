@@ -58,4 +58,10 @@ describe("nodejs compat", () => {
 		const response = await fetch(`http://${ip}:${port}/test-require-alias`);
 		await expect(response.text()).resolves.toBe(`"OK!"`);
 	});
+
+	test("set/clearImmediate", async ({ expect }) => {
+		const { ip, port } = wrangler;
+		const response = await fetch(`http://${ip}:${port}/test-immediate`);
+		await expect(response.text()).resolves.toBe("OK");
+	});
 });

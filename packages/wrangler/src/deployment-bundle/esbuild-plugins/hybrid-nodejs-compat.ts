@@ -2,7 +2,6 @@ import assert from "node:assert";
 import { builtinModules } from "node:module";
 import nodePath from "node:path";
 import dedent from "ts-dedent";
-import { cloudflare, env, nodeless } from "unenv";
 import { getBasePath } from "../../paths";
 import type { Plugin, PluginBuild } from "esbuild";
 
@@ -15,15 +14,24 @@ const REQUIRED_UNENV_ALIAS_NAMESPACE = "required-unenv-alias";
  * @param _unenvResolvePaths Root paths used to resolve absolute paths.
  * @returns ESBuild plugin
  */
-export function nodejsHybridPlugin(_unenvResolvePaths?: string[]): Plugin {
-	const { alias, inject, external } = env(nodeless, cloudflare);
+export async function nodejsHybridPlugin(
+	_unenvResolvePaths?: string[]
+): Promise<Plugin> {
+	// `unenv` and `@cloudflare/unenv-preset` only publish esm
+	const { defineEnv } = await import("unenv");
+	const { cloudflare } = await import("@cloudflare/unenv-preset");
+	const { alias, inject, external, polyfill } = defineEnv({
+		presets: [cloudflare],
+		npmShims: true,
+	}).env;
+
 	return {
 		name: "hybrid-nodejs_compat",
 		setup(build) {
 			errorOnServiceWorkerFormat(build);
 			handleRequireCallsToNodeJSBuiltins(build);
 			handleUnenvAliasedPackages(build, alias, external);
-			handleNodeJSGlobals(build, inject);
+			handleNodeJSGlobals(build, inject, polyfill);
 		},
 	};
 }
@@ -104,15 +112,13 @@ function handleRequireCallsToNodeJSBuiltins(build: PluginBuild) {
 function handleUnenvAliasedPackages(
 	build: PluginBuild,
 	alias: Record<string, string>,
-	external: string[]
+	external: readonly string[]
 ) {
 	// esbuild expects alias paths to be absolute
 	const aliasAbsolute: Record<string, string> = {};
 	for (const [module, unresolvedAlias] of Object.entries(alias)) {
 		try {
-			aliasAbsolute[module] = require
-				.resolve(unresolvedAlias)
-				.replace(/\.cjs$/, ".mjs");
+			aliasAbsolute[module] = require.resolve(unresolvedAlias);
 		} catch (e) {
 			// this is an alias for package that is not installed in the current app => ignore
 		}
@@ -128,8 +134,8 @@ function handleUnenvAliasedPackages(
 		// Note: Does not apply to Node.js packages that are handled in `handleRequireCallsToNodeJSBuiltins`
 		if (
 			args.kind === "require-call" &&
-			(unresolvedAlias.startsWith("unenv/runtime/npm/") ||
-				unresolvedAlias.startsWith("unenv/runtime/mock/"))
+			(unresolvedAlias.startsWith("unenv/npm/") ||
+				unresolvedAlias.startsWith("unenv/mock/"))
 		) {
 			return {
 				path: args.path,
@@ -164,13 +170,17 @@ function handleUnenvAliasedPackages(
 }
 
 /**
- * Inject node globals defined in unenv's `inject` config via virtual modules
+ * Inject node globals defined in unenv's preset `inject` and `polyfill` properties.
+ *
+ * - an `inject` injects virtual module defining the name on `globalThis`
+ * - a `polyfill` is injected directly
  */
 function handleNodeJSGlobals(
 	build: PluginBuild,
-	inject: Record<string, string | string[]>
+	inject: Record<string, string | readonly string[]>,
+	polyfill: readonly string[]
 ) {
-	const UNENV_GLOBALS_RE = /_virtual_unenv_global_polyfill-(.+)$/;
+	const UNENV_VIRTUAL_MODULE_RE = /_virtual_unenv_global_polyfill-(.+)$/;
 	const prefix = nodePath.resolve(
 		getBasePath(),
 		"_virtual_unenv_global_polyfill-"
@@ -206,15 +216,19 @@ function handleNodeJSGlobals(
 		injectsByModule.get(module)!.push({ injectedName, exportName, importName });
 	}
 
-	// Inject the virtual modules
 	build.initialOptions.inject = [
 		...(build.initialOptions.inject ?? []),
+		// Inject the virtual modules
 		...virtualModulePathToSpecifier.keys(),
+		// Inject the polyfills - needs an absolute path
+		...polyfill.map((m) => require.resolve(m)),
 	];
 
-	build.onResolve({ filter: UNENV_GLOBALS_RE }, ({ path }) => ({ path }));
+	build.onResolve({ filter: UNENV_VIRTUAL_MODULE_RE }, ({ path }) => ({
+		path,
+	}));
 
-	build.onLoad({ filter: UNENV_GLOBALS_RE }, ({ path }) => {
+	build.onLoad({ filter: UNENV_VIRTUAL_MODULE_RE }, ({ path }) => {
 		const module = virtualModulePathToSpecifier.get(path);
 		assert(module, `Expected ${path} to be mapped to a module specifier`);
 		const injects = injectsByModule.get(module);
