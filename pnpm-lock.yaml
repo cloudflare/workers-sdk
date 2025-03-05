@@ -1164,6 +1164,9 @@ importers:
       '@cloudflare/mock-npm-registry':
         specifier: workspace:*
         version: link:../mock-npm-registry
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../vite-plugin-cloudflare
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig

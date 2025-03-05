@@ -1,5 +1,32 @@
 # wrangler
 
+## 3.113.0
+
+### Minor Changes
+
+- [#8300](https://github.com/cloudflare/workers-sdk/pull/8300) [`bca1fb5`](https://github.com/cloudflare/workers-sdk/commit/bca1fb5510f79820d558be839f459de3d50505e0) Thanks [@vicb](https://github.com/vicb)! - Use the unenv preset for Cloudflare from `@cloudflare/unenv-preset`
+
+### Patch Changes
+
+- [#8338](https://github.com/cloudflare/workers-sdk/pull/8338) [`2d40989`](https://github.com/cloudflare/workers-sdk/commit/2d409892f1cf08f07f84d25dcab023bc20ada374) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Upload \_headers and \_redirects if present with Workers Assets as part of `wrangler deploy` and `wrangler versions upload`.
+
+- [#8288](https://github.com/cloudflare/workers-sdk/pull/8288) [`cf14e17`](https://github.com/cloudflare/workers-sdk/commit/cf14e17d40b9e51475ba4d9ee6b4e3ef5ae5e841) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Add assets Proxy Worker skeleton in miniflare
+
+  This commit implements a very basic Proxy Worker skeleton, and wires it in the "pipeline" miniflare creates for assets. This Worker will be incrementally worked on, but for now, the current implementation will forward all incoming requests to the Router Worker, thus leaving the current assets behaviour in local dev, the same.
+
+  This is an experimental feature available under the `--x-assets-rpc` flag: `wrangler dev --x-assets-rpc`.
+
+- [#8216](https://github.com/cloudflare/workers-sdk/pull/8216) [`af9a57a`](https://github.com/cloudflare/workers-sdk/commit/af9a57a327d9283ebf62ef6dc074f2005a57b669) Thanks [@ns476](https://github.com/ns476)! - Support Images binding in `wrangler types`
+
+- [#8304](https://github.com/cloudflare/workers-sdk/pull/8304) [`fbba583`](https://github.com/cloudflare/workers-sdk/commit/fbba583df9340a011fda538e4c9c6480129be1fd) Thanks [@jahands](https://github.com/jahands)! - chore: add concurrency and caching for Zone IDs and Workers routes lookups
+
+  Workers with many routes can result in duplicate Zone lookups during deployments, making deployments unnecessarily slow. This compounded by the lack of concurrency when making these API requests.
+
+  This change deduplicates these requests and adds concurrency to help speed up deployments.
+
+- Updated dependencies [[`2d40989`](https://github.com/cloudflare/workers-sdk/commit/2d409892f1cf08f07f84d25dcab023bc20ada374), [`da568e5`](https://github.com/cloudflare/workers-sdk/commit/da568e5a94bf270cfdcd80123d8161fc5437dcd2), [`cf14e17`](https://github.com/cloudflare/workers-sdk/commit/cf14e17d40b9e51475ba4d9ee6b4e3ef5ae5e841), [`79c7810`](https://github.com/cloudflare/workers-sdk/commit/79c781076cc79e512753b65644c027138aa1d878)]:
+  - miniflare@3.20250224.0
+
 ## 3.112.0
 
 ### Minor Changes
