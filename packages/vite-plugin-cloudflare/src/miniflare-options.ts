@@ -497,17 +497,19 @@ function getPreviewModules(
 	const entryPath = path.basename(main);
 
 	return {
-		rootPath,
+		// rootPath,
 		modules: [
 			{
 				type: "ESModule",
-				path: entryPath,
+				path: main,
 			},
 			...modulesRules.flatMap(({ type, include }) =>
-				globSync(include, { cwd: rootPath, ignore: entryPath }).map((path) => ({
-					type,
-					path,
-				}))
+				globSync(include, { cwd: rootPath, ignore: main, absolute: true }).map(
+					(path) => ({
+						type,
+						path,
+					})
+				)
 			),
 		],
 	} satisfies Pick<WorkerOptions, "rootPath" | "modules">;
