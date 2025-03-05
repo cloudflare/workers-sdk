@@ -66,7 +66,7 @@
 	},
 	"peerDependencies": {
 		"vite": "catalog:vite-plugin",
-		"wrangler": "catalog:vite-plugin"
+		"wrangler": "workspace:*"
 	},
 	"publishConfig": {
 		"access": "public"

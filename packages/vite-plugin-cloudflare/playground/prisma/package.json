@@ -22,6 +22,6 @@
 		"prisma": "^6.3.0",
 		"typescript": "catalog:default",
 		"vite": "catalog:vite-plugin",
-		"wrangler": "catalog:vite-plugin"
+		"wrangler": "workspace:*"
 	}
 }

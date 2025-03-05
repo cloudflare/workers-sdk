@@ -37,9 +37,6 @@ catalogs:
     vite:
       specifier: ^6.1.0
       version: 6.1.0
-    wrangler:
-      specifier: ^3.101.0
-      version: 3.109.2
 
 overrides:
   '@types/react-dom@18>@types/react': ^18
@@ -1843,8 +1840,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/custom-build-app:
     devDependencies:
@@ -1864,8 +1861,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/dev-vars:
     devDependencies:
@@ -1885,8 +1882,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/durable-objects:
     devDependencies:
@@ -1906,8 +1903,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/external-durable-objects:
     devDependencies:
@@ -1927,8 +1924,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/external-workers:
     devDependencies:
@@ -1948,8 +1945,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/external-workflows:
     devDependencies:
@@ -1969,8 +1966,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/hot-channel:
     devDependencies:
@@ -1990,8 +1987,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/module-resolution:
     devDependencies:
@@ -2032,8 +2029,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/multi-worker:
     devDependencies:
@@ -2053,8 +2050,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/node-compat:
     devDependencies:
@@ -2089,8 +2086,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/partyserver:
     dependencies:
@@ -2132,8 +2129,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/prisma:
     devDependencies:
@@ -2162,8 +2159,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/react-spa:
     dependencies:
@@ -2199,8 +2196,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/same-worker-service-bindings:
     devDependencies:
@@ -2220,8 +2217,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/spa-with-api:
     dependencies:
@@ -2257,8 +2254,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/static-mpa:
     devDependencies:
@@ -2278,8 +2275,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/virtual-modules:
     devDependencies:
@@ -2299,8 +2296,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/wasm:
     devDependencies:
@@ -2320,8 +2317,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/websockets:
     devDependencies:
@@ -2341,8 +2338,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/worker:
     devDependencies:
@@ -2362,8 +2359,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/workflows:
     devDependencies:
@@ -2383,8 +2380,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250214.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vitest-pool-workers:
     dependencies:
