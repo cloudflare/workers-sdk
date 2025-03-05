@@ -761,7 +761,7 @@ export class Miniflare {
 
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
 
-		if (this.#sharedOpts.core.inspectorProxy !== undefined) {
+		if (this.#sharedOpts.core.unsafeInspectorProxy !== undefined) {
 			if (this.#sharedOpts.core.inspectorPort === undefined) {
 				throw new MiniflareCoreError(
 					"ERR_MISSING_INSPECTOR_PROXY_PORT",
