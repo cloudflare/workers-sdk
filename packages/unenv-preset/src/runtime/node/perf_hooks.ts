@@ -2,6 +2,7 @@ import {
 	constants,
 	createHistogram,
 	monitorEventLoopDelay,
+	Performance,
 	PerformanceEntry,
 	PerformanceMark,
 	PerformanceMeasure,
@@ -24,14 +25,12 @@ export {
 	monitorEventLoopDelay,
 } from "unenv/node/perf_hooks";
 
-// `unenvPerf` is lazily instantiated to workaround a circular dependency.
-// `Performance` is undefined at this point.
-let unenvPerf: any;
+//@ts-expect-error Performance is of type `unknown`.
+const unenvPerf = new Performance();
 
 function createPropertyDescriptor(prop: string): PropertyDescriptor {
 	return {
 		get() {
-			unenvPerf ??= new Performance();
 			const unenvValue = unenvPerf[prop];
 			if (typeof unenvValue === "function") {
 				return unenvValue.bind(unenvPerf);
@@ -39,7 +38,6 @@ function createPropertyDescriptor(prop: string): PropertyDescriptor {
 			return unenvValue[prop];
 		},
 		set(value: unknown) {
-			unenvPerf ??= new Performance();
 			unenvPerf[prop] = value;
 		},
 		enumerable: true,
@@ -66,21 +64,17 @@ export const performance = Object.defineProperties(globalThis.performance, {
 	toJSON: createPropertyDescriptor("toJSON"),
 });
 
-// TODO: resolve type-mismatch between web and node
 export default {
 	/**
 	 * manually unroll unenv-polyfilled-symbols to make it tree-shakeable
 	 */
+	// @ts-expect-error Performance is of type `unknown`
 	Performance,
-	// @ts-expect-error
 	PerformanceEntry,
 	PerformanceMark,
-	// @ts-expect-error
 	PerformanceMeasure,
-	// @ts-expect-error
 	PerformanceObserverEntryList,
 	PerformanceObserver,
-	// @ts-expect-error
 	PerformanceResourceTiming,
 	constants,
 	createHistogram,
@@ -88,6 +82,5 @@ export default {
 	/**
 	 * manually unroll workerd-polyfilled-symbols to make it tree-shakeable
 	 */
-	// @ts-expect-error
 	performance,
 } satisfies typeof nodePerfHooks;
