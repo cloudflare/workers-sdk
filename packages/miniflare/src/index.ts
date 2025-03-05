@@ -75,6 +75,7 @@ import {
 	reviveError,
 	ServiceDesignatorSchema,
 } from "./plugins/core";
+import { InspectorProxy } from "./plugins/core/inspector-proxy";
 import {
 	Config,
 	Extension,
@@ -741,6 +742,9 @@ export class Miniflare {
 	readonly #webSocketServer: WebSocketServer;
 	readonly #webSocketExtraHeaders: WeakMap<http.IncomingMessage, Headers>;
 
+	#maybeInspectorProxy?: InspectorProxy;
+	#previousRuntimeInspectorPort?: number;
+
 	constructor(opts: MiniflareOptions) {
 		// Split and validate options
 		const [sharedOpts, workerOpts] = validateOptions(opts);
@@ -756,6 +760,19 @@ export class Miniflare {
 		}
 
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
+
+		if (this.#sharedOpts.core.inspectorProxy !== undefined) {
+			if (this.#sharedOpts.core.inspectorPort === undefined) {
+				throw new MiniflareCoreError(
+					"ERR_MISSING_INSPECTOR_PROXY_PORT",
+					"inspectorProxy option enabled without an inspectorPort specified"
+				);
+			}
+
+			this.#maybeInspectorProxy = new InspectorProxy(
+				this.#sharedOpts.core.inspectorPort
+			);
+		}
 
 		this.#liveReloadServer = new WebSocketServer({ noServer: true });
 		this.#webSocketServer = new WebSocketServer({
@@ -1383,14 +1400,21 @@ export class Miniflare {
 			configuredHost,
 			this.#sharedOpts.core.port
 		);
-		let inspectorAddress: string | undefined;
+		let runtimeInspectorAddress: string | undefined;
 		if (this.#sharedOpts.core.inspectorPort !== undefined) {
-			inspectorAddress = this.#getSocketAddress(
+			let runtimeInspectorPort = this.#sharedOpts.core.inspectorPort;
+			if (this.#maybeInspectorProxy !== undefined) {
+				// if we have an inspector proxy let's use a
+				// random port for the actual runtime inspector
+				runtimeInspectorPort = 0;
+			}
+			runtimeInspectorAddress = this.#getSocketAddress(
 				kInspectorSocket,
-				this.#previousSharedOpts?.core.inspectorPort,
+				this.#previousRuntimeInspectorPort,
 				"localhost",
-				this.#sharedOpts.core.inspectorPort
+				runtimeInspectorPort
 			);
+			this.#previousRuntimeInspectorPort = runtimeInspectorPort;
 		}
 		const loopbackAddress = `${
 			maybeGetLocallyAccessibleHost(configuredHost) ??
@@ -1401,7 +1425,7 @@ export class Miniflare {
 			entryAddress,
 			loopbackAddress,
 			requiredSockets,
-			inspectorAddress,
+			inspectorAddress: runtimeInspectorAddress,
 			verbose: this.#sharedOpts.core.verbose,
 			handleRuntimeStdio: this.#sharedOpts.core.handleRuntimeStdio,
 		};
@@ -1421,6 +1445,19 @@ export class Miniflare {
 		// sockets have been recorded. At this point, `maybeSocketPorts` contains
 		// all of `requiredSockets` as keys.
 		this.#socketPorts = maybeSocketPorts;
+
+		if (this.#maybeInspectorProxy !== undefined) {
+			// Try to get inspector port for worker
+			const maybePort = this.#socketPorts.get(kInspectorSocket);
+			if (maybePort === undefined) {
+				throw new MiniflareCoreError(
+					"ERR_RUNTIME_FAILURE",
+					"Unable to access the runtime inspector socket."
+				);
+			} else {
+				this.#maybeInspectorProxy.updateConnection(maybePort);
+			}
+		}
 
 		const entrySocket = config.sockets?.[0];
 		const secure = entrySocket !== undefined && "https" in entrySocket;
@@ -1527,6 +1564,10 @@ export class Miniflare {
 	async getInspectorURL(): Promise<URL> {
 		this.#checkDisposed();
 		await this.ready;
+
+		if (this.#maybeInspectorProxy !== undefined) {
+			return this.#maybeInspectorProxy.getInspectorURL();
+		}
 
 		// `#socketPorts` is assigned in `#assembleAndUpdateConfig()`, which is
 		// called by `#init()`, and `ready` doesn't resolve until `#init()` returns
@@ -1880,6 +1921,9 @@ export class Miniflare {
 			// Remove from instance registry as last step in `finally`, to make sure
 			// all dispose steps complete
 			maybeInstanceRegistry?.delete(this);
+
+			// Close the inspector proxy server if there is one
+			await this.#maybeInspectorProxy?.dispose();
 		}
 	}
 }
