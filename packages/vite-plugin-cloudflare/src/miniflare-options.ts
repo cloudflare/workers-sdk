@@ -497,7 +497,6 @@ function getPreviewModules(
 	const entryPath = path.basename(main);
 
 	return {
-		// modulesRoot: miniflareModulesRoot,
 		rootPath,
 		modules: [
 			{
@@ -511,12 +510,7 @@ function getPreviewModules(
 				}))
 			),
 		],
-		// .map((module) => ({
-		// 	type: module.type,
-		// 	path: path.join(miniflareModulesRoot, module.path),
-		// 	contents: fs.readFileSync(path.join(rootPath, module.path)),
-		// })),
-	} satisfies Pick<WorkerOptions, "rootPath" | "modulesRoot" | "modules">;
+	} satisfies Pick<WorkerOptions, "rootPath" | "modules">;
 }
 
 export function getPreviewMiniflareOptions(
