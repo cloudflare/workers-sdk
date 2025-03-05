@@ -62,13 +62,6 @@ export class InspectorProxy {
 
 			assert(this.#runtimeWs?.OPEN);
 
-			// let's send a `Debugger.enable` message when a client actually connects
-			// (see: https://github.com/cloudflare/workers-sdk/issues/7956#issuecomment-2698124131)
-			this.#sendMessageToRuntime({
-				method: "Debugger.enable",
-				id: this.nextCounter(),
-			});
-
 			ws.on("error", console.error);
 
 			ws.once("close", () => {
