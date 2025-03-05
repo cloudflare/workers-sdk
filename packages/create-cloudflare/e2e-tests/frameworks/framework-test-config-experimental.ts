@@ -1,6 +1,4 @@
-import { keys } from "../helpers";
-
-const LONG_TIMEOUT = 1000 * 60 * 10;
+import { keys, LONG_TIMEOUT } from "../helpers";
 
 export default function getFrameworkTestConfigExperimental() {
 	return {
