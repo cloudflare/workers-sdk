@@ -297,8 +297,6 @@ export class InspectorProxy {
 	async updateConnection(runtimeInspectorPort: number) {
 		this.#runtimeInspectorPort = runtimeInspectorPort;
 
-		// TODO: sendRuntimeDiscardConsoleEntries
-
 		this.#runtimeWs?.close();
 		this.#runtimeWs = new WebSocket(
 			`ws://127.0.0.1:${this.#runtimeInspectorPort}/core:user:`
