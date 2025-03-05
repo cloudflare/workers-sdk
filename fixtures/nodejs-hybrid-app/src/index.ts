@@ -21,13 +21,13 @@ export default {
 			case "/test-random":
 				return testGetRandomValues();
 			case "/test-process":
-				return testProcessBehaviour();
+				return testProcessBehavior();
 			case "/query":
 				return testPostgresLibrary(env, ctx);
 			case "/test-x509-certificate":
 				return testX509Certificate();
 			case "/test-require-alias":
-				return testRequireUenvAliasedPackages();
+				return testRequireUnenvAliasedPackages();
 			case "/test-immediate":
 				return await testImmediate();
 		}
@@ -38,6 +38,7 @@ export default {
 <a href="test-random">Test getRandomValues()</a>
 <a href="test-x509-certificate">Test X509Certificate</a>
 <a href="test-require-alias">Test require unenv aliased packages</a>
+<a href="test-immediate">Test setImmediate</a>
 `,
 			{ headers: { "Content-Type": "text/html; charset=utf-8" } }
 		);
@@ -64,7 +65,7 @@ async function testImmediate() {
 	}
 }
 
-function testRequireUenvAliasedPackages() {
+function testRequireUnenvAliasedPackages() {
 	const fetch = require("cross-fetch");
 	const supportsDefaultExports = typeof fetch === "function";
 	const supportsNamedExports = typeof fetch.Headers === "function";
@@ -132,7 +133,7 @@ function testBasicNodejsProperties() {
 	assert.strictEqual(typeof performance.clearMarks, "function");
 }
 
-function testProcessBehaviour() {
+function testProcessBehavior() {
 	const originalProcess = process;
 	try {
 		assert.notEqual(process, undefined);
