@@ -217,10 +217,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 
 				config.no_bundle = true;
-				config.rules = [
-					{ type: "ESModule", globs: ["**/*.js"] },
-					{ type: "ESModule", globs: ["**/*.mjs"] },
-				];
+				config.rules = [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }];
 				// Set to `undefined` if it's an empty object so that the user doesn't see a warning about using `unsafe` fields when deploying their Worker.
 				if (config.unsafe && Object.keys(config.unsafe).length === 0) {
 					config.unsafe = undefined;
