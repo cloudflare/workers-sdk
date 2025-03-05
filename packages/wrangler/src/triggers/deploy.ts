@@ -158,29 +158,13 @@ export default async function triggersDeploy(
 		const routesWithOtherBindings: Record<string, string[]> = {};
 
 		/**
-		 * Create a map of queues to ensure we only ever fetch
-		 * a specific zone's routes once. The key should be
-		 * the zone id.
-		 */
-		const getZoneQueues = new Map<string, PQueue>();
-		const getQueue = (key: string): PQueue => {
-			const existing = getZoneQueues.get(key);
-			if (existing) {
-				return existing;
-			}
-			const queue = new PQueue({ concurrency: 1 });
-			getZoneQueues.set(key, queue);
-			return queue;
-		};
-
-		/**
 		 * This queue ensures we limit how many concurrent fetch
 		 * requests we're making to the Zones API.
 		 */
 		const queue = new PQueue({ concurrency: 10 });
 		const zoneRoutesCache = new Map<
 			string,
-			Array<{ pattern: string; script: string }>
+			Promise<Array<{ pattern: string; script: string }>>
 		>();
 
 		const zoneIdCache = new Map();
@@ -191,30 +175,25 @@ export default async function triggersDeploy(
 					return;
 				}
 
-				// Processing each zone in a single thread ensures
-				// we only ever fetch a zone's routes once.
-				await getQueue(zone.id).add(async () => {
-					const routePattern =
-						typeof route === "string" ? route : route.pattern;
+				const routePattern = typeof route === "string" ? route : route.pattern;
 
-					const routesInZone =
-						zoneRoutesCache.get(zone.id) ??
-						(await fetchListResult<{
-							pattern: string;
-							script: string;
-						}>(`/zones/${zone.id}/workers/routes`));
-
+				let routesInZone = zoneRoutesCache.get(zone.id);
+				if (!routesInZone) {
+					routesInZone = fetchListResult<{
+						pattern: string;
+						script: string;
+					}>(`/zones/${zone.id}/workers/routes`);
 					zoneRoutesCache.set(zone.id, routesInZone);
+				}
 
-					routesInZone.forEach(({ script, pattern }) => {
-						if (pattern === routePattern && script !== scriptName) {
-							if (!(script in routesWithOtherBindings)) {
-								routesWithOtherBindings[script] = [];
-							}
-
-							routesWithOtherBindings[script].push(pattern);
+				(await routesInZone).forEach(({ script, pattern }) => {
+					if (pattern === routePattern && script !== scriptName) {
+						if (!(script in routesWithOtherBindings)) {
+							routesWithOtherBindings[script] = [];
 						}
-					});
+
+						routesWithOtherBindings[script].push(pattern);
+					}
 				});
 			});
 		}
