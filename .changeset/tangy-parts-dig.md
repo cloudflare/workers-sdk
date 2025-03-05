@@ -2,4 +2,4 @@
 "create-cloudflare": patch
 ---
 
-feat: add worker + vite plugin to vue experimental template
+feat: add Worker + Vite plugin to Vue experimental template
