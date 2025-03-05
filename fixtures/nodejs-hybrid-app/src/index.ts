@@ -28,6 +28,8 @@ export default {
 				return testX509Certificate();
 			case "/test-require-alias":
 				return testRequireUenvAliasedPackages();
+			case "/test-immediate":
+				return await testImmediate();
 		}
 
 		return new Response(
@@ -41,6 +43,26 @@ export default {
 		);
 	},
 };
+
+async function testImmediate() {
+	try {
+		await new Promise((resolve, reject) => {
+			// Give it a whole second otherwise it times-out
+			setTimeout(reject, 1000);
+
+			// This setImmediate should never trigger the reject if the clearImmediate is working
+			const id = setImmediate(reject);
+			// clearImmediate should cancel reject callback
+			clearImmediate(id);
+			// This setImmediate should trigger the resolve callback
+			setImmediate(resolve);
+		});
+
+		return new Response("OK");
+	} catch (e) {
+		return new Response(`NOT OK: ${e}`);
+	}
+}
 
 function testRequireUenvAliasedPackages() {
 	const fetch = require("cross-fetch");
