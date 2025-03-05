@@ -63,7 +63,10 @@ import {
 	WorkerOptions,
 	WrappedBindingNames,
 } from "./plugins";
-import { ROUTER_SERVICE_NAME } from "./plugins/assets/constants";
+import {
+	ROUTER_SERVICE_NAME,
+	RPC_PROXY_SERVICE_NAME,
+} from "./plugins/assets/constants";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
@@ -1205,13 +1208,23 @@ export class Miniflare {
 								"core:user:",
 								""
 							);
+
+							/*
+							 * If we are running multiple Workers in a single dev session,
+							 * and this is a binding to a Worker with assets, we want that
+							 * binding to point to the Router Worker or the Assets Proxy
+							 * Worker, if the `unsafeEnableAssetsRpc` flag is enabled
+							 */
 							const maybeAssetTargetService = allWorkerOpts.find(
 								(worker) =>
 									worker.core.name === targetWorkerName && worker.assets.assets
 							);
 							if (maybeAssetTargetService && !binding.service?.entrypoint) {
 								assert(binding.service?.name);
-								binding.service.name = `${ROUTER_SERVICE_NAME}:${targetWorkerName}`;
+								binding.service.name = this.#sharedOpts.core
+									.unsafeEnableAssetsRpc
+									? `${RPC_PROXY_SERVICE_NAME}:${targetWorkerName}`
+									: `${ROUTER_SERVICE_NAME}:${targetWorkerName}`;
 							}
 						}
 					}
@@ -1220,6 +1233,8 @@ export class Miniflare {
 
 			// Collect all services required by this worker
 			const unsafeStickyBlobs = sharedOpts.core.unsafeStickyBlobs ?? false;
+			const unsafeEnableAssetsRpc =
+				sharedOpts.core.unsafeEnableAssetsRpc ?? false;
 			const unsafeEphemeralDurableObjects =
 				workerOpts.core.unsafeEphemeralDurableObjects ?? false;
 			const pluginServicesOptionsBase: Omit<
@@ -1239,6 +1254,7 @@ export class Miniflare {
 				unsafeEphemeralDurableObjects,
 				queueProducers,
 				queueConsumers,
+				unsafeEnableAssetsRpc,
 			};
 			for (const [key, plugin] of PLUGIN_ENTRIES) {
 				const pluginServicesExtensions = await plugin.getServices({
@@ -1310,14 +1326,21 @@ export class Miniflare {
 		const globalServices = getGlobalServices({
 			sharedOptions: sharedOpts.core,
 			allWorkerRoutes,
-			// if Workers + Assets project but NOT Vitest, point to router Worker instead
-			// if Vitest with assets, the self binding on the test runner will point to RW
+			/*
+			 * - if Workers + Assets project but NOT Vitest, point to Router Worker or
+			 *   Proxy Worker depending on whether experimental flag `unsafeEnableAssetsRpc`
+			 *   was set
+			 * - if Vitest with assets, the self binding on the test runner will point to
+			 *   Router Worker
+			 */
 			fallbackWorkerName:
 				this.#workerOpts[0].assets.assets &&
 				!this.#workerOpts[0].core.name?.startsWith(
 					"vitest-pool-workers-runner-"
 				)
-					? `${ROUTER_SERVICE_NAME}:${this.#workerOpts[0].core.name}`
+					? this.#sharedOpts.core.unsafeEnableAssetsRpc
+						? `${RPC_PROXY_SERVICE_NAME}:${this.#workerOpts[0].core.name}`
+						: `${ROUTER_SERVICE_NAME}:${this.#workerOpts[0].core.name}`
 					: getUserServiceName(this.#workerOpts[0].core.name),
 			loopbackPort,
 			log: this.#log,

@@ -1,4 +1,4 @@
-import { getFrameworkMap } from "../src/templates";
+import { getFrameworkMap } from "../../src/templates";
 
 /**
  * Get the name of the framework to test or undefined if not focussing on a single framework.
@@ -10,8 +10,15 @@ export function getFrameworkToTest({ experimental = false }) {
 	}
 
 	const frameworks = getFrameworkMap({ experimental });
-	for (const [framework, { frameworkCli }] of Object.entries(frameworks)) {
-		if (frameworkCli === envCliToTest) {
+	for (const [framework, config] of Object.entries(frameworks)) {
+		if ("platformVariants" in config) {
+			if (
+				config.platformVariants.pages.frameworkCli === envCliToTest ||
+				config.platformVariants.workers.frameworkCli === envCliToTest
+			) {
+				return framework;
+			}
+		} else if (config.frameworkCli === envCliToTest) {
 			return framework;
 		}
 	}

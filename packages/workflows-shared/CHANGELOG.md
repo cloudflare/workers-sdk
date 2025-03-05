@@ -1,5 +1,11 @@
 # @cloudflare/workflows-shared
 
+## 0.2.3
+
+### Patch Changes
+
+- [#8123](https://github.com/cloudflare/workers-sdk/pull/8123) [`7f565c5`](https://github.com/cloudflare/workers-sdk/commit/7f565c5c8844cd8c42137ed653e0665fa54950d1) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Make NonRetryableError work and cache errored steps
+
 ## 0.2.2
 
 ### Patch Changes

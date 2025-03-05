@@ -1,5 +1,24 @@
 # wrangler
 
+## 3.112.0
+
+### Minor Changes
+
+- [#8256](https://github.com/cloudflare/workers-sdk/pull/8256) [`f59d95b`](https://github.com/cloudflare/workers-sdk/commit/f59d95b6f48ee2ea902202af2778a1598596ebbd) Thanks [@jbwcloudflare](https://github.com/jbwcloudflare)! - Add two new Queues commands: pause-delivery and resume-delivery
+
+  These new commands allow users to pause and resume the delivery of messages to Queue Consumers
+
+### Patch Changes
+
+- [#8274](https://github.com/cloudflare/workers-sdk/pull/8274) [`fce642d`](https://github.com/cloudflare/workers-sdk/commit/fce642d59264b1b6e7df8a6c9a015519b7574637) Thanks [@emily-shen](https://github.com/emily-shen)! - fix bindings to entrypoints on the same worker in workers with assets
+
+- [#8201](https://github.com/cloudflare/workers-sdk/pull/8201) [`2cad136`](https://github.com/cloudflare/workers-sdk/commit/2cad136e99c48c2bf64c0010a8ecc7465be79b03) Thanks [@ichernetsky-cf](https://github.com/ichernetsky-cf)! - fix: interactively list Cloudchamber deployments using labels
+
+- [#8289](https://github.com/cloudflare/workers-sdk/pull/8289) [`a4909cb`](https://github.com/cloudflare/workers-sdk/commit/a4909cbe552eae72b901cd78bf1f814f818085a0) Thanks [@penalosa](https://github.com/penalosa)! - Add the experimental `--x-assets-rpc` flag to gate feature work to support JSRPC with Workers + Assets projects.
+
+- Updated dependencies [[`fce642d`](https://github.com/cloudflare/workers-sdk/commit/fce642d59264b1b6e7df8a6c9a015519b7574637), [`a4909cb`](https://github.com/cloudflare/workers-sdk/commit/a4909cbe552eae72b901cd78bf1f814f818085a0)]:
+  - miniflare@3.20250214.2
+
 ## 3.111.0
 
 ### Minor Changes
