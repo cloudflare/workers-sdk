@@ -155,6 +155,7 @@ describe
 	.skipIf(
 		getFrameworkToTest({ experimental }) ||
 			isQuarantineMode() ||
+			workerTests.length === 0 ||
 			process.platform === "win32",
 	)
 	.concurrent(`E2E: Workers templates`, () => {

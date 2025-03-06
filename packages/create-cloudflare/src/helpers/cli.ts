@@ -57,7 +57,7 @@ export const C3_DEFAULTS: C3Args = {
 	open: true,
 	lang: "ts",
 	template:
-		"cloudflare/workers-sdk/packages/create-cloudflare/templates/hello-world",
+		"cloudflare/workers-sdk/packages/create-cloudflare/templates/hello-world-with-assets",
 };
 
 export const WRANGLER_DEFAULTS = {

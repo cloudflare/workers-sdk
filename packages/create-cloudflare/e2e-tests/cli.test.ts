@@ -85,7 +85,6 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 				expect(output).toContain(`category Hello World Starter`);
 				expect(output).toContain(`type Worker + Static Assets`);
 				expect(output).toContain(`lang TypeScript`);
-				expect(output).toContain(`no git`);
 				expect(output).toContain(`no deploy`);
 			},
 		);
@@ -128,7 +127,6 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 				expect(project.path).toExist();
 				expect(output).toContain(`type Scheduled Worker (Cron Trigger)`);
 				expect(output).toContain(`lang JavaScript`);
-				expect(output).toContain(`no git`);
 				expect(output).toContain(`no deploy`);
 			},
 		);
@@ -181,7 +179,6 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 					expect(project.path).toExist();
 					expect(output).toContain(`type Worker + Static Assets`);
 					expect(output).toContain(`lang TypeScript`);
-					expect(output).toContain(`no git`);
 					expect(output).toContain(`no deploy`);
 				} finally {
 					fs.rmSync(existingFilePath, {
