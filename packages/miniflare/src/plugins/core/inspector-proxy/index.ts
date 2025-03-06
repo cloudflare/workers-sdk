@@ -85,6 +85,9 @@ export class InspectorProxy {
 
 			ws.on("message", (data) => {
 				const msg = JSON.parse(data.toString());
+				console.log(`\x1b[44m msg devtools -> runtime \x1b[0m`);
+				console.log(msg);
+				console.log("\n");
 				assert(this.#runtimeWs?.OPEN);
 				this.#sendMessageToRuntime(msg);
 			});
@@ -226,6 +229,11 @@ export class InspectorProxy {
 			id: this.nextCounter(),
 		});
 
+		console.log(`\x1b[44m msg devtools -> runtime \x1b[0m`);
+		console.log(JSON.stringify({ method: "Runtime.enable", id: "<id>" }));
+		console.log(JSON.stringify({ method: "Network.enable", id: "<id>" }));
+		console.log();
+
 		clearInterval(this.#runtimeKeepAliveInterval);
 		this.#runtimeKeepAliveInterval = setInterval(() => {
 			if (this.#runtimeWs?.OPEN) {
@@ -295,18 +303,21 @@ export class InspectorProxy {
 		);
 		this.#runtimeWs.once("open", () => this.#handleRuntimeWebSocketOpen());
 		this.#runtimeWs.on("message", (data) => {
-			const message = JSON.parse(data.toString());
+			console.log(`\x1b[45m msg runtime -> devtools \x1b[0m`);
+			const obj = JSON.parse(data.toString());
+			console.log(obj);
+			console.log("\n");
 
 			if (!this.#devtoolsWs) {
 				// there is no devtools connection established
 				return;
 			}
 
-			if (isDevToolsEvent(message, "Debugger.scriptParsed")) {
-				return this.#handleRuntimeScriptParsed(message);
+			if (isDevToolsEvent(obj, "Debugger.scriptParsed")) {
+				return this.#handleRuntimeScriptParsed(obj);
 			}
 
-			return this.#sendMessageToDevtools(message);
+			return this.#sendMessageToDevtools(obj);
 		});
 	}
 
