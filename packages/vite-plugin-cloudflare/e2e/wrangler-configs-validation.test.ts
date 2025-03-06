@@ -5,25 +5,21 @@ import { test } from "./helpers.js";
 //       testing regarding the validation there are unit tests in src/__tests__/get-validated-wrangler-config-path.spec.ts
 
 describe("during development wrangler config files are validated", () => {
-	test("for the entry worker", async ({ expect, seed, viteDev }) => {
+	test("for the entry worker", async ({ expect, seed, runLongLived }) => {
 		const projectPath = await seed("no-wrangler-config", "pnpm");
-
-		const proc = viteDev(projectPath);
-
+		const proc = await runLongLived("pnpm", "dev", projectPath);
 		expect(await proc.exitCode).not.toBe(0);
 		expect(proc.stderr).toMatch(
 			/Error: No config file found in the .*? directory/
 		);
 	});
 
-	test("for auxiliary workers", async ({ expect, seed, viteDev }) => {
+	test("for auxiliary workers", async ({ expect, seed, runLongLived }) => {
 		const projectPath = await seed(
 			"no-wrangler-config-for-auxiliary-worker",
 			"pnpm"
 		);
-
-		const proc = viteDev(projectPath);
-
+		const proc = await runLongLived("pnpm", "dev", projectPath);
 		expect(await proc.exitCode).not.toBe(0);
 		expect(proc.stderr).toMatch(
 			/The provided configPath .*? requested for one of your auxiliary workers doesn't point to an existing file/

@@ -4,9 +4,10 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "tsc -b && vite build",
+		"build": "vite build",
 		"dev": "vite",
 		"lint": "eslint .",
+		"prepreview": "vite build",
 		"preview": "vite preview"
 	},
 	"dependencies": {
@@ -26,7 +27,6 @@
 		"globals": "^15.14.0",
 		"typescript": "~5.7.2",
 		"typescript-eslint": "^8.22.0",
-		"vite": "^6.1.0",
-		"wrangler": "^3.108.1"
+		"vite": "^6.1.0"
 	}
 }
