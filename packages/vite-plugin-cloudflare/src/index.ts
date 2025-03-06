@@ -28,7 +28,7 @@ import {
 } from "./node-js-compat";
 import { resolvePluginConfig } from "./plugin-config";
 import { MODULE_PATTERN } from "./shared";
-import { getOutputDirectory, toMiniflareRequest } from "./utils";
+import { cleanUrl, getOutputDirectory, toMiniflareRequest } from "./utils";
 import { handleWebSocket } from "./websockets";
 import { getWarningForWorkersConfigs } from "./workers-configs";
 import type { PluginConfig, ResolvedPluginConfig } from "./plugin-config";
@@ -330,11 +330,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					return;
 				}
 
-				// There may be a query parameter (e.g. '.wasm?module') so we remove that here
-				const moduleId = source.split("?")[0];
-				assert(moduleId);
-
-				const resolved = await this.resolve(moduleId, importer);
+				const resolved = await this.resolve(cleanUrl(source), importer);
 				assert(
 					resolved,
 					`Unexpected error: could not resolve ${additionalModuleType} module '${source}'`
