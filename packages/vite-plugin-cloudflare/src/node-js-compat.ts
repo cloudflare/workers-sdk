@@ -135,12 +135,3 @@ function getNodeCompatEntries() {
 
 	return entries;
 }
-
-const nodeCompatPolyfills = new Set(
-	env.polyfill.map((source) =>
-		resolvePathSync(source, { url: import.meta.url })
-	)
-);
-export function nodeJSCompatHasSideEffect(source: string) {
-	return nodeCompatPolyfills.has(source);
-}
