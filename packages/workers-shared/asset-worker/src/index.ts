@@ -1,6 +1,5 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { PerformanceTimer } from "../../utils/performance";
-import { InternalServerErrorResponse } from "../../utils/responses";
 import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics } from "./analytics";
@@ -16,44 +15,7 @@ import type {
 	UnsafePerformanceTimer,
 } from "../../utils/types";
 import type { Environment, ReadyAnalytics } from "./types";
-import type { Toucan } from "toucan-js";
-
-function handleError(
-	sentry: Toucan | undefined,
-	analytics: Analytics,
-	err: unknown
-) {
-	try {
-		const response = new InternalServerErrorResponse(err as Error);
-
-		// Log to Sentry if we can
-		if (sentry) {
-			sentry.captureException(err);
-		}
-
-		if (err instanceof Error) {
-			analytics.setData({ error: err.message });
-		}
-
-		return response;
-	} catch (e) {
-		console.error("Error handling error", e);
-		return new InternalServerErrorResponse(e as Error);
-	}
-}
-
-function submitMetrics(
-	analytics: Analytics,
-	performance: PerformanceTimer,
-	startTimeMs: number
-) {
-	try {
-		analytics.setData({ requestTime: performance.now() - startTimeMs });
-		analytics.write();
-	} catch (e) {
-		console.error("Error submitting metrics", e);
-	}
-}
+import { handleError, submitMetrics } from './utils/final-operations';
 
 export type Env = {
 	/*
@@ -96,6 +58,7 @@ export type Env = {
  * they are still in flux and that they are not an established API contract.
  */
 export default class extends WorkerEntrypoint<Env> {
+
 	async fetch(request: Request): Promise<Response> {
 		let sentry: ReturnType<typeof setupSentry> | undefined;
 		const analytics = new Analytics(this.env.ANALYTICS);
