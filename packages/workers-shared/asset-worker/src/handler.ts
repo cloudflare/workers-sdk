@@ -1,28 +1,31 @@
 import {
 	InternalServerErrorResponse,
 	MethodNotAllowedResponse,
+	NoIntentResponse,
 	NotFoundResponse,
 	NotModifiedResponse,
 	OkResponse,
 	TemporaryRedirectResponse,
 } from "../../utils/responses";
-import { getHeaders } from "./utils/headers";
+import { getAssetHeaders } from "./utils/headers";
 import type { AssetConfig } from "../../utils/types";
 import type EntrypointType from "./index";
 import type { Env } from "./index";
 
-export const handleRequest = async (
+type AssetIntent = {
+	eTag: string;
+	status: typeof OkResponse.status | typeof NotFoundResponse.status;
+};
+
+const getResponseOrAssetIntent = async (
 	request: Request,
 	env: Env,
 	configuration: Required<AssetConfig>,
-	exists: typeof EntrypointType.prototype.unstable_exists,
-	getByETag: typeof EntrypointType.prototype.unstable_getByETag
+	exists: typeof EntrypointType.prototype.unstable_exists
 ) => {
 	const { pathname, search } = new URL(request.url);
 
-	let decodedPathname = decodePath(pathname);
-	// normalize the path; remove multiple slashes which could lead to same-schema redirects
-	decodedPathname = decodedPathname.replace(/\/+/g, "/");
+	const decodedPathname = decodePath(pathname);
 
 	const intent = await getIntent(decodedPathname, configuration, exists);
 
@@ -31,10 +34,10 @@ export const handleRequest = async (
 			span.setTags({
 				decodedPathname,
 				configuration: JSON.stringify(configuration),
-				status: NotFoundResponse.status,
+				status: NoIntentResponse.status,
 			});
 
-			return new NotFoundResponse();
+			return new NoIntentResponse();
 		});
 	}
 
@@ -84,19 +87,31 @@ export const handleRequest = async (
 		});
 	}
 
+	return intent.asset;
+};
+
+const resolveAssetIntentToResponse = async (
+	assetIntent: AssetIntent,
+	request: Request,
+	env: Env,
+	getByETag: typeof EntrypointType.prototype.unstable_getByETag
+) => {
+	const { pathname } = new URL(request.url);
+	const method = request.method.toUpperCase();
+
 	const asset = await env.JAEGER.enterSpan("getByETag", async (span) => {
 		span.setTags({
 			pathname,
-			eTag: intent.asset.eTag,
-			status: intent.asset.status,
+			eTag: assetIntent.eTag,
+			status: assetIntent.status,
 		});
 
-		return await getByETag(intent.asset.eTag);
+		return await getByETag(assetIntent.eTag);
 	});
 
-	const headers = getHeaders(intent.asset.eTag, asset.contentType, request);
+	const headers = getAssetHeaders(assetIntent.eTag, asset.contentType, request);
 
-	const strongETag = `"${intent.asset.eTag}"`;
+	const strongETag = `"${assetIntent.eTag}"`;
 	const weakETag = `W/${strongETag}`;
 	const ifNoneMatch = request.headers.get("If-None-Match") || "";
 	if ([weakETag, strongETag].includes(ifNoneMatch)) {
@@ -112,13 +127,13 @@ export const handleRequest = async (
 
 	return env.JAEGER.enterSpan("response", (span) => {
 		span.setTags({
-			etag: intent.asset.eTag,
-			status: intent.asset.status,
+			etag: assetIntent.eTag,
+			status: assetIntent.status,
 			head: method === "HEAD",
 		});
 
 		const body = method === "HEAD" ? null : asset.readableStream;
-		switch (intent.asset.status) {
+		switch (assetIntent.status) {
 			case NotFoundResponse.status:
 				return new NotFoundResponse(body, { headers });
 			case OkResponse.status:
@@ -127,12 +142,59 @@ export const handleRequest = async (
 	});
 };
 
+export const canFetch = async (
+	request: Request,
+	env: Env,
+	configuration: Required<AssetConfig>,
+	exists: typeof EntrypointType.prototype.unstable_exists
+): Promise<boolean> => {
+	const responseOrAssetIntent = await getResponseOrAssetIntent(
+		request,
+		env,
+		{
+			...configuration,
+			not_found_handling: "none",
+		},
+		exists
+	);
+
+	if (responseOrAssetIntent instanceof NoIntentResponse) {
+		return false;
+	}
+
+	return true;
+};
+
+export const handleRequest = async (
+	request: Request,
+	env: Env,
+	configuration: Required<AssetConfig>,
+	exists: typeof EntrypointType.prototype.unstable_exists,
+	getByETag: typeof EntrypointType.prototype.unstable_getByETag
+) => {
+	const responseOrAssetIntent = await getResponseOrAssetIntent(
+		request,
+		env,
+		configuration,
+		exists
+	);
+
+	const response =
+		responseOrAssetIntent instanceof Response
+			? responseOrAssetIntent
+			: await resolveAssetIntentToResponse(
+					responseOrAssetIntent,
+					request,
+					env,
+					getByETag
+				);
+
+	return response;
+};
+
 type Intent =
 	| {
-			asset: {
-				eTag: string;
-				status: typeof OkResponse.status | typeof NotFoundResponse.status;
-			};
+			asset: AssetIntent;
 			redirect: null;
 	  }
 	| { asset: null; redirect: string }
@@ -739,18 +801,22 @@ const safeRedirect = async (
 /**
  * Decode all incoming paths to ensure that we can handle paths with non-ASCII characters.
  */
-export const decodePath = (pathname: string) => {
-	return pathname
-		.split("/")
-		.map((x) => {
-			try {
-				const decoded = decodeURIComponent(x);
-				return decoded;
-			} catch {
-				return x;
-			}
-		})
-		.join("/");
+const decodePath = (pathname: string) => {
+	return (
+		pathname
+			.split("/")
+			.map((x) => {
+				try {
+					const decoded = decodeURIComponent(x);
+					return decoded;
+				} catch {
+					return x;
+				}
+			})
+			.join("/")
+			// normalize the path; remove multiple slashes which could lead to same-schema redirects
+			.replace(/\/+/g, "/")
+	);
 };
 /**
  * Use the encoded path as the canonical path for sometimes-encoded characters

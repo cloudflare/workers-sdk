@@ -1,8 +1,12 @@
 import { vi } from "vitest";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { applyConfigurationDefaults } from "../src/configuration";
-import { handleRequest } from "../src/handler";
+import { canFetch, handleRequest } from "../src/handler";
 import type { AssetConfig } from "../../utils/types";
+
+const mockEnv = {
+	JAEGER: mockJaegerBinding(),
+};
 
 describe("[Asset Worker] `handleRequest`", () => {
 	it("attaches ETag headers to responses", async () => {
@@ -16,10 +20,6 @@ describe("[Asset Worker] `handleRequest`", () => {
 			readableStream: new ReadableStream(),
 			contentType: "text/html",
 		});
-
-		const mockEnv = {
-			JAEGER: mockJaegerBinding(),
-		};
 
 		const response = await handleRequest(
 			new Request("https://example.com/"),
@@ -44,10 +44,6 @@ describe("[Asset Worker] `handleRequest`", () => {
 			readableStream: new ReadableStream(),
 			contentType: "text/html",
 		});
-
-		const mockEnv = {
-			JAEGER: mockJaegerBinding(),
-		};
 
 		const response = await handleRequest(
 			new Request("https://example.com/", {
@@ -75,10 +71,6 @@ describe("[Asset Worker] `handleRequest`", () => {
 			contentType: "text/html",
 		});
 
-		const mockEnv = {
-			JAEGER: mockJaegerBinding(),
-		};
-
 		const response = await handleRequest(
 			new Request("https://example.com/", {
 				headers: { "If-None-Match": `W/"${eTag}"` },
@@ -105,10 +97,6 @@ describe("[Asset Worker] `handleRequest`", () => {
 			contentType: "text/html",
 		});
 
-		const mockEnv = {
-			JAEGER: mockJaegerBinding(),
-		};
-
 		const response = await handleRequest(
 			new Request("https://example.com/", {
 				headers: { "If-None-Match": "a fake etag!" },
@@ -129,10 +117,6 @@ describe("[Asset Worker] `handleRequest`", () => {
 			"/blog/index.html": "bbbbbbbbbb",
 			"/index.html": "cccccccccc",
 			"/test.html": "dddddddddd",
-		};
-
-		const mockEnv = {
-			JAEGER: mockJaegerBinding(),
 		};
 
 		// Attempt to path traverse down to the root /test within asset-server
@@ -198,10 +182,6 @@ describe("[Asset Worker] `handleRequest`", () => {
 			contentType: "text/html",
 		});
 
-		const mockEnv = {
-			JAEGER: mockJaegerBinding(),
-		};
-
 		// first malformed URL should return 404 as no match above
 		const response = await handleRequest(
 			new Request("https://example.com/%A0"),
@@ -223,5 +203,132 @@ describe("[Asset Worker] `handleRequest`", () => {
 			getByEtag
 		);
 		expect(response2.status).toBe(307);
+	});
+});
+
+describe("[Asset Worker] `canFetch`", () => {
+	it('should return "true" if for exact and nearby assets with html_handling on', async () => {
+		const exists = (pathname: string) => {
+			if (pathname === "/foo.html") {
+				return "some-etag";
+			}
+
+			return null;
+		};
+
+		expect(
+			await canFetch(
+				new Request("https://example.com/foo.html"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				applyConfigurationDefaults({ html_handling: "auto-trailing-slash" }),
+				exists
+			)
+		).toBeTruthy();
+
+		expect(
+			await canFetch(
+				new Request("https://example.com/foo"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				applyConfigurationDefaults({ html_handling: "auto-trailing-slash" }),
+				exists
+			)
+		).toBeTruthy();
+
+		expect(
+			await canFetch(
+				new Request("https://example.com/foo/"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				applyConfigurationDefaults({ html_handling: "auto-trailing-slash" }),
+				exists
+			)
+		).toBeTruthy();
+	});
+
+	it("should not consider 404s or SPAs", async () => {
+		const exists = (pathname: string) => {
+			if (["/404.html", "/index.html", "/foo.html"].includes(pathname)) {
+				return "some-etag";
+			}
+
+			return null;
+		};
+
+		for (const notFoundHandling of [
+			"single-page-application",
+			"404-page",
+		] as const) {
+			expect(
+				await canFetch(
+					new Request("https://example.com/foo"),
+					// @ts-expect-error Empty config default to using mocked jaeger
+					mockEnv,
+					applyConfigurationDefaults({ not_found_handling: notFoundHandling }),
+					exists
+				)
+			).toBeTruthy();
+
+			expect(
+				await canFetch(
+					new Request("https://example.com/bar"),
+					// @ts-expect-error Empty config default to using mocked jaeger
+					mockEnv,
+					applyConfigurationDefaults({ not_found_handling: notFoundHandling }),
+					exists
+				)
+			).toBeFalsy();
+
+			expect(
+				await canFetch(
+					new Request("https://example.com/"),
+					// @ts-expect-error Empty config default to using mocked jaeger
+					mockEnv,
+					applyConfigurationDefaults({ not_found_handling: notFoundHandling }),
+					exists
+				)
+			).toBeTruthy();
+
+			expect(
+				await canFetch(
+					new Request("https://example.com/404"),
+					// @ts-expect-error Empty config default to using mocked jaeger
+					mockEnv,
+					applyConfigurationDefaults({ not_found_handling: notFoundHandling }),
+					exists
+				)
+			).toBeTruthy();
+		}
+	});
+
+	it('should return "true" even for a bad method', async () => {
+		const exists = (pathname: string) => {
+			if (pathname === "/foo.html") {
+				return "some-etag";
+			}
+
+			return null;
+		};
+
+		expect(
+			await canFetch(
+				new Request("https://example.com/foo", { method: "POST" }),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				applyConfigurationDefaults(),
+				exists
+			)
+		).toBeTruthy();
+
+		expect(
+			await canFetch(
+				new Request("https://example.com/bar", { method: "POST" }),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				applyConfigurationDefaults(),
+				exists
+			)
+		).toBeFalsy();
 	});
 });

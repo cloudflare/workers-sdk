@@ -21,6 +21,13 @@ export class NotFoundResponse extends Response {
 	}
 }
 
+// A magical response type which is used to signal that a user worker should be invoked if one is present.
+export class NoIntentResponse extends NotFoundResponse {
+	constructor() {
+		super();
+	}
+}
+
 export class MethodNotAllowedResponse extends Response {
 	static readonly status = 405;
 

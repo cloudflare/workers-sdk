@@ -6,7 +6,7 @@ import { CACHE_CONTROL_BROWSER } from "../constants";
  * should attach to its response.
  *
  */
-export function getHeaders(
+export function getAssetHeaders(
 	eTag: string,
 	contentType: string | undefined,
 	request: Request
