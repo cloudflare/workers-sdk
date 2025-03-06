@@ -20,7 +20,9 @@
 		"directory": "packages/unenv-preset"
 	},
 	"license": "MIT OR Apache-2.0",
-	"sideEffects": false,
+	"sideEffects": [
+		"./dist/runtime/polyfill/**"
+	],
 	"type": "module",
 	"exports": {
 		".": {
