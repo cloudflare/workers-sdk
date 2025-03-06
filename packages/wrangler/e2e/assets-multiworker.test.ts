@@ -349,7 +349,9 @@ describe.each(
 				});
 			});
 
-			failsIf(style === "dev registry")(".fetch() existing asset", async () => {
+			failsIf(
+				style === "dev registry" && !wranglerDev.includes("--x-assets-rpc")
+			)(".fetch() existing asset", async () => {
 				const url = await start(
 					wranglerDev,
 					helper,
@@ -479,24 +481,23 @@ describe.each(
 									`,
 					});
 				});
-				failsIf(style === "dev registry")(
-					".fetch() existing asset",
-					async () => {
-						const url = await start(
-							wranglerDev,
-							helper,
-							assetWorker,
-							regularWorker
-						);
-						await vi.waitFor(
-							async () =>
-								await expect(fetchText(`${url}/asset`)).resolves.toBe(
-									"<p>have an asset directly</p>"
-								),
-							{ interval: 1000, timeout: 5_000 }
-						);
-					}
-				);
+				failsIf(
+					style === "dev registry" && !wranglerDev.includes("--x-assets-rpc")
+				)(".fetch() existing asset", async () => {
+					const url = await start(
+						wranglerDev,
+						helper,
+						assetWorker,
+						regularWorker
+					);
+					await vi.waitFor(
+						async () =>
+							await expect(fetchText(`${url}/asset`)).resolves.toBe(
+								"<p>have an asset directly</p>"
+							),
+						{ interval: 1000, timeout: 5_000 }
+					);
+				});
 
 				it(".fetch() non-existing asset", async () => {
 					const url = await start(
@@ -530,7 +531,9 @@ describe.each(
 					);
 				});
 
-				failsIf(style === "in process")(".increment()", async () => {
+				failsIf(
+					style === "in process" && !wranglerDev.includes("--x-assets-rpc")
+				)(".increment()", async () => {
 					const url = await start(
 						wranglerDev,
 						helper,
@@ -564,24 +567,23 @@ describe.each(
 									`,
 					});
 				});
-				failsIf(style === "dev registry")(
-					".fetch() existing asset",
-					async () => {
-						const url = await start(
-							wranglerDev,
-							helper,
-							assetWorker,
-							regularWorker
-						);
-						await vi.waitFor(
-							async () =>
-								await expect(fetchText(`${url}/asset`)).resolves.toBe(
-									"<p>have an asset directly</p>"
-								),
-							{ interval: 1000, timeout: 5_000 }
-						);
-					}
-				);
+				failsIf(
+					style === "dev registry" && !wranglerDev.includes("--x-assets-rpc")
+				)(".fetch() existing asset", async () => {
+					const url = await start(
+						wranglerDev,
+						helper,
+						assetWorker,
+						regularWorker
+					);
+					await vi.waitFor(
+						async () =>
+							await expect(fetchText(`${url}/asset`)).resolves.toBe(
+								"<p>have an asset directly</p>"
+							),
+						{ interval: 1000, timeout: 5_000 }
+					);
+				});
 
 				it(".fetch() non-existing asset", async () => {
 					const url = await start(
@@ -615,7 +617,9 @@ describe.each(
 					);
 				});
 
-				failsIf(style === "in process")(".increment()", async () => {
+				failsIf(
+					style === "in process" && !wranglerDev.includes("--x-assets-rpc")
+				)(".increment()", async () => {
 					const url = await start(
 						wranglerDev,
 						helper,
