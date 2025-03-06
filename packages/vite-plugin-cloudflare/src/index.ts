@@ -7,6 +7,10 @@ import MagicString from "magic-string";
 import { Miniflare } from "miniflare";
 import * as vite from "vite";
 import {
+	createModuleReference,
+	matchAdditionalModule,
+} from "./additional-modules";
+import {
 	createCloudflareEnvironmentOptions,
 	initRunners,
 } from "./cloudflare-environment";
@@ -27,7 +31,6 @@ import { MODULE_PATTERN } from "./shared";
 import { getOutputDirectory, toMiniflareRequest } from "./utils";
 import { handleWebSocket } from "./websockets";
 import { getWarningForWorkersConfigs } from "./workers-configs";
-import type { ModuleType } from "./constants";
 import type { PluginConfig, ResolvedPluginConfig } from "./plugin-config";
 import type { Unstable_RawConfig } from "wrangler";
 
@@ -310,9 +313,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				});
 			},
 		},
-		// Plugin to support `CompiledWasm` modules
+		// Plugin to support additional modules
 		{
-			name: "vite-plugin-cloudflare:modules",
+			name: "vite-plugin-cloudflare:additional-modules",
 			// We set `enforce: "pre"` so that this plugin runs before the Vite core plugins.
 			// Otherwise the `vite:wasm-fallback` plugin prevents the `.wasm` extension being used for module imports.
 			enforce: "pre",
@@ -321,19 +324,21 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				return getWorkerConfig(environment.name) !== undefined;
 			},
 			async resolveId(source, importer) {
-				if (!source.endsWith(".wasm")) {
+				const additionalModuleType = matchAdditionalModule(source);
+
+				if (!additionalModuleType) {
 					return;
 				}
 
 				const resolved = await this.resolve(source, importer);
 				assert(
 					resolved,
-					`Unexpected error: could not resolve Wasm module ${source}`
+					`Unexpected error: could not resolve ${additionalModuleType} module '${source}'`
 				);
 
 				return {
 					external: true,
-					id: createModuleReference("CompiledWasm", resolved.id),
+					id: createModuleReference(additionalModuleType, resolved.id),
 				};
 			},
 			renderChunk(code, chunk) {
@@ -343,7 +348,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				while ((match = moduleRE.exec(code))) {
 					magicString ??= new MagicString(code);
-					const [full, moduleType, modulePath] = match;
+					const [full, _, modulePath] = match;
 
 					assert(
 						modulePath,
@@ -356,7 +361,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						source = fs.readFileSync(modulePath);
 					} catch (error) {
 						throw new Error(
-							`Import ${modulePath} not found. Does the file exist?`
+							`Import '${modulePath}' not found. Does the file exist?`
 						);
 					}
 
@@ -515,8 +520,4 @@ function getDotDevDotVarsContent(
 	}
 
 	return null;
-}
-
-function createModuleReference(type: ModuleType, id: string) {
-	return `__CLOUDFLARE_MODULE__${type}__${id}__`;
 }

@@ -335,7 +335,7 @@ export function getDevMiniflareOptions(
 										const moduleRE = new RegExp(MODULE_PATTERN);
 
 										const shouldExternalize =
-											// Worker modules (CompiledWasm, Text, Data)
+											// Additional modules (CompiledWasm, Text, Data)
 											moduleRE.test(moduleId);
 
 										if (shouldExternalize) {
@@ -474,24 +474,31 @@ export function getDevMiniflareOptions(
 			assert(match, `Unexpected error: no match for module: ${rawSpecifier}.`);
 			const [full, moduleType, modulePath] = match;
 			assert(
+				moduleType,
+				`Unexpected error: module type not found in reference: ${full}.`
+			);
+			assert(
 				modulePath,
 				`Unexpected error: module path not found in reference: ${full}.`
 			);
 
-			let source: Buffer;
+			let contents: Buffer;
 
 			try {
-				source = fs.readFileSync(modulePath);
+				contents = fs.readFileSync(modulePath);
 			} catch (error) {
 				throw new Error(
 					`Import "${modulePath}" not found. Does the file exist?`
 				);
 			}
 
-			return MiniflareResponse.json({
-				// Cap'n Proto expects byte arrays for `:Data` typed fields from JSON
-				wasm: Array.from(source),
-			});
+			return MiniflareResponse.json(
+				{
+					CompiledWasm: { wasm: Array.from(contents) },
+					Data: { data: Array.from(contents) },
+					Text: { text: contents.toString() },
+				}[moduleType]
+			);
 		},
 	};
 }
