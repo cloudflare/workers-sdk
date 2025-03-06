@@ -5,7 +5,7 @@ import path from "node:path";
 import util from "node:util";
 import { stripAnsi } from "miniflare";
 import kill from "tree-kill";
-import { test as baseTest, inject, vi } from "vitest";
+import { test as baseTest, inject, onTestFailed, vi } from "vitest";
 
 const debuglog = util.debuglog("vite-plugin:test");
 
@@ -16,6 +16,10 @@ const debuglog = util.debuglog("vite-plugin:test");
 export const test = baseTest.extend<{
 	seed: (fixture: string) => Promise<string>;
 	viteDev: (
+		projectPath: string,
+		options?: { flags?: string[]; maxBuffer?: number }
+	) => Process;
+	vitePreview: (
 		projectPath: string,
 		options?: { flags?: string[]; maxBuffer?: number }
 	) => Process;
@@ -49,14 +53,28 @@ export const test = baseTest.extend<{
 	async viteDev({}, use) {
 		const processes: ChildProcess[] = [];
 		await use((projectPath) => {
-			debuglog("starting vite for " + projectPath);
+			debuglog("starting `vite dev` for " + projectPath);
 			const proc = childProcess.exec(`pnpm exec vite dev`, {
 				cwd: projectPath,
 			});
 			processes.push(proc);
 			return wrap(proc);
 		});
-		debuglog("Closing down vite dev processes", processes.length);
+		debuglog("Closing down `vite dev` processes", processes.length);
+		processes.forEach((proc) => proc.pid && kill(proc.pid));
+	},
+
+	async vitePreview({}, use) {
+		const processes: ChildProcess[] = [];
+		await use((projectPath) => {
+			debuglog("starting `vite preview` for " + projectPath);
+			const proc = childProcess.exec(`pnpm exec vite preview`, {
+				cwd: projectPath,
+			});
+			processes.push(proc);
+			return wrap(proc);
+		});
+		debuglog("Closing down `vite preview` processes", processes.length);
 		processes.forEach((proc) => proc.pid && kill(proc.pid));
 	},
 });
@@ -88,7 +106,7 @@ function wrap(proc: childProcess.ChildProcess): Process {
 		stderr += chunk;
 	});
 	const closePromise = events.once(proc, "close");
-	return {
+	const wrappedProc = {
 		get stdout() {
 			return stripAnsi(stdout);
 		},
@@ -99,6 +117,16 @@ function wrap(proc: childProcess.ChildProcess): Process {
 			return closePromise.then(([exitCode]) => exitCode ?? -1);
 		},
 	};
+
+	onTestFailed(() => {
+		console.log(
+			`Wrapped process logs (${proc.spawnfile} ${proc.spawnargs.join(" ")}):`
+		);
+		console.log(wrappedProc.stdout);
+		console.log(wrappedProc.stderr);
+	});
+
+	return wrappedProc;
 }
 
 export function runCommand(command: string, cwd: string) {
