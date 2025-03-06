@@ -42,7 +42,7 @@
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/vitest-pool-workers": "^0.7.0",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250224.0",
+		"@cloudflare/workers-types": "^4.20250303.0",
 		"@types/mime": "^3.0.4",
 		"esbuild": "0.17.19",
 		"rimraf": "catalog:default",
