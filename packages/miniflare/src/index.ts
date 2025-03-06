@@ -1343,19 +1343,41 @@ export class Miniflare {
 					directSocket.host,
 					directSocket.port
 				);
-				sockets.push({
-					name,
-					address,
-					service: {
-						name: getUserServiceName(workerName),
-						entrypoint: entrypoint === "default" ? undefined : entrypoint,
-					},
-					http: {
-						style: directSocket.proxy ? HttpOptions_Style.PROXY : undefined,
-						cfBlobHeader: CoreHeaders.CF_BLOB,
-						capnpConnectHost: HOST_CAPNP_CONNECT,
-					},
-				});
+
+				// only if workers with assets with default exports
+				// (class or non-class based)
+				if (
+					this.#sharedOpts.core.unsafeEnableAssetsRpc &&
+					workerOpts.assets.assets &&
+					entrypoint === "default"
+				) {
+					sockets.push({
+						name,
+						address,
+						service: {
+							name: `${RPC_PROXY_SERVICE_NAME}:${workerOpts.core.name}`,
+						},
+						http: {
+							style: directSocket.proxy ? HttpOptions_Style.PROXY : undefined,
+							cfBlobHeader: CoreHeaders.CF_BLOB,
+							capnpConnectHost: HOST_CAPNP_CONNECT,
+						},
+					});
+				} else {
+					sockets.push({
+						name,
+						address,
+						service: {
+							name: getUserServiceName(workerName),
+							entrypoint: entrypoint === "default" ? undefined : entrypoint,
+						},
+						http: {
+							style: directSocket.proxy ? HttpOptions_Style.PROXY : undefined,
+							cfBlobHeader: CoreHeaders.CF_BLOB,
+							capnpConnectHost: HOST_CAPNP_CONNECT,
+						},
+					});
+				}
 			}
 		}
 

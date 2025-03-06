@@ -24,6 +24,8 @@ export default {
 				`env.NAMED_ENTRYPOINT.fetch() response: ${workerDResponses.fetchResponse}\n` +
 				`env.NAMED_ENTRYPOINT.bee() response: ${workerDResponses.beeResult}\n` +
 				`env.NAMED_ENTRYPOINT.busyBee("🐝") response: ${workerDResponses.busyBeeResult}\n` +
+				`env.NAMED_ENTRYPOINT.foo("🐙").bar.buzz() response: ${workerDResponses.buzzResult}\n` +
+				`env.NAMED_ENTRYPOINT.newBeeCounter().value response: ${workerDResponses.beeCountResult}\n` +
 				`env.NAMED_ENTRYPOINT.scheduled() response: ${workerDResponses.scheduledResponse}\n\n`
 		);
 	},

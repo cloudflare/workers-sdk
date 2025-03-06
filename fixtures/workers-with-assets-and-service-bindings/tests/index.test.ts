@@ -6,6 +6,10 @@ import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 const devCmds = [{ args: [] }, { args: ["--x-assets-rpc"] }];
 
+const failsIf = (condition: boolean) => {
+	return condition ? it.fails : it;
+};
+
 describe.each(devCmds)(
 	"[wrangler dev $args][Workers + Assets] Service bindings to Worker with assets",
 	({ args }) => {
@@ -55,7 +59,7 @@ describe.each(devCmds)(
 			describe("Service binding to default export", () => {
 				// this currently incorrectly returns the User Worker response
 				// instead of the Asset Worker response
-				it.fails(
+				failsIf(!args.length)(
 					"should return Asset Worker response for routes that serve static content",
 					async ({ expect }) => {
 						let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
@@ -127,8 +131,8 @@ describe.each(devCmds)(
 			describe("Service binding to default entrypoint", () => {
 				// this currently incorrectly returns the User Worker response
 				// instead of the Asset Worker response
-				it.fails(
-					"should return Asset Worker response for fetch requestsfor routes that serve static content",
+				failsIf(!args.length)(
+					"should return Asset Worker response for fetch requests for routes that serve static content",
 					async ({ expect }) => {
 						let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
 						let text = await response.text();
@@ -239,6 +243,20 @@ describe.each(devCmds)(
 					);
 					expect(text).toContain(
 						'env.NAMED_ENTRYPOINT.busyBee("🐝") response: Hello busy 🐝s from worker-d busyBee(bee)'
+					);
+				});
+
+				it("should support promise pipelining", async ({ expect }) => {
+					// fetch URL is irrelevant here. workerA will internally call
+					// the appropriate fns on the service binding instead
+					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
+					let text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.NAMED_ENTRYPOINT.foo("🐙").bar.buzz() response: You made it! 🐙`
+					);
+					expect(text).toContain(
+						`env.NAMED_ENTRYPOINT.newBeeCounter().value response: 2`
 					);
 				});
 			});
