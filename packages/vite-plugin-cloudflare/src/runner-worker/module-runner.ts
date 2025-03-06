@@ -2,7 +2,7 @@ import {
 	createWebSocketModuleRunnerTransport,
 	ModuleRunner,
 } from "vite/module-runner";
-import { MODULE_PATTERN, UNKNOWN_HOST } from "../shared";
+import { ADDITIONAL_MODULE_PATTERN, UNKNOWN_HOST } from "../shared";
 import type { WrapperEnv } from "./env";
 
 let moduleRunner: ModuleRunner;
@@ -75,7 +75,7 @@ export async function createModuleRunner(
 				}
 			},
 			async runExternalModule(filepath) {
-				const moduleRE = new RegExp(MODULE_PATTERN);
+				const moduleRE = new RegExp(ADDITIONAL_MODULE_PATTERN);
 
 				if (
 					!moduleRE.test(filepath) &&
