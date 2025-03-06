@@ -8,6 +8,7 @@ import { createCommand, createNamespace } from "../core/create-command";
 import { CommandLineArgsError, FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
+import { isLocal } from "../utils/is-local";
 import { MAX_UPLOAD_SIZE } from "./constants";
 import {
 	bucketAndKeyFromObjectPath,
@@ -78,6 +79,7 @@ export const r2ObjectGetCommand = createCommand({
 	},
 	positionalArgs: ["objectPath"],
 	async handler(objectGetYargs, { config }) {
+		const localMode = isLocal(objectGetYargs);
 		const { objectPath, pipe, jurisdiction } = objectGetYargs;
 		const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
 		let fullBucketName = bucket;
@@ -100,7 +102,7 @@ export const r2ObjectGetCommand = createCommand({
 		} else {
 			output = process.stdout;
 		}
-		if (!objectGetYargs.remote) {
+		if (localMode) {
 			if (!pipe) {
 				logger.warn(remoteFlagWarning);
 			}
@@ -231,7 +233,7 @@ export const r2ObjectPutCommand = createCommand({
 			storageClass,
 			...options
 		} = objectPutYargs;
-		const local = !objectPutYargs.remote;
+		const localMode = isLocal(objectPutYargs);
 		const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
 		if (!file && !pipe) {
 			throw new CommandLineArgsError(
@@ -261,7 +263,7 @@ export const r2ObjectPutCommand = createCommand({
 			objectSize = blob.size;
 		}
 
-		if (objectSize > MAX_UPLOAD_SIZE && !local) {
+		if (objectSize > MAX_UPLOAD_SIZE && !localMode) {
 			throw new FatalError(
 				`Error: Wrangler only supports uploading files up to ${prettyBytes(
 					MAX_UPLOAD_SIZE,
@@ -287,7 +289,7 @@ export const r2ObjectPutCommand = createCommand({
 			`Creating object "${key}"${storageClassLog} in bucket "${fullBucketName}".`
 		);
 
-		if (local) {
+		if (localMode) {
 			logger.warn(remoteFlagWarning);
 			await usingLocalBucket(
 				persistTo,
@@ -387,6 +389,8 @@ export const r2ObjectDeleteCommand = createCommand({
 		},
 	},
 	async handler(args) {
+		const localMode = isLocal(args);
+
 		const { objectPath, jurisdiction } = args;
 		const config = readConfig(args);
 		const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
@@ -397,7 +401,7 @@ export const r2ObjectDeleteCommand = createCommand({
 
 		logger.log(`Deleting object "${key}" from bucket "${fullBucketName}".`);
 
-		if (!args.remote) {
+		if (localMode) {
 			logger.warn(remoteFlagWarning);
 			await usingLocalBucket(args.persistTo, config, bucket, (r2Bucket) =>
 				r2Bucket.delete(key)
