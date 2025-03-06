@@ -734,7 +734,11 @@ export const kvBulkPutCommand = createCommand({
 				namespaceId,
 				async (namespace) => {
 					for (const value of content) {
-						await namespace.put(value.key, value.value, {
+						let data = value.value;
+						if (value.base64) {
+							data = Buffer.from(data, "base64").toString();
+						}
+						await namespace.put(value.key, data, {
 							expiration: value.expiration,
 							expirationTtl: value.expiration_ttl,
 							metadata: value.metadata,
