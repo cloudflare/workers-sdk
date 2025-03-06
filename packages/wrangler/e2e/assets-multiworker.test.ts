@@ -114,7 +114,7 @@ describe.each([
 						compatibility_date = "2024-11-01"
 
 						[assets]
-						directory = "./public/"
+						directory = "public"
 						binding = "ASSETS"
 
 						[[services]]
@@ -328,7 +328,7 @@ describe.each([
 								compatibility_date = "2024-11-01"
 
 								[assets]
-								directory = "./public/"
+								directory = "public"
 						`,
 				});
 			});
@@ -413,7 +413,7 @@ describe.each([
 								main = "src/index.ts"
 
 								[assets]
-								directory = "./public/"
+								directory = "public"
 								binding = "ASSETS"
 						`,
 					"src/index.ts": dedent/* javascript */ `
