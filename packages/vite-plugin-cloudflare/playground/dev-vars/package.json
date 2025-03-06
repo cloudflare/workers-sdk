@@ -14,6 +14,6 @@
 		"@cloudflare/workers-types": "^4.20250224.0",
 		"typescript": "catalog:default",
 		"vite": "catalog:vite-plugin",
-		"wrangler": "catalog:vite-plugin"
+		"wrangler": "workspace:*"
 	}
 }

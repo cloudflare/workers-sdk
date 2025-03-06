@@ -37,7 +37,7 @@
 		"check:type": "tsc --build",
 		"dev": "tsup --watch",
 		"test": "vitest run",
-		"test:ci": "pnpm test && pnpm test:e2e",
+		"test:ci": "pnpm test",
 		"test:e2e": "vitest run -c e2e/vitest.config.ts",
 		"test:watch": "vitest"
 	},
@@ -47,6 +47,7 @@
 		"miniflare": "workspace:*",
 		"tinyglobby": "^0.2.12",
 		"unenv": "2.0.0-rc.1",
+		"wrangler": "workspace:*",
 		"ws": "catalog:default"
 	},
 	"devDependencies": {
@@ -62,12 +63,11 @@
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
 		"vite": "catalog:vite-plugin",
-		"vitest": "catalog:default",
-		"wrangler": "workspace:*"
+		"vitest": "catalog:default"
 	},
 	"peerDependencies": {
 		"vite": "catalog:vite-plugin",
-		"wrangler": "catalog:vite-plugin"
+		"wrangler": "workspace:*"
 	},
 	"publishConfig": {
 		"access": "public"

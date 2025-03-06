@@ -1,20 +1,17 @@
 {
-	"name": "@playground/cloudflare-env",
+	"name": "@playground/ai",
 	"private": true,
 	"type": "module",
 	"scripts": {
 		"build": "vite build --app",
-		"build:custom-mode": "vite build --app -c vite.config.custom-mode.ts",
 		"check:types": "tsc --build",
 		"dev": "vite dev",
-		"dev:custom-mode": "vite dev -c vite.config.custom-mode.ts",
-		"preview": "vite preview",
-		"preview:custom-mode": "vite preview -c vite.config.custom-mode.ts"
+		"preview": "vite preview"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250224.0",
+		"@cloudflare/workers-types": "^4.20250204.0",
 		"typescript": "catalog:default",
 		"vite": "catalog:vite-plugin",
 		"wrangler": "workspace:*"

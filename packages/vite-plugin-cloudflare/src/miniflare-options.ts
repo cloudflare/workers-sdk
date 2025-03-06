@@ -284,7 +284,7 @@ export function getDevMiniflareOptions(
 		},
 	];
 
-	const userWorkers =
+	const workersFromConfig =
 		resolvedPluginConfig.type === "workers"
 			? Object.entries(resolvedPluginConfig.workers).map(
 					([environmentName, workerConfig]) => {
@@ -296,71 +296,83 @@ export function getDevMiniflareOptions(
 							resolvedPluginConfig.cloudflareEnv
 						);
 
+						const { externalWorkers } = miniflareWorkerOptions;
+
 						const { ratelimits, ...workerOptions } =
 							miniflareWorkerOptions.workerOptions;
 
 						return {
-							...workerOptions,
-							// We have to add the name again because `unstable_getMiniflareWorkerOptions` sets it to `undefined`
-							name: workerConfig.name,
-							modulesRoot: miniflareModulesRoot,
-							unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
-							bindings: {
-								...workerOptions.bindings,
-								__VITE_ROOT__: resolvedViteConfig.root,
-								__VITE_ENTRY_PATH__: workerConfig.main,
-							},
-							serviceBindings: {
-								...workerOptions.serviceBindings,
-								...(environmentName ===
-									resolvedPluginConfig.entryWorkerEnvironmentName &&
-								workerConfig.assets?.binding
-									? {
-											[workerConfig.assets.binding]: ASSET_WORKER_NAME,
-										}
-									: {}),
-								__VITE_INVOKE_MODULE__: async (request) => {
-									const payload = (await request.json()) as vite.CustomPayload;
-									const invokePayloadData = payload.data as {
-										id: string;
-										name: string;
-										data: [string, string, FetchFunctionOptions];
-									};
-
-									assert(
-										invokePayloadData.name === "fetchModule",
-										`Invalid invoke event: ${invokePayloadData.name}`
-									);
-
-									const [moduleId] = invokePayloadData.data;
-									const moduleRE = new RegExp(MODULE_PATTERN);
-
-									const shouldExternalize =
-										// Worker modules (CompiledWasm, Text, Data)
-										moduleRE.test(moduleId);
-
-									if (shouldExternalize) {
-										const result = {
-											externalize: moduleId,
-											type: "module",
-										} satisfies vite.FetchResult;
-
-										return MiniflareResponse.json({ result });
-									}
-
-									const devEnvironment = viteDevServer.environments[
-										environmentName
-									] as CloudflareDevEnvironment;
-
-									const result = await devEnvironment.hot.handleInvoke(payload);
-
-									return MiniflareResponse.json(result);
+							externalWorkers,
+							worker: {
+								...workerOptions,
+								name: workerOptions.name ?? workerConfig.name,
+								modulesRoot: miniflareModulesRoot,
+								unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
+								bindings: {
+									...workerOptions.bindings,
+									__VITE_ROOT__: resolvedViteConfig.root,
+									__VITE_ENTRY_PATH__: workerConfig.main,
 								},
-							},
-						} satisfies Partial<WorkerOptions>;
+								serviceBindings: {
+									...workerOptions.serviceBindings,
+									...(environmentName ===
+										resolvedPluginConfig.entryWorkerEnvironmentName &&
+									workerConfig.assets?.binding
+										? {
+												[workerConfig.assets.binding]: ASSET_WORKER_NAME,
+											}
+										: {}),
+									__VITE_INVOKE_MODULE__: async (request) => {
+										const payload =
+											(await request.json()) as vite.CustomPayload;
+										const invokePayloadData = payload.data as {
+											id: string;
+											name: string;
+											data: [string, string, FetchFunctionOptions];
+										};
+
+										assert(
+											invokePayloadData.name === "fetchModule",
+											`Invalid invoke event: ${invokePayloadData.name}`
+										);
+
+										const [moduleId] = invokePayloadData.data;
+										const moduleRE = new RegExp(MODULE_PATTERN);
+
+										const shouldExternalize =
+											// Worker modules (CompiledWasm, Text, Data)
+											moduleRE.test(moduleId);
+
+										if (shouldExternalize) {
+											const result = {
+												externalize: moduleId,
+												type: "module",
+											} satisfies vite.FetchResult;
+
+											return MiniflareResponse.json({ result });
+										}
+
+										const devEnvironment = viteDevServer.environments[
+											environmentName
+										] as CloudflareDevEnvironment;
+
+										const result =
+											await devEnvironment.hot.handleInvoke(payload);
+
+										return MiniflareResponse.json(result);
+									},
+								},
+							} satisfies Partial<WorkerOptions>,
+						};
 					}
 				)
 			: [];
+
+	const userWorkers = workersFromConfig.map((options) => options.worker);
+
+	const externalWorkers = workersFromConfig.flatMap(
+		(options) => options.externalWorkers
+	);
 
 	const workerToWorkerEntrypointNamesMap =
 		getWorkerToWorkerEntrypointNamesMap(userWorkers);
@@ -386,6 +398,7 @@ export function getDevMiniflareOptions(
 		),
 		workers: [
 			...assetWorkers,
+			...externalWorkers,
 			...userWorkers.map((workerOptions) => {
 				const wrappers = [
 					`import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from '${RUNNER_PATH}';`,
@@ -523,20 +536,24 @@ export function getPreviewMiniflareOptions(
 		unstable_readConfig({ config: configPath })
 	);
 
-	const workers: Array<WorkerOptions> = workerConfigs.map((config) => {
+	const workers: Array<WorkerOptions> = workerConfigs.flatMap((config) => {
 		const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(config);
+
+		const { externalWorkers } = miniflareWorkerOptions;
 
 		const { ratelimits, modulesRules, ...workerOptions } =
 			miniflareWorkerOptions.workerOptions;
 
-		return {
-			...workerOptions,
-			// We have to add the name again because `unstable_getMiniflareWorkerOptions` sets it to `undefined`
-			name: config.name,
-			...(miniflareWorkerOptions.main
-				? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
-				: { modules: true, script: "" }),
-		};
+		return [
+			{
+				...workerOptions,
+				name: workerOptions.name ?? config.name,
+				...(miniflareWorkerOptions.main
+					? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
+					: { modules: true, script: "" }),
+			},
+			...externalWorkers,
+		];
 	});
 
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
