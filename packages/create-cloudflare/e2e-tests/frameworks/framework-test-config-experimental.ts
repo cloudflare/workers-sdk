@@ -228,6 +228,7 @@ export default function getFrameworkTestConfigExperimental() {
 			},
 		},
 		vue: {
+			flags: ["--ts"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
@@ -238,12 +239,6 @@ export default function getFrameworkTestConfigExperimental() {
 				route: "/",
 				expectedText: "Vite App",
 			},
-			promptHandlers: [
-				{
-					matcher: /Would you like to use TypeScript/,
-					input: [keys.enter],
-				},
-			],
 		},
 	};
 }

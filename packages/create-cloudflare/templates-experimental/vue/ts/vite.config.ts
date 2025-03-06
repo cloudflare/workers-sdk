@@ -8,14 +8,14 @@ import { cloudflare } from "@cloudflare/vite-plugin"
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [
-    vue(),
-    vueDevTools(),
+	plugins: [
+		vue(),
+		vueDevTools(),
 		cloudflare()
-  ],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
-    },
-  },
+	],
+	resolve: {
+		alias: {
+			'@': fileURLToPath(new URL('./src', import.meta.url))
+		},
+	},
 })
