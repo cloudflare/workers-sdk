@@ -182,7 +182,8 @@ export function printBindings(
 						value: addSuffix(
 							destination_address ||
 								allowed_destination_addresses?.join(", ") ||
-								"unrestricted"
+								"unrestricted",
+							{ isSimulatedLocally: true }
 						),
 					};
 				}

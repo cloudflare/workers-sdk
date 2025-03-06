@@ -705,6 +705,9 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			bindings.hyperdrive?.map(hyperdriveEntry) ?? []
 		),
 		workflows: Object.fromEntries(bindings.workflows?.map(workflowEntry) ?? []),
+		email: {
+			send_email: bindings.send_email,
+		},
 
 		durableObjects: Object.fromEntries([
 			...internalObjects.map(({ name, class_name }) => {
@@ -1026,6 +1029,7 @@ export async function buildMiniflareOptions(
 		liveReload: config.liveReload,
 		upstream,
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
+		unsafeTriggerHandlers: true,
 
 		log,
 		verbose: logger.loggerLevel === "debug",
