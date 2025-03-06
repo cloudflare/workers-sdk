@@ -7,6 +7,12 @@ MY_VAR = "my-var-value"
 MY_VAR_A = "my-var-a"
 MY_JSON_VAR = { test = true }
 
+[assets]
+directory = "./public"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "none"
+
 [[kv_namespaces]]
 binding = "MY_KV"
 id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
