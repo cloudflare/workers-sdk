@@ -627,7 +627,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					)
 				: undefined;
 
-		const legacyAssets = await syncWorkersSite(
+		const workersSitesAssets = await syncWorkersSite(
 			accountId,
 			// When we're using the newer service environments, we wouldn't
 			// have added the env name on to the script name. However, we must
@@ -643,25 +643,25 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const bindings = getBindings({
 			...config,
 			kv_namespaces: config.kv_namespaces.concat(
-				legacyAssets.namespace
-					? { binding: "__STATIC_CONTENT", id: legacyAssets.namespace }
+				workersSitesAssets.namespace
+					? { binding: "__STATIC_CONTENT", id: workersSitesAssets.namespace }
 					: []
 			),
 			vars: { ...config.vars, ...props.vars },
 			text_blobs: {
 				...config.text_blobs,
-				...(legacyAssets.manifest &&
+				...(workersSitesAssets.manifest &&
 					format === "service-worker" && {
 						__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
 					}),
 			},
 		});
 
-		if (legacyAssets.manifest) {
+		if (workersSitesAssets.manifest) {
 			modules.push({
 				name: "__STATIC_CONTENT_MANIFEST",
 				filePath: undefined,
-				content: JSON.stringify(legacyAssets.manifest),
+				content: JSON.stringify(workersSitesAssets.manifest),
 				type: "text",
 			});
 		}
