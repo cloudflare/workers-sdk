@@ -172,6 +172,11 @@ describe("wrangler", () => {
 					key: "test",
 					value: "value",
 				},
+				{
+					key: "encoded",
+					value: Buffer.from("some raw data").toString("base64"),
+					base64: true,
+				},
 			];
 			writeFileSync("./keys.json", JSON.stringify(keyValues));
 			await runWrangler(
@@ -191,12 +196,26 @@ describe("wrangler", () => {
 			value"
 		`);
 
+			await runWrangler(
+				`kv:key get encoded --namespace-id bulk-namespace-id --local --text`
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+			"[]
+			Success!
+			value
+			some raw data"
+		`);
+
 			await runWrangler(`kv:key list --namespace-id bulk-namespace-id --local`);
 			expect(std.out).toMatchInlineSnapshot(`
 			"[]
 			Success!
 			value
+			some raw data
 			[
+			  {
+			    \\"name\\": \\"encoded\\"
+			  },
 			  {
 			    \\"name\\": \\"hello\\"
 			  },
