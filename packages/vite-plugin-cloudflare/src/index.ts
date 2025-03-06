@@ -27,7 +27,7 @@ import {
 	resolveNodeJSImport,
 } from "./node-js-compat";
 import { resolvePluginConfig } from "./plugin-config";
-import { MODULE_PATTERN } from "./shared";
+import { ADDITIONAL_MODULE_PATTERN } from "./shared";
 import { cleanUrl, getOutputDirectory, toMiniflareRequest } from "./utils";
 import { handleWebSocket } from "./websockets";
 import { getWarningForWorkersConfigs } from "./workers-configs";
@@ -342,7 +342,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				};
 			},
 			renderChunk(code, chunk) {
-				const moduleRE = new RegExp(MODULE_PATTERN, "g");
+				const moduleRE = new RegExp(ADDITIONAL_MODULE_PATTERN, "g");
 				let match: RegExpExecArray | null;
 				let magicString: MagicString | undefined;
 

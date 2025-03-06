@@ -21,7 +21,7 @@ import {
 	ROUTER_WORKER_NAME,
 } from "./constants";
 import { getWorkerConfigPaths } from "./deploy-config";
-import { MODULE_PATTERN } from "./shared";
+import { ADDITIONAL_MODULE_PATTERN } from "./shared";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
 	PersistState,
@@ -332,7 +332,7 @@ export function getDevMiniflareOptions(
 										);
 
 										const [moduleId] = invokePayloadData.data;
-										const moduleRE = new RegExp(MODULE_PATTERN);
+										const moduleRE = new RegExp(ADDITIONAL_MODULE_PATTERN);
 
 										const shouldExternalize =
 											// Additional modules (CompiledWasm, Text, Data)
@@ -469,7 +469,7 @@ export function getDevMiniflareOptions(
 				`Unexpected error: no specifier in request to module fallback service.`
 			);
 
-			const moduleRE = new RegExp(MODULE_PATTERN);
+			const moduleRE = new RegExp(ADDITIONAL_MODULE_PATTERN);
 			const match = moduleRE.exec(rawSpecifier);
 			assert(match, `Unexpected error: no match for module: ${rawSpecifier}.`);
 			const [full, moduleType, modulePath] = match;
