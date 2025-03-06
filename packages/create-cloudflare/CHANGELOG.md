@@ -1,5 +1,13 @@
 # create-cloudflare
 
+## 2.40.2
+
+### Patch Changes
+
+- [#8371](https://github.com/cloudflare/workers-sdk/pull/8371) [`b24497d`](https://github.com/cloudflare/workers-sdk/commit/b24497daf70fc9f32f14060223dbef338f7d2ec0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - graduate C3 React (Workers) template
+
+- [#8349](https://github.com/cloudflare/workers-sdk/pull/8349) [`ca60010`](https://github.com/cloudflare/workers-sdk/commit/ca6001066586e0c549e63016aed0b18f0c546220) Thanks [@emily-shen](https://github.com/emily-shen)! - Add type generation command to React + Vite + Workers with Assets template and use `wrangler.jsonc` instead of `.json`.
+
 ## 2.40.1
 
 ### Patch Changes
