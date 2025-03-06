@@ -8,7 +8,7 @@ import { readJSON, usesTypescript, writeJSON } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import * as recast from "recast";
-import type { TemplateConfig } from "../../src/templates";
+import type { TemplateConfig } from "../../../src/templates";
 import type { types } from "recast";
 import type { C3Context } from "types";
 
@@ -156,7 +156,7 @@ const config: TemplateConfig = {
 	frameworkCli: "create-vite",
 	displayName: "React",
 	platform: "workers",
-	path: "templates-experimental/react",
+	path: "templates/react/workers",
 	copyFiles: {
 		variants: {
 			ts: {

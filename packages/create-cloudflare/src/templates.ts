@@ -28,7 +28,6 @@ import honoTemplateExperimental from "templates-experimental/hono/c3";
 import nextTemplateExperimental from "templates-experimental/next/c3";
 import nuxtTemplateExperimental from "templates-experimental/nuxt/c3";
 import qwikTemplateExperimental from "templates-experimental/qwik/c3";
-import reactTemplateExperimental from "templates-experimental/react/c3";
 import remixTemplateExperimental from "templates-experimental/remix/c3";
 import solidTemplateExperimental from "templates-experimental/solid/c3";
 import svelteTemplateExperimental from "templates-experimental/svelte/c3";
@@ -188,7 +187,6 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			next: nextTemplateExperimental,
 			nuxt: nuxtTemplateExperimental,
 			qwik: qwikTemplateExperimental,
-			react: reactTemplateExperimental,
 			remix: remixTemplateExperimental,
 			solid: solidTemplateExperimental,
 			svelte: svelteTemplateExperimental,

@@ -17,31 +17,6 @@ export default function getFrameworkTestConfigExperimental() {
 			},
 			flags: ["--style", "sass"],
 		},
-		react: {
-			promptHandlers: [
-				{
-					matcher: /Select a variant:/,
-					input: [keys.enter],
-				},
-			],
-			unsupportedOSs: ["win32"],
-			testCommitMessage: true,
-			verifyDeploy: {
-				route: "/",
-				// Note that this is the text in the static HTML that is returned
-				// This React SPA will change this at runtime but we are only making a fetch request
-				// not actually running the client side JS.
-				expectedText: "Vite + React + TS",
-			},
-			verifyPreview: {
-				route: "/",
-				previewArgs: ["--host=127.0.0.1"],
-				// Note that this is the text in the static HTML that is returned
-				// This React SPA will change this at runtime but we are only making a fetch request
-				// not actually running the client side JS.
-				expectedText: "Vite + React + TS",
-			},
-		},
 		gatsby: {
 			unsupportedPms: ["bun", "pnpm"],
 			promptHandlers: [
