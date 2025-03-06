@@ -1,8 +1,8 @@
-import bin from "./bin-example.bin";
-import html from "./html-example.html";
-import text from "./text-example.txt";
-import wasm from "./wasm-example.wasm";
-import wasmWithParam from "./wasm-example.wasm?module";
+import bin from "./modules/bin-example.bin";
+import html from "./modules/html-example.html";
+import text from "./modules/text-example.txt";
+import wasm from "./modules/wasm-example.wasm";
+import wasmWithParam from "./modules/wasm-example.wasm?module";
 
 export default {
 	async fetch(request) {
