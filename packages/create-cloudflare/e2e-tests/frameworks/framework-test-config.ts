@@ -107,7 +107,7 @@ export default function getFrameworkTestConfig(pm: string) {
 			},
 			flags: ["--skipTailwind"],
 		},
-		["angular:pages"]: {
+		"angular:pages": {
 			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
@@ -123,7 +123,7 @@ export default function getFrameworkTestConfig(pm: string) {
 			},
 			flags: ["--style", "sass"],
 		},
-		["angular:workers"]: {
+		"angular:workers": {
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
@@ -139,7 +139,7 @@ export default function getFrameworkTestConfig(pm: string) {
 			},
 			flags: ["--style", "sass"],
 		},
-		["gatsby:pages"]: {
+		"gatsby:pages": {
 			argv: ["--platform", "pages"],
 			unsupportedPms: ["bun", "pnpm"],
 			promptHandlers: [
@@ -159,7 +159,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Gatsby!",
 			},
 		},
-		["gatsby:workers"]: {
+		"gatsby:workers": {
 			argv: ["--platform", "workers"],
 			unsupportedPms: ["bun", "pnpm"],
 			promptHandlers: [
@@ -279,7 +279,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				"@/*",
 			],
 		},
-		["nuxt:pages"]: {
+		"nuxt:pages": {
 			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
@@ -304,7 +304,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "C3_TEST",
 			},
 		},
-		["nuxt:workers"]: {
+		"nuxt:workers": {
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
