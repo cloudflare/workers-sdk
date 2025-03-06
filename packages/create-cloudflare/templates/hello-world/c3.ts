@@ -5,7 +5,7 @@ import type { TemplateConfig } from "../../src/templates";
 export default {
 	configVersion: 1,
 	id: "hello-world",
-	displayName: "Hello World Worker",
+	displayName: "Worker only",
 	description: "Get started with a basic Worker in the language of your choice",
 	platform: "workers",
 	async configure(ctx) {
