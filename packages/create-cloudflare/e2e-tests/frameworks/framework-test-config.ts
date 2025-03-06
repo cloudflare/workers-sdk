@@ -433,7 +433,8 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "C3_TEST",
 			},
 		},
-		vue: {
+		"vue:pages": {
+			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
@@ -445,6 +446,20 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Vite App",
 			},
 			flags: ["--ts"],
+		},
+		"vue:workers": {
+			argv: ["--platform", "workers", "--ts"],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Vite App",
+			},
+			verifyPreview: {
+				previewArgs: ["--host=127.0.0.1"],
+				route: "/",
+				expectedText: "Vite App",
+			},
 		},
 	};
 }

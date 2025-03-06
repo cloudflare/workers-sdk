@@ -150,19 +150,5 @@ export default function getFrameworkTestConfigExperimental() {
 				expectedText: "C3_TEST",
 			},
 		},
-		vue: {
-			argv: ["--ts"],
-			testCommitMessage: true,
-			unsupportedOSs: ["win32"],
-			verifyDeploy: {
-				route: "/",
-				expectedText: "Vite App",
-			},
-			verifyPreview: {
-				previewArgs: ["--host=127.0.0.1"],
-				route: "/",
-				expectedText: "Vite App",
-			},
-		},
 	};
 }

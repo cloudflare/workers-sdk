@@ -5,7 +5,7 @@ import { runFrameworkGenerator } from "frameworks/index";
 import { readJSON, usesTypescript, writeJSON } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
-import type { TemplateConfig } from "../../src/templates";
+import type { TemplateConfig } from "../../../src/templates";
 import type { C3Context } from "types";
 
 const { npm } = detectPackageManager();
@@ -64,7 +64,7 @@ const config: TemplateConfig = {
 	frameworkCli: "create-vue",
 	platform: "workers",
 	displayName: "Vue",
-	path: "templates-experimental/vue",
+	path: "templates/workers/vue",
 	copyFiles: {
 		async selectVariant(ctx) {
 			// Note: this `selectVariant` function should not be needed
