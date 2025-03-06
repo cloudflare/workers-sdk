@@ -94,24 +94,6 @@ export default function getFrameworkTestConfigExperimental() {
 				"yarn",
 			],
 		},
-		nuxt: {
-			testCommitMessage: true,
-			timeout: LONG_TIMEOUT,
-			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
-			unsupportedOSs: ["win32"],
-			verifyDeploy: {
-				route: "/",
-				expectedText: "Welcome to Nuxt!",
-			},
-			verifyPreview: {
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
-		},
 		solid: {
 			promptHandlers: [
 				{

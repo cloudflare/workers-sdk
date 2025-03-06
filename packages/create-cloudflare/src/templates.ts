@@ -24,7 +24,6 @@ import helloWorldWithDurableObjectAssetsTemplateExperimental from "templates-exp
 import helloWorldWithAssetsTemplateExperimental from "templates-experimental/hello-world-with-assets/c3";
 import honoTemplateExperimental from "templates-experimental/hono/c3";
 import nextTemplateExperimental from "templates-experimental/next/c3";
-import nuxtTemplateExperimental from "templates-experimental/nuxt/c3";
 import qwikTemplateExperimental from "templates-experimental/qwik/c3";
 import remixTemplateExperimental from "templates-experimental/remix/c3";
 import solidTemplateExperimental from "templates-experimental/solid/c3";
@@ -181,7 +180,6 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			astro: astroTemplateExperimental,
 			hono: honoTemplateExperimental,
 			next: nextTemplateExperimental,
-			nuxt: nuxtTemplateExperimental,
 			qwik: qwikTemplateExperimental,
 			remix: remixTemplateExperimental,
 			solid: solidTemplateExperimental,

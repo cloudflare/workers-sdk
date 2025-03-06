@@ -8,7 +8,7 @@ import { readFile, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import * as recast from "recast";
-import type { TemplateConfig } from "../../src/templates";
+import type { TemplateConfig } from "../../../src/templates";
 import type { C3Context } from "types";
 
 const { npm, name: pm } = detectPackageManager();
@@ -30,7 +30,7 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	const packages = ["nitro-cloudflare-dev", "nitropack"];
+	const packages = ["nitro-cloudflare-dev"];
 
 	// When using pnpm, explicitly add h3 package so the H3Event type declaration can be updated.
 	// Package managers other than pnpm will hoist the dependency, as will pnpm with `--shamefully-hoist`
@@ -82,7 +82,7 @@ const updateNuxtConfig = () => {
 		b.objectExpression([
 			b.objectProperty(
 				b.identifier("preset"),
-				b.stringLiteral("cloudflare_module"),
+				b.stringLiteral("cloudflare-pages"),
 			),
 		]),
 	);
@@ -113,18 +113,18 @@ const config: TemplateConfig = {
 	configVersion: 1,
 	id: "nuxt",
 	frameworkCli: "nuxi",
-	platform: "workers",
+	platform: "pages",
 	displayName: "Nuxt",
 	copyFiles: {
 		path: "./templates",
 	},
-	path: "templates-experimental/nuxt",
+	path: "templates/nuxt/pages",
 	generate,
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			deploy: `${npm} run build && wrangler deploy`,
-			preview: `${npm} run build && wrangler dev`,
+			deploy: `${npm} run build && wrangler pages deploy`,
+			preview: `${npm} run build && wrangler pages dev`,
 			"cf-typegen": `wrangler types`,
 		},
 	}),

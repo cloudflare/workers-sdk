@@ -279,7 +279,8 @@ export default function getFrameworkTestConfig(pm: string) {
 				"@/*",
 			],
 		},
-		nuxt: {
+		["nuxt:pages"]: {
+			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
@@ -301,6 +302,25 @@ export default function getFrameworkTestConfig(pm: string) {
 				script: "build",
 				route: "/test",
 				expectedText: "C3_TEST",
+			},
+		},
+		["nuxt:workers"]: {
+			argv: ["--platform", "workers"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Welcome to Nuxt!",
+			},
+			verifyPreview: {
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			verifyBuildCfTypes: {
+				outputFile: "worker-configuration.d.ts",
+				envInterfaceName: "Env",
 			},
 		},
 		"react:pages": {
