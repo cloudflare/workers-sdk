@@ -118,7 +118,7 @@ describe.each([
 						binding = "ASSETS"
 
 						[[services]]
-						binding = "DEE"
+						binding = "DEFAULT"
 						service = '${regularWorkerName}'
 
 						[[services]]
@@ -160,7 +160,7 @@ describe.each([
 									const stub = env.REFERENCED_DO.get(id);
 									return new Response(await stub.sayHello("through DO RPC"));
 								}
-								return env.DEE.fetch(req);
+								return env.DEFAULT.fetch(req);
 							},
 						};
 						`,
