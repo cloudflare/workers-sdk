@@ -4,7 +4,7 @@ const config: TemplateConfig = {
 	configVersion: 1,
 	id: "hello-world-durable-object-with-assets",
 	path: "templates/hello-world-durable-object-with-assets",
-	displayName: "Worker + Static Assets + Durable Object",
+	displayName: "Worker + Static Assets + Durable Objects",
 	description:
 		"Get started with a basic stateful app to build projects like real-time chats, collaborative apps, and multiplayer games, which hosts assets",
 	platform: "workers",
