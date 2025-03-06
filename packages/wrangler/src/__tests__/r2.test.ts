@@ -2082,7 +2082,7 @@ describe("r2", () => {
 					  `);
 				});
 
-				it("it should add a date lifecycle rule using command-line arguments", async () => {
+				it("it should add a date lifecycle rule using command-line arguments and id alias", async () => {
 					const bucketName = "my-bucket";
 					const ruleId = "my-rule";
 					const prefix = "images/";
@@ -2132,7 +2132,7 @@ describe("r2", () => {
 						)
 					);
 					await runWrangler(
-						`r2 bucket lifecycle add ${bucketName} --name ${ruleId} --prefix ${prefix} --expire-date ${conditionValue}`
+						`r2 bucket lifecycle add ${bucketName} --id ${ruleId} --prefix ${prefix} --expire-date ${conditionValue}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding lifecycle rule 'my-rule' to bucket 'my-bucket'...
@@ -2181,6 +2181,52 @@ describe("r2", () => {
 					);
 					await runWrangler(
 						`r2 bucket lifecycle remove ${bucketName} --name ${ruleId}`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Removing lifecycle rule 'my-rule' from bucket 'my-bucket'...
+						Lifecycle rule 'my-rule' removed from bucket 'my-bucket'."
+					  `);
+				});
+				it("should remove a lifecycle rule as expected with id alias", async () => {
+					const bucketName = "my-bucket";
+					const ruleId = "my-rule";
+					const lifecycleRules = {
+						rules: [
+							{
+								id: ruleId,
+								enabled: true,
+								conditions: {},
+							},
+						],
+					};
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async ({ params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								return HttpResponse.json(createFetchResult(lifecycleRules));
+							},
+							{ once: true }
+						),
+						http.put(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async ({ request, params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketName).toEqual(bucketParam);
+								const requestBody = await request.json();
+								expect(requestBody).toEqual({
+									rules: [],
+								});
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(
+						`r2 bucket lifecycle remove ${bucketName} --id ${ruleId}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Removing lifecycle rule 'my-rule' from bucket 'my-bucket'...
@@ -2544,7 +2590,7 @@ describe("r2", () => {
 						"Add cancelled."
 					  `);
 				});
-				it("it should add an age lock rule using command-line arguments", async () => {
+				it("it should add an age lock rule using command-line arguments and id alias", async () => {
 					setIsTTY(true);
 					const bucketName = "my-bucket";
 
@@ -2561,7 +2607,7 @@ describe("r2", () => {
 					]);
 					// age
 					await runWrangler(
-						`r2 bucket lock add ${bucketName} --name rule-age --prefix prefix-age --retention-days 1`
+						`r2 bucket lock add ${bucketName} --id rule-age --prefix prefix-age --retention-days 1`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding lock rule 'rule-age' to bucket 'my-bucket'...
@@ -2752,6 +2798,28 @@ describe("r2", () => {
 					mockBucketLockPutWithExistingRules(bucketName, lockRules, []);
 					await runWrangler(
 						`r2 bucket lock remove ${bucketName} --name ${ruleId}`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Removing lock rule 'my-rule' from bucket 'my-bucket'...
+						Lock rule 'my-rule' removed from bucket 'my-bucket'."
+					  `);
+				});
+				it("should remove a lock rule as expected with id alias", async () => {
+					const bucketName = "my-bucket";
+					const ruleId = "my-rule";
+					const lockRules: BucketLockRule[] = [
+						{
+							id: ruleId,
+							enabled: true,
+							prefix: "prefix",
+							condition: {
+								type: "Indefinite",
+							},
+						},
+					];
+					mockBucketLockPutWithExistingRules(bucketName, lockRules, []);
+					await runWrangler(
+						`r2 bucket lock remove ${bucketName} --id ${ruleId}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Removing lock rule 'my-rule' from bucket 'my-bucket'...
