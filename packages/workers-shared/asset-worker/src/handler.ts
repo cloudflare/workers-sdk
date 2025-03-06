@@ -31,7 +31,7 @@ export const handleRequest = async (
 			span.setTags({
 				decodedPathname,
 				configuration: JSON.stringify(configuration),
-				status: 404,
+				status: NotFoundResponse.status,
 			});
 
 			return new NotFoundResponse();
@@ -43,7 +43,7 @@ export const handleRequest = async (
 		return env.JAEGER.enterSpan("method_not_allowed", (span) => {
 			span.setTags({
 				method,
-				status: 405,
+				status: MethodNotAllowedResponse.status,
 			});
 
 			return new MethodNotAllowedResponse();
@@ -66,7 +66,7 @@ export const handleRequest = async (
 					encodedDestination !== pathname
 						? encodedDestination
 						: intent.redirect ?? "<unknown>",
-				status: 307,
+				status: TemporaryRedirectResponse.status,
 			});
 
 			return new TemporaryRedirectResponse(encodedDestination + search);
@@ -77,7 +77,7 @@ export const handleRequest = async (
 		return env.JAEGER.enterSpan("unknown_action", (span) => {
 			span.setTags({
 				pathname,
-				status: 500,
+				status: InternalServerErrorResponse.status,
 			});
 
 			return new InternalServerErrorResponse(new Error("Unknown action"));
@@ -103,7 +103,7 @@ export const handleRequest = async (
 		return env.JAEGER.enterSpan("matched_etag", (span) => {
 			span.setTags({
 				matchedEtag: ifNoneMatch,
-				status: 304,
+				status: NotModifiedResponse.status,
 			});
 
 			return new NotModifiedResponse(null, { headers });
@@ -119,9 +119,9 @@ export const handleRequest = async (
 
 		const body = method === "HEAD" ? null : asset.readableStream;
 		switch (intent.asset.status) {
-			case 404:
+			case NotFoundResponse.status:
 				return new NotFoundResponse(body, { headers });
-			case 200:
+			case OkResponse.status:
 				return new OkResponse(body, { headers });
 		}
 	});
@@ -129,7 +129,10 @@ export const handleRequest = async (
 
 type Intent =
 	| {
-			asset: { eTag: string; status: 200 | 404 };
+			asset: {
+				eTag: string;
+				status: typeof OkResponse.status | typeof NotFoundResponse.status;
+			};
 			redirect: null;
 	  }
 	| { asset: null; redirect: string }
@@ -186,7 +189,7 @@ const htmlHandlingAutoTrailingSlash = async (
 		if (exactETag) {
 			// there's a binary /index file
 			return {
-				asset: { eTag: exactETag, status: 200 },
+				asset: { eTag: exactETag, status: OkResponse.status },
 				redirect: null,
 			};
 		} else {
@@ -242,7 +245,7 @@ const htmlHandlingAutoTrailingSlash = async (
 		if ((eTagResult = await exists(`${pathname}index.html`))) {
 			// /foo/index.html exists so serve at /foo/
 			return {
-				asset: { eTag: eTagResult, status: 200 },
+				asset: { eTag: eTagResult, status: OkResponse.status },
 				redirect: null,
 			};
 		} else if (
@@ -286,13 +289,13 @@ const htmlHandlingAutoTrailingSlash = async (
 	if (exactETag) {
 		// there's a binary /foo file
 		return {
-			asset: { eTag: exactETag, status: 200 },
+			asset: { eTag: exactETag, status: OkResponse.status },
 			redirect: null,
 		};
 	} else if ((eTagResult = await exists(`${pathname}.html`))) {
 		// foo.html exists so serve at /foo
 		return {
-			asset: { eTag: eTagResult, status: 200 },
+			asset: { eTag: eTagResult, status: OkResponse.status },
 			redirect: null,
 		};
 	} else if (
@@ -324,7 +327,7 @@ const htmlHandlingForceTrailingSlash = async (
 		if (exactETag) {
 			// there's a binary /index file
 			return {
-				asset: { eTag: exactETag, status: 200 },
+				asset: { eTag: exactETag, status: OkResponse.status },
 				redirect: null,
 			};
 		} else {
@@ -380,7 +383,7 @@ const htmlHandlingForceTrailingSlash = async (
 		if ((eTagResult = await exists(`${pathname}index.html`))) {
 			// /foo/index.html exists so serve at /foo/
 			return {
-				asset: { eTag: eTagResult, status: 200 },
+				asset: { eTag: eTagResult, status: OkResponse.status },
 				redirect: null,
 			};
 		} else if (
@@ -388,7 +391,7 @@ const htmlHandlingForceTrailingSlash = async (
 		) {
 			// /foo.html exists so serve at /foo/
 			return {
-				asset: { eTag: eTagResult, status: 200 },
+				asset: { eTag: eTagResult, status: OkResponse.status },
 				redirect: null,
 			};
 		}
@@ -407,7 +410,7 @@ const htmlHandlingForceTrailingSlash = async (
 		} else if (exactETag) {
 			// there's both /foo.html and /foo/index.html so we serve /foo.html at /foo.html only
 			return {
-				asset: { eTag: exactETag, status: 200 },
+				asset: { eTag: exactETag, status: OkResponse.status },
 				redirect: null,
 			};
 		} else if (
@@ -427,7 +430,7 @@ const htmlHandlingForceTrailingSlash = async (
 	if (exactETag) {
 		// there's a binary /foo file
 		return {
-			asset: { eTag: exactETag, status: 200 },
+			asset: { eTag: exactETag, status: OkResponse.status },
 			redirect: null,
 		};
 	} else if (
@@ -470,7 +473,7 @@ const htmlHandlingDropTrailingSlash = async (
 		if (exactETag) {
 			// there's a binary /index file
 			return {
-				asset: { eTag: exactETag, status: 200 },
+				asset: { eTag: exactETag, status: OkResponse.status },
 				redirect: null,
 			};
 		} else {
@@ -538,7 +541,7 @@ const htmlHandlingDropTrailingSlash = async (
 		} else if (exactETag) {
 			// there's both /foo.html and /foo/index.html so we serve /foo/index.html at /foo/index.html only
 			return {
-				asset: { eTag: exactETag, status: 200 },
+				asset: { eTag: exactETag, status: OkResponse.status },
 				redirect: null,
 			};
 		} else if (
@@ -558,7 +561,7 @@ const htmlHandlingDropTrailingSlash = async (
 			if ((eTagResult = await exists("/index.html"))) {
 				// /index.html exists so serve at /
 				return {
-					asset: { eTag: eTagResult, status: 200 },
+					asset: { eTag: eTagResult, status: OkResponse.status },
 					redirect: null,
 				};
 			}
@@ -614,19 +617,19 @@ const htmlHandlingDropTrailingSlash = async (
 	if (exactETag) {
 		// there's a binary /foo file
 		return {
-			asset: { eTag: exactETag, status: 200 },
+			asset: { eTag: exactETag, status: OkResponse.status },
 			redirect: null,
 		};
 	} else if ((eTagResult = await exists(`${pathname}.html`))) {
 		// /foo.html exists so serve at /foo
 		return {
-			asset: { eTag: eTagResult, status: 200 },
+			asset: { eTag: eTagResult, status: OkResponse.status },
 			redirect: null,
 		};
 	} else if ((eTagResult = await exists(`${pathname}/index.html`))) {
 		// /foo/index.html exists so serve at /foo
 		return {
-			asset: { eTag: eTagResult, status: 200 },
+			asset: { eTag: eTagResult, status: OkResponse.status },
 			redirect: null,
 		};
 	}
@@ -642,7 +645,7 @@ const htmlHandlingNone = async (
 	const exactETag = await exists(pathname);
 	if (exactETag) {
 		return {
-			asset: { eTag: exactETag, status: 200 },
+			asset: { eTag: exactETag, status: OkResponse.status },
 			redirect: null,
 		};
 	} else {
@@ -660,7 +663,7 @@ const notFound = async (
 			const eTag = await exists("/index.html");
 			if (eTag) {
 				return {
-					asset: { eTag, status: 200 },
+					asset: { eTag, status: OkResponse.status },
 					redirect: null,
 				};
 			}
@@ -673,7 +676,7 @@ const notFound = async (
 				const eTag = await exists(`${cwd}/404.html`);
 				if (eTag) {
 					return {
-						asset: { eTag, status: 404 },
+						asset: { eTag, status: NotFoundResponse.status },
 						redirect: null,
 					};
 				}
