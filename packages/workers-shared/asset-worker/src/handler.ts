@@ -7,10 +7,12 @@ import {
 	OkResponse,
 	TemporaryRedirectResponse,
 } from "../../utils/responses";
-import { getAssetHeaders } from "./utils/headers";
+import { attachCustomHeaders, getAssetHeaders } from "./utils/headers";
 import type { AssetConfig } from "../../utils/types";
 import type EntrypointType from "./index";
 import type { Env } from "./index";
+
+export const HEADERS_VERSION = 2;
 
 type AssetIntent = {
 	eTag: string;
@@ -189,7 +191,7 @@ export const handleRequest = async (
 					getByETag
 				);
 
-	return response;
+	return attachCustomHeaders(request, response, configuration);
 };
 
 type Intent =

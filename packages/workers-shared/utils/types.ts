@@ -11,6 +11,20 @@ export const RouterConfigSchema = z.object({
 	...InternalConfigSchema.shape,
 });
 
+const MetadataHeaderEntry = z.object({
+	set: z.record(z.string()).optional(),
+	unset: z.array(z.string()).optional(),
+});
+
+const MetadataHeaders = z.record(MetadataHeaderEntry);
+
+export const HeadersSchema = z
+	.object({
+		version: z.literal(2),
+		rules: MetadataHeaders,
+	})
+	.optional();
+
 export const AssetConfigSchema = z.object({
 	compatibility_date: z.string().optional(),
 	compatibility_flags: z.array(z.string()).optional(),
@@ -25,6 +39,7 @@ export const AssetConfigSchema = z.object({
 	not_found_handling: z
 		.enum(["single-page-application", "404-page", "none"])
 		.optional(),
+	headers: HeadersSchema,
 	...InternalConfigSchema.shape,
 });
 

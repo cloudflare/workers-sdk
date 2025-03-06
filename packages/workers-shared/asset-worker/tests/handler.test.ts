@@ -204,6 +204,241 @@ describe("[Asset Worker] `handleRequest`", () => {
 		);
 		expect(response2.status).toBe(307);
 	});
+
+	describe("_headers", () => {
+		it("attaches custom headers", async () => {
+			const configuration: AssetConfig = applyConfigurationDefaults({
+				html_handling: "none",
+				not_found_handling: "none",
+				headers: {
+					version: 2,
+					rules: {
+						"/": {
+							set: {
+								"X-Custom-Header": "Custom-Value",
+							},
+						},
+						"/foo": {
+							set: {
+								"X-Custom-Foo-Header": "Custom-Foo-Value",
+							},
+						},
+						"/bang/:placeheld": {
+							set: {
+								"X-Custom-Bang-Header": "Custom-Bang-Value :placeheld",
+							},
+						},
+						"/art/*": {
+							set: {
+								"X-Custom-Art-Header": "Custom-Art-Value :splat",
+								"Set-Cookie": "me",
+							},
+						},
+						"/art/nested/attack": {
+							set: {
+								"Set-Cookie": "me too",
+							},
+						},
+						"/system/override": {
+							set: {
+								ETag: "very rogue",
+							},
+						},
+						"/system/underride": {
+							unset: ["ETAg"],
+						},
+						"/art/nested/unset/attack*": {
+							unset: ["Set-Cookie"],
+							set: {
+								"Set-Cookie": "hijack",
+							},
+						},
+						"/art/nested/unset/attack/totalunset": {
+							unset: ["Set-Cookie"],
+						},
+						"/foo.html": {
+							set: {
+								"X-Custom-Foo-HTML-Header": "Custom-Foo-HTML-Value",
+							},
+						},
+					},
+				},
+			});
+			const eTag = "some-etag";
+			const exists = vi.fn().mockReturnValue(eTag);
+			const getByETag = vi.fn().mockReturnValue({
+				readableStream: new ReadableStream(),
+				contentType: "text/html",
+			});
+
+			// Static header on root
+			let response = await handleRequest(
+				new Request("https://example.com/"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.headers.get("X-Custom-Header")).toBe("Custom-Value");
+			expect(response.headers.has("X-Custom-Foo-Header")).toBeFalsy();
+
+			// Static header on path
+			response = await handleRequest(
+				new Request("https://example.com/foo"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.headers.get("X-Custom-Foo-Header")).toBe(
+				"Custom-Foo-Value"
+			);
+			expect(response.headers.has("X-Custom-Header")).toBeFalsy();
+
+			// Placeholder header
+			response = await handleRequest(
+				new Request("https://example.com/bang/baz"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.headers.get("X-Custom-Bang-Header")).toBe(
+				"Custom-Bang-Value baz"
+			);
+
+			// Placeholder doesn't catch children
+			response = await handleRequest(
+				new Request("https://example.com/bang/baz/abba"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.headers.has("X-Custom-Bang-Header")).toBeFalsy();
+
+			// Splat header
+			response = await handleRequest(
+				new Request("https://example.com/art/attack/by/Neil/Buchanan"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.headers.get("X-Custom-Art-Header")).toBe(
+				"Custom-Art-Value attack/by/Neil/Buchanan"
+			);
+			expect(response.headers.get("Set-Cookie")).toBe("me");
+
+			// Headers are appended
+			response = await handleRequest(
+				new Request("https://example.com/art/nested/attack"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.headers.get("Set-Cookie")).toBe("me, me too");
+
+			// System headers are overwritten
+			response = await handleRequest(
+				new Request("https://example.com/system/override"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.headers.get("ETag")).toBe("very rogue");
+
+			// System headers can be unset
+			response = await handleRequest(
+				new Request("https://example.com/system/underride"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.headers.has("ETag")).toBeFalsy();
+
+			// Custom headers can be unset and redefined
+			response = await handleRequest(
+				new Request("https://example.com/art/nested/unset/attack"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.headers.get("Set-Cookie")).toBe("hijack");
+
+			// Custom headers can entirely unset
+			response = await handleRequest(
+				new Request("https://example.com/art/nested/unset/attack/totalunset"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.headers.has("Set-Cookie")).toBeFalsy();
+
+			// Custom headers are applied even to redirect responses
+			response = await handleRequest(
+				new Request("https://example.com/foo.html"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				{ ...configuration, html_handling: "auto-trailing-slash" },
+				(pathname: string) => {
+					if (pathname === "/foo.html") {
+						return true;
+					}
+
+					return false;
+				},
+				getByETag
+			);
+
+			expect(response.headers.get("Location")).toBe("/foo");
+			expect(response.headers.get("X-Custom-Foo-HTML-Header")).toBe(
+				"Custom-Foo-HTML-Value"
+			);
+
+			// Custom headers are applied even to not modified responses
+			response = await handleRequest(
+				new Request("https://example.com/foo", {
+					headers: { "If-None-Match": `"${eTag}"` },
+				}),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.status).toBe(304);
+			expect(response.headers.get("X-Custom-Foo-Header")).toBe(
+				"Custom-Foo-Value"
+			);
+		});
+	});
 });
 
 describe("[Asset Worker] `canFetch`", () => {
