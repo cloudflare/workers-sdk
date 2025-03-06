@@ -11,6 +11,7 @@ import * as metrics from "../metrics";
 import { parseJSON, readFileSync, readFileSyncToBuffer } from "../parse";
 import { requireAuth } from "../user";
 import { getValidBindingName } from "../utils/getValidBindingName";
+import { isLocal } from "../utils/is-local";
 import {
 	createKVNamespace,
 	deleteKVBulkKeyValue,
@@ -288,6 +289,7 @@ export const kvKeyPutCommand = createCommand({
 	},
 
 	async handler({ key, ttl, expiration, metadata, ...args }) {
+		const localMode = isLocal(args);
 		const config = readConfig(args);
 		const namespaceId = getKVNamespaceId(args, config);
 		// One of `args.path` and `args.value` must be defined
@@ -311,7 +313,7 @@ export const kvKeyPutCommand = createCommand({
 		}
 
 		let metricEvent: EventNames;
-		if (!args.remote) {
+		if (localMode) {
 			await usingLocalNamespace(
 				args.persistTo,
 				config,
@@ -394,13 +396,14 @@ export const kvKeyListCommand = createCommand({
 
 	behaviour: { printBanner: false },
 	async handler({ prefix, ...args }) {
+		const localMode = isLocal(args);
 		// TODO: support for limit+cursor (pagination)
 		const config = readConfig(args);
 		const namespaceId = getKVNamespaceId(args, config);
 
 		let result: NamespaceKeyInfo[];
 		let metricEvent: EventNames;
-		if (!args.remote) {
+		if (localMode) {
 			const listResult = await usingLocalNamespace(
 				args.persistTo,
 				config,
@@ -479,12 +482,13 @@ export const kvKeyGetCommand = createCommand({
 
 	behaviour: { printBanner: false },
 	async handler({ key, ...args }) {
+		const localMode = isLocal(args);
 		const config = readConfig(args);
 		const namespaceId = getKVNamespaceId(args, config);
 
 		let bufferKVValue;
 		let metricEvent: EventNames;
-		if (!args.remote) {
+		if (localMode) {
 			const val = await usingLocalNamespace(
 				args.persistTo,
 				config,
@@ -568,13 +572,14 @@ export const kvKeyDeleteCommand = createCommand({
 	},
 
 	async handler({ key, ...args }) {
+		const localMode = isLocal(args);
 		const config = readConfig(args);
 		const namespaceId = getKVNamespaceId(args, config);
 
 		logger.log(`Deleting the key "${key}" on namespace ${namespaceId}.`);
 
 		let metricEvent: EventNames;
-		if (!args.remote) {
+		if (localMode) {
 			await usingLocalNamespace(
 				args.persistTo,
 				config,
@@ -656,6 +661,7 @@ export const kvBulkPutCommand = createCommand({
 	},
 
 	async handler({ filename, ...args }) {
+		const localMode = isLocal(args);
 		// The simplest implementation I could think of.
 		// This could be made more efficient with a streaming parser/uploader
 		// but we'll do that in the future if needed.
@@ -711,7 +717,7 @@ export const kvBulkPutCommand = createCommand({
 		}
 
 		let metricEvent: EventNames;
-		if (!args.remote) {
+		if (localMode) {
 			await usingLocalNamespace(
 				args.persistTo,
 				config,
@@ -795,6 +801,7 @@ export const kvBulkDeleteCommand = createCommand({
 	},
 
 	async handler({ filename, ...args }) {
+		const localMode = isLocal(args);
 		const config = readConfig(args);
 		const namespaceId = getKVNamespaceId(args, config);
 
@@ -845,7 +852,7 @@ export const kvBulkDeleteCommand = createCommand({
 		}
 
 		let metricEvent: EventNames;
-		if (!args.remote) {
+		if (localMode) {
 			await usingLocalNamespace(
 				args.persistTo,
 				config,
