@@ -1,5 +1,28 @@
 # miniflare
 
+## 3.20250224.0
+
+### Patch Changes
+
+- [#8338](https://github.com/cloudflare/workers-sdk/pull/8338) [`2d40989`](https://github.com/cloudflare/workers-sdk/commit/2d409892f1cf08f07f84d25dcab023bc20ada374) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Upload \_headers and \_redirects if present with Workers Assets as part of `wrangler deploy` and `wrangler versions upload`.
+
+- [#8251](https://github.com/cloudflare/workers-sdk/pull/8251) [`da568e5`](https://github.com/cloudflare/workers-sdk/commit/da568e5a94bf270cfdcd80123d8161fc5437dcd2) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250214.0  | 1.20250224.0  |
+  | @cloudflare/workers-types | ^4.20250214.0 | ^4.20250224.0 |
+
+- [#8288](https://github.com/cloudflare/workers-sdk/pull/8288) [`cf14e17`](https://github.com/cloudflare/workers-sdk/commit/cf14e17d40b9e51475ba4d9ee6b4e3ef5ae5e841) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Add assets Proxy Worker skeleton in miniflare
+
+  This commit implements a very basic Proxy Worker skeleton, and wires it in the "pipeline" miniflare creates for assets. This Worker will be incrementally worked on, but for now, the current implementation will forward all incoming requests to the Router Worker, thus leaving the current assets behaviour in local dev, the same.
+
+  This is an experimental feature available under the `--x-assets-rpc` flag: `wrangler dev --x-assets-rpc`.
+
+- [#8355](https://github.com/cloudflare/workers-sdk/pull/8355) [`79c7810`](https://github.com/cloudflare/workers-sdk/commit/79c781076cc79e512753b65644c027138aa1d878) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Add default empty router config for assets in Miniflare
+
 ## 3.20250214.2
 
 ### Patch Changes
