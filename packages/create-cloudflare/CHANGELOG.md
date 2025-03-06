@@ -1,5 +1,13 @@
 # create-cloudflare
 
+## 2.40.3
+
+### Patch Changes
+
+- [#8358](https://github.com/cloudflare/workers-sdk/pull/8358) [`5875adb`](https://github.com/cloudflare/workers-sdk/commit/5875adb87317184122075c5ba3dce1c302dc2f80) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: add Worker + Vite plugin to Vue experimental template
+
+- [#8291](https://github.com/cloudflare/workers-sdk/pull/8291) [`8461f9b`](https://github.com/cloudflare/workers-sdk/commit/8461f9b6ab582b75d752c860d412fa75849b3746) Thanks [@edmundhung](https://github.com/edmundhung)! - update vitest packages version on hello-world template
+
 ## 2.40.2
 
 ### Patch Changes

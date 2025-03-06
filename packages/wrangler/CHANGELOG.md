@@ -1,5 +1,11 @@
 # wrangler
 
+## 3.114.0
+
+### Minor Changes
+
+- [#8367](https://github.com/cloudflare/workers-sdk/pull/8367) [`7b6b0c2`](https://github.com/cloudflare/workers-sdk/commit/7b6b0c213c6e490934cca1943e39268f574281e4) Thanks [@jonesphillip](https://github.com/jonesphillip)! - Deprecated `--id` parameter in favor of `--name` for both the `wrangler r2 bucket lifecycle` and `wrangler r2 bucket lock` commands
+
 ## 3.113.0
 
 ### Minor Changes
