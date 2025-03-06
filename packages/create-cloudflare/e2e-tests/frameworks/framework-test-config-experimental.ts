@@ -228,7 +228,7 @@ export default function getFrameworkTestConfigExperimental() {
 			},
 		},
 		vue: {
-			flags: ["--ts"],
+			argv: ["--ts"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
@@ -236,6 +236,7 @@ export default function getFrameworkTestConfigExperimental() {
 				expectedText: "Vite App",
 			},
 			verifyPreview: {
+				previewArgs: ["--host=127.0.0.1"],
 				route: "/",
 				expectedText: "Vite App",
 			},
