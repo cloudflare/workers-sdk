@@ -1,7 +1,3 @@
-interface Env {
-  ASSETS: Fetcher;
-}
-
 export default {
   fetch(request, env) {
     const url = new URL(request.url);
