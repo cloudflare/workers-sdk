@@ -714,6 +714,10 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 				binding,
 			]) ?? []
 		),
+		email: {
+			send_email: bindings.send_email,
+		},
+
 		durableObjects: Object.fromEntries([
 			...internalObjects.map(({ name, class_name }) => {
 				const useSQLite = classNameToUseSQLite.get(class_name);
@@ -1035,6 +1039,7 @@ export async function buildMiniflareOptions(
 		liveReload: config.liveReload,
 		upstream,
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
+		unsafeTriggerHandlers: true,
 
 		log,
 		verbose: logger.loggerLevel === "debug",

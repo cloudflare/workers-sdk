@@ -6,6 +6,7 @@ import { CACHE_PLUGIN, CACHE_PLUGIN_NAME } from "./cache";
 import { CORE_PLUGIN, CORE_PLUGIN_NAME } from "./core";
 import { D1_PLUGIN, D1_PLUGIN_NAME } from "./d1";
 import { DURABLE_OBJECTS_PLUGIN, DURABLE_OBJECTS_PLUGIN_NAME } from "./do";
+import { EMAIL_PLUGIN, EMAIL_PLUGIN_NAME } from "./email";
 import { HYPERDRIVE_PLUGIN, HYPERDRIVE_PLUGIN_NAME } from "./hyperdrive";
 import { KV_PLUGIN, KV_PLUGIN_NAME } from "./kv";
 import { PIPELINE_PLUGIN, PIPELINES_PLUGIN_NAME } from "./pipelines";
@@ -29,6 +30,7 @@ export const PLUGINS = {
 	[WORKFLOWS_PLUGIN_NAME]: WORKFLOWS_PLUGIN,
 	[PIPELINES_PLUGIN_NAME]: PIPELINE_PLUGIN,
 	[SECRET_STORE_PLUGIN_NAME]: SECRET_STORE_PLUGIN,
+	[EMAIL_PLUGIN_NAME]: EMAIL_PLUGIN,
 };
 export type Plugins = typeof PLUGINS;
 
@@ -76,6 +78,7 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof R2_PLUGIN.options> &
 	z.input<typeof HYPERDRIVE_PLUGIN.options> &
 	z.input<typeof RATELIMIT_PLUGIN.options> &
+	z.input<typeof EMAIL_PLUGIN.options> &
 	z.input<typeof ASSETS_PLUGIN.options> &
 	z.input<typeof WORKFLOWS_PLUGIN.options> &
 	z.input<typeof PIPELINE_PLUGIN.options> &
@@ -139,3 +142,4 @@ export * from "./assets/schema";
 export * from "./workflows";
 export * from "./pipelines";
 export * from "./secret-store";
+export * from "./email";

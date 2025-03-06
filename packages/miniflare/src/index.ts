@@ -2,6 +2,7 @@ import assert from "assert";
 import crypto from "crypto";
 import { Abortable } from "events";
 import fs from "fs";
+import { mkdir, writeFile } from "fs/promises";
 import http from "http";
 import net from "net";
 import os from "os";
@@ -982,6 +983,15 @@ export class Miniflare {
 				if (!colors$.enabled) message = stripAnsi(message);
 				this.#log.logWithLevel(logLevel, message);
 				response = new Response(null, { status: 204 });
+			} else if (url.pathname === "/core/store-temp-file") {
+				await mkdir(path.join(this.#tmpPath, "files"), { recursive: true });
+				const filePath = path.join(
+					this.#tmpPath,
+					"files",
+					`${crypto.randomUUID()}.${url.searchParams.get("extension") ?? "txt"}`
+				);
+				await writeFile(filePath, await request.text());
+				response = new Response(filePath, { status: 200 });
 			}
 		} catch (e: any) {
 			this.#log.error(e);
@@ -1969,7 +1979,6 @@ export class Miniflare {
 		const result = new Map<keyof Plugins, string>();
 		for (const [key, plugin] of PLUGIN_ENTRIES) {
 			const sharedOpts = this.#sharedOpts[key];
-			// @ts-expect-error `sharedOptions` will match the plugin's type here
 			const maybePath = plugin.getPersistPath?.(sharedOpts, this.#tmpPath);
 			if (maybePath !== undefined) result.set(key, maybePath);
 		}
