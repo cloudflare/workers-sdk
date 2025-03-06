@@ -5,11 +5,9 @@ import { test } from "./helpers.js";
 //       testing regarding the validation there are unit tests in src/__tests__/validate_worker_environments_resolved_configs.spec.ts
 
 describe("during development wrangler config files are validated", () => {
-	test("for the entry worker", async ({ expect, seed, viteDev }) => {
+	test("for the entry worker", async ({ expect, seed, runLongLived }) => {
 		const projectPath = await seed("invalid-worker-env-configs", "pnpm");
-
-		const proc = viteDev(projectPath);
-
+		const proc = await runLongLived("pnpm", "dev", projectPath);
 		expect(await proc.exitCode).not.toBe(0);
 		expect(proc.stderr).toContain(
 			"The following environment configurations are incompatible with the Cloudflare Vite plugin"
