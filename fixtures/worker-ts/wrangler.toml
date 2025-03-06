@@ -1,3 +1,12 @@
-name = "worker-ts"
+name = "email-to-rss"
 main = "src/index.ts"
-compatibility_date = "2023-05-04"
+compatibility_date = "2025-02-14"
+
+compatibility_flags = [ "nodejs_compat", "experimental" ]
+
+[ai]
+binding = "AI"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "id"

@@ -1,3 +1,5 @@
+import { EmailMessage } from "cloudflare:email";
+import { RpcTarget } from "cloudflare:workers";
 import {
 	blue,
 	bold,
@@ -10,9 +12,15 @@ import {
 } from "kleur/colors";
 import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
 import { isCompressedByCloudflareFL } from "../../shared/mime-types";
+import { RAW_EMAIL } from "../email/constants";
 import { CoreBindings, CoreHeaders } from "./constants";
 import { STATUS_CODES } from "./http";
 import { matchRoutes, WorkerRoute } from "./routing";
+import type {
+	ForwardableEmailMessage,
+	Headers,
+	ReadableStream,
+} from "@cloudflare/workers-types";
 
 type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
@@ -25,6 +33,7 @@ type Env = {
 	[CoreBindings.DATA_LIVE_RELOAD_SCRIPT]?: ArrayBuffer;
 	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
 	[CoreBindings.DATA_PROXY_SHARED_SECRET]?: ArrayBuffer;
+	[CoreBindings.TRIGGER_HANDLERS]: boolean;
 } & {
 	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
 		| Fetcher
@@ -32,7 +41,6 @@ type Env = {
 };
 
 const encoder = new TextEncoder();
-
 function getUserRequest(
 	request: Request<unknown, IncomingRequestCfProperties>,
 	env: Env,
@@ -343,6 +351,80 @@ async function handleScheduled(
 	});
 }
 
+function createForwardableEmailMessage(
+	from: string,
+	to: string,
+	raw: ReadableStream<Uint8Array<ArrayBufferLike>>,
+	headers: Headers,
+	setReject: (reason: string) => void,
+	forward: (rcptTo: string, headers?: Headers) => Promise<void>,
+	reply: (message: EmailMessage) => Promise<void>
+) {
+	return {
+		from,
+		to,
+		raw,
+		headers: headers,
+		rawSize: Number(headers.get("Content-Length")),
+		setReject,
+		forward,
+		reply,
+	} satisfies ForwardableEmailMessage;
+}
+
+async function handleEmail(
+	params: URLSearchParams,
+	request: Request,
+	service: Fetcher,
+	env: Env,
+	ctx: ExecutionContext
+): Promise<Response> {
+	const from = params.get("from") ?? "";
+	const to = params.get("to") ?? "";
+	if (!request.body) {
+		return new Response("Include an email in the body", { status: 400 });
+	}
+
+	// @ts-expect-error .email() is valid—we need to update the types...
+	await service.email(
+		createForwardableEmailMessage(
+			from,
+			to,
+			request.body,
+			request.headers,
+			function setReject(reason: string): void {
+				console.log(
+					`${red(".setReject() called from Email Handler")} with the following reason: "${reason}"`
+				);
+			},
+			async function forward(rcptTo: string, headers?: Headers): Promise<void> {
+				console.log(
+					`${blue(".forward() called from Email Handler")} with\n  rcptTo: ${rcptTo}${headers ? `\n  headers:\n${[...headers.entries()].map(([k, v]) => `    ${k}: ${v}`).join("\n")}` : ""}`
+				);
+			},
+			async function reply(message: EmailMessage): Promise<void> {
+				const resp = await env[CoreBindings.SERVICE_LOOPBACK].fetch(
+					"http://localhost/core/store-temp-file?extension=eml",
+					{
+						method: "POST",
+						// @ts-expect-error See packages/miniflare/src/workers/email/email.worker.ts
+						body: message[RAW_EMAIL],
+					}
+				);
+				const file = await resp.text();
+
+				console.log(
+					`${blue(".reply() called from Email Handler with the following message:")}\n  ${file}`
+				);
+			}
+		)
+	);
+
+	return new Response(null, {
+		status: 200,
+	});
+}
+
 export default <ExportedHandler<Env>>{
 	async fetch(request, env, ctx) {
 		const startTime = Date.now();
@@ -390,8 +472,20 @@ export default <ExportedHandler<Env>>{
 		}
 
 		try {
-			if (url.pathname === "/cdn-cgi/mf/scheduled") {
-				return await handleScheduled(url.searchParams, service);
+			if (env[CoreBindings.TRIGGER_HANDLERS]) {
+				if (url.pathname === "/cdn-cgi/handler/scheduled") {
+					return await handleScheduled(url.searchParams, service);
+				}
+
+				if (url.pathname === "/cdn-cgi/handler/email") {
+					return await handleEmail(
+						url.searchParams,
+						request,
+						service,
+						env,
+						ctx
+					);
+				}
 			}
 
 			let response = await service.fetch(request);

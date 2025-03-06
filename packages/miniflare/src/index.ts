@@ -2,6 +2,7 @@ import assert from "assert";
 import crypto from "crypto";
 import { Abortable } from "events";
 import fs from "fs";
+import { mkdir, writeFile } from "fs/promises";
 import http from "http";
 import net from "net";
 import os from "os";
@@ -943,6 +944,15 @@ export class Miniflare {
 				if (!colors$.enabled) message = stripAnsi(message);
 				this.#log.logWithLevel(logLevel, message);
 				response = new Response(null, { status: 204 });
+			} else if (url.pathname === "/core/store-temp-file") {
+				await mkdir(path.join(this.#tmpPath, "files"), { recursive: true });
+				const emailPath = path.join(
+					this.#tmpPath,
+					"files",
+					`${crypto.randomUUID()}.${url.searchParams.get("extension") ?? "txt"}`
+				);
+				await writeFile(emailPath, await request.text());
+				response = new Response(emailPath, { status: 200 });
 			}
 		} catch (e: any) {
 			this.#log.error(e);
