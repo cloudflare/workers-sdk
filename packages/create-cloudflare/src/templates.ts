@@ -19,7 +19,6 @@ import {
 	writeJSON,
 } from "helpers/files";
 import astroTemplateExperimental from "templates-experimental/astro/c3";
-import gatsbyTemplateExperimental from "templates-experimental/gatsby/c3";
 import assetsOnlyTemplateExperimental from "templates-experimental/hello-world-assets-only/c3";
 import helloWorldWithDurableObjectAssetsTemplateExperimental from "templates-experimental/hello-world-durable-object-with-assets/c3";
 import helloWorldWithAssetsTemplateExperimental from "templates-experimental/hello-world-with-assets/c3";
@@ -180,7 +179,6 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 	if (experimental) {
 		return {
 			astro: astroTemplateExperimental,
-			gatsby: gatsbyTemplateExperimental,
 			hono: honoTemplateExperimental,
 			next: nextTemplateExperimental,
 			nuxt: nuxtTemplateExperimental,

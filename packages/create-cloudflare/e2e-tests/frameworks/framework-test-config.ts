@@ -139,7 +139,28 @@ export default function getFrameworkTestConfig(pm: string) {
 			},
 			flags: ["--style", "sass"],
 		},
-		gatsby: {
+		["gatsby:pages"]: {
+			argv: ["--platform", "pages"],
+			unsupportedPms: ["bun", "pnpm"],
+			promptHandlers: [
+				{
+					matcher: /Would you like to use a template\?/,
+					input: ["n"],
+				},
+			],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Gatsby!",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Gatsby!",
+			},
+		},
+		["gatsby:workers"]: {
+			argv: ["--platform", "workers"],
 			unsupportedPms: ["bun", "pnpm"],
 			promptHandlers: [
 				{

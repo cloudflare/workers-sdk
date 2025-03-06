@@ -2,25 +2,6 @@ import { keys, LONG_TIMEOUT } from "../helpers";
 
 export default function getFrameworkTestConfigExperimental() {
 	return {
-		gatsby: {
-			unsupportedPms: ["bun", "pnpm"],
-			promptHandlers: [
-				{
-					matcher: /Would you like to use a template\?/,
-					input: ["n"],
-				},
-			],
-			testCommitMessage: true,
-			timeout: LONG_TIMEOUT,
-			verifyDeploy: {
-				route: "/",
-				expectedText: "Gatsby!",
-			},
-			verifyPreview: {
-				route: "/",
-				expectedText: "Gatsby!",
-			},
-		},
 		hono: {
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
