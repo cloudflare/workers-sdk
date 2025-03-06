@@ -13,7 +13,7 @@ const encoder = new TextEncoder();
 
 beforeAll(() => {
 	if (!("crypto" in globalThis)) {
-		// @ts-expect-error will go away once Node.js is bumped
+		// @ts-expect-error will go away once Node.js is bumped to v20
 		globalThis.crypto = crypto;
 	}
 });
