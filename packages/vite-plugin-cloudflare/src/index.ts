@@ -330,7 +330,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					return;
 				}
 
-				const resolved = await this.resolve(source, importer);
+				// There may be a query parameter (e.g. '.wasm?module') so we remove that here
+				const moduleId = source.split("?")[0];
+				assert(moduleId);
+
+				const resolved = await this.resolve(moduleId, importer);
 				assert(
 					resolved,
 					`Unexpected error: could not resolve ${additionalModuleType} module '${source}'`
