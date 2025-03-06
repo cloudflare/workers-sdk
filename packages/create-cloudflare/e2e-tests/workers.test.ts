@@ -32,7 +32,35 @@ type WorkerTestConfig = RunnerConfig & {
 
 function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 	if (opts.experimental) {
+		// none currently
+		return [];
+	} else {
 		return [
+			{
+				template: "hello-world",
+				variants: ["ts", "js"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello World!",
+				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Hello World!",
+				},
+				verifyTest: true,
+			},
+			{
+				template: "hello-world",
+				variants: ["python"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello World!",
+				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Hello World!",
+				},
+			},
 			{
 				template: "hello-world-with-assets",
 				variants: ["ts", "js"],
@@ -77,34 +105,6 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 				// There is no preview script
 				verifyPreview: null,
 				argv: ["--category", "hello-world"],
-			},
-		];
-	} else {
-		return [
-			{
-				template: "hello-world",
-				variants: ["ts", "js"],
-				verifyDeploy: {
-					route: "/",
-					expectedText: "Hello World!",
-				},
-				verifyPreview: {
-					route: "/",
-					expectedText: "Hello World!",
-				},
-				verifyTest: true,
-			},
-			{
-				template: "hello-world",
-				variants: ["python"],
-				verifyDeploy: {
-					route: "/",
-					expectedText: "Hello World!",
-				},
-				verifyPreview: {
-					route: "/",
-					expectedText: "Hello World!",
-				},
 			},
 			{
 				template: "common",

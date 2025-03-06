@@ -48,7 +48,7 @@ export const isUpdateAvailable = async () => {
 export const C3_DEFAULTS: C3Args = {
 	projectName: new Haikunator().haikunate({ tokenHex: true }),
 	category: "hello-world",
-	type: "hello-world",
+	type: "hello-world-with-assets",
 	framework: "analog",
 	experimental: false,
 	autoUpdate: true,
