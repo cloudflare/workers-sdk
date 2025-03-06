@@ -374,8 +374,6 @@ export function getDevMiniflareOptions(
 		(options) => options.externalWorkers
 	);
 
-	console.log(userWorkers, externalWorkers);
-
 	const workerToWorkerEntrypointNamesMap =
 		getWorkerToWorkerEntrypointNamesMap(userWorkers);
 	const workerToDurableObjectClassNamesMap =
