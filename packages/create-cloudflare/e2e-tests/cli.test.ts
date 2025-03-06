@@ -82,8 +82,8 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 				);
 
 				expect(project.path).toExist();
-				expect(output).toContain(`category Hello World example`);
-				expect(output).toContain(`type Hello World Worker`);
+				expect(output).toContain(`category Hello World Starter`);
+				expect(output).toContain(`type Worker + Static Assets`);
 				expect(output).toContain(`lang TypeScript`);
 				expect(output).toContain(`no git`);
 				expect(output).toContain(`no deploy`);
@@ -179,7 +179,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 					);
 
 					expect(project.path).toExist();
-					expect(output).toContain(`type Hello World Worker`);
+					expect(output).toContain(`type Worker + Static Assets`);
 					expect(output).toContain(`lang TypeScript`);
 					expect(output).toContain(`no git`);
 					expect(output).toContain(`no deploy`);
@@ -272,8 +272,8 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 				);
 
 				expect(project.path).toExist();
-				expect(output).toContain(`category Hello World example`);
-				expect(output).toContain(`type Hello World Worker`);
+				expect(output).toContain(`category Hello World Starter`);
+				expect(output).toContain(`type Worker only`);
 				expect(output).toContain(`lang Python`);
 			},
 		);
@@ -379,7 +379,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 							matcher: /What would you like to start with\?/,
 							input: {
 								type: "select",
-								target: "Hello World example",
+								target: "Hello World Starter",
 								assertDefaultSelection: "Framework Starter",
 							},
 						},
@@ -387,7 +387,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 							matcher: /Which template would you like to use\?/,
 							input: {
 								type: "select",
-								target: "Hello World Worker Using Durable Objects",
+								target: "Worker + Durable Objects",
 							},
 						},
 						{
@@ -401,9 +401,8 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 							matcher: /Which template would you like to use\?/,
 							input: {
 								type: "select",
-								target: "Hello World Worker",
-								assertDefaultSelection:
-									"Hello World Worker Using Durable Objects",
+								target: "Worker only",
+								assertDefaultSelection: "Worker + Durable Objects",
 							},
 						},
 						{
@@ -418,7 +417,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 				);
 
 				expect(project.path).toExist();
-				expect(output).toContain(`type Hello World Worker`);
+				expect(output).toContain(`type Worker only`);
 				expect(output).toContain(`lang JavaScript`);
 			},
 		);
