@@ -12,6 +12,7 @@ import type { AssetConfig } from "../../../utils/types";
 export function getAssetHeaders(
 	eTag: string,
 	contentType: string | undefined,
+	cacheStatus: string,
 	request: Request
 ) {
 	const headers = new Headers({
@@ -25,6 +26,10 @@ export function getAssetHeaders(
 	if (isCacheable(request)) {
 		headers.append("Cache-Control", CACHE_CONTROL_BROWSER);
 	}
+
+	// Attach CF-Cache-Status, this will show to users that we are caching assets
+	// and it will also populate the cache fields through the logging pipeline.
+	headers.append("CF-Cache-Status", cacheStatus);
 
 	return headers;
 }

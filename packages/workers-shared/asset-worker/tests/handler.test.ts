@@ -1,5 +1,6 @@
 import { vi } from "vitest";
 import { mockJaegerBinding } from "../../utils/tracing";
+import { Analytics } from "../src/analytics";
 import { applyConfigurationDefaults } from "../src/configuration";
 import { canFetch, handleRequest } from "../src/handler";
 import type { AssetConfig } from "../../utils/types";
@@ -9,6 +10,8 @@ const mockEnv = {
 };
 
 describe("[Asset Worker] `handleRequest`", () => {
+	const analytics = new Analytics();
+
 	it("attaches ETag headers to responses", async () => {
 		const configuration: AssetConfig = applyConfigurationDefaults({
 			html_handling: "none",
@@ -19,6 +22,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 		const getByETag = vi.fn().mockReturnValue({
 			readableStream: new ReadableStream(),
 			contentType: "text/html",
+			cacheStatus: "HIT",
 		});
 
 		const response = await handleRequest(
@@ -27,9 +31,11 @@ describe("[Asset Worker] `handleRequest`", () => {
 			mockEnv,
 			configuration,
 			exists,
-			getByETag
+			getByETag,
+			analytics
 		);
 
+		expect(response.status).toBe(200);
 		expect(response.headers.get("ETag")).toBe(`"${eTag}"`);
 	});
 
@@ -43,6 +49,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 		const getByETag = vi.fn().mockReturnValue({
 			readableStream: new ReadableStream(),
 			contentType: "text/html",
+			cacheStatus: "HIT",
 		});
 
 		const response = await handleRequest(
@@ -53,7 +60,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 			mockEnv,
 			configuration,
 			exists,
-			getByETag
+			getByETag,
+			analytics
 		);
 
 		expect(response.status).toBe(304);
@@ -69,6 +77,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 		const getByETag = vi.fn().mockReturnValue({
 			readableStream: new ReadableStream(),
 			contentType: "text/html",
+			cacheStatus: "HIT",
 		});
 
 		const response = await handleRequest(
@@ -79,7 +88,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 			mockEnv,
 			configuration,
 			exists,
-			getByETag
+			getByETag,
+			analytics
 		);
 
 		expect(response.status).toBe(304);
@@ -95,6 +105,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 		const getByETag = vi.fn().mockReturnValue({
 			readableStream: new ReadableStream(),
 			contentType: "text/html",
+			cacheStatus: "HIT",
 		});
 
 		const response = await handleRequest(
@@ -105,7 +116,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 			mockEnv,
 			configuration,
 			exists,
-			getByETag
+			getByETag,
+			analytics
 		);
 
 		expect(response.status).toBe(200);
@@ -136,7 +148,9 @@ describe("[Asset Worker] `handleRequest`", () => {
 			async (_: string) => ({
 				readableStream: new ReadableStream(),
 				contentType: "text/html",
-			})
+				cacheStatus: "HIT",
+			}),
+			analytics
 		);
 
 		expect(response.status).toBe(404);
@@ -158,7 +172,9 @@ describe("[Asset Worker] `handleRequest`", () => {
 			async (_: string) => ({
 				readableStream: new ReadableStream(),
 				contentType: "text/html",
-			})
+				cacheStatus: "HIT",
+			}),
+			analytics
 		);
 
 		expect(response.status).toBe(404);
@@ -180,6 +196,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 		const getByEtag = async (_: string) => ({
 			readableStream: new ReadableStream(),
 			contentType: "text/html",
+			cachesStatus: "HIT",
 		});
 
 		// first malformed URL should return 404 as no match above
@@ -189,7 +206,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 			mockEnv,
 			configuration,
 			exists,
-			getByEtag
+			getByEtag,
+			analytics
 		);
 		expect(response.status).toBe(404);
 
@@ -200,9 +218,58 @@ describe("[Asset Worker] `handleRequest`", () => {
 			mockEnv,
 			configuration,
 			exists,
-			getByEtag
+			getByEtag,
+			analytics
 		);
 		expect(response2.status).toBe(307);
+	});
+
+	it("attaches CF-Cache-Status headers to responses", async () => {
+		const configuration: AssetConfig = applyConfigurationDefaults({
+			html_handling: "none",
+			not_found_handling: "none",
+		});
+		const eTag = "some-etag";
+		const exists = vi.fn().mockReturnValue(eTag);
+		let getByEtag = vi.fn().mockReturnValueOnce({
+			readableStream: new ReadableStream(),
+			contentType: "text/html",
+			cacheStatus: "HIT",
+		});
+
+		// Test cache HIT
+		const cacheHitResponse = await handleRequest(
+			new Request("https://example.com/"),
+			// @ts-expect-error Empty config default to using mocked jaeger
+			mockEnv,
+			configuration,
+			exists,
+			getByEtag,
+			analytics
+		);
+
+		expect(cacheHitResponse.status).toBe(200);
+		expect(cacheHitResponse.headers.get("CF-Cache-Status")).toBe("HIT");
+
+		// Test cache MISS
+		getByEtag = vi.fn().mockReturnValueOnce({
+			readableStream: new ReadableStream(),
+			contentType: "text/html",
+			cacheStatus: "MISS",
+		});
+
+		const cacheMissResponse = await handleRequest(
+			new Request("https://example.com/"),
+			// @ts-expect-error Empty config default to using mocked jaeger
+			mockEnv,
+			configuration,
+			exists,
+			getByEtag,
+			analytics
+		);
+
+		expect(cacheMissResponse.status).toBe(200);
+		expect(cacheMissResponse.headers.get("CF-Cache-Status")).toBe("MISS");
 	});
 
 	describe("_headers", () => {
@@ -278,7 +345,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.headers.get("X-Custom-Header")).toBe("Custom-Value");
@@ -291,7 +359,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.headers.get("X-Custom-Foo-Header")).toBe(
@@ -306,7 +375,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.headers.get("X-Custom-Bang-Header")).toBe(
@@ -320,7 +390,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.headers.has("X-Custom-Bang-Header")).toBeFalsy();
@@ -332,7 +403,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.headers.get("X-Custom-Art-Header")).toBe(
@@ -347,7 +419,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.headers.get("Set-Cookie")).toBe("me, me too");
@@ -359,7 +432,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.headers.get("ETag")).toBe("very rogue");
@@ -371,7 +445,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.headers.has("ETag")).toBeFalsy();
@@ -383,7 +458,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.headers.get("Set-Cookie")).toBe("hijack");
@@ -395,7 +471,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.headers.has("Set-Cookie")).toBeFalsy();
@@ -413,7 +490,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 
 					return false;
 				},
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.headers.get("Location")).toBe("/foo");
@@ -430,7 +508,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.status).toBe(304);
@@ -454,7 +533,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				() => null,
 				() => {
 					throw new Error("bang");
-				}
+				},
+				analytics
 			);
 
 			expect(response.status).toBe(301);
@@ -569,7 +649,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.status).toBe(301);
@@ -584,7 +665,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				() => null,
 				() => {
 					throw new Error("bang");
-				}
+				},
+				analytics
 			);
 
 			expect(response.status).toBe(301);
@@ -618,7 +700,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 						};
 					}
 					throw new Error("bang");
-				}
+				},
+				analytics
 			);
 
 			expect(response.status).toBe(200);
@@ -652,7 +735,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 						};
 					}
 					throw new Error("bang");
-				}
+				},
+				analytics
 			);
 
 			expect(response.status).toBe(200);
@@ -686,7 +770,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 						};
 					}
 					throw new Error("bang");
-				}
+				},
+				analytics
 			);
 
 			expect(response.status).toBe(200);
@@ -720,7 +805,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 						};
 					}
 					throw new Error("bang");
-				}
+				},
+				analytics
 			);
 
 			expect(response.status).toBe(404);
@@ -737,7 +823,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				},
 				() => {
 					throw new Error("bang");
-				}
+				},
+				analytics
 			);
 
 			expect(response.status).toBe(404);
@@ -750,7 +837,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.status).toBe(302);
@@ -762,7 +850,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.status).toBe(302);
@@ -774,7 +863,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.status).toBe(302);
@@ -787,7 +877,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.status).toBe(302);
@@ -801,7 +892,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.status).toBe(302);
@@ -817,7 +909,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.status).toBe(200);
@@ -829,7 +922,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.status).toBe(302);
@@ -841,7 +935,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.status).toBe(302);
@@ -854,7 +949,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.status).toBe(302);
@@ -866,7 +962,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.status).toBe(302);
@@ -878,7 +975,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.status).toBe(302);
@@ -891,7 +989,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.status).toBe(302);
@@ -905,7 +1004,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.status).toBe(302);
@@ -919,7 +1019,8 @@ describe("[Asset Worker] `handleRequest`", () => {
 				mockEnv,
 				configuration,
 				exists,
-				getByETag
+				getByETag,
+				analytics
 			);
 
 			expect(response.status).toBe(200);
