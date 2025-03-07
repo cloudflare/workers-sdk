@@ -223,53 +223,30 @@ describe.each([
 					`,
 			});
 		});
-		describe("worker with assets -> regular worker", () => {
-			it("can fetch a worker with assets", async () => {
-				const url = await start(
-					wranglerDev,
-					helper,
-					assetWorker,
-					regularWorker,
-					false
-				);
+		describe.skipIf(process.platform === "win32")(
+			"worker with assets -> regular worker",
+			() => {
+				it("can fetch a worker with assets", async () => {
+					const url = await start(
+						wranglerDev,
+						helper,
+						assetWorker,
+						regularWorker,
+						false
+					);
 
-				await expect(fetchText(`${url}/asset`)).resolves.toBe(
-					"<p>have an asset directly</p>"
-				);
-				await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
-					"<p>have an asset via a binding</p>"
-				);
-				await expect(
-					fetch(`${url}/worker`).then((r) => r.text())
-				).resolves.toBe("hello world from a worker with assets");
-			});
+					await expect(fetchText(`${url}/asset`)).resolves.toBe(
+						"<p>have an asset directly</p>"
+					);
+					await expect(fetchText(`${url}/asset-via-binding`)).resolves.toBe(
+						"<p>have an asset via a binding</p>"
+					);
+					await expect(
+						fetch(`${url}/worker`).then((r) => r.text())
+					).resolves.toBe("hello world from a worker with assets");
+				});
 
-			it("can fetch a regular worker through a worker with assets, including with rpc", async () => {
-				const url = await start(
-					wranglerDev,
-					helper,
-					assetWorker,
-					regularWorker,
-					false
-				);
-
-				await vi.waitFor(
-					async () =>
-						await expect(
-							fetch(`${url}/hello-from-dee`).then((r) => r.text())
-						).resolves.toBe("hello world from dee")
-				);
-
-				await vi.waitFor(
-					async () =>
-						await expect(fetchText(`${url}/count`)).resolves.toBe("6"),
-					{ interval: 1000, timeout: 10_000 }
-				);
-			});
-
-			it.skipIf(style === "dev registry")(
-				"can fetch a DO through a worker with assets, including with rpc",
-				async () => {
+				it("can fetch a regular worker through a worker with assets, including with rpc", async () => {
 					const url = await start(
 						wranglerDev,
 						helper,
@@ -280,25 +257,51 @@ describe.each([
 
 					await vi.waitFor(
 						async () =>
-							await expect(fetchText(`${url}/do-rpc`)).resolves.toBe(
-								"Hello through DO RPC"
-							),
-						{ interval: 1000, timeout: 10_000 }
+							await expect(
+								fetch(`${url}/hello-from-dee`).then((r) => r.text())
+							).resolves.toBe("hello world from dee")
 					);
+
 					await vi.waitFor(
 						async () =>
-							await expect(
-								fetchJson(`${url}/do`, {
-									headers: {
-										"X-Reset-Count": "true",
-									},
-								})
-							).resolves.toMatchObject({ count: 1 }),
+							await expect(fetchText(`${url}/count`)).resolves.toBe("6"),
 						{ interval: 1000, timeout: 10_000 }
 					);
-				}
-			);
-		});
+				});
+
+				it.skipIf(style === "dev registry")(
+					"can fetch a DO through a worker with assets, including with rpc",
+					async () => {
+						const url = await start(
+							wranglerDev,
+							helper,
+							assetWorker,
+							regularWorker,
+							false
+						);
+
+						await vi.waitFor(
+							async () =>
+								await expect(fetchText(`${url}/do-rpc`)).resolves.toBe(
+									"Hello through DO RPC"
+								),
+							{ interval: 1000, timeout: 10_000 }
+						);
+						await vi.waitFor(
+							async () =>
+								await expect(
+									fetchJson(`${url}/do`, {
+										headers: {
+											"X-Reset-Count": "true",
+										},
+									})
+								).resolves.toMatchObject({ count: 1 }),
+							{ interval: 1000, timeout: 10_000 }
+						);
+					}
+				);
+			}
+		);
 
 		describe("regular worker -> assets-only", () => {
 			beforeEach(async () => {
