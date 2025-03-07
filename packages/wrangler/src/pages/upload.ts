@@ -191,6 +191,7 @@ export const upload = async (
 	const { update, stop } = renderProgress(counter, args.fileMap.size);
 
 	const queue = new PQueue({ concurrency: BULK_UPLOAD_CONCURRENCY });
+	const queuePromises: Array<Promise<void>> = [];
 
 	for (const bucket of buckets) {
 		// Don't upload empty buckets (can happen for tiny projects)
@@ -264,27 +265,30 @@ export const upload = async (
 			}
 		};
 
-		void queue.add(() =>
-			doUpload().then(
-				() => {
-					counter += bucket.files.length;
-					update(counter, args.fileMap.size);
-				},
-				(error) => {
-					return Promise.reject(
-						new FatalError(
-							`Failed to upload files. Please try again. Error: ${JSON.stringify(
-								error
-							)})`,
-							error.code || 1
-						)
-					);
-				}
+		queuePromises.push(
+			queue.add(() =>
+				doUpload().then(
+					() => {
+						counter += bucket.files.length;
+						update(counter, args.fileMap.size);
+					},
+					(error) => {
+						return Promise.reject(
+							new FatalError(
+								`Failed to upload files. Please try again. Error: ${JSON.stringify(
+									error
+								)})`,
+								error.code || 1
+							)
+						);
+					}
+				)
 			)
 		);
 	}
-
-	await queue.onIdle();
+	// using Promise.all() here instead of queue.onIdle() to ensure
+	// we actually throw errors that occur within queued promises.
+	await Promise.all(queuePromises);
 
 	stop();
 
