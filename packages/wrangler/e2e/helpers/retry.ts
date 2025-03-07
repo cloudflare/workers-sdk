@@ -16,7 +16,7 @@ export async function retry<T>(
 			}
 			states.push(currentState);
 		} catch {}
-		await setTimeout(2_000);
+		await setTimeout(800);
 		n--;
 	}
 	console.error(states);

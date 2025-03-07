@@ -5,6 +5,7 @@ import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { seed as baseSeed, makeRoot } from "./helpers/setup";
+import { isLocalOnly } from "./helpers/skip-if-offline";
 import type { RequestInit } from "undici";
 
 async function fetchJson<T>(url: string, info?: RequestInit): Promise<T> {
@@ -68,7 +69,7 @@ const failsIf = (condition: boolean) => {
 type MultiworkerStyle = "dev registry" | "in process";
 
 describe.each(
-	(process.platform === "win32"
+	(process.platform === "win32" || isLocalOnly
 		? [
 				{
 					style: "in process",

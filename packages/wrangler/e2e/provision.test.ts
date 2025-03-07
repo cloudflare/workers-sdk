@@ -8,6 +8,7 @@ import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { normalizeOutput } from "./helpers/normalize";
 import { retry } from "./helpers/retry";
+import { isLocalOnly } from "./helpers/skip-if-offline";
 
 const TIMEOUT = 500_000;
 const normalize = (str: string) => {
@@ -17,7 +18,7 @@ const normalize = (str: string) => {
 };
 const workerName = generateResourceName();
 
-describe("provisioning", { timeout: TIMEOUT }, () => {
+describe.skipIf(isLocalOnly)("provisioning", { timeout: TIMEOUT }, () => {
 	let deployedUrl: string;
 	let kvId: string;
 	let kvId2: string;
