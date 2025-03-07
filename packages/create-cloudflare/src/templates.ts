@@ -372,12 +372,18 @@ export const createContext = async (
 			value: "web-framework",
 			description: "Select from the most popular full-stack web frameworks",
 		},
-		{
-			label: "Application Starter",
-			value: "demo",
-			description:
-				"Select from a range of starter applications using various Cloudflare products",
-		},
+		...(args.experimental
+			? [
+					/* there are currently no experimental application starters */
+				]
+			: [
+					{
+						label: "Application Starter",
+						value: "demo",
+						description:
+							"Select from a range of starter applications using various Cloudflare products",
+					},
+				]),
 		{
 			label: "Template from a GitHub repo",
 			value: "remote-template",
