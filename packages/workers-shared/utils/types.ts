@@ -11,6 +11,42 @@ export const RouterConfigSchema = z.object({
 	...InternalConfigSchema.shape,
 });
 
+const MetadataStaticRedirectEntry = z.object({
+	status: z.number(),
+	to: z.string(),
+	lineNumber: z.number(),
+});
+
+const MetadataRedirectEntry = z.object({
+	status: z.number(),
+	to: z.string(),
+});
+
+const MetadataStaticRedirects = z.record(MetadataStaticRedirectEntry);
+const MetadataRedirects = z.record(MetadataRedirectEntry);
+
+const MetadataHeaderEntry = z.object({
+	set: z.record(z.string()).optional(),
+	unset: z.array(z.string()).optional(),
+});
+
+const MetadataHeaders = z.record(MetadataHeaderEntry);
+
+export const RedirectsSchema = z
+	.object({
+		version: z.literal(1),
+		staticRules: MetadataStaticRedirects,
+		rules: MetadataRedirects,
+	})
+	.optional();
+
+export const HeadersSchema = z
+	.object({
+		version: z.literal(2),
+		rules: MetadataHeaders,
+	})
+	.optional();
+
 export const AssetConfigSchema = z.object({
 	compatibility_date: z.string().optional(),
 	compatibility_flags: z.array(z.string()).optional(),
@@ -25,6 +61,8 @@ export const AssetConfigSchema = z.object({
 	not_found_handling: z
 		.enum(["single-page-application", "404-page", "none"])
 		.optional(),
+	redirects: RedirectsSchema,
+	headers: HeadersSchema,
 	...InternalConfigSchema.shape,
 });
 

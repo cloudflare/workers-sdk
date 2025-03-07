@@ -15,6 +15,7 @@ const existsMock = (fileList: Set<string>) => {
 			if (fileList.has(pathname)) {
 				return pathname;
 			}
+			return null;
 		}
 	);
 };

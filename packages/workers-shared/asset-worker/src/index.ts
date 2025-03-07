@@ -7,7 +7,7 @@ import { Analytics } from "./analytics";
 import { AssetsManifest } from "./assets-manifest";
 import { applyConfigurationDefaults } from "./configuration";
 import { ExperimentAnalytics } from "./experiment-analytics";
-import { decodePath, getIntent, handleRequest } from "./handler";
+import { canFetch, handleRequest } from "./handler";
 import { getAssetWithMetadataFromKV } from "./utils/kv";
 import type {
 	AssetConfig,
@@ -103,10 +103,8 @@ export default class extends WorkerEntrypoint<Env> {
 		const startTimeMs = performance.now();
 
 		try {
-			if (!this.env.JAEGER) {
-				// For wrangler tests, if we don't have a jaeger binding, default to a mocked binding
-				this.env.JAEGER = mockJaegerBinding();
-			}
+			// TODO: Mock this with Miniflare
+			this.env.JAEGER ??= mockJaegerBinding();
 
 			sentry = setupSentry(
 				request,
@@ -175,20 +173,15 @@ export default class extends WorkerEntrypoint<Env> {
 
 	// TODO: Trace unstable methods
 	async unstable_canFetch(request: Request): Promise<boolean> {
-		const url = new URL(request.url);
-		const decodedPathname = decodePath(url.pathname);
-		const intent = await getIntent(
-			decodedPathname,
-			{
-				...applyConfigurationDefaults(this.env.CONFIG),
-				not_found_handling: "none",
-			},
+		// TODO: Mock this with Miniflare
+		this.env.JAEGER ??= mockJaegerBinding();
+
+		return canFetch(
+			request,
+			this.env,
+			applyConfigurationDefaults(this.env.CONFIG),
 			this.unstable_exists.bind(this)
 		);
-		if (intent === null) {
-			return false;
-		}
-		return true;
 	}
 
 	async unstable_getByETag(eTag: string): Promise<{

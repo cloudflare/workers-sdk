@@ -1605,6 +1605,9 @@ importers:
 
   packages/pages-shared:
     dependencies:
+      '@cloudflare/workers-shared':
+        specifier: workspace:*
+        version: link:../workers-shared
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
