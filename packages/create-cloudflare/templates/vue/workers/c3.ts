@@ -64,7 +64,7 @@ const config: TemplateConfig = {
 	frameworkCli: "create-vue",
 	platform: "workers",
 	displayName: "Vue",
-	path: "templates/workers/vue",
+	path: "templates/vue/workers",
 	copyFiles: {
 		async selectVariant(ctx) {
 			// Note: this `selectVariant` function should not be needed
