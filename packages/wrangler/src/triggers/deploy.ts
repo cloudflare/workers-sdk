@@ -204,6 +204,8 @@ export default async function triggersDeploy(
 				})
 			);
 		}
+		// using Promise.all() here instead of queue.onIdle() to ensure
+		// we actually throw errors that occur within queued promises.
 		await Promise.all(queuePromises);
 
 		if (Object.keys(routesWithOtherBindings).length > 0) {

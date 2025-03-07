@@ -1121,6 +1121,8 @@ async function publishRoutesFallback(
 			})
 		);
 	}
+	// using Promise.all() here instead of queue.onIdle() to ensure
+	// we actually throw errors that occur within queued promises.
 	await Promise.all(queuePromises);
 
 	// Deploy each route that is not already deployed.

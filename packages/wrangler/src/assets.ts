@@ -214,6 +214,8 @@ export const syncAssets = async (
 		logger.error(error.message);
 		throw error;
 	});
+	// using Promise.all() here instead of queue.onIdle() to ensure
+	// we actually throw errors that occur within queued promises.
 	await Promise.all(queuePromises);
 
 	// if queue finishes without receiving JWT from asset upload service (AUS)
