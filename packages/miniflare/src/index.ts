@@ -121,6 +121,7 @@ import type {
 	Queue,
 	R2Bucket,
 } from "@cloudflare/workers-types/experimental";
+import type { ChildProcess } from "child_process";
 
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
@@ -715,7 +716,7 @@ export class Miniflare {
 
 	#browsers: Set<{
 		wsEndpoint: () => string;
-		close: () => Promise<void>;
+		process: () => ChildProcess;
 	}> = new Set();
 
 	readonly #runtime?: Runtime;
@@ -1397,7 +1398,10 @@ export class Miniflare {
 	}
 
 	async #assembleAndUpdateConfig() {
-		[...this.#browsers.values()].map((b) => b.close());
+		for (const browser of this.#browsers) {
+			// .close() isn't enough
+			await browser.process().kill("SIGKILL");
+		}
 		// This function must be run with `#runtimeMutex` held
 		const initial = !this.#runtimeEntryURL;
 		assert(this.#runtime !== undefined);
@@ -1907,10 +1911,13 @@ export class Miniflare {
 		// we'd like them to be poisoned synchronously here.
 		this.#proxyClient?.poisonProxies();
 		try {
-			await Promise.all([...this.#browsers.values()].map((b) => b.close()));
-
 			await this.#waitForReady(/* disposing */ true);
 		} finally {
+			for (const browser of this.#browsers) {
+				// .close() isn't enough
+				await browser.process().kill("SIGKILL");
+			}
+
 			// Remove exit hook, we're cleaning up what they would've cleaned up now
 			this.#removeExitHook?.();
 
