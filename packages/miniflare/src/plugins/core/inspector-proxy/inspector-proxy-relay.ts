@@ -60,9 +60,6 @@ export class InspectorProxyRelay {
 
 		this.#devtoolsWs.on("message", (data) => {
 			const msg = JSON.parse(data.toString());
-			// console.log(`\x1b[44m msg devtools -> runtime \x1b[0m`);
-			// console.log(msg);
-			// console.log("\n");
 			assert(this.#runtimeWs?.OPEN);
 			this.#sendMessageToRuntime(msg);
 		});
