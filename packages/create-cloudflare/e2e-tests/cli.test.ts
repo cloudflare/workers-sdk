@@ -11,20 +11,20 @@ import {
 	runC3,
 	test,
 } from "./helpers";
-import type { Suite } from "vitest";
 
 const experimental = process.env.E2E_EXPERIMENTAL === "true";
 const frameworkToTest = getFrameworkToTest({ experimental: false });
 const { name: pm } = detectPackageManager();
+
+beforeAll((ctx) => {
+	recreateLogFolder({ experimental }, ctx);
+});
+
 // Note: skipIf(frameworkToTest) makes it so that all the basic C3 functionality
 //       tests are skipped in case we are testing a specific framework
 describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 	"E2E: Basic C3 functionality ",
 	() => {
-		beforeAll((ctx) => {
-			recreateLogFolder({ experimental }, ctx as Suite);
-		});
-
 		test({ experimental })("--version", async ({ logStream }) => {
 			const { output } = await runC3(["--version"], [], logStream);
 			expect(output).toEqual(version);
@@ -442,3 +442,178 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 		});
 	},
 );
+
+describe.skipIf(frameworkToTest || isQuarantineMode())("help text", () => {
+	test({ experimental })("--help", async ({ logStream }) => {
+		if (experimental) {
+			const { output } = await runC3(
+				["--help", "--experimental"],
+				[],
+				logStream,
+			);
+			expect(normalizeOutput(output)).toMatchInlineSnapshot(`
+				"create-cloudflare <version>
+				  The create-cloudflare cli (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
+				USAGE
+				  <USAGE>
+				OPTIONS
+				You have selected experimental mode - the options below are filtered to those that support experimental mode.
+				  directory
+				    The directory where the application should be created. Also used as the name of the application.
+				    If a path is provided that includes intermediary directories, only the base name will be used as the name of the application.
+				  --category=<value>
+				    Specifies the kind of templates that should be created
+				    Allowed Values:
+				      hello-world
+				        Hello World example
+				      web-framework
+				        Framework Starter
+				  --type=<value>, -t
+				    When using a built-in template, specifies the type of application that should be created.
+				    Note that "--category" and "--template" are mutually exclusive options. If both are provided, "--category" will be used.
+				    Allowed Values:
+				      hello-world-assets-only
+				        Get started with a basic Worker that only serves static assets
+				      hello-world-with-assets
+				        Get started with a basic Worker that also serves static assets, in the language of your choice
+				      hello-world-durable-object-with-assets
+				        Get started with a basic stateful app to build projects like real-time chats, collaborative apps, and multiplayer games, which hosts assets
+				  --framework=<value>, -f
+				    The type of framework to use to create a web application (when using this option "--category" is coerced to "web-framework")
+				    When using the --framework option, C3 will dispatch to the official creation tool used by the framework (ex. "create-remix" is used for Remix).
+				    You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
+				    npm create cloudflare -- --framework next -- --ts
+				    pnpm create cloudflare --framework next -- --ts
+				    Allowed Values:
+				      astro, hono, next, qwik, remix, solid, svelte
+				  --platform=<value>
+				    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
+				    Allowed Values:
+				      pages
+				        Create a web application that can be deployed to Pages.
+				      workers
+				        Create a web application that can be deployed to Workers (BETA).
+				  --lang=<value>
+				    The programming language of the template
+				    Allowed Values:
+				      ts, js, python
+				  --deploy, --no-deploy
+				    Deploy your application after it has been created
+				  --git, --no-git
+				    Initialize a local git repository for your application
+				  --open, --no-open
+				    Opens the deployed application in your browser (this option is ignored if the application is not deployed)
+				  --existing-script=<value>
+				    The name of an existing Cloudflare Workers script to clone locally (when using this option "--type" is coerced to "pre-existing").
+				    When "--existing-script" is specified, "deploy" will be ignored.
+				  --template=<value>
+				    An external template to be used when creating your project.
+				    Any "degit" compatible string may be specified. For example:
+				    npm create cloudflare my-project -- --template github:user/repo
+				    npm create cloudflare my-project -- --template git@github.com:user/repo
+				    npm create cloudflare my-project -- --template https://github.com/user/repo
+				    npm create cloudflare my-project -- --template git@github.com:user/repo#dev (branch)
+				    npm create cloudflare my-project -- --template git@github.com:user/repo#v1.2.3 (tag)
+				    npm create cloudflare my-project -- --template git@github.com:user/repo#1234abcd (commit)
+				    Note that subdirectories may also be used. For example:
+				    npm create cloudflare -- --template https://github.com/cloudflare/workers-sdk/templates/worker-r2
+				  --accept-defaults, --no-accept-defaults, -y
+				    Use all the default C3 options (each can also be overridden by specifying it)
+				  --auto-update, --no-auto-update
+				    Automatically uses the latest version of C3"
+			`);
+		} else {
+			const { output } = await runC3(["--help"], [], logStream);
+			expect(normalizeOutput(output)).toMatchInlineSnapshot(`
+				"create-cloudflare <version>
+				  The create-cloudflare cli (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
+				USAGE
+				  <USAGE>
+				OPTIONS
+				  directory
+				    The directory where the application should be created. Also used as the name of the application.
+				    If a path is provided that includes intermediary directories, only the base name will be used as the name of the application.
+				  --category=<value>
+				    Specifies the kind of templates that should be created
+				    Allowed Values:
+				      hello-world
+				        Hello World example
+				      web-framework
+				        Framework Starter
+				      demo
+				        Application Starter
+				      remote-template
+				        Template from a GitHub repo
+				  --type=<value>, -t
+				    When using a built-in template, specifies the type of application that should be created.
+				    Note that "--category" and "--template" are mutually exclusive options. If both are provided, "--category" will be used.
+				    Allowed Values:
+				      hello-world
+				        Get started with a basic Worker in the language of your choice
+				      hello-world-durable-object
+				        Get started with a basic stateful app to build projects like real-time chats, collaborative apps, and multiplayer games
+				      common
+				        Create a Worker to route and forward requests to other services
+				      scheduled
+				        Create a Worker to be executed on a schedule for periodic (cron) jobs
+				      queues
+				        Get started with a Worker that processes background tasks and message batches with Cloudflare Queues
+				      openapi
+				        Get started building a basic API on Workers
+				      pre-existing
+				        Fetch a Worker initialized from the Cloudflare dashboard.
+				  --framework=<value>, -f
+				    The type of framework to use to create a web application (when using this option "--category" is coerced to "web-framework")
+				    When using the --framework option, C3 will dispatch to the official creation tool used by the framework (ex. "create-remix" is used for Remix).
+				    You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
+				    npm create cloudflare -- --framework next -- --ts
+				    pnpm create cloudflare --framework next -- --ts
+				    Allowed Values:
+				      analog, angular, astro, docusaurus, gatsby, hono, next, nuxt, qwik, react, remix, solid, svelte, vue
+				  --platform=<value>
+				    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
+				    Allowed Values:
+				      pages
+				        Create a web application that can be deployed to Pages.
+				      workers
+				        Create a web application that can be deployed to Workers (BETA).
+				  --lang=<value>
+				    The programming language of the template
+				    Allowed Values:
+				      ts, js, python
+				  --deploy, --no-deploy
+				    Deploy your application after it has been created
+				  --git, --no-git
+				    Initialize a local git repository for your application
+				  --open, --no-open
+				    Opens the deployed application in your browser (this option is ignored if the application is not deployed)
+				  --existing-script=<value>
+				    The name of an existing Cloudflare Workers script to clone locally (when using this option "--type" is coerced to "pre-existing").
+				    When "--existing-script" is specified, "deploy" will be ignored.
+				  --template=<value>
+				    An external template to be used when creating your project.
+				    Any "degit" compatible string may be specified. For example:
+				    npm create cloudflare my-project -- --template github:user/repo
+				    npm create cloudflare my-project -- --template git@github.com:user/repo
+				    npm create cloudflare my-project -- --template https://github.com/user/repo
+				    npm create cloudflare my-project -- --template git@github.com:user/repo#dev (branch)
+				    npm create cloudflare my-project -- --template git@github.com:user/repo#v1.2.3 (tag)
+				    npm create cloudflare my-project -- --template git@github.com:user/repo#1234abcd (commit)
+				    Note that subdirectories may also be used. For example:
+				    npm create cloudflare -- --template https://github.com/cloudflare/workers-sdk/templates/worker-r2
+				  --accept-defaults, --no-accept-defaults, -y
+				    Use all the default C3 options (each can also be overridden by specifying it)
+				  --auto-update, --no-auto-update
+				    Automatically uses the latest version of C3"
+			`);
+		}
+	});
+});
+
+function normalizeOutput(output: string): string {
+	return output
+		.replaceAll("\r\n", "\n")
+		.replaceAll(/\n\n+/g, "\n")
+		.replace(/create-cloudflare v\d+\.\d+\.\d+/, "create-cloudflare <version>")
+		.replace(/USAGE\n[^\n]+/, `USAGE\n  <USAGE>`);
+}
