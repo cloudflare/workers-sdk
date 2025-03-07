@@ -84,6 +84,16 @@ const updateNuxtConfig = () => {
 				b.identifier("preset"),
 				b.stringLiteral("cloudflare-pages"),
 			),
+			b.objectProperty(
+				b.identifier("cloudflare"),
+				b.objectExpression([
+					b.objectProperty(
+						b.identifier("deployConfig"),
+						b.booleanLiteral(true),
+					),
+					b.objectProperty(b.identifier("nodeCompat"), b.booleanLiteral(true)),
+				]),
+			),
 		]),
 	);
 
