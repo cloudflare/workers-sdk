@@ -2,6 +2,7 @@ import { z } from "zod";
 import { ValueOf } from "../workers";
 import { ASSETS_PLUGIN } from "./assets";
 import { ASSETS_PLUGIN_NAME } from "./assets/constants";
+import { BROWSER_PLUGIN, BROWSER_PLUGIN_NAME } from "./browser";
 import { CACHE_PLUGIN, CACHE_PLUGIN_NAME } from "./cache";
 import { CORE_PLUGIN, CORE_PLUGIN_NAME } from "./core";
 import { D1_PLUGIN, D1_PLUGIN_NAME } from "./d1";
@@ -27,6 +28,7 @@ export const PLUGINS = {
 	[ASSETS_PLUGIN_NAME]: ASSETS_PLUGIN,
 	[WORKFLOWS_PLUGIN_NAME]: WORKFLOWS_PLUGIN,
 	[PIPELINES_PLUGIN_NAME]: PIPELINE_PLUGIN,
+	[BROWSER_PLUGIN_NAME]: BROWSER_PLUGIN,
 };
 export type Plugins = typeof PLUGINS;
 
@@ -76,7 +78,8 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof RATELIMIT_PLUGIN.options> &
 	z.input<typeof ASSETS_PLUGIN.options> &
 	z.input<typeof WORKFLOWS_PLUGIN.options> &
-	z.input<typeof PIPELINE_PLUGIN.options>;
+	z.input<typeof PIPELINE_PLUGIN.options> &
+	z.input<typeof BROWSER_PLUGIN.options>;
 
 export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof CACHE_PLUGIN.sharedOptions> &
