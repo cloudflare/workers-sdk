@@ -12,7 +12,6 @@ import util from "util";
 import zlib from "zlib";
 import exitHook from "exit-hook";
 import { $ as colors$ } from "kleur/colors";
-import { npxImport } from "npx-import";
 import stoppable from "stoppable";
 import {
 	Dispatcher,
@@ -953,6 +952,7 @@ export class Miniflare {
 				this.#log.logWithLevel(logLevel, message);
 				response = new Response(null, { status: 204 });
 			} else if (url.pathname === "/browser/launch") {
+				const { npxImport } = await import("npx-import");
 				// Version should be kept in sync with the supported version at https://github.com/cloudflare/puppeteer?tab=readme-ov-file#workers-version-of-puppeteer-core
 				const puppeteer = await npxImport(
 					"puppeteer@21.1.0",
