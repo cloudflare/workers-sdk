@@ -123,7 +123,7 @@ const CoreOptionsSchemaInput = z.intersection(
 		compatibilityDate: z.string().optional(),
 		compatibilityFlags: z.string().array().optional(),
 
-		unsafeInspectorProxy: z.boolean().optional().default(true),
+		unsafeInspectorProxy: z.boolean().optional(),
 
 		routes: z.string().array().optional(),
 
