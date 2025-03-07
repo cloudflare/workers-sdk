@@ -353,7 +353,8 @@ function workflowEntry(
 		},
 	];
 }
-function ratelimitEntry(ratelimit: CfUnsafeBinding): [string, object] {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function ratelimitEntry(ratelimit: CfUnsafeBinding): [string, any] {
 	return [ratelimit.name, ratelimit];
 }
 type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
@@ -383,6 +384,8 @@ type WorkerOptionsBindings = Pick<
 	| "hyperdrives"
 	| "durableObjects"
 	| "serviceBindings"
+	| "secretStores"
+	| "ratelimits"
 	| "workflows"
 	| "wrappedBindings"
 >;
@@ -673,7 +676,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		}
 	}
 
-	const bindingOptions = {
+	const bindingOptions: WorkerOptionsBindings = {
 		bindings: {
 			...bindings.vars,
 			// emulate version_metadata binding via a JSON var
@@ -705,7 +708,9 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			bindings.hyperdrive?.map(hyperdriveEntry) ?? []
 		),
 		workflows: Object.fromEntries(bindings.workflows?.map(workflowEntry) ?? []),
-
+		secretStores: Object.fromEntries(
+			bindings.secret_stores?.map((binding) => [binding.binding, binding]) ?? []
+		),
 		durableObjects: Object.fromEntries([
 			...internalObjects.map(({ name, class_name }) => {
 				const useSQLite = classNameToUseSQLite.get(class_name);
@@ -778,6 +783,7 @@ export function buildPersistOptions(
 			r2Persist: path.join(v3Path, "r2"),
 			d1Persist: path.join(v3Path, "d1"),
 			workflowsPersist: path.join(v3Path, "workflows"),
+			secretStorePersist: path.join(v3Path, "secrets"),
 		};
 	}
 }

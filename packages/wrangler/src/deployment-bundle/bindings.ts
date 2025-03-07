@@ -52,6 +52,7 @@ export function getBindings(
 		d1_databases: config?.d1_databases,
 		vectorize: config?.vectorize,
 		hyperdrive: config?.hyperdrive,
+		secret_stores: config?.secret_stores,
 		services: config?.services,
 		analytics_engine_datasets: config?.analytics_engine_datasets,
 		dispatch_namespaces: options?.pages
