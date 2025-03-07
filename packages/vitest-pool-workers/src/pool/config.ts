@@ -201,17 +201,17 @@ async function parseCustomPoolOptions(
 		const { workerOptions, externalWorkers, define, main } =
 			wrangler.unstable_getMiniflareWorkerOptions(
 				configPath,
-				options.wrangler.environment
+				options.wrangler.environment,
+				{ imagesLocalMode: true }
 			);
 
 		// If `main` wasn't explicitly configured, fall back to Wrangler config's
 		options.main ??= main;
 
-		// Not sure why the type gymnastics is required, but it is :shrug:
-		externalWorkers satisfies typeof options.miniflare.workers;
-		options.miniflare.workers = options.miniflare.workers.concat(
-			externalWorkers
-		) as typeof options.miniflare.workers;
+		options.miniflare.workers = [
+			...options.miniflare.workers,
+			...externalWorkers,
+		];
 
 		// Merge generated Miniflare options from Wrangler with specified overrides
 		options.miniflare = mergeWorkerOptions(
@@ -233,6 +233,7 @@ async function parseCustomPoolOptions(
 			options.main
 		);
 	}
+
 	return options;
 }
 
