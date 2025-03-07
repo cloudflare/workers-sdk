@@ -7,6 +7,7 @@ import { AssetsManifest } from "./assets-manifest";
 import { applyConfigurationDefaults } from "./configuration";
 import { ExperimentAnalytics } from "./experiment-analytics";
 import { canFetch, handleRequest } from "./handler";
+import { handleError, submitMetrics } from "./utils/final-operations";
 import { getAssetWithMetadataFromKV } from "./utils/kv";
 import type {
 	AssetConfig,
@@ -15,7 +16,6 @@ import type {
 	UnsafePerformanceTimer,
 } from "../../utils/types";
 import type { Environment, ReadyAnalytics } from "./types";
-import { handleError, submitMetrics } from './utils/final-operations';
 
 export type Env = {
 	/*
@@ -58,7 +58,6 @@ export type Env = {
  * they are still in flux and that they are not an established API contract.
  */
 export default class extends WorkerEntrypoint<Env> {
-
 	async fetch(request: Request): Promise<Response> {
 		let sentry: ReturnType<typeof setupSentry> | undefined;
 		const analytics = new Analytics(this.env.ANALYTICS);
@@ -120,7 +119,8 @@ export default class extends WorkerEntrypoint<Env> {
 					this.env,
 					config,
 					this.unstable_exists.bind(this),
-					this.unstable_getByETag.bind(this)
+					this.unstable_getByETag.bind(this),
+					analytics
 				);
 
 				analytics.setData({ status: response.status });
@@ -134,7 +134,7 @@ export default class extends WorkerEntrypoint<Env> {
 		}
 	}
 
-	// TODO: Trace unstable methods
+	// TODO: Add observability to these methods
 	async unstable_canFetch(request: Request): Promise<boolean> {
 		// TODO: Mock this with Miniflare
 		this.env.JAEGER ??= mockJaegerBinding();
@@ -150,11 +150,16 @@ export default class extends WorkerEntrypoint<Env> {
 	async unstable_getByETag(eTag: string): Promise<{
 		readableStream: ReadableStream;
 		contentType: string | undefined;
+		cacheStatus: "HIT" | "MISS";
 	}> {
+		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
+		const startTime = performance.now();
 		const asset = await getAssetWithMetadataFromKV(
 			this.env.ASSETS_KV_NAMESPACE,
 			eTag
 		);
+		const endTime = performance.now();
+		const assetFetchTime = endTime - startTime;
 
 		if (!asset || !asset.value) {
 			throw new Error(
@@ -165,12 +170,17 @@ export default class extends WorkerEntrypoint<Env> {
 		return {
 			readableStream: asset.value,
 			contentType: asset.metadata?.contentType,
+			// KV does not yet provide a way to check if a value was fetched from cache
+			// so we assume that if the fetch time is less than 100ms, it was a cache hit.
+			// This is a reasonable assumption given the data we have and how KV works.
+			cacheStatus: assetFetchTime <= 100 ? "HIT" : "MISS",
 		};
 	}
 
 	async unstable_getByPathname(pathname: string): Promise<{
 		readableStream: ReadableStream;
 		contentType: string | undefined;
+		cacheStatus: "HIT" | "MISS";
 	} | null> {
 		const eTag = await this.unstable_exists(pathname);
 		if (!eTag) {

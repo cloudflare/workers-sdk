@@ -1,7 +1,7 @@
-import { InternalServerErrorResponse } from '../../../utils/responses';
-import type { Toucan } from 'toucan-js';
-import type { Analytics } from '../analytics';
-import type { PerformanceTimer } from '../../../utils/performance';
+import { InternalServerErrorResponse } from "../../../utils/responses";
+import type { PerformanceTimer } from "../../../utils/performance";
+import type { Analytics } from "../analytics";
+import type { Toucan } from "toucan-js";
 
 export function handleError(
 	sentry: Toucan | undefined,
