@@ -1,5 +1,5 @@
 > [!WARNING]  
-> Since the release of Wrangler v3 in 2023, we’ve seen great adoption, and today over 95% of active Wrangler usage is with v3. 
+> Since the release of Wrangler v3 in 2023, we’ve seen great adoption, and today over 95% of active Wrangler usage is with v3.
 >
 > As such, Wrangler v2 is now deprecated, and no new features or bug fixes are being published for v2. We **strongly** recommend you upgrade to the latest version of Wrangler to receive continued support. We have a [migration guide](https://developers.cloudflare.com/workers/wrangler/migration/update-v3-to-v4) to make this process easy! If you encounter any difficulties, please let us know by filing an issue.
 
