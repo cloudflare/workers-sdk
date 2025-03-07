@@ -19,6 +19,7 @@ const supportedPagesConfigFields = [
 	"compatibility_date",
 	"compatibility_flags",
 	"send_metrics",
+	"no_bundle",
 	"limits",
 	"placement",
 	"vars",
