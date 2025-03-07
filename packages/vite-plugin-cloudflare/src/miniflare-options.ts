@@ -492,13 +492,20 @@ export function getDevMiniflareOptions(
 				);
 			}
 
-			return MiniflareResponse.json(
-				{
-					CompiledWasm: { wasm: Array.from(contents) },
-					Data: { data: Array.from(contents) },
-					Text: { text: contents.toString() },
-				}[moduleType]
-			);
+			switch (moduleType) {
+				case "CompiledWasm": {
+					return MiniflareResponse.json({ wasm: Array.from(contents) });
+				}
+				case "Data": {
+					return MiniflareResponse.json({ data: Array.from(contents) });
+				}
+				case "Text": {
+					return MiniflareResponse.json({ text: contents.toString() });
+				}
+				default: {
+					return MiniflareResponse.error();
+				}
+			}
 		},
 	};
 }
