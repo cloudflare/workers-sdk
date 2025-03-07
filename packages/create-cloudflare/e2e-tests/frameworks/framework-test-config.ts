@@ -5,7 +5,6 @@ export default function getFrameworkTestConfig(pm: string) {
 	return {
 		astro: {
 			testCommitMessage: true,
-			quarantine: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
 				route: "/",
