@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
+import * as fsp from "node:fs/promises";
 import { builtinModules } from "node:module";
 import * as path from "node:path";
 import { createMiddleware } from "@hattip/adapter-node";
@@ -343,7 +344,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					id: createModuleReference(additionalModuleType, resolved.id),
 				};
 			},
-			renderChunk(code, chunk) {
+			async renderChunk(code, chunk) {
 				const moduleRE = new RegExp(ADDITIONAL_MODULE_PATTERN, "g");
 				let match: RegExpExecArray | null;
 				let magicString: MagicString | undefined;
@@ -360,10 +361,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					let source: Buffer;
 
 					try {
-						source = fs.readFileSync(modulePath);
+						source = await fsp.readFile(modulePath);
 					} catch (error) {
 						throw new Error(
-							`Import '${modulePath}' not found. Does the file exist?`
+							`Import "${modulePath}" not found. Does the file exist?`
 						);
 					}
 

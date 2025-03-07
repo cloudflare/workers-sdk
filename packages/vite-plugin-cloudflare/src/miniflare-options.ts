@@ -461,7 +461,7 @@ export function getDevMiniflareOptions(
 				} satisfies WorkerOptions;
 			}),
 		],
-		unsafeModuleFallbackService(request) {
+		async unsafeModuleFallbackService(request) {
 			const url = new URL(request.url);
 			const rawSpecifier = url.searchParams.get("rawSpecifier");
 			assert(
@@ -485,7 +485,7 @@ export function getDevMiniflareOptions(
 			let contents: Buffer;
 
 			try {
-				contents = fs.readFileSync(modulePath);
+				contents = await fsp.readFile(modulePath);
 			} catch (error) {
 				throw new Error(
 					`Import "${modulePath}" not found. Does the file exist?`
