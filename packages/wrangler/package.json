@@ -126,7 +126,6 @@
 		"get-port": "^7.0.0",
 		"glob-to-regexp": "^0.4.1",
 		"https-proxy-agent": "7.0.2",
-		"ignore": "^5.2.0",
 		"is-ci": "^3.0.1",
 		"itty-time": "^1.0.6",
 		"javascript-time-ago": "^2.5.4",

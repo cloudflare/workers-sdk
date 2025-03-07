@@ -8,6 +8,15 @@ import {
 	MAX_ASSET_SIZE,
 	normalizeFilePath,
 } from "@cloudflare/workers-shared";
+import {
+	CF_ASSETS_IGNORE_FILENAME,
+	HEADERS_FILENAME,
+	REDIRECTS_FILENAME,
+} from "@cloudflare/workers-shared/utils/constants";
+import {
+	createAssetsIgnoreFunction,
+	maybeGetFile,
+} from "@cloudflare/workers-shared/utils/helpers";
 import chalk from "chalk";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
@@ -21,7 +30,6 @@ import { isJwtExpired } from "./pages/upload";
 import { APIError } from "./parse";
 import { getBasePath } from "./paths";
 import { dedent } from "./utils/dedent";
-import { createPatternMatcher, maybeGetFile } from "./utils/filesystem";
 import type { StartDevWorkerOptions } from "./api";
 import type { Config } from "./config";
 import type { DeployArgs } from "./deploy";
@@ -433,14 +441,14 @@ export function getAssetsOptions(
 		}
 	}
 
-	const redirects = maybeGetFile(path.join(directory, "_redirects"));
-	const headers = maybeGetFile(path.join(directory, "_headers"));
+	const redirects = maybeGetFile(path.join(directory, REDIRECTS_FILENAME));
+	const headers = maybeGetFile(path.join(directory, HEADERS_FILENAME));
 
 	// defaults are set in asset worker
 	const assetConfig: AssetConfig = {
 		html_handling: config.assets?.html_handling,
 		not_found_handling: config.assets?.not_found_handling,
-		// TODO: Parse redirects and headers
+		// The _redirects and _headers files are parsed in Miniflare in dev and parsing is not required for deploy
 	};
 
 	return {
@@ -535,40 +543,6 @@ export function validateAssetsArgsAndConfig(
 				"Read more: https://developers.cloudflare.com/workers/static-assets/binding/#smart-placement"
 		);
 	}
-}
-
-const CF_ASSETS_IGNORE_FILENAME = ".assetsignore";
-const REDIRECTS_FILENAME = "_redirects";
-const HEADERS_FILENAME = "_headers";
-
-/**
- * Create a function for filtering out ignored assets.
- *
- * The generated function takes an asset path, relative to the asset directory,
- * and returns true if the asset should not be ignored.
- */
-export async function createAssetsIgnoreFunction(dir: string) {
-	const cfAssetIgnorePath = path.resolve(dir, CF_ASSETS_IGNORE_FILENAME);
-
-	const ignorePatterns = [
-		// Ignore the `.assetsignore` file and other metafiles by default.
-		// The ignore lib expects unix-style paths for its patterns
-		`/${CF_ASSETS_IGNORE_FILENAME}`,
-		`/${REDIRECTS_FILENAME}`,
-		`/${HEADERS_FILENAME}`,
-	];
-
-	let assetsIgnoreFilePresent = false;
-	const assetsIgnore = maybeGetFile(cfAssetIgnorePath);
-	if (assetsIgnore !== undefined) {
-		assetsIgnoreFilePresent = true;
-		ignorePatterns.push(...assetsIgnore.split("\n"));
-	}
-
-	return {
-		assetsIgnoreFunction: createPatternMatcher(ignorePatterns, true),
-		assetsIgnoreFilePresent,
-	};
 }
 
 const WORKER_JS_FILENAME = "_worker.js";

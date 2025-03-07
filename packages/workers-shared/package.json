@@ -65,6 +65,7 @@
 		"@types/mime": "^3.0.4",
 		"concurrently": "^8.2.2",
 		"esbuild": "0.17.19",
+		"ignore": "^5.2.0",
 		"rimraf": "catalog:default",
 		"toucan-js": "4.0.0",
 		"typescript": "catalog:default",
