@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { chdir } from "node:process";
+import TOML from "@iarna/toml";
 import { execa } from "execa";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
@@ -74,7 +75,7 @@ describe("pages deploy", () => {
 			      --commit-message      The commit message to attach to this deployment  [string]
 			      --commit-dirty        Whether or not the workspace should be considered dirty for this deployment  [boolean]
 			      --skip-caching        Skip asset caching which speeds up builds  [boolean]
-			      --no-bundle           Whether to run bundling on \`_worker.js\` before deploying  [boolean] [default: false]
+			      --no-bundle           Whether to run bundling on \`_worker.js\` before deploying  [boolean]
 			      --upload-source-maps  Whether to upload any server-side sourcemaps with this deployment  [boolean] [default: false]"
 		`);
 	});
@@ -5422,6 +5423,51 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 			);
 			await runWrangler("pages deploy public --bundle=true --project-name=foo");
 			expect(std.out).toContain("✨ Uploading Worker bundle");
+		});
+	});
+
+	describe("_worker.js directory bundling", () => {
+		const workerIsBundled = async (contents: FormDataEntryValue | null) =>
+			(await toString(contents)).includes("worker_default as default");
+
+		["wrangler.json", "wrangler.toml"].forEach((configPath) => {
+			it(
+				"should not bundle the _worker.js when `no_bundle = true` in Wrangler config: " +
+					configPath,
+				async () => {
+					mkdirSync("public/_worker.js", { recursive: true });
+					writeFileSync(
+						"public/_worker.js/index.js",
+						`
+					export default {
+						async fetch(request, env) {
+							return new Response('Ok');
+						}
+					};
+					`
+					);
+
+					const config = {
+						name: "foo",
+						no_bundle: true,
+						pages_build_output_dir: "public",
+					};
+					writeFileSync(
+						`${configPath}`,
+						configPath === "wrangler.json"
+							? JSON.stringify(config)
+							: TOML.stringify(config)
+					);
+
+					simulateServer((generatedWorkerJS) =>
+						expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy()
+					);
+
+					await runWrangler("pages deploy");
+
+					expect(std.out).toContain("✨ Uploading Worker bundle");
+				}
+			);
 		});
 	});
 

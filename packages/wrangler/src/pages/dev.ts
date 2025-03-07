@@ -147,7 +147,8 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			"no-bundle": {
 				type: "boolean",
-				default: false,
+				default: undefined,
+				conflicts: "bundle",
 				description: "Whether to run bundling on `_worker.js`",
 			},
 			binding: {
@@ -357,9 +358,7 @@ export const Handler = async (args: PagesDevArguments) => {
 	const usingWorkerDirectory =
 		existsSync(workerScriptPath) && lstatSync(workerScriptPath).isDirectory();
 	const usingWorkerScript = existsSync(workerScriptPath);
-	// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
-	// There is no sane way to get the true value out of yargs, so here we are.
-	const enableBundling = args.bundle ?? !args.noBundle;
+	const enableBundling = args.bundle ?? !(args.noBundle ?? config.no_bundle);
 
 	const functionsDirectory = "./functions";
 	let usingFunctions = !usingWorkerScript && existsSync(functionsDirectory);
@@ -371,7 +370,7 @@ export const Handler = async (args: PagesDevArguments) => {
 		args.compatibilityFlags ?? config.compatibility_flags ?? [],
 		{
 			nodeCompat: args.nodeCompat,
-			noBundle: args.noBundle ?? config.no_bundle,
+			noBundle: !enableBundling,
 		}
 	);
 
