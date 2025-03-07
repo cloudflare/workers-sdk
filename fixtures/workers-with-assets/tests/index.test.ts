@@ -223,13 +223,6 @@ describe.each(devCmds)(
 		});
 
 		it("should apply custom redirects", async ({ expect }) => {
-			writeFileSync(
-				join(__dirname, "../public/_redirects"),
-				"/foo /bar\n/pic /lava-lamps.jpg 200"
-			);
-
-			await scheduler.wait(500);
-
 			let response = await fetch(`http://${ip}:${port}/foo`, {
 				redirect: "manual",
 			});
@@ -241,8 +234,6 @@ describe.each(devCmds)(
 			expect(await response.arrayBuffer()).toEqual(
 				readFileSync(join(__dirname, "../public/lava-lamps.jpg")).buffer
 			);
-
-			unlinkSync(join(__dirname, "../public/_redirects"));
 		});
 
 		it("should apply custom headers", async ({ expect }) => {
