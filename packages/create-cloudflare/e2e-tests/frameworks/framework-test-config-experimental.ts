@@ -2,40 +2,6 @@ import { keys, LONG_TIMEOUT } from "../helpers";
 
 export default function getFrameworkTestConfigExperimental() {
 	return {
-		angular: {
-			testCommitMessage: true,
-			timeout: LONG_TIMEOUT,
-			unsupportedOSs: ["win32"],
-			unsupportedPms: ["bun"],
-			verifyDeploy: {
-				route: "/",
-				expectedText: "Congratulations! Your app is running.",
-			},
-			verifyPreview: {
-				route: "/",
-				expectedText: "Congratulations! Your app is running.",
-			},
-			flags: ["--style", "sass"],
-		},
-		gatsby: {
-			unsupportedPms: ["bun", "pnpm"],
-			promptHandlers: [
-				{
-					matcher: /Would you like to use a template\?/,
-					input: ["n"],
-				},
-			],
-			testCommitMessage: true,
-			timeout: LONG_TIMEOUT,
-			verifyDeploy: {
-				route: "/",
-				expectedText: "Gatsby!",
-			},
-			verifyPreview: {
-				route: "/",
-				expectedText: "Gatsby!",
-			},
-		},
 		hono: {
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
@@ -128,24 +94,6 @@ export default function getFrameworkTestConfigExperimental() {
 				"yarn",
 			],
 		},
-		nuxt: {
-			testCommitMessage: true,
-			timeout: LONG_TIMEOUT,
-			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
-			unsupportedOSs: ["win32"],
-			verifyDeploy: {
-				route: "/",
-				expectedText: "Welcome to Nuxt!",
-			},
-			verifyPreview: {
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
-		},
 		solid: {
 			promptHandlers: [
 				{
@@ -200,20 +148,6 @@ export default function getFrameworkTestConfigExperimental() {
 			verifyPreview: {
 				route: "/test",
 				expectedText: "C3_TEST",
-			},
-		},
-		vue: {
-			argv: ["--ts"],
-			testCommitMessage: true,
-			unsupportedOSs: ["win32"],
-			verifyDeploy: {
-				route: "/",
-				expectedText: "Vite App",
-			},
-			verifyPreview: {
-				previewArgs: ["--host=127.0.0.1"],
-				route: "/",
-				expectedText: "Vite App",
 			},
 		},
 	};

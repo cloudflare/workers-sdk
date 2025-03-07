@@ -107,7 +107,8 @@ export default function getFrameworkTestConfig(pm: string) {
 			},
 			flags: ["--skipTailwind"],
 		},
-		angular: {
+		"angular:pages": {
+			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
@@ -122,7 +123,44 @@ export default function getFrameworkTestConfig(pm: string) {
 			},
 			flags: ["--style", "sass"],
 		},
-		gatsby: {
+		"angular:workers": {
+			argv: ["--platform", "workers"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			unsupportedPms: ["bun"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Congratulations! Your app is running.",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Congratulations! Your app is running.",
+			},
+			flags: ["--style", "sass"],
+		},
+		"gatsby:pages": {
+			argv: ["--platform", "pages"],
+			unsupportedPms: ["bun", "pnpm"],
+			promptHandlers: [
+				{
+					matcher: /Would you like to use a template\?/,
+					input: ["n"],
+				},
+			],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Gatsby!",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Gatsby!",
+			},
+		},
+		"gatsby:workers": {
+			argv: ["--platform", "workers"],
 			unsupportedPms: ["bun", "pnpm"],
 			promptHandlers: [
 				{
@@ -241,7 +279,8 @@ export default function getFrameworkTestConfig(pm: string) {
 				"@/*",
 			],
 		},
-		nuxt: {
+		"nuxt:pages": {
+			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
@@ -263,6 +302,25 @@ export default function getFrameworkTestConfig(pm: string) {
 				script: "build",
 				route: "/test",
 				expectedText: "C3_TEST",
+			},
+		},
+		"nuxt:workers": {
+			argv: ["--platform", "workers"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Welcome to Nuxt!",
+			},
+			verifyPreview: {
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			verifyBuildCfTypes: {
+				outputFile: "worker-configuration.d.ts",
+				envInterfaceName: "Env",
 			},
 		},
 		"react:pages": {
@@ -375,7 +433,8 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "C3_TEST",
 			},
 		},
-		vue: {
+		"vue:pages": {
+			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
@@ -387,6 +446,20 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Vite App",
 			},
 			flags: ["--ts"],
+		},
+		"vue:workers": {
+			argv: ["--platform", "workers", "--ts"],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Vite App",
+			},
+			verifyPreview: {
+				previewArgs: ["--host=127.0.0.1"],
+				route: "/",
+				expectedText: "Vite App",
+			},
 		},
 	};
 }
