@@ -2701,6 +2701,9 @@ importers:
       esbuild:
         specifier: 0.17.19
         version: 0.17.19
+      ignore:
+        specifier: ^5.2.0
+        version: 5.3.1
       rimraf:
         specifier: catalog:default
         version: 5.0.10
@@ -2958,9 +2961,6 @@ importers:
       https-proxy-agent:
         specifier: 7.0.2
         version: 7.0.2(supports-color@9.2.2)
-      ignore:
-        specifier: ^5.2.0
-        version: 5.3.1
       is-ci:
         specifier: ^3.0.1
         version: 3.0.1

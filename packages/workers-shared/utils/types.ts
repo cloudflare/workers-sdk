@@ -23,7 +23,9 @@ const MetadataRedirectEntry = z.object({
 });
 
 const MetadataStaticRedirects = z.record(MetadataStaticRedirectEntry);
+export type MetadataStaticRedirects = z.infer<typeof MetadataStaticRedirects>;
 const MetadataRedirects = z.record(MetadataRedirectEntry);
+export type MetadataRedirects = z.infer<typeof MetadataRedirects>;
 
 const MetadataHeaderEntry = z.object({
 	set: z.record(z.string()).optional(),
@@ -31,6 +33,7 @@ const MetadataHeaderEntry = z.object({
 });
 
 const MetadataHeaders = z.record(MetadataHeaderEntry);
+export type MetadataHeaders = z.infer<typeof MetadataHeaders>;
 
 export const RedirectsSchema = z
 	.object({

@@ -1,14 +1,16 @@
+import { mkdtempSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createAssetsIgnoreFunction } from "../assets";
-import { runInTempDir } from "./helpers/run-in-tmp";
+import { describe, expect, it } from "vitest";
+import { createAssetsIgnoreFunction } from "../helpers";
 
 describe("assets", () => {
-	runInTempDir();
+	const tmpDir = mkdtempSync(join(tmpdir(), "wrangler-tests"));
 
 	describe(".assetsignore", () => {
 		it("should ignore metafiles by default", async () => {
-			const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(".");
+			const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(tmpDir);
 
 			expect(assetsIgnoreFunction(".assetsignore")).toBeTruthy();
 			expect(assetsIgnoreFunction("_redirects")).toBeTruthy();
@@ -22,10 +24,10 @@ describe("assets", () => {
 
 		it("should allow users to force opt-in metafiles", async () => {
 			await writeFile(
-				"./.assetsignore",
+				join(tmpDir, "./.assetsignore"),
 				"!.assetsignore\n!_redirects\n!_headers"
 			);
-			const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(".");
+			const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(tmpDir);
 
 			expect(assetsIgnoreFunction(".assetsignore")).toBeFalsy();
 			expect(assetsIgnoreFunction("_redirects")).toBeFalsy();
@@ -34,10 +36,10 @@ describe("assets", () => {
 
 		it("should allow users to ignore files", async () => {
 			await writeFile(
-				"./.assetsignore",
+				join(tmpDir, "./.assetsignore"),
 				"logo.png\nchild/**/*.svg\n!child/nope.svg\n/*.js"
 			);
-			const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(".");
+			const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(tmpDir);
 
 			expect(assetsIgnoreFunction("abc")).toBeFalsy();
 			expect(assetsIgnoreFunction("logo.png")).toBeTruthy();

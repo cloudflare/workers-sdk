@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { parseRedirects } from "../..//metadata-generator/parseRedirects";
+import { parseRedirects } from "../configuration/parseRedirects";
 
 // Snapshot values
 const maxDynamicRedirectRules = 100;

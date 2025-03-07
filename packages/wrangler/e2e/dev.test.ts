@@ -1343,6 +1343,58 @@ describe("watch mode", () => {
 				expect(response.status).toBe(404);
 			});
 
+			it("supports adding new metafiles during dev session", async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
+								name = "${workerName}"
+								compatibility_date = "2023-01-01"
+
+								[assets]
+								directory = "./public"
+						`,
+					"public/index.html": dedent`
+									<h1>Hello Workers + Assets</h1>`,
+					"public/foo.html": dedent`
+									<h1>Foo</h1>`,
+					"public/bar.html": dedent`
+									<h1>Bar</h1>`,
+				});
+
+				const worker = helper.runLongLived(cmd);
+				const { url } = await worker.waitForReady();
+				let response = await fetch(`${url}/index.html`);
+
+				expect(response.headers.has("X-Custom")).toBeFalsy();
+				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
+
+				response = await fetch(`${url}/foo`, { redirect: "manual" });
+
+				expect(response.status).toBe(200);
+				expect(await response.text()).toBe("<h1>Foo</h1>");
+
+				await helper.seed({
+					"public/_headers": dedent`/\n  X-Header: Custom-Value`,
+					"public/_redirects": dedent`/foo /bar`,
+				});
+
+				await worker.waitForReload();
+
+				// re-calculating the asset manifest / reverse assets map might not be
+				// done at this point, so retry until they are available
+				response = await retry(
+					(r) => r.status !== 302,
+					async () => {
+						return await fetch(`${url}/foo`, { redirect: "manual" });
+					}
+				);
+				expect(response.status).toBe(302);
+				expect(response.headers.get("Location")).toBe("/bar");
+
+				response = await fetch(`${url}/`);
+				expect(response.headers.get("X-Header")).toBe("Custom-Value");
+			});
+
 			it(`supports modifying the assets directory in wrangler.toml during dev session`, async () => {
 				const helper = new WranglerE2ETestHelper();
 				await helper.seed({
