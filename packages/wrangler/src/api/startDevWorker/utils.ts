@@ -247,6 +247,12 @@ export function convertCfWorkerInitBindingstoBindings(
 				}
 				break;
 			}
+			case "secret_stores": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "secret_store", ...x };
+				}
+				break;
+			}
 			default: {
 				assertNever(type);
 			}
@@ -280,6 +286,7 @@ export async function convertBindingsToCfWorkerInitBindings(
 		d1_databases: undefined,
 		vectorize: undefined,
 		hyperdrive: undefined,
+		secret_stores: undefined,
 		services: undefined,
 		analytics_engine_datasets: undefined,
 		dispatch_namespaces: undefined,

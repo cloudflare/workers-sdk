@@ -3724,6 +3724,93 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		describe("[secret_stores]", () => {
+			it("should error if secret_stores is an object", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ secret_stores: {} },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"secret_stores\\" should be an array but got {}."
+		`);
+			});
+
+			it("should error if secret_stores is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ secret_stores: null },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"secret_stores\\" should be an array but got null."
+		`);
+			});
+
+			it("should accept valid bindings", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						secret_stores: [
+							{
+								binding: "VALID",
+								store_id: "store_id",
+								name: "secret_name",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if secret_stores.bindings are not valid", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						secret_stores: [
+							{},
+							{
+								binding: "VALID",
+								store_id: "store_id",
+								name: "secret_name",
+							},
+							{ binding: null, invalid: true, store_id: 123, name: null },
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in secret_stores[2] field: \\"invalid\\""
+				`);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"secret_stores[0]\\" bindings must have a string \\"binding\\" field but got {}.
+					  - \\"secret_stores[0]\\" bindings must have a string \\"store_id\\" field but got {}.
+					  - \\"secret_stores[0]\\" bindings must have a string \\"name\\" field but got {}.
+					  - \\"secret_stores[2]\\" bindings must have a string \\"binding\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"name\\":null}.
+					  - \\"secret_stores[2]\\" bindings must have a string \\"store_id\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"name\\":null}.
+					  - \\"secret_stores[2]\\" bindings must have a string \\"name\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"name\\":null}."
+				`);
+			});
+		});
+
 		describe("[unsafe.bindings]", () => {
 			it("should error if unsafe is an array", () => {
 				const { diagnostics } = normalizeAndValidateConfig(

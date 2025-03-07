@@ -126,6 +126,12 @@ export type WorkerMetadataBinding =
 	| { type: "mtls_certificate"; name: string; certificate_id: string }
 	| { type: "pipelines"; name: string; pipeline: string }
 	| {
+			type: "secret_store";
+			name: string;
+			store_id: string;
+			secret_name: string;
+	  }
+	| {
 			type: "logfwdr";
 			name: string;
 			destination: string;
@@ -359,6 +365,15 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			name: binding,
 			type: "hyperdrive",
 			id: id,
+		});
+	});
+
+	bindings.secret_stores?.forEach(({ binding, store_id, name }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "secret_store",
+			store_id,
+			secret_name: name,
 		});
 	});
 

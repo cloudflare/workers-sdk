@@ -147,6 +147,7 @@ export const typesCommand = createCommand({
 			secrets,
 			assets: config.assets,
 			workflows: config.workflows,
+			secret_stores: config.secret_stores,
 		};
 
 		await generateTypes(
@@ -310,6 +311,12 @@ async function generateTypes(
 	if (configToDTS.d1_databases) {
 		for (const d1 of configToDTS.d1_databases) {
 			envTypeStructure.push([constructTypeKey(d1.binding), "D1Database"]);
+		}
+	}
+
+	if (configToDTS.secret_stores) {
+		for (const secretStore of configToDTS.secret_stores) {
+			envTypeStructure.push([constructTypeKey(secretStore.binding), "?????"]);
 		}
 	}
 
