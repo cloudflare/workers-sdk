@@ -4,8 +4,9 @@ const config: TemplateConfig = {
 	configVersion: 1,
 	id: "hello-world-assets-only",
 	path: "templates/hello-world-assets-only",
-	displayName: "Static Assets only",
-	description: "Get started with a basic Worker that only serves static assets",
+	displayName: "Assets only",
+	description:
+		"For static sites (including SPAs) or when using your own backend",
 	platform: "workers",
 	copyFiles: {
 		path: "./templates",

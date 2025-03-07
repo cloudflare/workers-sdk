@@ -3,7 +3,7 @@ export default {
 	id: "hello-world-durable-object",
 	displayName: "Worker + Durable Objects",
 	description:
-		"Get started with a basic stateful app to build projects like real-time chats, collaborative apps, and multiplayer games",
+		"For multiplayer apps using WebSockets, or when you need synchronization",
 	platform: "workers",
 	copyFiles: {
 		variants: {

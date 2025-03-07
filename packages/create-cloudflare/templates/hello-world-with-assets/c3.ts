@@ -2,9 +2,8 @@ export default {
 	configVersion: 1,
 	id: "hello-world-with-assets",
 	path: "templates/hello-world-with-assets",
-	displayName: "Worker + Static Assets",
-	description:
-		"Get started with a basic Worker that also serves static assets, in the language of your choice",
+	displayName: "Worker + Assets",
+	description: "For static sites with an API or server-side rendering (SSR)",
 	platform: "workers",
 	copyFiles: {
 		variants: {

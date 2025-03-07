@@ -6,7 +6,8 @@ export default {
 	configVersion: 1,
 	id: "hello-world",
 	displayName: "Worker only",
-	description: "Get started with a basic Worker in the language of your choice",
+	description:
+		"For processing requests, transforming responses, or API endpoints",
 	platform: "workers",
 	async configure(ctx) {
 		if (ctx.args.lang === "python") {
