@@ -6,6 +6,7 @@ import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { normalizeOutput } from "./helpers/normalize";
+import { isLocalOnly } from "./helpers/skip-if-offline";
 
 function matchVersionId(stdout: string): string {
 	return stdout.match(/Version ID:\s+([a-f\d-]+)/)?.[1] as string;
@@ -21,7 +22,7 @@ const normalize = (str: string) =>
 		[CLOUDFLARE_ACCOUNT_ID]: "CLOUDFLARE_ACCOUNT_ID",
 	}).replaceAll(/^Author:(\s+).+@.+$/gm, "Author:$1person@example.com");
 
-describe("versions deploy", { timeout: TIMEOUT }, () => {
+describe.skipIf(isLocalOnly)("versions deploy", { timeout: TIMEOUT }, () => {
 	let versionId0: string;
 	let versionId1: string;
 	let versionId2: string;

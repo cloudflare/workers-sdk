@@ -3,6 +3,7 @@ import * as forge from "node-forge";
 import { describe, expect, it } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { normalizeOutput } from "./helpers/normalize";
+import { isLocalOnly } from "./helpers/skip-if-offline";
 
 // Generate X509 self signed root key pair and certificate
 function generateRootCertificate() {
@@ -111,7 +112,7 @@ function generateRootCaCert() {
 	return { certificate: pemCert, privateKey: pemPrivateKey };
 }
 
-describe("cert", () => {
+describe.skipIf(isLocalOnly)("cert", () => {
 	const normalize = (str: string) =>
 		normalizeOutput(str, {
 			[process.env.CLOUDFLARE_ACCOUNT_ID as string]: "CLOUDFLARE_ACCOUNT_ID",

@@ -3,9 +3,10 @@ import dedent from "ts-dedent";
 import { beforeEach, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { makeRoot, seed } from "./helpers/setup";
+import { isLocalOnly } from "./helpers/skip-if-offline";
 import { WRANGLER_IMPORT } from "./helpers/wrangler";
 
-describe("switching runtimes", () => {
+describe.skipIf(isLocalOnly)("switching runtimes", () => {
 	let root: string;
 	beforeEach(async () => {
 		root = await makeRoot();

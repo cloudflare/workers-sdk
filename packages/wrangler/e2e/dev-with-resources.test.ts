@@ -7,14 +7,17 @@ import { beforeEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
+import { isLocalOnly } from "./helpers/skip-if-offline";
 
 const port = await getPort();
 const inspectorPort = await getPort();
 
-const RUNTIMES = [
-	{ flags: "", runtime: "local" },
-	{ flags: "--remote", runtime: "remote" },
-] as const;
+const RUNTIMES = isLocalOnly
+	? [{ flags: "", runtime: "local" }]
+	: ([
+			{ flags: "", runtime: "local" },
+			{ flags: "--remote", runtime: "remote" },
+		] as const);
 
 // WebAssembly module containing single `func add(i32, i32): i32` export.
 // Generated using https://webassembly.github.io/wabt/demo/wat2wasm/.
@@ -519,7 +522,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		}
 	});
 
-	it("exposes Vectorize bindings", async () => {
+	it.skipIf(isLocalOnly)("exposes Vectorize bindings", async () => {
 		const name = await helper.vectorize(32, "euclidean");
 
 		await helper.seed({
@@ -723,10 +726,22 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		await expect(res.text()).resolves.toBe("env.WORKFLOW is available");
 	});
 
-	describe.sequential.each([
-		{ imagesMode: "remote", extraFlags: "" },
-		{ imagesMode: "local", extraFlags: "--experimental-images-local-mode" },
-	] as const)("Images Binding Mode: $imagesMode", async ({ extraFlags }) => {
+	describe.sequential.each(
+		isLocalOnly
+			? [
+					{
+						imagesMode: "local",
+						extraFlags: "--experimental-images-local-mode",
+					},
+				]
+			: ([
+					{ imagesMode: "remote", extraFlags: "" },
+					{
+						imagesMode: "local",
+						extraFlags: "--experimental-images-local-mode",
+					},
+				] as const)
+	)("Images Binding Mode: $imagesMode", async ({ extraFlags }) => {
 		it("exposes Images bindings", async () => {
 			await helper.seed({
 				"wrangler.toml": dedent`

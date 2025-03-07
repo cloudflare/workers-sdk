@@ -6,7 +6,86 @@ on:
   repository_dispatch:
 
 jobs:
-  e2e-test:
+  e2e-test-local:
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}
+      cancel-in-progress: true
+    timeout-minutes: 40
+    if: github.event_name == 'pull_request' && !contains(github.event.*.labels.*.name, 'e2e' )
+    name: "E2E Test (local mode only)"
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-13, windows-2022, ubuntu-22.04]
+        node: ["18"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+        with:
+          node-version: ${{ matrix.node }}
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: Run builds
+        run: pnpm run build
+        env:
+          NODE_ENV: "production"
+          CI_OS: ${{ runner.os }}
+
+      - name: Run Vite E2E tests
+        run: pnpm test:e2e -F @cloudflare/vite-plugin
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
+          CI_OS: ${{ matrix.os }}
+
+      - name: Run Wrangler E2E tests
+        run: pnpm run test:e2e:wrangler
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
+          HYPERDRIVE_DATABASE_URL: ${{ secrets.TEST_HYPERDRIVE_DATABASE_URL}}
+          WRANGLER: node --no-warnings ${{ github.workspace}}/packages/wrangler/bin/wrangler.js
+          WRANGLER_IMPORT: ${{ github.workspace}}/packages/wrangler/wrangler-dist/cli.js
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
+          CI_OS: ${{ matrix.os }}
+          WRANGLER_E2E_LOCAL_ONLY: true
+
+      - name: Upload debug logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-debug-logs-${{ matrix.os }}-${{ matrix.node }}
+          path: ${{ runner.temp }}/wrangler-debug-logs/
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-report-${{ matrix.os }}-${{ matrix.node }}
+          path: ${{ runner.temp }}/test-report/
+
+      - name: Upload turbo logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: turbo-runs-${{ matrix.os }}-${{ matrix.node }}
+          path: .turbo/runs
+
+  e2e-test-full:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}
       cancel-in-progress: true
