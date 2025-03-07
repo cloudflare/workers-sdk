@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { parseRedirects } from "../../metadata-generator/parseRedirects";
+import { parseRedirects } from "../configuration/parseRedirects";
 
 test("parseRedirects should handle a single rule", () => {
 	const input = `/a /b 301`;
