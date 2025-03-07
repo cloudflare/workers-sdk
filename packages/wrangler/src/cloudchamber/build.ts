@@ -69,9 +69,7 @@ export async function constructBuildCommand(options: {
 }
 
 // Function for building
-export async function dockerBuild(options: {
-	buildCmd: string;
-}): Promise<void> {
+export function dockerBuild(options: { buildCmd: string }): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const buildCmd = options.buildCmd.split(" ").slice(1);
 		const buildExec = options.buildCmd.split(" ").shift();
@@ -190,7 +188,7 @@ export async function buildCommand(
 			pathToDockerfile: args.PATH,
 			pathToDocker: args.pathToDocker,
 		})
-			.then(async (bc) => await dockerBuild({ buildCmd: bc }))
+			.then((bc) => dockerBuild({ buildCmd: bc }))
 			.then(async () => {
 				if (args.push) {
 					await dockerLoginManagedRegistry({
