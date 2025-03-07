@@ -12,6 +12,7 @@ import { PIPELINE_PLUGIN, PIPELINES_PLUGIN_NAME } from "./pipelines";
 import { QUEUES_PLUGIN, QUEUES_PLUGIN_NAME } from "./queues";
 import { R2_PLUGIN, R2_PLUGIN_NAME } from "./r2";
 import { RATELIMIT_PLUGIN, RATELIMIT_PLUGIN_NAME } from "./ratelimit";
+import { SECRET_STORE_PLUGIN, SECRET_STORE_PLUGIN_NAME } from "./secret-store";
 import { WORKFLOWS_PLUGIN, WORKFLOWS_PLUGIN_NAME } from "./workflows";
 
 export const PLUGINS = {
@@ -27,6 +28,7 @@ export const PLUGINS = {
 	[ASSETS_PLUGIN_NAME]: ASSETS_PLUGIN,
 	[WORKFLOWS_PLUGIN_NAME]: WORKFLOWS_PLUGIN,
 	[PIPELINES_PLUGIN_NAME]: PIPELINE_PLUGIN,
+	[SECRET_STORE_PLUGIN_NAME]: SECRET_STORE_PLUGIN,
 };
 export type Plugins = typeof PLUGINS;
 
@@ -76,7 +78,8 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof RATELIMIT_PLUGIN.options> &
 	z.input<typeof ASSETS_PLUGIN.options> &
 	z.input<typeof WORKFLOWS_PLUGIN.options> &
-	z.input<typeof PIPELINE_PLUGIN.options>;
+	z.input<typeof PIPELINE_PLUGIN.options> &
+	z.input<typeof SECRET_STORE_PLUGIN.options>;
 
 export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof CACHE_PLUGIN.sharedOptions> &
@@ -134,3 +137,4 @@ export * from "./assets";
 export * from "./assets/schema";
 export * from "./workflows";
 export * from "./pipelines";
+export * from "./secret-store";
