@@ -103,6 +103,7 @@ describe("normalizeAndValidateConfig()", () => {
 				producers: [],
 			},
 			r2_buckets: [],
+			secret_stores: [],
 			services: [],
 			analytics_engine_datasets: [],
 			route: undefined,
