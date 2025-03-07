@@ -118,6 +118,7 @@ export const syncAssets = async (
 	});
 
 	const queue = new PQueue({ concurrency: BULK_UPLOAD_CONCURRENCY });
+	const queuePromises: Array<Promise<void>> = [];
 	let attempts = 0;
 	const start = Date.now();
 	let completionJwt = "";
@@ -201,17 +202,19 @@ export const syncAssets = async (
 			}
 		};
 		// add to queue and run it if we haven't reached concurrency limit
-		void queue.add(() =>
-			doUpload().then((res) => {
-				completionJwt = res.jwt || completionJwt;
-			})
+		queuePromises.push(
+			queue.add(() =>
+				doUpload().then((res) => {
+					completionJwt = res.jwt || completionJwt;
+				})
+			)
 		);
 	}
 	queue.on("error", (error) => {
 		logger.error(error.message);
 		throw error;
 	});
-	await queue.onIdle();
+	await Promise.all(queuePromises);
 
 	// if queue finishes without receiving JWT from asset upload service (AUS)
 	// AUS only returns this in the final bucket upload response

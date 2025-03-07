@@ -1072,51 +1072,56 @@ async function publishRoutesFallback(
 	const deployedRoutes: string[] = [];
 
 	const queue = new PQueue({ concurrency: 10 });
+	const queuePromises: Array<Promise<void>> = [];
 	const zoneIdCache = new Map();
 
 	// Collect the routes (and their zones) that will be deployed.
 	const activeZones = new Map<string, string>();
 	const routesToDeploy = new Map<string, string>();
 	for (const route of routes) {
-		void queue.add(async () => {
-			const zone = await getZoneForRoute({ route, accountId }, zoneIdCache);
-			if (zone) {
-				activeZones.set(zone.id, zone.host);
-				routesToDeploy.set(
-					typeof route === "string" ? route : route.pattern,
-					zone.id
-				);
-			}
-		});
+		queuePromises.push(
+			queue.add(async () => {
+				const zone = await getZoneForRoute({ route, accountId }, zoneIdCache);
+				if (zone) {
+					activeZones.set(zone.id, zone.host);
+					routesToDeploy.set(
+						typeof route === "string" ? route : route.pattern,
+						zone.id
+					);
+				}
+			})
+		);
 	}
-	await queue.onIdle();
+	await Promise.all(queuePromises.splice(0, queuePromises.length));
 
 	// Collect the routes that are already deployed.
 	const allRoutes = new Map<string, string>();
 	const alreadyDeployedRoutes = new Set<string>();
 	for (const [zone, host] of activeZones) {
-		void queue.add(async () => {
-			try {
-				for (const { pattern, script } of await fetchListResult<{
-					pattern: string;
-					script: string;
-				}>(`/zones/${zone}/workers/routes`)) {
-					allRoutes.set(pattern, script);
-					if (script === scriptName) {
-						alreadyDeployedRoutes.add(pattern);
+		queuePromises.push(
+			queue.add(async () => {
+				try {
+					for (const { pattern, script } of await fetchListResult<{
+						pattern: string;
+						script: string;
+					}>(`/zones/${zone}/workers/routes`)) {
+						allRoutes.set(pattern, script);
+						if (script === scriptName) {
+							alreadyDeployedRoutes.add(pattern);
+						}
 					}
+				} catch (e) {
+					if (isAuthenticationError(e)) {
+						e.notes.push({
+							text: `This could be because the API token being used does not have permission to access the zone "${host}" (${zone}).`,
+						});
+					}
+					throw e;
 				}
-			} catch (e) {
-				if (isAuthenticationError(e)) {
-					e.notes.push({
-						text: `This could be because the API token being used does not have permission to access the zone "${host}" (${zone}).`,
-					});
-				}
-				throw e;
-			}
-		});
-		await queue.onIdle();
+			})
+		);
 	}
+	await Promise.all(queuePromises);
 
 	// Deploy each route that is not already deployed.
 	for (const [routePattern, zoneId] of routesToDeploy.entries()) {

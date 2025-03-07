@@ -14,6 +14,7 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
+import { retryOnAPIFailure } from "../utils/retry";
 import { getZoneForRoute } from "../zones";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
@@ -162,6 +163,7 @@ export default async function triggersDeploy(
 		 * requests we're making to the Zones API.
 		 */
 		const queue = new PQueue({ concurrency: 10 });
+		const queuePromises: Array<Promise<void>> = [];
 		const zoneRoutesCache = new Map<
 			string,
 			Promise<Array<{ pattern: string; script: string }>>
@@ -169,35 +171,40 @@ export default async function triggersDeploy(
 
 		const zoneIdCache = new Map();
 		for (const route of routes) {
-			void queue.add(async () => {
-				const zone = await getZoneForRoute({ route, accountId }, zoneIdCache);
-				if (!zone) {
-					return;
-				}
-
-				const routePattern = typeof route === "string" ? route : route.pattern;
-
-				let routesInZone = zoneRoutesCache.get(zone.id);
-				if (!routesInZone) {
-					routesInZone = fetchListResult<{
-						pattern: string;
-						script: string;
-					}>(`/zones/${zone.id}/workers/routes`);
-					zoneRoutesCache.set(zone.id, routesInZone);
-				}
-
-				(await routesInZone).forEach(({ script, pattern }) => {
-					if (pattern === routePattern && script !== scriptName) {
-						if (!(script in routesWithOtherBindings)) {
-							routesWithOtherBindings[script] = [];
-						}
-
-						routesWithOtherBindings[script].push(pattern);
+			queuePromises.push(
+				queue.add(async () => {
+					const zone = await getZoneForRoute({ route, accountId }, zoneIdCache);
+					if (!zone) {
+						return;
 					}
-				});
-			});
+
+					const routePattern =
+						typeof route === "string" ? route : route.pattern;
+
+					let routesInZone = zoneRoutesCache.get(zone.id);
+					if (!routesInZone) {
+						routesInZone = retryOnAPIFailure(() =>
+							fetchListResult<{
+								pattern: string;
+								script: string;
+							}>(`/zones/${zone.id}/workers/routes`)
+						);
+						zoneRoutesCache.set(zone.id, routesInZone);
+					}
+
+					(await routesInZone).forEach(({ script, pattern }) => {
+						if (pattern === routePattern && script !== scriptName) {
+							if (!(script in routesWithOtherBindings)) {
+								routesWithOtherBindings[script] = [];
+							}
+
+							routesWithOtherBindings[script].push(pattern);
+						}
+					});
+				})
+			);
 		}
-		await queue.onIdle();
+		await Promise.all(queuePromises);
 
 		if (Object.keys(routesWithOtherBindings).length > 0) {
 			let errorMessage =
