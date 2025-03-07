@@ -82,7 +82,6 @@ type Props = {
 	isWorkersSite: boolean;
 	minify: boolean | undefined;
 	uploadSourceMaps: boolean | undefined;
-	nodeCompat: boolean | undefined;
 	outDir: string | undefined;
 	outFile: string | undefined;
 	dryRun: boolean | undefined;
@@ -154,19 +153,6 @@ export const versionsUploadCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
-		format: {
-			choices: ["modules", "service-worker"] as const,
-			describe: "Choose an entry type",
-			deprecated: true,
-			hidden: true,
-		},
-		"legacy-assets": {
-			describe: "Static assets to be served",
-			type: "string",
-			requiresArg: true,
-			deprecated: true,
-			hidden: true,
-		},
 		site: {
 			describe: "Root folder of static assets for Workers Sites",
 			type: "string",
@@ -237,6 +223,8 @@ export const versionsUploadCommand = createCommand({
 		"node-compat": {
 			describe: "Enable Node.js compatibility",
 			type: "boolean",
+			hidden: true,
+			deprecated: true,
 		},
 		"dry-run": {
 			describe: "Don't actually deploy",
@@ -281,15 +269,15 @@ export const versionsUploadCommand = createCommand({
 			}
 		);
 
+		if (args.nodeCompat) {
+			throw new UserError(
+				`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`
+			);
+		}
+
 		if (args.site || config.site) {
 			throw new UserError(
 				"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead.",
-				{ telemetryMessage: true }
-			);
-		}
-		if (args.legacyAssets || config.legacy_assets) {
-			throw new UserError(
-				"Legacy assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead.",
 				{ telemetryMessage: true }
 			);
 		}
@@ -300,10 +288,6 @@ export const versionsUploadCommand = createCommand({
 
 		validateAssetsArgsAndConfig(
 			{
-				// given that legacyAssets and sites are not supported by
-				// `wrangler versions upload` pass them as undefined to
-				// skip the corresponding mutual exclusivity validation
-				legacyAssets: undefined,
 				site: undefined,
 				assets: args.assets,
 				script: args.script,
@@ -348,9 +332,6 @@ export const versionsUploadCommand = createCommand({
 			await verifyWorkerMatchesCITag(accountId, name, config.configPath);
 		}
 
-		if (!args.dryRun) {
-			await standardPricingWarning(config);
-		}
 		const { versionId, workerTag, versionPreviewUrl } = await versionsUpload({
 			config,
 			accountId,
@@ -372,7 +353,6 @@ export const versionsUploadCommand = createCommand({
 			assetsOptions,
 			minify: args.minify,
 			uploadSourceMaps: args.uploadSourceMaps,
-			nodeCompat: args.nodeCompat,
 			isWorkersSite: Boolean(args.site || config.site),
 			outDir: args.outdir,
 			dryRun: args.dryRun,
@@ -397,14 +377,6 @@ export const versionsUploadCommand = createCommand({
 		});
 	},
 });
-
-async function standardPricingWarning(config: Config) {
-	if (config.usage_model !== undefined) {
-		logger.warn(
-			`The \`usage_model\` defined in your ${configFileName(config.configPath)} file is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model`
-		);
-	}
-}
 
 export default async function versionsUpload(props: Props): Promise<{
 	versionId: string | null;
@@ -487,7 +459,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		props.compatibilityDate ?? config.compatibility_date,
 		props.compatibilityFlags ?? config.compatibility_flags,
 		{
-			nodeCompat: props.nodeCompat ?? config.node_compat,
 			noBundle: props.noBundle ?? config.no_bundle,
 		}
 	);
@@ -593,7 +564,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						bundle: true,
 						additionalModules: [],
 						moduleCollector,
-						serveLegacyAssetsFromWorker: false,
 						doBindings: config.durable_objects.bindings,
 						workflowBindings: config.workflows,
 						jsxFactory,
@@ -605,10 +575,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						define: { ...config.define, ...props.defines },
 						alias: { ...config.alias, ...props.alias },
 						checkFetch: false,
-						legacyAssets: config.legacy_assets,
 						mockAnalyticsEngineDatasets: [],
-						// enable the cache when publishing
-						bypassAssetCache: false,
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "deploy",

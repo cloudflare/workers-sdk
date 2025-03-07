@@ -41,7 +41,7 @@ import {
 	putConsumerById,
 	putQueue,
 } from "../queues/client";
-import { syncLegacyAssets } from "../sites";
+import { syncWorkersSite } from "../sites";
 import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
@@ -99,7 +99,6 @@ type Props = {
 	tsconfig: string | undefined;
 	isWorkersSite: boolean;
 	minify: boolean | undefined;
-	nodeCompat: boolean | undefined;
 	outDir: string | undefined;
 	outFile: string | undefined;
 	dryRun: boolean | undefined;
@@ -426,7 +425,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		compatibilityDate,
 		compatibilityFlags,
 		{
-			nodeCompat: props.nodeCompat ?? config.node_compat,
 			noBundle: props.noBundle ?? config.no_bundle,
 		}
 	);
@@ -554,8 +552,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						bundle: true,
 						additionalModules: [],
 						moduleCollector,
-						serveLegacyAssetsFromWorker:
-							!props.isWorkersSite && Boolean(props.legacyAssetPaths),
 						doBindings: config.durable_objects.bindings,
 						workflowBindings: config.workflows ?? [],
 						jsxFactory,
@@ -567,11 +563,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						define: { ...config.define, ...props.defines },
 						checkFetch: false,
 						alias: config.alias,
-						legacyAssets: config.legacy_assets,
 						// We do not mock AE datasets when deploying
 						mockAnalyticsEngineDatasets: [],
-						// enable the cache when publishing
-						bypassAssetCache: false,
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "deploy",
@@ -634,7 +627,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					)
 				: undefined;
 
-		const legacyAssets = await syncLegacyAssets(
+		const workersSitesAssets = await syncWorkersSite(
 			accountId,
 			// When we're using the newer service environments, we wouldn't
 			// have added the env name on to the script name. However, we must
@@ -650,25 +643,25 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const bindings = getBindings({
 			...config,
 			kv_namespaces: config.kv_namespaces.concat(
-				legacyAssets.namespace
-					? { binding: "__STATIC_CONTENT", id: legacyAssets.namespace }
+				workersSitesAssets.namespace
+					? { binding: "__STATIC_CONTENT", id: workersSitesAssets.namespace }
 					: []
 			),
 			vars: { ...config.vars, ...props.vars },
 			text_blobs: {
 				...config.text_blobs,
-				...(legacyAssets.manifest &&
+				...(workersSitesAssets.manifest &&
 					format === "service-worker" && {
 						__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
 					}),
 			},
 		});
 
-		if (legacyAssets.manifest) {
+		if (workersSitesAssets.manifest) {
 			modules.push({
 				name: "__STATIC_CONTENT_MANIFEST",
 				filePath: undefined,
-				content: JSON.stringify(legacyAssets.manifest),
+				content: JSON.stringify(workersSitesAssets.manifest),
 				type: "text",
 			});
 		}

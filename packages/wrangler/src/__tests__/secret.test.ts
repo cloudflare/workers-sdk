@@ -1208,28 +1208,4 @@ describe("wrangler secret", () => {
 			`);
 		});
 	});
-
-	describe("secret:bulk [DEPRECATED]", () => {
-		test("is still registered and usable", async () => {
-			const result = runWrangler("secret:bulk --help");
-
-			await expect(result).resolves.toBeUndefined();
-			expect(std.out).toMatchInlineSnapshot(`
-				"wrangler secret:bulk [json]
-
-				POSITIONALS
-				  json  The file of key-value pairs to upload, as JSON in form {\\"key\\": value, ...} or .dev.vars file in the form KEY=VALUE  [string]
-
-				GLOBAL FLAGS
-				  -c, --config   Path to Wrangler configuration file  [string]
-				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				  -h, --help     Show help  [boolean]
-				  -v, --version  Show version number  [boolean]
-
-				OPTIONS
-				      --name  Name of the Worker  [string]"
-			`);
-		});
-	});
 });

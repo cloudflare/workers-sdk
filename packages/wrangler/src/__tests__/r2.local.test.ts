@@ -17,15 +17,21 @@ describe("r2", () => {
 			it("should put R2 object from local bucket", async () => {
 				await expect(() =>
 					runWrangler(
-						`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
+						`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png `
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: The specified key does not exist.]`
 				);
 
+				expect(std.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBy default, \`wrangler r2\` commands access a local simulator of your R2 bucket, the same as that used by \`wrangler dev\`. To access your remote R2 bucket, re-run the command with the --remote flag[0m
+
+					"
+				`);
+
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
-					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
+					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png `
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
@@ -35,7 +41,7 @@ describe("r2", () => {
 		`);
 
 				await runWrangler(
-					`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
+					`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png `
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
@@ -50,11 +56,16 @@ describe("r2", () => {
 			it("should delete R2 object from local bucket", async () => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
-					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
+					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png `
 				);
+				expect(std.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBy default, \`wrangler r2\` commands access a local simulator of your R2 bucket, the same as that used by \`wrangler dev\`. To access your remote R2 bucket, re-run the command with the --remote flag[0m
+
+					"
+				`);
 
 				await runWrangler(
-					`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
+					`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png `
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
@@ -64,7 +75,7 @@ describe("r2", () => {
 		`);
 
 				await runWrangler(
-					`r2 object delete bucketName-object-test/wormhole-img.png --local`
+					`r2 object delete bucketName-object-test/wormhole-img.png `
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
@@ -77,7 +88,7 @@ describe("r2", () => {
 
 				await expect(() =>
 					runWrangler(
-						`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png --local`
+						`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png `
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: The specified key does not exist.]`
@@ -87,23 +98,23 @@ describe("r2", () => {
 			it("should follow persist-to for object bucket", async () => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
-					`r2 object put bucketName-object-test/file-one --file ./wormhole-img.png --local`
+					`r2 object put bucketName-object-test/file-one --file ./wormhole-img.png `
 				);
 
 				await runWrangler(
-					`r2 object put bucketName-object-test/file-two --file ./wormhole-img.png --local --persist-to ./different-dir`
+					`r2 object put bucketName-object-test/file-two --file ./wormhole-img.png  --persist-to ./different-dir`
 				);
 
 				await expect(() =>
 					runWrangler(
-						`r2 object get bucketName-object-test/file-one --file ./wormhole-img.png --local --persist-to ./different-dir`
+						`r2 object get bucketName-object-test/file-one --file ./wormhole-img.png  --persist-to ./different-dir`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: The specified key does not exist.]`
 				);
 
 				await runWrangler(
-					`r2 object get bucketName-object-test/file-two --file ./wormhole-img.png --local --persist-to ./different-dir`
+					`r2 object get bucketName-object-test/file-two --file ./wormhole-img.png  --persist-to ./different-dir`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
 			"Creating object \\"file-one\\" in bucket \\"bucketName-object-test\\".
