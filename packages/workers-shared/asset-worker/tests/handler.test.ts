@@ -437,6 +437,492 @@ describe("[Asset Worker] `handleRequest`", () => {
 			expect(response.headers.get("X-Custom-Foo-Header")).toBe(
 				"Custom-Foo-Value"
 			);
+
+			// Custom headers are applied even to custom redirect responses
+			response = await handleRequest(
+				new Request("https://example.com/foo"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				{
+					...configuration,
+					redirects: {
+						version: 1,
+						staticRules: {},
+						rules: { "/foo": { status: 301, to: "/bar" } },
+					},
+				},
+				() => null,
+				() => {
+					throw new Error("bang");
+				}
+			);
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe("/bar");
+			expect(response.headers.get("X-Custom-Foo-Header")).toBe(
+				"Custom-Foo-Value"
+			);
+		});
+	});
+
+	describe("_redirects", () => {
+		it("evaluates custom redirects", async () => {
+			const configuration: AssetConfig = applyConfigurationDefaults({
+				html_handling: "none",
+				not_found_handling: "none",
+				redirects: {
+					version: 1,
+					staticRules: {
+						"/foo": {
+							status: 301,
+							to: "/bar",
+							lineNumber: 1,
+						},
+						"/proxy": {
+							status: 200,
+							to: "/other",
+							lineNumber: 2,
+						},
+						"/proxy-explicit": {
+							status: 200,
+							to: "/other.html",
+							lineNumber: 3,
+						},
+						"/competeForwards": {
+							status: 302,
+							to: "/hostless",
+							lineNumber: 4,
+						},
+						"https://example.com/competeForwards": {
+							status: 302,
+							to: "/withhost",
+							lineNumber: 5,
+						},
+						"https://example.com/competeBackwards": {
+							status: 302,
+							to: "/withhost",
+							lineNumber: 6,
+						},
+						"/competeBackwards": {
+							status: 302,
+							to: "/hostless",
+							lineNumber: 7,
+						},
+						"/wonkyObjectOrder": {
+							status: 302,
+							to: "/hostless",
+							lineNumber: 9,
+						},
+						"https://example.com/wonkyObjectOrder": {
+							status: 302,
+							to: "/withhost",
+							lineNumber: 8,
+						},
+					},
+					rules: {
+						"/dynamic/:seg": {
+							status: 302,
+							to: "/:seg/new-dynamic/?with#params",
+						},
+						"/dynamic/:seg1/:seg2/:seg3": {
+							status: 302,
+							to: "https://fakehost/:seg3/:seg1/:seg2/new-dynamic/?with#params",
+						},
+						"/splat/*": {
+							status: 302,
+							to: "/:splat/new-splat",
+						},
+						"/splat/foo/*": {
+							status: 302,
+							to: "/will-never-fire",
+						},
+						"/but/this/will/*": {
+							status: 302,
+							to: "/too",
+						},
+						"/but/this/*": {
+							status: 302,
+							to: "/will",
+						},
+						"/partialSplat*": {
+							status: 302,
+							to: "/new-partialSplat:splat",
+						},
+						"/partialPlaceholder:placeholder": {
+							status: 302,
+							to: "/new-partialPlaceholder:placeholder",
+						},
+					},
+				},
+			});
+			const eTag = "some-etag";
+			const exists = vi.fn().mockReturnValue(eTag);
+			const getByETag = vi.fn().mockReturnValue({
+				readableStream: new ReadableStream(),
+				contentType: "text/html",
+			});
+
+			// Static redirect in front of an asset
+			let response = await handleRequest(
+				new Request("https://example.com/foo"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe("/bar");
+
+			// Static redirect with no underlying asset
+			response = await handleRequest(
+				new Request("https://example.com/foo"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				() => null,
+				() => {
+					throw new Error("bang");
+				}
+			);
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe("/bar");
+
+			// Proxy to another non-HTML asset
+			response = await handleRequest(
+				new Request("https://example.com/proxy"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				(pathname: string) => {
+					if (pathname === "/other") {
+						return "other-etag";
+					}
+
+					return null;
+				},
+				(requestedETag: string) => {
+					if (requestedETag === "other-etag") {
+						return {
+							readableStream: new ReadableStream({
+								start(controller) {
+									controller.enqueue(
+										new TextEncoder().encode("hello from other asset!")
+									);
+									controller.close();
+								},
+							}),
+							contentType: "application/octet-stream",
+						};
+					}
+					throw new Error("bang");
+				}
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toBe("hello from other asset!");
+
+			// Proxy to another nearby HTML asset implicitly
+			response = await handleRequest(
+				new Request("https://example.com/proxy"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				{ ...configuration, html_handling: "auto-trailing-slash" },
+				(pathname: string) => {
+					if (pathname === "/other.html") {
+						return "other-etag";
+					}
+
+					return null;
+				},
+				(requestedETag: string) => {
+					if (requestedETag === "other-etag") {
+						return {
+							readableStream: new ReadableStream({
+								start(controller) {
+									controller.enqueue(
+										new TextEncoder().encode("hello from other asset!")
+									);
+									controller.close();
+								},
+							}),
+							contentType: "text/html",
+						};
+					}
+					throw new Error("bang");
+				}
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toBe("hello from other asset!");
+
+			// Proxy to another HTML asset explicitly
+			response = await handleRequest(
+				new Request("https://example.com/proxy-explicit"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				(pathname: string) => {
+					if (pathname === "/other.html") {
+						return "other-etag";
+					}
+
+					return null;
+				},
+				(requestedETag: string) => {
+					if (requestedETag === "other-etag") {
+						return {
+							readableStream: new ReadableStream({
+								start(controller) {
+									controller.enqueue(
+										new TextEncoder().encode("hello from other asset!")
+									);
+									controller.close();
+								},
+							}),
+							contentType: "text/html",
+						};
+					}
+					throw new Error("bang");
+				}
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toBe("hello from other asset!");
+
+			// Proxy a non-existent asset with not_found_handling
+			response = await handleRequest(
+				new Request("https://example.com/proxy"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				{ ...configuration, not_found_handling: "404-page" },
+				(pathname: string) => {
+					if (pathname === "/404.html") {
+						return "404-etag";
+					}
+
+					return null;
+				},
+				(requestedETag: string) => {
+					if (requestedETag === "404-etag") {
+						return {
+							readableStream: new ReadableStream({
+								start(controller) {
+									controller.enqueue(
+										new TextEncoder().encode("hello from 404.html!")
+									);
+									controller.close();
+								},
+							}),
+							contentType: "text/html",
+						};
+					}
+					throw new Error("bang");
+				}
+			);
+
+			expect(response.status).toBe(404);
+			expect(await response.text()).toBe("hello from 404.html!");
+
+			// Proxy a non-existent asset without not_found_handling
+			response = await handleRequest(
+				new Request("https://example.com/proxy"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				{ ...configuration, not_found_handling: "none" },
+				() => {
+					return null;
+				},
+				() => {
+					throw new Error("bang");
+				}
+			);
+
+			expect(response.status).toBe(404);
+			expect(await response.text()).toBe("");
+
+			// Static redirects evaluate in line order
+			response = await handleRequest(
+				new Request("https://example.com/competeForwards"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.status).toBe(302);
+			expect(response.headers.get("Location")).toBe("/hostless");
+
+			response = await handleRequest(
+				new Request("https://example.com/competeBackwards"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.status).toBe(302);
+			expect(response.headers.get("Location")).toBe("/withhost");
+
+			response = await handleRequest(
+				new Request("https://example.com/wonkyObjectOrder"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.status).toBe(302);
+			expect(response.headers.get("Location")).toBe("/withhost");
+
+			// Dynamic placeholders work
+			response = await handleRequest(
+				new Request("https://example.com/dynamic/foo"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.status).toBe(302);
+			expect(response.headers.get("Location")).toBe(
+				"/foo/new-dynamic/?with#params"
+			);
+
+			response = await handleRequest(
+				new Request("https://example.com/dynamic/bar/baz/qux"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.status).toBe(302);
+			expect(response.headers.get("Location")).toBe(
+				"https://fakehost/qux/bar/baz/new-dynamic/?with#params"
+			);
+
+			response = await handleRequest(
+				new Request(
+					"https://example.com/dynamic/bar/baz/qux/too/many/segments"
+				),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.status).toBe(200);
+
+			// Dynamic splats work
+			response = await handleRequest(
+				new Request("https://example.com/splat/foo/bar/baz"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.status).toBe(302);
+			expect(response.headers.get("Location")).toBe("/foo/bar/baz/new-splat");
+
+			response = await handleRequest(
+				new Request("https://example.com/splat/"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.status).toBe(302);
+			expect(response.headers.get("Location")).toBe("https://new-splat/"); // pretty wonky!
+
+			// Dynamic rules are first-come-first-serve
+			response = await handleRequest(
+				new Request("https://example.com/splat/foo/nope"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.status).toBe(302);
+			expect(response.headers.get("Location")).toBe("/foo/nope/new-splat");
+
+			response = await handleRequest(
+				new Request("https://example.com/but/this/match"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.status).toBe(302);
+			expect(response.headers.get("Location")).toBe("/will");
+
+			response = await handleRequest(
+				new Request("https://example.com/but/this/will/match"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.status).toBe(302);
+			expect(response.headers.get("Location")).toBe("/too");
+
+			// Partial splats and placeholders work
+			response = await handleRequest(
+				new Request("https://example.com/partialSplatfoo/bar/baz"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.status).toBe(302);
+			expect(response.headers.get("Location")).toBe(
+				"/new-partialSplatfoo/bar/baz"
+			);
+
+			response = await handleRequest(
+				new Request("https://example.com/partialPlaceholderfoo"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.status).toBe(302);
+			expect(response.headers.get("Location")).toBe(
+				"/new-partialPlaceholderfoo"
+			);
+
+			response = await handleRequest(
+				new Request("https://example.com/partialPlaceholderfoo/"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists,
+				getByETag
+			);
+
+			expect(response.status).toBe(200);
 		});
 	});
 });
@@ -565,5 +1051,103 @@ describe("[Asset Worker] `canFetch`", () => {
 				exists
 			)
 		).toBeFalsy();
+	});
+
+	it('should return "true" for custom redirects without underlying assets', async () => {
+		const exists = (pathname: string) => {
+			if (["/404.html", "/does-exist"].includes(pathname)) {
+				return "some-etag";
+			}
+
+			return null;
+		};
+
+		const configuration = applyConfigurationDefaults({
+			redirects: {
+				version: 1,
+				staticRules: {
+					"/redirect": {
+						status: 301,
+						to: "/something",
+						lineNumber: 1,
+					},
+					"/proxy-valid": {
+						status: 200,
+						to: "/does-exist",
+						lineNumber: 2,
+					},
+					"/proxy-invalid": {
+						status: 200,
+						to: "/no-match",
+						lineNumber: 3,
+					},
+				},
+				rules: {},
+			},
+		});
+
+		expect(
+			await canFetch(
+				new Request("https://example.com/does-exist"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists
+			)
+		).toBeTruthy();
+
+		expect(
+			await canFetch(
+				new Request("https://example.com/no-match"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists
+			)
+		).toBeFalsy();
+
+		expect(
+			await canFetch(
+				new Request("https://example.com/redirect"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists
+			)
+		).toBeTruthy();
+
+		expect(
+			await canFetch(
+				new Request("https://example.com/proxy-valid"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				configuration,
+				exists
+			)
+		).toBeTruthy();
+
+		expect(
+			await canFetch(
+				new Request("https://example.com/proxy-invalid"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				{ ...configuration, not_found_handling: "none" },
+				() => {
+					return null;
+				}
+			)
+		).toBeTruthy();
+
+		expect(
+			await canFetch(
+				new Request("https://example.com/proxy-invalid"),
+				// @ts-expect-error Empty config default to using mocked jaeger
+				mockEnv,
+				{ ...configuration, not_found_handling: "404-page" },
+				() => {
+					return null;
+				}
+			)
+		).toBeTruthy();
 	});
 });

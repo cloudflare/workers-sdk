@@ -1,17 +1,23 @@
 import {
+	FoundResponse,
 	InternalServerErrorResponse,
 	MethodNotAllowedResponse,
+	MovedPermanentlyResponse,
 	NoIntentResponse,
 	NotFoundResponse,
 	NotModifiedResponse,
 	OkResponse,
+	PermanentRedirectResponse,
+	SeeOtherResponse,
 	TemporaryRedirectResponse,
 } from "../../utils/responses";
 import { attachCustomHeaders, getAssetHeaders } from "./utils/headers";
+import { generateRulesMatcher, replacer } from "./utils/rules-engine";
 import type { AssetConfig } from "../../utils/types";
 import type EntrypointType from "./index";
 import type { Env } from "./index";
 
+const REDIRECTS_VERSION = 1;
 export const HEADERS_VERSION = 2;
 
 type AssetIntent = {
@@ -25,21 +31,95 @@ const getResponseOrAssetIntent = async (
 	configuration: Required<AssetConfig>,
 	exists: typeof EntrypointType.prototype.unstable_exists
 ) => {
-	const { pathname, search } = new URL(request.url);
+	const url = new URL(request.url);
+	const { host, search } = url;
+	let { pathname } = url;
+
+	const staticRedirectsMatcher = () => {
+		const withHostMatch =
+			configuration.redirects.staticRules[`https://${host}${pathname}`];
+		const withoutHostMatch = configuration.redirects.staticRules[pathname];
+
+		if (withHostMatch && withoutHostMatch) {
+			if (withHostMatch.lineNumber < withoutHostMatch.lineNumber) {
+				return withHostMatch;
+			} else {
+				return withoutHostMatch;
+			}
+		}
+
+		return withHostMatch || withoutHostMatch;
+	};
+
+	const generateRedirectsMatcher = () =>
+		generateRulesMatcher(
+			configuration.redirects.version === REDIRECTS_VERSION
+				? configuration.redirects.rules
+				: {},
+			({ status, to }, replacements) => ({
+				status,
+				to: replacer(to, replacements),
+			})
+		);
+
+	const redirectMatch =
+		staticRedirectsMatcher() || generateRedirectsMatcher()({ request })[0];
+
+	let proxied = false;
+
+	if (redirectMatch) {
+		if (redirectMatch.status === 200) {
+			// A 200 redirect means that we are proxying to a different asset, for example,
+			// a request with url /users/12345 could be pointed to /users/id.html. In order to
+			// do this, we overwrite the pathname, and instead match for assets with that url,
+			// and importantly, do not use the regular redirect handler - as the url visible to
+			// the user does not change
+			pathname = new URL(redirectMatch.to, request.url).pathname;
+			proxied = true;
+		} else {
+			const { status, to } = redirectMatch;
+			const destination = new URL(to, request.url);
+			const location =
+				destination.origin === new URL(request.url).origin
+					? `${destination.pathname}${destination.search || search}${
+							destination.hash
+						}`
+					: `${destination.href.slice(0, destination.href.length - (destination.search.length + destination.hash.length))}${
+							destination.search ? destination.search : search
+						}${destination.hash}`;
+
+			switch (status) {
+				case MovedPermanentlyResponse.status:
+					return new MovedPermanentlyResponse(location);
+				case SeeOtherResponse.status:
+					return new SeeOtherResponse(location);
+				case TemporaryRedirectResponse.status:
+					return new TemporaryRedirectResponse(location);
+				case PermanentRedirectResponse.status:
+					return new PermanentRedirectResponse(location);
+				case FoundResponse.status:
+				default:
+					return new FoundResponse(location);
+			}
+		}
+	}
 
 	const decodedPathname = decodePath(pathname);
 
 	const intent = await getIntent(decodedPathname, configuration, exists);
 
 	if (!intent) {
+		const response = proxied ? new NotFoundResponse() : new NoIntentResponse();
+
 		return env.JAEGER.enterSpan("no_intent", (span) => {
 			span.setTags({
 				decodedPathname,
 				configuration: JSON.stringify(configuration),
-				status: NoIntentResponse.status,
+				proxied,
+				status: response.status,
 			});
 
-			return new NoIntentResponse();
+			return response;
 		});
 	}
 
