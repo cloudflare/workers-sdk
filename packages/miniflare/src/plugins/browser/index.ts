@@ -8,7 +8,7 @@ import {
 } from "../shared";
 import { BROWSER_PLUGIN_NAME } from "./constants";
 
-const BrowserOptionsSchema = z.object({
+export const BrowserOptionsSchema = z.object({
 	browser: z.string().optional(),
 });
 

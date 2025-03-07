@@ -137,3 +137,4 @@ export * from "./assets";
 export * from "./assets/schema";
 export * from "./workflows";
 export * from "./pipelines";
+export * from "./browser";
