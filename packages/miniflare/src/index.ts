@@ -1553,6 +1553,8 @@ export class Miniflare {
 		if (disposing) return new URL("http://[100::]/");
 		// Make sure `dispose()` wasn't called in the time we've been waiting
 		this.#checkDisposed();
+		// if there is an inspector proxy let's wait for it to be ready
+		await this.#maybeInspectorProxy?.ready;
 		// `#runtimeEntryURL` is assigned in `#assembleAndUpdateConfig()`, which is
 		// called by `#init()`, and `#initPromise` doesn't resolve until `#init()`
 		// returns.

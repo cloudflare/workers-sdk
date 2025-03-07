@@ -7,6 +7,8 @@ import { Log } from "../../../shared";
 import { InspectorProxyRelay } from "./inspector-proxy-relay";
 
 export class InspectorProxy {
+	#runtimeConnectionEstablished: DeferredPromise<void>;
+
 	#workerRelays: InspectorProxyRelay[] = [];
 
 	#server: Server;
@@ -17,6 +19,7 @@ export class InspectorProxy {
 		private workerNamesToProxy: Set<string>
 	) {
 		this.#server = this.#initializeServer();
+		this.#runtimeConnectionEstablished = new DeferredPromise();
 	}
 
 	#initializeServer() {
@@ -224,6 +227,16 @@ export class InspectorProxy {
 				);
 			})
 			.filter(Boolean) as InspectorProxyRelay[];
+
+		this.#runtimeConnectionEstablished.resolve();
+	}
+
+	async #waitForReady() {
+		await this.#runtimeConnectionEstablished;
+	}
+
+	get ready(): Promise<void> {
+		return this.#waitForReady();
 	}
 
 	async dispose(): Promise<void> {
