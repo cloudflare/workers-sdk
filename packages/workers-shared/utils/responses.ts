@@ -64,7 +64,7 @@ export class NotModifiedResponse extends Response {
 }
 
 export class MovedPermanentlyResponse extends Response {
-	static readonly status = 301 as const;
+	static readonly status = 301;
 
 	constructor(location: string, init?: ResponseInit) {
 		super(null, {

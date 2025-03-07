@@ -103,10 +103,8 @@ export default class extends WorkerEntrypoint<Env> {
 		const startTimeMs = performance.now();
 
 		try {
-			if (!this.env.JAEGER) {
-				// For wrangler tests, if we don't have a jaeger binding, default to a mocked binding
-				this.env.JAEGER = mockJaegerBinding();
-			}
+			// TODO: Mock this with Miniflare
+			this.env.JAEGER ??= mockJaegerBinding();
 
 			sentry = setupSentry(
 				request,
@@ -175,10 +173,8 @@ export default class extends WorkerEntrypoint<Env> {
 
 	// TODO: Trace unstable methods
 	async unstable_canFetch(request: Request): Promise<boolean> {
-		if (!this.env.JAEGER) {
-			// For wrangler tests, if we don't have a jaeger binding, default to a mocked binding
-			this.env.JAEGER = mockJaegerBinding();
-		}
+		// TODO: Mock this with Miniflare
+		this.env.JAEGER ??= mockJaegerBinding();
 
 		return canFetch(
 			request,
