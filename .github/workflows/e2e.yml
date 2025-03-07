@@ -16,8 +16,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-13, windows-2022, ubuntu-22.04]
-        node: ["18"]
+        os: [ubuntu-22.04-arm]
+        node: ["22"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -63,6 +63,7 @@ jobs:
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           CI_OS: ${{ matrix.os }}
           WRANGLER_E2E_LOCAL_ONLY: true
+          NODE_COMPILE_CACHE: ${{ runner.temp }}/node-cache
 
       - name: Upload debug logs
         if: always()
