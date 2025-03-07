@@ -1,9 +1,9 @@
-import assert from "node:assert";
 import crypto from "node:crypto";
 import { createServer, IncomingMessage, Server } from "node:http";
 import { DeferredPromise } from "miniflare:shared";
 import WebSocket, { WebSocketServer } from "ws";
 import { version as miniflareVersion } from "../../../../package.json";
+import { Log } from "../../../shared";
 import { InspectorProxyRelay } from "./inspector-proxy-relay";
 
 export class InspectorProxy {
@@ -11,7 +11,11 @@ export class InspectorProxy {
 
 	#server: Server;
 
-	constructor(private userInspectorPort: number) {
+	constructor(
+		private userInspectorPort: number,
+		private log: Log,
+		private workerNamesToProxy: Set<string>
+	) {
 		this.#server = this.#initializeServer();
 	}
 
@@ -52,8 +56,13 @@ export class InspectorProxy {
 				(relay) => upgradeRequest.url === relay.path
 			);
 
-			// TODO: implement better error handling
-			assert(target);
+			if (!target) {
+				this.log.warn(
+					`Warning: An inspector connection was requested for the ${upgradeRequest.url} path but no such inspector exists`
+				);
+				devtoolsWs.close();
+				return;
+			}
 
 			target.onDevtoolsConnected(
 				devtoolsWs,
@@ -198,13 +207,23 @@ export class InspectorProxy {
 		}[];
 
 		this.#workerRelays = workerdInspectorJson
-			.filter(({ id }) => id.startsWith("core:user:"))
 			.map(({ id }) => {
+				if (!id.startsWith("core:user:")) {
+					return;
+				}
+
+				const workerName = id.replace(/^core:user:/, "");
+
+				if (!this.workerNamesToProxy.has(workerName)) {
+					return;
+				}
+
 				return new InspectorProxyRelay(
-					id.replace(/^core:user:/, ""),
+					workerName,
 					new WebSocket(`ws://127.0.0.1:${runtimeInspectorPort}/${id}`)
 				);
-			});
+			})
+			.filter(Boolean) as InspectorProxyRelay[];
 	}
 
 	async dispose(): Promise<void> {

@@ -769,8 +769,18 @@ export class Miniflare {
 				);
 			}
 
+			const workerNamesToProxy = new Set(
+				this.#workerOpts
+					.filter(
+						({ core: { unsafeInspectorProxy } }) => !!unsafeInspectorProxy
+					)
+					.map((w) => w.core.name ?? "")
+			);
+
 			this.#maybeInspectorProxy = new InspectorProxy(
-				this.#sharedOpts.core.inspectorPort
+				this.#sharedOpts.core.inspectorPort,
+				this.#log,
+				workerNamesToProxy
 			);
 		}
 
