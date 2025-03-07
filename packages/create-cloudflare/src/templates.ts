@@ -18,20 +18,16 @@ import {
 	writeFile,
 	writeJSON,
 } from "helpers/files";
-import angularTemplateExperimental from "templates-experimental/angular/c3";
 import astroTemplateExperimental from "templates-experimental/astro/c3";
-import gatsbyTemplateExperimental from "templates-experimental/gatsby/c3";
 import assetsOnlyTemplateExperimental from "templates-experimental/hello-world-assets-only/c3";
 import helloWorldWithDurableObjectAssetsTemplateExperimental from "templates-experimental/hello-world-durable-object-with-assets/c3";
 import helloWorldWithAssetsTemplateExperimental from "templates-experimental/hello-world-with-assets/c3";
 import honoTemplateExperimental from "templates-experimental/hono/c3";
 import nextTemplateExperimental from "templates-experimental/next/c3";
-import nuxtTemplateExperimental from "templates-experimental/nuxt/c3";
 import qwikTemplateExperimental from "templates-experimental/qwik/c3";
 import remixTemplateExperimental from "templates-experimental/remix/c3";
 import solidTemplateExperimental from "templates-experimental/solid/c3";
 import svelteTemplateExperimental from "templates-experimental/svelte/c3";
-import vueTemplateExperimental from "templates-experimental/vue/c3";
 import analogTemplate from "templates/analog/c3";
 import angularTemplate from "templates/angular/c3";
 import astroTemplate from "templates/astro/c3";
@@ -180,17 +176,13 @@ export type TemplateMap = Record<
 export function getFrameworkMap({ experimental = false }): TemplateMap {
 	if (experimental) {
 		return {
-			angular: angularTemplateExperimental,
 			astro: astroTemplateExperimental,
-			gatsby: gatsbyTemplateExperimental,
 			hono: honoTemplateExperimental,
 			next: nextTemplateExperimental,
-			nuxt: nuxtTemplateExperimental,
 			qwik: qwikTemplateExperimental,
 			remix: remixTemplateExperimental,
 			solid: solidTemplateExperimental,
 			svelte: svelteTemplateExperimental,
-			vue: vueTemplateExperimental,
 		};
 	} else {
 		return {

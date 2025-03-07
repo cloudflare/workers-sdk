@@ -8,7 +8,7 @@ import { readFile, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import * as recast from "recast";
-import type { TemplateConfig } from "../../src/templates";
+import type { TemplateConfig } from "../../../src/templates";
 import type { C3Context } from "types";
 
 const { npm, name: pm } = detectPackageManager();
@@ -84,6 +84,16 @@ const updateNuxtConfig = () => {
 				b.identifier("preset"),
 				b.stringLiteral("cloudflare_module"),
 			),
+			b.objectProperty(
+				b.identifier("cloudflare"),
+				b.objectExpression([
+					b.objectProperty(
+						b.identifier("deployConfig"),
+						b.booleanLiteral(true),
+					),
+					b.objectProperty(b.identifier("nodeCompat"), b.booleanLiteral(true)),
+				]),
+			),
 		]),
 	);
 
@@ -118,7 +128,7 @@ const config: TemplateConfig = {
 	copyFiles: {
 		path: "./templates",
 	},
-	path: "templates-experimental/nuxt",
+	path: "templates/nuxt/workers",
 	generate,
 	configure,
 	transformPackageJson: async () => ({

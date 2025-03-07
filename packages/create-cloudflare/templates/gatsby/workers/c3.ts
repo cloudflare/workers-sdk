@@ -1,7 +1,7 @@
 import { inputPrompt } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { detectPackageManager } from "helpers/packageManagers";
-import type { TemplateConfig } from "../../src/templates";
+import type { TemplateConfig } from "../../../src/templates";
 import type { C3Context } from "types";
 
 const { npm } = detectPackageManager();
@@ -38,7 +38,7 @@ const config: TemplateConfig = {
 	copyFiles: {
 		path: "./templates",
 	},
-	path: "templates-experimental/gatsby",
+	path: "templates/gatsby/workers",
 	generate,
 	transformPackageJson: async () => ({
 		scripts: {
