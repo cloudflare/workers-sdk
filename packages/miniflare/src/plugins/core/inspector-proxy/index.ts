@@ -4,19 +4,12 @@ import { createServer, IncomingMessage, Server } from "node:http";
 import { DeferredPromise } from "miniflare:shared";
 import WebSocket, { WebSocketServer } from "ws";
 import { version as miniflareVersion } from "../../../../package.json";
-import { isDevToolsEvent } from "./devtools";
-import type {
-	DevToolsCommandRequests,
-	DevToolsEvent,
-	DevToolsEvents,
-} from "./devtools";
+import { InspectorProxyRelay } from "./inspector-proxy-relay";
 
 export class InspectorProxy {
+	#workerRelays: InspectorProxyRelay[] = [];
+
 	#server: Server;
-	#runtimeInspectorPort?: number;
-	#devtoolsWs?: WebSocket;
-	#runtimeWs?: WebSocket;
-	#devtoolsHaveFileSystemAccess = false;
 
 	constructor(private userInspectorPort: number) {
 		this.#server = this.#initializeServer();
@@ -47,50 +40,25 @@ export class InspectorProxy {
 	#initializeWebSocketServer(server: Server) {
 		const devtoolsWebSocketServer = new WebSocketServer({ server });
 
-		devtoolsWebSocketServer.on("connection", (ws, upgradeRequest) => {
-			/** We only want to have one active Devtools instance at a time. */
-			assert(
-				!this.#devtoolsWs,
-				"Too many clients; only one can be connected at a time"
-			);
-			this.#devtoolsWs = ws;
-
+		devtoolsWebSocketServer.on("connection", (devtoolsWs, upgradeRequest) => {
 			const validationError =
 				this.#validateDevToolsWebSocketUpgradeRequest(upgradeRequest);
 			if (validationError !== null) {
-				this.#devtoolsWs.close();
-				this.#devtoolsWs = undefined;
+				devtoolsWs.close();
 				return;
 			}
 
-			this.#checkIfDevtoolsHaveFileSystemAccess(upgradeRequest);
+			const target = this.#workerRelays.find(
+				(relay) => upgradeRequest.url === relay.path
+			);
 
-			assert(this.#runtimeWs?.OPEN);
+			// TODO: implement better error handling
+			assert(target);
 
-			ws.on("error", console.error);
-
-			ws.once("close", () => {
-				if (this.#runtimeWs?.OPEN) {
-					// Since Miniflare proxies the inspector, reloading Chrome DevTools won't trigger debugger initialisation events (because it's connecting to an extant session).
-					// This sends a `Debugger.disable` message to the remote when a new WebSocket connection is initialised,
-					// with the assumption that the new connection will shortly send a `Debugger.enable` event and trigger re-initialisation.
-					// The key initialisation messages that are needed are the `Debugger.scriptParsed` events.
-					this.#sendMessageToRuntime({
-						method: "Debugger.disable",
-						id: this.nextCounter(),
-					});
-				}
-				this.#devtoolsWs = undefined;
-			});
-
-			ws.on("message", (data) => {
-				const msg = JSON.parse(data.toString());
-				console.log(`\x1b[44m msg devtools -> runtime \x1b[0m`);
-				console.log(msg);
-				console.log("\n");
-				assert(this.#runtimeWs?.OPEN);
-				this.#sendMessageToRuntime(msg);
-			});
+			target.onDevtoolsConnected(
+				devtoolsWs,
+				this.#checkIfDevtoolsHaveFileSystemAccess(upgradeRequest)
+			);
 		});
 	}
 
@@ -172,7 +140,7 @@ export class InspectorProxy {
 		const userAgent = req.headers["user-agent"] ?? "";
 		const hasFileSystemAccess = !/mozilla/i.test(userAgent);
 
-		this.#devtoolsHaveFileSystemAccess = hasFileSystemAccess;
+		return hasFileSystemAccess;
 	}
 
 	#inspectorId = crypto.randomUUID();
@@ -187,24 +155,27 @@ export class InspectorProxy {
 		}
 
 		if (path === "/json" || path === "/json/list") {
-			// TODO: can we remove the `/ws` here if we only have a single worker?
-			const localHost = `${host}/ws`;
-			const devtoolsFrontendUrl = `https://devtools.devprod.cloudflare.dev/js_app?theme=systemPreferred&debugger=true&ws=${localHost}`;
+			return this.#workerRelays.map((relay) => {
+				const workerName = relay.workerName;
+				const localHost = `${host}/${workerName}`;
+				const devtoolsFrontendUrl = `https://devtools.devprod.cloudflare.dev/js_app?theme=systemPreferred&debugger=true&ws=${localHost}`;
 
-			return [
-				{
-					id: this.#inspectorId,
+				return {
+					id: `${this.#inspectorId}-${workerName}`,
 					type: "node", // TODO: can we specify different type?
 					description: "workers",
 					webSocketDebuggerUrl: `ws://${localHost}`,
 					devtoolsFrontendUrl,
 					devtoolsFrontendUrlCompat: devtoolsFrontendUrl,
 					// Below are fields that are visible in the DevTools UI.
-					title: "Cloudflare Worker",
+					title:
+						workerName.length === 0 || this.#workerRelays.length === 1
+							? `Cloudflare Worker`
+							: `Cloudflare Worker: ${workerName}`,
 					faviconUrl: "https://workers.cloudflare.com/favicon.ico",
 					// url: "http://" + localHost, // looks unnecessary
-				},
-			];
+				};
+			});
 		}
 
 		return null;
@@ -215,116 +186,29 @@ export class InspectorProxy {
 		return ++this.#runtimeMessageCounter;
 	}
 
-	#runtimeKeepAliveInterval: NodeJS.Timeout | undefined;
-
-	#handleRuntimeWebSocketOpen() {
-		assert(this.#runtimeWs?.OPEN);
-
-		this.#sendMessageToRuntime({
-			method: "Runtime.enable",
-			id: this.nextCounter(),
-		});
-		this.#sendMessageToRuntime({
-			method: "Network.enable",
-			id: this.nextCounter(),
-		});
-
-		console.log(`\x1b[44m msg devtools -> runtime \x1b[0m`);
-		console.log(JSON.stringify({ method: "Runtime.enable", id: "<id>" }));
-		console.log(JSON.stringify({ method: "Network.enable", id: "<id>" }));
-		console.log();
-
-		clearInterval(this.#runtimeKeepAliveInterval);
-		this.#runtimeKeepAliveInterval = setInterval(() => {
-			if (this.#runtimeWs?.OPEN) {
-				this.#sendMessageToRuntime({
-					method: "Runtime.getIsolateId",
-					id: this.nextCounter(),
-				});
-			}
-		}, 10_000);
-	}
-
-	#handleRuntimeScriptParsed(msg: DevToolsEvent<"Debugger.scriptParsed">) {
-		// If the devtools does not have filesystem access,
-		// rewrite the sourceMapURL to use a special scheme.
-		// This special scheme is used to indicate whether
-		// to intercept each loadNetworkResource message.
-
-		if (
-			!this.#devtoolsHaveFileSystemAccess &&
-			msg.params.sourceMapURL !== undefined &&
-			// Don't try to find a sourcemap for e.g. node-internal: scripts
-			msg.params.url.startsWith("file:")
-		) {
-			const url = new URL(msg.params.sourceMapURL, msg.params.url);
-			// Check for file: in case msg.params.sourceMapURL has a different
-			// protocol (e.g. data). In that case we should ignore this file
-			if (url.protocol === "file:") {
-				msg.params.sourceMapURL = url.href.replace("file:", "wrangler-file:");
-			}
-		}
-
-		return this.#sendMessageToDevtools(msg);
-	}
-
-	#sendMessageToDevtools(msg: DevToolsEvents) {
-		assert(this.#devtoolsWs);
-
-		if (!this.#devtoolsWs.OPEN) {
-			// the devtools web socket is established but not yet connected
-			this.#devtoolsWs.once("open", () =>
-				this.#devtoolsWs?.send(JSON.stringify(msg))
-			);
-			return;
-		}
-
-		this.#devtoolsWs.send(JSON.stringify(msg));
-	}
-
-	#sendMessageToRuntime(msg: DevToolsCommandRequests) {
-		assert(this.#runtimeWs?.OPEN);
-
-		this.#runtimeWs.send(JSON.stringify(msg));
-	}
-
 	getInspectorURL(): URL {
 		return getWebsocketURL(this.userInspectorPort);
 	}
 
-	// NOTE: this whole implementation assumes that there's a single runtime inspector socket,
-	//       which is connected to the user worker, we'll need to expand this to multiple workers later
 	async updateConnection(runtimeInspectorPort: number) {
-		this.#runtimeInspectorPort = runtimeInspectorPort;
+		const workerdInspectorJson = (await fetch(
+			`http://127.0.0.1:${runtimeInspectorPort}/json`
+		).then((resp) => resp.json())) as {
+			id: string;
+		}[];
 
-		this.#runtimeWs?.close();
-		this.#runtimeWs = new WebSocket(
-			`ws://127.0.0.1:${this.#runtimeInspectorPort}/core:user:`
-		);
-		this.#runtimeWs.once("open", () => this.#handleRuntimeWebSocketOpen());
-		this.#runtimeWs.on("message", (data) => {
-			console.log(`\x1b[45m msg runtime -> devtools \x1b[0m`);
-			const obj = JSON.parse(data.toString());
-			console.log(obj);
-			console.log("\n");
-
-			if (!this.#devtoolsWs) {
-				// there is no devtools connection established
-				return;
-			}
-
-			if (isDevToolsEvent(obj, "Debugger.scriptParsed")) {
-				return this.#handleRuntimeScriptParsed(obj);
-			}
-
-			return this.#sendMessageToDevtools(obj);
-		});
+		this.#workerRelays = workerdInspectorJson
+			.filter(({ id }) => id.startsWith("core:user:"))
+			.map(({ id }) => {
+				return new InspectorProxyRelay(
+					id.replace(/^core:user:/, ""),
+					new WebSocket(`ws://127.0.0.1:${runtimeInspectorPort}/${id}`)
+				);
+			});
 	}
 
 	async dispose(): Promise<void> {
-		clearInterval(this.#runtimeKeepAliveInterval);
-
-		this.#devtoolsWs?.close();
+		await Promise.all(this.#workerRelays.map((relay) => relay.dispose()));
 
 		const deferredPromise = new DeferredPromise<void>();
 		this.#server.close((err) => {
