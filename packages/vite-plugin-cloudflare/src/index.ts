@@ -330,6 +330,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					return;
 				}
 
+				// We clean the module URL here as the default rules include `.wasm?module`.
+				// We therefore need the match to include the query param but remove it before resolving the ID.
 				const resolved = await this.resolve(cleanUrl(source), importer);
 				assert(
 					resolved,
