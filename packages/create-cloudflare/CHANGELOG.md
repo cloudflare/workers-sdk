@@ -1,5 +1,17 @@
 # create-cloudflare
 
+## 2.41.0
+
+### Minor Changes
+
+- [#8372](https://github.com/cloudflare/workers-sdk/pull/8372) [`3536670`](https://github.com/cloudflare/workers-sdk/commit/35366708d36f82b3c51e3e5cc153a2c14b0d35c3) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: update nitro config in nuxt templates to use generated wrangler config
+
+### Patch Changes
+
+- [#8372](https://github.com/cloudflare/workers-sdk/pull/8372) [`3536670`](https://github.com/cloudflare/workers-sdk/commit/35366708d36f82b3c51e3e5cc153a2c14b0d35c3) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate Angular, Gatsby, Vue and Nuxt templates (Workers + Assets) from experimental
+
+  You no longer need to pass in the --experimental flag to access these templates.
+
 ## 2.40.3
 
 ### Patch Changes
