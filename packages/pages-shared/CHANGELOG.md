@@ -1,5 +1,17 @@
 # @cloudflare/pages-shared
 
+## 0.14.0
+
+### Minor Changes
+
+- [#8390](https://github.com/cloudflare/workers-sdk/pull/8390) [`53e6323`](https://github.com/cloudflare/workers-sdk/commit/53e63233c5b9bb786af3daea63c10ffe60a5d881) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Parse and apply metafiles (`_headers` and `_redirects`) in `wrangler dev` for Workers Assets
+
+### Patch Changes
+
+- Updated dependencies [[`53e6323`](https://github.com/cloudflare/workers-sdk/commit/53e63233c5b9bb786af3daea63c10ffe60a5d881), [`08b8c46`](https://github.com/cloudflare/workers-sdk/commit/08b8c46872988da7599891f8f1700bcbc7f86968), [`aba0e9c`](https://github.com/cloudflare/workers-sdk/commit/aba0e9cad62e77cfa5fb3515ea9f89aa225059ed)]:
+  - @cloudflare/workers-shared@0.15.0
+  - miniflare@3.20250224.1
+
 ## 0.13.12
 
 ### Patch Changes

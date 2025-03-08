@@ -1,5 +1,11 @@
 # miniflare
 
+## 3.20250224.1
+
+### Minor Changes
+
+- [#8390](https://github.com/cloudflare/workers-sdk/pull/8390) [`53e6323`](https://github.com/cloudflare/workers-sdk/commit/53e63233c5b9bb786af3daea63c10ffe60a5d881) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Parse and apply metafiles (`_headers` and `_redirects`) in `wrangler dev` for Workers Assets
+
 ## 3.20250224.0
 
 ### Patch Changes
