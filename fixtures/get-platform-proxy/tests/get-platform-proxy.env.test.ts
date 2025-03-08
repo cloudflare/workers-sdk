@@ -2,8 +2,8 @@ import path from "path";
 import { D1Database, R2Bucket } from "@cloudflare/workers-types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getPlatformProxy } from "./shared";
+import type { EnvWithDO } from "../worker-configuration";
 import type { Hyperdrive, KVNamespace } from "@cloudflare/workers-types";
-import type { Unstable_DevWorker } from "wrangler";
 
 type Env = {
 	MY_VAR: string;
@@ -18,10 +18,12 @@ type Env = {
 };
 
 const wranglerTomlFilePath = path.join(__dirname, "..", "wrangler.toml");
+const tomlWithDO = path.join(__dirname, "..", "wrangler.do.toml");
 
-describe("getPlatformProxy - env", () => {
-	let devWorkers: Unstable_DevWorker[];
-
+describe.each([
+	{ name: "sciprt with no exports", configPath: wranglerTomlFilePath },
+	{ name: "script with DO, useMain = true ", configPath: tomlWithDO },
+])("$name", ({ configPath }) => {
 	beforeEach(() => {
 		// Hide stdout messages from the test logs
 		vi.spyOn(console, "log").mockImplementation(() => {});
@@ -30,7 +32,8 @@ describe("getPlatformProxy - env", () => {
 	describe("var bindings", () => {
 		it("correctly obtains var bindings from both wrangler.toml and .dev.vars", async () => {
 			const { env, dispose } = await getPlatformProxy<Env>({
-				configPath: wranglerTomlFilePath,
+				configPath,
+				...(configPath === tomlWithDO && { exportsPath: { useMain: true } }),
 			});
 			try {
 				const { MY_VAR, MY_JSON_VAR, MY_DEV_VAR } = env;
@@ -46,7 +49,8 @@ describe("getPlatformProxy - env", () => {
 
 		it("correctly makes vars from .dev.vars override the ones in wrangler.toml", async () => {
 			const { env, dispose } = await getPlatformProxy<Env>({
-				configPath: wranglerTomlFilePath,
+				configPath,
+				...(configPath === tomlWithDO && { exportsPath: { useMain: true } }),
 			});
 			try {
 				const { MY_VAR_A } = env;
@@ -59,7 +63,8 @@ describe("getPlatformProxy - env", () => {
 
 		it("correctly makes vars from .dev.vars not override bindings of the same name from wrangler.toml", async () => {
 			const { env, dispose } = await getPlatformProxy<Env>({
-				configPath: wranglerTomlFilePath,
+				configPath,
+				...(configPath === tomlWithDO && { exportsPath: { useMain: true } }),
 			});
 			try {
 				const { MY_KV } = env;
@@ -74,50 +79,12 @@ describe("getPlatformProxy - env", () => {
 				await dispose();
 			}
 		});
-
-		it("correctly reads a toml from a custom path alongside with its .dev.vars", async () => {
-			const { env, dispose } = await getPlatformProxy<Env>({
-				configPath: path.join(
-					__dirname,
-					"..",
-					"custom-toml",
-					"path",
-					"test-toml"
-				),
-			});
-			try {
-				const { MY_VAR, MY_JSON_VAR, MY_DEV_VAR } = env;
-				expect(MY_VAR).toEqual("my-var-value-from-a-custom-toml");
-				expect(MY_JSON_VAR).toEqual({
-					test: true,
-					customToml: true,
-				});
-				expect(MY_DEV_VAR).toEqual("my-dev-var-value-from-a-custom-location");
-			} finally {
-				await dispose();
-			}
-		});
-	});
-
-	it("correctly reads a json config file", async () => {
-		const { env, dispose } = await getPlatformProxy<Env>({
-			configPath: path.join(__dirname, "..", "wrangler.json"),
-		});
-		try {
-			const { MY_VAR, MY_JSON_VAR } = env;
-			expect(MY_VAR).toEqual("my-var-value-from-a-json-config-file");
-			expect(MY_JSON_VAR).toEqual({
-				test: true,
-				fromJson: true,
-			});
-		} finally {
-			await dispose();
-		}
 	});
 
 	it("correctly obtains functioning KV bindings", async () => {
 		const { env, dispose } = await getPlatformProxy<Env>({
-			configPath: wranglerTomlFilePath,
+			configPath,
+			...(configPath === tomlWithDO && { exportsPath: { useMain: true } }),
 		});
 		const { MY_KV } = env;
 		let numOfKeys = (await MY_KV.list()).keys.length;
@@ -132,7 +99,8 @@ describe("getPlatformProxy - env", () => {
 
 	it("correctly obtains functioning R2 bindings", async () => {
 		const { env, dispose } = await getPlatformProxy<Env>({
-			configPath: wranglerTomlFilePath,
+			configPath,
+			...(configPath === tomlWithDO && { exportsPath: { useMain: true } }),
 		});
 		try {
 			const { MY_BUCKET } = env;
@@ -150,7 +118,8 @@ describe("getPlatformProxy - env", () => {
 
 	it("correctly obtains functioning D1 bindings", async () => {
 		const { env, dispose } = await getPlatformProxy<Env>({
-			configPath: wranglerTomlFilePath,
+			configPath,
+			...(configPath === tomlWithDO && { exportsPath: { useMain: true } }),
 		});
 		try {
 			const { MY_D1 } = env;
@@ -180,7 +149,8 @@ describe("getPlatformProxy - env", () => {
 	//            workerd itself and would simply not work in a node.js process
 	it("correctly obtains passthrough Hyperdrive bindings", async () => {
 		const { env, dispose } = await getPlatformProxy<Env>({
-			configPath: wranglerTomlFilePath,
+			configPath,
+			...(configPath === tomlWithDO && { exportsPath: { useMain: true } }),
 		});
 		try {
 			const { MY_HYPERDRIVE } = env;
@@ -200,7 +170,8 @@ describe("getPlatformProxy - env", () => {
 	describe("with a target environment", () => {
 		it("should provide bindings targeting a specified environment and also inherit top-level ones", async () => {
 			const { env, dispose } = await getPlatformProxy<Env>({
-				configPath: wranglerTomlFilePath,
+				configPath,
+				...(configPath === tomlWithDO && { exportsPath: { useMain: true } }),
 				environment: "production",
 			});
 			try {
@@ -217,7 +188,8 @@ describe("getPlatformProxy - env", () => {
 
 		it("should not provide bindings targeting an environment when none was specified", async () => {
 			const { env, dispose } = await getPlatformProxy<Env>({
-				configPath: wranglerTomlFilePath,
+				configPath,
+				...(configPath === tomlWithDO && { exportsPath: { useMain: true } }),
 			});
 			try {
 				expect(env.MY_VAR).not.toBe("my-PRODUCTION-var-value");
@@ -233,7 +205,8 @@ describe("getPlatformProxy - env", () => {
 
 		it("should provide secrets targeting a specified environment", async () => {
 			const { env, dispose } = await getPlatformProxy<Env>({
-				configPath: wranglerTomlFilePath,
+				configPath,
+				...(configPath === tomlWithDO && { exportsPath: { useMain: true } }),
 				environment: "production",
 			});
 			try {
@@ -248,7 +221,8 @@ describe("getPlatformProxy - env", () => {
 		it("should error if a non-existent environment is provided", async () => {
 			await expect(
 				getPlatformProxy({
-					configPath: wranglerTomlFilePath,
+					configPath,
+					...(configPath === tomlWithDO && { exportsPath: { useMain: true } }),
 					environment: "non-existent-environment",
 				})
 			).rejects.toThrow(
@@ -256,4 +230,54 @@ describe("getPlatformProxy - env", () => {
 			);
 		});
 	});
+});
+
+describe("with an exports file", () => {
+	it("should provide access to the exported DO on the env object", async () => {
+		const { env, dispose } = await getPlatformProxy<EnvWithDO>({
+			configPath: tomlWithDO,
+			exportsPath: { useMain: true },
+		});
+		try {
+			const id = env.DO.idFromName("foo");
+			const stub = env.DO.get(id);
+			const response = await stub.sayHello("And with an argument");
+			expect(response).toBe("Hello, World from DO! And with an argument");
+		} finally {
+			await dispose();
+		}
+	});
+});
+
+it("correctly reads a json config file", async () => {
+	const { env, dispose } = await getPlatformProxy<Env>({
+		configPath: path.join(__dirname, "..", "wrangler.json"),
+	});
+	try {
+		const { MY_VAR, MY_JSON_VAR } = env;
+		expect(MY_VAR).toEqual("my-var-value-from-a-json-config-file");
+		expect(MY_JSON_VAR).toEqual({
+			test: true,
+			fromJson: true,
+		});
+	} finally {
+		await dispose();
+	}
+});
+
+it("correctly reads a toml from a custom path alongside with its .dev.vars", async () => {
+	const { env, dispose } = await getPlatformProxy<Env>({
+		configPath: path.join(__dirname, "..", "custom-toml", "path", "test-toml"),
+	});
+	try {
+		const { MY_VAR, MY_JSON_VAR, MY_DEV_VAR } = env;
+		expect(MY_VAR).toEqual("my-var-value-from-a-custom-toml");
+		expect(MY_JSON_VAR).toEqual({
+			test: true,
+			customToml: true,
+		});
+		expect(MY_DEV_VAR).toEqual("my-dev-var-value-from-a-custom-location");
+	} finally {
+		await dispose();
+	}
 });
