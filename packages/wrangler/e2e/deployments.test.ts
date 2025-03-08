@@ -7,6 +7,7 @@ import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { normalizeOutput } from "./helpers/normalize";
 import { retry } from "./helpers/retry";
+import { isLocalOnly } from "./helpers/skip-if-offline";
 
 const TIMEOUT = 50_000;
 const normalize = (str: string) =>
@@ -17,7 +18,7 @@ const workerName = generateResourceName();
 const dispatchNamespaceName = generateResourceName("dispatch");
 const dispatchWorkerName = generateResourceName();
 
-describe("deployments", { timeout: TIMEOUT }, () => {
+describe.skipIf(isLocalOnly)("deployments", { timeout: TIMEOUT }, () => {
 	let deployedUrl: string;
 	const helper = new WranglerE2ETestHelper();
 
@@ -252,7 +253,7 @@ const checkAssets = async (testCases: AssetTestCase[], deployedUrl: string) => {
 	}
 };
 
-describe.each([
+describe.skipIf(isLocalOnly).each([
 	{
 		name: "regular Worker",
 		flags: "",
