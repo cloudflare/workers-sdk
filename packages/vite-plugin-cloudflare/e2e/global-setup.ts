@@ -3,7 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import util from "node:util";
 import { startMockNpmRegistry } from "@cloudflare/mock-npm-registry";
-import type { GlobalSetupContext } from "vitest/node";
+import type { TestProject } from "vitest/node";
+
+const debuglog = util.debuglog("vite-plugin:test");
 
 declare module "vitest" {
 	export interface ProvidedContext {
@@ -13,22 +15,27 @@ declare module "vitest" {
 
 // Using a global setup means we can modify tests without having to re-install
 // packages into our temporary directory
-// Typings for the GlobalSetupContext are augmented in `global-setup.d.ts`.
-export default async function ({ provide }: GlobalSetupContext) {
+export default async function ({ provide }: TestProject) {
 	const stopMockNpmRegistry = await startMockNpmRegistry(
 		"@cloudflare/vite-plugin"
 	);
 
 	// Create temporary directory to host projects used for testing
 	const root = await fs.mkdtemp(path.join(os.tmpdir(), "vite-plugin-"));
+	debuglog("Created temporary directory at " + root);
 
+	// The type of the provided `root` is defined in the `ProvidedContent` type above.
 	provide("root", root);
 
 	// Cleanup temporary directory on teardown
 	return async () => {
 		await stopMockNpmRegistry();
 
-		console.log("Cleaning up temporary directory...");
-		await fs.rm(root, { recursive: true, maxRetries: 10 });
+		if (process.env.CLOUDFLARE_VITE_E2E_KEEP_TEMP_DIRS) {
+			debuglog("Temporary directory left in-place at " + root);
+		} else {
+			debuglog("Cleaning up temporary directory...");
+			await fs.rm(root, { recursive: true, maxRetries: 10 });
+		}
 	};
 }
