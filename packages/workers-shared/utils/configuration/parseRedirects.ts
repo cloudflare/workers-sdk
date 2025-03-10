@@ -25,7 +25,7 @@ export function parseRedirects(input: string): ParsedRedirects {
 	let canCreateStaticRule = true;
 
 	for (let i = 0; i < lines.length; i++) {
-		const line = lines[i].trim();
+		const line = (lines[i] || "").trim();
 		if (line.length === 0 || line.startsWith("#")) {
 			continue;
 		}
