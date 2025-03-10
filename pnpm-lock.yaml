@@ -2792,8 +2792,8 @@ importers:
         specifier: workspace:*
         version: link:../kv-asset-handler
       '@cloudflare/unenv-preset':
-        specifier: 2.0.0
-        version: 2.0.0(unenv@2.0.0-rc.8)(workerd@1.20250224.0)
+        specifier: 2.0.2
+        version: 2.0.2(unenv@2.0.0-rc.14)(workerd@1.20250224.0)
       '@esbuild-plugins/node-globals-polyfill':
         specifier: 0.2.3
         version: 0.2.3(esbuild@0.17.19)
@@ -2813,8 +2813,8 @@ importers:
         specifier: 6.3.0
         version: 6.3.0
       unenv:
-        specifier: 2.0.0-rc.8
-        version: 2.0.0-rc.8
+        specifier: 2.0.0-rc.14
+        version: 2.0.0-rc.14
       workerd:
         specifier: 1.20250224.0
         version: 1.20250224.0
@@ -3651,10 +3651,10 @@ packages:
       workerd:
         optional: true
 
-  '@cloudflare/unenv-preset@2.0.0':
-    resolution: {integrity: sha512-Ar4HixFYP8e990JPACno3nqe10QsjS3yVWr48z5Vop5LygdnvPa5cfNHxGoQSPavvg5aaGnF0VAWc3JJ1tBKuQ==}
+  '@cloudflare/unenv-preset@2.0.2':
+    resolution: {integrity: sha512-nyzYnlZjjV5xT3LizahG1Iu6mnrCaxglJ04rZLpDwlDVDZ7v46lNsfxhV3A/xtfgQuSHmLnc6SVI+KwBpc3Lwg==}
     peerDependencies:
-      unenv: 2.0.0-rc.8
+      unenv: 2.0.0-rc.14
       workerd: ^1.20250124.0
     peerDependenciesMeta:
       workerd:
@@ -11178,9 +11178,6 @@ packages:
   unenv@2.0.0-rc.14:
     resolution: {integrity: sha512-od496pShMen7nOy5VmVJCnq8rptd45vh6Nx/r2iPbrba6pa6p+tS2ywuIHRZ/OBvSbQZB0kWvpO9XBNVFXHD3Q==}
 
-  unenv@2.0.0-rc.8:
-    resolution: {integrity: sha512-wj/lN45LvZ4Uz95rti6DC5wg56eocAwA8KYzExk2SN01iuAb9ayzMwN13Kd3EG2eBXu27PzgMIXLTwWfSczKfw==}
-
   unicorn-magic@0.1.0:
     resolution: {integrity: sha512-lRfVq8fE8gz6QMBuDM6a+LO3IAzTi05H6gCVaUpir2E1Rwpo4ZUog45KpNXKC/Mn3Yb9UDuHumeFTo9iV/D9FQ==}
     engines: {node: '>=18'}
@@ -12886,9 +12883,9 @@ snapshots:
     optionalDependencies:
       workerd: 1.20250224.0
 
-  '@cloudflare/unenv-preset@2.0.0(unenv@2.0.0-rc.8)(workerd@1.20250224.0)':
+  '@cloudflare/unenv-preset@2.0.2(unenv@2.0.0-rc.14)(workerd@1.20250224.0)':
     dependencies:
-      unenv: 2.0.0-rc.8
+      unenv: 2.0.0-rc.14
     optionalDependencies:
       workerd: 1.20250224.0
 
@@ -20907,14 +20904,6 @@ snapshots:
       ufo: 1.5.4
 
   unenv@2.0.0-rc.14:
-    dependencies:
-      defu: 6.1.4
-      exsolve: 1.0.1
-      ohash: 2.0.11
-      pathe: 2.0.3
-      ufo: 1.5.4
-
-  unenv@2.0.0-rc.8:
     dependencies:
       defu: 6.1.4
       exsolve: 1.0.1
