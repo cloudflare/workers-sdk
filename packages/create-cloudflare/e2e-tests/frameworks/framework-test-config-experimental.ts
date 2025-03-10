@@ -2,33 +2,6 @@ import { keys, LONG_TIMEOUT } from "../helpers";
 
 export default function getFrameworkTestConfigExperimental() {
 	return {
-		astro: {
-			testCommitMessage: true,
-			unsupportedOSs: ["win32"],
-			verifyDeploy: {
-				route: "/",
-				expectedText: "Hello, Astronaut!",
-			},
-			verifyPreview: {
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
-			verifyBuild: {
-				outputDir: "./dist",
-				script: "build",
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
-			flags: [
-				"--skip-houston",
-				"--no-install",
-				"--no-git",
-				"--template",
-				"blog",
-				"--typescript",
-				"strict",
-			],
-		},
 		hono: {
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
