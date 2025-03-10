@@ -20,7 +20,7 @@ export function parseHeaders(input: string): ParsedHeaders {
 	let rule: (HeadersRule & { line: string }) | undefined = undefined;
 
 	for (let i = 0; i < lines.length; i++) {
-		const line = lines[i].trim();
+		const line = (lines[i] || "").trim();
 		if (line.length === 0 || line.startsWith("#")) {
 			continue;
 		}
@@ -103,7 +103,7 @@ export function parseHeaders(input: string): ParsedHeaders {
 		}
 
 		const [rawName, ...rawValue] = line.split(HEADER_SEPARATOR);
-		const name = rawName.trim().toLowerCase();
+		const name = (rawName || "").trim().toLowerCase();
 
 		if (name.includes(" ")) {
 			invalid.push({
