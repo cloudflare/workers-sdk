@@ -1,7 +1,7 @@
 import { readConfig } from "../config";
 import { logger } from "../logger";
 import { patchConfig } from "./client";
-import { getCacheOptionsFromArgs, getOriginFromArgs, upsertOptions } from ".";
+import { getCacheOptionsFromArgs, getMtlsFromArgs, getOriginFromArgs, upsertOptions } from ".";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -32,6 +32,7 @@ export async function handler(
 		name: args.name,
 		origin,
 		caching: getCacheOptionsFromArgs(args),
+		mtls: getMtlsFromArgs(args),
 	});
 	logger.log(
 		`✅ Updated ${updated.id} Hyperdrive config\n`,

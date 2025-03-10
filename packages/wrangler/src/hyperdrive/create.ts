@@ -1,7 +1,7 @@
 import { configFileName, formatConfigSnippet, readConfig } from "../config";
 import { logger } from "../logger";
 import { createConfig } from "./client";
-import { getCacheOptionsFromArgs, getOriginFromArgs, upsertOptions } from ".";
+import { getCacheOptionsFromArgs, getOriginFromArgs, getMtlsFromArgs, upsertOptions } from ".";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -32,6 +32,7 @@ export async function handler(
 		name: args.name,
 		origin,
 		caching: getCacheOptionsFromArgs(args),
+		mtls: getMtlsFromArgs(args),
 	});
 	logger.log(`✅ Created new Hyperdrive config: ${database.id}`);
 	logger.log(
