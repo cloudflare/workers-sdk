@@ -44,6 +44,7 @@
 	"dependencies": {
 		"@cloudflare/unenv-preset": "1.1.1",
 		"@hattip/adapter-node": "^0.0.49",
+		"chokidar": "^4.0.1",
 		"miniflare": "workspace:*",
 		"tinyglobby": "^0.2.12",
 		"unenv": "2.0.0-rc.1",

@@ -1788,6 +1788,9 @@ importers:
       '@hattip/adapter-node':
         specifier: ^0.0.49
         version: 0.0.49
+      chokidar:
+        specifier: ^4.0.1
+        version: 4.0.3
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
