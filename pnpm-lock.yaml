@@ -1954,8 +1954,8 @@ importers:
         specifier: catalog:vite-plugin
         version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
       wrangler:
-        specifier: catalog:vite-plugin
-        version: 3.109.2(@cloudflare/workers-types@4.20250224.0)
+        specifier: workspace:*
+        version: link:../../../wrangler
 
   packages/vite-plugin-cloudflare/playground/external-durable-objects:
     devDependencies:
