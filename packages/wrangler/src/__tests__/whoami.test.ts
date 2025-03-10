@@ -231,7 +231,7 @@ describe("whoami", () => {
 			└───────────────┴────────────┘
 			🔓 Token Permissions: If scopes are missing, you may need to logout and re-login.
 			Scope (Access)
-			🎢 Unable to get membership roles. Make sure you have permissions to read the account."
+			🎢 Unable to get membership roles. Make sure you have permissions to read the account. Are you missing the \`User->Memberships->Read\` permission?"
 		`);
 	});
 });
