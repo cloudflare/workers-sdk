@@ -120,6 +120,7 @@ export async function convertToConfigBundle(
 		bindVectorizeToProd: event.config.dev?.bindVectorizeToProd ?? false,
 		imagesLocalMode: event.config.dev?.imagesLocalMode ?? false,
 		testScheduled: !!event.config.dev.testScheduled,
+		outboundService: event.config.dev?.outboundService,
 	};
 }
 
@@ -154,6 +155,7 @@ export class LocalRuntimeController extends RuntimeController {
 					await convertToConfigBundle(data),
 					this.#proxyToUserWorkerAuthenticationSecret
 				);
+
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
 			if (this.#mf === undefined) {
 				logger.log(chalk.dim("⎔ Starting local server..."));
