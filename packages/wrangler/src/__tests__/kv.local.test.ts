@@ -195,17 +195,7 @@ describe("wrangler", () => {
 		`);
 
 			await runWrangler(
-				`kv:key get encoded --namespace-id bulk-namespace-id --local --text`
-			);
-			expect(std.out).toMatchInlineSnapshot(`
-			"[]
-			Success!
-			value
-			some raw data"
-		`);
-
-			await runWrangler(
-				`kv:key get encoded --namespace-id bulk-namespace-id --text`
+				`kv key get encoded --namespace-id bulk-namespace-id --text`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 			"[]
