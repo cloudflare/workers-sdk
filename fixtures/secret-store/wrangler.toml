@@ -1,0 +1,8 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "secret-store"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+secret_stores = [
+    { binding = "SECRET", store_id = "test", name = "example" }
+]
