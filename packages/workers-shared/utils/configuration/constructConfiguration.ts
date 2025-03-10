@@ -143,14 +143,16 @@ export function constructHeaders({
 
 	const rules: MetadataHeaders = {};
 	for (const rule of headers.rules) {
-		rules[rule.path] = {};
+		const configuredRule: MetadataHeaders[string] = {};
 
 		if (Object.keys(rule.headers).length) {
-			rules[rule.path].set = rule.headers;
+			configuredRule.set = rule.headers;
 		}
 		if (rule.unsetHeaders.length) {
-			rules[rule.path].unset = rule.unsetHeaders;
+			configuredRule.unset = rule.unsetHeaders;
 		}
+
+		rules[rule.path] = configuredRule;
 	}
 
 	return {
