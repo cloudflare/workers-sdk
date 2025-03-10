@@ -2333,6 +2333,9 @@ export class Miniflare {
 			sockets,
 			extensions,
 			structuredLogging: this.#structuredWorkerdLogs,
+			autogates: process.env.MINIFLARE_WORKERD_AUTOGATES
+				? process.env.MINIFLARE_WORKERD_AUTOGATES.split(" ")
+				: [],
 		};
 	}
 
