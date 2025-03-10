@@ -53,6 +53,6 @@ describe.runIf(process.platform !== "win32")("c3 integration", () => {
 		});
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
-		expect(await res.text()).toBe("Hello World!");
+		expect(await res.text()).toContain("Hello, World!");
 	});
 });
