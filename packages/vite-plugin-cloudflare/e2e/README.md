@@ -21,7 +21,7 @@ These tests use a mock npm registry where the built plugin has been published.
 
 The registry is booted up and loaded with the local build of the plugin and its local dependencies in the global-setup.ts file that runs once at the start of the e2e test run, and the server is killed and its caches removed at the end of the test run.
 
-The Vite `test` function is extended with additional helpers to setup clean copies of fixtures outside of the monorepo so that they can be isolated from any other dependencies in the project.
+The Vitest `test` function is extended with additional helpers to setup clean copies of fixtures outside of the monorepo so that they can be isolated from any other dependencies in the project.
 
 The simplest test looks like:
 
@@ -30,7 +30,7 @@ test("can serve a Worker request", async ({ expect, seed, viteDev }) => {
 	const projectPath = await seed("basic");
 	runCommand(`pnpm install`, projectPath);
 
-	const proc = await viteDev("npm", "dev", projectPath);
+	const proc = await viteDev("pnpm", "dev", projectPath);
 	const url = await waitForReady(proc);
 	expect(await fetchJson(url + "/api/")).toEqual({ name: "Cloudflare" });
 });
@@ -38,7 +38,7 @@ test("can serve a Worker request", async ({ expect, seed, viteDev }) => {
 
 - The `seed()` helper makes a copy of the named fixture into a temporary directory. It returns the path to the directory containing the copy (`projectPath` above). This directory will be deleted at the end of the test.
 - The `runCommand()` helper simply executes a one-shot command and resolves when it has exited. You can use this to install the dependencies of the fixture from the mock npm registry, as in the example above.
-- The `viteCommand()` helper boots up the given npm long-lived command and returns an object that can be used to monitor its output. The process will be killed at the end of the test.
+- The `viteCommand()` helper boots up the given long-lived command and returns an object that can be used to monitor its output. The process will be killed at the end of the test.
 - The `waitForReady()` helper will resolve when the `proc` process has output its ready message, from which it will parse the url that can be fetched in the test.
 - The `fetchJson()` helper makes an Undici fetch to the url parsing the response into JSON. It will retry every 250ms for up to 10 secs to minimize flakes.
 
