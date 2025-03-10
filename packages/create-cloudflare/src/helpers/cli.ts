@@ -62,6 +62,6 @@ export const C3_DEFAULTS: C3Args = {
 
 export const WRANGLER_DEFAULTS = {
 	...C3_DEFAULTS,
-	type: "hello-world",
+	type: "hello-world-with-assets",
 	deploy: false,
 };
