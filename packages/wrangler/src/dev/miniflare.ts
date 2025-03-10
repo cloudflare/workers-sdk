@@ -689,6 +689,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		kvNamespaces: Object.fromEntries(
 			bindings.kv_namespaces?.map(kvNamespaceEntry) ?? []
 		),
+		browser: bindings.browser?.binding,
 		r2Buckets: Object.fromEntries(
 			bindings.r2_buckets?.map(r2BucketEntry) ?? []
 		),
