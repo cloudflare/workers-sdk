@@ -5,8 +5,9 @@ import { describe, expect, it } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { normalizeOutput } from "./helpers/normalize";
+import { isLocalOnly } from "./helpers/skip-if-offline";
 
-describe("r2", () => {
+describe.skipIf(isLocalOnly)("r2", () => {
 	const bucketName = generateResourceName("r2");
 	const fileContents = crypto.randomBytes(64).toString("hex");
 	const normalize = (str: string) =>
