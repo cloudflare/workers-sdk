@@ -28,6 +28,10 @@ export interface PluginConfig extends EntryWorkerConfig {
 	auxiliaryWorkers?: AuxiliaryWorkerConfig[];
 	persistState?: PersistState;
 	inspectorPort?: number | false;
+	experimental?: {
+		/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
+		headersAndRedirectsDevModeSupport?: boolean;
+	};
 }
 
 type Defined<T> = Exclude<T, undefined>;
@@ -47,6 +51,10 @@ interface BasePluginConfig {
 	persistState: PersistState;
 	cloudflareEnv: string | undefined;
 	inspectorPort: number | false;
+	experimental: {
+		/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
+		headersAndRedirectsDevModeSupport?: boolean;
+	};
 }
 
 interface AssetsOnlyPluginConfig extends BasePluginConfig {
@@ -82,6 +90,7 @@ export function resolvePluginConfig(
 	const configPaths = new Set<string>();
 	const persistState = pluginConfig.persistState ?? true;
 	const inspectorPort = pluginConfig.inspectorPort ?? DEFAULT_INSPECTOR_PORT;
+	const experimental = pluginConfig.experimental ?? {};
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
 	const { CLOUDFLARE_ENV: cloudflareEnv } = vite.loadEnv(
 		viteEnv.mode,
@@ -115,6 +124,7 @@ export function resolvePluginConfig(
 				entryWorker: entryWorkerResolvedConfig,
 			},
 			cloudflareEnv,
+			experimental,
 		};
 	}
 
@@ -173,5 +183,6 @@ export function resolvePluginConfig(
 			auxiliaryWorkers: auxiliaryWorkersResolvedConfigs,
 		},
 		cloudflareEnv,
+		experimental,
 	};
 }

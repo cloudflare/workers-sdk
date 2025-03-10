@@ -11,10 +11,8 @@ import {
 } from "miniflare";
 import { globSync } from "tinyglobby";
 import * as vite from "vite";
-import {
-	unstable_getMiniflareWorkerOptions,
-	unstable_readConfig,
-} from "wrangler";
+import { unstable_getMiniflareWorkerOptions } from "wrangler";
+import { getAssetsConfig } from "./asset-config";
 import {
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
@@ -197,26 +195,15 @@ export function getDevMiniflareOptions(
 	viteDevServer: vite.ViteDevServer
 ): MiniflareOptions {
 	const resolvedViteConfig = viteDevServer.config;
-	const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
-	const assetsConfig =
-		resolvedPluginConfig.type === "assets-only"
-			? resolvedPluginConfig.config.assets
-			: entryWorkerConfig?.assets;
+	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
-	const compatibilityOptions =
-		resolvedPluginConfig.type === "assets-only"
-			? {
-					compatibility_date: resolvedPluginConfig.config.compatibility_date,
-					compatibility_flags: resolvedPluginConfig.config.compatibility_flags,
-				}
-			: {
-					...(entryWorkerConfig?.compatibility_date
-						? { compatibility_date: entryWorkerConfig?.compatibility_date }
-						: {}),
-					...(entryWorkerConfig?.compatibility_flags
-						? { compatibility_flags: entryWorkerConfig?.compatibility_flags }
-						: {}),
-				};
+	const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
+	const assetsConfig = getAssetsConfig(
+		resolvedPluginConfig,
+		entryWorkerConfig,
+		logger,
+		resolvedViteConfig
+	);
 
 	const assetWorkers: Array<WorkerOptions> = [
 		{
@@ -256,15 +243,7 @@ export function getDevMiniflareOptions(
 				},
 			],
 			bindings: {
-				CONFIG: {
-					...compatibilityOptions,
-					...(assetsConfig?.html_handling
-						? { html_handling: assetsConfig.html_handling }
-						: {}),
-					...(assetsConfig?.not_found_handling
-						? { not_found_handling: assetsConfig.not_found_handling }
-						: {}),
-				},
+				CONFIG: assetsConfig,
 			},
 			serviceBindings: {
 				__VITE_ASSET_EXISTS__: async (request) => {
@@ -389,8 +368,6 @@ export function getDevMiniflareOptions(
 		getWorkerToDurableObjectClassNamesMap(userWorkers);
 	const workerToWorkflowEntrypointClassNamesMap =
 		getWorkerToWorkflowEntrypointClassNamesMap(userWorkers);
-
-	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
 	return {
 		log: logger,

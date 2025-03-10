@@ -11,6 +11,7 @@ import {
 	createModuleReference,
 	matchAdditionalModule,
 } from "./additional-modules";
+import { hasAssetsConfigChanged } from "./asset-config";
 import {
 	createCloudflareEnvironmentOptions,
 	initRunners,
@@ -284,7 +285,14 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 			},
 			handleHotUpdate(options) {
-				if (resolvedPluginConfig.configPaths.has(options.file)) {
+				if (
+					resolvedPluginConfig.configPaths.has(options.file) ||
+					hasAssetsConfigChanged(
+						resolvedPluginConfig,
+						resolvedViteConfig,
+						options.file
+					)
+				) {
 					options.server.restart();
 				}
 			},
