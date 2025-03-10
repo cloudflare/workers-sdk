@@ -42,4 +42,9 @@ export function nodeHeadersToWebHeaders(
 	return headers;
 }
 
+const postfixRE = /[?#].*$/;
+export function cleanUrl(url: string): string {
+	return url.replace(postfixRE, "");
+}
+
 export type Optional<T, K extends keyof T> = Omit<T, K> & Pick<Partial<T>, K>;
