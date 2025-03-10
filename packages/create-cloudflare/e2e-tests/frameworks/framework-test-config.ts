@@ -3,7 +3,36 @@ import { keys, LONG_TIMEOUT } from "../helpers";
 // These are ordered based on speed and reliability for ease of debugging
 export default function getFrameworkTestConfig(pm: string) {
 	return {
-		astro: {
+		"astro:pages": {
+			argv: ["--platform", "pages"],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Hello, Astronaut!",
+			},
+			verifyPreview: {
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			verifyBuild: {
+				outputDir: "./dist",
+				script: "build",
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			flags: [
+				"--skip-houston",
+				"--no-install",
+				"--no-git",
+				"--template",
+				"blog",
+				"--typescript",
+				"strict",
+			],
+		},
+		"astro:workers": {
+			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {

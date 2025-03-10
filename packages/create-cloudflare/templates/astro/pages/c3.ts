@@ -6,7 +6,7 @@ import { runCommand } from "helpers/command";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
-import type { TemplateConfig } from "../../src/templates";
+import type { TemplateConfig } from "../../../src/templates";
 import type { C3Context, PackageJson } from "types";
 
 const { npx } = detectPackageManager();
@@ -62,8 +62,9 @@ const config: TemplateConfig = {
 	configVersion: 1,
 	id: "astro",
 	frameworkCli: "create-astro",
-	platform: "workers",
+	platform: "pages",
 	displayName: "Astro",
+	path: "templates/astro/pages",
 	copyFiles: {
 		async selectVariant(ctx) {
 			// Note: this `selectVariant` function should not be needed
@@ -84,13 +85,12 @@ const config: TemplateConfig = {
 	devScript: "dev",
 	deployScript: "deploy",
 	previewScript: "preview",
-	path: "templates-experimental/astro",
 	generate,
 	configure,
 	transformPackageJson: async (pkgJson: PackageJson, ctx: C3Context) => ({
 		scripts: {
-			deploy: `astro build && wrangler deploy`,
-			preview: `astro build && wrangler dev`,
+			deploy: `astro build && wrangler pages deploy`,
+			preview: `astro build && wrangler pages dev`,
 			...(usesTypescript(ctx) && { "cf-typegen": `wrangler types` }),
 		},
 	}),
