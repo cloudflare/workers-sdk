@@ -51,7 +51,6 @@ test("persists Workflow data on file-system between runs", async (t) => {
 	let test = "";
 	while (performance.now() - begin < 2000) {
 		const res = await mf.dispatchFetch("http://localhost");
-		console.log(test);
 		test = await res.text();
 		if (
 			test ===
