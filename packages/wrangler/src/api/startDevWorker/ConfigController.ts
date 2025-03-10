@@ -65,10 +65,10 @@ async function resolveDevConfig(
 		};
 	};
 
-	const localPersistencePath = getLocalPersistencePath(
-		input.dev?.persist,
-		config
-	);
+	let localPersistencePath: string | null = null;
+	if (input.dev?.persist !== null) {
+		localPersistencePath = getLocalPersistencePath(input.dev?.persist, config);
+	}
 
 	const { host, routes } = await getHostAndRoutes(
 		{
@@ -123,6 +123,7 @@ async function resolveDevConfig(
 			hostname: host ?? getInferredHost(routes, config.configPath),
 		},
 		liveReload: input.dev?.liveReload || false,
+		logLevel: input.dev?.logLevel,
 		testScheduled: input.dev?.testScheduled,
 		// absolute resolved path
 		persist: localPersistencePath,
