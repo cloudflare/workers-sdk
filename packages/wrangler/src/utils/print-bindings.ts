@@ -93,6 +93,7 @@ export function printBindings(
 		dispatch_namespaces,
 		mtls_certificates,
 		pipelines,
+		assets,
 	} = bindings;
 
 	if (data_blobs !== undefined && Object.keys(data_blobs).length > 0) {
@@ -391,6 +392,13 @@ export function printBindings(
 				key: binding,
 				value: addSuffix(pipeline),
 			})),
+		});
+	}
+
+	if (assets !== undefined) {
+		output.push({
+			name: friendlyBindingNames.assets,
+			entries: [{ key: "Binding", value: assets.binding }],
 		});
 	}
 
