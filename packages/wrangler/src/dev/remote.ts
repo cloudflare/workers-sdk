@@ -7,7 +7,7 @@ import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getInferredHost } from "../dev";
 import { UserError } from "../errors";
 import { logger } from "../logger";
-import { syncLegacyAssets } from "../sites";
+import { syncWorkersSite } from "../sites";
 import { requireApiToken } from "../user";
 import { isAbortError } from "../utils/isAbortError";
 import { getZoneIdForPreview } from "../zones";
@@ -114,7 +114,7 @@ export async function createRemoteWorkerInit(props: {
 		props.modules
 	);
 
-	const legacyAssets = await syncLegacyAssets(
+	const workersSitesAssets = await syncWorkersSite(
 		props.accountId,
 		// When we're using the newer service environments, we wouldn't
 		// have added the env name on to the script name. However, we must
@@ -127,11 +127,11 @@ export async function createRemoteWorkerInit(props: {
 		undefined
 	); // TODO: cancellable?
 
-	if (legacyAssets.manifest) {
+	if (workersSitesAssets.manifest) {
 		modules.push({
 			name: "__STATIC_CONTENT_MANIFEST",
 			filePath: undefined,
-			content: JSON.stringify(legacyAssets.manifest),
+			content: JSON.stringify(workersSitesAssets.manifest),
 			type: "text",
 		});
 	}
@@ -152,13 +152,13 @@ export async function createRemoteWorkerInit(props: {
 		bindings: {
 			...props.bindings,
 			kv_namespaces: (props.bindings.kv_namespaces || []).concat(
-				legacyAssets.namespace
-					? { binding: "__STATIC_CONTENT", id: legacyAssets.namespace }
+				workersSitesAssets.namespace
+					? { binding: "__STATIC_CONTENT", id: workersSitesAssets.namespace }
 					: []
 			),
 			text_blobs: {
 				...props.bindings.text_blobs,
-				...(legacyAssets.manifest &&
+				...(workersSitesAssets.manifest &&
 					props.format === "service-worker" && {
 						__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
 					}),

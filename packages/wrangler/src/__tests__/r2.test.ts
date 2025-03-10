@@ -2931,7 +2931,7 @@ describe("r2", () => {
 
 			it("should download R2 object from bucket", async () => {
 				await runWrangler(
-					`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
+					`r2 object get --remote bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -2942,7 +2942,7 @@ describe("r2", () => {
 
 			it("should download R2 object from bucket into directory", async () => {
 				await runWrangler(
-					`r2 object get bucketName-object-test/wormhole-img.png --file ./a/b/c/wormhole-img.png`
+					`r2 object get --remote bucketName-object-test/wormhole-img.png --file ./a/b/c/wormhole-img.png`
 				);
 				expect(fs.readFileSync("a/b/c/wormhole-img.png", "utf8")).toBe(
 					"wormhole-img.png"
@@ -2952,7 +2952,7 @@ describe("r2", () => {
 			it("should upload R2 object to bucket", async () => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
-					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
+					`r2 object put --remote bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -2964,7 +2964,7 @@ describe("r2", () => {
 			it("should upload R2 object with storage class to bucket", async () => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
-					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png -s InfrequentAccess`
+					`r2 object put --remote bucketName-object-test/wormhole-img.png --file ./wormhole-img.png -s InfrequentAccess`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -2978,7 +2978,7 @@ describe("r2", () => {
 				fs.writeFileSync("wormhole-img.png", Buffer.alloc(TOO_BIG_FILE_SIZE));
 				await expect(
 					runWrangler(
-						`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
+						`r2 object put --remote bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
 					[Error: Error: Wrangler only supports uploading files up to 300 MiB in size
@@ -3028,7 +3028,7 @@ describe("r2", () => {
 					"--ct content-type-mock --cd content-disposition-mock --ce content-encoding-mock --cl content-lang-mock --cc cache-control-mock --e expire-time-mock";
 
 				await runWrangler(
-					`r2 object put bucketName-object-test/wormhole-img.png ${flags} --file wormhole-img.png`
+					`r2 object put --remote bucketName-object-test/wormhole-img.png ${flags} --file wormhole-img.png`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -3039,7 +3039,7 @@ describe("r2", () => {
 
 			it("should delete R2 object from bucket", async () => {
 				await runWrangler(
-					`r2 object delete bucketName-object-test/wormhole-img.png`
+					`r2 object delete --remote bucketName-object-test/wormhole-img.png`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -3052,7 +3052,7 @@ describe("r2", () => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await expect(
 					runWrangler(
-						`r2 object put bucketName-object-test/wormhole-img.png --pipe --file wormhole-img.png`
+						`r2 object put --remote bucketName-object-test/wormhole-img.png --pipe --file wormhole-img.png`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Arguments pipe and file are mutually exclusive]`
