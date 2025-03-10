@@ -30,7 +30,8 @@
 		"clean": "rimraf dist",
 		"deploy": "echo 'no deploy'",
 		"dev": "pnpm run bundle:local-binding --watch",
-		"test:ci": "vitest"
+		"test:ci": "vitest run",
+		"test:watch": "vitest"
 	},
 	"dependencies": {
 		"heap-js": "^2.5.0",
