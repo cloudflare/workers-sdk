@@ -1,7 +1,5 @@
 import {
 	performance,
-	// Note: `Performance` is only a type in `node:perf_hooks`
-	//       But it is a class in the polyfill, see `runtime/node/perf_hooks.ts`
 	Performance,
 	PerformanceEntry,
 	PerformanceMark,
@@ -9,22 +7,21 @@ import {
 	PerformanceObserver,
 	PerformanceObserverEntryList,
 	PerformanceResourceTiming,
-} from "node:perf_hooks";
+} from "unenv/node/perf_hooks";
 
 // `performance` augments the existing workerd implementation
-// @ts-expect-error
-globalThis.performance = performance;
+globalThis.performance = performance as Performance;
 
 // Classes not exposes by workerd
+// @ts-expect-error unenv type is `unknown`
 globalThis.Performance = Performance;
-// @ts-expect-error
+//@ts-expect-error PerformanceEntry constructor from `unenv` doesn't match the one from `node:perf_hooks`
 globalThis.PerformanceEntry = PerformanceEntry;
-// @ts-expect-error
 globalThis.PerformanceMark = PerformanceMark;
-// @ts-expect-error
+//@ts-expect-error PerformanceMeasure constructor from `unenv` doesn't match the one from `node:perf_hooks`
 globalThis.PerformanceMeasure = PerformanceMeasure;
-// @ts-expect-error
+//@ts-expect-error PerformanceObserver constructor from `unenv` doesn't match the one from `node:perf_hooks`
 globalThis.PerformanceObserver = PerformanceObserver;
 globalThis.PerformanceObserverEntryList = PerformanceObserverEntryList;
-// @ts-expect-error
+//@ts-expect-error PerformanceResourceTiming constructor from `unenv` doesn't match the one from `node:perf_hooks`
 globalThis.PerformanceResourceTiming = PerformanceResourceTiming;
