@@ -45,7 +45,6 @@ const hybridNodeCompatModules = [
 	"console",
 	"crypto",
 	"module",
-	"perf_hooks",
 	"process",
 	"util",
 ];

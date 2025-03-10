@@ -1,5 +1,11 @@
 # @cloudflare/unenv-preset
 
+## 2.0.1
+
+### Patch Changes
+
+- Sync with `unenv@2.0.0-rc.14`
+
 ## 2.0.0
 
 ### Major Changes
