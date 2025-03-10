@@ -9,20 +9,28 @@ import { test as baseTest, inject, onTestFailed, vi } from "vitest";
 
 const debuglog = util.debuglog("vite-plugin:test");
 
+const testEnv = {
+	...process.env,
+	// The following env vars are set to ensure that package managers
+	// do not use the same global cache and accidentally hit race conditions.
+	YARN_CACHE_FOLDER: "./.yarn/cache",
+	YARN_ENABLE_GLOBAL_CACHE: "false",
+	PNPM_HOME: "./.pnpm",
+	npm_config_cache: "./.npm/cache",
+};
+
 /**
  * Extends the Vitest `test()` function to support running vite in
  * well defined environments that represent real-world usage.
  */
 export const test = baseTest.extend<{
 	seed: (fixture: string) => Promise<string>;
-	viteDev: (
+	viteCommand: (
+		pm: "pnpm" | "npm" | "yarn",
+		command: "dev" | "preview",
 		projectPath: string,
 		options?: { flags?: string[]; maxBuffer?: number }
-	) => Process;
-	vitePreview: (
-		projectPath: string,
-		options?: { flags?: string[]; maxBuffer?: number }
-	) => Process;
+	) => Promise<Process>;
 }>({
 	/** Seed a test project from a fixture. */
 	async seed({}, use) {
@@ -49,32 +57,24 @@ export const test = baseTest.extend<{
 			}
 		}
 	},
-	/** Start a `vite dev` command and wraps its outputs. */
-	async viteDev({}, use) {
+	/** Starts a command and wraps its outputs. */
+	async viteCommand({}, use) {
 		const processes: ChildProcess[] = [];
-		await use((projectPath) => {
-			debuglog("starting `vite dev` for " + projectPath);
-			const proc = childProcess.exec(`pnpm exec vite dev`, {
-				cwd: projectPath,
-			});
-			processes.push(proc);
-			return wrap(proc);
-		});
-		debuglog("Closing down `vite dev` processes", processes.length);
-		processes.forEach((proc) => proc.pid && kill(proc.pid));
-	},
+		await use(async (pm, command, projectPath) => {
+			if (command === "preview") {
+				// We must first run the build command to generate the Worker that is to be previewed.
+				await runCommand(`${pm} exec vite build`, projectPath);
+			}
 
-	async vitePreview({}, use) {
-		const processes: ChildProcess[] = [];
-		await use((projectPath) => {
-			debuglog("starting `vite preview` for " + projectPath);
-			const proc = childProcess.exec(`pnpm exec vite preview`, {
+			debuglog(`starting "${command}" with ${pm} in ${projectPath}`);
+			const proc = childProcess.exec(`${pm} exec vite ${command}`, {
 				cwd: projectPath,
+				env: testEnv,
 			});
 			processes.push(proc);
 			return wrap(proc);
 		});
-		debuglog("Closing down `vite preview` processes", processes.length);
+		debuglog("Closing down command processes", processes.length);
 		processes.forEach((proc) => proc.pid && kill(proc.pid));
 	},
 });
@@ -86,7 +86,7 @@ export interface Process {
 }
 
 /**
- * Wrap a long running child process to capture its stdio and make it available programmatically.
+ * Wraps a long running child process to capture its stdio and make it available programmatically.
  */
 function wrap(proc: childProcess.ChildProcess): Process {
 	let stdout = "";
@@ -123,16 +123,18 @@ function wrap(proc: childProcess.ChildProcess): Process {
 			`Wrapped process logs (${proc.spawnfile} ${proc.spawnargs.join(" ")}):`
 		);
 		console.log(wrappedProc.stdout);
-		console.log(wrappedProc.stderr);
+		console.error(wrappedProc.stderr);
 	});
 
 	return wrappedProc;
 }
 
 export function runCommand(command: string, cwd: string) {
+	debuglog(`Running "${command}"`);
 	childProcess.execSync(command, {
 		cwd,
 		stdio: debuglog.enabled ? "inherit" : "ignore",
+		env: testEnv,
 	});
 }
 
