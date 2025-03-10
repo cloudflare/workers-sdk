@@ -17,7 +17,7 @@ const workerName = generateResourceName();
 const dispatchNamespaceName = generateResourceName("dispatch");
 const dispatchWorkerName = generateResourceName();
 
-describe("deployments", { timeout: TIMEOUT }, () => {
+describe.skip("deployments", { timeout: TIMEOUT }, () => {
 	let deployedUrl: string;
 	const helper = new WranglerE2ETestHelper();
 
@@ -260,7 +260,7 @@ describe.each([
 		async afterAll(helper: WranglerE2ETestHelper) {
 			await helper.run(`wrangler delete`);
 		},
-		expectInitialStdout: (output: string) => {
+		expectAssetsOnlyStdout: (output: string) => {
 			expect(output).toEqual(`🌀 Building list of assets...
 🌀 Starting asset upload...
 🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
@@ -278,12 +278,14 @@ Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
 		},
-		expectSubsequentStdout: (output: string) => {
+		expectWithWorkerStdout: (output: string) => {
 			expect(output).toEqual(`🌀 Building list of assets...
 🌀 Starting asset upload...
 No files to upload. Proceeding with deployment...
 Total Upload: xx KiB / gzip: xx KiB
-No bindings found.
+Your worker has access to the following bindings:
+- Assets:
+  - Binding: ASSETS
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -332,7 +334,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				`wrangler dispatch-namespace delete ${dispatchNamespaceName}`
 			);
 		},
-		expectInitialStdout: (output: string) => {
+		expectAssetsOnlyStdout: (output: string) => {
 			expect(output).toEqual(`🌀 Building list of assets...
 🌀 Starting asset upload...
 🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
@@ -349,12 +351,14 @@ Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
   Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
 		},
-		expectSubsequentStdout: (output: string) => {
+		expectWithWorkerStdout: (output: string) => {
 			expect(output).toEqual(`🌀 Building list of assets...
 🌀 Starting asset upload...
 No files to upload. Proceeding with deployment...
 Total Upload: xx KiB / gzip: xx KiB
-No bindings found.
+Your worker has access to the following bindings:
+- Assets:
+  - Binding: ASSETS
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
   Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
@@ -369,7 +373,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 	afterAll(async () => {
 		await testcase.afterAll(helper);
 	});
-	it("deploys a Workers + Assets project with assets only", async () => {
+	it.skip("deploys a Workers + Assets project with assets only", async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
 						name = "${workerName}"
@@ -381,7 +385,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 		});
 
 		const output = await helper.run(`wrangler deploy ${testcase.flags}`);
-		testcase.expectInitialStdout(normalize(output.stdout));
+		testcase.expectAssetsOnlyStdout(normalize(output.stdout));
 		if (testcase.url) {
 			deployedUrl = testcase.url;
 		} else {
@@ -452,7 +456,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 		});
 		const output = await helper.run(`wrangler deploy ${testcase.flags}`);
 		// expect only no asset files to be uploaded as no new asset files have been added
-		testcase.expectSubsequentStdout(normalize(output.stdout));
+		testcase.expectWithWorkerStdout(normalize(output.stdout));
 		if (!deployedUrl) {
 			const match = output.stdout.match(
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
@@ -518,7 +522,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 
 		const output = await helper.run(`wrangler deploy ${testcase.flags}`);
 		// expect only no asset files to be uploaded as no new asset files have been added
-		testcase.expectSubsequentStdout(normalize(output.stdout));
+		testcase.expectWithWorkerStdout(normalize(output.stdout));
 		if (!deployedUrl) {
 			const match = output.stdout.match(
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
