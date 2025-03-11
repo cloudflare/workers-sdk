@@ -24,6 +24,8 @@ test.serial(
 		await mf.ready;
 
 		const res = await fetch("http://localhost:9212/json/version");
+		t.is(res.headers.get("content-type"), "application/json");
+
 		const versionDetails = (await res.json()) as Record<string, string>;
 
 		t.regex(versionDetails["Browser"], /^miniflare\/v\d\.\d{8}\.\d+$/);
@@ -49,6 +51,8 @@ test.serial(
 
 		const res = await fetch("http://localhost:9212/json");
 		const inspectors = (await res.json()) as Record<string, string>[];
+
+		t.is(res.headers.get("content-type"), "application/json");
 
 		t.is(inspectors.length, 1);
 
@@ -85,6 +89,8 @@ test.serial(
 		await mf.ready;
 
 		const res = await fetch("http://localhost:9212/json");
+		t.is(res.headers.get("content-type"), "application/json");
+
 		const inspectors = (await res.json()) as Record<string, string>[];
 
 		t.is(inspectors.length, 3);
@@ -133,6 +139,8 @@ test.serial(
 		await mf.ready;
 
 		const res = await fetch("http://localhost:9212/json");
+		t.is(res.headers.get("content-type"), "application/json");
+
 		const inspectors = (await res.json()) as Record<string, string>[];
 
 		t.is(inspectors.length, 2);
