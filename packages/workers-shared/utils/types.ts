@@ -64,6 +64,7 @@ export const AssetConfigSchema = z.object({
 	not_found_handling: z
 		.enum(["single-page-application", "404-page", "none"])
 		.optional(),
+	single_page_application: z.boolean().optional(),
 	redirects: RedirectsSchema,
 	headers: HeadersSchema,
 	...InternalConfigSchema.shape,

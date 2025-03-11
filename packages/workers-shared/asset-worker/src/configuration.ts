@@ -10,7 +10,10 @@ export const normalizeConfiguration = (
 		compatibility_date: compatibilityOptions.compatibilityDate,
 		compatibility_flags: compatibilityOptions.compatibilityFlags,
 		html_handling: configuration?.html_handling ?? "auto-trailing-slash",
-		not_found_handling: configuration?.not_found_handling ?? "none",
+		not_found_handling: configuration?.single_page_application
+			? "single-page-application"
+			: configuration?.not_found_handling ?? "none",
+		single_page_application: configuration?.single_page_application ?? false,
 		redirects: configuration?.redirects ?? {
 			version: 1,
 			staticRules: {},
