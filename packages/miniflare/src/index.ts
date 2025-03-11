@@ -1574,10 +1574,10 @@ export class Miniflare {
 		// `dispose()`d synchronously, immediately after constructing a `Miniflare`
 		// instance. In this case, return a discard URL which we'll ignore.
 		if (disposing) return new URL("http://[100::]/");
-		// Make sure `dispose()` wasn't called in the time we've been waiting
-		this.#checkDisposed();
 		// if there is an inspector proxy let's wait for it to be ready
 		await this.#maybeInspectorProxy?.ready;
+		// Make sure `dispose()` wasn't called in the time we've been waiting
+		this.#checkDisposed();
 		// `#runtimeEntryURL` is assigned in `#assembleAndUpdateConfig()`, which is
 		// called by `#init()`, and `#initPromise` doesn't resolve until `#init()`
 		// returns.
@@ -1953,12 +1953,12 @@ export class Miniflare {
 			// `rm -rf ${#tmpPath}`, this won't throw if `#tmpPath` doesn't exist
 			await fs.promises.rm(this.#tmpPath, { force: true, recursive: true });
 
+			// Close the inspector proxy server if there is one
+			await this.#maybeInspectorProxy?.dispose();
+
 			// Remove from instance registry as last step in `finally`, to make sure
 			// all dispose steps complete
 			maybeInstanceRegistry?.delete(this);
-
-			// Close the inspector proxy server if there is one
-			await this.#maybeInspectorProxy?.dispose();
 		}
 	}
 }
