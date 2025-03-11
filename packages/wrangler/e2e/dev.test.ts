@@ -22,36 +22,6 @@ import { getStartedWorkerdProcesses } from "./helpers/workerd-processes";
  */
 const workerName = generateResourceName();
 
-it("can import URL from 'url' in node_compat mode", async () => {
-	const helper = new WranglerE2ETestHelper();
-	await helper.seed({
-		"wrangler.toml": dedent`
-				name = "${workerName}"
-				main = "src/index.ts"
-				compatibility_date = "2023-01-01"
-				node_compat = true
-		`,
-		"src/index.ts": dedent`
-				const { URL } = require('url');
-				const { URL: nURL } = require('node:url');
-
-				export default {
-					fetch(request) {
-						const url = new URL('postgresql://user:password@example.com:12345/dbname?sslmode=disable')
-						const nUrl = new nURL('postgresql://user:password@example.com:12345/dbname?sslmode=disable')
-						return new Response(url + nUrl)
-					}
-				}`,
-	});
-	const worker = helper.runLongLived(`wrangler dev`);
-
-	const { url } = await worker.waitForReady();
-
-	await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-		`"postgresql://user:password@example.com:12345/dbname?sslmode=disablepostgresql://user:password@example.com:12345/dbname?sslmode=disable"`
-	);
-});
-
 describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
 	"basic js dev: $cmd",
 	({ cmd }) => {

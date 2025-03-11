@@ -496,41 +496,41 @@ export const cat = "dog";`
 		);
 
 		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-		"------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"metadata\\"
+			"------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"metadata\\"
 
-		{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
-		------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
-		Content-Type: application/javascript+module
+			{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+			------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+			Content-Type: application/javascript+module
 
-		// _worker.js/index.js
-		import { cat } from \\"./cat.js\\";
-		import { dog } from \\"./dog.mjs\\";
-		var worker_default = {
-		  async fetch(request, env) {
-		    return new Response(\\"Hello from _worker.js/index.js\\" + cat + dog);
-		  }
-		};
-		export {
-		  worker_default as default
-		};
-		//# sourceMappingURL=bundledWorker-0.test.mjs.map
+			// _worker.js/index.js
+			import { cat } from \\"./cat.js\\";
+			import { dog } from \\"./dog.mjs\\";
+			var index_default = {
+			  async fetch(request, env) {
+			    return new Response(\\"Hello from _worker.js/index.js\\" + cat + dog);
+			  }
+			};
+			export {
+			  index_default as default
+			};
+			//# sourceMappingURL=bundledWorker-0.test.mjs.map
 
-		------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"cat.js\\"; filename=\\"cat.js\\"
-		Content-Type: application/javascript+module
-
-
-		export const cat = \\"cat\\";
-		------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"dog.mjs\\"; filename=\\"dog.mjs\\"
-		Content-Type: application/javascript+module
+			------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"cat.js\\"; filename=\\"cat.js\\"
+			Content-Type: application/javascript+module
 
 
-		export const cat = \\"dog\\";
-		------formdata-undici-0.test--"
-	`);
+			export const cat = \\"cat\\";
+			------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"dog.mjs\\"; filename=\\"dog.mjs\\"
+			Content-Type: application/javascript+module
+
+
+			export const cat = \\"dog\\";
+			------formdata-undici-0.test--"
+		`);
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});

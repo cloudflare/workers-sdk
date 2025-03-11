@@ -40,8 +40,6 @@ export function runBuild(
 		processEntrypoint,
 		additionalModules,
 		rules,
-		legacyAssets,
-		serveLegacyAssetsFromWorker,
 		tsconfig,
 		minify,
 		nodejsCompatMode,
@@ -67,10 +65,8 @@ export function runBuild(
 		processEntrypoint: boolean;
 		additionalModules: CfModule[];
 		rules: Config["rules"];
-		legacyAssets: Config["legacy_assets"];
 		define: Config["define"];
 		alias: Config["alias"];
-		serveLegacyAssetsFromWorker: boolean;
 		tsconfig: string | undefined;
 		minify: boolean | undefined;
 		nodejsCompatMode: NodeJSCompatMode | undefined;
@@ -149,7 +145,6 @@ export function runBuild(
 						bundle: !noBundle,
 						moduleCollector,
 						additionalModules: newAdditionalModules,
-						serveLegacyAssetsFromWorker,
 						jsxFactory,
 						jsxFragment,
 						watch: true,
@@ -161,9 +156,6 @@ export function runBuild(
 						alias,
 						define,
 						mockAnalyticsEngineDatasets,
-						legacyAssets,
-						// disable the cache in dev
-						bypassAssetCache: true,
 						targetConsumer,
 						testScheduled,
 						plugins: [logBuildOutput(nodejsCompatMode, onStart, updateBundle)],

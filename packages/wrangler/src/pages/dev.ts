@@ -10,7 +10,7 @@ import { shouldCheckFetch } from "../deployment-bundle/bundle";
 import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins/alias-external";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { startDev } from "../dev";
-import { FatalError } from "../errors";
+import { FatalError, UserError } from "../errors";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -218,6 +218,7 @@ export function Options(yargs: CommonYargsArgv) {
 				default: false,
 				type: "boolean",
 				hidden: true,
+				deprecated: true,
 			},
 			"experimental-local": {
 				describe: "Run on my machine using the Cloudflare Workers runtime",
@@ -257,6 +258,12 @@ export const Handler = async (args: PagesDevArguments) => {
 	}
 
 	await printWranglerBanner();
+
+	if (args.nodeCompat) {
+		throw new UserError(
+			`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`
+		);
+	}
 
 	if (args.experimentalLocal) {
 		logger.warn(
@@ -370,7 +377,6 @@ export const Handler = async (args: PagesDevArguments) => {
 		args.compatibilityDate ?? config.compatibility_date,
 		args.compatibilityFlags ?? config.compatibility_flags ?? [],
 		{
-			nodeCompat: args.nodeCompat,
 			noBundle: args.noBundle ?? config.no_bundle,
 		}
 	);
@@ -889,7 +895,6 @@ export const Handler = async (args: PagesDevArguments) => {
 				$0: "",
 				remote: false,
 				local: true,
-				experimentalLocal: undefined,
 				d1Databases: d1_databases,
 				testScheduled: false,
 				enablePagesAssetsServiceBinding: {
@@ -906,12 +911,10 @@ export const Handler = async (args: PagesDevArguments) => {
 				assets: undefined,
 				name: undefined,
 				noBundle: false,
-				format: undefined,
 				latest: false,
 				routes: undefined,
 				host: undefined,
 				localUpstream: undefined,
-				experimentalPublic: undefined,
 				upstreamProtocol: undefined,
 				var: undefined,
 				define: undefined,
@@ -920,9 +923,7 @@ export const Handler = async (args: PagesDevArguments) => {
 				jsxFragment: undefined,
 				tsconfig: undefined,
 				minify: undefined,
-				experimentalEnableLocalPersistence: undefined,
 				legacyEnv: undefined,
-				public: undefined,
 				env: undefined,
 				ip,
 				port,
@@ -932,7 +933,7 @@ export const Handler = async (args: PagesDevArguments) => {
 				httpsCertPath: args.httpsCertPath,
 				compatibilityDate,
 				compatibilityFlags,
-				nodeCompat: nodejsCompatMode === "legacy",
+				nodeCompat: undefined,
 				vars,
 				kv: kv_namespaces,
 				durableObjects: do_bindings,
@@ -955,11 +956,9 @@ export const Handler = async (args: PagesDevArguments) => {
 				experimentalImagesLocalMode: false,
 				enableIpc: true,
 				config: Array.isArray(args.config) ? args.config : undefined,
-				legacyAssets: undefined,
 				site: undefined,
 				siteInclude: undefined,
 				siteExclude: undefined,
-				inspect: undefined,
 				experimentalAssetsRpc: false,
 			})
 	);
