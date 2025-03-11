@@ -62,7 +62,7 @@ export class InspectorProxy {
 				// The key initialisation messages that are needed are the `Debugger.scriptParsed` events.
 				this.#sendMessageToRuntime({
 					method: "Debugger.disable",
-					id: this.nextCounter(),
+					id: this.#nextCounter(),
 				});
 			}
 			this.#devtoolsWs = undefined;
@@ -76,7 +76,7 @@ export class InspectorProxy {
 	}
 
 	#runtimeMessageCounter = 1e8;
-	nextCounter() {
+	#nextCounter() {
 		return ++this.#runtimeMessageCounter;
 	}
 
@@ -102,11 +102,11 @@ export class InspectorProxy {
 
 		this.#sendMessageToRuntime({
 			method: "Runtime.enable",
-			id: this.nextCounter(),
+			id: this.#nextCounter(),
 		});
 		this.#sendMessageToRuntime({
 			method: "Network.enable",
-			id: this.nextCounter(),
+			id: this.#nextCounter(),
 		});
 
 		clearInterval(this.#runtimeKeepAliveInterval);
@@ -114,7 +114,7 @@ export class InspectorProxy {
 			if (this.#runtimeWs?.OPEN) {
 				this.#sendMessageToRuntime({
 					method: "Runtime.getIsolateId",
-					id: this.nextCounter(),
+					id: this.#nextCounter(),
 				});
 			}
 		}, 10_000);
