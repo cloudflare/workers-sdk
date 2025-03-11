@@ -203,11 +203,6 @@ export class InspectorProxyController {
 		return null;
 	}
 
-	#runtimeMessageCounter = 1e8;
-	nextCounter() {
-		return ++this.#runtimeMessageCounter;
-	}
-
 	getInspectorURL(): URL {
 		return getWebsocketURL(this.userInspectorPort);
 	}
