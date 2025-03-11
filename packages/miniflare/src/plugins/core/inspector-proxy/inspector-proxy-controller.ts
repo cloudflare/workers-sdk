@@ -6,6 +6,15 @@ import { version as miniflareVersion } from "../../../../package.json";
 import { Log } from "../../../shared";
 import { InspectorProxy } from "./inspector-proxy";
 
+/**
+ * An `InspectorProxyController` connects to the various runtime (/workerd) inspector servers and exposes through the user specified
+ * inspector port the appropriate workers.
+ *
+ * The controller:
+ *  - implements the various discovery `/json/*` endpoints that inspector clients query (exposing only the appropriate workers)
+ *  - creates a proxy for each worker
+ *  - when a web socket connection is requested for a worker it passes such request to the appropriate proxy
+ */
 export class InspectorProxyController {
 	#runtimeConnectionEstablished: DeferredPromise<void>;
 

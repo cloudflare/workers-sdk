@@ -7,6 +7,12 @@ import type {
 	DevToolsEvents,
 } from "./devtools";
 
+/**
+ * An `InspectorProxy` connects to a single runtime (/workerd) inspector server and proxies websocket communication
+ * between the inspector server and potential inspector clients (/devtools).
+ *
+ * Each `InspectorProxy` has one and only one worker inspector server associated to it.
+ */
 export class InspectorProxy {
 	#workerName: string;
 	#runtimeWs: WebSocket;
