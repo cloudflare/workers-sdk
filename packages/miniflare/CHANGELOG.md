@@ -1,5 +1,15 @@
 # miniflare
 
+## 4.20250310.0
+
+### Major Changes
+
+- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@penalosa](https://github.com/penalosa)! - The `--node-compat` flag and `node_compat` config properties are no longer supported as of Wrangler v4. Instead, use the `nodejs_compat` compatibility flag. This includes the functionality from legacy `node_compat` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.
+
+  If you need to replicate the behaviour of the legacy `node_compat` feature, refer to https://developers.cloudflare.com/workers/wrangler/migration/update-v3-to-v4/ for a detailed guide.
+
+- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@penalosa](https://github.com/penalosa)! - Packages in Workers SDK now support the versions of Node that Node itself supports (Current, Active, Maintenance). Currently, that includes Node v18, v20, and v22.
+
 ## 3.20250310.0
 
 ### Patch Changes
