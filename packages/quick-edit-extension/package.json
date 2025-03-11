@@ -44,7 +44,7 @@
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:^",
 		"@cloudflare/workers-types": "^4.20250310.0",
-		"esbuild": "0.17.19",
+		"esbuild": "catalog:default",
 		"esbuild-register": "^3.5.0"
 	},
 	"engines": {

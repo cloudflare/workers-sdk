@@ -19,7 +19,7 @@ export const versionsSecretBulkCommand = createCommand({
 		printConfigWarnings: false,
 	},
 	args: {
-		json: {
+		file: {
 			describe: `The file of key-value pairs to upload, as JSON in form {"key": value, ...} or .dev.vars file in the form KEY=VALUE`,
 			type: "string",
 		},
@@ -39,7 +39,7 @@ export const versionsSecretBulkCommand = createCommand({
 			requiresArg: true,
 		},
 	},
-	positionalArgs: ["json"],
+	positionalArgs: ["file"],
 	handler: async function versionsSecretPutBulkHandler(args, { config }) {
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
@@ -54,7 +54,7 @@ export const versionsSecretBulkCommand = createCommand({
 			`🌀 Creating the secrets for the Worker "${scriptName}" ${args.env ? `(${args.env})` : ""}`
 		);
 
-		const content = await parseBulkInputToObject(args.json);
+		const content = await parseBulkInputToObject(args.file);
 
 		if (!content) {
 			return logger.error(`No content found in file or piped input.`);

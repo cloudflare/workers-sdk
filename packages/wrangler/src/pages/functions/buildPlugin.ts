@@ -107,7 +107,6 @@ export function buildPluginFromFunctions({
 				},
 			},
 		],
-		serveLegacyAssetsFromWorker: false,
 		checkFetch: local && checkFetch,
 		// TODO: mock AE datasets in Pages functions for dev
 		mockAnalyticsEngineDatasets: [],
@@ -116,8 +115,6 @@ export function buildPluginFromFunctions({
 		projectRoot: getPagesProjectRoot(),
 		defineNavigatorUserAgent,
 
-		legacyAssets: undefined,
-		bypassAssetCache: undefined,
 		jsxFactory: undefined,
 		jsxFragment: undefined,
 		tsconfig: undefined,
