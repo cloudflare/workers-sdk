@@ -764,21 +764,21 @@ export class Miniflare {
 
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
 
-		if (this.#sharedOpts.core.unsafeInspectorProxy !== undefined) {
+		const workerNamesToProxy = new Set(
+			this.#workerOpts
+				.filter(({ core: { unsafeInspectorProxy } }) => !!unsafeInspectorProxy)
+				.map((w) => w.core.name ?? "")
+		);
+
+		const enableInspectorProxy = workerNamesToProxy.size > 0;
+
+		if (enableInspectorProxy) {
 			if (this.#sharedOpts.core.inspectorPort === undefined) {
 				throw new MiniflareCoreError(
 					"ERR_MISSING_INSPECTOR_PROXY_PORT",
-					"inspectorProxy option enabled without an inspectorPort specified"
+					"inspector proxy requested but without an inspectorPort specified"
 				);
 			}
-
-			const workerNamesToProxy = new Set(
-				this.#workerOpts
-					.filter(
-						({ core: { unsafeInspectorProxy } }) => !!unsafeInspectorProxy
-					)
-					.map((w) => w.core.name ?? "")
-			);
 
 			this.#maybeInspectorProxyController = new InspectorProxyController(
 				this.#sharedOpts.core.inspectorPort,

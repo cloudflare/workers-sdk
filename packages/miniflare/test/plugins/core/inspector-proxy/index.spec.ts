@@ -12,7 +12,6 @@ test.serial(
 	async (t) => {
 		const mf = new Miniflare({
 			inspectorPort: 9212,
-			unsafeInspectorProxy: true,
 			workers: [
 				{
 					script: nullScript,
@@ -37,7 +36,6 @@ test.serial(
 	async (t) => {
 		const mf = new Miniflare({
 			inspectorPort: 9212,
-			unsafeInspectorProxy: true,
 			workers: [
 				{
 					script: nullScript,
@@ -65,7 +63,6 @@ test.serial(
 	async (t) => {
 		const mf = new Miniflare({
 			inspectorPort: 9212,
-			unsafeInspectorProxy: true,
 			workers: [
 				{
 					script: nullScript,
@@ -115,7 +112,6 @@ test.serial(
 	async (t) => {
 		const mf = new Miniflare({
 			inspectorPort: 9212,
-			unsafeInspectorProxy: true,
 			workers: [
 				{
 					script: nullScript,
@@ -158,7 +154,6 @@ test.serial(
 	async (t) => {
 		const mf = new Miniflare({
 			inspectorPort: 9212,
-			unsafeInspectorProxy: true,
 			workers: [
 				{
 					script: `
@@ -225,7 +220,6 @@ test.serial(
 	async (t) => {
 		const mf = new Miniflare({
 			inspectorPort: 9212,
-			unsafeInspectorProxy: true,
 			workers: [
 				{
 					name: "worker-a",
@@ -373,7 +367,6 @@ test.serial("InspectorProxy: can proxy messages > 1MB", async (t) => {
 
 	const mf = new Miniflare({
 		inspectorPort: 9212,
-		unsafeInspectorProxy: true,
 		workers: [
 			{
 				script: `

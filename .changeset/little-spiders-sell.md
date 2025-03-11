@@ -4,11 +4,11 @@
 
 feat: add new `unsafeInspectorProxy` option to miniflare
 
-Add a new `unsafeInspectorProxy` option to miniflare that establishes a proxy
-between miniflare and workerd for the v8 inspector APIs. With such proxy
-miniflare consumers can specify which workers should be exposed to inspector
-clients by miniflare. The inspector proxy communicates through miniflare's
-`inspectorPort` and exposes each requested worker via a path comprised
+Add a new `unsafeInspectorProxy` option to the miniflare worker options, if
+at least one worker has the option set then miniflare will establish a proxy
+between itself and workerd for the v8 inspector APIs which exposes only the
+requested workers to inspector clients. The inspector proxy communicates through
+miniflare's `inspectorPort` and exposes each requested worker via a path comprised
 of the worker's name
 
 example:
@@ -19,8 +19,6 @@ import { Miniflare } from "miniflare";
 const mf = new Miniflare({
 	// the inspector proxy will be accessible through port 9229
 	inspectorPort: 9229,
-	// enable the inspector proxy
-	unsafeInspectorProxy: true,
 	workers: [
 		{
 			name: "worker-a",
