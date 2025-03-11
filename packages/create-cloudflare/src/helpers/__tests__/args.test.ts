@@ -112,17 +112,18 @@ describe("Cli", () => {
 			]);
 		});
 
-		const stringArgs = [
-			"--framework",
-			"--template",
-			"--type",
-			"--existing-script",
-		];
+		const stringArgs = ["framework", "template", "type", "existing-script"];
 		test.each(stringArgs)("%s requires an argument", async (arg) => {
-			await expect(parseArgs(["my-react-project", arg])).resolves.toEqual({
+			const logSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+			await expect(
+				parseArgs(["my-react-project", `--${arg}`]),
+			).resolves.toEqual({
 				type: "unknown",
 				args: null,
 			});
+			expect(logSpy).toHaveBeenCalledWith(
+				expect.stringContaining(`Not enough arguments following: ${arg}`),
+			);
 		});
 	});
 });
