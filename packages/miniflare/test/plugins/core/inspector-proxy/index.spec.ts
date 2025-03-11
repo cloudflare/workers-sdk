@@ -436,5 +436,7 @@ test.serial("InspectorProxy: can proxy messages > 1MB", async (t) => {
 	const res = await resPromise;
 	t.is(await res.text(), `body:${LARGE_STRING}`);
 
-	console.log = originalConsoleLog;
+	t.teardown(() => {
+		console.log = originalConsoleLog;
+	});
 });
