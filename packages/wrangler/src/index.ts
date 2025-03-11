@@ -1,6 +1,8 @@
+import assert from "node:assert";
 import os from "node:os";
 import { setTimeout } from "node:timers/promises";
 import chalk from "chalk";
+import dedent from "ts-dedent";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
@@ -19,6 +21,7 @@ import { experimental_readRawConfig, loadDotEnv } from "./config";
 import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
+import { ArgDefinition, InternalDefinition } from "./core/types";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
 import { deployCommand, publishAlias } from "./deploy";
@@ -765,6 +768,97 @@ export function createCLIParser(argv: string[]) {
 			return hyperdrive(hyperdriveYargs.command(subHelp));
 		}
 	);
+
+	wrangler.command("build-docs", false, (hyperdriveYargs) => {
+		const tree = registry.getDefinitionTreeRoot();
+
+		function getOptionType(def: ArgDefinition): string {
+			let baseType = def.type;
+			if (def.array) {
+				baseType += "[]";
+			}
+			return `<Type text="${baseType}" />`;
+		}
+
+		function getOptionMeta(def: ArgDefinition): string {
+			if (def.demandOption) {
+				return `<MetaInfo text="required" />`;
+			}
+			return `<MetaInfo text="${def.default ? `(default: ${def.default}) ` : ""}optional" />`;
+		}
+
+		function addHyphen(arg: string) {
+			return arg.length > 1 ? `--${arg}` : `-${arg}`;
+		}
+
+		function toArray(
+			maybeArray: string | readonly string[] | undefined
+		): string[] {
+			if (Array.isArray(maybeArray) || !maybeArray) {
+				return (maybeArray ?? []) as string[];
+			}
+
+			return [maybeArray] as string[];
+		}
+
+		function printCommand(level: number, definition: InternalDefinition) {
+			logger.log(dedent`
+				${"#".repeat(level)} \`${definition?.command}\`
+
+				${definition?.metadata?.description?.trim()}
+
+				\`\`\`sh
+				${definition?.command} ${
+					"positionalArgs" in definition!
+						? definition.positionalArgs?.map((a) =>
+								definition.args?.[a].demandOption ? `<${a}>` : `[${a}]`
+							)
+						: ""
+				}
+				\`\`\`
+
+				${
+					"args" in definition!
+						? Object.entries(definition.args!)
+								.filter(([_, def]) => !def.hidden)
+								.map(([arg, def]) => {
+									return `- \`${definition.positionalArgs?.includes(arg) ? arg : addHyphen(arg)}\`${toArray(
+										def.alias
+									)
+										.map((a) => `, \`${addHyphen(a)}\``)
+										.join("")} ${getOptionType(def)} ${getOptionMeta(def)}
+  - ${def.describe ?? ""}`;
+								})
+								.join("\n")
+						: ""
+				}
+
+			`);
+		}
+		function printNamespace(level: number, definition: InternalDefinition) {
+			logger.log(dedent`
+				---
+
+				${"#".repeat(level)} \`${definition?.command}\`
+
+				${definition?.metadata?.description}
+
+			`);
+		}
+
+		for (const [label, namespaceOrCommand] of tree.subtree) {
+			if (namespaceOrCommand.definition?.type === "command") {
+				logger.log("---\n");
+				printCommand(2, namespaceOrCommand.definition);
+			} else if (namespaceOrCommand.definition?.type === "namespace") {
+				printNamespace(2, namespaceOrCommand.definition);
+				for (const [cmdLabel, def] of namespaceOrCommand.subtree) {
+					assert(def.definition);
+					printCommand(3, def.definition);
+				}
+			}
+		}
+	});
 
 	// cert - includes mtls-certificates and CA cert management
 	registry.define([
