@@ -140,6 +140,15 @@ The `directory` in the output configuration will automatically point to the clie
 > This output file is a snapshot of your configuration at the time of the build and is modified to reference your build artifacts.
 > It is the configuration that is used for preview and deployment.
 
+#### Update the .gitignore file
+
+Wrangler will use and/or generate temporary files that should not be stored in git. Add the following lines to the `.gitignore` file:
+
+```gitignore
+.wrangler
+.dev.vars
+```
+
 #### Run the development server
 
 Run `npm run dev` to verify that your application is working as expected.
