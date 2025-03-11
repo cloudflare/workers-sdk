@@ -32,11 +32,15 @@ export class InspectorProxy {
 		devtoolsWs: WebSocket,
 		devtoolsHaveFileSystemAccess: boolean
 	) {
-		/** We only want to have one active Devtools instance at a time. */
-		assert(
-			!this.#devtoolsWs,
-			"Too many clients; only one can be connected at a time"
-		);
+		if (this.#devtoolsWs) {
+			/** We only want to have one active Devtools instance at a time. */
+			// TODO(consider): prioritise new websocket over previous
+			devtoolsWs.close(
+				1013,
+				"Too many clients; only one can be connected at a time"
+			);
+			return;
+		}
 		this.#devtoolsWs = devtoolsWs;
 		this.#devtoolsHaveFileSystemAccess = devtoolsHaveFileSystemAccess;
 
