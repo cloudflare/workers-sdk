@@ -1,5 +1,20 @@
 # miniflare
 
+## 3.20250310.0
+
+### Patch Changes
+
+- [#8423](https://github.com/cloudflare/workers-sdk/pull/8423) [`8242e07`](https://github.com/cloudflare/workers-sdk/commit/8242e07447f47ab764655e8ec9a046b1fe9ea279) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250224.0  | 1.20250310.0  |
+  | @cloudflare/workers-types | ^4.20250224.0 | ^4.20250310.0 |
+
+- [#8390](https://github.com/cloudflare/workers-sdk/pull/8390) [`53e6323`](https://github.com/cloudflare/workers-sdk/commit/53e63233c5b9bb786af3daea63c10ffe60a5d881) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Parse and apply metafiles (`_headers` and `_redirects`) in `wrangler dev` for Workers Assets
+
 ## 3.20250224.0
 
 ### Patch Changes
