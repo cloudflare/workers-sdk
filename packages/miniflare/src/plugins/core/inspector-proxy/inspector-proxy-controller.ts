@@ -66,11 +66,11 @@ export class InspectorProxyController {
 				return;
 			}
 
-			const target = this.#proxies.find(
+			const proxy = this.#proxies.find(
 				({ path }) => upgradeRequest.url === path
 			);
 
-			if (!target) {
+			if (!proxy) {
 				this.log.warn(
 					`Warning: An inspector connection was requested for the ${upgradeRequest.url} path but no such inspector exists`
 				);
@@ -78,7 +78,7 @@ export class InspectorProxyController {
 				return;
 			}
 
-			target.onDevtoolsConnected(
+			proxy.onDevtoolsConnected(
 				devtoolsWs,
 				this.#checkIfDevtoolsHaveFileSystemAccess(upgradeRequest)
 			);
