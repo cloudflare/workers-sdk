@@ -161,11 +161,21 @@ describe("pages functions build", () => {
 
 		expect(readdirSync("dist").sort()).toMatchInlineSnapshot(`
 		Array [
+		  "bundle-meta.json",
 		  "e8f0f80fe25d71a0fc2b9a08c877020211192308-name.wasm",
 		  "f7ff9e8b7bb2e09b70935a5d785e0cc5d9d0abf0-greeting.wasm",
 		  "index.js",
 		]
 	`);
+
+		// `bundle-meta.json` contains ESBuild build metadata
+		// see https://esbuild.github.io/api/#build-metadata
+		const meta = JSON.parse(
+			readFileSync("dist/bundle-meta.json", { encoding: "utf8" })
+		);
+
+		expect(meta.inputs).toBeDefined();
+		expect(meta.outputs).toBeDefined();
 	});
 
 	it("should build _worker.js", async () => {
