@@ -78,7 +78,7 @@ import {
 	reviveError,
 	ServiceDesignatorSchema,
 } from "./plugins/core";
-import { InspectorProxy } from "./plugins/core/inspector-proxy";
+import { InspectorProxyController } from "./plugins/core/inspector-proxy";
 import {
 	Config,
 	Extension,
@@ -745,7 +745,7 @@ export class Miniflare {
 	readonly #webSocketServer: WebSocketServer;
 	readonly #webSocketExtraHeaders: WeakMap<http.IncomingMessage, Headers>;
 
-	#maybeInspectorProxy?: InspectorProxy;
+	#maybeInspectorProxyController?: InspectorProxyController;
 	#previousRuntimeInspectorPort?: number;
 
 	constructor(opts: MiniflareOptions) {
@@ -780,7 +780,7 @@ export class Miniflare {
 					.map((w) => w.core.name ?? "")
 			);
 
-			this.#maybeInspectorProxy = new InspectorProxy(
+			this.#maybeInspectorProxyController = new InspectorProxyController(
 				this.#sharedOpts.core.inspectorPort,
 				this.#log,
 				workerNamesToProxy
@@ -1436,7 +1436,7 @@ export class Miniflare {
 		let runtimeInspectorAddress: string | undefined;
 		if (this.#sharedOpts.core.inspectorPort !== undefined) {
 			let runtimeInspectorPort = this.#sharedOpts.core.inspectorPort;
-			if (this.#maybeInspectorProxy !== undefined) {
+			if (this.#maybeInspectorProxyController !== undefined) {
 				// if we have an inspector proxy let's use a
 				// random port for the actual runtime inspector
 				runtimeInspectorPort = 0;
@@ -1479,7 +1479,7 @@ export class Miniflare {
 		// all of `requiredSockets` as keys.
 		this.#socketPorts = maybeSocketPorts;
 
-		if (this.#maybeInspectorProxy !== undefined) {
+		if (this.#maybeInspectorProxyController !== undefined) {
 			// Try to get inspector port for the workers
 			const maybePort = this.#socketPorts.get(kInspectorSocket);
 			if (maybePort === undefined) {
@@ -1488,7 +1488,7 @@ export class Miniflare {
 					"Unable to access the runtime inspector socket."
 				);
 			} else {
-				this.#maybeInspectorProxy.updateConnection(maybePort);
+				this.#maybeInspectorProxyController.updateConnection(maybePort);
 			}
 		}
 
@@ -1575,7 +1575,7 @@ export class Miniflare {
 		// instance. In this case, return a discard URL which we'll ignore.
 		if (disposing) return new URL("http://[100::]/");
 		// if there is an inspector proxy let's wait for it to be ready
-		await this.#maybeInspectorProxy?.ready;
+		await this.#maybeInspectorProxyController?.ready;
 		// Make sure `dispose()` wasn't called in the time we've been waiting
 		this.#checkDisposed();
 		// `#runtimeEntryURL` is assigned in `#assembleAndUpdateConfig()`, which is
@@ -1600,8 +1600,8 @@ export class Miniflare {
 		this.#checkDisposed();
 		await this.ready;
 
-		if (this.#maybeInspectorProxy !== undefined) {
-			return this.#maybeInspectorProxy.getInspectorURL();
+		if (this.#maybeInspectorProxyController !== undefined) {
+			return this.#maybeInspectorProxyController.getInspectorURL();
 		}
 
 		// `#socketPorts` is assigned in `#assembleAndUpdateConfig()`, which is
@@ -1954,7 +1954,7 @@ export class Miniflare {
 			await fs.promises.rm(this.#tmpPath, { force: true, recursive: true });
 
 			// Close the inspector proxy server if there is one
-			await this.#maybeInspectorProxy?.dispose();
+			await this.#maybeInspectorProxyController?.dispose();
 
 			// Remove from instance registry as last step in `finally`, to make sure
 			// all dispose steps complete

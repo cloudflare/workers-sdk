@@ -7,7 +7,7 @@ import type {
 	DevToolsEvents,
 } from "./devtools";
 
-export class InspectorProxyRelay {
+export class InspectorProxy {
 	#workerName: string;
 	#runtimeWs: WebSocket;
 

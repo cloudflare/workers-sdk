@@ -4,12 +4,12 @@ import { DeferredPromise } from "miniflare:shared";
 import WebSocket, { WebSocketServer } from "ws";
 import { version as miniflareVersion } from "../../../../package.json";
 import { Log } from "../../../shared";
-import { InspectorProxyRelay } from "./inspector-proxy-relay";
+import { InspectorProxy } from "./inspector-proxy";
 
-export class InspectorProxy {
+export class InspectorProxyController {
 	#runtimeConnectionEstablished: DeferredPromise<void>;
 
-	#workerRelays: InspectorProxyRelay[] = [];
+	#proxies: InspectorProxy[] = [];
 
 	#server: Server;
 
@@ -57,8 +57,8 @@ export class InspectorProxy {
 				return;
 			}
 
-			const target = this.#workerRelays.find(
-				(relay) => upgradeRequest.url === relay.path
+			const target = this.#proxies.find(
+				({ path }) => upgradeRequest.url === path
 			);
 
 			if (!target) {
@@ -169,8 +169,7 @@ export class InspectorProxy {
 		}
 
 		if (path === "/json" || path === "/json/list") {
-			return this.#workerRelays.map((relay) => {
-				const workerName = relay.workerName;
+			return this.#proxies.map(({ workerName }) => {
 				const localHost = `${host}/${workerName}`;
 				const devtoolsFrontendUrl = `https://devtools.devprod.cloudflare.dev/js_app?theme=systemPreferred&debugger=true&ws=${localHost}`;
 
@@ -183,7 +182,7 @@ export class InspectorProxy {
 					devtoolsFrontendUrlCompat: devtoolsFrontendUrl,
 					// Below are fields that are visible in the DevTools UI.
 					title:
-						workerName.length === 0 || this.#workerRelays.length === 1
+						workerName.length === 0 || this.#proxies.length === 1
 							? `Cloudflare Worker`
 							: `Cloudflare Worker: ${workerName}`,
 					faviconUrl: "https://workers.cloudflare.com/favicon.ico",
@@ -211,7 +210,7 @@ export class InspectorProxy {
 			id: string;
 		}[];
 
-		this.#workerRelays = workerdInspectorJson
+		this.#proxies = workerdInspectorJson
 			.map(({ id }) => {
 				if (!id.startsWith("core:user:")) {
 					return;
@@ -223,12 +222,12 @@ export class InspectorProxy {
 					return;
 				}
 
-				return new InspectorProxyRelay(
+				return new InspectorProxy(
 					workerName,
 					new WebSocket(`ws://127.0.0.1:${runtimeInspectorPort}/${id}`)
 				);
 			})
-			.filter(Boolean) as InspectorProxyRelay[];
+			.filter(Boolean) as InspectorProxy[];
 
 		this.#runtimeConnectionEstablished.resolve();
 	}
@@ -242,7 +241,7 @@ export class InspectorProxy {
 	}
 
 	async dispose(): Promise<void> {
-		await Promise.all(this.#workerRelays.map((relay) => relay.dispose()));
+		await Promise.all(this.#proxies.map((proxy) => proxy.dispose()));
 
 		return new Promise((resolve, reject) => {
 			this.#server.close((err) => (err ? reject(err) : resolve()));
