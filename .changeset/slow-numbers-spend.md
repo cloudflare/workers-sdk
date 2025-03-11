@@ -1,5 +1,5 @@
 ---
-"create-cloudflare": patch
+"create-cloudflare": minor
 ---
 
 Graduate Angular, Gatsby, Vue and Nuxt templates (Workers + Assets) from experimental
