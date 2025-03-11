@@ -141,6 +141,7 @@ const bindingsConfigMock: Omit<
 			database_id: "1234",
 		},
 	],
+	secret_stores: [],
 	services: [{ binding: "SERVICE_BINDING", service: "SERVICE_NAME" }],
 	analytics_engine_datasets: [
 		{

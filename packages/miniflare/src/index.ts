@@ -56,6 +56,7 @@ import {
 	QueuesError,
 	R2_PLUGIN_NAME,
 	ReplaceWorkersTypes,
+	SECRET_STORE_PLUGIN_NAME,
 	SERVICE_ENTRY,
 	SharedOptions,
 	SOCKET_ENTRY,
@@ -1846,6 +1847,19 @@ export class Miniflare {
 		workerName?: string
 	): Promise<ReplaceWorkersTypes<KVNamespace>> {
 		return this.#getProxy(KV_PLUGIN_NAME, bindingName, workerName);
+	}
+	getSercetStoreKVNamespace(
+		bindingName: string,
+		workerName?: string
+	): Promise<ReplaceWorkersTypes<KVNamespace>> {
+		return this.#getProxy(
+			SECRET_STORE_PLUGIN_NAME,
+			bindingName,
+			workerName
+		).then((binding) => {
+			// @ts-ignore We exposed the internal KV namespace in the wrapped bindings
+			return binding.store;
+		});
 	}
 	getQueueProducer<Body = unknown>(
 		bindingName: string,
