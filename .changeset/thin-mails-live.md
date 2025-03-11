@@ -1,5 +1,6 @@
 ---
-"@cloudflare/workers-shared": patch
+"@cloudflare/workers-shared": minor
+"@cloudflare/pages-shared": patch
 "miniflare": patch
 "wrangler": patch
 ---
