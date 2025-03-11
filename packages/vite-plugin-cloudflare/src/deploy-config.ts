@@ -2,6 +2,7 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vite from "vite";
+import { unstable_readConfig } from "wrangler";
 import type { ResolvedPluginConfig } from "./plugin-config";
 
 interface DeployConfig {
@@ -13,7 +14,7 @@ function getDeployConfigPath(root: string) {
 	return path.resolve(root, ".wrangler", "deploy", "config.json");
 }
 
-export function getWorkerConfigPaths(root: string) {
+export function getWorkerConfigs(root: string) {
 	const deployConfigPath = getDeployConfigPath(root);
 	const deployConfig = JSON.parse(
 		fs.readFileSync(deployConfigPath, "utf-8")
@@ -22,9 +23,13 @@ export function getWorkerConfigPaths(root: string) {
 	return [
 		{ configPath: deployConfig.configPath },
 		...deployConfig.auxiliaryWorkers,
-	].map(({ configPath }) =>
-		path.resolve(path.dirname(deployConfigPath), configPath)
-	);
+	].map(({ configPath }) => {
+		const resolvedConfigPath = path.resolve(
+			path.dirname(deployConfigPath),
+			configPath
+		);
+		return unstable_readConfig({ config: resolvedConfigPath });
+	});
 }
 
 function getRelativePathToWorkerConfig(

@@ -15,7 +15,13 @@ import {
 	createCloudflareEnvironmentOptions,
 	initRunners,
 } from "./cloudflare-environment";
-import { writeDeployConfig } from "./deploy-config";
+import { DEFAULT_INSPECTOR_PORT } from "./constants";
+import {
+	addDebugToVitePrintUrls,
+	debuggingPath,
+	getDebuggerHtmlResponse,
+} from "./debugging";
+import { getWorkerConfigs, writeDeployConfig } from "./deploy-config";
 import {
 	getDevMiniflareOptions,
 	getPreviewMiniflareOptions,
@@ -296,8 +302,19 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					getDevMiniflareOptions(resolvedPluginConfig, viteDevServer)
 				);
 
+				if (resolvedPluginConfig.type === "workers") {
+					addDebugToVitePrintUrls(viteDevServer);
+				}
+
 				await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
 				const routerWorker = await getRouterWorker(miniflare);
+
+				const workerNames =
+					resolvedPluginConfig.type === "assets-only"
+						? []
+						: Object.values(resolvedPluginConfig.workers).map(
+								(worker) => worker.name
+							);
 
 				const middleware = createMiddleware(
 					({ request }) => {
@@ -317,16 +334,32 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				};
 			},
 			configurePreviewServer(vitePreviewServer) {
+				const workerConfigs = getWorkerConfigs(vitePreviewServer.config.root);
+
 				const miniflare = new Miniflare(
 					getPreviewMiniflareOptions(
 						vitePreviewServer,
+						workerConfigs,
 						pluginConfig.persistState ?? true,
 						pluginConfig.inspectorPort
 					)
 				);
 
+				if (workerConfigs.length >= 1) {
+					addDebugToVitePrintUrls(vitePreviewServer);
+				}
+
+				const workerNames = workerConfigs.map((worker) => worker.name ?? "");
+
 				const middleware = createMiddleware(
 					({ request }) => {
+						const url = new URL(request.url);
+						if (url.pathname === debuggingPath && workerNames.length >= 1) {
+							return getDebuggerHtmlResponse(
+								workerNames,
+								pluginConfig.inspectorPort ?? DEFAULT_INSPECTOR_PORT
+							);
+						}
 						return miniflare.dispatchFetch(toMiniflareRequest(request), {
 							redirect: "manual",
 						}) as any;
