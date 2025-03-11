@@ -836,14 +836,21 @@ export const addWranglerToGitIgnore = (ctx: C3Context) => {
 	}
 
 	const existingGitIgnoreContent = readFile(gitIgnorePath);
+	const wranglerGitIgnoreFilesToAdd: string[] = [];
 
-	const wranglerGitIgnoreFiles = [".wrangler", ".dev.vars"] as const;
-	const wranglerGitIgnoreFilesToAdd = wranglerGitIgnoreFiles.filter(
-		(file) =>
-			!existingGitIgnoreContent.match(
-				new RegExp(`\n${file}${file === ".wrangler" ? "/?" : ""}\\s+(#'*)?`),
-			),
+	const hasDotWrangler = existingGitIgnoreContent.match(
+		/^\/?\.wrangler(\/|\s|$)/m,
 	);
+	if (!hasDotWrangler) {
+		wranglerGitIgnoreFilesToAdd.push(".wrangler");
+	}
+
+	const hasDotDevDotVars = existingGitIgnoreContent.match(
+		/^\/?\.dev\.vars(\.?\*)?(\s|$)/m,
+	);
+	if (!hasDotDevDotVars) {
+		wranglerGitIgnoreFilesToAdd.push(".dev.vars*");
+	}
 
 	if (wranglerGitIgnoreFilesToAdd.length === 0) {
 		return;
@@ -857,7 +864,7 @@ export const addWranglerToGitIgnore = (ctx: C3Context) => {
 		...(!existingGitIgnoreContent.match(/\n\s*$/) ? [""] : []),
 	];
 
-	if (wranglerGitIgnoreFilesToAdd.length === wranglerGitIgnoreFiles.length) {
+	if (wranglerGitIgnoreFilesToAdd.length > 1) {
 		linesToAppend.push("# wrangler files");
 	}
 
