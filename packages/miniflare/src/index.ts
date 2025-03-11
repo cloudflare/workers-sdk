@@ -754,6 +754,23 @@ export class Miniflare {
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
 
+		const workerNamesToProxy = new Set(
+			this.#workerOpts
+				.filter(({ core: { unsafeInspectorProxy } }) => !!unsafeInspectorProxy)
+				.map((w) => w.core.name ?? "")
+		);
+
+		const enableInspectorProxy = workerNamesToProxy.size > 0;
+
+		if (enableInspectorProxy) {
+			if (this.#sharedOpts.core.inspectorPort === undefined) {
+				throw new MiniflareCoreError(
+					"ERR_MISSING_INSPECTOR_PROXY_PORT",
+					"inspector proxy requested but without an inspectorPort specified"
+				);
+			}
+		}
+
 		// Add to registry after initial options validation, before any servers/
 		// child processes are started
 		if (maybeInstanceRegistry !== undefined) {
@@ -763,14 +780,6 @@ export class Miniflare {
 		}
 
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
-
-		const workerNamesToProxy = new Set(
-			this.#workerOpts
-				.filter(({ core: { unsafeInspectorProxy } }) => !!unsafeInspectorProxy)
-				.map((w) => w.core.name ?? "")
-		);
-
-		const enableInspectorProxy = workerNamesToProxy.size > 0;
 
 		if (enableInspectorProxy) {
 			if (this.#sharedOpts.core.inspectorPort === undefined) {

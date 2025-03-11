@@ -1,7 +1,7 @@
 import events from "node:events";
 import { setTimeout } from "node:timers/promises";
 import test from "ava";
-import { fetch, Miniflare } from "miniflare";
+import { fetch, Miniflare, MiniflareCoreError } from "miniflare";
 import WebSocket from "ws";
 
 const nullScript =
@@ -61,6 +61,26 @@ test.serial(
 		t.is(inspectors[0]["webSocketDebuggerUrl"], "ws://localhost:9212/");
 	}
 );
+
+test.serial("InspectorProxy: proxy port validation", async (t) => {
+	t.throws(
+		() =>
+			new Miniflare({
+				workers: [
+					{
+						script: nullScript,
+						unsafeInspectorProxy: true,
+					},
+				],
+			}),
+		{
+			instanceOf: MiniflareCoreError,
+			code: "ERR_MISSING_INSPECTOR_PROXY_PORT",
+			message:
+				"inspector proxy requested but without an inspectorPort specified",
+		}
+	);
+});
 
 test.serial(
 	"InspectorProxy: /json should provide a list of a multiple worker inspector",
