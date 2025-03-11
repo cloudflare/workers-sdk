@@ -367,6 +367,9 @@ test.serial("InspectorProxy: can proxy messages > 1MB", async (t) => {
 
 	const originalConsoleLog = console.log;
 	console.log = () => {};
+	t.teardown(() => {
+		console.log = originalConsoleLog;
+	});
 
 	const mf = new Miniflare({
 		inspectorPort: 9212,
@@ -435,8 +438,4 @@ test.serial("InspectorProxy: can proxy messages > 1MB", async (t) => {
 
 	const res = await resPromise;
 	t.is(await res.text(), `body:${LARGE_STRING}`);
-
-	t.teardown(() => {
-		console.log = originalConsoleLog;
-	});
 });
