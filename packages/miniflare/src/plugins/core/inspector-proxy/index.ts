@@ -30,7 +30,9 @@ export class InspectorProxy {
 			);
 
 			if (maybeJson !== null) {
+				res.setHeader("Content-Type", "application/json");
 				res.end(JSON.stringify(maybeJson));
+				return;
 			}
 
 			res.statusCode = 404;
@@ -243,8 +245,9 @@ export class InspectorProxy {
 		await Promise.all(this.#workerRelays.map((relay) => relay.dispose()));
 
 		return new Promise((resolve, reject) => {
-			this.#server.close((err) => err ? reject(err) : resolve());
+			this.#server.close((err) => (err ? reject(err) : resolve()));
 		});
+	}
 }
 
 function getWebsocketURL(port: number): URL {
