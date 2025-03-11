@@ -1,6 +1,8 @@
 import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockPrompt } from "./helpers/mock-dialogs";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -2069,6 +2071,11 @@ describe("wrangler", () => {
 	});
 
 	describe("purge", () => {
+		const { setIsTTY } = useMockIsTTY();
+		beforeEach(() => {
+			setIsTTY(false);
+		});
+
 		function mockPurgeRequest() {
 			const requests = { count: 0 };
 
@@ -2144,20 +2151,99 @@ describe("wrangler", () => {
 				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				  -h, --help     Show help  [boolean]
-				  -v, --version  Show version number  [boolean]"
+				  -v, --version  Show version number  [boolean]
+
+				OPTIONS
+				      --force  Skip the confirmation dialog and forcefully purge the Queue  [boolean]"
 			`);
 		});
 
-		it("should call the /purge API endpoint", async () => {
+		it("rejects a missing --force flag in non-interactive mode", async () => {
 			const getrequests = mockGetQueueRequest("testQueue");
 			const requests = mockPurgeRequest();
 
+			await expect(
+				runWrangler("queues purge testQueue")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The --force flag is required to purge a Queue in non-interactive mode]`
+			);
+
+			expect(requests.count).toEqual(0);
+			expect(getrequests.count).toEqual(0);
+
+			expect(std.out).toMatchInlineSnapshot(`""`);
+		});
+
+		it("allows purge with the --force flag in non-interactive mode", async () => {
+			const getrequests = mockGetQueueRequest("testQueue");
+			const requests = mockPurgeRequest();
+
+			await runWrangler("queues purge testQueue --force");
+
+			expect(requests.count).toEqual(1);
+			expect(getrequests.count).toEqual(1);
+
+			expect(std.out).toMatchInlineSnapshot(`"Purged Queue 'testQueue'"`);
+		});
+
+		it("allows purge with the --force flag in non-interactive mode", async () => {
+			const getrequests = mockGetQueueRequest("testQueue");
+			const requests = mockPurgeRequest();
+
+			await runWrangler("queues purge testQueue --force");
+
+			expect(requests.count).toEqual(1);
+			expect(getrequests.count).toEqual(1);
+
+			expect(std.out).toMatchInlineSnapshot(`"Purged Queue 'testQueue'"`);
+		});
+
+		it("allows purge with the --force flag in interactive mode", async () => {
+			setIsTTY(true);
+			const getrequests = mockGetQueueRequest("testQueue");
+			const requests = mockPurgeRequest();
+			await runWrangler("queues purge testQueue --force");
+
+			expect(requests.count).toEqual(1);
+			expect(getrequests.count).toEqual(1);
+
+			expect(std.out).toMatchInlineSnapshot(`"Purged Queue 'testQueue'"`);
+		});
+
+		it("rejects invalid confirmation in interactive mode", async () => {
+			setIsTTY(true);
+			const getrequests = mockGetQueueRequest("testQueue");
+			const requests = mockPurgeRequest();
+			mockPrompt({
+				text: "This operation will permanently delete all the messages in Queue testQueue. Type testQueue to proceed.",
+				result: "wrong-name",
+			});
+			await expect(
+				runWrangler("queues purge testQueue")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Incorrect queue name provided. Skipping purge operation]`
+			);
+
+			expect(requests.count).toEqual(0);
+			expect(getrequests.count).toEqual(0);
+
+			expect(std.out).toMatchInlineSnapshot(`""`);
+		});
+
+		it("allows purge with correct confirmation in interactive mode", async () => {
+			setIsTTY(true);
+			const getrequests = mockGetQueueRequest("testQueue");
+			const requests = mockPurgeRequest();
+			mockPrompt({
+				text: "This operation will permanently delete all the messages in Queue testQueue. Type testQueue to proceed.",
+				result: "testQueue",
+			});
 			await runWrangler("queues purge testQueue");
 
 			expect(requests.count).toEqual(1);
 			expect(getrequests.count).toEqual(1);
 
-			expect(std.out).toMatchInlineSnapshot(`"Started a purge operation for Queue 'testQueue'"`);
+			expect(std.out).toMatchInlineSnapshot(`"Purged Queue 'testQueue'"`);
 		});
 	});
 });

@@ -10,11 +10,16 @@ import type {
 } from "../../../yargs-types";
 
 export function options(yargs: CommonYargsArgv) {
-	return yargs.positional("name", {
-		type: "string",
-		demandOption: true,
-		description: "The name of the queue",
-	});
+	return yargs
+		.positional("name", {
+			type: "string",
+			demandOption: true,
+			description: "The name of the queue",
+		})
+		.option("force", {
+			describe: "Skip the confirmation dialog and forcefully purge the Queue",
+			type: "boolean",
+		});
 }
 
 export async function handler(
@@ -22,18 +27,24 @@ export async function handler(
 ) {
 	const config = readConfig(args);
 
-	if (isInteractive()) {
+	if (!args.force && !isInteractive()) {
+		throw new FatalError(
+			"The --force flag is required to purge a Queue in non-interactive mode"
+		);
+	}
+
+	if (!args.force && isInteractive()) {
 		const result = await prompt(
 			`This operation will permanently delete all the messages in Queue ${args.name}. Type ${args.name} to proceed.`
 		);
+
 		if (result !== args.name) {
 			throw new FatalError(
 				"Incorrect queue name provided. Skipping purge operation"
 			);
 		}
 	}
-
 	await purgeQueue(config, args.name);
 
-	logger.log(`Started a purge operation for Queue '${args.name}'`);
+	logger.log(`Purged Queue '${args.name}'`);
 }
