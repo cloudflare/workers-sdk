@@ -4,8 +4,8 @@
 
 feat: add new `unsafeInspectorProxy` option to miniflare
 
-add a new `unsafeInspectorProxy` option to miniflare that established a proxy
-between miniflare and workerd for the v8 inspector APIs, with such proxy
+Add a new `unsafeInspectorProxy` option to miniflare that establishes a proxy
+between miniflare and workerd for the v8 inspector APIs. With such proxy
 miniflare consumers can specify which workers should be exposed to inspector
 clients by miniflare. The inspector proxy communicates through miniflare's
 `inspectorPort` and exposes each requested worker via a path comprised

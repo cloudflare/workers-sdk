@@ -242,16 +242,9 @@ export class InspectorProxy {
 	async dispose(): Promise<void> {
 		await Promise.all(this.#workerRelays.map((relay) => relay.dispose()));
 
-		const deferredPromise = new DeferredPromise<void>();
-		this.#server.close((err) => {
-			if (err) {
-				deferredPromise.reject(err);
-			} else {
-				deferredPromise.resolve();
-			}
+		return new Promise((resolve, reject) => {
+			this.#server.close((err) => err ? reject(err) : resolve());
 		});
-		return deferredPromise;
-	}
 }
 
 function getWebsocketURL(port: number): URL {

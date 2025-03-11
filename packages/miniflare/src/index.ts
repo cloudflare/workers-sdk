@@ -1480,7 +1480,7 @@ export class Miniflare {
 		this.#socketPorts = maybeSocketPorts;
 
 		if (this.#maybeInspectorProxy !== undefined) {
-			// Try to get inspector port for worker
+			// Try to get inspector port for the workers
 			const maybePort = this.#socketPorts.get(kInspectorSocket);
 			if (maybePort === undefined) {
 				throw new MiniflareCoreError(
