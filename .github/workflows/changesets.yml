@@ -69,11 +69,11 @@ jobs:
       #     WORKERS_SHARED_SENTRY_AUTH_TOKEN: ${{ secrets.WORKERS_SHARED_SENTRY_AUTH_TOKEN }}
       #     VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
-      - name: Send Alert
-        if: always()
-        run: node -r esbuild-register tools/deployments/alert-on-error.ts
-        env:
-          PUBLISH_STATUS: ${{ steps.changesets.outcome }}
-          DEPLOYMENT_STATUS: ${{ steps.deploy.outputs.status }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          TOKEN: ${{ secrets.STATUS_BOT_SECRET }}
+      # - name: Send Alert
+      #   if: always()
+      #   run: node -r esbuild-register tools/deployments/alert-on-error.ts
+      #   env:
+      #     PUBLISH_STATUS: ${{ steps.changesets.outcome }}
+      #     DEPLOYMENT_STATUS: ${{ steps.deploy.outputs.status }}
+      #     RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      #     TOKEN: ${{ secrets.STATUS_BOT_SECRET }}
