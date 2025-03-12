@@ -9,23 +9,20 @@ import type { Disk } from "./Disk";
 import type { DNSConfiguration } from "./DNSConfiguration";
 import type { Entrypoint } from "./Entrypoint";
 import type { EnvironmentVariable } from "./EnvironmentVariable";
+import type { Image } from "./Image";
 import type { Label } from "./Label";
 import type { MemorySizeWithUnit } from "./MemorySizeWithUnit";
+import type { NetworkParameters } from "./NetworkParameters";
 import type { Observability } from "./Observability";
+import type { Port } from "./Port";
+import type { ProvisionerConfiguration } from "./ProvisionerConfiguration";
 import type { SSHPublicKeyID } from "./SSHPublicKeyID";
 
 /**
- * Request body modifying an existing deployment
+ * Properties required to modify a cloudchamber deployment specified by the user.
  */
-export type ModifyDeploymentV2RequestBody = {
-	/**
-	 * The new image that the deployment will have from now on
-	 */
-	image?: string;
-	/**
-	 * The new location that the deployment will have from now on
-	 */
-	location?: string;
+export type ModifyUserDeploymentConfiguration = {
+	image?: Image;
 	/**
 	 * A list of SSH public key IDs from the account
 	 */
@@ -35,11 +32,11 @@ export type ModifyDeploymentV2RequestBody = {
 	 */
 	secrets?: Array<DeploymentSecretMap>;
 	/**
-	 * The new vcpu that the deployment will have from now on
+	 * Specify the vcpu to be used for the deployment. The default will be the one configured for the account.
 	 */
 	vcpu?: number;
 	/**
-	 * The new memory that the deployment will have from now on
+	 * Specify the memory to be used for the deployment. The default will be the one configured for the account.
 	 */
 	memory?: MemorySizeWithUnit;
 	/**
@@ -54,12 +51,15 @@ export type ModifyDeploymentV2RequestBody = {
 	 * Deployment labels
 	 */
 	labels?: Array<Label>;
+	network?: NetworkParameters;
 	command?: Command;
 	entrypoint?: Entrypoint;
 	dns?: DNSConfiguration;
+	ports?: Array<Port>;
 	/**
 	 * Health and readiness checks for this deployment.
 	 */
 	checks?: Array<DeploymentCheckRequestBody>;
+	provisioner?: ProvisionerConfiguration;
 	observability?: Observability;
 };
