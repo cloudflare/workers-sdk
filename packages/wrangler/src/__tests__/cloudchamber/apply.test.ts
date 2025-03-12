@@ -73,7 +73,7 @@ function mockModifyApplication(
 				if (expected !== undefined) {
 					expect(json).toEqual(expected);
 				}
-				console.log(json);
+
 				expect((json as CreateApplicationRequest).name).toBeUndefined();
 				response(json as ModifyApplicationRequestBody);
 				return HttpResponse.json(json);
@@ -166,6 +166,7 @@ describe("cloudchamber apply", () => {
 				name: "my-container-app",
 				instances: 3,
 				created_at: new Date().toString(),
+				version: 1,
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.REGIONAL,
 				configuration: {
@@ -197,6 +198,8 @@ describe("cloudchamber apply", () => {
 			│
 			├ Do you want to apply these changes?
 			│ yes
+			│
+			├ Loading
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
@@ -239,6 +242,7 @@ describe("cloudchamber apply", () => {
 				instances: 3,
 				created_at: new Date().toString(),
 				account_id: "1",
+				version: 1,
 				scheduling_policy: SchedulingPolicy.REGIONAL,
 				configuration: {
 					image: "./Dockerfile",
@@ -280,6 +284,8 @@ describe("cloudchamber apply", () => {
 			│
 			├ Do you want to apply these changes?
 			│ yes
+			│
+			├ Loading
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
@@ -336,6 +342,7 @@ describe("cloudchamber apply", () => {
 				id: "abc",
 				name: "my-container-app",
 				instances: 3,
+				version: 1,
 				created_at: new Date().toString(),
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.REGIONAL,
@@ -408,6 +415,8 @@ describe("cloudchamber apply", () => {
 			├ Do you want to apply these changes?
 			│ yes
 			│
+			├ Loading
+			│
 			│
 			│  SUCCESS  Modified application my-container-app
 			│
@@ -461,6 +470,7 @@ describe("cloudchamber apply", () => {
 				id: "abc",
 				name: "my-container-app",
 				instances: 3,
+				version: 1,
 				created_at: new Date().toString(),
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.REGIONAL,
@@ -601,8 +611,8 @@ describe("cloudchamber apply", () => {
 		};
 
 		mockGetApplications([
-			completeApp,
-			{ ...completeApp, name: "my-container-app-2", id: "abc2" },
+			{ ...completeApp, version: 1 },
+			{ ...completeApp, version: 1, name: "my-container-app-2", id: "abc2" },
 		]);
 		await runWrangler("cloudchamber apply --json");
 		/* eslint-disable */

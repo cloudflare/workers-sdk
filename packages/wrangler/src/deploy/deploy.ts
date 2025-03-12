@@ -7,6 +7,7 @@ import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
+import { buildContainers, deployContainers } from "../cloudchamber/deploy";
 import { configFileName, formatConfigSnippet } from "../config";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -756,6 +757,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		let workerBundle: FormData;
 
 		if (props.dryRun) {
+			if (config.containers) {
+				await buildContainers(config, workerTag ?? "worker-tag");
+			}
+
 			workerBundle = createWorkerUploadForm(worker);
 			printBindings(
 				{ ...withoutStaticAssets, vars: maskedVars },
@@ -978,6 +983,17 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	// deploy triggers
 	const targets = await triggersDeploy(props);
+
+	if (config.containers) {
+		assert(versionId && accountId);
+		await deployContainers(config, {
+			versionId,
+			accountId,
+			scriptName,
+			dryRun: props.dryRun,
+			env: props.env,
+		});
+	}
 
 	logger.log("Current Version ID:", versionId);
 
