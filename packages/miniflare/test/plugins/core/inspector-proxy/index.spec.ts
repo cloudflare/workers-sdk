@@ -384,7 +384,7 @@ test.serial(
 // through the InspectorProxy, we need to make sure that such proxying does not hit the limit.
 // By logging a large string we can verify that the inspector messages are being proxied successfully.
 // (This issue was encountered with the wrangler inspector proxy worker: https://github.com/cloudflare/workers-sdk/issues/5297)
-test.serial("InspectorProxy: can proxy messages > 1MB", async (t) => {
+test.only("InspectorProxy: can proxy messages > 1MB", async (t) => {
 	const LARGE_STRING = "This is a large string => " + "z".repeat(2 ** 20);
 
 	const originalConsoleLog = console.log;
@@ -429,15 +429,23 @@ test.serial("InspectorProxy: can proxy messages > 1MB", async (t) => {
 
 	await events.once(ws, "open");
 
-	ws.send(JSON.stringify({ id: 0, method: "Debugger.enable" }));
+	ws.send(JSON.stringify({ id: 0, method: "Runtime.enable" }));
+
+	t.like(await nextMessage(), {
+		method: "Runtime.executionContextCreated",
+	});
+
+	t.like(await nextMessage(), { id: 0 });
+
+	ws.send(JSON.stringify({ id: 1, method: "Debugger.enable" }));
 
 	t.like(await nextMessage(), {
 		method: "Debugger.scriptParsed",
 	});
 
-	t.like(await nextMessage(), { id: 0 });
+	t.like(await nextMessage(), { id: 1 });
 
-	// Send request and hit `debugger;` statement
+	// Send request had check that the large string gets logged
 	const originalAssertConsumed = process.env.MINIFLARE_ASSERT_BODIES_CONSUMED;
 	process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = undefined;
 	const resPromise = mf.dispatchFetch("http://localhost");
