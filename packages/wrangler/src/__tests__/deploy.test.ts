@@ -10,6 +10,7 @@ import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { File } from "undici";
 import { vi } from "vitest";
+import { type Application } from "../cloudchamber/client";
 import {
 	printBundleSize,
 	printOffendingDependencies,
@@ -17,6 +18,7 @@ import {
 import { clearOutputFilePath } from "../output";
 import { sniffUserAgent } from "../package-manager";
 import { writeAuthConfigFile } from "../user";
+import { mockAccount as mockContainersAccount } from "./cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockAuthDomain } from "./helpers/mock-auth-domain";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -9227,6 +9229,133 @@ addEventListener('fetch', event => {});`
 					  https://test-name.test-sub-domain.workers.dev
 					Current Version ID: Galaxy-Class"
 				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should support durable object bindings to SQLite classes with containers", async () => {
+				function mockGetVersion(versionId: string) {
+					msw.use(
+						http.get(
+							`*/accounts/:accountId/workers/scripts/:scriptName/versions/${versionId}`,
+							async () => {
+								return HttpResponse.json(
+									createFetchResult({
+										id: versionId,
+										metadata: {},
+										number: 2,
+										resources: {
+											bindings: [
+												{
+													type: "durable_object_namespace",
+													namespace_id: "1",
+													class_name: "ExampleDurableObject",
+												},
+											],
+										},
+									})
+								);
+							},
+							{ once: true }
+						)
+					);
+				}
+
+				function mockGetApplications(applications: Application[]) {
+					msw.use(
+						http.get(
+							"*/applications",
+							async () => {
+								return HttpResponse.json(applications);
+							},
+							{ once: true }
+						)
+					);
+				}
+
+				mockGetVersion("Galaxy-Class");
+
+				mockContainersAccount();
+				writeWranglerConfig({
+					durable_objects: {
+						bindings: [
+							{
+								name: "EXAMPLE_DO_BINDING",
+								class_name: "ExampleDurableObject",
+							},
+						],
+					},
+					containers: [
+						{
+							name: "my-container",
+							instances: 10,
+							class_name: "ExampleDurableObject",
+							configuration: {
+								image: "docker.io/hello:world",
+							},
+						},
+					],
+					migrations: [
+						{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+					],
+				});
+
+				mockGetApplications([]);
+				function mockCreateApplication(expected?: Partial<Application>) {
+					msw.use(
+						http.post(
+							"*/applications",
+							async ({ request }) => {
+								const json = await request.json();
+								if (expected !== undefined) {
+									expect(json).toMatchObject(expected);
+								}
+
+								return HttpResponse.json(json);
+							},
+							{ once: true }
+						)
+					);
+				}
+
+				mockCreateApplication({
+					name: "my-container",
+					instances: 10,
+					durable_objects: { namespace_id: "1" },
+				});
+
+				fs.writeFileSync(
+					"index.js",
+					`export class ExampleDurableObject {}; export default{};`
+				);
+				mockSubDomainRequest();
+				mockLegacyScriptData({
+					scripts: [{ id: "test-name", migration_tag: "v1" }],
+				});
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							class_name: "ExampleDurableObject",
+							name: "EXAMPLE_DO_BINDING",
+							type: "durable_object_namespace",
+						},
+					],
+					useOldUploadApi: true,
+					expectedContainers: [{ class_name: "ExampleDurableObject" }],
+				});
+
+				await runWrangler("deploy index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Your worker has access to the following bindings:
+			- Durable Objects:
+			  - EXAMPLE_DO_BINDING: ExampleDurableObject
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
