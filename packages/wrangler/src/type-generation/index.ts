@@ -11,6 +11,7 @@ import { getVarsForDev } from "../dev/dev-vars";
 import { CommandLineArgsError, UserError } from "../errors";
 import { logger } from "../logger";
 import { parseJSONC } from "../parse";
+import { isProcessEnvPopulated } from "../process-env";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type { Config, RawEnvironment } from "../config";
@@ -254,6 +255,7 @@ export async function generateEnvTypes(
 	entrypoint?: Entry,
 	log = true
 ): Promise<{ envHeader?: string; envTypes?: string }> {
+	let stringKeys: string[] = [];
 	const secrets = getVarsForDev(
 		// We do not want `getVarsForDev()` to merge in the standard vars into the dev vars
 		// because we want to be able to work with secrets differently to vars.
@@ -332,11 +334,13 @@ export async function generateEnvTypes(
 				constructTypeKey(varName),
 				varValues.length === 1 ? varValues[0] : varValues.join(" | "),
 			]);
+			stringKeys.push(varName);
 		}
 	}
 
 	for (const secretName in configToDTS.secrets) {
 		envTypeStructure.push([constructTypeKey(secretName), "string"]);
+		stringKeys.push(secretName);
 	}
 
 	if (configToDTS.durable_objects?.bindings) {
@@ -537,7 +541,10 @@ export async function generateEnvTypes(
 			entrypointFormat,
 			envInterface,
 			envTypeStructure.map(([key, value]) => `${key}: ${value};`),
-			modulesTypeStructure
+			modulesTypeStructure,
+			stringKeys,
+			config.compatibility_date,
+			config.compatibility_flags
 		);
 		const hash = createHash("sha256")
 			.update(consoleOutput)
@@ -589,17 +596,28 @@ function generateTypeStrings(
 	formatType: string,
 	envInterface: string,
 	envTypeStructure: string[],
-	modulesTypeStructure: string[]
+	modulesTypeStructure: string[],
+	stringKeys: string[],
+	compatibilityDate: string | undefined,
+	compatibilityFlags: string[] | undefined
 ): { fileContent: string; consoleOutput: string } {
 	let baseContent = "";
 	let eslintDisable = "";
+	let processEnv = "";
 
 	if (formatType === "modules") {
 		if (envTypeStructure.length === 0) {
 			eslintDisable =
-				"// eslint-disable-next-line @typescript-eslint/no-empty-interface,@typescript-eslint/no-empty-object-type\n";
+				"\t// eslint-disable-next-line @typescript-eslint/no-empty-interface,@typescript-eslint/no-empty-object-type\n";
 		}
-		baseContent = `interface ${envInterface} {${envTypeStructure.map((value) => `\n\t${value}`).join("")}\n}`;
+		if (
+			isProcessEnvPopulated(compatibilityDate, compatibilityFlags) &&
+			stringKeys.length > 0
+		) {
+			// StringifyValues ensures that json vars are correctly types as strings, not objects on process.env
+			processEnv = `\ntype StringifyValues<EnvType extends Record<string, unknown>> = {\n\t[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;\n};\ndeclare namespace NodeJS {\n\tinterface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, ${stringKeys.map((k) => `"${k}"`).join(" | ")}>> {}\n}`;
+		}
+		baseContent = `declare namespace Cloudflare {\n${eslintDisable}\tinterface Env {${envTypeStructure.map((value) => `\n\t\t${value}`).join("")}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
 	} else {
 		baseContent = `export {};\ndeclare global {\n${envTypeStructure.map((value) => `\tconst ${value}`).join("\n")}\n}`;
 	}
@@ -607,7 +625,7 @@ function generateTypeStrings(
 	const modulesContent = modulesTypeStructure.join("\n");
 
 	return {
-		fileContent: `${eslintDisable}${baseContent}\n${modulesContent}`,
+		fileContent: `${baseContent}\n${modulesContent}`,
 		consoleOutput: `${baseContent}\n${modulesContent}`,
 	};
 }
