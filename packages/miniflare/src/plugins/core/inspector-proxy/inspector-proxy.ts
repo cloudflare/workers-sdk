@@ -100,15 +100,6 @@ export class InspectorProxy {
 			return this.#sendMessageToDevtools(message);
 		});
 
-		this.#sendMessageToRuntime({
-			method: "Runtime.enable",
-			id: this.#nextCounter(),
-		});
-		this.#sendMessageToRuntime({
-			method: "Network.enable",
-			id: this.#nextCounter(),
-		});
-
 		clearInterval(this.#runtimeKeepAliveInterval);
 		this.#runtimeKeepAliveInterval = setInterval(() => {
 			if (this.#runtimeWs?.OPEN) {
