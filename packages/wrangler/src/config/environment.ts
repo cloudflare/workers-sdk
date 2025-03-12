@@ -307,6 +307,8 @@ interface EnvironmentInheritable {
 	 */
 	first_party_worker: boolean | undefined;
 
+	container: { class_name: string }[] | undefined;
+
 	/**
 	 * List of bindings that you will send to logfwdr
 	 *

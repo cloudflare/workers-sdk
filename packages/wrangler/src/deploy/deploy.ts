@@ -685,6 +685,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			bindings,
 			migrations,
 			modules,
+			containers: config.container ?? undefined,
 			sourceMaps: uploadSourceMaps
 				? loadSourceMaps(main, modules, bundle)
 				: undefined,
@@ -743,13 +744,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		// * aren't a service Worker
 		// * we don't have DO migrations
 		// * we aren't an fpw
+		// * not a container worker
 		const canUseNewVersionsDeploymentsApi =
 			workerExists &&
 			props.dispatchNamespace === undefined &&
 			prod &&
 			format === "modules" &&
 			migrations === undefined &&
-			!config.first_party_worker;
+			!config.first_party_worker &&
+			config.container === undefined;
 
 		let workerBundle: FormData;
 
