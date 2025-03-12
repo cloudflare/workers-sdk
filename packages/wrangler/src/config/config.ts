@@ -333,6 +333,7 @@ export const defaultWranglerConfig: Config = {
 	minify: undefined,
 	dispatch_namespaces: [],
 	first_party_worker: undefined,
+	container: undefined,
 	logfwdr: { bindings: [] },
 	logpush: undefined,
 	upload_source_maps: undefined,

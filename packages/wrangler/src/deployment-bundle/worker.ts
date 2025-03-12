@@ -349,6 +349,9 @@ export interface CfWorkerInit {
 		unsafe: CfUnsafe | undefined;
 		assets: CfAssetsBinding | undefined;
 	};
+
+	containers?: { class_name: string }[];
+
 	/**
 	 * The raw bindings - this is basically never provided and it'll be the bindings above
 	 * but if we're just taking from the api and re-putting then this is how we can do that
