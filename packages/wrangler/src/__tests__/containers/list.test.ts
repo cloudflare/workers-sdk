@@ -63,6 +63,7 @@ describe("containers list", () => {
 			        \\"created_at\\": \\"123\\",
 			        \\"account_id\\": \\"test-account\\",
 			        \\"name\\": \\"Test-app\\",
+			        \\"version\\": 1,
 			        \\"configuration\\": {
 			            \\"image\\": \\"test-registry.cfdata.org/test-app:v1\\",
 			            \\"network\\": {
@@ -81,6 +82,7 @@ describe("containers list", () => {
 			        \\"created_at\\": \\"123\\",
 			        \\"account_id\\": \\"test-account\\",
 			        \\"name\\": \\"Test-app\\",
+			        \\"version\\": 1,
 			        \\"configuration\\": {
 			            \\"image\\": \\"test-registry.cfdata.org/test-app:v10\\",
 			            \\"network\\": {
@@ -99,6 +101,7 @@ describe("containers list", () => {
 			        \\"created_at\\": \\"123\\",
 			        \\"account_id\\": \\"test-account\\",
 			        \\"name\\": \\"Test-app\\",
+			        \\"version\\": 1,
 			        \\"configuration\\": {
 			            \\"image\\": \\"test-registry.cfdata.org/test-app:v2\\",
 			            \\"network\\": {

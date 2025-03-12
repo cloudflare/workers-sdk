@@ -5,7 +5,7 @@
 import type { ImageRegistryProtoDomain } from "./ImageRegistryProtoDomain";
 
 /**
- * An image registry protocol (<proto>://<uri>) is a concept useful so you can refer to multiple registries within the same image ref.
+ * An image registry protocol (`<proto>://<uri>`) is a concept useful so you can refer to multiple registries within the same image ref.
  * In case you have multiple registries that are storing the same image, it will be highly available to Cloudchamber as it has multiple sources to pull from.
  * For example, you might push your image to a registry in "my-registry.com/images/hello:1.0", and to Cloudchamber's registry
  * "registry.cloudchamber.cfdata.org/hello:1.0".
