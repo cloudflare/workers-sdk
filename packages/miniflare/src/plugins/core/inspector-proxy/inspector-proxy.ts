@@ -69,9 +69,9 @@ export class InspectorProxy {
 		});
 
 		this.#devtoolsWs.on("message", (data) => {
-			const msg = JSON.parse(data.toString());
+			const message = JSON.parse(data.toString());
 			assert(this.#runtimeWs?.OPEN);
-			this.#sendMessageToRuntime(msg);
+			this.#sendMessageToRuntime(message);
 		});
 	}
 
@@ -86,18 +86,18 @@ export class InspectorProxy {
 		assert(this.#runtimeWs?.OPEN);
 
 		this.#runtimeWs.on("message", (data) => {
-			const obj = JSON.parse(data.toString());
+			const message = JSON.parse(data.toString());
 
 			if (!this.#devtoolsWs) {
 				// there is no devtools connection established
 				return;
 			}
 
-			if (isDevToolsEvent(obj, "Debugger.scriptParsed")) {
-				return this.#handleRuntimeScriptParsed(obj);
+			if (isDevToolsEvent(message, "Debugger.scriptParsed")) {
+				return this.#handleRuntimeScriptParsed(message);
 			}
 
-			return this.#sendMessageToDevtools(obj);
+			return this.#sendMessageToDevtools(message);
 		});
 
 		this.#sendMessageToRuntime({
@@ -120,7 +120,7 @@ export class InspectorProxy {
 		}, 10_000);
 	}
 
-	#handleRuntimeScriptParsed(msg: DevToolsEvent<"Debugger.scriptParsed">) {
+	#handleRuntimeScriptParsed(message: DevToolsEvent<"Debugger.scriptParsed">) {
 		// If the devtools does not have filesystem access,
 		// rewrite the sourceMapURL to use a special scheme.
 		// This special scheme is used to indicate whether
@@ -128,39 +128,42 @@ export class InspectorProxy {
 
 		if (
 			!this.#devtoolsHaveFileSystemAccess &&
-			msg.params.sourceMapURL !== undefined &&
+			message.params.sourceMapURL !== undefined &&
 			// Don't try to find a sourcemap for e.g. node-internal: scripts
-			msg.params.url.startsWith("file:")
+			message.params.url.startsWith("file:")
 		) {
-			const url = new URL(msg.params.sourceMapURL, msg.params.url);
-			// Check for file: in case msg.params.sourceMapURL has a different
+			const url = new URL(message.params.sourceMapURL, message.params.url);
+			// Check for file: in case message.params.sourceMapURL has a different
 			// protocol (e.g. data). In that case we should ignore this file
 			if (url.protocol === "file:") {
-				msg.params.sourceMapURL = url.href.replace("file:", "wrangler-file:");
+				message.params.sourceMapURL = url.href.replace(
+					"file:",
+					"wrangler-file:"
+				);
 			}
 		}
 
-		return this.#sendMessageToDevtools(msg);
+		return this.#sendMessageToDevtools(message);
 	}
 
-	#sendMessageToDevtools(msg: DevToolsEvents) {
+	#sendMessageToDevtools(message: DevToolsEvents) {
 		assert(this.#devtoolsWs);
 
 		if (!this.#devtoolsWs.OPEN) {
 			// the devtools web socket is established but not yet connected
 			this.#devtoolsWs.once("open", () =>
-				this.#devtoolsWs?.send(JSON.stringify(msg))
+				this.#devtoolsWs?.send(JSON.stringify(message))
 			);
 			return;
 		}
 
-		this.#devtoolsWs.send(JSON.stringify(msg));
+		this.#devtoolsWs.send(JSON.stringify(message));
 	}
 
-	#sendMessageToRuntime(msg: DevToolsCommandRequests) {
+	#sendMessageToRuntime(message: DevToolsCommandRequests) {
 		assert(this.#runtimeWs?.OPEN);
 
-		this.#runtimeWs.send(JSON.stringify(msg));
+		this.#runtimeWs.send(JSON.stringify(message));
 	}
 
 	async dispose(): Promise<void> {
