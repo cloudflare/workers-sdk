@@ -22,6 +22,7 @@ import type { Label } from "./Label";
 import type { MemorySizeWithUnit } from "./MemorySizeWithUnit";
 import type { Network } from "./Network";
 import type { NodeGroup } from "./NodeGroup";
+import type { Observability } from "./Observability";
 import type { Placement } from "./Placement";
 import type { Ref } from "./Ref";
 import type { SSHPublicKeyID } from "./SSHPublicKeyID";
@@ -32,6 +33,7 @@ import type { SSHPublicKeyID } from "./SSHPublicKeyID";
 export type DeploymentV2 = {
 	id: DeploymentID;
 	app_id?: ApplicationID;
+	app_version?: number;
 	created_at: ISO8601Timestamp;
 	account_id: AccountID;
 	version: DeploymentVersion;
@@ -85,4 +87,5 @@ export type DeploymentV2 = {
 	 */
 	checks?: Array<DeploymentCheck>;
 	state?: DeploymentState;
+	observability?: Observability;
 };

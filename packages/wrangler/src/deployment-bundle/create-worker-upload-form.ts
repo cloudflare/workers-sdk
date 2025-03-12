@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { File, FormData } from "undici";
+import { config } from "yargs";
 import { UserError } from "../errors";
 import { INHERIT_SYMBOL } from "./bindings";
 import { handleUnsafeCapnp } from "./capnp";
@@ -80,6 +81,7 @@ export type WorkerMetadataBinding =
 			class_name: string;
 			script_name?: string;
 			environment?: string;
+			namespace_id?: string;
 	  }
 	| {
 			type: "workflow";
