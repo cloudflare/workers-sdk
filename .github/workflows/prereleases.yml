@@ -1,9 +1,9 @@
-name: Publish @beta pre-release
+name: Publish @legacy-beta pre-release
 
 on:
   push:
     branches:
-      - main
+      - v3-maintenance
 jobs:
   prerelease:
     timeout-minutes: 30
@@ -48,8 +48,8 @@ jobs:
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
 
-      - name: Publish wrangler@beta to NPM
-        run: pnpm --filter wrangler publish --tag beta
+      - name: Publish wrangler@legacy-beta to NPM
+        run: pnpm --filter wrangler publish --tag legacy-beta
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
           # this is the "test/staging" key for sparrow analytics
@@ -58,33 +58,33 @@ jobs:
           SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
 
-      - name: Publish miniflare@beta to NPM
-        run: pnpm --filter miniflare publish --tag beta
+      - name: Publish miniflare@legacy-beta to NPM
+        run: pnpm --filter miniflare publish --tag legacy-beta
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
 
-      - name: Publish create-cloudflare@beta to NPM
-        run: pnpm --filter create-cloudflare publish --tag beta
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
-          # this is the "test/staging" key for sparrow analytics
-          SPARROW_SOURCE_KEY: "5adf183f94b3436ba78d67f506965998"
+      # - name: Publish create-cloudflare@beta to NPM
+      #   run: pnpm --filter create-cloudflare publish --tag beta
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+      #     # this is the "test/staging" key for sparrow analytics
+      #     SPARROW_SOURCE_KEY: "5adf183f94b3436ba78d67f506965998"
 
-      - name: Publish workers-shared@beta to NPM
-        run: pnpm --filter workers-shared publish --tag beta
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+      # - name: Publish workers-shared@beta to NPM
+      #   run: pnpm --filter workers-shared publish --tag beta
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
 
-      - name: Publish unenv-preset@beta to NPM
-        run: pnpm --filter unenv-preset publish --tag beta
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+      # - name: Publish unenv-preset@beta to NPM
+      #   run: pnpm --filter unenv-preset publish --tag beta
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
 
-      - name: Publish @cloudflare/vite-plugin@beta to NPM
-        run: pnpm --filter vite-plugin publish --tag beta
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+      # - name: Publish @cloudflare/vite-plugin@beta to NPM
+      #   run: pnpm --filter vite-plugin publish --tag beta
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
 
       - name: Get Package Version
-        run: echo "WRANGLER_VERSION=$(npm view wrangler@beta version)" >> $GITHUB_ENV
+        run: echo "WRANGLER_VERSION=$(npm view wrangler@legacy-beta version)" >> $GITHUB_ENV
         working-directory: packages/wrangler
