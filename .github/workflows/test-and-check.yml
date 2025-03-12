@@ -5,7 +5,7 @@ on:
 
 jobs:
   add-to-project:
-    if: github.head_ref != 'changeset-release/main'
+    if: github.head_ref != 'changeset-release/v3-maintenance'
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-add-pr
       cancel-in-progress: true
@@ -16,7 +16,7 @@ jobs:
       - run: curl -X POST https://devprod-status-bot.devprod.workers.dev/pr-project/workers-sdk/${{ github.event.number }}
 
   check-non-linux:
-    if: github.head_ref == 'changeset-release/main'
+    if: github.head_ref == 'changeset-release/v3-maintenance'
     timeout-minutes: 30
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-checks

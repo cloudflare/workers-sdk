@@ -3,7 +3,7 @@ name: Test old Node.js version
 on:
   push:
     branches:
-      - changeset-release/main
+      - changeset-release/v3-maintenance
 
 jobs:
   check:

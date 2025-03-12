@@ -2,10 +2,10 @@ e2e:
   - any:
       - changed-files:
           - any-glob-to-any-file: "packages/wrangler/e2e/**/*"
-      - head-branch: "changeset-release/main"
+      - head-branch: "changeset-release/v3-maintenance"
 
 c3-e2e:
   - any:
       - changed-files:
           - any-glob-to-any-file: "packages/create-cloudflare/**/*"
-      - head-branch: "changeset-release/main"
+      - head-branch: "changeset-release/v3-maintenance"

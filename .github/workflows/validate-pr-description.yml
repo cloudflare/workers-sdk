@@ -17,7 +17,7 @@ on:
 jobs:
   check:
     # Don't check the Version Packages PR
-    if: github.head_ref != 'changeset-release/main'
+    if: github.head_ref != 'changeset-release/v3-maintenance'
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-add-pr
       cancel-in-progress: true
