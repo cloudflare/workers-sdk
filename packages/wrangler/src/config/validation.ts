@@ -1384,6 +1384,14 @@ function normalizeAndValidateEnvironment(
 			isBoolean,
 			undefined
 		),
+		container: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"container",
+			() => true,
+			undefined
+		),
 		logpush: inheritable(
 			diagnostics,
 			topLevelEnv,
