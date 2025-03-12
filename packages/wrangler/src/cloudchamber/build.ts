@@ -41,6 +41,8 @@ export async function constructBuildCommand(options: {
 	pathToDocker?: string;
 	pathToDockerfile?: string;
 	platform?: string;
+	dockerfile?: string;
+	args?: Record<string, string>;
 }) {
 	// require a tag if we provide dockerfile
 	if (
@@ -61,10 +63,20 @@ export async function constructBuildCommand(options: {
 		imageTag,
 		"--platform",
 		platform,
-		dockerFilePath,
-	].join(" ");
+	];
 
-	return defaultBuildCommand;
+	if (options.args !== undefined) {
+		for (const arg in options.args) {
+			defaultBuildCommand.push("--build-arg", `${arg}=${options.args[arg]}`);
+		}
+	}
+
+	if (options.dockerfile !== undefined) {
+		defaultBuildCommand.push("-f", "-");
+	}
+
+	defaultBuildCommand.push(dockerFilePath ?? ".");
+	return defaultBuildCommand.join(" ");
 }
 
 // Function for building
@@ -97,7 +109,7 @@ async function tagImage(original: string, newTag: string, dockerPath: string) {
 export async function push(options: {
 	imageTag?: string;
 	pathToDocker?: string;
-}) {
+}): Promise<string> {
 	if (typeof options.imageTag === "undefined") {
 		throw new Error("Must provide an image tag when pushing");
 	}
@@ -113,6 +125,7 @@ export async function push(options: {
 	await new Promise((resolve) => {
 		child.on("close", resolve);
 	});
+	return imageTag;
 }
 
 export function buildYargs(yargs: CommonYargsArgvJSON) {

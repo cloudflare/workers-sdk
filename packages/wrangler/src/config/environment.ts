@@ -47,22 +47,32 @@ export type ContainerApp = {
 
 	/* Name of the application*/
 	name: string;
+
 	/* Number of application instances */
 	instances: number;
 	/* The scheduling policy of the application, default is regional */
 	scheduling_policy?: "regional" | "moon";
+
 	/* Configuration of the container */
 	configuration: {
 		image: string;
 		labels?: { name: string; value: string }[];
 		secrets?: { name: string; type: "env"; secret: string }[];
 	};
+
 	/* Scheduling constraints */
 	constraints?: {
 		regions?: string[];
 		cities?: string[];
 		tier?: number;
 	};
+
+	durable_objects?: {
+		namespace_id: string;
+	};
+
+	/* How a rollout should be done, defining the size of it */
+	rollout_step_percentage?: number;
 };
 
 /**
