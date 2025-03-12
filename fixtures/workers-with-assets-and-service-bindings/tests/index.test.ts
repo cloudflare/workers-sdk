@@ -55,26 +55,23 @@ describe.each(devCmds)(
 			describe("Service binding to default export", () => {
 				// this currently incorrectly returns the User Worker response
 				// instead of the Asset Worker response
-				it.fails(
-					"should return Asset Worker response for routes that serve static content",
-					async ({ expect }) => {
-						let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
-						let text = await response.text();
-						expect(response.status).toBe(200);
-						expect(text).toContain(
-							`env.DEFAULT_EXPORT.fetch() response: This is an asset of "worker-b"`
-						);
+				it("should return Asset Worker response for routes that serve static content", async ({
+					expect,
+				}) => {
+					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
+					let text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.DEFAULT_EXPORT.fetch() response: This is an asset of "worker-b"`
+					);
 
-						response = await fetch(
-							`http://${ipWorkerA}:${portWorkerA}/busy-bee`
-						);
-						text = await response.text();
-						expect(response.status).toBe(200);
-						expect(text).toContain(
-							`env.DEFAULT_EXPORT.fetch() response: All "worker-b" 🐝🐝🐝 are 🐝sy. Please come back later`
-						);
-					}
-				);
+					response = await fetch(`http://${ipWorkerA}:${portWorkerA}/busy-bee`);
+					text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.DEFAULT_EXPORT.fetch() response: All "worker-b" 🐝🐝🐝 are 🐝sy. Please come back later`
+					);
+				});
 
 				it("should return User Worker response for routes that don't serve static content", async ({
 					expect,
@@ -127,26 +124,23 @@ describe.each(devCmds)(
 			describe("Service binding to default entrypoint", () => {
 				// this currently incorrectly returns the User Worker response
 				// instead of the Asset Worker response
-				it.fails(
-					"should return Asset Worker response for fetch requestsfor routes that serve static content",
-					async ({ expect }) => {
-						let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
-						let text = await response.text();
-						expect(response.status).toBe(200);
-						expect(text).toContain(
-							`env.DEFAULT_ENTRYPOINT.fetch() response: This is an asset of "worker-c"`
-						);
+				it("should return Asset Worker response for fetch requestsfor routes that serve static content", async ({
+					expect,
+				}) => {
+					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
+					let text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.DEFAULT_ENTRYPOINT.fetch() response: This is an asset of "worker-c"`
+					);
 
-						response = await fetch(
-							`http://${ipWorkerA}:${portWorkerA}/busy-bee`
-						);
-						text = await response.text();
-						expect(response.status).toBe(200);
-						expect(text).toContain(
-							`env.DEFAULT_ENTRYPOINT.fetch() response: All "worker-c" 🐝🐝🐝 are 🐝sy. Please come back later`
-						);
-					}
-				);
+					response = await fetch(`http://${ipWorkerA}:${portWorkerA}/busy-bee`);
+					text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.DEFAULT_ENTRYPOINT.fetch() response: All "worker-c" 🐝🐝🐝 are 🐝sy. Please come back later`
+					);
+				});
 
 				it("should return User Worker response for routes that don't serve static content", async ({
 					expect,
