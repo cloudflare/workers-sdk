@@ -13,6 +13,15 @@ export async function getWorkerBResponses(request: Request, env) {
 	// test named functions with strictly one parameter
 	const busyBeeResult = await env.DEFAULT_EXPORT.busyBee("🐝");
 
+	// test nested functions + promise pipelining
+	const foo = env.DEFAULT_EXPORT.foo("✨");
+	const buzzResult = await foo.bar.buzz();
+
+	// test RPCTarget + promise pipelining
+	// this is not supported in non-class based syntax
+	const beeCountResult =
+		"RpcTarget is not supported in non-class based syntax Workers.";
+
 	// tests Cron Triggers
 	const scheduledResponse = await env.DEFAULT_EXPORT.scheduled({
 		cron: "* * * * *",
@@ -22,6 +31,8 @@ export async function getWorkerBResponses(request: Request, env) {
 		fetchResponse,
 		beeResult,
 		busyBeeResult,
+		buzzResult,
+		beeCountResult,
 		scheduledResponse,
 	};
 }
