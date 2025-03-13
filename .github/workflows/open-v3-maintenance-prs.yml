@@ -1,0 +1,33 @@
+name: v3 Maintenance
+
+on: pull_request
+
+jobs:
+  open-pr:
+    if: ${{ github.repository_owner == 'cloudflare' }}
+    name: Open backport PR for patches
+    runs-on: macos-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - uses: Ana06/get-changed-files@v1.2
+        id: files
+        with:
+          format: "json"
+
+      - run: node -r esbuild-register tools/deployments/open-v3-pr.ts
+        env:
+          FILES: ${{ steps.files.outputs.all }}
+          PR_NUMBER: ${{ github.event.number }}
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
