@@ -336,6 +336,9 @@ export async function applyCommand(
 			appConfigNoDefaults,
 			args.skipDefaults
 		);
+
+		delete (appConfig as Record<string, unknown>)["class_name"];
+
 		const application = applicationByNames[appConfig.name];
 		if (application !== undefined && application !== null) {
 			// we need to sort the objects (by key) because the diff algorithm works with
@@ -467,10 +470,12 @@ export async function applyCommand(
 				printLine(el, "  ");
 			});
 
+		const configToPush = { ...appConfig };
+
 		// add to the actions array to create the app later
 		actions.push({
 			action: "create",
-			application: appConfig,
+			application: configToPush,
 		});
 	}
 
