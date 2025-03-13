@@ -69,6 +69,9 @@ export type ContainerApp = {
 		cities?: string[];
 		tier?: number;
 	};
+	durable_objects?: {
+		namespace_id: string;
+	};
 };
 
 /**
