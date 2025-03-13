@@ -19,9 +19,8 @@ test("InspectorProxy: /json/version should provide details about the inspector v
 	});
 	t.teardown(() => mf.dispose());
 
-	await mf.ready;
+	const port = await getInspectorPortReady(mf);
 
-	const { port } = await mf.getInspectorURL();
 	const res = await fetch(`http://localhost:${port}/json/version`);
 	t.is(res.headers.get("content-type"), "application/json");
 
@@ -43,9 +42,8 @@ test("InspectorProxy: /json should provide a list of a single worker inspector",
 	});
 	t.teardown(() => mf.dispose());
 
-	await mf.ready;
+	const port = await getInspectorPortReady(mf);
 
-	const { port } = await mf.getInspectorURL();
 	const res = await fetch(`http://localhost:${port}/json`);
 	const inspectors = (await res.json()) as Record<string, string>[];
 
@@ -100,9 +98,8 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 	});
 	t.teardown(() => mf.dispose());
 
-	await mf.ready;
+	const port = await getInspectorPortReady(mf);
 
-	const { port } = await mf.getInspectorURL();
 	const res = await fetch(`http://localhost:${port}/json`);
 	t.is(res.headers.get("content-type"), "application/json");
 
@@ -148,9 +145,8 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 	});
 	t.teardown(() => mf.dispose());
 
-	await mf.ready;
+	const port = await getInspectorPortReady(mf);
 
-	const { port } = await mf.getInspectorURL();
 	const res = await fetch(`http://localhost:${port}/json`);
 	t.is(res.headers.get("content-type"), "application/json");
 
@@ -189,14 +185,7 @@ test("InspectorProxy: should allow debugging a single worker", async (t) => {
 	});
 	t.teardown(() => mf.dispose());
 
-	await mf.ready;
-
-	// when the inspector proxy is created there are some ws message exchanges between it
-	// and the runtime, these can interfere with testing and make tests flaky, so we just
-	// wait a bit here to avoid such problems
-	await setTimeout(30);
-
-	const { port } = await mf.getInspectorURL();
+	const port = await getInspectorPortReady(mf);
 
 	// Connect inspector WebSocket
 	const ws = new WebSocket(`ws://localhost:${port}`);
@@ -273,14 +262,7 @@ test("InspectorProxy: should allow debugging multiple workers", async (t) => {
 	});
 	t.teardown(() => mf.dispose());
 
-	await mf.ready;
-
-	// when the inspector proxy is created there are some ws message exchanges between it
-	// and the runtime, these can interfere with testing and make tests flaky, so we just
-	// wait a bit here to avoid such problems
-	await setTimeout(30);
-
-	const { port } = await mf.getInspectorURL();
+	const port = await getInspectorPortReady(mf);
 
 	// Connect inspector WebSockets
 	const webSockets = {
@@ -400,14 +382,7 @@ test("InspectorProxy: can proxy messages > 1MB", async (t) => {
 	});
 	t.teardown(() => mf.dispose());
 
-	await mf.ready;
-
-	// when the inspector proxy is created there are some ws message exchanges between it
-	// and the runtime, these can interfere with testing and make tests flaky, so we just
-	// wait a bit here to avoid such problems
-	await setTimeout(30);
-
-	const { port } = await mf.getInspectorURL();
+	const port = await getInspectorPortReady(mf);
 
 	// Connect inspector WebSocket
 	const ws = new WebSocket(`ws://localhost:${port}`);
@@ -458,3 +433,15 @@ test("InspectorProxy: can proxy messages > 1MB", async (t) => {
 	const res = await resPromise;
 	t.is(await res.text(), `body:${LARGE_STRING}`);
 });
+
+async function getInspectorPortReady(mf: Miniflare) {
+	await mf.ready;
+
+	// when the inspector proxy is created there are some ws message exchanges between it
+	// and the runtime, these can interfere with testing and make tests flaky, so we just
+	// wait a bit here to avoid such problems
+	await setTimeout(150);
+
+	const { port } = await mf.getInspectorURL();
+	return port;
+}
