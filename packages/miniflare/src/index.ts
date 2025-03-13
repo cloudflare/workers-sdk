@@ -329,44 +329,74 @@ function getDurableObjectClassNames(
 				classNames = new Map();
 				serviceClassNames.set(serviceName, classNames);
 			}
-			if (classNames.has(className)) {
-				// If we've already seen this class in this service, make sure the
-				// unsafe unique keys and unsafe prevent eviction values match
-				const existingInfo = classNames.get(className);
-				if (existingInfo?.enableSql !== enableSql) {
-					throw new MiniflareCoreError(
-						"ERR_DIFFERENT_STORAGE_BACKEND",
-						`Different storage backends defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
-							enableSql
-						)} and ${JSON.stringify(existingInfo?.enableSql)}`
-					);
-				}
-				if (existingInfo?.unsafeUniqueKey !== unsafeUniqueKey) {
-					throw new MiniflareCoreError(
-						"ERR_DIFFERENT_UNIQUE_KEYS",
-						`Multiple unsafe unique keys defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
-							unsafeUniqueKey
-						)} and ${JSON.stringify(existingInfo?.unsafeUniqueKey)}`
-					);
-				}
-				if (existingInfo?.unsafePreventEviction !== unsafePreventEviction) {
-					throw new MiniflareCoreError(
-						"ERR_DIFFERENT_PREVENT_EVICTION",
-						`Multiple unsafe prevent eviction values defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
-							unsafePreventEviction
-						)} and ${JSON.stringify(existingInfo?.unsafePreventEviction)}`
-					);
-				}
-			} else {
-				// Otherwise, just add it
-				classNames.set(className, {
-					enableSql,
-					unsafeUniqueKey,
-					unsafePreventEviction,
-				});
+
+			if (serviceName !== workerServiceName) {
+				// We will validate it later, ignore for now
+				continue;
+			}
+
+			classNames.set(className, {
+				enableSql,
+				unsafeUniqueKey,
+				unsafePreventEviction,
+			});
+		}
+	}
+
+	// Make sure the DO config matches across all services
+	for (const workerOpts of allWorkerOpts) {
+		const workerServiceName = getUserServiceName(workerOpts.core.name);
+		for (const designator of Object.values(
+			workerOpts.do.durableObjects ?? {}
+		)) {
+			const {
+				className,
+				// Fallback to current worker service if name not defined
+				serviceName = workerServiceName,
+				enableSql,
+				unsafeUniqueKey,
+				unsafePreventEviction,
+			} = normaliseDurableObject(designator);
+
+			if (serviceName === workerServiceName) {
+				continue;
+			}
+
+			const classNames = serviceClassNames.get(serviceName);
+			const existingInfo = classNames?.get(className);
+
+			if (
+				// enableSQL might be derived from the migrations and will be undefined if the serviceName is not the current worker
+				// We should compare the values only if they are defined
+				existingInfo?.enableSql !== undefined &&
+				existingInfo.enableSql !== enableSql
+			) {
+				throw new MiniflareCoreError(
+					"ERR_DIFFERENT_STORAGE_BACKEND",
+					`Different storage backends defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
+						enableSql
+					)} and ${JSON.stringify(existingInfo?.enableSql)}`
+				);
+			}
+			if (existingInfo?.unsafeUniqueKey !== unsafeUniqueKey) {
+				throw new MiniflareCoreError(
+					"ERR_DIFFERENT_UNIQUE_KEYS",
+					`Multiple unsafe unique keys defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
+						unsafeUniqueKey
+					)} and ${JSON.stringify(existingInfo?.unsafeUniqueKey)}`
+				);
+			}
+			if (existingInfo?.unsafePreventEviction !== unsafePreventEviction) {
+				throw new MiniflareCoreError(
+					"ERR_DIFFERENT_PREVENT_EVICTION",
+					`Multiple unsafe prevent eviction values defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
+						unsafePreventEviction
+					)} and ${JSON.stringify(existingInfo?.unsafePreventEviction)}`
+				);
 			}
 		}
 	}
+
 	return serviceClassNames;
 }
 
