@@ -12,6 +12,10 @@ if (require.main === module) {
 		// Create a new branch for the v3 maintenance PR
 		execSync(`git checkout -b v3-maintenance-${process.env.PR_NUMBER} -f`);
 
+		execSync(
+			`git rebase --onto v3-maintenance main v3-maintenance-${process.env.PR_NUMBER}`
+		);
+
 		execSync(`git push origin HEAD --force`);
 
 		try {
