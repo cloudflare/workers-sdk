@@ -49,6 +49,10 @@ export type ContainerApp = {
 	name: string;
 	/* Number of application instances */
 	instances: number;
+
+	image?: string;
+	class_name: string;
+
 	/* The scheduling policy of the application, default is regional */
 	scheduling_policy?: "regional" | "moon";
 	/* Configuration of the container */
@@ -307,8 +311,6 @@ interface EnvironmentInheritable {
 	 */
 	first_party_worker: boolean | undefined;
 
-	container: { class_name: string }[] | undefined;
-
 	/**
 	 * List of bindings that you will send to logfwdr
 	 *
@@ -460,18 +462,7 @@ export interface EnvironmentNonInheritable {
 	/**
 	 * Container related configuration
 	 */
-	containers: {
-		/**
-		 * Container app configuration
-		 *
-		 * NOTE: This field is not automatically inherited from the top level environment,
-		 * and so must be specified in every named environment.
-		 *
-		 * @default {}
-		 * @nonInheritable
-		 */
-		app: ContainerApp[];
-	};
+	containers?: ContainerApp[];
 
 	/**
 	 * These specify any Workers KV Namespaces you want to
