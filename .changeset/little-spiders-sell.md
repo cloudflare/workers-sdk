@@ -1,5 +1,5 @@
 ---
-"miniflare": minor
+"miniflare": patch
 ---
 
 feat: add new `unsafeInspectorProxy` option to miniflare
