@@ -6,6 +6,7 @@ import { processArgument } from "helpers/args";
 import { runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
 import { chooseAccount, wranglerLogin } from "../../src/wrangler/accounts";
+import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
 export async function copyExistingWorkerFiles(ctx: C3Context) {
@@ -63,7 +64,7 @@ export async function copyExistingWorkerFiles(ctx: C3Context) {
 	);
 }
 
-export default {
+const config: TemplateConfig = {
 	configVersion: 1,
 	id: "pre-existing",
 	displayName: "Pre-existing Worker (from Dashboard)",
@@ -78,6 +79,8 @@ export default {
 		copyFiles: copyExistingWorkerFiles,
 	}),
 };
+
+export default config;
 
 export interface ConfigureParams {
 	login: (ctx: C3Context) => Promise<boolean>;

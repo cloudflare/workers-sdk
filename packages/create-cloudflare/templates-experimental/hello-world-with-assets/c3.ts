@@ -1,4 +1,6 @@
-export default {
+import type { TemplateConfig } from "../../src/templates";
+
+const config: TemplateConfig = {
 	configVersion: 1,
 	id: "hello-world-with-assets",
 	path: "templates-experimental/hello-world-with-assets",
@@ -20,3 +22,4 @@ export default {
 		},
 	},
 };
+export default config;

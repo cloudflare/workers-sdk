@@ -2,7 +2,8 @@
 "create-cloudflare": patch
 ---
 
-remove `Application Starter` option in C3 experimental menu
+Remove categories in C3 that have no templates
 
-Remove the `Application Started` option that appears in the C3 experimental menu, which is
-however not useful since it doesn't contain any entry
+The `Application Starter` category doesn't contain any entries in experimental mode so we shouldn't show it.
+
+This change updates C3 to automatically exclude categories that have no templates.
