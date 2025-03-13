@@ -1,6 +1,6 @@
 # wrangler
 
-## 4.20250310.0
+## 4.0.0
 
 ### Major Changes
 
