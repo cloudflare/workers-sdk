@@ -7,6 +7,8 @@ import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
+import { apply, applyCommand } from "../cloudchamber/apply";
+import { fillOpenAPIConfiguration as fillCloudchamberOpenAPIConfiguration } from "../cloudchamber/common";
 import { configFileName, formatConfigSnippet } from "../config";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -28,6 +30,7 @@ import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
+import { CI } from "../is-ci";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -970,6 +973,55 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	// deploy triggers
 	const targets = await triggersDeploy(props);
+
+	if (config.containers !== undefined) {
+		for (const container of config.containers) {
+			const durableObjects = await fetchResult<
+				{
+					class_name: string;
+					name: string;
+					namespace_id: string;
+					type: string;
+					script_name?: string;
+				}[]
+			>(
+				`/accounts/${accountId}/workers/services/${scriptName}/environments/${props.env ?? "production"}/bindings`
+			);
+
+			const targetDurableObject = durableObjects.filter(
+				(durableObject) =>
+					durableObject.type === "durable_object_namespace" &&
+					durableObject.class_name === container.class_name &&
+					durableObject.script_name === undefined
+			);
+			if (targetDurableObject.length <= 0) {
+				logger.error(
+					"Could not deploy container application as durable object was not found in list of bindings"
+				);
+				continue;
+			}
+
+			const [targetDurableObjectNamespace] = targetDurableObject;
+			const configuration = {
+				...config,
+				containers: [
+					{
+						...container,
+						durable_objects: {
+							namespace_id: targetDurableObjectNamespace.namespace_id,
+						},
+					},
+				],
+			};
+
+			await fillCloudchamberOpenAPIConfiguration(config, CI.isCI());
+
+			await apply(
+				{ skipDefaults: false, json: true, env: props.env },
+				configuration
+			);
+		}
+	}
 
 	logger.log("Current Version ID:", versionId);
 
