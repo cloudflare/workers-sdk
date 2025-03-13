@@ -333,7 +333,6 @@ export const defaultWranglerConfig: Config = {
 	minify: undefined,
 	dispatch_namespaces: [],
 	first_party_worker: undefined,
-	container: undefined,
 	logfwdr: { bindings: [] },
 	logpush: undefined,
 	upload_source_maps: undefined,
@@ -343,7 +342,7 @@ export const defaultWranglerConfig: Config = {
 	/** NON-INHERITABLE ENVIRONMENT FIELDS **/
 	define: {},
 	cloudchamber: {},
-	containers: { app: [] },
+	containers: undefined,
 	send_email: [],
 	browser: undefined,
 	unsafe: {},

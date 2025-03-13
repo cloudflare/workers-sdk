@@ -1178,7 +1178,7 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"containers",
 			validateContainerAppConfig,
-			{ app: [] }
+			undefined
 		),
 		send_email: notInheritable(
 			diagnostics,
@@ -1382,14 +1382,6 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			"first_party_worker",
 			isBoolean,
-			undefined
-		),
-		container: inheritable(
-			diagnostics,
-			topLevelEnv,
-			rawEnv,
-			"container",
-			() => true,
 			undefined
 		),
 		logpush: inheritable(
@@ -2205,10 +2197,7 @@ const validateContainerAppConfig: ValidatorFn = (
 	value
 ) => {
 	if (!value) {
-		diagnostics.errors.push(
-			`"containers" should be an object, but got a falsy value`
-		);
-		return false;
+		return true;
 	}
 
 	if (typeof value !== "object") {
@@ -2218,47 +2207,45 @@ const validateContainerAppConfig: ValidatorFn = (
 		return false;
 	}
 
-	if (Array.isArray(value)) {
-		diagnostics.errors.push(
-			`"containers" should be an object, but got an array`
-		);
-		return false;
-	}
-
-	if (!("app" in value)) {
-		return true;
-	}
-
-	value = value.app;
 	if (!Array.isArray(value)) {
-		diagnostics.errors.push(
-			`"containers.app" should be an array, but got ${JSON.stringify(value)}`
-		);
+		diagnostics.errors.push(`"containers" should be an array`);
 		return false;
 	}
 
 	for (const containerApp of value) {
 		const containerAppOptional =
-			containerApp as Partial<CreateApplicationRequest>;
-		if (!isRequiredProperty(containerAppOptional, "instances", "number")) {
+			containerApp as Partial<CreateApplicationRequest> & {
+				image?: string | undefined;
+			};
+		if (!isRequiredProperty(containerAppOptional, "name", "string")) {
 			diagnostics.errors.push(
-				`"containers.app.instances" should be defined and an integer`
+				`"containers.name" should be defined and a string`
 			);
 		}
 
-		if (!isRequiredProperty(containerAppOptional, "name", "string")) {
-			diagnostics.errors.push(
-				`"containers.app.name" should be defined and a string`
-			);
+		if (
+			"image" in containerAppOptional &&
+			containerAppOptional.image !== undefined
+		) {
+			if (containerAppOptional.configuration?.image !== undefined) {
+				diagnostics.errors.push(
+					`"containers.image" and "containers.configuration.image" can't be defined at the same time`
+				);
+				return false;
+			}
+
+			containerAppOptional.configuration ??= {
+				image: containerAppOptional.image,
+			};
+			containerAppOptional.configuration.image = containerAppOptional.image;
+			delete containerAppOptional["image"];
 		}
 
 		if (!("configuration" in containerAppOptional)) {
-			diagnostics.errors.push(
-				`"containers.app.configuration" should be defined`
-			);
+			diagnostics.errors.push(`"containers.configuration" should be defined`);
 		} else if (Array.isArray(containerAppOptional.configuration)) {
 			diagnostics.errors.push(
-				`"containers.app.configuration" is defined as an array, it should be an object`
+				`"containers.configuration" is defined as an array, it should be an object`
 			);
 		} else if (
 			!isRequiredProperty(
@@ -2268,7 +2255,7 @@ const validateContainerAppConfig: ValidatorFn = (
 			)
 		) {
 			diagnostics.errors.push(
-				`"containers.app.configuration.image" should be defined and a string`
+				`"containers.image" should be defined and a string`
 			);
 		}
 	}

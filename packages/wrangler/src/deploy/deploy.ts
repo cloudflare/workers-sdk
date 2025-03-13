@@ -685,7 +685,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			bindings,
 			migrations,
 			modules,
-			containers: config.container ?? undefined,
+			containers: config.containers ?? undefined,
 			sourceMaps: uploadSourceMaps
 				? loadSourceMaps(main, modules, bundle)
 				: undefined,
@@ -752,7 +752,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			format === "modules" &&
 			migrations === undefined &&
 			!config.first_party_worker &&
-			config.container === undefined;
+			config.containers === undefined;
 
 		let workerBundle: FormData;
 
