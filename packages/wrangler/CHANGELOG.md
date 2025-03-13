@@ -6,7 +6,7 @@
 
 - [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@penalosa](https://github.com/penalosa)! - Use `--local` by default for `wrangler kv key` and `wrangler r2 object` commands
 
-- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@penalosa](https://github.com/penalosa)! - chore: remove deprecated `getBindingsProxy`
+- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: remove deprecated `getBindingsProxy`
 
   remove the deprecated `getBindingsProxy` utility which has been replaced with `getPlatformProxy`
 
@@ -23,7 +23,7 @@
   - `experimental_services`
   - `kv-namespaces`
 
-- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@penalosa](https://github.com/penalosa)! - Remove `wrangler d1 backups`
+- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@rozenmd](https://github.com/rozenmd)! - Remove `wrangler d1 backups`
 
   This change removes `wrangler d1 backups`, a set of alpha-only commands that would allow folks to interact with backups of their D1 alpha DBs.
 
@@ -31,13 +31,13 @@
 
   Closes #7470
 
-- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@penalosa](https://github.com/penalosa)! - Remove `--batch-size` as an option for `wrangler d1 execute` and `wrangler d1 migrations apply`
+- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@rozenmd](https://github.com/rozenmd)! - Remove `--batch-size` as an option for `wrangler d1 execute` and `wrangler d1 migrations apply`
 
   This change removes the deprecated `--batch-size` flag, as it is no longer necessary to decrease the number of queries wrangler sends to D1.
 
   Closes #7470
 
-- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@penalosa](https://github.com/penalosa)! - Remove alpha support from `wrangler d1 migrations apply`
+- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@rozenmd](https://github.com/rozenmd)! - Remove alpha support from `wrangler d1 migrations apply`
 
   This change removes code that would take a backup of D1 alpha databases before proceeding with applying a migration.
 
@@ -73,7 +73,7 @@
 
   If you need to replicate the behaviour of the legacy `node_compat` feature, refer to https://developers.cloudflare.com/workers/wrangler/migration/update-v3-to-v4/ for a detailed guide.
 
-- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@penalosa](https://github.com/penalosa)! - chore: update esbuild
+- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@threepointone](https://github.com/threepointone)! - chore: update esbuild
 
   This patch updates esbuild from 0.17.19 to 0.24.2. That's a big bump! Lots has gone into esbuild since May '23. All the details are available at https://github.com/evanw/esbuild/blob/main/CHANGELOG.md / https://github.com/evanw/esbuild/blob/main/CHANGELOG-2023.md.
 
@@ -244,7 +244,7 @@
       ];
       ```
 
-- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@penalosa](https://github.com/penalosa)! - Remove worker name prefix from KV namespace create
+- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@pmiguel](https://github.com/pmiguel)! - Remove worker name prefix from KV namespace create
 
   When running `wrangler kv namespace create <name>`, previously the name of the namespace was automatically prefixed with the worker title, or `worker-` when running outside the context of a worker.
   After this change, KV namespaces will no longer get prefixed, and the name used is the name supplied, verbatim.
@@ -253,7 +253,7 @@
 
 ### Minor Changes
 
-- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@penalosa](https://github.com/penalosa)! - Include runtime types in the output of `wrangler types` by default
+- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@emily-shen](https://github.com/emily-shen)! - Include runtime types in the output of `wrangler types` by default
 
   `wrangler types` will now produce one file that contains both `Env` types and runtime types based on your compatibility date and flags. This is located at `worker-configuration.d.ts` by default.
 
