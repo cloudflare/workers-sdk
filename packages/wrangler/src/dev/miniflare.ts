@@ -1030,6 +1030,8 @@ export async function buildMiniflareOptions(
 
 		unsafeEnableAssetsRpc: getFlag("ASSETS_RPC"),
 
+		unsafeTriggerHandlers: true,
+
 		log,
 		verbose: logger.loggerLevel === "debug",
 		handleRuntimeStdio,

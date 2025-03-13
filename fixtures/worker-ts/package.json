@@ -7,6 +7,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20250310.0",
+		"mimetext": "^3.0.27",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

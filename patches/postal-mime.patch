@@ -1,0 +1,10 @@
+diff --git a/postal-mime.d.ts b/postal-mime.d.ts
+index bf8dc08b669a7f78cb33f719d45435a6940e8996..953d9f81d670430bb20ef467193f34bb37eafc97 100644
+--- a/postal-mime.d.ts
++++ b/postal-mime.d.ts
+@@ -1,4 +1,4 @@
+-export type RawEmail = string | ArrayBuffer | Uint8Array | Blob | Buffer | ReadableStream;
++export type RawEmail = string | ArrayBuffer | Uint8Array | Blob | ReadableStream;
+ 
+ export type Header = Record<string, string>;
+ 

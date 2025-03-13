@@ -1,3 +1,5 @@
+import { ForwardableEmailMessage } from "@cloudflare/workers-types";
+import { EmailMessage } from "cloudflare:email";
 import {
 	blue,
 	bold,
@@ -9,10 +11,12 @@ import {
 	yellow,
 } from "kleur/colors";
 import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
+import PostalMime, { Email } from "postal-mime";
 import { isCompressedByCloudflareFL } from "../../shared/mime-types";
 import { CoreBindings, CoreHeaders } from "./constants";
 import { STATUS_CODES } from "./http";
 import { matchRoutes, WorkerRoute } from "./routing";
+import { isEmailRepliable, validateReply } from "./email.worker"
 
 type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
@@ -25,6 +29,7 @@ type Env = {
 	[CoreBindings.DATA_LIVE_RELOAD_SCRIPT]?: ArrayBuffer;
 	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
 	[CoreBindings.DATA_PROXY_SHARED_SECRET]?: ArrayBuffer;
+	[CoreBindings.TRIGGER_HANDLERS]: boolean;
 } & {
 	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
 		| Fetcher
@@ -32,7 +37,6 @@ type Env = {
 };
 
 const encoder = new TextEncoder();
-
 function getUserRequest(
 	request: Request<unknown, IncomingRequestCfProperties>,
 	env: Env,
@@ -343,6 +347,129 @@ async function handleScheduled(
 	});
 }
 
+function createForwardableEmailMessage(
+	from: string,
+	to: string,
+	raw: ReadableStream<Uint8Array<ArrayBufferLike>>,
+	headers: Headers,
+	setReject: (reason: string) => void,
+	forward: (rcptTo: string, headers?: Headers) => Promise<void>,
+	reply: (message: EmailMessage) => Promise<void>
+) {
+	return {
+		from,
+		to,
+		raw,
+		headers: headers,
+		rawSize: Number(headers.get("Content-Length")),
+		setReject,
+		forward,
+		reply,
+	} satisfies ForwardableEmailMessage;
+}
+
+async function handleEmail(
+	params: URLSearchParams,
+	request: Request,
+	service: Fetcher,
+	env: Env,
+	ctx: ExecutionContext
+): Promise<Response> {
+	const from = params.get("from") ?? "";
+	const to = params.get("to") ?? "";
+	if (!request.body) {
+		return new Response("Include an email in the body", { status: 400 });
+	}
+
+	// Get request blob as we need its size
+	const incomingEmailRaw = await (await request.blob()).bytes();
+
+	// Email worker limit is 25 MiB total
+	if (incomingEmailRaw.byteLength > 25 * 1024 * 1024) {
+		return new Response("Email is bigger than current limit - 25MiB.", {
+			status: 400,
+		});
+	}
+
+	let parsedIncomingEmail: Email;
+	try {
+		parsedIncomingEmail = await PostalMime.parse(incomingEmailRaw);
+	} catch (e) {
+		const error = e as Error;
+		return new Response(
+			`Email could not be parsed: ${error.name}: ${error.message}`,
+			{ status: 400 }
+		);
+	}
+
+	console.log("Incoming headers", parsedIncomingEmail.headers.map((header) => [header.key, header.value]))
+	const incomingEmailHeaders = new Headers(
+		parsedIncomingEmail.headers.map((header) => [header.key, header.value])
+	);
+
+	let maybeClientError: string | undefined = undefined;
+
+	// @ts-expect-error .email() is valid—we need to update the types...
+	await service.email(
+		// FIXME(lduarte): I have a feeling that because we are using RPC to do this, from + to + headers + readableStream can only take
+		// up 1MiB. Headers will probably be the part that takes up most space, but it's rare for emails headers to be that big.
+		createForwardableEmailMessage(
+			from,
+			to,
+			new ReadableStream({
+				start(controller) {
+					// probably not the most efficient way to do this?
+					controller.enqueue(incomingEmailRaw);
+				},
+			}),
+			incomingEmailHeaders,
+			function setReject(reason: string): void {
+				console.log(
+					`${red(".setReject() called from Email Handler")} with the following reason: "${reason}"`
+				);
+				maybeClientError = reason;
+			},
+			async function forward(rcptTo: string, headers?: Headers): Promise<void> {
+				console.log(
+					`${blue(".forward() called from Email Handler")} with\n  rcptTo: ${rcptTo}${headers ? `\n  headers:\n${[...headers.entries()].map(([k, v]) => `    ${k}: ${v}`).join("\n")}` : ""}`
+				);
+			},
+			async function reply(replyMessage: EmailMessage): Promise<void> {
+				if (!isEmailRepliable(parsedIncomingEmail, incomingEmailHeaders)) {
+					throw new Error("original email is not repliable");
+				}
+				console.log("after repliable")
+				const finalReply = await validateReply(parsedIncomingEmail, replyMessage)
+
+				console.log("after final")
+				const resp = await env[CoreBindings.SERVICE_LOOPBACK].fetch(
+					"http://localhost/core/store-temp-file?extension=eml",
+					{
+						method: "POST",
+						body: finalReply,
+					}
+				);
+				const file = await resp.text();
+
+				console.log(
+					`${blue(".reply() called from Email Handler with the following message:")}\n  ${file}`
+				);
+			}
+		)
+	);
+
+	if (maybeClientError !== undefined) {
+		return new Response(
+			`Email worker rejected email with the following reason: ${maybeClientError}`,
+			{ status: 400 }
+		);
+	}
+
+	return new Response(null, {
+		status: 200,
+	});
+}
+
 export default <ExportedHandler<Env>>{
 	async fetch(request, env, ctx) {
 		const startTime = Date.now();
@@ -390,8 +517,20 @@ export default <ExportedHandler<Env>>{
 		}
 
 		try {
-			if (url.pathname === "/cdn-cgi/mf/scheduled") {
-				return await handleScheduled(url.searchParams, service);
+			if (env[CoreBindings.TRIGGER_HANDLERS]) {
+				if (url.pathname === "/cdn-cgi/handler/scheduled") {
+					return await handleScheduled(url.searchParams, service);
+				}
+
+				if (url.pathname === "/cdn-cgi/handler/email") {
+					return await handleEmail(
+						url.searchParams,
+						request,
+						service,
+						env,
+						ctx
+					);
+				}
 			}
 
 			let response = await service.fetch(request);
