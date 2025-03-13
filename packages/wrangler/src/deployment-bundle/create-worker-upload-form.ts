@@ -651,7 +651,10 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			? { main_module: main.name }
 			: { body_part: main.name }),
 		bindings: metadataBindings,
-		containers: worker.containers === undefined ? undefined : worker.containers,
+		containers:
+			worker.containers === undefined
+				? undefined
+				: worker.containers.map((c) => ({ class_name: c.class_name })),
 
 		...(compatibility_date && { compatibility_date }),
 		...(compatibility_flags && {
@@ -681,6 +684,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		}
 	}
 
+	formData.set("metadata", JSON.stringify(metadata));
 	if (main.type === "commonjs" && modules && modules.length > 0) {
 		throw new TypeError(
 			"More than one module can only be specified when type = 'esm'"
