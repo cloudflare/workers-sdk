@@ -1,26 +1,5 @@
 import assert from "node:assert";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
-import dedent from "ts-dedent";
-import { bundleWorker } from "../deployment-bundle/bundle";
-import { noopModuleCollector } from "../deployment-bundle/module-collection";
 import { isProcessEnvPopulated } from "../process-env";
-import { mockConsoleMethods } from "./helpers/mock-console";
-import { runInTempDir } from "./helpers/run-in-tmp";
-
-/*
- * This file contains inline comments with the word "javascript"
- * This signals to a compatible editor extension that the template string
- * contents should be syntax-highlighted as JavaScript. One such extension
- * is zjcompt.es6-string-javascript, but there are others.
- */
-
-async function seedFs(files: Record<string, string>): Promise<void> {
-	for (const [location, contents] of Object.entries(files)) {
-		await mkdir(path.dirname(location), { recursive: true });
-		await writeFile(location, contents);
-	}
-}
 
 describe("isProcessEnvPopulated", () => {
 	test("default", () => {
