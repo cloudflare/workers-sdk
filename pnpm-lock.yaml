@@ -57,6 +57,9 @@ patchedDependencies:
   pg@8.11.3:
     hash: afbi5l3roukyz2s7kkn56yzjte
     path: patches/pg@8.11.3.patch
+  postal-mime:
+    hash: ngwql2fj2dlex3jjynq4iizhk4
+    path: patches/postal-mime.patch
   toucan-js@3.3.1:
     hash: b5gffumfuckaq3c77sda2gdfuq
     path: patches/toucan-js@3.3.1.patch
@@ -958,9 +961,6 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20250310.0
         version: 4.20250310.0
-      '@types/mimetext':
-        specifier: ^2.0.4
-        version: 2.0.4
       mimetext:
         specifier: ^3.0.27
         version: 3.0.27
@@ -1464,6 +1464,9 @@ importers:
       glob-to-regexp:
         specifier: 0.4.1
         version: 0.4.1
+      postal-mime:
+        specifier: ^2.4.3
+        version: 2.4.3(patch_hash=ngwql2fj2dlex3jjynq4iizhk4)
       stoppable:
         specifier: 1.1.0
         version: 1.1.0
@@ -5885,9 +5888,6 @@ packages:
   '@types/mime@3.0.4':
     resolution: {integrity: sha512-iJt33IQnVRkqeqC7PzBHPTC6fDlRNRW8vjrgqtScAhrmMwe8c4Eo7+fUGTa+XdWrpEgpyKWMYmi2dIwMAYRzPw==}
 
-  '@types/mimetext@2.0.4':
-    resolution: {integrity: sha512-FAS1I1TXyda0mlpwgxNSWGnax+xe18pvkKnAVrQ9nrLvc8A14Q5KRc7xzKHKkuu5XKGw6I1fNLyp8hG4g4Oppg==}
-
   '@types/minimatch@5.1.2':
     resolution: {integrity: sha512-K0VQKziLUWkVKiRVrx4a40iPaxTUefQmjtkQofBkYRcoaaL/8rhwDWww9qWbrgicNOgnpIsMxyNIUM4+n6dUIA==}
 
@@ -9715,6 +9715,9 @@ packages:
   possible-typed-array-names@1.0.0:
     resolution: {integrity: sha512-d7Uw+eZoloe0EHDIYoe+bQ5WXnGMOpmiZFTuMWCwpjzzkL2nTjcKiAk4hh8TjnGye2TwWOk3UXucZ+3rbmBa8Q==}
     engines: {node: '>= 0.4'}
+
+  postal-mime@2.4.3:
+    resolution: {integrity: sha512-KT8P+/We7LH48EhjmLRLEiQx+HI6zZ5TTeuzhuZkMbcJnp9mdmxm/FgiRIzmhZm8mxmk8mtisIAelq1wNwumxg==}
 
   postcss-calc@10.1.0:
     resolution: {integrity: sha512-uQ/LDGsf3mgsSUEXmAt3VsCSHR3aKqtEIkmB+4PhzYwRYOW5MZs/GhCCFpsOtJJkP6EC6uGipbrnaTjqaJZcJw==}
@@ -15023,8 +15026,6 @@ snapshots:
 
   '@types/mime@3.0.4': {}
 
-  '@types/mimetext@2.0.4': {}
-
   '@types/minimatch@5.1.2': {}
 
   '@types/mocha@10.0.10': {}
@@ -19340,6 +19341,8 @@ snapshots:
       '@babel/runtime': 7.22.5
 
   possible-typed-array-names@1.0.0: {}
+
+  postal-mime@2.4.3(patch_hash=ngwql2fj2dlex3jjynq4iizhk4): {}
 
   postcss-calc@10.1.0(postcss@8.5.1):
     dependencies:

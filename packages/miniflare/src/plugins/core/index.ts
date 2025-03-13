@@ -811,7 +811,10 @@ export function getGlobalServices({
 			name: SERVICE_ENTRY,
 			worker: {
 				modules: [{ name: "entry.worker.js", esModule: SCRIPT_ENTRY() }],
-				compatibilityDate: "2023-04-04",
+				// use 2024-04-05 because it's where RPC got introduced and we need it for the email handler
+				// otherwise, we would need to change workerd to add it to the Fetcher on a unsafe compat flag
+				// (which would be possible, but this seems easier)
+				compatibilityDate: "2024-04-05",
 				compatibilityFlags: ["nodejs_compat", "service_binding_extra_handlers"],
 				bindings: serviceEntryBindings,
 				durableObjectNamespaces: [

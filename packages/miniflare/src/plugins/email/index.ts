@@ -1,7 +1,7 @@
 import EMAIL_MESSAGE from "worker:email/email";
 import { z } from "zod";
 import { Worker_Binding } from "../../runtime";
-import { Plugin, ProxyNodeBinding } from "../shared";
+import { Plugin } from "../shared";
 
 // const RatelimitConfigSchema = z.object({
 // 	simple: z.object({
@@ -32,7 +32,7 @@ function createPlugin<O extends z.ZodType, S extends z.ZodType | undefined>(
 	return pluginDefinition;
 }
 
-export default createPlugin({
+export const EMAIL_PLUGIN = createPlugin({
 	options: z.object({
 		email: z.unknown().optional(),
 	}),
@@ -56,7 +56,7 @@ export default createPlugin({
 		// return bindings;
 		return [];
 	},
-	getNodeBindings(options) {
+	getNodeBindings(_options) {
 		return {};
 		// if (!options.ratelimits) {
 		// 	return {};
