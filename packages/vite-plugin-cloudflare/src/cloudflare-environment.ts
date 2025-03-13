@@ -126,6 +126,12 @@ export function createCloudflareEnvironmentOptions(
 	userConfig: vite.UserConfig,
 	environmentName: string
 ): vite.EnvironmentOptions {
+	const workerCompatFlags = workerConfig.compatibility_flags;
+
+	const workerdPopulatesEnv =
+		workerCompatFlags.includes("nodejs_compat") &&
+		workerCompatFlags.includes("nodejs_compat_populate_process_env");
+
 	return {
 		resolve: {
 			// Note: in order for ssr pre-bundling to take effect we need to ask vite to treat all
@@ -182,7 +188,9 @@ export function createCloudflareEnvironmentOptions(
 				],
 			},
 		},
-		keepProcessEnv: false,
+		// if workerd populates process.env then we need to let it do it,
+		// otherwise vite itself can own process.env
+		keepProcessEnv: workerdPopulatesEnv,
 	};
 }
 
