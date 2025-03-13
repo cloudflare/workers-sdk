@@ -1,5 +1,11 @@
 # wrangler
 
+## 2.21.3
+
+### Patch Changes
+
+- [#8393](https://github.com/cloudflare/workers-sdk/pull/8393) [`c4653081c`](https://github.com/cloudflare/workers-sdk/commit/c4653081c5fbbff80cc313bb059bb1592e7cedec) Thanks [@penalosa](https://github.com/penalosa)! - Deprecate Wrangler v2
+
 ## 2.21.2
 
 ### Patch Changes
