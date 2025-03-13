@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { File, FormData } from "undici";
+import { config } from "yargs";
 import { UserError } from "../errors";
 import { INHERIT_SYMBOL } from "./bindings";
 import { handleUnsafeCapnp } from "./capnp";
@@ -650,6 +651,11 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			? { main_module: main.name }
 			: { body_part: main.name }),
 		bindings: metadataBindings,
+		containers:
+			worker.containers === undefined
+				? undefined
+				: worker.containers.map((c) => ({ class_name: c.class_name })),
+
 		...(compatibility_date && { compatibility_date }),
 		...(compatibility_flags && {
 			compatibility_flags,
@@ -679,7 +685,6 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	}
 
 	formData.set("metadata", JSON.stringify(metadata));
-
 	if (main.type === "commonjs" && modules && modules.length > 0) {
 		throw new TypeError(
 			"More than one module can only be specified when type = 'esm'"
