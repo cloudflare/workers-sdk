@@ -20,18 +20,24 @@ export class InspectorProxyController {
 
 	#proxies: InspectorProxy[] = [];
 
-	#server: Server;
+	#server: Promise<Server>;
+
+	#inspectorPort: number | Promise<number>;
 
 	constructor(
-		private userInspectorPort: number,
+		userInspectorPort: number,
 		private log: Log,
 		private workerNamesToProxy: Set<string>
 	) {
+		this.#inspectorPort =
+			userInspectorPort !== 0
+				? userInspectorPort
+				: import("get-port").then(({ default: getPort }) => getPort());
 		this.#server = this.#initializeServer();
 		this.#runtimeConnectionEstablished = new DeferredPromise();
 	}
 
-	#initializeServer() {
+	async #initializeServer() {
 		const server = createServer(async (req, res) => {
 			const maybeJson = await this.#handleDevToolsJsonRequest(
 				req.headers.host ?? "localhost",
@@ -50,7 +56,7 @@ export class InspectorProxyController {
 
 		this.#initializeWebSocketServer(server);
 
-		server.listen(this.userInspectorPort);
+		server.listen(await this.#inspectorPort);
 
 		return server;
 	}
@@ -203,8 +209,8 @@ export class InspectorProxyController {
 		return null;
 	}
 
-	getInspectorURL(): URL {
-		return getWebsocketURL(this.userInspectorPort);
+	async getInspectorURL(): Promise<URL> {
+		return getWebsocketURL(await this.#inspectorPort);
 	}
 
 	async updateConnection(runtimeInspectorPort: number) {
@@ -247,8 +253,9 @@ export class InspectorProxyController {
 	async dispose(): Promise<void> {
 		await Promise.all(this.#proxies.map((proxy) => proxy.dispose()));
 
+		const server = await this.#server;
 		return new Promise((resolve, reject) => {
-			this.#server.close((err) => (err ? reject(err) : resolve()));
+			server.close((err) => (err ? reject(err) : resolve()));
 		});
 	}
 }
