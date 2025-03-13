@@ -255,7 +255,7 @@ export async function generateEnvTypes(
 	entrypoint?: Entry,
 	log = true
 ): Promise<{ envHeader?: string; envTypes?: string }> {
-	let stringKeys: string[] = [];
+	const stringKeys: string[] = [];
 	const secrets = getVarsForDev(
 		// We do not want `getVarsForDev()` to merge in the standard vars into the dev vars
 		// because we want to be able to work with secrets differently to vars.
