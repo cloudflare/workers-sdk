@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { createServer, IncomingMessage, Server } from "node:http";
+import getPort from "get-port";
 import { DeferredPromise } from "miniflare:shared";
 import WebSocket, { WebSocketServer } from "ws";
 import { version as miniflareVersion } from "../../../../package.json";
@@ -30,9 +31,7 @@ export class InspectorProxyController {
 		private workerNamesToProxy: Set<string>
 	) {
 		this.#inspectorPort =
-			userInspectorPort !== 0
-				? userInspectorPort
-				: import("get-port").then(({ default: getPort }) => getPort());
+			userInspectorPort !== 0 ? userInspectorPort : getPort();
 		this.#server = this.#initializeServer();
 		this.#runtimeConnectionEstablished = new DeferredPromise();
 	}
