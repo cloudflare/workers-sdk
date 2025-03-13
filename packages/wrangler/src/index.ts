@@ -101,7 +101,10 @@ export async function printWranglerBanner() {
 	const text = ` ⛅️ wrangler ${wranglerVersion} ${await updateCheck()}`;
 
 	logger.log(
-		text +
+		chalk.bgYellow(
+			"Wrangler v2 is deprecated. Please upgrade to Wrangler v3+\n"
+		) +
+			text +
 			"\n" +
 			(supportsColor.stdout
 				? chalk.hex("#FF8800")("-".repeat(text.length))
