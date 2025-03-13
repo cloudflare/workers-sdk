@@ -266,12 +266,8 @@ function sortObjectRecursive<T = Record<string | number, unknown>>(
 	return sortObjectKeys(objectCopy) as T;
 }
 
-/**
- * applyCommand is able to take the wrangler.toml file and render the changes that it
- * detects.
- */
-export async function applyCommand(
-	args: StrictYargsOptionsToInterfaceJSON<typeof applyCommandOptionalYargs>,
+export async function apply(
+	args: { skipDefaults: boolean | undefined; json: boolean; env?: string },
 	config: Config
 ) {
 	startSection(
@@ -585,4 +581,18 @@ export async function applyCommand(
 	}
 
 	endSection("Applied changes");
+}
+
+/**
+ * applyCommand is able to take the wrangler.toml file and render the changes that it
+ * detects.
+ */
+export async function applyCommand(
+	args: StrictYargsOptionsToInterfaceJSON<typeof applyCommandOptionalYargs>,
+	config: Config
+) {
+	return apply(
+		{ skipDefaults: args.skipDefaults, env: args.env, json: args.json },
+		config
+	);
 }

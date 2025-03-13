@@ -13,7 +13,9 @@ import type { Image } from "./Image";
 import type { Label } from "./Label";
 import type { MemorySizeWithUnit } from "./MemorySizeWithUnit";
 import type { NetworkParameters } from "./NetworkParameters";
+import type { Observability } from "./Observability";
 import type { Port } from "./Port";
+import type { ProvisionerConfiguration } from "./ProvisionerConfiguration";
 import type { SSHPublicKeyID } from "./SSHPublicKeyID";
 
 /**
@@ -58,4 +60,6 @@ export type UserDeploymentConfiguration = {
 	 * Health and readiness checks for this deployment.
 	 */
 	checks?: Array<DeploymentCheckRequestBody>;
+	provisioner?: ProvisionerConfiguration;
+	observability?: Observability;
 };

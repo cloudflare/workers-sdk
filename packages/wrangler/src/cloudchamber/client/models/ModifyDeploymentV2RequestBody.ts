@@ -11,6 +11,7 @@ import type { Entrypoint } from "./Entrypoint";
 import type { EnvironmentVariable } from "./EnvironmentVariable";
 import type { Label } from "./Label";
 import type { MemorySizeWithUnit } from "./MemorySizeWithUnit";
+import type { Observability } from "./Observability";
 import type { SSHPublicKeyID } from "./SSHPublicKeyID";
 
 /**
@@ -60,4 +61,5 @@ export type ModifyDeploymentV2RequestBody = {
 	 * Health and readiness checks for this deployment.
 	 */
 	checks?: Array<DeploymentCheckRequestBody>;
+	observability?: Observability;
 };

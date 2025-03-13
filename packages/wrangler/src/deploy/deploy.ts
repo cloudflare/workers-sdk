@@ -7,6 +7,8 @@ import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
+import { apply, applyCommand } from "../cloudchamber/apply";
+import { fillOpenAPIConfiguration as fillCloudchamberOpenAPIConfiguration } from "../cloudchamber/common";
 import { configFileName, formatConfigSnippet } from "../config";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -28,6 +30,7 @@ import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
+import { CI } from "../is-ci";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -973,7 +976,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (config.containers !== undefined) {
 		// TODO;
-		/* for (const container of config.containers) {
+		for (const container of config.containers) {
 			const durableObjects = await fetchResult<
 				{
 					class_name: string;
@@ -1000,7 +1003,25 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			}
 
 			const [targetDurableObjectNamespace] = targetDurableObject;
-		} */
+			const configuration = {
+				...config,
+				containers: [
+					{
+						...container,
+						durable_objects: {
+							namespace_id: targetDurableObjectNamespace.namespace_id,
+						},
+					},
+				],
+			};
+
+			await fillCloudchamberOpenAPIConfiguration(config, CI.isCI());
+
+			await apply(
+				{ skipDefaults: false, json: true, env: props.env },
+				configuration
+			);
+		}
 	}
 
 	logger.log("Current Version ID:", versionId);
