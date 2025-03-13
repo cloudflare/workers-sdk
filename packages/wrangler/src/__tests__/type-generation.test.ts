@@ -460,6 +460,100 @@ describe("generate types", () => {
 		`);
 	});
 
+	it("should include stringified process.env types for vars, secrets, and json", async () => {
+		fs.writeFileSync(
+			"./index.ts",
+			`import { DurableObject } from 'cloudflare:workers';
+				export default { async fetch () {} };
+				export class DurableDirect extends DurableObject {}
+				export { DurableReexport } from './durable-2.js';
+				// This should not be picked up, because it's external:
+				export class DurableExternal extends DurableObject {}`
+		);
+		fs.writeFileSync(
+			"./wrangler.toml",
+			TOML.stringify({
+				compatibility_date: "2022-01-12",
+				compatibility_flags: [
+					"nodejs_compat",
+					"nodejs_compat_populate_process_env",
+				],
+				name: "test-name",
+				main: "./index.ts",
+				...bindingsConfigMock,
+				unsafe: bindingsConfigMock.unsafe ?? {},
+			} as unknown as TOML.JsonMap),
+			"utf-8"
+		);
+		fs.writeFileSync("./.dev.vars", "SECRET=test", "utf-8");
+
+		await runWrangler("types --include-runtime=false");
+		expect(std.out).toMatchInlineSnapshot(`
+			"Generating project types...
+
+			declare namespace Cloudflare {
+				interface Env {
+					TEST_KV_NAMESPACE: KVNamespace;
+					SOMETHING: \\"asdasdfasdf\\";
+					ANOTHER: \\"thing\\";
+					\\"some-other-var\\": \\"some-other-value\\";
+					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+					SECRET: string;
+					DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
+					DURABLE_RE_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableReexport>;
+					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
+					DURABLE_EXTERNAL: DurableObjectNamespace /* DurableExternal from external-worker */;
+					R2_BUCKET_BINDING: R2Bucket;
+					D1_TESTING_SOMETHING: D1Database;
+					SERVICE_BINDING: Fetcher;
+					AE_DATASET_BINDING: AnalyticsEngineDataset;
+					NAMESPACE_BINDING: DispatchNamespace;
+					LOGFWDR_SCHEMA: any;
+					SOME_DATA_BLOB1: ArrayBuffer;
+					SOME_DATA_BLOB2: ArrayBuffer;
+					SOME_TEXT_BLOB1: string;
+					SOME_TEXT_BLOB2: string;
+					testing_unsafe: any;
+					UNSAFE_RATELIMIT: RateLimit;
+					TEST_QUEUE_BINDING: Queue;
+					SEND_EMAIL_BINDING: SendEmail;
+					VECTORIZE_BINDING: VectorizeIndex;
+					HYPERDRIVE_BINDING: Hyperdrive;
+					MTLS_BINDING: Fetcher;
+					BROWSER_BINDING: Fetcher;
+					AI_BINDING: Ai;
+					IMAGES_BINDING: ImagesBinding;
+					VERSION_METADATA_BINDING: { id: string; tag: string };
+					ASSETS_BINDING: Fetcher;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+			type StringifyValues<EnvType extends Record<string, unknown>> = {
+				[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
+			};
+			declare namespace NodeJS {
+				interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, \\"SOMETHING\\" | \\"ANOTHER\\" | \\"some-other-var\\" | \\"OBJECT_VAR\\" | \\"SECRET\\">> {}
+			}
+			declare module \\"*.txt\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.webp\\" {
+				const value: ArrayBuffer;
+				export default value;
+			}
+			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+			"
+		`);
+	});
+
 	it("should create a DTS file at the location that the command is executed from", async () => {
 		fs.writeFileSync("./index.ts", "export default { async fetch () {} };");
 		fs.writeFileSync(
