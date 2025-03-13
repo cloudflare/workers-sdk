@@ -7,7 +7,8 @@ import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
-import { apply, applyCommand } from "../cloudchamber/apply";
+import { apply } from "../cloudchamber/apply";
+import { build } from "../cloudchamber/build";
 import { fillOpenAPIConfiguration as fillCloudchamberOpenAPIConfiguration } from "../cloudchamber/common";
 import { configFileName, formatConfigSnippet } from "../config";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
@@ -956,6 +957,29 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 	}
 
+	if (config.containers !== undefined) {
+		if (!props.dryRun)
+			await fillCloudchamberOpenAPIConfiguration(config, CI.isCI());
+
+		if (props.dryRun)
+			for (const container of config.containers) {
+				const imageUri = container.image ?? container.configuration.image;
+
+				const isDockerfile = container.image !== undefined;
+				const imageTag = container.name + ":" + (workerTag ?? "dry-run");
+				if (isDockerfile) logger.log("Building image", imageTag);
+
+				if (isDockerfile)
+					await build({
+						tag: imageTag,
+						pathToDockerfile: imageUri,
+						// TODO: configurable
+						pathToDocker: "docker",
+						push: false,
+					});
+			}
+	}
+
 	if (props.dryRun) {
 		logger.log(`--dry-run: exiting now.`);
 		return { versionId, workerTag };
@@ -985,7 +1009,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					script_name?: string;
 				}[]
 			>(
-				`/accounts/${accountId}/workers/services/${scriptName}/environments/${props.env ?? "production"}/bindings`
+				`/accounts/${accountId}/workers/services/${scriptName}/environments/production/bindings`
 			);
 
 			const targetDurableObject = durableObjects.filter(
@@ -1014,7 +1038,26 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				],
 			};
 
-			await fillCloudchamberOpenAPIConfiguration(config, CI.isCI());
+			if (versionId === null) throw new Error("version ID is null");
+
+			const isDockerImage = container.image !== undefined;
+
+			const imageTag =
+				container.name + ":" + (versionId ?? "dryrun").split("-")[0];
+			if (isDockerImage) logger.log("Building image", imageTag);
+
+			const image = isDockerImage
+				? await build({
+						tag: imageTag,
+						pathToDockerfile: container.image!,
+						// TODO: configurable
+						pathToDocker: "docker",
+						push: !props.dryRun,
+					})
+				: container.configuration.image;
+
+			container.configuration.image = image;
+			container.image = image;
 
 			await apply(
 				{ skipDefaults: false, json: true, env: props.env },
