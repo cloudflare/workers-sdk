@@ -1933,6 +1933,21 @@ importers:
         specifier: workspace:*
         version: link:../wrangler
 
+  packages/userland-rpc:
+    devDependencies:
+      '@cloudflare/vitest-pool-workers':
+        specifier: workspace:*
+        version: link:../vitest-pool-workers
+      '@cloudflare/workers-types':
+        specifier: ^4.20250313.0
+        version: 4.20250313.0
+      '@types/node':
+        specifier: ^18.19.75
+        version: 18.19.76
+      devalue:
+        specifier: ^5.1.1
+        version: 5.1.1
+
   packages/vite-plugin-cloudflare:
     dependencies:
       '@cloudflare/unenv-preset':
@@ -4103,6 +4118,9 @@ packages:
 
   '@cloudflare/workers-types@4.20250415.0':
     resolution: {integrity: sha512-6N3N7yZEBVhztPUcloHSMm5+kSY0/e1OtoPjNrI5Jw8dyFTNSf875u0D76YFiYCV8WVwbp3RtdEAb6TWdAwoEw==}
+
+  '@cloudflare/workers-types@4.20250313.0':
+    resolution: {integrity: sha512-iqyzZwogC+3yL8h58vMhjYQUHUZA8XazE3Q+ofR59wDOnsPe/u9W6+aCl408N0iNBhMPvpJQQ3/lkz0iJN2fhA==}
 
   '@colors/colors@1.5.0':
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
@@ -7930,6 +7948,9 @@ packages:
 
   devalue@4.3.2:
     resolution: {integrity: sha512-KqFl6pOgOW+Y6wJgu80rHpo2/3H07vr8ntR9rkkFIRETewbf5GaYYcakYfiKz89K+sLsuPkQIZaXDMjUObZwWg==}
+
+  devalue@5.1.1:
+    resolution: {integrity: sha512-maua5KUiapvEwiEAe+XnlZ3Rh0GD+qI1J/nb9vrJc3muPXvcF/8gXYTWF76+5DAqHyDUtOIImEuo0YKE9mshVw==}
 
   devtools-protocol@0.0.1182435:
     resolution: {integrity: sha512-EmlkWb62wSbQNE1gRZZsi4KZYRaF5Skpp183LhRU7+sadKR06O1dHCjZmFSEG6Kv7P6S/UYLxcY3NlYwqKM99w==}
@@ -13834,6 +13855,8 @@ snapshots:
 
   '@cloudflare/workers-types@4.20250415.0': {}
 
+  '@cloudflare/workers-types@4.20250313.0': {}
+
   '@colors/colors@1.5.0':
     optional: true
 
@@ -17788,6 +17811,8 @@ snapshots:
   detect-newline@3.1.0: {}
 
   devalue@4.3.2: {}
+
+  devalue@5.1.1: {}
 
   devtools-protocol@0.0.1182435: {}
 
