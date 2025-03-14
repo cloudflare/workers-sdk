@@ -12,12 +12,16 @@ if (require.main === module) {
 		// Create a new branch for the v3 maintenance PR
 		execSync(`git checkout -b v3-maintenance-${process.env.PR_NUMBER} -f`);
 
+		execSync(
+			`git rebase --onto v3-maintenance main v3-maintenance-${process.env.PR_NUMBER}`
+		);
+
 		execSync(`git push origin HEAD --force`);
 
 		try {
 			// Open PR
 			execSync(
-				`gh pr create --base v2-maintenance --head v3-maintenance-${process.env.PR_NUMBER} --label "skip-pr-description-validation" --label "skip-v3-pr" --title "Backport #${process.env.PR_NUMBER} to Wrangler v3" --body "This is an automatically opened PR to backport patch changes from #${process.env.PR_NUMBER} to Wrangler v3"`
+				`gh pr create --base v3-maintenance --head v3-maintenance-${process.env.PR_NUMBER} --label "skip-pr-description-validation" --label "skip-v3-pr" --title "Backport #${process.env.PR_NUMBER} to Wrangler v3" --body "This is an automatically opened PR to backport patch changes from #${process.env.PR_NUMBER} to Wrangler v3"`
 			);
 		} catch {
 			// Ignore "PR already created failures"
