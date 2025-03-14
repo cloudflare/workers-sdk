@@ -9,7 +9,8 @@
 		},
 		"test:ci": {
 			"inputs": ["test/**"],
-			"dependsOn": ["build"]
+			"dependsOn": ["build"],
+			"env": ["MINIFLARE_WORKERD_PATH"]
 		}
 	}
 }
