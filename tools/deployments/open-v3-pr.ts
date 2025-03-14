@@ -13,7 +13,7 @@ if (require.main === module) {
 		execSync(`git checkout -b v3-maintenance-${process.env.PR_NUMBER} -f`);
 
 		execSync(
-			`git rebase --onto v3-maintenance origin/main v3-maintenance-${process.env.PR_NUMBER}`
+			`git rebase --onto origin/v3-maintenance origin/main v3-maintenance-${process.env.PR_NUMBER}`
 		);
 
 		execSync(`git push origin HEAD --force`);
