@@ -518,7 +518,9 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		}
 	});
 
-	it.only("exposes Vectorize bindings", async () => {
+	// Refer to https://github.com/cloudflare/workers-sdk/pull/8492 for full context on why this test does different things to the others.
+	// In particular, it uses a shared resource across test runs
+	it("exposes Vectorize bindings", async () => {
 		const name = await helper.vectorize(
 			32,
 			"euclidean",
