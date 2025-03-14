@@ -47,6 +47,9 @@ import {
 	getFirstAvailablePort,
 	getOutputDirectory,
 	getRouterWorker,
+	isAssetFetch,
+	isWorkerFetch,
+	log,
 	toMiniflareRequest,
 } from "./utils";
 import { handleWebSocket } from "./websockets";
@@ -90,16 +93,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			// This only applies to this plugin so is safe to use while other plugins migrate to the Environment API
 			sharedDuringBuild: true,
 			config(userConfig, env) {
-				if (env.isPreview) {
-					// Short-circuit the whole configuration if we are in preview mode
-					return { appType: "custom" };
-				}
-
 				resolvedPluginConfig = resolvePluginConfig(
 					pluginConfig,
 					userConfig,
 					env
 				);
+
+				if (env.isPreview) {
+					// Short-circuit the whole configuration if we are in preview mode
+					return { appType: "custom" };
+				}
 
 				if (!workersConfigsWarningShown) {
 					workersConfigsWarningShown = true;
@@ -358,18 +361,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 
 				await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
-
-				const middleware = createMiddleware(
-					async ({ request }) => {
-						assert(miniflare, `Miniflare not defined`);
-						const routerWorker = await getRouterWorker(miniflare);
-
-						return routerWorker.fetch(toMiniflareRequest(request), {
-							redirect: "manual",
-						}) as any;
-					},
-					{ alwaysCallNext: false }
-				);
+				const entryWorker = await getRouterWorker(miniflare);
 
 				handleWebSocket(viteDevServer.httpServer, async () => {
 					assert(miniflare, `Miniflare not defined`);
@@ -378,11 +370,71 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					return routerWorker.fetch;
 				});
 
-				return () => {
-					viteDevServer.middlewares.use((req, res, next) => {
-						middleware(req, res, next);
-					});
-				};
+				const preMiddleware = createMiddleware(
+					({ request, passThrough }) => {
+						const url = new URL(request.url);
+						if (url.pathname.startsWith("/@")) {
+							// URLs that start with `/@...` are special vite requests.
+							// We shouldn't pass them through the AssetWorker because it will response
+							// with a redirect to an encoded version `/%40...`.
+							log(
+								"pre-middleware",
+								request,
+								"special Vite request - pass-through"
+							);
+							passThrough();
+						} else if (
+							// workerType === "workers-only" ||
+							isAssetFetch(request) ||
+							isWorkerFetch(request)
+						) {
+							log("pre-middleware", request, "pass-through");
+							passThrough();
+						} else {
+							log("pre-middleware", request, "ask Entry Worker for response");
+							return entryWorker.fetch(toMiniflareRequest(request), {
+								redirect: "manual",
+							}) as any;
+						}
+					},
+					{ alwaysCallNext: false }
+				);
+
+				const postMiddleware = createMiddleware(
+					async ({ request, passThrough }) => {
+						if (
+							// userWorker &&
+							// (workerType === "workers-only" ||
+							// )
+							isWorkerFetch(request)
+						) {
+							// No assets (just a userWorker) or a specific user worker request
+							log("post-middleware", request, "ask User Worker for response");
+							return entryWorker.fetch(toMiniflareRequest(request)) as any;
+						} else if (isAssetFetch(request)) {
+							try {
+								log("post-middleware", request, "ask Vite to transform HTML");
+								const response = await tryHtmlTransform(viteDevServer, request);
+								if (response) {
+									return response;
+								}
+							} catch {
+								log(
+									"post-middleware",
+									request,
+									"unable to transform HTML - pass-through"
+								);
+							}
+							passThrough();
+						} else {
+							log("post-middleware", request, "pass-through");
+							passThrough;
+						}
+					}
+				);
+
+				viteDevServer.middlewares.use(preMiddleware);
+				return () => viteDevServer.middlewares.use(postMiddleware);
 			},
 			async configurePreviewServer(vitePreviewServer) {
 				const workerConfigs = getWorkerConfigs(vitePreviewServer.config.root);
@@ -394,6 +446,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				const miniflare = new Miniflare(
 					getPreviewMiniflareOptions(
+						resolvedPluginConfig,
 						vitePreviewServer,
 						workerConfigs,
 						pluginConfig.persistState ?? true,
@@ -937,4 +990,45 @@ function hasDotDevDotVarsFileChanged(
 
 		return false;
 	});
+}
+
+async function tryHtmlTransform(
+	viteDevServer: vite.ViteDevServer,
+	request: Request
+) {
+	const fileRoot = viteDevServer.config.root;
+	const { pathname } = new URL(request.url);
+	const filePath = path.join(fileRoot, pathname);
+
+	if (!filePath.endsWith(".html") || !isFile(filePath)) {
+		return null;
+	}
+
+	try {
+		console.log("Processing HTML file");
+		const content = await fsp.readFile(filePath, "utf-8");
+		const transformed = await viteDevServer.transformIndexHtml(
+			pathname,
+			content
+		);
+
+		return new Response(transformed, {
+			headers: { "Content-Type": "text/html" },
+		});
+	} catch (error) {
+		throw new Error(
+			`Unexpected error. Failed to load and transform ${pathname} - ${error}`
+		);
+	}
+}
+
+async function isFile(maybeFilePath: string) {
+	try {
+		const exists = (await fsp.stat(maybeFilePath)).isFile();
+		if (!exists) {
+			return null;
+		}
+	} catch (error) {
+		return null;
+	}
 }
