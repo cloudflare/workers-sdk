@@ -110,7 +110,7 @@ const embedWorkersPlugin = {
 					outbase: pkgRoot,
 					plugins:
 						args.path === miniflareSharedExtensionPath ||
-						args.path === miniflareZodExtensionPath
+							args.path === miniflareZodExtensionPath
 							? [rewriteNodeToInternalPlugin]
 							: [],
 				});
@@ -165,8 +165,6 @@ async function buildPackage() {
 	}
 	const outPath = path.join(pkgRoot, "dist");
 
-	const packagesToBundle = new Set(["get-port"]);
-
 	const buildOptions = {
 		platform: "node",
 		format: "cjs",
@@ -183,9 +181,7 @@ async function buildPackage() {
 			"miniflare",
 			// Mark `dependencies` as external, but not `devDependencies` (we use them
 			// to signal single-use/small packages we want inlined in the bundle)
-			...getPackageDependencies(pkg).filter(
-				(dep) => !packagesToBundle.has(dep)
-			),
+			...getPackageDependencies(pkg),
 			// Mark test dependencies as external
 			"ava",
 			"esbuild",

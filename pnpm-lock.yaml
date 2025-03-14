@@ -1455,9 +1455,6 @@ importers:
       exit-hook:
         specifier: 2.2.1
         version: 2.2.1
-      get-port:
-        specifier: ^7.1.0
-        version: 7.1.0
       glob-to-regexp:
         specifier: 0.4.1
         version: 0.4.1
@@ -1564,6 +1561,9 @@ importers:
       expect-type:
         specifier: ^0.15.0
         version: 0.15.0
+      get-port:
+        specifier: ^7.1.0
+        version: 7.1.0
       heap-js:
         specifier: ^2.5.0
         version: 2.5.0
