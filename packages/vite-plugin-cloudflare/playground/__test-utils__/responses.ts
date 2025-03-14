@@ -17,7 +17,7 @@ export async function getJsonResponse(
 	}
 }
 
-async function getResponse(path = "/") {
+export async function getResponse(path = "/") {
 	const url = `${viteTestUrl}${path}`;
 
 	const response = page.waitForResponse(url);
