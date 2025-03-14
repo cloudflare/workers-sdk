@@ -426,8 +426,10 @@ export function getAssetsOptions(
 		);
 	}
 
-	const redirects = maybeGetFile(path.join(directory, REDIRECTS_FILENAME));
-	const headers = maybeGetFile(path.join(directory, HEADERS_FILENAME));
+	const redirects = maybeGetFile(
+		path.join(resolvedAssetsPath, REDIRECTS_FILENAME)
+	);
+	const headers = maybeGetFile(path.join(resolvedAssetsPath, HEADERS_FILENAME));
 
 	// defaults are set in asset worker
 	const assetConfig: AssetConfig = {
