@@ -1,12 +1,6 @@
 // @ts-ignore
 import AssetWorker from "@cloudflare/workers-shared/dist/asset-worker.mjs";
-import { UNKNOWN_HOST } from "../shared";
 import type { WorkerEntrypoint } from "cloudflare:workers";
-
-interface Env {
-	__VITE_ASSET_EXISTS__: Fetcher;
-	__VITE_FETCH_ASSET__: Fetcher;
-}
 
 export default class CustomAssetWorker extends (AssetWorker as typeof WorkerEntrypoint<Env>) {
 	override async fetch(request: Request): Promise<Response> {
@@ -18,23 +12,55 @@ export default class CustomAssetWorker extends (AssetWorker as typeof WorkerEntr
 		return modifiedResponse;
 	}
 	async unstable_getByETag(
-		eTag: string
+		eTag: string,
+		request: Request
 	): Promise<{ readableStream: ReadableStream; contentType: string }> {
-		const url = new URL(eTag, UNKNOWN_HOST);
-		const response = await this.env.__VITE_FETCH_ASSET__.fetch(url);
+		const url = new URL(request.url);
+		url.pathname = eTag;
+		const pathRequest = new Request(url, request);
+		console.log(`AssetWorker: getByEtag(${pathRequest.url})`);
+		const response = await fetchAsset(pathRequest);
 
-		if (!response.body) {
-			throw new Error(`Unexpected error. No HTML found for ${eTag}.`);
+		const readableStream = response.body;
+		if (!readableStream) {
+			throw new Error(`Unexpected error. No content found for ${eTag}.`);
 		}
 
-		return { readableStream: response.body, contentType: "text/html" };
-	}
-	async unstable_exists(pathname: string): Promise<string | null> {
-		// We need this regex to avoid getting `//` as a pathname, which results in an invalid URL. Should this be fixed upstream?
-		const url = new URL(pathname.replace(/^\/{2,}/, "/"), UNKNOWN_HOST);
-		const response = await this.env.__VITE_ASSET_EXISTS__.fetch(url);
-		const exists = await response.json();
+		const contentType = response.headers.get("Content-Type");
+		if (!contentType) {
+			throw new Error(
+				`Unexpected error. Content type is missing from the for ${eTag}`
+			);
+		}
 
+		return { readableStream, contentType };
+	}
+	async unstable_exists(
+		pathname: string,
+		request: Request
+	): Promise<string | null> {
+		const url = new URL(request.url);
+		url.pathname = pathname;
+		const pathRequest = new Request(url, request);
+		console.log(`AssetWorker: exists(${pathRequest.url})`);
+		const response = await fetchAsset(pathRequest);
+		const exists = response.status === 200;
+		console.log(
+			pathname,
+			response.statusText,
+			response.headers.get("content-type")
+		);
 		return exists ? pathname : null;
+	}
+}
+
+function fetchAsset(request: Request) {
+	try {
+		const headers = new Headers(request.headers);
+		headers.set("__CF_REQUEST_TYPE_", "ASSET");
+		const newRequest = new Request(request, { headers });
+		return fetch(newRequest);
+	} catch (error) {
+		throw new Error(`Unexpected error. Failed to fetch asset: ${request.url}`);
 	}
 }
