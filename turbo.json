@@ -8,7 +8,8 @@
 		"NODE_VERSION",
 		"VITEST",
 		"NODE_DEBUG",
-		"NODE_EXTRA_CA_CERTS"
+		"NODE_EXTRA_CA_CERTS",
+		"MINIFLARE_WORKERD_PATH"
 	],
 	"tasks": {
 		"dev": {
@@ -40,7 +41,8 @@
 		},
 		"test:ci": {
 			"dependsOn": ["build"],
-			"outputLogs": "new-only"
+			"outputLogs": "new-only",
+			"env": ["MINIFLARE_WORKERD_PATH"]
 		},
 		"test:e2e": {
 			"env": ["WRANGLER", "CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"],
