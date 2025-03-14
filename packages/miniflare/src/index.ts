@@ -1375,7 +1375,14 @@ export class Miniflare {
 					"Ensure wrapped bindings don't have bindings to themselves."
 			);
 		}
-		return { services: servicesArray, sockets, extensions };
+		return {
+			services: servicesArray,
+			sockets,
+			extensions,
+			autogates: process.env.MINIFLARE_WORKERD_AUTOGATES
+				? process.env.MINIFLARE_WORKERD_AUTOGATES.split(" ")
+				: [],
+		};
 	}
 
 	async #assembleAndUpdateConfig() {
