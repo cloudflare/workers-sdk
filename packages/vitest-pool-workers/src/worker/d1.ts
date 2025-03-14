@@ -1,10 +1,11 @@
 import type { D1Migration } from "../shared/d1";
 
 function isD1Database(v: unknown): v is D1Database {
+	console.log(v.constructor.name);
 	return (
 		typeof v === "object" &&
 		v !== null &&
-		v.constructor.name === "D1Database" &&
+		v.constructor.name === "D1DatabaseWithSessionAPI" &&
 		"prepare" in v &&
 		typeof v.prepare === "function" &&
 		"batch" in v &&
