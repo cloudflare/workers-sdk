@@ -390,7 +390,7 @@ const verifyBuildCfTypesScript = async (
 
 	// the file still contains the env interface
 	expect(outputFileContentPostLines).toContain(
-		`interface ${envInterfaceName} {`,
+		`\tinterface ${envInterfaceName} {`,
 	);
 };
 
