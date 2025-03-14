@@ -43,3 +43,24 @@ export function nodeHeadersToWebHeaders(
 }
 
 export type Optional<T, K extends keyof T> = Omit<T, K> & Pick<Partial<T>, K>;
+
+export function log(handler: string, request: Request, action: string) {
+	console.log(
+		handler,
+		request.url,
+		isAssetFetch(request)
+			? "<ASSET REQUEST>"
+			: isWorkerFetch(request)
+				? "<WORKER REQUEST>"
+				: "<GENERAL REQUEST>",
+		action
+	);
+}
+
+export function isAssetFetch(request: Request) {
+	return request.headers.get("__CF_REQUEST_TYPE_") === "ASSET";
+}
+
+export function isWorkerFetch(request: Request) {
+	return request.headers.get("__CF_REQUEST_TYPE_") === "WORKER";
+}

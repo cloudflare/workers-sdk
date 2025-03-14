@@ -3,7 +3,7 @@ import { ROUTER_WORKER_NAME } from "./constants";
 import type { ResolvedPluginConfig } from "./plugin-config";
 import type { Miniflare } from "miniflare";
 
-export function getDevEntryWorker(
+export async function getDevEntryWorkers(
 	resolvedPluginConfig: ResolvedPluginConfig,
 	miniflare: Miniflare
 ) {
@@ -16,7 +16,14 @@ export function getDevEntryWorker(
 
 	assert(entryWorkerConfig, "Unexpected error: No entry worker configuration");
 
-	return entryWorkerConfig.assets
-		? miniflare.getWorker(ROUTER_WORKER_NAME)
-		: miniflare.getWorker(entryWorkerConfig.name);
+	const userWorker =
+		resolvedPluginConfig.type === "workers"
+			? await miniflare.getWorker(entryWorkerConfig.name)
+			: null;
+
+	const entryWorker = entryWorkerConfig.assets
+		? await miniflare.getWorker(ROUTER_WORKER_NAME)
+		: await miniflare.getWorker(entryWorkerConfig.name);
+
+	return { entryWorker, userWorker };
 }
