@@ -117,7 +117,7 @@ export const cliDefinition: ArgumentsDefinition = {
       You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
 
       npm create cloudflare -- --framework next -- --ts
-      pnpm create clouldfare --framework next -- --ts
+      pnpm create cloudflare --framework next -- --ts
       `,
 			values: (args) =>
 				getNamesAndDescriptions(
