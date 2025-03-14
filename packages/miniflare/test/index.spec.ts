@@ -1505,7 +1505,7 @@ test("Miniflare: getBindings() returns all bindings", async (t) => {
 
 	const opts: util.InspectOptions = { colors: false };
 	t.regex(util.inspect(bindings.SELF, opts), /name: 'Fetcher'/);
-	t.regex(util.inspect(bindings.DB, opts), /name: 'D1Database'/);
+	t.regex(util.inspect(bindings.DB, opts), /name: 'D1DatabaseWithSessionAPI'/);
 	t.regex(util.inspect(bindings.DO, opts), /name: 'DurableObjectNamespace'/);
 	t.regex(util.inspect(bindings.KV, opts), /name: 'KvNamespace'/);
 	t.regex(util.inspect(bindings.QUEUE, opts), /name: 'WorkerQueue'/);
