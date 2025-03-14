@@ -248,6 +248,9 @@ export function getDevMiniflareOptions(
 					...(assetsConfig?.not_found_handling
 						? { not_found_handling: assetsConfig.not_found_handling }
 						: {}),
+					...(assetsConfig?.single_page_application
+						? { single_page_application: assetsConfig.single_page_application }
+						: {}),
 				},
 			},
 			serviceBindings: {

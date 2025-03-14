@@ -18,3 +18,15 @@ test("returns the response from the API", async () => {
 	const contentAfter = await button.innerText();
 	expect(contentAfter).toBe("Name from API is: Cloudflare");
 });
+
+test("returns the home page even for 404-y pages", async () => {
+	page.goto("/foo");
+	const content = await page.textContent("h1");
+	expect(content).toBe("Vite + React");
+});
+
+test("returns the home page even for API-y pages", async () => {
+	page.goto("/api/");
+	const content = await page.textContent("h1");
+	expect(content).toBe("Vite + React");
+});
