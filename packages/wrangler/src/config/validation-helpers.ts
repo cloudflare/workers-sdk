@@ -1,6 +1,8 @@
+import TOML from "@iarna/toml";
 import type { RawConfig } from "./config";
 import type { Diagnostics } from "./diagnostics";
 import type { Environment, RawEnvironment } from "./environment";
+import type { AnyJson } from "@iarna/toml";
 
 /**
  *  Mark a field as deprecated.
@@ -22,6 +24,37 @@ export function deprecated<T extends object>(
 	const diagnosticMessage = `${BOLD}${title}${NORMAL}: "${fieldPath}":\n${message}`;
 	const result = unwindPropertyPath(config, fieldPath);
 	if (result !== undefined && result.field in result.container) {
+		diagnostics[`${type}s`].push(diagnosticMessage);
+		if (remove) {
+			delete (result.container as Record<string, unknown>)[result.field];
+		}
+	}
+}
+
+export function deprecatedValue<
+	T extends Record<string, unknown>,
+	P extends DeepKeyOf<T> & string,
+>(
+	diagnostics: Diagnostics,
+	config: T,
+	fieldPath: P,
+	value: DeepValueOf<T, P> & AnyJson,
+	message: string,
+	remove: boolean,
+	title = "Deprecation",
+	type: "warning" | "error" = "warning"
+): void {
+	const BOLD = "\x1b[1m";
+	const NORMAL = "\x1b[0m";
+	const diagnosticMessage = `${BOLD}${title}${NORMAL}: \`${fieldPath} = ${TOML.stringify.value(value)}\`:\n${message}`;
+	const result = unwindPropertyPath(config, fieldPath);
+
+	if (
+		result !== undefined &&
+		result.container !== undefined &&
+		result.field in result.container &&
+		(result.container as Record<string, unknown>)[result.field] === value
+	) {
 		diagnostics[`${type}s`].push(diagnosticMessage);
 		if (remove) {
 			delete (result.container as Record<string, unknown>)[result.field];
@@ -184,6 +217,14 @@ type DeepKeyOf<T> = (
 	: never;
 
 type DotPrefix<T extends string> = T extends "" ? "" : `.${T}`;
+
+type DeepValueOf<T, P extends string> = P extends `${infer K}.${infer R}`
+	? K extends keyof T
+		? DeepValueOf<NonNullable<T[K]>, R>
+		: never
+	: P extends keyof T
+		? T[P]
+		: never;
 
 /**
  * Return a container object and field name for the last property in a given property path.
@@ -384,7 +425,7 @@ export const all = (...validations: ValidatorFn[]): ValidatorFn => {
  * @param container the container of the fields to check against.
  * @param fields the names of the fields to check against.
  */
-export const isMutuallyExclusiveWith = <T extends RawEnvironment | RawConfig>(
+export const isMutuallyExclusiveWith = <T extends object>(
 	container: T,
 	...fields: (keyof T)[]
 ): ValidatorFn => {

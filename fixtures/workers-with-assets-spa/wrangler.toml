@@ -1,0 +1,10 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "worker-with-assets-spa"
+main = "./src/index.ts"
+compatibility_date = "2025-03-11"
+
+[assets]
+directory = "./public/"
+binding = "ASSETS"
+single_page_application = true
+run_worker_first = false
