@@ -1,5 +1,11 @@
 # miniflare
 
+## 3.20250310.1
+
+### Patch Changes
+
+- [#8453](https://github.com/cloudflare/workers-sdk/pull/8453) [`f90a669`](https://github.com/cloudflare/workers-sdk/commit/f90a6693310ebc04adfd8d7a9665011b0a7dba79) Thanks [@workers-devprod](https://github.com/workers-devprod)! - trigger dummy v3 maintenance release for testing
+
 ## 3.20250310.0
 
 ### Patch Changes
