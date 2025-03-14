@@ -7,6 +7,13 @@ import WebSocket from "ws";
 const nullScript =
 	'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));';
 
+test.before(() => {
+	// the tests in this file don't immediately consume bodies of fetch requests (since they
+	// test the debugging/inspector behavior), so we need to skip the bodies check by
+	// setting process.env.MINIFLARE_ASSERT_BODIES_CONSUMED to undefined
+	process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = undefined;
+});
+
 test("InspectorProxy: /json/version should provide details about the inspector version", async (t) => {
 	const mf = new Miniflare({
 		inspectorPort: 0,
@@ -206,10 +213,7 @@ test("InspectorProxy: should allow debugging a single worker", async (t) => {
 	t.like(await nextMessage(), { id: 0 });
 
 	// Send request and hit `debugger;` statement
-	const originalAssertConsumed = process.env.MINIFLARE_ASSERT_BODIES_CONSUMED;
-	process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = undefined;
 	const resPromise = mf.dispatchFetch("http://localhost");
-	process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = originalAssertConsumed;
 	t.like(await nextMessage(), { method: "Debugger.paused" });
 
 	// Resume execution
@@ -302,10 +306,7 @@ test("InspectorProxy: should allow debugging multiple workers", async (t) => {
 	await waitForScriptParsed("worker-b");
 
 	// Send request and hit `debugger;` statements
-	const originalAssertConsumed = process.env.MINIFLARE_ASSERT_BODIES_CONSUMED;
-	process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = undefined;
 	const resPromise = mf.dispatchFetch("http://localhost");
-	process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = originalAssertConsumed;
 	t.like(await nextMessage("worker-a"), { method: "Debugger.paused" });
 
 	const resumeWorker = async (worker: Worker) => {
@@ -411,10 +412,7 @@ test("InspectorProxy: can proxy messages > 1MB", async (t) => {
 	t.like(await nextMessage(), { id: 1 });
 
 	// Send request had check that the large string gets logged
-	const originalAssertConsumed = process.env.MINIFLARE_ASSERT_BODIES_CONSUMED;
-	process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = undefined;
 	const resPromise = mf.dispatchFetch("http://localhost");
-	process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = originalAssertConsumed;
 
 	const msg: {
 		method: string;
