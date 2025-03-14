@@ -4668,10 +4668,12 @@ addEventListener('fetch', event => {});`
 		});
 
 		it("should ignore assets that match patterns in an .assetsignore file in the root of the assets directory", async () => {
+			const redirectsContent = "/foo /bar";
+			const headersContent = "/some-path\nX-Header: Custom-Value";
 			const assets = [
 				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
-				{ filePath: "_redirects", content: "/foo /bar" },
-				{ filePath: "_headers", content: "/some-path\nX-Header: Custom-Value" },
+				{ filePath: "_redirects", content: redirectsContent },
+				{ filePath: "_headers", content: headersContent },
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.bak", content: "Content of file-2" },
 				{ filePath: "file-3.txt", content: "Content of file-3" },
@@ -4691,7 +4693,10 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest({
 				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
-					config: {},
+					config: {
+						_headers: headersContent,
+						_redirects: redirectsContent,
+					},
 				},
 				expectedType: "none",
 			});
