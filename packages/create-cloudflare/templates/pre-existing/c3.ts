@@ -68,6 +68,7 @@ const config: TemplateConfig = {
 	configVersion: 1,
 	id: "pre-existing",
 	displayName: "Pre-existing Worker (from Dashboard)",
+	description: "Fetch a Worker initialized from the Cloudflare dashboard.",
 	platform: "workers",
 	hidden: true,
 	copyFiles: {
