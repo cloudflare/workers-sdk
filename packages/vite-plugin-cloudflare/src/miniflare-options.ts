@@ -298,11 +298,19 @@ export function getDevMiniflareOptions(
 			bindings: {
 				CONFIG: {
 					has_user_worker: resolvedPluginConfig.type === "workers",
+					invoke_user_worker_ahead_of_assets:
+						assetsConfig?.run_worker_first ?? false,
 				},
 			},
 			serviceBindings: {
 				ASSET_WORKER: ASSET_WORKER_NAME,
-				...(entryWorkerConfig ? { USER_WORKER: userWorkerFetcher } : {}),
+				...(entryWorkerConfig
+					? {
+							USER_WORKER: assetsConfig?.run_worker_first
+								? entryWorkerConfig.name
+								: userWorkerFetcher,
+						}
+					: {}),
 			},
 		},
 		{
