@@ -3,6 +3,7 @@ import {
 	ModuleRunner,
 } from "vite/module-runner";
 import { MODULE_PATTERN, UNKNOWN_HOST } from "../shared";
+import { stripInternalEnv } from "./env";
 import type { WrapperEnv } from "./env";
 
 let moduleRunner: ModuleRunner;
@@ -76,6 +77,18 @@ export async function createModuleRunner(
 			},
 			async runExternalModule(filepath) {
 				const moduleRE = new RegExp(MODULE_PATTERN);
+
+				if (filepath === "cloudflare:workers") {
+					const originalCloudflareWorkersModule = await import(
+						"cloudflare:workers"
+					);
+					return {
+						...originalCloudflareWorkersModule,
+						env: stripInternalEnv(
+							originalCloudflareWorkersModule.env as WrapperEnv
+						),
+					};
+				}
 
 				if (
 					!moduleRE.test(filepath) &&
