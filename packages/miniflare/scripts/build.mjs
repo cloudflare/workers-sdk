@@ -110,7 +110,7 @@ const embedWorkersPlugin = {
 					outbase: pkgRoot,
 					plugins:
 						args.path === miniflareSharedExtensionPath ||
-							args.path === miniflareZodExtensionPath
+						args.path === miniflareZodExtensionPath
 							? [rewriteNodeToInternalPlugin]
 							: [],
 				});
