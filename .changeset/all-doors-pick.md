@@ -2,4 +2,4 @@
 "@cloudflare/vite-plugin": patch
 ---
 
-Add support for run_worker_first flag in Miniflare options
+Do not ignore `run_worker_first` in `vite preview` mode.
