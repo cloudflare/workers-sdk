@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import * as vite from "vite";
+import { wouldWorkerdPopulateProcessEnv } from "./node-js-compat";
 import { INIT_PATH, UNKNOWN_HOST, VITE_DEV_METADATA_HEADER } from "./shared";
 import { getOutputDirectory } from "./utils";
 import type { ResolvedPluginConfig, WorkerConfig } from "./plugin-config";
@@ -135,12 +136,6 @@ export function createCloudflareEnvironmentOptions(
 	userConfig: vite.UserConfig,
 	environmentName: string
 ): vite.EnvironmentOptions {
-	const workerCompatFlags = workerConfig.compatibility_flags;
-
-	const workerdPopulatesEnv =
-		workerCompatFlags.includes("nodejs_compat") &&
-		workerCompatFlags.includes("nodejs_compat_populate_process_env");
-
 	return {
 		resolve: {
 			// Note: in order for ssr pre-bundling to take effect we need to ask vite to treat all
@@ -197,9 +192,9 @@ export function createCloudflareEnvironmentOptions(
 				],
 			},
 		},
-		// if workerd populates process.env then we need to let it do it,
+		// if workerd populates process.env then we need to let it do that,
 		// otherwise vite itself can own process.env
-		keepProcessEnv: workerdPopulatesEnv,
+		keepProcessEnv: wouldWorkerdPopulateProcessEnv(workerConfig),
 	};
 }
 
