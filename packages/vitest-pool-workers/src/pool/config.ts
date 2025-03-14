@@ -163,6 +163,7 @@ async function parseCustomPoolOptions(
 		coalesceZodErrors(errorRef, e);
 	}
 
+	options.miniflare.workers = [];
 	// Try to parse auxiliary worker options
 	if (workers !== undefined) {
 		options.miniflare.workers = workers.map((worker, i) => {
@@ -197,19 +198,27 @@ async function parseCustomPoolOptions(
 
 		// Lazily import `wrangler` if and when we need it
 		const wrangler = await import("wrangler");
-		const { workerOptions, define, main } =
+		const { workerOptions, externalWorkers, define, main } =
 			wrangler.unstable_getMiniflareWorkerOptions(
 				configPath,
-				options.wrangler.environment
+				options.wrangler.environment,
+				{ imagesLocalMode: true }
 			);
 
 		// If `main` wasn't explicitly configured, fall back to Wrangler config's
 		options.main ??= main;
+
+		options.miniflare.workers = [
+			...options.miniflare.workers,
+			...externalWorkers,
+		];
+
 		// Merge generated Miniflare options from Wrangler with specified overrides
 		options.miniflare = mergeWorkerOptions(
 			workerOptions,
 			options.miniflare as SourcelessWorkerOptions
 		);
+
 		// Record any Wrangler `define`s
 		options.defines = define;
 	}
@@ -224,6 +233,7 @@ async function parseCustomPoolOptions(
 			options.main
 		);
 	}
+
 	return options;
 }
 
