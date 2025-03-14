@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import * as vite from "vite";
-import { INIT_PATH, UNKNOWN_HOST } from "./shared";
+import { wouldWorkerdPopulateProcessEnv } from "./node-js-compat";
+import { INIT_PATH, UNKNOWN_HOST, VITE_DEV_METADATA_HEADER } from "./shared";
 import { getOutputDirectory } from "./utils";
 import type { ResolvedPluginConfig, WorkerConfig } from "./plugin-config";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
@@ -72,6 +73,7 @@ function createHotChannel(
 }
 
 export class CloudflareDevEnvironment extends vite.DevEnvironment {
+	#viteResolvedConfig: vite.ResolvedConfig;
 	#webSocketContainer: { webSocket?: WebSocket };
 	#worker?: ReplaceWorkersTypes<Fetcher>;
 
@@ -83,15 +85,23 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 			transport: createHotChannel(webSocketContainer),
 		});
 		this.#webSocketContainer = webSocketContainer;
+		this.#viteResolvedConfig = config;
 	}
 
-	async initRunner(worker: ReplaceWorkersTypes<Fetcher>) {
+	async initRunner(
+		worker: ReplaceWorkersTypes<Fetcher>,
+		workerConfig: WorkerConfig
+	) {
 		this.#worker = worker;
 
 		const response = await this.#worker.fetch(
 			new URL(INIT_PATH, UNKNOWN_HOST),
 			{
 				headers: {
+					[VITE_DEV_METADATA_HEADER]: JSON.stringify({
+						root: this.#viteResolvedConfig.root,
+						entryPath: workerConfig.main,
+					}),
 					upgrade: "websocket",
 				},
 			}
@@ -180,7 +190,9 @@ export function createCloudflareEnvironmentOptions(
 				],
 			},
 		},
-		keepProcessEnv: false,
+		// if workerd populates process.env then we need to let it do that,
+		// otherwise vite itself can own process.env
+		keepProcessEnv: wouldWorkerdPopulateProcessEnv(workerConfig),
 	};
 }
 
@@ -202,7 +214,7 @@ export function initRunners(
 					viteDevServer.environments[
 						environmentName
 					] as CloudflareDevEnvironment
-				).initRunner(worker);
+				).initRunner(worker, workerConfig);
 			}
 		)
 	);

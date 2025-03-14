@@ -310,8 +310,6 @@ export function getDevMiniflareOptions(
 								unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
 								bindings: {
 									...workerOptions.bindings,
-									__VITE_ROOT__: resolvedViteConfig.root,
-									__VITE_ENTRY_PATH__: workerConfig.main,
 								},
 								serviceBindings: {
 									...workerOptions.serviceBindings,
