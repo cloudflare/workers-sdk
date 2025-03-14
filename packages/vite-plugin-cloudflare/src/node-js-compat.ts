@@ -118,3 +118,33 @@ function getNodeCompatEntries() {
 
 	return entries;
 }
+
+/**
+ * Discerns wether workerd would populate the `process.env` object a worker or not
+ *
+ * @param workerConfig the worker configuration
+ * @returns true if workerd would populate the `process.env` given the provided configuration, false otherwise
+ */
+export function wouldWorkerdPopulateProcessEnv(workerConfig: WorkerConfig) {
+	const workerCompatFlags = workerConfig.compatibility_flags;
+
+	if (!workerCompatFlags.includes("nodejs_compat")) {
+		return false;
+	}
+
+	if (workerCompatFlags.includes("nodejs_compat_populate_process_env")) {
+		return true;
+	}
+
+	const compatDateEnablingProcessEnvPopulation = new Date("2025-04-01");
+	const workerCompatDate = new Date(workerConfig.compatibility_date);
+
+	const dateEnablesFlag =
+		workerCompatDate.getTime() >=
+		compatDateEnablingProcessEnvPopulation.getTime();
+
+	return (
+		dateEnablesFlag &&
+		!workerCompatFlags.includes("nodejs_compat_do_not_populate_process_env")
+	);
+}
