@@ -1,0 +1,16 @@
+{
+	"compilerOptions": {
+		"strict": true,
+		"alwaysStrict": true,
+		"moduleResolution": "nodenext",
+		"preserveConstEnums": true,
+		"forceConsistentCasingInFileNames": true,
+		"allowSyntheticDefaultImports": true,
+		"types": ["@cloudflare/workers-types/experimental", "@types/node"],
+		"module": "NodeNext",
+		"target": "es2020",
+		"lib": ["es2020"],
+		"noEmit": true
+	},
+	"exclude": ["tests/**"]
+}

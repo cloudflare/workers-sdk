@@ -1,0 +1,33 @@
+{
+	"name": "@cloudflare/userland-rpc",
+	"version": "0.0.1",
+	"private": true,
+	"description": "RPC over websockets, between workers and/or browser clients",
+	"keywords": [
+		"cloudflare",
+		"workers",
+		"cloudflare workers",
+		"rpc"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/userland-rpc"
+	},
+	"license": "MIT OR Apache-2.0",
+	"author": "wrangler@cloudflare.com",
+	"scripts": {
+		"check:lint": "eslint . --max-warnings=0",
+		"check:type": "tsc",
+		"test:ci": "vitest run"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250313.0",
+		"@types/node": "catalog:default",
+		"devalue": "^5.1.1"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}
