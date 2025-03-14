@@ -1335,4 +1335,110 @@ describe("[Asset Worker] `canFetch`", () => {
 			)
 		).toBeTruthy();
 	});
+
+	describe("single_page_application", async () => {
+		const exists = (pathname: string) => {
+			if (["/404.html", "/index.html", "/foo.html"].includes(pathname)) {
+				return "some-etag";
+			}
+
+			return null;
+		};
+
+		const singlePageApplicationModes = [
+			[false, false],
+			[true, true],
+		] as const;
+
+		// Make sure all the not_found_handling options are overriden and exhibit the same behavior regardless
+		const notFoundHandlingModes = [
+			[undefined, true],
+			["none", true],
+			["404-page", true],
+			["single-page-application", true],
+		] as const;
+
+		const headersModes = [
+			[{}, false],
+			[{ "Sec-Fetch-Mode": "navigate" }, true],
+			[{ "Sec-Fetch-Mode": "cors" }, false],
+		] as const;
+
+		const matrix = [];
+		for (const singlePageApplication of singlePageApplicationModes) {
+			for (const notFoundHandling of notFoundHandlingModes) {
+				for (const headers of headersModes) {
+					matrix.push({
+						notFoundHandling: notFoundHandling[0],
+						singlePageApplication: singlePageApplication[0],
+						headers: headers[0],
+						expected:
+							notFoundHandling[1] && singlePageApplication[1] && headers[1],
+					});
+				}
+			}
+		}
+
+		it.each(matrix)(
+			"single_page_application $singlePageApplication, not_found_handling $notFoundHandling, headers: $headers -> $expected",
+			async ({
+				singlePageApplication,
+				notFoundHandling,
+				headers,
+				expected,
+			}) => {
+				expect(
+					await canFetch(
+						new Request("https://example.com/foo", { headers }),
+						// @ts-expect-error Empty config default to using mocked jaeger
+						mockEnv,
+						normalizeConfiguration({
+							single_page_application: singlePageApplication,
+							not_found_handling: notFoundHandling,
+						}),
+						exists
+					)
+				).toBeTruthy();
+
+				expect(
+					await canFetch(
+						new Request("https://example.com/bar", { headers }),
+						// @ts-expect-error Empty config default to using mocked jaeger
+						mockEnv,
+						normalizeConfiguration({
+							single_page_application: singlePageApplication,
+							not_found_handling: notFoundHandling,
+						}),
+						exists
+					)
+				).toBe(expected);
+
+				expect(
+					await canFetch(
+						new Request("https://example.com/", { headers }),
+						// @ts-expect-error Empty config default to using mocked jaeger
+						mockEnv,
+						normalizeConfiguration({
+							single_page_application: singlePageApplication,
+							not_found_handling: notFoundHandling,
+						}),
+						exists
+					)
+				).toBeTruthy();
+
+				expect(
+					await canFetch(
+						new Request("https://example.com/404", { headers }),
+						// @ts-expect-error Empty config default to using mocked jaeger
+						mockEnv,
+						normalizeConfiguration({
+							single_page_application: singlePageApplication,
+							not_found_handling: notFoundHandling,
+						}),
+						exists
+					)
+				).toBeTruthy();
+			}
+		);
+	});
 });
