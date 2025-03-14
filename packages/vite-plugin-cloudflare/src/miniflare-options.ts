@@ -18,9 +18,9 @@ import {
 import {
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
+	DEFAULT_INSPECTOR_PORT,
 	ROUTER_WORKER_NAME,
 } from "./constants";
-import { getWorkerConfigPaths } from "./deploy-config";
 import { MODULE_PATTERN } from "./shared";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
@@ -30,7 +30,7 @@ import type {
 } from "./plugin-config";
 import type { MiniflareOptions, SharedOptions, WorkerOptions } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
-import type { SourcelessWorkerOptions } from "wrangler";
+import type { SourcelessWorkerOptions, Unstable_Config } from "wrangler";
 
 type PersistOptions = Pick<
 	SharedOptions,
@@ -306,6 +306,7 @@ export function getDevMiniflareOptions(
 							worker: {
 								...workerOptions,
 								name: workerOptions.name ?? workerConfig.name,
+								unsafeInspectorProxy: true,
 								modulesRoot: miniflareModulesRoot,
 								unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
 								bindings: {
@@ -385,6 +386,8 @@ export function getDevMiniflareOptions(
 
 	return {
 		log: logger,
+		inspectorPort: resolvedPluginConfig.inspectorPort,
+		unsafeInspectorProxy: true,
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));
@@ -528,14 +531,11 @@ function getPreviewModules(
 
 export function getPreviewMiniflareOptions(
 	vitePreviewServer: vite.PreviewServer,
-	persistState: PersistState
+	workerConfigs: Unstable_Config[],
+	persistState: PersistState,
+	inspectorPort = DEFAULT_INSPECTOR_PORT
 ): MiniflareOptions {
 	const resolvedViteConfig = vitePreviewServer.config;
-	const configPaths = getWorkerConfigPaths(resolvedViteConfig.root);
-	const workerConfigs = configPaths.map((configPath) =>
-		unstable_readConfig({ config: configPath })
-	);
-
 	const workers: Array<WorkerOptions> = workerConfigs.flatMap((config) => {
 		const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(config);
 
@@ -548,6 +548,7 @@ export function getPreviewMiniflareOptions(
 			{
 				...workerOptions,
 				name: workerOptions.name ?? config.name,
+				unsafeInspectorProxy: true,
 				...(miniflareWorkerOptions.main
 					? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
 					: { modules: true, script: "" }),
@@ -560,6 +561,8 @@ export function getPreviewMiniflareOptions(
 
 	return {
 		log: logger,
+		inspectorPort,
+		unsafeInspectorProxy: true,
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));
