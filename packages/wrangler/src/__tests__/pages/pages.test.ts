@@ -63,7 +63,7 @@ describe("pages", () => {
 			      --inspector-port                             Port for devtools to connect to  [number]
 			      --proxy                                      The port to proxy (where the static assets are served)  [deprecated] [number]
 			      --script-path                                The location of the single Worker script if not using functions  [default: _worker.js]  [deprecated] [string]
-			      --no-bundle                                  Whether to run bundling on \`_worker.js\`  [boolean] [default: false]
+			      --no-bundle                                  Whether to run bundling on \`_worker.js\`  [boolean]
 			  -b, --binding                                    Bind variable/secret (KEY=VALUE)  [array]
 			  -k, --kv                                         KV namespace to bind (--kv KV_BINDING)  [array]
 			      --d1                                         D1 database to bind (--d1 D1_BINDING)  [array]
@@ -150,7 +150,7 @@ describe("pages", () => {
 			      --commit-message      The commit message to attach to this deployment  [string]
 			      --commit-dirty        Whether or not the workspace should be considered dirty for this deployment  [boolean]
 			      --skip-caching        Skip asset caching which speeds up builds  [boolean]
-			      --no-bundle           Whether to run bundling on \`_worker.js\` before deploying  [boolean] [default: false]
+			      --no-bundle           Whether to run bundling on \`_worker.js\` before deploying  [boolean]
 			      --upload-source-maps  Whether to upload any server-side sourcemaps with this deployment  [boolean] [default: false]"
 		`);
 	});
