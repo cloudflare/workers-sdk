@@ -243,15 +243,18 @@ export interface Unstable_MiniflareWorkerOptions {
 
 export function unstable_getMiniflareWorkerOptions(
 	configPath: string,
-	env?: string
+	env?: string,
+	options?: { imagesLocalMode: boolean }
 ): Unstable_MiniflareWorkerOptions;
 export function unstable_getMiniflareWorkerOptions(
 	config: Config,
-	env?: string
+	env?: string,
+	options?: { imagesLocalMode: boolean }
 ): Unstable_MiniflareWorkerOptions;
 export function unstable_getMiniflareWorkerOptions(
 	configOrConfigPath: string | Config,
-	env?: string
+	env?: string,
+	options?: { imagesLocalMode: boolean }
 ): Unstable_MiniflareWorkerOptions {
 	const config =
 		typeof configOrConfigPath === "string"
@@ -275,7 +278,7 @@ export function unstable_getMiniflareWorkerOptions(
 		services: [],
 		serviceBindings: {},
 		migrations: config.migrations,
-		imagesLocalMode: false,
+		imagesLocalMode: !!options?.imagesLocalMode,
 	});
 
 	// This function is currently only exported for the Workers Vitest pool.

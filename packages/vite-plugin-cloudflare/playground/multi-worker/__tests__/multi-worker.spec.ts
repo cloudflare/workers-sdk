@@ -37,6 +37,11 @@ describe("multi-worker service bindings", async () => {
 		expect(result).toEqual({ result: 9 });
 	});
 
+	test("promise pipelining on default entrypoint", async () => {
+		const result = await getJsonResponse("/rpc-method/promise-pipelining");
+		expect(result).toEqual({ result: "You made it! 🎉" });
+	});
+
 	test("calls an RPC getter on another worker", async () => {
 		const result = await getJsonResponse("/rpc-getter");
 		expect(result).toEqual({ result: "Cloudflare" });
@@ -45,5 +50,12 @@ describe("multi-worker service bindings", async () => {
 	test("calls an RPC method on a named entrypoint", async () => {
 		const result = await getJsonResponse("/rpc-named-entrypoint");
 		expect(result).toEqual({ result: 20 });
+	});
+
+	test("promise pipelining on a named entrypoint", async () => {
+		const result = await getJsonResponse(
+			"/rpc-named-entrypoint/promise-pipelining"
+		);
+		expect(result).toEqual({ result: "You made it! 🚀" });
 	});
 });
