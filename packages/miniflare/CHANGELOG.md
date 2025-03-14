@@ -1,5 +1,11 @@
 # miniflare
 
+## 4.20250310.1
+
+### Minor Changes
+
+- [#8445](https://github.com/cloudflare/workers-sdk/pull/8445) [`74b0c73`](https://github.com/cloudflare/workers-sdk/commit/74b0c7377a643241d4e3efa674cd644f8f5b8e10) Thanks [@lambrospetrou](https://github.com/lambrospetrou)! - D1 local developer experience supports sessions API bookmarks
+
 ## 4.20250310.0
 
 ### Major Changes
