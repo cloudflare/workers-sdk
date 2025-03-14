@@ -1,5 +1,17 @@
 # @cloudflare/unenv-preset
 
+## 2.0.2
+
+### Patch Changes
+
+- Fixes outdated dist files in the 2.0.1 release
+
+## 2.0.1
+
+### Patch Changes
+
+- Sync with `unenv@2.0.0-rc.14`
+
 ## 2.0.0
 
 ### Major Changes

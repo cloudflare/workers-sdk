@@ -22,36 +22,6 @@ import { getStartedWorkerdProcesses } from "./helpers/workerd-processes";
  */
 const workerName = generateResourceName();
 
-it("can import URL from 'url' in node_compat mode", async () => {
-	const helper = new WranglerE2ETestHelper();
-	await helper.seed({
-		"wrangler.toml": dedent`
-				name = "${workerName}"
-				main = "src/index.ts"
-				compatibility_date = "2023-01-01"
-				node_compat = true
-		`,
-		"src/index.ts": dedent`
-				const { URL } = require('url');
-				const { URL: nURL } = require('node:url');
-
-				export default {
-					fetch(request) {
-						const url = new URL('postgresql://user:password@example.com:12345/dbname?sslmode=disable')
-						const nUrl = new nURL('postgresql://user:password@example.com:12345/dbname?sslmode=disable')
-						return new Response(url + nUrl)
-					}
-				}`,
-	});
-	const worker = helper.runLongLived(`wrangler dev`);
-
-	const { url } = await worker.waitForReady();
-
-	await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-		`"postgresql://user:password@example.com:12345/dbname?sslmode=disablepostgresql://user:password@example.com:12345/dbname?sslmode=disable"`
-	);
-});
-
 describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
 	"basic js dev: $cmd",
 	({ cmd }) => {
@@ -1341,6 +1311,58 @@ describe("watch mode", () => {
 					}
 				));
 				expect(response.status).toBe(404);
+			});
+
+			it("supports adding new metafiles during dev session", async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
+								name = "${workerName}"
+								compatibility_date = "2023-01-01"
+
+								[assets]
+								directory = "./public"
+						`,
+					"public/index.html": dedent`
+									<h1>Hello Workers + Assets</h1>`,
+					"public/foo.html": dedent`
+									<h1>Foo</h1>`,
+					"public/bar.html": dedent`
+									<h1>Bar</h1>`,
+				});
+
+				const worker = helper.runLongLived(cmd);
+				const { url } = await worker.waitForReady();
+				let response = await fetch(`${url}/index.html`);
+
+				expect(response.headers.has("X-Custom")).toBeFalsy();
+				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
+
+				response = await fetch(`${url}/foo`, { redirect: "manual" });
+
+				expect(response.status).toBe(200);
+				expect(await response.text()).toBe("<h1>Foo</h1>");
+
+				await helper.seed({
+					"public/_headers": dedent`/\n  X-Header: Custom-Value`,
+					"public/_redirects": dedent`/foo /bar`,
+				});
+
+				await worker.waitForReload();
+
+				// re-calculating the asset manifest / reverse assets map might not be
+				// done at this point, so retry until they are available
+				response = await retry(
+					(r) => r.status !== 302,
+					async () => {
+						return await fetch(`${url}/foo`, { redirect: "manual" });
+					}
+				);
+				expect(response.status).toBe(302);
+				expect(response.headers.get("Location")).toBe("/bar");
+
+				response = await fetch(`${url}/`);
+				expect(response.headers.get("X-Header")).toBe("Custom-Value");
 			});
 
 			it(`supports modifying the assets directory in wrangler.toml during dev session`, async () => {

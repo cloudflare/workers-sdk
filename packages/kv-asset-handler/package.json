@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/kv-asset-handler",
-	"version": "0.3.4",
+	"version": "0.4.0",
 	"description": "Routes requests to KV assets",
 	"keywords": [
 		"kv",
@@ -42,7 +42,7 @@
 	},
 	"devDependencies": {
 		"@ava/typescript": "^4.1.0",
-		"@cloudflare/workers-types": "^4.20250224.0",
+		"@cloudflare/workers-types": "^4.20250310.0",
 		"@types/mime": "^3.0.4",
 		"@types/node": "catalog:default",
 		"@types/service-worker-mock": "^2.0.1",
@@ -50,7 +50,7 @@
 		"service-worker-mock": "^2.0.5"
 	},
 	"engines": {
-		"node": ">=16.13"
+		"node": ">=18.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

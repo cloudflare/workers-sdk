@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-shared",
-	"version": "0.14.5",
+	"version": "0.16.0",
 	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workers.",
 	"keywords": [
 		"cloudflare",
@@ -42,10 +42,11 @@
 		"generate-sourcemaps": "pnpm run generate-sourcemaps:asset-worker && pnpm generate-sourcemaps:router-worker",
 		"generate-sourcemaps:asset-worker": "pnpx wrangler versions upload -c asset-worker/wrangler.toml --dry-run --outdir=./dist",
 		"generate-sourcemaps:router-worker": "pnpx wrangler versions upload -c router-worker/wrangler.toml --dry-run --outdir=./dist",
-		"test": "concurrently --group -n router-worker,asset-worker \"pnpm run test:router-worker\" \"pnpm run test:asset-worker\"",
+		"test": "concurrently --group -n router-worker,asset-worker,utils \"pnpm run test:router-worker\" \"pnpm run test:asset-worker\" \"pnpm run test:utils\"",
 		"test:asset-worker": "vitest -c asset-worker/vitest.config.mts --dir asset-worker",
-		"test:ci": "concurrently --group -n router-worker,asset-worker \"pnpm run test:router-worker --run\" \"pnpm run test:asset-worker --run\"",
+		"test:ci": "concurrently --group -n router-worker,asset-worker,utils \"pnpm run test:router-worker --run\" \"pnpm run test:asset-worker --run\" \"pnpm run test:utils --run\"",
 		"test:router-worker": "vitest -c router-worker/vitest.config.mts --dir router-worker",
+		"test:utils": "vitest --dir utils",
 		"types:emit": "tsc index.ts --declaration --emitDeclarationOnly --declarationDir ./dist",
 		"upload-sourcemaps": "pnpm run upload-sourcemaps:asset-worker && pnpm run upload-sourcemaps:router-worker",
 		"upload-sourcemaps:asset-worker": "node -r esbuild-register ./scripts/upload-sourcemaps.ts --worker asset-worker --tag aw-$(node -r esbuild-register ./scripts/get-version-tag.ts)",
@@ -59,18 +60,19 @@
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/vitest-pool-workers": "^0.5.41",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250224.0",
+		"@cloudflare/workers-types": "^4.20250310.0",
 		"@sentry/cli": "^2.37.0",
 		"@types/mime": "^3.0.4",
 		"concurrently": "^8.2.2",
-		"esbuild": "0.17.19",
+		"esbuild": "catalog:default",
+		"ignore": "^5.2.0",
 		"rimraf": "catalog:default",
 		"toucan-js": "4.0.0",
 		"typescript": "catalog:default",
 		"vitest": "~2.1.0"
 	},
 	"engines": {
-		"node": ">=16.7.0"
+		"node": ">=18.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

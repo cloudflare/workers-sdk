@@ -1,0 +1,48 @@
+name: v3 Maintenance
+
+on: pull_request
+
+jobs:
+  open-pr:
+    if: ${{ github.repository_owner == 'cloudflare' }}
+    name: Open backport PR for patches
+    runs-on: macos-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - uses: Ana06/get-changed-files@v1.2
+        id: files
+        with:
+          format: "json"
+
+      - run: node -r esbuild-register tools/deployments/open-v3-pr.ts
+        env:
+          FILES: ${{ steps.files.outputs.all }}
+          PR_NUMBER: ${{ github.event.number }}
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
+      - name: "Comment on PR with error details"
+        if: failure()
+        uses: marocchino/sticky-pull-request-comment@daa4a82a0a3f6c162c02b83fa44b3ab83946f7cb
+        with:
+          message: |
+            Failed to automatically backport this PR's changes to Wrangler v3. Please manually create a PR targeting the `v3-maintenance` branch with your changes. Thank you for helping us keep Wrangler v3 supported!
+
+            Depending on your changes, running `git rebase --onto v3-maintenance main ${{ github.head_ref }}` might be a good starting point.
+
+      - name: "Comment on PR with error details"
+        if: success()
+        uses: marocchino/sticky-pull-request-comment@daa4a82a0a3f6c162c02b83fa44b3ab83946f7cb
+        with:
+          message: |
+            These changes have been automatically backported to Wrangler v3 :tada: You can view the automatically updated PR at https://github.com/cloudflare/workers-sdk/compare/v3-maintenance...v3-maintenance-${{ github.event.number }}. Please check that PR for correctness, and make sure it's merged after this one. Thank you for helping us keep Wrangler v3 supported!

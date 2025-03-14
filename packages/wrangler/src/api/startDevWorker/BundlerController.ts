@@ -111,9 +111,6 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						bundle: true,
 						additionalModules: [],
 						moduleCollector,
-						serveLegacyAssetsFromWorker: Boolean(
-							config.legacy?.legacyAssets && !config.dev?.remote
-						),
 						workflowBindings: bindings?.workflows ?? [],
 						doBindings: bindings?.durable_objects?.bindings ?? [],
 						jsxFactory: config.build.jsxFactory,
@@ -129,9 +126,6 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						mockAnalyticsEngineDatasets:
 							bindings.analytics_engine_datasets ?? [],
 						alias: config.build.alias,
-						legacyAssets: config.legacy?.legacyAssets,
-						// enable the cache when publishing
-						bypassAssetCache: false,
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "dev",
@@ -252,10 +246,6 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				processEntrypoint: Boolean(config.build?.processEntrypoint),
 				additionalModules: config.build?.additionalModules ?? [],
 				rules: config.build.moduleRules,
-				legacyAssets: config.legacy?.legacyAssets,
-				serveLegacyAssetsFromWorker: Boolean(
-					config.legacy?.legacyAssets && !config.dev?.remote
-				),
 				tsconfig: config.build?.tsconfig,
 				minify: config.build?.minify,
 				nodejsCompatMode: config.build.nodejsCompatMode,

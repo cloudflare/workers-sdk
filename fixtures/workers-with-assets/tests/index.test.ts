@@ -1,4 +1,6 @@
-import { resolve } from "node:path";
+import { readFileSync, rm, unlinkSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { scheduler } from "node:timers/promises";
 import { fetch } from "undici";
 import { afterAll, beforeAll, describe, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
@@ -218,6 +220,42 @@ describe.each(devCmds)(
 			let text = await response.text();
 			expect(response.status).toBe(200);
 			expect(text).toContain("hello from a named entrypoint");
+		});
+
+		it("should apply custom redirects", async ({ expect }) => {
+			let response = await fetch(`http://${ip}:${port}/foo`, {
+				redirect: "manual",
+			});
+			expect(response.status).toBe(302);
+			expect(response.headers.get("Location")).toBe("/bar");
+
+			response = await fetch(`http://${ip}:${port}/pic`);
+			expect(response.status).toBe(200);
+			expect(await response.arrayBuffer()).toEqual(
+				readFileSync(join(__dirname, "../public/lava-lamps.jpg")).buffer
+			);
+		});
+
+		it("should apply custom headers", async ({ expect }) => {
+			let response = await fetch(`http://${ip}:${port}/`);
+			expect(response.status).toBe(200);
+			expect(response.headers.get("X-Header")).toBe("Custom-Value");
+		});
+
+		it("should apply .assetsignore", async ({ expect }) => {
+			let response = await fetch(`http://${ip}:${port}/.assetsignore`);
+			expect(await response.text()).not.toContain("ignore-me.txt");
+
+			response = await fetch(`http://${ip}:${port}/ignore-me.txt`);
+			expect(await response.text()).not.toContain("SECRET");
+
+			response = await fetch(`http://${ip}:${port}/_headers`);
+			expect(await response.text()).not.toContain("X-Header");
+		});
+
+		it.todo("should warn of _worker.js", async ({ expect }) => {
+			// let response = await fetch(`http://${ip}:${port}/_worker.js`);
+			// expect(await response.text()).not.toContain("bang");
 		});
 	}
 );

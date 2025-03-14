@@ -12,6 +12,7 @@ import type {
 } from "../yargs-types";
 import type {
 	CachingOptions,
+	Mtls,
 	NetworkOriginWithSecrets,
 	OriginDatabaseWithSecrets,
 	OriginWithSecrets,
@@ -115,6 +116,16 @@ export function upsertOptions<T>(yargs: Argv<T>) {
 				type: "number",
 				describe:
 					"Indicates the number of seconds cache may serve the response after it becomes stale, cannot be set when caching is disabled",
+			},
+			"ca-certificate-uuid": {
+				type: "string",
+				describe:
+					"Sets custom CA certificate when connecting to origin database. Must be valid UUID of already uploaded CA certificate.",
+			},
+			"mtls-certificate-uuid": {
+				type: "string",
+				describe:
+					"Sets custom mTLS client certificates when connecting to origin database. Must be valid UUID of already uploaded public/private key certificates.",
 			},
 		})
 		.group(
@@ -295,5 +306,20 @@ export function getCacheOptionsFromArgs(
 		return undefined;
 	} else {
 		return caching;
+	}
+}
+
+export function getMtlsFromArgs(
+	args: StrictYargsOptionsToInterface<typeof upsertOptions>
+): Mtls | undefined {
+	const mtls = {
+		ca_certificate_uuid: args.caCertificateUuid,
+		mtls_certificate_uuid: args.mtlsCertificateUuid,
+	};
+
+	if (JSON.stringify(mtls) === "{}") {
+		return undefined;
+	} else {
+		return mtls;
 	}
 }

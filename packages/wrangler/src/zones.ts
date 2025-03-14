@@ -1,6 +1,7 @@
 import { fetchListResult } from "./cfetch";
 import { configFileName } from "./config";
 import { UserError } from "./errors";
+import { retryOnAPIFailure } from "./utils/retry";
 import type { Route } from "./config/environment";
 
 /**
@@ -160,13 +161,15 @@ async function getZoneIdFromHost(
 		if (!zoneIdCache.has(cacheKey)) {
 			zoneIdCache.set(
 				cacheKey,
-				fetchListResult<{ id: string }>(
-					`/zones`,
-					{},
-					new URLSearchParams({
-						name: hostPieces.join("."),
-						"account.id": from.accountId,
-					})
+				retryOnAPIFailure(() =>
+					fetchListResult<{ id: string }>(
+						`/zones`,
+						{},
+						new URLSearchParams({
+							name: hostPieces.join("."),
+							"account.id": from.accountId,
+						})
+					)
 				).then((zones) => zones[0]?.id ?? null)
 			);
 		}

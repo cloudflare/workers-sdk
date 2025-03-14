@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
+import { createPatternMatcher } from "@cloudflare/workers-shared/utils/helpers";
 import chalk from "chalk";
 import xxhash from "xxhash-wasm";
 import { UserError } from "./errors";
@@ -16,7 +17,6 @@ import {
 	putKVKeyValue,
 } from "./kv/helpers";
 import { logger, LOGGER_LEVELS } from "./logger";
-import { createPatternMatcher } from "./utils/filesystem";
 import type { Config } from "./config";
 import type { KeyValue } from "./kv/helpers";
 import type { XXHashAPI } from "xxhash-wasm";
@@ -118,7 +118,7 @@ function pluralise(count: number) {
  * @returns a promise for an object mapping the relative paths of the assets to the key of that
  * asset in the KV namespace.
  */
-export async function syncLegacyAssets(
+export async function syncWorkersSite(
 	accountId: string | undefined,
 	scriptName: string,
 	siteAssets: LegacyAssetPaths | undefined,
@@ -451,50 +451,6 @@ export interface LegacyAssetPaths {
 	 * An array of patterns that match files that should not be uploaded.
 	 */
 	excludePatterns: string[];
-}
-
-/**
- * Get an object that describes what assets to upload, if any.
- *
- * Uses the args (passed from the command line) if available,
- * falling back to those defined in the config.
- *
- * (This function corresponds to --legacy-assets/config.assets)
- *
- */
-export function getLegacyAssetPaths(
-	config: Config,
-	assetDirectory: string | undefined
-): LegacyAssetPaths | undefined {
-	const baseDirectory = assetDirectory
-		? process.cwd()
-		: path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
-
-	assetDirectory ??=
-		typeof config.legacy_assets === "string"
-			? config.legacy_assets
-			: config.legacy_assets !== undefined
-				? config.legacy_assets.bucket
-				: undefined;
-
-	const includePatterns =
-		(typeof config.legacy_assets !== "string" &&
-			config.legacy_assets?.include) ||
-		[];
-
-	const excludePatterns =
-		(typeof config.legacy_assets !== "string" &&
-			config.legacy_assets?.exclude) ||
-		[];
-
-	return assetDirectory
-		? {
-				baseDirectory,
-				assetDirectory,
-				includePatterns,
-				excludePatterns,
-			}
-		: undefined;
 }
 
 /**

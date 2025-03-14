@@ -8,6 +8,15 @@ import {
 	MAX_ASSET_SIZE,
 	normalizeFilePath,
 } from "@cloudflare/workers-shared";
+import {
+	CF_ASSETS_IGNORE_FILENAME,
+	HEADERS_FILENAME,
+	REDIRECTS_FILENAME,
+} from "@cloudflare/workers-shared/utils/constants";
+import {
+	createAssetsIgnoreFunction,
+	maybeGetFile,
+} from "@cloudflare/workers-shared/utils/helpers";
 import chalk from "chalk";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
@@ -21,7 +30,6 @@ import { isJwtExpired } from "./pages/upload";
 import { APIError } from "./parse";
 import { getBasePath } from "./paths";
 import { dedent } from "./utils/dedent";
-import { createPatternMatcher, maybeGetFile } from "./utils/filesystem";
 import type { StartDevWorkerOptions } from "./api";
 import type { Config } from "./config";
 import type { DeployArgs } from "./deploy";
@@ -118,6 +126,7 @@ export const syncAssets = async (
 	});
 
 	const queue = new PQueue({ concurrency: BULK_UPLOAD_CONCURRENCY });
+	const queuePromises: Array<Promise<void>> = [];
 	let attempts = 0;
 	const start = Date.now();
 	let completionJwt = "";
@@ -201,17 +210,21 @@ export const syncAssets = async (
 			}
 		};
 		// add to queue and run it if we haven't reached concurrency limit
-		void queue.add(() =>
-			doUpload().then((res) => {
-				completionJwt = res.jwt || completionJwt;
-			})
+		queuePromises.push(
+			queue.add(() =>
+				doUpload().then((res) => {
+					completionJwt = res.jwt || completionJwt;
+				})
+			)
 		);
 	}
 	queue.on("error", (error) => {
 		logger.error(error.message);
 		throw error;
 	});
-	await queue.onIdle();
+	// using Promise.all() here instead of queue.onIdle() to ensure
+	// we actually throw errors that occur within queued promises.
+	await Promise.all(queuePromises);
 
 	// if queue finishes without receiving JWT from asset upload service (AUS)
 	// AUS only returns this in the final bucket upload response
@@ -389,19 +402,6 @@ export function getAssetsOptions(
 		invoke_user_worker_ahead_of_assets: config.assets?.run_worker_first,
 	};
 
-	if (config.assets?.experimental_serve_directly !== undefined) {
-		if (routerConfig.invoke_user_worker_ahead_of_assets === undefined) {
-			routerConfig.invoke_user_worker_ahead_of_assets =
-				!config.assets?.experimental_serve_directly;
-		} else {
-			// Provided both the run_worker_first and experimental_serve_directly options
-			throw new UserError(
-				"run_worker_first and experimental_serve_directly specified.\n" +
-					"Only one of these configuration options may be provided."
-			);
-		}
-	}
-
 	// User Worker ahead of assets, but no assets binding provided
 	if (
 		routerConfig.invoke_user_worker_ahead_of_assets &&
@@ -420,27 +420,20 @@ export function getAssetsOptions(
 		!routerConfig.has_user_worker &&
 		routerConfig.invoke_user_worker_ahead_of_assets === true
 	) {
-		if (config.assets?.experimental_serve_directly !== undefined) {
-			throw new UserError(
-				"Cannot set experimental_serve_directly=false without a Worker script.\n" +
-					"Please remove experimental_serve_directly from your configuration file, or provide a Worker script in your configuration file (`main`)."
-			);
-		} else {
-			throw new UserError(
-				"Cannot set run_worker_first=true without a Worker script.\n" +
-					"Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (`main`)."
-			);
-		}
+		throw new UserError(
+			"Cannot set run_worker_first=true without a Worker script.\n" +
+				"Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (`main`)."
+		);
 	}
 
-	const redirects = maybeGetFile(path.join(directory, "_redirects"));
-	const headers = maybeGetFile(path.join(directory, "_headers"));
+	const redirects = maybeGetFile(path.join(directory, REDIRECTS_FILENAME));
+	const headers = maybeGetFile(path.join(directory, HEADERS_FILENAME));
 
 	// defaults are set in asset worker
 	const assetConfig: AssetConfig = {
 		html_handling: config.assets?.html_handling,
 		not_found_handling: config.assets?.not_found_handling,
-		// TODO: Parse redirects and headers
+		// The _redirects and _headers files are parsed in Miniflare in dev and parsing is not required for deploy
 	};
 
 	return {
@@ -465,37 +458,17 @@ export function validateAssetsArgsAndConfig(
 ): void;
 export function validateAssetsArgsAndConfig(
 	args:
-		| Pick<StartDevOptions, "legacyAssets" | "site" | "assets" | "script">
-		| Pick<DeployArgs, "legacyAssets" | "site" | "assets" | "script">,
+		| Pick<StartDevOptions, "site" | "assets" | "script">
+		| Pick<DeployArgs, "site" | "assets" | "script">,
 	config: Config
 ): void;
 export function validateAssetsArgsAndConfig(
 	args:
-		| Pick<StartDevOptions, "legacyAssets" | "site" | "assets" | "script">
-		| Pick<DeployArgs, "legacyAssets" | "site" | "assets" | "script">
+		| Pick<StartDevOptions, "site" | "assets" | "script">
+		| Pick<DeployArgs, "site" | "assets" | "script">
 		| Pick<StartDevWorkerOptions, "legacy" | "assets" | "entrypoint">,
 	config?: Config
 ): void {
-	/*
-	 * - `config.legacy_assets` conflates `legacy_assets` and `assets`
-	 * - `args.legacyAssets` conflates `legacy-assets` and `assets`
-	 */
-	if (
-		"legacy" in args
-			? args.assets && args.legacy.legacyAssets
-			: (args.assets || config?.assets) &&
-				(args?.legacyAssets || config?.legacy_assets)
-	) {
-		throw new UserError(
-			"Cannot use assets and legacy assets in the same Worker.\n" +
-				"Please remove either the `legacy_assets` or `assets` field from your configuration file.",
-			{
-				telemetryMessage:
-					"Cannot use assets and legacy assets in the same Worker",
-			}
-		);
-	}
-
 	if (
 		"legacy" in args
 			? args.assets && args.legacy.site
@@ -535,40 +508,6 @@ export function validateAssetsArgsAndConfig(
 				"Read more: https://developers.cloudflare.com/workers/static-assets/binding/#smart-placement"
 		);
 	}
-}
-
-const CF_ASSETS_IGNORE_FILENAME = ".assetsignore";
-const REDIRECTS_FILENAME = "_redirects";
-const HEADERS_FILENAME = "_headers";
-
-/**
- * Create a function for filtering out ignored assets.
- *
- * The generated function takes an asset path, relative to the asset directory,
- * and returns true if the asset should not be ignored.
- */
-export async function createAssetsIgnoreFunction(dir: string) {
-	const cfAssetIgnorePath = path.resolve(dir, CF_ASSETS_IGNORE_FILENAME);
-
-	const ignorePatterns = [
-		// Ignore the `.assetsignore` file and other metafiles by default.
-		// The ignore lib expects unix-style paths for its patterns
-		`/${CF_ASSETS_IGNORE_FILENAME}`,
-		`/${REDIRECTS_FILENAME}`,
-		`/${HEADERS_FILENAME}`,
-	];
-
-	let assetsIgnoreFilePresent = false;
-	const assetsIgnore = maybeGetFile(cfAssetIgnorePath);
-	if (assetsIgnore !== undefined) {
-		assetsIgnoreFilePresent = true;
-		ignorePatterns.push(...assetsIgnore.split("\n"));
-	}
-
-	return {
-		assetsIgnoreFunction: createPatternMatcher(ignorePatterns, true),
-		assetsIgnoreFilePresent,
-	};
 }
 
 const WORKER_JS_FILENAME = "_worker.js";

@@ -14,6 +14,7 @@ import {
 import { attachCustomHeaders, getAssetHeaders } from "./utils/headers";
 import { generateRulesMatcher, replacer } from "./utils/rules-engine";
 import type { AssetConfig } from "../../utils/types";
+import type { Analytics } from "./analytics";
 import type EntrypointType from "./index";
 import type { Env } from "./index";
 
@@ -176,7 +177,8 @@ const resolveAssetIntentToResponse = async (
 	assetIntent: AssetIntent,
 	request: Request,
 	env: Env,
-	getByETag: typeof EntrypointType.prototype.unstable_getByETag
+	getByETag: typeof EntrypointType.prototype.unstable_getByETag,
+	analytics: Analytics
 ) => {
 	const { pathname } = new URL(request.url);
 	const method = request.method.toUpperCase();
@@ -191,7 +193,13 @@ const resolveAssetIntentToResponse = async (
 		return await getByETag(assetIntent.eTag);
 	});
 
-	const headers = getAssetHeaders(assetIntent.eTag, asset.contentType, request);
+	const headers = getAssetHeaders(
+		assetIntent.eTag,
+		asset.contentType,
+		asset.cacheStatus,
+		request
+	);
+	analytics.setData({ cacheStatus: asset.cacheStatus });
 
 	const strongETag = `"${assetIntent.eTag}"`;
 	const weakETag = `W/${strongETag}`;
@@ -252,7 +260,8 @@ export const handleRequest = async (
 	env: Env,
 	configuration: Required<AssetConfig>,
 	exists: typeof EntrypointType.prototype.unstable_exists,
-	getByETag: typeof EntrypointType.prototype.unstable_getByETag
+	getByETag: typeof EntrypointType.prototype.unstable_getByETag,
+	analytics: Analytics
 ) => {
 	const responseOrAssetIntent = await getResponseOrAssetIntent(
 		request,
@@ -268,7 +277,8 @@ export const handleRequest = async (
 					responseOrAssetIntent,
 					request,
 					env,
-					getByETag
+					getByETag,
+					analytics
 				);
 
 	return attachCustomHeaders(request, response, configuration);

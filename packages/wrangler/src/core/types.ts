@@ -28,6 +28,8 @@ export type Metadata = {
 	deprecatedMessage?: string;
 	hidden?: boolean;
 	owner: Teams;
+	/** Prints something at the bottom of the help */
+	epilogue?: string;
 };
 
 export type ArgDefinition = PositionalOptions &
