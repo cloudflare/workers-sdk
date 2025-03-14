@@ -147,7 +147,10 @@ export default class extends WorkerEntrypoint<Env> {
 		);
 	}
 
-	async unstable_getByETag(eTag: string): Promise<{
+	async unstable_getByETag(
+		eTag: string,
+		request: Request
+	): Promise<{
 		readableStream: ReadableStream;
 		contentType: string | undefined;
 		cacheStatus: "HIT" | "MISS";
@@ -177,20 +180,26 @@ export default class extends WorkerEntrypoint<Env> {
 		};
 	}
 
-	async unstable_getByPathname(pathname: string): Promise<{
+	async unstable_getByPathname(
+		pathname: string,
+		request: Request
+	): Promise<{
 		readableStream: ReadableStream;
 		contentType: string | undefined;
 		cacheStatus: "HIT" | "MISS";
 	} | null> {
-		const eTag = await this.unstable_exists(pathname);
+		const eTag = await this.unstable_exists(pathname, request);
 		if (!eTag) {
 			return null;
 		}
 
-		return this.unstable_getByETag(eTag);
+		return this.unstable_getByETag(eTag, request);
 	}
 
-	async unstable_exists(pathname: string): Promise<string | null> {
+	async unstable_exists(
+		pathname: string,
+		request: Request
+	): Promise<string | null> {
 		const analytics = new ExperimentAnalytics(this.env.EXPERIMENT_ANALYTICS);
 		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
 
