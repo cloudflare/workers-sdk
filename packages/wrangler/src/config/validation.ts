@@ -9,6 +9,7 @@ import {
 	all,
 	appendEnvName,
 	deprecated,
+	deprecatedValue,
 	experimental,
 	getBindingNames,
 	hasProperty,
@@ -497,6 +498,15 @@ function normalizeAndValidateAssets(
 	topLevelEnv: Environment | undefined,
 	rawEnv: RawEnvironment
 ): Config["assets"] {
+	deprecatedValue(
+		diagnostics,
+		rawEnv,
+		"assets.not_found_handling",
+		"single-page-application",
+		"This option has been deprecated. Please use `assets.single_page_application = true` instead.",
+		false
+	);
+
 	return inheritable(
 		diagnostics,
 		topLevelEnv,
@@ -1916,7 +1926,12 @@ const validateCflogfwdrBinding: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
-const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
+const validateAssetsConfig: ValidatorFn = (
+	diagnostics,
+	field,
+	value,
+	topLevelEnv
+) => {
 	if (value === undefined) {
 		return true;
 	}
@@ -1981,6 +1996,23 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 		validateOptionalProperty(
 			diagnostics,
 			field,
+			"single_page_application",
+			(value as Assets).single_page_application,
+			"boolean"
+		) && isValid;
+
+	isValid =
+		isMutuallyExclusiveWith(value as Assets, "single_page_application")(
+			diagnostics,
+			"not_found_handling",
+			(value as Assets).not_found_handling,
+			topLevelEnv
+		) && isValid;
+
+	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
 			"run_worker_first",
 			(value as Assets).run_worker_first,
 			"boolean"
@@ -1992,6 +2024,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			"binding",
 			"html_handling",
 			"not_found_handling",
+			"single_page_application",
 			"run_worker_first",
 		]) && isValid;
 

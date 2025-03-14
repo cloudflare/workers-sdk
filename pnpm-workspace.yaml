@@ -18,6 +18,7 @@ catalog:
   vite: "^5.4.14"
   "ws": "8.18.0"
   esbuild: "0.24.2"
+  playwright-chromium: "^1.49.1"
 
 catalogs:
   vite-plugin:
