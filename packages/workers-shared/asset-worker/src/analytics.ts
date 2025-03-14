@@ -20,6 +20,8 @@ type Data = {
 	coloTier?: number;
 	// double5 - Response status code
 	status?: number;
+	// double6 - Single page application option
+	singlePageApplication?: boolean;
 
 	// -- Blobs --
 	// blob1 - Hostname of the request
@@ -71,6 +73,11 @@ export class Analytics {
 				this.data.metalId ?? -1, // double3
 				this.data.coloTier ?? -1, // double4
 				this.data.status ?? -1, // double5
+				this.data.singlePageApplication === true // double6
+					? 1
+					: this.data.singlePageApplication === false
+						? 0
+						: -1,
 			],
 			blobs: [
 				this.data.hostname?.substring(0, 256), // blob1 - trim to 256 bytes
