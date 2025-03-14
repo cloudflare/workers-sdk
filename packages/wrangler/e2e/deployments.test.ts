@@ -543,4 +543,10 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 		];
 		await checkAssets(testCases, deployedUrl);
 	});
+	it.todo(
+		"respects single_page_application when request looks SPA-like",
+		async () => {
+			// Can add this once it has landed in production
+		}
+	);
 });

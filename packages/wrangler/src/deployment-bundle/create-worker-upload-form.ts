@@ -135,6 +135,7 @@ export type WorkerMetadataBinding =
 export type AssetConfigMetadata = {
 	html_handling?: AssetConfig["html_handling"];
 	not_found_handling?: AssetConfig["not_found_handling"];
+	single_page_application?: AssetConfig["single_page_application"];
 	run_worker_first?: boolean;
 	_redirects?: string;
 	_headers?: string;
@@ -207,6 +208,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	const assetConfig: AssetConfigMetadata = {
 		html_handling: assets?.assetConfig?.html_handling,
 		not_found_handling: assets?.assetConfig?.not_found_handling,
+		single_page_application: assets?.assetConfig.single_page_application,
 		run_worker_first: assets?.routerConfig.invoke_user_worker_ahead_of_assets,
 		_redirects: assets?._redirects,
 		_headers: assets?._headers,
