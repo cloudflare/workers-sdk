@@ -28,6 +28,7 @@ import qwikTemplateExperimental from "templates-experimental/qwik/c3";
 import remixTemplateExperimental from "templates-experimental/remix/c3";
 import solidTemplateExperimental from "templates-experimental/solid/c3";
 import svelteTemplateExperimental from "templates-experimental/svelte/c3";
+import wakuTemplateExperimental from "templates-experimental/waku/c3";
 import analogTemplate from "templates/analog/c3";
 import angularTemplate from "templates/angular/c3";
 import astroTemplate from "templates/astro/c3";
@@ -183,6 +184,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			remix: remixTemplateExperimental,
 			solid: solidTemplateExperimental,
 			svelte: svelteTemplateExperimental,
+			waku: wakuTemplateExperimental,
 		};
 	} else {
 		return {
