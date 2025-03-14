@@ -394,7 +394,7 @@ const verifyBuildCfTypesScript = async (
 			// old type gen - some frameworkte templates pin older versions of wrangler
 			line === `interface ${envInterfaceName} {` ||
 			// new after importable env change
-			line === `interface ${envInterfaceName} extends Cloudflare.Env {`,
+			line === `interface ${envInterfaceName} extends Cloudflare.Env {}`,
 	);
 	expect(hasEnvInterface).toBe(true);
 };
