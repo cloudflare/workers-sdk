@@ -15,7 +15,9 @@ import { formatConfigSnippet } from "../config";
 import {
 	ApiError,
 	ApplicationsService,
+	CreateApplicationRolloutRequest,
 	DeploymentMutationError,
+	RolloutsService,
 	SchedulingPolicy,
 } from "./client";
 import { promiseSpinner } from "./common";
@@ -33,6 +35,7 @@ import type {
 	ApplicationName,
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
+	ModifyDeploymentV2RequestBody,
 	UserDeploymentConfiguration,
 } from "./client";
 import type { JsonMap } from "@iarna/toml";
@@ -61,7 +64,7 @@ function createApplicationToModifyApplication(
 function applicationToCreateApplication(
 	application: Application
 ): CreateApplicationRequest {
-	return {
+	const app: CreateApplicationRequest = {
 		configuration: application.configuration,
 		constraints: application.constraints,
 		name: application.name,
@@ -69,7 +72,9 @@ function applicationToCreateApplication(
 		affinities: application.affinities,
 		instances: application.instances,
 		jobs: application.jobs ? true : undefined,
+		durable_objects: application.durable_objects,
 	};
+	return app;
 }
 
 function containerAppToCreateApplication(
@@ -78,7 +83,7 @@ function containerAppToCreateApplication(
 ): CreateApplicationRequest {
 	const configuration =
 		containerApp.configuration as UserDeploymentConfiguration;
-	return {
+	const app = {
 		...containerApp,
 		configuration,
 		scheduling_policy:
@@ -95,6 +100,12 @@ function containerAppToCreateApplication(
 			),
 		},
 	};
+
+	// delete the fields that should not be sent to API
+	delete (app as Record<string, unknown>)["class_name"];
+	delete (app as Record<string, unknown>)["image"];
+
+	return app;
 }
 
 function isNumber(c: string | number) {
@@ -266,12 +277,8 @@ function sortObjectRecursive<T = Record<string | number, unknown>>(
 	return sortObjectKeys(objectCopy) as T;
 }
 
-/**
- * applyCommand is able to take the wrangler.toml file and render the changes that it
- * detects.
- */
-export async function applyCommand(
-	args: StrictYargsOptionsToInterfaceJSON<typeof applyCommandOptionalYargs>,
+export async function apply(
+	args: { skipDefaults: boolean | undefined; json: boolean; env?: string },
 	config: Config
 ) {
 	startSection(
@@ -279,24 +286,24 @@ export async function applyCommand(
 		"deploy changes to your application"
 	);
 
-	if (config.containers.app.length === 0) {
+	config.containers ??= [];
+
+	if (config.containers.length === 0) {
 		endSection(
 			"You don't have any container applications defined in your wrangler.toml",
 			"You can set the following configuration in your wrangler.toml"
 		);
 		const configuration = {
-			configuration: {
-				image: "docker.io/cloudflare/hello-world:1.0",
-			},
+			image: "docker.io/cloudflare/hello-world:1.0",
 			instances: 2,
 			name: config.name ?? "my-containers-application",
 		};
 		const endConfig: JsonMap =
 			args.env !== undefined
 				? {
-						env: { [args.env]: { containers: { app: [configuration] } } },
+						env: { [args.env]: { containers: [configuration] } },
 					}
-				: { containers: { app: [configuration] } };
+				: { containers: [configuration] };
 		formatConfigSnippet(endConfig, config.configPath)
 			.split("\n")
 			.forEach((el) => {
@@ -331,11 +338,12 @@ export async function applyCommand(
 
 	log(dim("Container application changes\n"));
 
-	for (const appConfigNoDefaults of config.containers.app) {
+	for (const appConfigNoDefaults of config.containers) {
 		const appConfig = containerAppToCreateApplication(
 			appConfigNoDefaults,
 			args.skipDefaults
 		);
+
 		const application = applicationByNames[appConfig.name];
 		if (application !== undefined && application !== null) {
 			// we need to sort the objects (by key) because the diff algorithm works with
@@ -344,19 +352,29 @@ export async function applyCommand(
 				stripUndefined(applicationToCreateApplication(application))
 			);
 
+			if (
+				prevApp.durable_objects !== undefined &&
+				appConfigNoDefaults.durable_objects !== undefined &&
+				prevApp.durable_objects.namespace_id !==
+					appConfigNoDefaults.durable_objects.namespace_id
+			) {
+				crash(
+					`Application "${prevApp.name}" is assigned to durable object ${prevApp.durable_objects.namespace_id}, but a new DO namespace is being assigned to the application,
+					you should delete the container application and deploy again`
+				);
+			}
+
 			const prev = formatConfigSnippet(
-				{ containers: { app: [prevApp as ContainerApp] } },
+				{ containers: [prevApp as ContainerApp] },
 				config.configPath
 			);
 			const now = formatConfigSnippet(
 				{
-					containers: {
-						app: [
-							sortObjectRecursive<CreateApplicationRequest>(
-								appConfig
-							) as ContainerApp,
-						],
-					},
+					containers: [
+						sortObjectRecursive<CreateApplicationRequest>(
+							appConfig
+						) as ContainerApp,
+					],
 				},
 				config.configPath
 			);
@@ -458,7 +476,7 @@ export async function applyCommand(
 		updateStatus(bold.underline(green.underline("NEW")) + ` ${appConfig.name}`);
 
 		const s = formatConfigSnippet(
-			{ containers: { app: [appConfig as ContainerApp] } },
+			{ containers: [appConfig as ContainerApp] },
 			config.configPath
 		);
 
@@ -469,10 +487,12 @@ export async function applyCommand(
 				printLine(el, "  ");
 			});
 
+		const configToPush = { ...appConfig };
+
 		// add to the actions array to create the app later
 		actions.push({
 			action: "create",
-			application: appConfig,
+			application: configToPush,
 		});
 	}
 
@@ -546,9 +566,49 @@ export async function applyCommand(
 		}
 
 		if (action.action === "modify") {
+			{
+				const [_result, err] = await wrap(
+					promiseSpinner(
+						ApplicationsService.modifyApplication(action.id, {
+							...action.application,
+						})
+					)
+				);
+
+				if (err !== null) {
+					if (!(err instanceof ApiError)) {
+						crash(
+							`Unexpected error modifying application ${action.name}: ${err.message}`
+						);
+					}
+
+					if (err.status === 400) {
+						crash(
+							`Error modifying application ${action.name} due to a ${brandColor.underline("misconfiguration")}\n\n\t${formatError(err)}`
+						);
+					}
+
+					crash(
+						`Error modifying application ${action.name} due to an internal error (request id: ${err.body.request_id}): ${formatError(err)}`
+					);
+				}
+			}
+
 			const [_result, err] = await wrap(
 				promiseSpinner(
-					ApplicationsService.modifyApplication(action.id, action.application),
+					RolloutsService.createApplicationRollout(action.id, {
+						description: "Progressive update",
+						strategy: CreateApplicationRolloutRequest.strategy.ROLLING,
+						target_configuration:
+							(action.application
+								.configuration as ModifyDeploymentV2RequestBody) ?? {},
+						steps: [
+							{ step_size: { percentage: 25 }, description: "Step 2" },
+							{ step_size: { percentage: 50 }, description: "Step 3" },
+							{ step_size: { percentage: 75 }, description: "Step 4" },
+							{ step_size: { percentage: 100 }, description: "Step 5" },
+						],
+					}),
 					{
 						json: args.json,
 						message: `modifying application ${action.name}`,
@@ -582,4 +642,18 @@ export async function applyCommand(
 	}
 
 	endSection("Applied changes");
+}
+
+/**
+ * applyCommand is able to take the wrangler.toml file and render the changes that it
+ * detects.
+ */
+export async function applyCommand(
+	args: StrictYargsOptionsToInterfaceJSON<typeof applyCommandOptionalYargs>,
+	config: Config
+) {
+	return apply(
+		{ skipDefaults: args.skipDefaults, env: args.env, json: args.json },
+		config
+	);
 }

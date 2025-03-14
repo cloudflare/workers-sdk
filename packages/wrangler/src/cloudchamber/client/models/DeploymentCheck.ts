@@ -21,5 +21,5 @@ export type DeploymentCheck = DeploymentCheckRequestBody & {
 	/**
 	 * Number of times to attempt the check before considering it to have failed
 	 */
-	retries: number;
+	attempts_before_failure: number;
 };

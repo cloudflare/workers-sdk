@@ -1,5 +1,5 @@
 import { spawn } from "child_process";
-import { logRaw } from "@cloudflare/cli";
+import { crash, logRaw } from "@cloudflare/cli";
 import { ImageRegistriesService } from "./client";
 import type { Config } from "../config";
 import type {
@@ -97,7 +97,7 @@ async function tagImage(original: string, newTag: string, dockerPath: string) {
 export async function push(options: {
 	imageTag?: string;
 	pathToDocker?: string;
-}) {
+}): Promise<string> {
 	if (typeof options.imageTag === "undefined") {
 		throw new Error("Must provide an image tag when pushing");
 	}
@@ -113,6 +113,7 @@ export async function push(options: {
 	await new Promise((resolve) => {
 		child.on("close", resolve);
 	});
+	return imageTag;
 }
 
 export function buildYargs(yargs: CommonYargsArgvJSON) {
@@ -160,33 +161,58 @@ export function pushYargs(yargs: CommonYargsArgvJSON) {
 		.positional("TAG", { type: "string", demandOption: true });
 }
 
+export function isImageURIOrDockerfile(s: string): "dockerfile" | "image_uri" {
+	try {
+		const url = new URL(s);
+		if (url.protocol.startsWith("http") && url.hostname) {
+			return "image_uri";
+		}
+	} catch {}
+
+	return "dockerfile";
+}
+
+export async function build(args: {
+	tag: string;
+	pathToDockerfile: string;
+	pathToDocker: string;
+	push: boolean;
+}): Promise<string> {
+	try {
+		const bc = await constructBuildCommand({
+			imageTag: args.tag,
+			pathToDockerfile: args.pathToDockerfile,
+			pathToDocker: args.pathToDocker,
+		});
+		await dockerBuild({ buildCmd: bc });
+
+		if (args.push) {
+			await dockerLoginManagedRegistry({
+				pathToDocker: args.pathToDocker,
+			});
+			return await push({ imageTag: args.tag });
+		}
+
+		return args.tag;
+	} catch (error) {
+		if (error instanceof Error) {
+			crash(error.message);
+		} else {
+			crash("An unknown error occurred");
+		}
+	}
+}
+
 export async function buildCommand(
 	args: StrictYargsOptionsToInterfaceJSON<typeof buildYargs>,
 	_: Config
 ) {
-	try {
-		await constructBuildCommand({
-			imageTag: args.tag,
-			pathToDockerfile: args.PATH,
-			pathToDocker: args.pathToDocker,
-		})
-			.then(async (bc) => dockerBuild({ buildCmd: bc }))
-			.then(async () => {
-				if (args.push) {
-					await dockerLoginManagedRegistry({
-						pathToDocker: args.pathToDocker,
-					}).then(async () => {
-						await push({ imageTag: args.tag });
-					});
-				}
-			});
-	} catch (error) {
-		if (error instanceof Error) {
-			logRaw(error.message);
-		} else {
-			logRaw("An unknown error occurred");
-		}
-	}
+	await build({
+		tag: args.tag,
+		pathToDockerfile: args.PATH,
+		pathToDocker: args.pathToDocker,
+		push: args.push,
+	});
 }
 
 export async function pushCommand(

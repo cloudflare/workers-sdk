@@ -49,6 +49,12 @@ export type ContainerApp = {
 	name: string;
 	/* Number of application instances */
 	instances: number;
+
+	/* The user can set both image in here or under configuration */
+	image?: string;
+
+	class_name: string;
+
 	/* The scheduling policy of the application, default is regional */
 	scheduling_policy?: "regional" | "moon";
 	/* Configuration of the container */
@@ -62,6 +68,9 @@ export type ContainerApp = {
 		regions?: string[];
 		cities?: string[];
 		tier?: number;
+	};
+	durable_objects?: {
+		namespace_id: string;
 	};
 };
 
@@ -458,18 +467,7 @@ export interface EnvironmentNonInheritable {
 	/**
 	 * Container related configuration
 	 */
-	containers: {
-		/**
-		 * Container app configuration
-		 *
-		 * NOTE: This field is not automatically inherited from the top level environment,
-		 * and so must be specified in every named environment.
-		 *
-		 * @default {}
-		 * @nonInheritable
-		 */
-		app: ContainerApp[];
-	};
+	containers?: ContainerApp[];
 
 	/**
 	 * These specify any Workers KV Namespaces you want to
