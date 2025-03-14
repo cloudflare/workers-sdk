@@ -1,5 +1,16 @@
 # wrangler
 
+## 3.114.2
+
+### Patch Changes
+
+- [#8453](https://github.com/cloudflare/workers-sdk/pull/8453) [`f90a669`](https://github.com/cloudflare/workers-sdk/commit/f90a6693310ebc04adfd8d7a9665011b0a7dba79) Thanks [@workers-devprod](https://github.com/workers-devprod)! - trigger dummy v3 maintenance release for testing
+
+- [#8504](https://github.com/cloudflare/workers-sdk/pull/8504) [`0192aae`](https://github.com/cloudflare/workers-sdk/commit/0192aae042478197d22e3fa3bfe300cfbfb69615) Thanks [@workers-devprod](https://github.com/workers-devprod)! - Fix Workers Assets metafiles (`_headers` and `_redirects`) resolution when running Wrangler from a different directory
+
+- Updated dependencies [[`f90a669`](https://github.com/cloudflare/workers-sdk/commit/f90a6693310ebc04adfd8d7a9665011b0a7dba79)]:
+  - miniflare@3.20250310.1
+
 ## 3.114.1
 
 ### Patch Changes
