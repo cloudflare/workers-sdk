@@ -3,7 +3,7 @@ import {
 	WorkerEntrypoint,
 	WorkflowEntrypoint,
 } from "cloudflare:workers";
-import { INIT_PATH } from "../shared";
+import { INIT_PATH, VITE_DEV_METADATA_HEADER } from "../shared";
 import { stripInternalEnv } from "./env";
 import { createModuleRunner, getWorkerEntryExport } from "./module-runner";
 import type { WrapperEnv } from "./env";
@@ -47,6 +47,8 @@ const DURABLE_OBJECT_KEYS = [
 ] as const;
 
 const WORKFLOW_ENTRYPOINT_KEYS = ["run"] as const;
+
+let entryPath = "";
 
 function getRpcProperty(
 	ctor: WorkerEntrypointConstructor | DurableObjectConstructor,
@@ -101,7 +103,6 @@ async function getWorkerEntrypointRpcProperty(
 	entrypoint: string,
 	key: string
 ): Promise<unknown> {
-	const entryPath = this.env.__VITE_ENTRY_PATH__;
 	const ctor = (await getWorkerEntryExport(
 		entryPath,
 		entrypoint
@@ -165,16 +166,17 @@ export function createWorkerEntrypointWrapper(
 
 	for (const key of WORKER_ENTRYPOINT_KEYS) {
 		Wrapper.prototype[key] = async function (arg) {
-			const entryPath = this.env.__VITE_ENTRY_PATH__;
-
 			if (key === "fetch") {
 				const request = arg as Request;
 				const url = new URL(request.url);
 
 				if (url.pathname === INIT_PATH) {
+					const viteDevMetadata: { root: string; entryPath: string } =
+						JSON.parse(request.headers.get(VITE_DEV_METADATA_HEADER) ?? "null");
+					entryPath = viteDevMetadata.entryPath;
 					const { 0: client, 1: server } = new WebSocketPair();
 					try {
-						await createModuleRunner(this.env, server);
+						await createModuleRunner(this.env, server, viteDevMetadata.root);
 					} catch (e) {
 						return new Response(
 							e instanceof Error ? e.message : JSON.stringify(e),
@@ -249,7 +251,6 @@ async function getDurableObjectRpcProperty(
 	className: string,
 	key: string
 ): Promise<unknown> {
-	const entryPath = this.env.__VITE_ENTRY_PATH__;
 	const { ctor, instance } = await this[kEnsureInstance]();
 
 	if (!(instance instanceof DurableObject)) {
@@ -307,7 +308,6 @@ export function createDurableObjectWrapper(
 		}
 
 		async [kEnsureInstance]() {
-			const entryPath = this.env.__VITE_ENTRY_PATH__;
 			const ctor = (await getWorkerEntryExport(
 				entryPath,
 				className
@@ -335,7 +335,6 @@ export function createDurableObjectWrapper(
 
 	for (const key of DURABLE_OBJECT_KEYS) {
 		Wrapper.prototype[key] = async function (...args: unknown[]) {
-			const entryPath = this.env.__VITE_ENTRY_PATH__;
 			const { instance } = await this[kEnsureInstance]();
 			const maybeFn = instance[key];
 
@@ -359,7 +358,6 @@ export function createWorkflowEntrypointWrapper(
 
 	for (const key of WORKFLOW_ENTRYPOINT_KEYS) {
 		Wrapper.prototype[key] = async function (...args: unknown[]) {
-			const entryPath = this.env.__VITE_ENTRY_PATH__;
 			const ctor = (await getWorkerEntryExport(
 				entryPath,
 				className
