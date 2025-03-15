@@ -1,4 +1,6 @@
-export default {
+import type { TemplateConfig } from "../../src/templates";
+
+const config: TemplateConfig = {
 	configVersion: 1,
 	id: "hello-world-durable-object",
 	displayName: "Hello World Worker Using Durable Objects",
@@ -16,3 +18,4 @@ export default {
 		},
 	},
 };
+export default config;

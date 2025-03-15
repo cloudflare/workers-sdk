@@ -148,6 +148,8 @@ export type TemplateConfig = {
 
 	/** The file path of the template. This is used internally and isn't a user facing config value.*/
 	path?: string;
+
+	bindings?: Record<string, unknown>;
 };
 
 type CopyFiles = (StaticFileMap | VariantInfo) & {
@@ -204,24 +206,37 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 	}
 }
 
-export function getTemplateMap({ experimental = false }) {
+export function getOtherTemplateMap({ experimental = false }): {
+	[x: string]: TemplateConfig;
+} {
+	if (experimental) {
+		return {};
+	} else {
+		return {
+			common: commonTemplate,
+			scheduled: scheduledTemplate,
+			queues: queuesTemplate,
+			openapi: openapiTemplate,
+			"pre-existing": preExistingTemplate,
+		};
+	}
+}
+
+export function getHelloWorldTemplateMap({ experimental = false }): {
+	[x: string]: TemplateConfig;
+} {
 	if (experimental) {
 		return {
 			"hello-world-assets-only": assetsOnlyTemplateExperimental,
 			"hello-world-with-assets": helloWorldWithAssetsTemplateExperimental,
 			"hello-world-durable-object-with-assets":
 				helloWorldWithDurableObjectAssetsTemplateExperimental,
-		} as Record<string, TemplateConfig>;
+		};
 	} else {
 		return {
 			"hello-world": helloWorldTemplate,
-			common: commonTemplate,
-			scheduled: scheduledTemplate,
-			queues: queuesTemplate,
 			"hello-world-durable-object": helloWorldDurableObjectTemplate,
-			openapi: openapiTemplate,
-			"pre-existing": preExistingTemplate,
-		} as Record<string, TemplateConfig>;
+		};
 	}
 }
 
@@ -303,6 +318,14 @@ export const createContext = async (
 	// Derive all correlated arguments first so we can skip some prompts
 	deriveCorrelatedArgs(args);
 
+	const experimental = args.experimental;
+
+	const frameworkMap = getFrameworkMap({ experimental });
+	const helloWorldTemplateMap = await getHelloWorldTemplateMap({
+		experimental,
+	});
+	const otherTemplateMap = await getOtherTemplateMap({ experimental });
+
 	let linesPrinted = 0;
 
 	// Allows the users to go back to the previous step
@@ -364,23 +387,30 @@ export const createContext = async (
 		format: (val) => `./${val}`,
 	});
 
-	const categoryOptions = [
-		{
+	const categoryOptions = [];
+	if (Object.keys(helloWorldTemplateMap).length) {
+		categoryOptions.push({
 			label: "Hello World example",
 			value: "hello-world",
 			description: "Select from barebones examples to get started with Workers",
-		},
-		{
+		});
+	}
+	if (Object.keys(frameworkMap).length) {
+		categoryOptions.push({
 			label: "Framework Starter",
 			value: "web-framework",
 			description: "Select from the most popular full-stack web frameworks",
-		},
-		{
+		});
+	}
+	if (Object.keys(otherTemplateMap).length) {
+		categoryOptions.push({
 			label: "Application Starter",
 			value: "demo",
 			description:
 				"Select from a range of starter applications using various Cloudflare products",
-		},
+		});
+	}
+	categoryOptions.push(
 		{
 			label: "Template from a GitHub repo",
 			value: "remote-template",
@@ -389,7 +419,7 @@ export const createContext = async (
 		// This is used only if the type is `pre-existing`
 		{ label: "Others", value: "others", hidden: true },
 		backOption,
-	];
+	);
 
 	const category = await processArgument(args, "category", {
 		type: "select",
@@ -407,9 +437,6 @@ export const createContext = async (
 	let template: TemplateConfig;
 
 	if (category === "web-framework") {
-		const frameworkMap = getFrameworkMap({
-			experimental: args.experimental,
-		});
 		const frameworkOptions = Object.entries(frameworkMap).map(
 			([key, config]) => ({
 				label: config.displayName,
@@ -473,22 +500,15 @@ export const createContext = async (
 	} else if (category === "remote-template") {
 		template = await processRemoteTemplate(args);
 	} else {
-		const templateMap = await getTemplateMap({
-			experimental: args.experimental,
-		});
+		const templateMap =
+			category === "hello-world" ? helloWorldTemplateMap : otherTemplateMap;
 		const templateOptions: Option[] = Object.entries(templateMap).map(
 			([value, { displayName, description, hidden }]) => {
-				const isHelloWorldExample = value.startsWith("hello-world");
-				const isCategoryMatched =
-					category === "hello-world"
-						? isHelloWorldExample
-						: !isHelloWorldExample;
-
 				return {
 					value,
 					label: displayName,
 					description,
-					hidden: hidden || !isCategoryMatched,
+					hidden: hidden,
 				};
 			},
 		);

@@ -1,4 +1,6 @@
-export default {
+import type { TemplateConfig } from "../../src/templates";
+
+const config: TemplateConfig = {
 	configVersion: 1,
 	id: "openapi",
 	displayName: "API starter (OpenAPI compliant)",
@@ -8,3 +10,5 @@ export default {
 		path: "./ts",
 	},
 };
+
+export default config;

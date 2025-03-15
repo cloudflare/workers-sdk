@@ -5,8 +5,9 @@ import { version } from "../../package.json";
 import { reporter } from "../metrics";
 import {
 	getFrameworkMap,
+	getHelloWorldTemplateMap,
 	getNamesAndDescriptions,
-	getTemplateMap,
+	getOtherTemplateMap,
 } from "../templates";
 import { C3_DEFAULTS, WRANGLER_DEFAULTS } from "./cli";
 import type { PromptConfig } from "@cloudflare/cli/interactive";
@@ -98,45 +99,10 @@ export const cliDefinition: ArgumentsDefinition = {
         `,
 			values(args) {
 				const experimental = Boolean(args?.["experimental"]);
-				if (experimental) {
-					return getNamesAndDescriptions(getTemplateMap({ experimental }));
-				} else {
-					return [
-						{
-							name: "hello-world",
-							description: "A basic “Hello World” Cloudflare Worker.",
-						},
-						{
-							name: "hello-world-durable-object",
-							description:
-								"A basic “Hello World” Cloudflare Worker with a Durable Worker.",
-						},
-						{
-							name: "common",
-							description:
-								"A Cloudflare Worker which implements a common example of routing/proxying functionalities.",
-						},
-						{
-							name: "scheduled",
-							description:
-								"A scheduled Cloudflare Worker (triggered via Cron Triggers).",
-						},
-						{
-							name: "queues",
-							description:
-								"A Cloudflare Worker which is both a consumer and produced of Queues.",
-						},
-						{
-							name: "openapi",
-							description: "A Worker implementing an OpenAPI REST endpoint.",
-						},
-						{
-							name: "pre-existing",
-							description:
-								"Fetch a Worker initialized from the Cloudflare dashboard.",
-						},
-					];
-				}
+				return getNamesAndDescriptions({
+					...getHelloWorldTemplateMap({ experimental }),
+					...getOtherTemplateMap({ experimental }),
+				});
 			},
 		},
 		{
@@ -151,7 +117,7 @@ export const cliDefinition: ArgumentsDefinition = {
       You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
 
       npm create cloudflare -- --framework next -- --ts
-      pnpm create clouldfare --framework next -- --ts
+      pnpm create cloudflare --framework next -- --ts
       `,
 			values: (args) =>
 				getNamesAndDescriptions(
