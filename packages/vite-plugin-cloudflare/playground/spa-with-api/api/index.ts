@@ -3,7 +3,7 @@ interface Env {
 }
 
 export default {
-	fetch(request, env) {
+	async fetch(request, env) {
 		const url = new URL(request.url);
 
 		if (url.pathname.startsWith("/api/")) {
@@ -12,6 +12,11 @@ export default {
 			});
 		}
 
-		return env.ASSETS.fetch(request);
+		const response = await env.ASSETS.fetch(request);
+		const newResponse = new Response(response.body, {
+			...response,
+			headers: { "CUSTOM-HEADER": "HERE!" },
+		});
+		return newResponse;
 	},
 } satisfies ExportedHandler<Env>;

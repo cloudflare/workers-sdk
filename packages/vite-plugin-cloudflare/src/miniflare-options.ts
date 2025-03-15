@@ -1,8 +1,23 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
-import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+	constructHeaders,
+	constructRedirects,
+} from "@cloudflare/workers-shared/utils/configuration/constructConfiguration";
+import { parseHeaders } from "@cloudflare/workers-shared/utils/configuration/parseHeaders";
+import { parseRedirects } from "@cloudflare/workers-shared/utils/configuration/parseRedirects";
+import {
+	HEADERS_FILENAME,
+	REDIRECTS_FILENAME,
+} from "@cloudflare/workers-shared/utils/constants";
+import { maybeGetFile } from "@cloudflare/workers-shared/utils/helpers";
+import {
+	HeadersSchema,
+	RedirectsSchema,
+} from "@cloudflare/workers-shared/utils/types";
+import { watch } from "chokidar";
 import {
 	kCurrentWorker,
 	Log,
@@ -22,12 +37,14 @@ import {
 } from "./constants";
 import { getWorkerConfigPaths } from "./deploy-config";
 import { MODULE_PATTERN } from "./shared";
+import { log } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
 	PersistState,
 	ResolvedPluginConfig,
 	WorkerConfig,
 } from "./plugin-config";
+import type { AssetConfig } from "@cloudflare/workers-shared/utils/types";
 import type { MiniflareOptions, SharedOptions, WorkerOptions } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
 import type { SourcelessWorkerOptions } from "wrangler";
@@ -197,11 +214,72 @@ export function getDevMiniflareOptions(
 	viteDevServer: vite.ViteDevServer
 ): MiniflareOptions {
 	const resolvedViteConfig = viteDevServer.config;
+	const logger = new ViteMiniflareLogger(resolvedViteConfig);
+
 	const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
 	const assetsConfig =
 		resolvedPluginConfig.type === "assets-only"
 			? resolvedPluginConfig.config.assets
 			: entryWorkerConfig?.assets;
+
+	const headersFile = path.join(resolvedViteConfig.publicDir, HEADERS_FILENAME);
+	const redirectsFile = path.join(
+		resolvedViteConfig.publicDir,
+		REDIRECTS_FILENAME
+	);
+
+	watch([headersFile, redirectsFile], {
+		persistent: true,
+		ignoreInitial: true,
+	}).on("all", async () => {
+		viteDevServer.restart();
+	});
+
+	const redirectsContents = maybeGetFile(redirectsFile);
+	const headersContents = maybeGetFile(headersFile);
+
+	const assetParserLogger = {
+		debug: (message: string) => logger.debug(message),
+		log: (message: string) => logger.info(message),
+		info: (message: string) => logger.info(message),
+		warn: (message: string) => logger.warn(message),
+		error: (error: Error) => logger.error(error),
+	};
+
+	let parsedRedirects: AssetConfig["redirects"] | undefined;
+	if (redirectsContents !== undefined) {
+		const redirects = parseRedirects(redirectsContents);
+		parsedRedirects = RedirectsSchema.parse(
+			constructRedirects({
+				redirects,
+				redirectsFile,
+				logger: assetParserLogger,
+			}).redirects
+		);
+	}
+
+	let parsedHeaders: AssetConfig["headers"] | undefined;
+	if (headersContents !== undefined) {
+		const headers = parseHeaders(headersContents);
+		parsedHeaders = HeadersSchema.parse(
+			constructHeaders({
+				headers,
+				headersFile,
+				logger: assetParserLogger,
+			}).headers
+		);
+	}
+
+	const assetConfig: AssetConfig = {
+		...(assetsConfig?.html_handling
+			? { html_handling: assetsConfig.html_handling }
+			: {}),
+		...(assetsConfig?.not_found_handling
+			? { not_found_handling: assetsConfig.not_found_handling }
+			: {}),
+		...(parsedRedirects ? { redirects: parsedRedirects } : {}),
+		...(parsedHeaders ? { headers: parsedHeaders } : {}),
+	};
 
 	const assetWorkers: Array<WorkerOptions> = [
 		{
@@ -220,11 +298,19 @@ export function getDevMiniflareOptions(
 			bindings: {
 				CONFIG: {
 					has_user_worker: resolvedPluginConfig.type === "workers",
+					invoke_user_worker_ahead_of_assets:
+						assetsConfig?.run_worker_first ?? false,
 				},
 			},
 			serviceBindings: {
 				ASSET_WORKER: ASSET_WORKER_NAME,
-				...(entryWorkerConfig ? { USER_WORKER: entryWorkerConfig.name } : {}),
+				...(entryWorkerConfig
+					? {
+							USER_WORKER: assetsConfig?.run_worker_first
+								? entryWorkerConfig.name
+								: userWorkerFetcher,
+						}
+					: {}),
 			},
 		},
 		{
@@ -241,45 +327,7 @@ export function getDevMiniflareOptions(
 				},
 			],
 			bindings: {
-				CONFIG: {
-					...(assetsConfig?.html_handling
-						? { html_handling: assetsConfig.html_handling }
-						: {}),
-					...(assetsConfig?.not_found_handling
-						? { not_found_handling: assetsConfig.not_found_handling }
-						: {}),
-				},
-			},
-			serviceBindings: {
-				__VITE_ASSET_EXISTS__: async (request) => {
-					const { pathname } = new URL(request.url);
-					const filePath = path.join(resolvedViteConfig.root, pathname);
-
-					let exists: boolean;
-
-					try {
-						exists = fs.statSync(filePath).isFile();
-					} catch (error) {
-						exists = false;
-					}
-
-					return MiniflareResponse.json(exists);
-				},
-				__VITE_FETCH_ASSET__: async (request) => {
-					const { pathname } = new URL(request.url);
-					const filePath = path.join(resolvedViteConfig.root, pathname);
-
-					try {
-						let html = await fsp.readFile(filePath, "utf-8");
-						html = await viteDevServer.transformIndexHtml(pathname, html);
-
-						return new MiniflareResponse(html, {
-							headers: { "Content-Type": "text/html" },
-						});
-					} catch (error) {
-						throw new Error(`Unexpected error. Failed to load ${pathname}`);
-					}
-				},
+				CONFIG: assetConfig,
 			},
 		},
 	];
@@ -380,8 +428,6 @@ export function getDevMiniflareOptions(
 		getWorkerToDurableObjectClassNamesMap(userWorkers);
 	const workerToWorkflowEntrypointClassNamesMap =
 		getWorkerToWorkflowEntrypointClassNamesMap(userWorkers);
-
-	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
 	return {
 		log: logger,
@@ -609,5 +655,27 @@ function miniflareLogLevelFromViteLogLevel(
 			return LogLevel.INFO;
 		case "silent":
 			return LogLevel.NONE;
+	}
+}
+
+export async function userWorkerFetcher(request: Request) {
+	try {
+		request.headers.set("__CF_REQUEST_TYPE_", "WORKER");
+		log("USER_WORKER binding (fetch):", request, "pass to Vite");
+		const response = await fetch(
+			request.url,
+			request as unknown as RequestInit
+		);
+		console.log(
+			"USER_WORKER binding (response):",
+			response.statusText,
+			response.headers.get("content-type")
+		);
+		return response;
+	} catch (error) {
+		console.log(error);
+		throw new Error(
+			`Unexpected error. Failed to fetch user worker: ${request.url} - ${error}`
+		);
 	}
 }
