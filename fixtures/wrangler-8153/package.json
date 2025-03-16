@@ -1,0 +1,25 @@
+{
+	"name": "wrangler-8153",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
+		"start": "wrangler dev",
+		"test": "vitest",
+		"test:ci": "pnpm wrangler d1 execute prod-d1-tutorial --local --file hash_errors.sql",
+		"cf-typegen": "wrangler types"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250310.0",
+		"typescript": "^5.5.2",
+		"vitest": "~3.0.7",
+		"wrangler": "workspace:*"
+	},
+	"pnpm": {
+		"onlyBuiltDependencies": [
+			"workerd"
+		]
+	}
+}
