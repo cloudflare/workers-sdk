@@ -122,6 +122,7 @@ const config: TemplateConfig = {
 
 		return { scripts };
 	},
+	typesPath: "worker-configuration.d.ts",
 	devScript: "dev",
 	deployScript: "deploy",
 	previewScript: "preview",

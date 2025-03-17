@@ -14,7 +14,7 @@
 		/* Specify how TypeScript looks up a file from a given module specifier. */
 		"moduleResolution": "node",
 		/* Specify type package names to be included without being referenced in a source file. */
-		"types": ["@cloudflare/workers-types"],
+		"types": ["./worker-configuration.d.ts"],
 		/* Enable importing .json files */
 		"resolveJsonModule": true,
 

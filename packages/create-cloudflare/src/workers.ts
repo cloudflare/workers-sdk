@@ -37,21 +37,7 @@ export async function addWorkersTypesToTsConfig(ctx: C3Context) {
 		return;
 	}
 
-	// const s = spinner();
-	// s.start("Adding generated types to `tsconfig.json`");
-
 	const tsconfig = readFile(tsconfigPath);
-	// const entrypointVersion = getLatestTypesEntrypoint(ctx);
-	// if (entrypointVersion === null) {
-	// 	s.stop(
-	// 		`${brandColor(
-	// 			"skipped",
-	// 		)} couldn't find latest compatible version of @cloudflare/workers-types`,
-	// 	);
-	// 	return;
-	// }
-
-	// const typesEntrypoint = `@cloudflare/workers-types/${entrypointVersion}`;
 
 	try {
 		const config = jsonc.parse(tsconfig);
