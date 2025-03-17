@@ -2,6 +2,17 @@ name: CI
 
 on:
   pull_request:
+    types:
+      [
+        opened,
+        synchronize,
+        reopened,
+        labeled,
+        unlabeled,
+        edited,
+        ready_for_review,
+        converted_to_draft,
+      ]
 
 jobs:
   add-to-project:
