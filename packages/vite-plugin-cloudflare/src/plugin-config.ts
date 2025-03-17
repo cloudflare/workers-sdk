@@ -30,17 +30,14 @@ export interface PluginConfig extends EntryWorkerConfig {
 
 type Defined<T> = Exclude<T, undefined>;
 
-interface BaseConfig extends SanitizedWorkerConfig {
+export interface AssetsOnlyConfig extends SanitizedWorkerConfig {
 	topLevelName: Defined<SanitizedWorkerConfig["topLevelName"]>;
 	name: Defined<SanitizedWorkerConfig["name"]>;
 	compatibility_date: Defined<SanitizedWorkerConfig["compatibility_date"]>;
-}
-
-export interface AssetsOnlyConfig extends BaseConfig {
 	assets: Defined<SanitizedWorkerConfig["assets"]>;
 }
 
-export interface WorkerConfig extends BaseConfig {
+export interface WorkerConfig extends AssetsOnlyConfig {
 	main: Defined<SanitizedWorkerConfig["main"]>;
 }
 

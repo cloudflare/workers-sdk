@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { unstable_readConfig } from "wrangler";
@@ -290,37 +289,44 @@ export function getWorkerConfig(
 
 	opts?.visitedConfigPaths?.add(configPath);
 
-	assert(
-		config.topLevelName,
-		missingFieldErrorMessage(`top-level 'name'`, configPath, env)
-	);
-	assert(config.name, missingFieldErrorMessage(`'name'`, configPath, env));
-	assert(
-		config.compatibility_date,
-		missingFieldErrorMessage(`'compatibility_date'`, configPath, env)
-	);
+	if (!config.name) {
+		throw new Error(missingFieldErrorMessage(`'name'`, configPath, env));
+	}
+
+	if (!config.topLevelName) {
+		throw new Error(
+			missingFieldErrorMessage(`top-level 'name'`, configPath, env)
+		);
+	}
+
+	if (!config.compatibility_date) {
+		throw new Error(
+			missingFieldErrorMessage(`'compatibility_date`, configPath, env)
+		);
+	}
+
+	const requiredFields = {
+		topLevelName: config.topLevelName,
+		name: config.name,
+		compatibility_date: config.compatibility_date,
+		assets: config.assets ?? {},
+	};
 
 	if (opts?.isEntryWorker && !config.main) {
-		assert(
-			config.assets,
-			missingFieldErrorMessage(`'main' or 'assets'`, configPath, env)
-		);
-
 		return {
 			type: "assets-only",
 			raw,
 			config: {
 				...config,
-				topLevelName: config.topLevelName,
-				name: config.name,
-				compatibility_date: config.compatibility_date,
-				assets: config.assets,
+				...requiredFields,
 			},
 			nonApplicable,
 		};
 	}
 
-	assert(config.main, missingFieldErrorMessage(`'main'`, configPath, env));
+	if (!config.main) {
+		throw new Error(missingFieldErrorMessage(`'main'`, configPath, env));
+	}
 
 	const mainStat = fs.statSync(config.main, { throwIfNoEntry: false });
 	if (!mainStat) {
@@ -339,9 +345,7 @@ export function getWorkerConfig(
 		raw,
 		config: {
 			...config,
-			topLevelName: config.topLevelName,
-			name: config.name,
-			compatibility_date: config.compatibility_date,
+			...requiredFields,
 			main: config.main,
 		},
 		nonApplicable,
