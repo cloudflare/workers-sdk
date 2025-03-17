@@ -63,11 +63,11 @@ export const test = baseTest.extend<{
 		await use(async (pm, command, projectPath) => {
 			if (command === "preview") {
 				// We must first run the build command to generate the Worker that is to be previewed.
-				await runCommand(`${pm} exec vite build`, projectPath);
+				await runCommand(`${pm} run build`, projectPath);
 			}
 
 			debuglog(`starting "${command}" with ${pm} in ${projectPath}`);
-			const proc = childProcess.exec(`${pm} exec vite ${command}`, {
+			const proc = childProcess.exec(`${pm} run ${command}`, {
 				cwd: projectPath,
 				env: testEnv,
 			});
