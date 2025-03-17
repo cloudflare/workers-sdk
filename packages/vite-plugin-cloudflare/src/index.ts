@@ -35,6 +35,9 @@ import { getWarningForWorkersConfigs } from "./workers-configs";
 import type { PluginConfig, ResolvedPluginConfig } from "./plugin-config";
 import type { Unstable_RawConfig } from "wrangler";
 
+// this flag is used to show the workers configs warning only once
+let workersConfigsWarningShown = false;
+
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
  *
@@ -46,9 +49,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	let resolvedPluginConfig: ResolvedPluginConfig;
 	let resolvedViteConfig: vite.ResolvedConfig;
 	let miniflare: Miniflare | undefined;
-
-	// this flag is used to show the workers configs warning only once
-	let workersConfigsWarningShown = false;
 
 	const additionalModulePaths = new Set<string>();
 
@@ -148,6 +148,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							}),
 					},
 				};
+			},
+			buildStart() {
+				// This resets the value when the dev server restarts
+				// At build time the config is evaluated for each environment before starting the builds
+				workersConfigsWarningShown = false;
 			},
 			configResolved(config) {
 				resolvedViteConfig = config;
