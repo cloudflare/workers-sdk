@@ -52,9 +52,13 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 	const additionalModulePaths = new Set<string>();
 
+	let hasClientBuild = false;
+
 	return [
 		{
 			name: "vite-plugin-cloudflare",
+			// This only applies to this plugin so is safe to use while other plugins migrate to the Environment API
+			sharedDuringBuild: true,
 			config(userConfig, env) {
 				if (env.isPreview) {
 					// Short-circuit the whole configuration if we are in preview mode
@@ -169,7 +173,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						this.environment.name ===
 						resolvedPluginConfig.entryWorkerEnvironmentName;
 
-					if (isEntryWorker && workerConfig.assets) {
+					if (isEntryWorker && hasClientBuild) {
 						const workerOutputDirectory = this.environment.config.build.outDir;
 						const clientOutputDirectory =
 							resolvedViteConfig.environments.client?.build.outDir;
@@ -179,10 +183,13 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							"Unexpected error: client output directory is undefined"
 						);
 
-						workerConfig.assets.directory = path.relative(
-							path.resolve(resolvedViteConfig.root, workerOutputDirectory),
-							path.resolve(resolvedViteConfig.root, clientOutputDirectory)
-						);
+						workerConfig.assets = {
+							...workerConfig.assets,
+							directory: path.relative(
+								path.resolve(resolvedViteConfig.root, workerOutputDirectory),
+								path.resolve(resolvedViteConfig.root, clientOutputDirectory)
+							),
+						};
 					}
 
 					config = workerConfig;
@@ -205,7 +212,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				} else if (this.environment.name === "client") {
 					const assetsOnlyConfig = resolvedPluginConfig.config;
 
-					assetsOnlyConfig.assets.directory = ".";
+					assetsOnlyConfig.assets = {
+						...assetsOnlyConfig.assets,
+						directory: ".",
+					};
 
 					const filesToAssetsIgnore = ["wrangler.json", ".dev.vars"];
 
@@ -236,6 +246,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				});
 			},
 			writeBundle() {
+				// This relies on the assumption that the client environment is built first
+				// Composable `buildApp` hooks could provide a more robust alternative in future
+				if (this.environment.name === "client") {
+					hasClientBuild = true;
+				}
 				// These conditions ensure the deploy config is emitted once per application build as `writeBundle` is called for each environment.
 				// If Vite introduces an additional hook that runs after the application has built then we could use that instead.
 				if (

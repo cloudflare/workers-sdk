@@ -309,7 +309,6 @@ export function getWorkerConfig(
 		topLevelName: config.topLevelName,
 		name: config.name,
 		compatibility_date: config.compatibility_date,
-		assets: config.assets ?? {},
 	};
 
 	if (opts?.isEntryWorker && !config.main) {
