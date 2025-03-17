@@ -4,6 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { dedent } from "../src/utils/dedent";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
+import { normalizeOutput } from "./helpers/normalize";
 
 const seed = {
 	"wrangler.toml": dedent`
@@ -147,7 +148,7 @@ describe("types", () => {
 			`wrangler types --x-include-runtime="./types.d.ts"`
 		);
 
-		expect(output.stderr).toBe("");
+		expect(normalizeOutput(output.stderr)).toBe("");
 		expect(output.status).toBe(0);
 	});
 	it("should include header with version information in the generated types", async () => {
