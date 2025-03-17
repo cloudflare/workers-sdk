@@ -168,7 +168,7 @@ describe("getWorkerConfig", () => {
 					undefined
 				)
 			).toThrowError(
-				/The provided Wrangler config main field \(.*?non-existing\/index\.ts\) doesn't point to an existing file/
+				/The provided Wrangler config main field \(.*?index\.ts\) doesn't point to an existing file/
 			);
 		});
 
