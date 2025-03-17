@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import * as vite from "vite";
-import { wouldWorkerdPopulateProcessEnv } from "./node-js-compat";
+import { isNodeCompat } from "./node-js-compat";
 import { INIT_PATH, UNKNOWN_HOST, VITE_DEV_METADATA_HEADER } from "./shared";
 import { getOutputDirectory } from "./utils";
 import type { ResolvedPluginConfig, WorkerConfig } from "./plugin-config";
@@ -191,9 +191,8 @@ export function createCloudflareEnvironmentOptions(
 				],
 			},
 		},
-		// if workerd populates process.env then we need to let it do that,
-		// otherwise vite itself can own process.env
-		keepProcessEnv: wouldWorkerdPopulateProcessEnv(workerConfig),
+		// if nodeCompat is enabled then let's keep the real process.env so that workerd can manipulate it
+		keepProcessEnv: isNodeCompat(workerConfig),
 	};
 }
 
