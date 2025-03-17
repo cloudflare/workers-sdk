@@ -46,6 +46,7 @@ const hybridNodeCompatModules = [
 	"crypto",
 	"module",
 	"process",
+	"tls",
 	"util",
 ];
 
