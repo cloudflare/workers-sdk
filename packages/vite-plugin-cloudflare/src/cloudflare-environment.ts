@@ -73,7 +73,6 @@ function createHotChannel(
 }
 
 export class CloudflareDevEnvironment extends vite.DevEnvironment {
-	#viteResolvedConfig: vite.ResolvedConfig;
 	#webSocketContainer: { webSocket?: WebSocket };
 	#worker?: ReplaceWorkersTypes<Fetcher>;
 
@@ -85,11 +84,11 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 			transport: createHotChannel(webSocketContainer),
 		});
 		this.#webSocketContainer = webSocketContainer;
-		this.#viteResolvedConfig = config;
 	}
 
 	async initRunner(
 		worker: ReplaceWorkersTypes<Fetcher>,
+		root: string,
 		workerConfig: WorkerConfig
 	) {
 		this.#worker = worker;
@@ -99,7 +98,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 			{
 				headers: {
 					[VITE_DEV_METADATA_HEADER]: JSON.stringify({
-						root: this.#viteResolvedConfig.root,
+						root,
 						entryPath: workerConfig.main,
 					}),
 					upgrade: "websocket",
@@ -216,7 +215,7 @@ export function initRunners(
 					viteDevServer.environments[
 						environmentName
 					] as CloudflareDevEnvironment
-				).initRunner(worker, workerConfig);
+				).initRunner(worker, viteDevServer.config.root, workerConfig);
 			}
 		)
 	);
