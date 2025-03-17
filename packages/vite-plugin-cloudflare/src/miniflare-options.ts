@@ -308,9 +308,6 @@ export function getDevMiniflareOptions(
 								name: workerOptions.name ?? workerConfig.name,
 								modulesRoot: miniflareModulesRoot,
 								unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
-								bindings: {
-									...workerOptions.bindings,
-								},
 								serviceBindings: {
 									...workerOptions.serviceBindings,
 									...(environmentName ===
