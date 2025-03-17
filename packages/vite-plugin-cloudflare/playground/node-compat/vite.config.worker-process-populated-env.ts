@@ -3,7 +3,7 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
 	build: {
-		outDir: "dist/worker-process",
+		outDir: "dist/worker-process-populated-env",
 	},
 	plugins: [
 		cloudflare({
