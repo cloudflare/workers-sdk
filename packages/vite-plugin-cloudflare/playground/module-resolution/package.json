@@ -5,11 +5,14 @@
 	"scripts": {
 		"build": "vite build --app",
 		"build:no-prebundling": "vite build --app -c ./vite.config.no-prebundling.ts",
+		"build:nodejs-compat": "vite build --app -c ./vite.config.nodejs-compat.ts",
 		"check:types": "tsc --build",
 		"dev": "vite dev",
 		"dev:no-prebundling": "vite dev -c ./vite.config.no-prebundling.ts",
+		"dev:nodejs-compat": "vite dev -c ./vite.config.nodejs-compat.ts",
 		"preview": "vite preview",
-		"preview:no-prebundling": "vite preview -c ./vite.config.no-prebundling.ts"
+		"preview:no-prebundling": "vite preview -c ./vite.config.no-prebundling.ts",
+		"preview:nodejs-compat": "vite preview -c ./vite.config.nodejs-compat.ts"
 	},
 	"devDependencies": {
 		"@cloudflare-dev-module-resolution/imports": "file:./packages/imports",

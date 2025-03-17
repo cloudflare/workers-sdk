@@ -1,4 +1,4 @@
-// Note: this file should be kept in sync with ./nodejs-compat/module-resolution.spec.ts
+// Note: this file should be kept in sync with ../module-resolution.spec.ts
 
 import { afterAll, describe, expect, test } from "vitest";
 import {
@@ -6,7 +6,7 @@ import {
 	getTextResponse,
 	isBuild,
 	serverLogs,
-} from "../../__test-utils__";
+} from "../../../__test-utils__";
 
 describe("module resolution", async () => {
 	afterAll(() => {
