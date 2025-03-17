@@ -1496,7 +1496,7 @@ describe("deploy", () => {
 					domains: [{ hostname: "api.example.com" }],
 				});
 				await runWrangler("deploy ./index");
-				expect(std.out).toContain("api.example.com (custom domain)");
+				expect(std.out).toContain("https://api.example.com (custom domain)");
 			});
 
 			it("should confirm override if custom domain deploy would override an existing domain", async () => {
@@ -1541,7 +1541,7 @@ Update them to point to this script instead?`,
 					result: true,
 				});
 				await runWrangler("deploy ./index");
-				expect(std.out).toContain("api.example.com (custom domain)");
+				expect(std.out).toContain("https://api.example.com (custom domain)");
 			});
 
 			it("should confirm override if custom domain deploy contains a conflicting DNS record", async () => {
@@ -1578,7 +1578,7 @@ Update them to point to this script instead?`,
 					result: true,
 				});
 				await runWrangler("deploy ./index");
-				expect(std.out).toContain("api.example.com (custom domain)");
+				expect(std.out).toContain("https://api.example.com (custom domain)");
 			});
 
 			it("should confirm for conflicting custom domains and then again for conflicting dns", async () => {
@@ -1642,7 +1642,7 @@ Update them to point to this script instead?`,
 					}
 				);
 				await runWrangler("deploy ./index");
-				expect(std.out).toContain("api.example.com (custom domain)");
+				expect(std.out).toContain("https://api.example.com (custom domain)");
 			});
 
 			it("should throw if an invalid custom domain is requested", async () => {
