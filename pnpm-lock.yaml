@@ -1776,11 +1776,11 @@ importers:
   packages/unenv-preset:
     dependencies:
       unenv:
-        specifier: 2.0.0-rc.14
-        version: 2.0.0-rc.14
+        specifier: 2.0.0-rc.15
+        version: 2.0.0-rc.15
       workerd:
-        specifier: ^1.20250310.0
-        version: 1.20250310.0
+        specifier: ^1.20250124.0
+        version: 1.20250124.0
     devDependencies:
       '@types/node-unenv':
         specifier: npm:@types/node@^22.13.9
@@ -7850,6 +7850,9 @@ packages:
   exsolve@1.0.1:
     resolution: {integrity: sha512-Smf0iQtkQVJLaph8r/qS8C8SWfQkaq9Q/dFcD44MLbJj6DNhlWefVuaS21SjfqOsBbjVlKtbCj6L9ekXK6EZUg==}
 
+  exsolve@1.0.4:
+    resolution: {integrity: sha512-xsZH6PXaER4XoV+NiT7JHp1bJodJVT+cxeSH1G0f0tlT0lJqYuHUP3bUx2HtfTDvOagMINYp8rsqusxud3RXhw==}
+
   ext-dep@file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/ext-dep:
     resolution: {directory: fixtures/vitest-pool-workers-examples/module-resolution/vendor/ext-dep, type: directory}
 
@@ -11209,6 +11212,9 @@ packages:
   unenv@2.0.0-rc.14:
     resolution: {integrity: sha512-od496pShMen7nOy5VmVJCnq8rptd45vh6Nx/r2iPbrba6pa6p+tS2ywuIHRZ/OBvSbQZB0kWvpO9XBNVFXHD3Q==}
 
+  unenv@2.0.0-rc.15:
+    resolution: {integrity: sha512-J/rEIZU8w6FOfLNz/hNKsnY+fFHWnu9MH4yRbSZF3xbbGHovcetXPs7sD+9p8L6CeNC//I9bhRYAOsBt2u7/OA==}
+
   unicorn-magic@0.1.0:
     resolution: {integrity: sha512-lRfVq8fE8gz6QMBuDM6a+LO3IAzTi05H6gCVaUpir2E1Rwpo4ZUog45KpNXKC/Mn3Yb9UDuHumeFTo9iV/D9FQ==}
     engines: {node: '>=18'}
@@ -11566,6 +11572,11 @@ packages:
 
   workerd@1.20241230.0:
     resolution: {integrity: sha512-EgixXP0JGXGq6J9lz17TKIZtfNDUvJNG+cl9paPMfZuYWT920fFpBx+K04YmnbQRLnglsivF1GT9pxh1yrlWhg==}
+    engines: {node: '>=16'}
+    hasBin: true
+
+  workerd@1.20250124.0:
+    resolution: {integrity: sha512-EnT9gN3M9/UHRFPZptKgK36DLOW8WfJV7cjNs3zstVbmF5cpFaHCAzX7tXWBO6zyvW/+EjklJPFtOvfatiZsuQ==}
     engines: {node: '>=16'}
     hasBin: true
 
@@ -12988,6 +12999,9 @@ snapshots:
   '@cloudflare/workerd-darwin-64@1.20241230.0':
     optional: true
 
+  '@cloudflare/workerd-darwin-64@1.20250124.0':
+    optional: true
+
   '@cloudflare/workerd-darwin-64@1.20250214.0':
     optional: true
 
@@ -12995,6 +13009,9 @@ snapshots:
     optional: true
 
   '@cloudflare/workerd-darwin-arm64@1.20241230.0':
+    optional: true
+
+  '@cloudflare/workerd-darwin-arm64@1.20250124.0':
     optional: true
 
   '@cloudflare/workerd-darwin-arm64@1.20250214.0':
@@ -13006,6 +13023,9 @@ snapshots:
   '@cloudflare/workerd-linux-64@1.20241230.0':
     optional: true
 
+  '@cloudflare/workerd-linux-64@1.20250124.0':
+    optional: true
+
   '@cloudflare/workerd-linux-64@1.20250214.0':
     optional: true
 
@@ -13015,6 +13035,9 @@ snapshots:
   '@cloudflare/workerd-linux-arm64@1.20241230.0':
     optional: true
 
+  '@cloudflare/workerd-linux-arm64@1.20250124.0':
+    optional: true
+
   '@cloudflare/workerd-linux-arm64@1.20250214.0':
     optional: true
 
@@ -13022,6 +13045,9 @@ snapshots:
     optional: true
 
   '@cloudflare/workerd-windows-64@1.20241230.0':
+    optional: true
+
+  '@cloudflare/workerd-windows-64@1.20250124.0':
     optional: true
 
   '@cloudflare/workerd-windows-64@1.20250214.0':
@@ -17469,6 +17495,8 @@ snapshots:
 
   exsolve@1.0.1: {}
 
+  exsolve@1.0.4: {}
+
   ext-dep@file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/ext-dep: {}
 
   extend@3.0.2: {}
@@ -20924,6 +20952,14 @@ snapshots:
       pathe: 2.0.3
       ufo: 1.5.4
 
+  unenv@2.0.0-rc.15:
+    dependencies:
+      defu: 6.1.4
+      exsolve: 1.0.4
+      ohash: 2.0.11
+      pathe: 2.0.3
+      ufo: 1.5.4
+
   unicorn-magic@0.1.0: {}
 
   universal-user-agent@6.0.1: {}
@@ -21382,6 +21418,14 @@ snapshots:
       '@cloudflare/workerd-linux-64': 1.20241230.0
       '@cloudflare/workerd-linux-arm64': 1.20241230.0
       '@cloudflare/workerd-windows-64': 1.20241230.0
+
+  workerd@1.20250124.0:
+    optionalDependencies:
+      '@cloudflare/workerd-darwin-64': 1.20250124.0
+      '@cloudflare/workerd-darwin-arm64': 1.20250124.0
+      '@cloudflare/workerd-linux-64': 1.20250124.0
+      '@cloudflare/workerd-linux-arm64': 1.20250124.0
+      '@cloudflare/workerd-windows-64': 1.20250124.0
 
   workerd@1.20250214.0:
     optionalDependencies:
