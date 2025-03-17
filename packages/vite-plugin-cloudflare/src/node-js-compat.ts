@@ -120,7 +120,7 @@ function getNodeCompatEntries() {
 }
 
 /**
- * Discerns wether workerd would populate the `process.env` object a worker or not
+ * Discerns whether workerd would populate the `process.env` object in a worker or not
  *
  * @param workerConfig the worker configuration
  * @returns true if workerd would populate the `process.env` given the provided configuration, false otherwise
