@@ -119,6 +119,7 @@ const cloudflareBuiltInModules = [
 ];
 
 const defaultConditions = ["workerd", "module", "browser"];
+const target = "es2022";
 
 export function createCloudflareEnvironmentOptions(
 	workerConfig: WorkerConfig,
@@ -144,7 +145,7 @@ export function createCloudflareEnvironmentOptions(
 			createEnvironment(name, config) {
 				return new vite.BuildEnvironment(name, config);
 			},
-			target: "es2022",
+			target,
 			// We need to enable `emitAssets` in order to support additional modules defined by `rules`
 			emitAssets: true,
 			outDir: getOutputDirectory(userConfig, environmentName),
@@ -165,6 +166,7 @@ export function createCloudflareEnvironmentOptions(
 			exclude: [...cloudflareBuiltInModules],
 			esbuildOptions: {
 				platform: "neutral",
+				target,
 				conditions: [...defaultConditions, "development"],
 				resolveExtensions: [
 					".mjs",
