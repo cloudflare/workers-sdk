@@ -1,5 +1,5 @@
 import { processArgument } from "@cloudflare/cli/args";
-import { AssignIPv4 } from "../client";
+import { AssignIPv4, AssignIPv6 } from "../client";
 import type { NetworkParameters } from "../client";
 
 export async function getNetworkInput(args: {
@@ -12,5 +12,7 @@ export async function getNetworkInput(args: {
 		label: "Include IPv4",
 		type: "confirm",
 	});
-	return ipv4 === true ? { assign_ipv4: AssignIPv4.PREDEFINED } : undefined;
+	return ipv4 === true
+		? { assign_ipv4: AssignIPv4.PREDEFINED }
+		: { assign_ipv6: AssignIPv6.PREDEFINED };
 }
