@@ -10,7 +10,11 @@
 	"baseBranch": "v3-maintenance",
 	"updateInternalDependencies": "patch",
 	"bumpVersionsWithWorkspaceProtocolOnly": true,
-	"ignore": [],
+	"ignore": [
+		"@cloudflare/vite-plugin",
+		"@cloudflare/pages-shared",
+		"@cloudflare/vitest-pool-workers"
+	],
 	"privatePackages": {
 		"tag": true,
 		"version": true
