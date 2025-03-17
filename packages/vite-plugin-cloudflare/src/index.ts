@@ -344,6 +344,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					id: createModuleReference(additionalModuleType, resolved.id),
 				};
 			},
+			async hotUpdate(options) {
+				if (matchAdditionalModule(options.file)) {
+					options.server.restart();
+				}
+			},
 			async renderChunk(code, chunk) {
 				const moduleRE = new RegExp(ADDITIONAL_MODULE_PATTERN, "g");
 				let match: RegExpExecArray | null;
