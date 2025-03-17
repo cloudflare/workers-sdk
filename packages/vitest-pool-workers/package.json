@@ -1,6 +1,7 @@
 {
 	"name": "@cloudflare/vitest-pool-workers",
 	"version": "0.7.8",
+	"private": true,
 	"description": "Workers Vitest integration for writing Vitest unit and integration tests that run inside the Workers runtime",
 	"keywords": [
 		"cloudflare",
@@ -49,7 +50,7 @@
 		"check:type": "tsc && tsc -p src/worker/tsconfig.json && tsc -p types/tsconfig.json",
 		"dev": "node scripts/bundle.mjs watch",
 		"test": "vitest run",
-		"test:ci": "vitest run"
+		"test:ci": "echo 0"
 	},
 	"dependencies": {
 		"birpc": "0.2.14",

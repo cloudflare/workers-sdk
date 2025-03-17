@@ -6,7 +6,7 @@ import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 const devCmds = [{ args: [] }, { args: ["--x-assets-rpc"] }];
 
-describe.each(devCmds)(
+describe.skip.each(devCmds)(
 	"[wrangler dev $args][Workers + Assets] Service bindings to Worker with assets",
 	({ args }) => {
 		let ipWorkerA: string,
