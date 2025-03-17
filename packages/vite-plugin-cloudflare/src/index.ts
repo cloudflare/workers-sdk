@@ -277,11 +277,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					{ alwaysCallNext: false }
 				);
 
-				handleWebSocket(
-					viteDevServer.httpServer,
-					entryWorker.fetch,
-					viteDevServer.config.logger
-				);
+				handleWebSocket(viteDevServer.httpServer, entryWorker.fetch);
 
 				return () => {
 					viteDevServer.middlewares.use((req, res, next) => {
@@ -306,11 +302,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					{ alwaysCallNext: false }
 				);
 
-				handleWebSocket(
-					vitePreviewServer.httpServer,
-					miniflare.dispatchFetch,
-					vitePreviewServer.config.logger
-				);
+				handleWebSocket(vitePreviewServer.httpServer, miniflare.dispatchFetch);
 
 				return () => {
 					vitePreviewServer.middlewares.use((req, res, next) => {
