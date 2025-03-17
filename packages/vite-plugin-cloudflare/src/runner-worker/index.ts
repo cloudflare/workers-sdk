@@ -170,12 +170,13 @@ export function createWorkerEntrypointWrapper(
 				const request = arg as Request;
 				const url = new URL(request.url);
 
+				let webSocket: WebSocket;
 				if (url.pathname === INIT_PATH) {
-					const viteDevMetadata: { root: string; entryPath: string } =
-						JSON.parse(request.headers.get(VITE_DEV_METADATA_HEADER) ?? "null");
-					entryPath = viteDevMetadata.entryPath;
-					const { 0: client, 1: server } = new WebSocketPair();
 					try {
+						const viteDevMetadata = getViteDevMetadata(request);
+						entryPath = viteDevMetadata.entryPath;
+						const { 0: client, 1: server } = new WebSocketPair();
+						webSocket = client;
 						await createModuleRunner(this.env, server, viteDevMetadata.root);
 					} catch (e) {
 						return new Response(
@@ -184,7 +185,10 @@ export function createWorkerEntrypointWrapper(
 						);
 					}
 
-					return new Response(null, { status: 101, webSocket: client });
+					return new Response(null, {
+						status: 101,
+						webSocket,
+					});
 				}
 			}
 
@@ -384,4 +388,38 @@ export function createWorkflowEntrypointWrapper(
 	}
 
 	return Wrapper;
+}
+
+function getViteDevMetadata(request: Request) {
+	const viteDevMetadataHeader = request.headers.get(VITE_DEV_METADATA_HEADER);
+	if (viteDevMetadataHeader === null) {
+		throw new Error(
+			"Unexpected internal error, vite dev metadata header not set"
+		);
+	}
+
+	let parsedViteDevMetadataHeader: Record<string, string>;
+	try {
+		parsedViteDevMetadataHeader = JSON.parse(viteDevMetadataHeader);
+	} catch {
+		throw new Error(
+			`Unexpected internal error, vite dev metadata header JSON parsing failed, value = ${viteDevMetadataHeader}`
+		);
+	}
+
+	const { root, entryPath } = parsedViteDevMetadataHeader;
+
+	if (root === undefined) {
+		throw new Error(
+			"Unexpected internal error, vite dev metadata header doesn't contain a root value"
+		);
+	}
+
+	if (entryPath === undefined) {
+		throw new Error(
+			"Unexpected internal error, vite dev metadata header doesn't contain an entryPath value"
+		);
+	}
+
+	return { root, entryPath };
 }
