@@ -1,17 +1,19 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
+import * as fsp from "node:fs/promises";
 import { builtinModules } from "node:module";
 import * as path from "node:path";
 import { createMiddleware } from "@hattip/adapter-node";
 import MagicString from "magic-string";
 import { Miniflare } from "miniflare";
 import * as vite from "vite";
+import { getHeadersPath, getRedirectsPath } from "./asset-config";
 import {
 	createCloudflareEnvironmentOptions,
 	initRunners,
 } from "./cloudflare-environment";
 import { writeDeployConfig } from "./deploy-config";
-import { getDevEntryWorker } from "./dev";
+import { getDevEntryWorkers } from "./dev";
 import {
 	getDevMiniflareOptions,
 	getPreviewMiniflareOptions,
@@ -24,7 +26,13 @@ import {
 } from "./node-js-compat";
 import { resolvePluginConfig } from "./plugin-config";
 import { MODULE_PATTERN } from "./shared";
-import { getOutputDirectory, toMiniflareRequest } from "./utils";
+import {
+	getOutputDirectory,
+	isAssetFetch,
+	isWorkerFetch,
+	log,
+	toMiniflareRequest,
+} from "./utils";
 import { handleWebSocket } from "./websockets";
 import { getWarningForWorkersConfigs } from "./workers-configs";
 import type { ModuleType } from "./constants";
@@ -50,16 +58,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		{
 			name: "vite-plugin-cloudflare",
 			config(userConfig, env) {
-				if (env.isPreview) {
-					// Short-circuit the whole configuration if we are in preview mode
-					return { appType: "custom" };
-				}
-
 				resolvedPluginConfig = resolvePluginConfig(
 					pluginConfig,
 					userConfig,
 					env
 				);
+
+				if (env.isPreview) {
+					// Short-circuit the whole configuration if we are in preview mode
+					return { appType: "custom" };
+				}
 
 				if (!workersConfigsWarningShown) {
 					workersConfigsWarningShown = true;
@@ -242,7 +250,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 			},
 			handleHotUpdate(options) {
-				if (resolvedPluginConfig.configPaths.has(options.file)) {
+				if (
+					resolvedPluginConfig.configPaths.has(options.file) ||
+					getRedirectsPath(options.server.config) === options.file ||
+					getHeadersPath(options.server.config) === options.file
+				) {
 					options.server.restart();
 				}
 			},
@@ -263,19 +275,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				);
 
 				await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
-				const entryWorker = await getDevEntryWorker(
-					resolvedPluginConfig,
-					miniflare
-				);
-
-				const middleware = createMiddleware(
-					({ request }) => {
-						return entryWorker.fetch(toMiniflareRequest(request), {
-							redirect: "manual",
-						}) as any;
-					},
-					{ alwaysCallNext: false }
-				);
+				const { entryWorker, userWorker, workerType } =
+					await getDevEntryWorkers(resolvedPluginConfig, miniflare);
 
 				handleWebSocket(
 					viteDevServer.httpServer,
@@ -283,15 +284,74 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					viteDevServer.config.logger
 				);
 
-				return () => {
-					viteDevServer.middlewares.use((req, res, next) => {
-						middleware(req, res, next);
-					});
-				};
+				const preMiddleware = createMiddleware(
+					({ request, passThrough }) => {
+						const url = new URL(request.url);
+						if (url.pathname.startsWith("/@")) {
+							// URLs that start with `/@...` are special vite requests.
+							// We shouldn't pass them through the AssetWorker because it will response
+							// with a redirect to an encoded version `/%40...`.
+							log(
+								"pre-middleware",
+								request,
+								"special Vite request - pass-through"
+							);
+							passThrough();
+						} else if (
+							workerType === "workers-only" ||
+							isAssetFetch(request) ||
+							isWorkerFetch(request)
+						) {
+							log("pre-middleware", request, "pass-through");
+							passThrough();
+						} else {
+							log("pre-middleware", request, "ask Entry Worker for response");
+							return entryWorker.fetch(toMiniflareRequest(request), {
+								redirect: "manual",
+							}) as any;
+						}
+					},
+					{ alwaysCallNext: false }
+				);
+
+				const postMiddleware = createMiddleware(
+					async ({ request, passThrough }) => {
+						if (
+							userWorker &&
+							(workerType === "workers-only" || isWorkerFetch(request))
+						) {
+							// No assets (just a userWorker) or a specific user worker request
+							log("post-middleware", request, "ask User Worker for response");
+							return userWorker.fetch(toMiniflareRequest(request)) as any;
+						} else if (isAssetFetch(request)) {
+							try {
+								log("post-middleware", request, "ask Vite to transform HTML");
+								const response = await tryHtmlTransform(viteDevServer, request);
+								if (response) {
+									return response;
+								}
+							} catch {
+								log(
+									"post-middleware",
+									request,
+									"unable to transform HTML - pass-through"
+								);
+							}
+							passThrough();
+						} else {
+							log("post-middleware", request, "pass-through");
+							passThrough;
+						}
+					}
+				);
+
+				viteDevServer.middlewares.use(preMiddleware);
+				return () => viteDevServer.middlewares.use(postMiddleware);
 			},
 			configurePreviewServer(vitePreviewServer) {
 				const miniflare = new Miniflare(
 					getPreviewMiniflareOptions(
+						resolvedPluginConfig,
 						vitePreviewServer,
 						pluginConfig.persistState ?? true
 					)
@@ -312,11 +372,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					vitePreviewServer.config.logger
 				);
 
-				return () => {
-					vitePreviewServer.middlewares.use((req, res, next) => {
-						middleware(req, res, next);
-					});
-				};
+				vitePreviewServer.middlewares.use((req, res, next) => {
+					middleware(req, res, next);
+				});
 			},
 		},
 		// Plugin to support `CompiledWasm` modules
@@ -363,7 +421,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 					try {
 						source = fs.readFileSync(modulePath);
-					} catch (error) {
+					} catch {
 						throw new Error(
 							`Import ${modulePath} not found. Does the file exist?`
 						);
@@ -528,4 +586,45 @@ function getDotDevDotVarsContent(
 
 function createModuleReference(type: ModuleType, id: string) {
 	return `__CLOUDFLARE_MODULE__${type}__${id}__`;
+}
+
+async function tryHtmlTransform(
+	viteDevServer: vite.ViteDevServer,
+	request: Request
+) {
+	const fileRoot = viteDevServer.config.root;
+	const { pathname } = new URL(request.url);
+	const filePath = path.join(fileRoot, pathname);
+
+	if (!filePath.endsWith(".html") || !isFile(filePath)) {
+		return null;
+	}
+
+	try {
+		console.log("Processing HTML file");
+		const content = await fsp.readFile(filePath, "utf-8");
+		const transformed = await viteDevServer.transformIndexHtml(
+			pathname,
+			content
+		);
+
+		return new Response(transformed, {
+			headers: { "Content-Type": "text/html" },
+		});
+	} catch (error) {
+		throw new Error(
+			`Unexpected error. Failed to load and transform ${pathname} - ${error}`
+		);
+	}
+}
+
+async function isFile(maybeFilePath: string) {
+	try {
+		const exists = (await fsp.stat(maybeFilePath)).isFile();
+		if (!exists) {
+			return null;
+		}
+	} catch (error) {
+		return null;
+	}
 }

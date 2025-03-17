@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
-import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -15,6 +14,7 @@ import {
 	unstable_getMiniflareWorkerOptions,
 	unstable_readConfig,
 } from "wrangler";
+import { getAssetsConfig } from "./asset-config";
 import {
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
@@ -22,13 +22,19 @@ import {
 } from "./constants";
 import { getWorkerConfigPaths } from "./deploy-config";
 import { MODULE_PATTERN } from "./shared";
+import { log, toMiniflareRequest } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
 	PersistState,
 	ResolvedPluginConfig,
 	WorkerConfig,
 } from "./plugin-config";
-import type { MiniflareOptions, SharedOptions, WorkerOptions } from "miniflare";
+import type {
+	Miniflare,
+	MiniflareOptions,
+	SharedOptions,
+	WorkerOptions,
+} from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
 import type { SourcelessWorkerOptions } from "wrangler";
 
@@ -197,11 +203,14 @@ export function getDevMiniflareOptions(
 	viteDevServer: vite.ViteDevServer
 ): MiniflareOptions {
 	const resolvedViteConfig = viteDevServer.config;
+	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 	const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
-	const assetsConfig =
-		resolvedPluginConfig.type === "assets-only"
-			? resolvedPluginConfig.config.assets
-			: entryWorkerConfig?.assets;
+	const assetsConfig = getAssetsConfig(
+		resolvedPluginConfig,
+		entryWorkerConfig?.assets,
+		logger,
+		resolvedViteConfig
+	);
 
 	const assetWorkers: Array<WorkerOptions> = [
 		{
@@ -220,11 +229,19 @@ export function getDevMiniflareOptions(
 			bindings: {
 				CONFIG: {
 					has_user_worker: resolvedPluginConfig.type === "workers",
+					invoke_user_worker_ahead_of_assets:
+						assetsConfig.run_worker_first ?? false,
 				},
 			},
 			serviceBindings: {
 				ASSET_WORKER: ASSET_WORKER_NAME,
-				...(entryWorkerConfig ? { USER_WORKER: entryWorkerConfig.name } : {}),
+				...(entryWorkerConfig
+					? {
+							USER_WORKER: assetsConfig.run_worker_first
+								? entryWorkerConfig.name
+								: createUserWorkerFetcher(entryWorkerConfig.name),
+						}
+					: {}),
 			},
 		},
 		{
@@ -241,45 +258,7 @@ export function getDevMiniflareOptions(
 				},
 			],
 			bindings: {
-				CONFIG: {
-					...(assetsConfig?.html_handling
-						? { html_handling: assetsConfig.html_handling }
-						: {}),
-					...(assetsConfig?.not_found_handling
-						? { not_found_handling: assetsConfig.not_found_handling }
-						: {}),
-				},
-			},
-			serviceBindings: {
-				__VITE_ASSET_EXISTS__: async (request) => {
-					const { pathname } = new URL(request.url);
-					const filePath = path.join(resolvedViteConfig.root, pathname);
-
-					let exists: boolean;
-
-					try {
-						exists = fs.statSync(filePath).isFile();
-					} catch (error) {
-						exists = false;
-					}
-
-					return MiniflareResponse.json(exists);
-				},
-				__VITE_FETCH_ASSET__: async (request) => {
-					const { pathname } = new URL(request.url);
-					const filePath = path.join(resolvedViteConfig.root, pathname);
-
-					try {
-						let html = await fsp.readFile(filePath, "utf-8");
-						html = await viteDevServer.transformIndexHtml(pathname, html);
-
-						return new MiniflareResponse(html, {
-							headers: { "Content-Type": "text/html" },
-						});
-					} catch (error) {
-						throw new Error(`Unexpected error. Failed to load ${pathname}`);
-					}
-				},
+				CONFIG: assetsConfig,
 			},
 		},
 	];
@@ -380,8 +359,6 @@ export function getDevMiniflareOptions(
 		getWorkerToDurableObjectClassNamesMap(userWorkers);
 	const workerToWorkflowEntrypointClassNamesMap =
 		getWorkerToWorkflowEntrypointClassNamesMap(userWorkers);
-
-	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
 	return {
 		log: logger,
@@ -527,10 +504,12 @@ function getPreviewModules(
 }
 
 export function getPreviewMiniflareOptions(
+	resolvedPluginConfig: ResolvedPluginConfig,
 	vitePreviewServer: vite.PreviewServer,
 	persistState: PersistState
 ): MiniflareOptions {
 	const resolvedViteConfig = vitePreviewServer.config;
+	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 	const configPaths = getWorkerConfigPaths(resolvedViteConfig.root);
 	const workerConfigs = configPaths.map((configPath) =>
 		unstable_readConfig({ config: configPath })
@@ -544,6 +523,17 @@ export function getPreviewMiniflareOptions(
 		const { ratelimits, modulesRules, ...workerOptions } =
 			miniflareWorkerOptions.workerOptions;
 
+		const assetConfig = getAssetsConfig(
+			resolvedPluginConfig,
+			config.assets,
+			logger,
+			resolvedViteConfig
+		);
+
+		if (workerOptions.assets) {
+			workerOptions.assets = { ...workerOptions.assets, ...{ assetConfig } };
+		}
+
 		return [
 			{
 				...workerOptions,
@@ -555,8 +545,6 @@ export function getPreviewMiniflareOptions(
 			...externalWorkers,
 		];
 	});
-
-	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
 	return {
 		log: logger,
@@ -610,4 +598,38 @@ function miniflareLogLevelFromViteLogLevel(
 		case "silent":
 			return LogLevel.NONE;
 	}
+}
+
+export function createUserWorkerFetcher(userWorkerName: string) {
+	return async (request: Request, miniflare: Miniflare) => {
+		try {
+			if (
+				request.method === "GET" &&
+				request.headers.get("upgrade") === "websocket"
+			) {
+				// Normal fetches can't handle upgrading websockets, so we send it direct
+				log("USER_WORKER binding (fetch):", request, "upgrade websocket");
+				return (await miniflare.getWorker(userWorkerName)).fetch(
+					toMiniflareRequest(request)
+				);
+			}
+			request.headers.set("__CF_REQUEST_TYPE_", "WORKER");
+			log("USER_WORKER binding (fetch):", request, "pass to Vite");
+			const response = await fetch(
+				request.url,
+				request as unknown as RequestInit
+			);
+			log(
+				"USER_WORKER binding (fetch response):",
+				request,
+				response.statusText + response.headers.get("content-type")
+			);
+			return response;
+		} catch (error) {
+			console.log("XXX", error);
+			throw new Error(
+				`Unexpected error. Failed to fetch user worker: ${request.url} - ${error}`
+			);
+		}
+	};
 }
