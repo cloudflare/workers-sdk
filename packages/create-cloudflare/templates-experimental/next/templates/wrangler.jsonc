@@ -5,7 +5,6 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
-  "minify": true,
   "assets": {
     "binding": "ASSETS",
     "directory": ".open-next/assets"
