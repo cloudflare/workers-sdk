@@ -26,6 +26,7 @@ export function normalizeOutput(
 		normalizeDebugLogFilepath,
 		removeLocalPort,
 		removeZeroWidthSpaces,
+		removeV3Warning,
 	];
 	for (const f of functions) {
 		stdout = f(stdout);
@@ -94,6 +95,15 @@ function removeVersionHeader(str: string): string {
 	}
 }
 
+/**
+ * Remove the Wrangler v3 out of date warning
+ */
+function removeV3Warning(str: string): string {
+	return str.replace(
+		/\s*▲ \[WARNING\] The version of Wrangler you are using is now out-of-date.\s*Please update to the latest version to prevent critical errors.\s*Run `npm install --save-dev wrangler@4` to update to the latest version.\s*After installation, run Wrangler with `npx wrangler`./,
+		""
+	);
+}
 /**
  * Normalize error `X` markers.
  *
