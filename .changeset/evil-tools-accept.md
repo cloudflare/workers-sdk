@@ -1,5 +1,5 @@
 ---
-"@cloudflare/vitest-pool-workers": minor
+"@cloudflare/vitest-pool-workers": patch
 ---
 
 Add support for Images binding
