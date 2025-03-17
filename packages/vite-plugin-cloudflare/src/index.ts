@@ -50,6 +50,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	// this flag is used to show the workers configs warning only once
 	let workersConfigsWarningShown = false;
 
+	const additionalModulePaths = new Set<string>();
+
 	return [
 		{
 			name: "vite-plugin-cloudflare",
@@ -339,13 +341,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					throw new Error(`Import "${source}" not found. Does the file exist?`);
 				}
 
+				// Add the path to the additional module so that we can identify the module in the `hotUpdate` hook
+				additionalModulePaths.add(resolved.id);
+
 				return {
 					external: true,
 					id: createModuleReference(additionalModuleType, resolved.id),
 				};
 			},
-			async hotUpdate(options) {
-				if (matchAdditionalModule(options.file)) {
+			hotUpdate(options) {
+				if (additionalModulePaths.has(options.file)) {
 					options.server.restart();
 				}
 			},
