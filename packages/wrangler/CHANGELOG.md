@@ -1,5 +1,28 @@
 # wrangler
 
+## 4.1.0
+
+### Minor Changes
+
+- [#8337](https://github.com/cloudflare/workers-sdk/pull/8337) [`1b2aa91`](https://github.com/cloudflare/workers-sdk/commit/1b2aa916fecb010dd250de3b2bbdd527bed992ef) Thanks [@Ltadrian](https://github.com/Ltadrian)! - Add mTLS configuration fields to Hyperdrive command
+
+  hyperdrive create test123 ... --ca-certificate-uuid=CA_CERT_UUID --mtls-certificate-uuid=MTLS_CERT_UUID
+
+### Patch Changes
+
+- [#8401](https://github.com/cloudflare/workers-sdk/pull/8401) [`b8fd1b1`](https://github.com/cloudflare/workers-sdk/commit/b8fd1b1c8be1d84a0b3be5f27f7c91f88d9473d2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Support `no_bundle` config in Pages for both `dev` and `deploy`.
+
+  This was already supported via a command line arg (`--no-bundle`).
+
+- [#8472](https://github.com/cloudflare/workers-sdk/pull/8472) [`4978e5b`](https://github.com/cloudflare/workers-sdk/commit/4978e5bebb081a5ff6901d0b1bb807d51c3db30b) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: throw explicit error for unknown mimetype during `wrangler check startup`
+
+- [#8478](https://github.com/cloudflare/workers-sdk/pull/8478) [`931b53d`](https://github.com/cloudflare/workers-sdk/commit/931b53d708b0369de97475a9f427bcb922795378) Thanks [@penalosa](https://github.com/penalosa)! - Add `wrangler types` support for importable env and `process.env`
+
+- [#8503](https://github.com/cloudflare/workers-sdk/pull/8503) [`edf169d`](https://github.com/cloudflare/workers-sdk/commit/edf169d15062a31dec1d32427fb72438425b45bf) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Fix Workers Assets metafiles (`_headers` and `_redirects`) resolution when running Wrangler from a different directory
+
+- Updated dependencies [[`5ae180e`](https://github.com/cloudflare/workers-sdk/commit/5ae180ee8acfc03b46bc3e836f5ce3856c458af8), [`74b0c73`](https://github.com/cloudflare/workers-sdk/commit/74b0c7377a643241d4e3efa674cd644f8f5b8e10)]:
+  - miniflare@4.20250317.0
+
 ## 4.0.0
 
 ### Major Changes

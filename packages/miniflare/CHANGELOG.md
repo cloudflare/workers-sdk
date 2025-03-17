@@ -1,5 +1,22 @@
 # miniflare
 
+## 4.20250317.0
+
+### Minor Changes
+
+- [#8445](https://github.com/cloudflare/workers-sdk/pull/8445) [`74b0c73`](https://github.com/cloudflare/workers-sdk/commit/74b0c7377a643241d4e3efa674cd644f8f5b8e10) Thanks [@lambrospetrou](https://github.com/lambrospetrou)! - D1 local developer experience supports sessions API bookmarks
+
+### Patch Changes
+
+- [#8538](https://github.com/cloudflare/workers-sdk/pull/8538) [`5ae180e`](https://github.com/cloudflare/workers-sdk/commit/5ae180ee8acfc03b46bc3e836f5ce3856c458af8) Thanks [@emily-shen](https://github.com/emily-shen)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250310.0  | 1.20250317.0  |
+  | @cloudflare/workers-types | ^4.20250310.0 | ^4.20250317.0 |
+
 ## 4.20250310.0
 
 ### Major Changes
