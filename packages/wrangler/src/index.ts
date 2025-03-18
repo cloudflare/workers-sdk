@@ -36,6 +36,15 @@ import {
 	JsonFriendlyFatalError,
 	UserError,
 } from "./errors";
+import {
+	eventSubscriptionsBrowseCommand,
+	eventSubscriptionsCreateCommand,
+	eventSubscriptionsDeleteCommand,
+	eventSubscriptionsGetCommand,
+	eventSubscriptionsListCommand,
+	eventSubscriptionsNamespace,
+	eventSubscriptionsUpdateCommand,
+} from "./event-subscriptions";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import {
@@ -536,6 +545,39 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command("queues", "🇶  Manage Workers Queues", (queuesYargs) => {
 		return queues(queuesYargs.command(subHelp));
 	});
+
+	// event-subscriptions
+	registry.define([
+		{
+			command: "wrangler event-subscriptions",
+			definition: eventSubscriptionsNamespace,
+		},
+		{
+			command: "wrangler event-subscriptions browse",
+			definition: eventSubscriptionsBrowseCommand,
+		},
+		{
+			command: "wrangler event-subscriptions list",
+			definition: eventSubscriptionsListCommand,
+		},
+		{
+			command: "wrangler event-subscriptions create",
+			definition: eventSubscriptionsCreateCommand,
+		},
+		{
+			command: "wrangler event-subscriptions update",
+			definition: eventSubscriptionsUpdateCommand,
+		},
+		{
+			command: "wrangler event-subscriptions delete",
+			definition: eventSubscriptionsDeleteCommand,
+		},
+		{
+			command: "wrangler event-subscriptions get",
+			definition: eventSubscriptionsGetCommand,
+		},
+	]);
+	registry.registerNamespace("event-subscriptions");
 
 	// r2
 	registry.define([
