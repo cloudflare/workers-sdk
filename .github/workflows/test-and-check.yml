@@ -114,13 +114,13 @@ jobs:
         include:
           - os: ubuntu-24.04-arm
             os_name: Linux
-            filter: '--filter="./tools" --filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
+            filter: '--filter="./tools" --filter="./packages/*" --filter="./fixtures/*"'
           - os: macos-latest
             os_name: macOS
-            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
+            filter: '--filter="./packages/*" --filter="./fixtures/*"'
           - os: windows-latest
             os_name: Windows
-            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
+            filter: '--filter="./packages/*" --filter="./fixtures/*"'
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
