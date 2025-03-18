@@ -1,7 +1,3 @@
-interface Env {
-	ASSETS: Fetcher;
-}
-
 export default {
 	fetch(request, env) {
 		const url = new URL(request.url);
@@ -12,6 +8,6 @@ export default {
 			});
 		}
 
-		return env.ASSETS.fetch(request);
+		return new Response(null, { status: 404 });
 	},
-} satisfies ExportedHandler<Env>;
+} satisfies ExportedHandler;
