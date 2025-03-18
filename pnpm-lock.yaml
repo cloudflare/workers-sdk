@@ -2823,8 +2823,8 @@ importers:
         specifier: workspace:*
         version: link:../kv-asset-handler
       '@cloudflare/unenv-preset':
-        specifier: 2.0.2
-        version: 2.0.2(unenv@2.0.0-rc.14)(workerd@1.20250317.0)
+        specifier: 2.2.0
+        version: 2.2.0(unenv@2.0.0-rc.15)(workerd@1.20250317.0)
       blake3-wasm:
         specifier: 2.1.5
         version: 2.1.5
@@ -2838,8 +2838,8 @@ importers:
         specifier: 6.3.0
         version: 6.3.0
       unenv:
-        specifier: 2.0.0-rc.14
-        version: 2.0.0-rc.14
+        specifier: 2.0.0-rc.15
+        version: 2.0.0-rc.15
       workerd:
         specifier: 1.20250317.0
         version: 1.20250317.0
@@ -3676,11 +3676,11 @@ packages:
       workerd:
         optional: true
 
-  '@cloudflare/unenv-preset@2.0.2':
-    resolution: {integrity: sha512-nyzYnlZjjV5xT3LizahG1Iu6mnrCaxglJ04rZLpDwlDVDZ7v46lNsfxhV3A/xtfgQuSHmLnc6SVI+KwBpc3Lwg==}
+  '@cloudflare/unenv-preset@2.2.0':
+    resolution: {integrity: sha512-U5/TQBjJN/HQ1JA4mzt5sTbvdT9aoucHYGbokY2JWwDkYbgoaTygYBshZpXHUo8lDppsAGdUf3pGlOc6U09HAg==}
     peerDependencies:
-      unenv: 2.0.0-rc.14
-      workerd: ^1.20250124.0
+      unenv: 2.0.0-rc.15
+      workerd: ^1.20250310.0
     peerDependenciesMeta:
       workerd:
         optional: true
@@ -7814,9 +7814,6 @@ packages:
     resolution: {integrity: sha512-28HqgMZAmih1Czt9ny7qr6ek2qddF4FclbMzwhCREB6OFfH+rXAnuNCwo1/wFvrtbgsQDb4kSbX9de9lFbrXnA==}
     engines: {node: '>= 0.10.0'}
 
-  exsolve@1.0.1:
-    resolution: {integrity: sha512-Smf0iQtkQVJLaph8r/qS8C8SWfQkaq9Q/dFcD44MLbJj6DNhlWefVuaS21SjfqOsBbjVlKtbCj6L9ekXK6EZUg==}
-
   exsolve@1.0.4:
     resolution: {integrity: sha512-xsZH6PXaER4XoV+NiT7JHp1bJodJVT+cxeSH1G0f0tlT0lJqYuHUP3bUx2HtfTDvOagMINYp8rsqusxud3RXhw==}
 
@@ -11180,9 +11177,6 @@ packages:
   unenv@2.0.0-rc.1:
     resolution: {integrity: sha512-PU5fb40H8X149s117aB4ytbORcCvlASdtF97tfls4BPIyj4PeVxvpSuy1jAptqYHqB0vb2w2sHvzM0XWcp2OKg==}
 
-  unenv@2.0.0-rc.14:
-    resolution: {integrity: sha512-od496pShMen7nOy5VmVJCnq8rptd45vh6Nx/r2iPbrba6pa6p+tS2ywuIHRZ/OBvSbQZB0kWvpO9XBNVFXHD3Q==}
-
   unenv@2.0.0-rc.15:
     resolution: {integrity: sha512-J/rEIZU8w6FOfLNz/hNKsnY+fFHWnu9MH4yRbSZF3xbbGHovcetXPs7sD+9p8L6CeNC//I9bhRYAOsBt2u7/OA==}
 
@@ -12886,9 +12880,9 @@ snapshots:
     optionalDependencies:
       workerd: 1.20250317.0
 
-  '@cloudflare/unenv-preset@2.0.2(unenv@2.0.0-rc.14)(workerd@1.20250317.0)':
+  '@cloudflare/unenv-preset@2.2.0(unenv@2.0.0-rc.15)(workerd@1.20250317.0)':
     dependencies:
-      unenv: 2.0.0-rc.14
+      unenv: 2.0.0-rc.15
     optionalDependencies:
       workerd: 1.20250317.0
 
@@ -17444,8 +17438,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  exsolve@1.0.1: {}
-
   exsolve@1.0.4: {}
 
   ext-dep@file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/ext-dep: {}
@@ -20895,14 +20887,6 @@ snapshots:
       mlly: 1.7.4
       ohash: 1.1.4
       pathe: 1.1.2
-      ufo: 1.5.4
-
-  unenv@2.0.0-rc.14:
-    dependencies:
-      defu: 6.1.4
-      exsolve: 1.0.1
-      ohash: 2.0.11
-      pathe: 2.0.3
       ufo: 1.5.4
 
   unenv@2.0.0-rc.15:
