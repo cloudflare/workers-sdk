@@ -1,5 +1,15 @@
 # @cloudflare/unenv-preset
 
+## 2.1.0
+
+### Minor Changes
+
+- [#8514](https://github.com/cloudflare/workers-sdk/pull/8514) [`4ad78ea`](https://github.com/cloudflare/workers-sdk/commit/4ad78ea2c9b8fed7e3afe581e1c320b852969f6a) Thanks [@vicb](https://github.com/vicb)! - Use the native implementation for `connect` and `TLSSocket` from `node:tls`
+
+### Patch Changes
+
+- [#8514](https://github.com/cloudflare/workers-sdk/pull/8514) [`4ad78ea`](https://github.com/cloudflare/workers-sdk/commit/4ad78ea2c9b8fed7e3afe581e1c320b852969f6a) Thanks [@vicb](https://github.com/vicb)! - sync with `unenv@2.0.0-rc.15`
+
 ## 2.0.2
 
 ### Patch Changes
