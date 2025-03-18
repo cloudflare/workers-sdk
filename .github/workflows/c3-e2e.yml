@@ -27,9 +27,9 @@ jobs:
     if: ${{ needs.turbo-ignore.outputs.skip == 'failure' }}
     timeout-minutes: 45
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}-${{ matrix.experimental }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
       cancel-in-progress: true
-    name: ${{ format('Run tests for {0}@{1} on {2} (experimental:{3})', matrix.pm.name, matrix.pm.version, matrix.os, matrix.experimental) }}
+    name: ${{ format('Run tests for {0}@{1} on {2}', matrix.pm.name, matrix.pm.version, matrix.os) }}
     strategy:
       fail-fast: false
       matrix:
@@ -41,15 +41,10 @@ jobs:
             { name: bun, version: "1.0.3" },
             { name: yarn, version: "1.0.0" },
           ]
-        experimental: [true, false]
         # include a single windows test with pnpm
         include:
           - os: windows-latest
             pm: { name: pnpm, version: "9.12.0" }
-            experimental: true
-          - os: windows-latest
-            pm: { name: pnpm, version: "9.12.0" }
-            experimental: false
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -73,13 +68,24 @@ jobs:
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
-      - name: E2E Tests
+      - name: E2E Tests (experimental)
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/run-c3-e2e
         with:
           packageManager: ${{ matrix.pm.name }}
           packageManagerVersion: ${{ matrix.pm.version }}
           quarantine: false
-          experimental: ${{ matrix.experimental }}
+          experimental: true
+          accountId: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
+
+      - name: E2E Tests (non-experimental)
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        uses: ./.github/actions/run-c3-e2e
+        with:
+          packageManager: ${{ matrix.pm.name }}
+          packageManagerVersion: ${{ matrix.pm.version }}
+          quarantine: false
+          experimental: false
           accountId: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
           apiToken: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
