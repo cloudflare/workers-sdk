@@ -21,25 +21,11 @@ describe("findPackageNames()", () => {
 	}) => {
 		expect(findPackageNames()).toEqual(
 			new Set([
-				"@cloudflare/chrome-devtools-patches",
 				"@cloudflare/kv-asset-handler",
-				"@cloudflare/prerelease-registry",
-				"@cloudflare/quick-edit",
 				"@cloudflare/unenv-preset",
-				"@cloudflare/workers-editor-shared",
 				"@cloudflare/workers-shared",
 				"@cloudflare/workflows-shared",
-				"cloudflare-workers-bindings-extension",
-				"create-cloudflare",
-				"devprod-status-bot",
-				"edge-preview-authenticated-proxy",
-				"format-errors",
 				"miniflare",
-				"playground-preview-worker",
-				"solarflare-theme",
-				"turbo-r2-archive",
-				"workers-playground",
-				"workers.new",
 				"wrangler",
 			])
 		);
