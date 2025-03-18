@@ -81,6 +81,11 @@ export default class extends WorkerEntrypoint<Env> {
 			);
 
 			const config = normalizeConfiguration(this.env.CONFIG);
+			sentry?.setContext("compatibilityOptions", {
+				compatibilityDate: config.compatibility_date,
+				compatibilityFlags: config.compatibility_flags,
+				originalCompatibilityFlags: this.env.CONFIG.compatibility_flags,
+			});
 			const userAgent = request.headers.get("user-agent") ?? "UA UNKNOWN";
 
 			const url = new URL(request.url);
@@ -102,7 +107,7 @@ export default class extends WorkerEntrypoint<Env> {
 					hostname: url.hostname,
 					htmlHandling: config.html_handling,
 					notFoundHandling: config.not_found_handling,
-					singlePageApplication: config.single_page_application,
+					compatibilityFlags: config.compatibility_flags,
 					userAgent: userAgent,
 				});
 			}

@@ -272,90 +272,6 @@ describe("[Asset Worker] `handleRequest`", () => {
 		expect(cacheMissResponse.headers.get("CF-Cache-Status")).toBe("MISS");
 	});
 
-	describe("single_page_application", () => {
-		it("should override any not_found_handling option", async () => {
-			for (const notFoundHandling of [
-				undefined,
-				"none",
-				"404-page",
-				"single-page-application",
-			] as const) {
-				const configuration: AssetConfig = normalizeConfiguration({
-					single_page_application: true,
-					not_found_handling: notFoundHandling,
-				});
-
-				const exists = (pathname: string) => {
-					if (pathname === "/index.html") {
-						return "index-etag";
-					}
-					if (pathname === "/logo.svg") {
-						return "logo-etag";
-					}
-					return null;
-				};
-
-				const getByETag = (eTag: string) => {
-					if (eTag === "index-etag") {
-						return {
-							readableStream: new ReadableStream(),
-							contentType: "text/html",
-						};
-					}
-					if (eTag === "logo-etag") {
-						return {
-							readableStream: new ReadableStream(),
-							contentType: "image/svg+xml",
-						};
-					}
-					throw new Error("bang");
-				};
-
-				// HTML
-				let response = await handleRequest(
-					new Request("https://example.com/"),
-					// @ts-expect-error Empty config default to using mocked jaeger
-					mockEnv,
-					configuration,
-					exists,
-					getByETag,
-					analytics
-				);
-
-				expect(response.status).toBe(200);
-				expect(response.headers.get("Content-Type")).toBe("text/html");
-
-				// Non-HTML
-				response = await handleRequest(
-					new Request("https://example.com/logo.svg"),
-					// @ts-expect-error Empty config default to using mocked jaeger
-					mockEnv,
-					configuration,
-					exists,
-					getByETag,
-					analytics
-				);
-
-				expect(response.status).toBe(200);
-				expect(response.headers.get("Content-Type")).toBe("image/svg+xml");
-
-				// No match
-				response = await handleRequest(
-					new Request("https://example.com/bang"),
-					// @ts-expect-error Empty config default to using mocked jaeger
-					mockEnv,
-					configuration,
-					exists,
-					getByETag,
-					analytics
-				);
-
-				expect(response.status).toBe(200);
-				expect(response.headers.get("Content-Type")).toBe("text/html");
-			}
-		});
-	});
-
 	describe("_headers", () => {
 		it("attaches custom headers", async () => {
 			const configuration: AssetConfig = normalizeConfiguration({
@@ -1336,7 +1252,7 @@ describe("[Asset Worker] `canFetch`", () => {
 		).toBeTruthy();
 	});
 
-	describe("single_page_application", async () => {
+	describe("assets_navigation_prefers_asset_serving", async () => {
 		const exists = (pathname: string) => {
 			if (["/404.html", "/index.html", "/foo.html"].includes(pathname)) {
 				return "some-etag";
@@ -1345,15 +1261,60 @@ describe("[Asset Worker] `canFetch`", () => {
 			return null;
 		};
 
-		const singlePageApplicationModes = [
-			[false, false],
-			[true, true],
+		interface CompatibilityOptions {
+			compatibilityDate?: string;
+			compatibilityFlags?: string[];
+		}
+
+		const compatibilityOptionsModes: [CompatibilityOptions, boolean][] = [
+			[{}, false],
+			[
+				{
+					compatibilityFlags: ["assets_navigation_prefers_asset_serving"],
+				},
+				true,
+			],
+			[
+				{
+					compatibilityFlags: ["assets_navigation_has_no_effect"],
+				},
+				false,
+			],
+			[
+				{
+					// Impossible in reality since workerd objects to mutually exclusive flags
+					compatibilityFlags: [
+						"assets_navigation_prefers_asset_serving",
+						"assets_navigation_has_no_effect",
+					],
+				},
+				true,
+			],
+			[
+				{
+					compatibilityDate: "2099-12-12",
+				},
+				true,
+			],
+			[
+				{
+					compatibilityDate: "2099-12-12",
+					compatibilityFlags: ["assets_navigation_prefers_asset_serving"],
+				},
+				true,
+			],
+			[
+				{
+					compatibilityDate: "2099-12-12",
+					compatibilityFlags: ["assets_navigation_has_no_effect"],
+				},
+				false,
+			],
 		] as const;
 
-		// Make sure all the not_found_handling options are overriden and exhibit the same behavior regardless
 		const notFoundHandlingModes = [
-			[undefined, true],
-			["none", true],
+			[undefined, false],
+			["none", false],
 			["404-page", true],
 			["single-page-application", true],
 		] as const;
@@ -1365,24 +1326,26 @@ describe("[Asset Worker] `canFetch`", () => {
 		] as const;
 
 		const matrix = [];
-		for (const singlePageApplication of singlePageApplicationModes) {
+		for (const compatibilityOptions of compatibilityOptionsModes) {
 			for (const notFoundHandling of notFoundHandlingModes) {
 				for (const headers of headersModes) {
 					matrix.push({
+						compatibilityDate: compatibilityOptions[0].compatibilityDate,
+						compatibilityFlags: compatibilityOptions[0].compatibilityFlags,
 						notFoundHandling: notFoundHandling[0],
-						singlePageApplication: singlePageApplication[0],
 						headers: headers[0],
 						expected:
-							notFoundHandling[1] && singlePageApplication[1] && headers[1],
+							compatibilityOptions[1] && notFoundHandling[1] && headers[1],
 					});
 				}
 			}
 		}
 
 		it.each(matrix)(
-			"single_page_application $singlePageApplication, not_found_handling $notFoundHandling, headers: $headers -> $expected",
+			"compatibility_date $compatibilityDate, compatibility_flags $compatibilityFlags, not_found_handling $notFoundHandling, headers: $headers -> $expected",
 			async ({
-				singlePageApplication,
+				compatibilityDate,
+				compatibilityFlags,
 				notFoundHandling,
 				headers,
 				expected,
@@ -1393,7 +1356,8 @@ describe("[Asset Worker] `canFetch`", () => {
 						// @ts-expect-error Empty config default to using mocked jaeger
 						mockEnv,
 						normalizeConfiguration({
-							single_page_application: singlePageApplication,
+							compatibility_date: compatibilityDate,
+							compatibility_flags: compatibilityFlags,
 							not_found_handling: notFoundHandling,
 						}),
 						exists
@@ -1406,7 +1370,8 @@ describe("[Asset Worker] `canFetch`", () => {
 						// @ts-expect-error Empty config default to using mocked jaeger
 						mockEnv,
 						normalizeConfiguration({
-							single_page_application: singlePageApplication,
+							compatibility_date: compatibilityDate,
+							compatibility_flags: compatibilityFlags,
 							not_found_handling: notFoundHandling,
 						}),
 						exists
@@ -1419,7 +1384,8 @@ describe("[Asset Worker] `canFetch`", () => {
 						// @ts-expect-error Empty config default to using mocked jaeger
 						mockEnv,
 						normalizeConfiguration({
-							single_page_application: singlePageApplication,
+							compatibility_date: compatibilityDate,
+							compatibility_flags: compatibilityFlags,
 							not_found_handling: notFoundHandling,
 						}),
 						exists
@@ -1432,7 +1398,8 @@ describe("[Asset Worker] `canFetch`", () => {
 						// @ts-expect-error Empty config default to using mocked jaeger
 						mockEnv,
 						normalizeConfiguration({
-							single_page_application: singlePageApplication,
+							compatibility_date: compatibilityDate,
+							compatibility_flags: compatibilityFlags,
 							not_found_handling: notFoundHandling,
 						}),
 						exists
