@@ -1,9 +1,0 @@
-{
-	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
-	"compilerOptions": {
-		"module": "CommonJS",
-		"types": ["@cloudflare/workers-types/experimental"]
-	},
-	"include": ["**/*.ts"],
-	"exclude": []
-}

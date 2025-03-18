@@ -10,7 +10,7 @@
 		"test:ci": "vitest run -c tests/vitest.config.mts"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "workspace:*",
+		"@cloudflare/vitest-pool-workers": "0.8.1",
 		"@cloudflare/workers-types": "^4.20250310.0",
 		"@types/node": "catalog:default",
 		"miniflare": "workspace:*",
