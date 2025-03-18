@@ -52,6 +52,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 	const additionalModulePaths = new Set<string>();
 
+	// This is set when the client environment is built to determine if the entry Worker should include assets
 	let hasClientBuild = false;
 
 	return [
@@ -151,7 +152,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			},
 			buildStart() {
 				// This resets the value when the dev server restarts
-				// At build time the config is evaluated for each environment before starting the builds
 				workersConfigsWarningShown = false;
 			},
 			configResolved(config) {
@@ -195,6 +195,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 								path.resolve(resolvedViteConfig.root, clientOutputDirectory)
 							),
 						};
+					} else {
+						workerConfig.assets = undefined;
 					}
 
 					config = workerConfig;
