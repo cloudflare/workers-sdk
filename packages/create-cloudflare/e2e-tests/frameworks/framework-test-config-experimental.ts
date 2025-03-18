@@ -44,25 +44,6 @@ export default function getFrameworkTestConfigExperimental() {
 				envInterfaceName: "Env",
 			},
 		},
-		remix: {
-			testCommitMessage: true,
-			timeout: LONG_TIMEOUT,
-			unsupportedPms: ["yarn"],
-			unsupportedOSs: ["win32"],
-			verifyDeploy: {
-				route: "/",
-				expectedText: "Welcome to Remix",
-			},
-			verifyPreview: {
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
-			flags: ["--typescript", "--no-install", "--no-git-init"],
-		},
 		next: {
 			testCommitMessage: true,
 			flags: [
