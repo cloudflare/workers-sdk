@@ -126,6 +126,8 @@ const CoreOptionsSchemaInput = z.intersection(
 		compatibilityDate: z.string().optional(),
 		compatibilityFlags: z.string().array().optional(),
 
+		unsafeInspectorProxy: z.boolean().optional(),
+
 		routes: z.string().array().optional(),
 
 		bindings: z.record(JsonSchema).optional(),
@@ -191,6 +193,7 @@ export const CoreSharedOptionsSchema = z.object({
 	httpsCertPath: z.string().optional(),
 
 	inspectorPort: z.number().optional(),
+
 	verbose: z.boolean().optional(),
 
 	log: z.instanceof(Log).optional(),

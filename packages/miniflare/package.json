@@ -83,6 +83,7 @@
 		"eslint-plugin-es": "^4.1.0",
 		"eslint-plugin-prettier": "^5.0.1",
 		"expect-type": "^0.15.0",
+		"get-port": "^7.1.0",
 		"heap-js": "^2.5.0",
 		"http-cache-semantics": "^4.1.0",
 		"kleur": "^4.1.5",
