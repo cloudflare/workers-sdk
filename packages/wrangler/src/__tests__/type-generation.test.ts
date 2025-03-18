@@ -129,7 +129,7 @@ const bindingsConfigMock: Omit<
 		],
 	},
 	workflows: [],
-	containers: { app: [] },
+	containers: undefined,
 	r2_buckets: [
 		{
 			binding: "R2_BUCKET_BINDING",

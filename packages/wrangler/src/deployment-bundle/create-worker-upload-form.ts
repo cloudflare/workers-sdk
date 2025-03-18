@@ -650,6 +650,11 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			? { main_module: main.name }
 			: { body_part: main.name }),
 		bindings: metadataBindings,
+		containers:
+			worker.containers === undefined
+				? undefined
+				: worker.containers.map((c) => ({ class_name: c.class_name })),
+
 		...(compatibility_date && { compatibility_date }),
 		...(compatibility_flags && {
 			compatibility_flags,
