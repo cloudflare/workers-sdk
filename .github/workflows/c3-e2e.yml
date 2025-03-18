@@ -27,9 +27,9 @@ jobs:
     if: ${{ needs.turbo-ignore.outputs.skip == 'failure' }}
     timeout-minutes: 45
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}-${{ matrix.experimental }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
       cancel-in-progress: true
-    name: ${{ format('Run tests for {0}@{1} on {2}', matrix.pm.name, matrix.pm.version, matrix.os, matrix.experimental) }}
+    name: ${{ format('Run tests for {0}@{1} on {2}', matrix.pm.name, matrix.pm.version, matrix.os) }}
     strategy:
       fail-fast: false
       matrix:
