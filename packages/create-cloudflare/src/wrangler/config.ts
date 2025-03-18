@@ -45,8 +45,11 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 			ensureNameExists(parsed, ctx.project.name),
 		);
 
-		const comment = `/**\n * For more details on how to configure Wrangler, refer to:\n * https://developers.cloudflare.com/workers/wrangler/configuration/\n */\n{\n\t"$schema": "node_modules/wrangler/config-schema.json",`;
+		const comment = `/**\n * For more details on how to configure Wrangler, refer to:\n * https://developers.cloudflare.com/workers/wrangler/configuration/\n */\n{`;
 
+		if (!modified["$schema"]) {
+			modified["$schema"] = "node_modules/wrangler/config-schema.json";
+		}
 		if (!modified["observability"]) {
 			modified["observability"] = { enabled: true };
 		}
