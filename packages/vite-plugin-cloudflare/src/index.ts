@@ -304,11 +304,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				handleWebSocket(vitePreviewServer.httpServer, miniflare.dispatchFetch);
 
-				return () => {
-					vitePreviewServer.middlewares.use((req, res, next) => {
-						middleware(req, res, next);
-					});
-				};
+				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
+				vitePreviewServer.middlewares.use((req, res, next) => {
+					middleware(req, res, next);
+				});
 			},
 		},
 		// Plugin to support `CompiledWasm` modules
