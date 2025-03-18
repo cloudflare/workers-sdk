@@ -198,6 +198,20 @@ export async function bundleWorker(
 	}
 
 	if (
+		targetConsumer === "dev"
+		// TODO: only load if assets enabled & !run_worker_first
+	) {
+		middlewareToLoad.push({
+			name: "assets-fetch",
+			path: "templates/middleware/middleware-assets-fetch.ts",
+			config: {
+				// TODO: pass in the asset binding name as config
+			},
+			supports: ["modules"],
+		});
+	}
+
+	if (
 		targetConsumer === "dev" &&
 		!process.env.WRANGLER_DISABLE_REQUEST_BODY_DRAINING
 	) {
