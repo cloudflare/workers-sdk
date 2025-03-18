@@ -9,6 +9,7 @@ export type Teams =
 	| "Workers: Workers Observability"
 	| "Product: KV"
 	| "Product: R2"
+	| "Product: R2 Data Catalog"
 	| "Product: D1"
 	| "Product: Queues"
 	| "Product: AI"
