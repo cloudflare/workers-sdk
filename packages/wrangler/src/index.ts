@@ -16,6 +16,7 @@ import {
 import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
 import { experimental_readRawConfig, loadDotEnv } from "./config";
+import { containers } from "./containers";
 import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
@@ -780,6 +781,11 @@ export function createCLIParser(argv: string[]) {
 	// cloudchamber
 	wrangler.command("cloudchamber", false, (cloudchamberArgs) => {
 		return cloudchamber(asJson(cloudchamberArgs.command(subHelp)), subHelp);
+	});
+
+	// containers
+	wrangler.command("containers", false, (containersArgs) => {
+		return containers(asJson(containersArgs.command(subHelp)), subHelp);
 	});
 
 	// [PRIVATE BETA] pubsub
