@@ -19,9 +19,6 @@ import {
 	writeJSON,
 } from "helpers/files";
 import astroTemplateExperimental from "templates-experimental/astro/c3";
-import assetsOnlyTemplateExperimental from "templates-experimental/hello-world-assets-only/c3";
-import helloWorldWithDurableObjectAssetsTemplateExperimental from "templates-experimental/hello-world-durable-object-with-assets/c3";
-import helloWorldWithAssetsTemplateExperimental from "templates-experimental/hello-world-with-assets/c3";
 import honoTemplateExperimental from "templates-experimental/hono/c3";
 import nextTemplateExperimental from "templates-experimental/next/c3";
 import qwikTemplateExperimental from "templates-experimental/qwik/c3";
@@ -34,8 +31,11 @@ import astroTemplate from "templates/astro/c3";
 import commonTemplate from "templates/common/c3";
 import docusaurusTemplate from "templates/docusaurus/c3";
 import gatsbyTemplate from "templates/gatsby/c3";
+import assetsOnlyTemplate from "templates/hello-world-assets-only/c3";
+import helloWorldWithDurableObjectAssetsTemplate from "templates/hello-world-durable-object-with-assets/c3";
 import helloWorldDurableObjectTemplate from "templates/hello-world-durable-object/c3";
-import helloWorldTemplate from "templates/hello-world/c3";
+import helloWorldWithAssetsTemplate from "templates/hello-world-with-assets/c3";
+import helloWorldWorkerTemplate from "templates/hello-world/c3";
 import honoTemplate from "templates/hono/c3";
 import nextTemplate from "templates/next/c3";
 import nuxtTemplate from "templates/nuxt/c3";
@@ -206,19 +206,18 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 
 export function getTemplateMap({ experimental = false }) {
 	if (experimental) {
-		return {
-			"hello-world-assets-only": assetsOnlyTemplateExperimental,
-			"hello-world-with-assets": helloWorldWithAssetsTemplateExperimental,
-			"hello-world-durable-object-with-assets":
-				helloWorldWithDurableObjectAssetsTemplateExperimental,
-		} as Record<string, TemplateConfig>;
+		return {} as Record<string, TemplateConfig>;
 	} else {
 		return {
-			"hello-world": helloWorldTemplate,
+			"hello-world": helloWorldWorkerTemplate,
+			"hello-world-assets-only": assetsOnlyTemplate,
+			"hello-world-with-assets": helloWorldWithAssetsTemplate,
+			"hello-world-durable-object": helloWorldDurableObjectTemplate,
+			"hello-world-durable-object-with-assets":
+				helloWorldWithDurableObjectAssetsTemplate,
 			common: commonTemplate,
 			scheduled: scheduledTemplate,
 			queues: queuesTemplate,
-			"hello-world-durable-object": helloWorldDurableObjectTemplate,
 			openapi: openapiTemplate,
 			"pre-existing": preExistingTemplate,
 		} as Record<string, TemplateConfig>;
@@ -366,9 +365,10 @@ export const createContext = async (
 
 	const categoryOptions = [
 		{
-			label: "Hello World example",
+			label: "Hello World Starter",
 			value: "hello-world",
-			description: "Select from barebones examples to get started with Workers",
+			description:
+				"Select from basic scaffolds to get started with Workers, Assets and Durable Objects",
 		},
 		{
 			label: "Framework Starter",

@@ -48,7 +48,7 @@ export const isUpdateAvailable = async () => {
 export const C3_DEFAULTS: C3Args = {
 	projectName: new Haikunator().haikunate({ tokenHex: true }),
 	category: "hello-world",
-	type: "hello-world",
+	type: "hello-world-with-assets",
 	framework: "analog",
 	experimental: false,
 	autoUpdate: true,
@@ -57,11 +57,11 @@ export const C3_DEFAULTS: C3Args = {
 	open: true,
 	lang: "ts",
 	template:
-		"cloudflare/workers-sdk/packages/create-cloudflare/templates/hello-world",
+		"cloudflare/workers-sdk/packages/create-cloudflare/templates/hello-world-with-assets",
 };
 
 export const WRANGLER_DEFAULTS = {
 	...C3_DEFAULTS,
-	type: "hello-world",
+	type: "hello-world-with-assets",
 	deploy: false,
 };

@@ -3,9 +3,10 @@ import type { TemplateConfig } from "../../src/templates";
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "hello-world-assets-only",
-	path: "templates-experimental/hello-world-assets-only",
-	displayName: "Hello World - Assets-only",
-	description: "Get started with a basic Worker that only serves static assets",
+	path: "templates/hello-world-assets-only",
+	displayName: "Assets only",
+	description:
+		"For static sites (including SPAs) or when using your own backend",
 	platform: "workers",
 	copyFiles: {
 		path: "./templates",
