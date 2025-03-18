@@ -89,10 +89,11 @@ export function resolvePluginConfig(
 		? path.resolve(root, pluginConfig.configPath)
 		: findWranglerConfig(root);
 
-	assert(
-		configPath,
-		`Config not found. Have you created a wrangler.json(c) or wrangler.toml file?`
-	);
+	if (!configPath) {
+		throw new Error(
+			`Config not found. Have you created a wrangler.json(c) or wrangler.toml file?`
+		);
+	}
 
 	const entryWorkerResolvedConfig = getWorkerConfig(configPath, cloudflareEnv, {
 		visitedConfigPaths: configPaths,
