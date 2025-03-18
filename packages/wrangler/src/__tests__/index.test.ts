@@ -52,6 +52,7 @@ describe("wrangler", () => {
 
 				  wrangler kv                     🗂️  Manage Workers KV Namespaces
 				  wrangler queues                 🇶  Manage Workers Queues
+				  wrangler event-subscriptions    🔔 Manage Event Subscriptions [open-beta]
 				  wrangler r2                     📦 Manage R2 buckets & objects
 				  wrangler d1                     🗄  Manage Workers D1 databases
 				  wrangler vectorize              🧮 Manage Vectorize indexes [open beta]
@@ -110,6 +111,7 @@ describe("wrangler", () => {
 
 				  wrangler kv                     🗂️  Manage Workers KV Namespaces
 				  wrangler queues                 🇶  Manage Workers Queues
+				  wrangler event-subscriptions    🔔 Manage Event Subscriptions [open-beta]
 				  wrangler r2                     📦 Manage R2 buckets & objects
 				  wrangler d1                     🗄  Manage Workers D1 databases
 				  wrangler vectorize              🧮 Manage Vectorize indexes [open beta]
