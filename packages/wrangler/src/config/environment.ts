@@ -907,8 +907,6 @@ export type Assets = {
 		| "none";
 	/** How to handle requests that do not match an asset. */
 	not_found_handling?: "single-page-application" | "404-page" | "none";
-	/** Whether or not to enable SPA mode */
-	single_page_application?: boolean;
 	/**
 	 * If true, route every request to the User Worker, whether or not it matches an asset.
 	 * If false, then respond to requests that match an asset with that asset directly.

@@ -10,12 +10,7 @@ export function setupSentry(
 	coloMetadata?: ColoMetadata,
 	versionMetadata?: WorkerVersionMetadata,
 	accountId?: number,
-	scriptId?: number,
-	compatibilityOptions: {
-		compatibilityDate?: string;
-		compatibilityFlags?: string[];
-		resolvedCompatibilityFlags?: string[];
-	} = {}
+	scriptId?: number
 ): Toucan | undefined {
 	// Are we running locally without access to Sentry secrets? If so, don't initialise Sentry
 	if (!(dsn && clientId && clientSecret)) {

@@ -1822,62 +1822,6 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 			});
 
-			it('should warn if using deprecated not_found_handling = "single-page-application"', async () => {
-				const expectedConfig = {
-					assets: {
-						directory: "./public",
-						not_found_handling: "single-page-application",
-					},
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					expectedConfig as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(config).toEqual(expect.objectContaining(expectedConfig));
-				expect(diagnostics.hasErrors()).toBe(false);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - [1mDeprecation[0m: \`assets.not_found_handling = \\"single-page-application\\"\`:
-					    This option has been deprecated. Please use \`assets.single_page_application = true\` instead."
-				`);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					"
-				`);
-			});
-
-			it("should error if not_found_handling and single_page_application are both specified", async () => {
-				const expectedConfig = {
-					assets: {
-						directory: "./public",
-						not_found_handling: "404-page",
-						single_page_application: true,
-					},
-				};
-
-				const { config, diagnostics } = normalizeAndValidateConfig(
-					expectedConfig as unknown as RawConfig,
-					undefined,
-					undefined,
-					{ env: undefined }
-				);
-
-				expect(config).toEqual(expect.objectContaining(expectedConfig));
-				expect(diagnostics.hasErrors()).toBe(true);
-				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					"
-				`);
-				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-					"Processing wrangler configuration:
-					  - Expected exactly one of the following fields [\\"not_found_handling\\",\\"single_page_application\\"]."
-				`);
-			});
-
 			it("should accept valid `assets` config values", () => {
 				const expectedConfig: RawConfig = {
 					assets: {

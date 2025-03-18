@@ -651,7 +651,9 @@ export const CORE_PLUGIN: Plugin<
 				worker: {
 					...workerScript,
 					compatibilityDate,
-					compatibilityFlags: options.compatibilityFlags,
+					compatibilityFlags: options.compatibilityFlags?.filter(
+						(flag) => !flag.startsWith("assets_")
+					),
 					bindings: workerBindings,
 					durableObjectNamespaces:
 						classNamesEntries.map<Worker_DurableObjectNamespace>(

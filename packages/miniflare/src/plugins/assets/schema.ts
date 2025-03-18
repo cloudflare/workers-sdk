@@ -14,7 +14,13 @@ export const AssetsOptionsSchema = z.object({
 			directory: PathSchema,
 			binding: z.string().optional(),
 			routerConfig: RouterConfigSchema.optional(),
-			assetConfig: AssetConfigSchema.optional(),
+			assetConfig: AssetConfigSchema.omit({
+				compatibility_date: true,
+				compatibility_flags: true,
+			}).optional(),
 		})
 		.optional(),
+
+	compatibilityDate: z.string().optional(),
+	compatibilityFlags: z.string().array().optional(),
 });

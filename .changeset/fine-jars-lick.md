@@ -2,4 +2,4 @@
 "wrangler": minor
 ---
 
-Add support for `assets.single_page_application` in `wrangler dev`
+Add support for `assets_sec_fetch_mode_navigate_header_prefers_asset_serving` compatibility flag in `wrangler dev`
