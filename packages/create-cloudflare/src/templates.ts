@@ -38,6 +38,7 @@ import openapiTemplate from "templates/openapi/c3";
 import preExistingTemplate from "templates/pre-existing/c3";
 import queuesTemplate from "templates/queues/c3";
 import qwikTemplate from "templates/qwik/c3";
+import reactRouterTemplate from "templates/react-router/c3";
 import reactTemplate from "templates/react/c3";
 import remixTemplate from "templates/remix/c3";
 import scheduledTemplate from "templates/scheduled/c3";
@@ -186,6 +187,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			nuxt: nuxtTemplate,
 			qwik: qwikTemplate,
 			react: reactTemplate,
+			"react-router": reactRouterTemplate,
 			remix: remixTemplate,
 			solid: solidTemplate,
 			svelte: svelteTemplate,
