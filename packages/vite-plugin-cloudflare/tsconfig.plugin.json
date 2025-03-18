@@ -5,5 +5,9 @@
 		"declarationMap": true
 	},
 	"include": ["src"],
-	"exclude": ["src/asset-workers", "src/runner-worker"]
+	"exclude": [
+		"src/asset-workers",
+		"src/runner-worker",
+		"src/__tests__/fixtures"
+	]
 }
