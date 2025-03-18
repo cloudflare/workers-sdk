@@ -16,7 +16,6 @@ import {
 	initRunners,
 } from "./cloudflare-environment";
 import { writeDeployConfig } from "./deploy-config";
-import { getDevEntryWorker } from "./dev";
 import {
 	getDevMiniflareOptions,
 	getPreviewMiniflareOptions,
@@ -29,7 +28,12 @@ import {
 } from "./node-js-compat";
 import { resolvePluginConfig } from "./plugin-config";
 import { additionalModuleGlobalRE } from "./shared";
-import { cleanUrl, getOutputDirectory, toMiniflareRequest } from "./utils";
+import {
+	cleanUrl,
+	getOutputDirectory,
+	getRouterWorker,
+	toMiniflareRequest,
+} from "./utils";
 import { handleWebSocket } from "./websockets";
 import { getWarningForWorkersConfigs } from "./workers-configs";
 import type { PluginConfig, ResolvedPluginConfig } from "./plugin-config";
@@ -291,21 +295,18 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				);
 
 				await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
-				const entryWorker = await getDevEntryWorker(
-					resolvedPluginConfig,
-					miniflare
-				);
+				const routerWorker = await getRouterWorker(miniflare);
 
 				const middleware = createMiddleware(
 					({ request }) => {
-						return entryWorker.fetch(toMiniflareRequest(request), {
+						return routerWorker.fetch(toMiniflareRequest(request), {
 							redirect: "manual",
 						}) as any;
 					},
 					{ alwaysCallNext: false }
 				);
 
-				handleWebSocket(viteDevServer.httpServer, entryWorker.fetch);
+				handleWebSocket(viteDevServer.httpServer, routerWorker.fetch);
 
 				return () => {
 					viteDevServer.middlewares.use((req, res, next) => {
