@@ -30,6 +30,8 @@ export default {
 				return testRequireUnenvAliasedPackages();
 			case "/test-immediate":
 				return await testImmediate();
+			case "/test-tls":
+				return await testTls();
 		}
 
 		return new Response(
@@ -39,6 +41,7 @@ export default {
 <a href="test-x509-certificate">Test X509Certificate</a>
 <a href="test-require-alias">Test require unenv aliased packages</a>
 <a href="test-immediate">Test setImmediate</a>
+<a href="test-tls">node:tls</a>
 `,
 			{ headers: { "Content-Type": "text/html; charset=utf-8" } }
 		);
@@ -194,4 +197,13 @@ async function testPostgresLibrary(env: Env, ctx: Context) {
 	// Clean up the client
 	ctx.waitUntil(client.end());
 	return resp;
+}
+
+async function testTls(env: Env, ctx: Context) {
+	const tls = await import("node:tls");
+
+	assert.strictEqual(typeof tls.connect, "function");
+	assert.strictEqual(typeof tls.TLSSocket, "function");
+
+	return new Response("OK");
 }
