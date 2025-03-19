@@ -2,7 +2,10 @@ import assert from "node:assert";
 import * as path from "node:path";
 import * as vite from "vite";
 import { DEFAULT_INSPECTOR_PORT } from "./constants";
-import { findWranglerConfig, getWorkerConfig } from "./workers-configs";
+import {
+	getValidatedWranglerConfigPath,
+	getWorkerConfig,
+} from "./workers-configs";
 import type {
 	AssetsOnlyWorkerResolvedConfig,
 	SanitizedWorkerConfig,
@@ -89,15 +92,10 @@ export function resolvePluginConfig(
 		/* prefixes */ ""
 	);
 
-	const configPath = pluginConfig.configPath
-		? path.resolve(root, pluginConfig.configPath)
-		: findWranglerConfig(root);
-
-	if (!configPath) {
-		throw new Error(
-			`Config not found. Have you created a wrangler.json(c) or wrangler.toml file?`
-		);
-	}
+	const configPath = getValidatedWranglerConfigPath(
+		root,
+		pluginConfig.configPath
+	);
 
 	const entryWorkerResolvedConfig = getWorkerConfig(configPath, cloudflareEnv, {
 		visitedConfigPaths: configPaths,
@@ -131,8 +129,13 @@ export function resolvePluginConfig(
 	const auxiliaryWorkersResolvedConfigs: WorkerResolvedConfig[] = [];
 
 	for (const auxiliaryWorker of pluginConfig.auxiliaryWorkers ?? []) {
+		const workerConfigPath = getValidatedWranglerConfigPath(
+			root,
+			auxiliaryWorker.configPath,
+			true
+		);
 		const workerResolvedConfig = getWorkerConfig(
-			path.resolve(root, auxiliaryWorker.configPath),
+			workerConfigPath,
 			cloudflareEnv,
 			{
 				visitedConfigPaths: configPaths,
