@@ -349,7 +349,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					addDebugToVitePrintUrls(vitePreviewServer);
 				}
 
-				const workerNames = workerConfigs.map((worker) => worker.name ?? "");
+				const workerNames = workerConfigs.map((worker) => {
+				  assert(worker.name);
+				  return worker.name;
+				});
 
 				const middleware = createMiddleware(
 					({ request }) => {
