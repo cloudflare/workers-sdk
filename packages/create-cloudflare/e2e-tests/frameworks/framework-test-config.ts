@@ -6,6 +6,10 @@ export default function getFrameworkTestConfig(pm: string) {
 		"react-router": {
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Hello from Cloudflare",
+			},
 			verifyPreview: {
 				route: "/",
 				expectedText: "Hello from Cloudflare",
