@@ -306,7 +306,8 @@ export function getDevMiniflareOptions(
 							worker: {
 								...workerOptions,
 								name: workerOptions.name ?? workerConfig.name,
-								unsafeInspectorProxy: true,
+								unsafeInspectorProxy:
+									resolvedPluginConfig.inspectorPort !== false,
 								modulesRoot: miniflareModulesRoot,
 								unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
 								serviceBindings: {
@@ -377,8 +378,8 @@ export function getDevMiniflareOptions(
 
 	return {
 		log: logger,
-		inspectorPort: resolvedPluginConfig.inspectorPort,
-		unsafeInspectorProxy: true,
+		inspectorPort: resolvedPluginConfig.inspectorPort || undefined,
+		unsafeInspectorProxy: resolvedPluginConfig.inspectorPort !== false,
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));
@@ -537,7 +538,7 @@ export function getPreviewMiniflareOptions(
 	vitePreviewServer: vite.PreviewServer,
 	workerConfigs: Unstable_Config[],
 	persistState: PersistState,
-	inspectorPort = DEFAULT_INSPECTOR_PORT
+	inspectorPort: number | false = DEFAULT_INSPECTOR_PORT
 ): MiniflareOptions {
 	const resolvedViteConfig = vitePreviewServer.config;
 	const workers: Array<WorkerOptions> = workerConfigs.flatMap((config) => {
@@ -552,7 +553,7 @@ export function getPreviewMiniflareOptions(
 			{
 				...workerOptions,
 				name: workerOptions.name ?? config.name,
-				unsafeInspectorProxy: true,
+				unsafeInspectorProxy: inspectorPort !== false,
 				...(miniflareWorkerOptions.main
 					? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
 					: { modules: true, script: "" }),
@@ -565,8 +566,8 @@ export function getPreviewMiniflareOptions(
 
 	return {
 		log: logger,
-		inspectorPort,
-		unsafeInspectorProxy: true,
+		inspectorPort: inspectorPort || undefined,
+		unsafeInspectorProxy: inspectorPort !== false,
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));

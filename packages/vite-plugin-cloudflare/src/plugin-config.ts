@@ -27,7 +27,7 @@ interface AuxiliaryWorkerConfig extends BaseWorkerConfig {
 export interface PluginConfig extends EntryWorkerConfig {
 	auxiliaryWorkers?: AuxiliaryWorkerConfig[];
 	persistState?: PersistState;
-	inspectorPort?: number;
+	inspectorPort?: number | false;
 }
 
 type Defined<T> = Exclude<T, undefined>;
@@ -46,7 +46,7 @@ interface BasePluginConfig {
 	configPaths: Set<string>;
 	persistState: PersistState;
 	cloudflareEnv: string | undefined;
-	inspectorPort: number;
+	inspectorPort: number | false;
 }
 
 interface AssetsOnlyPluginConfig extends BasePluginConfig {

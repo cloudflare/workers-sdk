@@ -13,5 +13,5 @@ export default defineConfig({
 			},
 		},
 	},
-	plugins: [cloudflare({ inspectorPort: 0, persistState: false })],
+	plugins: [cloudflare({ inspectorPort: false, persistState: false })],
 });

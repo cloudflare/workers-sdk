@@ -13,5 +13,5 @@ export default defineConfig({
 			},
 		},
 	},
-	plugins: [react(), cloudflare({ inspectorPort: 0, persistState: false })],
+	plugins: [react(), cloudflare({ inspectorPort: false, persistState: false })],
 });

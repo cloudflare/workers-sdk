@@ -72,7 +72,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		{
 			name: "vite-plugin-cloudflare:debug",
 			configureServer(viteDevServer) {
-				if (resolvedPluginConfig.type === "workers") {
+				if (
+					resolvedPluginConfig.type === "workers" &&
+					resolvedPluginConfig.inspectorPort !== false
+				) {
 					addDebugToVitePrintUrls(viteDevServer);
 				}
 
@@ -84,7 +87,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							);
 
 				viteDevServer.middlewares.use((req, res, next) => {
-					if (req.url === debuggingPath) {
+					if (
+						req.url === debuggingPath &&
+						resolvedPluginConfig.inspectorPort !== false
+					) {
 						const html = getDebugPathHtml(
 							workerNames,
 							resolvedPluginConfig.inspectorPort
@@ -96,11 +102,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				});
 			},
 			configurePreviewServer(vitePreviewServer) {
-				console.log(`\x1b[32m ??? \x1b[0m`);
-
 				const workerConfigs = getWorkerConfigs(vitePreviewServer.config.root);
 
-				if (workerConfigs.length >= 1) {
+				if (workerConfigs.length >= 1 && pluginConfig.inspectorPort !== false) {
 					addDebugToVitePrintUrls(vitePreviewServer);
 				}
 
@@ -110,7 +114,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				});
 
 				vitePreviewServer.middlewares.use((req, res, next) => {
-					if (req.url === debuggingPath) {
+					if (
+						req.url === debuggingPath &&
+						pluginConfig.inspectorPort !== false
+					) {
 						const html = getDebugPathHtml(
 							workerNames,
 							pluginConfig.inspectorPort ?? DEFAULT_INSPECTOR_PORT

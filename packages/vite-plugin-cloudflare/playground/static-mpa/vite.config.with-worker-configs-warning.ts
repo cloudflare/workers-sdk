@@ -21,7 +21,7 @@ export default defineConfig({
 	plugins: [
 		cloudflare({
 			configPath: "./wrangler.with-warning.toml",
-			inspectorPort: 0,
+			inspectorPort: false,
 			persistState: false,
 		}),
 	],
