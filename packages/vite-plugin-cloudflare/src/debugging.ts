@@ -28,7 +28,7 @@ export function addDebugToVitePrintUrls(
 }
 
 /**
- * Generate an HTML page that comprises of a single script that:
+ * Generate an HTML text that comprises of a single script that:
  *  - redirects the page to the devtools for the debugging of the first available worker
  *  - opens tags to the devtools for all the remaining workers if any
  *
@@ -37,12 +37,9 @@ export function addDebugToVitePrintUrls(
  *
  * @param workerNames the names of all the available workers
  * @param inspectorPort the inspector port that miniflare is using
- * @returns a miniflare html response object
+ * @returns the generated html
  */
-export function getDebuggerHtmlResponse(
-	workerNames: string[],
-	inspectorPort: number
-) {
+export function getDebugPathHtml(workerNames: string[], inspectorPort: number) {
 	// this function should always be called only when there is at least one worker to debug
 	assert(workerNames.length >= 1, "no workers present to debug");
 
@@ -52,21 +49,16 @@ export function getDebuggerHtmlResponse(
 		return devtoolsFrontendUrl;
 	});
 
-	return new Response(
-		`
-            <script>
-                const workerUrls = [${workerDevtoolsUrls.map((str) => JSON.stringify(str)).join(", ")}];
-                const [firstUrl, ...rest] = workerUrls;
-                for (const workerUrl of rest) {
-                    // open new tabs for the devtools of the various workers
-                    window.open(workerUrl);
-                }
-                // redirect the current tab to the devtools of the first worker
-                window.location.replace(firstUrl);
-            </script>
-        `,
-		{
-			headers: { "Content-Type": "text/html" },
-		}
-	);
+	return `
+		<script>
+			const workerUrls = [${workerDevtoolsUrls.map((str) => JSON.stringify(str)).join(", ")}];
+			const [firstUrl, ...rest] = workerUrls;
+			for (const workerUrl of rest) {
+				// open new tabs for the devtools of the various workers
+				window.open(workerUrl);
+			}
+			// redirect the current tab to the devtools of the first worker
+			window.location.replace(firstUrl);
+		</script>
+    `;
 }

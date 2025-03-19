@@ -19,7 +19,7 @@ import { DEFAULT_INSPECTOR_PORT } from "./constants";
 import {
 	addDebugToVitePrintUrls,
 	debuggingPath,
-	getDebuggerHtmlResponse,
+	getDebugPathHtml,
 } from "./debugging";
 import { getWorkerConfigs, writeDeployConfig } from "./deploy-config";
 import {
@@ -66,6 +66,62 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	let hasClientBuild = false;
 
 	return [
+		// Plugin that provides an __debug path for debugging the Cloudflare Workers.
+		// Note: the plugin should come before the main vite-plugin-cloudflare so that
+		//       the preview middleware can take precedence
+		{
+			name: "vite-plugin-cloudflare:debug",
+			configureServer(viteDevServer) {
+				if (resolvedPluginConfig.type === "workers") {
+					addDebugToVitePrintUrls(viteDevServer);
+				}
+
+				const workerNames =
+					resolvedPluginConfig.type === "assets-only"
+						? []
+						: Object.values(resolvedPluginConfig.workers).map(
+								(worker) => worker.name
+							);
+
+				viteDevServer.middlewares.use((req, res, next) => {
+					if (req.url === debuggingPath) {
+						const html = getDebugPathHtml(
+							workerNames,
+							resolvedPluginConfig.inspectorPort
+						);
+						res.setHeader("Content-Type", "text/html");
+						return res.end(html);
+					}
+					next();
+				});
+			},
+			configurePreviewServer(vitePreviewServer) {
+				console.log(`\x1b[32m ??? \x1b[0m`);
+
+				const workerConfigs = getWorkerConfigs(vitePreviewServer.config.root);
+
+				if (workerConfigs.length >= 1) {
+					addDebugToVitePrintUrls(vitePreviewServer);
+				}
+
+				const workerNames = workerConfigs.map((worker) => {
+					assert(worker.name);
+					return worker.name;
+				});
+
+				vitePreviewServer.middlewares.use((req, res, next) => {
+					if (req.url === debuggingPath) {
+						const html = getDebugPathHtml(
+							workerNames,
+							pluginConfig.inspectorPort ?? DEFAULT_INSPECTOR_PORT
+						);
+						res.setHeader("Content-Type", "text/html");
+						return res.end(html);
+					}
+					next();
+				});
+			},
+		},
 		{
 			name: "vite-plugin-cloudflare",
 			// This only applies to this plugin so is safe to use while other plugins migrate to the Environment API
@@ -302,19 +358,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					getDevMiniflareOptions(resolvedPluginConfig, viteDevServer)
 				);
 
-				if (resolvedPluginConfig.type === "workers") {
-					addDebugToVitePrintUrls(viteDevServer);
-				}
-
 				await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
 				const routerWorker = await getRouterWorker(miniflare);
-
-				const workerNames =
-					resolvedPluginConfig.type === "assets-only"
-						? []
-						: Object.values(resolvedPluginConfig.workers).map(
-								(worker) => worker.name
-							);
 
 				const middleware = createMiddleware(
 					({ request }) => {
@@ -345,24 +390,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					)
 				);
 
-				if (workerConfigs.length >= 1) {
-					addDebugToVitePrintUrls(vitePreviewServer);
-				}
-
-				const workerNames = workerConfigs.map((worker) => {
-				  assert(worker.name);
-				  return worker.name;
-				});
-
 				const middleware = createMiddleware(
 					({ request }) => {
-						const url = new URL(request.url);
-						if (url.pathname === debuggingPath && workerNames.length >= 1) {
-							return getDebuggerHtmlResponse(
-								workerNames,
-								pluginConfig.inspectorPort ?? DEFAULT_INSPECTOR_PORT
-							);
-						}
 						return miniflare.dispatchFetch(toMiniflareRequest(request), {
 							redirect: "manual",
 						}) as any;
