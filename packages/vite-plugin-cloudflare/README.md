@@ -512,7 +512,7 @@ To setup VS Code for breakpoint debugging for your application, you will need to
 {
   "configurations": [
     {
-      "name": "Debug Worker1",
+      "name": "<NAME_OF_WORKER>",
       "type": "node",
       "request": "attach",
       "websocketAddress": "ws://localhost:9229/<NAME_OF_WORKER>",
