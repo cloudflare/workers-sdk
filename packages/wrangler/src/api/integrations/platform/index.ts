@@ -19,8 +19,6 @@ import type { Config, RawConfig, RawEnvironment } from "../../../config";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, ModuleRule, WorkerOptions } from "miniflare";
 
-export { DEFAULT_MODULE_RULES as unstable_DEFAULT_MODULE_RULES };
-
 export { readConfig as unstable_readConfig };
 export type {
 	Config as Unstable_Config,
