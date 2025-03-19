@@ -484,7 +484,7 @@ Secrets can be provided to your Worker in local development using a [`.dev.vars`
 
 ## Debugging
 
-The Cloudflare Vite plugin allows you to conveniently debug your worker or workers logic during local development.
+The Cloudflare Vite plugin allows you to conveniently debug your Worker code during local development.
 
 By default the inspector port used by the plugin is `9229`, you can customize such by providing a different port to the plugin's `inspectorPort` option.
 
