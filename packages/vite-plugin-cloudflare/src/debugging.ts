@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import { Response } from "miniflare";
 import type * as vite from "vite";
 
 export const debuggingPath = "/__debug";
