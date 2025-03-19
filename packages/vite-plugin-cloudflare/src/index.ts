@@ -1,11 +1,16 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
+import * as fsp from "node:fs/promises";
 import { builtinModules } from "node:module";
 import * as path from "node:path";
 import { createMiddleware } from "@hattip/adapter-node";
 import MagicString from "magic-string";
 import { Miniflare } from "miniflare";
 import * as vite from "vite";
+import {
+	createModuleReference,
+	matchAdditionalModule,
+} from "./additional-modules";
 import {
 	createCloudflareEnvironmentOptions,
 	initRunners,
@@ -23,11 +28,10 @@ import {
 	resolveNodeJSImport,
 } from "./node-js-compat";
 import { resolvePluginConfig } from "./plugin-config";
-import { MODULE_PATTERN } from "./shared";
-import { getOutputDirectory, toMiniflareRequest } from "./utils";
+import { additionalModuleGlobalRE } from "./shared";
+import { cleanUrl, getOutputDirectory, toMiniflareRequest } from "./utils";
 import { handleWebSocket } from "./websockets";
 import { getWarningForWorkersConfigs } from "./workers-configs";
-import type { ModuleType } from "./constants";
 import type { PluginConfig, ResolvedPluginConfig } from "./plugin-config";
 import type { Unstable_RawConfig } from "wrangler";
 
@@ -45,6 +49,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 	// this flag is used to show the workers configs warning only once
 	let workersConfigsWarningShown = false;
+
+	const additionalModulePaths = new Set<string>();
 
 	return [
 		{
@@ -310,9 +316,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				});
 			},
 		},
-		// Plugin to support `CompiledWasm` modules
+		// Plugin to support additional modules
 		{
-			name: "vite-plugin-cloudflare:modules",
+			name: "vite-plugin-cloudflare:additional-modules",
 			// We set `enforce: "pre"` so that this plugin runs before the Vite core plugins.
 			// Otherwise the `vite:wasm-fallback` plugin prevents the `.wasm` extension being used for module imports.
 			enforce: "pre",
@@ -320,30 +326,45 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				// Note that this hook does not get called in preview mode.
 				return getWorkerConfig(environment.name) !== undefined;
 			},
-			async resolveId(source, importer) {
-				if (!source.endsWith(".wasm")) {
+			async resolveId(source, importer, options) {
+				const additionalModuleType = matchAdditionalModule(source);
+
+				if (!additionalModuleType) {
 					return;
 				}
 
-				const resolved = await this.resolve(source, importer);
-				assert(
-					resolved,
-					`Unexpected error: could not resolve Wasm module ${source}`
+				// We clean the module URL here as the default rules include `.wasm?module`.
+				// We therefore need the match to include the query param but remove it before resolving the ID.
+				const resolved = await this.resolve(
+					cleanUrl(source),
+					importer,
+					options
 				);
+
+				if (!resolved) {
+					throw new Error(`Import "${source}" not found. Does the file exist?`);
+				}
+
+				// Add the path to the additional module so that we can identify the module in the `hotUpdate` hook
+				additionalModulePaths.add(resolved.id);
 
 				return {
 					external: true,
-					id: createModuleReference("CompiledWasm", resolved.id),
+					id: createModuleReference(additionalModuleType, resolved.id),
 				};
 			},
-			renderChunk(code, chunk) {
-				const moduleRE = new RegExp(MODULE_PATTERN, "g");
-				let match: RegExpExecArray | null;
+			hotUpdate(options) {
+				if (additionalModulePaths.has(options.file)) {
+					options.server.restart();
+				}
+			},
+			async renderChunk(code, chunk) {
+				const matches = code.matchAll(additionalModuleGlobalRE);
 				let magicString: MagicString | undefined;
 
-				while ((match = moduleRE.exec(code))) {
+				for (const match of matches) {
 					magicString ??= new MagicString(code);
-					const [full, moduleType, modulePath] = match;
+					const [full, _, modulePath] = match;
 
 					assert(
 						modulePath,
@@ -353,10 +374,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					let source: Buffer;
 
 					try {
-						source = fs.readFileSync(modulePath);
+						source = await fsp.readFile(modulePath);
 					} catch (error) {
 						throw new Error(
-							`Import ${modulePath} not found. Does the file exist?`
+							`Import "${modulePath}" not found. Does the file exist?`
 						);
 					}
 
@@ -515,8 +536,4 @@ function getDotDevDotVarsContent(
 	}
 
 	return null;
-}
-
-function createModuleReference(type: ModuleType, id: string) {
-	return `__CLOUDFLARE_MODULE__${type}__${id}__`;
 }
