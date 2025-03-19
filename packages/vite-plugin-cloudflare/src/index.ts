@@ -326,7 +326,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				// Note that this hook does not get called in preview mode.
 				return getWorkerConfig(environment.name) !== undefined;
 			},
-			async resolveId(source, importer) {
+			async resolveId(source, importer, options) {
 				const additionalModuleType = matchAdditionalModule(source);
 
 				if (!additionalModuleType) {
@@ -335,7 +335,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				// We clean the module URL here as the default rules include `.wasm?module`.
 				// We therefore need the match to include the query param but remove it before resolving the ID.
-				const resolved = await this.resolve(cleanUrl(source), importer);
+				const resolved = await this.resolve(
+					cleanUrl(source),
+					importer,
+					options
+				);
 
 				if (!resolved) {
 					throw new Error(`Import "${source}" not found. Does the file exist?`);
