@@ -19,6 +19,7 @@ export const {
 	Certificate,
 	checkPrime,
 	checkPrimeSync,
+	// @ts-expect-error
 	Cipheriv,
 	createCipheriv,
 	createDecipheriv,
@@ -32,6 +33,7 @@ export const {
 	createSecretKey,
 	createSign,
 	createVerify,
+	// @ts-expect-error
 	Decipheriv,
 	diffieHellman,
 	DiffieHellman,
@@ -111,7 +113,6 @@ export default {
 	createECDH,
 	createSign,
 	createVerify,
-	// @ts-expect-error unenv has unknown type
 	diffieHellman,
 	getCipherInfo,
 	hash,
