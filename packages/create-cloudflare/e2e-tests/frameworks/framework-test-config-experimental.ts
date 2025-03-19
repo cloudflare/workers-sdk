@@ -2,24 +2,6 @@ import { keys, LONG_TIMEOUT } from "../helpers";
 
 export default function getFrameworkTestConfigExperimental() {
 	return {
-		hono: {
-			testCommitMessage: true,
-			unsupportedOSs: ["win32"],
-			verifyDeploy: {
-				route: "/message",
-				expectedText: "Hello Hono!",
-			},
-			verifyPreview: {
-				route: "/message",
-				expectedText: "Hello Hono!",
-			},
-			promptHandlers: [
-				{
-					matcher: /Do you want to install project dependencies\?/,
-					input: [keys.enter],
-				},
-			],
-		},
 		qwik: {
 			promptHandlers: [
 				{

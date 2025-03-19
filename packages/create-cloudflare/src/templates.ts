@@ -18,7 +18,6 @@ import {
 	writeFile,
 	writeJSON,
 } from "helpers/files";
-import honoTemplateExperimental from "templates-experimental/hono/c3";
 import nextTemplateExperimental from "templates-experimental/next/c3";
 import qwikTemplateExperimental from "templates-experimental/qwik/c3";
 import remixTemplateExperimental from "templates-experimental/remix/c3";
@@ -175,7 +174,6 @@ export type TemplateMap = Record<
 export function getFrameworkMap({ experimental = false }): TemplateMap {
 	if (experimental) {
 		return {
-			hono: honoTemplateExperimental,
 			next: nextTemplateExperimental,
 			qwik: qwikTemplateExperimental,
 			remix: remixTemplateExperimental,
@@ -229,6 +227,12 @@ export function getNamesAndDescriptions(templateMap: TemplateMap) {
 }
 
 export const deriveCorrelatedArgs = (args: Partial<C3Args>) => {
+	if (
+		args.template === "hono-worker-assets" ||
+		args.template === "hono-worker-only"
+	) {
+		args.framework = "hono";
+	}
 	// Derive the type based on the additional arguments provided
 	// Both `web-framework` and `remote-template` types are no longer used
 	// They are set only for backwards compatibility

@@ -1,11 +1,8 @@
 import { logRaw } from "@cloudflare/cli";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
-import { loadTemplateSnippets, transformFile } from "helpers/codemod";
+import { processArgument } from "helpers/args";
 import { detectPackageManager } from "helpers/packageManagers";
 import type { TemplateConfig } from "../../src/templates";
-import type * as recast from "recast";
 import type { C3Context } from "types";
 
 const generate = async (ctx: C3Context) => {
@@ -23,39 +20,41 @@ const generate = async (ctx: C3Context) => {
 	logRaw(""); // newline
 };
 
-const configure = async (ctx: C3Context) => {
-	const indexFile = "src/index.ts";
-
-	const s = spinner();
-	s.start(`Updating \`${indexFile}\``);
-
-	const snippets = loadTemplateSnippets(ctx);
-
-	transformFile(indexFile, {
-		visitVariableDeclarator(n) {
-			if (n.node.id.type === "Identifier" && n.node.id.name === "app") {
-				n.node.init = snippets
-					.appDeclarationTs[0] as recast.types.namedTypes.NewExpression;
-
-				return false;
-			}
-		},
-	});
-
-	s.stop(`${brandColor("updated")} \`${dim(indexFile)}\``);
-};
-
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "hono",
 	frameworkCli: "create-hono",
 	displayName: "Hono",
 	copyFiles: {
-		path: "./templates",
+		async selectVariant(ctx: C3Context) {
+			return processArgument(ctx.args, "template", {
+				type: "select",
+				question: "Do you want to include assets?",
+				label: "Include assets",
+				options: [
+					{
+						value: "hono-worker-assets",
+						label: "Yes",
+					},
+					{
+						value: "hono-worker-only",
+						label: "No",
+					},
+				],
+				defaultValue: "hono-worker-assets",
+			});
+		},
+		variants: {
+			"hono-worker-assets": {
+				path: "./worker-with-assets",
+			},
+			"hono-worker-only": {
+				path: "./worker-only",
+			},
+		},
 	},
 	platform: "workers",
 	generate,
-	configure,
 	transformPackageJson: async () => ({
 		scripts: {
 			dev: "wrangler dev",

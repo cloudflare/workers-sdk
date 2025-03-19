@@ -208,14 +208,15 @@ export default function getFrameworkTestConfig(pm: string) {
 			},
 		},
 		hono: {
+			argv: ["--template", "hono-worker-assets"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
-				route: "/",
+				route: "/message",
 				expectedText: "Hello Hono!",
 			},
 			verifyPreview: {
-				route: "/",
+				route: "/message",
 				expectedText: "Hello Hono!",
 			},
 			promptHandlers: [
