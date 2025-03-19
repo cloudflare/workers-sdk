@@ -652,6 +652,7 @@ export const CORE_PLUGIN: Plugin<
 					...workerScript,
 					compatibilityDate,
 					compatibilityFlags: options.compatibilityFlags?.filter(
+						// This can be removed once https://github.com/cloudflare/workerd/pull/3745 lands.
 						(flag) => !flag.startsWith("assets_")
 					),
 					bindings: workerBindings,
