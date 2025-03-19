@@ -333,7 +333,7 @@ export function getDevMiniflareOptions(
 
 										const [moduleId] = invokePayloadData.data;
 
-										// Additional modules (CompiledWasm, Text, Data)
+										// Additional modules (CompiledWasm, Data, Text)
 										if (additionalModuleRE.test(moduleId)) {
 											const result = {
 												externalize: moduleId,
