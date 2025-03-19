@@ -32,7 +32,7 @@ export const friendlyBindingNames: Record<
 	mtls_certificates: "mTLS Certificates",
 	workflows: "Workflows",
 	pipelines: "Pipelines",
-	secret_stores: "Secret Stores",
+	secrets_store_secrets: "Secrets Store Secrets",
 	assets: "Assets",
 } as const;
 
@@ -81,7 +81,7 @@ export function printBindings(
 		hyperdrive,
 		r2_buckets,
 		logfwdr,
-		secret_stores,
+		secrets_store_secrets,
 		services,
 		analytics_engine_datasets,
 		text_blobs,
@@ -290,15 +290,19 @@ export function printBindings(
 		});
 	}
 
-	if (secret_stores !== undefined && secret_stores.length > 0) {
+	if (secrets_store_secrets !== undefined && secrets_store_secrets.length > 0) {
 		output.push({
-			name: friendlyBindingNames.secret_stores,
-			entries: secret_stores.map(({ binding, store_id, name }) => {
-				return {
-					key: binding,
-					value: addSuffix(`${store_id}/${name}`),
-				};
-			}),
+			name: friendlyBindingNames.secrets_store_secrets,
+			entries: secrets_store_secrets.map(
+				({ binding, store_id, secret_name }) => {
+					return {
+						key: binding,
+						value: addSuffix(`${store_id}/${secret_name}`, {
+							isSimulatedLocally: true,
+						}),
+					};
+				}
+			),
 		});
 	}
 

@@ -126,7 +126,7 @@ export type WorkerMetadataBinding =
 	| { type: "mtls_certificate"; name: string; certificate_id: string }
 	| { type: "pipelines"; name: string; pipeline: string }
 	| {
-			type: "secret_store";
+			type: "secrets_store_secret";
 			name: string;
 			store_id: string;
 			secret_name: string;
@@ -368,14 +368,16 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		});
 	});
 
-	bindings.secret_stores?.forEach(({ binding, store_id, name }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "secret_store",
-			store_id,
-			secret_name: name,
-		});
-	});
+	bindings.secrets_store_secrets?.forEach(
+		({ binding, store_id, secret_name }) => {
+			metadataBindings.push({
+				name: binding,
+				type: "secrets_store_secret",
+				store_id,
+				secret_name,
+			});
+		}
+	);
 
 	bindings.services?.forEach(
 		({ binding, service, environment, entrypoint }) => {

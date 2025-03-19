@@ -385,10 +385,10 @@ type WorkerOptionsBindings = Pick<
 	| "hyperdrives"
 	| "durableObjects"
 	| "serviceBindings"
-	| "secretStores"
 	| "ratelimits"
 	| "workflows"
 	| "wrappedBindings"
+	| "secretsStoreSecrets"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -709,8 +709,11 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			bindings.hyperdrive?.map(hyperdriveEntry) ?? []
 		),
 		workflows: Object.fromEntries(bindings.workflows?.map(workflowEntry) ?? []),
-		secretStores: Object.fromEntries(
-			bindings.secret_stores?.map((binding) => [binding.binding, binding]) ?? []
+		secretsStoreSecrets: Object.fromEntries(
+			bindings.secrets_store_secrets?.map((binding) => [
+				binding.binding,
+				binding,
+			]) ?? []
 		),
 		durableObjects: Object.fromEntries([
 			...internalObjects.map(({ name, class_name }) => {
@@ -784,7 +787,7 @@ export function buildPersistOptions(
 			r2Persist: path.join(v3Path, "r2"),
 			d1Persist: path.join(v3Path, "d1"),
 			workflowsPersist: path.join(v3Path, "workflows"),
-			secretStorePersist: path.join(v3Path, "secrets"),
+			secretsStorePersist: path.join(v3Path, "secrets-store"),
 		};
 	}
 }
