@@ -1,6 +1,10 @@
 import { keys, LONG_TIMEOUT } from "../helpers";
+import type { FrameworkTestConfig } from "../frameworks.test";
 
-export default function getFrameworkTestConfigExperimental() {
+export default function getFrameworkTestConfigExperimental(): Record<
+	string,
+	FrameworkTestConfig
+> {
 	return {
 		hono: {
 			testCommitMessage: true,
@@ -19,6 +23,12 @@ export default function getFrameworkTestConfigExperimental() {
 					input: [keys.enter],
 				},
 			],
+			verifyBuildCfTypes: {
+				outputFile: "worker-configuration.d.ts",
+				envInterfaceName: "CloudflareBindings",
+				command: "wrangler types --env-interface CloudflareBindings",
+				compatFlags: [],
+			},
 		},
 		qwik: {
 			promptHandlers: [
@@ -42,6 +52,8 @@ export default function getFrameworkTestConfigExperimental() {
 			verifyBuildCfTypes: {
 				outputFile: "worker-configuration.d.ts",
 				envInterfaceName: "Env",
+				command: "wrangler types",
+				compatFlags: ["nodejs_compat"],
 			},
 		},
 		remix: {
@@ -60,6 +72,8 @@ export default function getFrameworkTestConfigExperimental() {
 			verifyBuildCfTypes: {
 				outputFile: "worker-configuration.d.ts",
 				envInterfaceName: "Env",
+				command: "wrangler types",
+				compatFlags: [],
 			},
 			flags: ["--typescript", "--no-install", "--no-git-init"],
 		},
@@ -77,6 +91,9 @@ export default function getFrameworkTestConfigExperimental() {
 			verifyBuildCfTypes: {
 				outputFile: "cloudflare-env.d.ts",
 				envInterfaceName: "CloudflareEnv",
+				command:
+					"wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+				compatFlags: ["nodejs_compat"],
 			},
 			verifyPreview: {
 				route: "/test",
@@ -148,6 +165,12 @@ export default function getFrameworkTestConfigExperimental() {
 			verifyPreview: {
 				route: "/test",
 				expectedText: "C3_TEST",
+			},
+			verifyBuildCfTypes: {
+				outputFile: "./src/worker-configuration.d.ts",
+				envInterfaceName: "Env",
+				command: "wrangler types",
+				compatFlags: [],
 			},
 		},
 	};

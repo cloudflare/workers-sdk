@@ -1,7 +1,10 @@
 import { keys, LONG_TIMEOUT } from "../helpers";
+import type { FrameworkTestConfig } from "../frameworks.test";
 
 // These are ordered based on speed and reliability for ease of debugging
-export default function getFrameworkTestConfig(pm: string) {
+export default function getFrameworkTestConfig(
+	pm: string,
+): Record<string, FrameworkTestConfig> {
 	return {
 		"astro:pages": {
 			argv: ["--platform", "pages"],
@@ -126,6 +129,8 @@ export default function getFrameworkTestConfig(pm: string) {
 			verifyBuildCfTypes: {
 				outputFile: "worker-configuration.d.ts",
 				envInterfaceName: "Env",
+				command: "wrangler types",
+				compatFlags: [],
 			},
 			verifyBuild: {
 				outputDir: "./dist/analog/public",
@@ -224,6 +229,12 @@ export default function getFrameworkTestConfig(pm: string) {
 					input: [keys.enter],
 				},
 			],
+			verifyBuildCfTypes: {
+				outputFile: "worker-configuration.d.ts",
+				envInterfaceName: "CloudflareBindings",
+				command: "wrangler types --env-interface CloudflareBindings",
+				compatFlags: [],
+			},
 		},
 		qwik: {
 			promptHandlers: [
@@ -246,6 +257,8 @@ export default function getFrameworkTestConfig(pm: string) {
 			verifyBuildCfTypes: {
 				outputFile: "worker-configuration.d.ts",
 				envInterfaceName: "Env",
+				command: "wrangler types",
+				compatFlags: ["nodejs_compat"],
 			},
 		},
 		remix: {
@@ -264,6 +277,8 @@ export default function getFrameworkTestConfig(pm: string) {
 			verifyBuildCfTypes: {
 				outputFile: "worker-configuration.d.ts",
 				envInterfaceName: "Env",
+				command: "wrangler types",
+				compatFlags: [],
 			},
 			verifyBuild: {
 				outputDir: "./build/client",
@@ -284,6 +299,8 @@ export default function getFrameworkTestConfig(pm: string) {
 			verifyBuildCfTypes: {
 				outputFile: "env.d.ts",
 				envInterfaceName: "CloudflareEnv",
+				command: "wrangler types --env-interface CloudflareEnv env.d.ts",
+				compatFlags: ["nodejs_compat"],
 			},
 			verifyDeploy: {
 				route: "/",
@@ -324,6 +341,8 @@ export default function getFrameworkTestConfig(pm: string) {
 			verifyBuildCfTypes: {
 				outputFile: "worker-configuration.d.ts",
 				envInterfaceName: "Env",
+				command: "wrangler types",
+				compatFlags: ["nodejs_compat"],
 			},
 			verifyBuild: {
 				outputDir: "./dist",
@@ -349,6 +368,8 @@ export default function getFrameworkTestConfig(pm: string) {
 			verifyBuildCfTypes: {
 				outputFile: "worker-configuration.d.ts",
 				envInterfaceName: "Env",
+				command: "wrangler types",
+				compatFlags: ["nodejs_compat"],
 			},
 		},
 		"react:pages": {
@@ -397,6 +418,11 @@ export default function getFrameworkTestConfig(pm: string) {
 				// This React SPA will change this at runtime but we are only making a fetch request
 				// not actually running the client side JS.
 				expectedText: "Vite + React + TS",
+			},
+			verifyBuildCfTypes: {
+				outputFile: "worker-configuration.d.ts",
+				envInterfaceName: "Env",
+				command: "wrangler types",
 			},
 		},
 		solid: {
@@ -460,6 +486,12 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
+			verifyBuildCfTypes: {
+				outputFile: "./src/worker-configuration.d.ts",
+				envInterfaceName: "Env",
+				command: "wrangler types",
+				compatFlags: [],
+			},
 		},
 		"vue:pages": {
 			argv: ["--platform", "pages"],
@@ -487,6 +519,11 @@ export default function getFrameworkTestConfig(pm: string) {
 				previewArgs: ["--host=127.0.0.1"],
 				route: "/",
 				expectedText: "Vite App",
+			},
+			verifyBuildCfTypes: {
+				outputFile: "worker-configuration.d.ts",
+				envInterfaceName: "Env",
+				command: "wrangler types",
 			},
 		},
 	};
