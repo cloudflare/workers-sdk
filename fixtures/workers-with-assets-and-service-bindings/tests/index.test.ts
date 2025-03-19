@@ -58,7 +58,8 @@ describe.each(devCmds)(
 		describe("Workers running in separate wrangler dev sessions", () => {
 			describe("Service binding to default export", () => {
 				// this currently incorrectly returns the User Worker response
-				// instead of the Asset Worker response
+				// instead of the Asset Worker response, unless `--x-assets-rpc`
+				// is provided
 				failsIf(!args.length)(
 					"should return Asset Worker response for routes that serve static content",
 					async ({ expect }) => {
@@ -130,7 +131,8 @@ describe.each(devCmds)(
 
 			describe("Service binding to default entrypoint", () => {
 				// this currently incorrectly returns the User Worker response
-				// instead of the Asset Worker response
+				// instead of the Asset Worker response, unless `--x-assets-rpc`
+				// is provided
 				failsIf(!args.length)(
 					"should return Asset Worker response for fetch requests for routes that serve static content",
 					async ({ expect }) => {

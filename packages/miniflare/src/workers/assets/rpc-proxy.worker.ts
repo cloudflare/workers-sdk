@@ -3,7 +3,7 @@ import type RouterWorker from "@cloudflare/workers-shared/asset-worker/src/index
 
 interface Env {
 	ROUTER_WORKER: Service<RouterWorker>;
-	USER_WORKER: Fetcher;
+	USER_WORKER: Fetcher | Service;
 }
 
 /*
@@ -46,7 +46,7 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 				 * Otherwise, forward to the USER_WORKER and return its response
 				 */
 				return function (...args: Array<unknown>) {
-					// @ts-ignore to figure out
+					// @ts-expect-error
 					return Reflect.apply(target.env.USER_WORKER[prop], target, args);
 				};
 			},
