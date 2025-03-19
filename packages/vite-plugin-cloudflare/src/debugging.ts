@@ -15,12 +15,13 @@ export function addDebugToVitePrintUrls(
 	server.printUrls = () => {
 		originalPrintUrls();
 
-		const httpServerAddress = server.httpServer?.address();
-		if (httpServerAddress && typeof httpServerAddress !== "string") {
-			const { port } = httpServerAddress;
+		const localUrl = server.resolvedUrls?.local[0];
+
+		if (localUrl) {
+			const { protocol, hostname, port } = new URL(localUrl);
 			const orange = (str: string) => `\x1b[38;5;214m${str}\x1b[0m`;
 			server.config.logger.info(
-				`  ${orange("➜")}  Debug:   ${orange(`http://localhost:${port}${debuggingPath}`)}`
+				`  ${orange("➜")}  Debug:   ${orange(`${protocol}${hostname}:${port}${debuggingPath}`)}`
 			);
 		}
 	};
