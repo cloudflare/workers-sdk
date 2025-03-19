@@ -1,4 +1,3 @@
-import nodeTls from "node:tls";
 import {
 	checkServerIdentity,
 	CLIENT_RENEG_LIMIT,
@@ -15,6 +14,7 @@ import {
 	SecureContext,
 	Server,
 } from "unenv/node/tls";
+import type nodeTls from "node:tls";
 
 export {
 	checkServerIdentity,
@@ -68,7 +68,7 @@ export const createSecureContext: typeof nodeTls.createSecureContext = (
 	];
 
 	for (const k of keys) {
-		if (options?.[k] !== undefined) {
+		if (options?.[k] != undefined) {
 			throw new Error("createSecureContext only supports default options.");
 		}
 	}
