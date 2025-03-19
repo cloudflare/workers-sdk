@@ -2,7 +2,8 @@ import bin from "./modules/bin-example.bin";
 import html from "./modules/html-example.html";
 import text from "./modules/text-example.txt";
 import wasm from "./modules/wasm-example.wasm";
-import wasmWithParam from "./modules/wasm-example.wasm?module";
+import init from "./modules/wasm-example.wasm?init";
+import wasmWithModuleParam from "./modules/wasm-example.wasm?module";
 
 export default {
 	async fetch(request) {
@@ -26,9 +27,15 @@ export default {
 
 				return Response.json({ result });
 			}
-			case "/wasm-with-param": {
-				const instance = await WebAssembly.instantiate(wasmWithParam);
+			case "/wasm-with-module-param": {
+				const instance = await WebAssembly.instantiate(wasmWithModuleParam);
 				const result = instance.exports.add(5, 6);
+
+				return Response.json({ result });
+			}
+			case "/wasm-with-init-param": {
+				const instance = await init();
+				const result = instance.exports.add(7, 8);
 
 				return Response.json({ result });
 			}
