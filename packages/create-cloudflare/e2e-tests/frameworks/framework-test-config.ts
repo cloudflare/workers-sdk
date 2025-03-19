@@ -423,7 +423,8 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Hello world",
 			},
 		},
-		svelte: {
+		"svelte:pages": {
+			argv: ["--platform", "pages"],
 			promptHandlers: [
 				{
 					matcher: /Which template would you like/,
@@ -457,6 +458,39 @@ export default function getFrameworkTestConfig(pm: string) {
 			verifyBuild: {
 				outputDir: ".svelte-kit/cloudflare",
 				script: "build",
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+		},
+		"svelte:workers": {
+			argv: ["--platform", "workers"],
+			promptHandlers: [
+				{
+					matcher: /Which template would you like/,
+					input: [keys.enter],
+				},
+				{
+					matcher: /Add type checking with Typescript/,
+					input: [keys.down, keys.enter],
+				},
+				{
+					matcher: /What would you like to add to your project/,
+					input: [keys.enter],
+				},
+				{
+					matcher:
+						/Which package manager do you want to install dependencies with/,
+					input: [keys.enter],
+				},
+			],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			unsupportedPms: ["npm"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "SvelteKit app",
+			},
+			verifyPreview: {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
