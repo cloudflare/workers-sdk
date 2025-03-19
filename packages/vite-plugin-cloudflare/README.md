@@ -525,7 +525,7 @@ To setup VS Code for breakpoint debugging for your application, you will need to
   "compounds": [
     {
       "name": "Debug All Workers",
-      "configurations": ["Worker1"],
+      "configurations": ["<NAME_OF_WORKER>"],
       "stopAll": true
     }
   ]
