@@ -275,6 +275,7 @@ export default function getFrameworkTestConfig(pm: string) {
 			flags: ["--typescript", "--no-install", "--no-git-init"],
 		},
 		"remix:workers": {
+			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedPms: ["yarn"],
