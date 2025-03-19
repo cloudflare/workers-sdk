@@ -13,3 +13,18 @@ describe("node compatibility", () => {
 		});
 	});
 });
+
+// This test checks that wrapped bindings which rely on additional workers with an authed connection to the CF API work
+describe("Workers AI", () => {
+	test("can serve a Worker request", async ({ expect, seed, viteDev }) => {
+		const projectPath = await seed("basic");
+		runCommand(`npm install`, projectPath);
+
+		const proc = await viteDev(projectPath);
+		const url = await waitForReady(proc);
+
+		expect(await fetchJson(url + "/ai/")).toEqual({
+			response: expect.stringContaining("Workers AI"),
+		});
+	});
+});

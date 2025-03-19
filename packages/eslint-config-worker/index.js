@@ -19,7 +19,7 @@ module.exports = {
 		project: true,
 	},
 	plugins: ["@typescript-eslint", "import", "unused-imports", "no-only-tests"],
-	extends: ["turbo"],
+	extends: ["plugin:turbo/recommended"],
 	overrides: [
 		{
 			files: ["*.ts", "*.tsx"],
@@ -27,7 +27,7 @@ module.exports = {
 				"eslint:recommended",
 				"plugin:@typescript-eslint/recommended",
 				"plugin:import/typescript",
-				"turbo",
+				"plugin:turbo/recommended",
 			],
 
 			rules: {

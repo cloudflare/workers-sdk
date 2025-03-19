@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "3.111.0",
+	"version": "4.2.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -70,14 +70,13 @@
 	},
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "workspace:*",
-		"@esbuild-plugins/node-globals-polyfill": "0.2.3",
-		"@esbuild-plugins/node-modules-polyfill": "0.2.2",
+		"@cloudflare/unenv-preset": "2.2.0",
 		"blake3-wasm": "2.1.5",
-		"esbuild": "0.17.19",
+		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
-		"unenv": "2.0.0-rc.1",
-		"workerd": "1.20250214.0"
+		"unenv": "2.0.0-rc.15",
+		"workerd": "1.20250317.0"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
@@ -87,7 +86,7 @@
 		"@cloudflare/types": "6.18.4",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250214.0",
+		"@cloudflare/workers-types": "^4.20250317.0",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.47.0",
@@ -125,7 +124,6 @@
 		"get-port": "^7.0.0",
 		"glob-to-regexp": "^0.4.1",
 		"https-proxy-agent": "7.0.2",
-		"ignore": "^5.2.0",
 		"is-ci": "^3.0.1",
 		"itty-time": "^1.0.6",
 		"javascript-time-ago": "^2.5.4",
@@ -163,7 +161,7 @@
 		"yargs": "^17.7.2"
 	},
 	"peerDependencies": {
-		"@cloudflare/workers-types": "^4.20250214.0"
+		"@cloudflare/workers-types": "^4.20250317.0"
 	},
 	"peerDependenciesMeta": {
 		"@cloudflare/workers-types": {
@@ -175,7 +173,7 @@
 		"sharp": "^0.33.5"
 	},
 	"engines": {
-		"node": ">=16.17.0"
+		"node": ">=18.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

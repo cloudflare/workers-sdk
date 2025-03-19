@@ -985,7 +985,7 @@ function formatCondition(condition: LifecycleCondition): string {
 }
 
 export function tableFromLifecycleRulesResponse(rules: LifecycleRule[]): {
-	id: string;
+	name: string;
 	enabled: string;
 	prefix: string;
 	action: string;
@@ -1018,7 +1018,7 @@ export function tableFromLifecycleRulesResponse(rules: LifecycleRule[]): {
 		}
 
 		rows.push({
-			id: rule.id,
+			name: rule.id,
 			enabled: rule.enabled ? "Yes" : "No",
 			prefix: rule.conditions.prefix || "(all prefixes)",
 			action: actions.join(", ") || "(none)",
@@ -1083,7 +1083,7 @@ export interface BucketLockRuleCondition {
 }
 
 export function tableFromBucketLockRulesResponse(rules: BucketLockRule[]): {
-	id: string;
+	name: string;
 	enabled: string;
 	prefix: string;
 	condition: string;
@@ -1092,7 +1092,7 @@ export function tableFromBucketLockRulesResponse(rules: BucketLockRule[]): {
 	for (const rule of rules) {
 		const conditionString = formatLockCondition(rule.condition);
 		rows.push({
-			id: rule.id,
+			name: rule.id,
 			enabled: rule.enabled ? "Yes" : "No",
 			prefix: rule.prefix || "(all prefixes)",
 			condition: conditionString,

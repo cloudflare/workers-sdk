@@ -217,7 +217,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 
 				config.no_bundle = true;
-				config.rules = [{ type: "ESModule", globs: ["**/*.js"] }];
+				config.rules = [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }];
 				// Set to `undefined` if it's an empty object so that the user doesn't see a warning about using `unsafe` fields when deploying their Worker.
 				if (config.unsafe && Object.keys(config.unsafe).length === 0) {
 					config.unsafe = undefined;
@@ -277,11 +277,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					{ alwaysCallNext: false }
 				);
 
-				handleWebSocket(
-					viteDevServer.httpServer,
-					entryWorker.fetch,
-					viteDevServer.config.logger
-				);
+				handleWebSocket(viteDevServer.httpServer, entryWorker.fetch);
 
 				return () => {
 					viteDevServer.middlewares.use((req, res, next) => {
@@ -306,17 +302,12 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					{ alwaysCallNext: false }
 				);
 
-				handleWebSocket(
-					vitePreviewServer.httpServer,
-					miniflare.dispatchFetch,
-					vitePreviewServer.config.logger
-				);
+				handleWebSocket(vitePreviewServer.httpServer, miniflare.dispatchFetch);
 
-				return () => {
-					vitePreviewServer.middlewares.use((req, res, next) => {
-						middleware(req, res, next);
-					});
-				};
+				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
+				vitePreviewServer.middlewares.use((req, res, next) => {
+					middleware(req, res, next);
+				});
 			},
 		},
 		// Plugin to support `CompiledWasm` modules

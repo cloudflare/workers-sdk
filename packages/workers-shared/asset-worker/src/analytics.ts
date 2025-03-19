@@ -36,6 +36,8 @@ type Data = {
 	version?: string;
 	// blob7 - Region of the colo (e.g. WEUR)
 	coloRegion?: string;
+	// blob8 - The cache status of the request
+	cacheStatus?: string;
 };
 
 export class Analytics {
@@ -78,6 +80,7 @@ export class Analytics {
 				this.data.error?.substring(0, 256), // blob5 - trim to 256 bytes
 				this.data.version, // blob6
 				this.data.coloRegion, // blob7
+				this.data.cacheStatus, // blob8
 			],
 		});
 	}

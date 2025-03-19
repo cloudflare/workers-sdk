@@ -63,7 +63,10 @@ import {
 	WorkerOptions,
 	WrappedBindingNames,
 } from "./plugins";
-import { ROUTER_SERVICE_NAME } from "./plugins/assets/constants";
+import {
+	ROUTER_SERVICE_NAME,
+	RPC_PROXY_SERVICE_NAME,
+} from "./plugins/assets/constants";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
@@ -75,6 +78,7 @@ import {
 	reviveError,
 	ServiceDesignatorSchema,
 } from "./plugins/core";
+import { InspectorProxyController } from "./plugins/core/inspector-proxy";
 import {
 	Config,
 	Extension,
@@ -741,11 +745,31 @@ export class Miniflare {
 	readonly #webSocketServer: WebSocketServer;
 	readonly #webSocketExtraHeaders: WeakMap<http.IncomingMessage, Headers>;
 
+	#maybeInspectorProxyController?: InspectorProxyController;
+	#previousRuntimeInspectorPort?: number;
+
 	constructor(opts: MiniflareOptions) {
 		// Split and validate options
 		const [sharedOpts, workerOpts] = validateOptions(opts);
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
+
+		const workerNamesToProxy = new Set(
+			this.#workerOpts
+				.filter(({ core: { unsafeInspectorProxy } }) => !!unsafeInspectorProxy)
+				.map((w) => w.core.name ?? "")
+		);
+
+		const enableInspectorProxy = workerNamesToProxy.size > 0;
+
+		if (enableInspectorProxy) {
+			if (this.#sharedOpts.core.inspectorPort === undefined) {
+				throw new MiniflareCoreError(
+					"ERR_MISSING_INSPECTOR_PROXY_PORT",
+					"inspector proxy requested but without an inspectorPort specified"
+				);
+			}
+		}
 
 		// Add to registry after initial options validation, before any servers/
 		// child processes are started
@@ -756,6 +780,21 @@ export class Miniflare {
 		}
 
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
+
+		if (enableInspectorProxy) {
+			if (this.#sharedOpts.core.inspectorPort === undefined) {
+				throw new MiniflareCoreError(
+					"ERR_MISSING_INSPECTOR_PROXY_PORT",
+					"inspector proxy requested but without an inspectorPort specified"
+				);
+			}
+
+			this.#maybeInspectorProxyController = new InspectorProxyController(
+				this.#sharedOpts.core.inspectorPort,
+				this.#log,
+				workerNamesToProxy
+			);
+		}
 
 		this.#liveReloadServer = new WebSocketServer({ noServer: true });
 		this.#webSocketServer = new WebSocketServer({
@@ -1205,13 +1244,23 @@ export class Miniflare {
 								"core:user:",
 								""
 							);
+
+							/*
+							 * If we are running multiple Workers in a single dev session,
+							 * and this is a binding to a Worker with assets, we want that
+							 * binding to point to the Router Worker or the Assets Proxy
+							 * Worker, if the `unsafeEnableAssetsRpc` flag is enabled
+							 */
 							const maybeAssetTargetService = allWorkerOpts.find(
 								(worker) =>
 									worker.core.name === targetWorkerName && worker.assets.assets
 							);
 							if (maybeAssetTargetService && !binding.service?.entrypoint) {
 								assert(binding.service?.name);
-								binding.service.name = `${ROUTER_SERVICE_NAME}:${targetWorkerName}`;
+								binding.service.name = this.#sharedOpts.core
+									.unsafeEnableAssetsRpc
+									? `${RPC_PROXY_SERVICE_NAME}:${targetWorkerName}`
+									: `${ROUTER_SERVICE_NAME}:${targetWorkerName}`;
 							}
 						}
 					}
@@ -1220,6 +1269,8 @@ export class Miniflare {
 
 			// Collect all services required by this worker
 			const unsafeStickyBlobs = sharedOpts.core.unsafeStickyBlobs ?? false;
+			const unsafeEnableAssetsRpc =
+				sharedOpts.core.unsafeEnableAssetsRpc ?? false;
 			const unsafeEphemeralDurableObjects =
 				workerOpts.core.unsafeEphemeralDurableObjects ?? false;
 			const pluginServicesOptionsBase: Omit<
@@ -1239,6 +1290,7 @@ export class Miniflare {
 				unsafeEphemeralDurableObjects,
 				queueProducers,
 				queueConsumers,
+				unsafeEnableAssetsRpc,
 			};
 			for (const [key, plugin] of PLUGIN_ENTRIES) {
 				const pluginServicesExtensions = await plugin.getServices({
@@ -1310,14 +1362,21 @@ export class Miniflare {
 		const globalServices = getGlobalServices({
 			sharedOptions: sharedOpts.core,
 			allWorkerRoutes,
-			// if Workers + Assets project but NOT Vitest, point to router Worker instead
-			// if Vitest with assets, the self binding on the test runner will point to RW
+			/*
+			 * - if Workers + Assets project but NOT Vitest, point to Router Worker or
+			 *   Proxy Worker depending on whether experimental flag `unsafeEnableAssetsRpc`
+			 *   was set
+			 * - if Vitest with assets, the self binding on the test runner will point to
+			 *   Router Worker
+			 */
 			fallbackWorkerName:
 				this.#workerOpts[0].assets.assets &&
 				!this.#workerOpts[0].core.name?.startsWith(
 					"vitest-pool-workers-runner-"
 				)
-					? `${ROUTER_SERVICE_NAME}:${this.#workerOpts[0].core.name}`
+					? this.#sharedOpts.core.unsafeEnableAssetsRpc
+						? `${RPC_PROXY_SERVICE_NAME}:${this.#workerOpts[0].core.name}`
+						: `${ROUTER_SERVICE_NAME}:${this.#workerOpts[0].core.name}`
 					: getUserServiceName(this.#workerOpts[0].core.name),
 			loopbackPort,
 			log: this.#log,
@@ -1383,14 +1442,21 @@ export class Miniflare {
 			configuredHost,
 			this.#sharedOpts.core.port
 		);
-		let inspectorAddress: string | undefined;
+		let runtimeInspectorAddress: string | undefined;
 		if (this.#sharedOpts.core.inspectorPort !== undefined) {
-			inspectorAddress = this.#getSocketAddress(
+			let runtimeInspectorPort = this.#sharedOpts.core.inspectorPort;
+			if (this.#maybeInspectorProxyController !== undefined) {
+				// if we have an inspector proxy let's use a
+				// random port for the actual runtime inspector
+				runtimeInspectorPort = 0;
+			}
+			runtimeInspectorAddress = this.#getSocketAddress(
 				kInspectorSocket,
-				this.#previousSharedOpts?.core.inspectorPort,
+				this.#previousRuntimeInspectorPort,
 				"localhost",
-				this.#sharedOpts.core.inspectorPort
+				runtimeInspectorPort
 			);
+			this.#previousRuntimeInspectorPort = runtimeInspectorPort;
 		}
 		const loopbackAddress = `${
 			maybeGetLocallyAccessibleHost(configuredHost) ??
@@ -1401,7 +1467,7 @@ export class Miniflare {
 			entryAddress,
 			loopbackAddress,
 			requiredSockets,
-			inspectorAddress,
+			inspectorAddress: runtimeInspectorAddress,
 			verbose: this.#sharedOpts.core.verbose,
 			handleRuntimeStdio: this.#sharedOpts.core.handleRuntimeStdio,
 		};
@@ -1421,6 +1487,19 @@ export class Miniflare {
 		// sockets have been recorded. At this point, `maybeSocketPorts` contains
 		// all of `requiredSockets` as keys.
 		this.#socketPorts = maybeSocketPorts;
+
+		if (this.#maybeInspectorProxyController !== undefined) {
+			// Try to get inspector port for the workers
+			const maybePort = this.#socketPorts.get(kInspectorSocket);
+			if (maybePort === undefined) {
+				throw new MiniflareCoreError(
+					"ERR_RUNTIME_FAILURE",
+					"Unable to access the runtime inspector socket."
+				);
+			} else {
+				this.#maybeInspectorProxyController.updateConnection(maybePort);
+			}
+		}
 
 		const entrySocket = config.sockets?.[0];
 		const secure = entrySocket !== undefined && "https" in entrySocket;
@@ -1504,6 +1583,8 @@ export class Miniflare {
 		// `dispose()`d synchronously, immediately after constructing a `Miniflare`
 		// instance. In this case, return a discard URL which we'll ignore.
 		if (disposing) return new URL("http://[100::]/");
+		// if there is an inspector proxy let's wait for it to be ready
+		await this.#maybeInspectorProxyController?.ready;
 		// Make sure `dispose()` wasn't called in the time we've been waiting
 		this.#checkDisposed();
 		// `#runtimeEntryURL` is assigned in `#assembleAndUpdateConfig()`, which is
@@ -1527,6 +1608,10 @@ export class Miniflare {
 	async getInspectorURL(): Promise<URL> {
 		this.#checkDisposed();
 		await this.ready;
+
+		if (this.#maybeInspectorProxyController !== undefined) {
+			return this.#maybeInspectorProxyController.getInspectorURL();
+		}
 
 		// `#socketPorts` is assigned in `#assembleAndUpdateConfig()`, which is
 		// called by `#init()`, and `ready` doesn't resolve until `#init()` returns
@@ -1876,6 +1961,9 @@ export class Miniflare {
 			await this.#stopLoopbackServer();
 			// `rm -rf ${#tmpPath}`, this won't throw if `#tmpPath` doesn't exist
 			await fs.promises.rm(this.#tmpPath, { force: true, recursive: true });
+
+			// Close the inspector proxy server if there is one
+			await this.#maybeInspectorProxyController?.dispose();
 
 			// Remove from instance registry as last step in `finally`, to make sure
 			// all dispose steps complete

@@ -17,6 +17,7 @@ const existsMock = (fileList: Set<string>) => {
 			if (fileList.has(pathname)) {
 				return pathname;
 			}
+			return null;
 		}
 	);
 };
@@ -59,15 +60,17 @@ describe.each(testSuites)("$title", ({ title, suite }) => {
 		vi.mocked(getAssetWithMetadataFromKV).mockRestore();
 	});
 	describe.each(suite)(`$html_handling`, ({ html_handling, cases }) => {
-		beforeEach(() => {
-			vi.mocked(applyConfigurationDefaults).mockImplementation(() => {
-				return {
-					html_handling,
-					not_found_handling: "none",
-					run_worker_first: true,
-					serve_directly: false,
-				};
-			});
+		beforeEach(async () => {
+			const originalApplyConfigurationDefaults = (
+				await vi.importActual<
+					typeof import("../../packages/workers-shared/asset-worker/src/configuration")
+				>("../../packages/workers-shared/asset-worker/src/configuration")
+			).applyConfigurationDefaults;
+			vi.mocked(applyConfigurationDefaults).mockImplementation(() => ({
+				...originalApplyConfigurationDefaults({}),
+				html_handling,
+				not_found_handling: "none",
+			}));
 		});
 		it.each(cases)(
 			"$title",

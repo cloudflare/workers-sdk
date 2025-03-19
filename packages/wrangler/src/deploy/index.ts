@@ -2,7 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
 import { configFileName } from "../config";
-import { createAlias, createCommand } from "../core/create-command";
+import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
 import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
@@ -10,22 +10,13 @@ import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
-import { getLegacyAssetPaths, getSiteAssetPaths } from "../sites";
+import { getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import deploy from "./deploy";
-import type { Config } from "../config";
-
-async function standardPricingWarning(config: Config) {
-	if (config.usage_model !== undefined) {
-		logger.warn(
-			`The \`usage_model\` defined in your ${configFileName(config.configPath)} file is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model`
-		);
-	}
-}
 
 export const deployCommand = createCommand({
 	metadata: {
@@ -90,33 +81,6 @@ export const deployCommand = createCommand({
 			describe: "Static assets to be served. Replaces Workers Sites.",
 			type: "string",
 			requiresArg: true,
-		},
-		format: {
-			choices: ["modules", "service-worker"] as const,
-			describe: "Choose an entry type",
-			deprecated: true,
-			hidden: true,
-		},
-		"experimental-public": {
-			describe: "(Deprecated) Static assets to be served",
-			type: "string",
-			requiresArg: true,
-			deprecated: true,
-			hidden: true,
-		},
-		public: {
-			describe: "(Deprecated) Static assets to be served",
-			type: "string",
-			requiresArg: true,
-			deprecated: true,
-			hidden: true,
-		},
-		"legacy-assets": {
-			describe: "Static assets to be served",
-			type: "string",
-			requiresArg: true,
-			deprecated: true,
-			hidden: true,
 		},
 		site: {
 			describe: "Root folder of static assets for Workers Sites",
@@ -197,6 +161,8 @@ export const deployCommand = createCommand({
 		"node-compat": {
 			describe: "Enable Node.js compatibility",
 			type: "boolean",
+			hidden: true,
+			deprecated: true,
 		},
 		"dry-run": {
 			describe: "Don't actually deploy",
@@ -249,22 +215,9 @@ export const deployCommand = createCommand({
 		}),
 	},
 	validateArgs(args) {
-		if (args.legacyAssets) {
-			logger.warn(
-				`The --legacy-assets argument has been deprecated. Please use --assets instead.\n` +
-					`To learn more about Workers with assets, visit our documentation at https://developers.cloudflare.com/workers/frameworks/.`
-			);
-		}
-		if (args.public) {
+		if (args.nodeCompat) {
 			throw new UserError(
-				"The --public field has been deprecated, try --legacy-assets instead.",
-				{ telemetryMessage: true }
-			);
-		}
-		if (args.experimentalPublic) {
-			throw new UserError(
-				"The --experimental-public field has been deprecated, try --legacy-assets instead.",
-				{ telemetryMessage: true }
+				`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`
 			);
 		}
 	},
@@ -282,16 +235,6 @@ export const deployCommand = createCommand({
 			config.userConfigPath && path.dirname(config.userConfigPath);
 
 		const entry = await getEntry(args, config, "deploy");
-
-		if (
-			(args.legacyAssets || config.legacy_assets) &&
-			(args.site || config.site)
-		) {
-			throw new UserError(
-				"Cannot use legacy assets and Workers Sites in the same Worker.",
-				{ telemetryMessage: true }
-			);
-		}
 
 		if (config.workflows?.length) {
 			logger.once.warn("Workflows is currently in open beta.");
@@ -313,19 +256,12 @@ export const deployCommand = createCommand({
 
 		const accountId = args.dryRun ? undefined : await requireAuth(config);
 
-		const legacyAssetPaths =
-			args.legacyAssets || config.legacy_assets
-				? getLegacyAssetPaths(config, args.legacyAssets)
-				: getSiteAssetPaths(
-						config,
-						args.site,
-						args.siteInclude,
-						args.siteExclude
-					);
-
-		if (!args.dryRun) {
-			await standardPricingWarning(config);
-		}
+		const siteAssetPaths = getSiteAssetPaths(
+			config,
+			args.site,
+			args.siteInclude,
+			args.siteExclude
+		);
 
 		const beforeUpload = Date.now();
 		let name = getScriptName(args, config);
@@ -371,10 +307,9 @@ export const deployCommand = createCommand({
 			tsconfig: args.tsconfig,
 			routes: args.routes,
 			assetsOptions,
-			legacyAssetPaths,
+			legacyAssetPaths: siteAssetPaths,
 			legacyEnv: isLegacyEnv(config),
 			minify: args.minify,
-			nodeCompat: args.nodeCompat,
 			isWorkersSite: Boolean(args.site || config.site),
 			outDir: args.outdir,
 			outFile: args.outfile,
@@ -415,13 +350,3 @@ export const deployCommand = createCommand({
 });
 
 export type DeployArgs = (typeof deployCommand)["args"];
-
-export const publishAlias = createAlias({
-	aliasOf: "wrangler deploy",
-	metadata: {
-		deprecated: true,
-		deprecatedMessage:
-			"`wrangler publish` is deprecated and will be removed in the next major version.\nPlease use `wrangler deploy` instead, which accepts exactly the same arguments.",
-		hidden: true,
-	},
-});

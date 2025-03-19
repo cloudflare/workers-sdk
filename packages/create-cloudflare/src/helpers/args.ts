@@ -70,12 +70,12 @@ export const cliDefinition: ArgumentsDefinition = {
 				const experimental = Boolean(args?.["experimental"]);
 				if (experimental) {
 					return [
-						{ name: "hello-world", description: "Hello World example" },
+						{ name: "hello-world", description: "Hello World Starter" },
 						{ name: "web-framework", description: "Framework Starter" },
 					];
 				} else {
 					return [
-						{ name: "hello-world", description: "Hello World example" },
+						{ name: "hello-world", description: "Hello World Starter" },
 						{ name: "web-framework", description: "Framework Starter" },
 						{ name: "demo", description: "Application Starter" },
 						{
@@ -159,6 +159,24 @@ export const cliDefinition: ArgumentsDefinition = {
 						experimental: Boolean(args?.["experimental"]),
 					}),
 				),
+		},
+		{
+			name: "platform",
+			type: "string",
+			description: `Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.`,
+			values: [
+				{
+					name: "pages",
+					description:
+						"Create a web application that can be deployed to Pages.",
+				},
+				{
+					name: "workers",
+					description:
+						"Create a web application that can be deployed to Workers (BETA).",
+				},
+			],
+			requiresArg: true,
 		},
 		{
 			name: "lang",

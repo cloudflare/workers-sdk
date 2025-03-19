@@ -1,5 +1,128 @@
 # miniflare
 
+## 4.20250317.1
+
+### Patch Changes
+
+- [#8357](https://github.com/cloudflare/workers-sdk/pull/8357) [`ff26dc2`](https://github.com/cloudflare/workers-sdk/commit/ff26dc20210c193b9e175f5567277d5584bdf657) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - feat: add new `unsafeInspectorProxy` option to miniflare
+
+  Add a new `unsafeInspectorProxy` option to the miniflare worker options, if
+  at least one worker has the option set then miniflare will establish a proxy
+  between itself and workerd for the v8 inspector APIs which exposes only the
+  requested workers to inspector clients. The inspector proxy communicates through
+  miniflare's `inspectorPort` and exposes each requested worker via a path comprised
+  of the worker's name
+
+  example:
+
+  ```js
+  import { Miniflare } from "miniflare";
+
+  const mf = new Miniflare({
+  	// the inspector proxy will be accessible through port 9229
+  	inspectorPort: 9229,
+  	workers: [
+  		{
+  			name: "worker-a",
+  			scriptPath: "./worker-a.js",
+  			// enable the inspector proxy for worker-a
+  			unsafeInspectorProxy: true,
+  		},
+  		{
+  			name: "worker-b",
+  			scriptPath: "./worker-b.js",
+  			// worker-b is not going to be proxied
+  		},
+  		{
+  			name: "worker-c",
+  			scriptPath: "./worker-c.js",
+  			// enable the inspector proxy for worker-c
+  			unsafeInspectorProxy: true,
+  		},
+  	],
+  });
+  ```
+
+  In the above example an inspector proxy gets set up which exposes `worker-a` and `worker-b`,
+  inspector clients can discover such workers via `http://localhost:9229` and communicate with
+  them respectively via `ws://localhost:9229/worker-a` and `ws://localhost:9229/worker-b`
+
+  Note: this API is experimental, thus it's not being added to the public documentation and
+  it's prefixed by `unsafe`
+
+## 4.20250317.0
+
+### Minor Changes
+
+- [#8445](https://github.com/cloudflare/workers-sdk/pull/8445) [`74b0c73`](https://github.com/cloudflare/workers-sdk/commit/74b0c7377a643241d4e3efa674cd644f8f5b8e10) Thanks [@lambrospetrou](https://github.com/lambrospetrou)! - D1 local developer experience supports sessions API bookmarks
+
+### Patch Changes
+
+- [#8538](https://github.com/cloudflare/workers-sdk/pull/8538) [`5ae180e`](https://github.com/cloudflare/workers-sdk/commit/5ae180ee8acfc03b46bc3e836f5ce3856c458af8) Thanks [@emily-shen](https://github.com/emily-shen)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250310.0  | 1.20250317.0  |
+  | @cloudflare/workers-types | ^4.20250310.0 | ^4.20250317.0 |
+
+## 4.20250310.0
+
+### Major Changes
+
+- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@penalosa](https://github.com/penalosa)! - The `--node-compat` flag and `node_compat` config properties are no longer supported as of Wrangler v4. Instead, use the `nodejs_compat` compatibility flag. This includes the functionality from legacy `node_compat` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.
+
+  If you need to replicate the behaviour of the legacy `node_compat` feature, refer to https://developers.cloudflare.com/workers/wrangler/migration/update-v3-to-v4/ for a detailed guide.
+
+- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@penalosa](https://github.com/penalosa)! - Packages in Workers SDK now support the versions of Node that Node itself supports (Current, Active, Maintenance). Currently, that includes Node v18, v20, and v22.
+
+## 3.20250310.0
+
+### Patch Changes
+
+- [#8423](https://github.com/cloudflare/workers-sdk/pull/8423) [`8242e07`](https://github.com/cloudflare/workers-sdk/commit/8242e07447f47ab764655e8ec9a046b1fe9ea279) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250224.0  | 1.20250310.0  |
+  | @cloudflare/workers-types | ^4.20250224.0 | ^4.20250310.0 |
+
+- [#8390](https://github.com/cloudflare/workers-sdk/pull/8390) [`53e6323`](https://github.com/cloudflare/workers-sdk/commit/53e63233c5b9bb786af3daea63c10ffe60a5d881) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Parse and apply metafiles (`_headers` and `_redirects`) in `wrangler dev` for Workers Assets
+
+## 3.20250224.0
+
+### Patch Changes
+
+- [#8338](https://github.com/cloudflare/workers-sdk/pull/8338) [`2d40989`](https://github.com/cloudflare/workers-sdk/commit/2d409892f1cf08f07f84d25dcab023bc20ada374) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Upload \_headers and \_redirects if present with Workers Assets as part of `wrangler deploy` and `wrangler versions upload`.
+
+- [#8251](https://github.com/cloudflare/workers-sdk/pull/8251) [`da568e5`](https://github.com/cloudflare/workers-sdk/commit/da568e5a94bf270cfdcd80123d8161fc5437dcd2) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250214.0  | 1.20250224.0  |
+  | @cloudflare/workers-types | ^4.20250214.0 | ^4.20250224.0 |
+
+- [#8288](https://github.com/cloudflare/workers-sdk/pull/8288) [`cf14e17`](https://github.com/cloudflare/workers-sdk/commit/cf14e17d40b9e51475ba4d9ee6b4e3ef5ae5e841) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Add assets Proxy Worker skeleton in miniflare
+
+  This commit implements a very basic Proxy Worker skeleton, and wires it in the "pipeline" miniflare creates for assets. This Worker will be incrementally worked on, but for now, the current implementation will forward all incoming requests to the Router Worker, thus leaving the current assets behaviour in local dev, the same.
+
+  This is an experimental feature available under the `--x-assets-rpc` flag: `wrangler dev --x-assets-rpc`.
+
+- [#8355](https://github.com/cloudflare/workers-sdk/pull/8355) [`79c7810`](https://github.com/cloudflare/workers-sdk/commit/79c781076cc79e512753b65644c027138aa1d878) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Add default empty router config for assets in Miniflare
+
+## 3.20250214.2
+
+### Patch Changes
+
+- [#8274](https://github.com/cloudflare/workers-sdk/pull/8274) [`fce642d`](https://github.com/cloudflare/workers-sdk/commit/fce642d59264b1b6e7df8a6c9a015519b7574637) Thanks [@emily-shen](https://github.com/emily-shen)! - fix bindings to entrypoints on the same worker in workers with assets
+
+- [#8289](https://github.com/cloudflare/workers-sdk/pull/8289) [`a4909cb`](https://github.com/cloudflare/workers-sdk/commit/a4909cbe552eae72b901cd78bf1f814f818085a0) Thanks [@penalosa](https://github.com/penalosa)! - Add the experimental `--x-assets-rpc` flag to gate feature work to support JSRPC with Workers + Assets projects.
+
 ## 3.20250214.1
 
 ### Patch Changes

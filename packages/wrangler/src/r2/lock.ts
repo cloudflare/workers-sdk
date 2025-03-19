@@ -66,15 +66,17 @@ export const r2BucketLockAddCommand = createCommand({
 		status: "stable",
 		owner: "Product: R2",
 	},
-	positionalArgs: ["bucket", "id", "prefix"],
+	positionalArgs: ["bucket", "name", "prefix"],
 	args: {
 		bucket: {
 			describe: "The name of the R2 bucket to add a bucket lock rule to",
 			type: "string",
 			demandOption: true,
 		},
-		id: {
-			describe: "A unique identifier for the bucket lock rule",
+		name: {
+			describe:
+				"A unique name for the bucket lock rule, used to identify and manage it.",
+			alias: "id",
 			type: "string",
 			requiresArg: true,
 		},
@@ -120,7 +122,7 @@ export const r2BucketLockAddCommand = createCommand({
 			retentionIndefinite,
 			jurisdiction,
 			force,
-			id,
+			name,
 			prefix,
 		},
 		{ config }
@@ -129,18 +131,18 @@ export const r2BucketLockAddCommand = createCommand({
 
 		const rules = await getBucketLockRules(accountId, bucket, jurisdiction);
 
-		if (!id && !isNonInteractiveOrCI() && !force) {
-			id = await prompt("Enter a unique identifier for the lock rule");
+		if (!name && !isNonInteractiveOrCI() && !force) {
+			name = await prompt("Enter a unique name for the lock rule");
 		}
 
-		if (!id) {
-			throw new UserError("Must specify a rule ID.", {
+		if (!name) {
+			throw new UserError("Must specify a rule name.", {
 				telemetryMessage: true,
 			});
 		}
 
 		const newRule: BucketLockRule = {
-			id: id,
+			id: name,
 			enabled: true,
 			condition: { type: "Indefinite" },
 		};
@@ -151,7 +153,7 @@ export const r2BucketLockAddCommand = createCommand({
 			);
 			if (prefix === "") {
 				const confirmedAdd = await confirm(
-					`Are you sure you want to add lock rule '${id}' to bucket '${bucket}' without a prefix? ` +
+					`Are you sure you want to add lock rule '${name}' to bucket '${bucket}' without a prefix? ` +
 						`The lock rule will apply to all objects in your bucket.`,
 					{ defaultValue: false }
 				);
@@ -173,7 +175,7 @@ export const r2BucketLockAddCommand = createCommand({
 			!force
 		) {
 			retentionIndefinite = await confirm(
-				`Are you sure you want to add lock rule '${id}' to bucket '${bucket}' without retention? ` +
+				`Are you sure you want to add lock rule '${name}' to bucket '${bucket}' without retention? ` +
 					`The lock rule will apply to all matching objects indefinitely.`,
 				{ defaultValue: false }
 			);
@@ -234,9 +236,9 @@ export const r2BucketLockAddCommand = createCommand({
 			});
 		}
 		rules.push(newRule);
-		logger.log(`Adding lock rule '${id}' to bucket '${bucket}'...`);
+		logger.log(`Adding lock rule '${name}' to bucket '${bucket}'...`);
 		await putBucketLockRules(accountId, bucket, rules, jurisdiction);
-		logger.log(`✨ Added lock rule '${id}' to bucket '${bucket}'.`);
+		logger.log(`✨ Added lock rule '${name}' to bucket '${bucket}'.`);
 	},
 });
 
@@ -253,8 +255,9 @@ export const r2BucketLockRemoveCommand = createCommand({
 			type: "string",
 			demandOption: true,
 		},
-		id: {
-			describe: "The unique identifier of the bucket lock rule to remove",
+		name: {
+			describe: "The unique name of the bucket lock rule to remove",
+			alias: "id",
 			type: "string",
 			demandOption: true,
 			requiresArg: true,
@@ -269,7 +272,7 @@ export const r2BucketLockRemoveCommand = createCommand({
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		const { bucket, id, jurisdiction } = args;
+		const { bucket, name, jurisdiction } = args;
 
 		const lockPolicies = await getBucketLockRules(
 			accountId,
@@ -277,23 +280,23 @@ export const r2BucketLockRemoveCommand = createCommand({
 			jurisdiction
 		);
 
-		const index = lockPolicies.findIndex((policy) => policy.id === id);
+		const index = lockPolicies.findIndex((policy) => policy.id === name);
 
 		if (index === -1) {
 			throw new UserError(
-				`Lock rule with ID '${id}' not found in configuration for '${bucket}'.`,
+				`Lock rule with ID '${name}' not found in configuration for '${bucket}'.`,
 				{
 					telemetryMessage:
-						"Lock rule with ID not found in configuration for bucket.",
+						"Lock rule with name not found in configuration for bucket.",
 				}
 			);
 		}
 
 		lockPolicies.splice(index, 1);
 
-		logger.log(`Removing lock rule '${id}' from bucket '${bucket}'...`);
+		logger.log(`Removing lock rule '${name}' from bucket '${bucket}'...`);
 		await putBucketLockRules(accountId, bucket, lockPolicies, jurisdiction);
-		logger.log(`Lock rule '${id}' removed from bucket '${bucket}'.`);
+		logger.log(`Lock rule '${name}' removed from bucket '${bucket}'.`);
 	},
 });
 

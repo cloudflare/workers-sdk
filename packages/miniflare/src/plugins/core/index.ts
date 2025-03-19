@@ -33,7 +33,10 @@ import {
 	CoreHeaders,
 	viewToBuffer,
 } from "../../workers";
-import { ROUTER_SERVICE_NAME } from "../assets/constants";
+import {
+	ROUTER_SERVICE_NAME,
+	RPC_PROXY_SERVICE_NAME,
+} from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
@@ -123,6 +126,8 @@ const CoreOptionsSchemaInput = z.intersection(
 		compatibilityDate: z.string().optional(),
 		compatibilityFlags: z.string().array().optional(),
 
+		unsafeInspectorProxy: z.boolean().optional(),
+
 		routes: z.string().array().optional(),
 
 		bindings: z.record(JsonSchema).optional(),
@@ -148,10 +153,12 @@ const CoreOptionsSchemaInput = z.intersection(
 		unsafeEvalBinding: z.string().optional(),
 		unsafeUseModuleFallbackService: z.boolean().optional(),
 
-		/** Used to set the vitest pool worker SELF binding to point to the router worker if there are assets.
-		 (If there are assets but we're not using vitest, the miniflare entry worker can point directly to RW.)
+		/** Used to set the vitest pool worker SELF binding to point to the Router Worker if there are assets.
+		 (If there are assets but we're not using vitest, the miniflare entry worker can point directly to
+		 Router Worker)
 		 */
 		hasAssetsAndIsVitest: z.boolean().optional(),
+		unsafeEnableAssetsRpc: z.boolean().optional(),
 	})
 );
 export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {
@@ -186,6 +193,7 @@ export const CoreSharedOptionsSchema = z.object({
 	httpsCertPath: z.string().optional(),
 
 	inspectorPort: z.number().optional(),
+
 	verbose: z.boolean().optional(),
 
 	log: z.instanceof(Log).optional(),
@@ -245,7 +253,8 @@ function getCustomServiceDesignator(
 	kind: CustomServiceKind,
 	name: string,
 	service: z.infer<typeof ServiceDesignatorSchema>,
-	hasAssetsAndIsVitest: boolean = false
+	hasAssetsAndIsVitest: boolean = false,
+	unsafeEnableAssetsRpc = false
 ): ServiceDesignator {
 	let serviceName: string;
 	let entrypoint: string | undefined;
@@ -256,7 +265,7 @@ function getCustomServiceDesignator(
 		// Worker with entrypoint
 		if ("name" in service) {
 			if (service.name === kCurrentWorker) {
-				// TODO when fetch on WorkerEntrypoints with assets is fixed in dev: point this router worker if assets are present.
+				// TODO when fetch on WorkerEntrypoints with assets is fixed in dev: point this Router Worker if assets are present.
 				serviceName = getUserServiceName(refererName);
 			} else {
 				serviceName = getUserServiceName(service.name);
@@ -267,9 +276,13 @@ function getCustomServiceDesignator(
 			serviceName = getBuiltinServiceName(workerIndex, kind, name);
 		}
 	} else if (service === kCurrentWorker) {
-		// Sets SELF binding to point to router worker instead if assets are present.
+		// Sets SELF binding to point to the Router Worker or the Assets
+		// Proxy Worker (depending on whether `unsafeEnableAssetsRpc` is set)
+		// if assets are present.
 		serviceName = hasAssetsAndIsVitest
-			? `${ROUTER_SERVICE_NAME}:${refererName}`
+			? unsafeEnableAssetsRpc
+				? `${RPC_PROXY_SERVICE_NAME}:${refererName}`
+				: `${ROUTER_SERVICE_NAME}:${refererName}`
 			: getUserServiceName(refererName);
 	} else {
 		// Regular user worker
@@ -422,7 +435,8 @@ export const CORE_PLUGIN: Plugin<
 							CustomServiceKind.UNKNOWN,
 							name,
 							service,
-							options.hasAssetsAndIsVitest
+							options.hasAssetsAndIsVitest,
+							options.unsafeEnableAssetsRpc
 						),
 					};
 				})
@@ -681,7 +695,8 @@ export const CORE_PLUGIN: Plugin<
 									CustomServiceKind.KNOWN,
 									CUSTOM_SERVICE_KNOWN_OUTBOUND,
 									options.outboundService,
-									options.hasAssetsAndIsVitest
+									options.hasAssetsAndIsVitest,
+									options.unsafeEnableAssetsRpc
 								),
 					cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
 					moduleFallback:

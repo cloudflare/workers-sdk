@@ -65,6 +65,11 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 			status: handle.status.bind(handle),
 		};
 	}
+	public async createBatch(
+		_batch: WorkflowInstanceCreateOptions<unknown>[]
+	): Promise<WorkflowInstance[]> {
+		throw new Error("createBatch is not yet implemented in local development.");
+	}
 }
 
 export class WorkflowHandle extends RpcTarget implements WorkflowInstance {

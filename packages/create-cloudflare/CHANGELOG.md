@@ -1,5 +1,97 @@
 # create-cloudflare
 
+## 2.41.2
+
+### Patch Changes
+
+- [#8379](https://github.com/cloudflare/workers-sdk/pull/8379) [`2b37abe`](https://github.com/cloudflare/workers-sdk/commit/2b37abe10dac9df6c0cc91114ea68b40b6c0991d) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate Workers + Assets hello world templates from experimental status
+
+- [#8541](https://github.com/cloudflare/workers-sdk/pull/8541) [`cfa525d`](https://github.com/cloudflare/workers-sdk/commit/cfa525dba45a6d678270216e1679e1ce32f62163) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Fixes the Cloudflare logo in the Vite React starter to support both dark and light mode
+
+## 2.41.1
+
+### Patch Changes
+
+- [#8418](https://github.com/cloudflare/workers-sdk/pull/8418) [`736bd4f`](https://github.com/cloudflare/workers-sdk/commit/736bd4fd87ec41c05b080996cd9ebd8e0951e08d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.1.6 | 15.2.1 |
+
+- [#8420](https://github.com/cloudflare/workers-sdk/pull/8420) [`db987de`](https://github.com/cloudflare/workers-sdk/commit/db987dec97284ce05e9e5d382c26a2a5bad35b73) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To    |
+  | ------------ | ------ | ----- |
+  | create-solid | 0.5.14 | 0.6.1 |
+
+- [#8451](https://github.com/cloudflare/workers-sdk/pull/8451) [`fd2cb21`](https://github.com/cloudflare/workers-sdk/commit/fd2cb2112739d322e49fcec8b00343e68d62e141) Thanks [@vicb](https://github.com/vicb)! - Update the Next experimental template to use version ~15.2.2
+
+## 2.41.0
+
+### Minor Changes
+
+- [#8372](https://github.com/cloudflare/workers-sdk/pull/8372) [`3536670`](https://github.com/cloudflare/workers-sdk/commit/35366708d36f82b3c51e3e5cc153a2c14b0d35c3) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: update nitro config in nuxt templates to use generated wrangler config
+
+### Patch Changes
+
+- [#8440](https://github.com/cloudflare/workers-sdk/pull/8440) [`af1c5c3`](https://github.com/cloudflare/workers-sdk/commit/af1c5c36e751dc452055f75fc30f28fa3e68beab) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - tighten up .gitignore processing
+
+- [#8372](https://github.com/cloudflare/workers-sdk/pull/8372) [`3536670`](https://github.com/cloudflare/workers-sdk/commit/35366708d36f82b3c51e3e5cc153a2c14b0d35c3) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate Angular, Gatsby, Vue and Nuxt templates (Workers + Assets) from experimental
+
+  You no longer need to pass in the --experimental flag to access these templates.
+
+## 2.40.3
+
+### Patch Changes
+
+- [#8358](https://github.com/cloudflare/workers-sdk/pull/8358) [`5875adb`](https://github.com/cloudflare/workers-sdk/commit/5875adb87317184122075c5ba3dce1c302dc2f80) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: add Worker + Vite plugin to Vue experimental template
+
+- [#8291](https://github.com/cloudflare/workers-sdk/pull/8291) [`8461f9b`](https://github.com/cloudflare/workers-sdk/commit/8461f9b6ab582b75d752c860d412fa75849b3746) Thanks [@edmundhung](https://github.com/edmundhung)! - update vitest packages version on hello-world template
+
+## 2.40.2
+
+### Patch Changes
+
+- [#8371](https://github.com/cloudflare/workers-sdk/pull/8371) [`b24497d`](https://github.com/cloudflare/workers-sdk/commit/b24497daf70fc9f32f14060223dbef338f7d2ec0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - graduate C3 React (Workers) template
+
+- [#8349](https://github.com/cloudflare/workers-sdk/pull/8349) [`ca60010`](https://github.com/cloudflare/workers-sdk/commit/ca6001066586e0c549e63016aed0b18f0c546220) Thanks [@emily-shen](https://github.com/emily-shen)! - Add type generation command to React + Vite + Workers with Assets template and use `wrangler.jsonc` instead of `.json`.
+
+## 2.40.1
+
+### Patch Changes
+
+- [#8311](https://github.com/cloudflare/workers-sdk/pull/8311) [`f379635`](https://github.com/cloudflare/workers-sdk/commit/f379635a338f546f72fe8208df00cb7801b1263f) Thanks [@p-glynn](https://github.com/p-glynn)! - use tabs for indentation in generated wrangler.json
+
+- [#7752](https://github.com/cloudflare/workers-sdk/pull/7752) [`595f170`](https://github.com/cloudflare/workers-sdk/commit/595f17092e332bfee92ac888556dc3e3d4232273) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: graduate Docusaurus Workers + Assets template from experimental
+
+## 2.40.0
+
+### Minor Changes
+
+- [#8197](https://github.com/cloudflare/workers-sdk/pull/8197) [`acd42a8`](https://github.com/cloudflare/workers-sdk/commit/acd42a849b31b0d2ef30b0443678e775ebe69fa2) Thanks [@dom96](https://github.com/dom96)! - Python Workers template now includes package for autocomplete and type hints
+
+### Patch Changes
+
+- [#8324](https://github.com/cloudflare/workers-sdk/pull/8324) [`94729a6`](https://github.com/cloudflare/workers-sdk/commit/94729a6916e2a8b2bb8177d322cd8c8916f57d10) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.6.16 | 0.6.23 |
+
+- [#8290](https://github.com/cloudflare/workers-sdk/pull/8290) [`5b047e4`](https://github.com/cloudflare/workers-sdk/commit/5b047e4af0ffaab65b9fb0a491982727cd1232bd) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - ensure that git commits are generated
+
+- [#8013](https://github.com/cloudflare/workers-sdk/pull/8013) [`bc62d24`](https://github.com/cloudflare/workers-sdk/commit/bc62d2405c42bf41666983f13dfac2f75506b82c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - add experimental React templates using the Cloudflare Vite plugin
+
+- [#8232](https://github.com/cloudflare/workers-sdk/pull/8232) [`59cb914`](https://github.com/cloudflare/workers-sdk/commit/59cb914ee4c0939d1b29421e857e16b8e4599300) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: stop c3 adding a duplicate `./wrangler.jsonc` when using --existing-script
+
+  This should mean dev and deploy on projects initialised using `create-cloudflare --existing-script` start working again. Note there will still be an extraneous `./src/wrangler.toml`, which will require a separate fix in the dashboard. This file can be manually deleted in the meantime.
+
 ## 2.39.0
 
 ### Minor Changes
