@@ -9,7 +9,8 @@ let moduleRunner: ModuleRunner;
 
 export async function createModuleRunner(
 	env: WrapperEnv,
-	webSocket: WebSocket
+	webSocket: WebSocket,
+	viteRoot: string
 ) {
 	if (moduleRunner) {
 		throw new Error("Runner already initialized");
@@ -25,7 +26,7 @@ export async function createModuleRunner(
 
 	moduleRunner = new ModuleRunner(
 		{
-			root: env.__VITE_ROOT__,
+			root: viteRoot,
 			sourcemapInterceptor: "prepareStackTrace",
 			transport: {
 				...transport,
