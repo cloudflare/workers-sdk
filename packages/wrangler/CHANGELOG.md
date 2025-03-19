@@ -1,5 +1,21 @@
 # wrangler
 
+## 4.2.0
+
+### Minor Changes
+
+- [#8477](https://github.com/cloudflare/workers-sdk/pull/8477) [`fd9dff8`](https://github.com/cloudflare/workers-sdk/commit/fd9dff833870b768af34b391bb109782d86908bb) Thanks [@gabivlj](https://github.com/gabivlj)! - wrangler deploy includes container configuration when uploading the script
+
+### Patch Changes
+
+- [#8220](https://github.com/cloudflare/workers-sdk/pull/8220) [`14680b9`](https://github.com/cloudflare/workers-sdk/commit/14680b90a23463d4592511ba4e02d38c30c1d2ea) Thanks [@IRCody](https://github.com/IRCody)! - Fix a bug in cloudchamber build where it would still attempt to push an image if the build failed.
+
+- [#8186](https://github.com/cloudflare/workers-sdk/pull/8186) [`05973bb`](https://github.com/cloudflare/workers-sdk/commit/05973bba4ca49e0fad43e6094ddea67cdf67dc42) Thanks [@IRCody](https://github.com/IRCody)! - Add cloudchamber images {list,delete} commands to list and delete images stored in cloudchamber managed registry.
+
+- Updated dependencies [[`ff26dc2`](https://github.com/cloudflare/workers-sdk/commit/ff26dc20210c193b9e175f5567277d5584bdf657), [`4ad78ea`](https://github.com/cloudflare/workers-sdk/commit/4ad78ea2c9b8fed7e3afe581e1c320b852969f6a)]:
+  - miniflare@4.20250317.1
+  - @cloudflare/unenv-preset@2.2.0
+
 ## 4.1.0
 
 ### Minor Changes
