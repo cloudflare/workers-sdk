@@ -35,7 +35,7 @@ const config: TemplateConfig = {
 	copyFiles: {
 		path: "./templates",
 	},
-	path: "templates/workers/remix",
+	path: "templates/remix/workers",
 	generate,
 	configure,
 	transformPackageJson: async () => ({
