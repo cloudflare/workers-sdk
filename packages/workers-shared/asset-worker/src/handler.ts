@@ -11,6 +11,10 @@ import {
 	SeeOtherResponse,
 	TemporaryRedirectResponse,
 } from "../../utils/responses";
+import {
+	flagIsEnabled,
+	SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING,
+} from "./compatibility-flags";
 import { attachCustomHeaders, getAssetHeaders } from "./utils/headers";
 import { generateRulesMatcher, replacer } from "./utils/rules-engine";
 import type { AssetConfig } from "../../utils/types";
@@ -238,13 +242,24 @@ export const canFetch = async (
 	configuration: Required<AssetConfig>,
 	exists: typeof EntrypointType.prototype.unstable_exists
 ): Promise<boolean> => {
+	if (
+		!(
+			flagIsEnabled(
+				configuration,
+				SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING
+			) && request.headers.get("Sec-Fetch-Mode") === "navigate"
+		)
+	) {
+		configuration = {
+			...configuration,
+			not_found_handling: "none",
+		};
+	}
+
 	const responseOrAssetIntent = await getResponseOrAssetIntent(
 		request,
 		env,
-		{
-			...configuration,
-			not_found_handling: "none",
-		},
+		configuration,
 		exists
 	);
 

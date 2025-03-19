@@ -248,7 +248,8 @@ export default function getFrameworkTestConfig(pm: string) {
 				envInterfaceName: "Env",
 			},
 		},
-		remix: {
+		"remix:pages": {
+			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedPms: ["yarn"],
@@ -270,6 +271,26 @@ export default function getFrameworkTestConfig(pm: string) {
 				script: "build",
 				route: "/test",
 				expectedText: "C3_TEST",
+			},
+			flags: ["--typescript", "--no-install", "--no-git-init"],
+		},
+		"remix:workers": {
+			argv: ["--platform", "workers"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedPms: ["yarn"],
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Welcome to Remix",
+			},
+			verifyPreview: {
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			verifyBuildCfTypes: {
+				outputFile: "worker-configuration.d.ts",
+				envInterfaceName: "Env",
 			},
 			flags: ["--typescript", "--no-install", "--no-git-init"],
 		},

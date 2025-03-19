@@ -1,3 +1,4 @@
+import type { ENABLEMENT_COMPATIBILITY_FLAGS } from "./compatibility-flags";
 import type { ReadyAnalytics } from "./types";
 
 // This will allow us to make breaking changes to the analytic schema
@@ -20,6 +21,8 @@ type Data = {
 	coloTier?: number;
 	// double5 - Response status code
 	status?: number;
+	// double6 - Compatibility flags
+	compatibilityFlags?: string[]; // converted into a bitmask
 
 	// -- Blobs --
 	// blob1 - Hostname of the request
@@ -39,6 +42,14 @@ type Data = {
 	// blob8 - The cache status of the request
 	cacheStatus?: string;
 };
+
+const COMPATIBILITY_FLAG_MASKS: Record<ENABLEMENT_COMPATIBILITY_FLAGS, number> =
+	{
+		assets_navigation_prefers_asset_serving: 1 << 0,
+		// next_one: 1 << 1
+		// one_after_that: 1 << 2
+		// etc: 1 << 3
+	};
 
 export class Analytics {
 	private data: Data = {};
@@ -61,6 +72,17 @@ export class Analytics {
 			return;
 		}
 
+		let compatibilityFlagsBitmask = 0;
+		for (const compatibilityFlag of this.data.compatibilityFlags || []) {
+			const mask =
+				COMPATIBILITY_FLAG_MASKS[
+					compatibilityFlag as ENABLEMENT_COMPATIBILITY_FLAGS
+				];
+			if (mask) {
+				compatibilityFlagsBitmask += mask;
+			}
+		}
+
 		this.readyAnalytics.logEvent({
 			version: VERSION,
 			accountId: this.data.accountId,
@@ -71,6 +93,7 @@ export class Analytics {
 				this.data.metalId ?? -1, // double3
 				this.data.coloTier ?? -1, // double4
 				this.data.status ?? -1, // double5
+				compatibilityFlagsBitmask, // double6
 			],
 			blobs: [
 				this.data.hostname?.substring(0, 256), // blob1 - trim to 256 bytes

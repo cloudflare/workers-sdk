@@ -1,6 +1,6 @@
 import { SELF } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { applyConfigurationDefaults } from "../../packages/workers-shared/asset-worker/src/configuration";
+import { normalizeConfiguration } from "../../packages/workers-shared/asset-worker/src/configuration";
 import Worker from "../../packages/workers-shared/asset-worker/src/index";
 import { getAssetWithMetadataFromKV } from "../../packages/workers-shared/asset-worker/src/utils/kv";
 import { encodingTestCases } from "./test-cases/encoding-test-cases";
@@ -65,8 +65,8 @@ describe.each(testSuites)("$title", ({ title, suite }) => {
 				await vi.importActual<
 					typeof import("../../packages/workers-shared/asset-worker/src/configuration")
 				>("../../packages/workers-shared/asset-worker/src/configuration")
-			).applyConfigurationDefaults;
-			vi.mocked(applyConfigurationDefaults).mockImplementation(() => ({
+			).normalizeConfiguration;
+			vi.mocked(normalizeConfiguration).mockImplementation(() => ({
 				...originalApplyConfigurationDefaults({}),
 				html_handling,
 				not_found_handling: "none",
