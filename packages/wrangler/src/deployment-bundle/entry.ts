@@ -113,13 +113,14 @@ export async function getEntry(
 			dedent`
 			Missing entry-point to Worker script or to assets directory
 
-			If you want to deploy a Worker that includes code, you can either:
+			If there is code to deploy, you can either:
 			- Specify an entry-point to your Worker script via the command line (ex: \`${fullCommand} src/index.ts\`)
 			- Or ${updateConfigMessage({ main: "src/index.ts" })}
 
-			If you want to deploy only a directory of assets (with no server-side code), you can either:
+			If are uploading a directory of assets, you can either:
 			- Specify the path to the directory of assets via the command line: (ex: \`${fullCommand} --assets=./dist\`)
-			- Or ${updateConfigMessage({ assets: { directory: "./dist" } })}`
+			- Or ${updateConfigMessage({ assets: { directory: "./dist" } })}`,
+			{ telemetryMessage: "missing worker entrypoint or assets directory" }
 		);
 	}
 	await runCustomBuild(

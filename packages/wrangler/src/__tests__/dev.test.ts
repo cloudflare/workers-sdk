@@ -308,7 +308,7 @@ describe.sequential("wrangler dev", () => {
 				`
 				[Error: Missing entry-point to Worker script or to assets directory
 
-				If you want to deploy a Worker that includes code, you can either:
+				If there is code to deploy, you can either:
 				- Specify an entry-point to your Worker script via the command line (ex: \`npx wrangler dev src/index.ts\`)
 				- Or add the following to your "wrangler.toml" file:
 
@@ -318,7 +318,7 @@ describe.sequential("wrangler dev", () => {
 				\`\`\`
 
 
-				If you want to deploy only a directory of assets (with no server-side code), you can either:
+				If are uploading a directory of assets, you can either:
 				- Specify the path to the directory of assets via the command line: (ex: \`npx wrangler dev --assets=./dist\`)
 				- Or add the following to your "wrangler.toml" file:
 
@@ -336,7 +336,7 @@ describe.sequential("wrangler dev", () => {
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing entry-point to Worker script or to assets directory[0m
 
 
-				  If you want to deploy a Worker that includes code, you can either:
+				  If there is code to deploy, you can either:
 				  - Specify an entry-point to your Worker script via the command line (ex: \`npx wrangler dev
 				  src/index.ts\`)
 				  - Or add the following to your \\"wrangler.toml\\" file:
@@ -347,7 +347,7 @@ describe.sequential("wrangler dev", () => {
 				  \`\`\`
 
 
-				  If you want to deploy only a directory of assets (with no server-side code), you can either:
+				  If are uploading a directory of assets, you can either:
 				  - Specify the path to the directory of assets via the command line: (ex: \`npx wrangler dev
 				  --assets=./dist\`)
 				  - Or add the following to your \\"wrangler.toml\\" file:
