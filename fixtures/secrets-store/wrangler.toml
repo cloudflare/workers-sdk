@@ -3,6 +3,6 @@ name = "secret-store"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
-secret_stores = [
-    { binding = "SECRET", store_id = "test", name = "example" }
+secrets_store_secrets = [
+    { binding = "SECRET", store_id = "test_store_id", secret_name = "secret_name" }
 ]

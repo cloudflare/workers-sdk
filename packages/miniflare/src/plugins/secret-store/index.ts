@@ -1,4 +1,4 @@
-import SCRIPT_SECRET_STORE_OBJECT from "worker:secret-store/secret-store";
+import SCRIPT_SECRETS_STORE_SECRET from "worker:secrets-store/secret";
 import { z } from "zod";
 import { ServiceDesignator, Worker_Binding } from "../../runtime";
 import { KV_PLUGIN, KVOptionsSchema } from "../kv";
@@ -7,19 +7,19 @@ import { PersistenceSchema, Plugin, ProxyNodeBinding } from "../shared";
 const SecretStoresSchema = z.record(
 	z.object({
 		store_id: z.string(),
-		name: z.string(),
+		secret_name: z.string(),
 	})
 );
 
 export const SecretStoreOptionsSchema = z.object({
-	secretStores: SecretStoresSchema.optional(),
+	secretsStoreSecrets: SecretStoresSchema.optional(),
 });
 
 export const SecretStoreSharedOptionsSchema = z.object({
-	secretStorePersist: PersistenceSchema,
+	secretsStorePersist: PersistenceSchema,
 });
 
-export const SECRET_STORE_PLUGIN_NAME = "secret-store";
+export const SECRET_STORE_PLUGIN_NAME = "secrets-store";
 const SERVICE_SECRET_STORE_PREFIX = `${SECRET_STORE_PLUGIN_NAME}`;
 const SERVICE_SECRET_STORE_MODULE = `cloudflare-internal:${SERVICE_SECRET_STORE_PREFIX}:module`;
 
@@ -54,13 +54,50 @@ export const SECRET_STORE_PLUGIN: Plugin<
 	options: SecretStoreOptionsSchema,
 	sharedOptions: SecretStoreSharedOptionsSchema,
 	async getBindings(options, workerIndex) {
-		if (!options.secretStores) {
+		if (!options.secretsStoreSecrets) {
 			return [];
 		}
 
+		const bindings = Object.entries(
+			options.secretsStoreSecrets
+		).map<Worker_Binding>(([name, config]) => {
+			return {
+				name,
+				service: {
+					name: `${SERVICE_SECRET_STORE_PREFIX}:${config.store_id}:${config.secret_name}`,
+					entrypoint: "SecretsStoreSecret",
+				},
+			};
+		});
+		return bindings;
+	},
+	getNodeBindings(options: z.infer<typeof SecretStoreOptionsSchema>) {
+		if (!options.secretsStoreSecrets) {
+			return {};
+		}
+		return Object.fromEntries(
+			Object.keys(options.secretsStoreSecrets).map((name) => [
+				name,
+				new ProxyNodeBinding(),
+			])
+		);
+	},
+	async getServices({ options, sharedOptions, ...restOptions }) {
+		if (!options.secretsStoreSecrets) {
+			return [];
+		}
+
+		const kvServices = await KV_PLUGIN.getServices({
+			options: getkvNamespacesOptions(options.secretsStoreSecrets),
+			sharedOptions: {
+				kvPersist: sharedOptions.secretsStorePersist,
+			},
+			...restOptions,
+		});
+
 		const kvBindings = await KV_PLUGIN.getBindings(
-			getkvNamespacesOptions(options.secretStores),
-			workerIndex
+			getkvNamespacesOptions(options.secretsStoreSecrets),
+			restOptions.workerIndex
 		);
 
 		if (!kvBindings || !kvBindings.every(isKvBinding)) {
@@ -69,72 +106,41 @@ export const SECRET_STORE_PLUGIN: Plugin<
 			);
 		}
 
-		const bindings = Object.entries(options.secretStores).map<Worker_Binding>(
-			([name, config]) => {
-				return {
-					name,
-					wrapped: {
-						moduleName: SERVICE_SECRET_STORE_MODULE,
-						innerBindings: [
-							{
-								name: "store",
-								kvNamespace: kvBindings.find(
-									// Look up the corresponding KV namespace for the store id
-									(binding) => binding.name === config.store_id
-								)?.kvNamespace,
-							},
-							{
-								name: "name",
-								json: JSON.stringify(config.name),
-							},
-						],
-					},
-				};
-			}
-		);
-		return bindings;
-	},
-	getNodeBindings(options: z.infer<typeof SecretStoreOptionsSchema>) {
-		if (!options.secretStores) {
-			return {};
-		}
-		return Object.fromEntries(
-			Object.keys(options.secretStores).map((name) => [
-				name,
-				new ProxyNodeBinding(),
-			])
-		);
-	},
-	async getServices({ options, sharedOptions, ...restOptions }) {
-		if (!options.secretStores) {
-			return [];
-		}
-
-		const kvServices = await KV_PLUGIN.getServices({
-			options: getkvNamespacesOptions(options.secretStores),
-			sharedOptions: {
-				kvPersist: sharedOptions.secretStorePersist,
-			},
-			...restOptions,
-		});
-
 		if (!Array.isArray(kvServices)) {
 			throw new Error("Expected KV plugin to return an array of services");
 		}
 
-		return {
-			services: kvServices,
-			extensions: [
-				{
-					modules: [
-						{
-							name: SERVICE_SECRET_STORE_MODULE,
-							esModule: SCRIPT_SECRET_STORE_OBJECT(),
-							internal: true,
+		return [
+			...kvServices,
+			...Object.entries(options.secretsStoreSecrets).map<Worker_Binding>(
+				([name, config]) => {
+					return {
+						name: `${SERVICE_SECRET_STORE_PREFIX}:${config.store_id}:${config.secret_name}`,
+						worker: {
+							compatibilityDate: "2025-01-01",
+							modules: [
+								{
+									name: "secret.worker.js",
+									esModule: SCRIPT_SECRETS_STORE_SECRET(),
+								},
+							],
+							bindings: [
+								{
+									name: "store",
+									kvNamespace: kvBindings.find(
+										// Look up the corresponding KV namespace for the store id
+										(binding) => binding.name === config.store_id
+									)?.kvNamespace,
+								},
+								{
+									name: "secret_name",
+									json: JSON.stringify(config.secret_name),
+								},
+							],
 						},
-					],
-				},
-			],
-		};
+					};
+				}
+			),
+		];
 	},
 };

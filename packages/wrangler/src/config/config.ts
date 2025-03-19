@@ -292,7 +292,7 @@ export const defaultWranglerConfig: Config = {
 	vectorize: [],
 	hyperdrive: [],
 	workflows: [],
-	secret_stores: [],
+	secrets_store_secrets: [],
 	services: [],
 	analytics_engine_datasets: [],
 	ai: undefined,

@@ -110,6 +110,7 @@ import {
 	SharedHeaders,
 	SiteBindings,
 } from "./workers";
+import { WRITE_SECRET } from "./workers/secrets-store/constants";
 import { formatZodError } from "./zod-format";
 import type {
 	CacheStorage,
@@ -1913,18 +1914,24 @@ export class Miniflare {
 	): Promise<ReplaceWorkersTypes<KVNamespace>> {
 		return this.#getProxy(KV_PLUGIN_NAME, bindingName, workerName);
 	}
-	getSercetStoreKVNamespace(
+	getSecretsStoreSecretWrite(
 		bindingName: string,
 		workerName?: string
-	): Promise<ReplaceWorkersTypes<KVNamespace>> {
+	): Promise<(value: string) => void> {
 		return this.#getProxy(
 			SECRET_STORE_PLUGIN_NAME,
 			bindingName,
 			workerName
 		).then((binding) => {
-			// @ts-ignore We exposed the internal KV namespace in the wrapped bindings
-			return binding.store;
+			// @ts-expect-error We exposed the internal KV namespace
+			return binding[WRITE_SECRET];
 		});
+	}
+	getSecretsStoreSecret(
+		bindingName: string,
+		workerName?: string
+	): Promise<ReplaceWorkersTypes<KVNamespace>> {
+		return this.#getProxy(SECRET_STORE_PLUGIN_NAME, bindingName, workerName);
 	}
 	getQueueProducer<Body = unknown>(
 		bindingName: string,
