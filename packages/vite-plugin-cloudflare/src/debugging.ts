@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import colors from "picocolors";
 import type * as vite from "vite";
 
 export const debuggingPath = "/__debug";
@@ -19,9 +20,15 @@ export function addDebugToVitePrintUrls(
 
 		if (localUrl) {
 			const { protocol, hostname, port } = new URL(localUrl);
-			const orange = (str: string) => `\x1b[38;5;214m${str}\x1b[0m`;
+
+			const colorDebugUrl = (url: string) =>
+				colors.dim(
+					colors.yellow(
+						url.replace(/:(\d+)\//, (_, port) => `:${colors.bold(port)}/`)
+					)
+				);
 			server.config.logger.info(
-				`  ${orange("➜")}  Debug:   ${orange(`${protocol}${hostname}:${port}${debuggingPath}`)}`
+				`  ${colors.green("➜")}  ${colors.bold("Debug")}:   ${colorDebugUrl(`${protocol}//${hostname}:${port}${debuggingPath}`)}`
 			);
 		}
 	};
