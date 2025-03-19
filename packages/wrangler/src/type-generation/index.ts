@@ -516,7 +516,7 @@ export async function generateEnvTypes(
 		for (const pipeline of configToDTS.pipelines) {
 			envTypeStructure.push([
 				constructTypeKey(pipeline.binding),
-				`import("cloudflare:pipelines").Pipeline`,
+				`import("cloudflare:pipelines").Pipeline<import("cloudflare:pipelines").PipelineRecord>`,
 			]);
 		}
 	}

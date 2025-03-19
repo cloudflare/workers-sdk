@@ -437,7 +437,7 @@ describe("generate types", () => {
 					IMAGES_BINDING: ImagesBinding;
 					VERSION_METADATA_BINDING: { id: string; tag: string };
 					ASSETS_BINDING: Fetcher;
-					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline;
+					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 				}
 			}
 			interface Env extends Cloudflare.Env {}
@@ -526,7 +526,7 @@ describe("generate types", () => {
 					IMAGES_BINDING: ImagesBinding;
 					VERSION_METADATA_BINDING: { id: string; tag: string };
 					ASSETS_BINDING: Fetcher;
-					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline;
+					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 				}
 			}
 			interface Env extends Cloudflare.Env {}
