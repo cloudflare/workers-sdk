@@ -14,7 +14,7 @@ export async function getWorkerDResponses(request: Request, env) {
 	const buzzResult = await foo.bar.buzz();
 
 	// test RpcTarget + promise pipelining
-	const beeCounter = await env.NAMED_ENTRYPOINT.newBeeCounter();
+	const beeCounter = env.NAMED_ENTRYPOINT.newBeeCounter();
 	beeCounter.increment(1); // returns 1
 	beeCounter.increment(2); // returns 3
 	beeCounter.increment(-1); // returns 2
