@@ -374,6 +374,11 @@ It accepts an optional `PluginConfig` parameter.
   All requests are routed through your entry Worker.
   During the build, each Worker is output to a separate subdirectory of `dist`.
 
+- `inspectorPort?: number | false`
+
+  Optional inspector port to use for debugging your workers, for more details on debugging see the [devtools section](#devtools). Can be set to `false` to disable
+  the debugging inspector altogether.
+
 > [!NOTE]
 > When running `wrangler deploy`, only your main (entry) Worker will be deployed.
 > If using multiple Workers, each must be deployed individually.
