@@ -1340,13 +1340,13 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validatePipelineBinding),
 			[]
 		),
-		secret_stores: notInheritable(
+		secrets_store_secrets: notInheritable(
 			diagnostics,
 			topLevelEnv,
 			rawConfig,
 			rawEnv,
 			envName,
-			"secret_stores",
+			"secrets_store_secrets",
 			validateBindingArray(envName, validateSecretStoreBinding),
 			[]
 		),
@@ -3154,7 +3154,7 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 const validateSecretStoreBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
-			`"secret_stores" bindings should be objects, but got ${JSON.stringify(value)}`
+			`"secrets_store_secrets" bindings should be objects, but got ${JSON.stringify(value)}`
 		);
 		return false;
 	}
@@ -3177,9 +3177,9 @@ const validateSecretStoreBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
-	if (!isRequiredProperty(value, "name", "string")) {
+	if (!isRequiredProperty(value, "secret_name", "string")) {
 		diagnostics.errors.push(
-			`"${field}" bindings must have a string "name" field but got ${JSON.stringify(
+			`"${field}" bindings must have a string "secret_name" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -3189,7 +3189,7 @@ const validateSecretStoreBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"store_id",
-		"name",
+		"secret_name",
 	]);
 
 	return isValid;

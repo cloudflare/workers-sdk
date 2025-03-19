@@ -4,12 +4,15 @@ import { Miniflare } from "miniflare";
 test("single secret-store", async (t) => {
 	const mf = new Miniflare({
 		verbose: true,
-		secretStores: {
+		compatibilityDate: "2025-01-01",
+		secretsStoreSecrets: {
 			SECRET: {
 				store_id: "test_store_id",
-				name: "secret_name",
+				secret_name: "secret_name",
 			},
 		},
+		secretsStorePersist:
+			"../../fixtures/secrets-store/.wrangler/state/v3/secrets-store",
 		modules: true,
 		script: `
 		export default {
@@ -28,12 +31,12 @@ test("single secret-store", async (t) => {
 
 	const response1 = await mf.dispatchFetch("http://localhost");
 
-	t.is(await response1.text(), "Secret secret_name not found");
+	t.is(await response1.text(), 'Secret "secret_name" not found');
 	t.is(response1.status, 404);
 
-	const store = await mf.getSercetStoreKVNamespace("SECRET");
+	const write = await mf.getSecretsStoreSecretWrite("SECRET");
 
-	await store.put("secret_name", "example");
+	await write("example");
 
 	const response2 = await mf.dispatchFetch("http://localhost");
 
@@ -44,20 +47,21 @@ test("single secret-store", async (t) => {
 test("multiple secret-store", async (t) => {
 	const mf = new Miniflare({
 		verbose: true,
-		secretStores: {
+		compatibilityDate: "2025-01-01",
+		secretsStoreSecrets: {
 			SECRET1: {
 				store_id: "test_store_id_1",
-				name: "secret_name_a",
+				secret_name: "secret_name_a",
 			},
 			// Same store id, different secret name
 			SECRET2: {
 				store_id: "test_store_id_1",
-				name: "secret_name_b",
+				secret_name: "secret_name_b",
 			},
 			// Different store id, same secret name
 			SECRET3: {
 				store_id: "test_store_id_2",
-				name: "secret_name_a",
+				secret_name: "secret_name_a",
 			},
 		},
 		modules: true,
@@ -89,10 +93,11 @@ test("multiple secret-store", async (t) => {
 		secret3: null,
 	});
 
-	const store1 = await mf.getSercetStoreKVNamespace("SECRET1");
+	const write1 = await mf.getSecretsStoreSecretWrite("SECRET1");
+	const write2 = await mf.getSecretsStoreSecretWrite("SECRET2");
 
-	await store1.put("secret_name_a", "example_a");
-	await store1.put("secret_name_b", "example_b");
+	await write1("example_a");
+	await write2("example_b");
 
 	const response2 = await mf.dispatchFetch("http://localhost");
 
@@ -102,9 +107,9 @@ test("multiple secret-store", async (t) => {
 		secret3: null,
 	});
 
-	const store2 = await mf.getSercetStoreKVNamespace("SECRET3");
+	const write3 = await mf.getSecretsStoreSecretWrite("SECRET3");
 
-	await store2.put("secret_name_a", "example_c");
+	await write3("example_c");
 
 	const response3 = await mf.dispatchFetch("http://localhost");
 

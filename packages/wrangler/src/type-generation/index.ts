@@ -381,9 +381,9 @@ export async function generateEnvTypes(
 		}
 	}
 
-	if (configToDTS.secret_stores) {
-		for (const secretStore of configToDTS.secret_stores) {
-			envTypeStructure.push([constructTypeKey(secretStore.binding), "?????"]);
+	if (configToDTS.secrets_store_secrets) {
+		for (const secretStore of configToDTS.secrets_store_secrets) {
+			envTypeStructure.push([constructTypeKey(secretStore.binding), "unknown"]);
 		}
 	}
 

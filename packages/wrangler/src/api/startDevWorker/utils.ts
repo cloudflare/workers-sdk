@@ -247,9 +247,9 @@ export function convertCfWorkerInitBindingstoBindings(
 				}
 				break;
 			}
-			case "secret_stores": {
+			case "secrets_store_secrets": {
 				for (const { binding, ...x } of info) {
-					output[binding] = { type: "secret_store", ...x };
+					output[binding] = { type: "secrets_store_secret", ...x };
 				}
 				break;
 			}
@@ -286,7 +286,7 @@ export async function convertBindingsToCfWorkerInitBindings(
 		d1_databases: undefined,
 		vectorize: undefined,
 		hyperdrive: undefined,
-		secret_stores: undefined,
+		secrets_store_secrets: undefined,
 		services: undefined,
 		analytics_engine_datasets: undefined,
 		dispatch_namespaces: undefined,
@@ -378,9 +378,9 @@ export async function convertBindingsToCfWorkerInitBindings(
 		} else if (binding.type === "workflow") {
 			bindings.workflows ??= [];
 			bindings.workflows.push({ ...binding, binding: name });
-		} else if (binding.type === "secret_store") {
-			bindings.secret_stores ??= [];
-			bindings.secret_stores.push({ ...binding, binding: name });
+		} else if (binding.type === "secrets_store_secret") {
+			bindings.secrets_store_secrets ??= [];
+			bindings.secrets_store_secrets.push({ ...binding, binding: name });
 		} else if (isUnsafeBindingType(binding.type)) {
 			bindings.unsafe ??= {
 				bindings: [],

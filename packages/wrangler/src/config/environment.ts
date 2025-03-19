@@ -851,7 +851,7 @@ export interface EnvironmentNonInheritable {
 	 * @default []
 	 * @nonInheritable
 	 */
-	secret_stores: {
+	secrets_store_secrets: {
 		/** The binding name used to refer to the bound service. */
 		binding: string;
 
@@ -859,7 +859,7 @@ export interface EnvironmentNonInheritable {
 		store_id: string;
 
 		/** Name of the secret */
-		name: string;
+		secret_name: string;
 	}[];
 }
 

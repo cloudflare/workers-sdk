@@ -261,7 +261,7 @@ export type Binding =
 	| ({ type: "dispatch_namespace" } & BindingOmit<CfDispatchNamespace>)
 	| ({ type: "mtls_certificate" } & BindingOmit<CfMTlsCertificate>)
 	| ({ type: "pipeline" } & BindingOmit<CfPipeline>)
-	| ({ type: "secret_store" } & BindingOmit<CfSecretStore>)
+	| ({ type: "secrets_store_secret" } & BindingOmit<CfSecretStore>)
 	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
 	| { type: `unsafe_${string}` }
 	| { type: "assets" };
