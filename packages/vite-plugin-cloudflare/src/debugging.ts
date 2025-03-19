@@ -5,7 +5,7 @@ import type * as vite from "vite";
 export const debuggingPath = "/__debug";
 
 /**
- * Modifies the url printing logic of a vite serve to also include a url that developers can use to open devtools to debug their workers/workers
+ * Modifies the url printing logic to also include a url that developers can use to open devtools to debug their Worker(s)
  *
  * @param server a vite server (dev or preview)
  */
