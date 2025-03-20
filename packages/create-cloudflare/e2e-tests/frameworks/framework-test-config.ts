@@ -14,6 +14,7 @@ export default function getFrameworkTestConfig(pm: string) {
 			verifyPreview: {
 				route: "/",
 				expectedText: "Hello from Cloudflare",
+				previewArgs: ["--host=127.0.0.1"],
 			},
 			verifyBuildCfTypes: {
 				outputFile: "worker-configuration.d.ts",
