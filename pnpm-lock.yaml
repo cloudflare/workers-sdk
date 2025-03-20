@@ -2396,6 +2396,27 @@ importers:
         specifier: workspace:*
         version: link:../../../wrangler
 
+  packages/vite-plugin-cloudflare/playground/static:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250317.0
+        version: 4.20250317.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
   packages/vite-plugin-cloudflare/playground/static-mpa:
     devDependencies:
       '@cloudflare/vite-plugin':
@@ -9428,6 +9449,9 @@ packages:
 
   obuf@1.1.2:
     resolution: {integrity: sha512-PX1wu0AmAdPqOL1mWhqmlOd8kOIZQwGZw6rh7uby9fTc5lhaOWFLX3I6R1hrF9k3zUY40e6igsLGkDXK92LJNg==}
+
+  ohash@1.1.4:
+    resolution: {integrity: sha512-FlDryZAahJmEF3VR3w1KogSEdWX3WhA5GPakFx4J81kEAiHyLMpdLLElS8n8dfNadMgAne/MywcvmogzscVt4g==}
 
   ohash@1.1.6:
     resolution: {integrity: sha512-TBu7PtV8YkAZn0tSxobKY2n2aAQva936lhRrj6957aDaCf9IEtqsKbgMzXE/F/sjqYOwmrukeORHNLe5glk7Cg==}
@@ -19174,6 +19198,8 @@ snapshots:
 
   obuf@1.1.2: {}
 
+  ohash@1.1.4: {}
+
   ohash@1.1.6: {}
 
   ohash@2.0.11: {}
@@ -21156,7 +21182,7 @@ snapshots:
     dependencies:
       defu: 6.1.4
       mlly: 1.7.4
-      ohash: 1.1.6
+      ohash: 1.1.4
       pathe: 1.1.2
       ufo: 1.5.4
 

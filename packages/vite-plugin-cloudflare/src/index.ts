@@ -16,7 +16,6 @@ import {
 	initRunners,
 } from "./cloudflare-environment";
 import { writeDeployConfig } from "./deploy-config";
-import { getDevEntryWorker } from "./dev";
 import {
 	getDevMiniflareOptions,
 	getPreviewMiniflareOptions,
@@ -29,11 +28,19 @@ import {
 } from "./node-js-compat";
 import { resolvePluginConfig } from "./plugin-config";
 import { additionalModuleGlobalRE } from "./shared";
-import { cleanUrl, getOutputDirectory, toMiniflareRequest } from "./utils";
+import {
+	cleanUrl,
+	getOutputDirectory,
+	getRouterWorker,
+	toMiniflareRequest,
+} from "./utils";
 import { handleWebSocket } from "./websockets";
 import { getWarningForWorkersConfigs } from "./workers-configs";
 import type { PluginConfig, ResolvedPluginConfig } from "./plugin-config";
 import type { Unstable_RawConfig } from "wrangler";
+
+// this flag is used to show the workers configs warning only once
+let workersConfigsWarningShown = false;
 
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
@@ -47,14 +54,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	let resolvedViteConfig: vite.ResolvedConfig;
 	let miniflare: Miniflare | undefined;
 
-	// this flag is used to show the workers configs warning only once
-	let workersConfigsWarningShown = false;
-
 	const additionalModulePaths = new Set<string>();
+
+	// This is set when the client environment is built to determine if the entry Worker should include assets
+	let hasClientBuild = false;
 
 	return [
 		{
 			name: "vite-plugin-cloudflare",
+			// This only applies to this plugin so is safe to use while other plugins migrate to the Environment API
+			sharedDuringBuild: true,
 			config(userConfig, env) {
 				if (env.isPreview) {
 					// Short-circuit the whole configuration if we are in preview mode
@@ -145,6 +154,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					},
 				};
 			},
+			buildStart() {
+				// This resets the value when the dev server restarts
+				workersConfigsWarningShown = false;
+			},
 			configResolved(config) {
 				resolvedViteConfig = config;
 			},
@@ -164,12 +177,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					}
 
 					workerConfig.main = entryChunk[0];
+					workerConfig.no_bundle = true;
+					workerConfig.rules = [
+						{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] },
+					];
 
 					const isEntryWorker =
 						this.environment.name ===
 						resolvedPluginConfig.entryWorkerEnvironmentName;
 
-					if (isEntryWorker && workerConfig.assets) {
+					if (isEntryWorker && hasClientBuild) {
 						const workerOutputDirectory = this.environment.config.build.outDir;
 						const clientOutputDirectory =
 							resolvedViteConfig.environments.client?.build.outDir;
@@ -179,10 +196,15 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							"Unexpected error: client output directory is undefined"
 						);
 
-						workerConfig.assets.directory = path.relative(
-							path.resolve(resolvedViteConfig.root, workerOutputDirectory),
-							path.resolve(resolvedViteConfig.root, clientOutputDirectory)
-						);
+						workerConfig.assets = {
+							...workerConfig.assets,
+							directory: path.relative(
+								path.resolve(resolvedViteConfig.root, workerOutputDirectory),
+								path.resolve(resolvedViteConfig.root, clientOutputDirectory)
+							),
+						};
+					} else {
+						workerConfig.assets = undefined;
 					}
 
 					config = workerConfig;
@@ -205,7 +227,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				} else if (this.environment.name === "client") {
 					const assetsOnlyConfig = resolvedPluginConfig.config;
 
-					assetsOnlyConfig.assets.directory = ".";
+					assetsOnlyConfig.assets = {
+						...assetsOnlyConfig.assets,
+						directory: ".",
+					};
 
 					const filesToAssetsIgnore = ["wrangler.json", ".dev.vars"];
 
@@ -222,8 +247,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					return;
 				}
 
-				config.no_bundle = true;
-				config.rules = [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }];
 				// Set to `undefined` if it's an empty object so that the user doesn't see a warning about using `unsafe` fields when deploying their Worker.
 				if (config.unsafe && Object.keys(config.unsafe).length === 0) {
 					config.unsafe = undefined;
@@ -236,6 +259,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				});
 			},
 			writeBundle() {
+				// This relies on the assumption that the client environment is built first
+				// Composable `buildApp` hooks could provide a more robust alternative in future
+				if (this.environment.name === "client") {
+					hasClientBuild = true;
+				}
 				// These conditions ensure the deploy config is emitted once per application build as `writeBundle` is called for each environment.
 				// If Vite introduces an additional hook that runs after the application has built then we could use that instead.
 				if (
@@ -269,21 +297,18 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				);
 
 				await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
-				const entryWorker = await getDevEntryWorker(
-					resolvedPluginConfig,
-					miniflare
-				);
+				const routerWorker = await getRouterWorker(miniflare);
 
 				const middleware = createMiddleware(
 					({ request }) => {
-						return entryWorker.fetch(toMiniflareRequest(request), {
+						return routerWorker.fetch(toMiniflareRequest(request), {
 							redirect: "manual",
 						}) as any;
 					},
 					{ alwaysCallNext: false }
 				);
 
-				handleWebSocket(viteDevServer.httpServer, entryWorker.fetch);
+				handleWebSocket(viteDevServer.httpServer, routerWorker.fetch);
 
 				return () => {
 					viteDevServer.middlewares.use((req, res, next) => {
