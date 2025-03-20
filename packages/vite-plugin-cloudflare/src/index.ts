@@ -343,7 +343,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		},
 		// Plugin to support `.wasm?init` extension
 		{
-			name: "vite-plugin:wasm-helper",
+			name: "vite-plugin-cloudflare:wasm-helper",
 			enforce: "pre",
 			applyToEnvironment(environment) {
 				return getWorkerConfig(environment.name) !== undefined;
