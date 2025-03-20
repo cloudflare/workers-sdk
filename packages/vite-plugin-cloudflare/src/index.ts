@@ -341,6 +341,26 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				});
 			},
 		},
+		// Plugin to support `.wasm?init` extension
+		{
+			name: "vite-plugin-cloudflare:wasm-helper",
+			enforce: "pre",
+			applyToEnvironment(environment) {
+				return getWorkerConfig(environment.name) !== undefined;
+			},
+			load(id) {
+				if (!id.endsWith(".wasm?init")) {
+					return;
+				}
+
+				return `
+					import wasm from "${cleanUrl(id)}";
+					export default function(opts = {}) {
+						return WebAssembly.instantiate(wasm, opts);
+					}
+				`;
+			},
+		},
 		// Plugin to support additional modules
 		{
 			name: "vite-plugin-cloudflare:additional-modules",

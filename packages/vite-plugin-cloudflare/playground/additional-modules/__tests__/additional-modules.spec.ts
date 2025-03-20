@@ -28,6 +28,11 @@ test("supports CompiledWasm modules with a '.wasm' extension", async () => {
 });
 
 test("supports CompiledWasm modules with a '.wasm?module' extension", async () => {
-	const result = await getJsonResponse("/wasm-with-param");
+	const result = await getJsonResponse("/wasm-with-module-param");
 	expect(result).toEqual({ result: 11 });
+});
+
+test("supports CompiledWasm modules with a '.wasm?init' extension", async () => {
+	const result = await getJsonResponse("/wasm-with-init-param");
+	expect(result).toEqual({ result: 15 });
 });
