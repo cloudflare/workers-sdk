@@ -490,15 +490,15 @@ Secrets can be provided to your Worker in local development using a [`.dev.vars`
 
 The Cloudflare Vite plugin allows you to conveniently debug your Worker code during local development.
 
-By default the inspector port used by the plugin is `9229`, you can customize such by providing a different port to the plugin's `inspectorPort` option.
+By default the inspector port used by the plugin is `9229`, which can be customized by providing a different port to the plugin's `inspectorPort` option.
 
 There are two recommended ways of doing so, which we'll explore in this section.
 
 ### Devtools
 
-When running `vite dev` or `vite preview` a convenient `/__debug` route in your local server will be made available which gives you access to [Cloudflare's implementation](/packages/chrome-devtools-patches) of [Chrome's DevTools](https://developer.chrome.com/docs/devtools/overview).
+When running `vite dev` or `vite preview` a `/__debug` route in your local server will be made available which gives you access to [Cloudflare's implementation](/packages/chrome-devtools-patches) of [Chrome's DevTools](https://developer.chrome.com/docs/devtools/overview).
 
-Navigating to such route will open a devtools tab for each of the workers in your application (Note: In case of multiple workers you might need to allow your browser to open pop-ups).
+Navigating to this route will open a devtools tab for each of the workers in your application (Note: in case of multiple workers you might need to allow your browser to open pop-ups).
 
 Once the tab or tabs are open, you can make a request to your application and start debugging your workers' code.
 
@@ -538,7 +538,7 @@ Note: if you customized your `inspectorPort` you need to use that port in the `w
 
 If you have more than one worker you need add a configuration in the `configurations` field for each one and then include the configuration name in the `configurations` array in the compound configuration.
 
-Once you're `launch.json` file is ready, after running `vite dev` or `vite preview` you can select **Debug All Workers** at the top of the **Run & Debug** panel to attach debuggers to all the various Workers. Then you can add breakpoints to your code and start debugging.
+Once your `launch.json` file is ready, after running `vite dev` or `vite preview` you can select **Debug All Workers** at the top of the **Run & Debug** panel to attach debuggers to all the various Workers. Then you can add breakpoints to your code and start debugging.
 
 Note: You can also manually select the configurations to run (e.g. **Debug Worker1**) to filter which workers you want to debug.
 
