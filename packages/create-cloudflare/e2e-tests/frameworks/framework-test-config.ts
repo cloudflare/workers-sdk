@@ -207,15 +207,36 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Gatsby!",
 			},
 		},
-		hono: {
+		"hono:pages": {
+			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
 				route: "/",
-				expectedText: "Hello Hono!",
+				expectedText: "Hello!",
 			},
 			verifyPreview: {
 				route: "/",
+				expectedText: "Hello!",
+				previewArgs: ["--host=127.0.0.1"],
+			},
+			promptHandlers: [
+				{
+					matcher: /Do you want to install project dependencies\?/,
+					input: [keys.enter],
+				},
+			],
+		},
+		"hono:workers": {
+			argv: ["--platform", "workers"],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/message",
+				expectedText: "Hello Hono!",
+			},
+			verifyPreview: {
+				route: "/message",
 				expectedText: "Hello Hono!",
 			},
 			promptHandlers: [
