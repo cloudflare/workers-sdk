@@ -1,7 +1,5 @@
 packages:
   - "packages/*"
-  - "packages/vite-plugin-cloudflare/playground/*"
-  - "packages/vite-plugin-cloudflare/playground"
   - "fixtures/*"
   - "tools"
 
@@ -17,8 +15,3 @@ catalog:
   vitest: "~3.0.5"
   vite: "^5.4.14"
   "ws": "8.18.0"
-
-catalogs:
-  vite-plugin:
-    "vite": "^6.1.0"
-    "@types/node": "^22.10.1"

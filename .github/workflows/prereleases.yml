@@ -32,10 +32,8 @@ jobs:
         run: |
           node .github/version-script.js wrangler
           node .github/version-script.js miniflare
-          node .github/version-script.js create-cloudflare
           node .github/version-script.js workers-shared
           node .github/version-script.js unenv-preset
-          node .github/version-script.js vite-plugin-cloudflare
 
       - name: Build
         run: pnpm run build

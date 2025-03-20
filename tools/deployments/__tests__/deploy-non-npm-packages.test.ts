@@ -97,18 +97,7 @@ describe("findDeployablePackageNames()", () => {
 	}) => {
 		expect(findDeployablePackageNames()).toMatchInlineSnapshot(`
 			Set {
-			  "@cloudflare/chrome-devtools-patches",
-			  "cloudflare-workers-bindings-extension",
-			  "devprod-status-bot",
-			  "edge-preview-authenticated-proxy",
-			  "format-errors",
-			  "playground-preview-worker",
-			  "@cloudflare/prerelease-registry",
-			  "@cloudflare/quick-edit",
-			  "turbo-r2-archive",
-			  "workers-playground",
 			  "@cloudflare/workers-shared",
-			  "workers.new",
 			  "@cloudflare/workflows-shared",
 			}
 		`);

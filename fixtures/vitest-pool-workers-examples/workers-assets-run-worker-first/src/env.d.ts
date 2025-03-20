@@ -1,3 +1,0 @@
-interface Env {
-	ASSETS: Fetcher;
-}

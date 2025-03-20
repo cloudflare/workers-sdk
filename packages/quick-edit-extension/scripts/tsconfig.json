@@ -1,9 +1,0 @@
-{
-	"extends": "@cloudflare/workers-tsconfig",
-	"compilerOptions": {
-		"module": "CommonJS",
-		"types": ["node"]
-	},
-	"include": ["bundle.ts"],
-	"exclude": []
-}
