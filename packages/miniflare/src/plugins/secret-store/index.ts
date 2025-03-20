@@ -20,8 +20,6 @@ export const SecretStoreSharedOptionsSchema = z.object({
 });
 
 export const SECRET_STORE_PLUGIN_NAME = "secrets-store";
-const SERVICE_SECRET_STORE_PREFIX = `${SECRET_STORE_PLUGIN_NAME}`;
-const SERVICE_SECRET_STORE_MODULE = `cloudflare-internal:${SERVICE_SECRET_STORE_PREFIX}:module`;
 
 function getkvNamespacesOptions(
 	secretStores: z.input<typeof SecretStoresSchema>
@@ -64,7 +62,7 @@ export const SECRET_STORE_PLUGIN: Plugin<
 			return {
 				name,
 				service: {
-					name: `${SERVICE_SECRET_STORE_PREFIX}:${config.store_id}:${config.secret_name}`,
+					name: `${SECRET_STORE_PLUGIN_NAME}:${config.store_id}:${config.secret_name}`,
 					entrypoint: "SecretsStoreSecret",
 				},
 			};
@@ -115,7 +113,7 @@ export const SECRET_STORE_PLUGIN: Plugin<
 			...Object.entries(options.secretsStoreSecrets).map<Worker_Binding>(
 				([name, config]) => {
 					return {
-						name: `${SERVICE_SECRET_STORE_PREFIX}:${config.store_id}:${config.secret_name}`,
+						name: `${SECRET_STORE_PLUGIN_NAME}:${config.store_id}:${config.secret_name}`,
 						worker: {
 							compatibilityDate: "2025-01-01",
 							modules: [
