@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-15, windows-2025, ubuntu-24.04]
+        os: [macos-latest, windows-latest, ubuntu-24.04-arm]
         node: ["18"]
     runs-on: ${{ matrix.os }}
     steps:
