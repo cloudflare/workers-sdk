@@ -52,7 +52,7 @@ export function getDebugPathHtml(workerNames: string[], inspectorPort: number) {
 
 	const workerDevtoolsUrls = workerNames.map((workerName) => {
 		const localHost = `localhost:${inspectorPort}/${workerName}`;
-		const devtoolsFrontendUrl = `https://devtools.devprod.cloudflare.dev/js_app?theme=systemPreferred&debugger=true&ws=${localHost}`;
+		const devtoolsFrontendUrl = `https://devtools.devprod.cloudflare.dev/js_app?theme=systemPreferred&debugger=true&ws=${localHost}&domain=${workerName}`;
 		return devtoolsFrontendUrl;
 	});
 
