@@ -868,6 +868,21 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/redirected-config-worker-with-environments:
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:^
+        version: link:../../packages/workers-tsconfig
+      undici:
+        specifier: catalog:default
+        version: 5.28.5
+      vitest:
+        specifier: catalog:default
+        version: 3.0.8(@types/node@18.19.76)(@vitest/ui@3.0.8)(jiti@2.4.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/routing-app: {}
 
   fixtures/rules-app: {}
