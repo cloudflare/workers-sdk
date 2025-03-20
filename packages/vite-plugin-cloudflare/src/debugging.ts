@@ -40,7 +40,7 @@ export function addDebugToVitePrintUrls(
  *  - opens tags to the devtools for all the remaining workers if any
  *
  * Note: this works based on the miniflare inspector proxy logic (where workers are available via
- * paths comprized of their names)
+ * paths comprised of their names)
  *
  * @param workerNames the names of all the available workers
  * @param inspectorPort the inspector port that miniflare is using
