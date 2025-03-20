@@ -26,7 +26,7 @@ describe("wrangler", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"wrangler queues
 
-				🇶  Manage Workers Queues
+				⇢ Manage Workers Queues
 
 				COMMANDS
 				  wrangler queues list                    List Queues

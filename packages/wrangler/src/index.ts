@@ -534,7 +534,7 @@ export function createCLIParser(argv: string[]) {
 	registry.registerNamespace("kv");
 
 	// queues
-	wrangler.command("queues", "🇶  Manage Workers Queues", (queuesYargs) => {
+	wrangler.command("queues", "⇢ Manage Workers Queues", (queuesYargs) => {
 		return queues(queuesYargs.command(subHelp));
 	});
 
