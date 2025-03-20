@@ -20,6 +20,22 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect(text).toMatchInlineSnapshot(`"Generated: true"`);
 	});
 
+	it("specified environments are ignored when using a generated config", async ({
+		expect,
+		onTestFinished,
+	}) => {
+		const { ip, port, stop, getOutput } = await runWranglerDev(basePath, [
+			"--port=0",
+			"--inspector-port=0",
+			"--env=staging",
+		]);
+		onTestFinished(async () => await stop?.());
+
+		expect(getOutput()).toMatch(
+			/Ignoring the requested environment \"staging\" since redirected configurations don't include environments/
+		);
+	});
+
 	it("uses a custom config from command line rather than generated config", async ({
 		expect,
 		onTestFinished,
