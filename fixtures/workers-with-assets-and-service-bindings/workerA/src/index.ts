@@ -1,12 +1,14 @@
 import { getWorkerBResponses } from "./workerB.util";
 import { getWorkerCResponses } from "./workerC.util";
 import { getWorkerDResponses } from "./workerD.util";
+import { getWorkerWSResponses } from "./workerWS.util";
 
 export default {
 	async fetch(request, env) {
 		const workerBResponses = await getWorkerBResponses(request, env);
 		const workerCResponses = await getWorkerCResponses(request, env);
 		const workerDResponses = await getWorkerDResponses(request, env);
+		const workerWSResponses = await getWorkerWSResponses(request, env);
 
 		// let's return everything for now to make testing easier
 		return new Response(
@@ -26,7 +28,10 @@ export default {
 				`env.NAMED_ENTRYPOINT.busyBee("🐝") response: ${workerDResponses.busyBeeResult}\n` +
 				`env.NAMED_ENTRYPOINT.foo("🐙").bar.buzz() response: ${workerDResponses.buzzResult}\n` +
 				`env.NAMED_ENTRYPOINT.newBeeCounter().value response: ${workerDResponses.beeCountResult}\n` +
-				`env.NAMED_ENTRYPOINT.scheduled() response: ${workerDResponses.scheduledResponse}\n\n`
+				`env.NAMED_ENTRYPOINT.scheduled() response: ${workerDResponses.scheduledResponse}\n` +
+				`"worker-ws" Responses\n` +
+				`env.WS.fetch() response: ${workerWSResponses.fetchResponse}\n` +
+				`env.WS.fetch(wsRequest) response: ${workerWSResponses.fetchWSResponse}\n\n`
 		);
 	},
 };

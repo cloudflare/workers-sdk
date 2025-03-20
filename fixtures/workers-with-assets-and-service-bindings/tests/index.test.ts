@@ -13,6 +13,8 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 	let stopWorkerC: (() => Promise<unknown>) | undefined,
 		getOutputWorkerC: () => string;
 	let stopWorkerD: (() => Promise<unknown>) | undefined;
+	let stopWorkerWS: (() => Promise<unknown>) | undefined,
+		getOutputWorkerWS: () => string;
 
 	beforeAll(async () => {
 		({ getOutput: getOutputWorkerB } = await runWranglerDev(
@@ -27,6 +29,11 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 
 		({ stop: stopWorkerD } = await runWranglerDev(
 			resolve(__dirname, "..", "workerD-with-named-entrypoint"),
+			["--port=0", "--inspector-port=0"]
+		));
+
+		({ stop: stopWorkerWS } = await runWranglerDev(
+			resolve(__dirname, "..", "workerWS"),
 			["--port=0", "--inspector-port=0"]
 		));
 
@@ -45,6 +52,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 		await stopWorkerB?.();
 		await stopWorkerC?.();
 		await stopWorkerD?.();
+		await stopWorkerWS?.();
 	});
 
 	describe("Workers running in separate wrangler dev sessions", () => {
@@ -235,6 +243,37 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 				);
 				expect(text).toContain(
 					`env.NAMED_ENTRYPOINT.newBeeCounter().value response: 2`
+				);
+			});
+		});
+
+		describe("Service binding to a Worker which handles WebSockets", () => {
+			it("should return Asset Worker response for fetch requests for routes that serve static content", async ({
+				expect,
+			}) => {
+				let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
+				let text = await response.text();
+				expect(response.status).toBe(200);
+				expect(text).toContain(
+					`env.WS.fetch() response: This is an asset of "worker-ws"`
+				);
+
+				response = await fetch(`http://${ipWorkerA}:${portWorkerA}/busy-bee`);
+				text = await response.text();
+				expect(response.status).toBe(200);
+				expect(text).toContain(
+					`env.WS.fetch() response: All "worker-ws" 🐝🐝🐝 are 🐝sy. Please come back later`
+				);
+			});
+
+			it("should be able to communicate over WebSocket", async ({ expect }) => {
+				let response = await fetch(
+					`http://${ipWorkerA}:${portWorkerA}/no-assets-at-this-path`
+				);
+				let text = await response.text();
+				expect(response.status).toBe(200);
+				expect(text).toContain(
+					"env.WS.fetch(wsRequest) response: pong: hello from client"
 				);
 			});
 		});
