@@ -9,6 +9,17 @@ export async function getWorkerDResponses(request: Request, env) {
 	// test named functions with parameters
 	const busyBeeResult = await env.NAMED_ENTRYPOINT.busyBee("🐝");
 
+	// test nested functions + promise pipelining
+	const foo = env.NAMED_ENTRYPOINT.foo("🐙");
+	const buzzResult = await foo.bar.buzz();
+
+	// test RpcTarget + promise pipelining
+	const beeCounter = env.NAMED_ENTRYPOINT.newBeeCounter();
+	beeCounter.increment(1); // returns 1
+	beeCounter.increment(2); // returns 3
+	beeCounter.increment(-1); // returns 2
+	const beeCountResult = await beeCounter.value; // returns 2
+
 	// tests Cron Triggers
 	// Cron Triggers can only be defined on default exports, class-based or otherwise
 
@@ -16,6 +27,8 @@ export async function getWorkerDResponses(request: Request, env) {
 		fetchResponse,
 		beeResult,
 		busyBeeResult,
+		buzzResult,
+		beeCountResult,
 		scheduledResponse:
 			"Not supported. Cron Triggers can only be defined on default exports.",
 	};

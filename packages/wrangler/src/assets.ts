@@ -415,7 +415,7 @@ export function getAssetsOptions(
 		);
 	}
 
-	// Using run_worker_first=true or experimental_serve_directly=false, but didn't provide a Worker script
+	// Using run_worker_first = true but didn't provide a Worker script
 	if (
 		!routerConfig.has_user_worker &&
 		routerConfig.invoke_user_worker_ahead_of_assets === true
@@ -436,6 +436,7 @@ export function getAssetsOptions(
 		html_handling: config.assets?.html_handling,
 		not_found_handling: config.assets?.not_found_handling,
 		// The _redirects and _headers files are parsed in Miniflare in dev and parsing is not required for deploy
+		// Similarly, `compatibility_date` and `compatibility_flags` are populated by Miniflare from the Worker definition and also are not required for deploy
 	};
 
 	return {

@@ -42,11 +42,11 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
-		"@cloudflare/unenv-preset": "1.1.1",
+		"@cloudflare/unenv-preset": "workspace:*",
 		"@hattip/adapter-node": "^0.0.49",
 		"miniflare": "workspace:*",
 		"tinyglobby": "^0.2.12",
-		"unenv": "2.0.0-rc.1",
+		"unenv": "2.0.0-rc.15",
 		"wrangler": "workspace:*",
 		"ws": "catalog:default"
 	},
@@ -54,7 +54,7 @@
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250317.0",
+		"@cloudflare/workers-types": "^4.20250319.0",
 		"@types/node": "catalog:vite-plugin",
 		"@types/ws": "^8.5.13",
 		"magic-string": "^0.30.12",
