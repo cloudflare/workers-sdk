@@ -252,6 +252,12 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 								name: `${ROUTER_SERVICE_NAME}:${id}`,
 							},
 						},
+						{
+							name: "USER_WORKER",
+							service: {
+								name: getUserServiceName(id),
+							},
+						},
 					],
 				},
 			};

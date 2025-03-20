@@ -23,6 +23,17 @@ export default {
 	},
 
 	/*
+	 * Nested functions
+	 */
+	async foo(emoji: string) {
+		return {
+			bar: {
+				buzz: () => `You made it! ${emoji}`,
+			},
+		};
+	},
+
+	/*
 	 * Cron Triggers
 	 *
 	 * When a Worker is invoked via a Cron Trigger, the scheduled() handler

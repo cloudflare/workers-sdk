@@ -1343,13 +1343,24 @@ export class Miniflare {
 					directSocket.host,
 					directSocket.port
 				);
+				// check if Worker with assets with default export
+				// (class or non-class based)
+				const service =
+					this.#sharedOpts.core.unsafeEnableAssetsRpc &&
+					workerOpts.assets.assets &&
+					entrypoint === "default"
+						? {
+								name: `${RPC_PROXY_SERVICE_NAME}:${workerOpts.core.name}`,
+							}
+						: {
+								name: getUserServiceName(workerName),
+								entrypoint: entrypoint === "default" ? undefined : entrypoint,
+							};
+
 				sockets.push({
 					name,
 					address,
-					service: {
-						name: getUserServiceName(workerName),
-						entrypoint: entrypoint === "default" ? undefined : entrypoint,
-					},
+					service,
 					http: {
 						style: directSocket.proxy ? HttpOptions_Style.PROXY : undefined,
 						cfBlobHeader: CoreHeaders.CF_BLOB,
