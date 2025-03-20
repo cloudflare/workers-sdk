@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import * as path from "node:path";
 import * as vite from "vite";
+import { DEFAULT_INSPECTOR_PORT } from "./constants";
 import { findWranglerConfig, getWorkerConfig } from "./workers-configs";
 import type {
 	AssetsOnlyWorkerResolvedConfig,
@@ -26,6 +27,7 @@ interface AuxiliaryWorkerConfig extends BaseWorkerConfig {
 export interface PluginConfig extends EntryWorkerConfig {
 	auxiliaryWorkers?: AuxiliaryWorkerConfig[];
 	persistState?: PersistState;
+	inspectorPort?: number | false;
 }
 
 type Defined<T> = Exclude<T, undefined>;
@@ -44,6 +46,7 @@ interface BasePluginConfig {
 	configPaths: Set<string>;
 	persistState: PersistState;
 	cloudflareEnv: string | undefined;
+	inspectorPort: number | false;
 }
 
 interface AssetsOnlyPluginConfig extends BasePluginConfig {
@@ -78,6 +81,7 @@ export function resolvePluginConfig(
 ): ResolvedPluginConfig {
 	const configPaths = new Set<string>();
 	const persistState = pluginConfig.persistState ?? true;
+	const inspectorPort = pluginConfig.inspectorPort ?? DEFAULT_INSPECTOR_PORT;
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
 	const { CLOUDFLARE_ENV: cloudflareEnv } = vite.loadEnv(
 		viteEnv.mode,
@@ -105,6 +109,7 @@ export function resolvePluginConfig(
 			type: "assets-only",
 			config: entryWorkerResolvedConfig.config,
 			configPaths,
+			inspectorPort,
 			persistState,
 			rawConfigs: {
 				entryWorker: entryWorkerResolvedConfig,
@@ -160,6 +165,7 @@ export function resolvePluginConfig(
 		type: "workers",
 		configPaths,
 		persistState,
+		inspectorPort,
 		workers,
 		entryWorkerEnvironmentName,
 		rawConfigs: {

@@ -7,3 +7,5 @@ export const ADDITIONAL_MODULE_TYPES = [
 	"Data",
 	"Text",
 ] as const;
+
+export const DEFAULT_INSPECTOR_PORT = 9229;

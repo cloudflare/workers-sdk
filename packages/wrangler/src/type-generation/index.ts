@@ -294,6 +294,7 @@ export async function generateEnvTypes(
 		secrets,
 		assets: config.assets,
 		workflows: config.workflows,
+		pipelines: config.pipelines,
 	};
 
 	const entrypointFormat = entrypoint?.format ?? "modules";
@@ -508,6 +509,15 @@ export async function generateEnvTypes(
 	if (configToDTS.workflows) {
 		for (const workflow of configToDTS.workflows) {
 			envTypeStructure.push([constructTypeKey(workflow.binding), "Workflow"]);
+		}
+	}
+
+	if (configToDTS.pipelines) {
+		for (const pipeline of configToDTS.pipelines) {
+			envTypeStructure.push([
+				constructTypeKey(pipeline.binding),
+				`import("cloudflare:pipelines").Pipeline<import("cloudflare:pipelines").PipelineRecord>`,
+			]);
 		}
 	}
 

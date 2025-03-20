@@ -18,7 +18,6 @@ import {
 	writeFile,
 	writeJSON,
 } from "helpers/files";
-import honoTemplateExperimental from "templates-experimental/hono/c3";
 import nextTemplateExperimental from "templates-experimental/next/c3";
 import qwikTemplateExperimental from "templates-experimental/qwik/c3";
 import solidTemplateExperimental from "templates-experimental/solid/c3";
@@ -173,7 +172,6 @@ export type TemplateMap = Record<
 export function getFrameworkMap({ experimental = false }): TemplateMap {
 	if (experimental) {
 		return {
-			hono: honoTemplateExperimental,
 			next: nextTemplateExperimental,
 			qwik: qwikTemplateExperimental,
 			solid: solidTemplateExperimental,
