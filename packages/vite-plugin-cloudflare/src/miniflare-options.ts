@@ -242,6 +242,12 @@ export function getDevMiniflareOptions(
 			],
 			bindings: {
 				CONFIG: {
+					...(entryWorkerConfig?.compatibility_date
+						? { compatibility_date: entryWorkerConfig?.compatibility_date }
+						: {}),
+					...(entryWorkerConfig?.compatibility_flags
+						? { compatibility_flags: entryWorkerConfig.compatibility_flags }
+						: {}),
 					...(assetsConfig?.html_handling
 						? { html_handling: assetsConfig.html_handling }
 						: {}),

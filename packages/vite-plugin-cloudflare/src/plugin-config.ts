@@ -36,6 +36,7 @@ export interface AssetsOnlyConfig extends SanitizedWorkerConfig {
 	topLevelName: Defined<SanitizedWorkerConfig["topLevelName"]>;
 	name: Defined<SanitizedWorkerConfig["name"]>;
 	compatibility_date: Defined<SanitizedWorkerConfig["compatibility_date"]>;
+	compatibility_flags: Defined<SanitizedWorkerConfig["compatibility_flags"]>;
 }
 
 export interface WorkerConfig extends AssetsOnlyConfig {
