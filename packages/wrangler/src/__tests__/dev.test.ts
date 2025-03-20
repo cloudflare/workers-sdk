@@ -12,6 +12,7 @@ import { getWorkerAccountAndContext } from "../dev/remote";
 import { FatalError } from "../errors";
 import { CI } from "../is-ci";
 import { logger } from "../logger";
+import { sniffUserAgent } from "../package-manager";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -298,20 +299,68 @@ describe.sequential("wrangler dev", () => {
 
 	describe("entry-points", () => {
 		it("should error if there is no entry-point specified", async () => {
+			vi.mocked(sniffUserAgent).mockReturnValue("npm");
 			writeWranglerConfig();
 
 			await expect(
 				runWrangler("dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`main\` config field.]`
+				`
+				[Error: Missing entry-point to Worker script or to assets directory
+
+				If there is code to deploy, you can either:
+				- Specify an entry-point to your Worker script via the command line (ex: \`npx wrangler dev src/index.ts\`)
+				- Or add the following to your "wrangler.toml" file:
+
+				\`\`\`
+				main = "src/index.ts"
+
+				\`\`\`
+
+
+				If are uploading a directory of assets, you can either:
+				- Specify the path to the directory of assets via the command line: (ex: \`npx wrangler dev --assets=./dist\`)
+				- Or add the following to your "wrangler.toml" file:
+
+				\`\`\`
+				[assets]
+				directory = "./dist"
+
+				\`\`\`
+				]
+			`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
-			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler dev path/to/script\`) or the \`main\` config field.[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing entry-point to Worker script or to assets directory[0m
 
-			        "
-		      `);
+
+				  If there is code to deploy, you can either:
+				  - Specify an entry-point to your Worker script via the command line (ex: \`npx wrangler dev
+				  src/index.ts\`)
+				  - Or add the following to your \\"wrangler.toml\\" file:
+
+				  \`\`\`
+				  main = \\"src/index.ts\\"
+
+				  \`\`\`
+
+
+				  If are uploading a directory of assets, you can either:
+				  - Specify the path to the directory of assets via the command line: (ex: \`npx wrangler dev
+				  --assets=./dist\`)
+				  - Or add the following to your \\"wrangler.toml\\" file:
+
+				  \`\`\`
+				  [assets]
+				  directory = \\"./dist\\"
+
+				  \`\`\`
+
+
+				"
+			`);
 		});
 
 		it("should use `main` from the top-level environment", async () => {
