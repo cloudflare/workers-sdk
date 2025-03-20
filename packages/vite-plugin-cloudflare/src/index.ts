@@ -66,69 +66,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	let hasClientBuild = false;
 
 	return [
-		// Plugin that provides an __debug path for debugging the Cloudflare Workers.
-		// Note: the plugin should come before the main vite-plugin-cloudflare so that
-		//       the preview middleware can take precedence
-		{
-			name: "vite-plugin-cloudflare:debug",
-			configureServer(viteDevServer) {
-				if (
-					resolvedPluginConfig.type === "workers" &&
-					resolvedPluginConfig.inspectorPort !== false
-				) {
-					addDebugToVitePrintUrls(viteDevServer);
-				}
-
-				const workerNames =
-					resolvedPluginConfig.type === "assets-only"
-						? []
-						: Object.values(resolvedPluginConfig.workers).map(
-								(worker) => worker.name
-							);
-
-				viteDevServer.middlewares.use((req, res, next) => {
-					if (
-						req.url === debuggingPath &&
-						resolvedPluginConfig.inspectorPort !== false
-					) {
-						const html = getDebugPathHtml(
-							workerNames,
-							resolvedPluginConfig.inspectorPort
-						);
-						res.setHeader("Content-Type", "text/html");
-						return res.end(html);
-					}
-					next();
-				});
-			},
-			configurePreviewServer(vitePreviewServer) {
-				const workerConfigs = getWorkerConfigs(vitePreviewServer.config.root);
-
-				if (workerConfigs.length >= 1 && pluginConfig.inspectorPort !== false) {
-					addDebugToVitePrintUrls(vitePreviewServer);
-				}
-
-				const workerNames = workerConfigs.map((worker) => {
-					assert(worker.name);
-					return worker.name;
-				});
-
-				vitePreviewServer.middlewares.use((req, res, next) => {
-					if (
-						req.url === debuggingPath &&
-						pluginConfig.inspectorPort !== false
-					) {
-						const html = getDebugPathHtml(
-							workerNames,
-							pluginConfig.inspectorPort ?? DEFAULT_INSPECTOR_PORT
-						);
-						res.setHeader("Content-Type", "text/html");
-						return res.end(html);
-					}
-					next();
-				});
-			},
-		},
 		{
 			name: "vite-plugin-cloudflare",
 			// This only applies to this plugin so is safe to use while other plugins migrate to the Environment API
@@ -591,6 +528,70 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				if (id === resolvedId?.id) {
 					return injectGlobalCode(id, code);
 				}
+			},
+		},
+		// Plugin that provides an __debug path for debugging the Cloudflare Workers.
+		{
+			name: "vite-plugin-cloudflare:debug",
+			// Note: this plugin needs to run before the main vite-plugin-cloudflare so that
+			//       the preview middleware here can take precedence
+			enforce: "pre",
+			configureServer(viteDevServer) {
+				if (
+					resolvedPluginConfig.type === "workers" &&
+					resolvedPluginConfig.inspectorPort !== false
+				) {
+					addDebugToVitePrintUrls(viteDevServer);
+				}
+
+				const workerNames =
+					resolvedPluginConfig.type === "assets-only"
+						? []
+						: Object.values(resolvedPluginConfig.workers).map(
+								(worker) => worker.name
+							);
+
+				viteDevServer.middlewares.use((req, res, next) => {
+					if (
+						req.url === debuggingPath &&
+						resolvedPluginConfig.inspectorPort !== false
+					) {
+						const html = getDebugPathHtml(
+							workerNames,
+							resolvedPluginConfig.inspectorPort
+						);
+						res.setHeader("Content-Type", "text/html");
+						return res.end(html);
+					}
+					next();
+				});
+			},
+			configurePreviewServer(vitePreviewServer) {
+				const workerConfigs = getWorkerConfigs(vitePreviewServer.config.root);
+
+				if (workerConfigs.length >= 1 && pluginConfig.inspectorPort !== false) {
+					addDebugToVitePrintUrls(vitePreviewServer);
+				}
+
+				const workerNames = workerConfigs.map((worker) => {
+					assert(worker.name);
+					return worker.name;
+				});
+
+				vitePreviewServer.middlewares.use((req, res, next) => {
+					if (
+						req.url === debuggingPath &&
+						pluginConfig.inspectorPort !== false
+					) {
+						const html = getDebugPathHtml(
+							workerNames,
+							pluginConfig.inspectorPort ?? DEFAULT_INSPECTOR_PORT
+						);
+						res.setHeader("Content-Type", "text/html");
+						return res.end(html);
+					}
+					next();
+				});
 			},
 		},
 	];
