@@ -131,5 +131,22 @@ export default function getFrameworkTestConfigExperimental() {
 				expectedText: "C3_TEST",
 			},
 		},
+		waku: {
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Waku",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Waku",
+			},
+			verifyBuildCfTypes: {
+				outputFile: "worker-configuration.d.ts",
+				envInterfaceName: "Env",
+			},
+		},
 	};
 }
