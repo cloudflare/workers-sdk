@@ -22,10 +22,7 @@ export function getRouterWorker(miniflare: Miniflare) {
 }
 
 export function toMiniflareRequest(request: Request): MiniflareRequest {
-	// something about how we dispatch this request strips the 'sec-fetch-mode: navigate' and replaces it with 'sec-fetch-mode: cors'
-	// current theory is that it is hattip or undici as it converts it for transport
-	// so, because this isn't a real security use-case,
-	// we can just set some arbitrary other header and convert that back into 'sec-fetch-mode: navigate' in our worker
+	// Undici sets the `Sec-Fetch-Mode` header to `cors` so we capture it in a custom header to be converted back later.
 	const secFetchMode = request.headers.get("Sec-Fetch-Mode");
 	if (secFetchMode) {
 		request.headers.set("X-Mf-Sec-Fetch-Mode", secFetchMode);

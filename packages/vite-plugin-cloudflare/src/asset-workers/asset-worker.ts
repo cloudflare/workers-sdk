@@ -16,10 +16,9 @@ export default class CustomAssetWorker extends AssetWorker {
 
 		return modifiedResponse;
 	}
-	async unstable_getByETag(eTag: string): Promise<{
-		readableStream: ReadableStream;
-		contentType: string | undefined;
-	}> {
+	async unstable_getByETag(
+		eTag: string
+	): Promise<{ readableStream: ReadableStream; contentType: string }> {
 		const url = new URL(eTag, UNKNOWN_HOST);
 		const response = await (
 			this as typeof AssetWorker as { env: Env }
@@ -29,10 +28,7 @@ export default class CustomAssetWorker extends AssetWorker {
 			throw new Error(`Unexpected error. No HTML found for ${eTag}.`);
 		}
 
-		return {
-			readableStream: response.body,
-			contentType: response.headers.get("Content-Type") ?? undefined,
-		};
+		return { readableStream: response.body, contentType: "text/html" };
 	}
 	async unstable_exists(pathname: string): Promise<string | null> {
 		// We need this regex to avoid getting `//` as a pathname, which results in an invalid URL. Should this be fixed upstream?
