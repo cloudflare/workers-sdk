@@ -80,7 +80,7 @@ export async function createModuleRunner(
 					const originalCloudflareWorkersModule = await import(
 						"cloudflare:workers"
 					);
-					return Object.freeze({
+					return Object.seal({
 						...originalCloudflareWorkersModule,
 						env: stripInternalEnv(
 							originalCloudflareWorkersModule.env as WrapperEnv
