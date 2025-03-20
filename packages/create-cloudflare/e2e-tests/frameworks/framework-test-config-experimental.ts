@@ -99,37 +99,5 @@ export default function getFrameworkTestConfigExperimental() {
 				expectedText: "Hello world",
 			},
 		},
-		svelte: {
-			promptHandlers: [
-				{
-					matcher: /Which template would you like/,
-					input: [keys.enter],
-				},
-				{
-					matcher: /Add type checking with Typescript/,
-					input: [keys.down, keys.enter],
-				},
-				{
-					matcher: /What would you like to add to your project/,
-					input: [keys.enter],
-				},
-				{
-					matcher:
-						/Which package manager do you want to install dependencies with/,
-					input: [keys.enter],
-				},
-			],
-			testCommitMessage: true,
-			unsupportedOSs: ["win32"],
-			unsupportedPms: ["npm"],
-			verifyDeploy: {
-				route: "/",
-				expectedText: "SvelteKit app",
-			},
-			verifyPreview: {
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
-		},
 	};
 }

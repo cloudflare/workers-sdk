@@ -22,7 +22,6 @@ import honoTemplateExperimental from "templates-experimental/hono/c3";
 import nextTemplateExperimental from "templates-experimental/next/c3";
 import qwikTemplateExperimental from "templates-experimental/qwik/c3";
 import solidTemplateExperimental from "templates-experimental/solid/c3";
-import svelteTemplateExperimental from "templates-experimental/svelte/c3";
 import analogTemplate from "templates/analog/c3";
 import angularTemplate from "templates/angular/c3";
 import astroTemplate from "templates/astro/c3";
@@ -178,7 +177,6 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			next: nextTemplateExperimental,
 			qwik: qwikTemplateExperimental,
 			solid: solidTemplateExperimental,
-			svelte: svelteTemplateExperimental,
 		};
 	} else {
 		return {
