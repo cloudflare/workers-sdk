@@ -1,7 +1,7 @@
 import { logRaw } from "@cloudflare/cli";
 import { runFrameworkGenerator } from "frameworks/index";
 import { detectPackageManager } from "helpers/packageManagers";
-import type { TemplateConfig } from "../../src/templates";
+import type { TemplateConfig } from "../../../src/templates";
 import type { C3Context } from "types";
 
 const generate = async (ctx: C3Context) => {
@@ -28,12 +28,10 @@ const config: TemplateConfig = {
 		path: "./templates",
 	},
 	platform: "workers",
-	path: "templates-experimental/hono",
+	path: "templates/hono/workers",
 	generate,
 	transformPackageJson: async () => ({
 		scripts: {
-			dev: "wrangler dev",
-			deploy: "wrangler deploy --minify",
 			"cf-typegen": "wrangler types --env-interface CloudflareBindings",
 		},
 	}),
