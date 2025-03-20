@@ -132,6 +132,8 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		}
 
 		const assetConfig: AssetConfig = {
+			compatibility_date: options.compatibilityDate,
+			compatibility_flags: options.compatibilityFlags,
 			...options.assets.assetConfig,
 			redirects: parsedRedirects,
 			headers: parsedHeaders,
@@ -248,6 +250,12 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 							name: "ROUTER_WORKER",
 							service: {
 								name: `${ROUTER_SERVICE_NAME}:${id}`,
+							},
+						},
+						{
+							name: "USER_WORKER",
+							service: {
+								name: getUserServiceName(id),
 							},
 						},
 					],

@@ -70,8 +70,8 @@ describe("getWarningForWorkersConfigs", () => {
 						"build",
 						"find_additional_modules",
 						"no_bundle",
+						"rules",
 					]),
-					overridden: new Set(["rules"]),
 				},
 				raw: getEmptyRawConfig(),
 			},
@@ -84,8 +84,7 @@ describe("getWarningForWorkersConfigs", () => {
 			[43mWARNING[0m: your worker config (at \`wrangler.json\`) contains the following configuration options which are ignored since they are not applicable when using Vite:
 			  - \`alias\` which is replaced by Vite's \`resolve.alias\` (docs: https://vite.dev/config/shared-options.html#resolve-alias)
 			  - \`minify\` which is replaced by Vite's \`build.minify\` (docs: https://vite.dev/config/build-options.html#build-minify)
-			  - \`build\`, \`find_additional_modules\`, \`no_bundle\` which are not relevant in the context of a Vite project
-			  - \`rules\` which is overridden by \`@cloudflare/vite-plugin\`
+			  - \`build\`, \`find_additional_modules\`, \`no_bundle\`, \`rules\` which are not relevant in the context of a Vite project
 			"
 		`);
 	});
@@ -101,7 +100,6 @@ describe("getWarningForWorkersConfigs", () => {
 				nonApplicable: {
 					replacedByVite: new Set(["alias"]),
 					notRelevant: new Set(["build"]),
-					overridden: new Set(),
 				},
 				raw: getEmptyRawConfig(),
 			},
@@ -115,7 +113,6 @@ describe("getWarningForWorkersConfigs", () => {
 					nonApplicable: {
 						replacedByVite: new Set([]),
 						notRelevant: new Set(["find_additional_modules", "no_bundle"]),
-						overridden: new Set(),
 					},
 					raw: getEmptyRawConfig(),
 				},
@@ -127,7 +124,6 @@ describe("getWarningForWorkersConfigs", () => {
 					nonApplicable: {
 						replacedByVite: new Set([]),
 						notRelevant: new Set(["site"]),
-						overridden: new Set(),
 					},
 					raw: getEmptyRawConfig(),
 				},
@@ -157,7 +153,6 @@ function getEmptyNotApplicableMap() {
 	return {
 		replacedByVite: new Set([]),
 		notRelevant: new Set([]),
-		overridden: new Set([]),
 	};
 }
 

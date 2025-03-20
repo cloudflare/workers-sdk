@@ -1,0 +1,27 @@
+{
+	"name": "workers-assets-spa",
+	"private": true,
+	"scripts": {
+		"check:type": "tsc",
+		"dev": "wrangler dev",
+		"pretest:ci": "pnpm playwright install chromium",
+		"test:ci": "vitest run",
+		"test:watch": "vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250319.0",
+		"@types/jest-image-snapshot": "^6.4.0",
+		"@types/node": "catalog:default",
+		"jest-image-snapshot": "^6.4.0",
+		"playwright-chromium": "catalog:default",
+		"typescript": "catalog:default",
+		"undici": "catalog:default",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}
