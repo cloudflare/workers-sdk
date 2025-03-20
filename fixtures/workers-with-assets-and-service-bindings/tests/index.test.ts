@@ -127,6 +127,31 @@ describe.each(devCmds)(
 						"Hello from worker-b scheduled()"
 					);
 				});
+
+				it("should support promise pipelining", async ({ expect }) => {
+					// fetch URL is irrelevant here. workerA will internally call
+					// the appropriate fns on the service binding instead
+					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
+					let text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.DEFAULT_EXPORT.foo("✨").bar.buzz() response: You made it! ✨`
+					);
+				});
+
+				it("should support property access", async ({ expect }) => {
+					// fetch URL is irrelevant here. workerA will internally call
+					// the appropriate fns on the service binding instead
+					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
+					let text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.DEFAULT_EXPORT.honey response: Bees make honey in worker-b`
+					);
+					expect(text).toContain(
+						`env.DEFAULT_EXPORT.honeyBee response: I am worker-b's honeyBee prop`
+					);
+				});
 			});
 
 			describe("Service binding to default entrypoint", () => {
@@ -199,6 +224,34 @@ describe.each(devCmds)(
 						"Hello from worker-c scheduled()"
 					);
 				});
+
+				it("should support promise pipelining", async ({ expect }) => {
+					// fetch URL is irrelevant here. workerA will internally call
+					// the appropriate fns on the service binding instead
+					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
+					let text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.DEFAULT_ENTRYPOINT.foo("🐜").bar.buzz() response: You made it! 🐜`
+					);
+					expect(text).toContain(
+						`env.DEFAULT_ENTRYPOINT.newBeeCounter().value response: 2`
+					);
+				});
+
+				it("should support property access", async ({ expect }) => {
+					// fetch URL is irrelevant here. workerA will internally call
+					// the appropriate fns on the service binding instead
+					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
+					let text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.DEFAULT_ENTRYPOINT.honey response: Bees make honey in worker-c`
+					);
+					expect(text).toContain(
+						`env.DEFAULT_ENTRYPOINT.honeyBee response: I am worker-c's honeyBee prop`
+					);
+				});
 			});
 
 			describe("Service binding to named entrypoint", () => {
@@ -259,6 +312,20 @@ describe.each(devCmds)(
 					);
 					expect(text).toContain(
 						`env.NAMED_ENTRYPOINT.newBeeCounter().value response: 2`
+					);
+				});
+
+				it("should support property access", async ({ expect }) => {
+					// fetch URL is irrelevant here. workerA will internally call
+					// the appropriate fns on the service binding instead
+					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
+					let text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.NAMED_ENTRYPOINT.honey response: Bees make honey in worker-d`
+					);
+					expect(text).toContain(
+						`env.NAMED_ENTRYPOINT.honeyBee response: I am worker-d's honeyBee prop`
 					);
 				});
 			});
