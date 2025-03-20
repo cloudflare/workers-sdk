@@ -57,6 +57,7 @@ export type MultiPlatformTemplateConfig = {
 		pages: TemplateConfig;
 		workers: TemplateConfig;
 	};
+	hidden?: boolean;
 };
 
 export type TemplateConfig = {
@@ -402,11 +403,20 @@ export const createContext = async (
 		const frameworkMap = getFrameworkMap({
 			experimental: args.experimental,
 		});
-		const frameworkOptions = Object.entries(frameworkMap).map(
-			([key, config]) => ({
-				label: config.displayName,
-				value: key,
-			}),
+
+		const frameworkOptions = Object.entries(frameworkMap).reduce<Option[]>(
+			(acc, [key, config]) => {
+				// only hide if we're going to show the options - otherwise, the
+				// result will show up as (skipped) instead of the actual value
+				if (!config.hidden || args.framework) {
+					acc.push({
+						label: config.displayName,
+						value: key,
+					});
+				}
+				return acc;
+			},
+			[],
 		);
 
 		const framework = await processArgument(args, "framework", {
