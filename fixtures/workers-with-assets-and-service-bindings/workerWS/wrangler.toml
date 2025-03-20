@@ -1,0 +1,6 @@
+name = "worker-ws"
+main = "./src/index.ts"
+compatibility_date = "2025-03-20"
+
+[assets]
+directory = "./public/"
