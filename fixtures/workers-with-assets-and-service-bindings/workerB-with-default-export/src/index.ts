@@ -1,4 +1,12 @@
+const honeyBee = "I am worker-b's honeyBee prop";
+
 export default {
+	honeyBee,
+
+	get honey() {
+		return "Bees make honey in worker-b";
+	},
+
 	/*
 	 * HTTP fetch
 	 *
