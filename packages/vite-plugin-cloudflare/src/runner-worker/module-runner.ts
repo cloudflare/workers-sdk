@@ -80,12 +80,12 @@ export async function createModuleRunner(
 					const originalCloudflareWorkersModule = await import(
 						"cloudflare:workers"
 					);
-					return {
+					return Object.freeze({
 						...originalCloudflareWorkersModule,
 						env: stripInternalEnv(
 							originalCloudflareWorkersModule.env as WrapperEnv
 						),
-					};
+					});
 				}
 
 				if (
