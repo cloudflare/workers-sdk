@@ -1,5 +1,5 @@
 ---
-"@cloudflare/vite-plugin": minor
+"@cloudflare/vite-plugin": patch
 ---
 
 add `/__debug` path for better debugging
