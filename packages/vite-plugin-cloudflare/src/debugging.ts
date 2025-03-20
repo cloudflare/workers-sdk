@@ -58,7 +58,7 @@ export function getDebugPathHtml(workerNames: string[], inspectorPort: number) {
 
 	return `
 		<script>
-			const workerUrls = [${workerDevtoolsUrls.map((str) => JSON.stringify(str)).join(", ")}];
+			const workerUrls = ${JSON.stringify(workerDevtoolsUrls)};
 			const [firstUrl, ...rest] = workerUrls;
 			for (const workerUrl of rest) {
 				// open new tabs for the devtools of the various workers
