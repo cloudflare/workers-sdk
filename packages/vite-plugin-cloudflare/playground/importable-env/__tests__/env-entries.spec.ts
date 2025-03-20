@@ -9,7 +9,7 @@ test("the importable env is accessible from outside the request handler", async 
 
 test("the fetch handler env contains the correct entries", async () => {
 	const json = await getJsonResponse();
-	expect(json?.["entires of the fetch handler env"]).toEqual([
+	expect(json?.["entries of the fetch handler env"]).toEqual([
 		{
 			key: "importable-env_VAR",
 			value: "my importable env variable",

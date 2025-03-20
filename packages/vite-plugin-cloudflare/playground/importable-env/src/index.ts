@@ -13,7 +13,7 @@ export default {
 		const entriesOfImportedEnv = getEntriesOf(importedEnv);
 
 		return Response.json({
-			"entires of the fetch handler env": entriesOfArgEnv,
+			"entries of the fetch handler env": entriesOfArgEnv,
 			"entries of the imported env": entriesOfImportedEnv,
 			"are the two set of entries the same?":
 				JSON.stringify(entriesOfArgEnv) ===
