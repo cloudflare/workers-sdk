@@ -373,7 +373,7 @@ const verifyBuildCfTypesScript = async (
 	// the file still contains the env interface
 	const hasEnvInterfacePre = outputFileContentPreLines.some(
 		(line) =>
-			// old type gen - some frameworkte templates pin older versions of wrangler
+			// old type gen - some framework templates pin older versions of wrangler
 			line === `interface ${envInterfaceName} {` ||
 			// new after importable env change
 			line === `interface ${envInterfaceName} extends Cloudflare.Env {}`,
@@ -397,7 +397,7 @@ const verifyBuildCfTypesScript = async (
 	// the file still contains the env interface
 	const hasEnvInterfacePost = outputFileContentPostLines.some(
 		(line) =>
-			// old type gen - some frameworkte templates pin older versions of wrangler
+			// old type gen - some framework templates pin older versions of wrangler
 			line === `interface ${envInterfaceName} {` ||
 			// new after importable env change
 			line === `interface ${envInterfaceName} extends Cloudflare.Env {}`,

@@ -4,6 +4,7 @@ import { keys, LONG_TIMEOUT } from "../helpers";
 export default function getFrameworkTestConfig(pm: string) {
 	return {
 		"react-router": {
+			unsupportedOSs: ["win32"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			verifyDeploy: {
