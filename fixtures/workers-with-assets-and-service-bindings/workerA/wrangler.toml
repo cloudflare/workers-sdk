@@ -17,3 +17,7 @@ service = "worker-c"
 binding = "NAMED_ENTRYPOINT"
 service = "worker-d"
 entrypoint = "EntrypointD"
+
+[[services]]
+binding = "WS"
+service = "worker-ws"
