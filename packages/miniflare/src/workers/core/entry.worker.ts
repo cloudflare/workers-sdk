@@ -387,7 +387,7 @@ async function handleEmail(
 	// `from` and `to` are the equivalent ones to the SMTP RCPT commands (not the ones in the email message itself)
 	const from = params.get("from") ?? "";
 	const to = params.get("to") ?? "";
-	// clone request as we need to the body to be cloned to forward it to the inside of the worker
+	// clone request as we need the body to be cloned to forward it to the inside of the worker
 	const clonedRequest = request.clone();
 	if (!request.body || !clonedRequest.body) {
 		return new Response("Include an email in the body", { status: 400 });
@@ -416,7 +416,7 @@ async function handleEmail(
 
 	if (parsedIncomingEmail.messageId === undefined) {
 		return new Response(
-			`Email could not be parsed: invalid or no message id provided`,
+			"Email could not be parsed: invalid or no message id provided",
 			{ status: 400 }
 		);
 	}

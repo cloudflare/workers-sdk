@@ -8,7 +8,7 @@ import { type MiniflareEmailMessage as EmailMessage } from "./email.worker";
  * @param input Header value for Message-Id, References, In-Reply-To, and other header values that might contain Message-id style text.
  */
 export function parseMessageIdStyleValue(input: string): string[] | undefined {
-	// probably not quite RFC-2822 compliant because we don't explitly support comments,
+	// probably not quite RFC-2822 compliant because we don't explicitly support comments,
 	// but no one uses them anyway.
 
 	type States = "inside" | "outside";
