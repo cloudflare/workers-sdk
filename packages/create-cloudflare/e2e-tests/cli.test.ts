@@ -528,7 +528,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())("help text", () => {
 				    Specifies the kind of templates that should be created
 				    Allowed Values:
 				      hello-world
-				        Hello World example
+				        Hello World Starter
 				      web-framework
 				        Framework Starter
 				      demo
@@ -540,9 +540,15 @@ describe.skipIf(frameworkToTest || isQuarantineMode())("help text", () => {
 				    Note that "--category" and "--template" are mutually exclusive options. If both are provided, "--category" will be used.
 				    Allowed Values:
 				      hello-world
-				        Get started with a basic Worker in the language of your choice
+				        For processing requests, transforming responses, or API endpoints
+				      hello-world-assets-only
+				        For static sites (including SPAs) or when using your own backend
+				      hello-world-with-assets
+				        For static sites with an API or server-side rendering (SSR)
 				      hello-world-durable-object
-				        Get started with a basic stateful app to build projects like real-time chats, collaborative apps, and multiplayer games
+				        For multiplayer apps using WebSockets, or when you need synchronization
+				      hello-world-durable-object-with-assets
+				        For full-stack applications requiring static assets, an API, and real-time coordination
 				      common
 				        Create a Worker to route and forward requests to other services
 				      scheduled
