@@ -340,7 +340,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 		},
 		expectSubsequentStdout: (output: string) => {
 			expect(output).toContain(`🌀 Building list of assets...
-				🌀 Starting asset upload...`);
+🌀 Starting asset upload...`);
 			// Unfortunately the server-side deduping logic isn't always 100% accurate, and sometimes a file is re-uploaded
 			// As such, to reduce CI flakes, this test just asserts that _at least one_ file isn't re-uploaded
 			expect(
