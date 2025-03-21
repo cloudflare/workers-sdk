@@ -274,7 +274,7 @@ export const Handler = async (args: PagesDevArguments) => {
 
 	if (args.env) {
 		throw new FatalError(
-			"Pages does not support targeting an environment with the --env flag. Use the --branch flag to target your production or preview branch",
+			"Pages does not support targeting an environment with the --env flag during local development.",
 			1
 		);
 	}
