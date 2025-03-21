@@ -1,5 +1,5 @@
-import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
+import { cloudflare } from "../__test-utils__/plugin";
 
 export default defineConfig({
 	environments: {
@@ -13,5 +13,5 @@ export default defineConfig({
 			},
 		},
 	},
-	plugins: [cloudflare({ inspectorPort: false, persistState: false })],
+	plugins: [cloudflare()],
 });

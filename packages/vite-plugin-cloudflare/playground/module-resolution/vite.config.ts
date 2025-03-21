@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
-import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
+import { cloudflare } from "../__test-utils__/plugin";
 
 export default defineConfig({
 	resolve: {
@@ -8,5 +8,5 @@ export default defineConfig({
 			"@alias/test": resolve(__dirname, "./src/aliasing.ts"),
 		},
 	},
-	plugins: [cloudflare({ inspectorPort: false, persistState: false })],
+	plugins: [cloudflare()],
 });

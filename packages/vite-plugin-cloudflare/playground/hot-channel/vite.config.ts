@@ -1,6 +1,6 @@
 import assert from "node:assert";
-import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
+import { cloudflare } from "../__test-utils__/plugin";
 
 export default defineConfig({
 	plugins: [
@@ -21,6 +21,6 @@ export default defineConfig({
 				};
 			},
 		},
-		cloudflare({ inspectorPort: false, persistState: false }),
+		cloudflare(),
 	],
 });

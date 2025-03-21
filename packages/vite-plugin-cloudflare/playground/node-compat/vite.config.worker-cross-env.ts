@@ -1,5 +1,5 @@
-import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
+import { cloudflare } from "../__test-utils__/plugin";
 
 export default defineConfig({
 	build: {
@@ -8,8 +8,6 @@ export default defineConfig({
 	plugins: [
 		cloudflare({
 			configPath: "./worker-cross-env/wrangler.toml",
-			inspectorPort: false,
-			persistState: false,
 		}),
 	],
 });
