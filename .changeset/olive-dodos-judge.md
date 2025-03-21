@@ -1,5 +1,5 @@
 ---
-"@cloudflare/workflows-shared": minor
+"@cloudflare/workflows-shared": patch
 ---
 
 Implement local dev for createBatch
