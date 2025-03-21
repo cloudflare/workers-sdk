@@ -54,9 +54,19 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			throw new Error("From: header does not match mail from");
 		}
 
-		const emailHeaders = new Headers(
-			parsedEmail.headers.map((header) => [header.key, header.value])
-		);
+		if (parsedEmail.messageId === undefined) {
+			throw new Error("invalid message-id");
+		}
+
+		let emailHeaders: Headers;
+		try {
+			emailHeaders = new Headers(
+				parsedEmail.headers.map((header) => [header.key, header.value])
+			);
+		} catch (e) {
+			const error = e as Error;
+			throw new Error(`could not parse email: ${error.message}`);
+		}
 
 		if (emailHeaders.get("received") !== null) {
 			throw new Error("invalid headers set");

@@ -211,7 +211,6 @@ export const CoreSharedOptionsSchema = z.object({
 	// Keep blobs when deleting/overwriting keys, required for stacked storage
 	unsafeStickyBlobs: z.boolean().optional(),
 
-
 	// Enable directly triggering user-worker handlers with paths like `/cdn-cgi/handler/scheduled`
 	unsafeTriggerHandlers: z.boolean().optional(),
 });

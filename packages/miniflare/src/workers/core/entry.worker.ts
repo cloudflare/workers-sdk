@@ -414,6 +414,13 @@ async function handleEmail(
 		);
 	}
 
+	if (parsedIncomingEmail.messageId === undefined) {
+		return new Response(
+			`Email could not be parsed: invalid or no message id provided`,
+			{ status: 400 }
+		);
+	}
+
 	if (from !== parsedIncomingEmail.from.address) {
 		console.log(
 			`${yellow("Provided envelope from address doesn't match message From header")} - Envelope From: ${from}; Header From: ${parsedIncomingEmail.from.address}`
@@ -426,9 +433,18 @@ async function handleEmail(
 		);
 	}
 
-	const incomingEmailHeaders = new Headers(
-		parsedIncomingEmail.headers.map((header) => [header.key, header.value])
-	);
+	let incomingEmailHeaders: Headers;
+	try {
+		incomingEmailHeaders = new Headers(
+			parsedIncomingEmail.headers.map((header) => [header.key, header.value])
+		);
+	} catch (e) {
+		const error = e as Error;
+		return new Response(
+			`Email could not be parsed: ${error.name}: ${error.message}`,
+			{ status: 400 }
+		);
+	}
 
 	let maybeClientError: string | undefined = undefined;
 

@@ -124,9 +124,20 @@ export async function validateReply(
 	if (parsedReply.from.address !== replyMessage.from) {
 		throw new Error("From: header does not match mail from");
 	}
-	const replyEmailHeaders = new Headers(
-		parsedReply.headers.map((header) => [header.key, header.value])
-	);
+
+	if (parsedReply.messageId === undefined) {
+		throw new Error("invalid message-id");
+	}
+
+	let replyEmailHeaders: Headers;
+	try {
+		replyEmailHeaders = new Headers(
+			parsedReply.headers.map((header) => [header.key, header.value])
+		);
+	} catch (e) {
+		const error = e as Error;
+		throw new Error(`could not parse email: ${error.message}`);
+	}
 
 	// reply cannot mess with the Received header
 	if (replyEmailHeaders.get("received") !== null) {
