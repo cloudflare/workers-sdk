@@ -4,7 +4,6 @@ import { RAW_EMAIL } from "./constants";
 import { type MiniflareEmailMessage as EmailMessage } from "./email.worker";
 
 /**
- *
  * @param input Header value for Message-Id, References, In-Reply-To, and other header values that might contain Message-id style text.
  */
 export function parseMessageIdStyleValue(input: string): string[] | undefined {
