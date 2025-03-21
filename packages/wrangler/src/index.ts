@@ -202,6 +202,7 @@ import { printWranglerBanner } from "./wrangler-banner";
 import { asJson } from "./yargs-types";
 import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
+import { kvBulkGetCommand } from "./kv/cli/bulkGet";
 
 if (proxy) {
 	setGlobalDispatcher(new ProxyAgent(proxy));
@@ -547,6 +548,7 @@ export function createCLIParser(argv: string[]) {
 		{ command: "wrangler kv key delete", definition: kvKeyDeleteCommand },
 		{ command: "wrangler kv bulk put", definition: kvBulkPutCommand },
 		{ command: "wrangler kv bulk delete", definition: kvBulkDeleteCommand },
+		{ command: "wrangler kv bulk get", definition: kvBulkGetCommand },
 	]);
 	registry.registerNamespace("kv");
 
