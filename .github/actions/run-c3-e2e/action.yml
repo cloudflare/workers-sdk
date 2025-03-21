@@ -44,6 +44,7 @@ runs:
       shell: bash
       run: pnpm run test:e2e --filter create-cloudflare
       env:
+        NODE_VERSION: ${{ matrix.node-version }}
         CLOUDFLARE_API_TOKEN: ${{ inputs.apiToken }}
         CLOUDFLARE_ACCOUNT_ID: ${{ inputs.accountId }}
         E2E_QUARANTINE: ${{ inputs.quarantine }}
