@@ -5,10 +5,10 @@
 	"type": "module",
 	"scripts": {
 		"check:types": "tsc --build",
-		"test:build": "cross-env VITE_TEST_BUILD=1 vitest run -c vitest.config.e2e.ts",
+		"test:build": "cross-env VITE_TEST_BUILD=1 vitest run -c vitest.config.build.e2e.ts",
 		"pretest:ci": "pnpm playwright install chromium",
 		"test:ci": "pnpm test:serve && pnpm test:build",
-		"test:serve": "vitest run -c vitest.config.e2e.ts"
+		"test:serve": "vitest run -c vitest.config.serve.e2e.ts"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",
