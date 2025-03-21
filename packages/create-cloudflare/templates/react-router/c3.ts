@@ -13,6 +13,7 @@ const generate = async (ctx: C3Context) => {
 		"https://github.com/remix-run/react-router-templates/tree/main/cloudflare",
 		// to prevent asking about git twice, just let c3 do it
 		"--no-git-init",
+		"--no-install"
 	]);
 
 	logRaw(""); // newline
