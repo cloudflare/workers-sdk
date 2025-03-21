@@ -284,7 +284,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			// Unfortunately the server-side deduping logic isn't always 100% accurate, and sometimes a file is re-uploaded
 			// As such, to reduce CI flakes, this test just asserts that _at least one_ file isn't re-uploaded
 			expect(output).toContain(
-				/Uploaded 1 of 1 assets|Uploaded 1 of 2 assets|No files to upload./
+				/(Uploaded 1 of 1 assets)|(Uploaded 1 of 2 assets)|(No files to upload.)/
 			);
 		},
 	},
@@ -353,7 +353,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			// Unfortunately the server-side deduping logic isn't always 100% accurate, and sometimes a file is re-uploaded
 			// As such, to reduce CI flakes, this test just asserts that _at least one_ file isn't re-uploaded
 			expect(output).toContain(
-				/Uploaded 1 of 1 assets|Uploaded 1 of 2 assets|No files to upload./
+				/(Uploaded 1 of 1 assets)|(Uploaded 1 of 2 assets)|(No files to upload.)/
 			);
 		},
 	},
