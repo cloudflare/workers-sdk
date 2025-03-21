@@ -1,5 +1,4 @@
 import { ForwardableEmailMessage } from "@cloudflare/workers-types";
-import { EmailMessage } from "cloudflare:email";
 import {
 	blue,
 	bold,

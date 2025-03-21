@@ -49,7 +49,7 @@ export const EMAIL_PLUGIN = createPlugin({
 			return [];
 		}
 
-		const sendEmailBindings = options.email?.send_email ?? [];
+		const sendEmailBindings = options.email.send_email;
 
 		return sendEmailBindings.map(({ name }) => ({
 			name,
@@ -80,7 +80,7 @@ export const EMAIL_PLUGIN = createPlugin({
 
 		const hasSendEmail =
 			args.options.email?.send_email?.length !== undefined &&
-			args.options.email?.send_email?.length > 0;
+			args.options.email.send_email.length > 0;
 		if (hasSendEmail) {
 			const sendEmailOptions = args.options.email?.send_email ?? [];
 			services.push(
