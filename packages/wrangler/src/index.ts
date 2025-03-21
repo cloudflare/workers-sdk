@@ -195,6 +195,7 @@ import { workflowsInstancesListCommand } from "./workflows/commands/instances/li
 import { workflowsInstancesPauseCommand } from "./workflows/commands/instances/pause";
 import { workflowsInstancesResumeCommand } from "./workflows/commands/instances/resume";
 import { workflowsInstancesTerminateCommand } from "./workflows/commands/instances/terminate";
+import { workflowsInstancesTerminateAllCommand } from "./workflows/commands/instances/terminate-all";
 import { workflowsListCommand } from "./workflows/commands/list";
 import { workflowsTriggerCommand } from "./workflows/commands/trigger";
 import { printWranglerBanner } from "./wrangler-banner";
@@ -914,6 +915,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler workflows instances terminate",
 			definition: workflowsInstancesTerminateCommand,
+		},
+		{
+			command: "wrangler workflows instances terminate-all",
+			definition: workflowsInstancesTerminateAllCommand,
 		},
 		{
 			command: "wrangler workflows instances pause",

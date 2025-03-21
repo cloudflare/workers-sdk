@@ -246,13 +246,39 @@ export default function getFrameworkTestConfig(pm: string) {
 				},
 			],
 		},
-		qwik: {
+		"qwik:pages": {
+			argv: ["--platform", "pages"],
 			promptHandlers: [
 				{
 					matcher: /Yes looks good, finish update/,
 					input: [keys.enter],
 				},
 			],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			unsupportedPms: ["yarn"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Welcome to Qwik",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Welcome to Qwik",
+			},
+			verifyBuildCfTypes: {
+				outputFile: "worker-configuration.d.ts",
+				envInterfaceName: "Env",
+			},
+		},
+		"qwik:workers": {
+			argv: ["--platform", "workers"],
+			promptHandlers: [
+				{
+					matcher: /Yes looks good, finish update/,
+					input: [keys.enter],
+				},
+			],
+			flags: [],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			unsupportedPms: ["yarn"],
