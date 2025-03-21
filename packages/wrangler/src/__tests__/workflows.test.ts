@@ -53,6 +53,24 @@ describe("wrangler workflows", () => {
 		);
 	};
 
+	const mockDeleteWorkflowRequest = async (workflowName: string) => {
+		msw.use(
+			http.delete(
+				`*/accounts/:accountId/workflows/:workflowName`,
+				async ({ params }) => {
+					expect(params.workflowName).toEqual(workflowName);
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {},
+					});
+				},
+				{ once: true }
+			)
+		);
+	};
+
 	const mockInstancesTerminateAll = async (
 		expectedWorkflow: string,
 		responseStatus: "ok" | "already_running",
@@ -515,15 +533,17 @@ describe("wrangler workflows", () => {
 	});
 
 	describe("delete", () => {
-		it("should delete a workflow - check not implemented", async () => {
+		it("should delete a workflow - green path", async () => {
 			writeWranglerConfig();
+
+			await mockDeleteWorkflowRequest("some-workflow");
 
 			await runWrangler(`workflows delete some-workflow`);
 			expect(std.out).toMatchInlineSnapshot(
-				`"🚫 Workflow \\"some-workflow\\" NOT removed"`
-			);
-			expect(std.info).toMatchInlineSnapshot(
-				`"🚫 delete command not yet implement"`
+				`
+				"✅ Workflow \\"some-workflow\\" removed successfully.
+				 Note that running instances might take a few minutes to be properly terminated."
+			`
 			);
 		});
 	});
