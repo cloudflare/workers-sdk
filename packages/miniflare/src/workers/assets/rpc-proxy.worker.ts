@@ -45,10 +45,7 @@ export default class RPCProxyWorker extends WorkerEntrypoint<Env> {
 				/*
 				 * Otherwise, forward to the USER_WORKER and return its response
 				 */
-				return function (...args: Array<unknown>) {
-					// @ts-expect-error
-					return Reflect.apply(target.env.USER_WORKER[prop], target, args);
-				};
+				return Reflect.get(target.env.USER_WORKER, prop);
 			},
 		});
 	}
