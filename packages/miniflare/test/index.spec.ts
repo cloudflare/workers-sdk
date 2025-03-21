@@ -1406,13 +1406,14 @@ test("Miniflare: manually triggered scheduled events", async (t) => {
 					scheduledRun = true;
 				}
 			}`,
+		unsafeTriggerHandlers: true,
 	});
 	t.teardown(() => mf.dispose());
 
 	let res = await mf.dispatchFetch("http://localhost");
 	t.is(await res.text(), "false");
 
-	res = await mf.dispatchFetch("http://localhost/cdn-cgi/mf/scheduled");
+	res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/scheduled");
 	t.is(await res.text(), "ok");
 
 	res = await mf.dispatchFetch("http://localhost");
