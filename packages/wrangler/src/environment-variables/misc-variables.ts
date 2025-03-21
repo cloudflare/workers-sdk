@@ -102,9 +102,9 @@ export const getCIMatchTag = getEnvironmentVariableFactory({
 });
 
 /**
- * `WRANGLER_CI_OVERRIDE_TAG` specifies a worker tag
+ * `WRANGLER_CI_OVERRIDE_NAME` specifies a worker name
  *
- * If this is set, Wrangler will override the worker name with this tag
+ * If this is set, Wrangler will override the worker name with this one
  */
 export const getCIOverrideName = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_CI_OVERRIDE_NAME",
