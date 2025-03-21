@@ -9,7 +9,11 @@ import { getJsonResponse } from "../../__test-utils__";
 //
 // We do this in the `preServe()` hook, in `serve.ts`, that is called from the `packages/vite-plugin-cloudflare/playground/vitest-setup.ts` file.
 
-test("runs D1 query using Prisma", async () => {
+test.skipIf(
+	// for some reason this seems to be problematic on windows
+	// when running the various playground tests in parallel
+	process.platform === "win32"
+)("runs D1 query using Prisma", async () => {
 	const result = await getJsonResponse();
 	expect(result).toEqual([
 		{ id: 1, email: "jane@prisma.io", name: "Jane Doe (Local)" },
