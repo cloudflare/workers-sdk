@@ -195,13 +195,10 @@ export function getDevMiniflareOptions(
 	viteDevServer: vite.ViteDevServer
 ): MiniflareOptions {
 	const resolvedViteConfig = viteDevServer.config;
-	const logger = new ViteMiniflareLogger(resolvedViteConfig);
-
 	const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
 	const assetsConfig = getAssetsConfig(
 		resolvedPluginConfig,
 		entryWorkerConfig,
-		logger,
 		resolvedViteConfig
 	);
 
@@ -368,6 +365,8 @@ export function getDevMiniflareOptions(
 		getWorkerToDurableObjectClassNamesMap(userWorkers);
 	const workerToWorkflowEntrypointClassNamesMap =
 		getWorkerToWorkflowEntrypointClassNamesMap(userWorkers);
+
+	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
 	return {
 		log: logger,

@@ -14,8 +14,8 @@ import {
 	HeadersSchema,
 	RedirectsSchema,
 } from "@cloudflare/workers-shared/utils/types";
-import { Log } from "miniflare";
 import type { ResolvedPluginConfig } from "./plugin-config";
+import type { Logger } from "@cloudflare/workers-shared/utils/configuration/types";
 import type { ResolvedConfig } from "vite";
 import type { Unstable_Config } from "wrangler";
 
@@ -44,10 +44,9 @@ export function hasAssetsConfigChanged(
 export function getAssetsConfig(
 	resolvedPluginConfig: ResolvedPluginConfig,
 	entryWorkerConfig: Unstable_Config | undefined,
-	viteLogger: Log,
 	resolvedConfig: ResolvedConfig
 ) {
-	const assetConfig =
+	const assetsConfig =
 		resolvedPluginConfig.type === "assets-only"
 			? resolvedPluginConfig.config.assets
 			: entryWorkerConfig?.assets;
@@ -60,32 +59,38 @@ export function getAssetsConfig(
 				}
 			: {
 					...(entryWorkerConfig?.compatibility_date
-						? { compatibility_date: entryWorkerConfig?.compatibility_date }
+						? { compatibility_date: entryWorkerConfig.compatibility_date }
 						: {}),
 					...(entryWorkerConfig?.compatibility_flags
-						? { compatibility_flags: entryWorkerConfig?.compatibility_flags }
+						? { compatibility_flags: entryWorkerConfig.compatibility_flags }
 						: {}),
 				};
 
-	if (!assetConfig) {
-		return compatibilityOptions;
-	}
-
 	const config = {
 		...compatibilityOptions,
-		...assetConfig,
+		...assetsConfig,
 	};
 
 	if (!resolvedPluginConfig.experimental?.headersAndRedirectsDevModeSupport) {
 		return config;
 	}
 
-	const logger = {
-		debug: viteLogger.debug.bind(viteLogger),
-		log: viteLogger.info.bind(viteLogger), // viteLogger doesn't have a `log()` method
-		info: viteLogger.info.bind(viteLogger),
-		warn: viteLogger.warn.bind(viteLogger),
-		error: viteLogger.error.bind(viteLogger),
+	const logger: Logger = {
+		debug() {
+			/* No debug log in Vite. */
+		},
+		log(message: string) {
+			resolvedConfig.logger.info(message);
+		},
+		info(message: string) {
+			resolvedConfig.logger.info(message);
+		},
+		warn(message: string) {
+			resolvedConfig.logger.warn(message);
+		},
+		error(error: Error) {
+			resolvedConfig.logger.error(error.message, { error });
+		},
 	};
 
 	const redirectsFile = getRedirectsConfigPath(resolvedConfig);

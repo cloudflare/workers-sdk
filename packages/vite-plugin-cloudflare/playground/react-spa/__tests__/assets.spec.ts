@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { isBuild, page, viteTestUrl } from "../../__test-utils__";
 
-describe("react-spa", { sequential: true, concurrent: false }, () => {
+describe("react-spa", () => {
 	test("returns the correct home page", async () => {
 		const content = await page.textContent("h1");
 		expect(content).toBe("Vite + React");
