@@ -178,7 +178,7 @@ export async function validateReply(
 
 		if (
 			parsedReferences === undefined ||
-			parsedReferences !== expectedReferences
+			parsedReferences.every((val, index) => val === expectedReferences[index])
 		) {
 			throw new Error("provided References header is invalid");
 		}
