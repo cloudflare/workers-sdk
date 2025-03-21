@@ -116,13 +116,13 @@ export const kvBulkGetCommand = createCommand({
 				},
 			);
 
-			process.stdout.write(JSON.stringify(result, null, 2));
+			logger.log(JSON.stringify(result, null, 2));
 
 			metricEvent = "get kv key-values (bulk) (local)";
 		} else {
 			const accountId = await requireAuth(config);
 
-			process.stdout.write(JSON.stringify(await getKVBulkKeyValue(accountId, namespaceId, keysToGet), null, 2));
+			logger.log(JSON.stringify(await getKVBulkKeyValue(accountId, namespaceId, keysToGet), null, 2));
 
 			metricEvent = "get kv key-values (bulk)";
 		}
@@ -131,6 +131,6 @@ export const kvBulkGetCommand = createCommand({
 			sendMetrics: config.send_metrics,
 		});
 
-		logger.log("\n\nSuccess!");
+		logger.log("\nSuccess!");
 	},
 });
