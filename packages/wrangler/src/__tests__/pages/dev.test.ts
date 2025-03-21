@@ -37,6 +37,8 @@ describe("pages dev", () => {
 	it("should error if the [--env] command line arg was specified", async () => {
 		await expect(
 			runWrangler("pages dev public --env=production")
-		).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: Pages does not support targeting an environment with the --env flag during local development.]`);
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Pages does not support targeting an environment with the --env flag during local development.]`
+		);
 	});
 });
