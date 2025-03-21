@@ -1,5 +1,11 @@
 # @cloudflare/workflows-shared
 
+## 0.3.1
+
+### Patch Changes
+
+- [#8606](https://github.com/cloudflare/workers-sdk/pull/8606) [`18edbc2`](https://github.com/cloudflare/workers-sdk/commit/18edbc2a6b02e6b7cd0a027e5b90ff043da6ee79) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Implement local dev for createBatch
+
 ## 0.3.0
 
 ### Minor Changes

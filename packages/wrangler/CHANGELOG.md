@@ -1,5 +1,28 @@
 # wrangler
 
+## 4.4.0
+
+### Minor Changes
+
+- [#8575](https://github.com/cloudflare/workers-sdk/pull/8575) [`4a5f270`](https://github.com/cloudflare/workers-sdk/commit/4a5f270129f4a2d8995ba2fdd7fc220ee7c75300) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Add workflows delete API endpoint
+
+- [#8578](https://github.com/cloudflare/workers-sdk/pull/8578) [`5f151fc`](https://github.com/cloudflare/workers-sdk/commit/5f151fc93bfcc87f9a6aa2a33cd67901e3507365) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Add terminate-all command to workflows
+
+- [#8382](https://github.com/cloudflare/workers-sdk/pull/8382) [`0d1240b`](https://github.com/cloudflare/workers-sdk/commit/0d1240becf3c08094b39e215de6d730f0d25de6b) Thanks [@jvaughan-cloudflare](https://github.com/jvaughan-cloudflare)! - Add Secrets Store command support to Wrangler CLI
+
+- [#8569](https://github.com/cloudflare/workers-sdk/pull/8569) [`1c94eee`](https://github.com/cloudflare/workers-sdk/commit/1c94eee008a8281e84171ef1edee74d965b90c33) Thanks [@vicb](https://github.com/vicb)! - Bump `@cloudflare/unenv-preset` to 2.3.0
+
+  Enable the recently implemented native APIs from `node:crypto`
+
+### Patch Changes
+
+- [#8556](https://github.com/cloudflare/workers-sdk/pull/8556) [`b7d6b7d`](https://github.com/cloudflare/workers-sdk/commit/b7d6b7dd1fbbaecd4f595d2d4249ab902b726538) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Add support for `assets_navigation_prefer_asset_serving` in Vite (`dev` and `preview`)
+
+- [#8597](https://github.com/cloudflare/workers-sdk/pull/8597) [`5d78760`](https://github.com/cloudflare/workers-sdk/commit/5d78760af7adbb57416d73f102123152d37bec53) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Graduate experimental RPC support for Workers with assets in local dev
+
+- Updated dependencies [[`d8f1c49`](https://github.com/cloudflare/workers-sdk/commit/d8f1c49541229f4b41bd16bbebda3017a5d17d64), [`b7d6b7d`](https://github.com/cloudflare/workers-sdk/commit/b7d6b7dd1fbbaecd4f595d2d4249ab902b726538), [`5d78760`](https://github.com/cloudflare/workers-sdk/commit/5d78760af7adbb57416d73f102123152d37bec53), [`c0d0cd0`](https://github.com/cloudflare/workers-sdk/commit/c0d0cd03a5eede7ec4f8a615f2c4b1f9a73dfcee)]:
+  - miniflare@4.20250320.0
+
 ## 4.3.0
 
 ### Minor Changes
