@@ -110,7 +110,7 @@ import {
 	SharedHeaders,
 	SiteBindings,
 } from "./workers";
-import { WRITE_SECRET } from "./workers/secrets-store/constants";
+import { ADMIN_API } from "./workers/secrets-store/constants";
 import { formatZodError } from "./zod-format";
 import type {
 	CacheStorage,
@@ -118,6 +118,7 @@ import type {
 	DurableObjectNamespace,
 	Fetcher,
 	KVNamespace,
+	KVNamespaceListKey,
 	Queue,
 	R2Bucket,
 } from "@cloudflare/workers-types/experimental";
@@ -1914,17 +1915,26 @@ export class Miniflare {
 	): Promise<ReplaceWorkersTypes<KVNamespace>> {
 		return this.#getProxy(KV_PLUGIN_NAME, bindingName, workerName);
 	}
-	getSecretsStoreSecretWrite(
+	getSecretsStoreSecretAPI(
 		bindingName: string,
 		workerName?: string
-	): Promise<(value: string) => void> {
+	): Promise<
+		() => {
+			create: (value: string) => Promise<string>;
+			update: (value: string, id: string) => Promise<string>;
+			duplicate: (id: string, newName: string) => Promise<string>;
+			delete: (id: string) => Promise<void>;
+			list: () => Promise<KVNamespaceListKey<{ uuid: string }, string>[]>;
+			get: (id: string) => Promise<string>;
+		}
+	> {
 		return this.#getProxy(
 			SECRET_STORE_PLUGIN_NAME,
 			bindingName,
 			workerName
 		).then((binding) => {
-			// @ts-expect-error We exposed the internal KV namespace
-			return binding[WRITE_SECRET];
+			// @ts-expect-error We exposed an admin API on this key
+			return binding[ADMIN_API];
 		});
 	}
 	getSecretsStoreSecret(

@@ -34,9 +34,9 @@ test("single secret-store", async (t) => {
 	t.is(await response1.text(), 'Secret "secret_name" not found');
 	t.is(response1.status, 404);
 
-	const write = await mf.getSecretsStoreSecretWrite("SECRET");
+	const api = await mf.getSecretsStoreSecretAPI("SECRET");
 
-	await write("example");
+	await api().create("example");
 
 	const response2 = await mf.dispatchFetch("http://localhost");
 
@@ -93,11 +93,11 @@ test("multiple secret-store", async (t) => {
 		secret3: null,
 	});
 
-	const write1 = await mf.getSecretsStoreSecretWrite("SECRET1");
-	const write2 = await mf.getSecretsStoreSecretWrite("SECRET2");
+	const api1 = await mf.getSecretsStoreSecretAPI("SECRET1");
+	const api2 = await mf.getSecretsStoreSecretAPI("SECRET2");
 
-	await write1("example_a");
-	await write2("example_b");
+	await api1().create("example_a");
+	await api2().create("example_b");
 
 	const response2 = await mf.dispatchFetch("http://localhost");
 
@@ -107,9 +107,9 @@ test("multiple secret-store", async (t) => {
 		secret3: null,
 	});
 
-	const write3 = await mf.getSecretsStoreSecretWrite("SECRET3");
+	const api3 = await mf.getSecretsStoreSecretAPI("SECRET3");
 
-	await write3("example_c");
+	await api3().create("example_c");
 
 	const response3 = await mf.dispatchFetch("http://localhost");
 
