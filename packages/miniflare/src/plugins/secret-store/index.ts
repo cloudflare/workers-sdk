@@ -51,7 +51,7 @@ export const SECRET_STORE_PLUGIN: Plugin<
 > = {
 	options: SecretStoreOptionsSchema,
 	sharedOptions: SecretStoreSharedOptionsSchema,
-	async getBindings(options, workerIndex) {
+	async getBindings(options) {
 		if (!options.secretsStoreSecrets) {
 			return [];
 		}
@@ -111,7 +111,7 @@ export const SECRET_STORE_PLUGIN: Plugin<
 		return [
 			...kvServices,
 			...Object.entries(options.secretsStoreSecrets).map<Worker_Binding>(
-				([name, config]) => {
+				([_, config]) => {
 					return {
 						name: `${SECRET_STORE_PLUGIN_NAME}:${config.store_id}:${config.secret_name}`,
 						worker: {

@@ -51,7 +51,7 @@ export class SecretsStoreSecret extends WorkerEntrypoint<Env> {
 					throw new Error(`Secret not found`);
 				}
 				const newId = crypto.randomUUID();
-				await this.env.store.put(this.env.secret_name, existingValue, {
+				await this.env.store.put(newName, existingValue, {
 					metadata: { uuid: newId },
 				});
 				return newId;
