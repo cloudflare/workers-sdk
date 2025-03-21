@@ -1,1 +1,1 @@
-export const WRITE_SECRET = "SecretsStoreSecret::write";
+export const ADMIN_API = "SecretsStoreSecret::admin_api";
