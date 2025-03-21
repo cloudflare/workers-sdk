@@ -246,7 +246,7 @@ describe.each([
 		name: "regular Worker",
 		flags: "",
 		async beforeAll() {},
-		async afterAll(helper: WranglerE2ETestHelper) {},
+		async afterAll() {},
 		expectInitialStdout: (output: string) => {
 			expect(output).toEqual(`🌀 Building list of assets...
 🌀 Starting asset upload...
