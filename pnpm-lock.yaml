@@ -265,7 +265,7 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20250317.0
-        version: 4.20250319.0
+        version: 4.20250320.0
       '@types/mimetext':
         specifier: ^2.0.4
         version: 2.0.4
