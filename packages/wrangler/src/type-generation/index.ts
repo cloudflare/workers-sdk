@@ -295,7 +295,7 @@ export async function generateEnvTypes(
 		assets: config.assets,
 		workflows: config.workflows,
 		pipelines: config.pipelines,
-		secret_stores: config.secret_stores,
+		secrets_store_secrets: config.secrets_store_secrets,
 	};
 
 	const entrypointFormat = entrypoint?.format ?? "modules";
