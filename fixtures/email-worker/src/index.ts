@@ -17,23 +17,6 @@ export default class extends WorkerEntrypoint<Env> {
 		const url = new URL(request.url);
 		if (url.pathname === "/error") throw new Error("Hello Error");
 
-		// const msg = createMimeMessage();
-		// // msg.setHeader("In-Reply-To", message.headers.get("Message-ID"));
-		// msg.setSender({ name: "GPT-4", addr: "sender@penalosa.cloud" });
-		// msg.setRecipient("message@from");
-		// msg.setSubject("An email generated in a worker");
-		// msg.addMessage({
-		// 	contentType: "text/plain",
-		// 	data: `Congratulations, you just sent an email from a worker.`,
-		// });
-		// var m = new EmailMessage(
-		// 	"sender@penalosa.cloud",
-		// 	"message@from",
-		// 	msg.asRaw()
-		// );
-		// console.log(m);
-		// _env.AI;
-		this.ctx;
 		if (url.pathname === "/send") {
 			const msg = createMimeMessage();
 			// msg.setHeader("In-Reply-To", message.headers.get("Message-ID"));

@@ -81,7 +81,6 @@ export const EMAIL_PLUGIN = createPlugin({
 		const hasSendEmail =
 			args.options.email?.send_email?.length !== undefined &&
 			args.options.email?.send_email?.length > 0;
-		// we only want to insert on the first worker as it will be shared between them since it's a service?
 		if (hasSendEmail) {
 			const sendEmailOptions = args.options.email?.send_email ?? [];
 			services.push(
