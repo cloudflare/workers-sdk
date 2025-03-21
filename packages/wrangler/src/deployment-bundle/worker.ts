@@ -195,6 +195,12 @@ export interface CfVectorize {
 	index_name: string;
 }
 
+export interface CfSecretStore {
+	binding: string;
+	store_id: string;
+	secret_name: string;
+}
+
 export interface CfHyperdrive {
 	binding: string;
 	id: string;
@@ -340,6 +346,7 @@ export interface CfWorkerInit {
 		d1_databases: CfD1Database[] | undefined;
 		vectorize: CfVectorize[] | undefined;
 		hyperdrive: CfHyperdrive[] | undefined;
+		secrets_store_secrets: CfSecretStore[] | undefined;
 		services: CfService[] | undefined;
 		analytics_engine_datasets: CfAnalyticsEngineDataset[] | undefined;
 		dispatch_namespaces: CfDispatchNamespace[] | undefined;

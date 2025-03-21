@@ -68,6 +68,28 @@ export class WranglerE2ETestHelper {
 		return id;
 	}
 
+	async secretsStore(isLocal: boolean) {
+		const name = generateResourceName("secrets-store");
+		if (isLocal) {
+			return name;
+		}
+		const result = await this.run(
+			`wrangler secrets-store store create ${name} --remote`
+		);
+
+		const regex = /ID:\s*(\w{32})/;
+		const match = result.output.match(regex);
+
+		assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
+		const id = match[1];
+		onTestFinished(async () => {
+			if (!isLocal) {
+				await this.run(`wrangler secrets-store store delete ${id} --remote`);
+			}
+		});
+		return id;
+	}
+
 	async dispatchNamespace(isLocal: boolean) {
 		const name = generateResourceName("dispatch");
 		if (isLocal) {

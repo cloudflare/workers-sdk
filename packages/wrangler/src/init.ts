@@ -423,6 +423,18 @@ export async function mapBindings(
 							];
 						}
 						break;
+					case "secrets_store_secret":
+						{
+							configObj.secrets_store_secrets = [
+								...(configObj.secrets_store_secrets ?? []),
+								{
+									binding: binding.name,
+									store_id: binding.store_id,
+									secret_name: binding.secret_name,
+								},
+							];
+						}
+						break;
 					case "service":
 						{
 							configObj.services = [
