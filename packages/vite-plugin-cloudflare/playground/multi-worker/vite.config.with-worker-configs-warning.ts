@@ -8,6 +8,7 @@ export default defineConfig({
 			auxiliaryWorkers: [
 				{ configPath: "./worker-b/wrangler.with-warning.toml" },
 			],
+			inspectorPort: false,
 			persistState: false,
 		}),
 	],
