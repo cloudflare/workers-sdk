@@ -12,6 +12,6 @@ export default {
 			});
 		}
 
-		return new Response("nothing here", { status: 404 });
+		return env.ASSETS.fetch(request);
 	},
 } satisfies ExportedHandler<Env>;

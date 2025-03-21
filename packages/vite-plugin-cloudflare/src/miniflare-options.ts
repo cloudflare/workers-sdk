@@ -203,21 +203,6 @@ export function getDevMiniflareOptions(
 			? resolvedPluginConfig.config.assets
 			: entryWorkerConfig?.assets;
 
-	const compatibilityOptions =
-		resolvedPluginConfig.type === "assets-only"
-			? {
-					compatibility_date: resolvedPluginConfig.config.compatibility_date,
-					compatibility_flags: resolvedPluginConfig.config.compatibility_flags,
-				}
-			: {
-					...(entryWorkerConfig?.compatibility_date
-						? { compatibility_date: entryWorkerConfig?.compatibility_date }
-						: {}),
-					...(entryWorkerConfig?.compatibility_flags
-						? { compatibility_flags: entryWorkerConfig?.compatibility_flags }
-						: {}),
-				};
-
 	const assetWorkers: Array<WorkerOptions> = [
 		{
 			name: ROUTER_WORKER_NAME,
@@ -257,7 +242,6 @@ export function getDevMiniflareOptions(
 			],
 			bindings: {
 				CONFIG: {
-					...compatibilityOptions,
 					...(assetsConfig?.html_handling
 						? { html_handling: assetsConfig.html_handling }
 						: {}),
