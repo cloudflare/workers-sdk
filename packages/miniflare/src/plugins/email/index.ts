@@ -51,7 +51,7 @@ export const EMAIL_PLUGIN = createPlugin({
 
 		const sendEmailBindings = options.email?.send_email ?? [];
 
-		return sendEmailBindings.map(({ name, ..._config }) => ({
+		return sendEmailBindings.map(({ name }) => ({
 			name,
 			service: {
 				entrypoint: "SendEmailBinding",
