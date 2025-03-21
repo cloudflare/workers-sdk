@@ -270,9 +270,13 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 🌀 Starting asset upload...`);
 			// Unfortunately the server-side deduping logic isn't always 100% accurate, and sometimes a file is re-uploaded
 			// As such, to reduce CI flakes, this test just asserts that _at least one_ file isn't re-uploaded
-			expect(output).toContain(
-				/(Uploaded 1 of 1 assets)|(Uploaded 1 of 2 assets)|(No files to upload.)/
-			);
+			expect(
+				[
+					"Uploaded 1 of 1 assets",
+					"Uploaded 1 of 2 assets",
+					"No files to upload.",
+				].some((s) => output.includes(s))
+			).toBeTruthy();
 		},
 	},
 	{
@@ -339,9 +343,13 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				🌀 Starting asset upload...`);
 			// Unfortunately the server-side deduping logic isn't always 100% accurate, and sometimes a file is re-uploaded
 			// As such, to reduce CI flakes, this test just asserts that _at least one_ file isn't re-uploaded
-			expect(output).toContain(
-				/(Uploaded 1 of 1 assets)|(Uploaded 1 of 2 assets)|(No files to upload.)/
-			);
+			expect(
+				[
+					"Uploaded 1 of 1 assets",
+					"Uploaded 1 of 2 assets",
+					"No files to upload.",
+				].some((s) => output.includes(s))
+			).toBeTruthy();
 		},
 	},
 ])("Workers + Assets deployment: $name", { timeout: TIMEOUT }, (testcase) => {
