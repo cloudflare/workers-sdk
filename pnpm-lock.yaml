@@ -872,11 +872,11 @@ importers:
 
   fixtures/rules-app: {}
 
-  fixtures/secret-store:
+  fixtures/secrets-store:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20250224.0
-        version: 4.20250224.0
+        version: 4.20250319.0
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
