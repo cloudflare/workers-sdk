@@ -464,20 +464,11 @@ describe.skipIf(frameworkToTest || isQuarantineMode())("help text", () => {
 				  --category=<value>
 				    Specifies the kind of templates that should be created
 				    Allowed Values:
-				      hello-world
-				        Hello World example
 				      web-framework
 				        Framework Starter
 				  --type=<value>, -t
 				    When using a built-in template, specifies the type of application that should be created.
 				    Note that "--category" and "--template" are mutually exclusive options. If both are provided, "--category" will be used.
-				    Allowed Values:
-				      hello-world-assets-only
-				        Get started with a basic Worker that only serves static assets
-				      hello-world-with-assets
-				        Get started with a basic Worker that also serves static assets, in the language of your choice
-				      hello-world-durable-object-with-assets
-				        Get started with a basic stateful app to build projects like real-time chats, collaborative apps, and multiplayer games, which hosts assets
 				  --framework=<value>, -f
 				    The type of framework to use to create a web application (when using this option "--category" is coerced to "web-framework")
 				    When using the --framework option, C3 will dispatch to the official creation tool used by the framework (ex. "create-remix" is used for Remix).
@@ -485,7 +476,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())("help text", () => {
 				    npm create cloudflare -- --framework next -- --ts
 				    pnpm create cloudflare --framework next -- --ts
 				    Allowed Values:
-				      astro, hono, next, qwik, remix, solid, svelte
+				      next, qwik, solid
 				  --platform=<value>
 				    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 				    Allowed Values:

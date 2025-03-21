@@ -70,10 +70,7 @@ export const cliDefinition: ArgumentsDefinition = {
 			values(args) {
 				const experimental = Boolean(args?.["experimental"]);
 				if (experimental) {
-					return [
-						{ name: "hello-world", description: "Hello World Starter" },
-						{ name: "web-framework", description: "Framework Starter" },
-					];
+					return [{ name: "web-framework", description: "Framework Starter" }];
 				} else {
 					return [
 						{ name: "hello-world", description: "Hello World Starter" },
