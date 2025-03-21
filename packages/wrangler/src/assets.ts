@@ -436,7 +436,8 @@ export function getAssetsOptions(
 		html_handling: config.assets?.html_handling,
 		not_found_handling: config.assets?.not_found_handling,
 		// The _redirects and _headers files are parsed in Miniflare in dev and parsing is not required for deploy
-		// Similarly, `compatibility_date` and `compatibility_flags` are populated by Miniflare from the Worker definition and also are not required for deploy
+		compatibility_date: config.compatibility_date,
+		compatibility_flags: config.compatibility_flags,
 	};
 
 	return {

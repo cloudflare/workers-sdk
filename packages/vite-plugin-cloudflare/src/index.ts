@@ -48,6 +48,8 @@ import type { Unstable_RawConfig } from "wrangler";
 // this flag is used to show the workers configs warning only once
 let workersConfigsWarningShown = false;
 
+export type { PluginConfig } from "./plugin-config";
+
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
  *

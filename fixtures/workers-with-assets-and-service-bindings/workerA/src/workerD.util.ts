@@ -9,6 +9,10 @@ export async function getWorkerDResponses(request: Request, env) {
 	// test named functions with parameters
 	const busyBeeResult = await env.NAMED_ENTRYPOINT.busyBee("🐝");
 
+	// test properties
+	const honeyResponse = await env.NAMED_ENTRYPOINT.honey;
+	const honeyBeeResponse = await env.NAMED_ENTRYPOINT.honeyBee;
+
 	// test nested functions + promise pipelining
 	const foo = env.NAMED_ENTRYPOINT.foo("🐙");
 	const buzzResult = await foo.bar.buzz();
@@ -27,6 +31,8 @@ export async function getWorkerDResponses(request: Request, env) {
 		fetchResponse,
 		beeResult,
 		busyBeeResult,
+		honeyResponse,
+		honeyBeeResponse,
 		buzzResult,
 		beeCountResult,
 		scheduledResponse:

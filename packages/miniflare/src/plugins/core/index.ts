@@ -33,10 +33,7 @@ import {
 	CoreHeaders,
 	viewToBuffer,
 } from "../../workers";
-import {
-	ROUTER_SERVICE_NAME,
-	RPC_PROXY_SERVICE_NAME,
-} from "../assets/constants";
+import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
@@ -158,7 +155,6 @@ const CoreOptionsSchemaInput = z.intersection(
 		 Router Worker)
 		 */
 		hasAssetsAndIsVitest: z.boolean().optional(),
-		unsafeEnableAssetsRpc: z.boolean().optional(),
 	})
 );
 export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {
@@ -215,7 +211,6 @@ export const CoreSharedOptionsSchema = z.object({
 	// Keep blobs when deleting/overwriting keys, required for stacked storage
 	unsafeStickyBlobs: z.boolean().optional(),
 
-	unsafeEnableAssetsRpc: z.boolean().optional(),
 
 	// Enable directly triggering user-worker handlers with paths like `/cdn-cgi/handler/scheduled`
 	unsafeTriggerHandlers: z.boolean().optional(),
@@ -256,8 +251,7 @@ function getCustomServiceDesignator(
 	kind: CustomServiceKind,
 	name: string,
 	service: z.infer<typeof ServiceDesignatorSchema>,
-	hasAssetsAndIsVitest: boolean = false,
-	unsafeEnableAssetsRpc = false
+	hasAssetsAndIsVitest: boolean = false
 ): ServiceDesignator {
 	let serviceName: string;
 	let entrypoint: string | undefined;
@@ -279,13 +273,10 @@ function getCustomServiceDesignator(
 			serviceName = getBuiltinServiceName(workerIndex, kind, name);
 		}
 	} else if (service === kCurrentWorker) {
-		// Sets SELF binding to point to the Router Worker or the Assets
-		// Proxy Worker (depending on whether `unsafeEnableAssetsRpc` is set)
+		// Sets SELF binding to point to the (assets) RPC Proxy Worker
 		// if assets are present.
 		serviceName = hasAssetsAndIsVitest
-			? unsafeEnableAssetsRpc
-				? `${RPC_PROXY_SERVICE_NAME}:${refererName}`
-				: `${ROUTER_SERVICE_NAME}:${refererName}`
+			? `${RPC_PROXY_SERVICE_NAME}:${refererName}`
 			: getUserServiceName(refererName);
 	} else {
 		// Regular user worker
@@ -438,8 +429,7 @@ export const CORE_PLUGIN: Plugin<
 							CustomServiceKind.UNKNOWN,
 							name,
 							service,
-							options.hasAssetsAndIsVitest,
-							options.unsafeEnableAssetsRpc
+							options.hasAssetsAndIsVitest
 						),
 					};
 				})
@@ -701,8 +691,7 @@ export const CORE_PLUGIN: Plugin<
 									CustomServiceKind.KNOWN,
 									CUSTOM_SERVICE_KNOWN_OUTBOUND,
 									options.outboundService,
-									options.hasAssetsAndIsVitest,
-									options.unsafeEnableAssetsRpc
+									options.hasAssetsAndIsVitest
 								),
 					cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
 					moduleFallback:

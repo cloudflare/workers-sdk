@@ -8,6 +8,7 @@ export default defineConfig({
 	plugins: [
 		cloudflare({
 			configPath: "./worker-process-populated-env/wrangler.toml",
+			inspectorPort: false,
 			persistState: false,
 		}),
 	],

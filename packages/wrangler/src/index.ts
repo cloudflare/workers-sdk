@@ -141,6 +141,22 @@ import {
 	secretPutCommand,
 } from "./secret";
 import {
+	secretsStoreNamespace,
+	secretsStoreSecretNamespace,
+	secretsStoreStoreNamespace,
+} from "./secrets-store";
+import {
+	secretsStoreSecretCreateCommand,
+	secretsStoreSecretDeleteCommand,
+	secretsStoreSecretDuplicateCommand,
+	secretsStoreSecretGetCommand,
+	secretsStoreSecretListCommand,
+	secretsStoreSecretUpdateCommand,
+	secretsStoreStoreCreateCommand,
+	secretsStoreStoreDeleteCommand,
+	secretsStoreStoreListCommand,
+} from "./secrets-store/commands";
+import {
 	addBreadcrumb,
 	captureGlobalException,
 	closeSentry,
@@ -810,6 +826,56 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command("ai", "🤖 Manage AI models", (aiYargs) => {
 		return ai(aiYargs.command(subHelp));
 	});
+
+	// secrets store
+	registry.define([
+		{ command: "wrangler secrets-store", definition: secretsStoreNamespace },
+		{
+			command: "wrangler secrets-store store",
+			definition: secretsStoreStoreNamespace,
+		},
+		{
+			command: "wrangler secrets-store store create",
+			definition: secretsStoreStoreCreateCommand,
+		},
+		{
+			command: "wrangler secrets-store store delete",
+			definition: secretsStoreStoreDeleteCommand,
+		},
+		{
+			command: "wrangler secrets-store store list",
+			definition: secretsStoreStoreListCommand,
+		},
+		{
+			command: "wrangler secrets-store secret",
+			definition: secretsStoreSecretNamespace,
+		},
+		{
+			command: "wrangler secrets-store secret create",
+			definition: secretsStoreSecretCreateCommand,
+		},
+		{
+			command: "wrangler secrets-store secret list",
+			definition: secretsStoreSecretListCommand,
+		},
+		{
+			command: "wrangler secrets-store secret get",
+			definition: secretsStoreSecretGetCommand,
+		},
+		{
+			command: "wrangler secrets-store secret update",
+			definition: secretsStoreSecretUpdateCommand,
+		},
+		{
+			command: "wrangler secrets-store secret delete",
+			definition: secretsStoreSecretDeleteCommand,
+		},
+		{
+			command: "wrangler secrets-store secret duplicate",
+			definition: secretsStoreSecretDuplicateCommand,
+		},
+	]);
+	registry.registerNamespace("cert");
 
 	// workflows
 	registry.define([

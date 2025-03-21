@@ -1,6 +1,17 @@
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 
 export class EntrypointD extends WorkerEntrypoint {
+	#honey = "Bees make honey in worker-d";
+	#honeyBee = "I am worker-d's honeyBee prop";
+
+	get honey() {
+		return this.#honey;
+	}
+
+	get honeyBee() {
+		return this.#honeyBee;
+	}
+
 	/*
 	 * `fetch` method
 	 */

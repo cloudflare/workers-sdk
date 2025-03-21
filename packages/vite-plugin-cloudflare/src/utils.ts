@@ -22,6 +22,11 @@ export function getRouterWorker(miniflare: Miniflare) {
 }
 
 export function toMiniflareRequest(request: Request): MiniflareRequest {
+	// Undici sets the `Sec-Fetch-Mode` header to `cors` so we capture it in a custom header to be converted back later.
+	const secFetchMode = request.headers.get("Sec-Fetch-Mode");
+	if (secFetchMode) {
+		request.headers.set("X-Mf-Sec-Fetch-Mode", secFetchMode);
+	}
 	return new MiniflareRequest(request.url, {
 		method: request.method,
 		headers: [["accept-encoding", "identity"], ...request.headers],

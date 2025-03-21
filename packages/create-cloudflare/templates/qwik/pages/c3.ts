@@ -1,13 +1,13 @@
-import { crash, endSection } from "@cloudflare/cli";
+import { endSection } from "@cloudflare/cli";
 import { brandColor } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { loadTemplateSnippets, transformFile } from "helpers/codemod";
 import { quoteShellArgs, runCommand } from "helpers/command";
-import { removeFile, usesTypescript } from "helpers/files";
+import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
-import type { TemplateConfig } from "../../src/templates";
+import type { TemplateConfig } from "../../../src/templates";
 import type { C3Context } from "types";
 
 const { npm, npx, name } = detectPackageManager();
@@ -22,11 +22,6 @@ const configure = async (ctx: C3Context) => {
 	const cmd = [name === "pnpm" ? npm : npx, "qwik", "add", "cloudflare-pages"];
 	endSection(`Running ${quoteShellArgs(cmd)}`);
 	await runCommand(cmd);
-
-	// Remove the extraneous Pages files
-	removeFile("./public/_headers");
-	removeFile("./public/_redirects");
-	removeFile("./public/_routes.json");
 
 	addBindingsProxy(ctx);
 	populateCloudflareEnv();
@@ -81,7 +76,7 @@ const addBindingsProxy = (ctx: C3Context) => {
 			}
 
 			if (configArgument.type !== "ObjectExpression") {
-				crash("Failed to update `vite.config.ts`");
+				throw new Error("Failed to update `vite.config.ts`");
 			}
 
 			// Add the `platform` object to the object
@@ -133,17 +128,17 @@ const config: TemplateConfig = {
 	id: "qwik",
 	frameworkCli: "create-qwik",
 	displayName: "Qwik",
-	platform: "workers",
+	platform: "pages",
 	copyFiles: {
 		path: "./templates",
 	},
-	path: "templates-experimental/qwik",
+	path: "templates/qwik/pages",
 	generate,
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			deploy: `${npm} run build && wrangler deploy`,
-			preview: `${npm} run build && wrangler dev`,
+			deploy: `${npm} run build && wrangler pages deploy`,
+			preview: `${npm} run build && wrangler pages dev`,
 			"cf-typegen": `wrangler types`,
 		},
 	}),
