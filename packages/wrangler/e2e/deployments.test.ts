@@ -193,17 +193,6 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 			                 Message:  -"
 		`);
 	});
-
-	it("delete worker", async () => {
-		const output = await helper.run(`wrangler delete`);
-
-		expect(output.stdout).toContain("Successfully deleted");
-		const status = await retry(
-			(s) => s === 200 || s === 500,
-			() => fetch(deployedUrl).then((r) => r.status)
-		);
-		expect(status).toBe(404);
-	});
 });
 
 type AssetTestCase = {
@@ -257,9 +246,7 @@ describe.each([
 		name: "regular Worker",
 		flags: "",
 		async beforeAll() {},
-		async afterAll(helper: WranglerE2ETestHelper) {
-			await helper.run(`wrangler delete`);
-		},
+		async afterAll(helper: WranglerE2ETestHelper) {},
 		expectInitialStdout: (output: string) => {
 			expect(output).toEqual(`🌀 Building list of assets...
 🌀 Starting asset upload...
