@@ -46,14 +46,6 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			throw new Error(`could not parse email: ${error.message}`);
 		}
 
-		if (emailMessage.from !== parsedEmail.from.address) {
-			throw new Error("From: header does not match mail from");
-		}
-
-		if (emailMessage.from !== parsedEmail.from.address) {
-			throw new Error("From: header does not match mail from");
-		}
-
 		if (parsedEmail.messageId === undefined) {
 			throw new Error("invalid message-id");
 		}
@@ -66,6 +58,10 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 		} catch (e) {
 			const error = e as Error;
 			throw new Error(`could not parse email: ${error.message}`);
+		}
+
+		if (emailMessage.from !== parsedEmail.from.address) {
+			throw new Error("From: header does not match mail from");
 		}
 
 		if (emailHeaders.get("received") !== null) {
