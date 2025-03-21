@@ -14,22 +14,19 @@ import { readdirSync } from "fs";
 // Get a list of e2e test files, each of which should have an associated script
 const e2eTests = readdirSync("packages/wrangler/e2e");
 
-const tasks = new Map<string, string>();
+const tasks = new Set<string>();
 
 for (const file of e2eTests) {
 	// Ignore other files in the e2e directory (the README, for instance)
 	if (file.endsWith(".test.ts")) {
-		tasks.set(
-			file,
+		tasks.add(
 			`pnpm test:e2e --log-order=stream --output-logs=new-only --summarize --filter wrangler --concurrency 1 -- run ./e2e/${file}`
 		);
 	}
 }
 
-for (const [file, task] of tasks.entries()) {
-	console.log("::group::Testing: " + file);
+for (const task of tasks.values()) {
 	execSync(task, {
 		stdio: "inherit",
 	});
-	console.log("::endgroup::");
 }

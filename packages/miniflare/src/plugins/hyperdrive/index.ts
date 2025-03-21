@@ -9,14 +9,9 @@ function hasPostgresProtocol(url: URL) {
 	return url.protocol === "postgresql:" || url.protocol === "postgres:";
 }
 
-function hasMysqlProtocol(url: URL) {
-	return url.protocol === "mysql:";
-}
-
 function getPort(url: URL) {
 	if (url.port !== "") return url.port;
 	if (hasPostgresProtocol(url)) return "5432";
-	if (hasMysqlProtocol(url)) return "3306";
 	// Validated in `HyperdriveSchema`
 	assert.fail(`Expected known protocol, got ${url.protocol}`);
 }
@@ -28,14 +23,13 @@ export const HyperdriveSchema = z
 		if (url.protocol === "") {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
-				message:
-					"You must specify the database protocol - e.g. 'postgresql'/'mysql'.",
+				message: "You must specify the database protocol - e.g. 'postgresql'.",
 			});
-		} else if (!hasPostgresProtocol(url) && !hasMysqlProtocol(url)) {
+		} else if (!hasPostgresProtocol(url)) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				message:
-					"Only PostgreSQL-compatible or MySQL-compatible databases are currently supported.",
+					"Only PostgreSQL or PostgreSQL compatible databases are currently supported.",
 			});
 		}
 		if (url.host === "") {

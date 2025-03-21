@@ -1,0 +1,1 @@
+new Hono<{ Bindings: CloudflareBindings }>()

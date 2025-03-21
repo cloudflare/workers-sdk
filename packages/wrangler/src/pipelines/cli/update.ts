@@ -104,7 +104,7 @@ export function addUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 			.option("transform-worker", {
 				type: "string",
 				describe:
-					'Pipeline transform Worker and entrypoint, to transform ingested records. Specified as <worker-name>.<entrypoint>, or "none".',
+					"Pipeline transform Worker and entrypoint (<worker>.<entrypoint>)",
 				demandOption: false,
 			})
 
@@ -282,12 +282,7 @@ export async function updatePipelineHandler(
 	}
 
 	if (args.transformWorker) {
-		if (args.transformWorker === "none") {
-			// Unset transformations
-			pipelineConfig.transforms = [];
-		} else {
-			pipelineConfig.transforms.push(parseTransform(args.transformWorker));
-		}
+		pipelineConfig.transforms.push(parseTransform(args.transformWorker));
 	}
 
 	if (args.r2Prefix) {

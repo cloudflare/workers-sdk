@@ -2,16 +2,14 @@ import {
 	createWebSocketModuleRunnerTransport,
 	ModuleRunner,
 } from "vite/module-runner";
-import { additionalModuleRE, UNKNOWN_HOST } from "../shared";
-import { stripInternalEnv } from "./env";
+import { MODULE_PATTERN, UNKNOWN_HOST } from "../shared";
 import type { WrapperEnv } from "./env";
 
 let moduleRunner: ModuleRunner;
 
 export async function createModuleRunner(
 	env: WrapperEnv,
-	webSocket: WebSocket,
-	viteRoot: string
+	webSocket: WebSocket
 ) {
 	if (moduleRunner) {
 		throw new Error("Runner already initialized");
@@ -27,7 +25,7 @@ export async function createModuleRunner(
 
 	moduleRunner = new ModuleRunner(
 		{
-			root: viteRoot,
+			root: env.__VITE_ROOT__,
 			sourcemapInterceptor: "prepareStackTrace",
 			transport: {
 				...transport,
@@ -76,20 +74,10 @@ export async function createModuleRunner(
 				}
 			},
 			async runExternalModule(filepath) {
-				if (filepath === "cloudflare:workers") {
-					const originalCloudflareWorkersModule = await import(
-						"cloudflare:workers"
-					);
-					return Object.seal({
-						...originalCloudflareWorkersModule,
-						env: stripInternalEnv(
-							originalCloudflareWorkersModule.env as WrapperEnv
-						),
-					});
-				}
+				const moduleRE = new RegExp(MODULE_PATTERN);
 
 				if (
-					!additionalModuleRE.test(filepath) &&
+					!moduleRE.test(filepath) &&
 					filepath.includes("/node_modules") &&
 					!filepath.includes("/node_modules/.vite")
 				) {

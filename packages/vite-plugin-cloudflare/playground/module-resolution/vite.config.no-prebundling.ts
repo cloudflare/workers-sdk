@@ -21,10 +21,6 @@ export default defineConfig({
 		},
 	},
 	plugins: [
-		cloudflare({
-			viteEnvironment: { name: "worker" },
-			inspectorPort: false,
-			persistState: false,
-		}),
+		cloudflare({ viteEnvironment: { name: "worker" }, persistState: false }),
 	],
 });

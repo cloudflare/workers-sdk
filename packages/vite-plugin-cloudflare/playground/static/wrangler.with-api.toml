@@ -1,3 +1,0 @@
-name = "static-with-api"
-compatibility_date = "2024-12-30"
-main = './api/index.ts'

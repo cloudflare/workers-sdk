@@ -9,7 +9,6 @@ export default defineConfig({
 				singleThread: true,
 			},
 		},
-		retry: 1,
 		include: ["e2e/**/*.test.ts"],
 		// eslint-disable-next-line turbo/no-undeclared-env-vars
 		outputFile: process.env.TEST_REPORT_PATH ?? ".e2e-test-report/index.html",

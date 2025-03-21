@@ -3,36 +3,7 @@ import { keys, LONG_TIMEOUT } from "../helpers";
 // These are ordered based on speed and reliability for ease of debugging
 export default function getFrameworkTestConfig(pm: string) {
 	return {
-		"astro:pages": {
-			argv: ["--platform", "pages"],
-			testCommitMessage: true,
-			unsupportedOSs: ["win32"],
-			verifyDeploy: {
-				route: "/",
-				expectedText: "Hello, Astronaut!",
-			},
-			verifyPreview: {
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
-			verifyBuild: {
-				outputDir: "./dist",
-				script: "build",
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
-			flags: [
-				"--skip-houston",
-				"--no-install",
-				"--no-git",
-				"--template",
-				"blog",
-				"--typescript",
-				"strict",
-			],
-		},
-		"astro:workers": {
-			argv: ["--platform", "workers"],
+		astro: {
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
@@ -207,36 +178,15 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Gatsby!",
 			},
 		},
-		"hono:pages": {
-			argv: ["--platform", "pages"],
+		hono: {
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
 				route: "/",
-				expectedText: "Hello!",
-			},
-			verifyPreview: {
-				route: "/",
-				expectedText: "Hello!",
-				previewArgs: ["--host=127.0.0.1"],
-			},
-			promptHandlers: [
-				{
-					matcher: /Do you want to install project dependencies\?/,
-					input: [keys.enter],
-				},
-			],
-		},
-		"hono:workers": {
-			argv: ["--platform", "workers"],
-			testCommitMessage: true,
-			unsupportedOSs: ["win32"],
-			verifyDeploy: {
-				route: "/message",
 				expectedText: "Hello Hono!",
 			},
 			verifyPreview: {
-				route: "/message",
+				route: "/",
 				expectedText: "Hello Hono!",
 			},
 			promptHandlers: [
@@ -246,8 +196,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				},
 			],
 		},
-		"qwik:pages": {
-			argv: ["--platform", "pages"],
+		qwik: {
 			promptHandlers: [
 				{
 					matcher: /Yes looks good, finish update/,
@@ -270,33 +219,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				envInterfaceName: "Env",
 			},
 		},
-		"qwik:workers": {
-			argv: ["--platform", "workers"],
-			promptHandlers: [
-				{
-					matcher: /Yes looks good, finish update/,
-					input: [keys.enter],
-				},
-			],
-			flags: [],
-			testCommitMessage: true,
-			unsupportedOSs: ["win32"],
-			unsupportedPms: ["yarn"],
-			verifyDeploy: {
-				route: "/",
-				expectedText: "Welcome to Qwik",
-			},
-			verifyPreview: {
-				route: "/",
-				expectedText: "Welcome to Qwik",
-			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
-		},
-		"remix:pages": {
-			argv: ["--platform", "pages"],
+		remix: {
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedPms: ["yarn"],
@@ -318,26 +241,6 @@ export default function getFrameworkTestConfig(pm: string) {
 				script: "build",
 				route: "/test",
 				expectedText: "C3_TEST",
-			},
-			flags: ["--typescript", "--no-install", "--no-git-init"],
-		},
-		"remix:workers": {
-			argv: ["--platform", "workers"],
-			testCommitMessage: true,
-			timeout: LONG_TIMEOUT,
-			unsupportedPms: ["yarn"],
-			unsupportedOSs: ["win32"],
-			verifyDeploy: {
-				route: "/",
-				expectedText: "Welcome to Remix",
-			},
-			verifyPreview: {
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
 			},
 			flags: ["--typescript", "--no-install", "--no-git-init"],
 		},
@@ -491,8 +394,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Hello world",
 			},
 		},
-		"svelte:pages": {
-			argv: ["--platform", "pages"],
+		svelte: {
 			promptHandlers: [
 				{
 					matcher: /Which template would you like/,
@@ -526,39 +428,6 @@ export default function getFrameworkTestConfig(pm: string) {
 			verifyBuild: {
 				outputDir: ".svelte-kit/cloudflare",
 				script: "build",
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
-		},
-		"svelte:workers": {
-			argv: ["--platform", "workers"],
-			promptHandlers: [
-				{
-					matcher: /Which template would you like/,
-					input: [keys.enter],
-				},
-				{
-					matcher: /Add type checking with Typescript/,
-					input: [keys.down, keys.enter],
-				},
-				{
-					matcher: /What would you like to add to your project/,
-					input: [keys.enter],
-				},
-				{
-					matcher:
-						/Which package manager do you want to install dependencies with/,
-					input: [keys.enter],
-				},
-			],
-			testCommitMessage: true,
-			unsupportedOSs: ["win32"],
-			unsupportedPms: ["npm"],
-			verifyDeploy: {
-				route: "/",
-				expectedText: "SvelteKit app",
-			},
-			verifyPreview: {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},

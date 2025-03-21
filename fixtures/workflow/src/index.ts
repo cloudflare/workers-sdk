@@ -27,7 +27,7 @@ export class Demo extends WorkflowEntrypoint<{}, Params> {
 			};
 		});
 
-		return payload ?? "no-payload";
+		return "i'm a workflow output";
 	}
 }
 
@@ -44,14 +44,7 @@ export default class extends WorkerEntrypoint<Env> {
 		}
 
 		let handle: WorkflowInstance;
-		if (url.pathname === "/createBatch") {
-			// creates two instances
-			const batch = await this.env.WORKFLOW.createBatch([
-				{ id: "batch-1", params: "1" },
-				{ id: "batch-2", params: "2" },
-			]);
-			return Response.json(batch.map((instance) => instance.id));
-		} else if (url.pathname === "/create") {
+		if (url.pathname === "/create") {
 			if (id === null) {
 				handle = await this.env.WORKFLOW.create();
 			} else {

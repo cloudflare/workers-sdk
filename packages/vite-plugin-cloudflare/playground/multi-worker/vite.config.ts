@@ -6,7 +6,6 @@ export default defineConfig({
 		cloudflare({
 			configPath: "./worker-a/wrangler.toml",
 			auxiliaryWorkers: [{ configPath: "./worker-b/wrangler.toml" }],
-			inspectorPort: false,
 			persistState: false,
 		}),
 	],

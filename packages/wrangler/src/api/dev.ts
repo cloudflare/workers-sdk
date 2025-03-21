@@ -215,6 +215,7 @@ export async function unstable_dev(
 		experimentalImagesLocalMode: imagesLocalMode ?? false,
 		enableIpc: options?.experimental?.enableIpc,
 		nodeCompat: undefined,
+		experimentalAssetsRpc: false,
 	};
 
 	//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
@@ -223,6 +224,7 @@ export async function unstable_dev(
 			// TODO: can we make this work?
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: false,
+			ASSETS_RPC: false,
 		},
 		() => startDev(devOptions)
 	);

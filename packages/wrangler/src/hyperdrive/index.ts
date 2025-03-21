@@ -70,7 +70,7 @@ export function upsertOptions<T>(yargs: Argv<T>) {
 			"origin-scheme": {
 				alias: "scheme",
 				type: "string",
-				choices: ["postgres", "postgresql", "mysql"],
+				choices: ["postgres", "postgresql"],
 				describe: "The scheme used to connect to the origin database",
 			},
 			database: {
@@ -165,28 +165,20 @@ export function getOriginFromArgs<
 ): PartialUpdate extends true ? OriginConfig | undefined : OriginConfig {
 	if (args.connectionString) {
 		const url = new URL(args.connectionString);
-		url.protocol = url.protocol.toLowerCase();
-
 		if (
 			url.port === "" &&
 			(url.protocol == "postgresql:" || url.protocol == "postgres:")
 		) {
 			url.port = "5432";
-		} else if (url.port === "" && url.protocol == "mysql:") {
-			url.port = "3306";
 		}
 
 		if (url.protocol === "") {
 			throw new UserError(
-				"You must specify the database protocol - e.g. 'postgresql'/'mysql'."
+				"You must specify the database protocol - e.g. 'postgresql'."
 			);
-		} else if (
-			!url.protocol.startsWith("postgresql") &&
-			!url.protocol.startsWith("postgres") &&
-			!url.protocol.startsWith("mysql")
-		) {
+		} else if (url.protocol !== "postgresql:" && url.protocol !== "postgres:") {
 			throw new UserError(
-				"Only PostgreSQL-compatible or MySQL-compatible databases are currently supported."
+				"Only PostgreSQL or PostgreSQL compatible databases are currently supported."
 			);
 		} else if (url.host === "") {
 			throw new UserError(
@@ -196,9 +188,9 @@ export function getOriginFromArgs<
 			throw new UserError(
 				"You must provide a port number - e.g. 'user:password@database.example.com:port/databasename"
 			);
-		} else if (!url.pathname) {
+		} else if (url.pathname === "") {
 			throw new UserError(
-				"You must provide a database name as the path component - e.g. example.com:port/databasename"
+				"You must provide a database name as the path component - e.g. example.com:port/postgres"
 			);
 		} else if (url.username === "") {
 			throw new UserError(

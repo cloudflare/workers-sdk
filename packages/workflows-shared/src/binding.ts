@@ -66,15 +66,9 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 		};
 	}
 	public async createBatch(
-		batch: WorkflowInstanceCreateOptions<unknown>[]
+		_batch: WorkflowInstanceCreateOptions<unknown>[]
 	): Promise<WorkflowInstance[]> {
-		if (batch.length === 0) {
-			throw new Error(
-				"WorkflowError: batchCreate should have at least 1 instance"
-			);
-		}
-
-		return await Promise.all(batch.map((val) => this.create(val)));
+		throw new Error("createBatch is not yet implemented in local development.");
 	}
 }
 

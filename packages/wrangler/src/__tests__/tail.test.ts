@@ -51,11 +51,6 @@ vi.mock("ws", async (importOriginal) => {
 	});
 	return module;
 });
-
-// we want to include the banner to make sure it doesn't show up in the output when
-// when --format=json
-vi.unmock("../wrangler-banner");
-
 describe("tail", () => {
 	mockAccountId();
 	mockApiToken();
@@ -533,14 +528,10 @@ describe("tail", () => {
 					)
 					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				------------------
-
-				Successfully created tail, expires at [mock expiration date]
-				Connected to test-worker, waiting for logs...
-				GET https://example.org/ - Ok @ [mock event timestamp]"
-			`);
+			        "Successfully created tail, expires at [mock expiration date]
+			        Connected to test-worker, waiting for logs...
+			        GET https://example.org/ - Ok @ [mock event timestamp]"
+		      `);
 			await api.closeHelper();
 		});
 
@@ -564,14 +555,10 @@ describe("tail", () => {
 					)
 					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				------------------
-
-				Successfully created tail, expires at [mock expiration date]
-				Connected to test-worker, waiting for logs...
-				MyDurableObject.foo - Ok @ [mock event timestamp]"
-			`);
+			        "Successfully created tail, expires at [mock expiration date]
+			        Connected to test-worker, waiting for logs...
+			        MyDurableObject.foo - Ok @ [mock event timestamp]"
+		      `);
 			await api.closeHelper();
 		});
 
@@ -592,14 +579,10 @@ describe("tail", () => {
 					)
 					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				------------------
-
-				Successfully created tail, expires at [mock expiration date]
-				Connected to test-worker, waiting for logs...
-				\\"* * * * *\\" @ [mock timestamp string] - Ok"
-			`);
+			        "Successfully created tail, expires at [mock expiration date]
+			        Connected to test-worker, waiting for logs...
+			        \\"* * * * *\\" @ [mock timestamp string] - Ok"
+		      `);
 			await api.closeHelper();
 		});
 
@@ -620,14 +603,10 @@ describe("tail", () => {
 					)
 					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				------------------
-
-				Successfully created tail, expires at [mock expiration date]
-				Connected to test-worker, waiting for logs...
-				Alarm @ [mock scheduled time] - Ok"
-			`);
+			        "Successfully created tail, expires at [mock expiration date]
+			        Connected to test-worker, waiting for logs...
+			        Alarm @ [mock scheduled time] - Ok"
+		      `);
 			await api.closeHelper();
 		});
 
@@ -648,14 +627,10 @@ describe("tail", () => {
 					)
 					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				------------------
-
-				Successfully created tail, expires at [mock expiration date]
-				Connected to test-worker, waiting for logs...
-				Email from:from@example.com to:to@example.com size:45416 @ [mock event timestamp] - Ok"
-			`);
+			"Successfully created tail, expires at [mock expiration date]
+			Connected to test-worker, waiting for logs...
+			Email from:from@example.com to:to@example.com size:45416 @ [mock event timestamp] - Ok"
+		`);
 			await api.closeHelper();
 		});
 
@@ -679,14 +654,10 @@ describe("tail", () => {
 						"[mock expiration date]"
 					)
 			).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				------------------
-
-				Successfully created tail, expires at [mock expiration date]
-				Connected to test-worker, waiting for logs...
-				Tailing some-worker,other-worker - Ok @ [mock event timestamp]"
-			`);
+			"Successfully created tail, expires at [mock expiration date]
+			Connected to test-worker, waiting for logs...
+			Tailing some-worker,other-worker - Ok @ [mock event timestamp]"
+		`);
 			await api.closeHelper();
 		});
 
@@ -709,15 +680,11 @@ describe("tail", () => {
 					"[mock expiration date]"
 				)
 			).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				------------------
-
-				Successfully created tail, expires at [mock expiration date]
-				Connected to test-worker, waiting for logs...
-				Tail is currently in sampling mode due to the high volume of messages. To prevent messages from being dropped consider adding filters.
-				Tail has exited sampling mode and is no longer dropping messages."
-			`);
+			"Successfully created tail, expires at [mock expiration date]
+			Connected to test-worker, waiting for logs...
+			Tail is currently in sampling mode due to the high volume of messages. To prevent messages from being dropped consider adding filters.
+			Tail has exited sampling mode and is no longer dropping messages."
+		`);
 			await api.closeHelper();
 		});
 
@@ -738,14 +705,10 @@ describe("tail", () => {
 					)
 					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				------------------
-
-				Successfully created tail, expires at [mock expiration date]
-				Connected to test-worker, waiting for logs...
-				Queue my-queue123 (7 messages) - Ok @ [mock timestamp string]"
-			`);
+			        "Successfully created tail, expires at [mock expiration date]
+			        Connected to test-worker, waiting for logs...
+			        Queue my-queue123 (7 messages) - Ok @ [mock timestamp string]"
+		      `);
 			await api.closeHelper();
 		});
 
@@ -765,14 +728,10 @@ describe("tail", () => {
 					)
 					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				------------------
-
-				Successfully created tail, expires at [mock expiration date]
-				Connected to test-worker, waiting for logs...
-				Unknown Event - Ok @ [mock timestamp string]"
-			`);
+			"Successfully created tail, expires at [mock expiration date]
+			Connected to test-worker, waiting for logs...
+			Unknown Event - Ok @ [mock timestamp string]"
+		`);
 			await api.closeHelper();
 		});
 
@@ -794,14 +753,10 @@ describe("tail", () => {
 					)
 					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				------------------
-
-				Successfully created tail, expires at [mock expiration date]
-				Connected to test-worker, waiting for logs...
-				GET https://example.org/ - Ok @ [mock event timestamp]"
-			`);
+			        "Successfully created tail, expires at [mock expiration date]
+			        Connected to test-worker, waiting for logs...
+			        GET https://example.org/ - Ok @ [mock event timestamp]"
+		      `);
 			await api.closeHelper();
 		});
 
@@ -853,17 +808,13 @@ describe("tail", () => {
 					)
 					.replace(mockTailExpiration.toISOString(), "[mock expiration date]")
 			).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				------------------
-
-				Successfully created tail, expires at [mock expiration date]
-				Connected to test-worker, waiting for logs...
-				GET https://example.org/ - Ok @ [mock event timestamp]
-				  (log) some string
-				  (log) { complex: 'object' }
-				  (error) 1234"
-			`);
+			        "Successfully created tail, expires at [mock expiration date]
+			        Connected to test-worker, waiting for logs...
+			        GET https://example.org/ - Ok @ [mock event timestamp]
+			          (log) some string
+			          (log) { complex: 'object' }
+			          (error) 1234"
+		      `);
 			expect(std.err).toMatchInlineSnapshot(`
 			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1m  Error: some error[0m
 

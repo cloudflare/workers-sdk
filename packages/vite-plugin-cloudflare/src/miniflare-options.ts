@@ -18,10 +18,10 @@ import {
 import {
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
-	DEFAULT_INSPECTOR_PORT,
 	ROUTER_WORKER_NAME,
 } from "./constants";
-import { additionalModuleRE } from "./shared";
+import { getWorkerConfigPaths } from "./deploy-config";
+import { MODULE_PATTERN } from "./shared";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
 	PersistState,
@@ -30,7 +30,7 @@ import type {
 } from "./plugin-config";
 import type { MiniflareOptions, SharedOptions, WorkerOptions } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
-import type { SourcelessWorkerOptions, Unstable_Config } from "wrangler";
+import type { SourcelessWorkerOptions } from "wrangler";
 
 type PersistOptions = Pick<
 	SharedOptions,
@@ -203,21 +203,6 @@ export function getDevMiniflareOptions(
 			? resolvedPluginConfig.config.assets
 			: entryWorkerConfig?.assets;
 
-	const compatibilityOptions =
-		resolvedPluginConfig.type === "assets-only"
-			? {
-					compatibility_date: resolvedPluginConfig.config.compatibility_date,
-					compatibility_flags: resolvedPluginConfig.config.compatibility_flags,
-				}
-			: {
-					...(entryWorkerConfig?.compatibility_date
-						? { compatibility_date: entryWorkerConfig?.compatibility_date }
-						: {}),
-					...(entryWorkerConfig?.compatibility_flags
-						? { compatibility_flags: entryWorkerConfig?.compatibility_flags }
-						: {}),
-				};
-
 	const assetWorkers: Array<WorkerOptions> = [
 		{
 			name: ROUTER_WORKER_NAME,
@@ -257,7 +242,6 @@ export function getDevMiniflareOptions(
 			],
 			bindings: {
 				CONFIG: {
-					...compatibilityOptions,
 					...(assetsConfig?.html_handling
 						? { html_handling: assetsConfig.html_handling }
 						: {}),
@@ -322,10 +306,13 @@ export function getDevMiniflareOptions(
 							worker: {
 								...workerOptions,
 								name: workerOptions.name ?? workerConfig.name,
-								unsafeInspectorProxy:
-									resolvedPluginConfig.inspectorPort !== false,
 								modulesRoot: miniflareModulesRoot,
 								unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
+								bindings: {
+									...workerOptions.bindings,
+									__VITE_ROOT__: resolvedViteConfig.root,
+									__VITE_ENTRY_PATH__: workerConfig.main,
+								},
 								serviceBindings: {
 									...workerOptions.serviceBindings,
 									...(environmentName ===
@@ -350,9 +337,13 @@ export function getDevMiniflareOptions(
 										);
 
 										const [moduleId] = invokePayloadData.data;
+										const moduleRE = new RegExp(MODULE_PATTERN);
 
-										// Additional modules (CompiledWasm, Data, Text)
-										if (additionalModuleRE.test(moduleId)) {
+										const shouldExternalize =
+											// Worker modules (CompiledWasm, Text, Data)
+											moduleRE.test(moduleId);
+
+										if (shouldExternalize) {
 											const result = {
 												externalize: moduleId,
 												type: "module",
@@ -394,8 +385,6 @@ export function getDevMiniflareOptions(
 
 	return {
 		log: logger,
-		inspectorPort: resolvedPluginConfig.inspectorPort || undefined,
-		unsafeInspectorProxy: resolvedPluginConfig.inspectorPort !== false,
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));
@@ -477,7 +466,7 @@ export function getDevMiniflareOptions(
 				} satisfies WorkerOptions;
 			}),
 		],
-		async unsafeModuleFallbackService(request) {
+		unsafeModuleFallbackService(request) {
 			const url = new URL(request.url);
 			const rawSpecifier = url.searchParams.get("rawSpecifier");
 			assert(
@@ -485,42 +474,29 @@ export function getDevMiniflareOptions(
 				`Unexpected error: no specifier in request to module fallback service.`
 			);
 
-			const match = additionalModuleRE.exec(rawSpecifier);
+			const moduleRE = new RegExp(MODULE_PATTERN);
+			const match = moduleRE.exec(rawSpecifier);
 			assert(match, `Unexpected error: no match for module: ${rawSpecifier}.`);
 			const [full, moduleType, modulePath] = match;
-			assert(
-				moduleType,
-				`Unexpected error: module type not found in reference: ${full}.`
-			);
 			assert(
 				modulePath,
 				`Unexpected error: module path not found in reference: ${full}.`
 			);
 
-			let contents: Buffer;
+			let source: Buffer;
 
 			try {
-				contents = await fsp.readFile(modulePath);
+				source = fs.readFileSync(modulePath);
 			} catch (error) {
 				throw new Error(
 					`Import "${modulePath}" not found. Does the file exist?`
 				);
 			}
 
-			switch (moduleType) {
-				case "CompiledWasm": {
-					return MiniflareResponse.json({ wasm: Array.from(contents) });
-				}
-				case "Data": {
-					return MiniflareResponse.json({ data: Array.from(contents) });
-				}
-				case "Text": {
-					return MiniflareResponse.json({ text: contents.toString() });
-				}
-				default: {
-					return MiniflareResponse.error();
-				}
-			}
+			return MiniflareResponse.json({
+				// Cap'n Proto expects byte arrays for `:Data` typed fields from JSON
+				wasm: Array.from(source),
+			});
 		},
 	};
 }
@@ -552,11 +528,14 @@ function getPreviewModules(
 
 export function getPreviewMiniflareOptions(
 	vitePreviewServer: vite.PreviewServer,
-	workerConfigs: Unstable_Config[],
-	persistState: PersistState,
-	inspectorPort: number | false = DEFAULT_INSPECTOR_PORT
+	persistState: PersistState
 ): MiniflareOptions {
 	const resolvedViteConfig = vitePreviewServer.config;
+	const configPaths = getWorkerConfigPaths(resolvedViteConfig.root);
+	const workerConfigs = configPaths.map((configPath) =>
+		unstable_readConfig({ config: configPath })
+	);
+
 	const workers: Array<WorkerOptions> = workerConfigs.flatMap((config) => {
 		const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(config);
 
@@ -569,7 +548,6 @@ export function getPreviewMiniflareOptions(
 			{
 				...workerOptions,
 				name: workerOptions.name ?? config.name,
-				unsafeInspectorProxy: inspectorPort !== false,
 				...(miniflareWorkerOptions.main
 					? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
 					: { modules: true, script: "" }),
@@ -582,8 +560,6 @@ export function getPreviewMiniflareOptions(
 
 	return {
 		log: logger,
-		inspectorPort: inspectorPort || undefined,
-		unsafeInspectorProxy: inspectorPort !== false,
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));

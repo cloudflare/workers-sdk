@@ -4,7 +4,7 @@ import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics } from "./analytics";
 import { AssetsManifest } from "./assets-manifest";
-import { normalizeConfiguration } from "./configuration";
+import { applyConfigurationDefaults } from "./configuration";
 import { ExperimentAnalytics } from "./experiment-analytics";
 import { canFetch, handleRequest } from "./handler";
 import { handleError, submitMetrics } from "./utils/final-operations";
@@ -80,12 +80,7 @@ export default class extends WorkerEntrypoint<Env> {
 				this.env.CONFIG?.script_id
 			);
 
-			const config = normalizeConfiguration(this.env.CONFIG);
-			sentry?.setContext("compatibilityOptions", {
-				compatibilityDate: config.compatibility_date,
-				compatibilityFlags: config.compatibility_flags,
-				originalCompatibilityFlags: this.env.CONFIG.compatibility_flags,
-			});
+			const config = applyConfigurationDefaults(this.env.CONFIG);
 			const userAgent = request.headers.get("user-agent") ?? "UA UNKNOWN";
 
 			const url = new URL(request.url);
@@ -107,7 +102,6 @@ export default class extends WorkerEntrypoint<Env> {
 					hostname: url.hostname,
 					htmlHandling: config.html_handling,
 					notFoundHandling: config.not_found_handling,
-					compatibilityFlags: config.compatibility_flags,
 					userAgent: userAgent,
 				});
 			}
@@ -148,7 +142,7 @@ export default class extends WorkerEntrypoint<Env> {
 		return canFetch(
 			request,
 			this.env,
-			normalizeConfiguration(this.env.CONFIG),
+			applyConfigurationDefaults(this.env.CONFIG),
 			this.unstable_exists.bind(this)
 		);
 	}

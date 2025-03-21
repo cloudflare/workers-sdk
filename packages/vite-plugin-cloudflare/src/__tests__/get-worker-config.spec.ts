@@ -50,6 +50,7 @@ describe("getWorkerConfig", () => {
 		expect(nonApplicable).toEqual({
 			replacedByVite: new Set(),
 			notRelevant: new Set(),
+			overridden: new Set(),
 		});
 	});
 
@@ -80,6 +81,7 @@ describe("getWorkerConfig", () => {
 		expect(nonApplicable).toEqual({
 			replacedByVite: new Set(),
 			notRelevant: new Set(),
+			overridden: new Set(),
 		});
 	});
 
@@ -148,12 +150,12 @@ describe("getWorkerConfig", () => {
 				"find_additional_modules",
 				"no_bundle",
 				"preserve_file_names",
-				"rules",
 				"site",
 				"tsconfig",
 				"upload_source_maps",
 			])
 		);
+		expect(nonApplicable.overridden).toEqual(new Set(["rules"]));
 	});
 
 	describe("invalid main config", () => {

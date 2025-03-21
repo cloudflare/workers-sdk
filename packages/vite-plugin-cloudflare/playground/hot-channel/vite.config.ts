@@ -21,6 +21,6 @@ export default defineConfig({
 				};
 			},
 		},
-		cloudflare({ inspectorPort: false, persistState: false }),
+		cloudflare({ persistState: false }),
 	],
 });

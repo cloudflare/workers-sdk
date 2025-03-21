@@ -1,6 +1,8 @@
+import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { unstable_readConfig } from "wrangler";
+import { name as packageName } from "../package.json";
 import type { AssetsOnlyConfig, WorkerConfig } from "./plugin-config";
 import type { Optional } from "./utils";
 import type { Unstable_Config as RawWorkerConfig } from "wrangler";
@@ -44,19 +46,29 @@ type NonApplicableConfigMap = {
 			NonApplicableWorkerConfigsInfo["notRelevant"][number]
 		>
 	>;
+	overridden: Set<
+		Extract<
+			keyof RawWorkerConfig,
+			NonApplicableWorkerConfigsInfo["overridden"][number]
+		>
+	>;
 };
 
 type NonApplicableWorkerConfigsInfo = typeof nonApplicableWorkerConfigs;
 
 type NonApplicableConfig =
 	| NonApplicableConfigReplacedByVite
-	| NonApplicableConfigNotRelevant;
+	| NonApplicableConfigNotRelevant
+	| NonApplicableConfigOverridden;
 
 type NonApplicableConfigReplacedByVite =
 	keyof NonApplicableWorkerConfigsInfo["replacedByVite"];
 
 type NonApplicableConfigNotRelevant =
 	NonApplicableWorkerConfigsInfo["notRelevant"][number];
+
+type NonApplicableConfigOverridden =
+	NonApplicableWorkerConfigsInfo["overridden"][number];
 
 /**
  * Set of worker config options that are not applicable when using Vite
@@ -89,11 +101,14 @@ export const nonApplicableWorkerConfigs = {
 		"find_additional_modules",
 		"no_bundle",
 		"preserve_file_names",
-		"rules",
 		"site",
 		"tsconfig",
 		"upload_source_maps",
 	],
+	/**
+	 * All the configs that get overridden by our plugin
+	 */
+	overridden: ["rules"],
 } as const;
 
 /**
@@ -122,6 +137,7 @@ function readWorkerConfig(
 	const nonApplicable: NonApplicableConfigMap = {
 		replacedByVite: new Set(),
 		notRelevant: new Set(),
+		overridden: new Set(),
 	};
 	const config: Optional<RawWorkerConfig, "build" | "define"> =
 		unstable_readConfig({ config: configPath, env }, {});
@@ -135,6 +151,10 @@ function readWorkerConfig(
 
 			if (isNotRelevant(prop)) {
 				nonApplicable.notRelevant.add(prop);
+			}
+
+			if (isOverridden(prop)) {
+				nonApplicable.overridden.add(prop);
 			}
 		}
 		delete config[prop];
@@ -154,8 +174,9 @@ function readWorkerConfig(
 	delete config["define"];
 
 	if (config.rules.length > 0) {
-		nonApplicable.notRelevant.add("rules");
+		nonApplicable.overridden.add("rules");
 	}
+	// Note: differently from above here we cannot delete `config['rules']` since Miniflare relies on this config being there
 
 	return {
 		raw,
@@ -237,7 +258,8 @@ function getWorkerNonApplicableWarnLines(
 ): string[] {
 	const lines: string[] = [];
 
-	const { replacedByVite, notRelevant } = workerConfig.nonApplicable;
+	const { replacedByVite, notRelevant, overridden } =
+		workerConfig.nonApplicable;
 
 	for (const config of replacedByVite) {
 		lines.push(
@@ -248,6 +270,11 @@ function getWorkerNonApplicableWarnLines(
 	if (notRelevant.size > 0)
 		lines.push(
 			`${linePrefix}${[...notRelevant].map((config) => `\`${config}\``).join(", ")} which ${notRelevant.size > 1 ? "are" : "is"} not relevant in the context of a Vite project`
+		);
+
+	if (overridden.size > 0)
+		lines.push(
+			`${linePrefix}${[...overridden].map((config) => `\`${config}\``).join(", ")} which ${overridden.size > 1 ? "are" : "is"} overridden by \`${packageName}\``
 		);
 
 	return lines;
@@ -263,6 +290,12 @@ function isNotRelevant(
 	configName: string
 ): configName is NonApplicableConfigNotRelevant {
 	return nonApplicableWorkerConfigs.notRelevant.includes(configName as any);
+}
+
+function isOverridden(
+	configName: string
+): configName is NonApplicableConfigOverridden {
+	return nonApplicableWorkerConfigs.overridden.includes(configName as any);
 }
 
 function missingFieldErrorMessage(
@@ -289,43 +322,37 @@ export function getWorkerConfig(
 
 	opts?.visitedConfigPaths?.add(configPath);
 
-	if (!config.name) {
-		throw new Error(missingFieldErrorMessage(`'name'`, configPath, env));
-	}
-
-	if (!config.topLevelName) {
-		throw new Error(
-			missingFieldErrorMessage(`top-level 'name'`, configPath, env)
-		);
-	}
-
-	if (!config.compatibility_date) {
-		throw new Error(
-			missingFieldErrorMessage(`'compatibility_date`, configPath, env)
-		);
-	}
-
-	const requiredFields = {
-		topLevelName: config.topLevelName,
-		name: config.name,
-		compatibility_date: config.compatibility_date,
-	};
+	assert(
+		config.topLevelName,
+		missingFieldErrorMessage(`top-level 'name'`, configPath, env)
+	);
+	assert(config.name, missingFieldErrorMessage(`'name'`, configPath, env));
+	assert(
+		config.compatibility_date,
+		missingFieldErrorMessage(`'compatibility_date'`, configPath, env)
+	);
 
 	if (opts?.isEntryWorker && !config.main) {
+		assert(
+			config.assets,
+			missingFieldErrorMessage(`'main' or 'assets'`, configPath, env)
+		);
+
 		return {
 			type: "assets-only",
 			raw,
 			config: {
 				...config,
-				...requiredFields,
+				topLevelName: config.topLevelName,
+				name: config.name,
+				compatibility_date: config.compatibility_date,
+				assets: config.assets,
 			},
 			nonApplicable,
 		};
 	}
 
-	if (!config.main) {
-		throw new Error(missingFieldErrorMessage(`'main'`, configPath, env));
-	}
+	assert(config.main, missingFieldErrorMessage(`'main'`, configPath, env));
 
 	const mainStat = fs.statSync(config.main, { throwIfNoEntry: false });
 	if (!mainStat) {
@@ -344,7 +371,9 @@ export function getWorkerConfig(
 		raw,
 		config: {
 			...config,
-			...requiredFields,
+			topLevelName: config.topLevelName,
+			name: config.name,
+			compatibility_date: config.compatibility_date,
 			main: config.main,
 		},
 		nonApplicable,

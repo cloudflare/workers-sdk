@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.3.0",
+	"version": "4.2.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -58,7 +58,7 @@
 		"clean": "rimraf wrangler-dist miniflare-dist emitted-types",
 		"dev": "pnpm run clean && concurrently -c black,blue --kill-others-on-fail false \"pnpm run bundle --watch\" \"pnpm run check:type --watch --preserveWatchOutput\"",
 		"emit-types": "tsc -p tsconfig.emit.json && node -r esbuild-register scripts/emit-types.ts",
-		"generate-json-schema": "node -r esbuild-register scripts/generate-json-schema.ts",
+		"generate-json-schema": "pnpm exec ts-json-schema-generator --no-type-check --path src/config/config.ts --type RawConfig --out config-schema.json",
 		"prepublishOnly": "cross-env SOURCEMAPS=false pnpm exec turbo build -F wrangler",
 		"start": "pnpm run bundle && cross-env NODE_OPTIONS=--enable-source-maps ./bin/wrangler.js",
 		"test": "dotenv -- pnpm run assert-git-version && dotenv -- vitest",
@@ -70,13 +70,13 @@
 	},
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "workspace:*",
-		"@cloudflare/unenv-preset": "2.3.0",
+		"@cloudflare/unenv-preset": "2.0.2",
 		"blake3-wasm": "2.1.5",
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
-		"unenv": "2.0.0-rc.15",
-		"workerd": "1.20250320.0"
+		"unenv": "2.0.0-rc.14",
+		"workerd": "1.20250317.0"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
@@ -86,7 +86,7 @@
 		"@cloudflare/types": "6.18.4",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250320.0",
+		"@cloudflare/workers-types": "^4.20250317.0",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.47.0",
@@ -161,7 +161,7 @@
 		"yargs": "^17.7.2"
 	},
 	"peerDependencies": {
-		"@cloudflare/workers-types": "^4.20250320.0"
+		"@cloudflare/workers-types": "^4.20250317.0"
 	},
 	"peerDependenciesMeta": {
 		"@cloudflare/workers-types": {

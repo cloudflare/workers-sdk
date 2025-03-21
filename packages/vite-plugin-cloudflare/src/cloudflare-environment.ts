@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import * as vite from "vite";
-import { isNodeCompat } from "./node-js-compat";
-import { INIT_PATH, UNKNOWN_HOST, VITE_DEV_METADATA_HEADER } from "./shared";
+import { INIT_PATH, UNKNOWN_HOST } from "./shared";
 import { getOutputDirectory } from "./utils";
 import type { ResolvedPluginConfig, WorkerConfig } from "./plugin-config";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
@@ -86,21 +85,13 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		this.#webSocketContainer = webSocketContainer;
 	}
 
-	async initRunner(
-		worker: ReplaceWorkersTypes<Fetcher>,
-		root: string,
-		workerConfig: WorkerConfig
-	) {
+	async initRunner(worker: ReplaceWorkersTypes<Fetcher>) {
 		this.#worker = worker;
 
 		const response = await this.#worker.fetch(
 			new URL(INIT_PATH, UNKNOWN_HOST),
 			{
 				headers: {
-					[VITE_DEV_METADATA_HEADER]: JSON.stringify({
-						root,
-						entryPath: workerConfig.main,
-					}),
 					upgrade: "websocket",
 				},
 			}
@@ -191,8 +182,7 @@ export function createCloudflareEnvironmentOptions(
 				],
 			},
 		},
-		// if nodeCompat is enabled then let's keep the real process.env so that workerd can manipulate it
-		keepProcessEnv: isNodeCompat(workerConfig),
+		keepProcessEnv: false,
 	};
 }
 
@@ -214,7 +204,7 @@ export function initRunners(
 					viteDevServer.environments[
 						environmentName
 					] as CloudflareDevEnvironment
-				).initRunner(worker, viteDevServer.config.root, workerConfig);
+				).initRunner(worker);
 			}
 		)
 	);

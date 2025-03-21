@@ -203,7 +203,7 @@ const bindingsConfigMock: Omit<
 		},
 		{ type: "CompiledWasm", globs: ["**/*.wasm"], fallthrough: true },
 	],
-	pipelines: [{ binding: "PIPELINE", pipeline: "my-pipeline" }],
+	pipelines: [],
 	assets: {
 		binding: "ASSETS_BINDING",
 		directory: "/assets",
@@ -437,7 +437,6 @@ describe("generate types", () => {
 					IMAGES_BINDING: ImagesBinding;
 					VERSION_METADATA_BINDING: { id: string; tag: string };
 					ASSETS_BINDING: Fetcher;
-					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 				}
 			}
 			interface Env extends Cloudflare.Env {}
@@ -526,7 +525,6 @@ describe("generate types", () => {
 					IMAGES_BINDING: ImagesBinding;
 					VERSION_METADATA_BINDING: { id: string; tag: string };
 					ASSETS_BINDING: Fetcher;
-					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 				}
 			}
 			interface Env extends Cloudflare.Env {}

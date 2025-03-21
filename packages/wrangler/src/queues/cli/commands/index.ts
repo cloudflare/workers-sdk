@@ -9,7 +9,6 @@ import {
 	options as pauseResumeOptions,
 	resumeHandler,
 } from "./pause-resume";
-import { handler as purgeHandler, options as purgeOptions } from "./purge";
 import { handler as updateHandler, options as updateOptions } from "./update";
 import type { CommonYargsArgv } from "../../../yargs-types";
 
@@ -64,13 +63,6 @@ export function queues(yargs: CommonYargsArgv) {
 		"Resume message delivery for a Queue",
 		pauseResumeOptions,
 		resumeHandler
-	);
-
-	yargs.command(
-		"purge <name>",
-		"Purge messages from a Queue",
-		purgeOptions,
-		purgeHandler
 	);
 
 	yargs.fail(HandleUnauthorizedError);

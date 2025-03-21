@@ -1,8 +1,6 @@
 import * as path from "node:path";
 import { Request as MiniflareRequest } from "miniflare";
 import * as vite from "vite";
-import { ROUTER_WORKER_NAME } from "./constants";
-import type { Miniflare } from "miniflare";
 import type { IncomingHttpHeaders } from "node:http";
 
 export function getOutputDirectory(
@@ -17,16 +15,7 @@ export function getOutputDirectory(
 	);
 }
 
-export function getRouterWorker(miniflare: Miniflare) {
-	return miniflare.getWorker(ROUTER_WORKER_NAME);
-}
-
 export function toMiniflareRequest(request: Request): MiniflareRequest {
-	// Undici sets the `Sec-Fetch-Mode` header to `cors` so we capture it in a custom header to be converted back later.
-	const secFetchMode = request.headers.get("Sec-Fetch-Mode");
-	if (secFetchMode) {
-		request.headers.set("X-Mf-Sec-Fetch-Mode", secFetchMode);
-	}
 	return new MiniflareRequest(request.url, {
 		method: request.method,
 		headers: [["accept-encoding", "identity"], ...request.headers],
@@ -51,11 +40,6 @@ export function nodeHeadersToWebHeaders(
 	}
 
 	return headers;
-}
-
-const postfixRE = /[?#].*$/;
-export function cleanUrl(url: string): string {
-	return url.replace(postfixRE, "");
 }
 
 export type Optional<T, K extends keyof T> = Omit<T, K> & Pick<Partial<T>, K>;

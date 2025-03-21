@@ -77,7 +77,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		};
 	},
 
-	async getServices({ options }) {
+	async getServices({ options, unsafeEnableAssetsRpc }) {
 		if (!options.assets) {
 			return [];
 		}
@@ -132,8 +132,6 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		}
 
 		const assetConfig: AssetConfig = {
-			compatibility_date: options.compatibilityDate,
-			compatibility_flags: options.compatibilityFlags,
 			...options.assets.assetConfig,
 			redirects: parsedRedirects,
 			headers: parsedHeaders,
@@ -227,40 +225,39 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			},
 		};
 
-		const assetsProxyService: Service = {
-			name: `${RPC_PROXY_SERVICE_NAME}:${id}`,
-			worker: {
-				compatibilityDate: "2024-08-01",
-				modules: [
-					{
-						name: "assets-proxy-worker.mjs",
-						esModule: SCRIPT_RPC_PROXY(),
-					},
-				],
-				bindings: [
-					{
-						name: "ROUTER_WORKER",
-						service: {
-							name: `${ROUTER_SERVICE_NAME}:${id}`,
-						},
-					},
-					{
-						name: "USER_WORKER",
-						service: {
-							name: getUserServiceName(id),
-						},
-					},
-				],
-			},
-		};
-
-		return [
+		const services = [
 			storageService,
 			namespaceService,
 			assetService,
 			routerService,
-			assetsProxyService,
 		];
+
+		if (unsafeEnableAssetsRpc) {
+			const assetsProxyService: Service = {
+				name: `${RPC_PROXY_SERVICE_NAME}:${id}`,
+				worker: {
+					compatibilityDate: "2024-08-01",
+					modules: [
+						{
+							name: "assets-proxy-worker.mjs",
+							esModule: SCRIPT_RPC_PROXY(),
+						},
+					],
+					bindings: [
+						{
+							name: "ROUTER_WORKER",
+							service: {
+								name: `${ROUTER_SERVICE_NAME}:${id}`,
+							},
+						},
+					],
+				},
+			};
+
+			services.push(assetsProxyService);
+		}
+
+		return services;
 	},
 };
 

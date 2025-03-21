@@ -1,7 +1,5 @@
-import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
-import { requireAuth } from "../../user";
 
 export const workflowsDeleteCommand = createCommand({
 	metadata: {
@@ -21,15 +19,8 @@ export const workflowsDeleteCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 
-	async handler(args, { config }) {
-		const accountId = await requireAuth(config);
-
-		await fetchResult(`/accounts/${accountId}/workflows/${args.name}`, {
-			method: "DELETE",
-		});
-
-		logger.log(
-			`✅ Workflow "${args.name}" removed successfully. \n Note that running instances might take a few minutes to be properly terminated.`
-		);
+	async handler(args) {
+		logger.info("🚫 delete command not yet implement");
+		logger.log(`🚫 Workflow "${args.name}" NOT removed`);
 	},
 });
