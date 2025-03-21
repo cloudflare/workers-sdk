@@ -1,3 +1,10 @@
 name = "worker-ts"
 main = "src/index.ts"
 compatibility_date = "2023-05-04"
+
+types_auto_update = "./worker-configuration.d.ts"
+
+[vars]
+TEST="test"
+test2 = "adssdf"
+test3="asdfsa3"
