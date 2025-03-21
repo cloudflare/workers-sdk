@@ -209,6 +209,13 @@ const bindingsConfigMock: Omit<
 		binding: "ASSETS_BINDING",
 		directory: "/assets",
 	},
+	secrets_store_secrets: [
+		{
+			binding: "SECRET",
+			store_id: "store_id",
+			secret_name: "secret_name",
+		},
+	],
 };
 
 describe("generate types", () => {
@@ -439,6 +446,7 @@ describe("generate types", () => {
 					VERSION_METADATA_BINDING: { id: string; tag: string };
 					ASSETS_BINDING: Fetcher;
 					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
+					SECRET: SecretsStoreSecret;
 				}
 			}
 			interface Env extends Cloudflare.Env {}
