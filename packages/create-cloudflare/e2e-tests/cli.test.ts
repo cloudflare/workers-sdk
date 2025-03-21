@@ -51,7 +51,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 			expect(output).toEqual(version);
 		});
 
-		test({ experimental }).skipIf(process.platform === "win32")(
+		test({ experimental }).skipIf(process.platform === "win32" || experimental)(
 			"Using arrow keys + enter",
 			async ({ logStream, project }) => {
 				const { output } = await runC3(
