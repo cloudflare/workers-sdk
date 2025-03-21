@@ -1,4 +1,9 @@
+import { crypto } from "@cloudflare/workers-types/experimental";
+import { Miniflare } from "miniflare";
+import { Config } from "../config";
 import { createCommand } from "../core/create-command";
+import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
+import { buildPersistOptions } from "../dev/miniflare";
 import { confirm, prompt } from "../dialogs";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
@@ -17,7 +22,37 @@ import {
 } from "./client";
 import type { Secret, Store } from "./client";
 
-// Store Commands
+export async function usingLocalSecretsStoreSecretAPI<T>(
+	persistTo: string | undefined,
+	config: Config,
+	storeId: string,
+	secretName: string,
+	closure: (
+		namespace: ReturnType<
+			Awaited<ReturnType<Miniflare["getSecretsStoreSecretAPI"]>>
+		>
+	) => Promise<T>
+): Promise<T> {
+	const persist = getLocalPersistencePath(persistTo, config);
+	const persistOptions = buildPersistOptions(persist);
+	const mf = new Miniflare({
+		script:
+			'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
+		...persistOptions,
+		secretsStoreSecrets: {
+			SECRET: {
+				store_id: storeId,
+				secret_name: secretName,
+			},
+		},
+	});
+	const namespace = await mf.getSecretsStoreSecretAPI("SECRET");
+	try {
+		return await closure(namespace());
+	} finally {
+		await mf.dispose();
+	}
+}
 
 export const secretsStoreStoreCreateCommand = createCommand({
 	metadata: {
@@ -40,14 +75,16 @@ export const secretsStoreStoreCreateCommand = createCommand({
 		},
 	},
 	async handler(args, { config }) {
-		let store: Store;
+		let store: { id: string };
 		logger.log(`🔐 Creating store... (Name: ${args.name})`);
 		if (args.remote) {
 			const accountId = config.account_id || (await getAccountId());
 			store = await createStore(accountId, { name: args.name });
 		} else {
-			logger.log(`Local mode enabled, this command is a no-op.`);
-			return;
+			throw new UserError(
+				"No local dev version of this command available, need to include --remote in command to create a Secrets Store on your account",
+				{ telemetryMessage: true }
+			);
 		}
 		logger.log(`✅ Created store! (Name: ${args.name}, ID: ${store.id})`);
 	},
@@ -79,8 +116,10 @@ export const secretsStoreStoreDeleteCommand = createCommand({
 			const accountId = config.account_id || (await getAccountId());
 			await deleteStore(accountId, args.storeId);
 		} else {
-			logger.log(`Local mode enabled, this command is a no-op.`);
-			return;
+			throw new UserError(
+				"No local dev version of this command available, need to include --remote in command to delete a Secrets Store from your account",
+				{ telemetryMessage: true }
+			);
 		}
 		logger.log(`✅ Deleted store! (ID: ${args.storeId})`);
 	},
@@ -124,7 +163,7 @@ export const secretsStoreStoreListCommand = createCommand({
 			stores = await listStores(accountId, urlParams);
 		} else {
 			throw new UserError(
-				"No local dev version of this command available, need to include --remote in command",
+				"No local dev version of this command available, need to include --remote in command to list Secrets Stores on your account",
 				{ telemetryMessage: true }
 			);
 		}
@@ -180,6 +219,10 @@ export const secretsStoreSecretListCommand = createCommand({
 			description: "Execute command against remote Secrets Store",
 			default: false,
 		},
+		"persist-to": {
+			type: "string",
+			describe: "Directory for local persistence",
+		},
 	},
 	async handler(args, { config }) {
 		const urlParams = new URLSearchParams();
@@ -196,10 +239,24 @@ export const secretsStoreSecretListCommand = createCommand({
 			const accountId = config.account_id || (await getAccountId());
 			secrets = await listSecrets(accountId, args.storeId, urlParams);
 		} else {
-			throw new UserError(
-				"No local dev version of this command available, need to include --remote in command",
-				{ telemetryMessage: true }
-			);
+			secrets = (
+				await usingLocalSecretsStoreSecretAPI(
+					args.persistTo,
+					config,
+					args.storeId,
+					"",
+					(api) => api.list()
+				)
+			).map((key) => ({
+				id: key.metadata?.uuid!,
+				store_id: args.storeId,
+				name: key.name,
+				comment: "",
+				scopes: [],
+				created: new Date().toISOString(),
+				modified: new Date().toISOString(),
+				status: "active",
+			}));
 		}
 
 		if (secrets.length === 0) {
@@ -246,6 +303,10 @@ export const secretsStoreSecretGetCommand = createCommand({
 			description: "Execute command against remote Secrets Store",
 			default: false,
 		},
+		"persist-to": {
+			type: "string",
+			describe: "Directory for local persistence",
+		},
 	},
 	async handler(args, { config }) {
 		logger.log(`🔐 Getting secret... (ID: ${args.secretId})`);
@@ -255,10 +316,23 @@ export const secretsStoreSecretGetCommand = createCommand({
 			const accountId = config.account_id || (await getAccountId());
 			secret = await getSecret(accountId, args.storeId, args.secretId);
 		} else {
-			throw new UserError(
-				"No local dev version of this command available, need to include --remote in command",
-				{ telemetryMessage: true }
+			const name = await usingLocalSecretsStoreSecretAPI(
+				args.persistTo,
+				config,
+				args.storeId,
+				"",
+				(api) => api.get(args.secretId)
 			);
+			secret = {
+				id: args.secretId,
+				store_id: args.storeId,
+				name,
+				comment: "",
+				scopes: [],
+				created: new Date().toISOString(),
+				modified: new Date().toISOString(),
+				status: "active",
+			};
 		}
 
 		const prettierSecret = [
@@ -318,6 +392,10 @@ export const secretsStoreSecretCreateCommand = createCommand({
 			description: "Execute command against remote Secrets Store",
 			default: false,
 		},
+		"persist-to": {
+			type: "string",
+			describe: "Directory for local persistence",
+		},
 	},
 	async handler(args, { config }) {
 		let secretValue = "";
@@ -351,10 +429,24 @@ export const secretsStoreSecretCreateCommand = createCommand({
 				comment: args.comment,
 			});
 		} else {
-			throw new UserError(
-				"No local dev version of this command available, need to include --remote in command",
-				{ telemetryMessage: true }
-			);
+			secrets = [
+				await usingLocalSecretsStoreSecretAPI(
+					args.persistTo,
+					config,
+					args.storeId,
+					args.name,
+					(api) => api.create(secretValue)
+				),
+			].map((id) => ({
+				id,
+				store_id: args.storeId,
+				name: args.name,
+				comment: args.comment ?? "",
+				scopes: args.scopes.split(","),
+				created: new Date().toISOString(),
+				modified: new Date().toISOString(),
+				status: "pending",
+			}));
 		}
 
 		if (secrets.length === 0) {
@@ -420,6 +512,10 @@ export const secretsStoreSecretUpdateCommand = createCommand({
 			description: "Execute command against remote Secrets Store",
 			default: false,
 		},
+		"persist-to": {
+			type: "string",
+			describe: "Directory for local persistence",
+		},
 	},
 	async handler(args, { config }) {
 		let secretValue = "";
@@ -459,10 +555,23 @@ export const secretsStoreSecretUpdateCommand = createCommand({
 				...(args.comment && { comment: args.comment }),
 			});
 		} else {
-			throw new UserError(
-				"No local dev version of this command available, need to include --remote in command",
-				{ telemetryMessage: true }
+			const name = await usingLocalSecretsStoreSecretAPI(
+				args.persistTo,
+				config,
+				args.storeId,
+				"",
+				(api) => api.update(secretValue, args.secretId)
 			);
+			secret = {
+				id: args.secretId,
+				store_id: args.storeId,
+				name,
+				comment: "",
+				scopes: [],
+				created: new Date().toISOString(),
+				modified: new Date().toISOString(),
+				status: "active",
+			};
 		}
 
 		logger.log(`✅ Updated secret! (ID: ${secret.id})`);
@@ -508,6 +617,10 @@ export const secretsStoreSecretDeleteCommand = createCommand({
 			description: "Execute command against remote Secrets Store",
 			default: false,
 		},
+		"persist-to": {
+			type: "string",
+			describe: "Directory for local persistence",
+		},
 	},
 	async handler(args, { config }) {
 		logger.log(`🔐 Deleting secret... (ID: ${args.secretId})`);
@@ -516,9 +629,12 @@ export const secretsStoreSecretDeleteCommand = createCommand({
 			const accountId = config.account_id || (await getAccountId());
 			await deleteSecret(accountId, args.storeId, args.secretId);
 		} else {
-			throw new UserError(
-				"No local dev version of this command available, need to include --remote in command",
-				{ telemetryMessage: true }
+			const name = await usingLocalSecretsStoreSecretAPI(
+				args.persistTo,
+				config,
+				args.storeId,
+				"",
+				(api) => api.delete(args.secretId)
 			);
 		}
 		logger.log(`✅ Deleted secret! (ID: ${args.secretId})`);
@@ -566,6 +682,10 @@ export const secretsStoreSecretDuplicateCommand = createCommand({
 			description: "Execute command against remote Secrets Store",
 			default: false,
 		},
+		"persist-to": {
+			type: "string",
+			describe: "Directory for local persistence",
+		},
 	},
 	async handler(args, { config }) {
 		logger.log(`🔐 Duplicating secret... (ID: ${args.secretId})`);
@@ -584,10 +704,23 @@ export const secretsStoreSecretDuplicateCommand = createCommand({
 				}
 			);
 		} else {
-			throw new UserError(
-				"No local dev version of this command available, need to include --remote in command",
-				{ telemetryMessage: true }
+			const duplicatedSecretId = await usingLocalSecretsStoreSecretAPI(
+				args.persistTo,
+				config,
+				args.storeId,
+				"",
+				(api) => api.duplicate(args.secretId, args.name)
 			);
+			duplicatedSecret = {
+				id: duplicatedSecretId,
+				store_id: args.storeId,
+				name: args.name,
+				comment: "",
+				scopes: [],
+				created: new Date().toISOString(),
+				modified: new Date().toISOString(),
+				status: "active",
+			};
 		}
 
 		logger.log(`✅ Duplicated secret! (ID: ${duplicatedSecret.id})`);
