@@ -1,6 +1,6 @@
 import { spawn } from "child_process";
 import { stat } from "fs/promises";
-import { logRaw } from "@cloudflare/cli";
+import { crash, logRaw } from "@cloudflare/cli";
 import { ImageRegistriesService } from "./client";
 import type { Config } from "../config";
 import type {
@@ -42,6 +42,8 @@ export async function constructBuildCommand(options: {
 	pathToDocker?: string;
 	pathToDockerfile?: string;
 	platform?: string;
+	dockerfile?: string;
+	args?: Record<string, string>;
 }) {
 	// require a tag if we provide dockerfile
 	if (
@@ -62,18 +64,42 @@ export async function constructBuildCommand(options: {
 		imageTag,
 		"--platform",
 		platform,
-		dockerFilePath,
-	].join(" ");
+	];
 
-	return defaultBuildCommand;
+	if (options.args !== undefined) {
+		for (const arg in options.args) {
+			defaultBuildCommand.push(`--build-arg='${arg}=${options.args[arg]}'`);
+		}
+	}
+
+	if (options.dockerfile !== undefined) {
+		defaultBuildCommand.push("-f", "-");
+	}
+
+	defaultBuildCommand.push(dockerFilePath ?? ".");
+	return defaultBuildCommand.join(" ");
 }
 
 // Function for building
-export function dockerBuild(options: { buildCmd: string }): Promise<void> {
+export function dockerBuild(options: {
+	buildCmd: string;
+	dockerfile?: string;
+}): Promise<void> {
 	return new Promise((resolve, reject) => {
 		const buildCmd = options.buildCmd.split(" ").slice(1);
 		const buildExec = options.buildCmd.split(" ").shift();
-		const child = spawn(String(buildExec), buildCmd, { stdio: "inherit" });
+		const child = spawn(String(buildExec), buildCmd, {
+			stdio: [
+				options.dockerfile !== undefined ? "pipe" : undefined,
+				"inherit",
+				"inherit",
+			],
+		});
+		if (child.stdin !== null) {
+			child.stdin.write(options.dockerfile);
+			child.stdin.end();
+		}
+
 		child.on("exit", (code) => {
 			if (code === 0) {
 				resolve();
@@ -99,7 +125,7 @@ async function tagImage(original: string, newTag: string, dockerPath: string) {
 export async function push(options: {
 	imageTag?: string;
 	pathToDocker?: string;
-}) {
+}): Promise<string> {
 	if (typeof options.imageTag === "undefined") {
 		throw new Error("Must provide an image tag when pushing");
 	}
@@ -115,6 +141,7 @@ export async function push(options: {
 	await new Promise((resolve) => {
 		child.on("close", resolve);
 	});
+	return imageTag;
 }
 
 export function buildYargs(yargs: CommonYargsArgvJSON) {
@@ -164,47 +191,64 @@ export function pushYargs(yargs: CommonYargsArgvJSON) {
 
 async function isDir(path: string): Promise<boolean> {
 	const stats = await stat(path);
-	return await stats.isDirectory();
+	return stats.isDirectory();
+}
+
+export async function build(args: {
+	tag: string;
+	pathToDockerfileDirectory: string;
+	pathToDocker: string;
+	push: boolean;
+	// specify the contents of the dockerfile if not wanting to use the dockerfile directory
+	dockerfileContents?: string;
+	args?: Record<string, string>;
+}): Promise<string> {
+	try {
+		const dir = await isDir(args.pathToDockerfileDirectory);
+		if (!dir) {
+			crash(`PATH must be a directory`);
+		}
+	} catch (error) {
+		crash(`Error when checking ${args.pathToDockerfileDirectory}: ${error}`);
+	}
+
+	try {
+		const bc = await constructBuildCommand({
+			imageTag: args.tag,
+			pathToDockerfile: args.pathToDockerfileDirectory,
+			pathToDocker: args.pathToDocker,
+			dockerfile: args.dockerfileContents,
+		});
+		await dockerBuild({ buildCmd: bc, dockerfile: args.dockerfileContents });
+
+		if (args.push) {
+			await dockerLoginManagedRegistry({
+				pathToDocker: args.pathToDocker,
+			});
+
+			return await push({ imageTag: args.tag });
+		}
+
+		return args.tag;
+	} catch (error) {
+		if (error instanceof Error) {
+			crash(error.message);
+		} else {
+			crash("An unknown error occurred");
+		}
+	}
 }
 
 export async function buildCommand(
 	args: StrictYargsOptionsToInterfaceJSON<typeof buildYargs>,
 	_: Config
 ) {
-	try {
-		const dir = await isDir(args.PATH);
-		if (!dir) {
-			logRaw(`PATH must be a directory`);
-			return;
-		}
-	} catch (error) {
-		logRaw(`Error when checking ${args.PATH}: ${error}`);
-		return;
-	}
-
-	try {
-		await constructBuildCommand({
-			imageTag: args.tag,
-			pathToDockerfile: args.PATH,
-			pathToDocker: args.pathToDocker,
-		})
-			.then((bc) => dockerBuild({ buildCmd: bc }))
-			.then(async () => {
-				if (args.push) {
-					await dockerLoginManagedRegistry({
-						pathToDocker: args.pathToDocker,
-					}).then(async () => {
-						await push({ imageTag: args.tag });
-					});
-				}
-			});
-	} catch (error) {
-		if (error instanceof Error) {
-			logRaw(error.message);
-		} else {
-			logRaw("Unknown error");
-		}
-	}
+	await build({
+		tag: args.tag,
+		pathToDockerfileDirectory: args.PATH,
+		pathToDocker: args.pathToDocker,
+		push: args.push,
+	});
 }
 
 export async function pushCommand(
