@@ -1,4 +1,6 @@
-export default {
+import type { TemplateConfig } from "../../src/templates";
+
+const config: TemplateConfig = {
 	configVersion: 1,
 	id: "queues",
 	displayName: "Queue consumer & producer Worker",
@@ -26,3 +28,5 @@ export default {
 		],
 	},
 };
+
+export default config;
