@@ -14,9 +14,9 @@
       }
     ]
   },
-	"migrations": [
+  "migrations": [
     {
-      "new_classes": [
+      "new_sqlite_classes": [
         "MyDurableObject"
       ],
       "tag": "v1"

@@ -49,17 +49,18 @@ export default {
 	 * @returns The response to be sent back to the client
 	 */
 	async fetch(request, env, ctx): Promise<Response> {
-		// We will create a `DurableObjectId` using the pathname from the Worker request
-		// This id refers to a unique instance of our 'MyDurableObject' class above
-		let id: DurableObjectId = env.MY_DURABLE_OBJECT.idFromName(new URL(request.url).pathname);
+		// Create a `DurableObjectId` for an instance of the `MyDurableObject`
+		// class named "foo". Requests from all Workers to the instance named
+		// "foo" will go to a single globally unique Durable Object instance.
+		const id: DurableObjectId = env.MY_DURABLE_OBJECT.idFromName("foo");
 
-		// This stub creates a communication channel with the Durable Object instance
-		// The Durable Object constructor will be invoked upon the first call for a given id
-		let stub = env.MY_DURABLE_OBJECT.get(id);
+		// Create a stub to open a communication channel with the Durable
+		// Object instance.
+		const stub = env.MY_DURABLE_OBJECT.get(id);
 
-		// We call the `sayHello()` RPC method on the stub to invoke the method on the remote
-		// Durable Object instance
-		let greeting = await stub.sayHello("world");
+		// Call the `sayHello()` RPC method on the stub to invoke the method on
+		// the remote Durable Object instance
+		const greeting = await stub.sayHello("world");
 
 		return new Response(greeting);
 	},
