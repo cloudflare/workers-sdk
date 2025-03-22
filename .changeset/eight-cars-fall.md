@@ -1,6 +1,6 @@
 ---
-"miniflare": minor
-"wrangler": minor
+"miniflare": patch
+"wrangler": patch
 "@cloudflare/vite-plugin": patch
 ---
 

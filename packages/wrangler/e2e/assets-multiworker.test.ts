@@ -61,10 +61,6 @@ async function startWorkersMultiworker(
 	return url;
 }
 
-const failsIf = (condition: boolean) => {
-	return condition ? it.fails : it;
-};
-
 type MultiworkerStyle = "dev registry" | "in process";
 
 describe.each(
@@ -74,12 +70,6 @@ describe.each(
 					style: "in process",
 					start: startWorkersMultiworker,
 					wranglerDev: "wrangler dev",
-				},
-
-				{
-					style: "in process",
-					start: startWorkersMultiworker,
-					wranglerDev: "wrangler dev --x-assets-rpc",
 				},
 			]
 		: [
@@ -92,16 +82,6 @@ describe.each(
 					style: "in process",
 					start: startWorkersMultiworker,
 					wranglerDev: "wrangler dev",
-				},
-				{
-					style: "dev registry",
-					start: startWorkersDevRegistry,
-					wranglerDev: "wrangler dev --x-assets-rpc",
-				},
-				{
-					style: "in process",
-					start: startWorkersMultiworker,
-					wranglerDev: "wrangler dev --x-assets-rpc",
 				},
 			]) as {
 		style: MultiworkerStyle;
@@ -349,9 +329,7 @@ describe.each(
 				});
 			});
 
-			failsIf(
-				style === "dev registry" && !wranglerDev.includes("--x-assets-rpc")
-			)(".fetch() existing asset", async () => {
+			it(".fetch() existing asset", async () => {
 				const url = await start(
 					wranglerDev,
 					helper,
@@ -481,9 +459,7 @@ describe.each(
 									`,
 					});
 				});
-				failsIf(
-					style === "dev registry" && !wranglerDev.includes("--x-assets-rpc")
-				)(".fetch() existing asset", async () => {
+				it(".fetch() existing asset", async () => {
 					const url = await start(
 						wranglerDev,
 						helper,
@@ -531,9 +507,7 @@ describe.each(
 					);
 				});
 
-				failsIf(
-					style === "in process" && !wranglerDev.includes("--x-assets-rpc")
-				)(".increment()", async () => {
+				it(".increment()", async () => {
 					const url = await start(
 						wranglerDev,
 						helper,
@@ -567,9 +541,7 @@ describe.each(
 									`,
 					});
 				});
-				failsIf(
-					style === "dev registry" && !wranglerDev.includes("--x-assets-rpc")
-				)(".fetch() existing asset", async () => {
+				it(".fetch() existing asset", async () => {
 					const url = await start(
 						wranglerDev,
 						helper,
@@ -617,9 +589,7 @@ describe.each(
 					);
 				});
 
-				failsIf(
-					style === "in process" && !wranglerDev.includes("--x-assets-rpc")
-				)(".increment()", async () => {
+				it(".increment()", async () => {
 					const url = await start(
 						wranglerDev,
 						helper,
