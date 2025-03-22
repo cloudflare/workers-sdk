@@ -155,6 +155,16 @@ export function normalizeAndValidateConfig(
 		isDispatchNamespace
 	);
 
+	const isRedirectedConfig = configPath && configPath !== userConfigPath;
+
+	const definedEnvironments = Object.keys(rawConfig.env ?? {});
+
+	if (isRedirectedConfig && definedEnvironments.length > 0) {
+		diagnostics.errors.push(
+			`Redirected configurations cannot include environments, instead the following have been found: ${definedEnvironments.map((env) => JSON.stringify(env)).join(", ")}`
+		);
+	}
+
 	//TODO: find a better way to define the type of Args that can be passed to the normalizeAndValidateConfig()
 	const envName = args.env;
 	assert(envName === undefined || typeof envName === "string");
@@ -162,67 +172,73 @@ export function normalizeAndValidateConfig(
 	let activeEnv = topLevelEnv;
 
 	if (envName !== undefined) {
-		const envDiagnostics = new Diagnostics(
-			`"env.${envName}" environment configuration`
-		);
-		const rawEnv = rawConfig.env?.[envName];
-
-		/**
-		 * If an environment name was specified, and we found corresponding configuration
-		 * for it in the config file, we will use that corresponding environment. If the
-		 * environment name was specified, but no configuration for it was found, we will:
-		 *
-		 * - default to the top-level environment for Pages. For Pages, Wrangler does not
-		 * require both of supported named environments ("preview" or "production") to be
-		 * explicitly defined in the config file. If either`[env.production]` or
-		 * `[env.preview]` is left unspecified, we will use the top-level environment when
-		 * targeting that named Pages environment.
-		 *
-		 * - create a fake active environment with the specified `envName` for Workers.
-		 * This is done to cover any legacy environment cases, where the `envName` is used.
-		 */
-		if (rawEnv !== undefined) {
-			activeEnv = normalizeAndValidateEnvironment(
-				envDiagnostics,
-				configPath,
-				rawEnv,
-				isDispatchNamespace,
-				envName,
-				topLevelEnv,
-				isLegacyEnv,
-				rawConfig
+		if (isRedirectedConfig) {
+			diagnostics.warnings.push(
+				`Ignoring the requested environment "${envName}" since redirected configurations don't include environments`
 			);
-			diagnostics.addChild(envDiagnostics);
-		} else if (!isPagesConfig(rawConfig)) {
-			activeEnv = normalizeAndValidateEnvironment(
-				envDiagnostics,
-				configPath,
-				topLevelEnv, // in this case reuse the topLevelEnv to ensure that nonInherited fields are not removed
-				isDispatchNamespace,
-				envName,
-				topLevelEnv,
-				isLegacyEnv,
-				rawConfig
+		} else {
+			const envDiagnostics = new Diagnostics(
+				`"env.${envName}" environment configuration`
 			);
-			const envNames = rawConfig.env
-				? `The available configured environment names are: ${JSON.stringify(
-						Object.keys(rawConfig.env)
-					)}\n`
-				: "";
-			const message =
-				`No environment found in configuration with name "${envName}".\n` +
-				`Before using \`--env=${envName}\` there should be an equivalent environment section in the configuration.\n` +
-				`${envNames}\n` +
-				`Consider adding an environment configuration section to the ${configFileName(configPath)} file:\n` +
-				"```\n[env." +
-				envName +
-				"]\n```\n";
+			const rawEnv = rawConfig.env?.[envName];
 
-			if (envNames.length > 0) {
-				diagnostics.errors.push(message);
-			} else {
-				// Only warn (rather than error) if there are not actually any environments configured in the Wrangler configuration file.
-				diagnostics.warnings.push(message);
+			/**
+			 * If an environment name was specified, and we found corresponding configuration
+			 * for it in the config file, we will use that corresponding environment. If the
+			 * environment name was specified, but no configuration for it was found, we will:
+			 *
+			 * - default to the top-level environment for Pages. For Pages, Wrangler does not
+			 * require both of supported named environments ("preview" or "production") to be
+			 * explicitly defined in the config file. If either`[env.production]` or
+			 * `[env.preview]` is left unspecified, we will use the top-level environment when
+			 * targeting that named Pages environment.
+			 *
+			 * - create a fake active environment with the specified `envName` for Workers.
+			 * This is done to cover any legacy environment cases, where the `envName` is used.
+			 */
+			if (rawEnv !== undefined) {
+				activeEnv = normalizeAndValidateEnvironment(
+					envDiagnostics,
+					configPath,
+					rawEnv,
+					isDispatchNamespace,
+					envName,
+					topLevelEnv,
+					isLegacyEnv,
+					rawConfig
+				);
+				diagnostics.addChild(envDiagnostics);
+			} else if (!isPagesConfig(rawConfig)) {
+				activeEnv = normalizeAndValidateEnvironment(
+					envDiagnostics,
+					configPath,
+					topLevelEnv, // in this case reuse the topLevelEnv to ensure that nonInherited fields are not removed
+					isDispatchNamespace,
+					envName,
+					topLevelEnv,
+					isLegacyEnv,
+					rawConfig
+				);
+				const envNames = rawConfig.env
+					? `The available configured environment names are: ${JSON.stringify(
+							Object.keys(rawConfig.env)
+						)}\n`
+					: "";
+				const message =
+					`No environment found in configuration with name "${envName}".\n` +
+					`Before using \`--env=${envName}\` there should be an equivalent environment section in the configuration.\n` +
+					`${envNames}\n` +
+					`Consider adding an environment configuration section to the ${configFileName(configPath)} file:\n` +
+					"```\n[env." +
+					envName +
+					"]\n```\n";
+
+				if (envNames.length > 0) {
+					diagnostics.errors.push(message);
+				} else {
+					// Only warn (rather than error) if there are not actually any environments configured in the Wrangler configuration file.
+					diagnostics.warnings.push(message);
+				}
 			}
 		}
 	}
