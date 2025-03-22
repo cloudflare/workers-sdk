@@ -1,5 +1,24 @@
 # miniflare
 
+## 4.20250320.0
+
+### Patch Changes
+
+- [#8618](https://github.com/cloudflare/workers-sdk/pull/8618) [`d8f1c49`](https://github.com/cloudflare/workers-sdk/commit/d8f1c49541229f4b41bd16bbebda3017a5d17d64) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250319.0  | 1.20250320.0  |
+  | @cloudflare/workers-types | ^4.20250319.0 | ^4.20250320.0 |
+
+- [#8556](https://github.com/cloudflare/workers-sdk/pull/8556) [`b7d6b7d`](https://github.com/cloudflare/workers-sdk/commit/b7d6b7dd1fbbaecd4f595d2d4249ab902b726538) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Add support for `assets_navigation_prefer_asset_serving` in Vite (`dev` and `preview`)
+
+- [#8597](https://github.com/cloudflare/workers-sdk/pull/8597) [`5d78760`](https://github.com/cloudflare/workers-sdk/commit/5d78760af7adbb57416d73f102123152d37bec53) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Graduate experimental RPC support for Workers with assets in local dev
+
+- [#8594](https://github.com/cloudflare/workers-sdk/pull/8594) [`c0d0cd0`](https://github.com/cloudflare/workers-sdk/commit/c0d0cd03a5eede7ec4f8a615f2c4b1f9a73dfcee) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Add support for property accessors in local dev RPC for Workers with assets
+
 ## 4.20250319.0
 
 ### Minor Changes
