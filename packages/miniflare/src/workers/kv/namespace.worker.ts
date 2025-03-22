@@ -3,12 +3,14 @@ import {
 	DeferredPromise,
 	DELETE,
 	GET,
+	POST,
 	HttpError,
 	KeyValueStorage,
 	maybeApply,
 	MiniflareDurableObject,
 	PUT,
 	RouteHandler,
+	KeyValueEntry,
 } from "miniflare:shared";
 import { KVHeaders, KVLimits, KVParams } from "./constants";
 import {
@@ -73,6 +75,31 @@ function secondsToMillis(seconds: number): number {
 	return seconds * 1000;
 }
 
+async function processKeyValue(obj: KeyValueEntry<unknown> | null, type: string = "text", withMetadata: boolean = false) {
+	const decoder = new TextDecoder();
+	let r = "";
+	if(obj?.value) {
+		for await (const chunk of obj?.value) {
+			r += decoder.decode(chunk, { stream: true });
+		}
+		r += decoder.decode();
+	}
+
+	let val = null;
+	try {
+		val = obj?.value == null ? null : type === "json" ? JSON.parse(r) : r;
+	} catch (err: any) {
+		throw new HttpError(400, "At least of of the requested keys corresponds to a non-JSON value");
+	}
+	if (val == null) {
+		return null;
+	}
+	if (withMetadata) {
+		return { value: val, metadata: obj?.metadata ? JSON.stringify(obj?.metadata) : null };
+	}
+	return val;
+  }
+
 export class KVNamespaceObject extends MiniflareDurableObject {
 	#storage?: KeyValueStorage;
 	get storage() {
@@ -81,12 +108,31 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 	}
 
 	@GET("/:key")
+	@POST("/bulk/get")
 	get: RouteHandler<KVParams> = async (req, params, url) => {
 		// Decode URL parameters
 		const key = decodeKey(params, url.searchParams);
 		const cacheTtlParam = url.searchParams.get(KVParams.CACHE_TTL);
 		const cacheTtl =
 			cacheTtlParam === null ? undefined : parseInt(cacheTtlParam);
+		if(req.body != null) { // get bulk
+			// get bulk
+			let r = "";
+			const decoder = new TextDecoder();
+			for await (const chunk of req.body) {
+				r += decoder.decode(chunk, { stream: true });
+			}
+			r += decoder.decode();
+			const parsedBody = JSON.parse(r);
+			const keys: string[] = parsedBody.keys;
+			const obj: {[key: string]: any} = {};
+			for(const key of keys) {
+				validateGetOptions(key, { cacheTtl: parsedBody?.cacheTtl });
+				const entry = await this.storage.get(key);
+				obj[key] = await processKeyValue(entry, parsedBody?.type, parsedBody?.withMetadata);
+			}
+			return new Response(JSON.stringify(obj));
+		}
 
 		// Get value from storage
 		validateGetOptions(key, { cacheTtl });
