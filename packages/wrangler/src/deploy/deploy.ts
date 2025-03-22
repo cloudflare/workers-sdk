@@ -715,6 +715,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			0
 		);
 
+		if (props.env) {
+			logger.log(`Environment: ${props.env}`);
+		} else {
+			logger.log("Environment: default");
+		}
+
 		await printBundleSize(
 			{ name: path.basename(resolvedEntryPointPath), content: content },
 			modules
