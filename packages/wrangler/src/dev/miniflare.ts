@@ -443,6 +443,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			serviceBindings[service.binding] = {
 				name: service.service,
 				entrypoint: service.entrypoint,
+				props: service.props,
 			};
 			continue;
 		}
@@ -506,6 +507,9 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 				}
 			}
 
+			// BUG: We have no way to pass `props` across an external socket, so we
+			// drop them. We are planning to move away from the multi-process model
+			// anyway, which will solve the problem.
 			serviceBindings[service.binding] = {
 				external: {
 					address,
