@@ -251,6 +251,7 @@ function getCustomServiceDesignator(
 ): ServiceDesignator {
 	let serviceName: string;
 	let entrypoint: string | undefined;
+	let props: any;
 	if (typeof service === "function") {
 		// Custom `fetch` function
 		serviceName = getCustomServiceName(workerIndex, kind, name);
@@ -264,6 +265,7 @@ function getCustomServiceDesignator(
 				serviceName = getUserServiceName(service.name);
 			}
 			entrypoint = service.entrypoint;
+			props = service.props;
 		} else {
 			// Builtin workerd service: network, external, disk
 			serviceName = getBuiltinServiceName(workerIndex, kind, name);
@@ -278,7 +280,7 @@ function getCustomServiceDesignator(
 		// Regular user worker
 		serviceName = getUserServiceName(service);
 	}
-	return { name: serviceName, entrypoint };
+	return { name: serviceName, entrypoint, ...(props && { props }) };
 }
 
 function maybeGetCustomServiceService(

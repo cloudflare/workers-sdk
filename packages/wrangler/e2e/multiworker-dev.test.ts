@@ -48,7 +48,7 @@ describe("multiworker", () => {
 					compatibility_date = "2024-11-01"
 			`,
 			"src/index.ts": dedent/* javascript */ `
-				import { DurableObject } from "cloudflare:workers";
+				import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
 
 				export default {
 					async fetch(req, env) {
@@ -68,6 +68,10 @@ describe("multiworker", () => {
 							await counter.increment(3)
 							return new Response(String(await counter.value))
                         }
+                        if (url.pathname === "/props") {
+                            const props = await env.MY_ENTRYPOINT_WITH_PROPS.getProps()
+                            return new Response(JSON.stringify(props))
+                        }
 						return env.BEE.fetch(req);
 					},
 				};
@@ -86,6 +90,12 @@ describe("multiworker", () => {
 						return "Hello " + name
 					}
                 }
+
+				export class MyWorkerEntrypoint extends WorkerEntrypoint {
+					async getProps() {
+						return this.ctx.props;
+					}
+				}
 				`,
 			"package.json": dedent`
 					{
@@ -193,6 +203,12 @@ describe("multiworker", () => {
 						binding = "COUNTER"
 						service = '${workerName2}'
 						entrypoint = 'CounterService'
+
+						[[services]]
+						binding = "MY_ENTRYPOINT_WITH_PROPS"
+						service = '${workerName}'
+						entrypoint = 'MyWorkerEntrypoint'
+						props = { foo = 123, bar = { baz = "hello from props" } }
 				`,
 			});
 		});
@@ -228,6 +244,33 @@ describe("multiworker", () => {
 
 			await vi.waitFor(
 				async () => await expect(fetchText(`${url}/count`)).resolves.toBe("6"),
+				{ interval: 1000, timeout: 10_000 }
+			);
+		});
+
+		it("can access service props through a binding", async () => {
+			// TODO: We currently test `ctx.props` support with the worker calling
+			// back to itself, not to another worker, because the multi-process
+			// dev environment doesn't support ctx.props, so only self-bindings
+			// actually work. When we move to the single-process dev approach,
+			// `ctx.props` should then just work cross-worker, and we should update
+			// this test to test that.
+
+			const workerA = helper.runLongLived(
+				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
+				{ cwd: a }
+			);
+			const { url } = await workerA.waitForReady(5_000);
+
+			await vi.waitFor(
+				async () => {
+					const response = await fetch(`${url}/props`);
+					const props = await response.json();
+					expect(props).toEqual({
+						foo: 123,
+						bar: { baz: "hello from props" },
+					});
+				},
 				{ interval: 1000, timeout: 10_000 }
 			);
 		});
