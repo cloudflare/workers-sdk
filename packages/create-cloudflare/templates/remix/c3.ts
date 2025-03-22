@@ -5,5 +5,6 @@ import type { MultiPlatformTemplateConfig } from "../../src/templates";
 const config: MultiPlatformTemplateConfig = {
 	displayName: "Remix",
 	platformVariants: { pages, workers },
+	hidden: true,
 };
 export default config;

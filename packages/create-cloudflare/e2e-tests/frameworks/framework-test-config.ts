@@ -3,6 +3,25 @@ import { keys, LONG_TIMEOUT } from "../helpers";
 // These are ordered based on speed and reliability for ease of debugging
 export default function getFrameworkTestConfig(pm: string) {
 	return {
+		"react-router": {
+			unsupportedOSs: ["win32"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Hello from Cloudflare",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Hello from Cloudflare",
+				previewArgs: ["--host=127.0.0.1"],
+			},
+			verifyBuildCfTypes: {
+				outputFile: "worker-configuration.d.ts",
+				envInterfaceName: "Env",
+			},
+			flags: ["--no-install", "--no-git-init"],
+		},
 		"astro:pages": {
 			argv: ["--platform", "pages"],
 			testCommitMessage: true,
