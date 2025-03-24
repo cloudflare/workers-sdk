@@ -1,5 +1,5 @@
 ---
-"create-cloudflare": minor
+"create-cloudflare": patch
 ---
 
-Also update the C3 Durable Objects + Assets example to use SQLite
+The Hello World DO templates were previously updated to use SQLite - this just also updates the DO + Assets template.
