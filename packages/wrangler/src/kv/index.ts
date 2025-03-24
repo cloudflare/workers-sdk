@@ -707,7 +707,6 @@ export const kvBulkGetCommand = createCommand({
 
 			logger.log(JSON.stringify(result, null, 2));
 
-			metricEvent = "get kv key-values (bulk) (local)";
 		} else {
 			const accountId = await requireAuth(config);
 
@@ -719,13 +718,7 @@ export const kvBulkGetCommand = createCommand({
 				)
 			);
 
-			metricEvent = "get kv key-values (bulk)";
 		}
-
-		metrics.sendMetricsEvent(metricEvent, {
-			sendMetrics: config.send_metrics,
-		});
-
 		logger.log("\nSuccess!");
 	},
 });

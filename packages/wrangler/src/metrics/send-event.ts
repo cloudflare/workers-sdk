@@ -33,8 +33,6 @@ export type EventNames =
 	| "write kv key-values (bulk) (local)"
 	| "delete kv key-values (bulk)"
 	| "delete kv key-values (bulk) (local)"
-	| "get kv key-values (bulk)"
-	| "get kv key-values (bulk) (local)"
 	| "create r2 bucket"
 	| "list r2 buckets"
 	| "delete r2 bucket"
