@@ -55,7 +55,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 			it("should return Asset Worker response for routes that serve static content", async ({
 				expect,
 			}) => {
-				vi.waitFor(async () => {
+				await vi.waitFor(async () => {
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
 					let text = await response.text();
 					expect(response.status).toBe(200);
@@ -75,7 +75,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 			it("should return User Worker response for routes that don't serve static content", async ({
 				expect,
 			}) => {
-				vi.waitFor(async () => {
+				await vi.waitFor(async () => {
 					let response = await fetch(
 						`http://${ipWorkerA}:${portWorkerA}/no-assets-at-this-path`
 					);
@@ -90,7 +90,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 			it("should return User Worker response for named functions", async ({
 				expect,
 			}) => {
-				vi.waitFor(async () => {
+				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// the appropriate fns on the service binding instead
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
@@ -106,7 +106,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 			});
 
 			it("should return cron trigger responses", async ({ expect }) => {
-				vi.waitFor(async () => {
+				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// env.DEFAULT_EXPORT.scheduled({cron: "* * * * *"}) instead
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
@@ -126,7 +126,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 			});
 
 			it("should support promise pipelining", async ({ expect }) => {
-				vi.waitFor(async () => {
+				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// the appropriate fns on the service binding instead
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
@@ -139,7 +139,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 			});
 
 			it("should support property access", async ({ expect }) => {
-				vi.waitFor(async () => {
+				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// the appropriate fns on the service binding instead
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
@@ -162,7 +162,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 			it("should return Asset Worker response for fetch requests for routes that serve static content", async ({
 				expect,
 			}) => {
-				vi.waitFor(async () => {
+				await vi.waitFor(async () => {
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
 					let text = await response.text();
 					expect(response.status).toBe(200);
@@ -182,7 +182,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 			it("should return User Worker response for routes that don't serve static content", async ({
 				expect,
 			}) => {
-				vi.waitFor(async () => {
+				await vi.waitFor(async () => {
 					let response = await fetch(
 						`http://${ipWorkerA}:${portWorkerA}/no-assets-at-this-path`
 					);
@@ -197,7 +197,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 			it("should return User Worker response for named functions", async ({
 				expect,
 			}) => {
-				vi.waitFor(async () => {
+				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// the appropriate fns on the service binding instead
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
@@ -213,7 +213,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 			});
 
 			it("should return cron trigger responses", async ({ expect }) => {
-				vi.waitFor(async () => {
+				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// env.DEFAULT_ENTRYPOINT.scheduled({cron: "* * * * *"}) instead
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
@@ -232,7 +232,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 			});
 
 			it("should support promise pipelining", async ({ expect }) => {
-				vi.waitFor(async () => {
+				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// the appropriate fns on the service binding instead
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
@@ -248,7 +248,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 			});
 
 			it("should support property access", async ({ expect }) => {
-				vi.waitFor(async () => {
+				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// the appropriate fns on the service binding instead
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
@@ -268,7 +268,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 			it("should return User Worker response for fetch requests", async ({
 				expect,
 			}) => {
-				vi.waitFor(async () => {
+				await vi.waitFor(async () => {
 					// static asset route
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
 					let text = await response.text();
@@ -300,7 +300,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 			it("should return User Worker response for named functions", async ({
 				expect,
 			}) => {
-				vi.waitFor(async () => {
+				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// the appropriate fns on the service binding instead
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
@@ -316,7 +316,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 			});
 
 			it("should support promise pipelining", async ({ expect }) => {
-				vi.waitFor(async () => {
+				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// the appropriate fns on the service binding instead
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
@@ -332,7 +332,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 			});
 
 			it("should support property access", async ({ expect }) => {
-				vi.waitFor(async () => {
+				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// the appropriate fns on the service binding instead
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
