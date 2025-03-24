@@ -1973,8 +1973,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250320.0
-        version: 4.20250320.0
+        specifier: ^4.20250321.0
+        version: 4.20250321.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
