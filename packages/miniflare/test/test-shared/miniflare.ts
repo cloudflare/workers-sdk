@@ -38,7 +38,23 @@ export function namespace<T>(ns: string, binding: T): Namespaced<T> {
 				return (keys: unknown, ...args: unknown[]) => {
 					if (typeof keys === "string") keys = ns + keys;
 					if (Array.isArray(keys)) keys = keys.map((key) => ns + key);
-					return (value as (...args: unknown[]) => unknown)(keys, ...args);
+					const result = (value as (...args: unknown[]) => unknown)(
+						keys,
+						...args
+					);
+					if (result instanceof Promise) {
+						return result.then((res) => {
+							if (res instanceof Map) {
+								let newResult = new Map<string, unknown>();
+								for (const [key, value] of res) {
+									newResult.set(key.slice(ns.length), value);
+								}
+								return newResult;
+							}
+							return res;
+						});
+					}
+					return result;
 				};
 			}
 			return value;
@@ -53,6 +69,8 @@ export function namespace<T>(ns: string, binding: T): Namespaced<T> {
 		},
 	});
 }
+
+
 
 export function miniflareTest<
 	Env,
@@ -83,7 +101,7 @@ export function miniflareTest<
               status: 500,
               headers: { "MF-Experimental-Error-Stack": "true" },
             });
-          } 
+          }
         }
       }
     `;

@@ -122,6 +122,56 @@ test("get: returns value", async (t) => {
 	const result = await kv.get("key");
 	t.is(result, "value");
 });
+
+test("bulk get: returns value", async (t) => {
+	const { kv } = t.context;
+	await kv.put("key1", "value1");
+	const result: any = await kv.get(["key1", "key2"]);
+	const expectedResult = new Map([
+		["key1", "value1"],
+		["key2", null],
+	]);
+
+	t.deepEqual(result, expectedResult);
+});
+
+test("bulk get: check max keys", async (t) => {
+	const { kv } = t.context;
+	await kv.put("key1", "value1");
+	const keyArray = [];
+	for (let i = 0; i <= 100; i++) {
+		keyArray.push(`key${i}`);
+	}
+	try {
+		await kv.get(keyArray);
+	} catch (error: any) {
+		t.is(error.message, "KV GET_BULK failed: 400 Bad Request");
+	}
+});
+
+test("bulk get: request json type", async (t) => {
+	const { kv } = t.context;
+	await kv.put("key1", '{"example": "ex"}');
+	await kv.put("key2", "example");
+	let result: any = await kv.get(["key1"]);
+	let expectedResult: any = new Map([["key1", '{"example": "ex"}']]);
+	expectedResult = new Map([["key1", '{"example": "ex"}']]);
+	t.deepEqual(result, expectedResult);
+
+	result = await kv.get(["key1"], "json");
+	expectedResult = new Map([["key1", { example: "ex" }]]);
+	t.deepEqual(result, expectedResult);
+
+	try {
+		await kv.get(["key1", "key2"], "json");
+	} catch (error: any) {
+		t.is(
+			error.message,
+			"KV GET_BULK failed: 400 At least of of the requested keys corresponds to a non-JSON value"
+		);
+	}
+});
+
 test("get: returns null for non-existent keys", async (t) => {
 	const { kv } = t.context;
 	t.is(await kv.get("key"), null);

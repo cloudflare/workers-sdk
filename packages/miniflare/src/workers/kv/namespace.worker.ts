@@ -3,14 +3,14 @@ import {
 	DeferredPromise,
 	DELETE,
 	GET,
-	POST,
 	HttpError,
+	KeyValueEntry,
 	KeyValueStorage,
 	maybeApply,
 	MiniflareDurableObject,
+	POST,
 	PUT,
 	RouteHandler,
-	KeyValueEntry,
 } from "miniflare:shared";
 import { KVHeaders, KVLimits, KVParams } from "./constants";
 import {
@@ -22,6 +22,7 @@ import {
 	validatePutOptions,
 } from "./validator.worker";
 
+const MAX_BULK_LENGTH = 100 * 1024 * 1024;
 interface KVParams {
 	key: string;
 }
@@ -75,10 +76,14 @@ function secondsToMillis(seconds: number): number {
 	return seconds * 1000;
 }
 
-async function processKeyValue(obj: KeyValueEntry<unknown> | null, type: string = "text", withMetadata: boolean = false) {
+async function processKeyValue(
+	obj: KeyValueEntry<unknown> | null,
+	type: string = "text",
+	withMetadata: boolean = false
+) {
 	const decoder = new TextDecoder();
 	let r = "";
-	if(obj?.value) {
+	if (obj?.value) {
 		for await (const chunk of obj?.value) {
 			r += decoder.decode(chunk, { stream: true });
 		}
@@ -89,16 +94,22 @@ async function processKeyValue(obj: KeyValueEntry<unknown> | null, type: string 
 	try {
 		val = obj?.value == null ? null : type === "json" ? JSON.parse(r) : r;
 	} catch (err: any) {
-		throw new HttpError(400, "At least of of the requested keys corresponds to a non-JSON value");
+		throw new HttpError(
+			400,
+			"At least of of the requested keys corresponds to a non-JSON value"
+		);
 	}
 	if (val == null) {
 		return null;
 	}
 	if (withMetadata) {
-		return { value: val, metadata: obj?.metadata ? JSON.stringify(obj?.metadata) : null };
+		return {
+			value: val,
+			metadata: obj?.metadata ? JSON.stringify(obj?.metadata) : null,
+		};
 	}
 	return val;
-  }
+}
 
 export class KVNamespaceObject extends MiniflareDurableObject {
 	#storage?: KeyValueStorage;
@@ -110,13 +121,7 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 	@GET("/:key")
 	@POST("/bulk/get")
 	get: RouteHandler<KVParams> = async (req, params, url) => {
-		// Decode URL parameters
-		const key = decodeKey(params, url.searchParams);
-		const cacheTtlParam = url.searchParams.get(KVParams.CACHE_TTL);
-		const cacheTtl =
-			cacheTtlParam === null ? undefined : parseInt(cacheTtlParam);
-		if(req.body != null) { // get bulk
-			// get bulk
+		if (req.method === "POST" && req.body != null) {
 			let r = "";
 			const decoder = new TextDecoder();
 			for await (const chunk of req.body) {
@@ -125,15 +130,33 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 			r += decoder.decode();
 			const parsedBody = JSON.parse(r);
 			const keys: string[] = parsedBody.keys;
-			const obj: {[key: string]: any} = {};
-			for(const key of keys) {
+			const type = parsedBody?.type;
+			if (type && type !== "text" && type !== "json") {
+				return new Response("", { status: 400 });
+			}
+			const obj: { [key: string]: any } = {};
+			if (keys.length > 100) {
+				return new Response("", { status: 400 });
+			}
+			for (const key of keys) {
 				validateGetOptions(key, { cacheTtl: parsedBody?.cacheTtl });
 				const entry = await this.storage.get(key);
-				obj[key] = await processKeyValue(entry, parsedBody?.type, parsedBody?.withMetadata);
+				const value = await processKeyValue(
+					entry,
+					parsedBody?.type,
+					parsedBody?.withMetadata
+				);
+				obj[key] = value;
 			}
+
 			return new Response(JSON.stringify(obj));
 		}
 
+		// Decode URL parameters
+		const key = decodeKey(params, url.searchParams);
+		const cacheTtlParam = url.searchParams.get(KVParams.CACHE_TTL);
+		const cacheTtl =
+			cacheTtlParam === null ? undefined : parseInt(cacheTtlParam);
 		// Get value from storage
 		validateGetOptions(key, { cacheTtl });
 		const entry = await this.storage.get(key);
@@ -160,7 +183,6 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 		const rawExpiration = url.searchParams.get(KVParams.EXPIRATION);
 		const rawExpirationTtl = url.searchParams.get(KVParams.EXPIRATION_TTL);
 		const rawMetadata = req.headers.get(KVHeaders.METADATA);
-
 		// Validate key, expiration and metadata
 		const now = millisToSeconds(this.timers.now());
 		const { expiration, metadata } = validatePutOptions(key, {
