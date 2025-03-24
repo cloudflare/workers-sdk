@@ -158,7 +158,7 @@ export const kvNamespaceDeleteCommand = createCommand({
 		binding: {
 			type: "string",
 			requiresArg: true,
-			describe: "The name of the namespace to delete",
+			describe: "The binding name to the namespace to delete from",
 		},
 		"namespace-id": {
 			type: "string",
@@ -237,7 +237,7 @@ export const kvKeyPutCommand = createCommand({
 		binding: {
 			type: "string",
 			requiresArg: true,
-			describe: "The binding of the namespace to write to",
+			describe: "the binding name to the namespace to write to",
 		},
 		"namespace-id": {
 			type: "string",
@@ -359,7 +359,7 @@ export const kvKeyListCommand = createCommand({
 		binding: {
 			type: "string",
 			requiresArg: true,
-			describe: "The name of the namespace to list",
+			describe: "The binding name to the namespace to list",
 		},
 		"namespace-id": {
 			type: "string",
@@ -445,7 +445,7 @@ export const kvKeyGetCommand = createCommand({
 		binding: {
 			type: "string",
 			requiresArg: true,
-			describe: "The name of the namespace to get from",
+			describe: "The binding name to the namespace to get from",
 		},
 		"namespace-id": {
 			type: "string",
@@ -546,7 +546,7 @@ export const kvKeyDeleteCommand = createCommand({
 		binding: {
 			type: "string",
 			requiresArg: true,
-			describe: "The name of the namespace to delete from",
+			describe: "The binding name to the namespace to delete from",
 		},
 		"namespace-id": {
 			type: "string",
@@ -618,7 +618,7 @@ export const kvBulkGetCommand = createCommand({
 		binding: {
 			type: "string",
 			requiresArg: true,
-			describe: "The name of the namespace to get from",
+			describe: "The binding name to the namespace to get from",
 		},
 		"namespace-id": {
 			type: "string",
@@ -740,7 +740,7 @@ export const kvBulkPutCommand = createCommand({
 		binding: {
 			type: "string",
 			requiresArg: true,
-			describe: "The name of the namespace to write to",
+			describe: "The binding name to the namespace to write to",
 		},
 		"namespace-id": {
 			type: "string",
@@ -892,7 +892,7 @@ export const kvBulkDeleteCommand = createCommand({
 		binding: {
 			type: "string",
 			requiresArg: true,
-			describe: "The name of the namespace to delete from",
+			describe: "The binding name to the namespace to delete from",
 		},
 		"namespace-id": {
 			type: "string",

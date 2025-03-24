@@ -636,7 +636,7 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --binding       The binding of the namespace to write to  [string]
+					      --binding       the binding name to the namespace to write to  [string]
 					      --namespace-id  The id of the namespace to write to  [string]
 					      --preview       Interact with a preview namespace  [boolean]
 					      --ttl           Time for which the entries should be visible  [number]
@@ -679,7 +679,7 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --binding       The binding of the namespace to write to  [string]
+					      --binding       the binding name to the namespace to write to  [string]
 					      --namespace-id  The id of the namespace to write to  [string]
 					      --preview       Interact with a preview namespace  [boolean]
 					      --ttl           Time for which the entries should be visible  [number]
@@ -724,7 +724,7 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --binding       The binding of the namespace to write to  [string]
+					      --binding       the binding name to the namespace to write to  [string]
 					      --namespace-id  The id of the namespace to write to  [string]
 					      --preview       Interact with a preview namespace  [boolean]
 					      --ttl           Time for which the entries should be visible  [number]
@@ -767,7 +767,7 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --binding       The binding of the namespace to write to  [string]
+					      --binding       the binding name to the namespace to write to  [string]
 					      --namespace-id  The id of the namespace to write to  [string]
 					      --preview       Interact with a preview namespace  [boolean]
 					      --ttl           Time for which the entries should be visible  [number]
@@ -810,7 +810,7 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --binding       The binding of the namespace to write to  [string]
+					      --binding       the binding name to the namespace to write to  [string]
 					      --namespace-id  The id of the namespace to write to  [string]
 					      --preview       Interact with a preview namespace  [boolean]
 					      --ttl           Time for which the entries should be visible  [number]
@@ -855,7 +855,7 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --binding       The binding of the namespace to write to  [string]
+					      --binding       the binding name to the namespace to write to  [string]
 					      --namespace-id  The id of the namespace to write to  [string]
 					      --preview       Interact with a preview namespace  [boolean]
 					      --ttl           Time for which the entries should be visible  [number]
@@ -1240,7 +1240,7 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --binding       The name of the namespace to get from  [string]
+					      --binding       The binding name to the namespace to get from  [string]
 					      --namespace-id  The id of the namespace to get from  [string]
 					      --preview       Interact with a preview namespace  [boolean] [default: false]
 					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
@@ -1278,7 +1278,7 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --binding       The name of the namespace to get from  [string]
+					      --binding       The binding name to the namespace to get from  [string]
 					      --namespace-id  The id of the namespace to get from  [string]
 					      --preview       Interact with a preview namespace  [boolean] [default: false]
 					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
@@ -1317,7 +1317,7 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --binding       The name of the namespace to get from  [string]
+					      --binding       The binding name to the namespace to get from  [string]
 					      --namespace-id  The id of the namespace to get from  [string]
 					      --preview       Interact with a preview namespace  [boolean] [default: false]
 					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
@@ -1906,7 +1906,9 @@ describe("wrangler", () => {
 								},
 								{} as { [key: string]: string }
 							);
-							return HttpResponse.json(createFetchResult(result), {
+							return HttpResponse.json(createFetchResult({
+								values: result
+							}), {
 								status: 200,
 							});
 						}
