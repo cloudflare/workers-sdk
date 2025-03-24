@@ -4,4 +4,4 @@
 
 Use native APIs in `node:tls`
 
-Adds `checkServerIdentity`, `createSecureContext`, and `SecureContext`
+Uses `checkServerIdentity`, `createSecureContext`, and `SecureContext` from workerd rather than the unenv polyfill.
