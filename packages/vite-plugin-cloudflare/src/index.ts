@@ -287,7 +287,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			},
 			handleHotUpdate(options) {
 				if (
-					resolvedPluginConfig.configPaths.has(options.file) ||
+					// Vite normalizes `options.file` so we use `path.resolve` for Windows compatibility
+					resolvedPluginConfig.configPaths.has(path.resolve(options.file)) ||
 					hasAssetsConfigChanged(
 						resolvedPluginConfig,
 						resolvedViteConfig,
