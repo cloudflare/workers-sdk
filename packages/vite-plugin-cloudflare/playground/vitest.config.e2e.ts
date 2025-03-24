@@ -10,7 +10,7 @@ export default defineConfig({
 		setupFiles: ["./vitest-setup.ts"],
 		globalSetup: ["./vitest-global-setup.ts"],
 		reporters: "dot",
-		// onConsoleLog: () => false,
+		onConsoleLog: () => false,
 		testTimeout: 10000,
 	},
 	publicDir: false,
