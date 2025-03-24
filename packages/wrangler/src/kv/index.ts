@@ -686,7 +686,6 @@ export const kvBulkGetCommand = createCommand({
 			);
 		}
 
-		let metricEvent: EventNames;
 		if (localMode) {
 			const result = await usingLocalNamespace(
 				args.persistTo,
@@ -706,7 +705,6 @@ export const kvBulkGetCommand = createCommand({
 			);
 
 			logger.log(JSON.stringify(result, null, 2));
-
 		} else {
 			const accountId = await requireAuth(config);
 
@@ -717,7 +715,6 @@ export const kvBulkGetCommand = createCommand({
 					2
 				)
 			);
-
 		}
 		logger.log("\nSuccess!");
 	},

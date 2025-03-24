@@ -301,8 +301,7 @@ export async function getKVBulkKeyValue(
 	keys: string[]
 ) {
 	const requestPayload = { keys };
-
-	return await fetchResult<BulkGetResponse>(
+	const result = await fetchResult<BulkGetResponse>(
 		`/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk/get`,
 		{
 			method: "POST",
@@ -310,6 +309,7 @@ export async function getKVBulkKeyValue(
 			headers: { "Content-Type": "application/json" },
 		}
 	);
+	return result.values;
 }
 
 export async function putKVBulkKeyValue(

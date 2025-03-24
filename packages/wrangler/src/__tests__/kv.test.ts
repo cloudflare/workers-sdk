@@ -1906,11 +1906,14 @@ describe("wrangler", () => {
 								},
 								{} as { [key: string]: string }
 							);
-							return HttpResponse.json(createFetchResult({
-								values: result
-							}), {
-								status: 200,
-							});
+							return HttpResponse.json(
+								createFetchResult({
+									values: result,
+								}),
+								{
+									status: 200,
+								}
+							);
 						}
 					)
 				);
