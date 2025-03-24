@@ -29,6 +29,10 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - if: ${{ inputs.packageManager == 'pnpm' }}
+      name: Set pnpm store
+      shell: bash
+      run: pnpm config set store-dir .pnpm/store/v3
     - if: ${{ inputs.packageManager == 'bun' }}
       name: Install Bun ${{ inputs.packageManagerVersion }}
       uses: oven-sh/setup-bun@v1
