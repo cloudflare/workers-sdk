@@ -6,7 +6,7 @@ import { getTextResponse, isBuild, serverLogs } from "../../__test-utils__";
 test.runIf(!isBuild)(
 	"successfully updates when a var is updated in the Worker config",
 	async ({ onTestFinished }) => {
-		const workerConfigPath = path.join(__dirname, "../wrangler.json");
+		const workerConfigPath = path.resolve(__dirname, "../wrangler.json");
 		const originalWorkerConfig = fs.readFileSync(workerConfigPath, "utf-8");
 
 		onTestFinished(async () => {
