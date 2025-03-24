@@ -1947,8 +1947,19 @@ describe("wrangler", () => {
 					`kv bulk get --remote --namespace-id some-namespace-id keys.json`
 				);
 				expect(requests.count).toEqual(1);
-				expect(std.out).toMatchInlineSnapshot();
-				expect(std.warn).toMatchInlineSnapshot();
+				expect(std.out).toMatchInlineSnapshot(`
+					"{
+					  \\"someKey1\\": \\"someKey1-value\\",
+					  \\"ns:someKey2\\": \\"ns:someKey2-value\\"
+					}
+
+					Success!"
+				`);
+				expect(std.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler kv bulk get\` is an open-beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+					"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
 
