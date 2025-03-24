@@ -155,7 +155,7 @@ export default class extends WorkerEntrypoint<Env> {
 
 	async unstable_getByETag(
 		eTag: string,
-		_request: Request
+		_request?: Request
 	): Promise<{
 		readableStream: ReadableStream;
 		contentType: string | undefined;
@@ -188,7 +188,7 @@ export default class extends WorkerEntrypoint<Env> {
 
 	async unstable_getByPathname(
 		pathname: string,
-		request: Request
+		request?: Request
 	): Promise<{
 		readableStream: ReadableStream;
 		contentType: string | undefined;
@@ -204,7 +204,7 @@ export default class extends WorkerEntrypoint<Env> {
 
 	async unstable_exists(
 		pathname: string,
-		_request: Request
+		_request?: Request
 	): Promise<string | null> {
 		const analytics = new ExperimentAnalytics(this.env.EXPERIMENT_ANALYTICS);
 		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
