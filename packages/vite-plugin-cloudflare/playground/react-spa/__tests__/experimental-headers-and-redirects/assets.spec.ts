@@ -102,7 +102,7 @@ describe("reloading the server", () => {
 			writeFileSync(redirectsPath, "");
 
 			// Wait for Vite to reload
-			expect.poll(
+			await expect.poll(
 				async () => {
 					const headersAfter = await fetch(viteTestUrl);
 					expect(headersAfter.headers.get("X-Header")).not.toBe(
