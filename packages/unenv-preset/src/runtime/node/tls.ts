@@ -36,7 +36,7 @@ export const {
 	checkServerIdentity,
 	connect,
 	createSecureContext,
-	// @ts-expect-error
+	// @ts-expect-error Node typings wrongly declare `SecureContext` as an interface
 	SecureContext,
 	TLSSocket,
 } = workerdTls;
