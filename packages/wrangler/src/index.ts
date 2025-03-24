@@ -41,6 +41,7 @@ import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import {
 	kvBulkDeleteCommand,
+	kvBulkGetCommand,
 	kvBulkNamespace,
 	kvBulkPutCommand,
 	kvKeyDeleteCommand,
@@ -54,7 +55,6 @@ import {
 	kvNamespaceListCommand,
 	kvNamespaceNamespace,
 } from "./kv";
-import { kvBulkGetCommand } from "./kv/cli/bulkGet";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import { getMetricsDispatcher } from "./metrics";
 import {
