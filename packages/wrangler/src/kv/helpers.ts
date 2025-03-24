@@ -1,6 +1,5 @@
 import { Blob } from "node:buffer";
 import { URLSearchParams } from "node:url";
-import type { ReplaceWorkersTypes } from "miniflare";
 import { Miniflare } from "miniflare";
 import { FormData } from "undici";
 import { fetchKVGetValue, fetchListResult, fetchResult } from "../cfetch";
@@ -10,6 +9,7 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import type { Config } from "../config";
 import type { KVNamespace } from "@cloudflare/workers-types/experimental";
+import type { ReplaceWorkersTypes } from "miniflare";
 
 /** The largest number of kv items we can pass to the API in a single request. */
 const API_MAX = 10000;

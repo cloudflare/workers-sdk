@@ -1895,14 +1895,17 @@ describe("wrangler", () => {
 								"application/json"
 							);
 							expect(await request.json()).toEqual({
-								keys: expectedKeys
+								keys: expectedKeys,
 							});
 
 							// i.e. for [key1, key2] => { key1: "key1-value", key2: "key2-value" }
-							const result = expectedKeys.reduce((acc, curr) => {
-								acc[curr] = `${curr}-value`
-								return acc;
-							}, {});
+							const result = expectedKeys.reduce(
+								(acc, curr) => {
+									acc[curr] = `${curr}-value`;
+									return acc;
+								},
+								{} as { [key: string]: string }
+							);
 							return HttpResponse.json(createFetchResult(result), {
 								status: 200,
 							});

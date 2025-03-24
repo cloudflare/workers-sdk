@@ -54,6 +54,7 @@ import {
 	kvNamespaceListCommand,
 	kvNamespaceNamespace,
 } from "./kv";
+import { kvBulkGetCommand } from "./kv/cli/bulkGet";
 import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
 import { getMetricsDispatcher } from "./metrics";
 import {
@@ -202,7 +203,6 @@ import { printWranglerBanner } from "./wrangler-banner";
 import { asJson } from "./yargs-types";
 import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
-import { kvBulkGetCommand } from "./kv/cli/bulkGet";
 
 if (proxy) {
 	setGlobalDispatcher(new ProxyAgent(proxy));
@@ -546,9 +546,9 @@ export function createCLIParser(argv: string[]) {
 		{ command: "wrangler kv key list", definition: kvKeyListCommand },
 		{ command: "wrangler kv key get", definition: kvKeyGetCommand },
 		{ command: "wrangler kv key delete", definition: kvKeyDeleteCommand },
+		{ command: "wrangler kv bulk get", definition: kvBulkGetCommand },
 		{ command: "wrangler kv bulk put", definition: kvBulkPutCommand },
 		{ command: "wrangler kv bulk delete", definition: kvBulkDeleteCommand },
-		{ command: "wrangler kv bulk get", definition: kvBulkGetCommand },
 	]);
 	registry.registerNamespace("kv");
 

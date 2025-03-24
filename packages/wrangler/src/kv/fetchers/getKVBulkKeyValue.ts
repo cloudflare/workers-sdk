@@ -5,14 +5,14 @@ type BulkGetResponse = {
 		[key: string]: {
 			value: string | object | null;
 			metadata?: object;
-		}
-	}
-}
+		};
+	};
+};
 
 export async function getKVBulkKeyValue(
 	accountId: string,
 	namespaceId: string,
-	keys: string[],
+	keys: string[]
 ) {
 	const requestPayload = { keys };
 
@@ -22,6 +22,6 @@ export async function getKVBulkKeyValue(
 			method: "POST",
 			body: JSON.stringify(requestPayload),
 			headers: { "Content-Type": "application/json" },
-		},
+		}
 	);
 }

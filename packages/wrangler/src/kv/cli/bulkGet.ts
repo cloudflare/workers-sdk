@@ -1,16 +1,14 @@
-import { createCommand } from "../../core/create-command";
-import { isLocal } from "../../utils/is-local";
 import { readConfig } from "../../config";
-import { getKVNamespaceId, usingLocalNamespace } from "../helpers";
-import { parseJSON, readFileSync } from "../../parse";
+import { createCommand } from "../../core/create-command";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
-import type { EventNames } from "../../metrics";
-import { text } from "node:stream/consumers";
-import { requireAuth } from "../../user";
-import { getKVBulkKeyValue } from "../fetchers/getKVBulkKeyValue";
 import * as metrics from "../../metrics";
-
+import { parseJSON, readFileSync } from "../../parse";
+import { requireAuth } from "../../user";
+import { isLocal } from "../../utils/is-local";
+import { getKVBulkKeyValue } from "../fetchers/getKVBulkKeyValue";
+import { getKVNamespaceId, usingLocalNamespace } from "../helpers";
+import type { EventNames } from "../../metrics";
 
 export const kvBulkGetCommand = createCommand({
 	metadata: {
@@ -63,12 +61,12 @@ export const kvBulkGetCommand = createCommand({
 		const content = parseJSON(readFileSync(filename), filename) as (
 			| string
 			| { name: string }
-			)[];
+		)[];
 
 		if (!Array.isArray(content)) {
 			throw new UserError(
 				`Unexpected JSON input from "${filename}".\n` +
-				`Expected an array of strings but got:\n${content}`,
+					`Expected an array of strings but got:\n${content}`
 			);
 		}
 
@@ -81,8 +79,8 @@ export const kvBulkGetCommand = createCommand({
 			if (typeof key !== "string") {
 				errors.push(
 					`The item at index ${index} is type: "${typeof item}" - ${JSON.stringify(
-						item,
-					)}`,
+						item
+					)}`
 				);
 				continue;
 			}
@@ -92,8 +90,8 @@ export const kvBulkGetCommand = createCommand({
 		if (errors.length > 0) {
 			throw new UserError(
 				`Unexpected JSON input from "${filename}".\n` +
-				`Expected an array of strings or objects with a "name" key.\n` +
-				errors.join("\n"),
+					`Expected an array of strings or objects with a "name" key.\n` +
+					errors.join("\n")
 			);
 		}
 
@@ -106,14 +104,14 @@ export const kvBulkGetCommand = createCommand({
 				async (namespace) => {
 					const out = {} as { [key: string]: { value: string | null } };
 					for (const key of keysToGet) {
-						const stream = await namespace.get(key, "text");
+						const value = await namespace.get(key, "text");
 
 						out[key as string] = {
-							value: stream === null ? null : await text(stream),
+							value,
 						};
 					}
 					return out;
-				},
+				}
 			);
 
 			logger.log(JSON.stringify(result, null, 2));
@@ -122,7 +120,13 @@ export const kvBulkGetCommand = createCommand({
 		} else {
 			const accountId = await requireAuth(config);
 
-			logger.log(JSON.stringify(await getKVBulkKeyValue(accountId, namespaceId, keysToGet), null, 2));
+			logger.log(
+				JSON.stringify(
+					await getKVBulkKeyValue(accountId, namespaceId, keysToGet),
+					null,
+					2
+				)
+			);
 
 			metricEvent = "get kv key-values (bulk)";
 		}

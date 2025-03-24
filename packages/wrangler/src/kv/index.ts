@@ -7,13 +7,11 @@ import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { CommandLineArgsError, UserError } from "../errors";
 import { logger } from "../logger";
-import type { EventNames } from "../metrics";
 import * as metrics from "../metrics";
 import { parseJSON, readFileSync, readFileSyncToBuffer } from "../parse";
 import { requireAuth } from "../user";
 import { getValidBindingName } from "../utils/getValidBindingName";
 import { isLocal } from "../utils/is-local";
-import type { KeyValue, NamespaceKeyInfo } from "./helpers";
 import {
 	createKVNamespace,
 	deleteKVBulkKeyValue,
@@ -29,6 +27,8 @@ import {
 	unexpectedKVKeyValueProps,
 	usingLocalNamespace,
 } from "./helpers";
+import type { EventNames } from "../metrics";
+import type { KeyValue, NamespaceKeyInfo } from "./helpers";
 
 export const kvNamespace = createNamespace({
 	metadata: {
