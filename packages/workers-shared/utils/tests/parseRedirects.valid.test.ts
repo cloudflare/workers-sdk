@@ -207,3 +207,68 @@ test("parseRedirects should accept relative URLs that don't point to .html files
 		invalid: [],
 	});
 });
+
+test("parseRedirects should support custom limits", () => {
+	const aaa = Array(1001).fill("a").join("");
+	const bbb = Array(1001).fill("b").join("");
+	const huge_line = `/${aaa} /${bbb} 301`;
+	let input = `
+    # Valid entry
+    /a /b
+    # Jumbo comment line OK, ignored as normal
+    ${Array(1001).fill("#").join("")}
+    # Huge path names rejected
+    ${huge_line}
+  `;
+	let result = parseRedirects(input, { maxLineLength: 3000 });
+	expect(result).toEqual({
+		rules: [
+			{ from: "/a", status: 302, to: "/b", lineNumber: 3 },
+			{ from: `/${aaa}`, status: 301, to: `/${bbb}`, lineNumber: 7 },
+		],
+		invalid: [],
+	});
+
+	input = `
+    # COMMENTS DON'T COUNT TOWARDS TOTAL VALID RULES
+    ${Array(150)
+			.fill(undefined)
+			.map((_, i) => `/a/${i}/* /b/${i}/:splat`)
+			.join("\n")}
+    # BUT DO GET COUNTED AS TOTAL LINES SKIPPED
+  `;
+	result = parseRedirects(input, { maxDynamicRules: 200 });
+	expect(result.rules.length).toBe(150);
+	expect(result.invalid.length).toBe(0);
+
+	input = `
+	  # COMMENTS DON'T COUNT TOWARDS TOTAL VALID RULES
+	  ${Array(2050)
+			.fill(undefined)
+			.map((_, i) => `/a/${i} /b/${i}`)
+			.join("\n")}
+	  # BUT DO GET COUNTED AS TOTAL LINES SKIPPED
+	`;
+	result = parseRedirects(input, { maxStaticRules: 3000 });
+	expect(result.rules.length).toBe(2050);
+	expect(result.invalid.length).toBe(0);
+
+	input = `
+	  # COMMENTS DON'T COUNT TOWARDS TOTAL VALID RULES
+	  ${Array(2050)
+			.fill(undefined)
+			.map((_, i) => `/a/${i} /b/${i}`)
+			.join("\n")}
+	    ${Array(150)
+				.fill(undefined)
+				.map((_, i) => `/a/${i}/* /b/${i}/:splat`)
+				.join("\n")}
+	  # BUT DO GET COUNTED AS TOTAL LINES SKIPPED
+	`;
+	result = parseRedirects(input, {
+		maxDynamicRules: 200,
+		maxStaticRules: 3000,
+	});
+	expect(result.rules.length).toBe(2200);
+	expect(result.invalid.length).toBe(0);
+});
