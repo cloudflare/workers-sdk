@@ -12,10 +12,13 @@ test.runIf(!isBuild)(
 		onTestFinished(async () => {
 			fs.writeFileSync(workerConfigPath, originalWorkerConfig);
 			// We need to ensure that the original config is restored before the next test runs
-			await vi.waitFor(async () => {
-				const revertedResponse = await getTextResponse();
-				expect(revertedResponse).toBe('The value of MY_VAR is "one"');
-			});
+			await vi.waitFor(
+				async () => {
+					const revertedResponse = await getTextResponse();
+					expect(revertedResponse).toBe('The value of MY_VAR is "one"');
+				},
+				{ timeout: 5000 }
+			);
 		});
 
 		const originalResponse = await getTextResponse();
@@ -28,10 +31,13 @@ test.runIf(!isBuild)(
 			},
 		});
 		fs.writeFileSync(workerConfigPath, updatedWorkerConfig);
-		await vi.waitFor(async () => {
-			const updatedResponse = await getTextResponse();
-			expect(updatedResponse).toBe('The value of MY_VAR is "two"');
-		});
+		await vi.waitFor(
+			async () => {
+				const updatedResponse = await getTextResponse();
+				expect(updatedResponse).toBe('The value of MY_VAR is "two"');
+			},
+			{ timeout: 5000 }
+		);
 	}
 );
 
@@ -44,10 +50,13 @@ test.runIf(!isBuild)(
 		onTestFinished(async () => {
 			fs.writeFileSync(workerConfigPath, originalWorkerConfig);
 			// We need to ensure that the original config is restored before the next test runs
-			await vi.waitFor(async () => {
-				const revertedResponse = await getTextResponse();
-				expect(revertedResponse).toBe('The value of MY_VAR is "one"');
-			});
+			await vi.waitFor(
+				async () => {
+					const revertedResponse = await getTextResponse();
+					expect(revertedResponse).toBe('The value of MY_VAR is "one"');
+				},
+				{ timeout: 5000 }
+			);
 		});
 
 		const originalResponse = await getTextResponse();
@@ -61,12 +70,15 @@ test.runIf(!isBuild)(
 			},
 		});
 		fs.writeFileSync(workerConfigPath, updatedWorkerConfig);
-		await vi.waitFor(async () => {
-			const newResponse = await getTextResponse();
-			expect(serverLogs.errors.join()).toMatch(
-				/.*The provided Wrangler config main field .+? doesn't point to an existing file.*/
-			);
-			expect(newResponse).toBe('The value of MY_VAR is "one"');
-		});
+		await vi.waitFor(
+			async () => {
+				const newResponse = await getTextResponse();
+				expect(serverLogs.errors.join()).toMatch(
+					/.*The provided Wrangler config main field .+? doesn't point to an existing file.*/
+				);
+				expect(newResponse).toBe('The value of MY_VAR is "one"');
+			},
+			{ timeout: 5000 }
+		);
 	}
 );
