@@ -31,10 +31,11 @@ export function hasAssetsConfigChanged(
 	if (!resolvedPluginConfig.experimental?.headersAndRedirectsDevModeSupport) {
 		return false;
 	}
+	// Note that we must "resolve" the changed file since the path from Vite will not match Windows backslashes.
 	return [
 		getRedirectsConfigPath(resolvedViteConfig),
 		getHeadersConfigPath(resolvedViteConfig),
-	].includes(changedFile);
+	].includes(path.resolve(changedFile));
 }
 
 /**

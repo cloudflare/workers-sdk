@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { isBuild, page, viteTestUrl } from "../../../__test-utils__";
 
 describe(
@@ -102,23 +102,16 @@ describe("reloading the server", () => {
 			writeFileSync(redirectsPath, "");
 
 			// Wait for Vite to reload
-			await expect.poll(
-				async () => {
-					const headersAfter = await fetch(viteTestUrl);
-					expect(headersAfter.headers.get("X-Header")).not.toBe(
-						"Custom-Value!!!"
-					);
-					const redirectAfter = await fetch(`${viteTestUrl}/foo`, {
-						redirect: "manual",
-					});
-					expect(redirectAfter.status).not.toBe(302);
-				},
-				{
-					interval: 100,
-					timeout: 5000,
-					message: "Expected Vite to reload with the new configuration.",
-				}
-			);
+			await vi.waitFor(async () => {
+				const headersAfter = await fetch(viteTestUrl);
+				expect(headersAfter.headers.get("X-Header")).not.toBe(
+					"Custom-Value!!!"
+				);
+				const redirectAfter = await fetch(`${viteTestUrl}/foo`, {
+					redirect: "manual",
+				});
+				expect(redirectAfter.status).not.toBe(302);
+			});
 		}
 	);
 });
