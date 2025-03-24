@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as vite from "vite";
 import { unstable_readConfig } from "wrangler";
 import type { AssetsOnlyConfig, WorkerConfig } from "./plugin-config";
 import type { Optional } from "./utils";
@@ -287,7 +288,7 @@ export function getWorkerConfig(
 
 	const { raw, config, nonApplicable } = readWorkerConfig(configPath, env);
 
-	opts?.visitedConfigPaths?.add(configPath);
+	opts?.visitedConfigPaths?.add(vite.normalizePath(configPath));
 
 	if (!config.name) {
 		throw new Error(missingFieldErrorMessage(`'name'`, configPath, env));
