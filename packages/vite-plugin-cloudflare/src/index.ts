@@ -46,10 +46,12 @@ import { getWarningForWorkersConfigs } from "./workers-configs";
 import type { PluginConfig, ResolvedPluginConfig } from "./plugin-config";
 import type { Unstable_RawConfig } from "wrangler";
 
+export type { PluginConfig } from "./plugin-config";
+
 // this flag is used to show the workers configs warning only once
 let workersConfigsWarningShown = false;
 
-export type { PluginConfig } from "./plugin-config";
+let miniflare: Miniflare | undefined;
 
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
@@ -61,7 +63,6 @@ export type { PluginConfig } from "./plugin-config";
 export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	let resolvedPluginConfig: ResolvedPluginConfig;
 	let resolvedViteConfig: vite.ResolvedConfig;
-	let miniflare: Miniflare | undefined;
 
 	const additionalModulePaths = new Set<string>();
 
@@ -296,17 +297,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					options.server.restart();
 				}
 			},
-			async buildEnd() {
-				if (miniflare) {
-					await miniflare.dispose();
-					miniflare = undefined;
-				}
-			},
 			async configureServer(viteDevServer) {
 				assert(
 					viteDevServer.httpServer,
 					"Unexpected error: No Vite HTTP server"
 				);
+
+				if (miniflare) {
+					await miniflare.dispose();
+					miniflare = undefined;
+				}
 
 				miniflare = new Miniflare(
 					getDevMiniflareOptions(resolvedPluginConfig, viteDevServer)
