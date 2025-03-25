@@ -247,4 +247,22 @@ describe("[Workers + Assets] dynamic site", () => {
 		// let response = await fetch(`http://${ip}:${port}/_worker.js`);
 		// expect(await response.text()).not.toContain("bang");
 	});
+
+	it("should work with files which start with .", async ({ expect }) => {
+		let response = await fetch(`http://${ip}:${port}/.dot`);
+		let text = await response.text();
+		expect(response.status).toBe(200);
+		expect(text).toMatchInlineSnapshot(`
+			"hi from .dot/index.html
+			"
+		`);
+
+		response = await fetch(`http://${ip}:${port}/.dotfile.html`);
+		text = await response.text();
+		expect(response.status).toBe(200);
+		expect(text).toMatchInlineSnapshot(`
+			"hi from .dotfile.html
+			"
+		`);
+	});
 });
