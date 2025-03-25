@@ -237,7 +237,7 @@ export const kvKeyPutCommand = createCommand({
 		binding: {
 			type: "string",
 			requiresArg: true,
-			describe: "the binding name to the namespace to write to",
+			describe: "The binding name to the namespace to write to",
 		},
 		"namespace-id": {
 			type: "string",
