@@ -2,30 +2,6 @@ import { keys, LONG_TIMEOUT } from "../helpers";
 
 export default function getFrameworkTestConfigExperimental() {
 	return {
-		qwik: {
-			promptHandlers: [
-				{
-					matcher: /Yes looks good, finish update/,
-					input: [keys.enter],
-				},
-			],
-			flags: [],
-			testCommitMessage: true,
-			unsupportedOSs: ["win32"],
-			unsupportedPms: ["yarn"],
-			verifyDeploy: {
-				route: "/",
-				expectedText: "Welcome to Qwik",
-			},
-			verifyPreview: {
-				route: "/",
-				expectedText: "Welcome to Qwik",
-			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
-		},
 		next: {
 			testCommitMessage: true,
 			flags: [

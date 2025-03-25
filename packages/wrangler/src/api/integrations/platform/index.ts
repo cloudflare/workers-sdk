@@ -105,7 +105,6 @@ export async function getPlatformProxy<
 		{
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: false,
-			ASSETS_RPC: false,
 		},
 		() => getMiniflareOptionsFromConfig(rawConfig, env, options)
 	);

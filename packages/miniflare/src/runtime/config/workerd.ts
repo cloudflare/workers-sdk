@@ -204,6 +204,7 @@ export interface Network {
 export interface DiskDirectory {
 	path?: string;
 	writable?: boolean;
+	allowDotfiles?: boolean;
 }
 
 export interface HttpOptions {

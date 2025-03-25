@@ -1,5 +1,43 @@
 # miniflare
 
+## 4.20250320.0
+
+### Patch Changes
+
+- [#8618](https://github.com/cloudflare/workers-sdk/pull/8618) [`d8f1c49`](https://github.com/cloudflare/workers-sdk/commit/d8f1c49541229f4b41bd16bbebda3017a5d17d64) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250319.0  | 1.20250320.0  |
+  | @cloudflare/workers-types | ^4.20250319.0 | ^4.20250320.0 |
+
+- [#8556](https://github.com/cloudflare/workers-sdk/pull/8556) [`b7d6b7d`](https://github.com/cloudflare/workers-sdk/commit/b7d6b7dd1fbbaecd4f595d2d4249ab902b726538) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Add support for `assets_navigation_prefer_asset_serving` in Vite (`dev` and `preview`)
+
+- [#8597](https://github.com/cloudflare/workers-sdk/pull/8597) [`5d78760`](https://github.com/cloudflare/workers-sdk/commit/5d78760af7adbb57416d73f102123152d37bec53) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Graduate experimental RPC support for Workers with assets in local dev
+
+- [#8594](https://github.com/cloudflare/workers-sdk/pull/8594) [`c0d0cd0`](https://github.com/cloudflare/workers-sdk/commit/c0d0cd03a5eede7ec4f8a615f2c4b1f9a73dfcee) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Add support for property accessors in local dev RPC for Workers with assets
+
+## 4.20250319.0
+
+### Minor Changes
+
+- [#8258](https://github.com/cloudflare/workers-sdk/pull/8258) [`9adbd50`](https://github.com/cloudflare/workers-sdk/commit/9adbd50cf1cbe841f8885de1d1d22b084fcfd987) Thanks [@knickish](https://github.com/knickish)! - Enable the creation of MySQL Hypedrive configs via the Wrangler CLI.
+
+### Patch Changes
+
+- [#8591](https://github.com/cloudflare/workers-sdk/pull/8591) [`dae7bd4`](https://github.com/cloudflare/workers-sdk/commit/dae7bd4dd0b97956d868799e6a01fe8b47a7250a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250317.0  | 1.20250319.0  |
+  | @cloudflare/workers-types | ^4.20250317.0 | ^4.20250319.0 |
+
+- [#8376](https://github.com/cloudflare/workers-sdk/pull/8376) [`a25f060`](https://github.com/cloudflare/workers-sdk/commit/a25f060232bfbfb30aede6a891b665f0450770bf) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Make local dev RPC behaviour on par with production for Workers with assets
+
 ## 4.20250317.1
 
 ### Patch Changes

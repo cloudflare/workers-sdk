@@ -14,7 +14,18 @@ import type {
 	RedirectRule,
 } from "./types";
 
-export function parseRedirects(input: string): ParsedRedirects {
+export function parseRedirects(
+	input: string,
+	{
+		maxStaticRules = MAX_STATIC_REDIRECT_RULES,
+		maxDynamicRules = MAX_DYNAMIC_REDIRECT_RULES,
+		maxLineLength = MAX_LINE_LENGTH,
+	}: {
+		maxStaticRules?: number;
+		maxDynamicRules?: number;
+		maxLineLength?: number;
+	} = {}
+): ParsedRedirects {
 	const lines = input.split("\n");
 	const rules: RedirectRule[] = [];
 	const seen_paths = new Set<string>();
@@ -25,16 +36,16 @@ export function parseRedirects(input: string): ParsedRedirects {
 	let canCreateStaticRule = true;
 
 	for (let i = 0; i < lines.length; i++) {
-		const line = lines[i].trim();
+		const line = (lines[i] || "").trim();
 		if (line.length === 0 || line.startsWith("#")) {
 			continue;
 		}
 
-		if (line.length > MAX_LINE_LENGTH) {
+		if (line.length > maxLineLength) {
 			invalid.push({
 				message: `Ignoring line ${
 					i + 1
-				} as it exceeds the maximum allowed length of ${MAX_LINE_LENGTH}.`,
+				} as it exceeds the maximum allowed length of ${maxLineLength}.`,
 			});
 			continue;
 		}
@@ -70,9 +81,9 @@ export function parseRedirects(input: string): ParsedRedirects {
 		) {
 			staticRules += 1;
 
-			if (staticRules > MAX_STATIC_REDIRECT_RULES) {
+			if (staticRules > maxStaticRules) {
 				invalid.push({
-					message: `Maximum number of static rules supported is ${MAX_STATIC_REDIRECT_RULES}. Skipping line.`,
+					message: `Maximum number of static rules supported is ${maxStaticRules}. Skipping line.`,
 				});
 				continue;
 			}
@@ -80,9 +91,9 @@ export function parseRedirects(input: string): ParsedRedirects {
 			dynamicRules += 1;
 			canCreateStaticRule = false;
 
-			if (dynamicRules > MAX_DYNAMIC_REDIRECT_RULES) {
+			if (dynamicRules > maxDynamicRules) {
 				invalid.push({
-					message: `Maximum number of dynamic rules supported is ${MAX_DYNAMIC_REDIRECT_RULES}. Skipping remaining ${
+					message: `Maximum number of dynamic rules supported is ${maxDynamicRules}. Skipping remaining ${
 						lines.length - i
 					} lines of file.`,
 				});

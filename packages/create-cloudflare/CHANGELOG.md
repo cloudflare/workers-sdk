@@ -1,5 +1,38 @@
 # create-cloudflare
 
+## 2.42.1
+
+### Patch Changes
+
+- [#8598](https://github.com/cloudflare/workers-sdk/pull/8598) [`e5dbedd`](https://github.com/cloudflare/workers-sdk/commit/e5dbedd78297d25cb8c8b1bd7c6cb70e2e9a626a) Thanks [@emily-shen](https://github.com/emily-shen)! - graduate Qwik + Workers Assets templates from experimental
+
+  You no longer need to include the `--experimental` flag to access this template.
+
+## 2.42.0
+
+### Minor Changes
+
+- [#8460](https://github.com/cloudflare/workers-sdk/pull/8460) [`31332ca`](https://github.com/cloudflare/workers-sdk/commit/31332ca461cea5fbbe8a6c56fe598962c94eae65) Thanks [@joshthoward](https://github.com/joshthoward)! - Update the C3 Durable Objects example to use SQLite
+
+### Patch Changes
+
+- [#8593](https://github.com/cloudflare/workers-sdk/pull/8593) [`36ae02c`](https://github.com/cloudflare/workers-sdk/commit/36ae02c575a6a2e806565a17cf16a5a80f3e45ad) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate Hono + Workers assets template from experimental.
+
+  You will no longer need to include the --experimental flag to access this template.
+  Also creates a hono template that uses the cloudflare-pages adapter.
+
+- [#8402](https://github.com/cloudflare/workers-sdk/pull/8402) [`03ec951`](https://github.com/cloudflare/workers-sdk/commit/03ec9510c5ebb0fceed7df64d90383cdac861b3e) Thanks [@emily-shen](https://github.com/emily-shen)! - graduate Astro Workers + Assets template from experimental
+
+  You no longer need to pass in --experimental to access the Workers + Assets version of the template.
+
+- [#8552](https://github.com/cloudflare/workers-sdk/pull/8552) [`0fe3260`](https://github.com/cloudflare/workers-sdk/commit/0fe32607199c9fa3b68e4cacab9522379b6704e0) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate remix Workers + Assets template from experimental
+
+  You will no longer need to pass in the `--experimental` flag to access this template.
+
+- [#8574](https://github.com/cloudflare/workers-sdk/pull/8574) [`9b86dba`](https://github.com/cloudflare/workers-sdk/commit/9b86dba81929db3c8216fdfc8aea62ccf69ef32f) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate sveltekit + workers assets template from experimental
+
+  You no longer need to pass in the --experimental flag to access this template.
+
 ## 2.41.2
 
 ### Patch Changes

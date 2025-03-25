@@ -4,7 +4,7 @@ import { Browser, chromium } from "playwright-chromium";
 import { afterAll, beforeAll, describe, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
-describe("Workers + Assets + SPA]", () => {
+describe("Workers + Assets + SPA", () => {
 	let ip: string, port: number, stop: (() => Promise<unknown>) | undefined;
 	let browser: Browser | undefined;
 

@@ -19,7 +19,6 @@ import {
 	writeJSON,
 } from "helpers/files";
 import nextTemplateExperimental from "templates-experimental/next/c3";
-import qwikTemplateExperimental from "templates-experimental/qwik/c3";
 import solidTemplateExperimental from "templates-experimental/solid/c3";
 import analogTemplate from "templates/analog/c3";
 import angularTemplate from "templates/angular/c3";
@@ -39,6 +38,7 @@ import openapiTemplate from "templates/openapi/c3";
 import preExistingTemplate from "templates/pre-existing/c3";
 import queuesTemplate from "templates/queues/c3";
 import qwikTemplate from "templates/qwik/c3";
+import reactRouterTemplate from "templates/react-router/c3";
 import reactTemplate from "templates/react/c3";
 import remixTemplate from "templates/remix/c3";
 import scheduledTemplate from "templates/scheduled/c3";
@@ -57,6 +57,7 @@ export type MultiPlatformTemplateConfig = {
 		pages: TemplateConfig;
 		workers: TemplateConfig;
 	};
+	hidden?: boolean;
 };
 
 export type TemplateConfig = {
@@ -173,7 +174,6 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 	if (experimental) {
 		return {
 			next: nextTemplateExperimental,
-			qwik: qwikTemplateExperimental,
 			solid: solidTemplateExperimental,
 		};
 	} else {
@@ -188,6 +188,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			nuxt: nuxtTemplate,
 			qwik: qwikTemplate,
 			react: reactTemplate,
+			"react-router": reactRouterTemplate,
 			remix: remixTemplate,
 			solid: solidTemplate,
 			svelte: svelteTemplate,
@@ -402,11 +403,20 @@ export const createContext = async (
 		const frameworkMap = getFrameworkMap({
 			experimental: args.experimental,
 		});
-		const frameworkOptions = Object.entries(frameworkMap).map(
-			([key, config]) => ({
-				label: config.displayName,
-				value: key,
-			}),
+
+		const frameworkOptions = Object.entries(frameworkMap).reduce<Option[]>(
+			(acc, [key, config]) => {
+				// only hide if we're going to show the options - otherwise, the
+				// result will show up as (skipped) instead of the actual value
+				if (!config.hidden || args.framework) {
+					acc.push({
+						label: config.displayName,
+						value: key,
+					});
+				}
+				return acc;
+			},
+			[],
 		);
 
 		const framework = await processArgument(args, "framework", {

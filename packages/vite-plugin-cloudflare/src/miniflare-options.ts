@@ -11,10 +11,8 @@ import {
 } from "miniflare";
 import { globSync } from "tinyglobby";
 import * as vite from "vite";
-import {
-	unstable_getMiniflareWorkerOptions,
-	unstable_readConfig,
-} from "wrangler";
+import { unstable_getMiniflareWorkerOptions } from "wrangler";
+import { getAssetsConfig } from "./asset-config";
 import {
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
@@ -198,10 +196,11 @@ export function getDevMiniflareOptions(
 ): MiniflareOptions {
 	const resolvedViteConfig = viteDevServer.config;
 	const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
-	const assetsConfig =
-		resolvedPluginConfig.type === "assets-only"
-			? resolvedPluginConfig.config.assets
-			: entryWorkerConfig?.assets;
+	const assetsConfig = getAssetsConfig(
+		resolvedPluginConfig,
+		entryWorkerConfig,
+		resolvedViteConfig
+	);
 
 	const assetWorkers: Array<WorkerOptions> = [
 		{
@@ -241,14 +240,7 @@ export function getDevMiniflareOptions(
 				},
 			],
 			bindings: {
-				CONFIG: {
-					...(assetsConfig?.html_handling
-						? { html_handling: assetsConfig.html_handling }
-						: {}),
-					...(assetsConfig?.not_found_handling
-						? { not_found_handling: assetsConfig.not_found_handling }
-						: {}),
-				},
+				CONFIG: assetsConfig,
 			},
 			serviceBindings: {
 				__VITE_ASSET_EXISTS__: async (request) => {

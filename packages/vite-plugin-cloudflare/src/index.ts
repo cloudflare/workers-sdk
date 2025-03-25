@@ -11,6 +11,7 @@ import {
 	createModuleReference,
 	matchAdditionalModule,
 } from "./additional-modules";
+import { hasAssetsConfigChanged } from "./asset-config";
 import {
 	createCloudflareEnvironmentOptions,
 	initRunners,
@@ -47,6 +48,8 @@ import type { Unstable_RawConfig } from "wrangler";
 
 // this flag is used to show the workers configs warning only once
 let workersConfigsWarningShown = false;
+
+export type { PluginConfig } from "./plugin-config";
 
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
@@ -282,7 +285,14 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 			},
 			handleHotUpdate(options) {
-				if (resolvedPluginConfig.configPaths.has(options.file)) {
+				if (
+					resolvedPluginConfig.configPaths.has(options.file) ||
+					hasAssetsConfigChanged(
+						resolvedPluginConfig,
+						resolvedViteConfig,
+						options.file
+					)
+				) {
 					options.server.restart();
 				}
 			},

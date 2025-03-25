@@ -1,89 +1,81 @@
 import { resolve } from "node:path";
 import { setTimeout } from "timers/promises";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, it } from "vitest";
+import { afterAll, beforeAll, describe, it, vi } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
-const devCmds = [{ args: [] }, { args: ["--x-assets-rpc"] }];
+describe("[Workers + Assets] Service bindings to Worker with assets", () => {
+	let ipWorkerA: string,
+		portWorkerA: number,
+		stopWorkerA: (() => Promise<unknown>) | undefined;
+	let stopWorkerB: (() => Promise<unknown>) | undefined,
+		getOutputWorkerB: () => string;
+	let stopWorkerC: (() => Promise<unknown>) | undefined,
+		getOutputWorkerC: () => string;
+	let stopWorkerD: (() => Promise<unknown>) | undefined;
 
-const failsIf = (condition: boolean) => {
-	return condition ? it.fails : it;
-};
+	beforeAll(async () => {
+		({ getOutput: getOutputWorkerB } = await runWranglerDev(
+			resolve(__dirname, "..", "workerB-with-default-export"),
+			["--port=0", "--inspector-port=0"]
+		));
 
-describe.each(devCmds)(
-	"[wrangler dev $args][Workers + Assets] Service bindings to Worker with assets",
-	({ args }) => {
-		let ipWorkerA: string,
-			portWorkerA: number,
-			stopWorkerA: (() => Promise<unknown>) | undefined;
-		let stopWorkerB: (() => Promise<unknown>) | undefined,
-			getOutputWorkerB: () => string;
-		let stopWorkerC: (() => Promise<unknown>) | undefined,
-			getOutputWorkerC: () => string;
-		let stopWorkerD: (() => Promise<unknown>) | undefined;
+		({ getOutput: getOutputWorkerC } = await runWranglerDev(
+			resolve(__dirname, "..", "workerC-with-default-entrypoint"),
+			["--port=0", "--inspector-port=0"]
+		));
 
-		beforeAll(async () => {
-			({ getOutput: getOutputWorkerB } = await runWranglerDev(
-				resolve(__dirname, "..", "workerB-with-default-export"),
-				["--port=0", "--inspector-port=0", ...args]
-			));
+		({ stop: stopWorkerD } = await runWranglerDev(
+			resolve(__dirname, "..", "workerD-with-named-entrypoint"),
+			["--port=0", "--inspector-port=0"]
+		));
 
-			({ getOutput: getOutputWorkerC } = await runWranglerDev(
-				resolve(__dirname, "..", "workerC-with-default-entrypoint"),
-				["--port=0", "--inspector-port=0", ...args]
-			));
+		({
+			ip: ipWorkerA,
+			port: portWorkerA,
+			stop: stopWorkerA,
+		} = await runWranglerDev(resolve(__dirname, "..", "workerA"), [
+			"--port=0",
+			"--inspector-port=0",
+		]));
+	});
 
-			({ stop: stopWorkerD } = await runWranglerDev(
-				resolve(__dirname, "..", "workerD-with-named-entrypoint"),
-				["--port=0", "--inspector-port=0", ...args]
-			));
+	afterAll(async () => {
+		await stopWorkerA?.();
+		await stopWorkerB?.();
+		await stopWorkerC?.();
+		await stopWorkerD?.();
+	});
 
-			({
-				ip: ipWorkerA,
-				port: portWorkerA,
-				stop: stopWorkerA,
-			} = await runWranglerDev(resolve(__dirname, "..", "workerA"), [
-				"--port=0",
-				"--inspector-port=0",
-			]));
-		});
+	describe("Workers running in separate wrangler dev sessions", () => {
+		describe("Service binding to default export", () => {
+			// this currently incorrectly returns the User Worker response
+			// instead of the Asset Worker response, unless `--x-assets-rpc`
+			// is provided
+			it("should return Asset Worker response for routes that serve static content", async ({
+				expect,
+			}) => {
+				await vi.waitFor(async () => {
+					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
+					let text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.DEFAULT_EXPORT.fetch() response: This is an asset of "worker-b"`
+					);
 
-		afterAll(async () => {
-			await stopWorkerA?.();
-			await stopWorkerB?.();
-			await stopWorkerC?.();
-			await stopWorkerD?.();
-		});
+					response = await fetch(`http://${ipWorkerA}:${portWorkerA}/busy-bee`);
+					text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.DEFAULT_EXPORT.fetch() response: All "worker-b" 🐝🐝🐝 are 🐝sy. Please come back later`
+					);
+				});
+			});
 
-		describe("Workers running in separate wrangler dev sessions", () => {
-			describe("Service binding to default export", () => {
-				// this currently incorrectly returns the User Worker response
-				// instead of the Asset Worker response, unless `--x-assets-rpc`
-				// is provided
-				failsIf(!args.length)(
-					"should return Asset Worker response for routes that serve static content",
-					async ({ expect }) => {
-						let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
-						let text = await response.text();
-						expect(response.status).toBe(200);
-						expect(text).toContain(
-							`env.DEFAULT_EXPORT.fetch() response: This is an asset of "worker-b"`
-						);
-
-						response = await fetch(
-							`http://${ipWorkerA}:${portWorkerA}/busy-bee`
-						);
-						text = await response.text();
-						expect(response.status).toBe(200);
-						expect(text).toContain(
-							`env.DEFAULT_EXPORT.fetch() response: All "worker-b" 🐝🐝🐝 are 🐝sy. Please come back later`
-						);
-					}
-				);
-
-				it("should return User Worker response for routes that don't serve static content", async ({
-					expect,
-				}) => {
+			it("should return User Worker response for routes that don't serve static content", async ({
+				expect,
+			}) => {
+				await vi.waitFor(async () => {
 					let response = await fetch(
 						`http://${ipWorkerA}:${portWorkerA}/no-assets-at-this-path`
 					);
@@ -93,10 +85,12 @@ describe.each(devCmds)(
 						"env.DEFAULT_EXPORT.fetch() response: Hello from worker-b fetch()"
 					);
 				});
+			});
 
-				it("should return User Worker response for named functions", async ({
-					expect,
-				}) => {
+			it("should return User Worker response for named functions", async ({
+				expect,
+			}) => {
+				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// the appropriate fns on the service binding instead
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
@@ -109,8 +103,10 @@ describe.each(devCmds)(
 						'env.DEFAULT_EXPORT.busyBee("🐝") response: Hello busy 🐝s from worker-b busyBee(bee)'
 					);
 				});
+			});
 
-				it("should return cron trigger responses", async ({ expect }) => {
+			it("should return cron trigger responses", async ({ expect }) => {
+				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// env.DEFAULT_EXPORT.scheduled({cron: "* * * * *"}) instead
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
@@ -129,34 +125,64 @@ describe.each(devCmds)(
 				});
 			});
 
-			describe("Service binding to default entrypoint", () => {
-				// this currently incorrectly returns the User Worker response
-				// instead of the Asset Worker response, unless `--x-assets-rpc`
-				// is provided
-				failsIf(!args.length)(
-					"should return Asset Worker response for fetch requests for routes that serve static content",
-					async ({ expect }) => {
-						let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
-						let text = await response.text();
-						expect(response.status).toBe(200);
-						expect(text).toContain(
-							`env.DEFAULT_ENTRYPOINT.fetch() response: This is an asset of "worker-c"`
-						);
+			it("should support promise pipelining", async ({ expect }) => {
+				await vi.waitFor(async () => {
+					// fetch URL is irrelevant here. workerA will internally call
+					// the appropriate fns on the service binding instead
+					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
+					let text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.DEFAULT_EXPORT.foo("✨").bar.buzz() response: You made it! ✨`
+					);
+				});
+			});
 
-						response = await fetch(
-							`http://${ipWorkerA}:${portWorkerA}/busy-bee`
-						);
-						text = await response.text();
-						expect(response.status).toBe(200);
-						expect(text).toContain(
-							`env.DEFAULT_ENTRYPOINT.fetch() response: All "worker-c" 🐝🐝🐝 are 🐝sy. Please come back later`
-						);
-					}
-				);
+			it("should support property access", async ({ expect }) => {
+				await vi.waitFor(async () => {
+					// fetch URL is irrelevant here. workerA will internally call
+					// the appropriate fns on the service binding instead
+					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
+					let text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.DEFAULT_EXPORT.honey response: Bees make honey in worker-b`
+					);
+					expect(text).toContain(
+						`env.DEFAULT_EXPORT.honeyBee response: I am worker-b's honeyBee prop`
+					);
+				});
+			});
+		});
 
-				it("should return User Worker response for routes that don't serve static content", async ({
-					expect,
-				}) => {
+		describe("Service binding to default entrypoint", () => {
+			// this currently incorrectly returns the User Worker response
+			// instead of the Asset Worker response, unless `--x-assets-rpc`
+			// is provided
+			it("should return Asset Worker response for fetch requests for routes that serve static content", async ({
+				expect,
+			}) => {
+				await vi.waitFor(async () => {
+					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
+					let text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.DEFAULT_ENTRYPOINT.fetch() response: This is an asset of "worker-c"`
+					);
+
+					response = await fetch(`http://${ipWorkerA}:${portWorkerA}/busy-bee`);
+					text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.DEFAULT_ENTRYPOINT.fetch() response: All "worker-c" 🐝🐝🐝 are 🐝sy. Please come back later`
+					);
+				});
+			});
+
+			it("should return User Worker response for routes that don't serve static content", async ({
+				expect,
+			}) => {
+				await vi.waitFor(async () => {
 					let response = await fetch(
 						`http://${ipWorkerA}:${portWorkerA}/no-assets-at-this-path`
 					);
@@ -166,10 +192,12 @@ describe.each(devCmds)(
 						"env.DEFAULT_ENTRYPOINT.fetch() response: Hello from worker-c fetch()"
 					);
 				});
+			});
 
-				it("should return User Worker response for named functions", async ({
-					expect,
-				}) => {
+			it("should return User Worker response for named functions", async ({
+				expect,
+			}) => {
+				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// the appropriate fns on the service binding instead
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
@@ -182,8 +210,10 @@ describe.each(devCmds)(
 						'env.DEFAULT_ENTRYPOINT.busyBee("🐝") response: Hello busy 🐝s from worker-c busyBee(bee)'
 					);
 				});
+			});
 
-				it("should return cron trigger responses", async ({ expect }) => {
+			it("should return cron trigger responses", async ({ expect }) => {
+				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// env.DEFAULT_ENTRYPOINT.scheduled({cron: "* * * * *"}) instead
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
@@ -201,10 +231,44 @@ describe.each(devCmds)(
 				});
 			});
 
-			describe("Service binding to named entrypoint", () => {
-				it("should return User Worker response for fetch requests", async ({
-					expect,
-				}) => {
+			it("should support promise pipelining", async ({ expect }) => {
+				await vi.waitFor(async () => {
+					// fetch URL is irrelevant here. workerA will internally call
+					// the appropriate fns on the service binding instead
+					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
+					let text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.DEFAULT_ENTRYPOINT.foo("🐜").bar.buzz() response: You made it! 🐜`
+					);
+					expect(text).toContain(
+						`env.DEFAULT_ENTRYPOINT.newBeeCounter().value response: 2`
+					);
+				});
+			});
+
+			it("should support property access", async ({ expect }) => {
+				await vi.waitFor(async () => {
+					// fetch URL is irrelevant here. workerA will internally call
+					// the appropriate fns on the service binding instead
+					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
+					let text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.DEFAULT_ENTRYPOINT.honey response: Bees make honey in worker-c`
+					);
+					expect(text).toContain(
+						`env.DEFAULT_ENTRYPOINT.honeyBee response: I am worker-c's honeyBee prop`
+					);
+				});
+			});
+		});
+
+		describe("Service binding to named entrypoint", () => {
+			it("should return User Worker response for fetch requests", async ({
+				expect,
+			}) => {
+				await vi.waitFor(async () => {
 					// static asset route
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
 					let text = await response.text();
@@ -231,10 +295,12 @@ describe.each(devCmds)(
 						"env.NAMED_ENTRYPOINT.fetch() response: Hello from worker-d fetch()"
 					);
 				});
+			});
 
-				it("should return User Worker response for named functions", async ({
-					expect,
-				}) => {
+			it("should return User Worker response for named functions", async ({
+				expect,
+			}) => {
+				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// the appropriate fns on the service binding instead
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
@@ -247,8 +313,10 @@ describe.each(devCmds)(
 						'env.NAMED_ENTRYPOINT.busyBee("🐝") response: Hello busy 🐝s from worker-d busyBee(bee)'
 					);
 				});
+			});
 
-				it("should support promise pipelining", async ({ expect }) => {
+			it("should support promise pipelining", async ({ expect }) => {
+				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// the appropriate fns on the service binding instead
 					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
@@ -262,6 +330,22 @@ describe.each(devCmds)(
 					);
 				});
 			});
+
+			it("should support property access", async ({ expect }) => {
+				await vi.waitFor(async () => {
+					// fetch URL is irrelevant here. workerA will internally call
+					// the appropriate fns on the service binding instead
+					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
+					let text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.NAMED_ENTRYPOINT.honey response: Bees make honey in worker-d`
+					);
+					expect(text).toContain(
+						`env.NAMED_ENTRYPOINT.honeyBee response: I am worker-d's honeyBee prop`
+					);
+				});
+			});
 		});
-	}
-);
+	});
+});
