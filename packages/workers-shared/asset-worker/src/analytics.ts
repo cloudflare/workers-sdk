@@ -1,5 +1,5 @@
-import type { ENABLEMENT_COMPATIBILITY_FLAGS } from "./compatibility-flags";
-import type { ReadyAnalytics } from "./types";
+import type { ENABLEMENT_COMPATIBILITY_FLAGS } from "./compatibility-flags.js";
+import type { ReadyAnalytics } from "./types.js";
 
 // This will allow us to make breaking changes to the analytic schema
 const VERSION = 1;

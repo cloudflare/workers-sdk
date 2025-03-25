@@ -1,4 +1,4 @@
-import { resolveCompatibilityOptions } from "../src/compatibility-flags";
+import { resolveCompatibilityOptions } from "../src/compatibility-flags.js";
 
 describe("resolveCompatibilityOptions", () => {
 	test("it does not interfere with existing flags", () => {

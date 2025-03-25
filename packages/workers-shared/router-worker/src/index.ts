@@ -1,15 +1,15 @@
-import { PerformanceTimer } from "../../utils/performance";
-import { setupSentry } from "../../utils/sentry";
-import { mockJaegerBinding } from "../../utils/tracing";
-import { Analytics, DISPATCH_TYPE } from "./analytics";
-import { applyConfigurationDefaults } from "./configuration";
-import type AssetWorker from "../../asset-worker/src/index";
+import { PerformanceTimer } from "../../utils/performance.js";
+import { setupSentry } from "../../utils/sentry.js";
+import { mockJaegerBinding } from "../../utils/tracing.js";
+import { Analytics, DISPATCH_TYPE } from "./analytics.js";
+import { applyConfigurationDefaults } from "./configuration.js";
+import type AssetWorker from "../../asset-worker/src/index.js";
 import type {
 	JaegerTracing,
 	RouterConfig,
 	UnsafePerformanceTimer,
-} from "../../utils/types";
-import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
+} from "../../utils/types.js";
+import type { ColoMetadata, Environment, ReadyAnalytics } from "./types.js";
 
 export interface Env {
 	ASSET_WORKER: Service<AssetWorker>;

@@ -1,4 +1,4 @@
-import type { RouterConfig } from "../../utils/types";
+import type { RouterConfig } from "../../utils/types.js";
 
 export const applyConfigurationDefaults = (
 	configuration?: RouterConfig

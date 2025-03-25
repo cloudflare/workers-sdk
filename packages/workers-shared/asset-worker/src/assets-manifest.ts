@@ -3,7 +3,7 @@ import {
 	ENTRY_SIZE,
 	HEADER_SIZE,
 	PATH_HASH_SIZE,
-} from "../../utils/constants";
+} from "../../utils/constants.js";
 
 export class AssetsManifest {
 	private data: ArrayBuffer;
@@ -76,10 +76,11 @@ export const compare = (a: Uint8Array, b: Uint8Array) => {
 	}
 
 	for (const [i, v] of a.entries()) {
-		if (v < b[i]) {
+		const bVal = b[i] as number;
+		if (v < bVal) {
 			return -1;
 		}
-		if (v > b[i]) {
+		if (v > bVal) {
 			return 1;
 		}
 	}

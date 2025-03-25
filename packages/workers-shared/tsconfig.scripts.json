@@ -1,0 +1,19 @@
+{
+	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
+	"compilerOptions": {
+		"module": "NodeNext",
+		"moduleDetection": "force",
+		"moduleResolution": "nodenext",
+		"verbatimModuleSyntax": true,
+		"types": ["@types/node"],
+
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
+		"forceConsistentCasingInFileNames": true,
+		"useUnknownInCatchVariables": false,
+		// "erasableSyntaxOnly": true,
+
+		"noEmit": true
+	},
+	"include": ["./scripts/**/*", "**/vitest.config.mts"]
+}

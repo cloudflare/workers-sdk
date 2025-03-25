@@ -1,7 +1,7 @@
-import { CACHE_CONTROL_BROWSER } from "../constants";
-import { HEADERS_VERSION } from "../handler";
-import { generateRulesMatcher, replacer } from "./rules-engine";
-import type { AssetConfig } from "../../../utils/types";
+import { CACHE_CONTROL_BROWSER } from "../constants.js";
+import { HEADERS_VERSION } from "../handler.js";
+import { generateRulesMatcher, replacer } from "./rules-engine.js";
+import type { AssetConfig } from "../../../utils/types.js";
 
 /**
  * Returns a Headers object that contains additional headers (to those
@@ -50,8 +50,8 @@ export function attachCustomHeaders(
 			: {},
 		({ set = {}, unset = [] }, replacements) => {
 			const replacedSet: Record<string, string> = {};
-			Object.keys(set).forEach((key) => {
-				replacedSet[key] = replacer(set[key], replacements);
+			Object.entries(set).forEach(([key, value]) => {
+				replacedSet[key] = replacer(value, replacements);
 			});
 			return {
 				set: replacedSet,
@@ -70,11 +70,11 @@ export function attachCustomHeaders(
 		unset.forEach((key) => {
 			response.headers.delete(key);
 		});
-		Object.keys(set).forEach((key) => {
+		Object.entries(set).forEach(([key, value]) => {
 			if (setMap.has(key.toLowerCase())) {
-				response.headers.append(key, set[key]);
+				response.headers.append(key, value);
 			} else {
-				response.headers.set(key, set[key]);
+				response.headers.set(key, value);
 				setMap.add(key.toLowerCase());
 			}
 		});

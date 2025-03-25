@@ -1,4 +1,4 @@
-import type { ReadyAnalytics } from "./types";
+import type { ReadyAnalytics } from "./types.js";
 
 // This will allow us to make breaking changes to the analytic schema
 const VERSION = 1;

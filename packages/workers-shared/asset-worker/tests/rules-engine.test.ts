@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { generateRulesMatcher, replacer } from "../src/utils/rules-engine";
+import { generateRulesMatcher, replacer } from "../src/utils/rules-engine.js";
 
 describe("rules engine", () => {
 	test("it should match simple pathname hosts", () => {

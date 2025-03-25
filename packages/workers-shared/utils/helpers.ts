@@ -6,8 +6,13 @@ import {
 	CF_ASSETS_IGNORE_FILENAME,
 	HEADERS_FILENAME,
 	REDIRECTS_FILENAME,
-} from "./constants";
+} from "./constants.js";
+import type { Ignore, Options } from "ignore";
 import type { PathOrFileDescriptor } from "node:fs";
+
+const ignoreFn = ignore satisfies typeof ignore as unknown as (
+	options?: Options
+) => Ignore;
 
 /** normalises sep for windows and prefix with `/` */
 export const normalizeFilePath = (relativeFilepath: string) => {
@@ -39,7 +44,7 @@ export function createPatternMatcher(
 	if (patterns.length === 0) {
 		return (_filePath) => !exclude;
 	} else {
-		const ignorer = ignore().add(patterns);
+		const ignorer = ignoreFn().add(patterns);
 		return (filePath) => ignorer.test(filePath).ignored;
 	}
 }

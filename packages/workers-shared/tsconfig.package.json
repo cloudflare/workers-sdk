@@ -1,0 +1,31 @@
+{
+	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
+	"compilerOptions": {
+		"module": "NodeNext",
+		"moduleDetection": "force",
+		"moduleResolution": "nodenext",
+		"verbatimModuleSyntax": true,
+		"types": ["@cloudflare/workers-types/experimental", "@types/node"],
+
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
+		"forceConsistentCasingInFileNames": true,
+		"useUnknownInCatchVariables": false,
+		// "erasableSyntaxOnly": true,
+
+		"noEmit": false,
+		"outDir": "./dist/",
+		"sourceMap": true,
+		"declaration": true,
+		"composite": true,
+		"declarationMap": true
+	},
+	"include": ["**/*"],
+	"exclude": [
+		"./dist/**/*",
+		"./scripts/**/*",
+		"**/*.test.ts",
+		"**/tests/**/*",
+		"**/vitest.config.mts"
+	]
+}
