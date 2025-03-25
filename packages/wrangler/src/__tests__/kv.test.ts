@@ -636,7 +636,7 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --binding       the binding name to the namespace to write to  [string]
+					      --binding       The binding name to the namespace to write to  [string]
 					      --namespace-id  The id of the namespace to write to  [string]
 					      --preview       Interact with a preview namespace  [boolean]
 					      --ttl           Time for which the entries should be visible  [number]
