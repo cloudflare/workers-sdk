@@ -21,13 +21,19 @@ export default {
 			case "/test-random":
 				return testGetRandomValues();
 			case "/test-process":
-				return testProcessBehaviour();
+				return testProcessBehavior();
 			case "/query":
 				return testPostgresLibrary(env, ctx);
 			case "/test-x509-certificate":
 				return testX509Certificate();
 			case "/test-require-alias":
-				return testRequireUenvAliasedPackages();
+				return testRequireUnenvAliasedPackages();
+			case "/test-immediate":
+				return await testImmediate();
+			case "/test-tls":
+				return await testTls();
+			case "/test-crypto":
+				return await testCrypto();
 		}
 
 		return new Response(
@@ -36,13 +42,36 @@ export default {
 <a href="test-random">Test getRandomValues()</a>
 <a href="test-x509-certificate">Test X509Certificate</a>
 <a href="test-require-alias">Test require unenv aliased packages</a>
+<a href="test-immediate">Test setImmediate</a>
+<a href="test-tls">node:tls</a>
+<a href="test-crypto">node:crypto</a>
 `,
 			{ headers: { "Content-Type": "text/html; charset=utf-8" } }
 		);
 	},
 };
 
-function testRequireUenvAliasedPackages() {
+async function testImmediate() {
+	try {
+		await new Promise((resolve, reject) => {
+			// Give it a whole second otherwise it times-out
+			setTimeout(reject, 1000);
+
+			// This setImmediate should never trigger the reject if the clearImmediate is working
+			const id = setImmediate(reject);
+			// clearImmediate should cancel reject callback
+			clearImmediate(id);
+			// This setImmediate should trigger the resolve callback
+			setImmediate(resolve);
+		});
+
+		return new Response("OK");
+	} catch (e) {
+		return new Response(`NOT OK: ${e}`);
+	}
+}
+
+function testRequireUnenvAliasedPackages() {
 	const fetch = require("cross-fetch");
 	const supportsDefaultExports = typeof fetch === "function";
 	const supportsNamedExports = typeof fetch.Headers === "function";
@@ -105,9 +134,12 @@ function testBasicNodejsProperties() {
 	assert.notEqual(Performance, undefined);
 	assert.strictEqual(global.Performance, Performance);
 	assert.strictEqual(globalThis.Performance, Performance);
+
+	assert.strictEqual(typeof performance.measure, "function");
+	assert.strictEqual(typeof performance.clearMarks, "function");
 }
 
-function testProcessBehaviour() {
+function testProcessBehavior() {
 	const originalProcess = process;
 	try {
 		assert.notEqual(process, undefined);
@@ -168,4 +200,36 @@ async function testPostgresLibrary(env: Env, ctx: Context) {
 	// Clean up the client
 	ctx.waitUntil(client.end());
 	return resp;
+}
+
+async function testTls() {
+	const tls = await import("node:tls");
+
+	assert.strictEqual(typeof tls.connect, "function");
+	assert.strictEqual(typeof tls.TLSSocket, "function");
+	assert.strictEqual(typeof tls.checkServerIdentity, "function");
+	assert.strictEqual(typeof tls.createSecureContext, "function");
+	assert.strictEqual(typeof tls.SecureContext, "function");
+
+	return new Response("OK");
+}
+
+async function testCrypto() {
+	const crypto = await import("node:crypto");
+
+	const test = { name: "aes-128-cbc", size: 16, iv: 16 };
+
+	const key = crypto.createSecretKey(Buffer.alloc(test.size));
+	const iv = Buffer.alloc(test.iv);
+
+	const cipher = crypto.createCipheriv(test.name, key, iv);
+	const decipher = crypto.createDecipheriv(test.name, key, iv);
+
+	let data = "";
+	data += decipher.update(cipher.update("Hello World", "utf8"));
+	data += decipher.update(cipher.final());
+	data += decipher.final();
+	assert.strictEqual(data, "Hello World");
+
+	return new Response("OK");
 }

@@ -48,7 +48,7 @@ describe("wrangler", () => {
 				  wrangler delete [script]        🗑  Delete a Worker from Cloudflare
 				  wrangler tail [worker]          🦚 Start a log tailing session for a Worker
 				  wrangler secret                 🤫 Generate a secret that can be referenced in a Worker
-				  wrangler types [path]           📝 Generate types from bindings and module rules in configuration
+				  wrangler types [path]           📝 Generate types from your Worker configuration
 
 				  wrangler kv                     🗂️  Manage Workers KV Namespaces
 				  wrangler queues                 🇶  Manage Workers Queues
@@ -66,9 +66,11 @@ describe("wrangler", () => {
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
 				  wrangler whoami                 🕵️  Retrieve your user information
+				  wrangler secrets-store          🔐 Manage the Secrets Store [alpha]
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]
@@ -105,7 +107,7 @@ describe("wrangler", () => {
 				  wrangler delete [script]        🗑  Delete a Worker from Cloudflare
 				  wrangler tail [worker]          🦚 Start a log tailing session for a Worker
 				  wrangler secret                 🤫 Generate a secret that can be referenced in a Worker
-				  wrangler types [path]           📝 Generate types from bindings and module rules in configuration
+				  wrangler types [path]           📝 Generate types from your Worker configuration
 
 				  wrangler kv                     🗂️  Manage Workers KV Namespaces
 				  wrangler queues                 🇶  Manage Workers Queues
@@ -123,9 +125,11 @@ describe("wrangler", () => {
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
 				  wrangler whoami                 🕵️  Retrieve your user information
+				  wrangler secrets-store          🔐 Manage the Secrets Store [alpha]
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]
@@ -154,24 +158,28 @@ describe("wrangler", () => {
 				`[Error: The argument "--config" expects a single value, but received multiple: ["wrangler.toml","example"].]`
 			);
 		});
+
+		it("should change cwd with --cwd", async () => {
+			const spy = vi.spyOn(process, "chdir").mockImplementation(() => {});
+			await runWrangler("--cwd /path");
+			expect(process.chdir).toHaveBeenCalledTimes(1);
+			expect(process.chdir).toHaveBeenCalledWith("/path");
+			spy.mockRestore();
+		});
 	});
 
 	describe("preview", () => {
 		it("should throw an error if the deprecated command is used with positional arguments", async () => {
-			await expect(runWrangler("preview GET")).rejects
-				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Deprecation:
-				The \`wrangler preview\` command has been deprecated.
-				Try using \`wrangler dev\` to to try out a worker during development.
-				]
-			`);
-			await expect(runWrangler(`preview GET "SomeBody"`)).rejects
-				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Deprecation:
-				The \`wrangler preview\` command has been deprecated.
-				Try using \`wrangler dev\` to to try out a worker during development.
-				]
-			`);
+			await expect(
+				runWrangler("preview GET")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown arguments: preview, GET]`
+			);
+			await expect(
+				runWrangler(`preview GET "SomeBody"`)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown arguments: preview, GET, SomeBody]`
+			);
 		});
 	});
 
@@ -188,10 +196,11 @@ describe("wrangler", () => {
 				  wrangler secret put <key>     Create or update a secret variable for a Worker
 				  wrangler secret delete <key>  Delete a secret variable from a Worker
 				  wrangler secret list          List all secrets for a Worker
-				  wrangler secret bulk [json]   Bulk upload secrets for a Worker
+				  wrangler secret bulk [file]   Bulk upload secrets for a Worker
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
@@ -213,6 +222,7 @@ describe("wrangler", () => {
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
@@ -235,6 +245,7 @@ describe("wrangler", () => {
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
@@ -255,6 +266,7 @@ describe("wrangler", () => {
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
@@ -275,6 +287,7 @@ describe("wrangler", () => {
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
@@ -282,7 +295,7 @@ describe("wrangler", () => {
 		});
 	});
 
-	it("should print a deprecation message for 'build' and then try to run `deploy --dry-run --outdir`", async () => {
+	it("build should run `deploy --dry-run --outdir`", async () => {
 		writeWranglerConfig({
 			main: "index.js",
 		});
@@ -290,14 +303,7 @@ describe("wrangler", () => {
 		await runWrangler("build");
 		await endEventLoop();
 		expect(std.out).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: \`wrangler build\` has been deprecated.[0m
-
-			  Please refer to [4mhttps://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build[0m
-			  for more information.
-			  Attempting to run \`wrangler deploy --dry-run --outdir=dist\` for you instead:
-
-
-			Total Upload: xx KiB / gzip: xx KiB
+			"Total Upload: xx KiB / gzip: xx KiB
 			No bindings found.
 			--dry-run: exiting now."
 		`);

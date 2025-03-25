@@ -1,4 +1,5 @@
-import ws from "ws";
+import { coupleWebSocket } from "miniflare";
+import { WebSocketServer } from "ws";
 import { UNKNOWN_HOST } from "./shared";
 import { nodeHeadersToWebHeaders } from "./utils";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
@@ -12,10 +13,9 @@ import type * as vite from "vite";
  */
 export function handleWebSocket(
 	httpServer: vite.HttpServer,
-	fetcher: ReplaceWorkersTypes<Fetcher>["fetch"],
-	logger: vite.Logger
+	fetcher: ReplaceWorkersTypes<Fetcher>["fetch"]
 ) {
-	const nodeWebSocket = new ws.Server({ noServer: true });
+	const nodeWebSocket = new WebSocketServer({ noServer: true });
 
 	httpServer.on(
 		"upgrade",
@@ -44,41 +44,7 @@ export function handleWebSocket(
 				socket,
 				head,
 				async (clientWebSocket) => {
-					workerWebSocket.accept();
-
-					// Forward Worker events to client
-					workerWebSocket.addEventListener("message", (event) => {
-						clientWebSocket.send(event.data);
-					});
-					workerWebSocket.addEventListener("error", (event) => {
-						logger.error(
-							`WebSocket error:\n${event.error?.stack || event.error?.message}`,
-							{ error: event.error }
-						);
-					});
-					workerWebSocket.addEventListener("close", () => {
-						clientWebSocket.close();
-					});
-
-					// Forward client events to Worker
-					clientWebSocket.on("message", (data, isBinary) => {
-						workerWebSocket.send(
-							isBinary
-								? Array.isArray(data)
-									? Buffer.concat(data)
-									: data
-								: data.toString()
-						);
-					});
-					clientWebSocket.on("error", (error) => {
-						logger.error(`WebSocket error:\n${error.stack || error.message}`, {
-							error,
-						});
-					});
-					clientWebSocket.on("close", () => {
-						workerWebSocket.close();
-					});
-
+					coupleWebSocket(clientWebSocket, workerWebSocket);
 					nodeWebSocket.emit("connection", clientWebSocket, request);
 				}
 			);

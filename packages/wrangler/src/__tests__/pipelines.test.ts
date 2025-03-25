@@ -264,6 +264,7 @@ describe("pipelines", () => {
 
 			GLOBAL FLAGS
 			  -c, --config   Path to Wrangler configuration file  [string]
+			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
@@ -309,6 +310,7 @@ describe("pipelines", () => {
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
@@ -598,6 +600,25 @@ describe("pipelines", () => {
 				  https://github.com/cloudflare/workers-sdk/issues/new/choose"
 			`);
 			expect(requests.count).toEqual(1);
+		});
+
+		it("should remove transformations", async () => {
+			const pipeline: Pipeline = samplePipeline;
+			mockShowRequest(pipeline.name, pipeline);
+
+			const update = JSON.parse(JSON.stringify(pipeline));
+			update.transforms = [
+				{
+					script: "hello",
+					entrypoint: "MyTransform",
+				},
+			];
+			const updateReq = mockUpdateRequest(update.name, update);
+
+			await runWrangler("pipelines update my-pipeline --transform-worker none");
+
+			expect(updateReq.count).toEqual(1);
+			expect(updateReq.body?.transforms.length).toEqual(0);
 		});
 	});
 

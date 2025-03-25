@@ -1,6 +1,8 @@
 import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockPrompt } from "./helpers/mock-dialogs";
+import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -27,15 +29,19 @@ describe("wrangler", () => {
 				🇶  Manage Workers Queues
 
 				COMMANDS
-				  wrangler queues list           List Queues
-				  wrangler queues create <name>  Create a Queue
-				  wrangler queues update <name>  Update a Queue
-				  wrangler queues delete <name>  Delete a Queue
-				  wrangler queues info <name>    Get Queue information
-				  wrangler queues consumer       Configure Queue consumers
+				  wrangler queues list                    List Queues
+				  wrangler queues create <name>           Create a Queue
+				  wrangler queues update <name>           Update a Queue
+				  wrangler queues delete <name>           Delete a Queue
+				  wrangler queues info <name>             Get Queue information
+				  wrangler queues consumer                Configure Queue consumers
+				  wrangler queues pause-delivery <name>   Pause message delivery for a Queue
+				  wrangler queues resume-delivery <name>  Resume message delivery for a Queue
+				  wrangler queues purge <name>            Purge messages from a Queue
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
@@ -109,6 +115,7 @@ describe("wrangler", () => {
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
+					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]
@@ -256,6 +263,7 @@ describe("wrangler", () => {
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
+					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]
@@ -509,23 +517,24 @@ describe("wrangler", () => {
 				await runWrangler("queues update --help");
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-          "wrangler queues update <name>
+					"wrangler queues update <name>
 
-          Update a Queue
+					Update a Queue
 
-          POSITIONALS
-            name  The name of the queue  [string] [required]
+					POSITIONALS
+					  name  The name of the queue  [string] [required]
 
-          GLOBAL FLAGS
-            -c, --config   Path to Wrangler configuration file  [string]
-            -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-            -h, --help     Show help  [boolean]
-            -v, --version  Show version number  [boolean]
+					GLOBAL FLAGS
+					  -c, --config   Path to Wrangler configuration file  [string]
+					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]
 
-          OPTIONS
-                --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 42300  [number]
-                --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be between 60 and 1209600  [number]"
-        `);
+					OPTIONS
+					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 42300  [number]
+					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be between 60 and 1209600  [number]"
+				`);
 			});
 
 			it("should update a queue with new message retention period and preserve old delivery delay", async () => {
@@ -671,6 +680,7 @@ describe("wrangler", () => {
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
+					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]"
@@ -739,6 +749,7 @@ describe("wrangler", () => {
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
+					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]"
@@ -786,6 +797,7 @@ describe("wrangler", () => {
 
 						GLOBAL FLAGS
 						  -c, --config   Path to Wrangler configuration file  [string]
+						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
@@ -1107,6 +1119,7 @@ describe("wrangler", () => {
 
 						GLOBAL FLAGS
 						  -c, --config   Path to Wrangler configuration file  [string]
+						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]"
@@ -1494,6 +1507,7 @@ describe("wrangler", () => {
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
+					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]"
@@ -1540,6 +1554,7 @@ describe("wrangler", () => {
 
 						GLOBAL FLAGS
 						  -c, --config   Path to Wrangler configuration file  [string]
+						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
@@ -1670,6 +1685,7 @@ describe("wrangler", () => {
 
 						GLOBAL FLAGS
 						  -c, --config   Path to Wrangler configuration file  [string]
+						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]"
@@ -1757,6 +1773,7 @@ describe("wrangler", () => {
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
+					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]"
@@ -1830,6 +1847,403 @@ describe("wrangler", () => {
 					Consumers: r2_bucket:bucket-consumer"
 				`);
 			});
+		});
+	});
+
+	describe("pause-delivery", () => {
+		function mockUpdateRequest(queueName: string) {
+			const requests = { count: 0 };
+
+			msw.use(
+				http.patch(
+					"*/accounts/:accountId/queues/:queueId",
+					async ({ request }) => {
+						requests.count += 1;
+
+						const body = (await request.json()) as {
+							queue_name: string;
+							settings: {
+								delivery_paused: boolean;
+							};
+						};
+						expect(body.queue_name).toEqual(queueName);
+						expect(body.settings.delivery_paused).toEqual(true);
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								queue_name: queueName,
+								created_on: "01-01-2001",
+								modified_on: "01-01-2001",
+							},
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
+		function mockGetQueueRequest(
+			queueName: string,
+			queueSettings: {
+				delivery_paused: boolean;
+			}
+		) {
+			const requests = { count: 0 };
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/queues?*",
+					async () => {
+						requests.count += 1;
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: [
+								{
+									queue_name: queueName,
+									created_on: "",
+									producers: [],
+									consumers: [],
+									producers_total_count: 1,
+									consumers_total_count: 0,
+									modified_on: "",
+									queue_id: "queueId",
+									settings: {
+										delivery_paused: queueSettings.delivery_paused,
+									},
+								},
+							],
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
+
+		it("should show the correct help text", async () => {
+			await runWrangler("queues pause-delivery --help");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"wrangler queues pause-delivery <name>
+
+				Pause message delivery for a Queue
+
+				POSITIONALS
+				  name  The name of the queue  [string] [required]
+
+				GLOBAL FLAGS
+				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
+			`);
+		});
+
+		it("should update the queue's delivery_paused setting", async () => {
+			const getrequests = mockGetQueueRequest("testQueue", {
+				delivery_paused: false,
+			});
+			const requests = mockUpdateRequest("testQueue");
+			await runWrangler("queues pause-delivery testQueue");
+
+			expect(requests.count).toEqual(1);
+			expect(getrequests.count).toEqual(1);
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Pausing message delivery for queue testQueue.
+				Paused message delivery for queue testQueue."
+			`);
+		});
+	});
+
+	describe("resume-delivery", () => {
+		function mockUpdateRequest(queueName: string) {
+			const requests = { count: 0 };
+
+			msw.use(
+				http.patch(
+					"*/accounts/:accountId/queues/:queueId",
+					async ({ request }) => {
+						requests.count += 1;
+
+						const body = (await request.json()) as {
+							queue_name: string;
+							settings: {
+								delivery_paused: boolean;
+							};
+						};
+						expect(body.queue_name).toEqual(queueName);
+						expect(body.settings.delivery_paused).toEqual(false);
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								queue_name: queueName,
+								created_on: "01-01-2001",
+								modified_on: "01-01-2001",
+							},
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
+		function mockGetQueueRequest(
+			queueName: string,
+			queueSettings: {
+				delivery_paused: boolean;
+			}
+		) {
+			const requests = { count: 0 };
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/queues?*",
+					async () => {
+						requests.count += 1;
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: [
+								{
+									queue_name: queueName,
+									created_on: "",
+									producers: [],
+									consumers: [],
+									producers_total_count: 1,
+									consumers_total_count: 0,
+									modified_on: "",
+									queue_id: "queueId",
+									settings: {
+										delivery_paused: queueSettings.delivery_paused,
+									},
+								},
+							],
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
+
+		it("should show the correct help text", async () => {
+			await runWrangler("queues resume-delivery --help");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"wrangler queues resume-delivery <name>
+
+				Resume message delivery for a Queue
+
+				POSITIONALS
+				  name  The name of the queue  [string] [required]
+
+				GLOBAL FLAGS
+				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
+			`);
+		});
+
+		it("should update the queue's delivery_paused setting to false", async () => {
+			const getrequests = mockGetQueueRequest("testQueue", {
+				delivery_paused: false,
+			});
+			const requests = mockUpdateRequest("testQueue");
+			await runWrangler("queues resume-delivery testQueue");
+
+			expect(requests.count).toEqual(1);
+			expect(getrequests.count).toEqual(1);
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Resuming message delivery for queue testQueue.
+				Resumed message delivery for queue testQueue."
+			`);
+		});
+	});
+
+	describe("purge", () => {
+		const { setIsTTY } = useMockIsTTY();
+		beforeEach(() => {
+			setIsTTY(false);
+		});
+
+		function mockPurgeRequest() {
+			const requests = { count: 0 };
+
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/queues/:queueId/purge",
+					async ({ request }) => {
+						requests.count += 1;
+
+						const body = (await request.json()) as {
+							delete_messages_permanently: boolean;
+						};
+						expect(body.delete_messages_permanently).toEqual(true);
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: {
+								started_on: "01-01-2001",
+								complete: false,
+							},
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
+		function mockGetQueueRequest(queueName: string) {
+			const requests = { count: 0 };
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/queues?*",
+					async () => {
+						requests.count += 1;
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: [
+								{
+									queue_name: queueName,
+									created_on: "",
+									producers: [],
+									consumers: [],
+									producers_total_count: 1,
+									consumers_total_count: 0,
+									modified_on: "",
+									queue_id: "queueId",
+								},
+							],
+						});
+					},
+					{ once: true }
+				)
+			);
+			return requests;
+		}
+
+		it("should show the correct help text", async () => {
+			await runWrangler("queues purge --help");
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"wrangler queues purge <name>
+
+				Purge messages from a Queue
+
+				POSITIONALS
+				  name  The name of the queue  [string] [required]
+
+				GLOBAL FLAGS
+				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]
+
+				OPTIONS
+				      --force  Skip the confirmation dialog and forcefully purge the Queue  [boolean]"
+			`);
+		});
+
+		it("rejects a missing --force flag in non-interactive mode", async () => {
+			const getrequests = mockGetQueueRequest("testQueue");
+			const requests = mockPurgeRequest();
+
+			await expect(
+				runWrangler("queues purge testQueue")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The --force flag is required to purge a Queue in non-interactive mode]`
+			);
+
+			expect(requests.count).toEqual(0);
+			expect(getrequests.count).toEqual(0);
+
+			expect(std.out).toMatchInlineSnapshot(`""`);
+		});
+
+		it("allows purge with the --force flag in non-interactive mode", async () => {
+			const getrequests = mockGetQueueRequest("testQueue");
+			const requests = mockPurgeRequest();
+
+			await runWrangler("queues purge testQueue --force");
+
+			expect(requests.count).toEqual(1);
+			expect(getrequests.count).toEqual(1);
+
+			expect(std.out).toMatchInlineSnapshot(`"Purged Queue 'testQueue'"`);
+		});
+
+		it("allows purge with the --force flag in non-interactive mode", async () => {
+			const getrequests = mockGetQueueRequest("testQueue");
+			const requests = mockPurgeRequest();
+
+			await runWrangler("queues purge testQueue --force");
+
+			expect(requests.count).toEqual(1);
+			expect(getrequests.count).toEqual(1);
+
+			expect(std.out).toMatchInlineSnapshot(`"Purged Queue 'testQueue'"`);
+		});
+
+		it("allows purge with the --force flag in interactive mode", async () => {
+			setIsTTY(true);
+			const getrequests = mockGetQueueRequest("testQueue");
+			const requests = mockPurgeRequest();
+			await runWrangler("queues purge testQueue --force");
+
+			expect(requests.count).toEqual(1);
+			expect(getrequests.count).toEqual(1);
+
+			expect(std.out).toMatchInlineSnapshot(`"Purged Queue 'testQueue'"`);
+		});
+
+		it("rejects invalid confirmation in interactive mode", async () => {
+			setIsTTY(true);
+			const getrequests = mockGetQueueRequest("testQueue");
+			const requests = mockPurgeRequest();
+			mockPrompt({
+				text: "This operation will permanently delete all the messages in Queue testQueue. Type testQueue to proceed.",
+				result: "wrong-name",
+			});
+			await expect(
+				runWrangler("queues purge testQueue")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Incorrect queue name provided. Skipping purge operation]`
+			);
+
+			expect(requests.count).toEqual(0);
+			expect(getrequests.count).toEqual(0);
+
+			expect(std.out).toMatchInlineSnapshot(`""`);
+		});
+
+		it("allows purge with correct confirmation in interactive mode", async () => {
+			setIsTTY(true);
+			const getrequests = mockGetQueueRequest("testQueue");
+			const requests = mockPurgeRequest();
+			mockPrompt({
+				text: "This operation will permanently delete all the messages in Queue testQueue. Type testQueue to proceed.",
+				result: "testQueue",
+			});
+			await runWrangler("queues purge testQueue");
+
+			expect(requests.count).toEqual(1);
+			expect(getrequests.count).toEqual(1);
+
+			expect(std.out).toMatchInlineSnapshot(`"Purged Queue 'testQueue'"`);
 		});
 	});
 });

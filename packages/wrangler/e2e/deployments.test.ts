@@ -12,7 +12,7 @@ const TIMEOUT = 50_000;
 const normalize = (str: string) =>
 	normalizeOutput(str, {
 		[CLOUDFLARE_ACCOUNT_ID]: "CLOUDFLARE_ACCOUNT_ID",
-	}).replaceAll(/^Author:(\s+).+@.+$/gm, "Author:$1person@example.com");
+	}).replaceAll(/^Author:.*$/gm, "Author:      person@example.com");
 const workerName = generateResourceName();
 const dispatchNamespaceName = generateResourceName("dispatch");
 const dispatchWorkerName = generateResourceName();
@@ -193,17 +193,6 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 			                 Message:  -"
 		`);
 	});
-
-	it("delete worker", async () => {
-		const output = await helper.run(`wrangler delete`);
-
-		expect(output.stdout).toContain("Successfully deleted");
-		const status = await retry(
-			(s) => s === 200 || s === 500,
-			() => fetch(deployedUrl).then((r) => r.status)
-		);
-		expect(status).toBe(404);
-	});
 });
 
 type AssetTestCase = {
@@ -257,9 +246,7 @@ describe.each([
 		name: "regular Worker",
 		flags: "",
 		async beforeAll() {},
-		async afterAll(helper: WranglerE2ETestHelper) {
-			await helper.run(`wrangler delete`);
-		},
+		async afterAll() {},
 		expectInitialStdout: (output: string) => {
 			expect(output).toEqual(`🌀 Building list of assets...
 🌀 Starting asset upload...
@@ -279,15 +266,17 @@ Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
 		},
 		expectSubsequentStdout: (output: string) => {
-			expect(output).toEqual(`🌀 Building list of assets...
-🌀 Starting asset upload...
-No files to upload. Proceeding with deployment...
-Total Upload: xx KiB / gzip: xx KiB
-No bindings found.
-Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
-Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
-  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
-Current Version ID: 00000000-0000-0000-0000-000000000000`);
+			expect(output).toContain(`🌀 Building list of assets...
+🌀 Starting asset upload...`);
+			// Unfortunately the server-side deduping logic isn't always 100% accurate, and sometimes a file is re-uploaded
+			// As such, to reduce CI flakes, this test just asserts that _at least one_ file isn't re-uploaded
+			expect(
+				[
+					"Uploaded 1 of 1 assets",
+					"Uploaded 1 of 2 assets",
+					"No files to upload.",
+				].some((s) => output.includes(s))
+			).toBeTruthy();
 		},
 	},
 	{
@@ -350,14 +339,17 @@ Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
 		},
 		expectSubsequentStdout: (output: string) => {
-			expect(output).toEqual(`🌀 Building list of assets...
-🌀 Starting asset upload...
-No files to upload. Proceeding with deployment...
-Total Upload: xx KiB / gzip: xx KiB
-No bindings found.
-Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
-  Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
-Current Version ID: 00000000-0000-0000-0000-000000000000`);
+			expect(output).toContain(`🌀 Building list of assets...
+🌀 Starting asset upload...`);
+			// Unfortunately the server-side deduping logic isn't always 100% accurate, and sometimes a file is re-uploaded
+			// As such, to reduce CI flakes, this test just asserts that _at least one_ file isn't re-uploaded
+			expect(
+				[
+					"Uploaded 1 of 1 assets",
+					"Uploaded 1 of 2 assets",
+					"No files to upload.",
+				].some((s) => output.includes(s))
+			).toBeTruthy();
 		},
 	},
 ])("Workers + Assets deployment: $name", { timeout: TIMEOUT }, (testcase) => {

@@ -11,6 +11,9 @@ const { env } = defineEnv({
 	presets: [cloudflare],
 });
 
+export const nodeCompatExternals = new Set(env.external);
+export const nodeCompatEntries = getNodeCompatEntries();
+
 /**
  * Returns true if the given combination of compat dates and flags means that we need Node.js compatibility.
  */
@@ -27,39 +30,12 @@ export function isNodeCompat(
 	if (nodeCompatMode === "v2") {
 		return true;
 	}
-	if (nodeCompatMode === "legacy") {
-		throw new Error(
-			"Unsupported Node.js compat mode (legacy). Remove the `node_compat` setting and add the `nodejs_compat` flag instead."
-		);
-	}
 	if (nodeCompatMode === "v1") {
 		throw new Error(
 			`Unsupported Node.js compat mode (v1). Only the v2 mode is supported, either change your compat date to "2024-09-23" or later, or set the "nodejs_compat_v2" compatibility flag`
 		);
 	}
 	return false;
-}
-
-/**
- * Gets a set of module specifiers for all possible Node.js compat polyfill entry-points
- */
-export function getNodeCompatEntries() {
-	const entries = new Set<string>(Object.values(env.alias));
-	for (const globalInject of Object.values(env.inject)) {
-		if (typeof globalInject === "string") {
-			entries.add(globalInject);
-		} else {
-			assert(
-				globalInject[0] !== undefined,
-				"Expected first element of globalInject to be defined"
-			);
-			entries.add(globalInject[0]);
-		}
-	}
-	for (const external of env.external) {
-		entries.delete(external);
-	}
-	return entries;
 }
 
 /**
@@ -85,19 +61,18 @@ export function injectGlobalCode(id: string, code: string) {
 		})
 		.join("\n");
 
+	// Some globals are not injected using the approach above but are added to globalThis via side-effect imports of polyfills from the unenv-preset.
+	const polyfillCode = env.polyfill
+		.map((polyfillPath) => `import "${polyfillPath}";\n`)
+		.join("");
+
 	const modified = new MagicString(code);
 	modified.prepend(injectedCode);
+	modified.prepend(polyfillCode);
 	return {
 		code: modified.toString(),
 		map: modified.generateMap({ hires: "boundary", source: id }),
 	};
-}
-
-/**
- * Gets an array of modules that should be considered external.
- */
-export function getNodeCompatExternals(): string[] {
-	return env.external;
 }
 
 /**
@@ -119,4 +94,39 @@ export function resolveNodeJSImport(source: string) {
 			resolved: resolvePathSync(alias, { url: import.meta.url }),
 		};
 	}
+	if (nodeCompatEntries.has(source)) {
+		return {
+			unresolved: source,
+			resolved: resolvePathSync(source, { url: import.meta.url }),
+		};
+	}
+}
+
+/**
+ * Gets a set of module specifiers for all possible Node.js compat polyfill entry-points
+ */
+function getNodeCompatEntries() {
+	// Include all the alias targets
+	const entries = new Set<string>(Object.values(env.alias));
+
+	// Include all the injection targets
+	for (const globalInject of Object.values(env.inject)) {
+		if (typeof globalInject === "string") {
+			entries.add(globalInject);
+		} else {
+			assert(
+				globalInject[0] !== undefined,
+				"Expected first element of globalInject to be defined"
+			);
+			entries.add(globalInject[0]);
+		}
+	}
+
+	// Include all the polyfills
+	env.polyfill.forEach((polyfill) => entries.add(polyfill));
+
+	// Exclude all the externals
+	nodeCompatExternals.forEach((external) => entries.delete(external));
+
+	return entries;
 }

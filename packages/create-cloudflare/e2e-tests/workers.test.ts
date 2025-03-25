@@ -1,3 +1,4 @@
+import { existsSync } from "fs";
 import { join } from "path";
 import { readJSON, readToml } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
@@ -6,7 +7,7 @@ import { sleep } from "helpers/sleep";
 import { fetch } from "undici";
 import { beforeAll, describe, expect } from "vitest";
 import { deleteWorker } from "../scripts/common";
-import { getFrameworkToTest } from "./frameworkToTest";
+import { getFrameworkToTest } from "./frameworks/framework-to-test";
 import {
 	isQuarantineMode,
 	kill,
@@ -31,7 +32,35 @@ type WorkerTestConfig = RunnerConfig & {
 
 function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 	if (opts.experimental) {
+		// none currently
+		return [];
+	} else {
 		return [
+			{
+				template: "hello-world",
+				variants: ["ts", "js"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello World!",
+				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Hello World!",
+				},
+				verifyTest: true,
+			},
+			{
+				template: "hello-world",
+				variants: ["python"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello World!",
+				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Hello World!",
+				},
+			},
 			{
 				template: "hello-world-with-assets",
 				variants: ["ts", "js"],
@@ -76,34 +105,6 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 				// There is no preview script
 				verifyPreview: null,
 				argv: ["--category", "hello-world"],
-			},
-		];
-	} else {
-		return [
-			{
-				template: "hello-world",
-				variants: ["ts", "js"],
-				verifyDeploy: {
-					route: "/",
-					expectedText: "Hello World!",
-				},
-				verifyPreview: {
-					route: "/",
-					expectedText: "Hello World!",
-				},
-				verifyTest: true,
-			},
-			{
-				template: "hello-world",
-				variants: ["python"],
-				verifyDeploy: {
-					route: "/",
-					expectedText: "Hello World!",
-				},
-				verifyPreview: {
-					route: "/",
-					expectedText: "Hello World!",
-				},
 			},
 			{
 				template: "common",
@@ -154,6 +155,7 @@ describe
 	.skipIf(
 		getFrameworkToTest({ experimental }) ||
 			isQuarantineMode() ||
+			workerTests.length === 0 ||
 			process.platform === "win32",
 	)
 	.concurrent(`E2E: Workers templates`, () => {
@@ -177,6 +179,7 @@ describe
 				const name = testConfig.name ?? testConfig.template;
 				test({ experimental })(
 					name,
+					{ retry: 1, timeout: testConfig.timeout || TEST_TIMEOUT },
 					async ({ project, logStream }) => {
 						try {
 							const deployedUrl = await runCli(
@@ -197,18 +200,20 @@ describe
 							const tomlPath = join(project.path, "wrangler.toml");
 							const jsoncPath = join(project.path, "wrangler.jsonc");
 
-							try {
-								expect(jsoncPath).toExist();
+							if (existsSync(jsoncPath)) {
 								const config = readJSON(jsoncPath) as { main?: string };
 								if (config.main) {
 									expect(join(project.path, config.main)).toExist();
 								}
-							} catch (e) {
-								expect(tomlPath).toExist();
+							} else if (existsSync(tomlPath)) {
 								const config = readToml(tomlPath) as { main?: string };
 								if (config.main) {
 									expect(join(project.path, config.main)).toExist();
 								}
+							} else {
+								expect.fail(
+									`Expected at least one of "${jsoncPath}" or "${tomlPath}" to exist.`,
+								);
 							}
 
 							const { verifyDeploy, verifyTest } = testConfig;
@@ -227,7 +232,6 @@ describe
 							await deleteWorker(project.name);
 						}
 					},
-					{ retry: 1, timeout: testConfig.timeout || TEST_TIMEOUT },
 				);
 			});
 	});

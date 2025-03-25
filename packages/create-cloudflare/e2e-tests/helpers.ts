@@ -13,6 +13,7 @@ import path from "path";
 import { setTimeout } from "timers/promises";
 import { stripAnsi } from "@cloudflare/cli";
 import { spawn } from "cross-spawn";
+import { runCommand } from "helpers/command";
 import { retry } from "helpers/retry";
 import treeKill from "tree-kill";
 import { fetch } from "undici";
@@ -27,6 +28,13 @@ import type { Writable } from "stream";
 import type { RunnerTask, RunnerTestSuite } from "vitest";
 
 export const C3_E2E_PREFIX = "tmp-e2e-c3";
+export const TEST_TIMEOUT = 1000 * 60 * 5;
+export const LONG_TIMEOUT = 1000 * 60 * 10;
+export const TEST_PM = process.env.TEST_PM ?? "";
+export const NO_DEPLOY = process.env.E2E_NO_DEPLOY ?? true;
+export const TEST_RETRIES = process.env.E2E_RETRIES
+	? parseInt(process.env.E2E_RETRIES)
+	: 1;
 
 export const keys = {
 	enter: "\x0d",
@@ -83,6 +91,7 @@ export type RunnerConfig = {
 	 * Specifies whether to run the preview script for the project and assert the response from the specified route.
 	 */
 	verifyPreview: null | {
+		previewArgs?: string[];
 		route: string;
 		expectedText: string;
 	};
@@ -100,7 +109,7 @@ export const runC3 = async (
 	// We don't use the "test" package manager here (i.e. TEST_PM and TEST_PM_VERSION) because yarn 1.x doesn't actually provide a `dlx` version.
 	// And in any case, this first step just installs a temp copy of create-cloudflare and executes it.
 	// The point of `detectPackageManager()` is for delegating to framework tooling when generating a project correctly.
-	const cmd = ["pnpx", "create-cloudflare", ...argv];
+	const cmd = ["pnpx", `create-cloudflare@${version}`, ...argv];
 	const proc = spawnWithLogging(
 		cmd,
 		{ env: testEnv, cwd: tmpdir() },
@@ -439,6 +448,9 @@ const testProjectDir = (suite: string, test: string) => {
 	return { getName, getPath, clean };
 };
 
+/**
+ * Test that we pushed the commit message to the deployment correctly.
+ */
 export const testDeploymentCommitMessage = async (
 	projectName: string,
 	framework: string,
@@ -490,6 +502,27 @@ export const testDeploymentCommitMessage = async (
 	expect(projectLatestCommitMessage).toContain(`framework = ${framework}`);
 };
 
+/**
+ * Test that C3 added a git commit with the correct message.
+ */
+export async function testGitCommitMessage(
+	projectName: string,
+	framework: string,
+	projectPath: string,
+) {
+	const commitMessage = await runCommand(["git", "log", "-1"], {
+		silent: true,
+		cwd: projectPath,
+	});
+
+	expect(commitMessage).toMatch(
+		/Initialize web application via create-cloudflare CLI/,
+	);
+	expect(commitMessage).toContain(`C3 = create-cloudflare@${version}`);
+	expect(commitMessage).toContain(`project name = ${projectName}`);
+	expect(commitMessage).toContain(`framework = ${framework}`);
+}
+
 export const isQuarantineMode = () => {
 	return process.env.E2E_QUARANTINE === "true";
 };
@@ -507,7 +540,10 @@ export const test = (opts: { experimental: boolean }) =>
 			const suite = task.suite.name
 				.toLowerCase()
 				.replaceAll(/[^a-z0-9-]/g, "-");
-			const suffix = task.name.toLowerCase().replaceAll(/[^a-z0-9-]/g, "-");
+			const suffix = task.name
+				.toLowerCase()
+				.replaceAll(/[^a-z0-9-]/g, "-")
+				.replaceAll(/^-|-$/g, "");
 			const { getPath, getName, clean } = testProjectDir(suite, suffix);
 			await use({ path: getPath(), name: getName() });
 			clean();

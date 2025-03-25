@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import fs from "node:fs";
 import path from "path";
 import { configFileName, withConfig } from "../../config";
@@ -6,15 +5,10 @@ import { confirm } from "../../dialogs";
 import { UserError } from "../../errors";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
-import { requireAuth } from "../../user";
 import { printWranglerBanner } from "../../wrangler-banner";
-import { createBackup } from "../backups";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { executeSql } from "../execute";
-import {
-	getDatabaseInfoFromConfig,
-	getDatabaseInfoFromIdOrName,
-} from "../utils";
+import { getDatabaseInfoFromConfig } from "../utils";
 import {
 	getMigrationsPath,
 	getUnappliedMigrations,
@@ -28,11 +22,7 @@ import type {
 } from "../../yargs-types";
 
 export function ApplyOptions(yargs: CommonYargsArgv) {
-	return MigrationOptions(yargs).option("batch-size", {
-		describe: "Number of queries to send in a single batch",
-		type: "number",
-		deprecated: true,
-	});
+	return MigrationOptions(yargs);
 }
 
 type ApplyHandlerOptions = StrictYargsOptionsToInterface<typeof ApplyOptions>;
@@ -124,23 +114,6 @@ Your database may not be available to serve requests during the migration, conti
 		);
 		if (!ok) {
 			return;
-		}
-
-		// don't backup prod db when applying migrations locally, in preview, or when using the experimental backend
-		if (!(local || preview)) {
-			assert(
-				databaseInfo,
-				"In non-local mode `databaseInfo` should be defined."
-			);
-			const accountId = await requireAuth(config);
-			const dbInfo = await getDatabaseInfoFromIdOrName(
-				accountId,
-				databaseInfo?.uuid
-			);
-			if (dbInfo.version === "alpha") {
-				logger.log("🕒 Creating backup...");
-				await createBackup(accountId, databaseInfo.uuid);
-			}
 		}
 
 		for (const migration of unappliedMigrations) {

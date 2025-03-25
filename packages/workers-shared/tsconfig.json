@@ -1,7 +1,6 @@
 {
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
-		"module": "esnext",
 		"sourceMap": true,
 		"forceConsistentCasingInFileNames": true,
 		"useUnknownInCatchVariables": false,

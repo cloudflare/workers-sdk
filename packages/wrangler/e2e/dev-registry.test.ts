@@ -34,9 +34,12 @@ describe("unstable_dev()", () => {
 	let parent: string;
 	let child: string;
 	let workerName: string;
+	let registryPath: string;
 
 	beforeEach(async () => {
 		workerName = generateResourceName("worker");
+
+		registryPath = makeRoot();
 
 		parent = makeRoot();
 
@@ -95,6 +98,7 @@ describe("unstable_dev()", () => {
 			"index.mjs": dedent/*javascript*/ `
 					import { unstable_dev } from "${WRANGLER_IMPORT}"
 					import { setTimeout } from "node:timers/promises";
+					import { readdirSync } from "node:fs"
 
 					const childWorker = await unstable_dev(
 						"${child.replaceAll("\\", "/")}/src/index.ts",
@@ -105,9 +109,12 @@ describe("unstable_dev()", () => {
 						}
 					);
 
-					// Wait long enough for the child to register itself on the Worker Registry
-					// before we boot up the parent that needs to know about it.
-					await setTimeout(2000)
+					for (const timeout of [1000, 2000, 4000, 8000, 16000]) {
+						if(readdirSync(process.env.WRANGLER_REGISTRY_PATH).includes("${workerName}")) {
+							break
+						}
+						await setTimeout(timeout)
+					}
 
 					const parentWorker = await unstable_dev(
 						"src/index.ts",
@@ -126,6 +133,10 @@ describe("unstable_dev()", () => {
 		const stdout = execSync(`node index.mjs`, {
 			cwd: parent,
 			encoding: "utf-8",
+			env: {
+				...process.env,
+				WRANGLER_REGISTRY_PATH: registryPath,
+			},
 		});
 		return stdout;
 	}

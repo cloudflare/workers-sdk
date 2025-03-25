@@ -87,7 +87,7 @@ describe("addWranglerToGitIgnore", () => {
 
 			# wrangler files
 			.wrangler
-			.dev.vars
+			.dev.vars*
 			"
 		`);
 	});
@@ -202,7 +202,7 @@ describe("addWranglerToGitIgnore", () => {
 
 			# wrangler files
 			.wrangler
-			.dev.vars
+			.dev.vars*
 			"
 		`);
 	});
@@ -239,7 +239,7 @@ describe("addWranglerToGitIgnore", () => {
 		);
 		expect(appendFileResults.content).toMatchInlineSnapshot(`
 			"
-			.dev.vars
+			.dev.vars*
 			"
 		`);
 	});

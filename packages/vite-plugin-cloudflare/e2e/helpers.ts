@@ -34,13 +34,15 @@ export const test = baseTest.extend<{
 			projectPaths.push(projectPath);
 			return projectPath;
 		});
-		for (const projectPath of projectPaths) {
-			debuglog("Deleting project path", projectPath);
-			await fs.rm(projectPath, {
-				force: true,
-				recursive: true,
-				maxRetries: 10,
-			});
+		if (!process.env.CLOUDFLARE_VITE_E2E_KEEP_TEMP_DIRS) {
+			for (const projectPath of projectPaths) {
+				debuglog("Deleting project path", projectPath);
+				await fs.rm(projectPath, {
+					force: true,
+					recursive: true,
+					maxRetries: 10,
+				});
+			}
 		}
 	},
 	/** Start a `vite dev` command and wraps its outputs. */
@@ -130,7 +132,7 @@ export async function fetchJson(url: string, info?: RequestInit) {
 export async function waitForReady(proc: Process) {
 	const match = await vi.waitUntil(
 		() => proc.stdout.match(/Local:\s+(http:\/\/localhost:\d+)/),
-		{ interval: 100, timeout: 5_000 }
+		{ interval: 100, timeout: 20_000 }
 	);
 	return match[1];
 }

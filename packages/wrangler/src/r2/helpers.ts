@@ -985,7 +985,7 @@ function formatCondition(condition: LifecycleCondition): string {
 }
 
 export function tableFromLifecycleRulesResponse(rules: LifecycleRule[]): {
-	id: string;
+	name: string;
 	enabled: string;
 	prefix: string;
 	action: string;
@@ -1018,7 +1018,7 @@ export function tableFromLifecycleRulesResponse(rules: LifecycleRule[]): {
 		}
 
 		rows.push({
-			id: rule.id,
+			name: rule.id,
 			enabled: rule.enabled ? "Yes" : "No",
 			prefix: rule.conditions.prefix || "(all prefixes)",
 			action: actions.join(", ") || "(none)",
@@ -1066,6 +1066,99 @@ export async function putLifecycleRules(
 		body: JSON.stringify({ rules: rules }),
 	});
 }
+
+// bucket lock rules
+
+export interface BucketLockRule {
+	id: string;
+	enabled: boolean;
+	prefix?: string;
+	condition: BucketLockRuleCondition;
+}
+
+export interface BucketLockRuleCondition {
+	type: "Age" | "Date" | "Indefinite";
+	maxAgeSeconds?: number;
+	date?: string;
+}
+
+export function tableFromBucketLockRulesResponse(rules: BucketLockRule[]): {
+	name: string;
+	enabled: string;
+	prefix: string;
+	condition: string;
+}[] {
+	const rows = [];
+	for (const rule of rules) {
+		const conditionString = formatLockCondition(rule.condition);
+		rows.push({
+			name: rule.id,
+			enabled: rule.enabled ? "Yes" : "No",
+			prefix: rule.prefix || "(all prefixes)",
+			condition: conditionString,
+		});
+	}
+	return rows;
+}
+
+function formatLockCondition(condition: BucketLockRuleCondition): string {
+	if (condition.type === "Age" && typeof condition.maxAgeSeconds === "number") {
+		const days = condition.maxAgeSeconds / 86400; // Convert seconds to days
+		if (days == 1) {
+			return `after ${days} day`;
+		} else {
+			return `after ${days} days`;
+		}
+	} else if (condition.type === "Date" && condition.date) {
+		const date = new Date(condition.date);
+		const displayDate = date.toISOString().split("T")[0];
+		return `on ${displayDate}`;
+	}
+
+	return `indefinitely`;
+}
+
+export async function getBucketLockRules(
+	accountId: string,
+	bucket: string,
+	jurisdiction?: string
+): Promise<BucketLockRule[]> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	const result = await fetchResult<{ rules: BucketLockRule[] }>(
+		`/accounts/${accountId}/r2/buckets/${bucket}/lock`,
+		{
+			method: "GET",
+			headers,
+		}
+	);
+	return result.rules;
+}
+
+export async function putBucketLockRules(
+	accountId: string,
+	bucket: string,
+	rules: BucketLockRule[],
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	await fetchResult(`/accounts/${accountId}/r2/buckets/${bucket}/lock`, {
+		method: "PUT",
+		headers,
+		body: JSON.stringify({ rules: rules }),
+	});
+}
+
+// bucket lock rules
 
 export function formatActionDescription(action: string): string {
 	switch (action) {

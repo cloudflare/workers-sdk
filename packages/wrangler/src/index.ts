@@ -16,29 +16,19 @@ import {
 import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
 import { experimental_readRawConfig, loadDotEnv } from "./config";
+import { containers } from "./containers";
 import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
 import { d1 } from "./d1";
 import { deleteHandler, deleteOptions } from "./delete";
-import { deployCommand, publishAlias } from "./deploy";
+import { deployCommand } from "./deploy";
 import { isAuthenticationError } from "./deploy/deploy";
 import {
 	isBuildFailure,
 	isBuildFailureFromCause,
 } from "./deployment-bundle/build-failures";
-import {
-	buildHandler,
-	buildOptions,
-	configHandler,
-	noOpOptions,
-	previewHandler,
-	previewOptions,
-	route,
-	routeHandler,
-	subdomainHandler,
-	subdomainOptions,
-} from "./deprecated";
+import { buildHandler, buildOptions } from "./deprecated";
 import { dev } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docs } from "./docs";
@@ -47,22 +37,18 @@ import {
 	JsonFriendlyFatalError,
 	UserError,
 } from "./errors";
-import { generateHandler, generateOptions } from "./generate";
 import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import {
-	kvBulkAlias,
 	kvBulkDeleteCommand,
 	kvBulkNamespace,
 	kvBulkPutCommand,
-	kvKeyAlias,
 	kvKeyDeleteCommand,
 	kvKeyGetCommand,
 	kvKeyListCommand,
 	kvKeyNamespace,
 	kvKeyPutCommand,
 	kvNamespace,
-	kvNamespaceAlias,
 	kvNamespaceCreateCommand,
 	kvNamespaceDeleteCommand,
 	kvNamespaceListCommand,
@@ -116,6 +102,13 @@ import {
 	r2BucketLifecycleSetCommand,
 } from "./r2/lifecycle";
 import {
+	r2BucketLockAddCommand,
+	r2BucketLockListCommand,
+	r2BucketLockNamespace,
+	r2BucketLockRemoveCommand,
+	r2BucketLockSetCommand,
+} from "./r2/lock";
+import {
 	r2BucketNotificationCreateCommand,
 	r2BucketNotificationDeleteCommand,
 	r2BucketNotificationGetAlias,
@@ -141,13 +134,28 @@ import {
 	r2BucketSippyNamespace,
 } from "./r2/sippy";
 import {
-	secretBulkAlias,
 	secretBulkCommand,
 	secretDeleteCommand,
 	secretListCommand,
 	secretNamespace,
 	secretPutCommand,
 } from "./secret";
+import {
+	secretsStoreNamespace,
+	secretsStoreSecretNamespace,
+	secretsStoreStoreNamespace,
+} from "./secrets-store";
+import {
+	secretsStoreSecretCreateCommand,
+	secretsStoreSecretDeleteCommand,
+	secretsStoreSecretDuplicateCommand,
+	secretsStoreSecretGetCommand,
+	secretsStoreSecretListCommand,
+	secretsStoreSecretUpdateCommand,
+	secretsStoreStoreCreateCommand,
+	secretsStoreStoreDeleteCommand,
+	secretsStoreStoreListCommand,
+} from "./secrets-store/commands";
 import {
 	addBreadcrumb,
 	captureGlobalException,
@@ -187,6 +195,7 @@ import { workflowsInstancesListCommand } from "./workflows/commands/instances/li
 import { workflowsInstancesPauseCommand } from "./workflows/commands/instances/pause";
 import { workflowsInstancesResumeCommand } from "./workflows/commands/instances/resume";
 import { workflowsInstancesTerminateCommand } from "./workflows/commands/instances/terminate";
+import { workflowsInstancesTerminateAllCommand } from "./workflows/commands/instances/terminate-all";
 import { workflowsListCommand } from "./workflows/commands/list";
 import { workflowsTriggerCommand } from "./workflows/commands/trigger";
 import { printWranglerBanner } from "./wrangler-banner";
@@ -230,6 +239,18 @@ export function createCLIParser(argv: string[]) {
 			describe: "Show version number",
 			alias: "version",
 			type: "boolean",
+		})
+		.option("cwd", {
+			describe:
+				"Run as if Wrangler was started in the specified directory instead of the current working directory",
+			type: "string",
+			requiresArg: true,
+		})
+		.check(demandSingleValue("cwd"))
+		.middleware((_argv) => {
+			if (_argv.cwd) {
+				process.chdir(_argv.cwd);
+			}
 		})
 		.option("config", {
 			alias: "c",
@@ -309,7 +330,7 @@ export function createCLIParser(argv: string[]) {
 		"Examples:": `${chalk.bold("EXAMPLES")}`,
 	});
 	wrangler.group(
-		["config", "env", "help", "version"],
+		["config", "cwd", "env", "help", "version"],
 		`${chalk.bold("GLOBAL FLAGS")}`
 	);
 	wrangler.help("help", "Show help").alias("h", "help");
@@ -398,10 +419,6 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler deploy",
 			definition: deployCommand,
-		},
-		{
-			command: "wrangler publish",
-			definition: publishAlias,
 		},
 	]);
 	registry.registerNamespace("deploy");
@@ -499,7 +516,6 @@ export function createCLIParser(argv: string[]) {
 		{ command: "wrangler secret delete", definition: secretDeleteCommand },
 		{ command: "wrangler secret list", definition: secretListCommand },
 		{ command: "wrangler secret bulk", definition: secretBulkCommand },
-		{ command: "wrangler secret:bulk", definition: secretBulkAlias },
 	]);
 	registry.registerNamespace("secret");
 
@@ -509,9 +525,6 @@ export function createCLIParser(argv: string[]) {
 
 	/******************** CMD GROUP ***********************/
 	registry.define([
-		{ command: "wrangler kv:key", definition: kvKeyAlias },
-		{ command: "wrangler kv:namespace", definition: kvNamespaceAlias },
-		{ command: "wrangler kv:bulk", definition: kvBulkAlias },
 		{ command: "wrangler kv", definition: kvNamespace },
 		{ command: "wrangler kv namespace", definition: kvNamespaceNamespace },
 		{ command: "wrangler kv key", definition: kvKeyNamespace },
@@ -701,6 +714,26 @@ export function createCLIParser(argv: string[]) {
 			command: "wrangler r2 bucket cors set",
 			definition: r2BucketCORSSetCommand,
 		},
+		{
+			command: "wrangler r2 bucket lock",
+			definition: r2BucketLockNamespace,
+		},
+		{
+			command: "wrangler r2 bucket lock list",
+			definition: r2BucketLockListCommand,
+		},
+		{
+			command: "wrangler r2 bucket lock add",
+			definition: r2BucketLockAddCommand,
+		},
+		{
+			command: "wrangler r2 bucket lock remove",
+			definition: r2BucketLockRemoveCommand,
+		},
+		{
+			command: "wrangler r2 bucket lock set",
+			definition: r2BucketLockSetCommand,
+		},
 	]);
 	registry.registerNamespace("r2");
 
@@ -767,6 +800,11 @@ export function createCLIParser(argv: string[]) {
 		return cloudchamber(asJson(cloudchamberArgs.command(subHelp)), subHelp);
 	});
 
+	// containers
+	wrangler.command("containers", false, (containersArgs) => {
+		return containers(asJson(containersArgs.command(subHelp)), subHelp);
+	});
+
 	// [PRIVATE BETA] pubsub
 	wrangler.command(
 		"pubsub",
@@ -789,6 +827,56 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command("ai", "🤖 Manage AI models", (aiYargs) => {
 		return ai(aiYargs.command(subHelp));
 	});
+
+	// secrets store
+	registry.define([
+		{ command: "wrangler secrets-store", definition: secretsStoreNamespace },
+		{
+			command: "wrangler secrets-store store",
+			definition: secretsStoreStoreNamespace,
+		},
+		{
+			command: "wrangler secrets-store store create",
+			definition: secretsStoreStoreCreateCommand,
+		},
+		{
+			command: "wrangler secrets-store store delete",
+			definition: secretsStoreStoreDeleteCommand,
+		},
+		{
+			command: "wrangler secrets-store store list",
+			definition: secretsStoreStoreListCommand,
+		},
+		{
+			command: "wrangler secrets-store secret",
+			definition: secretsStoreSecretNamespace,
+		},
+		{
+			command: "wrangler secrets-store secret create",
+			definition: secretsStoreSecretCreateCommand,
+		},
+		{
+			command: "wrangler secrets-store secret list",
+			definition: secretsStoreSecretListCommand,
+		},
+		{
+			command: "wrangler secrets-store secret get",
+			definition: secretsStoreSecretGetCommand,
+		},
+		{
+			command: "wrangler secrets-store secret update",
+			definition: secretsStoreSecretUpdateCommand,
+		},
+		{
+			command: "wrangler secrets-store secret delete",
+			definition: secretsStoreSecretDeleteCommand,
+		},
+		{
+			command: "wrangler secrets-store secret duplicate",
+			definition: secretsStoreSecretDuplicateCommand,
+		},
+	]);
+	registry.registerNamespace("cert");
 
 	// workflows
 	registry.define([
@@ -827,6 +915,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler workflows instances terminate",
 			definition: workflowsInstancesTerminateCommand,
+		},
+		{
+			command: "wrangler workflows instances terminate-all",
+			definition: workflowsInstancesTerminateAllCommand,
 		},
 		{
 			command: "wrangler workflows instances pause",
@@ -906,71 +998,10 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("check");
 
-	/******************************************************/
-	/*               DEPRECATED COMMANDS                  */
-	/******************************************************/
-	// [DEPRECATED] build
 	wrangler.command("build", false, buildOptions, buildHandler);
-
-	// [DEPRECATED] config
-	wrangler.command("config", false, noOpOptions, configHandler);
-
-	// [DEPRECATED] preview
-	wrangler.command(
-		"preview [method] [body]",
-		false,
-		previewOptions,
-		previewHandler
-	);
-
-	// [DEPRECATED] route
-	wrangler.command(
-		"route",
-		false, // I think we want to hide this command
-		// "➡️  List or delete worker routes",
-		(routeYargs) => {
-			return route(routeYargs);
-		},
-		routeHandler
-	);
-
-	// [DEPRECATED] subdomain
-	wrangler.command(
-		"subdomain [name]",
-		false,
-		// "👷 Create or change your workers.dev subdomain.",
-		subdomainOptions,
-		subdomainHandler
-	);
-
-	// [DEPRECATED] generate
-	wrangler.command(
-		"generate [name] [template]",
-		false,
-		generateOptions,
-		generateHandler
-	);
 
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
-
-	// [DEPRECATED] version
-	wrangler.command(
-		"version",
-		false,
-		() => {},
-		async () => {
-			if (process.stdout.isTTY) {
-				await printWranglerBanner();
-			} else {
-				logger.log(wranglerVersion);
-			}
-
-			logger.warn(
-				"`wrangler version` is deprecated and will be removed in a future major version. Please use `wrangler --version` instead."
-			);
-		}
-	);
 
 	registry.registerAll();
 

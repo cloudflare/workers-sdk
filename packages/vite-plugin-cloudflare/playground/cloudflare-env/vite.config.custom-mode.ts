@@ -3,5 +3,5 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
 	mode: "custom-mode",
-	plugins: [cloudflare({ persistState: false })],
+	plugins: [cloudflare({ inspectorPort: false, persistState: false })],
 });

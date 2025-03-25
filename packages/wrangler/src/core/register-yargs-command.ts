@@ -33,7 +33,7 @@ export function createRegisterYargsCommand(
 				if (def.type === "command") {
 					const args = def.args ?? {};
 
-					yargs.options(args);
+					yargs.options(args).epilogue(def.metadata?.epilogue ?? "");
 
 					// Ensure non-array arguments receive a single value
 					for (const [key, opt] of Object.entries(args)) {
@@ -93,7 +93,6 @@ function createHandler(def: CommandDefinition) {
 			const experimentalFlags = def.behaviour?.overrideExperimentalFlags
 				? def.behaviour?.overrideExperimentalFlags(args)
 				: {
-						FILE_BASED_REGISTRY: false,
 						MULTIWORKER: false,
 						RESOURCES_PROVISION: args.experimentalProvision ?? false,
 					};

@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
+import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
@@ -40,7 +41,7 @@ import {
 	putConsumerById,
 	putQueue,
 } from "../queues/client";
-import { syncLegacyAssets } from "../sites";
+import { syncWorkersSite } from "../sites";
 import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
@@ -98,7 +99,6 @@ type Props = {
 	tsconfig: string | undefined;
 	isWorkersSite: boolean;
 	minify: boolean | undefined;
-	nodeCompat: boolean | undefined;
 	outDir: string | undefined;
 	outFile: string | undefined;
 	dryRun: boolean | undefined;
@@ -156,7 +156,7 @@ export const validateRoutes = (routes: Route[], assets?: AssetsOptions) => {
 		} else if (
 			// If we have Assets but we're not always hitting the Worker then validate
 			assets?.directory !== undefined &&
-			assets.assetConfig.run_worker_first !== true
+			assets.routerConfig.invoke_user_worker_ahead_of_assets !== true
 		) {
 			const pattern = typeof route === "string" ? route : route.pattern;
 			const components = pattern.split("/");
@@ -190,7 +190,7 @@ export const validateRoutes = (routes: Route[], assets?: AssetsOptions) => {
 					return `  • ${route} (Will match assets: ${assetPath})`;
 				})
 				.join("\n")}` +
-				(assets?.routingConfig.has_user_worker
+				(assets?.routerConfig.has_user_worker
 					? "\n\nRequests not matching an asset will be forwarded to the Worker's code."
 					: "")
 		);
@@ -425,7 +425,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		compatibilityDate,
 		compatibilityFlags,
 		{
-			nodeCompat: props.nodeCompat ?? config.node_compat,
 			noBundle: props.noBundle ?? config.no_bundle,
 		}
 	);
@@ -553,8 +552,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						bundle: true,
 						additionalModules: [],
 						moduleCollector,
-						serveLegacyAssetsFromWorker:
-							!props.isWorkersSite && Boolean(props.legacyAssetPaths),
 						doBindings: config.durable_objects.bindings,
 						workflowBindings: config.workflows ?? [],
 						jsxFactory,
@@ -566,11 +563,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						define: { ...config.define, ...props.defines },
 						checkFetch: false,
 						alias: config.alias,
-						legacyAssets: config.legacy_assets,
 						// We do not mock AE datasets when deploying
 						mockAnalyticsEngineDatasets: [],
-						// enable the cache when publishing
-						bypassAssetCache: false,
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "deploy",
@@ -633,7 +627,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					)
 				: undefined;
 
-		const legacyAssets = await syncLegacyAssets(
+		const workersSitesAssets = await syncWorkersSite(
 			accountId,
 			// When we're using the newer service environments, we wouldn't
 			// have added the env name on to the script name. However, we must
@@ -649,25 +643,25 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const bindings = getBindings({
 			...config,
 			kv_namespaces: config.kv_namespaces.concat(
-				legacyAssets.namespace
-					? { binding: "__STATIC_CONTENT", id: legacyAssets.namespace }
+				workersSitesAssets.namespace
+					? { binding: "__STATIC_CONTENT", id: workersSitesAssets.namespace }
 					: []
 			),
 			vars: { ...config.vars, ...props.vars },
 			text_blobs: {
 				...config.text_blobs,
-				...(legacyAssets.manifest &&
+				...(workersSitesAssets.manifest &&
 					format === "service-worker" && {
 						__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
 					}),
 			},
 		});
 
-		if (legacyAssets.manifest) {
+		if (workersSitesAssets.manifest) {
 			modules.push({
 				name: "__STATIC_CONTENT_MANIFEST",
 				filePath: undefined,
-				content: JSON.stringify(legacyAssets.manifest),
+				content: JSON.stringify(workersSitesAssets.manifest),
 				type: "text",
 			});
 		}
@@ -691,6 +685,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			bindings,
 			migrations,
 			modules,
+			containers: config.containers ?? undefined,
 			sourceMaps: uploadSourceMaps
 				? loadSourceMaps(main, modules, bundle)
 				: undefined,
@@ -706,8 +701,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				props.assetsOptions && assetsJwt
 					? {
 							jwt: assetsJwt,
-							routingConfig: props.assetsOptions.routingConfig,
+							routerConfig: props.assetsOptions.routerConfig,
 							assetConfig: props.assetsOptions.assetConfig,
+							_redirects: props.assetsOptions._redirects,
+							_headers: props.assetsOptions._headers,
 						}
 					: undefined,
 			observability: config.observability,
@@ -747,13 +744,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		// * aren't a service Worker
 		// * we don't have DO migrations
 		// * we aren't an fpw
+		// * not a container worker
 		const canUseNewVersionsDeploymentsApi =
 			workerExists &&
 			props.dispatchNamespace === undefined &&
 			prod &&
 			format === "modules" &&
 			migrations === undefined &&
-			!config.first_party_worker;
+			!config.first_party_worker &&
+			config.containers === undefined;
 
 		let workerBundle: FormData;
 
@@ -1068,43 +1067,59 @@ async function publishRoutesFallback(
 
 	const deployedRoutes: string[] = [];
 
+	const queue = new PQueue({ concurrency: 10 });
+	const queuePromises: Array<Promise<void>> = [];
+	const zoneIdCache = new Map();
+
 	// Collect the routes (and their zones) that will be deployed.
 	const activeZones = new Map<string, string>();
 	const routesToDeploy = new Map<string, string>();
 	for (const route of routes) {
-		const zone = await getZoneForRoute({ route, accountId });
-		if (zone) {
-			activeZones.set(zone.id, zone.host);
-			routesToDeploy.set(
-				typeof route === "string" ? route : route.pattern,
-				zone.id
-			);
-		}
+		queuePromises.push(
+			queue.add(async () => {
+				const zone = await getZoneForRoute({ route, accountId }, zoneIdCache);
+				if (zone) {
+					activeZones.set(zone.id, zone.host);
+					routesToDeploy.set(
+						typeof route === "string" ? route : route.pattern,
+						zone.id
+					);
+				}
+			})
+		);
 	}
+	await Promise.all(queuePromises.splice(0, queuePromises.length));
 
 	// Collect the routes that are already deployed.
 	const allRoutes = new Map<string, string>();
 	const alreadyDeployedRoutes = new Set<string>();
 	for (const [zone, host] of activeZones) {
-		try {
-			for (const { pattern, script } of await fetchListResult<{
-				pattern: string;
-				script: string;
-			}>(`/zones/${zone}/workers/routes`)) {
-				allRoutes.set(pattern, script);
-				if (script === scriptName) {
-					alreadyDeployedRoutes.add(pattern);
+		queuePromises.push(
+			queue.add(async () => {
+				try {
+					for (const { pattern, script } of await fetchListResult<{
+						pattern: string;
+						script: string;
+					}>(`/zones/${zone}/workers/routes`)) {
+						allRoutes.set(pattern, script);
+						if (script === scriptName) {
+							alreadyDeployedRoutes.add(pattern);
+						}
+					}
+				} catch (e) {
+					if (isAuthenticationError(e)) {
+						e.notes.push({
+							text: `This could be because the API token being used does not have permission to access the zone "${host}" (${zone}).`,
+						});
+					}
+					throw e;
 				}
-			}
-		} catch (e) {
-			if (isAuthenticationError(e)) {
-				e.notes.push({
-					text: `This could be because the API token being used does not have permission to access the zone "${host}" (${zone}).`,
-				});
-			}
-			throw e;
-		}
+			})
+		);
 	}
+	// using Promise.all() here instead of queue.onIdle() to ensure
+	// we actually throw errors that occur within queued promises.
+	await Promise.all(queuePromises);
 
 	// Deploy each route that is not already deployed.
 	for (const [routePattern, zoneId] of routesToDeploy.entries()) {

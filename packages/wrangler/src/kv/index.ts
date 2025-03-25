@@ -3,11 +3,7 @@ import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
 import { formatConfigSnippet, readConfig } from "../config";
 import { demandOneOfOption } from "../core";
-import {
-	createAlias,
-	createCommand,
-	createNamespace,
-} from "../core/create-command";
+import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { CommandLineArgsError, UserError } from "../errors";
 import { logger } from "../logger";
@@ -15,6 +11,7 @@ import * as metrics from "../metrics";
 import { parseJSON, readFileSync, readFileSyncToBuffer } from "../parse";
 import { requireAuth } from "../user";
 import { getValidBindingName } from "../utils/getValidBindingName";
+import { isLocal } from "../utils/is-local";
 import {
 	createKVNamespace,
 	deleteKVBulkKeyValue,
@@ -32,36 +29,6 @@ import {
 } from "./helpers";
 import type { EventNames } from "../metrics";
 import type { KeyValue, NamespaceKeyInfo } from "./helpers";
-
-export const kvKeyAlias = createAlias({
-	aliasOf: "wrangler kv key",
-	metadata: {
-		deprecated: true,
-		deprecatedMessage:
-			"The `wrangler kv:key` command is deprecated and will be removed in a future major version. Please use `wrangler kv key` instead which behaves the same.",
-		hidden: true,
-	},
-});
-
-export const kvNamespaceAlias = createAlias({
-	aliasOf: "wrangler kv namespace",
-	metadata: {
-		deprecated: true,
-		deprecatedMessage:
-			"The `wrangler kv:namespace` command is deprecated and will be removed in a future major version. Please use `wrangler kv namespace` instead which behaves the same.",
-		hidden: true,
-	},
-});
-
-export const kvBulkAlias = createAlias({
-	aliasOf: "wrangler kv bulk",
-	metadata: {
-		deprecated: true,
-		deprecatedMessage:
-			"The `wrangler kv:bulk` command is deprecated and will be removed in a future major version. Please use `wrangler kv bulk` instead which behaves the same.",
-		hidden: true,
-	},
-});
 
 export const kvNamespace = createNamespace({
 	metadata: {
@@ -117,16 +84,9 @@ export const kvNamespaceCreateCommand = createCommand({
 
 	async handler(args) {
 		const config = readConfig(args);
-		if (!config.name) {
-			logger.warn(
-				"No configured name present, using `worker` as a prefix for the title"
-			);
-		}
-
-		const name = config.name || "worker";
-		const environment = args.env ? `-${args.env}` : "";
+		const environment = args.env ? `${args.env}-` : "";
 		const preview = args.preview ? "_preview" : "";
-		const title = `${name}${environment}-${args.namespace}${preview}`;
+		const title = `${environment}${args.namespace}${preview}`;
 
 		const accountId = await requireAuth(config);
 
@@ -313,6 +273,11 @@ export const kvKeyPutCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -324,6 +289,7 @@ export const kvKeyPutCommand = createCommand({
 	},
 
 	async handler({ key, ttl, expiration, metadata, ...args }) {
+		const localMode = isLocal(args);
 		const config = readConfig(args);
 		const namespaceId = getKVNamespaceId(args, config);
 		// One of `args.path` and `args.value` must be defined
@@ -347,7 +313,7 @@ export const kvKeyPutCommand = createCommand({
 		}
 
 		let metricEvent: EventNames;
-		if (args.local) {
+		if (localMode) {
 			await usingLocalNamespace(
 				args.persistTo,
 				config,
@@ -414,6 +380,11 @@ export const kvKeyListCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -425,13 +396,14 @@ export const kvKeyListCommand = createCommand({
 
 	behaviour: { printBanner: false },
 	async handler({ prefix, ...args }) {
+		const localMode = isLocal(args);
 		// TODO: support for limit+cursor (pagination)
 		const config = readConfig(args);
 		const namespaceId = getKVNamespaceId(args, config);
 
 		let result: NamespaceKeyInfo[];
 		let metricEvent: EventNames;
-		if (args.local) {
+		if (localMode) {
 			const listResult = await usingLocalNamespace(
 				args.persistTo,
 				config,
@@ -494,6 +466,11 @@ export const kvKeyGetCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -505,12 +482,13 @@ export const kvKeyGetCommand = createCommand({
 
 	behaviour: { printBanner: false },
 	async handler({ key, ...args }) {
+		const localMode = isLocal(args);
 		const config = readConfig(args);
 		const namespaceId = getKVNamespaceId(args, config);
 
 		let bufferKVValue;
 		let metricEvent: EventNames;
-		if (args.local) {
+		if (localMode) {
 			const val = await usingLocalNamespace(
 				args.persistTo,
 				config,
@@ -582,6 +560,11 @@ export const kvKeyDeleteCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -589,13 +572,14 @@ export const kvKeyDeleteCommand = createCommand({
 	},
 
 	async handler({ key, ...args }) {
+		const localMode = isLocal(args);
 		const config = readConfig(args);
 		const namespaceId = getKVNamespaceId(args, config);
 
 		logger.log(`Deleting the key "${key}" on namespace ${namespaceId}.`);
 
 		let metricEvent: EventNames;
-		if (args.local) {
+		if (localMode) {
 			await usingLocalNamespace(
 				args.persistTo,
 				config,
@@ -665,6 +649,11 @@ export const kvBulkPutCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -672,6 +661,7 @@ export const kvBulkPutCommand = createCommand({
 	},
 
 	async handler({ filename, ...args }) {
+		const localMode = isLocal(args);
 		// The simplest implementation I could think of.
 		// This could be made more efficient with a streaming parser/uploader
 		// but we'll do that in the future if needed.
@@ -727,14 +717,18 @@ export const kvBulkPutCommand = createCommand({
 		}
 
 		let metricEvent: EventNames;
-		if (args.local) {
+		if (localMode) {
 			await usingLocalNamespace(
 				args.persistTo,
 				config,
 				namespaceId,
 				async (namespace) => {
 					for (const value of content) {
-						await namespace.put(value.key, value.value, {
+						let data = value.value;
+						if (value.base64) {
+							data = Buffer.from(data, "base64").toString();
+						}
+						await namespace.put(value.key, data, {
 							expiration: value.expiration,
 							expirationTtl: value.expiration_ttl,
 							metadata: value.metadata,
@@ -795,6 +789,11 @@ export const kvBulkDeleteCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -802,6 +801,7 @@ export const kvBulkDeleteCommand = createCommand({
 	},
 
 	async handler({ filename, ...args }) {
+		const localMode = isLocal(args);
 		const config = readConfig(args);
 		const namespaceId = getKVNamespaceId(args, config);
 
@@ -852,7 +852,7 @@ export const kvBulkDeleteCommand = createCommand({
 		}
 
 		let metricEvent: EventNames;
-		if (args.local) {
+		if (localMode) {
 			await usingLocalNamespace(
 				args.persistTo,
 				config,

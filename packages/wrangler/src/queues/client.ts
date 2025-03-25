@@ -19,6 +19,7 @@ interface WorkerService {
 
 export interface QueueSettings {
 	delivery_delay?: number;
+	delivery_paused?: boolean;
 	message_retention_period?: number;
 }
 
@@ -82,6 +83,15 @@ export interface ConsumerSettings {
 	max_concurrency?: number | null;
 	visibility_timeout_ms?: number;
 	retry_delay?: number;
+}
+
+export interface PurgeQueueBody {
+	delete_messages_permanently: boolean;
+}
+
+export interface PurgeQueueResponse {
+	started_at: string;
+	complete: boolean;
 }
 
 const queuesUrl = (accountId: string, queueId?: string): string => {
@@ -404,4 +414,18 @@ export async function deleteWorkerConsumer(
 		queue
 	);
 	return deleteConsumerById(config, queue.queue_id, targetConsumer.consumer_id);
+}
+
+export async function purgeQueue(
+	config: Config,
+	queueName: string
+): Promise<void> {
+	const accountId = await requireAuth(config);
+	const queue = await getQueue(config, queueName);
+	const purgeURL = `${queuesUrl(accountId, queue.queue_id)}/purge`;
+	const body: PurgeQueueBody = { delete_messages_permanently: true };
+	return fetchResult(purgeURL, {
+		method: "POST",
+		body: JSON.stringify(body),
+	});
 }

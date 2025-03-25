@@ -38,6 +38,7 @@ describe("hyperdrive help", () => {
 
 			GLOBAL FLAGS
 			  -c, --config   Path to Wrangler configuration file  [string]
+			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
@@ -69,6 +70,7 @@ describe("hyperdrive help", () => {
 
 			GLOBAL FLAGS
 			  -c, --config   Path to Wrangler configuration file  [string]
+			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
@@ -118,7 +120,7 @@ describe("hyperdrive commands", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
 
 			{
@@ -155,7 +157,7 @@ describe("hyperdrive commands", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			📋 To start using your config from a Worker, add the following binding configuration to your wrangler.toml file:
 
 			[[hyperdrive]]
@@ -186,7 +188,42 @@ describe("hyperdrive commands", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
+
+			{
+			  \\"hyperdrive\\": [
+			    {
+			      \\"binding\\": \\"HYPERDRIVE\\",
+			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			    }
+			  ]
+			}"
+		`);
+	});
+
+	it("should handle creating a hyperdrive config for postgres without a port specified", async () => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --connection-string='mysql://test:password@example.com/neondb'"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			Object {
+			  "name": "test123",
+			  "origin": Object {
+			    "database": "neondb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 3306,
+			    "scheme": "mysql",
+			    "user": "test",
+			  },
+			}
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"🚧 Creating 'test123'
+			✅ Created new Hyperdrive MySQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
 
 			{
@@ -225,7 +262,7 @@ describe("hyperdrive commands", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
 
 			{
@@ -260,7 +297,7 @@ describe("hyperdrive commands", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
 
 			{
@@ -295,7 +332,7 @@ describe("hyperdrive commands", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
 
 			{
@@ -330,7 +367,7 @@ describe("hyperdrive commands", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
 
 			{
@@ -365,7 +402,7 @@ describe("hyperdrive commands", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
 
 			{
@@ -400,7 +437,42 @@ describe("hyperdrive commands", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
+
+			{
+			  \\"hyperdrive\\": [
+			    {
+			      \\"binding\\": \\"HYPERDRIVE\\",
+			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			    }
+			  ]
+			}"
+		`);
+	});
+
+	it("should create a hyperdrive config given individual params instead of a connection string", async () => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --origin-scheme=mysql"
+		);
+
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			Object {
+			  "name": "test123",
+			  "origin": Object {
+			    "database": "neondb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 1234,
+			    "scheme": "mysql",
+			    "user": "test",
+			  },
+			}
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"🚧 Creating 'test123'
+			✅ Created new Hyperdrive MySQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
 
 			{
@@ -422,6 +494,21 @@ describe("hyperdrive commands", () => {
 		).rejects.toThrow();
 		expect(std.err).toMatchInlineSnapshot(`
 			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou must provide an origin hostname for the database[0m
+
+			"
+		`);
+	});
+
+	it("should reject a create hyperdrive command if an unexpected origin-scheme is provided", async () => {
+		await expect(() =>
+			runWrangler(
+				"hyperdrive create test123 --host=example.com --port=5432 --database=foo --user=test --password=foo  --origin-scheme=mongodb"
+			)
+		).rejects.toThrow();
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid values:[0m
+
+			    Argument: origin-scheme, Given: \\"mongodb\\", Choices: \\"postgres\\", \\"postgresql\\", \\"mysql\\"
 
 			"
 		`);
@@ -461,7 +548,7 @@ describe("hyperdrive commands", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
 
 			{
@@ -496,7 +583,7 @@ describe("hyperdrive commands", () => {
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"🚧 Creating 'test123'
-			✅ Created new Hyperdrive config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
 
 			{
@@ -538,18 +625,58 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
+	it("should create a hyperdrive with mtls config", async () => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --ca-certificate-uuid=12345 --mtls-certificate-uuid=1234"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			Object {
+			  "mtls": Object {
+			    "ca_certificate_uuid": "12345",
+			    "mtls_certificate_uuid": "1234",
+			  },
+			  "name": "test123",
+			  "origin": Object {
+			    "database": "neondb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 1234,
+			    "scheme": "postgresql",
+			    "user": "test",
+			  },
+			}
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"🚧 Creating 'test123'
+			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
+
+			{
+			  \\"hyperdrive\\": [
+			    {
+			      \\"binding\\": \\"HYPERDRIVE\\",
+			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			    }
+			  ]
+			}"
+		`);
+	});
+
 	it("should handle listing configs", async () => {
 		mockHyperdriveGetListOrDelete();
 		await runWrangler("hyperdrive list");
 		expect(std.out).toMatchInlineSnapshot(`
 			"📋 Listing Hyperdrive configs
-			┌──────────────────────────────────────┬─────────┬────────┬────────────────┬──────┬──────────┬───────────────────┐
-			│ id                                   │ name    │ user   │ host           │ port │ database │ caching           │
-			├──────────────────────────────────────┼─────────┼────────┼────────────────┼──────┼──────────┼───────────────────┤
-			│ xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx │ test123 │ test   │ example.com    │ 5432 │ neondb   │                   │
-			├──────────────────────────────────────┼─────────┼────────┼────────────────┼──────┼──────────┼───────────────────┤
-			│ yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy │ new-db  │ dbuser │ www.google.com │ 3211 │ mydb     │ {\\"disabled\\":true} │
-			└──────────────────────────────────────┴─────────┴────────┴────────────────┴──────┴──────────┴───────────────────┘"
+			┌──────────────────────────────────────┬─────────────┬─────────┬────────────────┬──────┬────────────┬───────────┬───────────────────┬───────────────────────────────────────────────────────────────┐
+			│ id                                   │ name        │ user    │ host           │ port │ scheme     │ database  │ caching           │ mtls                                                          │
+			├──────────────────────────────────────┼─────────────┼─────────┼────────────────┼──────┼────────────┼───────────┼───────────────────┼───────────────────────────────────────────────────────────────┤
+			│ xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx │ test123     │ test    │ example.com    │ 5432 │ PostgreSQL │ neondb    │                   │                                                               │
+			├──────────────────────────────────────┼─────────────┼─────────┼────────────────┼──────┼────────────┼───────────┼───────────────────┼───────────────────────────────────────────────────────────────┤
+			│ yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy │ new-db      │ dbuser  │ www.google.com │ 3211 │ PostgreSQL │ mydb      │ {\\"disabled\\":true} │                                                               │
+			├──────────────────────────────────────┼─────────────┼─────────┼────────────────┼──────┼────────────┼───────────┼───────────────────┼───────────────────────────────────────────────────────────────┤
+			│ zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz │ new-db-mtls │ pg-mtls │ www.mtls.com   │ 3212 │            │ mydb-mtls │                   │ {\\"ca_certificate_uuid\\":\\"1234\\",\\"mtls_certificate_uuid\\":\\"1234\\"} │
+			└──────────────────────────────────────┴─────────────┴─────────┴────────────────┴──────┴────────────┴───────────┴───────────────────┴───────────────────────────────────────────────────────────────┘"
 		`);
 	});
 
@@ -854,6 +981,40 @@ describe("hyperdrive commands", () => {
 			"
 		`);
 	});
+
+	it("should handle updating a hyperdrive config's mtls configuration", async () => {
+		const reqProm = mockHyperdriveUpdate();
+		await runWrangler(
+			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --ca-certificate-uuid=2345 --mtls-certificate-uuid=234"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			Object {
+			  "mtls": Object {
+			    "ca_certificate_uuid": "2345",
+			    "mtls_certificate_uuid": "234",
+			  },
+			}
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"🚧 Updating 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
+			✅ Updated xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx Hyperdrive config
+			 {
+			  \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\",
+			  \\"name\\": \\"test123\\",
+			  \\"origin\\": {
+			    \\"scheme\\": \\"postgresql\\",
+			    \\"host\\": \\"example.com\\",
+			    \\"port\\": 5432,
+			    \\"database\\": \\"neondb\\",
+			    \\"user\\": \\"test\\"
+			  },
+			  \\"mtls\\": {
+			    \\"ca_certificate_uuid\\": \\"2345\\",
+			    \\"mtls_certificate_uuid\\": \\"234\\"
+			  }
+			}"
+		`);
+	});
 });
 
 const defaultConfig: HyperdriveConfig = {
@@ -906,6 +1067,21 @@ function mockHyperdriveGetListOrDelete() {
 									disabled: true,
 								},
 							},
+							{
+								id: "zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz",
+								name: "new-db-mtls",
+								origin: {
+									host: "www.mtls.com",
+									port: 3212,
+									database: "mydb-mtls",
+									user: "pg-mtls",
+									scheme: "pg-mtls",
+								},
+								mtls: {
+									ca_certificate_uuid: "1234",
+									mtls_certificate_uuid: "1234",
+								},
+							},
 						],
 						true
 					)
@@ -953,6 +1129,11 @@ function mockHyperdriveUpdate(): Promise<PatchHyperdriveBody> {
 							delete origin.port;
 						}
 					}
+					const mtls = defaultConfig.mtls;
+					if (mtls && reqBody.mtls) {
+						mtls.ca_certificate_uuid = reqBody.mtls.ca_certificate_uuid;
+						mtls.mtls_certificate_uuid = reqBody.mtls.mtls_certificate_uuid;
+					}
 
 					return HttpResponse.json(
 						createFetchResult(
@@ -961,6 +1142,7 @@ function mockHyperdriveUpdate(): Promise<PatchHyperdriveBody> {
 								name: reqBody.name ?? defaultConfig.name,
 								origin,
 								caching: reqBody.caching ?? defaultConfig.caching,
+								mtls: reqBody.mtls,
 							},
 							true
 						)
@@ -997,6 +1179,7 @@ function mockHyperdriveCreate(): Promise<CreateUpdateHyperdriveBody> {
 									access_client_id: reqBody.origin.access_client_id,
 								},
 								caching: reqBody.caching,
+								mtls: reqBody.mtls,
 							},
 							true
 						)

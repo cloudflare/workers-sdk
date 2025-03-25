@@ -11,7 +11,7 @@ import {
 	buildSitesOptions,
 } from "../../../dev/miniflare";
 import { run } from "../../../experimental-flags";
-import { getLegacyAssetPaths, getSiteAssetPaths } from "../../../sites";
+import { getSiteAssetPaths } from "../../../sites";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import { getServiceBindings } from "./services";
@@ -237,19 +237,23 @@ export interface Unstable_MiniflareWorkerOptions {
 	workerOptions: SourcelessWorkerOptions;
 	define: Record<string, string>;
 	main?: string;
+	externalWorkers: WorkerOptions[];
 }
 
 export function unstable_getMiniflareWorkerOptions(
 	configPath: string,
-	env?: string
+	env?: string,
+	options?: { imagesLocalMode: boolean }
 ): Unstable_MiniflareWorkerOptions;
 export function unstable_getMiniflareWorkerOptions(
 	config: Config,
-	env?: string
+	env?: string,
+	options?: { imagesLocalMode: boolean }
 ): Unstable_MiniflareWorkerOptions;
 export function unstable_getMiniflareWorkerOptions(
 	configOrConfigPath: string | Config,
-	env?: string
+	env?: string,
+	options?: { imagesLocalMode: boolean }
 ): Unstable_MiniflareWorkerOptions {
 	const config =
 		typeof configOrConfigPath === "string"
@@ -265,15 +269,15 @@ export function unstable_getMiniflareWorkerOptions(
 		}));
 
 	const bindings = getBindings(config, env, true, {});
-	const { bindingOptions } = buildMiniflareBindingOptions({
-		name: undefined,
+	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
+		name: config.name,
 		bindings,
-		workerDefinitions: undefined,
+		workerDefinitions: null,
 		queueConsumers: config.queues.consumers,
 		services: [],
 		serviceBindings: {},
 		migrations: config.migrations,
-		imagesLocalMode: false,
+		imagesLocalMode: !!options?.imagesLocalMode,
 	});
 
 	// This function is currently only exported for the Workers Vitest pool.
@@ -313,10 +317,8 @@ export function unstable_getMiniflareWorkerOptions(
 		);
 	}
 
-	const legacyAssetPaths = config.legacy_assets
-		? getLegacyAssetPaths(config, undefined)
-		: getSiteAssetPaths(config);
-	const sitesOptions = buildSitesOptions({ legacyAssetPaths });
+	const sitesAssetPaths = getSiteAssetPaths(config);
+	const sitesOptions = buildSitesOptions({ legacyAssetPaths: sitesAssetPaths });
 	const processedAssetOptions = getAssetsOptions({ assets: undefined }, config);
 	const assetOptions = processedAssetOptions
 		? buildAssetOptions({ assets: processedAssetOptions })
@@ -332,5 +334,10 @@ export function unstable_getMiniflareWorkerOptions(
 		...assetOptions,
 	};
 
-	return { workerOptions, define: config.define, main: config.main };
+	return {
+		workerOptions,
+		define: config.define,
+		main: config.main,
+		externalWorkers,
+	};
 }

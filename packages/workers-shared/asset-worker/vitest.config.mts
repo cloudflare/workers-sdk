@@ -1,13 +1,14 @@
-import { defineProject, mergeConfig } from "vitest/config";
-import configShared from "../../../vitest.shared.js";
+import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 
-export default mergeConfig(
-	configShared,
-	defineProject({
-		test: {
-			include: ["tests/**.{test,spec}.{ts,js}"],
-			globals: true,
-			setupFiles: [import.meta.resolve("./crypto-polyfill.ts")],
+export default defineWorkersConfig({
+	test: {
+		globals: true,
+		poolOptions: {
+			workers: {
+				wrangler: {
+					configPath: "./wrangler.toml",
+				},
+			},
 		},
-	})
-);
+	},
+});

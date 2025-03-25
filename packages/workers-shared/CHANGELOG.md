@@ -1,5 +1,43 @@
 # @cloudflare/workers-shared
 
+## 0.17.0
+
+### Minor Changes
+
+- [#8443](https://github.com/cloudflare/workers-sdk/pull/8443) [`3b1d081`](https://github.com/cloudflare/workers-sdk/commit/3b1d081b89892aa877c33ac63877db3eccedf062) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Requests with a `Sec-Fetch-Mode: navigate` header, made to a project with `sec_fetch_mode_navigate_header_prefers_asset_serving` compatibility flag, will be routed to the asset-worker rather than a user Worker when no exact asset match is found.
+
+  Requests without that header will continue to be routed to the user Worker when no exact asset match is found.
+
+## 0.16.0
+
+### Minor Changes
+
+- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@penalosa](https://github.com/penalosa)! - Packages in Workers SDK now support the versions of Node that Node itself supports (Current, Active, Maintenance). Currently, that includes Node v18, v20, and v22.
+
+## 0.15.0
+
+### Minor Changes
+
+- [#8390](https://github.com/cloudflare/workers-sdk/pull/8390) [`53e6323`](https://github.com/cloudflare/workers-sdk/commit/53e63233c5b9bb786af3daea63c10ffe60a5d881) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Parse and apply metafiles (`_headers` and `_redirects`) in `wrangler dev` for Workers Assets
+
+- [#8373](https://github.com/cloudflare/workers-sdk/pull/8373) [`08b8c46`](https://github.com/cloudflare/workers-sdk/commit/08b8c46872988da7599891f8f1700bcbc7f86968) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Add `CF-Cache-Status` to Workers Assets responses to indicate if we returned a cached asset or not. This will also populate zone cache analytics and Logpush logs.
+
+- [#8279](https://github.com/cloudflare/workers-sdk/pull/8279) [`aba0e9c`](https://github.com/cloudflare/workers-sdk/commit/aba0e9cad62e77cfa5fb3515ea9f89aa225059ed) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Add support for custom headers and redirects in asset-worker
+
+## 0.14.5
+
+### Patch Changes
+
+- [#8338](https://github.com/cloudflare/workers-sdk/pull/8338) [`2d40989`](https://github.com/cloudflare/workers-sdk/commit/2d409892f1cf08f07f84d25dcab023bc20ada374) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Upload \_headers and \_redirects if present with Workers Assets as part of `wrangler deploy` and `wrangler versions upload`.
+
+- [#8350](https://github.com/cloudflare/workers-sdk/pull/8350) [`56a8aed`](https://github.com/cloudflare/workers-sdk/commit/56a8aed9604491433154cc006d1ba2c3ab6ac1d1) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Removes non-public methods from asset-worker
+
+## 0.14.4
+
+### Patch Changes
+
+- [#8247](https://github.com/cloudflare/workers-sdk/pull/8247) [`a9a4c33`](https://github.com/cloudflare/workers-sdk/commit/a9a4c33143b9f58673ac0cdd251957997275fa10) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Omits Content-Type header for files of an unknown extension in Workers Assets
+
 ## 0.14.3
 
 ### Patch Changes

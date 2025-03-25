@@ -25,6 +25,9 @@ function testProcessBehaviour() {
 			"globalThis.process is not the same as process"
 		);
 
+		assert(!("FOO" in process.env), "process.env.FOO is populated");
+		assert(!("BAR" in process.env), "process.env.BAR is populated");
+
 		const fakeProcess1 = {} as typeof process;
 		process = fakeProcess1;
 		assert(process === fakeProcess1, "process is not updated to fakeProcess");

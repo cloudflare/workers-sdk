@@ -13,7 +13,7 @@
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"playwright-chromium": "^1.48.1",
+		"playwright-chromium": "catalog:default",
 		"typescript": "catalog:default"
 	}
 }
