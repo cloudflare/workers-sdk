@@ -149,7 +149,7 @@ describe("LocalRuntimeController", () => {
 			const config = {
 				name: "worker",
 				entrypoint: "NOT_REAL",
-				compatibilityFlags: ["nodejs_compat_v2"],
+				compatibilityFlags: ["nodejs_compat"],
 				compatibilityDate: "2023-10-01",
 			};
 			const bundle: Bundle = {
@@ -171,7 +171,7 @@ describe("LocalRuntimeController", () => {
 					`,
 					},
 					{
-						type: "commonjs",
+						type: "nodejs-compat-module",
 						name: "base64.cjs",
 						filePath: "/virtual/node/base64.cjs",
 						content: `module.exports = {
@@ -223,7 +223,7 @@ describe("LocalRuntimeController", () => {
 							});
 						} else if (pathname === "/throw-commonjs") {
 							try { add.throw(); } catch (e) { return new Response(e.stack); }
-						} else if (pathname === "/throw-other-commonjs") {
+						} else if (pathname === "/throw-nodejs-compat-module") {
 							try { base64.throw(); } catch (e) { return new Response(e.stack); }
 						} else {
 							return new Response(null, { status: 404 });
@@ -270,12 +270,12 @@ describe("LocalRuntimeController", () => {
 			    at Object.fetch (file:///D:/virtual/esm/index.mjs:15:19)"
 			`);
 
-				// Check stack traces from CommonJS modules include file path
-				res = await fetch(new URL("/throw-other-commonjs", url));
+				// Check stack traces from NodeJsCompatModule modules include file path
+				res = await fetch(new URL("/throw-nodejs-compat-module", url));
 				expect(res.status).toBe(200);
 				expect(normalizeDrive(await res.text())).toMatchInlineSnapshot(`
 			"Error: Oops!
-			    at Object.throw (file:///D:/virtual/node/base64.cjs:9:14)
+			    at Object.throw (file:///D:/virtual/esm/base64.cjs:9:14)
 			    at Object.fetch (file:///D:/virtual/esm/index.mjs:17:22)"
 			`);
 			} else {
@@ -285,12 +285,12 @@ describe("LocalRuntimeController", () => {
 			    at Object.fetch (file:///virtual/esm/index.mjs:15:19)"
 			`);
 
-				// Check stack traces from CommonJS modules include file path
-				res = await fetch(new URL("/throw-other-commonjs", url));
+				// Check stack traces from NodeJsCompatModule modules include file path
+				res = await fetch(new URL("/throw-nodejs-compat-module", url));
 				expect(res.status).toBe(200);
 				expect(await res.text()).toMatchInlineSnapshot(`
 			"Error: Oops!
-			    at Object.throw (file:///virtual/node/base64.cjs:9:14)
+			    at Object.throw (file:///virtual/esm/base64.cjs:9:14)
 			    at Object.fetch (file:///virtual/esm/index.mjs:17:22)"
 			`);
 			}

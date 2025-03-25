@@ -21,7 +21,7 @@ const SUGGEST_NODE =
 	"that uses Node.js built-ins, you'll either need to:" +
 	"\n- Bundle your Worker, configuring your bundler to polyfill Node.js built-ins" +
 	"\n- Configure your bundler to load Workers-compatible builds by changing the main fields/conditions" +
-	"\n- Enable the `nodejs_compat` compatibility flag" +
+	"\n- Enable the `nodejs_compat` compatibility flag and use the `NodeJsCompatModule` module type" +
 	"\n- Find an alternative package that doesn't require Node.js built-ins";
 
 const builtinModulesWithPrefix = builtinModules.concat(
@@ -43,6 +43,7 @@ export function maybeGetStringScriptPathIndex(
 export const ModuleRuleTypeSchema = z.enum([
 	"ESModule",
 	"CommonJS",
+	"NodeJsCompatModule",
 	"Text",
 	"Data",
 	"CompiledWasm",
@@ -51,7 +52,7 @@ export const ModuleRuleTypeSchema = z.enum([
 ]);
 export type ModuleRuleType = z.infer<typeof ModuleRuleTypeSchema>;
 
-type JavaScriptModuleRuleType = "ESModule" | "CommonJS";
+type JavaScriptModuleRuleType = "ESModule" | "CommonJS" | "NodeJsCompatModule";
 
 export const ModuleRuleSchema = z.object({
 	type: ModuleRuleTypeSchema,
@@ -290,6 +291,7 @@ ${dim(modulesConfig)}`;
 		}
 		const spec = specExpression.value;
 
+		const isNodeJsCompatModule = referencingType === "NodeJsCompatModule";
 		if (
 			// `cloudflare:` and `workerd:` imports don't need to be included explicitly
 			spec.startsWith("cloudflare:") ||
@@ -297,7 +299,7 @@ ${dim(modulesConfig)}`;
 			// Node.js compat v1 requires imports to be prefixed with `node:`
 			(this.#nodejsCompatMode === "v1" && spec.startsWith("node:")) ||
 			// Node.js compat modules and v2 can also handle non-prefixed imports
-			(this.#nodejsCompatMode === "v2" &&
+			((this.#nodejsCompatMode === "v2" || isNodeJsCompatModule) &&
 				builtinModulesWithPrefix.includes(spec)) ||
 			// Async Local Storage mode (node_als) only deals with `node:async_hooks` imports
 			(this.#nodejsCompatMode === "als" && spec === "node:async_hooks") ||
@@ -343,6 +345,7 @@ ${dim(modulesConfig)}`;
 		switch (rule.type) {
 			case "ESModule":
 			case "CommonJS":
+			case "NodeJsCompatModule":
 				const code = data.toString("utf8");
 				this.#visitJavaScriptModule(code, identifier, rule.type);
 				break;
@@ -380,6 +383,8 @@ function createJavaScriptModule(
 		return { name, esModule: code };
 	} else if (type === "CommonJS") {
 		return { name, commonJsModule: code };
+	} else if (type === "NodeJsCompatModule") {
+		return { name, nodeJsCompatModule: code };
 	}
 	// noinspection UnnecessaryLocalVariableJS
 	const exhaustive: never = type;
@@ -404,6 +409,7 @@ export function convertModuleDefinition(
 	switch (def.type) {
 		case "ESModule":
 		case "CommonJS":
+		case "NodeJsCompatModule":
 			return createJavaScriptModule(
 				contentsToString(contents),
 				name,
@@ -435,6 +441,8 @@ function convertWorkerModule(mod: Worker_Module): ModuleDefinition {
 
 	if ("esModule" in m) return { path, type: "ESModule" };
 	else if ("commonJsModule" in m) return { path, type: "CommonJS" };
+	else if ("nodeJsCompatModule" in m)
+		return { path, type: "NodeJsCompatModule" };
 	else if ("text" in m) return { path, type: "Text" };
 	else if ("data" in m) return { path, type: "Data" };
 	else if ("wasm" in m) return { path, type: "CompiledWasm" };

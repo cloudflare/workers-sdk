@@ -409,6 +409,8 @@ function maybeGetForceTypeModuleContents(
 			return { esModule: contents.toString() };
 		case "CommonJS":
 			return { commonJsModule: contents.toString() };
+		case "NodeJsCompatModule":
+			return { nodeJsCompatModule: contents.toString() };
 		case "Text":
 			return { text: contents.toString() };
 		case "Data":
@@ -508,8 +510,8 @@ async function load(
 	// Respond with CommonJS module
 
 	// If we're `import`ing a CommonJS module, or we're `require`ing a `node:*`
-	// module from a CommonJS, return an ES module shim. Note
-	// CommonJS can `require` ES modules, using the default export.
+	// module from a NodeJsCompatModule, return an ES module shim. Note
+	// NodeJsCompatModules can `require` ES modules, using the default export.
 	const insertCjsEsmShim = method === "import" || specifier.startsWith("node:");
 	if (insertCjsEsmShim && !disableCjsEsmShim) {
 		const fileName = posixPath.basename(filePath);
@@ -524,9 +526,9 @@ async function load(
 	}
 
 	// Otherwise, if we're `require`ing a non-`node:*` module, just return a
-	// CommonJS
+	// NodeJsCompatModule
 	debuglog(logBase, "cjs:", filePath);
-	return buildModuleResponse(target, { commonJsModule: contents });
+	return buildModuleResponse(target, { nodeJsCompatModule: contents });
 }
 
 export async function handleModuleFallbackRequest(

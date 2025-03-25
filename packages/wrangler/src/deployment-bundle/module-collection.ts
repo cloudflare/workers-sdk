@@ -36,6 +36,7 @@ export const RuleTypeToModuleType: Record<ConfigModuleRuleType, CfModuleType> =
 		Text: "text",
 		PythonModule: "python",
 		PythonRequirement: "python-requirement",
+		NodeJsCompatModule: "nodejs-compat-module",
 	};
 
 export const ModuleTypeToRuleType = flipObject(RuleTypeToModuleType);
