@@ -338,11 +338,11 @@ export const kvKeyPutCommand = createCommand({
 
 		if (args.path) {
 			logger.log(
-				`Writing the contents of ${args.path} to the key "${key}" on namespace ${namespaceId}${metadataLog}.`
+				`Writing the contents of ${args.path} to the key "${key}" on ${args.local ? "local" : "remote"} namespace ${namespaceId}${metadataLog}.`
 			);
 		} else {
 			logger.log(
-				`Writing the value "${value}" to key "${key}" on namespace ${namespaceId}${metadataLog}.`
+				`Writing the value "${value}" to key "${key}" on ${args.local ? "local" : "remote"} namespace ${namespaceId}${metadataLog}.`
 			);
 		}
 
@@ -429,6 +429,10 @@ export const kvKeyListCommand = createCommand({
 		const config = readConfig(args);
 		const namespaceId = getKVNamespaceId(args, config);
 
+		logger.log(
+			`Listing keys in ${args.local ? "local" : "remote"} namespace ${namespaceId}${prefix ? ` with prefix "${prefix}"` : ""}.`
+		);
+
 		let result: NamespaceKeyInfo[];
 		let metricEvent: EventNames;
 		if (args.local) {
@@ -507,6 +511,10 @@ export const kvKeyGetCommand = createCommand({
 	async handler({ key, ...args }) {
 		const config = readConfig(args);
 		const namespaceId = getKVNamespaceId(args, config);
+
+		logger.log(
+			`Reading key "${key}" from ${args.local ? "local" : "remote"} namespace ${namespaceId}.`
+		);
 
 		let bufferKVValue;
 		let metricEvent: EventNames;
@@ -592,7 +600,9 @@ export const kvKeyDeleteCommand = createCommand({
 		const config = readConfig(args);
 		const namespaceId = getKVNamespaceId(args, config);
 
-		logger.log(`Deleting the key "${key}" on namespace ${namespaceId}.`);
+		logger.log(
+			`Deleting the key "${key}" on ${args.local ? "local" : "remote"} namespace ${namespaceId}.`
+		);
 
 		let metricEvent: EventNames;
 		if (args.local) {
@@ -679,6 +689,10 @@ export const kvBulkPutCommand = createCommand({
 		const config = readConfig(args);
 		const namespaceId = getKVNamespaceId(args, config);
 		const content = parseJSON(readFileSync(filename), filename);
+
+		logger.log(
+			`Bulk uploading key-value pairs from "${filename}" to ${args.local ? "local" : "remote"} namespace ${namespaceId}.`
+		);
 
 		if (!Array.isArray(content)) {
 			throw new UserError(
@@ -807,13 +821,17 @@ export const kvBulkDeleteCommand = createCommand({
 
 		if (!args.force) {
 			const result = await confirm(
-				`Are you sure you want to delete all the keys read from "${filename}" from kv-namespace with id "${namespaceId}"?`
+				`Are you sure you want to delete all the keys read from "${filename}" from ${args.local ? "local" : "remote"} kv-namespace with id "${namespaceId}"?`
 			);
 			if (!result) {
 				logger.log(`Not deleting keys read from "${filename}".`);
 				return;
 			}
 		}
+
+		logger.log(
+			`Bulk deleting keys from "${filename}" in ${args.local ? "local" : "remote"} namespace ${namespaceId}.`
+		);
 
 		const content = parseJSON(readFileSync(filename), filename) as (
 			| string
