@@ -93,18 +93,18 @@ export const getOutputFilePathFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
- * `WRANGLER_CI_MATCH_TAG` specifies a worker tag
+ * `WRANGLER_CI_MATCH_TAG` specifies a Worker tag
  *
- * If this is set, Wrangler will ensure the worker being targeted has this tag
+ * If this is set, Wrangler will ensure the Worker being targeted has this tag
  */
 export const getCIMatchTag = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_CI_MATCH_TAG",
 });
 
 /**
- * `WRANGLER_CI_OVERRIDE_TAG` specifies a worker tag
+ * `WRANGLER_CI_OVERRIDE_NAME` specifies a Worker name
  *
- * If this is set, Wrangler will override the worker name with this tag
+ * If this is set, Wrangler will override the Worker name with this one
  */
 export const getCIOverrideName = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_CI_OVERRIDE_NAME",
