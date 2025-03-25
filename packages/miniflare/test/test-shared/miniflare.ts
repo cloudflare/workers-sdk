@@ -45,7 +45,7 @@ export function namespace<T>(ns: string, binding: T): Namespaced<T> {
 					if (result instanceof Promise) {
 						return result.then((res) => {
 							if (res instanceof Map) {
-								let newResult = new Map<string, unknown>();
+								const newResult = new Map<string, unknown>();
 								for (const [key, value] of res) {
 									newResult.set(key.slice(ns.length), value);
 								}
@@ -69,8 +69,6 @@ export function namespace<T>(ns: string, binding: T): Namespaced<T> {
 		},
 	});
 }
-
-
 
 export function miniflareTest<
 	Env,

@@ -22,7 +22,6 @@ import {
 	validatePutOptions,
 } from "./validator.worker";
 
-const MAX_BULK_LENGTH = 100 * 1024 * 1024;
 interface KVParams {
 	key: string;
 }
