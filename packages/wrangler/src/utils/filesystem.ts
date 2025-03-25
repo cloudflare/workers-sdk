@@ -17,4 +17,4 @@ export function ensureDirectoryExistsSync(filepath: string) {
 export {
 	maybeGetFile,
 	thrownIsDoesNotExistError,
-} from "@cloudflare/workers-shared/utils/helpers";
+} from "@cloudflare/workers-shared/dist/utils/helpers";

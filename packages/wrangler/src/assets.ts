@@ -3,20 +3,18 @@ import { existsSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
 import {
-	getContentType,
-	MAX_ASSET_COUNT,
-	MAX_ASSET_SIZE,
-	normalizeFilePath,
-} from "@cloudflare/workers-shared";
-import {
 	CF_ASSETS_IGNORE_FILENAME,
 	HEADERS_FILENAME,
+	MAX_ASSET_COUNT,
+	MAX_ASSET_SIZE,
 	REDIRECTS_FILENAME,
-} from "@cloudflare/workers-shared/utils/constants";
+} from "@cloudflare/workers-shared/dist/utils/constants";
 import {
 	createAssetsIgnoreFunction,
+	getContentType,
 	maybeGetFile,
-} from "@cloudflare/workers-shared/utils/helpers";
+	normalizeFilePath,
+} from "@cloudflare/workers-shared/dist/utils/helpers";
 import chalk from "chalk";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
@@ -34,7 +32,10 @@ import type { StartDevWorkerOptions } from "./api";
 import type { Config } from "./config";
 import type { DeployArgs } from "./deploy";
 import type { StartDevOptions } from "./dev";
-import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
+import type {
+	AssetConfig,
+	RouterConfig,
+} from "@cloudflare/workers-shared/dist/utils/types";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
 

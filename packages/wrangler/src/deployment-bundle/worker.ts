@@ -4,7 +4,10 @@ import type {
 	WorkerMetadata,
 	WorkerMetadataBinding,
 } from "./create-worker-upload-form";
-import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
+import type {
+	AssetConfig,
+	RouterConfig,
+} from "@cloudflare/workers-shared/dist/utils/types";
 import type { Json } from "miniflare";
 
 /**

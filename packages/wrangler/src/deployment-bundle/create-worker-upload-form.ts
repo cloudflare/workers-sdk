@@ -14,7 +14,7 @@ import type {
 	CfUserLimits,
 	CfWorkerInit,
 } from "./worker.js";
-import type { AssetConfig } from "@cloudflare/workers-shared";
+import type { AssetConfig } from "@cloudflare/workers-shared/dist/utils/types";
 import type { Json } from "miniflare";
 
 export const moduleTypeMimeType: {

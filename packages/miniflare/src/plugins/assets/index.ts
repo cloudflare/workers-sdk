@@ -2,29 +2,27 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path, { join } from "node:path";
 import {
-	CONTENT_HASH_OFFSET,
-	ENTRY_SIZE,
-	getContentType,
-	HEADER_SIZE,
-	MAX_ASSET_COUNT,
-	MAX_ASSET_SIZE,
-	normalizeFilePath,
-	PATH_HASH_OFFSET,
-	PATH_HASH_SIZE,
-} from "@cloudflare/workers-shared";
-import {
 	constructHeaders,
 	constructRedirects,
 } from "@cloudflare/workers-shared/utils/configuration/constructConfiguration";
 import { parseHeaders } from "@cloudflare/workers-shared/utils/configuration/parseHeaders";
 import { parseRedirects } from "@cloudflare/workers-shared/utils/configuration/parseRedirects";
 import {
+	CONTENT_HASH_OFFSET,
+	ENTRY_SIZE,
+	HEADER_SIZE,
 	HEADERS_FILENAME,
+	MAX_ASSET_COUNT,
+	MAX_ASSET_SIZE,
+	PATH_HASH_OFFSET,
+	PATH_HASH_SIZE,
 	REDIRECTS_FILENAME,
 } from "@cloudflare/workers-shared/utils/constants";
 import {
 	createAssetsIgnoreFunction,
+	getContentType,
 	maybeGetFile,
+	normalizeFilePath,
 } from "@cloudflare/workers-shared/utils/helpers";
 import {
 	AssetConfig,

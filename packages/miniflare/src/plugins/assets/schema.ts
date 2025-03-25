@@ -1,7 +1,7 @@
 import {
 	AssetConfigSchema,
 	RouterConfigSchema,
-} from "@cloudflare/workers-shared";
+} from "@cloudflare/workers-shared/utils/types";
 import { z } from "zod";
 import { PathSchema } from "../../shared";
 
