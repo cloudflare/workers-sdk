@@ -2,6 +2,7 @@ import { coupleWebSocket } from "miniflare";
 import { WebSocketServer } from "ws";
 import { UNKNOWN_HOST } from "./shared";
 import { nodeHeadersToWebHeaders } from "./utils";
+import type { MaybePromise } from "./utils";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
 import type { ReplaceWorkersTypes } from "miniflare";
 import type { IncomingMessage } from "node:http";
@@ -13,7 +14,9 @@ import type * as vite from "vite";
  */
 export function handleWebSocket(
 	httpServer: vite.HttpServer,
-	fetcher: ReplaceWorkersTypes<Fetcher>["fetch"]
+	getFetcher: () => MaybePromise<
+		ReplaceWorkersTypes<Fetcher>["fetch"] | undefined
+	>
 ) {
 	const nodeWebSocket = new WebSocketServer({ noServer: true });
 
@@ -28,11 +31,12 @@ export function handleWebSocket(
 			}
 
 			const headers = nodeHeadersToWebHeaders(request.headers);
-			const response = await fetcher(url, {
+			const fetcher = await getFetcher();
+			const response = await fetcher?.(url, {
 				headers,
 				method: request.method,
 			});
-			const workerWebSocket = response.webSocket;
+			const workerWebSocket = response?.webSocket;
 
 			if (!workerWebSocket) {
 				socket.destroy();

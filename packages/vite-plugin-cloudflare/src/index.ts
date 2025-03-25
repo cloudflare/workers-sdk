@@ -285,7 +285,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					writeDeployConfig(resolvedPluginConfig, resolvedViteConfig);
 				}
 			},
-			handleHotUpdate(options) {
+			hotUpdate(options) {
 				if (
 					// Vite normalizes `options.file` so we use `path.resolve` for Windows compatibility
 					resolvedPluginConfig.configPaths.has(path.resolve(options.file)) ||
@@ -295,7 +295,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						options.file
 					)
 				) {
+					// It's OK for this to be called multiple times as Vite prevents concurrent execution
 					options.server.restart();
+					return [];
 				}
 			},
 			async configureServer(viteDevServer) {
@@ -305,30 +307,40 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				);
 
 				if (miniflare) {
-					await miniflare.dispose();
-					miniflare = undefined;
+					await miniflare.setOptions(
+						getDevMiniflareOptions(resolvedPluginConfig, viteDevServer)
+					);
+				} else {
+					miniflare = new Miniflare(
+						getDevMiniflareOptions(resolvedPluginConfig, viteDevServer)
+					);
 				}
-
-				miniflare = new Miniflare(
-					getDevMiniflareOptions(resolvedPluginConfig, viteDevServer)
-				);
 
 				await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
 				const routerWorker = await getRouterWorker(miniflare);
 
 				const middleware = createMiddleware(
-					({ request }) => {
-						return routerWorker.fetch(toMiniflareRequest(request), {
-							redirect: "manual",
-						}) as any;
+					async ({ request }) => {
+						if (miniflare) {
+							const routerWorker = await getRouterWorker(miniflare);
+
+							return routerWorker.fetch(toMiniflareRequest(request), {
+								redirect: "manual",
+							}) as any;
+						}
 					},
 					{ alwaysCallNext: false }
 				);
 
-				handleWebSocket(viteDevServer.httpServer, routerWorker.fetch);
+				handleWebSocket(viteDevServer.httpServer, async () => {
+					if (miniflare) {
+						const routerWorker = await getRouterWorker(miniflare);
+						return routerWorker.fetch;
+					}
+				});
 
 				return () => {
-					viteDevServer.middlewares.use((req, res, next) => {
+					viteDevServer.middlewares.use(async (req, res, next) => {
 						middleware(req, res, next);
 					});
 				};
@@ -354,7 +366,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					{ alwaysCallNext: false }
 				);
 
-				handleWebSocket(vitePreviewServer.httpServer, miniflare.dispatchFetch);
+				handleWebSocket(
+					vitePreviewServer.httpServer,
+					() => miniflare.dispatchFetch
+				);
 
 				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
 				vitePreviewServer.middlewares.use((req, res, next) => {
@@ -422,6 +437,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			hotUpdate(options) {
 				if (additionalModulePaths.has(options.file)) {
 					options.server.restart();
+					return [];
 				}
 			},
 			async renderChunk(code, chunk) {
