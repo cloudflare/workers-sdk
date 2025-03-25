@@ -1,21 +1,21 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
-import { PerformanceTimer } from "../../utils/performance";
-import { setupSentry } from "../../utils/sentry";
-import { mockJaegerBinding } from "../../utils/tracing";
-import { Analytics } from "./analytics";
-import { AssetsManifest } from "./assets-manifest";
-import { normalizeConfiguration } from "./configuration";
-import { ExperimentAnalytics } from "./experiment-analytics";
-import { canFetch, handleRequest } from "./handler";
-import { handleError, submitMetrics } from "./utils/final-operations";
-import { getAssetWithMetadataFromKV } from "./utils/kv";
+import { PerformanceTimer } from "../../utils/performance.js";
+import { setupSentry } from "../../utils/sentry.js";
+import { mockJaegerBinding } from "../../utils/tracing.js";
+import { Analytics } from "./analytics.js";
+import { AssetsManifest } from "./assets-manifest.js";
+import { normalizeConfiguration } from "./configuration.js";
+import { ExperimentAnalytics } from "./experiment-analytics.js";
+import { canFetch, handleRequest } from "./handler.js";
+import { handleError, submitMetrics } from "./utils/final-operations.js";
+import { getAssetWithMetadataFromKV } from "./utils/kv.js";
 import type {
 	AssetConfig,
 	ColoMetadata,
 	JaegerTracing,
 	UnsafePerformanceTimer,
-} from "../../utils/types";
-import type { Environment, ReadyAnalytics } from "./types";
+} from "../../utils/types.js";
+import type { Environment, ReadyAnalytics } from "./types.js";
 
 export type Env = {
 	/*
@@ -58,7 +58,7 @@ export type Env = {
  * they are still in flux and that they are not an established API contract.
  */
 export default class extends WorkerEntrypoint<Env> {
-	async fetch(request: Request): Promise<Response> {
+	override async fetch(request: Request): Promise<Response> {
 		let sentry: ReturnType<typeof setupSentry> | undefined;
 		const analytics = new Analytics(this.env.ANALYTICS);
 		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);

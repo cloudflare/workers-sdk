@@ -1,4 +1,4 @@
-import type { AssetConfig } from "../../utils/types";
+import type { AssetConfig } from "../../utils/types.js";
 
 interface CompatibilityFlag {
 	enable: `assets_${string}`;

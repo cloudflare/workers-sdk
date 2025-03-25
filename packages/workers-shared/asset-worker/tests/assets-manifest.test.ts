@@ -5,9 +5,9 @@ import {
 	HEADER_SIZE,
 	PATH_HASH_OFFSET,
 	PATH_HASH_SIZE,
-} from "../../utils/constants";
+} from "../../utils/constants.js";
 import AssetManifestFixture from "../fixtures/AssetManifest.bin";
-import { binarySearch, compare, hashPath } from "../src/assets-manifest";
+import { binarySearch, compare, hashPath } from "../src/assets-manifest.js";
 
 const encoder = new TextEncoder();
 

@@ -4,14 +4,14 @@ import {
 	PLACEHOLDER_REGEX,
 	REDIRECTS_VERSION,
 	SPLAT_REGEX,
-} from "./constants";
+} from "./constants.js";
 import type {
 	AssetConfig,
 	MetadataHeaders,
 	MetadataRedirects,
 	MetadataStaticRedirects,
-} from "../types";
-import type { Logger, ParsedHeaders, ParsedRedirects } from "./types";
+} from "../types.js";
+import type { Logger, ParsedHeaders, ParsedRedirects } from "./types.js";
 
 export function constructRedirects({
 	redirects,

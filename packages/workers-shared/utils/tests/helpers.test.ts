@@ -3,7 +3,7 @@ import { writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createAssetsIgnoreFunction } from "../helpers";
+import { createAssetsIgnoreFunction } from "../helpers.js";
 
 describe("assets", () => {
 	const tmpDir = mkdtempSync(join(tmpdir(), "wrangler-tests"));

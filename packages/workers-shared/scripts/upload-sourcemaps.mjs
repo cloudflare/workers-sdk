@@ -1,7 +1,12 @@
+// @ts-check
 // Creates a sentry release with associated sourcemaps
 import SentryCli from "@sentry/cli";
 
-const requireEnvVar = (varName: string): string => {
+/**
+ * @param {string} varName
+ * @returns {string}
+ */
+const requireEnvVar = (varName) => {
 	const varValue = process.env[varName];
 	if (varValue === undefined || varValue === "") {
 		throw new Error(`Missing required environment variable: ${varName}`);
@@ -9,12 +14,17 @@ const requireEnvVar = (varName: string): string => {
 	return varValue;
 };
 
-const requireVar = (varName: string): string => {
+/**
+ * @param {string} varName
+ * @returns {string}
+ */
+const requireVar = (varName) => {
 	const args = process.argv.slice(2);
 
 	for (let i = 0; i < args.length; i += 2) {
-		if (args[i].startsWith("--") && args[i].substring(2) === varName) {
-			return args[i + 1];
+		const arg = /** @type {string} */ (args[i]);
+		if (arg.startsWith("--") && arg.substring(2) === varName) {
+			return /** @type {string} */ (args[i + 1]);
 		}
 	}
 	throw new Error(`Missing required variable: ${varName}`);
@@ -35,7 +45,11 @@ const sentryAccessClientSecret = requireEnvVar(
 const accessHeader = `cf-access-client-id: ${sentryAccessClientID}
 cf-access-client-secret: ${sentryAccessClientSecret}`;
 
-async function generateRelease(worker: string, release: string) {
+/**
+ * @param {string} worker
+ * @param {string} release
+ */
+async function generateRelease(worker, release) {
 	const dir = `./${worker}/dist`;
 	console.log(`Dir path: ${dir}`);
 

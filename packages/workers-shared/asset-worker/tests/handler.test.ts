@@ -1,9 +1,9 @@
 import { vi } from "vitest";
-import { mockJaegerBinding } from "../../utils/tracing";
-import { Analytics } from "../src/analytics";
-import { normalizeConfiguration } from "../src/configuration";
-import { canFetch, handleRequest } from "../src/handler";
-import type { AssetConfig } from "../../utils/types";
+import { mockJaegerBinding } from "../../utils/tracing.js";
+import { Analytics } from "../src/analytics.js";
+import { normalizeConfiguration } from "../src/configuration.js";
+import { canFetch, handleRequest } from "../src/handler.js";
+import type { AssetConfig } from "../../utils/types.js";
 
 const mockEnv = {
 	JAEGER: mockJaegerBinding(),

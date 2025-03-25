@@ -10,17 +10,17 @@ import {
 	PermanentRedirectResponse,
 	SeeOtherResponse,
 	TemporaryRedirectResponse,
-} from "../../utils/responses";
+} from "../../utils/responses.js";
 import {
 	flagIsEnabled,
 	SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING,
-} from "./compatibility-flags";
-import { attachCustomHeaders, getAssetHeaders } from "./utils/headers";
-import { generateRulesMatcher, replacer } from "./utils/rules-engine";
-import type { AssetConfig } from "../../utils/types";
-import type { Analytics } from "./analytics";
-import type EntrypointType from "./index";
-import type { Env } from "./index";
+} from "./compatibility-flags.js";
+import { attachCustomHeaders, getAssetHeaders } from "./utils/headers.js";
+import { generateRulesMatcher, replacer } from "./utils/rules-engine.js";
+import type { AssetConfig } from "../../utils/types.js";
+import type { Analytics } from "./analytics.js";
+import type EntrypointType from "./index.js";
+import type { Env } from "./index.js";
 
 const REDIRECTS_VERSION = 1;
 export const HEADERS_VERSION = 2;

@@ -5,14 +5,14 @@ import {
 	PERMITTED_STATUS_CODES,
 	PLACEHOLDER_REGEX,
 	SPLAT_REGEX,
-} from "./constants";
-import { urlHasHost, validateUrl } from "./validateURL";
+} from "./constants.js";
+import { urlHasHost, validateUrl } from "./validateURL.js";
 import type {
 	InvalidRedirectRule,
 	ParsedRedirects,
 	RedirectLine,
 	RedirectRule,
-} from "./types";
+} from "./types.js";
 
 export function parseRedirects(
 	input: string,

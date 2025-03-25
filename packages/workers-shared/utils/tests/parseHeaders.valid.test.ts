@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { parseHeaders } from "../configuration/parseHeaders";
+import { parseHeaders } from "../configuration/parseHeaders.js";
 
 test("parseHeaders should handle a single rule", () => {
 	const input = `/a
