@@ -1,5 +1,31 @@
 # @cloudflare/vite-plugin
 
+## 0.1.16
+
+### Patch Changes
+
+- [#8432](https://github.com/cloudflare/workers-sdk/pull/8432) [`d611caf`](https://github.com/cloudflare/workers-sdk/commit/d611caf7193644893aaa408c9de39f75cd427daf) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Experimental: add support for Workers Assets metafiles (\_headers and \_redirects) in `vite dev`.
+
+  **Experimental feature**: This feature is being made available behind an experimental option (`headersAndRedirectsDevModeSupport`) in the cloudflare plugin configuration. It could change or be removed at any time.
+
+  ```ts
+  cloudflare({
+  	// ...
+  	experimental: { headersAndRedirectsDevModeSupport: true },
+  }),
+  ```
+
+  Currently, in this experimental mode, requests that would result in an HTML response or a 404 response will take into account the \_headers and \_redirects settings.
+
+  Known limitation: requests for existing static assets will be served directly by Vite without considering the \_headers or \_redirects settings.
+
+  Production deployments or using `vite preview` already accurately supports the `_headers` and `_footers` features. The recommendation is to use `vite preview` for local testing of these settings.
+
+- Updated dependencies [[`7682675`](https://github.com/cloudflare/workers-sdk/commit/768267567427cb54f39dc13860b09affd924267d), [`9c844f7`](https://github.com/cloudflare/workers-sdk/commit/9c844f771a5345e3ccf64f07ac1d476a50a80fb6), [`d8c0495`](https://github.com/cloudflare/workers-sdk/commit/d8c04956a8c9e426bd7d26a421dff6d3f0590fd2), [`29cb306`](https://github.com/cloudflare/workers-sdk/commit/29cb3069c9bae79941247dc2fd71021f1c75887d), [`e4b76e8`](https://github.com/cloudflare/workers-sdk/commit/e4b76e8d2a038d58a142bc79c05c9aa7db9eb3eb)]:
+  - miniflare@4.20250321.0
+  - wrangler@4.4.1
+  - @cloudflare/unenv-preset@2.3.1
+
 ## 0.1.15
 
 ### Patch Changes

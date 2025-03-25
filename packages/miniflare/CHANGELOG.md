@@ -1,5 +1,20 @@
 # miniflare
 
+## 4.20250321.0
+
+### Patch Changes
+
+- [#8655](https://github.com/cloudflare/workers-sdk/pull/8655) [`7682675`](https://github.com/cloudflare/workers-sdk/commit/768267567427cb54f39dc13860b09affd924267d) Thanks [@emily-shen](https://github.com/emily-shen)! - fix bug where assets in directories starting with . would crash the dev server
+
+- [#8650](https://github.com/cloudflare/workers-sdk/pull/8650) [`9c844f7`](https://github.com/cloudflare/workers-sdk/commit/9c844f771a5345e3ccf64f07ac1d476a50a80fb6) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250320.0  | 1.20250321.0  |
+  | @cloudflare/workers-types | ^4.20250320.0 | ^4.20250321.0 |
+
 ## 4.20250320.0
 
 ### Patch Changes
