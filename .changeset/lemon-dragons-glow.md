@@ -2,4 +2,4 @@
 "wrangler": minor
 ---
 
-Wrangler pages deployments list - added ID to output
+Added the Pages deployment id to the JSON output for `wrangler pages deployment list`
