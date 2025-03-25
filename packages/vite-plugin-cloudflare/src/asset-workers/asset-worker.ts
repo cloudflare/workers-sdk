@@ -1,4 +1,4 @@
-import AssetWorker from "@cloudflare/workers-shared/asset-worker/src";
+import AssetWorker from "@cloudflare/workers-shared/dist/asset-worker/src/index.js";
 import { UNKNOWN_HOST } from "../shared";
 
 interface Env {

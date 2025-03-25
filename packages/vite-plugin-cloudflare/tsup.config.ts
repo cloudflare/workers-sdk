@@ -19,6 +19,7 @@ export default defineConfig([
 		outDir: "dist/asset-workers",
 		external: ["cloudflare:workers"],
 		tsconfig: "tsconfig.worker.json",
+		splitting: false,
 	},
 	{
 		entry: ["src/runner-worker/index.ts"],

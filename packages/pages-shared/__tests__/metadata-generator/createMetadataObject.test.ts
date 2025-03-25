@@ -3,7 +3,7 @@ import { createMetadataObject } from "../..//metadata-generator/createMetadataOb
 import type {
 	HeadersRule,
 	RedirectRule,
-} from "@cloudflare/workers-shared/utils/configuration/types";
+} from "@cloudflare/workers-shared/utils/configuration/types.js";
 
 const homeRedirectRule: RedirectRule = {
 	from: "/home",
