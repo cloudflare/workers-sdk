@@ -20,7 +20,7 @@ test("Miniflare: accepts manually defined modules", async (t) => {
 	// Check with just `path`
 	const mf = new Miniflare({
 		compatibilityDate: "2023-08-01",
-		compatibilityFlags: ["nodejs_compat"],
+		compatibilityFlags: ["nodejs_compat_v2"],
 		// TODO(soon): remove `modulesRoot` once https://github.com/cloudflare/workerd/issues/1101 fixed
 		//  and add separate test for that
 		modulesRoot: ROOT,
@@ -29,7 +29,7 @@ test("Miniflare: accepts manually defined modules", async (t) => {
 			{ type: "ESModule", path: path.join(ROOT, "blobs.mjs") },
 			{ type: "ESModule", path: path.join(ROOT, "blobs-indirect.mjs") },
 			{ type: "CommonJS", path: path.join(ROOT, "index.cjs") },
-			{ type: "NodeJsCompatModule", path: path.join(ROOT, "index.node.cjs") },
+			{ type: "CommonJS", path: path.join(ROOT, "index.node.cjs") },
 			// Testing modules in subdirectories
 			{ type: "Text", path: path.join(ROOT, "blobs", "text.txt") },
 			{ type: "Data", path: path.join(ROOT, "blobs", "data.bin") },
@@ -51,7 +51,7 @@ test("Miniflare: accepts manually defined modules", async (t) => {
 		"AGFzbQEAAAABBwFgAn9/AX8DAgEABwcBA2FkZAAACgkBBwAgACABawsACgRuYW1lAgMBAAA=";
 	await mf.setOptions({
 		compatibilityDate: "2023-08-01",
-		compatibilityFlags: ["nodejs_compat"],
+		compatibilityFlags: ["nodejs_compat_v2"],
 		modules: [
 			{ type: "ESModule", path: path.join(ROOT, "index.mjs") },
 			{
@@ -79,7 +79,7 @@ test("Miniflare: accepts manually defined modules", async (t) => {
         `,
 			},
 			{
-				type: "NodeJsCompatModule",
+				type: "CommonJS",
 				path: path.join(ROOT, "index.node.cjs"),
 				contents: `module.exports = "node:";`,
 			},
@@ -112,14 +112,14 @@ test("Miniflare: automatically collects modules", async (t) => {
 		modules: true,
 		modulesRoot: ROOT,
 		modulesRules: [
-			// Implicitly testing default module rules for `ESModule` and `CommonJS`
-			{ type: "NodeJsCompatModule", include: ["**/*.node.cjs"] },
+			// Implicitly testing default module rules for `ESModule`
+			{ type: "CommonJS", include: ["**/*.node.cjs", "**/*.cjs"] },
 			{ type: "Text", include: ["**/*.txt"] },
 			{ type: "Data", include: ["**/*.bin"] },
 			{ type: "CompiledWasm", include: ["**/*.wasm"] },
 		],
 		compatibilityDate: "2023-08-01",
-		compatibilityFlags: ["nodejs_compat"],
+		compatibilityFlags: ["nodejs_compat_v2"],
 		scriptPath: path.join(ROOT, "index.mjs"),
 	});
 	t.teardown(() => mf.dispose());
@@ -206,14 +206,14 @@ test("Miniflare: cannot automatically collect modules from dynamic import expres
 		modules: true,
 		modulesRoot: ROOT,
 		modulesRules: [
-			// Implicitly testing default module rules for `ESModule` and `CommonJS`
-			{ type: "NodeJsCompatModule", include: ["**/*.node.cjs"] },
+			// Implicitly testing default module rules for `ESModule`
+			{ type: "CommonJS", include: ["**/*.node.cjs", "**/*.cjs"] },
 			{ type: "Text", include: ["**/*.txt"] },
 			{ type: "Data", include: ["**/*.bin"] },
 			{ type: "CompiledWasm", include: ["**/*.wasm"] },
 		],
 		compatibilityDate: "2023-08-01",
-		compatibilityFlags: ["nodejs_compat"],
+		compatibilityFlags: ["nodejs_compat_v2"],
 		scriptPath,
 	});
 
@@ -233,7 +233,7 @@ You must manually define your modules when constructing Miniflare:
     modules: [
       { type: "ESModule", path: "index-dynamic.mjs" },
       { type: "CommonJS", path: "index.cjs" },
-      { type: "NodeJsCompatModule", path: "index.node.cjs" },
+      { type: "CommonJS", path: "index.node.cjs" },
       { type: "ESModule", path: "blobs-indirect.mjs" },
       { type: "ESModule", path: "blobs.mjs" },
       { type: "Text", path: "blobs/text.txt" },

@@ -27,7 +27,6 @@ export const moduleTypeMimeType: {
 	text: "text/plain",
 	python: "text/x-python",
 	"python-requirement": "text/x-python-requirement",
-	"nodejs-compat-module": undefined,
 };
 
 function toMimeType(type: CfModuleType): string {
