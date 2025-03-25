@@ -9,6 +9,8 @@ export default defineWorkersProject({
 		poolOptions: {
 			workers: {
 				singleWorker: true,
+				// FIXME(lduarte): currently for the workflow binding to work, isolateStorage must be disabled.
+				isolatedStorage: false,
 				miniflare: {
 					// Required to use `SELF.scheduled()`. This is an experimental
 					// compatibility flag, and cannot be enabled in production.

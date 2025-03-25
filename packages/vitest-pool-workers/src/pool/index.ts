@@ -449,6 +449,20 @@ function buildProjectWorkerOptions(
 	const workflowClassNames = Array.from(
 		fixupWorkflowBindingsToSelf(runnerWorker)
 	).sort();
+
+	if (
+		workflowClassNames.length !== 0 &&
+		project.options.isolatedStorage === true
+	) {
+		const message = [
+			`Project ${project.relativePath} has Workflows defined and \`isolatedStorage\` set to true.`,
+			"Please set `isolatedStorage` to false in order to run projects with Workflows.",
+			`Workflows defined in project: ${workflowClassNames.join(", ")}`,
+		].join("\n");
+
+		throw new Error(message);
+	}
+
 	const wrappers = [
 		'import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from "cloudflare:test-internal";',
 	];
