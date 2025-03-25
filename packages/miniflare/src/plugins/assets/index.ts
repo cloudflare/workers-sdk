@@ -85,7 +85,11 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		const storageServiceName = `${ASSETS_PLUGIN_NAME}:storage`;
 		const storageService: Service = {
 			name: storageServiceName,
-			disk: { path: options.assets.directory, writable: true },
+			disk: {
+				path: options.assets.directory,
+				writable: true,
+				allowDotfiles: true,
+			},
 		};
 
 		const { encodedAssetManifest, assetsReverseMap } = await buildAssetManifest(
