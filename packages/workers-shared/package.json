@@ -19,7 +19,10 @@
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
 	"type": "module",
-	"types": "./dist/",
+	"exports": {
+		"./dist/*": "./dist/*",
+		"./*": "./dist/*"
+	},
 	"files": [
 		"./dist/"
 	],

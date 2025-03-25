@@ -8,13 +8,13 @@ import {
 	MAX_ASSET_COUNT,
 	MAX_ASSET_SIZE,
 	REDIRECTS_FILENAME,
-} from "@cloudflare/workers-shared/dist/utils/constants";
+} from "@cloudflare/workers-shared/dist/utils/constants.js";
 import {
 	createAssetsIgnoreFunction,
 	getContentType,
 	maybeGetFile,
 	normalizeFilePath,
-} from "@cloudflare/workers-shared/dist/utils/helpers";
+} from "@cloudflare/workers-shared/dist/utils/helpers.js";
 import chalk from "chalk";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
@@ -35,7 +35,7 @@ import type { StartDevOptions } from "./dev";
 import type {
 	AssetConfig,
 	RouterConfig,
-} from "@cloudflare/workers-shared/dist/utils/types";
+} from "@cloudflare/workers-shared/dist/utils/types.js";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
 

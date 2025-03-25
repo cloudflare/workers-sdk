@@ -7,7 +7,7 @@ import type {
 import type {
 	AssetConfig,
 	RouterConfig,
-} from "@cloudflare/workers-shared/dist/utils/types";
+} from "@cloudflare/workers-shared/dist/utils/types.js";
 import type { Json } from "miniflare";
 
 /**

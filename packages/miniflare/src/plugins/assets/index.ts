@@ -4,9 +4,9 @@ import path, { join } from "node:path";
 import {
 	constructHeaders,
 	constructRedirects,
-} from "@cloudflare/workers-shared/utils/configuration/constructConfiguration";
-import { parseHeaders } from "@cloudflare/workers-shared/utils/configuration/parseHeaders";
-import { parseRedirects } from "@cloudflare/workers-shared/utils/configuration/parseRedirects";
+} from "@cloudflare/workers-shared/utils/configuration/constructConfiguration.js";
+import { parseHeaders } from "@cloudflare/workers-shared/utils/configuration/parseHeaders.js";
+import { parseRedirects } from "@cloudflare/workers-shared/utils/configuration/parseRedirects.js";
 import {
 	CONTENT_HASH_OFFSET,
 	ENTRY_SIZE,
@@ -17,18 +17,18 @@ import {
 	PATH_HASH_OFFSET,
 	PATH_HASH_SIZE,
 	REDIRECTS_FILENAME,
-} from "@cloudflare/workers-shared/utils/constants";
+} from "@cloudflare/workers-shared/utils/constants.js";
 import {
 	createAssetsIgnoreFunction,
 	getContentType,
 	maybeGetFile,
 	normalizeFilePath,
-} from "@cloudflare/workers-shared/utils/helpers";
+} from "@cloudflare/workers-shared/utils/helpers.js";
 import {
 	AssetConfig,
 	HeadersSchema,
 	RedirectsSchema,
-} from "@cloudflare/workers-shared/utils/types";
+} from "@cloudflare/workers-shared/utils/types.js";
 import prettyBytes from "pretty-bytes";
 import SCRIPT_ASSETS from "worker:assets/assets";
 import SCRIPT_ASSETS_KV from "worker:assets/assets-kv";

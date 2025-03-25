@@ -2,20 +2,20 @@ import * as path from "node:path";
 import {
 	constructHeaders,
 	constructRedirects,
-} from "@cloudflare/workers-shared/utils/configuration/constructConfiguration";
-import { parseHeaders } from "@cloudflare/workers-shared/utils/configuration/parseHeaders";
-import { parseRedirects } from "@cloudflare/workers-shared/utils/configuration/parseRedirects";
+} from "@cloudflare/workers-shared/utils/configuration/constructConfiguration.js";
+import { parseHeaders } from "@cloudflare/workers-shared/utils/configuration/parseHeaders.js";
+import { parseRedirects } from "@cloudflare/workers-shared/utils/configuration/parseRedirects.js";
 import {
 	HEADERS_FILENAME,
 	REDIRECTS_FILENAME,
-} from "@cloudflare/workers-shared/utils/constants";
-import { maybeGetFile } from "@cloudflare/workers-shared/utils/helpers";
+} from "@cloudflare/workers-shared/utils/constants.js";
+import { maybeGetFile } from "@cloudflare/workers-shared/utils/helpers.js";
 import {
 	HeadersSchema,
 	RedirectsSchema,
-} from "@cloudflare/workers-shared/utils/types";
+} from "@cloudflare/workers-shared/utils/types.js";
 import type { ResolvedPluginConfig } from "./plugin-config";
-import type { Logger } from "@cloudflare/workers-shared/utils/configuration/types";
+import type { Logger } from "@cloudflare/workers-shared/utils/configuration/types.js";
 import type { ResolvedConfig } from "vite";
 import type { Unstable_Config } from "wrangler";
 
