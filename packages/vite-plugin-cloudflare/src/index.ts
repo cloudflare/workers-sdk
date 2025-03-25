@@ -339,7 +339,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				});
 
 				return () => {
-					viteDevServer.middlewares.use(async (req, res, next) => {
+					viteDevServer.middlewares.use((req, res, next) => {
 						middleware(req, res, next);
 					});
 				};
