@@ -317,7 +317,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 
 				await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
-				const routerWorker = await getRouterWorker(miniflare);
 
 				const middleware = createMiddleware(
 					async ({ request }) => {
