@@ -277,10 +277,7 @@ async function popStackedStorage(fromDepth: number, persistPath: string) {
 				break;
 			}
 			const namePath = path.join(keyPath, name);
-			// if we are using workflows, we don't care if the sqlite got commited or not.
-			if (!persistPath.endsWith("workflows")) {
-				assert(name.endsWith(".sqlite"), `Expected .sqlite, got ${namePath}`);
-			}
+
 			await fs.unlink(namePath);
 		}
 	}
