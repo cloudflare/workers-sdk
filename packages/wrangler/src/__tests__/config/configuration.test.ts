@@ -2400,7 +2400,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						ASSETS_RPC: false,
 					},
 					() =>
 						normalizeAndValidateConfig(
@@ -2556,7 +2555,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						ASSETS_RPC: false,
 					},
 					() =>
 						normalizeAndValidateConfig(
@@ -2886,7 +2884,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						ASSETS_RPC: false,
 					},
 					() =>
 						normalizeAndValidateConfig(

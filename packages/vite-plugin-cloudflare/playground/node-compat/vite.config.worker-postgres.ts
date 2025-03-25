@@ -8,6 +8,7 @@ export default defineConfig({
 	plugins: [
 		cloudflare({
 			configPath: "./worker-postgres/wrangler.toml",
+			inspectorPort: false,
 			persistState: false,
 		}),
 	],

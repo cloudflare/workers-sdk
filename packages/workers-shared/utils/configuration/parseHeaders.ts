@@ -12,7 +12,13 @@ import type { HeadersRule, InvalidHeadersRule, ParsedHeaders } from "./types";
 // We do the proper validation in `validateUrl` anyway :)
 const LINE_IS_PROBABLY_A_PATH = new RegExp(/^([^\s]+:\/\/|^\/)/);
 
-export function parseHeaders(input: string): ParsedHeaders {
+export function parseHeaders(
+	input: string,
+	{
+		maxRules = MAX_HEADER_RULES,
+		maxLineLength = MAX_LINE_LENGTH,
+	}: { maxRules?: number; maxLineLength?: number } = {}
+): ParsedHeaders {
 	const lines = input.split("\n");
 	const rules: HeadersRule[] = [];
 	const invalid: InvalidHeadersRule[] = [];
@@ -20,24 +26,24 @@ export function parseHeaders(input: string): ParsedHeaders {
 	let rule: (HeadersRule & { line: string }) | undefined = undefined;
 
 	for (let i = 0; i < lines.length; i++) {
-		const line = lines[i].trim();
+		const line = (lines[i] || "").trim();
 		if (line.length === 0 || line.startsWith("#")) {
 			continue;
 		}
 
-		if (line.length > MAX_LINE_LENGTH) {
+		if (line.length > maxLineLength) {
 			invalid.push({
 				message: `Ignoring line ${
 					i + 1
-				} as it exceeds the maximum allowed length of ${MAX_LINE_LENGTH}.`,
+				} as it exceeds the maximum allowed length of ${maxLineLength}.`,
 			});
 			continue;
 		}
 
 		if (LINE_IS_PROBABLY_A_PATH.test(line)) {
-			if (rules.length >= MAX_HEADER_RULES) {
+			if (rules.length >= maxRules) {
 				invalid.push({
-					message: `Maximum number of rules supported is ${MAX_HEADER_RULES}. Skipping remaining ${
+					message: `Maximum number of rules supported is ${maxRules}. Skipping remaining ${
 						lines.length - i
 					} lines of file.`,
 				});
@@ -103,7 +109,7 @@ export function parseHeaders(input: string): ParsedHeaders {
 		}
 
 		const [rawName, ...rawValue] = line.split(HEADER_SEPARATOR);
-		const name = rawName.trim().toLowerCase();
+		const name = (rawName || "").trim().toLowerCase();
 
 		if (name.includes(" ")) {
 			invalid.push({

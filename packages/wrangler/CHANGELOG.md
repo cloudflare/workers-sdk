@@ -1,5 +1,62 @@
 # wrangler
 
+## 4.4.0
+
+### Minor Changes
+
+- [#8575](https://github.com/cloudflare/workers-sdk/pull/8575) [`4a5f270`](https://github.com/cloudflare/workers-sdk/commit/4a5f270129f4a2d8995ba2fdd7fc220ee7c75300) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Add workflows delete API endpoint
+
+- [#8578](https://github.com/cloudflare/workers-sdk/pull/8578) [`5f151fc`](https://github.com/cloudflare/workers-sdk/commit/5f151fc93bfcc87f9a6aa2a33cd67901e3507365) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Add terminate-all command to workflows
+
+- [#8382](https://github.com/cloudflare/workers-sdk/pull/8382) [`0d1240b`](https://github.com/cloudflare/workers-sdk/commit/0d1240becf3c08094b39e215de6d730f0d25de6b) Thanks [@jvaughan-cloudflare](https://github.com/jvaughan-cloudflare)! - Add Secrets Store command support to Wrangler CLI
+
+- [#8569](https://github.com/cloudflare/workers-sdk/pull/8569) [`1c94eee`](https://github.com/cloudflare/workers-sdk/commit/1c94eee008a8281e84171ef1edee74d965b90c33) Thanks [@vicb](https://github.com/vicb)! - Bump `@cloudflare/unenv-preset` to 2.3.0
+
+  Enable the recently implemented native APIs from `node:crypto`
+
+### Patch Changes
+
+- [#8556](https://github.com/cloudflare/workers-sdk/pull/8556) [`b7d6b7d`](https://github.com/cloudflare/workers-sdk/commit/b7d6b7dd1fbbaecd4f595d2d4249ab902b726538) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Add support for `assets_navigation_prefer_asset_serving` in Vite (`dev` and `preview`)
+
+- [#8597](https://github.com/cloudflare/workers-sdk/pull/8597) [`5d78760`](https://github.com/cloudflare/workers-sdk/commit/5d78760af7adbb57416d73f102123152d37bec53) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Graduate experimental RPC support for Workers with assets in local dev
+
+- Updated dependencies [[`d8f1c49`](https://github.com/cloudflare/workers-sdk/commit/d8f1c49541229f4b41bd16bbebda3017a5d17d64), [`b7d6b7d`](https://github.com/cloudflare/workers-sdk/commit/b7d6b7dd1fbbaecd4f595d2d4249ab902b726538), [`5d78760`](https://github.com/cloudflare/workers-sdk/commit/5d78760af7adbb57416d73f102123152d37bec53), [`c0d0cd0`](https://github.com/cloudflare/workers-sdk/commit/c0d0cd03a5eede7ec4f8a615f2c4b1f9a73dfcee)]:
+  - miniflare@4.20250320.0
+
+## 4.3.0
+
+### Minor Changes
+
+- [#8258](https://github.com/cloudflare/workers-sdk/pull/8258) [`9adbd50`](https://github.com/cloudflare/workers-sdk/commit/9adbd50cf1cbe841f8885de1d1d22b084fcfd987) Thanks [@knickish](https://github.com/knickish)! - Enable the creation of MySQL Hypedrive configs via the Wrangler CLI.
+
+- [#8353](https://github.com/cloudflare/workers-sdk/pull/8353) [`c4fa349`](https://github.com/cloudflare/workers-sdk/commit/c4fa349da3667be6c2ba0d96031b69e4674edbd8) Thanks [@jbwcloudflare](https://github.com/jbwcloudflare)! - Add new command to purge a Queue
+
+  This new command can be used to delete all existing messages in a Queue
+
+- [#8461](https://github.com/cloudflare/workers-sdk/pull/8461) [`86ab0ca`](https://github.com/cloudflare/workers-sdk/commit/86ab0ca52ab878a5c01900218e91261ac09f5438) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Add a 'allowTrailingCommas: true' option to improve IDE experience of 'wrangler.jsonc?'
+
+- [#8550](https://github.com/cloudflare/workers-sdk/pull/8550) [`5ae12a9`](https://github.com/cloudflare/workers-sdk/commit/5ae12a9390f81a3e1df2eb3da4a34dc143879a3c) Thanks [@vicb](https://github.com/vicb)! - Bump `@cloudflare/unenv-preset` to 2.2.0
+
+  Use the workerd native implementation for `node:tls`
+
+### Patch Changes
+
+- [#8501](https://github.com/cloudflare/workers-sdk/pull/8501) [`383dc0a`](https://github.com/cloudflare/workers-sdk/commit/383dc0abd5c883b3c39ece1abb1f332d1f63a0bb) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Add support for `assets_navigation_prefers_asset_serving` compatibility flag in `wrangler dev`
+
+- [#8562](https://github.com/cloudflare/workers-sdk/pull/8562) [`8278db5`](https://github.com/cloudflare/workers-sdk/commit/8278db5c862f51032ef7a2f79770f329c7f9dd9b) Thanks [@IRCody](https://github.com/IRCody)! - Add initial containers subcommand to wrangler.
+
+- [#8376](https://github.com/cloudflare/workers-sdk/pull/8376) [`a25f060`](https://github.com/cloudflare/workers-sdk/commit/a25f060232bfbfb30aede6a891b665f0450770bf) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Make local dev RPC behaviour on par with production for Workers with assets
+
+- [#8534](https://github.com/cloudflare/workers-sdk/pull/8534) [`62d5471`](https://github.com/cloudflare/workers-sdk/commit/62d5471eae9b5ed8cb31f025fa23ba3930b94317) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - improve the error messaging when the user provides neither an entry point nor an asset directory
+
+- [#8528](https://github.com/cloudflare/workers-sdk/pull/8528) [`2a43cdc`](https://github.com/cloudflare/workers-sdk/commit/2a43cdcf7218bd840737790707e07cbb25baa8ea) Thanks [@cmackenzie1](https://github.com/cmackenzie1)! - Support wrangler types for Pipelines
+
+- [#8579](https://github.com/cloudflare/workers-sdk/pull/8579) [`29015e5`](https://github.com/cloudflare/workers-sdk/commit/29015e5577ad8b063b93425da5e80d5054add728) Thanks [@cmackenzie1](https://github.com/cmackenzie1)! - Allow `wrangler pipelines update <pipelineName> --transform-worker none` to remove transformations from a Pipeline.
+
+- Updated dependencies [[`9adbd50`](https://github.com/cloudflare/workers-sdk/commit/9adbd50cf1cbe841f8885de1d1d22b084fcfd987), [`dae7bd4`](https://github.com/cloudflare/workers-sdk/commit/dae7bd4dd0b97956d868799e6a01fe8b47a7250a), [`a25f060`](https://github.com/cloudflare/workers-sdk/commit/a25f060232bfbfb30aede6a891b665f0450770bf), [`a7bd79b`](https://github.com/cloudflare/workers-sdk/commit/a7bd79bf40afe7079cd94557482bd909d825af09)]:
+  - miniflare@4.20250319.0
+  - @cloudflare/unenv-preset@2.3.0
+
 ## 4.2.0
 
 ### Minor Changes

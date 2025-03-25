@@ -1,5 +1,11 @@
 # @cloudflare/unenv-preset
 
+## 2.3.0
+
+### Minor Changes
+
+- [#8568](https://github.com/cloudflare/workers-sdk/pull/8568) [`a7bd79b`](https://github.com/cloudflare/workers-sdk/commit/a7bd79bf40afe7079cd94557482bd909d825af09) Thanks [@vicb](https://github.com/vicb)! - Use the native implementation of crypto APIs
+
 ## 2.2.0
 
 ### Minor Changes
