@@ -1,5 +1,5 @@
 ---
-"@cloudflare/workers-shared": minor
+"@cloudflare/workers-shared": patch
 ---
 
 Support customizing the metafile limits
