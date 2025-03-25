@@ -1,5 +1,13 @@
 # wrangler
 
+## 3.114.3
+
+### Patch Changes
+
+- [#8662](https://github.com/cloudflare/workers-sdk/pull/8662) [`5e57717`](https://github.com/cloudflare/workers-sdk/commit/5e57717a19e9bc294e7de44cc04b998299d264fe) Thanks [@workers-devprod](https://github.com/workers-devprod)! - Amend `pages dev` error message when an environment is requested
+
+- [#8535](https://github.com/cloudflare/workers-sdk/pull/8535) [`6f8e892`](https://github.com/cloudflare/workers-sdk/commit/6f8e89209c2b8013601844a021808b179bc4c1a4) Thanks [@workers-devprod](https://github.com/workers-devprod)! - improve the error messaging when the user provides neither an entry point nor an asset directory
+
 ## 3.114.2
 
 ### Patch Changes
