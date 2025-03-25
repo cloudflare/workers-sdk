@@ -4,7 +4,7 @@ import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics } from "./analytics";
 import { AssetsManifest } from "./assets-manifest";
-import { applyConfigurationDefaults } from "./configuration";
+import { normalizeConfiguration } from "./configuration";
 import { ExperimentAnalytics } from "./experiment-analytics";
 import { canFetch, handleRequest } from "./handler";
 import { handleError, submitMetrics } from "./utils/final-operations";
@@ -80,7 +80,12 @@ export default class extends WorkerEntrypoint<Env> {
 				this.env.CONFIG?.script_id
 			);
 
-			const config = applyConfigurationDefaults(this.env.CONFIG);
+			const config = normalizeConfiguration(this.env.CONFIG);
+			sentry?.setContext("compatibilityOptions", {
+				compatibilityDate: config.compatibility_date,
+				compatibilityFlags: config.compatibility_flags,
+				originalCompatibilityFlags: this.env.CONFIG.compatibility_flags,
+			});
 			const userAgent = request.headers.get("user-agent") ?? "UA UNKNOWN";
 
 			const url = new URL(request.url);
@@ -102,6 +107,7 @@ export default class extends WorkerEntrypoint<Env> {
 					hostname: url.hostname,
 					htmlHandling: config.html_handling,
 					notFoundHandling: config.not_found_handling,
+					compatibilityFlags: config.compatibility_flags,
 					userAgent: userAgent,
 				});
 			}
@@ -142,12 +148,15 @@ export default class extends WorkerEntrypoint<Env> {
 		return canFetch(
 			request,
 			this.env,
-			applyConfigurationDefaults(this.env.CONFIG),
+			normalizeConfiguration(this.env.CONFIG),
 			this.unstable_exists.bind(this)
 		);
 	}
 
-	async unstable_getByETag(eTag: string): Promise<{
+	async unstable_getByETag(
+		eTag: string,
+		_request?: Request
+	): Promise<{
 		readableStream: ReadableStream;
 		contentType: string | undefined;
 		cacheStatus: "HIT" | "MISS";
@@ -177,20 +186,26 @@ export default class extends WorkerEntrypoint<Env> {
 		};
 	}
 
-	async unstable_getByPathname(pathname: string): Promise<{
+	async unstable_getByPathname(
+		pathname: string,
+		request?: Request
+	): Promise<{
 		readableStream: ReadableStream;
 		contentType: string | undefined;
 		cacheStatus: "HIT" | "MISS";
 	} | null> {
-		const eTag = await this.unstable_exists(pathname);
+		const eTag = await this.unstable_exists(pathname, request);
 		if (!eTag) {
 			return null;
 		}
 
-		return this.unstable_getByETag(eTag);
+		return this.unstable_getByETag(eTag, request);
 	}
 
-	async unstable_exists(pathname: string): Promise<string | null> {
+	async unstable_exists(
+		pathname: string,
+		_request?: Request
+	): Promise<string | null> {
 		const analytics = new ExperimentAnalytics(this.env.EXPERIMENT_ANALYTICS);
 		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
 

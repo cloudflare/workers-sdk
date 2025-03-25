@@ -1,3 +1,5 @@
 interface Env {
-	PIPELINE: Pipeline<PipelineRecord>;
+	PIPELINE: import("cloudflare:pipelines").Pipeline<
+		import("cloudflare:pipelines").PipelineRecord
+	>;
 }

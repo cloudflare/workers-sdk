@@ -1,0 +1,9 @@
+{
+  "name": "<TBD>",
+  "main": "src/index.ts",
+  "compatibility_date": "<TBD>",
+	"pages_build_output_dir": "./dist",
+  "observability": {
+    "enabled": true
+  }
+}

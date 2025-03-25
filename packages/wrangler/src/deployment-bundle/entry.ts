@@ -1,7 +1,9 @@
 import path from "node:path";
-import { configFileName } from "../config";
+import dedent from "ts-dedent";
+import { configFileName, formatConfigSnippet } from "../config";
 import { UserError } from "../errors";
 import { logger } from "../logger";
+import { sniffUserAgent } from "../package-manager";
 import guessWorkerFormat from "./guess-worker-format";
 import {
 	resolveEntryWithAssets,
@@ -10,7 +12,7 @@ import {
 	resolveEntryWithScript,
 } from "./resolve-entry";
 import { runCustomBuild } from "./run-custom-build";
-import type { Config } from "../config";
+import type { Config, RawConfig } from "../config";
 import type { DurableObjectBindings } from "../config/environment";
 import type { CfScriptFormat } from "./worker";
 
@@ -70,8 +72,48 @@ export async function getEntry(
 					"For Pages, please run `wrangler pages dev` instead."
 			);
 		}
+
+		const compatibilityDateStr = [
+			new Date().getFullYear(),
+			(new Date().getMonth() + 1 + "").padStart(2, "0"),
+			(new Date().getDate() + "").padStart(2, "0"),
+		].join("-");
+
+		const updateConfigMessage = (snippet: RawConfig) => dedent`
+			${
+				config.configPath
+					? `add the following to your "${configFileName(config.configPath)}" file:`
+					: `create a "wrangler.jsonc" file containing:`
+			}
+
+			\`\`\`
+			${formatConfigSnippet(
+				{
+					...(config.name ? {} : { name: "worker-name" }),
+					...(config.compatibility_date
+						? {}
+						: { compatibility_date: compatibilityDateStr }),
+					...snippet,
+				},
+				config.configPath
+			)}
+			\`\`\`
+
+			`;
+
+		const fullCommand = `${getNpxEquivalent()} wrangler ${command}`;
 		throw new UserError(
-			`Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler ${command} path/to/script\`) or the \`main\` config field.`
+			dedent`
+			Missing entry-point to Worker script or to assets directory
+
+			If there is code to deploy, you can either:
+			- Specify an entry-point to your Worker script via the command line (ex: \`${fullCommand} src/index.ts\`)
+			- Or ${updateConfigMessage({ main: "src/index.ts" })}
+
+			If are uploading a directory of assets, you can either:
+			- Specify the path to the directory of assets via the command line: (ex: \`${fullCommand} --assets=./dist\`)
+			- Or ${updateConfigMessage({ assets: { directory: "./dist" } })}`,
+			{ telemetryMessage: "missing worker entrypoint or assets directory" }
 		);
 	}
 	await runCustomBuild(
@@ -166,4 +208,16 @@ function generateAddScriptNameExamples(
 			return `${currentBinding} ==> ${fixedBinding}`;
 		})
 		.join("\n");
+}
+
+export function getNpxEquivalent() {
+	switch (sniffUserAgent()) {
+		case "pnpm":
+			return "pnpm";
+		case "yarn":
+			return "yarn";
+		case "npm":
+		default:
+			return "npx";
+	}
 }

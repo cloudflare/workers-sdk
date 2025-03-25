@@ -415,7 +415,7 @@ export function getAssetsOptions(
 		);
 	}
 
-	// Using run_worker_first=true or experimental_serve_directly=false, but didn't provide a Worker script
+	// Using run_worker_first = true but didn't provide a Worker script
 	if (
 		!routerConfig.has_user_worker &&
 		routerConfig.invoke_user_worker_ahead_of_assets === true
@@ -426,14 +426,18 @@ export function getAssetsOptions(
 		);
 	}
 
-	const redirects = maybeGetFile(path.join(directory, REDIRECTS_FILENAME));
-	const headers = maybeGetFile(path.join(directory, HEADERS_FILENAME));
+	const redirects = maybeGetFile(
+		path.join(resolvedAssetsPath, REDIRECTS_FILENAME)
+	);
+	const headers = maybeGetFile(path.join(resolvedAssetsPath, HEADERS_FILENAME));
 
 	// defaults are set in asset worker
 	const assetConfig: AssetConfig = {
 		html_handling: config.assets?.html_handling,
 		not_found_handling: config.assets?.not_found_handling,
 		// The _redirects and _headers files are parsed in Miniflare in dev and parsing is not required for deploy
+		compatibility_date: config.compatibility_date,
+		compatibility_flags: config.compatibility_flags,
 	};
 
 	return {

@@ -16,6 +16,7 @@ import {
 import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
 import { experimental_readRawConfig, loadDotEnv } from "./config";
+import { containers } from "./containers";
 import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
@@ -140,6 +141,22 @@ import {
 	secretPutCommand,
 } from "./secret";
 import {
+	secretsStoreNamespace,
+	secretsStoreSecretNamespace,
+	secretsStoreStoreNamespace,
+} from "./secrets-store";
+import {
+	secretsStoreSecretCreateCommand,
+	secretsStoreSecretDeleteCommand,
+	secretsStoreSecretDuplicateCommand,
+	secretsStoreSecretGetCommand,
+	secretsStoreSecretListCommand,
+	secretsStoreSecretUpdateCommand,
+	secretsStoreStoreCreateCommand,
+	secretsStoreStoreDeleteCommand,
+	secretsStoreStoreListCommand,
+} from "./secrets-store/commands";
+import {
 	addBreadcrumb,
 	captureGlobalException,
 	closeSentry,
@@ -178,6 +195,7 @@ import { workflowsInstancesListCommand } from "./workflows/commands/instances/li
 import { workflowsInstancesPauseCommand } from "./workflows/commands/instances/pause";
 import { workflowsInstancesResumeCommand } from "./workflows/commands/instances/resume";
 import { workflowsInstancesTerminateCommand } from "./workflows/commands/instances/terminate";
+import { workflowsInstancesTerminateAllCommand } from "./workflows/commands/instances/terminate-all";
 import { workflowsListCommand } from "./workflows/commands/list";
 import { workflowsTriggerCommand } from "./workflows/commands/trigger";
 import { printWranglerBanner } from "./wrangler-banner";
@@ -782,6 +800,11 @@ export function createCLIParser(argv: string[]) {
 		return cloudchamber(asJson(cloudchamberArgs.command(subHelp)), subHelp);
 	});
 
+	// containers
+	wrangler.command("containers", false, (containersArgs) => {
+		return containers(asJson(containersArgs.command(subHelp)), subHelp);
+	});
+
 	// [PRIVATE BETA] pubsub
 	wrangler.command(
 		"pubsub",
@@ -804,6 +827,56 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command("ai", "🤖 Manage AI models", (aiYargs) => {
 		return ai(aiYargs.command(subHelp));
 	});
+
+	// secrets store
+	registry.define([
+		{ command: "wrangler secrets-store", definition: secretsStoreNamespace },
+		{
+			command: "wrangler secrets-store store",
+			definition: secretsStoreStoreNamespace,
+		},
+		{
+			command: "wrangler secrets-store store create",
+			definition: secretsStoreStoreCreateCommand,
+		},
+		{
+			command: "wrangler secrets-store store delete",
+			definition: secretsStoreStoreDeleteCommand,
+		},
+		{
+			command: "wrangler secrets-store store list",
+			definition: secretsStoreStoreListCommand,
+		},
+		{
+			command: "wrangler secrets-store secret",
+			definition: secretsStoreSecretNamespace,
+		},
+		{
+			command: "wrangler secrets-store secret create",
+			definition: secretsStoreSecretCreateCommand,
+		},
+		{
+			command: "wrangler secrets-store secret list",
+			definition: secretsStoreSecretListCommand,
+		},
+		{
+			command: "wrangler secrets-store secret get",
+			definition: secretsStoreSecretGetCommand,
+		},
+		{
+			command: "wrangler secrets-store secret update",
+			definition: secretsStoreSecretUpdateCommand,
+		},
+		{
+			command: "wrangler secrets-store secret delete",
+			definition: secretsStoreSecretDeleteCommand,
+		},
+		{
+			command: "wrangler secrets-store secret duplicate",
+			definition: secretsStoreSecretDuplicateCommand,
+		},
+	]);
+	registry.registerNamespace("cert");
 
 	// workflows
 	registry.define([
@@ -842,6 +915,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler workflows instances terminate",
 			definition: workflowsInstancesTerminateCommand,
+		},
+		{
+			command: "wrangler workflows instances terminate-all",
+			definition: workflowsInstancesTerminateAllCommand,
 		},
 		{
 			command: "wrangler workflows instances pause",

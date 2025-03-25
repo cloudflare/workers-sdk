@@ -15,6 +15,7 @@ import {
 	printOffendingDependencies,
 } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
+import { sniffUserAgent } from "../package-manager";
 import { writeAuthConfigFile } from "../user";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockAuthDomain } from "./helpers/mock-auth-domain";
@@ -559,7 +560,7 @@ describe("deploy", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in.
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -601,7 +602,7 @@ describe("deploy", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"Attempting to login via OAuth...
-					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 					Successfully logged in.
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
@@ -2536,6 +2537,7 @@ addEventListener('fetch', event => {});`
 		});
 
 		it("should error if there is no entry-point specified", async () => {
+			vi.mocked(sniffUserAgent).mockReturnValue("npm");
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockUploadWorkerRequest();
@@ -2543,15 +2545,62 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler deploy path/to/script\`) or the \`main\` config field.]`
+				`
+				[Error: Missing entry-point to Worker script or to assets directory
+
+				If there is code to deploy, you can either:
+				- Specify an entry-point to your Worker script via the command line (ex: \`npx wrangler deploy src/index.ts\`)
+				- Or add the following to your "wrangler.toml" file:
+
+				\`\`\`
+				main = "src/index.ts"
+
+				\`\`\`
+
+
+				If are uploading a directory of assets, you can either:
+				- Specify the path to the directory of assets via the command line: (ex: \`npx wrangler deploy --assets=./dist\`)
+				- Or add the following to your "wrangler.toml" file:
+
+				\`\`\`
+				[assets]
+				directory = "./dist"
+
+				\`\`\`
+				]
+			`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
-			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler deploy path/to/script\`) or the \`main\` config field.[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing entry-point to Worker script or to assets directory[0m
 
-			        "
-		      `);
+
+				  If there is code to deploy, you can either:
+				  - Specify an entry-point to your Worker script via the command line (ex: \`npx wrangler deploy
+				  src/index.ts\`)
+				  - Or add the following to your \\"wrangler.toml\\" file:
+
+				  \`\`\`
+				  main = \\"src/index.ts\\"
+
+				  \`\`\`
+
+
+				  If are uploading a directory of assets, you can either:
+				  - Specify the path to the directory of assets via the command line: (ex: \`npx wrangler deploy
+				  --assets=./dist\`)
+				  - Or add the following to your \\"wrangler.toml\\" file:
+
+				  \`\`\`
+				  [assets]
+				  directory = \\"./dist\\"
+
+				  \`\`\`
+
+
+				"
+			`);
 		});
 
 		describe("should source map validation errors", () => {
@@ -4668,10 +4717,12 @@ addEventListener('fetch', event => {});`
 		});
 
 		it("should ignore assets that match patterns in an .assetsignore file in the root of the assets directory", async () => {
+			const redirectsContent = "/foo /bar";
+			const headersContent = "/some-path\nX-Header: Custom-Value";
 			const assets = [
 				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
-				{ filePath: "_redirects", content: "/foo /bar" },
-				{ filePath: "_headers", content: "/some-path\nX-Header: Custom-Value" },
+				{ filePath: "_redirects", content: redirectsContent },
+				{ filePath: "_headers", content: headersContent },
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.bak", content: "Content of file-2" },
 				{ filePath: "file-3.txt", content: "Content of file-3" },
@@ -4691,7 +4742,10 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest({
 				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
-					config: {},
+					config: {
+						_headers: headersContent,
+						_redirects: redirectsContent,
+					},
 				},
 				expectedType: "none",
 			});
@@ -8547,6 +8601,66 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
+			it("should support durable object bindings to SQLite classes with containers", async () => {
+				writeWranglerConfig({
+					durable_objects: {
+						bindings: [
+							{
+								name: "EXAMPLE_DO_BINDING",
+								class_name: "ExampleDurableObject",
+							},
+						],
+					},
+					containers: [
+						{
+							name: "my-container",
+							instances: 10,
+							class_name: "ExampleDurableObject",
+							configuration: {
+								image: "docker.io/hello:world",
+							},
+						},
+					],
+					migrations: [
+						{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+					],
+				});
+				fs.writeFileSync(
+					"index.js",
+					`export class ExampleDurableObject {}; export default{};`
+				);
+				mockSubDomainRequest();
+				mockLegacyScriptData({
+					scripts: [{ id: "test-name", migration_tag: "v1" }],
+				});
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							class_name: "ExampleDurableObject",
+							name: "EXAMPLE_DO_BINDING",
+							type: "durable_object_namespace",
+						},
+					],
+					useOldUploadApi: true,
+					expectedContainers: [{ class_name: "ExampleDurableObject" }],
+				});
+
+				await runWrangler("deploy index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Your worker has access to the following bindings:
+			- Durable Objects:
+			  - EXAMPLE_DO_BINDING: ExampleDurableObject
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
 			it("should support durable objects and D1", async () => {
 				writeWranglerConfig({
 					main: "index.js",
@@ -9555,7 +9669,7 @@ addEventListener('fetch', event => {});`
 					)
 				)
 			).resolves.toMatchInlineSnapshot(`
-				"X [ERROR] Unexpected external import of \\"node:events\\", \\"node:net\\", \\"node:perf_hooks\\", \\"node:stream\\", and \\"node:tty\\".
+				"X [ERROR] Unexpected external import of \\"node:events\\", \\"node:perf_hooks\\", \\"node:stream\\", and \\"node:tty\\".
 				Your worker has no default export, which means it is assumed to be a Service Worker format Worker.
 				Did you mean to create a ES Module format Worker?
 				If so, try adding \`export default { ... }\` in your entry-point.

@@ -66,6 +66,7 @@ describe("wrangler", () => {
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
 				  wrangler whoami                 🕵️  Retrieve your user information
+				  wrangler secrets-store          🔐 Manage the Secrets Store [alpha]
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
@@ -124,6 +125,7 @@ describe("wrangler", () => {
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
 				  wrangler whoami                 🕵️  Retrieve your user information
+				  wrangler secrets-store          🔐 Manage the Secrets Store [alpha]
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]

@@ -64,4 +64,16 @@ describe("nodejs compat", () => {
 		const response = await fetch(`http://${ip}:${port}/test-immediate`);
 		await expect(response.text()).resolves.toBe("OK");
 	});
+
+	test("node:tls", async ({ expect }) => {
+		const { ip, port } = wrangler;
+		const response = await fetch(`http://${ip}:${port}/test-tls`);
+		await expect(response.text()).resolves.toBe("OK");
+	});
+
+	test("node:crypto", async ({ expect }) => {
+		const { ip, port } = wrangler;
+		const response = await fetch(`http://${ip}:${port}/test-crypto`);
+		await expect(response.text()).resolves.toBe("OK");
+	});
 });

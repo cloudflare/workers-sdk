@@ -1,5 +1,11 @@
-import { expect, test } from "vitest";
-import { page, serverLogs, viteTestUrl } from "../../__test-utils__";
+import { describe, expect, test } from "vitest";
+import {
+	getResponse,
+	isBuild,
+	page,
+	serverLogs,
+	viteTestUrl,
+} from "../../__test-utils__";
 
 test("returns the correct home page", async () => {
 	const content = await page.textContent("h1");
@@ -38,4 +44,38 @@ test("returns the correct nested 404 page", async () => {
 
 test("worker configs warnings are not present in the terminal", async () => {
 	expect(serverLogs.warns).toEqual([]);
+});
+
+describe.runIf(isBuild)("_headers", () => {
+	test("applies exact headers", async () => {
+		const response = await getResponse("/contact");
+		const header = await response.headerValue("X-Header");
+		expect(header).toBe("exact-header");
+	});
+
+	test("applies splat headers", async () => {
+		const response = await getResponse("/vite.svg");
+		const header = await response.headerValue("X-Header");
+		expect(header).toBe("splat-header");
+	});
+});
+
+describe.runIf(isBuild)("_redirects", () => {
+	test("applies exact redirects", async () => {
+		await page.goto(`${viteTestUrl}/home`);
+		const content = await page.textContent("h1");
+		expect(content).toBe("Home");
+	});
+
+	test("applies splat redirects", async () => {
+		await page.goto(`${viteTestUrl}/contact/random-page`);
+		const content = await page.textContent("h1");
+		expect(content).toBe("Contact");
+	});
+
+	test("applies redirects if an asset exists at the 'from' path", async () => {
+		await page.goto(`${viteTestUrl}/text-file.txt`);
+		const content = await page.textContent("h1");
+		expect(content).toBe("Home");
+	});
 });

@@ -1,7 +1,7 @@
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
-import { readFile, writeFile } from "helpers/files";
+import { readFile, usesTypescript, writeFile } from "helpers/files";
 import { installPackages } from "helpers/packages";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
@@ -10,7 +10,7 @@ const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [ctx.project.name]);
 };
 
-const configure = async () => {
+const configure = async (ctx: C3Context) => {
 	const packages = [
 		"@opennextjs/cloudflare@0.5.x",
 		"@cloudflare/workers-types",
@@ -21,13 +21,15 @@ const configure = async () => {
 		doneText: `${brandColor(`installed`)} ${dim(packages.join(", "))}`,
 	});
 
-	updateNextConfig();
+	const usesTs = usesTypescript(ctx);
+
+	updateNextConfig(usesTs);
 };
 
-const updateNextConfig = () => {
+const updateNextConfig = (usesTs: boolean) => {
 	const s = spinner();
 
-	const configFile = "next.config.mjs";
+	const configFile = `next.config.${usesTs ? "ts" : "mjs"}`;
 	s.start(`Updating \`${configFile}\``);
 
 	const configContent = readFile(configFile);
@@ -49,10 +51,8 @@ export default {
 	configVersion: 1,
 	id: "next",
 	frameworkCli: "create-next-app",
-	// TODO: here we need to specify a version of create-next-app which is different from the
-	//       standard one used in the stable Next.js template, that's because our open-next adapter
-	//       is not yet fully ready for Next.js 15, once it is we should remove the following
-	frameworkCliPinnedVersion: "^14.2.23",
+	// TODO: Stop using a pinned version when the template graduates.
+	frameworkCliPinnedVersion: "~15.2.2",
 	platform: "workers",
 	displayName: "Next.js (using Node.js compat + Workers Assets)",
 	path: "templates-experimental/next",

@@ -50,7 +50,6 @@ describe("getWorkerConfig", () => {
 		expect(nonApplicable).toEqual({
 			replacedByVite: new Set(),
 			notRelevant: new Set(),
-			overridden: new Set(),
 		});
 	});
 
@@ -81,7 +80,6 @@ describe("getWorkerConfig", () => {
 		expect(nonApplicable).toEqual({
 			replacedByVite: new Set(),
 			notRelevant: new Set(),
-			overridden: new Set(),
 		});
 	});
 
@@ -150,11 +148,42 @@ describe("getWorkerConfig", () => {
 				"find_additional_modules",
 				"no_bundle",
 				"preserve_file_names",
+				"rules",
 				"site",
 				"tsconfig",
 				"upload_source_maps",
 			])
 		);
-		expect(nonApplicable.overridden).toEqual(new Set(["rules"]));
+	});
+
+	describe("invalid main config", () => {
+		test("should throw if the provided main config doesn't point to an existing file", () => {
+			expect(() =>
+				getWorkerConfig(
+					fileURLToPath(
+						new URL("fixtures/non-existing-main-wrangler.toml", import.meta.url)
+					),
+					undefined
+				)
+			).toThrowError(
+				/The provided Wrangler config main field \(.*?index\.ts\) doesn't point to an existing file/
+			);
+		});
+
+		test("should throw if the provided main config doesn't point to an existing file", () => {
+			expect(() =>
+				getWorkerConfig(
+					fileURLToPath(
+						new URL(
+							"fixtures/incorrect-dir-main-wrangler.toml",
+							import.meta.url
+						)
+					),
+					undefined
+				)
+			).toThrowError(
+				/The provided Wrangler config main field \(.*?fixtures\) points to a directory, it needs to point to a file instead/
+			);
+		});
 	});
 });

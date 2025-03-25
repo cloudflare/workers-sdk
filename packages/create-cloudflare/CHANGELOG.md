@@ -1,5 +1,68 @@
 # create-cloudflare
 
+## 2.42.1
+
+### Patch Changes
+
+- [#8598](https://github.com/cloudflare/workers-sdk/pull/8598) [`e5dbedd`](https://github.com/cloudflare/workers-sdk/commit/e5dbedd78297d25cb8c8b1bd7c6cb70e2e9a626a) Thanks [@emily-shen](https://github.com/emily-shen)! - graduate Qwik + Workers Assets templates from experimental
+
+  You no longer need to include the `--experimental` flag to access this template.
+
+## 2.42.0
+
+### Minor Changes
+
+- [#8460](https://github.com/cloudflare/workers-sdk/pull/8460) [`31332ca`](https://github.com/cloudflare/workers-sdk/commit/31332ca461cea5fbbe8a6c56fe598962c94eae65) Thanks [@joshthoward](https://github.com/joshthoward)! - Update the C3 Durable Objects example to use SQLite
+
+### Patch Changes
+
+- [#8593](https://github.com/cloudflare/workers-sdk/pull/8593) [`36ae02c`](https://github.com/cloudflare/workers-sdk/commit/36ae02c575a6a2e806565a17cf16a5a80f3e45ad) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate Hono + Workers assets template from experimental.
+
+  You will no longer need to include the --experimental flag to access this template.
+  Also creates a hono template that uses the cloudflare-pages adapter.
+
+- [#8402](https://github.com/cloudflare/workers-sdk/pull/8402) [`03ec951`](https://github.com/cloudflare/workers-sdk/commit/03ec9510c5ebb0fceed7df64d90383cdac861b3e) Thanks [@emily-shen](https://github.com/emily-shen)! - graduate Astro Workers + Assets template from experimental
+
+  You no longer need to pass in --experimental to access the Workers + Assets version of the template.
+
+- [#8552](https://github.com/cloudflare/workers-sdk/pull/8552) [`0fe3260`](https://github.com/cloudflare/workers-sdk/commit/0fe32607199c9fa3b68e4cacab9522379b6704e0) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate remix Workers + Assets template from experimental
+
+  You will no longer need to pass in the `--experimental` flag to access this template.
+
+- [#8574](https://github.com/cloudflare/workers-sdk/pull/8574) [`9b86dba`](https://github.com/cloudflare/workers-sdk/commit/9b86dba81929db3c8216fdfc8aea62ccf69ef32f) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate sveltekit + workers assets template from experimental
+
+  You no longer need to pass in the --experimental flag to access this template.
+
+## 2.41.2
+
+### Patch Changes
+
+- [#8379](https://github.com/cloudflare/workers-sdk/pull/8379) [`2b37abe`](https://github.com/cloudflare/workers-sdk/commit/2b37abe10dac9df6c0cc91114ea68b40b6c0991d) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate Workers + Assets hello world templates from experimental status
+
+- [#8541](https://github.com/cloudflare/workers-sdk/pull/8541) [`cfa525d`](https://github.com/cloudflare/workers-sdk/commit/cfa525dba45a6d678270216e1679e1ce32f62163) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Fixes the Cloudflare logo in the Vite React starter to support both dark and light mode
+
+## 2.41.1
+
+### Patch Changes
+
+- [#8418](https://github.com/cloudflare/workers-sdk/pull/8418) [`736bd4f`](https://github.com/cloudflare/workers-sdk/commit/736bd4fd87ec41c05b080996cd9ebd8e0951e08d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.1.6 | 15.2.1 |
+
+- [#8420](https://github.com/cloudflare/workers-sdk/pull/8420) [`db987de`](https://github.com/cloudflare/workers-sdk/commit/db987dec97284ce05e9e5d382c26a2a5bad35b73) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To    |
+  | ------------ | ------ | ----- |
+  | create-solid | 0.5.14 | 0.6.1 |
+
+- [#8451](https://github.com/cloudflare/workers-sdk/pull/8451) [`fd2cb21`](https://github.com/cloudflare/workers-sdk/commit/fd2cb2112739d322e49fcec8b00343e68d62e141) Thanks [@vicb](https://github.com/vicb)! - Update the Next experimental template to use version ~15.2.2
+
 ## 2.41.0
 
 ### Minor Changes

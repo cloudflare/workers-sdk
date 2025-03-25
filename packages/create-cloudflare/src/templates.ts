@@ -18,24 +18,19 @@ import {
 	writeFile,
 	writeJSON,
 } from "helpers/files";
-import astroTemplateExperimental from "templates-experimental/astro/c3";
-import assetsOnlyTemplateExperimental from "templates-experimental/hello-world-assets-only/c3";
-import helloWorldWithDurableObjectAssetsTemplateExperimental from "templates-experimental/hello-world-durable-object-with-assets/c3";
-import helloWorldWithAssetsTemplateExperimental from "templates-experimental/hello-world-with-assets/c3";
-import honoTemplateExperimental from "templates-experimental/hono/c3";
 import nextTemplateExperimental from "templates-experimental/next/c3";
-import qwikTemplateExperimental from "templates-experimental/qwik/c3";
-import remixTemplateExperimental from "templates-experimental/remix/c3";
 import solidTemplateExperimental from "templates-experimental/solid/c3";
-import svelteTemplateExperimental from "templates-experimental/svelte/c3";
 import analogTemplate from "templates/analog/c3";
 import angularTemplate from "templates/angular/c3";
 import astroTemplate from "templates/astro/c3";
 import commonTemplate from "templates/common/c3";
 import docusaurusTemplate from "templates/docusaurus/c3";
 import gatsbyTemplate from "templates/gatsby/c3";
+import assetsOnlyTemplate from "templates/hello-world-assets-only/c3";
+import helloWorldWithDurableObjectAssetsTemplate from "templates/hello-world-durable-object-with-assets/c3";
 import helloWorldDurableObjectTemplate from "templates/hello-world-durable-object/c3";
-import helloWorldTemplate from "templates/hello-world/c3";
+import helloWorldWithAssetsTemplate from "templates/hello-world-with-assets/c3";
+import helloWorldWorkerTemplate from "templates/hello-world/c3";
 import honoTemplate from "templates/hono/c3";
 import nextTemplate from "templates/next/c3";
 import nuxtTemplate from "templates/nuxt/c3";
@@ -43,6 +38,7 @@ import openapiTemplate from "templates/openapi/c3";
 import preExistingTemplate from "templates/pre-existing/c3";
 import queuesTemplate from "templates/queues/c3";
 import qwikTemplate from "templates/qwik/c3";
+import reactRouterTemplate from "templates/react-router/c3";
 import reactTemplate from "templates/react/c3";
 import remixTemplate from "templates/remix/c3";
 import scheduledTemplate from "templates/scheduled/c3";
@@ -61,6 +57,7 @@ export type MultiPlatformTemplateConfig = {
 		pages: TemplateConfig;
 		workers: TemplateConfig;
 	};
+	hidden?: boolean;
 };
 
 export type TemplateConfig = {
@@ -176,13 +173,8 @@ export type TemplateMap = Record<
 export function getFrameworkMap({ experimental = false }): TemplateMap {
 	if (experimental) {
 		return {
-			astro: astroTemplateExperimental,
-			hono: honoTemplateExperimental,
 			next: nextTemplateExperimental,
-			qwik: qwikTemplateExperimental,
-			remix: remixTemplateExperimental,
 			solid: solidTemplateExperimental,
-			svelte: svelteTemplateExperimental,
 		};
 	} else {
 		return {
@@ -196,6 +188,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			nuxt: nuxtTemplate,
 			qwik: qwikTemplate,
 			react: reactTemplate,
+			"react-router": reactRouterTemplate,
 			remix: remixTemplate,
 			solid: solidTemplate,
 			svelte: svelteTemplate,
@@ -206,19 +199,18 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 
 export function getTemplateMap({ experimental = false }) {
 	if (experimental) {
-		return {
-			"hello-world-assets-only": assetsOnlyTemplateExperimental,
-			"hello-world-with-assets": helloWorldWithAssetsTemplateExperimental,
-			"hello-world-durable-object-with-assets":
-				helloWorldWithDurableObjectAssetsTemplateExperimental,
-		} as Record<string, TemplateConfig>;
+		return {} as Record<string, TemplateConfig>;
 	} else {
 		return {
-			"hello-world": helloWorldTemplate,
+			"hello-world": helloWorldWorkerTemplate,
+			"hello-world-assets-only": assetsOnlyTemplate,
+			"hello-world-with-assets": helloWorldWithAssetsTemplate,
+			"hello-world-durable-object": helloWorldDurableObjectTemplate,
+			"hello-world-durable-object-with-assets":
+				helloWorldWithDurableObjectAssetsTemplate,
 			common: commonTemplate,
 			scheduled: scheduledTemplate,
 			queues: queuesTemplate,
-			"hello-world-durable-object": helloWorldDurableObjectTemplate,
 			openapi: openapiTemplate,
 			"pre-existing": preExistingTemplate,
 		} as Record<string, TemplateConfig>;
@@ -366,9 +358,10 @@ export const createContext = async (
 
 	const categoryOptions = [
 		{
-			label: "Hello World example",
+			label: "Hello World Starter",
 			value: "hello-world",
-			description: "Select from barebones examples to get started with Workers",
+			description:
+				"Select from basic scaffolds to get started with Workers, Assets and Durable Objects",
 		},
 		{
 			label: "Framework Starter",
@@ -410,11 +403,20 @@ export const createContext = async (
 		const frameworkMap = getFrameworkMap({
 			experimental: args.experimental,
 		});
-		const frameworkOptions = Object.entries(frameworkMap).map(
-			([key, config]) => ({
-				label: config.displayName,
-				value: key,
-			}),
+
+		const frameworkOptions = Object.entries(frameworkMap).reduce<Option[]>(
+			(acc, [key, config]) => {
+				// only hide if we're going to show the options - otherwise, the
+				// result will show up as (skipped) instead of the actual value
+				if (!config.hidden || args.framework) {
+					acc.push({
+						label: config.displayName,
+						value: key,
+					});
+				}
+				return acc;
+			},
+			[],
 		);
 
 		const framework = await processArgument(args, "framework", {

@@ -21,6 +21,10 @@ The following selections do not need to be completed if this PR only contains ch
   - [ ] TODO (before merge)
   - [ ] Cloudflare docs PR(s): <!--e.g. <https://github.com/cloudflare/cloudflare-docs/pull/>...-->
   - [ ] Documentation not necessary because:
+- Wrangler V3 Backport
+  - [ ] TODO (before merge)
+  - [ ] Wrangler PR: <!--e.g. <https://github.com/cloudflare/workers-sdk/pull/>...-->
+  - [ ] Not necessary because: <!--e.g. not a patch change, not a Wrangler change...-->
 
 <!--
 Have you read our [Contributing guide](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md)?

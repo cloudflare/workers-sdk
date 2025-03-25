@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/unenv-preset",
-	"version": "2.0.2",
+	"version": "2.3.0",
 	"description": "cloudflare preset for unenv",
 	"keywords": [
 		"cloudflare",
@@ -53,8 +53,8 @@
 		"wrangler": "workspace:*"
 	},
 	"peerDependencies": {
-		"unenv": "2.0.0-rc.14",
-		"workerd": "^1.20250124.0"
+		"unenv": "2.0.0-rc.15",
+		"workerd": "^1.20250320.0"
 	},
 	"peerDependenciesMeta": {
 		"workerd": {

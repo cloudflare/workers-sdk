@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import parseChangeset from "@changesets/parse";
 
 /* eslint-disable turbo/no-undeclared-env-vars */
@@ -32,7 +32,7 @@ if (require.main === module) {
 export function isWranglerPatch(changedFilesJson: string) {
 	const changedFiles = JSON.parse(changedFilesJson) as string[];
 	const changesets = changedFiles
-		.filter((f) => f.startsWith(".changeset/"))
+		.filter((f) => f.startsWith(".changeset/") && existsSync(f))
 		.map((c) => parseChangeset(readFileSync(c, "utf8")));
 
 	let hasWranglerPatch = false;
