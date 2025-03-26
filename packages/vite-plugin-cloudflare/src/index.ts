@@ -308,13 +308,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 			},
 			hotUpdate(options) {
+				// Note that we must "resolve" the changed file since the path from Vite will not match Windows backslashes.
+				const changedFilePath = path.resolve(options.file);
+
 				if (
-					// Vite normalizes `options.file` so we use `path.resolve` for Windows compatibility
-					resolvedPluginConfig.configPaths.has(path.resolve(options.file)) ||
+					resolvedPluginConfig.configPaths.has(path.resolve(changedFilePath)) ||
+					hasDotDevDotVarsFileChanged(resolvedPluginConfig, changedFilePath) ||
 					hasAssetsConfigChanged(
 						resolvedPluginConfig,
 						resolvedViteConfig,
-						options.file
+						changedFilePath
 					)
 				) {
 					// It's OK for this to be called multiple times as Vite prevents concurrent execution
@@ -852,4 +855,26 @@ function getDotDevDotVarsContent(
 	}
 
 	return null;
+}
+
+/**
+ * Returns true if the `changedFile` matches one of a potential .dev.vars file.
+ */
+function hasDotDevDotVarsFileChanged(
+	resolvedPluginConfig: ResolvedPluginConfig,
+	changedFilePath: string
+) {
+	return [...resolvedPluginConfig.configPaths].some((configPath) => {
+		const dotDevDotVars = path.join(path.dirname(configPath), ".dev.vars");
+		if (dotDevDotVars === changedFilePath) {
+			return true;
+		}
+
+		if (resolvedPluginConfig.cloudflareEnv) {
+			const dotDevDotVarsForEnv = `${dotDevDotVars}.${resolvedPluginConfig.cloudflareEnv}`;
+			return dotDevDotVarsForEnv === changedFilePath;
+		}
+
+		return false;
+	});
 }

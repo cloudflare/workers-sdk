@@ -26,16 +26,15 @@ import type { Unstable_Config } from "wrangler";
 export function hasAssetsConfigChanged(
 	resolvedPluginConfig: ResolvedPluginConfig,
 	resolvedViteConfig: ResolvedConfig,
-	changedFile: string
+	changedFilePath: string
 ) {
 	if (!resolvedPluginConfig.experimental?.headersAndRedirectsDevModeSupport) {
 		return false;
 	}
-	// Note that we must "resolve" the changed file since the path from Vite will not match Windows backslashes.
 	return [
 		getRedirectsConfigPath(resolvedViteConfig),
 		getHeadersConfigPath(resolvedViteConfig),
-	].includes(path.resolve(changedFile));
+	].includes(changedFilePath);
 }
 
 /**
