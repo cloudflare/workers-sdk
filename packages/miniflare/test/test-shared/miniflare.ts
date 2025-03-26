@@ -44,6 +44,8 @@ export function namespace<T>(ns: string, binding: T): Namespaced<T> {
 					);
 					if (result instanceof Promise) {
 						return result.then((res) => {
+							// KV.get([a,b,c]) would be prefixed with ns, so we strip this prefix from response.
+							// Map keys => [ns-a, ns-b, ns-c] -> [a,b,c]
 							if (res instanceof Map) {
 								const newResult = new Map<string, unknown>();
 								for (const [key, value] of res) {

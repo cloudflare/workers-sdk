@@ -22,6 +22,7 @@ import {
 	validatePutOptions,
 } from "./validator.worker";
 
+const MAX_BULK_GET_KEYS = 100;
 interface KVParams {
 	key: string;
 }
@@ -81,17 +82,22 @@ async function processKeyValue(
 	withMetadata: boolean = false
 ) {
 	const decoder = new TextDecoder();
-	let r = "";
+	let decodedValue = "";
 	if (obj?.value) {
 		for await (const chunk of obj?.value) {
-			r += decoder.decode(chunk, { stream: true });
+			decodedValue += decoder.decode(chunk, { stream: true });
 		}
-		r += decoder.decode();
+		decodedValue += decoder.decode();
 	}
 
 	let val = null;
 	try {
-		val = obj?.value == null ? null : type === "json" ? JSON.parse(r) : r;
+		val =
+			obj?.value == null
+				? null
+				: type === "json"
+					? JSON.parse(decodedValue)
+					: decodedValue;
 	} catch (err: any) {
 		throw new HttpError(
 			400,
@@ -104,7 +110,7 @@ async function processKeyValue(
 	if (withMetadata) {
 		return {
 			value: val,
-			metadata: obj?.metadata ? JSON.stringify(obj?.metadata) : null,
+			metadata: obj?.metadata ?? null,
 		};
 	}
 	return val;
@@ -121,20 +127,20 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 	@POST("/bulk/get")
 	get: RouteHandler<KVParams> = async (req, params, url) => {
 		if (req.method === "POST" && req.body != null) {
-			let r = "";
+			let decodedBody = "";
 			const decoder = new TextDecoder();
 			for await (const chunk of req.body) {
-				r += decoder.decode(chunk, { stream: true });
+				decodedBody += decoder.decode(chunk, { stream: true });
 			}
-			r += decoder.decode();
-			const parsedBody = JSON.parse(r);
+			decodedBody += decoder.decode();
+			const parsedBody = JSON.parse(decodedBody);
 			const keys: string[] = parsedBody.keys;
 			const type = parsedBody?.type;
 			if (type && type !== "text" && type !== "json") {
 				return new Response("", { status: 400 });
 			}
 			const obj: { [key: string]: any } = {};
-			if (keys.length > 100) {
+			if (keys.length > MAX_BULK_GET_KEYS) {
 				return new Response("", { status: 400 });
 			}
 			for (const key of keys) {

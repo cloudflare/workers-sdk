@@ -172,6 +172,57 @@ test("bulk get: request json type", async (t) => {
 	}
 });
 
+test("bulk get: check metadata", async (t) => {
+	const { kv } = t.context;
+	await kv.put("key1", "value1", {
+		expiration: TIME_FUTURE,
+		metadata: { testing: true },
+	});
+
+	await kv.put("key2", "value2");
+	const result: any = await kv.getWithMetadata(["key1", "key2"]);
+	const expectedResult: any = new Map([
+		["key1", { value: "value1", metadata: { testing: true } }],
+		["key2", { value: "value2", metadata: null }],
+	]);
+	t.deepEqual(result, expectedResult);
+});
+
+test("bulk get: check metadata with int", async (t) => {
+	const { kv } = t.context;
+	await kv.put("key1", "value1", {
+		expiration: TIME_FUTURE,
+		metadata: 123,
+	});
+
+	const result: any = await kv.getWithMetadata(["key1"]);
+	const expectedResult: any = new Map([
+		["key1", { value: "value1", metadata: 123 }],
+	]);
+	t.deepEqual(result, expectedResult);
+});
+
+test("bulk get: check metadata as string", async (t) => {
+	const { kv } = t.context;
+	await kv.put("key1", "value1", {
+		expiration: TIME_FUTURE,
+		metadata: "example",
+	});
+	const result: any = await kv.getWithMetadata(["key1"]);
+	const expectedResult: any = new Map([
+		["key1", { value: "value1", metadata: "example" }],
+	]);
+	t.deepEqual(result, expectedResult);
+});
+
+test("bulk get: get with metadata for 404", async (t) => {
+	const { kv } = t.context;
+
+	const result: any = await kv.getWithMetadata(["key1"]);
+	const expectedResult: any = new Map([["key1", null]]);
+	t.deepEqual(result, expectedResult);
+});
+
 test("get: returns null for non-existent keys", async (t) => {
 	const { kv } = t.context;
 	t.is(await kv.get("key"), null);
