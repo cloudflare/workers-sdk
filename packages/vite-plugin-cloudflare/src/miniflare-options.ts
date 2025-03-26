@@ -572,6 +572,8 @@ export function getPreviewMiniflareOptions(
 	};
 }
 
+const removedMessages = [/^Ready on http/, /^Updated and ready on http/];
+
 /**
  * A Miniflare logger that forwards messages onto a Vite logger.
  */
@@ -583,9 +585,12 @@ class ViteMiniflareLogger extends Log {
 	}
 
 	override logWithLevel(level: LogLevel, message: string) {
-		if (/^Ready on http/.test(message)) {
-			level = LogLevel.DEBUG;
+		for (const removedMessage of removedMessages) {
+			if (removedMessage.test(message)) {
+				return;
+			}
 		}
+
 		switch (level) {
 			case LogLevel.ERROR:
 				return this.logger.error(message);

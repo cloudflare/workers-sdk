@@ -1,5 +1,5 @@
 {
-	"name": "@playground/partyserver",
+	"name": "@playground/config-changes",
 	"private": true,
 	"type": "module",
 	"scripts": {
@@ -8,21 +8,10 @@
 		"dev": "vite dev",
 		"preview": "vite preview"
 	},
-	"dependencies": {
-		"partyserver": "^0.0.64",
-		"partysocket": "^1.0.3",
-		"react": "^19.0.0",
-		"react-dom": "^19.0.0"
-	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20250321.0",
-		"@tailwindcss/vite": "^4.0.15",
-		"@types/react": "^19.0.0",
-		"@types/react-dom": "^19.0.0",
-		"@vitejs/plugin-react": "^4.3.4",
-		"tailwindcss": "^4.0.15",
 		"typescript": "catalog:default",
 		"vite": "catalog:vite-plugin",
 		"wrangler": "workspace:*"
