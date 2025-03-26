@@ -1,5 +1,19 @@
 # wrangler
 
+## 4.4.1
+
+### Patch Changes
+
+- [#8655](https://github.com/cloudflare/workers-sdk/pull/8655) [`7682675`](https://github.com/cloudflare/workers-sdk/commit/768267567427cb54f39dc13860b09affd924267d) Thanks [@emily-shen](https://github.com/emily-shen)! - fix bug where assets in directories starting with . would crash the dev server
+
+- [#8604](https://github.com/cloudflare/workers-sdk/pull/8604) [`d8c0495`](https://github.com/cloudflare/workers-sdk/commit/d8c04956a8c9e426bd7d26a421dff6d3f0590fd2) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Amend `pages dev` error message when an environment is requested
+
+- [#8536](https://github.com/cloudflare/workers-sdk/pull/8536) [`e4b76e8`](https://github.com/cloudflare/workers-sdk/commit/e4b76e8d2a038d58a142bc79c05c9aa7db9eb3eb) Thanks [@gabivlj](https://github.com/gabivlj)! - wrangler cloudchamber create explicitly sets IPv6 predefined
+
+- Updated dependencies [[`7682675`](https://github.com/cloudflare/workers-sdk/commit/768267567427cb54f39dc13860b09affd924267d), [`9c844f7`](https://github.com/cloudflare/workers-sdk/commit/9c844f771a5345e3ccf64f07ac1d476a50a80fb6), [`29cb306`](https://github.com/cloudflare/workers-sdk/commit/29cb3069c9bae79941247dc2fd71021f1c75887d)]:
+  - miniflare@4.20250321.0
+  - @cloudflare/unenv-preset@2.3.1
+
 ## 4.4.0
 
 ### Minor Changes
