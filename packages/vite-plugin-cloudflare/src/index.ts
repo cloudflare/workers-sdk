@@ -40,6 +40,7 @@ import { resolvePluginConfig } from "./plugin-config";
 import { additionalModuleGlobalRE } from "./shared";
 import {
 	cleanUrl,
+	getFirstAvailablePort,
 	getOutputDirectory,
 	getRouterWorker,
 	toMiniflareRequest,
@@ -59,6 +60,9 @@ export type { PluginConfig } from "./plugin-config";
 let workersConfigsWarningShown = false;
 
 let miniflare: Miniflare | undefined;
+
+/** The inspector port (or false if inspecting is disabled) to use for the vite preview command */
+let previewInspectorPort: number | false | undefined;
 
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
@@ -83,13 +87,13 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			name: "vite-plugin-cloudflare",
 			// This only applies to this plugin so is safe to use while other plugins migrate to the Environment API
 			sharedDuringBuild: true,
-			config(userConfig, env) {
+			async config(userConfig, env) {
 				if (env.isPreview) {
 					// Short-circuit the whole configuration if we are in preview mode
 					return { appType: "custom" };
 				}
 
-				resolvedPluginConfig = resolvePluginConfig(
+				resolvedPluginConfig = await resolvePluginConfig(
 					pluginConfig,
 					userConfig,
 					env
@@ -352,15 +356,19 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					});
 				};
 			},
-			configurePreviewServer(vitePreviewServer) {
+			async configurePreviewServer(vitePreviewServer) {
 				const workerConfigs = getWorkerConfigs(vitePreviewServer.config.root);
+
+				previewInspectorPort =
+					pluginConfig.inspectorPort ??
+					(await getFirstAvailablePort(DEFAULT_INSPECTOR_PORT));
 
 				const miniflare = new Miniflare(
 					getPreviewMiniflareOptions(
 						vitePreviewServer,
 						workerConfigs,
 						pluginConfig.persistState ?? true,
-						pluginConfig.inspectorPort
+						previewInspectorPort
 					)
 				);
 
@@ -654,12 +662,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				vitePreviewServer.middlewares.use((req, res, next) => {
 					if (
 						req.url === debuggingPath &&
-						pluginConfig.inspectorPort !== false
+						previewInspectorPort !== undefined &&
+						previewInspectorPort !== false
 					) {
-						const html = getDebugPathHtml(
-							workerNames,
-							pluginConfig.inspectorPort ?? DEFAULT_INSPECTOR_PORT
-						);
+						const html = getDebugPathHtml(workerNames, previewInspectorPort);
 						res.setHeader("Content-Type", "text/html");
 						return res.end(html);
 					}

@@ -2,6 +2,7 @@ import assert from "node:assert";
 import * as path from "node:path";
 import * as vite from "vite";
 import { DEFAULT_INSPECTOR_PORT } from "./constants";
+import { getFirstAvailablePort } from "./utils";
 import {
 	getValidatedWranglerConfigPath,
 	getWorkerConfig,
@@ -85,14 +86,16 @@ function workerNameToEnvironmentName(workerName: string) {
 	return workerName.replaceAll("-", "_");
 }
 
-export function resolvePluginConfig(
+export async function resolvePluginConfig(
 	pluginConfig: PluginConfig,
 	userConfig: vite.UserConfig,
 	viteEnv: vite.ConfigEnv
-): ResolvedPluginConfig {
+): Promise<ResolvedPluginConfig> {
 	const configPaths = new Set<string>();
 	const persistState = pluginConfig.persistState ?? true;
-	const inspectorPort = pluginConfig.inspectorPort ?? DEFAULT_INSPECTOR_PORT;
+	const inspectorPort =
+		pluginConfig.inspectorPort ??
+		(await getFirstAvailablePort(DEFAULT_INSPECTOR_PORT));
 	const experimental = pluginConfig.experimental ?? {};
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
 	const { CLOUDFLARE_ENV: cloudflareEnv } = vite.loadEnv(
