@@ -1,5 +1,19 @@
 # wrangler
 
+## 4.5.0
+
+### Minor Changes
+
+- [#8620](https://github.com/cloudflare/workers-sdk/pull/8620) [`14602d9`](https://github.com/cloudflare/workers-sdk/commit/14602d9f39f3fb1df7303dab5c91a77fa21e46f9) Thanks [@pmiguel](https://github.com/pmiguel)! - Add support for KV Bulk Gets in Wrangler
+
+### Patch Changes
+
+- [#8435](https://github.com/cloudflare/workers-sdk/pull/8435) [`8e3688f`](https://github.com/cloudflare/workers-sdk/commit/8e3688f27209edeac6241bf240ee5eec62d7ddb2) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: include assets binding when printing summary of bindings
+
+- [#8675](https://github.com/cloudflare/workers-sdk/pull/8675) [`f043b74`](https://github.com/cloudflare/workers-sdk/commit/f043b74c715ebd7ca1e3f62139ad43e57cec8f05) Thanks [@vicb](https://github.com/vicb)! - Bump `@cloudflare/unenv-preset` to 2.3.1
+
+  Use the workerd native implementation of `createSecureContext` and `checkServerIdentity` from `node:tls`. The functions have been implemented in `cloudflare/workerd#3754`.
+
 ## 4.4.1
 
 ### Patch Changes

@@ -1,5 +1,15 @@
 # @cloudflare/vite-plugin
 
+## 0.1.17
+
+### Patch Changes
+
+- [#8652](https://github.com/cloudflare/workers-sdk/pull/8652) [`a18155f`](https://github.com/cloudflare/workers-sdk/commit/a18155fb81f0399528a40f843736ff6565dc5579) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Fix a bug where updating config files would crash the dev server. This occurred because the previous Miniflare instance was not disposed before creating a new one. This would lead to a port collision because of the `inspectorPort` introduced by the new debugging features.
+
+- Updated dependencies [[`8e3688f`](https://github.com/cloudflare/workers-sdk/commit/8e3688f27209edeac6241bf240ee5eec62d7ddb2), [`f043b74`](https://github.com/cloudflare/workers-sdk/commit/f043b74c715ebd7ca1e3f62139ad43e57cec8f05), [`14602d9`](https://github.com/cloudflare/workers-sdk/commit/14602d9f39f3fb1df7303dab5c91a77fa21e46f9)]:
+  - wrangler@4.5.0
+  - @cloudflare/unenv-preset@2.3.1
+
 ## 0.1.16
 
 ### Patch Changes
