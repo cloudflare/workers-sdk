@@ -85,7 +85,6 @@ import {
 	r2BucketCatalogDisableCommand,
 	r2BucketCatalogEnableCommand,
 	r2BucketCatalogGetCommand,
-	r2BucketCatalogListCommand,
 	r2BucketCatalogNamespace,
 } from "./r2/catalog";
 import {
@@ -642,10 +641,6 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler r2 bucket catalog get",
 			definition: r2BucketCatalogGetCommand,
-		},
-		{
-			command: "wrangler r2 bucket catalog list",
-			definition: r2BucketCatalogListCommand,
 		},
 		{
 			command: "wrangler r2 bucket notification",

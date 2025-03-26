@@ -157,7 +157,7 @@ describe("r2", () => {
 				  wrangler r2 bucket info <bucket>    Get information about an R2 bucket
 				  wrangler r2 bucket delete <bucket>  Delete an R2 bucket
 				  wrangler r2 bucket sippy            Manage Sippy incremental migration on an R2 bucket
-				  wrangler r2 bucket catalog          Manage R2 bucket warehouses using the R2 Data Catalog [open-beta]
+				  wrangler r2 bucket catalog          Manage the data catalog for your R2 buckets - provides an Iceberg REST inferface so engines can query R2 data as tables [open-beta]
 				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
 				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
 				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
@@ -198,7 +198,7 @@ describe("r2", () => {
 				  wrangler r2 bucket info <bucket>    Get information about an R2 bucket
 				  wrangler r2 bucket delete <bucket>  Delete an R2 bucket
 				  wrangler r2 bucket sippy            Manage Sippy incremental migration on an R2 bucket
-				  wrangler r2 bucket catalog          Manage R2 bucket warehouses using the R2 Data Catalog [open-beta]
+				  wrangler r2 bucket catalog          Manage the data catalog for your R2 buckets - provides an Iceberg REST inferface so engines can query R2 data as tables [open-beta]
 				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
 				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
 				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
@@ -947,13 +947,12 @@ describe("r2", () => {
 					"
 					wrangler r2 bucket catalog
 
-					Manage R2 bucket warehouses using the R2 Data Catalog [open-beta]
+					Manage the data catalog for your R2 buckets - provides an Iceberg REST inferface so engines can query R2 data as tables [open-beta]
 
 					COMMANDS
-					  wrangler r2 bucket catalog enable <bucket>   Enable an R2 bucket as an Iceberg warehouse [open-beta]
-					  wrangler r2 bucket catalog disable <bucket>  Disable R2 bucket as an Iceberg warehouse [open-beta]
-					  wrangler r2 bucket catalog get <bucket>      Check the status of the Iceberg warehouse on an R2 bucket [open-beta]
-					  wrangler r2 bucket catalog list              List the R2 bucket warehouses for your account [open-beta]
+					  wrangler r2 bucket catalog enable <bucket>   Enable the data catalog on an R2 bucket [open-beta]
+					  wrangler r2 bucket catalog disable <bucket>  Disable the data catalog for an R2 bucket [open-beta]
+					  wrangler r2 bucket catalog get <bucket>      Get the status of the data catalog for an R2 bucket [open-beta]
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
@@ -985,12 +984,13 @@ describe("r2", () => {
 					);
 					await runWrangler("r2 bucket catalog enable testBucket");
 					expect(std.out).toMatchInlineSnapshot(
-						`"✨ Successfully enabled R2 bucket 'testBucket' as an Iceberg warehouse. Warehouse name: 'test-warehouse-name', id: 'test-warehouse-id'.
+						`"✨ Successfully enabled data catalog on bucket 'testBucket'.
 
-			To integrate with your Iceberg Client, please use the Catalog Uri: 'https://catalog.cloudflarestorage.com/test-warehouse-name'.
+			Catalog URI: 'https://catalog.cloudflarestorage.com/test-warehouse-name'
 
-			You will need a Cloudflare API token with 'R2 Data Catalog' permissions for your Iceberg Client to integrate with the Catalog.
-			Please refer to https://developers.cloudflare.com/r2/api/s3/tokens/ for more details."`
+			Use the Catalog URI in Iceberg-compatible query engines (Spark, DuckDB, Trino, etc.) to read or manage data as tables.
+			Note: You'll need a Cloudflare API token with 'R2 Data Catalog' permission to authenticate your client with this catalog.
+			For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"`
 					);
 				});
 
@@ -1004,7 +1004,7 @@ describe("r2", () => {
 						"
 						wrangler r2 bucket catalog enable <bucket>
 
-						Enable an R2 bucket as an Iceberg warehouse [open-beta]
+						Enable the data catalog on an R2 bucket [open-beta]
 
 						POSITIONALS
 						  bucket  The name of the bucket to enable  [string] [required]
@@ -1036,10 +1036,10 @@ describe("r2", () => {
 						"
 						wrangler r2 bucket catalog disable <bucket>
 
-						Disable R2 bucket as an Iceberg warehouse [open-beta]
+						Disable the data catalog for an R2 bucket [open-beta]
 
 						POSITIONALS
-						  bucket  The name of the bucket to disable  [string] [required]
+						  bucket  The name of the bucket to disable the data catalog for  [string] [required]
 
 						GLOBAL FLAGS
 						  -c, --config   Path to Wrangler configuration file  [string]
@@ -1058,7 +1058,7 @@ describe("r2", () => {
 				it("should disable R2 catalog for the given bucket", async () => {
 					setIsTTY(true);
 					mockConfirm({
-						text: "Are you sure you want to disable the warehouse for bucket 'testBucket'? Please note that this action is irreversible, and you will not be able to re-enable the warehouse on the bucket.",
+						text: "Are you sure you want to disable the data catalog for bucket 'testBucket'? This action is irreversible, and you cannot re-enable it on this bucket.",
 						result: true,
 					});
 					msw.use(
@@ -1072,7 +1072,7 @@ describe("r2", () => {
 					);
 					await runWrangler("r2 bucket catalog disable testBucket");
 					expect(std.out).toMatchInlineSnapshot(
-						`"✨ Successfully disabled R2 bucket 'testBucket' as an Iceberg warehouse."`
+						`"Successfully disabled the data catalog on bucket 'testBucket'."`
 					);
 				});
 			});
@@ -1088,10 +1088,10 @@ describe("r2", () => {
 						"
 						wrangler r2 bucket catalog get <bucket>
 
-						Check the status of the Iceberg warehouse on an R2 bucket [open-beta]
+						Get the status of the data catalog for an R2 bucket [open-beta]
 
 						POSITIONALS
-						  bucket  The name of the bucket to check  [string] [required]
+						  bucket  The name of the R2 bucket whose data catalog status to retrieve  [string] [required]
 
 						GLOBAL FLAGS
 						  -c, --config   Path to Wrangler configuration file  [string]
@@ -1132,12 +1132,11 @@ describe("r2", () => {
 					);
 					await runWrangler("r2 bucket catalog get test-bucket");
 					expect(std.out).toMatchInlineSnapshot(`
-					"Fetching warehouse status ...
-					┌─────────┬───────────┬─────────────┬────────┐
-					│ id      │ name      │ bucket      │ status │
-					├─────────┼───────────┼─────────────┼────────┤
-					│ test-id │ test-name │ test-bucket │ active │
-					└─────────┴───────────┴─────────────┴────────┘"
+					"Getting data catalog status for 'test-bucket'...
+					id:      test-id
+					name:    test-name
+					bucket:  test-bucket
+					status:  active"
 				`);
 				});
 
@@ -1168,68 +1167,8 @@ describe("r2", () => {
 					);
 					await runWrangler("r2 bucket catalog get test-bucket");
 					expect(std.out).toMatchInlineSnapshot(`
-					"Fetching warehouse status ...
-					No Catalog configuration found for the 'test-bucket' bucket."
-				`);
-				});
-			});
-
-			describe("list", () => {
-				it("should warn if no warehouses are found", async () => {
-					msw.use(
-						http.get(
-							"*/accounts/:accountId/r2-catalog",
-							async ({ params }) => {
-								const { accountId } = params;
-								expect(accountId).toEqual("some-account-id");
-								return HttpResponse.json(createFetchResult([], true));
-							},
-							{ once: true }
-						)
-					);
-					await runWrangler("r2 bucket catalog list");
-
-					expect(std.info).toMatchInlineSnapshot(`
-						"
-		You haven't created any warehouses on this account.
-
-		Use 'wrangler r2 catalog enable <bucket>' to enable one on your bucket.
-				"
-					`);
-				});
-
-				it("should list the warehouses", async () => {
-					msw.use(
-						http.get(
-							"*/accounts/:accountId/r2-catalog",
-							async ({ params }) => {
-								const { accountId } = params;
-								expect(accountId).toEqual("some-account-id");
-								return HttpResponse.json(
-									createFetchResult(
-										[
-											{
-												id: "test-id",
-												name: "test-name",
-												bucket: "test-bucket",
-												status: "active",
-											},
-										],
-										true
-									)
-								);
-							},
-							{ once: true }
-						)
-					);
-					await runWrangler("r2 bucket catalog list");
-					expect(std.out).toMatchInlineSnapshot(`
-					"Fetching warehouses ...
-					┌─────────┬───────────┬─────────────┬────────┐
-					│ id      │ name      │ bucket      │ status │
-					├─────────┼───────────┼─────────────┼────────┤
-					│ test-id │ test-name │ test-bucket │ active │
-					└─────────┴───────────┴─────────────┴────────┘"
+					"Getting data catalog status for 'test-bucket'...
+					Data catalog isn't enabled for bucket 'test-bucket'."
 				`);
 				});
 			});

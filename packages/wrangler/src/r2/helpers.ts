@@ -500,15 +500,6 @@ type R2Warehouse = {
 };
 
 /**
- * Retreive all the active warehouses for the account
- */
-export async function listR2Catalog(accountId: string): Promise<R2Warehouse[]> {
-	return await fetchResult(`/accounts/${accountId}/r2-catalog`, {
-		method: "GET",
-	});
-}
-
-/**
  * Retreive the warehouse for the bucket with the given name
  */
 export async function getR2Catalog(

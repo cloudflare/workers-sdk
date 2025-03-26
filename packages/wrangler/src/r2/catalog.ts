@@ -4,16 +4,13 @@ import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/mis
 import { logger } from "../logger";
 import { APIError } from "../parse";
 import { requireAuth } from "../user";
-import {
-	disableR2Catalog,
-	enableR2Catalog,
-	getR2Catalog,
-	listR2Catalog,
-} from "./helpers";
+import formatLabelledValues from "../utils/render-labelled-values";
+import { disableR2Catalog, enableR2Catalog, getR2Catalog } from "./helpers";
 
 export const r2BucketCatalogNamespace = createNamespace({
 	metadata: {
-		description: "Manage R2 bucket warehouses using the R2 Data Catalog",
+		description:
+			"Manage the data catalog for your R2 buckets - provides an Iceberg REST inferface so engines can query R2 data as tables",
 		status: "open-beta",
 		owner: "Product: R2 Data Catalog",
 	},
@@ -21,7 +18,7 @@ export const r2BucketCatalogNamespace = createNamespace({
 
 export const r2BucketCatalogEnableCommand = createCommand({
 	metadata: {
-		description: "Enable an R2 bucket as an Iceberg warehouse",
+		description: "Enable the data catalog on an R2 bucket",
 		status: "open-beta",
 		owner: "Product: R2 Data Catalog",
 	},
@@ -38,35 +35,36 @@ export const r2BucketCatalogEnableCommand = createCommand({
 
 		const response = await enableR2Catalog(accountId, args.bucket);
 
-		let catalog_host: string;
+		let catalogHost: string;
 		const env = getCloudflareApiEnvironmentFromEnv();
 		if (env === "staging") {
-			catalog_host = `https://catalog-staging.cloudflarestorage.com/${response.name}`;
+			catalogHost = `https://catalog-staging.cloudflarestorage.com/${response.name}`;
 		} else {
-			catalog_host = `https://catalog.cloudflarestorage.com/${response.name}`;
+			catalogHost = `https://catalog.cloudflarestorage.com/${response.name}`;
 		}
 
 		logger.log(
-			`✨ Successfully enabled R2 bucket '${args.bucket}' as an Iceberg warehouse. Warehouse name: '${response.name}', id: '${response.id}'.
+			`✨ Successfully enabled data catalog on bucket '${args.bucket}'.
 
-			To integrate with your Iceberg Client, please use the Catalog Uri: '${catalog_host}'.
+			Catalog URI: '${catalogHost}'
 
-			You will need a Cloudflare API token with 'R2 Data Catalog' permissions for your Iceberg Client to integrate with the Catalog.
-			Please refer to https://developers.cloudflare.com/r2/api/s3/tokens/ for more details.`
+			Use the Catalog URI in Iceberg-compatible query engines (Spark, DuckDB, Trino, etc.) to read or manage data as tables.
+			Note: You'll need a Cloudflare API token with 'R2 Data Catalog' permission to authenticate your client with this catalog.
+			For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/`
 		);
 	},
 });
 
 export const r2BucketCatalogDisableCommand = createCommand({
 	metadata: {
-		description: "Disable R2 bucket as an Iceberg warehouse",
+		description: "Disable the data catalog for an R2 bucket",
 		status: "open-beta",
 		owner: "Product: R2 Data Catalog",
 	},
 	positionalArgs: ["bucket"],
 	args: {
 		bucket: {
-			describe: "The name of the bucket to disable",
+			describe: "The name of the bucket to disable the data catalog for",
 			type: "string",
 			demandOption: true,
 		},
@@ -75,7 +73,7 @@ export const r2BucketCatalogDisableCommand = createCommand({
 		const accountId = await requireAuth(config);
 
 		const confirmedDisable = await confirm(
-			`Are you sure you want to disable the warehouse for bucket '${args.bucket}'? Please note that this action is irreversible, and you will not be able to re-enable the warehouse on the bucket.`
+			`Are you sure you want to disable the data catalog for bucket '${args.bucket}'? This action is irreversible, and you cannot re-enable it on this bucket.`
 		);
 		if (!confirmedDisable) {
 			logger.log("Disable cancelled.");
@@ -85,21 +83,22 @@ export const r2BucketCatalogDisableCommand = createCommand({
 		await disableR2Catalog(accountId, args.bucket);
 
 		logger.log(
-			`✨ Successfully disabled R2 bucket '${args.bucket}' as an Iceberg warehouse.`
+			`Successfully disabled the data catalog on bucket '${args.bucket}'.`
 		);
 	},
 });
 
 export const r2BucketCatalogGetCommand = createCommand({
 	metadata: {
-		description: "Check the status of the Iceberg warehouse on an R2 bucket",
+		description: "Get the status of the data catalog for an R2 bucket",
 		status: "open-beta",
 		owner: "Product: R2 Data Catalog",
 	},
 	positionalArgs: ["bucket"],
 	args: {
 		bucket: {
-			describe: "The name of the bucket to check",
+			describe:
+				"The name of the R2 bucket whose data catalog status to retrieve",
 			type: "string",
 			demandOption: true,
 		},
@@ -107,60 +106,26 @@ export const r2BucketCatalogGetCommand = createCommand({
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
+		logger.log(`Getting data catalog status for '${args.bucket}'...`);
+
 		try {
-			logger.log(`Fetching warehouse status ...`);
-			const warehouse = await getR2Catalog(accountId, args.bucket);
-			logger.table([
-				{
-					id: warehouse.id,
-					name: warehouse.name,
-					bucket: warehouse.bucket,
-					status: warehouse.status,
-				},
-			]);
+			const catalog = await getR2Catalog(accountId, args.bucket);
+
+			const output = {
+				id: catalog.id,
+				name: catalog.name,
+				bucket: catalog.bucket,
+				status: catalog.status,
+			};
+
+			logger.log(formatLabelledValues(output));
 		} catch (e) {
 			// R2 Data Catalog 40401 corresponds to a 404
 			if (e instanceof APIError && e.code == 40401) {
-				logger.log(
-					`No Catalog configuration found for the '${args.bucket}' bucket.`
-				);
+				logger.log(`Data catalog isn't enabled for bucket '${args.bucket}'.`);
 			} else {
 				throw e;
 			}
 		}
-	},
-});
-
-export const r2BucketCatalogListCommand = createCommand({
-	metadata: {
-		description: "List the R2 bucket warehouses for your account",
-		status: "open-beta",
-		owner: "Product: R2 Data Catalog",
-	},
-	positionalArgs: [],
-	args: {},
-	async handler(args, { config }) {
-		const accountId = await requireAuth(config);
-
-		logger.log(`Fetching warehouses ...`);
-		const warehouses = await listR2Catalog(accountId);
-
-		if (warehouses.length === 0) {
-			logger.info(`
-		You haven't created any warehouses on this account.
-
-		Use 'wrangler r2 catalog enable <bucket>' to enable one on your bucket.
-				`);
-			return;
-		}
-
-		logger.table(
-			warehouses.map((warehouse) => ({
-				id: warehouse.id,
-				name: warehouse.name,
-				bucket: warehouse.bucket,
-				status: warehouse.status,
-			}))
-		);
 	},
 });
