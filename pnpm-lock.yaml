@@ -2012,6 +2012,27 @@ importers:
         specifier: workspace:*
         version: link:../../../wrangler
 
+  packages/vite-plugin-cloudflare/playground/deps-assets-importing:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250321.0
+        version: 4.20250321.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@18.19.76)(jiti@2.4.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
   packages/vite-plugin-cloudflare/playground/dev-vars:
     devDependencies:
       '@cloudflare/vite-plugin':

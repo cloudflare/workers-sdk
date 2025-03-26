@@ -5,6 +5,7 @@ import {
 import { additionalModuleRE, UNKNOWN_HOST } from "../shared";
 import { stripInternalEnv } from "./env";
 import type { WrapperEnv } from "./env";
+import type { EvaluatedModuleNode, ResolvedResult } from "vite/module-runner";
 
 let moduleRunner: ModuleRunner;
 
@@ -54,7 +55,12 @@ export async function createModuleRunner(
 			async runInlinedModule(context, transformed, module) {
 				if (
 					module.file.includes("/node_modules") &&
-					!module.file.includes("/node_modules/.vite")
+					!module.file.includes("/node_modules/.vite") &&
+					// if the code includes some of the vite context functions (e.g. `__vite_ssr_exports__`)
+					// we assume that the module was processed by vite, meaning that even if it is in the
+					// node_modules folder it is actually not an external module (this can happen for node_module assets
+					// imported via vite's assets API: https://vite.dev/guide/assets.html#static-asset-handling)
+					!Object.keys(context).some((k) => transformed.includes(k))
 				) {
 					throw new Error(
 						`[Error] Trying to import non-prebundled module (only prebundled modules are allowed): ${module.id}` +
