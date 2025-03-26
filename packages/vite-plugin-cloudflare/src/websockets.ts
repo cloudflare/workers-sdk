@@ -14,9 +14,7 @@ import type * as vite from "vite";
  */
 export function handleWebSocket(
 	httpServer: vite.HttpServer,
-	getFetcher: () => MaybePromise<
-		ReplaceWorkersTypes<Fetcher>["fetch"] | undefined
-	>
+	getFetcher: () => MaybePromise<ReplaceWorkersTypes<Fetcher>["fetch"]>
 ) {
 	const nodeWebSocket = new WebSocketServer({ noServer: true });
 
@@ -32,11 +30,11 @@ export function handleWebSocket(
 
 			const headers = nodeHeadersToWebHeaders(request.headers);
 			const fetcher = await getFetcher();
-			const response = await fetcher?.(url, {
+			const response = await fetcher(url, {
 				headers,
 				method: request.method,
 			});
-			const workerWebSocket = response?.webSocket;
+			const workerWebSocket = response.webSocket;
 
 			if (!workerWebSocket) {
 				socket.destroy();

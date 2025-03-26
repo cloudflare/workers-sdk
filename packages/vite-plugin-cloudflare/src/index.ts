@@ -320,22 +320,21 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				const middleware = createMiddleware(
 					async ({ request }) => {
-						if (miniflare) {
-							const routerWorker = await getRouterWorker(miniflare);
+						assert(miniflare, `Miniflare not defined`);
+						const routerWorker = await getRouterWorker(miniflare);
 
-							return routerWorker.fetch(toMiniflareRequest(request), {
-								redirect: "manual",
-							}) as any;
-						}
+						return routerWorker.fetch(toMiniflareRequest(request), {
+							redirect: "manual",
+						}) as any;
 					},
 					{ alwaysCallNext: false }
 				);
 
 				handleWebSocket(viteDevServer.httpServer, async () => {
-					if (miniflare) {
-						const routerWorker = await getRouterWorker(miniflare);
-						return routerWorker.fetch;
-					}
+					assert(miniflare, `Miniflare not defined`);
+					const routerWorker = await getRouterWorker(miniflare);
+
+					return routerWorker.fetch;
 				});
 
 				return () => {
