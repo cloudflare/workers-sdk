@@ -16,7 +16,6 @@ import { getAssetsConfig } from "./asset-config";
 import {
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
-	DEFAULT_INSPECTOR_PORT,
 	ROUTER_WORKER_NAME,
 } from "./constants";
 import { additionalModuleRE } from "./shared";
@@ -530,7 +529,7 @@ export function getPreviewMiniflareOptions(
 	vitePreviewServer: vite.PreviewServer,
 	workerConfigs: Unstable_Config[],
 	persistState: PersistState,
-	inspectorPort: number | false = DEFAULT_INSPECTOR_PORT
+	inspectorPort: number | false
 ): MiniflareOptions {
 	const resolvedViteConfig = vitePreviewServer.config;
 	const workers: Array<WorkerOptions> = workerConfigs.flatMap((config) => {
