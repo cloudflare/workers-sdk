@@ -641,6 +641,11 @@ export const CORE_PLUGIN: Plugin<
 					if (request.headers.has("CF-Connecting-IP")) {
 						request.headers.delete("CF-Connecting-IP");
 					}
+					request.headers.set(
+						CoreHeaders.CUSTOM_SERVICE,
+						CoreBindings.TEXT_CUSTOM_SERVICE
+					);
+					request.headers.set(CoreHeaders.ORIGINAL_URL, request.url);
 					return fetch(request, {
 						redirect: "manual",
 					});
