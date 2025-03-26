@@ -46,10 +46,12 @@ import { getWarningForWorkersConfigs } from "./workers-configs";
 import type { PluginConfig, ResolvedPluginConfig } from "./plugin-config";
 import type { Unstable_RawConfig } from "wrangler";
 
+export type { PluginConfig } from "./plugin-config";
+
 // this flag is used to show the workers configs warning only once
 let workersConfigsWarningShown = false;
 
-export type { PluginConfig } from "./plugin-config";
+let miniflare: Miniflare | undefined;
 
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
@@ -61,7 +63,6 @@ export type { PluginConfig } from "./plugin-config";
 export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	let resolvedPluginConfig: ResolvedPluginConfig;
 	let resolvedViteConfig: vite.ResolvedConfig;
-	let miniflare: Miniflare | undefined;
 
 	const additionalModulePaths = new Set<string>();
 
@@ -284,22 +285,19 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					writeDeployConfig(resolvedPluginConfig, resolvedViteConfig);
 				}
 			},
-			handleHotUpdate(options) {
+			hotUpdate(options) {
 				if (
-					resolvedPluginConfig.configPaths.has(options.file) ||
+					// Vite normalizes `options.file` so we use `path.resolve` for Windows compatibility
+					resolvedPluginConfig.configPaths.has(path.resolve(options.file)) ||
 					hasAssetsConfigChanged(
 						resolvedPluginConfig,
 						resolvedViteConfig,
 						options.file
 					)
 				) {
+					// It's OK for this to be called multiple times as Vite prevents concurrent execution
 					options.server.restart();
-				}
-			},
-			async buildEnd() {
-				if (miniflare) {
-					await miniflare.dispose();
-					miniflare = undefined;
+					return [];
 				}
 			},
 			async configureServer(viteDevServer) {
@@ -308,15 +306,23 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					"Unexpected error: No Vite HTTP server"
 				);
 
-				miniflare = new Miniflare(
-					getDevMiniflareOptions(resolvedPluginConfig, viteDevServer)
-				);
+				if (miniflare) {
+					await miniflare.setOptions(
+						getDevMiniflareOptions(resolvedPluginConfig, viteDevServer)
+					);
+				} else {
+					miniflare = new Miniflare(
+						getDevMiniflareOptions(resolvedPluginConfig, viteDevServer)
+					);
+				}
 
 				await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
-				const routerWorker = await getRouterWorker(miniflare);
 
 				const middleware = createMiddleware(
-					({ request }) => {
+					async ({ request }) => {
+						assert(miniflare, `Miniflare not defined`);
+						const routerWorker = await getRouterWorker(miniflare);
+
 						return routerWorker.fetch(toMiniflareRequest(request), {
 							redirect: "manual",
 						}) as any;
@@ -324,7 +330,12 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					{ alwaysCallNext: false }
 				);
 
-				handleWebSocket(viteDevServer.httpServer, routerWorker.fetch);
+				handleWebSocket(viteDevServer.httpServer, async () => {
+					assert(miniflare, `Miniflare not defined`);
+					const routerWorker = await getRouterWorker(miniflare);
+
+					return routerWorker.fetch;
+				});
 
 				return () => {
 					viteDevServer.middlewares.use((req, res, next) => {
@@ -353,7 +364,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					{ alwaysCallNext: false }
 				);
 
-				handleWebSocket(vitePreviewServer.httpServer, miniflare.dispatchFetch);
+				handleWebSocket(
+					vitePreviewServer.httpServer,
+					() => miniflare.dispatchFetch
+				);
 
 				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
 				vitePreviewServer.middlewares.use((req, res, next) => {
@@ -421,6 +435,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			hotUpdate(options) {
 				if (additionalModulePaths.has(options.file)) {
 					options.server.restart();
+					return [];
 				}
 			},
 			async renderChunk(code, chunk) {

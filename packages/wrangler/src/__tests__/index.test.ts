@@ -261,6 +261,7 @@ describe("wrangler", () => {
 				Interact with multiple Workers KV key-value pairs at once
 
 				COMMANDS
+				  wrangler kv bulk get <filename>     Gets multiple key-value pairs from a namespace [open-beta]
 				  wrangler kv bulk put <filename>     Upload multiple key-value pairs to a namespace
 				  wrangler kv bulk delete <filename>  Delete multiple key-value pairs from a namespace
 
