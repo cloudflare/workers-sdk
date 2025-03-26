@@ -6,15 +6,28 @@ import util from "node:util";
 import { stripAnsi } from "miniflare";
 import kill from "tree-kill";
 import { test as baseTest, inject, vi } from "vitest";
+import vitePluginPackage from "../package.json";
 
 const debuglog = util.debuglog("vite-plugin:test");
+
+const testEnv = {
+	...process.env,
+	// The following env vars are set to ensure that package managers
+	// do not use the same global cache and accidentally hit race conditions.
+	YARN_CACHE_FOLDER: "./.yarn/cache",
+	YARN_ENABLE_GLOBAL_CACHE: "false",
+	PNPM_HOME: "./.pnpm",
+	npm_config_cache: "./.npm/cache",
+	// unset the VITEST env variable as this causes e2e issues with some frameworks
+	VITEST: undefined,
+};
 
 /**
  * Extends the Vitest `test()` function to support running vite in
  * well defined environments that represent real-world usage.
  */
 export const test = baseTest.extend<{
-	seed: (fixture: string) => Promise<string>;
+	seed: (fixture: string, pm: string) => Promise<string>;
 	viteDev: (
 		projectPath: string,
 		options?: { flags?: string[]; maxBuffer?: number }
@@ -24,13 +37,17 @@ export const test = baseTest.extend<{
 	async seed({}, use) {
 		const root = inject("root");
 		const projectPaths: string[] = [];
-		await use(async (fixture) => {
+		await use(async (fixture, pm) => {
 			const projectPath = path.resolve(root, fixture);
 			await fs.cp(path.resolve(__dirname, "fixtures", fixture), projectPath, {
 				recursive: true,
 				errorOnExist: true,
 			});
 			debuglog("Fixture copied to " + projectPath);
+			await updateVitePluginVersion(projectPath);
+			debuglog("Updated vite-plugin version in package.json");
+			runCommand(`${pm} install`, projectPath);
+			debuglog("Installed node modules");
 			projectPaths.push(projectPath);
 			return projectPath;
 		});
@@ -52,12 +69,28 @@ export const test = baseTest.extend<{
 			debuglog("starting vite for " + projectPath);
 			const proc = childProcess.exec(`pnpm exec vite dev`, {
 				cwd: projectPath,
+				env: testEnv,
 			});
 			processes.push(proc);
 			return wrap(proc);
 		});
 		debuglog("Closing down vite dev processes", processes.length);
-		processes.forEach((proc) => proc.pid && kill(proc.pid));
+		const result = await Promise.allSettled(
+			processes.map((proc) => {
+				return new Promise<number | undefined>((resolve, reject) => {
+					const pid = proc.pid;
+					if (!pid) {
+						resolve(undefined);
+					} else {
+						debuglog("killing process vite process", pid);
+						kill(pid, "SIGKILL", (error) =>
+							error ? reject(error) : resolve(pid)
+						);
+					}
+				});
+			})
+		);
+		debuglog("Killed processes", result);
 	},
 });
 
@@ -101,10 +134,28 @@ function wrap(proc: childProcess.ChildProcess): Process {
 	};
 }
 
+async function updateVitePluginVersion(projectPath: string) {
+	const pkg = JSON.parse(
+		await fs.readFile(path.resolve(projectPath, "package.json"), "utf8")
+	);
+	const fields = ["dependencies", "devDependencies", "peerDependencies"];
+	for (const field of fields) {
+		if (pkg[field]?.["@cloudflare/vite-plugin"]) {
+			pkg[field]["@cloudflare/vite-plugin"] = vitePluginPackage.version;
+		}
+	}
+	await fs.writeFile(
+		path.resolve(projectPath, "package.json"),
+		JSON.stringify(pkg, null, 2)
+	);
+}
+
 export function runCommand(command: string, cwd: string) {
+	debuglog("Running command:", command);
 	childProcess.execSync(command, {
 		cwd,
 		stdio: debuglog.enabled ? "inherit" : "ignore",
+		env: testEnv,
 	});
 }
 

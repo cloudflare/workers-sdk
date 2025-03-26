@@ -5,7 +5,9 @@
 		"skipLibCheck": true,
 		"types": ["node", "vitest"],
 		"target": "ESNext",
-		"moduleResolution": "NodeNext",
-		"module": "NodeNext"
+		"moduleResolution": "Node",
+		"module": "ESNext",
+		"esModuleInterop": true,
+		"resolveJsonModule": true
 	}
 }

@@ -25,8 +25,7 @@ The simplest test looks like:
 
 ```ts
 test("can serve a Worker request", async ({ expect, seed, viteDev }) => {
-	const projectPath = await seed("basic");
-	runCommand(`pnpm install`, projectPath);
+	const projectPath = await seed("basic", "pnpm");
 
 	const proc = await viteDev(projectPath);
 	const url = await waitForReady(proc);
@@ -34,8 +33,20 @@ test("can serve a Worker request", async ({ expect, seed, viteDev }) => {
 });
 ```
 
-- The `seed()` helper makes a copy of the named fixture into a temporary directory. It returns the path to the directory containing the copy (`projectPath` above). This directory will be deleted at the end of the test.
-- The `runCommand()` helper simply executes a one-shot command and resolves when it has exited. You can use this to install the dependencies of the fixture from the mock npm registry, as in the example above.
+- The `seed()` helper does the following:
+  - makes a copy of the named fixture into a temporary directory,
+  - updates the vite-plugin dependency in the package.json to match the local version
+  - runs `npm install` (or equivalent package manager command) in the temporary project
+  - returns the path to the directory containing the copy (`projectPath` above)
+  - the temporary directory will be deleted at the end of the test.
+- The `runCommand()` helper simply executes a one-shot command and resolves when it has exited. You can use this to install the dependencies of the fixture from the mock npm registry.
 - The `viteDev()` helper boots up the `vite dev` command and returns an object that can be used to monitor its output. The process will be killed at the end of the test.
 - The `waitForReady()` helper will resolve when the `vite dev` process has output its ready message, from which it will parse the url that can be fetched in the test.
 - The `fetchJson()` helper makes an Undici fetch to the url parsing the response into JSON. It will retry every 250ms for up to 10 secs to minimize flakes.
+
+## Debugging the tests
+
+You can provide the following environment variables to get access to the logs and the actual files being tested:
+
+- `NODE_DEBUG=vite-plugin:test` - this will display debugging log messages as well as the streamed output from the commands being run.
+- `CLOUDFLARE_VITE_E2E_KEEP_TEMP_DIRS=1` - this will prevent the temporary directory containing the test project from being deleted, so that you can go and play with it manually.

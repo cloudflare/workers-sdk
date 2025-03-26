@@ -29,6 +29,7 @@ import {
 import {
 	injectGlobalCode,
 	isNodeCompat,
+	nodeCompatEntries,
 	nodeCompatExternals,
 	NODEJS_MODULES_RE,
 	nodejsBuiltins,
@@ -516,15 +517,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							builtins: [...nodeCompatExternals],
 						},
 						optimizeDeps: {
-							// This is a list of dependency entry-points that should be pre-bundled.
-							// In this case we provide a list of all the possible polyfills so that they are pre-bundled,
-							// ready ahead the first request to the dev server.
-							// Without this the dependency optimizer will try to bundle them on-the-fly in the middle of the first request,
-							// which can potentially cause problems if it leads to previous pre-bundling to become stale and needing to be reloaded.
-
-							// TODO: work out how to re-enable pre-bundling of these
-							// include: [...getNodeCompatEntries()],
-
 							// This is a list of module specifiers that the dependency optimizer should not follow when doing import analysis.
 							// In this case we provide a list of all the Node.js modules, both those built-in to workerd and those that will be polyfilled.
 							// Obviously we don't want/need the optimizer to try to process modules that are built-in;
@@ -577,6 +569,30 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				const resolvedId = await this.resolve(workerConfig.main);
 				if (id === resolvedId?.id) {
 					return injectGlobalCode(id, code);
+				}
+			},
+			async configureServer(viteDevServer) {
+				// Register every unenv-preset entry-point upfront before the first request.
+				// Without this the dependency optimizer will try to bundle them on-the-fly in the middle of the first request,
+				// which can potentially cause problems if it leads to previous pre-bundling to become stale and needing to be reloaded.
+				for (const environment of Object.values(viteDevServer.environments)) {
+					const workerConfig = getWorkerConfig(environment.name);
+					if (isNodeCompat(workerConfig)) {
+						const processingPromises = Array.from(nodeCompatEntries).map(
+							(entry) => {
+								const result = resolveNodeJSImport(entry);
+								if (result) {
+									const registration =
+										environment.depsOptimizer?.registerMissingImport(
+											result.unresolved,
+											result.resolved
+										);
+									return registration?.processing;
+								}
+							}
+						);
+						await Promise.all(processingPromises);
+					}
 				}
 			},
 		},
