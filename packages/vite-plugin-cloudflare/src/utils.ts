@@ -61,3 +61,16 @@ export function cleanUrl(url: string): string {
 export type Optional<T, K extends keyof T> = Omit<T, K> & Pick<Partial<T>, K>;
 
 export type MaybePromise<T> = Promise<T> | T;
+
+export function cached<T extends unknown[], U extends NonNullable<unknown>>(
+	fn: (...args: T) => U
+): (...args: T) => U {
+	let cachedResult: U | undefined = undefined;
+	return (...args: T) => {
+		if (cachedResult !== undefined) {
+			return cachedResult;
+		}
+		cachedResult = fn(...args);
+		return cachedResult;
+	};
+}
