@@ -208,8 +208,16 @@ async function testTls() {
 	assert.strictEqual(typeof tls.connect, "function");
 	assert.strictEqual(typeof tls.TLSSocket, "function");
 	assert.strictEqual(typeof tls.checkServerIdentity, "function");
-	assert.strictEqual(typeof tls.createSecureContext, "function");
+	assert.strictEqual(
+		tls.checkServerIdentity("a.com", { subject: { CN: "a.com" } }),
+		undefined
+	);
 	assert.strictEqual(typeof tls.SecureContext, "function");
+	assert.strictEqual(typeof tls.createSecureContext, "function");
+	assert.strictEqual(
+		tls.createSecureContext({}) instanceof tls.SecureContext,
+		true
+	);
 
 	return new Response("OK");
 }
