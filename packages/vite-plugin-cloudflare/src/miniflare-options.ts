@@ -369,7 +369,10 @@ export function getDevMiniflareOptions(
 
 	return {
 		log: logger,
-		inspectorPort: resolvedPluginConfig.inspectorPort || undefined,
+		inspectorPort:
+			resolvedPluginConfig.inspectorPort === false
+				? undefined
+				: resolvedPluginConfig.inspectorPort,
 		unsafeInspectorProxy: resolvedPluginConfig.inspectorPort !== false,
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
@@ -557,7 +560,7 @@ export function getPreviewMiniflareOptions(
 
 	return {
 		log: logger,
-		inspectorPort: inspectorPort || undefined,
+		inspectorPort: inspectorPort === false ? undefined : inspectorPort,
 		unsafeInspectorProxy: inspectorPort !== false,
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
