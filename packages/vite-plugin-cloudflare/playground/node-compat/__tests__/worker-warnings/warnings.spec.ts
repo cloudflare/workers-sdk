@@ -4,18 +4,7 @@ import dedent from "ts-dedent";
 import { expect, test, vi } from "vitest";
 import { serverLogs } from "../../../__test-utils__";
 
-test("should display warnings if nodejs_compat is missing", async ({
-	onTestFinished,
-}) => {
-	const wranglerConfigPath = join(
-		__dirname,
-		"../../worker-warnings/wrangler.toml"
-	);
-	const originalWranglerConfig = readFileSync(wranglerConfigPath, "utf8");
-	onTestFinished(() => {
-		writeFileSync(wranglerConfigPath, originalWranglerConfig);
-	});
-
+test("should display warnings if nodejs_compat is missing", async () => {
 	await vi.waitFor(async () => {
 		expect(serverLogs.warns[0]?.replaceAll("\\", "/")).toContain(
 			dedent`

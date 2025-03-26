@@ -152,9 +152,7 @@ export class NodeJsCompatWarnings {
 	registerImport(source: string, importer = "<unknown>") {
 		const importers = this.sources.get(source) ?? new Set();
 		this.sources.set(source, importers);
-		if (!importers.has(importer)) {
-			importers.add(importer);
-		}
+		importers.add(importer);
 	}
 
 	renderWarningsOnIdle() {

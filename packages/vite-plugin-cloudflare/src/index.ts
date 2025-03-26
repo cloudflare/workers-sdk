@@ -59,11 +59,6 @@ let workersConfigsWarningShown = false;
 
 let miniflare: Miniflare | undefined;
 
-const nodeJsCompatWarningsMap = new WeakMap<
-	WorkerConfig,
-	NodeJsCompatWarnings
->();
-
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
  *
@@ -76,6 +71,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	let resolvedViteConfig: vite.ResolvedConfig;
 
 	const additionalModulePaths = new Set<string>();
+
+	const nodeJsCompatWarningsMap = new Map<WorkerConfig, NodeJsCompatWarnings>();
 
 	// This is set when the client environment is built to determine if the entry Worker should include assets
 	let hasClientBuild = false;
@@ -667,9 +664,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 											build.onResolve(
 												{ filter: NODEJS_MODULES_RE },
 												({ path, importer }) => {
-													// We have to delay getting this object from the map to here
-													// It has not been created at the point that the `configEnvironment()` hook is called.
-													// It only gets created in the
+													// We have to delay getting this `nodeJsCompatWarnings` from the `nodeJsCompatWarningsMap` until we are in this function.
+													// It has not been added to the map until the `configureServer()` hook is called, which is after the `configEnvironment()` hook.
 													const nodeJsCompatWarnings =
 														nodeJsCompatWarningsMap.get(workerConfig);
 													assert(
