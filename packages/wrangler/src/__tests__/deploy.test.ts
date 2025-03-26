@@ -118,7 +118,8 @@ describe("deploy", () => {
 
 		await runWrangler("deploy ./index.js");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"Environment: default
+			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			No bindings found.
 			Uploaded test-name (TIMINGS)
@@ -176,7 +177,8 @@ describe("deploy", () => {
 
 		await runWrangler("deploy ./index.js");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"Environment: default
+			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			No bindings found.
 			Uploaded test-name (TIMINGS)
@@ -206,7 +208,8 @@ describe("deploy", () => {
 
 		await runWrangler("deploy ./index.js");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"Environment: default
+			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			No bindings found.
 			Uploaded test-name (TIMINGS)
@@ -232,7 +235,8 @@ describe("deploy", () => {
 
 		await runWrangler("deploy ./index.js --env staging");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"Environment: staging
+			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			No bindings found.
 			Uploaded test-name (TIMINGS)
@@ -294,7 +298,8 @@ describe("deploy", () => {
 		mockSubDomainRequest();
 		await runWrangler("deploy ./some-path/worker/index.js");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"Environment: default
+			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your worker has access to the following bindings:
 			- Vars:
@@ -334,7 +339,8 @@ describe("deploy", () => {
 
 		await runWrangler("deploy ./my-worker/index.js");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"Environment: default
+			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your worker has access to the following bindings:
 			- Vars:
@@ -408,7 +414,8 @@ describe("deploy", () => {
 
 		await runWrangler("deploy ./my-worker/index.js");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"Environment: default
+			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your worker has access to the following bindings:
 			- Vars:
@@ -521,7 +528,8 @@ describe("deploy", () => {
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Worker ID:  abc12345
@@ -562,6 +570,7 @@ describe("deploy", () => {
 				"Attempting to login via OAuth...
 				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in.
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -604,6 +613,7 @@ describe("deploy", () => {
 					"Attempting to login via OAuth...
 					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 					Successfully logged in.
+					Environment: default
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					No bindings found.
@@ -629,7 +639,8 @@ describe("deploy", () => {
 			await expect(runWrangler("deploy index.js")).resolves.toBeUndefined();
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -664,7 +675,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					No bindings found.
 					Uploaded test-name (TIMINGS)
@@ -689,7 +701,8 @@ describe("deploy", () => {
 				await runWrangler("deploy index.js");
 
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					No bindings found.
 					Uploaded test-name (TIMINGS)
@@ -869,7 +882,8 @@ describe("deploy", () => {
 
 			await runWrangler("deploy index.js --env some-env");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: some-env
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name-some-env (TIMINGS)
@@ -892,7 +906,8 @@ describe("deploy", () => {
 
 				await runWrangler("deploy index.js --legacy-env true");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					No bindings found.
 					Uploaded test-name (TIMINGS)
@@ -915,7 +930,8 @@ describe("deploy", () => {
 
 				await runWrangler("deploy index.js --env some-env --legacy-env true");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: some-env
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					No bindings found.
 					Uploaded test-name-some-env (TIMINGS)
@@ -938,7 +954,8 @@ describe("deploy", () => {
 
 				await runWrangler("deploy index.js --env some-env --legacy-env true");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: some-env
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					No bindings found.
 					Uploaded test-name-some-env (TIMINGS)
@@ -1012,7 +1029,8 @@ describe("deploy", () => {
 
 				await runWrangler("deploy index.js --legacy-env false");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					No bindings found.
 					Uploaded test-name (TIMINGS)
@@ -1043,7 +1061,8 @@ describe("deploy", () => {
 
 				await runWrangler("deploy index.js --env some-env --legacy-env false");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: some-env
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					No bindings found.
 					Uploaded test-name (some-env) (TIMINGS)
@@ -1089,7 +1108,8 @@ describe("deploy", () => {
 		mockSubDomainRequest();
 		await runWrangler("deploy ./some-path/worker/index.js");
 		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"Environment: default
+			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your worker has access to the following bindings:
 			- Vars:
@@ -1129,7 +1149,8 @@ describe("deploy", () => {
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -1179,7 +1200,8 @@ describe("deploy", () => {
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -1224,7 +1246,8 @@ describe("deploy", () => {
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -1265,7 +1288,8 @@ describe("deploy", () => {
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -1327,7 +1351,8 @@ describe("deploy", () => {
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: staging
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (staging) (TIMINGS)
@@ -1440,7 +1465,8 @@ describe("deploy", () => {
 			"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -1818,7 +1844,8 @@ Update them to point to this script instead?`,
 					"
 				`);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					No bindings found.
 					Uploaded test-name (TIMINGS)
@@ -1885,7 +1912,8 @@ Update them to point to this script instead?`,
 					"
 				`);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					No bindings found.
 					Uploaded test-name (TIMINGS)
@@ -1952,7 +1980,8 @@ Update them to point to this script instead?`,
 					"
 				`);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					No bindings found.
 					Uploaded test-name (TIMINGS)
@@ -2032,7 +2061,8 @@ Update them to point to this script instead?`,
 
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					No bindings found.
 					Uploaded test-name (TIMINGS)
@@ -2061,7 +2091,8 @@ Update them to point to this script instead?`,
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -2084,7 +2115,8 @@ Update them to point to this script instead?`,
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -2104,7 +2136,8 @@ Update them to point to this script instead?`,
 			await runWrangler("deploy");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -2126,7 +2159,8 @@ Update them to point to this script instead?`,
 			await runWrangler("deploy");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -2145,7 +2179,8 @@ Update them to point to this script instead?`,
 			await runWrangler("deploy index.ts");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -2168,7 +2203,8 @@ Update them to point to this script instead?`,
 			await runWrangler("deploy index.ts");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -2202,7 +2238,8 @@ export default{
 			mockSubDomainRequest();
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -2230,7 +2267,8 @@ export default{
 			mockSubDomainRequest();
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -2250,7 +2288,8 @@ export default{
 			await runWrangler("deploy ./src/index.js");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -2294,7 +2333,8 @@ export default {};`
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				No bindings found.
 				--dry-run: exiting now.",
 				  "warn": "",
@@ -2329,7 +2369,8 @@ addEventListener('fetch', event => {});`
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				No bindings found.
 				--dry-run: exiting now.",
 				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe entrypoint index.js has exports like an ES Module, but hasn't defined a default export like a module worker normally would. Building the worker using \\"service-worker\\" format...[0m
@@ -2352,7 +2393,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./src/index.js");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -2436,6 +2478,7 @@ addEventListener('fetch', event => {});`
 				Uploading 2 new assets...
 				Uploaded 100% [2 out of 2]",
 				  "out": "↗️  Done syncing assets
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -2495,6 +2538,7 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"↗️  Done syncing assets
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -2752,6 +2796,7 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"↗️  Done syncing assets
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -2810,6 +2855,7 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"↗️  Done syncing assets
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -2875,6 +2921,7 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"↗️  Done syncing assets
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -2990,6 +3037,7 @@ addEventListener('fetch', event => {});`
 				│ Total (4 modules) │      │ xx KiB │
 				└───────────────────┴──────┴──────────┘
 				↗️  Done syncing assets
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -3047,6 +3095,7 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"↗️  Done syncing assets
+				Environment: some-env
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -3104,6 +3153,7 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"↗️  Done syncing assets
+				Environment: some-env
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -3146,6 +3196,7 @@ addEventListener('fetch', event => {});`
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"↗️  Done syncing assets
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -3194,6 +3245,7 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"↗️  Done syncing assets
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -3242,6 +3294,7 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"↗️  Done syncing assets
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -3291,6 +3344,7 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"↗️  Done syncing assets
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -3340,6 +3394,7 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"↗️  Done syncing assets
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -3389,6 +3444,7 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"↗️  Done syncing assets
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -3438,6 +3494,7 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"↗️  Done syncing assets
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -3489,6 +3546,7 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"↗️  Done syncing assets
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -3544,6 +3602,7 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"↗️  Done syncing assets
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -3655,6 +3714,7 @@ addEventListener('fetch', event => {});`
 			expect(std.debug).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"↗️  Done syncing assets
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -3795,6 +3855,7 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"↗️  Done syncing assets
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -3856,6 +3917,7 @@ addEventListener('fetch', event => {});`
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"↗️  Done syncing assets
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -3902,6 +3964,7 @@ addEventListener('fetch', event => {});`
 				Uploading 2 new assets...
 				Uploaded 100% [2 out of 2]",
 				  "out": "↗️  Done syncing assets
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -4118,6 +4181,7 @@ addEventListener('fetch', event => {});`
 					Uploading 110 new assets...
 					Uploaded 100% [110 out of 110]",
 					  "out": "↗️  Done syncing assets
+					Environment: default
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					No bindings found.
@@ -5380,7 +5444,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -5404,7 +5469,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -5427,7 +5493,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -5451,7 +5518,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -5476,7 +5544,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -5499,7 +5568,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -5522,7 +5592,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -5544,7 +5615,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -5567,7 +5639,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -5596,7 +5669,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: dev
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (dev) (TIMINGS)
@@ -5625,7 +5699,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: dev
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (dev) (TIMINGS)
@@ -5655,7 +5730,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: dev
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (dev) (TIMINGS)
@@ -5687,7 +5763,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: dev
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (dev) (TIMINGS)
@@ -5719,7 +5796,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: dev
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (dev) (TIMINGS)
@@ -5754,7 +5832,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index --env dev --legacy-env false");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: dev
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (dev) (TIMINGS)
@@ -5790,7 +5869,8 @@ addEventListener('fetch', event => {});`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: dev
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (dev) (TIMINGS)
@@ -5854,7 +5934,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -5876,7 +5957,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy ./index");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -5956,7 +6038,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy index.js");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -5994,7 +6077,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy index.js --env production");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: production
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name-production (TIMINGS)
@@ -6032,7 +6116,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy index.js --env production");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: production
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name-production (TIMINGS)
@@ -6064,7 +6149,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy index.js");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -6107,7 +6193,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy index.js --env production");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: production
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name-production (TIMINGS)
@@ -6150,7 +6237,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy index.js --env production");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: production
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name-production (TIMINGS)
@@ -6190,7 +6278,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy index.js --env production");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: production
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name-production (TIMINGS)
@@ -6229,7 +6318,8 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy index.js --env production");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: production
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name-production (TIMINGS)
@@ -6382,6 +6472,7 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Running custom build: node -e \\"4+4; require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\"
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -6410,6 +6501,7 @@ addEventListener('fetch', event => {});`
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"Running custom build: echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js
+					Environment: default
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					No bindings found.
@@ -6519,7 +6611,8 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest();
 			await runWrangler("deploy index.js --minify");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -6561,7 +6654,8 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest();
 			await runWrangler("deploy -e testEnv index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: testEnv
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (testEnv) (TIMINGS)
@@ -6588,7 +6682,8 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest();
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- Durable Objects:
@@ -6641,7 +6736,8 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest();
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- Durable Objects:
@@ -6687,7 +6783,8 @@ addEventListener('fetch', event => {});`
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- Durable Objects:
@@ -6742,7 +6839,8 @@ addEventListener('fetch', event => {});`
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- Durable Objects:
@@ -6789,7 +6887,8 @@ addEventListener('fetch', event => {});`
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- Durable Objects:
@@ -6838,7 +6937,8 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js --legacy-env false");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Durable Objects:
@@ -6904,7 +7004,8 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js --legacy-env false --env xyz");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: xyz
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Durable Objects:
@@ -6969,7 +7070,8 @@ addEventListener('fetch', event => {});`
 					  "debug": "",
 					  "err": "",
 					  "info": "",
-					  "out": "Total Upload: xx KiB / gzip: xx KiB
+					  "out": "Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Durable Objects:
@@ -7042,7 +7144,8 @@ addEventListener('fetch', event => {});`
 					  "debug": "",
 					  "err": "",
 					  "info": "",
-					  "out": "Total Upload: xx KiB / gzip: xx KiB
+					  "out": "Environment: xyz
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Durable Objects:
@@ -7101,7 +7204,8 @@ addEventListener('fetch', event => {});`
 					"deploy index.js --dispatch-namespace test-namespace"
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Durable Objects:
@@ -7153,7 +7257,8 @@ addEventListener('fetch', event => {});`
 					"deploy index.js --dispatch-namespace test-namespace"
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Durable Objects:
@@ -7186,7 +7291,8 @@ addEventListener('fetch', event => {});`
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -7211,7 +7317,8 @@ addEventListener('fetch', event => {});`
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -7438,7 +7545,8 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy index.js")).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- Data Blobs:
@@ -7889,7 +7997,8 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Wasm Modules:
@@ -7959,7 +8068,8 @@ addEventListener('fetch', event => {});`
 				mockSubDomainRequest();
 				await runWrangler("deploy index.js --config ./path/to/wrangler.toml");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Wasm Modules:
@@ -7998,7 +8108,8 @@ addEventListener('fetch', event => {});`
 				mockSubDomainRequest();
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					No bindings found.
 					Uploaded test-name (TIMINGS)
@@ -8036,7 +8147,8 @@ addEventListener('fetch', event => {});`
 				mockSubDomainRequest();
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Text Blobs:
@@ -8110,7 +8222,8 @@ addEventListener('fetch', event => {});`
 				mockSubDomainRequest();
 				await runWrangler("deploy index.js --config ./path/to/wrangler.toml");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Text Blobs:
@@ -8150,7 +8263,8 @@ addEventListener('fetch', event => {});`
 				mockSubDomainRequest();
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Data Blobs:
@@ -8224,7 +8338,8 @@ addEventListener('fetch', event => {});`
 				mockSubDomainRequest();
 				await runWrangler("deploy index.js --config ./path/to/wrangler.toml");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Data Blobs:
@@ -8264,7 +8379,8 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Vars:
@@ -8294,7 +8410,8 @@ addEventListener('fetch', event => {});`
 					  "debug": "",
 					  "err": "",
 					  "info": "",
-					  "out": "Total Upload: xx KiB / gzip: xx KiB
+					  "out": "Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Vars:
@@ -8325,7 +8442,8 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- R2 Buckets:
@@ -8375,7 +8493,8 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- logfwdr:
@@ -8449,7 +8568,8 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Durable Objects:
@@ -8497,7 +8617,8 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"Environment: default
+			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your worker has access to the following bindings:
 			- Durable Objects:
@@ -8540,7 +8661,8 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Durable Objects:
@@ -8587,7 +8709,8 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Durable Objects:
@@ -8647,7 +8770,8 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"Environment: default
+			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your worker has access to the following bindings:
 			- Durable Objects:
@@ -8702,7 +8826,8 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js --outdir tmp --dry-run");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"Environment: default
+			Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
 			- Durable Objects:
 			  - EXAMPLE_DO_BINDING: ExampleDurableObject
@@ -8770,7 +8895,8 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Services:
@@ -8811,7 +8937,8 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Services:
@@ -8843,7 +8970,8 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Analytics Engine Datasets:
@@ -8881,7 +9009,8 @@ addEventListener('fetch', event => {});`
 				});
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Dispatch Namespaces:
@@ -8939,7 +9068,8 @@ addEventListener('fetch', event => {});`
 				});
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Dispatch Namespaces:
@@ -8990,7 +9120,8 @@ addEventListener('fetch', event => {});`
 				});
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					Your worker has access to the following bindings:
 					- Dispatch Namespaces:
@@ -9034,7 +9165,8 @@ addEventListener('fetch', event => {});`
 					});
 					await runWrangler("deploy index.js");
 					expect(std.out).toMatchInlineSnapshot(`
-						"Total Upload: xx KiB / gzip: xx KiB
+						"Environment: default
+						Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
 						Your worker has access to the following bindings:
 						- Unsafe Metadata:
@@ -9075,7 +9207,8 @@ addEventListener('fetch', event => {});`
 
 					await runWrangler("deploy index.js");
 					expect(std.out).toMatchInlineSnapshot(`
-						"Total Upload: xx KiB / gzip: xx KiB
+						"Environment: default
+						Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
 						Your worker has access to the following bindings:
 						- Unsafe Metadata:
@@ -9122,7 +9255,8 @@ addEventListener('fetch', event => {});`
 
 					await runWrangler("deploy index.js");
 					expect(std.out).toMatchInlineSnapshot(`
-						"Total Upload: xx KiB / gzip: xx KiB
+						"Environment: default
+						Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
 						Your worker has access to the following bindings:
 						- Unsafe Metadata:
@@ -9165,7 +9299,8 @@ addEventListener('fetch', event => {});`
 
 					await runWrangler("deploy index.js");
 					expect(std.out).toMatchInlineSnapshot(`
-						"Total Upload: xx KiB / gzip: xx KiB
+						"Environment: default
+						Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
 						No bindings found.
 						Uploaded test-name (TIMINGS)
@@ -9270,7 +9405,8 @@ addEventListener('fetch', event => {});`
 
 					await runWrangler("deploy index.js");
 					expect(std.out).toMatchInlineSnapshot(`
-						"Total Upload: xx KiB / gzip: xx KiB
+						"Environment: default
+						Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
 						No bindings found.
 						Uploaded test-name (TIMINGS)
@@ -9316,7 +9452,8 @@ addEventListener('fetch', event => {});`
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -9348,7 +9485,8 @@ addEventListener('fetch', event => {});`
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -9386,7 +9524,8 @@ addEventListener('fetch', event => {});`
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -9488,7 +9627,8 @@ addEventListener('fetch', event => {});`
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -9520,7 +9660,8 @@ addEventListener('fetch', event => {});`
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -9553,7 +9694,8 @@ addEventListener('fetch', event => {});`
 				});
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Total Upload: xx KiB / gzip: xx KiB
+					"Environment: default
+					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					No bindings found.
 					Uploaded test-name (TIMINGS)
@@ -9697,7 +9839,8 @@ addEventListener('fetch', event => {});`
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -9729,7 +9872,8 @@ addEventListener('fetch', event => {});`
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -9763,7 +9907,8 @@ addEventListener('fetch', event => {});`
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -9795,7 +9940,8 @@ addEventListener('fetch', event => {});`
 				"deploy index.js --compatibility-date 2022-03-17 --name test-name"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -9840,7 +9986,8 @@ addEventListener('fetch', event => {});`
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -9893,7 +10040,8 @@ addEventListener('fetch', event => {});`
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -9920,7 +10068,8 @@ addEventListener('fetch', event => {});`
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -9978,7 +10127,8 @@ export default{
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -10004,7 +10154,8 @@ export default{
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -10094,7 +10245,8 @@ export default{
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -10186,7 +10338,8 @@ export default{
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- KV Namespaces:
@@ -10214,7 +10367,8 @@ export default{
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -10304,7 +10458,8 @@ export default{
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -10396,7 +10551,8 @@ export default{
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- KV Namespaces:
@@ -10437,7 +10593,8 @@ export default{
 			  "debug": "",
 			  "err": "",
 			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
+			  "out": "Environment: default
+			Total Upload: xx KiB / gzip: xx KiB
 			Your worker has access to the following bindings:
 			- Durable Objects:
 			  - NAME: SomeClass
@@ -10613,7 +10770,8 @@ export default{
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				No bindings found.
 				--dry-run: exiting now.",
 				  "warn": "",
@@ -10646,7 +10804,8 @@ export default{
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				No bindings found.
 				--dry-run: exiting now.",
 				  "warn": "",
@@ -10700,7 +10859,8 @@ export default{
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -10766,7 +10926,8 @@ export default{
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				No bindings found.
 
 				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
@@ -10839,7 +11000,8 @@ export default{
 				  "debug": "",
 				  "err": "",
 				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				  "out": "Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				No bindings found.
 
 				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/test-name/versions) failed.[0m
@@ -11068,7 +11230,8 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- Queues:
@@ -11115,7 +11278,8 @@ export default{
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- Queues:
@@ -11170,7 +11334,8 @@ export default{
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -11224,7 +11389,8 @@ export default{
 			});
 			await runWrangler(`deploy index.js --name ${expectedScriptName}`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded command-line-arg-script-name (TIMINGS)
@@ -11285,7 +11451,8 @@ export default{
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -11351,7 +11518,8 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -11404,7 +11572,8 @@ export default{
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -11465,7 +11634,8 @@ export default{
 			);
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -11526,7 +11696,8 @@ export default{
 			});
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -11588,7 +11759,8 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -11650,7 +11822,8 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -11865,7 +12038,8 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- Browser:
@@ -11898,7 +12072,8 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- Images:
@@ -11940,6 +12115,7 @@ export default{
 				├──────────────────────────────────────┼────────┼──────────┤
 				│ Total (1 module)                     │        │ xx KiB │
 				└──────────────────────────────────────┴────────┴──────────┘
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -11977,6 +12153,7 @@ export default{
 				├──────────────────────────────────────┼────────┼──────────┤
 				│ Total (1 module)                     │        │ xx KiB │
 				└──────────────────────────────────────┴────────┴──────────┘
+				Environment: default
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -12012,7 +12189,8 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- Hyperdrive Configs:
@@ -12044,7 +12222,8 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- mTLS Certificates:
@@ -12081,7 +12260,8 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
+			"Environment: default
+			Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your worker has access to the following bindings:
 			- Pipelines:
@@ -12109,7 +12289,8 @@ export default{
 			await runWrangler("deploy index.js --keep-vars");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -12134,7 +12315,8 @@ export default{
 			await runWrangler("deploy index.js");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -12161,7 +12343,8 @@ export default{
 			await runWrangler("deploy index.js");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -12193,7 +12376,8 @@ export default{
 				"deploy --dispatch-namespace test-dispatch-namespace index.js"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -12222,7 +12406,8 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -12260,7 +12445,8 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -12284,7 +12470,8 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -12352,7 +12539,8 @@ export default{
 				"
 			`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- Workflows:
@@ -12413,7 +12601,8 @@ export default{
 			await runWrangler("deploy");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
+				"Environment: default
+				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Your worker has access to the following bindings:
 				- Workflows:
