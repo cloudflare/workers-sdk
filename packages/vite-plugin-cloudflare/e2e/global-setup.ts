@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import util from "node:util";
 import { startMockNpmRegistry } from "@cloudflare/mock-npm-registry";
-import type { GlobalSetupContext } from "vitest/node";
+import type { TestProject } from "vitest/node";
 
 declare module "vitest" {
 	export interface ProvidedContext {
@@ -13,8 +13,7 @@ declare module "vitest" {
 
 // Using a global setup means we can modify tests without having to re-install
 // packages into our temporary directory
-// Typings for the GlobalSetupContext are augmented in `global-setup.d.ts`.
-export default async function ({ provide }: GlobalSetupContext) {
+export default async function ({ provide }: TestProject) {
 	const stopMockNpmRegistry = await startMockNpmRegistry(
 		"@cloudflare/vite-plugin"
 	);
@@ -28,7 +27,9 @@ export default async function ({ provide }: GlobalSetupContext) {
 	return async () => {
 		await stopMockNpmRegistry();
 
-		console.log("Cleaning up temporary directory...");
-		await fs.rm(root, { recursive: true, maxRetries: 10 });
+		if (!process.env.CLOUDFLARE_VITE_E2E_KEEP_TEMP_DIRS) {
+			console.log("Cleaning up temporary directory...", root);
+			await fs.rm(root, { recursive: true, maxRetries: 10 });
+		}
 	};
 }
