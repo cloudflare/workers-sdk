@@ -573,34 +573,34 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			},
 			async configureServer(viteDevServer) {
 				// Pre-optimize Node.js compat library entry-points for those environments that need it.
-				for (const environment of Object.values(viteDevServer.environments)) {
-					const workerConfig = getWorkerConfig(environment.name);
-					if (isNodeCompat(workerConfig)) {
-						// Make sure that the dependency optimizer has been initialized.
-						// This ensures that its standard static crawling to identify libraries to optimize still happens.
-						// If you don't call `init()` then the calls to `registerMissingImport()` appear to cancel the static crawling.
-						await environment.depsOptimizer?.init();
+				await Promise.all(
+					Object.values(viteDevServer.environments).flatMap(
+						async (environment) => {
+							const workerConfig = getWorkerConfig(environment.name);
+							if (isNodeCompat(workerConfig)) {
+								// Make sure that the dependency optimizer has been initialized.
+								// This ensures that its standard static crawling to identify libraries to optimize still happens.
+								// If you don't call `init()` then the calls to `registerMissingImport()` appear to cancel the static crawling.
+								await environment.depsOptimizer?.init();
 
-						// Register every unenv-preset entry-point with the dependency optimizer upfront before the first request.
-						// Without this the dependency optimizer will try to bundle them on-the-fly in the middle of the first request.
-						// That can potentially cause problems if it causes previously optimized bundles to become stale and need to be bundled.
-						const processingPromises = Array.from(nodeCompatEntries).map(
-							(entry) => {
-								const result = resolveNodeJSImport(entry);
-								if (result) {
-									const registration =
-										environment.depsOptimizer?.registerMissingImport(
-											result.unresolved,
-											result.resolved
-										);
-									return registration?.processing;
-								}
+								// Register every unenv-preset entry-point with the dependency optimizer upfront before the first request.
+								// Without this the dependency optimizer will try to bundle them on-the-fly in the middle of the first request.
+								// That can potentially cause problems if it causes previously optimized bundles to become stale and need to be bundled.
+								return Array.from(nodeCompatEntries).map((entry) => {
+									const result = resolveNodeJSImport(entry);
+									if (result) {
+										const registration =
+											environment.depsOptimizer?.registerMissingImport(
+												result.unresolved,
+												result.resolved
+											);
+										return registration?.processing;
+									}
+								});
 							}
-						);
-						// Wait for all the additional deps to be optimized before continuing to serve requests.
-						await Promise.all(processingPromises);
-					}
-				}
+						}
+					)
+				);
 			},
 		},
 		// Plugin that provides an __debug path for debugging the Cloudflare Workers.
