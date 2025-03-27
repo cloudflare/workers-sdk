@@ -566,7 +566,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())("help text", () => {
 				    npm create cloudflare -- --framework next -- --ts
 				    pnpm create cloudflare --framework next -- --ts
 				    Allowed Values:
-				      analog, angular, astro, docusaurus, gatsby, hono, next, nuxt, qwik, react, remix, solid, svelte, vue
+				      analog, angular, astro, docusaurus, gatsby, hono, next, nuxt, qwik, react, react-router, remix, solid, svelte, vue
 				  --platform=<value>
 				    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 				    Allowed Values:
