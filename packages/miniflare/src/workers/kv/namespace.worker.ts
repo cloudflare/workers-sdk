@@ -12,7 +12,7 @@ import {
 	PUT,
 	RouteHandler,
 } from "miniflare:shared";
-import { KVHeaders, KVLimits, KVParams } from "./constants";
+import { KVHeaders, KVLimits, KVParams, MAX_BULK_GET_KEYS } from "./constants";
 import {
 	decodeKey,
 	decodeListOptions,
@@ -22,7 +22,6 @@ import {
 	validatePutOptions,
 } from "./validator.worker";
 
-const MAX_BULK_GET_KEYS = 100;
 interface KVParams {
 	key: string;
 }
@@ -78,8 +77,8 @@ function secondsToMillis(seconds: number): number {
 
 async function processKeyValue(
 	obj: KeyValueEntry<unknown> | null,
-	type: string = "text",
-	withMetadata: boolean = false
+	type: "text" | "json" = "text",
+	withMetadata = false
 ) {
 	const decoder = new TextDecoder();
 	let decodedValue = "";
@@ -92,19 +91,18 @@ async function processKeyValue(
 
 	let val = null;
 	try {
-		val =
-			obj?.value == null
-				? null
-				: type === "json"
-					? JSON.parse(decodedValue)
-					: decodedValue;
+		val = !obj?.value
+			? null
+			: type === "json"
+				? JSON.parse(decodedValue)
+				: decodedValue;
 	} catch (err: any) {
 		throw new HttpError(
 			400,
-			"At least of of the requested keys corresponds to a non-JSON value"
+			"At least one of the requested keys corresponds to a non-JSON value"
 		);
 	}
-	if (val == null) {
+	if (val === null) {
 		return null;
 	}
 	if (withMetadata) {
@@ -137,11 +135,13 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 			const keys: string[] = parsedBody.keys;
 			const type = parsedBody?.type;
 			if (type && type !== "text" && type !== "json") {
-				return new Response("", { status: 400 });
+				return new Response(`Type ${type} is invalid`, { status: 400 });
 			}
 			const obj: { [key: string]: any } = {};
 			if (keys.length > MAX_BULK_GET_KEYS) {
-				return new Response("", { status: 400 });
+				return new Response(`Accepting a max of 100 keys, got ${keys.length}`, {
+					status: 400,
+				});
 			}
 			for (const key of keys) {
 				validateGetOptions(key, { cacheTtl: parsedBody?.cacheTtl });

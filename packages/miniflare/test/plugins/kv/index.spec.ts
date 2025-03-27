@@ -6,6 +6,7 @@ import consumers from "stream/consumers";
 import { Macro, ThrowsExpectation } from "ava";
 import {
 	KV_PLUGIN_NAME,
+	MAX_BULK_GET_KEYS,
 	Miniflare,
 	MiniflareOptions,
 	ReplaceWorkersTypes,
@@ -139,7 +140,7 @@ test("bulk get: check max keys", async (t) => {
 	const { kv } = t.context;
 	await kv.put("key1", "value1");
 	const keyArray = [];
-	for (let i = 0; i <= 100; i++) {
+	for (let i = 0; i <= MAX_BULK_GET_KEYS; i++) {
 		keyArray.push(`key${i}`);
 	}
 	try {
@@ -167,7 +168,7 @@ test("bulk get: request json type", async (t) => {
 	} catch (error: any) {
 		t.is(
 			error.message,
-			"KV GET_BULK failed: 400 At least of of the requested keys corresponds to a non-JSON value"
+			"KV GET_BULK failed: 400 At least one of the requested keys corresponds to a non-JSON value"
 		);
 	}
 });

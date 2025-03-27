@@ -2,4 +2,4 @@
 "miniflare": minor
 ---
 
-Add bulk gets for Workers KV
+Add Miniflare Workers KV bulk get support
