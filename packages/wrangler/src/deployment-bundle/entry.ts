@@ -138,17 +138,7 @@ export async function getEntry(
 		config.tsconfig
 	);
 
-	const { localBindings, remoteBindings } =
-		partitionDurableObjectBindings(config);
-
-	if (command === "dev" && remoteBindings.length > 0) {
-		logger.warn(
-			"WARNING: You have Durable Object bindings that are not defined locally in the worker being developed.\n" +
-				"Be aware that changes to the data stored in these Durable Objects will be permanent and affect the live instances.\n" +
-				"Remote Durable Objects that are affected:\n" +
-				remoteBindings.map((b) => `- ${JSON.stringify(b)}`).join("\n")
-		);
-	}
+	const { localBindings } = partitionDurableObjectBindings(config);
 
 	if (format === "service-worker" && localBindings.length > 0) {
 		const errorMessage =
