@@ -1,6 +1,6 @@
 import { kCurrentWorker, Miniflare } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
-import { readConfig } from "../../../config";
+import { formatConfigSnippet, readConfig } from "../../../config";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
 import { getBoundRegisteredWorkers } from "../../../dev-registry";
@@ -11,7 +11,9 @@ import {
 	buildSitesOptions,
 } from "../../../dev/miniflare";
 import { run } from "../../../experimental-flags";
+import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
+import { dedent } from "../../../utils/dedent";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import { getServiceBindings } from "./services";
@@ -112,6 +114,7 @@ export async function getPlatformProxy<
 	const mf = new Miniflare({
 		script: "",
 		modules: true,
+		name: "worker",
 		...(miniflareOptions as Record<string, unknown>),
 	});
 
@@ -136,6 +139,18 @@ async function getMiniflareOptionsFromConfig(
 ): Promise<Partial<MiniflareOptions>> {
 	const bindings = getBindings(rawConfig, env, true, {});
 
+	if (bindings.durable_objects) {
+		logger.warn(dedent`
+			You have defined an internal Durable Object (ie the binding does not have a script_name field).
+			You will not be able to develop it locally, but it should work in production.
+
+			Alternatively, you can define your DO "externally" in another worker.
+			To do this, create another Worker + Wrangler config file. Export your DO from there.
+			Then, set the script_name field in your original DO binding to equal the name field from your new external DO config.
+			You will be able to develop this locally by running:
+			npx wrangler dev -c path/to/original/wrangler.toml -c path/to/external-do/wrangler.toml
+			`);
+	}
 	const workerDefinitions = await getBoundRegisteredWorkers({
 		name: rawConfig.name,
 		services: bindings.services,
@@ -143,7 +158,7 @@ async function getMiniflareOptionsFromConfig(
 	});
 
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
-		name: undefined,
+		name: rawConfig.name,
 		bindings,
 		workerDefinitions,
 		queueConsumers: undefined,
@@ -162,6 +177,7 @@ async function getMiniflareOptionsFromConfig(
 			{
 				script: "",
 				modules: true,
+				name: rawConfig.name,
 				...bindingOptions,
 				serviceBindings: {
 					...serviceBindings,
