@@ -167,7 +167,10 @@ export function partitionDurableObjectBindings(config: Config): {
 	const localBindings: DurableObjectBindings = [];
 	const remoteBindings: DurableObjectBindings = [];
 	for (const binding of config.durable_objects.bindings) {
-		if (binding.script_name === undefined) {
+		if (
+			binding.script_name === undefined ||
+			binding.script_name === config.name
+		) {
 			localBindings.push(binding);
 		} else {
 			remoteBindings.push(binding);
