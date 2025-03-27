@@ -376,8 +376,8 @@ export function getValidatedWranglerConfigPath(
 		const errorMessagePrefix = `The provided configPath (${configPath})${forAuxiliaryWorkerErrorMessage}`;
 
 		const fileExtension = path.extname(configPath).slice(1);
-		const allowedExtensions = ["jsonc", "json", "toml"];
-		if (!allowedExtensions.includes(fileExtension)) {
+
+		if (!allowedWranglerConfigExtensions.includes(fileExtension)) {
 			const foundExtensionMessage = !fileExtension
 				? "no extension found"
 				: `"${fileExtension}" found`;
@@ -420,7 +420,7 @@ export function getValidatedWranglerConfigPath(
 
 // We can't rely on `readConfig` from Wrangler to find the config as it may be relative to a different root that's set by the user.
 function findWranglerConfig(root: string): string | undefined {
-	for (const extension of ["json", "jsonc", "toml"]) {
+	for (const extension of allowedWranglerConfigExtensions) {
 		const configPath = path.join(root, `wrangler.${extension}`);
 
 		if (fs.existsSync(configPath)) {
@@ -428,3 +428,5 @@ function findWranglerConfig(root: string): string | undefined {
 		}
 	}
 }
+
+const allowedWranglerConfigExtensions = ["jsonc", "json", "toml"];
