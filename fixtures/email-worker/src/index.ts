@@ -31,7 +31,7 @@ export default class extends WorkerEntrypoint<Env> {
 		msg.setHeader("In-Reply-To", message.headers.get("Message-ID")!);
 		msg.setSender({ name: "Sender", addr: "sender@penalosa.cloud" });
 		msg.setRecipient(message.from);
-		msg.setSubject("An email generated in a worker");
+		msg.setSubject("An email generated in a Worker");
 		msg.addMessage({
 			contentType: "text/plain",
 			data: `Congratulations, you just sent an email from a worker.`,
