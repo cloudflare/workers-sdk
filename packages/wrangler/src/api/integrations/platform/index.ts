@@ -149,12 +149,12 @@ async function getMiniflareOptionsFromConfig(
 				${localBindings.map((b) => `- ${JSON.stringify(b)}`).join("\n")}
 				These will not work in local development, but they should work in production.
 
-				If you want to develop these locally, you can define your DO "externally" in another worker.
+				If you want to develop these locally, you can define your DO "externally" in another Worker.
 				To do this, create another Worker and Wrangler config file. Export your DO from there.
 				Then, set the \`script_name\` field in your original DO binding to equal the \`name\` field from your new external DO config.
 
 				You will be able to develop this locally by running:
-				npx wrangler dev -c path/to/original/wrangler.json -c path/to/external-do/wrangler.json
+				npx wrangler dev -c path/to/original/wrangler.jsonc -c path/to/external-do/wrangler.jsonc
 				`);
 		}
 	}
