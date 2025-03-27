@@ -806,8 +806,17 @@ function hasDotDevDotVarsFileChanged(
 	resolvedPluginConfig: ResolvedPluginConfig,
 	changedFilePath: string
 ) {
-	return [...resolvedPluginConfig.configPaths].some(
-		(configPath) =>
-			path.join(path.dirname(configPath), ".dev.vars") === changedFilePath
-	);
+	return [...resolvedPluginConfig.configPaths].some((configPath) => {
+		const dotDevDotVars = path.join(path.dirname(configPath), ".dev.vars");
+		if (dotDevDotVars === changedFilePath) {
+			return true;
+		}
+
+		if (resolvedPluginConfig.cloudflareEnv) {
+			const dotDevDotVarsForEnv = `${dotDevDotVars}.${resolvedPluginConfig.cloudflareEnv}`;
+			return dotDevDotVarsForEnv === changedFilePath;
+		}
+
+		return false;
+	});
 }
