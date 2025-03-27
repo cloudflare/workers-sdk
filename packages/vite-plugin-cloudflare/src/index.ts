@@ -75,6 +75,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 	const nodeJsCompatWarningsMap = new Map<WorkerConfig, NodeJsCompatWarnings>();
 
+	/** The resolved inspector port (or undefined if inspecting is disabled) */
+	let resolvedInspectorPort: number | undefined;
+
 	// This is set when the client environment is built to determine if the entry Worker should include assets
 	let hasClientBuild = false;
 
@@ -337,6 +340,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					);
 				}
 
+				if (inspectorPort !== false) {
+					const miniflareInspectorUrl = await miniflare.getInspectorURL();
+					resolvedInspectorPort = Number.parseInt(miniflareInspectorUrl.port);
+				}
+
 				await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
 
 				const middleware = createMiddleware(
@@ -379,6 +387,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						requestedInspectorPort
 					)
 				);
+
+				if (requestedInspectorPort !== false) {
+					const miniflareInspectorUrl = await miniflare.getInspectorURL();
+					resolvedInspectorPort = Number.parseInt(miniflareInspectorUrl.port);
+				}
 
 				const middleware = createMiddleware(
 					({ request }) => {
@@ -603,7 +616,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			// Note: this plugin needs to run before the main vite-plugin-cloudflare so that
 			//       the preview middleware here can take precedence
 			enforce: "pre",
-			async configureServer(viteDevServer) {
+			configureServer(viteDevServer) {
 				if (
 					resolvedPluginConfig.type === "workers" &&
 					pluginConfig.inspectorPort !== false
@@ -618,9 +631,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 								(worker) => worker.name
 							);
 
-				const resolvedInspectorPort =
-					await getResolvedInspectorPort(pluginConfig);
-
 				viteDevServer.middlewares.use((req, res, next) => {
 					if (req.url === debuggingPath && resolvedInspectorPort) {
 						const html = getDebugPathHtml(workerNames, resolvedInspectorPort);
@@ -630,7 +640,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					next();
 				});
 			},
-			async configurePreviewServer(vitePreviewServer) {
+			configurePreviewServer(vitePreviewServer) {
 				const workerConfigs = getWorkerConfigs(vitePreviewServer.config.root);
 
 				if (workerConfigs.length >= 1 && pluginConfig.inspectorPort !== false) {
@@ -641,9 +651,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					assert(worker.name, "Expected the Worker to have a name");
 					return worker.name;
 				});
-
-				const resolvedInspectorPort =
-					await getResolvedInspectorPort(pluginConfig);
 
 				vitePreviewServer.middlewares.use((req, res, next) => {
 					if (req.url === debuggingPath && resolvedInspectorPort) {
@@ -772,20 +779,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			? resolvedPluginConfig.workers[environmentName]
 			: undefined;
 	}
-}
-
-/**
- * Gets the resolved port of the inspector provided by miniflare
- *
- * @param pluginConfig the user's plugin configuration
- * @returns the resolved port of null if the user opted out of debugging
- */
-async function getResolvedInspectorPort(pluginConfig: PluginConfig) {
-	if (miniflare && pluginConfig.inspectorPort !== false) {
-		const miniflareInspectorUrl = await miniflare.getInspectorURL();
-		return Number.parseInt(miniflareInspectorUrl.port);
-	}
-	return null;
 }
 
 /**
