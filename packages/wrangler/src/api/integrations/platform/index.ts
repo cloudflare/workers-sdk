@@ -115,7 +115,6 @@ export async function getPlatformProxy<
 	const mf = new Miniflare({
 		script: "",
 		modules: true,
-		name: "worker",
 		...(miniflareOptions as Record<string, unknown>),
 	});
 
