@@ -1,5 +1,14 @@
 # wrangler
 
+## 4.5.1
+
+### Patch Changes
+
+- [#8666](https://github.com/cloudflare/workers-sdk/pull/8666) [`f29f018`](https://github.com/cloudflare/workers-sdk/commit/f29f01813683ab3e42c53738be3d49a0f8cba512) Thanks [@penalosa](https://github.com/penalosa)! - Remove `NodeJSCompatModule`. This was never fully supported, and never worked for deploying Workers from Wrangler.
+
+- Updated dependencies [[`cad99dc`](https://github.com/cloudflare/workers-sdk/commit/cad99dc78d76e35f846e85ac328effff8ba9477d), [`f29f018`](https://github.com/cloudflare/workers-sdk/commit/f29f01813683ab3e42c53738be3d49a0f8cba512)]:
+  - miniflare@4.20250321.1
+
 ## 4.5.0
 
 ### Minor Changes

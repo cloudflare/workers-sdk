@@ -1,5 +1,15 @@
 # miniflare
 
+## 4.20250321.1
+
+### Minor Changes
+
+- [#8623](https://github.com/cloudflare/workers-sdk/pull/8623) [`cad99dc`](https://github.com/cloudflare/workers-sdk/commit/cad99dc78d76e35f846e85ac328effff8ba9477d) Thanks [@teresalves](https://github.com/teresalves)! - Add Miniflare Workers KV bulk get support
+
+### Patch Changes
+
+- [#8666](https://github.com/cloudflare/workers-sdk/pull/8666) [`f29f018`](https://github.com/cloudflare/workers-sdk/commit/f29f01813683ab3e42c53738be3d49a0f8cba512) Thanks [@penalosa](https://github.com/penalosa)! - Remove `NodeJSCompatModule`. This was never fully supported, and never worked for deploying Workers from Wrangler.
+
 ## 4.20250321.0
 
 ### Patch Changes
