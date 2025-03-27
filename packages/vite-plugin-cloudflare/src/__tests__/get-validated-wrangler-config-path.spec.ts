@@ -38,7 +38,7 @@ describe("invalid cases", () => {
 				undefined
 			);
 		}).toThrowError(
-			/No config file found in the .*?empty-dir directory, please add an appropriate wrangler.\(jsonc\|json\|toml\) file to the directory/
+			/No config file found in the .*?empty-dir directory\. Please add a wrangler.\(jsonc\|json\|toml\) file\./
 		);
 	});
 
@@ -83,8 +83,8 @@ describe("invalid cases", () => {
 				);
 			}).toThrowError(
 				forAuxiliaryWorker
-					? /The provided configPath \(.*?empty-dir.toml\) requested for one of your auxiliary workers points to a directory, it needs to point to a file instead/
-					: /The provided configPath \(.*?empty-dir.toml\) points to a directory, it needs to point to a file instead/
+					? /The provided configPath \(.*?empty-dir.toml\) requested for one of your auxiliary workers points to a directory\. It should point to a file\./
+					: /The provided configPath \(.*?empty-dir.toml\) points to a directory\. It should point to a file\./
 			);
 		});
 
