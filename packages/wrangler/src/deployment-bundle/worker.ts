@@ -22,8 +22,7 @@ export type CfModuleType =
 	| "text"
 	| "buffer"
 	| "python"
-	| "python-requirement"
-	| "nodejs-compat-module";
+	| "python-requirement";
 
 /**
  * An imported module.

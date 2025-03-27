@@ -973,8 +973,7 @@ export type ConfigModuleRuleType =
 	| "Text"
 	| "Data"
 	| "PythonModule"
-	| "PythonRequirement"
-	| "NodeJsCompatModule";
+	| "PythonRequirement";
 
 export type TailConsumer = {
 	/** The name of the service tail events will be forwarded to. */
