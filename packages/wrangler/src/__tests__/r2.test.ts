@@ -986,11 +986,11 @@ describe("r2", () => {
 					expect(std.out).toMatchInlineSnapshot(
 						`"✨ Successfully enabled data catalog on bucket 'testBucket'.
 
-			Catalog URI: 'https://catalog.cloudflarestorage.com/test-warehouse-name'
+Catalog URI: 'https://catalog.cloudflarestorage.com/test-warehouse-name'
 
-			Use this Catalog URI with Iceberg-compatible query engines (Spark, DuckDB, Trino, etc.) to query data as tables.
-			Note: You'll need a Cloudflare API token with 'R2 Data Catalog' permission to authenticate your client with this catalog.
-			For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"`
+Use this Catalog URI with Iceberg-compatible query engines (Spark, DuckDB, Trino, etc.) to query data as tables.
+Note: You'll need a Cloudflare API token with 'R2 Data Catalog' permission to authenticate your client with this catalog.
+For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"`
 					);
 				});
 
@@ -1133,10 +1133,9 @@ describe("r2", () => {
 					await runWrangler("r2 bucket catalog get test-bucket");
 					expect(std.out).toMatchInlineSnapshot(`
 					"Getting data catalog status for 'test-bucket'...
-					id:      test-id
-					name:    test-name
-					bucket:  test-bucket
-					status:  active"
+					Bucket:       test-bucket
+					Catalog URI:  https://catalog.cloudflarestorage.com/test-name
+					Status:       active"
 				`);
 				});
 

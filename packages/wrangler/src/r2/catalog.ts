@@ -46,11 +46,11 @@ export const r2BucketCatalogEnableCommand = createCommand({
 		logger.log(
 			`✨ Successfully enabled data catalog on bucket '${args.bucket}'.
 
-			Catalog URI: '${catalogHost}'
+Catalog URI: '${catalogHost}'
 
-			Use this Catalog URI with Iceberg-compatible query engines (Spark, DuckDB, Trino, etc.) to query data as tables.
-			Note: You'll need a Cloudflare API token with 'R2 Data Catalog' permission to authenticate your client with this catalog.
-			For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/`
+Use this Catalog URI with Iceberg-compatible query engines (Spark, DuckDB, Trino, etc.) to query data as tables.
+Note: You'll need a Cloudflare API token with 'R2 Data Catalog' permission to authenticate your client with this catalog.
+For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/`
 		);
 	},
 });
@@ -111,11 +111,18 @@ export const r2BucketCatalogGetCommand = createCommand({
 		try {
 			const catalog = await getR2Catalog(accountId, args.bucket);
 
+			const env = getCloudflareApiEnvironmentFromEnv();
+			let catalogHost: string;
+			if (env === "staging") {
+				catalogHost = `https://catalog-staging.cloudflarestorage.com/${catalog.name}`;
+			} else {
+				catalogHost = `https://catalog.cloudflarestorage.com/${catalog.name}`;
+			}
+
 			const output = {
-				id: catalog.id,
-				name: catalog.name,
-				bucket: catalog.bucket,
-				status: catalog.status,
+				Bucket: args.bucket,
+				"Catalog URI": catalogHost,
+				Status: catalog.status,
 			};
 
 			logger.log(formatLabelledValues(output));
