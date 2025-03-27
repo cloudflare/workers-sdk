@@ -1,5 +1,78 @@
 # create-cloudflare
 
+## 2.43.0
+
+### Minor Changes
+
+- [#8553](https://github.com/cloudflare/workers-sdk/pull/8553) [`dfbf03f`](https://github.com/cloudflare/workers-sdk/commit/dfbf03f87e491a57a9ad3d2fa9de1816d9553a75) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: add React Router + Workers assets template
+
+  Also hide the Remix template in the interactive menu, although it is still accessible via CLI with `--framework=remix`.
+
+### Patch Changes
+
+- [#8516](https://github.com/cloudflare/workers-sdk/pull/8516) [`82f35b8`](https://github.com/cloudflare/workers-sdk/commit/82f35b8796ce9fbd1a87a0a49cb84fe63e24a4de) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.14.2 | 3.15.1 |
+
+- [#8518](https://github.com/cloudflare/workers-sdk/pull/8518) [`8b71224`](https://github.com/cloudflare/workers-sdk/commit/8b7122440f334289187238361c4d976c17e953ee) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-astro | 4.11.0 | 4.11.1 |
+
+- [#8656](https://github.com/cloudflare/workers-sdk/pull/8656) [`1f27e26`](https://github.com/cloudflare/workers-sdk/commit/1f27e267ff2cd389e6fce9041f52ff40ff4cefd8) Thanks [@Cherry](https://github.com/Cherry)! - Improves minor HTML semantics of the default index.html included in various templates with Workers Assets
+
+- [#8610](https://github.com/cloudflare/workers-sdk/pull/8610) [`6a958df`](https://github.com/cloudflare/workers-sdk/commit/6a958df17944eaf340796ebf0310ed3564423e37) Thanks [@emily-shen](https://github.com/emily-shen)! - The Hello World DO templates were previously updated to use SQLite - this just also updates the DO + Assets template.
+
+- [#8651](https://github.com/cloudflare/workers-sdk/pull/8651) [`fc66a2b`](https://github.com/cloudflare/workers-sdk/commit/fc66a2b6b591a245e4c30e2731e7573f179e1b54) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: provide type for `env` in c3 when vitest is included in template
+
+## 2.42.1
+
+### Patch Changes
+
+- [#8598](https://github.com/cloudflare/workers-sdk/pull/8598) [`e5dbedd`](https://github.com/cloudflare/workers-sdk/commit/e5dbedd78297d25cb8c8b1bd7c6cb70e2e9a626a) Thanks [@emily-shen](https://github.com/emily-shen)! - graduate Qwik + Workers Assets templates from experimental
+
+  You no longer need to include the `--experimental` flag to access this template.
+
+## 2.42.0
+
+### Minor Changes
+
+- [#8460](https://github.com/cloudflare/workers-sdk/pull/8460) [`31332ca`](https://github.com/cloudflare/workers-sdk/commit/31332ca461cea5fbbe8a6c56fe598962c94eae65) Thanks [@joshthoward](https://github.com/joshthoward)! - Update the C3 Durable Objects example to use SQLite
+
+### Patch Changes
+
+- [#8593](https://github.com/cloudflare/workers-sdk/pull/8593) [`36ae02c`](https://github.com/cloudflare/workers-sdk/commit/36ae02c575a6a2e806565a17cf16a5a80f3e45ad) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate Hono + Workers assets template from experimental.
+
+  You will no longer need to include the --experimental flag to access this template.
+  Also creates a hono template that uses the cloudflare-pages adapter.
+
+- [#8402](https://github.com/cloudflare/workers-sdk/pull/8402) [`03ec951`](https://github.com/cloudflare/workers-sdk/commit/03ec9510c5ebb0fceed7df64d90383cdac861b3e) Thanks [@emily-shen](https://github.com/emily-shen)! - graduate Astro Workers + Assets template from experimental
+
+  You no longer need to pass in --experimental to access the Workers + Assets version of the template.
+
+- [#8552](https://github.com/cloudflare/workers-sdk/pull/8552) [`0fe3260`](https://github.com/cloudflare/workers-sdk/commit/0fe32607199c9fa3b68e4cacab9522379b6704e0) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate remix Workers + Assets template from experimental
+
+  You will no longer need to pass in the `--experimental` flag to access this template.
+
+- [#8574](https://github.com/cloudflare/workers-sdk/pull/8574) [`9b86dba`](https://github.com/cloudflare/workers-sdk/commit/9b86dba81929db3c8216fdfc8aea62ccf69ef32f) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate sveltekit + workers assets template from experimental
+
+  You no longer need to pass in the --experimental flag to access this template.
+
+## 2.41.2
+
+### Patch Changes
+
+- [#8379](https://github.com/cloudflare/workers-sdk/pull/8379) [`2b37abe`](https://github.com/cloudflare/workers-sdk/commit/2b37abe10dac9df6c0cc91114ea68b40b6c0991d) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate Workers + Assets hello world templates from experimental status
+
+- [#8541](https://github.com/cloudflare/workers-sdk/pull/8541) [`cfa525d`](https://github.com/cloudflare/workers-sdk/commit/cfa525dba45a6d678270216e1679e1ce32f62163) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Fixes the Cloudflare logo in the Vite React starter to support both dark and light mode
+
 ## 2.41.1
 
 ### Patch Changes

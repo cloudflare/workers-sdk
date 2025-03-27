@@ -53,6 +53,50 @@ describe("wrangler workflows", () => {
 		);
 	};
 
+	const mockDeleteWorkflowRequest = async (workflowName: string) => {
+		msw.use(
+			http.delete(
+				`*/accounts/:accountId/workflows/:workflowName`,
+				async ({ params }) => {
+					expect(params.workflowName).toEqual(workflowName);
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {},
+					});
+				},
+				{ once: true }
+			)
+		);
+	};
+
+	const mockInstancesTerminateAll = async (
+		expectedWorkflow: string,
+		responseStatus: "ok" | "already_running",
+		queryStatus: string | null = null
+	) => {
+		msw.use(
+			http.put(
+				`*/accounts/:accountId/workflows/:workflowName/instances/terminate`,
+				async ({ params, request }) => {
+					const maybeStatus = new URL(request.url).searchParams.get("status");
+					expect(maybeStatus).toStrictEqual(queryStatus);
+					expect(params.workflowName).toEqual(expectedWorkflow);
+					return HttpResponse.json({
+						success: true,
+						errors: [],
+						messages: [],
+						result: {
+							status: responseStatus,
+						},
+					});
+				},
+				{ once: true }
+			)
+		);
+	};
+
 	describe("help", () => {
 		it("should show help when no argument is passed", async () => {
 			writeWranglerConfig();
@@ -385,6 +429,74 @@ describe("wrangler workflows", () => {
 		});
 	});
 
+	describe("instances terminate-all", () => {
+		it("should be able to terminate - job created", async () => {
+			writeWranglerConfig();
+			await mockInstancesTerminateAll("some-workflow", "ok");
+
+			await runWrangler(`workflows instances terminate-all some-workflow`);
+			expect(std.info).toMatchInlineSnapshot(
+				`"🥷 A job to terminate instances from Workflow \\"some-workflow\\"  has been started. It might take a few minutes to complete."`
+			);
+		});
+
+		it("should be able to terminate - job exists", async () => {
+			writeWranglerConfig();
+			await mockInstancesTerminateAll("some-workflow", "ok");
+
+			await runWrangler(`workflows instances terminate-all some-workflow`);
+			expect(std.info).toMatchInlineSnapshot(
+				`"🥷 A job to terminate instances from Workflow \\"some-workflow\\"  has been started. It might take a few minutes to complete."`
+			);
+		});
+
+		it("should be able to terminate - specific status, job created", async () => {
+			writeWranglerConfig();
+			await mockInstancesTerminateAll("some-workflow", "ok", "queued");
+
+			await runWrangler(
+				`workflows instances terminate-all some-workflow --status queued`
+			);
+			expect(std.info).toMatchInlineSnapshot(
+				`"🥷 A job to terminate instances from Workflow \\"some-workflow\\" with status \\"queued\\" has been started. It might take a few minutes to complete."`
+			);
+		});
+
+		it("should be able to terminate - specific status, job exists", async () => {
+			writeWranglerConfig();
+			await mockInstancesTerminateAll(
+				"some-workflow",
+				"already_running",
+				"queued"
+			);
+
+			await runWrangler(
+				`workflows instances terminate-all some-workflow --status queued`
+			);
+			expect(std.info).toMatchInlineSnapshot(
+				`"🥷 A job to terminate instances from Workflow \\"some-workflow\\" with status \\"queued\\" is already running. It might take a few minutes to complete."`
+			);
+		});
+
+		it("invalid status", async () => {
+			writeWranglerConfig();
+			await expect(
+				runWrangler(
+					`workflows instances terminate-all some-workflow --status not-a-status`
+				)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Provided status "not-a-status" is not valid, it must be one of the following: queued, running, paused, waitingForPause, waiting.]`
+			);
+			expect(std.err).toMatchInlineSnapshot(
+				`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mProvided status \\"not-a-status\\" is not valid, it must be one of the following: queued, running, paused, waitingForPause, waiting.[0m
+
+				"
+			`
+			);
+		});
+	});
+
 	describe("trigger", () => {
 		const mockTriggerWorkflow = async () => {
 			msw.use(
@@ -421,15 +533,17 @@ describe("wrangler workflows", () => {
 	});
 
 	describe("delete", () => {
-		it("should delete a workflow - check not implemented", async () => {
+		it("should delete a workflow - green path", async () => {
 			writeWranglerConfig();
+
+			await mockDeleteWorkflowRequest("some-workflow");
 
 			await runWrangler(`workflows delete some-workflow`);
 			expect(std.out).toMatchInlineSnapshot(
-				`"🚫 Workflow \\"some-workflow\\" NOT removed"`
-			);
-			expect(std.info).toMatchInlineSnapshot(
-				`"🚫 delete command not yet implement"`
+				`
+				"✅ Workflow \\"some-workflow\\" removed successfully.
+				 Note that running instances might take a few minutes to be properly terminated."
+			`
 			);
 		});
 	});

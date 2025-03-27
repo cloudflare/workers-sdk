@@ -21,6 +21,7 @@ const generate = async (ctx: C3Context) => {
 		ctx.project.name,
 		"--packageManager",
 		npm,
+		"--no-install",
 		gitFlag,
 	]);
 

@@ -636,7 +636,7 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --binding       The binding of the namespace to write to  [string]
+					      --binding       The binding name to the namespace to write to  [string]
 					      --namespace-id  The id of the namespace to write to  [string]
 					      --preview       Interact with a preview namespace  [boolean]
 					      --ttl           Time for which the entries should be visible  [number]
@@ -679,7 +679,7 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --binding       The binding of the namespace to write to  [string]
+					      --binding       The binding name to the namespace to write to  [string]
 					      --namespace-id  The id of the namespace to write to  [string]
 					      --preview       Interact with a preview namespace  [boolean]
 					      --ttl           Time for which the entries should be visible  [number]
@@ -724,7 +724,7 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --binding       The binding of the namespace to write to  [string]
+					      --binding       The binding name to the namespace to write to  [string]
 					      --namespace-id  The id of the namespace to write to  [string]
 					      --preview       Interact with a preview namespace  [boolean]
 					      --ttl           Time for which the entries should be visible  [number]
@@ -767,7 +767,7 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --binding       The binding of the namespace to write to  [string]
+					      --binding       The binding name to the namespace to write to  [string]
 					      --namespace-id  The id of the namespace to write to  [string]
 					      --preview       Interact with a preview namespace  [boolean]
 					      --ttl           Time for which the entries should be visible  [number]
@@ -810,7 +810,7 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --binding       The binding of the namespace to write to  [string]
+					      --binding       The binding name to the namespace to write to  [string]
 					      --namespace-id  The id of the namespace to write to  [string]
 					      --preview       Interact with a preview namespace  [boolean]
 					      --ttl           Time for which the entries should be visible  [number]
@@ -855,7 +855,7 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --binding       The binding of the namespace to write to  [string]
+					      --binding       The binding name to the namespace to write to  [string]
 					      --namespace-id  The id of the namespace to write to  [string]
 					      --preview       Interact with a preview namespace  [boolean]
 					      --ttl           Time for which the entries should be visible  [number]
@@ -1240,7 +1240,7 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --binding       The name of the namespace to get from  [string]
+					      --binding       The binding name to the namespace to get from  [string]
 					      --namespace-id  The id of the namespace to get from  [string]
 					      --preview       Interact with a preview namespace  [boolean] [default: false]
 					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
@@ -1278,7 +1278,7 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --binding       The name of the namespace to get from  [string]
+					      --binding       The binding name to the namespace to get from  [string]
 					      --namespace-id  The id of the namespace to get from  [string]
 					      --preview       Interact with a preview namespace  [boolean] [default: false]
 					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
@@ -1317,7 +1317,7 @@ describe("wrangler", () => {
 					  -v, --version  Show version number  [boolean]
 
 					OPTIONS
-					      --binding       The name of the namespace to get from  [string]
+					      --binding       The binding name to the namespace to get from  [string]
 					      --namespace-id  The id of the namespace to get from  [string]
 					      --preview       Interact with a preview namespace  [boolean] [default: false]
 					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
@@ -1875,6 +1875,142 @@ describe("wrangler", () => {
 				`);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+		});
+
+		describe("get", () => {
+			function mockGetRequest(
+				expectedNamespaceId: string,
+				expectedKeys: string[]
+			) {
+				const requests = { count: 0 };
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/bulk/get",
+						async ({ request, params }) => {
+							requests.count++;
+							expect(params.accountId).toEqual("some-account-id");
+							expect(params.namespaceId).toEqual(expectedNamespaceId);
+							expect(request.headers.get("Content-Type")).toEqual(
+								"application/json"
+							);
+							expect(await request.json()).toEqual({
+								keys: expectedKeys,
+							});
+
+							// i.e. for [key1, key2] => { key1: "key1-value", key2: "key2-value" }
+							const result = expectedKeys.reduce(
+								(acc, curr) => {
+									acc[curr] = `${curr}-value`;
+									return acc;
+								},
+								{} as { [key: string]: string }
+							);
+							return HttpResponse.json(
+								createFetchResult({
+									values: result,
+								}),
+								{
+									status: 200,
+								}
+							);
+						}
+					)
+				);
+				return requests;
+			}
+
+			it("should get the keys parsed from a file (string)", async () => {
+				const keys = ["someKey1", "key2"];
+				writeFileSync("./keys.json", JSON.stringify(keys));
+				const requests = mockGetRequest("some-namespace-id", keys);
+				await runWrangler(
+					`kv bulk get --remote --namespace-id some-namespace-id keys.json`
+				);
+				expect(requests.count).toEqual(1);
+				expect(std.out).toMatchInlineSnapshot(`
+					"{
+					  \\"someKey1\\": \\"someKey1-value\\",
+					  \\"key2\\": \\"key2-value\\"
+					}
+
+					Success!"
+				`);
+				expect(std.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler kv bulk get\` is an open-beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+					"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should get the keys parsed from a file ({ name })", async () => {
+				const keys = [{ name: "someKey1" }, { name: "ns:someKey2" }];
+				writeFileSync("./keys.json", JSON.stringify(keys));
+				const requests = mockGetRequest(
+					"some-namespace-id",
+					keys.map((k) => k.name)
+				);
+				await runWrangler(
+					`kv bulk get --remote --namespace-id some-namespace-id keys.json`
+				);
+				expect(requests.count).toEqual(1);
+				expect(std.out).toMatchInlineSnapshot(`
+					"{
+					  \\"someKey1\\": \\"someKey1-value\\",
+					  \\"ns:someKey2\\": \\"ns:someKey2-value\\"
+					}
+
+					Success!"
+				`);
+				expect(std.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler kv bulk get\` is an open-beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+					"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should error if the file is not a JSON array", async () => {
+				const keys = 12354;
+				writeFileSync("./keys.json", JSON.stringify(keys));
+				await expect(
+					runWrangler(
+						`kv bulk get --remote --namespace-id some-namespace-id keys.json`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(`
+					[Error: Unexpected JSON input from "keys.json".
+					Expected an array of strings but got:
+					12354]
+				`);
+				expect(std.out).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler kv bulk get\` is an open-beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+					"
+				`);
+			});
+
+			it("should error if the file contains non-string items", async () => {
+				const keys = ["good", 12354, { key: "someKey" }, null];
+				writeFileSync("./keys.json", JSON.stringify(keys));
+				await expect(
+					runWrangler(
+						`kv bulk get --remote --namespace-id some-namespace-id keys.json`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(`
+					[Error: Unexpected JSON input from "keys.json".
+					Expected an array of strings or objects with a "name" key.
+					The item at index 1 is type: "number" - 12354
+					The item at index 2 is type: "object" - {"key":"someKey"}
+					The item at index 3 is type: "object" - null]
+				`);
+				expect(std.out).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler kv bulk get\` is an open-beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+					"
+				`);
 			});
 		});
 	});

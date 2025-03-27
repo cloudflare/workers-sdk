@@ -77,7 +77,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		};
 	},
 
-	async getServices({ options, unsafeEnableAssetsRpc }) {
+	async getServices({ options }) {
 		if (!options.assets) {
 			return [];
 		}
@@ -85,7 +85,11 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		const storageServiceName = `${ASSETS_PLUGIN_NAME}:storage`;
 		const storageService: Service = {
 			name: storageServiceName,
-			disk: { path: options.assets.directory, writable: true },
+			disk: {
+				path: options.assets.directory,
+				writable: true,
+				allowDotfiles: true,
+			},
 		};
 
 		const { encodedAssetManifest, assetsReverseMap } = await buildAssetManifest(
@@ -132,6 +136,8 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		}
 
 		const assetConfig: AssetConfig = {
+			compatibility_date: options.compatibilityDate,
+			compatibility_flags: options.compatibilityFlags,
 			...options.assets.assetConfig,
 			redirects: parsedRedirects,
 			headers: parsedHeaders,
@@ -225,39 +231,40 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			},
 		};
 
-		const services = [
+		const assetsProxyService: Service = {
+			name: `${RPC_PROXY_SERVICE_NAME}:${id}`,
+			worker: {
+				compatibilityDate: "2024-08-01",
+				modules: [
+					{
+						name: "assets-proxy-worker.mjs",
+						esModule: SCRIPT_RPC_PROXY(),
+					},
+				],
+				bindings: [
+					{
+						name: "ROUTER_WORKER",
+						service: {
+							name: `${ROUTER_SERVICE_NAME}:${id}`,
+						},
+					},
+					{
+						name: "USER_WORKER",
+						service: {
+							name: getUserServiceName(id),
+						},
+					},
+				],
+			},
+		};
+
+		return [
 			storageService,
 			namespaceService,
 			assetService,
 			routerService,
+			assetsProxyService,
 		];
-
-		if (unsafeEnableAssetsRpc) {
-			const assetsProxyService: Service = {
-				name: `${RPC_PROXY_SERVICE_NAME}:${id}`,
-				worker: {
-					compatibilityDate: "2024-08-01",
-					modules: [
-						{
-							name: "assets-proxy-worker.mjs",
-							esModule: SCRIPT_RPC_PROXY(),
-						},
-					],
-					bindings: [
-						{
-							name: "ROUTER_WORKER",
-							service: {
-								name: `${ROUTER_SERVICE_NAME}:${id}`,
-							},
-						},
-					],
-				},
-			};
-
-			services.push(assetsProxyService);
-		}
-
-		return services;
 	},
 };
 

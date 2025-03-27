@@ -19,7 +19,7 @@ const workerName = generateResourceName();
 const normalize = (str: string) =>
 	normalizeOutput(str, {
 		[CLOUDFLARE_ACCOUNT_ID]: "CLOUDFLARE_ACCOUNT_ID",
-	}).replaceAll(/^Author:(\s+).+@.+$/gm, "Author:$1person@example.com");
+	}).replaceAll(/^Author:.*$/gm, "Author:      person@example.com");
 
 describe("versions deploy", { timeout: TIMEOUT }, () => {
 	let versionId0: string;

@@ -25,7 +25,7 @@ export const imagesCommand = (yargs: CommonYargsArgvJSON) => {
 	return yargs
 		.command(
 			"list",
-			"perform operations on images in your cloudchamber registry",
+			"perform operations on images in your Cloudflare managed registry",
 			(args) => listImagesYargs(args),
 			(args) =>
 				handleFailure(async (_args: CommonYargsArgvSanitizedJSON, config) => {
@@ -34,7 +34,7 @@ export const imagesCommand = (yargs: CommonYargsArgvJSON) => {
 		)
 		.command(
 			"delete [image]",
-			"remove an image from your cloudchamber registry",
+			"remove an image from your Cloudflare managed registry",
 			(args) => deleteImageYargs(args),
 			(args) =>
 				handleFailure(async (_args: CommonYargsArgvSanitizedJSON, config) => {

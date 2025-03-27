@@ -1,5 +1,19 @@
 # @cloudflare/workers-shared
 
+## 0.17.1
+
+### Patch Changes
+
+- [#8643](https://github.com/cloudflare/workers-sdk/pull/8643) [`75005e3`](https://github.com/cloudflare/workers-sdk/commit/75005e3dc3d3dfc5becb5caf0896cd407c6c8386) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Support customizing the metafile limits
+
+## 0.17.0
+
+### Minor Changes
+
+- [#8443](https://github.com/cloudflare/workers-sdk/pull/8443) [`3b1d081`](https://github.com/cloudflare/workers-sdk/commit/3b1d081b89892aa877c33ac63877db3eccedf062) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Requests with a `Sec-Fetch-Mode: navigate` header, made to a project with `sec_fetch_mode_navigate_header_prefers_asset_serving` compatibility flag, will be routed to the asset-worker rather than a user Worker when no exact asset match is found.
+
+  Requests without that header will continue to be routed to the user Worker when no exact asset match is found.
+
 ## 0.16.0
 
 ### Minor Changes

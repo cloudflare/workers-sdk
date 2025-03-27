@@ -7,8 +7,8 @@
 	</head>
 	<body>
 		<h1 id="heading"></h1>
-		<button id="button">Fetch a random UUID</button>
-		<div id="random"></div>
+		<button id="button" type="button">Fetch a random UUID</button>
+		<output id="random" for="button"></output>
 		<script>
 			fetch('/message')
 				.then((resp) => resp.text())

@@ -211,7 +211,6 @@ export const deployCommand = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			ASSETS_RPC: false,
 		}),
 	},
 	validateArgs(args) {

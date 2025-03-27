@@ -181,7 +181,7 @@ describe("cloudchamber image list", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler cloudchamber images list
 
-			perform operations on images in your cloudchamber registry
+			perform operations on images in your Cloudflare managed registry
 
 			GLOBAL FLAGS
 			  -c, --config   Path to Wrangler configuration file  [string]

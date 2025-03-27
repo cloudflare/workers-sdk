@@ -1,6 +1,7 @@
 import { configFileName, formatConfigSnippet, readConfig } from "../config";
 import { logger } from "../logger";
 import { createConfig } from "./client";
+import { capitalizeScheme } from "./shared";
 import {
 	getCacheOptionsFromArgs,
 	getMtlsFromArgs,
@@ -39,7 +40,9 @@ export async function handler(
 		caching: getCacheOptionsFromArgs(args),
 		mtls: getMtlsFromArgs(args),
 	});
-	logger.log(`✅ Created new Hyperdrive config: ${database.id}`);
+	logger.log(
+		`✅ Created new Hyperdrive ${capitalizeScheme(database.origin.scheme)} config: ${database.id}`
+	);
 	logger.log(
 		`📋 To start using your config from a Worker, add the following binding configuration to your ${configFileName(config.configPath)} file:\n`
 	);

@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics } from "../src/analytics";
-import { applyConfigurationDefaults } from "../src/configuration";
+import { normalizeConfiguration } from "../src/configuration";
 import { canFetch, handleRequest } from "../src/handler";
 import type { AssetConfig } from "../../utils/types";
 
@@ -13,7 +13,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 	const analytics = new Analytics();
 
 	it("attaches ETag headers to responses", async () => {
-		const configuration: AssetConfig = applyConfigurationDefaults({
+		const configuration: AssetConfig = normalizeConfiguration({
 			html_handling: "none",
 			not_found_handling: "none",
 		});
@@ -40,7 +40,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 	});
 
 	it("returns 304 Not Modified responses for a valid strong ETag in If-None-Match", async () => {
-		const configuration: AssetConfig = applyConfigurationDefaults({
+		const configuration: AssetConfig = normalizeConfiguration({
 			html_handling: "none",
 			not_found_handling: "none",
 		});
@@ -68,7 +68,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 	});
 
 	it("returns 304 Not Modified responses for a valid weak ETag in If-None-Match", async () => {
-		const configuration: AssetConfig = applyConfigurationDefaults({
+		const configuration: AssetConfig = normalizeConfiguration({
 			html_handling: "none",
 			not_found_handling: "none",
 		});
@@ -96,7 +96,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 	});
 
 	it("returns 200 OK responses for an invalid ETag in If-None-Match", async () => {
-		const configuration: AssetConfig = applyConfigurationDefaults({
+		const configuration: AssetConfig = normalizeConfiguration({
 			html_handling: "none",
 			not_found_handling: "none",
 		});
@@ -136,7 +136,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 			new Request("https://example.com/blog/../test"),
 			// @ts-expect-error Empty config default to using mocked jaeger
 			mockEnv,
-			applyConfigurationDefaults({}),
+			normalizeConfiguration({}),
 			async (pathname: string) => {
 				if (pathname.startsWith("/blog/")) {
 					// our route
@@ -160,7 +160,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 			new Request("https://example.com/blog/%2E%2E/test"),
 			// @ts-expect-error Empty config default to using mocked jaeger
 			mockEnv,
-			applyConfigurationDefaults({}),
+			normalizeConfiguration({}),
 			async (pathname: string) => {
 				if (pathname.startsWith("/blog/")) {
 					// our route
@@ -185,7 +185,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 			"/index.html": "aaaaaaaaaa",
 			"/%A0%A0.html": "bbbbbbbbbb",
 		};
-		const configuration: AssetConfig = applyConfigurationDefaults({
+		const configuration: AssetConfig = normalizeConfiguration({
 			html_handling: "drop-trailing-slash",
 			not_found_handling: "none",
 		});
@@ -225,7 +225,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 	});
 
 	it("attaches CF-Cache-Status headers to responses", async () => {
-		const configuration: AssetConfig = applyConfigurationDefaults({
+		const configuration: AssetConfig = normalizeConfiguration({
 			html_handling: "none",
 			not_found_handling: "none",
 		});
@@ -274,7 +274,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 
 	describe("_headers", () => {
 		it("attaches custom headers", async () => {
-			const configuration: AssetConfig = applyConfigurationDefaults({
+			const configuration: AssetConfig = normalizeConfiguration({
 				html_handling: "none",
 				not_found_handling: "none",
 				headers: {
@@ -547,7 +547,7 @@ describe("[Asset Worker] `handleRequest`", () => {
 
 	describe("_redirects", () => {
 		it("evaluates custom redirects", async () => {
-			const configuration: AssetConfig = applyConfigurationDefaults({
+			const configuration: AssetConfig = normalizeConfiguration({
 				html_handling: "none",
 				not_found_handling: "none",
 				redirects: {
@@ -1043,7 +1043,7 @@ describe("[Asset Worker] `canFetch`", () => {
 				new Request("https://example.com/foo.html"),
 				// @ts-expect-error Empty config default to using mocked jaeger
 				mockEnv,
-				applyConfigurationDefaults({ html_handling: "auto-trailing-slash" }),
+				normalizeConfiguration({ html_handling: "auto-trailing-slash" }),
 				exists
 			)
 		).toBeTruthy();
@@ -1053,7 +1053,7 @@ describe("[Asset Worker] `canFetch`", () => {
 				new Request("https://example.com/foo"),
 				// @ts-expect-error Empty config default to using mocked jaeger
 				mockEnv,
-				applyConfigurationDefaults({ html_handling: "auto-trailing-slash" }),
+				normalizeConfiguration({ html_handling: "auto-trailing-slash" }),
 				exists
 			)
 		).toBeTruthy();
@@ -1063,7 +1063,7 @@ describe("[Asset Worker] `canFetch`", () => {
 				new Request("https://example.com/foo/"),
 				// @ts-expect-error Empty config default to using mocked jaeger
 				mockEnv,
-				applyConfigurationDefaults({ html_handling: "auto-trailing-slash" }),
+				normalizeConfiguration({ html_handling: "auto-trailing-slash" }),
 				exists
 			)
 		).toBeTruthy();
@@ -1087,7 +1087,7 @@ describe("[Asset Worker] `canFetch`", () => {
 					new Request("https://example.com/foo"),
 					// @ts-expect-error Empty config default to using mocked jaeger
 					mockEnv,
-					applyConfigurationDefaults({ not_found_handling: notFoundHandling }),
+					normalizeConfiguration({ not_found_handling: notFoundHandling }),
 					exists
 				)
 			).toBeTruthy();
@@ -1097,7 +1097,7 @@ describe("[Asset Worker] `canFetch`", () => {
 					new Request("https://example.com/bar"),
 					// @ts-expect-error Empty config default to using mocked jaeger
 					mockEnv,
-					applyConfigurationDefaults({ not_found_handling: notFoundHandling }),
+					normalizeConfiguration({ not_found_handling: notFoundHandling }),
 					exists
 				)
 			).toBeFalsy();
@@ -1107,7 +1107,7 @@ describe("[Asset Worker] `canFetch`", () => {
 					new Request("https://example.com/"),
 					// @ts-expect-error Empty config default to using mocked jaeger
 					mockEnv,
-					applyConfigurationDefaults({ not_found_handling: notFoundHandling }),
+					normalizeConfiguration({ not_found_handling: notFoundHandling }),
 					exists
 				)
 			).toBeTruthy();
@@ -1117,7 +1117,7 @@ describe("[Asset Worker] `canFetch`", () => {
 					new Request("https://example.com/404"),
 					// @ts-expect-error Empty config default to using mocked jaeger
 					mockEnv,
-					applyConfigurationDefaults({ not_found_handling: notFoundHandling }),
+					normalizeConfiguration({ not_found_handling: notFoundHandling }),
 					exists
 				)
 			).toBeTruthy();
@@ -1138,7 +1138,7 @@ describe("[Asset Worker] `canFetch`", () => {
 				new Request("https://example.com/foo", { method: "POST" }),
 				// @ts-expect-error Empty config default to using mocked jaeger
 				mockEnv,
-				applyConfigurationDefaults(),
+				normalizeConfiguration(),
 				exists
 			)
 		).toBeTruthy();
@@ -1148,7 +1148,7 @@ describe("[Asset Worker] `canFetch`", () => {
 				new Request("https://example.com/bar", { method: "POST" }),
 				// @ts-expect-error Empty config default to using mocked jaeger
 				mockEnv,
-				applyConfigurationDefaults(),
+				normalizeConfiguration(),
 				exists
 			)
 		).toBeFalsy();
@@ -1163,7 +1163,7 @@ describe("[Asset Worker] `canFetch`", () => {
 			return null;
 		};
 
-		const configuration = applyConfigurationDefaults({
+		const configuration = normalizeConfiguration({
 			redirects: {
 				version: 1,
 				staticRules: {
@@ -1250,5 +1250,162 @@ describe("[Asset Worker] `canFetch`", () => {
 				}
 			)
 		).toBeTruthy();
+	});
+
+	describe("assets_navigation_prefers_asset_serving", async () => {
+		const exists = (pathname: string) => {
+			if (["/404.html", "/index.html", "/foo.html"].includes(pathname)) {
+				return "some-etag";
+			}
+
+			return null;
+		};
+
+		interface CompatibilityOptions {
+			compatibilityDate?: string;
+			compatibilityFlags?: string[];
+		}
+
+		const compatibilityOptionsModes: [CompatibilityOptions, boolean][] = [
+			[{}, false],
+			[
+				{
+					compatibilityFlags: ["assets_navigation_prefers_asset_serving"],
+				},
+				true,
+			],
+			[
+				{
+					compatibilityFlags: ["assets_navigation_has_no_effect"],
+				},
+				false,
+			],
+			[
+				{
+					// Impossible in reality since workerd objects to mutually exclusive flags
+					compatibilityFlags: [
+						"assets_navigation_prefers_asset_serving",
+						"assets_navigation_has_no_effect",
+					],
+				},
+				true,
+			],
+			[
+				{
+					compatibilityDate: "2099-12-12",
+				},
+				true,
+			],
+			[
+				{
+					compatibilityDate: "2099-12-12",
+					compatibilityFlags: ["assets_navigation_prefers_asset_serving"],
+				},
+				true,
+			],
+			[
+				{
+					compatibilityDate: "2099-12-12",
+					compatibilityFlags: ["assets_navigation_has_no_effect"],
+				},
+				false,
+			],
+		] as const;
+
+		const notFoundHandlingModes = [
+			[undefined, false],
+			["none", false],
+			["404-page", true],
+			["single-page-application", true],
+		] as const;
+
+		const headersModes = [
+			[{}, false],
+			[{ "Sec-Fetch-Mode": "navigate" }, true],
+			[{ "Sec-Fetch-Mode": "cors" }, false],
+		] as const;
+
+		const matrix = [];
+		for (const compatibilityOptions of compatibilityOptionsModes) {
+			for (const notFoundHandling of notFoundHandlingModes) {
+				for (const headers of headersModes) {
+					matrix.push({
+						compatibilityDate: compatibilityOptions[0].compatibilityDate,
+						compatibilityFlags: compatibilityOptions[0].compatibilityFlags,
+						notFoundHandling: notFoundHandling[0],
+						headers: headers[0],
+						expected:
+							compatibilityOptions[1] && notFoundHandling[1] && headers[1],
+					});
+				}
+			}
+		}
+
+		it.each(matrix)(
+			"compatibility_date $compatibilityDate, compatibility_flags $compatibilityFlags, not_found_handling $notFoundHandling, headers: $headers -> $expected",
+			async ({
+				compatibilityDate,
+				compatibilityFlags,
+				notFoundHandling,
+				headers,
+				expected,
+			}) => {
+				expect(
+					await canFetch(
+						new Request("https://example.com/foo", { headers }),
+						// @ts-expect-error Empty config default to using mocked jaeger
+						mockEnv,
+						normalizeConfiguration({
+							compatibility_date: compatibilityDate,
+							compatibility_flags: compatibilityFlags,
+							not_found_handling: notFoundHandling,
+						}),
+						exists
+					)
+				).toBeTruthy();
+
+				expect(
+					await canFetch(
+						new Request("https://example.com/bar", { headers }),
+						// @ts-expect-error Empty config default to using mocked jaeger
+						mockEnv,
+						normalizeConfiguration({
+							compatibility_date: compatibilityDate,
+							compatibility_flags: compatibilityFlags,
+							not_found_handling: notFoundHandling,
+						}),
+						exists
+					)
+				).toBe(expected);
+
+				expect(
+					await canFetch(
+						new Request("https://example.com/", { headers }),
+						// @ts-expect-error Empty config default to using mocked jaeger
+						mockEnv,
+						normalizeConfiguration({
+							compatibility_date: compatibilityDate,
+							compatibility_flags: compatibilityFlags,
+							not_found_handling: notFoundHandling,
+						}),
+						exists
+					)
+				).toBeTruthy();
+
+				expect(
+					await canFetch(
+						new Request("https://example.com/404", { headers }),
+						// @ts-expect-error Empty config default to using mocked jaeger
+						mockEnv,
+						normalizeConfiguration({
+							compatibility_date: compatibilityDate,
+							compatibility_flags: compatibilityFlags,
+							not_found_handling: notFoundHandling,
+						}),
+						exists
+					)
+				).toBeTruthy();
+			}
+		);
 	});
 });

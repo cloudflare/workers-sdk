@@ -23,7 +23,7 @@ The following selections do not need to be completed if this PR only contains ch
   - [ ] Documentation not necessary because:
 - Wrangler V3 Backport
   - [ ] TODO (before merge)
-  - [ ] PR: <!--e.g. <https://github.com/cloudflare/workers-sdk/pull/>...-->
+  - [ ] Wrangler PR: <!--e.g. <https://github.com/cloudflare/workers-sdk/pull/>...-->
   - [ ] Not necessary because: <!--e.g. not a patch change, not a Wrangler change...-->
 
 <!--

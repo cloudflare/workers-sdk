@@ -44,6 +44,19 @@ describe("match-tag", () => {
 						);
 					} else if (params.workerName === "network-error-worker") {
 						return HttpResponse.error();
+					} else if (params.workerName === "auth-error-worker") {
+						return HttpResponse.json(
+							{
+								success: false,
+								errors: [
+									{
+										code: 10000,
+										message: "Authentication error",
+									},
+								],
+							},
+							{ status: 401 }
+						);
 					} else {
 						return HttpResponse.json(
 							{
@@ -92,13 +105,27 @@ describe("match-tag", () => {
 			);
 		});
 
-		it("catches all other API errors and throws generic validation error", async () => {
+		it("catches all other API errors and throws proper error", async () => {
+			vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123");
+			mockWorker("a-worker", "abc123");
+			await expect(
+				verifyWorkerMatchesCITag("some-account-id", "auth-error-worker")
+			).rejects.toMatchInlineSnapshot(
+				`
+				[Error: An error occurred while trying to validate that the Worker name matches what is expected by the build system.
+				A request to the Cloudflare API (/accounts/some-account-id/workers/services/auth-error-worker) failed.
+				Authentication error [code: 10000]]
+			`
+			);
+		});
+
+		it("catches all other errors and throws generic error", async () => {
 			vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123");
 			mockWorker("a-worker", "abc123");
 			await expect(
 				verifyWorkerMatchesCITag("some-account-id", "network-error-worker")
 			).rejects.toMatchInlineSnapshot(
-				`[Error: Wrangler cannot validate that your Worker name matches what is expected by the build system. Please retry the build.]`
+				`[Error: Wrangler cannot validate that your Worker name matches what is expected by the build system. Please retry the build. If the problem persists, please contact support.]`
 			);
 		});
 
@@ -143,11 +170,15 @@ describe("match-tag", () => {
 			it("catches all other API errors and throws generic validation error", async () => {
 				vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123");
 				mockWorker("a-worker", "abc123");
-				writeWranglerConfig({ name: "network-error-worker" });
+				writeWranglerConfig({ name: "auth-error-worker" });
 				await expect(
 					runWrangler("deploy ./index.js")
 				).rejects.toMatchInlineSnapshot(
-					`[Error: Wrangler cannot validate that your Worker name matches what is expected by the build system. Please retry the build.]`
+					`
+					[Error: An error occurred while trying to validate that the Worker name matches what is expected by the build system.
+					A request to the Cloudflare API (/accounts/some-account-id/workers/services/auth-error-worker) failed.
+					Authentication error [code: 10000]]
+				`
 				);
 			});
 

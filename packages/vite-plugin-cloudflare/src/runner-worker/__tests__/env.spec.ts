@@ -4,8 +4,6 @@ import { stripInternalEnv } from "../env";
 describe("stripInternalEnv", () => {
 	test("only __VITE internal fields", () => {
 		const env = {
-			__VITE_ROOT__: "",
-			__VITE_ENTRY_PATH__: "",
 			__VITE_INVOKE_MODULE__: {
 				fetch: async () => new Response(),
 			},
@@ -19,8 +17,6 @@ describe("stripInternalEnv", () => {
 
 	test("with extra env fields", () => {
 		const env = {
-			__VITE_ROOT__: "",
-			__VITE_ENTRY_PATH__: "",
 			__VITE_INVOKE_MODULE__: {
 				fetch: async () => new Response(),
 			},
@@ -41,25 +37,17 @@ describe("stripInternalEnv", () => {
 
 	test("with nested fields that share the same name as (top level) internal ones", () => {
 		const env = {
-			__VITE_ROOT__: "",
-			__VITE_ENTRY_PATH__: "",
 			__VITE_INVOKE_MODULE__: {
 				fetch: async () => new Response(),
 			},
 			__VITE_UNSAFE_EVAL__: {
 				eval: () => () => {},
 			},
-			myJson: {
-				__VITE_ROOT__: "",
-				__VITE_ENTRY_PATH__: "",
-			},
+			myJson: {},
 		};
 		const result = stripInternalEnv(env);
 		expect(result).toEqual({
-			myJson: {
-				__VITE_ENTRY_PATH__: "",
-				__VITE_ROOT__: "",
-			},
+			myJson: {},
 		});
 	});
 });

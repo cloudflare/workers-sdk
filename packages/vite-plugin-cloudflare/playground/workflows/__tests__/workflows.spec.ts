@@ -2,7 +2,7 @@ import { expect, test, vi } from "vitest";
 import { getJsonResponse } from "../../__test-utils__";
 
 test("creates a Workflow with an ID", async () => {
-	const instanceId = "test-id";
+	const instanceId = "workflows-test-id";
 
 	expect(await getJsonResponse(`/create?id=${instanceId}`)).toEqual({
 		id: instanceId,

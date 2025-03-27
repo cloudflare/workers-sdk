@@ -17,6 +17,7 @@ import {
 	deleteKVBulkKeyValue,
 	deleteKVKeyValue,
 	deleteKVNamespace,
+	getKVBulkKeyValue,
 	getKVKeyValue,
 	getKVNamespaceId,
 	isKVKeyValue,
@@ -157,7 +158,7 @@ export const kvNamespaceDeleteCommand = createCommand({
 		binding: {
 			type: "string",
 			requiresArg: true,
-			describe: "The name of the namespace to delete",
+			describe: "The binding name to the namespace to delete from",
 		},
 		"namespace-id": {
 			type: "string",
@@ -236,7 +237,7 @@ export const kvKeyPutCommand = createCommand({
 		binding: {
 			type: "string",
 			requiresArg: true,
-			describe: "The binding of the namespace to write to",
+			describe: "The binding name to the namespace to write to",
 		},
 		"namespace-id": {
 			type: "string",
@@ -358,7 +359,7 @@ export const kvKeyListCommand = createCommand({
 		binding: {
 			type: "string",
 			requiresArg: true,
-			describe: "The name of the namespace to list",
+			describe: "The binding name to the namespace to list",
 		},
 		"namespace-id": {
 			type: "string",
@@ -444,7 +445,7 @@ export const kvKeyGetCommand = createCommand({
 		binding: {
 			type: "string",
 			requiresArg: true,
-			describe: "The name of the namespace to get from",
+			describe: "The binding name to the namespace to get from",
 		},
 		"namespace-id": {
 			type: "string",
@@ -545,7 +546,7 @@ export const kvKeyDeleteCommand = createCommand({
 		binding: {
 			type: "string",
 			requiresArg: true,
-			describe: "The name of the namespace to delete from",
+			describe: "The binding name to the namespace to delete from",
 		},
 		"namespace-id": {
 			type: "string",
@@ -600,6 +601,125 @@ export const kvKeyDeleteCommand = createCommand({
 	},
 });
 
+export const kvBulkGetCommand = createCommand({
+	metadata: {
+		description: "Gets multiple key-value pairs from a namespace",
+		status: "open-beta",
+		owner: "Product: KV",
+	},
+
+	positionalArgs: ["filename"],
+	args: {
+		filename: {
+			describe: "The file containing the keys to get",
+			type: "string",
+			demandOption: true,
+		},
+		binding: {
+			type: "string",
+			requiresArg: true,
+			describe: "The binding name to the namespace to get from",
+		},
+		"namespace-id": {
+			type: "string",
+			requiresArg: true,
+			describe: "The id of the namespace to get from",
+		},
+		preview: {
+			type: "boolean",
+			describe: "Interact with a preview namespace",
+		},
+		local: {
+			type: "boolean",
+			describe: "Interact with local storage",
+		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
+		"persist-to": {
+			type: "string",
+			describe: "Directory for local persistence",
+		},
+	},
+
+	async handler({ filename, ...args }) {
+		const localMode = isLocal(args);
+		const config = readConfig(args);
+		const namespaceId = getKVNamespaceId(args, config);
+
+		const content = parseJSON(readFileSync(filename), filename) as (
+			| string
+			| { name: string }
+		)[];
+
+		if (!Array.isArray(content)) {
+			throw new UserError(
+				`Unexpected JSON input from "${filename}".\n` +
+					`Expected an array of strings but got:\n${content}`
+			);
+		}
+
+		const errors: string[] = [];
+
+		const keysToGet: string[] = [];
+		for (const [index, item] of content.entries()) {
+			const key = typeof item !== "string" ? item?.name : item;
+
+			if (typeof key !== "string") {
+				errors.push(
+					`The item at index ${index} is type: "${typeof item}" - ${JSON.stringify(
+						item
+					)}`
+				);
+				continue;
+			}
+			keysToGet.push(key);
+		}
+
+		if (errors.length > 0) {
+			throw new UserError(
+				`Unexpected JSON input from "${filename}".\n` +
+					`Expected an array of strings or objects with a "name" key.\n` +
+					errors.join("\n")
+			);
+		}
+
+		if (localMode) {
+			const result = await usingLocalNamespace(
+				args.persistTo,
+				config,
+				namespaceId,
+				async (namespace) => {
+					const out = {} as { [key: string]: { value: string | null } };
+					for (const key of keysToGet) {
+						const value = await namespace.get(key, "text");
+
+						out[key as string] = {
+							value,
+						};
+					}
+					return out;
+				}
+			);
+
+			logger.log(JSON.stringify(result, null, 2));
+		} else {
+			const accountId = await requireAuth(config);
+
+			logger.log(
+				JSON.stringify(
+					await getKVBulkKeyValue(accountId, namespaceId, keysToGet),
+					null,
+					2
+				)
+			);
+		}
+		logger.log("\nSuccess!");
+	},
+});
+
 export const kvBulkPutCommand = createCommand({
 	metadata: {
 		description: "Upload multiple key-value pairs to a namespace",
@@ -617,7 +737,7 @@ export const kvBulkPutCommand = createCommand({
 		binding: {
 			type: "string",
 			requiresArg: true,
-			describe: "The name of the namespace to write to",
+			describe: "The binding name to the namespace to write to",
 		},
 		"namespace-id": {
 			type: "string",
@@ -769,7 +889,7 @@ export const kvBulkDeleteCommand = createCommand({
 		binding: {
 			type: "string",
 			requiresArg: true,
-			describe: "The name of the namespace to delete from",
+			describe: "The binding name to the namespace to delete from",
 		},
 		"namespace-id": {
 			type: "string",

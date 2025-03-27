@@ -66,6 +66,7 @@ describe("wrangler", () => {
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
 				  wrangler whoami                 🕵️  Retrieve your user information
+				  wrangler secrets-store          🔐 Manage the Secrets Store [alpha]
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
@@ -124,6 +125,7 @@ describe("wrangler", () => {
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
 				  wrangler whoami                 🕵️  Retrieve your user information
+				  wrangler secrets-store          🔐 Manage the Secrets Store [alpha]
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
@@ -259,6 +261,7 @@ describe("wrangler", () => {
 				Interact with multiple Workers KV key-value pairs at once
 
 				COMMANDS
+				  wrangler kv bulk get <filename>     Gets multiple key-value pairs from a namespace [open-beta]
 				  wrangler kv bulk put <filename>     Upload multiple key-value pairs to a namespace
 				  wrangler kv bulk delete <filename>  Delete multiple key-value pairs from a namespace
 
