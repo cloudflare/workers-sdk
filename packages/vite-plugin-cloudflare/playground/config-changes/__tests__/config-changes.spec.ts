@@ -12,10 +12,13 @@ test.runIf(!isBuild)(
 		onTestFinished(async () => {
 			fs.writeFileSync(workerConfigPath, originalWorkerConfig);
 			// We need to ensure that the original config is restored before the next test runs
-			await waitForUpdate(async () => {
-				const revertedResponse = await getTextResponse();
-				expect(revertedResponse).toMatch(/The value of MY_VAR is "one"/);
-			});
+			await vi.waitFor(
+				async () => {
+					const revertedResponse = await getTextResponse();
+					expect(revertedResponse).toMatch(/The value of MY_VAR is "one"/);
+				},
+				{ timeout: 5000 }
+			);
 		});
 
 		const originalResponse = await getTextResponse();
@@ -28,10 +31,13 @@ test.runIf(!isBuild)(
 			},
 		});
 		fs.writeFileSync(workerConfigPath, updatedWorkerConfig);
-		await waitForUpdate(async () => {
-			const updatedResponse = await getTextResponse();
-			expect(updatedResponse).toMatch(/The value of MY_VAR is "two"/);
-		});
+		await vi.waitFor(
+			async () => {
+				const updatedResponse = await getTextResponse();
+				expect(updatedResponse).toMatch(/The value of MY_VAR is "two"/);
+			},
+			{ timeout: 5000 }
+		);
 	}
 );
 
@@ -44,10 +50,13 @@ test.runIf(!isBuild)(
 		onTestFinished(async () => {
 			fs.writeFileSync(workerConfigPath, originalWorkerConfig);
 			// We need to ensure that the original config is restored before the next test runs
-			await waitForUpdate(async () => {
-				const revertedResponse = await getTextResponse();
-				expect(revertedResponse).toMatch(/The value of MY_VAR is "one"/);
-			});
+			await vi.waitFor(
+				async () => {
+					const revertedResponse = await getTextResponse();
+					expect(revertedResponse).toMatch(/The value of MY_VAR is "one"/);
+				},
+				{ timeout: 5000 }
+			);
 		});
 
 		const originalResponse = await getTextResponse();
@@ -61,13 +70,16 @@ test.runIf(!isBuild)(
 			},
 		});
 		fs.writeFileSync(workerConfigPath, updatedWorkerConfig);
-		await waitForUpdate(async () => {
-			const newResponse = await getTextResponse();
-			expect(serverLogs.errors.join()).toMatch(
-				/.*The provided Wrangler config main field .+? doesn't point to an existing file.*/
-			);
-			expect(newResponse).toMatch(/The value of MY_VAR is "one"/);
-		});
+		await vi.waitFor(
+			async () => {
+				const newResponse = await getTextResponse();
+				expect(serverLogs.errors.join()).toMatch(
+					/.*The provided Wrangler config main field .+? doesn't point to an existing file.*/
+				);
+				expect(newResponse).toMatch(/The value of MY_VAR is "one"/);
+			},
+			{ timeout: 5000 }
+		);
 	}
 );
 
@@ -83,32 +95,27 @@ test.runIf(!isBuild)(
 		onTestFinished(async () => {
 			fs.writeFileSync(dotDevDotVarsFilePath, originalDotDevDotVars);
 			// We need to ensure that the original config is restored before the next test runs
-			await waitForUpdate(async () => {
-				const revertedResponse = await getTextResponse();
-				expect(revertedResponse).toMatch(
-					/the value of MY_SECRET is "secret A"/
-				);
-			});
+			await vi.waitFor(
+				async () => {
+					const revertedResponse = await getTextResponse();
+					expect(revertedResponse).toMatch(
+						/the value of MY_SECRET is "secret A"/
+					);
+				},
+				{ timeout: 5000 }
+			);
 		});
 
 		const originalResponse = await getTextResponse();
 		expect(originalResponse).toMatch(/the value of MY_SECRET is "secret A"/);
 
 		fs.writeFileSync(dotDevDotVarsFilePath, 'MY_SECRET = "secret B"\n');
-		await waitForUpdate(async () => {
-			const updatedResponse = await getTextResponse();
-			expect(updatedResponse).toMatch(/the value of MY_SECRET is "secret B"/);
-		});
+		await vi.waitFor(
+			async () => {
+				const updatedResponse = await getTextResponse();
+				expect(updatedResponse).toMatch(/the value of MY_SECRET is "secret B"/);
+			},
+			{ timeout: 5000 }
+		);
 	}
 );
-
-async function waitForUpdate(callback: () => Promise<void>) {
-	await vi.waitFor(callback, {
-		// let's give a generous timeout here as this
-		// has shown some signs of flakiness in CI
-		timeout: 10000,
-		// let's space out the requests, not to
-		// spam the server
-		interval: 500,
-	});
-}
