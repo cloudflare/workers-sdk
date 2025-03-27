@@ -5,6 +5,7 @@ import * as path from "node:path";
 import { createMiddleware } from "@hattip/adapter-node";
 import MagicString from "magic-string";
 import { Miniflare } from "miniflare";
+import colors from "picocolors";
 import * as vite from "vite";
 import {
 	createModuleReference,
@@ -316,16 +317,17 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					"Unexpected error: No Vite HTTP server"
 				);
 
-				const inspectorPort =
-					pluginConfig.inspectorPort ??
-					(await getFirstAvailablePort(DEFAULT_INSPECTOR_PORT));
+				const inputInspectorPort = await getInputInspectorPortOption(
+					pluginConfig,
+					viteDevServer
+				);
 
 				if (miniflare) {
 					await miniflare.setOptions(
 						getDevMiniflareOptions(
 							resolvedPluginConfig,
 							viteDevServer,
-							inspectorPort
+							inputInspectorPort
 						)
 					);
 				} else {
@@ -333,7 +335,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						getDevMiniflareOptions(
 							resolvedPluginConfig,
 							viteDevServer,
-							inspectorPort
+							inputInspectorPort
 						)
 					);
 				}
@@ -368,16 +370,18 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			async configurePreviewServer(vitePreviewServer) {
 				const workerConfigs = getWorkerConfigs(vitePreviewServer.config.root);
 
-				const inspectorPort =
-					pluginConfig.inspectorPort ??
-					(await getFirstAvailablePort(DEFAULT_INSPECTOR_PORT));
+				vitePreviewServer.config.logger.warnOnce;
+				const inputInspectorPort = await getInputInspectorPortOption(
+					pluginConfig,
+					vitePreviewServer
+				);
 
 				const miniflare = new Miniflare(
 					getPreviewMiniflareOptions(
 						vitePreviewServer,
 						workerConfigs,
 						pluginConfig.persistState ?? true,
-						inspectorPort
+						inputInspectorPort
 					)
 				);
 
@@ -759,6 +763,35 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			? resolvedPluginConfig.workers[environmentName]
 			: undefined;
 	}
+}
+
+/**
+ * Gets the inspector port option that should be passed to miniflare based on the user's plugin config
+ *
+ * @param pluginConfig the user plugin configs
+ * @param viteServer the vite (dev or preview) server
+ * @returns the inspector port to require from miniflare or false if debugging is disabled
+ */
+async function getInputInspectorPortOption(
+	pluginConfig: PluginConfig,
+	viteServer: vite.ViteDevServer | vite.PreviewServer
+) {
+	const inputInspectorPort =
+		pluginConfig.inspectorPort ??
+		(await getFirstAvailablePort(DEFAULT_INSPECTOR_PORT));
+
+	if (
+		pluginConfig.inspectorPort === undefined &&
+		inputInspectorPort !== DEFAULT_INSPECTOR_PORT
+	) {
+		viteServer.config.logger.warn(
+			colors.dim(
+				`Default inspector port ${DEFAULT_INSPECTOR_PORT} not available, using ${inputInspectorPort} instead\n`
+			)
+		);
+	}
+
+	return inputInspectorPort;
 }
 
 /**
