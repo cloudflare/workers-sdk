@@ -90,6 +90,13 @@ async function runLongLivedWrangler(
 		console.log(`[${command}]`, chunk.toString());
 		chunks.push(chunk);
 	});
+	wranglerProcess.once("exit", (exitCode) => {
+		if (exitCode !== 0) {
+			rejectReadyPromise(
+				`Wrangler exited with error code: ${exitCode}\nOutput: ${getOutput()}`
+			);
+		}
+	});
 	const getOutput = () => Buffer.concat(chunks).toString();
 	const clearOutput = () => (chunks.length = 0);
 
