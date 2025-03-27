@@ -15,6 +15,7 @@ const config: TemplateConfig = {
 	frameworkCli: "create-vue",
 	displayName: "Vue",
 	platform: "pages",
+	hidden: true,
 	path: "templates/pages/vue",
 	generate,
 	transformPackageJson: async () => ({

@@ -47,6 +47,7 @@ const config: TemplateConfig = {
 	frameworkCli: "create-vite",
 	displayName: "React",
 	platform: "pages",
+	hidden: true,
 	path: "templates/react/pages",
 	generate,
 	transformPackageJson: async () => ({

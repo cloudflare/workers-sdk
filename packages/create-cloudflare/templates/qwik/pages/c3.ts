@@ -129,6 +129,7 @@ const config: TemplateConfig = {
 	frameworkCli: "create-qwik",
 	displayName: "Qwik",
 	platform: "pages",
+	hidden: true,
 	copyFiles: {
 		path: "./templates",
 	},

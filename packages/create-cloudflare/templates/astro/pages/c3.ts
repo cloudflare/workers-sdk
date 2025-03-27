@@ -63,6 +63,7 @@ const config: TemplateConfig = {
 	id: "astro",
 	frameworkCli: "create-astro",
 	platform: "pages",
+	hidden: true,
 	displayName: "Astro",
 	path: "templates/astro/pages",
 	copyFiles: {
