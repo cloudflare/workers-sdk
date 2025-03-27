@@ -734,15 +734,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				if (workerConfig && !isNodeCompat(workerConfig)) {
 					const nodeJsCompatWarnings =
 						nodeJsCompatWarningsMap.get(workerConfig);
-					assert(
-						nodeJsCompatWarnings,
-						`expected nodeJsCompatWarnings to be defined for Worker "${workerConfig.name}"`
-					);
+					// TODO: re-assert this when we work out how to make it function with React Router builds.
+					// 								assert(
+					// 	nodeJsCompatWarnings,
+					// 	`expected nodeJsCompatWarnings to be defined for Worker "${workerConfig.name}"`
+					// );
 					if (nodejsBuiltins.has(source)) {
-						nodeJsCompatWarnings.registerImport(source, importer);
+						nodeJsCompatWarnings?.registerImport(source, importer);
 						// We don't have a natural place to trigger the rendering of the warnings
 						// So we trigger a rendering to happen soon after this round of processing.
-						nodeJsCompatWarnings.renderWarningsOnIdle();
+						nodeJsCompatWarnings?.renderWarningsOnIdle();
 						// Mark this path as external to avoid messy unwanted resolve errors.
 						// It will fail at runtime but we will log warnings to the user.
 						return {
