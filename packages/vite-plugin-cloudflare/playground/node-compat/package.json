@@ -33,7 +33,11 @@
 		"random:build": "vite build --app -c vite.config.worker-random.ts",
 		"random:dev": "vite dev -c vite.config.worker-random.ts",
 		"random:preview": "vite preview -c vite.config.worker-random.ts",
-		"random:test": "vitest run -c ../vitest.config.e2e.ts worker-random"
+		"random:test": "vitest run -c ../vitest.config.e2e.ts worker-random",
+		"warnings:build": "vite build --app -c vite.config.worker-warnings.ts",
+		"warnings:dev": "vite dev -c vite.config.worker-warnings.ts",
+		"warnings:preview": "vite preview -c vite.config.worker-warnings.ts",
+		"warnings:test": "vitest run -c ../vitest.config.e2e.ts worker-warnings"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",
