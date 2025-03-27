@@ -14,7 +14,7 @@ export default class extends WorkerEntrypoint<Env> {
 			msg.setSubject("An email generated in a Worker");
 			msg.addMessage({
 				contentType: "text/plain",
-				data: "Congratulations, you just sent an email from a worker.",
+				data: "Congratulations, you just sent an email from a Worker.",
 			});
 			const m = new EmailMessage(
 				"sender@penalosa.cloud",
