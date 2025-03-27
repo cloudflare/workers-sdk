@@ -10,7 +10,7 @@ import {
 	createModuleReference,
 	matchAdditionalModule,
 } from "./additional-modules";
-import { getHasAssetsConfigChanged } from "./asset-config";
+import { hasAssetsConfigChanged } from "./asset-config";
 import {
 	createCloudflareEnvironmentOptions,
 	initRunners,
@@ -294,12 +294,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 			},
 			hotUpdate(options) {
-				const hasWranglerFileChanged = getHasCloudflareFileChanged(
-					resolvedPluginConfig,
-					resolvedViteConfig
-				);
-
-				if (hasWranglerFileChanged(options.file)) {
+				if (
+					// Vite normalizes `options.file` so we use `path.resolve` for Windows compatibility
+					resolvedPluginConfig.configPaths.has(path.resolve(options.file)) ||
+					hasDotDevDotVarsFileChanged(resolvedPluginConfig, options.file) ||
+					hasAssetsConfigChanged(
+						resolvedPluginConfig,
+						resolvedViteConfig,
+						options.file
+					)
+				) {
 					// It's OK for this to be called multiple times as Vite prevents concurrent execution
 					options.server.restart();
 					return [];
@@ -794,65 +798,20 @@ function getDotDevDotVarsContent(
 }
 
 /**
- * Returns a function that checks if a given resolved path to a `changedFile` matches
- * some of the files that Cloudflare cares about (and that require the vite server to
- * reload)
- *
- * Note: the function is cached based on the resolvedPluginConfig just so that
- *       the extra paths resolutions are only done once
+ * Returns true if the `changedFile` matches one of a potential .dev.vars file.
  */
-function getHasCloudflareFileChanged(
+function hasDotDevDotVarsFileChanged(
 	resolvedPluginConfig: ResolvedPluginConfig,
-	resolvedViteConfig: vite.ResolvedConfig
+	changedFile: string
 ) {
-	const cachedValue = getHasCloudflareFileChangedMap.get(resolvedPluginConfig);
-	if (cachedValue) {
-		return cachedValue;
-	}
-
-	const wranglerConfigPaths = resolvedPluginConfig.configPaths;
-
 	const dotDevDotVarsPaths = new Set(
-		[...wranglerConfigPaths].map((configPath) =>
+		[...resolvedPluginConfig.configPaths].map((configPath) =>
 			path.join(path.dirname(configPath), ".dev.vars")
 		)
 	);
 
-	const hasAssetsConfigChanged = getHasAssetsConfigChanged(
-		resolvedPluginConfig,
-		resolvedViteConfig
-	);
+	// Note that we must "resolve" the changed file since the path from Vite will not match Windows backslashes.
+	const resolvedFilePath = path.resolve(changedFile);
 
-	const hasCloudflareFileChanged = (changedFile: string) => {
-		// Note that we must "resolve" the changed file since the path from Vite will not match Windows backslashes.
-		const resolvedFilePath = path.resolve(changedFile);
-
-		if (wranglerConfigPaths.has(resolvedFilePath)) {
-			// the file is a wrangler config file
-			return true;
-		}
-
-		if (dotDevDotVarsPaths.has(resolvedFilePath)) {
-			// the file is a .dev.vars file (in the same directory of a wrangler config file)
-			return true;
-		}
-
-		if (hasAssetsConfigChanged(changedFile)) {
-			// the file is an _redirects or _headers file
-			return true;
-		}
-
-		return false;
-	};
-
-	getHasCloudflareFileChangedMap.set(
-		resolvedPluginConfig,
-		hasCloudflareFileChanged
-	);
-	return hasCloudflareFileChanged;
+	return dotDevDotVarsPaths.has(resolvedFilePath);
 }
-
-const getHasCloudflareFileChangedMap = new Map<
-	ResolvedPluginConfig,
-	(changedFile: string) => boolean
->();

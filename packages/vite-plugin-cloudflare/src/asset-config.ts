@@ -20,25 +20,22 @@ import type { ResolvedConfig } from "vite";
 import type { Unstable_Config } from "wrangler";
 
 /**
- * Returns a function that checks if a given resolved path to a `changedFile` matches one of the _headers or _redirects files.
- * If the experimental support for these files is turned off the returned function always returns `false`.
+ * Returns true if the `changedFile` matches one of the _headers or _redirects files,
+ * and the experimental support for these files is turned on.
  */
-export function getHasAssetsConfigChanged(
+export function hasAssetsConfigChanged(
 	resolvedPluginConfig: ResolvedPluginConfig,
-	resolvedViteConfig: ResolvedConfig
+	resolvedViteConfig: ResolvedConfig,
+	changedFile: string
 ) {
 	if (!resolvedPluginConfig.experimental?.headersAndRedirectsDevModeSupport) {
-		return () => false;
+		return false;
 	}
-
-	const assetConfigPaths = new Set([
+	// Note that we must "resolve" the changed file since the path from Vite will not match Windows backslashes.
+	return [
 		getRedirectsConfigPath(resolvedViteConfig),
 		getHeadersConfigPath(resolvedViteConfig),
-	]);
-
-	return (changedFile: string) => {
-		return assetConfigPaths.has(changedFile);
-	};
+	].includes(path.resolve(changedFile));
 }
 
 /**
