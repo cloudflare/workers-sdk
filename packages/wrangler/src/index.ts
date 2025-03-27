@@ -41,6 +41,7 @@ import { hyperdrive } from "./hyperdrive/index";
 import { initHandler, initOptions } from "./init";
 import {
 	kvBulkDeleteCommand,
+	kvBulkGetCommand,
 	kvBulkNamespace,
 	kvBulkPutCommand,
 	kvKeyDeleteCommand,
@@ -545,6 +546,7 @@ export function createCLIParser(argv: string[]) {
 		{ command: "wrangler kv key list", definition: kvKeyListCommand },
 		{ command: "wrangler kv key get", definition: kvKeyGetCommand },
 		{ command: "wrangler kv key delete", definition: kvKeyDeleteCommand },
+		{ command: "wrangler kv bulk get", definition: kvBulkGetCommand },
 		{ command: "wrangler kv bulk put", definition: kvBulkPutCommand },
 		{ command: "wrangler kv bulk delete", definition: kvBulkDeleteCommand },
 	]);

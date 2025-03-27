@@ -59,3 +59,5 @@ export function cleanUrl(url: string): string {
 }
 
 export type Optional<T, K extends keyof T> = Omit<T, K> & Pick<Partial<T>, K>;
+
+export type MaybePromise<T> = Promise<T> | T;
