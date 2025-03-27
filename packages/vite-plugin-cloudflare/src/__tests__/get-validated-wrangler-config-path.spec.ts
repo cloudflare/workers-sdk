@@ -9,7 +9,7 @@ const isWindows = process.platform === "win32";
 
 describe("valid cases", () => {
 	test("should return the value of a found wrangler config", () => {
-		const path = getValidatedWranglerConfigPath(fixturesPath);
+		const path = getValidatedWranglerConfigPath(fixturesPath, undefined);
 		expect(normalize(path)).toMatch(
 			isWindows
 				? /\\__tests__\\fixtures\\wrangler\.toml/
@@ -33,7 +33,10 @@ describe("valid cases", () => {
 describe("invalid cases", () => {
 	test("should error with an helpful message if a wrangler config could not be found", () => {
 		expect(() => {
-			getValidatedWranglerConfigPath(join(fixturesPath, "empty-dir"));
+			getValidatedWranglerConfigPath(
+				join(fixturesPath, "empty-dir"),
+				undefined
+			);
 		}).toThrowError(
 			/No config file found in the .*?empty-dir directory, please add an appropriate wrangler.\(jsonc\|json\|toml\) file to the directory/
 		);
