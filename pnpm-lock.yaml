@@ -1918,6 +1918,9 @@ importers:
       playwright-chromium:
         specifier: catalog:default
         version: 1.49.1
+      ts-dedent:
+        specifier: ^2.2.0
+        version: 2.2.0
       typescript:
         specifier: catalog:default
         version: 5.7.3
