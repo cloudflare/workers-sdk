@@ -804,14 +804,12 @@ function hasDotDevDotVarsFileChanged(
 	resolvedPluginConfig: ResolvedPluginConfig,
 	changedFile: string
 ) {
-	const dotDevDotVarsPaths = new Set(
-		[...resolvedPluginConfig.configPaths].map((configPath) =>
-			path.join(path.dirname(configPath), ".dev.vars")
-		)
-	);
-
 	// Note that we must "resolve" the changed file since the path from Vite will not match Windows backslashes.
-	const resolvedFilePath = path.resolve(changedFile);
+	const resolvedChangedFilePath = path.resolve(changedFile);
 
-	return dotDevDotVarsPaths.has(resolvedFilePath);
+	return [...resolvedPluginConfig.configPaths].some(
+		(configPath) =>
+			path.join(path.dirname(configPath), ".dev.vars") ===
+			resolvedChangedFilePath
+	);
 }
