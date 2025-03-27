@@ -61,9 +61,6 @@ let workersConfigsWarningShown = false;
 
 let miniflare: Miniflare | undefined;
 
-/** The resolved inspector port (or undefined if inspecting is disabled) */
-let resolvedInspectorPort: number | undefined;
-
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
  *
@@ -78,6 +75,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	const additionalModulePaths = new Set<string>();
 
 	const nodeJsCompatWarningsMap = new Map<WorkerConfig, NodeJsCompatWarnings>();
+
+	/** The resolved inspector port (or undefined if inspecting is disabled) */
+	let resolvedInspectorPort: number | undefined;
 
 	// This is set when the client environment is built to determine if the entry Worker should include assets
 	let hasClientBuild = false;
