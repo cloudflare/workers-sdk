@@ -109,7 +109,7 @@ export const runC3 = async (
 	// We don't use the "test" package manager here (i.e. TEST_PM and TEST_PM_VERSION) because yarn 1.x doesn't actually provide a `dlx` version.
 	// And in any case, this first step just installs a temp copy of create-cloudflare and executes it.
 	// The point of `detectPackageManager()` is for delegating to framework tooling when generating a project correctly.
-	const cmd = ["pnpx", "create-cloudflare", ...argv];
+	const cmd = ["pnpx", `create-cloudflare@${version}`, ...argv];
 	const proc = spawnWithLogging(
 		cmd,
 		{ env: testEnv, cwd: tmpdir() },

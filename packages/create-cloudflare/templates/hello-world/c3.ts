@@ -5,8 +5,9 @@ import type { TemplateConfig } from "../../src/templates";
 export default {
 	configVersion: 1,
 	id: "hello-world",
-	displayName: "Hello World Worker",
-	description: "Get started with a basic Worker in the language of your choice",
+	displayName: "Worker only",
+	description:
+		"For processing requests, transforming responses, or API endpoints",
 	platform: "workers",
 	async configure(ctx) {
 		if (ctx.args.lang === "python") {

@@ -112,14 +112,18 @@ export class WranglerE2ETestHelper {
 		return { id, name };
 	}
 
-	async vectorize(dimensions: number, metric: string) {
+	async vectorize(dimensions: number, metric: string, resourceName?: string) {
 		// vectorize does not have a local dev mode yet, so we don't yet support the isLocal flag here
-		const name = generateResourceName("vectorize");
-		await this.run(
-			`wrangler vectorize create ${name} --dimensions ${dimensions} --metric ${metric}`
-		);
+		const name = resourceName ?? generateResourceName("vectorize");
+		if (!resourceName) {
+			await this.run(
+				`wrangler vectorize create ${name} --dimensions ${dimensions} --metric ${metric}`
+			);
+		}
 		onTestFinished(async () => {
-			await this.run(`wrangler vectorize delete ${name}`);
+			if (!resourceName) {
+				await this.run(`wrangler vectorize delete ${name}`);
+			}
 		});
 
 		return name;

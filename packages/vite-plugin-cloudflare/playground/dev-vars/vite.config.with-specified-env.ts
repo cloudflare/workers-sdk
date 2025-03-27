@@ -3,5 +3,5 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
 	mode: "with-specified-env",
-	plugins: [cloudflare({ persistState: false })],
+	plugins: [cloudflare({ inspectorPort: false, persistState: false })],
 });

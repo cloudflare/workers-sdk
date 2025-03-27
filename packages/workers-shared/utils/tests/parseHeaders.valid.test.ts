@@ -137,3 +137,40 @@ test("parseHeaders should add unset headers", () => {
 		invalid: [],
 	});
 });
+
+test("parseHeaders should support custom limits", () => {
+	const aaa = Array(1001).fill("a").join("");
+	const bbb = Array(1001).fill("b").join("");
+	const huge_line = `${aaa}: ${bbb}`;
+	let input = `
+    # Valid entry
+    /a
+      Name: Value
+    # Jumbo comment line OK, ignored as normal
+    ${Array(1001).fill("#").join("")}
+    # Huge path names rejected
+    /b
+      Name: Value
+      ${huge_line}
+  `;
+	let result = parseHeaders(input, { maxLineLength: 3000 });
+	expect(result).toEqual({
+		rules: [
+			{ path: "/a", headers: { name: "Value" }, unsetHeaders: [] },
+			{ path: "/b", headers: { name: "Value", [aaa]: bbb }, unsetHeaders: [] },
+		],
+		invalid: [],
+	});
+
+	input = `
+    # COMMENTS DON'T COUNT TOWARDS TOTAL VALID RULES
+    ${Array(150)
+			.fill(undefined)
+			.map((_, i) => `/a/${i}\nx-index: ${i}`)
+			.join("\n")}
+    # BUT DO GET COUNTED AS TOTAL LINES SKIPPED
+  `;
+	result = parseHeaders(input, { maxRules: 200 });
+	expect(result.rules.length).toBe(150);
+	expect(result.invalid.length).toBe(0);
+});

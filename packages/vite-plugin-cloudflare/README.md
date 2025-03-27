@@ -1,6 +1,6 @@
 # `@cloudflare/vite-plugin`
 
-[Intro](#intro) | [Quick start](#quick-start) | [Tutorial](#tutorial) | [API](#api) | [Cloudflare environments](#cloudflare-environments) | [Migrating from `wrangler dev`](#migrating-from-wrangler-dev)
+[Intro](#intro) | [Quick start](#quick-start) | [Tutorial](#tutorial) | [API](#api) | [Cloudflare environments](#cloudflare-environments) | [Debugging](#debugging) | [Migrating from `wrangler dev`](#migrating-from-wrangler-dev)
 
 ## Intro
 
@@ -374,6 +374,10 @@ It accepts an optional `PluginConfig` parameter.
   All requests are routed through your entry Worker.
   During the build, each Worker is output to a separate subdirectory of `dist`.
 
+- `inspectorPort?: number | false`
+
+  Optional inspector port to use for debugging your workers, for more details on debugging see the [devtools section](#devtools). Can be set to `false` to disable the debugging inspector altogether. Defaults to `9229`.
+
 > [!NOTE]
 > When running `wrangler deploy`, only your main (entry) Worker will be deployed.
 > If using multiple Workers, each must be deployed individually.
@@ -481,6 +485,62 @@ Secrets can be provided to your Worker in local development using a [`.dev.vars`
 
 > [!NOTE]
 > The `vite build` command copies the relevant `.dev.vars[.env-name]` file to the output directory. This is only used when running `vite preview` and is not deployed with your Worker.
+
+## Debugging
+
+The Cloudflare Vite plugin allows you to conveniently debug your Worker code during local development.
+
+By default the inspector port used by the plugin is `9229`, which can be customized by providing a different port to the plugin's `inspectorPort` option.
+
+There are two recommended ways of doing so, which we'll explore in this section.
+
+### Devtools
+
+When running `vite dev` or `vite preview` a `/__debug` route in your local server will be made available which gives you access to [Cloudflare's implementation](/packages/chrome-devtools-patches) of [Chrome's DevTools](https://developer.chrome.com/docs/devtools/overview).
+
+Navigating to this route will open a devtools tab for each of the workers in your application (Note: in case of multiple workers you might need to allow your browser to open pop-ups).
+
+Once the tab or tabs are open, you can make a request to your application and start debugging your workers' code.
+
+Note: If you're not interested in debugging all your workers you can close the tabs of the workers you don't want to debug.
+
+### VS Code
+
+To setup VS Code for breakpoint debugging for your application, you will need to create a `.vscode/launch.json` file that contains a configuration following this structure:
+
+```json
+{
+  "configurations": [
+    {
+      "name": "<NAME_OF_WORKER>",
+      "type": "node",
+      "request": "attach",
+      "websocketAddress": "ws://localhost:9229/<NAME_OF_WORKER>",
+      "resolveSourceMapLocations": null,
+      "attachExistingChildren": false,
+      "autoAttachChildProcesses": false,
+      "sourceMaps": true
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Debug All Workers",
+      "configurations": ["<NAME_OF_WORKER>"],
+      "stopAll": true
+    }
+  ]
+}
+```
+
+Where, `<NAME_OF_WORKER>` indicates the name of your worker as specified in your Wrangler configuration.
+
+Note: if you customized your `inspectorPort` you need to use that port in the `websocketAddress` field.
+
+If you have more than one worker you need add a configuration in the `configurations` field for each one and then include the configuration name in the `configurations` array in the compound configuration.
+
+Once your `launch.json` file is ready, after running `vite dev` or `vite preview` you can select **Debug All Workers** at the top of the **Run & Debug** panel to attach debuggers to all the various Workers. Then you can add breakpoints to your code and start debugging.
+
+Note: You can also manually select the configurations to run (e.g. **Debug Worker1**) to filter which workers you want to debug.
 
 ## Migrating from `wrangler dev`
 

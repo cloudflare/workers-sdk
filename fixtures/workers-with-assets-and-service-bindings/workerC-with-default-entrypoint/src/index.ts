@@ -1,6 +1,17 @@
-import { WorkerEntrypoint } from "cloudflare:workers";
+import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 
 export default class extends WorkerEntrypoint {
+	#honey = "Bees make honey in worker-c";
+	#honeyBee = "I am worker-c's honeyBee prop";
+
+	get honey() {
+		return this.#honey;
+	}
+
+	get honeyBee() {
+		return this.#honeyBee;
+	}
+
 	/*
 	 * HTTP fetch
 	 *
@@ -28,6 +39,28 @@ export default class extends WorkerEntrypoint {
 	}
 
 	/*
+	 * Nested functions
+	 *
+	 * see https://developers.cloudflare.com/workers/runtime-apis/rpc/#promise-pipelining
+	 */
+	async foo(emoji: string) {
+		return {
+			bar: {
+				buzz: () => `You made it! ${emoji}`,
+			},
+		};
+	}
+
+	/*
+	 * Class instances
+	 *
+	 * see https://developers.cloudflare.com/workers/runtime-apis/rpc/#class-instances
+	 */
+	async newBeeCounter() {
+		return new BeeCounter();
+	}
+
+	/*
 	 * Cron Triggers
 	 *
 	 * When a Worker is invoked via a Cron Trigger, the scheduled() handler
@@ -37,5 +70,18 @@ export default class extends WorkerEntrypoint {
 	 */
 	async scheduled() {
 		console.log("Hello from worker-c scheduled()");
+	}
+}
+
+class BeeCounter extends RpcTarget {
+	#value = 0;
+
+	increment(amount) {
+		this.#value += amount;
+		return this.#value;
+	}
+
+	get value() {
+		return this.#value;
 	}
 }

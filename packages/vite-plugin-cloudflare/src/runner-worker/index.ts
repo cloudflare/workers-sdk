@@ -3,7 +3,7 @@ import {
 	WorkerEntrypoint,
 	WorkflowEntrypoint,
 } from "cloudflare:workers";
-import { INIT_PATH } from "../shared";
+import { INIT_PATH, VITE_DEV_METADATA_HEADER } from "../shared";
 import { stripInternalEnv } from "./env";
 import { createModuleRunner, getWorkerEntryExport } from "./module-runner";
 import type { WrapperEnv } from "./env";
@@ -47,6 +47,8 @@ const DURABLE_OBJECT_KEYS = [
 ] as const;
 
 const WORKFLOW_ENTRYPOINT_KEYS = ["run"] as const;
+
+let entryPath = "";
 
 function getRpcProperty(
 	ctor: WorkerEntrypointConstructor | DurableObjectConstructor,
@@ -101,7 +103,6 @@ async function getWorkerEntrypointRpcProperty(
 	entrypoint: string,
 	key: string
 ): Promise<unknown> {
-	const entryPath = this.env.__VITE_ENTRY_PATH__;
 	const ctor = (await getWorkerEntryExport(
 		entryPath,
 		entrypoint
@@ -165,16 +166,18 @@ export function createWorkerEntrypointWrapper(
 
 	for (const key of WORKER_ENTRYPOINT_KEYS) {
 		Wrapper.prototype[key] = async function (arg) {
-			const entryPath = this.env.__VITE_ENTRY_PATH__;
-
 			if (key === "fetch") {
 				const request = arg as Request;
 				const url = new URL(request.url);
 
+				let webSocket: WebSocket;
 				if (url.pathname === INIT_PATH) {
-					const { 0: client, 1: server } = new WebSocketPair();
 					try {
-						await createModuleRunner(this.env, server);
+						const viteDevMetadata = getViteDevMetadata(request);
+						entryPath = viteDevMetadata.entryPath;
+						const { 0: client, 1: server } = new WebSocketPair();
+						webSocket = client;
+						await createModuleRunner(this.env, server, viteDevMetadata.root);
 					} catch (e) {
 						return new Response(
 							e instanceof Error ? e.message : JSON.stringify(e),
@@ -182,7 +185,10 @@ export function createWorkerEntrypointWrapper(
 						);
 					}
 
-					return new Response(null, { status: 101, webSocket: client });
+					return new Response(null, {
+						status: 101,
+						webSocket,
+					});
 				}
 			}
 
@@ -249,7 +255,6 @@ async function getDurableObjectRpcProperty(
 	className: string,
 	key: string
 ): Promise<unknown> {
-	const entryPath = this.env.__VITE_ENTRY_PATH__;
 	const { ctor, instance } = await this[kEnsureInstance]();
 
 	if (!(instance instanceof DurableObject)) {
@@ -307,7 +312,6 @@ export function createDurableObjectWrapper(
 		}
 
 		async [kEnsureInstance]() {
-			const entryPath = this.env.__VITE_ENTRY_PATH__;
 			const ctor = (await getWorkerEntryExport(
 				entryPath,
 				className
@@ -335,7 +339,6 @@ export function createDurableObjectWrapper(
 
 	for (const key of DURABLE_OBJECT_KEYS) {
 		Wrapper.prototype[key] = async function (...args: unknown[]) {
-			const entryPath = this.env.__VITE_ENTRY_PATH__;
 			const { instance } = await this[kEnsureInstance]();
 			const maybeFn = instance[key];
 
@@ -359,7 +362,6 @@ export function createWorkflowEntrypointWrapper(
 
 	for (const key of WORKFLOW_ENTRYPOINT_KEYS) {
 		Wrapper.prototype[key] = async function (...args: unknown[]) {
-			const entryPath = this.env.__VITE_ENTRY_PATH__;
 			const ctor = (await getWorkerEntryExport(
 				entryPath,
 				className
@@ -386,4 +388,38 @@ export function createWorkflowEntrypointWrapper(
 	}
 
 	return Wrapper;
+}
+
+function getViteDevMetadata(request: Request) {
+	const viteDevMetadataHeader = request.headers.get(VITE_DEV_METADATA_HEADER);
+	if (viteDevMetadataHeader === null) {
+		throw new Error(
+			"Unexpected internal error, vite dev metadata header not set"
+		);
+	}
+
+	let parsedViteDevMetadataHeader: Record<string, string>;
+	try {
+		parsedViteDevMetadataHeader = JSON.parse(viteDevMetadataHeader);
+	} catch {
+		throw new Error(
+			`Unexpected internal error, vite dev metadata header JSON parsing failed, value = ${viteDevMetadataHeader}`
+		);
+	}
+
+	const { root, entryPath } = parsedViteDevMetadataHeader;
+
+	if (root === undefined) {
+		throw new Error(
+			"Unexpected internal error, vite dev metadata header doesn't contain a root value"
+		);
+	}
+
+	if (entryPath === undefined) {
+		throw new Error(
+			"Unexpected internal error, vite dev metadata header doesn't contain an entryPath value"
+		);
+	}
+
+	return { root, entryPath };
 }

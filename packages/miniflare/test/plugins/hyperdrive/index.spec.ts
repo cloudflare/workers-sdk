@@ -74,7 +74,7 @@ test("validates config", async (t) => {
 		}),
 		{
 			message:
-				/Only PostgreSQL or PostgreSQL compatible databases are currently supported/,
+				/Only PostgreSQL-compatible or MySQL-compatible databases are currently supported./,
 		}
 	);
 

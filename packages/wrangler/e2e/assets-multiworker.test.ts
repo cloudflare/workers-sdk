@@ -61,10 +61,6 @@ async function startWorkersMultiworker(
 	return url;
 }
 
-const failsIf = (condition: boolean) => {
-	return condition ? it.fails : it;
-};
-
 type MultiworkerStyle = "dev registry" | "in process";
 
 describe.each(
@@ -74,12 +70,6 @@ describe.each(
 					style: "in process",
 					start: startWorkersMultiworker,
 					wranglerDev: "wrangler dev",
-				},
-
-				{
-					style: "in process",
-					start: startWorkersMultiworker,
-					wranglerDev: "wrangler dev --x-assets-rpc",
 				},
 			]
 		: [
@@ -92,16 +82,6 @@ describe.each(
 					style: "in process",
 					start: startWorkersMultiworker,
 					wranglerDev: "wrangler dev",
-				},
-				{
-					style: "dev registry",
-					start: startWorkersDevRegistry,
-					wranglerDev: "wrangler dev --x-assets-rpc",
-				},
-				{
-					style: "in process",
-					start: startWorkersMultiworker,
-					wranglerDev: "wrangler dev --x-assets-rpc",
 				},
 			]) as {
 		style: MultiworkerStyle;
@@ -349,7 +329,7 @@ describe.each(
 				});
 			});
 
-			failsIf(style === "dev registry")(".fetch() existing asset", async () => {
+			it(".fetch() existing asset", async () => {
 				const url = await start(
 					wranglerDev,
 					helper,
@@ -479,24 +459,21 @@ describe.each(
 									`,
 					});
 				});
-				failsIf(style === "dev registry")(
-					".fetch() existing asset",
-					async () => {
-						const url = await start(
-							wranglerDev,
-							helper,
-							assetWorker,
-							regularWorker
-						);
-						await vi.waitFor(
-							async () =>
-								await expect(fetchText(`${url}/asset`)).resolves.toBe(
-									"<p>have an asset directly</p>"
-								),
-							{ interval: 1000, timeout: 5_000 }
-						);
-					}
-				);
+				it(".fetch() existing asset", async () => {
+					const url = await start(
+						wranglerDev,
+						helper,
+						assetWorker,
+						regularWorker
+					);
+					await vi.waitFor(
+						async () =>
+							await expect(fetchText(`${url}/asset`)).resolves.toBe(
+								"<p>have an asset directly</p>"
+							),
+						{ interval: 1000, timeout: 5_000 }
+					);
+				});
 
 				it(".fetch() non-existing asset", async () => {
 					const url = await start(
@@ -530,7 +507,7 @@ describe.each(
 					);
 				});
 
-				failsIf(style === "in process")(".increment()", async () => {
+				it(".increment()", async () => {
 					const url = await start(
 						wranglerDev,
 						helper,
@@ -564,24 +541,21 @@ describe.each(
 									`,
 					});
 				});
-				failsIf(style === "dev registry")(
-					".fetch() existing asset",
-					async () => {
-						const url = await start(
-							wranglerDev,
-							helper,
-							assetWorker,
-							regularWorker
-						);
-						await vi.waitFor(
-							async () =>
-								await expect(fetchText(`${url}/asset`)).resolves.toBe(
-									"<p>have an asset directly</p>"
-								),
-							{ interval: 1000, timeout: 5_000 }
-						);
-					}
-				);
+				it(".fetch() existing asset", async () => {
+					const url = await start(
+						wranglerDev,
+						helper,
+						assetWorker,
+						regularWorker
+					);
+					await vi.waitFor(
+						async () =>
+							await expect(fetchText(`${url}/asset`)).resolves.toBe(
+								"<p>have an asset directly</p>"
+							),
+						{ interval: 1000, timeout: 5_000 }
+					);
+				});
 
 				it(".fetch() non-existing asset", async () => {
 					const url = await start(
@@ -615,7 +589,7 @@ describe.each(
 					);
 				});
 
-				failsIf(style === "in process")(".increment()", async () => {
+				it(".increment()", async () => {
 					const url = await start(
 						wranglerDev,
 						helper,

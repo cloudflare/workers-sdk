@@ -66,6 +66,9 @@ interface D1FailureResponse {
 	error: string;
 }
 
+// See https://github.com/cloudflare/workerd/blob/bcaf44290296c71f396175c30b43cff6b570231f/src/cloudflare/internal/d1-api.ts#L68-L72
+const D1_SESSION_COMMIT_TOKEN_HTTP_HEADER = "x-cf-d1-session-commit-token";
+
 export class D1Error extends HttpError {
 	constructor(readonly cause: unknown) {
 		super(500);
@@ -217,7 +220,12 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 			searchParams.get("resultsFormat")
 		);
 
-		return Response.json(this.#txn(queries, resultsFormat));
+		return Response.json(this.#txn(queries, resultsFormat), {
+			headers: {
+				[D1_SESSION_COMMIT_TOKEN_HTTP_HEADER]:
+					await this.state.storage.getCurrentBookmark(),
+			},
+		});
 	};
 
 	#isExportPragma(queries: D1Query[]): queries is D1ExportPragma {

@@ -147,7 +147,8 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			"no-bundle": {
 				type: "boolean",
-				default: false,
+				default: undefined,
+				conflicts: "bundle",
 				description: "Whether to run bundling on `_worker.js`",
 			},
 			binding: {
@@ -280,7 +281,7 @@ export const Handler = async (args: PagesDevArguments) => {
 
 	if (args.env) {
 		throw new FatalError(
-			"Pages does not support targeting an environment with the --env flag. Use the --branch flag to target your production or preview branch",
+			"Pages does not support targeting an environment with the --env flag during local development.",
 			1
 		);
 	}
@@ -364,9 +365,7 @@ export const Handler = async (args: PagesDevArguments) => {
 	const usingWorkerDirectory =
 		existsSync(workerScriptPath) && lstatSync(workerScriptPath).isDirectory();
 	const usingWorkerScript = existsSync(workerScriptPath);
-	// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
-	// There is no sane way to get the true value out of yargs, so here we are.
-	const enableBundling = args.bundle ?? !args.noBundle;
+	const enableBundling = args.bundle ?? !(args.noBundle ?? config.no_bundle);
 
 	const functionsDirectory = "./functions";
 	let usingFunctions = !usingWorkerScript && existsSync(functionsDirectory);
@@ -377,7 +376,7 @@ export const Handler = async (args: PagesDevArguments) => {
 		args.compatibilityDate ?? config.compatibility_date,
 		args.compatibilityFlags ?? config.compatibility_flags ?? [],
 		{
-			noBundle: args.noBundle ?? config.no_bundle,
+			noBundle: !enableBundling,
 		}
 	);
 
@@ -886,7 +885,6 @@ export const Handler = async (args: PagesDevArguments) => {
 		{
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: false,
-			ASSETS_RPC: false,
 		},
 		() =>
 			startDev({
@@ -959,7 +957,6 @@ export const Handler = async (args: PagesDevArguments) => {
 				site: undefined,
 				siteInclude: undefined,
 				siteExclude: undefined,
-				experimentalAssetsRpc: false,
 			})
 	);
 

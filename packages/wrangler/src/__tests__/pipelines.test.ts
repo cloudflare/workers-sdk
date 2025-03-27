@@ -601,6 +601,25 @@ describe("pipelines", () => {
 			`);
 			expect(requests.count).toEqual(1);
 		});
+
+		it("should remove transformations", async () => {
+			const pipeline: Pipeline = samplePipeline;
+			mockShowRequest(pipeline.name, pipeline);
+
+			const update = JSON.parse(JSON.stringify(pipeline));
+			update.transforms = [
+				{
+					script: "hello",
+					entrypoint: "MyTransform",
+				},
+			];
+			const updateReq = mockUpdateRequest(update.name, update);
+
+			await runWrangler("pipelines update my-pipeline --transform-worker none");
+
+			expect(updateReq.count).toEqual(1);
+			expect(updateReq.body?.transforms.length).toEqual(0);
+		});
 	});
 
 	describe("delete", () => {

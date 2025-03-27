@@ -1,5 +1,237 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.8.6
+
+### Patch Changes
+
+- Updated dependencies [[`8e3688f`](https://github.com/cloudflare/workers-sdk/commit/8e3688f27209edeac6241bf240ee5eec62d7ddb2), [`f043b74`](https://github.com/cloudflare/workers-sdk/commit/f043b74c715ebd7ca1e3f62139ad43e57cec8f05), [`14602d9`](https://github.com/cloudflare/workers-sdk/commit/14602d9f39f3fb1df7303dab5c91a77fa21e46f9)]:
+  - wrangler@4.5.0
+
+## 0.8.5
+
+### Patch Changes
+
+- Updated dependencies [[`7682675`](https://github.com/cloudflare/workers-sdk/commit/768267567427cb54f39dc13860b09affd924267d), [`9c844f7`](https://github.com/cloudflare/workers-sdk/commit/9c844f771a5345e3ccf64f07ac1d476a50a80fb6), [`d8c0495`](https://github.com/cloudflare/workers-sdk/commit/d8c04956a8c9e426bd7d26a421dff6d3f0590fd2), [`e4b76e8`](https://github.com/cloudflare/workers-sdk/commit/e4b76e8d2a038d58a142bc79c05c9aa7db9eb3eb)]:
+  - miniflare@4.20250321.0
+  - wrangler@4.4.1
+
+## 0.8.4
+
+### Patch Changes
+
+- [#8597](https://github.com/cloudflare/workers-sdk/pull/8597) [`5d78760`](https://github.com/cloudflare/workers-sdk/commit/5d78760af7adbb57416d73f102123152d37bec53) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Graduate experimental RPC support for Workers with assets in local dev
+
+- Updated dependencies [[`d8f1c49`](https://github.com/cloudflare/workers-sdk/commit/d8f1c49541229f4b41bd16bbebda3017a5d17d64), [`b7d6b7d`](https://github.com/cloudflare/workers-sdk/commit/b7d6b7dd1fbbaecd4f595d2d4249ab902b726538), [`4a5f270`](https://github.com/cloudflare/workers-sdk/commit/4a5f270129f4a2d8995ba2fdd7fc220ee7c75300), [`5f151fc`](https://github.com/cloudflare/workers-sdk/commit/5f151fc93bfcc87f9a6aa2a33cd67901e3507365), [`5d78760`](https://github.com/cloudflare/workers-sdk/commit/5d78760af7adbb57416d73f102123152d37bec53), [`0d1240b`](https://github.com/cloudflare/workers-sdk/commit/0d1240becf3c08094b39e215de6d730f0d25de6b), [`c0d0cd0`](https://github.com/cloudflare/workers-sdk/commit/c0d0cd03a5eede7ec4f8a615f2c4b1f9a73dfcee), [`1c94eee`](https://github.com/cloudflare/workers-sdk/commit/1c94eee008a8281e84171ef1edee74d965b90c33)]:
+  - miniflare@4.20250320.0
+  - wrangler@4.4.0
+
+## 0.8.3
+
+### Patch Changes
+
+- Updated dependencies [[`9adbd50`](https://github.com/cloudflare/workers-sdk/commit/9adbd50cf1cbe841f8885de1d1d22b084fcfd987), [`dae7bd4`](https://github.com/cloudflare/workers-sdk/commit/dae7bd4dd0b97956d868799e6a01fe8b47a7250a), [`383dc0a`](https://github.com/cloudflare/workers-sdk/commit/383dc0abd5c883b3c39ece1abb1f332d1f63a0bb), [`c4fa349`](https://github.com/cloudflare/workers-sdk/commit/c4fa349da3667be6c2ba0d96031b69e4674edbd8), [`8278db5`](https://github.com/cloudflare/workers-sdk/commit/8278db5c862f51032ef7a2f79770f329c7f9dd9b), [`86ab0ca`](https://github.com/cloudflare/workers-sdk/commit/86ab0ca52ab878a5c01900218e91261ac09f5438), [`a25f060`](https://github.com/cloudflare/workers-sdk/commit/a25f060232bfbfb30aede6a891b665f0450770bf), [`62d5471`](https://github.com/cloudflare/workers-sdk/commit/62d5471eae9b5ed8cb31f025fa23ba3930b94317), [`2a43cdc`](https://github.com/cloudflare/workers-sdk/commit/2a43cdcf7218bd840737790707e07cbb25baa8ea), [`5ae12a9`](https://github.com/cloudflare/workers-sdk/commit/5ae12a9390f81a3e1df2eb3da4a34dc143879a3c), [`29015e5`](https://github.com/cloudflare/workers-sdk/commit/29015e5577ad8b063b93425da5e80d5054add728)]:
+  - miniflare@4.20250319.0
+  - wrangler@4.3.0
+
+## 0.8.2
+
+### Patch Changes
+
+- Updated dependencies [[`14680b9`](https://github.com/cloudflare/workers-sdk/commit/14680b90a23463d4592511ba4e02d38c30c1d2ea), [`fd9dff8`](https://github.com/cloudflare/workers-sdk/commit/fd9dff833870b768af34b391bb109782d86908bb), [`ff26dc2`](https://github.com/cloudflare/workers-sdk/commit/ff26dc20210c193b9e175f5567277d5584bdf657), [`05973bb`](https://github.com/cloudflare/workers-sdk/commit/05973bba4ca49e0fad43e6094ddea67cdf67dc42)]:
+  - wrangler@4.2.0
+  - miniflare@4.20250317.1
+
+## 0.8.1
+
+### Patch Changes
+
+- [#8362](https://github.com/cloudflare/workers-sdk/pull/8362) [`1d6c6e7`](https://github.com/cloudflare/workers-sdk/commit/1d6c6e73af6a663fb5cdc812cee6f3c30aa41a1a) Thanks [@ns476](https://github.com/ns476)! - Add support for Images binding
+
+- Updated dependencies [[`b8fd1b1`](https://github.com/cloudflare/workers-sdk/commit/b8fd1b1c8be1d84a0b3be5f27f7c91f88d9473d2), [`4978e5b`](https://github.com/cloudflare/workers-sdk/commit/4978e5bebb081a5ff6901d0b1bb807d51c3db30b), [`5ae180e`](https://github.com/cloudflare/workers-sdk/commit/5ae180ee8acfc03b46bc3e836f5ce3856c458af8), [`74b0c73`](https://github.com/cloudflare/workers-sdk/commit/74b0c7377a643241d4e3efa674cd644f8f5b8e10), [`931b53d`](https://github.com/cloudflare/workers-sdk/commit/931b53d708b0369de97475a9f427bcb922795378), [`edf169d`](https://github.com/cloudflare/workers-sdk/commit/edf169d15062a31dec1d32427fb72438425b45bf), [`1b2aa91`](https://github.com/cloudflare/workers-sdk/commit/1b2aa916fecb010dd250de3b2bbdd527bed992ef)]:
+  - wrangler@4.1.0
+  - miniflare@4.20250317.0
+
+## 0.8.0
+
+### Minor Changes
+
+- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@threepointone](https://github.com/threepointone)! - chore: update esbuild
+
+  This patch updates esbuild from 0.17.19 to 0.24.2. That's a big bump! Lots has gone into esbuild since May '23. All the details are available at https://github.com/evanw/esbuild/blob/main/CHANGELOG.md / https://github.com/evanw/esbuild/blob/main/CHANGELOG-2023.md.
+
+  - We now support all modern JavasScript/TypeScript features suported by esbuild (as of December 2024). New additions include standard decorators, auto-accessors, and the `using` syntax.
+  - 0.18 introduced wider support for configuration specified via `tsconfig.json` https://github.com/evanw/esbuild/issues/3019. After observing the (lack of) any actual broken code over the last year for this release, we feel comfortable releasing this without considering it a breaking change.
+  - 0.19.3 introduced support for import attributes
+
+    ```js
+    import stuff from './stuff.json' with { type: 'json' }
+    ```
+
+    While we don't currently expose the esbuild configuration for developers to add their own plugins to customise how modules with import attributes are bundled, we may introduce new "types" ourselves in the future.
+
+  - 0.19.0 introduced support for wildcard imports. Specifics here (https://github.com/evanw/esbuild/blob/main/CHANGELOG-2023.md#0190). tl;dr -
+
+    - These 2 patterns will bundle all files that match the glob pattern into a single file.
+
+      ```js
+      const json1 = await import("./data/" + kind + ".json");
+      ```
+
+      ```js
+      const json2 = await import(`./data/${kind}.json`);
+      ```
+
+    - This pattern will NOT bundle any matching patterns:
+      ```js
+      const path = "./data/" + kind + ".js";
+      const json2 = await import(path);
+      ```
+      You can use `find_additional_modules` to bundle any additional modules that are not referenced in the code but are required by the project.
+
+    Now, this MAY be a breaking change for some. Specifically, if you were previously using the pattern (that will now include all files matching the glob pattern in the bundle), BUT `find_additional_modules` was NOT configured to include some files, those files would now be included in the bundle. For example, consider this code:
+
+    ```js
+    // src/index.js
+    export default {
+    	async fetch() {
+    		const url = new URL(request.url);
+    		const name = url.pathname;
+    		const value = (await import("." + name)).default;
+    		return new Response(value);
+    	},
+    };
+    ```
+
+    Imagine if in that folder, you had these 3 files:
+
+    ```js
+    // src/one.js
+    export default "one";
+    ```
+
+    ```js
+    // src/two.js
+    export default "two";
+    ```
+
+    ```js
+    // src/hidden/secret.js
+    export default "do not share this secret";
+    ```
+
+    And your `wrangler.toml` was:
+
+    ```toml
+    name = "my-worker"
+    main = "src/index.js
+    ```
+
+    Before this update:
+
+    1. A request to anything but `http://localhost:8787/` would error. For example, a request to `http://localhost:8787/one.js` would error with _No such module "one.js"._
+    2. Let's configure `wrangler.toml` to include all `.js` files in the `src` folder:
+
+    ```toml
+    name = "my-worker"
+    main = "src/index.js
+
+    find_additional_modules = true
+    rules = [
+      { type = "ESModule", globs = ["*.js"]}
+    ]
+    ```
+
+    Now, a request to `http://localhost:8787/one.js` would return the contents of `src/one.js`, but a request to `http://localhost:8787/hidden/secret.js` would error with _No such module "hidden/secret.js"._ To include this file, you could expand the `rules` array to be:
+
+    ```toml
+    rules = [
+      { type = "ESModule", globs = ["**/*.js"]}
+    ]
+    ```
+
+    Then, a request to `http://localhost:8787/hidden/secret.js` will return the contents of `src/hidden/secret.js`.
+
+    After this update:
+
+    - Let's put the wrangler.toml back to its original configuration:
+
+    ```toml
+    name = "my-worker"
+    main = "src/index.js
+    ```
+
+    - Now, a request to `http://localhost:8787/one.js` will return the contents of `src/one.js`, but a request to `http://localhost:8787/hidden/secret.js` will ALSO return the contents of `src/hidden/secret.js`. THIS MAY NOT BE WHAT YOU WANT. You can "fix" this in 2 ways:
+
+      1. Remove the inline wildcard import:
+
+      ```js
+      // src/index.js
+      export default {
+      	async fetch() {
+      		const name = new URL(request.url).pathname;
+      		const moduleName = "./" + name;
+      		const value = (await import(moduleName)).default;
+      		return new Response(value);
+      	},
+      };
+      ```
+
+      Now, no extra modules are included in the bundle, and a request to `http://localhost:8787/hidden/secret.js` will throw an error. You can use the `find_additional_modules` feature to include it again.
+
+      2. Don't use the wildcard import pattern:
+
+      ```js
+      // src/index.js
+      import one from "./one.js";
+      import two from "./two.js";
+
+      export default {
+      	async fetch() {
+      		const name = new URL(request.url).pathname;
+      		switch (name) {
+      			case "/one.js":
+      				return new Response(one);
+      			case "/two.js":
+      				return new Response(two);
+      			default:
+      				return new Response("Not found", { status: 404 });
+      		}
+      	},
+      };
+      ```
+
+      Further, there may be some files that aren't modules (js/ts/wasm/text/binary/etc) that are in the folder being included (For example, a `photo.jpg` file). This pattern will now attempt to include them in the bundle, and throw an error. It will look like this:
+
+      `[ERROR] No loader is configured for ".png" files: src/photo.jpg`
+
+      To fix this, simply move the offending file to a different folder.
+
+      In general, we DO NOT recommend using the wildcard import pattern. If done wrong, it can leak files into your bundle that you don't want, or make your worker slightly slower to start. If you must use it (either with a wildcard import pattern or with `find_additional_modules`) you must be diligent to check that your worker is working as expected and that you are not leaking files into your bundle that you don't want. You can configure eslint to disallow dynamic imports like this:
+
+      ```js
+      // eslint.config.js
+      export default [
+      	{
+      		rules: {
+      			"no-restricted-syntax": [
+      				"error",
+      				{
+      					selector: "ImportExpression[argument.type!='Literal']",
+      					message:
+      						"Dynamic imports with non-literal arguments are not allowed.",
+      				},
+      			],
+      		},
+      	},
+      ];
+      ```
+
+### Patch Changes
+
+- Updated dependencies [[`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f), [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f), [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f), [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f), [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f), [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f), [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f), [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f), [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f), [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f), [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f), [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f), [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f), [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f), [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f), [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f), [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f)]:
+  - wrangler@4.0.0
+  - miniflare@4.20250310.0
+
 ## 0.7.8
 
 ### Patch Changes

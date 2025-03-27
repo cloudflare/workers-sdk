@@ -30,6 +30,10 @@ export default {
 				return testRequireUnenvAliasedPackages();
 			case "/test-immediate":
 				return await testImmediate();
+			case "/test-tls":
+				return await testTls();
+			case "/test-crypto":
+				return await testCrypto();
 		}
 
 		return new Response(
@@ -39,6 +43,8 @@ export default {
 <a href="test-x509-certificate">Test X509Certificate</a>
 <a href="test-require-alias">Test require unenv aliased packages</a>
 <a href="test-immediate">Test setImmediate</a>
+<a href="test-tls">node:tls</a>
+<a href="test-crypto">node:crypto</a>
 `,
 			{ headers: { "Content-Type": "text/html; charset=utf-8" } }
 		);
@@ -194,4 +200,44 @@ async function testPostgresLibrary(env: Env, ctx: Context) {
 	// Clean up the client
 	ctx.waitUntil(client.end());
 	return resp;
+}
+
+async function testTls() {
+	const tls = await import("node:tls");
+
+	assert.strictEqual(typeof tls.connect, "function");
+	assert.strictEqual(typeof tls.TLSSocket, "function");
+	assert.strictEqual(typeof tls.checkServerIdentity, "function");
+	assert.strictEqual(
+		tls.checkServerIdentity("a.com", { subject: { CN: "a.com" } }),
+		undefined
+	);
+	assert.strictEqual(typeof tls.SecureContext, "function");
+	assert.strictEqual(typeof tls.createSecureContext, "function");
+	assert.strictEqual(
+		tls.createSecureContext({}) instanceof tls.SecureContext,
+		true
+	);
+
+	return new Response("OK");
+}
+
+async function testCrypto() {
+	const crypto = await import("node:crypto");
+
+	const test = { name: "aes-128-cbc", size: 16, iv: 16 };
+
+	const key = crypto.createSecretKey(Buffer.alloc(test.size));
+	const iv = Buffer.alloc(test.iv);
+
+	const cipher = crypto.createCipheriv(test.name, key, iv);
+	const decipher = crypto.createDecipheriv(test.name, key, iv);
+
+	let data = "";
+	data += decipher.update(cipher.update("Hello World", "utf8"));
+	data += decipher.update(cipher.final());
+	data += decipher.final();
+	assert.strictEqual(data, "Hello World");
+
+	return new Response("OK");
 }

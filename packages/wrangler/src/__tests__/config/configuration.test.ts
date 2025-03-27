@@ -78,7 +78,7 @@ describe("normalizeAndValidateConfig()", () => {
 				upstream_protocol: "http",
 				host: undefined,
 			},
-			containers: { app: [] },
+			containers: undefined,
 			cloudchamber: {},
 			durable_objects: {
 				bindings: [],
@@ -2400,7 +2400,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						ASSETS_RPC: false,
 					},
 					() =>
 						normalizeAndValidateConfig(
@@ -2556,7 +2555,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						ASSETS_RPC: false,
 					},
 					() =>
 						normalizeAndValidateConfig(
@@ -2886,7 +2884,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						ASSETS_RPC: false,
 					},
 					() =>
 						normalizeAndValidateConfig(

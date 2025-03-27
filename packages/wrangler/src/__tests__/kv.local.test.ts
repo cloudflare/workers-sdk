@@ -353,6 +353,61 @@ describe("wrangler", () => {
 		`);
 		});
 
+		it("should get local bulk kv storage", async () => {
+			const keyValues = [
+				{
+					key: "hello",
+					value: "world",
+				},
+				{
+					key: "test",
+					value: "value",
+				},
+			];
+			writeFileSync("./keys.json", JSON.stringify(keyValues));
+			await runWrangler(
+				`kv bulk put keys.json --namespace-id bulk-namespace-id`
+			);
+			await runWrangler(`kv key list --namespace-id bulk-namespace-id`);
+			expect(std.out).toMatchInlineSnapshot(`
+			"Success!
+			[
+			  {
+			    \\"name\\": \\"hello\\"
+			  },
+			  {
+			    \\"name\\": \\"test\\"
+			  }
+			]"
+		`);
+			const keys = ["hello", "test"];
+			writeFileSync("./keys.json", JSON.stringify(keys));
+			await runWrangler(
+				`kv bulk get keys.json --namespace-id bulk-namespace-id`
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+				"Success!
+				[
+				  {
+				    \\"name\\": \\"hello\\"
+				  },
+				  {
+				    \\"name\\": \\"test\\"
+				  }
+				]
+				{
+				  \\"hello\\": {
+				    \\"value\\": \\"world\\"
+				  },
+				  \\"test\\": {
+				    \\"value\\": \\"value\\"
+				  }
+				}
+
+				Success!"
+			`);
+		});
+
 		it("should follow persist-to for local kv storage", async () => {
 			await runWrangler(
 				`kv key put val value --namespace-id some-namespace-id`

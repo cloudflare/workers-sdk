@@ -65,6 +65,17 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 			status: handle.status.bind(handle),
 		};
 	}
+	public async createBatch(
+		batch: WorkflowInstanceCreateOptions<unknown>[]
+	): Promise<WorkflowInstance[]> {
+		if (batch.length === 0) {
+			throw new Error(
+				"WorkflowError: batchCreate should have at least 1 instance"
+			);
+		}
+
+		return await Promise.all(batch.map((val) => this.create(val)));
+	}
 }
 
 export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
