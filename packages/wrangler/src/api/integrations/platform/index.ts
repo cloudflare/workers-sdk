@@ -1,6 +1,7 @@
 import { kCurrentWorker, Miniflare } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
-import { formatConfigSnippet, readConfig } from "../../../config";
+import { readConfig } from "../../../config";
+import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
 import { getBoundRegisteredWorkers } from "../../../dev-registry";
@@ -132,6 +133,7 @@ export async function getPlatformProxy<
 	};
 }
 
+// this is only used by getPlatformProxy
 async function getMiniflareOptionsFromConfig(
 	rawConfig: Config,
 	env: string | undefined,
@@ -139,17 +141,22 @@ async function getMiniflareOptionsFromConfig(
 ): Promise<Partial<MiniflareOptions>> {
 	const bindings = getBindings(rawConfig, env, true, {});
 
-	if (bindings.durable_objects) {
-		logger.warn(dedent`
-			You have defined an internal Durable Object (ie the binding does not have a script_name field).
-			You will not be able to develop it locally, but it should work in production.
+	if (rawConfig["durable_objects"]) {
+		const { localBindings } = partitionDurableObjectBindings(rawConfig);
+		if (localBindings.length > 0) {
+			logger.warn(dedent`
+				You have defined bindings to the following internal Durable Objects:
+				${localBindings.map((b) => `- ${JSON.stringify(b)}`).join("\n")}
+				These will not work in local development, but they should work in production.
 
-			Alternatively, you can define your DO "externally" in another worker.
-			To do this, create another Worker + Wrangler config file. Export your DO from there.
-			Then, set the script_name field in your original DO binding to equal the name field from your new external DO config.
-			You will be able to develop this locally by running:
-			npx wrangler dev -c path/to/original/wrangler.toml -c path/to/external-do/wrangler.toml
-			`);
+				If you want to develop these locally, you can define your DO "externally" in another worker.
+				To do this, create another Worker and Wrangler config file. Export your DO from there.
+				Then, set the \`script_name\` field in your original DO binding to equal the \`name\` field from your new external DO config.
+
+				You will be able to develop this locally by running:
+				npx wrangler dev -c path/to/original/wrangler.json -c path/to/external-do/wrangler.json
+				`);
+		}
 	}
 	const workerDefinitions = await getBoundRegisteredWorkers({
 		name: rawConfig.name,
