@@ -79,7 +79,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 	return [
 		{
-			name: "vite-plugin-cloudflare",
+			name: "vite-cloudflare",
 			// This only applies to this plugin so is safe to use while other plugins migrate to the Environment API
 			sharedDuringBuild: true,
 			config(userConfig, env) {
