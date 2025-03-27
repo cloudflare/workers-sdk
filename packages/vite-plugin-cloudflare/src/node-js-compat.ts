@@ -1,9 +1,12 @@
 import assert from "node:assert";
+import { builtinModules } from "node:module";
+import path from "node:path";
 import { cloudflare } from "@cloudflare/unenv-preset";
 import MagicString from "magic-string";
 import { getNodeCompat } from "miniflare";
 import { resolvePathSync } from "mlly";
 import { defineEnv } from "unenv";
+import * as vite from "vite";
 import type { WorkerConfig } from "./plugin-config";
 
 const { env } = defineEnv({
@@ -15,11 +18,20 @@ export const nodeCompatExternals = new Set(env.external);
 export const nodeCompatEntries = getNodeCompatEntries();
 
 /**
+ * All the Node.js modules including their `node:...` aliases.
+ */
+export const nodejsBuiltins = new Set([
+	...builtinModules,
+	...builtinModules.map((m) => `node:${m}`),
+]);
+export const NODEJS_MODULES_RE = new RegExp(
+	`^(node:)?(${builtinModules.join("|")})$`
+);
+
+/**
  * Returns true if the given combination of compat dates and flags means that we need Node.js compatibility.
  */
-export function isNodeCompat(
-	workerConfig: WorkerConfig | undefined
-): workerConfig is WorkerConfig {
+export function isNodeCompat(workerConfig: WorkerConfig | undefined) {
 	if (workerConfig === undefined) {
 		return false;
 	}
@@ -129,4 +141,44 @@ function getNodeCompatEntries() {
 	nodeCompatExternals.forEach((external) => entries.delete(external));
 
 	return entries;
+}
+
+export class NodeJsCompatWarnings {
+	private sources = new Map<string, Set<string>>();
+	private timer: NodeJS.Timeout | undefined;
+
+	constructor(private readonly environment: vite.Environment) {}
+
+	registerImport(source: string, importer = "<unknown>") {
+		const importers = this.sources.get(source) ?? new Set();
+		this.sources.set(source, importers);
+		importers.add(importer);
+	}
+
+	renderWarningsOnIdle() {
+		if (this.timer) {
+			clearTimeout(this.timer);
+		}
+		this.timer = setTimeout(() => {
+			this.renderWarnings();
+			this.timer = undefined;
+		}, 500);
+	}
+
+	renderWarnings() {
+		if (this.sources.size > 0) {
+			let message =
+				`\n\nUnexpected Node.js imports for environment "${this.environment.name}". Do you need to enable the "nodejs_compat" compatibility flag?\n` +
+				"Refer to https://developers.cloudflare.com/workers/runtime-apis/nodejs/ for more details.\n";
+			this.sources.forEach((importers, source) => {
+				importers.forEach((importer) => {
+					message += ` - "${source}" imported from "${path.relative(this.environment.config.root, importer)}"\n`;
+				});
+			});
+			this.environment.logger.warn(message, {
+				environment: this.environment.name,
+			});
+			this.sources.clear();
+		}
+	}
 }

@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
-import { builtinModules } from "node:module";
 import * as path from "node:path";
 import { createMiddleware } from "@hattip/adapter-node";
 import MagicString from "magic-string";
@@ -31,6 +30,9 @@ import {
 	injectGlobalCode,
 	isNodeCompat,
 	nodeCompatExternals,
+	NODEJS_MODULES_RE,
+	nodejsBuiltins,
+	NodeJsCompatWarnings,
 	resolveNodeJSImport,
 } from "./node-js-compat";
 import { resolvePluginConfig } from "./plugin-config";
@@ -43,13 +45,19 @@ import {
 } from "./utils";
 import { handleWebSocket } from "./websockets";
 import { getWarningForWorkersConfigs } from "./workers-configs";
-import type { PluginConfig, ResolvedPluginConfig } from "./plugin-config";
+import type {
+	PluginConfig,
+	ResolvedPluginConfig,
+	WorkerConfig,
+} from "./plugin-config";
 import type { Unstable_RawConfig } from "wrangler";
+
+export type { PluginConfig } from "./plugin-config";
 
 // this flag is used to show the workers configs warning only once
 let workersConfigsWarningShown = false;
 
-export type { PluginConfig } from "./plugin-config";
+let miniflare: Miniflare | undefined;
 
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
@@ -61,9 +69,10 @@ export type { PluginConfig } from "./plugin-config";
 export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	let resolvedPluginConfig: ResolvedPluginConfig;
 	let resolvedViteConfig: vite.ResolvedConfig;
-	let miniflare: Miniflare | undefined;
 
 	const additionalModulePaths = new Set<string>();
+
+	const nodeJsCompatWarningsMap = new Map<WorkerConfig, NodeJsCompatWarnings>();
 
 	// This is set when the client environment is built to determine if the entry Worker should include assets
 	let hasClientBuild = false;
@@ -284,22 +293,19 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					writeDeployConfig(resolvedPluginConfig, resolvedViteConfig);
 				}
 			},
-			handleHotUpdate(options) {
+			hotUpdate(options) {
 				if (
-					resolvedPluginConfig.configPaths.has(options.file) ||
+					// Vite normalizes `options.file` so we use `path.resolve` for Windows compatibility
+					resolvedPluginConfig.configPaths.has(path.resolve(options.file)) ||
 					hasAssetsConfigChanged(
 						resolvedPluginConfig,
 						resolvedViteConfig,
 						options.file
 					)
 				) {
+					// It's OK for this to be called multiple times as Vite prevents concurrent execution
 					options.server.restart();
-				}
-			},
-			async buildEnd() {
-				if (miniflare) {
-					await miniflare.dispose();
-					miniflare = undefined;
+					return [];
 				}
 			},
 			async configureServer(viteDevServer) {
@@ -308,15 +314,23 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					"Unexpected error: No Vite HTTP server"
 				);
 
-				miniflare = new Miniflare(
-					getDevMiniflareOptions(resolvedPluginConfig, viteDevServer)
-				);
+				if (miniflare) {
+					await miniflare.setOptions(
+						getDevMiniflareOptions(resolvedPluginConfig, viteDevServer)
+					);
+				} else {
+					miniflare = new Miniflare(
+						getDevMiniflareOptions(resolvedPluginConfig, viteDevServer)
+					);
+				}
 
 				await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
-				const routerWorker = await getRouterWorker(miniflare);
 
 				const middleware = createMiddleware(
-					({ request }) => {
+					async ({ request }) => {
+						assert(miniflare, `Miniflare not defined`);
+						const routerWorker = await getRouterWorker(miniflare);
+
 						return routerWorker.fetch(toMiniflareRequest(request), {
 							redirect: "manual",
 						}) as any;
@@ -324,7 +338,12 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					{ alwaysCallNext: false }
 				);
 
-				handleWebSocket(viteDevServer.httpServer, routerWorker.fetch);
+				handleWebSocket(viteDevServer.httpServer, async () => {
+					assert(miniflare, `Miniflare not defined`);
+					const routerWorker = await getRouterWorker(miniflare);
+
+					return routerWorker.fetch;
+				});
 
 				return () => {
 					viteDevServer.middlewares.use((req, res, next) => {
@@ -353,7 +372,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					{ alwaysCallNext: false }
 				);
 
-				handleWebSocket(vitePreviewServer.httpServer, miniflare.dispatchFetch);
+				handleWebSocket(
+					vitePreviewServer.httpServer,
+					() => miniflare.dispatchFetch
+				);
 
 				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
 				vitePreviewServer.middlewares.use((req, res, next) => {
@@ -421,6 +443,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			hotUpdate(options) {
 				if (additionalModulePaths.has(options.file)) {
 					options.server.restart();
+					return [];
 				}
 			},
 			async renderChunk(code, chunk) {
@@ -507,10 +530,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							// Obviously we don't want/need the optimizer to try to process modules that are built-in;
 							// But also we want to avoid following the ones that are polyfilled since the dependency-optimizer import analyzer does not
 							// resolve these imports using our `resolveId()` hook causing the optimization step to fail.
-							exclude: [
-								...builtinModules,
-								...builtinModules.map((m) => `node:${m}`),
-							],
+							exclude: [...nodejsBuiltins],
 						},
 					};
 				}
@@ -604,7 +624,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 
 				const workerNames = workerConfigs.map((worker) => {
-					assert(worker.name);
+					assert(worker.name, "Expected the Worker to have a name");
 					return worker.name;
 				});
 
@@ -622,6 +642,115 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					}
 					next();
 				});
+			},
+		},
+		// Plugin to warn if Node.js APIs are being used without nodejs_compat turned on
+		{
+			name: "vite-plugin-cloudflare:nodejs-compat-warnings",
+			apply(_config, env) {
+				// Skip this whole plugin if we are in preview mode
+				return !env.isPreview;
+			},
+			configEnvironment(environmentName) {
+				const workerConfig = getWorkerConfig(environmentName);
+				if (workerConfig && !isNodeCompat(workerConfig)) {
+					return {
+						optimizeDeps: {
+							esbuildOptions: {
+								plugins: [
+									{
+										name: "vite-plugin-cloudflare:nodejs-compat-warnings-resolver",
+										setup(build) {
+											build.onResolve(
+												{ filter: NODEJS_MODULES_RE },
+												({ path, importer }) => {
+													// We have to delay getting this `nodeJsCompatWarnings` from the `nodeJsCompatWarningsMap` until we are in this function.
+													// It has not been added to the map until the `configureServer()` hook is called, which is after the `configEnvironment()` hook.
+													const nodeJsCompatWarnings =
+														nodeJsCompatWarningsMap.get(workerConfig);
+													assert(
+														nodeJsCompatWarnings,
+														`expected nodeJsCompatWarnings to be defined for Worker "${workerConfig.name}"`
+													);
+													nodeJsCompatWarnings.registerImport(path, importer);
+													// Mark this path as external to avoid messy unwanted resolve errors.
+													// It will fail at runtime but we will log warnings to the user.
+													return { path, external: true };
+												}
+											);
+											build.onEnd(() => {
+												const nodeJsCompatWarnings =
+													nodeJsCompatWarningsMap.get(workerConfig);
+												if (nodeJsCompatWarnings) {
+													nodeJsCompatWarnings.renderWarnings();
+												}
+											});
+										},
+									},
+								],
+							},
+						},
+					};
+				}
+			},
+			configureServer(viteDevServer) {
+				// Create a nodeJsCompatWarnings object for each Worker environment that has Node.js compat turned off.
+				for (const environment of Object.values(viteDevServer.environments)) {
+					const workerConfig = getWorkerConfig(environment.name);
+					if (workerConfig && !isNodeCompat(workerConfig)) {
+						nodeJsCompatWarningsMap.set(
+							workerConfig,
+							new NodeJsCompatWarnings(environment)
+						);
+					}
+				}
+			},
+			buildStart() {
+				const workerConfig = getWorkerConfig(this.environment.name);
+				if (workerConfig && !isNodeCompat(workerConfig)) {
+					nodeJsCompatWarningsMap.set(
+						workerConfig,
+						new NodeJsCompatWarnings(this.environment)
+					);
+				}
+			},
+			buildEnd() {
+				const workerConfig = getWorkerConfig(this.environment.name);
+				if (workerConfig && !isNodeCompat(workerConfig)) {
+					const nodeJsCompatWarnings =
+						nodeJsCompatWarningsMap.get(workerConfig);
+					assert(
+						nodeJsCompatWarnings,
+						`expected nodeJsCompatWarnings to be defined for Worker "${workerConfig.name}"`
+					);
+					nodeJsCompatWarnings.renderWarnings();
+				}
+			},
+			// We must ensure that the `resolveId` hook runs before the built-in ones otherwise we
+			// never see the Node.js built-in imports since they get handled by default Vite behavior.
+			enforce: "pre",
+			async resolveId(source, importer) {
+				const workerConfig = getWorkerConfig(this.environment.name);
+				if (workerConfig && !isNodeCompat(workerConfig)) {
+					const nodeJsCompatWarnings =
+						nodeJsCompatWarningsMap.get(workerConfig);
+					assert(
+						nodeJsCompatWarnings,
+						`expected nodeJsCompatWarnings to be defined for Worker "${workerConfig.name}"`
+					);
+					if (nodejsBuiltins.has(source)) {
+						nodeJsCompatWarnings.registerImport(source, importer);
+						// We don't have a natural place to trigger the rendering of the warnings
+						// So we trigger a rendering to happen soon after this round of processing.
+						nodeJsCompatWarnings.renderWarningsOnIdle();
+						// Mark this path as external to avoid messy unwanted resolve errors.
+						// It will fail at runtime but we will log warnings to the user.
+						return {
+							id: source,
+							external: true,
+						};
+					}
+				}
 			},
 		},
 	];

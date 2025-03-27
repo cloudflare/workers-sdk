@@ -1,5 +1,13 @@
 # @cloudflare/unenv-preset
 
+## 2.3.1
+
+### Patch Changes
+
+- [#8638](https://github.com/cloudflare/workers-sdk/pull/8638) [`29cb306`](https://github.com/cloudflare/workers-sdk/commit/29cb3069c9bae79941247dc2fd71021f1c75887d) Thanks [@vicb](https://github.com/vicb)! - Use native APIs in `node:tls`
+
+  Uses `checkServerIdentity`, `createSecureContext`, and `SecureContext` from workerd rather than the unenv polyfill.
+
 ## 2.3.0
 
 ### Minor Changes
