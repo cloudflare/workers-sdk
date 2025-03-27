@@ -363,7 +363,7 @@ export function getWorkerConfig(
  */
 export function getValidatedWranglerConfigPath(
 	root: string,
-	requestedConfigPath?: string,
+	requestedConfigPath: string | undefined,
 	isForAuxiliaryWorker = false
 ) {
 	if (requestedConfigPath) {
@@ -394,7 +394,7 @@ export function getValidatedWranglerConfigPath(
 		}
 		if (mainStat.isDirectory()) {
 			throw new Error(
-				`${errorMessagePrefix} points to a directory, it needs to point to a file instead`
+				`${errorMessagePrefix} points to a directory. It should point to a file.`
 			);
 		}
 
@@ -411,7 +411,7 @@ export function getValidatedWranglerConfigPath(
 
 	if (!configPath) {
 		throw new Error(
-			`No config file found in the ${root} directory, please add an appropriate wrangler.(jsonc|json|toml) file to the directory`
+			`No config file found in the ${root} directory. Please add a wrangler.(jsonc|json|toml) file.`
 		);
 	}
 
