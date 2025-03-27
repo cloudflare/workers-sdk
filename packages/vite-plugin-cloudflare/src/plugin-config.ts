@@ -92,15 +92,19 @@ export function resolvePluginConfig(
 		/* prefixes */ ""
 	);
 
-	const configPath = getValidatedWranglerConfigPath(
+	const entryWorkerConfigPath = getValidatedWranglerConfigPath(
 		root,
 		pluginConfig.configPath
 	);
 
-	const entryWorkerResolvedConfig = getWorkerConfig(configPath, cloudflareEnv, {
-		visitedConfigPaths: configPaths,
-		isEntryWorker: true,
-	});
+	const entryWorkerResolvedConfig = getWorkerConfig(
+		entryWorkerConfigPath,
+		cloudflareEnv,
+		{
+			visitedConfigPaths: configPaths,
+			isEntryWorker: true,
+		}
+	);
 
 	if (entryWorkerResolvedConfig.type === "assets-only") {
 		return {
