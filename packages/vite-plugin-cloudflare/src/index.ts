@@ -92,7 +92,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					return { appType: "custom" };
 				}
 
-				resolvedPluginConfig = await resolvePluginConfig(
+				resolvedPluginConfig = resolvePluginConfig(
 					pluginConfig,
 					userConfig,
 					env
@@ -318,17 +318,29 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					"Unexpected error: No Vite HTTP server"
 				);
 
+				const inspectorPort =
+					pluginConfig.inspectorPort ??
+					(await getFirstAvailablePort(DEFAULT_INSPECTOR_PORT));
+
 				if (miniflare) {
 					await miniflare.setOptions(
-						getDevMiniflareOptions(resolvedPluginConfig, viteDevServer)
+						getDevMiniflareOptions(
+							resolvedPluginConfig,
+							viteDevServer,
+							inspectorPort
+						)
 					);
 				} else {
 					miniflare = new Miniflare(
-						getDevMiniflareOptions(resolvedPluginConfig, viteDevServer)
+						getDevMiniflareOptions(
+							resolvedPluginConfig,
+							viteDevServer,
+							inspectorPort
+						)
 					);
 				}
 
-				if (resolvedPluginConfig.inspectorPort !== false) {
+				if (inspectorPort !== false) {
 					const miniflareInspectorUrl = await miniflare.getInspectorURL();
 					resolvedInspectorPort = Number.parseInt(miniflareInspectorUrl.port);
 				}
@@ -607,7 +619,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			configureServer(viteDevServer) {
 				if (
 					resolvedPluginConfig.type === "workers" &&
-					resolvedPluginConfig.inspectorPort !== false
+					pluginConfig.inspectorPort !== false
 				) {
 					addDebugToVitePrintUrls(viteDevServer);
 				}
