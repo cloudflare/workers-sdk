@@ -1,5 +1,18 @@
 # @cloudflare/vite-plugin
 
+## 0.1.18
+
+### Patch Changes
+
+- [#8702](https://github.com/cloudflare/workers-sdk/pull/8702) [`fcd71f8`](https://github.com/cloudflare/workers-sdk/commit/fcd71f8589d20c07d60ad519d53f3dc3f6f031ff) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - ensure that we don't crash when logging Node.js warnings when running in react-router builds
+
+- [#8207](https://github.com/cloudflare/workers-sdk/pull/8207) [`910007b`](https://github.com/cloudflare/workers-sdk/commit/910007bce580997051ac6ae438197f51eaa93b66) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Show warning if the user has forgotten to turn on nodejs_compat
+
+- Updated dependencies [[`cad99dc`](https://github.com/cloudflare/workers-sdk/commit/cad99dc78d76e35f846e85ac328effff8ba9477d), [`f29f018`](https://github.com/cloudflare/workers-sdk/commit/f29f01813683ab3e42c53738be3d49a0f8cba512)]:
+  - miniflare@4.20250321.1
+  - wrangler@4.5.1
+  - @cloudflare/unenv-preset@2.3.1
+
 ## 0.1.17
 
 ### Patch Changes
