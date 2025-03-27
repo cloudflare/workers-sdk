@@ -191,7 +191,8 @@ function getEntryWorkerConfig(
 
 export function getDevMiniflareOptions(
 	resolvedPluginConfig: ResolvedPluginConfig,
-	viteDevServer: vite.ViteDevServer
+	viteDevServer: vite.ViteDevServer,
+	inspectorPort: number | false
 ): MiniflareOptions {
 	const resolvedViteConfig = viteDevServer.config;
 	const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
@@ -297,8 +298,7 @@ export function getDevMiniflareOptions(
 							worker: {
 								...workerOptions,
 								name: workerOptions.name ?? workerConfig.name,
-								unsafeInspectorProxy:
-									resolvedPluginConfig.inspectorPort !== false,
+								unsafeInspectorProxy: inspectorPort !== false,
 								modulesRoot: miniflareModulesRoot,
 								unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
 								serviceBindings: {
@@ -369,11 +369,8 @@ export function getDevMiniflareOptions(
 
 	return {
 		log: logger,
-		inspectorPort:
-			resolvedPluginConfig.inspectorPort === false
-				? undefined
-				: resolvedPluginConfig.inspectorPort,
-		unsafeInspectorProxy: resolvedPluginConfig.inspectorPort !== false,
+		inspectorPort: inspectorPort === false ? undefined : inspectorPort,
+		unsafeInspectorProxy: inspectorPort !== false,
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));
