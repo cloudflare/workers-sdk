@@ -10,7 +10,7 @@ import { disableR2Catalog, enableR2Catalog, getR2Catalog } from "./helpers";
 export const r2BucketCatalogNamespace = createNamespace({
 	metadata: {
 		description:
-			"Manage the data catalog for your R2 buckets - provides an Iceberg REST inferface so engines can query R2 data as tables",
+			"Manage the data catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark, DuckDB, and Trino",
 		status: "open-beta",
 		owner: "Product: R2 Data Catalog",
 	},
@@ -48,7 +48,7 @@ export const r2BucketCatalogEnableCommand = createCommand({
 
 			Catalog URI: '${catalogHost}'
 
-			Use the Catalog URI in Iceberg-compatible query engines (Spark, DuckDB, Trino, etc.) to read or manage data as tables.
+			Use this Catalog URI with Iceberg-compatible query engines (Spark, DuckDB, Trino, etc.) to query data as tables.
 			Note: You'll need a Cloudflare API token with 'R2 Data Catalog' permission to authenticate your client with this catalog.
 			For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/`
 		);
