@@ -102,10 +102,7 @@ async function processKeyValue(
 			"At least one of the requested keys corresponds to a non-JSON value"
 		);
 	}
-	if (val === null) {
-		return null;
-	}
-	if (withMetadata) {
+	if (val && withMetadata) {
 		return {
 			value: val,
 			metadata: obj?.metadata ?? null,
