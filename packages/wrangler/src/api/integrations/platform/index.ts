@@ -1,6 +1,6 @@
 import { kCurrentWorker, Miniflare } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
-import { readConfig } from "../../../config";
+import { formatConfigSnippet, readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
@@ -109,7 +109,8 @@ export async function getPlatformProxy<
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: false,
 		},
-		() => getMiniflareOptionsFromConfig(rawConfig, env, options)
+		() =>
+			getMiniflareOptionsFromConfig(rawConfig, env, options, options.configPath)
 	);
 
 	const mf = new Miniflare({
@@ -136,7 +137,8 @@ export async function getPlatformProxy<
 async function getMiniflareOptionsFromConfig(
 	rawConfig: Config,
 	env: string | undefined,
-	options: GetPlatformProxyOptions
+	options: GetPlatformProxyOptions,
+	configPath: string | undefined
 ): Promise<Partial<MiniflareOptions>> {
 	const bindings = getBindings(rawConfig, env, true, {});
 
@@ -149,8 +151,36 @@ async function getMiniflareOptionsFromConfig(
 				These will not work in local development, but they should work in production.
 
 				If you want to develop these locally, you can define your DO "externally" in another Worker.
-				To do this, create another Worker and Wrangler config file. Export your DO from there.
-				Then, set the \`script_name\` field in your original DO binding to equal the \`name\` field from your new external DO config.
+				To do this, create another Worker, e.g.
+
+				export class MyDurableObject extends DurableObject {
+					// DO code goes here
+				}
+				export default {
+					fetch() {
+						// doesn't have to do anything, but DO cannot be the default export
+					}
+				}
+
+				Also create a new Wrangler config file for this Worker, e.g.
+
+				${formatConfigSnippet({ name: "external-do-worker", main: "src/index.ts", compatibility_date: "XXXX-XX-XX" }, configPath)}
+
+				Then, update your original DO bindings to include the script_name field, e.g.
+				${formatConfigSnippet(
+					{
+						durable_objects: {
+							bindings: [
+								{
+									name: "BINDING",
+									class_name: "MyDurableObject",
+									script_name: "external-do-worker",
+								},
+							],
+						},
+					},
+					configPath
+				)}
 
 				You will be able to develop this locally by running:
 				npx wrangler dev -c path/to/original/wrangler.jsonc -c path/to/external-do/wrangler.jsonc
