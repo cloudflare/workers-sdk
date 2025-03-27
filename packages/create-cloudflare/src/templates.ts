@@ -472,17 +472,25 @@ export const createContext = async (
 				label: "platform",
 				question: "Select your deployment platform",
 				options: [
-					{
-						label: "Workers with Assets (BETA)",
-						value: "workers",
-						description:
-							"Take advantage of the full Developer Platform, including R2, Queues, Durable Objects and more.",
-					},
-					{
-						label: "Pages",
-						value: "pages",
-						description: "Great for simple websites and applications.",
-					},
+					...(frameworkConfig.platformVariants.workers.hidden
+						? []
+						: [
+								{
+									label: "Workers with Assets",
+									value: "workers",
+									description:
+										"Take advantage of the full Developer Platform, including R2, Queues, Durable Objects and more.",
+								},
+							]),
+					...(frameworkConfig.platformVariants.pages.hidden
+						? []
+						: [
+								{
+									label: "Pages",
+									value: "pages",
+									description: "Great for simple websites and applications.",
+								},
+							]),
 					backOption,
 				],
 				defaultValue: "workers",
