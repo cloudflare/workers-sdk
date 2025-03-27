@@ -2,7 +2,6 @@ import path from "node:path";
 import dedent from "ts-dedent";
 import { configFileName, formatConfigSnippet } from "../config";
 import { UserError } from "../errors";
-import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";
 import guessWorkerFormat from "./guess-worker-format";
 import {
@@ -161,7 +160,7 @@ export async function getEntry(
  * Groups the durable object bindings into two lists:
  * those that are defined locally and those that refer to a durable object defined in another script.
  */
-function partitionDurableObjectBindings(config: Config): {
+export function partitionDurableObjectBindings(config: Config): {
 	localBindings: DurableObjectBindings;
 	remoteBindings: DurableObjectBindings;
 } {
