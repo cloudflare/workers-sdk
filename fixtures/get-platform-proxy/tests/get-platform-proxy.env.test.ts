@@ -226,42 +226,9 @@ describe("getPlatformProxy - env", () => {
 
 				  				- {"class_name":"MyDurableObject","name":"MY_DURABLE_OBJECT"}
 				  				These will not work in local development, but they should work in production.
-				  
+
 				  				If you want to develop these locally, you can define your DO "externally" in another Worker.
-				  				To do this, create another Worker, e.g.
-				  
-				  				export class MyDurableObject extends DurableObject {
-				  					// DO code goes here
-				  				}
-				  				export default {
-				  					fetch() {
-				  						// doesn't have to do anything, but DO cannot be the default export
-				  					}
-				  				}
-				  
-				  				Also create a new Wrangler config file for this Worker, e.g.
-				  
-				  				{
-				    "name": "external-do-worker",
-				    "main": "src/index.ts",
-				    "compatibility_date": "XXXX-XX-XX"
-				  }
-				  
-				  				Then, update your original DO bindings to include the script_name field, e.g.
-				  				{
-				    "durable_objects": {
-				      "bindings": [
-				        {
-				          "name": "BINDING",
-				          "class_name": "MyDurableObject",
-				          "script_name": "external-do-worker"
-				        }
-				      ]
-				    }
-				  }
-				  
-				  				You will be able to develop this locally by running:
-				  				npx wrangler dev -c path/to/original/wrangler.jsonc -c path/to/external-do/wrangler.jsonc
+				  				Refer to [4mhttps://developers.cloudflare.com/durable-objects/platform/known-issues/#local-development-with-web-frameworks[0m for guidance on how to do this.
 
 				",
 				    ],
@@ -275,6 +242,7 @@ describe("getPlatformProxy - env", () => {
 				}
 			`);
 		});
+
 		it("doesn't warn about external DOs and doesn't crash", async () => {
 			await getPlatformProxy<Env>({
 				configPath: path.join(__dirname, "..", "wrangler_external_do.jsonc"),

@@ -1,6 +1,6 @@
 import { kCurrentWorker, Miniflare } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
-import { formatConfigSnippet, readConfig } from "../../../config";
+import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
@@ -110,8 +110,7 @@ export async function getPlatformProxy<
 			RESOURCES_PROVISION: false,
 			ASSETS_RPC: false,
 		},
-		() =>
-			getMiniflareOptionsFromConfig(rawConfig, env, options, options.configPath)
+		() => getMiniflareOptionsFromConfig(rawConfig, env, options)
 	);
 
 	const mf = new Miniflare({
@@ -138,8 +137,7 @@ export async function getPlatformProxy<
 async function getMiniflareOptionsFromConfig(
 	rawConfig: Config,
 	env: string | undefined,
-	options: GetPlatformProxyOptions,
-	configPath: string | undefined
+	options: GetPlatformProxyOptions
 ): Promise<Partial<MiniflareOptions>> {
 	const bindings = getBindings(rawConfig, env, true, {});
 
@@ -152,39 +150,7 @@ async function getMiniflareOptionsFromConfig(
 				These will not work in local development, but they should work in production.
 
 				If you want to develop these locally, you can define your DO "externally" in another Worker.
-				To do this, create another Worker, e.g.
-
-				export class MyDurableObject extends DurableObject {
-					// DO code goes here
-				}
-				export default {
-					fetch() {
-						// doesn't have to do anything, but DO cannot be the default export
-					}
-				}
-
-				Also create a new Wrangler config file for this Worker, e.g.
-
-				${formatConfigSnippet({ name: "external-do-worker", main: "src/index.ts", compatibility_date: "XXXX-XX-XX" }, configPath)}
-
-				Then, update your original DO bindings to include the script_name field, e.g.
-				${formatConfigSnippet(
-					{
-						durable_objects: {
-							bindings: [
-								{
-									name: "BINDING",
-									class_name: "MyDurableObject",
-									script_name: "external-do-worker",
-								},
-							],
-						},
-					},
-					configPath
-				)}
-
-				You will be able to develop this locally by running:
-				npx wrangler dev -c path/to/original/wrangler.jsonc -c path/to/external-do/wrangler.jsonc
+				Refer to https://developers.cloudflare.com/durable-objects/platform/known-issues/#local-development-with-web-frameworks for guidance on how to do this.
 				`);
 		}
 	}
