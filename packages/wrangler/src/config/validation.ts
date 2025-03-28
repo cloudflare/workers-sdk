@@ -1,5 +1,7 @@
 import assert from "node:assert";
+import { existsSync } from "node:fs";
 import path from "node:path";
+import { User } from "@cloudflare/types";
 import { dedent } from "ts-dedent";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
@@ -105,6 +107,19 @@ export function normalizeAndValidateConfig(
 		rawConfig.send_metrics,
 		"boolean"
 	);
+
+	validateOptionalProperty(
+		diagnostics,
+		"",
+		"types_auto_update",
+		rawConfig.types_auto_update,
+		"string"
+	);
+	if (rawConfig.types_auto_update && !existsSync(rawConfig.types_auto_update)) {
+		throw new UserError(
+			`The file specified in "types_auto_update" does not exist: ${rawConfig.types_auto_update}`
+		);
+	}
 
 	validateOptionalProperty(
 		diagnostics,
@@ -238,6 +253,7 @@ export function normalizeAndValidateConfig(
 		),
 		legacy_env: isLegacyEnv,
 		send_metrics: rawConfig.send_metrics,
+		types_auto_update: rawConfig.types_auto_update,
 		keep_vars: rawConfig.keep_vars,
 		...activeEnv,
 		dev: normalizeAndValidateDev(diagnostics, rawConfig.dev ?? {}, args),
