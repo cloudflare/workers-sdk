@@ -215,9 +215,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 			},
 		);
 
-		// changed this to skip regardless as the template seems to have updated their dependencies
-		// which is causing package resolution issues in our CI
-		test({ experimental }).skip(
+		test({ experimental }).skipIf(process.platform === "win32")(
 			"Cloning remote template that uses wrangler.json",
 			async ({ logStream, project }) => {
 				const { output } = await runC3(
