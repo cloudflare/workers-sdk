@@ -1,4 +1,6 @@
-export default {
+import type { TemplateConfig } from "../../src/templates";
+
+const config: TemplateConfig = {
 	configVersion: 1,
 	id: "common",
 	displayName: "Example router & proxy Worker",
@@ -17,3 +19,5 @@ export default {
 		},
 	},
 };
+
+export default config;
