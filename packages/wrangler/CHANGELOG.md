@@ -1,5 +1,15 @@
 # wrangler
 
+## 4.6.0
+
+### Minor Changes
+
+- [#8548](https://github.com/cloudflare/workers-sdk/pull/8548) [`24c2c8f`](https://github.com/cloudflare/workers-sdk/commit/24c2c8f6053861e665cb0b4eb4af88d148e8480d) Thanks [@garvit-gupta](https://github.com/garvit-gupta)! - feat: Add wrangler commands for R2 Data Catalog
+
+### Patch Changes
+
+- [#8583](https://github.com/cloudflare/workers-sdk/pull/8583) [`ecbab5d`](https://github.com/cloudflare/workers-sdk/commit/ecbab5d256bf01d700797bba2ebb04b24b21b629) Thanks [@knickish](https://github.com/knickish)! - Improve formatting of cache options for hyperdrive list command
+
 ## 4.5.1
 
 ### Patch Changes
