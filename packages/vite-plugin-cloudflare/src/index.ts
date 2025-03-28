@@ -44,6 +44,7 @@ import {
 	toMiniflareRequest,
 } from "./utils";
 import { handleWebSocket } from "./websockets";
+import { validateWorkerEnvironmentsResolvedConfigs } from "./worker-environments-validation";
 import { getWarningForWorkersConfigs } from "./workers-configs";
 import type {
 	PluginConfig,
@@ -178,6 +179,13 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			},
 			configResolved(config) {
 				resolvedViteConfig = config;
+
+				if (resolvedPluginConfig.type === "workers") {
+					validateWorkerEnvironmentsResolvedConfigs(
+						resolvedPluginConfig,
+						resolvedViteConfig
+					);
+				}
 			},
 			generateBundle(_, bundle) {
 				let config: Unstable_RawConfig | undefined;
