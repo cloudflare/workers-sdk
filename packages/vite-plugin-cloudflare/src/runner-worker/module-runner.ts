@@ -5,6 +5,7 @@ import {
 import { additionalModuleRE, UNKNOWN_HOST } from "../shared";
 import { stripInternalEnv } from "./env";
 import type { WrapperEnv } from "./env";
+import type { EvaluatedModuleNode, ResolvedResult } from "vite/module-runner";
 
 let moduleRunner: ModuleRunner;
 
@@ -52,15 +53,6 @@ export async function createModuleRunner(
 		},
 		{
 			async runInlinedModule(context, transformed, module) {
-				if (
-					module.file.includes("/node_modules") &&
-					!module.file.includes("/node_modules/.vite")
-				) {
-					throw new Error(
-						`[Error] Trying to import non-prebundled module (only prebundled modules are allowed): ${module.id}` +
-							"\n\n(have you excluded the module via `optimizeDeps.exclude`?)"
-					);
-				}
 				const codeDefinition = `'use strict';async (${Object.keys(context).join(
 					","
 				)})=>{{`;
@@ -86,17 +78,6 @@ export async function createModuleRunner(
 							originalCloudflareWorkersModule.env as WrapperEnv
 						),
 					});
-				}
-
-				if (
-					!additionalModuleRE.test(filepath) &&
-					filepath.includes("/node_modules") &&
-					!filepath.includes("/node_modules/.vite")
-				) {
-					throw new Error(
-						`[Error] Trying to import non-prebundled module (only prebundled modules are allowed): ${filepath}` +
-							"\n\n(have you externalized the module via `resolve.external`?)"
-					);
 				}
 
 				filepath = filepath.replace(/^file:\/\//, "");
