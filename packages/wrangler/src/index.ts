@@ -719,7 +719,6 @@ export function createCLIParser(argv: string[]) {
 			definition: queuesConsumerRemoveCommand,
 		},
 	]);
-
 	registry.registerNamespace("queues");
 
 	registry.define([
