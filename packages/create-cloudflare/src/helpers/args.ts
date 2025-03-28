@@ -243,7 +243,8 @@ export const cliDefinition: ArgumentsDefinition = {
 			description: `The mechanism to use when fetching the template.
 				
         Can be either "git" or "tar". "tar" does not support fetching from private 
-				repositories. Defaults to "tar".
+				repositories. By default, degit will use "tar" if the template is hosted on GitHub, BitBucket, GitLab, or git.sr.ht. 
+				Otherwise, it will use "git".
         `,
 			values: [
 				{
