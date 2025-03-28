@@ -1,5 +1,15 @@
 # @cloudflare/vite-plugin
 
+## 0.1.19
+
+### Patch Changes
+
+- [#8706](https://github.com/cloudflare/workers-sdk/pull/8706) [`25eaf3b`](https://github.com/cloudflare/workers-sdk/commit/25eaf3b54a93c7e9fe941ae5f84322fcf7b1f4cd) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Set the `x-forwarded-host` header to the original host in requests. This fixes a bug where libraries such as Clerk would redirect to the workerd host rather than the Vite host.
+
+- Updated dependencies [[`ecbab5d`](https://github.com/cloudflare/workers-sdk/commit/ecbab5d256bf01d700797bba2ebb04b24b21b629), [`24c2c8f`](https://github.com/cloudflare/workers-sdk/commit/24c2c8f6053861e665cb0b4eb4af88d148e8480d)]:
+  - wrangler@4.6.0
+  - @cloudflare/unenv-preset@2.3.1
+
 ## 0.1.18
 
 ### Patch Changes

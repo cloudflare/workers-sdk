@@ -1,5 +1,16 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.8.8
+
+### Patch Changes
+
+- [#8624](https://github.com/cloudflare/workers-sdk/pull/8624) [`665ebd8`](https://github.com/cloudflare/workers-sdk/commit/665ebd857bd3859c403023774d2feee6b457d73a) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: Add usage charge warning when Vectorize and AI bindings are used in Vitest
+
+  Vectorize and AI bindings can now be used with Vitest. However, because they have no local simulators, they will access your account and incur usage charges, even in testing. Therefore we recommend mocking any usage of these bindings when testing.
+
+- Updated dependencies [[`ecbab5d`](https://github.com/cloudflare/workers-sdk/commit/ecbab5d256bf01d700797bba2ebb04b24b21b629), [`24c2c8f`](https://github.com/cloudflare/workers-sdk/commit/24c2c8f6053861e665cb0b4eb4af88d148e8480d)]:
+  - wrangler@4.6.0
+
 ## 0.8.7
 
 ### Patch Changes
