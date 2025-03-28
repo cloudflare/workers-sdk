@@ -12000,6 +12000,22 @@ export default{
 		});
 	});
 
+	describe("--metafile", () => {
+		it("should output a metafile when --metafile is set", async () => {
+
+			writeWranglerConfig();
+			writeWorkerSource();
+			await runWrangler("deploy index.js --metafile --dry-run --outdir=dist");
+
+			// Check if file exists
+			const metafilePath = path.join(process.cwd(), "dist", "bundle-meta.json");
+			expect(fs.existsSync(metafilePath)).toBe(true);
+			const metafile = JSON.parse(fs.readFileSync(metafilePath, "utf8"));
+			expect(metafile.inputs).toBeDefined();
+			expect(metafile.outputs).toBeDefined();
+		});
+	});
+
 	describe("--dispatch-namespace", () => {
 		it("should upload to dispatch namespace", async () => {
 			writeWranglerConfig();

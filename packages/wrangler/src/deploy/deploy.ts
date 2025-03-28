@@ -109,6 +109,7 @@ type Props = {
 	projectRoot: string | undefined;
 	dispatchNamespace: string | undefined;
 	experimentalAutoCreate: boolean;
+	metafile: boolean | undefined;
 };
 
 export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -590,6 +591,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					props.entry,
 					typeof destination === "string" ? destination : destination.path,
 					{
+						metafile: props.metafile,
 						bundle: true,
 						additionalModules: [],
 						moduleCollector,

@@ -138,6 +138,7 @@ export type BundleOptions = {
 	projectRoot: string | undefined;
 	defineNavigatorUserAgent: boolean;
 	external: string[] | undefined;
+	metafile?: boolean;
 };
 
 /**
@@ -176,6 +177,7 @@ export async function bundleWorker(
 		projectRoot,
 		defineNavigatorUserAgent,
 		external,
+		metafile,
 	}: BundleOptions
 ): Promise<BundleResult> {
 	// We create a temporary directory for any one-off files we
@@ -485,13 +487,14 @@ export async function bundleWorker(
 			};
 		} else {
 			result = await esbuild.build(buildOptions);
+
 			// Write the bundle metafile to disk.
-			if (result.metafile) {
+			if (metafile && result.metafile) {
 				let metaFilePath: string | undefined;
 				if (buildOptions.outdir) {
 					metaFilePath = path.join(buildOptions.outdir, "bundle-meta.json");
 				} else if (buildOptions.outfile) {
-					metaFilePath = buildOptions.outfile + ".bundle-meta.json";
+					metaFilePath = buildOptions.outfile + `.bundle-meta.json`;
 				}
 				if (metaFilePath) {
 					const metaJson = JSON.stringify(result.metafile, null, 2);

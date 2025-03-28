@@ -59,6 +59,7 @@ export function runBuild(
 		onStart,
 		defineNavigatorUserAgent,
 		checkFetch,
+		metafile,
 	}: {
 		entry: Entry;
 		destination: string | undefined;
@@ -86,6 +87,7 @@ export function runBuild(
 		onStart: () => void;
 		defineNavigatorUserAgent: boolean;
 		checkFetch: boolean;
+		metafile?: boolean;
 	},
 	setBundle: (
 		cb: (previous: EsbuildBundle | undefined) => EsbuildBundle
@@ -180,6 +182,8 @@ export function runBuild(
 						// sourcemap defaults to true in dev
 						sourcemap: undefined,
 						checkFetch,
+
+						metafile,
 					})
 				: undefined;
 
