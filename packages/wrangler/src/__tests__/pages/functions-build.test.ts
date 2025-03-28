@@ -161,15 +161,28 @@ describe("pages functions build", () => {
 
 		expect(readdirSync("dist").sort()).toMatchInlineSnapshot(`
 		Array [
-		  "bundle-meta.json",
 		  "e8f0f80fe25d71a0fc2b9a08c877020211192308-name.wasm",
 		  "f7ff9e8b7bb2e09b70935a5d785e0cc5d9d0abf0-greeting.wasm",
 		  "index.js",
 		]
 	`);
+	});
 
-		// `bundle-meta.json` contains ESBuild build metadata
-		// see https://esbuild.github.io/api/#build-metadata
+	it("should output a metafile when --metafile is set", async () => {
+		// Setup a basic pages function
+		mkdirSync("functions");
+		writeFileSync(
+			"functions/hello.js",
+			`export function onRequest() { return new Response("Hello from Pages Functions"); }`
+		);
+
+		// Run the build command
+		await runWrangler(`pages functions build --outdir=dist --metafile`);
+
+		// Check if file exists
+		expect(existsSync("dist/bundle-meta.json")).toBe(true);
+
+		// Structure checks for the metafile
 		const meta = JSON.parse(
 			readFileSync("dist/bundle-meta.json", { encoding: "utf8" })
 		);

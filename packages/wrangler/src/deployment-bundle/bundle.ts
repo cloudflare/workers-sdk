@@ -135,6 +135,7 @@ export type BundleOptions = {
 	projectRoot: string | undefined;
 	defineNavigatorUserAgent: boolean;
 	external: string[] | undefined;
+	metafile: string | boolean | undefined;
 };
 
 /**
@@ -170,6 +171,7 @@ export async function bundleWorker(
 		projectRoot,
 		defineNavigatorUserAgent,
 		external,
+		metafile,
 	}: BundleOptions
 ): Promise<BundleResult> {
 	// We create a temporary directory for any one-off files we
@@ -369,18 +371,16 @@ export async function bundleWorker(
 		entryPoints: [entry.file],
 		bundle,
 		absWorkingDir: entry.projectRoot,
+		outdir: destination,
 		keepNames: true,
+		entryNames: entryName || path.parse(entryFile).name,
 		...(isOutfile
 			? {
 					outdir: undefined,
 					outfile: destination,
 					entryNames: undefined,
 				}
-			: {
-					outdir: destination,
-					outfile: undefined,
-					entryNames: entryName || path.parse(entryFile).name,
-				}),
+			: {}),
 		inject,
 		external: bundle
 			? ["__STATIC_CONTENT_MANIFEST", ...(external ? external : [])]
@@ -455,19 +455,23 @@ export async function bundleWorker(
 			};
 		} else {
 			result = await esbuild.build(buildOptions);
+
 			// Write the bundle metafile to disk.
-			if (result.metafile) {
-				let metaFilePath: string | undefined;
-				if (buildOptions.outdir) {
-					metaFilePath = path.join(buildOptions.outdir, "bundle-meta.json");
-				} else if (buildOptions.outfile) {
-					metaFilePath = buildOptions.outfile + ".bundle-meta.json";
+			if (metafile && result.metafile) {
+				let metaFilePath: string;
+
+				if (metafile && typeof metafile === "string") {
+					metaFilePath = path.resolve(metafile as string);
+				} else if (isOutfile) {
+					metaFilePath = `${destination}.bundle-meta.json`;
+				} else {
+					metaFilePath = path.join(destination, "bundle-meta.json");
 				}
-				if (metaFilePath) {
-					const metaJson = JSON.stringify(result.metafile, null, 2);
-					fs.writeFileSync(metaFilePath, metaJson);
-				}
+
+				const metaJson = JSON.stringify(result.metafile, null, 2);
+				fs.writeFileSync(metaFilePath, metaJson);
 			}
+
 			// Even when we're not watching, we still want some way of cleaning up the
 			// temporary directory when we don't need it anymore
 			stop = async function () {

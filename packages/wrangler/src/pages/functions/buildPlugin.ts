@@ -120,5 +120,6 @@ export function buildPluginFromFunctions({
 		tsconfig: undefined,
 		testScheduled: undefined,
 		isOutfile: undefined,
+		metafile: undefined,
 	});
 }
