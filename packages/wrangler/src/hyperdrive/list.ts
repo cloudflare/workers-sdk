@@ -1,6 +1,7 @@
 import { readConfig } from "../config";
 import { logger } from "../logger";
 import { listConfigs } from "./client";
+import { formatCachingOptions } from "./shared";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -25,7 +26,7 @@ export async function handler(
 			host: database.origin.host ?? "",
 			port: database.origin.port?.toString() ?? "",
 			database: database.origin.database ?? "",
-			caching: JSON.stringify(database.caching),
+			caching: formatCachingOptions(database.caching),
 		}))
 	);
 }
