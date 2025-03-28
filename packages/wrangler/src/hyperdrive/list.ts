@@ -1,7 +1,7 @@
 import { readConfig } from "../config";
 import { logger } from "../logger";
 import { listConfigs } from "./client";
-import { capitalizeScheme } from "./shared";
+import { capitalizeScheme, formatCachingOptions } from "./shared";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -27,7 +27,7 @@ export async function handler(
 			port: database.origin.port?.toString() ?? "",
 			scheme: capitalizeScheme(database.origin.scheme),
 			database: database.origin.database ?? "",
-			caching: JSON.stringify(database.caching),
+			caching: formatCachingOptions(database.caching),
 			mtls: JSON.stringify(database.mtls),
 		}))
 	);
