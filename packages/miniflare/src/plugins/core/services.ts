@@ -84,12 +84,17 @@ export const ServiceFetchSchema = z.custom<
 	(request: Request, mf: Miniflare) => Awaitable<Response>
 >((v) => typeof v === "function");
 
+export const PropsSchema = z.object({
+	json: z.string(),
+});
+
 export const ServiceDesignatorSchema = z.union([
 	z.string(),
 	z.literal(kCurrentWorker),
 	z.object({
 		name: z.union([z.string(), z.literal(kCurrentWorker)]),
 		entrypoint: z.ostring(),
+		props: PropsSchema.optional(),
 	}),
 	z.object({ network: NetworkSchema }),
 	z.object({ external: ExternalServerSchema }),
