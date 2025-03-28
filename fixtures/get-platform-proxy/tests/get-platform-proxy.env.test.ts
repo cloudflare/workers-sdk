@@ -227,7 +227,7 @@ describe("getPlatformProxy - env", () => {
 				  				- {"class_name":"MyDurableObject","name":"MY_DURABLE_OBJECT"}
 				  				These will not work in local development, but they should work in production.
 				  
-				  				If you want to develop these locally, you can define your DO "externally" in another Worker.
+				  				If you want to develop these locally, you can define your DO in a separate Worker, specified by a separate configuration file.
 				  				Refer to [4mhttps://developers.cloudflare.com/durable-objects/platform/known-issues/#local-development-with-web-frameworks[0m for guidance on how to do this.
 
 				",
