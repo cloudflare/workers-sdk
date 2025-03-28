@@ -6,6 +6,14 @@ import {
 } from "../cloudchamber/build";
 import { handleFailure } from "../cloudchamber/common";
 import { imagesCommand } from "../cloudchamber/images/list";
+import {
+	deleteCommand,
+	deleteYargs,
+	infoCommand,
+	infoYargs,
+	listCommand,
+	listYargs,
+} from "./containers";
 import type { CommonYargsArgvJSON, CommonYargsOptions } from "../yargs-types";
 import type { CommandModule } from "yargs";
 
@@ -30,5 +38,23 @@ export const containers = (
 			"images",
 			"perform operations on images in your Cloudflare managed registry",
 			(args) => imagesCommand(args).command(subHelp)
+		)
+		.command(
+			"info [ID]",
+			"get information about a specific container",
+			(args) => infoYargs(args),
+			(args) => handleFailure(infoCommand)(args)
+		)
+		.command(
+			"list",
+			"list containers",
+			(args) => listYargs(args),
+			(args) => handleFailure(listCommand)(args)
+		)
+		.command(
+			"delete [ID]",
+			"delete a container",
+			(args) => deleteYargs(args),
+			(args) => handleFailure(deleteCommand)(args)
 		);
 };
