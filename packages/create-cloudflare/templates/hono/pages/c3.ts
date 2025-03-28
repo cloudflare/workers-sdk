@@ -29,6 +29,7 @@ const config: TemplateConfig = {
 	},
 	path: "templates/hono/pages",
 	platform: "pages",
+	hidden: true,
 	generate,
 	transformPackageJson: async () => ({
 		scripts: {
