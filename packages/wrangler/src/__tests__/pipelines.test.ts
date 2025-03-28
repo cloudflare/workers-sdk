@@ -296,17 +296,17 @@ describe("pipelines", () => {
 				      --batch-max-rows     Maximum number of rows per batch before flushing  [number]
 				      --batch-max-seconds  Maximum age of batch in seconds before flushing  [number]
 
-				Transformations
-				      --transform-worker  Pipeline transform Worker and entrypoint (<worker>.<entrypoint>)  [string]
-
 				Destination settings
 				      --r2-bucket             Destination R2 bucket name  [string] [required]
 				      --r2-access-key-id      R2 service Access Key ID for authentication. Leave empty for OAuth confirmation.  [string]
 				      --r2-secret-access-key  R2 service Secret Access Key for authentication. Leave empty for OAuth confirmation.  [string]
 				      --r2-prefix             Prefix for storing files in the destination bucket  [string] [default: \\"\\"]
 				      --compression           Compression format for output files  [string] [choices: \\"none\\", \\"gzip\\", \\"deflate\\"] [default: \\"gzip\\"]
-				      --file-template         Template for individual file names (must include \${slug})  [string]
+				      --file-template         Template for individual file names (must include \${slug}). For example: \\"\${slug}.log.gz\\"  [string]
 				      --partition-template    Path template for partitioned files in the bucket. If not specified, the default will be used  [string]
+
+				Pipeline settings
+				      --shard-count  Number of pipeline shards. More shards handle higher request volume; fewer shards produce larger output files  [number]
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
