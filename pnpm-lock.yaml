@@ -1848,6 +1848,9 @@ importers:
       '@hattip/adapter-node':
         specifier: ^0.0.49
         version: 0.0.49
+      get-port:
+        specifier: ^7.1.0
+        version: 7.1.0
       miniflare:
         specifier: workspace:*
         version: link:../miniflare

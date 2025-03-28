@@ -16,7 +16,6 @@ import { getAssetsConfig } from "./asset-config";
 import {
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
-	DEFAULT_INSPECTOR_PORT,
 	ROUTER_WORKER_NAME,
 } from "./constants";
 import { additionalModuleRE } from "./shared";
@@ -192,7 +191,8 @@ function getEntryWorkerConfig(
 
 export function getDevMiniflareOptions(
 	resolvedPluginConfig: ResolvedPluginConfig,
-	viteDevServer: vite.ViteDevServer
+	viteDevServer: vite.ViteDevServer,
+	inspectorPort: number | false
 ): MiniflareOptions {
 	const resolvedViteConfig = viteDevServer.config;
 	const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
@@ -298,8 +298,7 @@ export function getDevMiniflareOptions(
 							worker: {
 								...workerOptions,
 								name: workerOptions.name ?? workerConfig.name,
-								unsafeInspectorProxy:
-									resolvedPluginConfig.inspectorPort !== false,
+								unsafeInspectorProxy: inspectorPort !== false,
 								modulesRoot: miniflareModulesRoot,
 								unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
 								serviceBindings: {
@@ -370,8 +369,8 @@ export function getDevMiniflareOptions(
 
 	return {
 		log: logger,
-		inspectorPort: resolvedPluginConfig.inspectorPort || undefined,
-		unsafeInspectorProxy: resolvedPluginConfig.inspectorPort !== false,
+		inspectorPort: inspectorPort === false ? undefined : inspectorPort,
+		unsafeInspectorProxy: inspectorPort !== false,
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));
@@ -530,7 +529,7 @@ export function getPreviewMiniflareOptions(
 	vitePreviewServer: vite.PreviewServer,
 	workerConfigs: Unstable_Config[],
 	persistState: PersistState,
-	inspectorPort: number | false = DEFAULT_INSPECTOR_PORT
+	inspectorPort: number | false
 ): MiniflareOptions {
 	const resolvedViteConfig = vitePreviewServer.config;
 	const workers: Array<WorkerOptions> = workerConfigs.flatMap((config) => {
@@ -558,7 +557,7 @@ export function getPreviewMiniflareOptions(
 
 	return {
 		log: logger,
-		inspectorPort: inspectorPort || undefined,
+		inspectorPort: inspectorPort === false ? undefined : inspectorPort,
 		unsafeInspectorProxy: inspectorPort !== false,
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();

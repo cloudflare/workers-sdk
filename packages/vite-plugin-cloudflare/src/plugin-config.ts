@@ -2,6 +2,7 @@ import assert from "node:assert";
 import * as path from "node:path";
 import * as vite from "vite";
 import { DEFAULT_INSPECTOR_PORT } from "./constants";
+import { getFirstAvailablePort } from "./utils";
 import { findWranglerConfig, getWorkerConfig } from "./workers-configs";
 import type {
 	AssetsOnlyWorkerResolvedConfig,
@@ -50,7 +51,6 @@ interface BasePluginConfig {
 	configPaths: Set<string>;
 	persistState: PersistState;
 	cloudflareEnv: string | undefined;
-	inspectorPort: number | false;
 	experimental: {
 		/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
 		headersAndRedirectsDevModeSupport?: boolean;
@@ -89,7 +89,6 @@ export function resolvePluginConfig(
 ): ResolvedPluginConfig {
 	const configPaths = new Set<string>();
 	const persistState = pluginConfig.persistState ?? true;
-	const inspectorPort = pluginConfig.inspectorPort ?? DEFAULT_INSPECTOR_PORT;
 	const experimental = pluginConfig.experimental ?? {};
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
 	const { CLOUDFLARE_ENV: cloudflareEnv } = vite.loadEnv(
@@ -118,7 +117,6 @@ export function resolvePluginConfig(
 			type: "assets-only",
 			config: entryWorkerResolvedConfig.config,
 			configPaths,
-			inspectorPort,
 			persistState,
 			rawConfigs: {
 				entryWorker: entryWorkerResolvedConfig,
@@ -175,7 +173,6 @@ export function resolvePluginConfig(
 		type: "workers",
 		configPaths,
 		persistState,
-		inspectorPort,
 		workers,
 		entryWorkerEnvironmentName,
 		rawConfigs: {

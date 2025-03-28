@@ -1,4 +1,5 @@
 import * as path from "node:path";
+import getPort, { portNumbers } from "get-port";
 import { Request as MiniflareRequest } from "miniflare";
 import * as vite from "vite";
 import { ROUTER_WORKER_NAME } from "./constants";
@@ -66,3 +67,7 @@ export function cleanUrl(url: string): string {
 export type Optional<T, K extends keyof T> = Omit<T, K> & Pick<Partial<T>, K>;
 
 export type MaybePromise<T> = Promise<T> | T;
+
+export function getFirstAvailablePort(start: number) {
+	return getPort({ port: portNumbers(start, 65535) });
+}
