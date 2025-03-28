@@ -454,13 +454,9 @@ function buildProjectWorkerOptions(
 		workflowClassNames.length !== 0 &&
 		project.options.isolatedStorage === true
 	) {
-		const message = [
-			`Project ${project.relativePath} has Workflows defined and \`isolatedStorage\` set to true.`,
-			"Please set `isolatedStorage` to false in order to run projects with Workflows.",
-			`Workflows defined in project: ${workflowClassNames.join(", ")}`,
-		].join("\n");
-
-		throw new Error(message);
+		throw new Error(`Project ${project.relativePath} has Workflows defined and \`isolatedStorage\` set to true.
+Please set \`isolatedStorage\` to false in order to run projects with Workflows.
+Workflows defined in project: ${workflowClassNames.join(", ")}`);
 	}
 
 	const wrappers = [
