@@ -12,8 +12,8 @@ import {
 	buildSitesOptions,
 } from "../../../dev/miniflare";
 import { run } from "../../../experimental-flags";
-import { getLegacyAssetPaths, getSiteAssetPaths } from "../../../sites";
 import { logger } from "../../../logger";
+import { getLegacyAssetPaths, getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
