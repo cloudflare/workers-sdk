@@ -15,14 +15,14 @@ test.runIf(!isBuild)(
 			await vi.waitFor(
 				async () => {
 					const revertedResponse = await getTextResponse();
-					expect(revertedResponse).toBe('The value of MY_VAR is "one"');
+					expect(revertedResponse).toMatch(/The value of MY_VAR is "one"/);
 				},
 				{ timeout: 5000 }
 			);
 		});
 
 		const originalResponse = await getTextResponse();
-		expect(originalResponse).toBe('The value of MY_VAR is "one"');
+		expect(originalResponse).toMatch(/The value of MY_VAR is "one"/);
 
 		const updatedWorkerConfig = JSON.stringify({
 			...JSON.parse(originalWorkerConfig),
@@ -34,7 +34,7 @@ test.runIf(!isBuild)(
 		await vi.waitFor(
 			async () => {
 				const updatedResponse = await getTextResponse();
-				expect(updatedResponse).toBe('The value of MY_VAR is "two"');
+				expect(updatedResponse).toMatch(/The value of MY_VAR is "two"/);
 			},
 			{ timeout: 5000 }
 		);
@@ -53,14 +53,14 @@ test.runIf(!isBuild)(
 			await vi.waitFor(
 				async () => {
 					const revertedResponse = await getTextResponse();
-					expect(revertedResponse).toBe('The value of MY_VAR is "one"');
+					expect(revertedResponse).toMatch(/The value of MY_VAR is "one"/);
 				},
 				{ timeout: 5000 }
 			);
 		});
 
 		const originalResponse = await getTextResponse();
-		expect(originalResponse).toBe('The value of MY_VAR is "one"');
+		expect(originalResponse).toMatch(/The value of MY_VAR is "one"/);
 
 		const updatedWorkerConfig = JSON.stringify({
 			...JSON.parse(originalWorkerConfig),
@@ -76,7 +76,44 @@ test.runIf(!isBuild)(
 				expect(serverLogs.errors.join()).toMatch(
 					/.*The provided Wrangler config main field .+? doesn't point to an existing file.*/
 				);
-				expect(newResponse).toBe('The value of MY_VAR is "one"');
+				expect(newResponse).toMatch(/The value of MY_VAR is "one"/);
+			},
+			{ timeout: 5000 }
+		);
+	}
+);
+
+test.runIf(!isBuild)(
+	"successfully updates when a var is updated in a .dev.vars file",
+	async ({ onTestFinished }) => {
+		const dotDevDotVarsFilePath = path.join(__dirname, "../.dev.vars");
+		const originalDotDevDotVars = fs.readFileSync(
+			dotDevDotVarsFilePath,
+			"utf-8"
+		);
+
+		onTestFinished(async () => {
+			fs.writeFileSync(dotDevDotVarsFilePath, originalDotDevDotVars);
+			// We need to ensure that the original config is restored before the next test runs
+			await vi.waitFor(
+				async () => {
+					const revertedResponse = await getTextResponse();
+					expect(revertedResponse).toMatch(
+						/the value of MY_SECRET is "secret A"/
+					);
+				},
+				{ timeout: 5000 }
+			);
+		});
+
+		const originalResponse = await getTextResponse();
+		expect(originalResponse).toMatch(/the value of MY_SECRET is "secret A"/);
+
+		fs.writeFileSync(dotDevDotVarsFilePath, 'MY_SECRET = "secret B"\n');
+		await vi.waitFor(
+			async () => {
+				const updatedResponse = await getTextResponse();
+				expect(updatedResponse).toMatch(/the value of MY_SECRET is "secret B"/);
 			},
 			{ timeout: 5000 }
 		);
