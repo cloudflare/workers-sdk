@@ -22,6 +22,11 @@ export function getRouterWorker(miniflare: Miniflare) {
 }
 
 export function toMiniflareRequest(request: Request): MiniflareRequest {
+	// We set the X-Forwarded-Host header to the original host as the `Host` header inside a Worker will contain the workerd host
+	const host = request.headers.get("Host");
+	if (host) {
+		request.headers.set("X-Forwarded-Host", host);
+	}
 	// Undici sets the `Sec-Fetch-Mode` header to `cors` so we capture it in a custom header to be converted back later.
 	const secFetchMode = request.headers.get("Sec-Fetch-Mode");
 	if (secFetchMode) {
