@@ -1,0 +1,23 @@
+{
+	"name": "internal-do",
+	"main": "src/index.ts",
+	// Internal durable object = the binding does not specify a script name.
+	// This implies the DO is exported alongside this worker in `index.ts`,
+	// which it isn't actually. However we don't care about this here because
+	// getPlatformProxy will discard all user code anyway. We are simply making
+	// sure the warning shows up.
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "MyDurableObject",
+				"name": "MY_DURABLE_OBJECT",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"new_sqlite_classes": ["MyDurableObject"],
+			"tag": "v1",
+		},
+	],
+}
