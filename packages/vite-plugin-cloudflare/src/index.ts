@@ -716,39 +716,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					};
 				}
 			},
-			configureServer(viteDevServer) {
-				// Create a nodeJsCompatWarnings object for each Worker environment that has Node.js compat turned off.
-				for (const environment of Object.values(viteDevServer.environments)) {
-					const workerConfig = getWorkerConfig(environment.name);
-					if (workerConfig && !isNodeCompat(workerConfig)) {
-						nodeJsCompatWarningsMap.set(
-							workerConfig,
-							new NodeJsCompatWarnings(environment)
-						);
-					}
-				}
-			},
-			buildStart() {
-				const workerConfig = getWorkerConfig(this.environment.name);
-				if (workerConfig && !isNodeCompat(workerConfig)) {
-					nodeJsCompatWarningsMap.set(
-						workerConfig,
-						new NodeJsCompatWarnings(this.environment)
-					);
-				}
-			},
-			buildEnd() {
-				const workerConfig = getWorkerConfig(this.environment.name);
-				if (workerConfig && !isNodeCompat(workerConfig)) {
-					const nodeJsCompatWarnings =
-						nodeJsCompatWarningsMap.get(workerConfig);
-					assert(
-						nodeJsCompatWarnings,
-						`expected nodeJsCompatWarnings to be defined for Worker "${workerConfig.name}"`
-					);
-					nodeJsCompatWarnings.renderWarnings();
-				}
-			},
 			// We must ensure that the `resolveId` hook runs before the built-in ones otherwise we
 			// never see the Node.js built-in imports since they get handled by default Vite behavior.
 			enforce: "pre",
@@ -756,12 +723,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				const workerConfig = getWorkerConfig(this.environment.name);
 				if (workerConfig && !isNodeCompat(workerConfig)) {
 					const nodeJsCompatWarnings =
-						nodeJsCompatWarningsMap.get(workerConfig);
-					// TODO: re-assert this when we work out how to make it function with React Router builds.
-					// 								assert(
-					// 	nodeJsCompatWarnings,
-					// 	`expected nodeJsCompatWarnings to be defined for Worker "${workerConfig.name}"`
-					// );
+						nodeJsCompatWarningsMap.get(workerConfig) ??
+						new NodeJsCompatWarnings(this.environment);
+					nodeJsCompatWarningsMap.set(workerConfig, nodeJsCompatWarnings);
 					if (nodejsBuiltins.has(source)) {
 						nodeJsCompatWarnings?.registerImport(source, importer);
 						// We don't have a natural place to trigger the rendering of the warnings
