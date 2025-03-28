@@ -269,7 +269,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 				);
 
 				expect(project.path).toExist();
-				expect(output).toContain(`category Hello World Starter`);
+				expect(output).toContain(`category Hello World example`);
 				expect(output).toContain(`type Worker only`);
 				expect(output).toContain(`lang Python`);
 			},
