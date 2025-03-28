@@ -29,6 +29,7 @@ jobs:
         env:
           FILES: ${{ steps.files.outputs.all }}
           PR_NUMBER: ${{ github.event.number }}
+          PR_TITLE: ${{ toJson(github.event.pull_request.title) }}
           GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
       # - name: "Comment on PR with error details"
