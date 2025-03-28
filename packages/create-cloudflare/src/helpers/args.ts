@@ -237,6 +237,28 @@ export const cliDefinition: ArgumentsDefinition = {
         `,
 		},
 		{
+			name: "template-mode",
+			type: "string",
+			requiresArg: true,
+			description: `The mechanism to use when fetching the template.
+				
+        Can be either "git" or "tar". "tar" does not support fetching from private 
+				repositories. Defaults to "tar".
+        `,
+			values: [
+				{
+					name: "git",
+					description:
+						"Use git to fetch the template. Supports private repositories.",
+				},
+				{
+					name: "tar",
+					description:
+						"Use tar to fetch the template. Only supported on public repositories hosted on GitHub, BitBucket, GitLab, or git.sr.ht.",
+				},
+			],
+		},
+		{
 			name: "accept-defaults",
 			alias: "y",
 			type: "boolean",
