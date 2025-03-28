@@ -279,6 +279,32 @@ describe("downloadRemoteTemplate", () => {
 
 		expect(spinner).not.toBeCalled();
 	});
+
+	test("should call degit with a mode of undefined if not specified", async () => {
+		const mock = mockDegit();
+
+		await downloadRemoteTemplate("cloudflare/workers-sdk");
+
+		expect(mock).toBeCalledWith("cloudflare/workers-sdk", {
+			cache: false,
+			verbose: false,
+			force: true,
+			mode: undefined,
+		});
+	});
+
+	test("should call degit with a mode of 'git' if specified", async () => {
+		const mock = mockDegit();
+
+		await downloadRemoteTemplate("cloudflare/workers-sdk", "git");
+
+		expect(mock).toBeCalledWith("cloudflare/workers-sdk", {
+			cache: false,
+			verbose: false,
+			force: true,
+			mode: "git",
+		});
+	});
 });
 
 describe("deriveCorrelatedArgs", () => {
