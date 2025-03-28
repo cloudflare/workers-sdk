@@ -1,5 +1,16 @@
 # wrangler
 
+## 3.114.4
+
+### Patch Changes
+
+- [#8703](https://github.com/cloudflare/workers-sdk/pull/8703) [`ef89e6b`](https://github.com/cloudflare/workers-sdk/commit/ef89e6b118196abbf7b1c6d82e6112411e1b3bce) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Improve formatting of cache options for hyperdrive list command
+
+- [#8683](https://github.com/cloudflare/workers-sdk/pull/8683) [`90d93c9`](https://github.com/cloudflare/workers-sdk/commit/90d93c9ec055f74cae83200d58c0c924fffdf0b1) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Remove `NodeJSCompatModule`. This was never fully supported, and never worked for deploying Workers from Wrangler.
+
+- Updated dependencies [[`90d93c9`](https://github.com/cloudflare/workers-sdk/commit/90d93c9ec055f74cae83200d58c0c924fffdf0b1)]:
+  - miniflare@3.20250310.2
+
 ## 3.114.3
 
 ### Patch Changes
