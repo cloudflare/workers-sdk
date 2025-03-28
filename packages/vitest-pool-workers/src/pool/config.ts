@@ -211,7 +211,7 @@ async function parseCustomPoolOptions(
 
 		const wrappedBindings = Object.values(workerOptions.wrappedBindings ?? {});
 
-		const hasAI = wrappedBindings.some((binding) => {
+		const hasAIOrVectorizeBindings = wrappedBindings.some((binding) => {
 			return (
 				typeof binding === "object" &&
 				(binding.scriptName.includes("__WRANGLER_EXTERNAL_VECTORIZE_WORKER") ||
