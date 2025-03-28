@@ -183,7 +183,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			configResolved(config) {
 				resolvedViteConfig = config;
 
-				if (resolvedPluginConfig.type === "workers") {
+				if (resolvedPluginConfig?.type === "workers") {
 					validateWorkerEnvironmentsResolvedConfigs(
 						resolvedPluginConfig,
 						resolvedViteConfig
