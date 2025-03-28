@@ -66,7 +66,7 @@ interface AssetsOnlyPluginConfig extends BasePluginConfig {
 	};
 }
 
-interface WorkerPluginConfig extends BasePluginConfig {
+export interface WorkerPluginConfig extends BasePluginConfig {
 	type: "workers";
 	workers: Record<string, WorkerConfig>;
 	entryWorkerEnvironmentName: string;
