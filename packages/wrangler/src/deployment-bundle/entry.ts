@@ -2,7 +2,6 @@ import path from "node:path";
 import dedent from "ts-dedent";
 import { configFileName, formatConfigSnippet } from "../config";
 import { UserError } from "../errors";
-import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";
 import guessWorkerFormat from "./guess-worker-format";
 import {
@@ -138,17 +137,7 @@ export async function getEntry(
 		config.tsconfig
 	);
 
-	const { localBindings, remoteBindings } =
-		partitionDurableObjectBindings(config);
-
-	if (command === "dev" && remoteBindings.length > 0) {
-		logger.warn(
-			"WARNING: You have Durable Object bindings that are not defined locally in the worker being developed.\n" +
-				"Be aware that changes to the data stored in these Durable Objects will be permanent and affect the live instances.\n" +
-				"Remote Durable Objects that are affected:\n" +
-				remoteBindings.map((b) => `- ${JSON.stringify(b)}`).join("\n")
-		);
-	}
+	const { localBindings } = partitionDurableObjectBindings(config);
 
 	if (format === "service-worker" && localBindings.length > 0) {
 		const errorMessage =
@@ -179,14 +168,17 @@ export async function getEntry(
  * Groups the durable object bindings into two lists:
  * those that are defined locally and those that refer to a durable object defined in another script.
  */
-function partitionDurableObjectBindings(config: Config): {
+export function partitionDurableObjectBindings(config: Config): {
 	localBindings: DurableObjectBindings;
 	remoteBindings: DurableObjectBindings;
 } {
 	const localBindings: DurableObjectBindings = [];
 	const remoteBindings: DurableObjectBindings = [];
 	for (const binding of config.durable_objects.bindings) {
-		if (binding.script_name === undefined) {
+		if (
+			binding.script_name === undefined ||
+			binding.script_name === config.name
+		) {
 			localBindings.push(binding);
 		} else {
 			remoteBindings.push(binding);

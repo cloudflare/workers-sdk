@@ -1288,15 +1288,6 @@ describe.sequential("wrangler dev", () => {
 				  [4mhttps://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/[0m for more
 				  details.
 
-
-				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWARNING: You have Durable Object bindings that are not defined locally in the worker being developed.[0m
-
-				  Be aware that changes to the data stored in these Durable Objects will be permanent and affect the
-				  live instances.
-				  Remote Durable Objects that are affected:
-				  - {\\"name\\":\\"NAME_2\\",\\"class_name\\":\\"CLASS_2\\",\\"script_name\\":\\"SCRIPT_A\\"}
-				  - {\\"name\\":\\"NAME_4\\",\\"class_name\\":\\"CLASS_4\\",\\"script_name\\":\\"SCRIPT_B\\"}
-
 				"
 			`);
 		});
