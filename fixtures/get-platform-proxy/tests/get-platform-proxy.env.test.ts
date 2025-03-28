@@ -228,7 +228,7 @@ describe("getPlatformProxy - env", () => {
 				  				These will not work in local development, but they should work in production.
 				  
 				  				If you want to develop these locally, you can define your DO in a separate Worker, specified by a separate configuration file.
-				  				Refer to [4mhttps://developers.cloudflare.com/durable-objects/platform/known-issues/#local-development-with-web-frameworks[0m for guidance on how to do this.
+				  				Refer to [4mhttps://developers.cloudflare.com/workers/wrangler/api#durable-objects[0m for guidance on how to do this.
 
 				",
 				    ],

@@ -150,7 +150,7 @@ async function getMiniflareOptionsFromConfig(
 				These will not work in local development, but they should work in production.
 
 				If you want to develop these locally, you can define your DO in a separate Worker, specified by a separate configuration file.
-				Refer to https://developers.cloudflare.com/durable-objects/platform/known-issues/#local-development-with-web-frameworks for guidance on how to do this.
+				Refer to https://developers.cloudflare.com/workers/wrangler/api#durable-objects for guidance on how to do this.
 				`);
 		}
 	}
