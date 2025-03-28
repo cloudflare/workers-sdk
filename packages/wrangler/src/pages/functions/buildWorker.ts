@@ -34,6 +34,7 @@ export type Options = {
 	defineNavigatorUserAgent: boolean;
 	checkFetch: boolean;
 	external?: string[];
+	metafile?: boolean;
 };
 
 export function buildWorkerFromFunctions({
@@ -52,6 +53,7 @@ export function buildWorkerFromFunctions({
 	defineNavigatorUserAgent,
 	checkFetch,
 	external,
+	metafile,
 }: Options) {
 	const entry: Entry = {
 		file: resolve(getBasePath(), "templates/pages-template-worker.ts"),
@@ -99,6 +101,7 @@ export function buildWorkerFromFunctions({
 		jsxFragment: undefined,
 		tsconfig: undefined,
 		testScheduled: undefined,
+		metafile,
 	});
 }
 

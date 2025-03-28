@@ -197,6 +197,11 @@ export function deployOptions(yargs: CommonYargsArgv) {
 				describe: "Don't actually deploy",
 				type: "boolean",
 			})
+			.option("metafile", {
+				describe: "Exports build metadata from ESBuild. When used as a flag, outputs to 'bundle-meta.json'",
+				type: "boolean",
+				default: false,
+			})
 			.option("keep-vars", {
 				describe:
 					"Stop wrangler from deleting vars that are not present in the Wrangler configuration file\nBy default Wrangler will remove all vars and replace them with those found in the Wrangler configuration.\nIf your development approach is to modify vars after deployment via the dashboard you may wish to set this flag.",
@@ -373,6 +378,7 @@ async function deployWorker(args: DeployArgs) {
 		isWorkersSite: Boolean(args.site || config.site),
 		outDir: args.outdir,
 		dryRun: args.dryRun,
+		metafile: args.metafile,
 		noBundle: !(args.bundle ?? !config.no_bundle),
 		keepVars: args.keepVars,
 		logpush: args.logpush,
