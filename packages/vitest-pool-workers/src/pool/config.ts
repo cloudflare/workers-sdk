@@ -219,7 +219,7 @@ async function parseCustomPoolOptions(
 			);
 		});
 
-		if (hasAI) {
+		if (hasAIOrVectorizeBindings) {
 			log.warn(
 				"Workers AI and Vectorize bindings will access your Cloudflare account and incur usage charges even in testing. We recommend mocking any usage of these bindings in your tests."
 			);
