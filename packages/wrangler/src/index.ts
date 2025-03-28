@@ -82,6 +82,12 @@ import {
 	r2BucketUpdateStorageClassCommand,
 } from "./r2/bucket";
 import {
+	r2BucketCatalogDisableCommand,
+	r2BucketCatalogEnableCommand,
+	r2BucketCatalogGetCommand,
+	r2BucketCatalogNamespace,
+} from "./r2/catalog";
+import {
 	r2BucketCORSDeleteCommand,
 	r2BucketCORSListCommand,
 	r2BucketCORSNamespace,
@@ -619,6 +625,22 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler r2 bucket sippy get",
 			definition: r2BucketSippyGetCommand,
+		},
+		{
+			command: "wrangler r2 bucket catalog",
+			definition: r2BucketCatalogNamespace,
+		},
+		{
+			command: "wrangler r2 bucket catalog enable",
+			definition: r2BucketCatalogEnableCommand,
+		},
+		{
+			command: "wrangler r2 bucket catalog disable",
+			definition: r2BucketCatalogDisableCommand,
+		},
+		{
+			command: "wrangler r2 bucket catalog get",
+			definition: r2BucketCatalogGetCommand,
 		},
 		{
 			command: "wrangler r2 bucket notification",
