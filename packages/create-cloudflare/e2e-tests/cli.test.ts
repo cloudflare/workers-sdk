@@ -376,7 +376,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 							matcher: /What would you like to start with\?/,
 							input: {
 								type: "select",
-								target: "Hello World Starter",
+								target: "Hello World example",
 								assertDefaultSelection: "Framework Starter",
 							},
 						},
