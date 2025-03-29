@@ -51,7 +51,7 @@
 		"undici": "catalog:default",
 		"workerd": "1.20250321.0",
 		"ws": "catalog:default",
-		"youch": "3.2.3",
+		"youch": "3.3.4",
 		"zod": "3.22.3"
 	},
 	"devDependencies": {
