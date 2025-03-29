@@ -29,6 +29,7 @@ import {
 import {
 	injectGlobalCode,
 	isNodeCompat,
+	nodeCompatEntries,
 	nodeCompatExternals,
 	NODEJS_MODULES_RE,
 	nodejsBuiltins,
@@ -516,15 +517,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							builtins: [...nodeCompatExternals],
 						},
 						optimizeDeps: {
-							// This is a list of dependency entry-points that should be pre-bundled.
-							// In this case we provide a list of all the possible polyfills so that they are pre-bundled,
-							// ready ahead the first request to the dev server.
-							// Without this the dependency optimizer will try to bundle them on-the-fly in the middle of the first request,
-							// which can potentially cause problems if it leads to previous pre-bundling to become stale and needing to be reloaded.
-
-							// TODO: work out how to re-enable pre-bundling of these
-							// include: [...getNodeCompatEntries()],
-
 							// This is a list of module specifiers that the dependency optimizer should not follow when doing import analysis.
 							// In this case we provide a list of all the Node.js modules, both those built-in to workerd and those that will be polyfilled.
 							// Obviously we don't want/need the optimizer to try to process modules that are built-in;
@@ -578,6 +570,37 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				if (id === resolvedId?.id) {
 					return injectGlobalCode(id, code);
 				}
+			},
+			async configureServer(viteDevServer) {
+				// Pre-optimize Node.js compat library entry-points for those environments that need it.
+				await Promise.all(
+					Object.values(viteDevServer.environments).flatMap(
+						async (environment) => {
+							const workerConfig = getWorkerConfig(environment.name);
+							if (isNodeCompat(workerConfig)) {
+								// Make sure that the dependency optimizer has been initialized.
+								// This ensures that its standard static crawling to identify libraries to optimize still happens.
+								// If you don't call `init()` then the calls to `registerMissingImport()` appear to cancel the static crawling.
+								await environment.depsOptimizer?.init();
+
+								// Register every unenv-preset entry-point with the dependency optimizer upfront before the first request.
+								// Without this the dependency optimizer will try to bundle them on-the-fly in the middle of the first request.
+								// That can potentially cause problems if it causes previously optimized bundles to become stale and need to be bundled.
+								return Array.from(nodeCompatEntries).map((entry) => {
+									const result = resolveNodeJSImport(entry);
+									if (result) {
+										const registration =
+											environment.depsOptimizer?.registerMissingImport(
+												result.unresolved,
+												result.resolved
+											);
+										return registration?.processing;
+									}
+								});
+							}
+						}
+					)
+				);
 			},
 		},
 		// Plugin that provides an __debug path for debugging the Cloudflare Workers.
@@ -665,7 +688,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 												{ filter: NODEJS_MODULES_RE },
 												({ path, importer }) => {
 													// We have to delay getting this `nodeJsCompatWarnings` from the `nodeJsCompatWarningsMap` until we are in this function.
-													// It has not been added to the map until the `configureServer()` hook is called, which is after the `configEnvironment()` hook.
+													// It has not been added to the map until the `resolveId()` hook is called, which is after the `configEnvironment()` hook.
 													const nodeJsCompatWarnings =
 														nodeJsCompatWarningsMap.get(workerConfig);
 													assert(
@@ -678,52 +701,12 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 													return { path, external: true };
 												}
 											);
-											build.onEnd(() => {
-												const nodeJsCompatWarnings =
-													nodeJsCompatWarningsMap.get(workerConfig);
-												if (nodeJsCompatWarnings) {
-													nodeJsCompatWarnings.renderWarnings();
-												}
-											});
 										},
 									},
 								],
 							},
 						},
 					};
-				}
-			},
-			configureServer(viteDevServer) {
-				// Create a nodeJsCompatWarnings object for each Worker environment that has Node.js compat turned off.
-				for (const environment of Object.values(viteDevServer.environments)) {
-					const workerConfig = getWorkerConfig(environment.name);
-					if (workerConfig && !isNodeCompat(workerConfig)) {
-						nodeJsCompatWarningsMap.set(
-							workerConfig,
-							new NodeJsCompatWarnings(environment)
-						);
-					}
-				}
-			},
-			buildStart() {
-				const workerConfig = getWorkerConfig(this.environment.name);
-				if (workerConfig && !isNodeCompat(workerConfig)) {
-					nodeJsCompatWarningsMap.set(
-						workerConfig,
-						new NodeJsCompatWarnings(this.environment)
-					);
-				}
-			},
-			buildEnd() {
-				const workerConfig = getWorkerConfig(this.environment.name);
-				if (workerConfig && !isNodeCompat(workerConfig)) {
-					const nodeJsCompatWarnings =
-						nodeJsCompatWarningsMap.get(workerConfig);
-					assert(
-						nodeJsCompatWarnings,
-						`expected nodeJsCompatWarnings to be defined for Worker "${workerConfig.name}"`
-					);
-					nodeJsCompatWarnings.renderWarnings();
 				}
 			},
 			// We must ensure that the `resolveId` hook runs before the built-in ones otherwise we
@@ -733,17 +716,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				const workerConfig = getWorkerConfig(this.environment.name);
 				if (workerConfig && !isNodeCompat(workerConfig)) {
 					const nodeJsCompatWarnings =
-						nodeJsCompatWarningsMap.get(workerConfig);
-					// TODO: re-assert this when we work out how to make it function with React Router builds.
-					// 								assert(
-					// 	nodeJsCompatWarnings,
-					// 	`expected nodeJsCompatWarnings to be defined for Worker "${workerConfig.name}"`
-					// );
+						nodeJsCompatWarningsMap.get(workerConfig) ??
+						new NodeJsCompatWarnings(this.environment);
+					nodeJsCompatWarningsMap.set(workerConfig, nodeJsCompatWarnings);
 					if (nodejsBuiltins.has(source)) {
 						nodeJsCompatWarnings?.registerImport(source, importer);
-						// We don't have a natural place to trigger the rendering of the warnings
-						// So we trigger a rendering to happen soon after this round of processing.
-						nodeJsCompatWarnings?.renderWarningsOnIdle();
 						// Mark this path as external to avoid messy unwanted resolve errors.
 						// It will fail at runtime but we will log warnings to the user.
 						return {

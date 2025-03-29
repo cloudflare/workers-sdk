@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { getJsonResponse } from "../../__test-utils__";
+import { getJsonResponse, serverLogs } from "../../__test-utils__";
 
 // Need to remove the `.wrangler` directory and run the following commands before the tests:
 //
@@ -14,4 +14,8 @@ test("runs D1 query using Prisma", async () => {
 	expect(result).toEqual([
 		{ id: 1, email: "jane@prisma.io", name: "Jane Doe (Local)" },
 	]);
+
+	const info = serverLogs.info.join("\n");
+	expect(info).not.toContain("optimized dependencies changed. reloading");
+	expect(info).not.toContain("[vite] program reload");
 });

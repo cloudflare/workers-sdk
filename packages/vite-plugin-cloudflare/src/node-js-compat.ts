@@ -153,9 +153,10 @@ export class NodeJsCompatWarnings {
 		const importers = this.sources.get(source) ?? new Set();
 		this.sources.set(source, importers);
 		importers.add(importer);
+		this.renderWarningsOnIdle();
 	}
 
-	renderWarningsOnIdle() {
+	private renderWarningsOnIdle() {
 		if (this.timer) {
 			clearTimeout(this.timer);
 		}
@@ -165,10 +166,11 @@ export class NodeJsCompatWarnings {
 		}, 500);
 	}
 
-	renderWarnings() {
+	private renderWarnings() {
 		if (this.sources.size > 0) {
 			let message =
-				`\n\nUnexpected Node.js imports for environment "${this.environment.name}". Do you need to enable the "nodejs_compat" compatibility flag?\n` +
+				`Unexpected Node.js imports for environment "${this.environment.name}". ` +
+				`Do you need to enable the "nodejs_compat" compatibility flag? ` +
 				"Refer to https://developers.cloudflare.com/workers/runtime-apis/nodejs/ for more details.\n";
 			this.sources.forEach((importers, source) => {
 				importers.forEach((importer) => {
@@ -177,6 +179,7 @@ export class NodeJsCompatWarnings {
 			});
 			this.environment.logger.warn(message, {
 				environment: this.environment.name,
+				timestamp: true,
 			});
 			this.sources.clear();
 		}
