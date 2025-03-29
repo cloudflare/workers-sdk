@@ -688,7 +688,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 												{ filter: NODEJS_MODULES_RE },
 												({ path, importer }) => {
 													// We have to delay getting this `nodeJsCompatWarnings` from the `nodeJsCompatWarningsMap` until we are in this function.
-													// It has not been added to the map until the `configureServer()` hook is called, which is after the `configEnvironment()` hook.
+													// It has not been added to the map until the `resolveId()` hook is called, which is after the `configEnvironment()` hook.
 													const nodeJsCompatWarnings =
 														nodeJsCompatWarningsMap.get(workerConfig);
 													assert(
@@ -701,13 +701,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 													return { path, external: true };
 												}
 											);
-											build.onEnd(() => {
-												const nodeJsCompatWarnings =
-													nodeJsCompatWarningsMap.get(workerConfig);
-												if (nodeJsCompatWarnings) {
-													nodeJsCompatWarnings.renderWarnings();
-												}
-											});
 										},
 									},
 								],
@@ -728,9 +721,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					nodeJsCompatWarningsMap.set(workerConfig, nodeJsCompatWarnings);
 					if (nodejsBuiltins.has(source)) {
 						nodeJsCompatWarnings?.registerImport(source, importer);
-						// We don't have a natural place to trigger the rendering of the warnings
-						// So we trigger a rendering to happen soon after this round of processing.
-						nodeJsCompatWarnings?.renderWarningsOnIdle();
 						// Mark this path as external to avoid messy unwanted resolve errors.
 						// It will fail at runtime but we will log warnings to the user.
 						return {
