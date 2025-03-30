@@ -85,8 +85,8 @@ export type PatchHyperdriveBody = {
 };
 
 export type Mtls = {
-	ca_certificate_uuid?: string;
-	mtls_certificate_uuid?: string;
+	ca_certificate_id?: string;
+	mtls_certificate_id?: string;
 };
 
 export async function createConfig(
