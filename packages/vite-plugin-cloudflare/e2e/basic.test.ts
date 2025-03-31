@@ -1,5 +1,5 @@
 import { describe } from "vitest";
-import { fetchJson, runCommand, test, waitForReady } from "./helpers.js";
+import { fetchJson, test, waitForReady } from "./helpers.js";
 
 describe("node compatibility", () => {
 	describe.each(["pnpm", "npm", "yarn"])("using %s", (pm) => {
