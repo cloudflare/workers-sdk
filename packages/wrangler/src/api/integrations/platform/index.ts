@@ -148,8 +148,8 @@ async function getMiniflareOptionsFromConfig(
 				${localBindings.map((b) => `- ${JSON.stringify(b)}`).join("\n")}
 				These will not work in local development, but they should work in production.
 
-				If you want to develop these locally, you can define your DO in a separate Worker, specified by a separate configuration file.
-				Refer to https://developers.cloudflare.com/workers/wrangler/api#durable-objects for guidance on how to do this.
+				If you want to develop these locally, you can define your DO in a separate Worker, with a separate configuration file.
+				For detailed instructions, refer to the Durable Objects section here: https://developers.cloudflare.com/workers/wrangler/api#supported-bindings
 				`);
 		}
 	}
