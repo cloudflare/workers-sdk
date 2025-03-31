@@ -1,9 +1,9 @@
 import { execSync } from "node:child_process";
 import { rmSync } from "node:fs";
 import { resolve } from "node:path";
-import { startDefaultServe } from "../../vitest-setup";
+import { loadConfig, startDefaultServe } from "../../vitest-setup";
 
-export function preServe() {
+export async function preServe() {
 	const cwd = process.cwd();
 	try {
 		process.chdir(resolve(__dirname, ".."));
@@ -16,6 +16,13 @@ export function preServe() {
 	} finally {
 		process.chdir(cwd);
 	}
+
+	// Remove the cache directory that stores the pre-bundled optimized dependencies.
+	const config = await loadConfig({ command: "serve", mode: "development" });
+	rmSync(resolve(config.root, config.cacheDir), {
+		force: true,
+		recursive: true,
+	});
 }
 
 export async function serve() {

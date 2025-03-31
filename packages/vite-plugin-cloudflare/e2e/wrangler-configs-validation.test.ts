@@ -1,13 +1,12 @@
 import { describe } from "vitest";
-import { runCommand, test } from "./helpers.js";
+import { test } from "./helpers.js";
 
 // Note: the tests here just make sure that the validation does take place, for more fine grained
 //       testing regarding the validation there are unit tests in src/__tests__/get-validated-wrangler-config-path.spec.ts
 
 describe("during development wrangler config files are validated", () => {
 	test("for the entry worker", async ({ expect, seed, viteDev }) => {
-		const projectPath = await seed("no-wrangler-config");
-		runCommand(`pnpm install`, projectPath);
+		const projectPath = await seed("no-wrangler-config", "pnpm");
 
 		const proc = viteDev(projectPath);
 
@@ -18,8 +17,10 @@ describe("during development wrangler config files are validated", () => {
 	});
 
 	test("for auxiliary workers", async ({ expect, seed, viteDev }) => {
-		const projectPath = await seed("no-wrangler-config-for-auxiliary-worker");
-		runCommand(`pnpm install`, projectPath);
+		const projectPath = await seed(
+			"no-wrangler-config-for-auxiliary-worker",
+			"pnpm"
+		);
 
 		const proc = viteDev(projectPath);
 

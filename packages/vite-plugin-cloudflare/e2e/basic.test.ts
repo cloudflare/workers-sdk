@@ -1,11 +1,10 @@
 import { describe } from "vitest";
-import { fetchJson, runCommand, test, waitForReady } from "./helpers.js";
+import { fetchJson, test, waitForReady } from "./helpers.js";
 
 describe("node compatibility", () => {
-	describe.each(["pnpm --no-store", "npm", "yarn"])("using %s", (pm) => {
+	describe.each(["pnpm", "npm", "yarn"])("using %s", (pm) => {
 		test("can serve a Worker request", async ({ expect, seed, viteDev }) => {
-			const projectPath = await seed("basic");
-			runCommand(`${pm} install`, projectPath);
+			const projectPath = await seed("basic", pm);
 
 			const proc = await viteDev(projectPath);
 			const url = await waitForReady(proc);
@@ -17,8 +16,7 @@ describe("node compatibility", () => {
 // This test checks that wrapped bindings which rely on additional workers with an authed connection to the CF API work
 describe("Workers AI", () => {
 	test("can serve a Worker request", async ({ expect, seed, viteDev }) => {
-		const projectPath = await seed("basic");
-		runCommand(`npm install`, projectPath);
+		const projectPath = await seed("basic", "npm");
 
 		const proc = await viteDev(projectPath);
 		const url = await waitForReady(proc);
