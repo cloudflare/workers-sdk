@@ -44,7 +44,7 @@ export async function handleEmail(
 	// the raw email to the user Worker. As such, clone the request for use in this handler.
 	const clonedRequest = request.clone();
 
-	assert(clonedRequest.body !== null);
+	assert(clonedRequest.body !== null, "Cloned request body is null");
 
 	const incomingEmailRaw = new Uint8Array(await request.arrayBuffer());
 
@@ -161,7 +161,7 @@ export async function handleEmail(
 		);
 	}
 
-	return new Response("Worker successfully proce", {
+	return new Response("Worker successfully processed email", {
 		status: 200,
 	});
 }

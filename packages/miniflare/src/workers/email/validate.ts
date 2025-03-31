@@ -109,7 +109,7 @@ export async function validateReply(
 		throw new Error("In-Reply-To does not match original Message-ID");
 	}
 
-	assert(incomingMessage.references !== undefined);
+	const incomingReferences = incomingMessage.references ?? "";
 
 	if (parsedReply.references !== undefined) {
 		// if the email has the References header, we just validate it matches the incoming References header and also includes the incoming message ID
@@ -117,14 +117,14 @@ export async function validateReply(
 		if (
 			!(
 				parsedReply.references.includes(incomingMessage.messageId) &&
-				parsedReply.references.includes(incomingMessage.references)
+				parsedReply.references.includes(incomingReferences)
 			)
 		) {
 			throw new Error("provided References header is invalid");
 		}
 	} else {
 		// Otherwise, we need to construct a new References header according to https://datatracker.ietf.org/doc/html/rfc5322#section-3.6.4
-		const replyReferences = `References: ${incomingMessage.messageId} ${incomingMessage.references}\r\n`;
+		const replyReferences = `References: ${incomingMessage.messageId} ${incomingReferences}\r\n`;
 
 		const encodedReferences = new TextEncoder().encode(replyReferences);
 

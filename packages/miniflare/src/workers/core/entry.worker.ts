@@ -387,7 +387,10 @@ export default <ExportedHandler<Env>>{
 
 		try {
 			if (env[CoreBindings.TRIGGER_HANDLERS]) {
-				if (url.pathname === "/cdn-cgi/handler/scheduled") {
+				if (
+					url.pathname === "/cdn-cgi/handler/scheduled" ||
+					/* legacy URL path */ url.pathname === "/cdn-cgi/mf/scheduled"
+				) {
 					return await handleScheduled(url.searchParams, service);
 				}
 

@@ -2021,13 +2021,13 @@ describe("email local dev", () => {
 				async email(emailMessage) {
 				await emailMessage.reply(
 					new EmailMessage(
-						"someone-else@exmaple.com",
-						"someone@exmaple.com",
+						"someone-else@example.com",
+						"someone@example.com",
 						(new Response(
-\`From: someone else <someone-else@exmaple.com>
-To: someone <someone@exmaple.com>
-In-Reply-To: <im-a-random-message-id@exmaple.com>
-Message-ID: <im-another-random-message-id@exmaple.com>
+\`From: someone else <someone-else@example.com>
+To: someone <someone@example.com>
+In-Reply-To: <im-a-random-message-id@example.com>
+Message-ID: <im-another-random-message-id@example.com>
 MIME-Version: 1.0
 Content-Type: text/plain
 
@@ -2043,10 +2043,10 @@ This is a random email body.
 		const { url } = await worker.waitForReady();
 
 		const response = await fetch(`${url}/cdn-cgi/handler/email`, {
-			body: `From: someone <someone@exmaple.com>
-To: someone else <someone-else@exmaple.com>
+			body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
 MIME-Version: 1.0
-Message-ID: <im-a-random-message-id@exmaple.com>
+Message-ID: <im-a-random-message-id@example.com>
 Content-Type: text/plain
 
 This is a random email body.
@@ -2072,11 +2072,11 @@ This is a random email body.
 
 		expect(await readFile(maybeReplyPath, "utf-8")).toMatchInlineSnapshot(`
 			"References:
-			 <im-a-random-message-id@exmaple.com>
-			From: someone else <someone-else@exmaple.com>
-			To: someone <someone@exmaple.com>
-			In-Reply-To: <im-a-random-message-id@exmaple.com>
-			Message-ID: <im-another-random-message-id@exmaple.com>
+			 <im-a-random-message-id@example.com>
+			From: someone else <someone-else@example.com>
+			To: someone <someone@example.com>
+			In-Reply-To: <im-a-random-message-id@example.com>
+			Message-ID: <im-another-random-message-id@example.com>
 			MIME-Version: 1.0
 			Content-Type: text/plain
 
@@ -2108,10 +2108,10 @@ This is a random email body.
 		const { url } = await worker.waitForReady();
 
 		const response = await fetch(`${url}/cdn-cgi/handler/email`, {
-			body: `From: someone <someone@exmaple.com>
-To: someone else <someone-else@exmaple.com>
+			body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
 MIME-Version: 1.0
-Message-ID: <im-a-random-message-id@exmaple.com>
+Message-ID: <im-a-random-message-id@example.com>
 Content-Type: text/plain
 
 This is a random email body.
@@ -2139,7 +2139,7 @@ This is a random email body.
 
 			export default {
 				async email(emailMessage) {
-					await emailMessage.forward('mark.s@exmaple.com')
+					await emailMessage.forward('mark.s@example.com')
 				}
 			}`,
 		});
@@ -2149,10 +2149,10 @@ This is a random email body.
 		const { url } = await worker.waitForReady();
 
 		const response = await fetch(`${url}/cdn-cgi/handler/email`, {
-			body: `From: someone <someone@exmaple.com>
-To: someone else <someone-else@exmaple.com>
+			body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
 MIME-Version: 1.0
-Message-ID: <im-a-random-message-id@exmaple.com>
+Message-ID: <im-a-random-message-id@example.com>
 Content-Type: text/plain
 
 This is a random email body.
@@ -2164,7 +2164,7 @@ This is a random email body.
 
 		expect(
 			worker.currentOutput.includes(`.forward() called from Email Handler with
-  rcptTo: mark.s@exmaple.com`)
+  rcptTo: mark.s@example.com`)
 		);
 	});
 
@@ -2202,13 +2202,13 @@ This is a random email body.
 		const response = await fetch(
 			`${url}?` +
 				new URLSearchParams({
-					from: "someone@exmaple.com",
-					to: "someone-else@exmaple.com",
+					from: "someone@example.com",
+					to: "someone-else@example.com",
 				}).toString(),
 			{
-				body: `From: someone <someone@exmaple.com>
-To: someone else <someone-else@exmaple.com>
-Message-ID: <im-a-random-message-id@exmaple.com>
+				body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
+Message-ID: <im-a-random-message-id@example.com>
 MIME-Version: 1.0
 Content-Type: text/plain
 
@@ -2237,9 +2237,9 @@ This is a random email body.
 		}
 
 		expect(await readFile(maybeReplyPath, "utf-8")).toMatchInlineSnapshot(`
-			"From: someone <someone@exmaple.com>
-			To: someone else <someone-else@exmaple.com>
-			Message-ID: <im-a-random-message-id@exmaple.com>
+			"From: someone <someone@example.com>
+			To: someone else <someone-else@example.com>
+			Message-ID: <im-a-random-message-id@example.com>
 			MIME-Version: 1.0
 			Content-Type: text/plain
 

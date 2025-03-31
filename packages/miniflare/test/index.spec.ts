@@ -1443,18 +1443,21 @@ test("Miniflare: manually triggered email handler - valid email", async (t) => {
 	let res = await mf.dispatchFetch("http://localhost");
 	t.is(await res.text(), "false");
 
-	res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/email", {
-		body: `From: someone <someone@exmaple.com>
-To: someone else <someone-else@exmaple.com>
-Message-ID: <im-a-random-message-id@exmaple.com>
+	res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		{
+			body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
+Message-ID: <im-a-random-message-id@example.com>
 MIME-Version: 1.0
 Content-Type: text/plain
 
 This is a random email body.
 `,
-		method: "POST",
-	});
-	t.is(await res.text(), "");
+			method: "POST",
+		}
+	);
+	t.is(await res.text(), "Worker successfully processed email");
 	t.is(res.status, 200);
 
 	res = await mf.dispatchFetch("http://localhost");
@@ -1485,20 +1488,23 @@ test("Miniflare: manually triggered email handler - setReject does not throw", a
 	let res = await mf.dispatchFetch("http://localhost");
 	t.is(await res.text(), "false");
 
-	res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/email", {
-		body: `From: someone <someone@exmaple.com>
-To: someone else <someone-else@exmaple.com>
-Message-ID: <im-a-random-message-id@exmaple.com>
+	res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		{
+			body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
+Message-ID: <im-a-random-message-id@example.com>
 MIME-Version: 1.0
 Content-Type: text/plain
 
 This is a random email body.
 `,
-		method: "POST",
-	});
+			method: "POST",
+		}
+	);
 	t.is(
 		await res.text(),
-		"Email worker rejected email with the following reason: I just don't like this email :("
+		"Worker rejected email with the following reason: I just don't like this email :("
 	);
 	t.is(res.status, 400);
 
@@ -1519,7 +1525,7 @@ test("Miniflare: manually triggered email handler - forward does not throw", asy
 					return new Response(receivedEmail);
 				},
 				async email(emailMessage) {
-					await emailMessage.forward("mark.s@exmaple.com")
+					await emailMessage.forward("mark.s@example.com")
 					receivedEmail = true;
 				}
 			}`,
@@ -1530,18 +1536,21 @@ test("Miniflare: manually triggered email handler - forward does not throw", asy
 	let res = await mf.dispatchFetch("http://localhost");
 	t.is(await res.text(), "false");
 
-	res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/email", {
-		body: `From: someone <someone@exmaple.com>
-To: someone else <someone-else@exmaple.com>
-Message-ID: <im-a-random-message-id@exmaple.com>
+	res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		{
+			body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
+Message-ID: <im-a-random-message-id@example.com>
 MIME-Version: 1.0
 Content-Type: text/plain
 
 This is a random email body.
 `,
-		method: "POST",
-	});
-	t.is(await res.text(), "");
+			method: "POST",
+		}
+	);
+	t.is(await res.text(), "Worker successfully processed email");
 	t.is(res.status, 200);
 
 	res = await mf.dispatchFetch("http://localhost");
@@ -1571,16 +1580,19 @@ test("Miniflare: manually triggered email handler - invalid email, no message id
 	let res = await mf.dispatchFetch("http://localhost");
 	t.is(await res.text(), "false");
 
-	res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/email", {
-		body: `From: someone <someone@exmaple.com>
-To: someone else <someone-else@exmaple.com>
+	res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		{
+			body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
 MIME-Version: 1.0
 Content-Type: text/plain
 
 This is a random email body.
 `,
-		method: "POST",
-	});
+			method: "POST",
+		}
+	);
 	t.is(
 		await res.text(),
 		"Email could not be parsed: invalid or no message id provided"
@@ -1606,13 +1618,13 @@ test("Miniflare: manually triggered email handler - reply handler works", async 
 				},
 				async email(emailMessage) {
 					await emailMessage.reply(new EmailMessage(
-						"someone-else@exmaple.com",
-						"someone@exmaple.com",
+						"someone-else@example.com",
+						"someone@example.com",
 						(new Response(
-\`From: someone else <someone-else@exmaple.com>
-To: someone <someone@exmaple.com>
-In-Reply-To: <im-a-random-message-id@exmaple.com>
-Message-ID: <im-another-random-message-id@exmaple.com>
+\`From: someone else <someone-else@example.com>
+To: someone <someone@example.com>
+In-Reply-To: <im-a-random-message-id@example.com>
+Message-ID: <im-another-random-message-id@example.com>
 MIME-Version: 1.0
 Content-Type: text/plain
 
@@ -1630,18 +1642,21 @@ This is a random email body.
 	let res = await mf.dispatchFetch("http://localhost");
 	t.is(await res.text(), "false");
 
-	res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/email", {
-		body: `From: someone <someone@exmaple.com>
-To: someone else <someone-else@exmaple.com>
+	res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		{
+			body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
 MIME-Version: 1.0
-Message-ID: <im-a-random-message-id@exmaple.com>
+Message-ID: <im-a-random-message-id@example.com>
 Content-Type: text/plain
 
 This is a random email body.
 `,
-		method: "POST",
-	});
-	t.is(await res.text(), "");
+			method: "POST",
+		}
+	);
+	t.is(await res.text(), "Worker successfully processed email");
 	t.is(res.status, 200);
 
 	res = await mf.dispatchFetch("http://localhost");
@@ -1673,10 +1688,13 @@ test("Miniflare: manually triggered email handler - valid reply", async (t) => {
 	let res = await mf.dispatchFetch("http://localhost");
 	t.is(await res.text(), "false");
 
-	res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/email", {
-		body: "asbdiausbduiaBNIAUaduiw",
-		method: "POST",
-	});
+	res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		{
+			body: "asbdiausbduiaBNIAUaduiw",
+			method: "POST",
+		}
+	);
 	t.is(
 		await res.text(),
 		"Email could not be parsed: invalid or no message id provided"
