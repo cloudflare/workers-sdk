@@ -1,8 +1,6 @@
 import assert from "node:assert";
 import * as path from "node:path";
 import * as vite from "vite";
-import { DEFAULT_INSPECTOR_PORT } from "./constants";
-import { getFirstAvailablePort } from "./utils";
 import {
 	getValidatedWranglerConfigPath,
 	getWorkerConfig,
