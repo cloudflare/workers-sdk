@@ -5,11 +5,11 @@ import { runCommand, test } from "./helpers.js";
 //       testing regarding the validation there are unit tests in src/__tests__/get-validated-wrangler-config-path.spec.ts
 
 describe("during development wrangler config files are validated", () => {
-	test("for the entry worker", async ({ expect, seed, viteCommand }) => {
+	test("for the entry worker", async ({ expect, seed, viteDev }) => {
 		const projectPath = await seed("no-wrangler-config");
 		runCommand(`pnpm install`, projectPath);
 
-		const proc = await viteCommand("pnpm", "dev", projectPath);
+		const proc = viteDev(projectPath);
 
 		expect(await proc.exitCode).not.toBe(0);
 		expect(proc.stderr).toMatch(
@@ -17,11 +17,11 @@ describe("during development wrangler config files are validated", () => {
 		);
 	});
 
-	test("for auxiliary workers", async ({ expect, seed, viteCommand }) => {
+	test("for auxiliary workers", async ({ expect, seed, viteDev }) => {
 		const projectPath = await seed("no-wrangler-config-for-auxiliary-worker");
 		runCommand(`pnpm install`, projectPath);
 
-		const proc = await viteCommand("pnpm", "dev", projectPath);
+		const proc = viteDev(projectPath);
 
 		expect(await proc.exitCode).not.toBe(0);
 		expect(proc.stderr).toMatch(
