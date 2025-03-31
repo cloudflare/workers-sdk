@@ -47,9 +47,10 @@ export const r2BucketCatalogEnableCommand = createCommand({
 			`✨ Successfully enabled data catalog on bucket '${args.bucket}'.
 
 Catalog URI: '${catalogHost}'
+Warehouse: '${response.name}'
 
 Use this Catalog URI with Iceberg-compatible query engines (Spark, DuckDB, Trino, etc.) to query data as tables.
-Note: You'll need a Cloudflare API token with 'R2 Data Catalog' permission to authenticate your client with this catalog.
+Note: You will need a Cloudflare API token with 'R2 Data Catalog' permission to authenticate your client with this catalog.
 For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/`
 		);
 	},
@@ -73,18 +74,29 @@ export const r2BucketCatalogDisableCommand = createCommand({
 		const accountId = await requireAuth(config);
 
 		const confirmedDisable = await confirm(
-			`Are you sure you want to disable the data catalog for bucket '${args.bucket}'? This action is irreversible, and you cannot re-enable it on this bucket.`
+			`Are you sure you want to disable the data catalog for bucket '${args.bucket}'?`
 		);
 		if (!confirmedDisable) {
 			logger.log("Disable cancelled.");
 			return;
 		}
 
-		await disableR2Catalog(accountId, args.bucket);
+		try {
+			await disableR2Catalog(accountId, args.bucket);
 
-		logger.log(
-			`Successfully disabled the data catalog on bucket '${args.bucket}'.`
-		);
+			logger.log(
+				`Successfully disabled the data catalog on bucket '${args.bucket}'.`
+			);
+		} catch (e) {
+			// R2 Data Catalog 40401 corresponds to a 404
+			if (e instanceof APIError && e.code == 40401) {
+				logger.log(
+					`Data catalog is not enabled for bucket '${args.bucket}'. Please use 'wrangler r2 bucket catalog enable ${args.bucket}' to first enable the data catalog on this bucket.`
+				);
+			} else {
+				throw e;
+			}
+		}
 	},
 });
 
@@ -106,7 +118,7 @@ export const r2BucketCatalogGetCommand = createCommand({
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		logger.log(`Getting data catalog status for '${args.bucket}'...`);
+		logger.log(`Getting data catalog status for '${args.bucket}'...\n`);
 
 		try {
 			const catalog = await getR2Catalog(accountId, args.bucket);
@@ -122,6 +134,7 @@ export const r2BucketCatalogGetCommand = createCommand({
 			const output = {
 				Bucket: args.bucket,
 				"Catalog URI": catalogHost,
+				Warehouse: catalog.name,
 				Status: catalog.status,
 			};
 
@@ -129,7 +142,9 @@ export const r2BucketCatalogGetCommand = createCommand({
 		} catch (e) {
 			// R2 Data Catalog 40401 corresponds to a 404
 			if (e instanceof APIError && e.code == 40401) {
-				logger.log(`Data catalog isn't enabled for bucket '${args.bucket}'.`);
+				logger.log(
+					`Data catalog is not enabled for bucket '${args.bucket}'. Please use 'wrangler r2 bucket catalog enable ${args.bucket}' to first enable the data catalog on this bucket.`
+				);
 			} else {
 				throw e;
 			}
