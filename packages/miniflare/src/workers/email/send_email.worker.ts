@@ -7,29 +7,28 @@ import { type MiniflareEmailMessage as EmailMessage } from "./email.worker";
 
 interface SendEmailEnv {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
-	destination_address?: string;
-	allowed_destination_addresses?: string[];
+	destination_address: string | undefined;
+	allowed_destination_addresses: string[] | undefined;
 }
 
 export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
-	constructor(ctx: ExecutionContext, env: SendEmailEnv) {
-		super(ctx, env);
-	}
-
-	async send(emailMessage: EmailMessage): Promise<void> {
+	private checkDestinationAllowed(to: string) {
 		if (
 			this.env.destination_address !== undefined &&
-			emailMessage.to !== this.env.destination_address
+			to !== this.env.destination_address
 		) {
-			throw new Error(`email to ${emailMessage.to} not allowed`);
+			throw new Error(`email to ${to} not allowed`);
 		}
 
 		if (
 			this.env.allowed_destination_addresses !== undefined &&
-			!this.env.allowed_destination_addresses.includes(emailMessage.to)
+			!this.env.allowed_destination_addresses.includes(to)
 		) {
-			throw new Error(`email to ${emailMessage.to} not allowed`);
+			throw new Error(`email to ${to} not allowed`);
 		}
+	}
+	async send(emailMessage: EmailMessage): Promise<void> {
+		this.checkDestinationAllowed(emailMessage.to);
 
 		const rawEmail: ReadableStream<Uint8Array> = emailMessage[RAW_EMAIL];
 
