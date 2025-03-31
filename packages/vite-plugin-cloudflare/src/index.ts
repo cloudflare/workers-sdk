@@ -370,7 +370,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			async configurePreviewServer(vitePreviewServer) {
 				const workerConfigs = getWorkerConfigs(vitePreviewServer.config.root);
 
-				vitePreviewServer.config.logger.warnOnce;
 				const inputInspectorPort = await getInputInspectorPortOption(
 					pluginConfig,
 					vitePreviewServer
