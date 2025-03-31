@@ -78,30 +78,31 @@ export const EMAIL_PLUGIN = createPlugin({
 			});
 		}
 
-		const hasSendEmail =
-			args.options.email?.send_email?.length !== undefined &&
-			args.options.email.send_email.length > 0;
-		if (hasSendEmail) {
-			const sendEmailOptions = args.options.email?.send_email ?? [];
-			services.push(
-				...sendEmailOptions.map(({ name, ...config }) => ({
-					name: `${SERVICE_SEND_EMAIL_WORKER_PREFIX}-${name}`,
-					worker: {
-						compatibilityDate: "2025-03-17",
-						modules: [
-							{
-								name: "send_email.mjs",
-								esModule: SEND_EMAIL_BINDING(),
-							},
-						],
-						bindings: [
-							...buildJsonBindings(config),
-							WORKER_BINDING_SERVICE_LOOPBACK, // needed to send email to tmp folder
-						],
-					},
-				}))
-			);
-		}
+		services.push(
+			...(args.options.email?.send_email ?? []).map(({ name, ...config }) => ({
+				name: `${SERVICE_SEND_EMAIL_WORKER_PREFIX}:${name}`,
+				worker: {
+					compatibilityDate: "2025-03-17",
+					modules: [
+						{
+							name: "send_email.mjs",
+							esModule: SEND_EMAIL_BINDING(),
+						},
+					],
+					bindings: [
+						{
+							name: "destination_address",
+							json: config.destination_address,
+						},
+						{
+							name: "allowed_destination_addresses",
+							json: config.allowed_destination_addresses,
+						},
+						WORKER_BINDING_SERVICE_LOOPBACK, // needed to send email to tmp folder
+					],
+				},
+			}))
+		);
 
 		return {
 			services,

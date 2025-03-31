@@ -1,8 +1,8 @@
 import { RAW_EMAIL } from "./constants";
 import type { EmailMessage as EmailMessageType } from "@cloudflare/workers-types/experimental";
 
-// Because `EmailMessage` is not on the runtime, we use a different type for it, read below
-// for more details:
+// This type is the _actual_ type of an EmailMessage when running locally, which is different to production
+// Refer to the below constructor for more details about why
 export type MiniflareEmailMessage = {
 	from: string;
 	to: string;
