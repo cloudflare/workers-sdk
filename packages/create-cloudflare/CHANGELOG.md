@@ -1,5 +1,15 @@
 # create-cloudflare
 
+## 2.43.1
+
+### Patch Changes
+
+- [#8395](https://github.com/cloudflare/workers-sdk/pull/8395) [`3f41730`](https://github.com/cloudflare/workers-sdk/commit/3f41730ca62890dd19804e65da78ad82af54126c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Remove categories in C3 that have no templates
+
+  The `Application Starter` category doesn't contain any entries in experimental mode so we shouldn't show it.
+
+  This change updates C3 to automatically exclude categories that have no templates.
+
 ## 2.43.0
 
 ### Minor Changes

@@ -473,7 +473,7 @@ async function runProvisioningFlow(
 		});
 	}
 
-	const defaultName = `${scriptName}-${item.binding.toLowerCase().replace("_", "-")}`;
+	const defaultName = `${scriptName}-${item.binding.toLowerCase().replaceAll("_", "-")}`;
 	logger.log("Provisioning", item.binding, `(${friendlyBindingName})...`);
 
 	if (item.handler.name) {
