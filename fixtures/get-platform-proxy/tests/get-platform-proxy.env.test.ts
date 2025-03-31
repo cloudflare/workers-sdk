@@ -1,6 +1,14 @@
 import path from "path";
 import { D1Database, R2Bucket } from "@cloudflare/workers-types";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	MockInstance,
+	vi,
+} from "vitest";
 import { getPlatformProxy } from "./shared";
 import type { Hyperdrive, KVNamespace } from "@cloudflare/workers-types";
 import type { Unstable_DevWorker } from "wrangler";
@@ -195,6 +203,52 @@ describe("getPlatformProxy - env", () => {
 		} finally {
 			await dispose();
 		}
+	});
+
+	describe("DO warnings", () => {
+		let warn = {} as MockInstance<typeof console.warn>;
+		beforeEach(() => {
+			warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		});
+		afterEach(() => {
+			warn.mockRestore();
+		});
+
+		it("warns about internal DOs and doesn't crash", async () => {
+			await getPlatformProxy<Env>({
+				configPath: path.join(__dirname, "..", "wrangler_internal_do.jsonc"),
+			});
+			expect(warn).toMatchInlineSnapshot(`
+				[MockFunction warn] {
+				  "calls": [
+				    [
+				      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m				You have defined bindings to the following internal Durable Objects:[0m
+
+				  				- {"class_name":"MyDurableObject","name":"MY_DURABLE_OBJECT"}
+				  				These will not work in local development, but they should work in production.
+				  
+				  				If you want to develop these locally, you can define your DO in a separate Worker, with a separate configuration file.
+				  				For detailed instructions, refer to the Durable Objects section here: [4mhttps://developers.cloudflare.com/workers/wrangler/api#supported-bindings[0m
+
+				",
+				    ],
+				  ],
+				  "results": [
+				    {
+				      "type": "return",
+				      "value": undefined,
+				    },
+				  ],
+				}
+			`);
+		});
+
+		it("doesn't warn about external DOs and doesn't crash", async () => {
+			await getPlatformProxy<Env>({
+				configPath: path.join(__dirname, "..", "wrangler_external_do.jsonc"),
+			});
+			expect(warn).not.toHaveBeenCalled();
+		});
 	});
 
 	describe("with a target environment", () => {
