@@ -674,8 +674,12 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				// Skip this whole plugin if we are in preview mode
 				return !env.isPreview;
 			},
+			// We must ensure that the `resolveId` hook runs before the built-in ones.
+			// Otherwise we never see the Node.js built-in imports since they get handled by default Vite behavior.
+			enforce: "pre",
 			configEnvironment(environmentName) {
 				const workerConfig = getWorkerConfig(environmentName);
+
 				if (workerConfig && !isNodeCompat(workerConfig)) {
 					return {
 						optimizeDeps: {
@@ -687,15 +691,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 											build.onResolve(
 												{ filter: NODEJS_MODULES_RE },
 												({ path, importer }) => {
-													// We have to delay getting this `nodeJsCompatWarnings` from the `nodeJsCompatWarningsMap` until we are in this function.
-													// It has not been added to the map until the `resolveId()` hook is called, which is after the `configEnvironment()` hook.
 													const nodeJsCompatWarnings =
 														nodeJsCompatWarningsMap.get(workerConfig);
-													assert(
-														nodeJsCompatWarnings,
-														`expected nodeJsCompatWarnings to be defined for Worker "${workerConfig.name}"`
-													);
-													nodeJsCompatWarnings.registerImport(path, importer);
+													nodeJsCompatWarnings?.registerImport(path, importer);
 													// Mark this path as external to avoid messy unwanted resolve errors.
 													// It will fail at runtime but we will log warnings to the user.
 													return { path, external: true };
@@ -709,18 +707,30 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					};
 				}
 			},
-			// We must ensure that the `resolveId` hook runs before the built-in ones otherwise we
-			// never see the Node.js built-in imports since they get handled by default Vite behavior.
-			enforce: "pre",
+			configResolved(resolvedViteConfig) {
+				for (const environmentName of Object.keys(
+					resolvedViteConfig.environments
+				)) {
+					const workerConfig = getWorkerConfig(environmentName);
+
+					if (workerConfig && !isNodeCompat(workerConfig)) {
+						nodeJsCompatWarningsMap.set(
+							workerConfig,
+							new NodeJsCompatWarnings(environmentName, resolvedViteConfig)
+						);
+					}
+				}
+			},
 			async resolveId(source, importer) {
 				const workerConfig = getWorkerConfig(this.environment.name);
+
 				if (workerConfig && !isNodeCompat(workerConfig)) {
 					const nodeJsCompatWarnings =
-						nodeJsCompatWarningsMap.get(workerConfig) ??
-						new NodeJsCompatWarnings(this.environment);
-					nodeJsCompatWarningsMap.set(workerConfig, nodeJsCompatWarnings);
+						nodeJsCompatWarningsMap.get(workerConfig);
+
 					if (nodejsBuiltins.has(source)) {
 						nodeJsCompatWarnings?.registerImport(source, importer);
+
 						// Mark this path as external to avoid messy unwanted resolve errors.
 						// It will fail at runtime but we will log warnings to the user.
 						return {

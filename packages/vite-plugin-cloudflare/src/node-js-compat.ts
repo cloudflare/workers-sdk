@@ -147,7 +147,10 @@ export class NodeJsCompatWarnings {
 	private sources = new Map<string, Set<string>>();
 	private timer: NodeJS.Timeout | undefined;
 
-	constructor(private readonly environment: vite.Environment) {}
+	constructor(
+		private readonly environmentName: string,
+		private readonly resolvedViteConfig: vite.ResolvedConfig
+	) {}
 
 	registerImport(source: string, importer = "<unknown>") {
 		const importers = this.sources.get(source) ?? new Set();
@@ -169,16 +172,15 @@ export class NodeJsCompatWarnings {
 	private renderWarnings() {
 		if (this.sources.size > 0) {
 			let message =
-				`Unexpected Node.js imports for environment "${this.environment.name}". ` +
+				`Unexpected Node.js imports for environment "${this.environmentName}". ` +
 				`Do you need to enable the "nodejs_compat" compatibility flag? ` +
 				"Refer to https://developers.cloudflare.com/workers/runtime-apis/nodejs/ for more details.\n";
 			this.sources.forEach((importers, source) => {
 				importers.forEach((importer) => {
-					message += ` - "${source}" imported from "${path.relative(this.environment.config.root, importer)}"\n`;
+					message += ` - "${source}" imported from "${path.relative(this.resolvedViteConfig.root, importer)}"\n`;
 				});
 			});
-			this.environment.logger.warn(message, {
-				environment: this.environment.name,
+			this.resolvedViteConfig.logger.warn(message, {
 				timestamp: true,
 			});
 			this.sources.clear();
