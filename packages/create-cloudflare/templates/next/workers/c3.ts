@@ -3,7 +3,7 @@ import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { readFile, usesTypescript, writeFile } from "helpers/files";
 import { installPackages } from "helpers/packages";
-import type { TemplateConfig } from "../../../src/templates";
+import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
 const generate = async (ctx: C3Context) => {
@@ -55,7 +55,7 @@ export default {
 	frameworkCliPinnedVersion: "~15.2.2",
 	platform: "workers",
 	displayName: "Next.js (using Node.js compat + Workers Assets)",
-	path: "templates-experimental/next",
+	path: "templates/next/workers",
 	copyFiles: {
 		path: "./templates",
 	},
