@@ -34,13 +34,13 @@ test("Unbound send_email binding works", async (t) => {
 	const res = await mf.dispatchFetch(
 		"http://localhost/?" +
 			new URLSearchParams({
-				from: "someone@exmaple.com",
-				to: "someone-else@exmaple.com",
+				from: "someone@example.com",
+				to: "someone-else@example.com",
 			}).toString(),
 		{
-			body: `From: someone <someone@exmaple.com>
-To: someone else <someone-else@exmaple.com>
-Message-ID: <im-a-random-message-id@exmaple.com>
+			body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
+Message-ID: <im-a-random-message-id@example.com>
 MIME-Version: 1.0
 Content-Type: text/plain
 
@@ -69,8 +69,8 @@ test("Invalid email throws", async (t) => {
 	const res = await mf.dispatchFetch(
 		"http://localhost/?" +
 			new URLSearchParams({
-				from: "someone@exmaple.com",
-				to: "someone-else@exmaple.com",
+				from: "someone@example.com",
+				to: "someone-else@example.com",
 			}).toString(),
 		{
 			body: `adfsedfhwiofe`,
@@ -88,7 +88,7 @@ test("Single allowed destination send_email binding works", async (t) => {
 		script: SEND_EMAIL_SCRIPT(),
 		email: {
 			send_email: [
-				{ name: "SEND_EMAIL", destination_address: "someone-else@exmaple.com" },
+				{ name: "SEND_EMAIL", destination_address: "someone-else@example.com" },
 			],
 		},
 		compatibilityDate: "2025-03-17",
@@ -99,13 +99,13 @@ test("Single allowed destination send_email binding works", async (t) => {
 	const res = await mf.dispatchFetch(
 		"http://localhost/?" +
 			new URLSearchParams({
-				from: "someone@exmaple.com",
-				to: "someone-else@exmaple.com",
+				from: "someone@example.com",
+				to: "someone-else@example.com",
 			}).toString(),
 		{
-			body: `From: someone <someone@exmaple.com>
-To: someone else <someone-else@exmaple.com>
-Message-ID: <im-a-random-message-id@exmaple.com>
+			body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
+Message-ID: <im-a-random-message-id@example.com>
 MIME-Version: 1.0
 Content-Type: text/plain
 
@@ -125,7 +125,7 @@ test("Single allowed destination send_email binding throws if destiantion is not
 		script: SEND_EMAIL_SCRIPT(),
 		email: {
 			send_email: [
-				{ name: "SEND_EMAIL", destination_address: "helly.r@exmaple.com" },
+				{ name: "SEND_EMAIL", destination_address: "helly.r@example.com" },
 			],
 		},
 		compatibilityDate: "2025-03-17",
@@ -136,13 +136,13 @@ test("Single allowed destination send_email binding throws if destiantion is not
 	const res = await mf.dispatchFetch(
 		"http://localhost/?" +
 			new URLSearchParams({
-				from: "someone@exmaple.com",
-				to: "someone-else@exmaple.com",
+				from: "someone@example.com",
+				to: "someone-else@example.com",
 			}).toString(),
 		{
-			body: `From: someone <someone@exmaple.com>
-To: someone else <someone-else@exmaple.com>
-Message-ID: <im-a-random-message-id@exmaple.com>
+			body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
+Message-ID: <im-a-random-message-id@example.com>
 MIME-Version: 1.0
 Content-Type: text/plain
 
@@ -154,7 +154,7 @@ This is a random email body.
 
 	t.true(
 		(await res.text()).startsWith(
-			"Error: email to someone-else@exmaple.com not allowed"
+			"Error: email to someone-else@example.com not allowed"
 		)
 	);
 	t.is(res.status, 500);
@@ -169,8 +169,8 @@ test("Multiple allowed destination send_email binding works", async (t) => {
 				{
 					name: "SEND_EMAIL",
 					allowed_destination_addresses: [
-						"milchick@exmaple.com",
-						"miss-huang@exmaple.com",
+						"milchick@example.com",
+						"miss-huang@example.com",
 					],
 				},
 			],
@@ -183,13 +183,13 @@ test("Multiple allowed destination send_email binding works", async (t) => {
 	const res = await mf.dispatchFetch(
 		"http://localhost/?" +
 			new URLSearchParams({
-				from: "someone@exmaple.com",
-				to: "milchick@exmaple.com",
+				from: "someone@example.com",
+				to: "milchick@example.com",
 			}).toString(),
 		{
-			body: `From: someone <someone@exmaple.com>
-To: someone else <milchick@exmaple.com>
-Message-ID: <im-a-random-message-id@exmaple.com>
+			body: `From: someone <someone@example.com>
+To: someone else <milchick@example.com>
+Message-ID: <im-a-random-message-id@example.com>
 MIME-Version: 1.0
 Content-Type: text/plain
 
@@ -212,8 +212,8 @@ test("Multiple allowed send_email binding throws if destiantion is not equal", a
 				{
 					name: "SEND_EMAIL",
 					allowed_destination_addresses: [
-						"milchick@exmaple.com",
-						"miss-huang@exmaple.com",
+						"milchick@example.com",
+						"miss-huang@example.com",
 					],
 				},
 			],
@@ -226,13 +226,13 @@ test("Multiple allowed send_email binding throws if destiantion is not equal", a
 	const res = await mf.dispatchFetch(
 		"http://localhost/?" +
 			new URLSearchParams({
-				from: "someone@exmaple.com",
-				to: "helly.r@exmaple.com",
+				from: "someone@example.com",
+				to: "helly.r@example.com",
 			}).toString(),
 		{
-			body: `From: someone <someone@exmaple.com>
-To: someone else <helly.r@exmaple.com>
-Message-ID: <im-a-random-message-id@exmaple.com>
+			body: `From: someone <someone@example.com>
+To: someone else <helly.r@example.com>
+Message-ID: <im-a-random-message-id@example.com>
 MIME-Version: 1.0
 Content-Type: text/plain
 
@@ -244,7 +244,7 @@ This is a random email body.
 
 	t.true(
 		(await res.text()).startsWith(
-			"Error: email to helly.r@exmaple.com not allowed"
+			"Error: email to helly.r@example.com not allowed"
 		)
 	);
 	t.is(res.status, 500);

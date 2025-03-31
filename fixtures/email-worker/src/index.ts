@@ -10,7 +10,7 @@ export default class extends WorkerEntrypoint<Env> {
 		if (url.pathname === "/send") {
 			const msg = createMimeMessage();
 			msg.setSender({ name: "GPT-4", addr: "sender@penalosa.cloud" });
-			msg.setRecipient("else@exmaple.com");
+			msg.setRecipient("else@example.com");
 			msg.setSubject("An email generated in a Worker");
 			msg.addMessage({
 				contentType: "text/plain",
@@ -18,7 +18,7 @@ export default class extends WorkerEntrypoint<Env> {
 			});
 			const m = new EmailMessage(
 				"sender@penalosa.cloud",
-				"else@exmaple.com",
+				"else@example.com",
 				msg.asRaw()
 			);
 			await this.env.LIST_SEND.send(m);

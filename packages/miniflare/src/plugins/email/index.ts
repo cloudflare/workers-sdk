@@ -55,7 +55,7 @@ export const EMAIL_PLUGIN = createPlugin({
 			name,
 			service: {
 				entrypoint: "SendEmailBinding",
-				name: `${SERVICE_SEND_EMAIL_WORKER_PREFIX}-${name}`,
+				name: `${SERVICE_SEND_EMAIL_WORKER_PREFIX}:${name}`,
 			},
 		}));
 	},
@@ -90,14 +90,7 @@ export const EMAIL_PLUGIN = createPlugin({
 						},
 					],
 					bindings: [
-						{
-							name: "destination_address",
-							json: config.destination_address,
-						},
-						{
-							name: "allowed_destination_addresses",
-							json: config.allowed_destination_addresses,
-						},
+						...buildJsonBindings(config),
 						WORKER_BINDING_SERVICE_LOOPBACK, // needed to send email to tmp folder
 					],
 				},
