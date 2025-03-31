@@ -237,7 +237,6 @@ export default function getFrameworkTestConfig(pm: string) {
 			verifyPreview: {
 				route: "/",
 				expectedText: "Hello!",
-				previewArgs: ["--host=127.0.0.1"],
 			},
 			promptHandlers: [
 				{
