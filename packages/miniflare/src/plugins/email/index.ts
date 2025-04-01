@@ -91,7 +91,7 @@ export const EMAIL_PLUGIN = createPlugin({
 					],
 					bindings: [
 						...buildJsonBindings(config),
-						WORKER_BINDING_SERVICE_LOOPBACK, // needed to send email to tmp folder
+						WORKER_BINDING_SERVICE_LOOPBACK,
 					],
 				},
 			}))
