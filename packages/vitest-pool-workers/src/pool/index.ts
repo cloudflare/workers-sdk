@@ -209,7 +209,7 @@ function isDurableObjectDesignatorToSelf(
 function isWorkflowDesignatorToSelf(
 	value: unknown,
 	currentScriptName: string | undefined
-): value is string | { className: string } {
+): value is { className: string } {
 	return (
 		typeof value === "object" &&
 		value !== null &&
