@@ -376,7 +376,7 @@ It accepts an optional `PluginConfig` parameter.
 
 - `inspectorPort?: number | false`
 
-  Optional inspector port to use for debugging your workers, for more details on debugging see the [devtools section](#devtools). Can be set to `false` to disable the debugging inspector altogether. Defaults to `9229`.
+  Optional inspector port to use for debugging your workers, for more details on debugging see the [devtools section](#devtools). By default the vite plugin will attempt to use the first available port it can find starting at `9229`.
 
 > [!NOTE]
 > When running `wrangler deploy`, only your main (entry) Worker will be deployed.
