@@ -531,26 +531,26 @@ export function createWorkflowEntrypointWrapper(entrypoint: string) {
 			entrypoint
 		);
 		const userEnv = stripInternalEnv(this.env);
-		// entrypoint value should always be an object, worker entrypoint only supports this
+		// workflow entrypoint value should always be a constructor
 		if (typeof entrypointValue === "function") {
 			// Assuming the user has defined a `WorkflowEntrypoint` subclass
 			const ctor = entrypointValue as WorkflowEntrypointConstructor;
 			const instance = new ctor(this.ctx, userEnv);
 			// noinspection SuspiciousTypeOfGuard
 			if (!(instance instanceof WorkflowEntrypoint)) {
-				const message = `Expected ${entrypoint} export of ${mainPath} to be a subclass of \`WorkerEntrypoint\``;
+				const message = `Expected ${entrypoint} export of ${mainPath} to be a subclass of \`WorkflowEntrypoint\``;
 				throw new TypeError(message);
 			}
 			const maybeFn = instance["run"];
 			if (typeof maybeFn === "function") {
 				return maybeFn.call(instance, ...args);
 			} else {
-				const message = `Expected ${entrypoint} export of ${mainPath} to define a \`run()\` method`;
+				const message = `Expected ${entrypoint} export of ${mainPath} to define a \`run()\` method, but got ${typeof maybeFn}`;
 				throw new TypeError(message);
 			}
 		} else {
 			// Assuming the user has messed up
-			const message = `Expected ${entrypoint} export of ${mainPath}to be an object or a class, got ${entrypointValue}`;
+			const message = `Expected ${entrypoint} export of ${mainPath} to be a subclass of \`WorkflowEntrypoint\`, but got ${entrypointValue}`;
 			throw new TypeError(message);
 		}
 	};

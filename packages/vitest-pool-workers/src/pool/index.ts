@@ -341,12 +341,7 @@ function fixupWorkflowBindingsToSelf(
 	for (const key of Object.keys(worker.workflows)) {
 		const designator = worker.workflows[key];
 		// `designator` hasn't been validated at this point
-		if (typeof designator === "string") {
-			// Either this is a simple `string` designator to the current worker...
-			result.add(designator);
-			worker.workflows[key].className = USER_OBJECT_MODULE_NAME + designator;
-		} else if (isWorkflowDesignatorToSelf(designator, worker.name)) {
-			// ...or it's an object designator to the current worker
+		if (isWorkflowDesignatorToSelf(designator, worker.name)) {
 			result.add(designator.className);
 			// Shallow clone to avoid mutating config
 			worker.workflows[key] = {
