@@ -12097,11 +12097,11 @@ export default{
 	describe("secret_store", () => {
 		it("should upload secret store bindings", async () => {
 			writeWranglerConfig({
-				secret_stores: [
+				secrets_store_secrets: [
 					{
 						binding: "SECRET",
 						store_id: "store_id",
-						name: "secret_name",
+						secret_name: "secret_name",
 					},
 				],
 			});
