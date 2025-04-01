@@ -23,17 +23,22 @@ export class InspectorProxyController {
 
 	#server: Promise<Server>;
 
-	#inspectorPort: number | Promise<number>;
+	#inspectorPort: Promise<number>;
 
 	constructor(
-		userInspectorPort: number,
+		private inspectorPortOption: number,
 		private log: Log,
 		private workerNamesToProxy: Set<string>
 	) {
-		this.#inspectorPort =
-			userInspectorPort !== 0 ? userInspectorPort : getPort();
+		this.#inspectorPort = this.#getInspectorPortToUse();
 		this.#server = this.#initializeServer();
 		this.#runtimeConnectionEstablished = new DeferredPromise();
+	}
+
+	async #getInspectorPortToUse() {
+		return this.inspectorPortOption !== 0
+			? this.inspectorPortOption
+			: await getPort();
 	}
 
 	async #initializeServer() {
@@ -58,6 +63,14 @@ export class InspectorProxyController {
 		server.listen(await this.#inspectorPort);
 
 		return server;
+	}
+
+	async #restartServer() {
+		const server = await this.#server;
+		await new Promise<void>((resolve, reject) => {
+			server.close((err) => (err ? reject(err) : resolve()));
+		});
+		server.listen(await this.#inspectorPort);
 	}
 
 	#initializeWebSocketServer(server: Server) {
@@ -212,7 +225,17 @@ export class InspectorProxyController {
 		return getWebsocketURL(await this.#inspectorPort);
 	}
 
-	async updateConnection(runtimeInspectorPort: number) {
+	async updateConnection(
+		inspectorPortOption: number,
+		runtimeInspectorPort: number
+	) {
+		if (this.inspectorPortOption !== inspectorPortOption) {
+			this.inspectorPortOption = inspectorPortOption;
+			this.#inspectorPort = this.#getInspectorPortToUse();
+
+			await this.#restartServer();
+		}
+
 		const workerdInspectorJson = (await fetch(
 			`http://127.0.0.1:${runtimeInspectorPort}/json`
 		).then((resp) => resp.json())) as {
