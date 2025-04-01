@@ -33,10 +33,11 @@ const config: TemplateConfig = {
 	transformPackageJson: async () => ({
 		scripts: {
 			"cf-typegen": "wrangler types --env-interface CloudflareBindings",
+			preview: "vite build && wrangler pages dev",
 		},
 	}),
 	devScript: "dev",
 	deployScript: "deploy",
-	previewScript: "dev",
+	previewScript: "preview",
 };
 export default config;
