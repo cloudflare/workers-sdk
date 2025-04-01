@@ -47,6 +47,7 @@ import {
 	toMiniflareRequest,
 } from "./utils";
 import { handleWebSocket } from "./websockets";
+import { validateWorkerEnvironmentsResolvedConfigs } from "./worker-environments-validation";
 import { getWarningForWorkersConfigs } from "./workers-configs";
 import type {
 	PluginConfig,
@@ -181,6 +182,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			},
 			configResolved(config) {
 				resolvedViteConfig = config;
+
+				// TODO: the `resolvedPluginConfig` type is incorrect, it is `ResolvedPluginConfig`
+				//       but it should be `ResolvedPluginConfig | undefined` (since we don't actually
+				//       set this value for `vite preview`), we should fix this type
+				if (resolvedPluginConfig?.type === "workers") {
+					validateWorkerEnvironmentsResolvedConfigs(
+						resolvedPluginConfig,
+						resolvedViteConfig
+					);
+				}
 			},
 			generateBundle(_, bundle) {
 				let config: Unstable_RawConfig | undefined;
