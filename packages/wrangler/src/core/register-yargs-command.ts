@@ -1,10 +1,11 @@
+import assert from "node:assert";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { defaultWranglerConfig } from "../config/config";
 import { FatalError, UserError } from "../errors";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
-import { printResourceLocation } from "../utils/is-local";
+import { isLocal, printResourceLocation } from "../utils/is-local";
 import { printWranglerBanner } from "../wrangler-banner";
 import { demandSingleValue } from "./helpers";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
@@ -92,19 +93,24 @@ function createHandler(def: CommandDefinition) {
 
 			await def.validateArgs?.(args);
 
-			if (def.behaviour?.printLocalResourceWarning) {
-				// if remote is undefined, it defaults to local
-				let remote = "remote" in args ? args.remote : undefined;
-				if ("local" in args && args.local === false) {
-					remote = false;
-				}
-				if (remote) {
-					printResourceLocation("remote");
-				} else {
+			if (def.behaviour?.printResourceLocation) {
+				// we don't have the type of args here :(
+				const remote =
+					"remote" in args && typeof args.remote === "boolean"
+						? args.remote
+						: undefined;
+				const local =
+					"local" in args && typeof args.local === "boolean"
+						? args.local
+						: undefined;
+				const resourceIsLocal = isLocal({ remote, local });
+				if (resourceIsLocal) {
 					printResourceLocation("local");
 					logger.log(
 						`Use --remote if you want to access the remote instance.\n`
 					);
+				} else {
+					printResourceLocation("remote");
 				}
 			}
 

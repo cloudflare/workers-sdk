@@ -75,7 +75,7 @@ export const r2ObjectGetCommand = createCommand({
 		},
 	},
 	behaviour: {
-		printLocalResourceWarning(args) {
+		printResourceLocation(args) {
 			return !args?.pipe;
 		},
 	},
@@ -223,7 +223,7 @@ export const r2ObjectPutCommand = createCommand({
 		},
 	},
 	behaviour: {
-		printLocalResourceWarning(args) {
+		printResourceLocation(args) {
 			return !args?.pipe;
 		},
 	},
@@ -391,7 +391,7 @@ export const r2ObjectDeleteCommand = createCommand({
 		},
 	},
 	behaviour: {
-		printLocalResourceWarning: true,
+		printResourceLocation: true,
 	},
 	async handler(args) {
 		const localMode = isLocal(args);

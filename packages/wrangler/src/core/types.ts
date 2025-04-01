@@ -127,7 +127,7 @@ export type CommandDefinition<
 		/**
 		 * If true, print a message about whether the command is operating on a local or remote resource
 		 */
-		printLocalResourceWarning?:
+		printResourceLocation?:
 			| ((args?: HandlerArgs<NamedArgDefs>) => boolean)
 			| boolean;
 	};

@@ -131,7 +131,7 @@ export const kvNamespaceListCommand = createCommand({
 
 	args: {},
 
-	behaviour: { printBanner: false, printLocalResourceWarning: false },
+	behaviour: { printBanner: false, printResourceLocation: false },
 	async handler(args) {
 		const config = readConfig(args);
 
@@ -221,7 +221,7 @@ export const kvKeyPutCommand = createCommand({
 		owner: "Product: KV",
 	},
 	behaviour: {
-		printLocalResourceWarning: true,
+		printResourceLocation: true,
 	},
 	positionalArgs: ["key", "value"],
 	args: {
@@ -356,7 +356,7 @@ export const kvKeyListCommand = createCommand({
 	},
 	behaviour: {
 		// implicitly expects to output JSON only
-		printLocalResourceWarning: false,
+		printResourceLocation: false,
 		printBanner: false,
 	},
 
@@ -440,7 +440,7 @@ export const kvKeyGetCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: false,
-		printLocalResourceWarning: false,
+		printResourceLocation: false,
 	},
 	positionalArgs: ["key"],
 	args: {
@@ -541,7 +541,7 @@ export const kvKeyDeleteCommand = createCommand({
 		owner: "Product: KV",
 	},
 	behaviour: {
-		printLocalResourceWarning: true,
+		printResourceLocation: true,
 	},
 	positionalArgs: ["key"],
 	args: {
@@ -616,7 +616,7 @@ export const kvBulkGetCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: false,
-		printLocalResourceWarning: false,
+		printResourceLocation: false,
 	},
 	positionalArgs: ["filename"],
 	args: {
@@ -737,7 +737,7 @@ export const kvBulkPutCommand = createCommand({
 		owner: "Product: KV",
 	},
 	behaviour: {
-		printLocalResourceWarning: true,
+		printResourceLocation: true,
 	},
 	positionalArgs: ["filename"],
 	args: {
@@ -891,7 +891,7 @@ export const kvBulkDeleteCommand = createCommand({
 		owner: "Product: KV",
 	},
 	behaviour: {
-		printLocalResourceWarning: true,
+		printResourceLocation: true,
 	},
 	positionalArgs: ["filename"],
 	args: {
