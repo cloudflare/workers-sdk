@@ -72,6 +72,7 @@ export class InspectorProxyController {
 
 	async #restartServer() {
 		const server = await this.#server;
+		server.closeAllConnections();
 		await new Promise<void>((resolve, reject) => {
 			server.close((err) => (err ? reject(err) : resolve()));
 		});
