@@ -85,9 +85,12 @@ export type PatchHyperdriveBody = {
 };
 
 export type Mtls = {
-	ca_certificate_uuid?: string;
-	mtls_certificate_uuid?: string;
+	ca_certificate_id?: string;
+	mtls_certificate_id?: string;
+	sslmode?: string;
 };
+
+export const Sslmode = ["require", "verify-ca", "verify-full"];
 
 export async function createConfig(
 	config: Config,
