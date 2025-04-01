@@ -1,5 +1,6 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { blue } from "kleur/colors";
+import { LogLevel, SharedHeaders } from "miniflare:shared";
 import PostalMime, { Email } from "postal-mime";
 import { CoreBindings } from "../core/constants";
 import { RAW_EMAIL } from "./constants";
@@ -76,8 +77,15 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 		);
 		const file = await resp.text();
 
-		console.log(
-			`${blue("send_email binding called with the following message:")}\n  ${file}`
+		this.ctx.waitUntil(
+			this.env[CoreBindings.SERVICE_LOOPBACK].fetch(
+				"http://localhost/core/log",
+				{
+					method: "POST",
+					headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.INFO.toString() },
+					body: `${blue("send_email binding called with the following message:")}\n  ${file}`,
+				}
+			)
 		);
 	}
 }

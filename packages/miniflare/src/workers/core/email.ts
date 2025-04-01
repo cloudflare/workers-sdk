@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { ForwardableEmailMessage } from "@cloudflare/workers-types";
 import { blue, red, yellow } from "kleur/colors";
+import { LogLevel, SharedHeaders } from "miniflare:shared";
 import PostalMime, { Email } from "postal-mime";
 import { MiniflareEmailMessage } from "../email/email.worker";
 import { isEmailReplyable, validateReply } from "../email/validate";
@@ -21,7 +22,7 @@ export async function handleEmail(
 	request: Request,
 	service: Fetcher,
 	env: Env,
-	_ctx: ExecutionContext
+	ctx: ExecutionContext
 ): Promise<Response> {
 	// Turn an HTTP request into an EmailMessage, using:
 	//  - `from` and `to` from the URL
@@ -88,14 +89,24 @@ export async function handleEmail(
 	// Emails can contain both an "envelope" from/to and a "header" from/to. Warn if these are different.
 	// Refer to https://datatracker.ietf.org/doc/html/rfc5321#section-3, https://datatracker.ietf.org/doc/html/rfc5322#section-3.6.2, and https://datatracker.ietf.org/doc/html/rfc5322#section-3.6.3 for more details
 	if (from !== parsedIncomingEmail.from.address) {
-		console.warn(
-			`${yellow("Provided MAIL FROM address doesn't match the email message's \"From\" header")}:\n  MAIL FROM: ${from}\n  "From" header: ${parsedIncomingEmail.from.address}`
+		await env[CoreBindings.SERVICE_LOOPBACK].fetch(
+			"http://localhost/core/log",
+			{
+				method: "POST",
+				headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString() },
+				body: `${yellow("Provided MAIL FROM address doesn't match the email message's \"From\" header")}:\n  MAIL FROM: ${from}\n  "From" header: ${parsedIncomingEmail.from.address}`,
+			}
 		);
 	}
 
 	if (!parsedIncomingEmail.to?.map((addr) => addr.address).includes(to)) {
-		console.warn(
-			`${yellow('Provided RCPT TO address doesn\'t match any "To" header in the email message')}:\n  RCPT TO: ${to}\n  "To" header: ${parsedIncomingEmail.to?.map((addr) => addr.address).join(", ")}`
+		await env[CoreBindings.SERVICE_LOOPBACK].fetch(
+			"http://localhost/core/log",
+			{
+				method: "POST",
+				headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString() },
+				body: `${yellow('Provided RCPT TO address doesn\'t match any "To" header in the email message')}:\n  RCPT TO: ${to}\n  "To" header: ${parsedIncomingEmail.to?.map((addr) => addr.address).join(", ")}`,
+			}
 		);
 	}
 
@@ -119,18 +130,46 @@ export async function handleEmail(
 			rawSize: incomingEmailRaw.byteLength,
 			headers: incomingEmailHeaders,
 			setReject: (reason: string): void => {
-				console.log(
-					`${red("Email handler rejected message")} with the following reason: "${reason}"`
+				ctx.waitUntil(
+					env[CoreBindings.SERVICE_LOOPBACK].fetch(
+						"http://localhost/core/log",
+						{
+							method: "POST",
+							headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.ERROR.toString() },
+							body: `${red("Email handler rejected message")} with the following reason: "${reason}"`,
+						}
+					)
 				);
 				maybeClientError = reason;
 			},
 			forward: async (rcptTo: string, headers?: Headers): Promise<void> => {
-				console.log(
-					`${blue("Email handler forwarded message")} with\n  rcptTo: ${rcptTo}${renderEmailHeaders(headers)}`
+				await env[CoreBindings.SERVICE_LOOPBACK].fetch(
+					"http://localhost/core/log",
+					{
+						method: "POST",
+						headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.INFO.toString() },
+						body: `${blue("Email handler forwarded message")} with\n  rcptTo: ${rcptTo}${renderEmailHeaders(headers)}`,
+					}
 				);
 			},
 			reply: async (replyMessage: MiniflareEmailMessage): Promise<void> => {
-				if (!isEmailReplyable(parsedIncomingEmail, incomingEmailHeaders)) {
+				if (
+					!(await isEmailReplyable(
+						parsedIncomingEmail,
+						incomingEmailHeaders,
+						async (msg) =>
+							void (await env[CoreBindings.SERVICE_LOOPBACK].fetch(
+								"http://localhost/core/log",
+								{
+									method: "POST",
+									headers: {
+										[SharedHeaders.LOG_LEVEL]: LogLevel.ERROR.toString(),
+									},
+									body: msg,
+								}
+							))
+					))
+				) {
 					throw new Error("Original email is not replyable");
 				}
 				const finalReply = await validateReply(
@@ -147,8 +186,13 @@ export async function handleEmail(
 				);
 				const file = await resp.text();
 
-				console.log(
-					`${blue("Email handler replied to sender")} with the following message:\n  ${file}`
+				await env[CoreBindings.SERVICE_LOOPBACK].fetch(
+					"http://localhost/core/log",
+					{
+						method: "POST",
+						headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.INFO.toString() },
+						body: `${blue("Email handler replied to sender")} with the following message:\n  ${file}`,
+					}
 				);
 			},
 		} satisfies ForwardableEmailMessage

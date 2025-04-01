@@ -5,14 +5,15 @@ import { RAW_EMAIL } from "./constants";
 import { type MiniflareEmailMessage as EmailMessage } from "./email.worker";
 
 // Email Routing has some limits on what emails can be responded to, documented at https://developers.cloudflare.com/email-routing/email-workers/reply-email-workers/
-export function isEmailReplyable(
+export async function isEmailReplyable(
 	email: Email,
-	incomingEmailHeaders: Headers
-): boolean {
+	incomingEmailHeaders: Headers,
+	log: (message: string) => Promise<void>
+): Promise<boolean> {
 	// The x-auto-response-supress header is set by MS Exchange and some other email services on outgoing email
 	// to opt-out of automatic responses. If it's set, don't allow the user Worker to reply to the email
 	const autoResponseSupress = incomingEmailHeaders
-		.get("x-auto-response-supress")
+		.get("x-auto-response-suppress")
 		?.toLowerCase();
 	if (autoResponseSupress !== undefined && autoResponseSupress !== "none") {
 		return false;
@@ -37,10 +38,10 @@ export function isEmailReplyable(
 		// Email Routing does not support more than 100 entries in the References header
 		// Instead of parsing the References header according to https://datatracker.ietf.org/doc/html/rfc5322#section-3.6.4
 		// we instead count the occurrences of the `@` symbol, which occurs once per email
-		if (email.references.match(/@/)?.length ?? 0 >= 100) {
-			console.log(
+		if ((email.references.match(/@/g)?.length ?? 0) >= 100) {
+			await log(
 				red(
-					'The incoming email\'s "References" header has more than 100 entries. As such, your Worker cannot respond to this email. Refer to See https://developers.cloudflare.com/email-routing/email-workers/reply-email-workers/.'
+					'The incoming email\'s "References" header has more than 100 entries. As such, your Worker cannot respond to this email. Refer to https://developers.cloudflare.com/email-routing/email-workers/reply-email-workers/.'
 				)
 			);
 			return false;
@@ -78,7 +79,7 @@ export async function validateReply(
 		throw new Error(`could not parse email: ${error.message}`);
 	}
 
-	if (parsedReply.from.address !== replyMessage.from) {
+	if (parsedReply.from?.address !== replyMessage.from) {
 		throw new Error("From: header does not match mail from");
 	}
 
@@ -86,15 +87,9 @@ export async function validateReply(
 		throw new Error("invalid message-id");
 	}
 
-	let replyEmailHeaders: Headers;
-	try {
-		replyEmailHeaders = new Headers(
-			parsedReply.headers.map((header) => [header.key, header.value])
-		);
-	} catch (e) {
-		const error = e as Error;
-		throw new Error(`could not parse email: ${error.message}`);
-	}
+	const replyEmailHeaders = new Headers(
+		parsedReply.headers.map((header) => [header.key, header.value])
+	);
 
 	// Replies from an Email Worker cannot change the Received header
 	if (replyEmailHeaders.get("received") !== null) {
