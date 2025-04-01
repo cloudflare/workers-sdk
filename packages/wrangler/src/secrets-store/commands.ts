@@ -1,6 +1,4 @@
-import { crypto } from "@cloudflare/workers-types/experimental";
 import { Miniflare } from "miniflare";
-import { Config } from "../config";
 import { createCommand } from "../core/create-command";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { buildPersistOptions } from "../dev/miniflare";
@@ -20,6 +18,7 @@ import {
 	listStores,
 	updateSecret,
 } from "./client";
+import type { Config } from "../config";
 import type { Secret, Store } from "./client";
 
 export async function usingLocalSecretsStoreSecretAPI<T>(
@@ -248,7 +247,8 @@ export const secretsStoreSecretListCommand = createCommand({
 					(api) => api.list()
 				)
 			).map((key) => ({
-				id: key.metadata?.uuid!,
+				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+				id: key.metadata!.uuid,
 				store_id: args.storeId,
 				name: key.name,
 				comment: "",
@@ -629,7 +629,7 @@ export const secretsStoreSecretDeleteCommand = createCommand({
 			const accountId = config.account_id || (await getAccountId());
 			await deleteSecret(accountId, args.storeId, args.secretId);
 		} else {
-			const name = await usingLocalSecretsStoreSecretAPI(
+			await usingLocalSecretsStoreSecretAPI(
 				args.persistTo,
 				config,
 				args.storeId,
