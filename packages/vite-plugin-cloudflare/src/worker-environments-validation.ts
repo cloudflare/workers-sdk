@@ -67,22 +67,22 @@ export function validateWorkerEnvironmentsResolvedConfigs(
 	}
 
 	if (problematicEnvsConfigs.size > 0) {
-		const errorMessage = `The following environment configurations are incompatible with the Cloudflare vite plugin:\n${[
+		const errorMessage = `The following environment configurations are incompatible with the Cloudflare Vite plugin:\n${[
 			...problematicEnvsConfigs,
 		]
 			.map(([envName, problematicConfig]) =>
 				[
 					problematicConfig.optimizeDepsExclude
-						? `	- ${envName} environment: \`optimizeDeps.exclude\`: ${JSON.stringify(problematicConfig.optimizeDepsExclude)}\n`
+						? `	- "${envName}" environment: \`optimizeDeps.exclude\`: ${JSON.stringify(problematicConfig.optimizeDepsExclude)}\n`
 						: null,
 					problematicConfig.resolveExternal
-						? `	- ${envName} environment: \`resolve.external\`: ${JSON.stringify(problematicConfig.resolveExternal)}\n`
+						? `	- "${envName}" environment: \`resolve.external\`: ${JSON.stringify(problematicConfig.resolveExternal)}\n`
 						: null,
 				].join("")
 			)
 			.join(
 				""
-			)}To resolve this issue avoid setting \`optimizeDeps.exclude\` and \`resolve.external\` in any of your Cloudflare worker environments and avoid using plugins that do such thing.\n`;
+			)}To resolve this issue, avoid setting \`optimizeDeps.exclude\` and \`resolve.external\` in your Cloudflare Worker environments.\n`;
 
 		throw new Error(errorMessage);
 	}
