@@ -18,12 +18,12 @@ export function validateWorkerEnvironmentsResolvedConfigs(
 ) {
 	const workersEnvironmentNames = Object.keys(resolvedPluginConfig.workers);
 
-	type ProblematicEnvConfigs = {
+	type DisallowedEnvConfigs = {
 		optimizeDepsExclude?: vite.DepOptimizationOptions["exclude"];
 		resolveExternal?: vite.ResolveOptions["external"];
 	};
 
-	const problematicEnvsConfigs = new Map<string, ProblematicEnvConfigs>();
+	const disallowedEnvsConfigs = new Map<string, DisallowedEnvConfigs>();
 
 	for (const envName of workersEnvironmentNames) {
 		const workerEnvConfig = resolvedViteConfig.environments[envName];
@@ -31,9 +31,9 @@ export function validateWorkerEnvironmentsResolvedConfigs(
 
 		const { optimizeDeps, resolve } = workerEnvConfig;
 
-		const problematicConfig: ProblematicEnvConfigs = {};
+		const disallowedConfig: DisallowedEnvConfigs = {};
 
-		const problematicOptimizeDepsExcludeEntries = (
+		const disallowedOptimizeDepsExcludeEntries = (
 			optimizeDeps.exclude ?? []
 		).filter((entry) => {
 			if (cloudflareBuiltInModules.includes(entry)) {
@@ -49,34 +49,34 @@ export function validateWorkerEnvironmentsResolvedConfigs(
 				return false;
 			}
 
-			// everything else is problematic
+			// everything else is disallowed
 			return true;
 		});
-		if (problematicOptimizeDepsExcludeEntries.length > 0) {
-			problematicConfig.optimizeDepsExclude =
-				problematicOptimizeDepsExcludeEntries;
+		if (disallowedOptimizeDepsExcludeEntries.length > 0) {
+			disallowedConfig.optimizeDepsExclude =
+				disallowedOptimizeDepsExcludeEntries;
 		}
 
 		if (resolve.external === true || resolve.external.length > 0) {
-			problematicConfig.resolveExternal = resolve.external;
+			disallowedConfig.resolveExternal = resolve.external;
 		}
 
-		if (Object.keys(problematicConfig).length > 0) {
-			problematicEnvsConfigs.set(envName, problematicConfig);
+		if (Object.keys(disallowedConfig).length > 0) {
+			disallowedEnvsConfigs.set(envName, disallowedConfig);
 		}
 	}
 
-	if (problematicEnvsConfigs.size > 0) {
+	if (disallowedEnvsConfigs.size > 0) {
 		const errorMessage = `The following environment configurations are incompatible with the Cloudflare Vite plugin:\n${[
-			...problematicEnvsConfigs,
+			...disallowedEnvsConfigs,
 		]
-			.map(([envName, problematicConfig]) =>
+			.map(([envName, disallowedConfig]) =>
 				[
-					problematicConfig.optimizeDepsExclude
-						? `	- "${envName}" environment: \`optimizeDeps.exclude\`: ${JSON.stringify(problematicConfig.optimizeDepsExclude)}\n`
+					disallowedConfig.optimizeDepsExclude
+						? `	- "${envName}" environment: \`optimizeDeps.exclude\`: ${JSON.stringify(disallowedConfig.optimizeDepsExclude)}\n`
 						: null,
-					problematicConfig.resolveExternal
-						? `	- "${envName}" environment: \`resolve.external\`: ${JSON.stringify(problematicConfig.resolveExternal)}\n`
+					disallowedConfig.resolveExternal
+						? `	- "${envName}" environment: \`resolve.external\`: ${JSON.stringify(disallowedConfig.resolveExternal)}\n`
 						: null,
 				].join("")
 			)
