@@ -207,6 +207,9 @@ function renderError(err: FetchError, level = 0): string {
 			.join("\n") ?? "";
 	return (
 		(err.code ? `${err.message} [code: ${err.code}]` : err.message) +
+		(err.documentation_url
+			? `\nTo learn more about this error, visit: ${err.documentation_url}`
+			: "") +
 		chainedMessages
 	);
 }

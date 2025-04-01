@@ -49,7 +49,7 @@ describe("throwFetchError", () => {
 	runInTempDir();
 	mockConsoleMethods();
 
-	it("should include api errors and messages in error", async () => {
+	it("should include api errors, messages and documentation_url in error", async () => {
 		msw.use(
 			http.get("*/user", () => {
 				return HttpResponse.json(
@@ -57,8 +57,20 @@ describe("throwFetchError", () => {
 						null,
 						false,
 						[
-							{ code: 10001, message: "error one" },
-							{ code: 10002, message: "error two" },
+							{
+								code: 10001,
+								message: "error one",
+								documentation_url: "https://example.com/1",
+							},
+							{
+								code: 10002,
+								message: "error two",
+								documentation_url: "https://example.com/2",
+							},
+							{
+								code: 10003,
+								message: "error three",
+							},
 						],
 						["message one", "message two"]
 					)
@@ -68,8 +80,15 @@ describe("throwFetchError", () => {
 		await expect(runWrangler("whoami")).rejects.toMatchObject({
 			text: "A request to the Cloudflare API (/user) failed.",
 			notes: [
-				{ text: "error one [code: 10001]" },
-				{ text: "error two [code: 10002]" },
+				{
+					text: "error one [code: 10001]\nTo learn more about this error, visit: https://example.com/1",
+				},
+				{
+					text: "error two [code: 10002]\nTo learn more about this error, visit: https://example.com/2",
+				},
+				{
+					text: "error three [code: 10003]",
+				},
 				{ text: "message one" },
 				{ text: "message two" },
 				{
@@ -85,13 +104,25 @@ describe("throwFetchError", () => {
 				return HttpResponse.json({
 					result: null,
 					success: false,
-					errors: [{ code: 10000, message: "error" }],
+					errors: [
+						{
+							code: 10000,
+							message: "error",
+							documentation_url: "https://example.com/1",
+						},
+						{ code: 10001, message: "error 1" },
+					],
 				});
 			})
 		);
 		await expect(runWrangler("whoami")).rejects.toMatchObject({
 			text: "A request to the Cloudflare API (/user) failed.",
-			notes: [{ text: "error [code: 10000]" }],
+			notes: [
+				{
+					text: "error [code: 10000]\nTo learn more about this error, visit: https://example.com/1",
+				},
+				{ text: "error 1 [code: 10001]" },
+			],
 		});
 	});
 });
