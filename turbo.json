@@ -3,7 +3,7 @@
 	"remoteCache": {
 		"signature": true
 	},
-	"globalEnv": [
+	"globalPassThroughEnv": [
 		"CI_OS",
 		"NODE_VERSION",
 		"VITEST",
@@ -45,7 +45,6 @@
 			"env": ["MINIFLARE_WORKERD_PATH"]
 		},
 		"test:e2e": {
-			"env": ["WRANGLER", "CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"],
 			"dependsOn": ["build"],
 			"outputLogs": "new-only"
 		},
