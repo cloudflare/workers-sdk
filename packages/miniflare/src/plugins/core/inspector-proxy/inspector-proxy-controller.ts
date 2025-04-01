@@ -60,7 +60,12 @@ export class InspectorProxyController {
 
 		this.#initializeWebSocketServer(server);
 
+		const listeningPromise = new Promise<void>((resolve) =>
+			server.once("listening", resolve)
+		);
 		server.listen(await this.#inspectorPort);
+
+		await listeningPromise;
 
 		return server;
 	}
@@ -70,7 +75,11 @@ export class InspectorProxyController {
 		await new Promise<void>((resolve, reject) => {
 			server.close((err) => (err ? reject(err) : resolve()));
 		});
+		const listeningPromise = new Promise<void>((resolve) =>
+			server.once("listening", resolve)
+		);
 		server.listen(await this.#inspectorPort);
+		await listeningPromise;
 	}
 
 	#initializeWebSocketServer(server: Server) {
