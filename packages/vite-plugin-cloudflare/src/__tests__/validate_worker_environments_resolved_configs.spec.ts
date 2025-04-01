@@ -107,9 +107,9 @@ describe("validateWorkerEnvironmentsResolvedConfigs", () => {
 				resolvedViteConfig
 			)
 		).toThrowErrorMatchingInlineSnapshot(`
-			[Error: The following environment configurations are incompatible with the Cloudflare vite plugin:
-				- worker environment: \`optimizeDeps.exclude\`: ["node:assert"]
-			To resolve this issue avoid setting \`optimizeDeps.exclude\` and \`resolve.external\` in any of your Cloudflare worker environments and avoid using plugins that do such thing.
+			[Error: The following environment configurations are incompatible with the Cloudflare Vite plugin:
+				- "worker" environment: \`optimizeDeps.exclude\`: ["node:assert"]
+			To resolve this issue, avoid setting \`optimizeDeps.exclude\` and \`resolve.external\` in your Cloudflare Worker environments.
 			]
 		`);
 	});
@@ -156,10 +156,10 @@ describe("validateWorkerEnvironmentsResolvedConfigs", () => {
 			)
 		).toThrowErrorMatchingInlineSnapshot(
 			`
-			[Error: The following environment configurations are incompatible with the Cloudflare vite plugin:
-				- worker environment: \`optimizeDeps.exclude\`: ["pkgA","pkgB"]
-				- worker environment: \`resolve.external\`: true
-			To resolve this issue avoid setting \`optimizeDeps.exclude\` and \`resolve.external\` in any of your Cloudflare worker environments and avoid using plugins that do such thing.
+			[Error: The following environment configurations are incompatible with the Cloudflare Vite plugin:
+				- "worker" environment: \`optimizeDeps.exclude\`: ["pkgA","pkgB"]
+				- "worker" environment: \`resolve.external\`: true
+			To resolve this issue, avoid setting \`optimizeDeps.exclude\` and \`resolve.external\` in your Cloudflare Worker environments.
 			]
 		`
 		);
@@ -200,12 +200,12 @@ describe("validateWorkerEnvironmentsResolvedConfigs", () => {
 			)
 		).toThrowErrorMatchingInlineSnapshot(
 			`
-			[Error: The following environment configurations are incompatible with the Cloudflare vite plugin:
-				- workerA environment: \`optimizeDeps.exclude\`: ["pkgA"]
-				- workerA environment: \`resolve.external\`: true
-				- workerB environment: \`resolve.external\`: ["externalPkg1"]
-				- workerC environment: \`optimizeDeps.exclude\`: ["pkgB"]
-			To resolve this issue avoid setting \`optimizeDeps.exclude\` and \`resolve.external\` in any of your Cloudflare worker environments and avoid using plugins that do such thing.
+			[Error: The following environment configurations are incompatible with the Cloudflare Vite plugin:
+				- "workerA" environment: \`optimizeDeps.exclude\`: ["pkgA"]
+				- "workerA" environment: \`resolve.external\`: true
+				- "workerB" environment: \`resolve.external\`: ["externalPkg1"]
+				- "workerC" environment: \`optimizeDeps.exclude\`: ["pkgB"]
+			To resolve this issue, avoid setting \`optimizeDeps.exclude\` and \`resolve.external\` in your Cloudflare Worker environments.
 			]
 		`
 		);
