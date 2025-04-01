@@ -12,7 +12,7 @@ describe("during development wrangler config files are validated", () => {
 
 		expect(await proc.exitCode).not.toBe(0);
 		expect(proc.stderr).toContain(
-			"The following environment configurations are incompatible with the Cloudflare vite plugin"
+			"The following environment configurations are incompatible with the Cloudflare Vite plugin"
 		);
 	});
 });
