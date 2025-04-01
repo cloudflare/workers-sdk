@@ -1,6 +1,7 @@
 import { kCurrentWorker, Miniflare } from "miniflare";
 import { getAssetsOptions } from "../../../assets";
 import { readConfig } from "../../../config";
+import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
 import { getBoundRegisteredWorkers } from "../../../dev-registry";
@@ -11,7 +12,9 @@ import {
 	buildSitesOptions,
 } from "../../../dev/miniflare";
 import { run } from "../../../experimental-flags";
+import { logger } from "../../../logger";
 import { getLegacyAssetPaths, getSiteAssetPaths } from "../../../sites";
+import { dedent } from "../../../utils/dedent";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import { getServiceBindings } from "./services";
@@ -130,6 +133,7 @@ export async function getPlatformProxy<
 	};
 }
 
+// this is only used by getPlatformProxy
 async function getMiniflareOptionsFromConfig(
 	rawConfig: Config,
 	env: string | undefined,
@@ -137,6 +141,19 @@ async function getMiniflareOptionsFromConfig(
 ): Promise<Partial<MiniflareOptions>> {
 	const bindings = getBindings(rawConfig, env, true, {});
 
+	if (rawConfig["durable_objects"]) {
+		const { localBindings } = partitionDurableObjectBindings(rawConfig);
+		if (localBindings.length > 0) {
+			logger.warn(dedent`
+				You have defined bindings to the following internal Durable Objects:
+				${localBindings.map((b) => `- ${JSON.stringify(b)}`).join("\n")}
+				These will not work in local development, but they should work in production.
+
+				If you want to develop these locally, you can define your DO in a separate Worker, with a separate configuration file.
+				For detailed instructions, refer to the Durable Objects section here: https://developers.cloudflare.com/workers/wrangler/api#supported-bindings
+				`);
+		}
+	}
 	const workerDefinitions = await getBoundRegisteredWorkers({
 		name: rawConfig.name,
 		services: bindings.services,
@@ -144,7 +161,7 @@ async function getMiniflareOptionsFromConfig(
 	});
 
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
-		name: undefined,
+		name: rawConfig.name,
 		bindings,
 		workerDefinitions,
 		queueConsumers: undefined,
@@ -163,6 +180,7 @@ async function getMiniflareOptionsFromConfig(
 			{
 				script: "",
 				modules: true,
+				name: rawConfig.name,
 				...bindingOptions,
 				serviceBindings: {
 					...serviceBindings,
