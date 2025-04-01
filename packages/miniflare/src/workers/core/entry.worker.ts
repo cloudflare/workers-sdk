@@ -411,7 +411,9 @@ export default <ExportedHandler<Env>>{
 			}
 			response = maybeInjectLiveReload(response, env, ctx);
 			response = ensureAcceptableEncoding(clientAcceptEncoding, response);
+			// if (env[CoreBindings.TRIGGER_HANDLERS]) {
 			maybeLogRequest(request, response, env, ctx, startTime);
+			// }
 			return response;
 		} catch (e: any) {
 			return new Response(e?.stack ?? String(e), { status: 500 });
