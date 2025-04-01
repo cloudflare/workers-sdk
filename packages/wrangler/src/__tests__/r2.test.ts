@@ -967,7 +967,7 @@ describe("r2", () => {
 				it("should enable R2 catalog for the given bucket", async () => {
 					msw.use(
 						http.post(
-							"*/accounts/some-account-id/r2-catalog/testBucket",
+							"*/accounts/some-account-id/r2-catalog/testBucket/enable",
 							async () => {
 								return HttpResponse.json(
 									createFetchResult(
@@ -987,9 +987,10 @@ describe("r2", () => {
 						`"✨ Successfully enabled data catalog on bucket 'testBucket'.
 
 Catalog URI: 'https://catalog.cloudflarestorage.com/test-warehouse-name'
+Warehouse: 'test-warehouse-name'
 
 Use this Catalog URI with Iceberg-compatible query engines (Spark, DuckDB, Trino, etc.) to query data as tables.
-Note: You'll need a Cloudflare API token with 'R2 Data Catalog' permission to authenticate your client with this catalog.
+Note: You will need a Cloudflare API token with 'R2 Data Catalog' permission to authenticate your client with this catalog.
 For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"`
 					);
 				});
@@ -1058,12 +1059,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				it("should disable R2 catalog for the given bucket", async () => {
 					setIsTTY(true);
 					mockConfirm({
-						text: "Are you sure you want to disable the data catalog for bucket 'testBucket'? This action is irreversible, and you cannot re-enable it on this bucket.",
+						text: "Are you sure you want to disable the data catalog for bucket 'testBucket'?",
 						result: true,
 					});
 					msw.use(
-						http.delete(
-							"*/accounts/some-account-id/r2-catalog/testBucket",
+						http.post(
+							"*/accounts/some-account-id/r2-catalog/testBucket/disable",
 							async () => {
 								return HttpResponse.json(createFetchResult({}));
 							},
@@ -1074,6 +1075,43 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 					expect(std.out).toMatchInlineSnapshot(
 						`"Successfully disabled the data catalog on bucket 'testBucket'."`
 					);
+				});
+
+				it("should inform user if the catalog was never enabled for the bucket", async () => {
+					setIsTTY(true);
+					mockConfirm({
+						text: "Are you sure you want to disable the data catalog for bucket 'testBucket'?",
+						result: true,
+					});
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/r2-catalog/:bucketName/disable",
+							async ({ request, params }) => {
+								const { accountId } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(await request.text()).toEqual("");
+								return HttpResponse.json(
+									{
+										success: false,
+										errors: [
+											{
+												code: 40401,
+												message: "Warehouse not found",
+											},
+										],
+										result: null,
+									},
+									{ status: 404 }
+								);
+							},
+							{ once: true }
+						)
+					);
+
+					await runWrangler("r2 bucket catalog disable testBucket");
+					expect(std.out).toMatchInlineSnapshot(`
+						"Data catalog is not enabled for bucket 'testBucket'. Please use 'wrangler r2 bucket catalog enable testBucket' to first enable the data catalog on this bucket."
+					`);
 				});
 			});
 
@@ -1133,13 +1171,15 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 					await runWrangler("r2 bucket catalog get test-bucket");
 					expect(std.out).toMatchInlineSnapshot(`
 					"Getting data catalog status for 'test-bucket'...
+
 					Bucket:       test-bucket
 					Catalog URI:  https://catalog.cloudflarestorage.com/test-name
+					Warehouse:    test-name
 					Status:       active"
 				`);
 				});
 
-				it("should inform user if no active warehouse is present for the bucket", async () => {
+				it("should inform user if the catalog was never enabled for the bucket", async () => {
 					msw.use(
 						http.get(
 							"*/accounts/:accountId/r2-catalog/:bucketName",
@@ -1167,7 +1207,8 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 					await runWrangler("r2 bucket catalog get test-bucket");
 					expect(std.out).toMatchInlineSnapshot(`
 					"Getting data catalog status for 'test-bucket'...
-					Data catalog isn't enabled for bucket 'test-bucket'."
+
+					Data catalog is not enabled for bucket 'test-bucket'. Please use 'wrangler r2 bucket catalog enable test-bucket' to first enable the data catalog on this bucket."
 				`);
 				});
 			});

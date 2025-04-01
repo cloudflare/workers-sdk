@@ -523,9 +523,12 @@ export async function enableR2Catalog(
 	accountId: string,
 	bucketName: string
 ): Promise<R2WarehouseEnableResponse> {
-	return await fetchResult(`/accounts/${accountId}/r2-catalog/${bucketName}`, {
-		method: "POST",
-	});
+	return await fetchResult(
+		`/accounts/${accountId}/r2-catalog/${bucketName}/enable`,
+		{
+			method: "POST",
+		}
+	);
 }
 
 /**
@@ -535,9 +538,12 @@ export async function disableR2Catalog(
 	accountId: string,
 	bucketName: string
 ): Promise<R2WarehouseEnableResponse> {
-	return await fetchResult(`/accounts/${accountId}/r2-catalog/${bucketName}`, {
-		method: "DELETE",
-	});
+	return await fetchResult(
+		`/accounts/${accountId}/r2-catalog/${bucketName}/disable`,
+		{
+			method: "POST",
+		}
+	);
 }
 
 const R2EventableOperations = [
