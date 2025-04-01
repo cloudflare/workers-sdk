@@ -1557,11 +1557,13 @@ export class Miniflare {
 			const ready = initial ? "Ready" : "Updated and ready";
 
 			const urlSafeHost = getURLSafeHost(configuredHost);
-			this.#log.info(
-				`${ready} on ${secure ? "https" : "http"}://${urlSafeHost}:${entryPort}`
-			);
+			if (this.#sharedOpts.core.logRequests) {
+				this.#log.info(
+					`${ready} on ${secure ? "https" : "http"}://${urlSafeHost}:${entryPort}`
+				);
+			}
 
-			if (initial) {
+			if (initial && this.#sharedOpts.core.logRequests) {
 				const hosts: string[] = [];
 				if (configuredHost === "::" || configuredHost === "*") {
 					hosts.push("localhost");

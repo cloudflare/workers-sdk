@@ -27,9 +27,10 @@ export default class extends WorkerEntrypoint<Env> {
 		return new Response("Hello World!");
 	}
 	async email(message: ForwardableEmailMessage) {
+		console.log("hello");
 		const msg = createMimeMessage();
 		msg.setHeader("In-Reply-To", message.headers.get("Message-ID")!);
-		msg.setSender({ name: "Sender", addr: "sender@penalosa.cloud" });
+		msg.setSender(message.to);
 		msg.setRecipient(message.from);
 		msg.setSubject("An email generated in a Worker");
 		msg.addMessage({
@@ -37,16 +38,12 @@ export default class extends WorkerEntrypoint<Env> {
 			data: `Congratulations, you just sent an email from a Worker.`,
 		});
 
-		const m = new EmailMessage(
-			"sender@penalosa.cloud",
-			message.from,
-			msg.asRaw()
-		);
+		const m = new EmailMessage(message.to, message.from, msg.asRaw());
 		await message.forward(
 			"samuel@macleod.space",
 			new Headers({ hello: "world" })
 		);
-		message.setReject("Rejection reason");
+		// message.setReject("Rejection reason");
 		await message.reply(m);
 	}
 

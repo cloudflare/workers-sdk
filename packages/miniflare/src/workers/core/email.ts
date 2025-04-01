@@ -1,11 +1,15 @@
 import assert from "node:assert";
 import { ForwardableEmailMessage } from "@cloudflare/workers-types";
-import { blue, red, yellow } from "kleur/colors";
+import { $, blue, red, reset, yellow } from "kleur/colors";
 import { LogLevel, SharedHeaders } from "miniflare:shared";
 import PostalMime, { Email } from "postal-mime";
 import { MiniflareEmailMessage } from "../email/email.worker";
 import { isEmailReplyable, validateReply } from "../email/validate";
 import { CoreBindings } from "./constants";
+
+// Force-enable colours, because kleur can't detect this setting correctly from within a Worker
+// The user setting should be respected (and ansi stripped out if needed) in https://github.com/cloudflare/workers-sdk/blob/2529848e9ff3ddb01ac8c73f96747f32b47aca3e/packages/miniflare/src/index.ts#L993
+$.enabled = true;
 
 type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
@@ -136,7 +140,7 @@ export async function handleEmail(
 						{
 							method: "POST",
 							headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.ERROR.toString() },
-							body: `${red("Email handler rejected message")} with the following reason: "${reason}"`,
+							body: `${red("Email handler rejected message")}${reset(` with the following reason: "${reason}"`)}`,
 						}
 					)
 				);
@@ -148,7 +152,7 @@ export async function handleEmail(
 					{
 						method: "POST",
 						headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.INFO.toString() },
-						body: `${blue("Email handler forwarded message")} with\n  rcptTo: ${rcptTo}${renderEmailHeaders(headers)}`,
+						body: `${blue("Email handler forwarded message")}${reset(` with\n  rcptTo: ${rcptTo}${renderEmailHeaders(headers)}`)}`,
 					}
 				);
 			},
@@ -191,7 +195,7 @@ export async function handleEmail(
 					{
 						method: "POST",
 						headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.INFO.toString() },
-						body: `${blue("Email handler replied to sender")} with the following message:\n  ${file}`,
+						body: `${blue("Email handler replied to sender")}${reset(` with the following message:\n  ${file}`)}`,
 					}
 				);
 			},

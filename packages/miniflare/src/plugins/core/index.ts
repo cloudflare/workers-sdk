@@ -212,6 +212,8 @@ export const CoreSharedOptionsSchema = z.object({
 	unsafeStickyBlobs: z.boolean().optional(),
 	// Enable directly triggering user Worker handlers with paths like `/cdn-cgi/handler/scheduled`
 	unsafeTriggerHandlers: z.boolean().optional(),
+	// Enable logging requests
+	logRequests: z.boolean().default(true),
 });
 
 export const CORE_PLUGIN_NAME = "core";
@@ -751,6 +753,10 @@ export function getGlobalServices({
 		{
 			name: CoreBindings.TRIGGER_HANDLERS,
 			json: JSON.stringify(!!sharedOptions.unsafeTriggerHandlers),
+		},
+		{
+			name: CoreBindings.LOG_REQUESTS,
+			json: JSON.stringify(!!sharedOptions.logRequests),
 		},
 		{ name: CoreBindings.JSON_CF_BLOB, json: JSON.stringify(sharedOptions.cf) },
 		{ name: CoreBindings.JSON_LOG_LEVEL, json: JSON.stringify(log.level) },

@@ -254,12 +254,9 @@ export function castLogLevel(level: LoggerLevel): LogLevel {
 export function buildLog(): Log {
 	let level = castLogLevel(logger.loggerLevel);
 
-	// if we're in DEBUG or VERBOSE mode, clamp logLevel to WARN -- ie. don't show request logs for user worker
-	if (level <= LogLevel.DEBUG) {
-		level = Math.min(level, LogLevel.WARN);
-	}
-
-	return new WranglerLog(level, { prefix: "wrangler-UserWorker" });
+	return new WranglerLog(level, {
+		prefix: level === LogLevel.DEBUG ? "wrangler-UserWorker" : "wrangler",
+	});
 }
 
 async function buildSourceOptions(
@@ -1040,6 +1037,7 @@ export async function buildMiniflareOptions(
 		upstream,
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 		unsafeTriggerHandlers: true,
+		logRequests: false,
 
 		log,
 		verbose: logger.loggerLevel === "debug",
