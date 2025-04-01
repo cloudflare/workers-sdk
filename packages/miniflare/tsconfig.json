@@ -27,9 +27,5 @@
 		}
 	},
 	"include": ["src/**/*.ts", "test/**/*.ts", "types"],
-	"exclude": [
-		"src/workers/**/*.worker.ts",
-		"src/workers/node.d.ts",
-		"test/fixtures"
-	]
+	"exclude": ["src/workers/**/*.ts", "src/workers/node.d.ts", "test/fixtures"]
 }
