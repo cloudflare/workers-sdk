@@ -3220,9 +3220,10 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
-			Download complete."
-		`);
+					"Resource location: remote
+					Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
+					Download complete."
+				`);
 			});
 
 			it("should download R2 object from bucket into directory", async () => {
@@ -3241,9 +3242,10 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
-			Upload complete."
-		`);
+					"Resource location: remote
+					Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
+					Upload complete."
+				`);
 			});
 
 			it("should upload R2 object with storage class to bucket", async () => {
@@ -3253,9 +3255,10 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"Creating object \\"wormhole-img.png\\" with InfrequentAccess storage class in bucket \\"bucketName-object-test\\".
-			Upload complete."
-		`);
+					"Resource location: remote
+					Creating object \\"wormhole-img.png\\" with InfrequentAccess storage class in bucket \\"bucketName-object-test\\".
+					Upload complete."
+				`);
 			});
 
 			it("should fail to upload R2 object to bucket if too large", async () => {
@@ -3317,9 +3320,10 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
-			Upload complete."
-		`);
+					"Resource location: remote
+					Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
+					Upload complete."
+				`);
 			});
 
 			it("should delete R2 object from bucket", async () => {
@@ -3328,9 +3332,10 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"Deleting object \\"wormhole-img.png\\" from bucket \\"bucketName-object-test\\".
-			Delete complete."
-		`);
+					"Resource location: remote
+					Deleting object \\"wormhole-img.png\\" from bucket \\"bucketName-object-test\\".
+					Delete complete."
+				`);
 			});
 
 			it("should not allow `--pipe` & `--file` to run together", async () => {

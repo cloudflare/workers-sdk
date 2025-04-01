@@ -4,6 +4,7 @@ import { defaultWranglerConfig } from "../config/config";
 import { FatalError, UserError } from "../errors";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
+import { printResourceLocation } from "../utils/is-local";
 import { printWranglerBanner } from "../wrangler-banner";
 import { demandSingleValue } from "./helpers";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
@@ -90,6 +91,23 @@ function createHandler(def: CommandDefinition) {
 			// TODO(telemetry): send command started event
 
 			await def.validateArgs?.(args);
+
+			if (def.behaviour?.printLocalResourceWarning) {
+				// if remote is undefined, it defaults to local
+				let remote = "remote" in args ? args.remote : undefined;
+				if ("local" in args && args.local === false) {
+					remote = false;
+				}
+				if (remote) {
+					printResourceLocation("remote");
+				} else {
+					printResourceLocation("local");
+					logger.log(
+						`Use --remote if you want to access the remote instance.\n`
+					);
+				}
+			}
+
 			const experimentalFlags = def.behaviour?.overrideExperimentalFlags
 				? def.behaviour?.overrideExperimentalFlags(args)
 				: {

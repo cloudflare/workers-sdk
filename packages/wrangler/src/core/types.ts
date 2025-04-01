@@ -123,6 +123,13 @@ export type CommandDefinition<
 		 * If true, then look for a redirect file at `.wrangler/deploy/config.json` and use that to find the Wrangler configuration file.
 		 */
 		useConfigRedirectIfAvailable?: boolean;
+
+		/**
+		 * If true, print a message about whether the command is operating on a local or remote resource
+		 */
+		printLocalResourceWarning?:
+			| ((args?: HandlerArgs<NamedArgDefs>) => boolean)
+			| boolean;
 	};
 
 	/**

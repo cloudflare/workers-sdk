@@ -1,7 +1,10 @@
+import chalk from "chalk";
+import { logger } from "../logger";
+
 export function isLocal(
 	args: {
-		local: boolean | undefined;
-		remote: boolean | undefined;
+		local?: boolean;
+		remote?: boolean;
 	},
 	defaultValue = true
 ): boolean {
@@ -9,4 +12,8 @@ export function isLocal(
 		return defaultValue;
 	}
 	return args.local === true || args.remote === false;
+}
+
+export function printResourceLocation(location: "remote" | "local") {
+	logger.log(chalk.hex("#BD5B08").bold("Resource location:"), location);
 }

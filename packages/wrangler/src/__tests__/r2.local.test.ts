@@ -23,34 +23,43 @@ describe("r2", () => {
 					`[Error: The specified key does not exist.]`
 				);
 
-				expect(std.warn).toMatchInlineSnapshot(`
-					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBy default, \`wrangler r2\` commands access a local simulator of your R2 bucket, the same as that used by \`wrangler dev\`. To access your remote R2 bucket, re-run the command with the --remote flag[0m
-
-					"
-				`);
-
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
 					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png `
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
+					"Resource location: local
+					Use --remote if you want to access the remote instance.
 
-			Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
-			Upload complete."
-		`);
+					Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
+
+					Resource location: local
+					Use --remote if you want to access the remote instance.
+
+					Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
+					Upload complete."
+				`);
 
 				await runWrangler(
 					`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png `
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
+					"Resource location: local
+					Use --remote if you want to access the remote instance.
 
-			Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
-			Upload complete.
-			Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
-			Download complete."
-		`);
+					Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
+
+					Resource location: local
+					Use --remote if you want to access the remote instance.
+
+					Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
+					Upload complete.
+					Resource location: local
+					Use --remote if you want to access the remote instance.
+
+					Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
+					Download complete."
+				`);
 			});
 
 			it("should delete R2 object from local bucket", async () => {
@@ -58,33 +67,44 @@ describe("r2", () => {
 				await runWrangler(
 					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png `
 				);
-				expect(std.warn).toMatchInlineSnapshot(`
-					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBy default, \`wrangler r2\` commands access a local simulator of your R2 bucket, the same as that used by \`wrangler dev\`. To access your remote R2 bucket, re-run the command with the --remote flag[0m
-
-					"
-				`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
 
 				await runWrangler(
 					`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png `
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
-			Upload complete.
-			Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
-			Download complete."
-		`);
+					"Resource location: local
+					Use --remote if you want to access the remote instance.
+
+					Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
+					Upload complete.
+					Resource location: local
+					Use --remote if you want to access the remote instance.
+
+					Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
+					Download complete."
+				`);
 
 				await runWrangler(
 					`r2 object delete bucketName-object-test/wormhole-img.png `
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
-			Upload complete.
-			Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
-			Download complete.
-			Deleting object \\"wormhole-img.png\\" from bucket \\"bucketName-object-test\\".
-			Delete complete."
-		`);
+					"Resource location: local
+					Use --remote if you want to access the remote instance.
+
+					Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
+					Upload complete.
+					Resource location: local
+					Use --remote if you want to access the remote instance.
+
+					Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
+					Download complete.
+					Resource location: local
+					Use --remote if you want to access the remote instance.
+
+					Deleting object \\"wormhole-img.png\\" from bucket \\"bucketName-object-test\\".
+					Delete complete."
+				`);
 
 				await expect(() =>
 					runWrangler(
@@ -117,15 +137,27 @@ describe("r2", () => {
 					`r2 object get bucketName-object-test/file-two --file ./wormhole-img.png  --persist-to ./different-dir`
 				);
 				expect(std.out).toMatchInlineSnapshot(`
-			"Creating object \\"file-one\\" in bucket \\"bucketName-object-test\\".
-			Upload complete.
-			Creating object \\"file-two\\" in bucket \\"bucketName-object-test\\".
-			Upload complete.
-			Downloading \\"file-one\\" from \\"bucketName-object-test\\".
+					"Resource location: local
+					Use --remote if you want to access the remote instance.
 
-			Downloading \\"file-two\\" from \\"bucketName-object-test\\".
-			Download complete."
-		`);
+					Creating object \\"file-one\\" in bucket \\"bucketName-object-test\\".
+					Upload complete.
+					Resource location: local
+					Use --remote if you want to access the remote instance.
+
+					Creating object \\"file-two\\" in bucket \\"bucketName-object-test\\".
+					Upload complete.
+					Resource location: local
+					Use --remote if you want to access the remote instance.
+
+					Downloading \\"file-one\\" from \\"bucketName-object-test\\".
+
+					Resource location: local
+					Use --remote if you want to access the remote instance.
+
+					Downloading \\"file-two\\" from \\"bucketName-object-test\\".
+					Download complete."
+				`);
 			});
 		});
 	});

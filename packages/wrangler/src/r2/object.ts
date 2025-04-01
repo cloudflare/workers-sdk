@@ -20,9 +20,6 @@ import {
 } from "./helpers";
 import type { R2PutOptions } from "@cloudflare/workers-types/experimental";
 
-const remoteFlagWarning =
-	"By default, `wrangler r2` commands access a local simulator of your R2 bucket, the same as that used by `wrangler dev`. To access your remote R2 bucket, re-run the command with the --remote flag";
-
 export const r2ObjectNamespace = createNamespace({
 	metadata: {
 		description: `Manage R2 objects`,
@@ -77,6 +74,11 @@ export const r2ObjectGetCommand = createCommand({
 			type: "string",
 		},
 	},
+	behaviour: {
+		printLocalResourceWarning(args) {
+			return !args?.pipe;
+		},
+	},
 	positionalArgs: ["objectPath"],
 	async handler(objectGetYargs, { config }) {
 		const localMode = isLocal(objectGetYargs);
@@ -103,9 +105,6 @@ export const r2ObjectGetCommand = createCommand({
 			output = process.stdout;
 		}
 		if (localMode) {
-			if (!pipe) {
-				logger.warn(remoteFlagWarning);
-			}
 			await usingLocalBucket(
 				objectGetYargs.persistTo,
 				config,
@@ -223,6 +222,11 @@ export const r2ObjectPutCommand = createCommand({
 			type: "string",
 		},
 	},
+	behaviour: {
+		printLocalResourceWarning(args) {
+			return !args?.pipe;
+		},
+	},
 	async handler(objectPutYargs, { config }) {
 		const {
 			objectPath,
@@ -284,13 +288,11 @@ export const r2ObjectPutCommand = createCommand({
 		if (storageClass !== undefined) {
 			storageClassLog = ` with ${storageClass} storage class`;
 		}
-
 		logger.log(
 			`Creating object "${key}"${storageClassLog} in bucket "${fullBucketName}".`
 		);
 
 		if (localMode) {
-			logger.warn(remoteFlagWarning);
 			await usingLocalBucket(
 				persistTo,
 				config,
@@ -388,6 +390,9 @@ export const r2ObjectDeleteCommand = createCommand({
 			type: "string",
 		},
 	},
+	behaviour: {
+		printLocalResourceWarning: true,
+	},
 	async handler(args) {
 		const localMode = isLocal(args);
 
@@ -402,7 +407,6 @@ export const r2ObjectDeleteCommand = createCommand({
 		logger.log(`Deleting object "${key}" from bucket "${fullBucketName}".`);
 
 		if (localMode) {
-			logger.warn(remoteFlagWarning);
 			await usingLocalBucket(args.persistTo, config, bucket, (r2Bucket) =>
 				r2Bucket.delete(key)
 			);
