@@ -383,7 +383,10 @@ export async function generateEnvTypes(
 
 	if (configToDTS.secrets_store_secrets) {
 		for (const secretStore of configToDTS.secrets_store_secrets) {
-			envTypeStructure.push([constructTypeKey(secretStore.binding), "unknown"]);
+			envTypeStructure.push([
+				constructTypeKey(secretStore.binding),
+				"SecretsStoreSecret",
+			]);
 		}
 	}
 
