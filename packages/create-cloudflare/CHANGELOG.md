@@ -1,5 +1,39 @@
 # create-cloudflare
 
+## 2.43.2
+
+### Patch Changes
+
+- [#8731](https://github.com/cloudflare/workers-sdk/pull/8731) [`5eb6e1b`](https://github.com/cloudflare/workers-sdk/commit/5eb6e1bd9908835d11a800bfe59f631b6cc866ae) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.1.6 | 19.2.5 |
+
+- [#8732](https://github.com/cloudflare/workers-sdk/pull/8732) [`5fc7fe6`](https://github.com/cloudflare/workers-sdk/commit/5fc7fe6c7092fa089111d4a5e5b4a6c667b49463) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 7.4.0 | 7.4.1 |
+
+- [#8734](https://github.com/cloudflare/workers-sdk/pull/8734) [`e4e7296`](https://github.com/cloudflare/workers-sdk/commit/e4e7296fd2bcb00b511f9d48fb199c71540916ef) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-solid | 0.6.1 | 0.6.2 |
+
+- [#8741](https://github.com/cloudflare/workers-sdk/pull/8741) [`56637e3`](https://github.com/cloudflare/workers-sdk/commit/56637e3b2ca2c4aa86e07863a5b903503ee1c25a) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate Next.js + Workers Assets template from experimental
+
+  You no longer need the `--experimental` flag to access this template.
+
+- [#8738](https://github.com/cloudflare/workers-sdk/pull/8738) [`da1ec13`](https://github.com/cloudflare/workers-sdk/commit/da1ec13e730065169dfbcf24103728e5c04dd9a1) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: remove `main` field in wrangler.jsonc of Hono Pages template
+
 ## 2.43.1
 
 ### Patch Changes
