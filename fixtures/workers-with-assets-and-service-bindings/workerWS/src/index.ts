@@ -13,6 +13,10 @@ export default class extends WorkerEntrypoint {
 		const textEncoder = new TextEncoder();
 		server.addEventListener("message", (event) => {
 			server.send(textEncoder.encode(`pong: ${event.data}`));
+
+			// closing the server as we only ever expect to receive one
+			// message from the client
+			server.close();
 		});
 
 		return new Response(null, { status: 101, webSocket: client });
