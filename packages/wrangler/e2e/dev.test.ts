@@ -2023,7 +2023,6 @@ describe("email local dev", () => {
 					new EmailMessage(
 						"someone-else@example.com",
 						"someone@example.com",
-						(new Response(
 \`From: someone else <someone-else@example.com>
 To: someone <someone@example.com>
 In-Reply-To: <im-a-random-message-id@example.com>
@@ -2032,36 +2031,41 @@ MIME-Version: 1.0
 Content-Type: text/plain
 
 This is a random email body.
-\`)).body
-				));
+\`)
+				);
 				}
-			}`,
+			}
+	`,
 		});
 
 		const worker = helper.runLongLived("wrangler dev");
 
 		const { url } = await worker.waitForReady();
 
-		const response = await fetch(`${url}/cdn-cgi/handler/email`, {
-			body: `From: someone <someone@example.com>
-To: someone else <someone-else@example.com>
-MIME-Version: 1.0
-Message-ID: <im-a-random-message-id@example.com>
-Content-Type: text/plain
+		const response = await fetch(
+			`${url}/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com`,
+			{
+				body: dedent`
+				From: someone <someone@example.com>
+				To: someone else <someone-else@example.com>
+				MIME-Version: 1.0
+				Message-ID: <im-a-random-message-id@example.com>
+				Content-Type: text/plain
 
-This is a random email body.
-`,
-			method: "POST",
-		});
+				This is a random email body.
+			`,
+				method: "POST",
+			}
+		);
 
 		expect(response.status).toBe(200);
 
 		expect(worker.currentOutput).includes(
-			".reply() called from Email Handler with the following message:"
+			"Email handler replied to sender with the following message:"
 		);
 
 		const pathRegexp = new RegExp(
-			".reply\\(\\) called from Email Handler with the following message:\\s*(\\S*)"
+			"Email handler replied to sender with the following message:\\s*(\\S*)"
 		);
 
 		const maybeReplyPath = pathRegexp.exec(worker.currentOutput)?.[1];
@@ -2071,8 +2075,7 @@ This is a random email body.
 		}
 
 		expect(await readFile(maybeReplyPath, "utf-8")).toMatchInlineSnapshot(`
-			"References:
-			 <im-a-random-message-id@example.com>
+			"References: <im-a-random-message-id@example.com>
 			From: someone else <someone-else@example.com>
 			To: someone <someone@example.com>
 			In-Reply-To: <im-a-random-message-id@example.com>
@@ -2107,8 +2110,10 @@ This is a random email body.
 
 		const { url } = await worker.waitForReady();
 
-		const response = await fetch(`${url}/cdn-cgi/handler/email`, {
-			body: `From: someone <someone@example.com>
+		const response = await fetch(
+			`${url}/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com`,
+			{
+				body: `From: someone <someone@example.com>
 To: someone else <someone-else@example.com>
 MIME-Version: 1.0
 Message-ID: <im-a-random-message-id@example.com>
@@ -2116,13 +2121,18 @@ Content-Type: text/plain
 
 This is a random email body.
 `,
-			method: "POST",
-		});
+				method: "POST",
+			}
+		);
+
+		expect(await response.text()).toMatchInlineSnapshot(
+			`"Worker rejected email with the following reason: I dont like this email"`
+		);
 
 		expect(response.status).toBe(400);
 
 		expect(worker.currentOutput).includes(
-			'.setReject() called from Email Handler with the following message: "I dont like this email"'
+			'mail handler rejected message with the following reason: "I dont like this email"'
 		);
 	});
 
@@ -2148,8 +2158,10 @@ This is a random email body.
 
 		const { url } = await worker.waitForReady();
 
-		const response = await fetch(`${url}/cdn-cgi/handler/email`, {
-			body: `From: someone <someone@example.com>
+		const response = await fetch(
+			`${url}/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com`,
+			{
+				body: `From: someone <someone@example.com>
 To: someone else <someone-else@example.com>
 MIME-Version: 1.0
 Message-ID: <im-a-random-message-id@example.com>
@@ -2157,14 +2169,14 @@ Content-Type: text/plain
 
 This is a random email body.
 `,
-			method: "POST",
-		});
+				method: "POST",
+			}
+		);
 
 		expect(response.status).toBe(200);
 
-		expect(
-			worker.currentOutput.includes(`.forward() called from Email Handler with
-  rcptTo: mark.s@example.com`)
+		expect(worker.currentOutput).includes(
+			`Email handler forwarded message with\n  rcptTo: mark.s@example.com`
 		);
 	});
 
@@ -2200,11 +2212,7 @@ This is a random email body.
 		const { url } = await worker.waitForReady();
 
 		const response = await fetch(
-			`${url}?` +
-				new URLSearchParams({
-					from: "someone@example.com",
-					to: "someone-else@example.com",
-				}).toString(),
+			`${url}?from=someone@example.com&to=someone-else@example.com`,
 			{
 				body: `From: someone <someone@example.com>
 To: someone else <someone-else@example.com>
@@ -2227,7 +2235,7 @@ This is a random email body.
 		);
 
 		const pathRegexp = new RegExp(
-			"send_email binding called with the following message:.+\\s+(\\S*)"
+			"send_email binding called with the following message:\\s*(\\S*)"
 		);
 
 		const maybeReplyPath = pathRegexp.exec(worker.currentOutput)?.[1];
