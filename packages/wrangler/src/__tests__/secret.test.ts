@@ -1,7 +1,6 @@
 import * as fs from "node:fs";
 import { writeFileSync } from "node:fs";
 import readline from "node:readline";
-import { success } from "@cloudflare/cli";
 import * as TOML from "@iarna/toml";
 import { http, HttpResponse } from "msw";
 import { vi } from "vitest";
@@ -821,9 +820,10 @@ describe("wrangler secret", () => {
 					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
 					({ params }) => {
 						expect(params.accountId).toEqual("some-account-id");
-						return HttpResponse.json(
-							returnNetworkError ? null : createFetchResult(null)
-						);
+						if (returnNetworkError) {
+							return HttpResponse.error();
+						}
+						return HttpResponse.json(createFetchResult(null));
 					}
 				)
 			);
@@ -995,7 +995,7 @@ describe("wrangler secret", () => {
 			await expect(async () => {
 				await runWrangler("secret bulk ./secret.json --name script-name");
 			}).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[TypeError: Cannot read properties of null (reading 'success')]`
+				`[TypeError: Failed to fetch]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -1010,7 +1010,7 @@ describe("wrangler secret", () => {
 				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot read properties of null (reading 'success')[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to fetch[0m
 
 				"
 			`);
@@ -1030,7 +1030,7 @@ describe("wrangler secret", () => {
 			await expect(async () => {
 				await runWrangler("secret bulk ./secret.json --name script-name");
 			}).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[TypeError: Cannot read properties of null (reading 'success')]`
+				`[TypeError: Failed to fetch]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -1045,7 +1045,7 @@ describe("wrangler secret", () => {
 				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot read properties of null (reading 'success')[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to fetch[0m
 
 				"
 			`);
