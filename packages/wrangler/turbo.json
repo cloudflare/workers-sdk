@@ -61,12 +61,16 @@
 		},
 		"test:ci": {
 			"inputs": ["!*/**/.wrangler/**", "**/__tests__/**"],
-			"dependsOn": ["build"]
+			"dependsOn": ["build"],
+			"env": ["VITEST", "NODE_DEBUG", "MINIFLARE_WORKERD_PATH"]
 		},
 		"test:e2e": {
 			"inputs": ["e2e/**"],
 			"dependsOn": ["build"],
 			"env": [
+				"VITEST",
+				"NODE_DEBUG",
+				"MINIFLARE_WORKERD_PATH",
 				"WRANGLER",
 				"WRANGLER_IMPORT",
 				"CLOUDFLARE_ACCOUNT_ID",

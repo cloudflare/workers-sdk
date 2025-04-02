@@ -3,14 +3,8 @@
 	"remoteCache": {
 		"signature": true
 	},
-	"globalPassThroughEnv": [
-		"CI_OS",
-		"NODE_VERSION",
-		"VITEST",
-		"NODE_DEBUG",
-		"NODE_EXTRA_CA_CERTS",
-		"MINIFLARE_WORKERD_PATH"
-	],
+	"globalEnv": ["CI_OS", "NODE_VERSION"],
+	"globalPassThroughEnv": ["NODE_EXTRA_CA_CERTS"],
 	"tasks": {
 		"dev": {
 			"persistent": true,
@@ -41,8 +35,7 @@
 		},
 		"test:ci": {
 			"dependsOn": ["build"],
-			"outputLogs": "new-only",
-			"env": ["MINIFLARE_WORKERD_PATH"]
+			"outputLogs": "new-only"
 		},
 		"test:e2e": {
 			"dependsOn": ["build"],
