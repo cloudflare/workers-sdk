@@ -64,7 +64,7 @@
 		"test": "dotenv -- pnpm run assert-git-version && dotenv -- vitest",
 		"test:ci": "pnpm run test run",
 		"test:debug": "pnpm run test --silent=false --verbose=true",
-		"test:e2e": "dotenv -- vitest -c ./e2e/vitest.config.mts",
+		"test:e2e": "dotenv -- vitest run -c ./e2e/vitest.config.mts",
 		"test:watch": "pnpm run test --testTimeout=50000 --watch",
 		"type:tests": "tsc -p ./src/__tests__/tsconfig.json && tsc -p ./e2e/tsconfig.json"
 	},
