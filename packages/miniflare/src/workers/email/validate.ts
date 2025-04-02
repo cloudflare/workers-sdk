@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { red } from "kleur/colors";
 import PostalMime, { Email } from "postal-mime";
 import { RAW_EMAIL } from "./constants";

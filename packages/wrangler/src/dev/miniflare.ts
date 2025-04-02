@@ -252,7 +252,7 @@ export function castLogLevel(level: LoggerLevel): LogLevel {
 }
 
 export function buildLog(): Log {
-	let level = castLogLevel(logger.loggerLevel);
+	const level = castLogLevel(logger.loggerLevel);
 
 	return new WranglerLog(level, {
 		prefix: level === LogLevel.DEBUG ? "wrangler-UserWorker" : "wrangler",
