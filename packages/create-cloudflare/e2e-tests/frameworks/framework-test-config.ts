@@ -361,6 +361,8 @@ export default function getFrameworkTestConfig(pm: string) {
 		},
 		"next:pages": {
 			argv: ["--platform", "pages"],
+			timeout: LONG_TIMEOUT,
+			unsupportedPms: ["pnpm"],
 			promptHandlers: [
 				{
 					matcher: /Do you want to use the next-on-pages eslint-plugin\?/,
@@ -396,6 +398,8 @@ export default function getFrameworkTestConfig(pm: string) {
 		},
 		"next:workers": {
 			argv: ["--platform", "workers"],
+			timeout: LONG_TIMEOUT,
+			unsupportedPms: ["pnpm"],
 			testCommitMessage: true,
 			flags: [
 				"--ts",
