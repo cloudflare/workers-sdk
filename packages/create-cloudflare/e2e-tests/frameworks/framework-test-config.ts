@@ -399,7 +399,6 @@ export default function getFrameworkTestConfig(pm: string) {
 		"next:workers": {
 			argv: ["--platform", "workers"],
 			timeout: LONG_TIMEOUT,
-			unsupportedPms: ["pnpm"],
 			testCommitMessage: true,
 			flags: [
 				"--ts",
@@ -426,6 +425,7 @@ export default function getFrameworkTestConfig(pm: string) {
 			// see https://github.com/cloudflare/next-on-pages/blob/main/packages/next-on-pages/docs/supported.md#operating-systems
 			unsupportedOSs: ["win32"],
 			unsupportedPms: [
+				"pnpm",
 				// bun and yarn are failing in CI
 				"bun",
 				"yarn",
