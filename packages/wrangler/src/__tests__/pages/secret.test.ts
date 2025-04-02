@@ -671,7 +671,7 @@ describe("wrangler pages secret", () => {
 				http.patch(
 					"*/accounts/:accountId/pages/projects/:project",
 					async () => {
-						return HttpResponse.json(null);
+						return HttpResponse.error();
 					}
 				)
 			);
@@ -681,7 +681,7 @@ describe("wrangler pages secret", () => {
 					"pages secret bulk ./secret.json --project some-project-name"
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[TypeError: Cannot read properties of null (reading 'success')]`
+				`[TypeError: Failed to fetch]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -691,7 +691,7 @@ describe("wrangler pages secret", () => {
 				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot read properties of null (reading 'success')[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to fetch[0m
 
 				"
 			`);
