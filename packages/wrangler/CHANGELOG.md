@@ -1,5 +1,24 @@
 # wrangler
 
+## 3.114.4
+
+### Patch Changes
+
+- [#8758](https://github.com/cloudflare/workers-sdk/pull/8758) [`04ba075`](https://github.com/cloudflare/workers-sdk/commit/04ba07521872fc69855e00a105302ecaebc016d5) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: return actual error on `wrangler secret bulk`
+
+- [#8703](https://github.com/cloudflare/workers-sdk/pull/8703) [`ef89e6b`](https://github.com/cloudflare/workers-sdk/commit/ef89e6b118196abbf7b1c6d82e6112411e1b3bce) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Improve formatting of cache options for hyperdrive list command
+
+- [#8751](https://github.com/cloudflare/workers-sdk/pull/8751) [`e1ef298`](https://github.com/cloudflare/workers-sdk/commit/e1ef2989f1e13519ec363979f8c230a081efddcc) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: include documentation_url in API Errors if provided
+
+- [#8713](https://github.com/cloudflare/workers-sdk/pull/8713) [`47bf369`](https://github.com/cloudflare/workers-sdk/commit/47bf369ed33ed47253ec59ab13cde0b1cde1b726) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: stop getPlatformProxy crashing when internal DOs are present
+
+  Internal DOs still do not work with getPlatformProxy, but warn instead of crashing.
+
+- [#8683](https://github.com/cloudflare/workers-sdk/pull/8683) [`90d93c9`](https://github.com/cloudflare/workers-sdk/commit/90d93c9ec055f74cae83200d58c0c924fffdf0b1) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Remove `NodeJSCompatModule`. This was never fully supported, and never worked for deploying Workers from Wrangler.
+
+- Updated dependencies [[`90d93c9`](https://github.com/cloudflare/workers-sdk/commit/90d93c9ec055f74cae83200d58c0c924fffdf0b1)]:
+  - miniflare@3.20250310.2
+
 ## 3.114.3
 
 ### Patch Changes
