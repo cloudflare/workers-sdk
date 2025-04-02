@@ -118,7 +118,7 @@ export async function validateReply(
 		}
 	} else {
 		// Otherwise, we need to construct a new References header according to https://datatracker.ietf.org/doc/html/rfc5322#section-3.6.4
-		const replyReferences = `References: ${incomingMessage.messageId} ${incomingReferences}\r\n`;
+		const replyReferences = `References: ${incomingMessage.messageId}${incomingReferences.length > 0 ? " " : ""}${incomingReferences}\r\n`;
 
 		const encodedReferences = new TextEncoder().encode(replyReferences);
 
