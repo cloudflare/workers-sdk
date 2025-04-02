@@ -3559,7 +3559,7 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 
 			it("should error if secrets_store_secrets.bindings are not valid", () => {
-				const { diagnostics, config } = normalizeAndValidateConfig(
+				const { diagnostics } = normalizeAndValidateConfig(
 					{
 						secrets_store_secrets: [
 							{},
