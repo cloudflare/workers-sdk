@@ -1,5 +1,46 @@
 # @cloudflare/vite-plugin
 
+## 0.1.20
+
+### Patch Changes
+
+- [#8688](https://github.com/cloudflare/workers-sdk/pull/8688) [`28522ae`](https://github.com/cloudflare/workers-sdk/commit/28522aea505a23ca8b392fdc11ff5a2d8d6486f5) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Ensure that Node.js polyfills are pre-optimized before the first request
+
+  Previously, these polyfills were only optimized on demand when Vite became aware of them.
+  This was either because Vite was able to find an import to a polyfill when statically analysing the import tree of the entry-point,
+  or when a polyfilled module was dynamically imported as part of a executing code to handle a request.
+
+  In the second case, the optimizing of the dynamically imported dependency causes a reload of the Vite server, which can break applications that are holding state in modules during the request.
+  This is the case of most React type frameworks, in particular React Router.
+
+  Now, we pre-optimize all the possible Node.js polyfills when the server starts before the first request is handled.
+
+- [#8680](https://github.com/cloudflare/workers-sdk/pull/8680) [`8dcc50f`](https://github.com/cloudflare/workers-sdk/commit/8dcc50f50d0bffc3c555beacbc19da7e6e130542) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure that users can specify inspector port `0` to use a random port
+
+- [#8572](https://github.com/cloudflare/workers-sdk/pull/8572) [`e6fea13`](https://github.com/cloudflare/workers-sdk/commit/e6fea13186f2da77228b9bf0eb0b12e79d1f2eb9) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add validation for the `configPath` option in the plugin config that clearly indicates any issues.
+
+- [#8672](https://github.com/cloudflare/workers-sdk/pull/8672) [`d533f5e`](https://github.com/cloudflare/workers-sdk/commit/d533f5ee7da69c205d8d5e2a5f264d2370fc612b) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - replace modules runtime checks with vite environment config validation
+
+  currently at runtime the vite plugin applies checks to make sure that
+  external files are not being imported, such checks are however too
+  restrictive and prevent worker code to perform some valid imports from
+  node_modules (e.g. `import stylesheet from "<some-package>/styles.css?url";`)
+
+  the changes here replace the runtime checks (allowing valid imports from
+  node_modules) with some validation to the worker vite environment configurations,
+  specifically they make sure that the environment doesn't specify invalid
+  `optimizeDeps.exclude` and `resolve.external` options
+
+- [#8680](https://github.com/cloudflare/workers-sdk/pull/8680) [`8dcc50f`](https://github.com/cloudflare/workers-sdk/commit/8dcc50f50d0bffc3c555beacbc19da7e6e130542) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure that the plugin keeps looking for available inspector ports by default
+
+  this change updates the plugin so that if an inspector port is not specified and the
+  default inspector port (9229) is not available it keeps looking for other available
+  port instead of crashing
+
+- Updated dependencies [[`3993374`](https://github.com/cloudflare/workers-sdk/commit/39933740e81156baf90475acc23093eb3da8f47f), [`8df60b5`](https://github.com/cloudflare/workers-sdk/commit/8df60b592c0b0eaf7329b2e8d0f16fac9ac6c329), [`ec1f813`](https://github.com/cloudflare/workers-sdk/commit/ec1f813e9aff7f4af9ca187754ecf5006361bd38), [`624882e`](https://github.com/cloudflare/workers-sdk/commit/624882eaeb8db25096e4a84f8e194497de46be82)]:
+  - wrangler@4.7.0
+  - @cloudflare/unenv-preset@2.3.1
+
 ## 0.1.19
 
 ### Patch Changes

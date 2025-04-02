@@ -1,5 +1,21 @@
 # wrangler
 
+## 4.7.0
+
+### Minor Changes
+
+- [#8727](https://github.com/cloudflare/workers-sdk/pull/8727) [`3993374`](https://github.com/cloudflare/workers-sdk/commit/39933740e81156baf90475acc23093eb3da8f47f) Thanks [@Ltadrian](https://github.com/Ltadrian)! - add sslmode to hyperdrive and update mtls flags
+
+### Patch Changes
+
+- [#8720](https://github.com/cloudflare/workers-sdk/pull/8720) [`8df60b5`](https://github.com/cloudflare/workers-sdk/commit/8df60b592c0b0eaf7329b2e8d0f16fac9ac6c329) Thanks [@lukevalenta](https://github.com/lukevalenta)! - Fix logic to derive resource name from binding by replacing all underscores with dashes
+
+- [#8697](https://github.com/cloudflare/workers-sdk/pull/8697) [`ec1f813`](https://github.com/cloudflare/workers-sdk/commit/ec1f813e9aff7f4af9ca187754ecf5006361bd38) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: stop getPlatformProxy crashing when internal DOs are present
+
+  Internal DOs still do not work with getPlatformProxy, but warn instead of crashing.
+
+- [#8737](https://github.com/cloudflare/workers-sdk/pull/8737) [`624882e`](https://github.com/cloudflare/workers-sdk/commit/624882eaeb8db25096e4a84f8e194497de46be82) Thanks [@garvit-gupta](https://github.com/garvit-gupta)! - fix: General improvements for the R2 catalog commands
+
 ## 4.6.0
 
 ### Minor Changes
