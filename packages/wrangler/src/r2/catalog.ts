@@ -37,10 +37,11 @@ export const r2BucketCatalogEnableCommand = createCommand({
 
 		let catalogHost: string;
 		const env = getCloudflareApiEnvironmentFromEnv();
+		const path = response.name.replace("_", "/");
 		if (env === "staging") {
-			catalogHost = `https://catalog-staging.cloudflarestorage.com/${response.name}`;
+			catalogHost = `https://catalog-staging.cloudflarestorage.com/${path}`;
 		} else {
-			catalogHost = `https://catalog.cloudflarestorage.com/${response.name}`;
+			catalogHost = `https://catalog.cloudflarestorage.com/${path}`;
 		}
 
 		logger.log(
@@ -125,10 +126,11 @@ export const r2BucketCatalogGetCommand = createCommand({
 
 			const env = getCloudflareApiEnvironmentFromEnv();
 			let catalogHost: string;
+			const path = catalog.name.replace("_", "/");
 			if (env === "staging") {
-				catalogHost = `https://catalog-staging.cloudflarestorage.com/${catalog.name}`;
+				catalogHost = `https://catalog-staging.cloudflarestorage.com/${path}`;
 			} else {
-				catalogHost = `https://catalog.cloudflarestorage.com/${catalog.name}`;
+				catalogHost = `https://catalog.cloudflarestorage.com/${path}`;
 			}
 
 			const output = {

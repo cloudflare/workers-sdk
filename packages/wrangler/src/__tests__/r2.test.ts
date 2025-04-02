@@ -973,7 +973,7 @@ describe("r2", () => {
 									createFetchResult(
 										{
 											id: "test-warehouse-id",
-											name: "test-warehouse-name",
+											name: "test-account-id_test-warehouse-name",
 										},
 										true
 									)
@@ -986,8 +986,8 @@ describe("r2", () => {
 					expect(std.out).toMatchInlineSnapshot(
 						`"✨ Successfully enabled data catalog on bucket 'testBucket'.
 
-Catalog URI: 'https://catalog.cloudflarestorage.com/test-warehouse-name'
-Warehouse: 'test-warehouse-name'
+Catalog URI: 'https://catalog.cloudflarestorage.com/test-account-id/test-warehouse-name'
+Warehouse: 'test-account-id_test-warehouse-name'
 
 Use this Catalog URI with Iceberg-compatible query engines (Spark, PyIceberg etc.) to query data as tables.
 Note: You will need a Cloudflare API token with 'R2 Data Catalog' permission to authenticate your client with this catalog.
@@ -1157,7 +1157,7 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 									createFetchResult(
 										{
 											id: "test-id",
-											name: "test-name",
+											name: "test-account-id_test-name",
 											bucket: "test-bucket",
 											status: "active",
 										},
@@ -1172,8 +1172,8 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 					expect(std.out).toMatchInlineSnapshot(`
 					"Getting data catalog status for 'test-bucket'...
 
-					Catalog URI:  https://catalog.cloudflarestorage.com/test-name
-					Warehouse:    test-name
+					Catalog URI:  https://catalog.cloudflarestorage.com/test-account-id/test-name
+					Warehouse:    test-account-id_test-name
 					Status:       active"
 				`);
 				});
