@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { defaultWranglerConfig } from "../config/config";
