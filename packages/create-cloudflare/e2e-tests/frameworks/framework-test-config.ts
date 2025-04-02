@@ -402,6 +402,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				"--tailwind",
 				"--eslint",
 				"--app",
+				"--turbopack",
 				"--import-alias",
 				"@/*",
 				"--src-dir",
