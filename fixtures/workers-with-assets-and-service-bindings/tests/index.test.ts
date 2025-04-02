@@ -7,20 +7,22 @@ import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 	let ipWorkerA: string,
 		portWorkerA: number,
-		stopWorkerA: (() => Promise<unknown>) | undefined;
+		stopWorkerA: (() => Promise<unknown>) | undefined,
+		getOutputWorkerA: () => string;
 	let stopWorkerB: (() => Promise<unknown>) | undefined,
 		getOutputWorkerB: () => string;
 	let stopWorkerC: (() => Promise<unknown>) | undefined,
 		getOutputWorkerC: () => string;
 	let stopWorkerD: (() => Promise<unknown>) | undefined;
+	let stopWorkerWS: (() => Promise<unknown>) | undefined;
 
 	beforeAll(async () => {
-		({ getOutput: getOutputWorkerB } = await runWranglerDev(
+		({ stop: stopWorkerB, getOutput: getOutputWorkerB } = await runWranglerDev(
 			resolve(__dirname, "..", "workerB-with-default-export"),
 			["--port=0", "--inspector-port=0"]
 		));
 
-		({ getOutput: getOutputWorkerC } = await runWranglerDev(
+		({ stop: stopWorkerC, getOutput: getOutputWorkerC } = await runWranglerDev(
 			resolve(__dirname, "..", "workerC-with-default-entrypoint"),
 			["--port=0", "--inspector-port=0"]
 		));
@@ -30,10 +32,16 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 			["--port=0", "--inspector-port=0"]
 		));
 
+		({ stop: stopWorkerWS } = await runWranglerDev(
+			resolve(__dirname, "..", "workerWS"),
+			["--port=0", "--inspector-port=0"]
+		));
+
 		({
 			ip: ipWorkerA,
 			port: portWorkerA,
 			stop: stopWorkerA,
+			getOutput: getOutputWorkerA,
 		} = await runWranglerDev(resolve(__dirname, "..", "workerA"), [
 			"--port=0",
 			"--inspector-port=0",
@@ -45,13 +53,11 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 		await stopWorkerB?.();
 		await stopWorkerC?.();
 		await stopWorkerD?.();
+		await stopWorkerWS?.();
 	});
 
 	describe("Workers running in separate wrangler dev sessions", () => {
 		describe("Service binding to default export", () => {
-			// this currently incorrectly returns the User Worker response
-			// instead of the Asset Worker response, unless `--x-assets-rpc`
-			// is provided
 			it("should return Asset Worker response for routes that serve static content", async ({
 				expect,
 			}) => {
@@ -118,7 +124,6 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 
 					// add a timeout to allow stdout to update
 					await setTimeout(500);
-					console.log(getOutputWorkerB());
 					expect(getOutputWorkerB()).toContain(
 						"Hello from worker-b scheduled()"
 					);
@@ -156,9 +161,6 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 		});
 
 		describe("Service binding to default entrypoint", () => {
-			// this currently incorrectly returns the User Worker response
-			// instead of the Asset Worker response, unless `--x-assets-rpc`
-			// is provided
 			it("should return Asset Worker response for fetch requests for routes that serve static content", async ({
 				expect,
 			}) => {
@@ -344,6 +346,64 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 					expect(text).toContain(
 						`env.NAMED_ENTRYPOINT.honeyBee response: I am worker-d's honeyBee prop`
 					);
+				});
+			});
+		});
+
+		describe("Service binding to a Worker which handles WebSockets", () => {
+			it("should return Asset Worker response for fetch requests for routes that serve static content", async ({
+				expect,
+			}) => {
+				await vi.waitFor(async () => {
+					let response = await fetch(`http://${ipWorkerA}:${portWorkerA}`);
+					let text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.WS.fetch() response: This is an asset of "worker-ws"`
+					);
+
+					response = await fetch(`http://${ipWorkerA}:${portWorkerA}/busy-bee`);
+					text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.WS.fetch() response: All "worker-ws" 🐝🐝🐝 are 🐝sy. Please come back later`
+					);
+				});
+			});
+
+			it("should return User Worker response for fetch requests for routes that do not serve static content", async ({
+				expect,
+			}) => {
+				await vi.waitFor(async () => {
+					// this request does not have the "Upgrade" header set to "websocket" because
+					// workerA does not attach this header to the request
+					let response = await fetch(
+						`http://${ipWorkerA}:${portWorkerA}/no-assets-at-this-path`
+					);
+					let text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						`env.WS.fetch() response: Hello from worker-ws fetch()`
+					);
+				});
+			});
+
+			it("should be able to communicate over WebSocket", async ({ expect }) => {
+				await vi.waitFor(async () => {
+					// workerA will internally set the "Upgrade" header value to "websocket" and attach
+					// the header to the request
+					const response = await fetch(
+						`http://${ipWorkerA}:${portWorkerA}/no-assets-at-this-path`
+					);
+					const text = await response.text();
+					expect(response.status).toBe(200);
+					expect(text).toContain(
+						"env.WS.fetch() response: Hello from worker-ws fetch()"
+					);
+
+					// add a timeout to allow stdout to update
+					await setTimeout(500);
+					expect(getOutputWorkerA()).toContain("pong: hello from client");
 				});
 			});
 		});
