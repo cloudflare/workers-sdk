@@ -1,4 +1,3 @@
-import { ForwardableEmailMessage } from "@cloudflare/workers-types";
 import {
 	blue,
 	bold,
@@ -10,10 +9,7 @@ import {
 	yellow,
 } from "kleur/colors";
 import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
-import PostalMime, { Email } from "postal-mime";
 import { isCompressedByCloudflareFL } from "../../shared/mime-types";
-import { MiniflareEmailMessage } from "../email/email.worker";
-import { isEmailReplyable, validateReply } from "../email/validate";
 import { CoreBindings, CoreHeaders } from "./constants";
 import { handleEmail } from "./email";
 import { STATUS_CODES } from "./http";
