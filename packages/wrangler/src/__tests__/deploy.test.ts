@@ -12094,7 +12094,7 @@ export default{
 		});
 	});
 
-	describe("secret_store", () => {
+	describe("secrets_store_secrets", () => {
 		it("should upload secret store bindings", async () => {
 			writeWranglerConfig({
 				secrets_store_secrets: [
@@ -12110,7 +12110,7 @@ export default{
 			mockUploadWorkerRequest({
 				expectedBindings: [
 					{
-						type: "secret_store",
+						type: "secrets_store_secret",
 						name: "SECRET",
 						store_id: "store_id",
 						secret_name: "secret_name",
@@ -12123,7 +12123,7 @@ export default{
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
 			Your worker has access to the following bindings:
-			- Secret Stores:
+			- Secrets Store Secrets:
 			  - SECRET: store_id/secret_name
 			Uploaded test-name (TIMINGS)
 			Deployed test-name triggers (TIMINGS)
