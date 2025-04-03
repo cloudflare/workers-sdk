@@ -4,6 +4,7 @@ import type {
 	DatabaseVersion,
 	DatabaseWorkflow,
 } from "./engine";
+import type { WorkflowEvent } from "cloudflare:workers";
 
 export type Instance = {
 	id: string;
@@ -23,10 +24,7 @@ export type InstanceMetadata = {
 	workflow: DatabaseWorkflow;
 	version: DatabaseVersion;
 	instance: DatabaseInstance;
-	event: {
-		payload: Record<string, unknown>;
-		timestamp: Date;
-	};
+	event: WorkflowEvent<unknown>;
 };
 
 export enum InstanceStatus {

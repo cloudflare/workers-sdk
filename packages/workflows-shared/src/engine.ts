@@ -79,8 +79,8 @@ export class Engine extends DurableObject<Env> {
 	timeoutHandler: GracePeriodSemaphore;
 	priorityQueue: TimePriorityQueue | undefined;
 
-	// eslint-disable-next-line @typescript-eslint/ban-types
-	waiters: Map<string, Array<Function>> = new Map();
+	waiters: Map<string, Array<(event: Event | PromiseLike<Event>) => void>> =
+		new Map();
 	eventMap: Map<string, Array<Event>> = new Map();
 
 	constructor(state: DurableObjectState, env: Env) {
@@ -263,7 +263,6 @@ export class Engine extends DurableObject<Env> {
 				throw new Error("Engine was never started");
 			}
 
-			// @ts-expect-error event types are wrong but that's okay since we just take metadata :)
 			void this.init(
 				metadata.accountId,
 				metadata.workflow,

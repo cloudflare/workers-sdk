@@ -139,7 +139,7 @@ describe("Workflows", () => {
 		]);
 	});
 
-	test.only("waitForEvent should work", async ({ expect }) => {
+	test("waitForEvent should work", async ({ expect }) => {
 		await fetchJson(`http://${ip}:${port}/createDemo2?workflowName=something`);
 
 		await fetchJson(

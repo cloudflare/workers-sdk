@@ -1105,9 +1105,6 @@ importers:
 
   fixtures/workflow:
     devDependencies:
-      '@cloudflare/workers-tsconfig':
-        specifier: workspace:*
-        version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20250405.0
         version: 4.20250405.0

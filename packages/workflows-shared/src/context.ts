@@ -18,7 +18,7 @@ import type {
 
 export type Event = {
 	timestamp: Date;
-	payload: Record<string, unknown>;
+	payload: unknown;
 	type: string;
 };
 
@@ -605,8 +605,8 @@ export class Context extends RpcTarget {
 			(a) => a.hash === cacheKey && a.type === "timeout"
 		);
 		if (
-			// @ts-expect-error priorityQueue is initiated in init
 			(timeoutEntryPQ === undefined &&
+				this.#engine.priorityQueue !== undefined &&
 				this.#engine.priorityQueue.checkIfExistedInPast({
 					hash: cacheKey,
 					type: "timeout",
