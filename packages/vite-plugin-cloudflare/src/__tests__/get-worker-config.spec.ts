@@ -29,7 +29,6 @@ describe("getWorkerConfig", () => {
 		expect(raw.rules).toEqual([]);
 		expect(raw.site).toBeUndefined();
 		expect(raw.tsconfig).toBeUndefined();
-		expect(raw.upload_source_maps).toBeUndefined();
 	});
 
 	test("should return a simple config without non-applicable fields", () => {
@@ -75,7 +74,6 @@ describe("getWorkerConfig", () => {
 		expect(config.rules).toEqual([]);
 		expect(config.site).toBeUndefined();
 		expect(config.tsconfig).toBeUndefined();
-		expect(config.upload_source_maps).toBeUndefined();
 
 		expect(nonApplicable).toEqual({
 			replacedByVite: new Set(),
@@ -135,8 +133,6 @@ describe("getWorkerConfig", () => {
 		});
 		expect("tsconfig" in config).toBeFalsy();
 		expect(raw.tsconfig).toMatch(/tsconfig\.custom\.json$/);
-		expect("upload_source_maps" in config).toBeFalsy();
-		expect(raw.upload_source_maps).toBe(false);
 
 		expect(nonApplicable.replacedByVite).toEqual(
 			new Set(["define", "alias", "minify"])
@@ -151,7 +147,6 @@ describe("getWorkerConfig", () => {
 				"rules",
 				"site",
 				"tsconfig",
-				"upload_source_maps",
 			])
 		);
 	});

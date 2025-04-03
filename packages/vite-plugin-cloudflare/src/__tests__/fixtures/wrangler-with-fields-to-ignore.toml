@@ -18,8 +18,6 @@ rules = [{ type = "Text", globs = ["**/*.md"], fallthrough = true }]
 
 tsconfig = "./tsconfig.custom.json"
 
-upload_source_maps = false
-
 [alias]
 "my-test" = "./my-test.ts"
 "my-test-a" = "./my-test-a.ts"
