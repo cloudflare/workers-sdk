@@ -328,13 +328,13 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					"Unexpected error: No Vite HTTP server"
 				);
 
-				const inputInspectorPort = await getInputInspectorPortOption(
-					pluginConfig,
-					viteDevServer
-				);
+				if (!miniflare) {
+					const inputInspectorPort = await getInputInspectorPortOption(
+						pluginConfig,
+						viteDevServer
+					);
 
-				if (miniflare) {
-					await miniflare.setOptions(
+					miniflare = new Miniflare(
 						getDevMiniflareOptions(
 							resolvedPluginConfig,
 							viteDevServer,
@@ -342,11 +342,14 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						)
 					);
 				} else {
-					miniflare = new Miniflare(
+					const resolvedInspectorPort =
+						await getResolvedInspectorPort(pluginConfig);
+
+					await miniflare.setOptions(
 						getDevMiniflareOptions(
 							resolvedPluginConfig,
 							viteDevServer,
-							inputInspectorPort
+							resolvedInspectorPort ?? false
 						)
 					);
 				}
