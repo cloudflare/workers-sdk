@@ -142,7 +142,7 @@ describe("pipelines", () => {
 		return requests;
 	}
 
-	function mockShowRequest(
+	function mockGetRequest(
 		name: string,
 		pipeline: Pipeline | null,
 		status: number = 200,
@@ -258,7 +258,7 @@ describe("pipelines", () => {
 			COMMANDS
 			  wrangler pipelines create <pipeline>  Create a new Pipeline
 			  wrangler pipelines list               List current Pipelines
-			  wrangler pipelines show <pipeline>    Show a Pipeline configuration
+			  wrangler pipelines get <pipeline>     Get a Pipeline configuration
 			  wrangler pipelines update <pipeline>  Update a Pipeline
 			  wrangler pipelines delete <pipeline>  Delete a Pipeline
 
@@ -409,10 +409,10 @@ describe("pipelines", () => {
 		expect(requests.count).toEqual(1);
 	});
 
-	describe("show", () => {
-		it("should show pipeline", async () => {
-			const requests = mockShowRequest("foo", samplePipeline);
-			await runWrangler("pipelines show foo");
+	describe("get", () => {
+		it("should get pipeline", async () => {
+			const requests = mockGetRequest("foo", samplePipeline);
+			await runWrangler("pipelines get foo");
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
@@ -452,12 +452,12 @@ describe("pipelines", () => {
 		});
 
 		it("should fail on missing pipeline", async () => {
-			const requests = mockShowRequest("bad-pipeline", null, 404, {
+			const requests = mockGetRequest("bad-pipeline", null, 404, {
 				code: 1000,
 				message: "Pipeline does not exist",
 			});
 			await expect(
-				runWrangler("pipelines show bad-pipeline")
+				runWrangler("pipelines get bad-pipeline")
 			).rejects.toThrowError();
 
 			await endEventLoop();
@@ -477,7 +477,7 @@ describe("pipelines", () => {
 	describe("update", () => {
 		it("should update a pipeline", async () => {
 			const pipeline: Pipeline = samplePipeline;
-			mockShowRequest(pipeline.name, pipeline);
+			mockGetRequest(pipeline.name, pipeline);
 
 			const update = JSON.parse(JSON.stringify(pipeline));
 			update.destination.compression.type = "gzip";
@@ -489,7 +489,7 @@ describe("pipelines", () => {
 
 		it("should update a pipeline with new bucket", async () => {
 			const pipeline: Pipeline = samplePipeline;
-			mockShowRequest(pipeline.name, pipeline);
+			mockGetRequest(pipeline.name, pipeline);
 
 			const update = JSON.parse(JSON.stringify(pipeline));
 			update.destination.path.bucket = "new_bucket";
@@ -509,7 +509,7 @@ describe("pipelines", () => {
 
 		it("should update a pipeline with new credential", async () => {
 			const pipeline: Pipeline = samplePipeline;
-			mockShowRequest(pipeline.name, pipeline);
+			mockGetRequest(pipeline.name, pipeline);
 
 			const update = JSON.parse(JSON.stringify(pipeline));
 			update.destination.path.bucket = "new-bucket";
@@ -529,7 +529,7 @@ describe("pipelines", () => {
 
 		it("should update a pipeline with source changes http auth", async () => {
 			const pipeline: Pipeline = samplePipeline;
-			mockShowRequest(pipeline.name, pipeline);
+			mockGetRequest(pipeline.name, pipeline);
 
 			const update = JSON.parse(JSON.stringify(pipeline));
 			update.source = [
@@ -555,7 +555,7 @@ describe("pipelines", () => {
 
 		it("should update a pipeline cors headers", async () => {
 			const pipeline: Pipeline = samplePipeline;
-			mockShowRequest(pipeline.name, pipeline);
+			mockGetRequest(pipeline.name, pipeline);
 
 			const update = JSON.parse(JSON.stringify(pipeline));
 			update.source = [
@@ -580,7 +580,7 @@ describe("pipelines", () => {
 		});
 
 		it("should fail a missing pipeline", async () => {
-			const requests = mockShowRequest("bad-pipeline", null, 404, {
+			const requests = mockGetRequest("bad-pipeline", null, 404, {
 				code: 1000,
 				message: "Pipeline does not exist",
 			});
@@ -604,7 +604,7 @@ describe("pipelines", () => {
 
 		it("should remove transformations", async () => {
 			const pipeline: Pipeline = samplePipeline;
-			mockShowRequest(pipeline.name, pipeline);
+			mockGetRequest(pipeline.name, pipeline);
 
 			const update = JSON.parse(JSON.stringify(pipeline));
 			update.transforms = [

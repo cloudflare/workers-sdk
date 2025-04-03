@@ -10,7 +10,7 @@ import type {
 } from "../../yargs-types";
 import type { Argv } from "yargs";
 
-export function addShowOptions(yargs: Argv<CommonYargsOptions>) {
+export function addGetOptions(yargs: Argv<CommonYargsOptions>) {
 	return yargs.positional("pipeline", {
 		type: "string",
 		describe: "The name of the Pipeline to show",
@@ -18,8 +18,8 @@ export function addShowOptions(yargs: Argv<CommonYargsOptions>) {
 	});
 }
 
-export async function showPipelineHandler(
-	args: StrictYargsOptionsToInterface<typeof addShowOptions>
+export async function getPipelineHandler(
+	args: StrictYargsOptionsToInterface<typeof addGetOptions>
 ) {
 	await printWranglerBanner();
 	const config = readConfig(args);
