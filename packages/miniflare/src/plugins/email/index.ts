@@ -76,8 +76,8 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			});
 		}
 
-		services.push(
-			...(args.options.email?.send_email ?? []).map(({ name, ...config }) => ({
+		for (const { name, ...config } of args.options.email?.send_email ?? []) {
+			services.push({
 				name: `${SERVICE_SEND_EMAIL_WORKER_PREFIX}:${name}`,
 				worker: {
 					compatibilityDate: "2025-03-17",
@@ -92,8 +92,8 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 						WORKER_BINDING_SERVICE_LOOPBACK,
 					],
 				},
-			}))
-		);
+			});
+		}
 
 		return {
 			services,
