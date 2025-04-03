@@ -1037,6 +1037,12 @@ export async function buildMiniflareOptions(
 		upstream,
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 		unsafeTriggerHandlers: true,
+		// The way we run Miniflare instances with wrangler dev is that there are two:
+		//  - one holding the proxy worker,
+		//  - and one holding the user worker.
+		// The issue with that setup is that end users would see two sets of request logs from Miniflare!
+		// Instead of hiding all logs from this Miniflare instance, we specifically hide the request logs,
+		// allowing other logs to be shown to the user (such as details about emails being triggered)
 		logRequests: false,
 
 		log,
