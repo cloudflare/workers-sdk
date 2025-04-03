@@ -23,7 +23,11 @@ const EmailBindingOptionsSchema = z
 	);
 
 const EmailOptionsSchema = z.object({
-	send_email: z.array(EmailBindingOptionsSchema).optional(),
+	email: z
+		.object({
+			send_email: z.array(EmailBindingOptionsSchema).optional(),
+		})
+		.optional(),
 });
 
 export const EMAIL_PLUGIN_NAME = "email";
@@ -36,14 +40,8 @@ function buildJsonBindings(bindings: Record<string, any>): Worker_Binding[] {
 	}));
 }
 
-function createPlugin<O extends z.ZodType, S extends z.ZodType | undefined>(
-	pluginDefinition: Plugin<O, S>
-): Plugin<O, S> {
-	return pluginDefinition;
-}
-
-export const EMAIL_PLUGIN = createPlugin({
-	options: z.object({ email: EmailOptionsSchema.optional() }),
+export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
+	options: EmailOptionsSchema,
 	getBindings(options): Worker_Binding[] {
 		if (!options.email?.send_email) {
 			return [];
@@ -102,4 +100,4 @@ export const EMAIL_PLUGIN = createPlugin({
 			extensions,
 		};
 	},
-});
+};
