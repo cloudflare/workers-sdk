@@ -1497,7 +1497,7 @@ export class Miniflare {
 					"Unable to access the runtime inspector socket."
 				);
 			} else {
-				this.#maybeInspectorProxyController.updateConnection(
+				await this.#maybeInspectorProxyController.updateConnection(
 					this.#sharedOpts.core.inspectorPort,
 					maybePort
 				);
