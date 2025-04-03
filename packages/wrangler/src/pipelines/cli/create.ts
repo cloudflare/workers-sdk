@@ -102,8 +102,6 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 					"r2-secret-access-key",
 					"r2-prefix",
 					"compression",
-					"file-template",
-					"partition-template",
 				],
 				`${chalk.bold("Destination settings")}`
 			)
@@ -150,23 +148,6 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 				choices: ["none", "gzip", "deflate"],
 				default: "gzip",
 				demandOption: false,
-			})
-			.option("partition-template", {
-				type: "string",
-				describe:
-					"Path template for partitioned files in the bucket. If not specified, the default will be used",
-				demandOption: false,
-			})
-			.option("file-template", {
-				type: "string",
-				describe: `Template for individual file names (must include $\{slug}). For example: "$\{slug}.log.gz"`,
-				demandOption: false,
-				coerce: (val) => {
-					if (!val.includes("${slug}")) {
-						throw new UserError("filename must contain ${slug}");
-					}
-					return val;
-				},
 			})
 
 			// Pipeline settings
@@ -286,13 +267,6 @@ export async function createPipelineHandler(
 	if (args.r2Prefix) {
 		pipelineConfig.destination.path.prefix = args.r2Prefix;
 	}
-	if (args.partitionTemplate) {
-		pipelineConfig.destination.path.filepath = args.partitionTemplate;
-	}
-	if (args.fileTemplate) {
-		pipelineConfig.destination.path.filename = args.fileTemplate;
-	}
-
 	if (args.shardCount) {
 		pipelineConfig.metadata.shards = args.shardCount;
 	}
