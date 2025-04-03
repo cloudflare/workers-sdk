@@ -43,11 +43,6 @@ export default class extends WorkerEntrypoint<Env> {
 			"samuel@macleod.space",
 			new Headers({ hello: "world" })
 		);
-		// message.setReject("Rejection reason");
 		await message.reply(m);
-	}
-
-	async scheduled() {
-		console.log("I'm scheduled!");
 	}
 }
