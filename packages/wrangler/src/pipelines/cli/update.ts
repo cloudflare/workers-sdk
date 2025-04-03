@@ -1,6 +1,6 @@
 import chalk from "chalk";
 import { readConfig } from "../../config";
-import { FatalError } from "../../errors";
+import { FatalError, UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { printWranglerBanner } from "../../wrangler-banner";
@@ -16,7 +16,7 @@ import type {
 	CommonYargsOptions,
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
-import type { HttpSource, Source } from "../client";
+import type { BindingSource, HttpSource, Source } from "../client";
 import type { Argv } from "yargs";
 
 /**
@@ -43,22 +43,13 @@ export function addUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 			})
 			// Sources
 			.group(
-				[
-					"enable-worker-binding",
-					"enable-http",
-					"require-http-auth",
-					"cors-origins",
-				],
+				["source", "require-http-auth", "cors-origins"],
 				`${chalk.bold("Source settings")}`
 			)
-			.option("enable-worker-binding", {
-				type: "boolean",
-				describe: "Send data from a Worker to a Pipeline using a Binding",
-				demandOption: false,
-			})
-			.option("enable-http", {
-				type: "boolean",
-				describe: "Generate an endpoint to ingest data via HTTP",
+			.option("source", {
+				type: "array",
+				describe:
+					"Space separated list of allowed sources. Options are 'http' or 'worker'",
 				demandOption: false,
 			})
 			.option("require-http-auth", {
@@ -243,52 +234,52 @@ export async function updatePipelineHandler(
 		}
 	}
 
-	if (args.enableWorkerBinding !== undefined) {
-		// strip off old source & keep if necessary
-		const source = pipelineConfig.source.find(
-			(s: Source) => s.type === "binding"
-		);
-		pipelineConfig.source = pipelineConfig.source.filter(
-			(s: Source) => s.type !== "binding"
-		);
-		// add back only if specified
-		if (args.enableWorkerBinding) {
-			pipelineConfig.source.push({
-				...source,
-				type: "binding",
-				format: "json",
-			});
+	if (args.source && args.source.length > 0) {
+		const existingSources = pipelineConfig.source;
+		pipelineConfig.source = []; // Reset the list
+
+		const sourceHandlers: Record<string, () => Source> = {
+			http: (): HttpSource => {
+				const existing = existingSources.find((s: Source) => s.type === "http");
+
+				const http: HttpSource = {
+					...existing, // Copy over existing properties for forwards compatibility
+					type: "http",
+					format: "json",
+					...(args.requireHttpAuth && { authentication: args.requireHttpAuth }), // Include only if defined
+				};
+
+				if (args.corsOrigins && args.corsOrigins.length > 0) {
+					http.cors = { origins: args.corsOrigins };
+				}
+
+				return http;
+			},
+			worker: (): BindingSource => {
+				const existing = existingSources.find(
+					(s: Source) => s.type === "binding"
+				);
+
+				return {
+					...existing, // Copy over existing properties for forwards compatibility
+					type: "binding",
+					format: "json",
+				};
+			},
+		};
+
+		for (const source of args.source) {
+			const handler = sourceHandlers[source];
+			if (handler) {
+				pipelineConfig.source.push(handler());
+			}
 		}
 	}
 
-	if (args.enableHttp !== undefined) {
-		// strip off old source & keep if necessary
-		const source = pipelineConfig.source.find((s: Source) => s.type === "http");
-		pipelineConfig.source = pipelineConfig.source.filter(
-			(s: Source) => s.type !== "http"
+	if (pipelineConfig.source.length === 0) {
+		throw new UserError(
+			"No sources have been enabled. At least one source (HTTP or Worker Binding) should be enabled"
 		);
-		// add back if specified
-		if (args.enableHttp) {
-			const update = {
-				type: "http",
-				format: "json",
-				...source,
-			} satisfies HttpSource;
-
-			pipelineConfig.source.push(update);
-		}
-	}
-
-	const httpSource = pipelineConfig.source.find(
-		(s: Source) => s.type === "http"
-	);
-	if (httpSource) {
-		if (args.requireHttpAuth) {
-			httpSource.authentication = args.requireHttpAuth;
-		}
-		if (args.corsOrigins && args.corsOrigins.length > 0) {
-			httpSource.cors = { origins: args.corsOrigins };
-		}
 	}
 
 	if (args.transformWorker) {
