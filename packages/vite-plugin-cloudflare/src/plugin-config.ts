@@ -5,6 +5,7 @@ import {
 	getValidatedWranglerConfigPath,
 	getWorkerConfig,
 } from "./workers-configs";
+import type { Defined } from "./utils";
 import type {
 	AssetsOnlyWorkerResolvedConfig,
 	SanitizedWorkerConfig,
@@ -35,8 +36,6 @@ export interface PluginConfig extends EntryWorkerConfig {
 		headersAndRedirectsDevModeSupport?: boolean;
 	};
 }
-
-type Defined<T> = Exclude<T, undefined>;
 
 export interface AssetsOnlyConfig extends SanitizedWorkerConfig {
 	topLevelName: Defined<SanitizedWorkerConfig["topLevelName"]>;

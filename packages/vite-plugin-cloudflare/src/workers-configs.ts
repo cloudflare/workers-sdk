@@ -93,7 +93,6 @@ export const nonApplicableWorkerConfigs = {
 		"rules",
 		"site",
 		"tsconfig",
-		"upload_source_maps",
 	],
 } as const;
 
@@ -109,7 +108,6 @@ const nullableNonApplicable = [
 	"preserve_file_names",
 	"site",
 	"tsconfig",
-	"upload_source_maps",
 ] as const;
 
 function readWorkerConfig(
