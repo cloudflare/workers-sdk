@@ -2,10 +2,21 @@ name: Validate PR Description
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled, edited]
+    types:
+      [
+        opened,
+        synchronize,
+        reopened,
+        labeled,
+        unlabeled,
+        edited,
+        ready_for_review,
+        converted_to_draft,
+      ]
 
 jobs:
   check:
+    # Don't check the Version Packages PR
     if: github.head_ref != 'changeset-release/main'
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-add-pr
@@ -47,3 +58,4 @@ jobs:
           BODY: ${{ github.event.pull_request.body }}
           LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
           FILES: ${{ steps.files.outputs.all }}
+          DRAFT: ${{ github.event.pull_request.draft }}

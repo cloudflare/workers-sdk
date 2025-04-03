@@ -24,5 +24,15 @@
 		"jsx",
 		"decorators",
 		"explicitResourceManagement"
+	],
+	"overrides": [
+		{
+			"files": "packages/vite-plugin-cloudflare/README.md",
+			"options": {
+				"useTabs": false,
+				"trailingComma": "all",
+				"plugins": []
+			}
+		}
 	]
 }

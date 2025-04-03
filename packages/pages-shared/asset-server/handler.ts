@@ -1,4 +1,8 @@
 import {
+	generateRulesMatcher,
+	replacer,
+} from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
+import {
 	FoundResponse,
 	InternalServerErrorResponse,
 	MethodNotAllowedResponse,
@@ -11,7 +15,6 @@ import {
 	SeeOtherResponse,
 	TemporaryRedirectResponse,
 } from "./responses";
-import { generateRulesMatcher, replacer } from "./rulesEngine";
 import type {
 	Metadata,
 	MetadataHeadersEntries,
@@ -347,6 +350,7 @@ export async function generateHandler<
 
 	async function attachHeaders(response: Response) {
 		const existingHeaders = new Headers(response.headers);
+		const eTag = existingHeaders.get("eTag")?.match(/^"(.*)"$/)?.[1];
 
 		const extraHeaders = new Headers({
 			"access-control-allow-origin": "*",
@@ -364,13 +368,14 @@ export async function generateHandler<
 
 		if (
 			earlyHintsCache &&
-			isHTMLContentType(response.headers.get("Content-Type"))
+			isHTMLContentType(response.headers.get("Content-Type")) &&
+			eTag
 		) {
 			const preEarlyHintsHeaders = new Headers(headers);
 
 			// "Early Hints cache entries are keyed by request URI and ignore query strings."
 			// https://developers.cloudflare.com/cache/about/early-hints/
-			const earlyHintsCacheKey = `${protocol}//${host}${pathname}`;
+			const earlyHintsCacheKey = `${protocol}//${host}/${eTag}`;
 			const earlyHintsResponse =
 				await earlyHintsCache.match(earlyHintsCacheKey);
 			if (earlyHintsResponse) {

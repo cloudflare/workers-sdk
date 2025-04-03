@@ -1,113 +1,113 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`r2 > bucket > create > wrangler.json > should create a bucket & check request inputs 1`] = `
-"Creating bucket 'testBucket'...
-✅ Created bucket 'testBucket' with default storage class of Standard.
+"Creating bucket 'test-bucket'...
+✅ Created bucket 'test-bucket' with default storage class of Standard.
 
 Configure your Worker to write objects to this bucket:
 
 {
   \\"r2_buckets\\": [
     {
-      \\"bucket_name\\": \\"testBucket\\",
-      \\"binding\\": \\"testBucket\\"
+      \\"bucket_name\\": \\"test-bucket\\",
+      \\"binding\\": \\"test_bucket\\"
     }
   ]
 }"
 `;
 
 exports[`r2 > bucket > create > wrangler.json > should create a bucket with the expected default storage class 1`] = `
-"Creating bucket 'testBucket'...
-✅ Created bucket 'testBucket' with default storage class of InfrequentAccess.
+"Creating bucket 'test-bucket'...
+✅ Created bucket 'test-bucket' with default storage class of InfrequentAccess.
 
 Configure your Worker to write objects to this bucket:
 
 {
   \\"r2_buckets\\": [
     {
-      \\"bucket_name\\": \\"testBucket\\",
-      \\"binding\\": \\"testBucket\\"
+      \\"bucket_name\\": \\"test-bucket\\",
+      \\"binding\\": \\"test_bucket\\"
     }
   ]
 }"
 `;
 
 exports[`r2 > bucket > create > wrangler.json > should create a bucket with the expected jurisdiction 1`] = `
-"Creating bucket 'testBucket (eu)'...
-✅ Created bucket 'testBucket (eu)' with default storage class of Standard.
+"Creating bucket 'test-bucket (eu)'...
+✅ Created bucket 'test-bucket (eu)' with default storage class of Standard.
 
 Configure your Worker to write objects to this bucket:
 
 {
   \\"r2_buckets\\": [
     {
-      \\"bucket_name\\": \\"testBucket\\",
-      \\"binding\\": \\"testBucket\\"
+      \\"bucket_name\\": \\"test-bucket\\",
+      \\"binding\\": \\"test_bucket\\"
     }
   ]
 }"
 `;
 
 exports[`r2 > bucket > create > wrangler.json > should create a bucket with the expected location hint 1`] = `
-"Creating bucket 'testBucket'...
-✅ Created bucket 'testBucket' with location hint weur and default storage class of Standard.
+"Creating bucket 'test-bucket'...
+✅ Created bucket 'test-bucket' with location hint weur and default storage class of Standard.
 
 Configure your Worker to write objects to this bucket:
 
 {
   \\"r2_buckets\\": [
     {
-      \\"bucket_name\\": \\"testBucket\\",
-      \\"binding\\": \\"testBucket\\"
+      \\"bucket_name\\": \\"test-bucket\\",
+      \\"binding\\": \\"test_bucket\\"
     }
   ]
 }"
 `;
 
 exports[`r2 > bucket > create > wrangler.toml > should create a bucket & check request inputs 1`] = `
-"Creating bucket 'testBucket'...
-✅ Created bucket 'testBucket' with default storage class of Standard.
+"Creating bucket 'test-bucket'...
+✅ Created bucket 'test-bucket' with default storage class of Standard.
 
 Configure your Worker to write objects to this bucket:
 
 [[r2_buckets]]
-bucket_name = \\"testBucket\\"
-binding = \\"testBucket\\"
+bucket_name = \\"test-bucket\\"
+binding = \\"test_bucket\\"
 "
 `;
 
 exports[`r2 > bucket > create > wrangler.toml > should create a bucket with the expected default storage class 1`] = `
-"Creating bucket 'testBucket'...
-✅ Created bucket 'testBucket' with default storage class of InfrequentAccess.
+"Creating bucket 'test-bucket'...
+✅ Created bucket 'test-bucket' with default storage class of InfrequentAccess.
 
 Configure your Worker to write objects to this bucket:
 
 [[r2_buckets]]
-bucket_name = \\"testBucket\\"
-binding = \\"testBucket\\"
+bucket_name = \\"test-bucket\\"
+binding = \\"test_bucket\\"
 "
 `;
 
 exports[`r2 > bucket > create > wrangler.toml > should create a bucket with the expected jurisdiction 1`] = `
-"Creating bucket 'testBucket (eu)'...
-✅ Created bucket 'testBucket (eu)' with default storage class of Standard.
+"Creating bucket 'test-bucket (eu)'...
+✅ Created bucket 'test-bucket (eu)' with default storage class of Standard.
 
 Configure your Worker to write objects to this bucket:
 
 [[r2_buckets]]
-bucket_name = \\"testBucket\\"
-binding = \\"testBucket\\"
+bucket_name = \\"test-bucket\\"
+binding = \\"test_bucket\\"
 "
 `;
 
 exports[`r2 > bucket > create > wrangler.toml > should create a bucket with the expected location hint 1`] = `
-"Creating bucket 'testBucket'...
-✅ Created bucket 'testBucket' with location hint weur and default storage class of Standard.
+"Creating bucket 'test-bucket'...
+✅ Created bucket 'test-bucket' with location hint weur and default storage class of Standard.
 
 Configure your Worker to write objects to this bucket:
 
 [[r2_buckets]]
-bucket_name = \\"testBucket\\"
-binding = \\"testBucket\\"
+bucket_name = \\"test-bucket\\"
+binding = \\"test_bucket\\"
 "
 `;

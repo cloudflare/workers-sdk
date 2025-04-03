@@ -4,13 +4,6 @@ export interface ReadyAnalytics {
 	logEvent: (e: ReadyAnalyticsEvent) => void;
 }
 
-export interface ColoMetadata {
-	metalId: number;
-	coloId: number;
-	coloRegion: string;
-	coloTier: number;
-}
-
 export interface ReadyAnalyticsEvent {
 	accountId?: number;
 	indexId?: string;

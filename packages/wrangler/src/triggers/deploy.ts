@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import PQueue from "p-queue";
 import { fetchListResult, fetchResult } from "../cfetch";
 import {
 	formatTime,
@@ -13,6 +14,7 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
+import { retryOnAPIFailure } from "../utils/retry";
 import { getZoneForRoute } from "../zones";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
@@ -55,7 +57,8 @@ export default async function triggersDeploy(
 
 	if (!scriptName) {
 		throw new UserError(
-			'You need to provide a name when uploading a Worker Version. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
+			'You need to provide a name when uploading a Worker Version. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
+			{ telemetryMessage: true }
 		);
 	}
 
@@ -86,7 +89,7 @@ export default async function triggersDeploy(
 	}
 
 	if (!accountId) {
-		throw new UserError("Missing accountId");
+		throw new UserError("Missing accountId", { telemetryMessage: true });
 	}
 
 	const uploadMs = Date.now() - start;
@@ -154,28 +157,56 @@ export default async function triggersDeploy(
 		// except here we know we have a good API token or whatever so we don't need
 		// to bother with all the error handling tomfoolery.
 		const routesWithOtherBindings: Record<string, string[]> = {};
+
+		/**
+		 * This queue ensures we limit how many concurrent fetch
+		 * requests we're making to the Zones API.
+		 */
+		const queue = new PQueue({ concurrency: 10 });
+		const queuePromises: Array<Promise<void>> = [];
+		const zoneRoutesCache = new Map<
+			string,
+			Promise<Array<{ pattern: string; script: string }>>
+		>();
+
+		const zoneIdCache = new Map();
 		for (const route of routes) {
-			const zone = await getZoneForRoute({ route, accountId });
-			if (!zone) {
-				continue;
-			}
-
-			const routePattern = typeof route === "string" ? route : route.pattern;
-			const routesInZone = await fetchListResult<{
-				pattern: string;
-				script: string;
-			}>(`/zones/${zone.id}/workers/routes`);
-
-			routesInZone.forEach(({ script, pattern }) => {
-				if (pattern === routePattern && script !== scriptName) {
-					if (!(script in routesWithOtherBindings)) {
-						routesWithOtherBindings[script] = [];
+			queuePromises.push(
+				queue.add(async () => {
+					const zone = await getZoneForRoute({ route, accountId }, zoneIdCache);
+					if (!zone) {
+						return;
 					}
 
-					routesWithOtherBindings[script].push(pattern);
-				}
-			});
+					const routePattern =
+						typeof route === "string" ? route : route.pattern;
+
+					let routesInZone = zoneRoutesCache.get(zone.id);
+					if (!routesInZone) {
+						routesInZone = retryOnAPIFailure(() =>
+							fetchListResult<{
+								pattern: string;
+								script: string;
+							}>(`/zones/${zone.id}/workers/routes`)
+						);
+						zoneRoutesCache.set(zone.id, routesInZone);
+					}
+
+					(await routesInZone).forEach(({ script, pattern }) => {
+						if (pattern === routePattern && script !== scriptName) {
+							if (!(script in routesWithOtherBindings)) {
+								routesWithOtherBindings[script] = [];
+							}
+
+							routesWithOtherBindings[script].push(pattern);
+						}
+					});
+				})
+			);
 		}
+		// using Promise.all() here instead of queue.onIdle() to ensure
+		// we actually throw errors that occur within queued promises.
+		await Promise.all(queuePromises);
 
 		if (Object.keys(routesWithOtherBindings).length > 0) {
 			let errorMessage =
@@ -256,6 +287,15 @@ export default async function triggersDeploy(
 		logger.once.warn("Workflows is currently in open beta.");
 
 		for (const workflow of config.workflows) {
+			// NOTE: if the user provides a script_name thats not this script (aka bounds to another worker)
+			// we don't want to send this worker's config.
+			if (
+				workflow.script_name !== undefined &&
+				workflow.script_name !== scriptName
+			) {
+				continue;
+			}
+
 			deployments.push(
 				fetchResult(`/accounts/${accountId}/workflows/${workflow.name}`, {
 					method: "PUT",

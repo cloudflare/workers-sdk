@@ -1,6 +1,6 @@
-import { Data, List, Message, Struct } from "capnp-ts";
+import { Data, List, Message, Struct } from "capnp-es";
+import { Config as CapnpConfig } from "./generated";
 import { Config, kVoid } from "./workerd";
-import { Config as CapnpConfig } from "./workerd.capnp.js";
 
 function capitalize<S extends string>(str: S): Capitalize<S> {
 	return (
@@ -19,11 +19,13 @@ function encodeCapnpStruct(obj: any, struct: Struct) {
 	const anyStruct = struct as any;
 	for (const [key, value] of Object.entries(obj)) {
 		const capitalized = capitalize(key);
+		const safeKey = key === "constructor" ? `$${key}` : key;
+
 		if (value instanceof Uint8Array) {
-			const newData: Data = anyStruct[`init${capitalized}`](value.byteLength);
+			const newData: Data = anyStruct[`_init${capitalized}`](value.byteLength);
 			newData.copyBuffer(value);
 		} else if (Array.isArray(value)) {
-			const newList: List<any> = anyStruct[`init${capitalized}`](value.length);
+			const newList: List<any> = anyStruct[`_init${capitalized}`](value.length);
 			for (let i = 0; i < value.length; i++) {
 				if (typeof value[i] === "object") {
 					encodeCapnpStruct(value[i], newList.get(i));
@@ -32,14 +34,14 @@ function encodeCapnpStruct(obj: any, struct: Struct) {
 				}
 			}
 		} else if (typeof value === "object") {
-			const newStruct: Struct = anyStruct[`init${capitalized}`]();
+			const newStruct: Struct = anyStruct[`_init${capitalized}`]();
 			encodeCapnpStruct(value, newStruct);
 		} else if (value === kVoid) {
-			anyStruct[`set${capitalized}`]();
+			anyStruct[safeKey] = undefined;
 		} else if (value !== undefined) {
 			// Ignore all `undefined` values, explicitly `undefined` values should use
 			// kVoid symbol instead.
-			anyStruct[`set${capitalized}`](value);
+			anyStruct[safeKey] = value;
 		}
 	}
 }

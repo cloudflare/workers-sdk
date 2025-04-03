@@ -1,0 +1,14 @@
+{
+	"name": "ai-vectorize",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-03-20",
+	"ai": {
+		"binding": "AI",
+	},
+	"vectorize": [
+		{
+			"binding": "VECTORIZE",
+			"index_name": "embeddings",
+		},
+	],
+}

@@ -1,5 +1,13 @@
 # cloudflare-workers-bindings-extension
 
+## 0.0.10
+
+### Patch Changes
+
+- [#7777](https://github.com/cloudflare/workers-sdk/pull/7777) [`248bdb2`](https://github.com/cloudflare/workers-sdk/commit/248bdb21d765ab34489a0e695d1243b7664f0ce9) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: add home view with getting started information
+
+- [#7689](https://github.com/cloudflare/workers-sdk/pull/7689) [`3886065`](https://github.com/cloudflare/workers-sdk/commit/38860655ba9a77e3504680b593da0a4e9e8ae903) Thanks [@emily-shen](https://github.com/emily-shen)! - Add documentation links to binding created notification and bindings tree view
+
 ## 0.0.9
 
 ### Patch Changes

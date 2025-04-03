@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import dedent from "ts-dedent";
 import { Agent, fetch, setGlobalDispatcher } from "undici";
-import { test as baseTest, expect, vi } from "vitest";
+import { test as baseTest, describe, expect, vi } from "vitest";
 import { unstable_startWorkerRegistryServer } from "wrangler";
 import {
 	runWranglerDev,
@@ -95,10 +95,10 @@ const test = baseTest.extend<{
 		await Promise.allSettled(cleanups.map((fn) => fn()));
 	},
 });
-
-test("should support binding to the same worker", async ({ dev }) => {
-	const { url } = await dev({
-		"wrangler.toml": dedent`
+describe("entrypoints", () => {
+	test("should support binding to the same worker", async ({ dev }) => {
+		const { url } = await dev({
+			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
 
@@ -106,7 +106,7 @@ test("should support binding to the same worker", async ({ dev }) => {
 			binding = "SERVICE"
 			service = "entry"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			export default {
 				fetch(request, env, ctx) {
 					const { pathname } = new URL(request.url);
@@ -122,32 +122,34 @@ test("should support binding to the same worker", async ({ dev }) => {
 				}
 			}
 		`,
+		});
+
+		const response = await fetch(url);
+		// Check protocol, host, and cf preserved
+		expect(await response.text()).toBe(
+			'POST https://placeholder:9999/loopback {"thing":true}'
+		);
 	});
 
-	const response = await fetch(url);
-	// Check protocol, host, and cf preserved
-	expect(await response.text()).toBe(
-		'POST https://placeholder:9999/loopback {"thing":true}'
-	);
-});
-
-test("should support default ExportedHandler entrypoints", async ({ dev }) => {
-	await dev({
-		"wrangler.toml": dedent`
+	test("should support default ExportedHandler entrypoints", async ({
+		dev,
+	}) => {
+		await dev({
+			"wrangler.toml": dedent`
 			name = "bound"
 			main = "index.ts"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			export default {
 				fetch(request, env, ctx) {
 					return new Response(\`\${request.method} \${request.url} \${JSON.stringify(request.cf)}\`);
 				}
 			};
 		`,
-	});
+		});
 
-	const { url } = await dev({
-		"wrangler.toml": dedent`
+		const { url } = await dev({
+			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
 
@@ -155,7 +157,7 @@ test("should support default ExportedHandler entrypoints", async ({ dev }) => {
 			binding = "SERVICE"
 			service = "bound"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			export default {
 				fetch(request, env, ctx) {
 					return env.SERVICE.fetch("https://placeholder:9999/", {
@@ -165,23 +167,25 @@ test("should support default ExportedHandler entrypoints", async ({ dev }) => {
 				}
 			}
 		`,
+		});
+
+		await waitFor(async () => {
+			const response = await fetch(url);
+			const text = await response.text();
+			// Check protocol, host, and cf preserved
+			expect(text).toBe('POST https://placeholder:9999/ {"thing":true}');
+		});
 	});
 
-	await waitFor(async () => {
-		const response = await fetch(url);
-		const text = await response.text();
-		// Check protocol, host, and cf preserved
-		expect(text).toBe('POST https://placeholder:9999/ {"thing":true}');
-	});
-});
-
-test("should support default WorkerEntrypoint entrypoints", async ({ dev }) => {
-	await dev({
-		"wrangler.toml": dedent`
+	test("should support default WorkerEntrypoint entrypoints", async ({
+		dev,
+	}) => {
+		await dev({
+			"wrangler.toml": dedent`
 			name = "bound"
 			main = "index.ts"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			import { WorkerEntrypoint } from "cloudflare:workers";
 			// Check middleware is transparent to RPC
 			export default class ThingEntrypoint extends WorkerEntrypoint {
@@ -193,10 +197,10 @@ test("should support default WorkerEntrypoint entrypoints", async ({ dev }) => {
 				}
 			};
 		`,
-	});
+		});
 
-	const { url } = await dev({
-		"wrangler.toml": dedent`
+		const { url } = await dev({
+			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
 
@@ -204,7 +208,7 @@ test("should support default WorkerEntrypoint entrypoints", async ({ dev }) => {
 			binding = "SERVICE"
 			service = "bound"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			export default {
 				async fetch(request, env, ctx) {
 					const response = await env.SERVICE.fetch("https://placeholder:9999/", {
@@ -217,21 +221,21 @@ test("should support default WorkerEntrypoint entrypoints", async ({ dev }) => {
 				}
 			}
 		`,
+		});
+
+		await waitFor(async () => {
+			const response = await fetch(url);
+			const text = await response.text();
+			// Check protocol, host, and cf preserved
+			expect(text).toBe('POST https://placeholder:9999/ {"thing":true} pong');
+		});
 	});
 
-	await waitFor(async () => {
-		const response = await fetch(url);
-		const text = await response.text();
-		// Check protocol, host, and cf preserved
-		expect(text).toBe('POST https://placeholder:9999/ {"thing":true} pong');
-	});
-});
-
-test("should support middleware with default WorkerEntrypoint entrypoints", async ({
-	dev,
-}) => {
-	const files: Record<string, string> = {
-		"wrangler.toml": dedent`
+	test("should support middleware with default WorkerEntrypoint entrypoints", async ({
+		dev,
+	}) => {
+		const files: Record<string, string> = {
+			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
 
@@ -239,7 +243,7 @@ test("should support middleware with default WorkerEntrypoint entrypoints", asyn
 			binding = "SERVICE"
 			service = "entry"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			import { WorkerEntrypoint } from "cloudflare:workers";
 			let lastController;
 			export default class TestEntrypoint extends WorkerEntrypoint {
@@ -254,32 +258,32 @@ test("should support middleware with default WorkerEntrypoint entrypoints", asyn
 				}
 			}
 		`,
-	};
-	const { url } = await dev(files, ["--test-scheduled"]);
+		};
+		const { url } = await dev(files, ["--test-scheduled"]);
 
-	let response = await fetch(url);
-	expect(await response.text()).toBe("GET /");
+		let response = await fetch(url);
+		expect(await response.text()).toBe("GET /");
 
-	// Check other events can be dispatched
-	response = await fetch(new URL("/__scheduled?cron=* * * * 30", url));
-	expect(response.status).toBe(200);
-	expect(await response.text()).toBe("Ran scheduled event");
-	response = await fetch(new URL("/controller", url));
-	expect(response.status).toBe(200);
-	expect(await response.text()).toBe("* * * * 30");
+		// Check other events can be dispatched
+		response = await fetch(new URL("/__scheduled?cron=* * * * 30", url));
+		expect(response.status).toBe(200);
+		expect(await response.text()).toBe("Ran scheduled event");
+		response = await fetch(new URL("/controller", url));
+		expect(response.status).toBe(200);
+		expect(await response.text()).toBe("* * * * 30");
 
-	// Check multiple middleware can be registered
-	response = await fetch(new URL("/throw", url));
-	expect(response.status).toBe(500);
-	expect(response.headers.get("Content-Type")).toMatch(/text\/html/);
-	expect(await response.text()).toMatch("Oops!");
-});
+		// Check multiple middleware can be registered
+		response = await fetch(new URL("/throw", url));
+		expect(response.status).toBe(500);
+		expect(response.headers.get("Content-Type")).toMatch(/text\/html/);
+		expect(await response.text()).toMatch("Oops!");
+	});
 
-test("should support named ExportedHandler entrypoints to itself", async ({
-	dev,
-}) => {
-	const { url } = await dev({
-		"wrangler.toml": dedent`
+	test("should support named ExportedHandler entrypoints to itself", async ({
+		dev,
+	}) => {
+		const { url } = await dev({
+			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
 
@@ -288,7 +292,7 @@ test("should support named ExportedHandler entrypoints to itself", async ({
 			service = "entry"
 			entrypoint = "ThingEntrypoint"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			import { WorkerEntrypoint } from "cloudflare:workers";
 			export class ThingEntrypoint extends WorkerEntrypoint {
 				fetch(request) {
@@ -307,22 +311,22 @@ test("should support named ExportedHandler entrypoints to itself", async ({
 				}
 			}
 		`,
+		});
+
+		const response = await fetch(url);
+		// Check protocol, host, and cf preserved
+		expect(await response.text()).toBe(
+			'POST https://placeholder:9999/ {"thing":true}'
+		);
 	});
 
-	const response = await fetch(url);
-	// Check protocol, host, and cf preserved
-	expect(await response.text()).toBe(
-		'POST https://placeholder:9999/ {"thing":true}'
-	);
-});
-
-test("should support named ExportedHandler entrypoints", async ({ dev }) => {
-	await dev({
-		"wrangler.toml": dedent`
+	test("should support named ExportedHandler entrypoints", async ({ dev }) => {
+		await dev({
+			"wrangler.toml": dedent`
 			name = "bound"
 			main = "index.ts"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			export const thing = {
 				fetch(request, env, ctx) {
 					return new Response(\`\${request.method} \${request.url} \${JSON.stringify(request.cf)}\`);
@@ -330,10 +334,10 @@ test("should support named ExportedHandler entrypoints", async ({ dev }) => {
 			};
 			export default {}; // Required to treat as modules format worker
 		`,
-	});
+		});
 
-	const { url } = await dev({
-		"wrangler.toml": dedent`
+		const { url } = await dev({
+			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
 
@@ -342,7 +346,7 @@ test("should support named ExportedHandler entrypoints", async ({ dev }) => {
 			service = "bound"
 			entrypoint = "thing"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			export default {
 				fetch(request, env, ctx) {
 					return env.SERVICE.fetch("https://placeholder:9999/", {
@@ -352,23 +356,23 @@ test("should support named ExportedHandler entrypoints", async ({ dev }) => {
 				}
 			}
 		`,
+		});
+
+		await waitFor(async () => {
+			const response = await fetch(url);
+			const text = await response.text();
+			// Check protocol, host, and cf preserved
+			expect(text).toBe('POST https://placeholder:9999/ {"thing":true}');
+		});
 	});
 
-	await waitFor(async () => {
-		const response = await fetch(url);
-		const text = await response.text();
-		// Check protocol, host, and cf preserved
-		expect(text).toBe('POST https://placeholder:9999/ {"thing":true}');
-	});
-});
-
-test("should support named WorkerEntrypoint entrypoints", async ({ dev }) => {
-	await dev({
-		"wrangler.toml": dedent`
+	test("should support named WorkerEntrypoint entrypoints", async ({ dev }) => {
+		await dev({
+			"wrangler.toml": dedent`
 			name = "bound"
 			main = "index.ts"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			import { WorkerEntrypoint } from "cloudflare:workers";
 			export class ThingEntrypoint extends WorkerEntrypoint {
 				fetch(request) {
@@ -380,10 +384,10 @@ test("should support named WorkerEntrypoint entrypoints", async ({ dev }) => {
 			};
 			export default {}; // Required to treat as modules format worker
 		`,
-	});
+		});
 
-	const { url } = await dev({
-		"wrangler.toml": dedent`
+		const { url } = await dev({
+			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
 
@@ -392,7 +396,7 @@ test("should support named WorkerEntrypoint entrypoints", async ({ dev }) => {
 			service = "bound"
 			entrypoint = "ThingEntrypoint"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			export default {
 				async fetch(request, env, ctx) {
 					const response = await env.SERVICE.fetch("https://placeholder:9999/", {
@@ -405,23 +409,23 @@ test("should support named WorkerEntrypoint entrypoints", async ({ dev }) => {
 				}
 			}
 		`,
+		});
+
+		await waitFor(async () => {
+			const response = await fetch(url);
+			const text = await response.text();
+			// Check protocol, host, and cf preserved
+			expect(text).toBe('POST https://placeholder:9999/ {"thing":true} pong');
+		});
 	});
 
-	await waitFor(async () => {
-		const response = await fetch(url);
-		const text = await response.text();
-		// Check protocol, host, and cf preserved
-		expect(text).toBe('POST https://placeholder:9999/ {"thing":true} pong');
-	});
-});
-
-test("should support named entrypoints in pages dev", async ({ dev }) => {
-	await dev({
-		"wrangler.toml": dedent`
+	test("should support named entrypoints in pages dev", async ({ dev }) => {
+		await dev({
+			"wrangler.toml": dedent`
 			name = "bound"
 			main = "index.ts"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			import { WorkerEntrypoint } from "cloudflare:workers";
 			export class ThingEntrypoint extends WorkerEntrypoint {
 				ping() {
@@ -430,31 +434,31 @@ test("should support named entrypoints in pages dev", async ({ dev }) => {
 			};
 			export default {}; // Required to treat as modules format worker
 		`,
-	});
+		});
 
-	const files = {
-		"functions/index.ts": dedent`
+		const files = {
+			"functions/index.ts": dedent`
 			export const onRequest = async ({ env }) => {
 				return new Response(await env.SERVICE.ping());
 			};
 		`,
-	};
-	const { url } = await dev(
-		files,
-		["--service=SERVICE=bound#ThingEntrypoint"],
-		/* pagesPublicPath */ "dist"
-	);
+		};
+		const { url } = await dev(
+			files,
+			["--service=SERVICE=bound#ThingEntrypoint"],
+			/* pagesPublicPath */ "dist"
+		);
 
-	await waitFor(async () => {
-		const response = await fetch(url);
-		const text = await response.text();
-		expect(text).toBe("pong");
+		await waitFor(async () => {
+			const response = await fetch(url);
+			const text = await response.text();
+			expect(text).toBe("pong");
+		});
 	});
-});
 
-test("should support co-dependent services", async ({ dev }) => {
-	const { url } = await dev({
-		"wrangler.toml": dedent`
+	test("should support co-dependent services", async ({ dev }) => {
+		const { url } = await dev({
+			"wrangler.toml": dedent`
 			name = "a"
 			main = "index.ts"
 
@@ -463,7 +467,7 @@ test("should support co-dependent services", async ({ dev }) => {
 			service = "b"
 			entrypoint = "BEntrypoint"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			import { WorkerEntrypoint } from "cloudflare:workers";
 			export class AEntrypoint extends WorkerEntrypoint {
 				ping() {
@@ -476,10 +480,10 @@ test("should support co-dependent services", async ({ dev }) => {
 				}
 			};
 		`,
-	});
+		});
 
-	await dev({
-		"wrangler.toml": dedent`
+		await dev({
+			"wrangler.toml": dedent`
 			name = "b"
 			main = "index.ts"
 
@@ -488,7 +492,7 @@ test("should support co-dependent services", async ({ dev }) => {
 			service = "a"
 			entrypoint = "AEntrypoint"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			import { WorkerEntrypoint } from "cloudflare:workers";
 			export class BEntrypoint extends WorkerEntrypoint {
 				async ping() {
@@ -498,22 +502,22 @@ test("should support co-dependent services", async ({ dev }) => {
 			};
 			export default {}; // Required to treat as modules format worker
 		`,
+		});
+
+		await waitFor(async () => {
+			const response = await fetch(url);
+			const text = await response.text();
+			expect(text).toBe("b:a:pong");
+		});
 	});
 
-	await waitFor(async () => {
-		const response = await fetch(url);
-		const text = await response.text();
-		expect(text).toBe("b:a:pong");
-	});
-});
+	test("should support binding to Durable Object in another worker", async ({
+		dev,
+	}) => {
+		// RPC isn't supported in this case yet :(
 
-test("should support binding to Durable Object in another worker", async ({
-	dev,
-}) => {
-	// RPC isn't supported in this case yet :(
-
-	await dev({
-		"wrangler.toml": dedent`
+		await dev({
+			"wrangler.toml": dedent`
 			name = "bound"
 			main = "index.ts"
 
@@ -522,7 +526,7 @@ test("should support binding to Durable Object in another worker", async ({
 			  { name = "OBJECT", class_name = "ThingObject" }
 			]
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			import { DurableObject } from "cloudflare:workers";
 			export class ThingObject extends DurableObject {
 				fetch(request) {
@@ -537,10 +541,10 @@ test("should support binding to Durable Object in another worker", async ({
 			};
 			export default {}; // Required to treat as modules format worker
 		`,
-	});
+		});
 
-	const { url } = await dev({
-		"wrangler.toml": dedent`
+		const { url } = await dev({
+			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
 
@@ -549,7 +553,7 @@ test("should support binding to Durable Object in another worker", async ({
 			  { name = "OBJECT", class_name = "ThingObject", script_name = "bound" }
 			]
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			export default {
 				async fetch(request, env, ctx) {
 					const id = env.OBJECT.newUniqueId();
@@ -570,32 +574,32 @@ test("should support binding to Durable Object in another worker", async ({
 				}
 			}
 		`,
-	});
+		});
 
-	await waitFor(async () => {
-		const response = await fetch(url);
-		const text = await response.text();
-		// Check protocol, host, and cf preserved
-		expect(text).toBe('POST https://placeholder:9999/ {"thing":true}');
-	});
+		await waitFor(async () => {
+			const response = await fetch(url);
+			const text = await response.text();
+			// Check protocol, host, and cf preserved
+			expect(text).toBe('POST https://placeholder:9999/ {"thing":true}');
+		});
 
-	const rpcResponse = await fetch(new URL("/rpc", url));
-	const errors = await rpcResponse.json();
-	expect(errors).toMatchInlineSnapshot(`
+		const rpcResponse = await fetch(new URL("/rpc", url));
+		const errors = await rpcResponse.json();
+		expect(errors).toMatchInlineSnapshot(`
 		[
 		  "Error: Cannot access \`ThingObject#property\` as Durable Object RPC is not yet supported between multiple \`wrangler dev\` sessions.",
 		  "Error: Cannot access \`ThingObject#method\` as Durable Object RPC is not yet supported between multiple \`wrangler dev\` sessions.",
 		]
 	`);
-});
+	});
 
-test("should support binding to Durable Object in same worker", async ({
-	dev,
-}) => {
-	// RPC is supported here though :)
+	test("should support binding to Durable Object in same worker", async ({
+		dev,
+	}) => {
+		// RPC is supported here though :)
 
-	const { url } = await dev({
-		"wrangler.toml": dedent`
+		const { url } = await dev({
+			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
 
@@ -604,7 +608,7 @@ test("should support binding to Durable Object in same worker", async ({
 			  { name = "OBJECT", class_name = "ThingObject" }
 			]
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			import { DurableObject } from "cloudflare:workers";
 			export class ThingObject extends DurableObject {
 				ping() {
@@ -619,17 +623,17 @@ test("should support binding to Durable Object in same worker", async ({
 				}
 			}
 		`,
+		});
+
+		const response = await fetch(url);
+		expect(await response.text()).toBe("pong");
 	});
 
-	const response = await fetch(url);
-	expect(await response.text()).toBe("pong");
-});
-
-test("should support binding to Durable Object in same worker with explicit script_name", async ({
-	dev,
-}) => {
-	const { url } = await dev({
-		"wrangler.toml": dedent`
+	test("should support binding to Durable Object in same worker with explicit script_name", async ({
+		dev,
+	}) => {
+		const { url } = await dev({
+			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
 
@@ -638,7 +642,7 @@ test("should support binding to Durable Object in same worker with explicit scri
 			  { name = "OBJECT", class_name = "ThingObject", script_name = "entry" }
 			]
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			import { DurableObject } from "cloudflare:workers";
 			export class ThingObject extends DurableObject {
 				ping() {
@@ -653,20 +657,20 @@ test("should support binding to Durable Object in same worker with explicit scri
 				}
 			}
 		`,
+		});
+
+		const response = await fetch(url);
+		expect(await response.text()).toBe("pong");
 	});
 
-	const response = await fetch(url);
-	expect(await response.text()).toBe("pong");
-});
-
-test("should throw if binding to named entrypoint exported by version of wrangler without entrypoints support", async ({
-	dev,
-	isolatedDevRegistryPath,
-}) => {
-	// Start entry worker first, so the server starts with a stubbed service not
-	// found binding
-	const { url, session } = await dev({
-		"wrangler.toml": dedent`
+	test("should throw if binding to named entrypoint exported by version of wrangler without entrypoints support", async ({
+		dev,
+		isolatedDevRegistryPath,
+	}) => {
+		// Start entry worker first, so the server starts with a stubbed service not
+		// found binding
+		const { url, session } = await dev({
+			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
 
@@ -675,50 +679,50 @@ test("should throw if binding to named entrypoint exported by version of wrangle
 			service = "bound"
 			entrypoint = "ThingEntrypoint"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			export default {
 				async fetch(request, env, ctx) {
 					return env.SERVICE.fetch("https://placeholder:9999/");
 				}
 			}
 		`,
-	});
-	let response = await fetch(url);
-	expect(response.status).toBe(503);
-	expect(await response.text()).toBe(
-		'[wrangler] Couldn\'t find `wrangler dev` session for service "bound" to proxy to'
-	);
-
-	await writeFile(
-		path.join(isolatedDevRegistryPath, "bound"),
-		JSON.stringify({
-			protocol: "http",
-			mode: "local",
-			port: 0,
-			host: "localhost",
-			durableObjects: [],
-			durableObjectsHost: "localhost",
-			durableObjectsPort: 0,
-			// Intentionally omitting `entrypointAddresses`
-		})
-	);
-
-	// Wait for error to be thrown
-	await waitFor(() => {
-		const output = session.getOutput();
-		expect(output).toMatch(
-			'The `wrangler dev` session for service "bound" does not support proxying entrypoints. Please upgrade "bound"\'s `wrangler` version.'
+		});
+		let response = await fetch(url);
+		expect(response.status).toBe(503);
+		expect(await response.text()).toBe(
+			'[wrangler] Couldn\'t find `wrangler dev` session for service "bound" to proxy to'
 		);
-	});
-});
 
-test("should throw if wrangler session doesn't export expected entrypoint", async ({
-	dev,
-}) => {
-	// Start entry worker first, so the server starts with a stubbed service not
-	// found binding
-	const { url, session } = await dev({
-		"wrangler.toml": dedent`
+		await writeFile(
+			path.join(isolatedDevRegistryPath, "bound"),
+			JSON.stringify({
+				protocol: "http",
+				mode: "local",
+				port: 0,
+				host: "localhost",
+				durableObjects: [],
+				durableObjectsHost: "localhost",
+				durableObjectsPort: 0,
+				// Intentionally omitting `entrypointAddresses`
+			})
+		);
+
+		// Wait for error to be thrown
+		await waitFor(() => {
+			const output = session.getOutput();
+			expect(output).toMatch(
+				'The `wrangler dev` session for service "bound" does not support proxying entrypoints. Please upgrade "bound"\'s `wrangler` version.'
+			);
+		});
+	});
+
+	test("should throw if wrangler session doesn't export expected entrypoint", async ({
+		dev,
+	}) => {
+		// Start entry worker first, so the server starts with a stubbed service not
+		// found binding
+		const { url, session } = await dev({
+			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
 
@@ -727,26 +731,26 @@ test("should throw if wrangler session doesn't export expected entrypoint", asyn
 			service = "bound"
 			entrypoint = "ThingEntrypoint"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			export default {
 				async fetch(request, env, ctx) {
 					return env.SERVICE.fetch("https://placeholder:9999/");
 				}
 			}
 		`,
-	});
-	let response = await fetch(url);
-	expect(await response.text()).toBe(
-		'[wrangler] Couldn\'t find `wrangler dev` session for service "bound" to proxy to'
-	);
+		});
+		let response = await fetch(url);
+		expect(await response.text()).toBe(
+			'[wrangler] Couldn\'t find `wrangler dev` session for service "bound" to proxy to'
+		);
 
-	// Start up the bound worker without the expected entrypoint
-	await dev({
-		"wrangler.toml": dedent`
+		// Start up the bound worker without the expected entrypoint
+		await dev({
+			"wrangler.toml": dedent`
 			name = "bound"
 			main = "index.ts"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			import { WorkerEntrypoint } from "cloudflare:workers";
 			export class BadEntrypoint extends WorkerEntrypoint {
 				fetch(request) {
@@ -755,24 +759,24 @@ test("should throw if wrangler session doesn't export expected entrypoint", asyn
 			};
 			export default {}; // Required to treat as modules format worker
 		`,
+		});
+
+		// Wait for error to be thrown
+		await waitFor(() => {
+			const output = session.getOutput();
+			expect(output).toMatch(
+				'The `wrangler dev` session for service "bound" does not export an entrypoint named "ThingEntrypoint"'
+			);
+		});
 	});
 
-	// Wait for error to be thrown
-	await waitFor(() => {
-		const output = session.getOutput();
-		expect(output).toMatch(
-			'The `wrangler dev` session for service "bound" does not export an entrypoint named "ThingEntrypoint"'
-		);
-	});
-});
-
-test("should support binding to wrangler session listening on HTTPS", async ({
-	dev,
-}) => {
-	// Start entry worker first, so the server starts with a stubbed service not
-	// found binding
-	const { url, session } = await dev({
-		"wrangler.toml": dedent`
+	test("should support binding to wrangler session listening on HTTPS", async ({
+		dev,
+	}) => {
+		// Start entry worker first, so the server starts with a stubbed service not
+		// found binding
+		const { url, session } = await dev({
+			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
 
@@ -780,50 +784,50 @@ test("should support binding to wrangler session listening on HTTPS", async ({
 			binding = "SERVICE"
 			service = "bound"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			export default {
 				async fetch(request, env, ctx) {
 					return env.SERVICE.fetch("http://placeholder/");
 				}
 			}
 		`,
-	});
-	let response = await fetch(url);
-	expect(await response.text()).toBe(
-		'[wrangler] Couldn\'t find `wrangler dev` session for service "bound" to proxy to'
-	);
+		});
+		let response = await fetch(url);
+		expect(await response.text()).toBe(
+			'[wrangler] Couldn\'t find `wrangler dev` session for service "bound" to proxy to'
+		);
 
-	// Start up the bound worker using HTTPS
-	const files: Record<string, string> = {
-		"wrangler.toml": dedent`
+		// Start up the bound worker using HTTPS
+		const files: Record<string, string> = {
+			"wrangler.toml": dedent`
 			name = "bound"
 			main = "index.ts"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			export default {
 				fetch() {
 					return new Response("secure");
 				}
 			};
 		`,
-	};
-	await dev(files, ["--local-protocol=https"]);
+		};
+		await dev(files, ["--local-protocol=https"]);
 
-	await waitFor(async () => {
-		const response = await fetch(url);
-		const text = await response.text();
-		expect(text).toBe("secure");
+		await waitFor(async () => {
+			const response = await fetch(url);
+			const text = await response.text();
+			expect(text).toBe("secure");
+		});
 	});
-});
 
-test("should throw if binding to version of wrangler without entrypoints support over HTTPS", async ({
-	dev,
-	isolatedDevRegistryPath,
-}) => {
-	// Start entry worker first, so the server starts with a stubbed service not
-	// found binding
-	const { url, session } = await dev({
-		"wrangler.toml": dedent`
+	test("should throw if binding to version of wrangler without entrypoints support over HTTPS", async ({
+		dev,
+		isolatedDevRegistryPath,
+	}) => {
+		// Start entry worker first, so the server starts with a stubbed service not
+		// found binding
+		const { url, session } = await dev({
+			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
 
@@ -831,47 +835,47 @@ test("should throw if binding to version of wrangler without entrypoints support
 			binding = "SERVICE"
 			service = "bound"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			export default {
 				async fetch(request, env, ctx) {
 					return env.SERVICE.fetch("http://placeholder/");
 				}
 			}
 		`,
-	});
-	let response = await fetch(url);
-	expect(await response.text()).toBe(
-		'[wrangler] Couldn\'t find `wrangler dev` session for service "bound" to proxy to'
-	);
-
-	await writeFile(
-		path.join(isolatedDevRegistryPath, "bound"),
-		JSON.stringify({
-			protocol: "https",
-			mode: "local",
-			port: 0,
-			host: "localhost",
-			durableObjects: [],
-			durableObjectsHost: "localhost",
-			durableObjectsPort: 0,
-			// Intentionally omitting `entrypointAddresses`
-		})
-	);
-
-	// Wait for error to be thrown
-	await waitFor(() => {
-		const output = session.getOutput();
-		expect(output).toMatch(
-			'Cannot proxy to `wrangler dev` session for service "bound" because it uses HTTPS. Please upgrade "bound"\'s `wrangler` version, or remove the `--local-protocol`/`dev.local_protocol` option.'
+		});
+		let response = await fetch(url);
+		expect(await response.text()).toBe(
+			'[wrangler] Couldn\'t find `wrangler dev` session for service "bound" to proxy to'
 		);
-	});
-});
 
-test("should throw if performing RPC with session that hasn't started", async ({
-	dev,
-}) => {
-	const { url } = await dev({
-		"wrangler.toml": dedent`
+		await writeFile(
+			path.join(isolatedDevRegistryPath, "bound"),
+			JSON.stringify({
+				protocol: "https",
+				mode: "local",
+				port: 0,
+				host: "localhost",
+				durableObjects: [],
+				durableObjectsHost: "localhost",
+				durableObjectsPort: 0,
+				// Intentionally omitting `entrypointAddresses`
+			})
+		);
+
+		// Wait for error to be thrown
+		await waitFor(() => {
+			const output = session.getOutput();
+			expect(output).toMatch(
+				'Cannot proxy to `wrangler dev` session for service "bound" because it uses HTTPS. Please upgrade "bound"\'s `wrangler` version, or remove the `--local-protocol`/`dev.local_protocol` option.'
+			);
+		});
+	});
+
+	test("should throw if performing RPC with session that hasn't started", async ({
+		dev,
+	}) => {
+		const { url } = await dev({
+			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
 
@@ -880,7 +884,7 @@ test("should throw if performing RPC with session that hasn't started", async ({
 			service = "bound"
 			entrypoint = "ThingEntrypoint"
 		`,
-		"index.ts": dedent`
+			"index.ts": dedent`
 			export default {
 				async fetch(request, env, ctx) {
 					const errors = [];
@@ -890,14 +894,15 @@ test("should throw if performing RPC with session that hasn't started", async ({
 				}
 			}
 		`,
-	});
+		});
 
-	const response = await fetch(url);
-	const errors = await response.json();
-	expect(errors).toMatchInlineSnapshot(`
+		const response = await fetch(url);
+		const errors = await response.json();
+		expect(errors).toMatchInlineSnapshot(`
 		[
 		  "Error: Cannot access \`property\` as we couldn't find a \`wrangler dev\` session for service "bound" to proxy to.",
 		  "Error: Cannot access \`method\` as we couldn't find a \`wrangler dev\` session for service "bound" to proxy to.",
 		]
 	`);
+	});
 });

@@ -22,7 +22,7 @@ function writeAppConfiguration(...app: ContainerApp[]) {
 		"./wrangler.toml",
 		TOML.stringify({
 			name: "my-container",
-			containers: { app },
+			containers: app,
 		}),
 
 		"utf-8"
@@ -103,6 +103,7 @@ describe("cloudchamber apply", () => {
 		writeAppConfiguration({
 			name: "my-container-app",
 			instances: 3,
+			class_name: "DurableObjectClass",
 			configuration: {
 				image: "./Dockerfile",
 			},
@@ -122,15 +123,15 @@ describe("cloudchamber apply", () => {
 			│
 			├ NEW my-container-app
 			│
-			│   [[containers.app]]
+			│   [[containers]]
 			│   name = \\"my-container-app\\"
 			│   instances = 3
 			│   scheduling_policy = \\"regional\\"
 			│
-			│   [containers.app.configuration]
+			│   [containers.configuration]
 			│   image = \\"./Dockerfile\\"
 			│
-			│   [containers.app.constraints]
+			│   [containers.constraints]
 			│   tier = 2
 			│
 			├ Do you want to apply these changes?
@@ -150,6 +151,7 @@ describe("cloudchamber apply", () => {
 		setIsTTY(false);
 		writeAppConfiguration({
 			name: "my-container-app",
+			class_name: "DurableObjectClass",
 			instances: 4,
 			configuration: {
 				image: "./Dockerfile",
@@ -184,12 +186,12 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   [[containers.app]]
+			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
 			│   name = \\"my-container-app\\"
 			│
-			│   [containers.app.constraints]
+			│   [containers.constraints]
 			│ - tier = 3
 			│ + tier = 2
 			│
@@ -216,6 +218,7 @@ describe("cloudchamber apply", () => {
 			{
 				name: "my-container-app",
 				instances: 4,
+				class_name: "DurableObjectClass",
 				configuration: {
 					image: "./Dockerfile",
 				},
@@ -223,6 +226,7 @@ describe("cloudchamber apply", () => {
 			{
 				name: "my-container-app-2",
 				instances: 1,
+				class_name: "DurableObjectClass2",
 				configuration: {
 					image: "other-app/Dockerfile",
 				},
@@ -256,22 +260,22 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   [[containers.app]]
+			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
 			│   name = \\"my-container-app\\"
 			│
 			├ NEW my-container-app-2
 			│
-			│   [[containers.app]]
+			│   [[containers]]
 			│   name = \\"my-container-app-2\\"
 			│   instances = 1
 			│   scheduling_policy = \\"regional\\"
 			│
-			│   [containers.app.configuration]
+			│   [containers.configuration]
 			│   image = \\"other-app/Dockerfile\\"
 			│
-			│   [containers.app.constraints]
+			│   [containers.constraints]
 			│   tier = 1
 			│
 			├ Do you want to apply these changes?
@@ -296,6 +300,7 @@ describe("cloudchamber apply", () => {
 		writeAppConfiguration({
 			name: "my-container-app",
 			instances: 4,
+			class_name: "DurableObjectClass",
 			configuration: {
 				image: "./Dockerfile",
 				labels: [
@@ -380,24 +385,24 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   [[containers.app]]
+			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
 			│   name = \\"my-container-app\\"
 			│
-			│   [[containers.app.configuration.labels]]
+			│   [[containers.configuration.labels]]
 			│ + name = \\"name-1\\"
 			│ + value = \\"value-1\\"
 			│
-			│ + [[containers.app.configuration.labels]]
+			│ + [[containers.configuration.labels]]
 			│   name = \\"name-2\\"
 			│
-			│   [[containers.app.configuration.secrets]]
+			│   [[containers.configuration.secrets]]
 			│ - name = \\"MY_SECRET_1\\"
 			│ - secret = \\"SECRET_NAME_1\\"
 			│ - type = \\"env\\"
 			│
-			│ - [[containers.app.configuration.secrets]]
+			│ - [[containers.configuration.secrets]]
 			│   name = \\"MY_SECRET_2\\"
 			│
 			├ Do you want to apply these changes?
@@ -417,6 +422,7 @@ describe("cloudchamber apply", () => {
 	test("can apply an application, and there is no changes", async () => {
 		setIsTTY(false);
 		writeAppConfiguration({
+			class_name: "DurableObjectClass",
 			name: "my-container-app",
 			instances: 3,
 			configuration: {
@@ -516,6 +522,7 @@ describe("cloudchamber apply", () => {
 		const app = {
 			name: "my-container-app",
 			instances: 3,
+			class_name: "DurableObjectClass",
 			configuration: {
 				image: "./Dockerfile",
 				labels: [
@@ -554,6 +561,7 @@ describe("cloudchamber apply", () => {
 			name: "my-container-app",
 			instances: 3,
 			created_at: new Date().toString(),
+			class_name: "DurableObjectClass",
 			account_id: "1",
 			scheduling_policy: SchedulingPolicy.REGIONAL,
 			configuration: {

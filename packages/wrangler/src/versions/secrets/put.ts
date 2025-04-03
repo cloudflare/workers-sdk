@@ -90,6 +90,7 @@ export const versionsSecretPutCommand = createCommand({
 			versionMessage: args.message ?? `Updated secret "${args.key}"`,
 			versionTag: args.tag,
 			sendMetrics: config.send_metrics,
+			unsafeMetadata: config.unsafe.metadata,
 		});
 
 		logger.log(

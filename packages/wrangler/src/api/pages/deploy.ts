@@ -178,7 +178,6 @@ export async function deploy({
 		config?.compatibility_date ?? deploymentConfig.compatibility_date,
 		config?.compatibility_flags ?? deploymentConfig.compatibility_flags ?? [],
 		{
-			nodeCompat: false,
 			noBundle: config?.no_bundle,
 		}
 	);
@@ -447,7 +446,7 @@ export async function deploy({
 					body: formData,
 				}
 			);
-			return deploymentResponse;
+			return { deploymentResponse, formData };
 		} catch (e) {
 			lastErr = e;
 			if (

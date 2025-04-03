@@ -169,5 +169,7 @@ describe("versions upload", () => {
 			Uploaded test-name (TIMINGS)
 			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993"
 		`);
+
+		expect(std.info).toContain("Retrying API call after error...");
 	});
 });

@@ -1,20 +1,21 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { PerformanceTimer } from "../../utils/performance";
 import { setupSentry } from "../../utils/sentry";
+import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics } from "./analytics";
 import { AssetsManifest } from "./assets-manifest";
-import { applyConfigurationDefaults } from "./configuration";
-import { decodePath, getIntent, handleRequest } from "./handler";
-import { InternalServerErrorResponse } from "./responses";
+import { normalizeConfiguration } from "./configuration";
+import { ExperimentAnalytics } from "./experiment-analytics";
+import { canFetch, handleRequest } from "./handler";
+import { handleError, submitMetrics } from "./utils/final-operations";
 import { getAssetWithMetadataFromKV } from "./utils/kv";
-import { mockJaegerBinding } from "./utils/mocks";
 import type {
 	AssetConfig,
+	ColoMetadata,
 	JaegerTracing,
 	UnsafePerformanceTimer,
 } from "../../utils/types";
-import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
-import type { Toucan } from "toucan-js";
+import type { Environment, ReadyAnalytics } from "./types";
 
 export type Env = {
 	/*
@@ -38,6 +39,7 @@ export type Env = {
 	JAEGER: JaegerTracing;
 
 	ENVIRONMENT: Environment;
+	EXPERIMENT_ANALYTICS: ReadyAnalytics;
 	ANALYTICS: ReadyAnalytics;
 	COLO_METADATA: ColoMetadata;
 	UNSAFE_PERFORMANCE: UnsafePerformanceTimer;
@@ -63,116 +65,110 @@ export default class extends WorkerEntrypoint<Env> {
 		const startTimeMs = performance.now();
 
 		try {
-			if (!this.env.JAEGER) {
-				// For wrangler tests, if we don't have a jaeger binding, default to a mocked binding
-				this.env.JAEGER = mockJaegerBinding();
-			}
+			// TODO: Mock this with Miniflare
+			this.env.JAEGER ??= mockJaegerBinding();
 
 			sentry = setupSentry(
 				request,
 				this.ctx,
 				this.env.SENTRY_DSN,
 				this.env.SENTRY_ACCESS_CLIENT_ID,
-				this.env.SENTRY_ACCESS_CLIENT_SECRET
+				this.env.SENTRY_ACCESS_CLIENT_SECRET,
+				this.env.COLO_METADATA,
+				this.env.VERSION_METADATA,
+				this.env.CONFIG?.account_id,
+				this.env.CONFIG?.script_id
 			);
 
-			const config = applyConfigurationDefaults(this.env.CONFIG);
+			const config = normalizeConfiguration(this.env.CONFIG);
+			sentry?.setContext("compatibilityOptions", {
+				compatibilityDate: config.compatibility_date,
+				compatibilityFlags: config.compatibility_flags,
+				originalCompatibilityFlags: this.env.CONFIG.compatibility_flags,
+			});
 			const userAgent = request.headers.get("user-agent") ?? "UA UNKNOWN";
 
-			if (sentry) {
-				const colo = this.env.COLO_METADATA.coloId;
-				sentry.setTag("colo", this.env.COLO_METADATA.coloId);
-				sentry.setTag("metal", this.env.COLO_METADATA.metalId);
-				sentry.setUser({ userAgent: userAgent, colo: colo });
-			}
-
 			const url = new URL(request.url);
-			if (this.env.COLO_METADATA && this.env.VERSION_METADATA) {
+			if (
+				this.env.COLO_METADATA &&
+				this.env.VERSION_METADATA &&
+				this.env.CONFIG
+			) {
 				analytics.setData({
+					accountId: this.env.CONFIG.account_id,
+					scriptId: this.env.CONFIG.script_id,
+
 					coloId: this.env.COLO_METADATA.coloId,
 					metalId: this.env.COLO_METADATA.metalId,
 					coloTier: this.env.COLO_METADATA.coloTier,
+
 					coloRegion: this.env.COLO_METADATA.coloRegion,
-					version: this.env.VERSION_METADATA.id,
+					version: this.env.VERSION_METADATA.tag,
 					hostname: url.hostname,
 					htmlHandling: config.html_handling,
 					notFoundHandling: config.not_found_handling,
+					compatibilityFlags: config.compatibility_flags,
 					userAgent: userAgent,
 				});
 			}
 
-			return this.env.JAEGER.enterSpan("handleRequest", async (span) => {
+			return await this.env.JAEGER.enterSpan("handleRequest", async (span) => {
 				span.setTags({
 					hostname: url.hostname,
 					eyeballPath: url.pathname,
 					env: this.env.ENVIRONMENT,
+					version: this.env.VERSION_METADATA?.id,
 				});
 
-				return handleRequest(
+				const response = await handleRequest(
 					request,
 					this.env,
 					config,
 					this.unstable_exists.bind(this),
-					this.unstable_getByETag.bind(this)
+					this.unstable_getByETag.bind(this),
+					analytics
 				);
-			}).catch((err) =>
-				this.handleError(sentry, analytics, performance, startTimeMs, err)
-			);
+
+				analytics.setData({ status: response.status });
+
+				return response;
+			});
 		} catch (err) {
-			return this.handleError(sentry, analytics, performance, startTimeMs, err);
-		}
-	}
-
-	handleError(
-		sentry: Toucan | undefined,
-		analytics: Analytics,
-		performance: PerformanceTimer,
-		startTimeMs: number,
-		err: unknown
-	) {
-		try {
-			const response = new InternalServerErrorResponse(err as Error);
-
-			// Log to Sentry if we can
-			if (sentry) {
-				sentry.captureException(err);
-			}
-
-			if (err instanceof Error) {
-				analytics.setData({ error: err.message });
-			}
-
-			return response;
+			return handleError(sentry, analytics, err);
 		} finally {
-			analytics.setData({ requestTime: performance.now() - startTimeMs });
-			analytics.write();
+			submitMetrics(analytics, performance, startTimeMs);
 		}
 	}
 
+	// TODO: Add observability to these methods
 	async unstable_canFetch(request: Request): Promise<boolean> {
-		const url = new URL(request.url);
-		const decodedPathname = decodePath(url.pathname);
-		const intent = await getIntent(
-			decodedPathname,
-			{
-				...applyConfigurationDefaults(this.env.CONFIG),
-				not_found_handling: "none",
-			},
+		// TODO: Mock this with Miniflare
+		this.env.JAEGER ??= mockJaegerBinding();
+
+		return canFetch(
+			request,
+			this.env,
+			normalizeConfiguration(this.env.CONFIG),
 			this.unstable_exists.bind(this)
 		);
-		if (intent === null) {
-			return false;
-		}
-		return true;
 	}
 
 	async unstable_getByETag(
-		eTag: string
-	): Promise<{ readableStream: ReadableStream; contentType: string }> {
+		eTag: string,
+		_request?: Request
+	): Promise<{
+		readableStream: ReadableStream;
+		contentType: string | undefined;
+		cacheStatus: "HIT" | "MISS";
+	}> {
+		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
+		const startTime = performance.now();
 		const asset = await getAssetWithMetadataFromKV(
 			this.env.ASSETS_KV_NAMESPACE,
 			eTag
 		);
+		const endTime = performance.now();
+		const assetFetchTime = endTime - startTime;
 
 		if (!asset || !asset.value) {
 			throw new Error(
@@ -182,23 +178,55 @@ export default class extends WorkerEntrypoint<Env> {
 
 		return {
 			readableStream: asset.value,
-			contentType: asset.metadata?.contentType ?? "application/octet-stream",
+			contentType: asset.metadata?.contentType,
+			// KV does not yet provide a way to check if a value was fetched from cache
+			// so we assume that if the fetch time is less than 100ms, it was a cache hit.
+			// This is a reasonable assumption given the data we have and how KV works.
+			cacheStatus: assetFetchTime <= 100 ? "HIT" : "MISS",
 		};
 	}
 
 	async unstable_getByPathname(
-		pathname: string
-	): Promise<{ readableStream: ReadableStream; contentType: string } | null> {
-		const eTag = await this.unstable_exists(pathname);
+		pathname: string,
+		request?: Request
+	): Promise<{
+		readableStream: ReadableStream;
+		contentType: string | undefined;
+		cacheStatus: "HIT" | "MISS";
+	} | null> {
+		const eTag = await this.unstable_exists(pathname, request);
 		if (!eTag) {
 			return null;
 		}
 
-		return this.unstable_getByETag(eTag);
+		return this.unstable_getByETag(eTag, request);
 	}
 
-	async unstable_exists(pathname: string): Promise<string | null> {
-		const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
-		return await assetsManifest.get(pathname);
+	async unstable_exists(
+		pathname: string,
+		_request?: Request
+	): Promise<string | null> {
+		const analytics = new ExperimentAnalytics(this.env.EXPERIMENT_ANALYTICS);
+		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
+
+		if (
+			this.env.COLO_METADATA &&
+			this.env.VERSION_METADATA &&
+			this.env.CONFIG
+		) {
+			analytics.setData({
+				accountId: this.env.CONFIG.account_id,
+				experimentName: "manifest-read-timing",
+			});
+		}
+
+		const startTimeMs = performance.now();
+		try {
+			const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
+			return await assetsManifest.get(pathname);
+		} finally {
+			analytics.setData({ manifestReadTime: performance.now() - startTimeMs });
+			analytics.write();
+		}
 	}
 }

@@ -1,15 +1,17 @@
 import { execSync, spawn } from "node:child_process";
+import events from "node:events";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
-import { dirname, join, normalize, resolve } from "node:path";
+import path, { dirname, join, normalize, resolve } from "node:path";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
-import { unstable_dev } from "../api";
 import { configFileName, readConfig } from "../config";
 import { isBuildFailure } from "../deployment-bundle/build-failures";
 import { shouldCheckFetch } from "../deployment-bundle/bundle";
 import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins/alias-external";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
-import { FatalError } from "../errors";
+import { startDev } from "../dev";
+import { FatalError, UserError } from "../errors";
+import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -145,7 +147,8 @@ export function Options(yargs: CommonYargsArgv) {
 			},
 			"no-bundle": {
 				type: "boolean",
-				default: false,
+				default: undefined,
+				conflicts: "bundle",
 				description: "Whether to run bundling on `_worker.js`",
 			},
 			binding: {
@@ -216,17 +219,12 @@ export function Options(yargs: CommonYargsArgv) {
 				default: false,
 				type: "boolean",
 				hidden: true,
+				deprecated: true,
 			},
 			"experimental-local": {
 				describe: "Run on my machine using the Cloudflare Workers runtime",
 				type: "boolean",
 				deprecated: true,
-				hidden: true,
-			},
-			config: {
-				describe:
-					"Pages does not support custom paths for the Wrangler configuration file",
-				type: "string",
 				hidden: true,
 			},
 			"log-level": {
@@ -244,6 +242,12 @@ export function Options(yargs: CommonYargsArgv) {
 					"Bind to production Vectorize indexes in local development mode",
 				default: false,
 			},
+			"experimental-images-local-mode": {
+				type: "boolean",
+				describe:
+					"Use a local lower-fidelity implementation of the Images binding",
+				default: false,
+			},
 		});
 }
 
@@ -256,13 +260,19 @@ export const Handler = async (args: PagesDevArguments) => {
 
 	await printWranglerBanner();
 
+	if (args.nodeCompat) {
+		throw new UserError(
+			`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`
+		);
+	}
+
 	if (args.experimentalLocal) {
 		logger.warn(
 			"--experimental-local is no longer required and will be removed in a future version.\n`wrangler pages dev` now uses the local Cloudflare Workers runtime by default."
 		);
 	}
 
-	if (args.config) {
+	if (args.config && !Array.isArray(args.config)) {
 		throw new FatalError(
 			"Pages does not support custom paths for the Wrangler configuration file",
 			1
@@ -271,7 +281,7 @@ export const Handler = async (args: PagesDevArguments) => {
 
 	if (args.env) {
 		throw new FatalError(
-			"Pages does not support targeting an environment with the --env flag. Use the --branch flag to target your production or preview branch",
+			"Pages does not support targeting an environment with the --env flag during local development.",
 			1
 		);
 	}
@@ -285,9 +295,21 @@ export const Handler = async (args: PagesDevArguments) => {
 	// for `dev` we always use the top-level config, which means we need
 	// to read the config file with `env` set to `undefined`
 	const config = readConfig(
-		{ ...args, env: undefined },
+		{ ...args, env: undefined, config: undefined },
 		{ useRedirectIfAvailable: true }
 	);
+
+	if (
+		args.config &&
+		Array.isArray(args.config) &&
+		config.configPath &&
+		path.resolve(process.cwd(), args.config[0]) !== config.configPath
+	) {
+		throw new FatalError(
+			"The first `--config` argument must point to your Pages configuration file: " +
+				path.relative(process.cwd(), config.configPath)
+		);
+	}
 	const resolvedDirectory = args.directory ?? config.pages_build_output_dir;
 	const [_pages, _dev, ...remaining] = args._;
 	const command = remaining;
@@ -343,9 +365,7 @@ export const Handler = async (args: PagesDevArguments) => {
 	const usingWorkerDirectory =
 		existsSync(workerScriptPath) && lstatSync(workerScriptPath).isDirectory();
 	const usingWorkerScript = existsSync(workerScriptPath);
-	// TODO: Here lies a known bug. If you specify both `--bundle` and `--no-bundle`, this behavior is undefined and you will get unexpected results.
-	// There is no sane way to get the true value out of yargs, so here we are.
-	const enableBundling = args.bundle ?? !args.noBundle;
+	const enableBundling = args.bundle ?? !(args.noBundle ?? config.no_bundle);
 
 	const functionsDirectory = "./functions";
 	let usingFunctions = !usingWorkerScript && existsSync(functionsDirectory);
@@ -356,8 +376,7 @@ export const Handler = async (args: PagesDevArguments) => {
 		args.compatibilityDate ?? config.compatibility_date,
 		args.compatibilityFlags ?? config.compatibility_flags ?? [],
 		{
-			nodeCompat: args.nodeCompat,
-			noBundle: args.noBundle ?? config.no_bundle,
+			noBundle: !enableBundling,
 		}
 	);
 
@@ -525,8 +544,8 @@ export const Handler = async (args: PagesDevArguments) => {
 		try {
 			await runBuild();
 
-			watcher.on("all", async (eventName, path) => {
-				logger.debug(`🌀 "${eventName}" event detected at ${path}.`);
+			watcher.on("all", async (eventName, p) => {
+				logger.debug(`🌀 "${eventName}" event detected at ${p}.`);
 
 				// Skip re-building the Worker if "_worker.js" was deleted.
 				// This is necessary for Pages projects + Frameworks, where
@@ -708,8 +727,8 @@ export const Handler = async (args: PagesDevArguments) => {
 			await buildFn();
 
 			// If Functions found routes, continue using Functions
-			watcher.on("all", async (eventName, path) => {
-				logger.debug(`🌀 "${eventName}" event detected at ${path}.`);
+			watcher.on("all", async (eventName, p) => {
+				logger.debug(`🌀 "${eventName}" event detected at ${p}.`);
 
 				debouncedBuildFn();
 			});
@@ -862,61 +881,96 @@ export const Handler = async (args: PagesDevArguments) => {
 		}
 	}
 
-	const { stop, waitUntilExit } = await unstable_dev(scriptEntrypoint, {
-		env: undefined,
-		ip,
-		port,
-		inspectorPort,
-		localProtocol,
-		httpsKeyPath: args.httpsKeyPath,
-		httpsCertPath: args.httpsCertPath,
-		compatibilityDate,
-		compatibilityFlags,
-		nodeCompat: nodejsCompatMode === "legacy",
-		vars,
-		kv: kv_namespaces,
-		durableObjects: do_bindings,
-		r2: r2_buckets,
-		services,
-		ai,
-		rules: usingWorkerDirectory
-			? [
-					{
-						type: "ESModule",
-						globs: ["**/*.js", "**/*.mjs"],
-					},
-				]
-			: undefined,
-		bundle: enableBundling,
-		persistTo: args.persistTo,
-		inspect: undefined,
-		logLevel: args.logLevel,
-		experimental: {
-			processEntrypoint: true,
-			additionalModules: modules,
-			d1Databases: d1_databases,
-			disableExperimentalWarning: true,
-			enablePagesAssetsServiceBinding: {
-				proxyPort,
-				directory,
-			},
-			liveReload: args.liveReload,
-			forceLocal: true,
-			showInteractiveDevSession: args.showInteractiveDevSession,
-			testMode: false,
-			watch: true,
-			enableIpc: true,
+	const devServer = await run(
+		{
+			MULTIWORKER: Array.isArray(args.config),
+			RESOURCES_PROVISION: false,
 		},
-	});
-	metrics.sendMetricsEvent("run pages dev");
+		() =>
+			startDev({
+				script: scriptEntrypoint,
+				_: [],
+				$0: "",
+				remote: false,
+				local: true,
+				d1Databases: d1_databases,
+				testScheduled: false,
+				enablePagesAssetsServiceBinding: {
+					proxyPort,
+					directory,
+				},
+				forceLocal: true,
+				liveReload: args.liveReload,
+				showInteractiveDevSession: args.showInteractiveDevSession,
+				processEntrypoint: true,
+				additionalModules: modules,
+				v: undefined,
+				cwd: undefined,
+				assets: undefined,
+				name: undefined,
+				noBundle: false,
+				latest: false,
+				routes: undefined,
+				host: undefined,
+				localUpstream: undefined,
+				upstreamProtocol: undefined,
+				var: undefined,
+				define: undefined,
+				alias: undefined,
+				jsxFactory: undefined,
+				jsxFragment: undefined,
+				tsconfig: undefined,
+				minify: undefined,
+				legacyEnv: undefined,
+				env: undefined,
+				ip,
+				port,
+				inspectorPort,
+				localProtocol,
+				httpsKeyPath: args.httpsKeyPath,
+				httpsCertPath: args.httpsCertPath,
+				compatibilityDate,
+				compatibilityFlags,
+				nodeCompat: undefined,
+				vars,
+				kv: kv_namespaces,
+				durableObjects: do_bindings,
+				r2: r2_buckets,
+				services,
+				ai,
+				rules: usingWorkerDirectory
+					? [
+							{
+								type: "ESModule",
+								globs: ["**/*.js", "**/*.mjs"],
+							},
+						]
+					: undefined,
+				bundle: enableBundling,
+				persistTo: args.persistTo,
+				logLevel: args.logLevel ?? "log",
+				experimentalProvision: undefined,
+				experimentalVectorizeBindToProd: false,
+				experimentalImagesLocalMode: false,
+				enableIpc: true,
+				config: Array.isArray(args.config) ? args.config : undefined,
+				site: undefined,
+				siteInclude: undefined,
+				siteExclude: undefined,
+			})
+	);
 
-	CLEANUP_CALLBACKS.push(stop);
+	metrics.sendMetricsEvent("run pages dev");
 
 	process.on("exit", CLEANUP);
 	process.on("SIGINT", CLEANUP);
 	process.on("SIGTERM", CLEANUP);
 
-	await waitUntilExit();
+	await events.once(devServer.devEnv, "teardown");
+	const teardownRegistry = await devServer.teardownRegistryPromise;
+	await teardownRegistry?.(devServer.devEnv.config.latestConfig?.name);
+
+	devServer.unregisterHotKeys?.();
 	CLEANUP();
 	process.exit(0);
 };

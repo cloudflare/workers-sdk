@@ -22,7 +22,7 @@ import { maybeRegisterLocalWorker } from "./dev/local";
 import { UserError } from "./errors";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
-import { getLegacyAssetPaths, getSiteAssetPaths } from "./sites";
+import { getSiteAssetPaths } from "./sites";
 import { loginOrRefreshIfRequired, requireApiToken, requireAuth } from "./user";
 import {
 	collectKeyValues,
@@ -50,7 +50,6 @@ import type {
 } from "./deployment-bundle/worker";
 import type { WorkerRegistry } from "./dev-registry";
 import type { CfAccount } from "./dev/create-worker-preview";
-import type { LoggerLevel } from "./logger";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type { watch } from "chokidar";
 import type { Json } from "miniflare";
@@ -115,12 +114,6 @@ export const dev = createCommand({
 			type: "boolean",
 			default: false,
 		},
-		format: {
-			choices: ["modules", "service-worker"] as const,
-			describe: "Choose an entry type",
-			hidden: true,
-			deprecated: true,
-		},
 		ip: {
 			describe: "IP address to listen on",
 			type: "string",
@@ -163,27 +156,6 @@ export const dev = createCommand({
 			type: "string",
 			describe:
 				"Host to act as origin in local mode, defaults to dev.host or route",
-		},
-		"experimental-public": {
-			describe: "(Deprecated) Static assets to be served",
-			type: "string",
-			requiresArg: true,
-			deprecated: true,
-			hidden: true,
-		},
-		"legacy-assets": {
-			describe: "Static assets to be served",
-			type: "string",
-			requiresArg: true,
-			deprecated: true,
-			hidden: true,
-		},
-		public: {
-			describe: "(Deprecated) Static assets to be served",
-			type: "string",
-			requiresArg: true,
-			deprecated: true,
-			hidden: true,
 		},
 		site: {
 			describe: "Root folder of static assets for Workers Sites",
@@ -261,12 +233,6 @@ export const dev = createCommand({
 			deprecated: true,
 			hidden: true,
 		},
-		"experimental-local": {
-			describe: "Run on my machine using the Cloudflare Workers runtime",
-			type: "boolean",
-			deprecated: true,
-			hidden: true,
-		},
 		minify: {
 			describe: "Minify the script",
 			type: "boolean",
@@ -274,12 +240,8 @@ export const dev = createCommand({
 		"node-compat": {
 			describe: "Enable Node.js compatibility",
 			type: "boolean",
-		},
-		"experimental-enable-local-persistence": {
-			describe: "Enable persistence for local mode (deprecated, use --persist)",
-			type: "boolean",
-			deprecated: true,
 			hidden: true,
+			deprecated: true,
 		},
 		"persist-to": {
 			describe:
@@ -290,12 +252,6 @@ export const dev = createCommand({
 		"live-reload": {
 			describe: "Auto reload HTML pages when change is detected in local mode",
 			type: "boolean",
-		},
-		inspect: {
-			describe: "Enable dev tools",
-			type: "boolean",
-			deprecated: true,
-			hidden: true,
 		},
 		"legacy-env": {
 			type: "boolean",
@@ -310,8 +266,6 @@ export const dev = createCommand({
 		"log-level": {
 			choices: ["debug", "info", "log", "warn", "error", "none"] as const,
 			describe: "Specify logging level",
-			// Yargs requires this to type log-level properly
-			default: "log" as LoggerLevel,
 		},
 		"show-interactive-dev-session": {
 			describe:
@@ -324,8 +278,19 @@ export const dev = createCommand({
 				"Bind to production Vectorize indexes in local development mode",
 			default: false,
 		},
+		"experimental-images-local-mode": {
+			type: "boolean",
+			describe:
+				"Use a local lower-fidelity implementation of the Images binding",
+			default: false,
+		},
 	},
 	async validateArgs(args) {
+		if (args.nodeCompat) {
+			throw new UserError(
+				`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`
+			);
+		}
 		if (args.liveReload && args.remote) {
 			throw new UserError(
 				"--live-reload is only supported in local mode. Please just use one of either --remote or --live-reload."
@@ -348,13 +313,6 @@ export const dev = createCommand({
 					"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local."
 				);
 			}
-		}
-
-		if (args.legacyAssets) {
-			logger.warn(
-				`The --legacy-assets argument has been deprecated. Please use --assets instead.\n` +
-					`To learn more about Workers with assets, visit our documentation at https://developers.cloudflare.com/workers/frameworks/.`
-			);
 		}
 	},
 	async handler(args) {
@@ -535,7 +493,6 @@ async function setupDevEnv(
 						args.compatibilityDate ?? parsedConfig.compatibility_date,
 						args.compatibilityFlags ?? parsedConfig.compatibility_flags ?? [],
 						{
-							nodeCompat: args.nodeCompat ?? parsedConfig.node_compat,
 							noBundle: args.noBundle ?? parsedConfig.no_bundle,
 						}
 					),
@@ -551,6 +508,7 @@ async function setupDevEnv(
 					text_blobs: undefined,
 					browser: undefined,
 					ai: args.ai,
+					images: undefined,
 					version_metadata: args.version_metadata,
 					data_blobs: undefined,
 					durable_objects: { bindings: args.durableObjects ?? [] },
@@ -601,14 +559,12 @@ async function setupDevEnv(
 					? null
 					: devEnv.config.latestConfig?.dev.registry,
 				bindVectorizeToProd: args.experimentalVectorizeBindToProd,
+				imagesLocalMode: args.experimentalImagesLocalMode,
 				multiworkerPrimary: args.multiworkerPrimary,
 			},
 			legacy: {
 				site: (configParam) => {
-					const legacyAssetPaths = getResolvedLegacyAssetPaths(
-						args,
-						configParam
-					);
+					const legacyAssetPaths = getResolvedSiteAssetPaths(args, configParam);
 					return Boolean(args.site || configParam.site) && legacyAssetPaths
 						? {
 								bucket: path.join(
@@ -620,8 +576,6 @@ async function setupDevEnv(
 							}
 						: undefined;
 				},
-				legacyAssets: (configParam) =>
-					args.legacyAssets ?? configParam.legacy_assets,
 				enableServiceEnvironments: !(args.legacyEnv ?? true),
 			},
 			assets: args.assets,
@@ -643,39 +597,6 @@ export async function startDev(args: StartDevOptions) {
 	try {
 		if (args.logLevel) {
 			logger.loggerLevel = args.logLevel;
-		}
-
-		if (args.experimentalLocal) {
-			logger.warn(
-				"--experimental-local is no longer required and will be removed in a future version.\n`wrangler dev` now uses the local Cloudflare Workers runtime by default. 🎉"
-			);
-		}
-
-		if (args.inspect) {
-			//devtools are enabled by default, but we still need to disable them if the caller doesn't want them
-			logger.warn(
-				"Passing --inspect is unnecessary, now you can always connect to devtools."
-			);
-		}
-
-		if (args.experimentalPublic) {
-			throw new UserError(
-				"The --experimental-public field has been deprecated, try --legacy-assets instead."
-			);
-		}
-
-		if (args.public) {
-			throw new UserError(
-				"The --public field has been deprecated, try --legacy-assets instead."
-			);
-		}
-
-		if (args.experimentalEnableLocalPersistence) {
-			logger.warn(
-				`--experimental-enable-local-persistence is deprecated.\n` +
-					`Move any existing data to .wrangler/state and use --persist, or\n` +
-					`use --persist-to=./wrangler-local-state to keep using the old path.`
-			);
 		}
 
 		const authHook: AsyncHook<CfAccount, [Pick<Config, "account_id">]> = async (
@@ -906,20 +827,16 @@ export function getInferredHost(
 	}
 }
 
-function getResolvedLegacyAssetPaths(
+function getResolvedSiteAssetPaths(
 	args: Partial<StartDevOptions>,
 	configParam: Config
 ) {
-	const legacyAssetPaths =
-		args.legacyAssets || configParam.legacy_assets
-			? getLegacyAssetPaths(configParam, args.legacyAssets)
-			: getSiteAssetPaths(
-					configParam,
-					args.site,
-					args.siteInclude,
-					args.siteExclude
-				);
-	return legacyAssetPaths;
+	return getSiteAssetPaths(
+		configParam,
+		args.site,
+		args.siteInclude,
+		args.siteExclude
+	);
 }
 
 export function getBindings(
@@ -947,7 +864,7 @@ export function getBindings(
 				// TODO: This error has to be a _lot_ better, ideally just asking
 				// to create a preview namespace for the user automatically
 				throw new UserError(
-					`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your ${configFileName(configParam.configPath)} file`
+					`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your ${configFileName(configParam.configPath)} file`
 				); // Ugh, I really don't like this message very much
 			}
 			return {
@@ -1020,7 +937,12 @@ export function getBindings(
 			process.env[
 				`WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}`
 			];
-		if (!connectionStringFromEnv && !hyperdrive.localConnectionString) {
+		// only require a local connection string in the wrangler file or the env if not using dev --remote
+		if (
+			local &&
+			connectionStringFromEnv === undefined &&
+			hyperdrive.localConnectionString === undefined
+		) {
 			throw new UserError(
 				`When developing locally, you should use a local Postgres connection string to emulate Hyperdrive functionality. Please setup Postgres locally and set the value of the 'WRANGLER_HYPERDRIVE_LOCAL_CONNECTION_STRING_${hyperdrive.binding}' variable or "${hyperdrive.binding}"'s "localConnectionString" to the Postgres connection string.`
 			);
@@ -1079,6 +1001,7 @@ export function getBindings(
 		analytics_engine_datasets: configParam.analytics_engine_datasets,
 		browser: configParam.browser,
 		ai: args.ai || configParam.ai,
+		images: configParam.images,
 		version_metadata: args.version_metadata || configParam.version_metadata,
 		unsafe: {
 			bindings: configParam.unsafe.bindings,

@@ -4,7 +4,7 @@ import {
 	getWorkerdCompatibilityDate,
 } from "helpers/compatDate";
 import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
 import { createTestContext } from "../../__tests__/helpers";
 import { mockSpinner, mockWorkersTypesDirectory } from "./mocks";
 
@@ -29,6 +29,7 @@ describe("Compatibility Date Helpers", () => {
 	afterEach(() => {
 		agent.assertNoPendingInterceptors();
 		setGlobalDispatcher(originalDispatcher);
+		vi.useRealTimers();
 	});
 
 	const mockRegistryFetch = (latest: string) => {
@@ -62,7 +63,7 @@ describe("Compatibility Date Helpers", () => {
 
 			const date = await getWorkerdCompatibilityDate();
 
-			const fallbackDate = "2023-05-18";
+			const fallbackDate = "2024-11-11";
 			expect(date).toBe(fallbackDate);
 			expect(spinner.start).toHaveBeenCalled();
 			expect(spinner.stop).toHaveBeenCalledWith(
@@ -78,11 +79,27 @@ describe("Compatibility Date Helpers", () => {
 
 			const date = await getWorkerdCompatibilityDate();
 
-			const fallbackDate = "2023-05-18";
+			const fallbackDate = "2024-11-11";
 			expect(date).toBe(fallbackDate);
 			expect(spinner.start).toHaveBeenCalled();
 			expect(spinner.stop).toHaveBeenCalledWith(
 				expect.stringContaining(fallbackDate),
+			);
+		});
+
+		it("should use today's date if workerd's release is in the future", async () => {
+			vi.setSystemTime("2025-01-09T23:59:59.999Z");
+			console.log(new Date().toISOString());
+			mockRegistryFetch("2.20250110.5");
+
+			const date = await getWorkerdCompatibilityDate();
+
+			// should get back today because deploy will fail with a future date
+			const expectedDate = "2025-01-09";
+			expect(date).toBe(expectedDate);
+			expect(spinner.start).toHaveBeenCalled();
+			expect(spinner.stop).toHaveBeenCalledWith(
+				expect.stringContaining(expectedDate),
 			);
 		});
 	});

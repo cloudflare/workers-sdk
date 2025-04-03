@@ -354,6 +354,8 @@ const DefaultScopes = {
 	"queues:write": "See and change Cloudflare Queues settings and data",
 	"pipelines:write":
 		"See and change Cloudflare Pipelines configurations and data",
+	"secrets_store:write":
+		"See and change secrets + stores within the Secrets Store",
 } as const;
 
 const OptionalScopes = {
@@ -1204,7 +1206,7 @@ export async function getAccountId(): Promise<string> {
 		if (e instanceof NoDefaultValueProvided) {
 			throw new UserError(
 				`More than one account available but unable to select one in non-interactive mode.
-Please set the appropriate \`account_id\` in your ${configFileName(undefined)} file.
+Please set the appropriate \`account_id\` in your ${configFileName(undefined)} file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 Available accounts are (\`<name>\`: \`<account_id>\`):
 ${accounts
 	.map((account) => `  \`${account.name}\`: \`${account.id}\``)

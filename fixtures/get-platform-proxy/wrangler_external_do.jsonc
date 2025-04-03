@@ -1,0 +1,24 @@
+{
+	"name": "external-do",
+	"main": "src/index.ts",
+	// external durable object = binding has script_name. This indicates that
+	// the DO is exported in a separate Worker called `do-worker`. For the
+	// purposes of testing, we don't need to set that up because
+	// getPlatformProxy would not be involved in running that Worker.
+
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "MyDurableObject",
+				"name": "MY_DURABLE_OBJECT",
+				"script_name": "do-worker",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"new_sqlite_classes": ["MyDurableObject"],
+			"tag": "v1",
+		},
+	],
+}

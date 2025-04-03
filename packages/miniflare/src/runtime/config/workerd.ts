@@ -1,15 +1,16 @@
-// TODO: auto-generate this file
 import type {
 	HttpOptions_Style,
 	TlsOptions_Version,
 	Worker_Binding_CryptoKey_Usage,
-} from "./workerd.capnp.js";
+} from "./generated";
+
+// TODO: auto-generate this file
 
 export {
 	HttpOptions_Style,
 	TlsOptions_Version,
 	Worker_Binding_CryptoKey_Usage,
-} from "./workerd.capnp.js";
+} from "./generated";
 
 export const kVoid = Symbol("kVoid");
 export type Void = typeof kVoid;
@@ -77,7 +78,6 @@ export type Worker_Module = {
 	| { data?: Uint8Array }
 	| { wasm?: Uint8Array }
 	| { json?: string }
-	| { nodeJsCompatModule?: string }
 	| { pythonModule?: string }
 	| { pythonRequirement?: string }
 );
@@ -203,6 +203,7 @@ export interface Network {
 export interface DiskDirectory {
 	path?: string;
 	writable?: boolean;
+	allowDotfiles?: boolean;
 }
 
 export interface HttpOptions {

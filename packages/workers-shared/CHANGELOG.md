@@ -1,5 +1,139 @@
 # @cloudflare/workers-shared
 
+## 0.17.1
+
+### Patch Changes
+
+- [#8643](https://github.com/cloudflare/workers-sdk/pull/8643) [`75005e3`](https://github.com/cloudflare/workers-sdk/commit/75005e3dc3d3dfc5becb5caf0896cd407c6c8386) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Support customizing the metafile limits
+
+## 0.17.0
+
+### Minor Changes
+
+- [#8443](https://github.com/cloudflare/workers-sdk/pull/8443) [`3b1d081`](https://github.com/cloudflare/workers-sdk/commit/3b1d081b89892aa877c33ac63877db3eccedf062) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Requests with a `Sec-Fetch-Mode: navigate` header, made to a project with `sec_fetch_mode_navigate_header_prefers_asset_serving` compatibility flag, will be routed to the asset-worker rather than a user Worker when no exact asset match is found.
+
+  Requests without that header will continue to be routed to the user Worker when no exact asset match is found.
+
+## 0.16.0
+
+### Minor Changes
+
+- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@penalosa](https://github.com/penalosa)! - Packages in Workers SDK now support the versions of Node that Node itself supports (Current, Active, Maintenance). Currently, that includes Node v18, v20, and v22.
+
+## 0.15.0
+
+### Minor Changes
+
+- [#8390](https://github.com/cloudflare/workers-sdk/pull/8390) [`53e6323`](https://github.com/cloudflare/workers-sdk/commit/53e63233c5b9bb786af3daea63c10ffe60a5d881) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Parse and apply metafiles (`_headers` and `_redirects`) in `wrangler dev` for Workers Assets
+
+- [#8373](https://github.com/cloudflare/workers-sdk/pull/8373) [`08b8c46`](https://github.com/cloudflare/workers-sdk/commit/08b8c46872988da7599891f8f1700bcbc7f86968) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Add `CF-Cache-Status` to Workers Assets responses to indicate if we returned a cached asset or not. This will also populate zone cache analytics and Logpush logs.
+
+- [#8279](https://github.com/cloudflare/workers-sdk/pull/8279) [`aba0e9c`](https://github.com/cloudflare/workers-sdk/commit/aba0e9cad62e77cfa5fb3515ea9f89aa225059ed) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Add support for custom headers and redirects in asset-worker
+
+## 0.14.5
+
+### Patch Changes
+
+- [#8338](https://github.com/cloudflare/workers-sdk/pull/8338) [`2d40989`](https://github.com/cloudflare/workers-sdk/commit/2d409892f1cf08f07f84d25dcab023bc20ada374) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Upload \_headers and \_redirects if present with Workers Assets as part of `wrangler deploy` and `wrangler versions upload`.
+
+- [#8350](https://github.com/cloudflare/workers-sdk/pull/8350) [`56a8aed`](https://github.com/cloudflare/workers-sdk/commit/56a8aed9604491433154cc006d1ba2c3ab6ac1d1) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Removes non-public methods from asset-worker
+
+## 0.14.4
+
+### Patch Changes
+
+- [#8247](https://github.com/cloudflare/workers-sdk/pull/8247) [`a9a4c33`](https://github.com/cloudflare/workers-sdk/commit/a9a4c33143b9f58673ac0cdd251957997275fa10) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Omits Content-Type header for files of an unknown extension in Workers Assets
+
+## 0.14.3
+
+### Patch Changes
+
+- [`07613d3`](https://github.com/cloudflare/workers-sdk/commit/07613d3b231779466ca2528ce07385552ec73501) Thanks [@penalosa](https://github.com/penalosa)! - Trigger release after testing release process
+
+## 0.14.2
+
+### Patch Changes
+
+- [#8138](https://github.com/cloudflare/workers-sdk/pull/8138) [`f465840`](https://github.com/cloudflare/workers-sdk/commit/f46584035cc18eef3bc40b26131cc00666ab4e11) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Remove the interpolation search experiment for asset manifest reading
+
+## 0.14.1
+
+### Patch Changes
+
+- [#8116](https://github.com/cloudflare/workers-sdk/pull/8116) [`ee4873c`](https://github.com/cloudflare/workers-sdk/commit/ee4873c963b89b0091a2ff0952c274ef9dbf05ad) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Adds a RewriteFrames integration for workers-shared Sentry source-mappings.
+
+- [#8122](https://github.com/cloudflare/workers-sdk/pull/8122) [`e8829e3`](https://github.com/cloudflare/workers-sdk/commit/e8829e3b152cdec6f5bf75713a98297f45bd60fe) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: interpolation search method now checks for a single match at the beginning of every iteration
+
+- [#8115](https://github.com/cloudflare/workers-sdk/pull/8115) [`dba3f21`](https://github.com/cloudflare/workers-sdk/commit/dba3f21587ad294c7e45737e7c776d033cd80dd8) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Bump interpolation search method for asset manifest reading to 1%
+
+- [#8117](https://github.com/cloudflare/workers-sdk/pull/8117) [`08e37f6`](https://github.com/cloudflare/workers-sdk/commit/08e37f6e28c38e064aeca95de1b3d63d8cacbb2d) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Change asset-worker and router-worker analytics to using version tag rather than version UUID.
+
+- [#8126](https://github.com/cloudflare/workers-sdk/pull/8126) [`59eda4a`](https://github.com/cloudflare/workers-sdk/commit/59eda4af54f8eada5324bbd3014c41c934e566ac) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Add status code analytics to router-worker
+
+- [#8105](https://github.com/cloudflare/workers-sdk/pull/8105) [`f2e6e74`](https://github.com/cloudflare/workers-sdk/commit/f2e6e748989e283642e8b1496a789ca2bcd15757) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Handles a divide by zero error that could occur when searching large manifests
+
+- [#8127](https://github.com/cloudflare/workers-sdk/pull/8127) [`d4d5987`](https://github.com/cloudflare/workers-sdk/commit/d4d5987c9f567901542c22cb1df13e56cb286887) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Bump interpoplation search method for asset manifest reads to 50%
+
+## 0.14.0
+
+### Minor Changes
+
+- [#8094](https://github.com/cloudflare/workers-sdk/pull/8094) [`d83dd19`](https://github.com/cloudflare/workers-sdk/commit/d83dd1912baf680df45cea4bbdeae77d2d7013aa) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Provides sentry sourcemap generation and upload on production deploys.
+
+- [#8084](https://github.com/cloudflare/workers-sdk/pull/8084) [`2547c0f`](https://github.com/cloudflare/workers-sdk/commit/2547c0fcca80ac3fde9fed292c3c477218fbd096) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Rollout interpolation search method for asset manifests (1 / 20,000 requests)
+
+## 0.13.2
+
+### Patch Changes
+
+- [#8044](https://github.com/cloudflare/workers-sdk/pull/8044) [`7006630`](https://github.com/cloudflare/workers-sdk/commit/7006630cfe307da4840651bc8b6da102660e3f1a) Thanks [@GregBrimble](https://github.com/GregBrimble)! - chore: Adds analytics and code (zero-percent gated) for a new asset manifest search algorithm
+
+## 0.13.1
+
+### Patch Changes
+
+- [#7989](https://github.com/cloudflare/workers-sdk/pull/7989) [`cf09cfa`](https://github.com/cloudflare/workers-sdk/commit/cf09cfa33db317740a54c8b6b035a7e84b95c6ec) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Adds additional error messaging for errors from KV.
+
+- [#7996](https://github.com/cloudflare/workers-sdk/pull/7996) [`f9fd9df`](https://github.com/cloudflare/workers-sdk/commit/f9fd9df8f6e11d87bb34ed5005730de1d593989a) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Provide shorter message for KV GET errors.
+
+## 0.13.0
+
+### Minor Changes
+
+- [#7897](https://github.com/cloudflare/workers-sdk/pull/7897) [`34f9797`](https://github.com/cloudflare/workers-sdk/commit/34f9797822836b98edc4d8ddc6e2fb0ab322b864) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - chore: provides `run_worker_first` for Worker-script-first configuration. Deprecates `experimental_serve_directly`.
+
+## 0.12.5
+
+### Patch Changes
+
+- [#7906](https://github.com/cloudflare/workers-sdk/pull/7906) [`f5eaf4b`](https://github.com/cloudflare/workers-sdk/commit/f5eaf4bd2fcfdf19a40dd3056fc9b36c2654605c) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Fixes bug in router-worker that prevents unexpected errors from being captured.
+
+## 0.12.4
+
+### Patch Changes
+
+- [#7887](https://github.com/cloudflare/workers-sdk/pull/7887) [`cab3e37`](https://github.com/cloudflare/workers-sdk/commit/cab3e37f66e8cbcf0f16898eff1827db1126901b) Thanks [@WalshyDev](https://github.com/WalshyDev)! - chore: add more observability into asset-worker for the Workers team to better insight into how requests are handled.
+
+- [#7887](https://github.com/cloudflare/workers-sdk/pull/7887) [`cab3e37`](https://github.com/cloudflare/workers-sdk/commit/cab3e37f66e8cbcf0f16898eff1827db1126901b) Thanks [@WalshyDev](https://github.com/WalshyDev)! - chore: add tracing into router-worker so the Workers team can have a better insight into into how requests are handled.
+
+## 0.12.3
+
+### Patch Changes
+
+- [#7844](https://github.com/cloudflare/workers-sdk/pull/7844) [`92ed81e`](https://github.com/cloudflare/workers-sdk/commit/92ed81e9f35c4bc951da79be7fb08e7e60fb1f48) Thanks [@WalshyDev](https://github.com/WalshyDev)! - chore: plumb through account ID and Worker ID into the asset-worker and router-worker for use in analytics and error reporting.
+
+## 0.12.2
+
+### Patch Changes
+
+- [#7808](https://github.com/cloudflare/workers-sdk/pull/7808) [`7faabeb`](https://github.com/cloudflare/workers-sdk/commit/7faabeb1d1534818d0e93fe4e4710e9b77af1bfb) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: fix analytics not being logged for `asset-worker` in the case of a successful request.
+
+## 0.12.1
+
+### Patch Changes
+
+- [#7790](https://github.com/cloudflare/workers-sdk/pull/7790) [`c588c8a`](https://github.com/cloudflare/workers-sdk/commit/c588c8a79592979ef62489516593df7ca5b96901) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: remove `--experimental-versions` flag from the Asset/Router Workers `deploy` scripts, now that Wrangler has removed the flag.
+
 ## 0.12.0
 
 ### Minor Changes

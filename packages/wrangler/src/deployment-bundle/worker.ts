@@ -4,7 +4,7 @@ import type {
 	WorkerMetadata,
 	WorkerMetadataBinding,
 } from "./create-worker-upload-form";
-import type { AssetConfig, RoutingConfig } from "@cloudflare/workers-shared";
+import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 import type { Json } from "miniflare";
 
 /**
@@ -22,8 +22,7 @@ export type CfModuleType =
 	| "text"
 	| "buffer"
 	| "python"
-	| "python-requirement"
-	| "nodejs-compat-module";
+	| "python-requirement";
 
 /**
  * An imported module.
@@ -55,7 +54,7 @@ export interface CfModule {
 	 *   }
 	 * }
 	 */
-	content: string | Buffer;
+	content: string | Buffer<ArrayBuffer>;
 	/**
 	 * An optional sourcemap for this module if it's of a ESM or CJS type, this will only be present
 	 * if we're deploying with sourcemaps enabled. Since we copy extra modules that aren't bundled
@@ -99,7 +98,7 @@ export interface CfSendEmailBindings {
  */
 
 export interface CfWasmModuleBindings {
-	[key: string]: string | Uint8Array;
+	[key: string]: string | Uint8Array<ArrayBuffer>;
 }
 
 /**
@@ -128,6 +127,13 @@ export interface CfAIBinding {
 }
 
 /**
+ * A binding to Cloudflare Images
+ */
+export interface CfImagesBinding {
+	binding: string;
+}
+
+/**
  * A binding to the Worker Version's metadata
  */
 
@@ -140,7 +146,7 @@ export interface CfVersionMetadataBinding {
  */
 
 export interface CfDataBlobBindings {
-	[key: string]: string | Uint8Array;
+	[key: string]: string | Uint8Array<ArrayBuffer>;
 }
 
 /**
@@ -292,11 +298,6 @@ export interface CfUserLimits {
 	cpu_ms?: number;
 }
 
-export interface CfAssets {
-	jwt: string;
-	routingConfig: RoutingConfig;
-	assetConfig?: AssetConfig;
-}
 /**
  * Options for creating a `CfWorker`.
  */
@@ -328,6 +329,7 @@ export interface CfWorkerInit {
 		text_blobs: CfTextBlobBindings | undefined;
 		browser: CfBrowserBinding | undefined;
 		ai: CfAIBinding | undefined;
+		images: CfImagesBinding | undefined;
 		version_metadata: CfVersionMetadataBinding | undefined;
 		data_blobs: CfDataBlobBindings | undefined;
 		durable_objects: { bindings: CfDurableObject[] } | undefined;
@@ -346,6 +348,9 @@ export interface CfWorkerInit {
 		unsafe: CfUnsafe | undefined;
 		assets: CfAssetsBinding | undefined;
 	};
+
+	containers?: { class_name: string }[];
+
 	/**
 	 * The raw bindings - this is basically never provided and it'll be the bindings above
 	 * but if we're just taking from the api and re-putting then this is how we can do that
@@ -365,7 +370,15 @@ export interface CfWorkerInit {
 	limits: CfUserLimits | undefined;
 	annotations?: Record<string, string | undefined>;
 	keep_assets?: boolean | undefined;
-	assets: CfAssets | undefined;
+	assets:
+		| {
+				jwt: string;
+				routerConfig: RouterConfig;
+				assetConfig: AssetConfig;
+				_redirects?: string;
+				_headers?: string;
+		  }
+		| undefined;
 	observability: Observability | undefined;
 }
 

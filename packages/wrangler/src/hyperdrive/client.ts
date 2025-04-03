@@ -1,4 +1,4 @@
-import { fetchResult } from "../cfetch";
+import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { requireAuth } from "../user";
 import type { Config } from "../config";
 
@@ -7,6 +7,7 @@ export type HyperdriveConfig = {
 	name: string;
 	origin: PublicOrigin;
 	caching?: CachingOptions;
+	mtls?: Mtls;
 };
 
 export type OriginDatabase = {
@@ -73,13 +74,23 @@ export type CreateUpdateHyperdriveBody = {
 	name: string;
 	origin: OriginWithSecrets;
 	caching?: CachingOptions;
+	mtls?: Mtls;
 };
 
 export type PatchHyperdriveBody = {
 	name?: string;
 	origin?: OriginWithSecretsPartial;
 	caching?: CachingOptions;
+	mtls?: Mtls;
 };
+
+export type Mtls = {
+	ca_certificate_id?: string;
+	mtls_certificate_id?: string;
+	sslmode?: string;
+};
+
+export const Sslmode = ["require", "verify-ca", "verify-full"];
 
 export async function createConfig(
 	config: Config,
@@ -111,9 +122,12 @@ export async function getConfig(
 
 export async function listConfigs(config: Config): Promise<HyperdriveConfig[]> {
 	const accountId = await requireAuth(config);
-	return await fetchResult(`/accounts/${accountId}/hyperdrive/configs`, {
-		method: "GET",
-	});
+	return await fetchPagedListResult(
+		`/accounts/${accountId}/hyperdrive/configs`,
+		{
+			method: "GET",
+		}
+	);
 }
 
 export async function patchConfig(

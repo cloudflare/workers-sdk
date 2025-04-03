@@ -12,6 +12,7 @@
 				"CREATE_CLOUDFLARE_TELEMETRY_DEBUG",
 				"SPARROW_SOURCE_KEY"
 			],
+			"inputs": ["src/**", "templates*/**", "scripts/**", "*", "vitest*"],
 			"outputs": ["dist/**"]
 		},
 		"test:e2e": {
@@ -24,9 +25,11 @@
 				"E2E_RETRIES",
 				"E2E_NO_DEPLOY",
 				"E2E_EXPERIMENTAL",
-				"TEST_PM"
+				"TEST_PM",
+				"TEST_PM_VERSION"
 			],
 			"dependsOn": ["build"],
+			"inputs": ["e2e-tests/**"],
 			"outputs": [".e2e-logs", ".e2e-logs-experimental"]
 		}
 	}

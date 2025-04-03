@@ -17,7 +17,9 @@ import type {
 import type { AssetConfig } from "@cloudflare/workers-shared";
 import type { Json } from "miniflare";
 
-const moduleTypeMimeType: { [type in CfModuleType]: string | undefined } = {
+export const moduleTypeMimeType: {
+	[type in CfModuleType]: string | undefined;
+} = {
 	esm: "application/javascript+module",
 	commonjs: "application/javascript",
 	"compiled-wasm": "application/wasm",
@@ -25,7 +27,6 @@ const moduleTypeMimeType: { [type in CfModuleType]: string | undefined } = {
 	text: "text/plain",
 	python: "text/x-python",
 	"python-requirement": "text/x-python-requirement",
-	"nodejs-compat-module": undefined,
 };
 
 function toMimeType(type: CfModuleType): string {
@@ -62,6 +63,7 @@ export type WorkerMetadataBinding =
 	| { type: "text_blob"; name: string; part: string }
 	| { type: "browser"; name: string }
 	| { type: "ai"; name: string; staging?: boolean }
+	| { type: "images"; name: string }
 	| { type: "version_metadata"; name: string }
 	| { type: "data_blob"; name: string; part: string }
 	| { type: "kv_namespace"; name: string; namespace_id: string }
@@ -129,6 +131,14 @@ export type WorkerMetadataBinding =
 	  }
 	| { type: "assets"; name: string };
 
+export type AssetConfigMetadata = {
+	html_handling?: AssetConfig["html_handling"];
+	not_found_handling?: AssetConfig["not_found_handling"];
+	run_worker_first?: boolean;
+	_redirects?: string;
+	_headers?: string;
+};
+
 // for PUT /accounts/:accountId/workers/scripts/:scriptName
 type WorkerMetadataPut = {
 	/** The name of the entry point module. Only exists when the worker is in the ES module format */
@@ -153,7 +163,7 @@ type WorkerMetadataPut = {
 
 	assets?: {
 		jwt: string;
-		config?: AssetConfig;
+		config?: AssetConfigMetadata;
 	};
 	observability?: Observability | undefined;
 	// Allow unsafe.metadata to add arbitrary properties at runtime
@@ -193,14 +203,16 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		observability,
 	} = worker;
 
-	const assetConfig = {
+	const assetConfig: AssetConfigMetadata = {
 		html_handling: assets?.assetConfig?.html_handling,
 		not_found_handling: assets?.assetConfig?.not_found_handling,
-		serve_directly: assets?.assetConfig?.serve_directly,
+		run_worker_first: assets?.routerConfig.invoke_user_worker_ahead_of_assets,
+		_redirects: assets?._redirects,
+		_headers: assets?._headers,
 	};
 
 	// short circuit if static assets upload only
-	if (assets && !assets.routingConfig.has_user_worker) {
+	if (assets && !assets.routerConfig.has_user_worker) {
 		formData.set(
 			"metadata",
 			JSON.stringify({
@@ -444,6 +456,13 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		});
 	}
 
+	if (bindings.images !== undefined) {
+		metadataBindings.push({
+			name: bindings.images.binding,
+			type: "images",
+		});
+	}
+
 	if (bindings.version_metadata !== undefined) {
 		metadataBindings.push({
 			name: bindings.version_metadata.binding,
@@ -630,6 +649,11 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			? { main_module: main.name }
 			: { body_part: main.name }),
 		bindings: metadataBindings,
+		containers:
+			worker.containers === undefined
+				? undefined
+				: worker.containers.map((c) => ({ class_name: c.class_name })),
+
 		...(compatibility_date && { compatibility_date }),
 		...(compatibility_flags && {
 			compatibility_flags,

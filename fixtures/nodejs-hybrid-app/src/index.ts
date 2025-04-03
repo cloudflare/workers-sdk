@@ -21,13 +21,19 @@ export default {
 			case "/test-random":
 				return testGetRandomValues();
 			case "/test-process":
-				return testProcessBehaviour();
+				return testProcessBehavior();
 			case "/query":
 				return testPostgresLibrary(env, ctx);
 			case "/test-x509-certificate":
 				return testX509Certificate();
 			case "/test-require-alias":
-				return testRequireUenvAliasedPackages();
+				return testRequireUnenvAliasedPackages();
+			case "/test-immediate":
+				return await testImmediate();
+			case "/test-tls":
+				return await testTls();
+			case "/test-crypto":
+				return await testCrypto();
 		}
 
 		return new Response(
@@ -36,13 +42,36 @@ export default {
 <a href="test-random">Test getRandomValues()</a>
 <a href="test-x509-certificate">Test X509Certificate</a>
 <a href="test-require-alias">Test require unenv aliased packages</a>
+<a href="test-immediate">Test setImmediate</a>
+<a href="test-tls">node:tls</a>
+<a href="test-crypto">node:crypto</a>
 `,
 			{ headers: { "Content-Type": "text/html; charset=utf-8" } }
 		);
 	},
 };
 
-function testRequireUenvAliasedPackages() {
+async function testImmediate() {
+	try {
+		await new Promise((resolve, reject) => {
+			// Give it a whole second otherwise it times-out
+			setTimeout(reject, 1000);
+
+			// This setImmediate should never trigger the reject if the clearImmediate is working
+			const id = setImmediate(reject);
+			// clearImmediate should cancel reject callback
+			clearImmediate(id);
+			// This setImmediate should trigger the resolve callback
+			setImmediate(resolve);
+		});
+
+		return new Response("OK");
+	} catch (e) {
+		return new Response(`NOT OK: ${e}`);
+	}
+}
+
+function testRequireUnenvAliasedPackages() {
 	const fetch = require("cross-fetch");
 	const supportsDefaultExports = typeof fetch === "function";
 	const supportsNamedExports = typeof fetch.Headers === "function";
@@ -75,14 +104,9 @@ GzEf4UxiLBbUB6WRBgyVyquGfUMlKl/tnm4q0yeYQloYKSoHpGeHVJuN
 }
 
 function testGetRandomValues() {
-	assert(
-		webcrypto.getRandomValues === getRandomValues,
-		"Unexpected identity for getRandomValues"
-	);
-	assert(
-		nodeCrypto.getRandomValues === getRandomValues,
-		"Unexpected identity for getRandomValues"
-	);
+	assert.strictEqual(webcrypto.getRandomValues, getRandomValues);
+	assert.strictEqual(nodeCrypto.getRandomValues, getRandomValues);
+
 	return Response.json([
 		crypto.getRandomValues(new Uint8Array(6)).toString(), // global
 		webcrypto.getRandomValues(new Uint8Array(6)).toString(), // webcrypto
@@ -94,98 +118,57 @@ function testGetRandomValues() {
 function testBasicNodejsProperties() {
 	assert(s instanceof Stream, "expected s to be an instance of Stream");
 
-	assert(true, "the world is broken");
-
 	const buffer1 = Buffer.of(1);
-	assert(buffer1.toJSON().data[0] === 1, "Buffer is broken");
+	assert.strictEqual(buffer1.toJSON().data[0], 1);
 
 	const buffer2 = global.Buffer.of(1);
-	assert(buffer2.toJSON().data[0] === 1, "global.Buffer is broken");
+	assert.strictEqual(buffer2.toJSON().data[0], 1);
 
 	const buffer3 = globalThis.Buffer.of(1);
-	assert(buffer3.toJSON().data[0] === 1, "globalThis.Buffer is broken");
+	assert.strictEqual(buffer3.toJSON().data[0], 1);
 
-	assert(performance !== undefined, "performance is missing");
-	assert(global.performance !== undefined, "global.performance is missing");
-	assert(
-		globalThis.performance !== undefined,
-		"globalThis.performance is missing"
-	);
+	assert.notEqual(performance, undefined);
+	assert.strictEqual(global.performance, performance);
+	assert.strictEqual(globalThis.performance, performance);
 
-	assert(Performance !== undefined, "Performance is missing");
-	assert(global.Performance !== undefined, "global.Performance is missing");
-	assert(
-		globalThis.Performance !== undefined,
-		"globalThis.Performance is missing"
-	);
+	assert.notEqual(Performance, undefined);
+	assert.strictEqual(global.Performance, Performance);
+	assert.strictEqual(globalThis.Performance, Performance);
+
+	assert.strictEqual(typeof performance.measure, "function");
+	assert.strictEqual(typeof performance.clearMarks, "function");
 }
 
-function testProcessBehaviour() {
+function testProcessBehavior() {
 	const originalProcess = process;
 	try {
-		assert(process !== undefined, "process is missing");
-		assert(globalThis.process !== undefined, "globalThis.process is missing");
-		assert(global.process !== undefined, "global.process is missing");
-		assert(
-			process === global.process,
-			"process is not the same as global.process"
-		);
-		assert(
-			global.process === globalThis.process,
-			"global.process is not the same as globalThis.process"
-		);
-		assert(
-			globalThis.process === process,
-			"globalThis.process is not the same as process"
-		);
+		assert.notEqual(process, undefined);
+		assert.strictEqual(globalThis.process, process);
+		assert.strictEqual(global.process, process);
 
 		const fakeProcess1 = {} as typeof process;
 		process = fakeProcess1;
-		assert(process === fakeProcess1, "process is not updated to fakeProcess");
-		assert(
-			global.process === fakeProcess1,
-			"global.process is not updated to fakeProcess"
-		);
-		assert(
-			globalThis.process === fakeProcess1,
-			"globalThis.process is not updated to fakeProcess"
-		);
+		assert.strictEqual(process, fakeProcess1);
+		assert.strictEqual(global.process, fakeProcess1);
+		assert.strictEqual(globalThis.process, fakeProcess1);
 
 		const fakeProcess2 = {} as typeof process;
 		global.process = fakeProcess2;
-		assert(process === fakeProcess2, "process is not updated to fakeProcess");
-		assert(
-			global.process === fakeProcess2,
-			"global.process is not updated to fakeProcess"
-		);
-		assert(
-			globalThis.process === fakeProcess2,
-			"globalThis.process is not updated to fakeProcess"
-		);
+		assert.strictEqual(process, fakeProcess2);
+		assert.strictEqual(global.process, fakeProcess2);
+		assert.strictEqual(globalThis.process, fakeProcess2);
 
 		const fakeProcess3 = {} as typeof process;
 		globalThis.process = fakeProcess3;
-		assert(process === fakeProcess3, "process is not updated to fakeProcess");
-		assert(
-			global.process === fakeProcess3,
-			"global.process is not updated to fakeProcess"
-		);
-		assert(
-			globalThis.process === fakeProcess3,
-			"globalThis.process is not updated to fakeProcess"
-		);
+		assert.strictEqual(process, fakeProcess3);
+		assert.strictEqual(global.process, fakeProcess3);
+		assert.strictEqual(globalThis.process, fakeProcess3);
 
 		const fakeProcess4 = {} as typeof process;
 		globalThis["process"] = fakeProcess4;
-		assert(process === fakeProcess4, "process is not updated to fakeProcess");
-		assert(
-			global.process === fakeProcess4,
-			"global.process is not updated to fakeProcess"
-		);
-		assert(
-			globalThis.process === fakeProcess4,
-			"globalThis.process is not updated to fakeProcess"
-		);
+		assert.strictEqual(process, fakeProcess4);
+		assert.strictEqual(global.process, fakeProcess4);
+		assert.strictEqual(globalThis.process, fakeProcess4);
 	} catch (e) {
 		if (e instanceof Error) {
 			return new Response(`${e.stack}`, { status: 500 });
@@ -217,4 +200,44 @@ async function testPostgresLibrary(env: Env, ctx: Context) {
 	// Clean up the client
 	ctx.waitUntil(client.end());
 	return resp;
+}
+
+async function testTls() {
+	const tls = await import("node:tls");
+
+	assert.strictEqual(typeof tls.connect, "function");
+	assert.strictEqual(typeof tls.TLSSocket, "function");
+	assert.strictEqual(typeof tls.checkServerIdentity, "function");
+	assert.strictEqual(
+		tls.checkServerIdentity("a.com", { subject: { CN: "a.com" } }),
+		undefined
+	);
+	assert.strictEqual(typeof tls.SecureContext, "function");
+	assert.strictEqual(typeof tls.createSecureContext, "function");
+	assert.strictEqual(
+		tls.createSecureContext({}) instanceof tls.SecureContext,
+		true
+	);
+
+	return new Response("OK");
+}
+
+async function testCrypto() {
+	const crypto = await import("node:crypto");
+
+	const test = { name: "aes-128-cbc", size: 16, iv: 16 };
+
+	const key = crypto.createSecretKey(Buffer.alloc(test.size));
+	const iv = Buffer.alloc(test.iv);
+
+	const cipher = crypto.createCipheriv(test.name, key, iv);
+	const decipher = crypto.createDecipheriv(test.name, key, iv);
+
+	let data = "";
+	data += decipher.update(cipher.update("Hello World", "utf8"));
+	data += decipher.update(cipher.final());
+	data += decipher.final();
+	assert.strictEqual(data, "Hello World");
+
+	return new Response("OK");
 }

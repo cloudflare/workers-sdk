@@ -21,7 +21,7 @@ Telemetry in Wrangler allows us to better identify bugs and gain visibility on u
 - The format of the Wrangler configuration file (e.g. `toml`, `jsonc`)
 - Total session duration of the command run (e.g. 3 seconds, etc.)
 - Whether the Wrangler client is running in CI or in an interactive instance
-- Error _type_, if one occurs (e.g. `APIError` or `UserError`)
+- Error _type_ (e.g. `APIError` or `UserError`), and sanitised error messages that will not include user information like filepaths or stack traces (e.g. `Asset too large`).
 - General machine information such as OS and OS Version
 
 Cloudflare will receive the IP address associated with your machine and such information is handled in accordance with Cloudflare’s [Privacy Policy](https://www.cloudflare.com/privacypolicy/).

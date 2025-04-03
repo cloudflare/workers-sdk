@@ -2,13 +2,13 @@
 	"compilerOptions": {
 		"target": "ESNext",
 		"module": "ESNext",
-		"moduleResolution": "Node",
+		"moduleResolution": "bundler",
 		"skipLibCheck": true,
 		"esModuleInterop": true,
 		"strict": true,
 		"declaration": true,
 		"resolveJsonModule": true,
-		"types": ["node"]
+		"types": ["node-unenv"]
 	},
 	"include": ["src/**/*"]
 }

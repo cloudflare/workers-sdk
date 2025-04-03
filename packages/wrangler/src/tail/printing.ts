@@ -5,6 +5,7 @@ import type {
 	EmailEvent,
 	QueueEvent,
 	RequestEvent,
+	RpcEvent,
 	ScheduledEvent,
 	TailEvent,
 	TailEventMessage,
@@ -82,6 +83,13 @@ export function prettyPrintLogs(data: WebSocket.RawData): void {
 		logger.log(
 			`Queue ${queueName} (${batchSizeMsg}) - ${outcome} @ ${datetime}`
 		);
+	} else if (isRpcEvent(eventMessage.event)) {
+		const outcome = prettifyOutcome(eventMessage.outcome);
+		const datetime = new Date(eventMessage.eventTimestamp).toLocaleString();
+
+		logger.log(
+			`${eventMessage.entrypoint}.${eventMessage.event.rpcMethod} - ${outcome} @ ${datetime}`
+		);
 	} else {
 		// Unknown event type
 		const outcome = prettifyOutcome(eventMessage.outcome);
@@ -125,6 +133,10 @@ function isEmailEvent(event: TailEventMessage["event"]): event is EmailEvent {
 
 function isQueueEvent(event: TailEventMessage["event"]): event is QueueEvent {
 	return Boolean(event && "queue" in event);
+}
+
+function isRpcEvent(event: TailEventMessage["event"]): event is RpcEvent {
+	return Boolean(event && "rpcMethod" in event);
 }
 
 /**

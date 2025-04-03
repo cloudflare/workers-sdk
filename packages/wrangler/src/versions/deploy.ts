@@ -114,7 +114,8 @@ export const versionsDeployCommand = createCommand({
 
 		if (workerName === undefined) {
 			throw new UserError(
-				'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
+				'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
+				{ telemetryMessage: true }
 			);
 		}
 
@@ -144,13 +145,16 @@ export const versionsDeployCommand = createCommand({
 
 		// validate we have at least 1 version
 		if (confirmedVersionsToDeploy.length === 0) {
-			throw new UserError("You must select at least 1 version to deploy.");
+			throw new UserError("You must select at least 1 version to deploy.", {
+				telemetryMessage: true,
+			});
 		}
 
 		// validate we have at most experimentalMaxVersions (default: 2)
 		if (confirmedVersionsToDeploy.length > args.maxVersions) {
 			throw new UserError(
-				`You must select at most ${args.maxVersions} versions to deploy.`
+				`You must select at most ${args.maxVersions} versions to deploy.`,
+				{ telemetryMessage: "You must select at most 2 versions to deploy.`" }
 			);
 		}
 

@@ -3,6 +3,7 @@ import { configFileName, formatConfigSnippet } from "./config";
 import { getCIMatchTag } from "./environment-variables/misc-variables";
 import { FatalError } from "./errors";
 import { logger } from "./logger";
+import { APIError } from "./parse";
 import { getCloudflareAccountIdFromEnv } from "./user/auth-variables";
 import type { ServiceMetadataRes } from "./init";
 
@@ -48,9 +49,17 @@ export async function verifyWorkerMatchesCITag(
 			throw new FatalError(
 				`The name in your ${configFileName(configPath)} file (${workerName}) must match the name of your Worker. Please update the name field in your ${configFileName(configPath)} file.`
 			);
+		} else if (e instanceof APIError) {
+			throw new FatalError(
+				"An error occurred while trying to validate that the Worker name matches what is expected by the build system.\n" +
+					e.message +
+					"\n" +
+					e.notes.map((note) => note.text).join("\n")
+			);
 		} else {
 			throw new FatalError(
-				"Wrangler cannot validate that your Worker name matches what is expected by the build system. Please retry the build."
+				"Wrangler cannot validate that your Worker name matches what is expected by the build system. Please retry the build. " +
+					"If the problem persists, please contact support."
 			);
 		}
 	}

@@ -1,5 +1,25 @@
 # workers-playground
 
+## 0.2.4
+
+### Patch Changes
+
+- [#8205](https://github.com/cloudflare/workers-sdk/pull/8205) [`6f26beb`](https://github.com/cloudflare/workers-sdk/commit/6f26bebb0d41786cdc10320a0f1558467c563a67) Thanks [@penalosa](https://github.com/penalosa)! - Use today's date as the default starter playground compat date
+
+## 0.2.3
+
+### Patch Changes
+
+- [#7936](https://github.com/cloudflare/workers-sdk/pull/7936) [`2a59eae`](https://github.com/cloudflare/workers-sdk/commit/2a59eaeaf93d92d56cad33d91713d0e49339b1bd) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: sends raw request method through the X-CF-HTTP-Method header
+
+## 0.2.2
+
+### Patch Changes
+
+- [#7791](https://github.com/cloudflare/workers-sdk/pull/7791) [`f8c11d7`](https://github.com/cloudflare/workers-sdk/commit/f8c11d7418c6feeac673c7bad909050f1b56b476) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Reverts #7639
+
+  Seems like our prev release of the workers-playground broke things. We are seeing a spike of related errors. We are therefore reverting the changes
+
 ## 0.2.1
 
 ### Patch Changes

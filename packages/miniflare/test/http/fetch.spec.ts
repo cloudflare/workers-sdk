@@ -56,7 +56,7 @@ test("fetch: performs web socket upgrade", async (t) => {
 	assert(webSocket);
 
 	const eventPromise = new DeferredPromise<void>();
-	const messages: (string | ArrayBuffer)[] = [];
+	const messages: MessageEvent["data"][] = [];
 	webSocket.addEventListener("message", (e) => {
 		messages.push(e.data);
 		if (e.data === "hello server") eventPromise.resolve();

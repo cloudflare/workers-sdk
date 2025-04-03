@@ -54,14 +54,14 @@ router.put(
 			return c.json({ error: "MISSING_TEAM_ID" }, 400);
 		}
 
-		if (c.req.headers.get("Content-Type") !== "application/octet-stream") {
+		if (c.req.raw.headers.get("Content-Type") !== "application/octet-stream") {
 			return c.json({ error: "EXPECTED_OCTET_STREAM" }, 415);
 		}
 
-		const artifactTag = c.req.headers.get("x-artifact-tag");
+		const artifactTag = c.req.raw.headers.get("x-artifact-tag");
 		const r2Object = await c.env.R2_ARTIFACT_ARCHIVE.put(
 			`${teamID}/${artifactID}`,
-			c.req.body,
+			c.req.raw.body,
 			{
 				customMetadata: artifactTag
 					? {

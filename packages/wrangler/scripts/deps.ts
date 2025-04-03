@@ -14,17 +14,14 @@ export const EXTERNAL_DEPENDENCIES = [
 	// Wrangler depends on a pinned version of Miniflare.
 	"miniflare",
 
-	// Pending deletion in v4...
-	"@esbuild-plugins/node-globals-polyfill",
-	"@esbuild-plugins/node-modules-polyfill",
-
 	// @cloudflare/workers-types is an optional peer dependency of wrangler, so users can
 	// get the types by installing the package (to what version they prefer) themselves
 	"@cloudflare/workers-types",
-	// `@cloudflare/unenv-preset` and  `unenv` must be external because they contain code
-	// which needs to be resolved and read when we are bundling the worker application
-	"@cloudflare/unenv-preset",
+
+	// unenv must be external because it contains unenv/runtime code which needs to be resolved
+	// and read when we are bundling the worker application
 	"unenv",
+	"@cloudflare/unenv-preset",
 
 	// path-to-regexp must be external because it contains runtime code which needs to be resolved
 	// and read when we are bundling the worker application.
@@ -38,6 +35,9 @@ export const EXTERNAL_DEPENDENCIES = [
 
 	// workerd contains a native binary, so must be external. Wrangler depends on a pinned version.
 	"workerd",
+
+	// sharp contains native libraries
+	"sharp",
 ];
 
 const pathToPackageJson = path.resolve(__dirname, "..", "package.json");

@@ -40,9 +40,9 @@ export const Handler = withConfig<HandlerOptions>(
 
 export const listDatabases = async (
 	accountId: string,
-	limitCalls: boolean = false
+	limitCalls: boolean = false,
+	pageSize: number = 10
 ): Promise<Array<Database>> => {
-	const pageSize = 10;
 	let page = 1;
 	const results = [];
 	while (results.length % pageSize === 0) {

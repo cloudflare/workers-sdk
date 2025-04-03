@@ -1,12 +1,8 @@
-# Runs c3 e2e tests for quarantined frameworks on merges to main
-
 name: C3 E2E (Quarantine)
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - packages/create-cloudflare/**
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
 
 jobs:
   e2e:
@@ -46,5 +42,5 @@ jobs:
           packageManager: ${{ matrix.pm.name}}
           packageManagerVersion: ${{ matrix.pm.version }}
           quarantine: true
-          accountId: ${{ secrets.C3_TEST_CLOUDFLARE_ACCOUNT_ID }}
-          apiToken: ${{ secrets.C3_TEST_CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}

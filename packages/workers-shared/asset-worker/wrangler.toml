@@ -15,6 +15,16 @@ compatibility_date = "2024-07-31"
 # nodejs_compat required when using @cloudflare/vitest-pool-workers
 compatibility_flags = ["nodejs_compat"]
 
+[unsafe.metadata.build_options]
+stable_id = "cloudflare/cf_asset_worker"
+networks = ["cf","jdc"]
+
+[vars]
+ENVIRONMENT = "production"
+
+[version_metadata]
+binding = "VERSION_METADATA"
+
 [[unsafe.bindings]]
 name = "CONFIG"
 type = "param"
@@ -30,13 +40,38 @@ data_ref = true
 name = "ASSETS_KV_NAMESPACE"
 type = "internal_assets"
 
-[unsafe.metadata.build_options]
+[[unsafe.bindings]]
+name = "workers-asset-worker"
+type = "internal_capability_grants"
+
+[env.staging]
+name = "asset-worker-staging"
+
+[env.staging.unsafe.metadata.build_options]
 stable_id = "cloudflare/cf_asset_worker"
 networks = ["cf","jdc"]
 
-[version_metadata]
+[env.staging.vars]
+ENVIRONMENT = "staging"
+
+[env.staging.version_metadata]
 binding = "VERSION_METADATA"
 
-[[unsafe.bindings]]
+[[env.staging.unsafe.bindings]]
+name = "CONFIG"
+type = "param"
+param = "assetConfig"
+
+[[env.staging.unsafe.bindings]]
+name = "ASSETS_MANIFEST"
+type = "param"
+param = "assetManifest"
+data_ref = true
+
+[[env.staging.unsafe.bindings]]
+name = "ASSETS_KV_NAMESPACE"
+type = "internal_assets"
+
+[[env.staging.unsafe.bindings]]
 name = "workers-asset-worker"
 type = "internal_capability_grants"

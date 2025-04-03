@@ -1,5 +1,17 @@
 # playground-preview-worker
 
+## 0.1.4
+
+### Patch Changes
+
+- [#8114](https://github.com/cloudflare/workers-sdk/pull/8114) [`0322d08`](https://github.com/cloudflare/workers-sdk/commit/0322d085f634c1a0a12a59b4db293088d0cadb62) Thanks [@penalosa](https://github.com/penalosa)! - Upgrade to Hono v4
+
+## 0.1.3
+
+### Patch Changes
+
+- [#7793](https://github.com/cloudflare/workers-sdk/pull/7793) [`9941219`](https://github.com/cloudflare/workers-sdk/commit/994121908de7b0537c06ed4f6bae6cb35d32521d) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: ensure no body is passed when constructing a GET or HEAD request to the preview worker
+
 ## 0.1.2
 
 ### Patch Changes

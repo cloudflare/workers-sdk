@@ -48,6 +48,7 @@
 		"unenv",
 		"unrevoke",
 		"Untriaged",
+		"userconfig",
 		"versionless",
 		"wasmvalue",
 		"weakmap",
@@ -87,5 +88,6 @@
 		{
 			"mode": "auto"
 		}
-	]
+	],
+	"editor.formatOnSave": true
 }

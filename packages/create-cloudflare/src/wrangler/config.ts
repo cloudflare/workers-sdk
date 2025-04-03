@@ -1,8 +1,8 @@
-import { existsSync } from "fs";
+import { existsSync, mkdirSync } from "fs";
 import { resolve } from "path";
 import TOML from "@iarna/toml";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
-import { readFile, writeFile } from "helpers/files";
+import { readFile, writeFile, writeJSON } from "helpers/files";
 import { parse as jsoncParse } from "jsonc-parser";
 import type { JsonMap } from "@iarna/toml";
 import type { C3Context } from "types";
@@ -45,54 +45,58 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 			ensureNameExists(parsed, ctx.project.name),
 		);
 
-		const comment = `/**\n * For more details on how to configure Wrangler, refer to:\n * https://developers.cloudflare.com/workers/wrangler/configuration/\n */\n{\n  "$schema": "node_modules/wrangler/config-schema.json",`;
+		let comment = `/**\n * For more details on how to configure Wrangler, refer to:\n * https://developers.cloudflare.com/workers/wrangler/configuration/\n */\n{`;
+		if (!modified["$schema"]) {
+			comment += `\n\t"$schema": "node_modules/wrangler/config-schema.json",`;
+		}
 
 		if (!modified["observability"]) {
 			modified["observability"] = { enabled: true };
 		}
-		const stringified = comment + JSON.stringify(modified, null, 2).slice(1);
+		const stringified = comment + JSON.stringify(modified, null, "\t").slice(1);
 
 		writeWranglerJson(
 			ctx,
 			stringified.slice(0, -2) +
 				`
-  /**
-   * Smart Placement
-   * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
-   */
-  // "placement": { "mode": "smart" },
+	/**
+	 * Smart Placement
+	 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+	 */
+	// "placement": { "mode": "smart" },
 
-  /**
-   * Bindings
-   * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
-   * databases, object storage, AI inference, real-time communication and more.
-   * https://developers.cloudflare.com/workers/runtime-apis/bindings/
-   */
+	/**
+	 * Bindings
+	 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
+	 * databases, object storage, AI inference, real-time communication and more.
+	 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
+	 */
 
-  /**
-   * Environment Variables
-   * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-   */
-  // "vars": { "MY_VARIABLE": "production_value" },
-  /**
-   * Note: Use secrets to store sensitive data.
-   * https://developers.cloudflare.com/workers/configuration/secrets/
-   */
+	/**
+	 * Environment Variables
+	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+	 */
+	// "vars": { "MY_VARIABLE": "production_value" },
+	/**
+	 * Note: Use secrets to store sensitive data.
+	 * https://developers.cloudflare.com/workers/configuration/secrets/
+	 */
 
-  /**
-   * Static Assets
-   * https://developers.cloudflare.com/workers/static-assets/binding/
-   */
-  // "assets": { "directory": "./public/", "binding": "ASSETS" },
+	/**
+	 * Static Assets
+	 * https://developers.cloudflare.com/workers/static-assets/binding/
+	 */
+	// "assets": { "directory": "./public/", "binding": "ASSETS" },
 
-  /**
-   * Service Bindings (communicate between multiple Workers)
-   * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
-   */
-  // "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
+	/**
+	 * Service Bindings (communicate between multiple Workers)
+	 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
+	 */
+	// "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
 }
 `,
 		);
+		addVscodeConfig(ctx);
 	} else if (wranglerTomlExists(ctx)) {
 		const wranglerTomlStr = readWranglerToml(ctx);
 		const parsed = TOML.parse(wranglerTomlStr);
@@ -164,6 +168,7 @@ export const wranglerTomlExists = (ctx: C3Context) => {
 	return existsSync(wranglerTomlPath);
 };
 
+/** Checks for wrangler.json and wrangler.jsonc */
 export const wranglerJsonExists = (ctx: C3Context) => {
 	const wranglerJsonPath = getWranglerJsonPath(ctx);
 	const wranglerJsoncPath = getWranglerJsoncPath(ctx);
@@ -196,4 +201,22 @@ export const writeWranglerJson = (ctx: C3Context, contents: string) => {
 	}
 	const wranglerJsoncPath = getWranglerJsoncPath(ctx);
 	return writeFile(wranglerJsoncPath, contents);
+};
+
+export const addVscodeConfig = (ctx: C3Context) => {
+	const settingsPath = `${ctx.project.path}/.vscode/settings.json`;
+
+	// don't override a user's existing settings
+	// as this is just a quick stop gap we'll just not bother if the file exists
+	if (existsSync(settingsPath)) {
+		return;
+	}
+
+	mkdirSync(`${ctx.project.path}/.vscode`, { recursive: true });
+
+	writeJSON(settingsPath, {
+		"files.associations": {
+			"wrangler.json": "jsonc",
+		},
+	});
 };

@@ -198,15 +198,19 @@ function hasCursor(result_info: unknown): result_info is { cursor: string } {
 }
 
 function renderError(err: FetchError, level = 0): string {
+	const indent = "  ".repeat(level);
 	const chainedMessages =
 		err.error_chain
 			?.map(
 				(chainedError) =>
-					`\n${"  ".repeat(level)}- ${renderError(chainedError, level + 1)}`
+					`\n\n${indent}- ${renderError(chainedError, level + 1)}`
 			)
 			.join("\n") ?? "";
 	return (
 		(err.code ? `${err.message} [code: ${err.code}]` : err.message) +
+		(err.documentation_url
+			? `\n${indent}To learn more about this error, visit: ${err.documentation_url}`
+			: "") +
 		chainedMessages
 	);
 }

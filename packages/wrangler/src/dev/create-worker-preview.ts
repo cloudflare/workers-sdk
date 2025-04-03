@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { URL } from "node:url";
 import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
@@ -121,15 +122,6 @@ export interface CfPreviewToken {
 	prewarmUrl: URL;
 }
 
-// Credit: https://stackoverflow.com/a/2117523
-function randomId(): string {
-	return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-		const r = (Math.random() * 16) | 0,
-			v = c == "x" ? r : (r & 0x3) | 0x8;
-		return v.toString(16);
-	});
-}
-
 // URLs are often relative to the zone. Sometimes the base zone
 // will be grey-clouded, and so the host must be swapped out for
 // the worker route host, which is more likely to be orange-clouded.
@@ -190,16 +182,16 @@ export async function createPreviewSession(
 
 	logger.debug("-- END EXCHANGE API RESPONSE");
 	try {
-		const { inspector_websocket, prewarm, token } = parseJSON<{
+		const { inspector_websocket, prewarm, token } = parseJSON(bodyText) as {
 			inspector_websocket: string;
 			token: string;
 			prewarm: string;
-		}>(bodyText);
+		};
 		const inspector = new URL(inspector_websocket);
 		inspector.searchParams.append("cf_workers_preview_token", token);
 
 		return {
-			id: randomId(),
+			id: crypto.randomUUID(),
 			value: token,
 			host: ctx.host ?? inspector.host,
 			inspectorUrl: switchHost(inspector.href, ctx.host, !!ctx.zone),

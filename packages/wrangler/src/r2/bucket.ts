@@ -66,7 +66,8 @@ export const r2BucketCreateCommand = createCommand({
 
 		if (!isValidR2BucketName(name)) {
 			throw new UserError(
-				`The bucket name "${name}" is invalid. Bucket names can only have alphanumeric and - characters.`
+				`The bucket name "${name}" is invalid. ` +
+					"Bucket names must begin and end with an alphanumeric and can only contain letters (a-z), numbers (0-9), and hyphens (-)."
 			);
 		}
 

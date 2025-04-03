@@ -20,6 +20,7 @@ const workerName = generateResourceName();
 describe("provisioning", { timeout: TIMEOUT }, () => {
 	let deployedUrl: string;
 	let kvId: string;
+	let kvId2: string;
 	let d1Id: string;
 	const helper = new WranglerE2ETestHelper();
 
@@ -67,9 +68,7 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 	});
 
 	it("can provision resources and deploy worker", async () => {
-		const worker = helper.runLongLived(
-			`wrangler deploy --x-provision --x-auto-create`
-		);
+		const worker = helper.runLongLived(`wrangler deploy --x-provision`);
 		await worker.exitCode;
 		const output = await worker.output;
 		expect(normalize(output)).toMatchInlineSnapshot(`
@@ -83,16 +82,13 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 			  - R2
 			Provisioning KV (KV Namespace)...
 			🌀 Creating new KV Namespace "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-kv"...
-			✨ KV provisioned with tmp-e2e-worker-00000000-0000-0000-0000-000000000000-kv
-			--------------------------------------
+			✨ KV provisioned 🎉
 			Provisioning D1 (D1 Database)...
 			🌀 Creating new D1 Database "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-d1"...
-			✨ D1 provisioned with tmp-e2e-worker-00000000-0000-0000-0000-000000000000-d1
-			--------------------------------------
+			✨ D1 provisioned 🎉
 			Provisioning R2 (R2 Bucket)...
 			🌀 Creating new R2 Bucket "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-r2"...
-			✨ R2 provisioned with tmp-e2e-worker-00000000-0000-0000-0000-000000000000-r2
-			--------------------------------------
+			✨ R2 provisioned 🎉
 			🎉 All resources provisioned, continuing with deployment...
 			Your worker has access to the following bindings:
 			- KV Namespaces:
@@ -159,6 +155,52 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 		expect(text).toMatchInlineSnapshot('"Hello World!"');
 	});
 
+	it("can inherit and provision resources on version upload", async () => {
+		await helper.seed({
+			"wrangler.toml": dedent`
+						name = "${workerName}"
+						main = "src/index.ts"
+						compatibility_date = "2023-01-01"
+
+						[[r2_buckets]]
+						binding = "R2"
+
+						[[kv_namespaces]]
+						binding = "KV2"
+						`,
+		});
+		const worker = helper.runLongLived(
+			`wrangler versions upload --x-provision`
+		);
+		await worker.exitCode;
+		const output = await worker.output;
+		expect(normalize(output)).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			The following bindings need to be provisioned:
+			- KV Namespaces:
+			  - KV2
+			Provisioning KV2 (KV Namespace)...
+			🌀 Creating new KV Namespace "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-kv2"...
+			✨ KV2 provisioned 🎉
+			🎉 All resources provisioned, continuing with deployment...
+			Worker Startup Time: (TIMINGS)
+			Your worker has access to the following bindings:
+			- KV Namespaces:
+			  - KV2: 00000000000000000000000000000000
+			- R2 Buckets:
+			  - R2
+			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+			Worker Version ID: 00000000-0000-0000-0000-000000000000
+			Version Preview URL: https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev
+			To deploy this version to production traffic use the command wrangler versions deploy
+			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
+			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
+		`);
+		const kvMatch = output.match(/- KV2: (?<kv>[0-9a-f]{32})/);
+		assert(kvMatch?.groups);
+		kvId2 = kvMatch.groups.kv;
+	});
+
 	afterAll(async () => {
 		// we need to add d1 back into the config because otherwise wrangler will
 		// call the api for all 5000 or so db's the e2e test account has
@@ -189,6 +231,9 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 
 		output = await helper.run(
 			`wrangler kv namespace delete --namespace-id ${kvId}`
+		);
+		output = await helper.run(
+			`wrangler kv namespace delete --namespace-id ${kvId2}`
 		);
 		expect(output.stdout).toContain(`Deleted KV namespace`);
 	}, TIMEOUT);

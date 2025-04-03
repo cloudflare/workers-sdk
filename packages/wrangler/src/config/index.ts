@@ -1,4 +1,3 @@
-import fs from "node:fs";
 import path from "node:path";
 import TOML from "@iarna/toml";
 import dotenv from "dotenv";
@@ -6,6 +5,7 @@ import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
+import { maybeGetFile } from "../utils/filesystem";
 import { resolveWranglerConfigPath } from "./config-helpers";
 import { isPagesConfig, normalizeAndValidateConfig } from "./validation";
 import { validatePagesConfig } from "./validation-pages";
@@ -180,7 +180,7 @@ export const experimental_readRawConfig = (
 	if (configPath?.endsWith("toml")) {
 		rawConfig = parseTOML(readFileSync(configPath), configPath);
 	} else if (configPath?.endsWith("json") || configPath?.endsWith("jsonc")) {
-		rawConfig = parseJSONC(readFileSync(configPath), configPath);
+		rawConfig = parseJSONC(readFileSync(configPath), configPath) as RawConfig;
 	}
 	return { rawConfig, configPath, userConfigPath };
 };
@@ -203,25 +203,31 @@ export interface DotEnv {
 
 function tryLoadDotEnv(basePath: string): DotEnv | undefined {
 	try {
-		const parsed = dotenv.parse(fs.readFileSync(basePath));
-		return { path: basePath, parsed };
-	} catch (e) {
-		if ((e as { code: string }).code === "ENOENT") {
+		const contents = maybeGetFile(basePath);
+		if (contents === undefined) {
 			logger.debug(
 				`.env file not found at "${path.relative(".", basePath)}". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/`
 			);
-		} else {
-			logger.debug(
-				`Failed to load .env file "${path.relative(".", basePath)}":`,
-				e
-			);
+			return;
 		}
+
+		const parsed = dotenv.parse(contents);
+		return { path: basePath, parsed };
+	} catch (e) {
+		logger.debug(
+			`Failed to load .env file "${path.relative(".", basePath)}":`,
+			e
+		);
 	}
 }
 
 /**
  * Loads a dotenv file from `envPath`, preferring to read `${envPath}.${env}` if
  * `env` is defined and that file exists.
+ *
+ * Note: The `getDotDevDotVarsContent` function in the `packages/vite-plugin-cloudflare/src/index.ts` file
+ *       follows the same logic implemented here, the two need to be kept in sync, so if you modify some logic
+ *       here make sure that, if applicable, the same change is reflected there
  */
 export function loadDotEnv(envPath: string, env?: string): DotEnv | undefined {
 	if (env === undefined) {

@@ -181,5 +181,6 @@ function createWorkerObject(devEnv: DevEnv): Worker {
 		async dispose() {
 			await devEnv.teardown();
 		},
+		raw: devEnv,
 	};
 }

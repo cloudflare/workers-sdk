@@ -34,6 +34,7 @@ export const SiteBindings = {
 // This ensures edge caching of Workers Sites files is disabled, and the latest
 // local version is always served.
 export const SITES_NO_CACHE_PREFIX = "$__MINIFLARE_SITES__$/";
+export const MAX_BULK_GET_KEYS = 100;
 
 export function encodeSitesKey(key: string): string {
 	// `encodeURIComponent()` ensures `ETag`s used by `@cloudflare/kv-asset-handler`

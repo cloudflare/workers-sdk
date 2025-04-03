@@ -86,6 +86,8 @@ describe("writeOutput()", () => {
 			worker_tag: "ABCDE12345",
 			version_id: "1234",
 			targets: undefined,
+			worker_name_overridden: false,
+			wrangler_environment: undefined,
 		});
 
 		const outputFile = readFileSync(WRANGLER_OUTPUT_FILE_PATH, "utf8");
@@ -104,6 +106,8 @@ describe("writeOutput()", () => {
 				worker_tag: "ABCDE12345",
 				version_id: "1234",
 				targets: undefined,
+				worker_name_overridden: false,
+				wrangler_environment: undefined,
 			},
 		]);
 	});
@@ -151,6 +155,8 @@ describe("writeOutput()", () => {
 			worker_tag: "ABCDE12345",
 			version_id: "1234",
 			targets: undefined,
+			worker_name_overridden: false,
+			wrangler_environment: undefined,
 		});
 
 		const outputFilePaths = readdirSync("output");
@@ -172,6 +178,8 @@ describe("writeOutput()", () => {
 				worker_tag: "ABCDE12345",
 				version_id: "1234",
 				targets: undefined,
+				worker_name_overridden: false,
+				wrangler_environment: undefined,
 			},
 		]);
 	});

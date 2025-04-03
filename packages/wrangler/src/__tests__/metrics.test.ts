@@ -56,6 +56,7 @@ describe("metrics", () => {
 	afterEach(() => {
 		vi.unstubAllEnvs();
 		isCISpy.mockClear();
+		logger.resetLoggerLevel();
 	});
 
 	describe("getMetricsDispatcher()", () => {
@@ -67,6 +68,7 @@ describe("metrics", () => {
 			vi.mocked(getPlatform).mockReturnValue("mock platform");
 			vi.mocked(sniffUserAgent).mockReturnValue("npm");
 			vi.useFakeTimers({
+				toFake: ["setTimeout", "clearTimeout", "Date"],
 				now: new Date(2024, 11, 12),
 			});
 			writeMetricsConfig({
@@ -321,6 +323,7 @@ describe("metrics", () => {
 						durationSeconds: 6,
 						durationMinutes: 0.1,
 						errorType: "TypeError",
+						errorMessage: undefined,
 					},
 				};
 
@@ -445,6 +448,34 @@ describe("metrics", () => {
 				expect(std.debug).toContain('"isInteractive":false,');
 			});
 
+			it("should include an error message if the specific error has been allow-listed with {telemetryMessage:true}", async () => {
+				setIsTTY(false);
+				const requests = mockMetricRequest();
+
+				await expect(
+					runWrangler("docs arg -j=false")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Wrangler now supports wrangler.json configuration files by default and ignores the value of the \`--experimental-json-config\` flag.]`
+				);
+				expect(requests.count).toBe(2);
+				expect(std.debug).toContain(
+					'"errorMessage":"Wrangler now supports wrangler.json configuration files by default and ignores the value of the `--experimental-json-config` flag."'
+				);
+			});
+
+			it("should include an error message if the specific error has been allow-listed with a custom telemetry message", async () => {
+				setIsTTY(false);
+				const requests = mockMetricRequest();
+
+				await expect(
+					runWrangler("bloop")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Unknown argument: bloop]`
+				);
+				expect(requests.count).toBe(2);
+				expect(std.debug).toContain('"errorMessage":"yargs validation error"');
+			});
+
 			describe("banner", () => {
 				beforeEach(() => {
 					vi.mocked(getWranglerVersion).mockReturnValue("1.2.3");
@@ -552,15 +583,22 @@ describe("metrics", () => {
 				const args = {
 					default: false,
 					array: ["beep", "boop"],
-					secretArray: ["beep", "boop"],
-					// Note how
+					// Note how this is normalised
 					"secret-array": ["beep", "boop"],
 					number: 42,
 					string: "secret",
 					secretString: "secret",
+					flagOne: "default",
+					// Note how this is normalised
+					experimentalIncludeRuntime: "",
 				};
 
-				const redacted = redactArgValues(args, ["string", "array"]);
+				const redacted = redactArgValues(args, {
+					string: "*",
+					array: "*",
+					flagOne: ["default"],
+					xIncludeRuntime: [".wrangler/types/runtime.d.ts"],
+				});
 				expect(redacted).toEqual({
 					default: false,
 					array: ["beep", "boop"],
@@ -568,6 +606,8 @@ describe("metrics", () => {
 					number: 42,
 					string: "secret",
 					secretString: "<REDACTED>",
+					flagOne: "default",
+					xIncludeRuntime: ".wrangler/types/runtime.d.ts",
 				});
 			});
 		});
@@ -632,7 +672,9 @@ describe("metrics", () => {
 			});
 
 			it("should print a message if the permission date is older than the current metrics date", async () => {
-				vi.useFakeTimers();
+				vi.useFakeTimers({
+					toFake: ["setTimeout", "clearTimeout", "Date"],
+				});
 				vi.setSystemTime(new Date(2024, 11, 12));
 				const OLD_DATE = new Date(2000);
 				writeMetricsConfig({
@@ -682,7 +724,9 @@ describe("metrics", () => {
 
 	describe.each(["metrics", "telemetry"])("%s commands", (cmd) => {
 		beforeEach(() => {
-			vi.useFakeTimers();
+			vi.useFakeTimers({
+				toFake: ["setTimeout", "clearTimeout", "Date"],
+			});
 			vi.setSystemTime(new Date(2024, 11, 12));
 		});
 		afterEach(() => {

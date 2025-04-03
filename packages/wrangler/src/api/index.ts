@@ -8,6 +8,7 @@ export {
 	getMTlsCertificate,
 	getMTlsCertificateByName,
 	deleteMTlsCertificate,
+	uploadCaCertificateFromFs,
 } from "./mtls-certificate";
 export * from "./startDevWorker";
 export * from "./integrations";

@@ -45,9 +45,7 @@ describe("[Asset Worker] Fetching assets from KV", () => {
 
 			await expect(() =>
 				getAssetWithMetadataFromKV(mockKVNamespace, "abcd")
-			).rejects.toThrowError(
-				"Requested asset abcd could not be fetched from KV namespace."
-			);
+			).rejects.toThrowError("KV GET abcd failed.");
 		});
 
 		it("should retry once by default if something went wrong while fetching the asset", async () => {
@@ -55,9 +53,7 @@ describe("[Asset Worker] Fetching assets from KV", () => {
 
 			await expect(() =>
 				getAssetWithMetadataFromKV(mockKVNamespace, "abcd")
-			).rejects.toThrowError(
-				"Requested asset abcd could not be fetched from KV namespace."
-			);
+			).rejects.toThrowError("KV GET abcd failed.");
 			expect(spy).toHaveBeenCalledTimes(2);
 		});
 
@@ -66,10 +62,19 @@ describe("[Asset Worker] Fetching assets from KV", () => {
 
 			await expect(() =>
 				getAssetWithMetadataFromKV(mockKVNamespace, "abcd", undefined, 2)
-			).rejects.toThrowError(
-				"Requested asset abcd could not be fetched from KV namespace."
-			);
+			).rejects.toThrowError("KV GET abcd failed.");
 			expect(spy).toHaveBeenCalledTimes(3);
+		});
+
+		it("should inject message with error", async () => {
+			spy.mockReturnValue(
+				Promise.reject(new Error("Oeps! Something went wrong"))
+			);
+
+			await expect(() =>
+				getAssetWithMetadataFromKV(mockKVNamespace, "abcd")
+			).rejects.toThrowError("KV GET abcd failed: Oeps! Something went wrong");
+			expect(spy).toHaveBeenCalledTimes(2);
 		});
 
 		it("should retry on 404 and cache with 30s ttl", async () => {

@@ -9,7 +9,13 @@ import {
 } from "../ai/fetcher";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
-import { UserError } from "../errors";
+import { createFatalError, UserError } from "../errors";
+import {
+	EXTERNAL_IMAGES_WORKER_NAME,
+	EXTERNAL_IMAGES_WORKER_SCRIPT,
+	imagesLocalFetcher,
+	imagesRemoteFetcher,
+} from "../images/fetcher";
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
@@ -27,6 +33,7 @@ import type {
 	CfDurableObject,
 	CfHyperdrive,
 	CfKvNamespace,
+	CfPipeline,
 	CfQueue,
 	CfR2Bucket,
 	CfScriptFormat,
@@ -187,6 +194,7 @@ export interface ConfigBundle {
 	services: Config["services"] | undefined;
 	serviceBindings: Record<string, ServiceFetch>;
 	bindVectorizeToProd: boolean;
+	imagesLocalMode: boolean;
 	testScheduled: boolean;
 }
 
@@ -327,6 +335,9 @@ function queueProducerEntry(
 		{ queueName: queue.queue_name, deliveryDelay: queue.delivery_delay },
 	];
 }
+function pipelineEntry(pipeline: CfPipeline): [string, string] {
+	return [pipeline.binding, pipeline.pipeline];
+}
 function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
 }
@@ -368,6 +379,7 @@ type WorkerOptionsBindings = Pick<
 	| "d1Databases"
 	| "queueProducers"
 	| "queueConsumers"
+	| "pipelines"
 	| "hyperdrives"
 	| "durableObjects"
 	| "serviceBindings"
@@ -384,6 +396,7 @@ type MiniflareBindingsConfig = Pick<
 	| "name"
 	| "services"
 	| "serviceBindings"
+	| "imagesLocalMode"
 > &
 	Partial<Pick<ConfigBundle, "format" | "bundle" | "assets">>;
 
@@ -434,6 +447,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		}
 
 		const target = config.workerDefinitions?.[service.service];
+
 		if (target?.host === undefined || target.port === undefined) {
 			// If the target isn't in the registry, always return an error response
 			notFoundServices.add(service.service);
@@ -446,7 +460,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			// services support JSRPC over HTTP CONNECT using a special hostname.
 			// Refer to https://github.com/cloudflare/workerd/pull/1757 for details.
 			let address: `${string}:${number}`;
-			let style = HttpOptions_Style.PROXY;
+			let style: HttpOptions_Style = HttpOptions_Style.PROXY;
 			if (service.entrypoint !== undefined) {
 				// If the user has requested a named entrypoint...
 				if (target.entrypointAddresses === undefined) {
@@ -589,7 +603,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
 	if (bindings.ai?.binding) {
 		externalWorkers.push({
-			name: EXTERNAL_AI_WORKER_NAME,
+			name: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
 			modules: [
 				{
 					type: "ESModule",
@@ -603,7 +617,29 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		});
 
 		wrappedBindings[bindings.ai.binding] = {
-			scriptName: EXTERNAL_AI_WORKER_NAME,
+			scriptName: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
+		};
+	}
+
+	if (bindings.images?.binding) {
+		externalWorkers.push({
+			name: `${EXTERNAL_IMAGES_WORKER_NAME}:${config.name}`,
+			modules: [
+				{
+					type: "ESModule",
+					path: "index.mjs",
+					contents: EXTERNAL_IMAGES_WORKER_SCRIPT,
+				},
+			],
+			serviceBindings: {
+				FETCHER: config.imagesLocalMode
+					? imagesLocalFetcher
+					: imagesRemoteFetcher,
+			},
+		});
+
+		wrappedBindings[bindings.images?.binding] = {
+			scriptName: `${EXTERNAL_IMAGES_WORKER_NAME}:${config.name}`,
 		};
 	}
 
@@ -614,7 +650,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			const indexVersion = "v2";
 
 			externalWorkers.push({
-				name: EXTERNAL_VECTORIZE_WORKER_NAME + bindingName,
+				name: `${EXTERNAL_VECTORIZE_WORKER_NAME}:${config.name}:${bindingName}`,
 				modules: [
 					{
 						type: "ESModule",
@@ -632,7 +668,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			});
 
 			wrappedBindings[bindingName] = {
-				scriptName: EXTERNAL_VECTORIZE_WORKER_NAME + bindingName,
+				scriptName: `${EXTERNAL_VECTORIZE_WORKER_NAME}:${config.name}:${bindingName}`,
 			};
 		}
 	}
@@ -664,6 +700,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		queueConsumers: Object.fromEntries(
 			config.queueConsumers?.map(queueConsumerEntry) ?? []
 		),
+		pipelines: Object.fromEntries(bindings.pipelines?.map(pipelineEntry) ?? []),
 		hyperdrives: Object.fromEntries(
 			bindings.hyperdrive?.map(hyperdriveEntry) ?? []
 		),
@@ -751,7 +788,7 @@ export function buildAssetOptions(config: Pick<ConfigBundle, "assets">) {
 			assets: {
 				directory: config.assets.directory,
 				binding: config.assets.binding,
-				routingConfig: config.assets.routingConfig,
+				routerConfig: config.assets.routerConfig,
 				assetConfig: config.assets.assetConfig,
 			},
 		};
@@ -906,6 +943,7 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 let didWarnMiniflareCronSupport = false;
 let didWarnMiniflareVectorizeSupport = false;
 let didWarnAiAccountUsage = false;
+let didWarnImagesLocalModeUsage = false;
 
 export type Options = Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
 
@@ -948,6 +986,23 @@ export async function buildMiniflareOptions(
 			didWarnMiniflareVectorizeSupport = true;
 			logger.warn(
 				"You are using a mixed-mode binding for Vectorize (through `--experimental-vectorize-bind-to-prod`). It may incur usage charges and modify your databases even in local development. "
+			);
+		}
+	}
+
+	if (config.bindings.images && config.imagesLocalMode) {
+		if (!didWarnImagesLocalModeUsage) {
+			try {
+				await import("sharp");
+			} catch {
+				const msg =
+					"Sharp must be installed to use the Images binding local mode; check your version of Node is compatible";
+				throw createFatalError(msg, false);
+			}
+
+			didWarnImagesLocalModeUsage = true;
+			logger.info(
+				"You are using Images local mode. This only supports resizing, rotating and transcoding."
 			);
 		}
 	}

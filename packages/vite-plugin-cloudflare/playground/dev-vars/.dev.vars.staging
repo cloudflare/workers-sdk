@@ -1,0 +1,3 @@
+ENV_NAME = "staging"
+MY_DEV_VAR_A = "my .dev.vars staging variable A"
+MY_DEV_VAR_B = "my .dev.vars staging variable B"

@@ -1,8 +1,7 @@
+import assert from "node:assert";
 import { builtinModules } from "node:module";
 import nodePath from "node:path";
-import { cloudflare } from "@cloudflare/unenv-preset";
 import dedent from "ts-dedent";
-import { defineEnv } from "unenv";
 import { getBasePath } from "../../paths";
 import type { Plugin, PluginBuild } from "esbuild";
 
@@ -12,32 +11,27 @@ const REQUIRED_UNENV_ALIAS_NAMESPACE = "required-unenv-alias";
 /**
  * ESBuild plugin to apply the unenv preset.
  *
- * @param unenvResolvePaths Root paths used to resolve absolute paths.
+ * @param _unenvResolvePaths Root paths used to resolve absolute paths.
  * @returns ESBuild plugin
  */
-export function nodejsHybridPlugin(unenvResolvePaths?: string[]): Plugin {
-	// Get the resolved environment.
-	const { env } = defineEnv({
-		nodeCompat: true,
+export async function nodejsHybridPlugin(
+	_unenvResolvePaths?: string[]
+): Promise<Plugin> {
+	// `unenv` and `@cloudflare/unenv-preset` only publish esm
+	const { defineEnv } = await import("unenv");
+	const { cloudflare } = await import("@cloudflare/unenv-preset");
+	const { alias, inject, external, polyfill } = defineEnv({
 		presets: [cloudflare],
-		resolve: {
-			paths: unenvResolvePaths,
-		},
-	});
-	const { alias, inject, external } = env;
-	// Get the unresolved alias.
-	const unresolvedAlias = defineEnv({
-		nodeCompat: true,
-		presets: [cloudflare],
-		resolve: false,
-	}).env.alias;
+		npmShims: true,
+	}).env;
+
 	return {
 		name: "hybrid-nodejs_compat",
 		setup(build) {
 			errorOnServiceWorkerFormat(build);
 			handleRequireCallsToNodeJSBuiltins(build);
-			handleUnenvAliasedPackages(build, unresolvedAlias, alias, external);
-			handleNodeJSGlobals(build, inject);
+			handleUnenvAliasedPackages(build, alias, external);
+			handleNodeJSGlobals(build, inject, polyfill);
 		},
 	};
 }
@@ -112,26 +106,36 @@ function handleRequireCallsToNodeJSBuiltins(build: PluginBuild) {
  * Handles aliased NPM packages.
  *
  * @param build ESBuild PluginBuild.
- * @param unresolvedAlias Unresolved aliases from the presets.
  * @param alias Aliases resolved to absolute paths.
  * @param external external modules.
  */
 function handleUnenvAliasedPackages(
 	build: PluginBuild,
-	unresolvedAlias: Record<string, string>,
 	alias: Record<string, string>,
-	external: string[]
+	external: readonly string[]
 ) {
-	const UNENV_ALIAS_RE = new RegExp(`^(${Object.keys(alias).join("|")})$`);
+	// esbuild expects alias paths to be absolute
+	const aliasAbsolute: Record<string, string> = {};
+	for (const [module, unresolvedAlias] of Object.entries(alias)) {
+		try {
+			aliasAbsolute[module] = require.resolve(unresolvedAlias);
+		} catch (e) {
+			// this is an alias for package that is not installed in the current app => ignore
+		}
+	}
+
+	const UNENV_ALIAS_RE = new RegExp(
+		`^(${Object.keys(aliasAbsolute).join("|")})$`
+	);
 
 	build.onResolve({ filter: UNENV_ALIAS_RE }, (args) => {
-		const unresolved = unresolvedAlias[args.path];
+		const unresolvedAlias = alias[args.path];
 		// Convert `require()` calls for NPM packages to a virtual ES Module that can be imported avoiding the require calls.
 		// Note: Does not apply to Node.js packages that are handled in `handleRequireCallsToNodeJSBuiltins`
 		if (
 			args.kind === "require-call" &&
-			(unresolved.startsWith("unenv/runtime/npm/") ||
-				unresolved.startsWith("unenv/runtime/mock/"))
+			(unresolvedAlias.startsWith("unenv/npm/") ||
+				unresolvedAlias.startsWith("unenv/mock/"))
 		) {
 			return {
 				path: args.path,
@@ -141,26 +145,10 @@ function handleUnenvAliasedPackages(
 
 		// Resolve the alias to its absolute path and potentially mark it as external
 		return {
-			path: alias[args.path],
-			external: external.includes(unresolved),
+			path: aliasAbsolute[args.path],
+			external: external.includes(unresolvedAlias),
 		};
 	});
-
-	build.initialOptions.banner = { js: "", ...build.initialOptions.banner };
-	build.initialOptions.banner.js += dedent`
-		function __cf_cjs(esm) {
-		  const cjs = 'default' in esm ? esm.default : {};
-			for (const [k, v] of Object.entries(esm)) {
-				if (k !== 'default') {
-					Object.defineProperty(cjs, k, {
-						enumerable: true,
-						value: v,
-					});
-				}
-			}
-			return cjs;
-		}
-		`;
 
 	build.onLoad(
 		{ filter: /.*/, namespace: REQUIRED_UNENV_ALIAS_NAMESPACE },
@@ -168,7 +156,12 @@ function handleUnenvAliasedPackages(
 			return {
 				contents: dedent`
 					import * as esm from '${path}';
-					module.exports = __cf_cjs(esm);
+					module.exports = Object.entries(esm)
+								.filter(([k,]) => k !== 'default')
+								.reduce((cjs, [k, value]) =>
+									Object.defineProperty(cjs, k, { value, enumerable: true }),
+									"default" in esm ? esm.default : {}
+								);
 				`,
 				loader: "js",
 			};
@@ -177,77 +170,79 @@ function handleUnenvAliasedPackages(
 }
 
 /**
- * Inject node globals defined in unenv's `inject` config via virtual modules
+ * Inject node globals defined in unenv's preset `inject` and `polyfill` properties.
+ *
+ * - an `inject` injects virtual module defining the name on `globalThis`
+ * - a `polyfill` is injected directly
  */
 function handleNodeJSGlobals(
 	build: PluginBuild,
-	inject: Record<string, string | string[]>
+	inject: Record<string, string | readonly string[]>,
+	polyfill: readonly string[]
 ) {
-	const UNENV_GLOBALS_RE = /_virtual_unenv_global_polyfill-([^.]+)\.js$/;
+	const UNENV_VIRTUAL_MODULE_RE = /_virtual_unenv_global_polyfill-(.+)$/;
 	const prefix = nodePath.resolve(
 		getBasePath(),
 		"_virtual_unenv_global_polyfill-"
 	);
 
+	/**
+	 * Map of module identifiers to
+	 * - `injectedName`: the name injected on `globalThis`
+	 * - `exportName`: the export name from the module
+	 * - `importName`: the imported name
+	 */
+	const injectsByModule = new Map<
+		string,
+		{ injectedName: string; exportName: string; importName: string }[]
+	>();
+
+	// Module specifier (i.e. `/unenv/runtime/node/...`) keyed by path (i.e. `/prefix/_virtual_unenv_global_polyfill-...`)
+	const virtualModulePathToSpecifier = new Map<string, string>();
+
+	for (const [injectedName, moduleSpecifier] of Object.entries(inject)) {
+		const [module, exportName, importName] = Array.isArray(moduleSpecifier)
+			? [moduleSpecifier[0], moduleSpecifier[1], moduleSpecifier[1]]
+			: [moduleSpecifier, "default", "defaultExport"];
+
+		if (!injectsByModule.has(module)) {
+			injectsByModule.set(module, []);
+			virtualModulePathToSpecifier.set(
+				prefix + module.replaceAll("/", "-"),
+				module
+			);
+		}
+		// eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
+		injectsByModule.get(module)!.push({ injectedName, exportName, importName });
+	}
+
 	build.initialOptions.inject = [
 		...(build.initialOptions.inject ?? []),
-		//convert unenv's inject keys to absolute specifiers of custom virtual modules that will be provided via a custom onLoad
-		...Object.keys(inject).map(
-			(globalName) => `${prefix}${encodeToLowerCase(globalName)}.js`
-		),
+		// Inject the virtual modules
+		...virtualModulePathToSpecifier.keys(),
+		// Inject the polyfills - needs an absolute path
+		...polyfill.map((m) => require.resolve(m)),
 	];
 
-	build.onResolve({ filter: UNENV_GLOBALS_RE }, ({ path }) => ({ path }));
+	build.onResolve({ filter: UNENV_VIRTUAL_MODULE_RE }, ({ path }) => ({
+		path,
+	}));
 
-	build.onLoad({ filter: UNENV_GLOBALS_RE }, ({ path }) => {
-		// eslint-disable-next-line  @typescript-eslint/no-non-null-assertion
-		const globalName = decodeFromLowerCase(path.match(UNENV_GLOBALS_RE)![1]);
-		const { importStatement, exportName } = getGlobalInject(inject[globalName]);
+	build.onLoad({ filter: UNENV_VIRTUAL_MODULE_RE }, ({ path }) => {
+		const module = virtualModulePathToSpecifier.get(path);
+		assert(module, `Expected ${path} to be mapped to a module specifier`);
+		const injects = injectsByModule.get(module);
+		assert(injects, `Expected ${module} to inject values`);
+
+		const imports = injects.map(({ exportName, importName }) =>
+			importName === exportName ? exportName : `${exportName} as ${importName}`
+		);
 
 		return {
 			contents: dedent`
-				${importStatement}
-				globalThis.${globalName} = ${exportName};
+				import { ${imports.join(", ")} } from "${module}";
+				${injects.map(({ injectedName, importName }) => `globalThis.${injectedName} = ${importName};`).join("\n")}
 			`,
 		};
 	});
-}
-
-/**
- * Get the import statement and export name to be used for the given global inject setting.
- */
-function getGlobalInject(globalInject: string | string[]) {
-	if (typeof globalInject === "string") {
-		// the mapping is a simple string, indicating a default export, so the string is just the module specifier.
-		return {
-			importStatement: `import globalVar from "${globalInject}";`,
-			exportName: "globalVar",
-		};
-	}
-	// the mapping is a 2 item tuple, indicating a named export, made up of a module specifier and an export name.
-	const [moduleSpecifier, exportName] = globalInject;
-	return {
-		importStatement: `import { ${exportName} } from "${moduleSpecifier}";`,
-		exportName,
-	};
-}
-
-/**
- * Encodes a case sensitive string to lowercase string.
- *
- * - Escape $ with another $ ("$" -> "$$")
- * - Escape uppercase letters with $ and turn them into lowercase letters ("L" -> "$L")
- *
- * This function exists because ESBuild requires that all resolved paths are case insensitive.
- * Without this transformation, ESBuild will clobber /foo/bar.js with /foo/Bar.js
- */
-export function encodeToLowerCase(str: string): string {
-	return str.replace(/[A-Z$]/g, (escape) => `$${escape.toLowerCase()}`);
-}
-
-/**
- * Decodes a string lowercased using `encodeToLowerCase` to the original strings
- */
-export function decodeFromLowerCase(str: string): string {
-	return str.replace(/\$[a-z$]/g, (escaped) => escaped[1].toUpperCase());
 }

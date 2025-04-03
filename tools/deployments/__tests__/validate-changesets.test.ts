@@ -31,6 +31,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/workers-editor-shared",
 				"@cloudflare/workers-shared",
 				"@cloudflare/workflows-shared",
+				"@cloudflare/vite-plugin",
 				"cloudflare-workers-bindings-extension",
 				"create-cloudflare",
 				"devprod-status-bot",

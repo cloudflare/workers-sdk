@@ -10,12 +10,9 @@ import {
 import { fetchResult } from "../cfetch";
 import { configFileName, formatConfigSnippet } from "../config";
 import { createCommand } from "../core/create-command";
-import { getBindings } from "../deployment-bundle/bindings";
+import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
-import {
-	printBundleSize,
-	printOffendingDependencies,
-} from "../deployment-bundle/bundle-reporter";
+import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { getEntry } from "../deployment-bundle/entry";
@@ -32,7 +29,9 @@ import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
+import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
+import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";
 import { getMetricsUsageHeaders } from "../metrics";
@@ -49,17 +48,19 @@ import {
 } from "../sourcemap";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
+import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { printBindings } from "../utils/print-bindings";
-import { retryOnError } from "../utils/retry";
+import { retryOnAPIFailure } from "../utils/retry";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type { Rule } from "../config/environment";
 import type { Entry } from "../deployment-bundle/entry";
 import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
+import type { FormData } from "undici";
 
 type Props = {
 	config: Config;
@@ -81,53 +82,17 @@ type Props = {
 	isWorkersSite: boolean;
 	minify: boolean | undefined;
 	uploadSourceMaps: boolean | undefined;
-	nodeCompat: boolean | undefined;
 	outDir: string | undefined;
+	outFile: string | undefined;
 	dryRun: boolean | undefined;
 	noBundle: boolean | undefined;
 	keepVars: boolean | undefined;
 	projectRoot: string | undefined;
+	experimentalAutoCreate: boolean;
 
 	tag: string | undefined;
 	message: string | undefined;
 };
-
-const scriptStartupErrorRegex = /startup/i;
-
-function errIsScriptSize(err: unknown): err is { code: 10027 } {
-	if (!err) {
-		return false;
-	}
-
-	// 10027 = workers.api.error.script_too_large
-	if ((err as { code: number }).code === 10027) {
-		return true;
-	}
-
-	return false;
-}
-
-function errIsStartupErr(err: unknown): err is ParseError & { code: 10021 } {
-	if (!err) {
-		return false;
-	}
-
-	// 10021 = validation error
-	// no explicit error code for more granular errors than "invalid script"
-	// but the error will contain a string error message directly from the
-	// validator.
-	// the error always SHOULD look like "Script startup exceeded CPU limit."
-	// (or the less likely "Script startup exceeded memory limits.")
-	if (
-		(err as { code: number }).code === 10021 &&
-		err instanceof ParseError &&
-		scriptStartupErrorRegex.test(err.notes[0]?.text)
-	) {
-		return true;
-	}
-
-	return false;
-}
 
 export const versionsUploadCommand = createCommand({
 	metadata: {
@@ -161,6 +126,11 @@ export const versionsUploadCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
+		outfile: {
+			describe: "Output file for the bundled worker",
+			type: "string",
+			requiresArg: true,
+		},
 		"compatibility-date": {
 			describe: "Date to use for compatibility checks",
 			type: "string",
@@ -182,19 +152,6 @@ export const versionsUploadCommand = createCommand({
 			describe: "Static assets to be served. Replaces Workers Sites.",
 			type: "string",
 			requiresArg: true,
-		},
-		format: {
-			choices: ["modules", "service-worker"] as const,
-			describe: "Choose an entry type",
-			deprecated: true,
-			hidden: true,
-		},
-		"legacy-assets": {
-			describe: "Static assets to be served",
-			type: "string",
-			requiresArg: true,
-			deprecated: true,
-			hidden: true,
 		},
 		site: {
 			describe: "Root folder of static assets for Workers Sites",
@@ -266,6 +223,8 @@ export const versionsUploadCommand = createCommand({
 		"node-compat": {
 			describe: "Enable Node.js compatibility",
 			type: "boolean",
+			hidden: true,
+			deprecated: true,
 		},
 		"dry-run": {
 			describe: "Don't actually deploy",
@@ -282,9 +241,20 @@ export const versionsUploadCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
+		"experimental-auto-create": {
+			describe: "Automatically provision draft bindings with new resources",
+			type: "boolean",
+			default: true,
+			hidden: true,
+			alias: "x-auto-create",
+		},
 	},
 	behaviour: {
 		useConfigRedirectIfAvailable: true,
+		overrideExperimentalFlags: (args) => ({
+			MULTIWORKER: false,
+			RESOURCES_PROVISION: args.experimentalProvision ?? false,
+		}),
 	},
 	handler: async function versionsUploadHandler(args, { config }) {
 		const entry = await getEntry(args, config, "versions upload");
@@ -298,14 +268,16 @@ export const versionsUploadCommand = createCommand({
 			}
 		);
 
-		if (args.site || config.site) {
+		if (args.nodeCompat) {
 			throw new UserError(
-				"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
+				`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`
 			);
 		}
-		if (args.legacyAssets || config.legacy_assets) {
+
+		if (args.site || config.site) {
 			throw new UserError(
-				"Legacy assets does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead."
+				"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead.",
+				{ telemetryMessage: true }
 			);
 		}
 
@@ -315,10 +287,6 @@ export const versionsUploadCommand = createCommand({
 
 		validateAssetsArgsAndConfig(
 			{
-				// given that legacyAssets and sites are not supported by
-				// `wrangler versions upload` pass them as undefined to
-				// skip the corresponding mutual exclusivity validation
-				legacyAssets: undefined,
 				site: undefined,
 				assets: args.assets,
 				script: args.script,
@@ -339,21 +307,30 @@ export const versionsUploadCommand = createCommand({
 		const cliAlias = collectKeyValues(args.alias);
 
 		const accountId = args.dryRun ? undefined : await requireAuth(config);
-		const name = getScriptName(args, config);
+		let name = getScriptName(args, config);
 
-		assert(
-			name,
-			'You need to provide a name when publishing a worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
-		);
+		const ciOverrideName = getCIOverrideName();
+		let workerNameOverridden = false;
+		if (ciOverrideName !== undefined && ciOverrideName !== name) {
+			logger.warn(
+				`Failed to match Worker name. Your config file is using the Worker name "${name}", but the CI system expected "${ciOverrideName}". Overriding using the CI provided Worker name. Workers Builds connected builds will attempt to open a pull request to resolve this config name mismatch.`
+			);
+			name = ciOverrideName;
+			workerNameOverridden = true;
+		}
+
+		if (!name) {
+			throw new UserError(
+				'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
+				{ telemetryMessage: true }
+			);
+		}
 
 		if (!args.dryRun) {
 			assert(accountId, "Missing account ID");
 			await verifyWorkerMatchesCITag(accountId, name, config.configPath);
 		}
 
-		if (!args.dryRun) {
-			await standardPricingWarning(config);
-		}
 		const { versionId, workerTag, versionPreviewUrl } = await versionsUpload({
 			config,
 			accountId,
@@ -375,7 +352,6 @@ export const versionsUploadCommand = createCommand({
 			assetsOptions,
 			minify: args.minify,
 			uploadSourceMaps: args.uploadSourceMaps,
-			nodeCompat: args.nodeCompat,
 			isWorkersSite: Boolean(args.site || config.site),
 			outDir: args.outdir,
 			dryRun: args.dryRun,
@@ -384,6 +360,8 @@ export const versionsUploadCommand = createCommand({
 			projectRoot: entry.projectRoot,
 			tag: args.tag,
 			message: args.message,
+			experimentalAutoCreate: args.experimentalAutoCreate,
+			outFile: args.outfile,
 		});
 
 		writeOutput({
@@ -393,17 +371,11 @@ export const versionsUploadCommand = createCommand({
 			worker_tag: workerTag,
 			version_id: versionId,
 			preview_url: versionPreviewUrl,
+			wrangler_environment: args.env,
+			worker_name_overridden: workerNameOverridden,
 		});
 	},
 });
-
-async function standardPricingWarning(config: Config) {
-	if (config.usage_model !== undefined) {
-		logger.warn(
-			`The \`usage_model\` defined in your ${configFileName(config.configPath)} file is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model`
-		);
-	}
-}
 
 export default async function versionsUpload(props: Props): Promise<{
 	versionId: string | null;
@@ -486,7 +458,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		props.compatibilityDate ?? config.compatibility_date,
 		props.compatibilityFlags ?? config.compatibility_flags,
 		{
-			nodeCompat: props.nodeCompat ?? config.node_compat,
 			noBundle: props.noBundle ?? config.no_bundle,
 		}
 	);
@@ -592,7 +563,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						bundle: true,
 						additionalModules: [],
 						moduleCollector,
-						serveLegacyAssetsFromWorker: false,
 						doBindings: config.durable_objects.bindings,
 						workflowBindings: config.workflows,
 						jsxFactory,
@@ -604,10 +574,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						define: { ...config.define, ...props.defines },
 						alias: { ...config.alias, ...props.alias },
 						checkFetch: false,
-						legacyAssets: config.legacy_assets,
 						mockAnalyticsEngineDatasets: [],
-						// enable the cache when publishing
-						bypassAssetCache: false,
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "deploy",
@@ -707,8 +674,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				props.assetsOptions && assetsJwt
 					? {
 							jwt: assetsJwt,
-							routingConfig: props.assetsOptions.routingConfig,
+							routerConfig: props.assetsOptions.routerConfig,
 							assetConfig: props.assetsOptions.assetConfig,
+							_redirects: props.assetsOptions._redirects,
+							_headers: props.assetsOptions._headers,
 						}
 					: undefined,
 			logpush: undefined, // both logpush and observability are not supported in versions upload
@@ -731,17 +700,30 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			}
 		}
 
+		let workerBundle: FormData;
+
 		if (props.dryRun) {
+			workerBundle = createWorkerUploadForm(worker);
 			printBindings({ ...bindings, vars: maskedVars });
 		} else {
+			assert(accountId, "Missing accountId");
+			if (getFlag("RESOURCES_PROVISION")) {
+				await provisionBindings(
+					bindings,
+					accountId,
+					scriptName,
+					props.experimentalAutoCreate,
+					props.config
+				);
+			}
+			workerBundle = createWorkerUploadForm(worker);
+
 			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;
 
 			// Upload the version.
 			try {
-				const body = createWorkerUploadForm(worker);
-
-				const result = await retryOnError(async () =>
+				const result = await retryOnAPIFailure(async () =>
 					fetchResult<{
 						id: string;
 						startup_time_ms: number;
@@ -750,7 +732,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						};
 					}>(`${workerUrl}/versions`, {
 						method: "POST",
-						body,
+						body: workerBundle,
 						headers: await getMetricsUsageHeaders(config.send_metrics),
 					})
 				);
@@ -765,7 +747,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					printBindings({ ...bindings, vars: maskedVars });
 				}
 
-				helpIfErrorIsSizeOrScriptStartup(err, dependencies);
+				await helpIfErrorIsSizeOrScriptStartup(
+					err,
+					dependencies,
+					workerBundle,
+					props.projectRoot
+				);
 
 				// Apply source mapping to validation startup errors if possible
 				if (
@@ -802,6 +789,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 				throw err;
 			}
+		}
+		if (props.outFile) {
+			// we're using a custom output file,
+			// so let's first ensure it's parent directory exists
+			mkdirSync(path.dirname(props.outFile), { recursive: true });
+
+			const serializedFormData = await new Response(workerBundle).arrayBuffer();
+
+			writeFileSync(props.outFile, Buffer.from(serializedFormData));
 		}
 	} finally {
 		if (typeof destination !== "string") {
@@ -856,27 +852,6 @@ Changes to triggers (routes, custom domains, cron schedules, etc) must be applie
 	);
 
 	return { versionId, workerTag, versionPreviewUrl };
-}
-
-function helpIfErrorIsSizeOrScriptStartup(
-	err: unknown,
-	dependencies: { [path: string]: { bytesInOutput: number } }
-) {
-	if (errIsScriptSize(err)) {
-		printOffendingDependencies(dependencies);
-	} else if (errIsStartupErr(err)) {
-		const youFailed =
-			"Your Worker failed validation because it exceeded startup limits.";
-		const heresWhy =
-			"To ensure fast responses, we place constraints on Worker startup -- like how much CPU it can use, or how long it can take.";
-		const heresTheProblem =
-			"Your Worker failed validation, which means it hit one of these startup limits.";
-		const heresTheSolution =
-			"Try reducing the amount of work done during startup (outside the event handler), either by removing code or relocating it inside the event handler.";
-		logger.warn(
-			[youFailed, heresWhy, heresTheProblem, heresTheSolution].join("\n")
-		);
-	}
 }
 
 function formatTime(duration: number) {

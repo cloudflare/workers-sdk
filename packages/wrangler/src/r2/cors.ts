@@ -96,10 +96,9 @@ export const r2BucketCORSSetCommand = createCommand({
 
 		const jsonFilePath = path.resolve(file);
 
-		const corsConfig = parseJSON<{ rules: CORSRule[] }>(
-			readFileSync(jsonFilePath),
-			jsonFilePath
-		);
+		const corsConfig = parseJSON(readFileSync(jsonFilePath), jsonFilePath) as {
+			rules: CORSRule[];
+		};
 
 		if (!corsConfig.rules || !Array.isArray(corsConfig.rules)) {
 			throw new UserError(

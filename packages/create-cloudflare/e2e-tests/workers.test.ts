@@ -1,3 +1,4 @@
+import { existsSync } from "fs";
 import { join } from "path";
 import { readJSON, readToml } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
@@ -6,7 +7,7 @@ import { sleep } from "helpers/sleep";
 import { fetch } from "undici";
 import { beforeAll, describe, expect } from "vitest";
 import { deleteWorker } from "../scripts/common";
-import { getFrameworkToTest } from "./frameworkToTest";
+import { getFrameworkToTest } from "./frameworks/framework-to-test";
 import {
 	isQuarantineMode,
 	kill,
@@ -14,6 +15,7 @@ import {
 	runC3,
 	spawnWithLogging,
 	test,
+	waitForExit,
 } from "./helpers";
 import type { RunnerConfig } from "./helpers";
 import type { Writable } from "stream";
@@ -30,12 +32,26 @@ type WorkerTestConfig = RunnerConfig & {
 
 function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 	if (opts.experimental) {
+		// none currently
 		return [];
 	} else {
 		return [
 			{
 				template: "hello-world",
-				variants: ["TypeScript", "JavaScript", "Python"],
+				variants: ["ts", "js"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello World!",
+				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "Hello World!",
+				},
+				verifyTest: true,
+			},
+			{
+				template: "hello-world",
+				variants: ["python"],
 				verifyDeploy: {
 					route: "/",
 					expectedText: "Hello World!",
@@ -46,8 +62,53 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 				},
 			},
 			{
+				template: "hello-world-with-assets",
+				variants: ["ts", "js"],
+				verifyDeploy: {
+					route: "/message",
+					expectedText: "Hello, World!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+				verifyTest: true,
+				argv: ["--category", "hello-world"],
+			},
+			{
+				template: "hello-world-with-assets",
+				variants: ["python"],
+				verifyDeploy: {
+					route: "/message",
+					expectedText: "Hello, World!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+				argv: ["--category", "hello-world"],
+			},
+			{
+				template: "hello-world-durable-object-with-assets",
+				variants: ["ts", "js"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello, World!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+				argv: ["--category", "hello-world"],
+			},
+			{
+				template: "hello-world-assets-only",
+				variants: [],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello, World!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+				argv: ["--category", "hello-world"],
+			},
+			{
 				template: "common",
-				variants: ["TypeScript", "JavaScript"],
+				variants: ["ts", "js"],
 				verifyDeploy: {
 					route: "/",
 					expectedText: "Try making requests to:",
@@ -59,14 +120,14 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 			},
 			{
 				template: "queues",
-				variants: ["TypeScript", "JavaScript"],
+				variants: ["ts", "js"],
 				// Skipped for now, since C3 does not yet support resource creation
 				verifyDeploy: null,
 				verifyPreview: null,
 			},
 			{
 				template: "scheduled",
-				variants: ["TypeScript", "JavaScript"],
+				variants: ["ts", "js"],
 				// Skipped for now, since it's not possible to test scheduled events on deployed Workers
 				verifyDeploy: null,
 				verifyPreview: null,
@@ -87,14 +148,14 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 	}
 }
 
-const experimental = Boolean(process.env.E2E_EXPERIMENTAL);
+const experimental = process.env.E2E_EXPERIMENTAL === "true";
 const workerTests = getWorkerTests({ experimental });
 
 describe
 	.skipIf(
-		experimental || // skip until we add tests for experimental workers templates
-			getFrameworkToTest({ experimental }) ||
+		getFrameworkToTest({ experimental }) ||
 			isQuarantineMode() ||
+			workerTests.length === 0 ||
 			process.platform === "win32",
 	)
 	.concurrent(`E2E: Workers templates`, () => {
@@ -109,15 +170,7 @@ describe
 							return {
 								...testConfig,
 								name: `${testConfig.name ?? testConfig.template}-${variant.toLowerCase()}`,
-								promptHandlers: [
-									{
-										matcher: /Which language do you want to use\?/,
-										input: {
-											type: "select",
-											target: variant,
-										},
-									},
-								],
+								argv: (testConfig.argv ?? []).concat("--lang", variant),
 							};
 						})
 					: [testConfig],
@@ -126,6 +179,7 @@ describe
 				const name = testConfig.name ?? testConfig.template;
 				test({ experimental })(
 					name,
+					{ retry: 1, timeout: testConfig.timeout || TEST_TIMEOUT },
 					async ({ project, logStream }) => {
 						try {
 							const deployedUrl = await runCli(
@@ -137,9 +191,6 @@ describe
 							// Relevant project files should have been created
 							expect(project.path).toExist();
 
-							const gitignorePath = join(project.path, ".gitignore");
-							expect(gitignorePath).toExist();
-
 							const pkgJsonPath = join(project.path, "package.json");
 							expect(pkgJsonPath).toExist();
 
@@ -147,19 +198,25 @@ describe
 							expect(wranglerPath).toExist();
 
 							const tomlPath = join(project.path, "wrangler.toml");
-							const jsonPath = join(project.path, "wrangler.json");
+							const jsoncPath = join(project.path, "wrangler.jsonc");
 
-							try {
-								expect(jsonPath).toExist();
-								const config = readJSON(jsonPath) as { main: string };
-								expect(join(project.path, config.main)).toExist();
-							} catch {
-								expect(tomlPath).toExist();
-								const config = readToml(tomlPath) as { main: string };
-								expect(join(project.path, config.main)).toExist();
+							if (existsSync(jsoncPath)) {
+								const config = readJSON(jsoncPath) as { main?: string };
+								if (config.main) {
+									expect(join(project.path, config.main)).toExist();
+								}
+							} else if (existsSync(tomlPath)) {
+								const config = readToml(tomlPath) as { main?: string };
+								if (config.main) {
+									expect(join(project.path, config.main)).toExist();
+								}
+							} else {
+								expect.fail(
+									`Expected at least one of "${jsoncPath}" or "${tomlPath}" to exist.`,
+								);
 							}
 
-							const { verifyDeploy } = testConfig;
+							const { verifyDeploy, verifyTest } = testConfig;
 							if (verifyDeploy) {
 								if (deployedUrl) {
 									await verifyDeployment(deployedUrl, verifyDeploy);
@@ -167,11 +224,14 @@ describe
 									await verifyLocalDev(testConfig, project.path, logStream);
 								}
 							}
+
+							if (verifyTest) {
+								await verifyTestScript(project.path, logStream);
+							}
 						} finally {
 							await deleteWorker(project.name);
 						}
 					},
-					{ retry: 1, timeout: testConfig.timeout || TEST_TIMEOUT },
 				);
 			});
 	});
@@ -185,6 +245,7 @@ const runCli = async (
 		projectPath,
 		"--type",
 		template,
+		...(experimental ? ["--experimental"] : []),
 		"--no-open",
 		"--no-git",
 		NO_DEPLOY ? "--no-deploy" : "--deploy",
@@ -279,3 +340,21 @@ const verifyLocalDev = async (
 		await sleep(1000);
 	}
 };
+
+async function verifyTestScript(projectPath: string, logStream: Writable) {
+	const proc = spawnWithLogging(
+		[pm, "run", "test"],
+		{
+			cwd: projectPath,
+			env: {
+				VITEST: undefined,
+				// We need to fake that we are inside a CI
+				// so that the `vitest` commands do not go into watch mode and hang.
+				CI: "true",
+			},
+		},
+		logStream,
+	);
+
+	return await waitForExit(proc);
+}

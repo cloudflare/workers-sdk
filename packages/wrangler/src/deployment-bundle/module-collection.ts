@@ -16,11 +16,15 @@ import type { Entry } from "./entry";
 import type { CfModule, CfModuleType } from "./worker";
 import type esbuild from "esbuild";
 
-function flipObject<
+export function flipObject<
 	K extends string | number | symbol,
-	V extends string | number | symbol,
->(obj: Record<K, V>): Record<V, K> {
-	return Object.fromEntries(Object.entries(obj).map(([k, v]) => [v, k]));
+	V extends string | number | symbol | undefined,
+>(obj: Record<K, V>): Record<NonNullable<V>, K> {
+	return Object.fromEntries(
+		Object.entries(obj)
+			.filter(([_, v]) => !!v)
+			.map(([k, v]) => [v, k])
+	);
 }
 
 export const RuleTypeToModuleType: Record<ConfigModuleRuleType, CfModuleType> =
@@ -32,7 +36,6 @@ export const RuleTypeToModuleType: Record<ConfigModuleRuleType, CfModuleType> =
 		Text: "text",
 		PythonModule: "python",
 		PythonRequirement: "python-requirement",
-		NodeJsCompatModule: "nodejs-compat-module",
 	};
 
 export const ModuleTypeToRuleType = flipObject(RuleTypeToModuleType);
@@ -200,7 +203,9 @@ export function createModuleCollector(props: {
 								props.wrangler1xLegacyModuleReferences!.rootDirectory,
 								args.path
 							);
-							const fileContent = await readFile(filePath);
+							const fileContent = (await readFile(
+								filePath
+							)) as Buffer<ArrayBuffer>;
 							const fileHash = crypto
 								.createHash("sha1")
 								.update(fileContent)
@@ -296,7 +301,9 @@ export function createModuleCollector(props: {
 
 								// Finally, load the file and hash it
 								// If we didn't do any smart resolution above, this will attempt to load as an absolute path
-								const fileContent = await readFile(filePath);
+								const fileContent = (await readFile(
+									filePath
+								)) as Buffer<ArrayBuffer>;
 								const fileHash = crypto
 									.createHash("sha1")
 									.update(fileContent)

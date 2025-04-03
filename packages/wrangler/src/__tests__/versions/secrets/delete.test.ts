@@ -32,6 +32,7 @@ describe("versions secret delete", () => {
 		mockPostVersion((metadata) => {
 			// We should have all secrets except the one being deleted
 			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
 				{ type: "inherit", name: "ANOTHER_SECRET" },
 				{ type: "inherit", name: "YET_ANOTHER_SECRET" },
 			]);
@@ -55,6 +56,7 @@ describe("versions secret delete", () => {
 		mockGetVersion();
 		mockPostVersion((metadata) => {
 			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
 				{ type: "inherit", name: "ANOTHER_SECRET" },
 				{ type: "inherit", name: "YET_ANOTHER_SECRET" },
 			]);
@@ -82,6 +84,7 @@ describe("versions secret delete", () => {
 		mockGetVersion();
 		mockPostVersion((metadata) => {
 			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
 				{ type: "inherit", name: "ANOTHER_SECRET" },
 				{ type: "inherit", name: "YET_ANOTHER_SECRET" },
 			]);

@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import {
 	Disposable,
 	env,
@@ -18,9 +19,10 @@ import {
 } from "./show-bindings";
 import { importWrangler } from "./wrangler";
 
+type BindingLabel = "KV" | "R2" | "D1";
 class BindingType implements QuickPickItem {
 	constructor(
-		public label: string,
+		public label: BindingLabel,
 		public configKey?: string,
 		public detail?: string,
 		public iconPath?: Uri
@@ -33,63 +35,77 @@ export async function addBindingFlow(context: ExtensionContext) {
 			"KV",
 			"kv_namespaces",
 			"Global, low-latency, key-value data storage",
-			Uri.file(context.asAbsolutePath("resources/icons/kv.svg"))
+			Uri.file(context.asAbsolutePath("resources/icons/kv_namespaces.svg"))
 		),
 		new BindingType(
 			"R2",
 			"r2_buckets",
 			"Object storage for all your data",
-			Uri.file(context.asAbsolutePath("resources/icons/r2.svg"))
+			Uri.file(context.asAbsolutePath("resources/icons/r2_buckets.svg"))
 		),
 		new BindingType(
 			"D1",
 			"d1_databases",
 			"Serverless SQL databases",
-			Uri.file(context.asAbsolutePath("resources/icons/d1.svg"))
+			Uri.file(context.asAbsolutePath("resources/icons/d1_databases.svg"))
 		),
 	];
 
 	interface State {
-		title: string;
-		step: number;
-		totalSteps: number;
-		bindingType: BindingType;
-		name: string;
-		runtime: QuickPickItem;
-		id: string;
-	}
-
-	async function collectInputs() {
-		const state = {} as Partial<State>;
-		await MultiStepInput.run((input) => pickBindingType(input, state));
-		return state as State;
+		config?: Config;
+		configUri: Uri;
+		bindingType?: BindingType;
+		name?: string;
 	}
 
 	const title = "Add binding";
 
-	async function pickBindingType(input: MultiStepInput, state: Partial<State>) {
+	async function collectInputs() {
+		const configUri = await getConfigUri();
+		if (!configUri) {
+			const docs = await window.showErrorMessage(
+				"Unable to locate Wrangler configuration file — please open or create a project with a wrangler.json(c) or wrangler.toml file. You can run `npx create cloudflare@latest` to get started with a template.",
+				"Learn more"
+			);
+			if (docs) {
+				env.openExternal(
+					Uri.parse(
+						"https://developers.cloudflare.com/workers/wrangler/configuration/"
+					)
+				);
+			}
+			return;
+		}
+		let config: Config | undefined;
+		try {
+			config = await getWranglerConfig();
+		} catch {}
+		if (!config) {
+			window.showErrorMessage(
+				"Please update wrangler to at least 3.99.0 to use this extension."
+			);
+			return;
+		}
+
+		const state = { config, configUri };
+		await MultiStepInput.run((input) => pickBindingType(input, state));
+		return state;
+	}
+
+	async function pickBindingType(input: MultiStepInput, state: State) {
 		const pick = await input.showQuickPick({
 			title,
 			step: 1,
 			totalSteps: 2,
 			placeholder: "Choose a binding type",
 			items: bindingTypes,
-			activeItem:
-				typeof state.bindingType !== "string" ? state.bindingType : undefined,
 		});
 		state.bindingType = pick as BindingType;
 		return (input: MultiStepInput) => inputBindingName(input, state);
 	}
 
-	async function inputBindingName(
-		input: MultiStepInput,
-		state: Partial<State>
-	) {
-		const config = await getWranglerConfig();
-		if (!config) {
-			throw new Error("No config found");
-		}
-		const allBindingNames = getAllBindingNames(config);
+	async function inputBindingName(input: MultiStepInput, state: State) {
+		const allBindingNames = getAllBindingNames(state.config ?? {});
 
 		let name = await input.showInputBox({
 			title,
@@ -107,17 +123,9 @@ export async function addBindingFlow(context: ExtensionContext) {
 		return () => addToConfig(state);
 	}
 
-	async function addToConfig(state: Partial<State>) {
-		const configUri = await getConfigUri();
-		if (!configUri) {
-			// for some reason, if we just throw an error it doesn't surface properly when triggered by the button in the welcome view
-			window.showErrorMessage(
-				"Unable to locate Wrangler configuration file — have you opened a project with a wrangler.json(c) or wrangler.toml file?",
-				{}
-			);
-			return null;
-		}
-		const workspaceFolder = workspace.getWorkspaceFolder(configUri);
+	async function addToConfig(state: State) {
+		assert(state.bindingType?.configKey && state.name);
+		const workspaceFolder = workspace.getWorkspaceFolder(state.configUri);
 
 		if (!workspaceFolder) {
 			return null;
@@ -125,25 +133,39 @@ export async function addBindingFlow(context: ExtensionContext) {
 
 		const wrangler = importWrangler(workspaceFolder.uri.fsPath);
 
-		workspace.openTextDocument(configUri).then((doc) => {
-			window.showTextDocument(doc);
+		const doc = await workspace.openTextDocument(state.configUri);
+		window.showTextDocument(doc);
+		let openDocs: string | undefined;
+		let useClipboard = false;
+		if (!wrangler) {
+			useClipboard = true;
+		} else {
 			try {
-				wrangler.experimental_patchConfig(configUri.path, {
-					[state.bindingType?.configKey!]: [{ binding: state.name! }],
+				const configFileName = state.configUri.path.split("/").at(-1);
+				wrangler.experimental_patchConfig(state.configUri.path, {
+					[state.bindingType.configKey]: [{ binding: state.name }],
 				});
-				window.showInformationMessage(`Created binding '${state.name}'`);
-			} catch {
-				window.showErrorMessage(
-					`Unable to directly add binding to config file. A snippet has been copied to clipboard - please paste this into your config file.`
+				openDocs = await window.showInformationMessage(
+					`🎉 The ${state.bindingType.label} binding '${state.name}' has been added to your ${configFileName}`,
+					`Open ${state.bindingType.label} documentation`
 				);
-
-				const patch = `[[${state.bindingType?.configKey!}]]
-binding = "${state.name}"
-`;
-
-				env.clipboard.writeText(patch);
+			} catch {
+				useClipboard = true;
 			}
-		});
+		}
+		if (useClipboard) {
+			const patch = `[[${state.bindingType?.configKey!}]]
+			binding = "${state.name}"
+			`;
+			env.clipboard.writeText(patch);
+			openDocs = await window.showInformationMessage(
+				`✨ A snippet has been copied to clipboard - please paste this into your wrangler.toml`,
+				`Open ${state.bindingType.label} documentation`
+			);
+		}
+		if (openDocs) {
+			env.openExternal(Uri.parse(bindingDocs[state.bindingType.label]));
+		}
 	}
 
 	async function validateNameIsUnique(name: string, allBindingNames: string[]) {
@@ -170,7 +192,6 @@ interface QuickPickParameters<T extends QuickPickItem> {
 	step: number;
 	totalSteps: number;
 	items: T[];
-	activeItem?: T;
 	ignoreFocusOut?: boolean;
 	placeholder: string;
 	buttons?: QuickInputButton[];
@@ -238,7 +259,6 @@ export class MultiStepInput {
 		step,
 		totalSteps,
 		items,
-		activeItem,
 		ignoreFocusOut,
 		placeholder,
 		buttons,
@@ -255,9 +275,6 @@ export class MultiStepInput {
 				input.ignoreFocusOut = ignoreFocusOut ?? false;
 				input.placeholder = placeholder;
 				input.items = items;
-				if (activeItem) {
-					input.activeItems = [activeItem];
-				}
 				input.buttons = [
 					...(this.steps.length > 1 ? [QuickInputButtons.Back] : []),
 					...(buttons || []),
@@ -408,3 +425,9 @@ const isRecord = (
 	value: unknown
 ): value is Record<string | number | symbol, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
+
+const bindingDocs: Record<BindingLabel, string> = {
+	KV: "https://developers.cloudflare.com/kv/get-started/#5-access-your-kv-namespace-from-your-worker",
+	D1: "https://developers.cloudflare.com/d1/get-started/#write-queries-within-your-worker",
+	R2: "https://developers.cloudflare.com/r2/api/workers/workers-api-usage/#4-access-your-r2-bucket-from-your-worker",
+};

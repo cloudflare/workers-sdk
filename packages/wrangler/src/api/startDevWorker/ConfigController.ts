@@ -14,6 +14,7 @@ import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
+import { checkTypesDiff } from "../../type-generation/helpers";
 import { requireApiToken, requireAuth } from "../../user";
 import {
 	DEFAULT_INSPECTOR_PORT,
@@ -129,6 +130,7 @@ async function resolveDevConfig(
 		registry: input.dev?.registry,
 		bindVectorizeToProd: input.dev?.bindVectorizeToProd ?? false,
 		multiworkerPrimary: input.dev?.multiworkerPrimary,
+		imagesLocalMode: input.dev?.imagesLocalMode ?? false,
 	} satisfies StartDevWorkerOptions["dev"];
 }
 
@@ -169,6 +171,7 @@ async function resolveBindings(
 		{
 			registry: input.dev?.registry,
 			local: !input.dev?.remote,
+			imagesLocalMode: input.dev?.imagesLocalMode,
 			name: config.name,
 		}
 	);
@@ -227,13 +230,18 @@ async function resolveConfig(
 	config: Config,
 	input: StartDevWorkerInput
 ): Promise<StartDevWorkerOptions> {
+	if (
+		config.pages_build_output_dir &&
+		input.dev?.multiworkerPrimary === false
+	) {
+		throw new UserError(
+			`You cannot use a Pages project as a service binding target.\nIf you are trying to develop Pages and Workers together, please use \`wrangler pages dev\`. Note the first config file specified must be for the Pages project`
+		);
+	}
 	const legacySite = unwrapHook(input.legacy?.site, config);
-
-	const legacyAssets = unwrapHook(input.legacy?.legacyAssets, config);
 
 	const entry = await getEntry(
 		{
-			legacyAssets: Boolean(legacyAssets),
 			script: input.entrypoint,
 			moduleRoot: input.build?.moduleRoot,
 			// getEntry only needs to know if assets was specified.
@@ -298,7 +306,6 @@ async function resolveConfig(
 		dev: await resolveDevConfig(config, input),
 		legacy: {
 			site: legacySite,
-			legacyAssets: legacyAssets,
 			enableServiceEnvironments:
 				input.legacy?.enableServiceEnvironments ?? !isLegacyEnv(config),
 		},
@@ -308,12 +315,6 @@ async function resolveConfig(
 		},
 		assets: assetsOptions,
 	} satisfies StartDevWorkerOptions;
-
-	if (resolved.legacy.legacyAssets && resolved.legacy.site) {
-		throw new UserError(
-			"Cannot use legacy assets and Workers Sites in the same Worker."
-		);
-	}
 
 	if (
 		extractBindingsOfType("browser", resolved.bindings).length &&
@@ -367,6 +368,14 @@ async function resolveConfig(
 		Array.from(classNamesWhichUseSQLite.values()).some((v) => v)
 	) {
 		logger.warn("SQLite in Durable Objects is only supported in local mode.");
+	}
+
+	// prompt user to update their types if we detect that it is out of date
+	const typesChanged = await checkTypesDiff(config, entry);
+	if (typesChanged) {
+		logger.log(
+			"❓ Your types might be out of date. Re-run `wrangler types` to ensure your types are correct."
+		);
 	}
 
 	return resolved;

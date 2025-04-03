@@ -1,6 +1,7 @@
 {
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
+		"module": "CommonJS",
 		"types": ["node", "vitest/globals"],
 		"jsx": "preserve"
 	},

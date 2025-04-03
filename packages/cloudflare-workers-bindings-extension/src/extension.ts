@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { addBindingFlow } from "./add-binding";
-import { BindingsProvider } from "./show-bindings";
+import { HomeViewProvider } from "./home";
+import { BindingsProvider, Node } from "./show-bindings";
 
 export type Result = {
 	bindingsProvider: BindingsProvider;
@@ -40,12 +41,35 @@ export async function activate(
 			await addBindingFlow(context);
 		}
 	);
-	// Cleanup when the extension is deactivated
+
+	const openDocsCommand = vscode.commands.registerCommand(
+		"cloudflare-workers-bindings.openDocs",
+		async (node: Node) => {
+			const docs: Record<string, string> = {
+				d1_databases: "https://developers.cloudflare.com/d1/",
+				r2_buckets: "https://developers.cloudflare.com/r2/",
+				kv_namespaces: "https://developers.cloudflare.com/kv/",
+			};
+			if (node.type === "binding") {
+				vscode.env.openExternal(vscode.Uri.parse(docs[node.name]));
+			}
+		}
+	);
+
+	const webviewProvider = new HomeViewProvider(context);
+	const homeWebView = vscode.window.registerWebviewViewProvider(
+		HomeViewProvider.viewType,
+		webviewProvider
+	);
+
+	//  Cleanup when the extension is deactivated
 	context.subscriptions.push(
 		bindingsView,
 		watcher,
 		refreshCommand,
-		addBindingCommand
+		addBindingCommand,
+		openDocsCommand,
+		homeWebView
 	);
 
 	return {

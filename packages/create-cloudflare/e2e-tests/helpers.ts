@@ -7,11 +7,13 @@ import {
 	rmSync,
 } from "fs";
 import crypto from "node:crypto";
+import { readFileSync } from "node:fs";
 import { tmpdir } from "os";
 import path from "path";
 import { setTimeout } from "timers/promises";
 import { stripAnsi } from "@cloudflare/cli";
 import { spawn } from "cross-spawn";
+import { runCommand } from "helpers/command";
 import { retry } from "helpers/retry";
 import treeKill from "tree-kill";
 import { fetch } from "undici";
@@ -23,9 +25,16 @@ import type {
 	SpawnOptionsWithoutStdio,
 } from "child_process";
 import type { Writable } from "stream";
-import type { RunnerTestCase, Suite, Test } from "vitest";
+import type { RunnerTask, RunnerTestSuite } from "vitest";
 
 export const C3_E2E_PREFIX = "tmp-e2e-c3";
+export const TEST_TIMEOUT = 1000 * 60 * 5;
+export const LONG_TIMEOUT = 1000 * 60 * 10;
+export const TEST_PM = process.env.TEST_PM ?? "";
+export const NO_DEPLOY = process.env.E2E_NO_DEPLOY ?? true;
+export const TEST_RETRIES = process.env.E2E_RETRIES
+	? parseInt(process.env.E2E_RETRIES)
+	: 1;
 
 export const keys = {
 	enter: "\x0d",
@@ -71,14 +80,25 @@ export type RunnerConfig = {
 	argv?: string[];
 	quarantine?: boolean;
 	timeout?: number;
+	/**
+	 * Specifies whether to assert the response from the specified route after deployment.
+	 */
 	verifyDeploy: null | {
 		route: string;
 		expectedText: string;
 	};
+	/**
+	 * Specifies whether to run the preview script for the project and assert the response from the specified route.
+	 */
 	verifyPreview: null | {
+		previewArgs?: string[];
 		route: string;
 		expectedText: string;
 	};
+	/**
+	 * Specifies whether to run the test script for the project and verify the exit code.
+	 */
+	verifyTest?: boolean;
 };
 
 export const runC3 = async (
@@ -86,8 +106,15 @@ export const runC3 = async (
 	promptHandlers: PromptHandler[] = [],
 	logStream: Writable,
 ) => {
-	const cmd = ["node", "./dist/cli.js", ...argv];
-	const proc = spawnWithLogging(cmd, { env: testEnv }, logStream);
+	// We don't use the "test" package manager here (i.e. TEST_PM and TEST_PM_VERSION) because yarn 1.x doesn't actually provide a `dlx` version.
+	// And in any case, this first step just installs a temp copy of create-cloudflare and executes it.
+	// The point of `detectPackageManager()` is for delegating to framework tooling when generating a project correctly.
+	const cmd = ["pnpx", `create-cloudflare@${version}`, ...argv];
+	const proc = spawnWithLogging(
+		cmd,
+		{ env: testEnv, cwd: tmpdir() },
+		logStream,
+	);
 
 	const onData = (data: string) => {
 		handlePrompt(data);
@@ -313,21 +340,26 @@ export const waitForExit = async (
 	};
 };
 
-export const createTestLogStream = (
+const createTestLogStream = (
 	opts: { experimental: boolean },
-	task: RunnerTestCase,
+	task: RunnerTask,
 ) => {
 	// The .ansi extension allows for editor extensions that format ansi terminal codes
 	const fileName = `${normalizeTestName(task)}.ansi`;
 	assert(task.suite, "Expected task.suite to be defined");
-	return createWriteStream(path.join(getLogPath(opts, task.suite), fileName), {
+	const logPath = path.join(getLogPath(opts, task.suite), fileName);
+	const logStream = createWriteStream(logPath, {
 		flags: "a",
 	});
+	return {
+		logPath,
+		logStream,
+	};
 };
 
 export const recreateLogFolder = (
 	opts: { experimental: boolean },
-	suite: Suite,
+	suite: RunnerTestSuite,
 ) => {
 	// Clean the old folder if exists (useful for dev)
 	rmSync(getLogPath(opts, suite), {
@@ -338,7 +370,10 @@ export const recreateLogFolder = (
 	mkdirSync(getLogPath(opts, suite), { recursive: true });
 };
 
-const getLogPath = (opts: { experimental: boolean }, suite: Suite) => {
+const getLogPath = (
+	opts: { experimental: boolean },
+	suite: RunnerTestSuite,
+) => {
 	const { file } = suite;
 
 	const suiteFilename = file
@@ -352,7 +387,7 @@ const getLogPath = (opts: { experimental: boolean }, suite: Suite) => {
 	);
 };
 
-const normalizeTestName = (task: Test) => {
+const normalizeTestName = (task: RunnerTask) => {
 	const baseName = task.name
 		.toLowerCase()
 		.replace(/\s+/g, "_") // replace any whitespace with `_`
@@ -364,7 +399,7 @@ const normalizeTestName = (task: Test) => {
 	return baseName + suffix;
 };
 
-export const testProjectDir = (suite: string, test: string) => {
+const testProjectDir = (suite: string, test: string) => {
 	const tmpDirPath =
 		process.env.E2E_PROJECT_PATH ??
 		realpathSync(mkdtempSync(path.join(tmpdir(), `c3-tests-${suite}`)));
@@ -372,9 +407,18 @@ export const testProjectDir = (suite: string, test: string) => {
 	const randomSuffix = crypto.randomBytes(4).toString("hex");
 	const baseProjectName = `${C3_E2E_PREFIX}${randomSuffix}`;
 
-	const getName = () =>
+	const getName = () => {
 		// Worker project names cannot be longer than 58 characters
-		`${baseProjectName}-${test.substring(0, 57 - baseProjectName.length)}`;
+		const projectName = `${baseProjectName}-${test.substring(0, 57 - baseProjectName.length)}`;
+
+		// Project name cannot start/end with a dash
+		if (projectName.endsWith("-")) {
+			return projectName.slice(0, -1);
+		}
+
+		return projectName;
+	};
+
 	const getPath = () => path.join(tmpDirPath, getName());
 	const clean = () => {
 		try {
@@ -404,6 +448,9 @@ export const testProjectDir = (suite: string, test: string) => {
 	return { getName, getPath, clean };
 };
 
+/**
+ * Test that we pushed the commit message to the deployment correctly.
+ */
 export const testDeploymentCommitMessage = async (
 	projectName: string,
 	framework: string,
@@ -455,6 +502,27 @@ export const testDeploymentCommitMessage = async (
 	expect(projectLatestCommitMessage).toContain(`framework = ${framework}`);
 };
 
+/**
+ * Test that C3 added a git commit with the correct message.
+ */
+export async function testGitCommitMessage(
+	projectName: string,
+	framework: string,
+	projectPath: string,
+) {
+	const commitMessage = await runCommand(["git", "log", "-1"], {
+		silent: true,
+		cwd: projectPath,
+	});
+
+	expect(commitMessage).toMatch(
+		/Initialize web application via create-cloudflare CLI/,
+	);
+	expect(commitMessage).toContain(`C3 = create-cloudflare@${version}`);
+	expect(commitMessage).toContain(`project name = ${projectName}`);
+	expect(commitMessage).toContain(`framework = ${framework}`);
+}
+
 export const isQuarantineMode = () => {
 	return process.env.E2E_QUARANTINE === "true";
 };
@@ -472,14 +540,29 @@ export const test = (opts: { experimental: boolean }) =>
 			const suite = task.suite.name
 				.toLowerCase()
 				.replaceAll(/[^a-z0-9-]/g, "-");
-			const suffix = task.name.toLowerCase().replaceAll(/[^a-z0-9-]/g, "-");
+			const suffix = task.name
+				.toLowerCase()
+				.replaceAll(/[^a-z0-9-]/g, "-")
+				.replaceAll(/^-|-$/g, "");
 			const { getPath, getName, clean } = testProjectDir(suite, suffix);
 			await use({ path: getPath(), name: getName() });
 			clean();
 		},
-		async logStream({ task }, use) {
-			const logStream = createTestLogStream(opts, task);
+		async logStream({ task, onTestFailed }, use) {
+			const { logPath, logStream } = createTestLogStream(opts, task);
+
+			onTestFailed(() => {
+				console.error("##[group]Logs from failed test:", logPath);
+				try {
+					console.error(readFileSync(logPath, "utf8"));
+				} catch {
+					console.error("Unable to read log file");
+				}
+				console.error("##[endgroup]");
+			});
+
 			await use(logStream);
+
 			logStream.close();
 		},
 	});

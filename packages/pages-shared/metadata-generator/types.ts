@@ -1,46 +1,11 @@
-/* REDIRECT PARSING TYPES */
+import type {
+	ParsedHeaders,
+	ParsedRedirects,
+} from "@cloudflare/workers-shared/utils/configuration/types";
 
-export type RedirectLine = [from: string, to: string, status?: number];
-export type RedirectRule = {
-	from: string;
-	to: string;
-	status: number;
-	lineNumber: number;
-};
-
-export type Headers = Record<string, string>;
-export type HeadersRule = {
-	path: string;
-	headers: Headers;
-	unsetHeaders: string[];
-};
-
-export type InvalidRedirectRule = {
-	line?: string;
-	lineNumber?: number;
-	message: string;
-};
-
-export type InvalidHeadersRule = {
-	line?: string;
-	lineNumber?: number;
-	message: string;
-};
-
-export type ParsedRedirects = {
-	invalid: InvalidRedirectRule[];
-	rules: RedirectRule[];
-};
-
-/** Parsed redirects and input file */
 export type ParsedRedirectsWithFile = {
 	parsedRedirects?: ParsedRedirects;
 	file?: string;
-};
-
-export type ParsedHeaders = {
-	invalid: InvalidHeadersRule[];
-	rules: HeadersRule[];
 };
 
 /** Parsed headers and input file */
@@ -86,11 +51,3 @@ export type Metadata = {
 	deploymentId?: string;
 	failOpen?: boolean;
 };
-
-export interface Logger {
-	debug: (message: string) => void;
-	log: (message: string) => void;
-	info: (message: string) => void;
-	warn: (message: string) => void;
-	error: (error: Error) => void;
-}

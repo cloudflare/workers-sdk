@@ -61,14 +61,18 @@ describe("create", () => {
 		);
 		await runWrangler("d1 create test --location oc");
 		expect(std.out).toMatchInlineSnapshot(`
-		"✅ Successfully created DB 'test' in region OC
-		Created your new D1 database.
+			"✅ Successfully created DB 'test' in region OC
+			Created your new D1 database.
 
-		[[d1_databases]]
-		binding = \\"DB\\"
-		database_name = \\"test\\"
-		database_id = \\"51e7c314-456e-4167-b6c3-869ad188fc23\\"
-		"
-	`);
+			{
+			  \\"d1_databases\\": [
+			    {
+			      \\"binding\\": \\"DB\\",
+			      \\"database_name\\": \\"test\\",
+			      \\"database_id\\": \\"51e7c314-456e-4167-b6c3-869ad188fc23\\"
+			    }
+			  ]
+			}"
+		`);
 	});
 });

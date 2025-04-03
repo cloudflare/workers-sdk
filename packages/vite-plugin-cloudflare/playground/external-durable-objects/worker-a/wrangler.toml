@@ -1,0 +1,12 @@
+name = "worker-a"
+main = "./index.ts"
+compatibility_date = "2024-12-30"
+
+[durable_objects]
+bindings = [
+	{ name = "COUNTERS", class_name = "Counter", script_name = "worker-b" },
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["Counter"]

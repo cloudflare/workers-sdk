@@ -22,14 +22,17 @@ export class AssetsManifest {
 	}
 }
 
-const hashPath = async (path: string) => {
+export const hashPath = async (path: string) => {
 	const encoder = new TextEncoder();
 	const data = encoder.encode(path);
-	const hashBuffer = await crypto.subtle.digest("SHA-256", data.buffer);
+	const hashBuffer = await crypto.subtle.digest(
+		"SHA-256",
+		data.buffer as ArrayBuffer
+	);
 	return new Uint8Array(hashBuffer, 0, PATH_HASH_SIZE);
 };
 
-const binarySearch = (
+export const binarySearch = (
 	arr: Uint8Array,
 	searchValue: Uint8Array
 ): Uint8Array | false => {
@@ -64,7 +67,7 @@ const binarySearch = (
 	}
 };
 
-const compare = (a: Uint8Array, b: Uint8Array) => {
+export const compare = (a: Uint8Array, b: Uint8Array) => {
 	if (a.byteLength < b.byteLength) {
 		return -1;
 	}

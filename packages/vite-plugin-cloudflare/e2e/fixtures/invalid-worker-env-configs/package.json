@@ -1,0 +1,12 @@
+{
+	"name": "@vite-plugin-cloudflare-e2e/invalid-worker-env-configs",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "*",
+		"vite": "^6.2.3"
+	}
+}

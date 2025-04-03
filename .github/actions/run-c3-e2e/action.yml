@@ -22,6 +22,9 @@ inputs:
   apiToken:
     description: "The api token of the test account"
     required: true
+  node-version:
+    description: the version of Node.js to install
+    required: true
 
 runs:
   using: "composite"
@@ -39,11 +42,12 @@ runs:
         git config --global user.email wrangler@cloudflare.com
         git config --global user.name 'Wrangler automated PR updater'
 
-    - name: E2E Tests ${{inputs.experimental && '(experimental)' || ''}}
+    - name: E2E Tests ${{inputs.experimental == 'true' && '(experimental)' || ''}}
       id: run-e2e
       shell: bash
       run: pnpm run test:e2e --filter create-cloudflare
       env:
+        NODE_VERSION: ${{ inputs.node-version }}
         CLOUDFLARE_API_TOKEN: ${{ inputs.apiToken }}
         CLOUDFLARE_ACCOUNT_ID: ${{ inputs.accountId }}
         E2E_QUARANTINE: ${{ inputs.quarantine }}
@@ -57,8 +61,8 @@ runs:
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: e2e-logs${{inputs.quarantine && '-quarantine' || ''}}${{inputs.experimental && '-experimental' || ''}}-${{runner.os}}-${{inputs.packageManager}}
-        path: packages/create-cloudflare/.e2e-logs${{inputs.experimental && '-experimental' || ''}}
+        name: e2e-logs${{inputs.quarantine == 'true' && '-quarantine' || ''}}${{inputs.experimental == 'true' && '-experimental' || ''}}-${{runner.os}}-${{inputs.packageManager}}
+        path: packages/create-cloudflare/.e2e-logs${{inputs.experimental == 'true' && '-experimental' || ''}}
         include-hidden-files: true
 
     - name: Fail if errors detected

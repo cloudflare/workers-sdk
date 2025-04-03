@@ -1,8 +1,9 @@
+import path from "path";
 import * as vscode from "vscode";
 import { importWrangler } from "./wrangler";
 
 export type Config = ReturnType<
-	ReturnType<typeof importWrangler>["experimental_readRawConfig"]
+	NonNullable<ReturnType<typeof importWrangler>>["experimental_readRawConfig"]
 >["rawConfig"];
 
 export type Environment = Required<Config>["env"][string];
@@ -39,7 +40,7 @@ type EnvNode = {
 	name: string | null;
 };
 
-type BindingNode = Exclude<
+export type BindingNode = Exclude<
 	{
 		[Name in BindingType]: {
 			type: "binding";
@@ -56,7 +57,7 @@ type ResourceNode = {
 	description?: string;
 };
 
-type Node = EnvNode | BindingNode | ResourceNode;
+export type Node = EnvNode | BindingNode | ResourceNode;
 
 export class BindingsProvider implements vscode.TreeDataProvider<Node> {
 	// Event emitter for refreshing the tree
@@ -83,11 +84,24 @@ export class BindingsProvider implements vscode.TreeDataProvider<Node> {
 
 				return item;
 			}
+			// this is the header
 			case "binding": {
-				return new vscode.TreeItem(
+				const item = new vscode.TreeItem(
 					friendlyBindingNames[node.name],
 					vscode.TreeItemCollapsibleState.Expanded
 				);
+				const enabledBindings = ["kv_namespaces", "r2_buckets", "d1_databases"];
+				if (enabledBindings.includes(node.name)) {
+					item.contextValue = "binding";
+				}
+				item.iconPath = path.join(
+					__dirname,
+					"../",
+					"resources",
+					"icons",
+					`${node.name}.svg`
+				);
+				return item;
 			}
 			case "resource": {
 				const item = new vscode.TreeItem(
@@ -600,26 +614,29 @@ function hasBinding<Config extends Record<string, unknown> | Array<unknown>>(
 }
 
 // Finds the first wrangler config file in the workspace and parse it
-export async function getWranglerConfig(): Promise<Config | null> {
+export async function getWranglerConfig(): Promise<Config | undefined> {
 	const configUri = await getConfigUri();
 	if (!configUri) {
-		return null;
+		return;
 	}
 	const workspaceFolder = vscode.workspace.getWorkspaceFolder(configUri);
 
 	if (!workspaceFolder) {
-		return null;
+		return;
 	}
 
 	const wrangler = importWrangler(workspaceFolder.uri.fsPath);
-	const { rawConfig } = wrangler.experimental_readRawConfig({
-		config: configUri.fsPath,
-	});
-
-	return rawConfig;
+	if (!wrangler) {
+		return;
+	} else {
+		const { rawConfig } = wrangler.experimental_readRawConfig({
+			config: configUri.fsPath,
+		});
+		return rawConfig;
+	}
 }
 
-export async function getConfigUri(): Promise<vscode.Uri | null> {
+export async function getConfigUri(): Promise<vscode.Uri | undefined> {
 	const [configUri] = await vscode.workspace.findFiles(
 		"wrangler.{toml,jsonc,json}",
 		null,

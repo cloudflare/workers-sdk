@@ -2,12 +2,19 @@
 
 [unenv](https://github.com/unjs/unenv) preset for cloudflare.
 
+unenv provides polyfills to add [Node.js](https://nodejs.org/) compatibility for any JavaScript runtime, including browsers and edge workers.
+
 ## Usage
 
 ```ts
-import { cloudflare, env, nodeless } from "@cloudflare/unenv-preset";
+import { cloudflare } from "@cloudflare/unenv-preset";
+import { defineEnv } from "unenv";
 
-const {
-	/* ... */
-} = env(nodeless, cloudflare);
+const { env } = defineEnv({
+	presets: [cloudflare],
+});
+
+const { alias, inject, external, polyfill } = env;
 ```
+
+See the unenv [README](https://github.com/unjs/unenv/blob/main/README.md) for more details.

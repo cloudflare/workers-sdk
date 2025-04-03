@@ -13,7 +13,7 @@ export interface SocketLike<Message extends ArrayBuffer | Uint8Array | string> {
  * This assumes in-order delivery of chunks.
  */
 export function createChunkingSocket(
-	socket: SocketLike<ArrayBuffer | Uint8Array | string>,
+	socket: SocketLike<ArrayBuffer | Uint8Array<ArrayBuffer> | string>,
 	maxChunkByteLength = 1_048_576 /* 1 MiB */
 ): SocketLike<string> {
 	const listeners: ((message: string) => void)[] = [];

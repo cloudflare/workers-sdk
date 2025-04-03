@@ -1,0 +1,27 @@
+{
+	"name": "@cloudflare/mock-npm-registry",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./dist/index.js"
+	},
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"scripts": {
+		"build": "tsc",
+		"check:lint": "eslint . --max-warnings=0",
+		"check:types": "tsc"
+	},
+	"devDependencies": {
+		"@types/node": "catalog:default",
+		"@verdaccio/types": "^10.8.0",
+		"get-port": "^7.0.0",
+		"ts-dedent": "^2.2.0",
+		"typescript": "catalog:default",
+		"verdaccio": "^6.0.5"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

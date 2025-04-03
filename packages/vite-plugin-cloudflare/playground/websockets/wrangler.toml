@@ -1,0 +1,10 @@
+name = "worker"
+main = "./src/index.ts"
+compatibility_date = "2024-09-09"
+
+[durable_objects]
+bindings = [{ name = "WEBSOCKET_SERVER", class_name = "WebSocketServer" }]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["WebSocketServer"]
