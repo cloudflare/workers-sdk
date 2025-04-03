@@ -395,7 +395,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20241230.0
-        version: 4.20241230.0
+        version: 4.20250409.0
       '@types/is-even':
         specifier: ^1.0.2
         version: 1.0.2
@@ -947,18 +947,6 @@ importers:
         specifier: workspace:*
         version: link:../../packages/kv-asset-handler
 
-<<<<<<< HEAD
-||||||| parent of 5fb4a9add (Add fixtures using startWorker() and Miniflare directly)
-  fixtures/type-generation:
-    devDependencies:
-      vitest:
-        specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../packages/wrangler
-
-=======
   fixtures/start-worker-node-test:
     devDependencies:
       '@cloudflare/workers-tsconfig':
@@ -966,7 +954,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20241230.0
-        version: 4.20241230.0
+        version: 4.20250409.0
       '@types/is-even':
         specifier: ^1.0.2
         version: 1.0.2
@@ -980,16 +968,6 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
-  fixtures/type-generation:
-    devDependencies:
-      vitest:
-        specifier: catalog:default
-        version: 2.1.8(@types/node@18.19.59)(@vitest/ui@2.1.8)(msw@2.4.3(typescript@5.6.3))(supports-color@9.2.2)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../packages/wrangler
-
->>>>>>> 5fb4a9add (Add fixtures using startWorker() and Miniflare directly)
   fixtures/unstable_dev:
     devDependencies:
       wrangler:
@@ -6406,7 +6384,9 @@ packages:
   '@types/is-ci@3.0.0':
     resolution: {integrity: sha512-Q0Op0hdWbYd1iahB+IFNQcWXFq4O0Q5MwQP7uN0souuQ4rPg1vEYcnIOfr1gY+M+6rc8FGoRaBO1mOOvL29sEQ==}
 
-<<<<<<< HEAD
+  '@types/is-even@1.0.2':
+    resolution: {integrity: sha512-qXDiw1zrRSrExwuJHRvxr5eGANlWscPwvQw3xURyax0GkY+fSwwei2uy0ReJBF2N0EeniUr+h2iD9e/KQNroaQ==}
+
   '@types/istanbul-lib-coverage@2.0.6':
     resolution: {integrity: sha512-2QF/t/auWm0lsy8XtKVPG19v3sSOQlJe/YHZgfjb/KBBHOGSV+J2q/S671rcq9uTBrLAXmZpqJiaQbMT+zNU1w==}
 
@@ -6416,12 +6396,6 @@ packages:
   '@types/istanbul-reports@3.0.4':
     resolution: {integrity: sha512-pk2B1NWalF9toCRu6gjBzR69syFjP4Od8WRAX+0mmf9lAjCRicLOWc+ZrxZHx/0XRjotgkF9t6iaMJ+aXcOdZQ==}
 
-||||||| parent of 5fb4a9add (Add fixtures using startWorker() and Miniflare directly)
-=======
-  '@types/is-even@1.0.2':
-    resolution: {integrity: sha512-qXDiw1zrRSrExwuJHRvxr5eGANlWscPwvQw3xURyax0GkY+fSwwei2uy0ReJBF2N0EeniUr+h2iD9e/KQNroaQ==}
-
->>>>>>> 5fb4a9add (Add fixtures using startWorker() and Miniflare directly)
   '@types/javascript-time-ago@2.0.3':
     resolution: {integrity: sha512-G6SdYh6gHxgCTU0s4cMIRHwRO4p3f7jQSZbDPfUOZpUAG1od3rTjT0e8rxGThUiTTWQHwpBRws8eHO8D2QqfkA==}
 
@@ -9409,34 +9383,10 @@ packages:
   keytar@7.9.0:
     resolution: {integrity: sha512-VPD8mtVtm5JNtA2AErl6Chp06JBfy7diFQ7TQQhdpWOl6MrCRB+eRbvAZUsbGQS9kiMq0coJsy0W0vHpDCkWsQ==}
 
-<<<<<<< HEAD
-||||||| parent of 5fb4a9add (Add fixtures using startWorker() and Miniflare directly)
-  keyv@4.5.4:
-    resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
-
-  kind-of@6.0.3:
-    resolution: {integrity: sha512-dcS1ul+9tmeD95T+x28/ehLgd9mENa3LsvDTtzm3vyBEO7RPptvAD+t44WVXaUjTBRcrpFeFlC8WCruUR456hw==}
-    engines: {node: '>=0.10.0'}
-
-  klaw-sync@6.0.0:
-    resolution: {integrity: sha512-nIeuVSzdCCs6TDPTqI8w1Yre34sSq7AkZ4B3sfOBbI2CgVSB4Du4aLQijFU2+lhAFCwt9+42Hel6lQNIv6AntQ==}
-
-=======
-  keyv@4.5.4:
-    resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
-
   kind-of@3.2.2:
     resolution: {integrity: sha512-NOW9QQXMoZGg/oqnVNoNTTIFEIid1627WCffUBJEdMxYApq7mNE7CpzucIPc+ZQg25Phej7IJSmX3hO+oblOtQ==}
     engines: {node: '>=0.10.0'}
 
-  kind-of@6.0.3:
-    resolution: {integrity: sha512-dcS1ul+9tmeD95T+x28/ehLgd9mENa3LsvDTtzm3vyBEO7RPptvAD+t44WVXaUjTBRcrpFeFlC8WCruUR456hw==}
-    engines: {node: '>=0.10.0'}
-
-  klaw-sync@6.0.0:
-    resolution: {integrity: sha512-nIeuVSzdCCs6TDPTqI8w1Yre34sSq7AkZ4B3sfOBbI2CgVSB4Du4aLQijFU2+lhAFCwt9+42Hel6lQNIv6AntQ==}
-
->>>>>>> 5fb4a9add (Add fixtures using startWorker() and Miniflare directly)
   kleur@3.0.3:
     resolution: {integrity: sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w==}
     engines: {node: '>=6'}
@@ -15983,7 +15933,8 @@ snapshots:
     dependencies:
       ci-info: 3.9.0
 
-<<<<<<< HEAD
+  '@types/is-even@1.0.2': {}
+
   '@types/istanbul-lib-coverage@2.0.6': {}
 
   '@types/istanbul-lib-report@3.0.3':
@@ -15994,11 +15945,6 @@ snapshots:
     dependencies:
       '@types/istanbul-lib-report': 3.0.3
 
-||||||| parent of 5fb4a9add (Add fixtures using startWorker() and Miniflare directly)
-=======
-  '@types/is-even@1.0.2': {}
-
->>>>>>> 5fb4a9add (Add fixtures using startWorker() and Miniflare directly)
   '@types/javascript-time-ago@2.0.3': {}
 
   '@types/jest-image-snapshot@6.4.0':
@@ -19559,34 +19505,10 @@ snapshots:
       node-addon-api: 4.3.0
       prebuild-install: 7.1.2
 
-<<<<<<< HEAD
-||||||| parent of 5fb4a9add (Add fixtures using startWorker() and Miniflare directly)
-  keyv@4.5.4:
-    dependencies:
-      json-buffer: 3.0.1
-
-  kind-of@6.0.3: {}
-
-  klaw-sync@6.0.0:
-    dependencies:
-      graceful-fs: 4.2.10
-
-=======
-  keyv@4.5.4:
-    dependencies:
-      json-buffer: 3.0.1
-
   kind-of@3.2.2:
     dependencies:
       is-buffer: 1.1.6
 
-  kind-of@6.0.3: {}
-
-  klaw-sync@6.0.0:
-    dependencies:
-      graceful-fs: 4.2.10
-
->>>>>>> 5fb4a9add (Add fixtures using startWorker() and Miniflare directly)
   kleur@3.0.3: {}
 
   kleur@4.1.5: {}
