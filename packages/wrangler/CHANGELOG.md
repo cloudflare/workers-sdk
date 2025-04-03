@@ -1,5 +1,23 @@
 # wrangler
 
+## 4.7.1
+
+### Patch Changes
+
+- [#8746](https://github.com/cloudflare/workers-sdk/pull/8746) [`7427004`](https://github.com/cloudflare/workers-sdk/commit/7427004d45e52c0ef6e6e8dbe3ed5b79dc985d55) Thanks [@emily-shen](https://github.com/emily-shen)! - Log whether a command is operating on a remote or local resource
+
+- [#8757](https://github.com/cloudflare/workers-sdk/pull/8757) [`199caa4`](https://github.com/cloudflare/workers-sdk/commit/199caa40eb37fd4bc4b3adb499e37d87d30f76dd) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: return actual error on `wrangler secret bulk`
+
+- [#8750](https://github.com/cloudflare/workers-sdk/pull/8750) [`80ef13c`](https://github.com/cloudflare/workers-sdk/commit/80ef13c23da11345133f8909bd4c713ca6e31ec8) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: include documentation_url in API Errors if provided
+
+- [#8759](https://github.com/cloudflare/workers-sdk/pull/8759) [`55b336f`](https://github.com/cloudflare/workers-sdk/commit/55b336f4385b16a3f87782f2eecdf7d5c64a0621) Thanks [@garvit-gupta](https://github.com/garvit-gupta)! - fix: Minor refactor for the r2 data catalog commands
+
+- [#8753](https://github.com/cloudflare/workers-sdk/pull/8753) [`245cfbd`](https://github.com/cloudflare/workers-sdk/commit/245cfbd70d82b687073169b1ea732f7ce0b08f31) Thanks [@cmackenzie1](https://github.com/cmackenzie1)! - - Hide `--transform-worker` flag on `wrangler pipelines <create|update>` during private beta.
+  - Add `--shard-count` option for `wrangler pipelines <create|update>` for more control over Pipeline throughput or file
+    size
+- Updated dependencies [[`007f322`](https://github.com/cloudflare/workers-sdk/commit/007f322f66dc1edc70840330166732d25dae9cb3)]:
+  - miniflare@4.20250321.2
+
 ## 4.7.0
 
 ### Minor Changes

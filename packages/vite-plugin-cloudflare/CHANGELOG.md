@@ -1,5 +1,18 @@
 # @cloudflare/vite-plugin
 
+## 0.1.21
+
+### Patch Changes
+
+- [#8768](https://github.com/cloudflare/workers-sdk/pull/8768) [`beb8a6f`](https://github.com/cloudflare/workers-sdk/commit/beb8a6fac33a3ea776aacde2c3b316dd3268d008) Thanks [@jamesopstad](https://github.com/jamesopstad)! - No longer warn if the user sets `upload_source_maps` in the Worker config.
+
+- [#8767](https://github.com/cloudflare/workers-sdk/pull/8767) [`61b916e`](https://github.com/cloudflare/workers-sdk/commit/61b916e0fe1f5a6812a3173ca2744ec9c5a4edd8) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Fix inspector port change being logged on server restarts. An available inspector port is now found on the initial server start and reused across restarts.
+
+- Updated dependencies [[`7427004`](https://github.com/cloudflare/workers-sdk/commit/7427004d45e52c0ef6e6e8dbe3ed5b79dc985d55), [`007f322`](https://github.com/cloudflare/workers-sdk/commit/007f322f66dc1edc70840330166732d25dae9cb3), [`199caa4`](https://github.com/cloudflare/workers-sdk/commit/199caa40eb37fd4bc4b3adb499e37d87d30f76dd), [`80ef13c`](https://github.com/cloudflare/workers-sdk/commit/80ef13c23da11345133f8909bd4c713ca6e31ec8), [`55b336f`](https://github.com/cloudflare/workers-sdk/commit/55b336f4385b16a3f87782f2eecdf7d5c64a0621), [`245cfbd`](https://github.com/cloudflare/workers-sdk/commit/245cfbd70d82b687073169b1ea732f7ce0b08f31)]:
+  - wrangler@4.7.1
+  - miniflare@4.20250321.2
+  - @cloudflare/unenv-preset@2.3.1
+
 ## 0.1.20
 
 ### Patch Changes
