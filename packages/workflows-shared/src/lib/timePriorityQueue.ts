@@ -228,6 +228,19 @@ export class TimePriorityQueue {
 		);
 	}
 
+	checkIfExistedInPast(entry: Omit<WakerPriorityEntry, "targetTimestamp">) {
+		return (
+			this.#ctx.storage.sql
+				.exec(
+					"SELECT * FROM priority_queue WHERE entryType = ? AND hash = ? AND action = ?",
+					fromWakerPriorityType(entry.type),
+					entry.hash,
+					0
+				)
+				.toArray().length >= 1
+		);
+	}
+
 	private addEntryDB(entry: WakerPriorityEntry) {
 		this.#ctx.storage.sql.exec(
 			`

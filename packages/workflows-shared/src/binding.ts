@@ -41,6 +41,8 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 			terminate: handle.terminate.bind(handle),
 			restart: handle.restart.bind(handle),
 			status: handle.status.bind(handle),
+			// @ts-expect-error worker typesss
+			sendEvent: handle.sendEvent.bind(handle),
 		};
 	}
 
@@ -63,6 +65,8 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 			terminate: handle.terminate.bind(handle),
 			restart: handle.restart.bind(handle),
 			status: handle.status.bind(handle),
+			// @ts-expect-error worker typesss
+			sendEvent: handle.sendEvent.bind(handle),
 		};
 	}
 	public async createBatch(
@@ -119,9 +123,16 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 			.at(0);
 
 		const filteredLogs = logs.filter(
-			(log) => log.event === InstanceEvent.STEP_SUCCESS
+			(log) =>
+				log.event === InstanceEvent.STEP_SUCCESS ||
+				log.event === InstanceEvent.WAIT_COMPLETE
 		);
-		const stepOutputs = filteredLogs.map((log) => log.metadata.result);
+
+		const stepOutputs = filteredLogs.map((log) =>
+			log.event === InstanceEvent.STEP_SUCCESS
+				? log.metadata.result
+				: log.metadata.payload
+		);
 
 		const workflowOutput =
 			workflowSuccessEvent !== undefined
@@ -134,5 +145,16 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 			// @ts-expect-error types are wrong, will remove this expect-error once I fix them
 			output: workflowOutput,
 		}; // output, error
+	}
+
+	public async sendEvent(args: {
+		payload: unknown;
+		type: string;
+	}): Promise<void> {
+		await this.stub.receiveEvent({
+			payload: args.payload,
+			type: args.type,
+			timestamp: new Date(),
+		});
 	}
 }
