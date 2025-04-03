@@ -387,6 +387,20 @@ export default <ExportedHandler<Env>>{
 					url.pathname === "/cdn-cgi/handler/scheduled" ||
 					/* legacy URL path */ url.pathname === "/cdn-cgi/mf/scheduled"
 				) {
+					if (url.pathname === "/cdn-cgi/mf/scheduled") {
+						ctx.waitUntil(
+							env[CoreBindings.SERVICE_LOOPBACK].fetch(
+								"http://localhost/core/log",
+								{
+									method: "POST",
+									headers: {
+										[SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString(),
+									},
+									body: `Triggering scheduled handlers via a request to \`/cdn-cgi/mf/scheduled\` is deprecated, and will be removed in a future version of Miniflare. Instead, send a request to \`/cdn-cgi/handler/scheduled\``,
+								}
+							)
+						);
+					}
 					return await handleScheduled(url.searchParams, service);
 				}
 
@@ -407,9 +421,7 @@ export default <ExportedHandler<Env>>{
 			}
 			response = maybeInjectLiveReload(response, env, ctx);
 			response = ensureAcceptableEncoding(clientAcceptEncoding, response);
-			// if (env[CoreBindings.TRIGGER_HANDLERS]) {
 			maybeLogRequest(request, response, env, ctx, startTime);
-			// }
 			return response;
 		} catch (e: any) {
 			return new Response(e?.stack ?? String(e), { status: 500 });
