@@ -42,6 +42,7 @@ export function runBuild(
 		rules,
 		tsconfig,
 		minify,
+		keepNames,
 		nodejsCompatMode,
 		define,
 		alias,
@@ -69,6 +70,7 @@ export function runBuild(
 		alias: Config["alias"];
 		tsconfig: string | undefined;
 		minify: boolean | undefined;
+		keepNames: boolean;
 		nodejsCompatMode: NodeJSCompatMode | undefined;
 		noBundle: boolean;
 		findAdditionalModules: boolean | undefined;
@@ -150,6 +152,7 @@ export function runBuild(
 						watch: true,
 						tsconfig,
 						minify,
+						keepNames,
 						nodejsCompatMode,
 						doBindings: durableObjects.bindings,
 						workflowBindings: workflows,
