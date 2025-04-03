@@ -108,8 +108,6 @@ export function addUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 					"r2-secret-access-key",
 					"r2-prefix",
 					"compression",
-					"file-template",
-					"partition-template",
 				],
 				`${chalk.bold("Destination settings")}`
 			)
@@ -149,22 +147,6 @@ export function addUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 				describe: "Compression format for output files",
 				choices: ["none", "gzip", "deflate"],
 				demandOption: false,
-			})
-			.option("partition-template", {
-				type: "string",
-				describe: "Path template for partitioned files in the bucket",
-				demandOption: false,
-			})
-			.option("file-template", {
-				type: "string",
-				describe: "Template for individual file names (must include ${slug})",
-				demandOption: false,
-				coerce: (val: string) => {
-					if (!val.includes("${slug}")) {
-						throw new Error("filename must contain ${slug}");
-					}
-					return val;
-				},
 			})
 
 			// Pipeline settings
@@ -293,12 +275,6 @@ export async function updatePipelineHandler(
 
 	if (args.r2Prefix) {
 		pipelineConfig.destination.path.prefix = args.r2Prefix;
-	}
-	if (args.partitionTemplate) {
-		pipelineConfig.destination.path.filepath = args.partitionTemplate;
-	}
-	if (args.fileTemplate) {
-		pipelineConfig.destination.path.filename = args.fileTemplate;
 	}
 
 	if (args.shardCount) {
