@@ -11,10 +11,10 @@ export async function isEmailReplyable(
 ): Promise<boolean> {
 	// The x-auto-response-supress header is set by MS Exchange and some other email services on outgoing email
 	// to opt-out of automatic responses. If it's set, don't allow the user Worker to reply to the email
-	const autoResponseSupress = incomingEmailHeaders
+	const autoResponseSuppress = incomingEmailHeaders
 		.get("x-auto-response-suppress")
 		?.toLowerCase();
-	if (autoResponseSupress !== undefined && autoResponseSupress !== "none") {
+	if (autoResponseSuppress !== undefined && autoResponseSuppress !== "none") {
 		return false;
 	}
 

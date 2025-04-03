@@ -164,7 +164,7 @@ test("Single allowed destination send_email binding works", async (t) => {
 	t.is(await readFile(file, "utf-8"), email);
 });
 
-test("Single allowed destination send_email binding throws if destiantion is not equal", async (t) => {
+test("Single allowed destination send_email binding throws if destination is not equal", async (t) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: SEND_EMAIL_WORKER,
@@ -530,7 +530,7 @@ test("reply: unparseable", async (t) => {
 	const mf = new Miniflare({
 		log,
 		modules: true,
-		script: REPLY_EMAIL_WORKER(JSON.stringify(dedent``)),
+		script: REPLY_EMAIL_WORKER('""'),
 		unsafeTriggerHandlers: true,
 
 		compatibilityDate: "2025-03-17",
@@ -569,12 +569,12 @@ test("reply: no message id", async (t) => {
 		modules: true,
 		script: REPLY_EMAIL_WORKER(
 			JSON.stringify(dedent`
-		From: someone else <someone-else@example.com>
-		To: someone <someone@example.com>
-		MIME-Version: 1.0
-		Content-Type: text/plain
+				From: someone else <someone-else@example.com>
+				To: someone <someone@example.com>
+				MIME-Version: 1.0
+				Content-Type: text/plain
 
-		This is a random email body.`)
+				This is a random email body.`)
 		),
 		unsafeTriggerHandlers: true,
 
@@ -614,14 +614,14 @@ test("reply: disallowed header", async (t) => {
 		modules: true,
 		script: REPLY_EMAIL_WORKER(
 			JSON.stringify(dedent`
-		From: someone else <someone-else@example.com>
-		To: someone <someone@example.com>
-		MIME-Version: 1.0
-		Content-Type: text/plain
-		Message-ID: <im-a-random-message-id@example.com>
-		Received: something
+				From: someone else <someone-else@example.com>
+				To: someone <someone@example.com>
+				MIME-Version: 1.0
+				Content-Type: text/plain
+				Message-ID: <im-a-random-message-id@example.com>
+				Received: something
 
-		This is a random email body.`)
+				This is a random email body.`)
 		),
 		unsafeTriggerHandlers: true,
 
@@ -661,13 +661,13 @@ test("reply: missing In-Reply-To", async (t) => {
 		modules: true,
 		script: REPLY_EMAIL_WORKER(
 			JSON.stringify(dedent`
-		From: someone else <someone-else@example.com>
-		To: someone <someone@example.com>
-		MIME-Version: 1.0
-		Content-Type: text/plain
-		Message-ID: <im-a-random-message-id@example.com>
+				From: someone else <someone-else@example.com>
+				To: someone <someone@example.com>
+				MIME-Version: 1.0
+				Content-Type: text/plain
+				Message-ID: <im-a-random-message-id@example.com>
 
-		This is a random email body.`)
+				This is a random email body.`)
 		),
 		unsafeTriggerHandlers: true,
 
@@ -709,14 +709,14 @@ test("reply: wrong In-Reply-To", async (t) => {
 		modules: true,
 		script: REPLY_EMAIL_WORKER(
 			JSON.stringify(dedent`
-		From: someone else <someone-else@example.com>
-		To: someone <someone@example.com>
-		MIME-Version: 1.0
-		Content-Type: text/plain
-		In-Reply-To: random
-		Message-ID: <im-a-random-message-id@example.com>
+				From: someone else <someone-else@example.com>
+				To: someone <someone@example.com>
+				MIME-Version: 1.0
+				Content-Type: text/plain
+				In-Reply-To: random
+				Message-ID: <im-a-random-message-id@example.com>
 
-		This is a random email body.`)
+				This is a random email body.`)
 		),
 		unsafeTriggerHandlers: true,
 
@@ -760,15 +760,15 @@ test("reply: invalid references", async (t) => {
 		modules: true,
 		script: REPLY_EMAIL_WORKER(
 			JSON.stringify(dedent`
-		From: someone else <someone-else@example.com>
-		To: someone <someone@example.com>
-		MIME-Version: 1.0
-		Content-Type: text/plain
-		In-Reply-To: <im-a-random-parent-message-id@example.com>
-		Message-ID: <im-a-random-message-id@example.com>
-		References: <im-a-random-other-message-id@example.com>
+				From: someone else <someone-else@example.com>
+				To: someone <someone@example.com>
+				MIME-Version: 1.0
+				Content-Type: text/plain
+				In-Reply-To: <im-a-random-parent-message-id@example.com>
+				Message-ID: <im-a-random-message-id@example.com>
+				References: <im-a-random-other-message-id@example.com>
 
-		This is a random email body.`)
+				This is a random email body.`)
 		),
 		unsafeTriggerHandlers: true,
 
@@ -809,14 +809,14 @@ test("reply: references generated correctly", async (t) => {
 		modules: true,
 		script: REPLY_EMAIL_WORKER(
 			JSON.stringify(dedent`
-		From: someone else <someone-else@example.com>
-		To: someone <someone@example.com>
-		MIME-Version: 1.0
-		Content-Type: text/plain
-		In-Reply-To: <im-a-random-parent-message-id@example.com>
-		Message-ID: <im-a-random-message-id@example.com>
+				From: someone else <someone-else@example.com>
+				To: someone <someone@example.com>
+				MIME-Version: 1.0
+				Content-Type: text/plain
+				In-Reply-To: <im-a-random-parent-message-id@example.com>
+				Message-ID: <im-a-random-message-id@example.com>
 
-		This is a random email body.`)
+				This is a random email body.`)
 		),
 		unsafeTriggerHandlers: true,
 

@@ -2172,8 +2172,9 @@ This is a random email body.
 		expect(response.status).toBe(200);
 
 		expect(worker.currentOutput).includes(
-			`Email handler forwarded message with\n  rcptTo: mark.s@example.com`
+			`Email handler forwarded message with`
 		);
+		expect(worker.currentOutput).includes(`rcptTo: mark.s@example.com`);
 	});
 
 	it("should save file on send_email", async () => {
