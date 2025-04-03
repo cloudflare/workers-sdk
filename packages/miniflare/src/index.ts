@@ -984,10 +984,12 @@ export class Miniflare {
 				this.#log.logWithLevel(logLevel, message);
 				response = new Response(null, { status: 204 });
 			} else if (url.pathname === "/core/store-temp-file") {
-				await mkdir(path.join(this.#tmpPath, "files"), { recursive: true });
+				const prefix = url.searchParams.get("prefix");
+				const folder = prefix ? `files/${prefix}` : "files";
+				await mkdir(path.join(this.#tmpPath, folder), { recursive: true });
 				const filePath = path.join(
 					this.#tmpPath,
-					"files",
+					folder,
 					`${crypto.randomUUID()}.${url.searchParams.get("extension") ?? "txt"}`
 				);
 				await writeFile(filePath, await request.text());
