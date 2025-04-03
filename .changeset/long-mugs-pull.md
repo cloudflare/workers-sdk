@@ -4,22 +4,16 @@
 
 feat: add `config.keep_names` option
 
-adds a new option so that developers can opt out of esbuild's `keep_names` option
-(see: https://esbuild.github.io/api/#keep-names) which wrangler otherwise sets
-to `true`
+Adds a new option to Wrangler to allow developers to opt out of esbuild's `keep_names` option (https://esbuild.github.io/api/#keep-names). By default, Wrangler sets this to `true`
 
-this is something developers should not usually need to care about, but sometimes
-`keep_names` can create issues, in such cases they will be now able to set opt
-out of it
+This is something developers should not usually need to care about, but sometimes
+`keep_names` can create issues, and in such cases they will be now able to opt-out.
 
-example `wrangler.jsonc`:
+Example `wrangler.jsonc`:
 
 ```json
 {
 	"name": "my-worker",
 	"main": "src/worker.ts",
-	"compatibility_flags": ["nodejs_compat"],
-
-	"minify": false
+	"keep_names": false
 }
-```
