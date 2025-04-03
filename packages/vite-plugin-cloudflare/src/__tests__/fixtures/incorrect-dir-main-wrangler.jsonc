@@ -1,5 +1,5 @@
 {
-  "name": "my-worker",
-  "main": "./",
-  "compatibility_date": "2024-12-30"
+	"name": "my-worker",
+	"main": "./",
+	"compatibility_date": "2024-12-30",
 }
