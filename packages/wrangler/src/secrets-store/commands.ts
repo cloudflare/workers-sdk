@@ -116,7 +116,7 @@ export const secretsStoreStoreDeleteCommand = createCommand({
 			await deleteStore(accountId, args.storeId);
 		} else {
 			throw new UserError(
-				"No local dev version of this command available, need to include --remote in command to delete a Secrets Store from your account",
+				"This command is not supported in local mode. Use `wrangler <cmd> --remote` to delete a Secrets Store from your account.",
 				{ telemetryMessage: true }
 			);
 		}
@@ -162,7 +162,7 @@ export const secretsStoreStoreListCommand = createCommand({
 			stores = await listStores(accountId, urlParams);
 		} else {
 			throw new UserError(
-				"No local dev version of this command available, need to include --remote in command to list Secrets Stores on your account",
+				"This command is not supported in local mode. Use `wrangler <cmd> --remote` to list Secrets Stores on your account.",
 				{ telemetryMessage: true }
 			);
 		}
