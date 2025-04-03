@@ -191,7 +191,7 @@ test("InspectorProxy: should allow inspector port updating via miniflare#setOpti
 	const mf = new Miniflare({ ...options, inspectorPort: initialInspectorPort });
 	t.teardown(() => mf.dispose());
 
-	t.is(await getInspectorPortReady(mf), `${initialInspectorPort}`);
+	t.is(await getInspectorPortReady(mf), initialInspectorPort);
 
 	let res = await fetch(
 		`http://localhost:${initialInspectorPort}/json/version`
@@ -203,7 +203,7 @@ test("InspectorProxy: should allow inspector port updating via miniflare#setOpti
 
 	t.not(initialInspectorPort, newInspectorPort);
 
-	t.is(await getInspectorPortReady(mf), `${newInspectorPort}`);
+	t.is(await getInspectorPortReady(mf), newInspectorPort);
 
 	res = await fetch(`http://localhost:${newInspectorPort}/json/version`);
 	t.is(res.status, 200);
@@ -249,10 +249,10 @@ test("InspectorProxy: should not keep the same inspector port on miniflare#setOp
 	const mf = new Miniflare(options);
 	t.teardown(() => mf.dispose());
 
-	t.is(await getInspectorPortReady(mf), `${initialInspectorPort}`);
+	t.is(await getInspectorPortReady(mf), initialInspectorPort);
 
 	await mf.setOptions({ ...options, inspectorPort: 0 });
-	const newInspectorPort = parseInt(await getInspectorPortReady(mf));
+	const newInspectorPort = await getInspectorPortReady(mf);
 
 	t.not(initialInspectorPort, newInspectorPort);
 
@@ -375,13 +375,13 @@ test("InspectorProxy: the devtools websocket communication should adapt to an in
 		ws.close();
 	};
 
-	const initialInspectorPort = parseInt(await getInspectorPortReady(mf));
+	const initialInspectorPort = await getInspectorPortReady(mf);
 
 	await testDebuggingWorkerOn(initialInspectorPort);
 
 	mf.setOptions({ ...options, inspectorPort: await getPort() });
 
-	const newInspectorPort = parseInt(await getInspectorPortReady(mf));
+	const newInspectorPort = await getInspectorPortReady(mf);
 
 	t.not(initialInspectorPort, newInspectorPort);
 
@@ -602,5 +602,5 @@ async function getInspectorPortReady(mf: Miniflare) {
 	await setTimeout(150);
 
 	const { port } = await mf.getInspectorURL();
-	return port;
+	return parseInt(port);
 }
