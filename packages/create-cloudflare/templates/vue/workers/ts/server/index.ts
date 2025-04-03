@@ -7,5 +7,6 @@ export default {
 				name: "Cloudflare",
 			});
 		}
+		return new Response(null, { status: 404 });
 	},
 } satisfies ExportedHandler<Env>;
