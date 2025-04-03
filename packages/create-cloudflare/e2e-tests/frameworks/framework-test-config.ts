@@ -659,5 +659,22 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Vite App",
 			},
 		},
+		waku: {
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Waku",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Waku",
+			},
+			verifyBuildCfTypes: {
+				outputFile: "worker-configuration.d.ts",
+				envInterfaceName: "Env",
+			},
+		},
 	};
 }
