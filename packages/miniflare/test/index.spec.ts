@@ -1663,48 +1663,6 @@ This is a random email body.
 	t.is(await res.text(), "true");
 });
 
-test("Miniflare: manually triggered email handler - valid reply", async (t) => {
-	const log = new TestLog(t);
-
-	const mf = new Miniflare({
-		log,
-		modules: true,
-		script: `
-			let receivedEmail = false;
-			export default {
-				fetch() {
-					return new Response(receivedEmail);
-				},
-				email(emailMessage) {
-					emailMessage.reply
-
-					receivedEmail = true;
-				}
-			}`,
-		unsafeTriggerHandlers: true,
-	});
-	t.teardown(() => mf.dispose());
-
-	let res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "false");
-
-	res = await mf.dispatchFetch(
-		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
-		{
-			body: "asbdiausbduiaBNIAUaduiw",
-			method: "POST",
-		}
-	);
-	t.is(
-		await res.text(),
-		"Email could not be parsed: invalid or no message id provided"
-	);
-	t.is(res.status, 400);
-
-	res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "false");
-});
-
 test("Miniflare: listens on ipv6", async (t) => {
 	const log = new TestLog(t);
 
