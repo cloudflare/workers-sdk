@@ -1,8 +1,10 @@
 import { readConfig } from "../../config";
+import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { printWranglerBanner } from "../../wrangler-banner";
 import { getPipeline } from "../client";
+import { formatPipelinePretty } from "../index";
 import { validateName } from "../validate";
 import type {
 	CommonYargsOptions,
@@ -11,11 +13,25 @@ import type {
 import type { Argv } from "yargs";
 
 export function addGetOptions(yargs: Argv<CommonYargsOptions>) {
-	return yargs.positional("pipeline", {
-		type: "string",
-		describe: "The name of the Pipeline to show",
-		demandOption: true,
-	});
+	return yargs
+		.positional("pipeline", {
+			type: "string",
+			describe: "The name of the Pipeline to show",
+			demandOption: true,
+		})
+		.option("format", {
+			type: "string",
+			describe: "The output format for pipeline",
+			default: "pretty",
+			demandOption: false,
+			coerce: (value: string) => {
+				const formats = ["pretty", "json"];
+				if (!formats.includes(value)) {
+					throw new UserError(`Unknown format value: ${value}`);
+				}
+				return value;
+			},
+		});
 }
 
 export async function getPipelineHandler(
@@ -28,8 +44,14 @@ export async function getPipelineHandler(
 
 	validateName("pipeline name", name);
 
-	logger.log(`Retrieving config for Pipeline "${name}".`);
 	const pipeline = await getPipeline(accountId, name);
 
-	logger.log(JSON.stringify(pipeline, null, 2));
+	switch (args.format) {
+		case "json":
+			logger.log(JSON.stringify(pipeline, null, 2));
+			break;
+		case "pretty":
+			logger.log(formatPipelinePretty(pipeline));
+			break;
+	}
 }
