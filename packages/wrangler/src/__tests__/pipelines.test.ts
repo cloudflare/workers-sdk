@@ -286,10 +286,9 @@ describe("pipelines", () => {
 				  pipeline  The name of the new pipeline  [string] [required]
 
 				Source settings
-				      --enable-worker-binding  Send data from a Worker to a Pipeline using a Binding  [boolean] [default: true]
-				      --enable-http            Generate an endpoint to ingest data via HTTP  [boolean] [default: true]
-				      --require-http-auth      Require Cloudflare API Token for HTTPS endpoint authentication  [boolean] [default: false]
-				      --cors-origins           CORS origin allowlist for HTTP endpoint (use * for any origin)  [array]
+				      --source             Space separated list of allowed sources. Options are 'http' or 'worker'  [array] [default: [\\"http\\",\\"worker\\"]]
+				      --require-http-auth  Require Cloudflare API Token for HTTPS endpoint authentication  [boolean] [default: false]
+				      --cors-origins       CORS origin allowlist for HTTP endpoint (use * for any origin)  [array]
 
 				Batch hints
 				      --batch-max-mb       Maximum batch size in megabytes before flushing  [number]
@@ -325,7 +324,13 @@ describe("pipelines", () => {
 			expect(requests.count).toEqual(1);
 			expect(std.out).toMatchInlineSnapshot(`
 				"🌀 Creating Pipeline named \\"my-pipeline\\"
-				✅ Successfully created Pipeline \\"my-pipeline\\" with id 0001
+				✅ Successfully created Pipeline \\"my-pipeline\\" with ID 0001
+				- Source(s): HTTP, Worker
+				- Destination: R2 test-bucket
+				- Output: new-line delimited JSON files
+
+				To see the full pipeline configuration, run \`wrangler pipelines get my-pipeline\`
+
 				🎉 You can now send data to your Pipeline!
 
 				To start interacting with this Pipeline from a Worker, open your Worker’s config file and add the following binding configuration:
@@ -341,7 +346,7 @@ describe("pipelines", () => {
 
 				Send data to your Pipeline's HTTP endpoint:
 
-					curl \\"foo\\" -d '[{\\"foo\\": \\"bar\\"}]'
+				curl \\"foo\\" -d '[{\\"foo\\": \\"bar\\"}]'
 				"
 			`);
 		});
@@ -369,8 +374,8 @@ describe("pipelines", () => {
 			expect(requests.count).toEqual(1);
 
 			// contain http source and include auth
-			expect(requests.body?.source[1].type).toEqual("http");
-			expect((requests.body?.source[1] as HttpSource).authentication).toEqual(
+			expect(requests.body?.source[0].type).toEqual("http");
+			expect((requests.body?.source[0] as HttpSource).authentication).toEqual(
 				true
 			);
 		});
@@ -378,7 +383,7 @@ describe("pipelines", () => {
 		it("should create a pipeline without http", async () => {
 			const requests = mockCreateRequest("my-pipeline");
 			await runWrangler(
-				"pipelines create my-pipeline --enable-http=false --r2-bucket test-bucket --r2-access-key-id my-key --r2-secret-access-key my-secret"
+				"pipelines create my-pipeline --source worker --r2-bucket test-bucket --r2-access-key-id my-key --r2-secret-access-key my-secret"
 			);
 			expect(requests.count).toEqual(1);
 
@@ -542,7 +547,7 @@ describe("pipelines", () => {
 			const updateReq = mockUpdateRequest(update.name, update);
 
 			await runWrangler(
-				"pipelines update my-pipeline --enable-worker-binding=false --enable-http --require-http-auth"
+				"pipelines update my-pipeline --source http --require-http-auth"
 			);
 
 			expect(updateReq.count).toEqual(1);
@@ -568,7 +573,7 @@ describe("pipelines", () => {
 			const updateReq = mockUpdateRequest(update.name, update);
 
 			await runWrangler(
-				"pipelines update my-pipeline --enable-worker-binding=false --enable-http --cors-origins http://localhost:8787"
+				"pipelines update my-pipeline --source http --cors-origins http://localhost:8787"
 			);
 
 			expect(updateReq.count).toEqual(1);

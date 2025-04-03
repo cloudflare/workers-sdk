@@ -17,7 +17,12 @@ import type {
 	CommonYargsOptions,
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
-import type { BindingSource, HttpSource, PipelineUserConfig } from "../client";
+import type {
+	BindingSource,
+	HttpSource,
+	PipelineUserConfig,
+	Source,
+} from "../client";
 import type { Argv } from "yargs";
 
 export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
@@ -30,24 +35,14 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 			})
 			// Sources
 			.group(
-				[
-					"enable-worker-binding",
-					"enable-http",
-					"require-http-auth",
-					"cors-origins",
-				],
+				["source", "require-http-auth", "cors-origins"],
 				`${chalk.bold("Source settings")}`
 			)
-			.option("enable-worker-binding", {
-				type: "boolean",
-				describe: "Send data from a Worker to a Pipeline using a Binding",
-				default: true,
-				demandOption: false,
-			})
-			.option("enable-http", {
-				type: "boolean",
-				describe: "Generate an endpoint to ingest data via HTTP",
-				default: true,
+			.option("source", {
+				type: "array",
+				describe:
+					"Space separated list of allowed sources. Options are 'http' or 'worker'",
+				default: ["http", "worker"],
 				demandOption: false,
 			})
 			.option("require-http-auth", {
@@ -249,26 +244,33 @@ export async function createPipelineHandler(
 		throw new FatalError("Requires a r2 secret access key");
 	}
 
-	// add binding source (default to add)
-	if (args.enableWorkerBinding) {
-		pipelineConfig.source.push({
-			type: "binding",
-			format: "json",
-		} satisfies BindingSource);
-	}
+	if (args.source.length > 0) {
+		const sourceHandlers: Record<string, () => Source> = {
+			http: (): HttpSource => {
+				const http: HttpSource = {
+					type: "http",
+					format: "json",
+					authentication: args.requireHttpAuth,
+				};
 
-	// add http source (possibly authenticated), default to add
-	if (args.enableHttp) {
-		const source: HttpSource = {
-			type: "http",
-			format: "json",
-			authentication: args.requireHttpAuth,
+				if (args.corsOrigins && args.corsOrigins.length > 0) {
+					http.cors = { origins: args.corsOrigins };
+				}
+
+				return http;
+			},
+			worker: (): BindingSource => ({
+				type: "binding",
+				format: "json",
+			}),
 		};
 
-		if (args.corsOrigins && args.corsOrigins.length > 0) {
-			source.cors = { origins: args.corsOrigins };
+		for (const source of args.source) {
+			const handler = sourceHandlers[source];
+			if (handler) {
+				pipelineConfig.source.push(handler());
+			}
 		}
-		pipelineConfig.source.push(source);
 	}
 
 	if (pipelineConfig.source.length === 0) {
@@ -298,11 +300,20 @@ export async function createPipelineHandler(
 	logger.log(`🌀 Creating Pipeline named "${name}"`);
 	const pipeline = await createPipeline(accountId, pipelineConfig);
 
+	// Produces a summary of what was created and instructions for how to begin using Pipelines
 	logger.log(
-		`✅ Successfully created Pipeline "${pipeline.name}" with id ${pipeline.id}`
+		`✅ Successfully created Pipeline "${pipeline.name}" with ID ${pipeline.id}
+- Source(s): ${pipeline.source.map((s) => (s.type === "http" ? "HTTP" : "Worker")).join(", ")}
+- Destination: ${pipeline.destination.type.toUpperCase()} ${pipeline.destination.path.bucket}
+- Output: new-line delimited JSON files
+
+To see the full pipeline configuration, run \`wrangler pipelines get ${pipeline.name}\`
+`
 	);
+
 	logger.log("🎉 You can now send data to your Pipeline!");
-	if (args.enableWorkerBinding) {
+
+	if (args.source.includes("worker")) {
 		logger.log(
 			`\nTo start interacting with this Pipeline from a Worker, open your Worker’s config file and add the following binding configuration:\n`
 		);
@@ -320,8 +331,9 @@ export async function createPipelineHandler(
 			)
 		);
 	}
-	if (args.enableHttp) {
+
+	if (args.source.includes("http")) {
 		logger.log(`\nSend data to your Pipeline's HTTP endpoint:\n`);
-		logger.log(`	curl "${pipeline.endpoint}" -d '[{"foo": "bar"}]'\n`);
+		logger.log(`curl "${pipeline.endpoint}" -d '[{"foo": "bar"}]'\n`);
 	}
 }
