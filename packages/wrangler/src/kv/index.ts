@@ -11,7 +11,7 @@ import * as metrics from "../metrics";
 import { parseJSON, readFileSync, readFileSyncToBuffer } from "../parse";
 import { requireAuth } from "../user";
 import { getValidBindingName } from "../utils/getValidBindingName";
-import { isLocal } from "../utils/is-local";
+import { isLocal, printResourceLocation } from "../utils/is-local";
 import {
 	createKVNamespace,
 	deleteKVBulkKeyValue,
@@ -90,9 +90,8 @@ export const kvNamespaceCreateCommand = createCommand({
 		const title = `${environment}${args.namespace}${preview}`;
 
 		const accountId = await requireAuth(config);
-
+		printResourceLocation("remote");
 		// TODO: generate a binding name stripping non alphanumeric chars
-
 		logger.log(`🌀 Creating namespace with title "${title}"`);
 		const namespaceId = await createKVNamespace(accountId, title);
 		metrics.sendMetricsEvent("create kv namespace", {
@@ -132,7 +131,7 @@ export const kvNamespaceListCommand = createCommand({
 
 	args: {},
 
-	behaviour: { printBanner: false },
+	behaviour: { printBanner: false, printResourceLocation: false },
 	async handler(args) {
 		const config = readConfig(args);
 
@@ -153,7 +152,6 @@ export const kvNamespaceDeleteCommand = createCommand({
 		status: "stable",
 		owner: "Product: KV",
 	},
-
 	args: {
 		binding: {
 			type: "string",
@@ -177,7 +175,7 @@ export const kvNamespaceDeleteCommand = createCommand({
 
 	async handler(args) {
 		const config = readConfig(args);
-
+		printResourceLocation("remote");
 		let id;
 		try {
 			id = getKVNamespaceId(args, config);
@@ -222,7 +220,9 @@ export const kvKeyPutCommand = createCommand({
 		status: "stable",
 		owner: "Product: KV",
 	},
-
+	behaviour: {
+		printResourceLocation: true,
+	},
 	positionalArgs: ["key", "value"],
 	args: {
 		key: {
@@ -354,6 +354,11 @@ export const kvKeyListCommand = createCommand({
 		status: "stable",
 		owner: "Product: KV",
 	},
+	behaviour: {
+		// implicitly expects to output JSON only
+		printResourceLocation: false,
+		printBanner: false,
+	},
 
 	args: {
 		binding: {
@@ -395,7 +400,6 @@ export const kvKeyListCommand = createCommand({
 		demandOneOfOption("binding", "namespace-id")(args);
 	},
 
-	behaviour: { printBanner: false },
 	async handler({ prefix, ...args }) {
 		const localMode = isLocal(args);
 		// TODO: support for limit+cursor (pagination)
@@ -434,7 +438,10 @@ export const kvKeyGetCommand = createCommand({
 		status: "stable",
 		owner: "Product: KV",
 	},
-
+	behaviour: {
+		printBanner: false,
+		printResourceLocation: false,
+	},
 	positionalArgs: ["key"],
 	args: {
 		key: {
@@ -480,8 +487,6 @@ export const kvKeyGetCommand = createCommand({
 	validateArgs(args) {
 		demandOneOfOption("binding", "namespace-id")(args);
 	},
-
-	behaviour: { printBanner: false },
 	async handler({ key, ...args }) {
 		const localMode = isLocal(args);
 		const config = readConfig(args);
@@ -535,7 +540,9 @@ export const kvKeyDeleteCommand = createCommand({
 		status: "stable",
 		owner: "Product: KV",
 	},
-
+	behaviour: {
+		printResourceLocation: true,
+	},
 	positionalArgs: ["key"],
 	args: {
 		key: {
@@ -607,7 +614,10 @@ export const kvBulkGetCommand = createCommand({
 		status: "open-beta",
 		owner: "Product: KV",
 	},
-
+	behaviour: {
+		printBanner: false,
+		printResourceLocation: false,
+	},
 	positionalArgs: ["filename"],
 	args: {
 		filename: {
@@ -726,7 +736,9 @@ export const kvBulkPutCommand = createCommand({
 		status: "stable",
 		owner: "Product: KV",
 	},
-
+	behaviour: {
+		printResourceLocation: true,
+	},
 	positionalArgs: ["filename"],
 	args: {
 		filename: {
@@ -878,7 +890,9 @@ export const kvBulkDeleteCommand = createCommand({
 		status: "stable",
 		owner: "Product: KV",
 	},
-
+	behaviour: {
+		printResourceLocation: true,
+	},
 	positionalArgs: ["filename"],
 	args: {
 		filename: {
