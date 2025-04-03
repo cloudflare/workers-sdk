@@ -6,8 +6,8 @@ import { logger } from "../logger";
 import { APIError } from "../parse";
 import { addCreateOptions, createPipelineHandler } from "./cli/create";
 import { addDeleteOptions, deletePipelineHandler } from "./cli/delete";
+import { addGetOptions, getPipelineHandler } from "./cli/get";
 import { listPipelinesHandler } from "./cli/list";
-import { addShowOptions, showPipelineHandler } from "./cli/show";
 import { addUpdateOptions, updatePipelineHandler } from "./cli/update";
 import { generateR2ServiceToken, getR2Bucket } from "./client";
 import type { CommonYargsArgv } from "../yargs-types";
@@ -133,10 +133,10 @@ export function pipelines(pipelineYargs: CommonYargsArgv) {
 			listPipelinesHandler
 		)
 		.command(
-			"show <pipeline>",
-			"Show a Pipeline configuration",
-			addShowOptions,
-			showPipelineHandler
+			"get <pipeline>",
+			"Get a Pipeline configuration",
+			addGetOptions,
+			getPipelineHandler
 		)
 		.command(
 			"update <pipeline>",
