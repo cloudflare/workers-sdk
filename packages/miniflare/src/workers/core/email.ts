@@ -182,7 +182,7 @@ export async function handleEmail(
 				);
 
 				const resp = await env[CoreBindings.SERVICE_LOOPBACK].fetch(
-					"http://localhost/core/store-temp-file?extension=eml",
+					"http://localhost/core/store-temp-file?extension=eml&prefix=email",
 					{
 						method: "POST",
 						body: finalReply,

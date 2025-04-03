@@ -69,7 +69,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 		}
 
 		const resp = await this.env[CoreBindings.SERVICE_LOOPBACK].fetch(
-			"http://localhost/core/store-temp-file?extension=eml",
+			"http://localhost/core/store-temp-file?extension=eml&prefix=email",
 			{
 				method: "POST",
 				body: rawEmailBuffer,
