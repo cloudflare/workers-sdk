@@ -22,7 +22,7 @@ const EmailBindingOptionsSchema = z
 		])
 	);
 
-const EmailOptionsSchema = z.object({
+export const EmailOptionsSchema = z.object({
 	email: z
 		.object({
 			send_email: z.array(EmailBindingOptionsSchema).optional(),
