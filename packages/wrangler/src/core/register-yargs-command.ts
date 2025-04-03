@@ -92,7 +92,11 @@ function createHandler(def: CommandDefinition) {
 
 			await def.validateArgs?.(args);
 
-			if (def.behaviour?.printResourceLocation) {
+			const shouldPrintResourceLocation =
+				typeof def.behaviour?.printResourceLocation === "function"
+					? def.behaviour?.printResourceLocation(args)
+					: def.behaviour?.printResourceLocation;
+			if (shouldPrintResourceLocation) {
 				// we don't have the type of args here :(
 				const remote =
 					"remote" in args && typeof args.remote === "boolean"
