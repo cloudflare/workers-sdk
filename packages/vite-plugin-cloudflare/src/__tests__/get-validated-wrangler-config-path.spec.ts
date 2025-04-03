@@ -20,7 +20,7 @@ describe("valid cases", () => {
 	test("should return the value of a requested wrangler config", () => {
 		const path = getValidatedWranglerConfigPath(
 			fixturesPath,
-			join(fixturesPath, "simple-wrangler.toml")
+			join(fixturesPath, "simple-wrangler.jsonc")
 		);
 		expect(normalize(path)).toMatch(
 			isWindows
@@ -78,7 +78,7 @@ describe("invalid cases", () => {
 			expect(() => {
 				getValidatedWranglerConfigPath(
 					fixturesPath,
-					join(fixturesPath, "empty-dir.toml"),
+					join(fixturesPath, "empty-dir.jsonc"),
 					forAuxiliaryWorker
 				);
 			}).toThrowError(
@@ -92,7 +92,7 @@ describe("invalid cases", () => {
 			expect(() => {
 				getValidatedWranglerConfigPath(
 					fixturesPath,
-					join(fixturesPath, "empty-dir/wrangler.toml"),
+					join(fixturesPath, "empty-dir/wrangler.jsonc"),
 					forAuxiliaryWorker
 				);
 			}).toThrowError(

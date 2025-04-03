@@ -7,7 +7,7 @@ export default defineConfig({
 	},
 	plugins: [
 		cloudflare({
-			configPath: "./worker-process/wrangler.toml",
+			configPath: "./worker-process/wrangler.jsonc",
 			inspectorPort: false,
 			persistState: false,
 		}),

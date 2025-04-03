@@ -4,7 +4,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
 	plugins: [
 		cloudflare({
-			auxiliaryWorkers: [{ configPath: "./aux-worker/wrangler.toml" }],
+			auxiliaryWorkers: [{ configPath: "./aux-worker/wrangler.jsonc" }],
 		}),
 	],
 });
