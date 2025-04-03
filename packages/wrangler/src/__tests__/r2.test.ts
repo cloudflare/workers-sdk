@@ -157,7 +157,7 @@ describe("r2", () => {
 				  wrangler r2 bucket info <bucket>    Get information about an R2 bucket
 				  wrangler r2 bucket delete <bucket>  Delete an R2 bucket
 				  wrangler r2 bucket sippy            Manage Sippy incremental migration on an R2 bucket
-				  wrangler r2 bucket catalog          Manage the data catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark, DuckDB, and Trino [open-beta]
+				  wrangler r2 bucket catalog          Manage the data catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark and PyIceberg [open-beta]
 				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
 				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
 				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
@@ -198,7 +198,7 @@ describe("r2", () => {
 				  wrangler r2 bucket info <bucket>    Get information about an R2 bucket
 				  wrangler r2 bucket delete <bucket>  Delete an R2 bucket
 				  wrangler r2 bucket sippy            Manage Sippy incremental migration on an R2 bucket
-				  wrangler r2 bucket catalog          Manage the data catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark, DuckDB, and Trino [open-beta]
+				  wrangler r2 bucket catalog          Manage the data catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark and PyIceberg [open-beta]
 				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
 				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
 				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
@@ -947,7 +947,7 @@ describe("r2", () => {
 					"
 					wrangler r2 bucket catalog
 
-					Manage the data catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark, DuckDB, and Trino [open-beta]
+					Manage the data catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark and PyIceberg [open-beta]
 
 					COMMANDS
 					  wrangler r2 bucket catalog enable <bucket>   Enable the data catalog on an R2 bucket [open-beta]
@@ -989,7 +989,7 @@ describe("r2", () => {
 Catalog URI: 'https://catalog.cloudflarestorage.com/test-warehouse-name'
 Warehouse: 'test-warehouse-name'
 
-Use this Catalog URI with Iceberg-compatible query engines (Spark, DuckDB, Trino, etc.) to query data as tables.
+Use this Catalog URI with Iceberg-compatible query engines (Spark, PyIceberg etc.) to query data as tables.
 Note: You will need a Cloudflare API token with 'R2 Data Catalog' permission to authenticate your client with this catalog.
 For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"`
 					);
@@ -1172,7 +1172,6 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 					expect(std.out).toMatchInlineSnapshot(`
 					"Getting data catalog status for 'test-bucket'...
 
-					Bucket:       test-bucket
 					Catalog URI:  https://catalog.cloudflarestorage.com/test-name
 					Warehouse:    test-name
 					Status:       active"
