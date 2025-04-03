@@ -4,29 +4,29 @@ import { ServiceDesignator, Worker_Binding } from "../../runtime";
 import { KV_PLUGIN, KVOptionsSchema } from "../kv";
 import { PersistenceSchema, Plugin, ProxyNodeBinding } from "../shared";
 
-const SecretStoresSchema = z.record(
+const SecretsStoreSecretsSchema = z.record(
 	z.object({
 		store_id: z.string(),
 		secret_name: z.string(),
 	})
 );
 
-export const SecretStoreOptionsSchema = z.object({
-	secretsStoreSecrets: SecretStoresSchema.optional(),
+export const SecretsStoreSecretsOptionsSchema = z.object({
+	secretsStoreSecrets: SecretsStoreSecretsSchema.optional(),
 });
 
-export const SecretStoreSharedOptionsSchema = z.object({
+export const SecretsStoreSecretsSharedOptionsSchema = z.object({
 	secretsStorePersist: PersistenceSchema,
 });
 
 export const SECRET_STORE_PLUGIN_NAME = "secrets-store";
 
 function getkvNamespacesOptions(
-	secretStores: z.input<typeof SecretStoresSchema>
+	secretsStoreSecrets: z.input<typeof SecretsStoreSecretsSchema>
 ): z.input<typeof KVOptionsSchema> {
 	// Get unique store ids
 	const storeIds = new Set(
-		Object.values(secretStores).map((store) => store.store_id)
+		Object.values(secretsStoreSecrets).map((store) => store.store_id)
 	);
 	// Setup a KV Namespace per store id with store id as the binding name
 	const storeIdKvNamespaceEntries = Array.from(storeIds).map((storeId) => [
@@ -46,11 +46,11 @@ function isKvBinding(
 }
 
 export const SECRET_STORE_PLUGIN: Plugin<
-	typeof SecretStoreOptionsSchema,
-	typeof SecretStoreSharedOptionsSchema
+	typeof SecretsStoreSecretsOptionsSchema,
+	typeof SecretsStoreSecretsSharedOptionsSchema
 > = {
-	options: SecretStoreOptionsSchema,
-	sharedOptions: SecretStoreSharedOptionsSchema,
+	options: SecretsStoreSecretsOptionsSchema,
+	sharedOptions: SecretsStoreSecretsSharedOptionsSchema,
 	async getBindings(options) {
 		if (!options.secretsStoreSecrets) {
 			return [];
@@ -69,7 +69,7 @@ export const SECRET_STORE_PLUGIN: Plugin<
 		});
 		return bindings;
 	},
-	getNodeBindings(options: z.infer<typeof SecretStoreOptionsSchema>) {
+	getNodeBindings(options: z.infer<typeof SecretsStoreSecretsOptionsSchema>) {
 		if (!options.secretsStoreSecrets) {
 			return {};
 		}

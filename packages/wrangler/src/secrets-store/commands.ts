@@ -81,7 +81,7 @@ export const secretsStoreStoreCreateCommand = createCommand({
 			store = await createStore(accountId, { name: args.name });
 		} else {
 			throw new UserError(
-				"No local dev version of this command available, need to include --remote in command to create a Secrets Store on your account",
+				"Local secrets stores are automatically created for you on use. To create a Secrets Store on your account, use the --remote flag.",
 				{ telemetryMessage: true }
 			);
 		}
