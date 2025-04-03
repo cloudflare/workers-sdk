@@ -1983,6 +1983,7 @@ export class Miniflare {
 		const result = new Map<keyof Plugins, string>();
 		for (const [key, plugin] of PLUGIN_ENTRIES) {
 			const sharedOpts = this.#sharedOpts[key];
+			// @ts-expect-error `sharedOptions` will match the plugin's type here
 			const maybePath = plugin.getPersistPath?.(sharedOpts, this.#tmpPath);
 			if (maybePath !== undefined) result.set(key, maybePath);
 		}

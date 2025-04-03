@@ -2005,7 +2005,7 @@ describe("watch mode", () => {
 	);
 });
 
-describe.only("email local dev", () => {
+describe("email local dev", () => {
 	it("should save file on reply", async () => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed({
