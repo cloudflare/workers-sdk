@@ -11,9 +11,11 @@
   },
   // R2 incremental cache
   "r2_buckets": [
-    {
-      "binding": "NEXT_INC_CACHE_R2_BUCKET",
-      "bucket_name": "<BUCKET_NAME>"
-    }
+    // Create a R2 binding to enable incremental cache
+    // See https://opennext.js.org/cloudflare/caching for details
+    // {
+    //   "binding": "NEXT_INC_CACHE_R2_BUCKET",
+    //   "bucket_name": "<BUCKET_NAME>"
+    // }
   ]
 }
