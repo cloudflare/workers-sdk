@@ -12,8 +12,8 @@ describe("valid cases", () => {
 		const path = getValidatedWranglerConfigPath(fixturesPath, undefined);
 		expect(normalize(path)).toMatch(
 			isWindows
-				? /\\__tests__\\fixtures\\wrangler\.toml/
-				: /\/__tests__\/fixtures\/wrangler\.toml/
+				? /\\__tests__\\fixtures\\wrangler\.jsonc/
+				: /\/__tests__\/fixtures\/wrangler\.jsonc/
 		);
 	});
 
@@ -24,8 +24,8 @@ describe("valid cases", () => {
 		);
 		expect(normalize(path)).toMatch(
 			isWindows
-				? /\\__tests__\\fixtures\\simple-wrangler\.toml/
-				: /\/__tests__\/fixtures\/simple-wrangler\.toml/
+				? /\\__tests__\\fixtures\\simple-wrangler\.jsonc/
+				: /\/__tests__\/fixtures\/simple-wrangler\.jsonc/
 		);
 	});
 });
@@ -83,8 +83,8 @@ describe("invalid cases", () => {
 				);
 			}).toThrowError(
 				forAuxiliaryWorker
-					? /The provided configPath \(.*?empty-dir.toml\) requested for one of your auxiliary workers points to a directory\. It should point to a file\./
-					: /The provided configPath \(.*?empty-dir.toml\) points to a directory\. It should point to a file\./
+					? /The provided configPath \(.*?empty-dir.jsonc\) requested for one of your auxiliary workers points to a directory\. It should point to a file\./
+					: /The provided configPath \(.*?empty-dir.jsonc\) points to a directory\. It should point to a file\./
 			);
 		});
 
@@ -97,8 +97,8 @@ describe("invalid cases", () => {
 				);
 			}).toThrowError(
 				forAuxiliaryWorker
-					? /The provided configPath \(.*?wrangler.toml\) requested for one of your auxiliary workers doesn't point to an existing file/
-					: /The provided configPath \(.*?wrangler.toml\) doesn't point to an existing file/
+					? /The provided configPath \(.*?wrangler.jsonc\) requested for one of your auxiliary workers doesn't point to an existing file/
+					: /The provided configPath \(.*?wrangler.jsonc\) doesn't point to an existing file/
 			);
 		});
 	});
