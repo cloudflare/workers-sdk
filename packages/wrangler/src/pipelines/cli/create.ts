@@ -9,6 +9,7 @@ import { createPipeline } from "../client";
 import {
 	authorizeR2Bucket,
 	BYTES_PER_MB,
+	formatPipelinePretty,
 	getAccountR2Endpoint,
 	parseTransform,
 } from "../index";
@@ -274,17 +275,10 @@ export async function createPipelineHandler(
 	logger.log(`🌀 Creating Pipeline named "${name}"`);
 	const pipeline = await createPipeline(accountId, pipelineConfig);
 
-	// Produces a summary of what was created and instructions for how to begin using Pipelines
 	logger.log(
-		`✅ Successfully created Pipeline "${pipeline.name}" with ID ${pipeline.id}
-- Source(s): ${pipeline.source.map((s) => (s.type === "http" ? "HTTP" : "Worker")).join(", ")}
-- Destination: ${pipeline.destination.type.toUpperCase()} ${pipeline.destination.path.bucket}
-- Output: new-line delimited JSON files
-
-To see the full pipeline configuration, run \`wrangler pipelines get ${pipeline.name}\`
-`
+		`✅ Successfully created Pipeline "${pipeline.name}" with ID ${pipeline.id}\n`
 	);
-
+	logger.log(formatPipelinePretty(pipeline));
 	logger.log("🎉 You can now send data to your Pipeline!");
 
 	if (args.source.includes("worker")) {

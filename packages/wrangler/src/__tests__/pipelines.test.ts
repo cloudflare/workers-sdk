@@ -30,13 +30,20 @@ describe("pipelines", () => {
 				type: "http",
 				format: "json",
 				authentication: false,
+				cors: {
+					origins: ["*"],
+				},
 			},
 		],
 		transforms: [],
 		destination: {
 			type: "r2",
 			format: "json",
-			batch: {},
+			batch: {
+				max_bytes: 100000000,
+				max_duration_s: 300,
+				max_rows: 100000,
+			},
 			compression: {
 				type: "none",
 			},
@@ -101,6 +108,18 @@ describe("pipelines", () => {
 						name: name,
 						endpoint: "foo",
 					};
+
+					// API will set defaults if not provided
+					if (!pipeline.destination.batch.max_rows) {
+						pipeline.destination.batch.max_rows = 10_000_000;
+					}
+					if (!pipeline.destination.batch.max_bytes) {
+						pipeline.destination.batch.max_bytes = 100_000_000;
+					}
+					if (!pipeline.destination.batch.max_duration_s) {
+						pipeline.destination.batch.max_duration_s = 300;
+					}
+
 					return HttpResponse.json(
 						{
 							success: !error,
@@ -323,11 +342,25 @@ describe("pipelines", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"🌀 Creating Pipeline named \\"my-pipeline\\"
 				✅ Successfully created Pipeline \\"my-pipeline\\" with ID 0001
-				- Source(s): HTTP, Worker
-				- Destination: R2 test-bucket
-				- Output: new-line delimited JSON files
 
-				To see the full pipeline configuration, run \`wrangler pipelines get my-pipeline\`
+				Id:    0001
+				Name:  my-pipeline
+				Sources:
+				  HTTP:
+				    Endpoint:        foo
+				    Authentication:  off
+				    Format:          JSON
+				  Worker:
+				    Format:  JSON
+				Destination:
+				  Type:         R2
+				  Bucket:       test-bucket
+				  Format:       newline-delimited JSON
+				  Compression:  GZIP
+				  Batch hints:
+				    Max bytes:     100 MB
+				    Max duration:  300 seconds
+				    Max records:   10,000,000
 
 				🎉 You can now send data to your Pipeline!
 
@@ -413,14 +446,43 @@ describe("pipelines", () => {
 	});
 
 	describe("get", () => {
-		it("should get pipeline", async () => {
+		it("should get pipeline pretty", async () => {
 			const requests = mockGetRequest("foo", samplePipeline);
 			await runWrangler("pipelines get foo");
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Retrieving config for Pipeline \\"foo\\".
-				{
+				"Id:    0001
+				Name:  my-pipeline
+				Sources:
+				  HTTP:
+				    Endpoint:        https://0001.pipelines.cloudflarestorage.com
+				    Authentication:  off
+				    CORS Origins:    *
+				    Format:          JSON
+				  Worker:
+				    Format:  JSON
+				Destination:
+				  Type:         R2
+				  Bucket:       bucket
+				  Format:       newline-delimited JSON
+				  Compression:  NONE
+				  Batch hints:
+				    Max bytes:     100 MB
+				    Max duration:  300 seconds
+				    Max records:   100,000
+				"
+			`);
+			expect(requests.count).toEqual(1);
+		});
+
+		it("should get pipeline json", async () => {
+			const requests = mockGetRequest("foo", samplePipeline);
+			await runWrangler("pipelines get foo --format=json");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"{
 				  \\"id\\": \\"0001\\",
 				  \\"version\\": 1,
 				  \\"name\\": \\"my-pipeline\\",
@@ -433,14 +495,23 @@ describe("pipelines", () => {
 				    {
 				      \\"type\\": \\"http\\",
 				      \\"format\\": \\"json\\",
-				      \\"authentication\\": false
+				      \\"authentication\\": false,
+				      \\"cors\\": {
+				        \\"origins\\": [
+				          \\"*\\"
+				        ]
+				      }
 				    }
 				  ],
 				  \\"transforms\\": [],
 				  \\"destination\\": {
 				    \\"type\\": \\"r2\\",
 				    \\"format\\": \\"json\\",
-				    \\"batch\\": {},
+				    \\"batch\\": {
+				      \\"max_bytes\\": 100000000,
+				      \\"max_duration_s\\": 300,
+				      \\"max_rows\\": 100000
+				    },
 				    \\"compression\\": {
 				      \\"type\\": \\"none\\"
 				    },
@@ -467,8 +538,7 @@ describe("pipelines", () => {
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-				"Retrieving config for Pipeline \\"bad-pipeline\\".
-				X [ERROR] A request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.
+				"X [ERROR] A request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.
 				  Pipeline does not exist [code: 1000]
 				  If you think this is a bug, please open an issue at:
 				  https://github.com/cloudflare/workers-sdk/issues/new/choose"
