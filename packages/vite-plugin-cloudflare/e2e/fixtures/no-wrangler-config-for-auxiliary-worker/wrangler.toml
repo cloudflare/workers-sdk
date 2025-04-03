@@ -1,3 +1,0 @@
-name = "no-wrangler-config-for-auxiliary-worker"
-compatibility_date = "2024-12-30"
-main = "index.ts"
