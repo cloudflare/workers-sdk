@@ -316,9 +316,9 @@ const verifyPreviewScript = async (
 			"run",
 			previewScript,
 			...(pm === "npm" ? ["--"] : []),
+			...(verifyPreview.previewArgs ?? []),
 			"--port",
 			`${TEST_PORT}`,
-			...(verifyPreview.previewArgs ?? []),
 		],
 		{
 			cwd: projectPath,
