@@ -7,7 +7,5 @@ export default {
         name: "Cloudflare",
       });
     }
-
-    return env.ASSETS.fetch(request);
   },
-}
+} satisfies ExportedHandler<Env>;
