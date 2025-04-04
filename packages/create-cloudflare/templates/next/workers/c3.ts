@@ -12,7 +12,7 @@ const generate = async (ctx: C3Context) => {
 
 const configure = async (ctx: C3Context) => {
 	const packages = [
-		"@opennextjs/cloudflare@0.5.x",
+		"@opennextjs/cloudflare@~1.0.0-beta.0 || ^1.0.0",
 		"@cloudflare/workers-types",
 	];
 	await installPackages(packages, {
@@ -51,7 +51,7 @@ export default {
 	configVersion: 1,
 	id: "next",
 	frameworkCli: "create-next-app",
-	frameworkCliPinnedVersion: "~15.2.2",
+	frameworkCliPinnedVersion: "~15.2.4",
 	platform: "workers",
 	displayName: "Next.js (using Node.js compat + Workers Assets)",
 	path: "templates/next/workers",
@@ -62,8 +62,8 @@ export default {
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			deploy: `opennextjs-cloudflare && wrangler deploy`,
-			preview: `opennextjs-cloudflare && wrangler dev`,
+			deploy: `opennextjs-cloudflare build && opennextjs-cloudflare deploy`,
+			preview: `opennextjs-cloudflare build && opennextjs-cloudflare preview`,
 			"cf-typegen": `wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts`,
 		},
 	}),

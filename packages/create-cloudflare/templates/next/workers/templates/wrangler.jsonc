@@ -1,7 +1,7 @@
 {
   "name": "<app-name>",
   "main": ".open-next/worker.js",
-  "compatibility_date": "2024-09-26",
+  "compatibility_date": "2025-03-01",
   "compatibility_flags": [
     "nodejs_compat"
   ],

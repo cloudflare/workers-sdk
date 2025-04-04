@@ -415,6 +415,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				envInterfaceName: "CloudflareEnv",
 			},
 			verifyPreview: {
+				previewArgs: ["--"],
 				route: "/test",
 				expectedText: "Create Next App",
 			},
@@ -425,7 +426,6 @@ export default function getFrameworkTestConfig(pm: string) {
 			// see https://github.com/cloudflare/next-on-pages/blob/main/packages/next-on-pages/docs/supported.md#operating-systems
 			unsupportedOSs: ["win32"],
 			unsupportedPms: [
-				"pnpm",
 				// bun and yarn are failing in CI
 				"bun",
 				"yarn",
