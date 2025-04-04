@@ -332,12 +332,12 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					"Unexpected error: No Vite HTTP server"
 				);
 
-				if (!miniflare) {
-					const inputInspectorPort = await getInputInspectorPortOption(
-						pluginConfig,
-						viteDevServer
-					);
+				const inputInspectorPort = await getInputInspectorPortOption(
+					pluginConfig,
+					viteDevServer
+				);
 
+				if (!miniflare) {
 					miniflare = new Miniflare(
 						getDevMiniflareOptions(
 							resolvedPluginConfig,
@@ -346,14 +346,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						)
 					);
 				} else {
-					const resolvedInspectorPort =
-						await getResolvedInspectorPort(pluginConfig);
-
 					await miniflare.setOptions(
 						getDevMiniflareOptions(
 							resolvedPluginConfig,
 							viteDevServer,
-							resolvedInspectorPort ?? false
+							inputInspectorPort
 						)
 					);
 				}
@@ -807,6 +804,19 @@ async function getInputInspectorPortOption(
 	pluginConfig: PluginConfig,
 	viteServer: vite.ViteDevServer | vite.PreviewServer
 ) {
+	if (
+		pluginConfig.inspectorPort === undefined ||
+		pluginConfig.inspectorPort === 0
+	) {
+		const resolvedInspectorPort = await getResolvedInspectorPort(pluginConfig);
+
+		if (resolvedInspectorPort !== null) {
+			// the user is not specifying an inspector port to use and we're already
+			// using one (this is a server restart) so let's just reuse that
+			return resolvedInspectorPort;
+		}
+	}
+
 	const inputInspectorPort =
 		pluginConfig.inspectorPort ??
 		(await getFirstAvailablePort(DEFAULT_INSPECTOR_PORT));
