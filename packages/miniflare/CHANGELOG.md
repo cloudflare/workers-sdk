@@ -1,5 +1,11 @@
 # miniflare
 
+## 3.20250310.3
+
+### Patch Changes
+
+- [#8778](https://github.com/cloudflare/workers-sdk/pull/8778) [`dec7e2a`](https://github.com/cloudflare/workers-sdk/commit/dec7e2a98f7b3b77bea08c5db27bfa61f8d0656d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - update youch dependency to avoid vulnerable version of cookie
+
 ## 3.20250310.2
 
 ### Patch Changes
