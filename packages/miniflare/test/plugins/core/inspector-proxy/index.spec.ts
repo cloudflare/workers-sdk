@@ -1,7 +1,13 @@
 import events from "node:events";
 import { setTimeout } from "node:timers/promises";
 import test from "ava";
-import { fetch, Miniflare, MiniflareCoreError } from "miniflare";
+import getPort from "get-port";
+import {
+	fetch,
+	Miniflare,
+	MiniflareCoreError,
+	MiniflareOptions,
+} from "miniflare";
 import WebSocket from "ws";
 
 const nullScript =
@@ -172,6 +178,92 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 	);
 });
 
+test("InspectorProxy: should allow inspector port updating via miniflare#setOptions", async (t) => {
+	const initialInspectorPort = await getPort();
+	const options: MiniflareOptions = {
+		workers: [
+			{
+				script: nullScript,
+				unsafeInspectorProxy: true,
+			},
+		],
+	};
+	const mf = new Miniflare({ ...options, inspectorPort: initialInspectorPort });
+	t.teardown(() => mf.dispose());
+
+	t.is(await getInspectorPortReady(mf), initialInspectorPort);
+
+	let res = await fetch(
+		`http://localhost:${initialInspectorPort}/json/version`
+	);
+	t.is(res.status, 200);
+
+	const newInspectorPort = await getPort();
+	await mf.setOptions({ ...options, inspectorPort: newInspectorPort });
+
+	t.not(initialInspectorPort, newInspectorPort);
+
+	t.is(await getInspectorPortReady(mf), newInspectorPort);
+
+	res = await fetch(`http://localhost:${newInspectorPort}/json/version`);
+	t.is(res.status, 200);
+
+	await t.throwsAsync(
+		fetch(`http://localhost:${initialInspectorPort}/json/version`)
+	);
+});
+
+test("InspectorProxy: should keep the same inspector port on miniflare#setOptions calls with inspectorPort set to 0", async (t) => {
+	const options: MiniflareOptions = {
+		inspectorPort: 0,
+		workers: [
+			{
+				script: nullScript,
+				unsafeInspectorProxy: true,
+			},
+		],
+	};
+	const mf = new Miniflare(options);
+	t.teardown(() => mf.dispose());
+
+	const oldPort = await getInspectorPortReady(mf);
+
+	await mf.setOptions({ ...options, cf: false });
+
+	const newPort = await getInspectorPortReady(mf);
+
+	t.is(oldPort, newPort);
+});
+
+test("InspectorProxy: should not keep the same inspector port on miniflare#setOptions calls changing inspectorPort to 0", async (t) => {
+	const initialInspectorPort = await getPort();
+	const options: MiniflareOptions = {
+		inspectorPort: initialInspectorPort,
+		workers: [
+			{
+				script: nullScript,
+				unsafeInspectorProxy: true,
+			},
+		],
+	};
+	const mf = new Miniflare(options);
+	t.teardown(() => mf.dispose());
+
+	t.is(await getInspectorPortReady(mf), initialInspectorPort);
+
+	await mf.setOptions({ ...options, inspectorPort: 0 });
+	const newInspectorPort = await getInspectorPortReady(mf);
+
+	t.not(initialInspectorPort, newInspectorPort);
+
+	const res = await fetch(`http://localhost:${newInspectorPort}/json/version`);
+	t.is(res.status, 200);
+
+	await t.throwsAsync(
+		fetch(`http://localhost:${initialInspectorPort}/json/version`)
+	);
+});
+
 test("InspectorProxy: should allow debugging a single worker", async (t) => {
 	const mf = new Miniflare({
 		inspectorPort: 0,
@@ -225,6 +317,75 @@ test("InspectorProxy: should allow debugging a single worker", async (t) => {
 
 	const res = await resPromise;
 	t.is(await res.text(), "body");
+});
+
+test("InspectorProxy: the devtools websocket communication should adapt to an inspector port changes in a miniflare#setOptions calls", async (t) => {
+	const options: MiniflareOptions = {
+		workers: [
+			{
+				script: `
+						export default {
+							fetch(request, env, ctx) {
+								debugger;
+								return new Response("body");
+							}
+						}
+					`,
+				modules: true,
+				unsafeInspectorProxy: true,
+			},
+		],
+	};
+	const mf = new Miniflare({ ...options, inspectorPort: await getPort() });
+	t.teardown(() => mf.dispose());
+
+	const testDebuggingWorkerOn = async (port: number) => {
+		// Connect inspector WebSocket
+		const ws = new WebSocket(`ws://localhost:${port}`);
+		const messages = events.on(ws, "message");
+		async function nextMessage() {
+			const messageEvent = (await messages.next()).value;
+			return JSON.parse(messageEvent[0].toString());
+		}
+
+		await events.once(ws, "open");
+
+		ws.send(JSON.stringify({ id: 0, method: "Debugger.enable" }));
+
+		t.like(await nextMessage(), {
+			method: "Debugger.scriptParsed",
+		});
+
+		t.like(await nextMessage(), { id: 0 });
+
+		// Send request and hit `debugger;` statement
+		const resPromise = mf.dispatchFetch("http://localhost");
+		t.like(await nextMessage(), { method: "Debugger.paused" });
+
+		// Resume execution
+		ws.send(JSON.stringify({ id: 1, method: "Debugger.resume" }));
+
+		t.like(await nextMessage(), { id: 1 });
+
+		t.like(await nextMessage(), { method: "Debugger.resumed" });
+
+		const res = await resPromise;
+		t.is(await res.text(), "body");
+
+		ws.close();
+	};
+
+	const initialInspectorPort = await getInspectorPortReady(mf);
+
+	await testDebuggingWorkerOn(initialInspectorPort);
+
+	mf.setOptions({ ...options, inspectorPort: await getPort() });
+
+	const newInspectorPort = await getInspectorPortReady(mf);
+
+	t.not(initialInspectorPort, newInspectorPort);
+
+	await testDebuggingWorkerOn(newInspectorPort);
 });
 
 test("InspectorProxy: should allow debugging multiple workers", async (t) => {
@@ -441,5 +602,5 @@ async function getInspectorPortReady(mf: Miniflare) {
 	await setTimeout(150);
 
 	const { port } = await mf.getInspectorURL();
-	return port;
+	return parseInt(port);
 }
