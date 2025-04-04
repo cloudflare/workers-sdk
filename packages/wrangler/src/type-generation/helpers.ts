@@ -1,6 +1,7 @@
-import { readFileSync } from "fs";
+import { readFileSync, writeFileSync } from "fs";
 import { version } from "workerd";
 import { logger } from "../logger";
+import { generateRuntimeTypes } from "./runtime";
 import { generateEnvTypes } from ".";
 import type { Config } from "../config";
 import type { Entry } from "../deployment-bundle/entry";
@@ -17,7 +18,7 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 	try {
 		// Checking the default location only
 		maybeExistingTypesFileLines = readFileSync(
-			"./worker-configuration.d.ts",
+			config.types_auto_update ?? "./worker-configuration.d.ts",
 			"utf-8"
 		).split("\n");
 	} catch {
@@ -36,8 +37,9 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 	)?.groups?.result;
 
 	let newEnvHeader: string | undefined;
+	let newEnvTypes: string | undefined;
 	try {
-		const { envHeader } = await generateEnvTypes(
+		const { envHeader, envTypes } = await generateEnvTypes(
 			config,
 			{ strictVars: previousStrictVars === "false" ? false : true },
 			previousEnvInterface ?? "Env",
@@ -47,6 +49,7 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 			false
 		);
 		newEnvHeader = envHeader;
+		newEnvTypes = envTypes;
 	} catch (e) {
 		logger.error(e);
 	}
@@ -62,5 +65,32 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 	const runtimeOutOfDate =
 		existingRuntimeHeader && existingRuntimeHeader !== newRuntimeHeader;
 
-	return envOutOfDate || runtimeOutOfDate;
+	const changed = envOutOfDate || runtimeOutOfDate;
+
+	if (changed && config.types_auto_update) {
+		const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
+			config,
+			outFile: config.types_auto_update,
+		});
+		const newTypesFile = [
+			newEnvHeader,
+			runtimeHeader,
+			newEnvTypes,
+			runtimeTypes,
+		].join("\n");
+		try {
+			writeFileSync(config.types_auto_update, newTypesFile);
+			logger.log(
+				"❓ Your types looked out of date. We've rerun wrangler types for you and updated " +
+					config.types_auto_update
+			);
+		} catch (e) {
+			logger.error(e);
+		}
+	} else if (changed) {
+		logger.log(
+			"❓ Your types might be out of date. Re-run `wrangler types` to ensure your types are correct."
+		);
+	}
+	return changed;
 };
