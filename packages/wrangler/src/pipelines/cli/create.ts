@@ -56,7 +56,7 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 			.option("cors-origins", {
 				type: "array",
 				describe:
-					"CORS origin allowlist for HTTP endpoint (use * for any origin)",
+					"CORS origin allowlist for HTTP endpoint (use * for any origin). Defaults to an empty array",
 				demandOption: false,
 				coerce: validateCorsOrigins,
 			})
@@ -68,19 +68,23 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 			)
 			.option("batch-max-mb", {
 				type: "number",
-				describe: "Maximum batch size in megabytes before flushing",
+				describe:
+					"Maximum batch size in megabytes before flushing. Defaults to 100 MB if unset. Minimum: 1, Maximum: 100",
 				demandOption: false,
 				coerce: validateInRange("batch-max-mb", 1, 100),
 			})
 			.option("batch-max-rows", {
 				type: "number",
-				describe: "Maximum number of rows per batch before flushing",
+				describe:
+					"Maximum number of rows per batch before flushing. Defaults to 10,000,000 if unset. Minimum: 100, Maximum: 10,000,000",
 				demandOption: false,
-				coerce: validateInRange("batch-max-rows", 100, 1000000),
+				coerce: validateInRange("batch-max-rows", 100, 10_00_000),
 			})
 			.option("batch-max-seconds", {
 				type: "number",
-				describe: "Maximum age of batch in seconds before flushing",
+				describe:
+					"Maximum age of batch in seconds before flushing. Defaults to 300 if unset. Minimum: 1, Maximum: 300",
+
 				demandOption: false,
 				coerce: validateInRange("batch-max-seconds", 1, 300),
 			})
@@ -139,7 +143,8 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 			})
 			.option("r2-prefix", {
 				type: "string",
-				describe: "Prefix for storing files in the destination bucket",
+				describe:
+					"Prefix for storing files in the destination bucket. Default is no prefix",
 				default: "",
 				demandOption: false,
 			})
@@ -156,7 +161,7 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 			.option("shard-count", {
 				type: "number",
 				describe:
-					"Number of pipeline shards. More shards handle higher request volume; fewer shards produce larger output files",
+					"Number of pipeline shards. More shards handle higher request volume; fewer shards produce larger output files. Defaults to 2 if unset. Minimum: 1, Maximum: 15",
 				demandOption: false,
 			})
 	);
@@ -283,7 +288,7 @@ export async function createPipelineHandler(
 
 	if (args.source.includes("worker")) {
 		logger.log(
-			`\nTo start interacting with this Pipeline from a Worker, open your Worker’s config file and add the following binding configuration:\n`
+			`\nTo send data to your pipeline from a Worker, add the following to your wrangler config file:\n`
 		);
 		logger.log(
 			formatConfigSnippet(
