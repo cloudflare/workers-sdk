@@ -191,7 +191,7 @@ export function normalizeAndValidateConfig(
 
 	if (isRedirectedConfig && definedEnvironments.length > 0) {
 		diagnostics.errors.push(
-			`Redirected configurations cannot include environments, instead the following have been found: ${definedEnvironments.map((env) => JSON.stringify(env)).join(", ")}`
+			`Redirected configurations cannot include environments but the following have been found: ${definedEnvironments.map((env) => JSON.stringify(env)).join(", ")}`
 		);
 	}
 
