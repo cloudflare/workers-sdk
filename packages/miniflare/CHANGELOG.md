@@ -1,5 +1,20 @@
 # miniflare
 
+## 4.20250404.0
+
+### Patch Changes
+
+- [#8712](https://github.com/cloudflare/workers-sdk/pull/8712) [`e0efb6f`](https://github.com/cloudflare/workers-sdk/commit/e0efb6f17e0c76aa504711b6ca25c025ee1d21e5) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250321.0  | 1.20250404.0  |
+  | @cloudflare/workers-types | ^4.20250321.0 | ^4.20250404.0 |
+
+- [#8747](https://github.com/cloudflare/workers-sdk/pull/8747) [`0a401d0`](https://github.com/cloudflare/workers-sdk/commit/0a401d07714dc4e383060a0bbf71843c13d13281) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure that `miniflare#setOptions` allows the update of inspector ports
+
 ## 4.20250321.2
 
 ### Patch Changes
