@@ -395,6 +395,12 @@ export default function getFrameworkTestConfig(pm: string) {
 			],
 		},
 		"nuxt:pages": {
+			promptHandlers: [
+				{
+					matcher: /Would you like to install any of the official modules\?/,
+					input: [keys.enter],
+				},
+			],
 			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
@@ -420,6 +426,12 @@ export default function getFrameworkTestConfig(pm: string) {
 			},
 		},
 		"nuxt:workers": {
+			promptHandlers: [
+				{
+					matcher: /Would you like to install any of the official modules\?/,
+					input: [keys.enter],
+				},
+			],
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
