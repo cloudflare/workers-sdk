@@ -9,7 +9,7 @@ describe("'wrangler dev' errors because redirected configs can't include environ
 		await expect(
 			runWranglerDev(basePath, ["--port=0", "--inspector-port=0"])
 		).rejects.toThrowError(
-			/Redirected configurations cannot include environments, instead the following have been found: \"staging\"/
+			/Redirected configurations cannot include environments but the following have been found: \"staging\"/
 		);
 	});
 });
