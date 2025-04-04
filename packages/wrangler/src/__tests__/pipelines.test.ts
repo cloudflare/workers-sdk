@@ -274,6 +274,8 @@ describe("pipelines", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler pipelines
 
+			🚰 Manage Worker Pipelines [open beta]
+
 			COMMANDS
 			  wrangler pipelines create <pipeline>  Create a new Pipeline
 			  wrangler pipelines list               List current Pipelines
