@@ -203,9 +203,11 @@ export function normalizeAndValidateConfig(
 
 	if (envName !== undefined) {
 		if (isRedirectedConfig) {
-			diagnostics.warnings.push(
-				`Ignoring the requested environment "${envName}" since redirected configurations don't include environments`
-			);
+			diagnostics.errors.push(dedent`
+				You have specified the environment "${envName}", but are using a redirected configuration, produced by a build tool such as Vite.
+				You need to set the environment in your build tool, rather than via Wrangler.
+				For example, if you are using Vite, refer to these docs: https://developers.cloudflare.com/workers/vite-plugin
+			`);
 		} else {
 			const envDiagnostics = new Diagnostics(
 				`"env.${envName}" environment configuration`
