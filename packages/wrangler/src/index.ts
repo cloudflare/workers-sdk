@@ -955,10 +955,14 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("workflows");
 
-	// pipelines
-	wrangler.command("pipelines", false, (pipelinesYargs) => {
-		return pipelines(pipelinesYargs.command(subHelp));
-	});
+	// [OPEN BETA] pipelines
+	wrangler.command(
+		"pipelines",
+		`🚰 Manage Worker Pipelines ${chalk.hex(betaCmdColor)("[open beta]")}`,
+		(pipelinesYargs) => {
+			return pipelines(pipelinesYargs.command(subHelp));
+		}
+	);
 
 	/******************** CMD GROUP ***********************/
 
