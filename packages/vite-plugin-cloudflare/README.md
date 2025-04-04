@@ -3,6 +3,17 @@
 The Cloudflare Vite plugin enables a full-featured integration between [Vite](https://vite.dev/) and the [Workers runtime](https://developers.cloudflare.com/workers/runtime-apis/).
 Your Worker code runs inside [workerd](https://github.com/cloudflare/workerd), matching the production behavior as closely as possible and providing confidence as you develop and deploy your applications.
 
+```ts
+// vite.config.ts
+
+import { defineConfig } from "vite";
+import { cloudflare } from "@cloudflare/vite-plugin";
+
+export default defineConfig({
+  plugins: [cloudflare()],
+});
+```
+
 ## Documentation
 
 Full documentation can be found [here](https://developers.cloudflare.com/workers/vite-plugin/).
