@@ -42,7 +42,7 @@ describe.each(RUNTIMES)(
 
 			if (runtime === "local") {
 				expect(output.stderr).toContain(
-					"No local dev version of this command available"
+					"To create a Secrets Store on your account, use the --remote flag"
 				);
 				return;
 			}
@@ -68,7 +68,7 @@ describe.each(RUNTIMES)(
 			);
 			if (runtime === "local") {
 				expect(output.stderr).toContain(
-					"No local dev version of this command available"
+					"This command is not supported in local mode"
 				);
 				return;
 			}
@@ -157,7 +157,7 @@ describe.each(RUNTIMES)(
 			);
 			if (runtime === "local") {
 				expect(output.stderr).toContain(
-					"No local dev version of this command available"
+					"This command is not supported in local mode"
 				);
 				return;
 			}
