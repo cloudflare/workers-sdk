@@ -876,7 +876,7 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20250224.0
-        version: 4.20250321.0
+        version: 4.20250404.0
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
