@@ -5,7 +5,7 @@ import { getWorkerConfig } from "../workers-configs";
 describe("getWorkerConfig", () => {
 	test("should return a simple raw config", () => {
 		const { raw } = getWorkerConfig(
-			fileURLToPath(new URL("fixtures/simple-wrangler.toml", import.meta.url)),
+			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
 			undefined
 		);
 		expect(typeof raw).toEqual("object");
@@ -33,7 +33,7 @@ describe("getWorkerConfig", () => {
 
 	test("should return a simple config without non-applicable fields", () => {
 		const { config } = getWorkerConfig(
-			fileURLToPath(new URL("fixtures/simple-wrangler.toml", import.meta.url)),
+			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
 			undefined
 		);
 		expect(typeof config).toEqual("object");
@@ -43,7 +43,7 @@ describe("getWorkerConfig", () => {
 
 	test("should not return any non-applicable config when there isn't any", () => {
 		const { nonApplicable } = getWorkerConfig(
-			fileURLToPath(new URL("fixtures/simple-wrangler.toml", import.meta.url)),
+			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
 			undefined
 		);
 		expect(nonApplicable).toEqual({
@@ -54,7 +54,7 @@ describe("getWorkerConfig", () => {
 
 	test("should read a simple wrangler.toml file", () => {
 		const { config, raw, nonApplicable } = getWorkerConfig(
-			fileURLToPath(new URL("fixtures/simple-wrangler.toml", import.meta.url)),
+			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
 			undefined
 		);
 		expect(typeof config).toEqual("object");
@@ -84,7 +84,10 @@ describe("getWorkerConfig", () => {
 	test("should collect non applicable configs", () => {
 		const { config, raw, nonApplicable } = getWorkerConfig(
 			fileURLToPath(
-				new URL("fixtures/wrangler-with-fields-to-ignore.toml", import.meta.url)
+				new URL(
+					"fixtures/wrangler-with-fields-to-ignore.jsonc",
+					import.meta.url
+				)
 			),
 			undefined
 		);
@@ -156,7 +159,10 @@ describe("getWorkerConfig", () => {
 			expect(() =>
 				getWorkerConfig(
 					fileURLToPath(
-						new URL("fixtures/non-existing-main-wrangler.toml", import.meta.url)
+						new URL(
+							"fixtures/non-existing-main-wrangler.jsonc",
+							import.meta.url
+						)
 					),
 					undefined
 				)
@@ -170,7 +176,7 @@ describe("getWorkerConfig", () => {
 				getWorkerConfig(
 					fileURLToPath(
 						new URL(
-							"fixtures/incorrect-dir-main-wrangler.toml",
+							"fixtures/incorrect-dir-main-wrangler.jsonc",
 							import.meta.url
 						)
 					),
