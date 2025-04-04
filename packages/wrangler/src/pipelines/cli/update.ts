@@ -49,7 +49,7 @@ export function addUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 			.option("source", {
 				type: "array",
 				describe:
-					"Space separated list of allowed sources. Options are 'http' or 'worker'",
+					"Space separated list of allowed sources. Options are 'http' or 'worker'. Setting this will remove all other existing sources.",
 				demandOption: false,
 			})
 			.option("require-http-auth", {
@@ -73,19 +73,22 @@ export function addUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 			)
 			.option("batch-max-mb", {
 				type: "number",
-				describe: "Maximum batch size in megabytes before flushing",
+				describe:
+					"Maximum batch size in megabytes before flushing. Minimum: 1, Maximum: 100",
 				demandOption: false,
 				coerce: validateInRange("batch-max-mb", 1, 100),
 			})
 			.option("batch-max-rows", {
 				type: "number",
-				describe: "Maximum number of rows per batch before flushing",
+				describe:
+					"Maximum number of rows per batch before flushing. Minimum: 100, Maximum: 10,000,000",
 				demandOption: false,
-				coerce: validateInRange("batch-max-rows", 100, 1000000),
+				coerce: validateInRange("batch-max-rows", 100, 10_000_000),
 			})
 			.option("batch-max-seconds", {
 				type: "number",
-				describe: "Maximum age of batch in seconds before flushing",
+				describe:
+					"Maximum age of batch in seconds before flushing. Minimum: 1, Maximum: 300",
 				demandOption: false,
 				coerce: validateInRange("batch-max-seconds", 1, 300),
 			})

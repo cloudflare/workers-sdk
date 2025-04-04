@@ -307,22 +307,22 @@ describe("pipelines", () => {
 				Source settings
 				      --source             Space separated list of allowed sources. Options are 'http' or 'worker'  [array] [default: [\\"http\\",\\"worker\\"]]
 				      --require-http-auth  Require Cloudflare API Token for HTTPS endpoint authentication  [boolean] [default: false]
-				      --cors-origins       CORS origin allowlist for HTTP endpoint (use * for any origin)  [array]
+				      --cors-origins       CORS origin allowlist for HTTP endpoint (use * for any origin). Defaults to an empty array  [array]
 
 				Batch hints
-				      --batch-max-mb       Maximum batch size in megabytes before flushing  [number]
-				      --batch-max-rows     Maximum number of rows per batch before flushing  [number]
-				      --batch-max-seconds  Maximum age of batch in seconds before flushing  [number]
+				      --batch-max-mb       Maximum batch size in megabytes before flushing. Defaults to 100 MB if unset. Minimum: 1, Maximum: 100  [number]
+				      --batch-max-rows     Maximum number of rows per batch before flushing. Defaults to 10,000,000 if unset. Minimum: 100, Maximum: 10,000,000  [number]
+				      --batch-max-seconds  Maximum age of batch in seconds before flushing. Defaults to 300 if unset. Minimum: 1, Maximum: 300  [number]
 
 				Destination settings
 				      --r2-bucket             Destination R2 bucket name  [string] [required]
 				      --r2-access-key-id      R2 service Access Key ID for authentication. Leave empty for OAuth confirmation.  [string]
 				      --r2-secret-access-key  R2 service Secret Access Key for authentication. Leave empty for OAuth confirmation.  [string]
-				      --r2-prefix             Prefix for storing files in the destination bucket  [string] [default: \\"\\"]
+				      --r2-prefix             Prefix for storing files in the destination bucket. Default is no prefix  [string] [default: \\"\\"]
 				      --compression           Compression format for output files  [string] [choices: \\"none\\", \\"gzip\\", \\"deflate\\"] [default: \\"gzip\\"]
 
 				Pipeline settings
-				      --shard-count  Number of pipeline shards. More shards handle higher request volume; fewer shards produce larger output files  [number]
+				      --shard-count  Number of pipeline shards. More shards handle higher request volume; fewer shards produce larger output files. Defaults to 2 if unset. Minimum: 1, Maximum: 15  [number]
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
@@ -364,7 +364,7 @@ describe("pipelines", () => {
 
 				🎉 You can now send data to your Pipeline!
 
-				To start interacting with this Pipeline from a Worker, open your Worker’s config file and add the following binding configuration:
+				To send data to your pipeline from a Worker, add the following to your wrangler config file:
 
 				{
 				  \\"pipelines\\": [
