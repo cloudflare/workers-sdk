@@ -215,7 +215,15 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 			},
 		);
 
-		test({ experimental }).skipIf(process.platform === "win32")(
+		// Skipping this on npm because the template that we are downloading has a package-lock file that
+		// contains checksum that won't match the locally published packages we put in the Verdaccio mock npm registry.
+		// Otherwise `npm install`, which C3 does, will error with messages like:
+		//
+		// ```
+		// ERROR  Error: npm warn tarball tarball data for wrangler@http://localhost:61599/wrangler/-/wrangler-4.7.0.tgz
+		// (sha512-5LoyNxpPG8K0kcU43Ossyj7+Hq78v8BNtu7ZNNSxDOUcairMEDwcbrbUOqzu/iM4yHiri5wCjl4Ja57fKED/Sg==) seems to be corrupted.
+		// ```
+		test({ experimental }).skipIf(process.platform === "win32" || pm === "npm")(
 			"Cloning remote template that uses wrangler.json",
 			async ({ logStream, project }) => {
 				const { output } = await runC3(
