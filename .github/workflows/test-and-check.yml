@@ -147,7 +147,7 @@ jobs:
 
       - name: Run tests
         if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm run test:ci --concurrency 1 ${{ matrix.filter }}
+        run: pnpm run test:ci --concurrency 1 --log-order=stream ${{ matrix.filter }}
         env:
           TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
