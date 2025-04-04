@@ -17,6 +17,7 @@
 		},
 		"test:e2e": {
 			"env": [
+				"NODE_DEBUG",
 				"CLOUDFLARE_ACCOUNT_ID",
 				"CLOUDFLARE_API_TOKEN",
 				"FRAMEWORK_CLI_TO_TEST",
