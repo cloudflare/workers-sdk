@@ -1,5 +1,33 @@
 # create-cloudflare
 
+## 2.43.3
+
+### Patch Changes
+
+- [#8070](https://github.com/cloudflare/workers-sdk/pull/8070) [`9b469e2`](https://github.com/cloudflare/workers-sdk/commit/9b469e213e9139eb883e298f46cb018e1a679477) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 6.1.1 | 6.3.1 |
+
+- [#8733](https://github.com/cloudflare/workers-sdk/pull/8733) [`857a550`](https://github.com/cloudflare/workers-sdk/commit/857a55000d4175d314acac7b56e09c8a0188bc50) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.21.1 | 3.23.1 |
+
+- [#8769](https://github.com/cloudflare/workers-sdk/pull/8769) [`efda570`](https://github.com/cloudflare/workers-sdk/commit/efda570d7d98dce8bdbc6e8eff0ff920b6bbe985) Thanks [@emily-shen](https://github.com/emily-shen)! - remove unnecessary ASSETS binding call in SPA templates
+
+  With SPA mode now enabled by default for compat dates since 2025-04-01, the Workers in the React and Vue templates no longer need this fallback ASSETS binding.
+
+- [#7894](https://github.com/cloudflare/workers-sdk/pull/7894) [`15a7618`](https://github.com/cloudflare/workers-sdk/commit/15a761893c32f3a1c7df4c0f41c21b4fad594547) Thanks [@juanmirocks](https://github.com/juanmirocks)! - fix scheduled TS template to include a fetch handler like the JS one
+
+- [#8765](https://github.com/cloudflare/workers-sdk/pull/8765) [`95fc93f`](https://github.com/cloudflare/workers-sdk/commit/95fc93f266a80c6aa82f3bf053937e1ac639d564) Thanks [@vicb](https://github.com/vicb)! - Update the Next on Workers template to use `@opennextjs/cloudflare` 1.0.0-beta releases
+
 ## 2.43.2
 
 ### Patch Changes

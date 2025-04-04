@@ -1,5 +1,18 @@
 # wrangler
 
+## 4.7.2
+
+### Patch Changes
+
+- [#8763](https://github.com/cloudflare/workers-sdk/pull/8763) [`2650fd3`](https://github.com/cloudflare/workers-sdk/commit/2650fd38cf05e385594ada152dc7a7ad5252af84) Thanks [@garrettgu10](https://github.com/garrettgu10)! - R2 data catalog URIs now separate account ID and warehouse name with a slash rather than an underscore
+
+- [#8341](https://github.com/cloudflare/workers-sdk/pull/8341) [`196f51d`](https://github.com/cloudflare/workers-sdk/commit/196f51db7d7e1719464f19be5902c7b749205abb) Thanks [@kotkoroid](https://github.com/kotkoroid)! - Improve error message when request to obtain membership info fails
+
+  Wrangler now informs user that specific permission might be not granted when fails to obtain membership info. The same information is provided when Wrangler is unable to fetch user's email.
+
+- Updated dependencies [[`e0efb6f`](https://github.com/cloudflare/workers-sdk/commit/e0efb6f17e0c76aa504711b6ca25c025ee1d21e5), [`0a401d0`](https://github.com/cloudflare/workers-sdk/commit/0a401d07714dc4e383060a0bbf71843c13d13281)]:
+  - miniflare@4.20250404.0
+
 ## 4.7.1
 
 ### Patch Changes
