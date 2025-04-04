@@ -59,7 +59,7 @@ describe("types", () => {
 			path.join(helper.tmpPath, "./worker-configuration.d.ts"),
 			"utf8"
 		);
-		expect(file).contains('declare module "cloudflare:workers"');
+		expect(file).matches(/declare module ['"]cloudflare:workers["']/);
 		expect(file).contains("interface Env");
 	});
 
