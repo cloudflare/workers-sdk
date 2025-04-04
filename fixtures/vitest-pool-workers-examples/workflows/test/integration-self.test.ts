@@ -1,27 +1,22 @@
-import { createExecutionContext, env, SELF } from "cloudflare:test";
-import { expect, it, test, vi } from "vitest";
+import { SELF } from "cloudflare:test";
+import { expect, it, vi } from "vitest";
 
 it("should be able to trigger a workflow", async () => {
-	const request = new Request("https://mock-worker.local", {});
-
-	const res = await SELF.fetch(request);
+	const res = await SELF.fetch("https://mock-worker.local");
 
 	expect(res.status).toBe(200);
 });
 
-test("workflow should reach the end and be successful", async () => {
-	const request = new Request("https://mock-worker.local", {});
-
-	const res = await SELF.fetch(request);
+it("workflow should reach the end and be successful", async () => {
+	const res = await SELF.fetch("https://mock-worker.local");
 
 	const json = await res.json<{ id: string }>();
 
 	await vi.waitUntil(async () => {
-		const checkReq = new Request(`https://mock-worker.local?id=${json.id}`);
-
-		const res = await SELF.fetch(checkReq);
+		const res = await SELF.fetch(`https://mock-worker.local?id=${json.id}`);
 
 		const statusJson = await res.json<{ status: string }>();
+		console.log(statusJson);
 		return statusJson.status === "complete";
 	}, 1000);
 });
