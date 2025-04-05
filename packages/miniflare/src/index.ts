@@ -56,6 +56,7 @@ import {
 	QueuesError,
 	R2_PLUGIN_NAME,
 	ReplaceWorkersTypes,
+	SECRET_STORE_PLUGIN_NAME,
 	SERVICE_ENTRY,
 	SharedOptions,
 	SOCKET_ENTRY,
@@ -109,6 +110,7 @@ import {
 	SharedHeaders,
 	SiteBindings,
 } from "./workers";
+import { ADMIN_API } from "./workers/secrets-store/constants";
 import { formatZodError } from "./zod-format";
 import type {
 	CacheStorage,
@@ -116,6 +118,7 @@ import type {
 	DurableObjectNamespace,
 	Fetcher,
 	KVNamespace,
+	KVNamespaceListKey,
 	Queue,
 	R2Bucket,
 } from "@cloudflare/workers-types/experimental";
@@ -1911,6 +1914,34 @@ export class Miniflare {
 		workerName?: string
 	): Promise<ReplaceWorkersTypes<KVNamespace>> {
 		return this.#getProxy(KV_PLUGIN_NAME, bindingName, workerName);
+	}
+	getSecretsStoreSecretAPI(
+		bindingName: string,
+		workerName?: string
+	): Promise<
+		() => {
+			create: (value: string) => Promise<string>;
+			update: (value: string, id: string) => Promise<string>;
+			duplicate: (id: string, newName: string) => Promise<string>;
+			delete: (id: string) => Promise<void>;
+			list: () => Promise<KVNamespaceListKey<{ uuid: string }, string>[]>;
+			get: (id: string) => Promise<string>;
+		}
+	> {
+		return this.#getProxy(
+			SECRET_STORE_PLUGIN_NAME,
+			bindingName,
+			workerName
+		).then((binding) => {
+			// @ts-expect-error We exposed an admin API on this key
+			return binding[ADMIN_API];
+		});
+	}
+	getSecretsStoreSecret(
+		bindingName: string,
+		workerName?: string
+	): Promise<ReplaceWorkersTypes<KVNamespace>> {
+		return this.#getProxy(SECRET_STORE_PLUGIN_NAME, bindingName, workerName);
 	}
 	getQueueProducer<Body = unknown>(
 		bindingName: string,

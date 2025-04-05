@@ -295,6 +295,7 @@ export async function generateEnvTypes(
 		assets: config.assets,
 		workflows: config.workflows,
 		pipelines: config.pipelines,
+		secrets_store_secrets: config.secrets_store_secrets,
 	};
 
 	const entrypointFormat = entrypoint?.format ?? "modules";
@@ -377,6 +378,15 @@ export async function generateEnvTypes(
 	if (configToDTS.d1_databases) {
 		for (const d1 of configToDTS.d1_databases) {
 			envTypeStructure.push([constructTypeKey(d1.binding), "D1Database"]);
+		}
+	}
+
+	if (configToDTS.secrets_store_secrets) {
+		for (const secretsStoreSecret of configToDTS.secrets_store_secrets) {
+			envTypeStructure.push([
+				constructTypeKey(secretsStoreSecret.binding),
+				"SecretsStoreSecret",
+			]);
 		}
 	}
 

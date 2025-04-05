@@ -143,6 +143,13 @@ const bindingsConfigMock: Omit<
 			database_id: "1234",
 		},
 	],
+	secrets_store_secrets: [
+		{
+			binding: "SECRET",
+			store_id: "store_id",
+			secret_name: "secret_name",
+		},
+	],
 	services: [{ binding: "SERVICE_BINDING", service: "SERVICE_NAME" }],
 	analytics_engine_datasets: [
 		{
@@ -417,6 +424,7 @@ describe("generate types", () => {
 					DURABLE_EXTERNAL: DurableObjectNamespace /* DurableExternal from external-worker */;
 					R2_BUCKET_BINDING: R2Bucket;
 					D1_TESTING_SOMETHING: D1Database;
+					SECRET: SecretsStoreSecret;
 					SERVICE_BINDING: Fetcher;
 					AE_DATASET_BINDING: AnalyticsEngineDataset;
 					NAMESPACE_BINDING: DispatchNamespace;
@@ -506,6 +514,7 @@ describe("generate types", () => {
 					DURABLE_EXTERNAL: DurableObjectNamespace /* DurableExternal from external-worker */;
 					R2_BUCKET_BINDING: R2Bucket;
 					D1_TESTING_SOMETHING: D1Database;
+					SECRET: SecretsStoreSecret;
 					SERVICE_BINDING: Fetcher;
 					AE_DATASET_BINDING: AnalyticsEngineDataset;
 					NAMESPACE_BINDING: DispatchNamespace;
