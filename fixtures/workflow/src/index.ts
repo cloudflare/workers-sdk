@@ -42,10 +42,8 @@ export class Demo2 extends WorkflowEntrypoint<{}, Params> {
 			};
 		});
 
-		// @ts-expect-error need workers-types aaaaa
 		await step.waitForEvent("event-1 provider", {
 			type: "event-1",
-			payload: {},
 		});
 
 		const result2 = await step.do("Second step", async function () {
@@ -96,7 +94,6 @@ export default class extends WorkerEntrypoint<Env> {
 		} else if (url.pathname === "/sendEvent") {
 			handle = await this.env.WORKFLOW2.get(id);
 
-			// @ts-expect-error worker types
 			await handle.sendEvent({
 				type: "event-1",
 				payload: await req.json(),
