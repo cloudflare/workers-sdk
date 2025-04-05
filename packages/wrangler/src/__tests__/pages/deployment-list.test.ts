@@ -11,7 +11,7 @@ describe("pages deployment list", () => {
 	runInTempDir();
 	mockAccountId();
 	mockApiToken();
-	mockConsoleMethods();
+	const std = mockConsoleMethods();
 
 	afterEach(async () => {
 		// Force a tick to ensure that all promises resolve
@@ -46,6 +46,13 @@ describe("pages deployment list", () => {
 		await runWrangler("pages deployment list --project-name=images");
 
 		expect(requests.count).toBe(1);
+		expect(std.out).toMatchInlineSnapshot(`
+			"┌──────────────────────────────────────┬─────────────┬────────┬─────────┬───────────────────────────────────┬─────────────┬────────────────────────────────────────────────────────────────────────────────────────────────────┐
+			│ Id                                   │ Environment │ Branch │ Source  │ Deployment                        │ Status      │ Build                                                                                              │
+			├──────────────────────────────────────┼─────────────┼────────┼─────────┼───────────────────────────────────┼─────────────┼────────────────────────────────────────────────────────────────────────────────────────────────────┤
+			│ 87bbc8fe-16be-45cd-81e0-63d722e82cdf │ Preview     │ main   │ c764936 │ https://87bbc8fe.images.pages.dev │ 3 years ago │ https://dash.cloudflare.com/some-account-id/pages/view/images/87bbc8fe-16be-45cd-81e0-63d722e82cdf │
+			└──────────────────────────────────────┴─────────────┴────────┴─────────┴───────────────────────────────────┴─────────────┴────────────────────────────────────────────────────────────────────────────────────────────────────┘"
+		`);
 	});
 
 	it("should pass no environment", async () => {
