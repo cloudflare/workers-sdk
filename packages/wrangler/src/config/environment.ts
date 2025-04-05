@@ -47,27 +47,47 @@ export type ContainerApp = {
 
 	/* Name of the application*/
 	name: string;
+
 	/* Number of application instances */
 	instances: number;
 
-	/* The user can set both image in here or under configuration */
+	/*
+	 * The image can be a path to a Dockerfile, or an image uri.
+	 * The user can set both image in here or under configuration */
 	image?: string;
+
+	/**
+	 * The user sets here the build context of the application, by default it is
+	 * the directory of `image`.
+	 */
+	image_build_context?: string;
+
+	/**
+	 * Image variables to be passed along the image
+	 **/
+	image_vars?: Record<string, string>;
 
 	class_name: string;
 
 	/* The scheduling policy of the application, default is regional */
 	scheduling_policy?: "regional" | "moon";
+
 	/* Configuration of the container */
 	configuration: {
 		image: string;
 		labels?: { name: string; value: string }[];
 		secrets?: { name: string; type: "env"; secret: string }[];
 	};
+
 	/* Scheduling constraints */
 	constraints?: {
 		regions?: string[];
 		cities?: string[];
 		tier?: number;
+	};
+
+	durable_objects?: {
+		namespace_id: string;
 	};
 };
 
