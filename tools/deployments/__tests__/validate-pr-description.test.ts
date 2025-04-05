@@ -107,6 +107,39 @@ Fixes [AA-000](https://jira.cfdata.org/browse/AA-000).
 		).toHaveLength(0);
 	});
 
+	it("should accept a docs link", () => {
+		expect(
+			validateDescription(
+				"",
+				`## What this PR solves / how to test
+
+Fixes [AA-000](https://jira.cfdata.org/browse/AA-000).
+
+## Author has addressed the following
+
+- Tests
+  - [ ] TODO (before merge)
+  - [x] Tests included
+  - [ ] Tests not necessary because:
+- E2E Tests CI Job required? (Use "e2e" label or ask maintainer to run separately)
+  - [ ] I don't know
+  - [ ] Required
+  - [x] Not required because: test
+- Public documentation
+  - [ ] TODO (before merge)
+  - [x] Cloudflare docs PR(s): https://developers.cloudflare.com/workers/something-here/
+  - [ ] Documentation not necessary because:
+- Wrangler V3 Backport
+  - [ ] TODO (before merge)
+  - [x] Wrangler PR: https://github.com/cloudflare/workers-sdk/pull/123
+  - [ ] Not necessary because:
+`,
+				"[]",
+				'[".changeset/hello-world.md"]'
+			)
+		).toHaveLength(0);
+	});
+
 	it("should not accept e2e unknown", () => {
 		expect(
 			validateDescription(
