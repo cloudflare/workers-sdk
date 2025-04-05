@@ -1,0 +1,223 @@
+<!doctype html>
+<html>
+	<head>
+		<title>I'm a SPA</title>
+	</head>
+	<body>
+		<div id="root"></div>
+
+		<script type="text/babel">
+			const NavigationContext = React.createContext("navigation");
+
+			function Link({ href, children }) {
+				const { navigate } = React.useContext(NavigationContext);
+
+				return (
+					<a
+						href={href}
+						onClick={(e) => {
+							e.preventDefault();
+							navigate(href);
+						}}
+						children={children}
+					/>
+				);
+			}
+
+			function Navigation() {
+				return (
+					<nav>
+						<ul>
+							<li>
+								/ <a href="/">HARD</a> <Link href="/">SOFT</Link>
+							</li>
+							<li>
+								/blog <a href="/blog">HARD</a> <Link href="/blog">SOFT</Link>
+							</li>
+							<li>
+								/blog/random <a href="/blog/random">HARD</a>{" "}
+								<Link href="/blog/random">SOFT</Link>
+							</li>
+							<li>
+								/shadowed-by-asset.txt <a href="/shadowed-by-asset.txt">HARD</a>{" "}
+								<Link href="/shadowed-by-asset.txt">SOFT</Link>
+							</li>
+							<li>
+								/shadowed-by-spa <a href="/shadowed-by-spa">HARD</a>{" "}
+								<Link href="/shadowed-by-spa">SOFT</Link>
+							</li>
+							<li>
+								/api/math <a href="/api/math">HARD</a>{" "}
+								<Link href="/api/math">SOFT</Link>
+							</li>
+						</ul>
+					</nav>
+				);
+			}
+
+			function Blog() {
+				const [slug, setSlug] = React.useState("/blog/hello-world");
+				const { navigate } = React.useContext(NavigationContext);
+
+				return (
+					<div>
+						<h1>Blog</h1>
+						<input value={slug} onChange={(e) => setSlug(e.target.value)} />
+						<a href={slug}>HARD load</a>
+						<button
+							onClick={() => {
+								navigate(slug);
+							}}
+						>
+							SOFT load
+						</button>
+						<Navigation />
+					</div>
+				);
+			}
+
+			function BlogEntry() {
+				const { pathname } = new URL(document.location.href);
+				const slug = pathname.split("/blog/")[1];
+
+				return (
+					<div>
+						<h1>Blog | {slug}</h1>
+						<Navigation />
+					</div>
+				);
+			}
+
+			function ShadowedBySpa() {
+				return (
+					<div>
+						<h1>Shadowed by SPA!</h1>
+						<Navigation />
+					</div>
+				);
+			}
+
+			function FourOhFour() {
+				return (
+					<div>
+						<h1>404 page!</h1>
+						<Navigation />
+					</div>
+				);
+			}
+
+			function Home() {
+				const [mathResult, setMathResult] = React.useState("loading...");
+				const [jsonResult, setJsonResult] = React.useState("loading...");
+				const [htmlResult, setHtmlResult] = React.useState("loading...");
+
+				React.useEffect(() => {
+					(async () => {
+						const mathResponse = await fetch("/api/math");
+						setMathResult(await mathResponse.text());
+					})();
+				}, [setMathResult]);
+
+				React.useEffect(() => {
+					(async () => {
+						const jsonResponse = await fetch("/api/json", {
+							headers: { Accept: "application/json" },
+						});
+						setJsonResult(await jsonResponse.json());
+					})();
+				}, [setJsonResult]);
+
+				React.useEffect(() => {
+					(async () => {
+						const htmlResponse = await fetch("/api/html", {
+							headers: { Accept: "text/html" },
+						});
+						setHtmlResult(await htmlResponse.text());
+					})();
+				}, [setHtmlResult]);
+
+				return (
+					<div>
+						<h1>Homepage</h1>
+						<p>
+							Math result: <span id="math-result">{mathResult}</span>
+						</p>
+						<p>JSON result:</p>
+						<pre>
+							<code id="json-result">
+								{JSON.stringify(jsonResult, null, 2)}
+							</code>
+						</pre>
+						<p>HTML result:</p>
+						<div
+							dangerouslySetInnerHTML={{ __html: htmlResult }}
+							id="html-result"
+						/>
+						<Navigation />
+					</div>
+				);
+			}
+
+			function Router() {
+				const [pathname, setPathname] = React.useState(
+					new URL(document.location.href).pathname
+				);
+
+				const navigate = (location) => {
+					window.history.pushState({}, "", location);
+					setPathname(new URL(document.location.href).pathname);
+				};
+
+				return (
+					<NavigationContext.Provider value={{ navigate }}>
+						{(() => {
+							if (pathname.startsWith("/blog/")) {
+								return <BlogEntry />;
+							}
+							switch (pathname) {
+								case "/blog": {
+									return <Blog />;
+								}
+								case "/shadowed-by-spa": {
+									return (
+										<NavigationContext.Provider value={{ navigate }}>
+											<ShadowedBySpa />
+										</NavigationContext.Provider>
+									);
+								}
+								case "/": {
+									return (
+										<NavigationContext.Provider value={{ navigate }}>
+											<Home />
+										</NavigationContext.Provider>
+									);
+								}
+								default: {
+									return (
+										<NavigationContext.Provider value={{ navigate }}>
+											<FourOhFour />
+										</NavigationContext.Provider>
+									);
+								}
+							}
+						})()}
+					</NavigationContext.Provider>
+				);
+			}
+
+			const root = ReactDOM.createRoot(document.getElementById("root"));
+			root.render(<Router />);
+		</script>
+
+		<script
+			crossorigin
+			src="https://unpkg.com/react@18.3.1/umd/react.development.js"
+		></script>
+		<script
+			crossorigin
+			src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"
+		></script>
+
+		<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+	</body>
+</html>

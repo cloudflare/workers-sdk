@@ -2,7 +2,6 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { unstable_readConfig } from "wrangler";
-import { name as packageName } from "../package.json";
 import type { AssetsOnlyConfig, WorkerConfig } from "./plugin-config";
 import type { Optional } from "./utils";
 import type { Unstable_Config as RawWorkerConfig } from "wrangler";
@@ -46,29 +45,19 @@ type NonApplicableConfigMap = {
 			NonApplicableWorkerConfigsInfo["notRelevant"][number]
 		>
 	>;
-	overridden: Set<
-		Extract<
-			keyof RawWorkerConfig,
-			NonApplicableWorkerConfigsInfo["overridden"][number]
-		>
-	>;
 };
 
 type NonApplicableWorkerConfigsInfo = typeof nonApplicableWorkerConfigs;
 
 type NonApplicableConfig =
 	| NonApplicableConfigReplacedByVite
-	| NonApplicableConfigNotRelevant
-	| NonApplicableConfigOverridden;
+	| NonApplicableConfigNotRelevant;
 
 type NonApplicableConfigReplacedByVite =
 	keyof NonApplicableWorkerConfigsInfo["replacedByVite"];
 
 type NonApplicableConfigNotRelevant =
 	NonApplicableWorkerConfigsInfo["notRelevant"][number];
-
-type NonApplicableConfigOverridden =
-	NonApplicableWorkerConfigsInfo["overridden"][number];
 
 /**
  * Set of worker config options that are not applicable when using Vite
@@ -100,16 +89,11 @@ export const nonApplicableWorkerConfigs = {
 		"build",
 		"find_additional_modules",
 		"no_bundle",
-		"node_compat",
 		"preserve_file_names",
+		"rules",
 		"site",
 		"tsconfig",
-		"upload_source_maps",
 	],
-	/**
-	 * All the configs that get overridden by our plugin
-	 */
-	overridden: ["rules"],
 } as const;
 
 /**
@@ -121,11 +105,9 @@ const nullableNonApplicable = [
 	"find_additional_modules",
 	"minify",
 	"no_bundle",
-	"node_compat",
 	"preserve_file_names",
 	"site",
 	"tsconfig",
-	"upload_source_maps",
 ] as const;
 
 function readWorkerConfig(
@@ -139,7 +121,6 @@ function readWorkerConfig(
 	const nonApplicable: NonApplicableConfigMap = {
 		replacedByVite: new Set(),
 		notRelevant: new Set(),
-		overridden: new Set(),
 	};
 	const config: Optional<RawWorkerConfig, "build" | "define"> =
 		unstable_readConfig({ config: configPath, env }, {});
@@ -153,10 +134,6 @@ function readWorkerConfig(
 
 			if (isNotRelevant(prop)) {
 				nonApplicable.notRelevant.add(prop);
-			}
-
-			if (isOverridden(prop)) {
-				nonApplicable.overridden.add(prop);
 			}
 		}
 		delete config[prop];
@@ -176,9 +153,8 @@ function readWorkerConfig(
 	delete config["define"];
 
 	if (config.rules.length > 0) {
-		nonApplicable.overridden.add("rules");
+		nonApplicable.notRelevant.add("rules");
 	}
-	// Note: differently from above here we cannot delete `config['rules']` since Miniflare relies on this config being there
 
 	return {
 		raw,
@@ -260,8 +236,7 @@ function getWorkerNonApplicableWarnLines(
 ): string[] {
 	const lines: string[] = [];
 
-	const { replacedByVite, notRelevant, overridden } =
-		workerConfig.nonApplicable;
+	const { replacedByVite, notRelevant } = workerConfig.nonApplicable;
 
 	for (const config of replacedByVite) {
 		lines.push(
@@ -272,11 +247,6 @@ function getWorkerNonApplicableWarnLines(
 	if (notRelevant.size > 0)
 		lines.push(
 			`${linePrefix}${[...notRelevant].map((config) => `\`${config}\``).join(", ")} which ${notRelevant.size > 1 ? "are" : "is"} not relevant in the context of a Vite project`
-		);
-
-	if (overridden.size > 0)
-		lines.push(
-			`${linePrefix}${[...overridden].map((config) => `\`${config}\``).join(", ")} which ${overridden.size > 1 ? "are" : "is"} overridden by \`${packageName}\``
 		);
 
 	return lines;
@@ -292,12 +262,6 @@ function isNotRelevant(
 	configName: string
 ): configName is NonApplicableConfigNotRelevant {
 	return nonApplicableWorkerConfigs.notRelevant.includes(configName as any);
-}
-
-function isOverridden(
-	configName: string
-): configName is NonApplicableConfigOverridden {
-	return nonApplicableWorkerConfigs.overridden.includes(configName as any);
 }
 
 function missingFieldErrorMessage(
@@ -324,55 +288,137 @@ export function getWorkerConfig(
 
 	opts?.visitedConfigPaths?.add(configPath);
 
-	assert(
-		config.topLevelName,
-		missingFieldErrorMessage(`top-level 'name'`, configPath, env)
-	);
-	assert(config.name, missingFieldErrorMessage(`'name'`, configPath, env));
-	assert(
-		config.compatibility_date,
-		missingFieldErrorMessage(`'compatibility_date'`, configPath, env)
-	);
+	if (!config.name) {
+		throw new Error(missingFieldErrorMessage(`'name'`, configPath, env));
+	}
+
+	if (!config.topLevelName) {
+		throw new Error(
+			missingFieldErrorMessage(`top-level 'name'`, configPath, env)
+		);
+	}
+
+	if (!config.compatibility_date) {
+		throw new Error(
+			missingFieldErrorMessage(`'compatibility_date`, configPath, env)
+		);
+	}
+
+	const requiredFields = {
+		topLevelName: config.topLevelName,
+		name: config.name,
+		compatibility_date: config.compatibility_date,
+	};
 
 	if (opts?.isEntryWorker && !config.main) {
-		assert(
-			config.assets,
-			missingFieldErrorMessage(`'main' or 'assets'`, configPath, env)
-		);
-
 		return {
 			type: "assets-only",
 			raw,
 			config: {
 				...config,
-				topLevelName: config.topLevelName,
-				name: config.name,
-				compatibility_date: config.compatibility_date,
-				assets: config.assets,
+				...requiredFields,
 			},
 			nonApplicable,
 		};
 	}
 
-	assert(config.main, missingFieldErrorMessage(`'main'`, configPath, env));
+	if (!config.main) {
+		throw new Error(missingFieldErrorMessage(`'main'`, configPath, env));
+	}
+
+	const mainStat = fs.statSync(config.main, { throwIfNoEntry: false });
+	if (!mainStat) {
+		throw new Error(
+			`The provided Wrangler config main field (${config.main}) doesn't point to an existing file`
+		);
+	}
+	if (mainStat.isDirectory()) {
+		throw new Error(
+			`The provided Wrangler config main field (${config.main}) points to a directory, it needs to point to a file instead`
+		);
+	}
 
 	return {
 		type: "worker",
 		raw,
 		config: {
 			...config,
-			topLevelName: config.topLevelName,
-			name: config.name,
-			compatibility_date: config.compatibility_date,
+			...requiredFields,
 			main: config.main,
 		},
 		nonApplicable,
 	};
 }
 
+/**
+ * Returns the path to a wrangler config for a worker after having it validated
+ * (throws appropriate errors in case the validation fails)
+ *
+ * @param root the root of the vite project
+ * @param requestedConfigPath the requested config path, if any
+ * @param isForAuxiliaryWorker whether the config path is being requested for an auxiliary worker
+ * @returns a valid path to a config file
+ */
+export function getValidatedWranglerConfigPath(
+	root: string,
+	requestedConfigPath: string | undefined,
+	isForAuxiliaryWorker = false
+) {
+	if (requestedConfigPath) {
+		const configPath = path.resolve(root, requestedConfigPath);
+
+		const forAuxiliaryWorkerErrorMessage = isForAuxiliaryWorker
+			? " requested for one of your auxiliary workers"
+			: "";
+
+		const errorMessagePrefix = `The provided configPath (${configPath})${forAuxiliaryWorkerErrorMessage}`;
+
+		const fileExtension = path.extname(configPath).slice(1);
+
+		if (!allowedWranglerConfigExtensions.includes(fileExtension)) {
+			const foundExtensionMessage = !fileExtension
+				? "no extension found"
+				: `"${fileExtension}" found`;
+			throw new Error(
+				`${errorMessagePrefix} doesn't point to a file with the correct file extension. It should point to a jsonc, json or toml file (${foundExtensionMessage} instead)`
+			);
+		}
+
+		const mainStat = fs.statSync(configPath, { throwIfNoEntry: false });
+		if (!mainStat) {
+			throw new Error(
+				`${errorMessagePrefix} doesn't point to an existing file`
+			);
+		}
+		if (mainStat.isDirectory()) {
+			throw new Error(
+				`${errorMessagePrefix} points to a directory. It should point to a file.`
+			);
+		}
+
+		return configPath;
+	}
+
+	// the plugin's API requires auxiliary workers to always specify their config paths
+	assert(
+		isForAuxiliaryWorker === false,
+		"Unexpected Error: trying to find the wrangler config for an auxiliary worker"
+	);
+
+	const configPath = findWranglerConfig(root);
+
+	if (!configPath) {
+		throw new Error(
+			`No config file found in the ${root} directory. Please add a wrangler.(jsonc|json|toml) file.`
+		);
+	}
+
+	return configPath;
+}
+
 // We can't rely on `readConfig` from Wrangler to find the config as it may be relative to a different root that's set by the user.
-export function findWranglerConfig(root: string): string | undefined {
-	for (const extension of ["json", "jsonc", "toml"]) {
+function findWranglerConfig(root: string): string | undefined {
+	for (const extension of allowedWranglerConfigExtensions) {
 		const configPath = path.join(root, `wrangler.${extension}`);
 
 		if (fs.existsSync(configPath)) {
@@ -380,3 +426,5 @@ export function findWranglerConfig(root: string): string | undefined {
 		}
 	}
 }
+
+const allowedWranglerConfigExtensions = ["jsonc", "json", "toml"];

@@ -14,10 +14,9 @@ import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 describe("pages build env", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
-	const originalLoggerLevel = logger.loggerLevel;
 
 	afterEach(() => {
-		logger.loggerLevel = originalLoggerLevel;
+		logger.resetLoggerLevel();
 	});
 	beforeEach(() => {
 		vi.stubEnv("PAGES_ENVIRONMENT", "production");

@@ -15,10 +15,9 @@ export class WebSocketServer extends DurableObject {
 	}
 
 	override async webSocketMessage(ws: WebSocket, data: string | ArrayBuffer) {
-		const decoder = new TextDecoder();
-		const message = typeof data === "string" ? data : decoder.decode(data);
-
-		ws.send(`Durable Object received client message: '${message}'.`);
+		ws.send(
+			`Durable Object received client message: '${data}' of type '${typeof data}'.`
+		);
 	}
 }
 

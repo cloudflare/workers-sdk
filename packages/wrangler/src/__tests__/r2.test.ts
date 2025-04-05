@@ -6,17 +6,81 @@ import { actionsForEventCategories } from "../r2/helpers";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import { mockConfirm } from "./helpers/mock-dialogs";
+import { mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw, mswR2handlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type {
+	BucketLockRule,
 	PutNotificationRequestBody,
 	R2EventableOperation,
 	R2EventType,
 } from "../r2/helpers";
+
+function mockBucketLockPutNew(bucketName: string, rules: BucketLockRule[]) {
+	mockBucketLockPutWithExistingRules(bucketName, [], rules);
+}
+
+function mockBucketLockPutWithExistingRules(
+	bucketName: string,
+	existingRules: BucketLockRule[],
+	newRules: BucketLockRule[]
+) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/r2/buckets/:bucketName/lock",
+			async ({ params }) => {
+				const { accountId, bucketName: bucketParam } = params;
+				expect(accountId).toEqual("some-account-id");
+				expect(bucketParam).toEqual(bucketName);
+				return HttpResponse.json(
+					createFetchResult({
+						rules: existingRules,
+					})
+				);
+			},
+			{ once: true }
+		),
+		http.put(
+			"*/accounts/:accountId/r2/buckets/:bucketName/lock",
+			async ({ request, params }) => {
+				const { accountId, bucketName: bucketParam } = params;
+				expect(accountId).toEqual("some-account-id");
+				expect(bucketName).toEqual(bucketParam);
+				const requestBody = await request.json();
+				expect(requestBody).toEqual({
+					rules: newRules,
+				});
+				return HttpResponse.json(createFetchResult({}));
+			},
+			{ once: true }
+		)
+	);
+}
+
+function mockBucketLockGetExistingRules(
+	bucketName: string,
+	existingRules: BucketLockRule[]
+) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/r2/buckets/:bucketName/lock",
+			async ({ params }) => {
+				const { accountId, bucketName: bucketParam } = params;
+				expect(accountId).toEqual("some-account-id");
+				expect(bucketParam).toEqual(bucketName);
+				return HttpResponse.json(
+					createFetchResult({
+						rules: existingRules,
+					})
+				);
+			},
+			{ once: true }
+		)
+	);
+}
 
 describe("r2", () => {
 	const std = mockConsoleMethods();
@@ -38,6 +102,7 @@ describe("r2", () => {
 
 			GLOBAL FLAGS
 			  -c, --config   Path to Wrangler configuration file  [string]
+			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
@@ -66,6 +131,7 @@ describe("r2", () => {
 
 			GLOBAL FLAGS
 			  -c, --config   Path to Wrangler configuration file  [string]
+			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
@@ -91,14 +157,17 @@ describe("r2", () => {
 				  wrangler r2 bucket info <bucket>    Get information about an R2 bucket
 				  wrangler r2 bucket delete <bucket>  Delete an R2 bucket
 				  wrangler r2 bucket sippy            Manage Sippy incremental migration on an R2 bucket
+				  wrangler r2 bucket catalog          Manage the data catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark and PyIceberg [open-beta]
 				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
 				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
 				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
 				  wrangler r2 bucket lifecycle        Manage lifecycle rules for an R2 bucket
 				  wrangler r2 bucket cors             Manage CORS configuration for an R2 bucket
+				  wrangler r2 bucket lock             Manage lock rules for an R2 bucket
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
@@ -129,14 +198,17 @@ describe("r2", () => {
 				  wrangler r2 bucket info <bucket>    Get information about an R2 bucket
 				  wrangler r2 bucket delete <bucket>  Delete an R2 bucket
 				  wrangler r2 bucket sippy            Manage Sippy incremental migration on an R2 bucket
+				  wrangler r2 bucket catalog          Manage the data catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark and PyIceberg [open-beta]
 				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
 				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
 				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
 				  wrangler r2 bucket lifecycle        Manage lifecycle rules for an R2 bucket
 				  wrangler r2 bucket cors             Manage CORS configuration for an R2 bucket
+				  wrangler r2 bucket lock             Manage lock rules for an R2 bucket
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
@@ -244,6 +316,7 @@ describe("r2", () => {
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
+					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]
@@ -277,6 +350,7 @@ describe("r2", () => {
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
+					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]
@@ -399,6 +473,7 @@ describe("r2", () => {
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
+					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]"
@@ -428,6 +503,7 @@ describe("r2", () => {
 
 						GLOBAL FLAGS
 						  -c, --config   Path to Wrangler configuration file  [string]
+						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
@@ -493,6 +569,7 @@ describe("r2", () => {
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
+					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]
@@ -556,6 +633,7 @@ describe("r2", () => {
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
+					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]
@@ -623,6 +701,7 @@ describe("r2", () => {
 
 					GLOBAL FLAGS
 					  -c, --config   Path to Wrangler configuration file  [string]
+					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 					  -h, --help     Show help  [boolean]
 					  -v, --version  Show version number  [boolean]"
@@ -714,6 +793,7 @@ describe("r2", () => {
 
 						GLOBAL FLAGS
 						  -c, --config   Path to Wrangler configuration file  [string]
+						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
@@ -757,6 +837,7 @@ describe("r2", () => {
 
 						GLOBAL FLAGS
 						  -c, --config   Path to Wrangler configuration file  [string]
+						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
@@ -808,6 +889,7 @@ describe("r2", () => {
 
 						GLOBAL FLAGS
 						  -c, --config   Path to Wrangler configuration file  [string]
+						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
@@ -846,6 +928,288 @@ describe("r2", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`"Sippy configuration: https://storage.googleapis.com/storage/v1/b/testBucket"`
 				);
+			});
+		});
+
+		describe("catalog", () => {
+			it("should show the correct help when an invalid command is passed", async () => {
+				await expect(() =>
+					runWrangler("r2 bucket catalog foo")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Unknown argument: foo]`
+				);
+				expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
+
+			"
+		`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					wrangler r2 bucket catalog
+
+					Manage the data catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark and PyIceberg [open-beta]
+
+					COMMANDS
+					  wrangler r2 bucket catalog enable <bucket>   Enable the data catalog on an R2 bucket [open-beta]
+					  wrangler r2 bucket catalog disable <bucket>  Disable the data catalog for an R2 bucket [open-beta]
+					  wrangler r2 bucket catalog get <bucket>      Get the status of the data catalog for an R2 bucket [open-beta]
+
+					GLOBAL FLAGS
+					  -c, --config   Path to Wrangler configuration file  [string]
+					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]"
+				`);
+			});
+
+			describe("enable", () => {
+				it("should enable R2 catalog for the given bucket", async () => {
+					msw.use(
+						http.post(
+							"*/accounts/some-account-id/r2-catalog/testBucket/enable",
+							async () => {
+								return HttpResponse.json(
+									createFetchResult(
+										{
+											id: "test-warehouse-id",
+											name: "test-account-id_test-warehouse-name",
+										},
+										true
+									)
+								);
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler("r2 bucket catalog enable testBucket");
+					expect(std.out).toMatchInlineSnapshot(
+						`"✨ Successfully enabled data catalog on bucket 'testBucket'.
+
+Catalog URI: 'https://catalog.cloudflarestorage.com/test-account-id/test-warehouse-name'
+Warehouse: 'test-account-id_test-warehouse-name'
+
+Use this Catalog URI with Iceberg-compatible query engines (Spark, PyIceberg etc.) to query data as tables.
+Note: You will need a Cloudflare API token with 'R2 Data Catalog' permission to authenticate your client with this catalog.
+For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"`
+					);
+				});
+
+				it("should error if no bucket name is given", async () => {
+					await expect(
+						runWrangler("r2 bucket catalog enable")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: Not enough non-option arguments: got 0, need at least 1]`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						wrangler r2 bucket catalog enable <bucket>
+
+						Enable the data catalog on an R2 bucket [open-beta]
+
+						POSITIONALS
+						  bucket  The name of the bucket to enable  [string] [required]
+
+						GLOBAL FLAGS
+						  -c, --config   Path to Wrangler configuration file  [string]
+						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						  -h, --help     Show help  [boolean]
+						  -v, --version  Show version number  [boolean]"
+					`);
+					expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+				"
+			`);
+				});
+			});
+
+			describe("disable", () => {
+				const { setIsTTY } = useMockIsTTY();
+				it("should error if no bucket name is given", async () => {
+					await expect(
+						runWrangler("r2 bucket catalog disable")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: Not enough non-option arguments: got 0, need at least 1]`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						wrangler r2 bucket catalog disable <bucket>
+
+						Disable the data catalog for an R2 bucket [open-beta]
+
+						POSITIONALS
+						  bucket  The name of the bucket to disable the data catalog for  [string] [required]
+
+						GLOBAL FLAGS
+						  -c, --config   Path to Wrangler configuration file  [string]
+						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						  -h, --help     Show help  [boolean]
+						  -v, --version  Show version number  [boolean]"
+					`);
+					expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+				"
+			`);
+				});
+
+				it("should disable R2 catalog for the given bucket", async () => {
+					setIsTTY(true);
+					mockConfirm({
+						text: "Are you sure you want to disable the data catalog for bucket 'testBucket'?",
+						result: true,
+					});
+					msw.use(
+						http.post(
+							"*/accounts/some-account-id/r2-catalog/testBucket/disable",
+							async () => {
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler("r2 bucket catalog disable testBucket");
+					expect(std.out).toMatchInlineSnapshot(
+						`"Successfully disabled the data catalog on bucket 'testBucket'."`
+					);
+				});
+
+				it("should inform user if the catalog was never enabled for the bucket", async () => {
+					setIsTTY(true);
+					mockConfirm({
+						text: "Are you sure you want to disable the data catalog for bucket 'testBucket'?",
+						result: true,
+					});
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/r2-catalog/:bucketName/disable",
+							async ({ request, params }) => {
+								const { accountId } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(await request.text()).toEqual("");
+								return HttpResponse.json(
+									{
+										success: false,
+										errors: [
+											{
+												code: 40401,
+												message: "Warehouse not found",
+											},
+										],
+										result: null,
+									},
+									{ status: 404 }
+								);
+							},
+							{ once: true }
+						)
+					);
+
+					await runWrangler("r2 bucket catalog disable testBucket");
+					expect(std.out).toMatchInlineSnapshot(`
+						"Data catalog is not enabled for bucket 'testBucket'. Please use 'wrangler r2 bucket catalog enable testBucket' to first enable the data catalog on this bucket."
+					`);
+				});
+			});
+
+			describe("get", () => {
+				it("should error if no bucket name is given", async () => {
+					await expect(
+						runWrangler("r2 bucket catalog get")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: Not enough non-option arguments: got 0, need at least 1]`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						wrangler r2 bucket catalog get <bucket>
+
+						Get the status of the data catalog for an R2 bucket [open-beta]
+
+						POSITIONALS
+						  bucket  The name of the R2 bucket whose data catalog status to retrieve  [string] [required]
+
+						GLOBAL FLAGS
+						  -c, --config   Path to Wrangler configuration file  [string]
+						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						  -h, --help     Show help  [boolean]
+						  -v, --version  Show version number  [boolean]"
+					`);
+					expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+				"
+			`);
+				});
+
+				it("should get the catalog status for the given bucket", async () => {
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2-catalog/:bucketName",
+							async ({ request, params }) => {
+								const { accountId } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(await request.text()).toEqual("");
+								return HttpResponse.json(
+									createFetchResult(
+										{
+											id: "test-id",
+											name: "test-account-id_test-name",
+											bucket: "test-bucket",
+											status: "active",
+										},
+										true
+									)
+								);
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler("r2 bucket catalog get test-bucket");
+					expect(std.out).toMatchInlineSnapshot(`
+					"Getting data catalog status for 'test-bucket'...
+
+					Catalog URI:  https://catalog.cloudflarestorage.com/test-account-id/test-name
+					Warehouse:    test-account-id_test-name
+					Status:       active"
+				`);
+				});
+
+				it("should inform user if the catalog was never enabled for the bucket", async () => {
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2-catalog/:bucketName",
+							async ({ request, params }) => {
+								const { accountId } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(await request.text()).toEqual("");
+								return HttpResponse.json(
+									{
+										success: false,
+										errors: [
+											{
+												code: 40401,
+												message: "Warehouse not found",
+											},
+										],
+										result: null,
+									},
+									{ status: 404 }
+								);
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler("r2 bucket catalog get test-bucket");
+					expect(std.out).toMatchInlineSnapshot(`
+					"Getting data catalog status for 'test-bucket'...
+
+					Data catalog is not enabled for bucket 'test-bucket'. Please use 'wrangler r2 bucket catalog enable test-bucket' to first enable the data catalog on this bucket."
+				`);
+				});
 			});
 		});
 
@@ -989,6 +1353,7 @@ describe("r2", () => {
 
 						GLOBAL FLAGS
 						  -c, --config   Path to Wrangler configuration file  [string]
+						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
@@ -1349,6 +1714,7 @@ describe("r2", () => {
 
 						GLOBAL FLAGS
 						  -c, --config   Path to Wrangler configuration file  [string]
+						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
@@ -1507,6 +1873,7 @@ describe("r2", () => {
 
 						GLOBAL FLAGS
 						  -c, --config   Path to Wrangler configuration file  [string]
+						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 						  -h, --help     Show help  [boolean]
 						  -v, --version  Show version number  [boolean]
@@ -1933,7 +2300,7 @@ describe("r2", () => {
 					await runWrangler(`r2 bucket lifecycle list ${bucketName}`);
 					expect(std.out).toMatchInlineSnapshot(`
 					"Listing lifecycle rules for bucket 'my-bucket'...
-					id:       rule-1
+					name:     rule-1
 					enabled:  Yes
 					prefix:   images/
 					action:   Expire objects after 30 days"
@@ -1941,7 +2308,7 @@ describe("r2", () => {
 				});
 			});
 			describe("add", () => {
-				it("it should add a lifecycle rule using command-line arguments", async () => {
+				it("it should add an age lifecycle rule using command-line arguments", async () => {
 					const bucketName = "my-bucket";
 					const ruleId = "my-rule";
 					const prefix = "images/";
@@ -1991,7 +2358,65 @@ describe("r2", () => {
 						)
 					);
 					await runWrangler(
-						`r2 bucket lifecycle add ${bucketName} --id ${ruleId} --prefix ${prefix} --expire-days ${conditionValue}`
+						`r2 bucket lifecycle add ${bucketName} --name ${ruleId} --prefix ${prefix} --expire-days ${conditionValue}`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Adding lifecycle rule 'my-rule' to bucket 'my-bucket'...
+						✨ Added lifecycle rule 'my-rule' to bucket 'my-bucket'."
+					  `);
+				});
+
+				it("it should add a date lifecycle rule using command-line arguments and id alias", async () => {
+					const bucketName = "my-bucket";
+					const ruleId = "my-rule";
+					const prefix = "images/";
+					const conditionType = "Date";
+					const conditionValue = "2025-01-30";
+
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async ({ params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								return HttpResponse.json(
+									createFetchResult({
+										rules: [],
+									})
+								);
+							},
+							{ once: true }
+						),
+						http.put(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async ({ request, params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketName).toEqual(bucketParam);
+								const requestBody = await request.json();
+								expect(requestBody).toEqual({
+									rules: [
+										{
+											id: ruleId,
+											enabled: true,
+											conditions: { prefix: prefix },
+											deleteObjectsTransition: {
+												condition: {
+													type: conditionType,
+													date: "2025-01-30T00:00:00.000Z",
+												},
+											},
+										},
+									],
+								});
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(
+						`r2 bucket lifecycle add ${bucketName} --id ${ruleId} --prefix ${prefix} --expire-date ${conditionValue}`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
 						"Adding lifecycle rule 'my-rule' to bucket 'my-bucket'...
@@ -2001,6 +2426,52 @@ describe("r2", () => {
 			});
 			describe("remove", () => {
 				it("should remove a lifecycle rule as expected", async () => {
+					const bucketName = "my-bucket";
+					const ruleId = "my-rule";
+					const lifecycleRules = {
+						rules: [
+							{
+								id: ruleId,
+								enabled: true,
+								conditions: {},
+							},
+						],
+					};
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async ({ params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								return HttpResponse.json(createFetchResult(lifecycleRules));
+							},
+							{ once: true }
+						),
+						http.put(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async ({ request, params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketName).toEqual(bucketParam);
+								const requestBody = await request.json();
+								expect(requestBody).toEqual({
+									rules: [],
+								});
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(
+						`r2 bucket lifecycle remove ${bucketName} --name ${ruleId}`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Removing lifecycle rule 'my-rule' from bucket 'my-bucket'...
+						Lifecycle rule 'my-rule' removed from bucket 'my-bucket'."
+					  `);
+				});
+				it("should remove a lifecycle rule as expected with id alias", async () => {
 					const bucketName = "my-bucket";
 					const ruleId = "my-rule";
 					const lifecycleRules = {
@@ -2066,7 +2537,7 @@ describe("r2", () => {
 					);
 					await expect(() =>
 						runWrangler(
-							`r2 bucket lifecycle remove ${bucketName} --id ${ruleId}`
+							`r2 bucket lifecycle remove ${bucketName} --name ${ruleId}`
 						)
 					).rejects.toThrowErrorMatchingInlineSnapshot(
 						"[Error: Lifecycle rule with ID 'my-rule' not found in configuration for 'my-bucket'.]"
@@ -2277,6 +2748,442 @@ describe("r2", () => {
 				});
 			});
 		});
+		describe("lock", () => {
+			const { setIsTTY } = useMockIsTTY();
+			mockAccountId();
+			mockApiToken();
+			describe("list", () => {
+				it("should list lock rules when they exist", async () => {
+					const bucketName = "my-bucket";
+					const lockRules = [
+						{
+							id: "rule-age",
+							enabled: true,
+							prefix: "images/age",
+							condition: {
+								type: "Age",
+								maxAgeSeconds: 86400,
+							},
+						},
+						{
+							id: "rule-date",
+							enabled: true,
+							prefix: "images/date",
+							condition: {
+								type: "Date",
+								date: 1738277955891,
+							},
+						},
+						{
+							id: "rule-indefinite",
+							enabled: true,
+							prefix: "images/indefinite",
+							condition: {
+								type: "Indefinite",
+							},
+						},
+					];
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lock",
+							async ({ params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								return HttpResponse.json(
+									createFetchResult({
+										rules: lockRules,
+									})
+								);
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(`r2 bucket lock list ${bucketName}`);
+					expect(std.out).toMatchInlineSnapshot(`
+					"Listing lock rules for bucket 'my-bucket'...
+					name:       rule-age
+					enabled:    Yes
+					prefix:     images/age
+					condition:  after 1 day
+
+					name:       rule-date
+					enabled:    Yes
+					prefix:     images/date
+					condition:  on 2025-01-30
+
+					name:       rule-indefinite
+					enabled:    Yes
+					prefix:     images/indefinite
+					condition:  indefinitely"
+				  `);
+				});
+			});
+			describe("add", () => {
+				it("it should add a lock rule without prefix using command-line arguments", async () => {
+					setIsTTY(true);
+					const bucketName = "my-bucket";
+
+					mockBucketLockPutNew(bucketName, [
+						{
+							id: "rule-no-prefix",
+							enabled: true,
+							condition: {
+								type: "Age",
+								maxAgeSeconds: 86400,
+							},
+						},
+					]);
+
+					mockPrompt({
+						text: 'Enter a prefix for the bucket lock rule (set to "" for all prefixes)',
+						options: { defaultValue: "" },
+						result: "",
+					});
+					mockConfirm({
+						text:
+							`Are you sure you want to add lock rule 'rule-no-prefix' to bucket '${bucketName}' without a prefix? ` +
+							`The lock rule will apply to all objects in your bucket.`,
+						result: true,
+					});
+					await runWrangler(
+						`r2 bucket lock add ${bucketName} --name "rule-no-prefix" --retention-days 1`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Adding lock rule 'rule-no-prefix' to bucket 'my-bucket'...
+						✨ Added lock rule 'rule-no-prefix' to bucket 'my-bucket'."
+					  `);
+				});
+				it("it should fail to add lock rule using command-line arguments without condition", async () => {
+					setIsTTY(true);
+					const bucketName = "my-bucket";
+
+					mockBucketLockGetExistingRules(bucketName, []);
+
+					mockConfirm({
+						text:
+							`Are you sure you want to add lock rule 'rule-not-indefinite' to bucket '${bucketName}' without retention? ` +
+							`The lock rule will apply to all matching objects indefinitely.`,
+						result: false,
+					});
+
+					await runWrangler(
+						`r2 bucket lock add ${bucketName} --name 'rule-not-indefinite' --prefix prefix-not-indefinite`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Add cancelled."
+					  `);
+				});
+				it("it should add an age lock rule using command-line arguments and id alias", async () => {
+					setIsTTY(true);
+					const bucketName = "my-bucket";
+
+					mockBucketLockPutNew(bucketName, [
+						{
+							id: "rule-age",
+							enabled: true,
+							prefix: "prefix-age",
+							condition: {
+								type: "Age",
+								maxAgeSeconds: 86400,
+							},
+						},
+					]);
+					// age
+					await runWrangler(
+						`r2 bucket lock add ${bucketName} --id rule-age --prefix prefix-age --retention-days 1`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Adding lock rule 'rule-age' to bucket 'my-bucket'...
+						✨ Added lock rule 'rule-age' to bucket 'my-bucket'."
+					  `);
+				});
+				it("it should fail an age lock rule using command-line arguments with invalid age string", async () => {
+					setIsTTY(true);
+					const bucketName = "my-bucket";
+
+					mockBucketLockGetExistingRules(bucketName, []);
+					// age
+					await expect(() =>
+						runWrangler(
+							`r2 bucket lock add ${bucketName} --name rule-age --prefix prefix-age --retention-days one`
+						)
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: Days must be a number.]`
+					);
+				});
+				it("it should fail an age lock rule using command-line arguments with invalid negative age", async () => {
+					setIsTTY(true);
+					const bucketName = "my-bucket";
+
+					mockBucketLockPutNew(bucketName, [
+						{
+							id: "rule-age",
+							enabled: true,
+							prefix: "prefix-age",
+							condition: {
+								type: "Age",
+								maxAgeSeconds: 86400,
+							},
+						},
+					]);
+					// age
+					await expect(() =>
+						runWrangler(
+							`r2 bucket lock add ${bucketName} --name rule-age --prefix prefix-age --retention-days -10`
+						)
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: Days must be a positive number: -10]`
+					);
+				});
+				it("it should add a date lock rule using command-line arguments", async () => {
+					setIsTTY(true);
+					const bucketName = "my-bucket";
+
+					mockBucketLockPutNew(bucketName, [
+						{
+							id: "rule-date",
+							enabled: true,
+							prefix: "prefix-date",
+							condition: {
+								type: "Date",
+								date: "2025-01-30T00:00:00.000Z",
+							},
+						},
+					]);
+					// date
+					await runWrangler(
+						`r2 bucket lock add ${bucketName} --name rule-date --prefix prefix-date --retention-date 2025-01-30`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Adding lock rule 'rule-date' to bucket 'my-bucket'...
+						✨ Added lock rule 'rule-date' to bucket 'my-bucket'."
+					  `);
+				});
+				it("it should fail to add an invalid date lock rule using command-line arguments if retention is not", async () => {
+					setIsTTY(true);
+					const bucketName = "my-bucket";
+
+					mockBucketLockGetExistingRules(bucketName, []);
+					// date
+					await expect(() =>
+						runWrangler(
+							`r2 bucket lock add ${bucketName} --name "rule-date" --prefix "prefix-date" --retention-date "January 30, 2025"`
+						)
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: Date must be a valid date in the YYYY-MM-DD format: January 30, 2025]`
+					);
+				});
+				it("it should add an indefinite lock rule using command-line arguments", async () => {
+					setIsTTY(false);
+					const bucketName = "my-bucket";
+
+					mockBucketLockPutNew(bucketName, [
+						{
+							id: "rule-indefinite",
+							enabled: true,
+							prefix: "prefix-indefinite",
+							condition: {
+								type: "Indefinite",
+							},
+						},
+					]);
+
+					await runWrangler(
+						`r2 bucket lock add ${bucketName} --name rule-indefinite --prefix prefix-indefinite --retention-indefinite`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Adding lock rule 'rule-indefinite' to bucket 'my-bucket'...
+						✨ Added lock rule 'rule-indefinite' to bucket 'my-bucket'."
+					  `);
+				});
+				it("it should add an indefinite lock rule using command-line arguments and prompt if not initially specified", async () => {
+					setIsTTY(false);
+					const bucketName = "my-bucket";
+
+					mockBucketLockPutNew(bucketName, [
+						{
+							id: "rule-indefinite",
+							enabled: true,
+							prefix: "prefix-indefinite",
+							condition: {
+								type: "Indefinite",
+							},
+						},
+					]);
+
+					mockConfirm({
+						text:
+							`Are you sure you want to add lock rule 'rule-indefinite' to bucket '${bucketName}' without retention? ` +
+							`The lock rule will apply to all matching objects indefinitely.`,
+						result: true,
+					});
+
+					await runWrangler(
+						`r2 bucket lock add ${bucketName} --name rule-indefinite --prefix prefix-indefinite`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"? Are you sure you want to add lock rule 'rule-indefinite' to bucket 'my-bucket' without retention? The lock rule will apply to all matching objects indefinitely.
+						🤖 Using fallback value in non-interactive context: yes
+						Adding lock rule 'rule-indefinite' to bucket 'my-bucket'...
+						✨ Added lock rule 'rule-indefinite' to bucket 'my-bucket'."
+					  `);
+				});
+				it("it should fail to add a lock rule if retenion is indefinite but false", async () => {
+					setIsTTY(true);
+					const bucketName = "my-bucket";
+
+					mockBucketLockPutNew(bucketName, [
+						{
+							id: "rule-indefinite",
+							enabled: true,
+							prefix: "prefix-indefinite",
+							condition: {
+								type: "Indefinite",
+							},
+						},
+					]);
+
+					await expect(() =>
+						runWrangler(
+							`r2 bucket lock add ${bucketName} --name rule-indefinite --prefix prefix-indefinite --retention-indefinite false`
+						)
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: Retention must be specified.]`
+					);
+				});
+				it("it should fail a lock rule without any command-line arguments", async () => {
+					setIsTTY(false);
+					const bucketName = "my-bucket";
+
+					mockBucketLockGetExistingRules(bucketName, []);
+					// date
+					await expect(() =>
+						runWrangler(`r2 bucket lock add ${bucketName}`)
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: Must specify a rule name.]`
+					);
+				});
+			});
+			describe("remove", () => {
+				it("should remove a lock rule as expected", async () => {
+					const bucketName = "my-bucket";
+					const ruleId = "my-rule";
+					const lockRules: BucketLockRule[] = [
+						{
+							id: ruleId,
+							enabled: true,
+							prefix: "prefix",
+							condition: {
+								type: "Indefinite",
+							},
+						},
+					];
+					mockBucketLockPutWithExistingRules(bucketName, lockRules, []);
+					await runWrangler(
+						`r2 bucket lock remove ${bucketName} --name ${ruleId}`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Removing lock rule 'my-rule' from bucket 'my-bucket'...
+						Lock rule 'my-rule' removed from bucket 'my-bucket'."
+					  `);
+				});
+				it("should remove a lock rule as expected with id alias", async () => {
+					const bucketName = "my-bucket";
+					const ruleId = "my-rule";
+					const lockRules: BucketLockRule[] = [
+						{
+							id: ruleId,
+							enabled: true,
+							prefix: "prefix",
+							condition: {
+								type: "Indefinite",
+							},
+						},
+					];
+					mockBucketLockPutWithExistingRules(bucketName, lockRules, []);
+					await runWrangler(
+						`r2 bucket lock remove ${bucketName} --id ${ruleId}`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"Removing lock rule 'my-rule' from bucket 'my-bucket'...
+						Lock rule 'my-rule' removed from bucket 'my-bucket'."
+					  `);
+				});
+				it("should handle removing non-existant rule ID as expected", async () => {
+					const bucketName = "my-bucket";
+					const ruleId = "my-rule";
+
+					mockBucketLockPutWithExistingRules(bucketName, [], []);
+					await expect(() =>
+						runWrangler(`r2 bucket lock remove ${bucketName} --name ${ruleId}`)
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						"[Error: Lock rule with ID 'my-rule' not found in configuration for 'my-bucket'.]"
+					);
+				});
+			});
+			describe("set", () => {
+				it("should set lock configuration from a JSON file", async () => {
+					setIsTTY(false);
+					const bucketName = "my-bucket";
+					const filePath = "lock-configuration.json";
+					const lockRules = {
+						rules: [
+							{
+								id: "rule-no-prefix-age",
+								enabled: true,
+								condition: {
+									type: "Age",
+									maxAgeSeconds: 86400,
+								},
+							},
+							{
+								id: "rule-with-prefix-indefinite",
+								enabled: true,
+								prefix: "prefix",
+								condition: {
+									type: "Indefinite",
+								},
+							},
+						],
+					};
+
+					writeFileSync(filePath, JSON.stringify(lockRules));
+					mockConfirm({
+						text: `Are you sure you want to overwrite all existing lock rules for bucket '${bucketName}'?`,
+						options: { defaultValue: true },
+						result: true,
+					});
+
+					msw.use(
+						http.put(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lock",
+							async ({ request, params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketName).toEqual(bucketParam);
+								const requestBody = await request.json();
+								expect(requestBody).toEqual({
+									...lockRules,
+								});
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+
+					await runWrangler(
+						`r2 bucket lock set ${bucketName} --file ${filePath}`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"? Are you sure you want to overwrite all existing lock rules for bucket 'my-bucket'?
+						🤖 Using fallback value in non-interactive context: yes
+						Setting lock configuration (2 rules) for bucket 'my-bucket'...
+						✨ Set lock configuration for bucket 'my-bucket'."
+					  `);
+				});
+			});
+		});
 	});
 
 	describe("r2 object", () => {
@@ -2295,6 +3202,7 @@ describe("r2", () => {
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
@@ -2307,18 +3215,19 @@ describe("r2", () => {
 
 			it("should download R2 object from bucket", async () => {
 				await runWrangler(
-					`r2 object get bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
+					`r2 object get --remote bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
-			Download complete."
-		`);
+					"Resource location: remote
+					Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
+					Download complete."
+				`);
 			});
 
 			it("should download R2 object from bucket into directory", async () => {
 				await runWrangler(
-					`r2 object get bucketName-object-test/wormhole-img.png --file ./a/b/c/wormhole-img.png`
+					`r2 object get --remote bucketName-object-test/wormhole-img.png --file ./a/b/c/wormhole-img.png`
 				);
 				expect(fs.readFileSync("a/b/c/wormhole-img.png", "utf8")).toBe(
 					"wormhole-img.png"
@@ -2328,25 +3237,27 @@ describe("r2", () => {
 			it("should upload R2 object to bucket", async () => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
-					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
+					`r2 object put --remote bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
-			Upload complete."
-		`);
+					"Resource location: remote
+					Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
+					Upload complete."
+				`);
 			});
 
 			it("should upload R2 object with storage class to bucket", async () => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
-					`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png -s InfrequentAccess`
+					`r2 object put --remote bucketName-object-test/wormhole-img.png --file ./wormhole-img.png -s InfrequentAccess`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"Creating object \\"wormhole-img.png\\" with InfrequentAccess storage class in bucket \\"bucketName-object-test\\".
-			Upload complete."
-		`);
+					"Resource location: remote
+					Creating object \\"wormhole-img.png\\" with InfrequentAccess storage class in bucket \\"bucketName-object-test\\".
+					Upload complete."
+				`);
 			});
 
 			it("should fail to upload R2 object to bucket if too large", async () => {
@@ -2354,7 +3265,7 @@ describe("r2", () => {
 				fs.writeFileSync("wormhole-img.png", Buffer.alloc(TOO_BIG_FILE_SIZE));
 				await expect(
 					runWrangler(
-						`r2 object put bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
+						`r2 object put --remote bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
 					[Error: Error: Wrangler only supports uploading files up to 300 MiB in size
@@ -2404,31 +3315,33 @@ describe("r2", () => {
 					"--ct content-type-mock --cd content-disposition-mock --ce content-encoding-mock --cl content-lang-mock --cc cache-control-mock --e expire-time-mock";
 
 				await runWrangler(
-					`r2 object put bucketName-object-test/wormhole-img.png ${flags} --file wormhole-img.png`
+					`r2 object put --remote bucketName-object-test/wormhole-img.png ${flags} --file wormhole-img.png`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
-			Upload complete."
-		`);
+					"Resource location: remote
+					Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
+					Upload complete."
+				`);
 			});
 
 			it("should delete R2 object from bucket", async () => {
 				await runWrangler(
-					`r2 object delete bucketName-object-test/wormhole-img.png`
+					`r2 object delete --remote bucketName-object-test/wormhole-img.png`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"Deleting object \\"wormhole-img.png\\" from bucket \\"bucketName-object-test\\".
-			Delete complete."
-		`);
+					"Resource location: remote
+					Deleting object \\"wormhole-img.png\\" from bucket \\"bucketName-object-test\\".
+					Delete complete."
+				`);
 			});
 
 			it("should not allow `--pipe` & `--file` to run together", async () => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await expect(
 					runWrangler(
-						`r2 object put bucketName-object-test/wormhole-img.png --pipe --file wormhole-img.png`
+						`r2 object put --remote bucketName-object-test/wormhole-img.png --pipe --file wormhole-img.png`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Arguments pipe and file are mutually exclusive]`

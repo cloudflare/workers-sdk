@@ -1,18 +1,12 @@
 import { readFile, writeFile } from "node:fs/promises";
-import lzstring from "lz-string";
 import { FormData, Response } from "undici";
-
-const today = new Date();
-const year = String(today.getUTCFullYear());
-const month = String(today.getUTCMonth() + 1).padStart(2, "0");
-const date = String(today.getUTCDate()).padStart(2, "0");
 
 async function serialiseHashes(
 	workers: Record<string, FormData>
 ): Promise<Record<string, string>> {
 	const workerHashes = {};
 	for (const [name, worker] of Object.entries(workers)) {
-		workerHashes[name] = await compressWorker(worker);
+		workerHashes[name] = await serialiseWorker(worker);
 	}
 	return workerHashes;
 }
@@ -28,7 +22,7 @@ const pythonWorker = async () => {
 
 	const metadata = {
 		main_module: "index.py",
-		compatibility_date: `${year}-${month}-${date}`,
+		compatibility_date: `$REPLACE_COMPAT_DATE`,
 		compatibility_flags: ["python_workers"],
 	};
 
@@ -57,7 +51,7 @@ const defaultWorker = async () => {
 
 	const metadata = {
 		main_module: "index.js",
-		compatibility_date: `${year}-${month}-${date}`,
+		compatibility_date: `$REPLACE_COMPAT_DATE`,
 		compatibility_flags: ["nodejs_compat"],
 	};
 
@@ -89,7 +83,7 @@ const defaultWorker = async () => {
 	return worker;
 };
 
-async function compressWorker(worker: FormData) {
+async function serialiseWorker(worker: FormData) {
 	const serialisedWorker = new Response(worker);
 
 	const generatedBoundary = serialisedWorker.headers
@@ -101,11 +95,12 @@ async function compressWorker(worker: FormData) {
 	// This boundary is arbitrary, it's just specified for stability
 	const fixedBoundary = "----formdata-88e2b909-318c-42df-af0d-9077f33c7988";
 
-	return lzstring.compressToEncodedURIComponent(
-		`multipart/form-data; boundary=${fixedBoundary}:${await (
+	return {
+		contentType: `multipart/form-data; boundary=${fixedBoundary}`,
+		worker: await (
 			await serialisedWorker.text()
-		).replaceAll(generatedBoundary, fixedBoundary)}`
-	);
+		).replaceAll(generatedBoundary, fixedBoundary),
+	};
 }
 
 const pythonWorkerContent = await pythonWorker();

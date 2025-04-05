@@ -12,6 +12,7 @@ import type {
 } from "../yargs-types";
 import type {
 	CachingOptions,
+	Mtls,
 	NetworkOriginWithSecrets,
 	OriginDatabaseWithSecrets,
 	OriginWithSecrets,
@@ -69,7 +70,7 @@ export function upsertOptions<T>(yargs: Argv<T>) {
 			"origin-scheme": {
 				alias: "scheme",
 				type: "string",
-				choices: ["postgres", "postgresql"],
+				choices: ["postgres", "postgresql", "mysql"],
 				describe: "The scheme used to connect to the origin database",
 			},
 			database: {
@@ -116,6 +117,23 @@ export function upsertOptions<T>(yargs: Argv<T>) {
 				describe:
 					"Indicates the number of seconds cache may serve the response after it becomes stale, cannot be set when caching is disabled",
 			},
+			"ca-certificate-id": {
+				alias: "ca-certificate-uuid",
+				type: "string",
+				describe:
+					"Sets custom CA certificate when connecting to origin database. Must be valid UUID of already uploaded CA certificate.",
+			},
+			"mtls-certificate-id": {
+				alias: "mtls-certificate-uuid",
+				type: "string",
+				describe:
+					"Sets custom mTLS client certificates when connecting to origin database. Must be valid UUID of already uploaded public/private key certificates.",
+			},
+			sslmode: {
+				type: "string",
+				choices: ["require", "verify-ca", "verify-full"],
+				describe: "Sets CA sslmode for connecting to database.",
+			},
 		})
 		.group(
 			["connection-string"],
@@ -154,20 +172,28 @@ export function getOriginFromArgs<
 ): PartialUpdate extends true ? OriginConfig | undefined : OriginConfig {
 	if (args.connectionString) {
 		const url = new URL(args.connectionString);
+		url.protocol = url.protocol.toLowerCase();
+
 		if (
 			url.port === "" &&
 			(url.protocol == "postgresql:" || url.protocol == "postgres:")
 		) {
 			url.port = "5432";
+		} else if (url.port === "" && url.protocol == "mysql:") {
+			url.port = "3306";
 		}
 
 		if (url.protocol === "") {
 			throw new UserError(
-				"You must specify the database protocol - e.g. 'postgresql'."
+				"You must specify the database protocol - e.g. 'postgresql'/'mysql'."
 			);
-		} else if (url.protocol !== "postgresql:" && url.protocol !== "postgres:") {
+		} else if (
+			!url.protocol.startsWith("postgresql") &&
+			!url.protocol.startsWith("postgres") &&
+			!url.protocol.startsWith("mysql")
+		) {
 			throw new UserError(
-				"Only PostgreSQL or PostgreSQL compatible databases are currently supported."
+				"Only PostgreSQL-compatible or MySQL-compatible databases are currently supported."
 			);
 		} else if (url.host === "") {
 			throw new UserError(
@@ -177,9 +203,9 @@ export function getOriginFromArgs<
 			throw new UserError(
 				"You must provide a port number - e.g. 'user:password@database.example.com:port/databasename"
 			);
-		} else if (url.pathname === "") {
+		} else if (!url.pathname) {
 			throw new UserError(
-				"You must provide a database name as the path component - e.g. example.com:port/postgres"
+				"You must provide a database name as the path component - e.g. example.com:port/databasename"
 			);
 		} else if (url.username === "") {
 			throw new UserError(
@@ -295,5 +321,33 @@ export function getCacheOptionsFromArgs(
 		return undefined;
 	} else {
 		return caching;
+	}
+}
+
+export function getMtlsFromArgs(
+	args: StrictYargsOptionsToInterface<typeof upsertOptions>
+): Mtls | undefined {
+	const mtls = {
+		ca_certificate_id: args.caCertificateId,
+		mtls_certificate_id: args.mtlsCertificateId,
+		sslmode: args.sslmode,
+	};
+
+	if (JSON.stringify(mtls) === "{}") {
+		return undefined;
+	} else {
+		if (mtls.sslmode == "require" && mtls.ca_certificate_id?.trim()) {
+			throw new UserError("CA not allowed when sslmode = 'require' is set");
+		}
+
+		if (
+			(mtls.sslmode == "verify-ca" || mtls.sslmode == "verify-full") &&
+			!mtls.ca_certificate_id?.trim()
+		) {
+			throw new UserError(
+				"CA required when sslmode = 'verify-ca' or 'verify-full' is set"
+			);
+		}
+		return mtls;
 	}
 }

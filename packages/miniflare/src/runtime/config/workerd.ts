@@ -78,7 +78,6 @@ export type Worker_Module = {
 	| { data?: Uint8Array }
 	| { wasm?: Uint8Array }
 	| { json?: string }
-	| { nodeJsCompatModule?: string }
 	| { pythonModule?: string }
 	| { pythonRequirement?: string }
 );
@@ -204,6 +203,7 @@ export interface Network {
 export interface DiskDirectory {
 	path?: string;
 	writable?: boolean;
+	allowDotfiles?: boolean;
 }
 
 export interface HttpOptions {

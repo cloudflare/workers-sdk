@@ -31,6 +31,7 @@ import type { WorkerRegistry } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { ConfigController } from "./ConfigController";
+import type { DevEnv } from "./DevEnv";
 import type {
 	DispatchFetch,
 	Json,
@@ -53,6 +54,7 @@ export interface Worker {
 	scheduled: MiniflareWorker["scheduled"];
 	queue: MiniflareWorker["queue"];
 	dispose(): Promise<void>;
+	raw: DevEnv;
 }
 
 export interface StartDevWorkerInput {
@@ -171,7 +173,6 @@ export interface StartDevWorkerInput {
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;
-		legacyAssets?: Hook<Config["legacy_assets"], [Config]>;
 		enableServiceEnvironments?: boolean;
 	};
 	unsafe?: Omit<CfUnsafe, "bindings">;
@@ -193,7 +194,6 @@ export type StartDevWorkerOptions = Omit<StartDevWorkerInput, "assets"> & {
 		processEntrypoint: boolean;
 	};
 	legacy: StartDevWorkerInput["legacy"] & {
-		legacyAssets?: Config["legacy_assets"];
 		site?: Config["site"];
 	};
 	dev: StartDevWorkerInput["dev"] & {

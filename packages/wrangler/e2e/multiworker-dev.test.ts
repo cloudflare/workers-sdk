@@ -35,7 +35,6 @@ describe("multiworker", () => {
 	let b: string;
 	let c: string;
 	let helper: WranglerE2ETestHelper;
-
 	beforeEach(async () => {
 		workerName = generateResourceName("worker");
 		workerName2 = generateResourceName("worker");

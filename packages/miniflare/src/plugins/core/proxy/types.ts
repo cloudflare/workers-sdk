@@ -160,7 +160,6 @@ export type OverloadUnion8<T> = T extends {
 			| ((...args: P8) => R8)
 	: OverloadUnion7<T>;
 
-// `KVNamespace#{get,getWithMetadata}()` each have 9 overloads :D
 export type OverloadUnion9<T> = T extends {
 	(...args: infer P1): infer R1;
 	(...args: infer P2): infer R2;
@@ -184,8 +183,154 @@ export type OverloadUnion9<T> = T extends {
 			| ((...args: P9) => R9)
 	: OverloadUnion8<T>;
 
+export type OverloadUnion10<T> = T extends {
+	(...args: infer P1): infer R1;
+	(...args: infer P2): infer R2;
+	(...args: infer P3): infer R3;
+	(...args: infer P4): infer R4;
+	(...args: infer P5): infer R5;
+	(...args: infer P6): infer R6;
+	(...args: infer P7): infer R7;
+	(...args: infer P8): infer R8;
+	(...args: infer P9): infer R9;
+	(...args: infer P10): infer R10;
+}
+	?
+			| ((...args: P1) => R1)
+			| ((...args: P2) => R2)
+			| ((...args: P3) => R3)
+			| ((...args: P4) => R4)
+			| ((...args: P5) => R5)
+			| ((...args: P6) => R6)
+			| ((...args: P7) => R7)
+			| ((...args: P8) => R8)
+			| ((...args: P9) => R9)
+			| ((...args: P10) => R10)
+	: OverloadUnion9<T>;
+
+export type OverloadUnion11<T> = T extends {
+	(...args: infer P1): infer R1;
+	(...args: infer P2): infer R2;
+	(...args: infer P3): infer R3;
+	(...args: infer P4): infer R4;
+	(...args: infer P5): infer R5;
+	(...args: infer P6): infer R6;
+	(...args: infer P7): infer R7;
+	(...args: infer P8): infer R8;
+	(...args: infer P9): infer R9;
+	(...args: infer P10): infer R10;
+	(...args: infer P11): infer R11;
+}
+	?
+			| ((...args: P1) => R1)
+			| ((...args: P2) => R2)
+			| ((...args: P3) => R3)
+			| ((...args: P4) => R4)
+			| ((...args: P5) => R5)
+			| ((...args: P6) => R6)
+			| ((...args: P7) => R7)
+			| ((...args: P8) => R8)
+			| ((...args: P9) => R9)
+			| ((...args: P10) => R10)
+			| ((...args: P11) => R11)
+	: OverloadUnion10<T>;
+
+export type OverloadUnion12<T> = T extends {
+	(...args: infer P1): infer R1;
+	(...args: infer P2): infer R2;
+	(...args: infer P3): infer R3;
+	(...args: infer P4): infer R4;
+	(...args: infer P5): infer R5;
+	(...args: infer P6): infer R6;
+	(...args: infer P7): infer R7;
+	(...args: infer P8): infer R8;
+	(...args: infer P9): infer R9;
+	(...args: infer P10): infer R10;
+	(...args: infer P11): infer R11;
+	(...args: infer P12): infer R12;
+}
+	?
+			| ((...args: P1) => R1)
+			| ((...args: P2) => R2)
+			| ((...args: P3) => R3)
+			| ((...args: P4) => R4)
+			| ((...args: P5) => R5)
+			| ((...args: P6) => R6)
+			| ((...args: P7) => R7)
+			| ((...args: P8) => R8)
+			| ((...args: P9) => R9)
+			| ((...args: P10) => R10)
+			| ((...args: P11) => R11)
+			| ((...args: P12) => R12)
+	: OverloadUnion11<T>;
+
+export type OverloadUnion13<T> = T extends {
+	(...args: infer P1): infer R1;
+	(...args: infer P2): infer R2;
+	(...args: infer P3): infer R3;
+	(...args: infer P4): infer R4;
+	(...args: infer P5): infer R5;
+	(...args: infer P6): infer R6;
+	(...args: infer P7): infer R7;
+	(...args: infer P8): infer R8;
+	(...args: infer P9): infer R9;
+	(...args: infer P10): infer R10;
+	(...args: infer P11): infer R11;
+	(...args: infer P12): infer R12;
+	(...args: infer P13): infer R13;
+}
+	?
+			| ((...args: P1) => R1)
+			| ((...args: P2) => R2)
+			| ((...args: P3) => R3)
+			| ((...args: P4) => R4)
+			| ((...args: P5) => R5)
+			| ((...args: P6) => R6)
+			| ((...args: P7) => R7)
+			| ((...args: P8) => R8)
+			| ((...args: P9) => R9)
+			| ((...args: P10) => R10)
+			| ((...args: P11) => R11)
+			| ((...args: P12) => R12)
+			| ((...args: P13) => R13)
+	: OverloadUnion12<T>;
+
+// `KVNamespace#{get,getWithMetadata}()` each have 14 overloads :D
+export type OverloadUnion14<T> = T extends {
+	(...args: infer P1): infer R1;
+	(...args: infer P2): infer R2;
+	(...args: infer P3): infer R3;
+	(...args: infer P4): infer R4;
+	(...args: infer P5): infer R5;
+	(...args: infer P6): infer R6;
+	(...args: infer P7): infer R7;
+	(...args: infer P8): infer R8;
+	(...args: infer P9): infer R9;
+	(...args: infer P10): infer R10;
+	(...args: infer P11): infer R11;
+	(...args: infer P12): infer R12;
+	(...args: infer P13): infer R13;
+	(...args: infer P14): infer R14;
+}
+	?
+			| ((...args: P1) => R1)
+			| ((...args: P2) => R2)
+			| ((...args: P3) => R3)
+			| ((...args: P4) => R4)
+			| ((...args: P5) => R5)
+			| ((...args: P6) => R6)
+			| ((...args: P7) => R7)
+			| ((...args: P8) => R8)
+			| ((...args: P9) => R9)
+			| ((...args: P10) => R10)
+			| ((...args: P11) => R11)
+			| ((...args: P12) => R12)
+			| ((...args: P13) => R13)
+			| ((...args: P14) => R14)
+	: OverloadUnion13<T>;
+
 export type OverloadUnion<T extends (...args: any[]) => any> =
 	// Functions with no parameters pass the `extends` checks in the
 	// `OverloadUnionN` types with `(...args: unknown[]) => unknown` for the
 	// other overloads. Therefore, filter them out early.
-	Parameters<T> extends [] ? T : OverloadUnion9<T>;
+	Parameters<T> extends [] ? T : OverloadUnion14<T>;

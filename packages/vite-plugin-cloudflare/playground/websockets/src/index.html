@@ -9,7 +9,10 @@
 			<h1>WebSockets playground</h1>
 			<button id="open" aria-label="Open WebSocket">Open</button>
 			<button id="close" aria-label="Close WebSocket">Close</button>
-			<button id="send" aria-label="Send message">Send</button>
+			<button id="send-string" aria-label="Send string">Send string</button>
+			<button id="send-array-buffer" aria-label="Send ArrayBuffer">
+				Send ArrayBuffer
+			</button>
 			<h2 id="status">WebSocket closed</h2>
 			<p id="message"></p>
 		</main>
@@ -18,13 +21,17 @@
 		let ws;
 		const openButton = document.querySelector("#open");
 		const closeButton = document.querySelector("#close");
-		const sendButton = document.querySelector("#send");
+		const sendStringButton = document.querySelector("#send-string");
+		const sendArrayBufferButton = document.querySelector("#send-array-buffer");
 		const statusText = document.querySelector("#status");
 		const messageText = document.querySelector("#message");
 
 		openButton.addEventListener("click", () => open());
 		closeButton.addEventListener("click", () => close());
-		sendButton.addEventListener("click", () => send("Client event"));
+		sendStringButton.addEventListener("click", () => send("Client event"));
+		sendArrayBufferButton.addEventListener("click", () =>
+			send(new ArrayBuffer(10))
+		);
 
 		function open() {
 			if (ws) {

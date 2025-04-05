@@ -10,7 +10,7 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { getLocation } from "./cli/locations";
-import { AssignIPv4, DeploymentsService } from "./client";
+import { AssignIPv4, AssignIPv6, DeploymentsService } from "./client";
 import {
 	checkEverythingIsSet,
 	collectEnvironmentVariables,
@@ -137,7 +137,9 @@ export async function createCommand(
 			: [];
 		const useIpv4 = args.ipv4 ?? config.cloudchamber.ipv4;
 		const network =
-			useIpv4 === true ? { assign_ipv4: AssignIPv4.PREDEFINED } : undefined;
+			useIpv4 === true
+				? { assign_ipv4: AssignIPv4.PREDEFINED }
+				: { assign_ipv6: AssignIPv6.PREDEFINED };
 		const deployment = await DeploymentsService.createDeploymentV2({
 			image: body.image,
 			location: body.location,

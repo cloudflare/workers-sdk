@@ -1,0 +1,7 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "worker",
+	"compatibility_date": "2024-12-30",
+	"main": "./src/index.ts",
+	"vars": { "MY_VAR": "one" }
+}

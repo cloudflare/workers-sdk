@@ -165,11 +165,11 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 			}
 		)
 		.command(
-			"bulk [json]",
+			"bulk [file]",
 			"Bulk upload secrets for a Pages project",
 			(yargs) => {
 				return yargs
-					.positional("json", {
+					.positional("file", {
 						describe: `The file of key-value pairs to upload, as JSON in form {"key": value, ...} or .dev.vars file in the form KEY=VALUE`,
 						type: "string",
 					})
@@ -189,7 +189,7 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 				logger.log(
 					`🌀 Creating the secrets for the Pages project "${project.name}" (${env})`
 				);
-				const content = await parseBulkInputToObject(args.json);
+				const content = await parseBulkInputToObject(args.file);
 
 				if (!content) {
 					throw new FatalError(`🚨 No content found in file or piped input.`);
@@ -231,11 +231,8 @@ export const secret = (secretYargs: CommonYargsArgv, subHelp: SubHelp) => {
 						} secrets successfully uploaded`
 					);
 				} catch (err) {
-					logger.log("Finished processing secrets file:");
-					logger.log(`✨ 0 secrets successfully uploaded`);
-					throw new FatalError(
-						`🚨 ${Object.keys(upsertBindings).length} secrets failed to upload`
-					);
+					logger.log(`🚨 Secrets failed to upload`);
+					throw err;
 				}
 			}
 		)

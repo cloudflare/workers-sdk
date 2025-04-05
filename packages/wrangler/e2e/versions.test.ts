@@ -19,7 +19,7 @@ const workerName = generateResourceName();
 const normalize = (str: string) =>
 	normalizeOutput(str, {
 		[CLOUDFLARE_ACCOUNT_ID]: "CLOUDFLARE_ACCOUNT_ID",
-	}).replaceAll(/^Author:(\s+).+@.+$/gm, "Author:$1person@example.com");
+	}).replaceAll(/^Author:.*$/gm, "Author:      person@example.com");
 
 describe("versions deploy", { timeout: TIMEOUT }, () => {
 	let versionId0: string;
@@ -515,39 +515,6 @@ describe("versions deploy", { timeout: TIMEOUT }, () => {
 		expect(countOccurrences(deploymentsList.stdout, versionId0)).toBe(2); // once for regular deploy, once for rollback
 		expect(countOccurrences(deploymentsList.stdout, versionId1)).toBe(2); // once for versions deploy, once for rollback
 		expect(countOccurrences(deploymentsList.stdout, versionId2)).toBe(1); // once for versions deploy, only
-	});
-
-	it("fails to upload if using Legacy Assets", async () => {
-		await helper.seed({
-			"wrangler.toml": dedent`
-                name = "${workerName}"
-                main = "src/index.ts"
-                compatibility_date = "2023-01-01"
-            `,
-			"src/index.ts": dedent`
-                export default {
-                    fetch(request) {
-                        return new Response("Hello World!")
-                    }
-                }
-            `,
-			"package.json": dedent`
-                {
-                    "name": "${workerName}",
-                    "version": "0.0.0",
-                    "private": true
-                }
-            `,
-		});
-
-		const upload = await helper.run(
-			`wrangler versions upload --legacy-assets='./public'`
-		);
-
-		expect(normalize(upload.output)).toMatchInlineSnapshot(`
-			"X [ERROR] Legacy assets does not support uploading versions through \`wrangler versions upload\`. You must use \`wrangler deploy\` instead.
-			🪵  Logs were written to "<LOG>""
-		`);
 	});
 
 	it("fails to upload if using Workers Sites", async () => {

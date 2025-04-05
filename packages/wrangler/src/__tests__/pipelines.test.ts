@@ -264,6 +264,7 @@ describe("pipelines", () => {
 
 			GLOBAL FLAGS
 			  -c, --config   Path to Wrangler configuration file  [string]
+			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 			  -h, --help     Show help  [boolean]
 			  -v, --version  Show version number  [boolean]"
@@ -295,20 +296,21 @@ describe("pipelines", () => {
 				      --batch-max-rows     Maximum number of rows per batch before flushing  [number]
 				      --batch-max-seconds  Maximum age of batch in seconds before flushing  [number]
 
-				Transformations
-				      --transform-worker  Pipeline transform Worker and entrypoint (<worker>.<entrypoint>)  [string]
-
 				Destination settings
 				      --r2-bucket             Destination R2 bucket name  [string] [required]
 				      --r2-access-key-id      R2 service Access Key ID for authentication. Leave empty for OAuth confirmation.  [string]
 				      --r2-secret-access-key  R2 service Secret Access Key for authentication. Leave empty for OAuth confirmation.  [string]
 				      --r2-prefix             Prefix for storing files in the destination bucket  [string] [default: \\"\\"]
 				      --compression           Compression format for output files  [string] [choices: \\"none\\", \\"gzip\\", \\"deflate\\"] [default: \\"gzip\\"]
-				      --file-template         Template for individual file names (must include \${slug})  [string]
+				      --file-template         Template for individual file names (must include \${slug}). For example: \\"\${slug}.log.gz\\"  [string]
 				      --partition-template    Path template for partitioned files in the bucket. If not specified, the default will be used  [string]
+
+				Pipeline settings
+				      --shard-count  Number of pipeline shards. More shards handle higher request volume; fewer shards produce larger output files  [number]
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				  -h, --help     Show help  [boolean]
 				  -v, --version  Show version number  [boolean]"
@@ -598,6 +600,25 @@ describe("pipelines", () => {
 				  https://github.com/cloudflare/workers-sdk/issues/new/choose"
 			`);
 			expect(requests.count).toEqual(1);
+		});
+
+		it("should remove transformations", async () => {
+			const pipeline: Pipeline = samplePipeline;
+			mockShowRequest(pipeline.name, pipeline);
+
+			const update = JSON.parse(JSON.stringify(pipeline));
+			update.transforms = [
+				{
+					script: "hello",
+					entrypoint: "MyTransform",
+				},
+			];
+			const updateReq = mockUpdateRequest(update.name, update);
+
+			await runWrangler("pipelines update my-pipeline --transform-worker none");
+
+			expect(updateReq.count).toEqual(1);
+			expect(updateReq.body?.transforms.length).toEqual(0);
 		});
 	});
 

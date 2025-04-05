@@ -1,5 +1,11 @@
 # devprod-status-bot
 
+## 1.1.5
+
+### Patch Changes
+
+- [`07613d3`](https://github.com/cloudflare/workers-sdk/commit/07613d3b231779466ca2528ce07385552ec73501) Thanks [@penalosa](https://github.com/penalosa)! - Trigger release after testing release process
+
 ## 1.1.4
 
 ### Patch Changes

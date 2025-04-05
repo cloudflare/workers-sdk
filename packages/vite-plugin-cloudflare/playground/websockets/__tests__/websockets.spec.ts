@@ -26,16 +26,30 @@ test("closes WebSocket connection", async () => {
 	});
 });
 
-test("sends and receives WebSocket messages", async () => {
+test("sends and receives WebSocket string messages", async () => {
 	await openWebSocket();
-	const sendButton = page.getByRole("button", { name: "Send message" });
+	const sendButton = page.getByRole("button", { name: "Send string" });
 	const messageTextBefore = await page.textContent("p");
 	expect(messageTextBefore).toBe("");
 	await sendButton.click();
 	await vi.waitFor(async () => {
 		const messageTextAfter = await page.textContent("p");
 		expect(messageTextAfter).toBe(
-			`Durable Object received client message: 'Client event'.`
+			`Durable Object received client message: 'Client event' of type 'string'.`
+		);
+	});
+});
+
+test("sends and receives WebSocket ArrayBuffer messages", async () => {
+	await openWebSocket();
+	const sendButton = page.getByRole("button", { name: "Send ArrayBuffer" });
+	const messageTextBefore = await page.textContent("p");
+	expect(messageTextBefore).toBe("");
+	await sendButton.click();
+	await vi.waitFor(async () => {
+		const messageTextAfter = await page.textContent("p");
+		expect(messageTextAfter).toBe(
+			`Durable Object received client message: '[object ArrayBuffer]' of type 'object'.`
 		);
 	});
 });

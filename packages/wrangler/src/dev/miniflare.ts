@@ -33,6 +33,7 @@ import type {
 	CfDurableObject,
 	CfHyperdrive,
 	CfKvNamespace,
+	CfPipeline,
 	CfQueue,
 	CfR2Bucket,
 	CfScriptFormat,
@@ -334,6 +335,9 @@ function queueProducerEntry(
 		{ queueName: queue.queue_name, deliveryDelay: queue.delivery_delay },
 	];
 }
+function pipelineEntry(pipeline: CfPipeline): [string, string] {
+	return [pipeline.binding, pipeline.pipeline];
+}
 function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
 }
@@ -375,6 +379,7 @@ type WorkerOptionsBindings = Pick<
 	| "d1Databases"
 	| "queueProducers"
 	| "queueConsumers"
+	| "pipelines"
 	| "hyperdrives"
 	| "durableObjects"
 	| "serviceBindings"
@@ -442,6 +447,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		}
 
 		const target = config.workerDefinitions?.[service.service];
+
 		if (target?.host === undefined || target.port === undefined) {
 			// If the target isn't in the registry, always return an error response
 			notFoundServices.add(service.service);
@@ -597,7 +603,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
 	if (bindings.ai?.binding) {
 		externalWorkers.push({
-			name: EXTERNAL_AI_WORKER_NAME,
+			name: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
 			modules: [
 				{
 					type: "ESModule",
@@ -611,13 +617,13 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		});
 
 		wrappedBindings[bindings.ai.binding] = {
-			scriptName: EXTERNAL_AI_WORKER_NAME,
+			scriptName: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
 		};
 	}
 
 	if (bindings.images?.binding) {
 		externalWorkers.push({
-			name: EXTERNAL_IMAGES_WORKER_NAME,
+			name: `${EXTERNAL_IMAGES_WORKER_NAME}:${config.name}`,
 			modules: [
 				{
 					type: "ESModule",
@@ -633,7 +639,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		});
 
 		wrappedBindings[bindings.images?.binding] = {
-			scriptName: EXTERNAL_IMAGES_WORKER_NAME,
+			scriptName: `${EXTERNAL_IMAGES_WORKER_NAME}:${config.name}`,
 		};
 	}
 
@@ -644,7 +650,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			const indexVersion = "v2";
 
 			externalWorkers.push({
-				name: EXTERNAL_VECTORIZE_WORKER_NAME + bindingName,
+				name: `${EXTERNAL_VECTORIZE_WORKER_NAME}:${config.name}:${bindingName}`,
 				modules: [
 					{
 						type: "ESModule",
@@ -662,7 +668,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			});
 
 			wrappedBindings[bindingName] = {
-				scriptName: EXTERNAL_VECTORIZE_WORKER_NAME + bindingName,
+				scriptName: `${EXTERNAL_VECTORIZE_WORKER_NAME}:${config.name}:${bindingName}`,
 			};
 		}
 	}
@@ -694,6 +700,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		queueConsumers: Object.fromEntries(
 			config.queueConsumers?.map(queueConsumerEntry) ?? []
 		),
+		pipelines: Object.fromEntries(bindings.pipelines?.map(pipelineEntry) ?? []),
 		hyperdrives: Object.fromEntries(
 			bindings.hyperdrive?.map(hyperdriveEntry) ?? []
 		),
@@ -781,7 +788,7 @@ export function buildAssetOptions(config: Pick<ConfigBundle, "assets">) {
 			assets: {
 				directory: config.assets.directory,
 				binding: config.assets.binding,
-				routingConfig: config.assets.routingConfig,
+				routerConfig: config.assets.routerConfig,
 				assetConfig: config.assets.assetConfig,
 			},
 		};

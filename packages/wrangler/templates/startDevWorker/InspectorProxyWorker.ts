@@ -85,6 +85,9 @@ export class InspectorProxyWorker implements DurableObject {
 	proxyData?: ProxyData;
 	runtimeMessageBuffer: (DevToolsCommandResponses | DevToolsEvents)[] = [];
 
+	// Only allow a limited number of error-based reconnections, so as not to infinite loop
+	reconnectionsRemaining = 3;
+
 	async fetch(req: Request) {
 		if (
 			req.headers.get("Authorization") === this.env.PROXY_CONTROLLER_AUTH_SECRET
@@ -317,6 +320,17 @@ export class InspectorProxyWorker implements DurableObject {
 				`Failed to establish the WebSocket connection: expected server to reply with HTTP status code 101 (switching protocols), but received ${upgrade.status} instead.`
 			);
 
+			// Sometimes the backend will fail to connect the runtime websocket with a 502 error. These are usually transient, so try and reconnect
+			if (upgrade.status === 502 && this.reconnectionsRemaining >= 0) {
+				await scheduler.wait((3 - this.reconnectionsRemaining) * 1000);
+				this.sendDebugLog(
+					"RECONNECTING RUNTIME WEBSOCKET after 502. Reconnections remaining:",
+					this.reconnectionsRemaining
+				);
+
+				return this.reconnectRuntimeWebSocket();
+			}
+
 			this.websockets.runtimeDeferred.reject(error);
 			this.sendProxyControllerRequest({
 				type: "runtime-websocket-error",
@@ -377,6 +391,7 @@ export class InspectorProxyWorker implements DurableObject {
 	}
 	handleRuntimeWebSocketOpen(runtime: WebSocket) {
 		this.sendDebugLog("RUNTIME WEBSOCKET OPENED");
+		this.reconnectionsRemaining = 3;
 
 		this.sendRuntimeMessage(
 			{ method: "Runtime.enable", id: this.nextCounter() },

@@ -1,32 +1,46 @@
-import { createRequire } from "node:module";
+import assert from "node:assert";
+import { builtinModules } from "node:module";
+import path from "node:path";
+import { cloudflare } from "@cloudflare/unenv-preset";
 import MagicString from "magic-string";
 import { getNodeCompat } from "miniflare";
-import * as unenv from "unenv";
+import { resolvePathSync } from "mlly";
+import { defineEnv } from "unenv";
+import * as vite from "vite";
 import type { WorkerConfig } from "./plugin-config";
-import type { Environment } from "vite";
 
-const require = createRequire(import.meta.url);
-const preset = unenv.env(unenv.nodeless, unenv.cloudflare);
-const CLOUDFLARE_VIRTUAL_PREFIX = "\0cloudflare-";
+const { env } = defineEnv({
+	nodeCompat: true,
+	presets: [cloudflare],
+});
+
+export const nodeCompatExternals = new Set(env.external);
+export const nodeCompatEntries = getNodeCompatEntries();
+
+/**
+ * All the Node.js modules including their `node:...` aliases.
+ */
+export const nodejsBuiltins = new Set([
+	...builtinModules,
+	...builtinModules.map((m) => `node:${m}`),
+]);
+export const NODEJS_MODULES_RE = new RegExp(
+	`^(node:)?(${builtinModules.join("|")})$`
+);
 
 /**
  * Returns true if the given combination of compat dates and flags means that we need Node.js compatibility.
  */
-export function isNodeCompat({
-	compatibility_date,
-	compatibility_flags,
-}: WorkerConfig): boolean {
+export function isNodeCompat(workerConfig: WorkerConfig | undefined) {
+	if (workerConfig === undefined) {
+		return false;
+	}
 	const nodeCompatMode = getNodeCompat(
-		compatibility_date,
-		compatibility_flags ?? []
+		workerConfig.compatibility_date,
+		workerConfig.compatibility_flags ?? []
 	).mode;
 	if (nodeCompatMode === "v2") {
 		return true;
-	}
-	if (nodeCompatMode === "legacy") {
-		throw new Error(
-			"Unsupported Node.js compat mode (legacy). Remove the `node_compat` setting and add the `nodejs_compat` flag instead."
-		);
 	}
 	if (nodeCompatMode === "v1") {
 		throw new Error(
@@ -37,19 +51,10 @@ export function isNodeCompat({
 }
 
 /**
- * If the current environment needs Node.js compatibility,
- * then inject the necessary global polyfills into the code.
+ * Gets the necessary global polyfills to inject into the entry-point of the user's code.
  */
-export function injectGlobalCode(
-	id: string,
-	code: string,
-	workerConfig: WorkerConfig
-) {
-	if (!isNodeCompat(workerConfig)) {
-		return;
-	}
-
-	const injectedCode = Object.entries(preset.inject)
+export function injectGlobalCode(id: string, code: string) {
+	const injectedCode = Object.entries(env.inject)
 		.map(([globalName, globalInject]) => {
 			if (typeof globalInject === "string") {
 				const moduleSpecifier = globalInject;
@@ -59,12 +64,23 @@ export function injectGlobalCode(
 
 			// the mapping is a 2 item tuple, indicating a named export, made up of a module specifier and an export name.
 			const [moduleSpecifier, exportName] = globalInject;
+			assert(
+				moduleSpecifier !== undefined,
+				"Expected moduleSpecifier to be defined"
+			);
+			assert(exportName !== undefined, "Expected exportName to be defined");
 			return `import var_${globalName} from "${moduleSpecifier}";\nglobalThis.${globalName} = var_${globalName}.${exportName};\n`;
 		})
 		.join("\n");
 
+	// Some globals are not injected using the approach above but are added to globalThis via side-effect imports of polyfills from the unenv-preset.
+	const polyfillCode = env.polyfill
+		.map((polyfillPath) => `import "${polyfillPath}";\n`)
+		.join("");
+
 	const modified = new MagicString(code);
 	modified.prepend(injectedCode);
+	modified.prepend(polyfillCode);
 	return {
 		code: modified.toString(),
 		map: modified.generateMap({ hires: "boundary", source: id }),
@@ -72,69 +88,102 @@ export function injectGlobalCode(
 }
 
 /**
- * We only want to alias Node.js built-ins if the environment has Node.js compatibility turned on.
- * But Vite only allows us to configure aliases at the shared options level, not per environment.
- * So instead we alias these to a virtual module, which are then handled with environment specific code in the `resolveId` handler
+ * Resolves the `source` to a Node.js compat alias if possible.
+ *
+ * If there is an alias, the return value is an object with:
+ * - `unresolved`: a bare import path to the polyfill (e.g. `unenv/runtime/node/crypto`)
+ * - `resolved`: an absolute path to the polyfill (e.g. `/path/to/project/node_modules/unenv/runtime/node/child_process/index.mjs`)
  */
-export function getNodeCompatAliases() {
-	const aliases: Record<string, string> = {};
-	Object.keys(preset.alias).forEach((key) => {
-		// Don't create aliases for modules that are already marked as external
-		if (!preset.external.includes(key)) {
-			aliases[key] = CLOUDFLARE_VIRTUAL_PREFIX + key;
-		}
-	});
-	return aliases;
+export function resolveNodeJSImport(source: string) {
+	const alias = env.alias[source];
+
+	// These aliases must be resolved from the context of this plugin since the alias will refer to one of the
+	// `@cloudflare/unenv-preset` or the `unenv` packages, which are direct dependencies of this package,
+	// and not the user's project.
+	if (alias) {
+		return {
+			unresolved: alias,
+			resolved: resolvePathSync(alias, { url: import.meta.url }),
+		};
+	}
+	if (nodeCompatEntries.has(source)) {
+		return {
+			unresolved: source,
+			resolved: resolvePathSync(source, { url: import.meta.url }),
+		};
+	}
 }
 
 /**
- * Attempt to resolve the `id` to an unenv alias or polyfill.
+ * Gets a set of module specifiers for all possible Node.js compat polyfill entry-points
  */
-export function resolveNodeCompatId(
-	environment: Environment,
-	workerConfig: WorkerConfig,
-	id: string
-) {
-	const aliased = resolveNodeAliases(id, workerConfig) ?? id;
+function getNodeCompatEntries() {
+	// Include all the alias targets
+	const entries = new Set<string>(Object.values(env.alias));
 
-	if (aliased.startsWith("unenv/")) {
-		const resolvedDep = require.resolve(aliased).replace(/\.cjs$/, ".mjs");
-		if (environment.mode === "dev" && environment.depsOptimizer) {
-			const dep = environment.depsOptimizer.registerMissingImport(
-				aliased,
-				resolvedDep
-			);
-			return dep.id;
+	// Include all the injection targets
+	for (const globalInject of Object.values(env.inject)) {
+		if (typeof globalInject === "string") {
+			entries.add(globalInject);
 		} else {
-			return resolvedDep;
+			assert(
+				globalInject[0] !== undefined,
+				"Expected first element of globalInject to be defined"
+			);
+			entries.add(globalInject[0]);
 		}
 	}
+
+	// Include all the polyfills
+	env.polyfill.forEach((polyfill) => entries.add(polyfill));
+
+	// Exclude all the externals
+	nodeCompatExternals.forEach((external) => entries.delete(external));
+
+	return entries;
 }
 
-/**
- * Get an array of modules that should be considered external.
- */
-export function getNodeCompatExternals(): string[] {
-	return preset.external;
-}
+export class NodeJsCompatWarnings {
+	private sources = new Map<string, Set<string>>();
+	private timer: NodeJS.Timeout | undefined;
 
-/**
- * Convert any virtual module Id that was generated by the aliases returned from `getNodeCompatAliases()`
- * back to real a module Id and whether it is an external (built-in) package or not.
- */
-function resolveNodeAliases(source: string, workerConfig: WorkerConfig) {
-	if (
-		!source.startsWith(CLOUDFLARE_VIRTUAL_PREFIX) ||
-		!isNodeCompat(workerConfig)
-	) {
-		return;
+	constructor(
+		private readonly environmentName: string,
+		private readonly resolvedViteConfig: vite.ResolvedConfig
+	) {}
+
+	registerImport(source: string, importer = "<unknown>") {
+		const importers = this.sources.get(source) ?? new Set();
+		this.sources.set(source, importers);
+		importers.add(importer);
+		this.renderWarningsOnIdle();
 	}
 
-	const from = source.slice(CLOUDFLARE_VIRTUAL_PREFIX.length);
-	const alias = preset.alias[from];
-
-	if (alias && preset.external.includes(alias)) {
-		throw new Error(`Alias to external: ${source} -> ${alias}`);
+	private renderWarningsOnIdle() {
+		if (this.timer) {
+			clearTimeout(this.timer);
+		}
+		this.timer = setTimeout(() => {
+			this.renderWarnings();
+			this.timer = undefined;
+		}, 500);
 	}
-	return alias;
+
+	private renderWarnings() {
+		if (this.sources.size > 0) {
+			let message =
+				`Unexpected Node.js imports for environment "${this.environmentName}". ` +
+				`Do you need to enable the "nodejs_compat" compatibility flag? ` +
+				"Refer to https://developers.cloudflare.com/workers/runtime-apis/nodejs/ for more details.\n";
+			this.sources.forEach((importers, source) => {
+				importers.forEach((importer) => {
+					message += ` - "${source}" imported from "${path.relative(this.resolvedViteConfig.root, importer)}"\n`;
+				});
+			});
+			this.resolvedViteConfig.logger.warn(message, {
+				timestamp: true,
+			});
+			this.sources.clear();
+		}
+	}
 }

@@ -79,7 +79,7 @@ describe("Pages _worker.js", () => {
 				"workerjs-test/_worker.js",
 				"workerjs-test/XXX_worker.js"
 			);
-			await setTimeout(1000);
+			await setTimeout(200);
 			// Expect no output since the deletion of the worker should be ignored
 			expect(getOutput()).toBe("");
 			await tryRename(
@@ -87,7 +87,7 @@ describe("Pages _worker.js", () => {
 				"workerjs-test/XXX_worker.js",
 				"workerjs-test/_worker.js"
 			);
-			await setTimeout(1000);
+			await setTimeout(200);
 			// Expect replacing the worker to now trigger a success build.
 			expect(getOutput()).toContain("Compiled Worker successfully");
 		} finally {
@@ -116,7 +116,7 @@ describe("Pages _worker.js", () => {
 				"workerjs-test/_routes.json",
 				"workerjs-test/XXX_routes.json"
 			);
-			await setTimeout(1000);
+			await setTimeout(200);
 			// Expect no output since the deletion of the routes file should be ignored
 			expect(getOutput()).toBe("");
 			await tryRename(
@@ -124,7 +124,7 @@ describe("Pages _worker.js", () => {
 				"workerjs-test/XXX_routes.json",
 				"workerjs-test/_routes.json"
 			);
-			await setTimeout(1000);
+			await setTimeout(200);
 			// Expect replacing the routes file to trigger a build, although
 			// the routes build does not provide any output feedback to compare against,
 			// so we just check that nothing else is being printed.

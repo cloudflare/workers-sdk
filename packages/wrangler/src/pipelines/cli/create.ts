@@ -96,6 +96,7 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 				describe:
 					"Pipeline transform Worker and entrypoint (<worker>.<entrypoint>)",
 				demandOption: false,
+				hidden: true, // TODO: Remove once transformations launch
 			})
 
 			// Destination options
@@ -163,7 +164,7 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 			})
 			.option("file-template", {
 				type: "string",
-				describe: "Template for individual file names (must include ${slug})",
+				describe: `Template for individual file names (must include $\{slug}). For example: "$\{slug}.log.gz"`,
 				demandOption: false,
 				coerce: (val) => {
 					if (!val.includes("${slug}")) {
@@ -171,6 +172,15 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 					}
 					return val;
 				},
+			})
+
+			// Pipeline settings
+			.group(["shard-count"], `${chalk.bold("Pipeline settings")}`)
+			.option("shard-count", {
+				type: "number",
+				describe:
+					"Number of pipeline shards. More shards handle higher request volume; fewer shards produce larger output files",
+				demandOption: false,
 			})
 	);
 }
@@ -279,6 +289,10 @@ export async function createPipelineHandler(
 	}
 	if (args.fileTemplate) {
 		pipelineConfig.destination.path.filename = args.fileTemplate;
+	}
+
+	if (args.shardCount) {
+		pipelineConfig.metadata.shards = args.shardCount;
 	}
 
 	logger.log(`🌀 Creating Pipeline named "${name}"`);

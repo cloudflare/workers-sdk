@@ -1,14 +1,13 @@
 name: "\U0001F680 Feature Request"
 description: Have a suggestion for how to improve wrangler? Let us know!
-title: "\U0001F680 Feature Request:"
 labels: ["enhancement"]
+type: Feature
 
 body:
   - type: markdown
     attributes:
       value: |
-        ## Feature Request Form
-        Thank you for taking the time to file a feature request! Please let us know what you're trying to do, and how wrangler can help.
+        Thank you for taking the time to file a feature request! Please let us know what you're trying to do, and how Wrangler, Miniflare, Create-Cloudflare etc... can help.
 
   - type: textarea
     attributes:

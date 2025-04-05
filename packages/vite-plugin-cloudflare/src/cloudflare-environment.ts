@@ -1,8 +1,7 @@
 import assert from "node:assert";
-import { builtinModules } from "node:module";
 import * as vite from "vite";
-import { getNodeCompatExternals } from "./node-js-compat";
-import { INIT_PATH, UNKNOWN_HOST } from "./shared";
+import { isNodeCompat } from "./node-js-compat";
+import { INIT_PATH, UNKNOWN_HOST, VITE_DEV_METADATA_HEADER } from "./shared";
 import { getOutputDirectory } from "./utils";
 import type { ResolvedPluginConfig, WorkerConfig } from "./plugin-config";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
@@ -87,13 +86,21 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		this.#webSocketContainer = webSocketContainer;
 	}
 
-	async initRunner(worker: ReplaceWorkersTypes<Fetcher>) {
+	async initRunner(
+		worker: ReplaceWorkersTypes<Fetcher>,
+		root: string,
+		workerConfig: WorkerConfig
+	) {
 		this.#worker = worker;
 
 		const response = await this.#worker.fetch(
 			new URL(INIT_PATH, UNKNOWN_HOST),
 			{
 				headers: {
+					[VITE_DEV_METADATA_HEADER]: JSON.stringify({
+						root,
+						entryPath: workerConfig.main,
+					}),
 					upgrade: "websocket",
 				},
 			}
@@ -113,12 +120,15 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 	}
 }
 
-const cloudflareBuiltInModules = [
+export const cloudflareBuiltInModules = [
 	"cloudflare:email",
 	"cloudflare:sockets",
 	"cloudflare:workers",
 	"cloudflare:workflows",
 ];
+
+const defaultConditions = ["workerd", "module", "browser"];
+const target = "es2022";
 
 export function createCloudflareEnvironmentOptions(
 	workerConfig: WorkerConfig,
@@ -131,7 +141,9 @@ export function createCloudflareEnvironmentOptions(
 			//       dependencies as not external
 			noExternal: true,
 			// We want to use `workerd` package exports if available (e.g. for postgres).
-			conditions: ["workerd", "module", "browser", "development|production"],
+			conditions: [...defaultConditions, "development|production"],
+			// The Cloudflare ones are proper builtins in the environment
+			builtins: [...cloudflareBuiltInModules],
 		},
 		dev: {
 			createEnvironment(name, config) {
@@ -142,7 +154,11 @@ export function createCloudflareEnvironmentOptions(
 			createEnvironment(name, config) {
 				return new vite.BuildEnvironment(name, config);
 			},
+			target,
+			// We need to enable `emitAssets` in order to support additional modules defined by `rules`
+			emitAssets: true,
 			outDir: getOutputDirectory(userConfig, environmentName),
+			copyPublicDir: false,
 			ssr: true,
 			rollupOptions: {
 				// Note: vite starts dev pre-bundling crawling from either optimizeDeps.entries or rollupOptions.input
@@ -150,19 +166,17 @@ export function createCloudflareEnvironmentOptions(
 				//       dev pre-bundling crawling (were we not to set this input field we'd have to appropriately set
 				//       optimizeDeps.entries in the dev config)
 				input: workerConfig.main,
-				external: [...cloudflareBuiltInModules, ...getNodeCompatExternals()],
 			},
 		},
 		optimizeDeps: {
 			// Note: ssr pre-bundling is opt-in and we need to enable it by setting `noDiscovery` to false
 			noDiscovery: false,
-			exclude: [
-				...cloudflareBuiltInModules,
-				// we have to exclude all node modules to work in dev-mode not just the unenv externals...
-				...builtinModules.concat(builtinModules.map((m) => `node:${m}`)),
-			],
+			entries: workerConfig.main,
+			exclude: [...cloudflareBuiltInModules],
 			esbuildOptions: {
 				platform: "neutral",
+				target,
+				conditions: [...defaultConditions, "development"],
 				resolveExtensions: [
 					".mjs",
 					".js",
@@ -177,7 +191,8 @@ export function createCloudflareEnvironmentOptions(
 				],
 			},
 		},
-		keepProcessEnv: false,
+		// if nodeCompat is enabled then let's keep the real process.env so that workerd can manipulate it
+		keepProcessEnv: isNodeCompat(workerConfig),
 	};
 }
 
@@ -199,7 +214,7 @@ export function initRunners(
 					viteDevServer.environments[
 						environmentName
 					] as CloudflareDevEnvironment
-				).initRunner(worker);
+				).initRunner(worker, viteDevServer.config.root, workerConfig);
 			}
 		)
 	);

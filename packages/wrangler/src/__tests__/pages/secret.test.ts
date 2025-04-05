@@ -8,20 +8,11 @@ import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockGetMembershipsFail } from "../helpers/mock-oauth-flow";
 import { useMockStdin } from "../helpers/mock-stdin";
-import { msw } from "../helpers/msw";
+import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { PagesProject } from "../../pages/download-config";
 import type { Interface } from "node:readline";
-
-function createFetchResult(result: unknown, success = true) {
-	return {
-		success,
-		errors: [],
-		messages: [],
-		result,
-	};
-}
 
 export function mockGetMemberships(
 	accounts: { id: string; account: { id: string; name: string } }[]
@@ -680,7 +671,7 @@ describe("wrangler pages secret", () => {
 				http.patch(
 					"*/accounts/:accountId/pages/projects/:project",
 					async () => {
-						return HttpResponse.json(null);
+						return HttpResponse.error();
 					}
 				)
 			);
@@ -690,20 +681,76 @@ describe("wrangler pages secret", () => {
 					"pages secret bulk ./secret.json --project some-project-name"
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: 🚨 7 secrets failed to upload]`
+				`[TypeError: Failed to fetch]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
-				Finished processing secrets file:
-				✨ 0 secrets successfully uploaded
-				"
+				🚨 Secrets failed to upload
+
+				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 7 secrets failed to upload[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to fetch[0m
 
-			"
-		`);
+				"
+			`);
+		});
+
+		it("throws a meaningful error", async () => {
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-name-1": "secret_text",
+					"secret-name-2": "secret_text",
+				})
+			);
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+
+						return HttpResponse.json(createFetchResult({ bindings: [] }));
+					}
+				),
+				http.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						return HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									message: "This is a helpful error",
+									code: 1,
+								},
+							])
+						);
+					}
+				)
+			);
+
+			await expect(async () => {
+				await runWrangler("secret bulk ./secret.json --name script-name");
+			}).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/settings) failed.]`
+			);
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"🌀 Creating the secrets for the Worker \\"script-name\\"
+
+				🚨 Secrets failed to upload
+
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/settings) failed.[0m
+
+				  This is a helpful error [code: 1]
+
+				  If you think this is a bug, please open an issue at:
+				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+				"
+			`);
 		});
 	});
 });

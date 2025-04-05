@@ -1,10 +1,11 @@
-# add 'e2e' label to any changes within the 'packages/wrangler/e2e' directory
 e2e:
-  - all:
+  - any:
       - changed-files:
           - any-glob-to-any-file: "packages/wrangler/e2e/**/*"
+      - head-branch: "changeset-release/main"
 
-# add 'skip-pr-description-validation' label to Version Packages PRs
-skip-pr-description-validation:
-  - all:
+c3-e2e:
+  - any:
+      - changed-files:
+          - any-glob-to-any-file: "packages/create-cloudflare/**/*"
       - head-branch: "changeset-release/main"

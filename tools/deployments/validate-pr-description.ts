@@ -94,13 +94,25 @@ export function validateDescription(
 
 	if (
 		!(
-			/- \[x\] Cloudflare docs PR\(s\): https:\/\/github\.com\/cloudflare\/cloudflare-docs\/(pull|issues)\/\d+/i.test(
+			/- \[x\] Cloudflare docs PR\(s\): https:\/\/(github\.com\/cloudflare\/cloudflare-docs\/(pull|issues)\/\d+|developers\.cloudflare\.com\/.*)/i.test(
 				body
 			) || /- \[x\] Documentation not necessary because: .+/i.test(body)
 		)
 	) {
 		errors.push(
 			"Your PR must include documentation (in the form of a link to a Cloudflare Docs issue or PR), or provide justification for why no documentation is required"
+		);
+	}
+
+	if (
+		!(
+			/- \[x\] Wrangler PR: https:\/\/github\.com\/cloudflare\/workers-sdk\/(pull)\/\d+/i.test(
+				body
+			) || /- \[x\] Not necessary because: .+/i.test(body)
+		)
+	) {
+		errors.push(
+			"Your PR must include a v3 back-port (in the form of a link to a workers-sdk PR), or provide justification for why this is not required. A PR should automatically be opened up for you if this is required - this is only needed for patch changes to Wrangler (excluding experimental features labelled as `patch`)."
 		);
 	}
 

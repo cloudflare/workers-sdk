@@ -96,7 +96,7 @@ const embedWorkersPlugin: Plugin = {
 					format: "esm",
 					target: "esnext",
 					bundle: true,
-					sourcemap: true,
+					sourcemap: process.env.SOURCEMAPS !== "false",
 					sourcesContent: false,
 					metafile: true,
 					entryPoints: [args.path],

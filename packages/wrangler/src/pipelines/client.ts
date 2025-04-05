@@ -11,9 +11,12 @@ import type { R2BucketInfo } from "../r2/helpers";
 
 // ensure this is in sync with:
 //   https://bitbucket.cfdata.org/projects/PIPE/repos/superpipe/browse/src/coordinator/types.ts#6
-type RecursivePartial<T> = {
-	[P in keyof T]?: RecursivePartial<T[P]>;
-};
+type RecursivePartial<T> = T extends object
+	? {
+			[P in keyof T]?: RecursivePartial<T[P]>;
+		}
+	: T;
+
 export type PartialExcept<T, K extends keyof T> = RecursivePartial<T> &
 	Pick<T, K>;
 
@@ -21,6 +24,7 @@ export type TransformConfig = {
 	script: string;
 	entrypoint: string;
 };
+
 export type HttpSource = {
 	type: "http";
 	format: string;
@@ -30,15 +34,23 @@ export type HttpSource = {
 		origins: ["*"] | string[];
 	};
 };
+
 export type BindingSource = {
 	type: "binding";
 	format: string;
 	schema?: string;
 };
+
+export type Metadata = {
+	shards?: number;
+	[x: string]: unknown;
+};
+
 export type Source = HttpSource | BindingSource;
+
 export type PipelineUserConfig = {
 	name: string;
-	metadata: { [x: string]: string };
+	metadata: Metadata;
 	source: Source[];
 	transforms: TransformConfig[];
 	destination: {

@@ -37,10 +37,12 @@ export default <ExportedHandler<Env>>{
 		);
 		const newResponse = new Response(response.body, response);
 		// ensure the runtime will return the metadata we need
-		newResponse.headers.append(
-			"cf-kv-metadata",
-			`{"contentType": "${contentType}"}`
-		);
+		if (contentType !== null) {
+			newResponse.headers.append(
+				"cf-kv-metadata",
+				`{"contentType": "${contentType}"}`
+			);
+		}
 		return newResponse;
 	},
 };

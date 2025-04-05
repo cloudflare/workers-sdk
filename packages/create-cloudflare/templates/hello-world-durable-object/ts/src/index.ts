@@ -7,7 +7,7 @@ import { DurableObject } from "cloudflare:workers";
  * - Open a browser tab at http://localhost:8787/ to see your Durable Object in action
  * - Run `npm run deploy` to publish your application
  *
- * Bind resources to your worker in `wrangler.json`. After adding bindings, a type definition for the
+ * Bind resources to your worker in `wrangler.jsonc`. After adding bindings, a type definition for the
  * `Env` object can be regenerated with `npm run cf-typegen`.
  *
  * Learn more at https://developers.cloudflare.com/durable-objects
@@ -20,7 +20,7 @@ export class MyDurableObject extends DurableObject<Env> {
 	 * 	`DurableObjectStub::get` for a given identifier (no-op constructors can be omitted)
 	 *
 	 * @param ctx - The interface for interacting with Durable Object state
-	 * @param env - The interface to reference bindings declared in wrangler.json
+	 * @param env - The interface to reference bindings declared in wrangler.jsonc
 	 */
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
@@ -43,22 +43,23 @@ export default {
 	 * This is the standard fetch handler for a Cloudflare Worker
 	 *
 	 * @param request - The request submitted to the Worker from the client
-	 * @param env - The interface to reference bindings declared in wrangler.json
+	 * @param env - The interface to reference bindings declared in wrangler.jsonc
 	 * @param ctx - The execution context of the Worker
 	 * @returns The response to be sent back to the client
 	 */
 	async fetch(request, env, ctx): Promise<Response> {
-		// We will create a `DurableObjectId` using the pathname from the Worker request
-		// This id refers to a unique instance of our 'MyDurableObject' class above
-		let id: DurableObjectId = env.MY_DURABLE_OBJECT.idFromName(new URL(request.url).pathname);
+		// Create a `DurableObjectId` for an instance of the `MyDurableObject`
+		// class named "foo". Requests from all Workers to the instance named
+		// "foo" will go to a single globally unique Durable Object instance.
+		const id: DurableObjectId = env.MY_DURABLE_OBJECT.idFromName("foo");
 
-		// This stub creates a communication channel with the Durable Object instance
-		// The Durable Object constructor will be invoked upon the first call for a given id
-		let stub = env.MY_DURABLE_OBJECT.get(id);
+		// Create a stub to open a communication channel with the Durable
+		// Object instance.
+		const stub = env.MY_DURABLE_OBJECT.get(id);
 
-		// We call the `sayHello()` RPC method on the stub to invoke the method on the remote
-		// Durable Object instance
-		let greeting = await stub.sayHello("world");
+		// Call the `sayHello()` RPC method on the stub to invoke the method on
+		// the remote Durable Object instance
+		const greeting = await stub.sayHello("world");
 
 		return new Response(greeting);
 	},

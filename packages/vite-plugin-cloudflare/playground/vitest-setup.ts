@@ -151,8 +151,8 @@ beforeAll(async (s) => {
 					await preServe();
 				}
 				if (serve) {
-					server = await serve();
-					viteServer = mod.viteServer;
+					server = (await serve()) ?? server;
+					viteServer = mod.viteServer ?? viteServer;
 				}
 			} else {
 				await startDefaultServe();
@@ -178,13 +178,13 @@ beforeAll(async (s) => {
 			await browser.close();
 		}
 	};
-});
+}, 15_000);
 
 beforeEach(async () => {
 	await page.goto(viteTestUrl);
 });
 
-async function loadConfig(configEnv: ConfigEnv) {
+export async function loadConfig(configEnv: ConfigEnv) {
 	let config: UserConfig | null = null;
 	let cacheDir = "node_modules/.vite";
 
@@ -246,7 +246,9 @@ async function loadConfig(configEnv: ConfigEnv) {
 	return mergeConfig(options, config || {});
 }
 
-export async function startDefaultServe(): Promise<void> {
+export async function startDefaultServe(): Promise<
+	ViteDevServer | http.Server
+> {
 	setupConsoleWarnCollector(serverLogs.warns);
 
 	if (!isBuild) {
@@ -297,6 +299,7 @@ export async function startDefaultServe(): Promise<void> {
 		}
 		await page.goto(viteTestUrl);
 	}
+	return server;
 }
 
 /**
