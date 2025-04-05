@@ -467,22 +467,43 @@ export const createContext = async (
 		}
 
 		if ("platformVariants" in frameworkConfig) {
+			const availableVariants = Object.entries(
+				frameworkConfig.platformVariants,
+			).filter(([, config]) => !config.hidden) as [
+				keyof typeof frameworkConfig.platformVariants,
+				TemplateConfig,
+			][];
+
+			if (availableVariants.length === 1) {
+				args.platform ??= availableVariants[0][0];
+			}
+
 			const platform = await processArgument(args, "platform", {
 				type: "select",
 				label: "platform",
 				question: "Select your deployment platform",
 				options: [
-					{
-						label: "Workers with Assets (BETA)",
-						value: "workers",
-						description:
-							"Take advantage of the full Developer Platform, including R2, Queues, Durable Objects and more.",
-					},
-					{
-						label: "Pages",
-						value: "pages",
-						description: "Great for simple websites and applications.",
-					},
+					...(args.platform === "workers" ||
+					!frameworkConfig.platformVariants.workers.hidden
+						? [
+								{
+									label: "Workers with Assets",
+									value: "workers",
+									description:
+										"Take advantage of the full Developer Platform, including R2, Queues, Durable Objects and more.",
+								},
+							]
+						: []),
+					...(args.platform === "pages" ||
+					!frameworkConfig.platformVariants.pages.hidden
+						? [
+								{
+									label: "Pages",
+									value: "pages",
+									description: "Great for simple websites and applications.",
+								},
+							]
+						: []),
 					backOption,
 				],
 				defaultValue: "workers",

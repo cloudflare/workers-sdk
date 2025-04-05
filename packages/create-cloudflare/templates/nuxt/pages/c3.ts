@@ -125,6 +125,7 @@ const config: TemplateConfig = {
 	id: "nuxt",
 	frameworkCli: "nuxi",
 	platform: "pages",
+	hidden: true,
 	displayName: "Nuxt",
 	copyFiles: {
 		path: "./templates",

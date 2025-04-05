@@ -161,6 +161,7 @@ export default {
 	id: "next",
 	frameworkCli: "create-next-app",
 	platform: "pages",
+	hidden: true,
 	displayName: "Next.js",
 	path: "templates/next/pages",
 	generate,
