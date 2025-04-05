@@ -1,5 +1,13 @@
 # wrangler
 
+## 4.8.0
+
+### Minor Changes
+
+- [#8795](https://github.com/cloudflare/workers-sdk/pull/8795) [`d4c1171`](https://github.com/cloudflare/workers-sdk/commit/d4c11710fd36286be8587379d659e19e91778777) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Unhide `wrangler pages functions build` command.
+
+  This is already documented for Pages Plugins and by officially documenting it, we can ease the transition to Workers Assets for users of Pages Functions.
+
 ## 4.7.2
 
 ### Patch Changes
