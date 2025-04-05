@@ -1,5 +1,14 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.8.12
+
+### Patch Changes
+
+- [#8208](https://github.com/cloudflare/workers-sdk/pull/8208) [`9a3d43c`](https://github.com/cloudflare/workers-sdk/commit/9a3d43c20a1f1fc1fd17f94d4ae5e79223df61c8) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Make vitest-pool-workers not crash when a workflow is defined
+
+- Updated dependencies [[`d4c1171`](https://github.com/cloudflare/workers-sdk/commit/d4c11710fd36286be8587379d659e19e91778777)]:
+  - wrangler@4.8.0
+
 ## 0.8.11
 
 ### Patch Changes

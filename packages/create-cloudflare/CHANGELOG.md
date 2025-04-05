@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.43.4
+
+### Patch Changes
+
+- [#8698](https://github.com/cloudflare/workers-sdk/pull/8698) [`1ba9e97`](https://github.com/cloudflare/workers-sdk/commit/1ba9e9787effd2012b65500eb78b39d46243c5b0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - remove BETA label from Workers+Assets templates and hide Pages templates
+
 ## 2.43.3
 
 ### Patch Changes
