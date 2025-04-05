@@ -1376,6 +1376,14 @@ function normalizeAndValidateEnvironment(
 			isBoolean,
 			undefined
 		),
+		keep_names: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"keep_names",
+			isBoolean,
+			undefined
+		),
 		first_party_worker: inheritable(
 			diagnostics,
 			topLevelEnv,
