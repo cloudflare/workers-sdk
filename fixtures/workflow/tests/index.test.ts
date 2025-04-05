@@ -26,11 +26,13 @@ describe("Workflows", () => {
 		await stop?.();
 	});
 
-	async function fetchJson(url: string) {
+	async function fetchJson(url: string, body?: unknown, method?: string) {
 		const response = await fetch(url, {
 			headers: {
 				"MF-Disable-Pretty-Error": "1",
 			},
+			method: method ?? "GET",
+			body: body !== undefined ? JSON.stringify(body) : undefined,
 		});
 		const text = await response.text();
 
@@ -135,5 +137,40 @@ describe("Workflows", () => {
 				{ timeout: 5000 }
 			),
 		]);
+	});
+
+	test("waitForEvent should work", async ({ expect }) => {
+		await fetchJson(`http://${ip}:${port}/createDemo2?workflowName=something`);
+
+		await fetchJson(
+			`http://${ip}:${port}/sendEvent?workflowName=something`,
+			{ event: true },
+			"POST"
+		);
+
+		await vi.waitFor(
+			async () => {
+				await expect(
+					fetchJson(`http://${ip}:${port}/get2?workflowName=something`)
+				).resolves.toMatchInlineSnapshot(`
+					{
+					  "__LOCAL_DEV_STEP_OUTPUTS": [
+					    {
+					      "output": "First step result",
+					    },
+					    {
+					      "event": true,
+					    },
+					    {
+					      "output": "Second step result",
+					    },
+					  ],
+					  "output": {},
+					  "status": "complete",
+					}
+				`);
+			},
+			{ timeout: 5000 }
+		);
 	});
 });

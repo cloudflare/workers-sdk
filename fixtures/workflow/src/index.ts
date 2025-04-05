@@ -1,5 +1,6 @@
 import {
 	WorkerEntrypoint,
+	WorkflowBackoff,
 	WorkflowEntrypoint,
 	WorkflowEvent,
 	WorkflowStep,
@@ -31,8 +32,33 @@ export class Demo extends WorkflowEntrypoint<{}, Params> {
 	}
 }
 
+export class Demo2 extends WorkflowEntrypoint<{}, Params> {
+	async run(event: WorkflowEvent<Params>, step: WorkflowStep) {
+		const { timestamp, payload } = event;
+
+		const result = await step.do("First step", async function () {
+			return {
+				output: "First step result",
+			};
+		});
+
+		await step.waitForEvent("event-1 provider", {
+			type: "event-1",
+		});
+
+		const result2 = await step.do("Second step", async function () {
+			return {
+				output: "Second step result",
+			};
+		});
+
+		return payload ?? "no-payload";
+	}
+}
+
 type Env = {
 	WORKFLOW: Workflow;
+	WORKFLOW2: Workflow;
 };
 export default class extends WorkerEntrypoint<Env> {
 	async fetch(req: Request) {
@@ -43,6 +69,7 @@ export default class extends WorkerEntrypoint<Env> {
 			return new Response(null, { status: 404 });
 		}
 
+		console.log(url.pathname);
 		let handle: WorkflowInstance;
 		if (url.pathname === "/createBatch") {
 			// creates two instances
@@ -57,6 +84,22 @@ export default class extends WorkerEntrypoint<Env> {
 			} else {
 				handle = await this.env.WORKFLOW.create({ id });
 			}
+		} else if (url.pathname === "/createDemo2") {
+			console.log("I'm here", id);
+			if (id === null) {
+				handle = await this.env.WORKFLOW2.create();
+			} else {
+				handle = await this.env.WORKFLOW2.create({ id });
+			}
+		} else if (url.pathname === "/sendEvent") {
+			handle = await this.env.WORKFLOW2.get(id);
+
+			await handle.sendEvent({
+				type: "event-1",
+				payload: await req.json(),
+			});
+		} else if (url.pathname === "/get2") {
+			handle = await this.env.WORKFLOW2.get(id);
 		} else {
 			handle = await this.env.WORKFLOW.get(id);
 		}
