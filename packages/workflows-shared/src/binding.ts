@@ -41,7 +41,6 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 			terminate: handle.terminate.bind(handle),
 			restart: handle.restart.bind(handle),
 			status: handle.status.bind(handle),
-			// @ts-expect-error worker typesss
 			sendEvent: handle.sendEvent.bind(handle),
 		};
 	}
@@ -65,7 +64,6 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 			terminate: handle.terminate.bind(handle),
 			restart: handle.restart.bind(handle),
 			status: handle.status.bind(handle),
-			// @ts-expect-error worker typesss
 			sendEvent: handle.sendEvent.bind(handle),
 		};
 	}
