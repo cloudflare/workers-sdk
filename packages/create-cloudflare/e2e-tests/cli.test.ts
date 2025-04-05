@@ -486,10 +486,10 @@ describe.skipIf(frameworkToTest || isQuarantineMode())("help text", () => {
 				  --platform=<value>
 				    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 				    Allowed Values:
+				      workers
+				        Create a web application that can be deployed to Workers.
 				      pages
 				        Create a web application that can be deployed to Pages.
-				      workers
-				        Create a web application that can be deployed to Workers (BETA).
 				  --lang=<value>
 				    The programming language of the template
 				    Allowed Values:
@@ -576,10 +576,10 @@ describe.skipIf(frameworkToTest || isQuarantineMode())("help text", () => {
 				  --platform=<value>
 				    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 				    Allowed Values:
+				      workers
+				        Create a web application that can be deployed to Workers.
 				      pages
 				        Create a web application that can be deployed to Pages.
-				      workers
-				        Create a web application that can be deployed to Workers (BETA).
 				  --lang=<value>
 				    The programming language of the template
 				    Allowed Values:
