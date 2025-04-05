@@ -14,5 +14,5 @@
 			"miniflare:zod": ["./shared/zod.worker.ts"]
 		}
 	},
-	"include": ["node.d.ts", "**/*.worker.ts"]
+	"include": ["node.d.ts", "**/*.ts"]
 }

@@ -11,8 +11,10 @@ import {
 import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
 import { isCompressedByCloudflareFL } from "../../shared/mime-types";
 import { CoreBindings, CoreHeaders } from "./constants";
+import { handleEmail } from "./email";
 import { STATUS_CODES } from "./http";
 import { matchRoutes, WorkerRoute } from "./routing";
+import { handleScheduled } from "./scheduled";
 
 type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
@@ -25,6 +27,7 @@ type Env = {
 	[CoreBindings.DATA_LIVE_RELOAD_SCRIPT]?: ArrayBuffer;
 	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
 	[CoreBindings.DATA_PROXY_SHARED_SECRET]?: ArrayBuffer;
+	[CoreBindings.TRIGGER_HANDLERS]: boolean;
 } & {
 	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
 		| Fetcher
@@ -32,7 +35,6 @@ type Env = {
 };
 
 const encoder = new TextEncoder();
-
 function getUserRequest(
 	request: Request<unknown, IncomingRequestCfProperties>,
 	env: Env,
@@ -333,24 +335,6 @@ function handleProxy(request: Request, env: Env) {
 	return stub.fetch(request);
 }
 
-async function handleScheduled(
-	params: URLSearchParams,
-	service: Fetcher
-): Promise<Response> {
-	const time = params.get("time");
-	const scheduledTime = time ? new Date(parseInt(time)) : undefined;
-	const cron = params.get("cron") ?? undefined;
-
-	const result = await service.scheduled({
-		scheduledTime,
-		cron,
-	});
-
-	return new Response(result.outcome, {
-		status: result.outcome === "ok" ? 200 : 500,
-	});
-}
-
 export default <ExportedHandler<Env>>{
 	async fetch(request, env, ctx) {
 		const startTime = Date.now();
@@ -398,8 +382,37 @@ export default <ExportedHandler<Env>>{
 		}
 
 		try {
-			if (url.pathname === "/cdn-cgi/mf/scheduled") {
-				return await handleScheduled(url.searchParams, service);
+			if (env[CoreBindings.TRIGGER_HANDLERS]) {
+				if (
+					url.pathname === "/cdn-cgi/handler/scheduled" ||
+					/* legacy URL path */ url.pathname === "/cdn-cgi/mf/scheduled"
+				) {
+					if (url.pathname === "/cdn-cgi/mf/scheduled") {
+						ctx.waitUntil(
+							env[CoreBindings.SERVICE_LOOPBACK].fetch(
+								"http://localhost/core/log",
+								{
+									method: "POST",
+									headers: {
+										[SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString(),
+									},
+									body: `Triggering scheduled handlers via a request to \`/cdn-cgi/mf/scheduled\` is deprecated, and will be removed in a future version of Miniflare. Instead, send a request to \`/cdn-cgi/handler/scheduled\``,
+								}
+							)
+						);
+					}
+					return await handleScheduled(url.searchParams, service);
+				}
+
+				if (url.pathname === "/cdn-cgi/handler/email") {
+					return await handleEmail(
+						url.searchParams,
+						request,
+						service,
+						env,
+						ctx
+					);
+				}
 			}
 
 			let response = await service.fetch(request);
