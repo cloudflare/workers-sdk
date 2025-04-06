@@ -127,7 +127,7 @@ interface EnvironmentInheritable {
 	 * A list of flags that enable features from upcoming features of
 	 * the Workers runtime, usually used together with compatibility_date.
 	 *
-	 * More details at https://developers.cloudflare.com/workers/platform/compatibility-flags
+	 * More details at https://developers.cloudflare.com/workers/configuration/compatibility-flags/
 	 *
 	 * @default []
 	 * @inheritable
