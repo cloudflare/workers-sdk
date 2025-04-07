@@ -11,12 +11,22 @@ export function validateCorsOrigins(values: string[] | undefined) {
 		return values;
 	}
 
+	// If none provided, ignore other options
+	if (values.includes("none")) {
+		if (values.length > 1) {
+			throw new UserError(
+				"When specifying 'none', only one value is permitted."
+			);
+		}
+		return [];
+	}
+
 	// If wildcard provided, ignore other options
 	if (values.includes("*")) {
 		if (values.length > 1) {
 			throw new UserError("When specifying '*', only one value is permitted.");
 		}
-		return values;
+		return values; // ["*"]
 	}
 
 	// Ensure any value matches the format for a CORS origin
