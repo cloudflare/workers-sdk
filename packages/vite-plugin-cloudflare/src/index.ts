@@ -555,6 +555,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 										"process.env.NODE_ENV": JSON.stringify(
 											process.env.NODE_ENV ?? "production"
 										),
+										preventAssignment: true,
 									}),
 								],
 							},
