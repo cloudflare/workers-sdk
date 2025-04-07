@@ -1,5 +1,5 @@
 ---
-"wrangler": minor
+"wrangler": patch
 ---
 
 feat: Unhide `wrangler pages functions build` command.
