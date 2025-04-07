@@ -104,10 +104,13 @@ async function processKeyValue(
 		);
 	}
 	if (val && withMetadata) {
-		return [{
-			value: val,
-			metadata: obj?.metadata ?? null,
-		}, size];
+		return [
+			{
+				value: val,
+				metadata: obj?.metadata ?? null,
+			},
+			size,
+		];
 	}
 	return [val, size];
 }
@@ -152,7 +155,6 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 				);
 				totalBytes += size;
 				obj[key] = value;
-
 			}
 			const maxValueSize = this.beingTested
 				? KVLimits.MAX_VALUE_SIZE_TEST
