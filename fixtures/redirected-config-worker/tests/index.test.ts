@@ -20,7 +20,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect(text).toMatchInlineSnapshot(`"Generated: true"`);
 	});
 
-	it("uses a custom config from command line rather than generated config", async ({
+	it("specifying an environment causes an error since they are not supported in redirected configs", async ({
 		expect,
 		onTestFinished,
 	}) => {
