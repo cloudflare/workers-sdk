@@ -78,7 +78,7 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 				describe:
 					"Maximum number of rows per batch before flushing. Defaults to 10,000,000 if unset. Minimum: 100, Maximum: 10,000,000",
 				demandOption: false,
-				coerce: validateInRange("batch-max-rows", 100, 10_00_000),
+				coerce: validateInRange("batch-max-rows", 100, 10_000_000),
 			})
 			.option("batch-max-seconds", {
 				type: "number",
