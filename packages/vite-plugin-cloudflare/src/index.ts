@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { createMiddleware } from "@hattip/adapter-node";
+import replace from "@rollup/plugin-replace";
 import MagicString from "magic-string";
 import { Miniflare } from "miniflare";
 import colors from "picocolors";
@@ -547,6 +548,17 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				// Only configure this environment if it is a Worker using Node.js compatibility.
 				if (isNodeCompat(getWorkerConfig(name))) {
 					return {
+						build: {
+							rollupOptions: {
+								plugins: [
+									replace({
+										"process.env.NODE_ENV": JSON.stringify(
+											process.env.NODE_ENV ?? "production"
+										),
+									}),
+								],
+							},
+						},
 						resolve: {
 							builtins: [...nodeCompatExternals],
 						},
