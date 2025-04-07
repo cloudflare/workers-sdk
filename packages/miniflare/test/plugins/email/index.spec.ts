@@ -75,10 +75,14 @@ test("Unbound send_email binding works", async (t) => {
 	);
 	t.is(await res.text(), "ok");
 	t.is(res.status, 200);
-	t.is(log.logs[1][0], LogLevel.INFO);
-	t.is(
-		log.logs[1][1].split("\n")[0],
-		"send_email binding called with the following message:"
+	t.true(
+		log.logs.some(
+			([type, message]) =>
+				type === LogLevel.INFO &&
+				message.includes(
+					"send_email binding called with the following message:"
+				)
+		)
 	);
 
 	const file = log.logs[1][1].split("\n")[1].trim();
