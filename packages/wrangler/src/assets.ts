@@ -349,17 +349,10 @@ function logAssetsUploadStatus(
 	uploadedAssetsCount: number,
 	uploadedAssetFiles: string[]
 ) {
-	const level = logger.loggerLevel;
-	const isDebugLogLevel = LOGGER_LEVELS[level] >= LOGGER_LEVELS.debug;
-	let summary = `Uploaded ${uploadedAssetsCount} of ${numberFilesToUpload} assets`;
-	// if debug level we want to list all the files that were uploaded
-	summary += isDebugLogLevel ? ":" : "";
-
-	logger.info(summary);
-
-	if (isDebugLogLevel) {
-		uploadedAssetFiles.forEach((file) => logger.debug(`✨ ${file}`));
-	}
+	logger.info(
+		`Uploaded ${uploadedAssetsCount} of ${numberFilesToUpload} assets`
+	);
+	uploadedAssetFiles.forEach((file) => logger.debug(`✨ ${file}`));
 }
 
 /**
@@ -368,19 +361,10 @@ function logAssetsUploadStatus(
  * debug log level.
  */
 function logReadFilesFromDirectory(directory: string, assetFiles: string[]) {
-	const level = logger.loggerLevel;
-	const isDebugLogLevel = LOGGER_LEVELS[level] >= LOGGER_LEVELS.debug;
-	let summary = `✨ Read ${assetFiles.length} files from the assets directory ${directory}`;
-	// if debug level we want to list all the files we read from the directory
-	summary += isDebugLogLevel ? ":" : "";
-
-	logger.info(summary);
-
-	if (isDebugLogLevel) {
-		assetFiles.forEach((file) => {
-			logger.debug(`/${file}`);
-		});
-	}
+	logger.info(
+		`✨ Read ${assetFiles.length} files from the assets directory ${directory}`
+	);
+	assetFiles.forEach((file) => logger.debug(`/${file}`));
 }
 
 /**

@@ -280,14 +280,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				].some((s) => output.includes(s))
 			).toBeTruthy();
 		},
-	},
-	{
-		name: "regular Worker (debug logs)",
-		flags: "",
-		debug: true,
-		async beforeAll() {},
-		async afterAll() {},
-		expectAssetsOnlyStdout: (output: string) => {
+		expectDebugStdout: (output: string) => {
 			expect(output).toContain(`🌀 Building list of assets...
 ✨ Read 3 files from the assets directory /tmpdir
 /404.html
@@ -299,27 +292,15 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 + /404.html
 + /index.html
 + /[boop].html`);
-			expect(output).toContain(`Uploaded 1 of 3 assets:
-✨ /index.html`);
-			expect(output).toContain(`Uploaded 2 of 3 assets:
-✨ /[boop].html`);
-			expect(output).toEqual(`Uploaded 3 of 3 assets:
-✨ /404.html
-✨ Success! Uploaded 3 files (TIMINGS)`);
-		},
-		expectWithWorkerStdout: (output: string) => {
-			expect(output).toContain(`🌀 Building list of assets...
-✨ Read 3 files from the assets directory /tmpdir
-🌀 Starting asset upload...`);
-			// Unfortunately the server-side deduping logic isn't always 100% accurate, and sometimes a file is re-uploaded
-			// As such, to reduce CI flakes, this test just asserts that _at least one_ file isn't re-uploaded
-			expect(
-				[
-					"Uploaded 1 of 1 assets",
-					"Uploaded 1 of 2 assets",
-					"No updated asset files to upload.",
-				].some((s) => output.includes(s))
-			).toBeTruthy();
+			expect(output).toContain("Uploaded 1 of 3 assets");
+			expect(output).toContain("Uploaded 2 of 3 assets");
+			expect(output).toContain("Uploaded 3 of 3 assets");
+			// since we can't guarantee the order in which the files are uploaded,
+			// we need to check the listing of the uploaded files separately
+			expect(output).toContain("✨ /[boop].html");
+			expect(output).toContain("✨ /index.html");
+			expect(output).toContain("✨ /404.html");
+			expect(output).toContain("✨ Success! Uploaded 3 files (TIMINGS)");
 		},
 	},
 	{
@@ -397,6 +378,28 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			).toBeTruthy();
 			expect(output).toContain("- Binding: ASSETS");
 		},
+		expectDebugStdout: (output: string) => {
+			expect(output).toContain(`🌀 Building list of assets...
+✨ Read 3 files from the assets directory /tmpdir
+/404.html
+/[boop].html
+/index.html`);
+			expect(output).toContain("🌀 Starting asset upload...");
+			expect(output)
+				.toContain(`🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
++ /404.html
++ /index.html
++ /[boop].html`);
+			expect(output).toContain("Uploaded 1 of 3 assets");
+			expect(output).toContain("Uploaded 2 of 3 assets");
+			expect(output).toContain("Uploaded 3 of 3 assets");
+			// since we can't guarantee the order in which the files are uploaded,
+			// we need to check the listing of the uploaded files separately
+			expect(output).toContain("✨ /[boop].html");
+			expect(output).toContain("✨ /index.html");
+			expect(output).toContain("✨ /404.html");
+			expect(output).toContain("✨ Success! Uploaded 3 files (TIMINGS)");
+		},
 	},
 ])("Workers + Assets deployment: $name", { timeout: TIMEOUT }, (testcase) => {
 	let deployedUrl: string | undefined;
@@ -418,9 +421,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			...initialAssets,
 		});
 
-		const output = await helper.run(`wrangler deploy ${testcase.flags}`, {
-			debug: testcase.debug ?? false,
-		});
+		const output = await helper.run(`wrangler deploy ${testcase.flags}`);
 		testcase.expectAssetsOnlyStdout(normalize(output.stdout));
 		if (testcase.url) {
 			deployedUrl = testcase.url;
@@ -533,6 +534,72 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			}
 		);
 		expect(text).toContain("<h1>404.html</h1>");
+	});
+	it("deploys a Workers + Assets project with helpful debug logs", async () => {
+		await helper.seed({
+			"wrangler.toml": dedent`
+				name = "${generateResourceName()}"
+				main = "src/index.ts"
+				compatibility_date = "2023-01-01"
+				[assets]
+				directory = "public"
+			`,
+			"src/index.ts": dedent`
+				export default {
+					async fetch(request, env) {
+						return new Response("Hello World!")
+					}
+				}
+			`,
+			...initialAssets,
+		});
+
+		const output = await helper.run(`wrangler deploy ${testcase.flags}`, {
+			debug: true,
+		});
+		testcase.expectDebugStdout(normalize(output.stdout));
+
+		if (testcase.url) {
+			deployedUrl = testcase.url;
+		} else {
+			const match = output.stdout.match(
+				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+			);
+			assert(match?.groups);
+			deployedUrl = match.groups.url;
+		}
+
+		const testCases: AssetTestCase[] = [
+			// Tests html_handling = "auto_trailing_slash" (default):
+			{
+				path: "/",
+				content: "<h1>index.html</h1>",
+			},
+			{
+				path: "/index.html",
+				content: "<h1>index.html</h1>",
+				redirect: "/",
+			},
+			{
+				path: "/[boop]",
+				content: "<h1>[boop].html</h1>",
+				redirect: "/%5Bboop%5D",
+			},
+		];
+		await checkAssets(testCases, deployedUrl);
+
+		// Test 404 handling:
+		// even though 404.html has been uploaded, because not_found_handling is set to "none"
+		// we expect to get an empty response
+		const { text } = await retry(
+			(s) => s.status !== 404,
+			async () => {
+				const r = await fetch(new URL("/try-404", deployedUrl));
+				const temp = { text: await r.text(), status: r.status };
+				return temp;
+			}
+		);
+		expect(text).toBeFalsy();
 	});
 	it("runs user worker ahead of matching assets when run_worker_first = true", async () => {
 		await helper.seed({
