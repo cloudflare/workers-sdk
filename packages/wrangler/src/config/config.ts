@@ -63,6 +63,9 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	 */
 	send_metrics: boolean | undefined;
 
+	/** path to your types file if you want to opt in to auto updating */
+	types_auto_update: string | undefined;
+
 	/**
 	 * Options to configure the development server that your worker will use.
 	 */
@@ -263,6 +266,7 @@ export const defaultWranglerConfig: Config = {
 	/* TOP-LEVEL ONLY FIELDS */
 	pages_build_output_dir: undefined,
 	send_metrics: undefined,
+	types_auto_update: undefined,
 	dev: {
 		ip: process.platform === "win32" ? "127.0.0.1" : "localhost",
 		port: undefined, // the default of 8787 is set at runtime
