@@ -141,6 +141,11 @@ export type TemplateConfig = {
 	devScript?: string;
 	/** The key of the package.json "scripts" entry for previewing the project. Defaults to undefined (there might not be such script) */
 	previewScript?: string;
+	/** The key of the package.json "scripts" entry for generating the types of the project. Defaults to undefined (there might not be such script) */
+	typeGenScript?: string;
+
+	/** The file path to the generated types file.*/
+	typesPath?: string;
 
 	/** The file path of the template. This is used internally and isn't a user facing config value.*/
 	path?: string;
