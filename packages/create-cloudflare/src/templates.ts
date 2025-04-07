@@ -18,7 +18,6 @@ import {
 	writeFile,
 	writeJSON,
 } from "helpers/files";
-import nextTemplateExperimental from "templates-experimental/next/c3";
 import solidTemplateExperimental from "templates-experimental/solid/c3";
 import analogTemplate from "templates/analog/c3";
 import angularTemplate from "templates/angular/c3";
@@ -145,6 +144,8 @@ export type TemplateConfig = {
 
 	/** The file path of the template. This is used internally and isn't a user facing config value.*/
 	path?: string;
+
+	bindings?: Record<string, unknown>;
 };
 
 type CopyFiles = (StaticFileMap | VariantInfo) & {
@@ -173,7 +174,6 @@ export type TemplateMap = Record<
 export function getFrameworkMap({ experimental = false }): TemplateMap {
 	if (experimental) {
 		return {
-			next: nextTemplateExperimental,
 			solid: solidTemplateExperimental,
 		};
 	} else {
@@ -197,7 +197,25 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 	}
 }
 
-export function getTemplateMap({ experimental = false }) {
+export function getOtherTemplateMap({
+	experimental = false,
+}): Record<string, TemplateConfig> {
+	if (experimental) {
+		return {};
+	} else {
+		return {
+			common: commonTemplate,
+			scheduled: scheduledTemplate,
+			queues: queuesTemplate,
+			openapi: openapiTemplate,
+			"pre-existing": preExistingTemplate,
+		};
+	}
+}
+
+export function getHelloWorldTemplateMap({
+	experimental = false,
+}): Record<string, TemplateConfig> {
 	if (experimental) {
 		return {} as Record<string, TemplateConfig>;
 	} else {
@@ -295,6 +313,14 @@ export const createContext = async (
 	// Derive all correlated arguments first so we can skip some prompts
 	deriveCorrelatedArgs(args);
 
+	const experimental = args.experimental;
+
+	const frameworkMap = getFrameworkMap({ experimental });
+	const helloWorldTemplateMap = await getHelloWorldTemplateMap({
+		experimental,
+	});
+	const otherTemplateMap = await getOtherTemplateMap({ experimental });
+
 	let linesPrinted = 0;
 
 	// Allows the users to go back to the previous step
@@ -356,24 +382,30 @@ export const createContext = async (
 		format: (val) => `./${val}`,
 	});
 
-	const categoryOptions = [
-		{
-			label: "Hello World Starter",
+	const categoryOptions = [];
+	if (Object.keys(helloWorldTemplateMap).length) {
+		categoryOptions.push({
+			label: "Hello World example",
 			value: "hello-world",
-			description:
-				"Select from basic scaffolds to get started with Workers, Assets and Durable Objects",
-		},
-		{
+			description: "Select from barebones examples to get started with Workers",
+		});
+	}
+	if (Object.keys(frameworkMap).length) {
+		categoryOptions.push({
 			label: "Framework Starter",
 			value: "web-framework",
 			description: "Select from the most popular full-stack web frameworks",
-		},
-		{
+		});
+	}
+	if (Object.keys(otherTemplateMap).length) {
+		categoryOptions.push({
 			label: "Application Starter",
 			value: "demo",
 			description:
 				"Select from a range of starter applications using various Cloudflare products",
-		},
+		});
+	}
+	categoryOptions.push(
 		{
 			label: "Template from a GitHub repo",
 			value: "remote-template",
@@ -382,7 +414,7 @@ export const createContext = async (
 		// This is used only if the type is `pre-existing`
 		{ label: "Others", value: "others", hidden: true },
 		backOption,
-	];
+	);
 
 	const category = await processArgument(args, "category", {
 		type: "select",
@@ -400,10 +432,6 @@ export const createContext = async (
 	let template: TemplateConfig;
 
 	if (category === "web-framework") {
-		const frameworkMap = getFrameworkMap({
-			experimental: args.experimental,
-		});
-
 		const frameworkOptions = Object.entries(frameworkMap).reduce<Option[]>(
 			(acc, [key, config]) => {
 				// only hide if we're going to show the options - otherwise, the
@@ -439,22 +467,43 @@ export const createContext = async (
 		}
 
 		if ("platformVariants" in frameworkConfig) {
+			const availableVariants = Object.entries(
+				frameworkConfig.platformVariants,
+			).filter(([, config]) => !config.hidden) as [
+				keyof typeof frameworkConfig.platformVariants,
+				TemplateConfig,
+			][];
+
+			if (availableVariants.length === 1) {
+				args.platform ??= availableVariants[0][0];
+			}
+
 			const platform = await processArgument(args, "platform", {
 				type: "select",
 				label: "platform",
 				question: "Select your deployment platform",
 				options: [
-					{
-						label: "Workers with Assets (BETA)",
-						value: "workers",
-						description:
-							"Take advantage of the full Developer Platform, including R2, Queues, Durable Objects and more.",
-					},
-					{
-						label: "Pages",
-						value: "pages",
-						description: "Great for simple websites and applications.",
-					},
+					...(args.platform === "workers" ||
+					!frameworkConfig.platformVariants.workers.hidden
+						? [
+								{
+									label: "Workers with Assets",
+									value: "workers",
+									description:
+										"Take advantage of the full Developer Platform, including R2, Queues, Durable Objects and more.",
+								},
+							]
+						: []),
+					...(args.platform === "pages" ||
+					!frameworkConfig.platformVariants.pages.hidden
+						? [
+								{
+									label: "Pages",
+									value: "pages",
+									description: "Great for simple websites and applications.",
+								},
+							]
+						: []),
 					backOption,
 				],
 				defaultValue: "workers",
@@ -475,22 +524,15 @@ export const createContext = async (
 	} else if (category === "remote-template") {
 		template = await processRemoteTemplate(args);
 	} else {
-		const templateMap = await getTemplateMap({
-			experimental: args.experimental,
-		});
+		const templateMap =
+			category === "hello-world" ? helloWorldTemplateMap : otherTemplateMap;
 		const templateOptions: Option[] = Object.entries(templateMap).map(
 			([value, { displayName, description, hidden }]) => {
-				const isHelloWorldExample = value.startsWith("hello-world");
-				const isCategoryMatched =
-					category === "hello-world"
-						? isHelloWorldExample
-						: !isHelloWorldExample;
-
 				return {
 					value,
 					label: displayName,
 					description,
-					hidden: hidden || !isCategoryMatched,
+					hidden: hidden,
 				};
 			},
 		);

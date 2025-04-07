@@ -14,6 +14,7 @@ const config: TemplateConfig = {
 	id: "docusaurus",
 	frameworkCli: "create-docusaurus",
 	platform: "pages",
+	hidden: true,
 	displayName: "Docusaurus",
 	path: "templates/docusaurus/pages",
 	generate,

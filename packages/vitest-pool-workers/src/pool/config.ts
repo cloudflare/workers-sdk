@@ -2,6 +2,8 @@ import path from "node:path";
 import {
 	formatZodError,
 	getRootPath,
+	Log,
+	LogLevel,
 	mergeWorkerOptions,
 	parseWithRootPath,
 	PLUGINS,
@@ -135,6 +137,8 @@ function parseWorkerOptions(
 	return result;
 }
 
+const log = new Log(LogLevel.WARN, { prefix: "vpw" });
+
 async function parseCustomPoolOptions(
 	rootPath: string,
 	value: unknown,
@@ -204,6 +208,22 @@ async function parseCustomPoolOptions(
 				options.wrangler.environment,
 				{ imagesLocalMode: true }
 			);
+
+		const wrappedBindings = Object.values(workerOptions.wrappedBindings ?? {});
+
+		const hasAIOrVectorizeBindings = wrappedBindings.some((binding) => {
+			return (
+				typeof binding === "object" &&
+				(binding.scriptName.includes("__WRANGLER_EXTERNAL_VECTORIZE_WORKER") ||
+					binding.scriptName.includes("__WRANGLER_EXTERNAL_AI_WORKER"))
+			);
+		});
+
+		if (hasAIOrVectorizeBindings) {
+			log.warn(
+				"Workers AI and Vectorize bindings will access your Cloudflare account and incur usage charges even in testing. We recommend mocking any usage of these bindings in your tests."
+			);
+		}
 
 		// If `main` wasn't explicitly configured, fall back to Wrangler config's
 		options.main ??= main;

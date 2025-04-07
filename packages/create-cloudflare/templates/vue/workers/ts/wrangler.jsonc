@@ -4,7 +4,6 @@
 	"main": "server/index.ts",
 	"assets": {
 		"not_found_handling": "single-page-application",
-		"binding": "ASSETS"
 	},
 	"observability": {
 		"enabled": true

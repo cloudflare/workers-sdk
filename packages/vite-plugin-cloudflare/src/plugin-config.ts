@@ -1,8 +1,11 @@
 import assert from "node:assert";
 import * as path from "node:path";
 import * as vite from "vite";
-import { DEFAULT_INSPECTOR_PORT } from "./constants";
-import { findWranglerConfig, getWorkerConfig } from "./workers-configs";
+import {
+	getValidatedWranglerConfigPath,
+	getWorkerConfig,
+} from "./workers-configs";
+import type { Defined } from "./utils";
 import type {
 	AssetsOnlyWorkerResolvedConfig,
 	SanitizedWorkerConfig,
@@ -34,8 +37,6 @@ export interface PluginConfig extends EntryWorkerConfig {
 	};
 }
 
-type Defined<T> = Exclude<T, undefined>;
-
 export interface AssetsOnlyConfig extends SanitizedWorkerConfig {
 	topLevelName: Defined<SanitizedWorkerConfig["topLevelName"]>;
 	name: Defined<SanitizedWorkerConfig["name"]>;
@@ -50,7 +51,6 @@ interface BasePluginConfig {
 	configPaths: Set<string>;
 	persistState: PersistState;
 	cloudflareEnv: string | undefined;
-	inspectorPort: number | false;
 	experimental: {
 		/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
 		headersAndRedirectsDevModeSupport?: boolean;
@@ -65,7 +65,7 @@ interface AssetsOnlyPluginConfig extends BasePluginConfig {
 	};
 }
 
-interface WorkerPluginConfig extends BasePluginConfig {
+export interface WorkerPluginConfig extends BasePluginConfig {
 	type: "workers";
 	workers: Record<string, WorkerConfig>;
 	entryWorkerEnvironmentName: string;
@@ -89,7 +89,6 @@ export function resolvePluginConfig(
 ): ResolvedPluginConfig {
 	const configPaths = new Set<string>();
 	const persistState = pluginConfig.persistState ?? true;
-	const inspectorPort = pluginConfig.inspectorPort ?? DEFAULT_INSPECTOR_PORT;
 	const experimental = pluginConfig.experimental ?? {};
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
 	const { CLOUDFLARE_ENV: cloudflareEnv } = vite.loadEnv(
@@ -98,27 +97,25 @@ export function resolvePluginConfig(
 		/* prefixes */ ""
 	);
 
-	const configPath = pluginConfig.configPath
-		? path.resolve(root, pluginConfig.configPath)
-		: findWranglerConfig(root);
+	const entryWorkerConfigPath = getValidatedWranglerConfigPath(
+		root,
+		pluginConfig.configPath
+	);
 
-	if (!configPath) {
-		throw new Error(
-			`Config not found. Have you created a wrangler.json(c) or wrangler.toml file?`
-		);
-	}
-
-	const entryWorkerResolvedConfig = getWorkerConfig(configPath, cloudflareEnv, {
-		visitedConfigPaths: configPaths,
-		isEntryWorker: true,
-	});
+	const entryWorkerResolvedConfig = getWorkerConfig(
+		entryWorkerConfigPath,
+		cloudflareEnv,
+		{
+			visitedConfigPaths: configPaths,
+			isEntryWorker: true,
+		}
+	);
 
 	if (entryWorkerResolvedConfig.type === "assets-only") {
 		return {
 			type: "assets-only",
 			config: entryWorkerResolvedConfig.config,
 			configPaths,
-			inspectorPort,
 			persistState,
 			rawConfigs: {
 				entryWorker: entryWorkerResolvedConfig,
@@ -141,8 +138,13 @@ export function resolvePluginConfig(
 	const auxiliaryWorkersResolvedConfigs: WorkerResolvedConfig[] = [];
 
 	for (const auxiliaryWorker of pluginConfig.auxiliaryWorkers ?? []) {
+		const workerConfigPath = getValidatedWranglerConfigPath(
+			root,
+			auxiliaryWorker.configPath,
+			true
+		);
 		const workerResolvedConfig = getWorkerConfig(
-			path.resolve(root, auxiliaryWorker.configPath),
+			workerConfigPath,
 			cloudflareEnv,
 			{
 				visitedConfigPaths: configPaths,
@@ -175,7 +177,6 @@ export function resolvePluginConfig(
 		type: "workers",
 		configPaths,
 		persistState,
-		inspectorPort,
 		workers,
 		entryWorkerEnvironmentName,
 		rawConfigs: {

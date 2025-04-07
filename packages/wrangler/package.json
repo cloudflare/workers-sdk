@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.4.1",
+	"version": "4.7.2",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -59,24 +59,23 @@
 		"dev": "pnpm run clean && concurrently -c black,blue --kill-others-on-fail false \"pnpm run bundle --watch\" \"pnpm run check:type --watch --preserveWatchOutput\"",
 		"emit-types": "tsc -p tsconfig.emit.json && node -r esbuild-register scripts/emit-types.ts",
 		"generate-json-schema": "node -r esbuild-register scripts/generate-json-schema.ts",
-		"prepublishOnly": "cross-env SOURCEMAPS=false pnpm exec turbo build -F wrangler",
 		"start": "pnpm run bundle && cross-env NODE_OPTIONS=--enable-source-maps ./bin/wrangler.js",
 		"test": "dotenv -- pnpm run assert-git-version && dotenv -- vitest",
 		"test:ci": "pnpm run test run",
 		"test:debug": "pnpm run test --silent=false --verbose=true",
-		"test:e2e": "dotenv -- vitest -c ./e2e/vitest.config.mts",
+		"test:e2e": "dotenv -- vitest run -c ./e2e/vitest.config.mts",
 		"test:watch": "pnpm run test --testTimeout=50000 --watch",
 		"type:tests": "tsc -p ./src/__tests__/tsconfig.json && tsc -p ./e2e/tsconfig.json"
 	},
 	"dependencies": {
 		"@cloudflare/kv-asset-handler": "workspace:*",
-		"@cloudflare/unenv-preset": "2.3.0",
+		"@cloudflare/unenv-preset": "2.3.1",
 		"blake3-wasm": "2.1.5",
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
 		"unenv": "2.0.0-rc.15",
-		"workerd": "1.20250321.0"
+		"workerd": "1.20250404.0"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
@@ -86,7 +85,7 @@
 		"@cloudflare/types": "6.18.4",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250321.0",
+		"@cloudflare/workers-types": "^4.20250404.0",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@iarna/toml": "^3.0.0",
 		"@microsoft/api-extractor": "^7.47.0",
@@ -161,7 +160,7 @@
 		"yargs": "^17.7.2"
 	},
 	"peerDependencies": {
-		"@cloudflare/workers-types": "^4.20250321.0"
+		"@cloudflare/workers-types": "^4.20250404.0"
 	},
 	"peerDependenciesMeta": {
 		"@cloudflare/workers-types": {

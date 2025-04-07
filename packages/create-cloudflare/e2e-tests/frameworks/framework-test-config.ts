@@ -237,7 +237,6 @@ export default function getFrameworkTestConfig(pm: string) {
 			verifyPreview: {
 				route: "/",
 				expectedText: "Hello!",
-				previewArgs: ["--host=127.0.0.1"],
 			},
 			promptHandlers: [
 				{
@@ -360,7 +359,10 @@ export default function getFrameworkTestConfig(pm: string) {
 			},
 			flags: ["--typescript", "--no-install", "--no-git-init"],
 		},
-		next: {
+		"next:pages": {
+			argv: ["--platform", "pages"],
+			timeout: LONG_TIMEOUT,
+			unsupportedPms: ["pnpm"],
 			promptHandlers: [
 				{
 					matcher: /Do you want to use the next-on-pages eslint-plugin\?/,
@@ -394,7 +396,48 @@ export default function getFrameworkTestConfig(pm: string) {
 				"@/*",
 			],
 		},
+		"next:workers": {
+			argv: ["--platform", "workers"],
+			timeout: LONG_TIMEOUT,
+			testCommitMessage: true,
+			flags: [
+				"--ts",
+				"--tailwind",
+				"--eslint",
+				"--app",
+				"--turbopack",
+				"--import-alias",
+				"@/*",
+				"--src-dir",
+			],
+			verifyBuildCfTypes: {
+				outputFile: "cloudflare-env.d.ts",
+				envInterfaceName: "CloudflareEnv",
+			},
+			verifyPreview: {
+				previewArgs: ["--"],
+				route: "/test",
+				expectedText: "Create Next App",
+			},
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Create Next App",
+			},
+			// see https://github.com/cloudflare/next-on-pages/blob/main/packages/next-on-pages/docs/supported.md#operating-systems
+			unsupportedOSs: ["win32"],
+			unsupportedPms: [
+				// bun and yarn are failing in CI
+				"bun",
+				"yarn",
+			],
+		},
 		"nuxt:pages": {
+			promptHandlers: [
+				{
+					matcher: /Would you like to install any of the official modules\?/,
+					input: [keys.enter],
+				},
+			],
 			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
@@ -420,6 +463,12 @@ export default function getFrameworkTestConfig(pm: string) {
 			},
 		},
 		"nuxt:workers": {
+			promptHandlers: [
+				{
+					matcher: /Would you like to install any of the official modules\?/,
+					input: [keys.enter],
+				},
+			],
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,

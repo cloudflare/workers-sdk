@@ -625,16 +625,17 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should create a hyperdrive with mtls config", async () => {
+	it("should successfully create a hyperdrive with mtls config and sslmode=verify-full", async () => {
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
-			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --ca-certificate-uuid=12345 --mtls-certificate-uuid=1234"
+			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --ca-certificate-id=12345 --mtls-certificate-id=1234 --sslmode=verify-full"
 		);
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
 			Object {
 			  "mtls": Object {
-			    "ca_certificate_uuid": "12345",
-			    "mtls_certificate_uuid": "1234",
+			    "ca_certificate_id": "12345",
+			    "mtls_certificate_id": "1234",
+			    "sslmode": "verify-full",
 			  },
 			  "name": "test123",
 			  "origin": Object {
@@ -663,20 +664,112 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
+	it("should successfully create a hyperdrive with mtls config and sslmode=require", async () => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --mtls-certificate-id=1234 --sslmode=require"
+		);
+		await expect(reqProm).resolves.toMatchInlineSnapshot(`
+			Object {
+			  "mtls": Object {
+			    "mtls_certificate_id": "1234",
+			    "sslmode": "require",
+			  },
+			  "name": "test123",
+			  "origin": Object {
+			    "database": "neondb",
+			    "host": "example.com",
+			    "password": "password",
+			    "port": 1234,
+			    "scheme": "postgresql",
+			    "user": "test",
+			  },
+			}
+		`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"🚧 Creating 'test123'
+			✅ Created new Hyperdrive PostgreSQL config: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+			📋 To start using your config from a Worker, add the following binding configuration to your Wrangler configuration file:
+
+			{
+			  \\"hyperdrive\\": [
+			    {
+			      \\"binding\\": \\"HYPERDRIVE\\",
+			      \\"id\\": \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
+			    }
+			  ]
+			}"
+		`);
+	});
+
+	it("should error on create hyperdrive with mtls config sslmode=require and CA flag set", async () => {
+		await expect(() =>
+			runWrangler(
+				"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --ca-certificate-id=1234 --sslmode=require"
+			)
+		).rejects.toThrow();
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA not allowed when sslmode = 'require' is set[0m
+
+			"
+		`);
+	});
+
+	it("should error on create hyperdrive with mtls config sslmode=verify-ca missing CA", async () => {
+		await expect(() =>
+			runWrangler(
+				"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --mtls-certificate-id=1234 --sslmode=verify-ca"
+			)
+		).rejects.toThrow();
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA required when sslmode = 'verify-ca' or 'verify-full' is set[0m
+
+			"
+		`);
+	});
+
+	it("should error on create hyperdrive with mtls config sslmode=verify-full missing CA", async () => {
+		await expect(() =>
+			runWrangler(
+				"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --mtls-certificate-id=1234 --sslmode=verify-full"
+			)
+		).rejects.toThrow();
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCA required when sslmode = 'verify-ca' or 'verify-full' is set[0m
+
+			"
+		`);
+	});
+
+	it("should error on create hyperdrive with mtls config sslmode=random", async () => {
+		await expect(() =>
+			runWrangler(
+				"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --mtls-certificate-id=1234 --sslmode=random"
+			)
+		).rejects.toThrow();
+		expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid values:[0m
+
+			    Argument: sslmode, Given: \\"random\\", Choices: \\"require\\", \\"verify-ca\\", \\"verify-full\\"
+
+			"
+		`);
+	});
+
 	it("should handle listing configs", async () => {
 		mockHyperdriveGetListOrDelete();
 		await runWrangler("hyperdrive list");
 		expect(std.out).toMatchInlineSnapshot(`
 			"📋 Listing Hyperdrive configs
-			┌──────────────────────────────────────┬─────────────┬─────────┬────────────────┬──────┬────────────┬───────────┬───────────────────┬───────────────────────────────────────────────────────────────┐
-			│ id                                   │ name        │ user    │ host           │ port │ scheme     │ database  │ caching           │ mtls                                                          │
-			├──────────────────────────────────────┼─────────────┼─────────┼────────────────┼──────┼────────────┼───────────┼───────────────────┼───────────────────────────────────────────────────────────────┤
-			│ xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx │ test123     │ test    │ example.com    │ 5432 │ PostgreSQL │ neondb    │                   │                                                               │
-			├──────────────────────────────────────┼─────────────┼─────────┼────────────────┼──────┼────────────┼───────────┼───────────────────┼───────────────────────────────────────────────────────────────┤
-			│ yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy │ new-db      │ dbuser  │ www.google.com │ 3211 │ PostgreSQL │ mydb      │ {\\"disabled\\":true} │                                                               │
-			├──────────────────────────────────────┼─────────────┼─────────┼────────────────┼──────┼────────────┼───────────┼───────────────────┼───────────────────────────────────────────────────────────────┤
-			│ zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz │ new-db-mtls │ pg-mtls │ www.mtls.com   │ 3212 │            │ mydb-mtls │                   │ {\\"ca_certificate_uuid\\":\\"1234\\",\\"mtls_certificate_uuid\\":\\"1234\\"} │
-			└──────────────────────────────────────┴─────────────┴─────────┴────────────────┴──────┴────────────┴───────────┴───────────────────┴───────────────────────────────────────────────────────────────┘"
+			┌──────────────────────────────────────┬─────────────┬─────────┬────────────────┬──────┬────────────┬───────────┬──────────┬───────────────────────────────────────────────────────────────────────────────────┐
+			│ id                                   │ name        │ user    │ host           │ port │ scheme     │ database  │ caching  │ mtls                                                                              │
+			├──────────────────────────────────────┼─────────────┼─────────┼────────────────┼──────┼────────────┼───────────┼──────────┼───────────────────────────────────────────────────────────────────────────────────┤
+			│ xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx │ test123     │ test    │ example.com    │ 5432 │ PostgreSQL │ neondb    │ enabled  │                                                                                   │
+			├──────────────────────────────────────┼─────────────┼─────────┼────────────────┼──────┼────────────┼───────────┼──────────┼───────────────────────────────────────────────────────────────────────────────────┤
+			│ yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy │ new-db      │ dbuser  │ www.google.com │ 3211 │ PostgreSQL │ mydb      │ disabled │                                                                                   │
+			├──────────────────────────────────────┼─────────────┼─────────┼────────────────┼──────┼────────────┼───────────┼──────────┼───────────────────────────────────────────────────────────────────────────────────┤
+			│ zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz │ new-db-mtls │ pg-mtls │ www.mtls.com   │ 3212 │            │ mydb-mtls │ enabled  │ {\\"ca_certificate_id\\":\\"1234\\",\\"mtls_certificate_id\\":\\"1234\\",\\"sslmode\\":\\"verify-full\\"} │
+			└──────────────────────────────────────┴─────────────┴─────────┴────────────────┴──────┴────────────┴───────────┴──────────┴───────────────────────────────────────────────────────────────────────────────────┘"
 		`);
 	});
 
@@ -985,13 +1078,14 @@ describe("hyperdrive commands", () => {
 	it("should handle updating a hyperdrive config's mtls configuration", async () => {
 		const reqProm = mockHyperdriveUpdate();
 		await runWrangler(
-			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --ca-certificate-uuid=2345 --mtls-certificate-uuid=234"
+			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --ca-certificate-id=2345 --mtls-certificate-id=234 --sslmode=verify-full"
 		);
 		await expect(reqProm).resolves.toMatchInlineSnapshot(`
 			Object {
 			  "mtls": Object {
-			    "ca_certificate_uuid": "2345",
-			    "mtls_certificate_uuid": "234",
+			    "ca_certificate_id": "2345",
+			    "mtls_certificate_id": "234",
+			    "sslmode": "verify-full",
 			  },
 			}
 		`);
@@ -1009,8 +1103,9 @@ describe("hyperdrive commands", () => {
 			    \\"user\\": \\"test\\"
 			  },
 			  \\"mtls\\": {
-			    \\"ca_certificate_uuid\\": \\"2345\\",
-			    \\"mtls_certificate_uuid\\": \\"234\\"
+			    \\"ca_certificate_id\\": \\"2345\\",
+			    \\"mtls_certificate_id\\": \\"234\\",
+			    \\"sslmode\\": \\"verify-full\\"
 			  }
 			}"
 		`);
@@ -1078,8 +1173,9 @@ function mockHyperdriveGetListOrDelete() {
 									scheme: "pg-mtls",
 								},
 								mtls: {
-									ca_certificate_uuid: "1234",
-									mtls_certificate_uuid: "1234",
+									ca_certificate_id: "1234",
+									mtls_certificate_id: "1234",
+									sslmode: "verify-full",
 								},
 							},
 						],
@@ -1131,8 +1227,8 @@ function mockHyperdriveUpdate(): Promise<PatchHyperdriveBody> {
 					}
 					const mtls = defaultConfig.mtls;
 					if (mtls && reqBody.mtls) {
-						mtls.ca_certificate_uuid = reqBody.mtls.ca_certificate_uuid;
-						mtls.mtls_certificate_uuid = reqBody.mtls.mtls_certificate_uuid;
+						mtls.ca_certificate_id = reqBody.mtls.ca_certificate_id;
+						mtls.mtls_certificate_id = reqBody.mtls.mtls_certificate_id;
 					}
 
 					return HttpResponse.json(

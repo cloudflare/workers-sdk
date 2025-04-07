@@ -184,7 +184,7 @@ beforeEach(async () => {
 	await page.goto(viteTestUrl);
 });
 
-async function loadConfig(configEnv: ConfigEnv) {
+export async function loadConfig(configEnv: ConfigEnv) {
 	let config: UserConfig | null = null;
 	let cacheDir = "node_modules/.vite";
 

@@ -1,4 +1,5 @@
 import * as path from "node:path";
+import getPort, { portNumbers } from "get-port";
 import { Request as MiniflareRequest } from "miniflare";
 import * as vite from "vite";
 import { ROUTER_WORKER_NAME } from "./constants";
@@ -22,6 +23,11 @@ export function getRouterWorker(miniflare: Miniflare) {
 }
 
 export function toMiniflareRequest(request: Request): MiniflareRequest {
+	// We set the X-Forwarded-Host header to the original host as the `Host` header inside a Worker will contain the workerd host
+	const host = request.headers.get("Host");
+	if (host) {
+		request.headers.set("X-Forwarded-Host", host);
+	}
 	// Undici sets the `Sec-Fetch-Mode` header to `cors` so we capture it in a custom header to be converted back later.
 	const secFetchMode = request.headers.get("Sec-Fetch-Mode");
 	if (secFetchMode) {
@@ -61,3 +67,9 @@ export function cleanUrl(url: string): string {
 export type Optional<T, K extends keyof T> = Omit<T, K> & Pick<Partial<T>, K>;
 
 export type MaybePromise<T> = Promise<T> | T;
+
+export type Defined<T> = Exclude<T, undefined>;
+
+export function getFirstAvailablePort(start: number) {
+	return getPort({ port: portNumbers(start, 65535) });
+}

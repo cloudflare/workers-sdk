@@ -1,0 +1,5 @@
+{
+	"name": "my-worker",
+	"main": "./non-existing/index.ts",
+	"compatibility_date": "2024-12-30",
+}

@@ -206,6 +206,21 @@ function isDurableObjectDesignatorToSelf(
 	);
 }
 
+function isWorkflowDesignatorToSelf(
+	value: unknown,
+	currentScriptName: string | undefined
+): value is { className: string } {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"className" in value &&
+		typeof value.className === "string" &&
+		(!("scriptName" in value) ||
+			value.scriptName === undefined ||
+			value.scriptName === currentScriptName)
+	);
+}
+
 interface DurableObjectDesignator {
 	className: string;
 	scriptName?: string;
@@ -313,6 +328,31 @@ function fixupDurableObjectBindingsToSelf(
 	return result;
 }
 
+function fixupWorkflowBindingsToSelf(
+	worker: SourcelessWorkerOptions
+): Set<string> {
+	// TODO(someday): may need to extend this to take into account other workers
+	//  if doing multi-worker tests across workspace projects
+	// TODO(someday): may want to validate class names are valid identifiers?
+	const result = new Set<string>();
+	if (worker.workflows === undefined) {
+		return result;
+	}
+	for (const key of Object.keys(worker.workflows)) {
+		const designator = worker.workflows[key];
+		// `designator` hasn't been validated at this point
+		if (isWorkflowDesignatorToSelf(designator, worker.name)) {
+			result.add(designator.className);
+			// Shallow clone to avoid mutating config
+			worker.workflows[key] = {
+				...designator,
+				className: USER_OBJECT_MODULE_NAME + designator.className,
+			};
+		}
+	}
+	return result;
+}
+
 type ProjectWorkers = [
 	runnerWorker: WorkerOptions,
 	...auxiliaryWorkers: WorkerOptions[],
@@ -372,11 +412,8 @@ function buildProjectWorkerOptions(
 		runnerWorker.compatibilityFlags
 	);
 
-	if (mode !== "v1" && mode !== "v2") {
-		runnerWorker.compatibilityFlags.push(
-			"nodejs_compat",
-			"no_nodejs_compat_v2"
-		);
+	if (mode !== "v2") {
+		runnerWorker.compatibilityFlags.push("nodejs_compat_v2");
 	}
 
 	// Required for `workerd:unsafe` module. We don't require this flag to be set
@@ -404,9 +441,23 @@ function buildProjectWorkerOptions(
 	const durableObjectClassNames = Array.from(
 		fixupDurableObjectBindingsToSelf(runnerWorker)
 	).sort();
+	const workflowClassNames = Array.from(
+		fixupWorkflowBindingsToSelf(runnerWorker)
+	).sort();
+
+	if (
+		workflowClassNames.length !== 0 &&
+		project.options.isolatedStorage === true
+	) {
+		throw new Error(`Project ${project.relativePath} has Workflows defined and \`isolatedStorage\` set to true.
+Please set \`isolatedStorage\` to false in order to run projects with Workflows.
+Workflows defined in project: ${workflowClassNames.join(", ")}`);
+	}
+
 	const wrappers = [
-		'import { createWorkerEntrypointWrapper, createDurableObjectWrapper } from "cloudflare:test-internal";',
+		'import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from "cloudflare:test-internal";',
 	];
+
 	for (const entrypointName of serviceBindingEntrypointNames) {
 		const quotedEntrypointName = JSON.stringify(entrypointName);
 		const wrapper = `export const ${USER_OBJECT_MODULE_NAME}${entrypointName} = createWorkerEntrypointWrapper(${quotedEntrypointName});`;
@@ -415,6 +466,12 @@ function buildProjectWorkerOptions(
 	for (const className of durableObjectClassNames) {
 		const quotedClassName = JSON.stringify(className);
 		const wrapper = `export const ${USER_OBJECT_MODULE_NAME}${className} = createDurableObjectWrapper(${quotedClassName});`;
+		wrappers.push(wrapper);
+	}
+
+	for (const className of workflowClassNames) {
+		const quotedClassName = JSON.stringify(className);
+		const wrapper = `export const ${USER_OBJECT_MODULE_NAME}${className} = createWorkflowEntrypointWrapper(${quotedClassName});`;
 		wrappers.push(wrapper);
 	}
 

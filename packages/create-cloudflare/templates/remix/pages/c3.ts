@@ -47,6 +47,7 @@ const config: TemplateConfig = {
 	id: "remix",
 	frameworkCli: "create-remix",
 	platform: "pages",
+	hidden: true,
 	displayName: "Remix",
 	copyFiles: {
 		path: "./templates",

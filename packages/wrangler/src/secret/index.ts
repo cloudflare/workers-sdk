@@ -515,9 +515,8 @@ export const secretBulkCommand = createCommand({
 			logger.log(`✨ ${upsertBindings.length} secrets successfully uploaded`);
 		} catch (err) {
 			logger.log("");
-			logger.log("Finished processing secrets JSON file:");
-			logger.log(`✨ 0 secrets successfully uploaded`);
-			throw new Error(`🚨 ${upsertBindings.length} secrets failed to upload`);
+			logger.log(`🚨 Secrets failed to upload`);
+			throw err;
 		}
 	},
 });

@@ -157,6 +157,7 @@ describe("r2", () => {
 				  wrangler r2 bucket info <bucket>    Get information about an R2 bucket
 				  wrangler r2 bucket delete <bucket>  Delete an R2 bucket
 				  wrangler r2 bucket sippy            Manage Sippy incremental migration on an R2 bucket
+				  wrangler r2 bucket catalog          Manage the data catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark and PyIceberg [open-beta]
 				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
 				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
 				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
@@ -197,6 +198,7 @@ describe("r2", () => {
 				  wrangler r2 bucket info <bucket>    Get information about an R2 bucket
 				  wrangler r2 bucket delete <bucket>  Delete an R2 bucket
 				  wrangler r2 bucket sippy            Manage Sippy incremental migration on an R2 bucket
+				  wrangler r2 bucket catalog          Manage the data catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark and PyIceberg [open-beta]
 				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
 				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
 				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
@@ -926,6 +928,288 @@ describe("r2", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`"Sippy configuration: https://storage.googleapis.com/storage/v1/b/testBucket"`
 				);
+			});
+		});
+
+		describe("catalog", () => {
+			it("should show the correct help when an invalid command is passed", async () => {
+				await expect(() =>
+					runWrangler("r2 bucket catalog foo")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Unknown argument: foo]`
+				);
+				expect(std.err).toMatchInlineSnapshot(`
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
+
+			"
+		`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					wrangler r2 bucket catalog
+
+					Manage the data catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark and PyIceberg [open-beta]
+
+					COMMANDS
+					  wrangler r2 bucket catalog enable <bucket>   Enable the data catalog on an R2 bucket [open-beta]
+					  wrangler r2 bucket catalog disable <bucket>  Disable the data catalog for an R2 bucket [open-beta]
+					  wrangler r2 bucket catalog get <bucket>      Get the status of the data catalog for an R2 bucket [open-beta]
+
+					GLOBAL FLAGS
+					  -c, --config   Path to Wrangler configuration file  [string]
+					      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+					  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+					  -h, --help     Show help  [boolean]
+					  -v, --version  Show version number  [boolean]"
+				`);
+			});
+
+			describe("enable", () => {
+				it("should enable R2 catalog for the given bucket", async () => {
+					msw.use(
+						http.post(
+							"*/accounts/some-account-id/r2-catalog/testBucket/enable",
+							async () => {
+								return HttpResponse.json(
+									createFetchResult(
+										{
+											id: "test-warehouse-id",
+											name: "test-account-id_test-warehouse-name",
+										},
+										true
+									)
+								);
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler("r2 bucket catalog enable testBucket");
+					expect(std.out).toMatchInlineSnapshot(
+						`"✨ Successfully enabled data catalog on bucket 'testBucket'.
+
+Catalog URI: 'https://catalog.cloudflarestorage.com/test-account-id/test-warehouse-name'
+Warehouse: 'test-account-id_test-warehouse-name'
+
+Use this Catalog URI with Iceberg-compatible query engines (Spark, PyIceberg etc.) to query data as tables.
+Note: You will need a Cloudflare API token with 'R2 Data Catalog' permission to authenticate your client with this catalog.
+For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"`
+					);
+				});
+
+				it("should error if no bucket name is given", async () => {
+					await expect(
+						runWrangler("r2 bucket catalog enable")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: Not enough non-option arguments: got 0, need at least 1]`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						wrangler r2 bucket catalog enable <bucket>
+
+						Enable the data catalog on an R2 bucket [open-beta]
+
+						POSITIONALS
+						  bucket  The name of the bucket to enable  [string] [required]
+
+						GLOBAL FLAGS
+						  -c, --config   Path to Wrangler configuration file  [string]
+						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						  -h, --help     Show help  [boolean]
+						  -v, --version  Show version number  [boolean]"
+					`);
+					expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+				"
+			`);
+				});
+			});
+
+			describe("disable", () => {
+				const { setIsTTY } = useMockIsTTY();
+				it("should error if no bucket name is given", async () => {
+					await expect(
+						runWrangler("r2 bucket catalog disable")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: Not enough non-option arguments: got 0, need at least 1]`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						wrangler r2 bucket catalog disable <bucket>
+
+						Disable the data catalog for an R2 bucket [open-beta]
+
+						POSITIONALS
+						  bucket  The name of the bucket to disable the data catalog for  [string] [required]
+
+						GLOBAL FLAGS
+						  -c, --config   Path to Wrangler configuration file  [string]
+						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						  -h, --help     Show help  [boolean]
+						  -v, --version  Show version number  [boolean]"
+					`);
+					expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+				"
+			`);
+				});
+
+				it("should disable R2 catalog for the given bucket", async () => {
+					setIsTTY(true);
+					mockConfirm({
+						text: "Are you sure you want to disable the data catalog for bucket 'testBucket'?",
+						result: true,
+					});
+					msw.use(
+						http.post(
+							"*/accounts/some-account-id/r2-catalog/testBucket/disable",
+							async () => {
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler("r2 bucket catalog disable testBucket");
+					expect(std.out).toMatchInlineSnapshot(
+						`"Successfully disabled the data catalog on bucket 'testBucket'."`
+					);
+				});
+
+				it("should inform user if the catalog was never enabled for the bucket", async () => {
+					setIsTTY(true);
+					mockConfirm({
+						text: "Are you sure you want to disable the data catalog for bucket 'testBucket'?",
+						result: true,
+					});
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/r2-catalog/:bucketName/disable",
+							async ({ request, params }) => {
+								const { accountId } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(await request.text()).toEqual("");
+								return HttpResponse.json(
+									{
+										success: false,
+										errors: [
+											{
+												code: 40401,
+												message: "Warehouse not found",
+											},
+										],
+										result: null,
+									},
+									{ status: 404 }
+								);
+							},
+							{ once: true }
+						)
+					);
+
+					await runWrangler("r2 bucket catalog disable testBucket");
+					expect(std.out).toMatchInlineSnapshot(`
+						"Data catalog is not enabled for bucket 'testBucket'. Please use 'wrangler r2 bucket catalog enable testBucket' to first enable the data catalog on this bucket."
+					`);
+				});
+			});
+
+			describe("get", () => {
+				it("should error if no bucket name is given", async () => {
+					await expect(
+						runWrangler("r2 bucket catalog get")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: Not enough non-option arguments: got 0, need at least 1]`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						wrangler r2 bucket catalog get <bucket>
+
+						Get the status of the data catalog for an R2 bucket [open-beta]
+
+						POSITIONALS
+						  bucket  The name of the R2 bucket whose data catalog status to retrieve  [string] [required]
+
+						GLOBAL FLAGS
+						  -c, --config   Path to Wrangler configuration file  [string]
+						      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						  -h, --help     Show help  [boolean]
+						  -v, --version  Show version number  [boolean]"
+					`);
+					expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+				"
+			`);
+				});
+
+				it("should get the catalog status for the given bucket", async () => {
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2-catalog/:bucketName",
+							async ({ request, params }) => {
+								const { accountId } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(await request.text()).toEqual("");
+								return HttpResponse.json(
+									createFetchResult(
+										{
+											id: "test-id",
+											name: "test-account-id_test-name",
+											bucket: "test-bucket",
+											status: "active",
+										},
+										true
+									)
+								);
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler("r2 bucket catalog get test-bucket");
+					expect(std.out).toMatchInlineSnapshot(`
+					"Getting data catalog status for 'test-bucket'...
+
+					Catalog URI:  https://catalog.cloudflarestorage.com/test-account-id/test-name
+					Warehouse:    test-account-id_test-name
+					Status:       active"
+				`);
+				});
+
+				it("should inform user if the catalog was never enabled for the bucket", async () => {
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2-catalog/:bucketName",
+							async ({ request, params }) => {
+								const { accountId } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(await request.text()).toEqual("");
+								return HttpResponse.json(
+									{
+										success: false,
+										errors: [
+											{
+												code: 40401,
+												message: "Warehouse not found",
+											},
+										],
+										result: null,
+									},
+									{ status: 404 }
+								);
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler("r2 bucket catalog get test-bucket");
+					expect(std.out).toMatchInlineSnapshot(`
+					"Getting data catalog status for 'test-bucket'...
+
+					Data catalog is not enabled for bucket 'test-bucket'. Please use 'wrangler r2 bucket catalog enable test-bucket' to first enable the data catalog on this bucket."
+				`);
+				});
 			});
 		});
 
@@ -2935,9 +3219,10 @@ describe("r2", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
-			Download complete."
-		`);
+					"Resource location: remote
+					Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
+					Download complete."
+				`);
 			});
 
 			it("should download R2 object from bucket into directory", async () => {
@@ -2956,9 +3241,10 @@ describe("r2", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
-			Upload complete."
-		`);
+					"Resource location: remote
+					Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
+					Upload complete."
+				`);
 			});
 
 			it("should upload R2 object with storage class to bucket", async () => {
@@ -2968,9 +3254,10 @@ describe("r2", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"Creating object \\"wormhole-img.png\\" with InfrequentAccess storage class in bucket \\"bucketName-object-test\\".
-			Upload complete."
-		`);
+					"Resource location: remote
+					Creating object \\"wormhole-img.png\\" with InfrequentAccess storage class in bucket \\"bucketName-object-test\\".
+					Upload complete."
+				`);
 			});
 
 			it("should fail to upload R2 object to bucket if too large", async () => {
@@ -3032,9 +3319,10 @@ describe("r2", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
-			Upload complete."
-		`);
+					"Resource location: remote
+					Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
+					Upload complete."
+				`);
 			});
 
 			it("should delete R2 object from bucket", async () => {
@@ -3043,9 +3331,10 @@ describe("r2", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-			"Deleting object \\"wormhole-img.png\\" from bucket \\"bucketName-object-test\\".
-			Delete complete."
-		`);
+					"Resource location: remote
+					Deleting object \\"wormhole-img.png\\" from bucket \\"bucketName-object-test\\".
+					Delete complete."
+				`);
 			});
 
 			it("should not allow `--pipe` & `--file` to run together", async () => {

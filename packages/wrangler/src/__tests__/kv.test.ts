@@ -361,7 +361,8 @@ describe("wrangler", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
-					"Deleting KV namespace env-bound-id.
+					"Resource location: remote
+					Deleting KV namespace env-bound-id.
 					Deleted KV namespace env-bound-id."
 				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -443,7 +444,10 @@ describe("wrangler", () => {
 
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
-					`"Writing the value \\"my-value\\" to key \\"my-key\\" on namespace some-namespace-id."`
+					`
+					"Resource location: remote
+					Writing the value \\"my-value\\" to key \\"my-key\\" on namespace some-namespace-id."
+				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -460,7 +464,10 @@ describe("wrangler", () => {
 
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
-					`"Writing the value \\"my-value\\" to key \\"/my-key\\" on namespace DS9."`
+					`
+					"Resource location: remote
+					Writing the value \\"my-value\\" to key \\"/my-key\\" on namespace DS9."
+				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -476,7 +483,10 @@ describe("wrangler", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(
-					`"Writing the value \\"my-value\\" to key \\"my-key\\" on namespace bound-id."`
+					`
+					"Resource location: remote
+					Writing the value \\"my-value\\" to key \\"my-key\\" on namespace bound-id."
+				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(requests.count).toEqual(1);
@@ -494,7 +504,10 @@ describe("wrangler", () => {
 				);
 
 				expect(std.out).toMatchInlineSnapshot(
-					`"Writing the value \\"my-value\\" to key \\"my-key\\" on namespace preview-bound-id."`
+					`
+					"Resource location: remote
+					Writing the value \\"my-value\\" to key \\"my-key\\" on namespace preview-bound-id."
+				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(requests.count).toEqual(1);
@@ -512,7 +525,10 @@ describe("wrangler", () => {
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
-					`"Writing the value \\"my-value\\" to key \\"my-key\\" on namespace some-namespace-id."`
+					`
+					"Resource location: remote
+					Writing the value \\"my-value\\" to key \\"my-key\\" on namespace some-namespace-id."
+				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -527,7 +543,10 @@ describe("wrangler", () => {
 					"kv key put --remote my-key my-value --binding someBinding --env some-environment --preview false"
 				);
 				expect(std.out).toMatchInlineSnapshot(
-					`"Writing the value \\"my-value\\" to key \\"my-key\\" on namespace env-bound-id."`
+					`
+					"Resource location: remote
+					Writing the value \\"my-value\\" to key \\"my-key\\" on namespace env-bound-id."
+				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(requests.count).toEqual(1);
@@ -544,7 +563,10 @@ describe("wrangler", () => {
 					"kv key put --remote my-key --namespace-id some-namespace-id --path foo.txt"
 				);
 				expect(std.out).toMatchInlineSnapshot(
-					`"Writing the contents of foo.txt to the key \\"my-key\\" on namespace some-namespace-id."`
+					`
+					"Resource location: remote
+					Writing the contents of foo.txt to the key \\"my-key\\" on namespace some-namespace-id."
+				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(requests.count).toEqual(1);
@@ -564,7 +586,10 @@ describe("wrangler", () => {
 					"kv key put --remote my-key --namespace-id another-namespace-id --path test.png"
 				);
 				expect(std.out).toMatchInlineSnapshot(
-					`"Writing the contents of test.png to the key \\"my-key\\" on namespace another-namespace-id."`
+					`
+					"Resource location: remote
+					Writing the contents of test.png to the key \\"my-key\\" on namespace another-namespace-id."
+				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(requests.count).toEqual(1);
@@ -583,7 +608,10 @@ describe("wrangler", () => {
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
-					`"Writing the value \\"dVal\\" to key \\"dKey\\" on namespace some-namespace-id with metadata \\"{\\"mKey\\":\\"mValue\\"}\\"."`
+					`
+					"Resource location: remote
+					Writing the value \\"dVal\\" to key \\"dKey\\" on namespace some-namespace-id with metadata \\"{\\"mKey\\":\\"mValue\\"}\\"."
+				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -606,7 +634,10 @@ describe("wrangler", () => {
 				);
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
-					`"Writing the contents of test.png to the key \\"another-my-key\\" on namespace some-namespace-id with metadata \\"{\\"mKey\\":\\"mValue\\"}\\"."`
+					`
+					"Resource location: remote
+					Writing the contents of test.png to the key \\"another-my-key\\" on namespace some-namespace-id with metadata \\"{\\"mKey\\":\\"mValue\\"}\\"."
+				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -881,7 +912,10 @@ describe("wrangler", () => {
 					`[Error: A namespace with binding name "otherBinding" was not found in the configured "kv_namespaces".]`
 				);
 
-				expect(std.out).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Resource location: remote
+					"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA namespace with binding name \\"otherBinding\\" was not found in the configured \\"kv_namespaces\\".[0m
 
@@ -902,7 +936,10 @@ describe("wrangler", () => {
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: someBinding has both a namespace ID and a preview ID. Specify "--preview" or "--preview false" to avoid writing data to the wrong namespace.]`
 				);
-				expect(std.out).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Resource location: remote
+					"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1msomeBinding has both a namespace ID and a preview ID. Specify \\"--preview\\" or \\"--preview false\\" to avoid writing data to the wrong namespace.[0m
 
@@ -1469,7 +1506,10 @@ describe("wrangler", () => {
 
 				expect(requests.count).toEqual(1);
 				expect(std.out).toMatchInlineSnapshot(
-					`"Deleting the key \\"/NCC-74656\\" on namespace voyager."`
+					`
+					"Resource location: remote
+					Deleting the key \\"/NCC-74656\\" on namespace voyager."
+				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -1514,7 +1554,10 @@ describe("wrangler", () => {
 					`kv key delete --remote --binding someBinding --env some-environment --preview false someKey`
 				);
 				expect(std.out).toMatchInlineSnapshot(
-					`"Deleting the key \\"someKey\\" on namespace env-bound-id."`
+					`
+					"Resource location: remote
+					Deleting the key \\"someKey\\" on namespace env-bound-id."
+				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(requests.count).toEqual(1);
@@ -1573,7 +1616,10 @@ describe("wrangler", () => {
 					`kv bulk put --remote --namespace-id some-namespace-id keys.json`
 				);
 				expect(requests.count).toEqual(1);
-				expect(std.out).toMatchInlineSnapshot(`"Success!"`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Resource location: remote
+					Success!"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -1590,7 +1636,8 @@ describe("wrangler", () => {
 				);
 				expect(requests.count).toEqual(12);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Uploaded 0% (0 out of 12,000)
+					"Resource location: remote
+					Uploaded 0% (0 out of 12,000)
 					Uploaded 8% (1,000 out of 12,000)
 					Uploaded 16% (2,000 out of 12,000)
 					Uploaded 25% (3,000 out of 12,000)
@@ -1620,7 +1667,10 @@ describe("wrangler", () => {
 					[Error: Unexpected JSON input from "keys.json".
 					Expected an array of key-value objects but got type "object".]
 				`);
-				expect(std.out).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Resource location: remote
+					"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
@@ -1681,7 +1731,10 @@ describe("wrangler", () => {
 					The item at index 12 is {"key":"someKey1","value":"someValue1","base64":"string"}]
 				`);
 
-				expect(std.out).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Resource location: remote
+					"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`
 			          "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUnexpected key-value properties in \\"keys.json\\".[0m
 
@@ -1735,7 +1788,10 @@ describe("wrangler", () => {
 					`kv bulk delete --remote --namespace-id some-namespace-id keys.json`
 				);
 				expect(requests.count).toEqual(1);
-				expect(std.out).toMatchInlineSnapshot(`"Success!"`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Resource location: remote
+					Success!"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -1755,7 +1811,10 @@ describe("wrangler", () => {
 					`kv bulk delete --remote --namespace-id some-namespace-id keys.json`
 				);
 				expect(requests.count).toEqual(1);
-				expect(std.out).toMatchInlineSnapshot(`"Success!"`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Resource location: remote
+					Success!"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -1773,7 +1832,8 @@ describe("wrangler", () => {
 				);
 				expect(requests.count).toEqual(12);
 				expect(std.out).toMatchInlineSnapshot(`
-					"Deleted 0% (0 out of 12,000)
+					"Resource location: remote
+					Deleted 0% (0 out of 12,000)
 					Deleted 8% (1,000 out of 12,000)
 					Deleted 16% (2,000 out of 12,000)
 					Deleted 25% (3,000 out of 12,000)
@@ -1803,7 +1863,10 @@ describe("wrangler", () => {
 					`kv bulk delete --remote --namespace-id some-namespace-id keys.json`
 				);
 				expect(std.out).toMatchInlineSnapshot(
-					`"Not deleting keys read from \\"keys.json\\"."`
+					`
+					"Resource location: remote
+					Not deleting keys read from \\"keys.json\\"."
+				`
 				);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1817,7 +1880,10 @@ describe("wrangler", () => {
 					`kv bulk delete --remote --namespace-id some-namespace-id keys.json --force`
 				);
 				expect(requests.count).toEqual(1);
-				expect(std.out).toMatchInlineSnapshot(`"Success!"`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Resource location: remote
+					Success!"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -1830,7 +1896,10 @@ describe("wrangler", () => {
 					`kv bulk delete --remote --namespace-id some-namespace-id keys.json -f`
 				);
 				expect(requests.count).toEqual(1);
-				expect(std.out).toMatchInlineSnapshot(`"Success!"`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Resource location: remote
+					Success!"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
@@ -1851,7 +1920,10 @@ describe("wrangler", () => {
 					Expected an array of strings but got:
 					12354]
 				`);
-				expect(std.out).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Resource location: remote
+					"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
@@ -1873,7 +1945,10 @@ describe("wrangler", () => {
 					The item at index 2 is type: "object" - {"key":"someKey"}
 					The item at index 3 is type: "object" - null]
 				`);
-				expect(std.out).toMatchInlineSnapshot(`""`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"Resource location: remote
+					"
+				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 		});

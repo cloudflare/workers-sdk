@@ -1,5 +1,36 @@
 # miniflare
 
+## 4.20250404.0
+
+### Patch Changes
+
+- [#8712](https://github.com/cloudflare/workers-sdk/pull/8712) [`e0efb6f`](https://github.com/cloudflare/workers-sdk/commit/e0efb6f17e0c76aa504711b6ca25c025ee1d21e5) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250321.0  | 1.20250404.0  |
+  | @cloudflare/workers-types | ^4.20250321.0 | ^4.20250404.0 |
+
+- [#8747](https://github.com/cloudflare/workers-sdk/pull/8747) [`0a401d0`](https://github.com/cloudflare/workers-sdk/commit/0a401d07714dc4e383060a0bbf71843c13d13281) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure that `miniflare#setOptions` allows the update of inspector ports
+
+## 4.20250321.2
+
+### Patch Changes
+
+- [#8449](https://github.com/cloudflare/workers-sdk/pull/8449) [`007f322`](https://github.com/cloudflare/workers-sdk/commit/007f322f66dc1edc70840330166732d25dae9cb3) Thanks [@harryzcy](https://github.com/harryzcy)! - update youch dependency to avoid vulnerable version of cookie
+
+## 4.20250321.1
+
+### Minor Changes
+
+- [#8623](https://github.com/cloudflare/workers-sdk/pull/8623) [`cad99dc`](https://github.com/cloudflare/workers-sdk/commit/cad99dc78d76e35f846e85ac328effff8ba9477d) Thanks [@teresalves](https://github.com/teresalves)! - Add Miniflare Workers KV bulk get support
+
+### Patch Changes
+
+- [#8666](https://github.com/cloudflare/workers-sdk/pull/8666) [`f29f018`](https://github.com/cloudflare/workers-sdk/commit/f29f01813683ab3e42c53738be3d49a0f8cba512) Thanks [@penalosa](https://github.com/penalosa)! - Remove `NodeJSCompatModule`. This was never fully supported, and never worked for deploying Workers from Wrangler.
+
 ## 4.20250321.0
 
 ### Patch Changes

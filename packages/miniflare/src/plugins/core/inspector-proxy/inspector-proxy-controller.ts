@@ -23,17 +23,22 @@ export class InspectorProxyController {
 
 	#server: Promise<Server>;
 
-	#inspectorPort: number | Promise<number>;
+	#inspectorPort: Promise<number>;
 
 	constructor(
-		userInspectorPort: number,
+		private inspectorPortOption: number,
 		private log: Log,
 		private workerNamesToProxy: Set<string>
 	) {
-		this.#inspectorPort =
-			userInspectorPort !== 0 ? userInspectorPort : getPort();
+		this.#inspectorPort = this.#getInspectorPortToUse();
 		this.#server = this.#initializeServer();
 		this.#runtimeConnectionEstablished = new DeferredPromise();
+	}
+
+	async #getInspectorPortToUse() {
+		return this.inspectorPortOption !== 0
+			? this.inspectorPortOption
+			: await getPort();
 	}
 
 	async #initializeServer() {
@@ -55,9 +60,27 @@ export class InspectorProxyController {
 
 		this.#initializeWebSocketServer(server);
 
+		const listeningPromise = new Promise<void>((resolve) =>
+			server.once("listening", resolve)
+		);
 		server.listen(await this.#inspectorPort);
 
+		await listeningPromise;
+
 		return server;
+	}
+
+	async #restartServer() {
+		const server = await this.#server;
+		server.closeAllConnections();
+		await new Promise<void>((resolve, reject) => {
+			server.close((err) => (err ? reject(err) : resolve()));
+		});
+		const listeningPromise = new Promise<void>((resolve) =>
+			server.once("listening", resolve)
+		);
+		server.listen(await this.#inspectorPort);
+		await listeningPromise;
 	}
 
 	#initializeWebSocketServer(server: Server) {
@@ -212,7 +235,17 @@ export class InspectorProxyController {
 		return getWebsocketURL(await this.#inspectorPort);
 	}
 
-	async updateConnection(runtimeInspectorPort: number) {
+	async updateConnection(
+		inspectorPortOption: number,
+		runtimeInspectorPort: number
+	) {
+		if (this.inspectorPortOption !== inspectorPortOption) {
+			this.inspectorPortOption = inspectorPortOption;
+			this.#inspectorPort = this.#getInspectorPortToUse();
+
+			await this.#restartServer();
+		}
+
 		const workerdInspectorJson = (await fetch(
 			`http://127.0.0.1:${runtimeInspectorPort}/json`
 		).then((resp) => resp.json())) as {

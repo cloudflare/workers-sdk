@@ -1485,7 +1485,10 @@ export class Miniflare {
 		// all of `requiredSockets` as keys.
 		this.#socketPorts = maybeSocketPorts;
 
-		if (this.#maybeInspectorProxyController !== undefined) {
+		if (
+			this.#maybeInspectorProxyController !== undefined &&
+			this.#sharedOpts.core.inspectorPort !== undefined
+		) {
 			// Try to get inspector port for the workers
 			const maybePort = this.#socketPorts.get(kInspectorSocket);
 			if (maybePort === undefined) {
@@ -1494,7 +1497,10 @@ export class Miniflare {
 					"Unable to access the runtime inspector socket."
 				);
 			} else {
-				this.#maybeInspectorProxyController.updateConnection(maybePort);
+				await this.#maybeInspectorProxyController.updateConnection(
+					this.#sharedOpts.core.inspectorPort,
+					maybePort
+				);
 			}
 		}
 

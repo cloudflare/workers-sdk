@@ -9,6 +9,7 @@ import { createPipeline } from "../client";
 import {
 	authorizeR2Bucket,
 	BYTES_PER_MB,
+	formatPipelinePretty,
 	getAccountR2Endpoint,
 	parseTransform,
 } from "../index";
@@ -17,7 +18,12 @@ import type {
 	CommonYargsOptions,
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
-import type { BindingSource, HttpSource, PipelineUserConfig } from "../client";
+import type {
+	BindingSource,
+	HttpSource,
+	PipelineUserConfig,
+	Source,
+} from "../client";
 import type { Argv } from "yargs";
 
 export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
@@ -30,24 +36,14 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 			})
 			// Sources
 			.group(
-				[
-					"enable-worker-binding",
-					"enable-http",
-					"require-http-auth",
-					"cors-origins",
-				],
+				["source", "require-http-auth", "cors-origins"],
 				`${chalk.bold("Source settings")}`
 			)
-			.option("enable-worker-binding", {
-				type: "boolean",
-				describe: "Send data from a Worker to a Pipeline using a Binding",
-				default: true,
-				demandOption: false,
-			})
-			.option("enable-http", {
-				type: "boolean",
-				describe: "Generate an endpoint to ingest data via HTTP",
-				default: true,
+			.option("source", {
+				type: "array",
+				describe:
+					"Space separated list of allowed sources. Options are 'http' or 'worker'",
+				default: ["http", "worker"],
 				demandOption: false,
 			})
 			.option("require-http-auth", {
@@ -60,7 +56,7 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 			.option("cors-origins", {
 				type: "array",
 				describe:
-					"CORS origin allowlist for HTTP endpoint (use * for any origin)",
+					"CORS origin allowlist for HTTP endpoint (use * for any origin). Defaults to an empty array",
 				demandOption: false,
 				coerce: validateCorsOrigins,
 			})
@@ -72,19 +68,23 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 			)
 			.option("batch-max-mb", {
 				type: "number",
-				describe: "Maximum batch size in megabytes before flushing",
+				describe:
+					"Maximum batch size in megabytes before flushing. Defaults to 100 MB if unset. Minimum: 1, Maximum: 100",
 				demandOption: false,
 				coerce: validateInRange("batch-max-mb", 1, 100),
 			})
 			.option("batch-max-rows", {
 				type: "number",
-				describe: "Maximum number of rows per batch before flushing",
+				describe:
+					"Maximum number of rows per batch before flushing. Defaults to 10,000,000 if unset. Minimum: 100, Maximum: 10,000,000",
 				demandOption: false,
-				coerce: validateInRange("batch-max-rows", 100, 1000000),
+				coerce: validateInRange("batch-max-rows", 100, 10_000_000),
 			})
 			.option("batch-max-seconds", {
 				type: "number",
-				describe: "Maximum age of batch in seconds before flushing",
+				describe:
+					"Maximum age of batch in seconds before flushing. Defaults to 300 if unset. Minimum: 1, Maximum: 300",
+
 				demandOption: false,
 				coerce: validateInRange("batch-max-seconds", 1, 300),
 			})
@@ -96,6 +96,7 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 				describe:
 					"Pipeline transform Worker and entrypoint (<worker>.<entrypoint>)",
 				demandOption: false,
+				hidden: true, // TODO: Remove once transformations launch
 			})
 
 			// Destination options
@@ -106,8 +107,6 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 					"r2-secret-access-key",
 					"r2-prefix",
 					"compression",
-					"file-template",
-					"partition-template",
 				],
 				`${chalk.bold("Destination settings")}`
 			)
@@ -144,7 +143,8 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 			})
 			.option("r2-prefix", {
 				type: "string",
-				describe: "Prefix for storing files in the destination bucket",
+				describe:
+					"Prefix for storing files in the destination bucket. Default is no prefix",
 				default: "",
 				demandOption: false,
 			})
@@ -155,22 +155,14 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 				default: "gzip",
 				demandOption: false,
 			})
-			.option("partition-template", {
-				type: "string",
+
+			// Pipeline settings
+			.group(["shard-count"], `${chalk.bold("Pipeline settings")}`)
+			.option("shard-count", {
+				type: "number",
 				describe:
-					"Path template for partitioned files in the bucket. If not specified, the default will be used",
+					"Number of pipeline shards. More shards handle higher request volume; fewer shards produce larger output files. Defaults to 2 if unset. Minimum: 1, Maximum: 15",
 				demandOption: false,
-			})
-			.option("file-template", {
-				type: "string",
-				describe: "Template for individual file names (must include ${slug})",
-				demandOption: false,
-				coerce: (val) => {
-					if (!val.includes("${slug}")) {
-						throw new UserError("filename must contain ${slug}");
-					}
-					return val;
-				},
 			})
 	);
 }
@@ -239,26 +231,33 @@ export async function createPipelineHandler(
 		throw new FatalError("Requires a r2 secret access key");
 	}
 
-	// add binding source (default to add)
-	if (args.enableWorkerBinding) {
-		pipelineConfig.source.push({
-			type: "binding",
-			format: "json",
-		} satisfies BindingSource);
-	}
+	if (args.source.length > 0) {
+		const sourceHandlers: Record<string, () => Source> = {
+			http: (): HttpSource => {
+				const http: HttpSource = {
+					type: "http",
+					format: "json",
+					authentication: args.requireHttpAuth,
+				};
 
-	// add http source (possibly authenticated), default to add
-	if (args.enableHttp) {
-		const source: HttpSource = {
-			type: "http",
-			format: "json",
-			authentication: args.requireHttpAuth,
+				if (args.corsOrigins && args.corsOrigins.length > 0) {
+					http.cors = { origins: args.corsOrigins };
+				}
+
+				return http;
+			},
+			worker: (): BindingSource => ({
+				type: "binding",
+				format: "json",
+			}),
 		};
 
-		if (args.corsOrigins && args.corsOrigins.length > 0) {
-			source.cors = { origins: args.corsOrigins };
+		for (const source of args.source) {
+			const handler = sourceHandlers[source];
+			if (handler) {
+				pipelineConfig.source.push(handler());
+			}
 		}
-		pipelineConfig.source.push(source);
 	}
 
 	if (pipelineConfig.source.length === 0) {
@@ -274,23 +273,22 @@ export async function createPipelineHandler(
 	if (args.r2Prefix) {
 		pipelineConfig.destination.path.prefix = args.r2Prefix;
 	}
-	if (args.partitionTemplate) {
-		pipelineConfig.destination.path.filepath = args.partitionTemplate;
-	}
-	if (args.fileTemplate) {
-		pipelineConfig.destination.path.filename = args.fileTemplate;
+	if (args.shardCount) {
+		pipelineConfig.metadata.shards = args.shardCount;
 	}
 
 	logger.log(`🌀 Creating Pipeline named "${name}"`);
 	const pipeline = await createPipeline(accountId, pipelineConfig);
 
 	logger.log(
-		`✅ Successfully created Pipeline "${pipeline.name}" with id ${pipeline.id}`
+		`✅ Successfully created Pipeline "${pipeline.name}" with ID ${pipeline.id}\n`
 	);
+	logger.log(formatPipelinePretty(pipeline));
 	logger.log("🎉 You can now send data to your Pipeline!");
-	if (args.enableWorkerBinding) {
+
+	if (args.source.includes("worker")) {
 		logger.log(
-			`\nTo start interacting with this Pipeline from a Worker, open your Worker’s config file and add the following binding configuration:\n`
+			`\nTo send data to your pipeline from a Worker, add the following to your wrangler config file:\n`
 		);
 		logger.log(
 			formatConfigSnippet(
@@ -306,8 +304,9 @@ export async function createPipelineHandler(
 			)
 		);
 	}
-	if (args.enableHttp) {
+
+	if (args.source.includes("http")) {
 		logger.log(`\nSend data to your Pipeline's HTTP endpoint:\n`);
-		logger.log(`	curl "${pipeline.endpoint}" -d '[{"foo": "bar"}]'\n`);
+		logger.log(`curl "${pipeline.endpoint}" -d '[{"foo": "bar"}]'\n`);
 	}
 }

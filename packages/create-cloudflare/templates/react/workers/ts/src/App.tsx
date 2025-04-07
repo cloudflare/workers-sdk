@@ -45,7 +45,7 @@ function App() {
           Name from API is: {name}
         </button>
         <p>
-          Edit <code>api/index.ts</code> to change the name
+          Edit <code>worker/index.ts</code> to change the name
         </p>
       </div>
       <p className='read-the-docs'>

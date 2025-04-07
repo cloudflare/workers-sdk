@@ -6,7 +6,7 @@ export default defineConfig({
 		cache: false,
 		root: __dirname,
 		testTimeout: 1000 * 60 * 10, // 10 min for lengthy installs
-		maxConcurrency: 3,
+		fileParallelism: false,
 		globalSetup: ["global-setup.ts"],
 	},
 });

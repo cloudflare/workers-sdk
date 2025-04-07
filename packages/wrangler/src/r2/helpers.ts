@@ -492,6 +492,60 @@ export async function putR2Sippy(
 	);
 }
 
+type R2Warehouse = {
+	id: string;
+	name: string;
+	bucket: string;
+	status: "active" | "inactive";
+};
+
+/**
+ * Retreive the warehouse for the bucket with the given name
+ */
+export async function getR2Catalog(
+	accountId: string,
+	bucketName: string
+): Promise<R2Warehouse> {
+	return await fetchResult(`/accounts/${accountId}/r2-catalog/${bucketName}`, {
+		method: "GET",
+	});
+}
+
+type R2WarehouseEnableResponse = {
+	id: string;
+	name: string;
+};
+
+/**
+ * Activate the R2 bucket as an Iceberg warehouse
+ */
+export async function enableR2Catalog(
+	accountId: string,
+	bucketName: string
+): Promise<R2WarehouseEnableResponse> {
+	return await fetchResult(
+		`/accounts/${accountId}/r2-catalog/${bucketName}/enable`,
+		{
+			method: "POST",
+		}
+	);
+}
+
+/**
+ * Deactivate the R2 bucket as an Iceberg warehouse
+ */
+export async function disableR2Catalog(
+	accountId: string,
+	bucketName: string
+): Promise<R2WarehouseEnableResponse> {
+	return await fetchResult(
+		`/accounts/${accountId}/r2-catalog/${bucketName}/disable`,
+		{
+			method: "POST",
+		}
+	);
+}
+
 const R2EventableOperations = [
 	"PutObject",
 	"DeleteObject",

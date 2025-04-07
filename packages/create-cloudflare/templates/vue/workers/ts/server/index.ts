@@ -1,5 +1,5 @@
 export default {
-	fetch(request, env) {
+	fetch(request) {
 		const url = new URL(request.url);
 
 		if (url.pathname.startsWith("/api/")) {
@@ -7,7 +7,6 @@ export default {
 				name: "Cloudflare",
 			});
 		}
-
-		return env.ASSETS.fetch(request);
+		return new Response(null, { status: 404 });
 	},
 } satisfies ExportedHandler<Env>;

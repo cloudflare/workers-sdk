@@ -20,7 +20,7 @@ export default defineConfig({
 	},
 	plugins: [
 		cloudflare({
-			configPath: "./wrangler.with-warning.toml",
+			configPath: "./wrangler.with-warning.jsonc",
 			inspectorPort: false,
 			persistState: false,
 		}),

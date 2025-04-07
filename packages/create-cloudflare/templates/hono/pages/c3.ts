@@ -29,14 +29,16 @@ const config: TemplateConfig = {
 	},
 	path: "templates/hono/pages",
 	platform: "pages",
+	hidden: true,
 	generate,
 	transformPackageJson: async () => ({
 		scripts: {
 			"cf-typegen": "wrangler types --env-interface CloudflareBindings",
+			preview: "vite build && wrangler pages dev",
 		},
 	}),
 	devScript: "dev",
 	deployScript: "deploy",
-	previewScript: "dev",
+	previewScript: "preview",
 };
 export default config;

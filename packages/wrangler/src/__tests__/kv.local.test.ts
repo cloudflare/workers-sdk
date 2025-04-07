@@ -21,18 +21,24 @@ describe("wrangler", () => {
 				`kv key put val value --namespace-id some-namespace-id `
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Value not found
-			Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id."
-		`);
+				"Value not found
+				Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id."
+			`);
 
 			await runWrangler(
 				`kv key get val --namespace-id some-namespace-id --text`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Value not found
-			Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
-			value"
-		`);
+				"Value not found
+				Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
+				value"
+			`);
 		});
 
 		it("should list local kv storage", async () => {
@@ -63,23 +69,26 @@ describe("wrangler", () => {
 
 			await runWrangler(`kv key list --namespace-id some-namespace-id`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"[]
-			Success!
-			[
-			  {
-			    \\"name\\": \\"a\\"
-			  },
-			  {
-			    \\"name\\": \\"a/b\\"
-			  },
-			  {
-			    \\"name\\": \\"a/c\\"
-			  },
-			  {
-			    \\"name\\": \\"b\\"
-			  }
-			]"
-		`);
+				"[]
+				Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Success!
+				[
+				  {
+				    \\"name\\": \\"a\\"
+				  },
+				  {
+				    \\"name\\": \\"a/b\\"
+				  },
+				  {
+				    \\"name\\": \\"a/c\\"
+				  },
+				  {
+				    \\"name\\": \\"b\\"
+				  }
+				]"
+			`);
 
 			await runWrangler(
 				`kv key list --namespace-id some-namespace-id --prefix a`
@@ -92,40 +101,43 @@ describe("wrangler", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"[]
-			Success!
-			[
-			  {
-			    \\"name\\": \\"a\\"
-			  },
-			  {
-			    \\"name\\": \\"a/b\\"
-			  },
-			  {
-			    \\"name\\": \\"a/c\\"
-			  },
-			  {
-			    \\"name\\": \\"b\\"
-			  }
-			]
-			[
-			  {
-			    \\"name\\": \\"a\\"
-			  },
-			  {
-			    \\"name\\": \\"a/b\\"
-			  },
-			  {
-			    \\"name\\": \\"a/c\\"
-			  }
-			]
-			[
-			  {
-			    \\"name\\": \\"a/b\\"
-			  }
-			]
-			[]"
-		`);
+				"[]
+				Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Success!
+				[
+				  {
+				    \\"name\\": \\"a\\"
+				  },
+				  {
+				    \\"name\\": \\"a/b\\"
+				  },
+				  {
+				    \\"name\\": \\"a/c\\"
+				  },
+				  {
+				    \\"name\\": \\"b\\"
+				  }
+				]
+				[
+				  {
+				    \\"name\\": \\"a\\"
+				  },
+				  {
+				    \\"name\\": \\"a/b\\"
+				  },
+				  {
+				    \\"name\\": \\"a/c\\"
+				  }
+				]
+				[
+				  {
+				    \\"name\\": \\"a/b\\"
+				  }
+				]
+				[]"
+			`);
 		});
 
 		it("should delete local kv storage", async () => {
@@ -136,24 +148,39 @@ describe("wrangler", () => {
 				`kv key get val --namespace-id some-namespace-id --text`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
-			value"
-		`);
+				"Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
+				value"
+			`);
 			await runWrangler(`kv key delete val --namespace-id some-namespace-id`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
-			value
-			Deleting the key \\"val\\" on namespace some-namespace-id."
-		`);
+				"Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
+				value
+				Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Deleting the key \\"val\\" on namespace some-namespace-id."
+			`);
 
 			await runWrangler(
 				`kv key get val --namespace-id some-namespace-id --text`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
-			value
-			Deleting the key \\"val\\" on namespace some-namespace-id.
-			Value not found"
+				"Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
+				value
+				Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Deleting the key \\"val\\" on namespace some-namespace-id.
+				Value not found"
 			`);
 		});
 
@@ -181,47 +208,59 @@ describe("wrangler", () => {
 				`kv bulk put keys.json --namespace-id bulk-namespace-id`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"[]
-			Success!"
-		`);
+				"[]
+				Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Success!"
+			`);
 
 			await runWrangler(
 				`kv key get test --namespace-id bulk-namespace-id --text`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"[]
-			Success!
-			value"
-		`);
+				"[]
+				Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Success!
+				value"
+			`);
 
 			await runWrangler(
 				`kv key get encoded --namespace-id bulk-namespace-id --text`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"[]
-			Success!
-			value
-			some raw data"
-		`);
+				"[]
+				Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Success!
+				value
+				some raw data"
+			`);
 
 			await runWrangler(`kv key list --namespace-id bulk-namespace-id`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"[]
-			Success!
-			value
-			some raw data
-			[
-			  {
-			    \\"name\\": \\"encoded\\"
-			  },
-			  {
-			    \\"name\\": \\"hello\\"
-			  },
-			  {
-			    \\"name\\": \\"test\\"
-			  }
-			]"
-		`);
+				"[]
+				Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Success!
+				value
+				some raw data
+				[
+				  {
+				    \\"name\\": \\"encoded\\"
+				  },
+				  {
+				    \\"name\\": \\"hello\\"
+				  },
+				  {
+				    \\"name\\": \\"test\\"
+				  }
+				]"
+			`);
 		});
 
 		it("should delete local bulk kv storage", async () => {
@@ -241,48 +280,63 @@ describe("wrangler", () => {
 			);
 			await runWrangler(`kv key list --namespace-id bulk-namespace-id`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Success!
-			[
-			  {
-			    \\"name\\": \\"hello\\"
-			  },
-			  {
-			    \\"name\\": \\"test\\"
-			  }
-			]"
-		`);
+				"Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Success!
+				[
+				  {
+				    \\"name\\": \\"hello\\"
+				  },
+				  {
+				    \\"name\\": \\"test\\"
+				  }
+				]"
+			`);
 			const keys = ["hello", "test"];
 			writeFileSync("./keys.json", JSON.stringify(keys));
 			await runWrangler(
 				`kv bulk delete keys.json --namespace-id bulk-namespace-id --force`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Success!
-			[
-			  {
-			    \\"name\\": \\"hello\\"
-			  },
-			  {
-			    \\"name\\": \\"test\\"
-			  }
-			]
-			Success!"
-		`);
+				"Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Success!
+				[
+				  {
+				    \\"name\\": \\"hello\\"
+				  },
+				  {
+				    \\"name\\": \\"test\\"
+				  }
+				]
+				Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Success!"
+			`);
 
 			await runWrangler(`kv key list --namespace-id bulk-namespace-id`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Success!
-			[
-			  {
-			    \\"name\\": \\"hello\\"
-			  },
-			  {
-			    \\"name\\": \\"test\\"
-			  }
-			]
-			Success!
-			[]"
-		`);
+				"Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Success!
+				[
+				  {
+				    \\"name\\": \\"hello\\"
+				  },
+				  {
+				    \\"name\\": \\"test\\"
+				  }
+				]
+				Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Success!
+				[]"
+			`);
 		});
 
 		it("should delete local bulk kv storage ({ name })", async () => {
@@ -302,16 +356,19 @@ describe("wrangler", () => {
 			);
 			await runWrangler(`kv key list --namespace-id bulk-namespace-id`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Success!
-			[
-			  {
-			    \\"name\\": \\"hello\\"
-			  },
-			  {
-			    \\"name\\": \\"test\\"
-			  }
-			]"
-		`);
+				"Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Success!
+				[
+				  {
+				    \\"name\\": \\"hello\\"
+				  },
+				  {
+				    \\"name\\": \\"test\\"
+				  }
+				]"
+			`);
 			const keys = [
 				{
 					name: "hello",
@@ -325,32 +382,44 @@ describe("wrangler", () => {
 				`kv bulk delete keys.json --namespace-id bulk-namespace-id --force`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Success!
-			[
-			  {
-			    \\"name\\": \\"hello\\"
-			  },
-			  {
-			    \\"name\\": \\"test\\"
-			  }
-			]
-			Success!"
-		`);
+				"Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Success!
+				[
+				  {
+				    \\"name\\": \\"hello\\"
+				  },
+				  {
+				    \\"name\\": \\"test\\"
+				  }
+				]
+				Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Success!"
+			`);
 
 			await runWrangler(`kv key list --namespace-id bulk-namespace-id`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Success!
-			[
-			  {
-			    \\"name\\": \\"hello\\"
-			  },
-			  {
-			    \\"name\\": \\"test\\"
-			  }
-			]
-			Success!
-			[]"
-		`);
+				"Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Success!
+				[
+				  {
+				    \\"name\\": \\"hello\\"
+				  },
+				  {
+				    \\"name\\": \\"test\\"
+				  }
+				]
+				Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Success!
+				[]"
+			`);
 		});
 
 		it("should get local bulk kv storage", async () => {
@@ -370,23 +439,29 @@ describe("wrangler", () => {
 			);
 			await runWrangler(`kv key list --namespace-id bulk-namespace-id`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Success!
-			[
-			  {
-			    \\"name\\": \\"hello\\"
-			  },
-			  {
-			    \\"name\\": \\"test\\"
-			  }
-			]"
-		`);
+				"Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Success!
+				[
+				  {
+				    \\"name\\": \\"hello\\"
+				  },
+				  {
+				    \\"name\\": \\"test\\"
+				  }
+				]"
+			`);
 			const keys = ["hello", "test"];
 			writeFileSync("./keys.json", JSON.stringify(keys));
 			await runWrangler(
 				`kv bulk get keys.json --namespace-id bulk-namespace-id`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Success!
+				"Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Success!
 				[
 				  {
 				    \\"name\\": \\"hello\\"
@@ -417,28 +492,46 @@ describe("wrangler", () => {
 				`kv key put val persistValue --namespace-id some-namespace-id --persist-to ./persistdir`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
-			Writing the value \\"persistValue\\" to key \\"val\\" on namespace some-namespace-id."
-		`);
+				"Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
+				Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Writing the value \\"persistValue\\" to key \\"val\\" on namespace some-namespace-id."
+			`);
 
 			await runWrangler(
 				`kv key get val --namespace-id some-namespace-id --text`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
-			Writing the value \\"persistValue\\" to key \\"val\\" on namespace some-namespace-id.
-			value"
-		`);
+				"Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
+				Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Writing the value \\"persistValue\\" to key \\"val\\" on namespace some-namespace-id.
+				value"
+			`);
 
 			await runWrangler(
 				`kv key get val --namespace-id some-namespace-id --text --persist-to ./persistdir`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
-			Writing the value \\"persistValue\\" to key \\"val\\" on namespace some-namespace-id.
-			value
-			persistValue"
-		`);
+				"Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
+				Resource location: local
+				Use --remote if you want to access the remote instance.
+
+				Writing the value \\"persistValue\\" to key \\"val\\" on namespace some-namespace-id.
+				value
+				persistValue"
+			`);
 		});
 	});
 });
