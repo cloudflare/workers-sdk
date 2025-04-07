@@ -26,13 +26,13 @@ import type { Argv } from "yargs";
  */
 export function addUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 	/* These arguments are nearly identical to the option used for creating a pipeline, with some notable differences.
-		 Particularly, not all options are available for updating, and the default values have been removed. In this case, 
+		 Particularly, not all options are available for updating, and the default values have been removed. In this case,
 		 `undefined` is used to determine if the user provided that flag at all with the intent to change the value.
 	 */
 	return (
 		yargs
 			.positional("pipeline", {
-				describe: "The name of the Pipeline to update",
+				describe: "The name of the pipeline to update",
 				type: "string",
 				demandOption: true,
 			})
@@ -49,7 +49,7 @@ export function addUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 			.option("source", {
 				type: "array",
 				describe:
-					"Space separated list of allowed sources. Options are 'http' or 'worker'. Setting this will remove all other existing sources.",
+					"Space separated list of allowed sources. Options are 'http' or 'worker'",
 				demandOption: false,
 			})
 			.option("require-http-auth", {
@@ -157,7 +157,7 @@ export function addUpdateOptions(yargs: Argv<CommonYargsOptions>) {
 			.option("shard-count", {
 				type: "number",
 				describe:
-					"Number of pipeline shards. More shards handle higher request volume; fewer shards produce larger output files",
+					"Number of shards for the pipeline. More shards handle higher request volume; fewer shards produce larger output files",
 				demandOption: false,
 			})
 	);
@@ -292,10 +292,10 @@ export async function updatePipelineHandler(
 		}
 	}
 
-	logger.log(`🌀 Updating Pipeline "${name}"`);
+	logger.log(`🌀 Updating pipeline "${name}"`);
 	const pipeline = await updatePipeline(accountId, name, pipelineConfig);
 
 	logger.log(
-		`✅ Successfully updated Pipeline "${pipeline.name}" with ID ${pipeline.id}\n`
+		`✅ Successfully updated pipeline "${pipeline.name}" with ID ${pipeline.id}\n`
 	);
 }

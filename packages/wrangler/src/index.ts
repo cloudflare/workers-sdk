@@ -958,7 +958,7 @@ export function createCLIParser(argv: string[]) {
 	// [OPEN BETA] pipelines
 	wrangler.command(
 		"pipelines",
-		`🚰 Manage Worker Pipelines ${chalk.hex(betaCmdColor)("[open beta]")}`,
+		`🚰 Manage Cloudflare Pipelines ${chalk.hex(betaCmdColor)("[open beta]")}`,
 		(pipelinesYargs) => {
 			return pipelines(pipelinesYargs.command(subHelp));
 		}

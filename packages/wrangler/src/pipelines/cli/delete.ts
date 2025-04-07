@@ -13,7 +13,7 @@ import type { Argv } from "yargs";
 export function addDeleteOptions(yargs: Argv<CommonYargsOptions>) {
 	return yargs.positional("pipeline", {
 		type: "string",
-		describe: "The name of the Pipeline to show",
+		describe: "The name of the pipeline to delete",
 		demandOption: true,
 	});
 }
@@ -28,8 +28,8 @@ export async function deletePipelineHandler(
 
 	validateName("pipeline name", name);
 
-	logger.log(`Deleting Pipeline ${name}.`);
+	logger.log(`Deleting pipeline ${name}.`);
 	await deletePipeline(accountId, name);
 
-	logger.log(`Deleted Pipeline ${name}.`);
+	logger.log(`Deleted pipeline ${name}.`);
 }
