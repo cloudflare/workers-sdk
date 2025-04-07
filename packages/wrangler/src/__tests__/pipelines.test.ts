@@ -643,13 +643,13 @@ describe("pipelines", () => {
 			const updateReq = mockUpdateRequest(update.name, update);
 
 			await runWrangler(
-				"pipelines update my-pipeline --source http --cors-origins http://localhost:8787"
+				"pipelines update my-pipeline --cors-origins http://localhost:8787"
 			);
 
 			expect(updateReq.count).toEqual(1);
-			expect(updateReq.body?.source.length).toEqual(1);
-			expect(updateReq.body?.source[0].type).toEqual("http");
-			expect((updateReq.body?.source[0] as HttpSource).cors?.origins).toEqual([
+			expect(updateReq.body?.source.length).toEqual(2);
+			expect(updateReq.body?.source[1].type).toEqual("http");
+			expect((updateReq.body?.source[1] as HttpSource).cors?.origins).toEqual([
 				"http://localhost:8787",
 			]);
 		});

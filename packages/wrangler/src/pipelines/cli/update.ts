@@ -284,6 +284,20 @@ export async function updatePipelineHandler(
 		pipelineConfig.metadata.shards = args.shardCount;
 	}
 
+	// This covers the case where `--source` wasn't passed but `--cors-origins` or
+	// `--require-http-auth` was.
+	const httpSource = pipelineConfig.source.find(
+		(s: Source) => s.type === "http"
+	);
+	if (httpSource) {
+		if (args.requireHttpAuth) {
+			httpSource.authentication = args.requireHttpAuth;
+		}
+		if (args.corsOrigins && args.corsOrigins.length > 0) {
+			httpSource.cors = { origins: args.corsOrigins };
+		}
+	}
+
 	logger.log(`🌀 Updating Pipeline "${name}"`);
 	const pipeline = await updatePipeline(accountId, name, pipelineConfig);
 
