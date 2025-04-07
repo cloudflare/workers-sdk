@@ -654,6 +654,42 @@ describe("pipelines", () => {
 			]);
 		});
 
+		it("should update remove cors headers", async () => {
+			const pipeline: Pipeline = samplePipeline;
+			mockGetRequest(pipeline.name, pipeline);
+
+			const update = JSON.parse(JSON.stringify(pipeline));
+			update.source = [
+				{
+					type: "http",
+					format: "json",
+					authenticated: true,
+				},
+			];
+			const updateReq = mockUpdateRequest(update.name, update);
+
+			await runWrangler(
+				"pipelines update my-pipeline --cors-origins http://localhost:8787"
+			);
+
+			expect(updateReq.count).toEqual(1);
+			expect(updateReq.body?.source.length).toEqual(2);
+			expect(updateReq.body?.source[1].type).toEqual("http");
+			expect((updateReq.body?.source[1] as HttpSource).cors?.origins).toEqual([
+				"http://localhost:8787",
+			]);
+
+			mockGetRequest(pipeline.name, pipeline);
+			const secondUpdateReq = mockUpdateRequest(update.name, update);
+			await runWrangler("pipelines update my-pipeline --cors-origins none");
+			expect(secondUpdateReq.count).toEqual(1);
+			expect(secondUpdateReq.body?.source.length).toEqual(2);
+			expect(secondUpdateReq.body?.source[1].type).toEqual("http");
+			expect(
+				(secondUpdateReq.body?.source[1] as HttpSource).cors?.origins
+			).toEqual([]);
+		});
+
 		it("should fail a missing pipeline", async () => {
 			const requests = mockGetRequest("bad-pipeline", null, 404, {
 				code: 1000,

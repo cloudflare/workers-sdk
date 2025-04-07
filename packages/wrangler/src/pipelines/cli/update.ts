@@ -227,18 +227,12 @@ export async function updatePipelineHandler(
 			http: (): HttpSource => {
 				const existing = existingSources.find((s: Source) => s.type === "http");
 
-				const http: HttpSource = {
+				return {
 					...existing, // Copy over existing properties for forwards compatibility
 					type: "http",
 					format: "json",
 					...(args.requireHttpAuth && { authentication: args.requireHttpAuth }), // Include only if defined
 				};
-
-				if (args.corsOrigins && args.corsOrigins.length > 0) {
-					http.cors = { origins: args.corsOrigins };
-				}
-
-				return http;
 			},
 			worker: (): BindingSource => {
 				const existing = existingSources.find(
@@ -293,7 +287,7 @@ export async function updatePipelineHandler(
 		if (args.requireHttpAuth) {
 			httpSource.authentication = args.requireHttpAuth;
 		}
-		if (args.corsOrigins && args.corsOrigins.length > 0) {
+		if (args.corsOrigins) {
 			httpSource.cors = { origins: args.corsOrigins };
 		}
 	}
