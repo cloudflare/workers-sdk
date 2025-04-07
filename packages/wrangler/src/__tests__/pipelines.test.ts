@@ -30,13 +30,20 @@ describe("pipelines", () => {
 				type: "http",
 				format: "json",
 				authentication: false,
+				cors: {
+					origins: ["*"],
+				},
 			},
 		],
 		transforms: [],
 		destination: {
 			type: "r2",
 			format: "json",
-			batch: {},
+			batch: {
+				max_bytes: 100000000,
+				max_duration_s: 300,
+				max_rows: 100000,
+			},
 			compression: {
 				type: "none",
 			},
@@ -101,6 +108,18 @@ describe("pipelines", () => {
 						name: name,
 						endpoint: "foo",
 					};
+
+					// API will set defaults if not provided
+					if (!pipeline.destination.batch.max_rows) {
+						pipeline.destination.batch.max_rows = 10_000_000;
+					}
+					if (!pipeline.destination.batch.max_bytes) {
+						pipeline.destination.batch.max_bytes = 100_000_000;
+					}
+					if (!pipeline.destination.batch.max_duration_s) {
+						pipeline.destination.batch.max_duration_s = 300;
+					}
+
 					return HttpResponse.json(
 						{
 							success: !error,
@@ -142,7 +161,7 @@ describe("pipelines", () => {
 		return requests;
 	}
 
-	function mockShowRequest(
+	function mockGetRequest(
 		name: string,
 		pipeline: Pipeline | null,
 		status: number = 200,
@@ -255,10 +274,12 @@ describe("pipelines", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler pipelines
 
+			🚰 Manage Worker Pipelines [open beta]
+
 			COMMANDS
 			  wrangler pipelines create <pipeline>  Create a new Pipeline
 			  wrangler pipelines list               List current Pipelines
-			  wrangler pipelines show <pipeline>    Show a Pipeline configuration
+			  wrangler pipelines get <pipeline>     Get a Pipeline configuration
 			  wrangler pipelines update <pipeline>  Update a Pipeline
 			  wrangler pipelines delete <pipeline>  Delete a Pipeline
 
@@ -286,27 +307,24 @@ describe("pipelines", () => {
 				  pipeline  The name of the new pipeline  [string] [required]
 
 				Source settings
-				      --enable-worker-binding  Send data from a Worker to a Pipeline using a Binding  [boolean] [default: true]
-				      --enable-http            Generate an endpoint to ingest data via HTTP  [boolean] [default: true]
-				      --require-http-auth      Require Cloudflare API Token for HTTPS endpoint authentication  [boolean] [default: false]
-				      --cors-origins           CORS origin allowlist for HTTP endpoint (use * for any origin)  [array]
+				      --source             Space separated list of allowed sources. Options are 'http' or 'worker'  [array] [default: [\\"http\\",\\"worker\\"]]
+				      --require-http-auth  Require Cloudflare API Token for HTTPS endpoint authentication  [boolean] [default: false]
+				      --cors-origins       CORS origin allowlist for HTTP endpoint (use * for any origin). Defaults to an empty array  [array]
 
 				Batch hints
-				      --batch-max-mb       Maximum batch size in megabytes before flushing  [number]
-				      --batch-max-rows     Maximum number of rows per batch before flushing  [number]
-				      --batch-max-seconds  Maximum age of batch in seconds before flushing  [number]
+				      --batch-max-mb       Maximum batch size in megabytes before flushing. Defaults to 100 MB if unset. Minimum: 1, Maximum: 100  [number]
+				      --batch-max-rows     Maximum number of rows per batch before flushing. Defaults to 10,000,000 if unset. Minimum: 100, Maximum: 10,000,000  [number]
+				      --batch-max-seconds  Maximum age of batch in seconds before flushing. Defaults to 300 if unset. Minimum: 1, Maximum: 300  [number]
 
 				Destination settings
 				      --r2-bucket             Destination R2 bucket name  [string] [required]
 				      --r2-access-key-id      R2 service Access Key ID for authentication. Leave empty for OAuth confirmation.  [string]
 				      --r2-secret-access-key  R2 service Secret Access Key for authentication. Leave empty for OAuth confirmation.  [string]
-				      --r2-prefix             Prefix for storing files in the destination bucket  [string] [default: \\"\\"]
+				      --r2-prefix             Prefix for storing files in the destination bucket. Default is no prefix  [string] [default: \\"\\"]
 				      --compression           Compression format for output files  [string] [choices: \\"none\\", \\"gzip\\", \\"deflate\\"] [default: \\"gzip\\"]
-				      --file-template         Template for individual file names (must include \${slug}). For example: \\"\${slug}.log.gz\\"  [string]
-				      --partition-template    Path template for partitioned files in the bucket. If not specified, the default will be used  [string]
 
 				Pipeline settings
-				      --shard-count  Number of pipeline shards. More shards handle higher request volume; fewer shards produce larger output files  [number]
+				      --shard-count  Number of pipeline shards. More shards handle higher request volume; fewer shards produce larger output files. Defaults to 2 if unset. Minimum: 1, Maximum: 15  [number]
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
@@ -325,10 +343,30 @@ describe("pipelines", () => {
 			expect(requests.count).toEqual(1);
 			expect(std.out).toMatchInlineSnapshot(`
 				"🌀 Creating Pipeline named \\"my-pipeline\\"
-				✅ Successfully created Pipeline \\"my-pipeline\\" with id 0001
+				✅ Successfully created Pipeline \\"my-pipeline\\" with ID 0001
+
+				Id:    0001
+				Name:  my-pipeline
+				Sources:
+				  HTTP:
+				    Endpoint:        foo
+				    Authentication:  off
+				    Format:          JSON
+				  Worker:
+				    Format:  JSON
+				Destination:
+				  Type:         R2
+				  Bucket:       test-bucket
+				  Format:       newline-delimited JSON
+				  Compression:  GZIP
+				  Batch hints:
+				    Max bytes:     100 MB
+				    Max duration:  300 seconds
+				    Max records:   10,000,000
+
 				🎉 You can now send data to your Pipeline!
 
-				To start interacting with this Pipeline from a Worker, open your Worker’s config file and add the following binding configuration:
+				To send data to your pipeline from a Worker, add the following to your wrangler config file:
 
 				{
 				  \\"pipelines\\": [
@@ -341,7 +379,7 @@ describe("pipelines", () => {
 
 				Send data to your Pipeline's HTTP endpoint:
 
-					curl \\"foo\\" -d '[{\\"foo\\": \\"bar\\"}]'
+				curl \\"foo\\" -d '[{\\"foo\\": \\"bar\\"}]'
 				"
 			`);
 		});
@@ -369,8 +407,8 @@ describe("pipelines", () => {
 			expect(requests.count).toEqual(1);
 
 			// contain http source and include auth
-			expect(requests.body?.source[1].type).toEqual("http");
-			expect((requests.body?.source[1] as HttpSource).authentication).toEqual(
+			expect(requests.body?.source[0].type).toEqual("http");
+			expect((requests.body?.source[0] as HttpSource).authentication).toEqual(
 				true
 			);
 		});
@@ -378,7 +416,7 @@ describe("pipelines", () => {
 		it("should create a pipeline without http", async () => {
 			const requests = mockCreateRequest("my-pipeline");
 			await runWrangler(
-				"pipelines create my-pipeline --enable-http=false --r2-bucket test-bucket --r2-access-key-id my-key --r2-secret-access-key my-secret"
+				"pipelines create my-pipeline --source worker --r2-bucket test-bucket --r2-access-key-id my-key --r2-secret-access-key my-secret"
 			);
 			expect(requests.count).toEqual(1);
 
@@ -409,15 +447,44 @@ describe("pipelines", () => {
 		expect(requests.count).toEqual(1);
 	});
 
-	describe("show", () => {
-		it("should show pipeline", async () => {
-			const requests = mockShowRequest("foo", samplePipeline);
-			await runWrangler("pipelines show foo");
+	describe("get", () => {
+		it("should get pipeline pretty", async () => {
+			const requests = mockGetRequest("foo", samplePipeline);
+			await runWrangler("pipelines get foo");
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Retrieving config for Pipeline \\"foo\\".
-				{
+				"Id:    0001
+				Name:  my-pipeline
+				Sources:
+				  HTTP:
+				    Endpoint:        https://0001.pipelines.cloudflarestorage.com
+				    Authentication:  off
+				    CORS Origins:    *
+				    Format:          JSON
+				  Worker:
+				    Format:  JSON
+				Destination:
+				  Type:         R2
+				  Bucket:       bucket
+				  Format:       newline-delimited JSON
+				  Compression:  NONE
+				  Batch hints:
+				    Max bytes:     100 MB
+				    Max duration:  300 seconds
+				    Max records:   100,000
+				"
+			`);
+			expect(requests.count).toEqual(1);
+		});
+
+		it("should get pipeline json", async () => {
+			const requests = mockGetRequest("foo", samplePipeline);
+			await runWrangler("pipelines get foo --format=json");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"{
 				  \\"id\\": \\"0001\\",
 				  \\"version\\": 1,
 				  \\"name\\": \\"my-pipeline\\",
@@ -430,14 +497,23 @@ describe("pipelines", () => {
 				    {
 				      \\"type\\": \\"http\\",
 				      \\"format\\": \\"json\\",
-				      \\"authentication\\": false
+				      \\"authentication\\": false,
+				      \\"cors\\": {
+				        \\"origins\\": [
+				          \\"*\\"
+				        ]
+				      }
 				    }
 				  ],
 				  \\"transforms\\": [],
 				  \\"destination\\": {
 				    \\"type\\": \\"r2\\",
 				    \\"format\\": \\"json\\",
-				    \\"batch\\": {},
+				    \\"batch\\": {
+				      \\"max_bytes\\": 100000000,
+				      \\"max_duration_s\\": 300,
+				      \\"max_rows\\": 100000
+				    },
 				    \\"compression\\": {
 				      \\"type\\": \\"none\\"
 				    },
@@ -452,20 +528,19 @@ describe("pipelines", () => {
 		});
 
 		it("should fail on missing pipeline", async () => {
-			const requests = mockShowRequest("bad-pipeline", null, 404, {
+			const requests = mockGetRequest("bad-pipeline", null, 404, {
 				code: 1000,
 				message: "Pipeline does not exist",
 			});
 			await expect(
-				runWrangler("pipelines show bad-pipeline")
+				runWrangler("pipelines get bad-pipeline")
 			).rejects.toThrowError();
 
 			await endEventLoop();
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-				"Retrieving config for Pipeline \\"bad-pipeline\\".
-				X [ERROR] A request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.
+				"X [ERROR] A request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.
 				  Pipeline does not exist [code: 1000]
 				  If you think this is a bug, please open an issue at:
 				  https://github.com/cloudflare/workers-sdk/issues/new/choose"
@@ -477,7 +552,7 @@ describe("pipelines", () => {
 	describe("update", () => {
 		it("should update a pipeline", async () => {
 			const pipeline: Pipeline = samplePipeline;
-			mockShowRequest(pipeline.name, pipeline);
+			mockGetRequest(pipeline.name, pipeline);
 
 			const update = JSON.parse(JSON.stringify(pipeline));
 			update.destination.compression.type = "gzip";
@@ -489,7 +564,7 @@ describe("pipelines", () => {
 
 		it("should update a pipeline with new bucket", async () => {
 			const pipeline: Pipeline = samplePipeline;
-			mockShowRequest(pipeline.name, pipeline);
+			mockGetRequest(pipeline.name, pipeline);
 
 			const update = JSON.parse(JSON.stringify(pipeline));
 			update.destination.path.bucket = "new_bucket";
@@ -509,7 +584,7 @@ describe("pipelines", () => {
 
 		it("should update a pipeline with new credential", async () => {
 			const pipeline: Pipeline = samplePipeline;
-			mockShowRequest(pipeline.name, pipeline);
+			mockGetRequest(pipeline.name, pipeline);
 
 			const update = JSON.parse(JSON.stringify(pipeline));
 			update.destination.path.bucket = "new-bucket";
@@ -529,7 +604,7 @@ describe("pipelines", () => {
 
 		it("should update a pipeline with source changes http auth", async () => {
 			const pipeline: Pipeline = samplePipeline;
-			mockShowRequest(pipeline.name, pipeline);
+			mockGetRequest(pipeline.name, pipeline);
 
 			const update = JSON.parse(JSON.stringify(pipeline));
 			update.source = [
@@ -542,7 +617,7 @@ describe("pipelines", () => {
 			const updateReq = mockUpdateRequest(update.name, update);
 
 			await runWrangler(
-				"pipelines update my-pipeline --enable-worker-binding=false --enable-http --require-http-auth"
+				"pipelines update my-pipeline --source http --require-http-auth"
 			);
 
 			expect(updateReq.count).toEqual(1);
@@ -555,7 +630,7 @@ describe("pipelines", () => {
 
 		it("should update a pipeline cors headers", async () => {
 			const pipeline: Pipeline = samplePipeline;
-			mockShowRequest(pipeline.name, pipeline);
+			mockGetRequest(pipeline.name, pipeline);
 
 			const update = JSON.parse(JSON.stringify(pipeline));
 			update.source = [
@@ -568,19 +643,19 @@ describe("pipelines", () => {
 			const updateReq = mockUpdateRequest(update.name, update);
 
 			await runWrangler(
-				"pipelines update my-pipeline --enable-worker-binding=false --enable-http --cors-origins http://localhost:8787"
+				"pipelines update my-pipeline --cors-origins http://localhost:8787"
 			);
 
 			expect(updateReq.count).toEqual(1);
-			expect(updateReq.body?.source.length).toEqual(1);
-			expect(updateReq.body?.source[0].type).toEqual("http");
-			expect((updateReq.body?.source[0] as HttpSource).cors?.origins).toEqual([
+			expect(updateReq.body?.source.length).toEqual(2);
+			expect(updateReq.body?.source[1].type).toEqual("http");
+			expect((updateReq.body?.source[1] as HttpSource).cors?.origins).toEqual([
 				"http://localhost:8787",
 			]);
 		});
 
 		it("should fail a missing pipeline", async () => {
-			const requests = mockShowRequest("bad-pipeline", null, 404, {
+			const requests = mockGetRequest("bad-pipeline", null, 404, {
 				code: 1000,
 				message: "Pipeline does not exist",
 			});
@@ -604,7 +679,7 @@ describe("pipelines", () => {
 
 		it("should remove transformations", async () => {
 			const pipeline: Pipeline = samplePipeline;
-			mockShowRequest(pipeline.name, pipeline);
+			mockGetRequest(pipeline.name, pipeline);
 
 			const update = JSON.parse(JSON.stringify(pipeline));
 			update.transforms = [

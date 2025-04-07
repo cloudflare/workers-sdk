@@ -63,6 +63,7 @@ describe("wrangler", () => {
 				  wrangler dispatch-namespace     🏗️  Manage dispatch namespaces
 				  wrangler ai                     🤖 Manage AI models
 				  wrangler workflows              🔁 Manage Workflows [open-beta]
+				  wrangler pipelines              🚰 Manage Worker Pipelines [open beta]
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
 				  wrangler whoami                 🕵️  Retrieve your user information
@@ -122,6 +123,7 @@ describe("wrangler", () => {
 				  wrangler dispatch-namespace     🏗️  Manage dispatch namespaces
 				  wrangler ai                     🤖 Manage AI models
 				  wrangler workflows              🔁 Manage Workflows [open-beta]
+				  wrangler pipelines              🚰 Manage Worker Pipelines [open beta]
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
 				  wrangler whoami                 🕵️  Retrieve your user information
