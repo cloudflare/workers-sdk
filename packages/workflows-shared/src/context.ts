@@ -14,6 +14,7 @@ import type { InstanceMetadata } from "./instance";
 import type {
 	WorkflowSleepDuration,
 	WorkflowStepConfig,
+	WorkflowStepEvent,
 } from "cloudflare:workers";
 
 export type Event = {
@@ -535,13 +536,13 @@ export class Context extends RpcTarget {
 		return this.sleep(name, timestamp - now);
 	}
 
-	async waitForEvent(
+	async waitForEvent<T>(
 		name: string,
 		options: {
 			type: string;
 			timeout?: string | number;
 		}
-	): Promise<Event | void> {
+	): Promise<WorkflowStepEvent<T>> {
 		if (!options.timeout) {
 			options.timeout = "24 hours";
 		}
@@ -572,7 +573,7 @@ export class Context extends RpcTarget {
 					maybeResult
 				);
 			}
-			return maybeResult;
+			return maybeResult as WorkflowStepEvent<T>;
 		}
 		const maybeError: (Error & UserErrorField) | undefined =
 			(await this.#state.storage.get(errorKey)) as Error | undefined;
@@ -672,7 +673,7 @@ export class Context extends RpcTarget {
 			this.#engine.waiters.set(options.type, callbacks);
 		});
 
-		return Promise.race([
+		const result = await Promise.race([
 			eventPromise,
 			timeoutEntryPQ !== undefined
 				? timeoutPromise(timeoutEntryPQ.targetTimestamp - Date.now(), false)
@@ -699,5 +700,7 @@ export class Context extends RpcTarget {
 				await this.#state.storage.put(errorKey, error);
 				throw error;
 			});
+
+		return result as WorkflowStepEvent<T>;
 	}
 }
