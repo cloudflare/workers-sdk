@@ -1,5 +1,17 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.8.12
+
+### Patch Changes
+
+- [#7260](https://github.com/cloudflare/workers-sdk/pull/7260) [`30f7317`](https://github.com/cloudflare/workers-sdk/commit/30f7317797bf7edf8ed64124e61e8b3e93d14719) Thanks [@xtian](https://github.com/xtian)! - Support Yarn `.store` directory
+
+- [#8208](https://github.com/cloudflare/workers-sdk/pull/8208) [`9a3d43c`](https://github.com/cloudflare/workers-sdk/commit/9a3d43c20a1f1fc1fd17f94d4ae5e79223df61c8) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Make vitest-pool-workers not crash when a workflow is defined
+
+- Updated dependencies [[`4e69fb6`](https://github.com/cloudflare/workers-sdk/commit/4e69fb6f05138b32500695846482dd22bb2590d9), [`93267cf`](https://github.com/cloudflare/workers-sdk/commit/93267cf3c59d57792fb10cc10b23255e33679c4d), [`ec7e621`](https://github.com/cloudflare/workers-sdk/commit/ec7e6212199272f9811a30a84922823c82d7d650), [`75b454c`](https://github.com/cloudflare/workers-sdk/commit/75b454c37e3fd25162275e984834929cdb886c0f), [`d4c1171`](https://github.com/cloudflare/workers-sdk/commit/d4c11710fd36286be8587379d659e19e91778777)]:
+  - wrangler@4.8.0
+  - miniflare@4.20250405.0
+
 ## 0.8.11
 
 ### Patch Changes

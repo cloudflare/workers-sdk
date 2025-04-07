@@ -1,5 +1,16 @@
 # @cloudflare/vite-plugin
 
+## 1.0.1
+
+### Patch Changes
+
+- [#8806](https://github.com/cloudflare/workers-sdk/pull/8806) [`2f47670`](https://github.com/cloudflare/workers-sdk/commit/2f4767056495e587de7d9d4370667ea82bc2e6fe) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Replace assertion in vite-plugin-cloudflare:nodejs-compat plugin transform hook with early return. This prevents an error from being logged when building with React Router and TailwindCSS.
+
+- Updated dependencies [[`4e69fb6`](https://github.com/cloudflare/workers-sdk/commit/4e69fb6f05138b32500695846482dd22bb2590d9), [`93267cf`](https://github.com/cloudflare/workers-sdk/commit/93267cf3c59d57792fb10cc10b23255e33679c4d), [`ec7e621`](https://github.com/cloudflare/workers-sdk/commit/ec7e6212199272f9811a30a84922823c82d7d650), [`75b454c`](https://github.com/cloudflare/workers-sdk/commit/75b454c37e3fd25162275e984834929cdb886c0f), [`d4c1171`](https://github.com/cloudflare/workers-sdk/commit/d4c11710fd36286be8587379d659e19e91778777)]:
+  - wrangler@4.8.0
+  - miniflare@4.20250405.0
+  - @cloudflare/unenv-preset@2.3.1
+
 ## 1.0.0
 
 ### Major Changes
