@@ -543,7 +543,9 @@ export function createWorkflowEntrypointWrapper(entrypoint: string) {
 			}
 			const maybeFn = instance["run"];
 			if (typeof maybeFn === "function") {
-				return maybeFn.call(instance, ...args);
+				return patchAndRunWithHandlerContext(this.ctx, () =>
+					maybeFn.call(instance, ...args)
+				);
 			} else {
 				const message = `Expected ${entrypoint} export of ${mainPath} to define a \`run()\` method, but got ${typeof maybeFn}`;
 				throw new TypeError(message);
