@@ -14,7 +14,14 @@ import type { InstanceMetadata } from "./instance";
 import type {
 	WorkflowSleepDuration,
 	WorkflowStepConfig,
+	WorkflowStepEvent,
 } from "cloudflare:workers";
+
+export type Event = {
+	timestamp: Date;
+	payload: unknown;
+	type: string;
+};
 
 export type ResolvedStepConfig = Required<WorkflowStepConfig>;
 
@@ -527,5 +534,173 @@ export class Context extends RpcTarget {
 		}
 
 		return this.sleep(name, timestamp - now);
+	}
+
+	async waitForEvent<T>(
+		name: string,
+		options: {
+			type: string;
+			timeout?: string | number;
+		}
+	): Promise<WorkflowStepEvent<T>> {
+		if (!options.timeout) {
+			options.timeout = "24 hours";
+		}
+
+		const count = this.#getCount("waitForEvent-" + name);
+		const waitForEventNameWithCounter = `${name}-${count}`;
+		const hash = await computeHash(waitForEventNameWithCounter);
+		const cacheKey = `${hash}-${count}`;
+		const waitForEventKey = `${cacheKey}-value`;
+		const errorKey = `${cacheKey}-error`;
+
+		const pendingWaiterRegistered = `${cacheKey}-pending`;
+
+		const timeoutError = new WorkflowTimeoutError(
+			`Execution timed out after ${ms(options.timeout)}ms`
+		) as Error & UserErrorField;
+
+		const maybeResult = await this.#state.storage.get<Event>(waitForEventKey);
+
+		if (maybeResult) {
+			const shouldWriteLog =
+				(await this.#state.storage.get(waitForEventKey)) == undefined;
+			if (shouldWriteLog) {
+				this.#engine.writeLog(
+					InstanceEvent.WAIT_COMPLETE,
+					cacheKey,
+					waitForEventNameWithCounter,
+					maybeResult
+				);
+			}
+			return maybeResult as WorkflowStepEvent<T>;
+		}
+		const maybeError: (Error & UserErrorField) | undefined =
+			(await this.#state.storage.get(errorKey)) as Error | undefined;
+
+		if (maybeError) {
+			maybeError.isUserError = true;
+			throw maybeError;
+		}
+
+		const maybeRegistered = await this.#state.storage.get(
+			pendingWaiterRegistered
+		);
+
+		if (!maybeRegistered) {
+			this.#engine.writeLog(
+				InstanceEvent.WAIT_START,
+				cacheKey,
+				waitForEventNameWithCounter,
+				{
+					event: options.type,
+				}
+			);
+
+			await this.#state.storage.put(pendingWaiterRegistered, true);
+		}
+
+		// if there's a timeout on the PQ we pop it, because we wont need it
+		// @ts-expect-error priorityQueue is initiated in init
+		const timeoutEntryPQ = this.#engine.priorityQueue.getFirst(
+			(a) => a.hash === cacheKey && a.type === "timeout"
+		);
+		if (
+			(timeoutEntryPQ === undefined &&
+				this.#engine.priorityQueue !== undefined &&
+				this.#engine.priorityQueue.checkIfExistedInPast({
+					hash: cacheKey,
+					type: "timeout",
+				})) ||
+			(timeoutEntryPQ !== undefined &&
+				timeoutEntryPQ.targetTimestamp < Date.now())
+		) {
+			this.#engine.writeLog(
+				InstanceEvent.WAIT_TIMED_OUT,
+				cacheKey,
+				waitForEventNameWithCounter,
+				{
+					name: timeoutError.name,
+					message: timeoutError.message,
+				}
+			);
+			await this.#state.storage.put(errorKey, timeoutError);
+			throw timeoutError;
+		}
+
+		const timeoutPromise = async (timeoutToWait: number, addToPQ: boolean) => {
+			const priorityQueueHash = cacheKey;
+			if (addToPQ) {
+				// @ts-expect-error priorityQueue is initiated in init
+				await this.#engine.priorityQueue.add({
+					hash: priorityQueueHash,
+					targetTimestamp: Date.now() + timeoutToWait,
+					type: "timeout",
+				});
+			}
+			await scheduler.wait(timeoutToWait);
+			// if we reach here, means that we can try to delete the timeout from the PQ
+			// because we managed to wait in the same lifetime
+
+			// @ts-expect-error priorityQueue is initiated in init
+			this.#engine.priorityQueue.remove({
+				hash: priorityQueueHash,
+				type: "timeout",
+			});
+			// NOTE(lduarte): marking errors as user error allows the observability layer to avoid leaking
+			// user errors to sentry while making everything more observable. `isUserError` is not serialized
+			// into userland code due to how workerd serialzises errors over RPC - we also set it as undefined
+			// in the obs layer in case changes to workerd happen
+			const error = timeoutError;
+			error.isUserError = true;
+			throw error;
+		};
+
+		const eventPromise = new Promise<Event>((resolve) => {
+			// TODO: This might need to be the name, not the event type
+
+			const eventTypeQueue = this.#engine.eventMap.get(options.type);
+			if (eventTypeQueue) {
+				const event = eventTypeQueue.shift();
+				if (event) {
+					this.#engine.eventMap.set(options.type, eventTypeQueue);
+					return resolve(event);
+				}
+			}
+			const callbacks = this.#engine.waiters.get(options.type) ?? [];
+			callbacks.push(resolve);
+
+			this.#engine.waiters.set(options.type, callbacks);
+		});
+
+		const result = await Promise.race([
+			eventPromise,
+			timeoutEntryPQ !== undefined
+				? timeoutPromise(timeoutEntryPQ.targetTimestamp - Date.now(), false)
+				: timeoutPromise(ms(options.timeout), true),
+		])
+			.then(async (event) => {
+				console.log(event);
+				this.#engine.writeLog(
+					InstanceEvent.WAIT_COMPLETE,
+					cacheKey,
+					waitForEventNameWithCounter,
+					event as Event
+				);
+				await this.#state.storage.put(waitForEventKey, event);
+				return event;
+			})
+			.catch(async (error) => {
+				this.#engine.writeLog(
+					InstanceEvent.WAIT_TIMED_OUT,
+					cacheKey,
+					waitForEventNameWithCounter,
+					error
+				);
+				await this.#state.storage.put(errorKey, error);
+				throw error;
+			});
+
+		return result as WorkflowStepEvent<T>;
 	}
 }

@@ -4,7 +4,7 @@ import {
 	runInDurableObject,
 } from "cloudflare:test";
 import { NonRetryableError } from "cloudflare:workflows";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { InstanceEvent } from "../src";
 import type {
 	DatabaseInstance,
@@ -50,6 +50,26 @@ async function runWorkflow(
 	await setWorkflowEntrypoint(engineStub, callback);
 
 	await engineStub.init(
+		12346,
+		{} as DatabaseWorkflow,
+		{} as DatabaseVersion,
+		{} as DatabaseInstance,
+		{ payload: {}, timestamp: new Date(), instanceId: "some-instance-id" }
+	);
+
+	return engineStub;
+}
+
+async function runWorkflowDefer(
+	instanceId: string,
+	callback: (event: unknown, step: WorkflowStep) => Promise<unknown>
+): Promise<DurableObjectStub<Engine>> {
+	const engineId = env.ENGINE.idFromName(instanceId);
+	const engineStub = env.ENGINE.get(engineId);
+
+	await setWorkflowEntrypoint(engineStub, callback);
+
+	void engineStub.init(
 		12346,
 		{} as DatabaseWorkflow,
 		{} as DatabaseVersion,
@@ -112,5 +132,75 @@ describe("Engine", () => {
 		expect(
 			logs.logs.filter((val) => val.event == InstanceEvent.ATTEMPT_FAILURE)
 		).toHaveLength(1);
+	});
+
+	it("waitForEvent should receive events while active", async () => {
+		const engineStub = await runWorkflowDefer(
+			"MOCK-INSTANCE-ID",
+			async (_, step) => {
+				// @ts-expect-error not in worker types, yet
+				return await step.waitForEvent("i'm a event!", {
+					type: "event-type-1",
+					timeout: "10 seconds",
+				});
+			}
+		);
+
+		await vi.waitUntil(async () => {
+			const logs = (await engineStub.readLogs()) as EngineLogs;
+			return logs.logs.filter((val) => val.event == InstanceEvent.WAIT_START);
+		}, 500);
+
+		await engineStub.receiveEvent({
+			type: "event-type-1",
+			timestamp: new Date(),
+			payload: {},
+		});
+
+		await vi.waitUntil(async () => {
+			const logs = (await engineStub.readLogs()) as EngineLogs;
+			return logs.logs.filter(
+				(val) => val.event == InstanceEvent.WORKFLOW_SUCCESS
+			);
+		}, 500);
+	});
+
+	it("waitForEvent should receive events even if not active", async () => {
+		const engineStub = await runWorkflowDefer(
+			"MOCK-INSTANCE-ID",
+			async (_, step) => {
+				// @ts-expect-error not in worker types, yet
+				return await step.waitForEvent("i'm a event!", {
+					type: "event-type-1",
+					timeout: "10 seconds",
+				});
+			}
+		);
+
+		await vi.waitUntil(async () => {
+			const logs = (await engineStub.readLogs()) as EngineLogs;
+			return logs.logs.filter((val) => val.event == InstanceEvent.WAIT_START);
+		}, 500);
+
+		try {
+			await runInDurableObject(engineStub, async (_, state) => {
+				state.abort("kabooom");
+			});
+		} catch (e) {
+			// supposed to error out
+		}
+
+		await engineStub.receiveEvent({
+			type: "event-type-1",
+			timestamp: new Date(),
+			payload: {},
+		});
+
+		await vi.waitUntil(async () => {
+			const logs = (await engineStub.readLogs()) as EngineLogs;
+			return logs.logs.filter(
+				(val) => val.event == InstanceEvent.WORKFLOW_SUCCESS
+			);
+		}, 500);
 	});
 });
