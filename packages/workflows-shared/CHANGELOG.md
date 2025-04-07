@@ -1,5 +1,11 @@
 # @cloudflare/workflows-shared
 
+## 0.3.2
+
+### Patch Changes
+
+- [#8775](https://github.com/cloudflare/workers-sdk/pull/8775) [`ec7e621`](https://github.com/cloudflare/workers-sdk/commit/ec7e6212199272f9811a30a84922823c82d7d650) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Add `waitForEvent` and `sendEvent` support for local dev
+
 ## 0.3.1
 
 ### Patch Changes

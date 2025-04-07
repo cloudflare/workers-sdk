@@ -1,5 +1,22 @@
 # miniflare
 
+## 4.20250405.0
+
+### Minor Changes
+
+- [#8394](https://github.com/cloudflare/workers-sdk/pull/8394) [`93267cf`](https://github.com/cloudflare/workers-sdk/commit/93267cf3c59d57792fb10cc10b23255e33679c4d) Thanks [@edmundhung](https://github.com/edmundhung)! - Support Secrets Store Secret bindings
+
+### Patch Changes
+
+- [#8775](https://github.com/cloudflare/workers-sdk/pull/8775) [`ec7e621`](https://github.com/cloudflare/workers-sdk/commit/ec7e6212199272f9811a30a84922823c82d7d650) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250404.0  | 1.20250405.0  |
+  | @cloudflare/workers-types | ^4.20250404.0 | ^4.20250405.0 |
+
 ## 4.20250404.0
 
 ### Patch Changes
