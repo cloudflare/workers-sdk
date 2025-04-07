@@ -365,10 +365,15 @@ function getDurableObjectClassNames(
 			const classNames = serviceClassNames.get(serviceName);
 			const existingInfo = classNames?.get(className);
 
+			if (!existingInfo) {
+				// The DO might be defined in another Miniflare instance
+				continue;
+			}
+
 			if (
 				// enableSQL might be derived from the migrations and will be undefined if the serviceName is not the current worker
 				// We should compare the values only if they are defined
-				existingInfo?.enableSql !== undefined &&
+				existingInfo.enableSql !== undefined &&
 				existingInfo.enableSql !== enableSql
 			) {
 				throw new MiniflareCoreError(
@@ -378,7 +383,7 @@ function getDurableObjectClassNames(
 					)} and ${JSON.stringify(existingInfo?.enableSql)}`
 				);
 			}
-			if (existingInfo?.unsafeUniqueKey !== unsafeUniqueKey) {
+			if (existingInfo.unsafeUniqueKey !== unsafeUniqueKey) {
 				throw new MiniflareCoreError(
 					"ERR_DIFFERENT_UNIQUE_KEYS",
 					`Multiple unsafe unique keys defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
@@ -386,7 +391,7 @@ function getDurableObjectClassNames(
 					)} and ${JSON.stringify(existingInfo?.unsafeUniqueKey)}`
 				);
 			}
-			if (existingInfo?.unsafePreventEviction !== unsafePreventEviction) {
+			if (existingInfo.unsafePreventEviction !== unsafePreventEviction) {
 				throw new MiniflareCoreError(
 					"ERR_DIFFERENT_PREVENT_EVICTION",
 					`Multiple unsafe prevent eviction values defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
