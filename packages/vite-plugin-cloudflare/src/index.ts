@@ -599,7 +599,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			async transform(code, id) {
 				// Inject the Node.js compat globals into the entry module for Node.js compat environments.
 				const workerConfig = getWorkerConfig(this.environment.name);
-				assert(workerConfig, "Expected a worker config");
+				if (!workerConfig) {
+					return;
+				}
 				const resolvedId = await this.resolve(workerConfig.main);
 				if (id === resolvedId?.id) {
 					return injectGlobalCode(id, code);
