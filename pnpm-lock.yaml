@@ -887,6 +887,15 @@ importers:
 
   fixtures/rules-app: {}
 
+  fixtures/secrets-store:
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20250224.0
+        version: 4.20250404.0
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/shared:
     devDependencies:
       wrangler:

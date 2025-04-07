@@ -12094,6 +12094,45 @@ export default{
 		});
 	});
 
+	describe("secrets_store_secrets", () => {
+		it("should upload secret store bindings", async () => {
+			writeWranglerConfig({
+				secrets_store_secrets: [
+					{
+						binding: "SECRET",
+						store_id: "store_id",
+						secret_name: "secret_name",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "secrets_store_secret",
+						name: "SECRET",
+						store_id: "store_id",
+						secret_name: "secret_name",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Your worker has access to the following bindings:
+			- Secrets Store Secrets:
+			  - SECRET: store_id/secret_name
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
+		});
+	});
+
 	describe("--keep-vars", () => {
 		it("should send keepVars when keep-vars is passed in", async () => {
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", "hunter2");

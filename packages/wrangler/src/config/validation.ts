@@ -1358,6 +1358,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validatePipelineBinding),
 			[]
 		),
+		secrets_store_secrets: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"secrets_store_secrets",
+			validateBindingArray(envName, validateSecretsStoreSecretBinding),
+			[]
+		),
 		version_metadata: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -3154,6 +3164,54 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"pipeline",
+	]);
+
+	return isValid;
+};
+
+const validateSecretsStoreSecretBinding: ValidatorFn = (
+	diagnostics,
+	field,
+	value
+) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"secrets_store_secrets" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	// Secrets store bindings must have a binding, store_id, and secret_name
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "store_id", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "store_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	if (!isRequiredProperty(value, "secret_name", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "secret_name" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"store_id",
+		"secret_name",
 	]);
 
 	return isValid;
