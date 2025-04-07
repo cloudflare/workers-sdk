@@ -90,6 +90,7 @@ async function processKeyValue(
 	}
 
 	let val = null;
+	const size = decodedValue.length;
 	try {
 		val = !obj?.value
 			? null
@@ -99,16 +100,16 @@ async function processKeyValue(
 	} catch (err: any) {
 		throw new HttpError(
 			400,
-			"At least one of the requested keys corresponds to a non-JSON value"
+			`At least one of the requested keys corresponds to a non-${type} value`
 		);
 	}
 	if (val && withMetadata) {
-		return {
+		return [{
 			value: val,
 			metadata: obj?.metadata ?? null,
-		};
+		}, size];
 	}
-	return val;
+	return [val, size];
 }
 
 export class KVNamespaceObject extends MiniflareDurableObject {
@@ -132,23 +133,35 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 			const keys: string[] = parsedBody.keys;
 			const type = parsedBody?.type;
 			if (type && type !== "text" && type !== "json") {
-				return new Response(`Type ${type} is invalid`, { status: 400 });
+				return new Response("Bad Request", { status: 400 });
 			}
 			const obj: { [key: string]: any } = {};
 			if (keys.length > MAX_BULK_GET_KEYS) {
-				return new Response(`Accepting a max of 100 keys, got ${keys.length}`, {
+				return new Response("Bad Request", {
 					status: 400,
 				});
 			}
+			let totalBytes = 0;
 			for (const key of keys) {
 				validateGetOptions(key, { cacheTtl: parsedBody?.cacheTtl });
 				const entry = await this.storage.get(key);
-				const value = await processKeyValue(
+				const [value, size] = await processKeyValue(
 					entry,
 					parsedBody?.type,
 					parsedBody?.withMetadata
 				);
+				totalBytes += size;
 				obj[key] = value;
+
+			}
+			const maxValueSize = this.beingTested
+				? KVLimits.MAX_VALUE_SIZE_TEST
+				: KVLimits.MAX_BULK_SIZE;
+			if (totalBytes > maxValueSize) {
+				throw new HttpError(
+					413,
+					`Total size of request exceeds the limit of ${maxValueSize / 1024 / 1024}MB`
+				);
 			}
 
 			return new Response(JSON.stringify(obj));
