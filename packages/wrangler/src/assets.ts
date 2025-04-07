@@ -53,6 +53,8 @@ const BULK_UPLOAD_CONCURRENCY = 3;
 const MAX_UPLOAD_ATTEMPTS = 5;
 const MAX_UPLOAD_GATEWAY_ERRORS = 5;
 
+const MAX_DIFF_LINES = 100;
+
 export const syncAssets = async (
 	accountId: string | undefined,
 	assetDirectory: string,
@@ -132,7 +134,7 @@ export const syncAssets = async (
 	let attempts = 0;
 	const start = Date.now();
 	let completionJwt = "";
-	let assetUploadCount = 0;
+	let uploadedAssetsCount = 0;
 
 	for (const [bucketIndex, bucket] of assetBuckets.entries()) {
 		attempts = 0;
@@ -141,8 +143,10 @@ export const syncAssets = async (
 			// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
 			// This is so we don't run out of memory trying to upload the files.
 			const payload = new FormData();
+			const uploadedFiles: string[] = [];
 			for (const manifestEntry of bucket) {
 				const absFilePath = path.join(assetDirectory, manifestEntry[0]);
+				uploadedFiles.push(manifestEntry[0]);
 				payload.append(
 					manifestEntry[1].hash,
 					new File(
@@ -171,9 +175,11 @@ export const syncAssets = async (
 						body: payload,
 					}
 				);
-				assetUploadCount += bucket.length;
-				logger.info(
-					`Uploaded ${assetUploadCount} of ${numberFilesToUpload} assets`
+				uploadedAssetsCount += bucket.length;
+				logAssetsUploadStatus(
+					numberFilesToUpload,
+					uploadedAssetsCount,
+					uploadedFiles
 				);
 				return res;
 			} catch (e) {
@@ -251,6 +257,8 @@ export const syncAssets = async (
 
 const buildAssetManifest = async (dir: string) => {
 	const files = await readdir(dir, { recursive: true });
+	logReadFilesFromDirectory(dir, files);
+
 	const manifest: AssetManifest = {};
 	let counter = 0;
 
@@ -314,8 +322,6 @@ const buildAssetManifest = async (dir: string) => {
 	return manifest;
 };
 
-const MAX_DIFF_LINES = 100;
-
 function logAssetUpload(line: string, diffCount: number) {
 	const level = logger.loggerLevel;
 	if (LOGGER_LEVELS[level] >= LOGGER_LEVELS.debug) {
@@ -332,6 +338,49 @@ function logAssetUpload(line: string, diffCount: number) {
 		logger.info(chalk.dim(msg));
 	}
 	return diffCount++;
+}
+
+/**
+ * Logs a summary of the assets upload status ("Uploaded <count> of <total> assets"),
+ * and the list of uploaded files if in debug log level.
+ */
+function logAssetsUploadStatus(
+	numberFilesToUpload: number,
+	uploadedAssetsCount: number,
+	uploadedAssetFiles: string[]
+) {
+	const level = logger.loggerLevel;
+	const isDebugLogLevel = LOGGER_LEVELS[level] >= LOGGER_LEVELS.debug;
+	let summary = `Uploaded ${uploadedAssetsCount} of ${numberFilesToUpload} assets`;
+	// if debug level we want to list all the files that were uploaded
+	summary += isDebugLogLevel ? ":" : "";
+
+	logger.info(summary);
+
+	if (isDebugLogLevel) {
+		uploadedAssetFiles.forEach((file) => logger.debug(`✨ ${file}`));
+	}
+}
+
+/**
+ * Logs a summary of files read from a given directory ("Read <count>
+ * files from directory <dir>"), and the list of read files if in
+ * debug log level.
+ */
+function logReadFilesFromDirectory(directory: string, assetFiles: string[]) {
+	const level = logger.loggerLevel;
+	const isDebugLogLevel = LOGGER_LEVELS[level] >= LOGGER_LEVELS.debug;
+	let summary = `✨ Read ${assetFiles.length} files from the assets directory ${directory}`;
+	// if debug level we want to list all the files we read from the directory
+	summary += isDebugLogLevel ? ":" : "";
+
+	logger.info(summary);
+
+	if (isDebugLogLevel) {
+		assetFiles.forEach((file) => {
+			logger.debug(`/${file}`);
+		});
+	}
 }
 
 /**

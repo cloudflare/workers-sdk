@@ -21,7 +21,7 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 	let deployedUrl: string;
 	const helper = new WranglerE2ETestHelper();
 
-	it("deploy worker", async () => {
+	it("deploys a Worker", async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
 						name = "${workerName}"
@@ -61,7 +61,7 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 		expect(text).toMatchInlineSnapshot('"Hello World!"');
 	});
 
-	it("list 1 deployment", async () => {
+	it("lists 1 deployment", async () => {
 		const output = await helper.run(`wrangler deployments list`);
 
 		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
@@ -76,7 +76,7 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 		`);
 	});
 
-	it("modify & deploy worker", async () => {
+	it("modifies & deploys a Worker", async () => {
 		await helper.seed({
 			"src/index.ts": dedent`
         export default {
@@ -103,7 +103,7 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 		expect(text).toMatchInlineSnapshot('"Updated Worker!"');
 	});
 
-	it("list 2 deployments", async () => {
+	it("lists 2 deployments", async () => {
 		const dep = await helper.run(`wrangler deployments list`);
 		expect(normalize(dep.stdout)).toMatchInlineSnapshot(`
 			"Created:     TIMESTAMP
@@ -125,7 +125,7 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 		`);
 	});
 
-	it("rollback", async () => {
+	it("rolls back", async () => {
 		const output = await helper.run(
 			`wrangler rollback --message "A test message"`
 		);
@@ -164,7 +164,7 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 		`);
 	});
 
-	it("list deployments", async () => {
+	it("lists deployments", async () => {
 		const dep = await helper.run(`wrangler deployments list`);
 		expect(normalize(dep.stdout)).toMatchInlineSnapshot(`
 			"Created:     TIMESTAMP
@@ -249,6 +249,7 @@ describe.each([
 		async afterAll() {},
 		expectAssetsOnlyStdout: (output: string) => {
 			expect(output).toEqual(`🌀 Building list of assets...
+✨ Read 3 files from the assets directory /tmpdir
 🌀 Starting asset upload...
 🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
 + /404.html
@@ -267,6 +268,48 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 		},
 		expectWithWorkerStdout: (output: string) => {
 			expect(output).toContain(`🌀 Building list of assets...
+✨ Read 3 files from the assets directory /tmpdir
+🌀 Starting asset upload...`);
+			// Unfortunately the server-side deduping logic isn't always 100% accurate, and sometimes a file is re-uploaded
+			// As such, to reduce CI flakes, this test just asserts that _at least one_ file isn't re-uploaded
+			expect(
+				[
+					"Uploaded 1 of 1 assets",
+					"Uploaded 1 of 2 assets",
+					"No files to upload.",
+				].some((s) => output.includes(s))
+			).toBeTruthy();
+		},
+	},
+	{
+		name: "regular Worker (debug logs)",
+		flags: "",
+		debug: true,
+		async beforeAll() {},
+		async afterAll() {},
+		expectAssetsOnlyStdout: (output: string) => {
+			expect(output).toContain(`🌀 Building list of assets...
+✨ Read 3 files from the assets directory /tmpdir
+/404.html
+/[boop].html
+/index.html`);
+			expect(output).toContain("🌀 Starting asset upload...");
+			expect(output)
+				.toContain(`🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
++ /404.html
++ /index.html
++ /[boop].html`);
+			expect(output).toContain(`Uploaded 1 of 3 assets:
+✨ /index.html`);
+			expect(output).toContain(`Uploaded 2 of 3 assets:
+✨ /[boop].html`);
+			expect(output).toEqual(`Uploaded 3 of 3 assets:
+✨ /404.html
+✨ Success! Uploaded 3 files (TIMINGS)`);
+		},
+		expectWithWorkerStdout: (output: string) => {
+			expect(output).toContain(`🌀 Building list of assets...
+✨ Read 3 files from the assets directory /tmpdir
 🌀 Starting asset upload...`);
 			// Unfortunately the server-side deduping logic isn't always 100% accurate, and sometimes a file is re-uploaded
 			// As such, to reduce CI flakes, this test just asserts that _at least one_ file isn't re-uploaded
@@ -323,6 +366,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 		},
 		expectAssetsOnlyStdout: (output: string) => {
 			expect(output).toEqual(`🌀 Building list of assets...
+✨ Read 3 files from the assets directory /tmpdir
 🌀 Starting asset upload...
 🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
 + /404.html
@@ -340,6 +384,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 		},
 		expectWithWorkerStdout: (output: string) => {
 			expect(output).toContain(`🌀 Building list of assets...
+✨ Read 3 files from the assets directory /tmpdir
 🌀 Starting asset upload...`);
 			// Unfortunately the server-side deduping logic isn't always 100% accurate, and sometimes a file is re-uploaded
 			// As such, to reduce CI flakes, this test just asserts that _at least one_ file isn't re-uploaded
@@ -373,7 +418,9 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			...initialAssets,
 		});
 
-		const output = await helper.run(`wrangler deploy ${testcase.flags}`);
+		const output = await helper.run(`wrangler deploy ${testcase.flags}`, {
+			debug: testcase.debug ?? false,
+		});
 		testcase.expectAssetsOnlyStdout(normalize(output.stdout));
 		if (testcase.url) {
 			deployedUrl = testcase.url;
