@@ -11,8 +11,7 @@ test("single secret-store", async (t) => {
 				secret_name: "secret_name",
 			},
 		},
-		secretsStorePersist:
-			"../../fixtures/secrets-store/.wrangler/state/v3/secrets-store",
+		secretsStorePersist: false,
 		modules: true,
 		script: `
 		export default {

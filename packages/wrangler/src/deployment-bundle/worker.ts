@@ -87,11 +87,17 @@ export interface CfKvNamespace {
 /**
  * A binding to send email.
  */
-export interface CfSendEmailBindings {
+export type CfSendEmailBindings = {
 	name: string;
-	destination_address?: string;
-	allowed_destination_addresses?: string[];
-}
+} & (
+	| { destination_address?: string }
+	| { allowed_destination_addresses?: string[] }
+);
+// export interface CfSendEmailBindings {
+// 	name: string;
+// 	destination_address?: string | undefined;
+// 	allowed_destination_addresses?: string[] | undefined;
+// }
 
 /**
  * A binding to a wasm module (in service-worker format)

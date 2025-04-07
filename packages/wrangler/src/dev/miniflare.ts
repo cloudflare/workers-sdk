@@ -385,6 +385,7 @@ type WorkerOptionsBindings = Pick<
 	| "workflows"
 	| "wrappedBindings"
 	| "secretsStoreSecrets"
+	| "email"
 >;
 
 type MiniflareBindingsConfig = Pick<

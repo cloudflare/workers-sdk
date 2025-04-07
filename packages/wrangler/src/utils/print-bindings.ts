@@ -177,19 +177,25 @@ export function printBindings(
 	if (send_email !== undefined && send_email.length > 0) {
 		output.push({
 			name: friendlyBindingNames.send_email,
-			entries: send_email.map(
-				({ name, destination_address, allowed_destination_addresses }) => {
-					return {
-						key: name,
-						value: addSuffix(
-							destination_address ||
-								allowed_destination_addresses?.join(", ") ||
-								"unrestricted",
-							{ isSimulatedLocally: true }
-						),
-					};
-				}
-			),
+			entries: send_email.map((emailBinding) => {
+				const destination_address =
+					"destination_address" in emailBinding
+						? emailBinding.destination_address
+						: undefined;
+				const allowed_destination_addresses =
+					"allowed_destination_addresses" in emailBinding
+						? emailBinding.allowed_destination_addresses
+						: undefined;
+				return {
+					key: emailBinding.name,
+					value: addSuffix(
+						destination_address ||
+							allowed_destination_addresses?.join(", ") ||
+							"unrestricted",
+						{ isSimulatedLocally: true }
+					),
+				};
+			}),
 		});
 	}
 
