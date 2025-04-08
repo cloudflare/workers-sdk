@@ -17,7 +17,6 @@
 		"assembly",
 		"webassembly",
 		"rust",
-		"emscripten",
 		"typescript",
 		"router",
 		"http",

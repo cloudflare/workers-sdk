@@ -60,7 +60,11 @@
 			]
 		},
 		"test:ci": {
-			"inputs": ["!*/**/.wrangler/**", "**/__tests__/**"],
+			"inputs": [
+				"!*/**/.wrangler/**",
+				"**/__tests__/**",
+				"!*/**/tsconfig.tsbuildinfo"
+			],
 			"dependsOn": ["build"],
 			"env": ["VITEST", "NODE_DEBUG", "MINIFLARE_WORKERD_PATH"]
 		},
