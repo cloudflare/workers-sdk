@@ -1,5 +1,15 @@
 # miniflare
 
+## 4.20250405.1
+
+### Minor Changes
+
+- [#8375](https://github.com/cloudflare/workers-sdk/pull/8375) [`930ebb2`](https://github.com/cloudflare/workers-sdk/commit/930ebb279e165c1a82a70e89431e0a5a09b06647) Thanks [@penalosa](https://github.com/penalosa)! - Add support for email local dev and send_email binding
+
+### Patch Changes
+
+- [#8808](https://github.com/cloudflare/workers-sdk/pull/8808) [`afd93b9`](https://github.com/cloudflare/workers-sdk/commit/afd93b98d8eb700ce51dc8ea30eb0c0d56deae8d) Thanks [@teresalves](https://github.com/teresalves)! - KV: improve error messages for bulk gets
+
 ## 4.20250405.0
 
 ### Minor Changes
