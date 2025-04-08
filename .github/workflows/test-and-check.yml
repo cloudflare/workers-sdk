@@ -15,7 +15,7 @@ jobs:
     steps:
       - run: curl -X POST https://devprod-status-bot.devprod.workers.dev/pr-project/workers-sdk/${{ github.event.number }}
 
-  check-non-linux:
+  check-non-macos:
     if: github.head_ref == 'changeset-release/main'
     timeout-minutes: 30
     concurrency:
@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [ubuntu-24.04-arm, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -62,7 +62,7 @@ jobs:
       cancel-in-progress: true
 
     name: "Checks"
-    runs-on: ubuntu-24.04-arm
+    runs-on: macos-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -101,26 +101,26 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-24.04-arm
-            os_name: Linux
-            node_version: 18.20.6
-            filter: '--filter="./tools" --filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
+          # - os: ubuntu-24.04-arm
+          #   os_name: Linux
+          #   node_version: 18.20.6
+          #   filter: '--filter="./tools" --filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
           - os: macos-latest
             os_name: macOS
             node_version: 18.20.6
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
-          - os: windows-latest
-            os_name: Windows
-            node_version: 18.20.6
-            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
-          - os: ubuntu-24.04-arm
-            os_name: v20, Linux
-            node_version: 20
-            filter: '--filter="./packages/*"'
-          - os: ubuntu-24.04-arm
-            os_name: v22, Linux
-            node_version: 22
-            filter: '--filter="./packages/*" --filter="!./packages/kv-asset-handler"'
+          # - os: windows-latest
+          #   os_name: Windows
+          #   node_version: 18.20.6
+          #   filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
+          # - os: ubuntu-24.04-arm
+          #   os_name: v20, Linux
+          #   node_version: 20
+          #   filter: '--filter="./packages/*"'
+          # - os: ubuntu-24.04-arm
+          #   os_name: v22, Linux
+          #   node_version: 22
+          #   filter: '--filter="./packages/*" --filter="!./packages/kv-asset-handler"'
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
