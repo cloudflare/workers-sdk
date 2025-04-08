@@ -156,7 +156,7 @@ function replaceByte(stdout: string): string {
  * Temp directories are created with random names, so we replace all comments temp dirs in them
  */
 function normalizeTempDirs(stdout: string): string {
-	return stdout.replaceAll(/\/.+\/wrangler-smoke-.+/g, "/tmpdir");
+	return stdout.replaceAll(/\S+\/wrangler-smoke-.+/g, "/tmpdir");
 }
 
 /**

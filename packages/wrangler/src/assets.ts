@@ -362,7 +362,7 @@ function logAssetsUploadStatus(
  */
 function logReadFilesFromDirectory(directory: string, assetFiles: string[]) {
 	logger.info(
-		`✨ Read ${assetFiles.length} files from the assets directory ${directory}`
+		`✨ Read ${assetFiles.length} file${assetFiles.length === 1 ? "" : "s"} from the assets directory ${directory}`
 	);
 	assetFiles.forEach((file) => logger.debug(`/${file}`));
 }
