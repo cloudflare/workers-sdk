@@ -4,8 +4,8 @@
 	"tasks": {
 		"build": {
 			"inputs": [
+				"$TURBO_DEFAULT$",
 				"!*/**/__tests__/**",
-				"!*/**/.wrangler/**",
 				"bin/**",
 				"src/**",
 				"scripts/**",
@@ -61,9 +61,12 @@
 		},
 		"test:ci": {
 			"inputs": [
-				"!*/**/.wrangler/**",
+				"$TURBO_DEFAULT$",
 				"**/__tests__/**",
-				"!*/**/tsconfig.tsbuildinfo"
+				"!bin/**",
+				"!src/**",
+				"!scripts/**",
+				"!templates/**"
 			],
 			"dependsOn": ["build"],
 			"env": ["VITEST", "NODE_DEBUG", "MINIFLARE_WORKERD_PATH"]
