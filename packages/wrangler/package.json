@@ -19,7 +19,6 @@
 		"rust",
 		"emscripten",
 		"typescript",
-		"graphql",
 		"router",
 		"http",
 		"cli"
