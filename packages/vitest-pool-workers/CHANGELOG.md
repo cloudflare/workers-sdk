@@ -1,5 +1,15 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.8.13
+
+### Patch Changes
+
+- [#8832](https://github.com/cloudflare/workers-sdk/pull/8832) [`3d825da`](https://github.com/cloudflare/workers-sdk/commit/3d825dac5bf59370d7b8717b934dd692ce597149) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Make vitest-pool-workers not hang when console.\* is used in a Workflow
+
+- Updated dependencies [[`afd93b9`](https://github.com/cloudflare/workers-sdk/commit/afd93b98d8eb700ce51dc8ea30eb0c0d56deae8d), [`930ebb2`](https://github.com/cloudflare/workers-sdk/commit/930ebb279e165c1a82a70e89431e0a5a09b06647), [`09464a6`](https://github.com/cloudflare/workers-sdk/commit/09464a6c0d5bbc7b5ac2e33d68621e84f4fb4557), [`62df08a`](https://github.com/cloudflare/workers-sdk/commit/62df08af388c0e12bca807a96b9ce8dac02edd8f)]:
+  - miniflare@4.20250405.1
+  - wrangler@4.9.0
+
 ## 0.8.12
 
 ### Patch Changes

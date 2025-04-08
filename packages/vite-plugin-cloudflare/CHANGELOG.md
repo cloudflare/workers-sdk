@@ -1,5 +1,21 @@
 # @cloudflare/vite-plugin
 
+## 1.0.2
+
+### Patch Changes
+
+- [#8823](https://github.com/cloudflare/workers-sdk/pull/8823) [`f566680`](https://github.com/cloudflare/workers-sdk/commit/f5666806ebe806216bba20efd634ab1075e382b8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: replace `process.env.NODE_ENV` for nodejs_compat builds
+
+  make sure that occurrences of `process.env.NODE_ENV` are replaced with the
+  current `process.env.NODE_ENV` value or `"production"` on builds that include
+  the `nodejs_compat` flag, this enables libraries checking such value
+  (e.g. `react-dom`) to be properly treeshaken
+
+- Updated dependencies [[`afd93b9`](https://github.com/cloudflare/workers-sdk/commit/afd93b98d8eb700ce51dc8ea30eb0c0d56deae8d), [`930ebb2`](https://github.com/cloudflare/workers-sdk/commit/930ebb279e165c1a82a70e89431e0a5a09b06647), [`09464a6`](https://github.com/cloudflare/workers-sdk/commit/09464a6c0d5bbc7b5ac2e33d68621e84f4fb4557), [`62df08a`](https://github.com/cloudflare/workers-sdk/commit/62df08af388c0e12bca807a96b9ce8dac02edd8f)]:
+  - miniflare@4.20250405.1
+  - wrangler@4.9.0
+  - @cloudflare/unenv-preset@2.3.1
+
 ## 1.0.1
 
 ### Patch Changes

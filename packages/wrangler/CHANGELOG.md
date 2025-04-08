@@ -1,5 +1,28 @@
 # wrangler
 
+## 4.9.0
+
+### Minor Changes
+
+- [#8375](https://github.com/cloudflare/workers-sdk/pull/8375) [`930ebb2`](https://github.com/cloudflare/workers-sdk/commit/930ebb279e165c1a82a70e89431e0a5a09b06647) Thanks [@penalosa](https://github.com/penalosa)! - Add support for email local dev and send_email binding
+
+### Patch Changes
+
+- [#8809](https://github.com/cloudflare/workers-sdk/pull/8809) [`09464a6`](https://github.com/cloudflare/workers-sdk/commit/09464a6c0d5bbc7b5ac2e33d68621e84f4fb4557) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - improve error message when redirected config contains environments
+
+  this change improves that validation error message that users see
+  when a redirected config file contains environments, by:
+
+  - cleaning the message formatting and displaying the
+    offending environments in a list
+  - prompting the user to report the issue to the author
+    of the tool which has generated the config
+
+- [#8829](https://github.com/cloudflare/workers-sdk/pull/8829) [`62df08a`](https://github.com/cloudflare/workers-sdk/commit/62df08af388c0e12bca807a96b9ce8dac02edd8f) Thanks [@cmackenzie1](https://github.com/cmackenzie1)! - Add option `--cors-origin none` to remove CORS settings on a pipeline
+
+- Updated dependencies [[`afd93b9`](https://github.com/cloudflare/workers-sdk/commit/afd93b98d8eb700ce51dc8ea30eb0c0d56deae8d), [`930ebb2`](https://github.com/cloudflare/workers-sdk/commit/930ebb279e165c1a82a70e89431e0a5a09b06647)]:
+  - miniflare@4.20250405.1
+
 ## 4.8.0
 
 ### Minor Changes
