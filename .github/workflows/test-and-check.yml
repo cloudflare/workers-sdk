@@ -78,17 +78,25 @@ jobs:
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
       - name: Build
-        run: pnpm run build
+        run: pnpm run build --summarize
         env:
           CI_OS: ${{ runner.os }}
 
       - name: Check for errors
-        run: pnpm run check
+        run: pnpm run check --summarize
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
+          CI_OS: ${{ runner.os }}
 
       - name: Check the changesets
         run: node -r esbuild-register tools/deployments/validate-changesets.ts
+
+      - name: Upload turbo logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: turbo-runs-${{ matrix.os }}-${{ matrix.node }}
+          path: .turbo/runs
 
   test:
     timeout-minutes: 30
@@ -108,7 +116,7 @@ jobs:
           - os: macos-latest
             os_name: macOS
             node_version: 18.20.6
-            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
+            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --summarize'
           # - os: windows-latest
           #   os_name: Windows
           #   node_version: 18.20.6
@@ -155,3 +163,10 @@ jobs:
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           CI_OS: ${{ matrix.os_name }}
+
+      - name: Upload turbo logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: turbo-runs-${{ matrix.os }}-${{ matrix.node }}
+          path: .turbo/runs
