@@ -6,14 +6,15 @@ updates:
     directory: "/packages/create-cloudflare/src/frameworks"
     schedule:
       interval: "weekly"
+      # Don't run these at midday on Mondays, when we are busy trying to land PRs
+      day: "sunday"
+      time: "06:00"
     versioning-strategy: increase
     # the following is used to add the [C3] prefix to the PR title,
     # we override the commit message but setting a prefix like this
     # makes it so that also the PR title gets such prefix
     commit-message:
       prefix: "[C3] "
-    assignees:
-      - "@cloudflare/c3"
     reviewers:
       - "@cloudflare/c3"
     labels:
@@ -33,9 +34,8 @@ updates:
           - "@cloudflare/workers-types"
     schedule:
       interval: "daily"
+      time: "06:00" # the workerd release starts at 00:30 UTC each day
     versioning-strategy: increase
-    assignees:
-      - "@cloudflare/wrangler"
     reviewers:
       - "@cloudflare/wrangler"
     labels:

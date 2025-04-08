@@ -102,6 +102,7 @@ describe("normalizeAndValidateConfig()", () => {
 				producers: [],
 			},
 			r2_buckets: [],
+			secrets_store_secrets: [],
 			services: [],
 			analytics_engine_datasets: [],
 			route: undefined,
@@ -3501,6 +3502,99 @@ describe("normalizeAndValidateConfig()", () => {
 					  - \\"pipelines[0]\\" bindings must have a string \\"pipeline\\" field but got {}.
 					  - \\"pipelines[2]\\" bindings must have a string \\"binding\\" field but got {\\"binding\\":2000,\\"project\\":2111}.
 					  - \\"pipelines[2]\\" bindings must have a string \\"pipeline\\" field but got {\\"binding\\":2000,\\"project\\":2111}."
+				`);
+			});
+		});
+
+		describe("[secrets_store_secrets]", () => {
+			it("should error if secrets_store_secrets is an object", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ secrets_store_secrets: {} },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"secrets_store_secrets\\" should be an array but got {}."
+		`);
+			});
+
+			it("should error if secrets_store_secrets is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ secrets_store_secrets: null },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"secrets_store_secrets\\" should be an array but got null."
+		`);
+			});
+
+			it("should accept valid bindings", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						secrets_store_secrets: [
+							{
+								binding: "VALID",
+								store_id: "store_id",
+								secret_name: "secret_name",
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if secrets_store_secrets.bindings are not valid", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						secrets_store_secrets: [
+							{},
+							{
+								binding: "VALID",
+								store_id: "store_id",
+								secret_name: "secret_name",
+							},
+							{
+								binding: null,
+								invalid: true,
+								store_id: 123,
+								secret_name: null,
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in secrets_store_secrets[2] field: \\"invalid\\""
+				`);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"secrets_store_secrets[0]\\" bindings must have a string \\"binding\\" field but got {}.
+					  - \\"secrets_store_secrets[0]\\" bindings must have a string \\"store_id\\" field but got {}.
+					  - \\"secrets_store_secrets[0]\\" bindings must have a string \\"secret_name\\" field but got {}.
+					  - \\"secrets_store_secrets[2]\\" bindings must have a string \\"binding\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"secret_name\\":null}.
+					  - \\"secrets_store_secrets[2]\\" bindings must have a string \\"store_id\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"secret_name\\":null}.
+					  - \\"secrets_store_secrets[2]\\" bindings must have a string \\"secret_name\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"secret_name\\":null}."
 				`);
 			});
 		});

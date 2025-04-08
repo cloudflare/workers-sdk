@@ -1,0 +1,11 @@
+name = "email-to-rss"
+main = "src/index.ts"
+compatibility_date = "2025-02-14"
+
+compatibility_flags = [ "nodejs_compat" ]
+
+send_email = [
+   {name = "UNBOUND_SEND"},
+   {name = "SPECIFIC_SEND", destination_address = "something@example.com"},
+   {name = "LIST_SEND", allowed_destination_addresses = ["something@example.com", "else@example.com"]},
+]

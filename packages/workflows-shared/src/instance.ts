@@ -4,6 +4,7 @@ import type {
 	DatabaseVersion,
 	DatabaseWorkflow,
 } from "./engine";
+import type { WorkflowEvent } from "cloudflare:workers";
 
 export type Instance = {
 	id: string;
@@ -23,10 +24,7 @@ export type InstanceMetadata = {
 	workflow: DatabaseWorkflow;
 	version: DatabaseVersion;
 	instance: DatabaseInstance;
-	event: {
-		payload: Record<string, unknown>;
-		timestamp: Date;
-	};
+	event: WorkflowEvent<unknown>;
 };
 
 export enum InstanceStatus {
@@ -106,6 +104,13 @@ export const enum InstanceEvent {
 	ATTEMPT_START = 10,
 	ATTEMPT_SUCCESS = 11,
 	ATTEMPT_FAILURE = 12,
+
+	// It's here just to make it sequential and to not have gaps in the event types.
+	__INTERNAL_PROD = 13,
+
+	WAIT_START = 14,
+	WAIT_COMPLETE = 15,
+	WAIT_TIMED_OUT = 16,
 }
 
 export const enum InstanceTrigger {

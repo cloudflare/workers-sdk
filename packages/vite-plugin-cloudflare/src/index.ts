@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { createMiddleware } from "@hattip/adapter-node";
+import replace from "@rollup/plugin-replace";
 import MagicString from "magic-string";
 import { Miniflare } from "miniflare";
 import colors from "picocolors";
@@ -547,6 +548,18 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				// Only configure this environment if it is a Worker using Node.js compatibility.
 				if (isNodeCompat(getWorkerConfig(name))) {
 					return {
+						build: {
+							rollupOptions: {
+								plugins: [
+									replace({
+										"process.env.NODE_ENV": JSON.stringify(
+											process.env.NODE_ENV ?? "production"
+										),
+										preventAssignment: true,
+									}),
+								],
+							},
+						},
 						resolve: {
 							builtins: [...nodeCompatExternals],
 						},
@@ -599,7 +612,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			async transform(code, id) {
 				// Inject the Node.js compat globals into the entry module for Node.js compat environments.
 				const workerConfig = getWorkerConfig(this.environment.name);
-				assert(workerConfig, "Expected a worker config");
+				if (!workerConfig) {
+					return;
+				}
 				const resolvedId = await this.resolve(workerConfig.main);
 				if (id === resolvedId?.id) {
 					return injectGlobalCode(id, code);

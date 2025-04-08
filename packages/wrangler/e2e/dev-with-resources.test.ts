@@ -353,6 +353,40 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		expect(result.stdout).toBe("new-value");
 	});
 
+	it("exposes Secrets Store bindings", async () => {
+		const storeId = await helper.secretsStore(isLocal);
+
+		await helper.run(
+			`wrangler secrets-store secret create ${storeId} ${resourceFlags} --name mysecret --value my-secret-value --scopes workers`
+		);
+
+		await helper.seed({
+			"wrangler.toml": dedent`
+				name = "${workerName}"
+				main = "src/index.ts"
+				compatibility_date = "2025-01-01"
+				secrets_store_secrets = [
+					{ binding = "SECRET", store_id = "${storeId}", secret_name = "mysecret" }
+				]
+			`,
+			"src/index.ts": dedent`
+				export default {
+					async fetch(request, env, ctx) {
+						return new Response(await env.SECRET.get());
+					}
+				}
+			`,
+		});
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
+		const { url } = await worker.waitForReady();
+		const res = await fetch(url, {
+			headers: { "MF-Disable-Pretty-Error": "true" },
+		});
+		expect(await res.text()).toBe("my-secret-value");
+	});
+
 	it("supports Workers Sites bindings", async ({ onTestFinished }) => {
 		if (!isLocal) {
 			onTestFinished(async () => {

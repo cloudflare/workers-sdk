@@ -1,0 +1,13 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"compatibility_date": "2025-01-01",
+	"main": "src/index.ts",
+	"name": "secret-store",
+	"secrets_store_secrets": [
+		{
+			"binding": "SECRET",
+			"secret_name": "secret_name",
+			"store_id": "a3fb907f446e4d94bd946d7ea6365b1c",
+		},
+	],
+}

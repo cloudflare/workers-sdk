@@ -125,6 +125,12 @@ export type WorkerMetadataBinding =
 	| { type: "mtls_certificate"; name: string; certificate_id: string }
 	| { type: "pipelines"; name: string; pipeline: string }
 	| {
+			type: "secrets_store_secret";
+			name: string;
+			store_id: string;
+			secret_name: string;
+	  }
+	| {
 			type: "logfwdr";
 			name: string;
 			destination: string;
@@ -257,16 +263,22 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		}
 	});
 
-	bindings.send_email?.forEach(
-		({ name, destination_address, allowed_destination_addresses }) => {
-			metadataBindings.push({
-				name: name,
-				type: "send_email",
-				destination_address,
-				allowed_destination_addresses,
-			});
-		}
-	);
+	bindings.send_email?.forEach((emailBinding) => {
+		const destination_address =
+			"destination_address" in emailBinding
+				? emailBinding.destination_address
+				: undefined;
+		const allowed_destination_addresses =
+			"allowed_destination_addresses" in emailBinding
+				? emailBinding.allowed_destination_addresses
+				: undefined;
+		metadataBindings.push({
+			name: emailBinding.name,
+			type: "send_email",
+			destination_address,
+			allowed_destination_addresses,
+		});
+	});
 
 	bindings.durable_objects?.bindings.forEach(
 		({ name, class_name, script_name, environment }) => {
@@ -360,6 +372,17 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			id: id,
 		});
 	});
+
+	bindings.secrets_store_secrets?.forEach(
+		({ binding, store_id, secret_name }) => {
+			metadataBindings.push({
+				name: binding,
+				type: "secrets_store_secret",
+				store_id,
+				secret_name,
+			});
+		}
+	);
 
 	bindings.services?.forEach(
 		({ binding, service, environment, entrypoint }) => {

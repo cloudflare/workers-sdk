@@ -274,14 +274,14 @@ describe("pipelines", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler pipelines
 
-			🚰 Manage Worker Pipelines [open beta]
+			🚰 Manage Cloudflare Pipelines [open beta]
 
 			COMMANDS
-			  wrangler pipelines create <pipeline>  Create a new Pipeline
-			  wrangler pipelines list               List current Pipelines
-			  wrangler pipelines get <pipeline>     Get a Pipeline configuration
-			  wrangler pipelines update <pipeline>  Update a Pipeline
-			  wrangler pipelines delete <pipeline>  Delete a Pipeline
+			  wrangler pipelines create <pipeline>  Create a new pipeline
+			  wrangler pipelines list               List all pipelines
+			  wrangler pipelines get <pipeline>     Get a pipeline's configuration
+			  wrangler pipelines update <pipeline>  Update a pipeline
+			  wrangler pipelines delete <pipeline>  Delete a pipeline
 
 			GLOBAL FLAGS
 			  -c, --config   Path to Wrangler configuration file  [string]
@@ -301,7 +301,7 @@ describe("pipelines", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"wrangler pipelines create <pipeline>
 
-				Create a new Pipeline
+				Create a new pipeline
 
 				POSITIONALS
 				  pipeline  The name of the new pipeline  [string] [required]
@@ -324,7 +324,7 @@ describe("pipelines", () => {
 				      --compression           Compression format for output files  [string] [choices: \\"none\\", \\"gzip\\", \\"deflate\\"] [default: \\"gzip\\"]
 
 				Pipeline settings
-				      --shard-count  Number of pipeline shards. More shards handle higher request volume; fewer shards produce larger output files. Defaults to 2 if unset. Minimum: 1, Maximum: 15  [number]
+				      --shard-count  Number of shards for the pipeline. More shards handle higher request volume; fewer shards produce larger output files. Defaults to 2 if unset. Minimum: 1, Maximum: 15  [number]
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
@@ -342,8 +342,8 @@ describe("pipelines", () => {
 			);
 			expect(requests.count).toEqual(1);
 			expect(std.out).toMatchInlineSnapshot(`
-				"🌀 Creating Pipeline named \\"my-pipeline\\"
-				✅ Successfully created Pipeline \\"my-pipeline\\" with ID 0001
+				"🌀 Creating pipeline named \\"my-pipeline\\"
+				✅ Successfully created pipeline \\"my-pipeline\\" with ID 0001
 
 				Id:    0001
 				Name:  my-pipeline
@@ -364,7 +364,7 @@ describe("pipelines", () => {
 				    Max duration:  300 seconds
 				    Max records:   10,000,000
 
-				🎉 You can now send data to your Pipeline!
+				🎉 You can now send data to your pipeline!
 
 				To send data to your pipeline from a Worker, add the following to your wrangler config file:
 
@@ -377,7 +377,7 @@ describe("pipelines", () => {
 				  ]
 				}
 
-				Send data to your Pipeline's HTTP endpoint:
+				Send data to your pipeline's HTTP endpoint:
 
 				curl \\"foo\\" -d '[{\\"foo\\": \\"bar\\"}]'
 				"
@@ -654,6 +654,42 @@ describe("pipelines", () => {
 			]);
 		});
 
+		it("should update remove cors headers", async () => {
+			const pipeline: Pipeline = samplePipeline;
+			mockGetRequest(pipeline.name, pipeline);
+
+			const update = JSON.parse(JSON.stringify(pipeline));
+			update.source = [
+				{
+					type: "http",
+					format: "json",
+					authenticated: true,
+				},
+			];
+			const updateReq = mockUpdateRequest(update.name, update);
+
+			await runWrangler(
+				"pipelines update my-pipeline --cors-origins http://localhost:8787"
+			);
+
+			expect(updateReq.count).toEqual(1);
+			expect(updateReq.body?.source.length).toEqual(2);
+			expect(updateReq.body?.source[1].type).toEqual("http");
+			expect((updateReq.body?.source[1] as HttpSource).cors?.origins).toEqual([
+				"http://localhost:8787",
+			]);
+
+			mockGetRequest(pipeline.name, pipeline);
+			const secondUpdateReq = mockUpdateRequest(update.name, update);
+			await runWrangler("pipelines update my-pipeline --cors-origins none");
+			expect(secondUpdateReq.count).toEqual(1);
+			expect(secondUpdateReq.body?.source.length).toEqual(2);
+			expect(secondUpdateReq.body?.source[1].type).toEqual("http");
+			expect(
+				(secondUpdateReq.body?.source[1] as HttpSource).cors?.origins
+			).toEqual([]);
+		});
+
 		it("should fail a missing pipeline", async () => {
 			const requests = mockGetRequest("bad-pipeline", null, 404, {
 				code: 1000,
@@ -704,8 +740,8 @@ describe("pipelines", () => {
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Deleting Pipeline foo.
-				Deleted Pipeline foo."
+				"Deleting pipeline foo.
+				Deleted pipeline foo."
 			`);
 			expect(requests.count).toEqual(1);
 		});
@@ -723,7 +759,7 @@ describe("pipelines", () => {
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
-				"Deleting Pipeline bad-pipeline.
+				"Deleting pipeline bad-pipeline.
 				X [ERROR] A request to the Cloudflare API (/accounts/some-account-id/pipelines/bad-pipeline) failed.
 				  Pipeline does not exist [code: 1000]
 				  If you think this is a bug, please open an issue at:

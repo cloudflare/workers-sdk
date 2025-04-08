@@ -32,6 +32,7 @@ export const friendlyBindingNames: Record<
 	mtls_certificates: "mTLS Certificates",
 	workflows: "Workflows",
 	pipelines: "Pipelines",
+	secrets_store_secrets: "Secrets Store Secrets",
 	assets: "Assets",
 } as const;
 
@@ -80,6 +81,7 @@ export function printBindings(
 		hyperdrive,
 		r2_buckets,
 		logfwdr,
+		secrets_store_secrets,
 		services,
 		analytics_engine_datasets,
 		text_blobs,
@@ -175,18 +177,25 @@ export function printBindings(
 	if (send_email !== undefined && send_email.length > 0) {
 		output.push({
 			name: friendlyBindingNames.send_email,
-			entries: send_email.map(
-				({ name, destination_address, allowed_destination_addresses }) => {
-					return {
-						key: name,
-						value: addSuffix(
-							destination_address ||
-								allowed_destination_addresses?.join(", ") ||
-								"unrestricted"
-						),
-					};
-				}
-			),
+			entries: send_email.map((emailBinding) => {
+				const destination_address =
+					"destination_address" in emailBinding
+						? emailBinding.destination_address
+						: undefined;
+				const allowed_destination_addresses =
+					"allowed_destination_addresses" in emailBinding
+						? emailBinding.allowed_destination_addresses
+						: undefined;
+				return {
+					key: emailBinding.name,
+					value: addSuffix(
+						destination_address ||
+							allowed_destination_addresses?.join(", ") ||
+							"unrestricted",
+						{ isSimulatedLocally: true }
+					),
+				};
+			}),
 		});
 	}
 
@@ -286,6 +295,22 @@ export function printBindings(
 					value: addSuffix(binding.destination),
 				};
 			}),
+		});
+	}
+
+	if (secrets_store_secrets !== undefined && secrets_store_secrets.length > 0) {
+		output.push({
+			name: friendlyBindingNames.secrets_store_secrets,
+			entries: secrets_store_secrets.map(
+				({ binding, store_id, secret_name }) => {
+					return {
+						key: binding,
+						value: addSuffix(`${store_id}/${secret_name}`, {
+							isSimulatedLocally: true,
+						}),
+					};
+				}
+			),
 		});
 	}
 

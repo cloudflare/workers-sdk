@@ -252,14 +252,11 @@ export function castLogLevel(level: LoggerLevel): LogLevel {
 }
 
 export function buildLog(): Log {
-	let level = castLogLevel(logger.loggerLevel);
+	const level = castLogLevel(logger.loggerLevel);
 
-	// if we're in DEBUG or VERBOSE mode, clamp logLevel to WARN -- ie. don't show request logs for user worker
-	if (level <= LogLevel.DEBUG) {
-		level = Math.min(level, LogLevel.WARN);
-	}
-
-	return new WranglerLog(level, { prefix: "wrangler-UserWorker" });
+	return new WranglerLog(level, {
+		prefix: level === LogLevel.DEBUG ? "wrangler-UserWorker" : "wrangler",
+	});
 }
 
 async function buildSourceOptions(
@@ -353,7 +350,8 @@ function workflowEntry(
 		},
 	];
 }
-function ratelimitEntry(ratelimit: CfUnsafeBinding): [string, object] {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function ratelimitEntry(ratelimit: CfUnsafeBinding): [string, any] {
 	return [ratelimit.name, ratelimit];
 }
 type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
@@ -383,8 +381,11 @@ type WorkerOptionsBindings = Pick<
 	| "hyperdrives"
 	| "durableObjects"
 	| "serviceBindings"
+	| "ratelimits"
 	| "workflows"
 	| "wrappedBindings"
+	| "secretsStoreSecrets"
+	| "email"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -673,7 +674,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		}
 	}
 
-	const bindingOptions = {
+	const bindingOptions: WorkerOptionsBindings = {
 		bindings: {
 			...bindings.vars,
 			// emulate version_metadata binding via a JSON var
@@ -705,6 +706,15 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			bindings.hyperdrive?.map(hyperdriveEntry) ?? []
 		),
 		workflows: Object.fromEntries(bindings.workflows?.map(workflowEntry) ?? []),
+		secretsStoreSecrets: Object.fromEntries(
+			bindings.secrets_store_secrets?.map((binding) => [
+				binding.binding,
+				binding,
+			]) ?? []
+		),
+		email: {
+			send_email: bindings.send_email,
+		},
 
 		durableObjects: Object.fromEntries([
 			...internalObjects.map(({ name, class_name }) => {
@@ -778,6 +788,7 @@ export function buildPersistOptions(
 			r2Persist: path.join(v3Path, "r2"),
 			d1Persist: path.join(v3Path, "d1"),
 			workflowsPersist: path.join(v3Path, "workflows"),
+			secretsStorePersist: path.join(v3Path, "secrets-store"),
 		};
 	}
 }
@@ -1026,6 +1037,14 @@ export async function buildMiniflareOptions(
 		liveReload: config.liveReload,
 		upstream,
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
+		unsafeTriggerHandlers: true,
+		// The way we run Miniflare instances with wrangler dev is that there are two:
+		//  - one holding the proxy worker,
+		//  - and one holding the user worker.
+		// The issue with that setup is that end users would see two sets of request logs from Miniflare!
+		// Instead of hiding all logs from this Miniflare instance, we specifically hide the request logs,
+		// allowing other logs to be shown to the user (such as details about emails being triggered)
+		logRequests: false,
 
 		log,
 		verbose: logger.loggerLevel === "debug",

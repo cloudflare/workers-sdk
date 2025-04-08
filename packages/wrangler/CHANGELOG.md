@@ -1,5 +1,41 @@
 # wrangler
 
+## 4.8.0
+
+### Minor Changes
+
+- [#8394](https://github.com/cloudflare/workers-sdk/pull/8394) [`93267cf`](https://github.com/cloudflare/workers-sdk/commit/93267cf3c59d57792fb10cc10b23255e33679c4d) Thanks [@edmundhung](https://github.com/edmundhung)! - Support Secrets Store Secret bindings
+
+### Patch Changes
+
+- [#8780](https://github.com/cloudflare/workers-sdk/pull/8780) [`4e69fb6`](https://github.com/cloudflare/workers-sdk/commit/4e69fb6f05138b32500695846482dd22bb2590d9) Thanks [@cmackenzie1](https://github.com/cmackenzie1)! - - Rename `wrangler pipelines show` to `wrangler pipelines get`
+
+  - Replace `--enable-worker-binding` and `--enable-http` with `--source worker` and `--source http` (or
+    `--source http worker` for both)
+  - Remove `--file-template` and `--partition-template` flags from `wrangler pipelines create|update`
+  - Add pretty output for `wrangler pipelines get <pipeline>`. Existing output is available using `--format=json`.
+  - Clarify the minimums, maximums, and defaults (if unset) for `wrangler pipelines create` commands.
+
+- [#8596](https://github.com/cloudflare/workers-sdk/pull/8596) [`75b454c`](https://github.com/cloudflare/workers-sdk/commit/75b454c37e3fd25162275e984834929cdb886c0f) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add validation to redirected configs in regards to environments
+
+  add the following validation behaviors to wrangler deploy commands, that relate
+  to redirected configs (i.e. config files specified by `.wrangler/deploy/config.json` files):
+
+  - redirected configs are supposed to be already flattened configurations without any
+    environment (i.e. a build tool should generate redirected configs already targeting specific
+    environments), so if wrangler encounters a redirected config with some environments defined
+    it should error
+  - given the point above, specifying an environment (`--env=my-env`) when using redirected
+    configs is incorrect, so these environments should be ignored and a warning should be
+    presented to the user
+
+- [#8795](https://github.com/cloudflare/workers-sdk/pull/8795) [`d4c1171`](https://github.com/cloudflare/workers-sdk/commit/d4c11710fd36286be8587379d659e19e91778777) Thanks [@GregBrimble](https://github.com/GregBrimble)! - feat: Unhide `wrangler pages functions build` command.
+
+  This is already documented for Pages Plugins and by officially documenting it, we can ease the transition to Workers Assets for users of Pages Functions.
+
+- Updated dependencies [[`93267cf`](https://github.com/cloudflare/workers-sdk/commit/93267cf3c59d57792fb10cc10b23255e33679c4d), [`ec7e621`](https://github.com/cloudflare/workers-sdk/commit/ec7e6212199272f9811a30a84922823c82d7d650)]:
+  - miniflare@4.20250405.0
+
 ## 4.7.2
 
 ### Patch Changes
