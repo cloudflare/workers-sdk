@@ -1,6 +1,10 @@
 name: v3 Maintenance
 
-on: pull_request
+on:
+  pull_request:
+    branches: main
+    paths:
+      - ".changeset/**.md"
 
 jobs:
   open-pr:
