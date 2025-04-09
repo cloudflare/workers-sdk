@@ -34,12 +34,6 @@ jobs:
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
-      - name: Run builds
-        run: pnpm run build
-        env:
-          NODE_ENV: "production"
-          CI_OS: ${{ runner.os }}
-
       - name: Run Vite E2E tests
         run: pnpm test:e2e -F @cloudflare/vite-plugin --log-order=stream
         env:
@@ -62,20 +56,6 @@ jobs:
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           CI_OS: ${{ matrix.os }}
-
-      - name: Upload debug logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-test-debug-logs-${{ matrix.os }}-${{ matrix.node }}
-          path: ${{ runner.temp }}/wrangler-debug-logs/
-
-      - name: Upload test report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-test-report-${{ matrix.os }}-${{ matrix.node }}
-          path: ${{ runner.temp }}/test-report/
 
       - name: Upload turbo logs
         if: always()
@@ -112,12 +92,6 @@ jobs:
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
-      - name: Run builds
-        run: pnpm run build
-        env:
-          NODE_ENV: "production"
-          CI_OS: ${{ runner.os }}
-
       - name: Run Vite E2E tests
         run: pnpm test:e2e -F @cloudflare/vite-plugin --log-order=stream
         env:
@@ -140,20 +114,6 @@ jobs:
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           CI_OS: ${{ matrix.os }}
-
-      - name: Upload debug logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-test-debug-logs-${{ matrix.os }}-${{ matrix.node }}
-          path: ${{ runner.temp }}/wrangler-debug-logs/
-
-      - name: Upload test report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-test-report-${{ matrix.os }}-${{ matrix.node }}
-          path: ${{ runner.temp }}/test-report/
 
       - name: Upload turbo logs
         if: always()
