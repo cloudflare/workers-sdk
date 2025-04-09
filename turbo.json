@@ -15,6 +15,7 @@
 			"dependsOn": ["^build"],
 			"outputLogs": "new-only"
 		},
+
 		"test": {
 			"dependsOn": ["build"]
 		},
