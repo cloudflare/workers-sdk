@@ -34,6 +34,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 		);
 
 		const handle = new WorkflowHandle(id, stub);
+		// @ts-expect-error Workflow changes from #8775 is not backported to v3
 		return {
 			id: id,
 			pause: handle.pause.bind(handle),
@@ -56,6 +57,7 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 			throw new Error("instance.not_found");
 		}
 
+		// @ts-expect-error Workflow changes from #8775 is not backported to v3
 		return {
 			id: id,
 			pause: handle.pause.bind(handle),
@@ -65,8 +67,14 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> implements Workflow {
 			status: handle.status.bind(handle),
 		};
 	}
+	public async createBatch(
+		_batch: WorkflowInstanceCreateOptions<unknown>[]
+	): Promise<WorkflowInstance[]> {
+		throw new Error("createBatch is not yet implemented in local development.");
+	}
 }
 
+// @ts-expect-error Workflow changes from #8775 is not backported to v3
 export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 	constructor(
 		public id: string,
