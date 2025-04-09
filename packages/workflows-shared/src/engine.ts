@@ -259,6 +259,7 @@ export class Engine extends DurableObject<Env> {
 		void workflowRunningHandler();
 		try {
 			const target = this.env.USER_WORKFLOW;
+			// @ts-expect-error Workflow changes from #8775 is not backported to v3
 			const result = await target.run(event, stubStep);
 			this.writeLog(InstanceEvent.WORKFLOW_SUCCESS, null, null, {
 				result,
