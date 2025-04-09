@@ -3,7 +3,6 @@
 	"extends": ["//"],
 	"tasks": {
 		"build": {
-			"passThroughEnv": ["CI"],
 			"env": [
 				"TEST_PM",
 				"TEST_PM_VERSION",
