@@ -3,17 +3,7 @@
 	"extends": ["//"],
 	"tasks": {
 		"build": {
-			"inputs": [
-				"$TURBO_DEFAULT$",
-				"!*/**/__tests__/**",
-				"bin/**",
-				"src/**",
-				"scripts/**",
-				"templates/**",
-				"*.json",
-				"*.js",
-				"*.ts"
-			],
+			"inputs": ["$TURBO_DEFAULT$", "!**/__tests__/**", "!e2e/**"],
 			"outputs": [
 				"miniflare-dist/**",
 				"emitted-types/**",
@@ -60,14 +50,6 @@
 			]
 		},
 		"test:ci": {
-			"inputs": [
-				"$TURBO_DEFAULT$",
-				"**/__tests__/**",
-				"!bin/**",
-				"!src/**",
-				"!scripts/**",
-				"!templates/**"
-			],
 			"dependsOn": ["build"],
 			"env": ["VITEST", "NODE_DEBUG", "MINIFLARE_WORKERD_PATH"]
 		},
