@@ -4,26 +4,10 @@ on:
     types: [synchronize, opened, reopened, labeled, unlabeled]
 
 jobs:
-  turbo-ignore:
-    if: contains(github.event.*.labels.*.name, 'c3-e2e' ) && github.event.pull_request.head.repo.owner.login == 'cloudflare'
-    outputs:
-      skip: ${{ steps.skip.outcome }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - shell: bash
-        id: skip
-        continue-on-error: true
-        run: |
-          npx turbo-ignore create-cloudflare --task="test:e2e" --fallback=$(git merge-base origin/main HEAD)
   e2e-vp:
     # Note: please keep this job in sync with the e2e-only-dependabot-bumped-framework one
     #       in .github/workflows/c3-e2e-dependabot.yml
-    needs: ["turbo-ignore"]
-    if: needs.turbo-ignore.outputs.skip == 'failure' && github.head_ref == 'changeset-release/main'
+    if: github.head_ref == 'changeset-release/main'
     timeout-minutes: 45
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
@@ -55,8 +39,6 @@ jobs:
   e2e:
     # Note: please keep this job in sync with the e2e-only-dependabot-bumped-framework one
     #       in .github/workflows/c3-e2e-dependabot.yml
-    needs: ["turbo-ignore"]
-    if: ${{ needs.turbo-ignore.outputs.skip == 'failure' }}
     timeout-minutes: 45
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
