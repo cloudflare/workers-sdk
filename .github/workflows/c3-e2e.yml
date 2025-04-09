@@ -20,12 +20,10 @@ jobs:
         run: |
           npx turbo-ignore create-cloudflare --task="test:e2e" --fallback=$(git merge-base origin/main HEAD)
   e2e-vp:
-
     # Note: please keep this job in sync with the e2e-only-dependabot-bumped-framework one
     #       in .github/workflows/c3-e2e-dependabot.yml
-    if: github.head_ref == 'changeset-release/main'
     needs: ["turbo-ignore"]
-    if: ${{ needs.turbo-ignore.outputs.skip == 'failure' }}
+    if: needs.turbo-ignore.outputs.skip == 'failure' && github.head_ref == 'changeset-release/main'
     timeout-minutes: 45
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}
@@ -35,11 +33,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        pm:
-          [
-            { name: npm, version: "0.0.0" },
-            { name: yarn, version: "1.0.0" },
-          ]
+        pm: [{ name: npm, version: "0.0.0" }, { name: yarn, version: "1.0.0" }]
         # include a single windows test with pnpm
         include:
           - os: windows-latest
@@ -106,10 +100,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest]
-        pm:
-          [
-            { name: pnpm, version: "9.12.0" },
-          ]
+        pm: [{ name: pnpm, version: "9.12.0" }]
 
     runs-on: ${{ matrix.os }}
     steps:
