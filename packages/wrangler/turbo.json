@@ -55,7 +55,7 @@
 		},
 		"test:e2e": {
 			"inputs": ["e2e/**"],
-			"dependsOn": ["build"],
+			"dependsOn": ["build", "create-cloudflare#build"],
 			"env": [
 				"VITEST",
 				"NODE_DEBUG",
