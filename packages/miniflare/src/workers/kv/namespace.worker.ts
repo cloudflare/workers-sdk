@@ -141,7 +141,7 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 			}
 			const obj: { [key: string]: any } = {};
 			if (keys.length > MAX_BULK_GET_KEYS) {
-				const errorStr = "You can request a maximum of 100 keys";
+				const errorStr = `You can request a maximum of ${MAX_BULK_GET_KEYS} keys`;
 				return new Response(errorStr, { status: 400, statusText: errorStr });
 			}
 			if (keys.length < 1) {

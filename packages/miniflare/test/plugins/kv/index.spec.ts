@@ -168,8 +168,7 @@ test("bulk get: check minimum keys", async (t) => {
 test("bulk get: invalid type", async (t) => {
 	const { kv } = t.context;
 	try {
-		// @ts-ignore
-		await kv.get(["key"], {type: "invalid"});
+		await kv.get(["key"], { type: "invalid" as "json" });
 	} catch (error: any) {
 		t.is(
 			error.message,
