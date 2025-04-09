@@ -1,5 +1,20 @@
 # miniflare
 
+## 3.20250408.0
+
+### Patch Changes
+
+- [#8778](https://github.com/cloudflare/workers-sdk/pull/8778) [`dec7e2a`](https://github.com/cloudflare/workers-sdk/commit/dec7e2a98f7b3b77bea08c5db27bfa61f8d0656d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - update youch dependency to avoid vulnerable version of cookie
+
+- [#8856](https://github.com/cloudflare/workers-sdk/pull/8856) [`db2207a`](https://github.com/cloudflare/workers-sdk/commit/db2207ad846a584701a1b7b6afead7c26cf1a664) Thanks [@edmundhung](https://github.com/edmundhung)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250310.0  | 1.20250408.0  |
+  | @cloudflare/workers-types | ^4.20250310.0 | ^4.20250408.0 |
+
 ## 3.20250310.2
 
 ### Patch Changes
