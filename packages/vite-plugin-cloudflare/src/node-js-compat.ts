@@ -100,7 +100,8 @@ export function resolveNodeJSImport(source: string) {
 	// These aliases must be resolved from the context of this plugin since the alias will refer to one of the
 	// `@cloudflare/unenv-preset` or the `unenv` packages, which are direct dependencies of this package,
 	// and not the user's project.
-	if (alias) {
+	// We exclude `nodeCompatExternals` as these should be externalized rather than optimized
+	if (alias && !nodeCompatExternals.has(alias)) {
 		return {
 			unresolved: alias,
 			resolved: resolvePathSync(alias, { url: import.meta.url }),
