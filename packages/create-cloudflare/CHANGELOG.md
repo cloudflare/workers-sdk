@@ -1,5 +1,25 @@
 # create-cloudflare
 
+## 2.43.6
+
+### Patch Changes
+
+- [#8846](https://github.com/cloudflare/workers-sdk/pull/8846) [`22b51e3`](https://github.com/cloudflare/workers-sdk/commit/22b51e3e21419650e66db0e06af363a8eba744df) Thanks [@emily-shen](https://github.com/emily-shen)! - Use the latest version of Wrangler when using c3 to init from dash
+
+## 2.43.5
+
+### Patch Changes
+
+- [#8822](https://github.com/cloudflare/workers-sdk/pull/8822) [`22b8a80`](https://github.com/cloudflare/workers-sdk/commit/22b8a807f2703ef7586093645fa3f9e7a750056c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.23.1 | 3.24.1 |
+
+- [#8844](https://github.com/cloudflare/workers-sdk/pull/8844) [`0a9a260`](https://github.com/cloudflare/workers-sdk/commit/0a9a260993079e10883122e5560461a06064f0ff) Thanks [@vicb](https://github.com/vicb)! - Disable incremental cache in the c3 Next.js template
+
 ## 2.43.4
 
 ### Patch Changes
