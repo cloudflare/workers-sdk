@@ -1,0 +1,72 @@
+name: "Full C3 E2E run (experimental + non-experimental)"
+description: "Runs the C3 E2E test suite (experimental + non-experimental)"
+inputs:
+  turbo-api:
+    description: the api URL for connecting to the turbo remote cache
+  turbo-team:
+    description: the team identifier for connecting to the turbo remote cache
+  turbo-token:
+    description: the api token for connecting to the turbo remote cache
+  turbo-signature:
+    description: the cache signature key for connecting to the turbo remote cache
+  packageManager:
+    description: "Which package manager to run the tests with"
+    required: true
+  packageManagerVersion:
+    description: "Which package manager version to run the tests with"
+    required: true
+  accountId:
+    description: "The account id of the test account"
+    required: true
+  apiToken:
+    description: "The api token of the test account"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - uses: dorny/paths-filter@v3
+      id: changes
+      with:
+        filters: |
+          everything_but_markdown:
+            - '!**/*.md'
+
+    - name: Install Dependencies
+      if: steps.changes.outputs.everything_but_markdown == 'true'
+      uses: ./.github/actions/install-dependencies
+      with:
+        node-version: 20.11.1
+        turbo-api: ${{ inputs.turbo-api }}
+        turbo-team: ${{ inputs.turbo-team }}
+        turbo-token: ${{ inputs.turbo-token }}
+        turbo-signature: ${{ inputs.turbo-signature }}
+
+    - name: E2E Tests (experimental)
+      if: steps.changes.outputs.everything_but_markdown == 'true'
+      uses: ./.github/actions/run-c3-e2e
+      with:
+        node-version: 20.11.1
+        packageManager: ${{ inputs.packageManager }}
+        packageManagerVersion: ${{ inputs.packageManagerVersion }}
+        quarantine: false
+        experimental: true
+        accountId: ${{ inputs.accountId  }}
+        apiToken: ${{ inputs.apiToken  }}
+
+    - name: E2E Tests (non-experimental)
+      if: steps.changes.outputs.everything_but_markdown == 'true'
+      uses: ./.github/actions/run-c3-e2e
+      with:
+        node-version: 20.11.1
+        packageManager: ${{ inputs.packageManager }}
+        packageManagerVersion: ${{ inputs.packageManagerVersion }}
+        quarantine: false
+        experimental: false
+        accountId: ${{ inputs.accountId  }}
+        apiToken: ${{ inputs.apiToken  }}
