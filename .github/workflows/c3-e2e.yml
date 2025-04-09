@@ -80,7 +80,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest]
+        os: [ubuntu-latest]
         pm: [{ name: pnpm, version: "9.12.0" }]
 
     runs-on: ${{ matrix.os }}
