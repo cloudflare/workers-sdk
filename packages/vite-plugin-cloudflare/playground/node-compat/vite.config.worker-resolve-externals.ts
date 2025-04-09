@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
 
@@ -14,11 +15,15 @@ export default defineConfig({
 		{
 			name: "test-plugin",
 			async configureServer(viteDevServer) {
-				const id =
-					await viteDevServer.environments.worker?.pluginContainer.resolveId(
-						"node:dns"
-					);
-				console.log(id);
+				const workerEnvironment = viteDevServer.environments.worker;
+				assert(workerEnvironment);
+
+				const resolved =
+					await workerEnvironment.pluginContainer.resolveId("node:dns");
+
+				if (resolved) {
+					workerEnvironment.logger.info(`__${resolved.id}__`);
+				}
 			},
 		},
 	],
