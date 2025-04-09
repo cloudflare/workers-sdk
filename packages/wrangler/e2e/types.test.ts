@@ -87,7 +87,7 @@ describe("types", () => {
 			await readFile(path.join(helper.tmpPath, "./types.d.ts"))
 		).toString();
 
-		expect(file).contains('declare module "cloudflare:workers"');
+		expect(file).matches(/declare module ['"]cloudflare:workers["']/);
 	});
 
 	it("should recommend to uninstall @cloudflare/workers-types", async () => {
