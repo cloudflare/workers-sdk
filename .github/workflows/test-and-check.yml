@@ -15,7 +15,7 @@ jobs:
     steps:
       - run: curl -X POST https://devprod-status-bot.devprod.workers.dev/pr-project/workers-sdk/${{ github.event.number }}
 
-  check-non-macos:
+  check-vp:
     if: github.head_ref == 'changeset-release/main'
     timeout-minutes: 30
     concurrency:
@@ -97,6 +97,75 @@ jobs:
         with:
           name: turbo-runs-${{ matrix.os }}-${{ matrix.node }}
           path: .turbo/runs
+  test-vp:
+    if: github.head_ref == 'changeset-release/main'
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.filter }}-${{ matrix.node_version }}-test
+      cancel-in-progress: true
+
+    name: ${{ format('Tests ({0})', matrix.os_name) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04-arm
+            os_name: Linux
+            node_version: 18.20.6
+            filter: '--filter="./tools" --filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
+          - os: windows-latest
+            os_name: Windows
+            node_version: 18.20.6
+            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
+          - os: ubuntu-24.04-arm
+            os_name: v20, Linux
+            node_version: 20
+            filter: '--filter="./packages/*"'
+          - os: ubuntu-24.04-arm
+            os_name: v22, Linux
+            node_version: 22
+            filter: '--filter="./packages/*" --filter="!./packages/kv-asset-handler"'
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            everything_but_markdown:
+              - '!**/*.md'
+
+      - name: Install Dependencies
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+          node-version: ${{ matrix.node_version }}
+
+      - name: Run tests
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        run: pnpm run test:ci --concurrency 1 ${{ matrix.filter }}
+        env:
+          TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
+          CI_OS: ${{ matrix.os_name }}
+
+      - name: Upload turbo logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: turbo-runs-${{ matrix.os }}-${{ matrix.node }}
+          path: .turbo/runs
 
   test:
     timeout-minutes: 30
@@ -109,26 +178,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # - os: ubuntu-24.04-arm
-          #   os_name: Linux
-          #   node_version: 18.20.6
-          #   filter: '--filter="./tools" --filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
           - os: macos-latest
             os_name: macOS
             node_version: 18.20.6
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --summarize'
-          # - os: windows-latest
-          #   os_name: Windows
-          #   node_version: 18.20.6
-          #   filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
-          # - os: ubuntu-24.04-arm
-          #   os_name: v20, Linux
-          #   node_version: 20
-          #   filter: '--filter="./packages/*"'
-          # - os: ubuntu-24.04-arm
-          #   os_name: v22, Linux
-          #   node_version: 22
-          #   filter: '--filter="./packages/*" --filter="!./packages/kv-asset-handler"'
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo

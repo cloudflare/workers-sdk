@@ -12,12 +12,6 @@
 				"CREATE_CLOUDFLARE_TELEMETRY_DEBUG",
 				"SPARROW_SOURCE_KEY"
 			],
-			"inputs": [
-				"$TURBO_DEFAULT$",
-				"!e2e-tests/**",
-				"!src/__tests__/**",
-				"!vitest.config.mts"
-			],
 			"outputs": ["dist/**"]
 		},
 		"test:ci": {
