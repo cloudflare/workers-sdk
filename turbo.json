@@ -10,6 +10,7 @@
 			"persistent": true,
 			"cache": false
 		},
+
 		"build": {
 			"dependsOn": ["^build"],
 			"outputLogs": "new-only"
