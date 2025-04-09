@@ -108,6 +108,8 @@ export interface StartDevWorkerInput {
 		alias?: Record<string, string>;
 		/** Whether the bundled worker is minified. Only takes effect if bundle: true. */
 		minify?: boolean;
+		/** Whether to keep function names after JavaScript transpilations. */
+		keepNames?: boolean;
 		/** Options controlling a custom build step. */
 		custom?: {
 			/** Custom shell command to run before bundling. Runs even if bundle. */
