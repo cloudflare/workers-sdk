@@ -24,6 +24,11 @@ jobs:
             pm: { name: pnpm, version: "9.12.0" }
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: E2E Tests
         uses: ./.github/actions/combined-c3-e2e
         with:
@@ -52,6 +57,11 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: E2E Tests
         uses: ./.github/actions/combined-c3-e2e
         with:
