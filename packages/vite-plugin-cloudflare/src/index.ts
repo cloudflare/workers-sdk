@@ -656,7 +656,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				);
 			},
 		},
-		// Plugin that handles Node.js Async Local Storage (ALS)compatibility support for Vite Environments that are hosted in Cloudflare Workers.
+		// Plugin that handles Node.js Async Local Storage (ALS) compatibility support for Vite Environments that are hosted in Cloudflare Workers.
 		{
 			name: "vite-plugin-cloudflare:nodejs-als",
 			apply(_config, env) {
