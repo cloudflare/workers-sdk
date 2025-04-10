@@ -1,5 +1,18 @@
 # wrangler
 
+## 4.10.0
+
+### Minor Changes
+
+- [#8807](https://github.com/cloudflare/workers-sdk/pull/8807) [`dcce2ec`](https://github.com/cloudflare/workers-sdk/commit/dcce2ecf275c65428956d2106b83618652a907a0) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Promote workflows commands to stable
+
+### Patch Changes
+
+- [#8883](https://github.com/cloudflare/workers-sdk/pull/8883) [`5388447`](https://github.com/cloudflare/workers-sdk/commit/5388447d7ca5b00dbcc0970f52b76e20a17ebe30) Thanks [@penalosa](https://github.com/penalosa)! - fix: Only log requests to the Wrangler dev server once
+
+- Updated dependencies [[`b7ac367`](https://github.com/cloudflare/workers-sdk/commit/b7ac367fe4c3d7a05525443cc30af10bc19ce014), [`5388447`](https://github.com/cloudflare/workers-sdk/commit/5388447d7ca5b00dbcc0970f52b76e20a17ebe30)]:
+  - miniflare@4.20250409.0
+
 ## 4.9.1
 
 ### Patch Changes
