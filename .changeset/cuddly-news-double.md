@@ -4,8 +4,4 @@
 
 fix: make sure users can change inspector port when running vite dev
 
-currently when a user starts a dev server with `vite dev` the inspector
-port that the Cloudflare plugin will use will always be the initial one,
-even if the user sets a specific port in the plugin's options inside
-the vite config file, the changes here make sure that such config updates
-are instead actually reflected
+Ensure that the inspector port is updated if the user modifies it in the Vite config while the dev server is running.
