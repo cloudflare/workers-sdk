@@ -1,5 +1,16 @@
 # @cloudflare/vite-plugin
 
+## 1.0.5
+
+### Patch Changes
+
+- [#8685](https://github.com/cloudflare/workers-sdk/pull/8685) [`8e87754`](https://github.com/cloudflare/workers-sdk/commit/8e87754a2aee9dd2fb764a8ea03365553874f727) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - make sure that `.dev.vars` files trigger a full reload
+
+- Updated dependencies [[`b7ac367`](https://github.com/cloudflare/workers-sdk/commit/b7ac367fe4c3d7a05525443cc30af10bc19ce014), [`dcce2ec`](https://github.com/cloudflare/workers-sdk/commit/dcce2ecf275c65428956d2106b83618652a907a0), [`5388447`](https://github.com/cloudflare/workers-sdk/commit/5388447d7ca5b00dbcc0970f52b76e20a17ebe30)]:
+  - miniflare@4.20250409.0
+  - wrangler@4.10.0
+  - @cloudflare/unenv-preset@2.3.1
+
 ## 1.0.4
 
 ### Patch Changes
