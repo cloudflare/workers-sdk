@@ -141,6 +141,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			...options.assets.assetConfig,
 			redirects: parsedRedirects,
 			headers: parsedHeaders,
+			debug: true,
 		};
 
 		const id = options.assets.workerName;
