@@ -801,7 +801,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				if (workerConfig && !isNodeCompat(workerConfig)) {
 					if (isNodeAls(workerConfig) && /^(node:)?async_hooks$/.test(source)) {
 						// Skip if this is just async_hooks and Node.js ALS support is on.
-						return null;
+						return;
 					}
 
 					const nodeJsCompatWarnings =
