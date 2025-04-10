@@ -161,7 +161,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 										assert(
 											environment,
-											`${environmentName} environment not found`
+											`${environmentName} environment not found!`
 										);
 
 										return environment;
