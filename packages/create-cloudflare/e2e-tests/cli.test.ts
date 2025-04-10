@@ -83,7 +83,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 
 				expect(project.path).toExist();
 				expect(output).toContain(`category Hello World example`);
-				expect(output).toContain(`type SSR / full-stack apps`);
+				expect(output).toContain(`type SSR / full-stack app`);
 				expect(output).toContain(`lang TypeScript`);
 				expect(output).toContain(`no deploy`);
 			},
@@ -177,7 +177,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 					);
 
 					expect(project.path).toExist();
-					expect(output).toContain(`type SSR / full-stack apps`);
+					expect(output).toContain(`type SSR / full-stack app`);
 					expect(output).toContain(`lang TypeScript`);
 					expect(output).toContain(`no deploy`);
 				} finally {
