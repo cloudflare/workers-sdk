@@ -11,10 +11,7 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	const packages = [
-		"@opennextjs/cloudflare@~1.0.0-beta.0 || ^1.0.0",
-		"@cloudflare/workers-types",
-	];
+	const packages = ["@opennextjs/cloudflare@~1.0.0-beta.0 || ^1.0.0"];
 	await installPackages(packages, {
 		dev: true,
 		startText: "Adding the Cloudflare adapter",
@@ -53,7 +50,7 @@ export default {
 	frameworkCli: "create-next-app",
 	frameworkCliPinnedVersion: "~15.2.4",
 	platform: "workers",
-	displayName: "Next.js (using Node.js compat + Workers Assets)",
+	displayName: "Next.js",
 	path: "templates/next/workers",
 	copyFiles: {
 		path: "./templates",
@@ -70,5 +67,7 @@ export default {
 	devScript: "dev",
 	previewScript: "preview",
 	deployScript: "deploy",
+
+	typesPath: "cloudflare-env.d.ts",
 	compatibilityFlags: ["nodejs_compat"],
 } as TemplateConfig;
