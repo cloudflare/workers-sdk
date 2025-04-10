@@ -16,7 +16,7 @@ jobs:
       - run: curl -X POST https://devprod-status-bot.devprod.workers.dev/pr-project/workers-sdk/${{ github.event.number }}
 
   check-vp:
-    if: github.head_ref == 'changeset-release/main'
+    if: github.head_ref == 'changeset-release/main' || contains(github.event.*.labels.*.name, 'every-os' )
     timeout-minutes: 30
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-checks
@@ -99,7 +99,7 @@ jobs:
           path: .turbo/runs
 
   test-vp:
-    if: github.head_ref == 'changeset-release/main'
+    if: github.head_ref == 'changeset-release/main' || contains(github.event.*.labels.*.name, 'every-os' )
     timeout-minutes: 30
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.filter }}-${{ matrix.node_version }}-test

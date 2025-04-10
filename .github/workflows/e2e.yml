@@ -11,7 +11,7 @@ jobs:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}
       cancel-in-progress: true
     timeout-minutes: 40
-    if: github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'e2e' ) && github.event.pull_request.head.repo.owner.login == 'cloudflare' && github.head_ref == 'changeset-release/main'
+    if: github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'e2e' ) && github.event.pull_request.head.repo.owner.login == 'cloudflare' && (github.head_ref == 'changeset-release/main' || contains(github.event.*.labels.*.name, 'every-os' ))
     name: "E2E Test"
     strategy:
       fail-fast: false
