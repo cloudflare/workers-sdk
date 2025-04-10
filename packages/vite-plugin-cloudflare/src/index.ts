@@ -332,6 +332,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					"Unexpected error: No Vite HTTP server"
 				);
 
+				console.log("no-op change");
+
 				if (!miniflare) {
 					const inputInspectorPort = await getInputInspectorPortOption(
 						pluginConfig,
