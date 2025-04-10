@@ -63,6 +63,10 @@ export function isNodeAls(workerConfig: WorkerConfig | undefined) {
 	);
 }
 
+export function isNodeAlsModule(path: string) {
+	return /^(node:)?async_hooks$/.test(path);
+}
+
 /**
  * Gets the necessary global polyfills to inject into the entry-point of the user's code.
  */

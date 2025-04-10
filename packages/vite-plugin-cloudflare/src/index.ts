@@ -31,6 +31,7 @@ import {
 import {
 	injectGlobalCode,
 	isNodeAls,
+	isNodeAlsModule,
 	isNodeCompat,
 	nodeCompatEntries,
 	nodeCompatExternals,
@@ -759,7 +760,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 												({ path, importer }) => {
 													if (
 														isNodeAls(workerConfig) &&
-														/^(node:)?async_hooks$/.test(path)
+														isNodeAlsModule(path)
 													) {
 														// Skip if this is just async_hooks and Node.js ALS support is on.
 														return;
@@ -799,7 +800,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				const workerConfig = getWorkerConfig(this.environment.name);
 
 				if (workerConfig && !isNodeCompat(workerConfig)) {
-					if (isNodeAls(workerConfig) && /^(node:)?async_hooks$/.test(source)) {
+					if (isNodeAls(workerConfig) && isNodeAlsModule(source)) {
 						// Skip if this is just async_hooks and Node.js ALS support is on.
 						return;
 					}
