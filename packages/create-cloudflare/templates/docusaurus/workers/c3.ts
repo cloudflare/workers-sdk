@@ -29,5 +29,6 @@ const config: TemplateConfig = {
 	devScript: "start",
 	deployScript: "deploy",
 	previewScript: "preview",
+	installWorkersTypes: true,
 };
 export default config;

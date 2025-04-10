@@ -3,7 +3,6 @@ import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
-import { compatDateFlag } from "helpers/compatDate";
 import { readFile, readJSON, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
@@ -107,10 +106,11 @@ const config: TemplateConfig = {
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			start: `${npm} run build && wrangler pages dev dist/cloudflare ${await compatDateFlag()}`,
+			start: `${npm} run build && wrangler pages dev`,
 			build: `ng build && ${npm} run process`,
 			process: "node ./tools/copy-files.mjs",
-			deploy: `${npm} run build && wrangler pages deploy dist/cloudflare`,
+			deploy: `${npm} run build && wrangler pages deploy`,
+			"cf-typegen": `wrangler types`,
 		},
 	}),
 };
