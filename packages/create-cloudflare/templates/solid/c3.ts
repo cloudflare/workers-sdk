@@ -77,6 +77,7 @@ const config: TemplateConfig = {
 		scripts: {
 			preview: `${npm} run build && npx wrangler pages dev`,
 			deploy: `${npm} run build && wrangler pages deploy`,
+			"cf-typegen": `wrangler types`,
 		},
 	}),
 	compatibilityFlags: ["nodejs_compat"],

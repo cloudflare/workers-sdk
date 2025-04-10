@@ -48,7 +48,7 @@ export default {
 	frameworkCli: "create-next-app",
 	frameworkCliPinnedVersion: "~15.3.0",
 	platform: "workers",
-	displayName: "Next.js (using Node.js compat + Workers Assets)",
+	displayName: "Next.js",
 	path: "templates/next/workers",
 	copyFiles: {
 		path: "./templates",
@@ -65,5 +65,7 @@ export default {
 	devScript: "dev",
 	previewScript: "preview",
 	deployScript: "deploy",
+
+	typesPath: "cloudflare-env.d.ts",
 	compatibilityFlags: ["nodejs_compat"],
 } as TemplateConfig;
