@@ -69,6 +69,9 @@ describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
 
 			await worker.waitForReload();
 
+			// Regression test for issue where multiple request logs were being logged per request
+			expect([...worker.currentOutput.matchAll(/GET /g)].length).toBe(1);
+
 			await expect(fetchText(url)).resolves.toMatchSnapshot();
 		});
 
