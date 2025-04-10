@@ -3,12 +3,13 @@ name: v3 Maintenance
 on:
   pull_request:
     branches: main
+    types: [synchronize, opened, reopened, labeled, unlabeled]
     paths:
       - ".changeset/**.md"
 
 jobs:
   open-pr:
-    if: ${{ github.repository_owner == 'cloudflare' }}
+    if: ${{ github.repository_owner == 'cloudflare' && !contains(github.event.pull_request.labels.*.name, 'skip-v3-pr') }}
     name: Open backport PR for patches
     runs-on: macos-latest
     concurrency:
@@ -35,7 +36,6 @@ jobs:
           PR_NUMBER: ${{ github.event.number }}
           PR_TITLE: ${{ toJson(github.event.pull_request.title) }}
           GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-          LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
       # - name: "Comment on PR with error details"
       #   if: failure()
       #   uses: marocchino/sticky-pull-request-comment@daa4a82a0a3f6c162c02b83fa44b3ab83946f7cb

@@ -4,11 +4,7 @@ import parseChangeset from "@changesets/parse";
 
 /* eslint-disable turbo/no-undeclared-env-vars */
 if (require.main === module) {
-	const parsedLabels = JSON.parse(process.env.LABELS as string) as string[];
-	if (
-		isWranglerPatch(process.env.FILES as string) &&
-		!parsedLabels.includes("skip-v3-pr")
-	) {
+	if (isWranglerPatch(process.env.FILES as string)) {
 		// Create a new branch for the v3 maintenance PR
 		execSync(`git checkout -b v3-maintenance-${process.env.PR_NUMBER} -f`);
 
