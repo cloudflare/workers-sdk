@@ -46,7 +46,11 @@ export const test = baseTest.extend<{
 			debuglog("Fixture copied to " + projectPath);
 			await updateVitePluginVersion(projectPath);
 			debuglog("Updated vite-plugin version in package.json");
-			runCommand(`${pm} install`, projectPath);
+			if (pm === "yarn") {
+				runCommand("yarn install --force --non-interactive", projectPath);
+			} else {
+				runCommand(`${pm} install`, projectPath);
+			}
 			debuglog("Installed node modules");
 			projectPaths.push(projectPath);
 			return projectPath;
