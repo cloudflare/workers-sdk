@@ -1,5 +1,4 @@
 ---
-"create-cloudflare": minor
 "wrangler": patch
 ---
 
