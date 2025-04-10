@@ -117,7 +117,7 @@ interface EnvironmentInheritable {
 	 * A date in the form yyyy-mm-dd, which will be used to determine
 	 * which version of the Workers runtime is used.
 	 *
-	 * More details at https://developers.cloudflare.com/workers/platform/compatibility-dates
+	 * More details at https://developers.cloudflare.com/workers/configuration/compatibility-dates
 	 *
 	 * @inheritable
 	 */
