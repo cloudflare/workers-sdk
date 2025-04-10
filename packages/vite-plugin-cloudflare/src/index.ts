@@ -762,7 +762,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 														/^(node:)?async_hooks$/.test(path)
 													) {
 														// Skip if this is just async_hooks and Node.js ALS support is on.
-														return null;
+														return;
 													}
 
 													const nodeJsCompatWarnings =
