@@ -37,7 +37,7 @@
 		"clean": "rimraf ./dist ./dist-types",
 		"dev": "concurrently -n esbuild,typechk,typewrk -c yellow,blue,blue.dim \"node scripts/build.mjs watch\" \"node scripts/types.mjs tsconfig.json watch\" \"node scripts/types.mjs src/workers/tsconfig.json watch\"",
 		"lint:fix": "pnpm run check:lint --fix",
-		"test": "node scripts/build.mjs && ava && rimraf ./.tmp",
+		"test": "ava && rimraf ./.tmp",
 		"test:ci": "pnpm run test",
 		"types:build": "node scripts/types.mjs tsconfig.json && node scripts/types.mjs src/workers/tsconfig.json"
 	},

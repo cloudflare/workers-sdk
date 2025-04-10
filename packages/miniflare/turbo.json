@@ -3,12 +3,11 @@
 	"extends": ["//"],
 	"tasks": {
 		"build": {
-			"inputs": ["src/**", "scripts/**", "types/**", "*.mjs", "*.js", "*.json"],
+			"inputs": ["$TURBO_DEFAULT$", "!test/**", "!ava.config.mjs"],
 			"outputs": ["dist/**", "bootstrap.js", "worker-metafiles/**"],
 			"env": ["CI_OS"]
 		},
 		"test:ci": {
-			"inputs": ["test/**"],
 			"dependsOn": ["build"],
 			"env": ["MINIFLARE_WORKERD_PATH"]
 		}
