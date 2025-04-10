@@ -1,5 +1,3 @@
-// this test has to be run with a version of Node.js older than 16.13 to pass
-
 const { spawn } = require("child_process");
 const path = require("path");
 
