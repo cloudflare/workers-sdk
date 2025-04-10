@@ -1,74 +1,103 @@
 import { existsSync } from "fs";
-import { join } from "path";
+import { join, resolve } from "path";
 import { warn } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
+import { runCommand } from "helpers/command";
 import { getLatestTypesEntrypoint } from "helpers/compatDate";
-import { readFile, usesTypescript, writeFile } from "helpers/files";
+import { readFile, readJSON, usesTypescript, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import * as jsonc from "jsonc-parser";
-import type { C3Context } from "types";
+import type { C3Context, PackageJson } from "types";
 
 /**
- * Installs the latest version of the `@cloudflare/workers-types` package
- * and updates the .tsconfig file to use the latest entrypoint version.
+ * Generate types using `wrangler types` and update tsconfig
  */
-export async function installWorkersTypes(ctx: C3Context) {
-	const { npm } = detectPackageManager();
 
+export async function generateWorkersTypes(ctx: C3Context) {
 	if (!usesTypescript(ctx)) {
 		return;
 	}
+	const packageJsonPath = resolve("package.json");
+	const packageManifest = readJSON(packageJsonPath) as PackageJson;
+	if (!Object.keys(packageManifest.scripts ?? {}).includes("cf-typegen")) {
+		return;
+	}
 
-	await installPackages(["@cloudflare/workers-types"], {
-		dev: true,
-		startText: "Installing @cloudflare/workers-types",
-		doneText: `${brandColor("installed")} ${dim(`via ${npm}`)}`,
+	const { npm } = detectPackageManager();
+
+	const typesCmd = [npm, "run", "cf-typegen"];
+
+	await runCommand(typesCmd, {
+		cwd: ctx.project.path,
+		silent: true,
+		env: {
+			CLOUDFLARE_ACCOUNT_ID: ctx.account?.id,
+			NODE_ENV: "production",
+		},
+		startText: "Generating types for your application",
+		doneText: `${brandColor("generated")} ${dim(`to \`${ctx.template.typesPath ?? "worker-configuration.d.ts"}\` via \`${typesCmd.join(" ")}\``)}`,
 	});
-	await addWorkersTypesToTsConfig(ctx);
+
+	if (ctx.template.compatibilityFlags?.includes("nodejs_compat")) {
+		await installPackages(["@types/node"], {
+			dev: true,
+			startText: "Installing @types/node",
+			doneText: `${brandColor("installed")} ${dim(`via ${npm}`)}`,
+		});
+	}
+
+	delete packageManifest["devDependencies"]?.["@cloudflare/workers-types"];
+
+	writeFile(packageJsonPath, JSON.stringify(packageManifest, null, 2));
+	await updateTsConfig(ctx);
 }
 
-export async function addWorkersTypesToTsConfig(ctx: C3Context) {
+export async function updateTsConfig(ctx: C3Context) {
 	const tsconfigPath = join(ctx.project.path, "tsconfig.json");
 	if (!existsSync(tsconfigPath)) {
 		return;
 	}
 
-	const s = spinner();
-	s.start("Adding latest types to `tsconfig.json`");
-
 	const tsconfig = readFile(tsconfigPath);
-	const entrypointVersion = getLatestTypesEntrypoint(ctx);
-	if (entrypointVersion === null) {
-		s.stop(
-			`${brandColor(
-				"skipped",
-			)} couldn't find latest compatible version of @cloudflare/workers-types`,
-		);
-		return;
-	}
-
-	const typesEntrypoint = `@cloudflare/workers-types/${entrypointVersion}`;
 
 	try {
 		const config = jsonc.parse(tsconfig);
 		const currentTypes = config.compilerOptions?.types ?? [];
-
-		const explicitEntrypoint = (currentTypes as string[]).some((t) =>
-			t.match(/@cloudflare\/workers-types\/\d{4}-\d{2}-\d{2}/),
-		);
-
-		// If a type declaration with an explicit entrypoint exists, leave the types as is
-		// Otherwise, add the latest entrypoint
-		const newTypes = explicitEntrypoint
-			? [...currentTypes]
-			: [
-					...currentTypes.filter(
-						(t: string) => t !== "@cloudflare/workers-types",
-					),
-					typesEntrypoint,
-				];
+		let newTypes: string[];
+		if (ctx.template.installWorkersTypes) {
+			const entrypointVersion = getLatestTypesEntrypoint(ctx);
+			if (entrypointVersion === null) {
+				return;
+			}
+			const typesEntrypoint = `@cloudflare/workers-types/${entrypointVersion}`;
+			const explicitEntrypoint = (currentTypes as string[]).some((t) =>
+				t.match(/@cloudflare\/workers-types\/\d{4}-\d{2}-\d{2}/),
+			);
+			// If a type declaration with an explicit entrypoint exists, leave the types as is
+			// Otherwise, add the latest entrypoint
+			newTypes = explicitEntrypoint
+				? [...currentTypes]
+				: [
+						...currentTypes.filter(
+							(t: string) => t !== "@cloudflare/workers-types",
+						),
+						typesEntrypoint,
+					];
+		} else {
+			newTypes = [
+				...currentTypes.filter(
+					(t: string) => !t.startsWith("@cloudflare/workers-types"),
+				),
+				ctx.template.typesPath ?? "./worker-configuration.d.ts",
+				...(ctx.template.compatibilityFlags?.includes("nodejs_compat")
+					? ["node"]
+					: []),
+			];
+		}
+		if (newTypes.sort() === currentTypes.sort()) {
+			return;
+		}
 
 		// If we detect any tabs, use tabs, otherwise use spaces.
 		// We need to pass an explicit value here in order to preserve formatting properly.
@@ -86,10 +115,24 @@ export async function addWorkersTypesToTsConfig(ctx: C3Context) {
 		const updated = jsonc.applyEdits(tsconfig, edits);
 		writeFile(tsconfigPath, updated);
 	} catch (error) {
-		warn(
-			"Failed to update `tsconfig.json` with latest `@cloudflare/workers-types` entrypoint.",
-		);
+		warn("Failed to update `tsconfig.json`.");
 	}
+}
 
-	s.stop(`${brandColor("added")} ${dim(typesEntrypoint)}`);
+/**
+ * Installs the latest version of the `@cloudflare/workers-types` package
+ * and updates the .tsconfig file to use the latest entrypoint version.
+ */
+export async function installWorkersTypes(ctx: C3Context) {
+	if (!usesTypescript(ctx)) {
+		return;
+	}
+	const { npm } = detectPackageManager();
+
+	await installPackages(["@cloudflare/workers-types"], {
+		dev: true,
+		startText: "Installing @cloudflare/workers-types",
+		doneText: `${brandColor("installed")} ${dim(`via ${npm}`)}`,
+	});
+	await updateTsConfig(ctx);
 }
