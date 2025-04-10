@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { cloudflareBuiltInModules } from "./cloudflare-environment";
-import { isNodeCompat, NODEJS_MODULES_RE } from "./node-js-compat";
+import { isNodeAls, isNodeCompat, NODEJS_MODULES_RE } from "./node-js-compat";
 import type { WorkerPluginConfig } from "./plugin-config";
 import type * as vite from "vite";
 
@@ -42,10 +42,18 @@ export function validateWorkerEnvironmentsResolvedConfigs(
 			}
 
 			if (
+				/^(node:)?async_hooks$/.test(entry) &&
+				isNodeAls(resolvedPluginConfig.workers[envName])
+			) {
+				// `node:async_hooks` is allowed when nodejs_als compat is enabled
+				return false;
+			}
+
+			if (
 				NODEJS_MODULES_RE.test(entry) &&
 				isNodeCompat(resolvedPluginConfig.workers[envName])
 			) {
-				// node builtin modules are allowed when but nodejs compat is enabled
+				// node builtin modules are allowed when nodejs compat is enabled
 				return false;
 			}
 
