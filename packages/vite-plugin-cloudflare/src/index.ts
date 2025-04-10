@@ -312,7 +312,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				const changedFilePath = path.resolve(options.file);
 
 				if (
-					resolvedPluginConfig.configPaths.has(path.resolve(changedFilePath)) ||
+					resolvedPluginConfig.configPaths.has(changedFilePath) ||
 					hasDotDevDotVarsFileChanged(resolvedPluginConfig, changedFilePath) ||
 					hasAssetsConfigChanged(
 						resolvedPluginConfig,
