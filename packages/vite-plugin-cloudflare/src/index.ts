@@ -86,7 +86,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		{
 			name: "vite-plugin-cloudflare",
 			// This only applies to this plugin so is safe to use while other plugins migrate to the Environment API
-			sharedDuringBuild: true,
+			sharedDuringBuild: !!true,
 			config(userConfig, env) {
 				if (env.isPreview) {
 					// Short-circuit the whole configuration if we are in preview mode
