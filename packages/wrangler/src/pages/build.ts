@@ -50,7 +50,6 @@ export function Options(yargs: CommonYargsArgv) {
 			outfile: {
 				type: "string",
 				description: "The location of the output Worker script",
-				deprecated: true,
 			},
 			outdir: {
 				type: "string",

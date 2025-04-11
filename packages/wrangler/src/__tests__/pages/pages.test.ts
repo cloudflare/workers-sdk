@@ -24,7 +24,6 @@ describe("pages", () => {
 
 			COMMANDS
 			  wrangler pages dev [directory] [-- command..]  Develop your full-stack Pages application locally
-			  wrangler pages functions                       Helpers related to Pages Functions
 			  wrangler pages project                         Interact with your Pages projects
 			  wrangler pages deployment                      Interact with the deployments of a project
 			  wrangler pages deploy [directory]              Deploy a directory of static assets as a Pages deployment  [aliases: publish]
