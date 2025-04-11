@@ -94,7 +94,7 @@ export function validateDescription(
 
 	if (
 		!(
-			/- \[x\] Cloudflare docs PR\(s\): https:\/\/(github\.com\/cloudflare\/cloudflare-docs\/(pull|issues)\/\d+|developers\.cloudflare\.com\/.*)/i.test(
+			/- \[x\] Cloudflare docs PR\(s\): https:\/\/github\.com\/cloudflare\/cloudflare-docs\/(pull|issues)\/\d+/i.test(
 				body
 			) || /- \[x\] Documentation not necessary because: .+/i.test(body)
 		)
