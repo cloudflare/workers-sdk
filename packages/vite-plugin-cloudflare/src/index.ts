@@ -30,6 +30,8 @@ import {
 } from "./miniflare-options";
 import {
 	injectGlobalCode,
+	isNodeAls,
+	isNodeAlsModule,
 	isNodeCompat,
 	nodeCompatEntries,
 	nodeCompatExternals,
@@ -655,6 +657,26 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				);
 			},
 		},
+		// Plugin that handles Node.js Async Local Storage (ALS) compatibility support for Vite Environments that are hosted in Cloudflare Workers.
+		{
+			name: "vite-plugin-cloudflare:nodejs-als",
+			apply(_config, env) {
+				// Skip this whole plugin if we are in preview mode
+				return !env.isPreview;
+			},
+			configEnvironment(name, config) {
+				if (isNodeAls(getWorkerConfig(name))) {
+					return {
+						resolve: {
+							builtins: ["async_hooks", "node:async_hooks"],
+						},
+						optimizeDeps: {
+							exclude: ["async_hooks", "node:async_hooks"],
+						},
+					};
+				}
+			},
+		},
 		// Plugin that provides an __debug path for debugging the Cloudflare Workers.
 		{
 			name: "vite-plugin-cloudflare:debug",
@@ -736,6 +758,14 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 											build.onResolve(
 												{ filter: NODEJS_MODULES_RE },
 												({ path, importer }) => {
+													if (
+														isNodeAls(workerConfig) &&
+														isNodeAlsModule(path)
+													) {
+														// Skip if this is just async_hooks and Node.js ALS support is on.
+														return;
+													}
+
 													const nodeJsCompatWarnings =
 														nodeJsCompatWarningsMap.get(workerConfig);
 													nodeJsCompatWarnings?.registerImport(path, importer);
@@ -770,6 +800,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				const workerConfig = getWorkerConfig(this.environment.name);
 
 				if (workerConfig && !isNodeCompat(workerConfig)) {
+					if (isNodeAls(workerConfig) && isNodeAlsModule(source)) {
+						// Skip if this is just async_hooks and Node.js ALS support is on.
+						return;
+					}
+
 					const nodeJsCompatWarnings =
 						nodeJsCompatWarningsMap.get(workerConfig);
 
