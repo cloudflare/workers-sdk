@@ -333,9 +333,11 @@ describe("wrangler", () => {
 			const original = process.versions.bun;
 			process.versions.bun = "v1";
 			await logPossibleBugMessage();
-			expect(std.out).toMatchInlineSnapshot(`
-			"[32mWrangler does not support the Bun runtime. Please try this command again using Node.js[0m"
-		`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler does not support Bun. Please try this command again using Node.js.[0m
+
+				"
+			`);
 			process.versions.bun = original;
 		});
 	});
