@@ -1,5 +1,20 @@
 # create-cloudflare
 
+## 2.43.7
+
+### Patch Changes
+
+- [#8874](https://github.com/cloudflare/workers-sdk/pull/8874) [`5ace43b`](https://github.com/cloudflare/workers-sdk/commit/5ace43b2d4426b08030eae5fc790e51711224861) Thanks [@emily-shen](https://github.com/emily-shen)! - rename hello world templates with assets
+
+  Worker + Assets -> SSR / full-stack app
+  Assets only -> Static site
+
+## 2.43.6
+
+### Patch Changes
+
+- [#8846](https://github.com/cloudflare/workers-sdk/pull/8846) [`22b51e3`](https://github.com/cloudflare/workers-sdk/commit/22b51e3e21419650e66db0e06af363a8eba744df) Thanks [@emily-shen](https://github.com/emily-shen)! - Use the latest version of Wrangler when using c3 to init from dash
+
 ## 2.43.5
 
 ### Patch Changes

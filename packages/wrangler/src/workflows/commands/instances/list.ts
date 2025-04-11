@@ -10,7 +10,7 @@ export const workflowsInstancesListCommand = createCommand({
 		description:
 			"Instance related commands (list, describe, terminate, pause, resume)",
 		owner: "Product: Workflows",
-		status: "open-beta",
+		status: "stable",
 	},
 
 	positionalArgs: ["name"],

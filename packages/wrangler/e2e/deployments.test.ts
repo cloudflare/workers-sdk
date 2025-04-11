@@ -274,7 +274,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				[
 					"Uploaded 1 of 1 assets",
 					"Uploaded 1 of 2 assets",
-					"No files to upload.",
+					"No updated asset files to upload.",
 				].some((s) => output.includes(s))
 			).toBeTruthy();
 		},
@@ -347,7 +347,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				[
 					"Uploaded 1 of 1 assets",
 					"Uploaded 1 of 2 assets",
-					"No files to upload.",
+					"No updated asset files to upload.",
 				].some((s) => output.includes(s))
 			).toBeTruthy();
 			expect(output).toContain("- Binding: ASSETS");

@@ -8,7 +8,7 @@ export const workflowsInstancesTerminateAllCommand = createCommand({
 	metadata: {
 		description: "Terminate all workflow instances",
 		owner: "Product: Workflows",
-		status: "open-beta",
+		status: "stable",
 		hidden: true,
 	},
 

@@ -1,5 +1,20 @@
 # miniflare
 
+## 4.20250409.0
+
+### Patch Changes
+
+- [#8859](https://github.com/cloudflare/workers-sdk/pull/8859) [`b7ac367`](https://github.com/cloudflare/workers-sdk/commit/b7ac367fe4c3d7a05525443cc30af10bc19ce014) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250408.0  | 1.20250409.0  |
+  | @cloudflare/workers-types | ^4.20250408.0 | ^4.20250409.0 |
+
+- [#8883](https://github.com/cloudflare/workers-sdk/pull/8883) [`5388447`](https://github.com/cloudflare/workers-sdk/commit/5388447d7ca5b00dbcc0970f52b76e20a17ebe30) Thanks [@penalosa](https://github.com/penalosa)! - fix: Only log requests to the Wrangler dev server once
+
 ## 4.20250408.0
 
 ### Patch Changes

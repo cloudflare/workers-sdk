@@ -8,7 +8,7 @@ export const workflowsListCommand = createCommand({
 	metadata: {
 		description: "List Workflows associated to account",
 		owner: "Product: Workflows",
-		status: "open-beta",
+		status: "stable",
 	},
 	args: {
 		page: {

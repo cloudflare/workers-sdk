@@ -275,7 +275,7 @@ const verifyDeployment = async (
 		return;
 	}
 
-	if (testCommitMessage) {
+	if (testCommitMessage && process.env.CLOUDFLARE_API_TOKEN) {
 		await testDeploymentCommitMessage(projectName, frameworkId);
 	}
 
