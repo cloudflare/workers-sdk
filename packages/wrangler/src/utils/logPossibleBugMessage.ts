@@ -6,6 +6,12 @@ import { fgGreenColor, resetColor } from "./constants";
  * Write a message to the log that tells the user what they might do after we have reported an unexpected error.
  */
 export async function logPossibleBugMessage() {
+	if (process.versions.bun) {
+		logger.warn(
+			`Wrangler does not support Bun. Please try this command again using Node.js.`
+		);
+		return;
+	}
 	logger.log(
 		`${fgGreenColor}%s${resetColor}`,
 		"If you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose"
