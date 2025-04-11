@@ -2,7 +2,7 @@ import { describe } from "vitest";
 import { fetchJson, test, waitForReady } from "./helpers.js";
 
 describe("prebundling Node.js compatibility", () => {
-	describe.each(["pnpm", "npm", "yarn"])("using %s", (pm) => {
+	describe.each(["yarn", "pnpm", "npm"])("using %s", (pm) => {
 		test("will not cause a reload on a dynamic import of a Node.js module", async ({
 			expect,
 			seed,
