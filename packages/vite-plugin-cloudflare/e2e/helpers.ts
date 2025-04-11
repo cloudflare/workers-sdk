@@ -49,10 +49,7 @@ export const test = baseTest.extend<{
 			if (pm === "yarn") {
 				// Note: we use --force and --non-interactive because
 				//       otherwise yarn gets stuck during installation in CI
-				runCommand(
-					`${pm} install --verbose --force --non-interactive`,
-					projectPath
-				);
+				runCommand(`${pm} install --force --non-interactive`, projectPath);
 			} else {
 				runCommand(`${pm} install`, projectPath);
 			}
