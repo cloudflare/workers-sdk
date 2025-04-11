@@ -47,7 +47,7 @@ export const test = baseTest.extend<{
 			await updateVitePluginVersion(projectPath);
 			debuglog("Updated vite-plugin version in package.json");
 			if (pm === "yarn") {
-				runCommand("yarn install --non-interactive", projectPath);
+				runCommand("yarn install --force ", projectPath);
 			} else {
 				runCommand(`${pm} install`, projectPath);
 			}
