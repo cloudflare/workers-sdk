@@ -1,4 +1,4 @@
-name: Wrangler startup
+name: Test old Node.js version
 
 on:
   push:
@@ -6,8 +6,8 @@ on:
       - changeset-release/v3-maintenance
 
 jobs:
-  old-node:
-    name: "Prevents old Node versions"
+  check:
+    name: "Checks"
     timeout-minutes: 10
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
