@@ -7,6 +7,7 @@ import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
+import { buildContainers, deployContainers } from "../cloudchamber/deploy";
 import { configFileName, formatConfigSnippet } from "../config";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -953,6 +954,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 	}
 
+	if (config.containers !== undefined && props.dryRun) {
+		await buildContainers(config, workerTag ?? "worker-tag");
+	}
+
 	if (props.dryRun) {
 		logger.log(`--dry-run: exiting now.`);
 		return { versionId, workerTag };
@@ -970,6 +975,28 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	// deploy triggers
 	const targets = await triggersDeploy(props);
+
+	if (config.containers !== undefined) {
+		if (versionId == null) {
+			throw new Error(
+				"version id is not defined, making it unable to deploy containers"
+			);
+		}
+
+		if (accountId == null) {
+			throw new Error(
+				"account id is not defined, making it unable to deploy containers"
+			);
+		}
+
+		await deployContainers(logger, config, {
+			versionId,
+			accountId,
+			scriptName,
+			dryRun: props.dryRun,
+			env: props.env,
+		});
+	}
 
 	logger.log("Current Version ID:", versionId);
 

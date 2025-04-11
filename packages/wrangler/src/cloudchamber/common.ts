@@ -109,7 +109,7 @@ export function handleFailure<
 			await fillOpenAPIConfiguration(config, args.json);
 			await cb(args, config);
 		} catch (err) {
-			if (!args.json) {
+			if (!args.json || !isNonInteractiveOrCI()) {
 				throw err;
 			}
 
@@ -166,7 +166,7 @@ export async function promiseSpinner<T>(
 	return t;
 }
 
-async function fillOpenAPIConfiguration(config: Config, json: boolean) {
+export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 	const headers: Record<string, string> =
 		OpenAPI.HEADERS !== undefined ? { ...OpenAPI.HEADERS } : {};
 
@@ -218,7 +218,6 @@ async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 		const [, err] = await wrap(requireAuth(config));
 		if (err) {
 			crash("authenticating with the Cloudflare API:", err.message);
-			return;
 		}
 	}
 
