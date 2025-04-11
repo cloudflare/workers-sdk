@@ -7,8 +7,7 @@
 		"build": "vite build",
 		"dev": "vite",
 		"lint": "eslint .",
-		"prepreview": "vite build",
-		"preview": "vite preview"
+		"preview": "vite build && vite preview"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "*",
