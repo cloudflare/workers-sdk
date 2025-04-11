@@ -1,5 +1,36 @@
 # wrangler
 
+## 3.114.6
+
+### Patch Changes
+
+- [#8783](https://github.com/cloudflare/workers-sdk/pull/8783) [`7bcf352`](https://github.com/cloudflare/workers-sdk/commit/7bcf3527684b085effff895383b2c8a96c2d4943) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Improve error message when request to obtain membership info fails
+
+  Wrangler now informs user that specific permission might be not granted when fails to obtain membership info. The same information is provided when Wrangler is unable to fetch user's email.
+
+- [#8866](https://github.com/cloudflare/workers-sdk/pull/8866) [`db673d6`](https://github.com/cloudflare/workers-sdk/commit/db673d67adbd7edb3e08f46784de4e147f0a300b) Thanks [@edmundhung](https://github.com/edmundhung)! - improve error message when redirected config contains environments
+
+  this change improves that validation error message that users see
+  when a redirected config file contains environments, by:
+
+  - cleaning the message formatting and displaying the
+    offending environments in a list
+  - prompting the user to report the issue to the author
+    of the tool which has generated the config
+
+- [#8600](https://github.com/cloudflare/workers-sdk/pull/8600) [`91cf028`](https://github.com/cloudflare/workers-sdk/commit/91cf02893e3653db564c58ef079b51d93448978a) Thanks [@workers-devprod](https://github.com/workers-devprod)! - add validation to redirected configs in regards to environments
+
+  add the following validation behaviors to wrangler deploy commands, that relate
+  to redirected configs (i.e. config files specified by `.wrangler/deploy/config.json` files):
+
+  - redirected configs are supposed to be already flattened configurations without any
+    environment (i.e. a build tool should generate redirected configs already targeting specific
+    environments), so if wrangler encounters a redirected config with some environments defined
+    it should error
+  - given the point above, specifying an environment (`--env=my-env`) when using redirected
+    configs is incorrect, so these environments should be ignored and a warning should be
+    presented to the user
+
 ## 3.114.5
 
 ### Patch Changes
