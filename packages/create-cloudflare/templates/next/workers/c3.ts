@@ -59,13 +59,13 @@ export default {
 		scripts: {
 			deploy: `opennextjs-cloudflare build && opennextjs-cloudflare deploy`,
 			preview: `opennextjs-cloudflare build && opennextjs-cloudflare preview`,
-			"cf-typegen": `wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts`,
+			"cf-typegen": `wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts`,
 		},
 	}),
 	devScript: "dev",
 	previewScript: "preview",
 	deployScript: "deploy",
 
-	typesPath: "cloudflare-env.d.ts",
+	typesPath: "./cloudflare-env.d.ts",
 	compatibilityFlags: ["nodejs_compat"],
 } as TemplateConfig;
