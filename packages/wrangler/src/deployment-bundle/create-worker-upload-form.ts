@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { File, FormData } from "undici";
+import { config } from "yargs";
 import { UserError } from "../errors";
 import { INHERIT_SYMBOL } from "./bindings";
 import { handleUnsafeCapnp } from "./capnp";

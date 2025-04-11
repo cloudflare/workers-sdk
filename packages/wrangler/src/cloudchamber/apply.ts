@@ -15,7 +15,9 @@ import { formatConfigSnippet } from "../config";
 import {
 	ApiError,
 	ApplicationsService,
+	CreateApplicationRolloutRequest,
 	DeploymentMutationError,
+	RolloutsService,
 	SchedulingPolicy,
 } from "./client";
 import { promiseSpinner } from "./common";
@@ -33,6 +35,7 @@ import type {
 	ApplicationName,
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
+	ModifyDeploymentV2RequestBody,
 	UserDeploymentConfiguration,
 } from "./client";
 import type { JsonMap } from "@iarna/toml";
@@ -61,7 +64,7 @@ function createApplicationToModifyApplication(
 function applicationToCreateApplication(
 	application: Application
 ): CreateApplicationRequest {
-	return {
+	const app: CreateApplicationRequest = {
 		configuration: application.configuration,
 		constraints: application.constraints,
 		name: application.name,
@@ -69,7 +72,9 @@ function applicationToCreateApplication(
 		affinities: application.affinities,
 		instances: application.instances,
 		jobs: application.jobs ? true : undefined,
+		durable_objects: application.durable_objects,
 	};
+	return app;
 }
 
 function containerAppToCreateApplication(
@@ -272,12 +277,8 @@ function sortObjectRecursive<T = Record<string | number, unknown>>(
 	return sortObjectKeys(objectCopy) as T;
 }
 
-/**
- * applyCommand is able to take the wrangler.toml file and render the changes that it
- * detects.
- */
-export async function applyCommand(
-	args: StrictYargsOptionsToInterfaceJSON<typeof applyCommandOptionalYargs>,
+export async function apply(
+	args: { skipDefaults: boolean | undefined; json: boolean; env?: string },
 	config: Config
 ) {
 	startSection(
@@ -350,6 +351,18 @@ export async function applyCommand(
 			const prevApp = sortObjectRecursive<CreateApplicationRequest>(
 				stripUndefined(applicationToCreateApplication(application))
 			);
+
+			if (
+				prevApp.durable_objects !== undefined &&
+				appConfigNoDefaults.durable_objects !== undefined &&
+				prevApp.durable_objects.namespace_id !==
+					appConfigNoDefaults.durable_objects.namespace_id
+			) {
+				crash(
+					`Application "${prevApp.name}" is assigned to durable object ${prevApp.durable_objects.namespace_id}, but a new DO namespace is being assigned to the application,
+					you should delete the container application and deploy again`
+				);
+			}
 
 			const prev = formatConfigSnippet(
 				{ containers: [prevApp as ContainerApp] },
@@ -553,9 +566,49 @@ export async function applyCommand(
 		}
 
 		if (action.action === "modify") {
+			{
+				const [_result, err] = await wrap(
+					promiseSpinner(
+						ApplicationsService.modifyApplication(action.id, {
+							...action.application,
+						})
+					)
+				);
+
+				if (err !== null) {
+					if (!(err instanceof ApiError)) {
+						crash(
+							`Unexpected error modifying application ${action.name}: ${err.message}`
+						);
+					}
+
+					if (err.status === 400) {
+						crash(
+							`Error modifying application ${action.name} due to a ${brandColor.underline("misconfiguration")}\n\n\t${formatError(err)}`
+						);
+					}
+
+					crash(
+						`Error modifying application ${action.name} due to an internal error (request id: ${err.body.request_id}): ${formatError(err)}`
+					);
+				}
+			}
+
 			const [_result, err] = await wrap(
 				promiseSpinner(
-					ApplicationsService.modifyApplication(action.id, action.application),
+					RolloutsService.createApplicationRollout(action.id, {
+						description: "Progressive update",
+						strategy: CreateApplicationRolloutRequest.strategy.ROLLING,
+						target_configuration:
+							(action.application
+								.configuration as ModifyDeploymentV2RequestBody) ?? {},
+						steps: [
+							{ step_size: { percentage: 25 }, description: "Step 2" },
+							{ step_size: { percentage: 50 }, description: "Step 3" },
+							{ step_size: { percentage: 75 }, description: "Step 4" },
+							{ step_size: { percentage: 100 }, description: "Step 5" },
+						],
+					}),
 					{
 						json: args.json,
 						message: `modifying application ${action.name}`,
@@ -589,4 +642,18 @@ export async function applyCommand(
 	}
 
 	endSection("Applied changes");
+}
+
+/**
+ * applyCommand is able to take the wrangler.toml file and render the changes that it
+ * detects.
+ */
+export async function applyCommand(
+	args: StrictYargsOptionsToInterfaceJSON<typeof applyCommandOptionalYargs>,
+	config: Config
+) {
+	return apply(
+		{ skipDefaults: args.skipDefaults, env: args.env, json: args.json },
+		config
+	);
 }
