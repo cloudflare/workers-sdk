@@ -328,5 +328,15 @@ describe("wrangler", () => {
 			Note that there is a newer version of Wrangler available (123.123.123). Consider checking whether upgrading resolves this error."
 		`);
 		});
+
+		it("should display a warning if Bun is in use", async () => {
+			const original = process.versions.bun;
+			process.versions.bun = "v1";
+			await logPossibleBugMessage();
+			expect(std.out).toMatchInlineSnapshot(`
+			"[32mWrangler does not support the Bun runtime. Please try this command again using Node.js[0m"
+		`);
+			process.versions.bun = original;
+		});
 	});
 });

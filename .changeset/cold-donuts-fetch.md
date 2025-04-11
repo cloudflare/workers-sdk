@@ -2,6 +2,4 @@
 "wrangler": patch
 ---
 
-Remove Bun support
-
-This adds an error message to Wrangler when Wrangler is started using Bun. Wrangler has never supported Bun, and so this surfaces that lack of support earlier.
+When Wrangler encounters an error, if the Bun runtime is detected it will now warn users that Wrangler does not officially support Bun.
