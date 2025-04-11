@@ -1,5 +1,11 @@
 # wrangler
 
+## 4.10.1
+
+### Patch Changes
+
+- [#8885](https://github.com/cloudflare/workers-sdk/pull/8885) [`f2802f9`](https://github.com/cloudflare/workers-sdk/commit/f2802f9cdb3c3c97a2aa22f66d427af29a824f68) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Disambiguate the "No files to upload. Proceeding with deployment..." message
+
 ## 4.10.0
 
 ### Minor Changes
