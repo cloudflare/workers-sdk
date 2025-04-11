@@ -46,9 +46,13 @@ export const test = baseTest.extend<{
 			debuglog("Fixture copied to " + projectPath);
 			await updateVitePluginVersion(projectPath);
 			debuglog("Updated vite-plugin version in package.json");
-			// Note: we use --force because otherwise yarn
-			//       gets stuck during installation in CI
-			runCommand(`${pm} install --force`, projectPath);
+			if (pm === "yarn") {
+				// Note: we use --force and --non-interactive because
+				//       otherwise yarn gets stuck during installation in CI
+				runCommand(`${pm} install --force --non-interactive`, projectPath);
+			} else {
+				runCommand(`${pm} install`, projectPath);
+			}
 			debuglog("Installed node modules");
 			projectPaths.push(projectPath);
 			return projectPath;
