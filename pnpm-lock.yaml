@@ -16,7 +16,7 @@ catalogs:
       specifier: ~3.0.8
       version: 3.0.8
     esbuild:
-      specifier: ~0.25.2
+      specifier: 0.25.2
       version: 0.25.2
     playwright-chromium:
       specifier: ^1.49.1
