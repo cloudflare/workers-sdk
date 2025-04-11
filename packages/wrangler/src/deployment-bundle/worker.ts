@@ -217,6 +217,7 @@ export interface CfService {
 	service: string;
 	environment?: string;
 	entrypoint?: string;
+	props?: Record<string, unknown>;
 }
 
 export interface CfAnalyticsEngineDataset {
