@@ -33,15 +33,6 @@ jobs:
         env:
           CI_OS: ${{ runner.os }}
 
-      - name: Extract runtime versions
-        run: node .github/extract-runtime-versions.mjs # extract versions before modifying version to include commit hash
-
-      - name: Upload runtime versions
-        uses: actions/upload-artifact@v4
-        with:
-          name: runtime-versions.md
-          path: runtime-versions.md
-
       - name: Expose ACTIONS_RUNTIME_TOKEN and ACTIONS_RESULTS_URL
         # We use the `@actions/artifact` package in the prerelease scripts below.
         # This is meant to be used from custom JavaScript actions, rather than

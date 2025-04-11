@@ -228,9 +228,6 @@ dist/**
 .next/**
 .turbo
 
-# Runtime dependencies report
-runtime-versions.md
-
 /worker-rust/target/
 
 .e2e-test-report/
