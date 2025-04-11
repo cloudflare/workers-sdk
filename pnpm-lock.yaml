@@ -2699,9 +2699,6 @@ importers:
       devalue:
         specifier: ^4.3.0
         version: 4.3.2
-      esbuild:
-        specifier: catalog:default
-        version: 0.24.2
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
