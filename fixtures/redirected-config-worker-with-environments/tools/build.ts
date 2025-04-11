@@ -15,6 +15,12 @@ const config = {
 				environmentName: "staging",
 			},
 		},
+		testing: {
+			vars: {
+				generated: true,
+				environmentName: "testing",
+			},
+		},
 	},
 };
 writeFileSync("build/wrangler.json", JSON.stringify(config, undefined, 2));
