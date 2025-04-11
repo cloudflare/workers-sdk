@@ -129,6 +129,7 @@ export type WorkerMetadataBinding =
 			name: string;
 			store_id: string;
 			secret_name: string;
+			staging?: boolean;
 	  }
 	| {
 			type: "logfwdr";
@@ -374,12 +375,13 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	});
 
 	bindings.secrets_store_secrets?.forEach(
-		({ binding, store_id, secret_name }) => {
+		({ binding, store_id, secret_name, staging }) => {
 			metadataBindings.push({
 				name: binding,
 				type: "secrets_store_secret",
 				store_id,
 				secret_name,
+				staging,
 			});
 		}
 	);
