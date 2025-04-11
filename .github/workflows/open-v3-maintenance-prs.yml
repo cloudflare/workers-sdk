@@ -46,7 +46,7 @@ jobs:
 
             Depending on your changes, running `git rebase --onto v3-maintenance main ${{ github.head_ref }}` might be a good starting point.
 
-      - name: "Comment on PR with error details"
+      - name: "Comment on PR with backport PR details"
         if: success()
         uses: marocchino/sticky-pull-request-comment@daa4a82a0a3f6c162c02b83fa44b3ab83946f7cb
         with:
