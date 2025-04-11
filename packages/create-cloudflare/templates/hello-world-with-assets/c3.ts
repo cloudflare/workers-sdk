@@ -21,5 +21,6 @@ const config: TemplateConfig = {
 			},
 		},
 	},
+	compatibilityFlags: ["nodejs_compat"],
 };
 export default config;

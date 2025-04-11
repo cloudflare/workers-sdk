@@ -145,7 +145,6 @@ export const writeEslintrc = async (ctx: C3Context): Promise<void> => {
 const addDevDependencies = async (installEslintPlugin: boolean) => {
 	const packages = [
 		"@cloudflare/next-on-pages@1",
-		"@cloudflare/workers-types",
 		"vercel",
 		...(installEslintPlugin ? ["eslint-plugin-next-on-pages"] : []),
 	];
@@ -222,4 +221,5 @@ export default {
 	previewScript: "preview",
 	deployScript: "deploy",
 	compatibilityFlags: ["nodejs_compat"],
+	typesPath: "env.d.ts",
 } as TemplateConfig;
