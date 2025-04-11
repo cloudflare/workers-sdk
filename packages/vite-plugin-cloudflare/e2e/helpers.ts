@@ -5,7 +5,7 @@ import path from "node:path";
 import util from "node:util";
 import { stripAnsi } from "miniflare";
 import kill from "tree-kill";
-import { test as baseTest, inject, vi } from "vitest";
+import { test as baseTest, inject, onTestFailed, vi } from "vitest";
 import vitePluginPackage from "../package.json";
 
 const debuglog = util.debuglog("vite-plugin:test");
@@ -27,11 +27,13 @@ const testEnv = {
  * well defined environments that represent real-world usage.
  */
 export const test = baseTest.extend<{
-	seed: (fixture: string, pm: string) => Promise<string>;
-	viteDev: (
+	seed: (fixture: string, pm: "npm" | "pnpm" | "yarn") => Promise<string>;
+	runLongLived: (
+		pm: string,
+		command: "dev" | "preview",
 		projectPath: string,
 		options?: { flags?: string[]; maxBuffer?: number }
-	) => Process;
+	) => Promise<Process>;
 }>({
 	/** Seed a test project from a fixture. */
 	async seed({}, use) {
@@ -62,19 +64,19 @@ export const test = baseTest.extend<{
 			}
 		}
 	},
-	/** Start a `vite dev` command and wraps its outputs. */
-	async viteDev({}, use) {
+	/** Starts a command and wraps its outputs. */
+	async runLongLived({}, use) {
 		const processes: ChildProcess[] = [];
-		await use((projectPath) => {
-			debuglog("starting vite for " + projectPath);
-			const proc = childProcess.exec(`pnpm exec vite dev`, {
+		await use(async (pm, command, projectPath) => {
+			debuglog(`starting \`${command}\` for ${projectPath}`);
+			const proc = childProcess.exec(`${pm} run ${command}`, {
 				cwd: projectPath,
 				env: testEnv,
 			});
 			processes.push(proc);
 			return wrap(proc);
 		});
-		debuglog("Closing down vite dev processes", processes.length);
+		debuglog(`Closing down ${processes.length} process(es)`);
 		const result = await Promise.allSettled(
 			processes.map((proc) => {
 				return new Promise<number | undefined>((resolve, reject) => {
@@ -82,7 +84,7 @@ export const test = baseTest.extend<{
 					if (!pid) {
 						resolve(undefined);
 					} else {
-						debuglog("killing process vite process", pid);
+						debuglog(`Killing process, id:${pid}`);
 						kill(pid, "SIGKILL", (error) =>
 							error ? reject(error) : resolve(pid)
 						);
@@ -101,7 +103,7 @@ export interface Process {
 }
 
 /**
- * Wrap a long running child process to capture its stdio and make it available programmatically.
+ * Wraps a long running child process to capture its stdio and make it available programmatically.
  */
 function wrap(proc: childProcess.ChildProcess): Process {
 	let stdout = "";
@@ -121,7 +123,7 @@ function wrap(proc: childProcess.ChildProcess): Process {
 		stderr += chunk;
 	});
 	const closePromise = events.once(proc, "close");
-	return {
+	const wrappedProc = {
 		get stdout() {
 			return stripAnsi(stdout);
 		},
@@ -132,6 +134,16 @@ function wrap(proc: childProcess.ChildProcess): Process {
 			return closePromise.then(([exitCode]) => exitCode ?? -1);
 		},
 	};
+
+	onTestFailed(() => {
+		console.log(
+			`Wrapped process logs (${proc.spawnfile} ${proc.spawnargs.join(" ")}):`
+		);
+		console.log(wrappedProc.stdout);
+		console.error(wrappedProc.stderr);
+	});
+
+	return wrappedProc;
 }
 
 async function updateVitePluginVersion(projectPath: string) {
