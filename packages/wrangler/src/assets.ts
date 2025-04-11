@@ -89,7 +89,9 @@ export const syncAssets = async (
 				{ telemetryMessage: true }
 			);
 		}
-		logger.info(`No files to upload. Proceeding with deployment...`);
+		logger.info(
+			`No updated asset files to upload. Proceeding with deployment...`
+		);
 		return initializeAssetsResponse.jwt;
 	}
 
