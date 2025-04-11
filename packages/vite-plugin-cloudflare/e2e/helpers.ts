@@ -46,7 +46,9 @@ export const test = baseTest.extend<{
 			debuglog("Fixture copied to " + projectPath);
 			await updateVitePluginVersion(projectPath);
 			debuglog("Updated vite-plugin version in package.json");
-			runCommand(`${pm} install`, projectPath);
+			// Note: we use --force because otherwise yarn
+			//       gets stuck during installation in CI
+			runCommand(`${pm} install --force`, projectPath);
 			debuglog("Installed node modules");
 			projectPaths.push(projectPath);
 			return projectPath;
