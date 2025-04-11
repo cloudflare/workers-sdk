@@ -1,5 +1,15 @@
 # @cloudflare/vite-plugin
 
+## 1.0.6
+
+### Patch Changes
+
+- [#8878](https://github.com/cloudflare/workers-sdk/pull/8878) [`d04c69f`](https://github.com/cloudflare/workers-sdk/commit/d04c69f81eb40a854c219fdcad53e0387ca5f2e2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - add support for Node.js ALS compat mode
+
+- Updated dependencies [[`f2802f9`](https://github.com/cloudflare/workers-sdk/commit/f2802f9cdb3c3c97a2aa22f66d427af29a824f68)]:
+  - wrangler@4.10.1
+  - @cloudflare/unenv-preset@2.3.1
+
 ## 1.0.5
 
 ### Patch Changes
