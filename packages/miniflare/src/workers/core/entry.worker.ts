@@ -28,6 +28,7 @@ type Env = {
 	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
 	[CoreBindings.DATA_PROXY_SHARED_SECRET]?: ArrayBuffer;
 	[CoreBindings.TRIGGER_HANDLERS]: boolean;
+	[CoreBindings.LOG_REQUESTS]: boolean;
 } & {
 	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
 		| Fetcher
@@ -421,7 +422,9 @@ export default <ExportedHandler<Env>>{
 			}
 			response = maybeInjectLiveReload(response, env, ctx);
 			response = ensureAcceptableEncoding(clientAcceptEncoding, response);
-			maybeLogRequest(request, response, env, ctx, startTime);
+			if (env[CoreBindings.LOG_REQUESTS]) {
+				maybeLogRequest(request, response, env, ctx, startTime);
+			}
 			return response;
 		} catch (e: any) {
 			return new Response(e?.stack ?? String(e), { status: 500 });

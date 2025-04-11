@@ -4,8 +4,9 @@ const config: TemplateConfig = {
 	configVersion: 1,
 	id: "hello-world-with-assets",
 	path: "templates/hello-world-with-assets",
-	displayName: "Worker + Assets",
-	description: "For static sites with an API or server-side rendering (SSR)",
+	displayName: "SSR / full-stack app",
+	description:
+		"For sites with a backend API, or server-side rendering (SSR). Uses Static Assets with a Worker.",
 	platform: "workers",
 	copyFiles: {
 		variants: {

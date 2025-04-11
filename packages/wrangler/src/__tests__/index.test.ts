@@ -62,7 +62,7 @@ describe("wrangler", () => {
 				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
 				  wrangler dispatch-namespace     🏗️  Manage dispatch namespaces
 				  wrangler ai                     🤖 Manage AI models
-				  wrangler workflows              🔁 Manage Workflows [open-beta]
+				  wrangler workflows              🔁 Manage Workflows
 				  wrangler pipelines              🚰 Manage Cloudflare Pipelines [open beta]
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
@@ -122,7 +122,7 @@ describe("wrangler", () => {
 				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
 				  wrangler dispatch-namespace     🏗️  Manage dispatch namespaces
 				  wrangler ai                     🤖 Manage AI models
-				  wrangler workflows              🔁 Manage Workflows [open-beta]
+				  wrangler workflows              🔁 Manage Workflows
 				  wrangler pipelines              🚰 Manage Cloudflare Pipelines [open beta]
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
