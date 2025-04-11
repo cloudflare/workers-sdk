@@ -16,7 +16,7 @@ export default defineConfig({
 
 ## Documentation
 
-Full documentation can be found [here](https://developers.cloudflare.com/workers/vite-plugin/).
+Full documentation can be found in the [docs](https://developers.cloudflare.com/workers/vite-plugin/).
 
 ## Features
 
