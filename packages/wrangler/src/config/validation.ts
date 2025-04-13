@@ -182,11 +182,18 @@ export function normalizeAndValidateConfig(
 
 	if (envName !== undefined) {
 		if (isRedirectedConfig) {
-			diagnostics.errors.push(dedent`
-				You have specified the environment "${envName}", but are using a redirected configuration, produced by a build tool such as Vite.
-				You need to set the environment in your build tool, rather than via Wrangler.
-				For example, if you are using Vite, refer to these docs: https://developers.cloudflare.com/workers/vite-plugin/reference/cloudflare-environments/
-			`);
+			const isPagesExpected =
+				isPagesConfig(rawConfig) && ["production", "preview"].includes(envName);
+
+			// Note: we error if the user is specifying an environment, but not for pages
+			//       commands where the environment is always set (to either "preview" or "production")
+			if (!isPagesExpected) {
+				diagnostics.errors.push(dedent`
+					You have specified the environment "${envName}", but are using a redirected configuration, produced by a build tool such as Vite.
+					You need to set the environment in your build tool, rather than via Wrangler.
+					For example, if you are using Vite, refer to these docs: https://developers.cloudflare.com/workers/vite-plugin/reference/cloudflare-environments/
+				`);
+			}
 		} else {
 			const envDiagnostics = new Diagnostics(
 				`"env.${envName}" environment configuration`
