@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import * as forge from "node-forge";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { normalizeOutput } from "./helpers/normalize";
 
@@ -127,6 +127,13 @@ describe("cert", () => {
 	// Generate filenames for concurrent e2e test environment
 	const mtlsCertName = `mtls_cert_${randomUUID()}`;
 	const caCertName = `ca_cert_${randomUUID()}`;
+
+	afterAll(async () => {
+		// Make sure we clean up the certificates after the tests
+		// These certs are supposed to be deleted in the test, but in case of failure, we want to make sure they are deleted
+		await helper.run(`wrangler cert delete --name ${mtlsCertName}`);
+		await helper.run(`wrangler cert delete --name ${caCertName}`);
+	});
 
 	it("upload mtls-certificate", async () => {
 		// locally generated certs/key
