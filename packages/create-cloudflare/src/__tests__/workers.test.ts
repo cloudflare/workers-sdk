@@ -25,6 +25,7 @@ describe("updateTsConfig", () => {
 		ctx = createTestContext();
 		ctx.args.ts = true;
 		ctx.template.installWorkersTypes = false;
+		ctx.template.skipWranglerTypegen = false;
 
 		vi.mocked(existsSync).mockImplementation(() => true);
 		vi.mocked(getLatestTypesEntrypoint).mockReturnValue(mockCompatDate);
