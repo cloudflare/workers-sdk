@@ -28,6 +28,7 @@ if (require.main === module) {
 					`--label "skip-v3-pr"`,
 					`--title "V3 Backport [#${process.env.PR_NUMBER}]: ${process.env.PR_TITLE?.slice(1, -1)}"`,
 					`--body "This is an automatically opened PR to backport patch changes from #${process.env.PR_NUMBER} to Wrangler v3"`,
+					`--draft`,
 				].join(" ")
 			);
 		} catch {
