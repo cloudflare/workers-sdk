@@ -82,7 +82,7 @@ const apiFetch = async (
 		return json.result;
 	} catch (e) {
 		if (failSilently) {
-			return;
+			return false;
 		}
 		if (e instanceof ApiError) {
 			console.error(e.url, e.init);
@@ -122,7 +122,7 @@ export const listTmpE2EProjects = async () => {
 };
 
 export const deleteProject = async (project: string) => {
-	await apiFetch(
+	return await apiFetch(
 		`/pages/projects/${project}`,
 		{
 			method: "DELETE",
@@ -144,7 +144,7 @@ export const listTmpE2EWorkers = async () => {
 };
 
 export const deleteWorker = async (id: string) => {
-	await apiFetch(
+	return await apiFetch(
 		`/workers/scripts/${id}`,
 		{
 			method: "DELETE",
@@ -181,7 +181,7 @@ export const listTmpKVNamespaces = async () => {
 };
 
 export const deleteKVNamespace = async (id: string) => {
-	await apiFetch(
+	return await apiFetch(
 		`/storage/kv/namespaces/${id}`,
 		{
 			method: "DELETE",
@@ -219,7 +219,7 @@ export const listTmpDatabases = async () => {
 };
 
 export const deleteDatabase = async (id: string) => {
-	await apiFetch(
+	return await apiFetch(
 		`/d1/database/${id}`,
 		{
 			method: "DELETE",
@@ -257,7 +257,7 @@ export const listHyperdriveConfigs = async () => {
 };
 
 export const deleteHyperdriveConfig = async (id: string) => {
-	await apiFetch(
+	return await apiFetch(
 		`/hyperdrive/configs/${id}`,
 		{
 			method: "DELETE",
