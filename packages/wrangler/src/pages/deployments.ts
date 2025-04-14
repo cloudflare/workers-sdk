@@ -72,6 +72,7 @@ export async function ListHandler({ projectName, environment }: ListArgs) {
 
 	const data = deployments.map((deployment) => {
 		return {
+			Id: deployment.id,
 			Environment: titleCase(deployment.environment),
 			Branch: deployment.deployment_trigger.metadata.branch,
 			Source: shortSha(deployment.deployment_trigger.metadata.commit_hash),
