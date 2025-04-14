@@ -11,6 +11,7 @@ export const TESTS = {
 	testDns,
 	testTimers,
 	testNet,
+	testTls,
 };
 
 export default {
@@ -79,6 +80,8 @@ async function testNodeCompatModules() {
 	const module = await import("node:module");
 	const require = module.createRequire("/");
 	const modules = [
+		"_tls_common",
+		"_tls_wrap",
 		"assert",
 		"assert/strict",
 		"buffer",
@@ -165,4 +168,11 @@ export async function testNet() {
 	assert.strictEqual(typeof net, "object");
 	assert.strictEqual(typeof net.createConnection, "function");
 	assert.throws(() => net.createServer(), /not implemented/);
+}
+
+export async function testTls() {
+	const tls = await import("node:tls");
+	assert.strictEqual(typeof tls, "object");
+	// @ts-expect-error Invalid @types/node definition.
+	assert.strictEqual(typeof tls.createALPNProtocols, "function");
 }
