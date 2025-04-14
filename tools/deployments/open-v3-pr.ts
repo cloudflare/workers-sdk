@@ -1,5 +1,5 @@
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import parseChangeset from "@changesets/parse";
 
 /* eslint-disable turbo/no-undeclared-env-vars */
@@ -50,5 +50,13 @@ export function isWranglerPatch(changedFilesJson: string) {
 			}
 		}
 	}
+
+	if (process.env.GITHUB_OUTPUT) {
+		appendFileSync(
+			process.env.GITHUB_OUTPUT,
+			`has_wrangler_patch=${hasWranglerPatch ? "true" : "false"}\n`
+		);
+	}
+
 	return hasWranglerPatch;
 }
