@@ -125,8 +125,8 @@ describe("cert", () => {
 	const { certificate: caCert } = generateRootCaCert();
 
 	// Generate filenames for concurrent e2e test environment
-	const mtlsCertName = `mtls_cert_${randomUUID()}`;
-	const caCertName = `ca_cert_${randomUUID()}`;
+	const mtlsCertName = `tmp-e2e-mtls_cert_${randomUUID()}`;
+	const caCertName = `tmp-e2e-ca_cert_${randomUUID()}`;
 
 	it("upload mtls-certificate", async () => {
 		// locally generated certs/key
