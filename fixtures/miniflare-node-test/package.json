@@ -1,0 +1,22 @@
+{
+	"name": "miniflare-node-test",
+	"private": true,
+	"description": "",
+	"license": "ISC",
+	"author": "",
+	"type": "module",
+	"scripts": {
+		"test:ci": "node --test"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20241230.0",
+		"@types/is-even": "^1.0.2",
+		"is-even": "^1.0.0",
+		"miniflare": "workspace:*",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}
