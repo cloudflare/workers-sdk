@@ -41,6 +41,8 @@ export const emojifyStepType = (type: string) => {
 			return "🎯 Step";
 		case "sleep":
 			return "💤 Sleeping";
+		case "waitForEvent":
+			return "👀 Waiting for event";
 		case "termination":
 			return "🚫 Termination";
 		default:

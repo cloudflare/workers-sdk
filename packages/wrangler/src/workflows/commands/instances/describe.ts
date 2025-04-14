@@ -22,6 +22,7 @@ import type {
 	InstanceStatusAndLogs,
 	InstanceStepLog,
 	InstanceTerminateLog,
+	InstanceWaitForEventLog,
 } from "../../types";
 
 export const workflowsInstancesDescribeCommand = createCommand({
@@ -140,7 +141,11 @@ export const workflowsInstancesDescribeCommand = createCommand({
 
 function logStep(
 	args: typeof workflowsInstancesDescribeCommand.args,
-	step: InstanceStepLog | InstanceSleepLog | InstanceTerminateLog
+	step:
+		| InstanceStepLog
+		| InstanceSleepLog
+		| InstanceTerminateLog
+		| InstanceWaitForEventLog
 ) {
 	logRaw("");
 	const formattedStep: Record<string, string> = {};
@@ -197,6 +202,46 @@ function logStep(
 					`${retryDate.toLocaleString()} (in ${formatDistanceToNowStrict(retryDate)} from now)`;
 			}
 		}
+		if (step.output !== undefined && args.stepOutput) {
+			let output: string;
+			try {
+				output = JSON.stringify(step.output);
+			} catch {
+				output = step.output as string;
+			}
+			formattedStep.Output =
+				output.length > args.truncateOutputLimit
+					? output.substring(0, args.truncateOutputLimit) +
+						"[...output truncated]"
+					: output;
+		}
+	}
+
+	if (step.type == "waitForEvent") {
+		formattedStep.Name = step.name;
+		formattedStep.Type = emojifyStepType(step.type);
+
+		if (step.start != undefined) {
+			formattedStep.Start = new Date(step.start).toLocaleString();
+		}
+
+		if (step.end != undefined) {
+			formattedStep.End = new Date(step.end).toLocaleString();
+		}
+
+		if (step.start != null && step.end != null) {
+			formattedStep.Duration = formatDistanceStrict(
+				new Date(step.end),
+				new Date(step.start)
+			);
+		} else if (step.start != null) {
+			// Convert current date to UTC
+			formattedStep.Duration = formatDistanceStrict(
+				new Date(step.start),
+				new Date(new Date().toUTCString().slice(0, -4))
+			);
+		}
+
 		if (step.output !== undefined && args.stepOutput) {
 			let output: string;
 			try {
