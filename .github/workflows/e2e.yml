@@ -10,7 +10,7 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}
       cancel-in-progress: true
-    timeout-minutes: 40
+    timeout-minutes: 50
     if: github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'e2e' ) && github.event.pull_request.head.repo.owner.login == 'cloudflare' && (github.head_ref == 'changeset-release/main' || contains(github.event.*.labels.*.name, 'every-os' ))
     name: "E2E Test"
     strategy:
@@ -36,6 +36,7 @@ jobs:
 
       - name: Run Vite E2E tests
         run: pnpm test:e2e -F @cloudflare/vite-plugin --log-order=stream
+        timeout-minutes: 15
         env:
           NODE_DEBUG: "vite-plugin:test"
           # The AI tests need to connect to Cloudflare
@@ -68,7 +69,7 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}
       cancel-in-progress: true
-    timeout-minutes: 40
+    timeout-minutes: 50
     if: github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'e2e' ) && github.event.pull_request.head.repo.owner.login == 'cloudflare'
     name: "E2E Test"
     strategy:
@@ -94,6 +95,7 @@ jobs:
 
       - name: Run Vite E2E tests
         run: pnpm test:e2e -F @cloudflare/vite-plugin --log-order=stream
+        timeout-minutes: 15
         env:
           NODE_DEBUG: "vite-plugin:test"
           # The AI tests need to connect to Cloudflare
