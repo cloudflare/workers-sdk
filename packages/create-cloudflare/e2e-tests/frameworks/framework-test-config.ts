@@ -567,8 +567,8 @@ export default function getFrameworkTestConfig(pm: string) {
 					input: [keys.enter],
 				},
 				{
-					matcher: /Add type checking with Typescript/,
-					input: [keys.down, keys.enter],
+					matcher: /Add type checking with TypeScript/,
+					input: [keys.enter],
 				},
 				{
 					matcher: /What would you like to add to your project/,
@@ -606,8 +606,8 @@ export default function getFrameworkTestConfig(pm: string) {
 					input: [keys.enter],
 				},
 				{
-					matcher: /Add type checking with Typescript/,
-					input: [keys.down, keys.enter],
+					matcher: /Add type checking with TypeScript/,
+					input: [keys.enter],
 				},
 				{
 					matcher: /What would you like to add to your project/,
