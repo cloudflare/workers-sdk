@@ -1,4 +1,3 @@
-import { AnalyticsEngineDataset } from "@cloudflare/workers-types";
 import {
 	blue,
 	bold,
