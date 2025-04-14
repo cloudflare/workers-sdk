@@ -20,22 +20,10 @@ function buildWranglerArtifactReport(pkg) {
 	assert.strictEqual(name, "wrangler");
 	const url = getPrereleaseArtifactUrl(name);
 	const prUrl = getPrereleasePRArtifactUrl(name);
-	return `A wrangler prerelease is available for testing. You can install this latest build in your project with:
+	return `A Wrangler prerelease is available for testing. You can install this latest build in your project with:
 
 \`\`\`sh
 npm install --save-dev ${url}
-\`\`\`
-
-You can reference the automatically updated head of this PR with:
-
-\`\`\`sh
-npm install --save-dev ${prUrl}
-\`\`\`
-
-Or you can use \`npx\` with this latest build directly:
-
-\`\`\`sh
-npx ${url} dev path/to/script.js
 \`\`\``;
 }
 
@@ -61,7 +49,7 @@ function buildAdditionalArtifactReport(pkg) {
 	}
 
 	return `
-${name}:
+\`${name}\`:
 \`\`\`sh
 ${command}
 \`\`\`
@@ -84,7 +72,7 @@ function buildReport(pkgs) {
 
 	return `${wranglerReport}
 
-<details><summary>Additional artifacts:</summary>
+<details><summary>Prereleases for other packages:</summary>
 
 ${additionalReports.join("\n\n")}
 

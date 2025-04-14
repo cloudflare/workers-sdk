@@ -5510,7 +5510,9 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 				expect(contents).toContain(
 					'Content-Disposition: form-data; name="functionsWorker-0.test.js.map"'
 				);
-				expect(contents).toContain('"sources":["[[path]].ts"');
+				expect(contents).toContain(
+					`"sources":["${encodeURIComponent("[[path]].ts")}"`
+				);
 			});
 
 			await runWrangler("pages deploy");
