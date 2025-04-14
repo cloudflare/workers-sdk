@@ -150,8 +150,11 @@ export type TemplateConfig = {
 
 	bindings?: Record<string, unknown>;
 
-	/** Don't generate types, use @cloudflare/workers-types instead. Usually because the framework is pinned to Wrangler 3. Default false. */
+	/** Default false. For frameworks that are pinned to Wrangler 3. */
 	installWorkersTypes?: boolean;
+
+	/** Default false. To accomodate SSG frameworks etc. */
+	skipWranglerTypegen?: boolean;
 };
 
 type CopyFiles = (StaticFileMap | VariantInfo) & {

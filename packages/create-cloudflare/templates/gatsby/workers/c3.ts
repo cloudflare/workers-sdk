@@ -49,6 +49,6 @@ const config: TemplateConfig = {
 	devScript: "develop",
 	deployScript: "deploy",
 	previewScript: "preview",
-	installWorkersTypes: true,
+	skipWranglerTypegen: true,
 };
 export default config;
