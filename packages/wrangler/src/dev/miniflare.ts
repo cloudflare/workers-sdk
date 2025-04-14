@@ -386,6 +386,7 @@ type WorkerOptionsBindings = Pick<
 	| "wrappedBindings"
 	| "secretsStoreSecrets"
 	| "email"
+	| "analyticsEngineDatasets"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -704,6 +705,12 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		pipelines: Object.fromEntries(bindings.pipelines?.map(pipelineEntry) ?? []),
 		hyperdrives: Object.fromEntries(
 			bindings.hyperdrive?.map(hyperdriveEntry) ?? []
+		),
+		analyticsEngineDatasets: Object.fromEntries(
+			bindings.analytics_engine_datasets?.map((binding) => [
+				binding.binding,
+				{ dataset: binding.dataset ?? "dataset" },
+			]) ?? []
 		),
 		workflows: Object.fromEntries(bindings.workflows?.map(workflowEntry) ?? []),
 		secretsStoreSecrets: Object.fromEntries(
