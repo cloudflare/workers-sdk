@@ -5649,6 +5649,84 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 	});
+
+	describe("deploys using redirected configs", () => {
+		let fooProjectDetailsChecked = false;
+
+		beforeEach(() => {
+			fooProjectDetailsChecked = false;
+			mkdirSync("public");
+			mkdirSync("dist");
+			mkdirSync(".wrangler/deploy", { recursive: true });
+			writeFileSync(
+				".wrangler/deploy/config.json",
+				JSON.stringify({ configPath: "../../dist/wrangler.json" })
+			);
+			writeFileSync(
+				"dist/wrangler.json",
+				JSON.stringify({
+					compatibility_date: "2025-01-01",
+					name: "foo",
+					pages_build_output_dir: "../public",
+				})
+			);
+
+			simulateServer(async () => {});
+
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+
+						fooProjectDetailsChecked = true;
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									production_branch: "main",
+									deployment_configs: {
+										production: {},
+										preview: {},
+									},
+								} as Partial<Project>,
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+		});
+
+		afterEach(() => {
+			expect(fooProjectDetailsChecked).toBe(true);
+		});
+
+		const expectedInfo = dedent`
+			Using redirected Wrangler configuration.
+			 - Configuration being used: "dist/wrangler.json"
+			 - Original user's configuration: "<no user config found>"
+			 - Deploy configuration file: ".wrangler/deploy/config.json"
+		`;
+
+		it("should work without a branch specified (i.e. defaulting to the production environment)", async () => {
+			await runWrangler("pages deploy");
+			expect(std.info).toContain(expectedInfo);
+		});
+
+		it("should work with the main branch (i.e. the production environment)", async () => {
+			await runWrangler("pages deploy --branch main");
+			expect(std.info).toContain(expectedInfo);
+		});
+
+		it("should work with any branch (i.e. the preview environment)", async () => {
+			await runWrangler("pages deploy --branch my-branch");
+			expect(std.info).toContain(expectedInfo);
+		});
+	});
 });
 
 function mockGetProjectHandler(
