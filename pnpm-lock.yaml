@@ -395,7 +395,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20241230.0
-        version: 4.20250409.0
+        version: 4.20250410.0
       '@types/is-even':
         specifier: ^1.0.2
         version: 1.0.2
@@ -954,7 +954,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20241230.0
-        version: 4.20250409.0
+        version: 4.20250410.0
       '@types/is-even':
         specifier: ^1.0.2
         version: 1.0.2
