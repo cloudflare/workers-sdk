@@ -796,6 +796,7 @@ export function buildPersistOptions(
 			d1Persist: path.join(v3Path, "d1"),
 			workflowsPersist: path.join(v3Path, "workflows"),
 			secretsStorePersist: path.join(v3Path, "secrets-store"),
+			analyticsEngineDatasetsPersist: path.join(v3Path, "analytics-engine"),
 		};
 	}
 }
