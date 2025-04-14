@@ -221,5 +221,5 @@ export default {
 	previewScript: "preview",
 	deployScript: "deploy",
 	compatibilityFlags: ["nodejs_compat"],
-	typesPath: "env.d.ts",
+	typesPath: "./env.d.ts",
 } as TemplateConfig;
