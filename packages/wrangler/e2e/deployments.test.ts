@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -13,15 +13,13 @@ const normalize = (str: string) =>
 	normalizeOutput(str, {
 		[CLOUDFLARE_ACCOUNT_ID]: "CLOUDFLARE_ACCOUNT_ID",
 	}).replaceAll(/^Author:.*$/gm, "Author:      person@example.com");
-const workerName = generateResourceName();
-const dispatchNamespaceName = generateResourceName("dispatch");
-const dispatchWorkerName = generateResourceName();
 
 describe("deployments", { timeout: TIMEOUT }, () => {
-	let deployedUrl: string;
+	const workerName = generateResourceName();
 	const helper = new WranglerE2ETestHelper();
+	let deployedUrl: string;
 
-	it("deploy worker", async () => {
+	it("deploys a Worker", async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
 						name = "${workerName}"
@@ -61,7 +59,7 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 		expect(text).toMatchInlineSnapshot('"Hello World!"');
 	});
 
-	it("list 1 deployment", async () => {
+	it("lists 1 deployment", async () => {
 		const output = await helper.run(`wrangler deployments list`);
 
 		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
@@ -76,7 +74,7 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 		`);
 	});
 
-	it("modify & deploy worker", async () => {
+	it("modifies & deploys a Worker", async () => {
 		await helper.seed({
 			"src/index.ts": dedent`
         export default {
@@ -103,7 +101,7 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 		expect(text).toMatchInlineSnapshot('"Updated Worker!"');
 	});
 
-	it("list 2 deployments", async () => {
+	it("lists 2 deployments", async () => {
 		const dep = await helper.run(`wrangler deployments list`);
 		expect(normalize(dep.stdout)).toMatchInlineSnapshot(`
 			"Created:     TIMESTAMP
@@ -125,7 +123,7 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 		`);
 	});
 
-	it("rollback", async () => {
+	it("rolls back", async () => {
 		const output = await helper.run(
 			`wrangler rollback --message "A test message"`
 		);
@@ -164,7 +162,7 @@ describe("deployments", { timeout: TIMEOUT }, () => {
 		`);
 	});
 
-	it("list deployments", async () => {
+	it("lists deployments", async () => {
 		const dep = await helper.run(`wrangler deployments list`);
 		expect(normalize(dep.stdout)).toMatchInlineSnapshot(`
 			"Created:     TIMESTAMP
@@ -200,21 +198,23 @@ type AssetTestCase = {
 	content?: string;
 	redirect?: string;
 };
-const initialAssets = {
-	"public/index.html": dedent`
-<h1>index.html</h1>`,
-	"public/[boop].html": dedent`
-<h1>[boop].html</h1>`,
-	"public/404.html": dedent`
-<h1>404.html</h1>`,
-	"package.json": dedent`
-{
-	"name": "${workerName}",
-	"version": "0.0.0",
-	"private": true
+function generateInitialAssets(workerName: string) {
+	return {
+		"public/index.html": dedent`
+			<h1>index.html</h1>`,
+		"public/[boop].html": dedent`
+			<h1>[boop].html</h1>`,
+		"public/404.html": dedent`
+			<h1>404.html</h1>`,
+		"package.json": dedent`
+			{
+				"name": "${workerName}",
+				"version": "0.0.0",
+				"private": true
+			}`,
+	};
 }
-`,
-};
+
 const checkAssets = async (testCases: AssetTestCase[], deployedUrl: string) => {
 	for (const testCase of testCases) {
 		await vi.waitFor(
@@ -236,19 +236,45 @@ const checkAssets = async (testCases: AssetTestCase[], deployedUrl: string) => {
 					);
 				}
 			},
-			{ interval: 1_000, timeout: 30_000 }
+			{ interval: 1_000, timeout: 40_000 }
 		);
 	}
 };
 
-describe.each([
-	{
-		name: "regular Worker",
-		flags: "",
-		async beforeAll() {},
-		async afterAll() {},
-		expectAssetsOnlyStdout: (output: string) => {
-			expect(output).toEqual(`🌀 Building list of assets...
+describe("Workers + Assets deployment", () => {
+	const helper = new WranglerE2ETestHelper();
+	let deployedUrl: string | undefined;
+
+	describe("Workers", () => {
+		let workerName: string;
+
+		beforeEach(() => {
+			// deploy a new user Worker in each test
+			workerName = generateResourceName();
+		});
+
+		afterEach(async () => {
+			// clean up user Worker after each test
+			await helper.run(`wrangler delete`);
+		});
+
+		it("deploys a Workers + Assets project with assets only", async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
+							name = "${workerName}"
+							compatibility_date = "2023-01-01"
+							[assets]
+							directory = "public"
+					`,
+				...generateInitialAssets(workerName),
+			});
+
+			// deploy user Worker && verify output
+			const output = await helper.run(`wrangler deploy`);
+			const normalizedStdout = normalize(output.stdout);
+
+			expect(normalizedStdout).toEqual(`🌀 Building list of assets...
+✨ Read 3 files from the assets directory /tmpdir
 🌀 Starting asset upload...
 🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
 + /404.html
@@ -264,26 +290,301 @@ Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
-		},
-		expectWithWorkerStdout: (output: string) => {
-			expect(output).toContain(`🌀 Building list of assets...
-🌀 Starting asset upload...`);
-			// Unfortunately the server-side deduping logic isn't always 100% accurate, and sometimes a file is re-uploaded
-			// As such, to reduce CI flakes, this test just asserts that _at least one_ file isn't re-uploaded
-			expect(
-				[
-					"Uploaded 1 of 1 assets",
-					"Uploaded 1 of 2 assets",
-					"No updated asset files to upload.",
-				].some((s) => output.includes(s))
-			).toBeTruthy();
-		},
-	},
-	{
-		name: "Workers for Platforms",
-		flags: `--dispatch-namespace ${dispatchNamespaceName}`,
-		url: "",
-		async beforeAll(helper: WranglerE2ETestHelper) {
+
+			const match = output.stdout.match(
+				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+			);
+			assert(match?.groups);
+			deployedUrl = match.groups.url;
+
+			const testCases: AssetTestCase[] = [
+				// Tests html_handling = "auto_trailing_slash" (default):
+				{
+					path: "/",
+					content: "<h1>index.html</h1>",
+				},
+				{
+					path: "/index.html",
+					content: "<h1>index.html</h1>",
+					redirect: "/",
+				},
+				{
+					path: "/[boop]",
+					content: "<h1>[boop].html</h1>",
+					redirect: "/%5Bboop%5D",
+				},
+			];
+			await checkAssets(testCases, deployedUrl);
+
+			// Test 404 handling:
+			// even though 404.html has been uploaded, because not_found_handling is set to "none"
+			// we expect to get an empty response
+			const { text } = await retry(
+				(s) => s.status !== 404,
+				async () => {
+					const r = await fetch(new URL("/try-404", deployedUrl));
+					const temp = { text: await r.text(), status: r.status };
+					return temp;
+				}
+			);
+			expect(text).toBeFalsy();
+		});
+
+		it("deploys a Worker with static assets and user Worker", async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
+							name = "${workerName}"
+							main = "src/index.ts"
+							compatibility_date = "2023-01-01"
+							[assets]
+							directory = "public"
+							binding = "ASSETS"
+							html_handling = "none"
+							not_found_handling = "404-page"
+					`,
+				"src/index.ts": dedent`
+							export default {
+								async fetch(request, env) {
+									const url = new URL(request.url);
+									if (url.pathname === "/binding") {
+										return await env.ASSETS.fetch(new URL("index.html", request.url));
+									} else if (url.pathname === "/try-404") {
+										return await env.ASSETS.fetch(request.url);
+									}
+									return new Response("Hello World!")
+								}
+							}`,
+				...generateInitialAssets(workerName),
+			});
+
+			// deploy user Worker && verify output
+			const output = await helper.run(`wrangler deploy`);
+			const normalizedStdout = normalize(output.stdout);
+
+			expect(normalizedStdout).toContain(`🌀 Building list of assets...
+✨ Read 3 files from the assets directory /tmpdir
+🌀 Starting asset upload...
+🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
++ /404.html
++ /index.html
++ /[boop].html
+Uploaded 1 of 3 assets
+Uploaded 2 of 3 assets
+Uploaded 3 of 3 assets
+✨ Success! Uploaded 3 files (TIMINGS)
+Total Upload: xx KiB / gzip: xx KiB
+Your worker has access to the following bindings:
+- Assets:
+  - Binding: ASSETS
+Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
+  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
+Current Version ID: 00000000-0000-0000-0000-000000000000`);
+
+			const match = output.stdout.match(
+				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+			);
+			assert(match?.groups);
+			deployedUrl = match.groups.url;
+
+			const testCases: AssetTestCase[] = [
+				// because html handling has now been set to "none", only exact matches will be served
+				{
+					path: "/index.html",
+					content: "<h1>index.html</h1>",
+				},
+				// 404s should fall through to the user worker, and "/" is not an exact match
+				// so we should expect the UW response
+				{ path: "/", content: "Hello World!" },
+				{
+					path: "/binding",
+					content: "<h1>index.html</h1>",
+				},
+				{
+					path: "/worker",
+					content: "Hello World!",
+				},
+			];
+			await checkAssets(testCases, deployedUrl);
+
+			// unlike before, not_found_handling has been set to "404-page" instead of the default "none"
+			// note that with a user worker, the request must be passed back to the asset worker via the ASSET binding
+			// in order to return the 404 page
+			const { text } = await retry(
+				(s) => s.status !== 404,
+				async () => {
+					const r = await fetch(new URL("/try-404", deployedUrl));
+					const temp = { text: await r.text(), status: r.status };
+					return temp;
+				}
+			);
+			expect(text).toContain("<h1>404.html</h1>");
+		});
+
+		it("deploys a Workers + Assets project with helpful debug logs", async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
+					name = "${workerName}"
+					compatibility_date = "2023-01-01"
+					[assets]
+					directory = "public"
+				`,
+				...generateInitialAssets(workerName),
+			});
+
+			// deploy user Worker && verify output
+			const output = await helper.run(`wrangler deploy`, {
+				debug: true,
+			});
+			const normalizedStdout = normalize(output.stdout);
+
+			expect(normalizedStdout).toContain(`🌀 Building list of assets...
+✨ Read 3 files from the assets directory /tmpdir`);
+			// turns out these files are read in a diff order in Windows
+			// therefore asserting on each file individually :sigh:
+			expect(normalizedStdout).toContain("/404.html");
+			expect(normalizedStdout).toContain("/index.html");
+			expect(normalizedStdout).toContain("/[boop].html");
+			expect(normalizedStdout).toContain("🌀 Starting asset upload...");
+			expect(normalizedStdout)
+				.toContain(`🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
++ /404.html
++ /index.html
++ /[boop].html`);
+			expect(normalizedStdout).toContain("Uploaded 1 of 3 assets");
+			expect(normalizedStdout).toContain("Uploaded 2 of 3 assets");
+			expect(normalizedStdout).toContain("Uploaded 3 of 3 assets");
+			// since we can't guarantee the order in which the files are uploaded,
+			// we need to check the listing of the uploaded files separately
+			expect(normalizedStdout).toContain("✨ /[boop].html");
+			expect(normalizedStdout).toContain("✨ /index.html");
+			expect(normalizedStdout).toContain("✨ /404.html");
+			expect(normalizedStdout).toContain(
+				"✨ Success! Uploaded 3 files (TIMINGS)"
+			);
+
+			const match = output.stdout.match(
+				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+			);
+			assert(match?.groups);
+			deployedUrl = match.groups.url;
+
+			const testCases: AssetTestCase[] = [
+				// Tests html_handling = "auto_trailing_slash" (default):
+				{
+					path: "/",
+					content: "<h1>index.html</h1>",
+				},
+				{
+					path: "/index.html",
+					content: "<h1>index.html</h1>",
+					redirect: "/",
+				},
+				{
+					path: "/[boop]",
+					content: "<h1>[boop].html</h1>",
+					redirect: "/%5Bboop%5D",
+				},
+			];
+			await checkAssets(testCases, deployedUrl);
+
+			// Test 404 handling:
+			// even though 404.html has been uploaded, because not_found_handling is set to "none"
+			// we expect to get an empty response
+			const { text } = await retry(
+				(s) => s.status !== 404,
+				async () => {
+					const r = await fetch(new URL("/try-404", deployedUrl));
+					const temp = { text: await r.text(), status: r.status };
+					return temp;
+				}
+			);
+			expect(text).toBeFalsy();
+		});
+
+		it("runs the user Worker ahead of matching assets when run_worker_first = true", async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
+							name = "${workerName}"
+							main = "src/index.ts"
+							compatibility_date = "2023-01-01"
+							[assets]
+							directory = "public"
+							binding = "ASSETS"
+							html_handling = "none"
+							not_found_handling = "404-page"
+							run_worker_first = true
+					`,
+				"src/index.ts": dedent`
+							export default {
+								async fetch(request, env) {
+									return new Response("Hello World from User Worker!")
+								}
+							}`,
+				...generateInitialAssets(workerName),
+			});
+
+			// deploy user Worker && verify output
+			const output = await helper.run(`wrangler deploy`);
+			const normalizedStdout = normalize(output.stdout);
+
+			expect(normalizedStdout).toContain(`🌀 Building list of assets...
+✨ Read 3 files from the assets directory /tmpdir
+🌀 Starting asset upload...
+🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
++ /404.html
++ /index.html
++ /[boop].html
+Uploaded 1 of 3 assets
+Uploaded 2 of 3 assets
+Uploaded 3 of 3 assets
+✨ Success! Uploaded 3 files (TIMINGS)
+Total Upload: xx KiB / gzip: xx KiB
+Your worker has access to the following bindings:
+- Assets:
+  - Binding: ASSETS
+Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
+  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
+Current Version ID: 00000000-0000-0000-0000-000000000000`);
+
+			const match = output.stdout.match(
+				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+			);
+			assert(match?.groups);
+			deployedUrl = match.groups.url;
+
+			const testCases: AssetTestCase[] = [
+				{
+					path: "/index.html",
+					content: "Hello World from User Worker!",
+				},
+				{
+					path: "/",
+					content: "Hello World from User Worker!",
+				},
+				{
+					path: "/worker",
+					content: "Hello World from User Worker!",
+				},
+			];
+			await checkAssets(testCases, deployedUrl);
+		});
+	});
+
+	describe("Workers for Platforms", () => {
+		let dispatchNamespaceName: string;
+		let dispatchWorkerName: string;
+		let workerName: string;
+
+		beforeEach(async () => {
+			// deploy a new user Worker in each test
+			workerName = generateResourceName();
+
+			// set up a new dispatch Worker in each test
+			dispatchNamespaceName = generateResourceName("dispatch");
+			dispatchWorkerName = generateResourceName();
+
 			await helper.seed({
 				"dispatch-worker/wrangler.toml": dedent`
 							name = "${dispatchWorkerName}"
@@ -303,26 +604,43 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 					}
 				`,
 			});
-			await helper.run(
-				`wrangler dispatch-namespace create ${dispatchNamespaceName}`
-			);
-			const { stdout } = await helper.run(
-				`wrangler deploy -c dispatch-worker/wrangler.toml`
-			);
-			const match = stdout.match(
-				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-			);
-			assert(match?.groups);
-			this.url = match.groups.url;
-		},
-		async afterAll(helper: WranglerE2ETestHelper) {
+		});
+
+		afterEach(async () => {
+			// clean up dispatch Worker
 			await helper.run(`wrangler delete -c dispatch-worker/wrangler.toml`);
 			await helper.run(
 				`wrangler dispatch-namespace delete ${dispatchNamespaceName}`
 			);
-		},
-		expectAssetsOnlyStdout: (output: string) => {
-			expect(output).toEqual(`🌀 Building list of assets...
+		});
+
+		it("deploys a Workers + Assets project with assets only", async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
+							name = "${workerName}"
+							compatibility_date = "2023-01-01"
+							[assets]
+							directory = "public"
+					`,
+				...generateInitialAssets(workerName),
+			});
+
+			// create a dispatch namespace && verify output
+			let output = await helper.run(
+				`wrangler dispatch-namespace create ${dispatchNamespaceName}`
+			);
+			let normalizedStdout = normalize(output.stdout);
+			expect(normalizedStdout).toContain(
+				`Created dispatch namespace "tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000" with ID "00000000-0000-0000-0000-000000000000"`
+			);
+
+			// upload user Worker to the dispatch namespace && verify output
+			output = await helper.run(
+				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`
+			);
+			normalizedStdout = normalize(output.stdout);
+			expect(normalizedStdout).toEqual(`🌀 Building list of assets...
+✨ Read 3 files from the assets directory /tmpdir
 🌀 Starting asset upload...
 🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
 + /404.html
@@ -337,203 +655,266 @@ No bindings found.
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
   Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
-		},
-		expectWithWorkerStdout: (output: string) => {
-			expect(output).toContain(`🌀 Building list of assets...
-🌀 Starting asset upload...`);
-			// Unfortunately the server-side deduping logic isn't always 100% accurate, and sometimes a file is re-uploaded
-			// As such, to reduce CI flakes, this test just asserts that _at least one_ file isn't re-uploaded
-			expect(
-				[
-					"Uploaded 1 of 1 assets",
-					"Uploaded 1 of 2 assets",
-					"No updated asset files to upload.",
-				].some((s) => output.includes(s))
-			).toBeTruthy();
-			expect(output).toContain("- Binding: ASSETS");
-		},
-	},
-])("Workers + Assets deployment: $name", { timeout: TIMEOUT }, (testcase) => {
-	let deployedUrl: string | undefined;
-	const helper = new WranglerE2ETestHelper();
-	beforeAll(async () => {
-		await testcase.beforeAll(helper);
-	});
-	afterAll(async () => {
-		await testcase.afterAll(helper);
-	});
-	it("deploys a Workers + Assets project with assets only", async () => {
-		await helper.seed({
-			"wrangler.toml": dedent`
-						name = "${workerName}"
-						compatibility_date = "2023-01-01"
-						[assets]
-						directory = "public"
-				`,
-			...initialAssets,
-		});
 
-		const output = await helper.run(`wrangler deploy ${testcase.flags}`);
-		testcase.expectAssetsOnlyStdout(normalize(output.stdout));
-		if (testcase.url) {
-			deployedUrl = testcase.url;
-		} else {
+			// deploy dispatch Worker && verify output
+			output = await helper.run(
+				`wrangler deploy -c dispatch-worker/wrangler.toml`
+			);
+			normalizedStdout = normalize(output.stdout);
+			expect(normalizedStdout).toEqual(`Total Upload: xx KiB / gzip: xx KiB
+Your worker has access to the following bindings:
+- Dispatch Namespaces:
+  - DISPATCH: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
+Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
+  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
+Current Version ID: 00000000-0000-0000-0000-000000000000`);
+
 			const match = output.stdout.match(
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 			);
 			assert(match?.groups);
 			deployedUrl = match.groups.url;
-		}
 
-		const testCases: AssetTestCase[] = [
-			// Tests html_handling = "auto_trailing_slash" (default):
-			{
-				path: "/",
-				content: "<h1>index.html</h1>",
-			},
-			{
-				path: "/index.html",
-				content: "<h1>index.html</h1>",
-				redirect: "/",
-			},
-			{
-				path: "/[boop]",
-				content: "<h1>[boop].html</h1>",
-				redirect: "/%5Bboop%5D",
-			},
-		];
-		await checkAssets(testCases, deployedUrl);
+			const testCases: AssetTestCase[] = [
+				// Tests html_handling = "auto_trailing_slash" (default):
+				{
+					path: "/",
+					content: "<h1>index.html</h1>",
+				},
+				{
+					path: "/index.html",
+					content: "<h1>index.html</h1>",
+					redirect: "/",
+				},
+				{
+					path: "/[boop]",
+					content: "<h1>[boop].html</h1>",
+					redirect: "/%5Bboop%5D",
+				},
+			];
+			await checkAssets(testCases, deployedUrl);
 
-		// Test 404 handling:
-		// even though 404.html has been uploaded, because not_found_handling is set to "none"
-		// we expect to get an empty response
-		const { text } = await retry(
-			(s) => s.status !== 404,
-			async () => {
-				const r = await fetch(new URL("/try-404", deployedUrl));
-				const temp = { text: await r.text(), status: r.status };
-				return temp;
-			}
-		);
-		expect(text).toBeFalsy();
-	});
-	it("deploys a Worker with static assets and user Worker", async () => {
-		await helper.seed({
-			"wrangler.toml": dedent`
-						name = "${workerName}"
-						main = "src/index.ts"
-						compatibility_date = "2023-01-01"
-						[assets]
-						directory = "public"
-						binding = "ASSETS"
-						html_handling = "none"
-						not_found_handling = "404-page"
-				`,
-			"src/index.ts": dedent`
-						export default {
-							async fetch(request, env) {
-								const url = new URL(request.url);
-								if (url.pathname === "/binding") {
-									return await env.ASSETS.fetch(new URL("index.html", request.url));
-								} else if (url.pathname === "/try-404") {
-									return await env.ASSETS.fetch(request.url);
+			// Test 404 handling:
+			// even though 404.html has been uploaded, because not_found_handling is set to "none"
+			// we expect to get an empty response
+			const { text } = await retry(
+				(s) => s.status !== 404,
+				async () => {
+					const r = await fetch(new URL("/try-404", deployedUrl));
+					const temp = { text: await r.text(), status: r.status };
+					return temp;
+				}
+			);
+			expect(text).toBeFalsy();
+		});
+
+		it("deploys a Worker with static assets and user Worker", async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
+							name = "${workerName}"
+							main = "src/index.ts"
+							compatibility_date = "2023-01-01"
+							[assets]
+							directory = "public"
+							binding = "ASSETS"
+							html_handling = "none"
+							not_found_handling = "404-page"
+					`,
+				"src/index.ts": dedent`
+							export default {
+								async fetch(request, env) {
+									const url = new URL(request.url);
+									if (url.pathname === "/binding") {
+										return await env.ASSETS.fetch(new URL("index.html", request.url));
+									} else if (url.pathname === "/try-404") {
+										return await env.ASSETS.fetch(request.url);
+									}
+									return new Response("Hello World!")
 								}
-								return new Response("Hello World!")
-							}
-						}`,
-			...initialAssets,
-		});
-		const output = await helper.run(`wrangler deploy ${testcase.flags}`);
-		// expect only no asset files to be uploaded as no new asset files have been added
-		testcase.expectWithWorkerStdout(normalize(output.stdout));
-		if (!deployedUrl) {
+							}`,
+				...generateInitialAssets(workerName),
+			});
+
+			// create a dispatch namespace && verify output
+			let output = await helper.run(
+				`wrangler dispatch-namespace create ${dispatchNamespaceName}`
+			);
+			let normalizedStdout = normalize(output.stdout);
+			expect(normalizedStdout).toContain(
+				`Created dispatch namespace "tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000" with ID "00000000-0000-0000-0000-000000000000"`
+			);
+
+			// upload user Worker to the dispatch namespace && verify output
+			output = await helper.run(
+				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`
+			);
+			normalizedStdout = normalize(output.stdout);
+			expect(normalizedStdout).toContain(`🌀 Building list of assets...
+✨ Read 3 files from the assets directory /tmpdir
+🌀 Starting asset upload...
+🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
++ /404.html
++ /index.html
++ /[boop].html
+Uploaded 1 of 3 assets
+Uploaded 2 of 3 assets
+Uploaded 3 of 3 assets
+✨ Success! Uploaded 3 files (TIMINGS)
+Total Upload: xx KiB / gzip: xx KiB
+Your worker has access to the following bindings:
+- Assets:
+  - Binding: ASSETS
+Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+  Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
+Current Version ID: 00000000-0000-0000-0000-000000000000`);
+
+			// deploy dispatch Worker && verify output
+			output = await helper.run(
+				`wrangler deploy -c dispatch-worker/wrangler.toml`
+			);
+			normalizedStdout = normalize(output.stdout);
+			expect(normalizedStdout).toEqual(`Total Upload: xx KiB / gzip: xx KiB
+Your worker has access to the following bindings:
+- Dispatch Namespaces:
+  - DISPATCH: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
+Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
+  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
+Current Version ID: 00000000-0000-0000-0000-000000000000`);
+
 			const match = output.stdout.match(
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 			);
 			assert(match?.groups);
 			deployedUrl = match.groups.url;
-		}
 
-		const testCases: AssetTestCase[] = [
-			// because html handling has now been set to "none", only exact matches will be served
-			{
-				path: "/index.html",
-				content: "<h1>index.html</h1>",
-			},
-			// 404s should fall through to the user worker, and "/" is not an exact match
-			// so we should expect the UW response
-			{ path: "/", content: "Hello World!" },
-			{
-				path: "/binding",
-				content: "<h1>index.html</h1>",
-			},
-			{
-				path: "/worker",
-				content: "Hello World!",
-			},
-		];
-		await checkAssets(testCases, deployedUrl);
+			const testCases: AssetTestCase[] = [
+				// because html handling has now been set to "none", only exact matches will be served
+				{
+					path: "/index.html",
+					content: "<h1>index.html</h1>",
+				},
+				// 404s should fall through to the user worker, and "/" is not an exact match
+				// so we should expect the UW response
+				{ path: "/", content: "Hello World!" },
+				{
+					path: "/binding",
+					content: "<h1>index.html</h1>",
+				},
+				{
+					path: "/worker",
+					content: "Hello World!",
+				},
+			];
+			await checkAssets(testCases, deployedUrl);
 
-		// unlike before, not_found_handling has been set to "404-page" instead of the default "none"
-		// note that with a user worker, the request must be passed back to the asset worker via the ASSET binding
-		// in order to return the 404 page
-		const { text } = await retry(
-			(s) => s.status !== 404,
-			async () => {
-				const r = await fetch(new URL("/try-404", deployedUrl));
-				const temp = { text: await r.text(), status: r.status };
-				return temp;
-			}
-		);
-		expect(text).toContain("<h1>404.html</h1>");
-	});
-	it("runs user worker ahead of matching assets when run_worker_first = true", async () => {
-		await helper.seed({
-			"wrangler.toml": dedent`
-						name = "${workerName}"
-						main = "src/index.ts"
-						compatibility_date = "2023-01-01"
-						[assets]
-						directory = "public"
-						binding = "ASSETS"
-						html_handling = "none"
-						not_found_handling = "404-page"
-						run_worker_first = true
-				`,
-			"src/index.ts": dedent`
-						export default {
-							async fetch(request, env) {
-								return new Response("Hello World from User Worker!")
-							}
-						}`,
-			...initialAssets,
+			// unlike before, not_found_handling has been set to "404-page"
+			// instead of the default "none"
+			// note that with a user Worker, the request must be passed back to
+			// the asset worker via the ASSET binding in order to return the 404
+			// page
+			const { text } = await retry(
+				(s) => s.status !== 404,
+				async () => {
+					const r = await fetch(new URL("/try-404", deployedUrl));
+					const temp = { text: await r.text(), status: r.status };
+					return temp;
+				}
+			);
+			expect(text).toContain("<h1>404.html</h1>");
 		});
 
-		const output = await helper.run(`wrangler deploy ${testcase.flags}`);
-		// expect only no asset files to be uploaded as no new asset files have been added
-		testcase.expectWithWorkerStdout(normalize(output.stdout));
-		if (!deployedUrl) {
+		it("runs the user Worker ahead of matching assets when run_worker_first = true", async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
+							name = "${workerName}"
+							main = "src/index.ts"
+							compatibility_date = "2023-01-01"
+							[assets]
+							directory = "public"
+							binding = "ASSETS"
+							html_handling = "none"
+							not_found_handling = "404-page"
+							run_worker_first = true
+					`,
+				"src/index.ts": dedent`
+							export default {
+								async fetch(request, env) {
+									return new Response("Hello World from User Worker!")
+								}
+							}`,
+				...generateInitialAssets(workerName),
+			});
+
+			// create a dispatch namespace && verify output
+			let output = await helper.run(
+				`wrangler dispatch-namespace create ${dispatchNamespaceName}`
+			);
+			let normalizedStdout = normalize(output.stdout);
+			expect(normalizedStdout).toContain(
+				`Created dispatch namespace "tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000" with ID "00000000-0000-0000-0000-000000000000"`
+			);
+
+			// upload user Worker to the dispatch namespace && verify output
+			output = await helper.run(
+				`wrangler deploy --dispatch-namespace ${dispatchNamespaceName}`
+			);
+			normalizedStdout = normalize(output.stdout);
+			expect(normalizedStdout).toContain(`🌀 Building list of assets...
+✨ Read 3 files from the assets directory /tmpdir
+🌀 Starting asset upload...
+🌀 Found 3 new or modified static assets to upload. Proceeding with upload...
++ /404.html
++ /index.html
++ /[boop].html
+Uploaded 1 of 3 assets
+Uploaded 2 of 3 assets
+Uploaded 3 of 3 assets
+✨ Success! Uploaded 3 files (TIMINGS)
+Total Upload: xx KiB / gzip: xx KiB
+Your worker has access to the following bindings:
+- Assets:
+  - Binding: ASSETS
+Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+  Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
+Current Version ID: 00000000-0000-0000-0000-000000000000`);
+
+			// deploy dispatch Worker && verify output
+			output = await helper.run(
+				`wrangler deploy -c dispatch-worker/wrangler.toml`
+			);
+			normalizedStdout = normalize(output.stdout);
+			expect(normalizedStdout).toEqual(`Total Upload: xx KiB / gzip: xx KiB
+Your worker has access to the following bindings:
+- Dispatch Namespaces:
+  - DISPATCH: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
+Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
+  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
+Current Version ID: 00000000-0000-0000-0000-000000000000`);
+
 			const match = output.stdout.match(
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 			);
 			assert(match?.groups);
 			deployedUrl = match.groups.url;
-		}
 
-		const testCases: AssetTestCase[] = [
-			{
-				path: "/index.html",
-				content: "Hello World from User Worker!",
-			},
-			{
-				path: "/",
-				content: "Hello World from User Worker!",
-			},
-			{
-				path: "/worker",
-				content: "Hello World from User Worker!",
-			},
-		];
-		await checkAssets(testCases, deployedUrl);
+			const testCases: AssetTestCase[] = [
+				{
+					path: "/index.html",
+					content: "Hello World from User Worker!",
+				},
+				{
+					path: "/",
+					content: "Hello World from User Worker!",
+				},
+				{
+					path: "/worker",
+					content: "Hello World from User Worker!",
+				},
+			];
+			await checkAssets(testCases, deployedUrl);
+		});
 	});
 });
