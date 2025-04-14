@@ -9,7 +9,7 @@ export function esbuildAliasExternalPlugin(
 	return {
 		name: "external-alias-imports",
 		setup(build) {
-			build.onResolve({ filter: /.*/g }, (args) => {
+			build.onResolve({ filter: /.*/ }, (args) => {
 				// If it's the entrypoint, let it be as is
 				if (args.kind === "entry-point") {
 					return {
