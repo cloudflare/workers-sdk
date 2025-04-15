@@ -1,3 +1,4 @@
+import { createNamespace } from "../../../../core/create-command";
 import { pullConsumers } from "./http-pull";
 import { workerConsumers } from "./worker";
 import { handler as addHandler, options as addOptions } from "./worker/add";
@@ -6,6 +7,14 @@ import {
 	options as removeOptions,
 } from "./worker/remove";
 import type { CommonYargsArgv } from "../../../../yargs-types";
+
+export const queuesConsumerNamespace = createNamespace({
+	metadata: {
+		description: "Configure Queue consumers",
+		owner: "Product: Queues",
+		status: "stable",
+	},
+});
 
 export function consumers(yargs: CommonYargsArgv) {
 	yargs.command(
