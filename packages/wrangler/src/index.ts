@@ -61,7 +61,14 @@ import {
 	JsonFriendlyFatalError,
 	UserError,
 } from "./errors";
-import { hyperdrive } from "./hyperdrive/index";
+import { 
+	hyperdriveNamespace,
+	hyperdriveCreateCommand,
+	hyperdriveDeleteCommand,
+	hyperdriveGetCommand, 
+	hyperdriveListCommand,
+	hyperdriveUpdateCommand
+} from "./hyperdrive/index";
 import { init } from "./init";
 import {
 	kvBulkDeleteCommand,
@@ -218,7 +225,15 @@ import { whoami } from "./user/whoami";
 import { betaCmdColor, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { logPossibleBugMessage } from "./utils/logPossibleBugMessage";
-import { vectorize } from "./vectorize/index";
+import { 
+	vectorizeNamespace,
+	vectorizeMetadataNamespace,
+	vectorizeCreateCommand,
+	vectorizeDeleteCommand,
+	vectorizeGetCommand, 
+	vectorizeListCommand,
+	vectorizeQueryCommand
+} from "./vectorize/index";
 import { versionsNamespace } from "./versions";
 import { versionsDeployCommand } from "./versions/deploy";
 import { deploymentsNamespace } from "./versions/deployments";
@@ -883,23 +898,28 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("d1");
 
-	// [OPEN BETA] vectorize
-	wrangler.command(
-		"vectorize",
-		`🧮 Manage Vectorize indexes ${chalk.hex(betaCmdColor)("[open beta]")}`,
-		(vectorYargs) => {
-			return vectorize(vectorYargs.command(subHelp));
-		}
-	);
+	// vectorize
+	registry.define([
+		{ command: "wrangler vectorize", definition: vectorizeNamespace },
+		{ command: "wrangler vectorize create", definition: vectorizeCreateCommand },
+		{ command: "wrangler vectorize delete", definition: vectorizeDeleteCommand },
+		{ command: "wrangler vectorize get", definition: vectorizeGetCommand },
+		{ command: "wrangler vectorize list", definition: vectorizeListCommand },
+		{ command: "wrangler vectorize query", definition: vectorizeQueryCommand },
+		{ command: "wrangler vectorize metadata", definition: vectorizeMetadataNamespace },
+	]);
+	registry.registerNamespace("vectorize");
 
 	// hyperdrive
-	wrangler.command(
-		"hyperdrive",
-		"🚀 Manage Hyperdrive databases",
-		(hyperdriveYargs) => {
-			return hyperdrive(hyperdriveYargs.command(subHelp));
-		}
-	);
+	registry.define([
+		{ command: "wrangler hyperdrive", definition: hyperdriveNamespace },
+		{ command: "wrangler hyperdrive create", definition: hyperdriveCreateCommand },
+		{ command: "wrangler hyperdrive delete", definition: hyperdriveDeleteCommand },
+		{ command: "wrangler hyperdrive get", definition: hyperdriveGetCommand },
+		{ command: "wrangler hyperdrive list", definition: hyperdriveListCommand },
+		{ command: "wrangler hyperdrive update", definition: hyperdriveUpdateCommand },
+	]);
+	registry.registerNamespace("hyperdrive");
 
 	// cert - includes mtls-certificates and CA cert management
 	registry.define([
