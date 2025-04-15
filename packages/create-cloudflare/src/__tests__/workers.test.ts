@@ -38,6 +38,7 @@ describe("updateTsConfig", () => {
 
 	test("installing workers types", async () => {
 		ctx.template.installWorkersTypes = true;
+		ctx.template.skipWranglerTypegen = true;
 		await updateTsConfig(ctx);
 
 		expect(writeFile).toHaveBeenCalled();
@@ -55,6 +56,7 @@ describe("updateTsConfig", () => {
 
 	test("latest entrypoint not found", async () => {
 		ctx.template.installWorkersTypes = true;
+		ctx.template.skipWranglerTypegen = true;
 		vi.mocked(getLatestTypesEntrypoint).mockReturnValue(null);
 		await updateTsConfig(ctx);
 
@@ -63,6 +65,7 @@ describe("updateTsConfig", () => {
 
 	test("don't clobber existing entrypoints", async () => {
 		ctx.template.installWorkersTypes = true;
+		ctx.template.skipWranglerTypegen = true;
 		vi.mocked(readFile).mockImplementation(
 			() =>
 				`{ "compilerOptions": { "types" : ["@cloudflare/workers-types/2021-03-20"]} }`,
@@ -74,13 +77,32 @@ describe("updateTsConfig", () => {
 		);
 	});
 
-	test("will remove workers-types when generating types", async () => {
-		vi.mocked(readFile).mockImplementation(
-			() =>
-				`{ "compilerOptions": { "types" : ["@cloudflare/workers-types/2021-03-20"]} }`,
-		);
+	test("will remove workers-types when generating types, if generated types include runtime types", async () => {
+		vi.mocked(readFile).mockImplementation((path) => {
+			console.log("path", path);
+			if (path.includes("tsconfig.json")) {
+				return `{ "compilerOptions": { "types" : ["@cloudflare/workers-types/2021-03-20"]} }`;
+			} else {
+				return "// Runtime types generated with workerd";
+			}
+		});
 		await updateTsConfig(ctx);
 		expect(vi.mocked(writeFile).mock.calls[0][1]).not.toContain(
+			`"@cloudflare/workers-types/2021-03-20"`,
+		);
+	});
+
+	test("will NOT remove workers-types when generating types, if generated types don't include runtime types", async () => {
+		vi.mocked(readFile).mockImplementation((path) => {
+			if (path.includes("tsconfig.json")) {
+				return `{ "compilerOptions": { "types" : ["@cloudflare/workers-types/2021-03-20"]} }`;
+			} else {
+				return "no runtime types here";
+			}
+		});
+		await updateTsConfig(ctx);
+
+		expect(vi.mocked(writeFile).mock.calls[0][1]).toContain(
 			`"@cloudflare/workers-types/2021-03-20"`,
 		);
 	});

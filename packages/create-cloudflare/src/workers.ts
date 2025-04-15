@@ -1,4 +1,4 @@
-import { existsSync, read } from "fs";
+import { existsSync } from "fs";
 import { join, resolve } from "path";
 import { warn } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
@@ -61,13 +61,11 @@ export async function updateTsConfig(ctx: C3Context) {
 	if (!existsSync(tsconfigPath)) {
 		return;
 	}
-
 	const tsconfig = readFile(tsconfigPath);
-
 	try {
 		const config = jsonc.parse(tsconfig);
 		const currentTypes = config.compilerOptions?.types ?? [];
-		const newTypes: string[] = currentTypes;
+		let newTypes: string[] = [...currentTypes];
 		if (ctx.template.installWorkersTypes) {
 			const entrypointVersion = getLatestTypesEntrypoint(ctx);
 			if (entrypointVersion === null) {
@@ -77,16 +75,18 @@ export async function updateTsConfig(ctx: C3Context) {
 			const explicitEntrypoint = (currentTypes as string[]).some((t) =>
 				t.match(/@cloudflare\/workers-types\/\d{4}-\d{2}-\d{2}/),
 			);
-			// If a type declaration with an explicit entrypoint exists, leave the types as is
+			// If a type declaration with an explicit entrypoint exists, leave the types as is.
 			// Otherwise, add the latest entrypoint
 			if (!explicitEntrypoint) {
-				newTypes
-					.filter((t: string) => t !== "@cloudflare/workers-types")
-					.push(typesEntrypoint);
+				newTypes = newTypes.filter(
+					(t: string) => t !== "@cloudflare/workers-types",
+				);
+				newTypes.push(typesEntrypoint);
 			}
 		}
 		if (!ctx.template.skipWranglerTypegen) {
-			// if generated types include runtime types, remove workers-types
+			newTypes.push(ctx.template.typesPath ?? "./worker-configuration.d.ts");
+			// if generated types include runtime types, remove @cloudflare/workers-types
 			const typegen = readFile(
 				ctx.template.typesPath ?? "./worker-configuration.d.ts",
 			).split("\n");
@@ -95,14 +95,14 @@ export async function updateTsConfig(ctx: C3Context) {
 					line.includes("// Runtime types generated with workerd"),
 				)
 			) {
-				newTypes.filter(
+				newTypes = newTypes.filter(
 					(t: string) => !t.startsWith("@cloudflare/workers-types"),
 				);
 			}
+			// add node types if nodejs_compat is enabled
 			if (ctx.template.compatibilityFlags?.includes("nodejs_compat")) {
 				newTypes.push("node");
 			}
-			newTypes.push(ctx.template.typesPath ?? "./worker-configuration.d.ts");
 		}
 		if (newTypes.sort() === currentTypes.sort()) {
 			return;
