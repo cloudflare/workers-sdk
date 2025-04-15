@@ -32,8 +32,8 @@ export type Metadata = {
 	epilogue?: string;
 };
 
-export type ArgDefinition = PositionalOptions &
-	Pick<Options, "hidden" | "requiresArg">;
+export type ArgDefinition = Omit<PositionalOptions, "type"> &
+	Pick<Options, "hidden" | "requiresArg" | "deprecated" | "type">;
 export type NamedArgDefinitions = { [key: string]: ArgDefinition };
 export type HandlerArgs<Args extends NamedArgDefinitions> = DeepFlatten<
 	OnlyCamelCase<
