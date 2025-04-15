@@ -32,7 +32,7 @@ export async function copyExistingWorkerFiles(ctx: C3Context) {
 	await runCommand(
 		[
 			...dlx,
-			"wrangler@3",
+			"wrangler@latest",
 			"init",
 			"--from-dash",
 			ctx.args.existingScript,

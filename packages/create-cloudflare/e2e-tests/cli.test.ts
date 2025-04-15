@@ -83,7 +83,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 
 				expect(project.path).toExist();
 				expect(output).toContain(`category Hello World example`);
-				expect(output).toContain(`type Worker + Assets`);
+				expect(output).toContain(`type SSR / full-stack app`);
 				expect(output).toContain(`lang TypeScript`);
 				expect(output).toContain(`no deploy`);
 			},
@@ -177,7 +177,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 					);
 
 					expect(project.path).toExist();
-					expect(output).toContain(`type Worker + Assets`);
+					expect(output).toContain(`type SSR / full-stack app`);
 					expect(output).toContain(`lang TypeScript`);
 					expect(output).toContain(`no deploy`);
 				} finally {
@@ -548,9 +548,9 @@ describe.skipIf(frameworkToTest || isQuarantineMode())("help text", () => {
 				      hello-world
 				        For processing requests, transforming responses, or API endpoints
 				      hello-world-assets-only
-				        For static sites (including SPAs) or when using your own backend
+				        For static sites or when using your own backend. Uses Workers Static Assets.
 				      hello-world-with-assets
-				        For static sites with an API or server-side rendering (SSR)
+				        For sites with a backend API, or server-side rendering (SSR). Uses Static Assets with a Worker.
 				      hello-world-durable-object
 				        For multiplayer apps using WebSockets, or when you need synchronization
 				      hello-world-durable-object-with-assets

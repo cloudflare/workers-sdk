@@ -8,7 +8,7 @@ export const workflowsInstancesPauseCommand = createCommand({
 	metadata: {
 		description: "Pause a workflow instance",
 		owner: "Product: Workflows",
-		status: "open-beta",
+		status: "stable",
 	},
 
 	positionalArgs: ["name", "id"],

@@ -10,7 +10,7 @@ export const workflowsDescribeCommand = createCommand({
 	metadata: {
 		description: "Describe Workflow resource",
 		owner: "Product: Workflows",
-		status: "open-beta",
+		status: "stable",
 	},
 	args: {
 		name: {

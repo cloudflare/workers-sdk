@@ -15,14 +15,14 @@ test.runIf(!isBuild)(
 			await vi.waitFor(
 				async () => {
 					const revertedResponse = await getTextResponse();
-					expect(revertedResponse).toBe('The value of MY_VAR is "one"');
+					expect(revertedResponse).toContain('The value of MY_VAR is "one"');
 				},
 				{ timeout: 5000 }
 			);
 		});
 
 		const originalResponse = await getTextResponse();
-		expect(originalResponse).toBe('The value of MY_VAR is "one"');
+		expect(originalResponse).toContain('The value of MY_VAR is "one"');
 
 		const updatedWorkerConfig = JSON.stringify({
 			...JSON.parse(originalWorkerConfig),
@@ -34,7 +34,7 @@ test.runIf(!isBuild)(
 		await vi.waitFor(
 			async () => {
 				const updatedResponse = await getTextResponse();
-				expect(updatedResponse).toBe('The value of MY_VAR is "two"');
+				expect(updatedResponse).toContain('The value of MY_VAR is "two"');
 			},
 			{ timeout: 5000 }
 		);
@@ -53,14 +53,14 @@ test.runIf(!isBuild)(
 			await vi.waitFor(
 				async () => {
 					const revertedResponse = await getTextResponse();
-					expect(revertedResponse).toBe('The value of MY_VAR is "one"');
+					expect(revertedResponse).toContain('The value of MY_VAR is "one"');
 				},
 				{ timeout: 5000 }
 			);
 		});
 
 		const originalResponse = await getTextResponse();
-		expect(originalResponse).toBe('The value of MY_VAR is "one"');
+		expect(originalResponse).toContain('The value of MY_VAR is "one"');
 
 		const updatedWorkerConfig = JSON.stringify({
 			...JSON.parse(originalWorkerConfig),
@@ -76,7 +76,7 @@ test.runIf(!isBuild)(
 				expect(serverLogs.errors.join()).toMatch(
 					/.*The provided Wrangler config main field .+? doesn't point to an existing file.*/
 				);
-				expect(newResponse).toBe('The value of MY_VAR is "one"');
+				expect(newResponse).toContain('The value of MY_VAR is "one"');
 			},
 			{ timeout: 5000 }
 		);

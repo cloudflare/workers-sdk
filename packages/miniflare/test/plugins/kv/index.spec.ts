@@ -168,7 +168,7 @@ test("bulk get: request json type", async (t) => {
 	} catch (error: any) {
 		t.is(
 			error.message,
-			"KV GET_BULK failed: 400 At least one of the requested keys corresponds to a non-JSON value"
+			"KV GET_BULK failed: 400 At least one of the requested keys corresponds to a non-json value"
 		);
 	}
 });
@@ -222,6 +222,21 @@ test("bulk get: get with metadata for 404", async (t) => {
 	const result: any = await kv.getWithMetadata(["key1"]);
 	const expectedResult: any = new Map([["key1", null]]);
 	t.deepEqual(result, expectedResult);
+});
+
+test("bulk get: get over size limit", async (t) => {
+	const { kv } = t.context;
+	const bigValue = new Array(1024).fill("x").join("");
+	await kv.put("key1", bigValue);
+	await kv.put("key2", bigValue);
+	try {
+		await kv.getWithMetadata(["key1", "key2"]);
+	} catch (error: any) {
+		t.deepEqual(
+			error.message,
+			"KV GET_BULK failed: 413 Total size of request exceeds the limit of 0.0009765625MB" // 1024 Bytes for testing
+		);
+	}
 });
 
 test("get: returns null for non-existent keys", async (t) => {

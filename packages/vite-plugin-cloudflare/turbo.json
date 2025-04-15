@@ -3,7 +3,6 @@
 	"extends": ["//"],
 	"tasks": {
 		"build": {
-			"inputs": ["src/**", "*.ts"],
 			"outputs": ["dist/**"]
 		},
 		"test:e2e": {
@@ -13,6 +12,7 @@
 				"CLOUDFLARE_ACCOUNT_ID",
 				"CLOUDFLARE_API_TOKEN"
 			],
+			"dependsOn": ["build"],
 			"inputs": ["e2e/**"]
 		}
 	}

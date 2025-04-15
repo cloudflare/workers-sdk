@@ -1,5 +1,41 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.8.16
+
+### Patch Changes
+
+- [#8196](https://github.com/cloudflare/workers-sdk/pull/8196) [`fd8c0c4`](https://github.com/cloudflare/workers-sdk/commit/fd8c0c44c31af715fd07cf0eb31a4d0c432626f1) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: pre-bundle chai with vite instead of esbuild
+
+- Updated dependencies [[`c912b99`](https://github.com/cloudflare/workers-sdk/commit/c912b9943e4df158994e4be698e4be602397f03c), [`f5413c5`](https://github.com/cloudflare/workers-sdk/commit/f5413c5269ab32522a70c3ebedba95bf6e7a4684), [`f2802f9`](https://github.com/cloudflare/workers-sdk/commit/f2802f9cdb3c3c97a2aa22f66d427af29a824f68), [`d2b44a2`](https://github.com/cloudflare/workers-sdk/commit/d2b44a2f49deb749ad3a7918210ff680263a559c), [`4cc036d`](https://github.com/cloudflare/workers-sdk/commit/4cc036d46b2f5c3ceacb344882e713e7840becde), [`84ecfe9`](https://github.com/cloudflare/workers-sdk/commit/84ecfe9b4962d1edbe7967cfe4151f26de252a9d)]:
+  - wrangler@4.11.0
+  - miniflare@4.20250410.0
+
+## 0.8.15
+
+### Patch Changes
+
+- Updated dependencies [[`b7ac367`](https://github.com/cloudflare/workers-sdk/commit/b7ac367fe4c3d7a05525443cc30af10bc19ce014), [`dcce2ec`](https://github.com/cloudflare/workers-sdk/commit/dcce2ecf275c65428956d2106b83618652a907a0), [`5388447`](https://github.com/cloudflare/workers-sdk/commit/5388447d7ca5b00dbcc0970f52b76e20a17ebe30)]:
+  - miniflare@4.20250409.0
+  - wrangler@4.10.0
+
+## 0.8.14
+
+### Patch Changes
+
+- Updated dependencies [[`d454ad9`](https://github.com/cloudflare/workers-sdk/commit/d454ad99a75985744e7c48c93be098a96120e763)]:
+  - miniflare@4.20250408.0
+  - wrangler@4.9.1
+
+## 0.8.13
+
+### Patch Changes
+
+- [#8832](https://github.com/cloudflare/workers-sdk/pull/8832) [`3d825da`](https://github.com/cloudflare/workers-sdk/commit/3d825dac5bf59370d7b8717b934dd692ce597149) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Make vitest-pool-workers not hang when console.\* is used in a Workflow
+
+- Updated dependencies [[`afd93b9`](https://github.com/cloudflare/workers-sdk/commit/afd93b98d8eb700ce51dc8ea30eb0c0d56deae8d), [`930ebb2`](https://github.com/cloudflare/workers-sdk/commit/930ebb279e165c1a82a70e89431e0a5a09b06647), [`09464a6`](https://github.com/cloudflare/workers-sdk/commit/09464a6c0d5bbc7b5ac2e33d68621e84f4fb4557), [`62df08a`](https://github.com/cloudflare/workers-sdk/commit/62df08af388c0e12bca807a96b9ce8dac02edd8f)]:
+  - miniflare@4.20250405.1
+  - wrangler@4.9.0
+
 ## 0.8.12
 
 ### Patch Changes

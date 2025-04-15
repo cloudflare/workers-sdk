@@ -19,6 +19,12 @@ jobs:
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+          node-version: ${{ matrix.node_version }}
 
       - name: Build Miniflare
         # `extract-runtime-versions.mjs` needs to be able to resolve `miniflare`, but we want to have the correct
@@ -26,15 +32,6 @@ jobs:
         run: pnpm run build --filter miniflare
         env:
           CI_OS: ${{ runner.os }}
-
-      - name: Extract runtime versions
-        run: node .github/extract-runtime-versions.mjs # extract versions before modifying version to include commit hash
-
-      - name: Upload runtime versions
-        uses: actions/upload-artifact@v4
-        with:
-          name: runtime-versions.md
-          path: runtime-versions.md
 
       - name: Expose ACTIONS_RUNTIME_TOKEN and ACTIONS_RESULTS_URL
         # We use the `@actions/artifact` package in the prerelease scripts below.

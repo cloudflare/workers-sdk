@@ -42,6 +42,8 @@ updates:
       - "miniflare"
       - "dependencies"
       - "skip-pr-description-validation"
+      - "e2e"
+      - "every-os"
     allow:
       - dependency-name: "workerd"
       - dependency-name: "@cloudflare/workers-types"

@@ -108,13 +108,13 @@ describe("wrangler workflows", () => {
 				`
 				"wrangler workflows
 
-				🔁 Manage Workflows [open-beta]
+				🔁 Manage Workflows
 
 				COMMANDS
-				  wrangler workflows list                     List Workflows associated to account [open-beta]
-				  wrangler workflows describe <name>          Describe Workflow resource [open-beta]
-				  wrangler workflows trigger <name> [params]  Trigger a workflow, creating a new instance. Can optionally take a JSON string to pass a parameter into the workflow instance [open-beta]
-				  wrangler workflows instances                Manage Workflow instances [open-beta]
+				  wrangler workflows list                     List Workflows associated to account
+				  wrangler workflows describe <name>          Describe Workflow resource
+				  wrangler workflows trigger <name> [params]  Trigger a workflow, creating a new instance. Can optionally take a JSON string to pass a parameter into the workflow instance
+				  wrangler workflows instances                Manage Workflow instances
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
@@ -138,14 +138,14 @@ describe("wrangler workflows", () => {
 				`
 				"wrangler workflows instances
 
-				Manage Workflow instances [open-beta]
+				Manage Workflow instances
 
 				COMMANDS
-				  wrangler workflows instances list <name>            Instance related commands (list, describe, terminate, pause, resume) [open-beta]
-				  wrangler workflows instances describe <name> <id>   Describe a workflow instance - see its logs, retries and errors [open-beta]
-				  wrangler workflows instances terminate <name> <id>  Terminate a workflow instance [open-beta]
-				  wrangler workflows instances pause <name> <id>      Pause a workflow instance [open-beta]
-				  wrangler workflows instances resume <name> <id>     Resume a workflow instance [open-beta]
+				  wrangler workflows instances list <name>            Instance related commands (list, describe, terminate, pause, resume)
+				  wrangler workflows instances describe <name> <id>   Describe a workflow instance - see its logs, retries and errors
+				  wrangler workflows instances terminate <name> <id>  Terminate a workflow instance
+				  wrangler workflows instances pause <name> <id>      Pause a workflow instance
+				  wrangler workflows instances resume <name> <id>     Resume a workflow instance
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]

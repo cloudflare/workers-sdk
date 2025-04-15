@@ -561,24 +561,13 @@ export default function getFrameworkTestConfig(pm: string) {
 		},
 		"svelte:pages": {
 			argv: ["--platform", "pages"],
-			promptHandlers: [
-				{
-					matcher: /Which template would you like/,
-					input: [keys.enter],
-				},
-				{
-					matcher: /Add type checking with Typescript/,
-					input: [keys.down, keys.enter],
-				},
-				{
-					matcher: /What would you like to add to your project/,
-					input: [keys.enter],
-				},
-				{
-					matcher:
-						/Which package manager do you want to install dependencies with/,
-					input: [keys.enter],
-				},
+			flags: [
+				"--no-install",
+				"--no-add-ons",
+				"--template",
+				"minimal",
+				"--types",
+				"ts",
 			],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
@@ -600,24 +589,13 @@ export default function getFrameworkTestConfig(pm: string) {
 		},
 		"svelte:workers": {
 			argv: ["--platform", "workers"],
-			promptHandlers: [
-				{
-					matcher: /Which template would you like/,
-					input: [keys.enter],
-				},
-				{
-					matcher: /Add type checking with Typescript/,
-					input: [keys.down, keys.enter],
-				},
-				{
-					matcher: /What would you like to add to your project/,
-					input: [keys.enter],
-				},
-				{
-					matcher:
-						/Which package manager do you want to install dependencies with/,
-					input: [keys.enter],
-				},
+			flags: [
+				"--no-install",
+				"--no-add-ons",
+				"--template",
+				"minimal",
+				"--types",
+				"ts",
 			],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],

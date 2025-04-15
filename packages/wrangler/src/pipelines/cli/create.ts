@@ -161,7 +161,7 @@ export function addCreateOptions(yargs: Argv<CommonYargsOptions>) {
 			.option("shard-count", {
 				type: "number",
 				describe:
-					"Number of pipeline shards. More shards handle higher request volume; fewer shards produce larger output files. Defaults to 2 if unset. Minimum: 1, Maximum: 15",
+					"Number of shards for the pipeline. More shards handle higher request volume; fewer shards produce larger output files. Defaults to 2 if unset. Minimum: 1, Maximum: 15",
 				demandOption: false,
 			})
 	);
@@ -277,14 +277,14 @@ export async function createPipelineHandler(
 		pipelineConfig.metadata.shards = args.shardCount;
 	}
 
-	logger.log(`🌀 Creating Pipeline named "${name}"`);
+	logger.log(`🌀 Creating pipeline named "${name}"`);
 	const pipeline = await createPipeline(accountId, pipelineConfig);
 
 	logger.log(
-		`✅ Successfully created Pipeline "${pipeline.name}" with ID ${pipeline.id}\n`
+		`✅ Successfully created pipeline "${pipeline.name}" with ID ${pipeline.id}\n`
 	);
 	logger.log(formatPipelinePretty(pipeline));
-	logger.log("🎉 You can now send data to your Pipeline!");
+	logger.log("🎉 You can now send data to your pipeline!");
 
 	if (args.source.includes("worker")) {
 		logger.log(
@@ -306,7 +306,7 @@ export async function createPipelineHandler(
 	}
 
 	if (args.source.includes("http")) {
-		logger.log(`\nSend data to your Pipeline's HTTP endpoint:\n`);
+		logger.log(`\nSend data to your pipeline's HTTP endpoint:\n`);
 		logger.log(`curl "${pipeline.endpoint}" -d '[{"foo": "bar"}]'\n`);
 	}
 }

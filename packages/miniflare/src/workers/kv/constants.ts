@@ -7,6 +7,7 @@ export const KVLimits = {
 	MAX_VALUE_SIZE: 25 * 1024 * 1024 /* 25MiB */,
 	MAX_VALUE_SIZE_TEST: 1024 /* 1KiB */,
 	MAX_METADATA_SIZE: 1024 /* 1KiB */,
+	MAX_BULK_SIZE: 25 * 1024 * 1024 /* 25MiB */,
 } as const;
 
 export const KVParams = {

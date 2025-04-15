@@ -9,5 +9,6 @@ export const applyConfigurationDefaults = (
 		has_user_worker: configuration?.has_user_worker ?? false,
 		account_id: configuration?.account_id ?? -1,
 		script_id: configuration?.script_id ?? -1,
+		debug: configuration?.debug ?? false,
 	};
 };

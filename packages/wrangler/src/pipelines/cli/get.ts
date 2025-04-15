@@ -16,7 +16,7 @@ export function addGetOptions(yargs: Argv<CommonYargsOptions>) {
 	return yargs
 		.positional("pipeline", {
 			type: "string",
-			describe: "The name of the Pipeline to show",
+			describe: "The name of the pipeline to inspect",
 			demandOption: true,
 		})
 		.option("format", {

@@ -263,16 +263,22 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		}
 	});
 
-	bindings.send_email?.forEach(
-		({ name, destination_address, allowed_destination_addresses }) => {
-			metadataBindings.push({
-				name: name,
-				type: "send_email",
-				destination_address,
-				allowed_destination_addresses,
-			});
-		}
-	);
+	bindings.send_email?.forEach((emailBinding) => {
+		const destination_address =
+			"destination_address" in emailBinding
+				? emailBinding.destination_address
+				: undefined;
+		const allowed_destination_addresses =
+			"allowed_destination_addresses" in emailBinding
+				? emailBinding.allowed_destination_addresses
+				: undefined;
+		metadataBindings.push({
+			name: emailBinding.name,
+			type: "send_email",
+			destination_address,
+			allowed_destination_addresses,
+		});
+	});
 
 	bindings.durable_objects?.bindings.forEach(
 		({ name, class_name, script_name, environment }) => {
