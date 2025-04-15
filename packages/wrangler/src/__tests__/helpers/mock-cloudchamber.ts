@@ -1,9 +1,12 @@
 import {
+	ContainerNetworkMode,
 	DeploymentType,
 	NodeGroup,
 	PlacementStatusHealth,
+	SchedulingPolicy,
 } from "../../cloudchamber/client";
 import type {
+	Application,
 	DeploymentV2,
 	PlacementWithEvents,
 } from "../../cloudchamber/client";
@@ -179,5 +182,59 @@ export const MOCK_PLACEMENTS: PlacementWithEvents[] = [
 		terminate: false,
 		events: [],
 		status: { health: PlacementStatusHealth.RUNNING },
+	},
+];
+
+export const MOCK_APPLICATIONS: Application[] = [
+	{
+		id: "asdf-2",
+		created_at: "123",
+		account_id: "test-account",
+		name: "Test-app",
+		version: 1,
+		configuration: {
+			image: "test-registry.cfdata.org/test-app:v1",
+			network: {
+				mode: ContainerNetworkMode.PRIVATE,
+			},
+		},
+		scheduling_policy: SchedulingPolicy.REGIONAL,
+		instances: 2,
+		jobs: false,
+		constraints: { region: "WNAM" },
+	},
+	{
+		id: "asdf-1",
+		created_at: "123",
+		account_id: "test-account",
+		name: "Test-app",
+		version: 1,
+		configuration: {
+			image: "test-registry.cfdata.org/test-app:v10",
+			network: {
+				mode: ContainerNetworkMode.PRIVATE,
+			},
+		},
+		scheduling_policy: SchedulingPolicy.REGIONAL,
+		instances: 10,
+		jobs: false,
+		constraints: { region: "WNAM" },
+	},
+	{
+		id: "asdf-3",
+		created_at: "123",
+		account_id: "test-account",
+		name: "Test-app",
+		version: 1,
+		configuration: {
+			image: "test-registry.cfdata.org/test-app:v2",
+			network: {
+				mode: ContainerNetworkMode.PRIVATE,
+			},
+		},
+		scheduling_policy: SchedulingPolicy.REGIONAL,
+		instances: 2,
+		jobs: false,
+		constraints: { region: "WNAM" },
 	},
 ];
