@@ -1,6 +1,6 @@
 import assert from "assert";
 import { fetchResult } from "./cfetch";
-import { configFileName, readConfig } from "./config";
+import { configFileName } from "./config";
 import { createCommand } from "./core/create-command";
 import { confirm } from "./dialogs";
 import { UserError } from "./errors";
@@ -9,11 +9,8 @@ import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName } from "./utils/getScriptName";
-import { printWranglerBanner } from "./wrangler-banner";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "./yargs-types";
+
+
 
 // Types returned by the /script/{name}/references API
 type ServiceReference = {

@@ -1,9 +1,9 @@
 import path from "path";
-import { configFileName, withConfig } from "../../config";
+import { configFileName } from "../../config";
+import { createCommand } from "../../core/create-command";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
-import { printWranglerBanner } from "../../wrangler-banner";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { getDatabaseInfoFromConfig } from "../utils";
 import {
@@ -11,28 +11,46 @@ import {
 	getUnappliedMigrations,
 	initMigrationsTable,
 } from "./helpers";
-import { MigrationOptions } from "./options";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../yargs-types";
 
-export function ListOptions(yargs: CommonYargsArgv) {
-	return MigrationOptions(yargs);
-}
-
-type ListHandlerOptions = StrictYargsOptionsToInterface<typeof ListOptions>;
-
-export const ListHandler = withConfig<ListHandlerOptions>(
-	async ({
-		config,
-		database,
-		local,
-		remote,
-		persistTo,
-		preview,
-	}): Promise<void> => {
-		await printWranglerBanner();
+export const d1MigrationsListCommand = createCommand({
+	metadata: {
+		description: "List your D1 migrations",
+		status: "stable",
+		owner: "Product: D1",
+	},
+	behaviour: {
+		printBanner: true,
+	},
+	args: {
+		database: {
+			type: "string",
+			demandOption: true,
+			description: "The name or binding of the DB",
+		},
+		local: {
+			type: "boolean",
+			description:
+				"Execute commands/files against a local DB for use with wrangler dev",
+		},
+		remote: {
+			type: "boolean",
+			description:
+				"Execute commands/files against a remote DB for use with wrangler dev --remote",
+		},
+		preview: {
+			type: "boolean",
+			description: "Execute commands/files against a preview D1 DB",
+			default: false,
+		},
+		"persist-to": {
+			type: "string",
+			description:
+				"Specify directory to use for local persistence (you must use --local with this flag)",
+			requiresArg: true,
+		},
+	},
+	positionalArgs: ["database"],
+	async handler({ database, local, remote, persistTo, preview }, { config }) {
 		if (remote) {
 			await requireAuth({});
 		}
@@ -92,5 +110,5 @@ export const ListHandler = withConfig<ListHandlerOptions>(
 		}
 		logger.log("Migrations to be applied:");
 		logger.table(unappliedMigrations.map((m) => ({ Name: m.Name })));
-	}
-);
+	},
+});
