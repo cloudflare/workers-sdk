@@ -1,5 +1,18 @@
 # @cloudflare/vite-plugin
 
+## 1.0.7
+
+### Patch Changes
+
+- [#8786](https://github.com/cloudflare/workers-sdk/pull/8786) [`191ebc1`](https://github.com/cloudflare/workers-sdk/commit/191ebc1ebf6f20957d4b08c1428d0468743c82ea) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure users can change inspector port when running vite dev
+
+  Ensure that the inspector port is updated if the user modifies it in the Vite config while the dev server is running.
+
+- Updated dependencies [[`bab1724`](https://github.com/cloudflare/workers-sdk/commit/bab1724229974c545084c31df3731e7c2271ee49), [`511be3d`](https://github.com/cloudflare/workers-sdk/commit/511be3d17559e482fedf559cb61158e329c11d24), [`085a565`](https://github.com/cloudflare/workers-sdk/commit/085a565bb922ad023a38e2aee2042885e6691b2c)]:
+  - wrangler@4.11.1
+  - miniflare@4.20250410.1
+  - @cloudflare/unenv-preset@2.3.1
+
 ## 1.0.6
 
 ### Patch Changes

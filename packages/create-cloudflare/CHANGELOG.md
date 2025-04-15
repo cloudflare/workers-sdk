@@ -1,5 +1,17 @@
 # create-cloudflare
 
+## 2.44.0
+
+### Minor Changes
+
+- [#8708](https://github.com/cloudflare/workers-sdk/pull/8708) [`f4c37bb`](https://github.com/cloudflare/workers-sdk/commit/f4c37bb0e4bf6664dd946a7acf1e26b5780b832d) Thanks [@royvandewater](https://github.com/royvandewater)! - Add --template-mode argument to create-cloudflare to support templating from private repositories
+
+  create-cloudflare uses degit under the hood to clone template git repositories. degit will attempt to download a tar file of the HEAD of a repository if it is served up on one of several allow listed repository hosting services including GitHub. However, the tar support does not support templating from private repositories. To support that, we needed to create the ability to tell degit to use "git" mode to download the template using the user's git credentials.
+
+### Patch Changes
+
+- [#8950](https://github.com/cloudflare/workers-sdk/pull/8950) [`bab1724`](https://github.com/cloudflare/workers-sdk/commit/bab1724229974c545084c31df3731e7c2271ee49) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: include telemetry-related environment variables in release builds
+
 ## 2.43.8
 
 ### Patch Changes
