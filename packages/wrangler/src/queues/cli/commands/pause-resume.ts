@@ -1,38 +1,53 @@
-import { readConfig } from "../../../config";
+import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { getQueue, updateQueue } from "../../client";
 import { handleFetchError } from "../../utils";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../../yargs-types";
+import type { Config } from "../../../config";
 import type { PostQueueBody } from "../../client";
 
-export function options(yargs: CommonYargsArgv) {
-	return yargs.positional("name", {
-		type: "string",
-		demandOption: true,
-		description: "The name of the queue",
-	});
-}
+export const queuesPauseCommand = createCommand({
+	metadata: {
+		description: "Pause message delivery for a Queue",
+		owner: "Product: Queues",
+		status: "stable",
+	},
+	args: {
+		name: {
+			type: "string",
+			demandOption: true,
+			description: "The name of the queue",
+		},
+	},
+	positionalArgs: ["name"],
+	async handler(args, { config }) {
+		await toggleDeliveryPaused(args, config, true);
+	},
+});
 
-export async function pauseHandler(
-	args: StrictYargsOptionsToInterface<typeof options>
-) {
-	return toggleDeliveryPaused(args, true);
-}
-
-export async function resumeHandler(
-	args: StrictYargsOptionsToInterface<typeof options>
-) {
-	return toggleDeliveryPaused(args, false);
-}
+export const queuesResumeCommand = createCommand({
+	metadata: {
+		description: "Resume message delivery for a Queue",
+		owner: "Product: Queues",
+		status: "stable",
+	},
+	args: {
+		name: {
+			type: "string",
+			demandOption: true,
+			description: "The name of the queue",
+		},
+	},
+	positionalArgs: ["name"],
+	async handler(args, { config }) {
+		await toggleDeliveryPaused(args, config, false);
+	},
+});
 
 async function toggleDeliveryPaused(
-	args: StrictYargsOptionsToInterface<typeof options>,
+	args: typeof queuesPauseCommand.args | typeof queuesResumeCommand.args,
+	config: Config,
 	paused: boolean
 ) {
-	const config = readConfig(args);
 	const body: PostQueueBody = {
 		queue_name: args.name,
 		settings: {

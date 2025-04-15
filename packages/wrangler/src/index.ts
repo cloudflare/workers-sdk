@@ -70,7 +70,7 @@ import { pages } from "./pages";
 import { APIError, formatMessage, ParseError } from "./parse";
 import { pipelines } from "./pipelines";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
-import { queues } from "./queues/cli/commands";
+import { queues, queuesNamespace } from "./queues/cli/commands";
 import { r2Namespace } from "./r2";
 import {
 	r2BucketCreateCommand,
@@ -557,6 +557,64 @@ export function createCLIParser(argv: string[]) {
 	wrangler.command("queues", "🇶  Manage Workers Queues", (queuesYargs) => {
 		return queues(queuesYargs.command(subHelp));
 	});
+
+	registry.define([
+		{ command: "wrangler queues", definition: queuesNamespace },
+		{ command: "wrangler queues create", definition: queuesCreateCommand },
+		{ command: "wrangler queues update", definition: queuesUpdateCommand },
+		{ command: "wrangler queues delete", definition: queuesDeleteCommand },
+		{ command: "wrangler queues info", definition: queuesInfoCommand },
+		{
+			command: "wrangler queues pause-delivery",
+			definition: queuesPauseCommand,
+		},
+		{
+			command: "wrangler queues resume-delivery",
+			definition: queuesResumeCommand,
+		},
+		{
+			command: "wrangler queues purge",
+			definition: queuesPurgeCommand,
+		},
+		{
+			command: "wrangler queues consumer",
+			definition: queuesConsumerNamespace,
+		},
+		{
+			command: "wrangler queues consumer add",
+			definition: queuesConsumerAddCommand,
+		},
+		{
+			command: "wrangler queues consumer remove",
+			definition: queuesConsumerRemoveCommand,
+		},
+		{
+			command: "wrangler queues consumer http",
+			definition: queuesConsumerHttpNamespace,
+		},
+		{
+			command: "wrangler queues consumer http add",
+			definition: queuesConsumerHttpAddCommand,
+		},
+		{
+			command: "wrangler queues consumer http remove",
+			definition: queuesConsumerHttpRemoveCommand,
+		},
+		{
+			command: "wrangler queues consumer worker",
+			definition: queuesConsumerWorkerNamespace,
+		},
+		{
+			command: "wrangler queues consumer worker add",
+			definition: queuesConsumerWorkerAddCommand,
+		},
+		{
+			command: "wrangler queues consumer worker remove",
+			definition: queuesConsumerWorkerRemoveCommand,
+		},
+	]);
+
+	registry.registerNamespace("queues");
 
 	// r2
 	registry.define([

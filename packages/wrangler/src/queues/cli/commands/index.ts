@@ -1,3 +1,4 @@
+import { createNamespace } from "../../../core/create-command";
 import { HandleUnauthorizedError } from "../../utils";
 import { consumers } from "./consumer/index";
 import { handler as createHandler, options as createOptions } from "./create";
@@ -12,6 +13,14 @@ import {
 import { handler as purgeHandler, options as purgeOptions } from "./purge";
 import { handler as updateHandler, options as updateOptions } from "./update";
 import type { CommonYargsArgv } from "../../../yargs-types";
+
+export const queuesNamespace = createNamespace({
+	metadata: {
+		description: "🇶  Manage Workers Queues",
+		owner: "Product: Queues",
+		status: "stable",
+	},
+});
 
 export function queues(yargs: CommonYargsArgv) {
 	yargs.command("list", "List Queues", listOptions, listHandler);

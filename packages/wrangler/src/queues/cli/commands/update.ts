@@ -1,4 +1,4 @@
-import { readConfig } from "../../../config";
+import { createCommand } from "../../../core/create-command";
 import { CommandLineArgsError } from "../../../errors";
 import { logger } from "../../../logger";
 import { getQueue, updateQueue } from "../../client";
@@ -9,35 +9,47 @@ import {
 	MIN_MESSAGE_RETENTION_PERIOD_SECS,
 } from "../../constants";
 import { handleFetchError } from "../../utils";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../../yargs-types";
 import type { PostQueueBody, QueueSettings } from "../../client";
 
-export function options(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("name", {
+export const queuesUpdateCommand = createCommand({
+	metadata: {
+		description: "Update a Queue",
+		owner: "Product: Queues",
+		status: "stable",
+	},
+	args: {
+		name: {
 			type: "string",
 			demandOption: true,
 			description: "The name of the queue",
-		})
-		.options({
-			"delivery-delay-secs": {
-				type: "number",
-				describe:
-					"How long a published message should be delayed for, in seconds. Must be between 0 and 42300",
-			},
-			"message-retention-period-secs": {
-				type: "number",
-				describe:
-					"How long to retain a message in the queue, in seconds. Must be between 60 and 1209600",
-			},
-		});
-}
+		},
+		"delivery-delay-secs": {
+			type: "number",
+			describe:
+				"How long a published message should be delayed for, in seconds. Must be between 0 and 42300",
+		},
+		"message-retention-period-secs": {
+			type: "number",
+			describe:
+				"How long to retain a message in the queue, in seconds. Must be between 60 and 1209600",
+		},
+	},
+	positionalArgs: ["name"],
+	async handler(args, { config }) {
+		try {
+			const currentQueue = await getQueue(config, args.name);
+			const body = updateBody(args, currentQueue.settings);
+			logger.log(`Updating queue ${args.name}.`);
+			await updateQueue(config, body, currentQueue.queue_id);
+			logger.log(`Updated queue ${args.name}.`);
+		} catch (e) {
+			handleFetchError(e as { code?: number });
+		}
+	},
+});
 
 function updateBody(
-	args: StrictYargsOptionsToInterface<typeof options>,
+	args: typeof queuesUpdateCommand.args,
 	currentSettings?: QueueSettings
 ): PostQueueBody {
 	const body: PostQueueBody = {
@@ -92,19 +104,4 @@ function updateBody(
 	}
 
 	return body;
-}
-
-export async function handler(
-	args: StrictYargsOptionsToInterface<typeof options>
-) {
-	const config = readConfig(args);
-	try {
-		const currentQueue = await getQueue(config, args.name);
-		const body = updateBody(args, currentQueue.settings);
-		logger.log(`Updating queue ${args.name}.`);
-		await updateQueue(config, body, currentQueue.queue_id);
-		logger.log(`Updated queue ${args.name}.`);
-	} catch (e) {
-		handleFetchError(e as { code?: number });
-	}
 }
