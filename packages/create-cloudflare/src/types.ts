@@ -17,6 +17,7 @@ export type C3Args = {
 	lang?: string;
 	existingScript?: string;
 	template?: string;
+	templateMode?: "tar" | "git";
 	acceptDefaults?: boolean;
 	wranglerDefaults?: boolean;
 	additionalArgs?: string[];
