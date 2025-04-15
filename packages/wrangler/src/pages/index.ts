@@ -2,6 +2,7 @@
 
 import * as Build from "./build";
 import * as BuildEnv from "./build-env";
+import * as Delete from "./delete";
 import * as Deploy from "./deploy";
 import * as DeploymentTails from "./deployment-tails";
 import * as Deployments from "./deployments";
@@ -108,6 +109,12 @@ export function pages(yargs: CommonYargsArgv, subHelp: SubHelp) {
 							"livestream logs from your Functions",
 						DeploymentTails.Options,
 						DeploymentTails.Handler
+					)
+					.command(
+						"delete [deployment]",
+						"Delete a deployment",
+						Delete.Options,
+						Delete.Handler
 					)
 		)
 		.command(

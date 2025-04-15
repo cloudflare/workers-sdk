@@ -215,6 +215,7 @@ tools/deployment-status.json
 
 # IntelliJ
 .idea/
+*.iml
 
 # VSCode Theme
 *.vsix
