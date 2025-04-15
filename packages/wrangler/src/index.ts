@@ -38,7 +38,7 @@ import {
 	UserError,
 } from "./errors";
 import { hyperdrive } from "./hyperdrive/index";
-import { initHandler, initOptions } from "./init";
+import { init } from "./init";
 import {
 	kvBulkDeleteCommand,
 	kvBulkGetCommand,
@@ -406,13 +406,14 @@ export function createCLIParser(argv: string[]) {
 	registry.registerNamespace("docs");
 
 	/******************** CMD GROUP ***********************/
-	// init
-	wrangler.command(
-		"init [name]",
-		"📥 Initialize a basic Worker",
-		initOptions,
-		initHandler
-	);
+
+	registry.define([
+		{
+			command: "wrangler init",
+			definition: init,
+		},
+	]);
+	registry.registerNamespace("init");
 
 	registry.define([
 		{
