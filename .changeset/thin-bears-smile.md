@@ -1,5 +1,5 @@
 ---
-"wrangler": patch
+"wrangler": minor
 ---
 
 feat: Add debug logs to capture assets upload status, specifically:
