@@ -1,13 +1,8 @@
 import chalk from "chalk";
 import { type Argv } from "yargs";
 import { UserError } from "../errors";
-import { handler as createHandler, options as createOptions } from "./create";
-import { handler as deleteHandler, options as deleteOptions } from "./delete";
-import { handler as getHandler, options as getOptions } from "./get";
-import { handler as listHandler, options as listOptions } from "./list";
-import { handler as updateHandler, options as updateOptions } from "./update";
+import { createNamespace } from "../core/create-command";
 import type {
-	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type {
@@ -19,29 +14,19 @@ import type {
 	OriginWithSecretsPartial,
 } from "./client";
 
-export function hyperdrive(yargs: CommonYargsArgv) {
-	return yargs
-		.command(
-			"create <name>",
-			"Create a Hyperdrive config",
-			createOptions,
-			createHandler
-		)
-		.command(
-			"delete <id>",
-			"Delete a Hyperdrive config",
-			deleteOptions,
-			deleteHandler
-		)
-		.command("get <id>", "Get a Hyperdrive config", getOptions, getHandler)
-		.command("list", "List Hyperdrive configs", listOptions, listHandler)
-		.command(
-			"update <id>",
-			"Update a Hyperdrive config",
-			updateOptions,
-			updateHandler
-		);
-}
+export const hyperdriveNamespace = createNamespace({
+	metadata: {
+		description: "🚰 Manage Hyperdrive configs",
+		status: "open-beta",
+		owner: "Product: Hyperdrive",
+	},
+});
+
+export { hyperdriveCreateCommand } from "./create";
+export { hyperdriveDeleteCommand } from "./delete";
+export { hyperdriveGetCommand } from "./get";
+export { hyperdriveListCommand } from "./list";
+export { hyperdriveUpdateCommand } from "./update";
 
 export function upsertOptions<T>(yargs: Argv<T>) {
 	return yargs
