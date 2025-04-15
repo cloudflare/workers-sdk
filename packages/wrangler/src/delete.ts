@@ -1,6 +1,7 @@
 import assert from "assert";
 import { fetchResult } from "./cfetch";
 import { configFileName, readConfig } from "./config";
+import { createCommand } from "./core/create-command";
 import { confirm } from "./dialogs";
 import { UserError } from "./errors";
 import { deleteKVNamespace, listKVNamespaces } from "./kv/helpers";
@@ -61,99 +62,99 @@ export type Tail = {
 	modified_on: string;
 };
 
-export function deleteOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("script", {
+export const deleteCommand = createCommand({
+	metadata: {
+		description: "🗑  Delete a Worker from Cloudflare",
+		owner: "Workers: Authoring and Testing",
+		status: "stable",
+	},
+	args: {
+		script: {
 			describe: "The path to an entry point for your worker",
 			type: "string",
 			requiresArg: true,
-		})
-		.option("name", {
+		},
+		name: {
 			describe: "Name of the worker",
 			type: "string",
 			requiresArg: true,
-		})
-		.option("dry-run", {
+		},
+		"dry-run": {
 			describe: "Don't actually delete",
 			type: "boolean",
-		})
-		.option("force", {
+		},
+		force: {
 			describe:
 				"Delete even if doing so will break other Workers that depend on this one",
 			type: "boolean",
-		})
-		.option("legacy-env", {
+		},
+		"legacy-env": {
 			type: "boolean",
 			describe: "Use legacy environments",
 			hidden: true,
-		});
-}
-
-type DeleteArgs = StrictYargsOptionsToInterface<typeof deleteOptions>;
-
-export async function deleteHandler(args: DeleteArgs) {
-	await printWranglerBanner();
-
-	const config = readConfig(args);
-	if (config.pages_build_output_dir) {
-		throw new UserError(
-			"It looks like you've run a Workers-specific command in a Pages project.\n" +
-				"For Pages, please run `wrangler pages project delete` instead.",
-			{ telemetryMessage: true }
+		},
+	},
+	async handler(args, { config }) {
+		if (config.pages_build_output_dir) {
+			throw new UserError(
+				"It looks like you've run a Workers-specific command in a Pages project.\n" +
+					"For Pages, please run `wrangler pages project delete` instead.",
+				{ telemetryMessage: true }
+			);
+		}
+		metrics.sendMetricsEvent(
+			"delete worker script",
+			{},
+			{ sendMetrics: config.send_metrics }
 		);
-	}
-	metrics.sendMetricsEvent(
-		"delete worker script",
-		{},
-		{ sendMetrics: config.send_metrics }
-	);
 
-	const accountId = args.dryRun ? undefined : await requireAuth(config);
+		const accountId = args.dryRun ? undefined : await requireAuth(config);
 
-	const scriptName = getScriptName(args, config);
-	if (!scriptName) {
-		throw new UserError(
-			`A worker name must be defined, either via --name, or in your ${configFileName(config.configPath)} file`,
-			{
-				telemetryMessage:
-					"`A worker name must be defined, either via --name, or in your config file",
-			}
-		);
-	}
+		const scriptName = getScriptName(args, config);
+		if (!scriptName) {
+			throw new UserError(
+				`A worker name must be defined, either via --name, or in your ${configFileName(config.configPath)} file`,
+				{
+					telemetryMessage:
+						"`A worker name must be defined, either via --name, or in your config file",
+				}
+			);
+		}
 
-	if (args.dryRun) {
-		logger.log(`--dry-run: exiting now.`);
-		return;
-	}
-
-	assert(accountId, "Missing accountId");
-
-	const confirmed =
-		args.force ||
-		(await confirm(
-			`Are you sure you want to delete ${scriptName}? This action cannot be undone.`
-		));
-
-	if (confirmed) {
-		const needsForceDelete =
-			args.force ||
-			(await checkAndConfirmForceDeleteIfNecessary(scriptName, accountId));
-		if (needsForceDelete === null) {
-			// null means the user rejected the extra confirmation - return early
+		if (args.dryRun) {
+			logger.log(`--dry-run: exiting now.`);
 			return;
 		}
 
-		await fetchResult(
-			`/accounts/${accountId}/workers/services/${scriptName}`,
-			{ method: "DELETE" },
-			new URLSearchParams({ force: needsForceDelete.toString() })
-		);
+		assert(accountId, "Missing accountId");
 
-		await deleteSiteNamespaceIfExisting(scriptName, accountId);
+		const confirmed =
+			args.force ||
+			(await confirm(
+				`Are you sure you want to delete ${scriptName}? This action cannot be undone.`
+			));
 
-		logger.log("Successfully deleted", scriptName);
-	}
-}
+		if (confirmed) {
+			const needsForceDelete =
+				args.force ||
+				(await checkAndConfirmForceDeleteIfNecessary(scriptName, accountId));
+			if (needsForceDelete === null) {
+				// null means the user rejected the extra confirmation - return early
+				return;
+			}
+
+			await fetchResult(
+				`/accounts/${accountId}/workers/services/${scriptName}`,
+				{ method: "DELETE" },
+				new URLSearchParams({ force: needsForceDelete.toString() })
+			);
+
+			await deleteSiteNamespaceIfExisting(scriptName, accountId);
+
+			logger.log("Successfully deleted", scriptName);
+		}
+	},
+});
 
 async function deleteSiteNamespaceIfExisting(
 	scriptName: string,

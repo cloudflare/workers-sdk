@@ -21,7 +21,7 @@ import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
 import { d1 } from "./d1";
-import { deleteHandler, deleteOptions } from "./delete";
+import { deleteCommand, deleteHandler, deleteOptions } from "./delete";
 import { deployCommand } from "./deploy";
 import { isAuthenticationError } from "./deploy/deploy";
 import {
@@ -505,13 +505,8 @@ export function createCLIParser(argv: string[]) {
 		}
 	);
 
-	// delete
-	wrangler.command(
-		"delete [script]",
-		"🗑  Delete a Worker from Cloudflare",
-		deleteOptions,
-		deleteHandler
-	);
+	registry.define([{ command: "wrangler delete", definition: deleteCommand }]);
+	registry.registerNamespace("delete");
 
 	// tail
 	registry.define([{ command: "wrangler tail", definition: tailCommand }]);
