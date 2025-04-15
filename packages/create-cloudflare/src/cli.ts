@@ -170,7 +170,7 @@ const configure = async (ctx: C3Context) => {
 	if (ctx.template.installWorkersTypes) {
 		await installWorkersTypes(ctx);
 	}
-	if (ctx.template.skipWranglerTypegen) {
+	if (!ctx.template.skipWranglerTypegen) {
 		await generateWorkersTypes(ctx);
 	}
 
