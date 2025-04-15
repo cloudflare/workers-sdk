@@ -21,7 +21,7 @@ import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
 import { d1 } from "./d1";
-import { deleteCommand, deleteHandler, deleteOptions } from "./delete";
+import { deleteCommand } from "./delete";
 import { deployCommand } from "./deploy";
 import { isAuthenticationError } from "./deploy/deploy";
 import {
@@ -170,7 +170,8 @@ import {
 	setupSentry,
 } from "./sentry";
 import { tailCommand } from "./tail";
-import registerTriggersSubcommands from "./triggers";
+import { triggersDeployCommand, triggersNamespace } from "./triggers";
+import triggersDeploy from "./triggers/deploy";
 import { typesCommand } from "./type-generation";
 import { getAuthFromEnv } from "./user";
 import { loginCommand, logoutCommand, whoamiCommand } from "./user/commands";
@@ -497,13 +498,11 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("versions");
 
-	wrangler.command(
-		"triggers",
-		"🎯 Updates the triggers of your current deployment",
-		(yargs) => {
-			return registerTriggersSubcommands(yargs.command(subHelp));
-		}
-	);
+	registry.define([
+		{ command: "wrangler triggers", definition: triggersNamespace },
+		{ command: "wrangler triggers deploy", definition: triggersDeployCommand },
+	]);
+	registry.registerNamespace("triggers");
 
 	registry.define([{ command: "wrangler delete", definition: deleteCommand }]);
 	registry.registerNamespace("delete");
