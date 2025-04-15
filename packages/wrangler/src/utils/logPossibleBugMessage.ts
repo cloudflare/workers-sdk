@@ -8,7 +8,7 @@ import { fgGreenColor, resetColor } from "./constants";
 export async function logPossibleBugMessage() {
 	if (process.versions.bun) {
 		logger.warn(
-			`Wrangler does not support Bun. Please try this command again using Node.js.`
+			`Wrangler does not support the Bun runtime. Please try this command again using Node.js via \`npm\` or \`pnpm\`. Alternatively, make sure you're not passing the \`--bun\` flag when running \`bun run wrangler ...\``
 		);
 		return;
 	}

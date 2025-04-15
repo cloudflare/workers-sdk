@@ -340,7 +340,7 @@ describe("wrangler", () => {
 			process.versions.bun = "v1";
 			await logPossibleBugMessage();
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler does not support Bun. Please try this command again using Node.js.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler does not support the Bun runtime. Please try this command again using Node.js via \`npm\` or \`pnpm\`. Alternatively, make sure you're not passing the \`--bun\` flag when running \`bun run wrangler ...\`[0m
 
 				"
 			`);
