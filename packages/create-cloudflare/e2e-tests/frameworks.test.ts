@@ -384,7 +384,7 @@ const verifyBuildCfTypesScript = async (
 	);
 	expect(hasEnvInterfacePre).toBe(true);
 
-	expect(outputFileContent[1]).match(
+	expect(outputFileContent[2]).match(
 		/\/\/ Runtime types generated with workerd@1\.\d{8}\.\d \d{4}-\d{2}-\d{2} ([a-z_]+,?)*/,
 	);
 };
