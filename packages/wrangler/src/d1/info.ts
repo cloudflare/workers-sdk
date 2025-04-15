@@ -1,36 +1,38 @@
 import prettyBytes from "pretty-bytes";
 import { fetchGraphqlResult } from "../cfetch";
-import { withConfig } from "../config";
+import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { printWranglerBanner } from "../wrangler-banner";
 import {
 	getDatabaseByNameOrBinding,
 	getDatabaseInfoFromIdOrName,
 } from "./utils";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type { D1MetricsGraphQLResponse, Database } from "./types";
 
-export function Options(d1ListYargs: CommonYargsArgv) {
-	return d1ListYargs
-		.positional("name", {
-			describe: "The name of the DB",
+export const d1InfoCommand = createCommand({
+	metadata: {
+		description:
+			"Get information about a D1 database, including the current database size and state",
+		status: "stable",
+		owner: "Product: D1",
+	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
+	args: {
+		name: {
 			type: "string",
 			demandOption: true,
-		})
-		.option("json", {
-			describe: "return output as clean JSON",
+			description: "The name of the DB",
+		},
+		json: {
 			type: "boolean",
+			description: "Return output as clean JSON",
 			default: false,
-		});
-}
-
-type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
-export const Handler = withConfig<HandlerOptions>(
-	async ({ name, config, json }): Promise<void> => {
+		},
+	},
+	positionalArgs: ["name"],
+	async handler({ name, json }, { config }) {
 		const accountId = await requireAuth(config);
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,
@@ -141,8 +143,7 @@ export const Handler = withConfig<HandlerOptions>(
 				};
 			});
 
-			await printWranglerBanner();
 			logger.table(data);
 		}
-	}
-);
+	},
+});

@@ -1,14 +1,10 @@
 import { fetchResult } from "../cfetch";
-import { formatConfigSnippet, withConfig } from "../config";
+import { formatConfigSnippet } from "../config";
+import { createCommand } from "../core/create-command";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { printWranglerBanner } from "../wrangler-banner";
 import { LOCATION_CHOICES } from "./constants";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type { DatabaseCreationResult } from "./types";
 
 export async function createD1Database(
@@ -39,24 +35,29 @@ export async function createD1Database(
 	}
 }
 
-export function Options(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("name", {
-			describe: "The name of the new DB",
+export const d1CreateCommand = createCommand({
+	metadata: {
+		description: "Create D1 database",
+		status: "stable",
+		owner: "Product: D1",
+	},
+	behaviour: {
+		printBanner: true,
+	},
+	args: {
+		name: {
 			type: "string",
 			demandOption: true,
-		})
-		.option("location", {
-			describe:
-				"A hint for the primary location of the new DB. Options:\nweur: Western Europe\neeur: Eastern Europe\napac: Asia Pacific\noc: Oceania\nwnam: Western North America\nenam: Eastern North America \n",
+			description: "The name of the new DB",
+		},
+		location: {
 			type: "string",
-		});
-}
-
-type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
-export const Handler = withConfig<HandlerOptions>(
-	async ({ name, config, location }): Promise<void> => {
-		await printWranglerBanner();
+			description:
+				"A hint for the primary location of the new DB. Options:\nweur: Western Europe\neeur: Eastern Europe\napac: Asia Pacific\noc: Oceania\nwnam: Western North America\nenam: Eastern North America \n",
+		},
+	},
+	positionalArgs: ["name"],
+	async handler({ name, location }, { config }) {
 		const accountId = await requireAuth(config);
 
 		if (location) {
@@ -91,5 +92,5 @@ export const Handler = withConfig<HandlerOptions>(
 				config.configPath
 			)
 		);
-	}
-);
+	},
+});

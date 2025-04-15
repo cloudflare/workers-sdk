@@ -20,7 +20,25 @@ import { containers } from "./containers";
 import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
-import { d1 } from "./d1";
+import { d1Namespace } from "./d1";
+import { d1CreateCommand } from "./d1/create";
+import { d1DeleteCommand } from "./d1/delete";
+import { d1ExecuteCommand } from "./d1/execute";
+import { d1ExportCommand } from "./d1/export";
+import { d1InfoCommand } from "./d1/info";
+import { d1InsightsCommand } from "./d1/insights";
+import { d1ListCommand } from "./d1/list";
+import {
+	d1MigrationsApplyCommand,
+	d1MigrationsCreateCommand,
+	d1MigrationsListCommand,
+	d1MigrationsNamespace,
+} from "./d1/migrations";
+import {
+	d1TimeTravelInfoCommand,
+	d1TimeTravelNamespace,
+	d1TimeTravelRestoreCommand,
+} from "./d1/timeTravel";
 import { deleteCommand } from "./delete";
 import { deployCommand } from "./deploy";
 import { isAuthenticationError } from "./deploy/deploy";
@@ -824,10 +842,40 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("r2");
 
-	// d1
-	wrangler.command("d1", `🗄  Manage Workers D1 databases`, (d1Yargs) => {
-		return d1(d1Yargs.command(subHelp));
-	});
+	// D1 commands are registered using the CommandRegistry
+	registry.define([
+		{ command: "wrangler d1", definition: d1Namespace },
+		{ command: "wrangler d1 create", definition: d1CreateCommand },
+		{ command: "wrangler d1 delete", definition: d1DeleteCommand },
+		{ command: "wrangler d1 list", definition: d1ListCommand },
+		{ command: "wrangler d1 info", definition: d1InfoCommand },
+		{ command: "wrangler d1 insights", definition: d1InsightsCommand },
+		{ command: "wrangler d1 execute", definition: d1ExecuteCommand },
+		{ command: "wrangler d1 export", definition: d1ExportCommand },
+		{ command: "wrangler d1 time-travel", definition: d1TimeTravelNamespace },
+		{
+			command: "wrangler d1 time-travel info",
+			definition: d1TimeTravelInfoCommand,
+		},
+		{
+			command: "wrangler d1 time-travel restore",
+			definition: d1TimeTravelRestoreCommand,
+		},
+		{ command: "wrangler d1 migrations", definition: d1MigrationsNamespace },
+		{
+			command: "wrangler d1 migrations list",
+			definition: d1MigrationsListCommand,
+		},
+		{
+			command: "wrangler d1 migrations create",
+			definition: d1MigrationsCreateCommand,
+		},
+		{
+			command: "wrangler d1 migrations apply",
+			definition: d1MigrationsApplyCommand,
+		},
+	]);
+	registry.registerNamespace("d1");
 
 	// [OPEN BETA] vectorize
 	wrangler.command(
