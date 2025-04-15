@@ -1,4 +1,4 @@
-import { existsSync } from "fs";
+import { existsSync, read } from "fs";
 import { join, resolve } from "path";
 import { warn } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
@@ -11,7 +11,7 @@ import * as jsonc from "jsonc-parser";
 import type { C3Context, PackageJson } from "types";
 
 /**
- * Generate types using `wrangler types` and update tsconfig
+ * Generate types using the `cf-typegen` script and update tsconfig
  */
 
 export async function generateWorkersTypes(ctx: C3Context) {
@@ -31,10 +31,6 @@ export async function generateWorkersTypes(ctx: C3Context) {
 	await runCommand(typesCmd, {
 		cwd: ctx.project.path,
 		silent: true,
-		env: {
-			CLOUDFLARE_ACCOUNT_ID: ctx.account?.id,
-			NODE_ENV: "production",
-		},
 		startText: "Generating types for your application",
 		doneText: `${brandColor("generated")} ${dim(`to \`${ctx.template.typesPath ?? "worker-configuration.d.ts"}\` via \`${typesCmd.join(" ")}\``)}`,
 	});
@@ -53,6 +49,13 @@ export async function generateWorkersTypes(ctx: C3Context) {
 	await updateTsConfig(ctx);
 }
 
+/**
+ * update `types` in tsconfig:
+ * - set workers-types to latest entrypoint if installed
+ * - remove workers-types if runtime types have been generated
+ * - add generated types file if types were generated
+ * - add node if node compat
+ */
 export async function updateTsConfig(ctx: C3Context) {
 	const tsconfigPath = join(ctx.project.path, "tsconfig.json");
 	if (!existsSync(tsconfigPath)) {
@@ -64,7 +67,7 @@ export async function updateTsConfig(ctx: C3Context) {
 	try {
 		const config = jsonc.parse(tsconfig);
 		const currentTypes = config.compilerOptions?.types ?? [];
-		let newTypes: string[];
+		const newTypes: string[] = currentTypes;
 		if (ctx.template.installWorkersTypes) {
 			const entrypointVersion = getLatestTypesEntrypoint(ctx);
 			if (entrypointVersion === null) {
@@ -76,24 +79,30 @@ export async function updateTsConfig(ctx: C3Context) {
 			);
 			// If a type declaration with an explicit entrypoint exists, leave the types as is
 			// Otherwise, add the latest entrypoint
-			newTypes = explicitEntrypoint
-				? [...currentTypes]
-				: [
-						...currentTypes.filter(
-							(t: string) => t !== "@cloudflare/workers-types",
-						),
-						typesEntrypoint,
-					];
-		} else {
-			newTypes = [
-				...currentTypes.filter(
-					(t: string) => !t.startsWith("@cloudflare/workers-types"),
-				),
+			if (!explicitEntrypoint) {
+				newTypes
+					.filter((t: string) => t !== "@cloudflare/workers-types")
+					.push(typesEntrypoint);
+			}
+		}
+		if (!ctx.template.skipWranglerTypegen) {
+			// if generated types include runtime types, remove workers-types
+			const typegen = readFile(
 				ctx.template.typesPath ?? "./worker-configuration.d.ts",
-				...(ctx.template.compatibilityFlags?.includes("nodejs_compat")
-					? ["node"]
-					: []),
-			];
+			).split("\n");
+			if (
+				typegen.some((line) =>
+					line.includes("// Runtime types generated with workerd"),
+				)
+			) {
+				newTypes.filter(
+					(t: string) => !t.startsWith("@cloudflare/workers-types"),
+				);
+			}
+			if (ctx.template.compatibilityFlags?.includes("nodejs_compat")) {
+				newTypes.push("node");
+			}
+			newTypes.push(ctx.template.typesPath ?? "./worker-configuration.d.ts");
 		}
 		if (newTypes.sort() === currentTypes.sort()) {
 			return;
