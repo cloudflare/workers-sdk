@@ -514,6 +514,16 @@ describe.skipIf(frameworkToTest || isQuarantineMode())("help text", () => {
 				    npm create cloudflare my-project -- --template git@github.com:user/repo#1234abcd (commit)
 				    Note that subdirectories may also be used. For example:
 				    npm create cloudflare -- --template https://github.com/cloudflare/workers-sdk/templates/worker-r2
+				  --template-mode=<value>
+				    The mechanism to use when fetching the template.
+				    Can be either "git" or "tar". "tar" does not support fetching from private
+				    repositories. By default, degit will use "tar" if the template is hosted on GitHub, BitBucket, GitLab, or git.sr.ht.
+				    Otherwise, it will use "git".
+				    Allowed Values:
+				      git
+				        Use git to fetch the template. Supports private repositories.
+				      tar
+				        Use tar to fetch the template. Only supported on public repositories hosted on GitHub, BitBucket, GitLab, or git.sr.ht.
 				  --accept-defaults, --no-accept-defaults, -y
 				    Use all the default C3 options (each can also be overridden by specifying it)
 				  --auto-update, --no-auto-update
