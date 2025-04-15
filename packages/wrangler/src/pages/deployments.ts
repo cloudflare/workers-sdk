@@ -1,23 +1,26 @@
 import { format as timeagoFormat } from "timeago.js";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
+import { createCommand } from "../core/create-command";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type { PagesConfigCache } from "./types";
 import type { Deployment } from "@cloudflare/types";
 
-type ListArgs = StrictYargsOptionsToInterface<typeof ListOptions>;
-
-export function ListOptions(yargs: CommonYargsArgv) {
-	return yargs.options({
+export const pagesDeploymentListCommand = createCommand({
+	metadata: {
+		description: "List deployments in your Cloudflare Pages project",
+		status: "stable",
+		owner: "Workers: Authoring and Testing",
+	},
+	behaviour: {
+		provideConfig: false,
+	},
+	args: {
 		"project-name": {
 			type: "string",
 			description:
@@ -28,65 +31,66 @@ export function ListOptions(yargs: CommonYargsArgv) {
 			choices: ["production", "preview"],
 			description: "Environment type to list deployments for",
 		},
-	});
-}
+	},
+	async handler({ projectName, environment }) {
+		const config = getConfigCache<PagesConfigCache>(
+			PAGES_CONFIG_CACHE_FILENAME
+		);
+		const accountId = await requireAuth(config);
 
-export async function ListHandler({ projectName, environment }: ListArgs) {
-	const config = getConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME);
-	const accountId = await requireAuth(config);
+		projectName ??= config.project_name;
 
-	projectName ??= config.project_name;
-
-	const isInteractive = process.stdin.isTTY;
-	if (!projectName && isInteractive) {
-		projectName = await promptSelectProject({ accountId });
-	}
-
-	if (!projectName) {
-		throw new FatalError("Must specify a project name.", 1);
-	}
-
-	const deployments: Array<Deployment> = await fetchResult(
-		`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
-		{},
-		environment
-			? new URLSearchParams({ env: environment })
-			: new URLSearchParams({})
-	);
-
-	const titleCase = (word: string) =>
-		word.charAt(0).toUpperCase() + word.slice(1);
-
-	const shortSha = (sha: string) => sha.slice(0, 7);
-
-	const getStatus = (deployment: Deployment) => {
-		// Return a pretty time since timestamp if successful otherwise the status
-		if (
-			deployment.latest_stage.status === "success" &&
-			deployment.latest_stage.ended_on
-		) {
-			return timeagoFormat(deployment.latest_stage.ended_on);
+		const isInteractive = process.stdin.isTTY;
+		if (!projectName && isInteractive) {
+			projectName = await promptSelectProject({ accountId });
 		}
-		return titleCase(deployment.latest_stage.status);
-	};
 
-	const data = deployments.map((deployment) => {
-		return {
-			Id: deployment.id,
-			Environment: titleCase(deployment.environment),
-			Branch: deployment.deployment_trigger.metadata.branch,
-			Source: shortSha(deployment.deployment_trigger.metadata.commit_hash),
-			Deployment: deployment.url,
-			Status: getStatus(deployment),
-			// TODO: Use a url shortener
-			Build: `https://dash.cloudflare.com/${accountId}/pages/view/${deployment.project_name}/${deployment.id}`,
+		if (!projectName) {
+			throw new FatalError("Must specify a project name.", 1);
+		}
+
+		const deployments: Array<Deployment> = await fetchResult(
+			`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
+			{},
+			environment
+				? new URLSearchParams({ env: environment })
+				: new URLSearchParams({})
+		);
+
+		const titleCase = (word: string) =>
+			word.charAt(0).toUpperCase() + word.slice(1);
+
+		const shortSha = (sha: string) => sha.slice(0, 7);
+
+		const getStatus = (deployment: Deployment) => {
+			// Return a pretty time since timestamp if successful otherwise the status
+			if (
+				deployment.latest_stage.status === "success" &&
+				deployment.latest_stage.ended_on
+			) {
+				return timeagoFormat(deployment.latest_stage.ended_on);
+			}
+			return titleCase(deployment.latest_stage.status);
 		};
-	});
 
-	saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
-		account_id: accountId,
-	});
+		const data = deployments.map((deployment) => {
+			return {
+				Id: deployment.id,
+				Environment: titleCase(deployment.environment),
+				Branch: deployment.deployment_trigger.metadata.branch,
+				Source: shortSha(deployment.deployment_trigger.metadata.commit_hash),
+				Deployment: deployment.url,
+				Status: getStatus(deployment),
+				// TODO: Use a url shortener
+				Build: `https://dash.cloudflare.com/${accountId}/pages/view/${deployment.project_name}/${deployment.id}`,
+			};
+		});
 
-	logger.table(data);
-	metrics.sendMetricsEvent("list pages deployments");
-}
+		saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
+			account_id: accountId,
+		});
+
+		logger.table(data);
+		metrics.sendMetricsEvent("list pages deployments");
+	},
+});

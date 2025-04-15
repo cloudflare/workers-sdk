@@ -3,33 +3,39 @@ import { join, relative, resolve, sep } from "node:path";
 import { getType } from "mime";
 import { Minimatch } from "minimatch";
 import prettyBytes from "pretty-bytes";
+import { createCommand } from "../core/create-command";
 import { FatalError } from "../errors";
 import { MAX_ASSET_COUNT, MAX_ASSET_SIZE } from "./constants";
 import { hashFile } from "./hash";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 
-type UploadArgs = StrictYargsOptionsToInterface<typeof Options>;
+export const pagesProjectValidateCommand = createCommand({
+	metadata: {
+		description: "Validate a Pages project",
+		status: "stable",
+		owner: "Workers: Authoring and Testing",
+		hidden: true,
+	},
+	behaviour: {
+		provideConfig: false,
+	},
+	args: {
+		directory: {
+			type: "string",
+			description: "The directory of static files to validate",
+			required: true,
+		},
+	},
+	positionalArgs: ["directory"],
+	async handler({ directory }) {
+		if (!directory) {
+			throw new FatalError("Must specify a directory.", 1);
+		}
 
-export function Options(yargs: CommonYargsArgv) {
-	return yargs.positional("directory", {
-		type: "string",
-		demandOption: true,
-		description: "The directory of static files to validate",
-	});
-}
-
-export const Handler = async ({ directory }: UploadArgs) => {
-	if (!directory) {
-		throw new FatalError("Must specify a directory.", 1);
-	}
-
-	await validate({
-		directory,
-	});
-};
+		await validate({
+			directory,
+		});
+	},
+});
 
 export type FileContainer = {
 	path: string;

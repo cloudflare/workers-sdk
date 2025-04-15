@@ -4,12 +4,12 @@ import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
-import { 
-	aiNamespace, 
-	aiModelsCommand,
+import {
+	aiFineTuneCreateCommand,
+	aiFineTuneListCommand,
 	aiFineTuneNamespace,
-	aiFineTuneListCommand, 
-	aiFineTuneCreateCommand 
+	aiModelsCommand,
+	aiNamespace,
 } from "./ai";
 import {
 	certDeleteCommand,
@@ -61,13 +61,13 @@ import {
 	JsonFriendlyFatalError,
 	UserError,
 } from "./errors";
-import { 
-	hyperdriveNamespace,
+import {
 	hyperdriveCreateCommand,
 	hyperdriveDeleteCommand,
-	hyperdriveGetCommand, 
+	hyperdriveGetCommand,
 	hyperdriveListCommand,
-	hyperdriveUpdateCommand
+	hyperdriveNamespace,
+	hyperdriveUpdateCommand,
 } from "./hyperdrive/index";
 import { init } from "./init";
 import {
@@ -97,7 +97,33 @@ import {
 } from "./metrics/commands";
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { writeOutput } from "./output";
-import { pages } from "./pages";
+import {
+	pagesDeployCommand,
+	pagesDeploymentCreateCommand,
+	pagesDeploymentListCommand,
+	pagesDeploymentNamespace,
+	pagesDeploymentTailCommand,
+	pagesDevCommand,
+	pagesDownloadConfigCommand,
+	pagesDownloadNamespace,
+	pagesFunctionsBuildCommand,
+	pagesFunctionsBuildEnvCommand,
+	pagesFunctionsNamespace,
+	pagesFunctionsOptimizeRoutesCommand,
+	pagesNamespace,
+	pagesProjectCreateCommand,
+	pagesProjectDeleteCommand,
+	pagesProjectListCommand,
+	pagesProjectNamespace,
+	pagesProjectUploadCommand,
+	pagesProjectValidateCommand,
+	pagesSecretBulkCommand,
+	pagesSecretDeleteCommand,
+	pagesSecretListCommand,
+	pagesSecretNamespace,
+	pagesSecretPutCommand,
+} from "./pages";
+import { pagesPublishCommand } from "./pages/deploy";
 import { APIError, formatMessage, ParseError } from "./parse";
 import { pipelines } from "./pipelines";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
@@ -225,14 +251,14 @@ import { whoami } from "./user/whoami";
 import { betaCmdColor, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { logPossibleBugMessage } from "./utils/logPossibleBugMessage";
-import { 
-	vectorizeNamespace,
-	vectorizeMetadataNamespace,
+import {
 	vectorizeCreateCommand,
 	vectorizeDeleteCommand,
-	vectorizeGetCommand, 
+	vectorizeGetCommand,
 	vectorizeListCommand,
-	vectorizeQueryCommand
+	vectorizeMetadataNamespace,
+	vectorizeNamespace,
+	vectorizeQueryCommand,
 } from "./vectorize/index";
 import { versionsNamespace } from "./versions";
 import { versionsDeployCommand } from "./versions/deploy";
@@ -901,23 +927,122 @@ export function createCLIParser(argv: string[]) {
 	// vectorize
 	registry.define([
 		{ command: "wrangler vectorize", definition: vectorizeNamespace },
-		{ command: "wrangler vectorize create", definition: vectorizeCreateCommand },
-		{ command: "wrangler vectorize delete", definition: vectorizeDeleteCommand },
+		{
+			command: "wrangler vectorize create",
+			definition: vectorizeCreateCommand,
+		},
+		{
+			command: "wrangler vectorize delete",
+			definition: vectorizeDeleteCommand,
+		},
 		{ command: "wrangler vectorize get", definition: vectorizeGetCommand },
 		{ command: "wrangler vectorize list", definition: vectorizeListCommand },
 		{ command: "wrangler vectorize query", definition: vectorizeQueryCommand },
-		{ command: "wrangler vectorize metadata", definition: vectorizeMetadataNamespace },
+		{
+			command: "wrangler vectorize metadata",
+			definition: vectorizeMetadataNamespace,
+		},
 	]);
 	registry.registerNamespace("vectorize");
+
+	// pages
+	registry.define([
+		{ command: "wrangler pages", definition: pagesNamespace },
+		{ command: "wrangler pages dev", definition: pagesDevCommand },
+		{
+			command: "wrangler pages functions",
+			definition: pagesFunctionsNamespace,
+		},
+		{
+			command: "wrangler pages functions build",
+			definition: pagesFunctionsBuildCommand,
+		},
+		{
+			command: "wrangler pages functions build-env",
+			definition: pagesFunctionsBuildEnvCommand,
+		},
+		{
+			command: "wrangler pages functions optimize-routes",
+			definition: pagesFunctionsOptimizeRoutesCommand,
+		},
+		{ command: "wrangler pages project", definition: pagesProjectNamespace },
+		{
+			command: "wrangler pages project list",
+			definition: pagesProjectListCommand,
+		},
+		{
+			command: "wrangler pages project create",
+			definition: pagesProjectCreateCommand,
+		},
+		{
+			command: "wrangler pages project delete",
+			definition: pagesProjectDeleteCommand,
+		},
+		{
+			command: "wrangler pages project upload",
+			definition: pagesProjectUploadCommand,
+		},
+		{
+			command: "wrangler pages project validate",
+			definition: pagesProjectValidateCommand,
+		},
+		{
+			command: "wrangler pages deployment",
+			definition: pagesDeploymentNamespace,
+		},
+		{
+			command: "wrangler pages deployment list",
+			definition: pagesDeploymentListCommand,
+		},
+		{
+			command: "wrangler pages deployment create",
+			definition: pagesDeploymentCreateCommand,
+		},
+		{
+			command: "wrangler pages deployment tail",
+			definition: pagesDeploymentTailCommand,
+		},
+		{ command: "wrangler pages deploy", definition: pagesDeployCommand },
+		{ command: "wrangler pages publish", definition: pagesPublishCommand },
+		{ command: "wrangler pages download", definition: pagesDownloadNamespace },
+		{
+			command: "wrangler pages download config",
+			definition: pagesDownloadConfigCommand,
+		},
+		{ command: "wrangler pages secret", definition: pagesSecretNamespace },
+		{ command: "wrangler pages secret put", definition: pagesSecretPutCommand },
+		{
+			command: "wrangler pages secret bulk",
+			definition: pagesSecretBulkCommand,
+		},
+		{
+			command: "wrangler pages secret delete",
+			definition: pagesSecretDeleteCommand,
+		},
+		{
+			command: "wrangler pages secret list",
+			definition: pagesSecretListCommand,
+		},
+	]);
+	registry.registerNamespace("pages");
 
 	// hyperdrive
 	registry.define([
 		{ command: "wrangler hyperdrive", definition: hyperdriveNamespace },
-		{ command: "wrangler hyperdrive create", definition: hyperdriveCreateCommand },
-		{ command: "wrangler hyperdrive delete", definition: hyperdriveDeleteCommand },
+		{
+			command: "wrangler hyperdrive create",
+			definition: hyperdriveCreateCommand,
+		},
+		{
+			command: "wrangler hyperdrive delete",
+			definition: hyperdriveDeleteCommand,
+		},
 		{ command: "wrangler hyperdrive get", definition: hyperdriveGetCommand },
 		{ command: "wrangler hyperdrive list", definition: hyperdriveListCommand },
-		{ command: "wrangler hyperdrive update", definition: hyperdriveUpdateCommand },
+		{
+			command: "wrangler hyperdrive update",
+			definition: hyperdriveUpdateCommand,
+		},
 	]);
 	registry.registerNamespace("hyperdrive");
 
@@ -938,14 +1063,7 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("cert");
 
-	// pages
-	wrangler.command("pages", "⚡️ Configure Cloudflare Pages", (pagesYargs) => {
-		// Pages does not support the `--config`,
-		// and `--env` flags, therefore hiding them from the global flags list.
-		pagesYargs.hide("config").hide("env");
-
-		return pages(pagesYargs, subHelp);
-	});
+	// pages commands are fully migrated to CommandRegistry
 
 	// mtls-certificate
 	wrangler.command(
@@ -990,7 +1108,10 @@ export function createCLIParser(argv: string[]) {
 		{ command: "wrangler ai models", definition: aiModelsCommand },
 		{ command: "wrangler ai finetune", definition: aiFineTuneNamespace },
 		{ command: "wrangler ai finetune list", definition: aiFineTuneListCommand },
-		{ command: "wrangler ai finetune create", definition: aiFineTuneCreateCommand },
+		{
+			command: "wrangler ai finetune create",
+			definition: aiFineTuneCreateCommand,
+		},
 	]);
 	registry.registerNamespace("ai");
 
