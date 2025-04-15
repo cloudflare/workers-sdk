@@ -1,5 +1,16 @@
 # wrangler
 
+## 4.11.1
+
+### Patch Changes
+
+- [#8950](https://github.com/cloudflare/workers-sdk/pull/8950) [`bab1724`](https://github.com/cloudflare/workers-sdk/commit/bab1724229974c545084c31df3731e7c2271ee49) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: include telemetry-related environment variables in release builds
+
+- [#8903](https://github.com/cloudflare/workers-sdk/pull/8903) [`085a565`](https://github.com/cloudflare/workers-sdk/commit/085a565bb922ad023a38e2aee2042885e6691b2c) Thanks [@emily-shen](https://github.com/emily-shen)! - disable eslint in generated types file
+
+- Updated dependencies [[`511be3d`](https://github.com/cloudflare/workers-sdk/commit/511be3d17559e482fedf559cb61158e329c11d24)]:
+  - miniflare@4.20250410.1
+
 ## 4.11.0
 
 ### Minor Changes
