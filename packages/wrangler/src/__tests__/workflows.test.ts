@@ -142,7 +142,7 @@ describe("wrangler workflows", () => {
 
 				COMMANDS
 				  wrangler workflows instances list <name>            Instance related commands (list, describe, terminate, pause, resume)
-				  wrangler workflows instances describe <name> <id>   Describe a workflow instance - see its logs, retries and errors
+				  wrangler workflows instances describe <name> [id]   Describe a workflow instance - see its logs, retries and errors
 				  wrangler workflows instances terminate <name> <id>  Terminate a workflow instance
 				  wrangler workflows instances pause <name> <id>      Pause a workflow instance
 				  wrangler workflows instances resume <name> <id>     Resume a workflow instance
@@ -314,6 +314,18 @@ describe("wrangler workflows", () => {
 						});
 					},
 					{ once: true }
+				),
+				http.get(
+					`*/accounts/:accountId/workflows/some-workflow/instances`,
+					async () => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: [mockResponse],
+						});
+					},
+					{ once: true }
 				)
 			);
 		};
@@ -323,6 +335,20 @@ describe("wrangler workflows", () => {
 			await mockDescribeInstances();
 
 			await runWrangler(`workflows instances describe some-workflow bar`);
+			expect(std.out).toMatchInlineSnapshot(`
+"┌───────────────────────┬───────────────────────┬───────────┬────────────┬────────────────┐
+│ Start                 │ End                   │ Duration  │ State      │ Error          │
+├───────────────────────┼───────────────────────┼───────────┼────────────┼────────────────┤
+│ 1/1/2021, 12:00:00 AM │ 1/1/2021, 12:00:00 AM │ 0 seconds │ ✅ Success │ string: string │
+└───────────────────────┴───────────────────────┴───────────┴────────────┴────────────────┘"
+			`);
+		});
+
+		it("should describe the latest instance if none is provided", async () => {
+			writeWranglerConfig();
+			await mockDescribeInstances();
+
+			await runWrangler(`workflows instances describe some-workflow`);
 			expect(std.out).toMatchInlineSnapshot(`
 "┌───────────────────────┬───────────────────────┬───────────┬────────────┬────────────────┐
 │ Start                 │ End                   │ Duration  │ State      │ Error          │
