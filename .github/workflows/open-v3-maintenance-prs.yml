@@ -2,14 +2,19 @@ name: v3 Maintenance
 
 on:
   pull_request:
-    branches: main
+    branches: [main, v3-maintenance]
     types: [synchronize, opened, reopened, labeled, unlabeled]
     paths:
       - ".changeset/**.md"
 
 jobs:
   open-pr:
-    if: ${{ github.repository_owner == 'cloudflare' && !contains(github.event.pull_request.labels.*.name, 'skip-v3-pr') }}
+    if: ${{
+      github.repository_owner == 'cloudflare' &&
+      github.base_ref == 'main' &&
+      github.event.pull_request.draft == false &&
+      contains(github.event.pull_request.labels.*.name, 'skip-v3-pr') == false
+      }}
     name: Open backport PR for patches
     runs-on: macos-latest
     concurrency:
@@ -55,3 +60,30 @@ jobs:
           header: v3-backport
           message: |
             These changes have been automatically backported to Wrangler v3 :tada: You can view the automatically updated PR at https://github.com/cloudflare/workers-sdk/compare/v3-maintenance...v3-maintenance-${{ github.event.number }}. Please check that PR for correctness, and make sure it's merged after this one. Thank you for helping us keep Wrangler v3 supported!
+
+  check-status:
+    if: ${{
+      github.repository_owner == 'cloudflare' &&
+      github.base_ref == 'v3-maintenance' &&
+      github.event.pull_request.draft == false
+      }}
+    name: Check status of the original PR
+    runs-on: macos-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Check if the original PR is merged
+        run: node -r esbuild-register tools/deployments/check-v3-patch.ts
+        env:
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          BRANCH_NAME: ${{ github.head_ref }}
