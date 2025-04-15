@@ -70,7 +70,23 @@ import { pages } from "./pages";
 import { APIError, formatMessage, ParseError } from "./parse";
 import { pipelines } from "./pipelines";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
-import { queues, queuesNamespace } from "./queues/cli/commands";
+import { queuesNamespace } from "./queues/cli/commands";
+import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
+import { queuesConsumerHttpNamespace } from "./queues/cli/commands/consumer/http-pull";
+import { queuesConsumerHttpAddCommand } from "./queues/cli/commands/consumer/http-pull/add";
+import { queuesConsumerHttpRemoveCommand } from "./queues/cli/commands/consumer/http-pull/remove";
+import { queuesConsumerWorkerNamespace } from "./queues/cli/commands/consumer/worker";
+import { queuesConsumerAddCommand } from "./queues/cli/commands/consumer/worker/add";
+import { queuesConsumerRemoveCommand } from "./queues/cli/commands/consumer/worker/remove";
+import { queuesCreateCommand } from "./queues/cli/commands/create";
+import { queuesDeleteCommand } from "./queues/cli/commands/delete";
+import { queuesInfoCommand } from "./queues/cli/commands/info";
+import {
+	queuesPauseCommand,
+	queuesResumeCommand,
+} from "./queues/cli/commands/pause-resume";
+import { queuesPurgeCommand } from "./queues/cli/commands/purge";
+import { queuesUpdateCommand } from "./queues/cli/commands/update";
 import { r2Namespace } from "./r2";
 import {
 	r2BucketCreateCommand,
@@ -171,7 +187,6 @@ import {
 } from "./sentry";
 import { tailCommand } from "./tail";
 import { triggersDeployCommand, triggersNamespace } from "./triggers";
-import triggersDeploy from "./triggers/deploy";
 import { typesCommand } from "./type-generation";
 import { getAuthFromEnv } from "./user";
 import { loginCommand, logoutCommand, whoamiCommand } from "./user/commands";
@@ -553,11 +568,6 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("kv");
 
-	// queues
-	wrangler.command("queues", "🇶  Manage Workers Queues", (queuesYargs) => {
-		return queues(queuesYargs.command(subHelp));
-	});
-
 	registry.define([
 		{ command: "wrangler queues", definition: queuesNamespace },
 		{ command: "wrangler queues create", definition: queuesCreateCommand },
@@ -606,11 +616,11 @@ export function createCLIParser(argv: string[]) {
 		},
 		{
 			command: "wrangler queues consumer worker add",
-			definition: queuesConsumerWorkerAddCommand,
+			definition: queuesConsumerAddCommand,
 		},
 		{
 			command: "wrangler queues consumer worker remove",
-			definition: queuesConsumerWorkerRemoveCommand,
+			definition: queuesConsumerRemoveCommand,
 		},
 	]);
 

@@ -1,76 +1,66 @@
-import { readConfig } from "../../../../../config";
+import { createCommand } from "../../../../../core/create-command";
 import { CommandLineArgsError } from "../../../../../errors";
 import { logger } from "../../../../../logger";
 import { postConsumer } from "../../../../client";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../../../../yargs-types";
 import type { PostTypedConsumerBody } from "../../../../client";
 
-export function options(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("queue-name", {
+export const queuesConsumerHttpAddCommand = createCommand({
+	metadata: {
+		description: "Add a Queue HTTP Pull Consumer",
+		owner: "Product: Queues",
+		status: "stable",
+	},
+	args: {
+		"queue-name": {
 			type: "string",
 			demandOption: true,
 			description: "Name of the queue for the consumer",
-		})
-		.options({
-			"batch-size": {
-				type: "number",
-				describe: "Maximum number of messages per batch",
-			},
-			"message-retries": {
-				type: "number",
-				describe: "Maximum number of retries for each message",
-			},
-			"dead-letter-queue": {
-				type: "string",
-				describe: "Queue to send messages that failed to be consumed",
-			},
-			"visibility-timeout-secs": {
-				type: "number",
-				describe:
-					"The number of seconds a message will wait for an acknowledgement before being returned to the queue.",
-			},
-			"retry-delay-secs": {
-				type: "number",
-				describe: "The number of seconds to wait before retrying a message",
-			},
-		});
-}
-
-function createBody(
-	args: StrictYargsOptionsToInterface<typeof options>
-): PostTypedConsumerBody {
-	return {
-		type: "http_pull",
-		settings: {
-			batch_size: args.batchSize,
-			max_retries: args.messageRetries,
-			visibility_timeout_ms: args.visibilityTimeoutSecs
-				? args.visibilityTimeoutSecs * 1000
-				: undefined,
-			retry_delay: args.retryDelaySecs,
 		},
-		dead_letter_queue: args.deadLetterQueue,
-	};
-}
+		"batch-size": {
+			type: "number",
+			description: "Maximum number of messages per batch",
+		},
+		"message-retries": {
+			type: "number",
+			description: "Maximum number of retries for each message",
+		},
+		"dead-letter-queue": {
+			type: "string",
+			description: "Queue to send messages that failed to be consumed",
+		},
+		"visibility-timeout-secs": {
+			type: "number",
+			description:
+				"The number of seconds a message will wait for an acknowledgement before being returned to the queue.",
+		},
+		"retry-delay-secs": {
+			type: "number",
+			description: "The number of seconds to wait before retrying a message",
+		},
+	},
+	positionalArgs: ["queue-name"],
+	async handler(args, { config }) {
+		if (Array.isArray(args.retryDelaySecs)) {
+			throw new CommandLineArgsError(
+				`Cannot specify --retry-delay-secs multiple times`
+			);
+		}
 
-export async function handler(
-	args: StrictYargsOptionsToInterface<typeof options>
-) {
-	const config = readConfig(args);
+		const body = {
+			type: "http_pull",
+			settings: {
+				batch_size: args.batchSize,
+				max_retries: args.messageRetries,
+				visibility_timeout_ms: args.visibilityTimeoutSecs
+					? args.visibilityTimeoutSecs * 1000
+					: undefined,
+				retry_delay: args.retryDelaySecs,
+			},
+			dead_letter_queue: args.deadLetterQueue,
+		} as PostTypedConsumerBody;
 
-	if (Array.isArray(args.retryDelaySecs)) {
-		throw new CommandLineArgsError(
-			`Cannot specify --retry-delay-secs multiple times`
-		);
-	}
-
-	const body = createBody(args);
-
-	logger.log(`Adding consumer to queue ${args.queueName}.`);
-	await postConsumer(config, args.queueName, body);
-	logger.log(`Added consumer to queue ${args.queueName}.`);
-}
+		logger.log(`Adding consumer to queue ${args.queueName}.`);
+		await postConsumer(config, args.queueName, body);
+		logger.log(`Added consumer to queue ${args.queueName}.`);
+	},
+});
