@@ -4,7 +4,13 @@ import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
-import { ai } from "./ai";
+import { 
+	aiNamespace, 
+	aiModelsCommand,
+	aiFineTuneNamespace,
+	aiFineTuneListCommand, 
+	aiFineTuneCreateCommand 
+} from "./ai";
 import {
 	certDeleteCommand,
 	certListCommand,
@@ -959,9 +965,14 @@ export function createCLIParser(argv: string[]) {
 	);
 
 	// ai
-	wrangler.command("ai", "🤖 Manage AI models", (aiYargs) => {
-		return ai(aiYargs.command(subHelp));
-	});
+	registry.define([
+		{ command: "wrangler ai", definition: aiNamespace },
+		{ command: "wrangler ai models", definition: aiModelsCommand },
+		{ command: "wrangler ai finetune", definition: aiFineTuneNamespace },
+		{ command: "wrangler ai finetune list", definition: aiFineTuneListCommand },
+		{ command: "wrangler ai finetune create", definition: aiFineTuneCreateCommand },
+	]);
+	registry.registerNamespace("ai");
 
 	// secrets store
 	registry.define([

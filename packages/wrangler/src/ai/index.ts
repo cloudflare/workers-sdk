@@ -1,30 +1,24 @@
-import * as CreateFinetune from "./createFinetune";
-import * as ListCatalog from "./listCatalog";
-import * as ListFinetune from "./listFinetune";
-import type { CommonYargsArgv } from "../yargs-types";
+import { createNamespace } from "../core/create-command";
+import { aiModelsCommand } from "./listCatalog";
+import { aiFineTuneListCommand } from "./listFinetune";
+import { aiFineTuneCreateCommand } from "./createFinetune";
 
-export function ai(yargs: CommonYargsArgv) {
-	return yargs
-		.command(
-			"models",
-			"List catalog models",
-			ListCatalog.options,
-			ListCatalog.handler
-		)
-		.command("finetune", "Interact with finetune files", (finetuneArgs) =>
-			finetuneArgs
-				.demandCommand()
-				.command(
-					"list",
-					"List your finetune files",
-					ListFinetune.options,
-					ListFinetune.handler
-				)
-				.command(
-					"create <model_name> <finetune_name> <folder_path>",
-					"Create finetune and upload assets",
-					CreateFinetune.options,
-					CreateFinetune.handler
-				)
-		);
-}
+export const aiNamespace = createNamespace({
+  metadata: {
+    description: "🤖 Interact with AI models",
+    status: "stable",
+    owner: "Product: AI",
+  },
+});
+
+export const aiFineTuneNamespace = createNamespace({
+  metadata: {
+    description: "Interact with finetune files",
+    status: "stable",
+    owner: "Product: AI",
+  },
+});
+
+// Export commands
+export { aiModelsCommand };
+export { aiFineTuneListCommand, aiFineTuneCreateCommand };
