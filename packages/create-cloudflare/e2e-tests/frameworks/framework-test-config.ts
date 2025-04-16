@@ -151,7 +151,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/api/v1/test",
 				expectedText: "C3_TEST",
 			},
-			flags: ["--skipTailwind"],
+			flags: ["--skipTailwind", "--analogSFC=false"],
 		},
 		"angular:pages": {
 			argv: ["--platform", "pages"],
