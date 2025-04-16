@@ -5,7 +5,7 @@ import { deleteConfig } from "./client";
 export const hyperdriveDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete a Hyperdrive config",
-		status: "open-beta",
+		status: "stable",
 		owner: "Product: Hyperdrive",
 	},
 	args: {

@@ -14,8 +14,8 @@ import type { hyperdriveUpdateCommand } from "./update";
 
 export const hyperdriveNamespace = createNamespace({
 	metadata: {
-		description: "🚰 Manage Hyperdrive configs",
-		status: "open-beta",
+		description: "🚀 Manage Hyperdrive databases",
+		status: "stable",
 		owner: "Product: Hyperdrive",
 	},
 });

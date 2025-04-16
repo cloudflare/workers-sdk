@@ -1,14 +1,13 @@
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { listIndexes } from "./client";
-import { deprecatedV1DefaultFlag, vectorizeGABanner } from "./common";
+import { deprecatedV1DefaultFlag } from "./common";
 
 export const vectorizeListCommand = createCommand({
 	metadata: {
 		description: "List your Vectorize indexes",
 		status: "stable",
 		owner: "Product: Vectorize",
-		epilogue: vectorizeGABanner,
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

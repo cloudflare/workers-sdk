@@ -17,6 +17,7 @@ export const pagesProjectListCommand = createCommand({
 		description: "List your Cloudflare Pages projects",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
 	},
 	behaviour: {
 		provideConfig: false,
@@ -82,6 +83,7 @@ export const pagesProjectCreateCommand = createCommand({
 		description: "Create a new Cloudflare Pages project",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
 	},
 	behaviour: {
 		provideConfig: false,
@@ -204,6 +206,7 @@ export const pagesProjectDeleteCommand = createCommand({
 		description: "Delete a Cloudflare Pages project",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
 	},
 	behaviour: {
 		provideConfig: false,

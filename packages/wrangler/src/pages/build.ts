@@ -39,6 +39,7 @@ export const pagesFunctionsBuildCommand = createCommand({
 		description: "Compile a folder of Pages Functions into a single Worker",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
 	},
 	behaviour: {
 		provideConfig: false,

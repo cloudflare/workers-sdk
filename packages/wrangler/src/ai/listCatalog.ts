@@ -1,6 +1,6 @@
+import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { createCommand } from "../core/create-command";
 import { listCatalogEntries, truncateDescription } from "./utils";
 
 export const aiModelsCommand = createCommand({

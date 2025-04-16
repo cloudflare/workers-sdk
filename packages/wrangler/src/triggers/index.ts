@@ -9,14 +9,14 @@ import triggersDeploy from "./deploy";
 export const triggersNamespace = createNamespace({
 	metadata: {
 		description: "🎯 Updates the triggers of your current deployment",
-		status: "open-beta",
+		status: "experimental",
 		owner: "Workers: Authoring and Testing",
 	},
 });
 export const triggersDeployCommand = createCommand({
 	metadata: {
 		description: "Updates the triggers of your current deployment",
-		status: "open-beta",
+		status: "experimental",
 		owner: "Workers: Authoring and Testing",
 	},
 	args: {

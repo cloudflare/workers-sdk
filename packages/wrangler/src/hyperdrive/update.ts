@@ -11,7 +11,7 @@ import {
 export const hyperdriveUpdateCommand = createCommand({
 	metadata: {
 		description: "Update a Hyperdrive config",
-		status: "open-beta",
+		status: "stable",
 		owner: "Product: Hyperdrive",
 	},
 	args: {

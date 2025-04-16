@@ -13,7 +13,7 @@ import {
 export const hyperdriveCreateCommand = createCommand({
 	metadata: {
 		description: "Create a Hyperdrive config",
-		status: "open-beta",
+		status: "stable",
 		owner: "Product: Hyperdrive",
 	},
 	args: {

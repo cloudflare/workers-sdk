@@ -1,15 +1,14 @@
+import { createCommand } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
-import { createCommand } from "../core/create-command";
 import { deleteIndex } from "./client";
-import { deprecatedV1DefaultFlag, vectorizeGABanner } from "./common";
+import { deprecatedV1DefaultFlag } from "./common";
 
 export const vectorizeDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete a Vectorize index",
 		status: "stable",
 		owner: "Product: Vectorize",
-		epilogue: vectorizeGABanner,
 	},
 	behaviour: {
 		printBanner: true,

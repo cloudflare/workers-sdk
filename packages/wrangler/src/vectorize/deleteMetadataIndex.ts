@@ -1,41 +1,42 @@
 import { readConfig } from "../config";
+import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { deleteMetadataIndex } from "./client";
-import { vectorizeGABanner } from "./common";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { VectorizeMetadataIndexPropertyName } from "./types";
 
-export function options(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("name", {
+export const vectorizeDeleteMetadataIndexCommand = createCommand({
+	metadata: {
+		description: "Delete metadata indexes",
+		owner: "Product: Vectorize",
+		status: "stable",
+	},
+	args: {
+		name: {
 			type: "string",
 			demandOption: true,
 			description: "The name of the Vectorize index.",
-		})
-		.positional("property-name", {
+		},
+		propertyName: {
 			type: "string",
 			demandOption: true,
 			description: "The name of the metadata property to index.",
-		})
-		.epilogue(vectorizeGABanner);
-}
+		},
+	},
+	positionalArgs: ["name"],
+	async handler(args, { config }) {
+		const reqOptions: VectorizeMetadataIndexPropertyName = {
+			propertyName: args.propertyName,
+		};
 
-export async function handler(
-	args: StrictYargsOptionsToInterface<typeof options>
-) {
-	const config = readConfig(args);
+		logger.log(`📋 Deleting metadata index...`);
+		const mutation = await deleteMetadataIndex(config, args.name, reqOptions);
 
-	const reqOptions: VectorizeMetadataIndexPropertyName = {
-		propertyName: args.propertyName,
-	};
-
-	logger.log(`📋 Deleting metadata index...`);
-	const mutation = await deleteMetadataIndex(config, args.name, reqOptions);
-
-	logger.log(
-		`✅ Successfully enqueued metadata index deletion request. Mutation changeset identifier: ${mutation.mutationId}.`
-	);
-}
+		logger.log(
+			`✅ Successfully enqueued metadata index deletion request. Mutation changeset identifier: ${mutation.mutationId}.`
+		);
+	},
+});

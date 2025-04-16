@@ -1,7 +1,6 @@
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { queryIndexByVector, queryIndexByVectorId } from "./client";
-import { vectorizeGABanner } from "./common";
 import type {
 	VectorizeMatches,
 	VectorizeMetadataFilterValue,
@@ -16,7 +15,6 @@ export const vectorizeQueryCommand = createCommand({
 		description: "Query a Vectorize index",
 		status: "stable",
 		owner: "Product: Vectorize",
-		epilogue: vectorizeGABanner,
 		examples: [
 			{
 				command: `wrangler vectorize query --vector 1 2 3 0.5 1.25 6`,
@@ -41,17 +39,13 @@ export const vectorizeQueryCommand = createCommand({
 			description: "The name of the Vectorize index",
 		},
 		vector: {
-			type: "array",
+			type: "number",
+			array: true,
 			description: "Vector to query the Vectorize Index",
 			coerce: (arg: unknown[]) =>
-				arg
-					.map((value) =>
-						typeof value === "string" ? parseFloat(value) : value
-					)
-					.filter(
-						(value): value is number =>
-							typeof value === "number" && !isNaN(value)
-					),
+				arg.filter(
+					(value): value is number => typeof value === "number" && !isNaN(value)
+				),
 		},
 		"vector-id": {
 			type: "string",

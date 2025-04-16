@@ -5,7 +5,7 @@ import { getConfig } from "./client";
 export const hyperdriveGetCommand = createCommand({
 	metadata: {
 		description: "Get a Hyperdrive config",
-		status: "open-beta",
+		status: "stable",
 		owner: "Product: Hyperdrive",
 	},
 	args: {

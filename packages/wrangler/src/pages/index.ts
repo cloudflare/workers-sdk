@@ -8,6 +8,7 @@ export const pagesNamespace = createNamespace({
 		description: "⚡️ Configure Cloudflare Pages",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
 	},
 });
 
@@ -16,6 +17,7 @@ export const pagesFunctionsNamespace = createNamespace({
 		description: "Helpers related to Pages Functions",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
 	},
 });
 
@@ -24,6 +26,7 @@ export const pagesProjectNamespace = createNamespace({
 		description: "Interact with your Pages projects",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
 	},
 });
 
@@ -32,6 +35,7 @@ export const pagesDeploymentNamespace = createNamespace({
 		description: "Interact with the deployments of a project",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
 	},
 });
 
@@ -40,6 +44,7 @@ export const pagesDownloadNamespace = createNamespace({
 		description: "Download settings from your project",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
 	},
 });
 

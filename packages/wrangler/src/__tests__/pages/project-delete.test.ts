@@ -67,7 +67,7 @@ describe("pages project delete", () => {
 		await expect(
 			runWrangler("pages project delete")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Missing required argument: project-name]`
+			`[Error: Not enough non-option arguments: got 0, need at least 1]`
 		);
 	});
 

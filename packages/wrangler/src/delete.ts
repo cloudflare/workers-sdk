@@ -10,8 +10,6 @@ import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName } from "./utils/getScriptName";
 
-
-
 // Types returned by the /script/{name}/references API
 type ServiceReference = {
 	name: string;
@@ -91,6 +89,7 @@ export const deleteCommand = createCommand({
 			hidden: true,
 		},
 	},
+	positionalArgs: ["script"],
 	async handler(args, { config }) {
 		if (config.pages_build_output_dir) {
 			throw new UserError(

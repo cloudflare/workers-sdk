@@ -35,8 +35,14 @@ export function createRegisterYargsCommand(
 				if (def.type === "command") {
 					const args = def.args ?? {};
 
-					yargs
-						.options(args)
+					const nonPositional = Object.fromEntries(
+						Object.entries(args).filter(
+							([key]) => !(def.positionalArgs ?? []).includes(key)
+						)
+					);
+
+					subYargs
+						.options(nonPositional)
 						.epilogue(def.metadata?.epilogue ?? "")
 						.example(
 							def.metadata.examples?.map((ex) => [
@@ -45,18 +51,26 @@ export function createRegisterYargsCommand(
 							]) ?? []
 						);
 
+					for (const hide of def.metadata.hideGlobalFlags ?? []) {
+						subYargs.hide(hide);
+					}
+
 					// Ensure non-array arguments receive a single value
 					for (const [key, opt] of Object.entries(args)) {
 						if (!opt.array) {
-							yargs.check(demandSingleValue(key));
+							subYargs.check(demandSingleValue(key));
 						}
 					}
 
 					// Register positional arguments
 					for (const key of def.positionalArgs ?? []) {
-						yargs.positional(key, args[key] as PositionalOptions);
+						subYargs.positional(key, args[key] as PositionalOptions);
 					}
 				} else if (def.type === "namespace") {
+					for (const hide of def.metadata.hideGlobalFlags ?? []) {
+						subYargs.hide(hide);
+					}
+
 					// Hacky way to print --help for incomplete commands
 					// e.g. `wrangler kv namespace` runs `wrangler kv namespace --help`
 					subYargs.command(subHelp);

@@ -88,18 +88,6 @@ function createBody(args: typeof queuesCreateCommand.args): PostQueueBody {
 		queue_name: args.name,
 	};
 
-	if (Array.isArray(args.deliveryDelaySecs)) {
-		throw new CommandLineArgsError(
-			"Cannot specify --delivery-delay-secs multiple times"
-		);
-	}
-
-	if (Array.isArray(args.messageRetentionPeriodSecs)) {
-		throw new CommandLineArgsError(
-			"Cannot specify --message-retention-period-secs multiple times"
-		);
-	}
-
 	body.settings = {};
 
 	if (args.deliveryDelaySecs != undefined) {

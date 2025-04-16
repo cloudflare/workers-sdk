@@ -291,6 +291,7 @@ export const pagesDownloadConfigCommand = createCommand({
 			"Download your Pages project config as a Wrangler configuration file",
 		status: "experimental",
 		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
 	},
 	behaviour: {
 		provideConfig: false,

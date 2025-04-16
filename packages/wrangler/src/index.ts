@@ -135,6 +135,7 @@ import { queuesConsumerRemoveCommand } from "./queues/cli/commands/consumer/work
 import { queuesCreateCommand } from "./queues/cli/commands/create";
 import { queuesDeleteCommand } from "./queues/cli/commands/delete";
 import { queuesInfoCommand } from "./queues/cli/commands/info";
+import { queuesListCommand } from "./queues/cli/commands/list";
 import {
 	queuesPauseCommand,
 	queuesResumeCommand,
@@ -249,14 +250,19 @@ import { betaCmdColor, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { logPossibleBugMessage } from "./utils/logPossibleBugMessage";
 import { vectorizeCreateCommand } from "./vectorize/create";
+import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
 import { vectorizeDeleteCommand } from "./vectorize/delete";
+import { vectorizeDeleteVectorsCommand } from "./vectorize/deleteByIds";
+import { vectorizeDeleteMetadataIndexCommand } from "./vectorize/deleteMetadataIndex";
 import { vectorizeGetCommand } from "./vectorize/get";
-import {
-	vectorizeMetadataNamespace,
-	vectorizeNamespace,
-} from "./vectorize/index";
+import { vectorizeGetVectorsCommand } from "./vectorize/getByIds";
+import { vectorizeNamespace } from "./vectorize/index";
+import { vectorizeInfoCommand } from "./vectorize/info";
+import { vectorizeInsertCommand } from "./vectorize/insert";
 import { vectorizeListCommand } from "./vectorize/list";
+import { vectorizeListMetadataIndexCommand } from "./vectorize/listMetadataIndex";
 import { vectorizeQueryCommand } from "./vectorize/query";
+import { vectorizeUpsertCommand } from "./vectorize/upsert";
 import { versionsNamespace } from "./versions";
 import { versionsDeployCommand } from "./versions/deploy";
 import { deploymentsNamespace } from "./versions/deployments";
@@ -632,10 +638,15 @@ export function createCLIParser(argv: string[]) {
 
 	registry.define([
 		{ command: "wrangler queues", definition: queuesNamespace },
+		{ command: "wrangler queues list", definition: queuesListCommand },
 		{ command: "wrangler queues create", definition: queuesCreateCommand },
 		{ command: "wrangler queues update", definition: queuesUpdateCommand },
 		{ command: "wrangler queues delete", definition: queuesDeleteCommand },
 		{ command: "wrangler queues info", definition: queuesInfoCommand },
+		{
+			command: "wrangler queues consumer",
+			definition: queuesConsumerNamespace,
+		},
 		{
 			command: "wrangler queues pause-delivery",
 			definition: queuesPauseCommand,
@@ -648,10 +659,7 @@ export function createCLIParser(argv: string[]) {
 			command: "wrangler queues purge",
 			definition: queuesPurgeCommand,
 		},
-		{
-			command: "wrangler queues consumer",
-			definition: queuesConsumerNamespace,
-		},
+
 		{
 			command: "wrangler queues consumer add",
 			definition: queuesConsumerAddCommand,
@@ -889,11 +897,11 @@ export function createCLIParser(argv: string[]) {
 	// D1 commands are registered using the CommandRegistry
 	registry.define([
 		{ command: "wrangler d1", definition: d1Namespace },
-		{ command: "wrangler d1 create", definition: d1CreateCommand },
-		{ command: "wrangler d1 delete", definition: d1DeleteCommand },
 		{ command: "wrangler d1 list", definition: d1ListCommand },
 		{ command: "wrangler d1 info", definition: d1InfoCommand },
 		{ command: "wrangler d1 insights", definition: d1InsightsCommand },
+		{ command: "wrangler d1 create", definition: d1CreateCommand },
+		{ command: "wrangler d1 delete", definition: d1DeleteCommand },
 		{ command: "wrangler d1 execute", definition: d1ExecuteCommand },
 		{ command: "wrangler d1 export", definition: d1ExportCommand },
 		{ command: "wrangler d1 time-travel", definition: d1TimeTravelNamespace },
@@ -936,11 +944,73 @@ export function createCLIParser(argv: string[]) {
 		{ command: "wrangler vectorize list", definition: vectorizeListCommand },
 		{ command: "wrangler vectorize query", definition: vectorizeQueryCommand },
 		{
-			command: "wrangler vectorize metadata",
-			definition: vectorizeMetadataNamespace,
+			command: "wrangler vectorize insert",
+			definition: vectorizeInsertCommand,
+		},
+		{
+			command: "wrangler vectorize upsert",
+			definition: vectorizeUpsertCommand,
+		},
+		{
+			command: "wrangler vectorize get-vectors",
+			definition: vectorizeGetVectorsCommand,
+		},
+		{
+			command: "wrangler vectorize delete-vectors",
+			definition: vectorizeDeleteVectorsCommand,
+		},
+		{ command: "wrangler vectorize info", definition: vectorizeInfoCommand },
+		{
+			command: "wrangler vectorize create-metadata-index",
+			definition: vectorizeCreateMetadataIndexCommand,
+		},
+		{
+			command: "wrangler vectorize list-metadata-index",
+			definition: vectorizeListMetadataIndexCommand,
+		},
+		{
+			command: "wrangler vectorize delete-metadata-index",
+			definition: vectorizeDeleteMetadataIndexCommand,
 		},
 	]);
 	registry.registerNamespace("vectorize");
+
+	// hyperdrive
+	registry.define([
+		{ command: "wrangler hyperdrive", definition: hyperdriveNamespace },
+		{
+			command: "wrangler hyperdrive create",
+			definition: hyperdriveCreateCommand,
+		},
+		{
+			command: "wrangler hyperdrive delete",
+			definition: hyperdriveDeleteCommand,
+		},
+		{ command: "wrangler hyperdrive get", definition: hyperdriveGetCommand },
+		{ command: "wrangler hyperdrive list", definition: hyperdriveListCommand },
+		{
+			command: "wrangler hyperdrive update",
+			definition: hyperdriveUpdateCommand,
+		},
+	]);
+	registry.registerNamespace("hyperdrive");
+
+	// cert - includes mtls-certificates and CA cert management
+	registry.define([
+		{ command: "wrangler cert", definition: certNamespace },
+		{ command: "wrangler cert upload", definition: certUploadNamespace },
+		{
+			command: "wrangler cert upload mtls-certificate",
+			definition: certUploadMtlsCommand,
+		},
+		{
+			command: "wrangler cert upload certificate-authority",
+			definition: certUploadCaCertCommand,
+		},
+		{ command: "wrangler cert list", definition: certListCommand },
+		{ command: "wrangler cert delete", definition: certDeleteCommand },
+	]);
+	registry.registerNamespace("cert");
 
 	// pages
 	registry.define([
@@ -1001,12 +1071,13 @@ export function createCLIParser(argv: string[]) {
 		},
 		{ command: "wrangler pages deploy", definition: pagesDeployCommand },
 		{ command: "wrangler pages publish", definition: pagesPublishCommand },
+		{ command: "wrangler pages secret", definition: pagesSecretNamespace },
+
 		{ command: "wrangler pages download", definition: pagesDownloadNamespace },
 		{
 			command: "wrangler pages download config",
 			definition: pagesDownloadConfigCommand,
 		},
-		{ command: "wrangler pages secret", definition: pagesSecretNamespace },
 		{ command: "wrangler pages secret put", definition: pagesSecretPutCommand },
 		{
 			command: "wrangler pages secret bulk",
@@ -1022,45 +1093,6 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("pages");
-
-	// hyperdrive
-	registry.define([
-		{ command: "wrangler hyperdrive", definition: hyperdriveNamespace },
-		{
-			command: "wrangler hyperdrive create",
-			definition: hyperdriveCreateCommand,
-		},
-		{
-			command: "wrangler hyperdrive delete",
-			definition: hyperdriveDeleteCommand,
-		},
-		{ command: "wrangler hyperdrive get", definition: hyperdriveGetCommand },
-		{ command: "wrangler hyperdrive list", definition: hyperdriveListCommand },
-		{
-			command: "wrangler hyperdrive update",
-			definition: hyperdriveUpdateCommand,
-		},
-	]);
-	registry.registerNamespace("hyperdrive");
-
-	// cert - includes mtls-certificates and CA cert management
-	registry.define([
-		{ command: "wrangler cert", definition: certNamespace },
-		{ command: "wrangler cert upload", definition: certUploadNamespace },
-		{
-			command: "wrangler cert upload mtls-certificate",
-			definition: certUploadMtlsCommand,
-		},
-		{
-			command: "wrangler cert upload certificate-authority",
-			definition: certUploadCaCertCommand,
-		},
-		{ command: "wrangler cert list", definition: certListCommand },
-		{ command: "wrangler cert delete", definition: certDeleteCommand },
-	]);
-	registry.registerNamespace("cert");
-
-	// pages commands are fully migrated to CommandRegistry
 
 	// mtls-certificate
 	wrangler.command(
