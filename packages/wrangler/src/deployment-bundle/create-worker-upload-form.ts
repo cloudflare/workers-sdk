@@ -79,6 +79,7 @@ export type WorkerMetadataBinding =
 			class_name: string;
 			script_name?: string;
 			environment?: string;
+			namespace_id?: string;
 	  }
 	| {
 			type: "workflow";

@@ -10,6 +10,7 @@ import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { File } from "undici";
 import { vi } from "vitest";
+import { type Application } from "../cloudchamber/client";
 import {
 	printBundleSize,
 	printOffendingDependencies,
@@ -17,6 +18,7 @@ import {
 import { clearOutputFilePath } from "../output";
 import { sniffUserAgent } from "../package-manager";
 import { writeAuthConfigFile } from "../user";
+import { mockAccount as mockContainersAccount } from "./cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockAuthDomain } from "./helpers/mock-auth-domain";
 import { mockConsoleMethods } from "./helpers/mock-console";
