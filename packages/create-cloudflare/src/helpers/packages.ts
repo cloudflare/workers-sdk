@@ -10,6 +10,7 @@ type InstallConfig = {
 	startText?: string;
 	doneText?: string;
 	dev?: boolean;
+	cwd?: string;
 };
 
 /**
