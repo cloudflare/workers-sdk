@@ -10,6 +10,8 @@ type InstallConfig = {
 	startText?: string;
 	doneText?: string;
 	dev?: boolean;
+	cwd?: string;
+	legacyPeerDeps?: boolean;
 };
 
 /**
@@ -25,6 +27,7 @@ export const installPackages = async (
 	config: InstallConfig = {},
 ) => {
 	const { npm } = detectPackageManager();
+	const { legacyPeerDeps = true, ...opts } = config;
 
 	let saveFlag;
 	let cmd;
@@ -54,10 +57,10 @@ export const installPackages = async (
 			// Add --legacy-peer-deps so that installing Wrangler v4 doesn't case issues with
 			// frameworks that haven't updated their peer dependency for Wrangler v4
 			// TODO: Remove this once Wrangler v4 has been released and framework templates are updated
-			...(npm === "npm" ? ["--legacy-peer-deps"] : []),
+			...(legacyPeerDeps && npm === "npm" ? ["--legacy-peer-deps"] : []),
 		],
 		{
-			...config,
+			...opts,
 			silent: true,
 		},
 	);
