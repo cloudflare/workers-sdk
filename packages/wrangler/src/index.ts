@@ -47,7 +47,14 @@ import {
 	isBuildFailureFromCause,
 } from "./deployment-bundle/build-failures";
 import { dev } from "./dev";
-import { workerNamespaceCommands } from "./dispatch-namespace";
+import {
+	dispatchNamespaceCreateCommand,
+	dispatchNamespaceDeleteCommand,
+	dispatchNamespaceGetCommand,
+	dispatchNamespaceListCommand,
+	dispatchNamespaceNamespace,
+	dispatchNamespaceRenameCommand,
+} from "./dispatch-namespace";
 import { docs } from "./docs";
 import {
 	CommandLineArgsError,
@@ -1143,14 +1150,33 @@ export function createCLIParser(argv: string[]) {
 		}
 	);
 
-	// dispatch-namespace
-	wrangler.command(
-		"dispatch-namespace",
-		"🏗️  Manage dispatch namespaces",
-		(workerNamespaceYargs) => {
-			return workerNamespaceCommands(workerNamespaceYargs, subHelp);
-		}
-	);
+	registry.define([
+		{
+			command: "wrangler dispatch-namespace",
+			definition: dispatchNamespaceNamespace,
+		},
+		{
+			command: "wrangler dispatch-namespace list",
+			definition: dispatchNamespaceListCommand,
+		},
+		{
+			command: "wrangler dispatch-namespace get",
+			definition: dispatchNamespaceGetCommand,
+		},
+		{
+			command: "wrangler dispatch-namespace create",
+			definition: dispatchNamespaceCreateCommand,
+		},
+		{
+			command: "wrangler dispatch-namespace delete",
+			definition: dispatchNamespaceDeleteCommand,
+		},
+		{
+			command: "wrangler dispatch-namespace rename",
+			definition: dispatchNamespaceRenameCommand,
+		},
+	]);
+	registry.registerNamespace("dispatch-namespace");
 
 	// ai
 	registry.define([
