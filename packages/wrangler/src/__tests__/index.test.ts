@@ -334,5 +334,17 @@ describe("wrangler", () => {
 			Note that there is a newer version of Wrangler available (123.123.123). Consider checking whether upgrading resolves this error."
 		`);
 		});
+
+		it("should display a warning if Bun is in use", async () => {
+			const original = process.versions.bun;
+			process.versions.bun = "v1";
+			await logPossibleBugMessage();
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler does not support the Bun runtime. Please try this command again using Node.js via \`npm\` or \`pnpm\`. Alternatively, make sure you're not passing the \`--bun\` flag when running \`bun run wrangler ...\`[0m
+
+				"
+			`);
+			process.versions.bun = original;
+		});
 	});
 });
