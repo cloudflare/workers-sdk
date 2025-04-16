@@ -23,11 +23,11 @@ if (require.main === module) {
 	console.log(`🔍 Checking if PR #${prNumber} is merged...`);
 
 	try {
-		const result = execSync(`gh pr view ${prNumber} --json merged --jq .merged`)
+		const result = execSync(`gh pr view ${prNumber} --json state --jq .state`)
 			.toString()
 			.trim();
 
-		if (result === "true") {
+		if (result === "MERGED") {
 			console.log(`✅ PR #${prNumber} is merged.`);
 		} else {
 			console.error(`❌ PR #${prNumber} is not merged.`);
