@@ -62,11 +62,7 @@ jobs:
             These changes have been automatically backported to Wrangler v3 :tada: You can view the automatically updated PR at https://github.com/cloudflare/workers-sdk/compare/v3-maintenance...v3-maintenance-${{ github.event.number }}. Please check that PR for correctness, and make sure it's merged after this one. Thank you for helping us keep Wrangler v3 supported!
 
   check-status:
-    if: ${{
-      github.repository_owner == 'cloudflare' &&
-      github.base_ref == 'v3-maintenance' &&
-      github.event.pull_request.draft == false
-      }}
+    if: ${{ github.repository_owner == 'cloudflare' && github.base_ref == 'v3-maintenance' }}
     name: Check v3 patch status
     runs-on: macos-latest
     concurrency:
