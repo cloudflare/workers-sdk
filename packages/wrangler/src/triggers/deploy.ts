@@ -284,8 +284,6 @@ export default async function triggersDeploy(
 	}
 
 	if (config.workflows?.length) {
-		logger.once.warn("Workflows is currently in open beta.");
-
 		for (const workflow of config.workflows) {
 			// NOTE: if the user provides a script_name thats not this script (aka bounds to another worker)
 			// we don't want to send this worker's config.

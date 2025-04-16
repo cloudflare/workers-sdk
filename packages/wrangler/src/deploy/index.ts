@@ -293,10 +293,6 @@ export const deployCommand = createCommand({
 			);
 		}
 
-		if (config.workflows?.length) {
-			logger.once.warn("Workflows is currently in open beta.");
-		}
-
 		validateAssetsArgsAndConfig(args, config);
 
 		const assetsOptions = getAssetsOptions(args, config);

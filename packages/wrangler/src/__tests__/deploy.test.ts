@@ -13108,7 +13108,7 @@ export default{
 			msw.use(handler);
 		}
 
-		it("should log open-beta warning when deploying a workflow", async () => {
+		it("should not log open-beta warning when deploying a workflow", async () => {
 			writeWranglerConfig({
 				main: "index.js",
 				workflows: [
@@ -13143,11 +13143,7 @@ export default{
 
 			await runWrangler("deploy");
 
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWorkflows is currently in open beta.[0m
-
-				"
-			`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
