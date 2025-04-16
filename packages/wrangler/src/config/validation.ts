@@ -2535,6 +2535,39 @@ const validateContainerAppConfig: ValidatorFn = (
 			);
 		}
 
+		if (
+			"rollout_step_percentage" in containerAppOptional &&
+			containerAppOptional.rollout_step_percentage !== undefined
+		) {
+			if (
+				typeof containerAppOptional.rollout_step_percentage !== "number" ||
+				containerAppOptional.rollout_step_percentage > 100 ||
+				containerAppOptional.rollout_step_percentage < 25
+			) {
+				diagnostics.errors.push(
+					'"containers.rollout_step_percentage" should be a number between 25 and 100'
+				);
+			}
+		}
+
+		if (
+			"image" in containerAppOptional &&
+			containerAppOptional.image !== undefined
+		) {
+			if (containerAppOptional.configuration?.image !== undefined) {
+				diagnostics.errors.push(
+					`"containers.image" and "containers.configuration.image" can't be defined at the same time`
+				);
+				return false;
+			}
+
+			containerAppOptional.configuration ??= {
+				image: containerAppOptional.image,
+			};
+			containerAppOptional.configuration.image = containerAppOptional.image;
+			delete containerAppOptional["image"];
+		}
+
 		if (!("configuration" in containerAppOptional)) {
 			diagnostics.errors.push(
 				`"containers.app.configuration" should be defined`
