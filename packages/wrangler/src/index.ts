@@ -8,6 +8,7 @@ import { aiFineTuneNamespace, aiNamespace } from "./ai";
 import { aiFineTuneCreateCommand } from "./ai/createFinetune";
 import { aiModelsCommand } from "./ai/listCatalog";
 import { aiFineTuneListCommand } from "./ai/listFinetune";
+import { buildCommand } from "./build";
 import {
 	certDeleteCommand,
 	certListCommand,
@@ -45,7 +46,6 @@ import {
 	isBuildFailure,
 	isBuildFailureFromCause,
 } from "./deployment-bundle/build-failures";
-import { buildHandler, buildOptions } from "./deprecated";
 import { dev } from "./dev";
 import { workerNamespaceCommands } from "./dispatch-namespace";
 import { docs } from "./docs";
@@ -1334,7 +1334,13 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("check");
 
-	wrangler.command("build", false, buildOptions, buildHandler);
+	registry.define([
+		{
+			command: "wrangler build",
+			definition: buildCommand,
+		},
+	]);
+	registry.registerNamespace("build");
 
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
