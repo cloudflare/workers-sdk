@@ -1,26 +1,27 @@
-import { readConfig } from "../../config";
+import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
-import { printWranglerBanner } from "../../wrangler-banner";
 import { listPipelines } from "../client";
-import type { CommonYargsOptions } from "../../yargs-types";
-import type { ArgumentsCamelCase } from "yargs";
 
-export async function listPipelinesHandler(
-	args: ArgumentsCamelCase<CommonYargsOptions>
-) {
-	await printWranglerBanner();
-	const config = readConfig(args);
-	const accountId = await requireAuth(config);
+export const pipelinesListCommand = createCommand({
+	metadata: {
+		description: "List all pipelines",
+		owner: "Product: Pipelines",
+		status: "open-beta",
+	},
 
-	// TODO: we should show bindings & transforms if they exist for given ids
-	const list = await listPipelines(accountId);
+	async handler(_, { config }) {
+		const accountId = await requireAuth(config);
 
-	logger.table(
-		list.map((pipeline) => ({
-			name: pipeline.name,
-			id: pipeline.id,
-			endpoint: pipeline.endpoint,
-		}))
-	);
-}
+		// TODO: we should show bindings & transforms if they exist for given ids
+		const list = await listPipelines(accountId);
+
+		logger.table(
+			list.map((pipeline) => ({
+				name: pipeline.name,
+				id: pipeline.id,
+				endpoint: pipeline.endpoint,
+			}))
+		);
+	},
+});

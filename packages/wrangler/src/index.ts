@@ -127,7 +127,12 @@ import {
 import { pagesProjectUploadCommand } from "./pages/upload";
 import { pagesProjectValidateCommand } from "./pages/validate";
 import { APIError, formatMessage, ParseError } from "./parse";
-import { pipelines } from "./pipelines";
+import { pipelinesNamespace } from "./pipelines";
+import { pipelinesCreateCommand } from "./pipelines/cli/create";
+import { pipelinesDeleteCommand } from "./pipelines/cli/delete";
+import { pipelinesGetCommand } from "./pipelines/cli/get";
+import { pipelinesListCommand } from "./pipelines/cli/list";
+import { pipelinesUpdateCommand } from "./pipelines/cli/update";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queuesNamespace } from "./queues/cli/commands";
 import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
@@ -1263,14 +1268,33 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("workflows");
 
-	// [OPEN BETA] pipelines
-	wrangler.command(
-		"pipelines",
-		`🚰 Manage Cloudflare Pipelines ${chalk.hex(betaCmdColor)("[open beta]")}`,
-		(pipelinesYargs) => {
-			return pipelines(pipelinesYargs.command(subHelp));
-		}
-	);
+	registry.define([
+		{
+			command: "wrangler pipelines",
+			definition: pipelinesNamespace,
+		},
+		{
+			command: "wrangler pipelines create",
+			definition: pipelinesCreateCommand,
+		},
+		{
+			command: "wrangler pipelines list",
+			definition: pipelinesListCommand,
+		},
+		{
+			command: "wrangler pipelines get",
+			definition: pipelinesGetCommand,
+		},
+		{
+			command: "wrangler pipelines update",
+			definition: pipelinesUpdateCommand,
+		},
+		{
+			command: "wrangler pipelines delete",
+			definition: pipelinesDeleteCommand,
+		},
+	]);
+	registry.registerNamespace("pipelines");
 
 	/******************** CMD GROUP ***********************/
 
