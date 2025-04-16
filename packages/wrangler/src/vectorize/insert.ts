@@ -1,7 +1,6 @@
 import { createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
 import { File, FormData } from "undici";
-import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { insertIntoIndex, insertIntoIndexV1 } from "./client";
@@ -13,10 +12,6 @@ import {
 	VECTORIZE_UPSERT_BATCH_SIZE,
 	VECTORIZE_V1_MAX_BATCH_SIZE,
 } from "./common";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 
 export const vectorizeInsertCommand = createCommand({
 	metadata: {

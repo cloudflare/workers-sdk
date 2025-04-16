@@ -2,7 +2,6 @@ import { http, HttpResponse } from "msw";
 import { Headers, Request } from "undici";
 import { vi } from "vitest";
 import MockWebSocketServer from "vitest-websocket-mock";
-import { isNonInteractiveOrCI } from "../../is-interactive";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";

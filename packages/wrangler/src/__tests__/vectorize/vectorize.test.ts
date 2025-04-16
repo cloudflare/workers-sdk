@@ -491,7 +491,7 @@ describe("vectorize commands", () => {
 		`);
 	});
 
-	it.only("should handle a query on a vectorize index", async () => {
+	it("should handle a query on a vectorize index", async () => {
 		mockVectorizeV2Request();
 		// Parses the vector as [1, 2, 3, 4, 1.5, 2.6, 7, 8]
 		await runWrangler(

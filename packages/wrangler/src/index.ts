@@ -86,7 +86,12 @@ import {
 	telemetryNamespace,
 	telemetryStatusCommand,
 } from "./metrics/commands";
-import { mTlsCertificateCommands } from "./mtls-certificate/cli";
+import {
+	mTlsCertificateDeleteCommand,
+	mTlsCertificateListCommand,
+	mTlsCertificateNamespace,
+	mTlsCertificateUploadCommand,
+} from "./mtls-certificate/cli";
 import { writeOutput } from "./output";
 import {
 	pagesDeploymentNamespace,
@@ -1094,14 +1099,25 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("pages");
 
-	// mtls-certificate
-	wrangler.command(
-		"mtls-certificate",
-		"🪪  Manage certificates used for mTLS connections",
-		(mtlsYargs) => {
-			return mTlsCertificateCommands(mtlsYargs.command(subHelp));
-		}
-	);
+	registry.define([
+		{
+			command: "wrangler mtls-certificate",
+			definition: mTlsCertificateNamespace,
+		},
+		{
+			command: "wrangler mtls-certificate upload",
+			definition: mTlsCertificateUploadCommand,
+		},
+		{
+			command: "wrangler mtls-certificate list",
+			definition: mTlsCertificateListCommand,
+		},
+		{
+			command: "wrangler mtls-certificate delete",
+			definition: mTlsCertificateDeleteCommand,
+		},
+	]);
+	registry.registerNamespace("mtls-certificate");
 
 	// cloudchamber
 	wrangler.command("cloudchamber", false, (cloudchamberArgs) => {
