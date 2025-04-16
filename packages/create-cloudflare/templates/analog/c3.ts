@@ -25,6 +25,7 @@ const configure = async (ctx: C3Context) => {
 		const packages = [];
 		packages.push("nitropack");
 		packages.push("h3");
+		packages.push("@nx/devkit");
 
 		await installPackages(packages, {
 			dev: true,
