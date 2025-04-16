@@ -2,6 +2,7 @@ import { readFileSync, statSync } from "fs";
 import path from "path";
 import { type Config } from "../config";
 import { type ContainerApp } from "../config/environment";
+import { containersScope } from "../containers";
 import { getDockerPath } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -41,7 +42,11 @@ export async function deployContainers(
 	}
 
 	if (!dryRun) {
-		await fillOpenAPIConfiguration(config, isNonInteractiveOrCI());
+		await fillOpenAPIConfiguration(
+			config,
+			isNonInteractiveOrCI(),
+			containersScope
+		);
 	}
 
 	for (const container of config.containers) {
