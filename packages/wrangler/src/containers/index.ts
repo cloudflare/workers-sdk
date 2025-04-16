@@ -1,3 +1,4 @@
+import { applyCommand, applyCommandOptionalYargs } from "../cloudchamber/apply";
 import {
 	buildCommand,
 	buildYargs,
@@ -14,8 +15,11 @@ import {
 	listCommand,
 	listYargs,
 } from "./containers";
+import type { Scope } from "../user";
 import type { CommonYargsArgvJSON, CommonYargsOptions } from "../yargs-types";
 import type { CommandModule } from "yargs";
+
+export const containersScope: Scope = "containers:write";
 
 export const containers = (
 	yargs: CommonYargsArgvJSON,
@@ -26,13 +30,19 @@ export const containers = (
 			"build [PATH]",
 			"build a dockerfile",
 			(args) => buildYargs(args),
-			(args) => handleFailure(buildCommand)(args)
+			(args) => handleFailure(buildCommand, containersScope)(args)
 		)
 		.command(
 			"push [TAG]",
 			"push a tagged image to a Cloudflare managed registry, which is automatically integrated with your account",
 			(args) => pushYargs(args),
-			(args) => handleFailure(pushCommand)(args)
+			(args) => handleFailure(pushCommand, containersScope)(args)
+		)
+		.command(
+			"apply",
+			"apply the changes in the container applications to deploy",
+			(args) => applyCommandOptionalYargs(args),
+			(args) => handleFailure(applyCommand, containersScope)(args)
 		)
 		.command(
 			"images",
@@ -56,5 +66,6 @@ export const containers = (
 			"delete a container",
 			(args) => deleteYargs(args),
 			(args) => handleFailure(deleteCommand)(args)
+			(args) => imagesCommand(args, containersScope).command(subHelp)
 		);
 };
