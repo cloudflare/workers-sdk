@@ -43,7 +43,8 @@ export const workflowsInstancesDescribeCommand = createCommand({
 			describe:
 				"ID of the instance - instead of an UUID you can type 'latest' to get the latest instance and describe it",
 			type: "string",
-			demandOption: true,
+			demandOption: false,
+			default: "latest",
 		},
 		"step-output": {
 			describe:
@@ -77,6 +78,7 @@ export const workflowsInstancesDescribeCommand = createCommand({
 				return;
 			}
 
+			logRaw("Describing latest instance:");
 			id = instances[0].id;
 		}
 
