@@ -28,10 +28,19 @@ export function ListOptions(yargs: CommonYargsArgv) {
 			choices: ["production", "preview"],
 			description: "Environment type to list deployments for",
 		},
+		json: {
+			type: "boolean",
+			description: "Return output as clean JSON",
+			default: false,
+		},
 	});
 }
 
-export async function ListHandler({ projectName, environment }: ListArgs) {
+export async function ListHandler({
+	projectName,
+	environment,
+	json,
+}: ListArgs) {
 	const config = getConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME);
 	const accountId = await requireAuth(config);
 
@@ -87,6 +96,10 @@ export async function ListHandler({ projectName, environment }: ListArgs) {
 		account_id: accountId,
 	});
 
-	logger.table(data);
+	if (json) {
+		logger.log(JSON.stringify(data, null, 2));
+	} else {
+		logger.table(data);
+	}
 	metrics.sendMetricsEvent("list pages deployments");
 }
