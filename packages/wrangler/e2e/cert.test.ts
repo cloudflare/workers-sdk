@@ -125,8 +125,8 @@ describe("cert", () => {
 	const { certificate: caCert } = generateRootCaCert();
 
 	// Generate filenames for concurrent e2e test environment
-	const mtlsCertName = `tmp-e2e-mtls_cert_${randomUUID()}`;
-	const caCertName = `tmp-e2e-ca_cert_${randomUUID()}`;
+	const mtlsCertName = `tmp-e2e-mtls-cert-${randomUUID()}`;
+	const caCertName = `tmp-e2e-ca-cert-${randomUUID()}`;
 
 	it("upload mtls-certificate", async () => {
 		// locally generated certs/key
@@ -137,8 +137,8 @@ describe("cert", () => {
 			`wrangler cert upload mtls-certificate --name ${mtlsCertName} --cert mtls_client_cert_file.pem --key mtls_client_private_key_file.pem`
 		);
 		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
-			"Uploading mTLS Certificate mtls_cert_00000000-0000-0000-0000-000000000000...
-			Success! Uploaded mTLS Certificate mtls_cert_00000000-0000-0000-0000-000000000000
+			"Uploading mTLS Certificate tmp-e2e-mtls-cert-00000000-0000-0000-0000-000000000000...
+			Success! Uploaded mTLS Certificate tmp-e2e-mtls-cert-00000000-0000-0000-0000-000000000000
 			ID: 00000000-0000-0000-0000-000000000000
 			Issuer: CN=Root CA,O=Localhost Root CA,ST=California,C=US
 			Expires on 11/18/2034"
@@ -152,8 +152,8 @@ describe("cert", () => {
 			`wrangler cert upload certificate-authority --name ${caCertName} --ca-cert ca_chain_cert.pem`
 		);
 		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
-			"Uploading CA Certificate ca_cert_00000000-0000-0000-0000-000000000000...
-			Success! Uploaded CA Certificate ca_cert_00000000-0000-0000-0000-000000000000
+			"Uploading CA Certificate tmp-e2e-ca-cert-00000000-0000-0000-0000-000000000000...
+			Success! Uploaded CA Certificate tmp-e2e-ca-cert-00000000-0000-0000-0000-000000000000
 			ID: 00000000-0000-0000-0000-000000000000
 			Issuer: CN=Localhost CA,OU=SSL Department,O=Localhost,L=San Francisco,ST=California,C=US
 			Expires on 11/18/2034"
@@ -164,10 +164,10 @@ describe("cert", () => {
 		const output = await helper.run(`wrangler cert list`);
 		const result = normalize(output.stdout);
 		expect(result).toContain(
-			`Name: mtls_cert_00000000-0000-0000-0000-000000000000`
+			`Name: tmp-e2e-mtls-cert-00000000-0000-0000-0000-000000000000`
 		);
 		expect(result).toContain(
-			`Name: ca_cert_00000000-0000-0000-0000-000000000000`
+			`Name: tmp-e2e-ca-cert-00000000-0000-0000-0000-000000000000`
 		);
 	});
 
@@ -177,9 +177,9 @@ describe("cert", () => {
 		);
 		expect(normalize(delete_mtls_cert_output.stdout)).toMatchInlineSnapshot(
 			`
-			"? Are you sure you want to delete certificate 00000000-0000-0000-0000-000000000000 (mtls_cert_00000000-0000-0000-0000-000000000000)?
+			"? Are you sure you want to delete certificate 00000000-0000-0000-0000-000000000000 (tmp-e2e-mtls-cert-00000000-0000-0000-0000-000000000000)?
 			🤖 Using fallback value in non-interactive context: yes
-			Deleted certificate 00000000-0000-0000-0000-000000000000 (mtls_cert_00000000-0000-0000-0000-000000000000) successfully"
+			Deleted certificate 00000000-0000-0000-0000-000000000000 (tmp-e2e-mtls-cert-00000000-0000-0000-0000-000000000000) successfully"
 			`
 		);
 	});
@@ -190,9 +190,9 @@ describe("cert", () => {
 		);
 		expect(normalize(delete_ca_cert_output.stdout)).toMatchInlineSnapshot(
 			`
-			"? Are you sure you want to delete certificate 00000000-0000-0000-0000-000000000000 (ca_cert_00000000-0000-0000-0000-000000000000)?
+			"? Are you sure you want to delete certificate 00000000-0000-0000-0000-000000000000 (tmp-e2e-ca-cert-00000000-0000-0000-0000-000000000000)?
 			🤖 Using fallback value in non-interactive context: yes
-			Deleted certificate 00000000-0000-0000-0000-000000000000 (ca_cert_00000000-0000-0000-0000-000000000000) successfully"
+			Deleted certificate 00000000-0000-0000-0000-000000000000 (tmp-e2e-ca-cert-00000000-0000-0000-0000-000000000000) successfully"
 			`
 		);
 	});
