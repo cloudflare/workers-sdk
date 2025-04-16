@@ -1,5 +1,20 @@
 # wrangler
 
+## 3.114.7
+
+### Patch Changes
+
+- [#8955](https://github.com/cloudflare/workers-sdk/pull/8955) [`b7eba92`](https://github.com/cloudflare/workers-sdk/commit/b7eba92da4c8d971d7d025829361468db851e9b9) Thanks [@workers-devprod](https://github.com/workers-devprod)! - When Wrangler encounters an error, if the Bun runtime is detected it will now warn users that Wrangler does not officially support Bun.
+
+- [#8928](https://github.com/cloudflare/workers-sdk/pull/8928) [`8bcb257`](https://github.com/cloudflare/workers-sdk/commit/8bcb257d26e4691e2325987148fd19d4ac1902ae) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix redirected config env validation breaking wrangler pages commands
+
+  a validation check has recently been introduced to make wrangler error on
+  deploy commands when an environment is specified and a redirected configuration
+  is in use (the reason being that redirected configurations should not include
+  any environment), this check is problematic with pages commands where the
+  "production" environment is anyways set by default, to address this the validation
+  check is being relaxed here on pages commands
+
 ## 3.114.6
 
 ### Patch Changes
