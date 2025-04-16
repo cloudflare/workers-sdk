@@ -22,6 +22,7 @@ import type {
 	InstanceStatusAndLogs,
 	InstanceStepLog,
 	InstanceTerminateLog,
+	InstanceWaitForEventLog,
 } from "../../types";
 
 export const workflowsInstancesDescribeCommand = createCommand({
@@ -140,12 +141,20 @@ export const workflowsInstancesDescribeCommand = createCommand({
 
 function logStep(
 	args: typeof workflowsInstancesDescribeCommand.args,
-	step: InstanceStepLog | InstanceSleepLog | InstanceTerminateLog
+	step:
+		| InstanceStepLog
+		| InstanceSleepLog
+		| InstanceTerminateLog
+		| InstanceWaitForEventLog
 ) {
 	logRaw("");
 	const formattedStep: Record<string, string> = {};
 
-	if (step.type == "sleep" || step.type == "step") {
+	if (
+		step.type == "sleep" ||
+		step.type == "step" ||
+		step.type == "waitForEvent"
+	) {
 		formattedStep.Name = step.name;
 		formattedStep.Type = emojifyStepType(step.type);
 
@@ -197,6 +206,9 @@ function logStep(
 					`${retryDate.toLocaleString()} (in ${formatDistanceToNowStrict(retryDate)} from now)`;
 			}
 		}
+	}
+
+	if (step.type == "step" || step.type == "waitForEvent") {
 		if (step.output !== undefined && args.stepOutput) {
 			let output: string;
 			try {
@@ -212,7 +224,7 @@ function logStep(
 		}
 	}
 
-	logRaw(formatLabelledValues(formattedStep, { indentationCount: 2 }));
+	logger.log(formatLabelledValues(formattedStep, { indentationCount: 2 }));
 
 	if (step.type == "step") {
 		const prettyAttempts = step.attempts.map((val) => {
