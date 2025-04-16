@@ -235,10 +235,6 @@ export const deployCommand = createCommand({
 
 		const entry = await getEntry(args, config, "deploy");
 
-		if (config.workflows?.length) {
-			logger.once.warn("Workflows is currently in open beta.");
-		}
-
 		validateAssetsArgsAndConfig(args, config);
 
 		const assetsOptions = getAssetsOptions(args, config);
