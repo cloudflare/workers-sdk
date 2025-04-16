@@ -1,4 +1,4 @@
-import { crash, endSection } from "@cloudflare/cli";
+import { endSection } from "@cloudflare/cli";
 import { brandColor } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
@@ -24,8 +24,6 @@ const configure = async (ctx: C3Context) => {
 	await runCommand(cmd);
 
 	// Remove the extraneous Pages files
-	removeFile("./public/_headers");
-	removeFile("./public/_redirects");
 	removeFile("./public/_routes.json");
 
 	addBindingsProxy(ctx);
@@ -81,7 +79,7 @@ const addBindingsProxy = (ctx: C3Context) => {
 			}
 
 			if (configArgument.type !== "ObjectExpression") {
-				crash("Failed to update `vite.config.ts`");
+				throw new Error("Failed to update `vite.config.ts`");
 			}
 
 			// Add the `platform` object to the object
