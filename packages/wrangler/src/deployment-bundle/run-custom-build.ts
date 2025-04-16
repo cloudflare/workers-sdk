@@ -1,5 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import path from "node:path";
+import { Writable } from "node:stream";
+import chalk from "chalk";
 import { execaCommand } from "execa";
 import { configFileName } from "../config";
 import { UserError } from "../errors";
@@ -19,17 +21,37 @@ export async function runCustomBuild(
 	configPath: string | undefined
 ) {
 	if (build.command) {
-		logger.log("Running custom build:", build.command);
+		logger.log(chalk.blue("[custom build]"), "Running:", build.command);
 		try {
-			await execaCommand(build.command, {
+			const res = execaCommand(build.command, {
 				shell: true,
-				// we keep these two as "inherit" so that
-				// logs are still visible.
-				stdout: "inherit",
-				stderr: "inherit",
 				...(build.cwd && { cwd: build.cwd }),
 			});
+			res.stdout?.pipe(
+				new Writable({
+					write(chunk: Buffer, _, callback) {
+						const lines = chunk.toString().split("\n");
+						for (const line of lines) {
+							logger.log(chalk.blue("[custom build]"), line);
+						}
+						callback();
+					},
+				})
+			);
+			res.stderr?.pipe(
+				new Writable({
+					write(chunk: Buffer, _, callback) {
+						const lines = chunk.toString().split("\n");
+						for (const line of lines) {
+							logger.log(chalk.red("[custom build]"), line);
+						}
+						callback();
+					},
+				})
+			);
+			await res;
 		} catch (e) {
+			logger.error(e);
 			throw new UserError(
 				`Running custom build \`${build.command}\` failed. There are likely more logs from your build command above.`,
 				{
