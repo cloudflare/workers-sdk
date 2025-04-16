@@ -300,14 +300,22 @@ function colourFromHTTPStatus(status: number): Colorize {
 	return blue;
 }
 
+const ADDITIONAL_RESPONSE_LOG_HEADER_NAME = "X-Mf-Additional-Response-Log";
+
 function maybeLogRequest(
 	req: Request,
 	res: Response,
 	env: Env,
 	ctx: ExecutionContext,
 	startTime: number
-) {
-	if (env[CoreBindings.JSON_LOG_LEVEL] < LogLevel.INFO) return;
+): Response {
+	res = new Response(res.body, res); // Ensure mutable headers
+	const additionalResponseLog = res.headers.get(
+		ADDITIONAL_RESPONSE_LOG_HEADER_NAME
+	);
+	res.headers.delete(ADDITIONAL_RESPONSE_LOG_HEADER_NAME);
+
+	if (env[CoreBindings.JSON_LOG_LEVEL] < LogLevel.INFO) return res;
 
 	const url = new URL(req.url);
 	const statusText = (res.statusText.trim() || STATUS_CODES[res.status]) ?? "";
@@ -316,6 +324,9 @@ function maybeLogRequest(
 		colourFromHTTPStatus(res.status)(`${bold(res.status)} ${statusText} `),
 		grey(`(${Date.now() - startTime}ms)`),
 	];
+	if (additionalResponseLog) {
+		lines.push(` ${grey(additionalResponseLog)}`);
+	}
 	const message = reset(lines.join(""));
 
 	ctx.waitUntil(
@@ -325,6 +336,8 @@ function maybeLogRequest(
 			body: message,
 		})
 	);
+
+	return res;
 }
 
 function handleProxy(request: Request, env: Env) {
@@ -423,7 +436,7 @@ export default <ExportedHandler<Env>>{
 			response = maybeInjectLiveReload(response, env, ctx);
 			response = ensureAcceptableEncoding(clientAcceptEncoding, response);
 			if (env[CoreBindings.LOG_REQUESTS]) {
-				maybeLogRequest(request, response, env, ctx, startTime);
+				response = maybeLogRequest(request, response, env, ctx, startTime);
 			}
 			return response;
 		} catch (e: any) {

@@ -51,7 +51,7 @@ export default {
 	configVersion: 1,
 	id: "next",
 	frameworkCli: "create-next-app",
-	frameworkCliPinnedVersion: "~15.2.4",
+	frameworkCliPinnedVersion: "~15.3.0",
 	platform: "workers",
 	displayName: "Next.js (using Node.js compat + Workers Assets)",
 	path: "templates/next/workers",
