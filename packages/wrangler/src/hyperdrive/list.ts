@@ -6,7 +6,7 @@ import { capitalizeScheme, formatCachingOptions } from "./shared";
 export const hyperdriveListCommand = createCommand({
 	metadata: {
 		description: "List Hyperdrive configs",
-		status: "open-beta",
+		status: "stable",
 		owner: "Product: Hyperdrive",
 	},
 	args: {},

@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw";
 import { Headers, Request } from "undici";
 import { vi } from "vitest";
 import MockWebSocketServer from "vitest-websocket-mock";
+import { isNonInteractiveOrCI } from "../../is-interactive";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -21,8 +22,7 @@ import type {
 import type { RequestInit } from "undici";
 import type WebSocket from "ws";
 
-// we want to include the banner to make sure it doesn't show up in the output when
-// when --format=json
+// we want to include the banner to make sure it doesn't show up in the output when --format=json
 vi.unmock("../../wrangler-banner");
 vi.mock("ws", async (importOriginal) => {
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
@@ -52,6 +52,7 @@ vi.mock("ws", async (importOriginal) => {
 
 describe("pages deployment tail", () => {
 	runInTempDir();
+	const { setIsTTY } = useMockIsTTY();
 
 	let api: MockAPI;
 	afterEach(async () => {
@@ -64,11 +65,6 @@ describe("pages deployment tail", () => {
 	mockAccountId();
 	mockApiToken();
 	const std = mockConsoleMethods();
-
-	beforeEach(() => {
-		// Force the CLI to be "non-interactive" in test env
-		vi.stubEnv("CF_PAGES", "1");
-	});
 
 	/**
 	 * Interaction with the tailing API, including tail creation,
@@ -417,8 +413,6 @@ describe("pages deployment tail", () => {
 	});
 
 	describe("printing", () => {
-		const { setIsTTY } = useMockIsTTY();
-
 		it("logs request messages in JSON format", async () => {
 			api = mockTailAPIs();
 			await runWrangler(

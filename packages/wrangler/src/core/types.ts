@@ -34,6 +34,7 @@ export type Metadata = {
 		command: string;
 		description: string;
 	}[];
+	hideGlobalFlags?: string[];
 };
 
 export type ArgDefinition = Omit<PositionalOptions, "type"> &

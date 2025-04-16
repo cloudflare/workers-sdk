@@ -16,6 +16,7 @@ export const pagesDeploymentListCommand = createCommand({
 		description: "List deployments in your Cloudflare Pages project",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
 	},
 	behaviour: {
 		provideConfig: false,

@@ -23,13 +23,13 @@ describe("pages", () => {
 			⚡️ Configure Cloudflare Pages
 
 			COMMANDS
-			  wrangler pages dev [directory] [-- command..]  Develop your full-stack Pages application locally
-			  wrangler pages functions                       Helpers related to Pages Functions
-			  wrangler pages project                         Interact with your Pages projects
-			  wrangler pages deployment                      Interact with the deployments of a project
-			  wrangler pages deploy [directory]              Deploy a directory of static assets as a Pages deployment  [aliases: publish]
-			  wrangler pages secret                          Generate a secret that can be referenced in a Pages project
-			  wrangler pages download                        Download settings from your project
+			  wrangler pages dev [directory] [command]  Develop your full-stack Pages application locally
+			  wrangler pages functions                  Helpers related to Pages Functions
+			  wrangler pages project                    Interact with your Pages projects
+			  wrangler pages deployment                 Interact with the deployments of a project
+			  wrangler pages deploy [directory]         Deploy a directory of static assets as a Pages deployment
+			  wrangler pages secret                     Generate a secret that can be referenced in a Pages project
+			  wrangler pages download                   Download settings from your project
 
 			GLOBAL FLAGS
 			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
@@ -43,7 +43,7 @@ describe("pages", () => {
 		await endEventLoop();
 
 		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler pages dev [directory] [-- command..]
+			"wrangler pages dev [directory] [command]
 
 			Develop your full-stack Pages application locally
 
@@ -96,8 +96,8 @@ describe("pages", () => {
 
 			COMMANDS
 			  wrangler pages project list                   List your Cloudflare Pages projects
-			  wrangler pages project create [project-name]  Create a new Cloudflare Pages project
-			  wrangler pages project delete [project-name]  Delete a Cloudflare Pages project
+			  wrangler pages project create <project-name>  Create a new Cloudflare Pages project
+			  wrangler pages project delete <project-name>  Delete a Cloudflare Pages project
 
 			GLOBAL FLAGS
 			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
@@ -117,7 +117,9 @@ describe("pages", () => {
 
 			COMMANDS
 			  wrangler pages deployment list                List deployments in your Cloudflare Pages project
-			  wrangler pages deployment create [directory]  Publish a directory of static assets as a Pages deployment
+			  wrangler pages deployment create [directory]  Deploy a directory of static assets as a Pages deployment
+
+			                                                Alias for \\"wrangler pages deploy\\".
 			  wrangler pages deployment tail [deployment]   Start a tailing session for a project's deployment and livestream logs from your Functions
 
 			GLOBAL FLAGS
@@ -188,7 +190,7 @@ describe("pages", () => {
 			Download settings from your project
 
 			COMMANDS
-			  wrangler pages download config [projectName]  Experimental: Download your Pages project config as a Wrangler configuration file
+			  wrangler pages download config [projectName]  Download your Pages project config as a Wrangler configuration file [experimental]
 
 			GLOBAL FLAGS
 			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]

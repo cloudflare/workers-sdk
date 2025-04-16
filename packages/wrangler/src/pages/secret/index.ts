@@ -105,6 +105,7 @@ export const pagesSecretNamespace = createNamespace({
 		description: "Generate a secret that can be referenced in a Pages project",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
 	},
 });
 
@@ -113,6 +114,7 @@ export const pagesSecretPutCommand = createCommand({
 		description: "Create or update a secret variable for a Pages project",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
 	},
 	behaviour: {
 		provideConfig: false,
@@ -121,7 +123,7 @@ export const pagesSecretPutCommand = createCommand({
 		key: {
 			type: "string",
 			description: "The variable name to be accessible in the Pages project",
-			required: true,
+			demandOption: true,
 		},
 		"project-name": {
 			type: "string",
@@ -180,6 +182,7 @@ export const pagesSecretBulkCommand = createCommand({
 		description: "Bulk upload secrets for a Pages project",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
 	},
 	behaviour: {
 		provideConfig: false,
@@ -256,6 +259,7 @@ export const pagesSecretDeleteCommand = createCommand({
 		description: "Delete a secret variable from a Pages project",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
 	},
 	behaviour: {
 		provideConfig: false,
@@ -264,7 +268,7 @@ export const pagesSecretDeleteCommand = createCommand({
 		key: {
 			type: "string",
 			description: "The variable name to be accessible in the Pages project",
-			required: true,
+			demandOption: true,
 		},
 		"project-name": {
 			type: "string",
@@ -319,6 +323,7 @@ export const pagesSecretListCommand = createCommand({
 		description: "List all secrets for a Pages project",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
 	},
 	behaviour: {
 		provideConfig: false,

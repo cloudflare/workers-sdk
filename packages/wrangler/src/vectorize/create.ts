@@ -2,7 +2,7 @@ import { configFileName, formatConfigSnippet } from "../config";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { createIndex } from "./client";
-import { deprecatedV1DefaultFlag, vectorizeGABanner } from "./common";
+import { deprecatedV1DefaultFlag } from "./common";
 import type { VectorizeDistanceMetric } from "./types";
 
 export const vectorizeCreateCommand = createCommand({
@@ -10,7 +10,6 @@ export const vectorizeCreateCommand = createCommand({
 		description: "Create a Vectorize index",
 		status: "stable",
 		owner: "Product: Vectorize",
-		epilogue: vectorizeGABanner,
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

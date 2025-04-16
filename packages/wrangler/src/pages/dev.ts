@@ -80,6 +80,7 @@ export const pagesDevCommand = createCommand({
 		description: "Develop your full-stack Pages application locally",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
 	},
 	behaviour: {
 		provideConfig: false,
@@ -196,7 +197,6 @@ export const pagesDevCommand = createCommand({
 			description: "Auto reload HTML pages when change is detected",
 		},
 		"local-protocol": {
-			type: "string",
 			description: "Protocol to listen to requests on, defaults to http.",
 			choices: ["http", "https"] as const,
 		},
@@ -230,7 +230,6 @@ export const pagesDevCommand = createCommand({
 			hidden: true,
 		},
 		"log-level": {
-			type: "string",
 			choices: ["debug", "info", "log", "warn", "error", "none"] as const,
 			description: "Specify logging level",
 		},

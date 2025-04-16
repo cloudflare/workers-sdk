@@ -40,6 +40,7 @@ export const pagesPublishCommand = createAlias({
 	aliasOf: "wrangler pages deploy",
 	metadata: {
 		deprecated: true,
+		hidden: true,
 	},
 });
 
@@ -48,6 +49,7 @@ export const pagesDeployCommand = createCommand({
 		description: "Deploy a directory of static assets as a Pages deployment",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
 	},
 	behaviour: {
 		provideConfig: false,
@@ -55,7 +57,6 @@ export const pagesDeployCommand = createCommand({
 	args: {
 		directory: {
 			type: "string",
-			demandOption: true,
 			description: "The directory of static files to upload",
 		},
 		"project-name": {

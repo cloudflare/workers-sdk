@@ -5,7 +5,7 @@ import { readConfig } from "../config";
 import { getConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
 import { FatalError } from "../errors";
-import isInteractive from "../is-interactive";
+import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import {
@@ -31,13 +31,17 @@ const isStatusChoiceList = (
 
 export const pagesDeploymentTailCommand = createCommand({
 	metadata: {
-		description: "Start a tailing session for a project's deployment logs",
+		description:
+			"Start a tailing session for a project's deployment and livestream logs from your Functions",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
 	},
 	behaviour: {
 		provideConfig: false,
-		printBanner: (args) => args.format === "pretty",
+		printBanner: (args) =>
+			args.format === "pretty" ||
+			(args.format === undefined && !isNonInteractiveOrCI()),
 	},
 	args: {
 		deployment: {
@@ -61,7 +65,6 @@ export const pagesDeploymentTailCommand = createCommand({
 		},
 		format: {
 			type: "string",
-			default: process.stdout.isTTY ? "pretty" : "json",
 			choices: ["json", "pretty"],
 			description: "The format of log entries",
 		},
@@ -119,10 +122,14 @@ export const pagesDeploymentTailCommand = createCommand({
 		samplingRate,
 		search,
 		status,
-		format = "pretty",
+		format,
 		debug,
 		...args
 	}) {
+		if (format === undefined) {
+			format = isNonInteractiveOrCI() ? "json" : "pretty";
+		}
+
 		if (status && !isStatusChoiceList(status)) {
 			throw new FatalError(
 				"Invalid value for `--status`. Valid options: " +
