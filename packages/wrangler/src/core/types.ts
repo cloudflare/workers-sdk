@@ -30,6 +30,10 @@ export type Metadata = {
 	owner: Teams;
 	/** Prints something at the bottom of the help */
 	epilogue?: string;
+	examples?: {
+		command: string;
+		description: string;
+	}[];
 };
 
 export type ArgDefinition = Omit<PositionalOptions, "type"> &

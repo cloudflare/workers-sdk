@@ -101,14 +101,14 @@ export const pagesDevCommand = createCommand({
 			hidden: true,
 		},
 		"compatibility-date": {
-			type: "string",
 			description: "Date to use for compatibility checks",
+			type: "string",
 		},
 		"compatibility-flags": {
-			type: "string",
-			array: true,
 			description: "Flags to use for compatibility checks",
 			alias: "compatibility-flag",
+			type: "string",
+			array: true,
 		},
 		ip: {
 			type: "string",
@@ -201,43 +201,43 @@ export const pagesDevCommand = createCommand({
 			choices: ["http", "https"] as const,
 		},
 		"https-key-path": {
-			type: "string",
 			description: "Path to a custom certificate key",
+			type: "string",
 			requiresArg: true,
 		},
 		"https-cert-path": {
-			type: "string",
 			description: "Path to a custom certificate",
+			type: "string",
 			requiresArg: true,
 		},
 		"persist-to": {
-			type: "string",
 			description:
 				"Specify directory to use for local persistence (defaults to .wrangler/state)",
+			type: "string",
 			requiresArg: true,
 		},
 		"node-compat": {
-			type: "boolean",
 			description: "Enable Node.js compatibility",
 			default: false,
+			type: "boolean",
 			hidden: true,
 			deprecated: true,
 		},
 		"experimental-local": {
-			type: "boolean",
 			description: "Run on my machine using the Cloudflare Workers runtime",
+			type: "boolean",
 			deprecated: true,
 			hidden: true,
 		},
 		"log-level": {
 			type: "string",
-			description: "Specify logging level",
 			choices: ["debug", "info", "log", "warn", "error", "none"] as const,
+			description: "Specify logging level",
 		},
 		"show-interactive-dev-session": {
-			type: "boolean",
 			description:
 				"Show interactive dev session (defaults to true if the terminal supports interactivity)",
+			type: "boolean",
 		},
 		"experimental-vectorize-bind-to-prod": {
 			type: "boolean",

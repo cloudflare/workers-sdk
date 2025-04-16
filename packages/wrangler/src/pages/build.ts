@@ -117,10 +117,11 @@ export const pagesFunctionsBuildCommand = createCommand({
 			description: "Date to use for compatibility checks",
 		},
 		"compatibility-flags": {
-			type: "string",
-			array: true,
 			description: "Flags to use for compatibility checks",
 			alias: "compatibility-flag",
+			type: "string",
+			requiresArg: true,
+			array: true,
 		},
 		bindings: {
 			type: "string",
@@ -130,9 +131,9 @@ export const pagesFunctionsBuildCommand = createCommand({
 			hidden: true,
 		},
 		external: {
+			description: "A list of module imports to exclude from bundling",
 			type: "string",
 			array: true,
-			description: "A list of module imports to exclude from bundling",
 		},
 	},
 	positionalArgs: ["directory"],

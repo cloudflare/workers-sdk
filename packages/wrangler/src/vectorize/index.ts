@@ -1,10 +1,10 @@
-import { vectorizeGABanner } from "./common";
 import { createNamespace } from "../core/create-command";
+import { vectorizeGABanner } from "./common";
 
 export const vectorizeNamespace = createNamespace({
 	metadata: {
 		description: "🧮 Manage Vectorize indexes",
-		status: "stable",
+		status: "open-beta",
 		owner: "Product: Vectorize",
 		epilogue: vectorizeGABanner,
 	},
@@ -13,14 +13,7 @@ export const vectorizeNamespace = createNamespace({
 export const vectorizeMetadataNamespace = createNamespace({
 	metadata: {
 		description: "Manage Vectorize metadata indexes",
-		status: "stable",
+		status: "open-beta",
 		owner: "Product: Vectorize",
 	},
 });
-
-// Export all vectorize commands
-export { vectorizeCreateCommand } from "./create";
-export { vectorizeDeleteCommand } from "./delete";
-export { vectorizeGetCommand } from "./get";
-export { vectorizeListCommand } from "./list";
-export { vectorizeQueryCommand } from "./query";

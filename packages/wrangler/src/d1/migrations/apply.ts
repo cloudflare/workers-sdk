@@ -22,9 +22,6 @@ export const d1MigrationsApplyCommand = createCommand({
 		status: "stable",
 		owner: "Product: D1",
 	},
-	behaviour: {
-		printBanner: true,
-	},
 	args: {
 		database: {
 			type: "string",

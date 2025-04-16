@@ -4,13 +4,10 @@ import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
-import {
-	aiFineTuneCreateCommand,
-	aiFineTuneListCommand,
-	aiFineTuneNamespace,
-	aiModelsCommand,
-	aiNamespace,
-} from "./ai";
+import { aiFineTuneNamespace, aiNamespace } from "./ai";
+import { aiFineTuneCreateCommand } from "./ai/createFinetune";
+import { aiModelsCommand } from "./ai/listCatalog";
+import { aiFineTuneListCommand } from "./ai/listFinetune";
 import {
 	certDeleteCommand,
 	certListCommand,
@@ -34,17 +31,13 @@ import { d1ExportCommand } from "./d1/export";
 import { d1InfoCommand } from "./d1/info";
 import { d1InsightsCommand } from "./d1/insights";
 import { d1ListCommand } from "./d1/list";
-import {
-	d1MigrationsApplyCommand,
-	d1MigrationsCreateCommand,
-	d1MigrationsListCommand,
-	d1MigrationsNamespace,
-} from "./d1/migrations";
-import {
-	d1TimeTravelInfoCommand,
-	d1TimeTravelNamespace,
-	d1TimeTravelRestoreCommand,
-} from "./d1/timeTravel";
+import { d1MigrationsNamespace } from "./d1/migrations";
+import { d1MigrationsApplyCommand } from "./d1/migrations/apply";
+import { d1MigrationsCreateCommand } from "./d1/migrations/create";
+import { d1MigrationsListCommand } from "./d1/migrations/list";
+import { d1TimeTravelNamespace } from "./d1/timeTravel";
+import { d1TimeTravelInfoCommand } from "./d1/timeTravel/info";
+import { d1TimeTravelRestoreCommand } from "./d1/timeTravel/restore";
 import { deleteCommand } from "./delete";
 import { deployCommand } from "./deploy";
 import { isAuthenticationError } from "./deploy/deploy";
@@ -61,14 +54,12 @@ import {
 	JsonFriendlyFatalError,
 	UserError,
 } from "./errors";
-import {
-	hyperdriveCreateCommand,
-	hyperdriveDeleteCommand,
-	hyperdriveGetCommand,
-	hyperdriveListCommand,
-	hyperdriveNamespace,
-	hyperdriveUpdateCommand,
-} from "./hyperdrive/index";
+import { hyperdriveCreateCommand } from "./hyperdrive/create";
+import { hyperdriveDeleteCommand } from "./hyperdrive/delete";
+import { hyperdriveGetCommand } from "./hyperdrive/get";
+import { hyperdriveNamespace } from "./hyperdrive/index";
+import { hyperdriveListCommand } from "./hyperdrive/list";
+import { hyperdriveUpdateCommand } from "./hyperdrive/update";
 import { init } from "./init";
 import {
 	kvBulkDeleteCommand,
@@ -98,32 +89,38 @@ import {
 import { mTlsCertificateCommands } from "./mtls-certificate/cli";
 import { writeOutput } from "./output";
 import {
+	pagesDeploymentNamespace,
+	pagesDownloadNamespace,
+	pagesFunctionsNamespace,
+	pagesNamespace,
+	pagesProjectNamespace,
+} from "./pages";
+import { pagesFunctionsBuildCommand } from "./pages/build";
+import { pagesFunctionsBuildEnvCommand } from "./pages/build-env";
+import {
 	pagesDeployCommand,
 	pagesDeploymentCreateCommand,
-	pagesDeploymentListCommand,
-	pagesDeploymentNamespace,
-	pagesDeploymentTailCommand,
-	pagesDevCommand,
-	pagesDownloadConfigCommand,
-	pagesDownloadNamespace,
-	pagesFunctionsBuildCommand,
-	pagesFunctionsBuildEnvCommand,
-	pagesFunctionsNamespace,
-	pagesFunctionsOptimizeRoutesCommand,
-	pagesNamespace,
+	pagesPublishCommand,
+} from "./pages/deploy";
+import { pagesDeploymentTailCommand } from "./pages/deployment-tails";
+import { pagesDeploymentListCommand } from "./pages/deployments";
+import { pagesDevCommand } from "./pages/dev";
+import { pagesDownloadConfigCommand } from "./pages/download-config";
+import { pagesFunctionsOptimizeRoutesCommand } from "./pages/functions";
+import {
 	pagesProjectCreateCommand,
 	pagesProjectDeleteCommand,
 	pagesProjectListCommand,
-	pagesProjectNamespace,
-	pagesProjectUploadCommand,
-	pagesProjectValidateCommand,
+} from "./pages/projects";
+import {
 	pagesSecretBulkCommand,
 	pagesSecretDeleteCommand,
 	pagesSecretListCommand,
 	pagesSecretNamespace,
 	pagesSecretPutCommand,
-} from "./pages";
-import { pagesPublishCommand } from "./pages/deploy";
+} from "./pages/secret";
+import { pagesProjectUploadCommand } from "./pages/upload";
+import { pagesProjectValidateCommand } from "./pages/validate";
 import { APIError, formatMessage, ParseError } from "./parse";
 import { pipelines } from "./pipelines";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
@@ -251,15 +248,15 @@ import { whoami } from "./user/whoami";
 import { betaCmdColor, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { logPossibleBugMessage } from "./utils/logPossibleBugMessage";
+import { vectorizeCreateCommand } from "./vectorize/create";
+import { vectorizeDeleteCommand } from "./vectorize/delete";
+import { vectorizeGetCommand } from "./vectorize/get";
 import {
-	vectorizeCreateCommand,
-	vectorizeDeleteCommand,
-	vectorizeGetCommand,
-	vectorizeListCommand,
 	vectorizeMetadataNamespace,
 	vectorizeNamespace,
-	vectorizeQueryCommand,
 } from "./vectorize/index";
+import { vectorizeListCommand } from "./vectorize/list";
+import { vectorizeQueryCommand } from "./vectorize/query";
 import { versionsNamespace } from "./versions";
 import { versionsDeployCommand } from "./versions/deploy";
 import { deploymentsNamespace } from "./versions/deployments";

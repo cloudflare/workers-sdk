@@ -89,22 +89,24 @@ export const pagesProjectCreateCommand = createCommand({
 	args: {
 		"project-name": {
 			type: "string",
+			demandOption: true,
 			description: "The name of your Pages project",
-			required: true,
 		},
 		"production-branch": {
 			type: "string",
 			description: "The name of the production branch of your project",
 		},
 		"compatibility-flags": {
-			type: "string",
-			array: true,
 			description: "Flags to use for compatibility checks",
 			alias: "compatibility-flag",
+			type: "string",
+			requiresArg: true,
+			array: true,
 		},
 		"compatibility-date": {
-			type: "string",
 			description: "Date to use for compatibility checks",
+			type: "string",
+			requiresArg: true,
 		},
 	},
 	positionalArgs: ["project-name"],
@@ -210,11 +212,11 @@ export const pagesProjectDeleteCommand = createCommand({
 		"project-name": {
 			type: "string",
 			description: "The name of your Pages project",
-			required: true,
+			demandOption: true,
 		},
 		yes: {
-			type: "boolean",
 			alias: "y",
+			type: "boolean",
 			description: 'Answer "yes" to confirm project deletion',
 		},
 	},

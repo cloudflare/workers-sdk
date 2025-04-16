@@ -21,8 +21,8 @@ export const pagesProjectValidateCommand = createCommand({
 	args: {
 		directory: {
 			type: "string",
+			demandOption: true,
 			description: "The directory of static files to validate",
-			required: true,
 		},
 	},
 	positionalArgs: ["directory"],

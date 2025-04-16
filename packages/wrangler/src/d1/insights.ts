@@ -56,8 +56,7 @@ export function getDurationDates(durationString: string) {
 
 export const d1InsightsCommand = createCommand({
 	metadata: {
-		description:
-			"Experimental command. Get information about the queries run on a D1 database.",
+		description: "Get information about the queries run on a D1 database.",
 		status: "experimental",
 		owner: "Product: D1",
 	},
@@ -78,19 +77,19 @@ export const d1InsightsCommand = createCommand({
 		"sort-type": {
 			type: "string",
 			description: "Choose the operation you want to sort insights by",
-			choices: ["sum", "avg"],
+			choices: ["sum", "avg"] as const,
 			default: "sum",
 		},
 		"sort-by": {
 			type: "string",
 			description: "Choose the field you want to sort insights by",
-			choices: ["time", "reads", "writes", "count"],
-			default: "time",
+			choices: ["time", "reads", "writes", "count"] as const,
+			default: "time" as const,
 		},
 		"sort-direction": {
 			type: "string",
 			description: "Choose a sort direction",
-			choices: ["ASC", "DESC"],
+			choices: ["ASC", "DESC"] as const,
 			default: "DESC",
 		},
 		limit: {
@@ -102,6 +101,7 @@ export const d1InsightsCommand = createCommand({
 			type: "number",
 			description: "Same as --limit (deprecated)",
 			default: 5,
+			deprecated: true,
 			hidden: true,
 		},
 		json: {
@@ -128,10 +128,7 @@ export const d1InsightsCommand = createCommand({
 
 		if (result.version !== "alpha") {
 			const [startDate, endDate] = getDurationDates(timePeriod);
-			const parsedSortBy =
-				cliOptionToGraphQLOption[
-					sortBy as "time" | "reads" | "writes" | "count"
-				];
+			const parsedSortBy = cliOptionToGraphQLOption[sortBy];
 			const orderByClause =
 				parsedSortBy === "count"
 					? `${parsedSortBy}_${sortDirection}`
@@ -209,9 +206,6 @@ export const d1InsightsCommand = createCommand({
 		if (json) {
 			logger.log(JSON.stringify(output, null, 2));
 		} else {
-			logger.log(
-				"-------------------\n🚧 `wrangler d1 insights` is an experimental command.\n🚧 Flags for this command, their descriptions, and output may change between wrangler versions.\n-------------------\n"
-			);
 			logger.log(JSON.stringify(output, null, 2));
 		}
 	},

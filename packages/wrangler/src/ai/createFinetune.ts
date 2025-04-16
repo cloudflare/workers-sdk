@@ -2,9 +2,9 @@ import fs from "fs";
 import path from "path";
 import { FormData } from "undici";
 import { fetchResult } from "../cfetch";
+import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { createCommand } from "../core/create-command";
 import { getErrorMessage } from "./utils";
 import type { Message } from "../parse";
 import type { Finetune } from "./types";
@@ -16,9 +16,6 @@ export const aiFineTuneCreateCommand = createCommand({
 		description: "Create finetune and upload assets",
 		status: "stable",
 		owner: "Product: AI",
-	},
-	behaviour: {
-		printBanner: true,
 	},
 	args: {
 		model_name: {

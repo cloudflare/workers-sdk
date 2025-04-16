@@ -1,7 +1,4 @@
 import { createNamespace } from "../../core/create-command";
-import { d1MigrationsApplyCommand } from "./apply";
-import { d1MigrationsCreateCommand } from "./create";
-import { d1MigrationsListCommand } from "./list";
 
 export const d1MigrationsNamespace = createNamespace({
 	metadata: {
@@ -10,9 +7,3 @@ export const d1MigrationsNamespace = createNamespace({
 		owner: "Product: D1",
 	},
 });
-
-export {
-	d1MigrationsApplyCommand,
-	d1MigrationsCreateCommand,
-	d1MigrationsListCommand,
-};

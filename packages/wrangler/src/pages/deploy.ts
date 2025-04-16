@@ -38,6 +38,9 @@ export const pagesDeploymentCreateCommand = createAlias({
 
 export const pagesPublishCommand = createAlias({
 	aliasOf: "wrangler pages deploy",
+	metadata: {
+		deprecated: true,
+	},
 });
 
 export const pagesDeployCommand = createCommand({
@@ -52,8 +55,8 @@ export const pagesDeployCommand = createCommand({
 	args: {
 		directory: {
 			type: "string",
+			demandOption: true,
 			description: "The directory of static files to upload",
-			required: true,
 		},
 		"project-name": {
 			type: "string",
@@ -91,9 +94,9 @@ export const pagesDeployCommand = createCommand({
 			description: "Whether to run bundling on `_worker.js` before deploying",
 		},
 		config: {
-			type: "string",
 			description:
 				"Pages does not support custom Wrangler configuration file locations",
+			type: "string",
 			hidden: true,
 		},
 		"upload-source-maps": {

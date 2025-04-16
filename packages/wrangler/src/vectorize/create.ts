@@ -1,6 +1,6 @@
 import { configFileName, formatConfigSnippet } from "../config";
-import { logger } from "../logger";
 import { createCommand } from "../core/create-command";
+import { logger } from "../logger";
 import { createIndex } from "./client";
 import { deprecatedV1DefaultFlag, vectorizeGABanner } from "./common";
 import type { VectorizeDistanceMetric } from "./types";
@@ -13,18 +13,19 @@ export const vectorizeCreateCommand = createCommand({
 		epilogue: vectorizeGABanner,
 	},
 	behaviour: {
-		printBanner: true,
-		provideConfig: true,
+		printBanner: (args) => !args.json,
 	},
 	args: {
 		name: {
 			type: "string",
 			demandOption: true,
-			description: "The name of the Vectorize index to create (must be unique).",
+			description:
+				"The name of the Vectorize index to create (must be unique).",
 		},
 		dimensions: {
 			type: "number",
-			description: "The dimension size to configure this index for, based on the output dimensions of your ML model.",
+			description:
+				"The dimension size to configure this index for, based on the output dimensions of your ML model.",
 		},
 		metric: {
 			type: "string",
@@ -40,7 +41,8 @@ export const vectorizeCreateCommand = createCommand({
 				"openai/text-embedding-ada-002",
 				"cohere/embed-multilingual-v2.0",
 			],
-			description: "The name of an preset representing an embeddings model: Vectorize will configure the dimensions and distance metric for you when provided.",
+			description:
+				"The name of an preset representing an embeddings model: Vectorize will configure the dimensions and distance metric for you when provided.",
 		},
 		description: {
 			type: "string",
@@ -53,8 +55,10 @@ export const vectorizeCreateCommand = createCommand({
 		},
 		"deprecated-v1": {
 			type: "boolean",
+			deprecated: true,
 			default: deprecatedV1DefaultFlag,
-			description: "Create a deprecated Vectorize V1 index. This is not recommended and indexes created with this option need all other Vectorize operations to have this option enabled.",
+			description:
+				"Create a deprecated Vectorize V1 index. This is not recommended and indexes created with this option need all other Vectorize operations to have this option enabled.",
 		},
 	},
 	positionalArgs: ["name"],

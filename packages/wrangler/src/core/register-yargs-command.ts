@@ -14,6 +14,7 @@ import type {
 	InternalDefinition,
 	NamedArgDefinitions,
 } from "./types";
+import type { PositionalOptions } from "yargs";
 
 /**
  * Creates a function for registering commands using Yargs.
@@ -34,7 +35,15 @@ export function createRegisterYargsCommand(
 				if (def.type === "command") {
 					const args = def.args ?? {};
 
-					yargs.options(args).epilogue(def.metadata?.epilogue ?? "");
+					yargs
+						.options(args)
+						.epilogue(def.metadata?.epilogue ?? "")
+						.example(
+							def.metadata.examples?.map((ex) => [
+								ex.command,
+								ex.description,
+							]) ?? []
+						);
 
 					// Ensure non-array arguments receive a single value
 					for (const [key, opt] of Object.entries(args)) {
@@ -45,7 +54,7 @@ export function createRegisterYargsCommand(
 
 					// Register positional arguments
 					for (const key of def.positionalArgs ?? []) {
-						yargs.positional(key, args[key]);
+						yargs.positional(key, args[key] as PositionalOptions);
 					}
 				} else if (def.type === "namespace") {
 					// Hacky way to print --help for incomplete commands
