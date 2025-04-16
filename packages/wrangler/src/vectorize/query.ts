@@ -1,5 +1,5 @@
-import { logger } from "../logger";
 import { createCommand } from "../core/create-command";
+import { logger } from "../logger";
 import { queryIndexByVector, queryIndexByVectorId } from "./client";
 import { vectorizeGABanner } from "./common";
 import type {
@@ -19,18 +19,20 @@ export const vectorizeQueryCommand = createCommand({
 		epilogue: vectorizeGABanner,
 		examples: [
 			{
-				description: "Query the Vectorize Index by vector. To read from a json file that contains data in the format [1, 2, 3], you could use a command like `wrangler vectorize query --vector $(jq -r '.[]' data.json | xargs)`",
-				example: "wrangler vectorize query --vector 1 2 3 0.5 1.25 6",
+				command: `wrangler vectorize query --vector 1 2 3 0.5 1.25 6`,
+				description: "Query the Vectorize Index by vector",
 			},
 			{
+				command: `wrangler vectorize query --vector $(jq -r '.[]' data.json | xargs)`,
+				description:
+					"Query the Vectorize Index by vector from a json file that contains data in the format [1, 2, 3].",
+			},
+			{
+				command:
+					"wrangler vectorize query --filter '{ 'p1': 'abc', 'p2': { '$ne': true }, 'p3': 10, 'p4': false, 'nested.p5': 'abcd' }'",
 				description: "Filter the query results.",
-				example: "wrangler vectorize query --filter '{ \"p1\": \"abc\", \"p2\": { \"$ne\": true }, \"p3\": 10, \"p4\": false, \"nested.p5\": \"abcd\" }'",
 			},
 		],
-	},
-	behaviour: {
-		printBanner: true,
-		provideConfig: true,
 	},
 	args: {
 		name: {
@@ -41,7 +43,6 @@ export const vectorizeQueryCommand = createCommand({
 		vector: {
 			type: "array",
 			description: "Vector to query the Vectorize Index",
-			// Type cast to handle array coercion
 			coerce: (arg: unknown[]) =>
 				arg
 					.map((value) =>
@@ -152,94 +153,6 @@ export const vectorizeQueryCommand = createCommand({
 		logger.log(JSON.stringify(res, null, 2));
 	},
 });
-
-function validateQueryFilterInnerValue(
-	innerValue: VectorizeMetadataFilterValue
-) {
-	return ["string", "number", "boolean"].includes(typeof innerValue);
-}
-
-export function validateQueryFilter(
-	input: object
-): VectorizeVectorMetadataFilter | null {
-	try {
-		const parsedObj = input;
-
-		// Check if the parsed result is an object, not null, and not an array
-		if (
-			typeof parsedObj !== "object" ||
-			parsedObj === null ||
-			Array.isArray(parsedObj)
-		) {
-			// Invalid json
-			return null;
-		}
-
-		const result: VectorizeVectorMetadataFilter = {};
-
-		for (const field in parsedObj) {
-			if (Object.prototype.hasOwnProperty.call(parsedObj, field)) {
-				const value = (
-					parsedObj as Record<string, VectorizeVectorMetadataFilter>
-				)[field];
-
-				if (Array.isArray(value)) {
-					// Skip arrays
-					continue;
-				}
-
-				if (typeof value === "object" && value !== null) {
-					// Handle nested objects
-					const innerObj: VectorizeVectorMetadataFilter = {};
-					let validInnerObj = true;
-
-					for (const op in value) {
-						if (Object.prototype.hasOwnProperty.call(value, op)) {
-							const innerValue = value[op];
-							if (["$eq", "$ne", "$lt", "$lte", "$gt", "gte"].includes(op)) {
-								if (!validateQueryFilterInnerValue(innerValue)) {
-									validInnerObj = false;
-								}
-							} else if (["$in", "$nin"].includes(op)) {
-								if (!Array.isArray(innerValue)) {
-									validInnerObj = false;
-								} else {
-									if (!innerValue.every(validateQueryFilterInnerValue)) {
-										validInnerObj = false;
-									}
-								}
-							} else {
-								validInnerObj = false;
-							}
-
-							innerObj[op as VectorizeVectorMetadataFilterOp] = innerValue;
-						}
-					}
-
-					// Only add valid and non-empty innerObj to result
-					if (validInnerObj && Object.keys(innerObj).length > 0) {
-						result[field] = innerObj as VectorizeMetadataFilterValue;
-					} else if (validInnerObj) {
-						// Invalid innerObj
-					}
-				} else {
-					// Ensure value is of type Exclude<MdV, string[]> (i.e., string | number | boolean | null)
-					result[field] = value;
-				}
-			}
-		}
-
-		if (Object.keys(result).length > 0) {
-			return result;
-		} else {
-			// Empty result
-			return null;
-		}
-	} catch (error) {
-		// Error parsing
-		return null;
-	}
-}
 
 function validateQueryFilterInnerValue(
 	innerValue: VectorizeMetadataFilterValue

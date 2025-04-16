@@ -26,6 +26,7 @@ export const pagesProjectUploadCommand = createCommand({
 		description: "Upload files to a project",
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
+		hidden: true,
 	},
 	behaviour: {
 		provideConfig: false,
@@ -33,8 +34,8 @@ export const pagesProjectUploadCommand = createCommand({
 	args: {
 		directory: {
 			type: "string",
+			demandOption: true,
 			description: "The directory of static files to upload",
-			required: true,
 		},
 		"output-manifest-path": {
 			type: "string",

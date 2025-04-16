@@ -1,5 +1,5 @@
-import { logger } from "../logger";
 import { createCommand } from "../core/create-command";
+import { logger } from "../logger";
 import { listConfigs } from "./client";
 import { capitalizeScheme, formatCachingOptions } from "./shared";
 
@@ -9,12 +9,8 @@ export const hyperdriveListCommand = createCommand({
 		status: "open-beta",
 		owner: "Product: Hyperdrive",
 	},
-	behaviour: {
-		printBanner: true,
-		provideConfig: true,
-	},
 	args: {},
-	async handler(args, { config }) {
+	async handler(_, { config }) {
 		logger.log(`📋 Listing Hyperdrive configs`);
 		const databases = await listConfigs(config);
 		logger.table(

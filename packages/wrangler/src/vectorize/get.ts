@@ -1,5 +1,5 @@
-import { logger } from "../logger";
 import { createCommand } from "../core/create-command";
+import { logger } from "../logger";
 import { getIndex } from "./client";
 import { deprecatedV1DefaultFlag, vectorizeGABanner } from "./common";
 
@@ -12,7 +12,6 @@ export const vectorizeGetCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
-		provideConfig: true,
 	},
 	args: {
 		name: {

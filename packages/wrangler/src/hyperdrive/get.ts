@@ -1,5 +1,5 @@
-import { logger } from "../logger";
 import { createCommand } from "../core/create-command";
+import { logger } from "../logger";
 import { getConfig } from "./client";
 
 export const hyperdriveGetCommand = createCommand({
@@ -7,10 +7,6 @@ export const hyperdriveGetCommand = createCommand({
 		description: "Get a Hyperdrive config",
 		status: "open-beta",
 		owner: "Product: Hyperdrive",
-	},
-	behaviour: {
-		printBanner: true,
-		provideConfig: true,
 	},
 	args: {
 		id: {

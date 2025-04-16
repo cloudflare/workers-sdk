@@ -1,6 +1,4 @@
 import { createNamespace } from "../../core/create-command";
-import { d1TimeTravelInfoCommand } from "./info";
-import { d1TimeTravelRestoreCommand } from "./restore";
 
 export const d1TimeTravelNamespace = createNamespace({
 	metadata: {
@@ -10,5 +8,3 @@ export const d1TimeTravelNamespace = createNamespace({
 		owner: "Product: D1",
 	},
 });
-
-export { d1TimeTravelInfoCommand, d1TimeTravelRestoreCommand };

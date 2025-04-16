@@ -10,7 +10,7 @@ import { writeRoutesModule } from "./functions/routes";
 import { convertRoutesToRoutesJSONSpec } from "./functions/routes-transformation";
 import { getPagesTmpDir, RUNNING_BUILDERS } from "./utils";
 import type { BundleResult } from "../deployment-bundle/bundle";
-import type { PagesBuildArgs } from "./build";
+import type { pagesFunctionsBuildCommand } from "./build";
 import type { Config } from "./functions/routes";
 import type { NodeJSCompatMode } from "miniflare";
 
@@ -43,7 +43,7 @@ export async function buildFunctions({
 	external,
 }: Partial<
 	Pick<
-		PagesBuildArgs,
+		typeof pagesFunctionsBuildCommand.args,
 		| "outfile"
 		| "outdir"
 		| "outputConfigPath"
@@ -58,7 +58,7 @@ export async function buildFunctions({
 > & {
 	functionsDirectory: string;
 	onEnd?: () => void;
-	routesOutputPath?: PagesBuildArgs["outputRoutesPath"];
+	routesOutputPath?: (typeof pagesFunctionsBuildCommand.args)["outputRoutesPath"];
 	local: boolean;
 	nodejsCompatMode?: NodeJSCompatMode;
 	// Allow `routesModule` to be fixed, so we don't create a new file in the

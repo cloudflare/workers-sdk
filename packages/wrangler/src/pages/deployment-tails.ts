@@ -74,9 +74,9 @@ export const pagesDeploymentTailCommand = createCommand({
 				"anyway alongside the filter which would have blocked it.",
 		},
 		status: {
-			type: "array",
 			choices: statusChoices,
 			description: "Filter by invocation status",
+			array: true,
 		},
 		header: {
 			type: "string",

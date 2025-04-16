@@ -41,9 +41,6 @@ export const d1CreateCommand = createCommand({
 		status: "stable",
 		owner: "Product: D1",
 	},
-	behaviour: {
-		printBanner: true,
-	},
 	args: {
 		name: {
 			type: "string",

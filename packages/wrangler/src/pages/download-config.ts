@@ -301,9 +301,9 @@ export const pagesDownloadConfigCommand = createCommand({
 			description: "The Pages project to download",
 		},
 		force: {
-			type: "boolean",
 			description:
 				"Overwrite an existing Wrangler configuration file without prompting",
+			type: "boolean",
 		},
 	},
 	positionalArgs: ["projectName"],

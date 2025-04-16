@@ -2,7 +2,6 @@ import { createCommand } from "../../../../../core/create-command";
 import { CommandLineArgsError } from "../../../../../errors";
 import { logger } from "../../../../../logger";
 import { postConsumer } from "../../../../client";
-import type { PostTypedConsumerBody } from "../../../../client";
 
 export const queuesConsumerAddCommand = createCommand({
 	metadata: {
@@ -56,32 +55,26 @@ export const queuesConsumerAddCommand = createCommand({
 			);
 		}
 
-		const body = createBody(args);
+		const body = {
+			script_name: args.scriptName,
+			// TODO(soon) is this still the correct usage of the environment?
+			environment_name: args.env ?? "", // API expects empty string as default
+			type: "worker",
+			settings: {
+				batch_size: args.batchSize,
+				max_retries: args.messageRetries,
+				max_wait_time_ms:
+					args.batchTimeout !== undefined // API expects milliseconds
+						? 1000 * args.batchTimeout
+						: undefined,
+				max_concurrency: args.maxConcurrency,
+				retry_delay: args.retryDelaySecs,
+			},
+			dead_letter_queue: args.deadLetterQueue,
+		};
 
 		logger.log(`Adding consumer to queue ${args.queueName}.`);
 		await postConsumer(config, args.queueName, body);
 		logger.log(`Added consumer to queue ${args.queueName}.`);
 	},
 });
-
-function createBody(
-	args: typeof queuesConsumerAddCommand.args
-): PostTypedConsumerBody {
-	return {
-		script_name: args.scriptName,
-		// TODO(soon) is this still the correct usage of the environment?
-		environment_name: args.env ?? "", // API expects empty string as default
-		type: "worker",
-		settings: {
-			batch_size: args.batchSize,
-			max_retries: args.messageRetries,
-			max_wait_time_ms:
-				args.batchTimeout !== undefined // API expects milliseconds
-					? 1000 * args.batchTimeout
-					: undefined,
-			max_concurrency: args.maxConcurrency,
-			retry_delay: args.retryDelaySecs,
-		},
-		dead_letter_queue: args.deadLetterQueue,
-	};
-}
