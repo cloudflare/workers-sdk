@@ -1,11 +1,6 @@
-import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { getByIds } from "./client";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type { VectorizeVectorIds } from "./types";
 
 export const vectorizeGetVectorsCommand = createCommand({

@@ -1,11 +1,6 @@
-import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { listMetadataIndex } from "./client";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 
 export const vectorizeListMetadataIndexCommand = createCommand({
 	metadata: {
