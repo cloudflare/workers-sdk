@@ -17,6 +17,10 @@ export const emojifyInstanceStatus = (status: InstanceStatus) => {
 			return "▶ Running";
 		case "terminated":
 			return "🚫 Terminated";
+		case "waiting":
+			return "⏰ Waiting";
+		default:
+			return "❓ Unknown";
 	}
 };
 
