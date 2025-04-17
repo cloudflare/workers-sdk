@@ -15,6 +15,7 @@ import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import {
 	msw,
@@ -1555,6 +1556,33 @@ describe.sequential("wrangler dev", () => {
 					'^The directory specified by the "assets.directory" field in your configuration file does not exist:[Ss]*'
 				)
 			);
+		});
+
+		it("should ask for user confirmation to start remote dev session", async () => {
+			// interactive mode requires isTTY to be truthy and isCI to be falsy
+			const isCISpy = vi.spyOn(CI, "isCI").mockReturnValue(false);
+
+			writeWranglerConfig({
+				main: "./index.js",
+				assets: {
+					directory: "assets",
+				},
+			});
+			fs.mkdirSync("assets");
+			fs.writeFileSync("index.js", `export default {};`);
+
+			mockConfirm({
+				text: "Using `wrangler dev --remote` with assets requires a new Worker to be uploaded to the server. Do you want to continue?",
+				result: false,
+			});
+
+			await expect(
+				runWrangler("dev --remote")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				"[Error: Command aborted by user]"
+			);
+
+			isCISpy.mockClear();
 		});
 	});
 
