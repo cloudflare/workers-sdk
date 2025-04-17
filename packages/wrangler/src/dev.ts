@@ -11,7 +11,7 @@ import {
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
-import { configFileName, formatConfigSnippet } from "./config";
+import { configFileName, formatConfigSnippet, readConfig } from "./config";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deploy/deploy";
 import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
@@ -19,6 +19,7 @@ import { devRegistry, getBoundRegisteredWorkers } from "./dev-registry";
 import { getVarsForDev } from "./dev/dev-vars";
 import registerDevHotKeys from "./dev/hotkeys";
 import { maybeRegisterLocalWorker } from "./dev/local";
+import { confirm } from "./dialogs";
 import { UserError } from "./errors";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
@@ -598,6 +599,20 @@ export async function startDev(args: StartDevOptions) {
 	try {
 		if (args.logLevel) {
 			logger.loggerLevel = args.logLevel;
+		}
+
+		if (args.remote) {
+			const config = readConfig(args);
+
+			if (args.assets || config.assets) {
+				const ok = await confirm(
+					"Using `wrangler dev --remote` with assets requires a new Worker to be uploaded to the server. Do you want to continue?"
+				);
+
+				if (!ok) {
+					throw new UserError("Command aborted by user");
+				}
+			}
 		}
 
 		const authHook: AsyncHook<CfAccount, [Pick<Config, "account_id">]> = async (
