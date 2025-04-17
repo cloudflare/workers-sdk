@@ -90,6 +90,16 @@ export type InstanceTerminateLog = {
 	};
 };
 
+export type InstanceWaitForEventLog = {
+	name: string;
+	start: string;
+	end: string;
+	finished: boolean;
+	error: { name: string; message: string } | null;
+	output: unknown;
+	type: "waitForEvent";
+};
+
 export type InstanceStatusAndLogs = {
 	status: InstanceStatus;
 	params: Record<string, unknown>;
@@ -100,7 +110,12 @@ export type InstanceStatusAndLogs = {
 	queued: string;
 	start: string | null;
 	end: string | null;
-	steps: (InstanceStepLog | InstanceSleepLog | InstanceTerminateLog)[];
+	steps: (
+		| InstanceStepLog
+		| InstanceSleepLog
+		| InstanceTerminateLog
+		| InstanceWaitForEventLog
+	)[];
 	success: boolean | null;
 	error: { name: string; message: string } | null;
 };
