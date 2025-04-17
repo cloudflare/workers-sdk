@@ -172,4 +172,71 @@ describe("versions upload", () => {
 
 		expect(std.info).toContain("Retrying API call after error...");
 	});
+
+	it("should error when uploading an assets-only Worker with unsupported configuration for assets-only", async () => {
+		writeWranglerConfig({
+			assets: {
+				directory: "xyz",
+			},
+			send_metrics: true,
+			vars: {
+				MY_VAR: "my var",
+			},
+			services: [
+				{
+					binding: "BINDING_NAME",
+					service: "WORKER_NAME",
+				},
+			],
+			kv_namespaces: [
+				{
+					id: "123",
+					binding: "KV_BINDING_NAME",
+				},
+			],
+		});
+		await expect(runWrangler("versions upload")).rejects
+			.toThrowErrorMatchingInlineSnapshot(`
+			[Error: Assets-only Workers do not support the following configuration keys:
+
+			⋅ "send_metrics"
+			⋅ "vars"
+			⋅ "kv_namespaces"
+			⋅ "services"
+
+			Please remove these fields from your configuration file, or configure the "main" field if you are trying to deploy a Worker with assets.]
+		`);
+	});
+
+	it("should error when uploading an assets-only Worker via the --assets flag, with unsupported configuration for assets-only", async () => {
+		writeWranglerConfig({
+			send_metrics: true,
+			vars: {
+				MY_VAR: "my var",
+			},
+			services: [
+				{
+					binding: "BINDING_NAME",
+					service: "WORKER_NAME",
+				},
+			],
+			kv_namespaces: [
+				{
+					id: "123",
+					binding: "KV_BINDING_NAME",
+				},
+			],
+		});
+		await expect(runWrangler("versions upload --assets assets")).rejects
+			.toThrowErrorMatchingInlineSnapshot(`
+			[Error: Assets-only Workers do not support the following configuration keys:
+
+			⋅ "send_metrics"
+			⋅ "vars"
+			⋅ "kv_namespaces"
+			⋅ "services"
+
+			Please remove these fields from your configuration file, or configure the "main" field if you are trying to deploy a Worker with assets.]
+		`);
+	});
 });
