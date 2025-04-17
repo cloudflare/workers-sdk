@@ -612,9 +612,9 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 					contents: EXTERNAL_AI_WORKER_SCRIPT,
 				},
 			],
-			serviceBindings: {
-				FETCHER: AIFetcher,
-			},
+			// serviceBindings: {
+			// 	FETCHER: AIFetcher,
+			// },
 		});
 
 		wrappedBindings[bindings.ai.binding] = {

@@ -15,8 +15,11 @@ import {
 
 const ChainSymbol = Symbol.for("chain");
 
-// send: to client
-// receive: from client
+/**
+ * RpcClient is the client side of an RPC connection with RpcServer
+ * It's implemented to be transport agnostic, and just takes a `request()` method in the constructor
+ * which it uses to send a request and receive a response from the server
+ */
 export class RpcServer {
 	heap: Map<string, unknown>;
 
@@ -113,9 +116,19 @@ export class RpcServer {
 	}
 }
 
-// send: to server
-// receive: from server
+/**
+ * RpcClient is the client side of an RPC connection with RpcServer
+ * It's implemented to be transport agnostic, and just takes a `request()` method in the constructor
+ * which it uses to send a request and receive a response from the server
+ */
 export class RpcClient {
+	/**
+	 * We need to link up messages sent from the client to responses from the server.
+	 * This map stores a record of message ID to the promise that should be resolved with the result
+	 * once a message response has been received. It relies on messages (which are otherwise encoded strings)
+	 * starting with a 36 character message ID—chosen by the client and retained by the server to send back
+	 * in the response
+	 */
 	pendingMessages: Map<string, DeferredPromise<string>> = new Map();
 
 	constructor(private send: (data: string) => void) {}
@@ -170,6 +183,7 @@ export class RpcClient {
 								reducers
 							);
 							const promise = new DeferredPromise<string>();
+
 							this.pendingMessages.set(messageId, promise);
 
 							this.send(messageId + string);

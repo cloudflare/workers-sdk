@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
 
 class FilteredPushArray<T> extends Array<T> {
@@ -14,9 +15,79 @@ export default defineWorkersProject({
 	test: {
 		poolOptions: {
 			workers: {
-				singleWorker: true,
-				wrangler: {
-					configPath: "tests/wrangler.jsonc",
+				isolatedStorage: false,
+				miniflare: {
+					compatibilityDate: "2025-01-01",
+					compatibilityFlags: ["nodejs_compat_v2"],
+					serviceBindings: {
+						RPC_SERVER: "rpc-server",
+					},
+					wrappedBindings: {
+						KV: {
+							scriptName: "rpc-client",
+							bindings: {
+								key: "KV",
+							},
+						},
+						R2: {
+							scriptName: "rpc-client",
+							bindings: {
+								key: "R2",
+							},
+						},
+						COUNTER_SERVICE: {
+							scriptName: "rpc-client",
+							bindings: {
+								key: "COUNTER_SERVICE",
+							},
+						},
+					},
+
+					workers: [
+						{
+							name: "rpc-server",
+							modules: true,
+							scriptPath: "./rpc-server.js",
+							compatibilityDate: "2025-01-01",
+							compatibilityFlags: ["nodejs_compat_v2"],
+							serviceBindings: {
+								COUNTER_SERVICE: {
+									name: "other",
+									entrypoint: "CounterService",
+								},
+							},
+							durableObjects: {
+								DO: {
+									scriptName: "rpc-server",
+									className: "RpcDurableObject",
+								},
+							},
+							kvNamespaces: ["KV"],
+							r2Buckets: ["R2"],
+						},
+						{
+							name: "other",
+							modules: true,
+							scriptPath: "./tests/other.js",
+							compatibilityDate: "2025-01-01",
+							compatibilityFlags: ["nodejs_compat_v2"],
+						},
+						{
+							name: `rpc-client`,
+							modules: [
+								{
+									type: "ESModule",
+									path: "index.mjs",
+									contents: readFileSync("./rpc-client-wrapped-binding.js"),
+								},
+							],
+							serviceBindings: {
+								SERVER: {
+									name: "rpc-server",
+								},
+							},
+						},
+					],
 				},
 			},
 		},

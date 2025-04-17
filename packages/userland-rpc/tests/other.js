@@ -11,6 +11,12 @@ class Counter extends RpcTarget {
 	get value() {
 		return this.#value;
 	}
+
+	get fns() {
+		return {
+			hello: () => "world",
+		};
+	}
 }
 
 export class CounterService extends WorkerEntrypoint {

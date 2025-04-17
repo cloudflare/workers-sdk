@@ -238,12 +238,8 @@ export function createCloudflareReducers(
 				if (!heap) {
 					throw new Error("Attempted to use heap on client");
 				}
-				heap.set(
-					id,
-					"__miniflareWrappedFunction" in val
-						? val["__miniflareWrappedFunction"]
-						: val
-				);
+
+				heap.set(id, val);
 				return id;
 			}
 		},
@@ -434,11 +430,7 @@ export function bufferedStringify(
 
 		...reducers,
 	};
-	if (typeof value === "function") {
-		value = new __MiniflareFunctionWrapper(
-			value as ConstructorParameters<typeof __MiniflareFunctionWrapper>[0]
-		);
-	}
+
 	const stringifiedValue = stringify(value, streamReducers);
 	// If we didn't need to buffer anything, we've just encoded correctly. Note
 	// `unbufferedStream` may be undefined if the `value` didn't contain streams.
@@ -470,24 +462,6 @@ export function bufferedStringify(
 		const stringifiedValue = stringify(value, streamReducers);
 		return stringifiedValue;
 	});
-}
-
-// functions can't be stringified, so we wrap them into a class that we then use to pseudo-serialize them
-// we also add a proxy and make sure that properties set on the function object are accessible
-// (this is in particular necessary for RpcStubs)
-export class __MiniflareFunctionWrapper {
-	constructor(
-		fnWithProps: ((...args: unknown[]) => unknown) & {
-			[key: string | symbol]: unknown;
-		}
-	) {
-		return new Proxy(this, {
-			get: (_, key) => {
-				if (key === "__miniflareWrappedFunction") return fnWithProps;
-				return fnWithProps[key];
-			},
-		});
-	}
 }
 
 export function parseBufferedStreams<T>(

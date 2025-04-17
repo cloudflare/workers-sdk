@@ -1,0 +1,34 @@
+{
+	"main": "./rpc-server.ts",
+	"name": "rpc-server",
+	"compatibility_date": "2025-01-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+			"id": "a84611996277476f9cbc8ba904f93fa9",
+			"preview_id": "a84611996277476f9cbc8ba904f93fa9",
+		},
+	],
+	"r2_buckets": [
+		{
+			"binding": "R2",
+			"bucket_name": "r2-bucket",
+			"preview_bucket_name": "r2-bucket",
+		},
+	],
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": ["RpcDurableObject"],
+		},
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "DO",
+				"class_name": "RpcDurableObject",
+			},
+		],
+	},
+}

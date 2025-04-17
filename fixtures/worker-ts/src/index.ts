@@ -28,6 +28,7 @@ export default {
 		ctx: ExecutionContext
 	): Promise<Response> {
 		const url = new URL(request.url);
+		console.log(env.AI.checkProxy.nest());
 		if (url.pathname === "/error") throw new Error("Hello Error");
 		return new Response("Hello World!");
 	},
