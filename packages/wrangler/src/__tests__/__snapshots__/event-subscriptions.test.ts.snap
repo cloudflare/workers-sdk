@@ -1,0 +1,83 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`wrangler > event-subscription browse > can filter products with --source 1`] = `
+"┌───────────────────────────┬─────────┬──────────────┐
+│ service                   │ event   │ description  │
+├───────────────────────────┼─────────┼──────────────┤
+│ Test Product Resourceless │ event-1 │ Test event 1 │
+├───────────────────────────┼─────────┼──────────────┤
+│ Test Product Resourceless │ event-2 │ Test event 2 │
+└───────────────────────────┴─────────┴──────────────┘"
+`;
+
+exports[`wrangler > event-subscription browse > ignores products that do not exist on both QBW and Wrangler 1`] = `
+"┌──────────────┬─────────┬──────────────┐
+│ service      │ event   │ description  │
+├──────────────┼─────────┼──────────────┤
+│ Test Product │ event-1 │ Test event 1 │
+├──────────────┼─────────┼──────────────┤
+│ Test Product │ event-2 │ Test event 2 │
+└──────────────┴─────────┴──────────────┘"
+`;
+
+exports[`wrangler > event-subscription browse > shows all defined product events 1`] = `
+"┌───────────────────────────┬────────┬──────────────┐
+│ service                   │ event  │ description  │
+├───────────────────────────┼────────┼──────────────┤
+│ Test Product              │ v-e-1  │ Test event 1 │
+├───────────────────────────┼────────┼──────────────┤
+│ Test Product              │ v-e-2  │ Test event 2 │
+├───────────────────────────┼────────┼──────────────┤
+│ Test Product Resourceless │ vr-e-1 │ Test event 1 │
+├───────────────────────────┼────────┼──────────────┤
+│ Test Product Resourceless │ vr-e-2 │ Test event 2 │
+└───────────────────────────┴────────┴──────────────┘"
+`;
+
+exports[`wrangler > event-subscription create > allows resource-less products without a resource ID 1`] = `
+"┌──────────────────────┬───────────────────┬────────────────────┬────────────────┬────────┐
+│ id                   │ name              │ source             │ destination    │ events │
+├──────────────────────┼───────────────────┼────────────────────┼────────────────┼────────┤
+│ test-subscription-id │ test-subscription │ vitestResourceless │ queues.queueId │ e1,e2  │
+└──────────────────────┴───────────────────┴────────────────────┴────────────────┴────────┘"
+`;
+
+exports[`wrangler > event-subscription create > creates a new subscription 1`] = `
+"┌──────────────────────┬───────────────────┬─────────────────┬────────────────┬────────┐
+│ id                   │ name              │ source          │ destination    │ events │
+├──────────────────────┼───────────────────┼─────────────────┼────────────────┼────────┤
+│ test-subscription-id │ test-subscription │ vitest.testName │ queues.queueId │ e1,e2  │
+└──────────────────────┴───────────────────┴─────────────────┴────────────────┴────────┘"
+`;
+
+exports[`wrangler > event-subscription create > errors for unrecognized products 1`] = `[Error: Invalid source. TODO: Write a better / more helpful error message]`;
+
+exports[`wrangler > event-subscription create > errors when resource ID is missing 1`] = `[Error: Invalid resource ID. TODO: Write a better / more helpful error message]`;
+
+exports[`wrangler > event-subscriptions delete 1`] = `"Event subscription deleted!"`;
+
+exports[`wrangler > event-subscriptions get 1`] = `
+"┌──────────────────────┬───────────────────┬──────────────────────────────────┬──────────────────────┬────────┐
+│ id                   │ name              │ source                           │ destination          │ events │
+├──────────────────────┼───────────────────┼──────────────────────────────────┼──────────────────────┼────────┤
+│ test-subscription-id │ test-subscription │ test-product-id.test-resource-id │ queues.test-queue-id │ e1, e2 │
+└──────────────────────┴───────────────────┴──────────────────────────────────┴──────────────────────┴────────┘"
+`;
+
+exports[`wrangler > event-subscriptions list 1`] = `
+"┌────────────────────────┬─────────────────────┬──────────────────────────────────────┬────────────────────────┬────────┐
+│ id                     │ name                │ source                               │ destination            │ events │
+├────────────────────────┼─────────────────────┼──────────────────────────────────────┼────────────────────────┼────────┤
+│ test-subscription-id   │ test-subscription   │ test-product-id.test-resource-id     │ queues.test-queue-id   │ e1, e2 │
+├────────────────────────┼─────────────────────┼──────────────────────────────────────┼────────────────────────┼────────┤
+│ test-subscription-id-2 │ test-subscription-2 │ test-product-id-2.test-resource-id-2 │ queues.test-queue-id-2 │ e3, e4 │
+└────────────────────────┴─────────────────────┴──────────────────────────────────────┴────────────────────────┴────────┘"
+`;
+
+exports[`wrangler > event-subscriptions update 1`] = `
+"┌──────────────────────┬─────────┬──────────────────────────────────┬──────────────────────┬────────┐
+│ id                   │ name    │ source                           │ destination          │ events │
+├──────────────────────┼─────────┼──────────────────────────────────┼──────────────────────┼────────┤
+│ test-subscription-id │ updated │ test-product-id.test-resource-id │ queues.test-queue-id │ e1, e2 │
+└──────────────────────┴─────────┴──────────────────────────────────┴──────────────────────┴────────┘"
+`;
