@@ -41,6 +41,7 @@ export async function buildFunctions({
 	defineNavigatorUserAgent,
 	checkFetch,
 	external,
+	metafile,
 }: Partial<
 	Pick<
 		PagesBuildArgs,
@@ -66,6 +67,7 @@ export async function buildFunctions({
 	routesModule?: string;
 	defineNavigatorUserAgent: boolean;
 	checkFetch: boolean;
+	metafile?: string | boolean;
 }) {
 	RUNNING_BUILDERS.forEach(
 		(runningBuilder) => runningBuilder.stop && runningBuilder.stop()
@@ -143,6 +145,7 @@ export async function buildFunctions({
 			defineNavigatorUserAgent,
 			checkFetch,
 			external,
+			metafile,
 		});
 	}
 

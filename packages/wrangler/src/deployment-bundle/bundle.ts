@@ -135,6 +135,7 @@ export type BundleOptions = {
 	projectRoot: string | undefined;
 	defineNavigatorUserAgent: boolean;
 	external: string[] | undefined;
+	metafile: string | boolean | undefined;
 };
 
 /**
@@ -170,6 +171,7 @@ export async function bundleWorker(
 		projectRoot,
 		defineNavigatorUserAgent,
 		external,
+		metafile,
 	}: BundleOptions
 ): Promise<BundleResult> {
 	// We create a temporary directory for any one-off files we
@@ -453,6 +455,23 @@ export async function bundleWorker(
 			};
 		} else {
 			result = await esbuild.build(buildOptions);
+
+			// Write the bundle metafile to disk.
+			if (metafile && result.metafile) {
+				let metaFilePath: string;
+
+				if (metafile && typeof metafile === "string") {
+					metaFilePath = path.resolve(metafile as string);
+				} else if (isOutfile) {
+					metaFilePath = `${destination}.bundle-meta.json`;
+				} else {
+					metaFilePath = path.join(destination, "bundle-meta.json");
+				}
+
+				const metaJson = JSON.stringify(result.metafile, null, 2);
+				fs.writeFileSync(metaFilePath, metaJson);
+			}
+
 			// Even when we're not watching, we still want some way of cleaning up the
 			// temporary directory when we don't need it anymore
 			stop = async function () {

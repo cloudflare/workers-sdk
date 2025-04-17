@@ -92,6 +92,7 @@ type Props = {
 
 	tag: string | undefined;
 	message: string | undefined;
+	metafile: string | boolean | undefined;
 };
 
 export const versionsUploadCommand = createCommand({
@@ -362,6 +363,7 @@ export const versionsUploadCommand = createCommand({
 			message: args.message,
 			experimentalAutoCreate: args.experimentalAutoCreate,
 			outFile: args.outfile,
+			metafile: false,
 		});
 
 		writeOutput({
@@ -595,6 +597,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						// These options are dev-only
 						testScheduled: undefined,
 						watch: undefined,
+						metafile: props.metafile,
 					}
 				);
 

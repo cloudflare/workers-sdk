@@ -168,6 +168,12 @@ export const deployCommand = createCommand({
 			describe: "Don't actually deploy",
 			type: "boolean",
 		},
+		metafile: {
+			describe:
+				"Output build metadata from ESBuild to 'bundle-meta.json' or a specified file path",
+			type: "string",
+			coerce: (v: string) => (!v ? true : v),
+		},
 		"keep-vars": {
 			describe:
 				"Stop Wrangler from deleting vars that are not present in the Wrangler configuration file\nBy default Wrangler will remove all vars and replace them with those found in the Wrangler configuration.\nIf your development approach is to modify vars after deployment via the dashboard you may wish to set this flag.",
@@ -313,6 +319,7 @@ export const deployCommand = createCommand({
 			outDir: args.outdir,
 			outFile: args.outfile,
 			dryRun: args.dryRun,
+			metafile: args.metafile,
 			noBundle: !(args.bundle ?? !config.no_bundle),
 			keepVars: args.keepVars,
 			logpush: args.logpush,

@@ -134,6 +134,12 @@ export function Options(yargs: CommonYargsArgv) {
 				type: "string",
 				array: true,
 			},
+			metafile: {
+				describe:
+					"Output build metadata from ESBuild to 'bundle-meta.json' or a specified file path",
+				type: "string",
+				coerce: (v: string) => (!v ? true : v),
+			},
 		});
 }
 
@@ -158,6 +164,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 			defineNavigatorUserAgent,
 			checkFetch,
 			external,
+			metafile,
 		} = validatedArgs;
 
 		try {
@@ -185,6 +192,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 				defineNavigatorUserAgent,
 				checkFetch,
 				external,
+				metafile,
 			});
 		} catch (e) {
 			if (e instanceof FunctionsNoRoutesError) {
@@ -227,6 +235,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 			defineNavigatorUserAgent,
 			checkFetch,
 			external,
+			metafile,
 		} = validatedArgs;
 
 		/**
@@ -262,6 +271,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 					defineNavigatorUserAgent,
 					checkFetch,
 					externalModules: external,
+					metafile,
 				});
 			}
 		} else {
@@ -288,6 +298,7 @@ export const Handler = async (args: PagesBuildArgs) => {
 					defineNavigatorUserAgent,
 					checkFetch,
 					external,
+					metafile,
 				});
 			} catch (e) {
 				if (e instanceof FunctionsNoRoutesError) {

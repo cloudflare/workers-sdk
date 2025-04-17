@@ -172,6 +172,8 @@ export function runBuild(
 						// sourcemap defaults to true in dev
 						sourcemap: undefined,
 						checkFetch,
+
+						metafile: undefined,
 					})
 				: undefined;
 
