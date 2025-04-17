@@ -136,13 +136,17 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 			const keys: string[] = parsedBody.keys;
 			const type = parsedBody?.type;
 			if (type && type !== "text" && type !== "json") {
-				return new Response("Bad Request", { status: 400 });
+				const errorStr = `"${type}" is not a valid type. Use "json" or "text"`;
+				return new Response(errorStr, { status: 400, statusText: errorStr });
 			}
 			const obj: { [key: string]: any } = {};
 			if (keys.length > MAX_BULK_GET_KEYS) {
-				return new Response("Bad Request", {
-					status: 400,
-				});
+				const errorStr = `You can request a maximum of ${MAX_BULK_GET_KEYS} keys`;
+				return new Response(errorStr, { status: 400, statusText: errorStr });
+			}
+			if (keys.length < 1) {
+				const errorStr = "You must request a minimum of 1 key";
+				return new Response(errorStr, { status: 400, statusText: errorStr });
 			}
 			let totalBytes = 0;
 			for (const key of keys) {

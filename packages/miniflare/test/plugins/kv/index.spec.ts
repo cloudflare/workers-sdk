@@ -146,7 +146,34 @@ test("bulk get: check max keys", async (t) => {
 	try {
 		await kv.get(keyArray);
 	} catch (error: any) {
-		t.is(error.message, "KV GET_BULK failed: 400 Bad Request");
+		t.is(
+			error.message,
+			"KV GET_BULK failed: 400 You can request a maximum of 100 keys"
+		);
+	}
+});
+
+test("bulk get: check minimum keys", async (t) => {
+	const { kv } = t.context;
+	try {
+		await kv.get([]);
+	} catch (error: any) {
+		t.is(
+			error.message,
+			"KV GET_BULK failed: 400 You must request a minimum of 1 key"
+		);
+	}
+});
+
+test("bulk get: invalid type", async (t) => {
+	const { kv } = t.context;
+	try {
+		await kv.get(["key"], { type: "invalid" as "json" });
+	} catch (error: any) {
+		t.is(
+			error.message,
+			'KV GET_BULK failed: 400 "invalid" is not a valid type. Use "json" or "text"'
+		);
 	}
 });
 
