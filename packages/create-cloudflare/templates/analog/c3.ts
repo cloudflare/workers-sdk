@@ -20,19 +20,16 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	// Fix hoisting issues with pnpm, yarn and bun
-	if (pm === "pnpm" || pm === "yarn" || pm === "bun") {
-		const packages = [];
-		packages.push("nitropack");
-		packages.push("h3");
-		packages.push("@nx/devkit");
+	const packages = [];
+	packages.push("nitropack");
+	packages.push("h3");
+	packages.push("@nx/devkit");
 
-		await installPackages(packages, {
-			dev: true,
-			startText: `Installing ${packages.join(", ")}`,
-			doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
-		});
-	}
+	await installPackages(packages, {
+		dev: true,
+		startText: `Installing additional dependencies: ${packages.join(", ")}`,
+		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
+	});
 
 	updateViteConfig(ctx);
 	updateEnvTypes(ctx);
