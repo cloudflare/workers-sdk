@@ -281,10 +281,6 @@ export const versionsUploadCommand = createCommand({
 			);
 		}
 
-		if (config.workflows?.length) {
-			logger.once.warn("Workflows is currently in open beta.");
-		}
-
 		validateAssetsArgsAndConfig(
 			{
 				site: undefined,
