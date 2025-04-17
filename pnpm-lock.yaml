@@ -1933,6 +1933,24 @@ importers:
         specifier: workspace:*
         version: link:../wrangler
 
+  packages/userland-rpc:
+    devDependencies:
+      '@cloudflare/vitest-pool-workers':
+        specifier: workspace:*
+        version: link:../vitest-pool-workers
+      '@cloudflare/workers-types':
+        specifier: ^4.20250409.0
+        version: 4.20250409.0
+      '@types/node':
+        specifier: ^18.19.75
+        version: 18.19.76
+      devalue:
+        specifier: ^5.1.1
+        version: 5.1.1
+      miniflare:
+        specifier: workspace:*
+        version: link:../miniflare
+
   packages/vite-plugin-cloudflare:
     dependencies:
       '@cloudflare/unenv-preset':
@@ -7930,6 +7948,9 @@ packages:
 
   devalue@4.3.2:
     resolution: {integrity: sha512-KqFl6pOgOW+Y6wJgu80rHpo2/3H07vr8ntR9rkkFIRETewbf5GaYYcakYfiKz89K+sLsuPkQIZaXDMjUObZwWg==}
+
+  devalue@5.1.1:
+    resolution: {integrity: sha512-maua5KUiapvEwiEAe+XnlZ3Rh0GD+qI1J/nb9vrJc3muPXvcF/8gXYTWF76+5DAqHyDUtOIImEuo0YKE9mshVw==}
 
   devtools-protocol@0.0.1182435:
     resolution: {integrity: sha512-EmlkWb62wSbQNE1gRZZsi4KZYRaF5Skpp183LhRU7+sadKR06O1dHCjZmFSEG6Kv7P6S/UYLxcY3NlYwqKM99w==}
@@ -17788,6 +17809,8 @@ snapshots:
   detect-newline@3.1.0: {}
 
   devalue@4.3.2: {}
+
+  devalue@5.1.1: {}
 
   devtools-protocol@0.0.1182435: {}
 
