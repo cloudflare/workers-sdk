@@ -1,92 +1,95 @@
-import { DeferredPromise } from "./lib/deferred-promise";
 import {
-	bufferedStringify,
 	ChainItem,
 	createCloudflareReducers,
 	createCloudflareRevivers,
+	parse,
+	ReducersRevivers,
+	serialiseToRequest,
+	serialiseToResponse,
+	UnresolvedChain,
+	WORKERS_PLATFORM_IMPL,
+} from "./lib/devalue";
+import {
 	createHTTPReducers,
 	createHTTPRevivers,
-	parseBufferedStreams,
-	ReducersRevivers,
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
-	UnresolvedChain,
-} from "./lib/devalue";
+} from "./lib/miniflare";
 
 const ChainSymbol = Symbol.for("chain");
 
 /**
- * RpcClient is the client side of an RPC connection with RpcServer
- * It's implemented to be transport agnostic, and just takes a `request()` method in the constructor
- * which it uses to send a request and receive a response from the server
+ * RpcServer is the server side of an RPC connection with RpcClient
+ * It's implemented to be transport agnostic, and just defines a `request()`
+ * which should be called whenever the client sends a request
  */
 export class RpcServer {
+	/**
+	 * Sometimes we need to keep things around on the server-side in case the client requests them again
+	 * e.g. an RpcStub that the client still has a reference to
+	 */
 	heap: Map<string, unknown>;
 
-	constructor(
-		private send: (data: string) => void,
-		private expose: Record<string, unknown>
-	) {
+	constructor(/* the object to be exposed over RPC */ private expose: unknown) {
 		this.heap = new Map();
 	}
 
-	async receive(data: string) {
+	async request(request: Request): Promise<Response> {
 		const reducers: ReducersRevivers = {
 			...structuredSerializableReducers,
-			...createHTTPReducers(),
+			...createHTTPReducers(WORKERS_PLATFORM_IMPL),
 			...createCloudflareReducers(this.heap),
 		};
 		const revivers: ReducersRevivers = {
 			...structuredSerializableRevivers,
-			...createHTTPRevivers(),
+			...createHTTPRevivers(WORKERS_PLATFORM_IMPL),
 			...createCloudflareRevivers(this.heap),
 		};
-		const methodId = data.slice(0, 36);
-		const { chain, targetHeapId } = await parseBufferedStreams<{
+		/**
+		 * `chain` is the sequence of operations that client performed that should be replayed on the target
+		 * `targetHeapId` is _which_ target to replay the operations on. On a first request this will likely
+		 * be undefined, and so the chain should be replayed directly on `this.expose`
+		 */
+		const { chain, targetHeapId } = await parse<{
 			chain: ChainItem[];
-			targetHeapId: string;
-		}>(data.slice(36), revivers);
-		console.log({ chain });
-
-		let startingObject;
-		if (targetHeapId) {
-			startingObject = this.heap.get(targetHeapId);
-		} else {
-			startingObject = this.expose;
-		}
+			targetHeapId: string | undefined;
+		}>(request, revivers);
 
 		try {
-			const result = await this.resolveChain(startingObject, chain);
-			this.send(
-				methodId + (await bufferedStringify({ data: result }, reducers))
+			const result = await this.resolveChain(
+				targetHeapId ? this.heap.get(targetHeapId) : this.expose,
+				chain
 			);
+			return serialiseToResponse({ data: result }, reducers);
 		} catch (e) {
-			this.send(methodId + (await bufferedStringify({ error: e }, reducers)));
+			// Sometimes bindings can throw errors. We catch and serialise those, so they can be re-thrown on the client
+			return serialiseToResponse({ error: e }, reducers);
 		}
 	}
 
-	async resolveChain(target: any, chain: ChainItem[]) {
+	/**
+	 * Replay a `chain` of operations on a given `target`
+	 */
+	private async resolveChain(target: any, chain: ChainItem[]) {
 		let result = target;
 		for (const item of chain) {
-			console.log("resolving", item);
 			if (item.type === "get") {
+				// If the client operation was a property access
 				let prop = result[item.property];
 
 				if (
 					prop?.constructor.name === "RpcProperty" ||
 					typeof prop !== "function"
 				) {
-					console.log("prop", item);
-
+					// If the value is not a function, it can be used directly
+					// Note the special casing for `RpcProperty`, since typeof RpcProperty === "function"
 					result = prop;
 				} else {
-					console.log("fn", item);
-
+					// If the value is a function, bind it to the previous `result` to preserve `this` references
 					result = prop.bind(result);
 				}
 			} else if (item.type === "apply") {
-				console.log("apply", typeof item);
-
+				// If the client operation was a function call
 				result = await Reflect.apply(
 					result,
 					result,
@@ -103,7 +106,6 @@ export class RpcServer {
 						)
 					)
 				);
-				console.log("res", typeof (await result));
 			}
 		}
 		const returnable = await result;
@@ -122,22 +124,7 @@ export class RpcServer {
  * which it uses to send a request and receive a response from the server
  */
 export class RpcClient {
-	/**
-	 * We need to link up messages sent from the client to responses from the server.
-	 * This map stores a record of message ID to the promise that should be resolved with the result
-	 * once a message response has been received. It relies on messages (which are otherwise encoded strings)
-	 * starting with a 36 character message ID—chosen by the client and retained by the server to send back
-	 * in the response
-	 */
-	pendingMessages: Map<string, DeferredPromise<string>> = new Map();
-
-	constructor(private send: (data: string) => void) {}
-
-	receive(data: string) {
-		const methodId = data.slice(0, 36);
-		const promise = this.pendingMessages.get(methodId);
-		promise?.resolve(data.slice(36));
-	}
+	constructor(private request: (data: Request) => Promise<Response>) {}
 
 	createChainProxy<T>(
 		chain: ChainItem[] = [],
@@ -146,12 +133,12 @@ export class RpcClient {
 	): T {
 		const reducers: ReducersRevivers = {
 			...structuredSerializableReducers,
-			...createHTTPReducers(),
+			...createHTTPReducers(WORKERS_PLATFORM_IMPL),
 			...createCloudflareReducers(),
 		};
 		const revivers: ReducersRevivers = {
 			...structuredSerializableRevivers,
-			...createHTTPRevivers(),
+			...createHTTPRevivers(WORKERS_PLATFORM_IMPL),
 			...createCloudflareRevivers(undefined, (id) =>
 				this.createChainProxy([], id, false)
 			),
@@ -174,24 +161,20 @@ export class RpcClient {
 				if (prev?.type === "get" && prev?.property === "then") {
 					(async () => {
 						try {
-							const messageId = crypto.randomUUID();
-							const string = await bufferedStringify(
+							const req = await serialiseToRequest(
 								{
 									chain: chain.slice(0, -1),
 									targetHeapId,
 								},
 								reducers
 							);
-							const promise = new DeferredPromise<string>();
 
-							this.pendingMessages.set(messageId, promise);
+							const result = await this.request(req);
 
-							this.send(messageId + string);
-
-							const { data, error } = parseBufferedStreams<{
-								data: unknown;
-								error: unknown;
-							}>(await promise, revivers);
+							const { data, error } = await parse<{ data: any; error: Error }>(
+								result,
+								revivers
+							);
 
 							if (error) {
 								argumentsList[1](error);

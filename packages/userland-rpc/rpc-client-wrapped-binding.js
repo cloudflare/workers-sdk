@@ -1,20 +1,8 @@
-// lib/deferred-promise.ts
-var DeferredPromise = class extends Promise {
-  constructor(executor = () => {
-  }) {
-    let promiseResolve;
-    let promiseReject;
-    super((resolve, reject) => {
-      promiseResolve = resolve;
-      promiseReject = reject;
-      return executor(resolve, reject);
-    });
-    this.resolve = promiseResolve;
-    this.reject = promiseReject;
-  }
-};
-
 // lib/devalue.ts
+import assert2 from "node-internal:internal_assert";
+import { Buffer as Buffer2 } from "node-internal:internal_buffer";
+
+// lib/miniflare.ts
 import assert from "node-internal:internal_assert";
 import { Buffer } from "node-internal:internal_buffer";
 
@@ -447,7 +435,7 @@ function stringify_primitive(thing) {
   return String(thing);
 }
 
-// lib/devalue.ts
+// lib/miniflare.ts
 var ALLOWED_ARRAY_BUFFER_VIEW_CONSTRUCTORS = [
   DataView,
   Int8Array,
@@ -472,17 +460,6 @@ var ALLOWED_ERROR_CONSTRUCTORS = [
   Error
   // `Error` last so more specific error subclasses preferred
 ];
-function isReadableStream(value) {
-  return value instanceof ReadableStream;
-}
-function bufferReadableStream(stream) {
-  return new Response(stream).arrayBuffer();
-}
-function unbufferReadableStream(buffer) {
-  const body = new Response(buffer).body;
-  assert(body !== null);
-  return body;
-}
 var structuredSerializableReducers = {
   ArrayBuffer(value) {
     if (value instanceof ArrayBuffer) {
@@ -502,21 +479,11 @@ var structuredSerializableReducers = {
   Error(value) {
     for (const ctor of ALLOWED_ERROR_CONSTRUCTORS) {
       if (value instanceof ctor && value.name === ctor.name) {
-        return [
-          value.name,
-          value.message,
-          value.stack,
-          "cause" in value ? value.cause : void 0
-        ];
+        return [value.name, value.message, value.stack, value.cause];
       }
     }
     if (value instanceof Error) {
-      return [
-        "Error",
-        value.message,
-        value.stack,
-        "cause" in value ? value.cause : void 0
-      ];
+      return ["Error", value.message, value.stack, value.cause];
     }
   }
 };
@@ -542,11 +509,7 @@ var structuredSerializableRevivers = {
     assert(ALLOWED_ARRAY_BUFFER_VIEW_CONSTRUCTORS.includes(ctor));
     let length = byteLength;
     if ("BYTES_PER_ELEMENT" in ctor) length /= ctor.BYTES_PER_ELEMENT;
-    return new ctor(
-      buffer,
-      byteOffset,
-      length
-    );
+    return new ctor(buffer, byteOffset, length);
   },
   Error(value) {
     assert(Array.isArray(value));
@@ -561,58 +524,233 @@ var structuredSerializableRevivers = {
     return error;
   }
 };
-function createHTTPReducers() {
+function createHTTPReducers(impl) {
   return {
     Headers(val) {
-      if (val instanceof Headers) return Object.fromEntries(val);
+      if (val instanceof impl.Headers) return Object.fromEntries(val);
     },
     Request(val) {
-      if (val instanceof Request) {
+      if (val instanceof impl.Request) {
         return [val.method, val.url, val.headers, val.cf, val.body];
       }
     },
     Response(val) {
-      if (val instanceof Response) {
+      if (val instanceof impl.Response) {
         return [val.status, val.statusText, val.headers, val.cf, val.body];
       }
     }
   };
 }
+function createHTTPRevivers(impl) {
+  return {
+    Headers(value) {
+      assert(typeof value === "object" && value !== null);
+      return new impl.Headers(value);
+    },
+    Request(value) {
+      assert(Array.isArray(value));
+      const [method, url, headers, cf, body] = value;
+      assert(typeof method === "string");
+      assert(typeof url === "string");
+      assert(headers instanceof impl.Headers);
+      assert(body === null || impl.isReadableStream(body));
+      return new impl.Request(url, {
+        method,
+        headers,
+        cf,
+        // @ts-expect-error `duplex` is not required by `workerd` yet
+        duplex: body === null ? void 0 : "half",
+        body
+      });
+    },
+    Response(value) {
+      assert(Array.isArray(value));
+      const [status, statusText, headers, cf, body] = value;
+      assert(typeof status === "number");
+      assert(typeof statusText === "string");
+      assert(headers instanceof impl.Headers);
+      assert(body === null || impl.isReadableStream(body));
+      return new impl.Response(body, {
+        status,
+        statusText,
+        headers,
+        cf
+      });
+    }
+  };
+}
+function stringifyWithStreams(impl, value, reducers, allowUnbufferedStream) {
+  let unbufferedStream;
+  const bufferPromises = [];
+  const streamReducers = {
+    ReadableStream(value2) {
+      if (impl.isReadableStream(value2)) {
+        if (allowUnbufferedStream && unbufferedStream === void 0) {
+          unbufferedStream = value2;
+        } else {
+          bufferPromises.push(impl.bufferReadableStream(value2));
+        }
+        return true;
+      }
+    },
+    Blob(value2) {
+      if (value2 instanceof impl.Blob) {
+        bufferPromises.push(value2.arrayBuffer());
+        return true;
+      }
+    },
+    ...reducers
+  };
+  if (typeof value === "function") {
+    value = new __MiniflareFunctionWrapper(
+      value
+    );
+  }
+  const stringifiedValue = stringify(value, streamReducers);
+  if (bufferPromises.length === 0) {
+    return { value: stringifiedValue, unbufferedStream };
+  }
+  return Promise.all(bufferPromises).then((streamBuffers) => {
+    streamReducers.ReadableStream = function(value2) {
+      if (impl.isReadableStream(value2)) {
+        if (value2 === unbufferedStream) {
+          return true;
+        } else {
+          return streamBuffers.shift();
+        }
+      }
+    };
+    streamReducers.Blob = function(value2) {
+      if (value2 instanceof impl.Blob) {
+        const array = [streamBuffers.shift(), value2.type];
+        if (value2 instanceof impl.File) {
+          array.push(value2.name, value2.lastModified);
+        }
+        return array;
+      }
+    };
+    const stringifiedValue2 = stringify(value, streamReducers);
+    return { value: stringifiedValue2, unbufferedStream };
+  });
+}
+var __MiniflareFunctionWrapper = class {
+  constructor(fnWithProps) {
+    return new Proxy(this, {
+      get: (_, key) => {
+        if (key === "__miniflareWrappedFunction") return fnWithProps;
+        return fnWithProps[key];
+      }
+    });
+  }
+};
+function parseWithReadableStreams(impl, stringified, revivers) {
+  const streamRevivers = {
+    ReadableStream(value) {
+      if (value === true) {
+        assert(stringified.unbufferedStream !== void 0);
+        return stringified.unbufferedStream;
+      }
+      assert(value instanceof ArrayBuffer);
+      return impl.unbufferReadableStream(value);
+    },
+    Blob(value) {
+      assert(Array.isArray(value));
+      if (value.length === 2) {
+        const [buffer, type] = value;
+        assert(buffer instanceof ArrayBuffer);
+        assert(typeof type === "string");
+        const opts = {};
+        if (type !== "") opts.type = type;
+        return new impl.Blob([buffer], opts);
+      } else {
+        assert(value.length === 4);
+        const [buffer, type, name, lastModified] = value;
+        assert(buffer instanceof ArrayBuffer);
+        assert(typeof type === "string");
+        assert(typeof name === "string");
+        assert(typeof lastModified === "number");
+        const opts = { lastModified };
+        if (type !== "") opts.type = type;
+        return new impl.File([buffer], name, opts);
+      }
+    },
+    ...revivers
+  };
+  return parse(stringified.value, streamRevivers);
+}
+function prefixStream(prefix, stream) {
+  const identity = new TransformStream();
+  const writer = identity.writable.getWriter();
+  void writer.write(prefix).then(() => {
+    writer.releaseLock();
+    return stream.pipeTo(identity.writable);
+  }).catch((error) => {
+    return writer.abort(error);
+  });
+  return identity.readable;
+}
+async function readPrefix(stream, prefixLength) {
+  const chunks = [];
+  let chunksLength = 0;
+  for await (const chunk of stream.values({ preventCancel: true })) {
+    chunks.push(chunk);
+    chunksLength += chunk.byteLength;
+    if (chunksLength >= prefixLength) break;
+  }
+  if (chunksLength < prefixLength) {
+    throw new RangeError(
+      `Expected ${prefixLength} byte prefix, but received ${chunksLength} byte stream`
+    );
+  }
+  const atLeastPrefix = Buffer.concat(chunks, chunksLength);
+  const prefix = atLeastPrefix.subarray(0, prefixLength);
+  let rest = stream;
+  if (chunksLength > prefixLength) {
+    rest = prefixStream(atLeastPrefix.subarray(prefixLength), stream);
+  }
+  return [prefix, rest];
+}
+
+// lib/devalue.ts
 function isObject(value) {
   return !!value && typeof value === "object";
 }
 function isInternal(value) {
   return isObject(value) && !!value[Symbol.for("cloudflare:internal-class")];
 }
-var ClassMethod = class {
-  constructor(name, fn) {
+var SynchronousMethod = class {
+  constructor(name, method) {
     this.name = name;
-    this.fn = fn;
+    this.method = method;
   }
 };
-var precomputableFunctions = {
-  "Checksums::toJSON": (fn) => fn(),
-  "HeadResult::writeHttpMetadata": (fn) => {
-    const h = new Headers();
-    fn(h);
-    return h;
+var synchronousMethods = {
+  "Checksums::toJSON": {
+    reduce: (fn) => fn(),
+    revive: (v) => () => v
   },
-  "GetResult::writeHttpMetadata": (fn) => {
-    const h = new Headers();
-    fn(h);
-    return h;
-  }
-};
-var precomputableFunctionsRevivers = {
-  "Checksums::toJSON": (v) => () => v,
-  "HeadResult::writeHttpMetadata": (v) => (headers) => {
-    for (const [name, value] of v.entries()) {
-      headers.set(name, value);
+  "HeadResult::writeHttpMetadata": {
+    reduce: (fn) => {
+      const h = new Headers();
+      fn(h);
+      return h;
+    },
+    revive: (v) => (headers) => {
+      for (const [name, value] of v.entries()) {
+        headers.set(name, value);
+      }
     }
   },
-  "GetResult::writeHttpMetadata": (v) => (headers) => {
-    for (const [name, value] of v.entries()) {
-      headers.set(name, value);
+  "GetResult::writeHttpMetadata": {
+    reduce: (fn) => {
+      const h = new Headers();
+      fn(h);
+      return h;
+    },
+    revive: (v) => (headers) => {
+      for (const [name, value] of v.entries()) {
+        headers.set(name, value);
+      }
     }
   }
 };
@@ -638,29 +776,29 @@ function createCloudflareReducers(heap) {
         return val.chainProxy;
       }
     },
+    /**
+     * Internal classes are things like R2Object, which have some properties, synchronous methods, and optionally a stream
+     */
     InternalClass(val) {
       if (isInternal(val)) {
         let stream = void 0;
         if (val.body instanceof ReadableStream) {
           stream = val.body;
         }
-        let methods = [];
-        if (typeof val.writeHttpMetadata === "function") {
-          methods.push("writeHttpMetadata");
-        }
-        if (typeof val.toJSON === "function") {
-          methods.push("toJSON");
-        }
         return [
+          // These classes are not constructable in userland, but we need to make the constructor name
+          // match in case user-code depends
           val.constructor.name,
           {
             ...val,
             ...Object.fromEntries(
-              methods.filter((m) => typeof val[m] === "function").map((m) => [
+              Object.keys(val).filter(
+                (m) => !!synchronousMethods[`${val.constructor.name}::${m}`]
+              ).map((m) => [
                 m,
-                new ClassMethod(
+                new SynchronousMethod(
                   `${val.constructor.name}::${m}`,
-                  val[m].bind(val)
+                  val[m]
                 )
               ])
             )
@@ -669,15 +807,9 @@ function createCloudflareReducers(heap) {
         ];
       }
     },
-    PreComputableClassMethod(val) {
-      if (val instanceof ClassMethod && val.name in precomputableFunctions) {
-        return [
-          val.name,
-          precomputableFunctions[
-            val.name
-            // @ts-expect-error val.fn is valid here
-          ](val.fn)
-        ];
+    SynchronousMethod(val) {
+      if (val instanceof SynchronousMethod) {
+        return [val.name, synchronousMethods[val.name].reduce(val.method)];
       }
     }
   };
@@ -724,149 +856,113 @@ function createCloudflareRevivers(heap, stubProxy) {
       }
       return kls;
     },
-    PreComputableClassMethod(val) {
-      return precomputableFunctionsRevivers[val[0]](val[1]);
+    SynchronousMethod(val) {
+      assert2(Array.isArray(val));
+      return synchronousMethods[val[0]].revive(val[1]);
     }
   };
 }
-function createHTTPRevivers() {
-  return {
-    Headers(value) {
-      assert(typeof value === "object" && value !== null);
-      return new Headers(value);
-    },
-    Request(value) {
-      assert(Array.isArray(value));
-      const [method, url, headers, cf, body] = value;
-      assert(typeof method === "string");
-      assert(typeof url === "string");
-      assert(headers instanceof Headers);
-      assert(body === null || isReadableStream(body));
-      return new Request(url, {
-        method,
-        headers,
-        cf,
-        // @ts-expect-error `duplex` is not required by `workerd` yet
-        duplex: body === null ? void 0 : "half",
-        body
-      });
-    },
-    Response(value) {
-      assert(Array.isArray(value));
-      const [status, statusText, headers, cf, body] = value;
-      assert(typeof status === "number");
-      assert(typeof statusText === "string");
-      assert(headers instanceof Headers);
-      assert(body === null || isReadableStream(body));
-      return new Response(body, {
-        status,
-        statusText,
-        headers,
-        cf
-      });
-    }
-  };
-}
-function bufferedStringify(value, reducers) {
-  const bufferPromises = [];
-  const streamReducers = {
-    ReadableStream(value2) {
-      if (isReadableStream(value2)) {
-        bufferPromises.push(bufferReadableStream(value2));
-        return true;
-      }
-    },
-    Blob(value2) {
-      if (value2 instanceof Blob) {
-        bufferPromises.push(value2.arrayBuffer());
-        return true;
-      }
-    },
-    ...reducers
-  };
-  const stringifiedValue = stringify(value, streamReducers);
-  if (bufferPromises.length === 0) {
-    return stringifiedValue;
+var WORKERS_PLATFORM_IMPL = {
+  Blob,
+  File,
+  Headers,
+  Request,
+  Response,
+  isReadableStream(value) {
+    return value instanceof ReadableStream;
+  },
+  bufferReadableStream(stream) {
+    return new Response(stream).arrayBuffer();
+  },
+  unbufferReadableStream(buffer) {
+    const body = new Response(buffer).body;
+    assert2(body !== null);
+    return body;
   }
-  return Promise.all(bufferPromises).then((streamBuffers) => {
-    streamReducers.ReadableStream = function(value2) {
-      if (isReadableStream(value2)) {
-        return streamBuffers.shift();
-      }
-    };
-    streamReducers.Blob = function(value2) {
-      if (value2 instanceof Blob) {
-        const array = [streamBuffers.shift(), value2.type];
-        if (value2 instanceof File) {
-          array.push(value2.name, value2.lastModified);
-        }
-        return array;
-      }
-    };
-    const stringifiedValue2 = stringify(value, streamReducers);
-    return stringifiedValue2;
-  });
+};
+var decoder = new TextDecoder();
+var SIZE_HEADER = "X-Buffer-Size";
+async function parse2(serialised, revivers) {
+  let unbufferedStream;
+  const stringifiedSizeHeader = serialised.headers.get(SIZE_HEADER);
+  if (stringifiedSizeHeader === null || stringifiedSizeHeader === serialised.headers.get("Content-Length")) {
+    return parseWithReadableStreams(
+      WORKERS_PLATFORM_IMPL,
+      { value: await serialised.text() },
+      revivers
+    );
+  } else {
+    const argsSize = parseInt(stringifiedSizeHeader);
+    assert2(!Number.isNaN(argsSize));
+    assert2(serialised.body !== null);
+    const [encodedArgs, rest] = await readPrefix(serialised.body, argsSize);
+    unbufferedStream = rest;
+    const stringifiedArgs = decoder.decode(encodedArgs);
+    return parseWithReadableStreams(
+      WORKERS_PLATFORM_IMPL,
+      { value: stringifiedArgs, unbufferedStream: rest },
+      revivers
+    );
+  }
 }
-function parseBufferedStreams(stringified, revivers) {
-  const streamRevivers = {
-    ReadableStream(value) {
-      assert(value instanceof ArrayBuffer);
-      return unbufferReadableStream(value);
-    },
-    Blob(value) {
-      assert(Array.isArray(value));
-      if (value.length === 2) {
-        const [buffer, type] = value;
-        assert(buffer instanceof ArrayBuffer);
-        assert(typeof type === "string");
-        const opts = {};
-        if (type !== "") opts.type = type;
-        return new Blob([buffer], opts);
-      } else {
-        assert(value.length === 4);
-        const [buffer, type, name, lastModified] = value;
-        assert(buffer instanceof ArrayBuffer);
-        assert(typeof type === "string");
-        assert(typeof name === "string");
-        assert(typeof lastModified === "number");
-        const opts = { lastModified };
-        if (type !== "") opts.type = type;
-        return new File([buffer], name, opts);
-      }
-    },
-    ...revivers
-  };
-  return parse(stringified, streamRevivers);
+async function writeWithUnbufferedStream(writable, encodedValue, unbufferedStream) {
+  const writer = writable.getWriter();
+  await writer.write(encodedValue);
+  writer.releaseLock();
+  await unbufferedStream.pipeTo(writable);
+}
+var encoder = new TextEncoder();
+async function serialiseToRequest(data, reducers) {
+  const stringified = await stringifyWithStreams(
+    WORKERS_PLATFORM_IMPL,
+    data,
+    reducers,
+    true
+  );
+  if (stringified.unbufferedStream === void 0) {
+    const size = Buffer2.byteLength(stringified.value).toString();
+    return new Request("http://example.com", {
+      method: "POST",
+      headers: {
+        [SIZE_HEADER]: size,
+        "Content-Length": size
+      },
+      body: stringified.value
+    });
+  } else {
+    const body = new IdentityTransformStream();
+    const encodedValue = encoder.encode(stringified.value);
+    const encodedSize = encodedValue.byteLength.toString();
+    void writeWithUnbufferedStream(
+      body.writable,
+      encodedValue,
+      stringified.unbufferedStream
+    );
+    return new Request("http://example.com", {
+      method: "POST",
+      headers: {
+        [SIZE_HEADER]: encodedSize
+      },
+      body: body.readable
+    });
+  }
 }
 
 // index.ts
 var ChainSymbol = Symbol.for("chain");
 var RpcClient = class {
-  constructor(send) {
-    this.send = send;
-    /**
-     * We need to link up messages sent from the client to responses from the server.
-     * This map stores a record of message ID to the promise that should be resolved with the result
-     * once a message response has been received. It relies on messages (which are otherwise encoded strings)
-     * starting with a 36 character message ID—chosen by the client and retained by the server to send back
-     * in the response
-     */
-    this.pendingMessages = /* @__PURE__ */ new Map();
-  }
-  receive(data) {
-    const methodId = data.slice(0, 36);
-    const promise = this.pendingMessages.get(methodId);
-    promise?.resolve(data.slice(36));
+  constructor(request) {
+    this.request = request;
   }
   createChainProxy(chain = [], targetHeapId = void 0, thenable = true) {
     const reducers = {
       ...structuredSerializableReducers,
-      ...createHTTPReducers(),
+      ...createHTTPReducers(WORKERS_PLATFORM_IMPL),
       ...createCloudflareReducers()
     };
     const revivers = {
       ...structuredSerializableRevivers,
-      ...createHTTPRevivers(),
+      ...createHTTPRevivers(WORKERS_PLATFORM_IMPL),
       ...createCloudflareRevivers(
         void 0,
         (id) => this.createChainProxy([], id, false)
@@ -891,18 +987,18 @@ var RpcClient = class {
         if (prev?.type === "get" && prev?.property === "then") {
           (async () => {
             try {
-              const messageId = crypto.randomUUID();
-              const string = await bufferedStringify(
+              const req = await serialiseToRequest(
                 {
                   chain: chain.slice(0, -1),
                   targetHeapId
                 },
                 reducers
               );
-              const promise = new DeferredPromise();
-              this.pendingMessages.set(messageId, promise);
-              this.send(messageId + string);
-              const { data, error } = parseBufferedStreams(await promise, revivers);
+              const result = await this.request(req);
+              const { data, error } = await parse2(
+                result,
+                revivers
+              );
               if (error) {
                 argumentsList[1](error);
               } else {
@@ -936,25 +1032,12 @@ var RpcClient = class {
 
 // rpc-client-wrapped-binding.ts
 function rpc_client_wrapped_binding_default(env) {
-  let ws = null;
-  const client = new RpcClient(async (d) => {
-    console.log("client -> server", d);
-    if (!ws) {
-      const result = await fetch("http://localhost:8787/" + env.key, {
-        headers: { Upgrade: "websocket" }
-      });
-      console.log(result);
-      ws = result.webSocket;
-      ws?.accept();
-    }
-    console.log(ws?.readyState === WebSocket.READY_STATE_OPEN);
-    ws?.addEventListener("message", (message) => {
-      console.log("server -> client received");
-      client.receive(message.data);
-    });
-    await ws?.send(d);
+  const client = new RpcClient(async (request) => {
+    console.log("client -> server");
+    const response = await fetch("http://localhost:8787/" + env.key, request);
+    console.log("client <- server");
+    return response;
   });
-  console.log(env.key);
   return client.createChainProxy();
 }
 export {

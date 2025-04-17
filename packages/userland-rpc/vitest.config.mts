@@ -35,6 +35,12 @@ export default defineWorkersProject({
 								key: "R2",
 							},
 						},
+						AI: {
+							scriptName: "rpc-client",
+							bindings: {
+								key: "AI",
+							},
+						},
 						COUNTER_SERVICE: {
 							scriptName: "rpc-client",
 							bindings: {

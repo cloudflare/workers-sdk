@@ -1,6 +1,12 @@
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
-import { parse, stringify } from "devalue";
+import {
+	parseWithReadableStreams,
+	PlatformImpl,
+	prefixStream,
+	readPrefix,
+	stringifyWithStreams,
+} from "./miniflare";
 
 // This file implements `devalue` reducers and revivers for structured-
 // serialisable types not supported by default. See serialisable types here:
@@ -8,157 +14,6 @@ import { parse, stringify } from "devalue";
 
 export type ReducerReviver = (value: unknown) => unknown;
 export type ReducersRevivers = Record<string, ReducerReviver>;
-
-const ALLOWED_ARRAY_BUFFER_VIEW_CONSTRUCTORS = [
-	DataView,
-	Int8Array,
-	Uint8Array,
-	Uint8ClampedArray,
-	Int16Array,
-	Uint16Array,
-	Int32Array,
-	Uint32Array,
-	Float32Array,
-	Float64Array,
-	BigInt64Array,
-	BigUint64Array,
-] as const;
-
-type ArrayBufferConstructor = ConstructorParameters<
-	(typeof ALLOWED_ARRAY_BUFFER_VIEW_CONSTRUCTORS)[number]
->;
-
-const ALLOWED_ERROR_CONSTRUCTORS = [
-	EvalError,
-	RangeError,
-	ReferenceError,
-	SyntaxError,
-	TypeError,
-	URIError,
-	Error, // `Error` last so more specific error subclasses preferred
-] as const;
-
-type ErrorConstructor = ConstructorParameters<
-	(typeof ALLOWED_ARRAY_BUFFER_VIEW_CONSTRUCTORS)[number]
->;
-
-function isReadableStream(value: unknown): value is ReadableStream {
-	return value instanceof ReadableStream;
-}
-function bufferReadableStream(stream: BodyInit) {
-	return new Response(stream).arrayBuffer();
-}
-function unbufferReadableStream(buffer: BodyInit) {
-	const body = new Response(buffer).body;
-	assert(body !== null);
-	return body;
-}
-
-export const structuredSerializableReducers: ReducersRevivers = {
-	ArrayBuffer(value) {
-		if (value instanceof ArrayBuffer) {
-			// Return single element array so empty `ArrayBuffer` serialised as truthy
-			return [Buffer.from(value).toString("base64")];
-		}
-	},
-	ArrayBufferView(value) {
-		if (ArrayBuffer.isView(value)) {
-			return [
-				value.constructor.name,
-				value.buffer,
-				value.byteOffset,
-				value.byteLength,
-			];
-		}
-	},
-	Error(value) {
-		for (const ctor of ALLOWED_ERROR_CONSTRUCTORS) {
-			if (value instanceof ctor && value.name === ctor.name) {
-				return [
-					value.name,
-					value.message,
-					value.stack,
-					"cause" in value ? value.cause : undefined,
-				];
-			}
-		}
-		if (value instanceof Error) {
-			return [
-				"Error",
-				value.message,
-				value.stack,
-				"cause" in value ? value.cause : undefined,
-			];
-		}
-	},
-};
-export const structuredSerializableRevivers: ReducersRevivers = {
-	ArrayBuffer(value) {
-		assert(Array.isArray(value));
-		const [encoded] = value as unknown[];
-		assert(typeof encoded === "string");
-		const view = Buffer.from(encoded, "base64");
-		return view.buffer.slice(
-			view.byteOffset,
-			view.byteOffset + view.byteLength
-		);
-	},
-	ArrayBufferView(value) {
-		assert(Array.isArray(value));
-		const [name, buffer, byteOffset, byteLength] = value as unknown[];
-		assert(typeof name === "string");
-		assert(buffer instanceof ArrayBuffer);
-		assert(typeof byteOffset === "number");
-		assert(typeof byteLength === "number");
-		const ctor = (globalThis as Record<string, unknown>)[
-			name
-		] as (typeof ALLOWED_ARRAY_BUFFER_VIEW_CONSTRUCTORS)[number];
-		assert(ALLOWED_ARRAY_BUFFER_VIEW_CONSTRUCTORS.includes(ctor));
-		let length = byteLength;
-		if ("BYTES_PER_ELEMENT" in ctor) length /= ctor.BYTES_PER_ELEMENT;
-
-		// TS gets a bit confused without this cast
-		return new (ctor as new (...params: ArrayBufferConstructor) => unknown)(
-			buffer,
-			byteOffset,
-			length
-		);
-	},
-	Error(value) {
-		assert(Array.isArray(value));
-		const [name, message, stack, cause] = value as unknown[];
-		assert(typeof name === "string");
-		assert(typeof message === "string");
-		assert(stack === undefined || typeof stack === "string");
-		const ctor = (globalThis as Record<string, unknown>)[
-			name
-		] as (typeof ALLOWED_ERROR_CONSTRUCTORS)[number];
-		assert(ALLOWED_ERROR_CONSTRUCTORS.includes(ctor));
-
-		// @ts-expect-error { cause } is valid
-		const error = new ctor(message, { cause });
-		error.stack = stack;
-		return error;
-	},
-};
-
-export function createHTTPReducers(): ReducersRevivers {
-	return {
-		Headers(val) {
-			if (val instanceof Headers) return Object.fromEntries(val);
-		},
-		Request(val) {
-			if (val instanceof Request) {
-				return [val.method, val.url, val.headers, val.cf, val.body];
-			}
-		},
-		Response(val) {
-			if (val instanceof Response) {
-				return [val.status, val.statusText, val.headers, val.cf, val.body];
-			}
-		},
-	};
-}
 
 function isObject(
 	value: unknown
@@ -172,38 +27,56 @@ function isInternal(
 	return isObject(value) && !!value[Symbol.for("cloudflare:internal-class")];
 }
 
-class ClassMethod {
+/**
+ * Some Cloudflare bindings APIs have _synchronous_ methods. This is tricky!
+ * We need to be able to pass these across the async RPC boundary, and we need
+ * users to be able to call them on the client side as synchronous methods.
+ * Fortunately, all the synchronous methods that I've come across so far can be
+ * pre-computed on the server and then reconstructed from the result on the client
+ *
+ * This is a class so that serialisation/de-serialisation can be handled easily
+ * with devalue below
+ */
+class SynchronousMethod {
 	constructor(
 		public name: string,
-		public fn: Function
+		public method: (...args: any[]) => any
 	) {}
 }
-
-const precomputableFunctions = {
-	"Checksums::toJSON": (fn: () => unknown) => fn(),
-	"HeadResult::writeHttpMetadata": (fn: (headers: Headers) => Headers) => {
-		const h = new Headers();
-		fn(h);
-		return h;
+const synchronousMethods: Record<
+	string,
+	{
+		reduce: (fn: (...input: any[]) => any) => any;
+		revive: (serialised: any) => (...input: any[]) => unknown;
+	}
+> = {
+	"Checksums::toJSON": {
+		reduce: (fn: () => unknown) => fn(),
+		revive: (v: unknown) => () => v,
 	},
-	"GetResult::writeHttpMetadata": (fn: (headers: Headers) => Headers) => {
-		const h = new Headers();
-		fn(h);
-		return h;
+	"HeadResult::writeHttpMetadata": {
+		reduce: (fn: (headers: Headers) => void) => {
+			const h = new Headers();
+			fn(h);
+			return h;
+		},
+		revive: (v: Headers) => (headers: Headers) => {
+			for (const [name, value] of v.entries()) {
+				headers.set(name, value);
+			}
+		},
 	},
-};
-
-const precomputableFunctionsRevivers = {
-	"Checksums::toJSON": (v: unknown) => () => v,
-	"HeadResult::writeHttpMetadata": (v: Headers) => (headers: Headers) => {
-		for (const [name, value] of v.entries()) {
-			headers.set(name, value);
-		}
-	},
-	"GetResult::writeHttpMetadata": (v: Headers) => (headers: Headers) => {
-		for (const [name, value] of v.entries()) {
-			headers.set(name, value);
-		}
+	"GetResult::writeHttpMetadata": {
+		reduce: (fn: (headers: Headers) => void) => {
+			const h = new Headers();
+			fn(h);
+			return h;
+		},
+		revive: (v: Headers) => (headers: Headers) => {
+			for (const [name, value] of v.entries()) {
+				headers.set(name, value);
+			}
+		},
 	},
 };
 
@@ -248,6 +121,9 @@ export function createCloudflareReducers(
 				return val.chainProxy;
 			}
 		},
+		/**
+		 * Internal classes are things like R2Object, which have some properties, synchronous methods, and optionally a stream
+		 */
 		InternalClass(val) {
 			if (isInternal(val)) {
 				let stream: ReadableStream | undefined = undefined;
@@ -255,28 +131,22 @@ export function createCloudflareReducers(
 					stream = val.body;
 				}
 
-				let methods = [];
-
-				if (typeof val.writeHttpMetadata === "function") {
-					methods.push("writeHttpMetadata");
-				}
-
-				if (typeof val.toJSON === "function") {
-					methods.push("toJSON");
-				}
-
 				return [
+					// These classes are not constructable in userland, but we need to make the constructor name
+					// match in case user-code depends
 					val.constructor.name,
 					{
 						...val,
 						...Object.fromEntries(
-							methods
-								.filter((m) => typeof val[m] === "function")
+							Object.keys(val)
+								.filter(
+									(m) => !!synchronousMethods[`${val.constructor.name}::${m}`]
+								)
 								.map((m) => [
 									m,
-									new ClassMethod(
+									new SynchronousMethod(
 										`${val.constructor.name}::${m}`,
-										(val[m] as Function).bind(val)
+										val[m] as () => void
 									),
 								])
 						),
@@ -285,15 +155,9 @@ export function createCloudflareReducers(
 				];
 			}
 		},
-		PreComputableClassMethod(val) {
-			if (val instanceof ClassMethod && val.name in precomputableFunctions) {
-				return [
-					val.name,
-					precomputableFunctions[
-						val.name as keyof typeof precomputableFunctions
-						// @ts-expect-error val.fn is valid here
-					](val.fn),
-				];
+		SynchronousMethod(val) {
+			if (val instanceof SynchronousMethod) {
+				return [val.name, synchronousMethods[val.name].reduce(val.method)];
 			}
 		},
 	};
@@ -349,155 +213,143 @@ export function createCloudflareRevivers(
 			}
 			return kls;
 		},
-		PreComputableClassMethod(val) {
-			// @ts-expect-error this is fine
-			return precomputableFunctionsRevivers[val[0]](val[1]);
+		SynchronousMethod(val) {
+			assert(Array.isArray(val));
+			return synchronousMethods[val[0]].revive(val[1]);
 		},
 	};
 }
 
-export function createHTTPRevivers(): ReducersRevivers {
-	return {
-		Headers(value) {
-			assert(typeof value === "object" && value !== null);
-			return new Headers(value as Record<string, string>);
-		},
-		Request(value) {
-			assert(Array.isArray(value));
-			const [method, url, headers, cf, body] = value as unknown[];
-			assert(typeof method === "string");
-			assert(typeof url === "string");
-			assert(headers instanceof Headers);
-			assert(body === null || isReadableStream(body));
-			return new Request(url, {
-				method,
-				headers,
-				cf,
-				// @ts-expect-error `duplex` is not required by `workerd` yet
-				duplex: body === null ? undefined : "half",
-				body: body as ReadableStream | null,
-			});
-		},
-		Response(value) {
-			assert(Array.isArray(value));
-			const [status, statusText, headers, cf, body] = value as unknown[];
-			assert(typeof status === "number");
-			assert(typeof statusText === "string");
-			assert(headers instanceof Headers);
-			assert(body === null || isReadableStream(body));
-			return new Response(body as ReadableStream | null, {
-				status,
-				statusText,
-				headers,
-				cf,
-			});
-		},
-	};
-}
+export const WORKERS_PLATFORM_IMPL: PlatformImpl<ReadableStream> = {
+	Blob,
+	File,
+	Headers,
+	Request,
+	Response,
 
-// `devalue` `stringify()` that allows a single stream to be "unbuffered", and
-// sent separately. Other streams will be buffered.
-export function bufferedStringify(
-	value: unknown,
-	reducers: ReducersRevivers
-): string | Promise<string> {
-	// The tricky thing here is that `devalue` `stringify()` is synchronous, and
-	// doesn't support asynchronous reducers. Assuming we visit values in the same
-	// order each time, we can use an array to store buffer promises.
-	const bufferPromises: Promise<ArrayBuffer>[] = [];
-	const streamReducers: ReducersRevivers = {
-		ReadableStream(value) {
-			if (isReadableStream(value)) {
-				bufferPromises.push(bufferReadableStream(value));
+	isReadableStream(value): value is ReadableStream {
+		return value instanceof ReadableStream;
+	},
+	bufferReadableStream(stream) {
+		return new Response(stream).arrayBuffer();
+	},
+	unbufferReadableStream(buffer) {
+		const body = new Response(buffer).body;
+		assert(body !== null);
+		return body;
+	},
+};
 
-				// Using `true` to signify unbuffered stream, buffered streams will
-				// have this replaced with an `ArrayBuffer` on the 2nd `stringify()`
-				// If we don't have any buffer promises, this will encode to the correct
-				// value, so we don't need to re-`stringify()`.
-				return true;
-			}
-		},
-		Blob(value) {
-			if (value instanceof Blob) {
-				// `Blob`s are always buffered. We can't just serialise with a stream
-				// here (and recursively use the reducer above), because `workerd`
-				// doesn't allow us to synchronously reconstruct a `Blob` from a stream:
-				// its `new Blob([...])` doesn't support `ReadableStream` blob bits.
-				bufferPromises.push(value.arrayBuffer());
-				return true;
-			}
-		},
+const decoder = new TextDecoder();
 
-		...reducers,
-	};
-
-	const stringifiedValue = stringify(value, streamReducers);
-	// If we didn't need to buffer anything, we've just encoded correctly. Note
-	// `unbufferedStream` may be undefined if the `value` didn't contain streams.
-	// Note also in this case we're returning synchronously, so we can use this
-	// for synchronous methods too.
-	if (bufferPromises.length === 0) {
-		return stringifiedValue;
-	}
-
-	// Otherwise, wait for buffering to complete, and `stringify()` again with
-	// a reducer that expects buffers.
-	return Promise.all(bufferPromises).then((streamBuffers) => {
-		// Again, we're assuming values are visited in the same order, so `shift()`
-		// will give us the next correct buffer
-		streamReducers.ReadableStream = function (value) {
-			if (isReadableStream(value)) {
-				return streamBuffers.shift();
-			}
-		};
-		streamReducers.Blob = function (value) {
-			if (value instanceof Blob) {
-				const array: unknown[] = [streamBuffers.shift(), value.type];
-				if (value instanceof File) {
-					array.push(value.name, value.lastModified);
-				}
-				return array;
-			}
-		};
-		const stringifiedValue = stringify(value, streamReducers);
-		return stringifiedValue;
-	});
-}
-
-export function parseBufferedStreams<T>(
-	stringified: string,
+const SIZE_HEADER = "X-Buffer-Size";
+export async function parse<T>(
+	serialised: Request | Response,
 	revivers: ReducersRevivers
-): T {
-	const streamRevivers: ReducersRevivers = {
-		ReadableStream(value) {
-			assert(value instanceof ArrayBuffer);
-			return unbufferReadableStream(value);
-		},
-		Blob(value) {
-			assert(Array.isArray(value));
-			if (value.length === 2) {
-				// Blob
-				const [buffer, type] = value as unknown[];
-				assert(buffer instanceof ArrayBuffer);
-				assert(typeof type === "string");
-				const opts: BlobOptions = {};
-				if (type !== "") opts.type = type;
-				return new Blob([buffer], opts);
-			} else {
-				// File
-				assert(value.length === 4);
-				const [buffer, type, name, lastModified] = value as unknown[];
-				assert(buffer instanceof ArrayBuffer);
-				assert(typeof type === "string");
-				assert(typeof name === "string");
-				assert(typeof lastModified === "number");
-				const opts: FileOptions = { lastModified };
-				if (type !== "") opts.type = type;
-				return new File([buffer], name, opts);
-			}
-		},
-		...revivers,
-	};
+): Promise<T> {
+	let unbufferedStream: ReadableStream | undefined;
+	const stringifiedSizeHeader = serialised.headers.get(SIZE_HEADER);
+	if (
+		stringifiedSizeHeader === null ||
+		stringifiedSizeHeader === serialised.headers.get("Content-Length")
+	) {
+		// No unbuffered `ReadableStream`
+		return parseWithReadableStreams(
+			WORKERS_PLATFORM_IMPL,
+			{ value: await serialised.text() },
+			revivers
+		) as T;
+	} else {
+		// Unbuffered `ReadableStream` argument
+		const argsSize = parseInt(stringifiedSizeHeader);
+		assert(!Number.isNaN(argsSize));
+		assert(serialised.body !== null);
+		const [encodedArgs, rest] = await readPrefix(serialised.body, argsSize);
+		unbufferedStream = rest;
+		const stringifiedArgs = decoder.decode(encodedArgs);
+		return parseWithReadableStreams(
+			WORKERS_PLATFORM_IMPL,
+			{ value: stringifiedArgs, unbufferedStream: rest },
+			revivers
+		) as T;
+	}
+}
 
-	return parse(stringified, streamRevivers);
+async function writeWithUnbufferedStream(
+	writable: WritableStream,
+	encodedValue: Uint8Array,
+	unbufferedStream: ReadableStream
+) {
+	const writer = writable.getWriter();
+	await writer.write(encodedValue);
+	writer.releaseLock();
+	await unbufferedStream.pipeTo(writable);
+}
+
+const encoder = new TextEncoder();
+export async function serialiseToResponse(
+	data: unknown,
+	reducers: ReducersRevivers
+) {
+	const stringified = await stringifyWithStreams(
+		WORKERS_PLATFORM_IMPL,
+		data,
+		reducers,
+		true
+	);
+	if (stringified.unbufferedStream === undefined) {
+		return new Response(stringified.value);
+	} else {
+		const body = new IdentityTransformStream();
+		const encodedValue = encoder.encode(stringified.value);
+		const encodedSize = encodedValue.byteLength.toString();
+		void writeWithUnbufferedStream(
+			body.writable,
+			encodedValue,
+			stringified.unbufferedStream
+		);
+		return new Response(body.readable, {
+			headers: {
+				[SIZE_HEADER]: encodedSize,
+			},
+		});
+	}
+}
+export async function serialiseToRequest(
+	data: unknown,
+	reducers: ReducersRevivers
+) {
+	const stringified = await stringifyWithStreams(
+		WORKERS_PLATFORM_IMPL,
+		data,
+		reducers,
+		true
+	);
+	if (stringified.unbufferedStream === undefined) {
+		const size = Buffer.byteLength(stringified.value).toString();
+		return new Request("http://example.com", {
+			method: "POST",
+			headers: {
+				[SIZE_HEADER]: size,
+				"Content-Length": size,
+			},
+			body: stringified.value,
+		});
+	} else {
+		const body = new IdentityTransformStream();
+		const encodedValue = encoder.encode(stringified.value);
+		const encodedSize = encodedValue.byteLength.toString();
+		void writeWithUnbufferedStream(
+			body.writable,
+			encodedValue,
+			stringified.unbufferedStream
+		);
+		return new Request("http://example.com", {
+			method: "POST",
+			headers: {
+				[SIZE_HEADER]: encodedSize,
+			},
+			body: body.readable,
+		});
+	}
 }

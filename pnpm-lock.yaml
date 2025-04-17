@@ -1939,14 +1939,17 @@ importers:
         specifier: workspace:*
         version: link:../vitest-pool-workers
       '@cloudflare/workers-types':
-        specifier: ^4.20250313.0
-        version: 4.20250313.0
+        specifier: ^4.20250409.0
+        version: 4.20250409.0
       '@types/node':
         specifier: ^18.19.75
         version: 18.19.76
       devalue:
         specifier: ^5.1.1
         version: 5.1.1
+      miniflare:
+        specifier: workspace:*
+        version: link:../miniflare
 
   packages/vite-plugin-cloudflare:
     dependencies:
@@ -4118,9 +4121,6 @@ packages:
 
   '@cloudflare/workers-types@4.20250415.0':
     resolution: {integrity: sha512-6N3N7yZEBVhztPUcloHSMm5+kSY0/e1OtoPjNrI5Jw8dyFTNSf875u0D76YFiYCV8WVwbp3RtdEAb6TWdAwoEw==}
-
-  '@cloudflare/workers-types@4.20250313.0':
-    resolution: {integrity: sha512-iqyzZwogC+3yL8h58vMhjYQUHUZA8XazE3Q+ofR59wDOnsPe/u9W6+aCl408N0iNBhMPvpJQQ3/lkz0iJN2fhA==}
 
   '@colors/colors@1.5.0':
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
@@ -13854,8 +13854,6 @@ snapshots:
   '@cloudflare/workers-types@4.20240614.0': {}
 
   '@cloudflare/workers-types@4.20250415.0': {}
-
-  '@cloudflare/workers-types@4.20250313.0': {}
 
   '@colors/colors@1.5.0':
     optional: true

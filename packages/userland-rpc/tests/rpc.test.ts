@@ -7,6 +7,7 @@ declare module "cloudflare:test" {
 	interface ProvidedEnv {
 		KV: KVNamespace;
 		R2: R2Bucket;
+		AI: Ai;
 		COUNTER_SERVICE: Service<any>;
 	}
 }
@@ -16,7 +17,9 @@ describe("env", () => {
 		await env.KV.delete("key");
 		expect(await env.KV.get("key")).toBe(null);
 		expect(await env.KV.put("key", "value")).toBe(undefined);
-		expect(await env.KV.get("key")).toBe("value");
+		expect(
+			await new Response(await env.KV.get("key", { type: "stream" })).text()
+		).toBe("value");
 		expect(await env.KV.list()).toStrictEqual({
 			cacheStatus: null,
 			keys: [
@@ -37,15 +40,21 @@ describe("env", () => {
 		expect(object?.customMetadata).toStrictEqual({ hello: "world" });
 		expect(await object?.text()).toBe("value");
 	});
-	// test("rpc", async () => {
-	// 	using counter = await env.COUNTER_SERVICE.newCounter();
+	test("ai", async () => {
+		const gateway = env.AI.gateway("my-gateway");
 
-	// 	await counter.increment(2); // returns 2
-	// 	await counter.increment(1); // returns 3
-	// 	await counter.increment(-5); // returns -2
+		const response = await gateway.getUrl("open-ai");
+		console.log(JSON.stringify(response));
+	});
+	test("rpc", async () => {
+		using counter = await env.COUNTER_SERVICE.newCounter();
 
-	// 	const count = await counter.value;
+		await counter.increment(2); // returns 2
+		await counter.increment(1); // returns 3
+		await counter.increment(-5); // returns -2
 
-	// 	expect(count).toBe(-2);
-	// });
+		const count = await counter.value;
+
+		expect(count).toBe(-2);
+	});
 });

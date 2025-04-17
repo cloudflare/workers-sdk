@@ -2,32 +2,21 @@ import { DurableObject } from "cloudflare:workers";
 import { RpcServer } from ".";
 
 export class RpcDurableObject extends DurableObject<Record<string, unknown>> {
-	rpc: RpcServer | undefined = undefined;
+	private rpc: RpcServer | undefined = undefined;
+	constructor(state: DurableObjectState, env: Record<string, unknown>) {
+		super(state, env);
+	}
 	async fetch(request: Request): Promise<Response> {
 		const url = new URL(request.url);
 		const key = url.pathname.slice(1);
-		console.log("server request", key);
+		console.log("server <- client");
 
-		if (!request.headers.get("Upgrade")?.includes("websocket")) {
-			return new Response("hello");
-		}
+		this.rpc ??= new RpcServer(this.env[key]);
 
-		const [server, client] = Object.values(new WebSocketPair());
+		const response = await this.rpc.request(request);
+		console.log("server -> client");
 
-		this.rpc = new RpcServer((d) => {
-			console.log("server -> client");
-
-			server.send(d);
-		}, this.env[key]);
-
-		server.addEventListener("message", (event) => {
-			console.log("client -> server received");
-
-			this.rpc?.receive(event.data as string);
-		});
-		server.accept();
-
-		return new Response(null, { status: 101, webSocket: client });
+		return response;
 	}
 }
 

@@ -2,23 +2,23 @@
 	"main": "index.ts",
 	"name": "service",
 	"compatibility_date": "2024-05-05",
-	"kv_namespaces": [
-		{
-			"binding": "KV",
-			"id": "kv-id",
-		},
-	],
-	"r2_buckets": [
-		{
-			"binding": "R2",
-			"bucket_name": "r2",
-		},
-	],
-	"services": [
-		{
-			"binding": "COUNTER_SERVICE",
-			"service": "service",
-			"entrypoint": "CounterService",
-		},
-	],
+	// "kv_namespaces": [
+	// 	{
+	// 		"binding": "KV",
+	// 		"id": "kv-id",
+	// 	},
+	// ],
+	// "r2_buckets": [
+	// 	{
+	// 		"binding": "R2",
+	// 		"bucket_name": "r2",
+	// 	},
+	// ],
+	// "services": [
+	// 	{
+	// 		"binding": "COUNTER_SERVICE",
+	// 		"service": "service",
+	// 		"entrypoint": "CounterService",
+	// 	},
+	// ],
 }

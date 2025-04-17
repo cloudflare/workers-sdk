@@ -31,4 +31,14 @@
 			},
 		],
 	},
+	"services": [
+		{
+			"binding": "COUNTER_SERVICE",
+			"service": "other-worker",
+			"entrypoint": "CounterService",
+		},
+	],
+	"ai": {
+		"binding": "AI",
+	},
 }
