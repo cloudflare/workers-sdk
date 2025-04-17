@@ -51,6 +51,23 @@ export function isNodeCompat(workerConfig: WorkerConfig | undefined) {
 }
 
 /**
+ * Returns true if Node.js async local storage (ALS) is enabled (and not full Node.js compatibility mode).
+ */
+export function isNodeAls(workerConfig: WorkerConfig | undefined) {
+	return (
+		workerConfig !== undefined &&
+		getNodeCompat(
+			workerConfig.compatibility_date,
+			workerConfig.compatibility_flags ?? []
+		).mode === "als"
+	);
+}
+
+export function isNodeAlsModule(path: string) {
+	return /^(node:)?async_hooks$/.test(path);
+}
+
+/**
  * Gets the necessary global polyfills to inject into the entry-point of the user's code.
  */
 export function injectGlobalCode(id: string, code: string) {
@@ -100,7 +117,8 @@ export function resolveNodeJSImport(source: string) {
 	// These aliases must be resolved from the context of this plugin since the alias will refer to one of the
 	// `@cloudflare/unenv-preset` or the `unenv` packages, which are direct dependencies of this package,
 	// and not the user's project.
-	if (alias) {
+	// We exclude `nodeCompatExternals` as these should be externalized rather than optimized
+	if (alias && !nodeCompatExternals.has(alias)) {
 		return {
 			unresolved: alias,
 			resolved: resolvePathSync(alias, { url: import.meta.url }),

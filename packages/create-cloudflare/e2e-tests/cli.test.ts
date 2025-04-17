@@ -83,7 +83,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 
 				expect(project.path).toExist();
 				expect(output).toContain(`category Hello World example`);
-				expect(output).toContain(`type Worker + Assets`);
+				expect(output).toContain(`type SSR / full-stack app`);
 				expect(output).toContain(`lang TypeScript`);
 				expect(output).toContain(`no deploy`);
 			},
@@ -177,7 +177,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 					);
 
 					expect(project.path).toExist();
-					expect(output).toContain(`type Worker + Assets`);
+					expect(output).toContain(`type SSR / full-stack app`);
 					expect(output).toContain(`lang TypeScript`);
 					expect(output).toContain(`no deploy`);
 				} finally {
@@ -514,6 +514,16 @@ describe.skipIf(frameworkToTest || isQuarantineMode())("help text", () => {
 				    npm create cloudflare my-project -- --template git@github.com:user/repo#1234abcd (commit)
 				    Note that subdirectories may also be used. For example:
 				    npm create cloudflare -- --template https://github.com/cloudflare/workers-sdk/templates/worker-r2
+				  --template-mode=<value>
+				    The mechanism to use when fetching the template.
+				    Can be either "git" or "tar". "tar" does not support fetching from private
+				    repositories. By default, degit will use "tar" if the template is hosted on GitHub, BitBucket, GitLab, or git.sr.ht.
+				    Otherwise, it will use "git".
+				    Allowed Values:
+				      git
+				        Use git to fetch the template. Supports private repositories.
+				      tar
+				        Use tar to fetch the template. Only supported on public repositories hosted on GitHub, BitBucket, GitLab, or git.sr.ht.
 				  --accept-defaults, --no-accept-defaults, -y
 				    Use all the default C3 options (each can also be overridden by specifying it)
 				  --auto-update, --no-auto-update
@@ -548,9 +558,9 @@ describe.skipIf(frameworkToTest || isQuarantineMode())("help text", () => {
 				      hello-world
 				        For processing requests, transforming responses, or API endpoints
 				      hello-world-assets-only
-				        For static sites (including SPAs) or when using your own backend
+				        For static sites or when using your own backend. Uses Workers Static Assets.
 				      hello-world-with-assets
-				        For static sites with an API or server-side rendering (SSR)
+				        For sites with a backend API, or server-side rendering (SSR). Uses Static Assets with a Worker.
 				      hello-world-durable-object
 				        For multiplayer apps using WebSockets, or when you need synchronization
 				      hello-world-durable-object-with-assets
@@ -604,6 +614,16 @@ describe.skipIf(frameworkToTest || isQuarantineMode())("help text", () => {
 				    npm create cloudflare my-project -- --template git@github.com:user/repo#1234abcd (commit)
 				    Note that subdirectories may also be used. For example:
 				    npm create cloudflare -- --template https://github.com/cloudflare/workers-sdk/templates/worker-r2
+				  --template-mode=<value>
+				    The mechanism to use when fetching the template.
+				    Can be either "git" or "tar". "tar" does not support fetching from private
+				    repositories. By default, degit will use "tar" if the template is hosted on GitHub, BitBucket, GitLab, or git.sr.ht.
+				    Otherwise, it will use "git".
+				    Allowed Values:
+				      git
+				        Use git to fetch the template. Supports private repositories.
+				      tar
+				        Use tar to fetch the template. Only supported on public repositories hosted on GitHub, BitBucket, GitLab, or git.sr.ht.
 				  --accept-defaults, --no-accept-defaults, -y
 				    Use all the default C3 options (each can also be overridden by specifying it)
 				  --auto-update, --no-auto-update

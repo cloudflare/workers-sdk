@@ -28,6 +28,7 @@ type Env = {
 	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
 	[CoreBindings.DATA_PROXY_SHARED_SECRET]?: ArrayBuffer;
 	[CoreBindings.TRIGGER_HANDLERS]: boolean;
+	[CoreBindings.LOG_REQUESTS]: boolean;
 } & {
 	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
 		| Fetcher
@@ -299,14 +300,22 @@ function colourFromHTTPStatus(status: number): Colorize {
 	return blue;
 }
 
+const ADDITIONAL_RESPONSE_LOG_HEADER_NAME = "X-Mf-Additional-Response-Log";
+
 function maybeLogRequest(
 	req: Request,
 	res: Response,
 	env: Env,
 	ctx: ExecutionContext,
 	startTime: number
-) {
-	if (env[CoreBindings.JSON_LOG_LEVEL] < LogLevel.INFO) return;
+): Response {
+	res = new Response(res.body, res); // Ensure mutable headers
+	const additionalResponseLog = res.headers.get(
+		ADDITIONAL_RESPONSE_LOG_HEADER_NAME
+	);
+	res.headers.delete(ADDITIONAL_RESPONSE_LOG_HEADER_NAME);
+
+	if (env[CoreBindings.JSON_LOG_LEVEL] < LogLevel.INFO) return res;
 
 	const url = new URL(req.url);
 	const statusText = (res.statusText.trim() || STATUS_CODES[res.status]) ?? "";
@@ -315,6 +324,9 @@ function maybeLogRequest(
 		colourFromHTTPStatus(res.status)(`${bold(res.status)} ${statusText} `),
 		grey(`(${Date.now() - startTime}ms)`),
 	];
+	if (additionalResponseLog) {
+		lines.push(` ${grey(additionalResponseLog)}`);
+	}
 	const message = reset(lines.join(""));
 
 	ctx.waitUntil(
@@ -324,6 +336,8 @@ function maybeLogRequest(
 			body: message,
 		})
 	);
+
+	return res;
 }
 
 function handleProxy(request: Request, env: Env) {
@@ -421,7 +435,9 @@ export default <ExportedHandler<Env>>{
 			}
 			response = maybeInjectLiveReload(response, env, ctx);
 			response = ensureAcceptableEncoding(clientAcceptEncoding, response);
-			maybeLogRequest(request, response, env, ctx, startTime);
+			if (env[CoreBindings.LOG_REQUESTS]) {
+				response = maybeLogRequest(request, response, env, ctx, startTime);
+			}
 			return response;
 		} catch (e: any) {
 			return new Response(e?.stack ?? String(e), { status: 500 });

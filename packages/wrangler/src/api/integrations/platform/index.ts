@@ -48,7 +48,7 @@ export type GetPlatformProxyOptions = {
 	configPath?: string;
 	/**
 	 * Indicates if and where to persist the bindings data, if not present or `true` it defaults to the same location
-	 * used by wrangler v3: `.wrangler/state/v3` (so that the same data can be easily used by the caller and wrangler).
+	 * used by wrangler: `.wrangler/state/v3` (so that the same data can be easily used by the caller and wrangler).
 	 * If `false` is specified no data is persisted on the filesystem.
 	 */
 	persist?: boolean | { path: string };

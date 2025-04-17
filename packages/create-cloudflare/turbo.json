@@ -7,13 +7,14 @@
 				"TEST_PM",
 				"TEST_PM_VERSION",
 				"npm_config_user_agent",
-				"CI",
 				"CREATE_CLOUDFLARE_TELEMETRY_DISABLED",
 				"CREATE_CLOUDFLARE_TELEMETRY_DEBUG",
 				"SPARROW_SOURCE_KEY"
 			],
-			"inputs": ["src/**", "templates*/**", "scripts/**", "*", "vitest*"],
 			"outputs": ["dist/**"]
+		},
+		"test:ci": {
+			"dependsOn": ["build"]
 		},
 		"test:e2e": {
 			"env": [

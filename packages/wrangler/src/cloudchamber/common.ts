@@ -109,7 +109,7 @@ export function handleFailure<
 			await fillOpenAPIConfiguration(config, args.json);
 			await cb(args, config);
 		} catch (err) {
-			if (!args.json) {
+			if (!args.json || !isNonInteractiveOrCI()) {
 				throw err;
 			}
 

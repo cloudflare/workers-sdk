@@ -62,7 +62,7 @@ describe("wrangler", () => {
 				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
 				  wrangler dispatch-namespace     🏗️  Manage dispatch namespaces
 				  wrangler ai                     🤖 Manage AI models
-				  wrangler workflows              🔁 Manage Workflows [open-beta]
+				  wrangler workflows              🔁 Manage Workflows
 				  wrangler pipelines              🚰 Manage Cloudflare Pipelines [open beta]
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
@@ -122,7 +122,7 @@ describe("wrangler", () => {
 				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
 				  wrangler dispatch-namespace     🏗️  Manage dispatch namespaces
 				  wrangler ai                     🤖 Manage AI models
-				  wrangler workflows              🔁 Manage Workflows [open-beta]
+				  wrangler workflows              🔁 Manage Workflows
 				  wrangler pipelines              🚰 Manage Cloudflare Pipelines [open beta]
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
@@ -327,6 +327,18 @@ describe("wrangler", () => {
 			"[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 			Note that there is a newer version of Wrangler available (123.123.123). Consider checking whether upgrading resolves this error."
 		`);
+		});
+
+		it("should display a warning if Bun is in use", async () => {
+			const original = process.versions.bun;
+			process.versions.bun = "v1";
+			await logPossibleBugMessage();
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler does not support the Bun runtime. Please try this command again using Node.js via \`npm\` or \`pnpm\`. Alternatively, make sure you're not passing the \`--bun\` flag when running \`bun run wrangler ...\`[0m
+
+				"
+			`);
+			process.versions.bun = original;
 		});
 	});
 });

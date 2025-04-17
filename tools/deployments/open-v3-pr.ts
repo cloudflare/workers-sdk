@@ -1,14 +1,10 @@
 import { execSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import parseChangeset from "@changesets/parse";
 
 /* eslint-disable turbo/no-undeclared-env-vars */
 if (require.main === module) {
-	const parsedLabels = JSON.parse(process.env.LABELS as string) as string[];
-	if (
-		isWranglerPatch(process.env.FILES as string) &&
-		!parsedLabels.includes("skip-v3-pr")
-	) {
+	if (isWranglerPatch(process.env.FILES as string)) {
 		// Create a new branch for the v3 maintenance PR
 		execSync(`git checkout -b v3-maintenance-${process.env.PR_NUMBER} -f`);
 
@@ -30,8 +26,9 @@ if (require.main === module) {
 					`--head v3-maintenance-${process.env.PR_NUMBER}`,
 					`--label "skip-pr-description-validation"`,
 					`--label "skip-v3-pr"`,
-					`--title "V3 Backport [#${process.env.PR_NUMBER}]: ${process.env.PR_TITLE?.slice(1, -1)}`,
+					`--title "V3 Backport [#${process.env.PR_NUMBER}]: ${process.env.PR_TITLE?.slice(1, -1)}"`,
 					`--body "This is an automatically opened PR to backport patch changes from #${process.env.PR_NUMBER} to Wrangler v3"`,
+					`--draft`,
 				].join(" ")
 			);
 		} catch {
@@ -54,5 +51,13 @@ export function isWranglerPatch(changedFilesJson: string) {
 			}
 		}
 	}
+
+	if (process.env.GITHUB_OUTPUT) {
+		appendFileSync(
+			process.env.GITHUB_OUTPUT,
+			`has_wrangler_patch=${hasWranglerPatch ? "true" : "false"}\n`
+		);
+	}
+
 	return hasWranglerPatch;
 }

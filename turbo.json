@@ -4,7 +4,7 @@
 		"signature": true
 	},
 	"globalEnv": ["CI_OS", "NODE_VERSION"],
-	"globalPassThroughEnv": ["NODE_EXTRA_CA_CERTS"],
+	"globalPassThroughEnv": ["NODE_EXTRA_CA_CERTS", "CI"],
 	"tasks": {
 		"dev": {
 			"persistent": true,

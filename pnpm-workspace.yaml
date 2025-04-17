@@ -7,17 +7,17 @@ packages:
 
 catalog:
   "@types/node": "^18.19.75"
-  "@vitest/runner": ~3.0.8
-  "@vitest/snapshot": ~3.0.8
-  "@vitest/ui": ~3.0.8
+  "@vitest/runner": ~3.1.1
+  "@vitest/snapshot": ~3.1.1
+  "@vitest/ui": ~3.1.1
   # rimraf@6 requires node 20 or >=22
   rimraf: "^6.0.1"
   typescript: "^5.7.2"
   undici: "^5.28.5"
-  vitest: "~3.0.8"
+  vitest: "~3.1.1"
   vite: "^5.4.14"
   "ws": "8.18.0"
-  esbuild: "0.24.2"
+  esbuild: "0.25.2"
   playwright-chromium: "^1.49.1"
 
 catalogs:

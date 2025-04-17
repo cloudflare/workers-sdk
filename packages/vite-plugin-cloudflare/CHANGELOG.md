@@ -1,5 +1,46 @@
 # @cloudflare/vite-plugin
 
+## 1.0.7
+
+### Patch Changes
+
+- [#8786](https://github.com/cloudflare/workers-sdk/pull/8786) [`191ebc1`](https://github.com/cloudflare/workers-sdk/commit/191ebc1ebf6f20957d4b08c1428d0468743c82ea) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure users can change inspector port when running vite dev
+
+  Ensure that the inspector port is updated if the user modifies it in the Vite config while the dev server is running.
+
+- Updated dependencies [[`bab1724`](https://github.com/cloudflare/workers-sdk/commit/bab1724229974c545084c31df3731e7c2271ee49), [`511be3d`](https://github.com/cloudflare/workers-sdk/commit/511be3d17559e482fedf559cb61158e329c11d24), [`085a565`](https://github.com/cloudflare/workers-sdk/commit/085a565bb922ad023a38e2aee2042885e6691b2c)]:
+  - wrangler@4.11.1
+  - miniflare@4.20250410.1
+  - @cloudflare/unenv-preset@2.3.1
+
+## 1.0.6
+
+### Patch Changes
+
+- [#8878](https://github.com/cloudflare/workers-sdk/pull/8878) [`d04c69f`](https://github.com/cloudflare/workers-sdk/commit/d04c69f81eb40a854c219fdcad53e0387ca5f2e2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - add support for Node.js ALS compat mode
+
+- Updated dependencies [[`c912b99`](https://github.com/cloudflare/workers-sdk/commit/c912b9943e4df158994e4be698e4be602397f03c), [`f5413c5`](https://github.com/cloudflare/workers-sdk/commit/f5413c5269ab32522a70c3ebedba95bf6e7a4684), [`f2802f9`](https://github.com/cloudflare/workers-sdk/commit/f2802f9cdb3c3c97a2aa22f66d427af29a824f68), [`d2b44a2`](https://github.com/cloudflare/workers-sdk/commit/d2b44a2f49deb749ad3a7918210ff680263a559c), [`4cc036d`](https://github.com/cloudflare/workers-sdk/commit/4cc036d46b2f5c3ceacb344882e713e7840becde), [`84ecfe9`](https://github.com/cloudflare/workers-sdk/commit/84ecfe9b4962d1edbe7967cfe4151f26de252a9d)]:
+  - wrangler@4.11.0
+  - miniflare@4.20250410.0
+  - @cloudflare/unenv-preset@2.3.1
+
+## 1.0.5
+
+### Patch Changes
+
+- [#8685](https://github.com/cloudflare/workers-sdk/pull/8685) [`8e87754`](https://github.com/cloudflare/workers-sdk/commit/8e87754a2aee9dd2fb764a8ea03365553874f727) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - make sure that `.dev.vars` files trigger a full reload
+
+- Updated dependencies [[`b7ac367`](https://github.com/cloudflare/workers-sdk/commit/b7ac367fe4c3d7a05525443cc30af10bc19ce014), [`dcce2ec`](https://github.com/cloudflare/workers-sdk/commit/dcce2ecf275c65428956d2106b83618652a907a0), [`5388447`](https://github.com/cloudflare/workers-sdk/commit/5388447d7ca5b00dbcc0970f52b76e20a17ebe30)]:
+  - miniflare@4.20250409.0
+  - wrangler@4.10.0
+  - @cloudflare/unenv-preset@2.3.1
+
+## 1.0.4
+
+### Patch Changes
+
+- [#8862](https://github.com/cloudflare/workers-sdk/pull/8862) [`f843447`](https://github.com/cloudflare/workers-sdk/commit/f843447377af1c89f3c58d9e5aa14a18b12a8894) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Fix a bug where Node.js externals (i.e. Node.js imports that are included in the runtime) were being registered as missing imports with the `depsOptimizer`. This was previously causing the dev server to crash if these imports were encountered when using React Router.
+
 ## 1.0.3
 
 ### Patch Changes

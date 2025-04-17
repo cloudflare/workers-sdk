@@ -30,6 +30,8 @@ import {
 } from "./miniflare-options";
 import {
 	injectGlobalCode,
+	isNodeAls,
+	isNodeAlsModule,
 	isNodeCompat,
 	nodeCompatEntries,
 	nodeCompatExternals,
@@ -309,13 +311,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 			},
 			hotUpdate(options) {
+				// Note that we must "resolve" the changed file since the path from Vite will not match Windows backslashes.
+				const changedFilePath = path.resolve(options.file);
+
 				if (
-					// Vite normalizes `options.file` so we use `path.resolve` for Windows compatibility
-					resolvedPluginConfig.configPaths.has(path.resolve(options.file)) ||
+					resolvedPluginConfig.configPaths.has(changedFilePath) ||
+					hasDotDevDotVarsFileChanged(resolvedPluginConfig, changedFilePath) ||
 					hasAssetsConfigChanged(
 						resolvedPluginConfig,
 						resolvedViteConfig,
-						options.file
+						changedFilePath
 					)
 				) {
 					// It's OK for this to be called multiple times as Vite prevents concurrent execution
@@ -329,12 +334,12 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					"Unexpected error: No Vite HTTP server"
 				);
 
-				if (!miniflare) {
-					const inputInspectorPort = await getInputInspectorPortOption(
-						pluginConfig,
-						viteDevServer
-					);
+				const inputInspectorPort = await getInputInspectorPortOption(
+					pluginConfig,
+					viteDevServer
+				);
 
+				if (!miniflare) {
 					miniflare = new Miniflare(
 						getDevMiniflareOptions(
 							resolvedPluginConfig,
@@ -343,14 +348,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						)
 					);
 				} else {
-					const resolvedInspectorPort =
-						await getResolvedInspectorPort(pluginConfig);
-
 					await miniflare.setOptions(
 						getDevMiniflareOptions(
 							resolvedPluginConfig,
 							viteDevServer,
-							resolvedInspectorPort ?? false
+							inputInspectorPort
 						)
 					);
 				}
@@ -652,6 +654,26 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				);
 			},
 		},
+		// Plugin that handles Node.js Async Local Storage (ALS) compatibility support for Vite Environments that are hosted in Cloudflare Workers.
+		{
+			name: "vite-plugin-cloudflare:nodejs-als",
+			apply(_config, env) {
+				// Skip this whole plugin if we are in preview mode
+				return !env.isPreview;
+			},
+			configEnvironment(name, config) {
+				if (isNodeAls(getWorkerConfig(name))) {
+					return {
+						resolve: {
+							builtins: ["async_hooks", "node:async_hooks"],
+						},
+						optimizeDeps: {
+							exclude: ["async_hooks", "node:async_hooks"],
+						},
+					};
+				}
+			},
+		},
 		// Plugin that provides an __debug path for debugging the Cloudflare Workers.
 		{
 			name: "vite-plugin-cloudflare:debug",
@@ -733,6 +755,14 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 											build.onResolve(
 												{ filter: NODEJS_MODULES_RE },
 												({ path, importer }) => {
+													if (
+														isNodeAls(workerConfig) &&
+														isNodeAlsModule(path)
+													) {
+														// Skip if this is just async_hooks and Node.js ALS support is on.
+														return;
+													}
+
 													const nodeJsCompatWarnings =
 														nodeJsCompatWarningsMap.get(workerConfig);
 													nodeJsCompatWarnings?.registerImport(path, importer);
@@ -767,6 +797,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				const workerConfig = getWorkerConfig(this.environment.name);
 
 				if (workerConfig && !isNodeCompat(workerConfig)) {
+					if (isNodeAls(workerConfig) && isNodeAlsModule(source)) {
+						// Skip if this is just async_hooks and Node.js ALS support is on.
+						return;
+					}
+
 					const nodeJsCompatWarnings =
 						nodeJsCompatWarningsMap.get(workerConfig);
 
@@ -804,6 +839,19 @@ async function getInputInspectorPortOption(
 	pluginConfig: PluginConfig,
 	viteServer: vite.ViteDevServer | vite.PreviewServer
 ) {
+	if (
+		pluginConfig.inspectorPort === undefined ||
+		pluginConfig.inspectorPort === 0
+	) {
+		const resolvedInspectorPort = await getResolvedInspectorPort(pluginConfig);
+
+		if (resolvedInspectorPort !== null) {
+			// the user is not specifying an inspector port to use and we're already
+			// using one (this is a server restart) so let's just reuse that
+			return resolvedInspectorPort;
+		}
+	}
+
 	const inputInspectorPort =
 		pluginConfig.inspectorPort ??
 		(await getFirstAvailablePort(DEFAULT_INSPECTOR_PORT));
@@ -867,4 +915,26 @@ function getDotDevDotVarsContent(
 	}
 
 	return null;
+}
+
+/**
+ * Returns true if the `changedFile` matches one of a potential .dev.vars file.
+ */
+function hasDotDevDotVarsFileChanged(
+	resolvedPluginConfig: ResolvedPluginConfig,
+	changedFilePath: string
+) {
+	return [...resolvedPluginConfig.configPaths].some((configPath) => {
+		const dotDevDotVars = path.join(path.dirname(configPath), ".dev.vars");
+		if (dotDevDotVars === changedFilePath) {
+			return true;
+		}
+
+		if (resolvedPluginConfig.cloudflareEnv) {
+			const dotDevDotVarsForEnv = `${dotDevDotVars}.${resolvedPluginConfig.cloudflareEnv}`;
+			return dotDevDotVarsForEnv === changedFilePath;
+		}
+
+		return false;
+	});
 }
