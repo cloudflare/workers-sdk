@@ -138,8 +138,8 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "The fullstack meta-framework for Angular!",
 			},
 			verifyPreview: {
-				route: "/api/v1/test",
-				expectedText: "C3_TEST",
+				route: "/api/v1/hello",
+				expectedText: "Hello World",
 			},
 			verifyBuildCfTypes: {
 				outputFile: "worker-configuration.d.ts",
@@ -148,8 +148,8 @@ export default function getFrameworkTestConfig(pm: string) {
 			verifyBuild: {
 				outputDir: "./dist/analog/public",
 				script: "build",
-				route: "/api/v1/test",
-				expectedText: "C3_TEST",
+				route: "/api/v1/hello",
+				expectedText: "Hello World",
 			},
 			flags: ["--skipTailwind", "--analogSFC=false"],
 		},
