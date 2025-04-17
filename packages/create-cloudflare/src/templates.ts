@@ -142,10 +142,19 @@ export type TemplateConfig = {
 	/** The key of the package.json "scripts" entry for previewing the project. Defaults to undefined (there might not be such script) */
 	previewScript?: string;
 
+	/** The file path to the generated types file. Defaults to worker-configuration.d.ts*/
+	typesPath?: string;
+
 	/** The file path of the template. This is used internally and isn't a user facing config value.*/
 	path?: string;
 
 	bindings?: Record<string, unknown>;
+
+	/** Default false. For frameworks that are pinned to Wrangler 3. */
+	installWorkersTypes?: boolean;
+
+	/** Default false. To accomodate SSG frameworks etc. */
+	skipWranglerTypegen?: boolean;
 };
 
 type CopyFiles = (StaticFileMap | VariantInfo) & {

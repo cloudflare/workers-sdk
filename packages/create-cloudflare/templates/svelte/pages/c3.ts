@@ -1,5 +1,4 @@
 import { existsSync } from "node:fs";
-import { platform } from "node:os";
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { runFrameworkGenerator } from "frameworks/index";
@@ -144,10 +143,9 @@ const config: TemplateConfig = {
 		};
 
 		if (usesTypescript(ctx)) {
-			const mv = platform() === "win32" ? "move" : "mv";
 			scripts = {
 				...scripts,
-				"cf-typegen": `wrangler types && ${mv} worker-configuration.d.ts src/`,
+				"cf-typegen": `wrangler types ./src/worker-configuration.d.ts`,
 			};
 		}
 
@@ -156,5 +154,6 @@ const config: TemplateConfig = {
 	devScript: "dev",
 	deployScript: "deploy",
 	previewScript: "preview",
+	typesPath: "./src/worker-configuration.d.ts",
 };
 export default config;
