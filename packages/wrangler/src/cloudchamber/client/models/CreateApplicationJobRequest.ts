@@ -23,6 +23,10 @@ export type CreateApplicationJobRequest = {
 	 */
 	vcpus?: number;
 	/**
+	 * Allocate vCPUs for this job. It defaults to the application configuration's "vCPU" setting, and if that is not specified, it uses the account defaults.
+	 */
+	vcpu?: number;
+	/**
 	 * Allocate memory for this job. It defaults to the application configuration's vCPU setting, and if that is not specified, it uses the account defaults.
 	 */
 	memory?: MemorySizeWithUnit;
