@@ -505,7 +505,7 @@ export async function generateEnvTypes(
 	if (configToDTS.version_metadata) {
 		envTypeStructure.push([
 			configToDTS.version_metadata.binding,
-			"{ id: string; tag: string }",
+			"WorkerVersionMetadata",
 		]);
 	}
 
