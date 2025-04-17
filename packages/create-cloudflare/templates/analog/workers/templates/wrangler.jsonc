@@ -1,0 +1,12 @@
+{
+  "name": "<TBD>",
+  "main": "./dist/analog/server/index.mjs",
+  "compatibility_date": "<TBD>",
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./dist/analog/public/"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
