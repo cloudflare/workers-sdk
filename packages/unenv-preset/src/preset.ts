@@ -15,6 +15,8 @@ const nodeCompatModules = [
 	"_stream_readable",
 	"_stream_transform",
 	"_stream_writable",
+	"_tls_common",
+	"_tls_wrap",
 	"assert",
 	"assert/strict",
 	"buffer",
