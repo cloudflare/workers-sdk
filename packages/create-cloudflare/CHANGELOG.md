@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.45.0
+
+### Minor Changes
+
+- [#8978](https://github.com/cloudflare/workers-sdk/pull/8978) [`0afae8f`](https://github.com/cloudflare/workers-sdk/commit/0afae8f8c3e8fc1984523f2bb9355aec81f52e8a) Thanks [@edmundhung](https://github.com/edmundhung)! - updated the qwik cloudflare workers template to keep the default \_headers and \_redirects files
+
 ## 2.44.1
 
 ### Patch Changes
