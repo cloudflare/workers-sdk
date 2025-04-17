@@ -8,7 +8,7 @@ import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
-import type { TemplateConfig } from "../../src/templates";
+import type { TemplateConfig } from "../../../src/templates";
 import type { C3Context } from "types";
 
 const { npm } = detectPackageManager();
