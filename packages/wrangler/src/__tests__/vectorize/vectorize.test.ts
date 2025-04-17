@@ -21,7 +21,7 @@ describe("vectorize help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler vectorize
 
-			🧮 Manage Vectorize indexes [open beta]
+			🧮 Manage Vectorize indexes
 
 			COMMANDS
 			  wrangler vectorize create <name>                 Create a Vectorize index
@@ -43,16 +43,7 @@ describe("vectorize help", () => {
 			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]
-
-			--------------------
-			📣 Vectorize is now Generally Available.
-			📣 Please use the '--deprecated-v1' flag to create, get, list, delete and insert vectors into legacy Vectorize indexes
-			📣 Creation of legacy Vectorize indexes will be blocked by December 2024. Other operations will continue to function
-			📣 See the Vectorize docs to get started: https://developers.cloudflare.com/vectorize
-			📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-			📣 To give feedback, visit https://discord.cloudflare.com/
-			--------------------"
+			  -v, --version  Show version number  [boolean]"
 		`);
 	});
 
@@ -70,7 +61,7 @@ describe("vectorize help", () => {
 			"
 			wrangler vectorize
 
-			🧮 Manage Vectorize indexes [open beta]
+			🧮 Manage Vectorize indexes
 
 			COMMANDS
 			  wrangler vectorize create <name>                 Create a Vectorize index
@@ -92,16 +83,7 @@ describe("vectorize help", () => {
 			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]
-
-			--------------------
-			📣 Vectorize is now Generally Available.
-			📣 Please use the '--deprecated-v1' flag to create, get, list, delete and insert vectors into legacy Vectorize indexes
-			📣 Creation of legacy Vectorize indexes will be blocked by December 2024. Other operations will continue to function
-			📣 See the Vectorize docs to get started: https://developers.cloudflare.com/vectorize
-			📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-			📣 To give feedback, visit https://discord.cloudflare.com/
-			--------------------"
+			  -v, --version  Show version number  [boolean]"
 		`);
 	});
 
@@ -132,17 +114,8 @@ describe("vectorize help", () => {
 			  -v, --version  Show version number  [boolean]
 
 			OPTIONS
-			      --json           return output as clean JSON  [boolean] [default: false]
-			      --deprecated-v1  Fetch a deprecated V1 Vectorize index. This must be enabled if the index was created with V1 option.  [boolean] [default: false]
-
-			--------------------
-			📣 Vectorize is now Generally Available.
-			📣 Please use the '--deprecated-v1' flag to create, get, list, delete and insert vectors into legacy Vectorize indexes
-			📣 Creation of legacy Vectorize indexes will be blocked by December 2024. Other operations will continue to function
-			📣 See the Vectorize docs to get started: https://developers.cloudflare.com/vectorize
-			📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-			📣 To give feedback, visit https://discord.cloudflare.com/
-			--------------------"
+			      --json           Return output as clean JSON  [boolean] [default: false]
+			      --deprecated-v1  Fetch a deprecated V1 Vectorize index. This must be enabled if the index was created with V1 option.  [boolean] [default: false]"
 		`);
 	});
 
@@ -173,7 +146,7 @@ describe("vectorize help", () => {
 			  -v, --version  Show version number  [boolean]
 
 			OPTIONS
-			      --vector           Vector to query the Vectorize Index  [array]
+			      --vector           Vector to query the Vectorize Index  [number]
 			      --vector-id        Identifier for a vector in the index against which the index should be queried  [string]
 			      --top-k            The number of results (nearest neighbors) to return  [number] [default: 5]
 			      --return-values    Specify if the vector values should be included in the results  [boolean] [default: false]
@@ -182,21 +155,9 @@ describe("vectorize help", () => {
 			      --filter           Filter the query results based on this metadata filter.  [string]
 
 			EXAMPLES
-			  ❯❯ wrangler vectorize query --vector 1 2 3 0.5 1.25 6
-			     Query the Vectorize Index by vector. To read from a json file that contains data in the format [1, 2, 3], you could use a command like
-			     \`wrangler vectorize query --vector $(jq -r '.[]' data.json | xargs)\`
-
-			  ❯❯ wrangler vectorize query --filter '{ 'p1': 'abc', 'p2': { '$ne': true }, 'p3': 10, 'p4': false, 'nested.p5': 'abcd' }'
-			     Filter the query results.
-
-			--------------------
-			📣 Vectorize is now Generally Available.
-			📣 Please use the '--deprecated-v1' flag to create, get, list, delete and insert vectors into legacy Vectorize indexes
-			📣 Creation of legacy Vectorize indexes will be blocked by December 2024. Other operations will continue to function
-			📣 See the Vectorize docs to get started: https://developers.cloudflare.com/vectorize
-			📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-			📣 To give feedback, visit https://discord.cloudflare.com/
-			--------------------"
+			  wrangler vectorize query --vector 1 2 3 0.5 1.25 6                                                                      Query the Vectorize Index by vector
+			  wrangler vectorize query --vector $(jq -r '.[]' data.json | xargs)                                                      Query the Vectorize Index by vector from a json file that contains data in the format [1, 2, 3].
+			  wrangler vectorize query --filter '{ 'p1': 'abc', 'p2': { '$ne': true }, 'p3': 10, 'p4': false, 'nested.p5': 'abcd' }'  Filter the query results."
 		`);
 	});
 });

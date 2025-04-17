@@ -1,21 +1,26 @@
-import { withConfig } from "../config";
+import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { asJson } from "../yargs-types";
 import { listFinetuneEntries, truncateDescription } from "./utils";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type { Finetune } from "./types";
 
-export function options(yargs: CommonYargsArgv) {
-	return asJson(yargs);
-}
-
-type HandlerOptions = StrictYargsOptionsToInterface<typeof options>;
-export const handler = withConfig<HandlerOptions>(
-	async ({ json, config }): Promise<void> => {
+export const aiFineTuneListCommand = createCommand({
+	metadata: {
+		description: "List your finetune files",
+		status: "stable",
+		owner: "Product: AI",
+	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
+	args: {
+		json: {
+			type: "boolean",
+			description: "Return output as clean JSON",
+			default: false,
+		},
+	},
+	async handler({ json }, { config }) {
 		const accountId = await requireAuth(config);
 		const entries = await listFinetuneEntries(accountId);
 
@@ -37,5 +42,5 @@ export const handler = withConfig<HandlerOptions>(
 				);
 			}
 		}
-	}
-);
+	},
+});

@@ -1,20 +1,25 @@
-import { withConfig } from "../config";
+import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { asJson } from "../yargs-types";
 import { listCatalogEntries, truncateDescription } from "./utils";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 
-export function options(yargs: CommonYargsArgv) {
-	return asJson(yargs);
-}
-
-type HandlerOptions = StrictYargsOptionsToInterface<typeof options>;
-export const handler = withConfig<HandlerOptions>(
-	async ({ json, config }): Promise<void> => {
+export const aiModelsCommand = createCommand({
+	metadata: {
+		description: "List catalog models",
+		status: "stable",
+		owner: "Product: AI",
+	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
+	args: {
+		json: {
+			type: "boolean",
+			description: "Return output as clean JSON",
+			default: false,
+		},
+	},
+	async handler({ json }, { config }) {
 		const accountId = await requireAuth(config);
 		const entries = await listCatalogEntries(accountId);
 
@@ -40,5 +45,5 @@ export const handler = withConfig<HandlerOptions>(
 				);
 			}
 		}
-	}
-);
+	},
+});

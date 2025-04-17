@@ -3055,7 +3055,7 @@ and that at least one include rule is provided.
 
 			await expect(runWrangler("pages deploy public --project-name=foo"))
 				.rejects.toThrow(`Deployment failed!
-Failed to publish your Function. Got error: Uncaught TypeError: a is not a function
+	Failed to publish your Function. Got error: Uncaught TypeError: a is not a function
   at functionsWorker-0.11031665179307093.js:41:1`);
 		});
 	});
@@ -4711,7 +4711,7 @@ and that at least one include rule is provided.
 
 			await expect(runWrangler("pages deploy public --project-name=foo"))
 				.rejects.toThrow(`Deployment failed!
-Failed to publish your Function. Got error: Uncaught TypeError: a is not a function
+	Failed to publish your Function. Got error: Uncaught TypeError: a is not a function
   at functionsWorker-0.11031665179307093.js:41:1`);
 		});
 	});

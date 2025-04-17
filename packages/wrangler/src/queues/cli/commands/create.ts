@@ -1,5 +1,6 @@
 import dedent from "ts-dedent";
-import { formatConfigSnippet, readConfig } from "../../../config";
+import { formatConfigSnippet } from "../../../config";
+import { createCommand } from "../../../core/create-command";
 import { CommandLineArgsError } from "../../../errors";
 import { logger } from "../../../logger";
 import { getValidBindingName } from "../../../utils/getValidBindingName";
@@ -11,53 +12,81 @@ import {
 	MIN_MESSAGE_RETENTION_PERIOD_SECS,
 } from "../../constants";
 import { handleFetchError } from "../../utils";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../../yargs-types";
 import type { PostQueueBody } from "../../client";
 
-export function options(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("name", {
+export const queuesCreateCommand = createCommand({
+	metadata: {
+		description: "Create a Queue",
+		owner: "Product: Queues",
+		status: "stable",
+	},
+	args: {
+		name: {
 			type: "string",
 			demandOption: true,
 			description: "The name of the queue",
-		})
-		.options({
-			"delivery-delay-secs": {
-				type: "number",
-				describe:
-					"How long a published message should be delayed for, in seconds. Must be between 0 and 42300",
-				default: 0,
-			},
-			"message-retention-period-secs": {
-				type: "number",
-				describe:
-					"How long to retain a message in the queue, in seconds. Must be between 60 and 1209600",
-				default: 345600,
-			},
-		});
-}
+		},
+		"delivery-delay-secs": {
+			type: "number",
+			describe:
+				"How long a published message should be delayed for, in seconds. Must be between 0 and 42300",
+			default: 0,
+		},
+		"message-retention-period-secs": {
+			type: "number",
+			describe:
+				"How long to retain a message in the queue, in seconds. Must be between 60 and 1209600",
+			default: 345600,
+		},
+	},
+	positionalArgs: ["name"],
+	async handler(args, { config }) {
+		const body = createBody(args);
+		try {
+			logger.log(`🌀 Creating queue '${args.name}'`);
+			await createQueue(config, body);
+			logger.log(dedent`
+			✅ Created queue '${args.name}'
 
-function createBody(
-	args: StrictYargsOptionsToInterface<typeof options>
-): PostQueueBody {
+			Configure your Worker to send messages to this queue:
+
+			${formatConfigSnippet(
+				{
+					queues: {
+						producers: [
+							{
+								queue: args.name,
+								binding: getValidBindingName(args.name, "queue"),
+							},
+						],
+					},
+				},
+				config.configPath
+			)}
+			Configure your Worker to consume messages from this queue:
+
+			${formatConfigSnippet(
+				{
+					queues: {
+						consumers: [
+							{
+								queue: args.name,
+							},
+						],
+					},
+				},
+				config.configPath
+			)}`);
+		} catch (e) {
+			handleFetchError(e as { code?: number });
+		}
+	},
+});
+
+function createBody(args: typeof queuesCreateCommand.args): PostQueueBody {
 	const body: PostQueueBody = {
 		queue_name: args.name,
 	};
-
-	if (Array.isArray(args.deliveryDelaySecs)) {
-		throw new CommandLineArgsError(
-			"Cannot specify --delivery-delay-secs multiple times"
-		);
-	}
-
-	if (Array.isArray(args.messageRetentionPeriodSecs)) {
-		throw new CommandLineArgsError(
-			"Cannot specify --message-retention-period-secs multiple times"
-		);
-	}
 
 	body.settings = {};
 
@@ -90,49 +119,4 @@ function createBody(
 	}
 
 	return body;
-}
-
-export async function handler(
-	args: StrictYargsOptionsToInterface<typeof options>
-) {
-	const config = readConfig(args);
-	const body = createBody(args);
-	try {
-		logger.log(`🌀 Creating queue '${args.name}'`);
-		await createQueue(config, body);
-		logger.log(dedent`
-			✅ Created queue '${args.name}'
-
-			Configure your Worker to send messages to this queue:
-
-			${formatConfigSnippet(
-				{
-					queues: {
-						producers: [
-							{
-								queue: args.name,
-								binding: getValidBindingName(args.name, "queue"),
-							},
-						],
-					},
-				},
-				config.configPath
-			)}
-			Configure your Worker to consume messages from this queue:
-
-			${formatConfigSnippet(
-				{
-					queues: {
-						consumers: [
-							{
-								queue: args.name,
-							},
-						],
-					},
-				},
-				config.configPath
-			)}`);
-	} catch (e) {
-		handleFetchError(e as { code?: number });
-	}
 }

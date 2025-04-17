@@ -1,11 +1,11 @@
 import fs from "node:fs";
 import path from "path";
-import { configFileName, withConfig } from "../../config";
+import { configFileName } from "../../config";
+import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
 import { UserError } from "../../errors";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
-import { printWranglerBanner } from "../../wrangler-banner";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { executeSql } from "../execute";
 import { getDatabaseInfoFromConfig } from "../utils";
@@ -14,29 +14,44 @@ import {
 	getUnappliedMigrations,
 	initMigrationsTable,
 } from "./helpers";
-import { MigrationOptions } from "./options";
 import type { ParseError } from "../../parse";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../yargs-types";
 
-export function ApplyOptions(yargs: CommonYargsArgv) {
-	return MigrationOptions(yargs);
-}
-
-type ApplyHandlerOptions = StrictYargsOptionsToInterface<typeof ApplyOptions>;
-
-export const ApplyHandler = withConfig<ApplyHandlerOptions>(
-	async ({
-		config,
-		database,
-		local,
-		remote,
-		persistTo,
-		preview,
-	}): Promise<void> => {
-		await printWranglerBanner();
+export const d1MigrationsApplyCommand = createCommand({
+	metadata: {
+		description: "Apply D1 migrations",
+		status: "stable",
+		owner: "Product: D1",
+	},
+	args: {
+		database: {
+			type: "string",
+			demandOption: true,
+			description: "The name or binding of the DB",
+		},
+		local: {
+			type: "boolean",
+			description:
+				"Execute commands/files against a local DB for use with wrangler dev",
+		},
+		remote: {
+			type: "boolean",
+			description:
+				"Execute commands/files against a remote DB for use with wrangler dev --remote",
+		},
+		preview: {
+			type: "boolean",
+			description: "Execute commands/files against a preview D1 DB",
+			default: false,
+		},
+		"persist-to": {
+			type: "string",
+			description:
+				"Specify directory to use for local persistence (you must use --local with this flag)",
+			requiresArg: true,
+		},
+	},
+	positionalArgs: ["database"],
+	async handler({ database, local, remote, persistTo, preview }, { config }) {
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 
 		if (!databaseInfo && remote) {
@@ -192,5 +207,5 @@ Your database may not be available to serve requests during the migration, conti
 				);
 			}
 		}
-	}
-);
+	},
+});

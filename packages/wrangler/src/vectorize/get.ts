@@ -1,52 +1,53 @@
-import { readConfig } from "../config";
+import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { getIndex } from "./client";
-import { deprecatedV1DefaultFlag, vectorizeGABanner } from "./common";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
+import { deprecatedV1DefaultFlag } from "./common";
 
-export function options(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("name", {
+export const vectorizeGetCommand = createCommand({
+	metadata: {
+		description: "Get a Vectorize index by name",
+		status: "stable",
+		owner: "Product: Vectorize",
+	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
+	args: {
+		name: {
 			type: "string",
 			demandOption: true,
 			description: "The name of the Vectorize index.",
-		})
-		.option("json", {
-			describe: "return output as clean JSON",
+		},
+		json: {
 			type: "boolean",
 			default: false,
-		})
-		.option("deprecated-v1", {
+			description: "Return output as clean JSON",
+		},
+		"deprecated-v1": {
 			type: "boolean",
 			default: deprecatedV1DefaultFlag,
-			describe:
+			description:
 				"Fetch a deprecated V1 Vectorize index. This must be enabled if the index was created with V1 option.",
-		})
-		.epilogue(vectorizeGABanner);
-}
-
-export async function handler(
-	args: StrictYargsOptionsToInterface<typeof options>
-) {
-	const config = readConfig(args);
-	const index = await getIndex(config, args.name, args.deprecatedV1);
-
-	if (args.json) {
-		logger.log(JSON.stringify(index, null, 2));
-		return;
-	}
-
-	logger.table([
-		{
-			name: index.name,
-			dimensions: index.config?.dimensions.toString(),
-			metric: index.config?.metric,
-			description: index.description || "",
-			created: index.created_on,
-			modified: index.modified_on,
 		},
-	]);
-}
+	},
+	positionalArgs: ["name"],
+	async handler({ name, json, deprecatedV1 }, { config }) {
+		const index = await getIndex(config, name, deprecatedV1);
+
+		if (json) {
+			logger.log(JSON.stringify(index, null, 2));
+			return;
+		}
+
+		logger.table([
+			{
+				name: index.name,
+				dimensions: index.config?.dimensions.toString(),
+				metric: index.config?.metric,
+				description: index.description || "",
+				created: index.created_on,
+				modified: index.modified_on,
+			},
+		]);
+	},
+});

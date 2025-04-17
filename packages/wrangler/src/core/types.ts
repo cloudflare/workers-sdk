@@ -30,10 +30,15 @@ export type Metadata = {
 	owner: Teams;
 	/** Prints something at the bottom of the help */
 	epilogue?: string;
+	examples?: {
+		command: string;
+		description: string;
+	}[];
+	hideGlobalFlags?: string[];
 };
 
-export type ArgDefinition = PositionalOptions &
-	Pick<Options, "hidden" | "requiresArg">;
+export type ArgDefinition = Omit<PositionalOptions, "type"> &
+	Pick<Options, "hidden" | "requiresArg" | "deprecated" | "type">;
 export type NamedArgDefinitions = { [key: string]: ArgDefinition };
 export type HandlerArgs<Args extends NamedArgDefinitions> = DeepFlatten<
 	OnlyCamelCase<

@@ -5,6 +5,7 @@ import { execa } from "execa";
 import { assertNever } from "./api/startDevWorker/utils";
 import { fetchResult } from "./cfetch";
 import { fetchWorker } from "./cfetch/internal";
+import { createCommand } from "./core/create-command";
 import { getDatabaseInfoFromIdOrName } from "./d1/utils";
 import { getC3CommandFromEnv } from "./environment-variables/misc-variables";
 import { FatalError, UserError } from "./errors";
@@ -14,7 +15,6 @@ import { getPackageManager } from "./package-manager";
 import { requireAuth } from "./user";
 import { createBatches } from "./utils/create-batches";
 import * as shellquote from "./utils/shell-quote";
-import { printWranglerBanner } from "./wrangler-banner";
 import type { RawConfig } from "./config";
 import type {
 	CustomDomainRoute,
@@ -29,39 +29,122 @@ import type {
 	WorkerMetadataBinding,
 } from "./deployment-bundle/create-worker-upload-form";
 import type { PackageManager } from "./package-manager";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "./yargs-types";
 import type { ReadableStream } from "stream/web";
 
-export function initOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("name", {
+export const init = createCommand({
+	metadata: {
+		description: "📥 Initialize a basic Worker",
+		owner: "Workers: Authoring and Testing",
+		status: "stable",
+	},
+	args: {
+		name: {
 			describe: "The name of your worker",
 			type: "string",
-		})
-		.option("yes", {
+		},
+		yes: {
 			describe: 'Answer "yes" to any prompts for new projects',
 			type: "boolean",
 			alias: "y",
-		})
-		.option("from-dash", {
+		},
+		"from-dash": {
 			describe:
 				"The name of the Worker you wish to download from the Cloudflare dashboard for local development.",
 			type: "string",
 			requiresArg: true,
-		})
-		.option("delegate-c3", {
+		},
+		"delegate-c3": {
 			describe: "Delegate to Create Cloudflare CLI (C3)",
 			type: "boolean",
 			hidden: true,
 			default: true,
 			alias: "c3",
-		});
-}
+		},
+	},
+	behaviour: {
+		provideConfig: false,
+	},
+	positionalArgs: ["name"],
+	async handler(args) {
+		const yesFlag = args.yes ?? false;
 
-type InitArgs = StrictYargsOptionsToInterface<typeof initOptions>;
+		const packageManager = await getPackageManager();
+
+		const name = args.fromDash ?? args.name;
+
+		const c3Arguments = [
+			...shellquote.parse(getC3CommandFromEnv()),
+			...(name ? [name] : []),
+			...(yesFlag && isNpm(packageManager) ? ["-y"] : []), // --yes arg for npx
+			...(isNpm(packageManager) ? ["--"] : []),
+			...(args.fromDash ? ["--existing-script", args.fromDash] : []),
+			...(yesFlag ? ["--wrangler-defaults"] : []),
+		];
+		const replacementC3Command = `\`${packageManager.type} ${c3Arguments.join(
+			" "
+		)}\``;
+
+		if (args.fromDash && !args.delegateC3) {
+			const accountId = await requireAuth({});
+			try {
+				await fetchResult<ServiceMetadataRes>(
+					`/accounts/${accountId}/workers/services/${args.fromDash}`
+				);
+			} catch (err) {
+				if ((err as { code?: number }).code === 10090) {
+					throw new UserError(
+						"wrangler couldn't find a Worker with that name in your account.\nRun `wrangler whoami` to confirm you're logged into the correct account."
+					);
+				}
+				throw err;
+			}
+
+			const creationDir = path.join(process.cwd(), args.fromDash);
+
+			await mkdir(creationDir, { recursive: true });
+			const { modules, config } = await downloadWorker(
+				accountId,
+				args.fromDash
+			);
+
+			await mkdir(path.join(creationDir, "./src"), {
+				recursive: true,
+			});
+
+			config.main = `src/${config.main}`;
+			config.name = args.fromDash;
+
+			// writeFile in small batches (of 10) to not exhaust system file descriptors
+			for (const files of createBatches(modules, 10)) {
+				await Promise.all(
+					files.map(async (file) => {
+						const filepath = path.join(creationDir, `./src/${file.name}`);
+						const directory = dirname(filepath);
+
+						await mkdir(directory, { recursive: true });
+						await writeFile(filepath, file.stream() as ReadableStream);
+					})
+				);
+			}
+
+			await writeFile(
+				path.join(creationDir, "wrangler.toml"),
+				TOML.stringify(config as TOML.JsonMap)
+			);
+		} else {
+			logger.log(`🌀 Running ${replacementC3Command}...`);
+
+			// if telemetry is disabled in wrangler, prevent c3 from sending metrics too
+			const metricsConfig = readMetricsConfig();
+			await execa(packageManager.type, c3Arguments, {
+				stdio: "inherit",
+				...(metricsConfig.permission?.enabled === false && {
+					env: { CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1" },
+				}),
+			});
+		}
+	},
+});
 
 export type ServiceMetadataRes = {
 	id: string;
@@ -133,85 +216,6 @@ type CronTriggersRes = {
 
 function isNpm(packageManager: PackageManager) {
 	return packageManager.type === "npm";
-}
-
-export async function initHandler(args: InitArgs) {
-	await printWranglerBanner();
-
-	const yesFlag = args.yes ?? false;
-
-	const packageManager = await getPackageManager();
-
-	const name = args.fromDash ?? args.name;
-
-	const c3Arguments = [
-		...shellquote.parse(getC3CommandFromEnv()),
-		...(name ? [name] : []),
-		...(yesFlag && isNpm(packageManager) ? ["-y"] : []), // --yes arg for npx
-		...(isNpm(packageManager) ? ["--"] : []),
-		...(args.fromDash ? ["--existing-script", args.fromDash] : []),
-		...(yesFlag ? ["--wrangler-defaults"] : []),
-	];
-	const replacementC3Command = `\`${packageManager.type} ${c3Arguments.join(
-		" "
-	)}\``;
-
-	if (args.fromDash && !args.delegateC3) {
-		const accountId = await requireAuth({});
-		try {
-			await fetchResult<ServiceMetadataRes>(
-				`/accounts/${accountId}/workers/services/${args.fromDash}`
-			);
-		} catch (err) {
-			if ((err as { code?: number }).code === 10090) {
-				throw new UserError(
-					"wrangler couldn't find a Worker with that name in your account.\nRun `wrangler whoami` to confirm you're logged into the correct account."
-				);
-			}
-			throw err;
-		}
-
-		const creationDir = path.join(process.cwd(), args.fromDash);
-
-		await mkdir(creationDir, { recursive: true });
-		const { modules, config } = await downloadWorker(accountId, args.fromDash);
-
-		await mkdir(path.join(creationDir, "./src"), {
-			recursive: true,
-		});
-
-		config.main = `src/${config.main}`;
-		config.name = args.fromDash;
-
-		// writeFile in small batches (of 10) to not exhaust system file descriptors
-		for (const files of createBatches(modules, 10)) {
-			await Promise.all(
-				files.map(async (file) => {
-					const filepath = path.join(creationDir, `./src/${file.name}`);
-					const directory = dirname(filepath);
-
-					await mkdir(directory, { recursive: true });
-					await writeFile(filepath, file.stream() as ReadableStream);
-				})
-			);
-		}
-
-		await writeFile(
-			path.join(creationDir, "wrangler.toml"),
-			TOML.stringify(config as TOML.JsonMap)
-		);
-	} else {
-		logger.log(`🌀 Running ${replacementC3Command}...`);
-
-		// if telemetry is disabled in wrangler, prevent c3 from sending metrics too
-		const metricsConfig = readMetricsConfig();
-		await execa(packageManager.type, c3Arguments, {
-			stdio: "inherit",
-			...(metricsConfig.permission?.enabled === false && {
-				env: { CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1" },
-			}),
-		});
-	}
 }
 
 async function getWorkerConfig(
