@@ -11,7 +11,6 @@ import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
-import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { APIError } from "../parse";
@@ -117,10 +116,6 @@ export const versionsDeployCommand = createCommand({
 				'You need to provide a name of your worker. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
 				{ telemetryMessage: true }
 			);
-		}
-
-		if (config.workflows?.length) {
-			logger.once.warn("Workflows is currently in open beta.");
 		}
 
 		const versionCache: VersionCache = new Map();
