@@ -354,11 +354,16 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 	});
 
 	it("exposes Secrets Store bindings", async () => {
-		const storeId = await helper.secretsStore(isLocal);
+		// if remote, secrets store and secret will already be created
+		const storeId = "37009502100840c0a9800b4990ed0449";
+		const secret_name = "well-known-secret";
 
-		await helper.run(
-			`wrangler secrets-store secret create ${storeId} ${resourceFlags} --name mysecret --value my-secret-value --scopes workers`
-		);
+		// but we need to create the secret each time when running locally
+		if (isLocal) {
+			await helper.run(
+				`wrangler secrets-store secret create ${storeId} ${resourceFlags} --name ${secret_name} --value my-secret-value --scopes workers`
+			);
+		}
 
 		await helper.seed({
 			"wrangler.toml": dedent`
@@ -366,7 +371,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				main = "src/index.ts"
 				compatibility_date = "2025-01-01"
 				secrets_store_secrets = [
-					{ binding = "SECRET", store_id = "${storeId}", secret_name = "mysecret" }
+					{ binding = "SECRET", store_id = "${storeId}", secret_name = "${secret_name}" }
 				]
 			`,
 			"src/index.ts": dedent`
