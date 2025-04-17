@@ -17,7 +17,7 @@ describe("validateBackportPR", () => {
 		);
 	});
 
-	it("should return false if the PR is not merged", () => {
+	it("should return false if the original PR is not merged", () => {
 		const isMergedMock = vi.fn(() => false);
 		const result = validateBackportPR("v3-maintenance-13579", isMergedMock);
 
