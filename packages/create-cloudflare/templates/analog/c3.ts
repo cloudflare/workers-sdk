@@ -3,10 +3,10 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { runFrameworkGenerator } from "frameworks/index";
 import { loadTemplateSnippets, transformFile } from "helpers/codemod";
+import { runCommand } from "helpers/command";
 import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
-import { installPackages } from "helpers/packages";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
@@ -20,11 +20,10 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	const packages = ["nx", "@nx/devkit"];
-
-	await installPackages(packages, {
-		dev: true,
-		startText: `Installing additional dependencies: ${packages.join(", ")}`,
+	await runCommand([npm, "install"], {
+		silent: true,
+		cwd: ctx.project.path,
+		startText: "Installing dependencies",
 		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
 	});
 
