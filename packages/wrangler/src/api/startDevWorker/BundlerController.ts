@@ -123,8 +123,6 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 							config.compatibilityDate,
 							config.compatibilityFlags
 						),
-						mockAnalyticsEngineDatasets:
-							bindings.analytics_engine_datasets ?? [],
 						alias: config.build.alias,
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
@@ -255,7 +253,6 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				findAdditionalModules: config.build?.findAdditionalModules,
 				durableObjects: bindings?.durable_objects ?? { bindings: [] },
 				workflows: bindings?.workflows ?? [],
-				mockAnalyticsEngineDatasets: bindings.analytics_engine_datasets ?? [],
 				local: !config.dev?.remote,
 				// startDevWorker only applies to "dev"
 				targetConsumer: "dev",

@@ -47,7 +47,6 @@ export function runBuild(
 		alias,
 		noBundle,
 		findAdditionalModules,
-		mockAnalyticsEngineDatasets,
 		durableObjects,
 		workflows,
 		local,
@@ -74,7 +73,6 @@ export function runBuild(
 		findAdditionalModules: boolean | undefined;
 		durableObjects: Config["durable_objects"];
 		workflows: Config["workflows"];
-		mockAnalyticsEngineDatasets: Config["analytics_engine_datasets"];
 		local: boolean;
 		targetConsumer: "dev" | "deploy";
 		testScheduled: boolean;
@@ -155,7 +153,6 @@ export function runBuild(
 						workflowBindings: workflows,
 						alias,
 						define,
-						mockAnalyticsEngineDatasets,
 						targetConsumer,
 						testScheduled,
 						plugins: [logBuildOutput(nodejsCompatMode, onStart, updateBundle)],

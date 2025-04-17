@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { ValueOf } from "../workers";
+import {
+	ANALYTICS_ENGINE_PLUGIN,
+	ANALYTICS_ENGINE_PLUGIN_NAME,
+} from "./analytics-engine";
 import { ASSETS_PLUGIN } from "./assets";
 import { ASSETS_PLUGIN_NAME } from "./assets/constants";
 import { CACHE_PLUGIN, CACHE_PLUGIN_NAME } from "./cache";
@@ -31,6 +35,7 @@ export const PLUGINS = {
 	[PIPELINES_PLUGIN_NAME]: PIPELINE_PLUGIN,
 	[SECRET_STORE_PLUGIN_NAME]: SECRET_STORE_PLUGIN,
 	[EMAIL_PLUGIN_NAME]: EMAIL_PLUGIN,
+	[ANALYTICS_ENGINE_PLUGIN_NAME]: ANALYTICS_ENGINE_PLUGIN,
 };
 export type Plugins = typeof PLUGINS;
 
@@ -82,7 +87,8 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof ASSETS_PLUGIN.options> &
 	z.input<typeof WORKFLOWS_PLUGIN.options> &
 	z.input<typeof PIPELINE_PLUGIN.options> &
-	z.input<typeof SECRET_STORE_PLUGIN.options>;
+	z.input<typeof SECRET_STORE_PLUGIN.options> &
+	z.input<typeof ANALYTICS_ENGINE_PLUGIN.options>;
 
 export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof CACHE_PLUGIN.sharedOptions> &
@@ -91,7 +97,8 @@ export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof KV_PLUGIN.sharedOptions> &
 	z.input<typeof R2_PLUGIN.sharedOptions> &
 	z.input<typeof WORKFLOWS_PLUGIN.sharedOptions> &
-	z.input<typeof SECRET_STORE_PLUGIN.sharedOptions>;
+	z.input<typeof SECRET_STORE_PLUGIN.sharedOptions> &
+	z.input<typeof ANALYTICS_ENGINE_PLUGIN.sharedOptions>;
 
 export const PLUGIN_ENTRIES = Object.entries(PLUGINS) as [
 	keyof Plugins,
@@ -143,3 +150,4 @@ export * from "./workflows";
 export * from "./pipelines";
 export * from "./secret-store";
 export * from "./email";
+export * from "./analytics-engine";
