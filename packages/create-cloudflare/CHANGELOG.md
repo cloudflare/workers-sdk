@@ -1,5 +1,43 @@
 # create-cloudflare
 
+## 2.44.1
+
+### Patch Changes
+
+- [#8919](https://github.com/cloudflare/workers-sdk/pull/8919) [`3a83ff1`](https://github.com/cloudflare/workers-sdk/commit/3a83ff196886b68417c9412953cd86272c5235f0) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.2.1 | 15.3.0 |
+
+- [#8946](https://github.com/cloudflare/workers-sdk/pull/8946) [`5cffdec`](https://github.com/cloudflare/workers-sdk/commit/5cffdec307f214bb952ad2c4a35a1710d105f1bb) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To    |
+  | ---------- | ----- | ----- |
+  | sv         | 0.8.0 | 0.8.1 |
+
+- [#8947](https://github.com/cloudflare/workers-sdk/pull/8947) [`b0c1179`](https://github.com/cloudflare/workers-sdk/commit/b0c11793a9ace0bb49264161559043e697d0d6c5) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.2.6 | 19.2.7 |
+
+- [#8948](https://github.com/cloudflare/workers-sdk/pull/8948) [`cba4713`](https://github.com/cloudflare/workers-sdk/commit/cba4713e8b1b711c3954192dfb8188fe7101870c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | gatsby     | 5.14.1 | 5.14.3 |
+
+- [#8949](https://github.com/cloudflare/workers-sdk/pull/8949) [`5777b33`](https://github.com/cloudflare/workers-sdk/commit/5777b33c8598d8fd394e6a50661ed0bcc7918334) Thanks [@vicb](https://github.com/vicb)! - bump create-next-app to 15.3.0 for the Workers template
+
 ## 2.44.0
 
 ### Minor Changes
