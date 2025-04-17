@@ -328,7 +328,14 @@ async function resolveConfig(
 		);
 	}
 
-	validateAssetsArgsAndConfig(resolved);
+	validateAssetsArgsAndConfig(
+		{
+			site: resolved.legacy.site?.bucket,
+			assets: input.assets,
+			script: input.entrypoint,
+		},
+		config
+	);
 
 	const services = extractBindingsOfType("service", resolved.bindings);
 	if (services && services.length > 0 && resolved.dev?.remote) {

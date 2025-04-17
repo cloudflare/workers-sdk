@@ -22,19 +22,18 @@ import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
 import { File, FormData } from "undici";
 import { fetchResult } from "./cfetch";
+import { defaultWranglerConfig } from "./config/config";
 import { formatTime } from "./deploy/deploy";
 import { FatalError, UserError } from "./errors";
 import { logger, LOGGER_LEVELS } from "./logger";
 import { hashFile } from "./pages/hash";
 import { isJwtExpired } from "./pages/upload";
 import { APIError } from "./parse";
-import { getBasePath } from "./paths";
 import { dedent } from "./utils/dedent";
-import type { StartDevWorkerOptions } from "./api";
 import type { Config } from "./config";
-import type { DeployArgs } from "./deploy";
-import type { StartDevOptions } from "./dev";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
+
+const WORKER_JS_FILENAME = "_worker.js";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
 
@@ -490,45 +489,27 @@ export function getAssetsOptions(
  *     - assets cannot be used in combination with a few other select
  *        Workers features, such as: legacy assets, sites and tail consumers
  *     - an asset binding cannot be used in a Worker that only has assets
+ *     - a Worker that has only assets can be configured with only a few select
+ *       configuration file keys
  * and throw an appropriate error if invalid.
  */
 export function validateAssetsArgsAndConfig(
-	args: Pick<StartDevWorkerOptions, "legacy" | "assets" | "entrypoint">
-): void;
-export function validateAssetsArgsAndConfig(
-	args:
-		| Pick<StartDevOptions, "site" | "assets" | "script">
-		| Pick<DeployArgs, "site" | "assets" | "script">,
+	args: {
+		site: string | undefined;
+		assets: string | undefined;
+		script: string | undefined;
+	},
+	// args: StartDevOptions | DeployArgs | VersionsUploadArgs,
 	config: Config
-): void;
-export function validateAssetsArgsAndConfig(
-	args:
-		| Pick<StartDevOptions, "site" | "assets" | "script">
-		| Pick<DeployArgs, "site" | "assets" | "script">
-		| Pick<StartDevWorkerOptions, "legacy" | "assets" | "entrypoint">,
-	config?: Config
 ): void {
-	if (
-		"legacy" in args
-			? args.assets && args.legacy.site
-			: (args.assets || config?.assets) && (args.site || config?.site)
-	) {
+	if ((args.assets || config.assets) && (args.site || config.site)) {
 		throw new UserError(
 			"Cannot use assets and Workers Sites in the same Worker.\n" +
 				"Please remove either the `site` or `assets` field from your configuration file."
 		);
 	}
 
-	const noOpEntrypoint = path.resolve(
-		getBasePath(),
-		"templates/no-op-worker.js"
-	);
-
-	if (
-		"legacy" in args
-			? args.entrypoint === noOpEntrypoint && args.assets?.binding
-			: !(args.script || config?.main) && config?.assets?.binding
-	) {
+	if (!(args.script || config.main) && config.assets?.binding) {
 		throw new UserError(
 			"Cannot use assets with a binding in an assets-only Worker.\n" +
 				"Please remove the asset binding from your configuration file, or provide a Worker script in your configuration file (`main`).",
@@ -538,8 +519,8 @@ export function validateAssetsArgsAndConfig(
 
 	// Smart placement turned on when using assets
 	if (
-		config?.placement?.mode === "smart" &&
-		config?.assets?.run_worker_first === true
+		config.placement?.mode === "smart" &&
+		config.assets?.run_worker_first === true
 	) {
 		logger.warn(
 			"Turning on Smart Placement in a Worker that is using assets and run_worker_first set to true means that your entire Worker could be moved to run closer to your data source, and all requests will go to that Worker before serving assets.\n" +
@@ -547,9 +528,57 @@ export function validateAssetsArgsAndConfig(
 				"Read more: https://developers.cloudflare.com/workers/static-assets/binding/#smart-placement"
 		);
 	}
+
+	if (
+		(args.assets || config.assets?.directory) &&
+		!(args.script || config.main)
+	) {
+		const unsupportedConfigKeys = getConfigKeysUnsupportedByAssetsOnly(config);
+
+		if (unsupportedConfigKeys.length > 0) {
+			const keys = unsupportedConfigKeys.map((key) => `⋅ "${key}"`).join("\n");
+
+			throw new UserError(
+				`Assets-only Workers do not support the following configuration keys:\n\n` +
+					`${keys}\n\n` +
+					`Please remove these fields from your configuration file, or configure the "main" field if you are trying to deploy a Worker with assets.`
+			);
+		}
+	}
 }
 
-const WORKER_JS_FILENAME = "_worker.js";
+function getConfigKeysUnsupportedByAssetsOnly(config: Config): Array<string> {
+	const supportedAssetsOnlyConfigKeys = new Set([
+		"name",
+		"compatibility_date",
+		"compatibility_flags",
+		"assets",
+		"build",
+		"dev",
+		"routes",
+		// computed fields (see normalizeAndValidateConfig())
+		"configPath",
+		"userConfigPath",
+		"topLevelName",
+	]);
+
+	const configKeys = new Set(Object.keys(config) as Array<keyof Config>);
+	const unsupportedKeys: Set<string> = new Set();
+
+	for (const key of configKeys) {
+		// if this is an unsupported key with a non-default config value,
+		// add to `unsupportedKeys`
+		if (
+			!supportedAssetsOnlyConfigKeys.has(key) &&
+			config[key] !== undefined &&
+			JSON.stringify(config[key]) !== JSON.stringify(defaultWranglerConfig[key])
+		) {
+			unsupportedKeys.add(key);
+		}
+	}
+
+	return Array.from(unsupportedKeys.keys());
+}
 
 /**
  * Creates a function that logs a warning (only once) if the project has no `.assetsIgnore` file and is uploading _worker.js code as an asset.

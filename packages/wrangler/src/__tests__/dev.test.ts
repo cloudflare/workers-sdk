@@ -1474,6 +1474,27 @@ describe.sequential("wrangler dev", () => {
 			);
 		});
 
+		it("should error if config.assets and --site are used together", async () => {
+			writeWranglerConfig({
+				main: "./index.js",
+				assets: {
+					directory: "assets",
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.mkdirSync("assets");
+			fs.mkdirSync("xyz");
+
+			await expect(
+				runWrangler("dev --site xyz")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`
+				[Error: Cannot use assets and Workers Sites in the same Worker.
+				Please remove either the \`site\` or \`assets\` field from your configuration file.]
+			`
+			);
+		});
+
 		it("should error if an ASSET binding is provided without a user Worker", async () => {
 			writeWranglerConfig({
 				assets: { directory: "assets", binding: "ASSETS" },
@@ -1488,6 +1509,111 @@ describe.sequential("wrangler dev", () => {
 			`
 			);
 		});
+
+		it("should error when starting a dev session for an assets-only Worker with unsupported configuration for assets-only", async () => {
+			writeWranglerConfig({
+				assets: {
+					directory: "assets",
+				},
+				send_metrics: true,
+				vars: {
+					MY_VAR: "my var",
+				},
+				services: [
+					{
+						binding: "BINDING_NAME",
+						service: "WORKER_NAME",
+					},
+				],
+				kv_namespaces: [
+					{
+						id: "123",
+						binding: "KV_BINDING_NAME",
+					},
+				],
+			});
+			fs.mkdirSync("assets");
+			await expect(runWrangler("dev")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Assets-only Workers do not support the following configuration keys:
+
+				⋅ "send_metrics"
+				⋅ "vars"
+				⋅ "kv_namespaces"
+				⋅ "services"
+
+				Please remove these fields from your configuration file, or configure the "main" field if you are trying to deploy a Worker with assets.]
+			`);
+		});
+
+		it("should error when starting a dev session for an assets-only Worker with the --assets flag set but with unsupported configuration for assets-only", async () => {
+			writeWranglerConfig({
+				send_metrics: true,
+				vars: {
+					MY_VAR: "my var",
+				},
+				services: [
+					{
+						binding: "BINDING_NAME",
+						service: "WORKER_NAME",
+					},
+				],
+				kv_namespaces: [
+					{
+						id: "123",
+						binding: "KV_BINDING_NAME",
+					},
+				],
+			});
+			fs.mkdirSync("assets");
+			await expect(runWrangler("dev --assets assets")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Assets-only Workers do not support the following configuration keys:
+
+				⋅ "send_metrics"
+				⋅ "vars"
+				⋅ "kv_namespaces"
+				⋅ "services"
+
+				Please remove these fields from your configuration file, or configure the "main" field if you are trying to deploy a Worker with assets.]
+			`);
+		});
+
+		it.fails(
+			"should error when starting a dev session for an assets-only Worker with unsupported flags assets-only set",
+			async () => {
+				writeWranglerConfig({
+					assets: {
+						directory: "xyz",
+					},
+					send_metrics: true,
+					services: [
+						{
+							binding: "BINDING_NAME",
+							service: "WORKER_NAME",
+						},
+					],
+					kv_namespaces: [
+						{
+							id: "123",
+							binding: "KV_BINDING_NAME",
+						},
+					],
+				});
+				fs.mkdirSync("assets");
+				await expect(runWrangler("dev --var MY_VAR:13")).rejects
+					.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Assets-only Workers do not support the following configuration keys:
+
+				⋅ "send_metrics"
+				⋅ "vars"
+				⋅ "kv_namespaces"
+				⋅ "services"
+
+				Please remove these fields from your configuration file, or configure the "main" field if you are trying to deploy a Worker with assets.]
+			`);
+			}
+		);
 
 		it("should warn if run_worker_first=true but no binding is provided", async () => {
 			writeWranglerConfig({

@@ -235,7 +235,14 @@ export const deployCommand = createCommand({
 
 		const entry = await getEntry(args, config, "deploy");
 
-		validateAssetsArgsAndConfig(args, config);
+		validateAssetsArgsAndConfig(
+			{
+				site: args.site,
+				assets: args.assets,
+				script: args.script,
+			},
+			config
+		);
 
 		const assetsOptions = getAssetsOptions(args, config);
 
