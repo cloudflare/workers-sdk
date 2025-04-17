@@ -127,6 +127,7 @@ export default function getFrameworkTestConfig(pm: string) {
 			],
 		},
 		"analog:pages": {
+			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
@@ -154,6 +155,7 @@ export default function getFrameworkTestConfig(pm: string) {
 			flags: ["--skipTailwind", "--analogSFC=false"],
 		},
 		"analog:workers": {
+			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
