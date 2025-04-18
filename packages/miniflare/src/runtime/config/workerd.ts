@@ -46,6 +46,7 @@ export type Service = {
 export interface ServiceDesignator {
 	name?: string;
 	entrypoint?: string;
+	props?: { json: string };
 }
 
 export type Worker = (
