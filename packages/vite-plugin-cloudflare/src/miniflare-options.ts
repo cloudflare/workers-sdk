@@ -37,6 +37,7 @@ type PersistOptions = Pick<
 	| "kvPersist"
 	| "r2Persist"
 	| "workflowsPersist"
+	| "secretsStorePersist"
 >;
 
 function getPersistence(
@@ -61,6 +62,7 @@ function getPersistence(
 		kvPersist: path.join(persistPath, "kv"),
 		r2Persist: path.join(persistPath, "r2"),
 		workflowsPersist: path.join(persistPath, "workflows"),
+		secretsStorePersist: path.join(persistPath, "secrets-store"),
 	};
 }
 
