@@ -788,7 +788,7 @@ export function buildPersistOptions(
 			r2Persist: path.join(v3Path, "r2"),
 			d1Persist: path.join(v3Path, "d1"),
 			workflowsPersist: path.join(v3Path, "workflows"),
-			secretsStorePersist: path.join(v3Path, "secrets-store"),
+			secretsStorePersist: path.join(v3Path, "kv"),
 		};
 	}
 }

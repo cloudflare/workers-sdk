@@ -204,6 +204,7 @@ function getMiniflarePersistOptions(
 	persist: GetPlatformProxyOptions["persist"]
 ): Pick<
 	MiniflareOptions,
+	| "secretsStorePersist"
 	| "kvPersist"
 	| "durableObjectsPersist"
 	| "r2Persist"
@@ -218,6 +219,7 @@ function getMiniflarePersistOptions(
 			r2Persist: false,
 			d1Persist: false,
 			workflowsPersist: false,
+			secretsStorePersist: false,
 		};
 	}
 
@@ -232,6 +234,7 @@ function getMiniflarePersistOptions(
 		r2Persist: `${persistPath}/r2`,
 		d1Persist: `${persistPath}/d1`,
 		workflowsPersist: `${persistPath}/workflows`,
+		secretsStorePersist: `${persistPath}/kv`,
 	};
 }
 
