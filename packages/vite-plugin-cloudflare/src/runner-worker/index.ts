@@ -239,7 +239,7 @@ export function createWorkerEntrypointWrapper(
 
 const kInstance = Symbol("kInstance");
 const kEnsureInstance = Symbol("kEnsureInstance");
-
+const ensureInstancePromise = Symbol("ensureInstancePromise");
 interface DurableObjectInstance {
 	ctor: DurableObjectConstructor;
 	instance: DurableObject;
@@ -280,6 +280,7 @@ export function createDurableObjectWrapper(
 		implements DurableObjectWrapper
 	{
 		[kInstance]?: DurableObjectInstance;
+		[ensureInstancePromise]?: Promise<DurableObjectInstance>;
 
 		constructor(ctx: DurableObjectState, env: WrapperEnv) {
 			super(ctx, env);
@@ -312,28 +313,32 @@ export function createDurableObjectWrapper(
 		}
 
 		async [kEnsureInstance]() {
-			const ctor = (await getWorkerEntryExport(
-				entryPath,
-				className
-			)) as DurableObjectConstructor;
-
-			if (typeof ctor !== "function") {
-				throw new TypeError(
-					`${entryPath} does not export a ${className} Durable Object.`
-				);
+			if (!this[ensureInstancePromise]) {
+				this[ensureInstancePromise] = new Promise(async (resolve) => {
+					const ctor = (await getWorkerEntryExport(
+						entryPath,
+						className
+					)) as DurableObjectConstructor;
+		
+					if (typeof ctor !== "function") {
+						throw new TypeError(
+							`${entryPath} does not export a ${className} Durable Object.`
+						);
+					}
+		
+					if (!this[kInstance] || this[kInstance].ctor !== ctor) {
+						const userEnv = stripInternalEnv(this.env);
+						const instance = new ctor(this.ctx, userEnv);
+		
+						this[kInstance] = { ctor, instance };
+		
+						// Wait for `blockConcurrencyWhile()`s in the constructor to complete
+						await this.ctx.blockConcurrencyWhile(async () => {});
+					}
+					resolve(this[kInstance]);
+				});
 			}
-
-			if (!this[kInstance] || this[kInstance].ctor !== ctor) {
-				const userEnv = stripInternalEnv(this.env);
-				const instance = new ctor(this.ctx, userEnv);
-
-				this[kInstance] = { ctor, instance };
-
-				// Wait for `blockConcurrencyWhile()`s in the constructor to complete
-				await this.ctx.blockConcurrencyWhile(async () => {});
-			}
-
-			return this[kInstance];
+			return this[ensureInstancePromise];
 		}
 	}
 
