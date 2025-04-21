@@ -62,7 +62,7 @@ function getPersistence(
 		kvPersist: path.join(persistPath, "kv"),
 		r2Persist: path.join(persistPath, "r2"),
 		workflowsPersist: path.join(persistPath, "workflows"),
-		secretsStorePersist: path.join(persistPath, "secrets-store"),
+		secretsStorePersist: path.join(persistPath, "kv"),
 	};
 }
 
