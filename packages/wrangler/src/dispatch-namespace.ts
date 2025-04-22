@@ -1,12 +1,8 @@
 import { fetchResult } from "./cfetch";
-import { readConfig } from "./config";
 import { createCommand, createNamespace } from "./core/create-command";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
-import { printWranglerBanner } from "./wrangler-banner";
-import type { CommonYargsArgv, CommonYargsOptions } from "./yargs-types";
-import type { CommandModule } from "yargs";
 
 type Namespace = {
 	namespace_id: string;
