@@ -1,3 +1,4 @@
+import dedent from "ts-dedent";
 import { fetchResult } from "../cfetch";
 import { formatConfigSnippet } from "../config";
 import { createCommand } from "../core/create-command";
@@ -49,23 +50,22 @@ export const d1CreateCommand = createCommand({
 		},
 		location: {
 			type: "string",
-			description:
-				"A hint for the primary location of the new DB. Options:\nweur: Western Europe\neeur: Eastern Europe\napac: Asia Pacific\noc: Oceania\nwnam: Western North America\nenam: Eastern North America \n",
+			choices: LOCATION_CHOICES,
+			description: dedent`
+					A hint for the primary location of the new DB. Options:
+						weur: Western Europe
+						eeur: Eastern Europe
+						apac: Asia Pacific
+						oc: Oceania
+						wnam: Western North America
+						enam: Eastern North America
+
+					`,
 		},
 	},
 	positionalArgs: ["name"],
 	async handler({ name, location }, { config }) {
 		const accountId = await requireAuth(config);
-
-		if (location) {
-			if (LOCATION_CHOICES.indexOf(location.toLowerCase()) === -1) {
-				throw new UserError(
-					`Location '${location}' invalid. Valid values are ${LOCATION_CHOICES.join(
-						","
-					)}`
-				);
-			}
-		}
 
 		const db = await createD1Database(accountId, name, location);
 

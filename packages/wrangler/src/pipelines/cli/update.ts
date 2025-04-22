@@ -31,13 +31,13 @@ export const pipelinesUpdateCommand = createCommand({
 			type: "array",
 			describe:
 				"Space separated list of allowed sources. Options are 'http' or 'worker'",
-			group: `${chalk.bold("Source settings")}`,
+			group: "Source settings",
 		},
 		"require-http-auth": {
 			type: "boolean",
 			describe:
 				"Require Cloudflare API Token for HTTPS endpoint authentication",
-			group: `${chalk.bold("Source settings")}`,
+			group: "Source settings",
 		},
 		"cors-origins": {
 			type: "array",
@@ -45,7 +45,7 @@ export const pipelinesUpdateCommand = createCommand({
 				"CORS origin allowlist for HTTP endpoint (use * for any origin). Defaults to an empty array",
 			demandOption: false,
 			coerce: validateCorsOrigins,
-			group: `${chalk.bold("Source settings")}`,
+			group: "Source settings",
 		},
 
 		"batch-max-mb": {
@@ -54,7 +54,7 @@ export const pipelinesUpdateCommand = createCommand({
 				"Maximum batch size in megabytes before flushing. Defaults to 100 MB if unset. Minimum: 1, Maximum: 100",
 			demandOption: false,
 			coerce: validateInRange("batch-max-mb", 1, 100),
-			group: `${chalk.bold("Batch hints")}`,
+			group: "Batch hints",
 		},
 		"batch-max-rows": {
 			type: "number",
@@ -62,7 +62,7 @@ export const pipelinesUpdateCommand = createCommand({
 				"Maximum number of rows per batch before flushing. Defaults to 10,000,000 if unset. Minimum: 100, Maximum: 10,000,000",
 			demandOption: false,
 			coerce: validateInRange("batch-max-rows", 100, 10_000_000),
-			group: `${chalk.bold("Batch hints")}`,
+			group: "Batch hints",
 		},
 		"batch-max-seconds": {
 			type: "number",
@@ -71,7 +71,7 @@ export const pipelinesUpdateCommand = createCommand({
 
 			demandOption: false,
 			coerce: validateInRange("batch-max-seconds", 1, 300),
-			group: `${chalk.bold("Batch hints")}`,
+			group: "Batch hints",
 		},
 
 		// Transform options
@@ -81,20 +81,20 @@ export const pipelinesUpdateCommand = createCommand({
 				"Pipeline transform Worker and entrypoint (<worker>.<entrypoint>)",
 			demandOption: false,
 			hidden: true, // TODO: Remove once transformations launch
-			group: `${chalk.bold("Transformations")}`,
+			group: "Transformations",
 		},
 
 		"r2-bucket": {
 			type: "string",
 			describe: "Destination R2 bucket name",
-			group: `${chalk.bold("Destination settings")}`,
+			group: "Destination settings",
 		},
 		"r2-access-key-id": {
 			type: "string",
 			describe:
 				"R2 service Access Key ID for authentication. Leave empty for OAuth confirmation.",
 			demandOption: false,
-			group: `${chalk.bold("Destination settings")}`,
+			group: "Destination settings",
 			implies: "r2-secret-access-key",
 		},
 		"r2-secret-access-key": {
@@ -102,7 +102,7 @@ export const pipelinesUpdateCommand = createCommand({
 			describe:
 				"R2 service Secret Access Key for authentication. Leave empty for OAuth confirmation.",
 			demandOption: false,
-			group: `${chalk.bold("Destination settings")}`,
+			group: "Destination settings",
 			implies: "r2-access-key-id",
 		},
 
@@ -111,14 +111,14 @@ export const pipelinesUpdateCommand = createCommand({
 			describe:
 				"Prefix for storing files in the destination bucket. Default is no prefix",
 			demandOption: false,
-			group: `${chalk.bold("Destination settings")}`,
+			group: "Destination settings",
 		},
 		compression: {
 			type: "string",
 			describe: "Compression format for output files",
 			choices: ["none", "gzip", "deflate"],
 			demandOption: false,
-			group: `${chalk.bold("Destination settings")}`,
+			group: "Destination settings",
 		},
 
 		// Pipeline settings
@@ -127,7 +127,7 @@ export const pipelinesUpdateCommand = createCommand({
 			describe:
 				"Number of shards for the pipeline. More shards handle higher request volume; fewer shards produce larger output files. Defaults to 2 if unset. Minimum: 1, Maximum: 15",
 			demandOption: false,
-			group: `${chalk.bold("Pipeline settings")}`,
+			group: "Pipeline settings",
 		},
 	},
 	async handler(args, { config }) {

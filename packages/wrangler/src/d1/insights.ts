@@ -99,7 +99,7 @@ export const d1InsightsCommand = createCommand({
 		},
 		count: {
 			type: "number",
-			description: "Same as --limit (deprecated)",
+			description: "Same as --limit",
 			default: 5,
 			deprecated: true,
 			hidden: true,

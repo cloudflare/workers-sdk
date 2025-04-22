@@ -28,14 +28,15 @@ export const upsertOptions = (
 			type: "string",
 			description:
 				"The connection string for the database you want Hyperdrive to connect to - ex: protocol://user:password@host:port/database",
-			group: `${chalk.bold("Configure using a connection string")}`,
+			group: "Configure using a connection string",
 		},
 		"origin-host": {
 			alias: "host",
 			type: "string",
 			description: "The host of the origin database",
 			conflicts: "connection-string",
-			group: `${chalk.bold("Configure using individual parameters [conflicts with --connection-string]")}`,
+			group:
+				"Configure using individual parameters [conflicts with --connection-string]",
 		},
 		"origin-port": {
 			alias: "port",
@@ -46,35 +47,40 @@ export const upsertOptions = (
 				"access-client-id",
 				"access-client-secret",
 			],
-			group: `${chalk.bold("Configure using individual parameters [conflicts with --connection-string]")}`,
+			group:
+				"Configure using individual parameters [conflicts with --connection-string]",
 		},
 		"origin-scheme": {
 			alias: "scheme",
 			type: "string",
 			choices: ["postgres", "postgresql", "mysql"],
 			description: "The scheme used to connect to the origin database",
-			group: `${chalk.bold("Configure using individual parameters [conflicts with --connection-string]")}`,
+			group:
+				"Configure using individual parameters [conflicts with --connection-string]",
 			default: defaultOriginScheme,
 		},
 		database: {
 			type: "string",
 			description: "The name of the database within the origin database",
 			conflicts: "connection-string",
-			group: `${chalk.bold("Configure using individual parameters [conflicts with --connection-string]")}`,
+			group:
+				"Configure using individual parameters [conflicts with --connection-string]",
 		},
 		"origin-user": {
 			alias: "user",
 			type: "string",
 			description: "The username used to connect to the origin database",
 			conflicts: "connection-string",
-			group: `${chalk.bold("Configure using individual parameters [conflicts with --connection-string]")}`,
+			group:
+				"Configure using individual parameters [conflicts with --connection-string]",
 		},
 		"origin-password": {
 			alias: "password",
 			type: "string",
 			description: "The password used to connect to the origin database",
 			conflicts: "connection-string",
-			group: `${chalk.bold("Configure using individual parameters [conflicts with --connection-string]")}`,
+			group:
+				"Configure using individual parameters [conflicts with --connection-string]",
 		},
 		"access-client-id": {
 			type: "string",
@@ -82,31 +88,33 @@ export const upsertOptions = (
 				"The Client ID of the Access token to use when connecting to the origin database",
 			conflicts: ["connection-string", "origin-port"],
 			implies: ["access-client-secret"],
-			group: `${chalk.bold("Hyperdrive over Access [conflicts with --connection-string, --origin-port]")}`,
+			group:
+				"Hyperdrive over Access [conflicts with --connection-string, --origin-port]",
 		},
 		"access-client-secret": {
 			type: "string",
 			description:
 				"The Client Secret of the Access token to use when connecting to the origin database",
 			conflicts: ["connection-string", "origin-port"],
-			group: `${chalk.bold("Hyperdrive over Access [conflicts with --connection-string, --origin-port]")}`,
+			group:
+				"Hyperdrive over Access [conflicts with --connection-string, --origin-port]",
 		},
 		"caching-disabled": {
 			type: "boolean",
 			description: "Disables the caching of SQL responses",
-			group: `${chalk.bold("Caching Options")}`,
+			group: "Caching Options",
 		},
 		"max-age": {
 			type: "number",
 			description:
 				"Specifies max duration for which items should persist in the cache, cannot be set when caching is disabled",
-			group: `${chalk.bold("Caching Options")}`,
+			group: "Caching Options",
 		},
 		swr: {
 			type: "number",
 			description:
 				"Indicates the number of seconds cache may serve the response after it becomes stale, cannot be set when caching is disabled",
-			group: `${chalk.bold("Caching Options")}`,
+			group: "Caching Options",
 		},
 		"ca-certificate-id": {
 			alias: "ca-certificate-uuid",

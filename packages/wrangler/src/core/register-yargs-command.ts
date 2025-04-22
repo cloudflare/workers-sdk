@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { defaultWranglerConfig } from "../config/config";
@@ -38,7 +39,15 @@ export function createRegisterYargsCommand(
 					const positionalArgs = new Set(def.positionalArgs);
 
 					const nonPositional = Object.fromEntries(
-						Object.entries(args).filter(([key]) => !positionalArgs.has(key))
+						Object.entries(args)
+							.filter(([key]) => !positionalArgs.has(key))
+							.map(([name, opts]) => [
+								name,
+								{
+									...opts,
+									group: "group" in opts ? chalk.bold(opts.group) : undefined,
+								},
+							])
 					);
 
 					subYargs
