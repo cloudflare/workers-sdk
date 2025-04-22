@@ -386,13 +386,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	);
 
 	bindings.services?.forEach(
-		({ binding, service, environment, entrypoint }) => {
+		({ binding, service, environment, entrypoint, props }) => {
 			metadataBindings.push({
 				name: binding,
 				type: "service",
 				service,
 				...(environment && { environment }),
 				...(entrypoint && { entrypoint }),
+				...(props && { props }),
 			});
 		}
 	);

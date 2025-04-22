@@ -684,6 +684,8 @@ export interface EnvironmentNonInheritable {
 				environment?: string;
 				/** Optionally, the entrypoint (named export) of the service to bind to. */
 				entrypoint?: string;
+				/** Optional properties that will be made available to the service via ctx.props. */
+				props?: Record<string, unknown>;
 		  }[]
 		| undefined;
 
