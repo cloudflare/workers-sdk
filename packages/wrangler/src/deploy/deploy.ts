@@ -563,8 +563,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						define: { ...config.define, ...props.defines },
 						checkFetch: false,
 						alias: config.alias,
-						// We do not mock AE datasets when deploying
-						mockAnalyticsEngineDatasets: [],
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "deploy",
