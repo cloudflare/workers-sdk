@@ -17,3 +17,4 @@ Example `wrangler.jsonc`:
 	"main": "src/worker.ts",
 	"keep_names": false
 }
+```
