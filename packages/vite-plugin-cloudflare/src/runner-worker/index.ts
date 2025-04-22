@@ -319,19 +319,19 @@ export function createDurableObjectWrapper(
 						entryPath,
 						className
 					)) as DurableObjectConstructor;
-		
+
 					if (typeof ctor !== "function") {
 						throw new TypeError(
 							`${entryPath} does not export a ${className} Durable Object.`
 						);
 					}
-		
+
 					if (!this[kInstance] || this[kInstance].ctor !== ctor) {
 						const userEnv = stripInternalEnv(this.env);
 						const instance = new ctor(this.ctx, userEnv);
-		
+
 						this[kInstance] = { ctor, instance };
-		
+
 						// Wait for `blockConcurrencyWhile()`s in the constructor to complete
 						await this.ctx.blockConcurrencyWhile(async () => {});
 					}

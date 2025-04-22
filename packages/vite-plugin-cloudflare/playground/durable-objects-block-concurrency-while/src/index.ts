@@ -5,24 +5,32 @@ interface Env {
 }
 
 export class Pinger extends DurableObject<Env> {
-	initialized = false
+	initialized = false;
 
 	constructor(ctx: DurableObjectState, env: Env) {
-		super(ctx, env)
-		console.log(`DoDurableObject[${new Date().toISOString()}]: constructor: initialized: ${this.initialized}: begin`)
+		super(ctx, env);
+		console.log(
+			`DoDurableObject[${new Date().toISOString()}]: constructor: initialized: ${this.initialized}: begin`
+		);
 		ctx.blockConcurrencyWhile(async () => {
 			console.log(
 				`DoDurableObject[${new Date().toISOString()}]: constructor: blockConcurrencyWhile: initialized: ${this.initialized}: begin`
-			)
-			this.initialized = true
-			console.log(`DoDurableObject[${new Date().toISOString()}]: constructor: blockConcurrencyWhile: initialized: ${this.initialized}: end`)
-		})
-		console.log(`DoDurableObject[${new Date().toISOString()}]: constructor: ${this.initialized}: end`)
+			);
+			this.initialized = true;
+			console.log(
+				`DoDurableObject[${new Date().toISOString()}]: constructor: blockConcurrencyWhile: initialized: ${this.initialized}: end`
+			);
+		});
+		console.log(
+			`DoDurableObject[${new Date().toISOString()}]: constructor: ${this.initialized}: end`
+		);
 	}
 
 	async ping() {
-		console.log(`DoDurableObject[${new Date().toISOString()}]: ping: initialized: ${this.initialized}`)
-		return { ping: 'pong', initialized: this.initialized }
+		console.log(
+			`DoDurableObject[${new Date().toISOString()}]: ping: initialized: ${this.initialized}`
+		);
+		return { ping: "pong", initialized: this.initialized };
 	}
 }
 
