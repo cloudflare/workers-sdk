@@ -1,5 +1,22 @@
 # miniflare
 
+## 4.20250417.0
+
+### Minor Changes
+
+- [#8935](https://github.com/cloudflare/workers-sdk/pull/8935) [`41f095b`](https://github.com/cloudflare/workers-sdk/commit/41f095b0dd35411adbca3398966b5cfe8c39d433) Thanks [@penalosa](https://github.com/penalosa)! - Internal refactor to move local analytics engine support from Wrangler to Miniflare
+
+### Patch Changes
+
+- [#8993](https://github.com/cloudflare/workers-sdk/pull/8993) [`2a7749b`](https://github.com/cloudflare/workers-sdk/commit/2a7749bffb7fe5550c3192401ed6edd72c0eb510) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250416.0  | 1.20250417.0  |
+  | @cloudflare/workers-types | ^4.20250415.0 | ^4.20250417.0 |
+
 ## 4.20250416.0
 
 ### Patch Changes
