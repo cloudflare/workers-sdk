@@ -120,6 +120,7 @@ export type BundleOptions = {
 	watch: boolean | undefined;
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
+	keepNames: boolean;
 	nodejsCompatMode: NodeJSCompatMode | undefined;
 	define: Config["define"];
 	alias: Config["alias"];
@@ -154,6 +155,7 @@ export async function bundleWorker(
 		watch,
 		tsconfig,
 		minify,
+		keepNames,
 		nodejsCompatMode,
 		alias,
 		define,
@@ -353,7 +355,7 @@ export async function bundleWorker(
 		bundle,
 		absWorkingDir: entry.projectRoot,
 		outdir: destination,
-		keepNames: true,
+		keepNames,
 		entryNames: entryName || path.parse(entryFile).name,
 		...(isOutfile
 			? {

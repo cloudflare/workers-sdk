@@ -289,6 +289,7 @@ async function resolveConfig(
 			moduleRules: input.build?.moduleRules ?? getRules(config),
 
 			minify: input.build?.minify ?? config.minify,
+			keepNames: input.build?.keepNames ?? config.keep_names,
 			define: { ...config.define, ...input.build?.define },
 			custom: {
 				command: input.build?.custom?.command ?? config.build?.command,

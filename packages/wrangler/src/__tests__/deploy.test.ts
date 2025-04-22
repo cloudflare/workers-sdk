@@ -6573,6 +6573,84 @@ addEventListener('fetch', event => {});`
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
+
+		it("should apply esbuild's keep-names functionality by default", async () => {
+			writeWranglerConfig({
+				main: "./index.js",
+				legacy_env: false,
+				env: {
+					testEnv: {},
+				},
+			});
+			fs.writeFileSync(
+				"./index.js",
+				`
+				export
+					default {
+						fetch() {
+							function sayHello() {
+								return "Hello World with keep_names";
+							}
+							return new Response(sayHello());
+					}
+				}
+				`
+			);
+
+			const underscoreUnderscoreNameRegex = /__name\(.*?\)/;
+
+			mockUploadWorkerRequest({
+				env: "testEnv",
+				expectedType: "esm",
+				legacyEnv: false,
+				expectedEntry: (str) => {
+					expect(str).toMatch(underscoreUnderscoreNameRegex);
+				},
+			});
+
+			mockSubDomainRequest();
+			await runWrangler("deploy -e testEnv index.js");
+		});
+
+		it("should apply esbuild's keep-names functionality unless keep_names is set to false", async () => {
+			writeWranglerConfig({
+				main: "./index.js",
+				legacy_env: false,
+				env: {
+					testEnv: {
+						keep_names: false,
+					},
+				},
+			});
+			fs.writeFileSync(
+				"./index.js",
+				`
+				export
+					default {
+						fetch() {
+							function sayHello() {
+								return "Hello World without keep_names";
+							}
+							return new Response(sayHello());
+					}
+				}
+				`
+			);
+
+			const underscoreUnderscoreNameRegex = /__name\(.*?\)/;
+
+			mockUploadWorkerRequest({
+				env: "testEnv",
+				expectedType: "esm",
+				legacyEnv: false,
+				expectedEntry: (str) => {
+					expect(str).not.toMatch(underscoreUnderscoreNameRegex);
+				},
+			});
+
+			mockSubDomainRequest();
+			await runWrangler("deploy -e testEnv index.js");
+		});
 	});
 
 	describe("durable object migrations", () => {
