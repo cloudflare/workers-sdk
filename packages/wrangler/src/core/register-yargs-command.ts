@@ -35,10 +35,10 @@ export function createRegisterYargsCommand(
 				if (def.type === "command") {
 					const args = def.args ?? {};
 
+					const positionalArgs = new Set(def.positionalArgs);
+
 					const nonPositional = Object.fromEntries(
-						Object.entries(args).filter(
-							([key]) => !(def.positionalArgs ?? []).includes(key)
-						)
+						Object.entries(args).filter(([key]) => !positionalArgs.has(key))
 					);
 
 					subYargs
