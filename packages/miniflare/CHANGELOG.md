@@ -1,5 +1,18 @@
 # miniflare
 
+## 4.20250416.0
+
+### Patch Changes
+
+- [#8927](https://github.com/cloudflare/workers-sdk/pull/8927) [`62c40d7`](https://github.com/cloudflare/workers-sdk/commit/62c40d792b9555e6e25a5f99ae803e4943c4b56f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250410.0  | 1.20250416.0  |
+  | @cloudflare/workers-types | ^4.20250410.0 | ^4.20250415.0 |
+
 ## 4.20250410.1
 
 ### Minor Changes
