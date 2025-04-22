@@ -108,8 +108,6 @@ export function buildPluginFromFunctions({
 			},
 		],
 		checkFetch: local && checkFetch,
-		// TODO: mock AE datasets in Pages functions for dev
-		mockAnalyticsEngineDatasets: [],
 		targetConsumer: local ? "dev" : "deploy",
 		local,
 		projectRoot: getPagesProjectRoot(),
