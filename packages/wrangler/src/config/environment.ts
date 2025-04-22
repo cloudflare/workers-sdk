@@ -307,6 +307,14 @@ interface EnvironmentInheritable {
 	minify: boolean | undefined;
 
 	/**
+	 * Keep function names after javascript transpilations.
+	 *
+	 * @default {true}
+	 * @inheritable
+	 */
+	keep_names: boolean | undefined;
+
+	/**
 	 * Designates this Worker as an internal-only "first-party" Worker.
 	 *
 	 * @inheritable
