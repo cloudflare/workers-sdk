@@ -23,6 +23,7 @@ export const pipelinesGetCommand = createCommand({
 			default: "pretty",
 		},
 	},
+	positionalArgs: ["pipeline"],
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 		const name = args.pipeline;

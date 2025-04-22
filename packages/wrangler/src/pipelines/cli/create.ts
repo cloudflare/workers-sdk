@@ -27,7 +27,6 @@ export const pipelinesCreateCommand = createCommand({
 		owner: "Product: Pipelines",
 		status: "open-beta",
 	},
-	positionalArgs: ["pipeline"],
 	args: {
 		pipeline: {
 			describe: "The name of the new pipeline",
@@ -145,6 +144,7 @@ export const pipelinesCreateCommand = createCommand({
 			group: `${chalk.bold("Pipeline settings")}`,
 		},
 	},
+	positionalArgs: ["pipeline"],
 	validateArgs(args) {
 		if (
 			(args.r2AccessKeyId && !args.r2SecretAccessKey) ||

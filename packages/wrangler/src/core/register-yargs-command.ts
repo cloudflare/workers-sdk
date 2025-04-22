@@ -57,7 +57,7 @@ export function createRegisterYargsCommand(
 
 					// Ensure non-array arguments receive a single value
 					for (const [key, opt] of Object.entries(args)) {
-						if (!opt.array) {
+						if (!opt.array && opt.type !== "array") {
 							subYargs.check(demandSingleValue(key));
 						}
 					}
