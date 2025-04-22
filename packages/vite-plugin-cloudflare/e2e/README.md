@@ -26,10 +26,10 @@ The Vite `test` function is extended with additional helpers to setup clean copi
 The simplest test looks like:
 
 ```ts
-test("can serve a Worker request", async ({ expect, seed, viteDev }) => {
+test("can serve a Worker request", async ({ expect, seed, runLongLived }) => {
 	const projectPath = await seed("basic", "pnpm");
 
-	const proc = await viteDev("npm", "dev", projectPath);
+	const proc = await runLongLived("npm", "dev", projectPath);
 	const url = await waitForReady(proc);
 	expect(await fetchJson(url + "/api/")).toEqual({ name: "Cloudflare" });
 });

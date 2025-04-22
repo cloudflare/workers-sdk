@@ -66,33 +66,31 @@ export const test = baseTest.extend<{
 	},
 	/** Starts a command and wraps its outputs. */
 	async runLongLived({}, use) {
-		const processes: ChildProcess[] = [];
+		let process: ChildProcess | undefined;
 		await use(async (pm, command, projectPath) => {
 			debuglog(`starting \`${command}\` for ${projectPath}`);
 			const proc = childProcess.exec(`${pm} run ${command}`, {
 				cwd: projectPath,
 				env: testEnv,
 			});
-			processes.push(proc);
+			process = proc;
 			return wrap(proc);
 		});
-		debuglog(`Closing down ${processes.length} process(es)`);
-		const result = await Promise.allSettled(
-			processes.map((proc) => {
-				return new Promise<number | undefined>((resolve, reject) => {
-					const pid = proc.pid;
-					if (!pid) {
-						resolve(undefined);
-					} else {
-						debuglog(`Killing process, id:${pid}`);
-						kill(pid, "SIGKILL", (error) =>
-							error ? reject(error) : resolve(pid)
-						);
-					}
-				});
-			})
-		);
-		debuglog("Killed processes", result);
+		debuglog(`Closing down process`);
+		const result = await new Promise<number | undefined>((resolve, reject) => {
+			const pid = process?.pid;
+			if (!pid) {
+				resolve(undefined);
+			} else {
+				debuglog(`Killing process, id:${pid}`);
+				kill(pid, "SIGKILL", (error) => (error ? reject(error) : resolve(pid)));
+			}
+		});
+		if (result) {
+			debuglog("Killed process", result);
+		} else {
+			debuglog("Process had no pid");
+		}
 	},
 });
 
