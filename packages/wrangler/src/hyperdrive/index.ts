@@ -1,4 +1,3 @@
-import chalk from "chalk";
 import { createNamespace } from "../core/create-command";
 import { UserError } from "../errors";
 import type {

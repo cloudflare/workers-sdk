@@ -1,4 +1,3 @@
-import chalk from "chalk";
 import { createCommand } from "../../core/create-command";
 import { FatalError, UserError } from "../../errors";
 import { logger } from "../../logger";

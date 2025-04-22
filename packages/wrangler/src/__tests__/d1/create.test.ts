@@ -1,5 +1,4 @@
 import { http, HttpResponse } from "msw";
-import dedent from "ts-dedent";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -33,9 +32,8 @@ describe("create", () => {
 		mockGetMemberships([
 			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 		]);
-		await expect(
-			runWrangler("d1 create test --location sydney")
-		).rejects.toThrowErrorMatchingInlineSnapshot(`
+		await expect(runWrangler("d1 create test --location sydney")).rejects
+			.toThrowErrorMatchingInlineSnapshot(`
 			[Error: Invalid values:
 			  Argument: location, Given: "sydney", Choices: "weur", "eeur", "apac", "oc", "wnam", "enam"]
 		`);
