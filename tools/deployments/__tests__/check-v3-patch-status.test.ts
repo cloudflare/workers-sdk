@@ -2,10 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import { validateBackportPR } from "../check-v3-patch-status";
 
 describe("validateBackportPR", () => {
-	const consoleLog = vi.spyOn(console, "log");
-	const consoleError = vi.spyOn(console, "error");
-
 	it("should return false if the branch name does not match the pattern", () => {
+		const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
+		const consoleError = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => {});
 		const result = validateBackportPR("example/v3-maintenance-demo", () => {
 			throw new Error("Unexpected");
 		});
@@ -13,11 +14,15 @@ describe("validateBackportPR", () => {
 		expect(result).toBe(false);
 		expect(consoleLog).not.toBeCalled();
 		expect(consoleError).toBeCalledWith(
-			`❌ Branch name "example-branch" does not match the expected pattern "v3-maintenance-<PR_NUMBER>"`
+			`❌ Branch name "example/v3-maintenance-demo" does not match the expected pattern "v3-maintenance-<PR_NUMBER>"`
 		);
 	});
 
 	it("should return false if the original PR is not merged", () => {
+		const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
+		const consoleError = vi
+			.spyOn(console, "error")
+			.mockImplementation(() => {});
 		const isMergedMock = vi.fn(() => false);
 		const result = validateBackportPR("v3-maintenance-13579", isMergedMock);
 
@@ -28,6 +33,7 @@ describe("validateBackportPR", () => {
 	});
 
 	it("should return true if the original PR is merged", () => {
+		const consoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
 		const isMergedMock = vi.fn(() => true);
 		const result = validateBackportPR("v3-maintenance-2468", isMergedMock);
 
