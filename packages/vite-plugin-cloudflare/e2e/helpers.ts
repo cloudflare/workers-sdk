@@ -5,7 +5,14 @@ import path from "node:path";
 import util from "node:util";
 import { stripAnsi } from "miniflare";
 import kill from "tree-kill";
-import { test as baseTest, inject, onTestFailed, vi } from "vitest";
+import {
+	afterAll,
+	beforeAll,
+	inject,
+	onTestFailed,
+	onTestFinished,
+	vi,
+} from "vitest";
 import vitePluginPackage from "../package.json";
 
 const debuglog = util.debuglog("vite-plugin:test");
@@ -22,63 +29,50 @@ const testEnv = {
 	VITEST: undefined,
 };
 
-/**
- * Extends the Vitest `test()` function to support running vite in
- * well defined environments that represent real-world usage.
- */
-export const test = baseTest.extend<{
-	seed: (fixture: string, pm: "npm" | "pnpm" | "yarn") => Promise<string>;
-	runLongLived: (
-		pm: string,
-		command: "dev" | "buildAndPreview",
-		projectPath: string,
-		options?: { flags?: string[]; maxBuffer?: number }
-	) => Promise<Process>;
-}>({
-	/** Seed a test project from a fixture. */
-	async seed({}, use) {
-		const root = inject("root");
-		const projectPaths: string[] = [];
-		await use(async (fixture, pm) => {
-			const projectPath = path.resolve(root, fixture);
-			// We need to delete previous seeded files because, if the a node_modules was created by pnpm,
-			// you might get `npm error Cannot read properties of null (reading 'matches')`.
-			fs.rm(projectPath, { force: true, maxRetries: 10, recursive: true });
-			await fs.cp(path.resolve(__dirname, "fixtures", fixture), projectPath, {
-				recursive: true,
-				errorOnExist: true,
-			});
-			debuglog("Fixture copied to " + projectPath);
-			await updateVitePluginVersion(projectPath);
-			debuglog("Updated vite-plugin version in package.json");
-			runCommand(`${pm} install`, projectPath, { attempts: 2 });
-			debuglog("Installed node modules");
-			projectPaths.push(projectPath);
-			return projectPath;
+/** Seed a test project from a fixture. */
+export function seed(fixture: string, pm: "pnpm" | "yarn" | "npm") {
+	const root = inject("root");
+	const projectPath = path.resolve(root, fixture, pm);
+
+	beforeAll(async () => {
+		await fs.cp(path.resolve(__dirname, "fixtures", fixture), projectPath, {
+			recursive: true,
+			errorOnExist: true,
 		});
+		debuglog("Fixture copied to " + projectPath);
+		await updateVitePluginVersion(projectPath);
+		debuglog("Updated vite-plugin version in package.json");
+		runCommand(`${pm} install`, projectPath, { attempts: 2 });
+		debuglog("Installed node modules");
+	}, 50_000);
+
+	afterAll(async () => {
 		if (!process.env.CLOUDFLARE_VITE_E2E_KEEP_TEMP_DIRS) {
-			for (const projectPath of projectPaths) {
-				debuglog("Deleting project path", projectPath);
-				await fs.rm(projectPath, {
-					force: true,
-					recursive: true,
-					maxRetries: 10,
-				});
-			}
-		}
-	},
-	/** Starts a command and wraps its outputs. */
-	async runLongLived({}, use) {
-		let process: ChildProcess | undefined;
-		await use(async (pm, command, projectPath) => {
-			debuglog(`starting \`${command}\` for ${projectPath}`);
-			const proc = childProcess.exec(`${pm} run ${command}`, {
-				cwd: projectPath,
-				env: testEnv,
+			debuglog("Deleting project path", projectPath);
+			await fs.rm(projectPath, {
+				force: true,
+				recursive: true,
+				maxRetries: 10,
 			});
-			process = proc;
-			return wrap(proc);
-		});
+		}
+	});
+
+	return projectPath;
+}
+
+/** Starts a command and wraps its outputs. */
+export async function runLongLived(
+	pm: "pnpm" | "yarn" | "npm",
+	command: "dev" | "buildAndPreview",
+	projectPath: string
+) {
+	debuglog(`starting \`${command}\` for ${projectPath}`);
+	const process = childProcess.exec(`${pm} run ${command}`, {
+		cwd: projectPath,
+		env: testEnv,
+	});
+
+	onTestFinished(async () => {
 		debuglog(`Closing down process`);
 		const result = await new Promise<number | undefined>((resolve, reject) => {
 			const pid = process?.pid;
@@ -94,8 +88,9 @@ export const test = baseTest.extend<{
 		} else {
 			debuglog("Process had no pid");
 		}
-	},
-});
+	});
+	return wrap(process);
+}
 
 export interface Process {
 	readonly stdout: string;
