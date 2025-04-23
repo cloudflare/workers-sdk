@@ -292,8 +292,8 @@ export function createDurableObjectWrapper(
 					}
 
 					if (
-						key === "self" ||
 						typeof key === "symbol" ||
+						IGNORED_KEYS.includes(key) ||
 						(WORKER_ENTRYPOINT_KEYS as readonly string[]).includes(key)
 					) {
 						return;
