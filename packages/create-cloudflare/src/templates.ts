@@ -316,10 +316,10 @@ export const createContext = async (
 	const experimental = args.experimental;
 
 	const frameworkMap = getFrameworkMap({ experimental });
-	const helloWorldTemplateMap = await getHelloWorldTemplateMap({
+	const helloWorldTemplateMap = getHelloWorldTemplateMap({
 		experimental,
 	});
-	const otherTemplateMap = await getOtherTemplateMap({ experimental });
+	const otherTemplateMap = getOtherTemplateMap({ experimental });
 
 	let linesPrinted = 0;
 
@@ -645,7 +645,7 @@ export async function copyTemplateFiles(ctx: C3Context) {
 		srcdir = join(getTemplatePath(ctx), variantInfo.path);
 	}
 
-	const copyDestDir = await getCopyFilesDestinationDir(ctx);
+	const copyDestDir = getCopyFilesDestinationDir(ctx);
 	const destdir = join(ctx.project.path, ...(copyDestDir ? [copyDestDir] : []));
 
 	const s = spinner();
