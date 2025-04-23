@@ -1,26 +1,24 @@
 {
 	"compilerOptions": {
-		"allowJs": true,
-		"allowSyntheticDefaultImports": true,
-		"baseUrl": "src",
-		"declaration": true,
-		"sourceMap": true,
+		/* Base Options: */
 		"esModuleInterop": true,
-		"inlineSourceMap": false,
-		"lib": ["esnext"],
-		"listEmittedFiles": false,
-		"listFiles": false,
-		"moduleResolution": "node",
-		"noFallthroughCasesInSwitch": true,
-		"pretty": true,
-		"resolveJsonModule": true,
-		"rootDir": ".",
 		"skipLibCheck": true,
-		"strict": false,
-		"traceResolution": false,
-		"outDir": "",
-		"target": "esnext",
-		"module": "esnext",
+		"target": "es2022",
+		"verbatimModuleSyntax": false,
+		"allowJs": true,
+		"resolveJsonModule": true,
+		"moduleDetection": "force",
+		/* Strictness */
+		"noImplicitAny": false,
+		"noImplicitThis": true,
+		"strictNullChecks": false,
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		/* If NOT transpiling with TypeScript: */
+		"moduleResolution": "Bundler",
+		"module": "es2022",
+		"noEmit": true,
+		"lib": ["es2022"],
 		"types": [
 			"@types/node",
 			"@types/service-worker-mock",
@@ -28,5 +26,5 @@
 		]
 	},
 	"exclude": ["node_modules", "dist", "tests"],
-	"include": ["src", "scripts"]
+	"include": ["src", "worker-configuration.d.ts"]
 }

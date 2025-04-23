@@ -117,6 +117,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						jsxFragment: config.build.jsxFactory,
 						tsconfig: config.build.tsconfig,
 						minify: config.build.minify,
+						keepNames: config.build.keepNames ?? true,
 						nodejsCompatMode: config.build.nodejsCompatMode,
 						define: config.build.define,
 						checkFetch: shouldCheckFetch(
@@ -246,6 +247,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				rules: config.build.moduleRules,
 				tsconfig: config.build?.tsconfig,
 				minify: config.build?.minify,
+				keepNames: config.build?.keepNames ?? true,
 				nodejsCompatMode: config.build.nodejsCompatMode,
 				define: config.build.define,
 				alias: config.build.alias,

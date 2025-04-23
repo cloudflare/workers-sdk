@@ -175,6 +175,18 @@ async function listCommandHandle(
 			return;
 		}
 
+		// If we don't get multiple applications for any reason exit
+		if (
+			applications === undefined ||
+			applications === null ||
+			applications.length === 0
+		) {
+			logRaw(
+				"No containers found. See https://dash.cloudflare.com/?to=/:account/workers/containers to learn more."
+			);
+			return;
+		}
+
 		const applicationDetails = (a: Application) => {
 			const details = flatDetails(a);
 			return {
