@@ -32,9 +32,9 @@ const WORKER_ENTRYPOINT_KEYS = [
 	"fetch",
 	"queue",
 	"tail",
+	"test",
 	"trace",
 	"scheduled",
-	"test",
 ] as const;
 
 const DURABLE_OBJECT_KEYS = [
