@@ -1,0 +1,11 @@
+{
+  "name": "database-service",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-01-01",
+  "kv_namespaces": [
+    {
+      "binding": "KV_NAMESPACE",
+      "id": "00000000000000000000000000000000"
+    }
+  ]
+}

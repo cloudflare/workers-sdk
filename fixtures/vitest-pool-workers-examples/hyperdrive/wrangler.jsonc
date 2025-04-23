@@ -1,0 +1,12 @@
+{
+	"name": "hyperdrive",
+	"main": "src/index.ts",
+	"compatibility_date": "2024-01-01",
+	"hyperdrive": [
+		{
+			"binding": "ECHO_SERVER_HYPERDRIVE",
+			"id": "00000000000000000000000000000000",
+			"localConnectionString": "postgres://user:pass@127.0.0.1/db", // Overridden in `vitest.config.mts`
+		},
+	],
+}

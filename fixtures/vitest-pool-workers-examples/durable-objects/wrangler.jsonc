@@ -1,0 +1,28 @@
+{
+  "name": "durable-objects",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-01-01",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "COUNTER",
+        "class_name": "Counter"
+      },
+      {
+        "name": "SQL",
+        "class_name": "SQLiteDurableObject"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": [
+        "Counter"
+      ],
+      "new_sqlite_classes": [
+        "SQLiteDurableObject"
+      ]
+    }
+  ]
+}

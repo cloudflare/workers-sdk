@@ -1,0 +1,27 @@
+{
+	"name": "worker-a",
+	"main": "./src/index.ts",
+	"compatibility_date": "2025-01-01",
+	"services": [
+		// service binding to Worker that exports a default object
+		{
+			"binding": "DEFAULT_EXPORT",
+			"service": "worker-b",
+		},
+		// service binding to Worker that exports a default entrypoint
+		{
+			"binding": "DEFAULT_ENTRYPOINT",
+			"service": "worker-c",
+		},
+		// service binding to Worker that exports a named entrypoint
+		{
+			"binding": "NAMED_ENTRYPOINT",
+			"service": "worker-d",
+			"entrypoint": "EntrypointD",
+		},
+		{
+			"binding": "WS",
+			"service": "worker-ws",
+		},
+	],
+}
