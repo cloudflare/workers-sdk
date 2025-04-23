@@ -30,7 +30,7 @@ export const test = baseTest.extend<{
 	seed: (fixture: string, pm: "npm" | "pnpm" | "yarn") => Promise<string>;
 	runLongLived: (
 		pm: string,
-		command: "dev" | "preview",
+		command: "dev" | "buildAndPreview",
 		projectPath: string,
 		options?: { flags?: string[]; maxBuffer?: number }
 	) => Promise<Process>;

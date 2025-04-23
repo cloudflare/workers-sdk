@@ -2,7 +2,7 @@ import { describe } from "vitest";
 import { fetchJson, test, waitForReady } from "./helpers.js";
 
 const packageManagers = ["pnpm", "npm", "yarn"] as const;
-const commands = ["dev", "preview"] as const;
+const commands = ["dev", "buildAndPreview"] as const;
 
 describe("basic e2e tests", () => {
 	describe.each(packageManagers)('with "%s" package manager', (pm) => {
