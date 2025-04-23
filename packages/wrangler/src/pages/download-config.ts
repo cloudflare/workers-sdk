@@ -5,18 +5,14 @@ import chalk from "chalk";
 import { supportedCompatibilityDate } from "miniflare";
 import { fetchResult } from "../cfetch";
 import { getConfigCache } from "../config-cache";
+import { createCommand } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import { printWranglerBanner } from "../wrangler-banner";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import type { RawEnvironment } from "../config";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type { PagesConfigCache } from "./types";
 import type { Project } from "@cloudflare/types";
 
@@ -289,51 +285,59 @@ async function downloadProject(accountId: string, projectName: string) {
 	};
 }
 
-type DownloadConfigArgs = StrictYargsOptionsToInterface<typeof Options>;
-
-export function Options(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("projectName", {
+export const pagesDownloadConfigCommand = createCommand({
+	metadata: {
+		description:
+			"Download your Pages project config as a Wrangler configuration file",
+		status: "experimental",
+		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
+	},
+	behaviour: {
+		provideConfig: false,
+	},
+	args: {
+		projectName: {
 			type: "string",
 			description: "The Pages project to download",
-		})
-		.option("force", {
-			describe:
+		},
+		force: {
+			description:
 				"Overwrite an existing Wrangler configuration file without prompting",
 			type: "boolean",
-		});
-}
+		},
+	},
+	positionalArgs: ["projectName"],
+	async handler({ projectName, force }) {
+		void metrics.sendMetricsEvent("download pages config");
 
-export const Handler = async ({ projectName, force }: DownloadConfigArgs) => {
-	void metrics.sendMetricsEvent("download pages config");
-	await printWranglerBanner();
-
-	const projectConfig = getConfigCache<PagesConfigCache>(
-		PAGES_CONFIG_CACHE_FILENAME
-	);
-	const accountId = await requireAuth(projectConfig);
-
-	projectName ??= projectConfig.project_name;
-
-	if (!projectName) {
-		throw new FatalError("Must specify a project name.", 1);
-	}
-	const config = await downloadProject(accountId, projectName);
-	if (!force && existsSync("wrangler.toml")) {
-		const overwrite = await confirm(
-			"Your existing Wrangler configuration file will be overwritten. Continue?",
-			{ fallbackValue: false }
+		const projectConfig = getConfigCache<PagesConfigCache>(
+			PAGES_CONFIG_CACHE_FILENAME
 		);
-		if (!overwrite) {
-			throw new FatalError(
-				"Not overwriting existing Wrangler configuration file"
-			);
+		const accountId = await requireAuth(projectConfig);
+
+		projectName ??= projectConfig.project_name;
+
+		if (!projectName) {
+			throw new FatalError("Must specify a project name.", 1);
 		}
-	}
-	await writeWranglerToml(config);
-	logger.info(
-		chalk.green(
-			"Success! Your project settings have been downloaded to wrangler.toml"
-		)
-	);
-};
+		const config = await downloadProject(accountId, projectName);
+		if (!force && existsSync("wrangler.toml")) {
+			const overwrite = await confirm(
+				"Your existing Wrangler configuration file will be overwritten. Continue?",
+				{ fallbackValue: false }
+			);
+			if (!overwrite) {
+				throw new FatalError(
+					"Not overwriting existing Wrangler configuration file"
+				);
+			}
+		}
+		await writeWranglerToml(config);
+		logger.info(
+			chalk.green(
+				"Success! Your project settings have been downloaded to wrangler.toml"
+			)
+		);
+	},
+});

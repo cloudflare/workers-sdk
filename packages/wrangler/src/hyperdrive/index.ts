@@ -1,15 +1,5 @@
-import chalk from "chalk";
-import { type Argv } from "yargs";
+import { createNamespace } from "../core/create-command";
 import { UserError } from "../errors";
-import { handler as createHandler, options as createOptions } from "./create";
-import { handler as deleteHandler, options as deleteOptions } from "./delete";
-import { handler as getHandler, options as getOptions } from "./get";
-import { handler as listHandler, options as listOptions } from "./list";
-import { handler as updateHandler, options as updateOptions } from "./update";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type {
 	CachingOptions,
 	Mtls,
@@ -18,148 +8,131 @@ import type {
 	OriginWithSecrets,
 	OriginWithSecretsPartial,
 } from "./client";
+import type { hyperdriveCreateCommand } from "./create";
+import type { hyperdriveUpdateCommand } from "./update";
 
-export function hyperdrive(yargs: CommonYargsArgv) {
-	return yargs
-		.command(
-			"create <name>",
-			"Create a Hyperdrive config",
-			createOptions,
-			createHandler
-		)
-		.command(
-			"delete <id>",
-			"Delete a Hyperdrive config",
-			deleteOptions,
-			deleteHandler
-		)
-		.command("get <id>", "Get a Hyperdrive config", getOptions, getHandler)
-		.command("list", "List Hyperdrive configs", listOptions, listHandler)
-		.command(
-			"update <id>",
-			"Update a Hyperdrive config",
-			updateOptions,
-			updateHandler
-		);
-}
+export const hyperdriveNamespace = createNamespace({
+	metadata: {
+		description: "🚀 Manage Hyperdrive databases",
+		status: "stable",
+		owner: "Product: Hyperdrive",
+	},
+});
 
-export function upsertOptions<T>(yargs: Argv<T>) {
-	return yargs
-		.option({
-			"connection-string": {
-				type: "string",
-				describe:
-					"The connection string for the database you want Hyperdrive to connect to - ex: protocol://user:password@host:port/database",
-			},
-			"origin-host": {
-				alias: "host",
-				type: "string",
-				describe: "The host of the origin database",
-				conflicts: "connection-string",
-			},
-			"origin-port": {
-				alias: "port",
-				type: "number",
-				describe: "The port number of the origin database",
-				conflicts: [
-					"connection-string",
-					"access-client-id",
-					"access-client-secret",
-				],
-			},
-			"origin-scheme": {
-				alias: "scheme",
-				type: "string",
-				choices: ["postgres", "postgresql", "mysql"],
-				describe: "The scheme used to connect to the origin database",
-			},
-			database: {
-				type: "string",
-				describe: "The name of the database within the origin database",
-				conflicts: "connection-string",
-			},
-			"origin-user": {
-				alias: "user",
-				type: "string",
-				describe: "The username used to connect to the origin database",
-				conflicts: "connection-string",
-			},
-			"origin-password": {
-				alias: "password",
-				type: "string",
-				describe: "The password used to connect to the origin database",
-				conflicts: "connection-string",
-			},
-			"access-client-id": {
-				type: "string",
-				describe:
-					"The Client ID of the Access token to use when connecting to the origin database",
-				conflicts: ["connection-string", "origin-port"],
-				implies: ["access-client-secret"],
-			},
-			"access-client-secret": {
-				type: "string",
-				describe:
-					"The Client Secret of the Access token to use when connecting to the origin database",
-				conflicts: ["connection-string", "origin-port"],
-			},
-			"caching-disabled": {
-				type: "boolean",
-				describe: "Disables the caching of SQL responses",
-			},
-			"max-age": {
-				type: "number",
-				describe:
-					"Specifies max duration for which items should persist in the cache, cannot be set when caching is disabled",
-			},
-			swr: {
-				type: "number",
-				describe:
-					"Indicates the number of seconds cache may serve the response after it becomes stale, cannot be set when caching is disabled",
-			},
-			"ca-certificate-id": {
-				alias: "ca-certificate-uuid",
-				type: "string",
-				describe:
-					"Sets custom CA certificate when connecting to origin database. Must be valid UUID of already uploaded CA certificate.",
-			},
-			"mtls-certificate-id": {
-				alias: "mtls-certificate-uuid",
-				type: "string",
-				describe:
-					"Sets custom mTLS client certificates when connecting to origin database. Must be valid UUID of already uploaded public/private key certificates.",
-			},
-			sslmode: {
-				type: "string",
-				choices: ["require", "verify-ca", "verify-full"],
-				describe: "Sets CA sslmode for connecting to database.",
-			},
-		})
-		.group(
-			["connection-string"],
-			`${chalk.bold("Configure using a connection string")}`
-		)
-		.group(
-			[
-				"name",
-				"origin-host",
-				"origin-port",
-				"scheme",
-				"database",
-				"origin-user",
-				"origin-password",
+export const upsertOptions = (
+	defaultOriginScheme: string | undefined = undefined
+) =>
+	({
+		"connection-string": {
+			type: "string",
+			description:
+				"The connection string for the database you want Hyperdrive to connect to - ex: protocol://user:password@host:port/database",
+			group: "Configure using a connection string",
+		},
+		"origin-host": {
+			alias: "host",
+			type: "string",
+			description: "The host of the origin database",
+			conflicts: "connection-string",
+			group:
+				"Configure using individual parameters [conflicts with --connection-string]",
+		},
+		"origin-port": {
+			alias: "port",
+			type: "number",
+			description: "The port number of the origin database",
+			conflicts: [
+				"connection-string",
+				"access-client-id",
+				"access-client-secret",
 			],
-			`${chalk.bold("Configure using individual parameters [conflicts with --connection-string]")}`
-		)
-		.group(
-			["access-client-id", "access-client-secret"],
-			`${chalk.bold("Hyperdrive over Access [conflicts with --connection-string, --origin-port]")}`
-		)
-		.group(
-			["caching-disabled", "max-age", "swr"],
-			`${chalk.bold("Caching Options")}`
-		);
-}
+			group:
+				"Configure using individual parameters [conflicts with --connection-string]",
+		},
+		"origin-scheme": {
+			alias: "scheme",
+			type: "string",
+			choices: ["postgres", "postgresql", "mysql"],
+			description: "The scheme used to connect to the origin database",
+			group:
+				"Configure using individual parameters [conflicts with --connection-string]",
+			default: defaultOriginScheme,
+		},
+		database: {
+			type: "string",
+			description: "The name of the database within the origin database",
+			conflicts: "connection-string",
+			group:
+				"Configure using individual parameters [conflicts with --connection-string]",
+		},
+		"origin-user": {
+			alias: "user",
+			type: "string",
+			description: "The username used to connect to the origin database",
+			conflicts: "connection-string",
+			group:
+				"Configure using individual parameters [conflicts with --connection-string]",
+		},
+		"origin-password": {
+			alias: "password",
+			type: "string",
+			description: "The password used to connect to the origin database",
+			conflicts: "connection-string",
+			group:
+				"Configure using individual parameters [conflicts with --connection-string]",
+		},
+		"access-client-id": {
+			type: "string",
+			description:
+				"The Client ID of the Access token to use when connecting to the origin database",
+			conflicts: ["connection-string", "origin-port"],
+			implies: ["access-client-secret"],
+			group:
+				"Hyperdrive over Access [conflicts with --connection-string, --origin-port]",
+		},
+		"access-client-secret": {
+			type: "string",
+			description:
+				"The Client Secret of the Access token to use when connecting to the origin database",
+			conflicts: ["connection-string", "origin-port"],
+			group:
+				"Hyperdrive over Access [conflicts with --connection-string, --origin-port]",
+		},
+		"caching-disabled": {
+			type: "boolean",
+			description: "Disables the caching of SQL responses",
+			group: "Caching Options",
+		},
+		"max-age": {
+			type: "number",
+			description:
+				"Specifies max duration for which items should persist in the cache, cannot be set when caching is disabled",
+			group: "Caching Options",
+		},
+		swr: {
+			type: "number",
+			description:
+				"Indicates the number of seconds cache may serve the response after it becomes stale, cannot be set when caching is disabled",
+			group: "Caching Options",
+		},
+		"ca-certificate-id": {
+			alias: "ca-certificate-uuid",
+			type: "string",
+			description:
+				"Sets custom CA certificate when connecting to origin database. Must be valid UUID of already uploaded CA certificate.",
+		},
+		"mtls-certificate-id": {
+			alias: "mtls-certificate-uuid",
+			type: "string",
+			description:
+				"Sets custom mTLS client certificates when connecting to origin database. Must be valid UUID of already uploaded public/private key certificates.",
+		},
+		sslmode: {
+			type: "string",
+			choices: ["require", "verify-ca", "verify-full"],
+			description: "Sets CA sslmode for connecting to database.",
+		},
+	}) as const;
 
 export function getOriginFromArgs<
 	PartialUpdate extends boolean,
@@ -168,7 +141,9 @@ export function getOriginFromArgs<
 		: OriginWithSecrets,
 >(
 	allowPartialOrigin: PartialUpdate,
-	args: StrictYargsOptionsToInterface<typeof upsertOptions>
+	args:
+		| typeof hyperdriveCreateCommand.args
+		| typeof hyperdriveUpdateCommand.args
 ): PartialUpdate extends true ? OriginConfig | undefined : OriginConfig {
 	if (args.connectionString) {
 		const url = new URL(args.connectionString);
@@ -309,7 +284,9 @@ export function getOriginFromArgs<
 }
 
 export function getCacheOptionsFromArgs(
-	args: StrictYargsOptionsToInterface<typeof upsertOptions>
+	args:
+		| typeof hyperdriveCreateCommand.args
+		| typeof hyperdriveUpdateCommand.args
 ): CachingOptions | undefined {
 	const caching = {
 		disabled: args.cachingDisabled,
@@ -325,7 +302,9 @@ export function getCacheOptionsFromArgs(
 }
 
 export function getMtlsFromArgs(
-	args: StrictYargsOptionsToInterface<typeof upsertOptions>
+	args:
+		| typeof hyperdriveCreateCommand.args
+		| typeof hyperdriveUpdateCommand.args
 ): Mtls | undefined {
 	const mtls = {
 		ca_certificate_id: args.caCertificateId,
