@@ -1,16 +1,16 @@
 {
-  "compatibility_date": "2024-01-01",
-  "define": {
-    "WRANGLER_DEFINED_THING": "\"thing\"",
-    "WRANGLER_NESTED.DEFINED.THING": "[1,2,3]"
-  },
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "OTHER_OBJECT",
-        "class_name": "OtherObject",
-        "script_name": "other"
-      }
-    ]
-  }
+	"compatibility_date": "2024-01-01",
+	"define": {
+		"WRANGLER_DEFINED_THING": "\"thing\"",
+		"WRANGLER_NESTED.DEFINED.THING": "[1,2,3]",
+	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "OTHER_OBJECT",
+				"class_name": "OtherObject",
+				"script_name": "other",
+			},
+		],
+	},
 }
