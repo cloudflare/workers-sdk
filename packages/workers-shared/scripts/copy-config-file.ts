@@ -6,8 +6,8 @@ import { join, resolve } from "path";
 
 const pkgRoot = resolve(__dirname, "..");
 const dstDirectory = join(pkgRoot, "dist");
-const configFileSrc = join(pkgRoot, "asset-worker", "wrangler.toml");
-const configFileDst = join(dstDirectory, "asset-worker.toml");
+const configFileSrc = join(pkgRoot, "asset-worker", "wrangler.jsonc");
+const configFileDst = join(dstDirectory, "asset-worker.jsonc");
 
 if (!existsSync(dstDirectory)) {
 	mkdirSync(dstDirectory);
