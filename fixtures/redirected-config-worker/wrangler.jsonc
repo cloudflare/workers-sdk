@@ -1,5 +1,5 @@
 {
-  "name": "redirected-config-worker",
-  "compatibility_date": "2024-12-01",
-  "main": "src/index.js"
+	"name": "redirected-config-worker",
+	"compatibility_date": "2024-12-01",
+	"main": "src/index.js",
 }

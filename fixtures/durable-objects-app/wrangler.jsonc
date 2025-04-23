@@ -1,21 +1,19 @@
 {
-  "name": "do-worker-app",
-  "compatibility_date": "2022-03-31",
-  "main": "src/index.js",
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "MY_DO",
-        "class_name": "FooBar"
-      }
-    ]
-  },
-  "migrations": [
-    {
-      "tag": "v1",
-      "new_classes": [
-        "FooBar"
-      ]
-    }
-  ]
+	"name": "do-worker-app",
+	"compatibility_date": "2022-03-31",
+	"main": "src/index.js",
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "MY_DO",
+				"class_name": "FooBar",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": ["FooBar"],
+		},
+	],
 }

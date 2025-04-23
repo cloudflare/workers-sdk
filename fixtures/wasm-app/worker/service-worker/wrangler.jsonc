@@ -1,5 +1,5 @@
 {
-  "wasm_modules": {
-    "MYWASM": "../index_bg.wasm"
-  }
+	"wasm_modules": {
+		"MYWASM": "../index_bg.wasm",
+	},
 }
