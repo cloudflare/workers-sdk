@@ -19,7 +19,7 @@ CLOUDFLARE_ACCOUNT_ID=xxxx CLOUDFLARE_API_TOKEN=yyyy pnpm test:e2e -F @cloudflar
 
 These tests use a mock npm registry where the built plugin has been published.
 
-The registry is booted up and loaded with the local build of the plugin and its local dependencies in the global-setup.ts file that runs once at the start of the e2e test run, and the server is killed and its caches removed at the end of the test run.
+The registry is booted up and loaded with the local build of the plugin and its local dependencies in the global-setup.ts file that runs once at the start of the e2e test run, and the server is killed and its caches removed at the end of the test run. The mock npm registry will delegate to the standard public npm registry for non-local dependency requests (e.g. vite, typescript, etc).
 
 The Vite `test` function is extended with additional helpers to setup clean copies of fixtures outside of the monorepo so that they can be isolated from any other dependencies in the project.
 
@@ -38,7 +38,7 @@ test("can serve a Worker request", async ({ expect, seed, runLongLived }) => {
 - The `seed()` helper does the following:
   - makes a copy of the named fixture into a temporary directory,
   - updates the vite-plugin dependency in the package.json to match the local version
-  - runs `npm install` (or equivalent package manager command) in the temporary project
+  - runs `npm install` (or equivalent package manager command) in the temporary project - the dependencies are installed from the mock npm registry mentioned above.
   - returns the path to the directory containing the copy (`projectPath` above)
   - the temporary directory will be deleted at the end of the test.
 - The `runCommand()` helper simply executes a one-shot command and resolves when it has exited. You can use this to install the dependencies of the fixture from the mock npm registry.
