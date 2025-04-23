@@ -13,3 +13,7 @@ export default {
 		return new Response("Hello World!");
 	},
 } satisfies ExportedHandler;
+
+addEventListener("unhandledrejection", (event) => {
+	console.error("__unhandled rejection__");
+});
