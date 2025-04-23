@@ -41,7 +41,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
-		"@cloudflare/vitest-pool-workers": "^0.7.0",
+		"@cloudflare/vitest-pool-workers": "^0.8.19",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20250424.0",
 		"@types/mime": "^3.0.4",
