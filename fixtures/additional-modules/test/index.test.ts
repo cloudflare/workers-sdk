@@ -34,12 +34,12 @@ describe("find_additional_modules dev", () => {
 			{ recursive: true }
 		);
 		await fs.cp(
-			path.resolve(__dirname, "..", "wrangler.toml"),
-			path.join(tmpDir, "wrangler.toml")
+			path.resolve(__dirname, "..", "wrangler.jsonc"),
+			path.join(tmpDir, "wrangler.jsonc")
 		);
 
 		worker = await unstable_startWorker({
-			config: path.join(tmpDir, "wrangler.toml"),
+			config: path.join(tmpDir, "wrangler.jsonc"),
 		});
 	});
 	afterAll(async () => {
