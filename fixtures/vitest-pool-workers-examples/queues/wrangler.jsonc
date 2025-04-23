@@ -5,21 +5,21 @@
 	"kv_namespaces": [
 		{
 			"binding": "QUEUE_RESULTS",
-			"id": "00000000000000000000000000000000",
-		},
+			"id": "00000000000000000000000000000000"
+		}
 	],
 	"queues": {
 		"producers": [
 			{
 				"binding": "QUEUE_PRODUCER",
-				"queue": "queue",
-			},
+				"queue": "queue"
+			}
 		],
 		"consumers": [
 			{
 				"queue": "queue",
-				"max_batch_timeout": 3, // Overridden in `vitest.config.mts`
-			},
-		],
-	},
+				"max_batch_timeout": 3 // Overridden in `vitest.config.mts`
+			}
+		]
+	}
 }

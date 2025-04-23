@@ -6,19 +6,19 @@
 		"bindings": [
 			{
 				"name": "COUNTER",
-				"class_name": "Counter",
+				"class_name": "Counter"
 			},
 			{
 				"name": "SQL",
-				"class_name": "SQLiteDurableObject",
-			},
-		],
+				"class_name": "SQLiteDurableObject"
+			}
+		]
 	},
 	"migrations": [
 		{
 			"tag": "v1",
 			"new_classes": ["Counter"],
-			"new_sqlite_classes": ["SQLiteDurableObject"],
-		},
-	],
+			"new_sqlite_classes": ["SQLiteDurableObject"]
+		}
+	]
 }

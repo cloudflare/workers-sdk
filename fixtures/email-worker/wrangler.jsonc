@@ -5,18 +5,18 @@
 	"compatibility_flags": ["nodejs_compat"],
 	"send_email": [
 		{
-			"name": "UNBOUND_SEND",
+			"name": "UNBOUND_SEND"
 		},
 		{
 			"name": "SPECIFIC_SEND",
-			"destination_address": "something@example.com",
+			"destination_address": "something@example.com"
 		},
 		{
 			"name": "LIST_SEND",
 			"allowed_destination_addresses": [
 				"something@example.com",
-				"else@example.com",
-			],
-		},
-	],
+				"else@example.com"
+			]
+		}
+	]
 }

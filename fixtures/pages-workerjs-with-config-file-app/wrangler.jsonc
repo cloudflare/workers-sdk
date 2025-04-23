@@ -6,9 +6,9 @@
 	"vars": {
 		"VAR1": "celebrate",
 		"VAR2": "holiday",
-		"VAR3": "celebration",
+		"VAR3": "celebration"
 	},
 	"version_metadata": {
-		"binding": "METADATA",
-	},
+		"binding": "METADATA"
+	}
 }

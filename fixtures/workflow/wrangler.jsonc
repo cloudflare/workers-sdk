@@ -6,12 +6,12 @@
 		{
 			"binding": "WORKFLOW",
 			"name": "my-workflow",
-			"class_name": "Demo",
+			"class_name": "Demo"
 		},
 		{
 			"binding": "WORKFLOW2",
 			"name": "my-workflow2",
-			"class_name": "Demo2",
-		},
-	],
+			"class_name": "Demo2"
+		}
+	]
 }

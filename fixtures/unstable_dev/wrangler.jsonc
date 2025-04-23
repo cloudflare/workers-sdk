@@ -3,6 +3,6 @@
 	"main": "dist/out.js",
 	"compatibility_date": "2022-12-08",
 	"build": {
-		"command": "npx esbuild src/index.js --outfile=dist/out.js",
-	},
+		"command": "npx esbuild src/index.js --outfile=dist/out.js"
+	}
 }
