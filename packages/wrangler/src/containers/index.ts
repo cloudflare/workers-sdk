@@ -47,25 +47,24 @@ export const containers = (
 		.command(
 			"images",
 			"perform operations on images in your Cloudflare managed registry",
-			(args) => imagesCommand(args).command(subHelp)
+			(args) => imagesCommand(args, containersScope).command(subHelp)
 		)
 		.command(
 			"info [ID]",
 			"get information about a specific container",
 			(args) => infoYargs(args),
-			(args) => handleFailure(infoCommand)(args)
+			(args) => handleFailure(infoCommand, containersScope)(args)
 		)
 		.command(
 			"list",
 			"list containers",
 			(args) => listYargs(args),
-			(args) => handleFailure(listCommand)(args)
+			(args) => handleFailure(listCommand, containersScope)(args)
 		)
 		.command(
 			"delete [ID]",
 			"delete a container",
 			(args) => deleteYargs(args),
-			(args) => handleFailure(deleteCommand)(args)
-			(args) => imagesCommand(args, containersScope).command(subHelp)
+			(args) => handleFailure(deleteCommand, containersScope)(args)
 		);
 };

@@ -3,6 +3,7 @@ import path from "path";
 import { crash } from "@cloudflare/cli";
 import { type Config } from "../config";
 import { type ContainerApp } from "../config/environment";
+import { containersScope } from "../containers";
 import { CI } from "../is-ci";
 import { type Logger } from "../logger";
 import { fetchVersion } from "../versions/api";
@@ -45,7 +46,7 @@ export async function deployContainers(
 	}
 
 	if (!dryRun) {
-		await fillOpenAPIConfiguration(config, CI.isCI());
+		await fillOpenAPIConfiguration(config, CI.isCI(), containersScope);
 	}
 
 	for (const container of config.containers) {
