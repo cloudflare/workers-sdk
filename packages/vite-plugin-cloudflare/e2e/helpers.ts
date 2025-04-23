@@ -44,7 +44,7 @@ export function seed(fixture: string, pm: "pnpm" | "yarn" | "npm") {
 		debuglog("Updated vite-plugin version in package.json");
 		runCommand(`${pm} install`, projectPath, { attempts: 2 });
 		debuglog("Installed node modules");
-	}, 50_000);
+	}, 200_000);
 
 	afterAll(async () => {
 		if (!process.env.CLOUDFLARE_VITE_E2E_KEEP_TEMP_DIRS) {
