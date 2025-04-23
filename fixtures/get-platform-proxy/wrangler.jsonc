@@ -6,34 +6,34 @@
 		"MY_VAR": "my-var-value",
 		"MY_VAR_A": "my-var-a",
 		"MY_JSON_VAR": {
-			"test": true
-		}
+			"test": true,
+		},
 	},
 	"kv_namespaces": [
 		{
 			"binding": "MY_KV",
-			"id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-		}
+			"id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+		},
 	],
 	"r2_buckets": [
 		{
 			"binding": "MY_BUCKET",
-			"bucket_name": "my-bucket"
-		}
+			"bucket_name": "my-bucket",
+		},
 	],
 	"hyperdrive": [
 		{
 			"binding": "MY_HYPERDRIVE",
 			"id": "000000000000000000000000000000000",
-			"localConnectionString": "postgres://user:pass@127.0.0.1:1234/db"
-		}
+			"localConnectionString": "postgres://user:pass@127.0.0.1:1234/db",
+		},
 	],
 	"d1_databases": [
 		{
 			"binding": "MY_D1",
 			"database_name": "test-db",
-			"database_id": "000000000-0000-0000-0000-000000000000"
-		}
+			"database_id": "000000000-0000-0000-0000-000000000000",
+		},
 	],
 	"env": {
 		"production": {
@@ -41,15 +41,15 @@
 				"MY_VAR": "my-PRODUCTION-var-value",
 				"MY_JSON_VAR": {
 					"test": true,
-					"production": true
-				}
+					"production": true,
+				},
 			},
 			"kv_namespaces": [
 				{
 					"binding": "MY_KV_PROD",
-					"id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-				}
-			]
-		}
-	}
+					"id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+				},
+			],
+		},
+	},
 }

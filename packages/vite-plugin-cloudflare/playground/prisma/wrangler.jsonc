@@ -7,7 +7,7 @@
 		{
 			"binding": "DB",
 			"database_name": "prisma-demo-db",
-			"database_id": "local"
-		}
-	]
+			"database_id": "local",
+		},
+	],
 }

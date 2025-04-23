@@ -8,6 +8,6 @@
 		"DB_PORT": "5432",
 		"DB_NAME": "pfmegrnargs",
 		"DB_USERNAME": "reader",
-		"DB_PASSWORD": "NWDMCE5xdipIjRrp"
-	}
+		"DB_PASSWORD": "NWDMCE5xdipIjRrp",
+	},
 }

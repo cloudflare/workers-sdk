@@ -4,20 +4,20 @@
 	"compatibility_date": "2024-12-30",
 	"assets": {
 		"not_found_handling": "single-page-application",
-		"binding": "Assets"
+		"binding": "Assets",
 	},
 	"durable_objects": {
 		"bindings": [
 			{
 				"name": "MyServer",
-				"class_name": "MyServer"
-			}
-		]
+				"class_name": "MyServer",
+			},
+		],
 	},
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_classes": ["MyServer"]
-		}
-	]
+			"new_classes": ["MyServer"],
+		},
+	],
 }

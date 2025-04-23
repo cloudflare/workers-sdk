@@ -6,7 +6,7 @@
 		{
 			"binding": "NAMED_ENTRYPOINT",
 			"service": "worker",
-			"entrypoint": "NamedEntrypoint"
-		}
-	]
+			"entrypoint": "NamedEntrypoint",
+		},
+	],
 }

@@ -6,7 +6,7 @@
 		{
 			"name": "workflow",
 			"binding": "MY_WORKFLOW",
-			"class_name": "MyWorkflow"
-		}
-	]
+			"class_name": "MyWorkflow",
+		},
+	],
 }

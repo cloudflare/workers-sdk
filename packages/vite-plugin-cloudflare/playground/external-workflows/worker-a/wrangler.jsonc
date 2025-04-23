@@ -7,7 +7,7 @@
 			"name": "workflow",
 			"binding": "MY_WORKFLOW",
 			"script_name": "worker-b",
-			"class_name": "MyWorkflow"
-		}
-	]
+			"class_name": "MyWorkflow",
+		},
+	],
 }

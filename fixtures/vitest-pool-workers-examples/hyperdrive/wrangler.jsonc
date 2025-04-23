@@ -6,7 +6,7 @@
 		{
 			"binding": "ECHO_SERVER_HYPERDRIVE",
 			"id": "00000000000000000000000000000000",
-			"localConnectionString": "postgres://user:pass@127.0.0.1/db" // Overridden in `vitest.config.mts`
-		}
-	]
+			"localConnectionString": "postgres://user:pass@127.0.0.1/db", // Overridden in `vitest.config.mts`
+		},
+	],
 }

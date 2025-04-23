@@ -33,13 +33,6 @@
 				"trailingComma": "all",
 				"plugins": []
 			}
-		},
-		{
-			"files": "**/wrangler.jsonc",
-			"options": {
-				"trailingComma": "none",
-				"plugins": []
-			}
 		}
 	]
 }

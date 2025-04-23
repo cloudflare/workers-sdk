@@ -1,5 +1,5 @@
 {
 	"name": "worker-ts",
 	"main": "src/index.ts",
-	"compatibility_date": "2023-05-04"
+	"compatibility_date": "2023-05-04",
 }
