@@ -48,7 +48,7 @@ export const test = baseTest.extend<{
 			debuglog("Fixture copied to " + projectPath);
 			await updateVitePluginVersion(projectPath);
 			debuglog("Updated vite-plugin version in package.json");
-			runCommand(`${pm} install`, projectPath);
+			runCommand(`${pm} install`, projectPath, { retries: 2 });
 			debuglog("Installed node modules");
 			projectPaths.push(projectPath);
 			return projectPath;
@@ -160,13 +160,24 @@ async function updateVitePluginVersion(projectPath: string) {
 	);
 }
 
-export function runCommand(command: string, cwd: string) {
-	debuglog("Running command:", command);
-	childProcess.execSync(command, {
-		cwd,
-		stdio: debuglog.enabled ? "inherit" : "ignore",
-		env: testEnv,
-	});
+export function runCommand(command: string, cwd: string, { retries = 0 } = {}) {
+	while (retries >= 0) {
+		debuglog("Running command:", command);
+		try {
+			childProcess.execSync(command, {
+				cwd,
+				stdio: debuglog.enabled ? "inherit" : "ignore",
+				env: testEnv,
+			});
+		} catch (e) {
+			if (retries > 0) {
+				debuglog(`Retrying failed command (${e})`);
+				retries--;
+			} else {
+				throw e;
+			}
+		}
+	}
 }
 
 export async function fetchJson(url: string, info?: RequestInit) {
