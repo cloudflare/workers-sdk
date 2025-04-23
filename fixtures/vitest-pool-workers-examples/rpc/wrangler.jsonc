@@ -6,33 +6,33 @@
 	"kv_namespaces": [
 		{
 			"binding": "KV_NAMESPACE",
-			"id": "00000000000000000000000000000000",
-		},
+			"id": "00000000000000000000000000000000"
+		}
 	],
 	"durable_objects": {
 		"bindings": [
 			{
 				"name": "TEST_OBJECT",
-				"class_name": "TestObject",
-			},
-		],
+				"class_name": "TestObject"
+			}
+		]
 	},
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_classes": ["TestObject"],
-		},
+			"new_classes": ["TestObject"]
+		}
 	],
 	"services": [
 		{
 			"binding": "TEST_NAMED_HANDLER",
 			"service": "rpc",
-			"entrypoint": "testNamedHandler",
+			"entrypoint": "testNamedHandler"
 		},
 		{
 			"binding": "TEST_NAMED_ENTRYPOINT",
 			"service": "rpc",
-			"entrypoint": "TestNamedEntrypoint",
-		},
-	],
+			"entrypoint": "TestNamedEntrypoint"
+		}
+	]
 }

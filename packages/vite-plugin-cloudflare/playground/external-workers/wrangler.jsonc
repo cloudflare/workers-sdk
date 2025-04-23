@@ -3,15 +3,15 @@
 	"main": "./src/index.ts",
 	"compatibility_date": "2024-12-30",
 	"ai": {
-		"binding": "AI",
+		"binding": "AI"
 	},
 	"vectorize": [
 		{
 			"binding": "VECTORIZE",
-			"index_name": "dummy-index",
-		},
+			"index_name": "dummy-index"
+		}
 	],
 	"images": {
-		"binding": "IMAGES",
-	},
+		"binding": "IMAGES"
+	}
 }

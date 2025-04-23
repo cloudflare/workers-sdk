@@ -7,16 +7,16 @@
 	"rules": [
 		{
 			"type": "Data",
-			"globs": ["**/*.png"],
-		},
+			"globs": ["**/*.png"]
+		}
 	],
 	"triggers": {
-		"crons": ["0 10 * * MON-FRI", "0 10 * * TUE,THU", "0 15 * * MON,WED,FRI"],
+		"crons": ["0 10 * * MON-FRI", "0 10 * * TUE,THU", "0 15 * * MON,WED,FRI"]
 	},
 	"ai": {
-		"binding": "AI",
+		"binding": "AI"
 	},
 	"observability": {
-		"enabled": true,
-	},
+		"enabled": true
+	}
 }

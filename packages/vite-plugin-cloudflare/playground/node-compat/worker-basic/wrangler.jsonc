@@ -7,21 +7,21 @@
 		{
 			"binding": "MY_SERVICE",
 			"service": "worker",
-			"entrypoint": "MyWorkerEntrypoint",
-		},
+			"entrypoint": "MyWorkerEntrypoint"
+		}
 	],
 	"durable_objects": {
 		"bindings": [
 			{
 				"name": "MY_DO",
-				"class_name": "MyDurableObject",
-			},
-		],
+				"class_name": "MyDurableObject"
+			}
+		]
 	},
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_classes": ["MyDurableObject"],
-		},
-	],
+			"new_classes": ["MyDurableObject"]
+		}
+	]
 }

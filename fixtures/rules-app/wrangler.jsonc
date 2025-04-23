@@ -6,7 +6,7 @@
 		{
 			"type": "Text",
 			"globs": ["**/*.md"],
-			"fallthrough": true,
-		},
-	],
+			"fallthrough": true
+		}
+	]
 }

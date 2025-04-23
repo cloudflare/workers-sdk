@@ -10,9 +10,9 @@
 				"namespace_id": "1001",
 				"simple": {
 					"limit": 2,
-					"period": 60,
-				},
-			},
-		],
-	},
+					"period": 60
+				}
+			}
+		]
+	}
 }

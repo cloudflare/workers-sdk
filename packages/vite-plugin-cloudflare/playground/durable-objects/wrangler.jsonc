@@ -6,14 +6,14 @@
 		"bindings": [
 			{
 				"name": "COUNTERS",
-				"class_name": "Counter",
-			},
-		],
+				"class_name": "Counter"
+			}
+		]
 	},
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_classes": ["Counter"],
-		},
-	],
+			"new_classes": ["Counter"]
+		}
+	]
 }

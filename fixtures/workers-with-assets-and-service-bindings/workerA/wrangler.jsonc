@@ -6,22 +6,22 @@
 		// service binding to Worker that exports a default object
 		{
 			"binding": "DEFAULT_EXPORT",
-			"service": "worker-b",
+			"service": "worker-b"
 		},
 		// service binding to Worker that exports a default entrypoint
 		{
 			"binding": "DEFAULT_ENTRYPOINT",
-			"service": "worker-c",
+			"service": "worker-c"
 		},
 		// service binding to Worker that exports a named entrypoint
 		{
 			"binding": "NAMED_ENTRYPOINT",
 			"service": "worker-d",
-			"entrypoint": "EntrypointD",
+			"entrypoint": "EntrypointD"
 		},
 		{
 			"binding": "WS",
-			"service": "worker-ws",
-		},
-	],
+			"service": "worker-ws"
+		}
+	]
 }

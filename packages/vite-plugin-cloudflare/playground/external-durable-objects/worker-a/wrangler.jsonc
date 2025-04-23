@@ -7,14 +7,14 @@
 			{
 				"name": "COUNTERS",
 				"class_name": "Counter",
-				"script_name": "worker-b",
-			},
-		],
+				"script_name": "worker-b"
+			}
+		]
 	},
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_classes": ["Counter"],
-		},
-	],
+			"new_classes": ["Counter"]
+		}
+	]
 }

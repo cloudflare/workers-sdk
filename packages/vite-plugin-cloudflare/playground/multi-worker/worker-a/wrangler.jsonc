@@ -5,12 +5,12 @@
 	"services": [
 		{
 			"binding": "WORKER_B",
-			"service": "worker-b",
+			"service": "worker-b"
 		},
 		{
 			"binding": "NAMED_ENTRYPOINT",
 			"service": "worker-b",
-			"entrypoint": "NamedEntrypoint",
-		},
-	],
+			"entrypoint": "NamedEntrypoint"
+		}
+	]
 }

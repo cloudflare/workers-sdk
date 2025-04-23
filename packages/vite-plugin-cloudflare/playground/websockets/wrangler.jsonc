@@ -6,14 +6,14 @@
 		"bindings": [
 			{
 				"name": "WEBSOCKET_SERVER",
-				"class_name": "WebSocketServer",
-			},
-		],
+				"class_name": "WebSocketServer"
+			}
+		]
 	},
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_classes": ["WebSocketServer"],
-		},
-	],
+			"new_classes": ["WebSocketServer"]
+		}
+	]
 }

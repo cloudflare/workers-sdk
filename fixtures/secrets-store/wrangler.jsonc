@@ -7,7 +7,7 @@
 		{
 			"binding": "SECRET",
 			"secret_name": "secret_name",
-			"store_id": "a3fb907f446e4d94bd946d7ea6365b1c",
-		},
-	],
+			"store_id": "a3fb907f446e4d94bd946d7ea6365b1c"
+		}
+	]
 }

@@ -5,13 +5,13 @@
 	"kv_namespaces": [
 		{
 			"binding": "KV_NAMESPACE",
-			"id": "00000000000000000000000000000000",
-		},
+			"id": "00000000000000000000000000000000"
+		}
 	],
 	"r2_buckets": [
 		{
 			"binding": "R2_BUCKET",
-			"bucket_name": "bucket",
-		},
-	],
+			"bucket_name": "bucket"
+		}
+	]
 }

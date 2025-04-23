@@ -6,14 +6,14 @@
 		"bindings": [
 			{
 				"name": "MY_DO",
-				"class_name": "FooBar",
-			},
-		],
+				"class_name": "FooBar"
+			}
+		]
 	},
 	"migrations": [
 		{
 			"tag": "v1",
-			"new_classes": ["FooBar"],
-		},
-	],
+			"new_classes": ["FooBar"]
+		}
+	]
 }
