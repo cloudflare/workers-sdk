@@ -274,14 +274,14 @@ describe("pipelines", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler pipelines
 
-			🚰 Manage Cloudflare Pipelines [open beta]
+			🚰 Manage Cloudflare Pipelines [open-beta]
 
 			COMMANDS
-			  wrangler pipelines create <pipeline>  Create a new pipeline
-			  wrangler pipelines list               List all pipelines
-			  wrangler pipelines get <pipeline>     Get a pipeline's configuration
-			  wrangler pipelines update <pipeline>  Update a pipeline
-			  wrangler pipelines delete <pipeline>  Delete a pipeline
+			  wrangler pipelines create <pipeline>  Create a new pipeline [open-beta]
+			  wrangler pipelines list               List all pipelines [open-beta]
+			  wrangler pipelines get <pipeline>     Get a pipeline's configuration [open-beta]
+			  wrangler pipelines update <pipeline>  Update a pipeline [open-beta]
+			  wrangler pipelines delete <pipeline>  Delete a pipeline [open-beta]
 
 			GLOBAL FLAGS
 			  -c, --config   Path to Wrangler configuration file  [string]
@@ -301,10 +301,7 @@ describe("pipelines", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"wrangler pipelines create <pipeline>
 
-				Create a new pipeline
-
-				POSITIONALS
-				  pipeline  The name of the new pipeline  [string] [required]
+				Create a new pipeline [open-beta]
 
 				Source settings
 				      --source             Space separated list of allowed sources. Options are 'http' or 'worker'  [array] [default: [\\"http\\",\\"worker\\"]]
@@ -325,6 +322,9 @@ describe("pipelines", () => {
 
 				Pipeline settings
 				      --shard-count  Number of shards for the pipeline. More shards handle higher request volume; fewer shards produce larger output files. Defaults to 2 if unset. Minimum: 1, Maximum: 15  [number]
+
+				POSITIONALS
+				  pipeline  The name of the new pipeline  [string] [required]
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]

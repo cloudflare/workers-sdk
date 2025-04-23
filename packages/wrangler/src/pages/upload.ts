@@ -3,6 +3,7 @@ import { dirname } from "node:path";
 import { spinner } from "@cloudflare/cli/interactive";
 import PQueue from "p-queue";
 import { fetchResult } from "../cfetch";
+import { createCommand } from "../core/create-command";
 import { FatalError } from "../errors";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
@@ -17,62 +18,60 @@ import {
 } from "./constants";
 import { ApiErrorCodes } from "./errors";
 import { validate } from "./validate";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type { UploadPayloadFile } from "./types";
 import type { FileContainer } from "./validate";
 
-type UploadArgs = StrictYargsOptionsToInterface<typeof Options>;
-
-export function Options(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("directory", {
+export const pagesProjectUploadCommand = createCommand({
+	metadata: {
+		description: "Upload files to a project",
+		status: "stable",
+		owner: "Workers: Authoring and Testing",
+		hidden: true,
+	},
+	behaviour: {
+		provideConfig: false,
+	},
+	args: {
+		directory: {
 			type: "string",
 			demandOption: true,
 			description: "The directory of static files to upload",
-		})
-		.options({
-			"output-manifest-path": {
-				type: "string",
-				description: "The name of the project you want to deploy to",
-			},
-			"skip-caching": {
-				type: "boolean",
-				description: "Skip asset caching which speeds up builds",
-			},
+		},
+		"output-manifest-path": {
+			type: "string",
+			description: "The name of the project you want to deploy to",
+		},
+		"skip-caching": {
+			type: "boolean",
+			description: "Skip asset caching which speeds up builds",
+		},
+	},
+	positionalArgs: ["directory"],
+	async handler({ directory, outputManifestPath, skipCaching }) {
+		if (!directory) {
+			throw new FatalError("Must specify a directory.", 1);
+		}
+
+		if (!process.env.CF_PAGES_UPLOAD_JWT) {
+			throw new FatalError("No JWT given.", 1);
+		}
+
+		const fileMap = await validate({ directory });
+
+		const manifest = await upload({
+			fileMap,
+			jwt: process.env.CF_PAGES_UPLOAD_JWT,
+			skipCaching: skipCaching ?? false,
 		});
-}
 
-export const Handler = async ({
-	directory,
-	outputManifestPath,
-	skipCaching,
-}: UploadArgs) => {
-	if (!directory) {
-		throw new FatalError("Must specify a directory.", 1);
-	}
+		if (outputManifestPath) {
+			await mkdir(dirname(outputManifestPath), { recursive: true });
+			await writeFile(outputManifestPath, JSON.stringify(manifest));
+		}
 
-	if (!process.env.CF_PAGES_UPLOAD_JWT) {
-		throw new FatalError("No JWT given.", 1);
-	}
-
-	const fileMap = await validate({ directory });
-
-	const manifest = await upload({
-		fileMap,
-		jwt: process.env.CF_PAGES_UPLOAD_JWT,
-		skipCaching: skipCaching ?? false,
-	});
-
-	if (outputManifestPath) {
-		await mkdir(dirname(outputManifestPath), { recursive: true });
-		await writeFile(outputManifestPath, JSON.stringify(manifest));
-	}
-
-	logger.log(`✨ Upload complete!`);
-};
+		logger.log(`✨ Upload complete!`);
+	},
+});
 
 export const upload = async (
 	args:
