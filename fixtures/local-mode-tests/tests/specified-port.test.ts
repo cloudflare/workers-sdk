@@ -26,7 +26,7 @@ describe("specific port", () => {
 		worker = await unstable_dev(
 			path.resolve(__dirname, "..", "src", "module.ts"),
 			{
-				config: path.resolve(__dirname, "..", "wrangler.module.toml"),
+				config: path.resolve(__dirname, "..", "wrangler.module.jsonc"),
 				port: await getPort(),
 				ip: "127.0.0.1",
 				experimental: {

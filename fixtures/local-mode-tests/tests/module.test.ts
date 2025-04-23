@@ -17,7 +17,7 @@ describe("module worker", () => {
 		worker = await unstable_dev(
 			path.resolve(__dirname, "..", "src", "module.ts"),
 			{
-				config: path.resolve(__dirname, "..", "wrangler.module.toml"),
+				config: path.resolve(__dirname, "..", "wrangler.module.jsonc"),
 				vars: { VAR4: "https://google.com" },
 				ip: "127.0.0.1",
 				port: 0,
