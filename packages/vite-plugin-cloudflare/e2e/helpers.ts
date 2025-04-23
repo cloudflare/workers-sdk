@@ -164,15 +164,15 @@ export function runCommand(command: string, cwd: string, { retries = 0 } = {}) {
 	while (retries >= 0) {
 		debuglog("Running command:", command);
 		try {
+			retries--;
 			childProcess.execSync(command, {
 				cwd,
 				stdio: debuglog.enabled ? "inherit" : "ignore",
 				env: testEnv,
 			});
 		} catch (e) {
-			if (retries > 0) {
+			if (retries >= 0) {
 				debuglog(`Retrying failed command (${e})`);
-				retries--;
 			} else {
 				throw e;
 			}
