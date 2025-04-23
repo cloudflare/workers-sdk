@@ -15,7 +15,7 @@ export default defineWorkersProject({
 					compatibilityFlags: ["service_binding_extra_handlers"],
 				},
 				wrangler: {
-					configPath: "./wrangler.toml",
+					configPath: "./wrangler.jsonc",
 				},
 			},
 		},

@@ -1372,7 +1372,7 @@
   		poolOptions: {
   			workers: {
   				wrangler: {
-  					configPath: "./wrangler.toml",
+  					configPath: "./wrangler.jsonc",
   					environment: "production",
   				},
   			},
