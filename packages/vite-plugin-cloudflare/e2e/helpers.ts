@@ -74,13 +74,18 @@ export async function runLongLived(
 
 	onTestFinished(async () => {
 		debuglog(`Closing down process`);
-		const result = await new Promise<number | undefined>((resolve, reject) => {
+		const result = await new Promise<number | undefined>((resolve) => {
 			const pid = process?.pid;
 			if (!pid) {
 				resolve(undefined);
 			} else {
 				debuglog(`Killing process, id:${pid}`);
-				kill(pid, "SIGKILL", (error) => (error ? reject(error) : resolve(pid)));
+				kill(pid, "SIGKILL", (error) => {
+					if (error) {
+						debuglog("Error killing process", error);
+					}
+					resolve(pid);
+				});
 			}
 		});
 		if (result) {
