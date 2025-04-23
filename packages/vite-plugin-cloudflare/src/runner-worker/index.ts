@@ -22,10 +22,7 @@ interface DurableObjectConstructor<T = unknown> {
 
 interface WorkflowEntrypointConstructor<T = unknown> {
 	new (
-		// Constructor type to be added in https://github.com/cloudflare/workerd/pull/3239
-		// ...args: ConstructorParameters<typeof WorkflowEntrypoint<T>>
-		ctx: ExecutionContext,
-		env: T
+		...args: ConstructorParameters<typeof WorkflowEntrypoint<T>>
 	): WorkflowEntrypoint<T>;
 }
 

@@ -17,6 +17,6 @@ test("receives the original host as the `X-Forwarded-Host` header", async () => 
 	expect(response).toBe(testUrl.host);
 });
 
-test("does not have unhandled rejections", async () => {
+test("does not cause unhandled rejection", async () => {
 	expect(serverLogs.errors.join()).not.toContain("__unhandled rejection__");
 });
