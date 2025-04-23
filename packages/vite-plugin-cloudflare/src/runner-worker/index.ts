@@ -29,21 +29,23 @@ interface WorkflowEntrypointConstructor<T = unknown> {
 	): WorkflowEntrypoint<T>;
 }
 
+const IGNORED_KEYS = ["self", "tailStream"];
+
 const WORKER_ENTRYPOINT_KEYS = [
 	"fetch",
+	"queue",
 	"tail",
 	"trace",
 	"scheduled",
-	"queue",
 	"test",
 ] as const;
 
 const DURABLE_OBJECT_KEYS = [
-	"fetch",
 	"alarm",
-	"webSocketMessage",
+	"fetch",
 	"webSocketClose",
 	"webSocketError",
+	"webSocketMessage",
 ] as const;
 
 const WORKFLOW_ENTRYPOINT_KEYS = ["run"] as const;
@@ -145,8 +147,8 @@ export function createWorkerEntrypointWrapper(
 					}
 
 					if (
-						key === "self" ||
 						typeof key === "symbol" ||
+						IGNORED_KEYS.includes(key) ||
 						(DURABLE_OBJECT_KEYS as readonly string[]).includes(key)
 					) {
 						return;
