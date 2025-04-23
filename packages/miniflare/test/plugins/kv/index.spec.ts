@@ -48,55 +48,52 @@ function sqlStmts(object: MiniflareDurableObjectControlStub) {
 	};
 }
 
-const opts: Partial<MiniflareOptions> = {
-	kvNamespaces: { NAMESPACE: "namespace" },
-};
-const test = miniflareTest(opts, async (global) => {
-	return new global.Response(null, { status: 404 });
-});
-
-async function getKvTestContext(context: MiniflareTestContext): Promise<{
+interface Context extends MiniflareTestContext {
 	ns: string;
 	kv: Namespaced<ReplaceWorkersTypes<KVNamespace>>; // :D
 	object: MiniflareDurableObjectControlStub;
-}> {
+}
+
+const opts: Partial<MiniflareOptions> = {
+	kvNamespaces: { NAMESPACE: "namespace" },
+};
+const test = miniflareTest<unknown, Context>(opts, async (global) => {
+	return new global.Response(null, { status: 404 });
+});
+
+test.beforeEach(async (t) => {
 	// Namespace keys so tests which are accessing the same Miniflare instance
 	// and bucket don't have races from key collisions
 	const ns = `${Date.now()}_${Math.floor(
 		Math.random() * Number.MAX_SAFE_INTEGER
 	)}`;
-	const kv = namespace(ns, await context.mf.getKVNamespace("NAMESPACE"));
+	t.context.ns = ns;
+	t.context.kv = namespace(ns, await t.context.mf.getKVNamespace("NAMESPACE"));
 
 	// Enable fake timers
-	const objectNamespace = await context.mf._getInternalDurableObjectNamespace(
+	const objectNamespace = await t.context.mf._getInternalDurableObjectNamespace(
 		KV_PLUGIN_NAME,
 		"kv:object",
 		"KVNamespaceObject"
 	);
 	const objectId = objectNamespace.idFromName("namespace");
 	const objectStub = objectNamespace.get(objectId);
-	const object = new MiniflareDurableObjectControlStub(objectStub);
-	await object.enableFakeTimers(secondsToMillis(TIME_NOW));
-
-	return {
-		ns,
-		kv,
-		object,
-	};
-}
+	t.context.object = new MiniflareDurableObjectControlStub(objectStub);
+	await t.context.object.enableFakeTimers(secondsToMillis(TIME_NOW));
+});
 
 const validatesKeyMacro: Macro<
 	[
 		method: string,
 		func: (kv: ReplaceWorkersTypes<KVNamespace>, key?: any) => Promise<void>,
 	],
-	MiniflareTestContext
+	Context
 > = {
 	title(providedTitle, method) {
 		return `${method}: validates key`;
 	},
 	async exec(t, method, func) {
-		const { kv } = await getKvTestContext(t.context);
+		const { kv } = t.context;
 		kv.ns = "";
 		await t.throwsAsync(func(kv, ""), {
 			instanceOf: TypeError,
@@ -121,14 +118,14 @@ test(validatesKeyMacro, "get", async (kv, key) => {
 	await kv.get(key);
 });
 test("get: returns value", async (t) => {
-	const { kv } = await getKvTestContext(t.context);
+	const { kv } = t.context;
 	await kv.put("key", "value");
 	const result = await kv.get("key");
 	t.is(result, "value");
 });
 
 test("bulk get: returns value", async (t) => {
-	const { kv } = await getKvTestContext(t.context);
+	const { kv } = t.context;
 	await kv.put("key1", "value1");
 	const result: any = await kv.get(["key1", "key2"]);
 	const expectedResult = new Map([
@@ -140,7 +137,7 @@ test("bulk get: returns value", async (t) => {
 });
 
 test("bulk get: check max keys", async (t) => {
-	const { kv } = await getKvTestContext(t.context);
+	const { kv } = t.context;
 	await kv.put("key1", "value1");
 	const keyArray = [];
 	for (let i = 0; i <= MAX_BULK_GET_KEYS; i++) {
@@ -181,7 +178,7 @@ test("bulk get: invalid type", async (t) => {
 });
 
 test("bulk get: request json type", async (t) => {
-	const { kv } = await getKvTestContext(t.context);
+	const { kv } = t.context;
 	await kv.put("key1", '{"example": "ex"}');
 	await kv.put("key2", "example");
 	let result: any = await kv.get(["key1"]);
@@ -204,7 +201,7 @@ test("bulk get: request json type", async (t) => {
 });
 
 test("bulk get: check metadata", async (t) => {
-	const { kv } = await getKvTestContext(t.context);
+	const { kv } = t.context;
 	await kv.put("key1", "value1", {
 		expiration: TIME_FUTURE,
 		metadata: { testing: true },
@@ -220,7 +217,7 @@ test("bulk get: check metadata", async (t) => {
 });
 
 test("bulk get: check metadata with int", async (t) => {
-	const { kv } = await getKvTestContext(t.context);
+	const { kv } = t.context;
 	await kv.put("key1", "value1", {
 		expiration: TIME_FUTURE,
 		metadata: 123,
@@ -234,7 +231,7 @@ test("bulk get: check metadata with int", async (t) => {
 });
 
 test("bulk get: check metadata as string", async (t) => {
-	const { kv } = await getKvTestContext(t.context);
+	const { kv } = t.context;
 	await kv.put("key1", "value1", {
 		expiration: TIME_FUTURE,
 		metadata: "example",
@@ -247,7 +244,7 @@ test("bulk get: check metadata as string", async (t) => {
 });
 
 test("bulk get: get with metadata for 404", async (t) => {
-	const { kv } = await getKvTestContext(t.context);
+	const { kv } = t.context;
 
 	const result: any = await kv.getWithMetadata(["key1"]);
 	const expectedResult: any = new Map([["key1", null]]);
@@ -255,7 +252,7 @@ test("bulk get: get with metadata for 404", async (t) => {
 });
 
 test("bulk get: get over size limit", async (t) => {
-	const { kv } = await getKvTestContext(t.context);
+	const { kv } = t.context;
 	const bigValue = new Array(1024).fill("x").join("");
 	await kv.put("key1", bigValue);
 	await kv.put("key2", bigValue);
@@ -270,18 +267,18 @@ test("bulk get: get over size limit", async (t) => {
 });
 
 test("get: returns null for non-existent keys", async (t) => {
-	const { kv } = await getKvTestContext(t.context);
+	const { kv } = t.context;
 	t.is(await kv.get("key"), null);
 });
 test.serial("get: returns null for expired keys", async (t) => {
-	const { kv, object } = await getKvTestContext(t.context);
+	const { kv, object } = t.context;
 	await kv.put("key", "value", { expirationTtl: 60 });
 	t.not(await kv.get("key"), null);
 	await object.advanceFakeTime(60_000);
 	t.is(await kv.get("key"), null);
 });
 test("get: validates but ignores cache ttl", async (t) => {
-	const { kv } = await getKvTestContext(t.context);
+	const { kv } = t.context;
 	await kv.put("key", "value");
 	await t.throwsAsync(kv.get("key", { cacheTtl: "not a number" as any }), {
 		instanceOf: Error,
@@ -300,7 +297,7 @@ test(validatesKeyMacro, "put", async (kv, key) => {
 	await kv.put(key, "value");
 });
 test("put: puts value", async (t) => {
-	const { kv, ns } = await getKvTestContext(t.context);
+	const { kv, ns } = t.context;
 	await kv.put("key", "value", {
 		expiration: TIME_FUTURE,
 		metadata: { testing: true },
@@ -314,13 +311,13 @@ test("put: puts value", async (t) => {
 });
 test("put: puts empty value", async (t) => {
 	// https://github.com/cloudflare/miniflare/issues/703
-	const { kv } = await getKvTestContext(t.context);
+	const { kv } = t.context;
 	await kv.put("key", "");
 	const value = await kv.get("key");
 	t.is(value, "");
 });
 test("put: overrides existing keys", async (t) => {
-	const { kv, ns, object } = await getKvTestContext(t.context);
+	const { kv, ns, object } = t.context;
 	const stmts = sqlStmts(object);
 	await kv.put("key", "value1");
 	const blobId = await stmts.getBlobIdByKey(`${ns}key`);
@@ -343,7 +340,7 @@ test("put: overrides existing keys", async (t) => {
 	t.not(blobId, newBlobId);
 });
 test("put: keys are case-sensitive", async (t) => {
-	const { kv } = await getKvTestContext(t.context);
+	const { kv } = t.context;
 	await kv.put("key", "lower");
 	await kv.put("KEY", "upper");
 	let result = await kv.get("key");
@@ -352,7 +349,7 @@ test("put: keys are case-sensitive", async (t) => {
 	t.is(result, "upper");
 });
 test("put: validates expiration ttl", async (t) => {
-	const { kv } = await getKvTestContext(t.context);
+	const { kv } = t.context;
 	await t.throwsAsync(
 		kv.put("key", "value", { expirationTtl: "nan" as unknown as number }),
 		{
@@ -373,7 +370,7 @@ test("put: validates expiration ttl", async (t) => {
 	});
 });
 test("put: validates expiration", async (t) => {
-	const { kv } = await getKvTestContext(t.context);
+	const { kv } = t.context;
 	await t.throwsAsync(
 		kv.put("key", "value", { expiration: "nan" as unknown as number }),
 		{
@@ -394,7 +391,7 @@ test("put: validates expiration", async (t) => {
 	});
 });
 test("put: validates value size", async (t) => {
-	const { kv } = await getKvTestContext(t.context);
+	const { kv } = t.context;
 	const maxValueSize = 1024;
 	const byteLength = maxValueSize + 1;
 	const expectations: ThrowsExpectation<Error> = {
@@ -410,7 +407,7 @@ test("put: validates value size", async (t) => {
 	await kv.put("key", createJunkStream(byteLength - 1));
 });
 test("put: validates metadata size", async (t) => {
-	const { kv } = await getKvTestContext(t.context);
+	const { kv } = t.context;
 	const maxMetadataSize = 1024;
 	await t.throwsAsync(
 		kv.put("key", new Blob(["value"]).stream(), {
@@ -431,14 +428,14 @@ test(validatesKeyMacro, "delete", async (kv, key) => {
 	await kv.delete(key);
 });
 test("delete: deletes existing keys", async (t) => {
-	const { kv } = await getKvTestContext(t.context);
+	const { kv } = t.context;
 	await kv.put("key", "value");
 	t.not(await kv.get("key"), null);
 	await kv.delete("key");
 	t.is(await kv.get("key"), null);
 });
 test("delete: does nothing for non-existent keys", async (t) => {
-	const { kv } = await getKvTestContext(t.context);
+	const { kv } = t.context;
 	await kv.delete("key");
 	t.pass();
 });
@@ -454,13 +451,13 @@ const listMacro: Macro<
 			pages: KVNamespaceListResult<unknown>["keys"][];
 		},
 	],
-	MiniflareTestContext
+	Context
 > = {
 	title(providedTitle) {
 		return `list: ${providedTitle}`;
 	},
 	async exec(t, { values, options = {}, pages }) {
-		const { kv, ns } = await getKvTestContext(t.context);
+		const { kv, ns } = t.context;
 		for (const [key, value] of Object.entries(values)) {
 			await kv.put(key, value.value, {
 				expiration: value.expiration,
@@ -634,7 +631,7 @@ test("paginates keys matching prefix", listMacro, {
 	],
 });
 test("list: accepts long prefix", async (t) => {
-	const { kv, ns } = await getKvTestContext(t.context);
+	const { kv, ns } = t.context;
 	// Max key length, minus padding for `context.ns`
 	const longKey = "x".repeat(512 - ns.length);
 	await kv.put(longKey, "value");
@@ -642,7 +639,7 @@ test("list: accepts long prefix", async (t) => {
 	t.deepEqual(page.keys, [{ name: ns + longKey }]);
 });
 test("list: paginates with variable limit", async (t) => {
-	const { kv, ns } = await getKvTestContext(t.context);
+	const { kv, ns } = t.context;
 	await kv.put("key1", "value1");
 	await kv.put("key2", "value2");
 	await kv.put("key3", "value3");
@@ -659,7 +656,7 @@ test("list: paginates with variable limit", async (t) => {
 	assert(page.list_complete);
 });
 test("list: returns keys inserted whilst paginating", async (t) => {
-	const { kv, ns } = await getKvTestContext(t.context);
+	const { kv, ns } = t.context;
 	await kv.put("key1", "value1");
 	await kv.put("key3", "value3");
 	await kv.put("key5", "value5");
@@ -680,7 +677,7 @@ test("list: returns keys inserted whilst paginating", async (t) => {
 	assert(page.list_complete);
 });
 test.serial("list: ignores expired keys", async (t) => {
-	const { kv, ns, object } = await getKvTestContext(t.context);
+	const { kv, ns, object } = t.context;
 	for (let i = 1; i <= 3; i++) {
 		await kv.put(`key${i}`, `value${i}`, { expiration: TIME_NOW + i * 60 });
 	}
@@ -692,7 +689,7 @@ test.serial("list: ignores expired keys", async (t) => {
 	});
 });
 test("list: sorts lexicographically", async (t) => {
-	const { kv, ns } = await getKvTestContext(t.context);
+	const { kv, ns } = t.context;
 	await kv.put(", ", "value");
 	await kv.put("!", "value");
 	t.deepEqual(await kv.list({ prefix: ns }), {
@@ -702,7 +699,7 @@ test("list: sorts lexicographically", async (t) => {
 	});
 });
 test("list: validates limit", async (t) => {
-	const { kv } = await getKvTestContext(t.context);
+	const { kv } = t.context;
 	// The runtime will only send the limit if it's > 0
 	await t.throwsAsync(kv.list({ limit: 1001 }), {
 		instanceOf: Error,
