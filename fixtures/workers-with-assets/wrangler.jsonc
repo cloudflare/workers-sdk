@@ -5,13 +5,13 @@
 	"assets": {
 		"directory": "./public",
 		"binding": "ASSETS",
-		"run_worker_first": false
+		"run_worker_first": false,
 	},
 	"services": [
 		{
 			"binding": "NAMED",
 			"service": "worker-with-assets",
-			"entrypoint": "NamedEntrypoint"
-		}
-	]
+			"entrypoint": "NamedEntrypoint",
+		},
+	],
 }

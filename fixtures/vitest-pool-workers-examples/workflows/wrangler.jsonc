@@ -6,7 +6,7 @@
 		{
 			"binding": "TEST_WORKFLOW",
 			"class_name": "TestWorkflow",
-			"name": "test-workflow"
-		}
-	]
+			"name": "test-workflow",
+		},
+	],
 }

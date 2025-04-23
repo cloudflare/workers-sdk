@@ -1,7 +1,7 @@
 {
 	"name": "sites-app",
 	"site": {
-		"bucket": "./public"
+		"bucket": "./public",
 	},
-	"main": "src/modules.js"
+	"main": "src/modules.js",
 }

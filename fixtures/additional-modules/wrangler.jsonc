@@ -6,11 +6,11 @@
 	"rules": [
 		{
 			"type": "CommonJS",
-			"globs": ["**/*.cjs"]
+			"globs": ["**/*.cjs"],
 		},
 		{
 			"type": "ESModule",
-			"globs": ["**/*.js"]
-		}
-	]
+			"globs": ["**/*.js"],
+		},
+	],
 }

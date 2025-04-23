@@ -5,11 +5,11 @@
 	"services": [
 		{
 			"binding": "AUTH_SERVICE",
-			"service": "auth-service"
+			"service": "auth-service",
 		},
 		{
 			"binding": "DATABASE_SERVICE",
-			"service": "database-service"
-		}
-	]
+			"service": "database-service",
+		},
+	],
 }
