@@ -1327,7 +1327,7 @@ test("Miniflare: modules in sub-directories", async (t) => {
 	t.is(await res.text(), "123");
 });
 
-test.skip("Miniflare: python modules", async (t) => {
+test("Miniflare: python modules", async (t) => {
 	const mf = new Miniflare({
 		modules: [
 			{
