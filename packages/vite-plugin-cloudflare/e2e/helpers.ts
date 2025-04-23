@@ -41,6 +41,9 @@ export const test = baseTest.extend<{
 		const projectPaths: string[] = [];
 		await use(async (fixture, pm) => {
 			const projectPath = path.resolve(root, fixture);
+			// We need to delete previous seeded files because, if the a node_modules was created by pnpm,
+			// you might get `npm error Cannot read properties of null (reading 'matches')`.
+			fs.rm(projectPath, { force: true, maxRetries: 10, recursive: true });
 			await fs.cp(path.resolve(__dirname, "fixtures", fixture), projectPath, {
 				recursive: true,
 				errorOnExist: true,
@@ -48,7 +51,7 @@ export const test = baseTest.extend<{
 			debuglog("Fixture copied to " + projectPath);
 			await updateVitePluginVersion(projectPath);
 			debuglog("Updated vite-plugin version in package.json");
-			runCommand(`${pm} install`, projectPath, { retries: 2 });
+			runCommand(`${pm} install`, projectPath, { attempts: 2 });
 			debuglog("Installed node modules");
 			projectPaths.push(projectPath);
 			return projectPath;
@@ -160,18 +163,23 @@ async function updateVitePluginVersion(projectPath: string) {
 	);
 }
 
-export function runCommand(command: string, cwd: string, { retries = 0 } = {}) {
-	while (retries >= 0) {
+export function runCommand(
+	command: string,
+	cwd: string,
+	{ attempts = 1 } = {}
+) {
+	while (attempts > 0) {
 		debuglog("Running command:", command);
 		try {
-			retries--;
 			childProcess.execSync(command, {
 				cwd,
 				stdio: debuglog.enabled ? "inherit" : "ignore",
 				env: testEnv,
 			});
+			break;
 		} catch (e) {
-			if (retries >= 0) {
+			attempts--;
+			if (attempts > 0) {
 				debuglog(`Retrying failed command (${e})`);
 			} else {
 				throw e;
