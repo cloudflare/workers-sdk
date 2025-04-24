@@ -2,4 +2,4 @@
 "wrangler": minor
 ---
 
-Show latest instance by dafault on `workflows instances describe` command
+Show latest instance by default on `workflows instances describe` command
