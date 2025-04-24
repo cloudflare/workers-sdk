@@ -20,7 +20,7 @@ describe("Preview Worker", () => {
 
 	beforeAll(async () => {
 		worker = await unstable_dev(path.join(__dirname, "../src/index.ts"), {
-			config: path.join(__dirname, "../wrangler.toml"),
+			config: path.join(__dirname, "../wrangler.jsonc"),
 			ip: "127.0.0.1",
 			experimental: {
 				disableExperimentalWarning: true,

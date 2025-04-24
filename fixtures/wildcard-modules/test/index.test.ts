@@ -48,8 +48,8 @@ describe("wildcard imports: dev", () => {
 			{ recursive: true }
 		);
 		await fs.cp(
-			path.resolve(__dirname, "..", "wrangler.toml"),
-			path.join(tmpDir, "wrangler.toml")
+			path.resolve(__dirname, "..", "wrangler.jsonc"),
+			path.join(tmpDir, "wrangler.jsonc")
 		);
 
 		worker = await runWranglerDev(tmpDir, ["--port=0", "--inspector-port=0"]);

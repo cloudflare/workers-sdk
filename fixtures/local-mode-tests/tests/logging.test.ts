@@ -28,7 +28,7 @@ it("logs startup errors", async () => {
 		const worker = await unstable_dev(
 			path.resolve(__dirname, "..", "src", "nodejs-compat.ts"),
 			{
-				config: path.resolve(__dirname, "..", "wrangler.logging.toml"),
+				config: path.resolve(__dirname, "..", "wrangler.logging.jsonc"),
 				// Intentionally omitting `compatibilityFlags: ["nodejs_compat"]`
 				ip: "127.0.0.1",
 				experimental: {

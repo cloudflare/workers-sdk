@@ -23,7 +23,7 @@
 		"miniflare": "workspace:*"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "0.7.0",
+		"@cloudflare/vitest-pool-workers": "^0.8.19",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20250424.0",
 		"concurrently": "^8.2.2",

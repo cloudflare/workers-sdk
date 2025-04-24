@@ -12,7 +12,7 @@ export default defineWorkersProject({
 				// FIXME(lduarte): currently for the workflow binding to work, isolateStorage must be disabled.
 				isolatedStorage: false,
 				wrangler: {
-					configPath: "./wrangler.toml",
+					configPath: "./wrangler.jsonc",
 				},
 			},
 		},

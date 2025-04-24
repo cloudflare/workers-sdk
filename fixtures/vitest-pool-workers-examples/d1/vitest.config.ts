@@ -16,7 +16,7 @@ export default defineWorkersProject(async () => {
 				workers: {
 					singleWorker: true,
 					wrangler: {
-						configPath: "./wrangler.toml",
+						configPath: "./wrangler.jsonc",
 						environment: "production",
 					},
 					miniflare: {
