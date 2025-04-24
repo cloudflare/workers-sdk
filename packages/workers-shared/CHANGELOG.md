@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.17.3
+
+### Patch Changes
+
+- [#9043](https://github.com/cloudflare/workers-sdk/pull/9043) [`7744f1a`](https://github.com/cloudflare/workers-sdk/commit/7744f1a3039e01f593b6e578588e07d1139d1d93) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Adds tracing into asset-worker unstable methods so we can better measure/debug these.
+
 ## 0.17.2
 
 ### Patch Changes

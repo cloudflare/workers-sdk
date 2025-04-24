@@ -1,5 +1,13 @@
 # create-cloudflare
 
+## 2.45.2
+
+### Patch Changes
+
+- [#9031](https://github.com/cloudflare/workers-sdk/pull/9031) [`38ee9e4`](https://github.com/cloudflare/workers-sdk/commit/38ee9e43b682e72eb65ce0c1fc912403a6468d93) Thanks [@jsparkdev](https://github.com/jsparkdev)! - update react template to fix type errors
+
+- [#9032](https://github.com/cloudflare/workers-sdk/pull/9032) [`7749f42`](https://github.com/cloudflare/workers-sdk/commit/7749f42c3cf41ddd3fc2efee9acff69cea6b9e97) Thanks [@jsparkdev](https://github.com/jsparkdev)! - Removed `await` keyword used in non asynchronous function calls
+
 ## 2.45.1
 
 ### Patch Changes

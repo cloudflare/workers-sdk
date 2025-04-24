@@ -1,5 +1,16 @@
 # @cloudflare/vite-plugin
 
+## 1.0.11
+
+### Patch Changes
+
+- [#9039](https://github.com/cloudflare/workers-sdk/pull/9039) [`a9190de`](https://github.com/cloudflare/workers-sdk/commit/a9190de1340dfe43c38fec729e01139f499351dd) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Fixes two bugs that were caused by not accounting for an undocumented method on Workers and Durable Objects. `ctx.blockConcurrencyWhile` will now successfully block execution in Durable Objects and invoking Workers will no longer cause unhandled rejections.
+
+- Updated dependencies [[`fc47c79`](https://github.com/cloudflare/workers-sdk/commit/fc47c79f7c5ab532e0437897c8d7ab06abd5298d), [`f5ebb33`](https://github.com/cloudflare/workers-sdk/commit/f5ebb3376d918267df8c6722dcd73da35f5b4f81), [`6291fa1`](https://github.com/cloudflare/workers-sdk/commit/6291fa161571e0f02e22768dd506f7e3398fee94), [`0838f1b`](https://github.com/cloudflare/workers-sdk/commit/0838f1b4ccce347921f3a0746652fe379dd16faf), [`234afae`](https://github.com/cloudflare/workers-sdk/commit/234afae20456d3d3c4eb3d41fb2852ee866fec0a)]:
+  - miniflare@4.20250424.0
+  - wrangler@4.13.1
+  - @cloudflare/unenv-preset@2.3.1
+
 ## 1.0.10
 
 ### Patch Changes
