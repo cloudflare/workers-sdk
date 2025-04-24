@@ -51,7 +51,7 @@ function addPersistPathSuffix(
 	persistPath: Persistence
 ): string {
 	if (typeof persistPath === "string") {
-		return `${baseName}:${persistPath}`;
+		return `${baseName}:${encodeURIComponent(persistPath)}`;
 	}
 
 	return baseName;
