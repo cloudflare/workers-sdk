@@ -1,5 +1,18 @@
 # wrangler
 
+## 4.13.1
+
+### Patch Changes
+
+- [#8983](https://github.com/cloudflare/workers-sdk/pull/8983) [`f5ebb33`](https://github.com/cloudflare/workers-sdk/commit/f5ebb3376d918267df8c6722dcd73da35f5b4f81) Thanks [@Caio-Nogueira](https://github.com/Caio-Nogueira)! - Remove open-beta disclaimer from workflows commands
+
+- [#8990](https://github.com/cloudflare/workers-sdk/pull/8990) [`6291fa1`](https://github.com/cloudflare/workers-sdk/commit/6291fa161571e0f02e22768dd506f7e3398fee94) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: When generating Env types, set type of version metadata binding to `WorkerVersionMetadata`. This means it now correctly includes the `timestamp` field.
+
+- [#8966](https://github.com/cloudflare/workers-sdk/pull/8966) [`234afae`](https://github.com/cloudflare/workers-sdk/commit/234afae20456d3d3c4eb3d41fb2852ee866fec0a) Thanks [@penalosa](https://github.com/penalosa)! - Internal refactor to use the `createCommand` utility
+
+- Updated dependencies [[`fc47c79`](https://github.com/cloudflare/workers-sdk/commit/fc47c79f7c5ab532e0437897c8d7ab06abd5298d), [`0838f1b`](https://github.com/cloudflare/workers-sdk/commit/0838f1b4ccce347921f3a0746652fe379dd16faf)]:
+  - miniflare@4.20250424.0
+
 ## 4.13.0
 
 ### Minor Changes
