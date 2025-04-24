@@ -12350,7 +12350,7 @@ export default{
 			msw.use(handler);
 		}
 
-		it("should not log open-beta warning when deploying a workflow", async () => {
+		it("should deploy a workflow", async () => {
 			writeWranglerConfig({
 				main: "index.js",
 				workflows: [
