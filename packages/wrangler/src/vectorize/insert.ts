@@ -7,6 +7,7 @@ import { insertIntoIndex, insertIntoIndexV1 } from "./client";
 import {
 	deprecatedV1DefaultFlag,
 	getBatchFromFile,
+	isValidFile,
 	VECTORIZE_MAX_BATCH_SIZE,
 	VECTORIZE_MAX_UPSERT_VECTOR_RECORDS,
 	VECTORIZE_UPSERT_BATCH_SIZE,
@@ -54,6 +55,11 @@ export const vectorizeInsertCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
+		if (!(await isValidFile(args.file))) {
+			logger.error(`🚨 Cannot read invalid or empty file: ${args.file}.`);
+			return;
+		}
+
 		const rl = createInterface({ input: createReadStream(args.file) });
 
 		if (
