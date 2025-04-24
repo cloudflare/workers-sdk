@@ -52,7 +52,7 @@ export async function addWorkersTypesToTsConfig(ctx: C3Context) {
 	const typesEntrypoint = `@cloudflare/workers-types/${entrypointVersion}`;
 
 	try {
-		const config = jsonc.parse(tsconfig, [], { allowTrailingComma: true });
+		const config = jsonc.parse(tsconfig);
 		const currentTypes = config.compilerOptions?.types ?? [];
 
 		const explicitEntrypoint = (currentTypes as string[]).some((t) =>
