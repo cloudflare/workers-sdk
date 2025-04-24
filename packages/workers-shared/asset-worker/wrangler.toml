@@ -73,5 +73,5 @@ name = "ASSETS_KV_NAMESPACE"
 type = "internal_assets"
 
 [[env.staging.unsafe.bindings]]
-name = "workers-asset-worker"
+name = "workers-asset-worker-staging"
 type = "internal_capability_grants"

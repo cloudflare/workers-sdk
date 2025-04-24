@@ -65,5 +65,5 @@ stable_id = "cloudflare/cf_router_worker"
 networks = ["cf","jdc"]
 
 [[env.staging.unsafe.bindings]]
-name = "workers-router-worker"
+name = "workers-router-worker-staging"
 type = "internal_capability_grants"

@@ -140,7 +140,6 @@ export default class extends WorkerEntrypoint<Env> {
 		}
 	}
 
-	// TODO: Add observability to these methods
 	async unstable_canFetch(request: Request): Promise<boolean> {
 		// TODO: Mock this with Miniflare
 		this.env.JAEGER ??= mockJaegerBinding();
@@ -162,28 +161,45 @@ export default class extends WorkerEntrypoint<Env> {
 		cacheStatus: "HIT" | "MISS";
 	}> {
 		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
-		const startTime = performance.now();
-		const asset = await getAssetWithMetadataFromKV(
-			this.env.ASSETS_KV_NAMESPACE,
-			eTag
-		);
-		const endTime = performance.now();
-		const assetFetchTime = endTime - startTime;
-
-		if (!asset || !asset.value) {
-			throw new Error(
-				`Requested asset ${eTag} exists in the asset manifest but not in the KV namespace.`
+		const jaeger = this.env.JAEGER ?? mockJaegerBinding();
+		return jaeger.enterSpan("unstable_getByETag", async (span) => {
+			const startTime = performance.now();
+			const asset = await getAssetWithMetadataFromKV(
+				this.env.ASSETS_KV_NAMESPACE,
+				eTag
 			);
-		}
+			const endTime = performance.now();
+			const assetFetchTime = endTime - startTime;
 
-		return {
-			readableStream: asset.value,
-			contentType: asset.metadata?.contentType,
+			if (!asset || !asset.value) {
+				span.setTags({
+					error: true,
+				});
+				span.addLogs({
+					error: `Requested asset ${eTag} exists in the asset manifest but not in the KV namespace.`,
+				});
+				throw new Error(
+					`Requested asset ${eTag} exists in the asset manifest but not in the KV namespace.`
+				);
+			}
+
 			// KV does not yet provide a way to check if a value was fetched from cache
 			// so we assume that if the fetch time is less than 100ms, it was a cache hit.
 			// This is a reasonable assumption given the data we have and how KV works.
-			cacheStatus: assetFetchTime <= 100 ? "HIT" : "MISS",
-		};
+			const cacheStatus = assetFetchTime <= 100 ? "HIT" : "MISS";
+
+			span.setTags({
+				etag: eTag,
+				contentType: asset.metadata?.contentType ?? "unknown",
+				cacheStatus,
+			});
+
+			return {
+				readableStream: asset.value,
+				contentType: asset.metadata?.contentType,
+				cacheStatus,
+			};
+		});
 	}
 
 	async unstable_getByPathname(
@@ -194,12 +210,21 @@ export default class extends WorkerEntrypoint<Env> {
 		contentType: string | undefined;
 		cacheStatus: "HIT" | "MISS";
 	} | null> {
-		const eTag = await this.unstable_exists(pathname, request);
-		if (!eTag) {
-			return null;
-		}
+		const jaeger = this.env.JAEGER ?? mockJaegerBinding();
+		return jaeger.enterSpan("unstable_getByPathname", async (span) => {
+			const eTag = await this.unstable_exists(pathname, request);
 
-		return this.unstable_getByETag(eTag, request);
+			span.setTags({
+				path: pathname,
+				found: eTag !== null,
+			});
+
+			if (!eTag) {
+				return null;
+			}
+
+			return this.unstable_getByETag(eTag, request);
+		});
 	}
 
 	async unstable_exists(
@@ -208,25 +233,37 @@ export default class extends WorkerEntrypoint<Env> {
 	): Promise<string | null> {
 		const analytics = new ExperimentAnalytics(this.env.EXPERIMENT_ANALYTICS);
 		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
+		const jaeger = this.env.JAEGER ?? mockJaegerBinding();
+		return jaeger.enterSpan("unstable_exists", async (span) => {
+			if (
+				this.env.COLO_METADATA &&
+				this.env.VERSION_METADATA &&
+				this.env.CONFIG
+			) {
+				analytics.setData({
+					accountId: this.env.CONFIG.account_id,
+					experimentName: "manifest-read-timing",
+				});
+			}
 
-		if (
-			this.env.COLO_METADATA &&
-			this.env.VERSION_METADATA &&
-			this.env.CONFIG
-		) {
-			analytics.setData({
-				accountId: this.env.CONFIG.account_id,
-				experimentName: "manifest-read-timing",
-			});
-		}
+			const startTimeMs = performance.now();
+			try {
+				const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
+				const eTag = await assetsManifest.get(pathname);
 
-		const startTimeMs = performance.now();
-		try {
-			const assetsManifest = new AssetsManifest(this.env.ASSETS_MANIFEST);
-			return await assetsManifest.get(pathname);
-		} finally {
-			analytics.setData({ manifestReadTime: performance.now() - startTimeMs });
-			analytics.write();
-		}
+				span.setTags({
+					path: pathname,
+					found: eTag !== null,
+					etag: eTag ?? "",
+				});
+
+				return eTag;
+			} finally {
+				analytics.setData({
+					manifestReadTime: performance.now() - startTimeMs,
+				});
+				analytics.write();
+			}
+		});
 	}
 }
