@@ -1,25 +1,9 @@
-import {
-	handler as addHTTPConsumerHandler,
-	options as addOptions,
-} from "./add";
-import {
-	handler as removeHTTPConsumerHandler,
-	options as removeOptions,
-} from "./remove";
-import type { CommonYargsArgv } from "../../../../../yargs-types";
+import { createNamespace } from "../../../../../core/create-command";
 
-export function pullConsumers(yargs: CommonYargsArgv) {
-	yargs.command(
-		"add <queue-name>",
-		"Add a Queue HTTP Pull Consumer",
-		addOptions,
-		addHTTPConsumerHandler
-	);
-
-	yargs.command(
-		"remove <queue-name>",
-		"Remove a Queue HTTP Pull Consumer",
-		removeOptions,
-		removeHTTPConsumerHandler
-	);
-}
+export const queuesConsumerHttpNamespace = createNamespace({
+	metadata: {
+		description: "Configure Queue HTTP Pull Consumers",
+		owner: "Product: Queues",
+		status: "stable",
+	},
+});

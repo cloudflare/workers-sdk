@@ -33,6 +33,8 @@ function importModule(
 	});
 }
 
+const IGNORED_KEYS = ["self", "tailStream"];
+
 /**
  * Create a class extending `superClass` with a `Proxy` as a `prototype`.
  * Unknown accesses on the `prototype` will defer to `getUnknownPrototypeKey()`.
@@ -62,7 +64,7 @@ function createProxyPrototypeClass<
 					return value;
 				}
 				// noinspection SuspiciousTypeOfGuard
-				if (key === "self" || typeof key === "symbol") {
+				if (typeof key === "symbol" || IGNORED_KEYS.includes(key)) {
 					return;
 				}
 				return getUnknownPrototypeKey.call(receiver, key as string);

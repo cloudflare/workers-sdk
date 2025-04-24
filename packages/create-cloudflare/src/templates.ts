@@ -316,10 +316,10 @@ export const createContext = async (
 	const experimental = args.experimental;
 
 	const frameworkMap = getFrameworkMap({ experimental });
-	const helloWorldTemplateMap = await getHelloWorldTemplateMap({
+	const helloWorldTemplateMap = getHelloWorldTemplateMap({
 		experimental,
 	});
-	const otherTemplateMap = await getOtherTemplateMap({ experimental });
+	const otherTemplateMap = getOtherTemplateMap({ experimental });
 
 	let linesPrinted = 0;
 
@@ -645,7 +645,7 @@ export async function copyTemplateFiles(ctx: C3Context) {
 		srcdir = join(getTemplatePath(ctx), variantInfo.path);
 	}
 
-	const copyDestDir = await getCopyFilesDestinationDir(ctx);
+	const copyDestDir = getCopyFilesDestinationDir(ctx);
 	const destdir = join(ctx.project.path, ...(copyDestDir ? [copyDestDir] : []));
 
 	const s = spinner();
@@ -685,7 +685,7 @@ export const processRemoteTemplate = async (args: Partial<C3Args>) => {
 			.replace("/tree/main/", "/");
 	}
 
-	const path = await downloadRemoteTemplate(src);
+	const path = await downloadRemoteTemplate(src, args.templateMode);
 	const config = inferTemplateConfig(path);
 
 	validateTemplate(path, config);
@@ -772,7 +772,10 @@ const inferCopyFilesDefinition = (path: string): CopyFiles => {
  *            For convenience, `owner/repo` is also accepted.
  * @returns A path to a temporary directory containing the downloaded template
  */
-export const downloadRemoteTemplate = async (src: string) => {
+export const downloadRemoteTemplate = async (
+	src: string,
+	mode?: "git" | "tar",
+) => {
 	// degit runs `git clone` internally which may prompt for credentials if required
 	// Avoid using a `spinner()` during this operation -- use updateStatus instead.
 
@@ -783,6 +786,7 @@ export const downloadRemoteTemplate = async (src: string) => {
 			cache: false,
 			verbose: false,
 			force: true,
+			mode,
 		});
 
 		const tmpDir = await mkdtemp(join(tmpdir(), "c3-template"));

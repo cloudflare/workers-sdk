@@ -386,6 +386,7 @@ type WorkerOptionsBindings = Pick<
 	| "wrappedBindings"
 	| "secretsStoreSecrets"
 	| "email"
+	| "analyticsEngineDatasets"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -443,6 +444,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			serviceBindings[service.binding] = {
 				name: service.service,
 				entrypoint: service.entrypoint,
+				props: service.props,
 			};
 			continue;
 		}
@@ -506,6 +508,9 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 				}
 			}
 
+			// BUG: We have no way to pass `props` across an external socket, so we
+			// drop them. We are planning to move away from the multi-process model
+			// anyway, which will solve the problem.
 			serviceBindings[service.binding] = {
 				external: {
 					address,
@@ -705,6 +710,12 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		hyperdrives: Object.fromEntries(
 			bindings.hyperdrive?.map(hyperdriveEntry) ?? []
 		),
+		analyticsEngineDatasets: Object.fromEntries(
+			bindings.analytics_engine_datasets?.map((binding) => [
+				binding.binding,
+				{ dataset: binding.dataset ?? "dataset" },
+			]) ?? []
+		),
 		workflows: Object.fromEntries(bindings.workflows?.map(workflowEntry) ?? []),
 		secretsStoreSecrets: Object.fromEntries(
 			bindings.secrets_store_secrets?.map((binding) => [
@@ -789,6 +800,7 @@ export function buildPersistOptions(
 			d1Persist: path.join(v3Path, "d1"),
 			workflowsPersist: path.join(v3Path, "workflows"),
 			secretsStorePersist: path.join(v3Path, "secrets-store"),
+			analyticsEngineDatasetsPersist: path.join(v3Path, "analytics-engine"),
 		};
 	}
 }

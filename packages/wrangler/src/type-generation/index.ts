@@ -137,7 +137,7 @@ export const typesCommand = createCommand({
 		}
 		const entrypointFormat = entrypoint?.format ?? "modules";
 
-		const header = [];
+		const header = ["/* eslint-disable */"];
 		const content = [];
 		if (args.includeEnv) {
 			logger.log(`Generating project types...\n`);
@@ -505,7 +505,7 @@ export async function generateEnvTypes(
 	if (configToDTS.version_metadata) {
 		envTypeStructure.push([
 			configToDTS.version_metadata.binding,
-			"{ id: string; tag: string }",
+			"WorkerVersionMetadata",
 		]);
 	}
 
@@ -622,14 +622,9 @@ function generateTypeStrings(
 	compatibilityFlags: string[] | undefined
 ): { fileContent: string; consoleOutput: string } {
 	let baseContent = "";
-	let eslintDisable = "";
 	let processEnv = "";
 
 	if (formatType === "modules") {
-		if (envTypeStructure.length === 0) {
-			eslintDisable =
-				"\t// eslint-disable-next-line @typescript-eslint/no-empty-interface,@typescript-eslint/no-empty-object-type\n";
-		}
 		if (
 			isProcessEnvPopulated(compatibilityDate, compatibilityFlags) &&
 			stringKeys.length > 0
@@ -637,7 +632,7 @@ function generateTypeStrings(
 			// StringifyValues ensures that json vars are correctly types as strings, not objects on process.env
 			processEnv = `\ntype StringifyValues<EnvType extends Record<string, unknown>> = {\n\t[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;\n};\ndeclare namespace NodeJS {\n\tinterface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, ${stringKeys.map((k) => `"${k}"`).join(" | ")}>> {}\n}`;
 		}
-		baseContent = `declare namespace Cloudflare {\n${eslintDisable}\tinterface Env {${envTypeStructure.map((value) => `\n\t\t${value}`).join("")}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
+		baseContent = `declare namespace Cloudflare {\n\tinterface Env {${envTypeStructure.map((value) => `\n\t\t${value}`).join("")}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
 	} else {
 		baseContent = `export {};\ndeclare global {\n${envTypeStructure.map((value) => `\tconst ${value}`).join("\n")}\n}`;
 	}

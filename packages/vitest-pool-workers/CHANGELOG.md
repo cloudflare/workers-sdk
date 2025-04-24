@@ -1,5 +1,49 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.8.20
+
+### Patch Changes
+
+- Updated dependencies [[`c409318`](https://github.com/cloudflare/workers-sdk/commit/c409318f903c71f03498251c51cb854d95eaa53b), [`5ce70bd`](https://github.com/cloudflare/workers-sdk/commit/5ce70bdba8dc7e265447c997dc7c3af92469072b), [`3f0adf3`](https://github.com/cloudflare/workers-sdk/commit/3f0adf3c25e9cede1bd8c2ae873c059d1ab2ef38), [`0cfcfe0`](https://github.com/cloudflare/workers-sdk/commit/0cfcfe02eccaaa7f39218665588fb8970a969765)]:
+  - wrangler@4.13.0
+  - miniflare@4.20250422.0
+
+## 0.8.19
+
+### Patch Changes
+
+- Updated dependencies [[`2a7749b`](https://github.com/cloudflare/workers-sdk/commit/2a7749bffb7fe5550c3192401ed6edd72c0eb510), [`41f095b`](https://github.com/cloudflare/workers-sdk/commit/41f095b0dd35411adbca3398966b5cfe8c39d433)]:
+  - miniflare@4.20250417.0
+  - wrangler@4.12.1
+
+## 0.8.18
+
+### Patch Changes
+
+- [#8804](https://github.com/cloudflare/workers-sdk/pull/8804) [`8a0cf56`](https://github.com/cloudflare/workers-sdk/commit/8a0cf568cb76813857d420aa778de10e26b8db97) Thanks [@boimw](https://github.com/boimw)! - Add support for Vitest 3.1.x
+
+- Updated dependencies [[`eab7ad9`](https://github.com/cloudflare/workers-sdk/commit/eab7ad9af618bc85a79c077f07c6efcf05ae3f5f), [`62c40d7`](https://github.com/cloudflare/workers-sdk/commit/62c40d792b9555e6e25a5f99ae803e4943c4b56f), [`5de2b9a`](https://github.com/cloudflare/workers-sdk/commit/5de2b9a39a6cb6ac730d0f8f1b60f9f756c24993), [`69864b4`](https://github.com/cloudflare/workers-sdk/commit/69864b416420e2e8877befe8c41a507b78cd4413)]:
+  - wrangler@4.12.0
+  - miniflare@4.20250416.0
+
+## 0.8.17
+
+### Patch Changes
+
+- Updated dependencies [[`bab1724`](https://github.com/cloudflare/workers-sdk/commit/bab1724229974c545084c31df3731e7c2271ee49), [`511be3d`](https://github.com/cloudflare/workers-sdk/commit/511be3d17559e482fedf559cb61158e329c11d24), [`085a565`](https://github.com/cloudflare/workers-sdk/commit/085a565bb922ad023a38e2aee2042885e6691b2c)]:
+  - wrangler@4.11.1
+  - miniflare@4.20250410.1
+
+## 0.8.16
+
+### Patch Changes
+
+- [#8196](https://github.com/cloudflare/workers-sdk/pull/8196) [`fd8c0c4`](https://github.com/cloudflare/workers-sdk/commit/fd8c0c44c31af715fd07cf0eb31a4d0c432626f1) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: pre-bundle chai with vite instead of esbuild
+
+- Updated dependencies [[`c912b99`](https://github.com/cloudflare/workers-sdk/commit/c912b9943e4df158994e4be698e4be602397f03c), [`f5413c5`](https://github.com/cloudflare/workers-sdk/commit/f5413c5269ab32522a70c3ebedba95bf6e7a4684), [`f2802f9`](https://github.com/cloudflare/workers-sdk/commit/f2802f9cdb3c3c97a2aa22f66d427af29a824f68), [`d2b44a2`](https://github.com/cloudflare/workers-sdk/commit/d2b44a2f49deb749ad3a7918210ff680263a559c), [`4cc036d`](https://github.com/cloudflare/workers-sdk/commit/4cc036d46b2f5c3ceacb344882e713e7840becde), [`84ecfe9`](https://github.com/cloudflare/workers-sdk/commit/84ecfe9b4962d1edbe7967cfe4151f26de252a9d)]:
+  - wrangler@4.11.0
+  - miniflare@4.20250410.0
+
 ## 0.8.15
 
 ### Patch Changes

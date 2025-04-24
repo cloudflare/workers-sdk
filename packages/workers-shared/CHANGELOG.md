@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.17.2
+
+### Patch Changes
+
+- [#8887](https://github.com/cloudflare/workers-sdk/pull/8887) [`511be3d`](https://github.com/cloudflare/workers-sdk/commit/511be3d17559e482fedf559cb61158e329c11d24) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Add log message when `Sec-Fetch-Mode: navigate` is responsible for assets routing decision in `wrangler dev`
+
 ## 0.17.1
 
 ### Patch Changes

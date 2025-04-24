@@ -22,5 +22,6 @@ export const normalizeConfiguration = (
 		},
 		account_id: configuration?.account_id ?? -1,
 		script_id: configuration?.script_id ?? -1,
+		debug: configuration?.debug ?? false,
 	};
 };

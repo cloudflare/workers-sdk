@@ -1,31 +1,36 @@
 import fs from "node:fs";
 import path from "path";
-import { configFileName, withConfig } from "../../config";
+import { configFileName } from "../../config";
+import { createCommand } from "../../core/create-command";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
-import { printWranglerBanner } from "../../wrangler-banner";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
-import { Database } from "../options";
 import { getDatabaseInfoFromConfig } from "../utils";
 import { getMigrationsPath, getNextMigrationNumber } from "./helpers";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../yargs-types";
 
-export function CreateOptions(yargs: CommonYargsArgv) {
-	return Database(yargs).positional("message", {
-		describe: "The Migration message",
-		type: "string",
-		demandOption: true,
-	});
-}
-
-type CreateHandlerOptions = StrictYargsOptionsToInterface<typeof CreateOptions>;
-
-export const CreateHandler = withConfig<CreateHandlerOptions>(
-	async ({ config, database, message }): Promise<void> => {
-		await printWranglerBanner();
+export const d1MigrationsCreateCommand = createCommand({
+	metadata: {
+		description: "Create a new migration",
+		status: "stable",
+		owner: "Product: D1",
+	},
+	behaviour: {
+		printBanner: true,
+	},
+	args: {
+		database: {
+			type: "string",
+			demandOption: true,
+			description: "The name or binding of the DB",
+		},
+		message: {
+			type: "string",
+			demandOption: true,
+			description: "The Migration message",
+		},
+	},
+	positionalArgs: ["database", "message"],
+	async handler({ database, message }, { config }) {
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo) {
 			throw new UserError(
@@ -57,8 +62,8 @@ export const CreateHandler = withConfig<CreateHandlerOptions>(
 		logger.log(`✅ Successfully created Migration '${newMigrationName}'!\n`);
 		logger.log(`The migration is available for editing here`);
 		logger.log(`${migrationsPath}/${newMigrationName}`);
-	}
-);
+	},
+});
 
 function pad(num: number, size: number): string {
 	let newNum = num.toString();

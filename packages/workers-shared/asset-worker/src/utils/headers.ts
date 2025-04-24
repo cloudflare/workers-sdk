@@ -1,7 +1,12 @@
+import {
+	flagIsEnabled,
+	SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING,
+} from "../compatibility-flags";
 import { CACHE_CONTROL_BROWSER } from "../constants";
 import { HEADERS_VERSION } from "../handler";
 import { generateRulesMatcher, replacer } from "./rules-engine";
 import type { AssetConfig } from "../../../utils/types";
+import type { AssetIntentWithResolver } from "../handler";
 
 /**
  * Returns a Headers object that contains additional headers (to those
@@ -10,10 +15,11 @@ import type { AssetConfig } from "../../../utils/types";
  *
  */
 export function getAssetHeaders(
-	eTag: string,
+	{ eTag, resolver }: AssetIntentWithResolver,
 	contentType: string | undefined,
 	cacheStatus: string,
-	request: Request
+	request: Request,
+	configuration: Required<AssetConfig>
 ) {
 	const headers = new Headers({
 		ETag: `"${eTag}"`,
@@ -30,6 +36,20 @@ export function getAssetHeaders(
 	// Attach CF-Cache-Status, this will show to users that we are caching assets
 	// and it will also populate the cache fields through the logging pipeline.
 	headers.append("CF-Cache-Status", cacheStatus);
+
+	if (
+		configuration.debug &&
+		resolver === "not-found" &&
+		flagIsEnabled(
+			configuration,
+			SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING
+		)
+	) {
+		headers.append(
+			"X-Mf-Additional-Response-Log",
+			"`Sec-Fetch-Mode: navigate` header present - using `not_found_handling` behavior"
+		);
+	}
 
 	return headers;
 }

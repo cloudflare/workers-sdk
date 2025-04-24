@@ -1,9 +1,11 @@
 import {
+	deleteCertificate,
 	deleteDatabase,
 	deleteHyperdriveConfig,
 	deleteKVNamespace,
 	deleteProject,
 	deleteWorker,
+	listCertificates,
 	listHyperdriveConfigs,
 	listTmpDatabases,
 	listTmpE2EProjects,
@@ -89,5 +91,18 @@ async function run() {
 	}
 	if (hyperdriveConfigsToDelete.length === 0) {
 		console.log(`No Hyperdrive configs to delete.`);
+	}
+
+	const mtlsCertificates = await listCertificates();
+	for (const certificate of mtlsCertificates) {
+		console.log("Deleting mTLS certificate: " + certificate.id);
+		await deleteCertificate(certificate.id);
+	}
+	if (mtlsCertificates.length === 0) {
+		console.log(`No mTLS certificates to delete.`);
+	} else {
+		console.log(
+			`Successfully deleted ${mtlsCertificates.length} mTLS certificates`
+		);
 	}
 }

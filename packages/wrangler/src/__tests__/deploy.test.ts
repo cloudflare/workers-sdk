@@ -6571,6 +6571,84 @@ addEventListener('fetch', event => {});`
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
+
+		it("should apply esbuild's keep-names functionality by default", async () => {
+			writeWranglerConfig({
+				main: "./index.js",
+				legacy_env: false,
+				env: {
+					testEnv: {},
+				},
+			});
+			fs.writeFileSync(
+				"./index.js",
+				`
+				export
+					default {
+						fetch() {
+							function sayHello() {
+								return "Hello World with keep_names";
+							}
+							return new Response(sayHello());
+					}
+				}
+				`
+			);
+
+			const underscoreUnderscoreNameRegex = /__name\(.*?\)/;
+
+			mockUploadWorkerRequest({
+				env: "testEnv",
+				expectedType: "esm",
+				legacyEnv: false,
+				expectedEntry: (str) => {
+					expect(str).toMatch(underscoreUnderscoreNameRegex);
+				},
+			});
+
+			mockSubDomainRequest();
+			await runWrangler("deploy -e testEnv index.js");
+		});
+
+		it("should apply esbuild's keep-names functionality unless keep_names is set to false", async () => {
+			writeWranglerConfig({
+				main: "./index.js",
+				legacy_env: false,
+				env: {
+					testEnv: {
+						keep_names: false,
+					},
+				},
+			});
+			fs.writeFileSync(
+				"./index.js",
+				`
+				export
+					default {
+						fetch() {
+							function sayHello() {
+								return "Hello World without keep_names";
+							}
+							return new Response(sayHello());
+					}
+				}
+				`
+			);
+
+			const underscoreUnderscoreNameRegex = /__name\(.*?\)/;
+
+			mockUploadWorkerRequest({
+				env: "testEnv",
+				expectedType: "esm",
+				legacyEnv: false,
+				expectedEntry: (str) => {
+					expect(str).not.toMatch(underscoreUnderscoreNameRegex);
+				},
+			});
+
+			mockSubDomainRequest();
+			await runWrangler("deploy -e testEnv index.js");
+		});
 	});
 
 	describe("durable object migrations", () => {
@@ -8816,6 +8894,45 @@ addEventListener('fetch', event => {});`
 					Your worker has access to the following bindings:
 					- Services:
 					  - FOO: foo-service#MyHandler
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should support service bindings with props", async () => {
+				writeWranglerConfig({
+					services: [
+						{
+							binding: "FOO",
+							service: "foo-service",
+							props: { foo: 123, bar: { baz: "hello from props" } },
+						},
+					],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							type: "service",
+							name: "FOO",
+							service: "foo-service",
+							props: { foo: 123, bar: { baz: "hello from props" } },
+						},
+					],
+				});
+
+				await runWrangler("deploy index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your worker has access to the following bindings:
+					- Services:
+					  - FOO: foo-service
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev

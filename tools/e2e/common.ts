@@ -36,6 +36,18 @@ export type HyperdriveConfig = {
 	created_on: string;
 };
 
+export type MTlsCertificateResponse = {
+	id: string;
+	name?: string;
+	ca: boolean;
+	certificates: string;
+	expires_on: string;
+	issuer: string;
+	serial_number: string;
+	signature: string;
+	uploaded_on: string;
+};
+
 class ApiError extends Error {
 	constructor(
 		readonly url: string,
@@ -259,6 +271,28 @@ export const listHyperdriveConfigs = async () => {
 export const deleteHyperdriveConfig = async (id: string) => {
 	return await apiFetch(
 		`/hyperdrive/configs/${id}`,
+		{
+			method: "DELETE",
+		},
+		true
+	);
+};
+
+export const listCertificates = async () => {
+	const results = (await apiFetch(`/mtls_certificates`, {
+		method: "GET",
+	})) as MTlsCertificateResponse[];
+
+	return results.filter(
+		(cert) =>
+			cert.name?.includes("tmp-e2e") && // Certs are more than an hour old
+			Date.now() - new Date(cert.uploaded_on).valueOf() > 1000 * 60 * 60
+	);
+};
+
+export const deleteCertificate = async (id: string) => {
+	await apiFetch(
+		`/mtls_certificates/${id}`,
 		{
 			method: "DELETE",
 		},

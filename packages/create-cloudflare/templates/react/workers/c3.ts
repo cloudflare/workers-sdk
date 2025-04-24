@@ -36,7 +36,7 @@ const configure = async (ctx: C3Context) => {
 		doneText: `${brandColor(`installed`)} ${dim("@cloudflare/vite-plugin")}`,
 	});
 
-	await transformViteConfig(ctx);
+	transformViteConfig(ctx);
 
 	if (usesTypescript(ctx)) {
 		updateTsconfigJson();
