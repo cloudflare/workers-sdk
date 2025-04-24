@@ -7,6 +7,7 @@ import { insertIntoIndex, insertIntoIndexV1 } from "./client";
 import {
 	deprecatedV1DefaultFlag,
 	getBatchFromFile,
+	isValidFile,
 	VECTORIZE_MAX_BATCH_SIZE,
 	VECTORIZE_MAX_UPSERT_VECTOR_RECORDS,
 	VECTORIZE_UPSERT_BATCH_SIZE,
@@ -56,6 +57,11 @@ export function options(yargs: CommonYargsArgv) {
 export async function handler(
 	args: StrictYargsOptionsToInterface<typeof options>
 ) {
+	if (!(await isValidFile(args.file))) {
+		logger.error(`🚨 Cannot read invalid or empty file: ${args.file}.`);
+		return;
+	}
+	
 	const config = readConfig(args);
 	const rl = createInterface({ input: createReadStream(args.file) });
 
