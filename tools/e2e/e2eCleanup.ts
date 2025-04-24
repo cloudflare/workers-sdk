@@ -34,8 +34,8 @@ async function run() {
 	for (const kvNamespace of kvNamespacesToDelete) {
 		console.log("Deleting KV namespace: " + kvNamespace.title);
 		(await deleteKVNamespace(kvNamespace.id))
-			? console.log("success")
-			: console.log("failed");
+			? console.log(`Successfully deleted KV namespace ${kvNamespace.id}`)
+			: console.log(`Failed to delete KV namespace ${kvNamespace.id}`);
 	}
 
 	if (kvNamespacesToDelete.length === 0) {
@@ -47,8 +47,8 @@ async function run() {
 	for (const project of projectsToDelete) {
 		console.log("Deleting Pages project: " + project.name);
 		(await deleteProject(project.name))
-			? console.log("success")
-			: console.log("failed");
+			? console.log(`Successfully deleted project ${project.name}`)
+			: console.log(`Failed to delete project ${project.name}`);
 	}
 
 	if (projectsToDelete.length === 0) {
@@ -60,8 +60,8 @@ async function run() {
 	for (const worker of workersToDelete) {
 		console.log("Deleting worker: " + worker.id);
 		(await deleteWorker(worker.id))
-			? console.log("success")
-			: console.log("failed");
+			? console.log(`Successfully deleted Worker ${worker.id}`)
+			: console.log(`Failed to delete Worker ${worker.id}`);
 	}
 
 	if (workersToDelete.length === 0) {
@@ -72,8 +72,8 @@ async function run() {
 	for (const db of d1DatabasesToDelete) {
 		console.log("Deleting D1 database: " + db.name);
 		(await deleteDatabase(db.uuid))
-			? console.log("success")
-			: console.log("failed");
+			? console.log(`Successfully deleted D1 database ${db.uuid}`)
+			: console.log(`Failed to delete D1 database ${db.uuid}`);
 	}
 	if (d1DatabasesToDelete.length === 0) {
 		console.log(`No D1 databases to delete.`);
@@ -84,8 +84,8 @@ async function run() {
 		console.log("Deleting Hyperdrive configs: " + config.id);
 
 		(await deleteHyperdriveConfig(config.id))
-			? console.log("success")
-			: console.log("failed");
+			? console.log(`Successfully deleted Hyperdrive config ${config.id}`)
+			: console.log(`Failed to delete Hyperdrive config ${config.id}`);
 	}
 	if (hyperdriveConfigsToDelete.length === 0) {
 		console.log(`No Hyperdrive configs to delete.`);
