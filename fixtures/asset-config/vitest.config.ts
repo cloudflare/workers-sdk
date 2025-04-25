@@ -19,7 +19,7 @@ export default defineWorkersConfig({
 			workers: {
 				wrangler: {
 					configPath:
-						"../../packages/workers-shared/asset-worker/wrangler.toml",
+						"../../packages/workers-shared/asset-worker/wrangler.jsonc",
 				},
 			},
 		},
