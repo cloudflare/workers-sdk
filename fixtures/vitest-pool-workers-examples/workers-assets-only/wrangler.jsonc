@@ -1,8 +1,0 @@
-{
-	"name": "workers-static-assets-only",
-	"compatibility_date": "2024-09-19",
-	"assets": {
-		"directory": "./public",
-		"html_handling": "none",
-	},
-}
