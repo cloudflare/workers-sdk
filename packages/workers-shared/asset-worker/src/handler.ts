@@ -11,18 +11,22 @@ import {
 	SeeOtherResponse,
 	TemporaryRedirectResponse,
 } from "../../utils/responses";
+import { mockJaegerBinding } from "../../utils/tracing";
 import {
 	flagIsEnabled,
 	SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING,
 } from "./compatibility-flags";
 import { attachCustomHeaders, getAssetHeaders } from "./utils/headers";
-import { generateRulesMatcher, replacer } from "./utils/rules-engine";
+import {
+	generateRedirectsMatcher,
+	staticRedirectsMatcher,
+} from "./utils/rules-engine";
 import type { AssetConfig } from "../../utils/types";
 import type { Analytics } from "./analytics";
 import type EntrypointType from "./index";
 import type { Env } from "./index";
 
-const REDIRECTS_VERSION = 1;
+export const REDIRECTS_VERSION = 1;
 export const HEADERS_VERSION = 2;
 
 type AssetIntent = {
@@ -39,77 +43,20 @@ const getResponseOrAssetIntent = async (
 	exists: typeof EntrypointType.prototype.unstable_exists
 ): Promise<Response | AssetIntentWithResolver> => {
 	const url = new URL(request.url);
-	const { host, search } = url;
-	let { pathname } = url;
+	const { search } = url;
 
-	const staticRedirectsMatcher = () => {
-		const withHostMatch =
-			configuration.redirects.staticRules[`https://${host}${pathname}`];
-		const withoutHostMatch = configuration.redirects.staticRules[pathname];
-
-		if (withHostMatch && withoutHostMatch) {
-			if (withHostMatch.lineNumber < withoutHostMatch.lineNumber) {
-				return withHostMatch;
-			} else {
-				return withoutHostMatch;
-			}
-		}
-
-		return withHostMatch || withoutHostMatch;
-	};
-
-	const generateRedirectsMatcher = () =>
-		generateRulesMatcher(
-			configuration.redirects.version === REDIRECTS_VERSION
-				? configuration.redirects.rules
-				: {},
-			({ status, to }, replacements) => ({
-				status,
-				to: replacer(to, replacements),
-			})
-		);
-
-	const redirectMatch =
-		staticRedirectsMatcher() || generateRedirectsMatcher()({ request })[0];
-
-	let proxied = false;
-
-	if (redirectMatch) {
-		if (redirectMatch.status === 200) {
-			// A 200 redirect means that we are proxying/rewriting to a different asset, for example,
-			// a request with url /users/12345 could be pointed to /users/id.html. In order to
-			// do this, we overwrite the pathname, and instead match for assets with that url,
-			// and importantly, do not use the regular redirect handler - as the url visible to
-			// the user does not change
-			pathname = new URL(redirectMatch.to, request.url).pathname;
-			proxied = true;
-		} else {
-			const { status, to } = redirectMatch;
-			const destination = new URL(to, request.url);
-			const location =
-				destination.origin === new URL(request.url).origin
-					? `${destination.pathname}${destination.search || search}${
-							destination.hash
-						}`
-					: `${destination.href.slice(0, destination.href.length - (destination.search.length + destination.hash.length))}${
-							destination.search ? destination.search : search
-						}${destination.hash}`;
-
-			switch (status) {
-				case MovedPermanentlyResponse.status:
-					return new MovedPermanentlyResponse(location);
-				case SeeOtherResponse.status:
-					return new SeeOtherResponse(location);
-				case TemporaryRedirectResponse.status:
-					return new TemporaryRedirectResponse(location);
-				case PermanentRedirectResponse.status:
-					return new PermanentRedirectResponse(location);
-				case FoundResponse.status:
-				default:
-					return new FoundResponse(location);
-			}
-		}
+	const redirectResult = handleRedirects(
+		env,
+		request,
+		configuration,
+		url.host,
+		url.pathname,
+		search
+	);
+	if (redirectResult instanceof Response) {
+		return redirectResult;
 	}
+	const { proxied, pathname } = redirectResult;
 
 	const decodedPathname = decodePath(pathname);
 
@@ -306,7 +253,7 @@ export const handleRequest = async (
 					analytics
 				);
 
-	return attachCustomHeaders(request, response, configuration);
+	return attachCustomHeaders(request, response, configuration, env);
 };
 
 type Resolver = "html-handling" | "not-found";
@@ -1047,4 +994,77 @@ const encodePath = (pathname: string) => {
 			}
 		})
 		.join("/");
+};
+
+const handleRedirects = (
+	env: Env,
+	request: Request,
+	configuration: Required<AssetConfig>,
+	host: string,
+	pathname: string,
+	search: string
+): { proxied: boolean; pathname: string } | Response => {
+	const jaeger = env.JAEGER ?? mockJaegerBinding();
+	return jaeger.enterSpan("handle_redirects", (span) => {
+		const redirectMatch =
+			staticRedirectsMatcher(configuration, host, pathname) ||
+			generateRedirectsMatcher(configuration)({ request })[0];
+
+		let proxied = false;
+		if (redirectMatch) {
+			if (redirectMatch.status === 200) {
+				// A 200 redirect means that we are proxying/rewriting to a different asset, for example,
+				// a request with url /users/12345 could be pointed to /users/id.html. In order to
+				// do this, we overwrite the pathname, and instead match for assets with that url,
+				// and importantly, do not use the regular redirect handler - as the url visible to
+				// the user does not change
+				pathname = new URL(redirectMatch.to, request.url).pathname;
+				proxied = true;
+
+				span.setTags({
+					matched: true,
+					proxied: true,
+					new_path: pathname,
+					status: redirectMatch.status,
+				});
+			} else {
+				const { status, to } = redirectMatch;
+				const destination = new URL(to, request.url);
+				const location =
+					destination.origin === new URL(request.url).origin
+						? `${destination.pathname}${destination.search || search}${
+								destination.hash
+							}`
+						: `${destination.href.slice(0, destination.href.length - (destination.search.length + destination.hash.length))}${
+								destination.search ? destination.search : search
+							}${destination.hash}`;
+
+				span.setTags({
+					matched: true,
+					destination: location,
+					status,
+				});
+
+				switch (status) {
+					case MovedPermanentlyResponse.status:
+						return new MovedPermanentlyResponse(location);
+					case SeeOtherResponse.status:
+						return new SeeOtherResponse(location);
+					case TemporaryRedirectResponse.status:
+						return new TemporaryRedirectResponse(location);
+					case PermanentRedirectResponse.status:
+						return new PermanentRedirectResponse(location);
+					case FoundResponse.status:
+					default:
+						return new FoundResponse(location);
+				}
+			}
+		} else {
+			span.setTags({
+				matched: false,
+			});
+		}
+
+		return { proxied, pathname };
+	});
 };
