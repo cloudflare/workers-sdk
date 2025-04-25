@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
-import { isBuild, page, viteTestUrl } from "../../__test-utils__";
+import { failsIf, isBuild, page, viteTestUrl } from "../../__test-utils__";
 
-describe.skipIf(!isBuild)("run_worker_first support", () => {
+describe("run_worker_first support", () => {
 	test("returns the correct home page", async () => {
 		const content = await page.textContent("h1");
 		expect(content).toBe("Vite + React");
@@ -25,7 +25,9 @@ describe.skipIf(!isBuild)("run_worker_first support", () => {
 		expect(response.status).toBe(401);
 	});
 
-	test("returns UNAUTH for an admin image", async () => {
+	// This is the only use case that is not currently supported in dev mode.
+	// In that mode the middleware that runs the Worker is after the built-in Vite middleware that handles the assets.
+	failsIf(!isBuild)("returns UNAUTH for an admin image", async () => {
 		const response = await fetch(viteTestUrl + "/admin/secret.svg");
 		expect(response.status).toBe(401);
 	});
