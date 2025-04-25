@@ -58,7 +58,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
-		"@cloudflare/vitest-pool-workers": "^0.5.41",
+		"@cloudflare/vitest-pool-workers": "^0.7.0",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20250408.0",
 		"@sentry/cli": "^2.37.0",
