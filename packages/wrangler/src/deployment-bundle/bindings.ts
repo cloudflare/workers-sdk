@@ -405,7 +405,7 @@ export async function provisionBindings(
 			printable[resource.resourceType] ??= [];
 			printable[resource.resourceType].push({ binding: resource.binding });
 		}
-		printBindings(printable, { provisioning: true });
+		printBindings(printable, config.tail_consumers, { provisioning: true });
 		logger.log();
 
 		const existingResources: Record<string, NormalisedResourceInfo[]> = {};

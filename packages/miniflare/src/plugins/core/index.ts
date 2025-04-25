@@ -155,6 +155,8 @@ const CoreOptionsSchemaInput = z.intersection(
 		 Router Worker)
 		 */
 		hasAssetsAndIsVitest: z.boolean().optional(),
+
+		tails: z.array(ServiceDesignatorSchema).optional(),
 	})
 );
 export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {
@@ -590,6 +592,8 @@ export const CORE_PLUGIN: Plugin<
 
 		const services: Service[] = [];
 		const extensions: Extension[] = [];
+
+		console.log(options.tails);
 		if (isWrappedBinding) {
 			const stringName = JSON.stringify(name);
 			function invalidWrapped(reason: string): never {
@@ -700,6 +704,19 @@ export const CORE_PLUGIN: Plugin<
 						sharedOptions.unsafeModuleFallbackService !== undefined
 							? `localhost:${loopbackPort}`
 							: undefined,
+					tails:
+						options.tails === undefined
+							? undefined
+							: options.tails.map<ServiceDesignator>((service) => {
+									return getCustomServiceDesignator(
+										/* referrer */ options.name,
+										workerIndex,
+										CustomServiceKind.UNKNOWN,
+										name,
+										service,
+										options.hasAssetsAndIsVitest
+									);
+								}),
 				},
 			});
 		}
@@ -707,6 +724,18 @@ export const CORE_PLUGIN: Plugin<
 		// Define custom `fetch` services if set
 		if (options.serviceBindings !== undefined) {
 			for (const [name, service] of Object.entries(options.serviceBindings)) {
+				const maybeService = maybeGetCustomServiceService(
+					workerIndex,
+					CustomServiceKind.UNKNOWN,
+					name,
+					service
+				);
+				if (maybeService !== undefined) services.push(maybeService);
+			}
+		}
+
+		if (options.tails !== undefined) {
+			for (const service of options.tails) {
 				const maybeService = maybeGetCustomServiceService(
 					workerIndex,
 					CustomServiceKind.UNKNOWN,

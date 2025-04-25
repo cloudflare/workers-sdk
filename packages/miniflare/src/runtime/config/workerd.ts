@@ -63,6 +63,7 @@ export type Worker = (
 	durableObjectUniqueKeyModifier?: string;
 	durableObjectStorage?: Worker_DurableObjectStorage;
 	moduleFallback?: string;
+	tails?: ServiceDesignator[];
 };
 
 export type Worker_DurableObjectStorage =

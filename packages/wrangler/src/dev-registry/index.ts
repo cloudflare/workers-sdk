@@ -55,6 +55,7 @@ export async function getBoundRegisteredWorkers(
 		name,
 		services,
 		durableObjects,
+		tails,
 	}: {
 		name: string | undefined;
 		services:
@@ -65,10 +66,11 @@ export async function getBoundRegisteredWorkers(
 			| Config["durable_objects"]
 			| { bindings: Extract<Binding, { type: "durable_object_namespace" }>[] }
 			| undefined;
+		tails: Config["tail_consumers"] | undefined;
 	},
 	existingWorkerDefinitions?: WorkerRegistry | undefined
 ): Promise<WorkerRegistry | undefined> {
-	const serviceNames = (services || []).map(
+	const serviceNames = [...(services || []), ...(tails ?? [])].map(
 		(serviceBinding) => serviceBinding.service
 	);
 	const durableObjectServices = (
