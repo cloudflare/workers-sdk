@@ -44,6 +44,7 @@ import type {
 } from "./config/environment";
 import type { INHERIT_SYMBOL } from "./deployment-bundle/bindings";
 import type {
+	CfDispatchNamespace,
 	CfKvNamespace,
 	CfModule,
 	CfWorkerInit,
