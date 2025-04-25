@@ -153,6 +153,7 @@ async function resolveBindings(
 		r2: extractBindingsOfType("r2_bucket", input.bindings),
 		services: extractBindingsOfType("service", input.bindings),
 		d1Databases: extractBindingsOfType("d1", input.bindings),
+		dispatchNamespaces: extractBindingsOfType("dispatch_namespace", input.bindings),
 		ai: extractBindingsOfType("ai", input.bindings)?.[0],
 		version_metadata: extractBindingsOfType(
 			"version_metadata",

@@ -369,6 +369,12 @@ export type AdditionalDevProps = {
 	moduleRoot?: string;
 	rules?: Rule[];
 	showInteractiveDevSession?: boolean;
+	dispatchNamespaces?: {
+		type: "dispatch_namespace";
+	} & BindingOmit<CfDispatchNamespace> & {
+		binding: string;
+		name: string;
+	}[];
 };
 
 type DevArguments = (typeof dev)["args"];
