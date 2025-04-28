@@ -80,6 +80,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			const entry: Entry = {
 				file: config.entrypoint,
 				projectRoot: config.projectRoot,
+				configPath: config.config,
 				format: config.build.format,
 				moduleRoot: config.build.moduleRoot,
 				exports: config.build.exports,
@@ -235,6 +236,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		const entry: Entry = {
 			file: config.entrypoint,
 			projectRoot: config.projectRoot,
+			configPath: config.config,
 			format: config.build.format,
 			moduleRoot: config.build.moduleRoot,
 			exports: config.build.exports,

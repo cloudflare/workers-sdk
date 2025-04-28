@@ -30,6 +30,7 @@ export function buildPluginFromFunctions({
 	const entry: Entry = {
 		file: resolve(getBasePath(), "templates/pages-template-plugin.ts"),
 		projectRoot: functionsDirectory,
+		configPath: undefined,
 		format: "modules",
 		moduleRoot: functionsDirectory,
 		exports: [],

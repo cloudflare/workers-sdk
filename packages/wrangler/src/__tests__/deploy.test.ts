@@ -12714,30 +12714,20 @@ export default{
 				main: "index.py",
 				compatibility_flags: ["python_workers"],
 			});
-			await fs.promises.writeFile(
-				"index.py",
-				"from js import Response;\ndef fetch(request):\n return Response.new('hello')"
-			);
+			const expectedModules = {
+				"index.py":
+					"from js import Response;\ndef fetch(request):\n return Response.new('hello')",
+			};
+			await fs.promises.writeFile("index.py", expectedModules["index.py"]);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				expectedMainModule: "index.py",
+				expectedModules,
 			});
 
 			await runWrangler("deploy");
-			expect(
-				std.out.replace(
-					/.wrangler\/tmp\/deploy-(.+)\/index.py/,
-					".wrangler/tmp/deploy/index.py"
-				)
-			).toMatchInlineSnapshot(`
-				"┌──────────────────────────────────────┬────────┬──────────┐
-				│ Name                                 │ Type   │ Size     │
-				├──────────────────────────────────────┼────────┼──────────┤
-				│ .wrangler/tmp/deploy/index.py │ python │ xx KiB │
-				├──────────────────────────────────────┼────────┼──────────┤
-				│ Total (1 module)                     │        │ xx KiB │
-				└──────────────────────────────────────┴────────┴──────────┘
-				Total Upload: xx KiB / gzip: xx KiB
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -12751,30 +12741,20 @@ export default{
 			writeWranglerConfig({
 				compatibility_flags: ["python_workers"],
 			});
-			await fs.promises.writeFile(
-				"index.py",
-				"from js import Response;\ndef fetch(request):\n return Response.new('hello')"
-			);
+			const expectedModules = {
+				"index.py":
+					"from js import Response;\ndef fetch(request):\n return Response.new('hello')",
+			};
+			await fs.promises.writeFile("index.py", expectedModules["index.py"]);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				expectedMainModule: "index.py",
+				expectedModules,
 			});
 
 			await runWrangler("deploy index.py");
-			expect(
-				std.out.replace(
-					/.wrangler\/tmp\/deploy-(.+)\/index.py/,
-					".wrangler/tmp/deploy/index.py"
-				)
-			).toMatchInlineSnapshot(`
-				"┌──────────────────────────────────────┬────────┬──────────┐
-				│ Name                                 │ Type   │ Size     │
-				├──────────────────────────────────────┼────────┼──────────┤
-				│ .wrangler/tmp/deploy/index.py │ python │ xx KiB │
-				├──────────────────────────────────────┼────────┼──────────┤
-				│ Total (1 module)                     │        │ xx KiB │
-				└──────────────────────────────────────┴────────┴──────────┘
-				Total Upload: xx KiB / gzip: xx KiB
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)

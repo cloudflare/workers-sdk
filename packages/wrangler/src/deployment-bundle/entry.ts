@@ -25,6 +25,8 @@ export type Entry = {
 	file: string;
 	/** A worker's directory. Usually where the Wrangler configuration file is located */
 	projectRoot: string;
+	/** The path to the config file, if it exists. */
+	configPath: string | undefined;
 	/** Is this a module worker or a service worker? */
 	format: CfScriptFormat;
 	/** The directory that contains all of a `--no-bundle` worker's modules. Usually `${directory}/src`. Defaults to path.dirname(file) */
@@ -156,6 +158,7 @@ export async function getEntry(
 	return {
 		file: paths.absolutePath,
 		projectRoot,
+		configPath: config.configPath,
 		format,
 		moduleRoot:
 			args.moduleRoot ?? config.base_dir ?? path.dirname(paths.absolutePath),
