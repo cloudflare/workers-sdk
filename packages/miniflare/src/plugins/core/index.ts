@@ -593,7 +593,6 @@ export const CORE_PLUGIN: Plugin<
 		const services: Service[] = [];
 		const extensions: Extension[] = [];
 
-		console.log(options.tails);
 		if (isWrappedBinding) {
 			const stringName = JSON.stringify(name);
 			function invalidWrapped(reason: string): never {

@@ -7267,6 +7267,9 @@ addEventListener('fetch', event => {});`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
+				Your worker is sending Tail events to the following workers:
+				- listener
+				- test-listener
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
