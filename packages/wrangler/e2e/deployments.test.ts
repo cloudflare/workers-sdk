@@ -373,7 +373,7 @@ Uploaded 2 of 3 assets
 Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
-Your worker has access to the following bindings:
+Your Worker has access to the following bindings:
 - Assets:
   - Binding: ASSETS
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
@@ -540,7 +540,7 @@ Uploaded 2 of 3 assets
 Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
-Your worker has access to the following bindings:
+Your Worker has access to the following bindings:
 - Assets:
   - Binding: ASSETS
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
@@ -662,7 +662,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			);
 			normalizedStdout = normalize(output.stdout);
 			expect(normalizedStdout).toEqual(`Total Upload: xx KiB / gzip: xx KiB
-Your worker has access to the following bindings:
+Your Worker has access to the following bindings:
 - Dispatch Namespaces:
   - DISPATCH: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
@@ -762,7 +762,7 @@ Uploaded 2 of 3 assets
 Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
-Your worker has access to the following bindings:
+Your Worker has access to the following bindings:
 - Assets:
   - Binding: ASSETS
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
@@ -775,7 +775,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			);
 			normalizedStdout = normalize(output.stdout);
 			expect(normalizedStdout).toEqual(`Total Upload: xx KiB / gzip: xx KiB
-Your worker has access to the following bindings:
+Your Worker has access to the following bindings:
 - Dispatch Namespaces:
   - DISPATCH: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
@@ -873,7 +873,7 @@ Uploaded 2 of 3 assets
 Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
-Your worker has access to the following bindings:
+Your Worker has access to the following bindings:
 - Assets:
   - Binding: ASSETS
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
@@ -886,7 +886,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			);
 			normalizedStdout = normalize(output.stdout);
 			expect(normalizedStdout).toEqual(`Total Upload: xx KiB / gzip: xx KiB
-Your worker has access to the following bindings:
+Your Worker has access to the following bindings:
 - Dispatch Namespaces:
   - DISPATCH: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
