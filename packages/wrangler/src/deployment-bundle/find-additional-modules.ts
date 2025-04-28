@@ -24,14 +24,17 @@ async function* getFiles(
 	for (const file of await readdir(moduleRoot, { withFileTypes: true })) {
 		const absPath = path.join(moduleRoot, file.name);
 		if (file.isDirectory()) {
-			// Skip the hidden Wrangler directory and Wrangler config path, so we don't accidentally bundle non-user files.
-			if (absPath !== wranglerHiddenDirPath && absPath !== configPath) {
-				yield* getFiles(configPath, absPath, relativeTo, wranglerHiddenDirPath);
+			// Skip the hidden Wrangler directory so we don't accidentally bundle non-user files.
+			if (absPath !== wranglerHiddenDirPath) {
+				yield* getFiles(configPath, absPath, relativeTo, projectRoot);
 			}
 		} else {
-			// Module names should always use `/`. This is also required to match globs correctly on Windows. Later code will
-			// `path.resolve()` with these names to read contents which will perform appropriate normalisation.
-			yield path.relative(relativeTo, absPath).replaceAll("\\", "/");
+			// don't bundle the wrangler config file
+			if (absPath !== configPath) {
+				// Module names should always use `/`. This is also required to match globs correctly on Windows. Later code will
+				// `path.resolve()` with these names to read contents which will perform appropriate normalisation.
+				yield path.relative(relativeTo, absPath).replaceAll("\\", "/");
+			}
 		}
 	}
 }

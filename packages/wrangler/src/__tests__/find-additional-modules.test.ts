@@ -242,11 +242,7 @@ describe("traverse module graph", () => {
 			]
 		);
 
-		expect(modules.map((m) => m.name)).toMatchInlineSnapshot(`
-			Array [
-			  "wrangler.jsonc",
-			]
-		`);
+		expect(modules.map((m) => m.name)).toMatchInlineSnapshot(`Array []`);
 	});
 
 	it("should resolve files that match the default rules", async () => {
