@@ -252,6 +252,7 @@ async function handleCreateCommand(
 			if (typeof value !== "string") {
 				return "Unknown error";
 			}
+
 			if (value.length === 0) {
 				// validate is called before defaultValue is
 				// applied, so we must set it ourselves

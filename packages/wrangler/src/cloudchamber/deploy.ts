@@ -1,8 +1,8 @@
 import { readFileSync, statSync } from "fs";
 import path from "path";
-import { crash } from "@cloudflare/cli";
 import { type Config } from "../config";
 import { type ContainerApp } from "../config/environment";
+import { UserError } from "../errors";
 import { CI } from "../is-ci";
 import { type Logger } from "../logger";
 import { fetchVersion } from "../versions/api";
@@ -144,7 +144,7 @@ function getBuildArguments(
 				throw new Error("invalid protocol");
 			}
 		} catch {
-			crash(
+			throw new UserError(
 				`The image ${imageRef} could not be found, and the image is not a valid reference (e.g: docker.io/httpd:1)`
 			);
 		}

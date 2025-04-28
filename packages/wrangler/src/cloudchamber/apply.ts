@@ -1,6 +1,5 @@
 import {
 	cancel,
-	crash,
 	endSection,
 	log,
 	logRaw,
@@ -12,6 +11,7 @@ import {
 import { processArgument } from "@cloudflare/cli/args";
 import { bold, brandColor, dim, green, red } from "@cloudflare/cli/colors";
 import { formatConfigSnippet } from "../config";
+import { UserError } from "../errors";
 import {
 	ApiError,
 	ApplicationsService,
@@ -394,7 +394,7 @@ export async function apply(
 				prevApp.durable_objects.namespace_id !==
 					appConfigNoDefaults.durable_objects.namespace_id
 			) {
-				crash(
+				throw new UserError(
 					`Application "${prevApp.name}" is assigned to durable object ${prevApp.durable_objects.namespace_id}, but a new DO namespace is being assigned to the application,
 					you should delete the container application and deploy again`
 				);
@@ -588,17 +588,19 @@ export async function apply(
 			);
 			if (err !== null) {
 				if (!(err instanceof ApiError)) {
-					crash(`Unexpected error creating application: ${err.message}`);
+					throw new UserError(
+						`Unexpected error creating application: ${err.message}`
+					);
 				}
 
 				if (err.status === 400) {
-					crash(
+					throw new UserError(
 						`Error creating application due to a misconfiguration\n${formatError(err)}`
 					);
 				}
 
-				crash(
-					`Error creating application due to an internal error (request id: ${err.body.request_id}): ${formatError(err)}`
+				throw new UserError(
+					`Error creating application due to an internal error (request id: ${err.body.request_id}):\n${formatError(err)}`
 				);
 			}
 
@@ -622,19 +624,19 @@ export async function apply(
 
 				if (err !== null) {
 					if (!(err instanceof ApiError)) {
-						crash(
+						throw new UserError(
 							`Unexpected error modifying application ${action.name}: ${err.message}`
 						);
 					}
 
 					if (err.status === 400) {
-						crash(
-							`Error modifying application ${action.name} due to a ${brandColor.underline("misconfiguration")}\n\n\t${formatError(err)}`
+						throw new UserError(
+							`Error modifying application ${action.name} due to a misconfiguration:\n\n\t${formatError(err)}`
 						);
 					}
 
-					crash(
-						`Error modifying application ${action.name} due to an internal error (request id: ${err.body.request_id}): ${formatError(err)}`
+					throw new UserError(
+						`Error modifying application ${action.name} due to an internal error (request id: ${err.body.request_id}):\n${formatError(err)}`
 					);
 				}
 			}
@@ -658,18 +660,18 @@ export async function apply(
 				);
 				if (err !== null) {
 					if (!(err instanceof ApiError)) {
-						crash(
-							`Unexpected error rolling out application ${action.name}: ${err.message}`
+						throw new UserError(
+							`Unexpected error rolling out application ${action.name}:\n${err.message}`
 						);
 					}
 
 					if (err.status === 400) {
-						crash(
-							`Error rolling out application ${action.name} due to a ${brandColor.underline("misconfiguration")}\n\n\t${formatError(err)}`
+						throw new UserError(
+							`Error rolling out application ${action.name} due to a misconfiguration:\n\n\t${formatError(err)}`
 						);
 					}
 
-					crash(
+					throw new UserError(
 						`Error rolling out application ${action.name} due to an internal error (request id: ${err.body.request_id}): ${formatError(err)}`
 					);
 				}

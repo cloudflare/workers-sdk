@@ -45,15 +45,16 @@ export type CloudchamberConfig = {
 export type ContainerApp = {
 	// TODO: fill out the entire type
 
-	/* Name of the application*/
+	/** Name of the application*/
 	name: string;
 
-	/* Number of application instances */
+	/** Number of application instances */
 	instances: number;
 
-	/*
+	/**
 	 * The path to a Dockerfile, or an image URI.
-	 * Can be defined both here or by setting the `image` key in the `ContainerApp` configuration  */
+	 * Can be defined both here or by setting the `image` key in the `ContainerApp` configuration
+	 */
 	image?: string;
 
 	/**
@@ -63,12 +64,12 @@ export type ContainerApp = {
 
 	/**
 	 * Image variables to be passed along the image
-	 **/
+	 */
 	image_vars?: Record<string, string>;
 
 	class_name: string;
 
-	/* The scheduling policy of the application, default is regional */
+	/** The scheduling policy of the application, default is regional */
 	scheduling_policy?: "regional" | "moon";
 
 	/* Configuration of the container */
@@ -78,7 +79,7 @@ export type ContainerApp = {
 		secrets?: { name: string; type: "env"; secret: string }[];
 	};
 
-	/* Scheduling constraints */
+	/** Scheduling constraints */
 	constraints?: {
 		regions?: string[];
 		cities?: string[];
@@ -89,7 +90,7 @@ export type ContainerApp = {
 		namespace_id: string;
 	};
 
-	/* How a rollout should be done, defining the size of it */
+	/** How a rollout should be done, defining the size of it */
 	rollout_step_percentage?: number;
 };
 

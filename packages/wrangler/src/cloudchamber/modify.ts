@@ -195,6 +195,7 @@ async function handleModifyCommand(
 			if (typeof value !== "string") {
 				return "Unknown error";
 			}
+
 			const { err } = parseImageName(value);
 			return err;
 		},

@@ -1,6 +1,5 @@
 import {
 	cancel,
-	crash,
 	endSection,
 	logRaw,
 	shapes,
@@ -12,6 +11,7 @@ import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { ApplicationsService } from "../cloudchamber/client";
 import { loadAccountSpinner } from "../cloudchamber/common";
 import { wrap } from "../cloudchamber/helpers/wrap";
+import { UserError } from "../errors";
 import isInteractive from "../is-interactive";
 import type { Application } from "../cloudchamber/client/models/Application";
 import type { ListApplications } from "../cloudchamber/client/models/ListApplications";
@@ -61,10 +61,9 @@ export async function deleteCommand(
 		ApplicationsService.deleteApplication(deleteArgs.ID)
 	);
 	if (err) {
-		crash(
+		throw new UserError(
 			`There has been an internal error deleting your containers.\n ${err.message}`
 		);
-		return;
 	}
 	endSection("Your container has been deleted");
 }
@@ -95,10 +94,9 @@ export async function infoCommand(
 		ApplicationsService.getApplication(infoArgs.ID)
 	);
 	if (err) {
-		crash(
+		throw new UserError(
 			`There has been an internal error requesting your containers.\n ${err.message}`
 		);
-		return;
 	}
 
 	const details = flatDetails(application);
@@ -169,10 +167,9 @@ async function listCommandHandle(
 		);
 		stop();
 		if (err) {
-			crash(
+			throw new UserError(
 				`There has been an internal error listing your containers.\n ${err.message}`
 			);
-			return;
 		}
 
 		const applicationDetails = (a: Application) => {
