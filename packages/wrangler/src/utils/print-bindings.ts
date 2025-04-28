@@ -41,7 +41,7 @@ export const friendlyBindingNames: Record<
  */
 export function printBindings(
 	bindings: Partial<CfWorkerInit["bindings"]>,
-	tails: CfTailConsumer[] = [],
+	tailConsumers: CfTailConsumer[] = [],
 	context: {
 		registry?: WorkerRegistry | null;
 		local?: boolean;
@@ -69,8 +69,6 @@ export function printBindings(
 		name: string;
 		entries: { key: string; value: string | boolean }[];
 	}[] = [];
-
-	let tailConsumers: string[] = [];
 
 	const {
 		data_blobs,
@@ -348,24 +346,6 @@ export function printBindings(
 		});
 	}
 
-	if (tails !== undefined && tails.length > 0) {
-		tailConsumers = tails.map(({ service }) => {
-			let value = service;
-
-			if (context.local && context.registry !== null) {
-				const registryDefinition = context.registry?.[service];
-				hasConnectionStatus = true;
-
-				if (registryDefinition) {
-					value = value + " " + chalk.green("[connected]");
-				} else {
-					value = value + " " + chalk.red("[not connected]");
-				}
-			}
-			return value;
-		});
-	}
-
 	if (
 		analytics_engine_datasets !== undefined &&
 		analytics_engine_datasets.length > 0
@@ -579,9 +559,25 @@ export function printBindings(
 	} else {
 		title = "Your Worker is sending Tail events to the following Workers:";
 	}
-	if (tailConsumers.length > 0) {
+	if (tailConsumers !== undefined && tailConsumers.length > 0) {
 		logger.log(
-			`${title}\n${tailConsumers.map((worker) => `- ${worker}`).join("\n")}`
+			`${title}\n${tailConsumers
+				.map(({ service }) => {
+					let value = service;
+
+					if (context.local && context.registry !== null) {
+						const registryDefinition = context.registry?.[service];
+						hasConnectionStatus = true;
+
+						if (registryDefinition) {
+							value = `- ${value} ${chalk.green("[connected]")}`;
+						} else {
+							value = `- ${value} ${chalk.red("[not connected]")}`;
+						}
+					}
+					return value;
+				})
+				.join("\n")}`
 		);
 	}
 

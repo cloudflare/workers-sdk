@@ -120,7 +120,7 @@ export async function convertToConfigBundle(
 		bindVectorizeToProd: event.config.dev?.bindVectorizeToProd ?? false,
 		imagesLocalMode: event.config.dev?.imagesLocalMode ?? false,
 		testScheduled: !!event.config.dev.testScheduled,
-		tails: event.config.tails,
+		tails: event.config.tailConsumers,
 	};
 }
 

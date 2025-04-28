@@ -84,7 +84,7 @@ export interface StartDevWorkerInput {
 	/** The triggers which will cause the worker's exported default handlers to be called. */
 	triggers?: Trigger[];
 
-	tails?: CfTailConsumer[];
+	tailConsumers?: CfTailConsumer[];
 
 	/**
 	 * Whether Wrangler should send usage metrics to Cloudflare for this project.
