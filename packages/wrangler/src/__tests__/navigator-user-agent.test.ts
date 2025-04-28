@@ -105,6 +105,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 			{
 				file: path.resolve("src/index.js"),
 				projectRoot: process.cwd(),
+				configPath: undefined,
 				format: "modules",
 				moduleRoot: path.dirname(path.resolve("src/index.js")),
 				exports: [],
@@ -166,6 +167,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 			{
 				file: path.resolve("src/index.js"),
 				projectRoot: process.cwd(),
+				configPath: undefined,
 				format: "modules",
 				moduleRoot: path.dirname(path.resolve("src/index.js")),
 				exports: [],
