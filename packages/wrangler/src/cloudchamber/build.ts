@@ -1,6 +1,6 @@
 import { spawn } from "child_process";
 import { stat } from "fs/promises";
-import { crash, logRaw } from "@cloudflare/cli";
+import { UserError } from "../errors";
 import { ImageRegistriesService } from "./client";
 import type { Config } from "../config";
 import type {
@@ -208,10 +208,14 @@ export async function build(args: BuildArgs): Promise<string> {
 	try {
 		const dir = await isDir(args.pathToDockerfileDirectory);
 		if (!dir) {
-			crash(`PATH must be a directory`);
+			throw new UserError(
+				`${args.pathToDockerfileDirectory} does not exist or is not a directory. Please specify a valid directory path.`
+			);
 		}
 	} catch (error) {
-		crash(`Error when checking ${args.pathToDockerfileDirectory}: ${error}`);
+		throw new UserError(
+			`Error when checking ${args.pathToDockerfileDirectory}: ${error}`
+		);
 	}
 
 	try {
@@ -235,10 +239,10 @@ export async function build(args: BuildArgs): Promise<string> {
 		return args.tag;
 	} catch (error) {
 		if (error instanceof Error) {
-			crash(error.message);
-		} else {
-			crash("An unknown error occurred");
+			throw new UserError(error.message);
 		}
+
+		throw new UserError("An unknown error occurred");
 	}
 }
 
@@ -266,9 +270,9 @@ export async function pushCommand(
 		});
 	} catch (error) {
 		if (error instanceof Error) {
-			logRaw(error.message);
-		} else {
-			logRaw("An unknown error occurred");
+			throw new UserError(error.message);
 		}
+
+		throw new UserError("An unknown error occurred");
 	}
 }

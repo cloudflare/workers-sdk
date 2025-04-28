@@ -1,6 +1,5 @@
 import { readFileSync, statSync } from "fs";
 import path from "path";
-import { crash } from "@cloudflare/cli";
 import { type Config } from "../config";
 import { type ContainerApp } from "../config/environment";
 import { UserError } from "../errors";
@@ -106,10 +105,9 @@ function getBuildArguments(
 	versionId: string,
 	dryRun?: boolean
 ) {
-	let isDockerImage = false;
 	const imageRef = container.image ?? container.configuration.image;
 
-	let imagePath = path.resolve(imageRef);
+	const imagePath = path.resolve(imageRef);
 	let dockerfile = "";
 	try {
 		const fd = statSync(imagePath);
@@ -121,7 +119,6 @@ function getBuildArguments(
 		}
 
 		const dockerfileContents = readFileSync(imagePath, "utf8");
-		isDockerImage = true;
 		dockerfile = dockerfileContents;
 	} catch (err) {
 		if (!(err instanceof Error)) {
@@ -133,7 +130,6 @@ function getBuildArguments(
 		}
 
 		// not found, not a dockerfile, let's try parsing the image ref as an URL?
-		isDockerImage = false;
 		try {
 			const imageParts = imageRef.split("/");
 			if (!imageParts[imageParts.length - 1].includes(":")) {
@@ -145,7 +141,7 @@ function getBuildArguments(
 				throw new Error("invalid protocol");
 			}
 		} catch {
-			crash(
+			throw new UserError(
 				`The image ${imageRef} could not be found, and the image is not a valid reference (e.g: docker.io/httpd:1)`
 			);
 		}
@@ -155,7 +151,7 @@ function getBuildArguments(
 
 	const imageTag = container.name + ":" + versionId.split("-")[0];
 
-	const dockerPath = process.env["DOCKER_PATH"] ?? "docker";
+	const dockerPath = process.env["CONTAINERS_DOCKER_PATH"] ?? "docker";
 	const buildOptions = {
 		tag: imageTag,
 		pathToDockerfileDirectory:
