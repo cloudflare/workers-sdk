@@ -4,7 +4,7 @@ permissions:
 
 on:
   pull_request:
-    branches: v3-maintenance
+    branches: [v3-maintenance, "edmundhung/v3-maintenance-workflow"]
     types: [synchronize, opened, reopened, labeled, unlabeled]
     paths:
       - ".changeset/**.md"
