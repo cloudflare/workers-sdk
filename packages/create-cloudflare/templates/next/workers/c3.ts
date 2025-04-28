@@ -11,14 +11,9 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	const packages = [
-		"@opennextjs/cloudflare@~1.0.0-beta.0 || ^1.0.0",
-		"@cloudflare/workers-types",
-	];
-	await installPackages(packages, {
-		dev: true,
+	await installPackages(["@opennextjs/cloudflare@~1.0.0-beta.0 || ^1.0.0"], {
 		startText: "Adding the Cloudflare adapter",
-		doneText: `${brandColor(`installed`)} ${dim(packages.join(", "))}`,
+		doneText: `${brandColor(`installed`)} @opennextjs/cloudflare)}`,
 	});
 
 	const usesTs = usesTypescript(ctx);
