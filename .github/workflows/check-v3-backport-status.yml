@@ -1,0 +1,34 @@
+name: v3 Maintenance
+permissions:
+  pull-requests: read
+
+on:
+  pull_request:
+    branches: v3-maintenance
+    types: [synchronize, opened, reopened, labeled, unlabeled]
+    paths:
+      - ".changeset/**.md"
+
+jobs:
+  check-status:
+    if: ${{ github.repository_owner == 'cloudflare' }}
+    name: Is original PR merged
+    runs-on: macos-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Check original PR status
+        run: node -r esbuild-register tools/deployments/check-v3-backport-status.ts
+        env:
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          BRANCH_NAME: ${{ github.head_ref }}
