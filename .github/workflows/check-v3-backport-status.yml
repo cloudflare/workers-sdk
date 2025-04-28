@@ -11,7 +11,7 @@ on:
 
 jobs:
   check-status:
-    if: ${{ github.repository_owner == 'cloudflare' }}
+    if: ${{ github.repository_owner == 'cloudflare' && github.head_ref != 'changeset-release/v3-maintenance' }}
     name: Is original PR merged
     runs-on: macos-latest
     concurrency:
