@@ -554,7 +554,7 @@ export function printBindings(
 		} else if (context.name && getFlag("MULTIWORKER")) {
 			title = `${chalk.blue(context.name)} has access to the following bindings:`;
 		} else {
-			title = "Your worker has access to the following bindings:";
+			title = "Your Worker has access to the following bindings:";
 		}
 
 		const message = [
@@ -575,9 +575,9 @@ export function printBindings(
 	}
 	let title: string;
 	if (context.name && getFlag("MULTIWORKER")) {
-		title = `${chalk.blue(context.name)} is sending Tail events to the following workers:`;
+		title = `${chalk.blue(context.name)} is sending Tail events to the following Workers:`;
 	} else {
-		title = "Your worker is sending Tail events to the following workers:";
+		title = "Your Worker is sending Tail events to the following Workers:";
 	}
 	if (tailConsumers.length > 0) {
 		logger.log(
@@ -587,7 +587,7 @@ export function printBindings(
 
 	if (hasConnectionStatus) {
 		logger.once.info(
-			`\nService bindings, durable object bindings, and tail consumers connect to other \`wrangler dev\` processes running locally, with their connection status indicated by ${chalk.green("[connected]")} or ${chalk.red("[not connected]")}. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development\n`
+			`\nService bindings, Durable Object bindings, and Tail consumers connect to other \`wrangler dev\` processes running locally, with their connection status indicated by ${chalk.green("[connected]")} or ${chalk.red("[not connected]")}. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development\n`
 		);
 	}
 }

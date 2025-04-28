@@ -389,7 +389,7 @@ describe("multiworker", () => {
 		});
 	});
 
-	describe("tails", () => {
+	describe("Tail consumers", () => {
 		beforeEach(async () => {
 			await baseSeed(a, {
 				"wrangler.toml": dedent`

@@ -375,7 +375,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 		);
 	});
 
-	describe("tails", () => {
+	describe("Tail consumers", () => {
 		beforeEach(async () => {
 			await baseSeed(a, {
 				"wrangler.toml": dedent`

@@ -530,7 +530,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	const notFoundTails = new Set<string>();
 	for (const tail of config.tails ?? []) {
 		if (tail.service === config.name || config.workerDefinitions === null) {
-			// If this is a tail binding to the current worker or the registry is disabled,
+			// If this is a tail binding to the current Worker or the registry is disabled,
 			// don't bother using the dev registry to look up the address, just bind to it directly.
 			tails.push({ name: tail.service });
 
