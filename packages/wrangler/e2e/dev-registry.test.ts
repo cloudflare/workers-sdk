@@ -302,7 +302,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 			);
 
 			expect(normalizeOutput(workerA.currentOutput)).toContain(
-				"bindings connect to other `wrangler dev` processes running locally"
+				"connect to other `wrangler dev` processes running locally"
 			);
 		});
 
@@ -589,7 +589,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 			);
 
 			expect(normalizeOutput(workerA.currentOutput)).toContain(
-				"bindings connect to other `wrangler dev` processes running locally"
+				"connect to other `wrangler dev` processes running locally"
 			);
 		});
 

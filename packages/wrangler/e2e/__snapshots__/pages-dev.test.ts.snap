@@ -30,7 +30,7 @@ Your worker has access to the following bindings:
   - VAR1: "(hidden)"
   - VAR2: "VAR_2_TOML"
   - VAR3: "(hidden)"
-Service bindings & durable object bindings connect to other \`wrangler dev\` processes running locally, with their connection status indicated by [connected] or [not connected]. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development
+Service bindings, durable object bindings, and tail consumers connect to other \`wrangler dev\` processes running locally, with their connection status indicated by [connected] or [not connected]. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development
 ▲ [WARNING] Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development.
 "
 `;
