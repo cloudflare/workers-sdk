@@ -92,6 +92,14 @@ export type ContainerApp = {
 
 	/** How a rollout should be done, defining the size of it */
 	rollout_step_percentage?: number;
+
+	/**
+	 * How a rollout should be created. It supports the following modes:
+	 *  - full_auto: The container application will be rolled out fully automatically.
+	 *  - none: The container application won't have a roll out or update.
+	 *  - manual: The container application will be rollout fully by manually actioning progress steps.
+	 */
+	rollout_kind?: "full_auto" | "none" | "full_manual";
 };
 
 /**

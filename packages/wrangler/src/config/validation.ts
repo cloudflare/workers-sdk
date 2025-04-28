@@ -2282,6 +2282,22 @@ const validateContainerAppConfig: ValidatorFn = (
 		}
 
 		if (
+			"rollout_kind" in containerAppOptional &&
+			containerAppOptional.rollout_kind !== undefined
+		) {
+			if (
+				typeof containerAppOptional.rollout_kind !== "string" ||
+				!["full_auto", "full_manual", "none"].includes(
+					containerAppOptional.rollout_kind
+				)
+			) {
+				diagnostics.errors.push(
+					`"containers.rollout_kind" should be either 'full_auto', 'full_manual' or 'none', but got ${containerAppOptional.rollout_kind}`
+				);
+			}
+		}
+
+		if (
 			"image" in containerAppOptional &&
 			containerAppOptional.image !== undefined
 		) {
