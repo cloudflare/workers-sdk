@@ -2,6 +2,7 @@ import { createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
 import { File, FormData } from "undici";
 import { createCommand } from "../core/create-command";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { upsertIntoIndex } from "./client";
 import {
@@ -47,17 +48,17 @@ export const vectorizeUpsertCommand = createCommand({
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
 		if (!(await isValidFile(args.file))) {
-			logger.error(`🚨 Cannot read invalid or empty file: ${args.file}.`);
-			return;
+			throw new UserError(
+				`🚨 Cannot read invalid or empty file: ${args.file}.`
+			);
 		}
 
 		const rl = createInterface({ input: createReadStream(args.file) });
 
 		if (Number(args.batchSize) > VECTORIZE_MAX_BATCH_SIZE) {
-			logger.error(
-				`🚨 The global rate limit for the Cloudflare API is 1200 requests per five minutes. Vectorize indexes currently limit upload batches to ${VECTORIZE_MAX_BATCH_SIZE} records at a time to stay within the service limits`
+			throw new UserError(
+				`🚨 The global rate limit for the Cloudflare API is 1200 requests per five minutes. Vectorize indexes currently limit upload batches to ${VECTORIZE_MAX_BATCH_SIZE} records at a time to stay within the service limits.`
 			);
-			return;
 		}
 
 		let vectorUpsertCount = 0;

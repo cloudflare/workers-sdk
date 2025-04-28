@@ -1,4 +1,5 @@
 import { createCommand } from "../core/create-command";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { deleteByIds } from "./client";
 import type { VectorizeVectorIds } from "./types";
@@ -26,8 +27,9 @@ export const vectorizeDeleteVectorsCommand = createCommand({
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
 		if (args.ids.length === 0) {
-			logger.error("🚨 Please provide valid vector identifiers for deletion.");
-			return;
+			throw new UserError(
+				"🚨 Please provide valid vector identifiers for deletion."
+			);
 		}
 
 		logger.log(`📋 Deleting vectors...`);
