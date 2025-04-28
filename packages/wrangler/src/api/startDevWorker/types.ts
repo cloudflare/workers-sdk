@@ -24,6 +24,7 @@ import type {
 	CfSecretsStoreSecrets,
 	CfSendEmailBindings,
 	CfService,
+	CfTailConsumer,
 	CfUnsafe,
 	CfVectorize,
 	CfWorkflow,
@@ -82,6 +83,8 @@ export interface StartDevWorkerInput {
 	migrations?: DurableObjectMigration[];
 	/** The triggers which will cause the worker's exported default handlers to be called. */
 	triggers?: Trigger[];
+
+	tailConsumers?: CfTailConsumer[];
 
 	/**
 	 * Whether Wrangler should send usage metrics to Cloudflare for this project.

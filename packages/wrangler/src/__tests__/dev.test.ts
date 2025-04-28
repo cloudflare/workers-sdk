@@ -1262,7 +1262,7 @@ describe.sequential("wrangler dev", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
 
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Durable Objects:
 				  - NAME_1: CLASS_1
 				  - NAME_2: CLASS_2 (defined in SCRIPT_A [not connected])
@@ -1346,7 +1346,7 @@ describe.sequential("wrangler dev", () => {
 				"Using vars defined in .dev.vars
 				Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
 
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Vars:
 				  - VAR_1: \\"(hidden)\\"
 				  - VAR_2: \\"original value 2\\"
@@ -1382,7 +1382,7 @@ describe.sequential("wrangler dev", () => {
 				"Using vars defined in .dev.vars.custom
 				Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
 
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Vars:
 				  - CUSTOM_VAR: \\"(hidden)\\"
 				"
@@ -1588,7 +1588,7 @@ describe.sequential("wrangler dev", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
 
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Services:
 				  - WorkerA: A [not connected]
 				  - WorkerB: B [not connected]
@@ -1611,7 +1611,7 @@ describe.sequential("wrangler dev", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
 
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Services:
 				  - WorkerA: A [not connected]
 				  - WorkerB: B [not connected]
@@ -1640,7 +1640,7 @@ describe.sequential("wrangler dev", () => {
 				"Using vars defined in .dev.vars
 				Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
 
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Vars:
 				  - variable: 123
 				  - overriden: \\"(hidden)\\"

@@ -90,7 +90,7 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 			🌀 Creating new R2 Bucket "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-r2"...
 			✨ R2 provisioned 🎉
 			🎉 All resources provisioned, continuing with deployment...
-			Your worker has access to the following bindings:
+			Your Worker has access to the following bindings:
 			- KV Namespaces:
 			  - KV: 00000000000000000000000000000000
 			- D1 Databases:
@@ -132,7 +132,7 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 		const output = await worker.output;
 		expect(normalize(output)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
-			Your worker has access to the following bindings:
+			Your Worker has access to the following bindings:
 			- KV Namespaces:
 			  - KV
 			- D1 Databases:
@@ -184,7 +184,7 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 			✨ KV2 provisioned 🎉
 			🎉 All resources provisioned, continuing with deployment...
 			Worker Startup Time: (TIMINGS)
-			Your worker has access to the following bindings:
+			Your Worker has access to the following bindings:
 			- KV Namespaces:
 			  - KV2: 00000000000000000000000000000000
 			- R2 Buckets:

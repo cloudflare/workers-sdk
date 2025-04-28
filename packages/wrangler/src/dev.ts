@@ -407,6 +407,7 @@ async function updateDevEnvRegistry(
 					devEnv.config.latestConfig?.bindings
 				),
 			},
+			tailConsumers: devEnv.config.latestConfig?.tailConsumers,
 		},
 		registry
 	);

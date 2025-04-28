@@ -157,6 +157,7 @@ async function getMiniflareOptionsFromConfig(
 		name: rawConfig.name,
 		services: bindings.services,
 		durableObjects: rawConfig["durable_objects"],
+		tailConsumers: [],
 	});
 
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
@@ -168,6 +169,7 @@ async function getMiniflareOptionsFromConfig(
 		serviceBindings: {},
 		migrations: rawConfig.migrations,
 		imagesLocalMode: false,
+		tails: [],
 	});
 
 	const persistOptions = getMiniflarePersistOptions(options.persist);
@@ -296,6 +298,7 @@ export function unstable_getMiniflareWorkerOptions(
 		serviceBindings: {},
 		migrations: config.migrations,
 		imagesLocalMode: !!options?.imagesLocalMode,
+		tails: config.tail_consumers,
 	});
 
 	// This function is currently only exported for the Workers Vitest pool.

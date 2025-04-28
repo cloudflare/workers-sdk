@@ -1,7 +1,7 @@
 import chalk from "chalk";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
-import type { CfWorkerInit } from "../deployment-bundle/worker";
+import type { CfTailConsumer, CfWorkerInit } from "../deployment-bundle/worker";
 import type { WorkerRegistry } from "../dev-registry";
 
 export const friendlyBindingNames: Record<
@@ -41,6 +41,7 @@ export const friendlyBindingNames: Record<
  */
 export function printBindings(
 	bindings: Partial<CfWorkerInit["bindings"]>,
+	tailConsumers: CfTailConsumer[] = [],
 	context: {
 		registry?: WorkerRegistry | null;
 		local?: boolean;
@@ -515,44 +516,73 @@ export function printBindings(
 	}
 
 	if (output.length === 0) {
-		logger.log("No bindings found.");
-		return;
-	}
+		if (context.name && getFlag("MULTIWORKER")) {
+			logger.log(`No bindings found for ${chalk.blue(context.name)}`);
+		} else {
+			logger.log("No bindings found.");
+		}
+	} else {
+		if (context.local) {
+			logger.once.log(
+				`Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.\n`
+			);
+		}
 
-	if (context.local) {
-		logger.once.log(
-			`Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.\n`
+		let title: string;
+		if (context.provisioning) {
+			title = "The following bindings need to be provisioned:";
+		} else if (context.name && getFlag("MULTIWORKER")) {
+			title = `${chalk.blue(context.name)} has access to the following bindings:`;
+		} else {
+			title = "Your Worker has access to the following bindings:";
+		}
+
+		const message = [
+			title,
+			...output
+				.map((bindingGroup) => {
+					return [
+						`- ${bindingGroup.name}:`,
+						bindingGroup.entries.map(
+							({ key, value }) => `  - ${key}${value ? ":" : ""} ${value}`
+						),
+					];
+				})
+				.flat(2),
+		].join("\n");
+
+		logger.log(message);
+	}
+	let title: string;
+	if (context.name && getFlag("MULTIWORKER")) {
+		title = `${chalk.blue(context.name)} is sending Tail events to the following Workers:`;
+	} else {
+		title = "Your Worker is sending Tail events to the following Workers:";
+	}
+	if (tailConsumers !== undefined && tailConsumers.length > 0) {
+		logger.log(
+			`${title}\n${tailConsumers
+				.map(({ service }) => {
+					if (context.local && context.registry !== null) {
+						const registryDefinition = context.registry?.[service];
+						hasConnectionStatus = true;
+
+						if (registryDefinition) {
+							return `- ${service} ${chalk.green("[connected]")}`;
+						} else {
+							return `- ${service} ${chalk.red("[not connected]")}`;
+						}
+					} else {
+						return `- ${service}`;
+					}
+				})
+				.join("\n")}`
 		);
 	}
 
-	let title: string;
-	if (context.provisioning) {
-		title = "The following bindings need to be provisioned:";
-	} else if (context.name && getFlag("MULTIWORKER")) {
-		title = `${chalk.blue(context.name)} has access to the following bindings:`;
-	} else {
-		title = "Your worker has access to the following bindings:";
-	}
-
-	const message = [
-		title,
-		...output
-			.map((bindingGroup) => {
-				return [
-					`- ${bindingGroup.name}:`,
-					bindingGroup.entries.map(
-						({ key, value }) => `  - ${key}${value ? ":" : ""} ${value}`
-					),
-				];
-			})
-			.flat(2),
-	].join("\n");
-
-	logger.log(message);
-
 	if (hasConnectionStatus) {
 		logger.once.info(
-			`\nService bindings & durable object bindings connect to other \`wrangler dev\` processes running locally, with their connection status indicated by ${chalk.green("[connected]")} or ${chalk.red("[not connected]")}. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development\n`
+			`\nService bindings, Durable Object bindings, and Tail consumers connect to other \`wrangler dev\` processes running locally, with their connection status indicated by ${chalk.green("[connected]")} or ${chalk.red("[not connected]")}. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development\n`
 		);
 	}
 }

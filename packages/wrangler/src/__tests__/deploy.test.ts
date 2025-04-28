@@ -296,7 +296,7 @@ describe("deploy", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
+			Your Worker has access to the following bindings:
 			- Vars:
 			  - xyz: 123
 			Uploaded test-name (TIMINGS)
@@ -336,7 +336,7 @@ describe("deploy", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
+			Your Worker has access to the following bindings:
 			- Vars:
 			  - xyz: 123
 			Uploaded test-worker (TIMINGS)
@@ -410,7 +410,7 @@ describe("deploy", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
+			Your Worker has access to the following bindings:
 			- Vars:
 			  - xyz: 123
 			Uploaded test-worker-jsonc (TIMINGS)
@@ -1091,7 +1091,7 @@ describe("deploy", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
+			Your Worker has access to the following bindings:
 			- Vars:
 			  - xyz: 123
 			Uploaded test-name (TIMINGS)
@@ -6668,7 +6668,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Durable Objects:
 				  - SOMENAME: SomeClass
 				Uploaded test-name (TIMINGS)
@@ -6721,7 +6721,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Durable Objects:
 				  - SOMENAME: SomeClass (defined in some-script)
 				Uploaded test-name (TIMINGS)
@@ -6767,7 +6767,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Durable Objects:
 				  - SOMENAME: SomeClass
 				  - SOMEOTHERNAME: SomeOtherClass
@@ -6822,7 +6822,7 @@ addEventListener('fetch', event => {});`
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Durable Objects:
 				  - SOMENAME: SomeClass
 				  - SOMEOTHERNAME: SomeOtherClass
@@ -6869,7 +6869,7 @@ addEventListener('fetch', event => {});`
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Durable Objects:
 				  - SOMENAME: SomeClass
 				  - SOMEOTHERNAME: SomeOtherClass
@@ -6918,7 +6918,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Durable Objects:
 					  - SOMENAME: SomeClass
 					  - SOMEOTHERNAME: SomeOtherClass
@@ -6984,7 +6984,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Durable Objects:
 					  - SOMENAME: SomeClass
 					  - SOMEOTHERNAME: SomeOtherClass
@@ -7049,7 +7049,7 @@ addEventListener('fetch', event => {});`
 					  "info": "",
 					  "out": "Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Durable Objects:
 					  - SOMENAME: SomeClass
 					  - SOMEOTHERNAME: SomeOtherClass
@@ -7122,7 +7122,7 @@ addEventListener('fetch', event => {});`
 					  "info": "",
 					  "out": "Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Durable Objects:
 					  - SOMENAME: SomeClass
 					  - SOMEOTHERNAME: SomeOtherClass
@@ -7181,7 +7181,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Durable Objects:
 					  - SOMENAME: SomeClass
 					  - SOMEOTHERNAME: SomeOtherClass
@@ -7233,7 +7233,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Durable Objects:
 					  - SOMENAME: SomeClass
 					  - SOMEOTHERNAME: SomeOtherClass
@@ -7267,6 +7267,9 @@ addEventListener('fetch', event => {});`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
+				Your Worker is sending Tail events to the following Workers:
+				- listener
+				- test-listener
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -7518,7 +7521,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Data Blobs:
 				  - DATA_BLOB_ONE: some-data-blob.bin
 				  - DATA_BLOB_TWO: more-data-blob.bin
@@ -7969,7 +7972,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Wasm Modules:
 					  - TESTWASMNAME: path/to/test.wasm
 					Uploaded test-name (TIMINGS)
@@ -8039,7 +8042,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Wasm Modules:
 					  - TESTWASMNAME: path/to/and/the/path/to/test.wasm
 					Uploaded test-name (TIMINGS)
@@ -8116,7 +8119,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Text Blobs:
 					  - TESTTEXTBLOBNAME: path/to/text.file
 					Uploaded test-name (TIMINGS)
@@ -8190,7 +8193,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Text Blobs:
 					  - TESTTEXTBLOBNAME: path/to/and/the/path/to/text.file
 					Uploaded test-name (TIMINGS)
@@ -8230,7 +8233,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Data Blobs:
 					  - TESTDATABLOBNAME: path/to/data.bin
 					Uploaded test-name (TIMINGS)
@@ -8304,7 +8307,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Data Blobs:
 					  - TESTDATABLOBNAME: path/to/and/the/path/to/data.bin
 					Uploaded test-name (TIMINGS)
@@ -8344,7 +8347,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Vars:
 					  - text: \\"plain ol' string\\"
 					  - count: 1
@@ -8374,7 +8377,7 @@ addEventListener('fetch', event => {});`
 					  "info": "",
 					  "out": "Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Vars:
 					  - TEXT: \\"(hidden)\\"
 					  - COUNT: \\"(hidden)\\"
@@ -8405,7 +8408,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- R2 Buckets:
 					  - FOO: foo-bucket
 					Uploaded test-name (TIMINGS)
@@ -8455,7 +8458,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- logfwdr:
 					  - httplogs: httplogs
 					  - trace: trace
@@ -8529,7 +8532,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Durable Objects:
 					  - EXAMPLE_DO_BINDING: ExampleDurableObject
 					Uploaded test-name (TIMINGS)
@@ -8575,16 +8578,16 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - EXAMPLE_DO_BINDING: ExampleDurableObject
-			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your Worker has access to the following bindings:
+					- Durable Objects:
+					  - EXAMPLE_DO_BINDING: ExampleDurableObject
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -8620,7 +8623,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Durable Objects:
 					  - EXAMPLE_DO_BINDING: ExampleDurableObject (defined in example-do-binding-worker)
 					Uploaded test-name (TIMINGS)
@@ -8667,7 +8670,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Durable Objects:
 					  - EXAMPLE_DO_BINDING: ExampleDurableObject
 					Uploaded test-name (TIMINGS)
@@ -8725,16 +8728,16 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - EXAMPLE_DO_BINDING: ExampleDurableObject
-			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your Worker has access to the following bindings:
+					- Durable Objects:
+					  - EXAMPLE_DO_BINDING: ExampleDurableObject
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -8780,14 +8783,14 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js --outdir tmp --dry-run");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - EXAMPLE_DO_BINDING: ExampleDurableObject
-			- D1 Databases:
-			  - DB: test-d1-db (UUID-1-2-3-4), Preview: (UUID-1-2-3-4)
-			--dry-run: exiting now."
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Your Worker has access to the following bindings:
+					- Durable Objects:
+					  - EXAMPLE_DO_BINDING: ExampleDurableObject
+					- D1 Databases:
+					  - DB: test-d1-db (UUID-1-2-3-4), Preview: (UUID-1-2-3-4)
+					--dry-run: exiting now."
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				const output = fs.readFileSync("tmp/index.js", "utf-8");
@@ -8850,7 +8853,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Services:
 					  - FOO: foo-service
 					Uploaded test-name (TIMINGS)
@@ -8891,7 +8894,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Services:
 					  - FOO: foo-service#MyHandler
 					Uploaded test-name (TIMINGS)
@@ -8930,7 +8933,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Services:
 					  - FOO: foo-service
 					Uploaded test-name (TIMINGS)
@@ -8962,7 +8965,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Analytics Engine Datasets:
 					  - FOO: foo-dataset
 					Uploaded test-name (TIMINGS)
@@ -9000,7 +9003,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Dispatch Namespaces:
 					  - foo: Foo
 					Uploaded test-name (TIMINGS)
@@ -9058,7 +9061,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Dispatch Namespaces:
 					  - foo: Foo (outbound -> foo_outbound)
 					  - bar: Bar (outbound -> bar_outbound)
@@ -9109,7 +9112,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Dispatch Namespaces:
 					  - foo: Foo (outbound -> foo_outbound)
 					Uploaded test-name (TIMINGS)
@@ -9153,7 +9156,7 @@ addEventListener('fetch', event => {});`
 					expect(std.out).toMatchInlineSnapshot(`
 						"Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
-						Your worker has access to the following bindings:
+						Your Worker has access to the following bindings:
 						- Unsafe Metadata:
 						  - stringify: true
 						  - something: \\"else\\"
@@ -9194,7 +9197,7 @@ addEventListener('fetch', event => {});`
 					expect(std.out).toMatchInlineSnapshot(`
 						"Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
-						Your worker has access to the following bindings:
+						Your Worker has access to the following bindings:
 						- Unsafe Metadata:
 						  - binding-type: my-binding
 						Uploaded test-name (TIMINGS)
@@ -9241,7 +9244,7 @@ addEventListener('fetch', event => {});`
 					expect(std.out).toMatchInlineSnapshot(`
 						"Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
-						Your worker has access to the following bindings:
+						Your Worker has access to the following bindings:
 						- Unsafe Metadata:
 						  - plain_text: my-binding
 						Uploaded test-name (TIMINGS)
@@ -10305,7 +10308,7 @@ export default{
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- KV Namespaces:
 				  - KV: kv-namespace-id
 				Uploaded test-name (TIMINGS)
@@ -10515,7 +10518,7 @@ export default{
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- KV Namespaces:
 				  - KV: kv-namespace-id
 				Uploaded test-name (TIMINGS)
@@ -10550,18 +10553,18 @@ export default{
 			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "");
 			await runWrangler("deploy index.js --dry-run");
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - NAME: SomeClass
-			--dry-run: exiting now.",
-			  "warn": "",
-			}
-		`);
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "Total Upload: xx KiB / gzip: xx KiB
+				Your Worker has access to the following bindings:
+				- Durable Objects:
+				  - NAME: SomeClass
+				--dry-run: exiting now.",
+				  "warn": "",
+				}
+			`);
 		});
 	});
 
@@ -11187,7 +11190,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Queues:
 				  - QUEUE_ONE: queue1
 				Uploaded test-name (TIMINGS)
@@ -11234,7 +11237,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Queues:
 				  - MY_QUEUE: queue1
 				Uploaded test-name (TIMINGS)
@@ -11984,7 +11987,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Browser:
 				  - Name: MYBROWSER
 				- AI:
@@ -12017,7 +12020,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Images:
 				  - Name: IMAGES_BIND
 				Uploaded test-name (TIMINGS)
@@ -12131,7 +12134,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Hyperdrive Configs:
 				  - HYPERDRIVE: 343cd4f1d58c42fbb5bd082592fd7143
 				Uploaded test-name (TIMINGS)
@@ -12163,7 +12166,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- mTLS Certificates:
 				  - CERT_ONE: 1234
 				Uploaded test-name (TIMINGS)
@@ -12198,16 +12201,16 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Pipelines:
-			  - MY_PIPELINE: my-pipeline
-			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				- Pipelines:
+				  - MY_PIPELINE: my-pipeline
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 	});
 
@@ -12237,16 +12240,16 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Secrets Store Secrets:
-			  - SECRET: store_id/secret_name
-			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				- Secrets Store Secrets:
+				  - SECRET: store_id/secret_name
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 	});
 
@@ -12506,7 +12509,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Workflows:
 				  - WORKFLOW: MyWorkflow
 				Uploaded test-name (TIMINGS)
@@ -12567,7 +12570,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Workflows:
 				  - WORKFLOW: MyWorkflow (defined in another-script)
 				Uploaded this-script (TIMINGS)
