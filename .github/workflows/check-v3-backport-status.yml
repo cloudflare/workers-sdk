@@ -1,4 +1,6 @@
 name: v3 Maintenance
+permissions:
+  pull-requests: read
 
 on:
   pull_request:
