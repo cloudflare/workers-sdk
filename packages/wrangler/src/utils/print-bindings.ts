@@ -563,19 +563,18 @@ export function printBindings(
 		logger.log(
 			`${title}\n${tailConsumers
 				.map(({ service }) => {
-					let value = service;
-
 					if (context.local && context.registry !== null) {
 						const registryDefinition = context.registry?.[service];
 						hasConnectionStatus = true;
 
 						if (registryDefinition) {
-							value = `- ${value} ${chalk.green("[connected]")}`;
+							return `- ${service} ${chalk.green("[connected]")}`;
 						} else {
-							value = `- ${value} ${chalk.red("[not connected]")}`;
+							return `- ${service} ${chalk.red("[not connected]")}`;
 						}
+					} else {
+						return `- ${service}`;
 					}
-					return value;
 				})
 				.join("\n")}`
 		);
