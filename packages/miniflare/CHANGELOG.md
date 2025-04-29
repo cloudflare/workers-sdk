@@ -1,5 +1,22 @@
 # miniflare
 
+## 4.20250428.0
+
+### Minor Changes
+
+- [#9083](https://github.com/cloudflare/workers-sdk/pull/9083) [`137d2da`](https://github.com/cloudflare/workers-sdk/commit/137d2da0602db0f66a5c1b6f277624f6031d9dc5) Thanks [@penalosa](https://github.com/penalosa)! - Support Tail Workers in local dev
+
+### Patch Changes
+
+- [#9081](https://github.com/cloudflare/workers-sdk/pull/9081) [`d2ecc76`](https://github.com/cloudflare/workers-sdk/commit/d2ecc763e4d77620d6a9be71855e87893631ebc0) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250424.0  | 1.20250428.0  |
+  | @cloudflare/workers-types | ^4.20250424.0 | ^4.20250428.0 |
+
 ## 4.20250424.1
 
 ### Patch Changes
