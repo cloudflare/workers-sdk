@@ -431,8 +431,10 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 			await expect(fetchText(`${url}`)).resolves.toBe("hello from a");
 
 			await vi.waitFor(
-				async () =>
-					expect(workerB.currentOutput).includes("received tail event"),
+				async () => {
+					await fetchText(`${url}`);
+					expect(workerB.currentOutput).includes("received tail event");
+				},
 				{ interval: 1000, timeout: 10_000 }
 			);
 		});
