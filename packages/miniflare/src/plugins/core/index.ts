@@ -84,9 +84,12 @@ if (process.env.NODE_EXTRA_CA_CERTS !== undefined) {
 		const extra = readFileSync(process.env.NODE_EXTRA_CA_CERTS, "utf8");
 		// Split bundle into individual certificates and add each individually:
 		// https://github.com/cloudflare/miniflare/pull/587/files#r1271579671
-		const pemBegin = "-----BEGIN";
-		for (const cert of extra.split(pemBegin)) {
-			if (cert.trim() !== "") trustedCertificates.push(pemBegin + cert);
+		const certs = extra.match(
+			/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g
+		);
+
+		if (certs !== null) {
+			trustedCertificates.push(...certs);
 		}
 	} catch {}
 }
