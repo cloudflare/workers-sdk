@@ -1,5 +1,6 @@
 import { configFileName, formatConfigSnippet } from "../config";
 import { createCommand } from "../core/create-command";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { createIndex } from "./client";
 import { deprecatedV1DefaultFlag } from "./common";
@@ -76,10 +77,9 @@ export const vectorizeCreateCommand = createCommand({
 				dimensions: args.dimensions,
 			};
 		} else {
-			logger.error(
-				"You must provide both dimensions and a metric, or a known model preset when creating an index."
+			throw new UserError(
+				"🚨 You must provide both dimensions and a metric, or a known model preset when creating an index."
 			);
-			return;
 		}
 
 		if (args.deprecatedV1) {
