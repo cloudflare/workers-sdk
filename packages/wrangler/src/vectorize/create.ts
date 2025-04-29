@@ -1,4 +1,5 @@
 import { configFileName, formatConfigSnippet, readConfig } from "../config";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { createIndex } from "./client";
 import { deprecatedV1DefaultFlag, vectorizeGABanner } from "./common";
@@ -83,10 +84,9 @@ export async function handler(
 			dimensions: args.dimensions,
 		};
 	} else {
-		logger.error(
-			"You must provide both dimensions and a metric, or a known model preset when creating an index."
+		throw new UserError(
+			"🚨 You must provide both dimensions and a metric, or a known model preset when creating an index."
 		);
-		return;
 	}
 
 	if (args.deprecatedV1) {

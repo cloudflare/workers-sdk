@@ -2,11 +2,13 @@ import { createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
 import { File, FormData } from "undici";
 import { readConfig } from "../config";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { insertIntoIndex, insertIntoIndexV1 } from "./client";
 import {
 	deprecatedV1DefaultFlag,
 	getBatchFromFile,
+	isValidFile,
 	VECTORIZE_MAX_BATCH_SIZE,
 	VECTORIZE_MAX_UPSERT_VECTOR_RECORDS,
 	VECTORIZE_UPSERT_BATCH_SIZE,
@@ -56,6 +58,10 @@ export function options(yargs: CommonYargsArgv) {
 export async function handler(
 	args: StrictYargsOptionsToInterface<typeof options>
 ) {
+	if (!(await isValidFile(args.file))) {
+		throw new UserError(`🚨 Cannot read invalid or empty file: ${args.file}.`);
+	}
+
 	const config = readConfig(args);
 	const rl = createInterface({ input: createReadStream(args.file) });
 
@@ -63,18 +69,16 @@ export async function handler(
 		args.deprecatedV1 &&
 		Number(args.batchSize) > VECTORIZE_V1_MAX_BATCH_SIZE
 	) {
-		logger.error(
+		throw new UserError(
 			`🚨 Vectorize currently limits upload batches to ${VECTORIZE_V1_MAX_BATCH_SIZE} records at a time.`
 		);
-		return;
 	} else if (
 		!args.deprecatedV1 &&
 		Number(args.batchSize) > VECTORIZE_MAX_BATCH_SIZE
 	) {
-		logger.error(
-			`🚨 The global rate limit for the Cloudflare API is 1200 requests per five minutes. Vectorize V2 indexes currently limit upload batches to ${VECTORIZE_MAX_BATCH_SIZE} records at a time to stay within the service limits`
+		throw new UserError(
+			`🚨 The global rate limit for the Cloudflare API is 1200 requests per five minutes. Vectorize V2 indexes currently limit upload batches to ${VECTORIZE_MAX_BATCH_SIZE} records at a time to stay within the service limits.`
 		);
-		return;
 	}
 
 	let vectorInsertCount = 0;

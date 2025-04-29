@@ -1,4 +1,5 @@
 import { readConfig } from "../config";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getByIds } from "./client";
 import { vectorizeGABanner } from "./common";
@@ -33,8 +34,7 @@ export async function handler(
 	const config = readConfig(args);
 
 	if (args.ids.length === 0) {
-		logger.error("🚨 Please provide valid vector identifiers.");
-		return;
+		throw new UserError("🚨 Please provide valid vector identifiers.");
 	}
 
 	logger.log(`📋 Fetching vectors...`);
