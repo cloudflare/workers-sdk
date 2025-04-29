@@ -80,6 +80,84 @@ describe("User", () => {
 			});
 		});
 
+		it("should login a user when `wrangler login` is run with custom callbackHost param", async () => {
+			mockOAuthServerCallback("success");
+
+			let counter = 0;
+			msw.use(
+				http.post(
+					"*/oauth2/token",
+					async () => {
+						counter += 1;
+
+						return HttpResponse.json({
+							access_token: "test-access-token",
+							expires_in: 100000,
+							refresh_token: "test-refresh-token",
+							scope: "account:read",
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler("login --callback-host='0.0.0.0'");
+
+			expect(counter).toBe(1);
+			expect(std.out).toMatchInlineSnapshot(`
+				"Attempting to login via OAuth...
+				Temporary login server listening on 0.0.0.0:8976
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2F0.0.0.0%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Successfully logged in."
+			`);
+			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+				api_token: undefined,
+				oauth_token: "test-access-token",
+				refresh_token: "test-refresh-token",
+				expiration_time: expect.any(String),
+				scopes: ["account:read"],
+			});
+		});
+
+		it("should login a user when `wrangler login` is run with custom callbackPort param", async () => {
+			mockOAuthServerCallback("success");
+
+			let counter = 0;
+			msw.use(
+				http.post(
+					"*/oauth2/token",
+					async () => {
+						counter += 1;
+
+						return HttpResponse.json({
+							access_token: "test-access-token",
+							expires_in: 100000,
+							refresh_token: "test-refresh-token",
+							scope: "account:read",
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler("login --callback-port=8787");
+
+			expect(counter).toBe(1);
+			expect(std.out).toMatchInlineSnapshot(`
+				"Attempting to login via OAuth...
+				Temporary login server listening on localhost:8787
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8787%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Successfully logged in."
+			`);
+			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
+				api_token: undefined,
+				oauth_token: "test-access-token",
+				refresh_token: "test-refresh-token",
+				expiration_time: expect.any(String),
+				scopes: ["account:read"],
+			});
+		});
+
 		it("login works in a different environment", async () => {
 			vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
 			mockOAuthServerCallback("success");
