@@ -1,6 +1,6 @@
 import type { TemplateConfig } from "../../src/templates";
 
-const config: TemplateConfig = {
+export default {
 	configVersion: 1,
 	id: "workflow-starter",
 	displayName: "Workflow",
@@ -8,5 +8,4 @@ const config: TemplateConfig = {
 		"For multi-step applications with durable execution, that automatically retry",
 	platform: "workers",
 	copyFiles: { path: "./ts" },
-};
-export default config;
+} satisfies TemplateConfig;
