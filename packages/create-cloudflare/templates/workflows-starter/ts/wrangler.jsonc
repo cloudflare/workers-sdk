@@ -1,5 +1,3 @@
-// <docs-tag name="workflows-wrangler.json">
-//$schema: "node_modules/wrangler/config-schema.json"
 {
 	"name": "<TBD>",
 	"main": "src/index.ts",
@@ -7,20 +5,13 @@
 
 	"observability": {
 		"enabled": true,
-		"head_sampling_rate": 1, // optional. default = 1.
+		"head_sampling_rate": 1,
 	},
-
-	// <docs-tag name="workflows-binding-wrangler.json">
 	"workflows": [
 		{
-			// name of your workflow
 			"name": "workflows-starter",
-			// binding name env.MYWORKFLOW
 			"binding": "MY_WORKFLOW",
-			// this is class that extends the Workflow class in src/index.ts
 			"class_name": "MyWorkflow",
 		},
 	],
-	// </docs-tag name="workflows-binding-wrangler.json">
 }
-// </docs-tag name="workflows-wrangler.json">
