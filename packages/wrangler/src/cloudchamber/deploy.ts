@@ -99,7 +99,7 @@ export async function deployContainers(
 // getBuildArguments takes the image from `container.image` or `container.configuration.image`
 // if the first is not defined. It accepts either a URI or path to a Dockerfile.
 // It will return options that are usable with the build() method from containers.
-function getBuildArguments(
+export function getBuildArguments(
 	container: ContainerApp,
 	idForImageTag: string,
 	dryRun?: boolean
@@ -133,7 +133,7 @@ function getBuildArguments(
 			const imageParts = imageRef.split("/");
 			if (!imageParts[imageParts.length - 1].includes(":")) {
 				throw new UserError(
-					`image reference ${imageRef} needs to include atleast a tag ':'`
+					`image needs to include atleast a tag ':' (e.g: docker.io/httpd:1)`
 				);
 			}
 
@@ -141,12 +141,16 @@ function getBuildArguments(
 			new URL(`https://${imageRef}`);
 			if (imageRef.includes("://")) {
 				throw new UserError(
-					`The image ${imageRef} should not the protocol part (e.g: docker.io/httpd:1, not https://docker.io/httpd:1)`
+					`should not include the protocol part (e.g: docker.io/httpd:1, not https://docker.io/httpd:1)`
 				);
 			}
-		} catch {
+		} catch (err) {
+			if (!(err instanceof UserError)) {
+				throw err;
+			}
+
 			throw new UserError(
-				`The image ${imageRef} could not be found, and the image is not a valid reference (e.g: docker.io/httpd:1)`
+				`The image ${imageRef} could not be found, and the image is not a valid reference: ${err.message}`
 			);
 		}
 
