@@ -8,7 +8,6 @@ import {
 	writeFile,
 } from "node:fs/promises";
 import path from "node:path";
-import * as util from "node:util";
 import { watch } from "chokidar";
 import { version as wranglerVersion } from "../../package.json";
 import { getRegistryPath } from "../environment-variables/misc-variables";
@@ -16,148 +15,124 @@ import { logger } from "../logger";
 import type { WorkerDefinition, WorkerRegistry } from "./types";
 
 const DEV_REGISTRY_PATH = getRegistryPath();
-const heartbeats = new Map<string, NodeJS.Timeout>();
-let globalWorkers: WorkerRegistry | undefined;
-let globalWatcher: ReturnType<typeof watch> | undefined;
 
-export const FileRegistry = {
-	devRegistry,
-	getRegisteredWorkers,
-	registerWorker,
-	startWorkerRegistry,
-	stopWorkerRegistry,
-	unregisterWorker,
-};
+export class DevRegistry {
+	heartbeats: Map<string, NodeJS.Timeout>;
+	workers: WorkerRegistry | undefined;
+	watcher: ReturnType<typeof watch> | undefined;
+	registryPath: string;
 
-async function devRegistry(
-	cb: (workers: WorkerRegistry | undefined) => void
-): Promise<(name?: string) => Promise<void>> {
-	let previousRegistry: WorkerRegistry | undefined;
-
-	await startWorkerRegistry(async (registry) => {
-		if (!util.isDeepStrictEqual(registry, previousRegistry)) {
-			previousRegistry = registry;
-			cb(registry);
-		}
-	});
-
-	return async (name?: string) => {
-		try {
-			const [unregisterResult, stopRegistryResult] = await Promise.allSettled([
-				name ? unregisterWorker(name) : Promise.resolve(),
-				stopWorkerRegistry(),
-			]);
-			if (unregisterResult.status === "rejected") {
-				logger.error("Failed to unregister worker", unregisterResult.reason);
-			}
-			if (stopRegistryResult.status === "rejected") {
-				logger.error(
-					"Failed to stop worker registry",
-					stopRegistryResult.reason
-				);
-			}
-		} catch (err) {
-			logger.error("Failed to cleanup dev registry", err);
-		}
-	};
-}
-
-async function startWorkerRegistry(
-	cb?: (registry: WorkerRegistry | undefined) => void
-) {
-	await loadWorkerDefinitions();
-	cb?.({ ...globalWorkers });
-	globalWatcher ??= watch(DEV_REGISTRY_PATH, {
-		persistent: true,
-	}).on("all", async () => {
-		await loadWorkerDefinitions();
-		cb?.({ ...globalWorkers });
-	});
-	return;
-}
-
-async function stopWorkerRegistry() {
-	if (globalWatcher) {
-		await globalWatcher?.close();
-		for (const heartbeat of heartbeats) {
-			clearInterval(heartbeat[1]);
-		}
-		return;
+	constructor(registryPath: string) {
+		this.registryPath = registryPath;
+		this.heartbeats = new Map<string, NodeJS.Timeout>();
+		this.workers = {};
 	}
-}
 
-async function registerWorker(name: string, definition: WorkerDefinition) {
-	const existingHeartbeat = heartbeats.get(name);
-	if (existingHeartbeat) {
-		clearInterval(existingHeartbeat);
+	async start(
+		callback?: (registry: WorkerRegistry | undefined) => void
+	): Promise<void> {
+		await this.refresh();
+
+		callback?.({ ...this.workers });
+
+		this.watcher ??= watch(this.registryPath, {
+			persistent: true,
+		}).on("all", async () => {
+			await this.refresh();
+			callback?.({ ...this.workers });
+		});
 	}
-	await mkdir(DEV_REGISTRY_PATH, { recursive: true });
-	await writeFile(
-		path.join(DEV_REGISTRY_PATH, name),
-		// We don't currently do anything with the stored Wrangler version,
-		// but if we need to make breaking changes to this format in the future
-		// we can use this field to present useful messaging
-		JSON.stringify({ ...definition, wranglerVersion }, null, 2)
-	);
-	heartbeats.set(
-		name,
-		setInterval(() => {
-			utimesSync(path.join(DEV_REGISTRY_PATH, name), new Date(), new Date());
-		}, 30_000)
-	);
-	return;
-}
 
-async function getRegisteredWorkers(): Promise<WorkerRegistry | undefined> {
-	globalWorkers = await loadWorkerDefinitions();
-	return { ...globalWorkers };
-}
+	async stop(): Promise<void> {
+		if (this.watcher) {
+			await this.watcher.close();
 
-async function unregisterWorker(name: string) {
-	try {
-		await unlink(path.join(DEV_REGISTRY_PATH, name));
-		const existingHeartbeat = heartbeats.get(name);
+			for (const heartbeat of this.heartbeats) {
+				clearInterval(heartbeat[1]);
+			}
+
+			this.heartbeats.clear();
+			this.watcher = undefined;
+		}
+	}
+
+	async register(name: string, definition: WorkerDefinition) {
+		const existingHeartbeat = this.heartbeats.get(name);
 		if (existingHeartbeat) {
 			clearInterval(existingHeartbeat);
 		}
-	} catch (e) {
-		logger.debug("failed to unregister worker", e);
+		await mkdir(this.registryPath, { recursive: true });
+		await writeFile(
+			path.join(this.registryPath, name),
+			// We don't currently do anything with the stored Wrangler version,
+			// but if we need to make breaking changes to this format in the future
+			// we can use this field to present useful messaging
+			JSON.stringify({ ...definition, wranglerVersion }, null, 2)
+		);
+		this.heartbeats.set(
+			name,
+			setInterval(() => {
+				utimesSync(path.join(this.registryPath, name), new Date(), new Date());
+			}, 30_000)
+		);
+		return;
 	}
-	return;
-}
 
-async function loadWorkerDefinitions(): Promise<WorkerRegistry> {
-	await mkdir(DEV_REGISTRY_PATH, { recursive: true });
-	globalWorkers ??= {};
-	const newWorkers = new Set<string>();
-	const workerDefinitions = await readdir(DEV_REGISTRY_PATH);
-	for (const workerName of workerDefinitions) {
+	async unregister(name: string) {
 		try {
-			const file = await readFile(
-				path.join(DEV_REGISTRY_PATH, workerName),
-				"utf8"
-			);
-			const stats = await stat(path.join(DEV_REGISTRY_PATH, workerName));
-			// Cleanup existing workers older than 10 minutes
-			if (stats.mtime.getTime() < Date.now() - 600000) {
-				await unregisterWorker(workerName);
-			} else {
-				globalWorkers[workerName] = JSON.parse(file);
-				newWorkers.add(workerName);
+			await unlink(path.join(this.registryPath, name));
+			const existingHeartbeat = this.heartbeats.get(name);
+			if (existingHeartbeat) {
+				clearInterval(existingHeartbeat);
 			}
 		} catch (e) {
-			// This can safely be ignored. It generally indicates the worker was too old and was removed by a parallel Wrangler process
-			logger.debug(
-				"Error while loading worker definition from the registry",
-				e
-			);
+			logger.debug("failed to unregister worker", e);
 		}
 	}
 
-	for (const worker of Object.keys(globalWorkers)) {
-		if (!newWorkers.has(worker)) {
-			delete globalWorkers[worker];
-		}
+	async getWorkers(): Promise<WorkerRegistry> {
+		return this.refresh();
 	}
-	return globalWorkers;
+
+	async refresh() {
+		await mkdir(this.registryPath, { recursive: true });
+
+		this.workers ??= {};
+
+		const newWorkers = new Set<string>();
+		const workerDefinitions = await readdir(this.registryPath);
+
+		for (const workerName of workerDefinitions) {
+			try {
+				const file = await readFile(
+					path.join(this.registryPath, workerName),
+					"utf8"
+				);
+				const stats = await stat(path.join(this.registryPath, workerName));
+				// Cleanup existing workers older than 10 minutes
+				if (stats.mtime.getTime() < Date.now() - 600000) {
+					await this.unregister(workerName);
+				} else {
+					this.workers[workerName] = JSON.parse(file);
+					newWorkers.add(workerName);
+				}
+			} catch (e) {
+				// This can safely be ignored. It generally indicates the worker was too old and was removed by a parallel Wrangler process
+				logger.debug(
+					"Error while loading worker definition from the registry",
+					e
+				);
+			}
+		}
+
+		for (const worker of Object.keys(this.workers)) {
+			if (!newWorkers.has(worker)) {
+				delete this.workers[worker];
+			}
+		}
+
+		return this.workers;
+	}
 }
+
+export const fileRegistry = new DevRegistry(DEV_REGISTRY_PATH);

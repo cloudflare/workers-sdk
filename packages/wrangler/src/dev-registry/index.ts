@@ -1,4 +1,6 @@
-import { FileRegistry } from "./file-registry";
+import * as util from "node:util";
+import { logger } from "../logger";
+import { fileRegistry } from "./file-registry";
 import type { Binding } from "../api";
 import type { Config } from "../config";
 import type {
@@ -17,14 +19,14 @@ export type { WorkerDefinition, WorkerRegistry, WorkerEntrypointsDefinition };
 export async function startWorkerRegistry(
 	listener?: (registry: WorkerRegistry | undefined) => void
 ) {
-	return FileRegistry.startWorkerRegistry(listener);
+	return fileRegistry.start(listener);
 }
 
 /**
  * Stop the service registry.
  */
 export async function stopWorkerRegistry() {
-	return FileRegistry.stopWorkerRegistry();
+	return fileRegistry.stop();
 }
 
 /**
@@ -34,7 +36,7 @@ export async function registerWorker(
 	name: string,
 	definition: WorkerDefinition
 ) {
-	return FileRegistry.registerWorker(name, definition);
+	return fileRegistry.register(name, definition);
 }
 
 /**
@@ -43,7 +45,7 @@ export async function registerWorker(
 export async function getRegisteredWorkers(): Promise<
 	WorkerRegistry | undefined
 > {
-	return FileRegistry.getRegisteredWorkers();
+	return fileRegistry.getWorkers();
 }
 
 /**
@@ -96,5 +98,32 @@ export async function getBoundRegisteredWorkers(
 export async function devRegistry(
 	cb: (workers: WorkerRegistry | undefined) => void
 ): Promise<(name?: string) => Promise<void>> {
-	return FileRegistry.devRegistry(cb);
+	let previousRegistry: WorkerRegistry | undefined;
+
+	await fileRegistry.start(async (registry) => {
+		if (!util.isDeepStrictEqual(registry, previousRegistry)) {
+			previousRegistry = registry;
+			cb(registry);
+		}
+	});
+
+	return async (name?: string) => {
+		try {
+			const [unregisterResult, stopRegistryResult] = await Promise.allSettled([
+				name ? fileRegistry.unregister(name) : Promise.resolve(),
+				stopWorkerRegistry(),
+			]);
+			if (unregisterResult.status === "rejected") {
+				logger.error("Failed to unregister worker", unregisterResult.reason);
+			}
+			if (stopRegistryResult.status === "rejected") {
+				logger.error(
+					"Failed to stop worker registry",
+					stopRegistryResult.reason
+				);
+			}
+		} catch (err) {
+			logger.error("Failed to cleanup dev registry", err);
+		}
+	};
 }
