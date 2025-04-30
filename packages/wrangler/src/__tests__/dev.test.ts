@@ -1537,7 +1537,6 @@ describe.sequential("wrangler dev", () => {
 				.toThrowErrorMatchingInlineSnapshot(`
 				[Error: Assets-only Workers do not support the following configuration keys:
 
-				⋅ "send_metrics"
 				⋅ "vars"
 				⋅ "kv_namespaces"
 				⋅ "services"
@@ -1570,7 +1569,6 @@ describe.sequential("wrangler dev", () => {
 				.toThrowErrorMatchingInlineSnapshot(`
 				[Error: Assets-only Workers do not support the following configuration keys:
 
-				⋅ "send_metrics"
 				⋅ "vars"
 				⋅ "kv_namespaces"
 				⋅ "services"
@@ -1605,7 +1603,6 @@ describe.sequential("wrangler dev", () => {
 					.toThrowErrorMatchingInlineSnapshot(`
 				[Error: Assets-only Workers do not support the following configuration keys:
 
-				⋅ "send_metrics"
 				⋅ "vars"
 				⋅ "kv_namespaces"
 				⋅ "services"

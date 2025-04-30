@@ -199,7 +199,6 @@ describe("versions upload", () => {
 			.toThrowErrorMatchingInlineSnapshot(`
 			[Error: Assets-only Workers do not support the following configuration keys:
 
-			⋅ "send_metrics"
 			⋅ "vars"
 			⋅ "kv_namespaces"
 			⋅ "services"
@@ -231,7 +230,6 @@ describe("versions upload", () => {
 			.toThrowErrorMatchingInlineSnapshot(`
 			[Error: Assets-only Workers do not support the following configuration keys:
 
-			⋅ "send_metrics"
 			⋅ "vars"
 			⋅ "kv_namespaces"
 			⋅ "services"

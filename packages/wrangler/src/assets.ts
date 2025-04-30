@@ -556,6 +556,7 @@ function getConfigKeysUnsupportedByAssetsOnly(config: Config): Array<string> {
 		"build",
 		"dev",
 		"routes",
+		"send_metrics",
 		// computed fields (see normalizeAndValidateConfig())
 		"configPath",
 		"userConfigPath",
