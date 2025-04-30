@@ -1,17 +1,16 @@
 {
-	"name": "@playground/worker",
+	"name": "@playground/middleware-mode",
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "vite build --app",
-		"check:types": "tsc --build",
-		"dev": "vite dev",
-		"preview": "vite preview"
+		"dev": "node server.js"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20250428.0",
+		"@types/express": "^5.0.1",
+		"express": "^5.1.0",
 		"typescript": "catalog:default",
 		"vite": "catalog:vite-plugin",
 		"wrangler": "workspace:*"
