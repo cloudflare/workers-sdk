@@ -244,7 +244,7 @@ export function getHelloWorldTemplateMap({
 			scheduled: scheduledTemplate,
 			queues: queuesTemplate,
 			openapi: openapiTemplate,
-			"workflows-starter": workflowsTemplate,
+			"workflow-starter": workflowsTemplate,
 			"pre-existing": preExistingTemplate,
 		} as Record<string, TemplateConfig>;
 	}
