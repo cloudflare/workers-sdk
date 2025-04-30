@@ -125,7 +125,7 @@ function getBuildArguments(
 		}
 
 		if ((err as Error & { code: string }).code !== "ENOENT") {
-			throw new Error(`Error reading file ${imagePath}: ${err.message}`);
+			throw new UserError(`Error reading file ${imagePath}: ${err.message}`);
 		}
 
 		// not found, not a dockerfile, let's try parsing the image ref as an URL?
