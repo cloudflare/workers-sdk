@@ -2,6 +2,7 @@ import { readFileSync, statSync } from "fs";
 import path from "path";
 import { type Config } from "../config";
 import { type ContainerApp } from "../config/environment";
+import { getDockerPath } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
@@ -45,7 +46,7 @@ export async function deployContainers(
 
 	for (const container of config.containers) {
 		const version = await fetchVersion(accountId, scriptName, versionId);
-		const targetDurableObject = version.resources.bindings.filter(
+		const targetDurableObject = version.resources.bindings.find(
 			(durableObject) =>
 				durableObject.type === "durable_object_namespace" &&
 				durableObject.class_name === container.class_name &&
@@ -53,17 +54,15 @@ export async function deployContainers(
 				durableObject.namespace_id !== undefined
 		);
 
-		if (targetDurableObject.length <= 0) {
-			logger.error(
+		if (!targetDurableObject) {
+			throw new UserError(
 				"Could not deploy container application as durable object was not found in list of bindings"
 			);
-			continue;
 		}
 
-		const [targetDurableObjectNamespace] = targetDurableObject;
 		if (
-			targetDurableObjectNamespace.type !== "durable_object_namespace" ||
-			targetDurableObjectNamespace.namespace_id === undefined
+			targetDurableObject.type !== "durable_object_namespace" ||
+			targetDurableObject.namespace_id === undefined
 		) {
 			throw new Error("unreachable");
 		}
@@ -74,7 +73,7 @@ export async function deployContainers(
 				{
 					...container,
 					durable_objects: {
-						namespace_id: targetDurableObjectNamespace.namespace_id,
+						namespace_id: targetDurableObject.namespace_id,
 					},
 				},
 			],
@@ -133,12 +132,17 @@ function getBuildArguments(
 		try {
 			const imageParts = imageRef.split("/");
 			if (!imageParts[imageParts.length - 1].includes(":")) {
-				throw new Error("image reference needs to include atleast a tag ':'");
+				throw new UserError(
+					`image reference ${imageRef} needs to include atleast a tag ':'`
+				);
 			}
 
-			const url = new URL(`https://${imageRef}`);
-			if (url.protocol !== "https:") {
-				throw new Error("invalid protocol");
+			// validate URL
+			new URL(`https://${imageRef}`);
+			if (imageRef.includes("://")) {
+				throw new UserError(
+					`The image ${imageRef} should not the protocol part (e.g: docker.io/httpd:1, not https://docker.io/httpd:1)`
+				);
 			}
 		} catch {
 			throw new UserError(
@@ -151,7 +155,7 @@ function getBuildArguments(
 
 	const imageTag = container.name + ":" + idForImageTag.split("-")[0];
 
-	const dockerPath = process.env["CONTAINERS_DOCKER_PATH"] ?? "docker";
+	const dockerPath = getDockerPath();
 	const buildOptions = {
 		tag: imageTag,
 		pathToDockerfileDirectory:

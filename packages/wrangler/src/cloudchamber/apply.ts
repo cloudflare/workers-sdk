@@ -22,7 +22,6 @@ import {
 } from "./client";
 import { promiseSpinner } from "./common";
 import { diffLines } from "./helpers/diff";
-import { wrap } from "./helpers/wrap";
 import type { Config } from "../config";
 import type { ContainerApp } from "../config/environment";
 import type {
@@ -580,13 +579,16 @@ export async function apply(
 
 	for (const action of actions) {
 		if (action.action === "create") {
-			const [_result, err] = await wrap(
-				promiseSpinner(
+			try {
+				await promiseSpinner(
 					ApplicationsService.createApplication(action.application),
 					{ json: args.json, message: `creating ${action.application.name}` }
-				)
-			);
-			if (err !== null) {
+				);
+			} catch (err) {
+				if (!(err instanceof Error)) {
+					throw err;
+				}
+
 				if (!(err instanceof ApiError)) {
 					throw new UserError(
 						`Unexpected error creating application: ${err.message}`
@@ -607,43 +609,44 @@ export async function apply(
 			success(`Created application ${brandColor(action.application.name)}`, {
 				shape: shapes.bar,
 			});
+
 			printLine("");
 			continue;
 		}
 
 		if (action.action === "modify") {
-			{
-				const [_result, err] = await wrap(
-					promiseSpinner(
-						ApplicationsService.modifyApplication(action.id, {
-							...action.application,
-							configuration: undefined,
-						})
-					)
+			try {
+				await promiseSpinner(
+					ApplicationsService.modifyApplication(action.id, {
+						...action.application,
+						configuration: undefined,
+					})
 				);
+			} catch (err) {
+				if (!(err instanceof Error)) {
+					throw err;
+				}
 
-				if (err !== null) {
-					if (!(err instanceof ApiError)) {
-						throw new UserError(
-							`Unexpected error modifying application ${action.name}: ${err.message}`
-						);
-					}
-
-					if (err.status === 400) {
-						throw new UserError(
-							`Error modifying application ${action.name} due to a misconfiguration:\n\n\t${formatError(err)}`
-						);
-					}
-
+				if (!(err instanceof ApiError)) {
 					throw new UserError(
-						`Error modifying application ${action.name} due to an internal error (request id: ${err.body.request_id}):\n${formatError(err)}`
+						`Unexpected error modifying application ${action.name}: ${err.message}`
 					);
 				}
+
+				if (err.status === 400) {
+					throw new UserError(
+						`Error modifying application ${action.name} due to a misconfiguration:\n\n\t${formatError(err)}`
+					);
+				}
+
+				throw new UserError(
+					`Error modifying application ${action.name} due to an internal error (request id: ${err.body.request_id}):\n${formatError(err)}`
+				);
 			}
 
 			if (action.rollout_step_percentage !== undefined) {
-				const [_result, err] = await wrap(
-					promiseSpinner(
+				try {
+					await promiseSpinner(
 						RolloutsService.createApplicationRollout(action.id, {
 							description: "Progressive update",
 							strategy: CreateApplicationRolloutRequest.strategy.ROLLING,
@@ -656,9 +659,12 @@ export async function apply(
 							json: args.json,
 							message: `rolling out container version ${action.name}`,
 						}
-					)
-				);
-				if (err !== null) {
+					);
+				} catch (err) {
+					if (!(err instanceof Error)) {
+						throw err;
+					}
+
 					if (!(err instanceof ApiError)) {
 						throw new UserError(
 							`Unexpected error rolling out application ${action.name}:\n${err.message}`
@@ -680,6 +686,7 @@ export async function apply(
 			success(`Modified application ${brandColor(action.name)}`, {
 				shape: shapes.bar,
 			});
+
 			printLine("");
 			continue;
 		}
