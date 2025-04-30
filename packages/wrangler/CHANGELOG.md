@@ -1,5 +1,22 @@
 # wrangler
 
+## 4.14.0
+
+### Minor Changes
+
+- [#8981](https://github.com/cloudflare/workers-sdk/pull/8981) [`3b60131`](https://github.com/cloudflare/workers-sdk/commit/3b60131ca5a1bafcf7af16b0f41f2601a9a3ee85) Thanks [@Caio-Nogueira](https://github.com/Caio-Nogueira)! - Adds support for waitForEvent step type
+
+- [#9083](https://github.com/cloudflare/workers-sdk/pull/9083) [`137d2da`](https://github.com/cloudflare/workers-sdk/commit/137d2da0602db0f66a5c1b6f277624f6031d9dc5) Thanks [@penalosa](https://github.com/penalosa)! - Support Tail Workers in local dev
+
+### Patch Changes
+
+- [#8975](https://github.com/cloudflare/workers-sdk/pull/8975) [`9bf55aa`](https://github.com/cloudflare/workers-sdk/commit/9bf55aa60aa69ea9bf2b59138504d1772d84c14d) Thanks [@Caio-Nogueira](https://github.com/Caio-Nogueira)! - Adds missing `waiting` status on the `wrangler workflow instances list` command
+
+- [#9048](https://github.com/cloudflare/workers-sdk/pull/9048) [`0b4d22a`](https://github.com/cloudflare/workers-sdk/commit/0b4d22a864d7781c87ccead79888b39fd7304575) Thanks [@garvit-gupta](https://github.com/garvit-gupta)! - fix: Validate input file for Vectorize inserts
+
+- Updated dependencies [[`d2ecc76`](https://github.com/cloudflare/workers-sdk/commit/d2ecc763e4d77620d6a9be71855e87893631ebc0), [`137d2da`](https://github.com/cloudflare/workers-sdk/commit/137d2da0602db0f66a5c1b6f277624f6031d9dc5)]:
+  - miniflare@4.20250428.0
+
 ## 4.13.2
 
 ### Patch Changes
