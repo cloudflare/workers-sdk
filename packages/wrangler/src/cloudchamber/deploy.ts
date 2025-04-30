@@ -10,13 +10,13 @@ import { apply } from "./apply";
 import { build } from "./build";
 import { fillOpenAPIConfiguration } from "./common";
 
-export async function buildContainers(config: Config, versionId: string) {
+export async function buildContainers(config: Config, imageTag: string) {
 	if (config.containers === undefined) {
 		return;
 	}
 
 	for (const container of config.containers) {
-		const options = getBuildArguments(container, versionId, true);
+		const options = getBuildArguments(container, imageTag, true);
 		if (options.isDockerImage) {
 			await build(options);
 		}
@@ -102,7 +102,7 @@ export async function deployContainers(
 // It will return options that are usable with the build() method from containers.
 function getBuildArguments(
 	container: ContainerApp,
-	versionId: string,
+	idForImageTag: string,
 	dryRun?: boolean
 ) {
 	const imageRef = container.image ?? container.configuration.image;
@@ -149,7 +149,7 @@ function getBuildArguments(
 		return { isDockerImage: false } as const;
 	}
 
-	const imageTag = container.name + ":" + versionId.split("-")[0];
+	const imageTag = container.name + ":" + idForImageTag.split("-")[0];
 
 	const dockerPath = process.env["CONTAINERS_DOCKER_PATH"] ?? "docker";
 	const buildOptions = {
