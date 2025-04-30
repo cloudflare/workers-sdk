@@ -177,6 +177,18 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 					expectedText: "SwaggerUI",
 				},
 			},
+			{
+				template: "workflows-starter",
+				variants: [],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "details",
+				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "details",
+				},
+			},
 		];
 	}
 }
