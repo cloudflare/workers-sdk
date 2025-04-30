@@ -282,6 +282,7 @@ export const deriveCorrelatedArgs = (args: Partial<C3Args>) => {
 		case "common":
 		case "scheduled":
 		case "queues":
+		case "workflow-starter":
 		case "openapi":
 			args.category ??= "demo";
 			break;
