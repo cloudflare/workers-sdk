@@ -113,16 +113,12 @@ jobs:
         include:
           - os: ubuntu-24.04-arm
             os_name: Linux
-            node_version: 18.20.6
+            node_version: 20.19.1
             filter: '--filter="./tools" --filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
           - os: windows-latest
             os_name: Windows
-            node_version: 18.20.6
+            node_version: 20.19.1
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
-          - os: ubuntu-24.04-arm
-            os_name: v20, Linux
-            node_version: 20
-            filter: '--filter="./packages/*"'
           - os: ubuntu-24.04-arm
             os_name: v22, Linux
             node_version: 22
@@ -182,7 +178,7 @@ jobs:
         include:
           - os: macos-latest
             os_name: macOS
-            node_version: 18.20.6
+            node_version: 20.19.1
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --summarize'
     runs-on: ${{ matrix.os }}
     steps:
