@@ -244,7 +244,7 @@ export function getHelloWorldTemplateMap({
 			scheduled: scheduledTemplate,
 			queues: queuesTemplate,
 			openapi: openapiTemplate,
-			"workflow-starter": workflowsTemplate,
+			"workflows-starter": workflowsTemplate,
 			"pre-existing": preExistingTemplate,
 		} as Record<string, TemplateConfig>;
 	}
@@ -295,7 +295,7 @@ export const deriveCorrelatedArgs = (args: Partial<C3Args>) => {
 		case "common":
 		case "scheduled":
 		case "queues":
-		case "workflow-starter":
+		case "workflows-starter":
 		case "openapi":
 			args.category ??= "demo";
 			break;
