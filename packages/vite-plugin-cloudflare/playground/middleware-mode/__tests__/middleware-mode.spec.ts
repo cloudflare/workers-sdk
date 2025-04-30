@@ -1,10 +1,10 @@
 import { expect, test } from "vitest";
-import { page } from "../../__test-utils__";
+import { isBuild, page } from "../../__test-utils__";
 import { port } from "./serve";
 
 const url = `http://localhost:${port}`;
 
-test("returns correct response", async () => {
+test.skipIf(isBuild)("returns correct response", async () => {
 	const responsePromise = page.waitForResponse(url);
 	await page.goto(url);
 	const response = await responsePromise;

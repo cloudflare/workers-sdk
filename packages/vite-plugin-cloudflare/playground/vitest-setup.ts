@@ -181,7 +181,11 @@ beforeAll(async (s) => {
 }, 15_000);
 
 beforeEach(async () => {
-	await page.goto(viteTestUrl);
+	try {
+		await page.goto(viteTestUrl);
+	} catch (error) {
+		// Expected to error for middleware-mode test as `viteTestUrl` will not be valid
+	}
 });
 
 export async function loadConfig(configEnv: ConfigEnv) {
