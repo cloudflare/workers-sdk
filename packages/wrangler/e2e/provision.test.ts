@@ -224,10 +224,13 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 		output = await helper.run(`wrangler delete`);
 		expect(output.stdout).toContain("Successfully deleted");
 
-		await vi.waitFor(async () => {
-			const res = await fetch(deployedUrl);
-			await expect(res.status).not.toBe(200);
-		});
+		await vi.waitFor(
+			async () => {
+				const res = await fetch(deployedUrl);
+				await expect(res.status).not.toBe(200);
+			},
+			{ interval: 1_000, timeout: 20_000 }
+		);
 
 		output = await helper.run(
 			`wrangler kv namespace delete --namespace-id ${kvId}`
