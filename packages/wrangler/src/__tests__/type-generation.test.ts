@@ -1,5 +1,4 @@
 import * as fs from "fs";
-import path from "path";
 import * as TOML from "@iarna/toml";
 import {
 	constructTSModuleGlob,
@@ -420,7 +419,7 @@ describe("generate types", () => {
 				name: "test-name",
 				main: "./index.ts",
 				...bindingsConfigMock,
-				unsafe: bindingsConfigMock.unsafe ?? {},
+				unsafe: bindingsConfigMock.unsafe,
 			} as unknown as TOML.JsonMap),
 			"utf-8"
 		);
@@ -445,8 +444,8 @@ describe("generate types", () => {
 					D1_TESTING_SOMETHING: D1Database;
 					SECRET: SecretsStoreSecret;
 					SERVICE_BINDING: Fetcher /* service_name */;
-					OTHER_SERVICE_BINDING: Fetcher /* entrypoint FakeEntrypoint from service_name_2 */;
-					OTHER_SERVICE_BINDING_ENTRYPOINT: Fetcher /* entrypoint RealEntrypoint from service_name_2 */;
+					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
+					OTHER_SERVICE_BINDING_ENTRYPOINT: Service /* entrypoint RealEntrypoint from service_name_2 */;
 					AE_DATASET_BINDING: AnalyticsEngineDataset;
 					NAMESPACE_BINDING: DispatchNamespace;
 					LOGFWDR_SCHEMA: any;
@@ -511,7 +510,7 @@ describe("generate types", () => {
 				name: "test-name",
 				main: "./index.ts",
 				...bindingsConfigMock,
-				unsafe: bindingsConfigMock.unsafe ?? {},
+				unsafe: bindingsConfigMock.unsafe,
 			} as unknown as TOML.JsonMap),
 			"utf-8"
 		);
@@ -538,8 +537,8 @@ describe("generate types", () => {
 					D1_TESTING_SOMETHING: D1Database;
 					SECRET: SecretsStoreSecret;
 					SERVICE_BINDING: Fetcher /* service_name */;
-					OTHER_SERVICE_BINDING: Fetcher /* entrypoint FakeEntrypoint from service_name_2 */;
-					OTHER_SERVICE_BINDING_ENTRYPOINT: Fetcher /* entrypoint RealEntrypoint from service_name_2 */;
+					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
+					OTHER_SERVICE_BINDING_ENTRYPOINT: Service /* entrypoint RealEntrypoint from service_name_2 */;
 					AE_DATASET_BINDING: AnalyticsEngineDataset;
 					NAMESPACE_BINDING: DispatchNamespace;
 					LOGFWDR_SCHEMA: any;
@@ -596,10 +595,7 @@ describe("generate types", () => {
 			"./a/index.ts",
 			`import { DurableObject } from 'cloudflare:workers';
 				export default { async fetch () {} };
-				export class DurableDirect extends DurableObject {}
-				export { DurableReexport } from './durable-2.js';
-				// This should not be picked up, because it's external:
-				export class DurableExternal extends DurableObject {}`
+				export class DurableDirect extends DurableObject {}`
 		);
 		fs.writeFileSync(
 			"./a/wrangler.toml",
@@ -612,10 +608,12 @@ describe("generate types", () => {
 				name: "test-name",
 				main: "./index.ts",
 				...bindingsConfigMock,
-				unsafe: bindingsConfigMock.unsafe ?? {},
+				unsafe: bindingsConfigMock.unsafe,
 			} as unknown as TOML.JsonMap),
 			"utf-8"
 		);
+		fs.writeFileSync("./a/.dev.vars", "SECRET=test", "utf-8");
+
 		fs.mkdirSync("b");
 
 		fs.writeFileSync("./b/index.ts", `export default { async fetch () {} };`);
@@ -629,11 +627,15 @@ describe("generate types", () => {
 				],
 				name: "service_name",
 				main: "./index.ts",
-				...bindingsConfigMock,
-				unsafe: bindingsConfigMock.unsafe ?? {},
+				vars: {
+					// This should not be included in the generated types
+					WORKER_B_VAR: "worker b var",
+				},
 			} as unknown as TOML.JsonMap),
 			"utf-8"
 		);
+		// This should not be included in the generated types
+		fs.writeFileSync("./b/.dev.vars", "SECRET_B=hidden", "utf-8");
 
 		fs.mkdirSync("c");
 
@@ -657,12 +659,15 @@ describe("generate types", () => {
 				],
 				name: "service_name_2",
 				main: "./index.ts",
-				...bindingsConfigMock,
-				unsafe: bindingsConfigMock.unsafe ?? {},
+				vars: {
+					// This should not be included in the generated types
+					WORKER_C_VAR: "worker c var",
+				},
 			} as unknown as TOML.JsonMap),
 			"utf-8"
 		);
-		fs.writeFileSync("./a/.dev.vars", "SECRET=test", "utf-8");
+		// This should not be included in the generated types
+		fs.writeFileSync("./c/.dev.vars", "SECRET_C=hidden", "utf-8");
 
 		await runWrangler(
 			"types --include-runtime=false -c a/wrangler.toml -c b/wrangler.toml -c c/wrangler.toml --path a/worker-configuration.d.ts"
@@ -681,14 +686,15 @@ describe("generate types", () => {
 					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
 					SECRET: string;
 					DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
-					DURABLE_RE_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableReexport>;
+					DURABLE_RE_EXPORT: DurableObjectNamespace /* DurableReexport */;
 					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
 					DURABLE_EXTERNAL: DurableObjectNamespace /* DurableExternal from external-worker */;
 					REAL_DURABLE_EXTERNAL: DurableObjectNamespace<import(\\"../c/index\\").RealDurableExternal>;
 					R2_BUCKET_BINDING: R2Bucket;
 					D1_TESTING_SOMETHING: D1Database;
-					SERVICE_BINDING: Service<import(\\"../b/index\\").default>;
-					OTHER_SERVICE_BINDING: Fetcher /* entrypoint FakeEntrypoint from service_name_2 */;
+					SECRET: SecretsStoreSecret;
+					SERVICE_BINDING: Fetcher /* service_name */;
+					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
 					OTHER_SERVICE_BINDING_ENTRYPOINT: Service<import(\\"../c/index\\").RealEntrypoint>;
 					AE_DATASET_BINDING: AnalyticsEngineDataset;
 					NAMESPACE_BINDING: DispatchNamespace;
@@ -707,7 +713,7 @@ describe("generate types", () => {
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
 					IMAGES_BINDING: ImagesBinding;
-					VERSION_METADATA_BINDING: { id: string; tag: string };
+					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;
 					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 				}

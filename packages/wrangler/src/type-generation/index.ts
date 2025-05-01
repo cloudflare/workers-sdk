@@ -146,7 +146,7 @@ export const typesCommand = createCommand({
 			for (const secondaryConfig of secondaryConfigs) {
 				const serviceEntry = await getEntry({}, secondaryConfig, "types");
 
-				if (serviceEntry?.name) {
+				if (serviceEntry.name) {
 					const key = serviceEntry.name;
 					if (serviceEntries.has(key)) {
 						logger.warn(
@@ -395,19 +395,17 @@ export async function generateEnvTypes(
 
 	if (configToDTS.durable_objects?.bindings) {
 		for (const durableObject of configToDTS.durable_objects.bindings) {
-			const entrypointFile = durableObject.script_name
-				? serviceEntries?.get(durableObject.script_name)?.file
-				: entrypoint?.file;
+			const doEntrypoint = durableObject.script_name
+				? serviceEntries?.get(durableObject.script_name)
+				: entrypoint;
 
-			const importPath = entrypointFile
-				? generateImportSpecifier(fullOutputPath, entrypointFile)
+			const importPath = doEntrypoint
+				? generateImportSpecifier(fullOutputPath, doEntrypoint.file)
 				: undefined;
 
-			const exportExists = (
-				durableObject.script_name
-					? serviceEntries?.get(durableObject.script_name)
-					: entrypoint
-			)?.exports?.some((e) => e === durableObject.class_name);
+			const exportExists = doEntrypoint?.exports?.some(
+				(e) => e === durableObject.class_name
+			);
 
 			let typeName: string;
 
@@ -446,20 +444,18 @@ export async function generateEnvTypes(
 
 	if (configToDTS.services) {
 		for (const service of configToDTS.services) {
-			const entrypointFile =
-				service.service !== entrypoint?.name
-					? serviceEntries?.get(service.service)?.file
-					: entrypoint?.file;
-
-			const importPath = entrypointFile
-				? generateImportSpecifier(fullOutputPath, entrypointFile)
-				: undefined;
-
-			const exportExists = (
+			const serviceEntry =
 				service.service !== entrypoint?.name
 					? serviceEntries?.get(service.service)
-					: entrypoint
-			)?.exports?.some((e) => e === service.entrypoint);
+					: entrypoint;
+
+			const importPath = serviceEntry
+				? generateImportSpecifier(fullOutputPath, serviceEntry.file)
+				: undefined;
+
+			const exportExists = serviceEntry?.exports?.some(
+				(e) => e === service.entrypoint
+			);
 
 			let typeName: string;
 
