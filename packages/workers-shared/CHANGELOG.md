@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.15.1
+
+### Patch Changes
+
+- [#9055](https://github.com/cloudflare/workers-sdk/pull/9055) [`fc04292`](https://github.com/cloudflare/workers-sdk/commit/fc042928b06aba7abe466ee2efb83e56f10ebba0) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - chore: convert wrangler.toml files into wrangler.jsonc ones
+
 ## 0.15.0
 
 ### Minor Changes

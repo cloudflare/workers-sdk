@@ -1,5 +1,20 @@
 # wrangler
 
+## 3.114.8
+
+### Patch Changes
+
+- [#9086](https://github.com/cloudflare/workers-sdk/pull/9086) [`a2a56c8`](https://github.com/cloudflare/workers-sdk/commit/a2a56c84bbfa12efa828b03c2292875b0cb09c75) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Do not include .wrangler and Wrangler config files in additional modules
+
+  Previously, if you added modules rules such as `**/*.js` or `**/*.json`, specified `no_bundle: true`, and the entry-point to the Worker was in the project root directory, Wrangler could include files that were not intended, such as `.wrangler/tmp/xxx.js` or the Wrangler config file itself. Now these files are automatically skipped when trying to find additional modules by searching the file tree.
+
+- [#9037](https://github.com/cloudflare/workers-sdk/pull/9037) [`d0d0025`](https://github.com/cloudflare/workers-sdk/commit/d0d0025dd538a7bbc9af2b68f46c55902440d7a2) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: When generating Env types, set type of version metadata binding to `WorkerVersionMetadata`. This means it now correctly includes the `timestamp` field.
+
+- [#9093](https://github.com/cloudflare/workers-sdk/pull/9093) [`2f2f7ba`](https://github.com/cloudflare/workers-sdk/commit/2f2f7ba12eb5c20d81106b40e1f4ed412851b741) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Validate input file for Vectorize inserts
+
+- Updated dependencies [[`fc04292`](https://github.com/cloudflare/workers-sdk/commit/fc042928b06aba7abe466ee2efb83e56f10ebba0), [`a01adca`](https://github.com/cloudflare/workers-sdk/commit/a01adca398c236d91ef87e2c6cbb4432ada2a919)]:
+  - miniflare@3.20250408.1
+
 ## 3.114.7
 
 ### Patch Changes
