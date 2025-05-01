@@ -9,6 +9,7 @@ import {
 	LogLevel,
 	Response as MiniflareResponse,
 } from "miniflare";
+import colors from "picocolors";
 import { globSync } from "tinyglobby";
 import * as vite from "vite";
 import { unstable_getMiniflareWorkerOptions } from "wrangler";
@@ -187,6 +188,43 @@ function getEntryWorkerConfig(
 	return resolvedPluginConfig.workers[
 		resolvedPluginConfig.entryWorkerEnvironmentName
 	];
+}
+
+function filterTails(
+	tails: WorkerOptions["tails"],
+	userWorkers: { name?: string }[],
+	log: (msg: string) => void
+) {
+	// Only connect the tail consumers that represent Workers that are defined in the Vite config. Warn that a tail will be omitted otherwise
+	// This _differs from service bindings_ because tail consumers are "optional" in a sense, and shouldn't affect the runtime behaviour of a Worker
+	return tails?.filter((tailService) => {
+		let name: string;
+		if (typeof tailService === "string") {
+			name = tailService;
+		} else if (
+			typeof tailService === "object" &&
+			"name" in tailService &&
+			typeof tailService.name === "string"
+		) {
+			name = tailService.name;
+		} else {
+			// Don't interfere with network-based tail connections (e.g. via the dev registry), or kCurrentWorker
+			return true;
+		}
+		const found = !!userWorkers.find((w) => w.name === name);
+
+		if (!found) {
+			log(
+				colors.dim(
+					colors.yellow(
+						`Tail consumer "${name}" was not found in your config. Make sure you add it if you'd like to simulate receiving tail events locally.`
+					)
+				)
+			);
+		}
+
+		return found;
+	});
 }
 
 export function getDevMiniflareOptions(
@@ -434,6 +472,11 @@ export function getDevMiniflareOptions(
 
 				return {
 					...workerOptions,
+					tails: filterTails(
+						workerOptions.tails,
+						userWorkers,
+						viteDevServer.config.logger.warn
+					),
 					modules: [
 						{
 							type: "ESModule",
@@ -543,6 +586,11 @@ export function getPreviewMiniflareOptions(
 		return [
 			{
 				...workerOptions,
+				tails: filterTails(
+					workerOptions.tails,
+					workerConfigs,
+					vitePreviewServer.config.logger.warn
+				),
 				name: workerOptions.name ?? config.name,
 				unsafeInspectorProxy: inspectorPort !== false,
 				...(miniflareWorkerOptions.main
