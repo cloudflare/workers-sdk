@@ -882,6 +882,7 @@ export const pagesDevCommand = createCommand({
 			{
 				MULTIWORKER: Array.isArray(args.config),
 				RESOURCES_PROVISION: false,
+				MIXED_MODE: false,
 			},
 			() =>
 				startDev({

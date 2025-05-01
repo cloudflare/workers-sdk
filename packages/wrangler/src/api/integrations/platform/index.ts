@@ -108,6 +108,8 @@ export async function getPlatformProxy<
 		{
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: false,
+			// TODO: when possible mixed mode should be made available for getPlatformProxy
+			MIXED_MODE: false,
 		},
 		() => getMiniflareOptionsFromConfig(rawConfig, env, options)
 	);

@@ -224,6 +224,7 @@ export async function unstable_dev(
 			// TODO: can we make this work?
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: false,
+			MIXED_MODE: false,
 		},
 		() => startDev(devOptions)
 	);
