@@ -11,41 +11,11 @@ import type {
 
 export type { WorkerDefinition, WorkerRegistry, WorkerEntrypointsDefinition };
 
-/**
- * Start the service registry. It's a simple server
- * that exposes endpoints for registering and unregistering
- * services, as well as getting the state of the registry.
- */
-export async function startWorkerRegistry(
-	listener?: (registry: WorkerRegistry | undefined) => void
-) {
-	return fileRegistry.start(listener);
-}
-
-/**
- * Stop the service registry.
- */
-export async function stopWorkerRegistry() {
-	return fileRegistry.stop();
-}
-
-/**
- * Register a worker in the registry.
- */
 export async function registerWorker(
 	name: string,
 	definition: WorkerDefinition
 ) {
 	return fileRegistry.register(name, definition);
-}
-
-/**
- * Get the state of the service registry.
- */
-export async function getRegisteredWorkers(): Promise<
-	WorkerRegistry | undefined
-> {
-	return fileRegistry.getWorkers();
 }
 
 /**
@@ -83,7 +53,7 @@ export async function getBoundRegisteredWorkers(
 		return {};
 	}
 	const workerDefinitions =
-		existingWorkerDefinitions ?? (await getRegisteredWorkers());
+		existingWorkerDefinitions ?? (await fileRegistry.getWorkers());
 
 	const filteredWorkers = Object.fromEntries(
 		Object.entries(workerDefinitions || {}).filter(
@@ -111,7 +81,7 @@ export async function devRegistry(
 		try {
 			const [unregisterResult, stopRegistryResult] = await Promise.allSettled([
 				name ? fileRegistry.unregister(name) : Promise.resolve(),
-				stopWorkerRegistry(),
+				fileRegistry.stop(),
 			]);
 			if (unregisterResult.status === "rejected") {
 				logger.error("Failed to unregister worker", unregisterResult.reason);

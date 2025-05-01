@@ -28,6 +28,11 @@ export class DevRegistry {
 		this.workers = {};
 	}
 
+	/**
+	 * Start the service registry. It's a simple server
+	 * that exposes endpoints for registering and unregistering
+	 * services, as well as getting the state of the registry.
+	 */
 	async start(
 		callback?: (registry: WorkerRegistry | undefined) => void
 	): Promise<void> {
@@ -43,6 +48,9 @@ export class DevRegistry {
 		});
 	}
 
+	/**
+	 * Stop the service registry.
+	 */
 	async stop(): Promise<void> {
 		if (this.watcher) {
 			await this.watcher.close();
@@ -56,6 +64,9 @@ export class DevRegistry {
 		}
 	}
 
+	/**
+	 * Register a worker in the registry.
+	 */
 	async register(name: string, definition: WorkerDefinition) {
 		const existingHeartbeat = this.heartbeats.get(name);
 		if (existingHeartbeat) {
@@ -90,6 +101,9 @@ export class DevRegistry {
 		}
 	}
 
+	/**
+	 * Get the state of the service registry.
+	 */
 	async getWorkers(): Promise<WorkerRegistry> {
 		return this.refresh();
 	}

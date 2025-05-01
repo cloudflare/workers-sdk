@@ -17,7 +17,6 @@ import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
-import { getServiceBindings } from "./services";
 import type { Config, RawConfig, RawEnvironment } from "../../../config";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, ModuleRule, WorkerOptions } from "miniflare";
@@ -174,8 +173,6 @@ async function getMiniflareOptionsFromConfig(
 
 	const persistOptions = getMiniflarePersistOptions(options.persist);
 
-	const serviceBindings = await getServiceBindings(bindings.services);
-
 	const miniflareOptions: MiniflareOptions = {
 		workers: [
 			{
@@ -183,10 +180,6 @@ async function getMiniflareOptionsFromConfig(
 				modules: true,
 				name: rawConfig.name,
 				...bindingOptions,
-				serviceBindings: {
-					...serviceBindings,
-					...bindingOptions.serviceBindings,
-				},
 			},
 			...externalWorkers,
 		],
