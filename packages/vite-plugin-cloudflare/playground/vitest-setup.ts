@@ -153,6 +153,7 @@ beforeAll(async (s) => {
 				if (serve) {
 					server = (await serve()) ?? server;
 					viteServer = mod.viteServer ?? viteServer;
+					viteTestUrl = mod.viteTestUrl ?? viteTestUrl;
 				}
 			} else {
 				await startDefaultServe();
