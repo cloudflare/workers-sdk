@@ -4,7 +4,11 @@ import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import chalk from "chalk";
 import { findUpSync } from "find-up";
 import { getNodeCompat } from "miniflare";
-import { configFileName, experimental_readRawConfig } from "../config";
+import {
+	configFileName,
+	experimental_readRawConfig,
+	readConfig,
+} from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
 import { getVarsForDev } from "../dev/dev-vars";
@@ -24,6 +28,9 @@ export const typesCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		epilogue:
 			"📖 Learn more at https://developers.cloudflare.com/workers/languages/typescript/#generate-types",
+	},
+	behaviour: {
+		provideConfig: false,
 	},
 	positionalArgs: ["path"],
 	args: {
@@ -61,13 +68,6 @@ export const typesCommand = createCommand({
 			demandOption: false,
 			hidden: true,
 			deprecated: true,
-		},
-		"service-config": {
-			alias: "s",
-			type: "string",
-			array: true,
-			describe: "Additional wrangler configuration file(s) defining bound services",
-			default: [],
 		},
 	},
 	validateArgs(args) {
@@ -115,7 +115,18 @@ export const typesCommand = createCommand({
 			);
 		}
 	},
-	async handler(args, { config }) {
+	async handler(args) {
+		let config: Config;
+		const secondaryConfigs: Config[] = [];
+		if (Array.isArray(args.config)) {
+			config = readConfig({ ...args, config: args.config[0] });
+			for (const configPath of args.config.slice(1)) {
+				secondaryConfigs.push(readConfig({ config: configPath }));
+			}
+		} else {
+			config = readConfig(args);
+		}
+
 		const { envInterface, path: outputPath } = args;
 
 		if (
@@ -129,87 +140,32 @@ export const typesCommand = createCommand({
 			);
 		}
 
-		// --- BEGIN: Load and process service configs ---
-		const serviceEntries: Record<string, { entry: Entry; configPath: string }> = {};
+		const serviceEntries: Map<string, Entry> = new Map();
 
-		if (args.serviceConfig?.length) {
-			logger.log("Processing service configuration files...");
-			for (const serviceConfigPath of args.serviceConfig) {
-				const absoluteServiceConfigPath = resolve(serviceConfigPath);
-				if (!fs.existsSync(absoluteServiceConfigPath)) {
-					logger.warn(
-						`Service config '${serviceConfigPath}' does not exist; skipping.`
-					);
-					continue;
-				}
-				try {
-					// Read the raw config for the service
-					const { rawConfig: serviceRawConfig } = experimental_readRawConfig({
-						config: absoluteServiceConfigPath,
-					});
+		if (secondaryConfigs.length > 0) {
+			for (const secondaryConfig of secondaryConfigs) {
+				const serviceEntry = await getEntry({}, secondaryConfig, "types");
 
-					// Construct a minimal Config object for getEntry
-					// We assume getEntry primarily needs the entry point definition (main/site)
-					// and potentially the name and paths for context.
-					const serviceConfigForEntry: Config = {
-						...serviceRawConfig,
-						configPath: absoluteServiceConfigPath,
-						userConfigPath: absoluteServiceConfigPath,
-						topLevelName: serviceRawConfig.name ?? undefined, // Use name from config if available
-						legacy_env: false,
-						send_metrics: false,
-						// @ts-expect-error explanation
-						dev: serviceRawConfig.dev,
-						build: serviceRawConfig.build ?? {},
-						durable_objects: serviceRawConfig.durable_objects ?? {
-							bindings: []
-						}
-					};
-
-					// Resolve the entry point for the service config using the constructed object
-					const serviceEntry = await getEntry(
-						{},
-						serviceConfigForEntry, // Pass the constructed Config-like object
-						"types"
-					).catch(
-						(e) => {
-							logger.warn(
-								`Failed to resolve entry for ${serviceConfigPath}: ${e instanceof Error ? e.message : e}`
-							);
-							return undefined; // Explicitly return undefined on error
-						}
-					);
-
-					if (serviceEntry && serviceEntry.name) {
-						const key = serviceEntry.name;
-						if (serviceEntries[key]) {
-							logger.warn(
-								`Duplicate service key '${key}' detected for config '${serviceConfigPath}'. Overwriting previous entry.`
-							);
-						}
-						serviceEntries[key] = {
-							entry: serviceEntry,
-							configPath: absoluteServiceConfigPath,
-						};
-						logger.log(
-							chalk.dim(
-								`  Found entry for service '${key}' at '${relative(process.cwd(), serviceEntry.file)}'`
-							)
-						);
-					} else {
+				if (serviceEntry?.name) {
+					const key = serviceEntry.name;
+					if (serviceEntries.has(key)) {
 						logger.warn(
-							`Could not resolve entry point for service config '${serviceConfigPath}'. Types may be incomplete.`
+							`Configuration file for Worker '${key}' has been passed in more than once using \`--config\`. To remove this warning, only pass each unique Worker config file once.`
 						);
 					}
-				} catch (e) {
-					logger.error(
-						`Failed to process service config ${serviceConfigPath}: ${e instanceof Error ? e.message : e}`
+					serviceEntries.set(key, serviceEntry);
+					logger.log(
+						chalk.dim(
+							`- Found Worker '${key}' at '${relative(process.cwd(), serviceEntry.file)}' (${secondaryConfig.configPath})`
+						)
+					);
+				} else {
+					logger.warn(
+						`Could not resolve entry point for service config '${secondaryConfig}'. Types may be incomplete.`
 					);
 				}
 			}
-			logger.log(chalk.dim("Finished processing service configurations.\n"));
 		}
-		// --- END: Load and process service configs ---
 
 		const configContainsEntrypoint =
 			config.main !== undefined || !!config.site?.["entry-point"];
@@ -238,7 +194,7 @@ export const typesCommand = createCommand({
 				envInterface,
 				outputPath,
 				entrypoint,
-				serviceEntries,
+				serviceEntries
 			);
 			if (envHeader && envTypes) {
 				header.push(envHeader);
@@ -344,7 +300,7 @@ export async function generateEnvTypes(
 	envInterface: string,
 	outputPath: string,
 	entrypoint?: Entry,
-	serviceEntries: Record<string, { entry: Entry; configPath: string }> = {},
+	serviceEntries?: Map<string, Entry>,
 	log = true
 ): Promise<{ envHeader?: string; envTypes?: string }> {
 	const stringKeys: string[] = [];
@@ -359,7 +315,7 @@ export async function generateEnvTypes(
 
 	const configToDTS: ConfigToDTS = {
 		kv_namespaces: config.kv_namespaces ?? [],
-		vars: collectAllVars(args),
+		vars: collectAllVars({ ...args, config: config.configPath }),
 		wasm_modules: config.wasm_modules,
 		text_blobs: {
 			...config.text_blobs,
@@ -438,18 +394,24 @@ export async function generateEnvTypes(
 	}
 
 	if (configToDTS.durable_objects?.bindings) {
-		const importPath = entrypoint?.file
-			? generateImportSpecifier(fullOutputPath, entrypoint.file)
-			: undefined;
-
 		for (const durableObject of configToDTS.durable_objects.bindings) {
-			const exportExists = entrypoint?.exports?.some(
-				(e) => e === durableObject.class_name
-			);
+			const entrypointFile = durableObject.script_name
+				? serviceEntries?.get(durableObject.script_name)?.file
+				: entrypoint?.file;
+
+			const importPath = entrypointFile
+				? generateImportSpecifier(fullOutputPath, entrypointFile)
+				: undefined;
+
+			const exportExists = (
+				durableObject.script_name
+					? serviceEntries?.get(durableObject.script_name)
+					: entrypoint
+			)?.exports?.some((e) => e === durableObject.class_name);
 
 			let typeName: string;
-			// Import the type if it's exported and it's not an external worker
-			if (importPath && exportExists && !durableObject.script_name) {
+
+			if (importPath && exportExists) {
 				typeName = `DurableObjectNamespace<import("${importPath}").${durableObject.class_name}>`;
 			} else if (durableObject.script_name) {
 				typeName = `DurableObjectNamespace /* ${durableObject.class_name} from ${durableObject.script_name} */`;
@@ -484,38 +446,32 @@ export async function generateEnvTypes(
 
 	if (configToDTS.services) {
 		for (const service of configToDTS.services) {
-			// --- BEGIN: Updated service binding logic ---
-			const bindingName = (service.binding || "").toUpperCase();
-			const serviceKey = service.service; // Normalize binding name for lookup
-			const serviceEntryInfo = serviceEntries[serviceKey]; // Check if we have an entry for this binding
-			if (serviceEntryInfo) {
-				const { entry: serviceEntry } = serviceEntryInfo;
-				// Resolve the relative path from the output file's directory to the service's entry file.
-				const primaryDir = dirname(fullOutputPath);
-				const relativePathToService = relative(
-					primaryDir,
-					serviceEntry.file
-				).replace(/\\/g, "/"); // Use POSIX paths
+			const entrypointFile =
+				service.service !== entrypoint?.name
+					? serviceEntries?.get(service.service)?.file
+					: entrypoint?.file;
 
-				// Ensure the import path starts with './' or '../'
-				const importPath = relativePathToService.startsWith(".")
-					? relativePathToService
-					: `./${relativePathToService}`;
+			const importPath = entrypointFile
+				? generateImportSpecifier(fullOutputPath, entrypointFile)
+				: undefined;
 
-				// Use typeof import(...) for the type
-				envTypeStructure.push([
-					constructTypeKey(service.binding),
-					`import("${importPath}").default`,
-				]);
+			const exportExists = (
+				service.service !== entrypoint?.name
+					? serviceEntries?.get(service.service)
+					: entrypoint
+			)?.exports?.some((e) => e === service.entrypoint);
+
+			let typeName: string;
+
+			if (importPath && exportExists) {
+				typeName = `Service<import("${importPath}").${service.entrypoint ?? "default"}>`;
+			} else if (service.entrypoint) {
+				typeName = `Service /* entrypoint ${service.entrypoint} from ${service.service} */`;
 			} else {
-				// Fallback if no service entry is provided or found: use the default "Fetcher" type.
-				if (bindingName && !serviceEntries[bindingName]) {
-					// Optional: Log a warning if a binding exists but no corresponding -s config was found/processed
-					// logger.warn(`No service entry found for binding '${service.binding}'. Using default 'Fetcher' type.`);
-				}
-				envTypeStructure.push([constructTypeKey(service.binding), "Fetcher"]);
+				typeName = `Fetcher /* ${service.service} */`;
 			}
-			// --- END: Updated service binding logic ---
+
+			envTypeStructure.push([constructTypeKey(service.binding), typeName]);
 		}
 	}
 
