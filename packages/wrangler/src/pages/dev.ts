@@ -947,6 +947,7 @@ export const pagesDevCommand = createCommand({
 					persistTo: args.persistTo,
 					logLevel: args.logLevel ?? "log",
 					experimentalProvision: undefined,
+					experimentalMixedMode: false,
 					experimentalVectorizeBindToProd: false,
 					experimentalImagesLocalMode: false,
 					enableIpc: true,
