@@ -1,5 +1,11 @@
 # miniflare
 
+## 4.20250428.1
+
+### Patch Changes
+
+- [#9089](https://github.com/cloudflare/workers-sdk/pull/9089) [`357d42a`](https://github.com/cloudflare/workers-sdk/commit/357d42acfb16d21169d004961030cd4822526a96) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: skip comment lines when parsing `NODE_EXTRA_CA_CERTS`
+
 ## 4.20250428.0
 
 ### Minor Changes
