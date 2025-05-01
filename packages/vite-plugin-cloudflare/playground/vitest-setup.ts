@@ -153,6 +153,7 @@ beforeAll(async (s) => {
 				if (serve) {
 					server = (await serve()) ?? server;
 					viteServer = mod.viteServer ?? viteServer;
+					viteTestUrl = mod.viteTestUrl ?? viteTestUrl;
 				}
 			} else {
 				await startDefaultServe();
@@ -181,11 +182,7 @@ beforeAll(async (s) => {
 }, 15_000);
 
 beforeEach(async () => {
-	try {
-		await page.goto(viteTestUrl);
-	} catch (error) {
-		// Expected to error for middleware-mode test as `viteTestUrl` will not be valid
-	}
+	await page.goto(viteTestUrl);
 });
 
 export async function loadConfig(configEnv: ConfigEnv) {

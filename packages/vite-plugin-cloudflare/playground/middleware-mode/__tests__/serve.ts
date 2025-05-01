@@ -1,7 +1,9 @@
 import * as path from "node:path";
 import { rootDir } from "../../__test-utils__";
 
-export const port = 3000;
+const port = 3000;
+
+export const viteTestUrl = `http://localhost:${port}`;
 
 export async function serve() {
 	const { createServer } = await import(path.resolve(rootDir, "server.js"));
