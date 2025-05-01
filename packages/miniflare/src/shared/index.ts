@@ -1,4 +1,5 @@
 export * from "./colour";
+export * from "./dev-registry";
 export * from "./error";
 export * from "./event";
 export * from "./log";
