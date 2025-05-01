@@ -1,5 +1,13 @@
 # miniflare
 
+## 3.20250408.1
+
+### Patch Changes
+
+- [#9055](https://github.com/cloudflare/workers-sdk/pull/9055) [`fc04292`](https://github.com/cloudflare/workers-sdk/commit/fc042928b06aba7abe466ee2efb83e56f10ebba0) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - chore: convert wrangler.toml files into wrangler.jsonc ones
+
+- [#9117](https://github.com/cloudflare/workers-sdk/pull/9117) [`a01adca`](https://github.com/cloudflare/workers-sdk/commit/a01adca398c236d91ef87e2c6cbb4432ada2a919) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: skip comment lines when parsing `NODE_EXTRA_CA_CERTS`
+
 ## 3.20250408.0
 
 ### Patch Changes
