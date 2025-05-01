@@ -366,6 +366,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					{ alwaysCallNext: false }
 				);
 
+				// The HTTP server is not available in middleware mode
 				if (viteDevServer.httpServer) {
 					handleWebSocket(viteDevServer.httpServer, async () => {
 						assert(miniflare, `Miniflare not defined`);
