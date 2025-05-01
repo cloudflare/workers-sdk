@@ -211,7 +211,7 @@ function filterTails(
 			// Don't interfere with network-based tail connections (e.g. via the dev registry), or kCurrentWorker
 			return true;
 		}
-		const found = !!userWorkers.find((w) => w.name === name);
+		const found = userWorkers.some(w => w.name === name);
 
 		if (!found) {
 			log(
