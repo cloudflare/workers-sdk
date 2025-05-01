@@ -9,17 +9,34 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 import { watch } from "chokidar";
-import { version as wranglerVersion } from "../../package.json";
-import { getRegistryPath } from "../environment-variables/misc-variables";
-import { logger } from "../logger";
-import type { WorkerDefinition, WorkerRegistry } from "./types";
+import { version as wranglerVersion } from "../package.json";
+import { getRegistryPath } from "./environment-variables/misc-variables";
+import { logger } from "./logger";
 
 const DEV_REGISTRY_PATH = getRegistryPath();
+
+export type WorkerRegistry = Record<string, WorkerDefinition>;
+
+export type WorkerEntrypointsDefinition = Record<
+	"default" | string,
+	{ host: string; port: number } | undefined
+>;
+
+export type WorkerDefinition = {
+	port: number | undefined;
+	protocol: "http" | "https" | undefined;
+	host: string | undefined;
+	mode: "local" | "remote";
+	headers?: Record<string, string>;
+	entrypointAddresses?: WorkerEntrypointsDefinition;
+	durableObjects: { name: string; className: string }[];
+	durableObjectsHost?: string;
+	durableObjectsPort?: number;
+};
 
 export class DevRegistry {
 	heartbeats: Map<string, NodeJS.Timeout>;
 	workers: WorkerRegistry | undefined;
-	watcher: ReturnType<typeof watch> | undefined;
 	registryPath: string;
 
 	constructor(registryPath: string) {
@@ -29,39 +46,30 @@ export class DevRegistry {
 	}
 
 	/**
-	 * Start the service registry. It's a simple server
-	 * that exposes endpoints for registering and unregistering
-	 * services, as well as getting the state of the registry.
+	 * Watch files inside the registry
 	 */
-	async start(
-		callback?: (registry: WorkerRegistry | undefined) => void
-	): Promise<void> {
-		await this.refresh();
+	async watch(
+		callback?: (registry: WorkerRegistry) => void
+	): Promise<() => Promise<void>> {
+		const workers = await this.getWorkers();
+		callback?.({ ...workers });
 
-		callback?.({ ...this.workers });
-
-		this.watcher ??= watch(this.registryPath, {
+		const watcher = watch(this.registryPath, {
 			persistent: true,
 		}).on("all", async () => {
-			await this.refresh();
-			callback?.({ ...this.workers });
+			const newWorkers = await this.refresh();
+			callback?.({ ...newWorkers });
 		});
-	}
 
-	/**
-	 * Stop the service registry.
-	 */
-	async stop(): Promise<void> {
-		if (this.watcher) {
-			await this.watcher.close();
+		return async () => {
+			await watcher.close();
 
 			for (const heartbeat of this.heartbeats) {
 				clearInterval(heartbeat[1]);
 			}
 
 			this.heartbeats.clear();
-			this.watcher = undefined;
-		}
+		};
 	}
 
 	/**
@@ -105,7 +113,11 @@ export class DevRegistry {
 	 * Get the state of the service registry.
 	 */
 	async getWorkers(): Promise<WorkerRegistry> {
-		return this.refresh();
+		if (!this.workers) {
+			return this.refresh();
+		}
+
+		return this.workers;
 	}
 
 	async refresh() {
@@ -149,4 +161,4 @@ export class DevRegistry {
 	}
 }
 
-export const fileRegistry = new DevRegistry(DEV_REGISTRY_PATH);
+export const devRegistry = new DevRegistry(DEV_REGISTRY_PATH);

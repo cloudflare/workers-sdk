@@ -1,4 +1,5 @@
-import { registerWorker } from "../dev-registry";
+import assert from "node:assert";
+import { devRegistry } from "../dev-registry";
 import type { CfDurableObject } from "../deployment-bundle/worker";
 import type { WorkerEntrypointsDefinition } from "../dev-registry";
 
@@ -8,18 +9,15 @@ export function maybeRegisterLocalWorker(
 	internalDurableObjects: CfDurableObject[] | undefined,
 	entrypointAddresses: WorkerEntrypointsDefinition | undefined
 ) {
-	if (name === undefined) {
-		return;
-	}
+	assert(name !== undefined);
 
 	let protocol = url.protocol;
 	protocol = protocol.substring(0, url.protocol.length - 1);
-	if (protocol !== "http" && protocol !== "https") {
-		return;
-	}
+
+	assert(protocol === "http" || protocol === "https");
 
 	const port = parseInt(url.port);
-	return registerWorker(name, {
+	return devRegistry.register(name, {
 		protocol,
 		mode: "local",
 		port,

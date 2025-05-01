@@ -15,7 +15,7 @@ import { configFileName, formatConfigSnippet } from "./config";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deploy/deploy";
 import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
-import { devRegistry, getBoundRegisteredWorkers } from "./dev-registry";
+import { devRegistry } from "./dev-registry";
 import { getVarsForDev } from "./dev/dev-vars";
 import registerDevHotKeys from "./dev/hotkeys";
 import { maybeRegisterLocalWorker } from "./dev/local";
@@ -32,6 +32,7 @@ import { mergeWithOverride } from "./utils/mergeWithOverride";
 import { getHostFromRoute } from "./zones";
 import type {
 	AsyncHook,
+	Binding,
 	ReloadCompleteEvent,
 	StartDevWorkerInput,
 	Trigger,
@@ -320,10 +321,9 @@ export const dev = createCommand({
 		assert(devInstance.devEnv !== undefined);
 		await events.once(devInstance.devEnv, "teardown");
 		await Promise.all(devInstance.secondary.map((d) => d.teardown()));
-		if (devInstance.teardownRegistryPromise) {
-			const teardownRegistry = await devInstance.teardownRegistryPromise;
-			await teardownRegistry(devInstance.devEnv.config.latestConfig?.name);
-		}
+		await devInstance.closeRegistryWatcher?.(
+			devInstance.devEnv.config.latestConfig?.name
+		);
 		devInstance.unregisterHotKeys?.();
 	},
 });
@@ -384,6 +384,54 @@ export type StartDevOptions = DevArguments &
 		onReady?: (ip: string, port: number) => void;
 		enableIpc?: boolean;
 	};
+
+/**
+ * a function that takes your serviceNames and durableObjectNames and returns a
+ * list of the running workers that we're bound to
+ */
+async function getBoundRegisteredWorkers(
+	{
+		name,
+		services,
+		durableObjects,
+		tailConsumers,
+	}: {
+		name: string | undefined;
+		services:
+			| Config["services"]
+			| Extract<Binding, { type: "service" }>[]
+			| undefined;
+		durableObjects:
+			| Config["durable_objects"]
+			| { bindings: Extract<Binding, { type: "durable_object_namespace" }>[] }
+			| undefined;
+		tailConsumers: Config["tail_consumers"] | undefined;
+	},
+	existingWorkerDefinitions: WorkerRegistry | undefined
+): Promise<WorkerRegistry | undefined> {
+	const serviceNames = [...(services || []), ...(tailConsumers ?? [])].map(
+		(serviceBinding) => serviceBinding.service
+	);
+	const durableObjectServices = (
+		durableObjects || { bindings: [] }
+	).bindings.map((durableObjectBinding) => durableObjectBinding.script_name);
+
+	if (serviceNames.length === 0 && durableObjectServices.length === 0) {
+		return {};
+	}
+	const workerDefinitions =
+		existingWorkerDefinitions ?? (await devRegistry.getWorkers());
+
+	const filteredWorkers = Object.fromEntries(
+		Object.entries(workerDefinitions || {}).filter(
+			([key, _value]) =>
+				//https://github.com/cloudflare/workers-sdk/blob/19b9b2fb1cb7063cb3928ecb26325cab9c10136f/packages/wrangler/src/dev/miniflare.ts#L444-L445
+				key !== name && // Always exclude current worker to avoid infinite loops
+				(serviceNames.includes(key) || durableObjectServices.includes(key))
+		)
+	);
+	return filteredWorkers;
+}
 
 async function updateDevEnvRegistry(
 	devEnv: DevEnv,
@@ -591,9 +639,7 @@ export async function startDev(args: StartDevOptions) {
 	let configFileWatcher: ReturnType<typeof watch> | undefined;
 	let assetsWatcher: ReturnType<typeof watch> | undefined;
 	let devEnv: DevEnv | DevEnv[] | undefined;
-	let teardownRegistryPromise:
-		| Promise<(name?: string) => Promise<void>>
-		| undefined;
+	let closeRegistryWatcher: ((name?: string) => Promise<void>) | undefined;
 
 	let unregisterHotKeys: (() => void) | undefined;
 	try {
@@ -685,10 +731,34 @@ export async function startDev(args: StartDevOptions) {
 			});
 
 			if (!args.disableDevRegistry) {
-				teardownRegistryPromise = devRegistry((registry) => {
+				const closeWatcherPromise = devRegistry.watch((registry) => {
 					assert(devEnv !== undefined && !Array.isArray(devEnv));
 					void updateDevEnvRegistry(devEnv, registry);
 				});
+
+				closeRegistryWatcher = async (name?: string) => {
+					try {
+						const [unregisterResult, stopRegistryResult] =
+							await Promise.allSettled([
+								name ? devRegistry.unregister(name) : Promise.resolve(),
+								closeWatcherPromise.then((closeWatcher) => closeWatcher()),
+							]);
+						if (unregisterResult.status === "rejected") {
+							logger.error(
+								"Failed to unregister worker",
+								unregisterResult.reason
+							);
+						}
+						if (stopRegistryResult.status === "rejected") {
+							logger.error(
+								"Failed to close registry watcher",
+								stopRegistryResult.reason
+							);
+						}
+					} catch (err) {
+						logger.error("Failed to cleanup dev registry", err);
+					}
+				};
 
 				devEnv.runtimes.forEach((runtime) => {
 					runtime.on(
@@ -721,7 +791,7 @@ export async function startDev(args: StartDevOptions) {
 			devEnv: Array.isArray(devEnv) ? devEnv[0] : devEnv,
 			secondary: Array.isArray(devEnv) ? devEnv.slice(1) : [],
 			unregisterHotKeys,
-			teardownRegistryPromise,
+			closeRegistryWatcher,
 		};
 	} catch (e) {
 		await Promise.allSettled([
@@ -731,10 +801,9 @@ export async function startDev(args: StartDevOptions) {
 				? devEnv.map((d) => d.teardown())
 				: [devEnv?.teardown()]),
 			(async () => {
-				if (teardownRegistryPromise) {
+				if (closeRegistryWatcher) {
 					assert(devEnv === undefined || !Array.isArray(devEnv));
-					const teardownRegistry = await teardownRegistryPromise;
-					await teardownRegistry(devEnv?.config.latestConfig?.name);
+					await closeRegistryWatcher(devEnv?.config.latestConfig?.name);
 				}
 				unregisterHotKeys?.();
 			})(),

@@ -233,8 +233,9 @@ export async function unstable_dev(
 		address,
 		stop: async () => {
 			await devServer.devEnv.teardown.bind(devServer.devEnv)();
-			const teardownRegistry = await devServer.teardownRegistryPromise;
-			await teardownRegistry?.(devServer.devEnv.config.latestConfig?.name);
+			await devServer.closeRegistryWatcher?.(
+				devServer.devEnv.config.latestConfig?.name
+			);
 
 			devServer.unregisterHotKeys?.();
 		},
