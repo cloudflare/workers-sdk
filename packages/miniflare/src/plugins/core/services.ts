@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Request, Response } from "../../http";
-import { HOST_CAPNP_CONNECT, Miniflare } from "../../index";
+import { Miniflare } from "../../index";
 import {
 	ExternalServer,
 	HttpOptions_Style,
@@ -21,18 +21,14 @@ export const HttpOptionsHeaderSchema = z.object({
 	name: z.string(), // name should be required
 	value: z.ostring(), // If omitted, the header will be removed
 });
-const HttpOptionsSchema = z
-	.object({
-		style: z.nativeEnum(HttpOptions_Style).optional(),
-		forwardedProtoHeader: z.ostring(),
-		cfBlobHeader: z.ostring(),
-		injectRequestHeaders: HttpOptionsHeaderSchema.array().optional(),
-		injectResponseHeaders: HttpOptionsHeaderSchema.array().optional(),
-	})
-	.transform((options) => ({
-		...options,
-		capnpConnectHost: HOST_CAPNP_CONNECT,
-	}));
+const HttpOptionsSchema = z.object({
+	style: z.nativeEnum(HttpOptions_Style).optional(),
+	forwardedProtoHeader: z.ostring(),
+	cfBlobHeader: z.ostring(),
+	injectRequestHeaders: HttpOptionsHeaderSchema.array().optional(),
+	injectResponseHeaders: HttpOptionsHeaderSchema.array().optional(),
+	capnpConnectHost: z.ostring(),
+});
 
 const TlsOptionsKeypairSchema = z.object({
 	privateKey: z.ostring(),

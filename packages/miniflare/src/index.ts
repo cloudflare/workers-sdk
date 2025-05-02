@@ -301,6 +301,35 @@ function validateOptions(
 		names.add(name);
 	}
 
+	for (const opts of pluginWorkerOpts) {
+		if (opts.core.serviceBindings) {
+			for (const name of Object.keys(opts.core.serviceBindings)) {
+				const workerName = opts.core.name ?? "";
+				const service = opts.core.serviceBindings[name];
+				if (
+					typeof service === "object" &&
+					"name" in service &&
+					!pluginWorkerOpts.find(
+						(options) => options.core.name === service.name
+					)
+				) {
+					// This is a service binding to a worker that doesn't exist
+					// Override it to connect to the loopback service
+					opts.core.serviceBindings[name] = {
+						external: {
+							http: {
+								// TODO: To support service workers format
+								// style: HttpOptions_Style.HOST,
+								cfBlobHeader: CoreHeaders.CF_BLOB,
+								capnpConnectHost: `${HOST_CAPNP_CONNECT}-${workerName}`,
+							},
+						},
+					};
+				}
+			}
+		}
+	}
+
 	return [pluginSharedOpts, pluginWorkerOpts];
 }
 
@@ -1106,6 +1135,61 @@ export class Miniflare {
 				http.createServer(this.#handleLoopback),
 				/* grace */ 0
 			);
+			server.on("connect", async (req, clientSocket, head) => {
+				const [host, port] = req.url?.split(":") ?? [
+					"miniflare-unsafe-internal-capnp-connect-",
+					"n/a",
+				];
+				console.log(`CONNECT for ${host}:${port}`);
+
+				try {
+					// Dynamically resolve where to actually connect:
+					const serviceName = host?.replace(
+						"miniflare-unsafe-internal-capnp-connect-",
+						""
+					);
+					const registry = await this.#devRegistry?.getWorkers();
+					// Pick the default entrypoint address for now
+					const address =
+						registry?.[serviceName]?.entrypointAddresses?.["default"];
+
+					if (!address) {
+						throw new Error(
+							`No address found for the default entrypoint of "${serviceName}"`
+						);
+					}
+
+					// Open a raw TCP connection to the real Workerd:
+					const serverSocket = net.connect(address.port, address.host, () => {
+						// Tell the client the tunnel is ready:
+						clientSocket.write(
+							"HTTP/1.1 200 Connection Established\r\n" +
+								"Proxy-agent: dynamic-capnp-proxy/1.0\r\n" +
+								"\r\n"
+						);
+						// If any bytes arrived already, forward them:
+						if (head && head.length) serverSocket.write(head);
+
+						// Pipe data both ways:
+						serverSocket.pipe(clientSocket);
+						clientSocket.pipe(serverSocket);
+					});
+
+					serverSocket.on("error", (err) => {
+						console.error("Upstream connect error:", err);
+						clientSocket.write("HTTP/1.1 502 Bad Gateway\r\n\r\n");
+						clientSocket.end();
+					});
+					clientSocket.on("error", (err) => {
+						console.error("Client socket error:", err);
+						serverSocket.end();
+					});
+				} catch (err) {
+					console.error("Lookup or proxy error:", err);
+					clientSocket.write("HTTP/1.1 502 Bad Gateway\r\n\r\n");
+					clientSocket.end();
+				}
+			});
 			server.on("upgrade", this.#handleLoopbackUpgrade);
 			server.listen(0, hostname, () => resolve(server));
 		});
@@ -1376,7 +1460,7 @@ export class Miniflare {
 					http: {
 						style: directSocket.proxy ? HttpOptions_Style.PROXY : undefined,
 						cfBlobHeader: CoreHeaders.CF_BLOB,
-						capnpConnectHost: HOST_CAPNP_CONNECT,
+						capnpConnectHost: `${HOST_CAPNP_CONNECT}-${workerName}`,
 					},
 				});
 			}
