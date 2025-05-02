@@ -302,35 +302,6 @@ function validateOptions(
 		names.add(name);
 	}
 
-	for (const opts of pluginWorkerOpts) {
-		if (opts.core.serviceBindings) {
-			for (const name of Object.keys(opts.core.serviceBindings)) {
-				const service = opts.core.serviceBindings[name];
-				if (
-					typeof service === "object" &&
-					"name" in service &&
-					service.name !== kCurrentWorker &&
-					!pluginWorkerOpts.find(
-						(options) => options.core.name === service.name
-					)
-				) {
-					// This is a service binding to a worker that doesn't exist
-					// Override it to connect to the loopback service
-					opts.core.serviceBindings[name] = {
-						external: {
-							http: {
-								// TODO: To support service workers format
-								// style: HttpOptions_Style.HOST,
-								cfBlobHeader: CoreHeaders.CF_BLOB,
-								capnpConnectHost: `${HOST_CAPNP_CONNECT}-${service.name}`,
-							},
-						},
-					};
-				}
-			}
-		}
-	}
-
 	return [pluginSharedOpts, pluginWorkerOpts];
 }
 
@@ -1222,6 +1193,56 @@ export class Miniflare {
 		const allPreviousWorkerOpts = this.#previousWorkerOpts;
 		const allWorkerOpts = this.#workerOpts;
 		const sharedOpts = this.#sharedOpts;
+
+		// Override service bindings if they point to a worker that doesn't exist
+		if (this.#devRegistry) {
+			for (const opts of allWorkerOpts) {
+				if (opts.core.name) {
+					const defaultUrl = await this.unsafeGetDirectURL(opts.core.name);
+
+					await this.#devRegistry.register(opts.core.name, {
+						port: loopbackPort,
+						protocol: "http",
+						host: this.#loopbackHost,
+						mode: "local",
+						entrypointAddresses: {
+							default: {
+								host: defaultUrl.hostname,
+								port: parseInt(defaultUrl.port),
+							},
+						},
+						durableObjects: [],
+					});
+				}
+
+				if (opts.core.serviceBindings) {
+					for (const name of Object.keys(opts.core.serviceBindings)) {
+						const service = opts.core.serviceBindings[name];
+						if (
+							typeof service === "object" &&
+							"name" in service &&
+							service.name !== kCurrentWorker &&
+							!allWorkerOpts.find(
+								(options) => options.core.name === service.name
+							)
+						) {
+							// This is a service binding to a worker that doesn't exist
+							// Override it to connect to the loopback service
+							opts.core.serviceBindings[name] = {
+								external: {
+									http: {
+										// TODO: To support service workers format
+										// style: HttpOptions_Style.HOST,
+										cfBlobHeader: CoreHeaders.CF_BLOB,
+										capnpConnectHost: `${HOST_CAPNP_CONNECT}-${service.name}`,
+									},
+								},
+							};
+						}
+					}
+				}
+			}
+		}
 
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
 		this.#cfObject = sharedOpts.core.cf;
