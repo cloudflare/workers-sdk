@@ -1,9 +1,13 @@
 import path from "node:path";
 import { getBasePath } from "../../paths";
+import { requireApiToken, requireAuth } from "../../user";
 import { startWorker } from "../startDevWorker";
 import type { StartDevWorkerInput, Worker } from "../startDevWorker/types";
 
-type MixedModeSession = Pick<Worker, "ready" | "setConfig"> & {
+type BindingsOpt = StartDevWorkerInput["bindings"];
+
+type MixedModeSession = Pick<Worker, "ready" | "dispose"> & {
+	["setConfig"]: (bindings: BindingsOpt) => Promise<void>;
 	["mixedModeConnectionString"]: MixedModeConnectionString;
 };
 
@@ -13,23 +17,36 @@ export type MixedModeConnectionString = Awaited<Worker["url"]> & {
 };
 
 export async function startMixedModeSession(
-	bindings: StartDevWorkerInput["bindings"]
+	bindings: BindingsOpt
 ): Promise<MixedModeSession> {
-	const proxyServerWorkerEntrypoint = path.resolve(
+	const proxyServerWorkerWranglerConfig = path.resolve(
 		getBasePath(),
-		"templates/mixedMode/proxyServerWorker.ts"
+		"templates/mixedMode/proxyServerWorker/wrangler.jsonc"
 	);
-	const { ready, setConfig, url } = await startWorker({
-		entrypoint: proxyServerWorkerEntrypoint,
+
+	const worker = await startWorker({
+		config: proxyServerWorkerWranglerConfig,
 		dev: {
 			remote: true,
+			auth: {
+				accountId: await requireAuth({}),
+				apiToken: requireApiToken(),
+			},
 		},
 		bindings,
 	});
 
+	const mixedModeConnectionString =
+		(await worker.url) as MixedModeConnectionString;
+
+	const setConfig = async (newBindings: BindingsOpt) => {
+		await worker.setConfig({ bindings: newBindings });
+	};
+
 	return {
-		ready,
+		ready: worker.ready,
+		mixedModeConnectionString,
 		setConfig,
-		mixedModeConnectionString: (await url) as MixedModeConnectionString,
+		dispose: worker.dispose,
 	};
 }

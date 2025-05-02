@@ -409,6 +409,15 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/mixed-mode-node-test:
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/no-bundle-import:
     devDependencies:
       get-port:
