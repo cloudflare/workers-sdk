@@ -144,13 +144,13 @@ export function getBuildArguments(
 					`should not include the protocol part (e.g: docker.io/httpd:1, not https://docker.io/httpd:1)`
 				);
 			}
-		} catch (err) {
-			if (!(err instanceof UserError)) {
+		} catch (errParsingURL) {
+			if (!(errParsingURL instanceof UserError)) {
 				throw err;
 			}
 
 			throw new UserError(
-				`The image ${imageRef} could not be found, and the image is not a valid reference: ${err.message}`
+				`The image ${imageRef} could not be found, and the image is not a valid reference: ${errParsingURL.message}`
 			);
 		}
 

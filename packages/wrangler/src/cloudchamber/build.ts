@@ -12,6 +12,10 @@ import type { ImageRegistryPermissions } from "./client";
 // default cloudflare managed registry
 const domain = "registry.cloudchamber.cfdata.org";
 
+export function getDefaultRegistry() {
+	return domain;
+}
+
 export async function dockerLoginManagedRegistry(options: {
 	pathToDocker?: string;
 }) {
@@ -29,6 +33,7 @@ export async function dockerLoginManagedRegistry(options: {
 		).on("error", (err) => {
 			throw err;
 		});
+
 		child.stdin.write(credentials.password);
 		child.stdin.end();
 		await new Promise((resolve) => {
