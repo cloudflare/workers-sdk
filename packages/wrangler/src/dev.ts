@@ -60,6 +60,7 @@ export const dev = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
+			MIXED_MODE: args.experimentalMixedMode ?? false,
 		}),
 	},
 	metadata: {
