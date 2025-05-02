@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
@@ -223,11 +223,14 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 		expect(output.stdout).toContain(`Deleted '${workerName}-d1' successfully.`);
 		output = await helper.run(`wrangler delete`);
 		expect(output.stdout).toContain("Successfully deleted");
-		const status = await retry(
-			(s) => s === 200 || s === 500,
-			() => fetch(deployedUrl).then((r) => r.status)
+
+		await vi.waitFor(
+			async () => {
+				const res = await fetch(deployedUrl);
+				await expect(res.status).not.toBe(200);
+			},
+			{ interval: 1_000, timeout: 20_000 }
 		);
-		expect(status).toBe(404);
 
 		output = await helper.run(
 			`wrangler kv namespace delete --namespace-id ${kvId}`
