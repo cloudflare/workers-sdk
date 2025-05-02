@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
+import { constants as http_constants } from "node:http2";
 import * as path from "node:path";
 import { createMiddleware } from "@hattip/adapter-node";
 import replace from "@rollup/plugin-replace";
@@ -57,7 +58,7 @@ import type {
 	ResolvedPluginConfig,
 	WorkerConfig,
 } from "./plugin-config";
-import type { Unstable_RawConfig } from "wrangler";
+import type { Unstable_Config, Unstable_RawConfig } from "wrangler";
 
 export type { PluginConfig } from "./plugin-config";
 
@@ -376,6 +377,15 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					});
 				}
 
+				if ("workers" === resolvedPluginConfig.type) {
+					configureCronHandler(
+						viteDevServer,
+						[...Object.values(resolvedPluginConfig.workers)],
+						miniflare,
+						resolvedPluginConfig.entryWorkerEnvironmentName
+					);
+				}
+
 				return () => {
 					viteDevServer.middlewares.use((req, res, next) => {
 						middleware(req, res, next);
@@ -412,6 +422,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					vitePreviewServer.httpServer,
 					() => miniflare.dispatchFetch
 				);
+
+				configureCronHandler(vitePreviewServer, workerConfigs, miniflare);
 
 				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
 				vitePreviewServer.middlewares.use((req, res, next) => {
@@ -623,7 +635,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			async configureServer(viteDevServer) {
 				// Pre-optimize Node.js compat library entry-points for those environments that need it.
 				await Promise.all(
-					Object.values(viteDevServer.environments).flatMap(
+					Object.values(viteDevServer.environments ?? {}).flatMap(
 						async (environment) => {
 							const workerConfig = getWorkerConfig(environment.name);
 							if (isNodeCompat(workerConfig)) {
@@ -824,6 +836,63 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			? resolvedPluginConfig.workers[environmentName]
 			: undefined;
 	}
+}
+
+function configureCronHandler(
+	server: vite.ViteDevServer | vite.PreviewServer,
+	configs: WorkerConfig[] | Unstable_Config[],
+	miniflare: Miniflare,
+	worker_name?: string
+) {
+	const has_triggers = new Set(
+		configs.filter((c) => c.triggers.crons.length).map((c) => c.name)
+	);
+	if (!has_triggers.size) return;
+
+	const cronMiddleware = createMiddleware(
+		async ({ request }) => {
+			const { searchParams } = new URL(request.url);
+			const selected_worker = searchParams.get("worker") || worker_name;
+			if (selected_worker && !has_triggers.has(selected_worker))
+				return new Response("Not found", {
+					status: http_constants.HTTP_STATUS_NOT_FOUND,
+				});
+			try {
+				const worker = await miniflare.getWorker(selected_worker);
+				await worker.scheduled({
+					cron: searchParams.get("cron") || "* * * * *",
+					scheduledTime: new Date(),
+				});
+				return new Response("Ran scheduled event");
+			} catch (e) {
+				return new Response("Something went wrong", {
+					status: http_constants.HTTP_STATUS_INTERNAL_SERVER_ERROR,
+				});
+			}
+		},
+		{
+			alwaysCallNext: false,
+		}
+	);
+	server.middlewares.use("/__scheduled", cronMiddleware);
+	server.printUrls = new Proxy(server.printUrls, {
+		apply(target: () => void, thisArg: any, argArray: any[]): any {
+			Reflect.apply(target, thisArg, argArray);
+			const localUrl = server.resolvedUrls?.local[0];
+
+			if (!localUrl) return;
+			const { protocol, hostname, port } = new URL(localUrl);
+			const colorizedUrl = (url: string) =>
+				colors.dim(
+					colors.cyanBright(
+						url.replace(/:(\d+)\//, (_, port) => `:${colors.bold(port)}/`)
+					)
+				);
+			server.config.logger.info(
+				`  ${colors.green("➜")}  ${colors.bold("Cron")}:    ${colorizedUrl(`${protocol}//${hostname}:${port}/__scheduled`)}`
+			);
+		},
+	});
 }
 
 /**
