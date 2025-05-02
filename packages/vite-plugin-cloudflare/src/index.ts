@@ -40,6 +40,7 @@ import {
 	NodeJsCompatWarnings,
 	resolveNodeJSImport,
 } from "./node-js-compat";
+import { PluginAssetRequest } from "./plugin-asset-request";
 import { resolvePluginConfig } from "./plugin-config";
 import { additionalModuleGlobalRE } from "./shared";
 import {
@@ -47,6 +48,8 @@ import {
 	getFirstAvailablePort,
 	getOutputDirectory,
 	getRouterWorker,
+	isFsServingSafe,
+	isViteDevAsset,
 	toMiniflareRequest,
 } from "./utils";
 import { handleWebSocket } from "./websockets";
@@ -112,7 +115,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 
 				return {
-					appType: "custom",
+					appType: env.command === "serve" ? "mpa" : "custom",
 					environments:
 						resolvedPluginConfig.type === "workers"
 							? {
@@ -324,7 +327,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					)
 				) {
 					// It's OK for this to be called multiple times as Vite prevents concurrent execution
-					options.server.restart();
+					void options.server.restart();
 					return [];
 				}
 			},
@@ -364,32 +367,38 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					});
 				}
 
-				return () => {
-					viteDevServer.middlewares.use(async (req, res, next) => {
-						try {
-							assert(miniflare, `Miniflare not defined`);
-							const routerWorker = await getRouterWorker(miniflare);
+				viteDevServer.middlewares.use(async (req, res, next) => {
+					const { pathname, search } = new URL(req.url!);
+					if (
+						isViteDevAsset(`${pathname}?${search}`) ||
+						isFsServingSafe(resolvedViteConfig, pathname) ||
+						req instanceof PluginAssetRequest
+					) {
+						return next();
+					}
+					try {
+						assert(miniflare, `Miniflare not defined`);
+						const routerWorker = await getRouterWorker(miniflare);
 
-							const request = createRequest(req, res);
-							const response = await routerWorker.fetch(
-								toMiniflareRequest(request),
-								{
-									redirect: "manual",
-								}
-							);
-
-							// Vite uses HTTP/2 when `server.https` is enabled
-							if (req.httpVersionMajor === 2) {
-								// HTTP/2 disallows use of the `transfer-encoding` header
-								response.headers.delete("transfer-encoding");
+						const request = createRequest(req, res);
+						const response = await routerWorker.fetch(
+							toMiniflareRequest(request),
+							{
+								redirect: "manual",
 							}
+						);
 
-							await sendResponse(res, response as any);
-						} catch (error) {
-							next(error);
+						// Vite uses HTTP/2 when `server.https` is enabled
+						if (req.httpVersionMajor === 2) {
+							// HTTP/2 disallows use of the `transfer-encoding` header
+							response.headers.delete("transfer-encoding");
 						}
-					});
-				};
+
+						await sendResponse(res, response as any);
+					} catch (error) {
+						next(error);
+					}
+				});
 			},
 			async configurePreviewServer(vitePreviewServer) {
 				const workerConfigs = getWorkerConfigs(vitePreviewServer.config.root);
