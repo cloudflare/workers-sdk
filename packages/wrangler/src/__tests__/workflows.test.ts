@@ -112,8 +112,8 @@ describe("wrangler workflows", () => {
 
 				COMMANDS
 				  wrangler workflows list                     List Workflows associated to account
-					wrangler workflows delete <name>            Delete workflow - when deleting a workflow, it will also delete it's own instances
 				  wrangler workflows describe <name>          Describe Workflow resource
+					wrangler workflows delete <name>            Delete workflow - when deleting a workflow, it will also delete it's own instances
 				  wrangler workflows trigger <name> [params]  Trigger a workflow, creating a new instance. Can optionally take a JSON string to pass a parameter into the workflow instance
 				  wrangler workflows instances                Manage Workflow instances
 
