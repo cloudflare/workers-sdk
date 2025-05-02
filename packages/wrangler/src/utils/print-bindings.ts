@@ -2,7 +2,6 @@ import chalk from "chalk";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import type { CfTailConsumer, CfWorkerInit } from "../deployment-bundle/worker";
-import type { WorkerRegistry } from "../dev-registry";
 
 export const friendlyBindingNames: Record<
 	keyof CfWorkerInit["bindings"],
@@ -43,14 +42,12 @@ export function printBindings(
 	bindings: Partial<CfWorkerInit["bindings"]>,
 	tailConsumers: CfTailConsumer[] = [],
 	context: {
-		registry?: WorkerRegistry | null;
 		local?: boolean;
 		imagesLocalMode?: boolean;
 		name?: string;
 		provisioning?: boolean;
 	} = {}
 ) {
-	let hasConnectionStatus = false;
 	const addSuffix = createAddSuffix({
 		isProvisioning: context.provisioning,
 		isLocalDev: context.local,
@@ -116,23 +113,7 @@ export function printBindings(
 				({ name, class_name, script_name }) => {
 					let value = class_name;
 					if (script_name) {
-						if (context.local && context.registry !== null) {
-							const registryDefinition = context.registry?.[script_name];
-
-							hasConnectionStatus = true;
-							if (
-								registryDefinition &&
-								registryDefinition.durableObjects.some(
-									(d) => d.className === class_name
-								)
-							) {
-								value += ` (defined in ${script_name} ${chalk.green("[connected]")})`;
-							} else {
-								value += ` (defined in ${script_name} ${chalk.red("[not connected]")})`;
-							}
-						} else {
-							value += ` (defined in ${script_name})`;
-						}
+						value += ` (defined in ${script_name})`;
 					}
 
 					return {
@@ -324,20 +305,6 @@ export function printBindings(
 					value += `#${entrypoint}`;
 				}
 
-				if (context.local && context.registry !== null) {
-					const registryDefinition = context.registry?.[service];
-					hasConnectionStatus = true;
-
-					if (
-						registryDefinition &&
-						(!entrypoint ||
-							registryDefinition.entrypointAddresses?.[entrypoint])
-					) {
-						value = value + " " + chalk.green("[connected]");
-					} else {
-						value = value + " " + chalk.red("[not connected]");
-					}
-				}
 				return {
 					key: binding,
 					value,
@@ -562,27 +529,8 @@ export function printBindings(
 	if (tailConsumers !== undefined && tailConsumers.length > 0) {
 		logger.log(
 			`${title}\n${tailConsumers
-				.map(({ service }) => {
-					if (context.local && context.registry !== null) {
-						const registryDefinition = context.registry?.[service];
-						hasConnectionStatus = true;
-
-						if (registryDefinition) {
-							return `- ${service} ${chalk.green("[connected]")}`;
-						} else {
-							return `- ${service} ${chalk.red("[not connected]")}`;
-						}
-					} else {
-						return `- ${service}`;
-					}
-				})
+				.map(({ service }) => `- ${service}`)
 				.join("\n")}`
-		);
-	}
-
-	if (hasConnectionStatus) {
-		logger.once.info(
-			`\nService bindings, Durable Object bindings, and Tail consumers connect to other \`wrangler dev\` processes running locally, with their connection status indicated by ${chalk.green("[connected]")} or ${chalk.red("[not connected]")}. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development\n`
 		);
 	}
 }

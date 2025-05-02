@@ -95,6 +95,7 @@ import {
 } from "./runtime";
 import {
 	_isCyclic,
+	DevRegistry,
 	Log,
 	MiniflareCoreError,
 	NoOpLog,
@@ -745,6 +746,7 @@ export class Miniflare {
 	readonly #liveReloadServer: WebSocketServer;
 	readonly #webSocketServer: WebSocketServer;
 	readonly #webSocketExtraHeaders: WeakMap<http.IncomingMessage, Headers>;
+	readonly #devRegistry: DevRegistry | undefined;
 
 	#maybeInspectorProxyController?: InspectorProxyController;
 	#previousRuntimeInspectorPort?: number;
@@ -794,6 +796,13 @@ export class Miniflare {
 				this.#sharedOpts.core.inspectorPort,
 				this.#log,
 				workerNamesToProxy
+			);
+		}
+
+		if (this.#sharedOpts.core.unsafeDevRegistryPath) {
+			this.#devRegistry = new DevRegistry(
+				this.#sharedOpts.core.unsafeDevRegistryPath,
+				this.#log
 			);
 		}
 

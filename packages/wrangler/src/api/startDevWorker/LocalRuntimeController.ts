@@ -7,7 +7,6 @@ import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import { convertBindingsToCfWorkerInitBindings } from "./utils";
-import type { WorkerEntrypointsDefinition } from "../../dev-registry";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
@@ -90,8 +89,8 @@ export async function convertToConfigBundle(
 		compatibilityDate: event.config.compatibilityDate,
 		compatibilityFlags: event.config.compatibilityFlags,
 		bindings,
+		devRegistry: event.config.dev.devRegistry ?? false,
 		migrations: event.config.migrations,
-		workerDefinitions: event.config.dev?.registry,
 		legacyAssetPaths: event.config.legacy?.site?.bucket
 			? {
 					baseDirectory: event.config.legacy?.site?.bucket,
@@ -149,12 +148,11 @@ export class LocalRuntimeController extends RuntimeController {
 
 	async #onBundleComplete(data: BundleCompleteEvent, id: number) {
 		try {
-			const { options, internalObjects, entrypointNames } =
-				await MF.buildMiniflareOptions(
-					this.#log,
-					await convertToConfigBundle(data),
-					this.#proxyToUserWorkerAuthenticationSecret
-				);
+			const { options } = await MF.buildMiniflareOptions(
+				this.#log,
+				await convertToConfigBundle(data),
+				this.#proxyToUserWorkerAuthenticationSecret
+			);
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
 			if (this.#mf === undefined) {
 				logger.log(chalk.dim("⎔ Starting local server..."));
@@ -176,13 +174,6 @@ export class LocalRuntimeController extends RuntimeController {
 				return;
 			}
 
-			// Get entrypoint addresses
-			const entrypointAddresses: WorkerEntrypointsDefinition = {};
-			for (const name of entrypointNames) {
-				const directUrl = await this.#mf.unsafeGetDirectURL(undefined, name);
-				const port = parseInt(directUrl.port);
-				entrypointAddresses[name] = { host: directUrl.hostname, port };
-			}
 			this.emitReloadCompleteEvent({
 				type: "reloadComplete",
 				config: data.config,
@@ -211,8 +202,6 @@ export class LocalRuntimeController extends RuntimeController {
 					},
 					liveReload: data.config.dev?.liveReload,
 					proxyLogsToController: data.bundle.entry.format === "service-worker",
-					internalDurableObjects: internalObjects,
-					entrypointAddresses,
 				},
 			});
 		} catch (error) {

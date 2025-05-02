@@ -4,7 +4,6 @@ import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
-import { devRegistry } from "../../../dev-registry";
 import { getClassNamesWhichUseSQLite } from "../../../dev/class-names-sqlite";
 import {
 	buildAssetOptions,
@@ -152,11 +151,9 @@ async function getMiniflareOptionsFromConfig(
 				`);
 		}
 	}
-	const workerDefinitions = await devRegistry.getWorkers();
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
 		name: rawConfig.name,
 		bindings,
-		workerDefinitions,
 		queueConsumers: undefined,
 		services: rawConfig.services,
 		serviceBindings: {},
@@ -279,7 +276,6 @@ export function unstable_getMiniflareWorkerOptions(
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
 		name: config.name,
 		bindings,
-		workerDefinitions: null,
 		queueConsumers: config.queues.consumers,
 		services: [],
 		serviceBindings: {},

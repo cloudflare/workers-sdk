@@ -156,10 +156,6 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 						liveReload: data.config.dev?.liveReload,
 						proxyLogsToController:
 							data.bundle.entry.format === "service-worker",
-
-						// It's not possible to bind to Workers in a multi-worker setup across the dev registry, so these are intentionally left empty
-						internalDurableObjects: [],
-						entrypointAddresses: {},
 					},
 				});
 			}

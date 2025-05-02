@@ -964,9 +964,6 @@ export const pagesDevCommand = createCommand({
 		process.on("SIGTERM", CLEANUP);
 
 		await events.once(devServer.devEnv, "teardown");
-		await devServer.closeRegistryWatcher?.(
-			devServer.devEnv.config.latestConfig?.name
-		);
 
 		devServer.unregisterHotKeys?.();
 		CLEANUP();

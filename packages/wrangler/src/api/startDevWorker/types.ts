@@ -29,7 +29,6 @@ import type {
 	CfVectorize,
 	CfWorkflow,
 } from "../../deployment-bundle/worker";
-import type { WorkerRegistry } from "../../dev-registry";
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { ConfigController } from "./ConfigController";
@@ -147,6 +146,8 @@ export interface StartDevWorkerInput {
 		watch?: boolean;
 		/** Whether a script tag is inserted on text/html responses which will reload the page upon file changes. Defaults to false. */
 		liveReload?: boolean;
+		/** Whether it should connect to workers running on another dev session. */
+		devRegistry?: boolean;
 
 		/** The local address to reach your worker. Applies to remote: true (remote mode) and remote: false (local mode). */
 		server?: {
@@ -162,9 +163,6 @@ export interface StartDevWorkerInput {
 		outboundService?: ServiceFetch;
 		/** An undici MockAgent to declaratively mock fetch calls to particular resources. */
 		mockFetch?: undici.MockAgent;
-
-		/** Describes the registry of other Workers running locally */
-		registry?: WorkerRegistry | null;
 
 		testScheduled?: boolean;
 

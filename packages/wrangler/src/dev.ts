@@ -1,24 +1,18 @@
 import assert from "node:assert";
 import events from "node:events";
 import path from "node:path";
-import util from "node:util";
 import { isWebContainer } from "@webcontainer/env";
 import { DevEnv } from "./api";
 import { MultiworkerRuntimeController } from "./api/startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "./api/startDevWorker/NoOpProxyController";
-import {
-	convertCfWorkerInitBindingstoBindings,
-	extractBindingsOfType,
-} from "./api/startDevWorker/utils";
+import { convertCfWorkerInitBindingstoBindings } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
 import { configFileName, formatConfigSnippet } from "./config";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deploy/deploy";
 import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
-import { devRegistry } from "./dev-registry";
 import { getVarsForDev } from "./dev/dev-vars";
 import registerDevHotKeys from "./dev/hotkeys";
-import { maybeRegisterLocalWorker } from "./dev/local";
 import { UserError } from "./errors";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
@@ -30,13 +24,7 @@ import {
 } from "./utils/collectKeyValues";
 import { mergeWithOverride } from "./utils/mergeWithOverride";
 import { getHostFromRoute } from "./zones";
-import type {
-	AsyncHook,
-	Binding,
-	ReloadCompleteEvent,
-	StartDevWorkerInput,
-	Trigger,
-} from "./api";
+import type { AsyncHook, StartDevWorkerInput, Trigger } from "./api";
 import type { Config, Environment } from "./config";
 import type {
 	EnvironmentNonInheritable,
@@ -49,7 +37,6 @@ import type {
 	CfModule,
 	CfWorkerInit,
 } from "./deployment-bundle/worker";
-import type { WorkerRegistry } from "./dev-registry";
 import type { CfAccount } from "./dev/create-worker-preview";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type { watch } from "chokidar";
@@ -321,9 +308,6 @@ export const dev = createCommand({
 		assert(devInstance.devEnv !== undefined);
 		await events.once(devInstance.devEnv, "teardown");
 		await Promise.all(devInstance.secondary.map((d) => d.teardown()));
-		await devInstance.closeRegistryWatcher?.(
-			devInstance.devEnv.config.latestConfig?.name
-		);
 		devInstance.unregisterHotKeys?.();
 	},
 });
@@ -384,103 +368,6 @@ export type StartDevOptions = DevArguments &
 		onReady?: (ip: string, port: number) => void;
 		enableIpc?: boolean;
 	};
-
-/**
- * a function that takes your serviceNames and durableObjectNames and returns a
- * list of the running workers that we're bound to
- */
-async function getBoundRegisteredWorkers(
-	{
-		name,
-		services,
-		durableObjects,
-		tailConsumers,
-	}: {
-		name: string | undefined;
-		services:
-			| Config["services"]
-			| Extract<Binding, { type: "service" }>[]
-			| undefined;
-		durableObjects:
-			| Config["durable_objects"]
-			| { bindings: Extract<Binding, { type: "durable_object_namespace" }>[] }
-			| undefined;
-		tailConsumers: Config["tail_consumers"] | undefined;
-	},
-	existingWorkerDefinitions: WorkerRegistry | undefined
-): Promise<WorkerRegistry | undefined> {
-	const serviceNames = [...(services || []), ...(tailConsumers ?? [])].map(
-		(serviceBinding) => serviceBinding.service
-	);
-	const durableObjectServices = (
-		durableObjects || { bindings: [] }
-	).bindings.map((durableObjectBinding) => durableObjectBinding.script_name);
-
-	if (serviceNames.length === 0 && durableObjectServices.length === 0) {
-		return {};
-	}
-	const workerDefinitions =
-		existingWorkerDefinitions ?? (await devRegistry.getWorkers());
-
-	const filteredWorkers = Object.fromEntries(
-		Object.entries(workerDefinitions || {}).filter(
-			([key, _value]) =>
-				//https://github.com/cloudflare/workers-sdk/blob/19b9b2fb1cb7063cb3928ecb26325cab9c10136f/packages/wrangler/src/dev/miniflare.ts#L444-L445
-				key !== name && // Always exclude current worker to avoid infinite loops
-				(serviceNames.includes(key) || durableObjectServices.includes(key))
-		)
-	);
-	return filteredWorkers;
-}
-
-async function updateDevEnvRegistry(
-	devEnv: DevEnv,
-	registry: WorkerRegistry | undefined
-) {
-	// Make sure we're not patching an empty config
-	if (!devEnv.config.latestConfig) {
-		await events.once(devEnv.config, "configUpdate");
-	}
-
-	let boundWorkers = await getBoundRegisteredWorkers(
-		{
-			name: devEnv.config.latestConfig?.name,
-			services: extractBindingsOfType(
-				"service",
-				devEnv.config.latestConfig?.bindings
-			),
-			durableObjects: {
-				bindings: extractBindingsOfType(
-					"durable_object_namespace",
-					devEnv.config.latestConfig?.bindings
-				),
-			},
-			tailConsumers: devEnv.config.latestConfig?.tailConsumers,
-		},
-		registry
-	);
-
-	// Normalise an empty registry to undefined
-	if (boundWorkers && Object.keys(boundWorkers).length === 0) {
-		boundWorkers = undefined;
-	}
-
-	if (
-		util.isDeepStrictEqual(
-			boundWorkers,
-			devEnv.config.latestConfig?.dev?.registry
-		)
-	) {
-		return;
-	}
-
-	void devEnv.config.patch({
-		dev: {
-			...devEnv.config.latestConfig?.dev,
-			registry: boundWorkers,
-		},
-	});
-}
 
 async function getPagesAssetsFetcher(
 	options: EnablePagesAssetsServiceBindingOptions | undefined
@@ -603,11 +490,9 @@ async function setupDevEnv(
 				},
 				persist: args.persistTo,
 				liveReload: args.liveReload,
+				devRegistry: !args.disableDevRegistry,
 				testScheduled: args.testScheduled,
 				logLevel: args.logLevel,
-				registry: args.disableDevRegistry
-					? null
-					: devEnv.config.latestConfig?.dev.registry,
 				bindVectorizeToProd: args.experimentalVectorizeBindToProd,
 				imagesLocalMode: args.experimentalImagesLocalMode,
 				multiworkerPrimary: args.multiworkerPrimary,
@@ -639,7 +524,6 @@ export async function startDev(args: StartDevOptions) {
 	let configFileWatcher: ReturnType<typeof watch> | undefined;
 	let assetsWatcher: ReturnType<typeof watch> | undefined;
 	let devEnv: DevEnv | DevEnv[] | undefined;
-	let closeRegistryWatcher: ((name?: string) => Promise<void>) | undefined;
 
 	let unregisterHotKeys: (() => void) | undefined;
 	try {
@@ -730,56 +614,6 @@ export async function startDev(args: StartDevOptions) {
 				}
 			});
 
-			if (!args.disableDevRegistry) {
-				const closeWatcherPromise = devRegistry.watch((registry) => {
-					assert(devEnv !== undefined && !Array.isArray(devEnv));
-					void updateDevEnvRegistry(devEnv, registry);
-				});
-
-				closeRegistryWatcher = async (name?: string) => {
-					try {
-						const [unregisterResult, stopRegistryResult] =
-							await Promise.allSettled([
-								name ? devRegistry.unregister(name) : Promise.resolve(),
-								closeWatcherPromise.then((closeWatcher) => closeWatcher()),
-							]);
-						if (unregisterResult.status === "rejected") {
-							logger.error(
-								"Failed to unregister worker",
-								unregisterResult.reason
-							);
-						}
-						if (stopRegistryResult.status === "rejected") {
-							logger.error(
-								"Failed to close registry watcher",
-								stopRegistryResult.reason
-							);
-						}
-					} catch (err) {
-						logger.error("Failed to cleanup dev registry", err);
-					}
-				};
-
-				devEnv.runtimes.forEach((runtime) => {
-					runtime.on(
-						"reloadComplete",
-						async (reloadEvent: ReloadCompleteEvent) => {
-							if (!reloadEvent.config.dev?.remote) {
-								assert(devEnv !== undefined && !Array.isArray(devEnv));
-								const { url } = await devEnv.proxy.ready.promise;
-
-								await maybeRegisterLocalWorker(
-									url,
-									reloadEvent.config.name,
-									reloadEvent.proxyData.internalDurableObjects,
-									reloadEvent.proxyData.entrypointAddresses
-								);
-							}
-						}
-					);
-				});
-			}
-
 			if (isInteractive() && args.showInteractiveDevSession !== false) {
 				unregisterHotKeys = registerDevHotKeys(devEnv, args);
 			}
@@ -791,7 +625,6 @@ export async function startDev(args: StartDevOptions) {
 			devEnv: Array.isArray(devEnv) ? devEnv[0] : devEnv,
 			secondary: Array.isArray(devEnv) ? devEnv.slice(1) : [],
 			unregisterHotKeys,
-			closeRegistryWatcher,
 		};
 	} catch (e) {
 		await Promise.allSettled([
@@ -800,13 +633,7 @@ export async function startDev(args: StartDevOptions) {
 			...(Array.isArray(devEnv)
 				? devEnv.map((d) => d.teardown())
 				: [devEnv?.teardown()]),
-			(async () => {
-				if (closeRegistryWatcher) {
-					assert(devEnv === undefined || !Array.isArray(devEnv));
-					await closeRegistryWatcher(devEnv?.config.latestConfig?.name);
-				}
-				unregisterHotKeys?.();
-			})(),
+			unregisterHotKeys?.(),
 		]);
 		throw e;
 	}
