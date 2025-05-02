@@ -94,6 +94,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 							unsafePreventEviction: true,
 						},
 					},
+					stripCfConnectingIp: false,
 					serviceBindings: {
 						PROXY_CONTROLLER: async (req): Promise<Response> => {
 							const message =

@@ -1116,6 +1116,7 @@ export async function buildMiniflareOptions(
 				name: getName(config),
 				compatibilityDate: config.compatibilityDate,
 				compatibilityFlags: config.compatibilityFlags,
+				stripCfConnectingIp: false,
 
 				...sourceOptions,
 				...bindingOptions,
