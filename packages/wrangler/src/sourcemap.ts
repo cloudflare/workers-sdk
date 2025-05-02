@@ -231,7 +231,7 @@ function lineMatchToCallSite(lineMatch: RegExpMatchArray): CallSite {
 		typeName,
 		functionName,
 		methodName,
-		fileName: lineMatch[2] || null,
+		fileName: lineMatch[2],
 		lineNumber: parseInt(lineMatch[3]) || null,
 		columnNumber: parseInt(lineMatch[4]) || null,
 		native: isNative,
@@ -242,7 +242,7 @@ interface CallSiteOptions {
 	typeName: string | null;
 	functionName: string | null;
 	methodName: string | null;
-	fileName: string | null;
+	fileName: string;
 	lineNumber: number | null;
 	columnNumber: number | null;
 	native: boolean;
@@ -253,6 +253,21 @@ interface CallSiteOptions {
 // https://github.com/felixge/node-stack-trace/blob/4c41a4526e74470179b3b6dd5d75191ca8c56c17/index.js
 class CallSite implements NodeJS.CallSite {
 	constructor(private readonly opts: CallSiteOptions) {}
+	getScriptHash(): string {
+		throw new Error("Method not implemented.");
+	}
+	getEnclosingColumnNumber(): number {
+		throw new Error("Method not implemented.");
+	}
+	getEnclosingLineNumber(): number {
+		throw new Error("Method not implemented.");
+	}
+	getPosition(): number {
+		throw new Error("Method not implemented.");
+	}
+	toString(): string {
+		throw new Error("Method not implemented.");
+	}
 
 	getThis(): unknown {
 		return null;
@@ -273,7 +288,7 @@ class CallSite implements NodeJS.CallSite {
 	getFileName(): string | undefined {
 		return this.opts.fileName ?? undefined;
 	}
-	getScriptNameOrSourceURL(): string | null {
+	getScriptNameOrSourceURL(): string {
 		return this.opts.fileName;
 	}
 	getLineNumber(): number | null {
