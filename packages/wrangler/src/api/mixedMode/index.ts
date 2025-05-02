@@ -12,7 +12,7 @@ export type MixedModeConnectionString = Awaited<Worker["url"]> & {
 	[__brand]: "MixedModeConnectionString";
 };
 
-export async function experimental_startMixedModeSession(
+export async function startMixedModeSession(
 	bindings: StartDevWorkerInput["bindings"]
 ): Promise<MixedModeSession> {
 	const proxyServerWorkerEntrypoint = path.resolve(
