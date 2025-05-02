@@ -72,6 +72,7 @@ import {
 	getUserServiceName,
 	handlePrettyErrorRequest,
 	JsonErrorSchema,
+	kCurrentWorker,
 	maybeWrappedModuleToWorkerName,
 	NameSourceOptions,
 	reviveError,
@@ -304,11 +305,11 @@ function validateOptions(
 	for (const opts of pluginWorkerOpts) {
 		if (opts.core.serviceBindings) {
 			for (const name of Object.keys(opts.core.serviceBindings)) {
-				const workerName = opts.core.name ?? "";
 				const service = opts.core.serviceBindings[name];
 				if (
 					typeof service === "object" &&
 					"name" in service &&
+					service.name !== kCurrentWorker &&
 					!pluginWorkerOpts.find(
 						(options) => options.core.name === service.name
 					)
@@ -321,7 +322,7 @@ function validateOptions(
 								// TODO: To support service workers format
 								// style: HttpOptions_Style.HOST,
 								cfBlobHeader: CoreHeaders.CF_BLOB,
-								capnpConnectHost: `${HOST_CAPNP_CONNECT}-${workerName}`,
+								capnpConnectHost: `${HOST_CAPNP_CONNECT}-${service.name}`,
 							},
 						},
 					};
