@@ -2036,12 +2036,36 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 		) && isValid;
 
 	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"worker_first_paths",
+			(value as Assets).worker_first_paths,
+			"object"
+		) && isValid;
+
+	const paths = (value as Assets).worker_first_paths;
+	if (paths !== undefined && !Array.isArray(paths)) {
+		diagnostics.errors.push(`"${field}.worker_first_paths" should be an array`);
+		isValid = false;
+	} else if (
+		paths !== undefined &&
+		!paths.every((p) => typeof p === "string")
+	) {
+		diagnostics.errors.push(
+			`"${field}.worker_first_paths" should be an array of strings`
+		);
+		isValid = false;
+	}
+
+	isValid =
 		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 			"directory",
 			"binding",
 			"html_handling",
 			"not_found_handling",
 			"run_worker_first",
+			"worker_first_paths",
 		]) && isValid;
 
 	return isValid;

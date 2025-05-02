@@ -8,6 +8,7 @@ const InternalConfigSchema = z.object({
 
 export const RouterConfigSchema = z.object({
 	invoke_user_worker_ahead_of_assets: z.boolean().optional(),
+	worker_first_paths: z.array(z.string()).optional(),
 	has_user_worker: z.boolean().optional(),
 	...InternalConfigSchema.shape,
 });

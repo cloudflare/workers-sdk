@@ -435,16 +435,18 @@ export function getAssetsOptions(
 	const routerConfig: RouterConfig = {
 		has_user_worker: Boolean(args.script || config.main),
 		invoke_user_worker_ahead_of_assets: config.assets?.run_worker_first,
+		worker_first_paths: config.assets?.worker_first_paths,
 	};
 
 	// User Worker ahead of assets, but no assets binding provided
 	if (
-		routerConfig.invoke_user_worker_ahead_of_assets &&
+		(routerConfig.invoke_user_worker_ahead_of_assets ||
+			routerConfig.worker_first_paths?.length) &&
 		!config?.assets?.binding
 	) {
 		logger.warn(
-			"run_worker_first=true set without an assets binding\n" +
-				"Setting run_worker_first to true will always invoke your Worker script.\n" +
+			"run_worker_first=true or worker_first_paths set without an assets binding\n" +
+				"This configuration will always invoke your Worker script for the specified paths.\n" +
 				"To fetch your assets from your Worker, please set the [assets.binding] key in your configuration file.\n\n" +
 				"Read more: https://developers.cloudflare.com/workers/static-assets/binding/#binding"
 		);
@@ -453,11 +455,12 @@ export function getAssetsOptions(
 	// Using run_worker_first = true but didn't provide a Worker script
 	if (
 		!routerConfig.has_user_worker &&
-		routerConfig.invoke_user_worker_ahead_of_assets === true
+		(routerConfig.invoke_user_worker_ahead_of_assets === true ||
+			routerConfig.worker_first_paths?.length)
 	) {
 		throw new UserError(
-			"Cannot set run_worker_first=true without a Worker script.\n" +
-				"Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (`main`)."
+			"Cannot set run_worker_first=true or worker_first_paths without a Worker script.\n" +
+				"Please remove these settings from your configuration file, or provide a Worker script in your configuration file (`main`)."
 		);
 	}
 

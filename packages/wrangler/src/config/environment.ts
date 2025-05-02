@@ -941,6 +941,11 @@ export type Assets = {
 	 * If false, then respond to requests that match an asset with that asset directly.
 	 * */
 	run_worker_first?: boolean;
+	/**
+	 * Array of paths that should be handled by the User Worker first.
+	 * Requests matching these paths will be routed to the User Worker before checking for matching assets.
+	 */
+	worker_first_paths?: string[];
 };
 
 export interface Observability {
