@@ -22,7 +22,15 @@ jobs:
       - name: Use Node.js v16
         uses: actions/setup-node@v4
         with:
-          node-version: 16.13.0
+          node-version: 16
 
       - name: Check for error message
-        run: node packages/wrangler/src/__tests__/test-old-node-version.js
+        run: node packages/wrangler/src/__tests__/test-old-node-version.js error
+
+      - name: Use Node.js v18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Check for warning message
+        run: node packages/wrangler/src/__tests__/test-old-node-version.js warn

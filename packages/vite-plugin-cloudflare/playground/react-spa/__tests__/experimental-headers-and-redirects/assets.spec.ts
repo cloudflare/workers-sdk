@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test, vi } from "vitest";
-import { isBuild, page, viteTestUrl } from "../../../__test-utils__";
+import { failsIf, isBuild, page, viteTestUrl } from "../../../__test-utils__";
 
 describe(
 	"react-spa (with experimental support)",
@@ -115,7 +115,3 @@ describe("reloading the server", () => {
 		}
 	);
 });
-
-function failsIf(condition: boolean) {
-	return condition ? test.fails : test;
-}

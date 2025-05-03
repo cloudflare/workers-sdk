@@ -15,6 +15,9 @@ const config: TemplateConfig = {
 			ts: {
 				path: "./ts",
 			},
+			python: {
+				path: "./py",
+			},
 		},
 	},
 };

@@ -1,5 +1,17 @@
 # @cloudflare/workers-shared
 
+## 0.17.5
+
+### Patch Changes
+
+- [#9050](https://github.com/cloudflare/workers-sdk/pull/9050) [`1be5644`](https://github.com/cloudflare/workers-sdk/commit/1be56441dec5e8faea3b6c007c1a347bab1a4029) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Adds tracing to \_headers & \_redirects in Workers Assets allowing Cloudflare employees to better debug customer issues regarding these features.
+
+## 0.17.4
+
+### Patch Changes
+
+- [#9033](https://github.com/cloudflare/workers-sdk/pull/9033) [`2c50115`](https://github.com/cloudflare/workers-sdk/commit/2c501151d3d1a563681cdb300a298b83862b60e2) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: convert wrangler.toml files into wrangler.jsonc ones
+
 ## 0.17.3
 
 ### Patch Changes

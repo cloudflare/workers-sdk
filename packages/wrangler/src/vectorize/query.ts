@@ -1,4 +1,5 @@
 import { createCommand } from "../core/create-command";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { queryIndexByVector, queryIndexByVectorId } from "./client";
 import type {
@@ -115,10 +116,9 @@ export const vectorizeQueryCommand = createCommand({
 			(args.vector === undefined && args.vectorId === undefined) ||
 			(args.vector !== undefined && args.vectorId !== undefined)
 		) {
-			logger.error(
+			throw new UserError(
 				"🚨 Either vector or vector-id parameter must be provided, but not both."
 			);
-			return;
 		}
 
 		logger.log(`📋 Searching for relevant vectors...`);

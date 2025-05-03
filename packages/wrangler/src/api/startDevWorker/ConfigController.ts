@@ -169,6 +169,7 @@ async function resolveBindings(
 			...bindings,
 			vars: maskedVars,
 		},
+		input.tailConsumers ?? config.tail_consumers,
 		{
 			registry: input.dev?.registry,
 			local: !input.dev?.remote,
@@ -316,6 +317,7 @@ async function resolveConfig(
 			metadata: input.unsafe?.metadata ?? unsafe?.metadata,
 		},
 		assets: assetsOptions,
+		tailConsumers: config.tail_consumers ?? [],
 	} satisfies StartDevWorkerOptions;
 
 	if (

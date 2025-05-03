@@ -757,7 +757,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		if (props.dryRun) {
 			workerBundle = createWorkerUploadForm(worker);
-			printBindings({ ...withoutStaticAssets, vars: maskedVars });
+			printBindings(
+				{ ...withoutStaticAssets, vars: maskedVars },
+				config.tail_consumers
+			);
 		} else {
 			assert(accountId, "Missing accountId");
 
@@ -853,7 +856,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				}
 				bindingsPrinted = true;
 
-				printBindings({ ...withoutStaticAssets, vars: maskedVars });
+				printBindings(
+					{ ...withoutStaticAssets, vars: maskedVars },
+					config.tail_consumers
+				);
 
 				versionId = parseNonHyphenedUuid(result.deployment_id);
 
@@ -879,7 +885,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				}
 			} catch (err) {
 				if (!bindingsPrinted) {
-					printBindings({ ...withoutStaticAssets, vars: maskedVars });
+					printBindings(
+						{ ...withoutStaticAssets, vars: maskedVars },
+						config.tail_consumers
+					);
 				}
 				await helpIfErrorIsSizeOrScriptStartup(
 					err,

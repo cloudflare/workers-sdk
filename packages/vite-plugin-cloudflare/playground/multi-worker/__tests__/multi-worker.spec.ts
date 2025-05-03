@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { describe, expect, test } from "vitest";
@@ -13,11 +14,24 @@ describe.runIf(isBuild)("output directories", () => {
 		expect(fs.existsSync(path.join(rootDir, "dist", "worker_a"))).toBe(true);
 		expect(fs.existsSync(path.join(rootDir, "dist", "worker_b"))).toBe(true);
 	});
+
+	test("does include unwanted files in deployment bundle", async () => {
+		const output = execSync("pnpm deploy-a --dry-run", {
+			cwd: rootDir,
+			encoding: "utf8",
+		});
+		// There should be no additional modules, in particular ones in `.wrangler/tmp`.
+		expect(output).not.toContain("Attaching additional modules");
+	});
 });
 
 describe("multi-worker basic functionality", async () => {
-	test("worker configs warnings are not present in the terminal", async () => {
-		expect(serverLogs.warns).toEqual([]);
+	test("warning about non-existent tail is printed", async () => {
+		expect(serverLogs.warns).toEqual([
+			expect.stringMatching(
+				/Make sure you add it if you'd like to simulate receiving tail events locally/
+			),
+		]);
 	});
 
 	test("entry worker returns a response", async () => {
