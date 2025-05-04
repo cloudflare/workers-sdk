@@ -11,6 +11,7 @@ import type {
 } from "../../utils/types";
 import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
 
+
 export interface Env {
 	ASSET_WORKER: Service<AssetWorker>;
 	USER_WORKER: Fetcher;
@@ -54,15 +55,18 @@ export default {
 			);
 
 			const config = applyConfigurationDefaults(env.CONFIG);
+
 			const url = new URL(request.url);
 
 			if (env.COLO_METADATA && env.VERSION_METADATA && env.CONFIG) {
 				analytics.setData({
 					accountId: env.CONFIG.account_id,
 					scriptId: env.CONFIG.script_id,
+
 					coloId: env.COLO_METADATA.coloId,
 					metalId: env.COLO_METADATA.metalId,
 					coloTier: env.COLO_METADATA.coloTier,
+
 					coloRegion: env.COLO_METADATA.coloRegion,
 					hostname: url.hostname,
 					version: env.VERSION_METADATA.tag,
@@ -80,14 +84,8 @@ export default {
 				) ??
 					false);
 
-			console.log(
-				shouldRunWorkerFirst,
-				config.worker_first_paths,
-				url.pathname
-			);
-
 			// User's configuration indicates they want user-Worker to run ahead of any
-			// assets for this path. Do not provide any fallback logic.
+			// assets or any assets for this path. Do not provide any fallback logic.
 			if (shouldRunWorkerFirst) {
 				if (!config.has_user_worker) {
 					throw new Error(

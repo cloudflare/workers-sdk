@@ -170,6 +170,24 @@ export class LocalRuntimeController extends RuntimeController {
 			// so only one update can happen at a time.
 			const userWorkerUrl = await this.#mf.ready;
 			const userWorkerInspectorUrl = await this.#mf.getInspectorURL();
+
+			// Get asset worker URL if assets are configured
+			let assetWorkerUrl:
+				| { protocol: string; hostname: string; port: string }
+				| undefined = undefined;
+			if (data.config.assets) {
+				const assetUrl = await this.#mf
+					.unsafeGetDirectURL("asset-worker")
+					.catch(() => undefined);
+				if (assetUrl) {
+					assetWorkerUrl = {
+						protocol: assetUrl.protocol,
+						hostname: assetUrl.hostname,
+						port: assetUrl.port,
+					};
+				}
+			}
+
 			// If we received a new `bundleComplete` event before we were able to
 			// dispatch a `reloadComplete` for this bundle, ignore this bundle.
 			if (id !== this.#currentBundleId) {
@@ -213,6 +231,11 @@ export class LocalRuntimeController extends RuntimeController {
 					proxyLogsToController: data.bundle.entry.format === "service-worker",
 					internalDurableObjects: internalObjects,
 					entrypointAddresses,
+					assetWorkerUrl: assetWorkerUrl ?? {
+						protocol: "",
+						hostname: "",
+						port: "",
+					},
 				},
 			});
 		} catch (error) {

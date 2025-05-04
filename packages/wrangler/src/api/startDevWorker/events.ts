@@ -155,4 +155,5 @@ export type ProxyData = {
 	proxyLogsToController?: boolean;
 	internalDurableObjects?: CfDurableObject[];
 	entrypointAddresses: WorkerEntrypointsDefinition | undefined;
+	assetWorkerUrl: UrlOriginParts;
 };

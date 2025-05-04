@@ -1,5 +1,5 @@
 {
-	"name": "workers-assets-with-user-worker-worker-first-paths",
+	"name": "workers-with-assets-worker-first-paths",
 	"private": true,
 	"license": "MIT",
 	"main": "src/index.ts",
