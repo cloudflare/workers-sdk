@@ -65,7 +65,6 @@ export interface StartDevWorkerInput {
 	/**
 	 * The javascript or typescript entry-point of the worker.
 	 * This is the `main` property of a Wrangler configuration file.
-	 * You can specify a file path or provide the contents directly.
 	 */
 	entrypoint?: string;
 	/** The configuration of the worker. */
