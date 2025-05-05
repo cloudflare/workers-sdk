@@ -73,3 +73,24 @@ export type Defined<T> = Exclude<T, undefined>;
 export function getFirstAvailablePort(start: number) {
 	return getPort({ port: portNumbers(start, 65535) });
 }
+
+export function log(handler: string, request: Request, action: string) {
+	console.log(
+		handler,
+		request.url,
+		isAssetFetch(request)
+			? "<ASSET REQUEST>"
+			: isWorkerFetch(request)
+				? "<WORKER REQUEST>"
+				: "<GENERAL REQUEST>",
+		action
+	);
+}
+
+export function isAssetFetch(request: Request) {
+	return request.headers.get("__CF_REQUEST_TYPE_") === "ASSET";
+}
+
+export function isWorkerFetch(request: Request) {
+	return request.headers.get("__CF_REQUEST_TYPE_") === "WORKER";
+}
