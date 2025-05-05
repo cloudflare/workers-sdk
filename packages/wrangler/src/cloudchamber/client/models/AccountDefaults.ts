@@ -9,5 +9,10 @@ import type { MemorySizeWithUnit } from "./MemorySizeWithUnit";
  */
 export type AccountDefaults = {
 	vcpus: number;
+	memory_mib?: number;
+	/**
+	 * DEPRECATED
+	 * @deprecated
+	 */
 	memory: MemorySizeWithUnit;
 };

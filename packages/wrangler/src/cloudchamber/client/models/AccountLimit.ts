@@ -14,10 +14,23 @@ import type { NodeGroup } from "./NodeGroup";
 export type AccountLimit = {
 	account_id: AccountID;
 	vcpu_per_deployment: number;
+	/**
+	 * @deprecated
+	 */
 	memory_per_deployment: MemorySizeWithUnit;
+	memory_mib_per_deployment?: number;
+	/**
+	 * @deprecated
+	 */
 	disk_per_deployment: DiskSizeWithUnit;
+	disk_mb_per_deployment?: number;
 	total_vcpu: number;
+	/**
+	 * DEPRECATED
+	 * @deprecated
+	 */
 	total_memory: MemorySizeWithUnit;
+	total_memory_mib?: number;
 	node_group: NodeGroup;
 	/**
 	 * Network modes that will be included in this customer's vm
