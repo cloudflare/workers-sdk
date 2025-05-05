@@ -211,6 +211,95 @@ describe("cloudchamber apply", () => {
 		/* eslint-enable */
 	});
 
+	test("can apply a simple existing application and create other (max_instances)", async () => {
+		setIsTTY(false);
+		writeAppConfiguration(
+			{
+				name: "my-container-app",
+				class_name: "DurableObjectClass",
+				max_instances: 3,
+				configuration: {
+					image: "./Dockerfile",
+				},
+			},
+			{
+				name: "my-container-app-2",
+				max_instances: 3,
+				class_name: "DurableObjectClass2",
+				configuration: {
+					image: "other-app/Dockerfile",
+				},
+			}
+		);
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app",
+				max_instances: 3,
+				instances: 3,
+				created_at: new Date().toString(),
+				account_id: "1",
+				version: 1,
+				scheduling_policy: SchedulingPolicy.REGIONAL,
+				configuration: {
+					image: "./Dockerfile2",
+				},
+				constraints: {
+					tier: 1,
+				},
+			},
+		]);
+		const res = mockModifyApplication();
+		mockCreateApplication({ id: "abc" } as Application);
+		await runWrangler("cloudchamber apply --json");
+		await res;
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ EDIT my-container-app
+			│
+			│   [containers.configuration]
+			│ - image = \\"./Dockerfile2\\"
+			│ + image = \\"./Dockerfile\\"
+			│
+			│   [containers.constraints]
+			│   ...
+			│
+			├ NEW my-container-app-2
+			│
+			│   [[containers]]
+			│   name = \\"my-container-app-2\\"
+			│   max_instances = 3
+			│   scheduling_policy = \\"regional\\"
+			│
+			│   [containers.configuration]
+			│   image = \\"other-app/Dockerfile\\"
+			│
+			│   [containers.constraints]
+			│   tier = 1
+			│
+			├ Do you want to apply these changes?
+			│ yes
+			│
+			├ Loading
+			│
+			│
+			│  SUCCESS  Modified application my-container-app
+			│
+			│
+			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
+			│
+			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		/* eslint-enable */
+	});
+
 	test("can apply a simple existing application and create other", async () => {
 		setIsTTY(false);
 		writeAppConfiguration(

@@ -140,6 +140,10 @@ function containerAppToCreateApplication(
 	delete (app as Record<string, unknown>)["image_vars"];
 	delete (app as Record<string, unknown>)["rollout_step_percentage"];
 
+	if (containerApp.instances === undefined) {
+		delete (app as Record<string, unknown>)["instances"];
+	}
+
 	return app;
 }
 

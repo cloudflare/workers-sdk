@@ -49,7 +49,10 @@ export type ContainerApp = {
 	name: string;
 
 	/** Number of application instances */
-	instances: number;
+	instances?: number;
+
+	/** Number of maximum application instances. Only applicable to Durable Object container applications */
+	max_instances?: number;
 
 	/**
 	 * The path to a Dockerfile, or an image URI.
