@@ -853,12 +853,16 @@ function configureCronHandler(
 		async ({ request }) => {
 			const { searchParams } = new URL(request.url);
 			const selected_worker = searchParams.get("worker") || worker_name;
-			if (selected_worker && !has_triggers.has(selected_worker))
-				return new Response("Not found", {
+			let worker: Awaited<ReturnType<typeof miniflare.getWorker>>;
+			try {
+				worker = await miniflare.getWorker(selected_worker);
+			} catch (e) {
+				console.error(e);
+				return new Response(`${selected_worker} not found`, {
 					status: http_constants.HTTP_STATUS_NOT_FOUND,
 				});
+			}
 			try {
-				const worker = await miniflare.getWorker(selected_worker);
 				await worker.scheduled({
 					cron: searchParams.get("cron") || "* * * * *",
 					scheduledTime: new Date(),

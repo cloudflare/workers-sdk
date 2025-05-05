@@ -1,5 +1,5 @@
 {
-	"name": "scheduled-worker",
+	"name": "scheduled_worker",
 	"main": "./src/index.ts",
 	"compatibility_date": "2024-12-30",
 	"triggers": {
