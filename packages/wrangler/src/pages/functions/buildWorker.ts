@@ -23,6 +23,7 @@ export type Options = {
 	outfile?: string;
 	outdir?: string;
 	minify?: boolean;
+	keepNames?: boolean;
 	sourcemap?: boolean;
 	fallbackService?: string;
 	watch?: boolean;
@@ -41,6 +42,7 @@ export function buildWorkerFromFunctions({
 	outfile = join(getPagesTmpDir(), `./functionsWorker-${Math.random()}.js`),
 	outdir,
 	minify = false,
+	keepNames = true,
 	sourcemap = false,
 	fallbackService = "ASSETS",
 	watch = false,
@@ -56,6 +58,7 @@ export function buildWorkerFromFunctions({
 	const entry: Entry = {
 		file: resolve(getBasePath(), "templates/pages-template-worker.ts"),
 		projectRoot: functionsDirectory,
+		configPath: undefined,
 		format: "modules",
 		moduleRoot: functionsDirectory,
 		exports: [],
@@ -72,11 +75,10 @@ export function buildWorkerFromFunctions({
 		inject: [routesModule],
 		...(outdir ? { entryName: "index" } : { entryName: undefined }),
 		minify,
+		keepNames,
 		sourcemap,
 		watch,
 		nodejsCompatMode,
-		// TODO: mock AE datasets in Pages functions for dev
-		mockAnalyticsEngineDatasets: [],
 		define: {
 			__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
 		},
@@ -107,6 +109,7 @@ export type RawOptions = {
 	bundle?: boolean;
 	externalModules?: string[];
 	minify?: boolean;
+	keepNames?: boolean;
 	sourcemap?: boolean;
 	watch?: boolean;
 	plugins?: Plugin[];
@@ -135,6 +138,7 @@ export function buildRawWorker({
 	bundle = true,
 	externalModules,
 	minify = false,
+	keepNames = true,
 	sourcemap = false,
 	watch = false,
 	plugins = [],
@@ -149,6 +153,7 @@ export function buildRawWorker({
 	const entry: Entry = {
 		file: workerScriptPath,
 		projectRoot: resolve(directory),
+		configPath: undefined,
 		format: "modules",
 		moduleRoot: resolve(directory),
 		exports: [],
@@ -162,11 +167,10 @@ export function buildRawWorker({
 		moduleCollector,
 		additionalModules,
 		minify,
+		keepNames,
 		sourcemap,
 		watch,
 		nodejsCompatMode,
-		// TODO: mock AE datasets in Pages functions for dev
-		mockAnalyticsEngineDatasets: [],
 		define: {},
 		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
@@ -235,6 +239,7 @@ export async function produceWorkerBundleForWorkerJSDirectory({
 		{
 			file: entrypoint,
 			projectRoot: resolve(workerJSDirectory),
+			configPath: undefined,
 			format: "modules",
 			moduleRoot: resolve(workerJSDirectory),
 			exports: [],

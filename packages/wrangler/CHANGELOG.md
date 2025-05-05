@@ -1,5 +1,139 @@
 # wrangler
 
+## 4.14.1
+
+### Patch Changes
+
+- [#9085](https://github.com/cloudflare/workers-sdk/pull/9085) [`cdc88d8`](https://github.com/cloudflare/workers-sdk/commit/cdc88d8fc5ee30d2b3f35b6e548334d5dc68aea1) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Do not include .wrangler and Wrangler config files in additional modules
+
+  Previously, if you added modules rules such as `**/*.js` or `**/*.json`, specified `no_bundle: true`, and the entry-point to the Worker was in the project root directory, Wrangler could include files that were not intended, such as `.wrangler/tmp/xxx.js` or the Wrangler config file itself. Now these files are automatically skipped when trying to find additional modules by searching the file tree.
+
+- [#9095](https://github.com/cloudflare/workers-sdk/pull/9095) [`508a1a3`](https://github.com/cloudflare/workers-sdk/commit/508a1a31a039a5f4700efbc7535a165d79b22cb9) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - wrangler login put custom callback host and port into the auth URL
+
+- [#9113](https://github.com/cloudflare/workers-sdk/pull/9113) [`82e220e`](https://github.com/cloudflare/workers-sdk/commit/82e220e943521d9f2cbaa63cdb56792da6cb1c60) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `x-mixed-mode` flag
+
+  This experimental flag currently has no effect. More details will be shared as we roll out its functionality.
+
+- Updated dependencies [[`357d42a`](https://github.com/cloudflare/workers-sdk/commit/357d42acfb16d21169d004961030cd4822526a96)]:
+  - miniflare@4.20250428.1
+
+## 4.14.0
+
+### Minor Changes
+
+- [#8981](https://github.com/cloudflare/workers-sdk/pull/8981) [`3b60131`](https://github.com/cloudflare/workers-sdk/commit/3b60131ca5a1bafcf7af16b0f41f2601a9a3ee85) Thanks [@Caio-Nogueira](https://github.com/Caio-Nogueira)! - Adds support for waitForEvent step type
+
+- [#9083](https://github.com/cloudflare/workers-sdk/pull/9083) [`137d2da`](https://github.com/cloudflare/workers-sdk/commit/137d2da0602db0f66a5c1b6f277624f6031d9dc5) Thanks [@penalosa](https://github.com/penalosa)! - Support Tail Workers in local dev
+
+### Patch Changes
+
+- [#8975](https://github.com/cloudflare/workers-sdk/pull/8975) [`9bf55aa`](https://github.com/cloudflare/workers-sdk/commit/9bf55aa60aa69ea9bf2b59138504d1772d84c14d) Thanks [@Caio-Nogueira](https://github.com/Caio-Nogueira)! - Adds missing `waiting` status on the `wrangler workflow instances list` command
+
+- [#9048](https://github.com/cloudflare/workers-sdk/pull/9048) [`0b4d22a`](https://github.com/cloudflare/workers-sdk/commit/0b4d22a864d7781c87ccead79888b39fd7304575) Thanks [@garvit-gupta](https://github.com/garvit-gupta)! - fix: Validate input file for Vectorize inserts
+
+- Updated dependencies [[`d2ecc76`](https://github.com/cloudflare/workers-sdk/commit/d2ecc763e4d77620d6a9be71855e87893631ebc0), [`137d2da`](https://github.com/cloudflare/workers-sdk/commit/137d2da0602db0f66a5c1b6f277624f6031d9dc5)]:
+  - miniflare@4.20250428.0
+
+## 4.13.2
+
+### Patch Changes
+
+- Updated dependencies [[`2c50115`](https://github.com/cloudflare/workers-sdk/commit/2c501151d3d1a563681cdb300a298b83862b60e2)]:
+  - miniflare@4.20250424.1
+
+## 4.13.1
+
+### Patch Changes
+
+- [#8983](https://github.com/cloudflare/workers-sdk/pull/8983) [`f5ebb33`](https://github.com/cloudflare/workers-sdk/commit/f5ebb3376d918267df8c6722dcd73da35f5b4f81) Thanks [@Caio-Nogueira](https://github.com/Caio-Nogueira)! - Remove open-beta disclaimer from workflows commands
+
+- [#8990](https://github.com/cloudflare/workers-sdk/pull/8990) [`6291fa1`](https://github.com/cloudflare/workers-sdk/commit/6291fa161571e0f02e22768dd506f7e3398fee94) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: When generating Env types, set type of version metadata binding to `WorkerVersionMetadata`. This means it now correctly includes the `timestamp` field.
+
+- [#8966](https://github.com/cloudflare/workers-sdk/pull/8966) [`234afae`](https://github.com/cloudflare/workers-sdk/commit/234afae20456d3d3c4eb3d41fb2852ee866fec0a) Thanks [@penalosa](https://github.com/penalosa)! - Internal refactor to use the `createCommand` utility
+
+- Updated dependencies [[`fc47c79`](https://github.com/cloudflare/workers-sdk/commit/fc47c79f7c5ab532e0437897c8d7ab06abd5298d), [`0838f1b`](https://github.com/cloudflare/workers-sdk/commit/0838f1b4ccce347921f3a0746652fe379dd16faf)]:
+  - miniflare@4.20250424.0
+
+## 4.13.0
+
+### Minor Changes
+
+- [#8640](https://github.com/cloudflare/workers-sdk/pull/8640) [`5ce70bd`](https://github.com/cloudflare/workers-sdk/commit/5ce70bdba8dc7e265447c997dc7c3af92469072b) Thanks [@kentonv](https://github.com/kentonv)! - Add support for defining `props` on a Service binding.
+
+  In your configuration file, you can define a service binding with props:
+
+  ```json
+  {
+  	"services": [
+  		{
+  			"binding": "MY_SERVICE",
+  			"service": "some-worker",
+  			"props": { "foo": 123, "bar": "value" }
+  		}
+  	]
+  }
+  ```
+
+  These can then be accessed by the callee:
+
+  ```ts
+  import { WorkerEntrypoint } from "cloudflare:workers";
+
+  export default class extends WorkerEntrypoint {
+  	fetch() {
+  		return new Response(JSON.stringify(this.ctx.props));
+  	}
+  }
+  ```
+
+- [#8771](https://github.com/cloudflare/workers-sdk/pull/8771) [`0cfcfe0`](https://github.com/cloudflare/workers-sdk/commit/0cfcfe02eccaaa7f39218665588fb8970a969765) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - feat: add `config.keep_names` option
+
+  Adds a new option to Wrangler to allow developers to opt out of esbuild's `keep_names` option (https://esbuild.github.io/api/#keep-names). By default, Wrangler sets this to `true`
+
+  This is something developers should not usually need to care about, but sometimes
+  `keep_names` can create issues, and in such cases they will be now able to opt-out.
+
+  Example `wrangler.jsonc`:
+
+  ```json
+  {
+  	"name": "my-worker",
+  	"main": "src/worker.ts",
+  	"keep_names": false
+  }
+  ```
+
+### Patch Changes
+
+- [#9024](https://github.com/cloudflare/workers-sdk/pull/9024) [`c409318`](https://github.com/cloudflare/workers-sdk/commit/c409318f903c71f03498251c51cb854d95eaa53b) Thanks [@IRCody](https://github.com/IRCody)! - Correctly handle 0 length responses to wrangler containers list.
+
+- Updated dependencies [[`5ce70bd`](https://github.com/cloudflare/workers-sdk/commit/5ce70bdba8dc7e265447c997dc7c3af92469072b), [`3f0adf3`](https://github.com/cloudflare/workers-sdk/commit/3f0adf3c25e9cede1bd8c2ae873c059d1ab2ef38)]:
+  - miniflare@4.20250422.0
+
+## 4.12.1
+
+### Patch Changes
+
+- [#8935](https://github.com/cloudflare/workers-sdk/pull/8935) [`41f095b`](https://github.com/cloudflare/workers-sdk/commit/41f095b0dd35411adbca3398966b5cfe8c39d433) Thanks [@penalosa](https://github.com/penalosa)! - Internal refactor to move local analytics engine support from Wrangler to Miniflare
+
+- Updated dependencies [[`2a7749b`](https://github.com/cloudflare/workers-sdk/commit/2a7749bffb7fe5550c3192401ed6edd72c0eb510), [`41f095b`](https://github.com/cloudflare/workers-sdk/commit/41f095b0dd35411adbca3398966b5cfe8c39d433)]:
+  - miniflare@4.20250417.0
+
+## 4.12.0
+
+### Minor Changes
+
+- [#8316](https://github.com/cloudflare/workers-sdk/pull/8316) [`69864b4`](https://github.com/cloudflare/workers-sdk/commit/69864b416420e2e8877befe8c41a507b78cd4413) Thanks [@gnekich](https://github.com/gnekich)! - introduce callback-host and callback-port param for wrangler login command
+
+### Patch Changes
+
+- [#8889](https://github.com/cloudflare/workers-sdk/pull/8889) [`eab7ad9`](https://github.com/cloudflare/workers-sdk/commit/eab7ad9af618bc85a79c077f07c6efcf05ae3f5f) Thanks [@penalosa](https://github.com/penalosa)! - When Wrangler encounters an error, if the Bun runtime is detected it will now warn users that Wrangler does not officially support Bun.
+
+- [#8673](https://github.com/cloudflare/workers-sdk/pull/8673) [`5de2b9a`](https://github.com/cloudflare/workers-sdk/commit/5de2b9a39a6cb6ac730d0f8f1b60f9f756c24993) Thanks [@IRCody](https://github.com/IRCody)! - Add containers {info, list, delete} subcommands.
+
+- Updated dependencies [[`62c40d7`](https://github.com/cloudflare/workers-sdk/commit/62c40d792b9555e6e25a5f99ae803e4943c4b56f)]:
+  - miniflare@4.20250416.0
+
 ## 4.11.1
 
 ### Patch Changes

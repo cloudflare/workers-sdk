@@ -558,13 +558,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						jsxFragment,
 						tsconfig: props.tsconfig ?? config.tsconfig,
 						minify,
+						keepNames: config.keep_names ?? true,
 						sourcemap: uploadSourceMaps,
 						nodejsCompatMode,
 						define: { ...config.define, ...props.defines },
 						checkFetch: false,
 						alias: config.alias,
-						// We do not mock AE datasets when deploying
-						mockAnalyticsEngineDatasets: [],
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "deploy",
@@ -758,7 +757,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		if (props.dryRun) {
 			workerBundle = createWorkerUploadForm(worker);
-			printBindings({ ...withoutStaticAssets, vars: maskedVars });
+			printBindings(
+				{ ...withoutStaticAssets, vars: maskedVars },
+				config.tail_consumers
+			);
 		} else {
 			assert(accountId, "Missing accountId");
 
@@ -854,7 +856,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				}
 				bindingsPrinted = true;
 
-				printBindings({ ...withoutStaticAssets, vars: maskedVars });
+				printBindings(
+					{ ...withoutStaticAssets, vars: maskedVars },
+					config.tail_consumers
+				);
 
 				versionId = parseNonHyphenedUuid(result.deployment_id);
 
@@ -880,7 +885,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				}
 			} catch (err) {
 				if (!bindingsPrinted) {
-					printBindings({ ...withoutStaticAssets, vars: maskedVars });
+					printBindings(
+						{ ...withoutStaticAssets, vars: maskedVars },
+						config.tail_consumers
+					);
 				}
 				await helpIfErrorIsSizeOrScriptStartup(
 					err,

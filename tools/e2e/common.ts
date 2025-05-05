@@ -36,6 +36,18 @@ export type HyperdriveConfig = {
 	created_on: string;
 };
 
+export type MTlsCertificateResponse = {
+	id: string;
+	name?: string;
+	ca: boolean;
+	certificates: string;
+	expires_on: string;
+	issuer: string;
+	serial_number: string;
+	signature: string;
+	uploaded_on: string;
+};
+
 class ApiError extends Error {
 	constructor(
 		readonly url: string,
@@ -82,7 +94,7 @@ const apiFetch = async (
 		return json.result;
 	} catch (e) {
 		if (failSilently) {
-			return;
+			return false;
 		}
 		if (e instanceof ApiError) {
 			console.error(e.url, e.init);
@@ -122,7 +134,7 @@ export const listTmpE2EProjects = async () => {
 };
 
 export const deleteProject = async (project: string) => {
-	await apiFetch(
+	return await apiFetch(
 		`/pages/projects/${project}`,
 		{
 			method: "DELETE",
@@ -144,7 +156,7 @@ export const listTmpE2EWorkers = async () => {
 };
 
 export const deleteWorker = async (id: string) => {
-	await apiFetch(
+	return await apiFetch(
 		`/workers/scripts/${id}`,
 		{
 			method: "DELETE",
@@ -181,7 +193,7 @@ export const listTmpKVNamespaces = async () => {
 };
 
 export const deleteKVNamespace = async (id: string) => {
-	await apiFetch(
+	return await apiFetch(
 		`/storage/kv/namespaces/${id}`,
 		{
 			method: "DELETE",
@@ -219,7 +231,7 @@ export const listTmpDatabases = async () => {
 };
 
 export const deleteDatabase = async (id: string) => {
-	await apiFetch(
+	return await apiFetch(
 		`/d1/database/${id}`,
 		{
 			method: "DELETE",
@@ -257,8 +269,30 @@ export const listHyperdriveConfigs = async () => {
 };
 
 export const deleteHyperdriveConfig = async (id: string) => {
-	await apiFetch(
+	return await apiFetch(
 		`/hyperdrive/configs/${id}`,
+		{
+			method: "DELETE",
+		},
+		true
+	);
+};
+
+export const listCertificates = async () => {
+	const results = (await apiFetch(`/mtls_certificates`, {
+		method: "GET",
+	})) as MTlsCertificateResponse[];
+
+	return results.filter(
+		(cert) =>
+			cert.name?.includes("tmp-e2e") && // Certs are more than an hour old
+			Date.now() - new Date(cert.uploaded_on).valueOf() > 1000 * 60 * 60
+	);
+};
+
+export const deleteCertificate = async (id: string) => {
+	await apiFetch(
+		`/mtls_certificates/${id}`,
 		{
 			method: "DELETE",
 		},

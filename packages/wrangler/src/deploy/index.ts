@@ -211,6 +211,7 @@ export const deployCommand = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
+			MIXED_MODE: false,
 		}),
 	},
 	validateArgs(args) {
@@ -234,10 +235,6 @@ export const deployCommand = createCommand({
 			config.userConfigPath && path.dirname(config.userConfigPath);
 
 		const entry = await getEntry(args, config, "deploy");
-
-		if (config.workflows?.length) {
-			logger.once.warn("Workflows is currently in open beta.");
-		}
 
 		validateAssetsArgsAndConfig(args, config);
 

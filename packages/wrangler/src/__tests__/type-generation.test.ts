@@ -443,7 +443,7 @@ describe("generate types", () => {
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
 					IMAGES_BINDING: ImagesBinding;
-					VERSION_METADATA_BINDING: { id: string; tag: string };
+					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;
 					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 				}
@@ -533,7 +533,7 @@ describe("generate types", () => {
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
 					IMAGES_BINDING: ImagesBinding;
-					VERSION_METADATA_BINDING: { id: string; tag: string };
+					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;
 					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 				}

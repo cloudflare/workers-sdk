@@ -21,7 +21,7 @@ describe("vectorize help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler vectorize
 
-			🧮 Manage Vectorize indexes [open beta]
+			🧮 Manage Vectorize indexes
 
 			COMMANDS
 			  wrangler vectorize create <name>                 Create a Vectorize index
@@ -43,16 +43,7 @@ describe("vectorize help", () => {
 			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]
-
-			--------------------
-			📣 Vectorize is now Generally Available.
-			📣 Please use the '--deprecated-v1' flag to create, get, list, delete and insert vectors into legacy Vectorize indexes
-			📣 Creation of legacy Vectorize indexes will be blocked by December 2024. Other operations will continue to function
-			📣 See the Vectorize docs to get started: https://developers.cloudflare.com/vectorize
-			📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-			📣 To give feedback, visit https://discord.cloudflare.com/
-			--------------------"
+			  -v, --version  Show version number  [boolean]"
 		`);
 	});
 
@@ -70,7 +61,7 @@ describe("vectorize help", () => {
 			"
 			wrangler vectorize
 
-			🧮 Manage Vectorize indexes [open beta]
+			🧮 Manage Vectorize indexes
 
 			COMMANDS
 			  wrangler vectorize create <name>                 Create a Vectorize index
@@ -92,16 +83,7 @@ describe("vectorize help", () => {
 			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 			  -h, --help     Show help  [boolean]
-			  -v, --version  Show version number  [boolean]
-
-			--------------------
-			📣 Vectorize is now Generally Available.
-			📣 Please use the '--deprecated-v1' flag to create, get, list, delete and insert vectors into legacy Vectorize indexes
-			📣 Creation of legacy Vectorize indexes will be blocked by December 2024. Other operations will continue to function
-			📣 See the Vectorize docs to get started: https://developers.cloudflare.com/vectorize
-			📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-			📣 To give feedback, visit https://discord.cloudflare.com/
-			--------------------"
+			  -v, --version  Show version number  [boolean]"
 		`);
 	});
 
@@ -132,17 +114,8 @@ describe("vectorize help", () => {
 			  -v, --version  Show version number  [boolean]
 
 			OPTIONS
-			      --json           return output as clean JSON  [boolean] [default: false]
-			      --deprecated-v1  Fetch a deprecated V1 Vectorize index. This must be enabled if the index was created with V1 option.  [boolean] [default: false]
-
-			--------------------
-			📣 Vectorize is now Generally Available.
-			📣 Please use the '--deprecated-v1' flag to create, get, list, delete and insert vectors into legacy Vectorize indexes
-			📣 Creation of legacy Vectorize indexes will be blocked by December 2024. Other operations will continue to function
-			📣 See the Vectorize docs to get started: https://developers.cloudflare.com/vectorize
-			📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-			📣 To give feedback, visit https://discord.cloudflare.com/
-			--------------------"
+			      --json           Return output as clean JSON  [boolean] [default: false]
+			      --deprecated-v1  Fetch a deprecated V1 Vectorize index. This must be enabled if the index was created with V1 option.  [boolean] [default: false]"
 		`);
 	});
 
@@ -173,7 +146,7 @@ describe("vectorize help", () => {
 			  -v, --version  Show version number  [boolean]
 
 			OPTIONS
-			      --vector           Vector to query the Vectorize Index  [array]
+			      --vector           Vector to query the Vectorize Index  [number]
 			      --vector-id        Identifier for a vector in the index against which the index should be queried  [string]
 			      --top-k            The number of results (nearest neighbors) to return  [number] [default: 5]
 			      --return-values    Specify if the vector values should be included in the results  [boolean] [default: false]
@@ -182,21 +155,9 @@ describe("vectorize help", () => {
 			      --filter           Filter the query results based on this metadata filter.  [string]
 
 			EXAMPLES
-			  ❯❯ wrangler vectorize query --vector 1 2 3 0.5 1.25 6
-			     Query the Vectorize Index by vector. To read from a json file that contains data in the format [1, 2, 3], you could use a command like
-			     \`wrangler vectorize query --vector $(jq -r '.[]' data.json | xargs)\`
-
-			  ❯❯ wrangler vectorize query --filter '{ 'p1': 'abc', 'p2': { '$ne': true }, 'p3': 10, 'p4': false, 'nested.p5': 'abcd' }'
-			     Filter the query results.
-
-			--------------------
-			📣 Vectorize is now Generally Available.
-			📣 Please use the '--deprecated-v1' flag to create, get, list, delete and insert vectors into legacy Vectorize indexes
-			📣 Creation of legacy Vectorize indexes will be blocked by December 2024. Other operations will continue to function
-			📣 See the Vectorize docs to get started: https://developers.cloudflare.com/vectorize
-			📣 Please report any bugs to https://github.com/cloudflare/workers-sdk/issues/new/choose
-			📣 To give feedback, visit https://discord.cloudflare.com/
-			--------------------"
+			  wrangler vectorize query --vector 1 2 3 0.5 1.25 6                                                                      Query the Vectorize Index by vector
+			  wrangler vectorize query --vector $(jq -r '.[]' data.json | xargs)                                                      Query the Vectorize Index by vector from a json file that contains data in the format [1, 2, 3].
+			  wrangler vectorize query --filter '{ 'p1': 'abc', 'p2': { '$ne': true }, 'p3': 10, 'p4': false, 'nested.p5': 'abcd' }'  Filter the query results."
 		`);
 	});
 });
@@ -339,13 +300,9 @@ describe("vectorize commands", () => {
 
 		await expect(
 			runWrangler("vectorize create test-index --dimensions=1536")
-		).resolves.toBeUndefined();
-
-		expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou must provide both dimensions and a metric, or a known model preset when creating an index.[0m
-
-"
-			`);
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: 🚨 You must provide both dimensions and a metric, or a known model preset when creating an index.]`
+		);
 	});
 
 	it("should handle listing vectorize V1 indexes", async () => {
@@ -501,13 +458,12 @@ describe("vectorize commands", () => {
 
 	it("should log error when getByIds does not receive ids", async () => {
 		mockVectorizeV2Request();
-		await runWrangler("vectorize get-vectors test-index --ids");
 
-		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Please provide valid vector identifiers.[0m
-
-"
-		`);
+		await expect(
+			runWrangler("vectorize get-vectors test-index --ids")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: 🚨 Please provide valid vector identifiers.]`
+		);
 	});
 
 	it("should handle a deleteByIds on a vectorize index", async () => {
@@ -521,13 +477,12 @@ describe("vectorize commands", () => {
 
 	it("should log error when deleteByIds does not receive ids", async () => {
 		mockVectorizeV2Request();
-		await runWrangler("vectorize delete-vectors test-index --ids");
 
-		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Please provide valid vector identifiers for deletion.[0m
-
-"
-		`);
+		await expect(
+			runWrangler("vectorize delete-vectors test-index --ids")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: 🚨 Please provide valid vector identifiers for deletion.]`
+		);
 	});
 
 	it("should handle a query on a vectorize index", async () => {
@@ -590,30 +545,22 @@ describe("vectorize commands", () => {
 
 	it("should fail query when neither vector nor vector-id is provided", async () => {
 		mockVectorizeV2RequestError();
-		await runWrangler(
-			"vectorize query test-index --top-k=2 --return-values=true"
+		await expect(
+			runWrangler("vectorize query test-index --top-k=2 --return-values=true")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: 🚨 Either vector or vector-id parameter must be provided, but not both.]`
 		);
-		expect(std.out).toMatchInlineSnapshot(`""`);
-
-		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Either vector or vector-id parameter must be provided, but not both.[0m
-
-"
-		`);
 	});
 
 	it("should fail query when both vector and vector-id are provided", async () => {
 		mockVectorizeV2RequestError();
-		await runWrangler(
-			"vectorize query test-index --vector 1 2 3 '4' --vector-id some-vector-id"
+		await expect(
+			runWrangler(
+				"vectorize query test-index --vector 1 2 3 '4' --vector-id some-vector-id"
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: 🚨 Either vector or vector-id parameter must be provided, but not both.]`
 		);
-		expect(std.out).toMatchInlineSnapshot(`""`);
-
-		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 Either vector or vector-id parameter must be provided, but not both.[0m
-
-"
-		`);
 	});
 
 	it("should fail query with invalid return-metadata flag", async () => {

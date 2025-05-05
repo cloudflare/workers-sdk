@@ -105,6 +105,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 			{
 				file: path.resolve("src/index.js"),
 				projectRoot: process.cwd(),
+				configPath: undefined,
 				format: "modules",
 				moduleRoot: path.dirname(path.resolve("src/index.js")),
 				exports: [],
@@ -115,7 +116,6 @@ describe("defineNavigatorUserAgent is respected", () => {
 				bundle: true,
 				additionalModules: [],
 				moduleCollector: noopModuleCollector,
-				mockAnalyticsEngineDatasets: [],
 				doBindings: [],
 				workflowBindings: [],
 				define: {},
@@ -167,6 +167,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 			{
 				file: path.resolve("src/index.js"),
 				projectRoot: process.cwd(),
+				configPath: undefined,
 				format: "modules",
 				moduleRoot: path.dirname(path.resolve("src/index.js")),
 				exports: [],
@@ -181,7 +182,6 @@ describe("defineNavigatorUserAgent is respected", () => {
 				workflowBindings: [],
 				define: {},
 				alias: {},
-				mockAnalyticsEngineDatasets: [],
 				checkFetch: false,
 				targetConsumer: "deploy",
 				local: true,

@@ -4,7 +4,11 @@ import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
-import { ai } from "./ai";
+import { aiFineTuneNamespace, aiNamespace } from "./ai";
+import { aiFineTuneCreateCommand } from "./ai/createFinetune";
+import { aiModelsCommand } from "./ai/listCatalog";
+import { aiFineTuneListCommand } from "./ai/listFinetune";
+import { buildCommand } from "./build";
 import {
 	certDeleteCommand,
 	certListCommand,
@@ -20,25 +24,50 @@ import { containers } from "./containers";
 import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
-import { d1 } from "./d1";
-import { deleteHandler, deleteOptions } from "./delete";
+import { d1Namespace } from "./d1";
+import { d1CreateCommand } from "./d1/create";
+import { d1DeleteCommand } from "./d1/delete";
+import { d1ExecuteCommand } from "./d1/execute";
+import { d1ExportCommand } from "./d1/export";
+import { d1InfoCommand } from "./d1/info";
+import { d1InsightsCommand } from "./d1/insights";
+import { d1ListCommand } from "./d1/list";
+import { d1MigrationsNamespace } from "./d1/migrations";
+import { d1MigrationsApplyCommand } from "./d1/migrations/apply";
+import { d1MigrationsCreateCommand } from "./d1/migrations/create";
+import { d1MigrationsListCommand } from "./d1/migrations/list";
+import { d1TimeTravelNamespace } from "./d1/timeTravel";
+import { d1TimeTravelInfoCommand } from "./d1/timeTravel/info";
+import { d1TimeTravelRestoreCommand } from "./d1/timeTravel/restore";
+import { deleteCommand } from "./delete";
 import { deployCommand } from "./deploy";
 import { isAuthenticationError } from "./deploy/deploy";
 import {
 	isBuildFailure,
 	isBuildFailureFromCause,
 } from "./deployment-bundle/build-failures";
-import { buildHandler, buildOptions } from "./deprecated";
 import { dev } from "./dev";
-import { workerNamespaceCommands } from "./dispatch-namespace";
+import {
+	dispatchNamespaceCreateCommand,
+	dispatchNamespaceDeleteCommand,
+	dispatchNamespaceGetCommand,
+	dispatchNamespaceListCommand,
+	dispatchNamespaceNamespace,
+	dispatchNamespaceRenameCommand,
+} from "./dispatch-namespace";
 import { docs } from "./docs";
 import {
 	CommandLineArgsError,
 	JsonFriendlyFatalError,
 	UserError,
 } from "./errors";
-import { hyperdrive } from "./hyperdrive/index";
-import { initHandler, initOptions } from "./init";
+import { hyperdriveCreateCommand } from "./hyperdrive/create";
+import { hyperdriveDeleteCommand } from "./hyperdrive/delete";
+import { hyperdriveGetCommand } from "./hyperdrive/get";
+import { hyperdriveNamespace } from "./hyperdrive/index";
+import { hyperdriveListCommand } from "./hyperdrive/list";
+import { hyperdriveUpdateCommand } from "./hyperdrive/update";
+import { init } from "./init";
 import {
 	kvBulkDeleteCommand,
 	kvBulkGetCommand,
@@ -64,13 +93,72 @@ import {
 	telemetryNamespace,
 	telemetryStatusCommand,
 } from "./metrics/commands";
-import { mTlsCertificateCommands } from "./mtls-certificate/cli";
+import {
+	mTlsCertificateDeleteCommand,
+	mTlsCertificateListCommand,
+	mTlsCertificateNamespace,
+	mTlsCertificateUploadCommand,
+} from "./mtls-certificate/cli";
 import { writeOutput } from "./output";
-import { pages } from "./pages";
+import {
+	pagesDeploymentNamespace,
+	pagesDownloadNamespace,
+	pagesFunctionsNamespace,
+	pagesNamespace,
+	pagesProjectNamespace,
+} from "./pages";
+import { pagesFunctionsBuildCommand } from "./pages/build";
+import { pagesFunctionsBuildEnvCommand } from "./pages/build-env";
+import {
+	pagesDeployCommand,
+	pagesDeploymentCreateCommand,
+	pagesPublishCommand,
+} from "./pages/deploy";
+import { pagesDeploymentTailCommand } from "./pages/deployment-tails";
+import { pagesDeploymentListCommand } from "./pages/deployments";
+import { pagesDevCommand } from "./pages/dev";
+import { pagesDownloadConfigCommand } from "./pages/download-config";
+import { pagesFunctionsOptimizeRoutesCommand } from "./pages/functions";
+import {
+	pagesProjectCreateCommand,
+	pagesProjectDeleteCommand,
+	pagesProjectListCommand,
+} from "./pages/projects";
+import {
+	pagesSecretBulkCommand,
+	pagesSecretDeleteCommand,
+	pagesSecretListCommand,
+	pagesSecretNamespace,
+	pagesSecretPutCommand,
+} from "./pages/secret";
+import { pagesProjectUploadCommand } from "./pages/upload";
+import { pagesProjectValidateCommand } from "./pages/validate";
 import { APIError, formatMessage, ParseError } from "./parse";
-import { pipelines } from "./pipelines";
+import { pipelinesNamespace } from "./pipelines";
+import { pipelinesCreateCommand } from "./pipelines/cli/create";
+import { pipelinesDeleteCommand } from "./pipelines/cli/delete";
+import { pipelinesGetCommand } from "./pipelines/cli/get";
+import { pipelinesListCommand } from "./pipelines/cli/list";
+import { pipelinesUpdateCommand } from "./pipelines/cli/update";
 import { pubSubCommands } from "./pubsub/pubsub-commands";
-import { queues } from "./queues/cli/commands";
+import { queuesNamespace } from "./queues/cli/commands";
+import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
+import { queuesConsumerHttpNamespace } from "./queues/cli/commands/consumer/http-pull";
+import { queuesConsumerHttpAddCommand } from "./queues/cli/commands/consumer/http-pull/add";
+import { queuesConsumerHttpRemoveCommand } from "./queues/cli/commands/consumer/http-pull/remove";
+import { queuesConsumerWorkerNamespace } from "./queues/cli/commands/consumer/worker";
+import { queuesConsumerAddCommand } from "./queues/cli/commands/consumer/worker/add";
+import { queuesConsumerRemoveCommand } from "./queues/cli/commands/consumer/worker/remove";
+import { queuesCreateCommand } from "./queues/cli/commands/create";
+import { queuesDeleteCommand } from "./queues/cli/commands/delete";
+import { queuesInfoCommand } from "./queues/cli/commands/info";
+import { queuesListCommand } from "./queues/cli/commands/list";
+import {
+	queuesPauseCommand,
+	queuesResumeCommand,
+} from "./queues/cli/commands/pause-resume";
+import { queuesPurgeCommand } from "./queues/cli/commands/purge";
+import { queuesUpdateCommand } from "./queues/cli/commands/update";
 import { r2Namespace } from "./r2";
 import {
 	r2BucketCreateCommand,
@@ -170,7 +258,7 @@ import {
 	setupSentry,
 } from "./sentry";
 import { tailCommand } from "./tail";
-import registerTriggersSubcommands from "./triggers";
+import { triggersDeployCommand, triggersNamespace } from "./triggers";
 import { typesCommand } from "./type-generation";
 import { getAuthFromEnv } from "./user";
 import { loginCommand, logoutCommand, whoamiCommand } from "./user/commands";
@@ -178,7 +266,20 @@ import { whoami } from "./user/whoami";
 import { betaCmdColor, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { logPossibleBugMessage } from "./utils/logPossibleBugMessage";
-import { vectorize } from "./vectorize/index";
+import { vectorizeCreateCommand } from "./vectorize/create";
+import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
+import { vectorizeDeleteCommand } from "./vectorize/delete";
+import { vectorizeDeleteVectorsCommand } from "./vectorize/deleteByIds";
+import { vectorizeDeleteMetadataIndexCommand } from "./vectorize/deleteMetadataIndex";
+import { vectorizeGetCommand } from "./vectorize/get";
+import { vectorizeGetVectorsCommand } from "./vectorize/getByIds";
+import { vectorizeNamespace } from "./vectorize/index";
+import { vectorizeInfoCommand } from "./vectorize/info";
+import { vectorizeInsertCommand } from "./vectorize/insert";
+import { vectorizeListCommand } from "./vectorize/list";
+import { vectorizeListMetadataIndexCommand } from "./vectorize/listMetadataIndex";
+import { vectorizeQueryCommand } from "./vectorize/query";
+import { vectorizeUpsertCommand } from "./vectorize/upsert";
 import { versionsNamespace } from "./versions";
 import { versionsDeployCommand } from "./versions/deploy";
 import { deploymentsNamespace } from "./versions/deployments";
@@ -324,6 +425,12 @@ export function createCLIParser(argv: string[]) {
 			hidden: true,
 			alias: ["x-provision"],
 		})
+		.option("experimental-mixed-mode", {
+			describe: `Experimental: Enable Mixed Mode`,
+			type: "boolean",
+			hidden: true,
+			alias: ["x-mixed-mode"],
+		})
 		.epilogue(
 			`Please report any issues to ${chalk.hex("#3B818D")(
 				"https://github.com/cloudflare/workers-sdk/issues/new/choose"
@@ -406,13 +513,14 @@ export function createCLIParser(argv: string[]) {
 	registry.registerNamespace("docs");
 
 	/******************** CMD GROUP ***********************/
-	// init
-	wrangler.command(
-		"init [name]",
-		"📥 Initialize a basic Worker",
-		initOptions,
-		initHandler
-	);
+
+	registry.define([
+		{
+			command: "wrangler init",
+			definition: init,
+		},
+	]);
+	registry.registerNamespace("init");
 
 	registry.define([
 		{
@@ -496,21 +604,14 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("versions");
 
-	wrangler.command(
-		"triggers",
-		"🎯 Updates the triggers of your current deployment",
-		(yargs) => {
-			return registerTriggersSubcommands(yargs.command(subHelp));
-		}
-	);
+	registry.define([
+		{ command: "wrangler triggers", definition: triggersNamespace },
+		{ command: "wrangler triggers deploy", definition: triggersDeployCommand },
+	]);
+	registry.registerNamespace("triggers");
 
-	// delete
-	wrangler.command(
-		"delete [script]",
-		"🗑  Delete a Worker from Cloudflare",
-		deleteOptions,
-		deleteHandler
-	);
+	registry.define([{ command: "wrangler delete", definition: deleteCommand }]);
+	registry.registerNamespace("delete");
 
 	// tail
 	registry.define([{ command: "wrangler tail", definition: tailCommand }]);
@@ -558,10 +659,65 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("kv");
 
-	// queues
-	wrangler.command("queues", "🇶  Manage Workers Queues", (queuesYargs) => {
-		return queues(queuesYargs.command(subHelp));
-	});
+	registry.define([
+		{ command: "wrangler queues", definition: queuesNamespace },
+		{ command: "wrangler queues list", definition: queuesListCommand },
+		{ command: "wrangler queues create", definition: queuesCreateCommand },
+		{ command: "wrangler queues update", definition: queuesUpdateCommand },
+		{ command: "wrangler queues delete", definition: queuesDeleteCommand },
+		{ command: "wrangler queues info", definition: queuesInfoCommand },
+		{
+			command: "wrangler queues consumer",
+			definition: queuesConsumerNamespace,
+		},
+		{
+			command: "wrangler queues pause-delivery",
+			definition: queuesPauseCommand,
+		},
+		{
+			command: "wrangler queues resume-delivery",
+			definition: queuesResumeCommand,
+		},
+		{
+			command: "wrangler queues purge",
+			definition: queuesPurgeCommand,
+		},
+
+		{
+			command: "wrangler queues consumer add",
+			definition: queuesConsumerAddCommand,
+		},
+		{
+			command: "wrangler queues consumer remove",
+			definition: queuesConsumerRemoveCommand,
+		},
+		{
+			command: "wrangler queues consumer http",
+			definition: queuesConsumerHttpNamespace,
+		},
+		{
+			command: "wrangler queues consumer http add",
+			definition: queuesConsumerHttpAddCommand,
+		},
+		{
+			command: "wrangler queues consumer http remove",
+			definition: queuesConsumerHttpRemoveCommand,
+		},
+		{
+			command: "wrangler queues consumer worker",
+			definition: queuesConsumerWorkerNamespace,
+		},
+		{
+			command: "wrangler queues consumer worker add",
+			definition: queuesConsumerAddCommand,
+		},
+		{
+			command: "wrangler queues consumer worker remove",
+			definition: queuesConsumerRemoveCommand,
+		},
+	]);
+
+	registry.registerNamespace("queues");
 
 	// r2
 	registry.define([
@@ -761,28 +917,106 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("r2");
 
-	// d1
-	wrangler.command("d1", `🗄  Manage Workers D1 databases`, (d1Yargs) => {
-		return d1(d1Yargs.command(subHelp));
-	});
+	// D1 commands are registered using the CommandRegistry
+	registry.define([
+		{ command: "wrangler d1", definition: d1Namespace },
+		{ command: "wrangler d1 list", definition: d1ListCommand },
+		{ command: "wrangler d1 info", definition: d1InfoCommand },
+		{ command: "wrangler d1 insights", definition: d1InsightsCommand },
+		{ command: "wrangler d1 create", definition: d1CreateCommand },
+		{ command: "wrangler d1 delete", definition: d1DeleteCommand },
+		{ command: "wrangler d1 execute", definition: d1ExecuteCommand },
+		{ command: "wrangler d1 export", definition: d1ExportCommand },
+		{ command: "wrangler d1 time-travel", definition: d1TimeTravelNamespace },
+		{
+			command: "wrangler d1 time-travel info",
+			definition: d1TimeTravelInfoCommand,
+		},
+		{
+			command: "wrangler d1 time-travel restore",
+			definition: d1TimeTravelRestoreCommand,
+		},
+		{ command: "wrangler d1 migrations", definition: d1MigrationsNamespace },
+		{
+			command: "wrangler d1 migrations list",
+			definition: d1MigrationsListCommand,
+		},
+		{
+			command: "wrangler d1 migrations create",
+			definition: d1MigrationsCreateCommand,
+		},
+		{
+			command: "wrangler d1 migrations apply",
+			definition: d1MigrationsApplyCommand,
+		},
+	]);
+	registry.registerNamespace("d1");
 
-	// [OPEN BETA] vectorize
-	wrangler.command(
-		"vectorize",
-		`🧮 Manage Vectorize indexes ${chalk.hex(betaCmdColor)("[open beta]")}`,
-		(vectorYargs) => {
-			return vectorize(vectorYargs.command(subHelp));
-		}
-	);
+	// vectorize
+	registry.define([
+		{ command: "wrangler vectorize", definition: vectorizeNamespace },
+		{
+			command: "wrangler vectorize create",
+			definition: vectorizeCreateCommand,
+		},
+		{
+			command: "wrangler vectorize delete",
+			definition: vectorizeDeleteCommand,
+		},
+		{ command: "wrangler vectorize get", definition: vectorizeGetCommand },
+		{ command: "wrangler vectorize list", definition: vectorizeListCommand },
+		{ command: "wrangler vectorize query", definition: vectorizeQueryCommand },
+		{
+			command: "wrangler vectorize insert",
+			definition: vectorizeInsertCommand,
+		},
+		{
+			command: "wrangler vectorize upsert",
+			definition: vectorizeUpsertCommand,
+		},
+		{
+			command: "wrangler vectorize get-vectors",
+			definition: vectorizeGetVectorsCommand,
+		},
+		{
+			command: "wrangler vectorize delete-vectors",
+			definition: vectorizeDeleteVectorsCommand,
+		},
+		{ command: "wrangler vectorize info", definition: vectorizeInfoCommand },
+		{
+			command: "wrangler vectorize create-metadata-index",
+			definition: vectorizeCreateMetadataIndexCommand,
+		},
+		{
+			command: "wrangler vectorize list-metadata-index",
+			definition: vectorizeListMetadataIndexCommand,
+		},
+		{
+			command: "wrangler vectorize delete-metadata-index",
+			definition: vectorizeDeleteMetadataIndexCommand,
+		},
+	]);
+	registry.registerNamespace("vectorize");
 
 	// hyperdrive
-	wrangler.command(
-		"hyperdrive",
-		"🚀 Manage Hyperdrive databases",
-		(hyperdriveYargs) => {
-			return hyperdrive(hyperdriveYargs.command(subHelp));
-		}
-	);
+	registry.define([
+		{ command: "wrangler hyperdrive", definition: hyperdriveNamespace },
+		{
+			command: "wrangler hyperdrive create",
+			definition: hyperdriveCreateCommand,
+		},
+		{
+			command: "wrangler hyperdrive delete",
+			definition: hyperdriveDeleteCommand,
+		},
+		{ command: "wrangler hyperdrive get", definition: hyperdriveGetCommand },
+		{ command: "wrangler hyperdrive list", definition: hyperdriveListCommand },
+		{
+			command: "wrangler hyperdrive update",
+			definition: hyperdriveUpdateCommand,
+		},
+	]);
+	registry.registerNamespace("hyperdrive");
 
 	// cert - includes mtls-certificates and CA cert management
 	registry.define([
@@ -802,22 +1036,106 @@ export function createCLIParser(argv: string[]) {
 	registry.registerNamespace("cert");
 
 	// pages
-	wrangler.command("pages", "⚡️ Configure Cloudflare Pages", (pagesYargs) => {
-		// Pages does not support the `--config`,
-		// and `--env` flags, therefore hiding them from the global flags list.
-		pagesYargs.hide("config").hide("env");
+	registry.define([
+		{ command: "wrangler pages", definition: pagesNamespace },
+		{ command: "wrangler pages dev", definition: pagesDevCommand },
+		{
+			command: "wrangler pages functions",
+			definition: pagesFunctionsNamespace,
+		},
+		{
+			command: "wrangler pages functions build",
+			definition: pagesFunctionsBuildCommand,
+		},
+		{
+			command: "wrangler pages functions build-env",
+			definition: pagesFunctionsBuildEnvCommand,
+		},
+		{
+			command: "wrangler pages functions optimize-routes",
+			definition: pagesFunctionsOptimizeRoutesCommand,
+		},
+		{ command: "wrangler pages project", definition: pagesProjectNamespace },
+		{
+			command: "wrangler pages project list",
+			definition: pagesProjectListCommand,
+		},
+		{
+			command: "wrangler pages project create",
+			definition: pagesProjectCreateCommand,
+		},
+		{
+			command: "wrangler pages project delete",
+			definition: pagesProjectDeleteCommand,
+		},
+		{
+			command: "wrangler pages project upload",
+			definition: pagesProjectUploadCommand,
+		},
+		{
+			command: "wrangler pages project validate",
+			definition: pagesProjectValidateCommand,
+		},
+		{
+			command: "wrangler pages deployment",
+			definition: pagesDeploymentNamespace,
+		},
+		{
+			command: "wrangler pages deployment list",
+			definition: pagesDeploymentListCommand,
+		},
+		{
+			command: "wrangler pages deployment create",
+			definition: pagesDeploymentCreateCommand,
+		},
+		{
+			command: "wrangler pages deployment tail",
+			definition: pagesDeploymentTailCommand,
+		},
+		{ command: "wrangler pages deploy", definition: pagesDeployCommand },
+		{ command: "wrangler pages publish", definition: pagesPublishCommand },
+		{ command: "wrangler pages secret", definition: pagesSecretNamespace },
 
-		return pages(pagesYargs, subHelp);
-	});
+		{ command: "wrangler pages download", definition: pagesDownloadNamespace },
+		{
+			command: "wrangler pages download config",
+			definition: pagesDownloadConfigCommand,
+		},
+		{ command: "wrangler pages secret put", definition: pagesSecretPutCommand },
+		{
+			command: "wrangler pages secret bulk",
+			definition: pagesSecretBulkCommand,
+		},
+		{
+			command: "wrangler pages secret delete",
+			definition: pagesSecretDeleteCommand,
+		},
+		{
+			command: "wrangler pages secret list",
+			definition: pagesSecretListCommand,
+		},
+	]);
+	registry.registerNamespace("pages");
 
-	// mtls-certificate
-	wrangler.command(
-		"mtls-certificate",
-		"🪪  Manage certificates used for mTLS connections",
-		(mtlsYargs) => {
-			return mTlsCertificateCommands(mtlsYargs.command(subHelp));
-		}
-	);
+	registry.define([
+		{
+			command: "wrangler mtls-certificate",
+			definition: mTlsCertificateNamespace,
+		},
+		{
+			command: "wrangler mtls-certificate upload",
+			definition: mTlsCertificateUploadCommand,
+		},
+		{
+			command: "wrangler mtls-certificate list",
+			definition: mTlsCertificateListCommand,
+		},
+		{
+			command: "wrangler mtls-certificate delete",
+			definition: mTlsCertificateDeleteCommand,
+		},
+	]);
+	registry.registerNamespace("mtls-certificate");
 
 	// cloudchamber
 	wrangler.command("cloudchamber", false, (cloudchamberArgs) => {
@@ -838,19 +1156,46 @@ export function createCLIParser(argv: string[]) {
 		}
 	);
 
-	// dispatch-namespace
-	wrangler.command(
-		"dispatch-namespace",
-		"🏗️  Manage dispatch namespaces",
-		(workerNamespaceYargs) => {
-			return workerNamespaceCommands(workerNamespaceYargs, subHelp);
-		}
-	);
+	registry.define([
+		{
+			command: "wrangler dispatch-namespace",
+			definition: dispatchNamespaceNamespace,
+		},
+		{
+			command: "wrangler dispatch-namespace list",
+			definition: dispatchNamespaceListCommand,
+		},
+		{
+			command: "wrangler dispatch-namespace get",
+			definition: dispatchNamespaceGetCommand,
+		},
+		{
+			command: "wrangler dispatch-namespace create",
+			definition: dispatchNamespaceCreateCommand,
+		},
+		{
+			command: "wrangler dispatch-namespace delete",
+			definition: dispatchNamespaceDeleteCommand,
+		},
+		{
+			command: "wrangler dispatch-namespace rename",
+			definition: dispatchNamespaceRenameCommand,
+		},
+	]);
+	registry.registerNamespace("dispatch-namespace");
 
 	// ai
-	wrangler.command("ai", "🤖 Manage AI models", (aiYargs) => {
-		return ai(aiYargs.command(subHelp));
-	});
+	registry.define([
+		{ command: "wrangler ai", definition: aiNamespace },
+		{ command: "wrangler ai models", definition: aiModelsCommand },
+		{ command: "wrangler ai finetune", definition: aiFineTuneNamespace },
+		{ command: "wrangler ai finetune list", definition: aiFineTuneListCommand },
+		{
+			command: "wrangler ai finetune create",
+			definition: aiFineTuneCreateCommand,
+		},
+	]);
+	registry.registerNamespace("ai");
 
 	// secrets store
 	registry.define([
@@ -955,14 +1300,33 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("workflows");
 
-	// [OPEN BETA] pipelines
-	wrangler.command(
-		"pipelines",
-		`🚰 Manage Cloudflare Pipelines ${chalk.hex(betaCmdColor)("[open beta]")}`,
-		(pipelinesYargs) => {
-			return pipelines(pipelinesYargs.command(subHelp));
-		}
-	);
+	registry.define([
+		{
+			command: "wrangler pipelines",
+			definition: pipelinesNamespace,
+		},
+		{
+			command: "wrangler pipelines create",
+			definition: pipelinesCreateCommand,
+		},
+		{
+			command: "wrangler pipelines list",
+			definition: pipelinesListCommand,
+		},
+		{
+			command: "wrangler pipelines get",
+			definition: pipelinesGetCommand,
+		},
+		{
+			command: "wrangler pipelines update",
+			definition: pipelinesUpdateCommand,
+		},
+		{
+			command: "wrangler pipelines delete",
+			definition: pipelinesDeleteCommand,
+		},
+	]);
+	registry.registerNamespace("pipelines");
 
 	/******************** CMD GROUP ***********************/
 
@@ -1026,7 +1390,13 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("check");
 
-	wrangler.command("build", false, buildOptions, buildHandler);
+	registry.define([
+		{
+			command: "wrangler build",
+			definition: buildCommand,
+		},
+	]);
+	registry.registerNamespace("build");
 
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);

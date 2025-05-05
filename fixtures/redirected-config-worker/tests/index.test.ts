@@ -39,7 +39,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 		onTestFinished,
 	}) => {
 		const { ip, port, stop } = await runWranglerDev(basePath, [
-			"-c=wrangler.toml",
+			"-c=wrangler.jsonc",
 			"--port=0",
 			"--inspector-port=0",
 		]);

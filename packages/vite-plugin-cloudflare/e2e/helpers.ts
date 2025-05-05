@@ -5,7 +5,14 @@ import path from "node:path";
 import util from "node:util";
 import { stripAnsi } from "miniflare";
 import kill from "tree-kill";
-import { test as baseTest, inject, vi } from "vitest";
+import {
+	afterAll,
+	beforeAll,
+	inject,
+	onTestFailed,
+	onTestFinished,
+	vi,
+} from "vitest";
 import vitePluginPackage from "../package.json";
 
 const debuglog = util.debuglog("vite-plugin:test");
@@ -22,77 +29,73 @@ const testEnv = {
 	VITEST: undefined,
 };
 
-/**
- * Extends the Vitest `test()` function to support running vite in
- * well defined environments that represent real-world usage.
- */
-export const test = baseTest.extend<{
-	seed: (fixture: string, pm: string) => Promise<string>;
-	viteDev: (
-		projectPath: string,
-		options?: { flags?: string[]; maxBuffer?: number }
-	) => Process;
-}>({
-	/** Seed a test project from a fixture. */
-	async seed({}, use) {
-		const root = inject("root");
-		const projectPaths: string[] = [];
-		await use(async (fixture, pm) => {
-			const projectPath = path.resolve(root, fixture);
-			await fs.cp(path.resolve(__dirname, "fixtures", fixture), projectPath, {
-				recursive: true,
-				errorOnExist: true,
-			});
-			debuglog("Fixture copied to " + projectPath);
-			await updateVitePluginVersion(projectPath);
-			debuglog("Updated vite-plugin version in package.json");
-			runCommand(`${pm} install`, projectPath);
-			debuglog("Installed node modules");
-			projectPaths.push(projectPath);
-			return projectPath;
+/** Seed a test project from a fixture. */
+export function seed(fixture: string, pm: "pnpm" | "yarn" | "npm") {
+	const root = inject("root");
+	const projectPath = path.resolve(root, fixture, pm);
+
+	beforeAll(async () => {
+		await fs.cp(path.resolve(__dirname, "fixtures", fixture), projectPath, {
+			recursive: true,
+			errorOnExist: true,
 		});
+		debuglog("Fixture copied to " + projectPath);
+		await updateVitePluginVersion(projectPath);
+		debuglog("Updated vite-plugin version in package.json");
+		runCommand(`${pm} install`, projectPath, { attempts: 2 });
+		debuglog("Installed node modules");
+	}, 200_000);
+
+	afterAll(async () => {
 		if (!process.env.CLOUDFLARE_VITE_E2E_KEEP_TEMP_DIRS) {
-			for (const projectPath of projectPaths) {
-				debuglog("Deleting project path", projectPath);
-				await fs.rm(projectPath, {
-					force: true,
-					recursive: true,
-					maxRetries: 10,
+			debuglog("Deleting project path", projectPath);
+			await fs.rm(projectPath, {
+				force: true,
+				recursive: true,
+				maxRetries: 10,
+			});
+		}
+	});
+
+	return projectPath;
+}
+
+/** Starts a command and wraps its outputs. */
+export async function runLongLived(
+	pm: "pnpm" | "yarn" | "npm",
+	command: "dev" | "buildAndPreview",
+	projectPath: string
+) {
+	debuglog(`starting \`${command}\` for ${projectPath}`);
+	const process = childProcess.exec(`${pm} run ${command}`, {
+		cwd: projectPath,
+		env: testEnv,
+	});
+
+	onTestFinished(async () => {
+		debuglog(`Closing down process`);
+		const result = await new Promise<number | undefined>((resolve) => {
+			const pid = process?.pid;
+			if (!pid) {
+				resolve(undefined);
+			} else {
+				debuglog(`Killing process, id:${pid}`);
+				kill(pid, "SIGKILL", (error) => {
+					if (error) {
+						debuglog("Error killing process", error);
+					}
+					resolve(pid);
 				});
 			}
-		}
-	},
-	/** Start a `vite dev` command and wraps its outputs. */
-	async viteDev({}, use) {
-		const processes: ChildProcess[] = [];
-		await use((projectPath) => {
-			debuglog("starting vite for " + projectPath);
-			const proc = childProcess.exec(`pnpm exec vite dev`, {
-				cwd: projectPath,
-				env: testEnv,
-			});
-			processes.push(proc);
-			return wrap(proc);
 		});
-		debuglog("Closing down vite dev processes", processes.length);
-		const result = await Promise.allSettled(
-			processes.map((proc) => {
-				return new Promise<number | undefined>((resolve, reject) => {
-					const pid = proc.pid;
-					if (!pid) {
-						resolve(undefined);
-					} else {
-						debuglog("killing process vite process", pid);
-						kill(pid, "SIGKILL", (error) =>
-							error ? reject(error) : resolve(pid)
-						);
-					}
-				});
-			})
-		);
-		debuglog("Killed processes", result);
-	},
-});
+		if (result) {
+			debuglog("Killed process", result);
+		} else {
+			debuglog("Process had no pid");
+		}
+	});
+	return wrap(process);
+}
 
 export interface Process {
 	readonly stdout: string;
@@ -101,7 +104,7 @@ export interface Process {
 }
 
 /**
- * Wrap a long running child process to capture its stdio and make it available programmatically.
+ * Wraps a long running child process to capture its stdio and make it available programmatically.
  */
 function wrap(proc: childProcess.ChildProcess): Process {
 	let stdout = "";
@@ -121,7 +124,7 @@ function wrap(proc: childProcess.ChildProcess): Process {
 		stderr += chunk;
 	});
 	const closePromise = events.once(proc, "close");
-	return {
+	const wrappedProc = {
 		get stdout() {
 			return stripAnsi(stdout);
 		},
@@ -132,6 +135,16 @@ function wrap(proc: childProcess.ChildProcess): Process {
 			return closePromise.then(([exitCode]) => exitCode ?? -1);
 		},
 	};
+
+	onTestFailed(() => {
+		console.log(
+			`Wrapped process logs (${proc.spawnfile} ${proc.spawnargs.join(" ")}):`
+		);
+		console.log(wrappedProc.stdout);
+		console.error(wrappedProc.stderr);
+	});
+
+	return wrappedProc;
 }
 
 async function updateVitePluginVersion(projectPath: string) {
@@ -150,13 +163,29 @@ async function updateVitePluginVersion(projectPath: string) {
 	);
 }
 
-export function runCommand(command: string, cwd: string) {
-	debuglog("Running command:", command);
-	childProcess.execSync(command, {
-		cwd,
-		stdio: debuglog.enabled ? "inherit" : "ignore",
-		env: testEnv,
-	});
+export function runCommand(
+	command: string,
+	cwd: string,
+	{ attempts = 1 } = {}
+) {
+	while (attempts > 0) {
+		debuglog("Running command:", command);
+		try {
+			childProcess.execSync(command, {
+				cwd,
+				stdio: debuglog.enabled ? "inherit" : "ignore",
+				env: testEnv,
+			});
+			break;
+		} catch (e) {
+			attempts--;
+			if (attempts > 0) {
+				debuglog(`Retrying failed command (${e})`);
+			} else {
+				throw e;
+			}
+		}
+	}
 }
 
 export async function fetchJson(url: string, info?: RequestInit) {

@@ -90,6 +90,7 @@ export const ServiceDesignatorSchema = z.union([
 	z.object({
 		name: z.union([z.string(), z.literal(kCurrentWorker)]),
 		entrypoint: z.ostring(),
+		props: z.record(z.unknown()).optional(),
 	}),
 	z.object({ network: NetworkSchema }),
 	z.object({ external: ExternalServerSchema }),

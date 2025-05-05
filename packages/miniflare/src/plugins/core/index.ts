@@ -84,9 +84,12 @@ if (process.env.NODE_EXTRA_CA_CERTS !== undefined) {
 		const extra = readFileSync(process.env.NODE_EXTRA_CA_CERTS, "utf8");
 		// Split bundle into individual certificates and add each individually:
 		// https://github.com/cloudflare/miniflare/pull/587/files#r1271579671
-		const pemBegin = "-----BEGIN";
-		for (const cert of extra.split(pemBegin)) {
-			if (cert.trim() !== "") trustedCertificates.push(pemBegin + cert);
+		const certs = extra.match(
+			/-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g
+		);
+
+		if (certs !== null) {
+			trustedCertificates.push(...certs);
 		}
 	} catch {}
 }
@@ -155,6 +158,8 @@ const CoreOptionsSchemaInput = z.intersection(
 		 Router Worker)
 		 */
 		hasAssetsAndIsVitest: z.boolean().optional(),
+
+		tails: z.array(ServiceDesignatorSchema).optional(),
 	})
 );
 export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {
@@ -255,6 +260,7 @@ function getCustomServiceDesignator(
 ): ServiceDesignator {
 	let serviceName: string;
 	let entrypoint: string | undefined;
+	let props: { json: string } | undefined;
 	if (typeof service === "function") {
 		// Custom `fetch` function
 		serviceName = getCustomServiceName(workerIndex, kind, name);
@@ -268,6 +274,9 @@ function getCustomServiceDesignator(
 				serviceName = getUserServiceName(service.name);
 			}
 			entrypoint = service.entrypoint;
+			if (service.props) {
+				props = { json: JSON.stringify(service.props) };
+			}
 		} else {
 			// Builtin workerd service: network, external, disk
 			serviceName = getBuiltinServiceName(workerIndex, kind, name);
@@ -282,7 +291,7 @@ function getCustomServiceDesignator(
 		// Regular user worker
 		serviceName = getUserServiceName(service);
 	}
-	return { name: serviceName, entrypoint };
+	return { name: serviceName, entrypoint, props };
 }
 
 function maybeGetCustomServiceService(
@@ -586,6 +595,7 @@ export const CORE_PLUGIN: Plugin<
 
 		const services: Service[] = [];
 		const extensions: Extension[] = [];
+
 		if (isWrappedBinding) {
 			const stringName = JSON.stringify(name);
 			function invalidWrapped(reason: string): never {
@@ -696,6 +706,19 @@ export const CORE_PLUGIN: Plugin<
 						sharedOptions.unsafeModuleFallbackService !== undefined
 							? `localhost:${loopbackPort}`
 							: undefined,
+					tails:
+						options.tails === undefined
+							? undefined
+							: options.tails.map<ServiceDesignator>((service) => {
+									return getCustomServiceDesignator(
+										/* referrer */ options.name,
+										workerIndex,
+										CustomServiceKind.UNKNOWN,
+										name,
+										service,
+										options.hasAssetsAndIsVitest
+									);
+								}),
 				},
 			});
 		}
@@ -703,6 +726,18 @@ export const CORE_PLUGIN: Plugin<
 		// Define custom `fetch` services if set
 		if (options.serviceBindings !== undefined) {
 			for (const [name, service] of Object.entries(options.serviceBindings)) {
+				const maybeService = maybeGetCustomServiceService(
+					workerIndex,
+					CustomServiceKind.UNKNOWN,
+					name,
+					service
+				);
+				if (maybeService !== undefined) services.push(maybeService);
+			}
+		}
+
+		if (options.tails !== undefined) {
+			for (const service of options.tails) {
 				const maybeService = maybeGetCustomServiceService(
 					workerIndex,
 					CustomServiceKind.UNKNOWN,

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { isBuild, page, viteTestUrl } from "../../__test-utils__";
+import { failsIf, isBuild, page, viteTestUrl } from "../../__test-utils__";
 
 describe("react-spa", () => {
 	test("returns the correct home page", async () => {
@@ -65,7 +65,3 @@ describe("react-spa", () => {
 		);
 	});
 });
-
-function failsIf(condition: boolean) {
-	return condition ? test.fails : test;
-}

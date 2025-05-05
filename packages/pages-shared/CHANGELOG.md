@@ -1,5 +1,59 @@
 # @cloudflare/pages-shared
 
+## 0.13.35
+
+### Patch Changes
+
+- Updated dependencies [[`357d42a`](https://github.com/cloudflare/workers-sdk/commit/357d42acfb16d21169d004961030cd4822526a96)]:
+  - miniflare@4.20250428.1
+
+## 0.13.34
+
+### Patch Changes
+
+- Updated dependencies [[`1be5644`](https://github.com/cloudflare/workers-sdk/commit/1be56441dec5e8faea3b6c007c1a347bab1a4029), [`d2ecc76`](https://github.com/cloudflare/workers-sdk/commit/d2ecc763e4d77620d6a9be71855e87893631ebc0), [`137d2da`](https://github.com/cloudflare/workers-sdk/commit/137d2da0602db0f66a5c1b6f277624f6031d9dc5)]:
+  - @cloudflare/workers-shared@0.17.5
+  - miniflare@4.20250428.0
+
+## 0.13.33
+
+### Patch Changes
+
+- [#9033](https://github.com/cloudflare/workers-sdk/pull/9033) [`2c50115`](https://github.com/cloudflare/workers-sdk/commit/2c501151d3d1a563681cdb300a298b83862b60e2) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: convert wrangler.toml files into wrangler.jsonc ones
+
+- Updated dependencies [[`2c50115`](https://github.com/cloudflare/workers-sdk/commit/2c501151d3d1a563681cdb300a298b83862b60e2)]:
+  - @cloudflare/workers-shared@0.17.4
+  - miniflare@4.20250424.1
+
+## 0.13.32
+
+### Patch Changes
+
+- Updated dependencies [[`7744f1a`](https://github.com/cloudflare/workers-sdk/commit/7744f1a3039e01f593b6e578588e07d1139d1d93), [`fc47c79`](https://github.com/cloudflare/workers-sdk/commit/fc47c79f7c5ab532e0437897c8d7ab06abd5298d), [`0838f1b`](https://github.com/cloudflare/workers-sdk/commit/0838f1b4ccce347921f3a0746652fe379dd16faf)]:
+  - @cloudflare/workers-shared@0.17.3
+  - miniflare@4.20250424.0
+
+## 0.13.31
+
+### Patch Changes
+
+- Updated dependencies [[`5ce70bd`](https://github.com/cloudflare/workers-sdk/commit/5ce70bdba8dc7e265447c997dc7c3af92469072b), [`3f0adf3`](https://github.com/cloudflare/workers-sdk/commit/3f0adf3c25e9cede1bd8c2ae873c059d1ab2ef38)]:
+  - miniflare@4.20250422.0
+
+## 0.13.30
+
+### Patch Changes
+
+- Updated dependencies [[`2a7749b`](https://github.com/cloudflare/workers-sdk/commit/2a7749bffb7fe5550c3192401ed6edd72c0eb510), [`41f095b`](https://github.com/cloudflare/workers-sdk/commit/41f095b0dd35411adbca3398966b5cfe8c39d433)]:
+  - miniflare@4.20250417.0
+
+## 0.13.29
+
+### Patch Changes
+
+- Updated dependencies [[`62c40d7`](https://github.com/cloudflare/workers-sdk/commit/62c40d792b9555e6e25a5f99ae803e4943c4b56f)]:
+  - miniflare@4.20250416.0
+
 ## 0.13.28
 
 ### Patch Changes

@@ -254,6 +254,7 @@ export const versionsUploadCommand = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
+			MIXED_MODE: false,
 		}),
 	},
 	handler: async function versionsUploadHandler(args, { config }) {
@@ -279,10 +280,6 @@ export const versionsUploadCommand = createCommand({
 				"Workers Sites does not support uploading versions through `wrangler versions upload`. You must use `wrangler deploy` instead.",
 				{ telemetryMessage: true }
 			);
-		}
-
-		if (config.workflows?.length) {
-			logger.once.warn("Workflows is currently in open beta.");
 		}
 
 		validateAssetsArgsAndConfig(
@@ -569,12 +566,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						jsxFragment,
 						tsconfig: props.tsconfig ?? config.tsconfig,
 						minify,
+						keepNames: config.keep_names ?? true,
 						sourcemap: uploadSourceMaps,
 						nodejsCompatMode,
 						define: { ...config.define, ...props.defines },
 						alias: { ...config.alias, ...props.alias },
 						checkFetch: false,
-						mockAnalyticsEngineDatasets: [],
 						// We want to know if the build is for development or publishing
 						// This could potentially cause issues as we no longer have identical behaviour between dev and deploy?
 						targetConsumer: "deploy",
@@ -704,7 +701,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		if (props.dryRun) {
 			workerBundle = createWorkerUploadForm(worker);
-			printBindings({ ...bindings, vars: maskedVars });
+			printBindings({ ...bindings, vars: maskedVars }, config.tail_consumers);
 		} else {
 			assert(accountId, "Missing accountId");
 			if (getFlag("RESOURCES_PROVISION")) {
@@ -739,12 +736,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 				logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 				bindingsPrinted = true;
-				printBindings({ ...bindings, vars: maskedVars });
+				printBindings({ ...bindings, vars: maskedVars }, config.tail_consumers);
 				versionId = result.id;
 				hasPreview = result.metadata.has_preview;
 			} catch (err) {
 				if (!bindingsPrinted) {
-					printBindings({ ...bindings, vars: maskedVars });
+					printBindings(
+						{ ...bindings, vars: maskedVars },
+						config.tail_consumers
+					);
 				}
 
 				await helpIfErrorIsSizeOrScriptStartup(

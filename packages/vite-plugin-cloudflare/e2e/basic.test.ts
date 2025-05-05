@@ -1,28 +1,45 @@
-import { describe } from "vitest";
-import { fetchJson, test, waitForReady } from "./helpers.js";
+import { describe, test } from "vitest";
+import { fetchJson, runLongLived, seed, waitForReady } from "./helpers.js";
 
-describe("node compatibility", () => {
-	describe.each(["pnpm", "npm", "yarn"])("using %s", (pm) => {
-		test("can serve a Worker request", async ({ expect, seed, viteDev }) => {
-			const projectPath = await seed("basic", pm);
+const isWindows = process.platform === "win32";
+const packageManagers = ["pnpm", , "npm", "yarn"] as const;
+const commands = ["dev", "buildAndPreview"] as const;
 
-			const proc = await viteDev(projectPath);
-			const url = await waitForReady(proc);
-			expect(await fetchJson(url + "/api/")).toEqual({ name: "Cloudflare" });
-		});
-	});
-});
+describe("basic e2e tests", () => {
+	describe.each(packageManagers)('with "%s" package manager', async (pm) => {
+		const projectPath = seed("basic", pm);
 
-// This test checks that wrapped bindings which rely on additional workers with an authed connection to the CF API work
-describe("Workers AI", () => {
-	test("can serve a Worker request", async ({ expect, seed, viteDev }) => {
-		const projectPath = await seed("basic", "npm");
+		describe.each(commands)('with "%s" command', (command) => {
+			describe("node compatibility", () => {
+				test.skipIf(isWindows && command === "buildAndPreview")(
+					"can serve a Worker request",
+					async ({ expect }) => {
+						const proc = await runLongLived(pm, command, projectPath);
+						const url = await waitForReady(proc);
+						expect(await fetchJson(url + "/api/")).toEqual({
+							name: "Cloudflare",
+						});
+					}
+				);
+			});
 
-		const proc = await viteDev(projectPath);
-		const url = await waitForReady(proc);
+			// This test checks that wrapped bindings which rely on additional workers with an authed connection to the CF API work
+			// They are skipped if you have not provided the necessary account id and api token.
+			describe.skipIf(
+				!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN
+			)("Workers AI", () => {
+				test.skipIf(isWindows && command === "buildAndPreview")(
+					"can serve a Worker request",
+					async ({ expect }) => {
+						const proc = await runLongLived(pm, command, projectPath);
+						const url = await waitForReady(proc);
 
-		expect(await fetchJson(url + "/ai/")).toEqual({
-			response: expect.stringContaining("Workers AI"),
+						expect(await fetchJson(url + "/ai/")).toEqual({
+							response: expect.stringContaining("Workers AI"),
+						});
+					}
+				);
+			});
 		});
 	});
 });

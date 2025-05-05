@@ -9,7 +9,11 @@ on:
 
 jobs:
   open-pr:
-    if: ${{ github.repository_owner == 'cloudflare' && !contains(github.event.pull_request.labels.*.name, 'skip-v3-pr') }}
+    if: ${{
+      github.repository_owner == 'cloudflare' &&
+      github.event.pull_request.draft == false &&
+      contains(github.event.pull_request.labels.*.name, 'skip-v3-pr') == false
+      }}
     name: Open backport PR for patches
     runs-on: macos-latest
     concurrency:

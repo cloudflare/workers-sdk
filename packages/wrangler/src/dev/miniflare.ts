@@ -192,6 +192,7 @@ export interface ConfigBundle {
 	upstreamProtocol: "http" | "https";
 	inspect: boolean;
 	services: Config["services"] | undefined;
+	tails: Config["tail_consumers"] | undefined;
 	serviceBindings: Record<string, ServiceFetch>;
 	bindVectorizeToProd: boolean;
 	imagesLocalMode: boolean;
@@ -386,6 +387,8 @@ type WorkerOptionsBindings = Pick<
 	| "wrappedBindings"
 	| "secretsStoreSecrets"
 	| "email"
+	| "analyticsEngineDatasets"
+	| "tails"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -398,6 +401,7 @@ type MiniflareBindingsConfig = Pick<
 	| "services"
 	| "serviceBindings"
 	| "imagesLocalMode"
+	| "tails"
 > &
 	Partial<Pick<ConfigBundle, "format" | "bundle" | "assets">>;
 
@@ -443,6 +447,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			serviceBindings[service.binding] = {
 				name: service.service,
 				entrypoint: service.entrypoint,
+				props: service.props,
 			};
 			continue;
 		}
@@ -506,6 +511,9 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 				}
 			}
 
+			// BUG: We have no way to pass `props` across an external socket, so we
+			// drop them. We are planning to move away from the multi-process model
+			// anyway, which will solve the problem.
 			serviceBindings[service.binding] = {
 				external: {
 					address,
@@ -516,6 +524,50 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 				},
 			};
 		}
+	}
+
+	const tails: NonNullable<WorkerOptions["tails"]> = [];
+	const notFoundTails = new Set<string>();
+	for (const tail of config.tails ?? []) {
+		if (tail.service === config.name || config.workerDefinitions === null) {
+			// If this is a tail binding to the current Worker or the registry is disabled,
+			// don't bother using the dev registry to look up the address, just bind to it directly.
+			tails.push({ name: tail.service });
+
+			continue;
+		}
+
+		const target = config.workerDefinitions?.[tail.service];
+
+		// Tail consumers are always on the default entrypoint
+		const defaultEntrypoint = target?.entrypointAddresses?.["default"];
+		if (
+			target?.host === undefined ||
+			target.port === undefined ||
+			defaultEntrypoint === undefined
+		) {
+			notFoundTails.add(tail.service);
+		} else {
+			const style = HttpOptions_Style.PROXY;
+			const address = `${defaultEntrypoint.host}:${defaultEntrypoint.port}`;
+
+			tails.push({
+				external: {
+					address,
+					http: {
+						style,
+						cfBlobHeader: CoreHeaders.CF_BLOB,
+					},
+				},
+			});
+		}
+	}
+
+	if (notFoundTails.size > 0) {
+		logger.debug(
+			"Couldn't connect to the following configured `tail_consumers`: ",
+			[...notFoundTails.values()].join(", ")
+		);
 	}
 
 	const classNameToUseSQLite = getClassNamesWhichUseSQLite(config.migrations);
@@ -705,6 +757,12 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		hyperdrives: Object.fromEntries(
 			bindings.hyperdrive?.map(hyperdriveEntry) ?? []
 		),
+		analyticsEngineDatasets: Object.fromEntries(
+			bindings.analytics_engine_datasets?.map((binding) => [
+				binding.binding,
+				{ dataset: binding.dataset ?? "dataset" },
+			]) ?? []
+		),
 		workflows: Object.fromEntries(bindings.workflows?.map(workflowEntry) ?? []),
 		secretsStoreSecrets: Object.fromEntries(
 			bindings.secrets_store_secrets?.map((binding) => [
@@ -763,6 +821,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 
 		serviceBindings,
 		wrappedBindings: wrappedBindings,
+		tails,
 	};
 
 	return {
@@ -789,6 +848,7 @@ export function buildPersistOptions(
 			d1Persist: path.join(v3Path, "d1"),
 			workflowsPersist: path.join(v3Path, "workflows"),
 			secretsStorePersist: path.join(v3Path, "secrets-store"),
+			analyticsEngineDatasetsPersist: path.join(v3Path, "analytics-engine"),
 		};
 	}
 }
@@ -970,8 +1030,8 @@ export async function buildMiniflareOptions(
 	if (config.crons.length > 0 && !config.testScheduled) {
 		if (!didWarnMiniflareCronSupport) {
 			didWarnMiniflareCronSupport = true;
-			log.warn(
-				"Miniflare 3 does not currently trigger scheduled Workers automatically.\nUse `--test-scheduled` to forward fetch triggers."
+			logger.warn(
+				"Miniflare does not currently trigger scheduled Workers automatically.\nRefer to https://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers for more details "
 			);
 		}
 	}

@@ -42,12 +42,12 @@ export function runBuild(
 		rules,
 		tsconfig,
 		minify,
+		keepNames,
 		nodejsCompatMode,
 		define,
 		alias,
 		noBundle,
 		findAdditionalModules,
-		mockAnalyticsEngineDatasets,
 		durableObjects,
 		workflows,
 		local,
@@ -69,12 +69,12 @@ export function runBuild(
 		alias: Config["alias"];
 		tsconfig: string | undefined;
 		minify: boolean | undefined;
+		keepNames: boolean;
 		nodejsCompatMode: NodeJSCompatMode | undefined;
 		noBundle: boolean;
 		findAdditionalModules: boolean | undefined;
 		durableObjects: Config["durable_objects"];
 		workflows: Config["workflows"];
-		mockAnalyticsEngineDatasets: Config["analytics_engine_datasets"];
 		local: boolean;
 		targetConsumer: "dev" | "deploy";
 		testScheduled: boolean;
@@ -150,12 +150,12 @@ export function runBuild(
 						watch: true,
 						tsconfig,
 						minify,
+						keepNames,
 						nodejsCompatMode,
 						doBindings: durableObjects.bindings,
 						workflowBindings: workflows,
 						alias,
 						define,
-						mockAnalyticsEngineDatasets,
 						targetConsumer,
 						testScheduled,
 						plugins: [logBuildOutput(nodejsCompatMode, onStart, updateBundle)],

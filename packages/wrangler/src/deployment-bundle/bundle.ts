@@ -120,11 +120,11 @@ export type BundleOptions = {
 	watch: boolean | undefined;
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
+	keepNames: boolean;
 	nodejsCompatMode: NodeJSCompatMode | undefined;
 	define: Config["define"];
 	alias: Config["alias"];
 	checkFetch: boolean;
-	mockAnalyticsEngineDatasets: Config["analytics_engine_datasets"];
 	targetConsumer: "dev" | "deploy";
 	testScheduled: boolean | undefined;
 	inject: string[] | undefined;
@@ -155,11 +155,11 @@ export async function bundleWorker(
 		watch,
 		tsconfig,
 		minify,
+		keepNames,
 		nodejsCompatMode,
 		alias,
 		define,
 		checkFetch,
-		mockAnalyticsEngineDatasets,
 		targetConsumer,
 		testScheduled,
 		inject: injectOption,
@@ -181,21 +181,6 @@ export async function bundleWorker(
 
 	// At this point, we take the opportunity to "wrap" the worker with middleware.
 	const middlewareToLoad: MiddlewareLoader[] = [];
-
-	if (
-		targetConsumer === "dev" &&
-		mockAnalyticsEngineDatasets &&
-		mockAnalyticsEngineDatasets.length > 0
-	) {
-		middlewareToLoad.push({
-			name: "mock-analytics-engine",
-			path: "templates/middleware/middleware-mock-analytics-engine.ts",
-			config: {
-				bindings: mockAnalyticsEngineDatasets.map(({ binding }) => binding),
-			},
-			supports: ["modules", "service-worker"],
-		});
-	}
 
 	if (
 		targetConsumer === "dev" &&
@@ -370,7 +355,7 @@ export async function bundleWorker(
 		bundle,
 		absWorkingDir: entry.projectRoot,
 		outdir: destination,
-		keepNames: true,
+		keepNames,
 		entryNames: entryName || path.parse(entryFile).name,
 		...(isOutfile
 			? {

@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { defaultWranglerConfig } from "../config/config";
@@ -14,6 +15,7 @@ import type {
 	InternalDefinition,
 	NamedArgDefinitions,
 } from "./types";
+import type { PositionalOptions } from "yargs";
 
 /**
  * Creates a function for registering commands using Yargs.
@@ -34,20 +36,50 @@ export function createRegisterYargsCommand(
 				if (def.type === "command") {
 					const args = def.args ?? {};
 
-					yargs.options(args).epilogue(def.metadata?.epilogue ?? "");
+					const positionalArgs = new Set(def.positionalArgs);
+
+					const nonPositional = Object.fromEntries(
+						Object.entries(args)
+							.filter(([key]) => !positionalArgs.has(key))
+							.map(([name, opts]) => [
+								name,
+								{
+									...opts,
+									group: "group" in opts ? chalk.bold(opts.group) : undefined,
+								},
+							])
+					);
+
+					subYargs
+						.options(nonPositional)
+						.epilogue(def.metadata?.epilogue ?? "")
+						.example(
+							def.metadata.examples?.map((ex) => [
+								ex.command,
+								ex.description,
+							]) ?? []
+						);
+
+					for (const hide of def.metadata.hideGlobalFlags ?? []) {
+						subYargs.hide(hide);
+					}
 
 					// Ensure non-array arguments receive a single value
 					for (const [key, opt] of Object.entries(args)) {
-						if (!opt.array) {
-							yargs.check(demandSingleValue(key));
+						if (!opt.array && opt.type !== "array") {
+							subYargs.check(demandSingleValue(key));
 						}
 					}
 
 					// Register positional arguments
 					for (const key of def.positionalArgs ?? []) {
-						yargs.positional(key, args[key]);
+						subYargs.positional(key, args[key] as PositionalOptions);
 					}
 				} else if (def.type === "namespace") {
+					for (const hide of def.metadata.hideGlobalFlags ?? []) {
+						subYargs.hide(hide);
+					}
+
 					// Hacky way to print --help for incomplete commands
 					// e.g. `wrangler kv namespace` runs `wrangler kv namespace --help`
 					subYargs.command(subHelp);
@@ -122,6 +154,7 @@ function createHandler(def: CommandDefinition) {
 				: {
 						MULTIWORKER: false,
 						RESOURCES_PROVISION: args.experimentalProvision ?? false,
+						MIXED_MODE: args.experimentalMixedMode ?? false,
 					};
 
 			await run(experimentalFlags, () =>

@@ -307,6 +307,14 @@ interface EnvironmentInheritable {
 	minify: boolean | undefined;
 
 	/**
+	 * Keep function names after javascript transpilations.
+	 *
+	 * @default {true}
+	 * @inheritable
+	 */
+	keep_names: boolean | undefined;
+
+	/**
 	 * Designates this Worker as an internal-only "first-party" Worker.
 	 *
 	 * @inheritable
@@ -661,6 +669,8 @@ export interface EnvironmentNonInheritable {
 				environment?: string;
 				/** Optionally, the entrypoint (named export) of the service to bind to. */
 				entrypoint?: string;
+				/** Optional properties that will be made available to the service via ctx.props. */
+				props?: Record<string, unknown>;
 		  }[]
 		| undefined;
 

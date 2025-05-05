@@ -24,6 +24,7 @@ import type {
 	CfSecretsStoreSecrets,
 	CfSendEmailBindings,
 	CfService,
+	CfTailConsumer,
 	CfUnsafe,
 	CfVectorize,
 	CfWorkflow,
@@ -64,7 +65,6 @@ export interface StartDevWorkerInput {
 	/**
 	 * The javascript or typescript entry-point of the worker.
 	 * This is the `main` property of a Wrangler configuration file.
-	 * You can specify a file path or provide the contents directly.
 	 */
 	entrypoint?: string;
 	/** The configuration of the worker. */
@@ -82,6 +82,8 @@ export interface StartDevWorkerInput {
 	migrations?: DurableObjectMigration[];
 	/** The triggers which will cause the worker's exported default handlers to be called. */
 	triggers?: Trigger[];
+
+	tailConsumers?: CfTailConsumer[];
 
 	/**
 	 * Whether Wrangler should send usage metrics to Cloudflare for this project.
@@ -108,6 +110,8 @@ export interface StartDevWorkerInput {
 		alias?: Record<string, string>;
 		/** Whether the bundled worker is minified. Only takes effect if bundle: true. */
 		minify?: boolean;
+		/** Whether to keep function names after JavaScript transpilations. */
+		keepNames?: boolean;
 		/** Options controlling a custom build step. */
 		custom?: {
 			/** Custom shell command to run before bundling. Runs even if bundle. */

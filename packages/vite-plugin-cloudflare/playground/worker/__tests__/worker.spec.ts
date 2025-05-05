@@ -16,3 +16,7 @@ test("receives the original host as the `X-Forwarded-Host` header", async () => 
 	const response = await getTextResponse("/x-forwarded-host");
 	expect(response).toBe(testUrl.host);
 });
+
+test("does not cause unhandled rejection", async () => {
+	expect(serverLogs.errors.join()).not.toContain("__unhandled rejection__");
+});

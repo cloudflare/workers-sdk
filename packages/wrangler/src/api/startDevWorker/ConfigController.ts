@@ -168,6 +168,7 @@ async function resolveBindings(
 			...bindings,
 			vars: maskedVars,
 		},
+		input.tailConsumers ?? config.tail_consumers,
 		{
 			registry: input.dev?.registry,
 			local: !input.dev?.remote,
@@ -289,6 +290,7 @@ async function resolveConfig(
 			moduleRules: input.build?.moduleRules ?? getRules(config),
 
 			minify: input.build?.minify ?? config.minify,
+			keepNames: input.build?.keepNames ?? config.keep_names,
 			define: { ...config.define, ...input.build?.define },
 			custom: {
 				command: input.build?.custom?.command ?? config.build?.command,
@@ -314,6 +316,7 @@ async function resolveConfig(
 			metadata: input.unsafe?.metadata ?? unsafe?.metadata,
 		},
 		assets: assetsOptions,
+		tailConsumers: config.tail_consumers ?? [],
 	} satisfies StartDevWorkerOptions;
 
 	if (

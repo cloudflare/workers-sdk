@@ -1,4 +1,5 @@
-from js import Response
+from workers import Response, handler
 
+@handler
 async def on_fetch(request, env):
-    return Response.new("Hello World!")
+    return Response("Hello World!")
