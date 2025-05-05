@@ -16,6 +16,7 @@ export const MOCK_DEPLOYMENTS: DeploymentV2[] = [
 		account_id: "123",
 		vcpu: 4,
 		memory: "400MB",
+		memory_mib: 400,
 		version: 1,
 		image: "hello",
 		location: {
@@ -35,6 +36,7 @@ export const MOCK_DEPLOYMENTS: DeploymentV2[] = [
 		account_id: "123",
 		vcpu: 4,
 		memory: "400MB",
+		memory_mib: 400,
 		version: 2,
 		image: "hello",
 		location: {
@@ -65,6 +67,7 @@ export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 		account_id: "123",
 		vcpu: 4,
 		memory: "400MB",
+		memory_mib: 400,
 		version: 1,
 		image: "hello",
 		location: {
@@ -84,6 +87,7 @@ export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 		account_id: "123",
 		vcpu: 4,
 		memory: "400MB",
+		memory_mib: 400,
 		version: 2,
 		image: "hello",
 		location: {
@@ -111,6 +115,7 @@ export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 		account_id: "123",
 		vcpu: 4,
 		memory: "400MB",
+		memory_mib: 400,
 		version: 1,
 		image: "hello",
 		location: {
@@ -130,6 +135,7 @@ export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 		account_id: "123",
 		vcpu: 4,
 		memory: "400MB",
+		memory_mib: 400,
 		version: 2,
 		image: "hello",
 		location: {
