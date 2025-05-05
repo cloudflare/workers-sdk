@@ -100,7 +100,8 @@ function applicationToCreateApplication(
 		name: application.name,
 		scheduling_policy: application.scheduling_policy,
 		affinities: application.affinities,
-		instances: application.instances ?? 0,
+		instances:
+			application.max_instances !== undefined ? 0 : application.instances,
 		jobs: application.jobs ? true : undefined,
 		durable_objects: application.durable_objects,
 	};
