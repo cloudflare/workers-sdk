@@ -936,7 +936,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 						name = "e2e-test-${workerName}"
 						class_name = "MyDurableObject"
 						image = "${getDefaultRegistry()}/e2e-test:1.0"
-						max_instances = 3
+						max_instances = 1
 
 						[[migrations]]
 						tag = "v1"

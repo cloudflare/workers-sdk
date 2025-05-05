@@ -82,7 +82,7 @@ function createApplicationToModifyApplication(
 ): ModifyApplicationRequestBody {
 	return {
 		configuration: req.configuration,
-		instances: req.max_instances !== undefined ? undefined : req.instances,
+		instances: req.max_instances !== undefined ? 0 : req.instances,
 		max_instances: req.max_instances,
 		constraints: req.constraints,
 		affinities: req.affinities,
@@ -139,10 +139,6 @@ function containerAppToCreateApplication(
 	delete (app as Record<string, unknown>)["image_build_context"];
 	delete (app as Record<string, unknown>)["image_vars"];
 	delete (app as Record<string, unknown>)["rollout_step_percentage"];
-
-	if (containerApp.instances === undefined) {
-		delete (app as Record<string, unknown>)["instances"];
-	}
 
 	return app;
 }
@@ -408,6 +404,7 @@ export async function apply(
 				{ containers: [prevApp as ContainerApp] },
 				config.configPath
 			);
+
 			const now = formatConfigSnippet(
 				{
 					containers: [
@@ -524,7 +521,18 @@ export async function apply(
 		updateStatus(bold.underline(green.underline("NEW")) + ` ${appConfig.name}`);
 
 		const s = formatConfigSnippet(
-			{ containers: [appConfig as ContainerApp] },
+			{
+				containers: [
+					{
+						...appConfig,
+						instances:
+							appConfig.max_instances !== undefined
+								? // trick until we allow setting instances to undefined in the API
+									undefined
+								: appConfig.instances,
+					} as ContainerApp,
+				],
+			},
 			config.configPath
 		);
 
@@ -535,6 +543,7 @@ export async function apply(
 				printLine(el, "  ");
 			});
 
+		// temporarily set instances to 0 if set
 		const configToPush = { ...appConfig };
 
 		// add to the actions array to create the app later
@@ -628,6 +637,10 @@ export async function apply(
 				await promiseSpinner(
 					ApplicationsService.modifyApplication(action.id, {
 						...action.application,
+						instances:
+							action.application.max_instances !== undefined
+								? undefined
+								: action.application.instances,
 						configuration: undefined,
 					})
 				);

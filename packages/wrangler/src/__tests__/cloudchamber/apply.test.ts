@@ -45,7 +45,9 @@ function mockCreateApplication(expected?: Application) {
 	msw.use(
 		http.post(
 			"*/applications",
-			async () => {
+			async ({ request }) => {
+				const body = await request.json();
+				expect(body).toHaveProperty("instances");
 				return HttpResponse.json(expected);
 			},
 			{ once: true }
@@ -252,7 +254,8 @@ describe("cloudchamber apply", () => {
 		const res = mockModifyApplication();
 		mockCreateApplication({ id: "abc" } as Application);
 		await runWrangler("cloudchamber apply --json");
-		await res;
+		const body = await res;
+		expect(body).not.toHaveProperty("instances");
 		/* eslint-disable */
 		expect(std.stdout).toMatchInlineSnapshot(`
 			"╭ Deploy a container application deploy changes to your application
