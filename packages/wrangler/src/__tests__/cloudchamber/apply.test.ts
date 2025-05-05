@@ -45,12 +45,8 @@ function mockCreateApplication(expected?: Application) {
 	msw.use(
 		http.post(
 			"*/applications",
-			async ({ request }) => {
-				const json = (await request.json()) as ModifyApplicationRequestBody;
-				if (expected !== undefined) {
-					expect(json).toEqual(expected);
-				}
-				return HttpResponse.json(json);
+			async () => {
+				return HttpResponse.json(expected);
 			},
 			{ once: true }
 		)
@@ -112,7 +108,7 @@ describe("cloudchamber apply", () => {
 			},
 		});
 		mockGetApplications([]);
-		mockCreateApplication();
+		mockCreateApplication({ id: "abc" } as Application);
 		await runWrangler("cloudchamber apply --json");
 		/* eslint-disable */
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
@@ -138,7 +134,7 @@ describe("cloudchamber apply", () => {
 			│ yes
 			│
 			│
-			│  SUCCESS  Created application my-container-app
+			│  SUCCESS  Created application my-container-app (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -253,7 +249,7 @@ describe("cloudchamber apply", () => {
 			},
 		]);
 		const res = mockModifyApplication();
-		mockCreateApplication();
+		mockCreateApplication({ id: "abc" } as Application);
 		await runWrangler("cloudchamber apply --json");
 		await res;
 		/* eslint-disable */
@@ -291,7 +287,7 @@ describe("cloudchamber apply", () => {
 			│  SUCCESS  Modified application my-container-app
 			│
 			│
-			│  SUCCESS  Created application my-container-app-2
+			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
 			│
 			╰ Applied changes
 

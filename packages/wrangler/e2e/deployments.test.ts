@@ -988,22 +988,32 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 			);
 			assert(match?.groups);
-			const url = match.groups.url;
-			await vi.waitFor(
-				async () => {
-					const response = await fetch(`${url}/do`);
-					if (!response.ok) {
-						throw new Error(
-							"Durable object transient error: " + (await response.text())
-						);
-					}
-
-					expect(await response.text()).toEqual("hello from container");
-				},
-
-				// big timeout for containers
-				{ timeout: 250_000, interval: 1000 }
+			const matchApplicationId = output.stdout.match(
+				/([(]Application ID: (?<applicationId>.+?)[)])/
 			);
+			assert(matchApplicationId?.groups);
+			const url = match.groups.url;
+			try {
+				await vi.waitFor(
+					async () => {
+						const response = await fetch(`${url}/do`);
+						if (!response.ok) {
+							throw new Error(
+								"Durable object transient error: " + (await response.text())
+							);
+						}
+
+						expect(await response.text()).toEqual("hello from container");
+					},
+
+					// big timeout for containers
+					{ timeout: 250_000, interval: 1000 }
+				);
+			} finally {
+				await helper.run(
+					`wrangler containers delete ${matchApplicationId.groups.applicationId}`
+				);
+			}
 		});
 	});
 });

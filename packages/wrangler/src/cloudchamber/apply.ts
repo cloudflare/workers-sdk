@@ -580,8 +580,9 @@ export async function apply(
 
 	for (const action of actions) {
 		if (action.action === "create") {
+			let application: Application;
 			try {
-				await promiseSpinner(
+				application = await promiseSpinner(
 					ApplicationsService.createApplication(action.application),
 					{ json: args.json, message: `creating ${action.application.name}` }
 				);
@@ -607,9 +608,12 @@ export async function apply(
 				);
 			}
 
-			success(`Created application ${brandColor(action.application.name)}`, {
-				shape: shapes.bar,
-			});
+			success(
+				`Created application ${brandColor(action.application.name)} (Application ID: ${application.id})`,
+				{
+					shape: shapes.bar,
+				}
+			);
 
 			printLine("");
 			continue;
