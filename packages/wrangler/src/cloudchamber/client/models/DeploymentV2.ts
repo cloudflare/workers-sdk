@@ -61,9 +61,13 @@ export type DeploymentV2 = {
 	 */
 	vcpu: number;
 	/**
-	 * The memory of this deployment
+	 * @deprecated
 	 */
 	memory: MemorySizeWithUnit;
+	/**
+	 * The memory of this deployment, in MiB
+	 */
+	memory_mib: number;
 	/**
 	 * The node group of this deployment
 	 */
@@ -74,9 +78,13 @@ export type DeploymentV2 = {
 	disk?: Disk;
 	network?: Network;
 	/**
-	 * The GPU memory of this deployment. If deployment is not node_group 'gpu', this will be null
+	 * @deprecated
 	 */
 	gpu_memory?: MemorySizeWithUnit;
+	/**
+	 * The GPU memory of this deployment, in MiB. If deployment is not node_group 'gpu', this will be null
+	 */
+	gpu_memory_mib?: number;
 	command?: Command;
 	entrypoint?: Entrypoint;
 	dns?: DNSConfiguration;
