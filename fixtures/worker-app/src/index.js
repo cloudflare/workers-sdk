@@ -101,4 +101,7 @@ export default {
 		ctx.waitUntil(Promise.resolve(event.scheduledTime));
 		ctx.waitUntil(Promise.resolve(event.cron));
 	},
+	tail(events) {
+		console.log("tails", { events });
+	},
 };

@@ -85,11 +85,44 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 				argv: ["--category", "hello-world"],
 			},
 			{
+				template: "hello-world-durable-object",
+				variants: ["ts", "js"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello, world!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+				argv: ["--category", "hello-world"],
+			},
+			{
+				template: "hello-world-durable-object",
+				variants: ["python"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello, world!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+				argv: ["--category", "hello-world"],
+			},
+			{
 				template: "hello-world-durable-object-with-assets",
 				variants: ["ts", "js"],
 				verifyDeploy: {
 					route: "/",
 					expectedText: "Hello, World!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+				argv: ["--category", "hello-world"],
+			},
+			{
+				template: "hello-world-durable-object-with-assets",
+				variants: ["python"],
+				verifyDeploy: {
+					route: "/message",
+					expectedText: "Hello, world!",
 				},
 				// There is no preview script
 				verifyPreview: null,

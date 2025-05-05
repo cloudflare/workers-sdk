@@ -2401,6 +2401,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
+						MIXED_MODE: false,
 					},
 					() =>
 						normalizeAndValidateConfig(
@@ -2556,6 +2557,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
+						MIXED_MODE: false,
 					},
 					() =>
 						normalizeAndValidateConfig(
@@ -2885,6 +2887,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
+						MIXED_MODE: false,
 					},
 					() =>
 						normalizeAndValidateConfig(

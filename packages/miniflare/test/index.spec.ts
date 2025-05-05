@@ -921,6 +921,58 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 	t.deepEqual(rpcTarget.id, "test-id");
 });
 
+test("Miniflare: tail consumer called", async (t) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				name: "a",
+				tails: ["b"],
+				compatibilityDate: "2025-04-28",
+				modules: true,
+				script: `
+
+				export default {
+					async fetch(request, env) {
+						if(request.url.includes("b")) { return env.B.fetch(request)}
+						console.log("log event")
+
+						return new Response("hello from a");
+					}
+				}
+				`,
+				serviceBindings: {
+					B: "b",
+				},
+			},
+			{
+				name: "b",
+				modules: true,
+				compatibilityDate: "2025-04-28",
+
+				script: `
+				let event;
+				export default {
+					fetch() {return Response.json(event)},
+					tail(e) {event = e }
+				};
+				`,
+			},
+		],
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch("http://placeholder");
+	t.deepEqual(await res.text(), "hello from a");
+	t.deepEqual(
+		(
+			(await (await mf.dispatchFetch("http://placeholder/b")).json()) as {
+				logs: { message: string[] }[];
+			}[]
+		)[0].logs[0].message,
+		["log event"]
+	);
+});
+
 test("Miniflare: custom outbound service", async (t) => {
 	const mf = new Miniflare({
 		workers: [

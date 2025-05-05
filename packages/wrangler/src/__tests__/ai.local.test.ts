@@ -1,5 +1,6 @@
 import { Request } from "miniflare";
 import { HttpResponse } from "msw";
+import { Headers } from "undici";
 import { AIFetcher } from "../ai/fetcher";
 import * as internal from "../cfetch/internal";
 import * as user from "../user";

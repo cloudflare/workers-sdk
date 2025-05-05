@@ -329,11 +329,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 			},
 			async configureServer(viteDevServer) {
-				assert(
-					viteDevServer.httpServer,
-					"Unexpected error: No Vite HTTP server"
-				);
-
 				const inputInspectorPort = await getInputInspectorPortOption(
 					pluginConfig,
 					viteDevServer
@@ -371,12 +366,15 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					{ alwaysCallNext: false }
 				);
 
-				handleWebSocket(viteDevServer.httpServer, async () => {
-					assert(miniflare, `Miniflare not defined`);
-					const routerWorker = await getRouterWorker(miniflare);
+				// The HTTP server is not available in middleware mode
+				if (viteDevServer.httpServer) {
+					handleWebSocket(viteDevServer.httpServer, async () => {
+						assert(miniflare, `Miniflare not defined`);
+						const routerWorker = await getRouterWorker(miniflare);
 
-					return routerWorker.fetch;
-				});
+						return routerWorker.fetch;
+					});
+				}
 
 				return () => {
 					viteDevServer.middlewares.use((req, res, next) => {

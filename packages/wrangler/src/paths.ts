@@ -82,6 +82,16 @@ export interface EphemeralDirectory {
 }
 
 /**
+ * Gets the path to the project's `.wrangler` folder.
+ */
+export function getWranglerHiddenDirPath(
+	projectRoot: string | undefined
+): string {
+	projectRoot ??= process.cwd();
+	return path.join(projectRoot, ".wrangler");
+}
+
+/**
  * Gets a temporary directory in the project's `.wrangler` folder with the
  * specified prefix. We create temporary directories in `.wrangler` as opposed
  * to the OS's temporary directory to avoid issues with different drive letters
@@ -93,8 +103,7 @@ export function getWranglerTmpDir(
 	prefix: string,
 	cleanup = true
 ): EphemeralDirectory {
-	projectRoot ??= process.cwd();
-	const tmpRoot = path.join(projectRoot, ".wrangler", "tmp");
+	const tmpRoot = path.join(getWranglerHiddenDirPath(projectRoot), "tmp");
 	fs.mkdirSync(tmpRoot, { recursive: true });
 
 	const tmpPrefix = path.join(tmpRoot, `${prefix}-`);

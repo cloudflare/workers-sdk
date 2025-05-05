@@ -386,7 +386,9 @@ export function validateScopeKeys(
 	return scopes.every((scope) => scope in DefaultScopes);
 }
 
-const CALLBACK_URL = "http://localhost:8976/oauth/callback";
+function getCallbackUrl(host = "localhost", port = 8976) {
+	return `http://${host}:${port}/oauth/callback`;
+}
 
 let LocalState: State = {
 	...getAuthTokens(),
@@ -663,7 +665,12 @@ function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
 	return true;
 }
 
-async function getAuthURL(scopes: string[], clientId: string): Promise<string> {
+async function getAuthURL(
+	scopes: string[],
+	clientId: string,
+	callbackHost: string,
+	callbackPort: number
+): Promise<string> {
 	const { codeChallenge, codeVerifier } = await generatePKCECodes();
 	const stateQueryParam = generateRandomState(RECOMMENDED_STATE_LENGTH);
 
@@ -676,7 +683,7 @@ async function getAuthURL(scopes: string[], clientId: string): Promise<string> {
 	return generateAuthUrl({
 		authUrl: getAuthUrlFromEnv(),
 		clientId,
-		callbackUrl: CALLBACK_URL,
+		callbackUrl: getCallbackUrl(callbackHost, callbackPort),
 		scopes,
 		stateQueryParam,
 		codeChallenge,
@@ -790,7 +797,7 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 	const params = new URLSearchParams({
 		grant_type: `authorization_code`,
 		code: authorizationCode ?? "",
-		redirect_uri: CALLBACK_URL,
+		redirect_uri: getCallbackUrl(),
 		client_id: getClientIdFromEnv(),
 		code_verifier: codeVerifier,
 	});
@@ -957,7 +964,12 @@ export async function getOauthToken(options: {
 	callbackHost: string;
 	callbackPort: number;
 }): Promise<AccessContext> {
-	const urlToOpen = await getAuthURL(options.scopes, options.clientId);
+	const urlToOpen = await getAuthURL(
+		options.scopes,
+		options.clientId,
+		options.callbackHost,
+		options.callbackPort
+	);
 	let server: http.Server;
 	let loginTimeoutHandle: ReturnType<typeof setTimeout>;
 	const timerPromise = new Promise<AccessContext>((_, reject) => {

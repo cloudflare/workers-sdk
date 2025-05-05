@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.17.5
+
+### Patch Changes
+
+- [#9050](https://github.com/cloudflare/workers-sdk/pull/9050) [`1be5644`](https://github.com/cloudflare/workers-sdk/commit/1be56441dec5e8faea3b6c007c1a347bab1a4029) Thanks [@WalshyDev](https://github.com/WalshyDev)! - Adds tracing to \_headers & \_redirects in Workers Assets allowing Cloudflare employees to better debug customer issues regarding these features.
+
 ## 0.17.4
 
 ### Patch Changes

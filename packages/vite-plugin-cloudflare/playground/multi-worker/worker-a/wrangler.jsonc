@@ -13,4 +13,5 @@
 			"entrypoint": "NamedEntrypoint",
 		},
 	],
+	"tail_consumers": [{ "service": "tail-a" }],
 }

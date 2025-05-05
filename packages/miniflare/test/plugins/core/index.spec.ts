@@ -48,7 +48,12 @@ opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async (t) => {
 	// (see https://github.com/cloudflare/miniflare/pull/587/files#r1271579671)
 	const caCertsPath = path.join(tmp, "bundle.pem");
 	const caCerts = [...tls.rootCertificates, cert];
-	await fs.writeFile(caCertsPath, caCerts.join("\n"));
+	await fs.writeFile(
+		caCertsPath,
+		["## This is a comment which should be ignored\n"].concat(
+			caCerts.join("\n")
+		)
+	);
 
 	// Start Miniflare with NODE_EXTRA_CA_CERTS environment variable
 	// (cannot use sync process methods here as that would block HTTPS server)

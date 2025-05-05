@@ -222,4 +222,22 @@ describe("dataset upsert", () => {
 		✅ Successfully enqueued 5 vectors into index 'my-index' for upsertion."
 	`);
 	});
+
+	it("should reject an invalid file param", async () => {
+		await expect(
+			runWrangler("vectorize upsert my-index --file invalid_vectors.ndjson")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: 🚨 Cannot read invalid or empty file: invalid_vectors.ndjson.]`
+		);
+	});
+
+	it("should reject an empty file param", async () => {
+		writeFileSync("empty_vectors.ndjson", "");
+
+		await expect(
+			runWrangler("vectorize upsert my-index --file empty_vectors.ndjson")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: 🚨 Cannot read invalid or empty file: empty_vectors.ndjson.]`
+		);
+	});
 });

@@ -119,7 +119,7 @@ describe.sequential.each([{ cmd: "wrangler pages dev" }])(
 			);
 			await worker.waitForReady();
 			expect(normalizeOutput(worker.currentOutput)).toContain(
-				dedent`Your worker has access to the following bindings:
+				dedent`Your Worker has access to the following bindings:
 					- Durable Objects:
 					  - TEST_DO: TestDurableObject (defined in a [not connected])
 					- KV Namespaces:
@@ -325,7 +325,7 @@ describe.sequential.each([{ cmd: "wrangler pages dev" }])(
 
 			expect(text).toBe("⚡️ Pages ⚡️ supports wrangler.toml");
 			expect(normalizeOutput(worker.currentOutput)).toContain(
-				dedent`Your worker has access to the following bindings:
+				dedent`Your Worker has access to the following bindings:
 					- KV Namespaces:
 					  - KV_BINDING_TOML: KV_ID_TOML [simulated locally]
 					- Vars:

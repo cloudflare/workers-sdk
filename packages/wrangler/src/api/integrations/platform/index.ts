@@ -108,6 +108,8 @@ export async function getPlatformProxy<
 		{
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: false,
+			// TODO: when possible mixed mode should be made available for getPlatformProxy
+			MIXED_MODE: false,
 		},
 		() => getMiniflareOptionsFromConfig(rawConfig, env, options)
 	);
@@ -157,6 +159,7 @@ async function getMiniflareOptionsFromConfig(
 		name: rawConfig.name,
 		services: bindings.services,
 		durableObjects: rawConfig["durable_objects"],
+		tailConsumers: [],
 	});
 
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
@@ -168,6 +171,7 @@ async function getMiniflareOptionsFromConfig(
 		serviceBindings: {},
 		migrations: rawConfig.migrations,
 		imagesLocalMode: false,
+		tails: [],
 	});
 
 	const persistOptions = getMiniflarePersistOptions(options.persist);
@@ -296,6 +300,7 @@ export function unstable_getMiniflareWorkerOptions(
 		serviceBindings: {},
 		migrations: config.migrations,
 		imagesLocalMode: !!options?.imagesLocalMode,
+		tails: config.tail_consumers,
 	});
 
 	// This function is currently only exported for the Workers Vitest pool.
