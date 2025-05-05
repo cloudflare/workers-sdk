@@ -42,9 +42,13 @@ export type DeploymentCheckRequestBody = {
 	/**
 	 * Number of times to attempt the check before considering it to have failed
 	 */
-	retries?: number;
+	attempts_before_failure?: number;
 	/**
-	 * The kind of check. A failed "healthy" check affects a deployment's "healthy" status, while a failed "ready" check affects a deployment's "ready" status.
+	 * The kind of check. A failed "healthy" check affects a deployment's "healthy" status, while a failed "ready" check affects a deployment's "ready" status
 	 */
 	kind: DeploymentCheckKind;
+	/**
+	 * Initial time period after container start during which failed checks will be ignored
+	 */
+	grace_period?: Duration;
 };

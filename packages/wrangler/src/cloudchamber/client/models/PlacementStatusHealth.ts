@@ -2,6 +2,16 @@
 /* tslint:disable */
 /* eslint-disable */
 
+/**
+ * Represents the 'status' of a Placement.
+ * - placed: The Placement has been created on a node.
+ * - stopping: The Placement is stopping.
+ * - running: The Placement is running.
+ * - failed: The Placement failed to run.
+ * - stopped: The Placement stopped.
+ * - unhealthy: The Placement has a failing healthcheck.
+ *
+ */
 export enum PlacementStatusHealth {
 	PLACED = "placed",
 	STOPPING = "stopping",
@@ -9,6 +19,5 @@ export enum PlacementStatusHealth {
 	FAILED = "failed",
 	STOPPED = "stopped",
 	UNHEALTHY = "unhealthy",
-	PENDING = "pending",
-	COMPLETE = "complete",
+	DO_CONNECTED = "do_connected",
 }

@@ -7,6 +7,9 @@ import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
+import { apply } from "../cloudchamber/apply";
+import { build } from "../cloudchamber/build";
+import { fillOpenAPIConfiguration as fillCloudchamberOpenAPIConfiguration } from "../cloudchamber/common";
 import { configFileName, formatConfigSnippet } from "../config";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -28,6 +31,7 @@ import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
+import { CI } from "../is-ci";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -961,6 +965,29 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 	}
 
+	if (config.containers !== undefined) {
+		if (!props.dryRun)
+			await fillCloudchamberOpenAPIConfiguration(config, CI.isCI());
+
+		if (props.dryRun)
+			for (const container of config.containers) {
+				const imageUri = container.image ?? container.configuration.image;
+
+				const isDockerfile = container.image !== undefined;
+				const imageTag = container.name + ":" + (workerTag ?? "dry-run");
+				if (isDockerfile) logger.log("Building image", imageTag);
+
+				if (isDockerfile)
+					await build({
+						tag: imageTag,
+						pathToDockerfile: imageUri,
+						// TODO: configurable
+						pathToDocker: "docker",
+						push: false,
+					});
+			}
+	}
+
 	if (props.dryRun) {
 		logger.log(`--dry-run: exiting now.`);
 		return { versionId, workerTag };
@@ -978,6 +1005,74 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	// deploy triggers
 	const targets = await triggersDeploy(props);
+
+	if (config.containers !== undefined) {
+		for (const container of config.containers) {
+			const durableObjects = await fetchResult<
+				{
+					class_name: string;
+					name: string;
+					namespace_id: string;
+					type: string;
+					script_name?: string;
+				}[]
+			>(
+				`/accounts/${accountId}/workers/services/${scriptName}/environments/production/bindings`
+			);
+
+			const targetDurableObject = durableObjects.filter(
+				(durableObject) =>
+					durableObject.type === "durable_object_namespace" &&
+					durableObject.class_name === container.class_name &&
+					durableObject.script_name === undefined
+			);
+			if (targetDurableObject.length <= 0) {
+				logger.error(
+					"Could not deploy container application as durable object was not found in list of bindings"
+				);
+				continue;
+			}
+
+			const [targetDurableObjectNamespace] = targetDurableObject;
+			const configuration = {
+				...config,
+				containers: [
+					{
+						...container,
+						durable_objects: {
+							namespace_id: targetDurableObjectNamespace.namespace_id,
+						},
+					},
+				],
+			};
+
+			if (versionId === null) throw new Error("version ID is null");
+
+			const isDockerImage = container.image !== undefined;
+
+			const imageTag =
+				container.name + ":" + (versionId ?? "dryrun").split("-")[0];
+			if (isDockerImage) logger.log("Building image", imageTag);
+
+			const image = isDockerImage
+				? await build({
+						tag: imageTag,
+						pathToDockerfile: container.image!,
+						// TODO: configurable
+						pathToDocker: "docker",
+						push: !props.dryRun,
+					})
+				: container.configuration.image;
+
+			container.configuration.image = image;
+			container.image = image;
+
+			await apply(
+				{ skipDefaults: false, json: true, env: props.env },
+				configuration
+			);
+		}
+	}
 
 	logger.log("Current Version ID:", versionId);
 
