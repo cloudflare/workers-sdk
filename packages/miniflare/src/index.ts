@@ -1740,24 +1740,41 @@ export class Miniflare {
 			if (devRegistry) {
 				await Promise.all(
 					this.#workerOpts.map(async (workerOpts) => {
-						if (workerOpts.core.name) {
-							const defaultUrl = await this.unsafeGetDirectURL(
-								workerOpts.core.name
-							);
-							await devRegistry.register(workerOpts.core.name, {
-								protocol: "http",
-								host: undefined,
-								port: undefined,
-								mode: "local",
-								entrypointAddresses: {
-									default: {
-										host: defaultUrl.hostname,
-										port: parseInt(defaultUrl.port),
-									},
-								},
-								durableObjects: [],
-							});
+						if (!workerOpts.core.name) {
+							return;
 						}
+
+						const addresses = await Promise.all(
+							workerOpts.core.unsafeDirectSockets?.map(async (directSocket) => {
+								const defaultUrl = await this.unsafeGetDirectURL(
+									workerOpts.core.name,
+									directSocket.entrypoint
+								);
+
+								return {
+									entrypoint: directSocket.entrypoint,
+									host: defaultUrl.hostname,
+									port: parseInt(defaultUrl.port),
+								};
+							}) ?? []
+						);
+
+						await devRegistry.register(workerOpts.core.name, {
+							protocol: "http",
+							host: undefined,
+							port: undefined,
+							mode: "local",
+							entrypointAddresses: Object.fromEntries(
+								addresses.map(({ entrypoint, host, port }) => [
+									entrypoint ?? "default",
+									{
+										host,
+										port,
+									},
+								]) ?? []
+							),
+							durableObjects: [],
+						});
 					})
 				);
 			}

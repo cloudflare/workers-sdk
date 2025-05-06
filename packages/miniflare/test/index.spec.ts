@@ -2305,35 +2305,24 @@ test("Miniflare: allows direct access to workers", async (t) => {
 });
 test("Miniflare: allows RPC between multiple instances", async (t) => {
 	const mf1 = new Miniflare({
-		name: "mf1",
-		compatibilityDate: "2025-03-30",
+		unsafeDirectSockets: [{ entrypoint: "TestEntrypoint" }],
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		script: `
 			import { WorkerEntrypoint } from "cloudflare:workers";
-			export default class TestEntrypoint extends WorkerEntrypoint {
+			export class TestEntrypoint extends WorkerEntrypoint {
 				ping() { return "pong"; }
 			}
 		`,
 	});
 	t.teardown(() => mf1.dispose());
 
-	const testEntrypointUrl = await mf1.unsafeGetDirectURL();
+	const testEntrypointUrl = await mf1.unsafeGetDirectURL("", "TestEntrypoint");
 
 	const mf2 = new Miniflare({
-		name: "mf2",
 		serviceBindings: {
-			SERVICE: {
-				external: {
-					address: testEntrypointUrl.host,
-					http: {
-						style: HttpOptions_Style.PROXY,
-						capnpConnectHost: "miniflare-unsafe-internal-capnp-connect-mf1",
-					},
-				},
-			},
+			SERVICE: { external: { address: testEntrypointUrl.host, http: {} } },
 		},
-		compatibilityDate: "2025-03-30",
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		script: `
@@ -2353,9 +2342,8 @@ test("Miniflare: allows RPC between multiple instances", async (t) => {
 test.only("Miniflare: dev registry", async (t) => {
 	const unsafeDevRegistryPath = path.join(tmpdir(), "dev-registry");
 	const mf1 = new Miniflare({
-		name: "mf1",
+		name: "worker-a",
 		unsafeDevRegistryPath,
-		compatibilityDate: "2025-03-30",
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		script: `
@@ -2366,9 +2354,6 @@ test.only("Miniflare: dev registry", async (t) => {
 		`,
 		unsafeDirectSockets: [
 			{
-				port: 54321,
-				entrypoint: "default",
-				host: "127.0.0.1",
 				proxy: true,
 			},
 		],
@@ -2377,15 +2362,12 @@ test.only("Miniflare: dev registry", async (t) => {
 
 	await mf1.ready;
 
-	console.log("Test URL", await mf1.unsafeGetDirectURL());
-
 	const mf2 = new Miniflare({
-		name: "mf2",
+		name: "worker-b",
 		unsafeDevRegistryPath,
-		compatibilityDate: "2025-03-30",
 		serviceBindings: {
 			SERVICE: {
-				name: "mf1",
+				name: "worker-a",
 				props: {},
 			},
 		},
