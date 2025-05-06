@@ -150,11 +150,8 @@ export type TemplateConfig = {
 
 	bindings?: Record<string, unknown>;
 
-	/** Default false. For frameworks that are pinned to Wrangler 3. */
-	installWorkersTypes?: boolean;
-
 	/** Default false. To accomodate SSG frameworks etc. */
-	skipWranglerTypegen?: boolean;
+	workersTypes?: "generated" | "installed" | "none";
 };
 
 type CopyFiles = (StaticFileMap | VariantInfo) & {
@@ -614,6 +611,9 @@ export const createContext = async (
 	const directory = dirname(path);
 	const originalCWD = process.cwd();
 
+	// set default to generate types
+	template.workersTypes ??= "generated";
+	template.typesPath ??= "worker-configuration.d.ts";
 	return {
 		project: { name, path },
 		// We need to maintain a reference to the original args

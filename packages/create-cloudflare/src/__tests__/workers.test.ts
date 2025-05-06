@@ -24,8 +24,7 @@ describe("updateTsConfig", () => {
 	beforeEach(() => {
 		ctx = createTestContext();
 		ctx.args.ts = true;
-		ctx.template.installWorkersTypes = false;
-		ctx.template.skipWranglerTypegen = false;
+		ctx.template.workersTypes = "generated";
 
 		vi.mocked(existsSync).mockImplementation(() => true);
 		vi.mocked(getLatestTypesEntrypoint).mockReturnValue(mockCompatDate);
@@ -37,8 +36,8 @@ describe("updateTsConfig", () => {
 	});
 
 	test("installing workers types", async () => {
-		ctx.template.installWorkersTypes = true;
-		ctx.template.skipWranglerTypegen = true;
+		ctx.template.workersTypes = "installed";
+
 		await updateTsConfig(ctx);
 
 		expect(writeFile).toHaveBeenCalled();
@@ -55,8 +54,8 @@ describe("updateTsConfig", () => {
 	});
 
 	test("latest entrypoint not found", async () => {
-		ctx.template.installWorkersTypes = true;
-		ctx.template.skipWranglerTypegen = true;
+		ctx.template.workersTypes = "installed";
+
 		vi.mocked(getLatestTypesEntrypoint).mockReturnValue(null);
 		await updateTsConfig(ctx);
 
@@ -64,8 +63,7 @@ describe("updateTsConfig", () => {
 	});
 
 	test("don't clobber existing entrypoints", async () => {
-		ctx.template.installWorkersTypes = true;
-		ctx.template.skipWranglerTypegen = true;
+		ctx.template.workersTypes = "installed";
 		vi.mocked(readFile).mockImplementation(
 			() =>
 				`{ "compilerOptions": { "types" : ["@cloudflare/workers-types/2021-03-20"]} }`,

@@ -167,10 +167,9 @@ const configure = async (ctx: C3Context) => {
 	addWranglerToGitIgnore(ctx);
 
 	await updatePackageScripts(ctx);
-	if (ctx.template.installWorkersTypes) {
+	if (ctx.template.workersTypes === "installed") {
 		await installWorkersTypes(ctx);
-	}
-	if (!ctx.template.skipWranglerTypegen) {
+	} else if (ctx.template.workersTypes === "generated") {
 		await generateWorkersTypes(ctx);
 	}
 

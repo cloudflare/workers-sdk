@@ -32,7 +32,7 @@ export async function generateWorkersTypes(ctx: C3Context) {
 		cwd: ctx.project.path,
 		silent: true,
 		startText: "Generating types for your application",
-		doneText: `${brandColor("generated")} ${dim(`to \`${ctx.template.typesPath ?? "worker-configuration.d.ts"}\` via \`${typesCmd.join(" ")}\``)}`,
+		doneText: `${brandColor("generated")} ${dim(`to \`${ctx.template.typesPath}\` via \`${typesCmd.join(" ")}\``)}`,
 	});
 
 	if (ctx.template.compatibilityFlags?.includes("nodejs_compat")) {
@@ -66,7 +66,7 @@ export async function updateTsConfig(ctx: C3Context) {
 		const config = jsonc.parse(tsconfig);
 		const currentTypes = config.compilerOptions?.types ?? [];
 		let newTypes: string[] = [...currentTypes];
-		if (ctx.template.installWorkersTypes) {
+		if (ctx.template.workersTypes === "installed") {
 			const entrypointVersion = getLatestTypesEntrypoint(ctx);
 			if (entrypointVersion === null) {
 				return;
@@ -84,7 +84,7 @@ export async function updateTsConfig(ctx: C3Context) {
 				newTypes.push(typesEntrypoint);
 			}
 		}
-		if (!ctx.template.skipWranglerTypegen) {
+		if (ctx.template.workersTypes === "generated") {
 			newTypes.push(ctx.template.typesPath ?? "./worker-configuration.d.ts");
 			// if generated types include runtime types, remove @cloudflare/workers-types
 			const typegen = readFile(
