@@ -2376,7 +2376,6 @@ test.only("Miniflare: dev registry", async (t) => {
 	t.teardown(() => mf1.dispose());
 
 	await mf1.ready;
-	await mf1.updateRegistry();
 
 	console.log("Test URL", await mf1.unsafeGetDirectURL());
 

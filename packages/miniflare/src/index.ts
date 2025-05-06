@@ -1734,39 +1734,48 @@ export class Miniflare {
 		return new URL(this.#runtimeEntryURL.toString());
 	}
 	get ready(): Promise<URL> {
-		return this.#waitForReady();
-	}
+		return this.#waitForReady().then(async (url) => {
+			const devRegistry = this.#devRegistry;
 
-	async updateRegistry(): Promise<void> {
-		if (this.#devRegistry && this.#workerOpts[0].core.name) {
-			const defaultUrl = await this.unsafeGetDirectURL();
+			if (devRegistry) {
+				await Promise.all(
+					this.#workerOpts.map(async (workerOpts) => {
+						if (workerOpts.core.name) {
+							const defaultUrl = await this.unsafeGetDirectURL(
+								workerOpts.core.name
+							);
+							await devRegistry.register(workerOpts.core.name, {
+								protocol: "http",
+								host: undefined,
+								port: undefined,
+								mode: "local",
+								entrypointAddresses: {
+									default: {
+										host: defaultUrl.hostname,
+										port: parseInt(defaultUrl.port),
+									},
+								},
+								durableObjects: [],
+							});
+						}
+					})
+				);
+			}
 
-			await this.#devRegistry.register(this.#workerOpts[0].core.name, {
-				port: await this.#getLoopbackPort(),
-				protocol: "http",
-				host: this.#loopbackHost,
-				mode: "local",
-				entrypointAddresses: {
-					default: {
-						host: defaultUrl.hostname,
-						port: parseInt(defaultUrl.port),
-					},
-				},
-				durableObjects: [],
-			});
-		}
+			return url;
+		});
 	}
 
 	async getCf(): Promise<Record<string, any>> {
 		this.#checkDisposed();
-		await this.ready;
+		await this.#waitForReady();
 
 		return JSON.parse(JSON.stringify(this.#cfObject));
 	}
 
 	async getInspectorURL(): Promise<URL> {
 		this.#checkDisposed();
-		await this.ready;
+		await this.#waitForReady();
 
 		if (this.#maybeInspectorProxyController !== undefined) {
 			return this.#maybeInspectorProxyController.getInspectorURL();
@@ -1793,7 +1802,7 @@ export class Miniflare {
 		entrypoint = "default"
 	): Promise<URL> {
 		this.#checkDisposed();
-		await this.ready;
+		await this.#waitForReady();
 
 		// Get worker index and options from name, defaulting to entrypoint
 		const workerIndex = this.#findAndAssertWorkerIndex(workerName);
@@ -1864,7 +1873,7 @@ export class Miniflare {
 
 	dispatchFetch: DispatchFetch = async (input, init) => {
 		this.#checkDisposed();
-		await this.ready;
+		await this.#waitForReady();
 
 		assert(this.#runtimeEntryURL !== undefined);
 		assert(this.#runtimeDispatcher !== undefined);
@@ -1943,7 +1952,7 @@ export class Miniflare {
 	/** @internal */
 	async _getProxyClient(): Promise<ProxyClient> {
 		this.#checkDisposed();
-		await this.ready;
+		await this.#waitForReady();
 		assert(this.#proxyClient !== undefined);
 		return this.#proxyClient;
 	}
