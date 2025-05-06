@@ -99,6 +99,23 @@ jobs:
           name: turbo-runs-${{ matrix.os }}-${{ matrix.node }}
           path: .turbo/runs
 
+      # Check for old Node.js version warnings and errors
+      - name: Use Node.js v16
+        uses: actions/setup-node@v4
+        with:
+          node-version: 16
+
+      - name: Check for error message on Node.js < v18
+        run: node packages/wrangler/src/__tests__/test-old-node-version.js error
+
+      - name: Use Node.js v18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Check for warning message on Node.js < v20
+        run: node packages/wrangler/src/__tests__/test-old-node-version.js warn
+
   test-vp:
     if: github.head_ref == 'changeset-release/main' || contains(github.event.*.labels.*.name, 'every-os' )
     timeout-minutes: 30
