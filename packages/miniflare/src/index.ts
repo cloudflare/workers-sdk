@@ -1026,6 +1026,55 @@ export class Miniflare {
 		return response;
 	};
 
+	#handleLoopbackConnect = async (
+		req: http.IncomingMessage,
+		clientSocket: Duplex,
+		head: Buffer
+	) => {
+		const connectHost = req.url;
+
+		if (!connectHost) {
+			clientSocket.write("HTTP/1.1 400 Bad Request\r\n\r\n");
+			clientSocket.end();
+			return;
+		}
+
+		const [workerName, entrypoint] = connectHost
+			.replace("miniflare-unsafe-internal-capnp-connect-", "")
+			.split(".");
+		const registry = await this.#devRegistry?.refresh();
+		// Pick the default entrypoint address for now
+		const address =
+			registry?.[workerName]?.entrypointAddresses?.[entrypoint ?? "default"];
+
+		console.log("Proxying to address of Worker", workerName, address);
+
+		if (!address) {
+			throw new Error(
+				`No address found for the "${entrypoint}" entrypoint of "${workerName}"`
+			);
+		}
+
+		const serverSocket = net.connect(address.port, address.host, () => {
+			serverSocket.write(`CONNECT ${HOST_CAPNP_CONNECT} HTTP/1.1\r\n\r\n`);
+
+			// Push along any buffered bytes
+			if (head && head.length) {
+				serverSocket.write(head);
+			}
+
+			serverSocket.pipe(clientSocket);
+		});
+
+		// Errors on either side
+		serverSocket.on("error", (err) => {
+			console.error("Upstream tunnel error:", err);
+			clientSocket.write("HTTP/1.1 502 Bad Gateway\r\n\r\n");
+			clientSocket.end();
+		});
+		clientSocket.on("error", () => serverSocket.end());
+	};
+
 	#handleLoopbackUpgrade = async (
 		req: http.IncomingMessage,
 		socket: Duplex,
@@ -1109,83 +1158,9 @@ export class Miniflare {
 				http.createServer(this.#handleLoopback),
 				/* grace */ 0
 			);
+			server.on("connect", this.#handleLoopbackConnect);
 			server.on("upgrade", this.#handleLoopbackUpgrade);
 			server.listen(0, hostname, () => resolve(server));
-		}).then((server) => {
-			const proxy = net.createServer((socket) => {
-				let connectedWorker = "";
-				let entrypoint: string | undefined;
-				let serverSocket: net.Socket;
-
-				socket.addListener("data", async (d: Buffer) => {
-					if (!connectedWorker && !serverSocket) {
-						const chunk = d.toString();
-						let buffer;
-						if (chunk.startsWith("CONNECT")) {
-							// this is a JSRPC connection, get the worker name from the capnpConnectHost
-
-							const workerName = chunk.match(
-								/CONNECT miniflare-unsafe-internal-capnp-connect-(.+) HTTP\/1\.1/
-							);
-							assert(workerName !== null);
-							const serviceEntrypoint = workerName[1];
-							[connectedWorker, entrypoint] = serviceEntrypoint.split(".");
-
-							buffer = Buffer.alloc(d.length - serviceEntrypoint.length - 1);
-							d.copy(
-								buffer,
-								0,
-								0,
-								"CONNECT miniflare-unsafe-internal-capnp-connect".length
-							);
-							d.copy(
-								buffer,
-								"CONNECT miniflare-unsafe-internal-capnp-connect".length,
-								"CONNECT miniflare-unsafe-internal-capnp-connect".length +
-									serviceEntrypoint.length +
-									1
-							);
-						} else {
-							// this is an HTTP connection, get the worker name from the X-Worker header
-							const workerName = chunk.match(/X-Worker: (.+)\r\n/);
-							assert(workerName !== null);
-							connectedWorker = workerName[1];
-
-							buffer = d;
-						}
-
-						const registry = await this.#devRegistry?.refresh();
-						// Pick the default entrypoint address for now
-						const address =
-							registry?.[connectedWorker]?.entrypointAddresses?.[
-								entrypoint ?? "default"
-							];
-
-						console.log(
-							"Proxying to address of Worker",
-							connectedWorker,
-							address
-						);
-
-						if (!address) {
-							throw new Error(
-								`No address found for the default entrypoint of "${connectedWorker}"`
-							);
-						}
-
-						serverSocket = net.connect(address.port, address.host, () => {
-							serverSocket.write(buffer);
-							serverSocket.pipe(socket);
-						});
-					} else {
-						serverSocket.write(d);
-					}
-				});
-			});
-
-			return new Promise<any>((resolve) => {
-				this.#proxyServer = proxy.listen(0, hostname, () => resolve(server));
-			});
 		});
 	}
 
@@ -1221,9 +1196,6 @@ export class Miniflare {
 
 		// Override service bindings if they point to a worker that doesn't exist
 		if (this.#devRegistry) {
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			const proxyPort = getServerPort(this.#proxyServer!);
-
 			for (const opts of allWorkerOpts) {
 				if (opts.core.serviceBindings) {
 					for (const name of Object.keys(opts.core.serviceBindings)) {
@@ -1240,7 +1212,7 @@ export class Miniflare {
 							// Override it to connect to the loopback service
 							opts.core.serviceBindings[name] = {
 								external: {
-									address: `${loopbackHost}:${proxyPort}`,
+									address: `${loopbackHost}:${loopbackPort}`,
 									http: {
 										// TODO: To support service workers format
 										// style: HttpOptions_Style.HOST,
