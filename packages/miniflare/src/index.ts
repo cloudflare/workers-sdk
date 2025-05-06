@@ -140,7 +140,7 @@ function maybeGetLocallyAccessibleHost(
 	if (h === "::1") return "[::1]";
 }
 
-function getServerPort(server: http.Server) {
+function getServerPort(server: http.Server | net.Server): number {
 	const address = server.address();
 	// Note address would be string with unix socket
 	assert(address !== null && typeof address === "object");
@@ -740,6 +740,8 @@ export class Miniflare {
 	// `ready`. We would have no way of catching these otherwise.
 	readonly #initPromise: Promise<void>;
 
+	#proxyServer: net.Server | undefined;
+
 	// Aborted when dispose() is called
 	readonly #disposeController: AbortController;
 	#loopbackServer?: StoppableServer;
@@ -1107,63 +1109,76 @@ export class Miniflare {
 				http.createServer(this.#handleLoopback),
 				/* grace */ 0
 			);
-			server.on("connect", async (req, clientSocket, head) => {
-				const [host, port] = req.url?.split(":") ?? [
-					"miniflare-unsafe-internal-capnp-connect-",
-					"n/a",
-				];
-				console.log(`CONNECT for ${host}:${port}`);
-
-				try {
-					// Dynamically resolve where to actually connect:
-					const serviceName = host?.replace(
-						"miniflare-unsafe-internal-capnp-connect-",
-						""
-					);
-					const registry = await this.#devRegistry?.getWorkers();
-					// Pick the default entrypoint address for now
-					const address =
-						registry?.[serviceName]?.entrypointAddresses?.["default"];
-
-					if (!address) {
-						throw new Error(
-							`No address found for the default entrypoint of "${serviceName}"`
-						);
-					}
-
-					// Open a raw TCP connection to the real Workerd:
-					const serverSocket = net.connect(address.port, address.host, () => {
-						// Tell the client the tunnel is ready:
-						clientSocket.write(
-							"HTTP/1.1 200 Connection Established\r\n" +
-								"Proxy-agent: dynamic-capnp-proxy/1.0\r\n" +
-								"\r\n"
-						);
-						// If any bytes arrived already, forward them:
-						if (head && head.length) serverSocket.write(head);
-
-						// Pipe data both ways:
-						serverSocket.pipe(clientSocket);
-						clientSocket.pipe(serverSocket);
-					});
-
-					serverSocket.on("error", (err) => {
-						console.error("Upstream connect error:", err);
-						clientSocket.write("HTTP/1.1 502 Bad Gateway\r\n\r\n");
-						clientSocket.end();
-					});
-					clientSocket.on("error", (err) => {
-						console.error("Client socket error:", err);
-						serverSocket.end();
-					});
-				} catch (err) {
-					console.error("Lookup or proxy error:", err);
-					clientSocket.write("HTTP/1.1 502 Bad Gateway\r\n\r\n");
-					clientSocket.end();
-				}
-			});
 			server.on("upgrade", this.#handleLoopbackUpgrade);
 			server.listen(0, hostname, () => resolve(server));
+		}).then((server) => {
+			const proxy = net.createServer((socket) => {
+				let connectedWorker = "";
+				let serverSocket: net.Socket;
+
+				socket.addListener("data", async (d: any) => {
+					if (!connectedWorker && !serverSocket) {
+						let chunk = d.toString();
+						let buffer;
+						if (chunk.startsWith("CONNECT")) {
+							// this is a JSRPC connection, get the worker name from the capnpConnectHost
+
+							const workerName = chunk.match(
+								/CONNECT miniflare-unsafe-internal-capnp-connect-(.+) HTTP\/1\.1/
+							);
+							console.log(chunk);
+							connectedWorker = workerName[1];
+
+							buffer = Buffer.alloc(d.length - connectedWorker.length - 1);
+							d.copy(
+								buffer,
+								0,
+								0,
+								"CONNECT miniflare-unsafe-internal-capnp-connect".length
+							);
+							d.copy(
+								buffer,
+								"CONNECT miniflare-unsafe-internal-capnp-connect".length,
+								"CONNECT miniflare-unsafe-internal-capnp-connect".length +
+									connectedWorker.length +
+									1
+							);
+						} else {
+							// this is an HTTP connection, get the worker name from the X-Worker header
+							const workerName = chunk.match(/X-Worker: (.+)\r\n/);
+							connectedWorker = workerName[1];
+
+							buffer = d;
+						}
+						console.log("Proxying to address of Worker", connectedWorker);
+						// TODO: look up this address dynamically in the dev registry
+
+						const registry = await this.#devRegistry?.refresh();
+						// Pick the default entrypoint address for now
+						const address =
+							registry?.[connectedWorker]?.entrypointAddresses?.["default"];
+
+						if (!address) {
+							throw new Error(
+								`No address found for the default entrypoint of "${connectedWorker}"`
+							);
+						}
+
+						console.log("Registry address", address);
+
+						serverSocket = net.connect(address.port, address.host, () => {
+							serverSocket.write(buffer);
+							serverSocket.pipe(socket);
+						});
+					} else {
+						serverSocket.write(d);
+					}
+				});
+			});
+
+			return new Promise<any>((resolve) => {
+				this.#proxyServer = proxy.listen(0, hostname, () => resolve(server));
+			});
 		});
 	}
 
@@ -1189,32 +1204,20 @@ export class Miniflare {
 		return `${getURLSafeHost(host)}:${requestedPort ?? 0}`;
 	}
 
-	async #assembleConfig(loopbackPort: number): Promise<Config> {
+	async #assembleConfig(
+		loopbackPort: number,
+		loopbackHost: string
+	): Promise<Config> {
 		const allPreviousWorkerOpts = this.#previousWorkerOpts;
 		const allWorkerOpts = this.#workerOpts;
 		const sharedOpts = this.#sharedOpts;
 
 		// Override service bindings if they point to a worker that doesn't exist
 		if (this.#devRegistry) {
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			const proxyPort = getServerPort(this.#proxyServer!);
+
 			for (const opts of allWorkerOpts) {
-				if (opts.core.name) {
-					const defaultUrl = await this.unsafeGetDirectURL(opts.core.name);
-
-					await this.#devRegistry.register(opts.core.name, {
-						port: loopbackPort,
-						protocol: "http",
-						host: this.#loopbackHost,
-						mode: "local",
-						entrypointAddresses: {
-							default: {
-								host: defaultUrl.hostname,
-								port: parseInt(defaultUrl.port),
-							},
-						},
-						durableObjects: [],
-					});
-				}
-
 				if (opts.core.serviceBindings) {
 					for (const name of Object.keys(opts.core.serviceBindings)) {
 						const service = opts.core.serviceBindings[name];
@@ -1230,6 +1233,7 @@ export class Miniflare {
 							// Override it to connect to the loopback service
 							opts.core.serviceBindings[name] = {
 								external: {
+									address: `${loopbackHost}:${proxyPort}`,
 									http: {
 										// TODO: To support service workers format
 										// style: HttpOptions_Style.HOST,
@@ -1482,7 +1486,7 @@ export class Miniflare {
 					http: {
 						style: directSocket.proxy ? HttpOptions_Style.PROXY : undefined,
 						cfBlobHeader: CoreHeaders.CF_BLOB,
-						capnpConnectHost: `${HOST_CAPNP_CONNECT}-${workerName}`,
+						capnpConnectHost: `${HOST_CAPNP_CONNECT}`,
 					},
 				});
 			}
@@ -1545,8 +1549,12 @@ export class Miniflare {
 		// This function must be run with `#runtimeMutex` held
 		const initial = !this.#runtimeEntryURL;
 		assert(this.#runtime !== undefined);
+		const configuredHost = this.#sharedOpts.core.host ?? DEFAULT_HOST;
 		const loopbackPort = await this.#getLoopbackPort();
-		const config = await this.#assembleConfig(loopbackPort);
+		const loopbackHost =
+			maybeGetLocallyAccessibleHost(configuredHost) ??
+			getURLSafeHost(configuredHost);
+		const config = await this.#assembleConfig(loopbackPort, loopbackHost);
 		const configBuffer = serializeConfig(config);
 
 		// Get all socket names we expect to get ports for
@@ -1562,7 +1570,6 @@ export class Miniflare {
 		}
 
 		// Reload runtime
-		const configuredHost = this.#sharedOpts.core.host ?? DEFAULT_HOST;
 		const entryAddress = this.#getSocketAddress(
 			SOCKET_ENTRY,
 			this.#previousSharedOpts?.core.port,
@@ -1585,10 +1592,7 @@ export class Miniflare {
 			);
 			this.#previousRuntimeInspectorPort = runtimeInspectorPort;
 		}
-		const loopbackAddress = `${
-			maybeGetLocallyAccessibleHost(configuredHost) ??
-			getURLSafeHost(configuredHost)
-		}:${loopbackPort}`;
+		const loopbackAddress = `${loopbackHost}:${loopbackPort}`;
 		const runtimeOpts: Abortable & RuntimeOptions = {
 			signal: this.#disposeController.signal,
 			entryAddress,
@@ -1731,6 +1735,26 @@ export class Miniflare {
 	}
 	get ready(): Promise<URL> {
 		return this.#waitForReady();
+	}
+
+	async updateRegistry(): Promise<void> {
+		if (this.#devRegistry && this.#workerOpts[0].core.name) {
+			const defaultUrl = await this.unsafeGetDirectURL();
+
+			await this.#devRegistry.register(this.#workerOpts[0].core.name, {
+				port: await this.#getLoopbackPort(),
+				protocol: "http",
+				host: this.#loopbackHost,
+				mode: "local",
+				entrypointAddresses: {
+					default: {
+						host: defaultUrl.hostname,
+						port: parseInt(defaultUrl.port),
+					},
+				},
+				durableObjects: [],
+			});
+		}
 	}
 
 	async getCf(): Promise<Record<string, any>> {

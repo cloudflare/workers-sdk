@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Request, Response } from "../../http";
-import { Miniflare } from "../../index";
+import { HOST_CAPNP_CONNECT, Miniflare } from "../../index";
 import {
 	ExternalServer,
 	HttpOptions_Style,
@@ -27,7 +27,7 @@ const HttpOptionsSchema = z.object({
 	cfBlobHeader: z.ostring(),
 	injectRequestHeaders: HttpOptionsHeaderSchema.array().optional(),
 	injectResponseHeaders: HttpOptionsHeaderSchema.array().optional(),
-	capnpConnectHost: z.ostring(),
+	capnpConnectHost: z.ostring().default(HOST_CAPNP_CONNECT),
 });
 
 const TlsOptionsKeypairSchema = z.object({

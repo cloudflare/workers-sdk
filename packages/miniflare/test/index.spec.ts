@@ -7,7 +7,7 @@ import { existsSync } from "fs";
 import fs from "fs/promises";
 import http from "http";
 import { AddressInfo } from "net";
-import os from "os";
+import os, { tmpdir } from "os";
 import path from "path";
 import { Writable } from "stream";
 import { json, text } from "stream/consumers";
@@ -28,6 +28,7 @@ import {
 	createFetchMock,
 	DeferredPromise,
 	fetch,
+	HttpOptions_Style,
 	kCurrentWorker,
 	MessageEvent,
 	Miniflare,
@@ -2304,24 +2305,35 @@ test("Miniflare: allows direct access to workers", async (t) => {
 });
 test("Miniflare: allows RPC between multiple instances", async (t) => {
 	const mf1 = new Miniflare({
-		unsafeDirectSockets: [{ entrypoint: "TestEntrypoint" }],
+		name: "mf1",
+		compatibilityDate: "2025-03-30",
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		script: `
 			import { WorkerEntrypoint } from "cloudflare:workers";
-			export class TestEntrypoint extends WorkerEntrypoint {
+			export default class TestEntrypoint extends WorkerEntrypoint {
 				ping() { return "pong"; }
 			}
 		`,
 	});
 	t.teardown(() => mf1.dispose());
 
-	const testEntrypointUrl = await mf1.unsafeGetDirectURL("", "TestEntrypoint");
+	const testEntrypointUrl = await mf1.unsafeGetDirectURL();
 
 	const mf2 = new Miniflare({
+		name: "mf2",
 		serviceBindings: {
-			SERVICE: { external: { address: testEntrypointUrl.host, http: {} } },
+			SERVICE: {
+				external: {
+					address: testEntrypointUrl.host,
+					http: {
+						style: HttpOptions_Style.PROXY,
+						capnpConnectHost: "miniflare-unsafe-internal-capnp-connect-mf1",
+					},
+				},
+			},
 		},
+		compatibilityDate: "2025-03-30",
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		script: `
@@ -2337,6 +2349,63 @@ test("Miniflare: allows RPC between multiple instances", async (t) => {
 
 	const res = await mf2.dispatchFetch("http://placeholder");
 	t.is(await res.text(), "pong");
+});
+test.only("Miniflare: dev registry", async (t) => {
+	const unsafeDevRegistryPath = path.join(tmpdir(), "dev-registry");
+	const mf1 = new Miniflare({
+		name: "mf1",
+		unsafeDevRegistryPath,
+		compatibilityDate: "2025-03-30",
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+			import { WorkerEntrypoint } from "cloudflare:workers";
+			export default class TestEntrypoint extends WorkerEntrypoint {
+				ping() { return "pong"; }
+			}
+		`,
+		unsafeDirectSockets: [
+			{
+				port: 54321,
+				entrypoint: "default",
+				host: "127.0.0.1",
+				proxy: true,
+			},
+		],
+	});
+	t.teardown(() => mf1.dispose());
+
+	await mf1.ready;
+	await mf1.updateRegistry();
+
+	console.log("Test URL", await mf1.unsafeGetDirectURL());
+
+	const mf2 = new Miniflare({
+		name: "mf2",
+		unsafeDevRegistryPath,
+		compatibilityDate: "2025-03-30",
+		serviceBindings: {
+			SERVICE: {
+				name: "mf1",
+				props: {},
+			},
+		},
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+			export default {
+				async fetch(request, env, ctx) {
+					const result = await env.SERVICE.ping();
+					return new Response(result);
+				}
+			}
+		`,
+	});
+	t.teardown(() => mf2.dispose());
+
+	const res = await mf2.dispatchFetch("http://placeholder");
+	const result = await res.text();
+	t.is(result, "pong");
 });
 
 // Only test `MINIFLARE_WORKERD_PATH` on Unix. The test uses a Node.js script

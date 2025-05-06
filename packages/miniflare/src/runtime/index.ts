@@ -103,6 +103,7 @@ function getRuntimeArgs(options: RuntimeOptions) {
 		"--experimental",
 		`--socket-addr=${SOCKET_ENTRY}=${options.entryAddress}`,
 		`--external-addr=${SERVICE_LOOPBACK}=${options.loopbackAddress}`,
+		`--verbose`,
 		// Configure extra pipe for receiving control messages (e.g. when ready)
 		"--control-fd=3",
 		// Read config from stdin
