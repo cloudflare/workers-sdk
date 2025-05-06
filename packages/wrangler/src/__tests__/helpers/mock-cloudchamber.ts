@@ -191,6 +191,7 @@ export const MOCK_APPLICATIONS: Application[] = [
 		created_at: "123",
 		account_id: "test-account",
 		name: "Test-app",
+		version: 1,
 		configuration: {
 			image: "test-registry.cfdata.org/test-app:v1",
 			network: {
@@ -207,6 +208,7 @@ export const MOCK_APPLICATIONS: Application[] = [
 		created_at: "123",
 		account_id: "test-account",
 		name: "Test-app",
+		version: 1,
 		configuration: {
 			image: "test-registry.cfdata.org/test-app:v10",
 			network: {
@@ -223,6 +225,7 @@ export const MOCK_APPLICATIONS: Application[] = [
 		created_at: "123",
 		account_id: "test-account",
 		name: "Test-app",
+		version: 1,
 		configuration: {
 			image: "test-registry.cfdata.org/test-app:v2",
 			network: {

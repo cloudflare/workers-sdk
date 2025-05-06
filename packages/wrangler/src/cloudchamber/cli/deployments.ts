@@ -1,8 +1,9 @@
 import { exit } from "process";
-import { cancel, crash, endSection, log, newline } from "@cloudflare/cli";
+import { cancel, endSection, log, newline } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim, yellow } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import { UserError } from "../../errors";
 import { DeploymentsService } from "../client";
 import { wrap } from "../helpers/wrap";
 import { idToLocationName } from "../locations";
@@ -95,11 +96,10 @@ export async function loadDeployments(
 
 	stop();
 	if (err) {
-		crash(
+		throw new UserError(
 			"There has been an error while loading your deployments: \n " +
 				err.message
 		);
-		return [];
 	}
 
 	const deployments = deploymentsResponse.filter((d) =>

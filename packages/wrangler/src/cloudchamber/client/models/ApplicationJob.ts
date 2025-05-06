@@ -32,6 +32,10 @@ export type ApplicationJob = {
 	/**
 	 * Allocated vCPUs for this job
 	 */
+	vcpu: number;
+	/**
+	 * Allocated vCPUs for this job
+	 */
 	vcpus: number;
 	/**
 	 * Allocated memory for this job
