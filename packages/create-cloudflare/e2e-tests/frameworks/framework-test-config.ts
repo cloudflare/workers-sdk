@@ -16,10 +16,6 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Hello from Cloudflare",
 				previewArgs: ["--host=127.0.0.1"],
 			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
 			flags: ["--no-install", "--no-git-init"],
 		},
 		"astro:pages": {
@@ -39,10 +35,6 @@ export default function getFrameworkTestConfig(pm: string) {
 				script: "build",
 				route: "/test",
 				expectedText: "C3_TEST",
-			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
 			},
 			flags: [
 				"--skip-houston",
@@ -71,10 +63,6 @@ export default function getFrameworkTestConfig(pm: string) {
 				script: "build",
 				route: "/test",
 				expectedText: "C3_TEST",
-			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
 			},
 			flags: [
 				"--skip-houston",
@@ -150,10 +138,6 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/api/v1/test",
 				expectedText: "C3_TEST",
 			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
 			verifyBuild: {
 				outputDir: "./dist/analog/public",
 				script: "build",
@@ -191,10 +175,6 @@ export default function getFrameworkTestConfig(pm: string) {
 			verifyPreview: {
 				route: "/",
 				expectedText: "Congratulations! Your app is running.",
-			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
 			},
 			flags: ["--style", "sass"],
 		},
@@ -250,10 +230,6 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Hello!",
 			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "CloudflareBindings",
-			},
 			promptHandlers: [
 				{
 					matcher: /Do you want to install project dependencies\?/,
@@ -272,10 +248,6 @@ export default function getFrameworkTestConfig(pm: string) {
 			verifyPreview: {
 				route: "/message",
 				expectedText: "Hello Hono!",
-			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "CloudflareBindings",
 			},
 			promptHandlers: [
 				{
@@ -374,10 +346,6 @@ export default function getFrameworkTestConfig(pm: string) {
 				},
 			],
 			testCommitMessage: true,
-			verifyBuildCfTypes: {
-				outputFile: "env.d.ts",
-				envInterfaceName: "CloudflareEnv",
-			},
 			verifyDeploy: {
 				route: "/",
 				expectedText: "Create Next App",
@@ -414,10 +382,6 @@ export default function getFrameworkTestConfig(pm: string) {
 				"@/*",
 				"--src-dir",
 			],
-			verifyBuildCfTypes: {
-				outputFile: "cloudflare-env.d.ts",
-				envInterfaceName: "CloudflareEnv",
-			},
 			verifyPreview: {
 				previewArgs: ["--"],
 				route: "/test",
@@ -455,10 +419,6 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
 			verifyBuild: {
 				outputDir: "./dist",
 				script: "build",
@@ -486,10 +446,6 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
 		},
 		"react:pages": {
 			argv: ["--platform", "pages"],
@@ -509,10 +465,6 @@ export default function getFrameworkTestConfig(pm: string) {
 			verifyPreview: {
 				route: "/",
 				expectedText: "Vite + React",
-			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
 			},
 		},
 		"react:workers": {
@@ -542,10 +494,6 @@ export default function getFrameworkTestConfig(pm: string) {
 				// not actually running the client side JS.
 				expectedText: "Vite + React + TS",
 			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
 		},
 		solid: {
 			promptHandlers: [
@@ -569,10 +517,6 @@ export default function getFrameworkTestConfig(pm: string) {
 			verifyPreview: {
 				route: "/",
 				expectedText: "Hello world",
-			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
 			},
 		},
 		"svelte:pages": {
@@ -602,10 +546,6 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
-			verifyBuildCfTypes: {
-				outputFile: "./src/worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
 		},
 		"svelte:workers": {
 			argv: ["--platform", "workers"],
@@ -628,10 +568,6 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
-			verifyBuildCfTypes: {
-				outputFile: "./src/worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
 		},
 		"vue:pages": {
 			argv: ["--platform", "pages"],
@@ -644,10 +580,6 @@ export default function getFrameworkTestConfig(pm: string) {
 			verifyPreview: {
 				route: "/",
 				expectedText: "Vite App",
-			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
 			},
 			flags: ["--ts"],
 		},
@@ -663,10 +595,6 @@ export default function getFrameworkTestConfig(pm: string) {
 				previewArgs: ["--host=127.0.0.1"],
 				route: "/",
 				expectedText: "Vite App",
-			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
 			},
 		},
 	};

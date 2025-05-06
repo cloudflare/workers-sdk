@@ -93,6 +93,7 @@ const updateTypeDefinitions = (ctx: C3Context) => {
 	});
 };
 
+const typesPath = "./src/worker-configuration.d.ts";
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "svelte",
@@ -114,7 +115,7 @@ const config: TemplateConfig = {
 		if (usesTypescript(ctx)) {
 			scripts = {
 				...scripts,
-				"cf-typegen": `wrangler types ./src/worker-configuration.d.ts`,
+				"cf-typegen": `wrangler types ${typesPath}`,
 			};
 		}
 
@@ -123,6 +124,6 @@ const config: TemplateConfig = {
 	devScript: "dev",
 	deployScript: "deploy",
 	previewScript: "preview",
-	typesPath: "./src/worker-configuration.d.ts",
+	typesPath,
 };
 export default config;

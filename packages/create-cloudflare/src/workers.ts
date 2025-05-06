@@ -83,8 +83,7 @@ export async function updateTsConfig(ctx: C3Context) {
 				);
 				newTypes.push(typesEntrypoint);
 			}
-		}
-		if (ctx.template.workersTypes === "generated") {
+		} else if (ctx.template.workersTypes === "generated") {
 			newTypes.push(ctx.template.typesPath ?? "./worker-configuration.d.ts");
 			// if generated types include runtime types, remove @cloudflare/workers-types
 			const typegen = readFile(

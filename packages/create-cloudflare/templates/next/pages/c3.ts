@@ -155,6 +155,9 @@ const addDevDependencies = async (installEslintPlugin: boolean) => {
 	});
 };
 
+const envInterfaceName = "CloudflareEnv";
+const typesPath = "./env.d.ts";
+
 export default {
 	configVersion: 1,
 	id: "next",
@@ -212,7 +215,7 @@ export default {
 				preview: `${pagesBuildRunCommand} && wrangler pages dev`,
 				deploy: `${pagesBuildRunCommand} && wrangler pages deploy`,
 				...(usesTypescript(ctx) && {
-					"cf-typegen": `wrangler types --env-interface CloudflareEnv env.d.ts`,
+					"cf-typegen": `wrangler types --env-interface ${envInterfaceName} ${typesPath}`,
 				}),
 			},
 		};
@@ -221,5 +224,6 @@ export default {
 	previewScript: "preview",
 	deployScript: "deploy",
 	compatibilityFlags: ["nodejs_compat"],
-	typesPath: "./env.d.ts",
+	typesPath,
+	envInterfaceName,
 } as TemplateConfig;

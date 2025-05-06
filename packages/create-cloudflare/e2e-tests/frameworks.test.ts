@@ -176,7 +176,11 @@ describe.concurrent(
 							project.path,
 							logStream,
 						);
-						await verifyBuildCfTypesScript(testConfig, project.path, logStream);
+						await verifyBuildCfTypesScript(
+							frameworkConfig,
+							project.path,
+							logStream,
+						);
 						await verifyBuildScript(testConfig, project.path, logStream);
 					} catch (e) {
 						console.error("ERROR", e);
@@ -353,11 +357,11 @@ const verifyPreviewScript = async (
 };
 
 const verifyBuildCfTypesScript = async (
-	{ verifyBuildCfTypes }: FrameworkTestConfig,
+	{ workersTypes, typesPath, envInterfaceName }: TemplateConfig,
 	projectPath: string,
 	logStream: Writable,
 ) => {
-	if (!verifyBuildCfTypes) {
+	if (workersTypes === "none") {
 		return;
 	}
 
@@ -370,23 +374,27 @@ const verifyBuildCfTypesScript = async (
 
 	await waitForExit(buildTypesProc);
 
-	const { outputFile, envInterfaceName } = verifyBuildCfTypes;
-
-	const outputFileContent = readFile(join(projectPath, outputFile)).split("\n");
+	const outputFileContent = readFile(
+		join(projectPath, typesPath ?? "worker-configuration.d.ts"),
+	).split("\n");
 
 	// the file contains the env interface
 	const hasEnvInterfacePre = outputFileContent.some(
 		(line) =>
 			// old type gen - some framework templates pin older versions of wrangler
-			line === `interface ${envInterfaceName} {` ||
+			line === `interface ${envInterfaceName ?? "Env"} {` ||
 			// new after importable env change
-			line === `interface ${envInterfaceName} extends Cloudflare.Env {}`,
+			line ===
+				`interface ${envInterfaceName ?? "Env"} extends Cloudflare.Env {}`,
 	);
 	expect(hasEnvInterfacePre).toBe(true);
 
-	expect(outputFileContent[2]).match(
-		/\/\/ Runtime types generated with workerd@1\.\d{8}\.\d \d{4}-\d{2}-\d{2} ([a-z_]+,?)*/,
-	);
+	// if the types were installed, only the Env types will be present
+	if (workersTypes === "generated") {
+		expect(outputFileContent[2]).match(
+			/\/\/ Runtime types generated with workerd@1\.\d{8}\.\d \d{4}-\d{2}-\d{2} ([a-z_]+,?)*/,
+		);
+	}
 };
 
 const verifyBuildScript = async (

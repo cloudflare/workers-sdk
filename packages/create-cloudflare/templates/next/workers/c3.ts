@@ -42,6 +42,8 @@ const updateNextConfig = (usesTs: boolean) => {
 	s.stop(`${brandColor(`updated`)} ${dim(`\`${configFile}\``)}`);
 };
 
+const envInterfaceName = "CloudflareBindings";
+const typesPath = "./cloudflare-env.d.ts";
 export default {
 	configVersion: 1,
 	id: "next",
@@ -59,13 +61,13 @@ export default {
 		scripts: {
 			deploy: `opennextjs-cloudflare build && opennextjs-cloudflare deploy`,
 			preview: `opennextjs-cloudflare build && opennextjs-cloudflare preview`,
-			"cf-typegen": `wrangler types --env-interface CloudflareEnv ./cloudflare-env.d.ts`,
+			"cf-typegen": `wrangler types --env-interface ${envInterfaceName} ${typesPath}`,
 		},
 	}),
 	devScript: "dev",
 	previewScript: "preview",
 	deployScript: "deploy",
-
-	typesPath: "./cloudflare-env.d.ts",
+	typesPath,
+	envInterfaceName,
 	compatibilityFlags: ["nodejs_compat"],
 } as TemplateConfig;
