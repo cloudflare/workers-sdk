@@ -3,7 +3,7 @@ import test, { describe } from "node:test";
 import { experimental_startMixedModeSession } from "wrangler";
 
 describe("startMixedModeSession", () => {
-	test("no-op mixed-mode proxyServerWorker", async (t) => {
+	test("simple AI request to the proxyServerWorker", async (t) => {
 		if (
 			!process.env.CLOUDFLARE_ACCOUNT_ID ||
 			!process.env.CLOUDFLARE_API_TOKEN
@@ -11,13 +11,25 @@ describe("startMixedModeSession", () => {
 			return t.skip();
 		}
 
-		const mixedModeSession = await experimental_startMixedModeSession({});
+		const mixedModeSession = await experimental_startMixedModeSession({
+			AI: {
+				type: "ai",
+			},
+		});
 		const proxyServerUrl =
 			mixedModeSession.mixedModeConnectionString.toString();
 		assert.match(proxyServerUrl, /http:\/\/localhost:\d{4,5}\//);
-		assert.strictEqual(
-			await (await fetch(proxyServerUrl)).text(),
-			"no-op mixed-mode proxyServerWorker"
+		assert.match(
+			await (
+				await fetch(proxyServerUrl, {
+					headers: {
+						"MF-Binding-Name": "AI",
+						"MF-URL": "https://workers-binding.ai/ai-api/models/search",
+					},
+				})
+			).text(),
+			// Assert the catalog _at least_ contains a LLama model
+			/Llama/
 		);
 		await mixedModeSession.ready;
 		await mixedModeSession.dispose();
