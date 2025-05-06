@@ -5,8 +5,8 @@ import { experimental_startMixedModeSession } from "wrangler";
 describe("startMixedModeSession", () => {
 	test("simple AI request to the proxyServerWorker", async (t) => {
 		if (
-			!process.env.CLOUDFLARE_ACCOUNT_ID ||
-			!process.env.CLOUDFLARE_API_TOKEN
+			!process.env.TEST_CLOUDFLARE_ACCOUNT_ID ||
+			!process.env.TEST_CLOUDFLARE_API_TOKEN
 		) {
 			return t.skip();
 		}
