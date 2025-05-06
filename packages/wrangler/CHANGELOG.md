@@ -1,5 +1,19 @@
 # wrangler
 
+## 4.14.2
+
+### Patch Changes
+
+- [#9118](https://github.com/cloudflare/workers-sdk/pull/9118) [`1cd30a5`](https://github.com/cloudflare/workers-sdk/commit/1cd30a554f00dfd7bff43bbd3e601bc67f7acb2b) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: remove outdated js-doc comment for `unstable_startDevWorker`'s `entrypoint`
+
+- [#9120](https://github.com/cloudflare/workers-sdk/pull/9120) [`11aa362`](https://github.com/cloudflare/workers-sdk/commit/11aa36255013780bbc8cd45a758a3658f8b0cc9f) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `experimental_startMixedModeSession` no-op utility
+
+  This experimental utility has no effect. More details will be shared as we roll out its functionality.
+
+- [#7423](https://github.com/cloudflare/workers-sdk/pull/7423) [`2be85d7`](https://github.com/cloudflare/workers-sdk/commit/2be85d77dd5eff024568bf6ce2358a1dae74ae2a) Thanks [@penalosa](https://github.com/penalosa)! - Make sure custom build logging output is more clearly signposted, and make sure it doesn't interfere with the interactive dev session output.
+
+- [#9112](https://github.com/cloudflare/workers-sdk/pull/9112) [`3fe85d4`](https://github.com/cloudflare/workers-sdk/commit/3fe85d4882a1f4f4a9438f4d6618399236ee9e26) Thanks [@penalosa](https://github.com/penalosa)! - Warn if the Node.js version is below Node.js 20
+
 ## 4.14.1
 
 ### Patch Changes
