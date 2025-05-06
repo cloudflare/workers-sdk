@@ -3,20 +3,20 @@
 	"private": true,
 	"description": "A test for external dispatch namespaces",
 	"scripts": {
-		"dispatchee": "wrangler dev dispatchee/index.ts --port 8600",
-		"outbound": "wrangler dev outbound/index.ts --port 8601",
-		"dispatcher": "wrangler dev dispatcher/index.ts --port 8602",
-		"pages-dispatcher": "cd pages-dispatcher && npx wrangler pages dev public --port 8603 --dispatch MY_DISPATCH_NAMESPACE=my-namespace@outbound#parameter1,parameter2",
 		"dev": "npx concurrently -s first -k 'npm:dispatchee' 'npm:outbound' 'npm:dispatcher' 'npm:pages-dispatcher'",
-		"test": "vitest run",
+		"dispatchee": "wrangler dev dispatchee/index.ts --port 8600",
+		"dispatcher": "wrangler dev dispatcher/index.ts --port 8602",
+		"outbound": "wrangler dev outbound/index.ts --port 8601",
+		"pages-dispatcher": "cd pages-dispatcher && npx wrangler pages dev public --port 8603 --dispatch MY_DISPATCH_NAMESPACE=my-namespace@outbound#parameter1,parameter2",
+		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc --noEmit"
 	},
 	"devDependencies": {
-		"undici": "^5.28.3",
-		"concurrently": "^8.2.1",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20240405.0",
+		"concurrently": "^8.2.1",
+		"undici": "^5.28.3",
 		"wrangler": "workspace:*"
 	}
 }
