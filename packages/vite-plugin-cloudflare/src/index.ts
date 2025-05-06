@@ -370,10 +370,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				return () => {
 					viteDevServer.middlewares.use(async (req, res, next) => {
-						assert(miniflare, `Miniflare not defined`);
-						const routerWorker = await getRouterWorker(miniflare);
-
 						try {
+							assert(miniflare, `Miniflare not defined`);
+							const routerWorker = await getRouterWorker(miniflare);
+
 							const request = createRequest(req, res);
 							const response = await routerWorker.fetch(
 								toMiniflareRequest(request),
