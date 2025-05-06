@@ -137,6 +137,7 @@ async function resolveDevConfig(
 		bindVectorizeToProd: input.dev?.bindVectorizeToProd ?? false,
 		multiworkerPrimary: input.dev?.multiworkerPrimary,
 		imagesLocalMode: input.dev?.imagesLocalMode ?? false,
+		dispatchNamespace: input.dev?.dispatchNamespace,
 	} satisfies StartDevWorkerOptions["dev"];
 }
 
@@ -445,7 +446,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 					script: input.entrypoint,
 					config: input.config,
 					env: input.env,
-					"dispatch-namespace": undefined,
+					"dispatch-namespace": input.dev?.dispatchNamespace,
 					"legacy-env": !input.legacy?.enableServiceEnvironments,
 					remote: input.dev?.remote,
 					upstreamProtocol:

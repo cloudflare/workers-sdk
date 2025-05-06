@@ -56,6 +56,7 @@ export async function getBoundRegisteredWorkers(
 		services,
 		durableObjects,
 		tailConsumers,
+		dispatchNamespaces,
 	}: {
 		name: string | undefined;
 		services:
@@ -78,7 +79,20 @@ export async function getBoundRegisteredWorkers(
 		durableObjects || { bindings: [] }
 	).bindings.map((durableObjectBinding) => durableObjectBinding.script_name);
 
-	if (serviceNames.length === 0 && durableObjectServices.length === 0) {
+	const dispatchNamespacesNames = (dispatchNamespaces || []).map(
+		(dispatchNamespaceBinding) => dispatchNamespaceBinding.namespace
+	);
+
+	const dispatchOutboundServices = (dispatchNamespaces || []).map(
+		(dispatchNamespaceBinding) => dispatchNamespaceBinding.outbound?.service
+	);
+
+	if (
+		serviceNames.length === 0 &&
+		durableObjectServices.length === 0 &&
+		dispatchNamespacesNames.length === 0 &&
+		dispatchOutboundServices.length === 0
+	) {
 		return {};
 	}
 	const workerDefinitions =
@@ -86,9 +100,13 @@ export async function getBoundRegisteredWorkers(
 
 	const filteredWorkers = Object.fromEntries(
 		Object.entries(workerDefinitions || {}).filter(
-			([key, _value]) =>
+			([key, value]) =>
 				key !== name && // Always exclude current worker to avoid infinite loops
-				(serviceNames.includes(key) || durableObjectServices.includes(key))
+				(serviceNames.includes(key) ||
+					durableObjectServices.includes(key) ||
+					dispatchOutboundServices.includes(key) ||
+					(value.dispatchNamespace &&
+						dispatchNamespacesNames.includes(value.dispatchNamespace)))
 		)
 	);
 	return filteredWorkers;

@@ -573,6 +573,7 @@ async function setupDevEnv(
 				bindVectorizeToProd: args.experimentalVectorizeBindToProd,
 				imagesLocalMode: args.experimentalImagesLocalMode,
 				multiworkerPrimary: args.multiworkerPrimary,
+				dispatchNamespace: args.dispatchNamespace,
 			},
 			legacy: {
 				site: (configParam) => {

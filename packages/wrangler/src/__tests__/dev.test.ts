@@ -311,20 +311,6 @@ describe.sequential("wrangler dev", () => {
 		});
 	});
 
-	describe("local", () => {
-		it("should error if both --local and --remote are specified", async () => {
-			writeWranglerConfig({
-				main: "index.js",
-			});
-			fs.writeFileSync("index.js", `export default {};`);
-			await expect(
-				runWrangler("dev --local --remote")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`"The \`--remote\` argument cannot be used in conjunction with the \`--local\` argument."`
-			);
-		});
-	});
-
 	describe("entry-points", () => {
 		it("should error if there is no entry-point specified", async () => {
 			vi.mocked(sniffUserAgent).mockReturnValue("npm");

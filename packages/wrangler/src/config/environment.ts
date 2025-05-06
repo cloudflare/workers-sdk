@@ -465,7 +465,7 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
-	 * @default `undefined`
+	 * @default undefined
 	 * @nonInheritable
 	 */
 	dispatch_namespace: string | undefined;
