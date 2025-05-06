@@ -6,7 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { ChildProcess } from "child_process";
 import type { RequestInfo, RequestInit, Response } from "undici";
-import type { UnstableDevWorker } from "wrangler";
+import type { Unstable_DevWorker } from "wrangler";
 
 const waitUntilReady = async (
 	input: RequestInfo,
@@ -33,29 +33,29 @@ type WranglerInstance = {
 };
 
 describe("external-dispatch-namespace-app", () => {
-	let dispatchee: UnstableDevWorker;
-	let outbound: UnstableDevWorker;
-	let dispatcher: UnstableDevWorker;
+	let dispatchee: Unstable_DevWorker;
+	let outbound: Unstable_DevWorker;
+	let dispatcher: Unstable_DevWorker;
 	let pagesDispatcher: WranglerInstance;
 
 	beforeAll(async () => {
 		dispatchee = await unstable_dev(
 			path.join(__dirname, "../dispatchee/index.ts"),
 			{
-				config: path.join(__dirname, "../dispatchee/wrangler.toml"),
+				config: path.join(__dirname, "../dispatchee/wrangler.jsonc"),
 				dispatchNamespace: "my-namespace",
 			}
 		);
 		outbound = await unstable_dev(
 			path.join(__dirname, "../outbound/index.ts"),
 			{
-				config: path.join(__dirname, "../outbound/wrangler.toml"),
+				config: path.join(__dirname, "../outbound/wrangler.jsonc"),
 			}
 		);
 		dispatcher = await unstable_dev(
 			path.join(__dirname, "../dispatcher/index.ts"),
 			{
-				config: path.join(__dirname, "../dispatcher/wrangler.toml"),
+				config: path.join(__dirname, "../dispatcher/wrangler.jsonc"),
 			}
 		);
 		pagesDispatcher = await getWranglerInstance({
