@@ -300,7 +300,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: ^4.20240405.0
-        version: 4.20250428.0
+        version: 4.20250506.0
       concurrently:
         specifier: ^8.2.1
         version: 8.2.2
