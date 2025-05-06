@@ -7,6 +7,7 @@
 		"build:custom-output-directories": "vite build --app -c ./vite.config.custom-output-directories.ts",
 		"check:types": "tsc --build",
 		"dev": "vite dev",
+		"dev:https": "vite dev -c ./vite.config.https.ts",
 		"preview": "vite preview",
 		"preview:custom-output-directories": "vite preview -c ./vite.config.custom-output-directories.ts"
 	},
@@ -20,6 +21,7 @@
 		"@cloudflare/workers-types": "^4.20250507.0",
 		"@types/react": "^19.0.0",
 		"@types/react-dom": "^19.0.0",
+		"@vitejs/plugin-basic-ssl": "^2.0.0",
 		"@vitejs/plugin-react": "^4.3.4",
 		"typescript": "catalog:default",
 		"vite": "catalog:vite-plugin",

@@ -96,7 +96,7 @@ beforeAll(async (s) => {
 	}
 
 	browser = await chromium.connect(wsEndpoint);
-	page = await browser.newPage();
+	page = await browser.newPage({ ignoreHTTPSErrors: true });
 
 	const globalConsole = console;
 	const warn = globalConsole.warn;
