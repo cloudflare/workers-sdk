@@ -5,11 +5,13 @@
 	"scripts": {
 		"build": "vite build --app",
 		"build:custom-output-directories": "vite build --app -c ./vite.config.custom-output-directories.ts",
+		"build:https": "vite build --app -c ./vite.config.https.ts",
 		"check:types": "tsc --build",
 		"dev": "vite dev",
 		"dev:https": "vite dev -c ./vite.config.https.ts",
 		"preview": "vite preview",
-		"preview:custom-output-directories": "vite preview -c ./vite.config.custom-output-directories.ts"
+		"preview:custom-output-directories": "vite preview -c ./vite.config.custom-output-directories.ts",
+		"preview:https": "vite preview -c ./vite.config.https.ts"
 	},
 	"dependencies": {
 		"react": "^19.0.0",

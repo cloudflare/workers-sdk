@@ -415,10 +415,17 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					() => miniflare.dispatchFetch
 				);
 
-				const requestListener = createRequestListener((request) => {
-					return miniflare.dispatchFetch(toMiniflareRequest(request), {
-						redirect: "manual",
-					}) as any;
+				const requestListener = createRequestListener(async (request) => {
+					const response = (await miniflare.dispatchFetch(
+						toMiniflareRequest(request),
+						{
+							redirect: "manual",
+						}
+					)) as any;
+
+					console.log(response.headers);
+
+					return response;
 				});
 
 				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
