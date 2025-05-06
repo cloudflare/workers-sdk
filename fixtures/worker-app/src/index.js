@@ -1,3 +1,4 @@
+import { WorkerEntrypoint } from "cloudflare:workers";
 import cookie from "cookie";
 import { randomBytes } from "isomorphic-random-example";
 import { now } from "./dep";
@@ -18,7 +19,7 @@ function hexEncode(array) {
 		.join("");
 }
 
-export default {
+export default class E extends WorkerEntrypoint {
 	async fetch(request, env) {
 		console.log("request log");
 
@@ -26,10 +27,10 @@ export default {
 		if (pathname.startsWith("/fav"))
 			return new Response("Not found", { status: 404 });
 		if (pathname === "/version_metadata") return Response.json(env.METADATA);
-		if (pathname === "/random") return new Response(hexEncode(randomBytes(8)));
-		if (pathname === "/error") throw new Error("Oops!");
+		if (pathname === "/app") return new Response(hexEncode(randomBytes(8)));
+		if (pathname === "/a") throw new Error("Oops!");
 		if (pathname === "/redirect") return Response.redirect(`${origin}/foo`);
-		if (pathname === "/cookie")
+		if (pathname === "/app")
 			return new Response("", {
 				headers: [
 					[
@@ -88,7 +89,7 @@ export default {
 				"Host"
 			)} ORIGIN:${request.headers.get("Origin")}`
 		);
-	},
+	}
 
 	/**
 	 * Handle a scheduled event.
@@ -100,8 +101,12 @@ export default {
 	scheduled(event, env, ctx) {
 		ctx.waitUntil(Promise.resolve(event.scheduledTime));
 		ctx.waitUntil(Promise.resolve(event.cron));
-	},
+	}
+	foo(n) {
+		return n + 1;
+	}
+
 	tail(events) {
 		console.log("tails", { events });
-	},
-};
+	}
+}

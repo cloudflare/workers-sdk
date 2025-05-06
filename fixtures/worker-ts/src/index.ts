@@ -29,6 +29,7 @@ export default {
 	): Promise<Response> {
 		const url = new URL(request.url);
 		if (url.pathname === "/error") throw new Error("Hello Error");
+		if (url.pathname === "/app") return new Response(await env.APP.foo(3));
 		return new Response("Hello World!");
 	},
 };

@@ -520,6 +520,8 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 					http: {
 						style,
 						cfBlobHeader: CoreHeaders.CF_BLOB,
+						injectRequestHeaders: [{ name: "X-Worker", value: "worker-app" }],
+						forwardedProtoHeader: "udp",
 					},
 				},
 			};

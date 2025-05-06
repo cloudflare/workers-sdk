@@ -31,7 +31,7 @@ const HttpOptionsSchema = z
 	})
 	.transform((options) => ({
 		...options,
-		capnpConnectHost: HOST_CAPNP_CONNECT,
+		capnpConnectHost: HOST_CAPNP_CONNECT + "-my-worker",
 	}));
 
 const TlsOptionsKeypairSchema = z.object({
