@@ -1935,7 +1935,7 @@ export class Miniflare {
 
 	dispatchFetch: DispatchFetch = async (input, init) => {
 		this.#checkDisposed();
-		await this.#waitForReady();
+		await this.ready;
 
 		assert(this.#runtimeEntryURL !== undefined);
 		assert(this.#runtimeDispatcher !== undefined);
@@ -2222,7 +2222,14 @@ export class Miniflare {
 
 			// Close the inspector proxy server if there is one
 			await this.#maybeInspectorProxyController?.dispose();
-
+			// Unregister workers from dev registry
+			await Promise.allSettled(
+				this.#workerOpts.map(async (opts) => {
+					if (opts.core.name) {
+						await this.#devRegistry?.unregister(opts.core.name);
+					}
+				})
+			);
 			// Remove from instance registry as last step in `finally`, to make sure
 			// all dispose steps complete
 			maybeInstanceRegistry?.delete(this);
