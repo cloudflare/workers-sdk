@@ -69,5 +69,4 @@ export default {
 	deployScript: "deploy",
 	typesPath,
 	envInterfaceName,
-	compatibilityFlags: ["nodejs_compat"],
 } as TemplateConfig;

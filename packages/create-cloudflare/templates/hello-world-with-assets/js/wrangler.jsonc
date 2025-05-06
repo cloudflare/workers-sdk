@@ -3,7 +3,8 @@
   "main": "src/index.js",
   "compatibility_date": "<TBD>",
   "compatibility_flags": [
-    "nodejs_compat"
+    "nodejs_compat",
+    "global_fetch_strictly_public"
   ],
   "assets": {
     "binding": "ASSETS",
