@@ -7,36 +7,36 @@ const assert = require("assert");
 
 const mode = process.argv[2];
 
+// We need to run a Wrangler command that will cause the warning banner to be shown.
+// (`wrangler help` does not do this.)
 const wranglerProcess = spawn(
 	"node",
-	[path.join(__dirname, "../../bin/wrangler.js"), "help"],
+	[path.join(__dirname, "../../bin/wrangler.js"), "whoami"],
 	{ stdio: "pipe" }
 );
 
-const messageToMatch = "Wrangler requires at least Node.js v";
+const messageToMatch = /Wrangler requires at least Node\.js v\d+/;
 
 wranglerProcess.once("exit", (code) => {
 	try {
 		if (mode === "error") {
 			const errorMessage = wranglerProcess.stderr.read().toString();
 
-			assert(code === 1, "Expected exit code 1");
-			assert(
-				errorMessage.includes(messageToMatch),
+			assert.equal(code, 1, "Expected exit code 1");
+			assert.match(
+				errorMessage,
+				messageToMatch,
 				`Expected error message to include "${messageToMatch}"`
 			);
 		} else {
 			const warningMessage = wranglerProcess.stderr.read().toString();
 
-			assert(code === 1, "Expected exit code 1");
-			assert(
-				warningMessage.includes(messageToMatch),
+			// Wrangler should only warn, and so validate that the process exits cleanly
+			assert.equal(code, 0, "Expected exit code 0");
+			assert.match(
+				warningMessage,
+				messageToMatch,
 				`Expected error message to include "${messageToMatch}"`
-			);
-			// Wrangler should only warn, and so validate that the help text was shown
-			assert(
-				warningMessage.includes("Show help"),
-				`Expected error message to include "Show help"`
 			);
 		}
 	} catch (err) {
