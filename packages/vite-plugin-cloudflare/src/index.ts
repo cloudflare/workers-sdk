@@ -2,7 +2,11 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { createMiddleware } from "@hattip/adapter-node";
+import {
+	createRequest,
+	createRequestListener,
+	sendResponse,
+} from "@mjackson/node-fetch-server";
 import replace from "@rollup/plugin-replace";
 import MagicString from "magic-string";
 import { Miniflare } from "miniflare";
@@ -354,18 +358,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
 
-				const middleware = createMiddleware(
-					async ({ request }) => {
-						assert(miniflare, `Miniflare not defined`);
-						const routerWorker = await getRouterWorker(miniflare);
-
-						return routerWorker.fetch(toMiniflareRequest(request), {
-							redirect: "manual",
-						}) as any;
-					},
-					{ alwaysCallNext: false }
-				);
-
 				// The HTTP server is not available in middleware mode
 				if (viteDevServer.httpServer) {
 					handleWebSocket(viteDevServer.httpServer, async () => {
@@ -377,8 +369,23 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 
 				return () => {
-					viteDevServer.middlewares.use((req, res, next) => {
-						middleware(req, res, next);
+					viteDevServer.middlewares.use(async (req, res) => {
+						assert(miniflare, `Miniflare not defined`);
+						const routerWorker = await getRouterWorker(miniflare);
+
+						const request = createRequest(req, res);
+						const response = await routerWorker.fetch(
+							toMiniflareRequest(request),
+							{
+								redirect: "manual",
+							}
+						);
+
+						if (req.httpVersionMajor === 2) {
+							response.headers.delete("transfer-encoding");
+						}
+
+						await sendResponse(res, response as any);
 					});
 				};
 			},
@@ -399,23 +406,20 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					)
 				);
 
-				const middleware = createMiddleware(
-					({ request }) => {
-						return miniflare.dispatchFetch(toMiniflareRequest(request), {
-							redirect: "manual",
-						}) as any;
-					},
-					{ alwaysCallNext: false }
-				);
-
 				handleWebSocket(
 					vitePreviewServer.httpServer,
 					() => miniflare.dispatchFetch
 				);
 
+				const requestListener = createRequestListener((request) => {
+					return miniflare.dispatchFetch(toMiniflareRequest(request), {
+						redirect: "manual",
+					}) as any;
+				});
+
 				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
-				vitePreviewServer.middlewares.use((req, res, next) => {
-					middleware(req, res, next);
+				vitePreviewServer.middlewares.use((req, res) => {
+					requestListener(req, res);
 				});
 			},
 		},
