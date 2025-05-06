@@ -2348,12 +2348,13 @@ test.only("Miniflare: dev registry", async (t) => {
 		modules: true,
 		script: `
 			import { WorkerEntrypoint } from "cloudflare:workers";
-			export default class TestEntrypoint extends WorkerEntrypoint {
+			export class TestEntrypoint extends WorkerEntrypoint {
 				ping() { return "pong"; }
 			}
 		`,
 		unsafeDirectSockets: [
 			{
+				entrypoint: "TestEntrypoint",
 				proxy: true,
 			},
 		],
@@ -2368,7 +2369,7 @@ test.only("Miniflare: dev registry", async (t) => {
 		serviceBindings: {
 			SERVICE: {
 				name: "worker-a",
-				props: {},
+				entrypoint: "TestEntrypoint",
 			},
 		},
 		compatibilityFlags: ["experimental"],

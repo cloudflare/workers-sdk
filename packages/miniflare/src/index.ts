@@ -1114,11 +1114,12 @@ export class Miniflare {
 		}).then((server) => {
 			const proxy = net.createServer((socket) => {
 				let connectedWorker = "";
+				let entrypoint: string | undefined;
 				let serverSocket: net.Socket;
 
-				socket.addListener("data", async (d: any) => {
+				socket.addListener("data", async (d: Buffer) => {
 					if (!connectedWorker && !serverSocket) {
-						let chunk = d.toString();
+						const chunk = d.toString();
 						let buffer;
 						if (chunk.startsWith("CONNECT")) {
 							// this is a JSRPC connection, get the worker name from the capnpConnectHost
@@ -1126,10 +1127,11 @@ export class Miniflare {
 							const workerName = chunk.match(
 								/CONNECT miniflare-unsafe-internal-capnp-connect-(.+) HTTP\/1\.1/
 							);
-							console.log(chunk);
-							connectedWorker = workerName[1];
+							assert(workerName !== null);
+							const serviceEntrypoint = workerName[1];
+							[connectedWorker, entrypoint] = serviceEntrypoint.split(".");
 
-							buffer = Buffer.alloc(d.length - connectedWorker.length - 1);
+							buffer = Buffer.alloc(d.length - serviceEntrypoint.length - 1);
 							d.copy(
 								buffer,
 								0,
@@ -1140,31 +1142,36 @@ export class Miniflare {
 								buffer,
 								"CONNECT miniflare-unsafe-internal-capnp-connect".length,
 								"CONNECT miniflare-unsafe-internal-capnp-connect".length +
-									connectedWorker.length +
+									serviceEntrypoint.length +
 									1
 							);
 						} else {
 							// this is an HTTP connection, get the worker name from the X-Worker header
 							const workerName = chunk.match(/X-Worker: (.+)\r\n/);
+							assert(workerName !== null);
 							connectedWorker = workerName[1];
 
 							buffer = d;
 						}
-						console.log("Proxying to address of Worker", connectedWorker);
-						// TODO: look up this address dynamically in the dev registry
 
 						const registry = await this.#devRegistry?.refresh();
 						// Pick the default entrypoint address for now
 						const address =
-							registry?.[connectedWorker]?.entrypointAddresses?.["default"];
+							registry?.[connectedWorker]?.entrypointAddresses?.[
+								entrypoint ?? "default"
+							];
+
+						console.log(
+							"Proxying to address of Worker",
+							connectedWorker,
+							address
+						);
 
 						if (!address) {
 							throw new Error(
 								`No address found for the default entrypoint of "${connectedWorker}"`
 							);
 						}
-
-						console.log("Registry address", address);
 
 						serverSocket = net.connect(address.port, address.host, () => {
 							serverSocket.write(buffer);
@@ -1238,7 +1245,7 @@ export class Miniflare {
 										// TODO: To support service workers format
 										// style: HttpOptions_Style.HOST,
 										cfBlobHeader: CoreHeaders.CF_BLOB,
-										capnpConnectHost: `${HOST_CAPNP_CONNECT}-${service.name}`,
+										capnpConnectHost: `${HOST_CAPNP_CONNECT}-${service.name}.${service.entrypoint ?? "default"}`,
 									},
 								},
 							};
@@ -1738,6 +1745,13 @@ export class Miniflare {
 			const devRegistry = this.#devRegistry;
 
 			if (devRegistry) {
+				const protocol = url.protocol.substring(0, url.protocol.length - 1);
+
+				assert(
+					protocol === "http" || protocol === "https",
+					"Expected protocol to be http or https"
+				);
+
 				await Promise.all(
 					this.#workerOpts.map(async (workerOpts) => {
 						if (!workerOpts.core.name) {
@@ -1760,10 +1774,12 @@ export class Miniflare {
 						);
 
 						await devRegistry.register(workerOpts.core.name, {
-							protocol: "http",
-							host: undefined,
-							port: undefined,
-							mode: "local",
+							protocol,
+							// These host and port values are used only when the registered definition
+							// does not include direct entrypoint (i.e. old wrangler version) or uses service-worker syntax.
+							// See https://github.com/cloudflare/workers-sdk/blob/8cdabe23fcc2813f970db02928b016bbf3b155e5/packages/wrangler/src/dev/miniflare.ts#L506-L507
+							host: url.hostname,
+							port: parseInt(url.port),
 							entrypointAddresses: Object.fromEntries(
 								addresses.map(({ entrypoint, host, port }) => [
 									entrypoint ?? "default",
@@ -1773,7 +1789,36 @@ export class Miniflare {
 									},
 								]) ?? []
 							),
-							durableObjects: [],
+							durableObjects: Object.entries(
+								workerOpts.do.durableObjects ?? {}
+							).reduce<Array<{ name: string; className: string }>>(
+								(result, [bindingName, binding]) => {
+									if (
+										// If the binding is defined as a string, it must be internal
+										typeof binding === "string"
+									) {
+										result.push({
+											name: bindingName,
+											className: binding,
+										});
+									} else if (
+										// If the script name is undefined, it is defaults to the current worker
+										binding.scriptName === undefined ||
+										// Otherwise, check if it matches any of the worker names
+										this.#workerOpts.find(
+											(opts) => binding.scriptName === opts.core.name
+										)
+									) {
+										result.push({
+											name: bindingName,
+											className: binding.className,
+										});
+									}
+
+									return result;
+								},
+								[]
+							),
 						});
 					})
 				);
