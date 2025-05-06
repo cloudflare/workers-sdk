@@ -73,7 +73,6 @@
 			"@types/react-tabs>@types/react": "^18",
 			"@types/react-transition-group>@types/react": "^18",
 			"@cloudflare/elements>@types/react": "^18",
-			"capnpc-ts>typescript": "4.2.4",
 			"@types/node": "$@types/node",
 			"vitest>vite": "^5.0.0"
 		},
