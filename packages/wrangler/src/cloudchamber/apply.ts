@@ -543,7 +543,6 @@ export async function apply(
 				printLine(el, "  ");
 			});
 
-		// temporarily set instances to 0 if set
 		const configToPush = { ...appConfig };
 
 		// add to the actions array to create the app later

@@ -2,7 +2,6 @@ import assert from "node:assert";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getDefaultRegistry } from "../src/cloudchamber/build";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -935,7 +934,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 						[[containers]]
 						name = "e2e-test-${workerName}"
 						class_name = "MyDurableObject"
-						image = "${getDefaultRegistry()}/e2e-test:1.0"
+						image = "registry.cloudchamber.cfdata.org/e2e-test:1.0"
 						max_instances = 1
 
 						[[migrations]]
@@ -1007,7 +1006,8 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 					},
 
 					// big timeout for containers
-					{ timeout: 250_000, interval: 1000 }
+					// (3m)
+					{ timeout: 60 * 3 * 1000, interval: 1000 }
 				);
 			} finally {
 				await helper.run(
