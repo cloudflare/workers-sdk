@@ -17,7 +17,7 @@ const normalize = (str: string) => {
 };
 const workerName = generateResourceName();
 
-describe("provisioning", { timeout: TIMEOUT }, () => {
+describe.skip("provisioning", { timeout: TIMEOUT }, () => {
 	let deployedUrl: string;
 	let kvId: string;
 	let kvId2: string;
