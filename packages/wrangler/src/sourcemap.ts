@@ -265,10 +265,6 @@ class CallSite implements NodeJS.CallSite {
 	getPosition(): number {
 		throw new Error("Method not implemented.");
 	}
-	toString(): string {
-		throw new Error("Method not implemented.");
-	}
-
 	getThis(): unknown {
 		return null;
 	}
