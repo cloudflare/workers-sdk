@@ -1,5 +1,33 @@
 # create-cloudflare
 
+## 2.46.2
+
+### Patch Changes
+
+- [#9136](https://github.com/cloudflare/workers-sdk/pull/9136) [`5b0c9c9`](https://github.com/cloudflare/workers-sdk/commit/5b0c9c9485e6801241f4bedcf2bca026c8baa585) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-astro | 4.11.3 | 4.11.4 |
+
+- [#9137](https://github.com/cloudflare/workers-sdk/pull/9137) [`81163a3`](https://github.com/cloudflare/workers-sdk/commit/81163a399f05260711a804a40fd1a022e315b391) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To      |
+  | --------------- | ------ | ------- |
+  | @angular/create | 19.2.9 | 19.2.10 |
+
+- [#9138](https://github.com/cloudflare/workers-sdk/pull/9138) [`c2d249d`](https://github.com/cloudflare/workers-sdk/commit/c2d249d698fabc6249d2b400d175f7549e2c4e92) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 7.5.2 | 7.5.3 |
+
 ## 2.46.1
 
 ### Patch Changes
