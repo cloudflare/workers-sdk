@@ -1,4 +1,3 @@
-import { applyCommand, applyCommandOptionalYargs } from "../cloudchamber/apply";
 import {
 	buildCommand,
 	buildYargs,
@@ -37,12 +36,6 @@ export const containers = (
 			"push a tagged image to a Cloudflare managed registry, which is automatically integrated with your account",
 			(args) => pushYargs(args),
 			(args) => handleFailure(pushCommand, containersScope)(args)
-		)
-		.command(
-			"apply",
-			"apply the changes in the container applications to deploy",
-			(args) => applyCommandOptionalYargs(args),
-			(args) => handleFailure(applyCommand, containersScope)(args)
 		)
 		.command(
 			"images",
