@@ -17,9 +17,9 @@ Your worker has access to the following bindings:
   - D1_BINDING_2_TOML: D1_NAME_2_TOML (D1_ID_2_TOML) [simulated locally]
   - D1_BINDING_3_ARGS: local-D1_BINDING_3_ARGS=D1_NAME_3_ARGS (D1_NAME_3_ARGS) [simulated locally]
 - R2 Buckets:
-  - R2_BINDING_1_TOML: NEW_R2_BUCKET_1 [simulated locally]
-  - R2_BINDING_2_TOML: R2_BUCKET_2_TOML [simulated locally]
-  - R2_BINDING_3_TOML: R2_BUCKET_3_ARGS [simulated locally]
+  - R2_BINDING_1_TOML: new-r2-bucket-1 [simulated locally]
+  - R2_BINDING_2_TOML: r2-bucket-2-toml [simulated locally]
+  - R2_BINDING_3_TOML: r2-bucket-3-args [simulated locally]
 - Services:
   - SERVICE_BINDING_1_TOML: NEW_SERVICE_NAME_1 [not connected]
   - SERVICE_BINDING_2_TOML: SERVICE_NAME_2_TOML [not connected]

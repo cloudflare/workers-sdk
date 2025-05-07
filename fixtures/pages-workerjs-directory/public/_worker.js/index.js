@@ -42,7 +42,7 @@ export default {
 		}
 
 		if (pathname === "/r2") {
-			await env.R2.put("key", "value");
+			await env.r2bucket.put("key", "value");
 
 			await env.R2_REF.put("key", "value");
 

@@ -73,7 +73,7 @@ export const mswR2handlers = [
 			HttpResponse.json(
 				createFetchResult({
 					accountId: "some-account-id",
-					bucketName: "bucketName-object-test",
+					bucketName: "bucket-object-test",
 					objectName: "wormhole-img.png",
 				})
 			),
