@@ -94,6 +94,8 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 							unsafePreventEviction: true,
 						},
 					},
+					// Miniflare will strip CF-Connecting-IP from outgoing fetches from a Worker (to fix https://github.com/cloudflare/workers-sdk/issues/7924)
+					// However, the proxy worker only makes outgoing requests to the user Worker Miniflare instance, which _should_ receive CF-Connecting-IP
 					stripCfConnectingIp: false,
 					serviceBindings: {
 						PROXY_CONTROLLER: async (req): Promise<Response> => {
