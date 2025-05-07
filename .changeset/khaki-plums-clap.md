@@ -6,7 +6,7 @@ This adds support for more accurate types for service bindings when running `wra
 
 ```ts
 interface Env {
-  SERVICE_BINDING: Fetcher
+	SERVICE_BINDING: Fetcher;
 }
 ```
 
@@ -14,6 +14,6 @@ This type was "correct", but didn't capture the possibility of using JSRPC to co
 
 ```ts
 interface Env {
-  SERVICE_BINDING: Service<import("../service/src/index").Entrypoint>;
+	SERVICE_BINDING: Service<import("../service/src/index").Entrypoint>;
 }
 ```

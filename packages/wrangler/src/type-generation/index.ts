@@ -140,7 +140,7 @@ export const typesCommand = createCommand({
 			);
 		}
 
-		const serviceEntries: Map<string, Entry> = new Map();
+		const secondaryEntries: Map<string, Entry> = new Map();
 
 		if (secondaryConfigs.length > 0) {
 			for (const secondaryConfig of secondaryConfigs) {
@@ -148,20 +148,20 @@ export const typesCommand = createCommand({
 
 				if (serviceEntry.name) {
 					const key = serviceEntry.name;
-					if (serviceEntries.has(key)) {
+					if (secondaryEntries.has(key)) {
 						logger.warn(
 							`Configuration file for Worker '${key}' has been passed in more than once using \`--config\`. To remove this warning, only pass each unique Worker config file once.`
 						);
 					}
-					serviceEntries.set(key, serviceEntry);
+					secondaryEntries.set(key, serviceEntry);
 					logger.log(
 						chalk.dim(
 							`- Found Worker '${key}' at '${relative(process.cwd(), serviceEntry.file)}' (${secondaryConfig.configPath})`
 						)
 					);
 				} else {
-					logger.warn(
-						`Could not resolve entry point for service config '${secondaryConfig}'. Types may be incomplete.`
+					throw new UserError(
+						`Could not resolve entry point for service config '${secondaryConfig}'.`
 					);
 				}
 			}
@@ -194,7 +194,7 @@ export const typesCommand = createCommand({
 				envInterface,
 				outputPath,
 				entrypoint,
-				serviceEntries
+				secondaryEntries
 			);
 			if (envHeader && envTypes) {
 				header.push(envHeader);

@@ -122,12 +122,12 @@ const bindingsConfigMock: Omit<
 			{ name: "DURABLE_RE_EXPORT", class_name: "DurableReexport" },
 			{ name: "DURABLE_NO_EXPORT", class_name: "DurableNoexport" },
 			{
-				name: "DURABLE_EXTERNAL",
+				name: "DURABLE_EXTERNAL_UNKNOWN_ENTRY",
 				class_name: "DurableExternal",
 				script_name: "external-worker",
 			},
 			{
-				name: "REAL_DURABLE_EXTERNAL",
+				name: "DURABLE_EXTERNAL_PROVIDED_ENTRY",
 				class_name: "RealDurableExternal",
 				script_name: "service_name_2",
 			},
@@ -438,8 +438,8 @@ describe("generate types", () => {
 					DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
 					DURABLE_RE_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableReexport>;
 					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
-					DURABLE_EXTERNAL: DurableObjectNamespace /* DurableExternal from external-worker */;
-					REAL_DURABLE_EXTERNAL: DurableObjectNamespace /* RealDurableExternal from service_name_2 */;
+					DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
+					DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace /* RealDurableExternal from service_name_2 */;
 					R2_BUCKET_BINDING: R2Bucket;
 					D1_TESTING_SOMETHING: D1Database;
 					SECRET: SecretsStoreSecret;
@@ -531,8 +531,8 @@ describe("generate types", () => {
 					DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
 					DURABLE_RE_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableReexport>;
 					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
-					DURABLE_EXTERNAL: DurableObjectNamespace /* DurableExternal from external-worker */;
-					REAL_DURABLE_EXTERNAL: DurableObjectNamespace /* RealDurableExternal from service_name_2 */;
+					DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
+					DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace /* RealDurableExternal from service_name_2 */;
 					R2_BUCKET_BINDING: R2Bucket;
 					D1_TESTING_SOMETHING: D1Database;
 					SECRET: SecretsStoreSecret;
@@ -688,8 +688,8 @@ describe("generate types", () => {
 					DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
 					DURABLE_RE_EXPORT: DurableObjectNamespace /* DurableReexport */;
 					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
-					DURABLE_EXTERNAL: DurableObjectNamespace /* DurableExternal from external-worker */;
-					REAL_DURABLE_EXTERNAL: DurableObjectNamespace<import(\\"../c/index\\").RealDurableExternal>;
+					DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
+					DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace<import(\\"../c/index\\").RealDurableExternal>;
 					R2_BUCKET_BINDING: R2Bucket;
 					D1_TESTING_SOMETHING: D1Database;
 					SECRET: SecretsStoreSecret;
