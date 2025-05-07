@@ -3,17 +3,13 @@ import { getBasePath } from "../../paths";
 import { requireApiToken, requireAuth } from "../../user";
 import { startWorker } from "../startDevWorker";
 import type { StartDevWorkerInput, Worker } from "../startDevWorker/types";
+import type { MixedModeConnectionString } from "miniflare";
 
 type BindingsOpt = StartDevWorkerInput["bindings"];
 
 type MixedModeSession = Pick<Worker, "ready" | "dispose"> & {
 	["setConfig"]: (bindings: BindingsOpt) => Promise<void>;
 	["mixedModeConnectionString"]: MixedModeConnectionString;
-};
-
-declare const __brand: unique symbol;
-export type MixedModeConnectionString = Awaited<Worker["url"]> & {
-	[__brand]: "MixedModeConnectionString";
 };
 
 export async function startMixedModeSession(

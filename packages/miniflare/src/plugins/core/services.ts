@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { Request, Response } from "../../http";
-import { HOST_CAPNP_CONNECT, Miniflare } from "../../index";
+import {
+	HOST_CAPNP_CONNECT,
+	Miniflare,
+	MixedModeConnectionString,
+} from "../../index";
 import {
 	ExternalServer,
 	HttpOptions_Style,
@@ -91,6 +95,7 @@ export const ServiceDesignatorSchema = z.union([
 		name: z.union([z.string(), z.literal(kCurrentWorker)]),
 		entrypoint: z.ostring(),
 		props: z.record(z.unknown()).optional(),
+		mixedModeConnectionString: z.custom<MixedModeConnectionString>().optional(),
 	}),
 	z.object({ network: NetworkSchema }),
 	z.object({ external: ExternalServerSchema }),
