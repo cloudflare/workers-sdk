@@ -599,9 +599,17 @@ function shorten(query: string | undefined, length: number) {
 }
 
 async function checkForSQLiteBinary(filename: string) {
-	const fd = await fs.open(filename, "r");
 	const buffer = Buffer.alloc(15);
-	await fd.read(buffer, 0, 15);
+
+	try {
+		const fd = await fs.open(filename, "r");
+		await fd.read(buffer, 0, 15);
+	} catch (e) {
+		throw new UserError(
+			`Unable to read SQL text file "${filename}". Please check the file path and try again.`
+		);
+	}
+
 	if (buffer.toString("utf8") === "SQLite format 3") {
 		throw new UserError(
 			"Provided file is a binary SQLite database file instead of an SQL text file. The execute command can only process SQL text files. Please export an SQL file from your SQLite database and try again."

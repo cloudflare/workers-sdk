@@ -137,6 +137,24 @@ describe("execute", () => {
 			)
 		);
 	});
+
+	it("should throw a UserError if file does not exist", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+
+		await expect(runWrangler(`d1 execute db --file missing.sql --local --json`))
+			.rejects.toThrowErrorMatchingInlineSnapshot(`
+			[Error: {
+			  "error": {
+			    "text": "Unable to read SQL text file /"missing.sql/". Please check the file path and try again."
+			  }
+			}]
+		`);
+	});
 });
 
 function useSentry() {
