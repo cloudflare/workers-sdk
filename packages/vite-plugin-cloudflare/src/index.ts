@@ -2,11 +2,7 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import {
-	createRequest,
-	createRequestListener,
-	sendResponse,
-} from "@mjackson/node-fetch-server";
+import { createRequest, sendResponse } from "@mjackson/node-fetch-server";
 import replace from "@rollup/plugin-replace";
 import MagicString from "magic-string";
 import { Miniflare } from "miniflare";
@@ -415,22 +411,23 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					() => miniflare.dispatchFetch
 				);
 
-				const requestListener = createRequestListener(async (request) => {
-					const response = (await miniflare.dispatchFetch(
-						toMiniflareRequest(request),
-						{
-							redirect: "manual",
-						}
-					)) as any;
-
-					console.log(response.headers);
-
-					return response;
-				});
-
 				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
-				vitePreviewServer.middlewares.use((req, res) => {
-					requestListener(req, res);
+				vitePreviewServer.middlewares.use(async (req, res, next) => {
+					try {
+						const request = createRequest(req, res);
+						const response = await miniflare.dispatchFetch(
+							toMiniflareRequest(request),
+							{ redirect: "manual" }
+						);
+
+						if (req.httpVersionMajor === 2) {
+							response.headers.delete("transfer-encoding");
+						}
+
+						await sendResponse(res, response as any);
+					} catch (error) {
+						next(error);
+					}
 				});
 			},
 		},
