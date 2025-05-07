@@ -2,6 +2,7 @@ import { formatConfigSnippet } from "../../config";
 import { createCommand } from "../../core/create-command";
 import { FatalError, UserError } from "../../errors";
 import { logger } from "../../logger";
+import { isValidR2BucketName } from "../../r2/helpers";
 import { requireAuth } from "../../user";
 import { getValidBindingName } from "../../utils/getValidBindingName";
 import { createPipeline } from "../client";
@@ -157,6 +158,10 @@ export const pipelinesCreateCommand = createCommand({
 
 	async handler(args, { config }) {
 		const bucket = args.r2Bucket;
+		if (!isValidR2BucketName(bucket)) {
+			`The bucket name "${bucket}" is invalid. ` +
+				"Bucket names must begin and end with an alphanumeric, only contain letters (a-z), numbers (0-9), and hyphens (-), and be between 3 and 63 characters long.";
+		}
 		const name = args.pipeline;
 		const compression = args.compression;
 
@@ -182,7 +187,7 @@ export const pipelinesCreateCommand = createCommand({
 				},
 				batch: batch,
 				path: {
-					bucket: bucket,
+					bucket,
 				},
 				credentials: {
 					endpoint: getAccountR2Endpoint(accountId),

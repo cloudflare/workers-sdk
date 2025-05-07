@@ -16,7 +16,7 @@ describe("Pages Functions", () => {
 			[
 				"--binding=NAME=VALUE",
 				"--binding=OTHER_NAME=THING=WITH=EQUALS",
-				"--r2=BUCKET",
+				"--r2=bucket",
 				"--port=0",
 				"--inspector-port=0",
 			]
@@ -58,7 +58,7 @@ describe("Pages Functions", () => {
 		const env = await response.json();
 		expect(env).toEqual({
 			ASSETS: {},
-			BUCKET: {},
+			bucket: {},
 			NAME: "VALUE",
 			OTHER_NAME: "THING=WITH=EQUALS",
 			VAR_1: "var #1 value",

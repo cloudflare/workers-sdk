@@ -588,7 +588,7 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket create abc_def")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: The bucket name "abc_def" is invalid. Bucket names must begin and end with an alphanumeric and can only contain letters (a-z), numbers (0-9), and hyphens (-).]`
+					`[Error: The bucket name "abc_def" is invalid. Bucket names must begin and end with an alphanumeric, only contain letters (a-z), numbers (0-9), and hyphens (-), and be between 3 and 63 characters long.]`
 				);
 			});
 
@@ -604,7 +604,7 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket create abc-")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: The bucket name "abc-" is invalid. Bucket names must begin and end with an alphanumeric and can only contain letters (a-z), numbers (0-9), and hyphens (-).]`
+					`[Error: The bucket name "abc-" is invalid. Bucket names must begin and end with an alphanumeric, only contain letters (a-z), numbers (0-9), and hyphens (-), and be between 3 and 63 characters long.]`
 				);
 			});
 
@@ -612,7 +612,7 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket create " + "a".repeat(64))
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: The bucket name "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" is invalid. Bucket names must begin and end with an alphanumeric and can only contain letters (a-z), numbers (0-9), and hyphens (-).]`
+					`[Error: The bucket name "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" is invalid. Bucket names must begin and end with an alphanumeric, only contain letters (a-z), numbers (0-9), and hyphens (-), and be between 3 and 63 characters long.]`
 				);
 			});
 
@@ -3215,19 +3215,19 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 
 			it("should download R2 object from bucket", async () => {
 				await runWrangler(
-					`r2 object get --remote bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
+					`r2 object get --remote bucket-object-test/wormhole-img.png --file ./wormhole-img.png`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"Resource location: remote
-					Downloading \\"wormhole-img.png\\" from \\"bucketName-object-test\\".
+					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
 					Download complete."
 				`);
 			});
 
 			it("should download R2 object from bucket into directory", async () => {
 				await runWrangler(
-					`r2 object get --remote bucketName-object-test/wormhole-img.png --file ./a/b/c/wormhole-img.png`
+					`r2 object get --remote bucket-object-test/wormhole-img.png --file ./a/b/c/wormhole-img.png`
 				);
 				expect(fs.readFileSync("a/b/c/wormhole-img.png", "utf8")).toBe(
 					"wormhole-img.png"
@@ -3237,12 +3237,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 			it("should upload R2 object to bucket", async () => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
-					`r2 object put --remote bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
+					`r2 object put --remote bucket-object-test/wormhole-img.png --file ./wormhole-img.png`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"Resource location: remote
-					Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
+					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
 					Upload complete."
 				`);
 			});
@@ -3250,12 +3250,12 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 			it("should upload R2 object with storage class to bucket", async () => {
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
-					`r2 object put --remote bucketName-object-test/wormhole-img.png --file ./wormhole-img.png -s InfrequentAccess`
+					`r2 object put --remote bucket-object-test/wormhole-img.png --file ./wormhole-img.png -s InfrequentAccess`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"Resource location: remote
-					Creating object \\"wormhole-img.png\\" with InfrequentAccess storage class in bucket \\"bucketName-object-test\\".
+					Creating object \\"wormhole-img.png\\" with InfrequentAccess storage class in bucket \\"bucket-object-test\\".
 					Upload complete."
 				`);
 			});
@@ -3265,12 +3265,23 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				fs.writeFileSync("wormhole-img.png", Buffer.alloc(TOO_BIG_FILE_SIZE));
 				await expect(
 					runWrangler(
-						`r2 object put --remote bucketName-object-test/wormhole-img.png --file ./wormhole-img.png`
+						`r2 object put --remote bucket-object-test/wormhole-img.png --file ./wormhole-img.png`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
 					[Error: Error: Wrangler only supports uploading files up to 300 MiB in size
 					wormhole-img.png is 301 MiB in size]
 				`);
+			});
+
+			it("should fail to upload R2 object to bucket if the name is invalid", async () => {
+				fs.writeFileSync("wormhole-img.png", "passageway");
+				await expect(
+					runWrangler(
+						`r2 object put --remote BUCKET/wormhole-img.png --file ./wormhole-img.png`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: The bucket name "BUCKET" is invalid. Bucket names must begin and end with an alphanumeric, only contain letters (a-z), numbers (0-9), and hyphens (-), and be between 3 and 63 characters long.]`
+				);
 			});
 
 			it("should pass all fetch option flags into requestInit & check request inputs", async () => {
@@ -3280,7 +3291,7 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 						({ request, params }) => {
 							const { accountId, bucketName, objectName } = params;
 							expect(accountId).toEqual("some-account-id");
-							expect(bucketName).toEqual("bucketName-object-test");
+							expect(bucketName).toEqual("bucket-object-test");
 							expect(objectName).toEqual("wormhole-img.png");
 							const headersObject = Object.fromEntries(
 								request.headers.entries()
@@ -3302,7 +3313,7 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 							return HttpResponse.json(
 								createFetchResult({
 									accountId: "some-account-id",
-									bucketName: "bucketName-object-test",
+									bucketName: "bucket-object-test",
 									objectName: "wormhole-img.png",
 								})
 							);
@@ -3315,24 +3326,24 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 					"--ct content-type-mock --cd content-disposition-mock --ce content-encoding-mock --cl content-lang-mock --cc cache-control-mock --e expire-time-mock";
 
 				await runWrangler(
-					`r2 object put --remote bucketName-object-test/wormhole-img.png ${flags} --file wormhole-img.png`
+					`r2 object put --remote bucket-object-test/wormhole-img.png ${flags} --file wormhole-img.png`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"Resource location: remote
-					Creating object \\"wormhole-img.png\\" in bucket \\"bucketName-object-test\\".
+					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
 					Upload complete."
 				`);
 			});
 
 			it("should delete R2 object from bucket", async () => {
 				await runWrangler(
-					`r2 object delete --remote bucketName-object-test/wormhole-img.png`
+					`r2 object delete --remote bucket-object-test/wormhole-img.png`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"Resource location: remote
-					Deleting object \\"wormhole-img.png\\" from bucket \\"bucketName-object-test\\".
+					Deleting object \\"wormhole-img.png\\" from bucket \\"bucket-object-test\\".
 					Delete complete."
 				`);
 			});
@@ -3341,7 +3352,7 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await expect(
 					runWrangler(
-						`r2 object put --remote bucketName-object-test/wormhole-img.png --pipe --file wormhole-img.png`
+						`r2 object put --remote bucket-object-test/wormhole-img.png --pipe --file wormhole-img.png`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Arguments pipe and file are mutually exclusive]`
