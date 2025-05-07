@@ -1,13 +1,21 @@
 import { existsSync } from "fs";
-import { join, resolve } from "path";
+import { join } from "path";
 import { warn } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
+import TOML from "@iarna/toml";
 import { runCommand } from "helpers/command";
 import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, readJSON, usesTypescript, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
+import { parse as jsoncParse } from "jsonc-parser";
 import * as jsonc from "jsonc-parser";
+import {
+	readWranglerJson,
+	readWranglerToml,
+	wranglerJsonExists,
+	wranglerTomlExists,
+} from "./wrangler/config";
 import type { C3Context, PackageJson } from "types";
 
 /**
@@ -18,9 +26,12 @@ export async function generateWorkersTypes(ctx: C3Context) {
 	if (!usesTypescript(ctx)) {
 		return;
 	}
-	const packageJsonPath = resolve("package.json");
+	const packageJsonPath = join(ctx.project.path, "package.json");
+	if (!existsSync(packageJsonPath)) {
+		return;
+	}
 	const packageManifest = readJSON(packageJsonPath) as PackageJson;
-	if (!Object.keys(packageManifest.scripts ?? {}).includes("cf-typegen")) {
+	if (!packageManifest.scripts?.["cf-typegen"]) {
 		return;
 	}
 
@@ -35,19 +46,43 @@ export async function generateWorkersTypes(ctx: C3Context) {
 		doneText: `${brandColor("generated")} ${dim(`to \`${ctx.template.typesPath}\` via \`${typesCmd.join(" ")}\``)}`,
 	});
 
-	if (ctx.template.compatibilityFlags?.includes("nodejs_compat")) {
+	const usesNodeCompat = await maybeInstallNodeTypes(ctx, npm);
+
+	delete packageManifest["devDependencies"]?.["@cloudflare/workers-types"];
+
+	writeFile(packageJsonPath, JSON.stringify(packageManifest, null, 2));
+	await updateTsConfig(ctx, usesNodeCompat);
+}
+
+const maybeInstallNodeTypes = async (ctx: C3Context, npm: string) => {
+	let parsedConfig: Record<string, unknown> = {};
+	if (wranglerJsonExists(ctx)) {
+		const wranglerJsonStr = readWranglerJson(ctx);
+		parsedConfig = jsoncParse(wranglerJsonStr, undefined, {
+			allowTrailingComma: true,
+		});
+	} else if (wranglerTomlExists(ctx)) {
+		const wranglerTomlStr = readWranglerToml(ctx);
+		parsedConfig = TOML.parse(wranglerTomlStr);
+	}
+
+	const compatibility_flags = Array.isArray(parsedConfig["compatibility_flags"])
+		? parsedConfig["compatibility_flags"]
+		: [];
+
+	if (
+		compatibility_flags.includes("nodejs_compat") ||
+		compatibility_flags.includes("nodejs_compat_v2")
+	) {
 		await installPackages(["@types/node"], {
 			dev: true,
 			startText: "Installing @types/node",
 			doneText: `${brandColor("installed")} ${dim(`via ${npm}`)}`,
 		});
+		return true;
 	}
-
-	delete packageManifest["devDependencies"]?.["@cloudflare/workers-types"];
-
-	writeFile(packageJsonPath, JSON.stringify(packageManifest, null, 2));
-	await updateTsConfig(ctx);
-}
+	return false;
+};
 
 /**
  * update `types` in tsconfig:
@@ -56,7 +91,7 @@ export async function generateWorkersTypes(ctx: C3Context) {
  * - add generated types file if types were generated
  * - add node if node compat
  */
-export async function updateTsConfig(ctx: C3Context) {
+export async function updateTsConfig(ctx: C3Context, usesNodeCompat: boolean) {
 	const tsconfigPath = join(ctx.project.path, "tsconfig.json");
 	if (!existsSync(tsconfigPath)) {
 		return;
@@ -99,7 +134,7 @@ export async function updateTsConfig(ctx: C3Context) {
 				);
 			}
 			// add node types if nodejs_compat is enabled
-			if (ctx.template.compatibilityFlags?.includes("nodejs_compat")) {
+			if (usesNodeCompat) {
 				newTypes.push("node");
 			}
 		}
@@ -143,5 +178,6 @@ export async function installWorkersTypes(ctx: C3Context) {
 		startText: "Installing @cloudflare/workers-types",
 		doneText: `${brandColor("installed")} ${dim(`via ${npm}`)}`,
 	});
-	await updateTsConfig(ctx);
+	const usesNodeCompat = await maybeInstallNodeTypes(ctx, npm);
+	await updateTsConfig(ctx, usesNodeCompat);
 }

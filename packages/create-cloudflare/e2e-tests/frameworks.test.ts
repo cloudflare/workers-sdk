@@ -80,10 +80,12 @@ describe.concurrent(
 		});
 
 		Object.entries(frameworkTests).forEach(([frameworkKey, testConfig]) => {
-			const frameworkConfig = getFrameworkConfig(frameworkKey);
-			frameworkConfig.workersTypes ??= "generated";
-			frameworkConfig.typesPath ??= "worker-configuration.d.ts";
-			frameworkConfig.envInterfaceName ??= "Env";
+			const frameworkConfig = {
+				workersTypes: "generated" as const,
+				typesPath: "worker-configuration.d.ts",
+				envInterfaceName: "Env",
+				...getFrameworkConfig(frameworkKey),
+			};
 			test({ experimental }).runIf(
 				shouldRunTest(frameworkConfig.id, testConfig),
 			)(
