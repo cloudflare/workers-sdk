@@ -8,24 +8,25 @@ async function streamResponse(writable: WritableStream) {
 
 	await writer.write(
 		encoder.encode(`
-	<!DOCTYPE html>
-	<html>
-	<head>
-		<title>Streaming example</title>
-	</head>
-	<body>
-		<h1>Streaming example</h1>
-		<p>Loading content...</p>
-	`)
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Streaming example</title>
+</head>
+<body>
+	<h1>Streaming example</h1>
+	<p>Loading content...</p>
+		`)
 	);
 
 	await sleep(1000);
 	await writer.write(encoder.encode(`<p id="one">Chunk after 1 second`));
 	await sleep(1000);
-	await writer.write(encoder.encode(`<p id="two">Chunk after 2 seconds`));
-	await sleep(1000);
 	await writer.write(
-		encoder.encode(`<p id="three">Chunk after 3 seconds</p></body></html>`)
+		encoder.encode(`
+	<p id="two">Chunk after 2 seconds</p>
+</body></html>
+		`)
 	);
 	await writer.close();
 }

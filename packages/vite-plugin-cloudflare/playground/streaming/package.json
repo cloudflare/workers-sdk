@@ -3,10 +3,13 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "vite build --app",
+		"build": "vite build",
+		"build:https": "vite build -c ./vite.config.https.ts",
 		"check:types": "tsc --build",
 		"dev": "vite dev",
-		"preview": "vite preview"
+		"dev:https": "vite dev -c ./vite.config.https.ts",
+		"preview": "vite preview",
+		"preview:https": "vite preview -c ./vite.config.https.ts"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",
