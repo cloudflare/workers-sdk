@@ -1,6 +1,5 @@
 import path from "node:path";
 import { getBasePath } from "../../paths";
-import { requireApiToken, requireAuth } from "../../user";
 import { startWorker } from "../startDevWorker";
 import type { StartDevWorkerInput, Worker } from "../startDevWorker/types";
 import type { MixedModeConnectionString } from "miniflare";
