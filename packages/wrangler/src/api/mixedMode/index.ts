@@ -13,7 +13,10 @@ type MixedModeSession = Pick<Worker, "ready" | "dispose"> & {
 };
 
 export async function startMixedModeSession(
-	bindings: BindingsOpt
+	bindings: BindingsOpt,
+	options?: {
+		auth: NonNullable<StartDevWorkerInput["dev"]>["auth"];
+	}
 ): Promise<MixedModeSession> {
 	const proxyServerWorkerWranglerConfig = path.resolve(
 		getBasePath(),
@@ -24,10 +27,7 @@ export async function startMixedModeSession(
 		config: proxyServerWorkerWranglerConfig,
 		dev: {
 			remote: true,
-			auth: {
-				accountId: await requireAuth({}),
-				apiToken: requireApiToken(),
-			},
+			auth: options?.auth,
 		},
 		bindings,
 	});
