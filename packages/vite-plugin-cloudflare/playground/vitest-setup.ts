@@ -96,6 +96,7 @@ beforeAll(async (s) => {
 	}
 
 	browser = await chromium.connect(wsEndpoint);
+	// `@vitejs/plugin-basic-ssl` requires a manual confirmation step in the browser so we enable `ignoreHTTPSErrors` to bypass this
 	page = await browser.newPage({ ignoreHTTPSErrors: true });
 
 	const globalConsole = console;
