@@ -137,6 +137,19 @@ describe("info", () => {
 	});
 
 	it("should pretty print by default, incl. the wrangler banner", async () => {
+		setIsTTY(false);
+		mockGetMemberships([
+			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+		]);
+		writeWranglerConfig({
+			d1_databases: [
+				{
+					binding: "DB",
+					database_name: "northwind",
+					database_id: "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
+				},
+			],
+		});
 		msw.use(
 			http.get("*/accounts/:accountId/d1/database/*", async () => {
 				return HttpResponse.json(
@@ -180,11 +193,7 @@ describe("info", () => {
 		// pretty print by default
 		await runWrangler("d1 info northwind");
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			------------------
-
-			┌───────────────────────┬──────────────────────────────────────┐
+			"┌───────────────────────┬──────────────────────────────────────┐
 			│ DB                    │ d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06 │
 			├───────────────────────┼──────────────────────────────────────┤
 			│ name                  │ northwind                            │
