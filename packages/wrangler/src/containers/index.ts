@@ -7,7 +7,6 @@ import {
 } from "../cloudchamber/build";
 import { handleFailure } from "../cloudchamber/common";
 import { imagesCommand } from "../cloudchamber/images/list";
-import type { Scope } from "../user";
 import {
 	deleteCommand,
 	deleteYargs,
@@ -16,6 +15,7 @@ import {
 	listCommand,
 	listYargs,
 } from "./containers";
+import type { Scope } from "../user";
 import type { CommonYargsArgvJSON, CommonYargsOptions } from "../yargs-types";
 import type { CommandModule } from "yargs";
 
