@@ -11,19 +11,14 @@ describe("startMixedModeSession", () => {
 			return t.skip();
 		}
 
-		const mixedModeSession = await experimental_startMixedModeSession(
-			{
-				AI: {
-					type: "ai",
-				},
+		process.env.CLOUDFLARE_ACCOUNT_ID = process.env.TEST_CLOUDFLARE_ACCOUNT_ID;
+		process.env.CLOUDFLARE_API_TOKEN = process.env.TEST_CLOUDFLARE_API_TOKEN;
+
+		const mixedModeSession = await experimental_startMixedModeSession({
+			AI: {
+				type: "ai",
 			},
-			{
-				auth: {
-					accountId: process.env.TEST_CLOUDFLARE_ACCOUNT_ID,
-					apiToken: process.env.TEST_CLOUDFLARE_API_TOKEN,
-				},
-			}
-		);
+		});
 		const proxyServerUrl =
 			mixedModeSession.mixedModeConnectionString.toString();
 		assert.match(proxyServerUrl, /http:\/\/localhost:\d{4,5}\//);
