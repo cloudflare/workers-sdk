@@ -966,6 +966,9 @@ importers:
       '@types/is-even':
         specifier: ^1.0.2
         version: 1.0.2
+      get-port:
+        specifier: ^7.1.0
+        version: 7.1.0
       is-even:
         specifier: ^1.0.0
         version: 1.0.0
