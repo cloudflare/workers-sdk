@@ -16,6 +16,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Hello from Cloudflare",
 				previewArgs: ["--host=127.0.0.1"],
 			},
+			nodeCompat: false,
 			flags: ["--no-install", "--no-git-init"],
 		},
 		"astro:pages": {
@@ -36,6 +37,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
+			nodeCompat: true,
 			flags: [
 				"--skip-houston",
 				"--no-install",
@@ -64,6 +66,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
+			nodeCompat: true,
 			flags: [
 				"--skip-houston",
 				"--no-install",
@@ -88,6 +91,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Dinosaurs are cool",
 			},
+			nodeCompat: false,
 			flags: [`--package-manager`, pm],
 			promptHandlers: [
 				// {
@@ -114,6 +118,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Dinosaurs are cool",
 			},
+			nodeCompat: false,
 			flags: [`--package-manager`, pm],
 			promptHandlers: [
 				{
@@ -144,6 +149,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/api/v1/test",
 				expectedText: "C3_TEST",
 			},
+			nodeCompat: false,
 			flags: ["--skipTailwind"],
 		},
 		"angular:pages": {
@@ -160,6 +166,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Congratulations! Your app is running.",
 			},
+			nodeCompat: false,
 			flags: ["--style", "sass"],
 		},
 		"angular:workers": {
@@ -176,6 +183,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Congratulations! Your app is running.",
 			},
+			nodeCompat: false,
 			flags: ["--style", "sass"],
 		},
 		"gatsby:pages": {
@@ -197,6 +205,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Gatsby!",
 			},
+			nodeCompat: false,
 		},
 		"gatsby:workers": {
 			argv: ["--platform", "workers"],
@@ -217,6 +226,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Gatsby!",
 			},
+			nodeCompat: false,
 		},
 		"hono:pages": {
 			argv: ["--platform", "pages"],
@@ -230,6 +240,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Hello!",
 			},
+			nodeCompat: false,
 			promptHandlers: [
 				{
 					matcher: /Do you want to install project dependencies\?/,
@@ -249,6 +260,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/message",
 				expectedText: "Hello Hono!",
 			},
+			nodeCompat: false,
 			promptHandlers: [
 				{
 					matcher: /Do you want to install project dependencies\?/,
@@ -275,6 +287,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Welcome to Qwik",
 			},
+			nodeCompat: true,
 		},
 		"qwik:workers": {
 			argv: ["--platform", "workers"],
@@ -296,6 +309,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Welcome to Qwik",
 			},
+			nodeCompat: true,
 		},
 		"remix:pages": {
 			argv: ["--platform", "pages"],
@@ -317,6 +331,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
+			nodeCompat: false,
 			flags: ["--typescript", "--no-install", "--no-git-init"],
 		},
 		"remix:workers": {
@@ -333,6 +348,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
+			nodeCompat: false,
 			flags: ["--typescript", "--no-install", "--no-git-init"],
 		},
 		"next:pages": {
@@ -356,6 +372,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Create Next App",
 			},
+			nodeCompat: true,
 			flags: [
 				"--typescript",
 				"--no-install",
@@ -391,6 +408,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Create Next App",
 			},
+			nodeCompat: true,
 			// see https://github.com/cloudflare/next-on-pages/blob/main/packages/next-on-pages/docs/supported.md#operating-systems
 			unsupportedOSs: ["win32"],
 			unsupportedPms: [
@@ -415,6 +433,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Welcome to Nuxt!",
 			},
+			nodeCompat: false,
 			verifyPreview: {
 				route: "/test",
 				expectedText: "C3_TEST",
@@ -446,6 +465,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
+			nodeCompat: false,
 		},
 		"react:pages": {
 			argv: ["--platform", "pages"],
@@ -466,6 +486,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Vite + React",
 			},
+			nodeCompat: false,
 		},
 		"react:workers": {
 			argv: ["--platform", "workers"],
@@ -494,6 +515,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				// not actually running the client side JS.
 				expectedText: "Vite + React + TS",
 			},
+			nodeCompat: false,
 		},
 		solid: {
 			promptHandlers: [
@@ -518,6 +540,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Hello world",
 			},
+			nodeCompat: true,
 		},
 		"svelte:pages": {
 			argv: ["--platform", "pages"],
@@ -546,6 +569,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
+			nodeCompat: false,
 		},
 		"svelte:workers": {
 			argv: ["--platform", "workers"],
@@ -568,6 +592,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
+			nodeCompat: false,
 		},
 		"vue:pages": {
 			argv: ["--platform", "pages"],
@@ -581,6 +606,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Vite App",
 			},
+			nodeCompat: false,
 			flags: ["--ts"],
 		},
 		"vue:workers": {
@@ -596,6 +622,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Vite App",
 			},
+			nodeCompat: false,
 		},
 	};
 }

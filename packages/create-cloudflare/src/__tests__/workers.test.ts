@@ -38,7 +38,7 @@ describe("updateTsConfig", () => {
 	test("installing workers types", async () => {
 		ctx.template.workersTypes = "installed";
 
-		await updateTsConfig(ctx, false);
+		await updateTsConfig(ctx, { usesNodeCompat: false });
 
 		expect(writeFile).toHaveBeenCalled();
 
@@ -49,7 +49,7 @@ describe("updateTsConfig", () => {
 
 	test("tsconfig.json not found", async () => {
 		vi.mocked(existsSync).mockImplementation(() => false);
-		await updateTsConfig(ctx, false);
+		await updateTsConfig(ctx, { usesNodeCompat: false });
 		expect(writeFile).not.toHaveBeenCalled();
 	});
 
@@ -57,7 +57,7 @@ describe("updateTsConfig", () => {
 		ctx.template.workersTypes = "installed";
 
 		vi.mocked(getLatestTypesEntrypoint).mockReturnValue(null);
-		await updateTsConfig(ctx, false);
+		await updateTsConfig(ctx, { usesNodeCompat: false });
 
 		expect(writeFile).not.toHaveBeenCalled();
 	});
@@ -68,7 +68,7 @@ describe("updateTsConfig", () => {
 			() =>
 				`{ "compilerOptions": { "types" : ["@cloudflare/workers-types/2021-03-20"]} }`,
 		);
-		await updateTsConfig(ctx, false);
+		await updateTsConfig(ctx, { usesNodeCompat: false });
 
 		expect(vi.mocked(writeFile).mock.calls[0][1]).toContain(
 			`"@cloudflare/workers-types/2021-03-20"`,
@@ -83,7 +83,7 @@ describe("updateTsConfig", () => {
 				return "// Runtime types generated with workerd";
 			}
 		});
-		await updateTsConfig(ctx, false);
+		await updateTsConfig(ctx, { usesNodeCompat: false });
 		expect(vi.mocked(writeFile).mock.calls[0][1]).not.toContain(
 			`"@cloudflare/workers-types/2021-03-20"`,
 		);
@@ -97,7 +97,7 @@ describe("updateTsConfig", () => {
 				return "no runtime types here";
 			}
 		});
-		await updateTsConfig(ctx, false);
+		await updateTsConfig(ctx, { usesNodeCompat: false });
 
 		expect(vi.mocked(writeFile).mock.calls[0][1]).toContain(
 			`"@cloudflare/workers-types/2021-03-20"`,
@@ -105,7 +105,7 @@ describe("updateTsConfig", () => {
 	});
 
 	test("will add generated types file", async () => {
-		await updateTsConfig(ctx, false);
+		await updateTsConfig(ctx, { usesNodeCompat: false });
 		expect(vi.mocked(writeFile).mock.calls[0][1]).toContain(
 			`./worker-configuration.d.ts`,
 		);

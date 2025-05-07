@@ -12,6 +12,7 @@ import {
 import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import { sleep } from "helpers/sleep";
+import * as jsonc from "jsonc-parser";
 import { fetch } from "undici";
 import { beforeAll, describe, expect } from "vitest";
 import { deleteProject, deleteWorker } from "../scripts/common";
@@ -41,12 +42,9 @@ import type { Writable } from "stream";
 
 type FrameworkTestConfig = RunnerConfig & {
 	testCommitMessage: boolean;
+	nodeCompat: boolean;
 	unsupportedPms?: string[];
 	unsupportedOSs?: string[];
-	verifyBuildCfTypes?: {
-		outputFile: string;
-		envInterfaceName: string;
-	};
 	verifyBuild?: {
 		outputDir: string;
 		script: string;
@@ -180,11 +178,8 @@ describe.concurrent(
 							project.path,
 							logStream,
 						);
-						await verifyBuildCfTypesScript(
-							frameworkConfig,
-							project.path,
-							logStream,
-						);
+
+						await verifyTypes(testConfig, frameworkConfig, project.path);
 						await verifyBuildScript(testConfig, project.path, logStream);
 					} catch (e) {
 						console.error("ERROR", e);
@@ -360,44 +355,52 @@ const verifyPreviewScript = async (
 	}
 };
 
-const verifyBuildCfTypesScript = async (
-	{ workersTypes, typesPath, envInterfaceName }: TemplateConfig,
+const verifyTypes = async (
+	{ nodeCompat }: FrameworkTestConfig,
+	{
+		workersTypes,
+		typesPath = "./worker-configuration.d.ts",
+		envInterfaceName = "Env",
+	}: TemplateConfig,
 	projectPath: string,
-	logStream: Writable,
 ) => {
 	if (workersTypes === "none") {
 		return;
 	}
 
-	// Run the `cf-typegen` script to generate types for bindings in fixture
-	const buildTypesProc = spawnWithLogging(
-		[pm, "run", "cf-typegen"],
-		{ cwd: projectPath },
-		logStream,
-	);
+	const outputFileContent = readFile(join(projectPath, typesPath)).split("\n");
 
-	await waitForExit(buildTypesProc);
-
-	const outputFileContent = readFile(
-		join(projectPath, typesPath ?? "worker-configuration.d.ts"),
-	).split("\n");
-
-	// the file contains the env interface
-	const hasEnvInterfacePre = outputFileContent.some(
+	const hasEnvInterface = outputFileContent.some(
 		(line) =>
 			// old type gen - some framework templates pin older versions of wrangler
-			line === `interface ${envInterfaceName ?? "Env"} {` ||
+			line === `interface ${envInterfaceName} {` ||
 			// new after importable env change
-			line ===
-				`interface ${envInterfaceName ?? "Env"} extends Cloudflare.Env {}`,
+			line === `interface ${envInterfaceName} extends Cloudflare.Env {}`,
 	);
-	expect(hasEnvInterfacePre).toBe(true);
+	expect(hasEnvInterface).toBe(true);
 
-	// if the types were installed, only the Env types will be present
+	// if the runtime types were installed, they wont be in this file
 	if (workersTypes === "generated") {
 		expect(outputFileContent[2]).match(
 			/\/\/ Runtime types generated with workerd@1\.\d{8}\.\d \d{4}-\d{2}-\d{2} ([a-z_]+,?)*/,
 		);
+	}
+
+	const tsconfigPath = join(projectPath, "tsconfig.json");
+	const tsconfigTypes = jsonc.parse(readFile(tsconfigPath)).compilerOptions
+		?.types;
+	if (workersTypes === "generated") {
+		expect(tsconfigTypes).toContain(typesPath);
+	}
+	if (workersTypes === "installed") {
+		expect(
+			tsconfigTypes.some((x: string) =>
+				x.includes("@cloudflare/workers-types"),
+			),
+		).toBe(true);
+	}
+	if (nodeCompat) {
+		expect(tsconfigTypes).toContain(`node`);
 	}
 };
 

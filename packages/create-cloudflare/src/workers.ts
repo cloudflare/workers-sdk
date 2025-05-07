@@ -8,7 +8,6 @@ import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, readJSON, usesTypescript, writeFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
-import { parse as jsoncParse } from "jsonc-parser";
 import * as jsonc from "jsonc-parser";
 import {
 	readWranglerJson,
@@ -51,14 +50,14 @@ export async function generateWorkersTypes(ctx: C3Context) {
 	delete packageManifest["devDependencies"]?.["@cloudflare/workers-types"];
 
 	writeFile(packageJsonPath, JSON.stringify(packageManifest, null, 2));
-	await updateTsConfig(ctx, usesNodeCompat);
+	await updateTsConfig(ctx, { usesNodeCompat });
 }
 
 const maybeInstallNodeTypes = async (ctx: C3Context, npm: string) => {
 	let parsedConfig: Record<string, unknown> = {};
 	if (wranglerJsonExists(ctx)) {
 		const wranglerJsonStr = readWranglerJson(ctx);
-		parsedConfig = jsoncParse(wranglerJsonStr, undefined, {
+		parsedConfig = jsonc.parse(wranglerJsonStr, undefined, {
 			allowTrailingComma: true,
 		});
 	} else if (wranglerTomlExists(ctx)) {
@@ -91,7 +90,10 @@ const maybeInstallNodeTypes = async (ctx: C3Context, npm: string) => {
  * - add generated types file if types were generated
  * - add node if node compat
  */
-export async function updateTsConfig(ctx: C3Context, usesNodeCompat: boolean) {
+export async function updateTsConfig(
+	ctx: C3Context,
+	{ usesNodeCompat }: { usesNodeCompat: boolean },
+) {
 	const tsconfigPath = join(ctx.project.path, "tsconfig.json");
 	if (!existsSync(tsconfigPath)) {
 		return;
@@ -133,10 +135,10 @@ export async function updateTsConfig(ctx: C3Context, usesNodeCompat: boolean) {
 					(t: string) => !t.startsWith("@cloudflare/workers-types"),
 				);
 			}
-			// add node types if nodejs_compat is enabled
-			if (usesNodeCompat) {
-				newTypes.push("node");
-			}
+		}
+		// add node types if nodejs_compat is enabled
+		if (usesNodeCompat) {
+			newTypes.push("node");
 		}
 		if (newTypes.sort() === currentTypes.sort()) {
 			return;
@@ -179,5 +181,5 @@ export async function installWorkersTypes(ctx: C3Context) {
 		doneText: `${brandColor("installed")} ${dim(`via ${npm}`)}`,
 	});
 	const usesNodeCompat = await maybeInstallNodeTypes(ctx, npm);
-	await updateTsConfig(ctx, usesNodeCompat);
+	await updateTsConfig(ctx, { usesNodeCompat });
 }
