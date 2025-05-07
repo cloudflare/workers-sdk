@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.46.1
+
+### Patch Changes
+
+- [#9159](https://github.com/cloudflare/workers-sdk/pull/9159) [`c6b3f10`](https://github.com/cloudflare/workers-sdk/commit/c6b3f10f5adf4e6d62bcc9fe89574a2cbcce3870) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - bump esbuild version to fix regression in 0.25.0
+
 ## 2.46.0
 
 ### Minor Changes
