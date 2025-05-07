@@ -2999,17 +2999,14 @@ test("Miniflare: CF-Connecting-IP is preserved when present", async (t) => {
 test("Miniflare: can fetch origins behind Cloudflare", async (t) => {
 	const mf = new Miniflare({
 		script:
-			"export default { fetch(request) { return fetch('https://shopify.com') } }",
+			"export default { fetch(request) { return fetch('https://dash.cloudflare.com') } }",
 		modules: true,
 	});
 	t.teardown(() => mf.dispose());
 
 	const landingPage = await mf.dispatchFetch("http://example.com/");
-	t.assert(
-		!(await landingPage.text()).includes(
-			"Unfortunately, it is resolving to an IP address that is creating a conflict within Cloudflare's system"
-		)
-	);
+	await landingPage.text();
+	t.assert(landingPage.status === 200);
 });
 
 test("Miniflare: can use module fallback service", async (t) => {
