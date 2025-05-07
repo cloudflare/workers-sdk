@@ -3,23 +3,19 @@ import test from "ava";
 import { Miniflare } from "miniflare";
 import { useTmp } from "./test-shared";
 
-test.skip("DevRegistry: fetch to module worker", async (t) => {
+test("DevRegistry: fetch to module worker", async (t) => {
 	const tmp = await useTmp(t);
 	const unsafeDevRegistryPath = path.join(tmp, "dev-registry");
 	const remote = new Miniflare({
-		name: "worker-a",
+		name: "remote-worker",
 		unsafeDevRegistryPath,
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		script: `
 			export default {
 				async fetch(request, env, ctx) {
-                    const url = new URL(request.url);
-                    const name = url.searchParams.get("name");
-
-                    if (!name) {
-                        return new Response("Missing name", { status: 400 });
-                    }
+                    const url = new URL(request.url, 'http://placeholder');
+                    const name = url.searchParams.get("name") ?? 'anonymous';
 
 					return new Response("Hello " + name);
 				}
@@ -36,11 +32,11 @@ test.skip("DevRegistry: fetch to module worker", async (t) => {
 	await remote.ready;
 
 	const local = new Miniflare({
-		name: "worker-b",
+		name: "local-worker",
 		unsafeDevRegistryPath,
 		serviceBindings: {
 			SERVICE: {
-				name: "worker-a",
+				name: "remote-worker",
 			},
 		},
 		compatibilityFlags: ["experimental"],
@@ -55,16 +51,16 @@ test.skip("DevRegistry: fetch to module worker", async (t) => {
 	});
 	t.teardown(() => local.dispose());
 
-	const res = await local.dispatchFetch("http://placeholder?name=World");
+	const res = await local.dispatchFetch("http://example.com?name=World");
 	const result = await res.text();
-	t.is(res.status, 200);
 	t.is(result, "Hello World");
+	t.is(res.status, 200);
 });
 test("DevRegistry: RPC to default entrypoint", async (t) => {
 	const tmp = await useTmp(t);
 	const unsafeDevRegistryPath = path.join(tmp, "dev-registry");
 	const remote = new Miniflare({
-		name: "worker-a",
+		name: "remote-worker",
 		unsafeDevRegistryPath,
 		compatibilityFlags: ["experimental"],
 		modules: true,
@@ -85,11 +81,11 @@ test("DevRegistry: RPC to default entrypoint", async (t) => {
 	await remote.ready;
 
 	const local = new Miniflare({
-		name: "worker-b",
+		name: "local-worker",
 		unsafeDevRegistryPath,
 		serviceBindings: {
 			SERVICE: {
-				name: "worker-a",
+				name: "remote-worker",
 			},
 		},
 		compatibilityFlags: ["experimental"],
@@ -113,7 +109,7 @@ test("DevRegistry: RPC to custom entrypoint", async (t) => {
 	const tmp = await useTmp(t);
 	const unsafeDevRegistryPath = path.join(tmp, "dev-registry");
 	const remote = new Miniflare({
-		name: "worker-a",
+		name: "remote-worker",
 		unsafeDevRegistryPath,
 		compatibilityFlags: ["experimental"],
 		modules: true,
@@ -135,11 +131,11 @@ test("DevRegistry: RPC to custom entrypoint", async (t) => {
 	await remote.ready;
 
 	const local = new Miniflare({
-		name: "worker-b",
+		name: "local-worker",
 		unsafeDevRegistryPath,
 		serviceBindings: {
 			SERVICE: {
-				name: "worker-a",
+				name: "remote-worker",
 				entrypoint: "TestEntrypoint",
 			},
 		},
@@ -160,15 +156,15 @@ test("DevRegistry: RPC to custom entrypoint", async (t) => {
 	const result = await res.text();
 	t.is(result, "pong");
 });
-test.skip("DevRegistry: fetch to unknown worker", async (t) => {
+test("DevRegistry: fetch to unknown worker", async (t) => {
 	const tmp = await useTmp(t);
 	const unsafeDevRegistryPath = path.join(tmp, "dev-registry");
 	const mf = new Miniflare({
-		name: "worker-a",
+		name: "local-worker",
 		unsafeDevRegistryPath,
 		serviceBindings: {
 			SERVICE: {
-				name: "worker-b",
+				name: "remote-worker",
 			},
 		},
 		compatibilityFlags: ["experimental"],
@@ -176,11 +172,7 @@ test.skip("DevRegistry: fetch to unknown worker", async (t) => {
 		script: `
 			export default {
 				async fetch(request, env, ctx) {
-                    try {
-                        return await env.SERVICE.fetch(request);
-                    } catch (e) {
-                        return new Response(e.message, { status: 500 });
-                    }
+                    return await env.SERVICE.fetch(request);
 				}
 			}
 		`,
@@ -189,18 +181,21 @@ test.skip("DevRegistry: fetch to unknown worker", async (t) => {
 
 	const res = await mf.dispatchFetch("http://placeholder");
 	const result = await res.text();
-	t.is(res.status, 500);
-	t.is(result, "???");
+	t.is(res.status, 503);
+	t.is(
+		result,
+		`Couldn\'t find dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+	);
 });
 test("DevRegistry: RPC to unknown worker", async (t) => {
 	const tmp = await useTmp(t);
 	const unsafeDevRegistryPath = path.join(tmp, "dev-registry");
 	const mf = new Miniflare({
-		name: "worker-a",
+		name: "remote-worker",
 		unsafeDevRegistryPath,
 		serviceBindings: {
 			SERVICE: {
-				name: "worker-b",
+				name: "local-worker",
 			},
 		},
 		compatibilityFlags: ["experimental"],
@@ -224,14 +219,14 @@ test("DevRegistry: RPC to unknown worker", async (t) => {
 	t.is(res.status, 500);
 	t.is(
 		await res.text(),
-		`Cannot access "ping" as we couldn\'t find a dev session for the "default" entrypoint of service "worker-b" to proxy to.`
+		`Cannot access "ping" as we couldn\'t find a dev session for the "default" entrypoint of service "local-worker" to proxy to.`
 	);
 });
 test("DevRegistry: RPC to unknown entrypoint", async (t) => {
 	const tmp = await useTmp(t);
 	const unsafeDevRegistryPath = path.join(tmp, "dev-registry");
 	const remote = new Miniflare({
-		name: "worker-a",
+		name: "remote-worker",
 		unsafeDevRegistryPath,
 		compatibilityFlags: ["experimental"],
 		modules: true,
@@ -252,11 +247,11 @@ test("DevRegistry: RPC to unknown entrypoint", async (t) => {
 	await remote.ready;
 
 	const local = new Miniflare({
-		name: "worker-b",
+		name: "local-worker",
 		unsafeDevRegistryPath,
 		serviceBindings: {
 			SERVICE: {
-				name: "worker-a",
+				name: "remote-worker",
 				entrypoint: "TestEntrypoint",
 			},
 		},
@@ -281,14 +276,14 @@ test("DevRegistry: RPC to unknown entrypoint", async (t) => {
 	t.is(res.status, 500);
 	t.is(
 		await res.text(),
-		`Cannot access "ping" as we couldn\'t find a dev session for the "TestEntrypoint" entrypoint of service "worker-a" to proxy to.`
+		`Cannot access "ping" as we couldn\'t find a dev session for the "TestEntrypoint" entrypoint of service "remote-worker" to proxy to.`
 	);
 });
-test.skip("DevRegistry: fetch to service worker", async (t) => {
+test("DevRegistry: fetch to service worker", async (t) => {
 	const tmp = await useTmp(t);
 	const unsafeDevRegistryPath = path.join(tmp, "dev-registry");
 	const remote = new Miniflare({
-		name: "worker-a",
+		name: "remote-worker",
 		unsafeDevRegistryPath,
 		compatibilityFlags: ["experimental"],
 		script: `addEventListener("fetch", (event) => {
@@ -300,11 +295,11 @@ test.skip("DevRegistry: fetch to service worker", async (t) => {
 	await remote.ready;
 
 	const local = new Miniflare({
-		name: "worker-b",
+		name: "local-worker",
 		unsafeDevRegistryPath,
 		serviceBindings: {
 			SERVICE: {
-				name: "worker-a",
+				name: "remote-worker",
 			},
 		},
 		compatibilityFlags: ["experimental"],

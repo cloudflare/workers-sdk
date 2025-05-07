@@ -6,6 +6,8 @@ export const CoreHeaders = {
 	ERROR_STACK: "MF-Experimental-Error-Stack",
 	ROUTE_OVERRIDE: "MF-Route-Override",
 	CF_BLOB: "MF-CF-Blob",
+	EXTERNAL_PROXY_SERVICE: "MF-External-Proxy-Service",
+	EXTERNAL_PROXY_ENTRYPOINT: "MF-External-Proxy-Entrypoint",
 
 	// API Proxy
 	OP_SECRET: "MF-Op-Secret",

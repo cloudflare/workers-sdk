@@ -921,10 +921,90 @@ export class Miniflare {
 		return this.#workerOpts.map<NameSourceOptions>(({ core }) => core);
 	}
 
+	#getExternalServiceAddress = async (
+		service: string,
+		entrypoint: string | undefined = "default"
+	): Promise<{ host: string; port: number }> => {
+		const registry = await this.#devRegistry?.refresh();
+		const target = registry?.[service];
+
+		let address = target?.entrypointAddresses[entrypoint];
+
+		if (
+			target &&
+			!address &&
+			entrypoint === "default" &&
+			target.protocol !== "https"
+		) {
+			// Fallback to sending requests directly to the target
+			address = target;
+		}
+
+		if (!address) {
+			assert(this.#socketPorts !== undefined);
+			const port = this.#socketPorts?.get(
+				EXTERNAL_FALLBACK_SOCKET_NAME + "_" + service + "_" + entrypoint
+			);
+
+			if (!port) {
+				throw new Error(
+					`There is no socket opened for "${service}" with the "${entrypoint}" entrypoint`
+				);
+			}
+
+			address = {
+				host: DEFAULT_HOST,
+				port,
+			};
+		}
+
+		return address;
+	};
+
 	#handleLoopback = async (
 		req: http.IncomingMessage,
 		res?: http.ServerResponse
 	): Promise<Response | undefined> => {
+		const service =
+			req.headers[CoreHeaders.EXTERNAL_PROXY_SERVICE.toLowerCase()];
+		const entrypoint =
+			req.headers[CoreHeaders.EXTERNAL_PROXY_ENTRYPOINT.toLowerCase()];
+
+		if (res && typeof service === "string" && typeof entrypoint === "string") {
+			delete req.headers[CoreHeaders.EXTERNAL_PROXY_SERVICE.toLowerCase()];
+			delete req.headers[CoreHeaders.EXTERNAL_PROXY_ENTRYPOINT.toLowerCase()];
+
+			const address = await this.#getExternalServiceAddress(
+				service,
+				entrypoint
+			);
+			const upstream = http.request(
+				{
+					host: address.host,
+					port: address.port,
+					method: req.method,
+					path: req.url,
+					headers: req.headers,
+				},
+				(upRes) => {
+					// Relay status and headers back to the original client
+					res.writeHead(upRes.statusCode ?? 500, upRes.headers);
+					//Pipe the response body
+					upRes.pipe(res);
+				}
+			);
+
+			// Pipe the client request body to the upstream
+			req.pipe(upstream);
+
+			upstream.on("error", (err) => {
+				console.error("Upstream request error:", err);
+				if (!res.headersSent) res.writeHead(502);
+				res.end("Bad Gateway");
+			});
+			return;
+		}
+
 		// Extract headers from request
 		const headers = new Headers();
 		for (const [name, values] of Object.entries(req.headers)) {
@@ -1033,71 +1113,34 @@ export class Miniflare {
 		clientSocket: Duplex,
 		head: Buffer
 	) => {
-		const connectHost = req.url;
-
-		if (
-			!connectHost ||
-			!connectHost.startsWith("miniflare-unsafe-internal-capnp-connect-")
-		) {
-			clientSocket.write("HTTP/1.1 400 Bad Request\r\n\r\n");
-			clientSocket.end();
-			return;
-		}
-
-		const [workerName, entrypoint = "default"] = connectHost
-			.replace("miniflare-unsafe-internal-capnp-connect-", "")
-			.split(".");
-		const registry = await this.#devRegistry?.refresh();
-		const target = registry?.[workerName];
-
-		let address = target?.entrypointAddresses[entrypoint];
-
-		if (
-			target &&
-			!address &&
-			entrypoint === "default" &&
-			target.protocol !== "https"
-		) {
-			// Fallback to sending requests directly to the target
-			address = target;
-		}
-
-		if (!address) {
-			assert(this.#socketPorts !== undefined);
-			const port = this.#socketPorts?.get(
-				EXTERNAL_FALLBACK_SOCKET_NAME + "_" + workerName + "_" + entrypoint
+		try {
+			const [workerName, entrypoint = "default"] = req.url?.split(":") ?? [];
+			const address = await this.#getExternalServiceAddress(
+				workerName,
+				entrypoint
 			);
+			const serverSocket = net.connect(address.port, address.host, () => {
+				serverSocket.write(`CONNECT ${HOST_CAPNP_CONNECT} HTTP/1.1\r\n\r\n`);
 
-			if (!port) {
+				// Push along any buffered bytes
+				if (head && head.length) {
+					serverSocket.write(head);
+				}
+
+				serverSocket.pipe(clientSocket);
+			});
+
+			// Errors on either side
+			serverSocket.on("error", (err) => {
+				console.error("Upstream tunnel error:", err);
 				clientSocket.write("HTTP/1.1 502 Bad Gateway\r\n\r\n");
 				clientSocket.end();
-				return;
-			}
-
-			address = {
-				host: DEFAULT_HOST,
-				port,
-			};
-		}
-
-		const serverSocket = net.connect(address.port, address.host, () => {
-			serverSocket.write(`CONNECT ${HOST_CAPNP_CONNECT} HTTP/1.1\r\n\r\n`);
-
-			// Push along any buffered bytes
-			if (head && head.length) {
-				serverSocket.write(head);
-			}
-
-			serverSocket.pipe(clientSocket);
-		});
-
-		// Errors on either side
-		serverSocket.on("error", (err) => {
-			console.error("Upstream tunnel error:", err);
+			});
+			clientSocket.on("error", () => serverSocket.end());
+		} catch {
 			clientSocket.write("HTTP/1.1 502 Bad Gateway\r\n\r\n");
 			clientSocket.end();
-		});
-		clientSocket.on("error", () => serverSocket.end());
+		}
 	};
 
 	#handleLoopbackUpgrade = async (
@@ -1320,7 +1363,19 @@ export class Miniflare {
 									// TODO: To support service workers format
 									// style: HttpOptions_Style.HOST,
 									cfBlobHeader: CoreHeaders.CF_BLOB,
-									capnpConnectHost: `${HOST_CAPNP_CONNECT}-${service.name}.${service.entrypoint ?? "default"}`,
+									// The Connect Host is needed for RPC proxying
+									capnpConnectHost: `${service.name}:${service.entrypoint ?? "default"}`,
+									// The headers are needed for proxying fetch requests
+									injectRequestHeaders: [
+										{
+											name: CoreHeaders.EXTERNAL_PROXY_SERVICE,
+											value: service.name,
+										},
+										{
+											name: CoreHeaders.EXTERNAL_PROXY_ENTRYPOINT,
+											value: service.entrypoint ?? "default",
+										},
+									],
 								},
 							},
 						};
