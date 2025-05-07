@@ -784,7 +784,7 @@ export const CORE_PLUGIN: Plugin<
 							esModule: STRIP_CF_CONNECTING_IP(),
 						},
 					],
-					compatibilityDate: "2025-04-28",
+					compatibilityDate: "2025-02-01",
 					globalOutbound: getGlobalOutbound(workerIndex, options),
 				},
 			});
