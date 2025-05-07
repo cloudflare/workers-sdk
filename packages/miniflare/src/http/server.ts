@@ -1,8 +1,8 @@
 import fs from "fs/promises";
 import { z } from "zod";
-import { CORE_PLUGIN } from "../plugins";
+import { CORE_PLUGIN, HOST_CAPNP_CONNECT } from "../plugins";
 import { HttpOptions, Socket_Https } from "../runtime";
-import { Awaitable } from "../workers";
+import { Awaitable, CoreHeaders } from "../workers";
 import { CERT, KEY } from "./cert";
 
 export async function getEntrySocketHttpOptions(
@@ -37,7 +37,12 @@ export async function getEntrySocketHttpOptions(
 			},
 		};
 	} else {
-		return { http: {} };
+		return {
+			http: {
+				cfBlobHeader: CoreHeaders.CF_BLOB,
+				capnpConnectHost: HOST_CAPNP_CONNECT,
+			},
+		};
 	}
 }
 

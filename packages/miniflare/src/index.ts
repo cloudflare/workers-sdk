@@ -96,7 +96,11 @@ import {
 } from "./runtime";
 import {
 	_isCyclic,
+	createExternalFallbackService,
 	DevRegistry,
+	EXTERNAL_FALLBACK_SERVICE_NAME,
+	EXTERNAL_FALLBACK_SOCKET_NAME,
+	getIdentifier,
 	Log,
 	MiniflareCoreError,
 	NoOpLog,
@@ -740,8 +744,6 @@ export class Miniflare {
 	// `ready`. We would have no way of catching these otherwise.
 	readonly #initPromise: Promise<void>;
 
-	#proxyServer: net.Server | undefined;
-
 	// Aborted when dispose() is called
 	readonly #disposeController: AbortController;
 	#loopbackServer?: StoppableServer;
@@ -1033,26 +1035,49 @@ export class Miniflare {
 	) => {
 		const connectHost = req.url;
 
-		if (!connectHost) {
+		if (
+			!connectHost ||
+			!connectHost.startsWith("miniflare-unsafe-internal-capnp-connect-")
+		) {
 			clientSocket.write("HTTP/1.1 400 Bad Request\r\n\r\n");
 			clientSocket.end();
 			return;
 		}
 
-		const [workerName, entrypoint] = connectHost
+		const [workerName, entrypoint = "default"] = connectHost
 			.replace("miniflare-unsafe-internal-capnp-connect-", "")
 			.split(".");
 		const registry = await this.#devRegistry?.refresh();
-		// Pick the default entrypoint address for now
-		const address =
-			registry?.[workerName]?.entrypointAddresses?.[entrypoint ?? "default"];
+		const target = registry?.[workerName];
 
-		console.log("Proxying to address of Worker", workerName, address);
+		let address = target?.entrypointAddresses[entrypoint];
+
+		if (
+			target &&
+			!address &&
+			entrypoint === "default" &&
+			target.protocol !== "https"
+		) {
+			// Fallback to sending requests directly to the target
+			address = target;
+		}
 
 		if (!address) {
-			throw new Error(
-				`No address found for the "${entrypoint}" entrypoint of "${workerName}"`
+			assert(this.#socketPorts !== undefined);
+			const port = this.#socketPorts?.get(
+				EXTERNAL_FALLBACK_SOCKET_NAME + "_" + workerName + "_" + entrypoint
 			);
+
+			if (!port) {
+				clientSocket.write("HTTP/1.1 502 Bad Gateway\r\n\r\n");
+				clientSocket.end();
+				return;
+			}
+
+			address = {
+				host: DEFAULT_HOST,
+				port,
+			};
 		}
 
 		const serverSocket = net.connect(address.port, address.host, () => {
@@ -1194,39 +1219,6 @@ export class Miniflare {
 		const allWorkerOpts = this.#workerOpts;
 		const sharedOpts = this.#sharedOpts;
 
-		// Override service bindings if they point to a worker that doesn't exist
-		if (this.#devRegistry) {
-			for (const opts of allWorkerOpts) {
-				if (opts.core.serviceBindings) {
-					for (const name of Object.keys(opts.core.serviceBindings)) {
-						const service = opts.core.serviceBindings[name];
-						if (
-							typeof service === "object" &&
-							"name" in service &&
-							service.name !== kCurrentWorker &&
-							!allWorkerOpts.find(
-								(options) => options.core.name === service.name
-							)
-						) {
-							// This is a service binding to a worker that doesn't exist
-							// Override it to connect to the loopback service
-							opts.core.serviceBindings[name] = {
-								external: {
-									address: `${loopbackHost}:${loopbackPort}`,
-									http: {
-										// TODO: To support service workers format
-										// style: HttpOptions_Style.HOST,
-										cfBlobHeader: CoreHeaders.CF_BLOB,
-										capnpConnectHost: `${HOST_CAPNP_CONNECT}-${service.name}.${service.entrypoint ?? "default"}`,
-									},
-								},
-							};
-						}
-					}
-				}
-			}
-		}
-
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
 		this.#cfObject = sharedOpts.core.cf;
 
@@ -1265,7 +1257,10 @@ export class Miniflare {
 			sockets.push({
 				name: SOCKET_ENTRY_LOCAL,
 				service: { name: SERVICE_ENTRY },
-				http: {},
+				http: {
+					cfBlobHeader: CoreHeaders.CF_BLOB,
+					capnpConnectHost: HOST_CAPNP_CONNECT,
+				},
 				address: "127.0.0.1:0",
 			});
 		}
@@ -1278,6 +1273,13 @@ export class Miniflare {
 			workerName: string;
 			innerBindings: Worker_Binding[];
 		}[] = [];
+
+		const externalServices = new Map<string, Set<string | undefined>>();
+		const externalDOs: Array<{
+			identifier: string;
+			scriptName: string;
+			className: string;
+		}> = [];
 
 		for (let i = 0; i < allWorkerOpts.length; i++) {
 			const previousWorkerOpts = allPreviousWorkerOpts?.[i];
@@ -1297,6 +1299,77 @@ export class Miniflare {
 				// This will be the UserWorker, or the vitest pool worker wrapping the UserWorker
 				// The asset plugin needs this so that it can set the binding between the RouterWorker and the UserWorker
 				workerOpts.assets.assets.workerName = workerOpts.core.name;
+			}
+
+			// Override service bindings if they point to a worker that doesn't exist
+			if (workerOpts.core.serviceBindings) {
+				for (const name of Object.keys(workerOpts.core.serviceBindings)) {
+					const service = workerOpts.core.serviceBindings[name];
+					if (
+						typeof service === "object" &&
+						"name" in service &&
+						service.name !== kCurrentWorker &&
+						!allWorkerOpts.find((options) => options.core.name === service.name)
+					) {
+						// This is a service binding to a worker that doesn't exist
+						// Override it to connect to the dev registry
+						workerOpts.core.serviceBindings[name] = {
+							external: {
+								address: `${loopbackHost}:${loopbackPort}`,
+								http: {
+									// TODO: To support service workers format
+									// style: HttpOptions_Style.HOST,
+									cfBlobHeader: CoreHeaders.CF_BLOB,
+									capnpConnectHost: `${HOST_CAPNP_CONNECT}-${service.name}.${service.entrypoint ?? "default"}`,
+								},
+							},
+						};
+
+						let entrypoints = externalServices.get(service.name);
+
+						if (!entrypoints) {
+							entrypoints = new Set();
+							externalServices.set(service.name, entrypoints);
+						}
+
+						entrypoints.add(service.entrypoint);
+					}
+				}
+			}
+			// Override durable objects if they point to a script name that doesn't exist
+			if (workerOpts.do.durableObjects) {
+				for (const [name, durableObject] of Object.entries(
+					workerOpts.do.durableObjects
+				)) {
+					if (
+						typeof durableObject !== "string" &&
+						durableObject.scriptName !== undefined &&
+						allWorkerOpts.every(
+							(opts) => opts.core.name !== durableObject.scriptName
+						)
+					) {
+						const identifier = getIdentifier(
+							`do_${durableObject.scriptName}_${durableObject.className}`
+						);
+						workerOpts.do.durableObjects[name] = {
+							className: identifier,
+							scriptName: EXTERNAL_FALLBACK_SERVICE_NAME,
+							useSQLite: durableObject.useSQLite,
+							// Matches the unique key Miniflare will generate for this object in
+							// the target session. We need to do this so workerd generates the
+							// same IDs it would if this were part of the same process. workerd
+							// doesn't allow IDs from Durable Objects with different unique keys
+							// to be used with each other.
+							unsafeUniqueKey: `${durableObject.scriptName}-${durableObject.className}`,
+						};
+
+						externalDOs.push({
+							identifier,
+							scriptName: durableObject.scriptName,
+							className: durableObject.className,
+						});
+					}
+				}
 			}
 
 			// Collect all bindings from this worker
@@ -1465,9 +1538,35 @@ export class Miniflare {
 					http: {
 						style: directSocket.proxy ? HttpOptions_Style.PROXY : undefined,
 						cfBlobHeader: CoreHeaders.CF_BLOB,
-						capnpConnectHost: `${HOST_CAPNP_CONNECT}`,
+						capnpConnectHost: HOST_CAPNP_CONNECT,
 					},
 				});
+			}
+		}
+
+		if (externalServices.size > 0) {
+			for (const [serviceName, entrypoints] of externalServices) {
+				const service = createExternalFallbackService(serviceName, entrypoints);
+				assert(service.name !== undefined);
+
+				services.set(service.name, service);
+
+				for (const entrypoint of entrypoints) {
+					const socketName = `${EXTERNAL_FALLBACK_SOCKET_NAME}_${serviceName}_${entrypoint ?? "default"}`;
+					sockets.push({
+						name: socketName,
+						address: this.#getSocketAddress(socketName, 0, DEFAULT_HOST, 0),
+						service: {
+							name: service.name,
+							entrypoint,
+						},
+						http: {
+							style: HttpOptions_Style.PROXY,
+							cfBlobHeader: CoreHeaders.CF_BLOB,
+							capnpConnectHost: HOST_CAPNP_CONNECT,
+						},
+					});
+				}
 			}
 		}
 

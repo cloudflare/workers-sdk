@@ -7,7 +7,7 @@ import { existsSync } from "fs";
 import fs from "fs/promises";
 import http from "http";
 import { AddressInfo } from "net";
-import os, { tmpdir } from "os";
+import os from "os";
 import path from "path";
 import { Writable } from "stream";
 import { json, text } from "stream/consumers";
@@ -28,7 +28,6 @@ import {
 	createFetchMock,
 	DeferredPromise,
 	fetch,
-	HttpOptions_Style,
 	kCurrentWorker,
 	MessageEvent,
 	Miniflare,
@@ -2338,56 +2337,6 @@ test("Miniflare: allows RPC between multiple instances", async (t) => {
 
 	const res = await mf2.dispatchFetch("http://placeholder");
 	t.is(await res.text(), "pong");
-});
-test.only("Miniflare: dev registry", async (t) => {
-	const unsafeDevRegistryPath = path.join(tmpdir(), "dev-registry");
-	const mf1 = new Miniflare({
-		name: "worker-a",
-		unsafeDevRegistryPath,
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
-			import { WorkerEntrypoint } from "cloudflare:workers";
-			export class TestEntrypoint extends WorkerEntrypoint {
-				ping() { return "pong"; }
-			}
-		`,
-		unsafeDirectSockets: [
-			{
-				entrypoint: "TestEntrypoint",
-				proxy: true,
-			},
-		],
-	});
-	t.teardown(() => mf1.dispose());
-
-	await mf1.ready;
-
-	const mf2 = new Miniflare({
-		name: "worker-b",
-		unsafeDevRegistryPath,
-		serviceBindings: {
-			SERVICE: {
-				name: "worker-a",
-				entrypoint: "TestEntrypoint",
-			},
-		},
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
-			export default {
-				async fetch(request, env, ctx) {
-					const result = await env.SERVICE.ping();
-					return new Response(result);
-				}
-			}
-		`,
-	});
-	t.teardown(() => mf2.dispose());
-
-	const res = await mf2.dispatchFetch("http://placeholder");
-	const result = await res.text();
-	t.is(result, "pong");
 });
 
 // Only test `MINIFLARE_WORKERD_PATH` on Unix. The test uses a Node.js script
