@@ -246,14 +246,22 @@ export function bucketAndKeyFromObjectPath(objectPath = ""): {
 	bucket: string;
 	key: string;
 } {
-	const match = /^([^/]+)\/(.*)/.exec(objectPath);
-	if (match === null) {
+	// Path format is `<bucket>/<key>`
+	const match = /^(?<bucket>[^/]+)\/(?<key>.*)/.exec(objectPath);
+	if (match === null || !match.groups) {
 		throw new UserError(
 			`The object path must be in the form of {bucket}/{key} you provided ${objectPath}`
 		);
 	}
+	const { bucket, key } = match.groups;
+	if (!isValidR2BucketName(bucket)) {
+		throw new UserError(
+			`The bucket name "${bucket}" is invalid. ` +
+				"Bucket names must begin and end with an alphanumeric, only contain letters (a-z), numbers (0-9), and hyphens (-), and be between 3 and 63 characters long."
+		);
+	}
 
-	return { bucket: match[1], key: match[2] };
+	return { bucket, key };
 }
 
 /**
@@ -1287,6 +1295,8 @@ export async function deleteCORSPolicy(
 
 /**
  * R2 bucket names must only contain alphanumeric and - characters.
+ *
+ * See https://developers.cloudflare.com/r2/buckets/create-buckets/#bucket-level-operations
  */
 export function isValidR2BucketName(name: string | undefined): name is string {
 	return (
