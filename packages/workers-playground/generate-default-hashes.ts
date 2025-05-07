@@ -27,22 +27,47 @@ const pythonWorker = async () => {
 	};
 
 	worker.set("metadata", JSON.stringify(metadata));
+	const files = await readdir("./starter");
+	for (const file of files) {
+		const stat = await lstat("./starter/" + file);
+		if (stat.isDirectory()) {
+			for (const sub of await readdir("./starter/" + file)) {
+				console.log("starter/" + sub);
+				worker.set(
+					file + "/" + sub,
+					new Blob([await readFile("./starter/" + file + "/" + sub, "utf8")], {
+						type: "text/plain",
+					}),
+					file + "/" + sub
+				);
+			}
+		} else {
+			// console.log(file);
+			worker.set(
+				file,
+				new Blob([await readFile("./starter/" + file, "utf8")], {
+					type: "text/plain",
+				}),
+				file
+			);
+		}
+	}
 
-	worker.set(
-		"index.py",
-		new Blob([await readFile("./welcome/index.py", "utf8")], {
-			type: "text/x-python",
-		}),
-		"index.py"
-	);
+	// worker.set(
+	// 	"index.py",
+	// 	new Blob([await readFile("./welcome/index.py", "utf8")], {
+	// 		type: "text/x-python",
+	// 	}),
+	// 	"index.py"
+	// );
 
-	worker.set(
-		"requirements.txt",
-		new Blob([await readFile("./welcome/requirements.txt", "utf8")], {
-			type: "text/plain",
-		}),
-		"requirements.txt"
-	);
+	// worker.set(
+	// 	"requirements.txt",
+	// 	new Blob([await readFile("./welcome/requirements.txt", "utf8")], {
+	// 		type: "text/plain",
+	// 	}),
+	// 	"requirements.txt"
+	// );
 	return worker;
 };
 

@@ -50,7 +50,7 @@ export default function URLBar({ initialURL, onSubmit, loading }: Props) {
 						setUrl(newURL);
 					}}
 				/>
-				<Button type="primary" inverted={true} submit={true} loading={loading}>
+				<Button type="primary" inverted={true} submit={true}>
 					Go
 				</Button>
 			</Div>

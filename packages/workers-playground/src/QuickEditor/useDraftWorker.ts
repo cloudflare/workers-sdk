@@ -124,6 +124,7 @@ export function serialiseWorker(service: PartialWorker): FormData {
 }
 
 export type PreviewHash = {
+	token: string;
 	previewUrl: string;
 	devtoolsUrl: string;
 	serialised: string;
@@ -157,9 +158,7 @@ async function updatePreviewHash(content: Worker): Promise<PreviewHash> {
 	}
 
 	return {
-		previewUrl: `https://${v4()}.${
-			import.meta.env.VITE_PLAYGROUND_PREVIEW
-		}/.update-preview-token?token=${encodeURIComponent(deploy.preview)}`,
+		previewUrl: `http://localhost:8787/`,
 		devtoolsUrl: `wss://${import.meta.env.VITE_PLAYGROUND_ROOT}${
 			deploy.inspector
 		}`,
@@ -196,6 +195,18 @@ export function useDraftWorker(initialHash: string): {
 	const [previewHash, setPreviewHash] = useState<PreviewHash>();
 	const [previewError, setPreviewError] = useState<string>();
 	const [devtoolsUrl, setDevtoolsUrl] = useState<string>();
+
+	// useEffect(() => {
+	// 	void fetch(
+	// 		"https://cloudedit-controller.devprod-playground.workers.dev/editor/setup",
+	// 		{ method: "POST" }
+	// 	).then(async (r) => {
+	// 		const json = await r.json();
+
+	// 		setPreviewHash({ token: json.token });
+	// 		console.log("setup resp", await r.json());
+	// 	});
+	// }, []);
 
 	useEffect(() => {
 		async function updatePreview(content: Worker) {
@@ -235,8 +246,9 @@ export function useDraftWorker(initialHash: string): {
 		updateDraft: setDraftWorker,
 		devtoolsUrl,
 		previewHash,
-		isPreviewUpdating,
-		previewError: previewError,
+		isPreviewUpdating: false,
+		// previewError: previewError,
 		parseError: error?.toString(),
+		token: previewHash?.token,
 	};
 }

@@ -18,7 +18,7 @@ export interface Env {
 	// MY_BUCKET: R2Bucket;
 	//
 	// Example binding to a Service. Learn more at https://developers.cloudflare.com/workers/runtime-apis/service-bindings/
-	// MY_SERVICE: Fetcher;
+	// MY_SERVICE:Fetcher;
 }
 
 export default {

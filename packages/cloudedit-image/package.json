@@ -1,0 +1,20 @@
+{
+	"name": "cloudedit-image",
+	"type": "module",
+	"scripts": {
+		"build": "tsx scripts/bundle.ts",
+		"dev": "tsx watch src/index.ts"
+	},
+	"dependencies": {
+		"@hono/node-server": "^1.13.8",
+		"@hono/node-ws": "^1.0.8",
+		"chokidar": "^4.0.1",
+		"hono": "^4.7.1",
+		"node-pty": "^1.0.0"
+	},
+	"devDependencies": {
+		"@types/node": "^20.11.17",
+		"esbuild": "^0.25.0",
+		"tsx": "^4.7.1"
+	}
+}

@@ -13,6 +13,8 @@ import UrlBar from "./UrlBar";
 export function getPreviewIframeUrl(edgePreview: string, previewUrl: string) {
 	const url = new URL(edgePreview);
 	url.searchParams.set("suffix", previewUrl);
+	url.searchParams.set("port", "8787");
+	url.searchParams.set("token", "token");
 	return url.href;
 }
 
@@ -20,12 +22,12 @@ function PreviewTabImplementation() {
 	const draftWorker = useContext(ServiceContext);
 
 	const previewSrc = useMemo(() => {
-		if (draftWorker?.previewHash !== undefined) {
-			return getPreviewIframeUrl(
-				draftWorker.previewHash.previewUrl,
-				draftWorker?.previewUrl ?? ""
-			);
-		}
+		// if (draftWorker?.previewHash !== undefined) {
+		return getPreviewIframeUrl(
+			"https://cloudedit-controller.devprod-playground.workers.dev/proxy",
+			draftWorker?.previewUrl
+		);
+		// }
 	}, [draftWorker?.previewHash, draftWorker?.previewUrl]);
 
 	const onLoad = useInjectSources(
@@ -37,6 +39,8 @@ function PreviewTabImplementation() {
 		previewSrc,
 		onLoad
 	);
+
+	console.log({ isLoading, previewSrc });
 
 	return (
 		<Div display="flex" flexDirection="column" width="100%">

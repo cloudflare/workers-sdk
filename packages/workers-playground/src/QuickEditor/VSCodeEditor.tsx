@@ -39,6 +39,7 @@ type Props = {
 	onChange: (update: Required<Pick<Data, "entrypoint" | "files">>) => void;
 };
 
+const decoder = new TextDecoder("utf8");
 /**
  * This component handles communication with the embedded VSCode for Web instance.
  * To make changes _within_ VSCode for Web, see https://github.com/cloudflare/workers-sdk/packages/quick-edit
@@ -63,7 +64,21 @@ export function VSCodeEditor({ content, onChange }: Props) {
 
 	const [loading, setLoading] = useState(true);
 
+	const socket = useRef<WebSocket>();
+
 	const hasLoadedWorkerFiles = useRef(false);
+	useEffect(() => {
+		function createFSConnection(): void {
+			if (socket.current) {
+				return;
+			}
+			socket.current = new WebSocket(
+				"wss://cloudedit-controller.devprod-playground.workers.dev/fs?token=token"
+			);
+		}
+
+		createFSConnection();
+	}, []);
 
 	useEffect(() => {
 		const editorRef = editor.current;
@@ -102,6 +117,13 @@ export function VSCodeEditor({ content, onChange }: Props) {
 					});
 				}
 				if (data.type === "UpdateFile") {
+					socket.current?.send(
+						JSON.stringify({
+							type: "change",
+							path: stripSlashPrefix(data.body.path),
+							contents: btoa(decoder.decode(data.body.contents)),
+						})
+					);
 					onChange({
 						files: {
 							...content.files,
@@ -114,6 +136,13 @@ export function VSCodeEditor({ content, onChange }: Props) {
 					});
 				}
 				if (data.type === "CreateFile") {
+					socket.current?.send(
+						JSON.stringify({
+							type: "add",
+							path: stripSlashPrefix(data.body.path),
+							contents: btoa(decoder.decode(data.body.contents)),
+						})
+					);
 					onChange({
 						files: {
 							...content.files,
@@ -126,6 +155,12 @@ export function VSCodeEditor({ content, onChange }: Props) {
 					});
 				}
 				if (data.type === "DeleteFile") {
+					socket.current?.send(
+						JSON.stringify({
+							type: "unlink",
+							path: stripSlashPrefix(data.body.path),
+						})
+					);
 					const { [stripSlashPrefix(data.body.path)]: _toRemove, ...toKeep } =
 						content.files ?? {};
 

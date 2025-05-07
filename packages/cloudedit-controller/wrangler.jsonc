@@ -1,0 +1,30 @@
+{
+	"name": "cloudedit-controller",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-02-15",
+	"observability": {
+		"enabled": true,
+	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "CLOUDCHAMBER_CONTROLLER",
+				"class_name": "CloudchamberController",
+			},
+		],
+	},
+	"migrations": [
+		{ "tag": "v1", "new_sqlite_classes": ["CloudchamberController"] },
+	],
+	"containers": [
+		{
+			"name": "cloudedit",
+			"image": "../cloudedit-image/Dockerfile",
+			"class_name": "CloudchamberController",
+			"max_instances": 7,
+			"disk": {
+				"size": "4GB",
+			},
+		},
+	],
+}
