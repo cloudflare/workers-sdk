@@ -3,6 +3,9 @@ import test, { describe } from "node:test";
 import { Miniflare } from "miniflare";
 import { experimental_startMixedModeSession } from "wrangler";
 
+process.env.CLOUDFLARE_ACCOUNT_ID = process.env.TEST_CLOUDFLARE_ACCOUNT_ID;
+process.env.CLOUDFLARE_API_TOKEN = process.env.TEST_CLOUDFLARE_API_TOKEN;
+
 describe("startMixedModeSession", () => {
 	test("simple AI request to the proxyServerWorker", async () => {
 		const mixedModeSession = await experimental_startMixedModeSession({
