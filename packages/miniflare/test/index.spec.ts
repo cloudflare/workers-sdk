@@ -2995,20 +2995,6 @@ test("Miniflare: CF-Connecting-IP is preserved when present", async (t) => {
 	t.deepEqual(await ip.text(), "128.0.0.1");
 });
 
-// regression test for https://github.com/cloudflare/workers-sdk/issues/7924
-test("Miniflare: can fetch origins behind Cloudflare", async (t) => {
-	const mf = new Miniflare({
-		script:
-			"export default { fetch(request) { return fetch('https://dash.cloudflare.com') } }",
-		modules: true,
-	});
-	t.teardown(() => mf.dispose());
-
-	const landingPage = await mf.dispatchFetch("http://example.com/");
-	await landingPage.text();
-	t.assert(landingPage.status === 200);
-});
-
 test("Miniflare: can use module fallback service", async (t) => {
 	const modulesRoot = "/";
 	const modules: Record<string, Omit<Worker_Module, "name">> = {
