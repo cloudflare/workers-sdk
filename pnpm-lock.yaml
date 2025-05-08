@@ -413,6 +413,9 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
+      miniflare:
+        specifier: workspace:*
+        version: link:../../packages/miniflare
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
