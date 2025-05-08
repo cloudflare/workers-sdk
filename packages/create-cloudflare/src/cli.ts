@@ -34,7 +34,7 @@ import {
 	updatePackageScripts,
 } from "./templates";
 import { validateProjectDirectory } from "./validators";
-import { generateWorkersTypes, installWorkersTypes } from "./workers";
+import { addTypes } from "./workers";
 import { updateWranglerConfig } from "./wrangler/config";
 import type { C3Args, C3Context } from "types";
 
@@ -167,11 +167,8 @@ const configure = async (ctx: C3Context) => {
 	addWranglerToGitIgnore(ctx);
 
 	await updatePackageScripts(ctx);
-	if (ctx.template.workersTypes === "installed") {
-		await installWorkersTypes(ctx);
-	} else if (ctx.template.workersTypes === "generated") {
-		await generateWorkersTypes(ctx);
-	}
+
+	await addTypes(ctx);
 
 	await offerGit(ctx);
 	await gitCommit(ctx);

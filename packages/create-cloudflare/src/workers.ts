@@ -17,14 +17,26 @@ import {
 } from "./wrangler/config";
 import type { C3Context, PackageJson } from "types";
 
+export async function addTypes(ctx: C3Context) {
+	if (!usesTypescript(ctx) || ctx.template.workersTypes === "none") {
+		return;
+	}
+	const { npm } = detectPackageManager();
+
+	if (ctx.template.workersTypes === "installed") {
+		await installWorkersTypes(npm);
+	} else if (ctx.template.workersTypes === "generated") {
+		await generateWorkersTypes(ctx, npm);
+	}
+	const usesNodeCompat = await maybeInstallNodeTypes(ctx, npm);
+	await updateTsConfig(ctx, { usesNodeCompat });
+}
+
 /**
  * Generate types using the `cf-typegen` script and update tsconfig
  */
 
-export async function generateWorkersTypes(ctx: C3Context) {
-	if (!usesTypescript(ctx)) {
-		return;
-	}
+async function generateWorkersTypes(ctx: C3Context, npm: string) {
 	const packageJsonPath = join(ctx.project.path, "package.json");
 	if (!existsSync(packageJsonPath)) {
 		return;
@@ -33,8 +45,6 @@ export async function generateWorkersTypes(ctx: C3Context) {
 	if (!packageManifest.scripts?.["cf-typegen"]) {
 		return;
 	}
-
-	const { npm } = detectPackageManager();
 
 	const typesCmd = [npm, "run", "cf-typegen"];
 
@@ -45,12 +55,10 @@ export async function generateWorkersTypes(ctx: C3Context) {
 		doneText: `${brandColor("generated")} ${dim(`to \`${ctx.template.typesPath}\` via \`${typesCmd.join(" ")}\``)}`,
 	});
 
-	const usesNodeCompat = await maybeInstallNodeTypes(ctx, npm);
-
-	delete packageManifest["devDependencies"]?.["@cloudflare/workers-types"];
-
-	writeFile(packageJsonPath, JSON.stringify(packageManifest, null, 2));
-	await updateTsConfig(ctx, { usesNodeCompat });
+	if (packageManifest["devDependencies"]?.["@cloudflare/workers-types"]) {
+		delete packageManifest["devDependencies"]?.["@cloudflare/workers-types"];
+		writeFile(packageJsonPath, JSON.stringify(packageManifest, null, 2));
+	}
 }
 
 const maybeInstallNodeTypes = async (ctx: C3Context, npm: string) => {
@@ -169,17 +177,10 @@ export async function updateTsConfig(
  * Installs the latest version of the `@cloudflare/workers-types` package
  * and updates the .tsconfig file to use the latest entrypoint version.
  */
-export async function installWorkersTypes(ctx: C3Context) {
-	if (!usesTypescript(ctx)) {
-		return;
-	}
-	const { npm } = detectPackageManager();
-
+async function installWorkersTypes(npm: string) {
 	await installPackages(["@cloudflare/workers-types"], {
 		dev: true,
 		startText: "Installing @cloudflare/workers-types",
 		doneText: `${brandColor("installed")} ${dim(`via ${npm}`)}`,
 	});
-	const usesNodeCompat = await maybeInstallNodeTypes(ctx, npm);
-	await updateTsConfig(ctx, { usesNodeCompat });
 }
