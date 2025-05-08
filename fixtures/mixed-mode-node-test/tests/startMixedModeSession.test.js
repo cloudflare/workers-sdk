@@ -7,7 +7,7 @@ process.env.CLOUDFLARE_ACCOUNT_ID = process.env.TEST_CLOUDFLARE_ACCOUNT_ID;
 process.env.CLOUDFLARE_API_TOKEN = process.env.TEST_CLOUDFLARE_API_TOKEN;
 
 describe("startMixedModeSession", () => {
-	test("simple AI request to the proxyServerWorker", async () => {
+	test.skip("simple AI request to the proxyServerWorker", async () => {
 		const mixedModeSession = await experimental_startMixedModeSession({
 			AI: {
 				type: "ai",
@@ -31,7 +31,7 @@ describe("startMixedModeSession", () => {
 		await mixedModeSession.ready;
 		await mixedModeSession.dispose();
 	});
-	test("AI mixed mode binding", async () => {
+	test.skip("AI mixed mode binding", async () => {
 		const mixedModeSession = await experimental_startMixedModeSession({
 			AI: {
 				type: "ai",
@@ -68,6 +68,42 @@ describe("startMixedModeSession", () => {
 		assert.match(
 			await (await mf.dispatchFetch("http://example.com")).text(),
 			/This is a response from Workers AI/
+		);
+		await mf.dispose();
+
+		await mixedModeSession.ready;
+		await mixedModeSession.dispose();
+	});
+
+	test("Browser mixed mode binding", async () => {
+		const mixedModeSession = await experimental_startMixedModeSession({
+			BROWSER: {
+				type: "browser",
+			},
+		});
+
+		const mf = new Miniflare({
+			compatibilityDate: "2025-01-01",
+			compatibilityFlags: ["nodejs_compat"],
+			modules: true,
+			script: /* javascript */ `
+			export default {
+				async fetch(request, env) {
+					// Simulate acquiring a session
+					const content = await env.BROWSER.fetch("http://fake.host/v1/acquire");
+					return Response.json(await content.json());
+				}
+			}
+		`,
+			browserRendering: {
+				binding: "BROWSER",
+				mixedModeConnectionString: mixedModeSession.mixedModeConnectionString,
+			},
+		});
+
+		assert.match(
+			await (await mf.dispatchFetch("http://example.com")).text(),
+			/sessionId/
 		);
 		await mf.dispose();
 

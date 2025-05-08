@@ -7,6 +7,10 @@ import {
 } from "./analytics-engine";
 import { ASSETS_PLUGIN } from "./assets";
 import { ASSETS_PLUGIN_NAME } from "./assets/constants";
+import {
+	BROWSER_RENDERING_PLUGIN,
+	BROWSER_RENDERING_PLUGIN_NAME,
+} from "./browser-rendering";
 import { CACHE_PLUGIN, CACHE_PLUGIN_NAME } from "./cache";
 import { CORE_PLUGIN, CORE_PLUGIN_NAME } from "./core";
 import { D1_PLUGIN, D1_PLUGIN_NAME } from "./d1";
@@ -38,6 +42,7 @@ export const PLUGINS = {
 	[EMAIL_PLUGIN_NAME]: EMAIL_PLUGIN,
 	[ANALYTICS_ENGINE_PLUGIN_NAME]: ANALYTICS_ENGINE_PLUGIN,
 	[AI_PLUGIN_NAME]: AI_PLUGIN,
+	[BROWSER_RENDERING_PLUGIN_NAME]: BROWSER_RENDERING_PLUGIN,
 };
 export type Plugins = typeof PLUGINS;
 
@@ -91,7 +96,8 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof PIPELINE_PLUGIN.options> &
 	z.input<typeof SECRET_STORE_PLUGIN.options> &
 	z.input<typeof ANALYTICS_ENGINE_PLUGIN.options> &
-	z.input<typeof AI_PLUGIN.options>;
+	z.input<typeof AI_PLUGIN.options> &
+	z.input<typeof BROWSER_RENDERING_PLUGIN.options>;
 
 export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof CACHE_PLUGIN.sharedOptions> &
@@ -155,3 +161,4 @@ export * from "./secret-store";
 export * from "./email";
 export * from "./analytics-engine";
 export * from "./ai";
+export * from "./browser-rendering";
