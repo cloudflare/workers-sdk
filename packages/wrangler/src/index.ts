@@ -371,6 +371,7 @@ export function createCLIParser(argv: string[]) {
 				"config",
 				(configArgv) =>
 					configArgv["_"][0] === "dev" ||
+					configArgv["_"][0] === "types" ||
 					(configArgv["_"][0] === "pages" && configArgv["_"][1] === "dev")
 			)
 		)

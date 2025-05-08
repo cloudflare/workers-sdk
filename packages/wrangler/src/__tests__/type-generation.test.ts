@@ -1,5 +1,4 @@
 import * as fs from "fs";
-import * as TOML from "@iarna/toml";
 import {
 	constructTSModuleGlob,
 	constructTypeKey,
@@ -122,9 +121,14 @@ const bindingsConfigMock: Omit<
 			{ name: "DURABLE_RE_EXPORT", class_name: "DurableReexport" },
 			{ name: "DURABLE_NO_EXPORT", class_name: "DurableNoexport" },
 			{
-				name: "DURABLE_EXTERNAL",
+				name: "DURABLE_EXTERNAL_UNKNOWN_ENTRY",
 				class_name: "DurableExternal",
 				script_name: "external-worker",
+			},
+			{
+				name: "DURABLE_EXTERNAL_PROVIDED_ENTRY",
+				class_name: "RealDurableExternal",
+				script_name: "service_name_2",
 			},
 		],
 	},
@@ -150,7 +154,19 @@ const bindingsConfigMock: Omit<
 			secret_name: "secret_name",
 		},
 	],
-	services: [{ binding: "SERVICE_BINDING", service: "SERVICE_NAME" }],
+	services: [
+		{ binding: "SERVICE_BINDING", service: "service_name" },
+		{
+			binding: "OTHER_SERVICE_BINDING",
+			service: "service_name_2",
+			entrypoint: "FakeEntrypoint",
+		},
+		{
+			binding: "OTHER_SERVICE_BINDING_ENTRYPOINT",
+			service: "service_name_2",
+			entrypoint: "RealEntrypoint",
+		},
+	],
 	analytics_engine_datasets: [
 		{
 			binding: "AE_DATASET_BINDING",
@@ -260,38 +276,38 @@ describe("generate types", () => {
 
 	it("should respect the top level -c|--config flag", async () => {
 		fs.writeFileSync(
-			"./wrangler.toml",
-			TOML.stringify({
+			"./wrangler.jsonc",
+			JSON.stringify({
 				compatibility_date: "2022-01-12",
 				compatibility_flags: ["fake-compat-1"],
 				vars: {
 					var: "from wrangler toml",
 				},
-			} as TOML.JsonMap),
+			}),
 			"utf-8"
 		);
 
 		fs.writeFileSync(
-			"./my-wrangler-config-a.toml",
-			TOML.stringify({
+			"./my-wrangler-config-a.jsonc",
+			JSON.stringify({
 				compatibility_date: "2023-01-12",
 				compatibility_flags: ["fake-compat-2"],
 				vars: {
 					var: "from my-wrangler-config-a",
 				},
-			} as TOML.JsonMap),
+			}),
 			"utf-8"
 		);
 
 		fs.writeFileSync(
-			"./my-wrangler-config-b.toml",
-			TOML.stringify({
+			"./my-wrangler-config-b.jsonc",
+			JSON.stringify({
 				compatibility_date: "2024-01-12",
 				compatibility_flags: ["fake-compat-3"],
 				vars: {
 					var: "from my-wrangler-config-b",
 				},
-			} as TOML.JsonMap),
+			}),
 			"utf-8"
 		);
 
@@ -304,7 +320,7 @@ describe("generate types", () => {
 			outFile: "worker-configuration.d.ts",
 		});
 
-		await runWrangler("types --config ./my-wrangler-config-a.toml");
+		await runWrangler("types --config ./my-wrangler-config-a.jsonc");
 		expect(spy).toHaveBeenNthCalledWith(2, {
 			config: expect.objectContaining({
 				compatibility_date: "2023-01-12",
@@ -313,7 +329,7 @@ describe("generate types", () => {
 			outFile: "worker-configuration.d.ts",
 		});
 
-		await runWrangler("types -c my-wrangler-config-b.toml");
+		await runWrangler("types -c my-wrangler-config-b.jsonc");
 		expect(spy).toHaveBeenNthCalledWith(3, {
 			config: expect.objectContaining({
 				compatibility_date: "2024-01-12",
@@ -340,7 +356,7 @@ describe("generate types", () => {
 
 			📖 Read about runtime types
 			https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 
 			Generating project types...
 
@@ -360,7 +376,7 @@ describe("generate types", () => {
 
 			📖 Read about runtime types
 			https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 
 			Generating project types...
 
@@ -380,7 +396,7 @@ describe("generate types", () => {
 
 			📖 Read about runtime types
 			https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 			"
 		`);
 	});
@@ -396,14 +412,14 @@ describe("generate types", () => {
 				export class DurableExternal extends DurableObject {}`
 		);
 		fs.writeFileSync(
-			"./wrangler.toml",
-			TOML.stringify({
+			"./wrangler.jsonc",
+			JSON.stringify({
 				compatibility_date: "2022-01-12",
 				name: "test-name",
 				main: "./index.ts",
 				...bindingsConfigMock,
-				unsafe: bindingsConfigMock.unsafe ?? {},
-			} as unknown as TOML.JsonMap),
+				unsafe: bindingsConfigMock.unsafe,
+			}),
 			"utf-8"
 		);
 
@@ -416,16 +432,19 @@ describe("generate types", () => {
 					TEST_KV_NAMESPACE: KVNamespace;
 					SOMETHING: \\"asdasdfasdf\\";
 					ANOTHER: \\"thing\\";
-					\\"some-other-var\\": \\"some-other-value\\";
 					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+					\\"some-other-var\\": \\"some-other-value\\";
 					DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
 					DURABLE_RE_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableReexport>;
 					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
-					DURABLE_EXTERNAL: DurableObjectNamespace /* DurableExternal from external-worker */;
+					DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
+					DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace /* RealDurableExternal from service_name_2 */;
 					R2_BUCKET_BINDING: R2Bucket;
 					D1_TESTING_SOMETHING: D1Database;
 					SECRET: SecretsStoreSecret;
-					SERVICE_BINDING: Fetcher;
+					SERVICE_BINDING: Fetcher /* service_name */;
+					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
+					OTHER_SERVICE_BINDING_ENTRYPOINT: Service /* entrypoint RealEntrypoint from service_name_2 */;
 					AE_DATASET_BINDING: AnalyticsEngineDataset;
 					NAMESPACE_BINDING: DispatchNamespace;
 					LOGFWDR_SCHEMA: any;
@@ -464,7 +483,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 			"
 		`);
 	});
@@ -480,8 +499,8 @@ describe("generate types", () => {
 				export class DurableExternal extends DurableObject {}`
 		);
 		fs.writeFileSync(
-			"./wrangler.toml",
-			TOML.stringify({
+			"./wrangler.jsonc",
+			JSON.stringify({
 				compatibility_date: "2022-01-12",
 				compatibility_flags: [
 					"nodejs_compat",
@@ -490,8 +509,8 @@ describe("generate types", () => {
 				name: "test-name",
 				main: "./index.ts",
 				...bindingsConfigMock,
-				unsafe: bindingsConfigMock.unsafe ?? {},
-			} as unknown as TOML.JsonMap),
+				unsafe: bindingsConfigMock.unsafe,
+			}),
 			"utf-8"
 		);
 		fs.writeFileSync("./.dev.vars", "SECRET=test", "utf-8");
@@ -505,17 +524,20 @@ describe("generate types", () => {
 					TEST_KV_NAMESPACE: KVNamespace;
 					SOMETHING: \\"asdasdfasdf\\";
 					ANOTHER: \\"thing\\";
-					\\"some-other-var\\": \\"some-other-value\\";
 					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+					\\"some-other-var\\": \\"some-other-value\\";
 					SECRET: string;
 					DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
 					DURABLE_RE_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableReexport>;
 					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
-					DURABLE_EXTERNAL: DurableObjectNamespace /* DurableExternal from external-worker */;
+					DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
+					DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace /* RealDurableExternal from service_name_2 */;
 					R2_BUCKET_BINDING: R2Bucket;
 					D1_TESTING_SOMETHING: D1Database;
 					SECRET: SecretsStoreSecret;
-					SERVICE_BINDING: Fetcher;
+					SERVICE_BINDING: Fetcher /* service_name */;
+					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
+					OTHER_SERVICE_BINDING_ENTRYPOINT: Service /* entrypoint RealEntrypoint from service_name_2 */;
 					AE_DATASET_BINDING: AnalyticsEngineDataset;
 					NAMESPACE_BINDING: DispatchNamespace;
 					LOGFWDR_SCHEMA: any;
@@ -543,7 +565,7 @@ describe("generate types", () => {
 				[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 			};
 			declare namespace NodeJS {
-				interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, \\"SOMETHING\\" | \\"ANOTHER\\" | \\"some-other-var\\" | \\"OBJECT_VAR\\" | \\"SECRET\\">> {}
+				interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, \\"SOMETHING\\" | \\"ANOTHER\\" | \\"OBJECT_VAR\\" | \\"some-other-var\\" | \\"SECRET\\">> {}
 			}
 			declare module \\"*.txt\\" {
 				const value: string;
@@ -560,7 +582,164 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			"
+		`);
+	});
+
+	it("should handle multiple worker configs", async () => {
+		fs.mkdirSync("a");
+
+		fs.writeFileSync(
+			"./a/index.ts",
+			`import { DurableObject } from 'cloudflare:workers';
+				export default { async fetch () {} };
+				export class DurableDirect extends DurableObject {}`
+		);
+		fs.writeFileSync(
+			"./a/wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				compatibility_flags: [
+					"nodejs_compat",
+					"nodejs_compat_populate_process_env",
+				],
+				name: "test-name",
+				main: "./index.ts",
+				...bindingsConfigMock,
+				unsafe: bindingsConfigMock.unsafe,
+			}),
+			"utf-8"
+		);
+		fs.writeFileSync("./a/.dev.vars", "SECRET=test", "utf-8");
+
+		fs.mkdirSync("b");
+
+		fs.writeFileSync("./b/index.ts", `export default { async fetch () {} };`);
+		fs.writeFileSync(
+			"./b/wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				compatibility_flags: [
+					"nodejs_compat",
+					"nodejs_compat_populate_process_env",
+				],
+				name: "service_name",
+				main: "./index.ts",
+				vars: {
+					// This should not be included in the generated types
+					WORKER_B_VAR: "worker b var",
+				},
+			}),
+			"utf-8"
+		);
+		// This should not be included in the generated types
+		fs.writeFileSync("./b/.dev.vars", "SECRET_B=hidden", "utf-8");
+
+		fs.mkdirSync("c");
+
+		fs.writeFileSync(
+			"./c/index.ts",
+			`import { DurableObject, WorkerEntrypoint } from 'cloudflare:workers';
+				export default { async fetch () {} };
+
+				export class RealDurableExternal extends DurableObject {}
+
+				export class RealEntrypoint extends WorkerEntrypoint {}
+				`
+		);
+		fs.writeFileSync(
+			"./c/wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				compatibility_flags: [
+					"nodejs_compat",
+					"nodejs_compat_populate_process_env",
+				],
+				name: "service_name_2",
+				main: "./index.ts",
+				vars: {
+					// This should not be included in the generated types
+					WORKER_C_VAR: "worker c var",
+				},
+			}),
+			"utf-8"
+		);
+		// This should not be included in the generated types
+		fs.writeFileSync("./c/.dev.vars", "SECRET_C=hidden", "utf-8");
+
+		await runWrangler(
+			"types --include-runtime=false -c a/wrangler.jsonc -c b/wrangler.jsonc -c c/wrangler.jsonc --path a/worker-configuration.d.ts"
+		);
+		expect(std.out).toMatchInlineSnapshot(`
+			"- Found Worker 'service_name' at 'b/index.ts' (b/wrangler.jsonc)
+			- Found Worker 'service_name_2' at 'c/index.ts' (c/wrangler.jsonc)
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface Env {
+					TEST_KV_NAMESPACE: KVNamespace;
+					SOMETHING: \\"asdasdfasdf\\";
+					ANOTHER: \\"thing\\";
+					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+					\\"some-other-var\\": \\"some-other-value\\";
+					SECRET: string;
+					DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
+					DURABLE_RE_EXPORT: DurableObjectNamespace /* DurableReexport */;
+					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
+					DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
+					DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace<import(\\"../c/index\\").RealDurableExternal>;
+					R2_BUCKET_BINDING: R2Bucket;
+					D1_TESTING_SOMETHING: D1Database;
+					SECRET: SecretsStoreSecret;
+					SERVICE_BINDING: Fetcher /* service_name */;
+					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
+					OTHER_SERVICE_BINDING_ENTRYPOINT: Service<import(\\"../c/index\\").RealEntrypoint>;
+					AE_DATASET_BINDING: AnalyticsEngineDataset;
+					NAMESPACE_BINDING: DispatchNamespace;
+					LOGFWDR_SCHEMA: any;
+					SOME_DATA_BLOB1: ArrayBuffer;
+					SOME_DATA_BLOB2: ArrayBuffer;
+					SOME_TEXT_BLOB1: string;
+					SOME_TEXT_BLOB2: string;
+					testing_unsafe: any;
+					UNSAFE_RATELIMIT: RateLimit;
+					TEST_QUEUE_BINDING: Queue;
+					SEND_EMAIL_BINDING: SendEmail;
+					VECTORIZE_BINDING: VectorizeIndex;
+					HYPERDRIVE_BINDING: Hyperdrive;
+					MTLS_BINDING: Fetcher;
+					BROWSER_BINDING: Fetcher;
+					AI_BINDING: Ai;
+					IMAGES_BINDING: ImagesBinding;
+					VERSION_METADATA_BINDING: WorkerVersionMetadata;
+					ASSETS_BINDING: Fetcher;
+					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+			type StringifyValues<EnvType extends Record<string, unknown>> = {
+				[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
+			};
+			declare namespace NodeJS {
+				interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, \\"SOMETHING\\" | \\"ANOTHER\\" | \\"OBJECT_VAR\\" | \\"some-other-var\\" | \\"SECRET\\">> {}
+			}
+			declare module \\"*.txt\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.webp\\" {
+				const value: ArrayBuffer;
+				export default value;
+			}
+			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			────────────────────────────────────────────────────────────
+			✨ Types written to a/worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 			"
 		`);
 	});
@@ -568,8 +747,8 @@ describe("generate types", () => {
 	it("should create a DTS file at the location that the command is executed from", async () => {
 		fs.writeFileSync("./index.ts", "export default { async fetch () {} };");
 		fs.writeFileSync(
-			"./wrangler.toml",
-			TOML.stringify({
+			"./wrangler.jsonc",
+			JSON.stringify({
 				compatibility_date: "2022-01-12",
 				name: "test-name",
 				main: "./index.ts",
@@ -583,14 +762,14 @@ describe("generate types", () => {
 		expect(fs.readFileSync("./worker-configuration.d.ts", "utf-8"))
 			.toMatchInlineSnapshot(`
 				"/* eslint-disable */
-				// Generated by Wrangler by running \`wrangler\` (hash: a123396658ac84465faf6f0f82c0337b)
+				// Generated by Wrangler by running \`wrangler\` (hash: fc5d598f2fb05668416eab9ae2c2898d)
 				// Runtime types generated with workerd@
 				declare namespace Cloudflare {
 					interface Env {
 						SOMETHING: \\"asdasdfasdf\\";
 						ANOTHER: \\"thing\\";
-						\\"some-other-var\\": \\"some-other-value\\";
 						OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+						\\"some-other-var\\": \\"some-other-value\\";
 					}
 				}
 				interface Env extends Cloudflare.Env {}
@@ -607,8 +786,8 @@ describe("generate types", () => {
 				'addEventListener("fetch", event => { event.respondWith(() => new Response("")); })'
 			);
 			fs.writeFileSync(
-				"./wrangler.toml",
-				TOML.stringify({
+				"./wrangler.jsonc",
+				JSON.stringify({
 					compatibility_date: "2022-01-12",
 					name: "test-name",
 					main: "./index.ts",
@@ -624,7 +803,7 @@ describe("generate types", () => {
 				No project types to add.
 
 				────────────────────────────────────────────────────────────
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 				"
 			`);
 		});
@@ -635,8 +814,8 @@ describe("generate types", () => {
 				'addEventListener("fetch", event => { event.respondWith(() => new Response("")); })'
 			);
 			fs.writeFileSync(
-				"./wrangler.toml",
-				TOML.stringify({
+				"./wrangler.jsonc",
+				JSON.stringify({
 					compatibility_date: "2022-01-12",
 					name: "test-name",
 					main: "./index.ts",
@@ -666,7 +845,7 @@ describe("generate types", () => {
 
 				📖 Read about runtime types
 				https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 				"
 			`);
 		});
@@ -674,8 +853,8 @@ describe("generate types", () => {
 		it("should create a DTS file with an empty env interface for module syntax workers", async () => {
 			fs.writeFileSync("./index.ts", "export default { async fetch () {} };");
 			fs.writeFileSync(
-				"./wrangler.toml",
-				TOML.stringify({
+				"./wrangler.jsonc",
+				JSON.stringify({
 					compatibility_date: "2022-01-12",
 					name: "test-name",
 					main: "./index.ts",
@@ -697,7 +876,7 @@ describe("generate types", () => {
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 				"
 			`);
 		});
@@ -710,13 +889,13 @@ describe("generate types", () => {
 		);
 		fs.writeFileSync("./index.ts", "export default { async fetch () {} };");
 		fs.writeFileSync(
-			"./wrangler.toml",
-			TOML.stringify({
+			"./wrangler.jsonc",
+			JSON.stringify({
 				compatibility_date: "2022-01-12",
 				name: "test-name",
 				main: "./index.ts",
 				vars: bindingsConfigMock.vars,
-			} as TOML.JsonMap),
+			}),
 			"utf-8"
 		);
 
@@ -733,8 +912,8 @@ describe("generate types", () => {
 		}); async function handleRequest(request) {  return new Response('Hello worker!', {headers: { 'content-type': 'text/plain' },});}`
 		);
 		fs.writeFileSync(
-			"./wrangler.toml",
-			TOML.stringify({
+			"./wrangler.jsonc",
+			JSON.stringify({
 				compatibility_date: "2022-01-12",
 				name: "test-name",
 				main: "./index.ts",
@@ -744,7 +923,7 @@ describe("generate types", () => {
 							metadata: bindingsConfigMock.unsafe.metadata,
 						}
 					: undefined,
-			} as TOML.JsonMap),
+			}),
 			"utf-8"
 		);
 
@@ -761,18 +940,18 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 			"
 		`);
 	});
 
 	it("should accept a toml file without an entrypoint and fallback to the standard modules declarations", async () => {
 		fs.writeFileSync(
-			"./wrangler.toml",
-			TOML.stringify({
+			"./wrangler.jsonc",
+			JSON.stringify({
 				compatibility_date: "2022-01-12",
 				vars: bindingsConfigMock.vars,
-			} as unknown as TOML.JsonMap),
+			}),
 			"utf-8"
 		);
 
@@ -784,8 +963,8 @@ describe("generate types", () => {
 				interface Env {
 					SOMETHING: \\"asdasdfasdf\\";
 					ANOTHER: \\"thing\\";
-					\\"some-other-var\\": \\"some-other-value\\";
 					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+					\\"some-other-var\\": \\"some-other-value\\";
 				}
 			}
 			interface Env extends Cloudflare.Env {}
@@ -799,18 +978,18 @@ describe("generate types", () => {
 
 			📖 Read about runtime types
 			https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 			"
 		`);
 	});
 
 	it("should not error if expected entrypoint is not found and assume module worker", async () => {
 		fs.writeFileSync(
-			"./wrangler.toml",
-			TOML.stringify({
+			"./wrangler.jsonc",
+			JSON.stringify({
 				main: "index.ts",
 				vars: bindingsConfigMock.vars,
-			} as unknown as TOML.JsonMap),
+			}),
 			"utf-8"
 		);
 		expect(fs.existsSync("index.ts")).toEqual(false);
@@ -823,8 +1002,8 @@ describe("generate types", () => {
 				interface Env {
 					SOMETHING: \\"asdasdfasdf\\";
 					ANOTHER: \\"thing\\";
-					\\"some-other-var\\": \\"some-other-value\\";
 					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+					\\"some-other-var\\": \\"some-other-value\\";
 				}
 			}
 			interface Env extends Cloudflare.Env {}
@@ -832,20 +1011,20 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 			"
 		`);
 	});
 
 	it("should include secret keys from .dev.vars", async () => {
 		fs.writeFileSync(
-			"./wrangler.toml",
-			TOML.stringify({
+			"./wrangler.jsonc",
+			JSON.stringify({
 				vars: {
 					myTomlVarA: "A from wrangler toml",
 					myTomlVarB: "B from wrangler toml",
 				},
-			} as TOML.JsonMap),
+			}),
 			"utf-8"
 		);
 
@@ -877,22 +1056,22 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 			"
 		`);
 	});
 
 	it("should allow opting out of strict-vars", async () => {
 		fs.writeFileSync(
-			"./wrangler.toml",
-			TOML.stringify({
+			"./wrangler.jsonc",
+			JSON.stringify({
 				vars: {
 					varStr: "A from wrangler toml",
 					varArrNum: [1, 2, 3],
 					varArrMix: [1, "two", 3, true],
 					varObj: { test: true },
 				},
-			} as TOML.JsonMap),
+			}),
 			"utf-8"
 		);
 
@@ -914,20 +1093,20 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 			"
 		`);
 	});
 
 	it("should override vars with secrets", async () => {
 		fs.writeFileSync(
-			"./wrangler.toml",
-			TOML.stringify({
+			"./wrangler.jsonc",
+			JSON.stringify({
 				vars: {
 					MY_VARIABLE_A: "my variable",
 					MY_VARIABLE_B: { variable: true },
 				},
-			} as TOML.JsonMap),
+			}),
 			"utf-8"
 		);
 
@@ -954,15 +1133,15 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 			"
 		`);
 	});
 
 	it("various different types of vars", async () => {
 		fs.writeFileSync(
-			"./wrangler.toml",
-			TOML.stringify({
+			"./wrangler.jsonc",
+			JSON.stringify({
 				vars: {
 					"var-a": '"a\\""',
 					"var-a-1": '"a\\\\"',
@@ -974,7 +1153,7 @@ describe("generate types", () => {
 					false: false,
 					"multi\nline\nvar": "this\nis\na\nmulti\nline\nvariable!",
 				},
-			} as TOML.JsonMap),
+			}),
 			"utf-8"
 		);
 		await runWrangler("types --include-runtime=false");
@@ -1002,7 +1181,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 			"
 		`);
 	});
@@ -1010,8 +1189,8 @@ describe("generate types", () => {
 	describe("vars present in multiple environments", () => {
 		beforeEach(() => {
 			fs.writeFileSync(
-				"./wrangler.toml",
-				TOML.stringify({
+				"./wrangler.jsonc",
+				JSON.stringify({
 					vars: {
 						MY_VAR: "a var",
 						MY_VAR_A: "A (dev)",
@@ -1033,7 +1212,7 @@ describe("generate types", () => {
 							},
 						},
 					},
-				} as TOML.JsonMap),
+				}),
 				"utf-8"
 			);
 		});
@@ -1048,8 +1227,8 @@ describe("generate types", () => {
 					interface Env {
 						MY_VAR: \\"a var\\";
 						MY_VAR_A: \\"A (dev)\\" | \\"A (prod)\\" | \\"A (stag)\\";
-						MY_VAR_C: [\\"a\\",\\"b\\",\\"c\\"] | [1,2,3];
 						MY_VAR_B: {\\"value\\":\\"B (dev)\\"} | {\\"value\\":\\"B (prod)\\"};
+						MY_VAR_C: [\\"a\\",\\"b\\",\\"c\\"] | [1,2,3];
 					}
 				}
 				interface Env extends Cloudflare.Env {}
@@ -1057,7 +1236,7 @@ describe("generate types", () => {
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 				"
 			`);
 		});
@@ -1072,8 +1251,8 @@ describe("generate types", () => {
 					interface Env {
 						MY_VAR: string;
 						MY_VAR_A: string;
-						MY_VAR_C: string[] | number[];
 						MY_VAR_B: object;
+						MY_VAR_C: string[] | number[];
 					}
 				}
 				interface Env extends Cloudflare.Env {}
@@ -1081,7 +1260,7 @@ describe("generate types", () => {
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 				"
 			`);
 		});
@@ -1091,10 +1270,10 @@ describe("generate types", () => {
 		describe("env", () => {
 			it("should allow the user to customize the interface name", async () => {
 				fs.writeFileSync(
-					"./wrangler.toml",
-					TOML.stringify({
+					"./wrangler.jsonc",
+					JSON.stringify({
 						vars: bindingsConfigMock.vars,
-					} as TOML.JsonMap),
+					}),
 					"utf-8"
 				);
 
@@ -1108,8 +1287,8 @@ describe("generate types", () => {
 						interface Env {
 							SOMETHING: \\"asdasdfasdf\\";
 							ANOTHER: \\"thing\\";
-							\\"some-other-var\\": \\"some-other-value\\";
 							OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+							\\"some-other-var\\": \\"some-other-value\\";
 						}
 					}
 					interface CloudflareEnv extends Cloudflare.Env {}
@@ -1117,17 +1296,17 @@ describe("generate types", () => {
 					────────────────────────────────────────────────────────────
 					✨ Types written to worker-configuration.d.ts
 
-					📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+					📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 					"
 				`);
 			});
 
 			it("should error if --env-interface is specified with no argument", async () => {
 				fs.writeFileSync(
-					"./wrangler.toml",
-					TOML.stringify({
+					"./wrangler.jsonc",
+					JSON.stringify({
 						vars: bindingsConfigMock.vars,
-					} as TOML.JsonMap),
+					}),
 					"utf-8"
 				);
 
@@ -1138,10 +1317,10 @@ describe("generate types", () => {
 
 			it("should error if an invalid interface identifier is provided to --env-interface", async () => {
 				fs.writeFileSync(
-					"./wrangler.toml",
-					TOML.stringify({
+					"./wrangler.jsonc",
+					JSON.stringify({
 						vars: bindingsConfigMock.vars,
-					} as TOML.JsonMap),
+					}),
 					"utf-8"
 				);
 
@@ -1170,12 +1349,12 @@ describe("generate types", () => {
 				}); async function handleRequest(request) {  return new Response('Hello worker!', {headers: { 'content-type': 'text/plain' },});}`
 				);
 				fs.writeFileSync(
-					"./wrangler.toml",
-					TOML.stringify({
+					"./wrangler.jsonc",
+					JSON.stringify({
 						name: "test-name",
 						main: "./index.ts",
 						vars: bindingsConfigMock.vars,
-					} as TOML.JsonMap),
+					}),
 					"utf-8"
 				);
 
@@ -1190,11 +1369,11 @@ describe("generate types", () => {
 		describe("output file", () => {
 			it("should allow the user to specify where to write the result", async () => {
 				fs.writeFileSync(
-					"./wrangler.toml",
-					TOML.stringify({
+					"./wrangler.jsonc",
+					JSON.stringify({
 						compatibility_date: "2022-01-12",
 						vars: bindingsConfigMock.vars,
-					} as TOML.JsonMap),
+					}),
 					"utf-8"
 				);
 
@@ -1205,14 +1384,14 @@ describe("generate types", () => {
 				expect(fs.readFileSync("./cloudflare-env.d.ts", "utf-8"))
 					.toMatchInlineSnapshot(`
 						"/* eslint-disable */
-						// Generated by Wrangler by running \`wrangler\` (hash: a123396658ac84465faf6f0f82c0337b)
+						// Generated by Wrangler by running \`wrangler\` (hash: fc5d598f2fb05668416eab9ae2c2898d)
 						// Runtime types generated with workerd@
 						declare namespace Cloudflare {
 							interface Env {
 								SOMETHING: \\"asdasdfasdf\\";
 								ANOTHER: \\"thing\\";
-								\\"some-other-var\\": \\"some-other-value\\";
 								OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+								\\"some-other-var\\": \\"some-other-value\\";
 							}
 						}
 						interface Env extends Cloudflare.Env {}
@@ -1224,10 +1403,10 @@ describe("generate types", () => {
 
 			it("should error if the user points to a non-d.ts file", async () => {
 				fs.writeFileSync(
-					"./wrangler.toml",
-					TOML.stringify({
+					"./wrangler.jsonc",
+					JSON.stringify({
 						vars: bindingsConfigMock.vars,
-					} as TOML.JsonMap),
+					}),
 					"utf-8"
 				);
 
@@ -1249,10 +1428,10 @@ describe("generate types", () => {
 
 		it("should allow multiple customizations to be applied together", async () => {
 			fs.writeFileSync(
-				"./wrangler.toml",
-				TOML.stringify({
+				"./wrangler.jsonc",
+				JSON.stringify({
 					vars: bindingsConfigMock.vars,
-				} as TOML.JsonMap),
+				}),
 				"utf-8"
 			);
 
@@ -1263,14 +1442,14 @@ describe("generate types", () => {
 			expect(fs.readFileSync("./my-cloudflare-env-interface.d.ts", "utf-8"))
 				.toMatchInlineSnapshot(`
 					"/* eslint-disable */
-					// Generated by Wrangler by running \`wrangler\` (hash: 7e48a0a15b531f54ca31c564fe6cb101)
+					// Generated by Wrangler by running \`wrangler\` (hash: 60930eb00599b0244bd44c7fd113844b)
 					// Runtime types generated with workerd@
 					declare namespace Cloudflare {
 						interface Env {
 							SOMETHING: \\"asdasdfasdf\\";
 							ANOTHER: \\"thing\\";
-							\\"some-other-var\\": \\"some-other-value\\";
 							OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captian\\":\\"Picard\\"};
+							\\"some-other-var\\": \\"some-other-value\\";
 						}
 					}
 					interface MyCloudflareEnvInterface extends Cloudflare.Env {}
@@ -1284,13 +1463,13 @@ describe("generate types", () => {
 	describe("runtime types output", () => {
 		beforeEach(() => {
 			fs.writeFileSync(
-				"./wrangler.toml",
-				TOML.stringify({
+				"./wrangler.jsonc",
+				JSON.stringify({
 					compatibility_date: "2022-12-12",
 					vars: {
 						"var-a": "a",
 					},
-				} as TOML.JsonMap),
+				}),
 				"utf-8"
 			);
 		});
@@ -1325,7 +1504,7 @@ describe("generate types", () => {
 
 				📖 Read about runtime types
 				https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 				"
 			`);
 		});
@@ -1358,7 +1537,7 @@ describe("generate types", () => {
 
 				📖 Read about runtime types
 				https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.toml file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 				"
 			`);
 		});
