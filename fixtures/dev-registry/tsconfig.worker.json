@@ -1,0 +1,4 @@
+{
+	"extends": ["@cloudflare/workers-tsconfig/worker.json"],
+	"include": ["vite-worker", "vite-multi-workers"]
+}

@@ -1,0 +1,11 @@
+{
+	"name": "vite-worker",
+	"main": "./vite-worker/index.ts",
+	"compatibility_date": "2024-12-30",
+	"services": [
+		{
+			"binding": "remote",
+			"service": "vite-multi-workers",
+		},
+	],
+}
