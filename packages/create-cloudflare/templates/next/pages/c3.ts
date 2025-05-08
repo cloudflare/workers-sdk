@@ -145,7 +145,6 @@ export const writeEslintrc = async (ctx: C3Context): Promise<void> => {
 const addDevDependencies = async (installEslintPlugin: boolean) => {
 	const packages = [
 		"@cloudflare/next-on-pages@1",
-		"@cloudflare/workers-types",
 		"vercel",
 		...(installEslintPlugin ? ["eslint-plugin-next-on-pages"] : []),
 	];
@@ -155,6 +154,9 @@ const addDevDependencies = async (installEslintPlugin: boolean) => {
 		doneText: `${brandColor(`installed`)} ${dim(packages.join(", "))}`,
 	});
 };
+
+const envInterfaceName = "CloudflareEnv";
+const typesPath = "./env.d.ts";
 
 export default {
 	configVersion: 1,
@@ -213,7 +215,7 @@ export default {
 				preview: `${pagesBuildRunCommand} && wrangler pages dev`,
 				deploy: `${pagesBuildRunCommand} && wrangler pages deploy`,
 				...(usesTypescript(ctx) && {
-					"cf-typegen": `wrangler types --env-interface CloudflareEnv env.d.ts`,
+					"cf-typegen": `wrangler types --env-interface ${envInterfaceName} ${typesPath}`,
 				}),
 			},
 		};
@@ -222,4 +224,6 @@ export default {
 	previewScript: "preview",
 	deployScript: "deploy",
 	compatibilityFlags: ["nodejs_compat"],
+	typesPath,
+	envInterfaceName,
 } as TemplateConfig;

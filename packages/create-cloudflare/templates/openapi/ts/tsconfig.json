@@ -22,7 +22,6 @@
 		"types": [
 			"@types/node",
 			"@types/service-worker-mock",
-			"@cloudflare/workers-types"
 		]
 	},
 	"exclude": ["node_modules", "dist", "tests"],

@@ -25,6 +25,7 @@ export default function getFrameworkTestConfigExperimental() {
 				route: "/",
 				expectedText: "Hello world",
 			},
+			nodeCompat: true,
 		},
 	};
 }
