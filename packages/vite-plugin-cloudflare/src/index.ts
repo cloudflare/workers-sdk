@@ -378,7 +378,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 								}
 							);
 
+							// Vite uses HTTP/2 when `server.https` is enabled
 							if (req.httpVersionMajor === 2) {
+								// HTTP/2 disallows use of the `transfer-encoding` header
 								response.headers.delete("transfer-encoding");
 							}
 
@@ -420,7 +422,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							{ redirect: "manual" }
 						);
 
+						// Vite uses HTTP/2 when `preview.https` is enabled
 						if (req.httpVersionMajor === 2) {
+							// HTTP/2 disallows use of the `transfer-encoding` header
 							response.headers.delete("transfer-encoding");
 						}
 
