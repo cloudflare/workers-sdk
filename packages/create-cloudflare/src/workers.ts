@@ -73,13 +73,13 @@ const maybeInstallNodeTypes = async (ctx: C3Context, npm: string) => {
 		parsedConfig = TOML.parse(wranglerTomlStr);
 	}
 
-	const compatibility_flags = Array.isArray(parsedConfig["compatibility_flags"])
+	const compatibilityFlags = Array.isArray(parsedConfig["compatibility_flags"])
 		? parsedConfig["compatibility_flags"]
 		: [];
 
 	if (
-		compatibility_flags.includes("nodejs_compat") ||
-		compatibility_flags.includes("nodejs_compat_v2")
+		compatibilityFlags.includes("nodejs_compat") ||
+		compatibilityFlags.includes("nodejs_compat_v2")
 	) {
 		await installPackages(["@types/node"], {
 			dev: true,
