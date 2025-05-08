@@ -1,0 +1,5 @@
+{
+	"name": "vite-multi-workers-health",
+	"main": "./vite-multi-workers/health.ts",
+	"compatibility_date": "2024-12-30",
+}

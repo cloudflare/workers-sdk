@@ -4,8 +4,12 @@
 	"compatibility_date": "2024-12-30",
 	"services": [
 		{
-			"binding": "remote",
+			"binding": "REMOTE",
 			"service": "vite-multi-workers",
+		},
+		{
+			"binding": "HEALTH",
+			"service": "vite-multi-workers-health",
 		},
 	],
 }

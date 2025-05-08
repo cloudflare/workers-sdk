@@ -1,13 +1,16 @@
-import { WorkerEntrypoint } from "cloudflare:workers";
-
-export class TestEntrypoint extends WorkerEntrypoint {
-	ping() {
-		return "pong";
-	}
-}
-
 export default {
-	fetch(request, env) {
-		return env.remote.fetch(request);
+	async fetch(request, env) {
+		try {
+			const url = new URL(request.url);
+
+			if (url.pathname === "/ping") {
+				const result = await env.HEALTH.ping();
+				return new Response(result);
+			}
+
+			return env.REMOTE.fetch(request);
+		} catch (error) {
+			return new Response(`${error}`, { status: 500 });
+		}
 	},
-} satisfies ExportedHandler<{ remote: any }>;
+} satisfies ExportedHandler<{ REMOTE: any; HEALTH: any }>;

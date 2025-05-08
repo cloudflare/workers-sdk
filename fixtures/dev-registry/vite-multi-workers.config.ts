@@ -7,6 +7,11 @@ export default defineConfig({
 			configPath: "./wrangler.vite-multi-workers.jsonc",
 			inspectorPort: false,
 			persistState: false,
+			auxiliaryWorkers: [
+				{
+					configPath: "./wrangler.vite-multi-workers.health.jsonc",
+				},
+			],
 		}),
 	],
 });

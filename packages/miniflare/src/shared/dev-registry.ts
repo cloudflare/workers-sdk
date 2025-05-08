@@ -13,7 +13,12 @@ import path from "node:path";
 import { Duplex } from "node:stream";
 import { FSWatcher, watch } from "chokidar";
 import { HOST_CAPNP_CONNECT } from "../plugins";
-import { HttpOptions, Service, SocketPorts } from "../runtime";
+import {
+	HttpOptions,
+	HttpOptions_Style,
+	Service,
+	SocketPorts,
+} from "../runtime";
 import { CoreHeaders } from "../workers";
 import { Log } from "./log";
 
@@ -218,6 +223,9 @@ export class DevRegistry {
 				}
 
 				serverSocket.pipe(clientSocket);
+				clientSocket.pipe(serverSocket);
+				// Note: I might need to kill the tunnel if it is connected to a fallback service
+				// To make sure workerd re-connects everytime to see if the service is available
 			});
 
 			// Errors on either side
@@ -372,8 +380,7 @@ export function getExternalServiceHttpOptions(
 	entrypoint: string | undefined
 ): HttpOptions {
 	return {
-		// TODO: Do I need to set a style?
-		// style: HttpOptions_Style.HOST,
+		style: HttpOptions_Style.PROXY,
 		cfBlobHeader: CoreHeaders.CF_BLOB,
 		// The Connect Host is needed for RPC proxying
 		capnpConnectHost: `${service}:${entrypoint ?? "default"}`,
