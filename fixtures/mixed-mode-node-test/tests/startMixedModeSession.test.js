@@ -7,7 +7,7 @@ process.env.CLOUDFLARE_ACCOUNT_ID = process.env.TEST_CLOUDFLARE_ACCOUNT_ID;
 process.env.CLOUDFLARE_API_TOKEN = process.env.TEST_CLOUDFLARE_API_TOKEN;
 
 describe("startMixedModeSession", () => {
-	test.skip("simple AI request to the proxyServerWorker", async () => {
+	test("simple AI request to the proxyServerWorker", async () => {
 		const mixedModeSession = await experimental_startMixedModeSession({
 			AI: {
 				type: "ai",
@@ -31,7 +31,7 @@ describe("startMixedModeSession", () => {
 		await mixedModeSession.ready;
 		await mixedModeSession.dispose();
 	});
-	test.skip("AI mixed mode binding", async () => {
+	test("AI mixed mode binding", async () => {
 		const mixedModeSession = await experimental_startMixedModeSession({
 			AI: {
 				type: "ai",
