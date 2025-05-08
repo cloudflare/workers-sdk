@@ -138,33 +138,38 @@ export class DevRegistry {
 		req: http.IncomingMessage,
 		res?: http.ServerResponse
 	): boolean {
-		const service = req.headers[PROXY_SERVICE_HEADER.toLowerCase()];
-		const entrypoint = req.headers[PROXY_ENTRYPOINT_HEADER.toLowerCase()];
+		const service = req.headers[PROXY_SERVICE_HEADER];
+		const entrypoint = req.headers[PROXY_ENTRYPOINT_HEADER];
 
 		if (!res || typeof service !== "string" || typeof entrypoint !== "string") {
 			// This is not a external fetch request. No proxying needed.
 			return false;
 		}
 
-		delete req.headers[PROXY_SERVICE_HEADER.toLowerCase()];
-		delete req.headers[PROXY_ENTRYPOINT_HEADER.toLowerCase()];
+		delete req.headers[PROXY_SERVICE_HEADER];
+		delete req.headers[PROXY_ENTRYPOINT_HEADER];
 
 		const address = this.getExternalServiceAddress(service, entrypoint);
-		const upstream = http.request(
-			{
-				host: address.host,
-				port: address.port,
-				method: req.method,
-				path: req.url,
-				headers: req.headers,
-			},
-			(upRes) => {
-				// Relay status and headers back to the original client
-				res.writeHead(upRes.statusCode ?? 500, upRes.headers);
-				//Pipe the response body
-				upRes.pipe(res);
-			}
+		const url = new URL(
+			req.url ?? "/",
+			`${address.protocol}://${req.headers.host}`
 		);
+		const options: http.RequestOptions = {
+			host: address.host,
+			port: address.port,
+			method: req.method,
+			// Workerd expects the full URL in the request instead of the path only
+			// e.g. GET http://placeholder/test HTTP/1.1 instead of GET /test HTTP/1.1
+			// Using req.url (the path) will result in TypeError: Invalid URL string.
+			path: url.toString(),
+			headers: req.headers,
+		};
+		const upstream = http.request(options, (upRes) => {
+			// Relay status and headers back to the original client
+			res.writeHead(upRes.statusCode ?? 500, upRes.headers);
+			//Pipe the response body
+			upRes.pipe(res);
+		});
 
 		// Pipe the client request body to the upstream
 		req.pipe(upstream);
@@ -220,7 +225,7 @@ export class DevRegistry {
 	private getExternalServiceAddress(
 		service: string,
 		entrypoint: string | undefined = "default"
-	): { host: string; port: number } {
+	): { protocol: "http" | "https"; host: string; port: number } {
 		if (!this.registry) {
 			throw new Error("Registry not initialized yet");
 		}
@@ -256,7 +261,11 @@ export class DevRegistry {
 			};
 		}
 
-		return address;
+		return {
+			protocol: target?.protocol ?? "http",
+			host: address.host,
+			port: address.port,
+		};
 	}
 
 	private async refresh() {
@@ -378,8 +387,9 @@ export function getExternalFallbackServiceSocketName(
 	return `external-fallback-${service}-${entrypoint ?? "default"}`;
 }
 
-const PROXY_SERVICE_HEADER = "Dev-Registry-Proxy-Service";
-const PROXY_ENTRYPOINT_HEADER = "Dev-Registry-Proxy-Entrypoint";
+// Node HTTP server parsed headers are always in lowercase
+const PROXY_SERVICE_HEADER = "Dev-Registry-Proxy-Service".toLowerCase();
+const PROXY_ENTRYPOINT_HEADER = "Dev-Registry-Proxy-Entrypoint".toLowerCase();
 const CREATE_PROXY_PROTOTYPE_CLASS_HELPER_SCRIPT = `
 	const HANDLER_RESERVED_KEYS = new Set([
 		"alarm",
