@@ -3,7 +3,7 @@
 	"extends": ["//"],
 	"tasks": {
 		"test:ci": {
-			"env": ["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"]
+			"env": ["TEST_CLOUDFLARE_ACCOUNT_ID", "TEST_CLOUDFLARE_API_TOKEN"]
 		}
 	}
 }
