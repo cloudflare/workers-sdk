@@ -11,5 +11,9 @@
 			"binding": "HEALTH",
 			"service": "vite-multi-workers-health",
 		},
+		{
+			"binding": "WRANGLER",
+			"service": "wrangler-worker",
+		},
 	],
 }

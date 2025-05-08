@@ -26,5 +26,5 @@ export function getGlobalWranglerConfigPath() {
 }
 
 export function getDefaultDevRegistryPath() {
-	return path.join(getGlobalWranglerConfigPath(), "dev-registry");
+	return path.join(getGlobalWranglerConfigPath(), "registry");
 }

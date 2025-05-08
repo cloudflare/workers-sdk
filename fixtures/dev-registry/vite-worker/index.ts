@@ -8,9 +8,13 @@ export default {
 				return new Response(result);
 			}
 
+			if (url.pathname === "/wrangler") {
+				return env.WRANGLER.fetch(request);
+			}
+
 			return env.REMOTE.fetch(request);
 		} catch (error) {
 			return new Response(`${error}`, { status: 500 });
 		}
 	},
-} satisfies ExportedHandler<{ REMOTE: any; HEALTH: any }>;
+} satisfies ExportedHandler<{ REMOTE: any; HEALTH: any; WRANGLER: any }>;
