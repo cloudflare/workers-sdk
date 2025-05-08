@@ -17,6 +17,6 @@ export default {
 				})
 			);
 		}
-		return new Response("no-op mixed-mode proxyServerWorker");
+		return new Response("Provide a binding", { status: 400 });
 	},
 } satisfies ExportedHandler<Record<string, Fetcher>>;
