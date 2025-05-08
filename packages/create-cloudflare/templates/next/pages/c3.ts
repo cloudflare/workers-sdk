@@ -75,14 +75,6 @@ const configure = async (ctx: C3Context) => {
 
 	const usesTs = usesTypescript(ctx);
 
-	if (usesTs) {
-		copyFile(
-			join(getTemplatePath(ctx), "env.d.ts"),
-			join(projectPath, "env.d.ts"),
-		);
-		updateStatus("Created an env.d.ts file");
-	}
-
 	const installEslintPlugin = await shouldInstallNextOnPagesEslintPlugin(ctx);
 
 	if (installEslintPlugin) {
