@@ -108,6 +108,7 @@ import {
 	DevRegistry,
 	getExternalFallbackServiceSocketName,
 	getExternalServiceHttpOptions,
+	WorkerDefinition,
 } from "./shared/dev-registry";
 import { isCompressedByCloudflareFL } from "./shared/mime-types";
 import {
@@ -853,6 +854,8 @@ export class Miniflare {
 				// effort basis.
 				this.#log.debug(`Unable to remove temporary directory: ${String(e)}`);
 			}
+			// Unregister all workers from the dev registry
+			void this.#devRegistry.dispose();
 		});
 
 		this.#disposeController = new AbortController();
@@ -1721,18 +1724,20 @@ export class Miniflare {
 		// Return a copy so external mutations don't propagate to `#runtimeEntryURL`
 		return new URL(this.#runtimeEntryURL.toString());
 	}
-	get ready(): Promise<URL> {
-		return this.#waitForReady().then(async (url) => {
-			const protocol = url.protocol.substring(0, url.protocol.length - 1);
 
-			assert(
-				protocol === "http" || protocol === "https",
-				"Expected protocol to be http or https"
-			);
+	async #getWorkerDefinitions(
+		url: URL
+	): Promise<Record<string, WorkerDefinition>> {
+		const protocol = url.protocol.substring(0, url.protocol.length - 1);
 
-			await Promise.all([
-				this.#devRegistry.watch(),
-				...this.#workerOpts.map(async (workerOpts) => {
+		assert(
+			protocol === "http" || protocol === "https",
+			"Expected protocol to be http or https"
+		);
+
+		const entries = await Promise.all(
+			this.#workerOpts.map<Promise<[string, WorkerDefinition] | undefined>>(
+				async (workerOpts) => {
 					if (!workerOpts.core.name) {
 						return;
 					}
@@ -1752,26 +1757,44 @@ export class Miniflare {
 						}) ?? []
 					);
 
-					await this.#devRegistry.register(workerOpts.core.name, {
-						protocol,
-						// These host and port values are used only when the registered definition
-						// does not include direct entrypoint (i.e. old wrangler version) or uses service-worker syntax.
-						// See https://github.com/cloudflare/workers-sdk/blob/8cdabe23fcc2813f970db02928b016bbf3b155e5/packages/wrangler/src/dev/miniflare.ts#L506-L507
-						host: url.hostname,
-						port: parseInt(url.port),
-						entrypointAddresses: Object.fromEntries(
-							addresses.map(({ entrypoint, host, port }) => [
-								entrypoint ?? "default",
-								{
-									host,
-									port,
-								},
-							]) ?? []
-						),
-						durableObjects: [],
-					});
-				}),
-			]);
+					return [
+						workerOpts.core.name,
+						{
+							protocol,
+							// These host and port values are used only when the registered definition
+							// does not include direct entrypoint (i.e. old wrangler version) or uses service-worker syntax.
+							// See https://github.com/cloudflare/workers-sdk/blob/8cdabe23fcc2813f970db02928b016bbf3b155e5/packages/wrangler/src/dev/miniflare.ts#L506-L507
+							host: url.hostname,
+							port: parseInt(url.port),
+							entrypointAddresses: Object.fromEntries(
+								addresses.map(({ entrypoint, host, port }) => [
+									entrypoint ?? "default",
+									{
+										host,
+										port,
+									},
+								]) ?? []
+							),
+							durableObjects: [],
+						},
+					];
+				}
+			)
+		);
+
+		return Object.fromEntries(entries.filter((entry) => entry !== undefined));
+	}
+
+	get ready(): Promise<URL> {
+		return this.#waitForReady().then(async (url) => {
+			// Collect all worker definitions
+			const workerDefinitions = await this.#getWorkerDefinitions(url);
+
+			// Register all workers with the dev registry
+			this.#devRegistry.register(workerDefinitions);
+
+			// Watch for changes to the dev registry
+			await this.#devRegistry.watch();
 
 			return url;
 		});
@@ -1868,12 +1891,20 @@ export class Miniflare {
 		this.#workerOpts = workerOpts;
 		this.#log = this.#sharedOpts.core.log ?? this.#log;
 
-		await this.#devRegistry.updateRegistryPath(
-			sharedOpts.core.unsafeDevRegistryPath
-		);
-
+		await this.#devRegistry.updateRegistryPath(opts.unsafeDevRegistryPath);
 		// Send to runtime and wait for updates to process
 		await this.#assembleAndUpdateConfig();
+
+		assert(
+			this.#runtimeEntryURL !== undefined,
+			"The runtime entry URL should be defined at this point"
+		);
+		// Collect all worker definitions
+		const workerDefinitions = await this.#getWorkerDefinitions(
+			this.#runtimeEntryURL
+		);
+		// Register all workers with the dev registry
+		this.#devRegistry.register(workerDefinitions);
 	}
 
 	setOptions(opts: MiniflareOptions): Promise<void> {
@@ -2175,15 +2206,7 @@ export class Miniflare {
 
 			// Close the inspector proxy server if there is one
 			await this.#maybeInspectorProxyController?.dispose();
-			// Unregister workers from dev registry
-			await Promise.allSettled(
-				this.#workerOpts.map(async (opts) => {
-					if (opts.core.name) {
-						await this.#devRegistry?.unregister(opts.core.name);
-					}
-				})
-			);
-			// Stop the watcher and clean up
+			// Unregister workers from dev registry and stop the file watcher
 			await this.#devRegistry.dispose();
 
 			// Remove from instance registry as last step in `finally`, to make sure

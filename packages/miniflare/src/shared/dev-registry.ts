@@ -1,12 +1,12 @@
-import { utimesSync } from "node:fs";
 import {
-	mkdir,
-	readdir,
-	readFile,
-	stat,
-	unlink,
-	writeFile,
-} from "node:fs/promises";
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	statSync,
+	unlinkSync,
+	utimesSync,
+	writeFileSync,
+} from "node:fs";
 import http from "node:http";
 import net from "node:net";
 import path from "node:path";
@@ -35,6 +35,7 @@ export type WorkerDefinition = {
 export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();
 	private registry: WorkerRegistry = {};
+	private managedWorkers: Set<string> = new Set();
 	private watcher: FSWatcher | undefined;
 	public socketPorts: SocketPorts | undefined;
 
@@ -46,85 +47,54 @@ export class DevRegistry {
 	/**
 	 * Watch files inside the registry
 	 */
-	async watch(): Promise<void> {
+	public watch(): void {
 		if (!this.registryPath || this.watcher) {
 			return;
 		}
-
-		await this.refresh();
 
 		this.watcher = watch(this.registryPath, { persistent: true }).on(
 			"all",
 			() => this.refresh()
 		);
+
+		this.refresh();
 	}
 
-	async dispose(): Promise<void> {
-		if (this.watcher) {
-			await this.watcher.close();
-			this.watcher = undefined;
+	private clear() {
+		for (const worker of this.managedWorkers) {
+			this.unregister(worker);
 		}
 
 		for (const heartbeat of this.heartbeats) {
 			clearInterval(heartbeat[1]);
 		}
 
+		this.managedWorkers.clear();
 		this.heartbeats.clear();
 	}
 
-	async updateRegistryPath(registryPath: string | undefined): Promise<void> {
-		if (this.registryPath === registryPath) {
-			// If the registry path hasn't changed, do nothing
-			return;
-		}
-
-		this.registryPath = registryPath;
-
-		await this.dispose();
-		await this.watch();
-	}
-
 	/**
-	 * Register a worker in the registry.
+	 * Unregister all managed workers and cleanup
+	 * This is a sync function that returns a promise
+	 * to ensure all workers are unregistered within the exit hook without waiting
 	 */
-	async register(name: string, definition: WorkerDefinition) {
-		if (!this.registryPath) {
-			return;
-		}
+	public dispose(): Promise<void> | undefined {
+		this.clear();
 
-		const existingHeartbeat = this.heartbeats.get(name);
-		if (existingHeartbeat) {
-			clearInterval(existingHeartbeat);
-		}
-		await mkdir(this.registryPath, { recursive: true });
-		await writeFile(
-			path.join(this.registryPath, name),
-			JSON.stringify(definition, null, 2)
-		);
-		this.heartbeats.set(
-			name,
-			setInterval(() => {
-				if (this.registryPath) {
-					utimesSync(
-						path.join(this.registryPath, name),
-						new Date(),
-						new Date()
-					);
-				}
-			}, 30_000)
-		);
+		// Only this step is async and could be awaited
+		return this.watcher?.close();
 	}
 
 	/**
 	 * Unregister a worker in the registry.
 	 */
-	async unregister(name: string) {
+	private unregister(name: string) {
 		if (!this.registryPath) {
 			return;
 		}
 
 		try {
-			await unlink(path.join(this.registryPath, name));
+			unlinkSync(path.join(this.registryPath, name));
 			const existingHeartbeat = this.heartbeats.get(name);
 			if (existingHeartbeat) {
 				clearInterval(existingHeartbeat);
@@ -134,7 +104,50 @@ export class DevRegistry {
 		}
 	}
 
-	handleExternalFetch(
+	public async updateRegistryPath(
+		registryPath: string | undefined
+	): Promise<void> {
+		this.clear();
+
+		if (this.registryPath !== registryPath) {
+			this.watcher?.close();
+			this.watcher = undefined;
+			this.watch();
+		}
+	}
+
+	public register(workers: Record<string, WorkerDefinition>) {
+		if (!this.registryPath) {
+			return;
+		}
+
+		for (const [name, definition] of Object.entries(workers)) {
+			const existingHeartbeat = this.heartbeats.get(name);
+			if (existingHeartbeat) {
+				clearInterval(existingHeartbeat);
+			}
+			mkdirSync(this.registryPath, { recursive: true });
+			writeFileSync(
+				path.join(this.registryPath, name),
+				JSON.stringify(definition, null, 2)
+			);
+			this.managedWorkers.add(name);
+			this.heartbeats.set(
+				name,
+				setInterval(() => {
+					if (this.registryPath) {
+						utimesSync(
+							path.join(this.registryPath, name),
+							new Date(),
+							new Date()
+						);
+					}
+				}, 30_000)
+			);
+		}
+	}
+
+	public handleExternalFetch(
 		req: http.IncomingMessage,
 		res?: http.ServerResponse
 	): boolean {
@@ -167,7 +180,7 @@ export class DevRegistry {
 		const upstream = http.request(options, (upRes) => {
 			// Relay status and headers back to the original client
 			res.writeHead(upRes.statusCode ?? 500, upRes.headers);
-			//Pipe the response body
+			// Pipe the response body
 			upRes.pipe(res);
 		});
 
@@ -183,7 +196,7 @@ export class DevRegistry {
 		return true;
 	}
 
-	handleExternalRPCConnection(
+	public handleExternalRPCConnection(
 		connectHost: string | undefined,
 		clientSocket: Duplex,
 		head: Buffer
@@ -268,28 +281,28 @@ export class DevRegistry {
 		};
 	}
 
-	private async refresh() {
+	private refresh(): void {
 		if (!this.registryPath) {
-			throw new Error("No registry path set");
+			return;
 		}
 
-		await mkdir(this.registryPath, { recursive: true });
+		mkdirSync(this.registryPath, { recursive: true });
 
 		this.registry ??= {};
 
 		const newWorkers = new Set<string>();
-		const workerDefinitions = await readdir(this.registryPath);
+		const workerDefinitions = readdirSync(this.registryPath);
 
 		for (const workerName of workerDefinitions) {
 			try {
-				const file = await readFile(
+				const file = readFileSync(
 					path.join(this.registryPath, workerName),
 					"utf8"
 				);
-				const stats = await stat(path.join(this.registryPath, workerName));
-				// Cleanup existing workers older than 10 minutes
-				if (stats.mtime.getTime() < Date.now() - 600000) {
-					await this.unregister(workerName);
+				const stats = statSync(path.join(this.registryPath, workerName));
+				// Cleanup existing workers older than 5 minutes
+				if (stats.mtime.getTime() < Date.now() - 300_000) {
+					this.unregister(workerName);
 				} else {
 					this.registry[workerName] = JSON.parse(file);
 					newWorkers.add(workerName);
@@ -307,8 +320,6 @@ export class DevRegistry {
 				delete this.registry[worker];
 			}
 		}
-
-		return this.registry;
 	}
 }
 
