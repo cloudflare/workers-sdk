@@ -2754,8 +2754,8 @@ importers:
         specifier: workspace:*
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
-        specifier: ^4.20250506.0
-        version: 4.20250506.0
+        specifier: ^4.20250507.0
+        version: 4.20250507.0
       '@vitejs/plugin-basic-ssl':
         specifier: ^2.0.0
         version: 2.0.0(vite@6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2))
@@ -16528,7 +16528,7 @@ snapshots:
       '@typescript-eslint/type-utils': 6.10.0(eslint@8.57.1)(typescript@5.7.3)
       '@typescript-eslint/utils': 6.10.0(eslint@8.57.1)(typescript@5.7.3)
       '@typescript-eslint/visitor-keys': 6.10.0
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       eslint: 8.57.1
       graphemer: 1.4.0
       ignore: 5.3.1
@@ -16564,7 +16564,7 @@ snapshots:
       '@typescript-eslint/types': 6.10.0
       '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.7.3)
       '@typescript-eslint/visitor-keys': 6.10.0
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       eslint: 8.57.1
     optionalDependencies:
       typescript: 5.7.3
@@ -16577,7 +16577,7 @@ snapshots:
       '@typescript-eslint/types': 7.18.0
       '@typescript-eslint/typescript-estree': 7.18.0(typescript@5.6.3)
       '@typescript-eslint/visitor-keys': 7.18.0
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       eslint: 8.57.1
     optionalDependencies:
       typescript: 5.6.3
@@ -16763,7 +16763,7 @@ snapshots:
 
   '@verdaccio/loaders@8.0.0-next-8.4':
     dependencies:
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       lodash: 4.17.21
     transitivePeerDependencies:
       - supports-color
@@ -16824,7 +16824,7 @@ snapshots:
 
   '@verdaccio/signature@8.0.0-next-8.1':
     dependencies:
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       jsonwebtoken: 9.0.2
     transitivePeerDependencies:
       - supports-color
@@ -17399,7 +17399,7 @@ snapshots:
       common-path-prefix: 3.0.0
       concordance: 5.0.4
       currently-unhandled: 0.4.1
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       emittery: 1.0.1
       figures: 6.0.1
       globby: 14.0.1
@@ -18460,8 +18460,8 @@ snapshots:
 
   esbuild-register@3.5.0(esbuild@0.25.4):
     dependencies:
-      debug: 4.3.7(supports-color@8.1.1)
-      esbuild: 0.25.2
+      debug: 4.3.7(supports-color@9.2.2)
+      esbuild: 0.25.4
     transitivePeerDependencies:
       - supports-color
 
@@ -18797,7 +18797,7 @@ snapshots:
       ajv: 6.12.6
       chalk: 4.1.2
       cross-spawn: 7.0.6
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       doctrine: 3.0.0
       escape-string-regexp: 4.0.0
       eslint-scope: 7.2.2
@@ -22452,7 +22452,7 @@ snapshots:
       cac: 6.7.14
       chokidar: 3.6.0
       consola: 3.3.3
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       esbuild: 0.23.1
       execa: 5.1.1
       joycon: 3.1.1
@@ -22889,7 +22889,7 @@ snapshots:
       '@volar/typescript': 2.3.4
       '@vue/language-core': 2.0.29(typescript@5.7.3)
       compare-versions: 6.1.1
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       kolorist: 1.8.0
       local-pkg: 0.5.0
       magic-string: 0.30.17
@@ -22904,7 +22904,7 @@ snapshots:
 
   vite-tsconfig-paths@4.2.0(typescript@5.7.3)(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2)):
     dependencies:
-      debug: 4.3.7(supports-color@8.1.1)
+      debug: 4.3.7(supports-color@9.2.2)
       globrex: 0.1.2
       tsconfck: 2.1.1(typescript@5.7.3)
     optionalDependencies:
