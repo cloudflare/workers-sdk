@@ -1676,6 +1676,104 @@ describe.sequential("wrangler dev", () => {
 		`
 		);
 	});
+
+	describe("mixed mode", () => {
+		const wranglerConfigWithRemoteBindings = {
+			kv_namespaces: [
+				{
+					binding: "KV",
+					id: "xxxx-xxxx-xxxx-xxxx",
+					remote: true,
+				},
+			],
+			r2_buckets: [
+				{
+					binding: "MY_R2",
+					bucket_name: "my-bucket",
+					remote: true,
+				},
+			],
+			queues: {
+				producers: [
+					{
+						binding: "MY_QUEUE_PRODUCES",
+						queue: "my-queue",
+						remote: true,
+					},
+				],
+			},
+			d1_databases: [
+				{
+					binding: "MY_D1",
+					database_id: "xxx",
+					remote: true,
+				},
+			],
+			workflows: [
+				{
+					binding: "MY_WORKFLOW",
+					name: "workflow-name",
+					class_name: "myClass",
+					remote: true,
+				},
+			],
+		};
+
+		it("should ignore remote true settings without the --x-mixed-mode flag (initial logs only test)", async () => {
+			writeWranglerConfig(wranglerConfigWithRemoteBindings);
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWranglerUntilConfig("dev index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+
+				Your Worker has access to the following bindings:
+				- Workflows:
+				  - MY_WORKFLOW: myClass [simulated locally]
+				- KV Namespaces:
+				  - KV: xxxx-xxxx-xxxx-xxxx [simulated locally]
+				- Queues:
+				  - MY_QUEUE_PRODUCES: my-queue [simulated locally]
+				- D1 Databases:
+				  - MY_D1: xxx [simulated locally]
+				- R2 Buckets:
+				  - MY_R2: my-bucket [simulated locally]
+				"
+			`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
+
+				    - Unexpected fields found in kv_namespaces[0] field: \\"remote\\"
+				    - Unexpected fields found in queues.producers[0] field: \\"remote\\"
+				    - Unexpected fields found in r2_buckets[0] field: \\"remote\\"
+				    - Unexpected fields found in d1_databases[0] field: \\"remote\\"
+
+				"
+			`);
+		});
+
+		it("should honor the remote true settings with the --x-mixed-mode flag (initial logs only test)", async () => {
+			writeWranglerConfig(wranglerConfigWithRemoteBindings);
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWranglerUntilConfig("dev --x-mixed-mode index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+
+				Your Worker has access to the following bindings:
+				- Workflows:
+				  - MY_WORKFLOW: myClass [connected to remote resource]
+				- KV Namespaces:
+				  - KV: xxxx-xxxx-xxxx-xxxx [connected to remote resource]
+				- Queues:
+				  - MY_QUEUE_PRODUCES: my-queue [connected to remote resource]
+				- D1 Databases:
+				  - MY_D1: xxx [connected to remote resource]
+				- R2 Buckets:
+				  - MY_R2: my-bucket [connected to remote resource]
+				"
+			`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+	});
 });
 
 function mockGetZones(domain: string, zones: { id: string }[] = []) {

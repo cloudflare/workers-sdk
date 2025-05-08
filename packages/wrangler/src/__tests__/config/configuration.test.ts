@@ -6264,6 +6264,82 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 	});
+
+	describe("mixed mode", () => {
+		it("should ignore remote configs when specified without MIXED_MODE enabled", () => {
+			const rawConfig: RawConfig = {
+				name: "my-worker",
+				kv_namespaces: [
+					{
+						binding: "KV",
+						id: "xxxx-xxxx-xxxx-xxxx",
+						remote: true,
+					},
+				],
+				r2_buckets: [
+					{
+						binding: "R2",
+						bucket_name: "my-r2",
+						remote: 5 as unknown as boolean,
+					},
+				],
+			};
+			const { diagnostics } = run(
+				{
+					RESOURCES_PROVISION: false,
+					MULTIWORKER: false,
+					MIXED_MODE: false,
+				},
+				() =>
+					normalizeAndValidateConfig(rawConfig, undefined, undefined, {
+						env: undefined,
+					})
+			);
+
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - Unexpected fields found in kv_namespaces[0] field: \\"remote\\"
+				  - Unexpected fields found in r2_buckets[0] field: \\"remote\\""
+			`);
+		});
+
+		it("should error on non boolean remote values", () => {
+			const rawConfig: RawConfig = {
+				name: "my-worker",
+				kv_namespaces: [
+					{
+						binding: "KV",
+						id: "xxxx-xxxx-xxxx-xxxx",
+						remote: "hello" as unknown as boolean,
+					},
+				],
+				r2_buckets: [
+					{
+						binding: "R2",
+						bucket_name: "my-r2",
+						remote: 5 as unknown as boolean,
+					},
+				],
+			};
+			const { diagnostics } = run(
+				{
+					RESOURCES_PROVISION: false,
+					MULTIWORKER: false,
+					MIXED_MODE: true,
+				},
+				() =>
+					normalizeAndValidateConfig(rawConfig, undefined, undefined, {
+						env: undefined,
+					})
+			);
+
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - \\"kv_namespaces[0]\\" should, optionally, have a boolean \\"remote\\" field but got {\\"binding\\":\\"KV\\",\\"id\\":\\"xxxx-xxxx-xxxx-xxxx\\",\\"remote\\":\\"hello\\"}.
+				  - \\"r2_buckets[0]\\" should, optionally, have a boolean \\"remote\\" field but got {\\"binding\\":\\"R2\\",\\"bucket_name\\":\\"my-r2\\",\\"remote\\":5}."
+			`);
+		});
+	});
 });
 
 describe("experimental_readRawConfig()", () => {
