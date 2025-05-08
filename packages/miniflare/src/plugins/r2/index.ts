@@ -11,6 +11,7 @@ import {
 	getMiniflareObjectBindings,
 	getPersistPath,
 	migrateDatabase,
+	MixedModeConnectionString,
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
@@ -21,7 +22,20 @@ import {
 } from "../shared";
 
 export const R2OptionsSchema = z.object({
-	r2Buckets: z.union([z.record(z.string()), z.string().array()]).optional(),
+	r2Buckets: z
+		.union([
+			z.record(z.string()),
+			z.record(
+				z.object({
+					id: z.string(),
+					mixedModeConnectionString: z
+						.custom<MixedModeConnectionString>()
+						.optional(),
+				})
+			),
+			z.string().array(),
+		])
+		.optional(),
 });
 export const R2SharedOptionsSchema = z.object({
 	r2Persist: PersistenceSchema,
