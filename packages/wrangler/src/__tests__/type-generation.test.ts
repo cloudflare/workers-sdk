@@ -1,5 +1,4 @@
 import * as fs from "fs";
-import * as TOML from "@iarna/toml";
 import {
 	constructTSModuleGlob,
 	constructTypeKey,
