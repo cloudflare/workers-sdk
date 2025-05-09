@@ -8,15 +8,30 @@ export const mockEndDate = new Date(2025, 1, 3);
  * Normalize the input string, to make it reliable to use in tests.
  */
 export function normalizeString(input: string): string {
-	return normalizeDates(
-		normalizeErrorMarkers(
-			replaceByte(
-				stripTrailingWhitespace(
-					normalizeSlashes(normalizeCwd(normalizeTempDirs(stripTimings(input))))
+	return normalizeTables(
+		normalizeDates(
+			normalizeErrorMarkers(
+				replaceByte(
+					stripTrailingWhitespace(
+						normalizeSlashes(
+							normalizeCwd(normalizeTempDirs(stripTimings(input)))
+						)
+					)
 				)
 			)
 		)
 	);
+}
+
+function normalizeTables(str: string): string {
+	return str
+		.replaceAll(/┌─+/g, "┌─")
+		.replaceAll(/┬─+/g, "┬─")
+		.replaceAll(/ +│/g, " │")
+		.replaceAll(/├─+/g, "├─")
+		.replaceAll(/┼─+/g, "┼─")
+		.replaceAll(/└─+/g, "└─")
+		.replaceAll(/┴─+/g, "┴─");
 }
 
 function normalizeDates(str: string): string {
