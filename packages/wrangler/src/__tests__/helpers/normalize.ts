@@ -1,14 +1,31 @@
+export const mockCreateDate = new Date(2025, 4, 1);
+export const mockModifiedDate = new Date(2025, 4, 2);
+export const mockStartDate = new Date(2021, 1, 1);
+export const mockQueuedDate = new Date(2025, 1, 2);
+export const mockEndDate = new Date(2025, 1, 3);
+
 /**
  * Normalize the input string, to make it reliable to use in tests.
  */
 export function normalizeString(input: string): string {
-	return normalizeErrorMarkers(
-		replaceByte(
-			stripTrailingWhitespace(
-				normalizeSlashes(normalizeCwd(normalizeTempDirs(stripTimings(input))))
+	return normalizeDates(
+		normalizeErrorMarkers(
+			replaceByte(
+				stripTrailingWhitespace(
+					normalizeSlashes(normalizeCwd(normalizeTempDirs(stripTimings(input))))
+				)
 			)
 		)
 	);
+}
+
+function normalizeDates(str: string): string {
+	return str
+		.replaceAll(mockCreateDate.toLocaleString(), "[mock-create-date]")
+		.replaceAll(mockModifiedDate.toLocaleString(), "[mock-modified-date]")
+		.replaceAll(mockStartDate.toLocaleString(), "[mock-start-date]")
+		.replaceAll(mockQueuedDate.toLocaleString(), "[mock-queued-date]")
+		.replaceAll(mockEndDate.toLocaleString(), "[mock-end-date]");
 }
 
 /**
