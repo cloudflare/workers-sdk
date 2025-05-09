@@ -939,7 +939,10 @@ export function getBindings(
 		servicesConfig,
 		servicesArgs,
 		"binding"
-	);
+	).map((service) => ({
+		...service,
+		remote: getFlag("MIXED_MODE") && "remote" in service && !!service.remote,
+	}));
 
 	// Hyperdrive bindings
 	const hyperdriveBindings = configParam.hyperdrive.map((hyperdrive) => {

@@ -330,7 +330,7 @@ export function printBindings(
 	if (services !== undefined && services.length > 0) {
 		output.push({
 			name: friendlyBindingNames.services,
-			entries: services.map(({ binding, service, entrypoint }) => {
+			entries: services.map(({ binding, service, entrypoint, remote }) => {
 				let value = service;
 				if (entrypoint) {
 					value += `#${entrypoint}`;
@@ -352,7 +352,9 @@ export function printBindings(
 				}
 				return {
 					key: binding,
-					value,
+					value: addSuffix(value, {
+						isSimulatedLocally: !remote,
+					}),
 				};
 			}),
 		});
