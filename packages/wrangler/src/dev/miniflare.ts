@@ -414,10 +414,6 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 } {
 	const bindings = config.bindings;
 
-	// TODO(DEVX-1853, DEVX-1854): call `startMixedModeSession` here so that we get mixedModeConnectionStrings that we can
-	//       pass to miniflare (Note: this function is used from `LocalRuntimeController`, `MultiworkerRuntimeController` and
-	//       `getPlatformProxy`)
-
 	// Setup blob and module bindings
 	// TODO: check all these blob bindings just work, they're relative to cwd
 	const textBlobBindings = { ...bindings.text_blobs };
