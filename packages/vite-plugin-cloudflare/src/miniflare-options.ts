@@ -340,8 +340,12 @@ export function getDevMiniflareOptions(
 								unsafeInspectorProxy: inspectorPort !== false,
 								modulesRoot: miniflareModulesRoot,
 								unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
-								// Expose the default entrypoint of the workers with the dev registry
-								unsafeDirectSockets: [{ proxy: true }],
+								unsafeDirectSockets: [
+									{
+										// Expose the default entrypoint of the worker with the dev registry
+										entrypoint: undefined,
+									},
+								],
 								serviceBindings: {
 									...workerOptions.serviceBindings,
 									...(environmentName ===

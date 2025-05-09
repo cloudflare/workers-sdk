@@ -13,12 +13,7 @@ import path from "node:path";
 import { Duplex } from "node:stream";
 import { FSWatcher, watch } from "chokidar";
 import { HOST_CAPNP_CONNECT } from "../plugins";
-import {
-	HttpOptions,
-	HttpOptions_Style,
-	Service,
-	SocketPorts,
-} from "../runtime";
+import { HttpOptions, Service, SocketPorts } from "../runtime";
 import { CoreHeaders } from "../workers";
 import { Log } from "./log";
 
@@ -168,18 +163,11 @@ export class DevRegistry {
 		delete req.headers[PROXY_ENTRYPOINT_HEADER];
 
 		const address = this.getExternalServiceAddress(service, entrypoint);
-		const url = new URL(
-			req.url ?? "/",
-			`${address.protocol}://${req.headers.host}`
-		);
 		const options: http.RequestOptions = {
 			host: address.host,
 			port: address.port,
 			method: req.method,
-			// Workerd expects the full URL in the request instead of the path only
-			// e.g. GET http://placeholder/test HTTP/1.1 instead of GET /test HTTP/1.1
-			// Using req.url (the path) will result in TypeError: Invalid URL string.
-			path: url.toString(),
+			path: req.url,
 			headers: req.headers,
 		};
 		const upstream = http.request(options, (upRes) => {
@@ -380,11 +368,11 @@ export function getExternalServiceHttpOptions(
 	entrypoint: string | undefined
 ): HttpOptions {
 	return {
-		style: HttpOptions_Style.PROXY,
+		// To make sure `request.cf` is set correctly
 		cfBlobHeader: CoreHeaders.CF_BLOB,
-		// The Connect Host is needed for RPC proxying
+		// Use the service name and entrypoint as the host to proxy RPC calls
 		capnpConnectHost: `${service}:${entrypoint ?? "default"}`,
-		// The headers are needed for proxying fetch requests
+		// The headers are injected only for fetch and are used for proxying fetch requests
 		injectRequestHeaders: [
 			{
 				name: PROXY_SERVICE_HEADER,

@@ -1471,7 +1471,6 @@ export class Miniflare {
 							entrypoint,
 						},
 						http: {
-							style: HttpOptions_Style.PROXY,
 							cfBlobHeader: CoreHeaders.CF_BLOB,
 							capnpConnectHost: HOST_CAPNP_CONNECT,
 						},
