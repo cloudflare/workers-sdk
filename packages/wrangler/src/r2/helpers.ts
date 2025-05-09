@@ -256,8 +256,7 @@ export function bucketAndKeyFromObjectPath(objectPath = ""): {
 	const { bucket, key } = match.groups;
 	if (!isValidR2BucketName(bucket)) {
 		throw new UserError(
-			`The bucket name "${bucket}" is invalid. ` +
-				"Bucket names must begin and end with an alphanumeric, only contain letters (a-z), numbers (0-9), and hyphens (-), and be between 3 and 63 characters long."
+			`The bucket name "${bucket}" is invalid. ${bucketFormatMessage}`
 		);
 	}
 
@@ -1294,7 +1293,10 @@ export async function deleteCORSPolicy(
 }
 
 /**
- * R2 bucket names must only contain alphanumeric and - characters.
+ * R2 bucket names must:
+ * - contain lower case letters, numbers, and `-`
+ * - start and end with with a lower case letter or number
+ * - be between 6 and 63 characters long
  *
  * See https://developers.cloudflare.com/r2/buckets/create-buckets/#bucket-level-operations
  */
@@ -1303,6 +1305,8 @@ export function isValidR2BucketName(name: string | undefined): name is string {
 		typeof name === "string" && /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(name)
 	);
 }
+
+export const bucketFormatMessage = `Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.`;
 
 const CHUNK_SIZE = 1024;
 export async function createFileReadableStream(filePath: string) {

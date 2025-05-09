@@ -16,7 +16,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { getBasePath } from "../paths";
-import { isValidR2BucketName } from "../r2/helpers";
+import { bucketFormatMessage, isValidR2BucketName } from "../r2/helpers";
 import * as shellquote from "../utils/shell-quote";
 import { printWranglerBanner } from "../wrangler-banner";
 import { buildFunctions } from "./buildFunctions";
@@ -1277,8 +1277,7 @@ function getBindingsFromArgs(args: PagesDevArguments): Partial<
 
 				if (!isValidR2BucketName(bucketName)) {
 					logger.error(
-						`The bucket name "${bucketName}" is invalid. ` +
-							"Bucket names must begin and end with an alphanumeric, only contain letters (a-z), numbers (0-9), and hyphens (-), and be between 3 and 63 characters long."
+						`The bucket name "${bucketName}" is invalid. ${bucketFormatMessage}`
 					);
 					return;
 				}

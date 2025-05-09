@@ -586,7 +586,7 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket create abc_def")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: The bucket name "abc_def" is invalid. Bucket names must begin and end with an alphanumeric, only contain letters (a-z), numbers (0-9), and hyphens (-), and be between 3 and 63 characters long.]`
+					`[Error: The bucket name "abc_def" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.]`
 				);
 			});
 
@@ -602,7 +602,7 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket create abc-")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: The bucket name "abc-" is invalid. Bucket names must begin and end with an alphanumeric, only contain letters (a-z), numbers (0-9), and hyphens (-), and be between 3 and 63 characters long.]`
+					`[Error: The bucket name "abc-" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.]`
 				);
 			});
 
@@ -610,7 +610,7 @@ describe("r2", () => {
 				await expect(
 					runWrangler("r2 bucket create " + "a".repeat(64))
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: The bucket name "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" is invalid. Bucket names must begin and end with an alphanumeric, only contain letters (a-z), numbers (0-9), and hyphens (-), and be between 3 and 63 characters long.]`
+					`[Error: The bucket name "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.]`
 				);
 			});
 
@@ -2993,7 +2993,7 @@ describe("r2", () => {
 						`r2 object put BUCKET/wormhole-img.png --file ./wormhole-img.png`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: The bucket name "BUCKET" is invalid. Bucket names must begin and end with an alphanumeric, only contain letters (a-z), numbers (0-9), and hyphens (-), and be between 3 and 63 characters long.]`
+					`[Error: The bucket name "BUCKET" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.]`
 				);
 			});
 

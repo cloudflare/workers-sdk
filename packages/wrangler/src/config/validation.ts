@@ -4,7 +4,7 @@ import TOML from "@iarna/toml";
 import { dedent } from "ts-dedent";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
-import { isValidR2BucketName } from "../r2/helpers";
+import { bucketFormatMessage, isValidR2BucketName } from "../r2/helpers";
 import { friendlyBindingNames } from "../utils/print-bindings";
 import { Diagnostics } from "./diagnostics";
 import {
@@ -2798,8 +2798,7 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		!isValidR2BucketName(value.bucket_name)
 	) {
 		diagnostics.errors.push(
-			`"${field}.bucket_name" must begin and end with an alphanumeric, only contain letters (a-z), numbers (0-9), and hyphens (-)," +
-			" and be between 3 and 63 characters long. but got ${JSON.stringify(value.bucket_name)}.`
+			`${field}.bucket_name=${JSON.stringify(value.bucket_name)} is invalid. ${bucketFormatMessage}`
 		);
 		isValid = false;
 	}
@@ -2818,8 +2817,7 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		!isValidR2BucketName(value.preview_bucket_name)
 	) {
 		diagnostics.errors.push(
-			`"${field}.preview_bucket_name" must begin and end with an alphanumeric, only contain letters (a-z), numbers (0-9), and hyphens (-)," +
-			" and be between 3 and 63 characters long. but got ${JSON.stringify(value.preview_bucket_name)}.`
+			`${field}.preview_bucket_name= ${JSON.stringify(value.preview_bucket_name)} is invalid. ${bucketFormatMessage}`
 		);
 		isValid = false;
 	}
