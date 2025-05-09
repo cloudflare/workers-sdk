@@ -15,7 +15,7 @@ describe("startMixedModeSession", () => {
 		});
 		const proxyServerUrl =
 			mixedModeSession.mixedModeConnectionString.toString();
-		assert.match(proxyServerUrl, /http:\/\/localhost:\d{4,5}\//);
+		assert.match(proxyServerUrl, /http:\/\/(localhost|127\.0\.0\.1):\d{4,5}\//);
 		assert.match(
 			await (
 				await fetch(proxyServerUrl, {
@@ -31,6 +31,7 @@ describe("startMixedModeSession", () => {
 		await mixedModeSession.ready;
 		await mixedModeSession.dispose();
 	});
+
 	test("AI mixed mode binding", async () => {
 		const mixedModeSession = await experimental_startMixedModeSession({
 			AI: {
