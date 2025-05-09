@@ -2884,10 +2884,8 @@ describe("normalizeAndValidateConfig()", () => {
 					  - \\"r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
 					  - \\"r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
 					  - \\"r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"r2-bucket-2\\",\\"preview_bucket_name\\":2555}.
-					  - \\"r2_buckets[4].bucket_name\\" must begin and end with an alphanumeric, only contain letters (a-z), numbers (0-9), and hyphens (-),\\" +
-					    			\\" and be between 3 and 63 characters long. but got \\"INVALID-NAME\\".
-					  - \\"r2_buckets[5].preview_bucket_name\\" must begin and end with an alphanumeric, only contain letters (a-z), numbers (0-9), and hyphens (-),\\" +
-					    			\\" and be between 3 and 63 characters long. but got \\"INVALID-NAME\\".
+					  - r2_buckets[4].bucket_name=\\"INVALID-NAME\\" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.
+					  - r2_buckets[5].preview_bucket_name= \\"INVALID-NAME\\" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.
 					  - \\"r2_buckets[6]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_5\\",\\"bucket_name\\":\\"\\"}."
 				`);
 			});
@@ -5255,8 +5253,7 @@ describe("normalizeAndValidateConfig()", () => {
 					    - \\"env.ENV1.r2_buckets[1]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\"}.
 					    - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
 					    - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
-					    - \\"env.ENV1.r2_buckets[3].bucket_name\\" must begin and end with an alphanumeric, only contain letters (a-z), numbers (0-9), and hyphens (-),\\" +
-					      			\\" and be between 3 and 63 characters long. but got \\"R2_BUCKET_2\\".
+					    - env.ENV1.r2_buckets[3].bucket_name=\\"R2_BUCKET_2\\" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.
 					    - \\"env.ENV1.r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}."
 				`);
 			});
