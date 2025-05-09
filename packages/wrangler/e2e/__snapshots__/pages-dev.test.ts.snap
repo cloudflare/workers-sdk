@@ -21,9 +21,9 @@ Your Worker has access to the following bindings:
   - R2_BINDING_2_TOML: R2_BUCKET_2_TOML [simulated locally]
   - R2_BINDING_3_TOML: R2_BUCKET_3_ARGS [simulated locally]
 - Services:
-  - SERVICE_BINDING_1_TOML: NEW_SERVICE_NAME_1 [not connected]
-  - SERVICE_BINDING_2_TOML: SERVICE_NAME_2_TOML [not connected]
-  - SERVICE_BINDING_3_TOML: SERVICE_NAME_3_ARGS [not connected]
+  - SERVICE_BINDING_1_TOML: NEW_SERVICE_NAME_1 [not connected] [simulated locally]
+  - SERVICE_BINDING_2_TOML: SERVICE_NAME_2_TOML [not connected] [simulated locally]
+  - SERVICE_BINDING_3_TOML: SERVICE_NAME_3_ARGS [not connected] [simulated locally]
 - AI:
   - Name: AI_BINDING_2_TOML [connected to remote resource]
 - Vars:
