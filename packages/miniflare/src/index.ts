@@ -106,8 +106,10 @@ import {
 import {
 	createExternalFallbackService,
 	DevRegistry,
+	extractExternalFetchProxyTarget,
 	getExternalFallbackServiceSocketName,
 	getExternalServiceHttpOptions,
+	getProtocol,
 	WorkerDefinition,
 } from "./shared/dev-registry";
 import { isCompressedByCloudflareFL } from "./shared/mime-types";
@@ -923,12 +925,71 @@ export class Miniflare {
 		return this.#workerOpts.map<NameSourceOptions>(({ core }) => core);
 	}
 
+	#getFallbackServiceAddress(service: string, entrypoint: string | undefined) {
+		assert(
+			this.#socketPorts !== undefined && this.#runtimeEntryURL !== undefined,
+			"Cannot resolve address for fallback service before runtime is initialised"
+		);
+
+		const port = this.#socketPorts.get(
+			getExternalFallbackServiceSocketName(service, entrypoint)
+		);
+
+		if (!port) {
+			throw new Error(
+				`There is no socket opened for "${service}" with the "${entrypoint}" entrypoint`
+			);
+		}
+
+		return {
+			protocol: getProtocol(this.#runtimeEntryURL),
+			host: "127.0.0.1",
+			port,
+		};
+	}
+
 	#handleLoopback = async (
 		req: http.IncomingMessage,
 		res?: http.ServerResponse
 	): Promise<Response | undefined> => {
-		if (this.#devRegistry.handleExternalFetch(req, res)) {
-			// The request is proxied to the external service, no extra handling is needed
+		const proxyTarget = extractExternalFetchProxyTarget(req);
+
+		if (proxyTarget) {
+			const address =
+				this.#devRegistry.getExternalServiceAddress(
+					proxyTarget.service,
+					proxyTarget.entrypoint
+				) ??
+				this.#getFallbackServiceAddress(
+					proxyTarget.service,
+					proxyTarget.entrypoint
+				);
+
+			const options: http.RequestOptions = {
+				host: address.host,
+				port: address.port,
+				method: req.method,
+				path: req.url,
+				headers: req.headers,
+			};
+
+			// Res is optional only on websocket upgrade requests
+			assert(res !== undefined, "No response object provided");
+			const upstream = http.request(options, (upRes) => {
+				// Relay status and headers back to the original client
+				res.writeHead(upRes.statusCode ?? 500, upRes.headers);
+				// Pipe the response body
+				upRes.pipe(res);
+			});
+
+			// Pipe the client request body to the upstream
+			req.pipe(upstream);
+
+			upstream.on("error", (err) => {
+				this.#log.error(err);
+				if (!res.headersSent) res.writeHead(502);
+				res.end("Bad Gateway");
+			});
 			return;
 		}
 
@@ -1091,16 +1152,46 @@ export class Miniflare {
 
 	#handleLoopbackConnect = async (
 		req: http.IncomingMessage,
-		socket: Duplex,
+		clientSocket: Duplex,
 		head: Buffer
 	) => {
-		if (this.#devRegistry.handleExternalRPCConnection(req.url, socket, head)) {
-			// The RPC connection is proxied to the external service, no extra handling needed
-			return;
-		}
+		try {
+			const connectHost = req.url;
+			const [serviceName, entrypoint] = connectHost?.split(":") ?? [];
+			const address =
+				this.#devRegistry.getExternalServiceAddress(serviceName, entrypoint) ??
+				this.#getFallbackServiceAddress(serviceName, entrypoint);
 
-		socket.write("HTTP/1.1 400 Bad Request\r\n\r\n");
-		socket.end();
+			const serverSocket = net.connect(address.port, address.host, () => {
+				serverSocket.write(`CONNECT ${HOST_CAPNP_CONNECT} HTTP/1.1\r\n\r\n`);
+
+				// Push along any buffered bytes
+				if (head && head.length) {
+					serverSocket.write(head);
+				}
+
+				serverSocket.pipe(clientSocket);
+				clientSocket.pipe(serverSocket);
+			});
+
+			// Errors on either side
+			serverSocket.on("error", (err) => {
+				this.#log.error(err);
+				clientSocket.write("HTTP/1.1 502 Bad Gateway\r\n\r\n");
+				clientSocket.end();
+			});
+			clientSocket.on("error", () => serverSocket.end());
+
+			// Close the tunnel if the service is updated
+			// This make sure workerd will re-connect to the latest address
+			this.#devRegistry.subscribe(serviceName, () => {
+				clientSocket.write("HTTP/1.1 503 Service Unavailable\r\n\r\n");
+				clientSocket.end();
+			});
+		} catch {
+			clientSocket.write("HTTP/1.1 502 Bad Gateway\r\n\r\n");
+			clientSocket.end();
+		}
 	};
 
 	async #getLoopbackPort(): Promise<number> {
@@ -1606,9 +1697,6 @@ export class Miniflare {
 		// all of `requiredSockets` as keys.
 		this.#socketPorts = maybeSocketPorts;
 
-		// Update the dev registry proxy with the new socket ports
-		this.#devRegistry.socketPorts = maybeSocketPorts;
-
 		if (
 			this.#maybeInspectorProxyController !== undefined &&
 			this.#sharedOpts.core.inspectorPort !== undefined
@@ -1727,13 +1815,7 @@ export class Miniflare {
 	async #getWorkerDefinitions(
 		url: URL
 	): Promise<Record<string, WorkerDefinition>> {
-		const protocol = url.protocol.substring(0, url.protocol.length - 1);
-
-		assert(
-			protocol === "http" || protocol === "https",
-			"Expected protocol to be http or https"
-		);
-
+		const protocol = getProtocol(url);
 		const entries = await Promise.all(
 			this.#workerOpts.map<Promise<[string, WorkerDefinition] | undefined>>(
 				async (workerOpts) => {

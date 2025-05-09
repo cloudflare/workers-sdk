@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import {
 	mkdirSync,
 	readdirSync,
@@ -8,12 +9,9 @@ import {
 	writeFileSync,
 } from "node:fs";
 import http from "node:http";
-import net from "node:net";
 import path from "node:path";
-import { Duplex } from "node:stream";
 import { FSWatcher, watch } from "chokidar";
-import { HOST_CAPNP_CONNECT } from "../plugins";
-import { HttpOptions, Service, SocketPorts } from "../runtime";
+import { HttpOptions, Service } from "../runtime";
 import { CoreHeaders } from "../workers";
 import { Log } from "./log";
 
@@ -36,8 +34,8 @@ export class DevRegistry {
 	private heartbeats = new Map<string, NodeJS.Timeout>();
 	private registry: WorkerRegistry = {};
 	private managedWorkers: Set<string> = new Set();
+	private listeners: Map<string, Array<() => void>> = new Map();
 	private watcher: FSWatcher | undefined;
-	public socketPorts: SocketPorts | undefined;
 
 	constructor(
 		private registryPath: string | undefined,
@@ -56,7 +54,6 @@ export class DevRegistry {
 			"all",
 			() => this.refresh()
 		);
-
 		this.refresh();
 	}
 
@@ -70,6 +67,8 @@ export class DevRegistry {
 			this.unregister(worker);
 		}
 		this.managedWorkers.clear();
+		this.listeners.clear();
+		this.registry = {};
 
 		// Only this step is async and could be awaited
 		return this.watcher?.close();
@@ -91,6 +90,8 @@ export class DevRegistry {
 			if (this.registryPath) {
 				unlinkSync(path.join(this.registryPath, name));
 			}
+
+			this.notify(name);
 		} catch (e) {
 			this.log?.debug(`failed to unregister worker: ${e}`);
 		}
@@ -103,6 +104,8 @@ export class DevRegistry {
 			this.unregister(worker);
 		}
 		this.managedWorkers.clear();
+		this.listeners.clear();
+		this.registry = {};
 
 		if (this.registryPath !== registryPath) {
 			if (this.watcher) {
@@ -144,138 +147,59 @@ export class DevRegistry {
 		}
 	}
 
-	public handleExternalFetch(
-		req: http.IncomingMessage,
-		res?: http.ServerResponse
-	): boolean {
-		const service = req.headers[PROXY_SERVICE_HEADER];
-		const entrypoint = req.headers[PROXY_ENTRYPOINT_HEADER];
-
-		if (!res || typeof service !== "string" || typeof entrypoint !== "string") {
-			// This is not a external fetch request. No proxying needed.
-			return false;
-		}
-
-		delete req.headers[PROXY_SERVICE_HEADER];
-		delete req.headers[PROXY_ENTRYPOINT_HEADER];
-
-		const address = this.getExternalServiceAddress(service, entrypoint);
-		const options: http.RequestOptions = {
-			host: address.host,
-			port: address.port,
-			method: req.method,
-			path: req.url,
-			headers: req.headers,
-		};
-		const upstream = http.request(options, (upRes) => {
-			// Relay status and headers back to the original client
-			res.writeHead(upRes.statusCode ?? 500, upRes.headers);
-			// Pipe the response body
-			upRes.pipe(res);
-		});
-
-		// Pipe the client request body to the upstream
-		req.pipe(upstream);
-
-		upstream.on("error", (err) => {
-			this.log.error(err);
-			if (!res.headersSent) res.writeHead(502);
-			res.end("Bad Gateway");
-		});
-
-		return true;
-	}
-
-	public handleExternalRPCConnection(
-		connectHost: string | undefined,
-		clientSocket: Duplex,
-		head: Buffer
-	): boolean {
-		if (!this.registryPath) {
-			return false;
-		}
-
-		try {
-			const [serviceName, entrypoint = "default"] =
-				connectHost?.split(":") ?? [];
-			const address = this.getExternalServiceAddress(serviceName, entrypoint);
-			const serverSocket = net.connect(address.port, address.host, () => {
-				serverSocket.write(`CONNECT ${HOST_CAPNP_CONNECT} HTTP/1.1\r\n\r\n`);
-
-				// Push along any buffered bytes
-				if (head && head.length) {
-					serverSocket.write(head);
-				}
-
-				serverSocket.pipe(clientSocket);
-				clientSocket.pipe(serverSocket);
-				// TODO: Kill the tunnel if it is connected to a fallback service
-				// This make sure workerd will re-connect everytime to see if the service is available
-			});
-
-			// Errors on either side
-			serverSocket.on("error", (err) => {
-				this.log.error(err);
-				clientSocket.write("HTTP/1.1 502 Bad Gateway\r\n\r\n");
-				clientSocket.end();
-			});
-			clientSocket.on("error", () => serverSocket.end());
-		} catch {
-			clientSocket.write("HTTP/1.1 502 Bad Gateway\r\n\r\n");
-			clientSocket.end();
-		}
-
-		return true;
-	}
-
-	private getExternalServiceAddress(
+	public getExternalServiceAddress(
 		service: string,
 		entrypoint: string | undefined = "default"
 	): {
 		protocol: "http" | "https";
 		host: string;
 		port: number;
-	} {
+	} | null {
 		if (!this.registry) {
 			throw new Error("Registry not initialized yet");
 		}
 
 		const target = this.registry?.[service];
+		const entrypointAddress = target?.entrypointAddresses[entrypoint];
 
-		let address = target?.entrypointAddresses[entrypoint];
-
-		if (
-			target &&
-			!address &&
-			entrypoint === "default" &&
-			target.protocol !== "https"
-		) {
-			// Fallback to sending requests directly to the target
-			address = target;
-		}
-
-		if (!address) {
-			const port = this.socketPorts?.get(
-				getExternalFallbackServiceSocketName(service, entrypoint)
-			);
-
-			if (!port) {
-				throw new Error(
-					`There is no socket opened for "${service}" with the "${entrypoint}" entrypoint`
-				);
-			}
-
-			address = {
-				host: "127.0.0.1",
-				port,
+		if (entrypointAddress !== undefined) {
+			return {
+				protocol: target.protocol,
+				host: entrypointAddress.host,
+				port: entrypointAddress.port,
 			};
 		}
 
-		return {
-			protocol: target?.protocol ?? "http",
-			host: address.host,
-			port: address.port,
-		};
+		if (target && target.protocol !== "https" && entrypoint === "default") {
+			// Fallback to sending requests directly to the entry worker
+			return {
+				protocol: target.protocol,
+				host: target.host,
+				port: target.port,
+			};
+		}
+
+		return null;
+	}
+
+	public subscribe(service: string, callback: () => void): void {
+		let callbacks = this.listeners.get(service);
+
+		if (!callbacks) {
+			callbacks = [];
+			this.listeners.set(service, callbacks);
+		}
+
+		callbacks.push(callback);
+	}
+
+	private notify(service: string): void {
+		const callbacks = this.listeners.get(service);
+		if (callbacks) {
+			for (const callback of callbacks) {
+				callback();
+			}
+		}
 	}
 
 	private refresh(): void {
@@ -284,8 +208,6 @@ export class DevRegistry {
 		}
 
 		mkdirSync(this.registryPath, { recursive: true });
-
-		this.registry ??= {};
 
 		const newWorkers = new Set<string>();
 		const workerDefinitions = readdirSync(this.registryPath);
@@ -302,6 +224,7 @@ export class DevRegistry {
 					this.unregister(workerName);
 				} else {
 					this.registry[workerName] = JSON.parse(file);
+					this.notify(workerName);
 					newWorkers.add(workerName);
 				}
 			} catch (e) {
@@ -315,6 +238,7 @@ export class DevRegistry {
 		for (const worker of Object.keys(this.registry)) {
 			if (!newWorkers.has(worker)) {
 				delete this.registry[worker];
+				this.notify(worker);
 			}
 		}
 	}
@@ -392,6 +316,40 @@ export function getExternalFallbackServiceSocketName(
 	entrypoint: string | undefined
 ): string {
 	return `external-fallback-${service}-${entrypoint ?? "default"}`;
+}
+
+export function getProtocol(url: URL): "http" | "https" {
+	const protocol = url.protocol.substring(0, url.protocol.length - 1);
+
+	assert(
+		protocol === "http" || protocol === "https",
+		"Expected protocol to be http or https"
+	);
+
+	return protocol;
+}
+
+export function extractExternalFetchProxyTarget(req: http.IncomingMessage): {
+	service: string;
+	entrypoint: string;
+} | null {
+	const service = req.headers[PROXY_SERVICE_HEADER];
+	const entrypoint = req.headers[PROXY_ENTRYPOINT_HEADER];
+
+	if (typeof service !== "string" || typeof entrypoint !== "string") {
+		// This is not a external fetch request. No proxying needed.
+		return null;
+	}
+
+	// Remove the headers from the request
+	// to avoid sending them to the target service
+	delete req.headers[PROXY_SERVICE_HEADER];
+	delete req.headers[PROXY_ENTRYPOINT_HEADER];
+
+	return {
+		service,
+		entrypoint,
+	};
 }
 
 // Node HTTP server parsed headers are always in lowercase
