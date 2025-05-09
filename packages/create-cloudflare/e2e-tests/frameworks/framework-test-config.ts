@@ -354,13 +354,6 @@ export default function getFrameworkTestConfig(pm: string) {
 		"next:pages": {
 			argv: ["--platform", "pages"],
 			timeout: LONG_TIMEOUT,
-			unsupportedPms: ["pnpm"],
-			promptHandlers: [
-				{
-					matcher: /Do you want to use the next-on-pages eslint-plugin\?/,
-					input: ["y"],
-				},
-			],
 			testCommitMessage: true,
 			verifyDeploy: {
 				route: "/",
@@ -373,32 +366,13 @@ export default function getFrameworkTestConfig(pm: string) {
 				expectedText: "Create Next App",
 			},
 			nodeCompat: true,
-			flags: [
-				"--typescript",
-				"--no-install",
-				"--eslint",
-				"--tailwind",
-				"--src-dir",
-				"--app",
-				"--turbopack",
-				"--import-alias",
-				"@/*",
-			],
+			flags: ["--yes", "--no-install", "--import-alias", "@/*"],
 		},
 		"next:workers": {
 			argv: ["--platform", "workers"],
 			timeout: LONG_TIMEOUT,
 			testCommitMessage: true,
-			flags: [
-				"--ts",
-				"--tailwind",
-				"--eslint",
-				"--app",
-				"--turbopack",
-				"--import-alias",
-				"@/*",
-				"--src-dir",
-			],
+			flags: ["--yes", "--import-alias", "@/*"],
 			verifyPreview: {
 				previewArgs: ["--"],
 				route: "/test",
