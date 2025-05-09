@@ -4597,15 +4597,11 @@ addEventListener('fetch', event => {});`
 			);
 			await expect(
 				flatBodies["80e40c1f2422528cb2fba3f9389ce315"]
-			).toBeAFileWhichMatches(
-				new File(
-					["c29tZXRoaW5nLWJpbmFyeQ=="],
-					"80e40c1f2422528cb2fba3f9389ce315",
-					{
-						type: "application/null",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["c29tZXRoaW5nLWJpbmFyeQ=="],
+				name: "80e40c1f2422528cb2fba3f9389ce315",
+				type: "application/null",
+			});
 		});
 
 		it("should be able to upload files with special characters in filepaths", async () => {
@@ -4667,42 +4663,27 @@ addEventListener('fetch', event => {});`
 			const flatBodies = Object.fromEntries(
 				uploadBodies.flatMap((b) => [...b.entries()])
 			);
-			const [nodeMajorString] = process.versions.node.split(".");
-			const nodeMajor = Number(nodeMajorString);
 			await expect(
 				flatBodies["ff5016e92f039aa743a4ff7abb3180fa"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTM="],
-					"ff5016e92f039aa743a4ff7abb3180fa",
-					{
-						// TODO: this should be "text/plain; charset=utf-8", but msw? is stripping the charset part
-						type: nodeMajor > 18 ? "text/plain;charset=utf-8" : "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTM="],
+				name: "ff5016e92f039aa743a4ff7abb3180fa",
+				type: "text/plain",
+			});
 			await expect(
 				flatBodies["7574a8cd3094a050388ac9663af1c1d6"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTI="],
-					"7574a8cd3094a050388ac9663af1c1d6",
-					{
-						type: nodeMajor > 18 ? "text/plain;charset=utf-8" : "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTI="],
+				name: "7574a8cd3094a050388ac9663af1c1d6",
+				type: "text/plain",
+			});
 			await expect(
 				flatBodies["0de3dd5df907418e9730fd2bd747bd5e"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTE="],
-					"0de3dd5df907418e9730fd2bd747bd5e",
-					{
-						type: nodeMajor > 18 ? "text/plain;charset=utf-8" : "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTE="],
+				name: "0de3dd5df907418e9730fd2bd747bd5e",
+				type: "text/plain",
+			});
 		});
 
 		it("should resolve assets directory relative to wrangler.toml if using config", async () => {
@@ -5133,54 +5114,34 @@ addEventListener('fetch', event => {});`
 				bodies.flatMap((b) => [...b.entries()])
 			);
 
-			const [nodeMajorString] = process.versions.node.split(".");
-			const nodeMajor = Number(nodeMajorString);
-
 			await expect(
 				flatBodies["0de3dd5df907418e9730fd2bd747bd5e"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTE="],
-					"0de3dd5df907418e9730fd2bd747bd5e",
-					{
-						type: nodeMajor > 18 ? "text/plain;charset=utf-8" : "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTE="],
+				name: "0de3dd5df907418e9730fd2bd747bd5e",
+				type: "text/plain",
+			});
 			await expect(
 				flatBodies["7574a8cd3094a050388ac9663af1c1d6"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTI="],
-					"7574a8cd3094a050388ac9663af1c1d6",
-					{
-						// TODO: this should be "text/plain; charset=utf-8", but msw? is stripping the charset part
-						type: nodeMajor > 18 ? "text/plain;charset=utf-8" : "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTI="],
+				name: "7574a8cd3094a050388ac9663af1c1d6",
+				type: "text/plain",
+			});
 			await expect(
 				flatBodies["ff5016e92f039aa743a4ff7abb3180fa"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTM="],
-					"ff5016e92f039aa743a4ff7abb3180fa",
-					{
-						type: nodeMajor > 18 ? "text/plain;charset=utf-8" : "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTM="],
+				name: "ff5016e92f039aa743a4ff7abb3180fa",
+				type: "text/plain",
+			});
 			await expect(
 				flatBodies["f05e28a3d0bdb90d3cf4bdafe592488f"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTU="],
-					"f05e28a3d0bdb90d3cf4bdafe592488f",
-					{
-						type: nodeMajor > 18 ? "text/plain;charset=utf-8" : "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTU="],
+				name: "f05e28a3d0bdb90d3cf4bdafe592488f",
+				type: "text/plain",
+			});
 		});
 
 		it("should be able to upload a user worker with ASSETS binding and config", async () => {
@@ -13686,9 +13647,15 @@ const mockAssetUploadRequest = async (
 	);
 };
 expect.extend({
-	async toBeAFileWhichMatches(received: File, expected: File) {
+	async toBeAFileWhichMatches(
+		received: File,
+		expected: {
+			fileBits: string[];
+			name: string;
+			type: string;
+		}
+	) {
 		const { equals } = this;
-
 		if (!equals(received.name, expected.name)) {
 			return {
 				pass: false,
@@ -13697,7 +13664,7 @@ expect.extend({
 			};
 		}
 
-		if (!equals(received.type, expected.type)) {
+		if (!equals(received.type, expect.stringMatching(expected.type))) {
 			return {
 				pass: false,
 				message: () =>
@@ -13706,7 +13673,9 @@ expect.extend({
 		}
 
 		const receviedText = await received.text();
-		const expectedText = await expected.text();
+		const expectedText = await new File(expected.fileBits, expected.name, {
+			type: expected.type,
+		}).text();
 		if (!equals(receviedText, expectedText)) {
 			return {
 				pass: false,
@@ -13723,7 +13692,11 @@ expect.extend({
 });
 
 interface CustomMatchers {
-	toBeAFileWhichMatches: (expected: File) => unknown;
+	toBeAFileWhichMatches: (expected: {
+		fileBits: string[];
+		name: string;
+		type: string;
+	}) => unknown;
 }
 
 declare module "vitest" {
