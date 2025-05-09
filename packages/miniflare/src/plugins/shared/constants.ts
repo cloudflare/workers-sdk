@@ -1,3 +1,4 @@
+import SCRIPT_MIXED_MODE_CLIENT from "worker:shared/mixed-mode-client";
 import SCRIPT_OBJECT_ENTRY from "worker:shared/object-entry";
 import {
 	Worker,
@@ -5,6 +6,7 @@ import {
 	Worker_Binding_DurableObjectNamespaceDesignator,
 } from "../../runtime";
 import { CoreBindings, SharedBindings } from "../../workers";
+import { MixedModeConnectionString } from ".";
 
 export const SOCKET_ENTRY = "entry";
 export const SOCKET_ENTRY_LOCAL = "entry:local";
@@ -66,6 +68,31 @@ export function objectEntryWorker(
 			{
 				name: SharedBindings.DURABLE_OBJECT_NAMESPACE_OBJECT,
 				durableObjectNamespace,
+			},
+		],
+	};
+}
+
+export function mixedModeClientWorker(
+	mixedModeConnectionString: MixedModeConnectionString,
+	binding: string
+) {
+	return {
+		compatibilityDate: "2025-01-01",
+		modules: [
+			{
+				name: "index.worker.js",
+				esModule: SCRIPT_MIXED_MODE_CLIENT(),
+			},
+		],
+		bindings: [
+			{
+				name: "mixedModeConnectionString",
+				text: mixedModeConnectionString.href,
+			},
+			{
+				name: "binding",
+				text: binding,
 			},
 		],
 	};
