@@ -1,4 +1,5 @@
 import path from "node:path";
+import getPort from "get-port";
 import { getBasePath } from "../../paths";
 import { startWorker } from "../startDevWorker";
 import type { StartDevWorkerInput, Worker } from "../startDevWorker/types";
@@ -27,6 +28,12 @@ export async function startMixedModeSession(
 		dev: {
 			remote: true,
 			auth: options?.auth,
+			server: {
+				port: await getPort(),
+			},
+			inspector: {
+				port: await getPort(),
+			},
 		},
 		bindings,
 	});

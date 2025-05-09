@@ -162,17 +162,18 @@ async function getMiniflareOptionsFromConfig(
 		tailConsumers: [],
 	});
 
-	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
-		name: rawConfig.name,
-		bindings,
-		workerDefinitions,
-		queueConsumers: undefined,
-		services: rawConfig.services,
-		serviceBindings: {},
-		migrations: rawConfig.migrations,
-		imagesLocalMode: false,
-		tails: [],
-	});
+	const { bindingOptions, externalWorkers } =
+		await buildMiniflareBindingOptions({
+			name: rawConfig.name,
+			bindings,
+			workerDefinitions,
+			queueConsumers: undefined,
+			services: rawConfig.services,
+			serviceBindings: {},
+			migrations: rawConfig.migrations,
+			imagesLocalMode: false,
+			tails: [],
+		});
 
 	const persistOptions = getMiniflarePersistOptions(options.persist);
 
@@ -262,21 +263,21 @@ export interface Unstable_MiniflareWorkerOptions {
 	externalWorkers: WorkerOptions[];
 }
 
-export function unstable_getMiniflareWorkerOptions(
+export async function unstable_getMiniflareWorkerOptions(
 	configPath: string,
 	env?: string,
 	options?: { imagesLocalMode: boolean }
-): Unstable_MiniflareWorkerOptions;
-export function unstable_getMiniflareWorkerOptions(
+): Promise<Unstable_MiniflareWorkerOptions>;
+export async function unstable_getMiniflareWorkerOptions(
 	config: Config,
 	env?: string,
 	options?: { imagesLocalMode: boolean }
-): Unstable_MiniflareWorkerOptions;
-export function unstable_getMiniflareWorkerOptions(
+): Promise<Unstable_MiniflareWorkerOptions>;
+export async function unstable_getMiniflareWorkerOptions(
 	configOrConfigPath: string | Config,
 	env?: string,
 	options?: { imagesLocalMode: boolean }
-): Unstable_MiniflareWorkerOptions {
+): Promise<Unstable_MiniflareWorkerOptions> {
 	const config =
 		typeof configOrConfigPath === "string"
 			? readConfig({ config: configOrConfigPath, env })
@@ -291,17 +292,18 @@ export function unstable_getMiniflareWorkerOptions(
 		}));
 
 	const bindings = getBindings(config, env, true, {});
-	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
-		name: config.name,
-		bindings,
-		workerDefinitions: null,
-		queueConsumers: config.queues.consumers,
-		services: [],
-		serviceBindings: {},
-		migrations: config.migrations,
-		imagesLocalMode: !!options?.imagesLocalMode,
-		tails: config.tail_consumers,
-	});
+	const { bindingOptions, externalWorkers } =
+		await buildMiniflareBindingOptions({
+			name: config.name,
+			bindings,
+			workerDefinitions: null,
+			queueConsumers: config.queues.consumers,
+			services: [],
+			serviceBindings: {},
+			migrations: config.migrations,
+			imagesLocalMode: !!options?.imagesLocalMode,
+			tails: config.tail_consumers,
+		});
 
 	// This function is currently only exported for the Workers Vitest pool.
 	// In tests, we don't want to rely on the dev registry, as we can't guarantee

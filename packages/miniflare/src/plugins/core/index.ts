@@ -160,6 +160,9 @@ const CoreOptionsSchemaInput = z.intersection(
 		hasAssetsAndIsVitest: z.boolean().optional(),
 
 		tails: z.array(ServiceDesignatorSchema).optional(),
+
+		/** Dispose function that will be called as part of miniflare's dispose logic */
+		disposeCallback: z.function().returns(z.promise(z.void())).optional(),
 	})
 );
 export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {

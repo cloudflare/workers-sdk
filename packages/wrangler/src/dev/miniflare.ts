@@ -7,9 +7,11 @@ import {
 	EXTERNAL_AI_WORKER_NAME,
 	EXTERNAL_AI_WORKER_SCRIPT,
 } from "../ai/fetcher";
+import { startMixedModeSession } from "../api";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { createFatalError, UserError } from "../errors";
+import { getFlag } from "../experimental-flags";
 import {
 	EXTERNAL_IMAGES_WORKER_NAME,
 	EXTERNAL_IMAGES_WORKER_SCRIPT,
@@ -45,7 +47,12 @@ import type { WorkerRegistry } from "../dev-registry";
 import type { LoggerLevel } from "../logger";
 import type { LegacyAssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
-import type { MiniflareOptions, SourceOptions, WorkerOptions } from "miniflare";
+import type {
+	MiniflareOptions,
+	MixedModeConnectionString,
+	SourceOptions,
+	WorkerOptions,
+} from "miniflare";
 import type { UUID } from "node:crypto";
 import type { Readable } from "node:stream";
 
@@ -407,16 +414,41 @@ type MiniflareBindingsConfig = Pick<
 
 // TODO(someday): would be nice to type these methods more, can we export types for
 //  each plugin options schema and use those
-export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
+export async function buildMiniflareBindingOptions(
+	config: MiniflareBindingsConfig
+): Promise<{
 	bindingOptions: WorkerOptionsBindings;
+	disposeCallback: () => Promise<void>;
 	internalObjects: CfDurableObject[];
 	externalWorkers: WorkerOptions[];
-} {
+}> {
+	// TODO: remove the leading underscore
+	let _mixedModeConnectionString: MixedModeConnectionString | undefined;
+	let disposeCallback = async () => {};
 	const bindings = config.bindings;
 
-	// TODO(DEVX-1853, DEVX-1854): call `startMixedModeSession` here so that we get mixedModeConnectionStrings that we can
-	//       pass to miniflare (Note: this function is used from `LocalRuntimeController`, `MultiworkerRuntimeController` and
-	//       `getPlatformProxy`)
+	if (getFlag("MIXED_MODE")) {
+		const remoteBindings = extractRemoteBindings(bindings);
+
+		const requiresMixedMode =
+			!!remoteBindings.ai ||
+			Object.entries(remoteBindings).some(
+				([key, value]) =>
+					key === "ai" || (Array.isArray(value) && value.length > 0)
+			);
+
+		if (requiresMixedMode) {
+			// use remoteBindings here
+			const startWorkerRemoveBindings = {};
+
+			const mixedModeSession = await startMixedModeSession(
+				startWorkerRemoveBindings
+			);
+			await mixedModeSession.ready;
+			_mixedModeConnectionString = mixedModeSession.mixedModeConnectionString;
+			disposeCallback = mixedModeSession.dispose;
+		}
+	}
 
 	// Setup blob and module bindings
 	// TODO: check all these blob bindings just work, they're relative to cwd
@@ -830,6 +862,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 
 	return {
 		bindingOptions,
+		disposeCallback,
 		internalObjects,
 		externalWorkers,
 	};
@@ -1089,7 +1122,7 @@ export async function buildMiniflareOptions(
 
 	const { sourceOptions, entrypointNames } = await buildSourceOptions(config);
 	const { bindingOptions, internalObjects, externalWorkers } =
-		buildMiniflareBindingOptions(config);
+		await buildMiniflareBindingOptions(config);
 	const sitesOptions = buildSitesOptions(config);
 	const persistOptions = buildPersistOptions(config.localPersistencePath);
 	const assetOptions = buildAssetOptions(config);
@@ -1137,4 +1170,56 @@ export async function buildMiniflareOptions(
 		],
 	};
 	return { options, internalObjects, entrypointNames };
+}
+
+function extractRemoteBindings(
+	bindings: MiniflareBindingsConfig["bindings"]
+): Partial<
+	Pick<
+		MiniflareBindingsConfig["bindings"],
+		| "services"
+		| "kv_namespaces"
+		| "r2_buckets"
+		| "d1_databases"
+		| "queues"
+		| "workflows"
+		| "ai"
+	>
+> {
+	const remoteBindings: Partial<
+		Pick<
+			MiniflareBindingsConfig["bindings"],
+			| "services"
+			| "kv_namespaces"
+			| "r2_buckets"
+			| "d1_databases"
+			| "queues"
+			| "workflows"
+			| "ai"
+		>
+	> = {};
+
+	if (bindings.ai) {
+		// AI is always remote
+		remoteBindings.ai = bindings.ai;
+	}
+
+	const keys = [
+		"services",
+		"kv_namespaces",
+		"r2_buckets",
+		"d1_databases",
+		"queues",
+		"workflows",
+	] as const;
+	for (const key of keys) {
+		if (bindings[key]) {
+			const remotes = bindings[key].filter(({ remote }) => remote);
+			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+			// @ts-ignore -- remotes is interpreted as the union of the possible types and not the one specific to the key
+			remoteBindings[key] = remotes;
+		}
+	}
+
+	return remoteBindings;
 }
