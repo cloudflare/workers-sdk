@@ -25,9 +25,9 @@ export type WorkerEntrypointsDefinition = Record<
 >;
 
 export type WorkerDefinition = {
-	port: number;
 	protocol: "http" | "https";
 	host: string;
+	port: number;
 	entrypointAddresses: WorkerEntrypointsDefinition;
 	durableObjects: { name: string; className: string }[];
 };
@@ -45,7 +45,7 @@ export class DevRegistry {
 	) {}
 
 	/**
-	 * Watch files inside the registry
+	 * Watch files inside the registry directory for changes.
 	 */
 	public watch(): void {
 		if (!this.registryPath || this.watcher) {
@@ -60,44 +60,36 @@ export class DevRegistry {
 		this.refresh();
 	}
 
-	private clear() {
+	/**
+	 * Unregister all managed workers and close the watcher.
+	 * This is a sync function that returns a promise
+	 * to ensure all workers are unregistered within the exit hook
+	 */
+	public dispose(): Promise<void> | undefined {
 		for (const worker of this.managedWorkers) {
 			this.unregister(worker);
 		}
-
-		for (const heartbeat of this.heartbeats) {
-			clearInterval(heartbeat[1]);
-		}
-
 		this.managedWorkers.clear();
-		this.heartbeats.clear();
-	}
-
-	/**
-	 * Unregister all managed workers and cleanup
-	 * This is a sync function that returns a promise
-	 * to ensure all workers are unregistered within the exit hook without waiting
-	 */
-	public dispose(): Promise<void> | undefined {
-		this.clear();
 
 		// Only this step is async and could be awaited
 		return this.watcher?.close();
 	}
 
 	/**
-	 * Unregister a worker in the registry.
+	 * Unregister worker in the registry.
 	 */
-	private unregister(name: string) {
-		if (!this.registryPath) {
-			return;
-		}
-
+	private unregister(name: string): void {
 		try {
-			unlinkSync(path.join(this.registryPath, name));
 			const existingHeartbeat = this.heartbeats.get(name);
+
+			// Clear the check first before removing the files on disk
 			if (existingHeartbeat) {
+				this.heartbeats.delete(name);
 				clearInterval(existingHeartbeat);
+			}
+
+			if (this.registryPath) {
+				unlinkSync(path.join(this.registryPath, name));
 			}
 		} catch (e) {
 			this.log?.debug(`failed to unregister worker: ${e}`);
@@ -107,11 +99,16 @@ export class DevRegistry {
 	public async updateRegistryPath(
 		registryPath: string | undefined
 	): Promise<void> {
-		this.clear();
+		for (const worker of this.managedWorkers) {
+			this.unregister(worker);
+		}
+		this.managedWorkers.clear();
 
 		if (this.registryPath !== registryPath) {
-			this.watcher?.close();
-			this.watcher = undefined;
+			if (this.watcher) {
+				await this.watcher.close();
+				this.watcher = undefined;
+			}
 			this.watch();
 		}
 	}
@@ -212,8 +209,8 @@ export class DevRegistry {
 
 				serverSocket.pipe(clientSocket);
 				clientSocket.pipe(serverSocket);
-				// Note: I might need to kill the tunnel if it is connected to a fallback service
-				// To make sure workerd re-connects everytime to see if the service is available
+				// TODO: Kill the tunnel if it is connected to a fallback service
+				// This make sure workerd will re-connect everytime to see if the service is available
 			});
 
 			// Errors on either side
@@ -234,7 +231,11 @@ export class DevRegistry {
 	private getExternalServiceAddress(
 		service: string,
 		entrypoint: string | undefined = "default"
-	): { protocol: "http" | "https"; host: string; port: number } {
+	): {
+		protocol: "http" | "https";
+		host: string;
+		port: number;
+	} {
 		if (!this.registry) {
 			throw new Error("Registry not initialized yet");
 		}
