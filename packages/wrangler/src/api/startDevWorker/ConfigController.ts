@@ -66,6 +66,12 @@ async function resolveDevConfig(
 		};
 	};
 
+	if (input.dev?.remote && input.dev?.dispatchNamespace) {
+		throw new UserError(
+			"The `--dispatch-namespace` argument cannot be used in conjunction with the `--remote` argument. If you want dispatch to this script from a Workers for Platforms dispatch namespace, please remove the `--remote` argument from your CLI command."
+		);
+	}
+
 	const localPersistencePath = getLocalPersistencePath(
 		input.dev?.persist,
 		config
@@ -131,6 +137,7 @@ async function resolveDevConfig(
 		bindVectorizeToProd: input.dev?.bindVectorizeToProd ?? false,
 		multiworkerPrimary: input.dev?.multiworkerPrimary,
 		imagesLocalMode: input.dev?.imagesLocalMode ?? false,
+		dispatchNamespace: input.dev?.dispatchNamespace,
 	} satisfies StartDevWorkerOptions["dev"];
 }
 
@@ -158,6 +165,10 @@ async function resolveBindings(
 			"version_metadata",
 			input.bindings
 		)?.[0],
+		dispatchNamespaces: extractBindingsOfType(
+			"dispatch_namespace",
+			input.bindings
+		),
 	});
 
 	const maskedVars = maskVars(bindings, config);
@@ -435,7 +446,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 					script: input.entrypoint,
 					config: input.config,
 					env: input.env,
-					"dispatch-namespace": undefined,
+					"dispatch-namespace": input.dev?.dispatchNamespace,
 					"legacy-env": !input.legacy?.enableServiceEnvironments,
 					remote: input.dev?.remote,
 					upstreamProtocol:

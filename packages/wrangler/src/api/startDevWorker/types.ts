@@ -175,6 +175,8 @@ export interface StartDevWorkerInput {
 
 		/** Treat this as the primary worker in a multiworker setup (i.e. the first Worker in Miniflare's options) */
 		multiworkerPrimary?: boolean;
+
+		dispatchNamespace?: string;
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;

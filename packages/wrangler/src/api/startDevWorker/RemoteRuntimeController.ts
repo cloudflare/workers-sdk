@@ -275,6 +275,7 @@ export class RemoteRuntimeController extends RuntimeController {
 					proxyLogsToController: true,
 					internalDurableObjects: [],
 					entrypointAddresses: {},
+					dispatchNamespace: undefined,
 				},
 			});
 		} catch (error) {

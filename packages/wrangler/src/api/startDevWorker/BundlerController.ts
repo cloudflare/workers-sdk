@@ -257,6 +257,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				findAdditionalModules: config.build?.findAdditionalModules,
 				durableObjects: bindings?.durable_objects ?? { bindings: [] },
 				workflows: bindings?.workflows ?? [],
+				dispatchNamespace: config.dev.dispatchNamespace,
 				local: !config.dev?.remote,
 				// startDevWorker only applies to "dev"
 				targetConsumer: "dev",

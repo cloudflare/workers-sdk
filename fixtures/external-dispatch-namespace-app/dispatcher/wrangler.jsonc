@@ -1,0 +1,13 @@
+{
+	"name": "dispatcher",
+	"dispatch_namespaces": [
+		{
+			"binding": "MY_DISPATCH_NAMESPACE",
+			"namespace": "my-namespace",
+			"outbound": {
+				"service": "outbound",
+				"parameters": ["parameter1", "parameter2"],
+			},
+		},
+	],
+}

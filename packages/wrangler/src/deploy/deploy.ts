@@ -575,6 +575,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							props.compatibilityFlags ?? config.compatibility_flags
 						),
 						plugins: [logBuildOutput(nodejsCompatMode)],
+						dispatchNamespace:
+							props.dispatchNamespace || config.dispatch_namespace,
 
 						// Pages specific options used by wrangler pages commands
 						entryName: undefined,

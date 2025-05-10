@@ -73,6 +73,7 @@ describe("pages", () => {
 			      --ai                                         AI to bind (--ai AI_BINDING)  [string]
 			      --version-metadata                           Worker Version metadata (--version-metadata VERSION_METADATA_BINDING)  [string]
 			      --service                                    Service to bind (--service SERVICE=SCRIPT_NAME)  [array]
+			      --dispatch                                   Dispatch namespace to bind (--dispatch DISPATCH_BINDING=namespace-name)  [array]
 			      --live-reload                                Auto reload HTML pages when change is detected  [boolean] [default: false]
 			      --local-protocol                             Protocol to listen to requests on, defaults to http.  [choices: \\"http\\", \\"https\\"]
 			      --https-key-path                             Path to a custom certificate key  [string]

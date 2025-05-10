@@ -56,6 +56,7 @@ export function runBuild(
 		projectRoot,
 		onStart,
 		defineNavigatorUserAgent,
+		dispatchNamespace,
 		checkFetch,
 	}: {
 		entry: Entry;
@@ -81,6 +82,7 @@ export function runBuild(
 		projectRoot: string | undefined;
 		onStart: () => void;
 		defineNavigatorUserAgent: boolean;
+		dispatchNamespace: string | undefined;
 		checkFetch: boolean;
 	},
 	setBundle: (
@@ -162,6 +164,7 @@ export function runBuild(
 						local,
 						projectRoot,
 						defineNavigatorUserAgent,
+						dispatchNamespace,
 
 						// Pages specific options used by wrangler pages commands
 						entryName: undefined,
