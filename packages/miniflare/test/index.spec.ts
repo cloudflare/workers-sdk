@@ -2996,16 +2996,19 @@ test("Miniflare: CF-Connecting-IP is preserved when present", async (t) => {
 });
 
 // regression test for https://github.com/cloudflare/workers-sdk/issues/7924
+// The "server" service just returns the value of the CF-Connecting-IP header which would normally be added by Miniflare. If you send a request to with no such header, Miniflare will add one.
+// The "client" service makes an outbound request with a fake CF-Connecting-IP header to the "server" service. If the outbound stripping happens then this header will not make it to the "server" service
+// so its response will contain the header added by Miniflare. If the stripping is turned off then the response from the "server" service will contain the fake header.
 test("Miniflare: strips CF-Connecting-IP", async (t) => {
 	const server = new Miniflare({
 		script:
 			"export default { fetch(request) { return new Response(request.headers.get(`CF-Connecting-IP`)) } }",
 		modules: true,
 	});
-	const url = await server.ready;
+	const serverUrl = await server.ready;
 
 	const client = new Miniflare({
-		script: `export default { fetch(request) { return fetch('${url.href}', {headers: {"CF-Connecting-IP":"fake-value"}}) } }`,
+		script: `export default { fetch(request) { return fetch('${serverUrl.href}', {headers: {"CF-Connecting-IP":"fake-value"}}) } }`,
 		modules: true,
 	});
 	t.teardown(() => client.dispose());
@@ -3015,16 +3018,17 @@ test("Miniflare: strips CF-Connecting-IP", async (t) => {
 	// The CF-Connecting-IP header value of "fake-value" should be stripped by Miniflare, and should be replaced with a generic 127.0.0.1
 	t.notDeepEqual(await landingPage.text(), "fake-value");
 });
+
 test("Miniflare: does not strip CF-Connecting-IP when configured", async (t) => {
 	const server = new Miniflare({
 		script:
 			"export default { fetch(request) { return new Response(request.headers.get(`CF-Connecting-IP`)) } }",
 		modules: true,
 	});
-	const url = await server.ready;
+	const serverUrl = await server.ready;
 
 	const client = new Miniflare({
-		script: `export default { fetch(request) { return fetch('${url.href}', {headers: {"CF-Connecting-IP":"fake-value"}}) } }`,
+		script: `export default { fetch(request) { return fetch('${serverUrl.href}', {headers: {"CF-Connecting-IP":"fake-value"}}) } }`,
 		modules: true,
 		stripCfConnectingIp: false,
 	});
