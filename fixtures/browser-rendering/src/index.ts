@@ -8,6 +8,17 @@ export default {
 		let img: Buffer;
 		if (url) {
 			url = new URL(url).toString(); // normalize
+
+			if (url.indexOf("selector")) {
+				const allResultsSelector = "h1";
+				const browser = await puppeteer.launch(env.MYBROWSER);
+				const page = await browser.newPage();
+				await page.goto(url);
+				const text = await page.waitForSelector(allResultsSelector);
+				const h1Text = await page.$eval("h1", (el) => el.textContent.trim());
+				return new Response(h1Text);
+			}
+			
 			img = await env.BROWSER_KV_DEMO.get(url, { type: "arrayBuffer" });
 			if (img === null) {
 				const browser = await puppeteer.launch(env.MYBROWSER);
