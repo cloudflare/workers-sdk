@@ -337,7 +337,7 @@ export function printBindings(
 				}
 
 				if (remote) {
-					value += addSuffix(value, {
+					value = addSuffix(value, {
 						isSimulatedLocally: false,
 					});
 				} else if (context.local && context.registry !== null) {
