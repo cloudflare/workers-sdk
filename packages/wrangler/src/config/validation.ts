@@ -3,6 +3,7 @@ import path from "node:path";
 import { dedent } from "ts-dedent";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
+import { bucketFormatMessage, isValidR2BucketName } from "../r2/helpers";
 import { friendlyBindingNames } from "../utils/print-bindings";
 import { Diagnostics } from "./diagnostics";
 import {
@@ -2561,6 +2562,17 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+	if (
+		isValid &&
+		hasProperty(value, "bucket_name") &&
+		!isValidR2BucketName(value.bucket_name)
+	) {
+		diagnostics.errors.push(
+			`${field}.bucket_name=${JSON.stringify(value.bucket_name)} is invalid. ${bucketFormatMessage}`
+		);
+		isValid = false;
+	}
+
 	if (!isOptionalProperty(value, "preview_bucket_name", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should, optionally, have a string "preview_bucket_name" field but got ${JSON.stringify(
@@ -2569,6 +2581,17 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+	if (
+		isValid &&
+		hasProperty(value, "preview_bucket_name") &&
+		!isValidR2BucketName(value.preview_bucket_name)
+	) {
+		diagnostics.errors.push(
+			`${field}.preview_bucket_name= ${JSON.stringify(value.preview_bucket_name)} is invalid. ${bucketFormatMessage}`
+		);
+		isValid = false;
+	}
+
 	if (!isOptionalProperty(value, "jurisdiction", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should, optionally, have a string "jurisdiction" field but got ${JSON.stringify(

@@ -87,7 +87,6 @@ const config: TemplateConfig = {
 			"cf-typegen": `wrangler types`,
 		},
 	}),
-	compatibilityFlags: ["nodejs_compat"],
 	devScript: "dev",
 	deployScript: "deploy",
 	previewScript: "preview",

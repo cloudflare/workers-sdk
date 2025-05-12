@@ -137,7 +137,7 @@ const bindingsConfigMock: Omit<
 	r2_buckets: [
 		{
 			binding: "R2_BUCKET_BINDING",
-			bucket_name: "R2BUCKET_NAME_TEST",
+			bucket_name: "r2bucket-name-test",
 		},
 	],
 	d1_databases: [
