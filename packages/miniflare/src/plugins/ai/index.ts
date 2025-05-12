@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import SCRIPT_MIXED_MODE_CLIENT from "worker:shared/mixed-mode-client";
 import { z } from "zod";
 import {
 	mixedModeClientWorker,
