@@ -382,6 +382,57 @@ function getDurableObjectClassNames(
 	return serviceClassNames;
 }
 
+/**
+ * This collects all external service bindings from all workers and overrides
+ * it to point to a proxy in the loopback server. A fallback service will be created
+ * for each of the external service in case the upstream service is not available.
+ */
+function getExternalServiceBindings(
+	allWorkerOpts: PluginWorkerOptions[],
+	loopbackHost: string,
+	loopbackPort: number
+) {
+	const externalServices = new Map<string, Set<string | undefined>>();
+
+	for (const workerOpts of allWorkerOpts) {
+		// Override service bindings if they point to a worker that doesn't exist
+		if (workerOpts.core.serviceBindings) {
+			for (const name of Object.keys(workerOpts.core.serviceBindings)) {
+				const service = workerOpts.core.serviceBindings[name];
+				if (
+					typeof service === "object" &&
+					"name" in service &&
+					service.name !== kCurrentWorker &&
+					allWorkerOpts.every((options) => options.core.name !== service.name)
+				) {
+					// This is a service binding to a worker that doesn't exist
+					// Override it to connect to the dev registry proxy
+					workerOpts.core.serviceBindings[name] = {
+						external: {
+							address: `${loopbackHost}:${loopbackPort}`,
+							http: getExternalServiceHttpOptions(
+								service.name,
+								service.entrypoint
+							),
+						},
+					};
+
+					let entrypoints = externalServices.get(service.name);
+
+					if (!entrypoints) {
+						entrypoints = new Set();
+						externalServices.set(service.name, entrypoints);
+					}
+
+					entrypoints.add(service.entrypoint);
+				}
+			}
+		}
+	}
+
+	return externalServices;
+}
+
 function invalidWrappedAsBound(name: string, bindingType: string): never {
 	const stringName = JSON.stringify(name);
 	throw new MiniflareCoreError(
@@ -1262,6 +1313,11 @@ export class Miniflare {
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
 		this.#cfObject = sharedOpts.core.cf;
 
+		const externalServices = getExternalServiceBindings(
+			allWorkerOpts,
+			loopbackHost,
+			loopbackPort
+		);
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const wrappedBindingNames = getWrappedBindingNames(
 			allWorkerOpts,
@@ -1314,8 +1370,6 @@ export class Miniflare {
 			innerBindings: Worker_Binding[];
 		}[] = [];
 
-		const externalServices = new Map<string, Set<string | undefined>>();
-
 		for (let i = 0; i < allWorkerOpts.length; i++) {
 			const previousWorkerOpts = allPreviousWorkerOpts?.[i];
 			const workerOpts = allWorkerOpts[i];
@@ -1334,40 +1388,6 @@ export class Miniflare {
 				// This will be the UserWorker, or the vitest pool worker wrapping the UserWorker
 				// The asset plugin needs this so that it can set the binding between the RouterWorker and the UserWorker
 				workerOpts.assets.assets.workerName = workerOpts.core.name;
-			}
-
-			// Override service bindings if they point to a worker that doesn't exist
-			if (workerOpts.core.serviceBindings) {
-				for (const name of Object.keys(workerOpts.core.serviceBindings)) {
-					const service = workerOpts.core.serviceBindings[name];
-					if (
-						typeof service === "object" &&
-						"name" in service &&
-						service.name !== kCurrentWorker &&
-						allWorkerOpts.every((options) => options.core.name !== service.name)
-					) {
-						// This is a service binding to a worker that doesn't exist
-						// Override it to connect to the dev registry proxy
-						workerOpts.core.serviceBindings[name] = {
-							external: {
-								address: `${loopbackHost}:${loopbackPort}`,
-								http: getExternalServiceHttpOptions(
-									service.name,
-									service.entrypoint
-								),
-							},
-						};
-
-						let entrypoints = externalServices.get(service.name);
-
-						if (!entrypoints) {
-							entrypoints = new Set();
-							externalServices.set(service.name, entrypoints);
-						}
-
-						entrypoints.add(service.entrypoint);
-					}
-				}
 			}
 
 			// Collect all bindings from this worker

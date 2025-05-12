@@ -3,9 +3,6 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "pnpm run \"/^build:.*/\"",
-		"build:vite-multi-workers": "vite build --config vite-multi-workers.config.ts",
-		"build:vite-worker": "vite build --config vite-worker.config.ts",
 		"check:types": "tsc --build",
 		"dev": "pnpm run \"/^dev:.*/\"",
 		"dev:vite-multi-workers": "vite dev --config vite-multi-workers.config.ts",

@@ -61,11 +61,7 @@ test("DevRegistry: fetch to module worker", async (t) => {
 				}
 			}
 		`,
-		unsafeDirectSockets: [
-			{
-				proxy: true,
-			},
-		],
+		unsafeDirectSockets: [{}],
 	});
 	t.teardown(() => remote.dispose());
 
@@ -110,11 +106,7 @@ test("DevRegistry: RPC to default entrypoint", async (t) => {
 				ping() { return "pong"; }
 			}
 		`,
-		unsafeDirectSockets: [
-			{
-				proxy: true,
-			},
-		],
+		unsafeDirectSockets: [{}],
 	});
 	t.teardown(() => remote.dispose());
 
@@ -162,7 +154,6 @@ test("DevRegistry: RPC to custom entrypoint", async (t) => {
 		unsafeDirectSockets: [
 			{
 				entrypoint: "TestEntrypoint",
-				proxy: true,
 			},
 		],
 	});
@@ -276,11 +267,7 @@ test("DevRegistry: RPC to unknown entrypoint", async (t) => {
 				ping() { return "pong"; }
 			}
 		`,
-		unsafeDirectSockets: [
-			{
-				proxy: true,
-			},
-		],
+		unsafeDirectSockets: [{}],
 	});
 	t.teardown(() => remote.dispose());
 
