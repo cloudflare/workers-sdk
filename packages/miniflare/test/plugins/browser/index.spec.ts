@@ -1,6 +1,7 @@
 import test from "ava";
 import { Miniflare, MiniflareOptions } from "miniflare";
 
+
 const BROWSER_WORKER_SCRIPT = () => `
 import puppeteer from "@cloudflare/puppeteer";
 export default {
@@ -14,7 +15,7 @@ export default {
 
 			if (url.indexOf("selector")) {
 				const allResultsSelector = "h1";
-				const browser = await puppeteerModule.exports.launch(env.MYBROWSER);
+				const browser = await puppeteer.exports.launch(env.MYBROWSER);
 				const page = await browser.newPage();
 				await page.goto(url);
 				const text = await page.waitForSelector(allResultsSelector);
@@ -24,7 +25,7 @@ export default {
 
 			img = await env.BROWSER_KV_DEMO.get(url, { type: "arrayBuffer" });
 			if (img === null) {
-				const browser = await puppeteerModule.exports.launch(env.MYBROWSER);
+				const browser = await puppeteer.exports.launch(env.MYBROWSER);
 				const page = await browser.newPage();
 				await page.goto(url);
 				img = await page.screenshot();
