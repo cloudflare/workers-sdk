@@ -6,6 +6,9 @@ import { experimental_startMixedModeSession } from "wrangler";
 process.env.CLOUDFLARE_ACCOUNT_ID = process.env.TEST_CLOUDFLARE_ACCOUNT_ID;
 process.env.CLOUDFLARE_API_TOKEN = process.env.TEST_CLOUDFLARE_API_TOKEN;
 
+// Mixed Mode relies on deploying a Worker to a user's account, and so the following tests require authentication
+// This is provided in CI, but forks of the repo/running the fixture tests locally won't necessarily have authentication
+// As such, we skip the tests if authentication isn't provided.
 const baseDescribe =
 	process.env.TEST_CLOUDFLARE_ACCOUNT_ID &&
 	process.env.TEST_CLOUDFLARE_API_TOKEN
