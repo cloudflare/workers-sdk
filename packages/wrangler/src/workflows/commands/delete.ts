@@ -9,7 +9,6 @@ export const workflowsDeleteCommand = createCommand({
 			"Delete workflow - when deleting a workflow, it will also delete it's own instances",
 		owner: "Product: Workflows",
 		status: "stable",
-		hidden: true,
 	},
 
 	args: {

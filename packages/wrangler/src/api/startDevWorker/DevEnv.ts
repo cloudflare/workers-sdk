@@ -20,7 +20,12 @@ export class DevEnv extends EventEmitter {
 	async startWorker(options: StartDevWorkerInput): Promise<Worker> {
 		const worker = createWorkerObject(this);
 
-		await this.config.set(options);
+		try {
+			await this.config.set(options, true);
+		} catch (e) {
+			await worker.dispose();
+			throw e;
+		}
 
 		return worker;
 	}
@@ -148,8 +153,8 @@ function createWorkerObject(devEnv: DevEnv): Worker {
 			assert(devEnv.config.latestConfig);
 			return devEnv.config.latestConfig;
 		},
-		setConfig(config) {
-			return devEnv.config.set(config);
+		async setConfig(config, throwErrors) {
+			return devEnv.config.set(config, throwErrors);
 		},
 		patchConfig(config) {
 			return devEnv.config.patch(config);

@@ -43,6 +43,7 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 			previousEnvInterface ?? "Env",
 			"worker-configuration.d.ts",
 			entry,
+			new Map(),
 			// don't log anything
 			false
 		);

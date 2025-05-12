@@ -125,7 +125,7 @@ export class ProxyNodeBinding {
 }
 
 export function namespaceKeys(
-	namespaces?: Record<string, string> | string[]
+	namespaces?: Record<string, string | { id: string }> | string[]
 ): string[] {
 	if (Array.isArray(namespaces)) {
 		return namespaces;
@@ -136,13 +136,28 @@ export function namespaceKeys(
 	}
 }
 
+export type MixedModeConnectionString = URL & {
+	__brand: "MixedModeConnectionString";
+};
+
 export function namespaceEntries(
-	namespaces?: Record<string, string> | string[]
+	namespaces?:
+		| Record<
+				string,
+				| string
+				| { id: string; mixedModeConnectionString?: MixedModeConnectionString }
+		  >
+		| string[]
 ): [bindingName: string, id: string][] {
 	if (Array.isArray(namespaces)) {
 		return namespaces.map((bindingName) => [bindingName, bindingName]);
 	} else if (namespaces !== undefined) {
-		return Object.entries(namespaces);
+		return Object.entries(namespaces).map(([key, value]) => {
+			if (typeof value === "string") {
+				return [key, value];
+			}
+			return [key, value.id];
+		});
 	} else {
 		return [];
 	}

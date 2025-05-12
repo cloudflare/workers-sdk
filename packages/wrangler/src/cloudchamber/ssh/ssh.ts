@@ -1,8 +1,6 @@
 import { readdir, readFile, stat } from "fs/promises";
 import { homedir, userInfo } from "os";
-import { exit } from "process";
 import {
-	crash,
 	endSection,
 	log,
 	logRaw,
@@ -14,6 +12,7 @@ import {
 } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { pollSSHKeysUntilCondition } from "../cli";
 import { SshPublicKeysService } from "../client";
@@ -382,8 +381,7 @@ async function promptForSSHKey(
 	);
 	stop();
 	if (err != null) {
-		crash("Error adding your public ssh key: " + err.message);
-		exit(1);
+		throw new UserError("Error adding your public ssh key: " + err.message);
 	}
 
 	return res;

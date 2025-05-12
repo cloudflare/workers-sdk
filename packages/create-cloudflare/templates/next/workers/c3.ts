@@ -11,7 +11,7 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	await installPackages(["@opennextjs/cloudflare@~1.0.0-beta.0 || ^1.0.0"], {
+	await installPackages(["@opennextjs/cloudflare@^1.0.2"], {
 		startText: "Adding the Cloudflare adapter",
 		doneText: `${brandColor(`installed`)} @opennextjs/cloudflare)}`,
 	});
@@ -42,13 +42,14 @@ const updateNextConfig = (usesTs: boolean) => {
 	s.stop(`${brandColor(`updated`)} ${dim(`\`${configFile}\``)}`);
 };
 
+const envInterfaceName = "CloudflareBindings";
+const typesPath = "./cloudflare-env.d.ts";
 export default {
 	configVersion: 1,
 	id: "next",
 	frameworkCli: "create-next-app",
-	frameworkCliPinnedVersion: "~15.3.0",
 	platform: "workers",
-	displayName: "Next.js (using Node.js compat + Workers Assets)",
+	displayName: "Next.js",
 	path: "templates/next/workers",
 	copyFiles: {
 		path: "./templates",
@@ -59,11 +60,12 @@ export default {
 		scripts: {
 			deploy: `opennextjs-cloudflare build && opennextjs-cloudflare deploy`,
 			preview: `opennextjs-cloudflare build && opennextjs-cloudflare preview`,
-			"cf-typegen": `wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts`,
+			"cf-typegen": `wrangler types --env-interface ${envInterfaceName} ${typesPath}`,
 		},
 	}),
 	devScript: "dev",
 	previewScript: "preview",
 	deployScript: "deploy",
-	compatibilityFlags: ["nodejs_compat"],
+	typesPath,
+	envInterfaceName,
 } as TemplateConfig;

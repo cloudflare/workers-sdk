@@ -438,11 +438,11 @@ describe("pipelines", () => {
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"┌──────┬──────┬──────────────────────────────────────────────┐
-			│ name │ id   │ endpoint                                     │
-			├──────┼──────┼──────────────────────────────────────────────┤
-			│ foo  │ 0001 │ https://0001.pipelines.cloudflarestorage.com │
-			└──────┴──────┴──────────────────────────────────────────────┘"
+			"┌─┬─┬─┐
+			│ name │ id │ endpoint │
+			├─┼─┼─┤
+			│ foo │ 0001 │ https://0001.pipelines.cloudflarestorage.com │
+			└─┴─┴─┘"
 		`);
 		expect(requests.count).toEqual(1);
 	});

@@ -215,7 +215,7 @@ describe("Hot Keys", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"╭─────────────────────────────────────────────────────────╮
-				│  [a] first option, [b] second option, [c] third option  │
+				│  [a] first option, [b] second option, [c] third option │
 				╰─────────────────────────────────────────────────────────╯"
 			`);
 
@@ -223,11 +223,11 @@ describe("Hot Keys", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"╭─────────────────────────────────────────────────────────╮
-				│  [a] first option, [b] second option, [c] third option  │
+				│  [a] first option, [b] second option, [c] third option │
 				╰─────────────────────────────────────────────────────────╯
 				something 1
 				╭─────────────────────────────────────────────────────────╮
-				│  [a] first option, [b] second option, [c] third option  │
+				│  [a] first option, [b] second option, [c] third option │
 				╰─────────────────────────────────────────────────────────╯"
 			`);
 
@@ -236,11 +236,11 @@ describe("Hot Keys", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"╭─────────────────────────────────────────────────────────╮
-				│  [a] first option, [b] second option, [c] third option  │
+				│  [a] first option, [b] second option, [c] third option │
 				╰─────────────────────────────────────────────────────────╯
 				something 1
 				╭─────────────────────────────────────────────────────────╮
-				│  [a] first option, [b] second option, [c] third option  │
+				│  [a] first option, [b] second option, [c] third option │
 				╰─────────────────────────────────────────────────────────╯
 				something 2"
 			`);
@@ -267,9 +267,9 @@ describe("Hot Keys", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"╭─────────────────────╮
-					│  [a] first option   │
-					│  [b] second option  │
-					│  [c] third option   │
+					│  [a] first option │
+					│  [b] second option │
+					│  [c] third option │
 					╰─────────────────────╯"
 				`);
 				unregisterHotKeys();

@@ -19,24 +19,12 @@ const generate = async (ctx: C3Context) => {
 	logRaw(""); // newline
 };
 
-// TODO: Uncomment this once @react-router/dev updates its peer dependency to Wrangler v4
-// const configure = async () => {
-// 	await installPackages(["wrangler@latest"], {
-// 		dev: true,
-// 		startText: "Updating the Wrangler version",
-// 		doneText: `${brandColor(`updated`)} ${dim("wrangler@latest")}`,
-// 	});
-// };
-
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "react-router",
 	platform: "workers",
 	frameworkCli: "create-react-router",
 	displayName: "React Router (formerly Remix)",
-	copyFiles: {
-		path: "./templates",
-	},
 	generate,
 	// configure,
 	transformPackageJson: async () => ({

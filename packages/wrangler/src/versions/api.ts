@@ -13,7 +13,7 @@ export async function fetchVersion(
 	workerName: string,
 	versionId: VersionId,
 	versionCache?: VersionCache
-) {
+): Promise<ApiVersion> {
 	const cachedVersion = versionCache?.get(versionId);
 	if (cachedVersion) {
 		return cachedVersion;
@@ -89,7 +89,9 @@ export async function fetchDeployableVersions(
 	workerName: string,
 	versionCache: VersionCache
 ): Promise<ApiVersion[]> {
-	const { items: versions } = await fetchResult<{ items: ApiVersion[] }>(
+	const { items: versions } = await fetchResult<{
+		items: ApiVersion[];
+	}>(
 		`/accounts/${accountId}/workers/scripts/${workerName}/versions?deployable=true`
 	);
 

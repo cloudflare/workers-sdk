@@ -12,6 +12,7 @@ import {
 	getMiniflareObjectBindings,
 	getPersistPath,
 	migrateDatabase,
+	MixedModeConnectionString,
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
@@ -29,7 +30,20 @@ import {
 } from "./sites";
 
 export const KVOptionsSchema = z.object({
-	kvNamespaces: z.union([z.record(z.string()), z.string().array()]).optional(),
+	kvNamespaces: z
+		.union([
+			z.record(z.string()),
+			z.record(
+				z.object({
+					id: z.string(),
+					mixedModeConnectionString: z
+						.custom<MixedModeConnectionString>()
+						.optional(),
+				})
+			),
+			z.string().array(),
+		])
+		.optional(),
 
 	// Workers Sites
 	sitePath: PathSchema.optional(),

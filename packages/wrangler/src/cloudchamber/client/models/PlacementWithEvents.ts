@@ -21,4 +21,8 @@ export type PlacementWithEvents = {
 	status: PlacementStatus;
 	events: PlacementEvents;
 	last_update?: ISO8601Timestamp;
+	/**
+	 * Set if it backed or is currently backing a durable object actor.
+	 */
+	durable_object_actor_id?: string;
 };

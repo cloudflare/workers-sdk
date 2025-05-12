@@ -5,6 +5,7 @@ import { getUserServiceName } from "../core";
 import {
 	getPersistPath,
 	kUnsafeEphemeralUniqueKey,
+	MixedModeConnectionString,
 	PersistenceSchema,
 	Plugin,
 	ProxyNodeBinding,
@@ -29,6 +30,9 @@ export const DurableObjectsOptionsSchema = z.object({
 						.optional(),
 					// Prevents the Durable Object being evicted.
 					unsafePreventEviction: z.boolean().optional(),
+					mixedModeConnectionString: z
+						.custom<MixedModeConnectionString>()
+						.optional(),
 				}),
 			])
 		)

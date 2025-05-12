@@ -1,8 +1,9 @@
 import { Buffer } from "node:buffer";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { Writable } from "node:stream";
 import * as TOML from "@iarna/toml";
 import { sync } from "command-exists";
 import * as esbuild from "esbuild";
@@ -10,13 +11,17 @@ import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { File } from "undici";
 import { vi } from "vitest";
+import { getDefaultRegistry } from "../cloudchamber/build";
+import { type ImageRegistryCredentialsConfiguration } from "../cloudchamber/client";
 import {
 	printBundleSize,
 	printOffendingDependencies,
 } from "../deployment-bundle/bundle-reporter";
+import { getDockerPath } from "../environment-variables/misc-variables";
 import { clearOutputFilePath } from "../output";
 import { sniffUserAgent } from "../package-manager";
 import { writeAuthConfigFile } from "../user";
+import { mockAccount as mockContainersAccount } from "./cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockAuthDomain } from "./helpers/mock-auth-domain";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -55,6 +60,7 @@ import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { AssetManifest } from "../assets";
+import type { AccountRegistryToken, Application } from "../cloudchamber/client";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
 import type {
@@ -62,10 +68,12 @@ import type {
 	PostTypedConsumerBody,
 	QueueResponse,
 } from "../queues/client";
+import type { ChildProcess } from "node:child_process";
 import type { FormData } from "undici";
 import type { Mock } from "vitest";
 
 vi.mock("command-exists");
+vi.mock("node:child_process");
 vi.mock("../check/commands", async (importOriginal) => {
 	return {
 		...(await importOriginal()),
@@ -74,6 +82,18 @@ vi.mock("../check/commands", async (importOriginal) => {
 		},
 	};
 });
+
+function mockGetApplications(applications: Application[]) {
+	msw.use(
+		http.get(
+			"*/applications",
+			async () => {
+				return HttpResponse.json(applications);
+			},
+			{ once: true }
+		)
+	);
+}
 
 describe("deploy", () => {
 	mockAccountId();
@@ -453,29 +473,29 @@ describe("deploy", () => {
 			`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.]`
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-		"
-		[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.[0m
+			"
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.[0m
 
-		  Authentication error [code: 10000]
+			  Authentication error [code: 10000]
 
 
-		📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
-		Please ensure it has the correct permissions for this operation.
+			📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
+			Please ensure it has the correct permissions for this operation.
 
-		Getting User settings...
-		ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN in your environment.
-		👋 You are logged in with an API Token, associated with the email user@example.com.
-		┌───────────────┬────────────┐
-		│ Account Name  │ Account ID │
-		├───────────────┼────────────┤
-		│ Account One   │ account-1  │
-		├───────────────┼────────────┤
-		│ Account Two   │ account-2  │
-		├───────────────┼────────────┤
-		│ Account Three │ account-3  │
-		└───────────────┴────────────┘
-		🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens."
-	`);
+			Getting User settings...
+			ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN in your environment.
+			👋 You are logged in with an API Token, associated with the email user@example.com.
+			┌─┬─┐
+			│ Account Name │ Account ID │
+			├─┼─┤
+			│ Account One │ account-1 │
+			├─┼─┤
+			│ Account Two │ account-2 │
+			├─┼─┤
+			│ Account Three │ account-3 │
+			└─┴─┘
+			🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens."
+		`);
 	});
 
 	it("should error helpfully if pages_build_output_dir is set in wrangler.toml", async () => {
@@ -2976,19 +2996,19 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [2 out of 2]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"┌───────────────────┬──────┬──────────┐
-				│ Name              │ Type │ Size     │
-				├───────────────────┼──────┼──────────┤
-				│ a/1.mjs           │ esm  │ xx KiB │
-				├───────────────────┼──────┼──────────┤
-				│ a/b/2.mjs         │ esm  │ xx KiB │
-				├───────────────────┼──────┼──────────┤
-				│ a/b/3.mjs         │ esm  │ xx KiB │
-				├───────────────────┼──────┼──────────┤
-				│ a/b/c/4.mjs       │ esm  │ xx KiB │
-				├───────────────────┼──────┼──────────┤
-				│ Total (4 modules) │      │ xx KiB │
-				└───────────────────┴──────┴──────────┘
+				"┌─┬─┬─┐
+				│ Name │ Type │ Size │
+				├─┼─┼─┤
+				│ a/1.mjs │ esm │ xx KiB │
+				├─┼─┼─┤
+				│ a/b/2.mjs │ esm │ xx KiB │
+				├─┼─┼─┤
+				│ a/b/3.mjs │ esm │ xx KiB │
+				├─┼─┼─┤
+				│ a/b/c/4.mjs │ esm │ xx KiB │
+				├─┼─┼─┤
+				│ Total (4 modules) │ │ xx KiB │
+				└─┴─┴─┘
 				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -4577,15 +4597,11 @@ addEventListener('fetch', event => {});`
 			);
 			await expect(
 				flatBodies["80e40c1f2422528cb2fba3f9389ce315"]
-			).toBeAFileWhichMatches(
-				new File(
-					["c29tZXRoaW5nLWJpbmFyeQ=="],
-					"80e40c1f2422528cb2fba3f9389ce315",
-					{
-						type: "application/null",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["c29tZXRoaW5nLWJpbmFyeQ=="],
+				name: "80e40c1f2422528cb2fba3f9389ce315",
+				type: "application/null",
+			});
 		});
 
 		it("should be able to upload files with special characters in filepaths", async () => {
@@ -4647,42 +4663,27 @@ addEventListener('fetch', event => {});`
 			const flatBodies = Object.fromEntries(
 				uploadBodies.flatMap((b) => [...b.entries()])
 			);
-			const [nodeMajorString] = process.versions.node.split(".");
-			const nodeMajor = Number(nodeMajorString);
 			await expect(
 				flatBodies["ff5016e92f039aa743a4ff7abb3180fa"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTM="],
-					"ff5016e92f039aa743a4ff7abb3180fa",
-					{
-						// TODO: this should be "text/plain; charset=utf-8", but msw? is stripping the charset part
-						type: nodeMajor > 18 ? "text/plain;charset=utf-8" : "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTM="],
+				name: "ff5016e92f039aa743a4ff7abb3180fa",
+				type: "text/plain",
+			});
 			await expect(
 				flatBodies["7574a8cd3094a050388ac9663af1c1d6"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTI="],
-					"7574a8cd3094a050388ac9663af1c1d6",
-					{
-						type: nodeMajor > 18 ? "text/plain;charset=utf-8" : "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTI="],
+				name: "7574a8cd3094a050388ac9663af1c1d6",
+				type: "text/plain",
+			});
 			await expect(
 				flatBodies["0de3dd5df907418e9730fd2bd747bd5e"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTE="],
-					"0de3dd5df907418e9730fd2bd747bd5e",
-					{
-						type: nodeMajor > 18 ? "text/plain;charset=utf-8" : "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTE="],
+				name: "0de3dd5df907418e9730fd2bd747bd5e",
+				type: "text/plain",
+			});
 		});
 
 		it("should resolve assets directory relative to wrangler.toml if using config", async () => {
@@ -5113,54 +5114,34 @@ addEventListener('fetch', event => {});`
 				bodies.flatMap((b) => [...b.entries()])
 			);
 
-			const [nodeMajorString] = process.versions.node.split(".");
-			const nodeMajor = Number(nodeMajorString);
-
 			await expect(
 				flatBodies["0de3dd5df907418e9730fd2bd747bd5e"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTE="],
-					"0de3dd5df907418e9730fd2bd747bd5e",
-					{
-						type: nodeMajor > 18 ? "text/plain;charset=utf-8" : "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTE="],
+				name: "0de3dd5df907418e9730fd2bd747bd5e",
+				type: "text/plain",
+			});
 			await expect(
 				flatBodies["7574a8cd3094a050388ac9663af1c1d6"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTI="],
-					"7574a8cd3094a050388ac9663af1c1d6",
-					{
-						// TODO: this should be "text/plain; charset=utf-8", but msw? is stripping the charset part
-						type: nodeMajor > 18 ? "text/plain;charset=utf-8" : "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTI="],
+				name: "7574a8cd3094a050388ac9663af1c1d6",
+				type: "text/plain",
+			});
 			await expect(
 				flatBodies["ff5016e92f039aa743a4ff7abb3180fa"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTM="],
-					"ff5016e92f039aa743a4ff7abb3180fa",
-					{
-						type: nodeMajor > 18 ? "text/plain;charset=utf-8" : "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTM="],
+				name: "ff5016e92f039aa743a4ff7abb3180fa",
+				type: "text/plain",
+			});
 			await expect(
 				flatBodies["f05e28a3d0bdb90d3cf4bdafe592488f"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTU="],
-					"f05e28a3d0bdb90d3cf4bdafe592488f",
-					{
-						type: nodeMajor > 18 ? "text/plain;charset=utf-8" : "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTU="],
+				name: "f05e28a3d0bdb90d3cf4bdafe592488f",
+				type: "text/plain",
+			});
 		});
 
 		it("should be able to upload a user worker with ASSETS binding and config", async () => {
@@ -8682,7 +8663,335 @@ addEventListener('fetch', event => {});`
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
+			it("should support durable object bindings to SQLite classes with containers (docker flow)", async () => {
+				function mockGetVersion(versionId: string) {
+					msw.use(
+						http.get(
+							`*/accounts/:accountId/workers/scripts/:scriptName/versions/${versionId}`,
+							async () => {
+								return HttpResponse.json(
+									createFetchResult({
+										id: versionId,
+										metadata: {},
+										number: 2,
+										resources: {
+											bindings: [
+												{
+													type: "durable_object_namespace",
+													namespace_id: "1",
+													class_name: "ExampleDurableObject",
+												},
+											],
+										},
+									})
+								);
+							},
+							{ once: true }
+						)
+					);
+				}
+
+				mockGetVersion("Galaxy-Class");
+
+				function defaultChildProcess() {
+					return {
+						stderr: Buffer.from([]),
+						stdout: Buffer.from("i promise I am a successful process"),
+						on: function (reason: string, cbPassed: (code: number) => unknown) {
+							if (reason === "close") {
+								cbPassed(0);
+							}
+
+							return this;
+						},
+					} as unknown as ChildProcess;
+				}
+
+				vi.mocked(spawn).mockImplementation((cmd, args) => {
+					expect(cmd).toBe(getDockerPath());
+					if (args[0] === "image") {
+						expect(args).toEqual([
+							"image",
+							"push",
+							`${getDefaultRegistry()}/my-container:Galaxy`,
+						]);
+						return defaultChildProcess();
+					}
+
+					if (args[0] === "tag") {
+						expect(args).toEqual([
+							"tag",
+							"my-container:Galaxy",
+							`${getDefaultRegistry()}/my-container:Galaxy`,
+						]);
+						return defaultChildProcess();
+					}
+
+					if (args[0] === "login") {
+						let password = "";
+						const readable = new Writable({
+							write(chunk) {
+								password += chunk;
+							},
+							final() {},
+						});
+
+						return {
+							stdout: Buffer.from("i promise I am a successful docker login"),
+							stdin: readable,
+							on: function (
+								reason: string,
+								cbPassed: (code: number) => unknown
+							) {
+								if (reason === "close") {
+									expect(password).toEqual("mockpassword");
+									cbPassed(0);
+								}
+
+								return this;
+							},
+						} as unknown as ChildProcess;
+					}
+
+					expect(args).toEqual([
+						"build",
+						"-t",
+						getDefaultRegistry() + "/my-container:Galaxy",
+						"--platform",
+						"linux/amd64",
+						"-f",
+						"-",
+						".",
+					]);
+
+					let dockerfile = "";
+					const readable = new Writable({
+						write(chunk) {
+							dockerfile += chunk;
+						},
+						final() {},
+					});
+					return {
+						pid: -1,
+						error: undefined,
+						stderr: Buffer.from([]),
+						stdout: Buffer.from("i promise I am a successful docker build"),
+						stdin: readable,
+						status: 0,
+						signal: null,
+						output: [null],
+						on: (reason: string, cbPassed: (code: number) => unknown) => {
+							if (reason === "exit") {
+								expect(dockerfile).toEqual("FROM scratch");
+								cbPassed(0);
+							}
+						},
+					} as unknown as ChildProcess;
+				});
+
+				mockContainersAccount();
+
+				writeWranglerConfig({
+					durable_objects: {
+						bindings: [
+							{
+								name: "EXAMPLE_DO_BINDING",
+								class_name: "ExampleDurableObject",
+							},
+						],
+					},
+					containers: [
+						{
+							name: "my-container",
+							instances: 10,
+							class_name: "ExampleDurableObject",
+							configuration: { image: "./Dockerfile" },
+						},
+					],
+					migrations: [
+						{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+					],
+				});
+
+				fs.writeFileSync("Dockerfile", "FROM scratch");
+				mockGetApplications([]);
+				function mockCreateApplication(expected?: Partial<Application>) {
+					msw.use(
+						http.post(
+							"*/applications",
+							async ({ request }) => {
+								const json = await request.json();
+								if (expected !== undefined) {
+									expect(json).toMatchObject(expected);
+								}
+
+								return HttpResponse.json(json);
+							},
+							{ once: true }
+						)
+					);
+				}
+
+				function mockGenerateImageRegistryCredentials() {
+					msw.use(
+						http.post(
+							`*/registries/${getDefaultRegistry()}/credentials`,
+							async ({ request }) => {
+								const json =
+									(await request.json()) as ImageRegistryCredentialsConfiguration;
+								expect(json.permissions).toEqual(["push"]);
+
+								return HttpResponse.json({
+									account_id: "123",
+									registry_host: getDefaultRegistry(),
+									username: "v1",
+									password: "mockpassword",
+								} as AccountRegistryToken);
+							},
+							{ once: true }
+						)
+					);
+				}
+
+				mockGenerateImageRegistryCredentials();
+
+				mockCreateApplication({
+					name: "my-container",
+					instances: 10,
+					durable_objects: { namespace_id: "1" },
+					configuration: {
+						image: getDefaultRegistry() + "/my-container:Galaxy",
+					},
+				});
+
+				fs.writeFileSync(
+					"index.js",
+					`export class ExampleDurableObject {}; export default{};`
+				);
+
+				mockSubDomainRequest();
+				mockLegacyScriptData({
+					scripts: [{ id: "test-name", migration_tag: "v1" }],
+				});
+
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							class_name: "ExampleDurableObject",
+							name: "EXAMPLE_DO_BINDING",
+							type: "durable_object_namespace",
+						},
+					],
+					useOldUploadApi: true,
+					expectedContainers: [{ class_name: "ExampleDurableObject" }],
+				});
+
+				await runWrangler("deploy index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your Worker has access to the following bindings:
+					- Durable Objects:
+					  - EXAMPLE_DO_BINDING: ExampleDurableObject
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Building image my-container:Galaxy
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should support durable objects and D1", async () => {
+				writeWranglerConfig({
+					main: "index.js",
+					durable_objects: {
+						bindings: [
+							{
+								name: "EXAMPLE_DO_BINDING",
+								class_name: "ExampleDurableObject",
+							},
+						],
+					},
+					migrations: [{ tag: "v1", new_classes: ["ExampleDurableObject"] }],
+					d1_databases: [
+						{
+							binding: "DB",
+							database_name: "test-d1-db",
+							database_id: "UUID-1-2-3-4",
+							preview_database_id: "UUID-1-2-3-4",
+						},
+					],
+				});
+				const scriptContent = `export class ExampleDurableObject {}; export default{};`;
+				fs.writeFileSync("index.js", scriptContent);
+				mockSubDomainRequest();
+				mockLegacyScriptData({
+					scripts: [{ id: "test-name", migration_tag: "v1" }],
+				});
+				mockUploadWorkerRequest({
+					expectedType: "esm",
+					expectedBindings: [
+						{
+							name: "EXAMPLE_DO_BINDING",
+							class_name: "ExampleDurableObject",
+							type: "durable_object_namespace",
+						},
+						{ name: "DB", type: "d1_database" },
+					],
+				});
+
+				await runWrangler("deploy index.js --outdir tmp --dry-run");
+				expect(std.out).toMatchInlineSnapshot(`
+					"Total Upload: xx KiB / gzip: xx KiB
+					Your Worker has access to the following bindings:
+					- Durable Objects:
+					  - EXAMPLE_DO_BINDING: ExampleDurableObject
+					- D1 Databases:
+					  - DB: test-d1-db (UUID-1-2-3-4), Preview: (UUID-1-2-3-4)
+					--dry-run: exiting now."
+				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+				const output = fs.readFileSync("tmp/index.js", "utf-8");
+				// D1 no longer injects middleware, so we can pass through the user's code unchanged
+				expect(output).not.toContain(`ExampleDurableObject2`);
+				// ExampleDurableObject is exported directly
+				expect(output).toContain("export {\n  ExampleDurableObject,");
+			});
+
 			it("should support durable object bindings to SQLite classes with containers", async () => {
+				function mockGetVersion(versionId: string) {
+					msw.use(
+						http.get(
+							`*/accounts/:accountId/workers/scripts/:scriptName/versions/${versionId}`,
+							async () => {
+								return HttpResponse.json(
+									createFetchResult({
+										id: versionId,
+										metadata: {},
+										number: 2,
+										resources: {
+											bindings: [
+												{
+													type: "durable_object_namespace",
+													namespace_id: "1",
+													class_name: "ExampleDurableObject",
+												},
+											],
+										},
+									})
+								);
+							},
+							{ once: true }
+						)
+					);
+				}
+
+				mockGetVersion("Galaxy-Class");
+
+				mockContainersAccount();
 				writeWranglerConfig({
 					durable_objects: {
 						bindings: [
@@ -8706,6 +9015,31 @@ addEventListener('fetch', event => {});`
 						{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
 					],
 				});
+
+				mockGetApplications([]);
+				function mockCreateApplication(expected?: Partial<Application>) {
+					msw.use(
+						http.post(
+							"*/applications",
+							async ({ request }) => {
+								const json = await request.json();
+								if (expected !== undefined) {
+									expect(json).toMatchObject(expected);
+								}
+
+								return HttpResponse.json(json);
+							},
+							{ once: true }
+						)
+					);
+				}
+
+				mockCreateApplication({
+					name: "my-container",
+					instances: 10,
+					durable_objects: { namespace_id: "1" },
+				});
+
 				fs.writeFileSync(
 					"index.js",
 					`export class ExampleDurableObject {}; export default{};`
@@ -13313,9 +13647,15 @@ const mockAssetUploadRequest = async (
 	);
 };
 expect.extend({
-	async toBeAFileWhichMatches(received: File, expected: File) {
+	async toBeAFileWhichMatches(
+		received: File,
+		expected: {
+			fileBits: string[];
+			name: string;
+			type: string;
+		}
+	) {
 		const { equals } = this;
-
 		if (!equals(received.name, expected.name)) {
 			return {
 				pass: false,
@@ -13324,7 +13664,7 @@ expect.extend({
 			};
 		}
 
-		if (!equals(received.type, expected.type)) {
+		if (!equals(received.type, expect.stringMatching(expected.type))) {
 			return {
 				pass: false,
 				message: () =>
@@ -13333,7 +13673,9 @@ expect.extend({
 		}
 
 		const receviedText = await received.text();
-		const expectedText = await expected.text();
+		const expectedText = await new File(expected.fileBits, expected.name, {
+			type: expected.type,
+		}).text();
 		if (!equals(receviedText, expectedText)) {
 			return {
 				pass: false,
@@ -13350,7 +13692,11 @@ expect.extend({
 });
 
 interface CustomMatchers {
-	toBeAFileWhichMatches: (expected: File) => unknown;
+	toBeAFileWhichMatches: (expected: {
+		fileBits: string[];
+		name: string;
+		type: string;
+	}) => unknown;
 }
 
 declare module "vitest" {
