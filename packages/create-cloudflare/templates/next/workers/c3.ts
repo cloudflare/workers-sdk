@@ -11,7 +11,7 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	await installPackages(["@opennextjs/cloudflare@~1.0.0-beta.0 || ^1.0.0"], {
+	await installPackages(["@opennextjs/cloudflare@^1.0.2"], {
 		startText: "Adding the Cloudflare adapter",
 		doneText: `${brandColor(`installed`)} @opennextjs/cloudflare)}`,
 	});
