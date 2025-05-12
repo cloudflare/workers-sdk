@@ -1,11 +1,9 @@
-import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config';
+import { defineProject, mergeConfig } from "vitest/config";
+import configShared from "../../vitest.shared";
 
-export default defineWorkersConfig({
-	test: {
-		poolOptions: {
-			workers: {
-				wrangler: { configPath: './wrangler.jsonc' },
-			},
-		},
-	},
-});
+export default mergeConfig(
+	configShared,
+	defineProject({
+		test: {},
+	})
+);

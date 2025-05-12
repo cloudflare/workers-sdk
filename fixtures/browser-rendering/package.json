@@ -1,13 +1,13 @@
 {
 	"name": "browser-rendering",
-	"version": "0.0.0",
 	"private": true,
 	"scripts": {
 		"cf-typegen": "wrangler types",
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
 		"start": "wrangler dev",
-		"test": "vitest"
+		"test": "vitest",
+		"test:ci": "vitest run"
 	},
 	"devDependencies": {
 		"@cloudflare/puppeteer": "^0.0.14",
@@ -16,5 +16,8 @@
 		"typescript": "^5.5.2",
 		"vitest": "~3.0.7",
 		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
 	}
 }

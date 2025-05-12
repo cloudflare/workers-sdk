@@ -2,12 +2,37 @@ import puppeteer from "@cloudflare/puppeteer";
 
 export default {
 	async fetch(request, env): Promise<Response> {
-		console.log(env.MYBROWSER);
 		const { searchParams } = new URL(request.url);
 		let url = searchParams.get("url");
+		let action = searchParams.get("action");
 		let img: Buffer;
 		if (url) {
 			url = new URL(url).toString(); // normalize
+			if (action == "select") {
+				const browser = await puppeteer.launch(env.MYBROWSER);
+				const page = await browser.newPage();
+				await page.goto(url);
+				const h1Text = await page.$eval("h1", (el) => el.textContent.trim());
+				return new Response(h1Text);
+			}
+
+			if (action === "alter") {
+				const browser = await puppeteer.launch(env.MYBROWSER);
+				const page = await browser.newPage();
+
+				await page.goto(url); // change to your target URL
+
+				await page.evaluate(() => {
+					const paragraph = document.querySelector("p");
+					if (paragraph) {
+						paragraph.textContent = "New paragraph text set by Puppeteer!";
+					}
+				});
+
+				const pText = await page.$eval("p", (el) => el.textContent.trim());
+				return new Response(pText);
+			}
+
 			img = await env.BROWSER_KV_DEMO.get(url, { type: "arrayBuffer" });
 			if (img === null) {
 				const browser = await puppeteer.launch(env.MYBROWSER);

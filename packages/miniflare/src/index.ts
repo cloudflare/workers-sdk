@@ -953,6 +953,7 @@ export class Miniflare {
 				this.#log.logWithLevel(logLevel, message);
 				response = new Response(null, { status: 204 });
 			} else if (url.pathname === "/browser/launch") {
+				// eslint-disable-next-line es/no-dynamic-import
 				const { npxImport } = await import("npx-import");
 				// Version should be kept in sync with the supported version at https://github.com/cloudflare/puppeteer?tab=readme-ov-file#workers-version-of-puppeteer-core
 				const puppeteer = await npxImport(

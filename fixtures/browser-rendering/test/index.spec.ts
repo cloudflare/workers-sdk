@@ -1,25 +1,67 @@
 // test/index.spec.ts
-import { env, createExecutionContext, waitOnExecutionContext, SELF } from 'cloudflare:test';
-import { describe, it, expect } from 'vitest';
-import worker from '../src/index';
+import { rm } from "node:fs/promises";
+import { resolve } from "path";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
-// For now, you'll need to do something like this to get a correctly-typed
-// `Request` to pass to `worker.fetch()`.
-const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
+describe("Local Browser", () => {
+	let ip: string,
+		port: number,
+		stop: (() => Promise<unknown>) | undefined,
+		getOutput: () => string;
 
-describe('Hello World worker', () => {
-	it('responds with Hello World! (unit style)', async () => {
-		const request = new IncomingRequest('http://example.com');
-		// Create an empty context to pass to `worker.fetch()`.
-		const ctx = createExecutionContext();
-		const response = await worker.fetch(request, env, ctx);
-		// Wait for all `Promise`s passed to `ctx.waitUntil()` to settle before running test assertions
-		await waitOnExecutionContext(ctx);
-		expect(await response.text()).toMatchInlineSnapshot(`"Hello World!"`);
+	beforeAll(async () => {
+		// delete previous run contents because of persistence
+		await rm(resolve(__dirname, "..") + "/.wrangler", {
+			force: true,
+			recursive: true,
+		});
+		({ ip, port, stop, getOutput } = await runWranglerDev(
+			resolve(__dirname, ".."),
+			["--local", "--port=0", "--inspector-port=0"]
+		));
 	});
 
-	it('responds with Hello World! (integration style)', async () => {
-		const response = await SELF.fetch('https://example.com');
-		expect(await response.text()).toMatchInlineSnapshot(`"Hello World!"`);
+	afterAll(async () => {
+		await stop?.();
+	});
+
+	async function fetchText(url: string) {
+		const response = await fetch(url, {
+			headers: {
+				"MF-Disable-Pretty-Error": "1",
+			},
+		});
+		const text = await response.text();
+
+		return text;
+	}
+
+	it("Doesn't run a browser, just testing that the worker is running!", async () => {
+		await expect(
+			fetchText(`http://${ip}:${port}/create?workflowName=test`)
+		).resolves.toEqual("Please add an ?url=https://example.com/ parameter");
+	});
+
+	it("Run a browser, and chec h1 text content", async () => {
+		try {
+			await expect(
+				fetchText(`http://${ip}:${port}/?url=https://example.com&action=select`)
+			).resolves.toEqual("Example Domain");
+		} catch (err) {
+			console.log(err);
+			expect("true").toMatch("false");
+		}
+	});
+
+	it("Run a browser, and chec p text content", async () => {
+		try {
+			await expect(
+				fetchText(`http://${ip}:${port}/?url=https://example.com&action=alter`)
+			).resolves.toEqual("New paragraph text set by Puppeteer!");
+		} catch (err) {
+			console.log(err);
+			expect("true").toMatch("false");
+		}
 	});
 });
