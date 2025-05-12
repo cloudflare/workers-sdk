@@ -1,7 +1,11 @@
 import assert from "node:assert";
-import SCRIPT_MIXED_MODE_CLIENT from "worker:shared/mixed-mode-client";
 import { z } from "zod";
-import { MixedModeConnectionString, Plugin, ProxyNodeBinding } from "../shared";
+import {
+	mixedModeClientWorker,
+	MixedModeConnectionString,
+	Plugin,
+	ProxyNodeBinding,
+} from "../shared";
 
 const BrowserRenderingSchema = z.object({
 	binding: z.string(),
@@ -53,25 +57,10 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 		return [
 			{
 				name: `${BROWSER_RENDERING_PLUGIN_NAME}:${options.browserRendering.binding}`,
-				worker: {
-					compatibilityDate: "2025-01-01",
-					modules: [
-						{
-							name: "index.worker.js",
-							esModule: SCRIPT_MIXED_MODE_CLIENT(),
-						},
-					],
-					bindings: [
-						{
-							name: "mixedModeConnectionString",
-							text: options.browserRendering.mixedModeConnectionString.href,
-						},
-						{
-							name: "binding",
-							text: options.browserRendering.binding,
-						},
-					],
-				},
+				worker: mixedModeClientWorker(
+					options.browserRendering.mixedModeConnectionString,
+					options.browserRendering.binding
+				),
 			},
 		];
 	},

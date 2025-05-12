@@ -39,6 +39,7 @@ import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
 	kUnsafeEphemeralUniqueKey,
+	mixedModeClientWorker,
 	parseRoutes,
 	Plugin,
 	ProxyNodeBinding,
@@ -269,8 +270,12 @@ function getCustomServiceDesignator(
 		// Custom `fetch` function
 		serviceName = getCustomServiceName(workerIndex, kind, name);
 	} else if (typeof service === "object") {
+		if ("mixedModeConnectionString" in service) {
+			assert("name" in service && typeof service.name === "string");
+			serviceName = `${CORE_PLUGIN_NAME}:mixed-mode-service:${workerIndex}:${name}`;
+		}
 		// Worker with entrypoint
-		if ("name" in service) {
+		else if ("name" in service) {
 			if (service.name === kCurrentWorker) {
 				// TODO when fetch on WorkerEntrypoints with assets is fixed in dev: point this Router Worker if assets are present.
 				serviceName = getUserServiceName(refererName);
@@ -325,6 +330,20 @@ function maybeGetCustomServiceService(
 		return {
 			name: getBuiltinServiceName(workerIndex, kind, name),
 			...service,
+		};
+	} else if (
+		typeof service === "object" &&
+		"mixedModeConnectionString" in service
+	) {
+		assert(
+			service.mixedModeConnectionString &&
+				service.name &&
+				typeof service.name === "string"
+		);
+
+		return {
+			name: `${CORE_PLUGIN_NAME}:mixed-mode-service:${workerIndex}:${name}`,
+			worker: mixedModeClientWorker(service.mixedModeConnectionString, name),
 		};
 	}
 }

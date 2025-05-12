@@ -120,4 +120,54 @@ baseDescribe("startMixedModeSession", () => {
 		await mixedModeSession.ready;
 		await mixedModeSession.dispose();
 	});
+
+	test("External worker mixed mode binding", async () => {
+		const mixedModeSession = await experimental_startMixedModeSession({
+			SERVICE: {
+				type: "service",
+				service: "mixed-mode-test-target",
+			},
+			SERVICE_WITH_ENTRYPOINT: {
+				type: "service",
+				entrypoint: "CustomEntrypoint",
+				service: "mixed-mode-test-target",
+			},
+		});
+
+		const mf = new Miniflare({
+			compatibilityDate: "2025-01-01",
+			modules: true,
+			script: /* javascript */ `
+			export default {
+				async fetch(request, env) {
+					try{
+					return Response.json({
+						"default": await (await env.SERVICE.fetch("http://example.com")).text(),
+						"entrypoint": await (await env.SERVICE_WITH_ENTRYPOINT.fetch("http://example.com")).text()
+					})}catch(e){console.log(e);return new Response(e)}
+				}
+			}
+		`,
+			serviceBindings: {
+				SERVICE: {
+					name: "mixed-mode-test-target",
+					mixedModeConnectionString: mixedModeSession.mixedModeConnectionString,
+				},
+				SERVICE_WITH_ENTRYPOINT: {
+					name: "mixed-mode-test-target",
+					entrypoint: "CustomEntrypoint",
+					mixedModeConnectionString: mixedModeSession.mixedModeConnectionString,
+				},
+			},
+		});
+		const response = await (
+			await mf.dispatchFetch("http://example.com")
+		).text();
+		assert.match(response, /Hello World/);
+		assert.match(response, /Hello from entrypoint/);
+		await mf.dispose();
+
+		await mixedModeSession.ready;
+		await mixedModeSession.dispose();
+	});
 });

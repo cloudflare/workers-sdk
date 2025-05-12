@@ -1,7 +1,11 @@
 import assert from "node:assert";
-import SCRIPT_MIXED_MODE_CLIENT from "worker:shared/mixed-mode-client";
 import { z } from "zod";
-import { MixedModeConnectionString, Plugin, ProxyNodeBinding } from "../shared";
+import {
+	mixedModeClientWorker,
+	MixedModeConnectionString,
+	Plugin,
+	ProxyNodeBinding,
+} from "../shared";
 
 const AISchema = z.object({
 	binding: z.string(),
@@ -57,25 +61,10 @@ export const AI_PLUGIN: Plugin<typeof AIOptionsSchema> = {
 		return [
 			{
 				name: `${AI_PLUGIN_NAME}:${options.ai.binding}`,
-				worker: {
-					compatibilityDate: "2025-01-01",
-					modules: [
-						{
-							name: "index.worker.js",
-							esModule: SCRIPT_MIXED_MODE_CLIENT(),
-						},
-					],
-					bindings: [
-						{
-							name: "mixedModeConnectionString",
-							text: options.ai.mixedModeConnectionString.href,
-						},
-						{
-							name: "binding",
-							text: options.ai.binding,
-						},
-					],
-				},
+				worker: mixedModeClientWorker(
+					options.ai.mixedModeConnectionString,
+					options.ai.binding
+				),
 			},
 		];
 	},
