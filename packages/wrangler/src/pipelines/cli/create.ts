@@ -2,6 +2,7 @@ import chalk from "chalk";
 import { formatConfigSnippet, readConfig } from "../../config";
 import { FatalError, UserError } from "../../errors";
 import { logger } from "../../logger";
+import { bucketFormatMessage, isValidR2BucketName } from "../../r2/helpers";
 import { requireAuth } from "../../user";
 import { getValidBindingName } from "../../utils/getValidBindingName";
 import { printWranglerBanner } from "../../wrangler-banner";
@@ -182,6 +183,9 @@ export async function createPipelineHandler(
 
 	const config = readConfig(args);
 	const bucket = args.r2Bucket;
+	if (!isValidR2BucketName(bucket)) {
+		`The bucket name "${bucket}" is invalid. ${bucketFormatMessage}`;
+	}
 	const name = args.pipeline;
 	const compression = args.compression;
 
@@ -207,7 +211,7 @@ export async function createPipelineHandler(
 			},
 			batch: batch,
 			path: {
-				bucket: bucket,
+				bucket,
 			},
 			credentials: {
 				endpoint: getAccountR2Endpoint(accountId),
