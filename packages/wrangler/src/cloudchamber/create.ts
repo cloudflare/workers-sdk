@@ -8,6 +8,7 @@ import {
 import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+import { parseByteSize } from "./../parse";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { getLocation } from "./cli/locations";
 import { AssignIPv4, DeploymentsService } from "./client";
@@ -92,7 +93,7 @@ export function createCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 			type: "string",
 			demandOption: false,
 			describe:
-				"Amount of memory (GB, MB...) to allocate to this deployment. Ex: 4GB.",
+				"Amount of memory (GiB, MiB...) to allocate to this deployment. Ex: 4GiB.",
 		})
 		.option("ipv4", {
 			requiresArg: false,
@@ -138,6 +139,11 @@ export async function createCommand(
 		const useIpv4 = args.ipv4 ?? config.cloudchamber.ipv4;
 		const network =
 			useIpv4 === true ? { assign_ipv4: AssignIPv4.PREDEFINED } : undefined;
+		const memory = args.memory ?? config.cloudchamber.memory;
+		const memoryMib =
+			memory !== undefined
+				? Math.round(parseByteSize(memory, 1024) / (1024 * 1024))
+				: undefined;
 		const deployment = await DeploymentsService.createDeploymentV2({
 			image: body.image,
 			location: body.location,
@@ -145,8 +151,8 @@ export async function createCommand(
 			environment_variables: environmentVariables,
 			labels: labels,
 			vcpu: args.vcpu ?? config.cloudchamber.vcpu,
-			memory: args.memory ?? config.cloudchamber.memory,
 			network: network,
+			memory_mib: memoryMib,
 		});
 		console.log(JSON.stringify(deployment, null, 4));
 		return;
@@ -280,13 +286,22 @@ async function handleCreateCommand(
 	const selectedLabels = await promptForLabels(labels, [], false);
 
 	const account = await loadAccount();
+
+	const memory = args.memory ?? config.cloudchamber.memory;
+	const memoryMib =
+		memory !== undefined
+			? Math.round(parseByteSize(memory, 1024) / (1024 * 1024))
+			: account.defaults.memory_mib ??
+				Math.round(
+					parseByteSize(account.defaults.memory, 1024) / (1024 * 1024)
+				);
+
 	renderDeploymentConfiguration("create", {
 		image,
 		location,
 		network,
 		vcpu: args.vcpu ?? config.cloudchamber.vcpu ?? account.defaults.vcpus,
-		memory:
-			args.memory ?? config.cloudchamber.memory ?? account.defaults.memory,
+		memoryMib,
 		environmentVariables: selectedEnvironmentVariables,
 		labels: selectedLabels,
 		env: args.env,
@@ -303,7 +318,7 @@ async function handleCreateCommand(
 	}
 
 	const { start, stop } = spinner();
-	start("Creating your container", "shortly your container will be created");
+	start("Creating your container", "your container will be created shortly");
 	const [deployment, err] = await wrap(
 		DeploymentsService.createDeploymentV2({
 			image,
@@ -312,7 +327,7 @@ async function handleCreateCommand(
 			environment_variables: environmentVariables,
 			labels: labels,
 			vcpu: args.vcpu ?? config.cloudchamber.vcpu,
-			memory: args.memory ?? config.cloudchamber.memory,
+			memory_mib: memoryMib,
 			network,
 		})
 	);

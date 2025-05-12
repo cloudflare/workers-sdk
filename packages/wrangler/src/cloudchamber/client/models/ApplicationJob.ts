@@ -38,9 +38,13 @@ export type ApplicationJob = {
 	 */
 	memory_mb: number;
 	/**
-	 * Specify the memory to be used for the deployment. The default will be the one configured for the account.
+	 * @deprecated
 	 */
 	memory: MemorySizeWithUnit;
+	/**
+	 * Specify the memory to be used for the deployment, in MiB. The default will be the one configured for the account.
+	 */
+	memory_mib?: number;
 	/**
 	 * The disk configuration for this job expressed in string
 	 */
