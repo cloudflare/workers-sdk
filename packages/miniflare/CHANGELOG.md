@@ -1,5 +1,32 @@
 # miniflare
 
+## 4.20250508.0
+
+### Patch Changes
+
+- [#7914](https://github.com/cloudflare/workers-sdk/pull/7914) [`37af035`](https://github.com/cloudflare/workers-sdk/commit/37af03518e59a8af9c66c3b50fa380186d2c098b) Thanks [@andyjessop](https://github.com/andyjessop)! - fix(miniflare): strip CF-Connecting-IP header from all outbound requests
+
+- [#9174](https://github.com/cloudflare/workers-sdk/pull/9174) [`ceeb375`](https://github.com/cloudflare/workers-sdk/commit/ceeb375cac316a6508853511a1ad6ec15d120244) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250507.0  | 1.20250508.0  |
+  | @cloudflare/workers-types | ^4.20250507.0 | ^4.20250508.0 |
+
+- [#9181](https://github.com/cloudflare/workers-sdk/pull/9181) [`349cffc`](https://github.com/cloudflare/workers-sdk/commit/349cffcd547e602a4bf3fb708122cf00bb4ad8d2) Thanks [@penalosa](https://github.com/penalosa)! - Add a mixed-mode-only browser rendering plugin
+
+- [#9186](https://github.com/cloudflare/workers-sdk/pull/9186) [`362cb0b`](https://github.com/cloudflare/workers-sdk/commit/362cb0be3fa28bbf007491f7156ecb522bd7ee43) Thanks [@penalosa](https://github.com/penalosa)! - Support Mixed Mode Service Bindings in Miniflare
+
+- [#9198](https://github.com/cloudflare/workers-sdk/pull/9198) [`2cc8197`](https://github.com/cloudflare/workers-sdk/commit/2cc819782c2ebb0d7f852be719c4230d2a7db6ae) Thanks [@kylecarbs](https://github.com/kylecarbs)! - fix: ensure the fetch proxy message port is started
+
+  While Node.js will start the message port automatically when a `message` event listener is added,
+  this diverges from the standard Web API for message ports, which require you to explicitly start
+  listening on the port.
+
+- [#9168](https://github.com/cloudflare/workers-sdk/pull/9168) [`6b42c28`](https://github.com/cloudflare/workers-sdk/commit/6b42c28aa42457a64e9342b1cd1f92ad2228ff37) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add `mixedModeConnectionString` to the various binding configs
+
 ## 4.20250507.0
 
 ### Patch Changes
