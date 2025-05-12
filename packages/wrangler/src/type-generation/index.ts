@@ -12,10 +12,11 @@ import {
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
 import { getVarsForDev } from "../dev/dev-vars";
-import { CommandLineArgsError, UserError } from "../errors";
+import { CommandLineArgsError, FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { parseJSONC } from "../parse";
 import { isProcessEnvPopulated } from "../process-env";
+import { checkTypesDiff } from "./helpers";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type { Config, RawEnvironment } from "../config";
@@ -60,6 +61,11 @@ export const typesCommand = createCommand({
 			type: "boolean",
 			default: true,
 			describe: "Generate literal and union types for variables",
+		},
+		check: {
+			type: "boolean",
+			demandOption: false,
+			describe: "Check if the types at the provided path are up-to-date.",
 		},
 		"experimental-include-runtime": {
 			alias: "x-include-runtime",
@@ -127,8 +133,6 @@ export const typesCommand = createCommand({
 			config = readConfig(args);
 		}
 
-		const { envInterface, path: outputPath } = args;
-
 		if (
 			!config.configPath ||
 			!fs.existsSync(config.configPath) ||
@@ -140,47 +144,25 @@ export const typesCommand = createCommand({
 			);
 		}
 
-		const secondaryEntries: Map<string, Entry> = new Map();
-
-		if (secondaryConfigs.length > 0) {
-			for (const secondaryConfig of secondaryConfigs) {
-				const serviceEntry = await getEntry({}, secondaryConfig, "types");
-
-				if (serviceEntry.name) {
-					const key = serviceEntry.name;
-					if (secondaryEntries.has(key)) {
-						logger.warn(
-							`Configuration file for Worker '${key}' has been passed in more than once using \`--config\`. To remove this warning, only pass each unique Worker config file once.`
-						);
-					}
-					secondaryEntries.set(key, serviceEntry);
-					logger.log(
-						chalk.dim(
-							`- Found Worker '${key}' at '${relative(process.cwd(), serviceEntry.file)}' (${secondaryConfig.configPath})`
-						)
-					);
-				} else {
-					throw new UserError(
-						`Could not resolve entry point for service config '${secondaryConfig}'.`
-					);
-				}
+		if (args.check) {
+			const typesOutOfDate = await checkTypesDiff(config, args.path);
+			if (typesOutOfDate) {
+				throw new FatalError(
+					`Types at ${args.path} are out of date - run \`wrangler types\` to regenerate types.`,
+					1
+				);
+			} else {
+				logger.log(`✨ Types at ${args.path} are up to date.`);
+				return;
 			}
 		}
 
-		const configContainsEntrypoint =
-			config.main !== undefined || !!config.site?.["entry-point"];
+		const { entrypoint, secondaryEntries } = await getEntrypointsFromConfigs(
+			config,
+			secondaryConfigs
+		);
 
-		let entrypoint: Entry | undefined;
-		if (configContainsEntrypoint) {
-			// this will throw if an entrypoint is expected, but doesn't exist
-			// e.g. before building. however someone might still want to generate types
-			// so we default to module worker
-			try {
-				entrypoint = await getEntry({}, config, "types");
-			} catch {
-				entrypoint = undefined;
-			}
-		}
+		const { path: outputPath } = args;
 		const entrypointFormat = entrypoint?.format ?? "modules";
 
 		const header = ["/* eslint-disable */"];
@@ -191,8 +173,6 @@ export const typesCommand = createCommand({
 			const { envHeader, envTypes } = await generateEnvTypes(
 				config,
 				args,
-				envInterface,
-				outputPath,
 				entrypoint,
 				secondaryEntries
 			);
@@ -288,6 +268,57 @@ export function generateImportSpecifier(from: string, to: string) {
 	}
 }
 
+export const getEntrypointsFromConfigs = async (
+	config: Config,
+	secondaryConfigs: Config[],
+	silent = false
+) => {
+	const secondaryEntries: Map<string, Entry> = new Map();
+
+	if (secondaryConfigs.length > 0) {
+		for (const secondaryConfig of secondaryConfigs) {
+			const serviceEntry = await getEntry({}, secondaryConfig, "types");
+
+			if (serviceEntry.name) {
+				const key = serviceEntry.name;
+				if (secondaryEntries.has(key) && !silent) {
+					logger.warn(
+						`Configuration file for Worker '${key}' has been passed in more than once using \`--config\`. To remove this warning, only pass each unique Worker config file once.`
+					);
+				}
+				secondaryEntries.set(key, serviceEntry);
+				if (!silent) {
+					logger.log(
+						chalk.dim(
+							`- Found Worker '${key}' at '${relative(process.cwd(), serviceEntry.file)}' (${secondaryConfig.configPath})`
+						)
+					);
+				}
+			} else {
+				throw new UserError(
+					`Could not resolve entry point for service config '${secondaryConfig}'.`
+				);
+			}
+		}
+	}
+
+	const configContainsEntrypoint =
+		config.main !== undefined || !!config.site?.["entry-point"];
+
+	let entrypoint: Entry | undefined;
+	if (configContainsEntrypoint) {
+		// this will throw if an entrypoint is expected, but doesn't exist
+		// e.g. before building. however someone might still want to generate types
+		// so we default to module worker
+		try {
+			entrypoint = await getEntry({}, config, "types");
+		} catch {
+			entrypoint = undefined;
+		}
+	}
+	return { entrypoint, secondaryEntries };
+};
+
 type Secrets = Record<string, string>;
 
 type ConfigToDTS = Partial<Omit<Config, "vars">> & { vars: VarTypes } & {
@@ -297,12 +328,11 @@ type ConfigToDTS = Partial<Omit<Config, "vars">> & { vars: VarTypes } & {
 export async function generateEnvTypes(
 	config: Config,
 	args: Partial<(typeof typesCommand)["args"]>,
-	envInterface: string,
-	outputPath: string,
 	entrypoint?: Entry,
 	serviceEntries?: Map<string, Entry>,
 	log = true
 ): Promise<{ envHeader?: string; envTypes?: string }> {
+	const { path: outputPath } = args;
 	const stringKeys: string[] = [];
 	const secrets = getVarsForDev(
 		// We do not want `getVarsForDev()` to merge in the standard vars into the dev vars
@@ -347,7 +377,7 @@ export async function generateEnvTypes(
 	};
 
 	const entrypointFormat = entrypoint?.format ?? "modules";
-	const fullOutputPath = resolve(outputPath);
+	const fullOutputPath = resolve(outputPath ?? "worker-configuration.d.ts");
 
 	// Note: we infer whether the user has provided an envInterface by checking
 	//       if it is different from the default `Env` value, this works well
@@ -355,7 +385,7 @@ export async function generateEnvTypes(
 	//       an argument... we either need to do this or removing the yargs
 	//       default value for envInterface and do `envInterface ?? "Env"`,
 	//       for a better UX we chose to go with the yargs default value
-	const userProvidedEnvInterface = envInterface !== "Env";
+	const userProvidedEnvInterface = args.envInterface !== "Env";
 
 	if (userProvidedEnvInterface && entrypointFormat === "service-worker") {
 		throw new Error(
@@ -634,7 +664,7 @@ export async function generateEnvTypes(
 	if (entrypointFormat === "modules" || typesHaveBeenFound) {
 		const { fileContent, consoleOutput } = generateTypeStrings(
 			entrypointFormat,
-			envInterface,
+			args.envInterface ?? "Env",
 			envTypeStructure.map(([key, value]) => `${key}: ${value};`),
 			modulesTypeStructure,
 			stringKeys,

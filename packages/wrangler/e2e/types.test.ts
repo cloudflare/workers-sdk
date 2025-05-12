@@ -1,19 +1,20 @@
 import { readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { dedent } from "../src/utils/dedent";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 
+const baseConfig = dedent`
+name = "test-worker"
+main = "src/index.ts"
+compatibility_date = "2023-01-01"
+compatibility_flags = ["nodejs_compat", "no_global_navigator"]
+[vars]
+MY_VAR = "my-var-value"
+`;
 const seed = {
-	"wrangler.toml": dedent`
-		name = "test-worker"
-		main = "src/index.ts"
-		compatibility_date = "2023-01-01"
-		compatibility_flags = ["nodejs_compat", "no_global_navigator"]
-		[vars]
-		MY_VAR = "my-var-value"
-	`,
+	"wrangler.toml": baseConfig,
 	"src/index.ts": dedent`
 		export default {
 			fetch(request) {
@@ -31,9 +32,12 @@ const seed = {
 };
 
 describe("types", () => {
-	it("should generate runtime types without a flag", async () => {
-		const helper = new WranglerE2ETestHelper();
+	let helper: WranglerE2ETestHelper;
+	beforeEach(async () => {
+		helper = new WranglerE2ETestHelper();
 		await helper.seed(seed);
+	});
+	it("should generate runtime types without a flag", async () => {
 		const output = await helper.run(`wrangler types`);
 
 		expect(output.stdout).toContain("Generating runtime types...");
@@ -45,8 +49,6 @@ describe("types", () => {
 	});
 
 	it("should generate runtime types and env types in one file at the default path", async () => {
-		const helper = new WranglerE2ETestHelper();
-		await helper.seed(seed);
 		const output = await helper.run(`wrangler types`);
 		expect(output.stdout).toContain("Generating project types...");
 		expect(output.stdout).toContain("interface Env {");
@@ -64,8 +66,6 @@ describe("types", () => {
 	});
 
 	it("should be able to generate an Env type only", async () => {
-		const helper = new WranglerE2ETestHelper();
-		await helper.seed(seed);
 		const output = await helper.run(`wrangler types --include-runtime=false`);
 		expect(output.stdout).not.toContain("Generating runtime types...");
 		const file = readFileSync(
@@ -86,8 +86,6 @@ describe("types", () => {
 	});
 
 	it("should include header with version information in the generated types", async () => {
-		const helper = new WranglerE2ETestHelper();
-		await helper.seed(seed);
 		await helper.run(`wrangler types "./types.d.ts" `);
 
 		const lines = readFileSync(
@@ -104,7 +102,6 @@ describe("types", () => {
 	});
 
 	it("should include header with wrangler command that generated it", async () => {
-		const helper = new WranglerE2ETestHelper();
 		await helper.seed({
 			...seed,
 			"wranglerA.toml": dedent`
@@ -131,8 +128,6 @@ describe("types", () => {
 	});
 
 	it("should not regenerate runtime types if the header matches, but should regenerate env types", async () => {
-		const helper = new WranglerE2ETestHelper();
-		await helper.seed(seed);
 		await helper.run(`wrangler types`);
 
 		const typesPath = path.join(helper.tmpPath, "worker-configuration.d.ts");
@@ -161,11 +156,9 @@ describe("types", () => {
 		expect(file2).toContain("FAKE RUNTIME");
 	});
 
-	it("should prompt you to update types if they've been changed", async () => {
-		const helper = new WranglerE2ETestHelper();
-		await helper.seed(seed);
+	it("should prompt you to update types if types have changed during dev", async () => {
 		await helper.run(`wrangler types`);
-		seed["wrangler.toml"] = dedent`
+		let newConfig = dedent`
 				name = "test-worker"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
@@ -173,19 +166,71 @@ describe("types", () => {
 				[vars]
 				BEEP = "BOOP"
 			`;
-		await helper.seed(seed);
+		await helper.seed({ ...seed, "wrangler.toml": newConfig });
 		const worker = helper.runLongLived("wrangler dev");
 		await worker.readUntil(/❓ Your types might be out of date./);
-		seed["wrangler.toml"] = dedent`
+		// error goes away when reset
+		await helper.seed({ ...seed, "wrangler.toml": baseConfig });
+		await expect(
+			worker.readUntil(/❓ Your types might be out of date./, 5_000)
+		).rejects.toThrowError();
+
+		// change runtime types
+		newConfig = dedent`
 			name = "test-worker"
 			main = "src/index.ts"
 			compatibility_date = "2023-01-01"
 			compatibility_flags = ["nodejs_compat"]
 			[vars]
-			BEEP = "BOOP"
-			ASDf = "ADSfadsf"
+			MY_VAR = "my-var-value"
 		`;
-		await helper.seed(seed);
+		await helper.seed({ ...seed, "wrangler.toml": newConfig });
 		await worker.readUntil(/❓ Your types might be out of date./);
+		// error goes away when reset
+		await helper.seed({ ...seed, "wrangler.toml": baseConfig });
+		await expect(
+			worker.readUntil(/❓ Your types might be out of date./, 5_000)
+		).rejects.toThrowError();
+	});
+
+	it("should error on running `wrangler types --check` if env changes", async () => {
+		await helper.run(`wrangler types`);
+
+		const newConfig = dedent`
+				name = "test-worker"
+				main = "src/index.ts"
+				compatibility_date = "2023-01-01"
+				compatibility_flags = ["nodejs_compat", "no_global_navigator"]
+				[vars]
+				BEEP = "BOOP"
+			`;
+		await helper.seed({ ...seed, "wrangler.toml": newConfig });
+		const output = await helper.run(`wrangler types --check`);
+		expect(output.stderr).toContain("out of date");
+	});
+
+	it("should error on running `wrangler types --check` if runtime types change", async () => {
+		await helper.run(`wrangler types`);
+
+		const newConfig = dedent`
+				name = "test-worker"
+				main = "src/index.ts"
+				compatibility_date = "2023-01-01"
+				compatibility_flags = ["nodejs_compat"]
+				[vars]
+				MY_VAR = "my-var-value"
+			`;
+		await helper.seed({ ...seed, "wrangler.toml": newConfig });
+		const output = await helper.run(`wrangler types --check`);
+		expect(output.stderr).toContain("out of date");
+	});
+
+	it("should not error on `wrangler types --check` if types are up to date", async () => {
+		await helper.run(`wrangler types`);
+		const output = await helper.run(`wrangler types --check`);
+
+		expect(output.stdout).toContain(
+			`✨ Types at worker-configuration.d.ts are up to date.`
+		);
 	});
 });

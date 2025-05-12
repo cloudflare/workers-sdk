@@ -374,11 +374,15 @@ async function resolveConfig(
 	}
 
 	// prompt user to update their types if we detect that it is out of date
-	const typesChanged = await checkTypesDiff(config, entry);
-	if (typesChanged) {
-		logger.log(
-			"❓ Your types might be out of date. Re-run `wrangler types` to ensure your types are correct."
-		);
+	if (entry.file.endsWith(".ts")) {
+		try {
+			const typesChanged = await checkTypesDiff(config);
+			if (typesChanged) {
+				logger.log(
+					"❓ Your types might be out of date. Re-run `wrangler types` to ensure your types are correct."
+				);
+			}
+		} catch {}
 	}
 
 	return resolved;

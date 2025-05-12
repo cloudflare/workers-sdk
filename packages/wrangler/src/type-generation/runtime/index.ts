@@ -46,7 +46,11 @@ export async function generateRuntimeTypes({
 		throw new Error("Config must have a compatibility date.");
 	}
 
-	const header = `// Runtime types generated with workerd@${version} ${compatibility_date} ${compatibility_flags.sort().join(",")}`;
+	const header = getRuntimeHeader(
+		version,
+		compatibility_date,
+		compatibility_flags
+	);
 
 	try {
 		const lines = (await readFile(outFile, "utf8")).split("\n");
@@ -119,3 +123,11 @@ async function generate({
 		await mf.dispose();
 	}
 }
+
+export const getRuntimeHeader = (
+	workerd_version: string,
+	compatibility_date: string,
+	compatibility_flags: string[]
+) => {
+	return `// Runtime types generated with workerd@${workerd_version} ${compatibility_date} ${compatibility_flags.sort().join(",")}`;
+};
