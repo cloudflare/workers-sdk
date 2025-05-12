@@ -426,6 +426,8 @@ export type WorkflowBinding = {
 	class_name: string;
 	/** The script where the Workflow is defined (if it's external to this Worker) */
 	script_name?: string;
+	/** Whether the Workflow should be remote or not (only available under `--x-mixed-mode`) */
+	remote?: boolean;
 };
 
 /**
@@ -523,6 +525,8 @@ export interface EnvironmentNonInheritable {
 		id?: string;
 		/** The ID of the KV namespace used during `wrangler dev` */
 		preview_id?: string;
+		/** Whether the KV namespace should be remote or not (only available under `--x-mixed-mode`) */
+		remote?: boolean;
 	}[];
 
 	/**
@@ -563,6 +567,9 @@ export interface EnvironmentNonInheritable {
 
 			/** The number of seconds to wait before delivering a message */
 			delivery_delay?: number;
+
+			/** Whether the Queue producer should be remote or not (only available under `--x-mixed-mode`) */
+			remote?: boolean;
 		}[];
 
 		/** Consumer configuration */
@@ -614,6 +621,8 @@ export interface EnvironmentNonInheritable {
 		preview_bucket_name?: string;
 		/** The jurisdiction that the bucket exists in. Default if not present. */
 		jurisdiction?: string;
+		/** Whether the R2 bucket should be remote or not (only available under `--x-mixed-mode`) */
+		remote?: boolean;
 	}[];
 
 	/**
@@ -640,6 +649,8 @@ export interface EnvironmentNonInheritable {
 		migrations_dir?: string;
 		/** Internal use only. */
 		database_internal_env?: string;
+		/** Whether the D1 database should be remote or not (only available under `--x-mixed-mode`) */
+		remote?: boolean;
 	}[];
 
 	/**
@@ -697,6 +708,8 @@ export interface EnvironmentNonInheritable {
 				entrypoint?: string;
 				/** Optional properties that will be made available to the service via ctx.props. */
 				props?: Record<string, unknown>;
+				/** Whether the service binding should be remote or not (only available under `--x-mixed-mode`) */
+				remote?: boolean;
 		  }[]
 		| undefined;
 

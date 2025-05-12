@@ -82,6 +82,7 @@ export interface CfVars {
 export interface CfKvNamespace {
 	binding: string;
 	id?: string | typeof INHERIT_SYMBOL;
+	remote?: boolean;
 }
 
 /**
@@ -130,6 +131,7 @@ export interface CfBrowserBinding {
 export interface CfAIBinding {
 	binding: string;
 	staging?: boolean;
+	remote?: true;
 }
 
 /**
@@ -170,18 +172,21 @@ export interface CfWorkflow {
 	class_name: string;
 	binding: string;
 	script_name?: string;
+	remote?: boolean;
 }
 
 export interface CfQueue {
 	binding: string;
 	queue_name: string;
 	delivery_delay?: number;
+	remote?: boolean;
 }
 
 export interface CfR2Bucket {
 	binding: string;
 	bucket_name?: string | typeof INHERIT_SYMBOL;
 	jurisdiction?: string;
+	remote?: boolean;
 }
 
 // TODO: figure out if this is duplicated in packages/wrangler/src/config/environment.ts
@@ -193,6 +198,7 @@ export interface CfD1Database {
 	database_internal_env?: string;
 	migrations_table?: string;
 	migrations_dir?: string;
+	remote?: boolean;
 }
 
 export interface CfVectorize {
@@ -218,6 +224,7 @@ export interface CfService {
 	environment?: string;
 	entrypoint?: string;
 	props?: Record<string, unknown>;
+	remote?: boolean;
 }
 
 export interface CfAnalyticsEngineDataset {
