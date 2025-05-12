@@ -1590,8 +1590,8 @@ describe.sequential("wrangler dev", () => {
 
 				Your Worker has access to the following bindings:
 				- Services:
-				  - WorkerA: A [not connected] [simulated locally]
-				  - WorkerB: B [not connected] [simulated locally]
+				  - WorkerA: A [not connected]
+				  - WorkerB: B [not connected]
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1613,8 +1613,8 @@ describe.sequential("wrangler dev", () => {
 
 				Your Worker has access to the following bindings:
 				- Services:
-				  - WorkerA: A [not connected] [simulated locally]
-				  - WorkerB: B [not connected] [simulated locally]
+				  - WorkerA: A [not connected]
+				  - WorkerB: B [not connected]
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1739,7 +1739,7 @@ describe.sequential("wrangler dev", () => {
 				- R2 Buckets:
 				  - MY_R2: my-bucket [simulated locally]
 				- Services:
-				  - WorkerA: A [not connected] [simulated locally]
+				  - WorkerA: A [not connected]
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -1773,7 +1773,7 @@ describe.sequential("wrangler dev", () => {
 				- R2 Buckets:
 				  - MY_R2: my-bucket [connected to remote resource]
 				- Services:
-				  - WorkerA: A [not connected] [connected to remote resource]
+				  - WorkerA: A [connected to remote resource]
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);

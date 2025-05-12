@@ -336,7 +336,11 @@ export function printBindings(
 					value += `#${entrypoint}`;
 				}
 
-				if (context.local && context.registry !== null) {
+				if (remote) {
+					value += addSuffix(value, {
+						isSimulatedLocally: false,
+					});
+				} else if (context.local && context.registry !== null) {
 					const registryDefinition = context.registry?.[service];
 					hasConnectionStatus = true;
 
@@ -345,16 +349,20 @@ export function printBindings(
 						(!entrypoint ||
 							registryDefinition.entrypointAddresses?.[entrypoint])
 					) {
-						value = value + " " + chalk.green("[connected]");
+						if (getFlag("MIXED_MODE")) {
+							value =
+								value + " " + chalk.green(`[connected to local resource]`);
+						} else {
+							value = value + " " + chalk.green(`[connected]`);
+						}
 					} else {
 						value = value + " " + chalk.red("[not connected]");
 					}
 				}
+
 				return {
 					key: binding,
-					value: addSuffix(value, {
-						isSimulatedLocally: !remote,
-					}),
+					value,
 				};
 			}),
 		});
