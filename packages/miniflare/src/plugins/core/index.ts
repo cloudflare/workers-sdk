@@ -8,6 +8,7 @@ import { TextEncoder } from "util";
 import { bold } from "kleur/colors";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
+import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
 import { z } from "zod";
 import { fetch } from "../../http";
 import {
@@ -160,6 +161,9 @@ const CoreOptionsSchemaInput = z.intersection(
 		 */
 		hasAssetsAndIsVitest: z.boolean().optional(),
 		unsafeEnableAssetsRpc: z.boolean().optional(),
+
+		// Strip the CF-Connecting-IP header from outbound fetches
+		stripCfConnectingIp: z.boolean().default(true),
 	})
 );
 export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {
@@ -385,6 +389,27 @@ export function maybeWrappedModuleToWorkerName(
 	if (name.startsWith(WRAPPED_MODULE_PREFIX)) {
 		return name.substring(WRAPPED_MODULE_PREFIX.length);
 	}
+}
+
+function getStripCfConnectingIpName(workerIndex: number) {
+	return `strip-cf-connecting-ip:${workerIndex}`;
+}
+
+function getGlobalOutbound(
+	workerIndex: number,
+	options: z.infer<typeof CORE_PLUGIN.options>
+) {
+	return options.outboundService === undefined
+		? undefined
+		: getCustomServiceDesignator(
+				/* referrer */ options.name,
+				workerIndex,
+				CustomServiceKind.KNOWN,
+				CUSTOM_SERVICE_KNOWN_OUTBOUND,
+				options.outboundService,
+				options.hasAssetsAndIsVitest,
+				options.unsafeEnableAssetsRpc
+			);
 }
 
 export const CORE_PLUGIN: Plugin<
@@ -686,18 +711,9 @@ export const CORE_PLUGIN: Plugin<
 							: options.unsafeEphemeralDurableObjects
 								? { inMemory: kVoid }
 								: { localDisk: DURABLE_OBJECTS_STORAGE_SERVICE_NAME },
-					globalOutbound:
-						options.outboundService === undefined
-							? undefined
-							: getCustomServiceDesignator(
-									/* referrer */ options.name,
-									workerIndex,
-									CustomServiceKind.KNOWN,
-									CUSTOM_SERVICE_KNOWN_OUTBOUND,
-									options.outboundService,
-									options.hasAssetsAndIsVitest,
-									options.unsafeEnableAssetsRpc
-								),
+					globalOutbound: options.stripCfConnectingIp
+						? { name: getStripCfConnectingIpName(workerIndex) }
+						: getGlobalOutbound(workerIndex, options),
 					cacheApiOutbound: { name: getCacheServiceName(workerIndex) },
 					moduleFallback:
 						options.unsafeUseModuleFallbackService &&
@@ -728,6 +744,22 @@ export const CORE_PLUGIN: Plugin<
 				options.outboundService
 			);
 			if (maybeService !== undefined) services.push(maybeService);
+		}
+
+		if (options.stripCfConnectingIp) {
+			services.push({
+				name: getStripCfConnectingIpName(workerIndex),
+				worker: {
+					modules: [
+						{
+							name: "index.js",
+							esModule: STRIP_CF_CONNECTING_IP(),
+						},
+					],
+					compatibilityDate: "2025-01-01",
+					globalOutbound: getGlobalOutbound(workerIndex, options),
+				},
+			});
 		}
 
 		return { services, extensions };

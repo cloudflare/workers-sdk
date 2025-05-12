@@ -3,7 +3,6 @@
 	"extends": ["//"],
 	"tasks": {
 		"build": {
-			"inputs": ["src/**", "scripts/**", "types/**", "*.mjs", "*.js", "*.json"],
 			"outputs": ["dist/**", "bootstrap.js", "worker-metafiles/**"],
 			"env": ["CI_OS"]
 		},
