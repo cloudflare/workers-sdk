@@ -53,7 +53,7 @@
 		"wrangler": "workspace:*"
 	},
 	"peerDependencies": {
-		"unenv": "2.0.0-rc.15",
+		"unenv": "2.0.0-rc.17",
 		"workerd": "^1.20250320.0"
 	},
 	"peerDependenciesMeta": {

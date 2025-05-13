@@ -34,6 +34,10 @@ export default {
 				return await testTls();
 			case "/test-crypto":
 				return await testCrypto();
+			case "/test-sqlite":
+				return await testSqlite();
+			case "/test-http":
+				return await testHttp();
 		}
 
 		return new Response(
@@ -45,6 +49,8 @@ export default {
 <a href="test-immediate">Test setImmediate</a>
 <a href="test-tls">node:tls</a>
 <a href="test-crypto">node:crypto</a>
+<a href="test-sqlite">node:sqlite</a>
+<a href="test-http">node:http</a>
 `,
 			{ headers: { "Content-Type": "text/html; charset=utf-8" } }
 		);
@@ -145,6 +151,8 @@ function testProcessBehavior() {
 		assert.notEqual(process, undefined);
 		assert.strictEqual(globalThis.process, process);
 		assert.strictEqual(global.process, process);
+		assert.strictEqual(typeof process.version, "string");
+		assert.strictEqual(typeof process.versions.node, "string");
 
 		const fakeProcess1 = {} as typeof process;
 		process = fakeProcess1;
@@ -238,6 +246,23 @@ async function testCrypto() {
 	data += decipher.update(cipher.final());
 	data += decipher.final();
 	assert.strictEqual(data, "Hello World");
+
+	return new Response("OK");
+}
+
+async function testSqlite() {
+	const sqlite = await import("node:sqlite");
+
+	assert.strictEqual(typeof sqlite.DatabaseSync, "function");
+
+	return new Response("OK");
+}
+
+async function testHttp() {
+	const http = await import("node:http");
+
+	const agent = new http.Agent();
+	assert.strictEqual(typeof agent.options, "object");
 
 	return new Response("OK");
 }
