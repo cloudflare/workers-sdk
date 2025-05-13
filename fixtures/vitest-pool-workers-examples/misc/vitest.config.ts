@@ -11,14 +11,13 @@ export default defineWorkersProject({
 			workers: {
 				singleWorker: true,
 				miniflare: {
+					assets: {
+						directory: "./public",
+						binding: "ASSETS",
+					},
 					kvNamespaces: ["KV_NAMESPACE"],
 					outboundService(request) {
 						return new Response(`fallthrough:${request.method} ${request.url}`);
-					},
-					serviceBindings: {
-						ASSETS(request) {
-							return new Response(`assets:${request.method} ${request.url}`);
-						},
 					},
 					workers: [
 						{
