@@ -368,15 +368,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 
 				viteDevServer.middlewares.use(async (req, res, next) => {
-					const { pathname, search } = new URL(req.url!);
-					if (
-						isViteDevAsset(`${pathname}?${search}`) ||
-						isFsServingSafe(resolvedViteConfig, pathname) ||
-						req instanceof PluginAssetRequest
-					) {
+					if (req instanceof PluginAssetRequest) {
 						return next();
 					}
 					try {
+						if (
+							isViteDevAsset(req.url) ||
+							isFsServingSafe(resolvedViteConfig, req.url!)
+						) {
+							return next();
+						}
 						assert(miniflare, `Miniflare not defined`);
 						const routerWorker = await getRouterWorker(miniflare);
 
