@@ -79,6 +79,8 @@ async function testNodeCompatModules() {
 	const module = await import("node:module");
 	const require = module.createRequire("/");
 	const modules = [
+		"_tls_common",
+		"_tls_wrap",
 		"assert",
 		"assert/strict",
 		"buffer",

@@ -45,7 +45,7 @@
 		"test:watch": "vitest"
 	},
 	"devDependencies": {
-		"@types/node-unenv": "npm:@types/node@^22.13.9",
+		"@types/node-unenv": "npm:@types/node@^22.14.0",
 		"typescript": "catalog:default",
 		"unbuild": "^3.2.0",
 		"undici": "catalog:default",
@@ -54,7 +54,7 @@
 	},
 	"peerDependencies": {
 		"unenv": "2.0.0-rc.17",
-		"workerd": "^1.20250320.0"
+		"workerd": "^1.20250508.0"
 	},
 	"peerDependenciesMeta": {
 		"workerd": {
