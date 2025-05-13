@@ -104,12 +104,17 @@ import {
 	stripAnsi,
 } from "./shared";
 import {
-	createExternalFallbackService,
+	createExternalService,
+	createInternalDoProxyService,
 	DevRegistry,
-	extractExternalFetchProxyTarget,
-	getExternalFallbackServiceSocketName,
+	extractExternalDoFetchProxyTarget,
+	extractExternalServiceFetchProxyTarget,
 	getExternalServiceHttpOptions,
+	getExternalServiceName,
+	getExternalServiceSocketName,
 	getProtocol,
+	INTERNAL_DO_PROXY_SERVICE_NAME,
+	INTERNAL_DO_PROXY_SERVICE_PATH,
 	WorkerDefinition,
 } from "./shared/dev-registry";
 import { isCompressedByCloudflareFL } from "./shared/mime-types";
@@ -387,12 +392,28 @@ function getDurableObjectClassNames(
  * it to point to a proxy in the loopback server. A fallback service will be created
  * for each of the external service in case the upstream service is not available.
  */
-function getExternalServiceBindings(
+function getExternalServiceEntrypoints(
 	allWorkerOpts: PluginWorkerOptions[],
 	loopbackHost: string,
 	loopbackPort: number
 ) {
-	const externalServices = new Map<string, Set<string | undefined>>();
+	const externalServices = new Map<
+		string,
+		Map<string | undefined, "service" | "durableObject">
+	>();
+	const getEntrypoints = (name: string) => {
+		let externalService = externalServices.get(name);
+
+		if (!externalService) {
+			externalService = new Map<
+				string | undefined,
+				"durableObject" | "service"
+			>();
+			externalServices.set(name, externalService);
+		}
+
+		return externalService;
+	};
 
 	for (const workerOpts of allWorkerOpts) {
 		// Override service bindings if they point to a worker that doesn't exist
@@ -402,6 +423,7 @@ function getExternalServiceBindings(
 				if (
 					typeof service === "object" &&
 					"name" in service &&
+					service.name &&
 					service.name !== kCurrentWorker &&
 					allWorkerOpts.every((options) => options.core.name !== service.name)
 				) {
@@ -417,14 +439,42 @@ function getExternalServiceBindings(
 						},
 					};
 
-					let entrypoints = externalServices.get(service.name);
+					const entrypoints = getEntrypoints(service.name);
+					entrypoints.set(service.entrypoint, "service");
+				}
+			}
+		}
 
-					if (!entrypoints) {
-						entrypoints = new Set();
-						externalServices.set(service.name, entrypoints);
-					}
+		if (workerOpts.do.durableObjects) {
+			for (const [bindingName, designator] of Object.entries(
+				workerOpts.do.durableObjects
+			)) {
+				const workerName = workerOpts.core.name;
 
-					entrypoints.add(service.entrypoint);
+				if (
+					workerName &&
+					typeof designator === "object" &&
+					typeof designator.scriptName !== "undefined" &&
+					allWorkerOpts.every(
+						(opts) => opts.core.name !== designator.scriptName
+					)
+				) {
+					// If this is an external Durable Object, point it to the external service instead
+					workerOpts.do.durableObjects[bindingName] = {
+						className: designator.className,
+						scriptName: getExternalServiceName(designator.scriptName),
+						useSQLite: designator.useSQLite,
+						// Matches the unique key Miniflare will generate for this object in
+						// the target session. We need to do this so workerd generates the
+						// same IDs it would if this were part of the same process. workerd
+						// doesn't allow IDs from Durable Objects with different unique keys
+						// to be used with each other.
+						unsafeUniqueKey: `${designator.scriptName}-${designator.className}`,
+						unsafePreventEviction: designator.unsafePreventEviction,
+					};
+
+					const entrypoints = getEntrypoints(designator.scriptName);
+					entrypoints.set(designator.className, "durableObject");
 				}
 			}
 		}
@@ -983,7 +1033,7 @@ export class Miniflare {
 		);
 
 		const port = this.#socketPorts.get(
-			getExternalFallbackServiceSocketName(service, entrypoint)
+			getExternalServiceSocketName(service, entrypoint)
 		);
 
 		if (!port) {
@@ -1003,44 +1053,36 @@ export class Miniflare {
 		req: http.IncomingMessage,
 		res?: http.ServerResponse
 	): Promise<Response | undefined> => {
-		const proxyTarget = extractExternalFetchProxyTarget(req);
+		const serviceProxyTarget = extractExternalServiceFetchProxyTarget(req);
 
-		if (proxyTarget) {
+		if (serviceProxyTarget) {
+			assert(res !== undefined, "No response object provided");
+
 			const address =
 				this.#devRegistry.getExternalServiceAddress(
-					proxyTarget.service,
-					proxyTarget.entrypoint
+					serviceProxyTarget.service,
+					serviceProxyTarget.entrypoint
 				) ??
 				this.#getFallbackServiceAddress(
-					proxyTarget.service,
-					proxyTarget.entrypoint
+					serviceProxyTarget.service,
+					serviceProxyTarget.entrypoint
 				);
 
-			const options: http.RequestOptions = {
-				host: address.host,
-				port: address.port,
-				method: req.method,
-				path: req.url,
-				headers: req.headers,
-			};
+			this.#handleProxy(req, res, address);
+			return;
+		}
 
-			// Res is optional only on websocket upgrade requests
+		const doProxyTarget = extractExternalDoFetchProxyTarget(req);
+
+		if (doProxyTarget) {
 			assert(res !== undefined, "No response object provided");
-			const upstream = http.request(options, (upRes) => {
-				// Relay status and headers back to the original client
-				res.writeHead(upRes.statusCode ?? 500, upRes.headers);
-				// Pipe the response body
-				upRes.pipe(res);
-			});
 
-			// Pipe the client request body to the upstream
-			req.pipe(upstream);
+			const address = this.#devRegistry.getExtneralDurableObjectAddress(
+				doProxyTarget.scriptName,
+				doProxyTarget.className
+			);
 
-			upstream.on("error", (err) => {
-				this.#log.error(err);
-				if (!res.headersSent) res.writeHead(502);
-				res.end("Bad Gateway");
-			});
+			this.#handleProxy(req, res, address);
 			return;
 		}
 
@@ -1245,6 +1287,49 @@ export class Miniflare {
 		}
 	};
 
+	#handleProxy = (
+		req: http.IncomingMessage,
+		res: http.ServerResponse,
+		address: {
+			protocol: "http" | "https";
+			host: string;
+			port: number;
+			path?: string;
+		} | null
+	) => {
+		if (!address) {
+			res.writeHead(503);
+			res.end("Service Unavailable");
+			return;
+		}
+
+		const options: http.RequestOptions = {
+			host: address.host,
+			port: address.port,
+			method: req.method,
+			path: address.path ?? req.url,
+			headers: req.headers,
+		};
+
+		// Res is optional only on websocket upgrade requests
+		assert(res !== undefined, "No response object provided");
+		const upstream = http.request(options, (upRes) => {
+			// Relay status and headers back to the original client
+			res.writeHead(upRes.statusCode ?? 500, upRes.headers);
+			// Pipe the response body
+			upRes.pipe(res);
+		});
+
+		// Pipe the client request body to the upstream
+		req.pipe(upstream);
+
+		upstream.on("error", (err) => {
+			this.#log.error(err);
+			if (!res.headersSent) res.writeHead(502);
+			res.end("Bad Gateway");
+		});
+	};
+
 	async #getLoopbackPort(): Promise<number> {
 		// This function must be run with `#runtimeMutex` held
 
@@ -1313,7 +1398,7 @@ export class Miniflare {
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
 		this.#cfObject = sharedOpts.core.cf;
 
-		const externalServices = getExternalServiceBindings(
+		const externalServices = getExternalServiceEntrypoints(
 			allWorkerOpts,
 			loopbackHost,
 			loopbackPort
@@ -1562,31 +1647,68 @@ export class Miniflare {
 			}
 		}
 
-		if (externalServices.size > 0) {
+		if (externalServices && externalServices.size > 0) {
+			const isDevRegistryEnabled = this.#devRegistry.isEnabled();
+			const proxyURL = `http://${loopbackHost}:${loopbackPort}`;
 			for (const [serviceName, entrypoints] of externalServices) {
-				const service = createExternalFallbackService(serviceName, entrypoints);
+				const service = createExternalService({
+					serviceName,
+					entrypoints,
+					proxyURL,
+					isDevRegistryEnabled,
+				});
 				assert(service.name !== undefined);
 
 				services.set(service.name, service);
 
-				for (const entrypoint of entrypoints) {
-					const socketName = getExternalFallbackServiceSocketName(
-						serviceName,
-						entrypoint
-					);
-					sockets.push({
-						name: socketName,
-						address: this.#getSocketAddress(socketName, 0, DEFAULT_HOST, 0),
-						service: {
-							name: service.name,
-							entrypoint,
-						},
-						http: {
-							cfBlobHeader: CoreHeaders.CF_BLOB,
-							capnpConnectHost: HOST_CAPNP_CONNECT,
-						},
-					});
+				for (const [entrypoint, type] of entrypoints) {
+					if (type === "service") {
+						const socketName = getExternalServiceSocketName(
+							serviceName,
+							entrypoint
+						);
+						sockets.push({
+							name: socketName,
+							address: this.#getSocketAddress(socketName, 0, DEFAULT_HOST, 0),
+							service: {
+								name: service.name,
+								entrypoint,
+							},
+							http: {
+								cfBlobHeader: CoreHeaders.CF_BLOB,
+								capnpConnectHost: HOST_CAPNP_CONNECT,
+							},
+						});
+					}
 				}
+			}
+		}
+
+		// Expose all internal durable object with a proxy service
+		if (this.#devRegistry.isEnabled()) {
+			const internalObjects = allWorkerOpts.flatMap((workerOpts) => {
+				const scriptName = workerOpts.core.name;
+				const serviceName = getUserServiceName(scriptName);
+				const classNames = durableObjectClassNames.get(serviceName);
+
+				if (!classNames || !scriptName) {
+					return [];
+				}
+
+				return Array.from(classNames.keys()).map<[string, string]>(
+					(className) => [scriptName, className]
+				);
+			});
+
+			if (internalObjects.length > 0) {
+				const service = createInternalDoProxyService(internalObjects);
+				assert(service.name !== undefined);
+				services.set(service.name, service);
+				// Set up a custom route for the internal durable object proxy service
+				// This is needed for compatibility with the Wrangler Dev Registry implementation
+				allWorkerRoutes.set(INTERNAL_DO_PROXY_SERVICE_NAME, [
+					`*/${INTERNAL_DO_PROXY_SERVICE_PATH}`,
+				]);
 			}
 		}
 
@@ -1876,7 +1998,16 @@ export class Miniflare {
 									},
 								]) ?? []
 							),
-							durableObjects: [],
+							durableObjects: Object.entries(
+								workerOpts.do.durableObjects ?? {}
+							).map(([bindingName, designator]) => ({
+								// TODO: limit to internal durable objects
+								name: bindingName,
+								className:
+									typeof designator === "object"
+										? designator.className
+										: designator,
+							})),
 						},
 					];
 				}
