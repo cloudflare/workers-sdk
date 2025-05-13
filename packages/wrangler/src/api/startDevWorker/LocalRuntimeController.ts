@@ -5,7 +5,6 @@ import { Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
 import { getFlag } from "../../experimental-flags";
 import { logger } from "../../logger";
-import { startMixedModeSession } from "../mixedMode";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import {
@@ -169,9 +168,14 @@ export class LocalRuntimeController extends RuntimeController {
 						convertedRemoteBindings ?? {}
 					).length;
 					if (numOfRemoteBindings > 0) {
-						this.#mixedModeSession = await startMixedModeSession(
-							convertedRemoteBindings
-						);
+						// Note: we import the mixedMode module dynamically to avoid circular
+						//       import issues (since mixed mode uses startWorker which uses
+						//       LocalRuntimeController)
+						const mixedModeModule = await import("../../api/mixedMode");
+						this.#mixedModeSession =
+							await mixedModeModule.startMixedModeSession(
+								convertedRemoteBindings
+							);
 					}
 				} else {
 					// Note: we always call setConfig even when there are zero remote bindings, in these
