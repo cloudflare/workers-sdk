@@ -15,7 +15,7 @@ describe("wrangler dev - mixed mode", () => {
 			"local/index.js": dedent`
 							export default {
 								fetch(request) {
-									return new Response("Hello from local worker");
+									return new Response("Hello from local worker!");
 								}
 							}`,
 		});
@@ -38,7 +38,7 @@ describe("wrangler dev - mixed mode", () => {
 								async fetch(request, env) {
 									const localWorkerText = await (await env.LOCAL_WORKER.fetch(request)).text();
 									const remoteWorkerText = await (await env.REMOTE_WORKER.fetch(request)).text();
-									return new Response(\`LOCAL:\${localWorkerText}\\nREMOTE: \${remoteWorkerText}\n\`);
+									return new Response(\`LOCAL: \${localWorkerText}\\nREMOTE: \${remoteWorkerText}\n\`);
 								}
 							}`,
 		});
@@ -50,8 +50,8 @@ describe("wrangler dev - mixed mode", () => {
 		const { url } = await worker.waitForReady();
 
 		await expect(fetchText(url)).resolves.toMatchInlineSnapshot(`
-			"LOCAL:Hello from a local worker
-			REMOTE: Hello World
+			"LOCAL: Hello from a local worker!
+			REMOTE: Hello World!
 			"
 		`);
 	});
