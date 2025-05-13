@@ -18,6 +18,7 @@ import { getScriptName } from "../utils/getScriptName";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import deploy from "./deploy";
 
+
 export const deployCommand = createCommand({
 	metadata: {
 		description: "🆙 Deploy a Worker to Cloudflare",
@@ -176,7 +177,10 @@ export const deployCommand = createCommand({
 		},
 		"keep-vars": {
 			describe:
-				"Stop Wrangler from deleting vars that are not present in the Wrangler configuration file\nBy default Wrangler will remove all vars and replace them with those found in the Wrangler configuration.\nIf your development approach is to modify vars after deployment via the dashboard you may wish to set this flag.",
+				"When set to true, the environment variables are not deleted before the deployment.\n" +
+				"When set to false (default) Wrangler will delete all vars before settings those found in the Wrangler configuration.\n" +
+				"If you set variables via the dashboard you probably want to set this flag to true.\n" +
+				"Note that secrets are never deleted by deployments.",
 			default: false,
 			type: "boolean",
 		},
