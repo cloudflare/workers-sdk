@@ -30,7 +30,7 @@ import { getZoneIdForPreview } from "../../zones";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import {
-	convertCfWorkerInitBindingstoBindings,
+	convertCfWorkerInitBindingsToBindings,
 	extractBindingsOfType,
 	unwrapHook,
 } from "./utils";
@@ -180,7 +180,7 @@ async function resolveBindings(
 	return {
 		bindings: {
 			...input.bindings,
-			...convertCfWorkerInitBindingstoBindings(bindings),
+			...convertCfWorkerInitBindingsToBindings(bindings),
 		},
 		unsafe: bindings.unsafe,
 	};

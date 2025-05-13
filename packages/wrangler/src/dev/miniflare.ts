@@ -10,6 +10,7 @@ import {
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { createFatalError, UserError } from "../errors";
+import { getFlag } from "../experimental-flags";
 import {
 	EXTERNAL_IMAGES_WORKER_NAME,
 	EXTERNAL_IMAGES_WORKER_SCRIPT,
@@ -45,7 +46,12 @@ import type { WorkerRegistry } from "../dev-registry";
 import type { LoggerLevel } from "../logger";
 import type { LegacyAssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
-import type { MiniflareOptions, SourceOptions, WorkerOptions } from "miniflare";
+import type {
+	MiniflareOptions,
+	MixedModeConnectionString,
+	SourceOptions,
+	WorkerOptions,
+} from "miniflare";
 import type { UUID } from "node:crypto";
 import type { Readable } from "node:stream";
 
@@ -313,25 +319,66 @@ function getRemoteId(id: string | symbol | undefined): string | null {
 	return typeof id === "string" ? id : null;
 }
 
-function kvNamespaceEntry({ binding, id }: CfKvNamespace): [string, string] {
-	return [binding, getRemoteId(id) ?? binding];
+function kvNamespaceEntry(
+	{ binding, id: originalId, remote }: CfKvNamespace,
+	mixedModeConnectionString?: MixedModeConnectionString
+): [
+	string,
+	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
+] {
+	const id = getRemoteId(originalId) ?? binding;
+	if (!getFlag("MIXED_MODE") || !remote) {
+		return [binding, { id }];
+	}
+	return [binding, { id, mixedModeConnectionString }];
 }
-function r2BucketEntry({ binding, bucket_name }: CfR2Bucket): [string, string] {
-	return [binding, getRemoteId(bucket_name) ?? binding];
+function r2BucketEntry(
+	{ binding, bucket_name, remote }: CfR2Bucket,
+	mixedModeConnectionString?: MixedModeConnectionString
+): [
+	string,
+	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
+] {
+	const id = getRemoteId(bucket_name) ?? binding;
+	if (!getFlag("MIXED_MODE") || !remote) {
+		return [binding, { id }];
+	}
+	return [binding, { id, mixedModeConnectionString }];
 }
-function d1DatabaseEntry(db: CfD1Database): [string, string] {
-	return [
-		db.binding,
-		getRemoteId(db.preview_database_id ?? db.database_id) ?? db.binding,
-	];
+function d1DatabaseEntry(
+	{ binding, database_id, preview_database_id, remote }: CfD1Database,
+	mixedModeConnectionString?: MixedModeConnectionString
+): [
+	string,
+	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
+] {
+	const id = getRemoteId(preview_database_id ?? database_id) ?? binding;
+	if (!getFlag("MIXED_MODE") || !remote) {
+		return [binding, { id }];
+	}
+	return [binding, { id, mixedModeConnectionString }];
 }
 function queueProducerEntry(
-	queue: CfQueue
-): [string, { queueName: string; deliveryDelay: number | undefined }] {
-	return [
-		queue.binding,
-		{ queueName: queue.queue_name, deliveryDelay: queue.delivery_delay },
-	];
+	{
+		binding,
+		queue_name: queueName,
+		delivery_delay: deliveryDelay,
+		remote,
+	}: CfQueue,
+	mixedModeConnectionString?: MixedModeConnectionString
+): [
+	string,
+	{
+		queueName: string;
+		deliveryDelay: number | undefined;
+		mixedModeConnectionString?: MixedModeConnectionString;
+	},
+] {
+	if (!getFlag("MIXED_MODE") || !remote) {
+		return [binding, { queueName, deliveryDelay }];
+	}
+
+	return [binding, { queueName, deliveryDelay, mixedModeConnectionString }];
 }
 function pipelineEntry(pipeline: CfPipeline): [string, string] {
 	return [pipeline.binding, pipeline.pipeline];
@@ -340,14 +387,41 @@ function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
 }
 function workflowEntry(
-	workflow: CfWorkflow
-): [string, { name: string; className: string; scriptName?: string }] {
+	{
+		binding,
+		name,
+		class_name: className,
+		script_name: scriptName,
+		remote,
+	}: CfWorkflow,
+	mixedModeConnectionString?: MixedModeConnectionString
+): [
+	string,
+	{
+		name: string;
+		className: string;
+		scriptName?: string;
+		mixedModeConnectionString?: MixedModeConnectionString;
+	},
+] {
+	if (!getFlag("MIXED_MODE") || !remote) {
+		return [
+			binding,
+			{
+				name,
+				className,
+				scriptName,
+			},
+		];
+	}
+
 	return [
-		workflow.binding,
+		binding,
 		{
-			name: workflow.name,
-			className: workflow.class_name,
-			scriptName: workflow.script_name,
+			name,
+			className,
+			scriptName,
+			mixedModeConnectionString,
 		},
 	];
 }
@@ -370,6 +444,7 @@ function queueConsumerEntry(consumer: QueueConsumer) {
 type WorkerOptionsBindings = Pick<
 	WorkerOptions,
 	| "bindings"
+	| "ai"
 	| "textBlobBindings"
 	| "dataBlobBindings"
 	| "wasmBindings"
@@ -407,7 +482,10 @@ type MiniflareBindingsConfig = Pick<
 
 // TODO(someday): would be nice to type these methods more, can we export types for
 //  each plugin options schema and use those
-export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
+export function buildMiniflareBindingOptions(
+	config: MiniflareBindingsConfig,
+	mixedModeConnectionString?: MixedModeConnectionString
+): {
 	bindingOptions: WorkerOptionsBindings;
 	internalObjects: CfDurableObject[];
 	externalWorkers: WorkerOptions[];
@@ -441,6 +519,16 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 
 	const notFoundServices = new Set<string>();
 	for (const service of config.services ?? []) {
+		if (getFlag("MIXED_MODE") && service.remote) {
+			serviceBindings[service.binding] = {
+				name: service.service,
+				props: service.props,
+				entrypoint: service.entrypoint,
+				mixedModeConnectionString,
+			};
+			continue;
+		}
+
 		if (service.service === config.name || config.workerDefinitions === null) {
 			// If this is a service binding to the current worker or the registry is disabled,
 			// don't bother using the dev registry to look up the address, just bind to it directly.
@@ -655,23 +743,25 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 
 	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
 	if (bindings.ai?.binding) {
-		externalWorkers.push({
-			name: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
-			modules: [
-				{
-					type: "ESModule",
-					path: "index.mjs",
-					contents: EXTERNAL_AI_WORKER_SCRIPT,
+		if (!getFlag("MIXED_MODE")) {
+			externalWorkers.push({
+				name: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
+				modules: [
+					{
+						type: "ESModule",
+						path: "index.mjs",
+						contents: EXTERNAL_AI_WORKER_SCRIPT,
+					},
+				],
+				serviceBindings: {
+					FETCHER: AIFetcher,
 				},
-			],
-			serviceBindings: {
-				FETCHER: AIFetcher,
-			},
-		});
+			});
 
-		wrappedBindings[bindings.ai.binding] = {
-			scriptName: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
-		};
+			wrappedBindings[bindings.ai.binding] = {
+				scriptName: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
+			};
+		}
 	}
 
 	if (bindings.images?.binding) {
@@ -738,17 +828,33 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		dataBlobBindings,
 		wasmBindings,
 
+		ai:
+			bindings.ai && getFlag("MIXED_MODE") && mixedModeConnectionString
+				? {
+						binding: bindings.ai.binding,
+						mixedModeConnectionString,
+					}
+				: undefined,
+
 		kvNamespaces: Object.fromEntries(
-			bindings.kv_namespaces?.map(kvNamespaceEntry) ?? []
+			bindings.kv_namespaces?.map((kv) =>
+				kvNamespaceEntry(kv, mixedModeConnectionString)
+			) ?? []
 		),
 		r2Buckets: Object.fromEntries(
-			bindings.r2_buckets?.map(r2BucketEntry) ?? []
+			bindings.r2_buckets?.map((r2) =>
+				r2BucketEntry(r2, mixedModeConnectionString)
+			) ?? []
 		),
 		d1Databases: Object.fromEntries(
-			bindings.d1_databases?.map(d1DatabaseEntry) ?? []
+			bindings.d1_databases?.map((d1) =>
+				d1DatabaseEntry(d1, mixedModeConnectionString)
+			) ?? []
 		),
 		queueProducers: Object.fromEntries(
-			bindings.queues?.map(queueProducerEntry) ?? []
+			bindings.queues?.map((queue) =>
+				queueProducerEntry(queue, mixedModeConnectionString)
+			) ?? []
 		),
 		queueConsumers: Object.fromEntries(
 			config.queueConsumers?.map(queueConsumerEntry) ?? []
@@ -763,7 +869,11 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 				{ dataset: binding.dataset ?? "dataset" },
 			]) ?? []
 		),
-		workflows: Object.fromEntries(bindings.workflows?.map(workflowEntry) ?? []),
+		workflows: Object.fromEntries(
+			bindings.workflows?.map((workflow) =>
+				workflowEntry(workflow, mixedModeConnectionString)
+			) ?? []
+		),
 		secretsStoreSecrets: Object.fromEntries(
 			bindings.secrets_store_secrets?.map((binding) => [
 				binding.binding,
@@ -1021,7 +1131,8 @@ export type Options = Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
 export async function buildMiniflareOptions(
 	log: Log,
 	config: Omit<ConfigBundle, "rules">,
-	proxyToUserWorkerAuthenticationSecret: UUID
+	proxyToUserWorkerAuthenticationSecret: UUID,
+	mixedModeConnectionString?: MixedModeConnectionString
 ): Promise<{
 	options: Options;
 	internalObjects: CfDurableObject[];
@@ -1085,7 +1196,7 @@ export async function buildMiniflareOptions(
 
 	const { sourceOptions, entrypointNames } = await buildSourceOptions(config);
 	const { bindingOptions, internalObjects, externalWorkers } =
-		buildMiniflareBindingOptions(config);
+		buildMiniflareBindingOptions(config, mixedModeConnectionString);
 	const sitesOptions = buildSitesOptions(config);
 	const persistOptions = buildPersistOptions(config.localPersistencePath);
 	const assetOptions = buildAssetOptions(config);

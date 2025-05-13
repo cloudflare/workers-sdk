@@ -7,7 +7,7 @@ import { DevEnv } from "./api";
 import { MultiworkerRuntimeController } from "./api/startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "./api/startDevWorker/NoOpProxyController";
 import {
-	convertCfWorkerInitBindingstoBindings,
+	convertCfWorkerInitBindingsToBindings,
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
@@ -503,7 +503,7 @@ async function setupDevEnv(
 			bindings: {
 				...(await getPagesAssetsFetcher(args.enablePagesAssetsServiceBinding)),
 				...collectPlainTextVars(args.var),
-				...convertCfWorkerInitBindingstoBindings({
+				...convertCfWorkerInitBindingsToBindings({
 					kv_namespaces: args.kv,
 					vars: args.vars,
 					send_email: undefined,

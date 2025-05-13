@@ -3,11 +3,17 @@ import { readFile } from "node:fs/promises";
 import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
+import { getFlag } from "../../experimental-flags";
 import { logger } from "../../logger";
+import { startMixedModeSession } from "../mixedMode";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import { convertBindingsToCfWorkerInitBindings } from "./utils";
+import {
+	convertBindingsToCfWorkerInitBindings,
+	convertCfWorkerInitBindingsToBindings,
+} from "./utils";
 import type { WorkerEntrypointsDefinition } from "../../dev-registry";
+import type { MixedModeSession } from "../mixedMode";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
@@ -143,17 +149,44 @@ export class LocalRuntimeController extends RuntimeController {
 	#mutex = new Mutex();
 	#mf?: Miniflare;
 
+	#mixedModeSession?: MixedModeSession;
+
 	onBundleStart(_: BundleStartEvent) {
 		// Ignored in local runtime
 	}
 
 	async #onBundleComplete(data: BundleCompleteEvent, id: number) {
 		try {
+			const configBundle = await convertToConfigBundle(data);
+
+			if (getFlag("MIXED_MODE") && !data.config.dev?.remote) {
+				const remoteBindings = extractRemoteBindings(configBundle.bindings);
+				const convertedRemoteBindings =
+					convertCfWorkerInitBindingsToBindings(remoteBindings);
+
+				if (this.#mixedModeSession === undefined) {
+					const numOfRemoteBindings = Object.keys(
+						convertedRemoteBindings ?? {}
+					).length;
+					if (numOfRemoteBindings > 0) {
+						this.#mixedModeSession = await startMixedModeSession(
+							convertedRemoteBindings
+						);
+					}
+				} else {
+					// Note: we always call setConfig even when there are zero remote bindings, in these
+					//       cases we could terminate the remote session if we wanted, that's probably
+					//       something to consider down the line
+					await this.#mixedModeSession.setConfig(convertedRemoteBindings);
+				}
+			}
+
 			const { options, internalObjects, entrypointNames } =
 				await MF.buildMiniflareOptions(
 					this.#log,
-					await convertToConfigBundle(data),
-					this.#proxyToUserWorkerAuthenticationSecret
+					configBundle,
+					this.#proxyToUserWorkerAuthenticationSecret,
+					this.#mixedModeSession?.mixedModeConnectionString
 				);
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
 			if (this.#mf === undefined) {
@@ -254,6 +287,13 @@ export class LocalRuntimeController extends RuntimeController {
 		await this.#mf?.dispose();
 		this.#mf = undefined;
 
+		if (this.#mixedModeSession) {
+			logger.log(chalk.dim("⎔ Shutting down remote connection..."));
+		}
+
+		await this.#mixedModeSession?.dispose();
+		this.#mixedModeSession = undefined;
+
 		logger.debug("LocalRuntimeController teardown complete");
 	};
 	async teardown() {
@@ -270,4 +310,47 @@ export class LocalRuntimeController extends RuntimeController {
 	emitReloadCompleteEvent(data: ReloadCompleteEvent) {
 		this.emit("reloadComplete", data);
 	}
+}
+
+type RemoveBindingsConfigs = Partial<
+	Pick<
+		MF.ConfigBundle["bindings"],
+		| "services"
+		| "kv_namespaces"
+		| "r2_buckets"
+		| "d1_databases"
+		| "queues"
+		| "workflows"
+		| "ai"
+	>
+>;
+
+function extractRemoteBindings(
+	bindings: MF.ConfigBundle["bindings"]
+): RemoveBindingsConfigs {
+	const remoteBindings: RemoveBindingsConfigs = {};
+
+	if (bindings.ai) {
+		// AI is always remote
+		remoteBindings.ai = bindings.ai;
+	}
+
+	const keys = [
+		"services",
+		"kv_namespaces",
+		"r2_buckets",
+		"d1_databases",
+		"queues",
+		"workflows",
+	] as const;
+	for (const key of keys) {
+		if (bindings[key]) {
+			const remotes = bindings[key].filter(({ remote }) => remote);
+			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+			// @ts-ignore -- remotes is interpreted as the union of the possible types and not the one specific to the key
+			remoteBindings[key] = remotes;
+		}
+	}
+
+	return remoteBindings;
 }
