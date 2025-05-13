@@ -13,7 +13,21 @@ export default {
 					originalHeaders.set(name, value);
 				}
 			}
-			return env[targetBinding].fetch(
+			let fetcher = env[targetBinding];
+
+			// Special case the Dispatch Namespace binding because it has a top-level synchronous .get() call
+			const dispatchNamespaceOptions = originalHeaders.get(
+				"MF-Dispatch-Namespace-Options"
+			);
+			if (dispatchNamespaceOptions) {
+				const { name, args, options } = JSON.parse(dispatchNamespaceOptions);
+				fetcher = (env[targetBinding] as DispatchNamespace).get(
+					name,
+					args,
+					options
+				);
+			}
+			return (fetcher as Fetcher).fetch(
 				request.headers.get("MF-URL")!,
 				new Request(request, {
 					redirect: "manual",
@@ -23,4 +37,4 @@ export default {
 		}
 		return new Response("Provide a binding", { status: 400 });
 	},
-} satisfies ExportedHandler<Record<string, Fetcher>>;
+} satisfies ExportedHandler<Record<string, Fetcher | DispatchNamespace>>;
