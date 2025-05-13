@@ -74,7 +74,7 @@
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
-		"unenv": "2.0.0-rc.15",
+		"unenv": "2.0.0-rc.17",
 		"workerd": "1.20250508.0"
 	},
 	"devDependencies": {
