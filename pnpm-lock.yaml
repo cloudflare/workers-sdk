@@ -1971,8 +1971,8 @@ importers:
         specifier: ^0.2.12
         version: 0.2.12
       unenv:
-        specifier: 2.0.0-rc.15
-        version: 2.0.0-rc.15
+        specifier: 2.0.0-rc.17
+        version: 2.0.0-rc.17
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -22686,7 +22686,7 @@ snapshots:
       exsolve: 1.0.4
       ohash: 2.0.11
       pathe: 2.0.3
-      ufo: 1.5.4
+      ufo: 1.6.1
 
   unenv@2.0.0-rc.15:
     dependencies:
@@ -22694,7 +22694,7 @@ snapshots:
       exsolve: 1.0.4
       ohash: 2.0.11
       pathe: 2.0.3
-      ufo: 1.5.4
+      ufo: 1.6.1
 
   unenv@2.0.0-rc.17:
     dependencies:
