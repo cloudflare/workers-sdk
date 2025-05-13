@@ -10,4 +10,5 @@ export class ExecutionContext {
 			throw new Error("Illegal invocation");
 		}
 	}
+	props: any;
 }
