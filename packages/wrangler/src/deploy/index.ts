@@ -176,9 +176,9 @@ export const deployCommand = createCommand({
 		},
 		"keep-vars": {
 			describe:
-				"When set to true, the environment variables are not deleted before the deployment.\n" +
-				"When set to false (default) Wrangler will delete all vars before settings those found in the Wrangler configuration.\n" +
-				"If you set variables via the dashboard you probably want to set this flag to true.\n" +
+				"When not used, Wrangler will delete all vars before settings those found in the Wrangler configuration.\n" +
+				"When used, the environment variables are not deleted before the deployment.\n" +
+				"If you set variables via the dashboard you probably want to use this flag.\n" +
 				"Note that secrets are never deleted by deployments.",
 			default: false,
 			type: "boolean",
