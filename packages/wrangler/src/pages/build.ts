@@ -136,6 +136,12 @@ export const pagesFunctionsBuildCommand = createCommand({
 			type: "string",
 			array: true,
 		},
+		metafile: {
+			describe:
+				"Path to output build metadata from esbuild. If flag is used without a path, defaults to 'bundle-meta.json' inside the directory specified by --outdir.",
+			type: "string",
+			coerce: (v: string) => (!v ? true : v),
+		},
 	},
 	positionalArgs: ["directory"],
 	async handler(args) {
@@ -159,6 +165,7 @@ export const pagesFunctionsBuildCommand = createCommand({
 				defineNavigatorUserAgent,
 				checkFetch,
 				external,
+				metafile,
 			} = validatedArgs;
 
 			try {
@@ -186,6 +193,7 @@ export const pagesFunctionsBuildCommand = createCommand({
 					defineNavigatorUserAgent,
 					checkFetch,
 					external,
+					metafile,
 				});
 			} catch (e) {
 				if (e instanceof FunctionsNoRoutesError) {
@@ -228,6 +236,7 @@ export const pagesFunctionsBuildCommand = createCommand({
 				defineNavigatorUserAgent,
 				checkFetch,
 				external,
+				metafile,
 			} = validatedArgs;
 
 			/**
@@ -289,6 +298,7 @@ export const pagesFunctionsBuildCommand = createCommand({
 						defineNavigatorUserAgent,
 						checkFetch,
 						external,
+						metafile,
 					});
 				} catch (e) {
 					if (e instanceof FunctionsNoRoutesError) {
