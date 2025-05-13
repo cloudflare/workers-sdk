@@ -219,6 +219,8 @@ async function testTls() {
 		true
 	);
 
+	assert.strictEqual(typeof tls.convertALPNProtocols, "function");
+
 	return new Response("OK");
 }
 

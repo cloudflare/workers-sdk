@@ -11,6 +11,7 @@ export const TESTS = {
 	testDns,
 	testTimers,
 	testNet,
+	testTls,
 };
 
 export default {
@@ -167,4 +168,10 @@ export async function testNet() {
 	assert.strictEqual(typeof net, "object");
 	assert.strictEqual(typeof net.createConnection, "function");
 	assert.throws(() => net.createServer(), /not implemented/);
+}
+
+export async function testTls() {
+	const tls = await import("node:tls");
+	assert.strictEqual(typeof tls, "object");
+	assert.strictEqual(typeof tls.convertALPNProtocols, "function");
 }
