@@ -18,7 +18,6 @@ import { getScriptName } from "../utils/getScriptName";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import deploy from "./deploy";
 
-
 export const deployCommand = createCommand({
 	metadata: {
 		description: "🆙 Deploy a Worker to Cloudflare",
