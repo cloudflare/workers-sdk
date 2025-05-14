@@ -163,6 +163,11 @@ export class LocalRuntimeController extends RuntimeController {
 				const convertedRemoteBindings =
 					convertCfWorkerInitBindingsToBindings(remoteBindings);
 
+				// TODO(perf): here we can save the converted remote bindings
+				//             and on new iterations we can diff the old and new
+				//             converted remote bindings, if they are all the
+				//             same we can just leave the mixedModeSession untouched
+
 				if (this.#mixedModeSession === undefined) {
 					const numOfRemoteBindings = Object.keys(
 						convertedRemoteBindings ?? {}
