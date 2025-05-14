@@ -101,6 +101,7 @@ export function buildWorkerFromFunctions({
 		tsconfig: undefined,
 		testScheduled: undefined,
 		metafile,
+		splitting: false,
 	});
 }
 
@@ -219,6 +220,7 @@ export function buildRawWorker({
 		testScheduled: undefined,
 		entryName: undefined,
 		inject: undefined,
+		splitting: undefined,
 	});
 }
 

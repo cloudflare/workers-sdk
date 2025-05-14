@@ -12674,6 +12674,70 @@ export default{
 		});
 	});
 
+	describe("--experimental-code-splitting", () => {
+		it("should apply code splitting to the worker", async () => {
+			writeWranglerConfig();
+			const scriptContent = `
+				export default {
+					async fetch() {
+						const module = await import("./module.js");
+						return new Response(module.default);
+					}
+				}
+			`;
+			fs.writeFileSync("index.js", scriptContent);
+
+			const moduleContent = `
+				const module = "hello";
+				export default module;
+			`;
+			fs.writeFileSync("module.js", moduleContent);
+
+			await runWrangler(
+				"deploy index.js --dry-run --experimental-code-splitting --outdir=dist"
+			);
+
+			const outputFiles = await fs.promises.readdir(
+				path.join(process.cwd(), "dist")
+			);
+			expect(outputFiles).toContain("index.js");
+			const moduleFile = outputFiles.find((file) =>
+				file.match(/module-\w+\.js/)
+			);
+			expect(moduleFile).toBeDefined();
+		});
+
+		it("should not apply code splitting to the worker if it's not enabled", async () => {
+			writeWranglerConfig();
+			const scriptContent = `
+				export default {
+					async fetch() {
+						const module = await import("./module.js");
+						return new Response(module.default);
+					}
+				}
+			`;
+			fs.writeFileSync("index.js", scriptContent);
+
+			const moduleContent = `
+				const module = "hello";
+				export default module;
+			`;
+			fs.writeFileSync("module.js", moduleContent);
+
+			await runWrangler("deploy index.js --dry-run --outdir=dist");
+
+			const outputFiles = await fs.promises.readdir(
+				path.join(process.cwd(), "dist")
+			);
+			expect(outputFiles).toContain("index.js");
+			const moduleFile = outputFiles.find((file) =>
+				file.match(/module-\w+\.js/)
+			);
+			expect(moduleFile).toBeUndefined();
+		});
+	});
+
 	describe("--dispatch-namespace", () => {
 		it("should upload to dispatch namespace", async () => {
 			writeWranglerConfig();

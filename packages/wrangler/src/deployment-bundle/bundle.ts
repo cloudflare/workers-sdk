@@ -99,6 +99,7 @@ export type BundleResult = {
 	modules: CfModule[];
 	dependencies: esbuild.Metafile["outputs"][string]["inputs"];
 	resolvedEntryPointPath: string;
+	chunks?: string[];
 	bundleType: CfModuleType;
 	stop: (() => Promise<void>) | undefined;
 	sourceMapPath?: string | undefined;
@@ -136,6 +137,7 @@ export type BundleOptions = {
 	defineNavigatorUserAgent: boolean;
 	external: string[] | undefined;
 	metafile: string | boolean | undefined;
+	splitting: boolean | undefined;
 };
 
 /**
@@ -172,6 +174,7 @@ export async function bundleWorker(
 		defineNavigatorUserAgent,
 		external,
 		metafile,
+		splitting,
 	}: BundleOptions
 ): Promise<BundleResult> {
 	// We create a temporary directory for any one-off files we
@@ -357,6 +360,7 @@ export async function bundleWorker(
 		bundle,
 		absWorkingDir: entry.projectRoot,
 		keepNames,
+		splitting: splitting && bundle && !isOutfile && entry.format === "modules",
 		...(isOutfile
 			? {
 					outdir: undefined,
@@ -472,7 +476,12 @@ export async function bundleWorker(
 		throw e;
 	}
 
-	const entryPoint = getEntryPointFromMetafile(entryFile, result.metafile);
+	const entryPoint = getEntryPointFromMetafile(
+		entry.projectRoot,
+		entryFile,
+		result.metafile
+	);
+
 	const notExportedDOs = doBindings
 		.filter((x) => !x.script_name && !entryPoint.exports.includes(x.class_name))
 		.map((x) => x.class_name);
@@ -508,6 +517,22 @@ export async function bundleWorker(
 		entryPoint.relativePath
 	);
 
+	const relativeEntryFile = path.relative(entry.projectRoot, entryFile);
+
+	const outputModules =
+		bundleType === "esm"
+			? Object.entries(result.metafile.outputs).filter(
+					([_, output]) =>
+						output.entryPoint !== relativeEntryFile &&
+						(output.imports.length || output.exports.length)
+				)
+			: [];
+
+	const chunks: string[] = [];
+	for (const [chunkPath] of outputModules) {
+		chunks.push(chunkPath);
+	}
+
 	// A collision between additionalModules and moduleCollector.modules is incredibly unlikely because moduleCollector hashes the modules it collects.
 	// However, if it happens, let's trust the explicitly provided additionalModules over the ones we discovered.
 	const modules = dedupeModulesByName([
@@ -519,6 +544,7 @@ export async function bundleWorker(
 
 	return {
 		modules,
+		chunks,
 		dependencies: entryPoint.dependencies,
 		resolvedEntryPointPath,
 		bundleType,

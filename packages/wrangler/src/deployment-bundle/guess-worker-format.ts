@@ -44,7 +44,11 @@ export default async function guessWorkerFormat(
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	const metafile = result.metafile!;
 
-	const { exports } = getEntryPointFromMetafile(entryFile, metafile);
+	const { exports } = getEntryPointFromMetafile(
+		entryWorkingDirectory,
+		entryFile,
+		metafile
+	);
 	let guessedWorkerFormat: CfScriptFormat;
 	if (exports.length > 0) {
 		if (exports.includes("default")) {

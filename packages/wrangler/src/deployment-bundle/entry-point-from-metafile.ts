@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import path from "node:path";
 import type { Metafile } from "esbuild";
 
 /**
@@ -6,13 +7,24 @@ import type { Metafile } from "esbuild";
  * from the output of esbuild.
  */
 export function getEntryPointFromMetafile(
+	projectRoot: string,
 	entryFile: string,
 	metafile: Metafile
 ) {
+	const entryFileRelativePath = path.relative(projectRoot, entryFile);
+
 	const entryPoints = Object.entries(metafile.outputs).filter(
 		([_path, output]) => output.entryPoint !== undefined
 	);
-	if (entryPoints.length !== 1) {
+
+	const entryPoint =
+		entryPoints.length === 1
+			? entryPoints[0]
+			: entryPoints.find(
+					([, output]) => output.entryPoint === entryFileRelativePath
+				);
+
+	if (!entryPoint) {
 		const entryPointList = entryPoints
 			.map(([_input, output]) => output.entryPoint)
 			.join("\n");
@@ -24,13 +36,16 @@ export function getEntryPointFromMetafile(
 			entryPoints.length < 2,
 			`More than one entry-point found for generated bundle.\n${entryPointList}`
 		);
+		throw new Error(
+			`Cannot find entry-point "${entryFile}" in generated bundle.\n${entryPointList}`
+		);
 	}
 
-	const [relativePath, entryPoint] = entryPoints[0];
+	const [relativePath, output] = entryPoint;
 
 	return {
 		relativePath,
-		exports: entryPoint.exports,
-		dependencies: entryPoint.inputs,
+		exports: output.exports,
+		dependencies: output.inputs,
 	};
 }
