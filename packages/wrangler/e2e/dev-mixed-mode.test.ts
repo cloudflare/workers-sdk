@@ -2,20 +2,22 @@ import dedent from "ts-dedent";
 import { describe, expect, it } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
+import { makeRoot, seed } from "./helpers/setup";
 
 describe("wrangler dev - mixed mode", () => {
 	it("can handle both remote and local service bindings at the same time", async () => {
 		const helper = new WranglerE2ETestHelper();
-		await helper.seed({
-			"local/wrangler.json": JSON.stringify({
+		const local = makeRoot();
+		await seed(local, {
+			"wrangler.json": JSON.stringify({
 				name: "local-worker",
 				main: "index.js",
 				compatibility_date: "2025-05-07",
 			}),
-			"local/index.js": dedent`
+			"index.js": dedent`
 							export default {
 								fetch(request) {
-									return new Response("Hello from local worker!");
+										return new Response("Hello from a local worker!");
 								}
 							}`,
 		});
@@ -42,7 +44,7 @@ describe("wrangler dev - mixed mode", () => {
 								}
 							}`,
 		});
-		const localWorker = helper.runLongLived("wrangler dev");
+		const localWorker = helper.runLongLived("wrangler dev", { cwd: local });
 		await localWorker.waitForReady();
 
 		const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
