@@ -178,7 +178,7 @@ export class LocalRuntimeController extends RuntimeController {
 							);
 					}
 				} else {
-					// Note: we always call setConfig even when there are zero remote bindings, in these
+					// Note: we always call pathConfig even when there are zero remote bindings, in these
 					//       cases we could terminate the remote session if we wanted, that's probably
 					//       something to consider down the line
 					await this.#mixedModeSession.patchConfig(convertedRemoteBindings);
