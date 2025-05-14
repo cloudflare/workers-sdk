@@ -163,9 +163,14 @@ export class LocalRuntimeController extends RuntimeController {
 					configBundle.bindings
 				);
 				const convertedRemoteBindings = Object.fromEntries(
-					Object.entries(remoteBindings ?? []).filter(
-						([, b]) => "remote" in b && b["remote"]
-					)
+					Object.entries(remoteBindings ?? []).filter(([, b]) => {
+						if (b.type === "ai") {
+							// AI is always remote
+							return true;
+						}
+
+						return "remote" in b && b["remote"];
+					})
 				);
 
 				// TODO(perf): here we can save the converted remote bindings
