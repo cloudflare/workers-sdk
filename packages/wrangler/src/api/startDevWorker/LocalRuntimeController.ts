@@ -323,7 +323,7 @@ export class LocalRuntimeController extends RuntimeController {
 	}
 }
 
-type RemoveBindingsConfigs = Partial<
+type RemoteBindingsConfigs = Partial<
 	Pick<
 		MF.ConfigBundle["bindings"],
 		| "services"
@@ -338,8 +338,8 @@ type RemoveBindingsConfigs = Partial<
 
 function extractRemoteBindings(
 	bindings: MF.ConfigBundle["bindings"]
-): RemoveBindingsConfigs {
-	const remoteBindings: RemoveBindingsConfigs = {};
+): RemoteBindingsConfigs {
+	const remoteBindings: RemoteBindingsConfigs = {};
 
 	if (bindings.ai) {
 		// AI is always remote
