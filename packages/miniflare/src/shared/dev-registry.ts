@@ -309,10 +309,9 @@ export function createExternalService(options: {
 				if (type === "durableObject") {
 					return [
 						{
-							name: className,
 							className,
-							unsafeUniqueKey: `${options.serviceName}-${className}`,
-						},
+							uniqueKey: `${options.serviceName}-${className}`,
+						} satisfies Worker_DurableObjectNamespace,
 					];
 				}
 
