@@ -12,6 +12,7 @@ import WebSocket from "ws";
 import { LocalRuntimeController } from "../../../api/startDevWorker/LocalRuntimeController";
 import { urlFromParts } from "../../../api/startDevWorker/utils";
 import { RuleTypeToModuleType } from "../../../deployment-bundle/module-collection";
+import { Logger, run } from "../../../logger";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { useTeardown } from "../../helpers/teardown";
@@ -137,6 +138,15 @@ function configDefaults(
 	};
 }
 
+function getLocalRuntimeController() {
+	const testLogger = new Logger();
+	testLogger.loggerLevel = "none";
+	return run(testLogger, () => {
+		const controller = new LocalRuntimeController();
+		return controller;
+	});
+}
+
 describe("LocalRuntimeController", () => {
 	const teardown = useTeardown();
 	mockConsoleMethods();
@@ -144,7 +154,7 @@ describe("LocalRuntimeController", () => {
 
 	describe("Core", () => {
 		it("should start Miniflare with module worker", async () => {
-			const controller = new LocalRuntimeController();
+			const controller = getLocalRuntimeController();
 			teardown(() => controller.teardown());
 
 			const config = {
@@ -298,7 +308,7 @@ describe("LocalRuntimeController", () => {
 			}
 		});
 		it("should start Miniflare with service worker", async () => {
-			const controller = new LocalRuntimeController();
+			const controller = getLocalRuntimeController();
 			teardown(() => controller.teardown());
 
 			const config = {
@@ -393,7 +403,7 @@ describe("LocalRuntimeController", () => {
 			}
 		});
 		it("should update the running Miniflare instance", async () => {
-			const controller = new LocalRuntimeController();
+			const controller = getLocalRuntimeController();
 			teardown(() => controller.teardown());
 
 			function update(version: number) {
@@ -444,7 +454,7 @@ describe("LocalRuntimeController", () => {
 			expect(await res.json()).toEqual({ binding: 5, bundle: 5 });
 		});
 		it("should start Miniflare with configured compatibility settings", async () => {
-			const controller = new LocalRuntimeController();
+			const controller = getLocalRuntimeController();
 			teardown(() => controller.teardown());
 
 			// `global_navigator` was enabled by default on `2022-03-21`:
@@ -508,7 +518,7 @@ describe("LocalRuntimeController", () => {
 			expect(await res.text()).toBe("object");
 		});
 		it("should start inspector on random port and allow debugging", async () => {
-			const controller = new LocalRuntimeController();
+			const controller = getLocalRuntimeController();
 			teardown(() => controller.teardown());
 
 			const config: Partial<StartDevWorkerOptions> = {
@@ -576,7 +586,7 @@ describe("LocalRuntimeController", () => {
 
 	describe("Bindings", () => {
 		it("should expose basic bindings", async () => {
-			const controller = new LocalRuntimeController();
+			const controller = getLocalRuntimeController();
 			teardown(() => controller.teardown());
 
 			const config: Partial<StartDevWorkerOptions> = {
@@ -623,7 +633,7 @@ describe("LocalRuntimeController", () => {
 			});
 		});
 		it("should expose WebAssembly module bindings in service workers", async () => {
-			const controller = new LocalRuntimeController();
+			const controller = getLocalRuntimeController();
 			teardown(() => controller.teardown());
 
 			const config: Partial<StartDevWorkerOptions> = {
@@ -658,7 +668,7 @@ describe("LocalRuntimeController", () => {
 			expect(await res.text()).toBe("3");
 		});
 		it("should persist cached data", async () => {
-			const controller = new LocalRuntimeController();
+			const controller = getLocalRuntimeController();
 			teardown(() => controller.teardown());
 
 			const config: Partial<StartDevWorkerOptions> = {
@@ -728,7 +738,7 @@ describe("LocalRuntimeController", () => {
 			expect(await res.text()).toBe("miss");
 		});
 		it("should expose KV namespace bindings", async () => {
-			const controller = new LocalRuntimeController();
+			const controller = getLocalRuntimeController();
 			teardown(() => controller.teardown());
 
 			const config: Partial<StartDevWorkerOptions> = {
@@ -790,7 +800,7 @@ describe("LocalRuntimeController", () => {
 			expect(await res.text()).toBe("");
 		});
 		it("should support Workers Sites bindings", async () => {
-			const controller = new LocalRuntimeController();
+			const controller = getLocalRuntimeController();
 			teardown(() => controller.teardown());
 
 			fs.writeFileSync("company.txt", "👨‍👩‍👧‍👦");
@@ -861,7 +871,7 @@ describe("LocalRuntimeController", () => {
 			expect(res.status).toBe(404);
 		});
 		it("should expose R2 bucket bindings", async () => {
-			const controller = new LocalRuntimeController();
+			const controller = getLocalRuntimeController();
 			teardown(() => controller.teardown());
 
 			const config: Partial<StartDevWorkerOptions> = {
@@ -924,7 +934,7 @@ describe("LocalRuntimeController", () => {
 			expect(await res.text()).toBe("");
 		});
 		it("should expose D1 database bindings", async () => {
-			const controller = new LocalRuntimeController();
+			const controller = getLocalRuntimeController();
 			teardown(() => controller.teardown());
 
 			const config: Partial<StartDevWorkerOptions> = {
@@ -992,7 +1002,7 @@ describe("LocalRuntimeController", () => {
 			expect(await res.json()).toEqual([]);
 		});
 		it("should expose queue producer bindings and consume queue messages", async () => {
-			const controller = new LocalRuntimeController();
+			const controller = getLocalRuntimeController();
 			teardown(() => controller.teardown());
 
 			const reportPromise = new DeferredPromise<unknown>();
@@ -1055,7 +1065,7 @@ describe("LocalRuntimeController", () => {
 			const port = address.port;
 
 			// Start runtime with hyperdrive binding
-			const controller = new LocalRuntimeController();
+			const controller = getLocalRuntimeController();
 			teardown(() => controller.teardown());
 
 			const localConnectionString = `postgres://username:password@127.0.0.1:${port}/db`;
