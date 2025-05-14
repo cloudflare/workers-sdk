@@ -185,6 +185,8 @@ export class LocalRuntimeController extends RuntimeController {
 				}
 			}
 
+			await this.#mixedModeSession?.ready;
+
 			const { options, internalObjects, entrypointNames } =
 				await MF.buildMiniflareOptions(
 					this.#log,
