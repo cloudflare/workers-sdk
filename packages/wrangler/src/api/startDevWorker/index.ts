@@ -1,3 +1,4 @@
+import { Logger, run } from "../../logger";
 import { DevEnv } from "./DevEnv";
 import type { StartDevWorkerInput, Worker } from "./types";
 
@@ -8,7 +9,9 @@ export * from "./events";
 export async function startWorker(
 	options: StartDevWorkerInput
 ): Promise<Worker> {
-	const devEnv = new DevEnv();
+	return run(new Logger(), () => {
+		const devEnv = new DevEnv();
 
-	return devEnv.startWorker(options);
+		return devEnv.startWorker(options);
+	});
 }

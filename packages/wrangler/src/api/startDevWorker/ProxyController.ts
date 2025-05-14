@@ -16,7 +16,7 @@ import {
 	WranglerLog,
 } from "../../dev/miniflare";
 import { getHttpsOptions } from "../../https-options";
-import { logger } from "../../logger";
+import { getScopedLogger } from "../../logger";
 import { getSourceMappedStack } from "../../sourcemap";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
@@ -58,6 +58,8 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 	protected latestBundle?: EsbuildBundle;
 
 	secret = randomUUID();
+
+	#logger = getScopedLogger();
 
 	protected createProxyWorker() {
 		if (this._torndown) {
@@ -155,13 +157,15 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 				},
 			],
 
-			verbose: logger.loggerLevel === "debug",
+			verbose: this.#logger.loggerLevel === "debug",
 
 			// log requests into the ProxyWorker (for local + remote mode)
-			log: new ProxyControllerLogger(castLogLevel(logger.loggerLevel), {
+			log: new ProxyControllerLogger(castLogLevel(this.#logger.loggerLevel), {
 				prefix:
 					// if debugging, log requests with specic ProxyWorker prefix
-					logger.loggerLevel === "debug" ? "wrangler-ProxyWorker" : "wrangler",
+					this.#logger.loggerLevel === "debug"
+						? "wrangler-ProxyWorker"
+						: "wrangler",
 			}),
 			handleRuntimeStdio,
 			liveReload: false,
@@ -178,7 +182,9 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 		this.proxyWorkerOptions = proxyWorkerOptions;
 
 		if (proxyWorkerOptionsChanged) {
-			logger.debug("ProxyWorker miniflare options changed, reinstantiating...");
+			this.#logger.debug(
+				"ProxyWorker miniflare options changed, reinstantiating..."
+			);
 
 			void this.proxyWorker.setOptions(proxyWorkerOptions).catch((error) => {
 				this.emitErrorEvent("Failed to start ProxyWorker", error);
@@ -415,7 +421,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 
 				break;
 			case "debug-log":
-				logger.debug("[ProxyWorker]", ...message.args);
+				this.#logger.debug("[ProxyWorker]", ...message.args);
 
 				break;
 			default:
@@ -441,7 +447,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 				}
 
 				const stack = getSourceMappedStack(message.params.exceptionDetails);
-				logger.error(message.params.exceptionDetails.text, stack);
+				this.#logger.error(message.params.exceptionDetails.text, stack);
 				break;
 			}
 			default: {
@@ -455,7 +461,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 		switch (message.type) {
 			case "runtime-websocket-error":
 				// TODO: consider sending proxyData again to trigger the InspectorProxyWorker to reconnect to the runtime
-				logger.debug(
+				this.#logger.debug(
 					"[InspectorProxyWorker] 'runtime websocket' error",
 					message.error
 				);
@@ -470,7 +476,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 					break;
 				}
 
-				logger.debug("[InspectorProxyWorker]", ...message.args);
+				this.#logger.debug("[InspectorProxyWorker]", ...message.args);
 
 				break;
 			case "load-network-resource": {
@@ -502,7 +508,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 
 	_torndown = false;
 	async teardown() {
-		logger.debug("ProxyController teardown beginning...");
+		this.#logger.debug("ProxyController teardown beginning...");
 		this._torndown = true;
 
 		const { proxyWorker } = this;
@@ -517,7 +523,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 				}),
 		]);
 
-		logger.debug("ProxyController teardown complete");
+		this.#logger.debug("ProxyController teardown complete");
 	}
 
 	// *********************

@@ -13,7 +13,7 @@ import {
 import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { UserError } from "../../errors";
-import { logger } from "../../logger";
+import { getScopedLogger } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
 import { requireApiToken, requireAuth } from "../../user";
 import {
@@ -330,6 +330,8 @@ async function resolveConfig(
 
 	validateAssetsArgsAndConfig(resolved);
 
+	const logger = getScopedLogger();
+
 	const services = extractBindingsOfType("service", resolved.bindings);
 	if (services && services.length > 0 && resolved.dev?.remote) {
 		logger.warn(
@@ -390,6 +392,8 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	#configWatcher?: ReturnType<typeof watch>;
 	#abortController?: AbortController;
 
+	#logger = getScopedLogger();
+
 	async #ensureWatchingConfig(configPath: string | undefined) {
 		await this.#configWatcher?.close();
 		if (configPath) {
@@ -397,7 +401,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 				persistent: true,
 				ignoreInitial: true,
 			}).on("change", async (_event) => {
-				logger.log(`${path.basename(configPath)} changed...`);
+				this.#logger.log(`${path.basename(configPath)} changed...`);
 				assert(
 					this.latestInput,
 					"Cannot be watching config without having first set an input"
@@ -486,9 +490,9 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	// ******************
 
 	async teardown() {
-		logger.debug("ConfigController teardown beginning...");
+		this.#logger.debug("ConfigController teardown beginning...");
 		await this.#configWatcher?.close();
-		logger.debug("ConfigController teardown complete");
+		this.#logger.debug("ConfigController teardown complete");
 	}
 
 	// *********************

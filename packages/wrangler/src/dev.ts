@@ -22,7 +22,7 @@ import { maybeRegisterLocalWorker } from "./dev/local";
 import { UserError } from "./errors";
 import { getFlag } from "./experimental-flags";
 import isInteractive from "./is-interactive";
-import { logger } from "./logger";
+import { Logger, logger, run } from "./logger";
 import { getSiteAssetPaths } from "./sites";
 import { loginOrRefreshIfRequired, requireApiToken, requireAuth } from "./user";
 import {
@@ -663,60 +663,62 @@ export async function startDev(args: StartDevOptions) {
 				))
 			);
 		} else {
-			devEnv = new DevEnv();
+			await run(new Logger(), async () => {
+				devEnv = new DevEnv();
 
-			// The ProxyWorker will have a stable host and port, so only listen for the first update
-			void devEnv.proxy.ready.promise.then(({ url }) => {
-				if (args.onReady) {
-					args.onReady(url.hostname, parseInt(url.port));
-				}
+				// The ProxyWorker will have a stable host and port, so only listen for the first update
+				void devEnv.proxy.ready.promise.then(({ url }) => {
+					if (args.onReady) {
+						args.onReady(url.hostname, parseInt(url.port));
+					}
 
-				if (
-					(args.enableIpc || !args.onReady) &&
-					process.send &&
-					typeof vitest === "undefined"
-				) {
-					process.send(
-						JSON.stringify({
-							event: "DEV_SERVER_READY",
-							ip: url.hostname,
-							port: parseInt(url.port),
-						})
-					);
-				}
-			});
-
-			if (!args.disableDevRegistry) {
-				teardownRegistryPromise = devRegistry((registry) => {
-					assert(devEnv !== undefined && !Array.isArray(devEnv));
-					void updateDevEnvRegistry(devEnv, registry);
+					if (
+						(args.enableIpc || !args.onReady) &&
+						process.send &&
+						typeof vitest === "undefined"
+					) {
+						process.send(
+							JSON.stringify({
+								event: "DEV_SERVER_READY",
+								ip: url.hostname,
+								port: parseInt(url.port),
+							})
+						);
+					}
 				});
 
-				devEnv.runtimes.forEach((runtime) => {
-					runtime.on(
-						"reloadComplete",
-						async (reloadEvent: ReloadCompleteEvent) => {
-							if (!reloadEvent.config.dev?.remote) {
-								assert(devEnv !== undefined && !Array.isArray(devEnv));
-								const { url } = await devEnv.proxy.ready.promise;
+				if (!args.disableDevRegistry) {
+					teardownRegistryPromise = devRegistry((registry) => {
+						assert(devEnv !== undefined && !Array.isArray(devEnv));
+						void updateDevEnvRegistry(devEnv, registry);
+					});
 
-								await maybeRegisterLocalWorker(
-									url,
-									reloadEvent.config.name,
-									reloadEvent.proxyData.internalDurableObjects,
-									reloadEvent.proxyData.entrypointAddresses
-								);
+					devEnv.runtimes.forEach((runtime) => {
+						runtime.on(
+							"reloadComplete",
+							async (reloadEvent: ReloadCompleteEvent) => {
+								if (!reloadEvent.config.dev?.remote) {
+									assert(devEnv !== undefined && !Array.isArray(devEnv));
+									const { url } = await devEnv.proxy.ready.promise;
+
+									await maybeRegisterLocalWorker(
+										url,
+										reloadEvent.config.name,
+										reloadEvent.proxyData.internalDurableObjects,
+										reloadEvent.proxyData.entrypointAddresses
+									);
+								}
 							}
-						}
-					);
-				});
-			}
+						);
+					});
+				}
 
-			if (isInteractive() && args.showInteractiveDevSession !== false) {
-				unregisterHotKeys = registerDevHotKeys(devEnv, args);
-			}
+				if (isInteractive() && args.showInteractiveDevSession !== false) {
+					unregisterHotKeys = registerDevHotKeys(devEnv, args);
+				}
 
-			await setupDevEnv(devEnv, args.config, authHook, args);
+				await setupDevEnv(devEnv, args.config, authHook, args);
+			});
 		}
 
 		return {

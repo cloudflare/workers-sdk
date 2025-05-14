@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { execSync, spawn } from "node:child_process";
 import events from "node:events";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
@@ -966,6 +967,7 @@ export const pagesDevCommand = createCommand({
 		process.on("SIGINT", CLEANUP);
 		process.on("SIGTERM", CLEANUP);
 
+		assert(devServer.devEnv !== undefined);
 		await events.once(devServer.devEnv, "teardown");
 		const teardownRegistry = await devServer.teardownRegistryPromise;
 		await teardownRegistry?.(devServer.devEnv.config.latestConfig?.name);

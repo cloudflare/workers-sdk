@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
-import { logger } from "../../logger";
+import { getScopedLogger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import { convertBindingsToCfWorkerInitBindings } from "./utils";
@@ -143,6 +143,8 @@ export class LocalRuntimeController extends RuntimeController {
 	#mutex = new Mutex();
 	#mf?: Miniflare;
 
+	#logger = getScopedLogger();
+
 	onBundleStart(_: BundleStartEvent) {
 		// Ignored in local runtime
 	}
@@ -157,10 +159,10 @@ export class LocalRuntimeController extends RuntimeController {
 				);
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
 			if (this.#mf === undefined) {
-				logger.log(chalk.dim("⎔ Starting local server..."));
+				this.#logger.log(chalk.dim("⎔ Starting local server..."));
 				this.#mf = new Miniflare(options);
 			} else {
-				logger.log(chalk.dim("⎔ Reloading local server..."));
+				this.#logger.log(chalk.dim("⎔ Reloading local server..."));
 
 				await this.#mf.setOptions(options);
 			}
@@ -245,16 +247,16 @@ export class LocalRuntimeController extends RuntimeController {
 	}
 
 	#teardown = async (): Promise<void> => {
-		logger.debug("LocalRuntimeController teardown beginning...");
+		this.#logger.debug("LocalRuntimeController teardown beginning...");
 
 		if (this.#mf) {
-			logger.log(chalk.dim("⎔ Shutting down local server..."));
+			this.#logger.log(chalk.dim("⎔ Shutting down local server..."));
 		}
 
 		await this.#mf?.dispose();
 		this.#mf = undefined;
 
-		logger.debug("LocalRuntimeController teardown complete");
+		this.#logger.debug("LocalRuntimeController teardown complete");
 	};
 	async teardown() {
 		return this.#mutex.runWith(this.#teardown);

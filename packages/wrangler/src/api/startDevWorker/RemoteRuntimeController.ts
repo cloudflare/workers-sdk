@@ -11,7 +11,7 @@ import {
 	handlePreviewSessionUploadError,
 } from "../../dev/remote";
 import { MissingConfigError } from "../../errors";
-import { logger } from "../../logger";
+import { getScopedLogger } from "../../logger";
 import { getAccessToken } from "../../user/access";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
@@ -39,6 +39,8 @@ export class RemoteRuntimeController extends RuntimeController {
 	#mutex = new Mutex();
 
 	#session?: CfPreviewSession;
+
+	#logger = getScopedLogger();
 
 	async #previewSession(
 		props: Parameters<typeof getWorkerAccountAndContext>[0]
@@ -157,7 +159,7 @@ export class RemoteRuntimeController extends RuntimeController {
 	}
 
 	async #onBundleComplete({ config, bundle }: BundleCompleteEvent, id: number) {
-		logger.log(chalk.dim("⎔ Starting remote preview..."));
+		this.#logger.log(chalk.dim("⎔ Starting remote preview..."));
 
 		try {
 			const routes = config.triggers
@@ -185,7 +187,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			const auth = await unwrapHook(config.dev.auth);
 
 			if (this.#session) {
-				logger.log(chalk.dim("⎔ Detected changes, restarted server."));
+				this.#logger.log(chalk.dim("⎔ Detected changes, restarted server."));
 			}
 
 			this.#session ??= await this.#previewSession({
@@ -323,12 +325,12 @@ export class RemoteRuntimeController extends RuntimeController {
 
 	async teardown() {
 		if (this.#session) {
-			logger.log(chalk.dim("⎔ Shutting down remote preview..."));
+			this.#logger.log(chalk.dim("⎔ Shutting down remote preview..."));
 		}
-		logger.debug("RemoteRuntimeController teardown beginning...");
+		this.#logger.debug("RemoteRuntimeController teardown beginning...");
 		this.#session = undefined;
 		this.#abortController.abort();
-		logger.debug("RemoteRuntimeController teardown complete");
+		this.#logger.debug("RemoteRuntimeController teardown complete");
 	}
 
 	// *********************
