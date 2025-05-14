@@ -572,7 +572,7 @@ export const createContext = async (
 
 	template = {
 		workersTypes: "generated",
-		typesPath: "worker-configuration.d.ts",
+		typesPath: "./worker-configuration.d.ts",
 		envInterfaceName: "Env",
 		...template,
 	};
