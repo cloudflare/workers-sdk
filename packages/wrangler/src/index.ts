@@ -1246,7 +1246,7 @@ export function createCLIParser(argv: string[]) {
 			definition: secretsStoreSecretDuplicateCommand,
 		},
 	]);
-	registry.registerNamespace("cert");
+	registry.registerNamespace("secrets-store");
 
 	// workflows
 	registry.define([
