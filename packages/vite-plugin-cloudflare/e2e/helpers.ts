@@ -32,6 +32,7 @@ const testEnv = {
 const strictPeerDeps = {
 	pnpm: "--strict-peer-dependencies",
 	npm: "--strict-peer-deps",
+	// yarn does not have an option for strict checks
 	yarn: "",
 };
 
