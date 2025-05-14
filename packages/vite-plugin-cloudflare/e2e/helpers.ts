@@ -29,6 +29,12 @@ const testEnv = {
 	VITEST: undefined,
 };
 
+const strictPeerDeps = {
+	pnpm: "--strict-peer-dependencies",
+	npm: "--strict-peer-deps",
+	yarn: "",
+};
+
 /** Seed a test project from a fixture. */
 export function seed(fixture: string, pm: "pnpm" | "yarn" | "npm") {
 	const root = inject("root");
@@ -42,7 +48,9 @@ export function seed(fixture: string, pm: "pnpm" | "yarn" | "npm") {
 		debuglog("Fixture copied to " + projectPath);
 		await updateVitePluginVersion(projectPath);
 		debuglog("Updated vite-plugin version in package.json");
-		runCommand(`${pm} install`, projectPath, { attempts: 2 });
+		runCommand(`${pm} install ${strictPeerDeps[pm]}`, projectPath, {
+			attempts: 2,
+		});
 		debuglog("Installed node modules");
 	}, 200_000);
 
