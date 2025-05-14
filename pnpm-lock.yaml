@@ -1950,8 +1950,8 @@ importers:
   packages/vite-plugin-cloudflare:
     dependencies:
       '@cloudflare/unenv-preset':
-        specifier: workspace:*
-        version: link:../unenv-preset
+        specifier: 2.3.1
+        version: 2.3.1(unenv@2.0.0-rc.15)(workerd@1.20250508.0)
       '@mjackson/node-fetch-server':
         specifier: ^0.6.1
         version: 0.6.1
@@ -1971,8 +1971,8 @@ importers:
         specifier: ^0.2.12
         version: 0.2.12
       unenv:
-        specifier: 2.0.0-rc.17
-        version: 2.0.0-rc.17
+        specifier: 2.0.0-rc.15
+        version: 2.0.0-rc.15
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -3212,7 +3212,7 @@ importers:
         version: link:../kv-asset-handler
       '@cloudflare/unenv-preset':
         specifier: 2.3.1
-        version: 2.3.1(unenv@2.0.0-rc.17)(workerd@1.20250508.0)
+        version: 2.3.1(unenv@2.0.0-rc.15)(workerd@1.20250508.0)
       blake3-wasm:
         specifier: 2.1.5
         version: 2.1.5
@@ -3226,8 +3226,8 @@ importers:
         specifier: 6.3.0
         version: 6.3.0
       unenv:
-        specifier: 2.0.0-rc.17
-        version: 2.0.0-rc.17
+        specifier: 2.0.0-rc.15
+        version: 2.0.0-rc.15
       workerd:
         specifier: 1.20250508.0
         version: 1.20250508.0
@@ -14008,9 +14008,9 @@ snapshots:
     optionalDependencies:
       workerd: 1.20250417.0
 
-  '@cloudflare/unenv-preset@2.3.1(unenv@2.0.0-rc.17)(workerd@1.20250508.0)':
+  '@cloudflare/unenv-preset@2.3.1(unenv@2.0.0-rc.15)(workerd@1.20250508.0)':
     dependencies:
-      unenv: 2.0.0-rc.17
+      unenv: 2.0.0-rc.15
     optionalDependencies:
       workerd: 1.20250508.0
 
