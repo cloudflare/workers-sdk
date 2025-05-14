@@ -12922,6 +12922,87 @@ export default{
 			`);
 		});
 	});
+
+	describe("tag and message", () => {
+		it("should upload a tag and message", async () => {
+			writeWorkerSource();
+			writeWranglerConfig({});
+			mockUploadWorkerRequest();
+			mockSubDomainRequest();
+			mockGetWorkerSubdomain({ enabled: true });
+
+			await runWrangler(
+				"deploy ./index.js --tag test-tag --message test-message"
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				No bindings found.
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should output a warning if uploading a tag with old upload api", async () => {
+			writeWorkerSource({ type: "sw" });
+			writeWranglerConfig({});
+			mockUploadWorkerRequest({
+				expectedType: "sw",
+				useOldUploadApi: true,
+			});
+			mockSubDomainRequest();
+			mockGetWorkerSubdomain({ enabled: true });
+
+			await runWrangler("deploy ./index.js --tag test-tag");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				No bindings found.
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWorker does not support Worker Versions, ignoring tag and message.[0m
+
+				"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should output a warning if uploading a message with old upload api", async () => {
+			writeWorkerSource({ type: "sw" });
+			writeWranglerConfig({});
+			mockUploadWorkerRequest({
+				expectedType: "sw",
+				useOldUploadApi: true,
+			});
+			mockSubDomainRequest();
+			mockGetWorkerSubdomain({ enabled: true });
+
+			await runWrangler("deploy ./index.js --message test-message");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				No bindings found.
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWorker does not support Worker Versions, ignoring tag and message.[0m
+
+				"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+	});
 });
 
 /** Write mock assets to the file system so they can be uploaded. */
