@@ -1950,8 +1950,8 @@ importers:
   packages/vite-plugin-cloudflare:
     dependencies:
       '@cloudflare/unenv-preset':
-        specifier: 2.3.1
-        version: 2.3.1(unenv@2.0.0-rc.15)(workerd@1.20250508.0)
+        specifier: workspace:*
+        version: link:../unenv-preset
       '@mjackson/node-fetch-server':
         specifier: ^0.6.1
         version: 0.6.1
@@ -1971,8 +1971,8 @@ importers:
         specifier: ^0.2.12
         version: 0.2.12
       unenv:
-        specifier: 2.0.0-rc.15
-        version: 2.0.0-rc.15
+        specifier: 2.0.0-rc.17
+        version: 2.0.0-rc.17
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
