@@ -1,5 +1,18 @@
 # @cloudflare/vite-plugin
 
+## 1.2.1
+
+### Patch Changes
+
+- [#9248](https://github.com/cloudflare/workers-sdk/pull/9248) [`07f4010`](https://github.com/cloudflare/workers-sdk/commit/07f4010e6d2ee74a8af5659da68c68b5ef35400e) Thanks [@vicb](https://github.com/vicb)! - fix unenv version mismatch
+
+- [#9228](https://github.com/cloudflare/workers-sdk/pull/9228) [`0dc7e3c`](https://github.com/cloudflare/workers-sdk/commit/0dc7e3c5ba645b03a09d9ab958d3cc77ac2e08eb) Thanks [@vicb](https://github.com/vicb)! - Bump unenv to 2.0.0-rc.17
+
+- Updated dependencies [[`f61a08e`](https://github.com/cloudflare/workers-sdk/commit/f61a08e311a5aa6b24d56f1901d7fb17b16377b0), [`07f4010`](https://github.com/cloudflare/workers-sdk/commit/07f4010e6d2ee74a8af5659da68c68b5ef35400e), [`ea71df3`](https://github.com/cloudflare/workers-sdk/commit/ea71df3d485cfb37b4585b157ae6b95933b0335f), [`d033a7d`](https://github.com/cloudflare/workers-sdk/commit/d033a7da1c5b918d4e3bd2ea53bc0f0d20817715)]:
+  - @cloudflare/unenv-preset@2.3.2
+  - wrangler@4.15.1
+  - miniflare@4.20250508.1
+
 ## 1.2.0
 
 ### Minor Changes
