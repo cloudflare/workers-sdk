@@ -159,9 +159,14 @@ export class LocalRuntimeController extends RuntimeController {
 			const configBundle = await convertToConfigBundle(data);
 
 			if (getFlag("MIXED_MODE") && !data.config.dev?.remote) {
-				const remoteBindings = extractRemoteBindings(configBundle.bindings);
-				const convertedRemoteBindings =
-					convertCfWorkerInitBindingsToBindings(remoteBindings);
+				const remoteBindings = convertCfWorkerInitBindingsToBindings(
+					configBundle.bindings
+				);
+				const convertedRemoteBindings = Object.fromEntries(
+					Object.entries(remoteBindings ?? []).filter(
+						([, b]) => "remote" in b && b["remote"]
+					)
+				);
 
 				// TODO(perf): here we can save the converted remote bindings
 				//             and on new iterations we can diff the old and new
@@ -321,47 +326,4 @@ export class LocalRuntimeController extends RuntimeController {
 	emitReloadCompleteEvent(data: ReloadCompleteEvent) {
 		this.emit("reloadComplete", data);
 	}
-}
-
-type RemoteBindingsConfigs = Partial<
-	Pick<
-		MF.ConfigBundle["bindings"],
-		| "services"
-		| "kv_namespaces"
-		| "r2_buckets"
-		| "d1_databases"
-		| "queues"
-		| "workflows"
-		| "ai"
-	>
->;
-
-function extractRemoteBindings(
-	bindings: MF.ConfigBundle["bindings"]
-): RemoteBindingsConfigs {
-	const remoteBindings: RemoteBindingsConfigs = {};
-
-	if (bindings.ai) {
-		// AI is always remote
-		remoteBindings.ai = bindings.ai;
-	}
-
-	const keys = [
-		"services",
-		"kv_namespaces",
-		"r2_buckets",
-		"d1_databases",
-		"queues",
-		"workflows",
-	] as const;
-	for (const key of keys) {
-		if (bindings[key]) {
-			const remotes = bindings[key].filter(({ remote }) => remote);
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-			// @ts-ignore -- remotes is interpreted as the union of the possible types and not the one specific to the key
-			remoteBindings[key] = remotes;
-		}
-	}
-
-	return remoteBindings;
 }
