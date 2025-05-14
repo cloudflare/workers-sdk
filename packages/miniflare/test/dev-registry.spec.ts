@@ -429,7 +429,7 @@ test("DevRegistry: fetch to unknown durable object with dev registry disabled", 
 	t.is(res.status, 503);
 	t.is(result, "Service Unavailable");
 });
-test.skip("DevRegistry: fetch to external durable object", async (t) => {
+test("DevRegistry: fetch to durable object", async (t) => {
 	const tmp = await useTmp(t);
 	const unsafeDevRegistryPath = path.join(tmp, "dev-registry");
 	const remote = new Miniflare({
@@ -452,10 +452,7 @@ test.skip("DevRegistry: fetch to external durable object", async (t) => {
 
 			export default {
 				async fetch(request, env, ctx) {
-                    const ns = env.DO;
-					const id = ns.newUniqueId();
-					const stub = ns.get(id);
-					return stub.fetch(request);
+                    return new Response("Hello from the default Worker Entrypoint!");
 				}
 			}
 		`,
@@ -493,7 +490,7 @@ test.skip("DevRegistry: fetch to external durable object", async (t) => {
 	t.is(result, "Hello from Durable Object!");
 	t.is(res.status, 200);
 });
-test("DevRegistry: RPC to external durable object", async (t) => {
+test("DevRegistry: RPC to durable object", async (t) => {
 	const tmp = await useTmp(t);
 	const unsafeDevRegistryPath = path.join(tmp, "dev-registry");
 	const remote = new Miniflare({
