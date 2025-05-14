@@ -304,9 +304,11 @@ export async function bundleWorker(
 		inject.push(checkedFetchFileToInject);
 	}
 
-	// We injected the `CF-Connecting-IP` header in the entry worker on Miniflare
-	// This was previously stripped within miniflare but this causes an issue with TCP ingress
-	// due to the global outbound setup. This is a workaround until a fix is in place in workerd.
+	// We injected the `CF-Connecting-IP` header in the entry worker on Miniflare.
+	// It used to be stripped by Miniflare, but that caused TCP ingress failures
+	// because of the global outbound setup. This is a temporary workaround until
+	// a proper fix is landed in Workerd.
+	// See https://github.com/cloudflare/workers-sdk/issues/9238 for more details.
 	if (targetConsumer === "dev" && local) {
 		const stripCfConnectingIpHeaderFileToInject = path.join(
 			tmpDir.path,
