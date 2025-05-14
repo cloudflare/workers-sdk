@@ -36,6 +36,7 @@ import {
 } from "./utils";
 import type { Config } from "../../config";
 import type { CfUnsafe } from "../../deployment-bundle/worker";
+import type { Logger } from "../../logger";
 import type { ControllerEventMap } from "./BaseController";
 import type { ConfigUpdateEvent } from "./events";
 import type {
@@ -229,7 +230,8 @@ async function resolveTriggers(
 
 async function resolveConfig(
 	config: Config,
-	input: StartDevWorkerInput
+	input: StartDevWorkerInput,
+	logger: Logger
 ): Promise<StartDevWorkerOptions> {
 	if (
 		config.pages_build_output_dir &&
@@ -329,8 +331,6 @@ async function resolveConfig(
 	}
 
 	validateAssetsArgsAndConfig(resolved);
-
-	const logger = getScopedLogger();
 
 	const services = extractBindingsOfType("service", resolved.bindings);
 	if (services && services.length > 0 && resolved.dev?.remote) {
@@ -462,7 +462,11 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 				void this.#ensureWatchingConfig(fileConfig.configPath);
 			}
 
-			const resolvedConfig = await resolveConfig(fileConfig, input);
+			const resolvedConfig = await resolveConfig(
+				fileConfig,
+				input,
+				this.#logger
+			);
 			if (signal.aborted) {
 				return;
 			}
