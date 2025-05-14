@@ -8,8 +8,8 @@ import type { MixedModeConnectionString } from "miniflare";
 type BindingsOpt = StartDevWorkerInput["bindings"];
 
 export type MixedModeSession = Pick<Worker, "ready" | "dispose"> & {
-	["patchConfig"]: (bindings: BindingsOpt) => Promise<void>;
-	["mixedModeConnectionString"]: MixedModeConnectionString;
+	updateBindings: (bindings: BindingsOpt) => Promise<void>;
+	mixedModeConnectionString: MixedModeConnectionString;
 };
 
 export async function startMixedModeSession(
@@ -44,14 +44,14 @@ export async function startMixedModeSession(
 	const mixedModeConnectionString =
 		(await worker.url) as MixedModeConnectionString;
 
-	const patchConfig = async (newBindings: BindingsOpt) => {
+	const updateBindings = async (newBindings: BindingsOpt) => {
 		await worker.patchConfig({ bindings: newBindings });
 	};
 
 	return {
 		ready: worker.ready,
 		mixedModeConnectionString,
-		patchConfig,
+		updateBindings,
 		dispose: worker.dispose,
 	};
 }
