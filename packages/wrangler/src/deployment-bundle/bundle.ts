@@ -304,6 +304,30 @@ export async function bundleWorker(
 		inject.push(checkedFetchFileToInject);
 	}
 
+	// We injected the `CF-Connecting-IP` header in the entry worker on Miniflare
+	// This was previously stripped within miniflare but this causes an issue with TCP ingress
+	// due to the global outbound setup. This is a workaround until a fix is in place in workerd.
+	if (targetConsumer === "dev" && local) {
+		const stripCfConnectingIpHeaderFileToInject = path.join(
+			tmpDir.path,
+			"strip-cf-connecting-ip-header.js"
+		);
+
+		if (!fs.existsSync(stripCfConnectingIpHeaderFileToInject)) {
+			fs.writeFileSync(
+				stripCfConnectingIpHeaderFileToInject,
+				fs.readFileSync(
+					path.resolve(
+						getBasePath(),
+						"templates/strip-cf-connecting-ip-header.js"
+					)
+				)
+			);
+		}
+
+		inject.push(stripCfConnectingIpHeaderFileToInject);
+	}
+
 	// When multiple workers are running we need some way to disambiguate logs between them. Inject a patched version of `globalThis.console` that prefixes logs with the worker name
 	if (getFlag("MULTIWORKER")) {
 		middlewareToLoad.push({
