@@ -374,7 +374,7 @@ async function resolveConfig(
 	}
 
 	// prompt user to update their types if we detect that it is out of date
-	if (entry.file.endsWith(".ts")) {
+	if (entry.file.endsWith(".ts") || entry.file.endsWith(".tsx")) {
 		try {
 			const typesChanged = await checkTypesDiff(config);
 			if (typesChanged) {

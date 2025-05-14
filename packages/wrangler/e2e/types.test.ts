@@ -227,10 +227,22 @@ describe("types", () => {
 
 	it("should not error on `wrangler types --check` if types are up to date", async () => {
 		await helper.run(`wrangler types`);
-		const output = await helper.run(`wrangler types --check`);
+		let output = await helper.run(`wrangler types --check`);
+		expect(output.stderr).toBeFalsy();
 
+		await helper.run(`wrangler types --include-env=false`);
+		output = await helper.run(`wrangler types --check`);
+		expect(output.stderr).toBeFalsy();
+
+		await helper.run(`wrangler types --include-runtime=false`);
+		output = await helper.run(`wrangler types --check`);
+		expect(output.stderr).toBeFalsy();
+
+		await helper.run(`wrangler types ./custom.d.ts`);
+		output = await helper.run(`wrangler types ./custom.d.ts --check`);
+		expect(output.stderr).toBeFalsy();
 		expect(output.stdout).toContain(
-			`✨ Types at worker-configuration.d.ts are up to date.`
+			`✨ Types at ./custom.d.ts are up to date.`
 		);
 	});
 });
