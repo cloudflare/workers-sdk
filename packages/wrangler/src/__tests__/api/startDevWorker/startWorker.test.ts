@@ -1,5 +1,5 @@
+import http from "node:http";
 import path from "node:path";
-import { Response } from "miniflare";
 import dedent from "ts-dedent";
 import { startWorker } from "../../../api/startDevWorker";
 import { runInTempDir } from "../../helpers/run-in-tmp";
@@ -13,7 +13,22 @@ describe("startWorker", () => {
 	it.skipIf(process.platform === "win32")(
 		"strips the CF-Connecting-IP header from all outbound requests",
 		async (t) => {
-			t.onTestFinished(() => worker?.dispose());
+			const server = http.createServer((req, res) => {
+				res.writeHead(200);
+				res.end(
+					req.headers["cf-connecting-ip"] ?? "CF-Connecting-IP header stripped"
+				);
+			});
+
+			t.onTestFinished(() => {
+				server.close();
+			});
+
+			const address = server.listen(0).address();
+
+			if (address === null || typeof address === "string") {
+				expect.fail("Failed to get server address");
+			}
 
 			await seed({
 				"src/index.ts": dedent`
@@ -32,17 +47,11 @@ describe("startWorker", () => {
 			const worker = await startWorker({
 				name: "test-worker",
 				entrypoint: path.resolve("src/index.ts"),
-				dev: {
-					outboundService(request) {
-						return new Response(
-							request.headers.get("CF-Connecting-IP") ??
-								"CF-Connecting-IP header stripped"
-						);
-					},
-				},
 			});
 
-			const response = await worker.fetch("http://example.com");
+			t.onTestFinished(() => worker.dispose());
+
+			const response = await worker.fetch(`http://127.0.0.1:${address.port}`);
 			await expect(response.text()).resolves.toEqual(
 				"CF-Connecting-IP header stripped"
 			);
