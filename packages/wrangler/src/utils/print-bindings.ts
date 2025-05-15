@@ -377,7 +377,9 @@ export function printBindings(
 			entries: analytics_engine_datasets.map(({ binding, dataset }) => {
 				return {
 					key: binding,
-					value: addSuffix(dataset ?? binding),
+					value: addSuffix(dataset ?? binding, {
+						isSimulatedLocally: true,
+					}),
 				};
 			}),
 		});
