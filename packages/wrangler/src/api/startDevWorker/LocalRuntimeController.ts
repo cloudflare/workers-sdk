@@ -173,7 +173,7 @@ export class LocalRuntimeController extends RuntimeController {
 					})
 				);
 
-				// TODO(perf): here we can save the converted remote bindings
+				// TODO(DEVX-1893): here we can save the converted remote bindings
 				//             and on new iterations we can diff the old and new
 				//             converted remote bindings, if they are all the
 				//             same we can just leave the mixedModeSession untouched
