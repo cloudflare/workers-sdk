@@ -980,40 +980,44 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			});
 		});
 
-		it("can fetch DO container", async () => {
-			const output = await helper.run(`wrangler deploy`);
+		it(
+			"can fetch DO container",
+			{ timeout: 60 * 3 * 1000, retry: 3 },
+			async () => {
+				const output = await helper.run(`wrangler deploy`);
 
-			const match = output.stdout.match(
-				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-			);
-			assert(match?.groups);
-			const matchApplicationId = output.stdout.match(
-				/([(]Application ID: (?<applicationId>.+?)[)])/
-			);
-			assert(matchApplicationId?.groups);
-			const url = match.groups.url;
-			try {
-				await vi.waitFor(
-					async () => {
-						const response = await fetch(`${url}/do`);
-						if (!response.ok) {
-							throw new Error(
-								"Durable object transient error: " + (await response.text())
-							);
-						}
-
-						expect(await response.text()).toEqual("hello from container");
-					},
-
-					// big timeout for containers
-					// (3m)
-					{ timeout: 60 * 3 * 1000, interval: 1000 }
+				const match = output.stdout.match(
+					/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
 				);
-			} finally {
-				await helper.run(
-					`wrangler containers delete ${matchApplicationId.groups.applicationId}`
+				assert(match?.groups);
+				const matchApplicationId = output.stdout.match(
+					/([(]Application ID: (?<applicationId>.+?)[)])/
 				);
+				assert(matchApplicationId?.groups);
+				const url = match.groups.url;
+				try {
+					await vi.waitFor(
+						async () => {
+							const response = await fetch(`${url}/do`);
+							if (!response.ok) {
+								throw new Error(
+									"Durable object transient error: " + (await response.text())
+								);
+							}
+
+							expect(await response.text()).toEqual("hello from container");
+						},
+
+						// big timeout for containers
+						// (3m)
+						{ timeout: 60 * 3 * 1000, interval: 1000 }
+					);
+				} finally {
+					await helper.run(
+						`wrangler containers delete ${matchApplicationId.groups.applicationId}`
+					);
+				}
 			}
-		});
+		);
 	});
 });
