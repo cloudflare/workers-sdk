@@ -75,14 +75,14 @@ async function getBinaryFileContents(file: File<string | Uint8Array>) {
 	return readFile(file.path);
 }
 
-export function convertCfWorkerInitBindingstoBindings(
-	inputBindings: CfWorkerInit["bindings"]
+export function convertCfWorkerInitBindingsToBindings(
+	inputBindings: Partial<CfWorkerInit["bindings"]>
 ): StartDevWorkerOptions["bindings"] {
 	const output: StartDevWorkerOptions["bindings"] = {};
 
 	// required to retain type information
 	type Entries<T> = { [K in keyof T]: [K, T[K]] }[keyof T][];
-	type BindingsIterable = Entries<typeof inputBindings>;
+	type BindingsIterable = Entries<Required<typeof inputBindings>>;
 	const bindingsIterable = Object.entries(inputBindings) as BindingsIterable;
 
 	for (const [type, info] of bindingsIterable) {
