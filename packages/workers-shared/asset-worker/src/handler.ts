@@ -195,7 +195,7 @@ const resolveAssetIntentToResponse = async (
 export const canFetch = async (
 	request: Request,
 	env: Env,
-	configuration: Required<AssetConfig>,
+	configuration: Required<AssetConfig> & { hasStaticRouting?: boolean },
 	exists: typeof EntrypointType.prototype.unstable_exists
 ): Promise<boolean> => {
 	if (
@@ -203,7 +203,9 @@ export const canFetch = async (
 			flagIsEnabled(
 				configuration,
 				SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING
-			) && request.headers.get("Sec-Fetch-Mode") === "navigate"
+			) &&
+			request.headers.get("Sec-Fetch-Mode") === "navigate" &&
+			!configuration.hasStaticRouting
 		)
 	) {
 		configuration = {
