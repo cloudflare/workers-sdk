@@ -1,5 +1,11 @@
 # miniflare
 
+## 4.20250508.2
+
+### Patch Changes
+
+- [#9256](https://github.com/cloudflare/workers-sdk/pull/9256) [`3b384e2`](https://github.com/cloudflare/workers-sdk/commit/3b384e28c7b2c2be1bf959831ad538c56f2a8c8a) Thanks [@penalosa](https://github.com/penalosa)! - Move the Analytics Engine simulator implementation from JSRPC to a Wrapped binding. This fixes a regression introduced in https://github.com/cloudflare/workers-sdk/pull/8935 that preventing Analytics Engine bindings working in local dev for Workers with a compatibility date prior to JSRPC being enabled.
+
 ## 4.20250508.1
 
 ### Patch Changes
