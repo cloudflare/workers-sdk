@@ -24,5 +24,25 @@ c3-e2e:
 skip-v3-pr:
   - any:
       - changed-files:
-          - any-glob-to-all-files: ["!packages/wrangler/**/*"]
+          - any-globs-to-all-files:
+              [
+                "packages/create-cloudflare/**/*",
+                "packages/vitest-pool-workers/**/*",
+                "packages/vite-plugin-cloudflare/**/*",
+                "packages/chrome-devtools-patches/**/*",
+                "packages/cloudflare-workers-bindings-extension/**/*",
+                "packages/devprod-status-bot/**/*",
+                "packages/edge-preview-authenticated-proxy/**/*",
+                "packages/format-errors/**/*",
+                "packages/playground-preview-worker/**/*",
+                "packages/prerelease-registry/**/*",
+                "packages/quick-edit/**/*",
+                "packages/quick-edit-extension/**/*",
+                "packages/solarflare-theme/**/*",
+                "packages/turbo-r2-archive/**/*",
+                "packages/workers-editor-shared/**/*",
+                "packages/workers-playground/**/*",
+                "packages/workers-tsconfig/**/*",
+                "packages/workers.new/**/*",
+              ]
       - head-branch: "changeset-release/main"
