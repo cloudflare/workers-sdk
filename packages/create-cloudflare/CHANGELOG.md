@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.47.1
+
+### Patch Changes
+
+- [#9244](https://github.com/cloudflare/workers-sdk/pull/9244) [`f0f1055`](https://github.com/cloudflare/workers-sdk/commit/f0f10559ca7126c8fb8f902d2865cc91adf11872) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: set `compilerOptions.types` to `./worker-configuration.d.ts` instead of `worker-configuration.d.ts` in tsconfig.json
+
 ## 2.47.0
 
 ### Minor Changes
