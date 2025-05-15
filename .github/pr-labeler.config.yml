@@ -21,3 +21,8 @@ c3-e2e:
           # which are stored in packages/create-cloudflare/src/frameworks/package.json.
           - any-glob-to-any-file: "packages/create-cloudflare/src/**/*"
       - head-branch: "changeset-release/main"
+skip-v3-pr:
+  - any:
+      - changed-files:
+          - any-glob-to-all-files: ["!packages/wrangler/**/*"]
+      - head-branch: "changeset-release/main"
