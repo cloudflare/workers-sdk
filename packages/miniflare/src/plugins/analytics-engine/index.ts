@@ -35,10 +35,6 @@ export const ANALYTICS_ENGINE_PLUGIN: Plugin<
 		).map<Worker_Binding>(([name, config]) => {
 			return {
 				name,
-				service: {
-					name: `${ANALYTICS_ENGINE_PLUGIN_NAME}:local-simulator`,
-					entrypoint: "LocalAnalyticsEngineDataset",
-				},
 				wrapped: {
 					moduleName: `${ANALYTICS_ENGINE_PLUGIN_NAME}:local-simulator`,
 					innerBindings: [
