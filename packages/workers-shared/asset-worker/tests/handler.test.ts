@@ -1,6 +1,7 @@
 import { vi } from "vitest";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics } from "../src/analytics";
+import { SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING } from "../src/compatibility-flags";
 import { normalizeConfiguration } from "../src/configuration";
 import { canFetch, handleRequest } from "../src/handler";
 import type { AssetConfig } from "../../utils/types";
@@ -1124,6 +1125,80 @@ describe("[Asset Worker] `canFetch`", () => {
 		}
 	});
 
+	describe('should always return "true" for 404s or SPAs when static routing is present', async () => {
+		const exists = (pathname: string) => {
+			// only our special files are present
+			if (["/404.html", "/index.html"].includes(pathname)) {
+				return "some-etag";
+			}
+
+			return null;
+		};
+
+		for (const notFoundHandling of [
+			"single-page-application",
+			"404-page",
+		] as const) {
+			for (const headers of [{}, { "Sec-Fetch-Mode": "navigate" }] as Record<
+				string,
+				string
+			>[]) {
+				for (const flags of [
+					[SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING.disable],
+					[SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING.enable],
+				]) {
+					const config = normalizeConfiguration({
+						not_found_handling: notFoundHandling,
+						compatibility_flags: flags,
+						has_static_routing: true,
+					});
+
+					it(`notFoundHandling=${notFoundHandling} Sec-Fetch-Mode=${headers["Sec-Fetch-Mode"]} flags=${flags}`, async () => {
+						expect(
+							await canFetch(
+								new Request("https://example.com/foo", { headers }),
+								// @ts-expect-error Empty config default to using mocked jaeger
+								mockEnv,
+								config,
+								exists
+							)
+						).toBeTruthy();
+
+						expect(
+							await canFetch(
+								new Request("https://example.com/bar", { headers }),
+								// @ts-expect-error Empty config default to using mocked jaeger
+								mockEnv,
+								config,
+								exists
+							)
+						).toBeTruthy();
+
+						expect(
+							await canFetch(
+								new Request("https://example.com/", { headers }),
+								// @ts-expect-error Empty config default to using mocked jaeger
+								mockEnv,
+								config,
+								exists
+							)
+						).toBeTruthy();
+
+						expect(
+							await canFetch(
+								new Request("https://example.com/404", { headers }),
+								// @ts-expect-error Empty config default to using mocked jaeger
+								mockEnv,
+								config,
+								exists
+							)
+						).toBeTruthy();
+					});
+				}
+			}
+		}
+	});
+
 	it('should return "true" even for a bad method', async () => {
 		const exists = (pathname: string) => {
 			if (pathname === "/foo.html") {
@@ -1325,29 +1400,39 @@ describe("[Asset Worker] `canFetch`", () => {
 			[{ "Sec-Fetch-Mode": "cors" }, false],
 		] as const;
 
+		const hasStaticRoutingModes = [
+			[false, false],
+			[true, true],
+		] as const;
+
 		const matrix = [];
 		for (const compatibilityOptions of compatibilityOptionsModes) {
 			for (const notFoundHandling of notFoundHandlingModes) {
 				for (const headers of headersModes) {
-					matrix.push({
-						compatibilityDate: compatibilityOptions[0].compatibilityDate,
-						compatibilityFlags: compatibilityOptions[0].compatibilityFlags,
-						notFoundHandling: notFoundHandling[0],
-						headers: headers[0],
-						expected:
-							compatibilityOptions[1] && notFoundHandling[1] && headers[1],
-					});
+					for (const hasStaticRouting of hasStaticRoutingModes) {
+						matrix.push({
+							compatibilityDate: compatibilityOptions[0].compatibilityDate,
+							compatibilityFlags: compatibilityOptions[0].compatibilityFlags,
+							notFoundHandling: notFoundHandling[0],
+							headers: headers[0],
+							hasStaticRouting: hasStaticRouting[0],
+							expected:
+								(hasStaticRouting[1] && notFoundHandling[1]) ||
+								(compatibilityOptions[1] && notFoundHandling[1] && headers[1]),
+						});
+					}
 				}
 			}
 		}
 
 		it.each(matrix)(
-			"compatibility_date $compatibilityDate, compatibility_flags $compatibilityFlags, not_found_handling $notFoundHandling, headers: $headers -> $expected",
+			"compatibility_date $compatibilityDate, compatibility_flags $compatibilityFlags, not_found_handling $notFoundHandling, headers: $headers, hasStaticRouting $hasStaticRouting -> $expected",
 			async ({
 				compatibilityDate,
 				compatibilityFlags,
 				notFoundHandling,
 				headers,
+				hasStaticRouting,
 				expected,
 			}) => {
 				expect(
@@ -1359,6 +1444,7 @@ describe("[Asset Worker] `canFetch`", () => {
 							compatibility_date: compatibilityDate,
 							compatibility_flags: compatibilityFlags,
 							not_found_handling: notFoundHandling,
+							has_static_routing: hasStaticRouting,
 						}),
 						exists
 					)
@@ -1373,6 +1459,7 @@ describe("[Asset Worker] `canFetch`", () => {
 							compatibility_date: compatibilityDate,
 							compatibility_flags: compatibilityFlags,
 							not_found_handling: notFoundHandling,
+							has_static_routing: hasStaticRouting,
 						}),
 						exists
 					)
@@ -1387,6 +1474,7 @@ describe("[Asset Worker] `canFetch`", () => {
 							compatibility_date: compatibilityDate,
 							compatibility_flags: compatibilityFlags,
 							not_found_handling: notFoundHandling,
+							has_static_routing: hasStaticRouting,
 						}),
 						exists
 					)
@@ -1401,6 +1489,7 @@ describe("[Asset Worker] `canFetch`", () => {
 							compatibility_date: compatibilityDate,
 							compatibility_flags: compatibilityFlags,
 							not_found_handling: notFoundHandling,
+							has_static_routing: hasStaticRouting,
 						}),
 						exists
 					)
