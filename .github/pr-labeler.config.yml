@@ -1,7 +1,14 @@
 e2e:
   - any:
       - changed-files:
-          - any-glob-to-any-file: "packages/wrangler/e2e/**/*"
+          - any-glob-to-any-file:
+              [
+                "packages/wrangler/**/*",
+                "packages/miniflare/**/*",
+                "packages/vite-plugin-cloudflare/**/*",
+                "packages/create-cloudflare/**/*",
+                "packages/vitest-pool-workers/**/*",
+              ]
       - head-branch: "changeset-release/main"
 
 c3-e2e:
