@@ -1,5 +1,17 @@
 # wrangler
 
+## 4.15.2
+
+### Patch Changes
+
+- [#9257](https://github.com/cloudflare/workers-sdk/pull/9257) [`33daa09`](https://github.com/cloudflare/workers-sdk/commit/33daa0961fd8ae06ff9138dc63cb320dc934bf55) Thanks [@penalosa](https://github.com/penalosa)! - Relax R2 bucket validation for `pages dev` commands
+
+- [#9256](https://github.com/cloudflare/workers-sdk/pull/9256) [`3b384e2`](https://github.com/cloudflare/workers-sdk/commit/3b384e28c7b2c2be1bf959831ad538c56f2a8c8a) Thanks [@penalosa](https://github.com/penalosa)! - Move the Analytics Engine simulator implementation from JSRPC to a Wrapped binding. This fixes a regression introduced in https://github.com/cloudflare/workers-sdk/pull/8935 that preventing Analytics Engine bindings working in local dev for Workers with a compatibility date prior to JSRPC being enabled.
+
+- Updated dependencies [[`3b384e2`](https://github.com/cloudflare/workers-sdk/commit/3b384e28c7b2c2be1bf959831ad538c56f2a8c8a)]:
+  - miniflare@4.20250508.2
+  - @cloudflare/unenv-preset@2.3.2
+
 ## 4.15.1
 
 ### Patch Changes
