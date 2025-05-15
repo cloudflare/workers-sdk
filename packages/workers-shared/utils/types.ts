@@ -74,6 +74,7 @@ export const AssetConfigSchema = z.object({
 		.optional(),
 	redirects: RedirectsSchema,
 	headers: HeadersSchema,
+	has_static_routing: z.boolean().optional(),
 	...InternalConfigSchema.shape,
 });
 
