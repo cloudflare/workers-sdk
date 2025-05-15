@@ -98,6 +98,7 @@ export async function createRemoteWorkerInit(props: {
 	bindings: CfWorkerInit["bindings"];
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
+	minimal_mode?: boolean;
 }) {
 	const { entrypointSource: content, modules } = withSourceURLs(
 		props.bundle.path,
@@ -184,7 +185,8 @@ export async function createRemoteWorkerInit(props: {
 		placement: undefined, // no placement in dev
 		tail_consumers: undefined, // no tail consumers in dev - TODO revisit?
 		limits: undefined, // no limits in preview - not supported yet but can be added
-		observability: undefined, // no observability in dev
+		observability: undefined, // no observability in dev,
+		minimal_mode: props.minimal_mode
 	};
 
 	return init;

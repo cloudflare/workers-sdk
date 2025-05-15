@@ -447,7 +447,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 					env: input.env,
 					"dispatch-namespace": undefined,
 					"legacy-env": !input.legacy?.enableServiceEnvironments,
-					remote: input.dev?.remote,
+					remote: !!input.dev?.remote,
 					upstreamProtocol:
 						input.dev?.origin?.secure === undefined
 							? undefined

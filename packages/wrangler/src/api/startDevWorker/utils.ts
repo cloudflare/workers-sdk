@@ -330,11 +330,11 @@ export async function convertBindingsToCfWorkerInitBindings(
 			bindings.data_blobs ??= {};
 			bindings.data_blobs[name] = await getBinaryFileContents(binding.source);
 		} else if (binding.type === "browser") {
-			bindings.browser = { binding: name };
+			bindings.browser = { ...binding, binding: name };
 		} else if (binding.type === "ai") {
-			bindings.ai = { binding: name };
+			bindings.ai = { ...binding, binding: name };
 		} else if (binding.type === "images") {
-			bindings.images = { binding: name };
+			bindings.images = { ...binding, binding: name };
 		} else if (binding.type === "version_metadata") {
 			bindings.version_metadata = { binding: name };
 		} else if (binding.type === "durable_object_namespace") {

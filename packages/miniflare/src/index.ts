@@ -78,6 +78,7 @@ import {
 	ServiceDesignatorSchema,
 } from "./plugins/core";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
+import { imagesLocalFetcher } from "./plugins/images/fetcher";
 import {
 	Config,
 	Extension,
@@ -871,18 +872,22 @@ export class Miniflare {
 		request: Request,
 		customService: string
 	): Promise<Response> {
-		const slashIndex = customService.indexOf("/");
-		// TODO: technically may want to keep old versions around so can always
-		//  recover this in case of setOptions()?
-		const workerIndex = parseInt(customService.substring(0, slashIndex));
-		const serviceKind = customService[slashIndex + 1] as CustomServiceKind;
-		const serviceName = customService.substring(slashIndex + 2);
 		let service: z.infer<typeof ServiceDesignatorSchema> | undefined;
-		if (serviceKind === CustomServiceKind.UNKNOWN) {
-			service =
-				this.#workerOpts[workerIndex]?.core.serviceBindings?.[serviceName];
-		} else if (serviceName === CUSTOM_SERVICE_KNOWN_OUTBOUND) {
-			service = this.#workerOpts[workerIndex]?.core.outboundService;
+		if (customService === CoreBindings.IMAGES_SERVICE) {
+			service = imagesLocalFetcher;
+		} else {
+			const slashIndex = customService.indexOf("/");
+			// TODO: technically may want to keep old versions around so can always
+			//  recover this in case of setOptions()?
+			const workerIndex = parseInt(customService.substring(0, slashIndex));
+			const serviceKind = customService[slashIndex + 1] as CustomServiceKind;
+			const serviceName = customService.substring(slashIndex + 2);
+			if (serviceKind === CustomServiceKind.UNKNOWN) {
+				service =
+					this.#workerOpts[workerIndex]?.core.serviceBindings?.[serviceName];
+			} else if (serviceName === CUSTOM_SERVICE_KNOWN_OUTBOUND) {
+				service = this.#workerOpts[workerIndex]?.core.outboundService;
+			}
 		}
 		// Should only define custom service bindings if `service` is a function
 		assert(typeof service === "function");
