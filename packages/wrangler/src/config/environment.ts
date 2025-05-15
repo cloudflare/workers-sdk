@@ -285,10 +285,10 @@ interface EnvironmentInheritable {
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#triggers
 	 *
-	 * @default {crons:[]}
+	 * @default {crons: undefined}
 	 * @inheritable
 	 */
-	triggers: { crons: string[] };
+	triggers: { crons: string[] | undefined };
 
 	/**
 	 * Specify limits for runtime behavior.

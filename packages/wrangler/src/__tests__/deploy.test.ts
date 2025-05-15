@@ -2071,6 +2071,43 @@ Update them to point to this script instead?`,
 		it.todo("should error if it's a workers.dev route");
 	});
 
+	describe("triggers", () => {
+		it("should deploy the worker with a scheduled trigger", async () => {
+			const crons = ["*/5 * * * *", "0 18 * * 6L"];
+			writeWranglerConfig({
+				triggers: { crons },
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockPublishSchedulesRequest({ crons });
+			await runWrangler("deploy ./index");
+		});
+
+		it("should deploy the worker with an empty array of scheduled triggers", async () => {
+			const crons: string[] = [];
+			writeWranglerConfig({
+				triggers: { crons },
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockPublishSchedulesRequest({ crons });
+			await runWrangler("deploy ./index");
+		});
+
+		it.each([{ triggers: { crons: undefined } }, { triggers: undefined }, {}])(
+			"should deploy the worker without updating the scheduled triggers",
+			async (config) => {
+				writeWranglerConfig(config);
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				await runWrangler("deploy ./index");
+			}
+		);
+	});
+
 	describe("entry-points", () => {
 		it("should be able to use `index` with no extension as the entry-point (esm)", async () => {
 			writeWranglerConfig();
@@ -12943,6 +12980,38 @@ function mockDeploymentsListRequest() {
 
 function mockLastDeploymentRequest() {
 	msw.use(...mswSuccessDeploymentScriptMetadata);
+}
+
+function mockPublishSchedulesRequest({
+	crons = [],
+	env = undefined,
+	legacyEnv = false,
+}: {
+	crons: Config["triggers"]["crons"];
+	env?: string | undefined;
+	legacyEnv?: boolean | undefined;
+}) {
+	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
+	const environment = env && !legacyEnv ? "/environments/:envName" : "";
+
+	msw.use(
+		http.put(
+			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/schedules`,
+			async ({ request, params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toEqual(
+					legacyEnv && env ? `test-name-${env}` : "test-name"
+				);
+				if (!legacyEnv) {
+					expect(params.envName).toEqual(env);
+				}
+				const body = (await request.json()) as [{ cron: string }];
+				expect(body).toEqual(crons.map((cron) => ({ cron })));
+				return HttpResponse.json(createFetchResult(null));
+			},
+			{ once: true }
+		)
+	);
 }
 
 function mockPublishRoutesRequest({
