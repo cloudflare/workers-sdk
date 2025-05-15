@@ -39,7 +39,7 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 			return {
 				name,
 				wrapped: {
-					moduleName: `${DISPATCH_NAMESPACE_PLUGIN_NAME}:local-namespace`,
+					moduleName: `${DISPATCH_NAMESPACE_PLUGIN_NAME}:local-dispatch-namespace`,
 					innerBindings: [
 						{
 							name: "fetcher",
@@ -89,7 +89,7 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 				{
 					modules: [
 						{
-							name: `${DISPATCH_NAMESPACE_PLUGIN_NAME}:local-namespace`,
+							name: `${DISPATCH_NAMESPACE_PLUGIN_NAME}:local-dispatch-namespace`,
 							esModule: LOCAL_DISPATCH_NAMESPACE(),
 							internal: true,
 						},

@@ -1,6 +1,7 @@
 interface Env {
 	fetcher: Fetcher;
 }
+
 class LocalDispatchNamespace implements DispatchNamespace {
 	constructor(private env: Env) {}
 	get(
