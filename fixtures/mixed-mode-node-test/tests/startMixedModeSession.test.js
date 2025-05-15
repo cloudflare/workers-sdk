@@ -170,4 +170,43 @@ baseDescribe("startMixedModeSession", () => {
 		await mixedModeSession.ready;
 		await mixedModeSession.dispose();
 	});
+
+	test("Dispatch Namespace mixed mode binding", async () => {
+		const mixedModeSession = await experimental_startMixedModeSession({
+			DISPATCH: {
+				type: "dispatch_namespace",
+				namespace: "mixed-mode-test-namespace",
+			},
+		});
+
+		const mf = new Miniflare({
+			compatibilityDate: "2025-01-01",
+			modules: true,
+			script: /* javascript */ `
+			export default {
+				async fetch(request, env) {
+					try{
+						const worker = env.DISPATCH.get("mixed-mode-test-customer-worker")
+					return Response.json({
+						"worker": await (await worker.fetch("http://example.com")).text(),
+					})}catch(e){console.log(e);return new Response(e)}
+				}
+			}
+		`,
+			dispatchNamespaces: {
+				DISPATCH: {
+					namespace: "mixed-mode-test-namespace",
+					mixedModeConnectionString: mixedModeSession.mixedModeConnectionString,
+				},
+			},
+		});
+		const response = await (
+			await mf.dispatchFetch("http://example.com")
+		).text();
+		assert.match(response, /Hello from customer worker/);
+		await mf.dispose();
+
+		await mixedModeSession.ready;
+		await mixedModeSession.dispose();
+	});
 });
