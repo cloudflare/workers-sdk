@@ -1,7 +1,8 @@
+import { generateStaticRoutingRuleMatcher } from "../../asset-worker/src/utils/rules-engine";
 import { PerformanceTimer } from "../../utils/performance";
 import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
-import { Analytics, DISPATCH_TYPE } from "./analytics";
+import { Analytics, DISPATCH_TYPE, STATIC_ROUTING_DECISION } from "./analytics";
 import { applyConfigurationDefaults } from "./configuration";
 import type AssetWorker from "../../asset-worker/src/index";
 import type {
@@ -53,6 +54,7 @@ export default {
 				env.CONFIG?.script_id
 			);
 
+			const hasStaticRouting = env.CONFIG.static_routing !== undefined;
 			const config = applyConfigurationDefaults(env.CONFIG);
 
 			const url = new URL(request.url);
@@ -74,6 +76,69 @@ export default {
 			}
 
 			const maybeSecondRequest = request.clone();
+
+			if (config.static_routing) {
+				// evaluate "exclude" rules
+				const excludeRulesMatcher = generateStaticRoutingRuleMatcher(
+					config.static_routing.exclude ?? []
+				);
+				if (
+					excludeRulesMatcher({
+						request,
+					})
+				) {
+					// direct to asset worker
+					analytics.setData({
+						dispatchtype: DISPATCH_TYPE.WORKER,
+						staticRoutingDecision: STATIC_ROUTING_DECISION.EXCLUDE,
+					});
+					return await env.JAEGER.enterSpan("dispatch_worker", async (span) => {
+						span.setTags({
+							hasUserWorker: config.has_user_worker,
+							asset: "static_routing",
+							dispatchType: DISPATCH_TYPE.ASSETS,
+						});
+
+						return env.ASSET_WORKER.fetch(maybeSecondRequest);
+					});
+				}
+				// evaluate "include" rules
+				const includeRulesMatcher = generateStaticRoutingRuleMatcher(
+					config.static_routing.include
+				);
+				if (
+					includeRulesMatcher({
+						request,
+					})
+				) {
+					if (!config.has_user_worker) {
+						throw new Error(
+							"Fetch for user worker without having a user worker binding"
+						);
+					}
+					// direct to user worker
+					analytics.setData({
+						dispatchtype: DISPATCH_TYPE.WORKER,
+						staticRoutingDecision: STATIC_ROUTING_DECISION.INCLUDE,
+					});
+					return await env.JAEGER.enterSpan("dispatch_worker", async (span) => {
+						span.setTags({
+							hasUserWorker: true,
+							asset: "static_routing",
+							dispatchType: DISPATCH_TYPE.WORKER,
+						});
+
+						userWorkerInvocation = true;
+						return env.USER_WORKER.fetch(maybeSecondRequest);
+					});
+				}
+
+				analytics.setData({
+					staticRoutingDecision: hasStaticRouting
+						? STATIC_ROUTING_DECISION.NOT_ROUTED
+						: STATIC_ROUTING_DECISION.NOT_PROVIDED,
+				});
+			}
 
 			// User's configuration indicates they want user-Worker to run ahead of any
 			// assets. Do not provide any fallback logic.
