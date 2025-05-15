@@ -819,7 +819,7 @@ describe("writes debug logs to hidden file", () => {
 	});
 });
 
-describe.only("analytics engine", () => {
+describe("analytics engine", () => {
 	describe.each([{ cmd: "wrangler dev" }])(
 		"mock analytics engine datasets: $cmd",
 		({ cmd }) => {
