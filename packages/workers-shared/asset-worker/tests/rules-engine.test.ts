@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { generateRulesMatcher, replacer } from "../src/utils/rules-engine";
+import {
+	generateRulesMatcher,
+	generateStaticRoutingRuleMatcher,
+	replacer,
+} from "../src/utils/rules-engine";
 
 describe("rules engine", () => {
 	test("it should match simple pathname hosts", () => {
@@ -113,5 +117,53 @@ describe("replacer", () => {
 		).toEqual(
 			"Link: </assets/js/main.js>; rel=preload; as=script, </assets/js/lang.js>; rel=preload; as=script"
 		);
+	});
+});
+
+describe("static routing rules", () => {
+	test("should return true for a request that matches", () => {
+		expect(
+			generateStaticRoutingRuleMatcher(["/some/path"])({
+				request: new Request("https://site.com/some/path"),
+			})
+		).toEqual(true);
+
+		expect(
+			generateStaticRoutingRuleMatcher(["/some/*"])({
+				request: new Request("https://site.com/some/path"),
+			})
+		).toEqual(true);
+
+		expect(
+			generateStaticRoutingRuleMatcher(["/no/match", "/some/*"])({
+				request: new Request("https://site.com/some/path"),
+			})
+		).toEqual(true);
+	});
+
+	test("should return false for a request that does not match", () => {
+		expect(
+			generateStaticRoutingRuleMatcher(["/some/path"])({
+				request: new Request("https://site.com"),
+			})
+		).toEqual(false);
+
+		expect(
+			generateStaticRoutingRuleMatcher(["/some/*"])({
+				request: new Request("https://site.com/path"),
+			})
+		).toEqual(false);
+
+		expect(
+			generateStaticRoutingRuleMatcher(["/some/path", "/other/path"])({
+				request: new Request("https://site.com/path"),
+			})
+		).toEqual(false);
+
+		expect(
+			generateStaticRoutingRuleMatcher([])({
+				request: new Request("https://site.com/some/path"),
+			})
+		).toEqual(false);
 	});
 });
