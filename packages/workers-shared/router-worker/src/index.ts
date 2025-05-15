@@ -163,7 +163,9 @@ export default {
 			}
 
 			// If we have a user-Worker, but no assets, dispatch to Worker script
-			const assetsExist = await env.ASSET_WORKER.unstable_canFetch(request);
+			const assetsExist = await env.ASSET_WORKER.unstable_canFetch(request, {
+				hasStaticRouting,
+			});
 			if (config.has_user_worker && !assetsExist) {
 				analytics.setData({ dispatchtype: DISPATCH_TYPE.WORKER });
 
