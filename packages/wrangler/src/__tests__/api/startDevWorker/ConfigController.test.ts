@@ -4,6 +4,7 @@ import dedent from "ts-dedent";
 import { describe, it } from "vitest";
 import { ConfigController } from "../../../api/startDevWorker/ConfigController";
 import { unwrapHook } from "../../../api/startDevWorker/utils";
+import { Logger, run } from "../../../logger";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";
@@ -17,6 +18,15 @@ async function waitForConfigUpdate(
 	return event;
 }
 
+function getConfigController() {
+	const testLogger = new Logger();
+	testLogger.loggerLevel = "none";
+	return run(testLogger, () => {
+		const controller = new ConfigController();
+		return controller;
+	});
+}
+
 describe("ConfigController", () => {
 	runInTempDir();
 	mockConsoleMethods();
@@ -24,7 +34,7 @@ describe("ConfigController", () => {
 	mockApiToken();
 
 	it("should emit configUpdate events with defaults applied", async () => {
-		const controller = new ConfigController();
+		const controller = getConfigController();
 		const event = waitForConfigUpdate(controller);
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
@@ -58,7 +68,7 @@ describe("ConfigController", () => {
 	});
 
 	it("should apply module root to parent if main is nested from base_dir", async () => {
-		const controller = new ConfigController();
+		const controller = getConfigController();
 		const event = waitForConfigUpdate(controller);
 		await seed({
 			"some/base_dir/nested/index.js": dedent/* javascript */ `
@@ -93,7 +103,7 @@ base_dir = \"./some/base_dir\"`,
 		});
 	});
 	it("should shallow merge patched config", async () => {
-		const controller = new ConfigController();
+		const controller = getConfigController();
 		const event1 = waitForConfigUpdate(controller);
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
@@ -187,7 +197,7 @@ base_dir = \"./some/base_dir\"`,
 	});
 
 	it("should use account_id from config file before env var", async () => {
-		const controller = new ConfigController();
+		const controller = getConfigController();
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
                 export default {}

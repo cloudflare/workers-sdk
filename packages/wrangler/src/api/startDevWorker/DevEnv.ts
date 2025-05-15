@@ -1,12 +1,13 @@
 import assert from "node:assert";
 import { EventEmitter } from "node:events";
-import { logger } from "../../logger";
+import { getScopedLogger } from "../../logger";
 import { formatMessage, ParseError } from "../../parse";
 import { BundlerController } from "./BundlerController";
 import { ConfigController } from "./ConfigController";
 import { LocalRuntimeController } from "./LocalRuntimeController";
 import { ProxyController } from "./ProxyController";
 import { RemoteRuntimeController } from "./RemoteRuntimeController";
+import type { Logger } from "../../logger";
 import type { Controller, RuntimeController } from "./BaseController";
 import type { ErrorEvent } from "./events";
 import type { StartDevWorkerInput, Worker } from "./types";
@@ -17,7 +18,11 @@ export class DevEnv extends EventEmitter {
 	runtimes: RuntimeController[];
 	proxy: ProxyController;
 
+	#logger: Logger;
+
 	async startWorker(options: StartDevWorkerInput): Promise<Worker> {
+		this.#logger.loggerLevel = options.dev?.logLevel ?? "log";
+
 		const worker = createWorkerObject(this);
 
 		try {
@@ -41,6 +46,8 @@ export class DevEnv extends EventEmitter {
 	} = {}) {
 		super();
 
+		this.#logger = getScopedLogger();
+
 		this.config = config;
 		this.bundler = bundler;
 		this.runtimes = runtimes;
@@ -52,8 +59,11 @@ export class DevEnv extends EventEmitter {
 		});
 
 		this.on("error", (event: ErrorEvent) => {
-			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
-			logger.debug("=> Error contextual data:", event.data);
+			this.#logger.debug(
+				`Error in ${event.source}: ${event.reason}\n`,
+				event.cause
+			);
+			this.#logger.debug("=> Error contextual data:", event.data);
 		});
 
 		config.on("configUpdate", (event) => {
@@ -94,7 +104,7 @@ export class DevEnv extends EventEmitter {
 	// *********************
 
 	async teardown() {
-		logger.debug("DevEnv teardown beginning...");
+		this.#logger.debug("DevEnv teardown beginning...");
 
 		await Promise.all([
 			this.config.teardown(),
@@ -110,7 +120,7 @@ export class DevEnv extends EventEmitter {
 
 		this.emit("teardown");
 
-		logger.debug("DevEnv teardown complete");
+		this.#logger.debug("DevEnv teardown complete");
 	}
 
 	emitErrorEvent(ev: ErrorEvent) {
@@ -119,8 +129,8 @@ export class DevEnv extends EventEmitter {
 			(ev.reason.startsWith("Failed to send message to") ||
 				ev.reason.startsWith("Could not connect to InspectorProxyWorker"))
 		) {
-			logger.debug(`Error in ${ev.source}: ${ev.reason}\n`, ev.cause);
-			logger.debug("=> Error contextual data:", ev.data);
+			this.#logger.debug(`Error in ${ev.source}: ${ev.reason}\n`, ev.cause);
+			this.#logger.debug("=> Error contextual data:", ev.data);
 		}
 		// Parse errors are recoverable by changing your Wrangler configuration file and saving
 		// All other errors from the ConfigController are non-recoverable
@@ -128,7 +138,7 @@ export class DevEnv extends EventEmitter {
 			ev.source === "ConfigController" &&
 			ev.cause instanceof ParseError
 		) {
-			logger.log(formatMessage(ev.cause));
+			this.#logger.log(formatMessage(ev.cause));
 		}
 		// if other knowable + recoverable errors occur, handle them here
 		else {

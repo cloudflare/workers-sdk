@@ -3,6 +3,7 @@ import path from "path";
 import dedent from "ts-dedent";
 import { test as base, describe } from "vitest";
 import { BundlerController } from "../../../api/startDevWorker/BundlerController";
+import { Logger, run } from "../../../logger";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { seed } from "../../helpers/seed";
@@ -19,11 +20,15 @@ function findSourceFile(source: string, name: string): string {
 const test = base.extend<{ controller: BundlerController }>({
 	// eslint-disable-next-line no-empty-pattern
 	controller: async ({}, use) => {
-		const controller = new BundlerController();
+		const testLogger = new Logger();
+		testLogger.loggerLevel = "none";
+		await run(testLogger, async () => {
+			const controller = new BundlerController();
 
-		await use(controller);
+			await use(controller);
 
-		await controller.teardown();
+			await controller.teardown();
+		});
 	},
 });
 

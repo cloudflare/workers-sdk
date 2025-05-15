@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import events from "node:events";
 import { fetch, Request } from "undici";
 import { startDev } from "../dev";
@@ -237,6 +238,7 @@ export async function unstable_dev(
 		port,
 		address,
 		stop: async () => {
+			assert(devServer.devEnv !== undefined);
 			await devServer.devEnv.teardown.bind(devServer.devEnv)();
 			const teardownRegistry = await devServer.teardownRegistryPromise;
 			await teardownRegistry?.(devServer.devEnv.config.latestConfig?.name);
@@ -249,6 +251,7 @@ export async function unstable_dev(
 			);
 		},
 		waitUntilExit: async () => {
+			assert(devServer.devEnv !== undefined);
 			await events.once(devServer.devEnv, "teardown");
 		},
 	};

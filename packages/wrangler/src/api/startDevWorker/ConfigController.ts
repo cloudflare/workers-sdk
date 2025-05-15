@@ -13,7 +13,7 @@ import {
 import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { UserError } from "../../errors";
-import { logger } from "../../logger";
+import { getScopedLogger } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
 import { requireApiToken, requireAuth } from "../../user";
 import {
@@ -36,6 +36,7 @@ import {
 } from "./utils";
 import type { Config } from "../../config";
 import type { CfUnsafe } from "../../deployment-bundle/worker";
+import type { Logger } from "../../logger";
 import type { ControllerEventMap } from "./BaseController";
 import type { ConfigUpdateEvent } from "./events";
 import type {
@@ -229,7 +230,8 @@ async function resolveTriggers(
 
 async function resolveConfig(
 	config: Config,
-	input: StartDevWorkerInput
+	input: StartDevWorkerInput,
+	logger: Logger
 ): Promise<StartDevWorkerOptions> {
 	if (
 		config.pages_build_output_dir &&
@@ -400,6 +402,8 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	#configWatcher?: ReturnType<typeof watch>;
 	#abortController?: AbortController;
 
+	#logger = getScopedLogger();
+
 	async #ensureWatchingConfig(configPath: string | undefined) {
 		await this.#configWatcher?.close();
 		if (configPath) {
@@ -407,7 +411,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 				persistent: true,
 				ignoreInitial: true,
 			}).on("change", async (_event) => {
-				logger.log(`${path.basename(configPath)} changed...`);
+				this.#logger.log(`${path.basename(configPath)} changed...`);
 				assert(
 					this.latestInput,
 					"Cannot be watching config without having first set an input"
@@ -468,7 +472,11 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 				void this.#ensureWatchingConfig(fileConfig.configPath);
 			}
 
-			const resolvedConfig = await resolveConfig(fileConfig, input);
+			const resolvedConfig = await resolveConfig(
+				fileConfig,
+				input,
+				this.#logger
+			);
 			if (signal.aborted) {
 				return;
 			}
@@ -496,9 +504,9 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	// ******************
 
 	async teardown() {
-		logger.debug("ConfigController teardown beginning...");
+		this.#logger.debug("ConfigController teardown beginning...");
 		await this.#configWatcher?.close();
-		logger.debug("ConfigController teardown complete");
+		this.#logger.debug("ConfigController teardown complete");
 	}
 
 	// *********************

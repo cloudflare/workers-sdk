@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { format } from "node:util";
 import chalk from "chalk";
 import CLITable from "cli-table3";
@@ -216,3 +217,20 @@ export function logBuildFailure(errors: Message[], warnings: Message[]) {
 
 	logBuildWarnings(warnings);
 }
+
+const scopedLoggers = new AsyncLocalStorage<Logger>();
+
+export const run = <V>(scopedLogger: Logger, cb: () => V) =>
+	scopedLoggers.run(scopedLogger, cb);
+
+export const getScopedLogger = () => {
+	const store = scopedLoggers.getStore();
+	if (store === undefined) {
+		throw new Error("No scoped logger store instantiated");
+	}
+	const value = scopedLoggers.getStore();
+	if (value === undefined) {
+		throw new Error("No scoped logger found in store");
+	}
+	return value;
+};

@@ -12,7 +12,7 @@ import {
 import { runCustomBuild } from "../../deployment-bundle/run-custom-build";
 import { getAssetChangeMessage } from "../../dev";
 import { runBuild } from "../../dev/use-esbuild";
-import { logger } from "../../logger";
+import { getScopedLogger } from "../../logger";
 import { isNavigatorDefined } from "../../navigator-user-agent";
 import { debounce } from "../../pages/utils";
 import { getWranglerTmpDir } from "../../paths";
@@ -43,6 +43,8 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 	// Handle aborting in-flight custom builds as new ones come in from the filesystem watcher
 	#customBuildAborter = new AbortController();
 
+	#logger = getScopedLogger();
+
 	async #runCustomBuild(config: StartDevWorkerOptions, filePath: string) {
 		// If a new custom build comes in, we need to cancel in-flight builds
 		this.#customBuildAborter.abort();
@@ -52,7 +54,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		const buildAborter = this.#customBuildAborter;
 		const relativeFile =
 			path.relative(config.projectRoot, config.entrypoint) || ".";
-		logger.log(`The file ${filePath} changed, restarting build...`);
+		this.#logger.log(`The file ${filePath} changed, restarting build...`);
 		this.emitBundleStartEvent(config);
 		try {
 			await runCustomBuild(
@@ -173,7 +175,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				entrypointSource: readFileSync(entrypointPath, "utf8"),
 			});
 		} catch (err) {
-			logger.error("Custom build failed:", err);
+			this.#logger.error("Custom build failed:", err);
 			this.emitErrorEvent({
 				type: "error",
 				reason: "Custom build failed",
@@ -313,7 +315,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				ignoreInitial: true,
 			}).on("all", async (eventName, filePath) => {
 				const message = getAssetChangeMessage(eventName, filePath);
-				logger.debug(`🌀 ${message}...`);
+				this.#logger.debug(`🌀 ${message}...`);
 				debouncedRefreshBundle();
 			});
 		}
@@ -326,7 +328,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 		try {
 			this.#tmpDir = getWranglerTmpDir(event.config.projectRoot, "dev");
 		} catch (e) {
-			logger.error(
+			this.#logger.error(
 				"Failed to create temporary directory to store built files."
 			);
 			this.emitErrorEvent({
@@ -344,7 +346,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 	}
 
 	async teardown() {
-		logger.debug("BundlerController teardown beginning...");
+		this.#logger.debug("BundlerController teardown beginning...");
 		this.#customBuildAborter?.abort();
 		this.#tmpDir?.remove();
 		await Promise.all([
@@ -352,7 +354,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 			this.#customBuildWatcher?.close(),
 			this.#assetsWatcher?.close(),
 		]);
-		logger.debug("BundlerController teardown complete");
+		this.#logger.debug("BundlerController teardown complete");
 	}
 
 	emitBundleStartEvent(config: StartDevWorkerOptions) {

@@ -25,6 +25,7 @@ export async function startMixedModeSession(
 	const worker = await startWorker({
 		config: proxyServerWorkerWranglerConfig,
 		dev: {
+			logLevel: "none",
 			remote: true,
 			auth: options?.auth,
 		},
