@@ -36,8 +36,17 @@ export const ANALYTICS_ENGINE_PLUGIN: Plugin<
 			return {
 				name,
 				service: {
-					name: `${ANALYTICS_ENGINE_PLUGIN_NAME}:${config.dataset}`,
+					name: `${ANALYTICS_ENGINE_PLUGIN_NAME}:local-simulator`,
 					entrypoint: "LocalAnalyticsEngineDataset",
+				},
+				wrapped: {
+					moduleName: `${ANALYTICS_ENGINE_PLUGIN_NAME}:local-simulator`,
+					innerBindings: [
+						{
+							name: "dataset",
+							json: JSON.stringify(config.dataset),
+						},
+					],
 				},
 			};
 		});
@@ -59,29 +68,19 @@ export const ANALYTICS_ENGINE_PLUGIN: Plugin<
 			return [];
 		}
 
-		return [
-			...Object.entries(options.analyticsEngineDatasets).map<Worker_Binding>(
-				([_, config]) => {
-					return {
-						name: `${ANALYTICS_ENGINE_PLUGIN_NAME}:${config.dataset}`,
-						worker: {
-							compatibilityDate: "2025-01-01",
-							modules: [
-								{
-									name: "analytics-engine.worker.js",
-									esModule: ANALYTICS_ENGINE(),
-								},
-							],
-							bindings: [
-								{
-									name: "dataset",
-									json: JSON.stringify(config.dataset),
-								},
-							],
+		return {
+			services: [],
+			extensions: [
+				{
+					modules: [
+						{
+							name: `${ANALYTICS_ENGINE_PLUGIN_NAME}:local-simulator`,
+							esModule: ANALYTICS_ENGINE(),
+							internal: true,
 						},
-					};
-				}
-			),
-		];
+					],
+				},
+			],
+		};
 	},
 };

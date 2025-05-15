@@ -830,7 +830,7 @@ describe("analytics engine", () => {
 						"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
-				compatibility_date = "2024-08-08"
+				compatibility_date = "2022-08-08"
 
 				[[analytics_engine_datasets]]
 				binding = "ANALYTICS_BINDING"
