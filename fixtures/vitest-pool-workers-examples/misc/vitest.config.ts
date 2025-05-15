@@ -7,17 +7,19 @@ export default defineWorkersProject({
 		"CONFIG_NESTED.DEFINED.THING": "[1,2,3]",
 	},
 	test: {
+		exclude: ["test/assets.test.ts"],
 		poolOptions: {
 			workers: {
 				singleWorker: true,
 				miniflare: {
-					assets: {
-						directory: "./public",
-						binding: "ASSETS",
-					},
 					kvNamespaces: ["KV_NAMESPACE"],
 					outboundService(request) {
 						return new Response(`fallthrough:${request.method} ${request.url}`);
+					},
+					serviceBindings: {
+						ASSETS(request) {
+							return new Response(`assets:${request.method} ${request.url}`);
+						},
 					},
 					workers: [
 						{

@@ -14,10 +14,4 @@
 			},
 		],
 	},
-	"assets": {
-		// This will be overridden by the assets config in vitest.config.ts
-		// See https://github.com/cloudflare/workers-sdk/issues/9130
-		"directory": "./does-not-exist",
-		"binding": "ASSETS",
-	},
 }
