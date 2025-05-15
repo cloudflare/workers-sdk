@@ -17,7 +17,6 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { getBasePath } from "../paths";
-import { bucketFormatMessage, isValidR2BucketName } from "../r2/helpers";
 import * as shellquote from "../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
 import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
@@ -1267,15 +1266,6 @@ function getBindingsFromArgs(args: typeof pagesDevCommand.args): Partial<
 
 				if (!binding) {
 					logger.warn("Could not parse R2 binding:", r2.toString());
-					return;
-				}
-
-				const bucketName = ref || binding.toString();
-
-				if (!isValidR2BucketName(bucketName)) {
-					logger.error(
-						`The bucket name "${bucketName}" is invalid. ${bucketFormatMessage}`
-					);
 					return;
 				}
 

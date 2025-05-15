@@ -115,7 +115,7 @@ describe.sequential.each([{ cmd: "wrangler pages dev" }])(
 					}`,
 			});
 			const worker = helper.runLongLived(
-				`${cmd} --inspector-port ${inspectorPort} . --port ${port} --service TEST_SERVICE=test-worker --kv TEST_KV --do TEST_DO=TestDurableObject@a --d1 TEST_D1 --r2 test-r2`
+				`${cmd} --inspector-port ${inspectorPort} . --port ${port} --service TEST_SERVICE=test-worker --kv TEST_KV --do TEST_DO=TestDurableObject@a --d1 TEST_D1 --r2 TEST_R2`
 			);
 			await worker.waitForReady();
 			expect(normalizeOutput(worker.currentOutput)).toContain(
@@ -127,7 +127,7 @@ describe.sequential.each([{ cmd: "wrangler pages dev" }])(
 					- D1 Databases:
 					  - TEST_D1: local-TEST_D1 (TEST_D1) [simulated locally]
 					- R2 Buckets:
-					  - test-r2: test-r2 [simulated locally]
+					  - TEST_R2: TEST_R2 [simulated locally]
 					- Services:
 					  - TEST_SERVICE: test-worker [not connected]
 		`
