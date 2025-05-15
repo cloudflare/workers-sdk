@@ -54,14 +54,13 @@ export const checkTypesDiff = async (
 			secondaryConfigs.push(readConfig({ config: configPath }));
 		}
 	}
-
 	const { entrypoint, secondaryEntries } = await getEntrypointsFromConfigs(
 		primaryConfig,
 		secondaryConfigs
 	);
-	let envOutOfDate = false;
 
-	if (args.includeEnv !== false) {
+	let envOutOfDate = false;
+	if (args.includeEnv) {
 		const { envHash } = await generateEnvTypes(
 			primaryConfig,
 			args,

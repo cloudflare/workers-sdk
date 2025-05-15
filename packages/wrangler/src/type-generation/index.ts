@@ -65,7 +65,7 @@ export const typesCommand = createCommand({
 		check: {
 			type: "boolean",
 			demandOption: false,
-			describe: "Check if the types at the provided path are up-to-date.",
+			describe: "Check if the types at the provided path are up to date.",
 		},
 		"experimental-include-runtime": {
 			alias: "x-include-runtime",
@@ -152,7 +152,7 @@ export const typesCommand = createCommand({
 					1
 				);
 			} else {
-				logger.log(`✨ Types at ${args.path} are up to date.`);
+				logger.log(`✨ Types at ${args.path} are up to date.\n`);
 				return;
 			}
 		}
