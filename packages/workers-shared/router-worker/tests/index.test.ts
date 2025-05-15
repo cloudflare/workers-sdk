@@ -15,7 +15,7 @@ describe("unit tests", async () => {
 			},
 		} as Env;
 
-		void expect(
+		await expect(
 			async () => await worker.fetch(request, env, ctx)
 		).rejects.toThrowError(
 			"Fetch for user worker without having a user worker binding"
