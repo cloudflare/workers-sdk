@@ -1273,7 +1273,7 @@ function getBindingsFromArgs(args: PagesDevArguments): Partial<
 				}
 
 				// The generated `bucket_name` might be invalid as per https://developers.cloudflare.com/r2/buckets/create-buckets/#bucket-level-operations
-				// However this name only applies to the dev environment and is not validated by miniflare.				
+				// However this name only applies to the dev environment and is not validated by miniflare.
 				return { binding, bucket_name: ref || binding.toString() };
 			})
 			.filter(Boolean) as EnvironmentNonInheritable["r2_buckets"];
