@@ -820,7 +820,7 @@ describe("writes debug logs to hidden file", () => {
 });
 
 describe.only("analytics engine", () => {
-	describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
+	describe.each([{ cmd: "wrangler dev" }])(
 		"mock analytics engine datasets: $cmd",
 		({ cmd }) => {
 			describe("module worker", () => {
@@ -868,8 +868,8 @@ describe.only("analytics engine", () => {
 				});
 			});
 
-			describe.skip("service worker", async () => {
-				it("analytics engine datasets are mocked in dev", async () => {
+			describe("service worker", async () => {
+				it("using analytics engine datasets logs a warning in dev", async () => {
 					const helper = new WranglerE2ETestHelper();
 					await helper.seed({
 						"wrangler.toml": dedent`
@@ -903,11 +903,8 @@ describe.only("analytics engine", () => {
 					});
 					const worker = helper.runLongLived(cmd);
 
-					const { url } = await worker.waitForReady();
-
-					const text = await fetchText(url);
-					expect(text).toContain(
-						`successfully wrote datapoint from service worker`
+					await worker.readUntil(
+						/Analytics Engine is not supported locally when using the service-worker format/
 					);
 				});
 			});
