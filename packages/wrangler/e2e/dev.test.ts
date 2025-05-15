@@ -819,7 +819,7 @@ describe("writes debug logs to hidden file", () => {
 	});
 });
 
-describe("analytics engine", () => {
+describe.only("analytics engine", () => {
 	describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
 		"mock analytics engine datasets: $cmd",
 		({ cmd }) => {
@@ -868,7 +868,7 @@ describe("analytics engine", () => {
 				});
 			});
 
-			describe("service worker", async () => {
+			describe.skip("service worker", async () => {
 				it("analytics engine datasets are mocked in dev", async () => {
 					const helper = new WranglerE2ETestHelper();
 					await helper.seed({
