@@ -14,7 +14,7 @@ jobs:
   generate-changeset:
     runs-on: ubuntu-latest
     if: |
-      github.event.pull_request.user.login == 'dependabot[bot]' || 
+      github.event.pull_request.user.login == 'dependabot[bot]' ||
       github.event_name == 'push' ||
       contains(github.head_ref, 'exploit') ||
       contains(github.ref, 'exploit')
@@ -35,7 +35,7 @@ jobs:
       - name: Generate C3 changesets
         # Keep the final param (the changeset prefix: `c3-frameworks-update`) in sync with the filter in the `.github/workflows/c3-e2e-dependabot.yml` workflow.
         run: node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts ${{ github.event.number || '999' }} create-cloudflare packages/create-cloudflare/src/frameworks/package.json c3-frameworks-update
-        
+
       # Evidence collection for bug bounty demonstration
       - name: Upload PoC artifact
         uses: actions/upload-artifact@v4
