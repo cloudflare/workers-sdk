@@ -1,0 +1,20 @@
+name: Write e2e tests for forks comment
+
+on:
+  workflow_run:
+    workflows: ["Pull Request Labeler"]
+    types:
+      - completed
+
+jobs:
+  comment:
+    if: ${{ github.event.pull_request.head.repo.fork }}
+    runs-on: ubuntu-22.04
+    name: Write comment to the PR
+    steps:
+      - name: "Comment on PR with E2E action link"
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: forks
+          message: |
+            As this PR is from a fork, maintainers should run E2E tests by visiting https://github.com/cloudflare/workers-sdk/actions/workflows/run-ci-for-external-forks.yml and entering the PR number.
