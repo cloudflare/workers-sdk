@@ -1,3 +1,4 @@
+import getPort from "get-port";
 import dedent from "ts-dedent";
 import { describe, expect, it } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
@@ -115,7 +116,10 @@ async function spawnLocalWorker(helper: WranglerE2ETestHelper): Promise<void> {
 							}
 						}`,
 	});
-	const localWorker = helper.runLongLived("wrangler dev", { cwd: local });
+	const localWorker = helper.runLongLived(
+		`wrangler dev --port ${await getPort()}`,
+		{ cwd: local }
+	);
 	const { url } = await localWorker.waitForReady();
 
 	console.log(`
