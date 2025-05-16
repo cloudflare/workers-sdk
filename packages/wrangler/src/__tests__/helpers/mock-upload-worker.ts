@@ -42,13 +42,10 @@ export function mockUploadWorkerRequest(
 		expectedContainers?: { class_name: string }[];
 	} = {}
 ) {
-	const expectedScriptName = (options.expectedScriptName ??= "test-name");
 	const handleUpload: HttpResponseResolver = async ({ params, request }) => {
 		const url = new URL(request.url);
 		expect(params.accountId).toEqual("some-account-id");
-		expect(params.scriptName).toEqual(
-			legacyEnv && env ? `${expectedScriptName}-${env}` : expectedScriptName
-		);
+		expect(params.scriptName).toEqual(expectedScriptName);
 		if (!legacyEnv) {
 			expect(params.envName).toEqual(env);
 		}
@@ -185,6 +182,11 @@ export function mockUploadWorkerRequest(
 		expectedObservability,
 		expectedSettingsPatch,
 	} = options;
+
+	const expectedScriptName =
+		options.expectedScriptName ??
+		"test-name" + (legacyEnv && env ? `-${env}` : "");
+
 	if (env && !legacyEnv) {
 		msw.use(
 			http.put(

@@ -1004,19 +1004,17 @@ describe("deploy", () => {
 				`);
 			});
 
-			it("should throw an error w/ helpful message when using --env --name", async () => {
+			it("should allow --env and --name to be used together", async () => {
 				writeWranglerConfig({ env: { "some-env": {} } });
 				writeWorkerSource();
 				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					env: "some-env",
+					expectedScriptName: "voyager",
+					legacyEnv: true,
+				});
 				await runWrangler(
 					"deploy index.js --name voyager --env some-env --legacy-env true"
-				).catch((err) =>
-					expect(err).toMatchInlineSnapshot(`
-						[Error: In legacy environment mode you cannot use --name and --env together. If you want to specify a Worker name for a specific environment you can add the following to your wrangler.toml file:
-						[env.some-env]
-						name = "voyager"
-						]
-					`)
 				);
 			});
 		});
