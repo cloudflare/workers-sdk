@@ -234,3 +234,4 @@ dist/**
 .e2e-test-report/
 
 .dev.vars
+.node-cache/

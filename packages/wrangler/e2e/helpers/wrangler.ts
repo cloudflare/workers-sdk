@@ -9,6 +9,9 @@ export const WRANGLER = process.env.WRANGLER?.replaceAll("\\", "/") ?? "";
 export const WRANGLER_IMPORT = pathToFileURL(
 	process.env.WRANGLER_IMPORT?.replaceAll("\\", "/") ?? ""
 );
+export const MINIFLARE_IMPORT = pathToFileURL(
+	process.env.MINIFLARE_IMPORT?.replaceAll("\\", "/") ?? ""
+);
 
 export type WranglerCommandOptions = CommandOptions & { debug?: boolean };
 

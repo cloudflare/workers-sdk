@@ -5,7 +5,7 @@ import { startWorker } from "../startDevWorker";
 import type { StartDevWorkerInput, Worker } from "../startDevWorker/types";
 import type { MixedModeConnectionString } from "miniflare";
 
-type BindingsOpt = StartDevWorkerInput["bindings"];
+type BindingsOpt = NonNullable<StartDevWorkerInput["bindings"]>;
 
 export type MixedModeSession = Pick<Worker, "ready" | "dispose"> & {
 	updateBindings: (bindings: BindingsOpt) => Promise<void>;
@@ -23,10 +23,18 @@ export async function startMixedModeSession(
 		"templates/mixedMode/proxyServerWorker/wrangler.jsonc"
 	);
 
+	// Transform all bindings to use "raw" mode
+	const rawBindings = Object.fromEntries(
+		Object.entries(bindings).map(([key, binding]) => [
+			key,
+			{ ...binding, raw: true },
+		])
+	);
+
 	const worker = await startWorker({
 		config: proxyServerWorkerWranglerConfig,
 		dev: {
-			remote: true,
+			remote: "minimal",
 			auth: options?.auth,
 			server: {
 				port: await getPort(),
@@ -38,14 +46,21 @@ export async function startMixedModeSession(
 				port: await getPort(),
 			},
 		},
-		bindings,
+		bindings: rawBindings,
 	});
 
 	const mixedModeConnectionString =
 		(await worker.url) as MixedModeConnectionString;
 
 	const updateBindings = async (newBindings: BindingsOpt) => {
-		await worker.patchConfig({ bindings: newBindings });
+		// Transform all new bindings to use "raw" mode
+		const rawNewBindings = Object.fromEntries(
+			Object.entries(newBindings).map(([key, binding]) => [
+				key,
+				{ ...binding, raw: true },
+			])
+		);
+		await worker.patchConfig({ bindings: rawNewBindings });
 	};
 
 	return {

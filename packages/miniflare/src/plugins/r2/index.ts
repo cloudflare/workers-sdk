@@ -11,6 +11,7 @@ import {
 	getMiniflareObjectBindings,
 	getPersistPath,
 	migrateDatabase,
+	mixedModeClientWorker,
 	MixedModeConnectionString,
 	namespaceEntries,
 	namespaceKeys,
@@ -58,7 +59,7 @@ export const R2_PLUGIN: Plugin<
 	sharedOptions: R2SharedOptionsSchema,
 	getBindings(options) {
 		const buckets = namespaceEntries(options.r2Buckets);
-		return buckets.map<Worker_Binding>(([name, id]) => ({
+		return buckets.map<Worker_Binding>(([name, { id }]) => ({
 			name,
 			r2Bucket: { name: `${R2_BUCKET_SERVICE_PREFIX}:${id}` },
 		}));
@@ -78,10 +79,14 @@ export const R2_PLUGIN: Plugin<
 	}) {
 		const persist = sharedOptions.r2Persist;
 		const buckets = namespaceEntries(options.r2Buckets);
-		const services = buckets.map<Service>(([_, id]) => ({
-			name: `${R2_BUCKET_SERVICE_PREFIX}:${id}`,
-			worker: objectEntryWorker(R2_BUCKET_OBJECT, id),
-		}));
+		const services = buckets.map<Service>(
+			([name, { id, mixedModeConnectionString }]) => ({
+				name: `${R2_BUCKET_SERVICE_PREFIX}:${id}`,
+				worker: mixedModeConnectionString
+					? mixedModeClientWorker(mixedModeConnectionString, name)
+					: objectEntryWorker(R2_BUCKET_OBJECT, id),
+			})
+		);
 
 		if (buckets.length > 0) {
 			const uniqueKey = `miniflare-${R2_BUCKET_OBJECT_CLASS_NAME}`;
@@ -127,7 +132,7 @@ export const R2_PLUGIN: Plugin<
 			services.push(storageService, objectService);
 
 			for (const bucket of buckets) {
-				await migrateDatabase(log, uniqueKey, persistPath, bucket[1]);
+				await migrateDatabase(log, uniqueKey, persistPath, bucket[1].id);
 			}
 		}
 
