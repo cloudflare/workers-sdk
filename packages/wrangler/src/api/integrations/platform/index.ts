@@ -18,6 +18,7 @@ import { dedent } from "../../../utils/dedent";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import { getServiceBindings } from "./services";
+import type { AssetsOptions } from "../../../assets";
 import type { Config, RawConfig, RawEnvironment } from "../../../config";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, ModuleRule, WorkerOptions } from "miniflare";
@@ -265,17 +266,32 @@ export interface Unstable_MiniflareWorkerOptions {
 export function unstable_getMiniflareWorkerOptions(
 	configPath: string,
 	env?: string,
-	options?: { imagesLocalMode: boolean }
+	options?: {
+		imagesLocalMode?: boolean;
+		overrides?: {
+			assets?: Partial<AssetsOptions>;
+		};
+	}
 ): Unstable_MiniflareWorkerOptions;
 export function unstable_getMiniflareWorkerOptions(
 	config: Config,
 	env?: string,
-	options?: { imagesLocalMode: boolean }
+	options?: {
+		imagesLocalMode?: boolean;
+		overrides?: {
+			assets?: Partial<AssetsOptions>;
+		};
+	}
 ): Unstable_MiniflareWorkerOptions;
 export function unstable_getMiniflareWorkerOptions(
 	configOrConfigPath: string | Config,
 	env?: string,
-	options?: { imagesLocalMode: boolean }
+	options?: {
+		imagesLocalMode?: boolean;
+		overrides?: {
+			assets?: Partial<AssetsOptions>;
+		};
+	}
 ): Unstable_MiniflareWorkerOptions {
 	const config =
 		typeof configOrConfigPath === "string"
@@ -342,7 +358,11 @@ export function unstable_getMiniflareWorkerOptions(
 
 	const sitesAssetPaths = getSiteAssetPaths(config);
 	const sitesOptions = buildSitesOptions({ legacyAssetPaths: sitesAssetPaths });
-	const processedAssetOptions = getAssetsOptions({ assets: undefined }, config);
+	const processedAssetOptions = getAssetsOptions(
+		{ assets: undefined },
+		config,
+		options?.overrides?.assets
+	);
 	const assetOptions = processedAssetOptions
 		? buildAssetOptions({ assets: processedAssetOptions })
 		: {};

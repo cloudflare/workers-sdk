@@ -202,11 +202,15 @@ async function parseCustomPoolOptions(
 
 		// Lazily import `wrangler` if and when we need it
 		const wrangler = await import("wrangler");
+
 		const { workerOptions, externalWorkers, define, main } =
 			wrangler.unstable_getMiniflareWorkerOptions(
 				configPath,
 				options.wrangler.environment,
-				{ imagesLocalMode: true }
+				{
+					imagesLocalMode: true,
+					overrides: { assets: options.miniflare.assets },
+				}
 			);
 
 		const wrappedBindings = Object.values(workerOptions.wrappedBindings ?? {});

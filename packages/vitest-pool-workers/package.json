@@ -27,13 +27,13 @@
 	"license": "MIT",
 	"exports": {
 		".": {
-			"import": "./dist/pool/index.mjs",
-			"types": "./types/cloudflare-test.d.ts"
+			"types": "./types/cloudflare-test.d.ts",
+			"import": "./dist/pool/index.mjs"
 		},
 		"./config": {
+			"types": "./dist/config/index.d.ts",
 			"import": "./dist/config/index.cjs",
-			"require": "./dist/config/index.cjs",
-			"types": "./dist/config/index.d.ts"
+			"require": "./dist/config/index.cjs"
 		}
 	},
 	"main": "dist/pool/index.mjs",
