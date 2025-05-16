@@ -1,3 +1,4 @@
+import getPort from "get-port";
 import dedent from "ts-dedent";
 import { describe, expect, it } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
@@ -107,6 +108,11 @@ async function spawnLocalWorker(helper: WranglerE2ETestHelper): Promise<void> {
 							}
 						}`,
 	});
-	const localWorker = helper.runLongLived("wrangler dev", { cwd: local });
+	const localWorker = helper.runLongLived(
+		// Note: we use a random port here otherwise for some reason in CI windows
+		//       allows the default port to be overridden by other processes
+		`wrangler dev --port ${await getPort()}`,
+		{ cwd: local }
+	);
 	await localWorker.waitForReady();
 }
