@@ -42,7 +42,7 @@ const updateNextConfig = (usesTs: boolean) => {
 	s.stop(`${brandColor(`updated`)} ${dim(`\`${configFile}\``)}`);
 };
 
-const envInterfaceName = "CloudflareBindings";
+const envInterfaceName = "CloudflareEnv";
 const typesPath = "./cloudflare-env.d.ts";
 export default {
 	configVersion: 1,
