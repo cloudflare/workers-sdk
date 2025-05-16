@@ -56,7 +56,7 @@ export const KVSharedOptionsSchema = z.object({
 
 const SERVICE_NAMESPACE_PREFIX = `${KV_PLUGIN_NAME}:ns`;
 const KV_STORAGE_SERVICE_NAME = `${KV_PLUGIN_NAME}:storage`;
-const KV_NAMESPACE_OBJECT_CLASS_NAME = "KVNamespaceObject";
+export const KV_NAMESPACE_OBJECT_CLASS_NAME = "KVNamespaceObject";
 const KV_NAMESPACE_OBJECT: Worker_Binding_DurableObjectNamespaceDesignator = {
 	serviceName: SERVICE_NAMESPACE_PREFIX,
 	className: KV_NAMESPACE_OBJECT_CLASS_NAME,
