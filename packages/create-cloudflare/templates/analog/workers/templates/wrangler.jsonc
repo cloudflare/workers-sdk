@@ -2,6 +2,9 @@
   "name": "<TBD>",
   "main": "./dist/analog/server/index.mjs",
   "compatibility_date": "<TBD>",
+  "compatibility_flags": [
+    "global_fetch_strictly_public"
+  ],
   "assets": {
     "binding": "ASSETS",
     "directory": "./dist/analog/public/"

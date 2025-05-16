@@ -18,7 +18,7 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	const packages = ["nitro-cloudflare-dev", "nitropack", "@nx/devkit"];
+	const packages = ["nitro-cloudflare-dev"];
 
 	// When using pnpm, explicitly add h3 package so the H3Event type declaration can be updated.
 	// Package managers other than pnpm will hoist the dependency, as will pnpm with `--shamefully-hoist`
@@ -31,6 +31,8 @@ const configure = async (ctx: C3Context) => {
 		cwd: ctx.project.path,
 		startText: "Installing nitro module `nitro-cloudflare-dev`",
 		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
+		// Make sure npm installs all the peer dependencies of the package
+		legacyPeerDeps: false,
 	});
 
 	updateViteConfig();
