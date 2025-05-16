@@ -1,5 +1,11 @@
 # miniflare
 
+## 4.20250508.3
+
+### Patch Changes
+
+- [#9245](https://github.com/cloudflare/workers-sdk/pull/9245) [`b87b472`](https://github.com/cloudflare/workers-sdk/commit/b87b472a1a06419c1ded539fa478fa69a688efba) Thanks [@penalosa](https://github.com/penalosa)! - Support Mixed Mode Dispatch Namespaces
+
 ## 4.20250508.2
 
 ### Patch Changes
