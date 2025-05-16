@@ -5,3 +5,4 @@ export * from "./log";
 export * from "./matcher";
 export * from "./streams";
 export * from "./types";
+export * from "./wrangler";

@@ -245,6 +245,27 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/dev-registry:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../../packages/vite-plugin-cloudflare
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250508.0
+        version: 4.20250508.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/durable-objects-app:
     devDependencies:
       '@cloudflare/workers-tsconfig':
@@ -1692,6 +1713,9 @@ importers:
       capnp-es:
         specifier: ^0.0.7
         version: 0.0.7(typescript@5.7.3)
+      chokidar:
+        specifier: ^4.0.1
+        version: 4.0.1
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
@@ -1755,6 +1779,9 @@ importers:
       which:
         specifier: ^2.0.2
         version: 2.0.2
+      xdg-app-paths:
+        specifier: ^8.3.0
+        version: 8.3.0
 
   packages/mock-npm-registry:
     devDependencies:

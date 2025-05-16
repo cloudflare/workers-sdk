@@ -1,0 +1,20 @@
+{
+	"name": "dev-registry",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"check:types": "tsc --build",
+		"dev": "pnpm run \"/^dev:.*/\"",
+		"dev:vite-multi-workers": "vite dev --config vite-multi-workers.config.ts",
+		"dev:vite-worker": "vite dev --config vite-worker.config.ts",
+		"dev:wrangler-worker": "wrangler dev -c wrangler.wrangler-worker.jsonc"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250508.0",
+		"typescript": "catalog:default",
+		"vite": "catalog:vite-plugin",
+		"wrangler": "workspace:*"
+	}
+}

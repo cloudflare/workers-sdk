@@ -1,0 +1,5 @@
+{
+	"name": "vite-multi-workers",
+	"main": "./vite-multi-workers/index.ts",
+	"compatibility_date": "2024-12-30",
+}

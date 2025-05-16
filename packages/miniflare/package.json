@@ -74,6 +74,7 @@
 		"@typescript-eslint/parser": "^6.9.0",
 		"ava": "^6.0.1",
 		"capnp-es": "^0.0.7",
+		"chokidar": "^4.0.1",
 		"concurrently": "^8.2.2",
 		"devalue": "^4.3.0",
 		"devtools-protocol": "^0.0.1182435",
@@ -94,7 +95,8 @@
 		"source-map": "^0.6.1",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
-		"which": "^2.0.2"
+		"which": "^2.0.2",
+		"xdg-app-paths": "^8.3.0"
 	},
 	"engines": {
 		"node": ">=18.0.0"
