@@ -711,7 +711,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 
 	if (main.type === "commonjs" && modules && modules.length > 0) {
 		throw new TypeError(
-			"More than one module can only be specified when type = 'esm'"
+			`More than one module can only be specified when type = 'esm' ${modules.map((m) => m.name).join(", ")}`
 		);
 	}
 

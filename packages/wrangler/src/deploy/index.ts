@@ -211,6 +211,13 @@ export const deployCommand = createCommand({
 			hidden: true,
 			alias: "x-auto-create",
 		},
+		"experimental-code-splitting": {
+			describe: "Enable esbuild's code splitting feature.",
+			type: "boolean",
+			default: false,
+			hidden: true,
+			alias: "x-code-splitting",
+		},
 	},
 	behaviour: {
 		useConfigRedirectIfAvailable: true,
@@ -325,6 +332,7 @@ export const deployCommand = createCommand({
 			projectRoot,
 			dispatchNamespace: args.dispatchNamespace,
 			experimentalAutoCreate: args.experimentalAutoCreate,
+			experimentalCodeSplitting: args.experimentalCodeSplitting,
 		});
 
 		writeOutput({
