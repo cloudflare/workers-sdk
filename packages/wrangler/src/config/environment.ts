@@ -200,6 +200,7 @@ interface EnvironmentInheritable {
 	 * Whether we use <name>.<subdomain>.workers.dev to
 	 * test and deploy your Worker.
 	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#workersdev
 	 *
 	 * @default true
 	 * @breaking
@@ -222,6 +223,8 @@ interface EnvironmentInheritable {
 	 * Only one of `routes` or `route` is required.
 	 *
 	 * Only required when workers_dev is false, and there's no scheduled Worker (see `triggers`)
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#types-of-routes
 	 *
 	 * @inheritable
 	 */
@@ -280,6 +283,8 @@ interface EnvironmentInheritable {
 	 *
 	 * More details here https://developers.cloudflare.com/workers/platform/cron-triggers
 	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#triggers
+	 *
 	 * @default {crons:[]}
 	 * @inheritable
 	 */
@@ -288,6 +293,8 @@ interface EnvironmentInheritable {
 	/**
 	 * Specify limits for runtime behavior.
 	 * Only supported for the "standard" Usage Model
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#limits
 	 *
 	 * @inheritable
 	 */
@@ -299,6 +306,8 @@ interface EnvironmentInheritable {
 	 * to use Text, Data, and CompiledWasm modules, or when you wish to
 	 * have a .js file be treated as an ESModule instead of CommonJS.
 	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#bundling
+	 *
 	 * @inheritable
 	 */
 	rules: Rule[];
@@ -308,6 +317,8 @@ interface EnvironmentInheritable {
 	 *
 	 * Refer to the [custom builds documentation](https://developers.cloudflare.com/workers/cli-wrangler/configuration#build)
 	 * for more details.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#custom-builds
 	 *
 	 * @default {watch_dir:"./src"}
 	 */
@@ -376,6 +387,9 @@ interface EnvironmentInheritable {
 
 	/**
 	 * Include source maps when uploading this worker.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#source-maps
+	 *
 	 * @inheritable
 	 */
 	upload_source_maps: boolean | undefined;
@@ -394,12 +408,16 @@ interface EnvironmentInheritable {
 	 *
 	 * More details at https://developers.cloudflare.com/workers/frameworks/
 	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#assets
+	 *
 	 * @inheritable
 	 */
 	assets: Assets | undefined;
 
 	/**
 	 * Specify the observability behavior of the Worker.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#observability
 	 *
 	 * @inheritable
 	 */
@@ -454,6 +472,8 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+	 *
 	 * @default {}
 	 * @nonInheritable
 	 */
@@ -467,6 +487,8 @@ export interface EnvironmentNonInheritable {
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#durable-objects
 	 *
 	 * @default {bindings:[]}
 	 * @nonInheritable
@@ -515,6 +537,8 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#kv-namespaces
+	 *
 	 * @default []
 	 * @nonInheritable
 	 */
@@ -535,6 +559,8 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#email-bindings
+	 *
 	 * @default []
 	 * @nonInheritable
 	 */
@@ -552,6 +578,8 @@ export interface EnvironmentNonInheritable {
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#queues
 	 *
 	 * @default {consumers:[],producers:[]}
 	 * @nonInheritable
@@ -609,6 +637,8 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#r2-buckets
+	 *
 	 * @default []
 	 * @nonInheritable
 	 */
@@ -630,6 +660,8 @@ export interface EnvironmentNonInheritable {
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#d1-databases
 	 *
 	 * @default []
 	 * @nonInheritable
@@ -659,6 +691,8 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#vectorize-indexes
+	 *
 	 * @default []
 	 * @nonInheritable
 	 */
@@ -674,6 +708,8 @@ export interface EnvironmentNonInheritable {
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#hyperdrive
 	 *
 	 * @default []
 	 * @nonInheritable
@@ -692,6 +728,8 @@ export interface EnvironmentNonInheritable {
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
 	 *
 	 * @default []
 	 * @nonInheritable
@@ -719,6 +757,8 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#analytics-engine-datasets
+	 *
 	 * @default []
 	 * @nonInheritable
 	 */
@@ -735,6 +775,8 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#browser-rendering
+	 *
 	 * @default {}
 	 * @nonInheritable
 	 */
@@ -749,6 +791,8 @@ export interface EnvironmentNonInheritable {
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#workers-ai
 	 *
 	 * @default {}
 	 * @nonInheritable
@@ -765,6 +809,8 @@ export interface EnvironmentNonInheritable {
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#images
 	 *
 	 * @default {}
 	 * @nonInheritable
@@ -835,6 +881,8 @@ export interface EnvironmentNonInheritable {
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
 	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#mtls-certificates
+	 *
 	 * @default []
 	 * @nonInheritable
 	 */
@@ -861,6 +909,8 @@ export interface EnvironmentNonInheritable {
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#dispatch-namespace-bindings-workers-for-platforms
 	 *
 	 * @default []
 	 * @nonInheritable
