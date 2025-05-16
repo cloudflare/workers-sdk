@@ -140,14 +140,20 @@ export default class extends WorkerEntrypoint<Env> {
 		}
 	}
 
-	async unstable_canFetch(request: Request): Promise<boolean> {
+	async unstable_canFetch(
+		request: Request,
+		params?: { hasStaticRouting: boolean }
+	): Promise<boolean> {
 		// TODO: Mock this with Miniflare
 		this.env.JAEGER ??= mockJaegerBinding();
 
 		return canFetch(
 			request,
 			this.env,
-			normalizeConfiguration(this.env.CONFIG),
+			{
+				...normalizeConfiguration(this.env.CONFIG),
+				hasStaticRouting: params?.hasStaticRouting,
+			},
 			this.unstable_exists.bind(this)
 		);
 	}
