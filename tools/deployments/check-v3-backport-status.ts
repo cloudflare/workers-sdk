@@ -44,7 +44,7 @@ export function validateBackportPR(
 }
 
 export function extractPullRequestNumber(branchName: string): string | null {
-	const match = branchName.match(/^v3-(maintenance|backport)-(\d+)$/);
+	const match = branchName.match(/^v3-(?:maintenance|backport)-(\d+)$/);
 
 	if (match && match[1]) {
 		return match[1];
