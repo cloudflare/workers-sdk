@@ -4,6 +4,7 @@ import SCRIPT_SECRETS_STORE_SECRET from "worker:secrets-store/secret";
 import { z } from "zod";
 import { Service, Worker_Binding } from "../../runtime";
 import { SharedBindings } from "../../workers";
+import { KV_NAMESPACE_OBJECT_CLASS_NAME } from "../kv";
 import {
 	getMiniflareObjectBindings,
 	getPersistPath,
@@ -83,7 +84,6 @@ export const SECRET_STORE_PLUGIN: Plugin<
 
 		await fs.mkdir(persistPath, { recursive: true });
 
-		const KV_NAMESPACE_OBJECT_CLASS_NAME = "KVNamespaceObject";
 		const storageService = {
 			name: `${SECRET_STORE_PLUGIN_NAME}:storage`,
 			disk: { path: persistPath, writable: true },
