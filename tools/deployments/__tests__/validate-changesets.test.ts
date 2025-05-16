@@ -22,7 +22,6 @@ describe("findPackageNames()", () => {
 		expect(findPackageNames()).toEqual(
 			new Set([
 				"@cloudflare/kv-asset-handler",
-				"@cloudflare/unenv-preset",
 				"@cloudflare/workers-shared",
 				"@cloudflare/workflows-shared",
 				"miniflare",
