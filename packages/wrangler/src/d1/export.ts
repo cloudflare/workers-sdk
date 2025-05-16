@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { Readable } from 'node:stream'
 import { spinner, spinnerWhile } from "@cloudflare/cli/interactive";
 import chalk from "chalk";
 import { Miniflare } from "miniflare";
@@ -200,7 +201,7 @@ async function exportRemotely(
 					`There was an error while downloading from the presigned URL with status code: ${contents.status}`
 				);
 			}
-			await fs.writeFile(output, contents.body || "");
+			await fs.writeFile(output, Readable.fromWeb(contents.body));
 		},
 	});
 	logger.log(`🌀 Downloaded to ${output} successfully!`);
