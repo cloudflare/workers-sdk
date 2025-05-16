@@ -78,6 +78,7 @@ describe("cloudchamber list", () => {
 		        \\"account_id\\": \\"123\\",
 		        \\"vcpu\\": 4,
 		        \\"memory\\": \\"400MB\\",
+		        \\"memory_mib\\": 400,
 		        \\"version\\": 1,
 		        \\"image\\": \\"hello\\",
 		        \\"location\\": {
@@ -97,6 +98,7 @@ describe("cloudchamber list", () => {
 		        \\"account_id\\": \\"123\\",
 		        \\"vcpu\\": 4,
 		        \\"memory\\": \\"400MB\\",
+		        \\"memory_mib\\": 400,
 		        \\"version\\": 2,
 		        \\"image\\": \\"hello\\",
 		        \\"location\\": {
@@ -126,6 +128,7 @@ describe("cloudchamber list", () => {
 		        \\"account_id\\": \\"123\\",
 		        \\"vcpu\\": 4,
 		        \\"memory\\": \\"400MB\\",
+		        \\"memory_mib\\": 400,
 		        \\"version\\": 1,
 		        \\"image\\": \\"hello\\",
 		        \\"location\\": {
@@ -145,6 +148,7 @@ describe("cloudchamber list", () => {
 		        \\"account_id\\": \\"123\\",
 		        \\"vcpu\\": 4,
 		        \\"memory\\": \\"400MB\\",
+		        \\"memory_mib\\": 400,
 		        \\"version\\": 2,
 		        \\"image\\": \\"hello\\",
 		        \\"location\\": {

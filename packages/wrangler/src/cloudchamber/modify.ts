@@ -1,6 +1,7 @@
 import { cancel, startSection } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+import { parseByteSize } from "../parse";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { pickDeployment } from "./cli/deployments";
 import { getLocation } from "./cli/locations";
@@ -103,6 +104,12 @@ export async function modifyCommand(
 		);
 		const labels = collectLabels(modifyArgs.label);
 
+		const memory = modifyArgs.memory ?? config.cloudchamber.memory;
+		const memoryMib =
+			memory !== undefined
+				? Math.round(parseByteSize(memory, 1024) / (1024 * 1024))
+				: undefined;
+
 		const deployment = await DeploymentsService.modifyDeploymentV2(
 			modifyArgs.deploymentId,
 			{
@@ -112,7 +119,7 @@ export async function modifyCommand(
 				labels: labels,
 				ssh_public_key_ids: modifyArgs.sshPublicKeyId,
 				vcpu: modifyArgs.vcpu ?? config.cloudchamber.vcpu,
-				memory: modifyArgs.memory ?? config.cloudchamber.memory,
+				memory_mib: memoryMib,
 			}
 		);
 		console.log(JSON.stringify(deployment, null, 4));
@@ -229,11 +236,17 @@ async function handleModifyCommand(
 		true
 	);
 
+	const memory = args.memory ?? config.cloudchamber.memory;
+	const memoryMib =
+		memory !== undefined
+			? Math.round(parseByteSize(memory, 1024) / (1024 * 1024))
+			: undefined;
+
 	renderDeploymentConfiguration("modify", {
 		image,
 		location: location ?? deployment.location.name,
 		vcpu: args.vcpu ?? config.cloudchamber.vcpu ?? deployment.vcpu,
-		memory: args.memory ?? config.cloudchamber.memory ?? deployment.memory,
+		memoryMib: memoryMib ?? deployment.memory_mib,
 		env: args.env,
 		environmentVariables:
 			selectedEnvironmentVariables !== undefined
@@ -265,7 +278,7 @@ async function handleModifyCommand(
 			environment_variables: selectedEnvironmentVariables,
 			labels: selectedLabels,
 			vcpu: args.vcpu ?? config.cloudchamber.vcpu,
-			memory: args.memory ?? config.cloudchamber.memory,
+			memory_mib: memoryMib,
 		})
 	);
 	stop();

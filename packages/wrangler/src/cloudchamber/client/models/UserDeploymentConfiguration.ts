@@ -36,9 +36,13 @@ export type UserDeploymentConfiguration = {
 	 */
 	vcpu?: number;
 	/**
-	 * Specify the memory to be used for the deployment. The default will be the one configured for the account.
+	 * @deprecated
 	 */
 	memory?: MemorySizeWithUnit;
+	/**
+	 * Specify the memory to be used for the deployment, in MiB. The default will be the one configured for the account.
+	 */
+	memory_mib?: number;
 	/**
 	 * The disk configuration for this deployment
 	 */
@@ -52,6 +56,14 @@ export type UserDeploymentConfiguration = {
 	 */
 	labels?: Array<Label>;
 	network?: NetworkParameters;
+	/**
+	 * @deprecated
+	 */
+	gpu_memory?: MemorySizeWithUnit;
+	/**
+	 * Specify the GPU memory to be used for the deployment, in MiB. (Mandatory for gVisor deployments)
+	 */
+	gpu_memory_mib?: number;
 	command?: Command;
 	entrypoint?: Entrypoint;
 	dns?: DNSConfiguration;
