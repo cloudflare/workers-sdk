@@ -211,6 +211,17 @@ export const deployCommand = createCommand({
 			hidden: true,
 			alias: "x-auto-create",
 		},
+		tag: {
+			describe: "A tag for this Worker Gradual Rollouts Version",
+			type: "string",
+			requiresArg: true,
+		},
+		message: {
+			describe:
+				"A descriptive message for this Worker Gradual Rollouts Version",
+			type: "string",
+			requiresArg: true,
+		},
 	},
 	behaviour: {
 		useConfigRedirectIfAvailable: true,
@@ -325,6 +336,8 @@ export const deployCommand = createCommand({
 			projectRoot,
 			dispatchNamespace: args.dispatchNamespace,
 			experimentalAutoCreate: args.experimentalAutoCreate,
+			tag: args.tag,
+			message: args.message,
 		});
 
 		writeOutput({

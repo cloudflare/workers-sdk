@@ -112,6 +112,8 @@ type Props = {
 	dispatchNamespace: string | undefined;
 	experimentalAutoCreate: boolean;
 	metafile: string | boolean | undefined;
+	tag: string | undefined;
+	message: string | undefined;
 };
 
 export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -710,12 +712,42 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						}
 					: undefined,
 			observability: config.observability,
+			annotations:
+				props.message || props.tag
+					? {
+							"workers/message": props.message,
+							"workers/tag": props.tag,
+						}
+					: undefined,
 		};
 
 		sourceMapSize = worker.sourceMaps?.reduce(
 			(acc, m) => acc + m.content.length,
 			0
 		);
+
+		// We can use the new versions/deployments APIs if we:
+		// * are uploading a worker that already exists
+		// * aren't a dispatch namespace deploy
+		// * aren't a service env deploy
+		// * aren't a service Worker
+		// * we don't have DO migrations
+		// * we aren't an fpw
+		// * not a container worker
+		const canUseNewVersionsDeploymentsApi =
+			workerExists &&
+			props.dispatchNamespace === undefined &&
+			prod &&
+			format === "modules" &&
+			migrations === undefined &&
+			!config.first_party_worker &&
+			config.containers === undefined;
+
+		if (!canUseNewVersionsDeploymentsApi && worker.annotations !== undefined) {
+			logger.warn(
+				"Worker does not support Worker Versions, ignoring tag and message."
+			);
+		}
 
 		await printBundleSize(
 			{ name: path.basename(resolvedEntryPointPath), content: content },
@@ -738,23 +770,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				maskedVars[key] = "(hidden)";
 			}
 		}
-
-		// We can use the new versions/deployments APIs if we:
-		// * are uploading a worker that already exists
-		// * aren't a dispatch namespace deploy
-		// * aren't a service env deploy
-		// * aren't a service Worker
-		// * we don't have DO migrations
-		// * we aren't an fpw
-		// * not a container worker
-		const canUseNewVersionsDeploymentsApi =
-			workerExists &&
-			props.dispatchNamespace === undefined &&
-			prod &&
-			format === "modules" &&
-			migrations === undefined &&
-			!config.first_party_worker &&
-			config.containers === undefined;
 
 		let workerBundle: FormData;
 
