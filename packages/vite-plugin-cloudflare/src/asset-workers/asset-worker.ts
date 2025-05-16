@@ -28,7 +28,10 @@ export default class CustomAssetWorker extends AssetWorker {
 			throw new Error(`Unexpected error. No HTML found for ${eTag}.`);
 		}
 
-		return { readableStream: response.body, contentType: "text/html" };
+		return {
+			readableStream: response.body,
+			contentType: response.headers.get("Content-Type") || "text/html",
+		};
 	}
 	async unstable_exists(pathname: string): Promise<string | null> {
 		// We need this regex to avoid getting `//` as a pathname, which results in an invalid URL. Should this be fixed upstream?
