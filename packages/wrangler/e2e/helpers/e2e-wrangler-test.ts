@@ -41,7 +41,7 @@ export class WranglerE2ETestHelper {
 	}
 
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-	importMiniflare(): Promise<typeof import("../../../miniflare/src/index")> {
+	importMiniflare(): Promise<typeof import("miniflare")> {
 		return import(MINIFLARE_IMPORT.href);
 	}
 
