@@ -91,6 +91,76 @@ describe("wrangler dev - mixed mode", () => {
 			"
 		`);
 	});
+
+	describe("multi-worker", () => {
+		it("handles both remote and local service bindings at the same time in all workers", async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.json": JSON.stringify({
+					name: "mixed-mode-mixed-bindings-multi-worker-test",
+					main: "index.js",
+					compatibility_date: "2025-05-07",
+					services: [
+						{
+							binding: "LOCAL_TEST_WORKER",
+							service: "local-test-worker",
+							remote: false,
+						},
+						{
+							binding: "REMOTE_WORKER",
+							service: "mixed-mode-test-target",
+							remote: true,
+						},
+					],
+				}),
+				"index.js": dedent`
+								export default {
+									async fetch(request, env) {
+										const remoteWorkerText = await (await env.REMOTE_WORKER.fetch(request)).text();
+										const localTestWorkerText = await (await env.LOCAL_TEST_WORKER.fetch(request)).text();
+										return new Response(\`[main-test-worker]REMOTE<WORKER>: \${remoteWorkerText}\\n\${localTestWorkerText}\\n\`);
+									}
+								}`,
+			});
+			const localTest = makeRoot();
+			await seed(localTest, {
+				"wrangler.json": JSON.stringify({
+					name: "local-test-worker",
+					main: "index.js",
+					compatibility_date: "2025-05-07",
+					services: [
+						{
+							// Note: we use the same binding name but bound to a difference service
+							binding: "REMOTE_WORKER",
+							service: "mixed-mode-test-target-alt",
+							remote: true,
+						},
+					],
+				}),
+				"index.js": dedent`
+								export default {
+									async fetch(request, env) {
+										const remoteWorkerText = await (await env.REMOTE_WORKER.fetch(request)).text();
+										return new Response(\`[local-test-worker]REMOTE<WORKER>: \${remoteWorkerText}\`);
+									}
+								}`,
+			});
+
+			const worker = helper.runLongLived(
+				`wrangler dev --x-mixed-mode -c wrangler.json -c ${localTest}/wrangler.json`
+			);
+
+			const { url } = await worker.waitForReady();
+
+			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
+				`
+				"[main-test-worker]REMOTE<WORKER>: Hello World!
+				[local-test-worker]REMOTE<WORKER>: Hello World! (alternative)
+				"
+			`
+			);
+		});
+	});
 });
 
 async function spawnLocalWorker(helper: WranglerE2ETestHelper): Promise<void> {
