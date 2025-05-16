@@ -429,6 +429,44 @@ test("DevRegistry: fetch to unknown durable object with dev registry disabled", 
 	t.is(res.status, 503);
 	t.is(result, "Service Unavailable");
 });
+test("DevRegistry: RPC to unknown durable object with dev registry disabled", async (t) => {
+	const mf = new Miniflare({
+		name: "local-worker",
+		durableObjects: {
+			DO: {
+				className: "MyDurableObject",
+				scriptName: "remote-worker",
+			},
+		},
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+			export default {
+				async fetch(request, env, ctx) {
+					try {
+						const ns = env.DO;
+						const id = ns.newUniqueId();
+						const stub = ns.get(id);
+						const result = await stub.ping();
+						return new Response(result);
+					} catch (ex) {
+						return new Response(ex.message, { status: 500 });
+					}
+				}
+			}
+		`,
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch("http://placeholder");
+	const result = await res.text();
+	t.is(
+		result,
+		`Durable Object "MyDurableObject" of script "remote-worker" is not defined in the options. ` +
+			`Set the "unsafeDevRegistryPath" option if you would like Miniflare to lookup services from the Dev Registry.`
+	);
+	t.is(res.status, 500);
+});
 test("DevRegistry: fetch to durable object", async (t) => {
 	const tmp = await useTmp(t);
 	const unsafeDevRegistryPath = path.join(tmp, "dev-registry");
