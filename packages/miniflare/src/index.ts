@@ -399,7 +399,7 @@ function getExternalServiceEntrypoints(
 ) {
 	const externalServices = new Map<
 		string,
-		Map<string | undefined, "service" | "durableObject">
+		Map<string | undefined, "service" | "durableObject" | "tail">
 	>();
 	const getEntrypoints = (name: string) => {
 		let externalService = externalServices.get(name);
@@ -407,7 +407,7 @@ function getExternalServiceEntrypoints(
 		if (!externalService) {
 			externalService = new Map<
 				string | undefined,
-				"durableObject" | "service"
+				"durableObject" | "service" | "tail"
 			>();
 			externalServices.set(name, externalService);
 		}
@@ -420,27 +420,36 @@ function getExternalServiceEntrypoints(
 		if (workerOpts.core.serviceBindings) {
 			for (const name of Object.keys(workerOpts.core.serviceBindings)) {
 				const service = workerOpts.core.serviceBindings[name];
-				if (
+
+				let serviceName: string | undefined;
+				let entrypoint: string | undefined;
+
+				if (typeof service === "string") {
+					serviceName = service;
+				} else if (
 					typeof service === "object" &&
 					"name" in service &&
-					service.name &&
-					service.name !== kCurrentWorker &&
-					allWorkerOpts.every((options) => options.core.name !== service.name)
+					service.name !== kCurrentWorker
+				) {
+					serviceName = service.name;
+					entrypoint = service.entrypoint;
+				}
+
+				if (
+					serviceName &&
+					allWorkerOpts.every((options) => options.core.name !== serviceName)
 				) {
 					// This is a service binding to a worker that doesn't exist
 					// Override it to connect to the dev registry proxy
 					workerOpts.core.serviceBindings[name] = {
 						external: {
 							address: `${loopbackHost}:${loopbackPort}`,
-							http: getExternalServiceHttpOptions(
-								service.name,
-								service.entrypoint
-							),
+							http: getExternalServiceHttpOptions(serviceName, entrypoint),
 						},
 					};
 
-					const entrypoints = getEntrypoints(service.name);
-					entrypoints.set(service.entrypoint, "service");
+					const entrypoints = getEntrypoints(serviceName);
+					entrypoints.set(entrypoint, "service");
 				}
 			}
 		}
@@ -475,6 +484,43 @@ function getExternalServiceEntrypoints(
 
 					const entrypoints = getEntrypoints(designator.scriptName);
 					entrypoints.set(designator.className, "durableObject");
+				}
+			}
+		}
+
+		if (workerOpts.core.tails) {
+			for (let i = 0; i < workerOpts.core.tails.length; i++) {
+				const tailService = workerOpts.core.tails[i];
+
+				let serviceName: string | undefined;
+				let entrypoint: string | undefined;
+
+				if (typeof tailService === "string") {
+					serviceName = tailService;
+				} else if (
+					typeof tailService === "object" &&
+					"name" in tailService &&
+					tailService.name !== kCurrentWorker
+				) {
+					serviceName = tailService.name;
+					entrypoint = tailService.entrypoint;
+				}
+
+				if (
+					serviceName &&
+					allWorkerOpts.every((options) => options.core.name !== serviceName)
+				) {
+					// This is a tail worker that doesn't exist
+					// Override it to connect to the dev registry proxy
+					workerOpts.core.tails[i] = {
+						external: {
+							address: `${loopbackHost}:${loopbackPort}`,
+							http: getExternalServiceHttpOptions(serviceName, entrypoint),
+						},
+					};
+
+					const entrypoints = getEntrypoints(serviceName);
+					entrypoints.set(entrypoint, "tail");
 				}
 			}
 		}
@@ -1662,7 +1708,7 @@ export class Miniflare {
 				services.set(service.name, service);
 
 				for (const [entrypoint, type] of entrypoints) {
-					if (type === "service") {
+					if (type !== "durableObject") {
 						const socketName = getExternalServiceSocketName(
 							serviceName,
 							entrypoint

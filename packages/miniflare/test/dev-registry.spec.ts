@@ -592,3 +592,98 @@ test("DevRegistry: RPC to durable object", async (t) => {
 	);
 	t.is(res.status, 500);
 });
+test("DevRegistry: tail to default entrypoint", async (t) => {
+	const tmp = await useTmp(t);
+	const unsafeDevRegistryPath = path.join(tmp, "dev-registry");
+	const remote = new Miniflare({
+		name: "remote-worker",
+		unsafeDevRegistryPath,
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+			let event = null;
+			export default {
+				fetch() {
+					return Response.json(event?.[0].logs[0].message);
+				},
+				tail(e) {
+					event = e;
+				}
+			};
+		`,
+		unsafeDirectSockets: [{}],
+	});
+	t.teardown(() => remote.dispose());
+
+	await remote.ready;
+
+	const local = new Miniflare({
+		name: "local-worker",
+		unsafeDevRegistryPath,
+		tails: ["remote-worker"],
+		serviceBindings: {
+			remote: "remote-worker",
+		},
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+			export default {
+				async fetch(request, env) {
+					if (request.url.includes("remote-worker")) {
+						return env.remote.fetch(request)
+					}
+					console.log("log event")
+					return new Response("Hello from local-worker!");
+				}
+			}
+		`,
+	});
+	t.teardown(() => local.dispose());
+
+	const res = await local.dispatchFetch("http://example.com");
+	const result = await res.text();
+	t.is(result, "Hello from local-worker!");
+
+	const res2 = await local.dispatchFetch("http://example.com/remote-worker");
+	const result2 = await res2.json();
+
+	t.deepEqual(result2, ["log event"]);
+});
+test("DevRegistry: tail to unknown worker", async (t) => {
+	const tmp = await useTmp(t);
+	const unsafeDevRegistryPath = path.join(tmp, "dev-registry");
+	const mf = new Miniflare({
+		name: "local-worker",
+		unsafeDevRegistryPath,
+		tails: ["remote-worker"],
+		serviceBindings: {
+			remote: "remote-worker",
+		},
+		compatibilityFlags: ["experimental"],
+		modules: true,
+		script: `
+			export default {
+				async fetch(request, env) {
+					if (request.url.includes("remote-worker")) {
+						return env.remote.fetch(request)
+					}
+					console.log("log event")
+					return new Response("Hello from local-worker!");
+				}
+			}
+		`,
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch("http://example.com");
+	const result = await res.text();
+	t.is(result, "Hello from local-worker!");
+
+	const res2 = await mf.dispatchFetch("http://example.com/remote-worker");
+	const result2 = await res2.text();
+
+	t.deepEqual(
+		result2,
+		`Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+	);
+});

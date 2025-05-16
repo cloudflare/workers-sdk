@@ -291,7 +291,7 @@ export function getExternalServiceName(service: string) {
 
 export function createExternalService(options: {
 	serviceName: string;
-	entrypoints: Map<string | undefined, "service" | "durableObject">;
+	entrypoints: Map<string | undefined, "service" | "durableObject" | "tail">;
 	proxyURL: string;
 	isDevRegistryEnabled: boolean;
 }): Service {
@@ -372,6 +372,22 @@ export function createExternalService(options: {
 
 								return klass;
 							}
+
+							function createFallbackTailHandler({ service, entrypoint }) {
+								return {
+									fetch() {
+										const message = ${
+											options.isDevRegistryEnabled
+												? `\`Couldn't find a local dev session for the "\${entrypoint}" entrypoint of service "\${service}" to proxy to\``
+												: `\`Fetch Handler "\${entrypoint}" of service "\${service}" is not defined in the options. Set the "unsafeDevRegistryPath" option if you would like Miniflare to lookup services from the Dev Registry.\``
+										};
+										return new Response(message, { status: 503 });
+									},
+									tail(events) {
+										// No-op
+									}
+								};
+							}
 						`,
 						...Array.from(options.entrypoints).map(
 							([entrypoint = "default", type]) => {
@@ -383,6 +399,8 @@ export function createExternalService(options: {
 										return `export ${entrypoint === "default" ? "default" : `const ${entrypoint} =`} createFallbackWorkerEntrypointClass({ service: "${service}", entrypoint: "${entrypoint}" });`;
 									case "durableObject":
 										return `export const ${entrypoint} = createProxyDurableObjectClass({ scriptName: "${service}", className: "${entrypoint}", proxyUrl: "${proxyURL}" });`;
+									case "tail":
+										return `export ${entrypoint === "default" ? "default" : `const ${entrypoint} =`} createFallbackTailHandler({ service: "${service}", entrypoint: "${entrypoint}" });`;
 									default:
 										throw new Error(
 											`Unsupported entrypoint type "${type}" for external service "${service}" `
