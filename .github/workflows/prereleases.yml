@@ -33,7 +33,6 @@ jobs:
           node .github/version-script.js wrangler
           node .github/version-script.js miniflare
           node .github/version-script.js workers-shared
-          node .github/version-script.js unenv-preset
 
       - name: Build
         run: pnpm run build
