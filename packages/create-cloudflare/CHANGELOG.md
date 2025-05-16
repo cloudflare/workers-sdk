@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.47.2
+
+### Patch Changes
+
+- [#9274](https://github.com/cloudflare/workers-sdk/pull/9274) [`14dc393`](https://github.com/cloudflare/workers-sdk/commit/14dc3937b9bc1d5fe45cbc08b1a47c04b3e0f0a9) Thanks [@vicb](https://github.com/vicb)! - fix the env interface name in Next
+
 ## 2.47.1
 
 ### Patch Changes
