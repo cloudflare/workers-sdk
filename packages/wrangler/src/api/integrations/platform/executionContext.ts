@@ -10,4 +10,6 @@ export class ExecutionContext {
 			throw new Error("Illegal invocation");
 		}
 	}
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	props: any = {};
 }
