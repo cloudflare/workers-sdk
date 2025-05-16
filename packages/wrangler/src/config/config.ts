@@ -371,7 +371,7 @@ export const defaultWranglerConfig: Config = {
 	jsx_fragment: "React.Fragment",
 	migrations: [],
 	triggers: {
-		crons: [],
+		crons: undefined,
 	},
 	usage_model: undefined,
 	rules: [],

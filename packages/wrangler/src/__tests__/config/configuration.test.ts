@@ -114,7 +114,7 @@ describe("normalizeAndValidateConfig()", () => {
 			ai: undefined,
 			version_metadata: undefined,
 			triggers: {
-				crons: [],
+				crons: undefined,
 			},
 			unsafe: {
 				bindings: undefined,

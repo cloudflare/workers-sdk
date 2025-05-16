@@ -248,10 +248,12 @@ interface EnvironmentInheritable {
 	 *
 	 * More details here https://developers.cloudflare.com/workers/platform/cron-triggers
 	 *
-	 * @default {crons:[]}
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#triggers
+	 *
+	 * @default {crons: undefined}
 	 * @inheritable
 	 */
-	triggers: { crons: string[] };
+	triggers: { crons: string[] | undefined };
 
 	/**
 	 * Specifies the Usage Model for your Worker. There are two options -

@@ -38,7 +38,7 @@ export default async function triggersDeploy(
 ): Promise<string[] | void> {
 	const { config, accountId, name: scriptName } = props;
 
-	const triggers = props.triggers || config.triggers?.crons;
+	const schedules = props.triggers || config.triggers?.crons;
 	const routes =
 		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
 	const routesOnly: Array<Route> = [];
@@ -258,17 +258,18 @@ export default async function triggersDeploy(
 	}
 
 	// Configure any schedules for the script.
-	// TODO: rename this to `schedules`?
-	if (triggers && triggers.length) {
+	// If schedules is not defined then we just leave whatever is previously deployed alone.
+	// If it is an empty array we will remove all schedules.
+	if (schedules) {
 		deployments.push(
 			fetchResult(`${workerUrl}/schedules`, {
 				// Note: PUT will override previous schedules on this script.
 				method: "PUT",
-				body: JSON.stringify(triggers.map((cron) => ({ cron }))),
+				body: JSON.stringify(schedules.map((cron) => ({ cron }))),
 				headers: {
 					"Content-Type": "application/json",
 				},
-			}).then(() => triggers.map((trigger) => `schedule: ${trigger}`))
+			}).then(() => schedules.map((trigger) => `schedule: ${trigger}`))
 		);
 	}
 
