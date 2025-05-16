@@ -22,7 +22,7 @@ export function validateBackportPR(
 
 	if (!prNumber) {
 		console.error(
-			`❌ Branch name "${branchName}" does not match the expected pattern "v3-maintenance-<PR_NUMBER>"`
+			`❌ Branch name "${branchName}" does not match the expected pattern "v3-backport-<PR_NUMBER>"`
 		);
 		return false;
 	}
@@ -44,7 +44,7 @@ export function validateBackportPR(
 }
 
 export function extractPullRequestNumber(branchName: string): string | null {
-	const match = branchName.match(/^v3-maintenance-(\d+)$/);
+	const match = branchName.match(/^v3-(maintenance|backport)-(\d+)$/);
 
 	if (match && match[1]) {
 		return match[1];
