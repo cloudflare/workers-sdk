@@ -1,19 +1,11 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-/* eslint-disable @typescript-eslint/consistent-type-imports */
 import path from "node:path";
 import dedent from "ts-dedent";
-import {
-	beforeEach,
-	describe,
-	expect,
-	ExpectStatic,
-	it,
-	onTestFinished,
-} from "vitest";
+import { beforeEach, describe, expect, it, onTestFinished } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import type { Binding } from "../src/api";
 import type { MixedModeConnectionString, WorkerOptions } from "miniflare";
+import type { ExpectStatic } from "vitest";
 
 type TestCase<T = void> = {
 	name: string;
@@ -310,7 +302,8 @@ describe.each(testCases)("Mixed Mode for $name", (testCase) => {
 
 		const mixedModeSession = await experimental_startMixedModeSession(
 			typeof testCase.mixedModeSessionConfig === "function"
-				? testCase.mixedModeSessionConfig(setupResult!)
+				? /* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */
+					testCase.mixedModeSessionConfig(setupResult!)
 				: testCase.mixedModeSessionConfig
 		);
 
@@ -322,6 +315,7 @@ describe.each(testCases)("Mixed Mode for $name", (testCase) => {
 			modulesRoot: helper.tmpPath,
 			...testCase.miniflareConfig(
 				mixedModeSession.mixedModeConnectionString,
+				/* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */
 				setupResult!
 			),
 		});
