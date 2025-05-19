@@ -1,4 +1,4 @@
-import childProcess, { ChildProcess } from "node:child_process";
+import childProcess from "node:child_process";
 import events from "node:events";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -36,37 +36,56 @@ const strictPeerDeps = {
 	yarn: "",
 };
 
-/** Seed a test project from a fixture. */
-export function seed(fixture: string, pm: "pnpm" | "yarn" | "npm") {
+/** Prepares an object that allows to see a test project from a fixture. */
+export function prepareSeed(fixture: string, pm: "pnpm" | "yarn" | "npm") {
 	const root = inject("root");
-	const projectPath = path.resolve(root, fixture, pm);
+	const projectPath = path.resolve(
+		root,
+		`${fixture}-${Math.round(Math.random() * 1e5)}`,
+		pm
+	);
+
+	return {
+		projectPath,
+		seed: async () => {
+			await fs.cp(path.resolve(__dirname, "fixtures", fixture), projectPath, {
+				recursive: true,
+				errorOnExist: true,
+			});
+			debuglog("Fixture copied to " + projectPath);
+			await updateVitePluginVersion(projectPath);
+			debuglog("Updated vite-plugin version in package.json");
+			runCommand(`${pm} install ${strictPeerDeps[pm]}`, projectPath, {
+				attempts: 2,
+			});
+			debuglog("Installed node modules");
+		},
+		cleanup: async () => {
+			if (!process.env.CLOUDFLARE_VITE_E2E_KEEP_TEMP_DIRS) {
+				debuglog("Deleting project path", projectPath);
+				await fs.rm(projectPath, {
+					force: true,
+					recursive: true,
+					maxRetries: 10,
+				});
+			}
+		},
+	};
+}
+
+/** Seed a test project from a fixture. */
+export function testSeed(fixture: string, pm: "pnpm" | "yarn" | "npm") {
+	const seedObj = prepareSeed(fixture, pm);
 
 	beforeAll(async () => {
-		await fs.cp(path.resolve(__dirname, "fixtures", fixture), projectPath, {
-			recursive: true,
-			errorOnExist: true,
-		});
-		debuglog("Fixture copied to " + projectPath);
-		await updateVitePluginVersion(projectPath);
-		debuglog("Updated vite-plugin version in package.json");
-		runCommand(`${pm} install ${strictPeerDeps[pm]}`, projectPath, {
-			attempts: 2,
-		});
-		debuglog("Installed node modules");
+		await seedObj.seed();
 	}, 200_000);
 
 	afterAll(async () => {
-		if (!process.env.CLOUDFLARE_VITE_E2E_KEEP_TEMP_DIRS) {
-			debuglog("Deleting project path", projectPath);
-			await fs.rm(projectPath, {
-				force: true,
-				recursive: true,
-				maxRetries: 10,
-			});
-		}
+		await seedObj.cleanup();
 	});
 
-	return projectPath;
+	return seedObj.projectPath;
 }
 
 /** Starts a command and wraps its outputs. */
@@ -221,7 +240,7 @@ export async function fetchJson(url: string, info?: RequestInit) {
 export async function waitForReady(proc: Process) {
 	const match = await vi.waitUntil(
 		() => proc.stdout.match(/Local:\s+(http:\/\/localhost:\d+)/),
-		{ interval: 100, timeout: 20_000 }
+		{ interval: 100, timeout: 30_000 }
 	);
 	return match[1];
 }

@@ -21,7 +21,12 @@ import { getServiceBindings } from "./services";
 import type { AssetsOptions } from "../../../assets";
 import type { Config, RawConfig, RawEnvironment } from "../../../config";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
-import type { MiniflareOptions, ModuleRule, WorkerOptions } from "miniflare";
+import type {
+	MiniflareOptions,
+	MixedModeConnectionString,
+	ModuleRule,
+	WorkerOptions,
+} from "miniflare";
 
 export { readConfig as unstable_readConfig };
 export type {
@@ -249,6 +254,7 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		imagesLocalMode?: boolean;
+		resolveRemotesTo?: MixedModeConnectionString;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
@@ -259,6 +265,7 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		imagesLocalMode?: boolean;
+		resolveRemotesTo?: MixedModeConnectionString;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
@@ -269,6 +276,7 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		imagesLocalMode?: boolean;
+		resolveRemotesTo?: MixedModeConnectionString;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
@@ -287,19 +295,22 @@ export function unstable_getMiniflareWorkerOptions(
 			fallthrough: rule.fallthrough,
 		}));
 
-	const bindings = getBindings(config, env, true, {});
-	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
-		name: config.name,
-		complianceRegion: config.compliance_region,
-		bindings,
-		workerDefinitions: null,
-		queueConsumers: config.queues.consumers,
-		services: [],
-		serviceBindings: {},
-		migrations: config.migrations,
-		imagesLocalMode: !!options?.imagesLocalMode,
-		tails: config.tail_consumers,
-	});
+	const bindings = getBindings(config, env, true, {}, true);
+	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
+		{
+			name: config.name,
+			complianceRegion: config.compliance_region,
+			bindings,
+			workerDefinitions: null,
+			queueConsumers: config.queues.consumers,
+			services: [],
+			serviceBindings: {},
+			migrations: config.migrations,
+			imagesLocalMode: !!options?.imagesLocalMode,
+			tails: config.tail_consumers,
+		},
+		options?.resolveRemotesTo
+	);
 
 	// This function is currently only exported for the Workers Vitest pool.
 	// In tests, we don't want to rely on the dev registry, as we can't guarantee
@@ -312,6 +323,16 @@ export function unstable_getMiniflareWorkerOptions(
 			bindings.services.map((binding) => {
 				const name =
 					binding.service === config.name ? kCurrentWorker : binding.service;
+				if (options?.resolveRemotesTo && binding.remote) {
+					return [
+						binding.binding,
+						{
+							name,
+							entrypoint: binding.entrypoint,
+							mixedModeConnectionString: options.resolveRemotesTo,
+						},
+					];
+				}
 				return [binding.binding, { name, entrypoint: binding.entrypoint }];
 			})
 		);

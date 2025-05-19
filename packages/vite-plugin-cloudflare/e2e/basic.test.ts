@@ -1,5 +1,5 @@
 import { describe, test } from "vitest";
-import { fetchJson, runLongLived, seed, waitForReady } from "./helpers.js";
+import { fetchJson, runLongLived, testSeed, waitForReady } from "./helpers.js";
 
 const isWindows = process.platform === "win32";
 const packageManagers = ["pnpm", , "npm", "yarn"] as const;
@@ -7,7 +7,7 @@ const commands = ["dev", "buildAndPreview"] as const;
 
 describe("basic e2e tests", () => {
 	describe.each(packageManagers)('with "%s" package manager', async (pm) => {
-		const projectPath = seed("basic", pm);
+		const projectPath = testSeed("basic", pm);
 
 		describe.each(commands)('with "%s" command', (command) => {
 			describe("node compatibility", () => {

@@ -12,7 +12,12 @@ import {
 import colors from "picocolors";
 import { globSync } from "tinyglobby";
 import * as vite from "vite";
-import { unstable_getMiniflareWorkerOptions } from "wrangler";
+import {
+	experimental_pickRemoteBindings,
+	experimental_startMixedModeSession,
+	unstable_convertConfigBindingsToStartWorkerBindings,
+	unstable_getMiniflareWorkerOptions,
+} from "wrangler";
 import { getAssetsConfig } from "./asset-config";
 import {
 	ASSET_WORKER_NAME,
@@ -28,7 +33,11 @@ import type {
 } from "./plugin-config";
 import type { MiniflareOptions, SharedOptions, WorkerOptions } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
-import type { SourcelessWorkerOptions, Unstable_Config } from "wrangler";
+import type {
+	Experimental_MixedModeSession,
+	SourcelessWorkerOptions,
+	Unstable_Config,
+} from "wrangler";
 
 function getPersistenceRoot(
 	root: string,
@@ -210,13 +219,14 @@ function filterTails(
 	});
 }
 
-export function getDevMiniflareOptions(
+export async function getDevMiniflareOptions(
 	resolvedPluginConfig: ResolvedPluginConfig,
 	viteDevServer: vite.ViteDevServer,
 	inspectorPort: number | false
-): MiniflareOptions {
+): Promise<MiniflareOptions> {
 	const resolvedViteConfig = viteDevServer.config;
 	const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
+
 	const assetsConfig = getAssetsConfig(
 		resolvedPluginConfig,
 		entryWorkerConfig,
@@ -299,77 +309,98 @@ export function getDevMiniflareOptions(
 
 	const workersFromConfig =
 		resolvedPluginConfig.type === "workers"
-			? Object.entries(resolvedPluginConfig.workers).map(
-					([environmentName, workerConfig]) => {
-						const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
-							{
-								...workerConfig,
-								assets: undefined,
-							},
-							resolvedPluginConfig.cloudflareEnv
-						);
+			? await Promise.all(
+					Object.entries(resolvedPluginConfig.workers).map(
+						async ([environmentName, workerConfig]) => {
+							let mixedModeSession: Experimental_MixedModeSession | undefined;
+							if (resolvedPluginConfig.experimental.mixedMode && workerConfig) {
+								const workerRemoteBindings = experimental_pickRemoteBindings(
+									unstable_convertConfigBindingsToStartWorkerBindings(
+										workerConfig
+									) ?? {}
+								);
 
-						const { externalWorkers } = miniflareWorkerOptions;
-
-						const { ratelimits, ...workerOptions } =
-							miniflareWorkerOptions.workerOptions;
-
-						return {
-							externalWorkers,
-							worker: {
-								...workerOptions,
-								name: workerOptions.name ?? workerConfig.name,
-								unsafeInspectorProxy: inspectorPort !== false,
-								modulesRoot: miniflareModulesRoot,
-								unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
-								serviceBindings: {
-									...workerOptions.serviceBindings,
-									...(environmentName ===
-										resolvedPluginConfig.entryWorkerEnvironmentName &&
-									workerConfig.assets?.binding
-										? {
-												[workerConfig.assets.binding]: ASSET_WORKER_NAME,
-											}
-										: {}),
-									__VITE_INVOKE_MODULE__: async (request) => {
-										const payload =
-											(await request.json()) as vite.CustomPayload;
-										const invokePayloadData = payload.data as {
-											id: string;
-											name: string;
-											data: [string, string, FetchFunctionOptions];
-										};
-
-										assert(
-											invokePayloadData.name === "fetchModule",
-											`Invalid invoke event: ${invokePayloadData.name}`
+								if (Object.keys(workerRemoteBindings).length > 0) {
+									mixedModeSession =
+										await experimental_startMixedModeSession(
+											workerRemoteBindings
 										);
+								}
+							}
 
-										const [moduleId] = invokePayloadData.data;
-
-										// Additional modules (CompiledWasm, Data, Text)
-										if (additionalModuleRE.test(moduleId)) {
-											const result = {
-												externalize: moduleId,
-												type: "module",
-											} satisfies vite.FetchResult;
-
-											return MiniflareResponse.json({ result });
-										}
-
-										const devEnvironment = viteDevServer.environments[
-											environmentName
-										] as CloudflareDevEnvironment;
-
-										const result =
-											await devEnvironment.hot.handleInvoke(payload);
-
-										return MiniflareResponse.json(result);
-									},
+							const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
+								{
+									...workerConfig,
+									assets: undefined,
 								},
-							} satisfies Partial<WorkerOptions>,
-						};
-					}
+								resolvedPluginConfig.cloudflareEnv,
+								{
+									resolveRemotesTo: mixedModeSession?.mixedModeConnectionString,
+								}
+							);
+
+							const { externalWorkers } = miniflareWorkerOptions;
+
+							const { ratelimits, ...workerOptions } =
+								miniflareWorkerOptions.workerOptions;
+
+							return {
+								externalWorkers,
+								worker: {
+									...workerOptions,
+									name: workerOptions.name ?? workerConfig.name,
+									unsafeInspectorProxy: inspectorPort !== false,
+									modulesRoot: miniflareModulesRoot,
+									unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
+									serviceBindings: {
+										...workerOptions.serviceBindings,
+										...(environmentName ===
+											resolvedPluginConfig.entryWorkerEnvironmentName &&
+										workerConfig.assets?.binding
+											? {
+													[workerConfig.assets.binding]: ASSET_WORKER_NAME,
+												}
+											: {}),
+										__VITE_INVOKE_MODULE__: async (request) => {
+											const payload =
+												(await request.json()) as vite.CustomPayload;
+											const invokePayloadData = payload.data as {
+												id: string;
+												name: string;
+												data: [string, string, FetchFunctionOptions];
+											};
+
+											assert(
+												invokePayloadData.name === "fetchModule",
+												`Invalid invoke event: ${invokePayloadData.name}`
+											);
+
+											const [moduleId] = invokePayloadData.data;
+
+											// Additional modules (CompiledWasm, Data, Text)
+											if (additionalModuleRE.test(moduleId)) {
+												const result = {
+													externalize: moduleId,
+													type: "module",
+												} satisfies vite.FetchResult;
+
+												return MiniflareResponse.json({ result });
+											}
+
+											const devEnvironment = viteDevServer.environments[
+												environmentName
+											] as CloudflareDevEnvironment;
+
+											const result =
+												await devEnvironment.hot.handleInvoke(payload);
+
+											return MiniflareResponse.json(result);
+										},
+									},
+								} satisfies Partial<WorkerOptions>,
+							};
+						}
+					)
 				)
 			: [];
 
@@ -551,38 +582,62 @@ function getPreviewModules(
 	} satisfies Pick<WorkerOptions, "rootPath" | "modules">;
 }
 
-export function getPreviewMiniflareOptions(
+export async function getPreviewMiniflareOptions(
 	vitePreviewServer: vite.PreviewServer,
 	workerConfigs: Unstable_Config[],
 	persistState: PersistState,
+	mixedModeEnabled: boolean,
 	inspectorPort: number | false
-): MiniflareOptions {
+): Promise<MiniflareOptions> {
 	const resolvedViteConfig = vitePreviewServer.config;
-	const workers: Array<WorkerOptions> = workerConfigs.flatMap((config) => {
-		const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(config);
+	const workers: Array<WorkerOptions> = (
+		await Promise.all(
+			workerConfigs.map(async (workerConfig) => {
+				let mixedModeSession: Experimental_MixedModeSession | undefined;
+				if (mixedModeEnabled && workerConfig) {
+					const workerRemoteBindings = experimental_pickRemoteBindings(
+						unstable_convertConfigBindingsToStartWorkerBindings(workerConfig) ??
+							{}
+					);
 
-		const { externalWorkers } = miniflareWorkerOptions;
+					if (Object.keys(workerRemoteBindings).length > 0) {
+						mixedModeSession =
+							await experimental_startMixedModeSession(workerRemoteBindings);
+					}
+				}
 
-		const { ratelimits, modulesRules, ...workerOptions } =
-			miniflareWorkerOptions.workerOptions;
+				const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
+					workerConfig,
+					undefined,
+					{
+						resolveRemotesTo: mixedModeSession?.mixedModeConnectionString,
+					}
+				);
 
-		return [
-			{
-				...workerOptions,
-				tails: filterTails(
-					workerOptions.tails,
-					workerConfigs,
-					vitePreviewServer.config.logger.warn
-				),
-				name: workerOptions.name ?? config.name,
-				unsafeInspectorProxy: inspectorPort !== false,
-				...(miniflareWorkerOptions.main
-					? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
-					: { modules: true, script: "" }),
-			},
-			...externalWorkers,
-		];
-	});
+				const { externalWorkers } = miniflareWorkerOptions;
+
+				const { ratelimits, modulesRules, ...workerOptions } =
+					miniflareWorkerOptions.workerOptions;
+
+				return [
+					{
+						...workerOptions,
+						tails: filterTails(
+							workerOptions.tails,
+							workerConfigs,
+							vitePreviewServer.config.logger.warn
+						),
+						name: workerOptions.name ?? workerConfig.name,
+						unsafeInspectorProxy: inspectorPort !== false,
+						...(miniflareWorkerOptions.main
+							? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
+							: { modules: true, script: "" }),
+					},
+					...externalWorkers,
+				] as Array<WorkerOptions>;
+			})
+		)
+	).flat();
 
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
