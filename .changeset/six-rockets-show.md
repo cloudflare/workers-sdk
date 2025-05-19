@@ -4,7 +4,7 @@
 
 allow --name and --env args on wrangler deploy
 
-Previously it was not possible to provide a Worker nam as a command line argument at the same time as setting the Wrangler environment.
+Previously it was not possible to provide a Worker name as a command line argument at the same time as setting the Wrangler environment.
 Now specifying `--name` is supported and will override any names set in the Wrangler config:
 
 **wrangler.json**
