@@ -18,7 +18,6 @@ import {
 	inheritableInLegacyEnvironments,
 	isBoolean,
 	isMutuallyExclusiveWith,
-	isObjectWith,
 	isOneOf,
 	isOptionalProperty,
 	isRequiredProperty,
@@ -1337,8 +1336,8 @@ function normalizeAndValidateEnvironment(
 			topLevelEnv,
 			rawEnv,
 			"triggers",
-			isObjectWith("crons"),
-			{ crons: [] }
+			validateTriggers,
+			{ crons: undefined }
 		),
 		assets: normalizeAndValidateAssets(diagnostics, topLevelEnv, rawEnv),
 		usage_model: inheritable(
@@ -1739,6 +1738,44 @@ const validateAndNormalizeRules = (
 		validateRules(envName),
 		deprecatedRules ?? []
 	);
+};
+
+const validateTriggers: ValidatorFn = (
+	diagnostics,
+	triggersFieldName,
+	triggersValue
+) => {
+	if (triggersValue === undefined || triggersValue === null) {
+		return true;
+	}
+
+	if (typeof triggersValue !== "object") {
+		diagnostics.errors.push(
+			`Expected "${triggersFieldName}" to be of type object but got ${JSON.stringify(
+				triggersValue
+			)}.`
+		);
+		return false;
+	}
+
+	let isValid = true;
+
+	if ("crons" in triggersValue && !Array.isArray(triggersValue.crons)) {
+		diagnostics.errors.push(
+			`Expected "${triggersFieldName}.crons" to be of type array, but got ${JSON.stringify(triggersValue)}.`
+		);
+		isValid = false;
+	}
+
+	isValid =
+		validateAdditionalProperties(
+			diagnostics,
+			triggersFieldName,
+			Object.keys(triggersValue),
+			["crons"]
+		) && isValid;
+
+	return isValid;
 };
 
 const validateRules =
