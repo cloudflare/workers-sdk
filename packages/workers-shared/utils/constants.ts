@@ -31,3 +31,4 @@ export const MAX_ASSET_SIZE = 25 * 1024 * 1024;
 export const CF_ASSETS_IGNORE_FILENAME = ".assetsignore";
 export const REDIRECTS_FILENAME = "_redirects";
 export const HEADERS_FILENAME = "_headers";
+export const ROUTES_FILENAME = "_routes.json";

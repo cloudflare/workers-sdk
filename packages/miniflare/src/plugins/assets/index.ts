@@ -11,6 +11,7 @@ import {
 	normalizeFilePath,
 	PATH_HASH_OFFSET,
 	PATH_HASH_SIZE,
+	ROUTES_FILENAME,
 } from "@cloudflare/workers-shared";
 import {
 	constructHeaders,
@@ -18,6 +19,7 @@ import {
 } from "@cloudflare/workers-shared/utils/configuration/constructConfiguration";
 import { parseHeaders } from "@cloudflare/workers-shared/utils/configuration/parseHeaders";
 import { parseRedirects } from "@cloudflare/workers-shared/utils/configuration/parseRedirects";
+import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import {
 	HEADERS_FILENAME,
 	REDIRECTS_FILENAME,
@@ -98,9 +100,11 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 
 		const redirectsFile = join(options.assets.directory, REDIRECTS_FILENAME);
 		const headersFile = join(options.assets.directory, HEADERS_FILENAME);
+		const staticRoutingFile = join(options.assets.directory, ROUTES_FILENAME);
 
 		const redirectsContents = maybeGetFile(redirectsFile);
 		const headersContents = maybeGetFile(headersFile);
+		const staticRoutingContents = maybeGetFile(staticRoutingFile);
 
 		const logger = new Log();
 		const assetParserLogger = {
@@ -133,6 +137,21 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 					logger: assetParserLogger,
 				}).headers
 			);
+		}
+
+		if (staticRoutingContents !== undefined) {
+			const { parsed, errorMessage } = parseStaticRouting(
+				staticRoutingContents
+			);
+			if (errorMessage) {
+				throw new Error(errorMessage);
+			} else {
+				logger.info(`✨ Parsed _routes.json.`);
+			}
+			options.assets.routerConfig = {
+				...options.assets.routerConfig,
+				static_routing: parsed,
+			};
 		}
 
 		const assetConfig: AssetConfig = {
