@@ -6,10 +6,7 @@ import {
 } from "./constants";
 import type { StaticRouting } from "../types";
 
-export function parseStaticRouting(input: string): {
-	parsed: StaticRouting;
-	errorMessage: string | undefined;
-} {
+export function parseStaticRouting(input: string) {
 	const parsed = StaticRoutingSchema.parse(JSON.parse(input)) as StaticRouting;
 
 	if (parsed.version !== ROUTES_SPEC_VERSION) {
@@ -45,7 +42,10 @@ export function parseStaticRouting(input: string): {
 	const invalidExcludes = validateStaticRoutingRules(parsed.exclude ?? []);
 
 	const errorMessage = formatInvalidRoutes(invalidIncludes, invalidExcludes);
-	return { parsed, errorMessage };
+	if (errorMessage) {
+		throw new Error(errorMessage);
+	}
+	return parsed;
 }
 
 function validateStaticRoutingRules(rules: string[]): string[] {

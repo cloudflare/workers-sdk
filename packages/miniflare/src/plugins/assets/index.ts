@@ -140,14 +140,9 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		}
 
 		if (staticRoutingContents !== undefined) {
-			const { parsed, errorMessage } = parseStaticRouting(
-				staticRoutingContents
-			);
-			if (errorMessage) {
-				throw new Error(errorMessage);
-			} else {
-				logger.info(`✨ Parsed _routes.json.`);
-			}
+			const parsed = parseStaticRouting(staticRoutingContents);
+			logger.info(`✨ Parsed _routes.json.`);
+
 			options.assets.routerConfig = {
 				...options.assets.routerConfig,
 				static_routing: parsed,
