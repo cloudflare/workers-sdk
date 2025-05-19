@@ -1,5 +1,8 @@
 import * as path from "node:path";
-import { loadDotEnv } from "../config";
+import { maybeGetFile } from "@cloudflare/workers-shared";
+import dotenv from "dotenv";
+import { getDefaultEnvPaths, loadDotEnv } from "../config/dot-env";
+import { getCloudflareIncludeProcessEnvFromEnv } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import type { Config } from "../config";
 
@@ -16,8 +19,12 @@ import type { Config } from "../config";
  * Wrangler configuration). If the `--env <env>` option is set, we'll first look for
  * `.dev.vars.<env>`.
  *
- * Any values in this file, formatted like a `dotenv` file, will add to or override `vars`
+ * If there are no `.dev.vars*` file, we will look for `.env*` files in the same directory.
+ * If the `--env-file <file-path>` option is set, we'll look for the `.env*` files at that path.
+ *
+ * Any values in these files (all formatted like `.env` files) will add to or override `vars`
  * bindings provided in the Wrangler configuration file.
+ *
  */
 export function getVarsForDev(
 	config: Pick<Config, "userConfigPath" | "vars">,
@@ -27,8 +34,10 @@ export function getVarsForDev(
 	const configDir = path.resolve(
 		config.userConfigPath ? path.dirname(config.userConfigPath) : "."
 	);
+
+	// First, try to load from .dev.vars
 	const devVarsPath = path.resolve(configDir, ".dev.vars");
-	const loaded = loadDotEnv(devVarsPath, env);
+	const loaded = loadDotDevDotVars(devVarsPath, env);
 	if (loaded !== undefined) {
 		const devVarsRelativePath = path.relative(process.cwd(), loaded.path);
 		if (!silent) {
@@ -39,6 +48,59 @@ export function getVarsForDev(
 			...loaded.parsed,
 		};
 	} else {
-		return config.vars;
+		// If no .dev.vars files load vars from .env files in the configuration directory.
+		const dotEnvVars = loadDotEnv(
+			getDefaultEnvPaths(path.resolve(path.join(configDir, ".env")), env),
+			{
+				includeProcessEnv: getCloudflareIncludeProcessEnvFromEnv(),
+				silent,
+			}
+		);
+		return {
+			...config.vars,
+			...dotEnvVars,
+		};
+	}
+}
+
+export interface DotDevDotVars {
+	path: string;
+	parsed: dotenv.DotenvParseOutput;
+}
+
+function tryLoadDotDevDotVars(basePath: string): DotDevDotVars | undefined {
+	try {
+		const contents = maybeGetFile(basePath);
+		if (contents === undefined) {
+			logger.debug(
+				`local dev variables file not found at "${path.relative(".", basePath)}". Continuing... For more details, refer to https://developers.cloudflare.com/workers/wrangler/system-environment-variables/`
+			);
+			return;
+		}
+
+		const parsed = dotenv.parse(contents);
+		return { path: basePath, parsed };
+	} catch (e) {
+		logger.debug(
+			`Failed to load local dev variables file "${path.relative(".", basePath)}":`,
+			e
+		);
+	}
+}
+
+/**
+ * Loads a .dev.vars (or .env style) file from `envPath`, preferring to read `${envPath}.${env}` if
+ * `env` is defined and that file exists.
+ */
+export function loadDotDevDotVars(
+	envPath: string,
+	env?: string
+): DotDevDotVars | undefined {
+	if (env === undefined) {
+		return tryLoadDotDevDotVars(envPath);
+	} else {
+		return (
+			tryLoadDotDevDotVars(`${envPath}.${env}`) ?? tryLoadDotDevDotVars(envPath)
+		);
 	}
 }
