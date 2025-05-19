@@ -122,6 +122,7 @@ import type {
 	R2Bucket,
 } from "@cloudflare/workers-types/experimental";
 import type { ChildProcess } from "child_process";
+const { npxImport } = await import("npx-import");
 
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
@@ -953,8 +954,6 @@ export class Miniflare {
 				this.#log.logWithLevel(logLevel, message);
 				response = new Response(null, { status: 204 });
 			} else if (url.pathname === "/browser/launch") {
-				// eslint-disable-next-line es/no-dynamic-import
-				const { npxImport } = await import("npx-import");
 				// Version should be kept in sync with the supported version at https://github.com/cloudflare/puppeteer?tab=readme-ov-file#workers-version-of-puppeteer-core
 				const puppeteer = await npxImport(
 					"puppeteer@21.1.0",
