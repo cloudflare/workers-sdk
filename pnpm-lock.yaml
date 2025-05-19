@@ -1085,7 +1085,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.7
-        version: 3.0.9(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2)
+        version: 3.0.9(@types/node@20.17.32)(@vitest/ui@3.2.3(vitest@3.2.3))(jiti@2.4.2)(lightningcss@1.29.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -3512,6 +3512,9 @@ importers:
       dotenv:
         specifier: ^16.3.1
         version: 16.3.1
+      dotenv-expand:
+        specifier: ^12.0.2
+        version: 12.0.2
       execa:
         specifier: ^6.1.0
         version: 6.1.0
@@ -8676,12 +8679,20 @@ packages:
     resolution: {integrity: sha512-GopVGCpVS1UKH75VKHGuQFqS1Gusej0z4FyQkPdwjil2gNIv+LNsqBlboOzpJFZKVT95GkCyWJbBSdFEFUWI2A==}
     engines: {node: '>=12'}
 
+  dotenv-expand@12.0.2:
+    resolution: {integrity: sha512-lXpXz2ZE1cea1gL4sz2Ipj8y4PiVjytYr3Ij0SWoms1PGxIv7m2CRKuRuCRtHdVuvM/hNJPMxt5PbhboNC4dPQ==}
+    engines: {node: '>=12'}
+
   dotenv@16.0.3:
     resolution: {integrity: sha512-7GO6HghkA5fYG9TYnNxi14/7K9f5occMlp3zXAuSxn7CKCxt9xbNWG7yF8hTCSUchlfWSe3uLmlPfigevRItzQ==}
     engines: {node: '>=12'}
 
   dotenv@16.3.1:
     resolution: {integrity: sha512-IPzF4w4/Rd94bA9imS68tZBaYyBWSCE47V1RGuMrB94iyTOIEwRmVL2x/4An+6mETpLrKJ5hQkB8W4kFAadeIQ==}
+    engines: {node: '>=12'}
+
+  dotenv@16.6.1:
+    resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
     engines: {node: '>=12'}
 
   dotenv@8.6.0:
@@ -17270,7 +17281,7 @@ snapshots:
       '@typescript-eslint/type-utils': 6.10.0(eslint@8.57.1)(typescript@5.8.2)
       '@typescript-eslint/utils': 6.10.0(eslint@8.57.1)(typescript@5.8.2)
       '@typescript-eslint/visitor-keys': 6.10.0
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       eslint: 8.57.1
       graphemer: 1.4.0
       ignore: 5.3.1
@@ -17306,7 +17317,7 @@ snapshots:
       '@typescript-eslint/types': 6.10.0
       '@typescript-eslint/typescript-estree': 6.10.0(typescript@5.8.2)
       '@typescript-eslint/visitor-keys': 6.10.0
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       eslint: 8.57.1
     optionalDependencies:
       typescript: 5.8.2
@@ -17319,7 +17330,7 @@ snapshots:
       '@typescript-eslint/types': 7.18.0
       '@typescript-eslint/typescript-estree': 7.18.0(typescript@5.6.3)
       '@typescript-eslint/visitor-keys': 7.18.0
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       eslint: 8.57.1
     optionalDependencies:
       typescript: 5.6.3
@@ -17505,7 +17516,7 @@ snapshots:
 
   '@verdaccio/loaders@8.0.0-next-8.4':
     dependencies:
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       lodash: 4.17.21
     transitivePeerDependencies:
       - supports-color
@@ -17566,7 +17577,7 @@ snapshots:
 
   '@verdaccio/signature@8.0.0-next-8.1':
     dependencies:
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       jsonwebtoken: 9.0.2
     transitivePeerDependencies:
       - supports-color
@@ -18187,7 +18198,7 @@ snapshots:
       common-path-prefix: 3.0.0
       concordance: 5.0.4
       currently-unhandled: 0.4.1
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       emittery: 1.0.1
       figures: 6.0.1
       globby: 14.0.1
@@ -19095,9 +19106,15 @@ snapshots:
 
   dotenv-expand@10.0.0: {}
 
+  dotenv-expand@12.0.2:
+    dependencies:
+      dotenv: 16.6.1
+
   dotenv@16.0.3: {}
 
   dotenv@16.3.1: {}
+
+  dotenv@16.6.1: {}
 
   dotenv@8.6.0: {}
 
@@ -19292,7 +19309,7 @@ snapshots:
 
   esbuild-register@3.5.0(esbuild@0.25.4):
     dependencies:
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       esbuild: 0.25.4
     transitivePeerDependencies:
       - supports-color
@@ -19637,7 +19654,7 @@ snapshots:
       ajv: 6.12.6
       chalk: 4.1.2
       cross-spawn: 7.0.6
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       doctrine: 3.0.0
       escape-string-regexp: 4.0.0
       eslint-scope: 7.2.2
@@ -23943,7 +23960,7 @@ snapshots:
       '@volar/typescript': 2.3.4
       '@vue/language-core': 2.0.29(typescript@5.8.2)
       compare-versions: 6.1.1
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       kolorist: 1.8.0
       local-pkg: 0.5.0
       magic-string: 0.30.17
@@ -23958,7 +23975,7 @@ snapshots:
 
   vite-tsconfig-paths@4.2.0(typescript@5.8.2)(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2)):
     dependencies:
-      debug: 4.3.7(supports-color@9.2.2)
+      debug: 4.3.7(supports-color@8.1.1)
       globrex: 0.1.2
       tsconfck: 2.1.1(typescript@5.8.2)
     optionalDependencies:
@@ -24044,7 +24061,7 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@3.0.9(@types/node@20.17.32)(@vitest/ui@3.2.3)(jiti@2.4.2)(lightningcss@1.29.2):
+  vitest@3.0.9(@types/node@20.17.32)(@vitest/ui@3.2.3(vitest@3.2.3))(jiti@2.4.2)(lightningcss@1.29.2):
     dependencies:
       '@vitest/expect': 3.0.9
       '@vitest/mocker': 3.0.9(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2))

@@ -42,8 +42,8 @@ export const getC3CommandFromEnv = getEnvironmentVariableFactory({
  */
 export const getWranglerSendMetricsFromEnv =
 	getBooleanEnvironmentVariableFactory({
-	variableName: "WRANGLER_SEND_METRICS",
-});
+		variableName: "WRANGLER_SEND_METRICS",
+	});
 
 /**
  * Set `WRANGLER_API_ENVIRONMENT` environment variable to "staging" to tell Wrangler to hit the staging APIs rather than production.
@@ -285,3 +285,12 @@ export const getDockerHost = getEnvironmentVariableFactory({
 			: "unix:///var/run/docker.sock";
 	},
 });
+
+/**
+ * `CLOUDFLARE_INCLUDE_PROCESS_ENV` specifies whether to include the `process.env` in vars loaded from `.env` for local development.
+ */
+export const getCloudflareIncludeProcessEnvFromEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "CLOUDFLARE_INCLUDE_PROCESS_ENV",
+		defaultValue: () => false,
+	});

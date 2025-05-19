@@ -2,7 +2,6 @@ import * as fs from "node:fs";
 import module from "node:module";
 import getPort from "get-port";
 import { http, HttpResponse } from "msw";
-import patchConsole from "patch-console";
 import dedent from "ts-dedent";
 import { vi } from "vitest";
 import { ConfigController } from "../api/startDevWorker/ConfigController";
@@ -11,7 +10,6 @@ import { getWorkerAccountAndContext } from "../dev/remote";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import { FatalError } from "../errors";
 import { CI } from "../is-ci";
-import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -132,7 +130,6 @@ describe.sequential("wrangler dev", () => {
 			...mswSuccessOauthHandlers,
 			...mswSuccessUserHandlers
 		);
-		logger.clearHistory();
 	});
 
 	runInTempDir();
@@ -140,11 +137,7 @@ describe.sequential("wrangler dev", () => {
 	mockApiToken();
 	const std = mockConsoleMethods();
 	afterEach(() => {
-		patchConsole(() => {});
 		msw.resetHandlers();
-		spy.mockClear();
-		setSpy.mockClear();
-		logger.resetLoggerLevel();
 	});
 
 	async function runWranglerUntilConfig(
@@ -155,6 +148,11 @@ describe.sequential("wrangler dev", () => {
 			await runWrangler(cmd, env);
 		} catch (e) {
 			console.error(e);
+		}
+		if (spy.mock.calls.length === 0) {
+			throw new Error(
+				"Config was never reached:\n" + JSON.stringify(std, null, 2)
+			);
 		}
 		return { ...spy.mock.calls[0][0], input: setSpy.mock.calls[0][0] };
 	}
@@ -948,45 +946,113 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		describe(".env", () => {
+			const processEnv = process.env;
+			beforeEach(() => (process.env = { ...processEnv }));
+			afterEach(() => (process.env = processEnv));
+
 			beforeEach(() => {
-				fs.writeFileSync(".env", "CUSTOM_BUILD_VAR=default");
-				fs.writeFileSync(".env.custom", "CUSTOM_BUILD_VAR=custom");
+				fs.writeFileSync(
+					".env",
+					dedent`
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1=default-1
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_2=default-2
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=default-3
+					`
+				);
+				fs.writeFileSync(
+					".env.local",
+					dedent`
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1=default-local-1
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_LOCAL=default-local
+					`
+				);
+				fs.writeFileSync(
+					".env.custom",
+					dedent`
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_2=custom-2
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=custom-3
+					`
+				);
+				fs.writeFileSync(
+					".env.custom.local",
+					dedent`
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1=custom-local-1
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=custom-local-3
+						__DOT_ENV_TEST_CUSTOM_BUILD_VAR_LOCAL=custom-local
+					`
+				);
+				fs.writeFileSync(
+					"build.js",
+					dedent`
+						const fs = require('fs');
+						const customFields = Object.entries(process.env).filter(([key]) => key.startsWith('__DOT_ENV_TEST_CUSTOM_BUILD_VAR'));
+						console.log(customFields.map(([key, value]) => key + "=" + value).join('\\n'));
+					`
+				);
 				fs.writeFileSync("index.js", `export default {};`);
 				writeWranglerConfig({
 					main: "index.js",
-					env: { custom: {} },
-					build: {
-						// Ideally, we'd just log the var here and match it in `std.out`,
-						// but stdout from custom builds is piped directly to
-						// `process.stdout` which we don't capture.
-						command: `node -e "require('fs').writeFileSync('var.txt', process.env.CUSTOM_BUILD_VAR)"`,
-					},
+					env: { custom: {}, noEnv: {} },
+					build: { command: `node ./build.js` },
 				});
-
-				// We won't overwrite existing process.env keys with .env values (to
-				// allow .env overrides to be specified on the shell), so make sure this
-				// key definitely doesn't exist.
-				vi.stubEnv("CUSTOM_BUILD_VAR", "");
-				delete process.env.CUSTOM_BUILD_VAR;
 			});
 
-			it("should load environment variables from `.env`", async () => {
+			function extractCustomBuildLogs(stdout: string) {
+				return stdout
+					.split("\n")
+					.filter((line) => line.startsWith("[custom build]"))
+					.map((line) => line.replace(/\[custom build\]( |$)/, ""))
+					.sort()
+					.join("\n");
+			}
+
+			it("should pass environment variables from `.env` to custom builds", async () => {
 				await runWranglerUntilConfig("dev");
-				const output = fs.readFileSync("var.txt", "utf8");
-				expect(output).toMatch("default");
+				expect(extractCustomBuildLogs(std.out)).toMatchInlineSnapshot(`
+					"
+					Running: node ./build.js
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1=default-local-1
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_2=default-2
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=default-3
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_LOCAL=default-local"
+				`);
 			});
+
 			it("should prefer to load environment variables from `.env.<environment>` if `--env <environment>` is set", async () => {
 				await runWranglerUntilConfig("dev --env custom");
-				const output = fs.readFileSync("var.txt", "utf8");
-				expect(output).toMatch("custom");
+				expect(extractCustomBuildLogs(std.out)).toMatchInlineSnapshot(`
+					"
+					Running: node ./build.js
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1=custom-local-1
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_2=custom-2
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=custom-local-3
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_LOCAL=custom-local"
+				`);
 			});
-			it("should show reasonable debug output if `.env` does not exist", async () => {
-				fs.rmSync(".env");
-				writeWranglerConfig({
-					main: "index.js",
-				});
-				await runWranglerUntilConfig("dev --log-level debug");
-				expect(std.debug).toContain(".env file not found at");
+
+			it("should use default `.env` if `.env.<environment>` does not exist", async () => {
+				await runWranglerUntilConfig("dev --env=noEnv");
+				expect(extractCustomBuildLogs(std.out)).toMatchInlineSnapshot(`
+					"
+					Running: node ./build.js
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1=default-local-1
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_2=default-2
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=default-3
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_LOCAL=default-local"
+				`);
+			});
+
+			it("should not override environment variables already on process.env", async () => {
+				vi.stubEnv("__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1", "process-env");
+				await runWranglerUntilConfig("dev");
+				expect(extractCustomBuildLogs(std.out)).toMatchInlineSnapshot(`
+					"
+					Running: node ./build.js
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_1=process-env
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_2=default-2
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_3=default-3
+					__DOT_ENV_TEST_CUSTOM_BUILD_VAR_LOCAL=default-local"
+				`);
 			});
 		});
 	});
@@ -1428,6 +1494,127 @@ describe.sequential("wrangler dev", () => {
 
 				"
 			`);
+		});
+	});
+
+	describe(".env in local dev", () => {
+		const processEnv = process.env;
+		beforeEach(() => (process.env = { ...processEnv }));
+		afterEach(() => (process.env = processEnv));
+
+		beforeEach(() => {
+			fs.writeFileSync(
+				".env",
+				dedent`
+						__DOT_ENV_LOCAL_DEV_VAR_1=default-1
+						__DOT_ENV_LOCAL_DEV_VAR_2=default-2
+						__DOT_ENV_LOCAL_DEV_VAR_3=default-3
+					`
+			);
+			fs.writeFileSync(
+				".env.local",
+				dedent`
+						__DOT_ENV_LOCAL_DEV_VAR_1=default-local-1
+						__DOT_ENV_LOCAL_DEV_VAR_LOCAL=default-local
+					`
+			);
+			fs.writeFileSync(
+				".env.custom",
+				dedent`
+						__DOT_ENV_LOCAL_DEV_VAR_2=custom-2
+						__DOT_ENV_LOCAL_DEV_VAR_3=custom-3
+					`
+			);
+			fs.writeFileSync(
+				".env.custom.local",
+				dedent`
+						__DOT_ENV_LOCAL_DEV_VAR_1=custom-local-1
+						__DOT_ENV_LOCAL_DEV_VAR_3=custom-local-3
+						__DOT_ENV_LOCAL_DEV_VAR_LOCAL=custom-local
+					`
+			);
+			fs.writeFileSync("index.js", `export default {};`);
+			writeWranglerConfig({
+				main: "index.js",
+			});
+		});
+
+		function extractUsingVars(stdout: string) {
+			return stdout
+				.split("\n")
+				.filter((line) => line.startsWith("Using vars"))
+				.sort()
+				.join("\n");
+		}
+
+		function extractBindings(stdout: string) {
+			return stdout
+				.split("\n")
+				.filter((line) => line.startsWith("env."))
+				.sort()
+				.join("\n");
+		}
+
+		it("should get local dev `vars` from `.env`", async () => {
+			await runWranglerUntilConfig("dev");
+			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(`
+				"Using vars defined in .env
+				Using vars defined in .env.local"
+			`);
+			expect(extractBindings(std.out)).toMatchInlineSnapshot(`
+				"env.__DOT_ENV_LOCAL_DEV_VAR_1 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_2 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL (\\"(hidden)\\")      Environment Variable      local"
+			`);
+		});
+
+		it("should get local dev `vars` from appropriate `.env.<environment>` files when --env=<environment> is set", async () => {
+			await runWranglerUntilConfig("dev --env custom");
+			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(`
+				"Using vars defined in .env
+				Using vars defined in .env.custom
+				Using vars defined in .env.custom.local
+				Using vars defined in .env.local"
+			`);
+			expect(extractBindings(std.out)).toMatchInlineSnapshot(`
+				"env.__DOT_ENV_LOCAL_DEV_VAR_1 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_2 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL (\\"(hidden)\\")      Environment Variable      local"
+			`);
+		});
+
+		it("should get local dev vars from appropriate `.env` files when --env=<environment> is set but no .env.<environment> file exists", async () => {
+			await runWranglerUntilConfig("dev --env noEnv");
+			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(`
+				"Using vars defined in .env
+				Using vars defined in .env.local"
+			`);
+			expect(extractBindings(std.out)).toMatchInlineSnapshot(`
+				"env.__DOT_ENV_LOCAL_DEV_VAR_1 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_2 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\\"(hidden)\\")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL (\\"(hidden)\\")      Environment Variable      local"
+			`);
+		});
+
+		it("should get local dev `vars` from `process.env` when `CLOUDFLARE_INCLUDE_PROCESS_ENV` is true", async () => {
+			await runWranglerUntilConfig("dev --env custom", {
+				CLOUDFLARE_INCLUDE_PROCESS_ENV: "true",
+			});
+			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(`
+				"Using vars defined in .env
+				Using vars defined in .env.custom
+				Using vars defined in .env.custom.local
+				Using vars defined in .env.local
+				Using vars defined in process.env"
+			`);
+			// We could dump out all the bindings but that would be a lot of noise, and also may change between OSes and runs.
+			// Instead, we know that the `CLOUDFLARE_INCLUDE_PROCESS_ENV` variable should be present, so we just check for that.
+			expect(extractBindings(std.out)).contains(
+				'env.CLOUDFLARE_INCLUDE_PROCESS_ENV ("(hidden)")'
+			);
 		});
 	});
 

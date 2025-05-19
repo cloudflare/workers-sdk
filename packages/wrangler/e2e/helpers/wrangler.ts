@@ -25,13 +25,6 @@ export async function runWrangler(
 	return runCommand(getWranglerCommand(wranglerCommand), { cwd, env, timeout });
 }
 
-export function runWranglerLongLived(
-	wranglerCommand: string,
-	options: WranglerCommandOptions = {}
-) {
-	return new WranglerLongLivedCommand(wranglerCommand, options);
-}
-
 export class WranglerLongLivedCommand extends LongLivedCommand {
 	constructor(wranglerCommand: string, options: WranglerCommandOptions = {}) {
 		super(getWranglerCommand(wranglerCommand), getOptions(options));
