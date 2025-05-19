@@ -1,4 +1,4 @@
-from workers import DurableObject, Response
+from workers import DurableObject, Response, handler
 
 """
  * Welcome to Cloudflare Workers! This is your first Durable Objects application.
@@ -48,6 +48,7 @@ class MyDurableObject(DurableObject):
 * @param {ExecutionContext} ctx - The execution context of the Worker
 * @returns {Promise<Response>} The response to be sent back to the client
 """
+@handler
 async def on_fetch(request, env, ctx):
     # Create a `DurableObjectId` for an instance of the `MyDurableObject`
     # class named "foo". Requests from all Workers to the instance named
