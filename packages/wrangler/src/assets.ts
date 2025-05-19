@@ -12,6 +12,7 @@ import {
 	CF_ASSETS_IGNORE_FILENAME,
 	HEADERS_FILENAME,
 	REDIRECTS_FILENAME,
+	ROUTES_FILENAME,
 } from "@cloudflare/workers-shared/utils/constants";
 import {
 	createAssetsIgnoreFunction,
@@ -391,6 +392,7 @@ export type AssetsOptions = {
 	assetConfig: AssetConfig;
 	_redirects?: string;
 	_headers?: string;
+	_routes?: string;
 };
 
 export function getAssetsOptions(
@@ -470,12 +472,13 @@ export function getAssetsOptions(
 
 	const _redirects = maybeGetFile(path.join(directory, REDIRECTS_FILENAME));
 	const _headers = maybeGetFile(path.join(directory, HEADERS_FILENAME));
+	const _routes = maybeGetFile(path.join(directory, ROUTES_FILENAME));
 
 	// defaults are set in asset worker
 	const assetConfig: AssetConfig = {
 		html_handling: config.assets?.html_handling,
 		not_found_handling: config.assets?.not_found_handling,
-		// The _redirects and _headers files are parsed in Miniflare in dev and parsing is not required for deploy
+		// The _redirects, _headers and _routes.json files are parsed in Miniflare in dev and parsing is not required for deploy
 		compatibility_date: config.compatibility_date,
 		compatibility_flags: config.compatibility_flags,
 	};
@@ -487,6 +490,7 @@ export function getAssetsOptions(
 		assetConfig,
 		_redirects,
 		_headers,
+		_routes,
 	};
 }
 
