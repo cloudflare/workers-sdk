@@ -5,6 +5,9 @@ on:
       pr-number:
         description: "The PR number to run CI on behalf of"
         required: true
+      commit-sha:
+        description: "The specific commit SHA from the PR branch to run CI on"
+        required: true
       reviewed:
         description: "Confirm that the PR has been reviewed for use/leakage of secrets"
         type: boolean
@@ -32,13 +35,15 @@ jobs:
           team: wrangler
 
       - name: Stop workflow if user is not a team member
-        if: ${{ steps.teamAffiliation.outputs.isTeamMember == false }}
+        if: ${{ steps.teamAffiliation.outputs.isTeamMember == 'false' }}
         run: |
-          echo "You must be on the "wrangler" team to trigger this job."
+          echo "You must be on the \"wrangler\" team to trigger this job."
           exit 1
 
       - name: "Checkout PR"
-        run: gh pr checkout ${{ inputs.pr-number }} -b run-ci-on-behalf-of-${{ inputs.pr-number }} -f
+        run: |
+          gh pr checkout ${{ inputs.pr-number }} --branch run-ci-on-behalf-of-${{ inputs.pr-number }}
+          git reset --hard ${{ inputs.commit-sha }}
         env:
           GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
 
@@ -47,6 +52,13 @@ jobs:
 
       - name: "Create Draft PR"
         run: |
-          gh pr create --head run-ci-on-behalf-of-${{ inputs.pr-number }} --draft --label "e2e" --title "Run CI on behalf of #${{ inputs.pr-number }}" --body "This PR is created to run CI on behalf of \#${{ inputs.pr-number }}. It can be closed after the CI run is complete."
+          TITLE="Run CI on behalf of #${{ inputs.pr-number }} @${{ inputs.commit-sha }}"
+          BODY="This PR runs CI on behalf of #${{ inputs.pr-number }} at commit ${{ inputs.commit-sha }}. It can be closed after the CI run is complete."
+          gh pr create \
+            --head run-ci-on-behalf-of-${{ inputs.pr-number }} \
+            --draft \
+            --label "e2e" \
+            --title "$TITLE" \
+            --body "$BODY"
         env:
           GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
