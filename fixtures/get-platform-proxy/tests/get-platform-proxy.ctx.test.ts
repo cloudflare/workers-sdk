@@ -33,6 +33,7 @@ describe("getPlatformProxy - ctx", () => {
 			expect(ctx.constructor.name).toBe("ExecutionContext");
 			expect(typeof ctx.waitUntil).toBe("function");
 			expect(typeof ctx.passThroughOnException).toBe("function");
+			expect(ctx.props).toEqual({});
 
 			ctx.waitUntil = ((str: string) => `- ${str} -`) as any;
 			expect(ctx.waitUntil("waitUntil can be overridden" as any)).toBe(
