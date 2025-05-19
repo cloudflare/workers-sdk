@@ -285,3 +285,12 @@ export const getDockerHost = getEnvironmentVariableFactory({
 			: "unix:///var/run/docker.sock";
 	},
 });
+
+/**
+ * `CLOUDFLARE_INCLUDE_PROCESS_ENV` specifies whether to include the `process.env` in vars loaded from `.env` for local development.
+ */
+export const getCloudflareIncludeProcessEnvFromEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "CLOUDFLARE_INCLUDE_PROCESS_ENV",
+		defaultValue: () => false,
+	});

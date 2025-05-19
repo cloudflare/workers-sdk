@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import os from "node:os";
+import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { ApiError } from "@cloudflare/containers-shared";
 import chalk from "chalk";
@@ -21,7 +22,8 @@ import {
 } from "./cert/cert";
 import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
-import { experimental_readRawConfig, loadDotEnv, readConfig } from "./config";
+import { experimental_readRawConfig, readConfig } from "./config";
+import { getDefaultEnvPaths, loadDotEnv } from "./config/dot-env";
 import { containers } from "./containers";
 import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
@@ -420,12 +422,11 @@ export function createCLIParser(argv: string[]) {
 		})
 		.check((args) => {
 			// Grab locally specified env params from `.env` file
-			const loaded = loadDotEnv(".env", args.env);
-			for (const [key, value] of Object.entries(loaded?.parsed ?? {})) {
-				if (!(key in process.env)) {
-					process.env[key] = value;
-				}
-			}
+			process.env =
+				loadDotEnv(getDefaultEnvPaths(resolve(".env"), args.env), {
+					includeProcessEnv: true,
+					silent: true,
+				}) ?? process.env;
 
 			// Write a session entry to the output file (if there is one).
 			writeOutput({
