@@ -116,6 +116,7 @@
 		"date-fns": "^4.1.0",
 		"devtools-protocol": "^0.0.1182435",
 		"dotenv": "^16.3.1",
+		"dotenv-expand": "^12.0.2",
 		"execa": "^6.1.0",
 		"find-up": "^6.3.0",
 		"get-port": "^7.0.0",
