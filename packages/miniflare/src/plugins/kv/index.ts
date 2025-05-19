@@ -12,6 +12,7 @@ import {
 	getMiniflareObjectBindings,
 	getPersistPath,
 	migrateDatabase,
+	mixedModeClientWorker,
 	MixedModeConnectionString,
 	namespaceEntries,
 	namespaceKeys,
@@ -76,7 +77,7 @@ export const KV_PLUGIN: Plugin<
 	sharedOptions: KVSharedOptionsSchema,
 	async getBindings(options) {
 		const namespaces = namespaceEntries(options.kvNamespaces);
-		const bindings = namespaces.map<Worker_Binding>(([name, id]) => ({
+		const bindings = namespaces.map<Worker_Binding>(([name, { id }]) => ({
 			name,
 			kvNamespace: { name: `${SERVICE_NAMESPACE_PREFIX}:${id}` },
 		}));
@@ -110,10 +111,14 @@ export const KV_PLUGIN: Plugin<
 	}) {
 		const persist = sharedOptions.kvPersist;
 		const namespaces = namespaceEntries(options.kvNamespaces);
-		const services = namespaces.map<Service>(([_, id]) => ({
-			name: `${SERVICE_NAMESPACE_PREFIX}:${id}`,
-			worker: objectEntryWorker(KV_NAMESPACE_OBJECT, id),
-		}));
+		const services = namespaces.map<Service>(
+			([name, { id, mixedModeConnectionString }]) => ({
+				name: `${SERVICE_NAMESPACE_PREFIX}:${id}`,
+				worker: mixedModeConnectionString
+					? mixedModeClientWorker(mixedModeConnectionString, name)
+					: objectEntryWorker(KV_NAMESPACE_OBJECT, id),
+			})
+		);
 
 		if (services.length > 0) {
 			const uniqueKey = `miniflare-${KV_NAMESPACE_OBJECT_CLASS_NAME}`;
@@ -161,7 +166,7 @@ export const KV_PLUGIN: Plugin<
 			// databases from the old location to the new location. Blobs are still
 			// stored in the same location.
 			for (const namespace of namespaces) {
-				await migrateDatabase(log, uniqueKey, persistPath, namespace[1]);
+				await migrateDatabase(log, uniqueKey, persistPath, namespace[1].id);
 			}
 		}
 

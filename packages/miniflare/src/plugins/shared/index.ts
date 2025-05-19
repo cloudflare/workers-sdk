@@ -148,15 +148,24 @@ export function namespaceEntries(
 				| { id: string; mixedModeConnectionString?: MixedModeConnectionString }
 		  >
 		| string[]
-): [bindingName: string, id: string][] {
+): [
+	bindingName: string,
+	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
+][] {
 	if (Array.isArray(namespaces)) {
-		return namespaces.map((bindingName) => [bindingName, bindingName]);
+		return namespaces.map((bindingName) => [bindingName, { id: bindingName }]);
 	} else if (namespaces !== undefined) {
 		return Object.entries(namespaces).map(([key, value]) => {
 			if (typeof value === "string") {
-				return [key, value];
+				return [key, { id: value }];
 			}
-			return [key, value.id];
+			return [
+				key,
+				{
+					id: value.id,
+					mixedModeConnectionString: value.mixedModeConnectionString,
+				},
+			];
 		});
 	} else {
 		return [];
