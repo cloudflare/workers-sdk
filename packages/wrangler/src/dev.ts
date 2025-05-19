@@ -847,7 +847,8 @@ export function getBindings(
 	configParam: Config,
 	env: string | undefined,
 	local: boolean,
-	args: AdditionalDevProps
+	args: AdditionalDevProps,
+	mixedModeEnabled = getFlag("MIXED_MODE")
 ): CfWorkerInit["bindings"] {
 	/**
 	 * In Pages, KV, DO, D1, R2, AI and service bindings can be specified as
@@ -874,7 +875,7 @@ export function getBindings(
 			return {
 				binding,
 				id: preview_id ?? id,
-				remote: getFlag("MIXED_MODE") && remote,
+				remote: mixedModeEnabled && remote,
 			};
 		}
 	);
@@ -895,7 +896,7 @@ export function getBindings(
 		if (local) {
 			return {
 				...d1Db,
-				remote: getFlag("MIXED_MODE") && d1Db.remote,
+				remote: mixedModeEnabled && d1Db.remote,
 				database_id,
 			};
 		}
@@ -925,7 +926,7 @@ export function getBindings(
 					binding,
 					bucket_name: preview_bucket_name ?? bucket_name,
 					jurisdiction,
-					remote: getFlag("MIXED_MODE") && remote,
+					remote: mixedModeEnabled && remote,
 				};
 			}
 		) || [];
@@ -941,7 +942,7 @@ export function getBindings(
 		"binding"
 	).map((service) => ({
 		...service,
-		remote: getFlag("MIXED_MODE") && "remote" in service && !!service.remote,
+		remote: mixedModeEnabled && "remote" in service && !!service.remote,
 	}));
 
 	// Hyperdrive bindings
@@ -980,14 +981,14 @@ export function getBindings(
 				binding: queue.binding,
 				queue_name: queue.queue,
 				delivery_delay: queue.delivery_delay,
-				remote: getFlag("MIXED_MODE") && queue.remote,
+				remote: mixedModeEnabled && queue.remote,
 			};
 		}),
 	];
 
 	const workflowsConfig = configParam.workflows.map((workflowConfig) => ({
 		...workflowConfig,
-		remote: getFlag("MIXED_MODE") && workflowConfig.remote,
+		remote: mixedModeEnabled && workflowConfig.remote,
 	}));
 
 	const bindings: CfWorkerInit["bindings"] = {
