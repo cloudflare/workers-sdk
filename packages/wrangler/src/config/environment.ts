@@ -1062,8 +1062,11 @@ export type Assets = {
 	/**
 	 * If true, route every request to the User Worker, whether or not it matches an asset.
 	 * If false, then respond to requests that match an asset with that asset directly.
-	 * */
-	run_worker_first?: boolean;
+	 *
+	 * Can also be a list of paths to match against.
+	 * Matches will be routed to the User Worker, and matches to negative rules will go to the Asset Worker.
+	 */
+	run_worker_first?: boolean | string[];
 };
 
 export interface Observability {
