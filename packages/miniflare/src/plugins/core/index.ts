@@ -335,7 +335,7 @@ function maybeGetCustomServiceService(
 		};
 	} else if (
 		typeof service === "object" &&
-		"mixedModeConnectionString" in service
+		service.mixedModeConnectionString !== undefined
 	) {
 		assert(
 			service.mixedModeConnectionString &&
