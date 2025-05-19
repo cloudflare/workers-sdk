@@ -12,6 +12,8 @@ const StaticRoutingSchema = z.object({
 	exclude: z.array(z.string()).optional(),
 });
 
+export type StaticRouting = z.infer<typeof StaticRoutingSchema>;
+
 export const RouterConfigSchema = z.object({
 	invoke_user_worker_ahead_of_assets: z.boolean().optional(),
 	static_routing: StaticRoutingSchema.optional(),
