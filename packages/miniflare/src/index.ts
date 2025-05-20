@@ -12,6 +12,7 @@ import util from "util";
 import zlib from "zlib";
 import exitHook from "exit-hook";
 import { $ as colors$ } from "kleur/colors";
+import { npxImport } from "npx-import";
 import stoppable from "stoppable";
 import {
 	Dispatcher,
@@ -122,7 +123,6 @@ import type {
 	R2Bucket,
 } from "@cloudflare/workers-types/experimental";
 import type { ChildProcess } from "child_process";
-const { npxImport } = await import("npx-import");
 
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
