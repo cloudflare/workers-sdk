@@ -1683,6 +1683,9 @@ importers:
       capnp-es:
         specifier: ^0.0.7
         version: 0.0.7(typescript@5.7.3)
+      chokidar:
+        specifier: ^4.0.1
+        version: 4.0.1
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
