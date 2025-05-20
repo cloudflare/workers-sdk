@@ -1785,6 +1785,53 @@ describe("watch mode", () => {
 					/Warning: The following routes will attempt to serve Assets on a configured path:/
 				);
 			});
+
+			it(`supports adding _routes.json during dev session`, async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
+							name = "${workerName}"
+							main = "src/index.ts"
+							compatibility_date = "2023-01-01"
+
+							[assets]
+							directory = "./public"
+					`,
+					"src/index.ts": dedent`
+						export default {
+							fetch(request) {
+								return new Response("Hello from user Worker!")
+							}
+						}`,
+					"public/beep/boop.html": dedent`
+						<h1>Hello from an asset</h1>`,
+				});
+				const worker = helper.runLongLived(cmd);
+				const { url } = await worker.waitForReady();
+
+				// verify response from Asset Worker
+				let response = await fetch(`${url}/beep/boop`);
+				expect(response.status).toBe(200);
+				expect(await response.text()).toBe("<h1>Hello from an asset</h1>");
+
+				await helper.seed({
+					"public/_routes.json": dedent`
+						{"version":1,
+						"include":["/beep/*"],
+						"exclude":["/beep/boop"]
+						}`,
+				});
+
+				await worker.waitForReload();
+
+				// exclude hits asset
+				response = await fetch(`${url}/beep/boop`);
+				expect(await response.text()).toBe("<h1>Hello from an asset</h1>");
+
+				// include hits user worker
+				response = await fetch(`${url}/beep`);
+				expect(await response.text()).toBe("Hello from user Worker!");
+			});
 		}
 	);
 
