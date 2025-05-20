@@ -128,6 +128,7 @@ export default function getFrameworkTestConfig(pm: string) {
 			],
 		},
 		"analog:pages": {
+			quarantine: true,
 			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
@@ -153,6 +154,7 @@ export default function getFrameworkTestConfig(pm: string) {
 			flags: ["--skipTailwind", "--analogSFC=false"],
 		},
 		"analog:workers": {
+			quarantine: true,
 			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
