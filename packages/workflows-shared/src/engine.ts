@@ -13,6 +13,7 @@ import {
 	startGracePeriod,
 } from "./lib/gracePeriodSemaphore";
 import { TimePriorityQueue } from "./lib/timePriorityQueue";
+import type { Event } from "./context";
 import type { InstanceMetadata, RawInstanceLog } from "./instance";
 import type { WorkflowEntrypoint, WorkflowEvent } from "cloudflare:workers";
 
@@ -56,6 +57,7 @@ export type Log = {
 	target: string | null;
 	metadata: {
 		result: unknown;
+		payload: unknown;
 	};
 };
 
@@ -64,6 +66,8 @@ export type EngineLogs = {
 };
 
 const ENGINE_STATUS_KEY = "ENGINE_STATUS";
+
+const EVENT_MAP_PREFIX = "EVENT_MAP";
 
 export class Engine extends DurableObject<Env> {
 	logs: Array<unknown> = [];
@@ -74,6 +78,10 @@ export class Engine extends DurableObject<Env> {
 	workflowName: string | undefined;
 	timeoutHandler: GracePeriodSemaphore;
 	priorityQueue: TimePriorityQueue | undefined;
+
+	waiters: Map<string, Array<(event: Event | PromiseLike<Event>) => void>> =
+		new Map();
+	eventMap: Map<string, Array<Event>> = new Map();
 
 	constructor(state: DurableObjectState, env: Env) {
 		super(state, env);
@@ -179,6 +187,92 @@ export class Engine extends DurableObject<Env> {
 		// TODO: Maybe don't actually kill but instead check a flag and return early if true
 	}
 
+	async storeEventMap() {
+		// TODO: this can be more efficient, but oh well
+		await this.ctx.blockConcurrencyWhile(async () => {
+			for (const [key, value] of this.eventMap.entries()) {
+				for (const eventIdx in value) {
+					await this.ctx.storage.put(
+						`${EVENT_MAP_PREFIX}\n${key}\n${eventIdx}`,
+						value[eventIdx]
+					);
+				}
+			}
+		});
+	}
+
+	async restoreEventMap() {
+		await this.ctx.blockConcurrencyWhile(async () => {
+			// FIXME(lduarte): can this OoM the DO in the production?
+			const entries = await this.ctx.storage.list<Event>({
+				prefix: EVENT_MAP_PREFIX,
+			});
+			for (const [key, value] of entries) {
+				const [_, eventType, _idx] = key.split("\n");
+				// NOTE(lduarte): safe to do because list returns keys in ascending order, so
+				// indexes will be correctly ordered
+				const eventList = this.eventMap.get(eventType) ?? [];
+				eventList.push(value);
+				this.eventMap.set(eventType, eventList);
+			}
+		});
+	}
+
+	async receiveEvent(event: {
+		timestamp: Date;
+		payload: unknown;
+		type: string;
+	}) {
+		// Always queue the event first
+		// TODO: Persist it across lifetimes
+		// There are four possible cases here:
+		// - There is a callback waiting, send it
+		// - There is no callback waiting but engine is alive, store it
+		// - Engine is not awake and is in Waiting status, store it and start it up
+		// - Engine is not awake and is in Paused (or another terminal) status, store it
+		// - Engine is not awake and is Errored or Terminated, this should not get called
+		let eventTypeQueue = this.eventMap.get(event.type) ?? [];
+		eventTypeQueue.push(event as Event);
+		await this.storeEventMap();
+		// TODO: persist eventMap - it can be over 2MiB
+		this.eventMap.set(event.type, eventTypeQueue);
+
+		// if the engine is running
+		if (this.isRunning) {
+			// Attempt to get the callback and run it
+			const callbacks = this.waiters.get(event.type);
+			if (callbacks) {
+				const callback = callbacks[0];
+				if (callback) {
+					callback(event);
+					// Remove it from the list of callbacks
+					callbacks.shift();
+					this.waiters.set(event.type, callbacks);
+
+					eventTypeQueue = this.eventMap.get(event.type) ?? [];
+					eventTypeQueue.shift();
+					this.eventMap.set(event.type, eventTypeQueue);
+
+					return;
+				}
+			}
+		} else {
+			const metadata =
+				await this.ctx.storage.get<InstanceMetadata>(INSTANCE_METADATA);
+			if (metadata === undefined) {
+				throw new Error("Engine was never started");
+			}
+
+			void this.init(
+				metadata.accountId,
+				metadata.workflow,
+				metadata.version,
+				metadata.instance,
+				metadata.event
+			);
+		}
+	}
+
 	async userTriggeredTerminate() {}
 
 	async init(
@@ -245,6 +339,9 @@ export class Engine extends DurableObject<Env> {
 			});
 			this.writeLog(InstanceEvent.WORKFLOW_START, null, null, {});
 		}
+
+		// restore eventMap so that waitForEvent across lifetimes works correctly
+		await this.restoreEventMap();
 
 		const stubStep = new Context(this, this.ctx);
 

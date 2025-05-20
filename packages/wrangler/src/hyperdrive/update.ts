@@ -1,40 +1,45 @@
-import { readConfig } from "../config";
+import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { patchConfig } from "./client";
-import { getCacheOptionsFromArgs, getOriginFromArgs, upsertOptions } from ".";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
+import {
+	getCacheOptionsFromArgs,
+	getMtlsFromArgs,
+	getOriginFromArgs,
+	upsertOptions,
+} from ".";
 
-export function options(commonYargs: CommonYargsArgv) {
-	const yargs = commonYargs
-		.positional("id", {
+export const hyperdriveUpdateCommand = createCommand({
+	metadata: {
+		description: "Update a Hyperdrive config",
+		status: "stable",
+		owner: "Product: Hyperdrive",
+	},
+	args: {
+		id: {
 			type: "string",
 			demandOption: true,
 			description: "The ID of the Hyperdrive config",
-		})
-		.options({
-			name: { type: "string", describe: "Give your config a new name" },
+		},
+		name: {
+			type: "string",
+			description: "Give your config a new name",
+		},
+		...upsertOptions(),
+	},
+	positionalArgs: ["id"],
+	async handler(args, { config }) {
+		const origin = getOriginFromArgs(true, args);
+
+		logger.log(`🚧 Updating '${args.id}'`);
+		const updated = await patchConfig(config, args.id, {
+			name: args.name,
+			origin,
+			caching: getCacheOptionsFromArgs(args),
+			mtls: getMtlsFromArgs(args),
 		});
-
-	return upsertOptions(yargs);
-}
-
-export async function handler(
-	args: StrictYargsOptionsToInterface<typeof options>
-) {
-	const config = readConfig(args);
-	const origin = getOriginFromArgs(true, args);
-
-	logger.log(`🚧 Updating '${args.id}'`);
-	const updated = await patchConfig(config, args.id, {
-		name: args.name,
-		origin,
-		caching: getCacheOptionsFromArgs(args),
-	});
-	logger.log(
-		`✅ Updated ${updated.id} Hyperdrive config\n`,
-		JSON.stringify(updated, null, 2)
-	);
-}
+		logger.log(
+			`✅ Updated ${updated.id} Hyperdrive config\n`,
+			JSON.stringify(updated, null, 2)
+		);
+	},
+});

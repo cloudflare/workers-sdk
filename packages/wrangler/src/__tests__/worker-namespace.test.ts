@@ -35,11 +35,11 @@ describe("dispatch-namespace", () => {
 			🏗️  Manage dispatch namespaces
 
 			COMMANDS
-			  wrangler dispatch-namespace list                          List all dispatch namespaces
-			  wrangler dispatch-namespace get <name>                    Get information about a dispatch namespace
-			  wrangler dispatch-namespace create <name>                 Create a dispatch namespace
-			  wrangler dispatch-namespace delete <name>                 Delete a dispatch namespace
-			  wrangler dispatch-namespace rename <old-name> <new-name>  Rename a dispatch namespace
+			  wrangler dispatch-namespace list                        List all dispatch namespaces
+			  wrangler dispatch-namespace get <name>                  Get information about a dispatch namespace
+			  wrangler dispatch-namespace create <name>               Create a dispatch namespace
+			  wrangler dispatch-namespace delete <name>               Delete a dispatch namespace
+			  wrangler dispatch-namespace rename <oldName> <newName>  Rename a dispatch namespace
 
 			GLOBAL FLAGS
 			  -c, --config   Path to Wrangler configuration file  [string]
@@ -308,13 +308,13 @@ describe("dispatch-namespace", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				wrangler dispatch-namespace rename <old-name> <new-name>
+				wrangler dispatch-namespace rename <oldName> <newName>
 
 				Rename a dispatch namespace
 
 				POSITIONALS
-				  old-name  Name of the dispatch namespace  [string] [required]
-				  new-name  New name of the dispatch namespace  [string] [required]
+				  oldName  Name of the dispatch namespace  [string] [required]
+				  newName  New name of the dispatch namespace  [string] [required]
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]

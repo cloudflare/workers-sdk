@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
-import path from "node:path";
+import path, { join } from "node:path";
 import {
 	CONTENT_HASH_OFFSET,
 	ENTRY_SIZE,
@@ -12,6 +12,25 @@ import {
 	PATH_HASH_OFFSET,
 	PATH_HASH_SIZE,
 } from "@cloudflare/workers-shared";
+import {
+	constructHeaders,
+	constructRedirects,
+} from "@cloudflare/workers-shared/utils/configuration/constructConfiguration";
+import { parseHeaders } from "@cloudflare/workers-shared/utils/configuration/parseHeaders";
+import { parseRedirects } from "@cloudflare/workers-shared/utils/configuration/parseRedirects";
+import {
+	HEADERS_FILENAME,
+	REDIRECTS_FILENAME,
+} from "@cloudflare/workers-shared/utils/constants";
+import {
+	createAssetsIgnoreFunction,
+	maybeGetFile,
+} from "@cloudflare/workers-shared/utils/helpers";
+import {
+	AssetConfig,
+	HeadersSchema,
+	RedirectsSchema,
+} from "@cloudflare/workers-shared/utils/types";
 import prettyBytes from "pretty-bytes";
 import SCRIPT_ASSETS from "worker:assets/assets";
 import SCRIPT_ASSETS_KV from "worker:assets/assets-kv";
@@ -19,6 +38,7 @@ import SCRIPT_ROUTER from "worker:assets/router";
 import SCRIPT_RPC_PROXY from "worker:assets/rpc-proxy";
 import { z } from "zod";
 import { Service } from "../../runtime";
+import { Log } from "../../shared";
 import { SharedBindings } from "../../workers";
 import { getUserServiceName } from "../core";
 import { Plugin, ProxyNodeBinding } from "../shared";
@@ -57,7 +77,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		};
 	},
 
-	async getServices({ options, unsafeEnableAssetsRpc }) {
+	async getServices({ options }) {
 		if (!options.assets) {
 			return [];
 		}
@@ -65,12 +85,64 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 		const storageServiceName = `${ASSETS_PLUGIN_NAME}:storage`;
 		const storageService: Service = {
 			name: storageServiceName,
-			disk: { path: options.assets.directory, writable: true },
+			disk: {
+				path: options.assets.directory,
+				writable: true,
+				allowDotfiles: true,
+			},
 		};
 
 		const { encodedAssetManifest, assetsReverseMap } = await buildAssetManifest(
 			options.assets.directory
 		);
+
+		const redirectsFile = join(options.assets.directory, REDIRECTS_FILENAME);
+		const headersFile = join(options.assets.directory, HEADERS_FILENAME);
+
+		const redirectsContents = maybeGetFile(redirectsFile);
+		const headersContents = maybeGetFile(headersFile);
+
+		const logger = new Log();
+		const assetParserLogger = {
+			debug: (message: string) => logger.debug(message),
+			log: (message: string) => logger.info(message),
+			info: (message: string) => logger.info(message),
+			warn: (message: string) => logger.warn(message),
+			error: (error: Error) => logger.error(error),
+		};
+
+		let parsedRedirects: AssetConfig["redirects"] | undefined;
+		if (redirectsContents !== undefined) {
+			const redirects = parseRedirects(redirectsContents);
+			parsedRedirects = RedirectsSchema.parse(
+				constructRedirects({
+					redirects,
+					redirectsFile,
+					logger: assetParserLogger,
+				}).redirects
+			);
+		}
+
+		let parsedHeaders: AssetConfig["headers"] | undefined;
+		if (headersContents !== undefined) {
+			const headers = parseHeaders(headersContents);
+			parsedHeaders = HeadersSchema.parse(
+				constructHeaders({
+					headers,
+					headersFile,
+					logger: assetParserLogger,
+				}).headers
+			);
+		}
+
+		const assetConfig: AssetConfig = {
+			compatibility_date: options.compatibilityDate,
+			compatibility_flags: options.compatibilityFlags,
+			...options.assets.assetConfig,
+			redirects: parsedRedirects,
+			headers: parsedHeaders,
+			debug: true,
+		};
 
 		const id = options.assets.workerName;
 
@@ -123,7 +195,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 					},
 					{
 						name: "CONFIG",
-						json: JSON.stringify(options.assets.assetConfig ?? {}),
+						json: JSON.stringify(assetConfig),
 					},
 				],
 			},
@@ -160,39 +232,40 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			},
 		};
 
-		const services = [
+		const assetsProxyService: Service = {
+			name: `${RPC_PROXY_SERVICE_NAME}:${id}`,
+			worker: {
+				compatibilityDate: "2024-08-01",
+				modules: [
+					{
+						name: "assets-proxy-worker.mjs",
+						esModule: SCRIPT_RPC_PROXY(),
+					},
+				],
+				bindings: [
+					{
+						name: "ROUTER_WORKER",
+						service: {
+							name: `${ROUTER_SERVICE_NAME}:${id}`,
+						},
+					},
+					{
+						name: "USER_WORKER",
+						service: {
+							name: getUserServiceName(id),
+						},
+					},
+				],
+			},
+		};
+
+		return [
 			storageService,
 			namespaceService,
 			assetService,
 			routerService,
+			assetsProxyService,
 		];
-
-		if (unsafeEnableAssetsRpc) {
-			const assetsProxyService: Service = {
-				name: `${RPC_PROXY_SERVICE_NAME}:${id}`,
-				worker: {
-					compatibilityDate: "2024-08-01",
-					modules: [
-						{
-							name: "assets-proxy-worker.mjs",
-							esModule: SCRIPT_RPC_PROXY(),
-						},
-					],
-					bindings: [
-						{
-							name: "ROUTER_WORKER",
-							service: {
-								name: `${ROUTER_SERVICE_NAME}:${id}`,
-							},
-						},
-					],
-				},
-			};
-
-			services.push(assetsProxyService);
-		}
-
-		return services;
 	},
 };
 
@@ -231,9 +304,13 @@ const walk = async (dir: string) => {
 	const files = await fs.readdir(dir, { recursive: true });
 	const manifest: ManifestEntry[] = [];
 	const assetsReverseMap: AssetReverseMap = {};
+	const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(dir);
 	let counter = 0;
 	await Promise.all(
 		files.map(async (file) => {
+			if (assetsIgnoreFunction(file)) {
+				return;
+			}
 			/** absolute file path */
 			const filepath = path.join(dir, file);
 			const relativeFilepath = path.relative(dir, filepath);
@@ -243,6 +320,8 @@ const walk = async (dir: string) => {
 			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
 				return;
 			} else {
+				// TODO: Warn about _worker.js
+
 				if (filestat.size > MAX_ASSET_SIZE) {
 					throw new Error(
 						`Asset too large.\n` +

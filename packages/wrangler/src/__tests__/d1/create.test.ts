@@ -32,11 +32,11 @@ describe("create", () => {
 		mockGetMemberships([
 			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
 		]);
-		await expect(
-			runWrangler("d1 create test --location sydney")
-		).rejects.toThrowError(
-			`Location 'sydney' invalid. Valid values are weur,eeur,apac,oc,wnam,enam`
-		);
+		await expect(runWrangler("d1 create test --location sydney")).rejects
+			.toThrowErrorMatchingInlineSnapshot(`
+			[Error: Invalid values:
+			  Argument: location, Given: "sydney", Choices: "weur", "eeur", "apac", "oc", "wnam", "enam"]
+		`);
 	});
 
 	it("should try send a request to the API for a valid input", async () => {

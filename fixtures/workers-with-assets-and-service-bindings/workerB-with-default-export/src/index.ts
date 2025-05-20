@@ -1,4 +1,12 @@
+const honeyBee = "I am worker-b's honeyBee prop";
+
 export default {
+	honeyBee,
+
+	get honey() {
+		return "Bees make honey in worker-b";
+	},
+
 	/*
 	 * HTTP fetch
 	 *
@@ -20,6 +28,17 @@ export default {
 	 */
 	busyBee(bee: string) {
 		return `Hello busy ${bee}s from worker-b busyBee(bee)`;
+	},
+
+	/*
+	 * Nested functions
+	 */
+	async foo(emoji: string) {
+		return {
+			bar: {
+				buzz: () => `You made it! ${emoji}`,
+			},
+		};
 	},
 
 	/*

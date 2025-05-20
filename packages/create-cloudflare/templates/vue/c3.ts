@@ -1,29 +1,9 @@
-import { runFrameworkGenerator } from "frameworks/index";
-import { detectPackageManager } from "helpers/packageManagers";
-import type { TemplateConfig } from "../../src/templates";
-import type { C3Context } from "types";
+import pages from "./pages/c3";
+import workers from "./workers/c3";
+import type { MultiPlatformTemplateConfig } from "../../src/templates";
 
-const { npm } = detectPackageManager();
-
-const generate = async (ctx: C3Context) => {
-	await runFrameworkGenerator(ctx, [ctx.project.name]);
-};
-
-const config: TemplateConfig = {
-	configVersion: 1,
-	id: "vue",
-	frameworkCli: "create-vue",
+const config: MultiPlatformTemplateConfig = {
 	displayName: "Vue",
-	platform: "pages",
-	generate,
-	transformPackageJson: async () => ({
-		scripts: {
-			deploy: `${npm} run build && wrangler pages deploy ./dist`,
-			preview: `${npm} run build && wrangler pages dev ./dist`,
-		},
-	}),
-	devScript: "dev",
-	deployScript: "deploy",
-	previewScript: "preview",
+	platformVariants: { pages, workers },
 };
 export default config;

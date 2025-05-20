@@ -9,19 +9,17 @@ import {
 	LogLevel,
 	Response as MiniflareResponse,
 } from "miniflare";
+import colors from "picocolors";
 import { globSync } from "tinyglobby";
 import * as vite from "vite";
-import {
-	unstable_getMiniflareWorkerOptions,
-	unstable_readConfig,
-} from "wrangler";
+import { unstable_getMiniflareWorkerOptions } from "wrangler";
+import { getAssetsConfig } from "./asset-config";
 import {
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
 	ROUTER_WORKER_NAME,
 } from "./constants";
-import { getWorkerConfigPaths } from "./deploy-config";
-import { MODULE_PATTERN } from "./shared";
+import { additionalModuleRE } from "./shared";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
 	PersistState,
@@ -30,7 +28,7 @@ import type {
 } from "./plugin-config";
 import type { MiniflareOptions, SharedOptions, WorkerOptions } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
-import type { SourcelessWorkerOptions } from "wrangler";
+import type { SourcelessWorkerOptions, Unstable_Config } from "wrangler";
 
 type PersistOptions = Pick<
 	SharedOptions,
@@ -192,16 +190,55 @@ function getEntryWorkerConfig(
 	];
 }
 
+function filterTails(
+	tails: WorkerOptions["tails"],
+	userWorkers: { name?: string }[],
+	log: (msg: string) => void
+) {
+	// Only connect the tail consumers that represent Workers that are defined in the Vite config. Warn that a tail will be omitted otherwise
+	// This _differs from service bindings_ because tail consumers are "optional" in a sense, and shouldn't affect the runtime behaviour of a Worker
+	return tails?.filter((tailService) => {
+		let name: string;
+		if (typeof tailService === "string") {
+			name = tailService;
+		} else if (
+			typeof tailService === "object" &&
+			"name" in tailService &&
+			typeof tailService.name === "string"
+		) {
+			name = tailService.name;
+		} else {
+			// Don't interfere with network-based tail connections (e.g. via the dev registry), or kCurrentWorker
+			return true;
+		}
+		const found = userWorkers.some((w) => w.name === name);
+
+		if (!found) {
+			log(
+				colors.dim(
+					colors.yellow(
+						`Tail consumer "${name}" was not found in your config. Make sure you add it if you'd like to simulate receiving tail events locally.`
+					)
+				)
+			);
+		}
+
+		return found;
+	});
+}
+
 export function getDevMiniflareOptions(
 	resolvedPluginConfig: ResolvedPluginConfig,
-	viteDevServer: vite.ViteDevServer
+	viteDevServer: vite.ViteDevServer,
+	inspectorPort: number | false
 ): MiniflareOptions {
 	const resolvedViteConfig = viteDevServer.config;
 	const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
-	const assetsConfig =
-		resolvedPluginConfig.type === "assets-only"
-			? resolvedPluginConfig.config.assets
-			: entryWorkerConfig?.assets;
+	const assetsConfig = getAssetsConfig(
+		resolvedPluginConfig,
+		entryWorkerConfig,
+		resolvedViteConfig
+	);
 
 	const assetWorkers: Array<WorkerOptions> = [
 		{
@@ -241,14 +278,7 @@ export function getDevMiniflareOptions(
 				},
 			],
 			bindings: {
-				CONFIG: {
-					...(assetsConfig?.html_handling
-						? { html_handling: assetsConfig.html_handling }
-						: {}),
-					...(assetsConfig?.not_found_handling
-						? { not_found_handling: assetsConfig.not_found_handling }
-						: {}),
-				},
+				CONFIG: assetsConfig,
 			},
 			serviceBindings: {
 				__VITE_ASSET_EXISTS__: async (request) => {
@@ -284,7 +314,7 @@ export function getDevMiniflareOptions(
 		},
 	];
 
-	const userWorkers =
+	const workersFromConfig =
 		resolvedPluginConfig.type === "workers"
 			? Object.entries(resolvedPluginConfig.workers).map(
 					([environmentName, workerConfig]) => {
@@ -296,71 +326,75 @@ export function getDevMiniflareOptions(
 							resolvedPluginConfig.cloudflareEnv
 						);
 
+						const { externalWorkers } = miniflareWorkerOptions;
+
 						const { ratelimits, ...workerOptions } =
 							miniflareWorkerOptions.workerOptions;
 
 						return {
-							...workerOptions,
-							// We have to add the name again because `unstable_getMiniflareWorkerOptions` sets it to `undefined`
-							name: workerConfig.name,
-							modulesRoot: miniflareModulesRoot,
-							unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
-							bindings: {
-								...workerOptions.bindings,
-								__VITE_ROOT__: resolvedViteConfig.root,
-								__VITE_ENTRY_PATH__: workerConfig.main,
-							},
-							serviceBindings: {
-								...workerOptions.serviceBindings,
-								...(environmentName ===
-									resolvedPluginConfig.entryWorkerEnvironmentName &&
-								workerConfig.assets?.binding
-									? {
-											[workerConfig.assets.binding]: ASSET_WORKER_NAME,
+							externalWorkers,
+							worker: {
+								...workerOptions,
+								name: workerOptions.name ?? workerConfig.name,
+								unsafeInspectorProxy: inspectorPort !== false,
+								modulesRoot: miniflareModulesRoot,
+								unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
+								serviceBindings: {
+									...workerOptions.serviceBindings,
+									...(environmentName ===
+										resolvedPluginConfig.entryWorkerEnvironmentName &&
+									workerConfig.assets?.binding
+										? {
+												[workerConfig.assets.binding]: ASSET_WORKER_NAME,
+											}
+										: {}),
+									__VITE_INVOKE_MODULE__: async (request) => {
+										const payload =
+											(await request.json()) as vite.CustomPayload;
+										const invokePayloadData = payload.data as {
+											id: string;
+											name: string;
+											data: [string, string, FetchFunctionOptions];
+										};
+
+										assert(
+											invokePayloadData.name === "fetchModule",
+											`Invalid invoke event: ${invokePayloadData.name}`
+										);
+
+										const [moduleId] = invokePayloadData.data;
+
+										// Additional modules (CompiledWasm, Data, Text)
+										if (additionalModuleRE.test(moduleId)) {
+											const result = {
+												externalize: moduleId,
+												type: "module",
+											} satisfies vite.FetchResult;
+
+											return MiniflareResponse.json({ result });
 										}
-									: {}),
-								__VITE_INVOKE_MODULE__: async (request) => {
-									const payload = (await request.json()) as vite.CustomPayload;
-									const invokePayloadData = payload.data as {
-										id: string;
-										name: string;
-										data: [string, string, FetchFunctionOptions];
-									};
 
-									assert(
-										invokePayloadData.name === "fetchModule",
-										`Invalid invoke event: ${invokePayloadData.name}`
-									);
+										const devEnvironment = viteDevServer.environments[
+											environmentName
+										] as CloudflareDevEnvironment;
 
-									const [moduleId] = invokePayloadData.data;
-									const moduleRE = new RegExp(MODULE_PATTERN);
+										const result =
+											await devEnvironment.hot.handleInvoke(payload);
 
-									const shouldExternalize =
-										// Worker modules (CompiledWasm, Text, Data)
-										moduleRE.test(moduleId);
-
-									if (shouldExternalize) {
-										const result = {
-											externalize: moduleId,
-											type: "module",
-										} satisfies vite.FetchResult;
-
-										return MiniflareResponse.json({ result });
-									}
-
-									const devEnvironment = viteDevServer.environments[
-										environmentName
-									] as CloudflareDevEnvironment;
-
-									const result = await devEnvironment.hot.handleInvoke(payload);
-
-									return MiniflareResponse.json(result);
+										return MiniflareResponse.json(result);
+									},
 								},
-							},
-						} satisfies Partial<WorkerOptions>;
+							} satisfies Partial<WorkerOptions>,
+						};
 					}
 				)
 			: [];
+
+	const userWorkers = workersFromConfig.map((options) => options.worker);
+
+	const externalWorkers = workersFromConfig.flatMap(
+		(options) => options.externalWorkers
+	);
 
 	const workerToWorkerEntrypointNamesMap =
 		getWorkerToWorkerEntrypointNamesMap(userWorkers);
@@ -373,6 +407,8 @@ export function getDevMiniflareOptions(
 
 	return {
 		log: logger,
+		inspectorPort: inspectorPort === false ? undefined : inspectorPort,
+		unsafeInspectorProxy: inspectorPort !== false,
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));
@@ -386,6 +422,7 @@ export function getDevMiniflareOptions(
 		),
 		workers: [
 			...assetWorkers,
+			...externalWorkers,
 			...userWorkers.map((workerOptions) => {
 				const wrappers = [
 					`import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from '${RUNNER_PATH}';`,
@@ -435,6 +472,11 @@ export function getDevMiniflareOptions(
 
 				return {
 					...workerOptions,
+					tails: filterTails(
+						workerOptions.tails,
+						userWorkers,
+						viteDevServer.config.logger.warn
+					),
 					modules: [
 						{
 							type: "ESModule",
@@ -453,7 +495,7 @@ export function getDevMiniflareOptions(
 				} satisfies WorkerOptions;
 			}),
 		],
-		unsafeModuleFallbackService(request) {
+		async unsafeModuleFallbackService(request) {
 			const url = new URL(request.url);
 			const rawSpecifier = url.searchParams.get("rawSpecifier");
 			assert(
@@ -461,29 +503,42 @@ export function getDevMiniflareOptions(
 				`Unexpected error: no specifier in request to module fallback service.`
 			);
 
-			const moduleRE = new RegExp(MODULE_PATTERN);
-			const match = moduleRE.exec(rawSpecifier);
+			const match = additionalModuleRE.exec(rawSpecifier);
 			assert(match, `Unexpected error: no match for module: ${rawSpecifier}.`);
 			const [full, moduleType, modulePath] = match;
+			assert(
+				moduleType,
+				`Unexpected error: module type not found in reference: ${full}.`
+			);
 			assert(
 				modulePath,
 				`Unexpected error: module path not found in reference: ${full}.`
 			);
 
-			let source: Buffer;
+			let contents: Buffer;
 
 			try {
-				source = fs.readFileSync(modulePath);
+				contents = await fsp.readFile(modulePath);
 			} catch (error) {
 				throw new Error(
 					`Import "${modulePath}" not found. Does the file exist?`
 				);
 			}
 
-			return MiniflareResponse.json({
-				// Cap'n Proto expects byte arrays for `:Data` typed fields from JSON
-				wasm: Array.from(source),
-			});
+			switch (moduleType) {
+				case "CompiledWasm": {
+					return MiniflareResponse.json({ wasm: Array.from(contents) });
+				}
+				case "Data": {
+					return MiniflareResponse.json({ data: Array.from(contents) });
+				}
+				case "Text": {
+					return MiniflareResponse.json({ text: contents.toString() });
+				}
+				default: {
+					return MiniflareResponse.error();
+				}
+			}
 		},
 	};
 }
@@ -515,34 +570,43 @@ function getPreviewModules(
 
 export function getPreviewMiniflareOptions(
 	vitePreviewServer: vite.PreviewServer,
-	persistState: PersistState
+	workerConfigs: Unstable_Config[],
+	persistState: PersistState,
+	inspectorPort: number | false
 ): MiniflareOptions {
 	const resolvedViteConfig = vitePreviewServer.config;
-	const configPaths = getWorkerConfigPaths(resolvedViteConfig.root);
-	const workerConfigs = configPaths.map((configPath) =>
-		unstable_readConfig({ config: configPath })
-	);
-
-	const workers: Array<WorkerOptions> = workerConfigs.map((config) => {
+	const workers: Array<WorkerOptions> = workerConfigs.flatMap((config) => {
 		const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(config);
+
+		const { externalWorkers } = miniflareWorkerOptions;
 
 		const { ratelimits, modulesRules, ...workerOptions } =
 			miniflareWorkerOptions.workerOptions;
 
-		return {
-			...workerOptions,
-			// We have to add the name again because `unstable_getMiniflareWorkerOptions` sets it to `undefined`
-			name: config.name,
-			...(miniflareWorkerOptions.main
-				? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
-				: { modules: true, script: "" }),
-		};
+		return [
+			{
+				...workerOptions,
+				tails: filterTails(
+					workerOptions.tails,
+					workerConfigs,
+					vitePreviewServer.config.logger.warn
+				),
+				name: workerOptions.name ?? config.name,
+				unsafeInspectorProxy: inspectorPort !== false,
+				...(miniflareWorkerOptions.main
+					? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
+					: { modules: true, script: "" }),
+			},
+			...externalWorkers,
+		];
 	});
 
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
 	return {
 		log: logger,
+		inspectorPort: inspectorPort === false ? undefined : inspectorPort,
+		unsafeInspectorProxy: inspectorPort !== false,
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));
@@ -555,6 +619,8 @@ export function getPreviewMiniflareOptions(
 	};
 }
 
+const removedMessages = [/^Ready on http/, /^Updated and ready on http/];
+
 /**
  * A Miniflare logger that forwards messages onto a Vite logger.
  */
@@ -566,9 +632,12 @@ class ViteMiniflareLogger extends Log {
 	}
 
 	override logWithLevel(level: LogLevel, message: string) {
-		if (/^Ready on http/.test(message)) {
-			level = LogLevel.DEBUG;
+		for (const removedMessage of removedMessages) {
+			if (removedMessage.test(message)) {
+				return;
+			}
 		}
+
 		switch (level) {
 			case LogLevel.ERROR:
 				return this.logger.error(message);

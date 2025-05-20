@@ -246,14 +246,21 @@ export function bucketAndKeyFromObjectPath(objectPath = ""): {
 	bucket: string;
 	key: string;
 } {
-	const match = /^([^/]+)\/(.*)/.exec(objectPath);
-	if (match === null) {
+	// Path format is `<bucket>/<key>`
+	const match = /^(?<bucket>[^/]+)\/(?<key>.*)/.exec(objectPath);
+	if (match === null || !match.groups) {
 		throw new UserError(
 			`The object path must be in the form of {bucket}/{key} you provided ${objectPath}`
 		);
 	}
+	const { bucket, key } = match.groups;
+	if (!isValidR2BucketName(bucket)) {
+		throw new UserError(
+			`The bucket name "${bucket}" is invalid. ${bucketFormatMessage}`
+		);
+	}
 
-	return { bucket: match[1], key: match[2] };
+	return { bucket, key };
 }
 
 /**
@@ -489,6 +496,60 @@ export async function putR2Sippy(
 	return await fetchResult(
 		`/accounts/${accountId}/r2/buckets/${bucketName}/sippy`,
 		{ method: "PUT", body: JSON.stringify(params), headers }
+	);
+}
+
+type R2Warehouse = {
+	id: string;
+	name: string;
+	bucket: string;
+	status: "active" | "inactive";
+};
+
+/**
+ * Retreive the warehouse for the bucket with the given name
+ */
+export async function getR2Catalog(
+	accountId: string,
+	bucketName: string
+): Promise<R2Warehouse> {
+	return await fetchResult(`/accounts/${accountId}/r2-catalog/${bucketName}`, {
+		method: "GET",
+	});
+}
+
+type R2WarehouseEnableResponse = {
+	id: string;
+	name: string;
+};
+
+/**
+ * Activate the R2 bucket as an Iceberg warehouse
+ */
+export async function enableR2Catalog(
+	accountId: string,
+	bucketName: string
+): Promise<R2WarehouseEnableResponse> {
+	return await fetchResult(
+		`/accounts/${accountId}/r2-catalog/${bucketName}/enable`,
+		{
+			method: "POST",
+		}
+	);
+}
+
+/**
+ * Deactivate the R2 bucket as an Iceberg warehouse
+ */
+export async function disableR2Catalog(
+	accountId: string,
+	bucketName: string
+): Promise<R2WarehouseEnableResponse> {
+	return await fetchResult(
+		`/accounts/${accountId}/r2-catalog/${bucketName}/disable`,
+		{
+			method: "POST",
+		}
 	);
 }
 
@@ -1286,13 +1347,20 @@ export async function deleteCORSPolicy(
 }
 
 /**
- * R2 bucket names must only contain alphanumeric and - characters.
+ * R2 bucket names must:
+ * - contain lower case letters, numbers, and `-`
+ * - start and end with with a lower case letter or number
+ * - be between 6 and 63 characters long
+ *
+ * See https://developers.cloudflare.com/r2/buckets/create-buckets/#bucket-level-operations
  */
 export function isValidR2BucketName(name: string | undefined): name is string {
 	return (
 		typeof name === "string" && /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(name)
 	);
 }
+
+export const bucketFormatMessage = `Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.`;
 
 const CHUNK_SIZE = 1024;
 export async function createFileReadableStream(filePath: string) {

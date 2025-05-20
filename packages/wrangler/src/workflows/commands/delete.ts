@@ -1,13 +1,14 @@
+import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
+import { requireAuth } from "../../user";
 
 export const workflowsDeleteCommand = createCommand({
 	metadata: {
 		description:
 			"Delete workflow - when deleting a workflow, it will also delete it's own instances",
 		owner: "Product: Workflows",
-		status: "open-beta",
-		hidden: true,
+		status: "stable",
 	},
 
 	args: {
@@ -19,8 +20,15 @@ export const workflowsDeleteCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 
-	async handler(args) {
-		logger.info("🚫 delete command not yet implement");
-		logger.log(`🚫 Workflow "${args.name}" NOT removed`);
+	async handler(args, { config }) {
+		const accountId = await requireAuth(config);
+
+		await fetchResult(`/accounts/${accountId}/workflows/${args.name}`, {
+			method: "DELETE",
+		});
+
+		logger.log(
+			`✅ Workflow "${args.name}" removed successfully. \n Note that running instances might take a few minutes to be properly terminated.`
+		);
 	},
 });

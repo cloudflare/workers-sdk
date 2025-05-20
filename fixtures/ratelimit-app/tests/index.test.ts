@@ -9,7 +9,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 
 	beforeAll(async () => {
 		worker = await unstable_startWorker({
-			config: path.join(basePath, "wrangler.toml"),
+			config: path.join(basePath, "wrangler.jsonc"),
 		});
 	});
 

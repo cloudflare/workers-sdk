@@ -1,36 +1,38 @@
 import prettyBytes from "pretty-bytes";
 import { fetchGraphqlResult } from "../cfetch";
-import { withConfig } from "../config";
+import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { printWranglerBanner } from "../wrangler-banner";
 import {
 	getDatabaseByNameOrBinding,
 	getDatabaseInfoFromIdOrName,
 } from "./utils";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type { D1MetricsGraphQLResponse, Database } from "./types";
 
-export function Options(d1ListYargs: CommonYargsArgv) {
-	return d1ListYargs
-		.positional("name", {
-			describe: "The name of the DB",
+export const d1InfoCommand = createCommand({
+	metadata: {
+		description:
+			"Get information about a D1 database, including the current database size and state",
+		status: "stable",
+		owner: "Product: D1",
+	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+	},
+	args: {
+		name: {
 			type: "string",
 			demandOption: true,
-		})
-		.option("json", {
-			describe: "return output as clean JSON",
+			description: "The name of the DB",
+		},
+		json: {
 			type: "boolean",
+			description: "Return output as clean JSON",
 			default: false,
-		});
-}
-
-type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
-export const Handler = withConfig<HandlerOptions>(
-	async ({ name, config, json }): Promise<void> => {
+		},
+	},
+	positionalArgs: ["name"],
+	async handler({ name, json }, { config }) {
 		const accountId = await requireAuth(config);
 		const db: Database = await getDatabaseByNameOrBinding(
 			config,
@@ -40,7 +42,7 @@ export const Handler = withConfig<HandlerOptions>(
 
 		const result = await getDatabaseInfoFromIdOrName(accountId, db.uuid);
 
-		const output: Record<string, string | number> = { ...result };
+		const output: Record<string, string | number | object> = { ...result };
 		if (output["file_size"]) {
 			output["database_size"] = output["file_size"];
 			delete output["file_size"];
@@ -116,6 +118,12 @@ export const Handler = withConfig<HandlerOptions>(
 		if (json) {
 			logger.log(JSON.stringify(output, null, 2));
 		} else {
+			// Selectively bring the nested read_replication info at the top level.
+			if (result.read_replication) {
+				output["read_replication.mode"] = result.read_replication.mode;
+				delete output["read_replication"];
+			}
+
 			// Snip off the "uuid" property from the response and use those as the header
 			const entries = Object.entries(output).filter(
 				// also remove any version that isn't "alpha"
@@ -132,6 +140,10 @@ export const Handler = withConfig<HandlerOptions>(
 					k === "rows_written_24h"
 				) {
 					value = v.toLocaleString();
+				} else if (typeof v === "object") {
+					// There shouldn't be any, but in the worst case we missed something
+					// or added a nested object in the response, serialize it instead of showing `[object Object]`.
+					value = JSON.stringify(v);
 				} else {
 					value = String(v);
 				}
@@ -141,8 +153,7 @@ export const Handler = withConfig<HandlerOptions>(
 				};
 			});
 
-			await printWranglerBanner();
 			logger.table(data);
 		}
-	}
-);
+	},
+});

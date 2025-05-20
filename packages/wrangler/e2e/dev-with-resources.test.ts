@@ -241,8 +241,7 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 
 describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 	const isLocal = runtime === "local";
-	const resourceFlags = isLocal ? "--local" : "";
-	const d1ResourceFlags = isLocal ? "" : "--remote";
+	const resourceFlags = isLocal ? "" : "--remote";
 
 	let helper: WranglerE2ETestHelper;
 	beforeEach(() => {
@@ -352,6 +351,45 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 			`wrangler kv key get ${resourceFlags} --namespace-id=${ns} new-key`
 		);
 		expect(result.stdout).toBe("new-value");
+	});
+
+	it("exposes Secrets Store bindings", async () => {
+		// if remote, secrets store and secret will already be created
+		const storeId = "37009502100840c0a9800b4990ed0449";
+		const secret_name = "well-known-secret";
+
+		// but we need to create the secret each time when running locally
+		if (isLocal) {
+			await helper.run(
+				`wrangler secrets-store secret create ${storeId} ${resourceFlags} --name ${secret_name} --value my-secret-value --scopes workers`
+			);
+		}
+
+		await helper.seed({
+			"wrangler.toml": dedent`
+				name = "${workerName}"
+				main = "src/index.ts"
+				compatibility_date = "2025-01-01"
+				secrets_store_secrets = [
+					{ binding = "SECRET", store_id = "${storeId}", secret_name = "${secret_name}" }
+				]
+			`,
+			"src/index.ts": dedent`
+				export default {
+					async fetch(request, env, ctx) {
+						return new Response(await env.SECRET.get());
+					}
+				}
+			`,
+		});
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
+		const { url } = await worker.waitForReady();
+		const res = await fetch(url, {
+			headers: { "MF-Disable-Pretty-Error": "true" },
+		});
+		expect(await res.text()).toBe("my-secret-value");
 	});
 
 	it("supports Workers Sites bindings", async ({ onTestFinished }) => {
@@ -497,7 +535,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		});
 
 		const result = await helper.run(
-			`wrangler d1 execute ${d1ResourceFlags} DB --file schema.sql`
+			`wrangler d1 execute ${resourceFlags} DB --file schema.sql`
 		);
 		// D1 defaults to `--local`, so we deliberately use `flags`, not `resourceFlags`
 		const worker = helper.runLongLived(
@@ -511,7 +549,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		}
 
 		const result2 = await helper.run(
-			`wrangler d1 execute ${d1ResourceFlags} DB --command "SELECT * FROM entries WHERE key = 'key2'"`
+			`wrangler d1 execute ${resourceFlags} DB --command "SELECT * FROM entries WHERE key = 'key2'"`
 		);
 		expect(result2.stdout).toContain("value2");
 		if (isLocal) {
@@ -519,8 +557,14 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		}
 	});
 
+	// Refer to https://github.com/cloudflare/workers-sdk/pull/8492 for full context on why this test does different things to the others.
+	// In particular, it uses a shared resource across test runs
 	it("exposes Vectorize bindings", async () => {
-		const name = await helper.vectorize(32, "euclidean");
+		const name = await helper.vectorize(
+			32,
+			"euclidean",
+			"well-known-vectorize"
+		);
 
 		await helper.seed({
 			"wrangler.toml": dedent`
@@ -531,39 +575,37 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				binding = "VECTORIZE"
 				index_name = "${name}"
 				`,
-			"src/index.ts": dedent`
+			"src/index.ts": dedent/*javascript*/ `
 				export interface Env {
 					VECTORIZE: Vectorize;
 				}
 
-				async function waitForMutation(env: Env, mutationId: string) {
-					while((await env.VECTORIZE.describe()).processedUpToMutation != mutationId) {
-						await new Promise(resolve => setTimeout(resolve, 2000));
-					}
-				}
-
 				export default {
 					async fetch(request: Request, env: Env, ctx: any) {
-						await env.VECTORIZE.insert([{"id":"a44706aa-a366-48bc-8cc1-3feffd87d548","values":[0.2321,0.8121,0.6315,0.6151,0.4121,0.1512,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"metadata":{"text":"Peter Piper picked a peck of pickled peppers"}}]);
-						await env.VECTORIZE.insert([{"id":"b0daca4a-ffd8-4865-926b-e24800af2a2d","values":[0.2331,1.0125,0.6131,0.9421,0.9661,0.8121,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"metadata":{"text":"She sells seashells by the sea"}}]);
-						await waitForMutation(env, (await env.VECTORIZE.upsert([{"id":"b0daca4a-ffd8-4865-926b-e24800af2a2d","values":[0.2331,1.0125,0.6131,0.9421,0.9661,0.8121,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"metadata":{"text":"She sells seashells by the seashore"}}])).mutationId);
+						const url = new URL(request.url)
+						if(url.pathname === "/insert") {
+							await env.VECTORIZE.insert([{"id":"a44706aa-a366-48bc-8cc1-3feffd87d548","values":[0.2321,0.8121,0.6315,0.6151,0.4121,0.1512,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"metadata":{"text":"Peter Piper picked a peck of pickled peppers"}}]);
+							await env.VECTORIZE.insert([{"id":"b0daca4a-ffd8-4865-926b-e24800af2a2d","values":[0.2331,1.0125,0.6131,0.9421,0.9661,0.8121,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"metadata":{"text":"She sells seashells by the sea"}}]);
+							await env.VECTORIZE.upsert([{"id":"b0daca4a-ffd8-4865-926b-e24800af2a2d","values":[0.2331,1.0125,0.6131,0.9421,0.9661,0.8121,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"metadata":{"text":"She sells seashells by the seashore"}}]);
+							return new Response("inserted")
+						}
+						if(url.pathname === "/query") {
+							let response = "";
+							response += JSON.stringify(await env.VECTORIZE.getByIds(["a44706aa-a366-48bc-8cc1-3feffd87d548"]));
 
-						let response = "";
-						response += JSON.stringify(await env.VECTORIZE.getByIds(["a44706aa-a366-48bc-8cc1-3feffd87d548"]));
+							const queryVector: Array<number> = [
+								0.13, 0.25, 0.44, 0.53, 0.62, 0.41, 0.59, 0.68, 0.29, 0.82, 0.37, 0.5,
+								0.74, 0.46, 0.57, 0.64, 0.28, 0.61, 0.73, 0.35, 0.78, 0.58, 0.42, 0.32,
+								0.77, 0.65, 0.49, 0.54, 0.31, 0.29, 0.71, 0.57,
+							]; // vector of dimension 32
+							const matches = await env.VECTORIZE.query(queryVector, {
+								topK: 3,
+								returnValues: true,
+								returnMetadata: "all",
+							});
 
-						const queryVector: Array<number> = [
-							0.13, 0.25, 0.44, 0.53, 0.62, 0.41, 0.59, 0.68, 0.29, 0.82, 0.37, 0.5,
-							0.74, 0.46, 0.57, 0.64, 0.28, 0.61, 0.73, 0.35, 0.78, 0.58, 0.42, 0.32,
-							0.77, 0.65, 0.49, 0.54, 0.31, 0.29, 0.71, 0.57,
-						]; // vector of dimension 32
-						const matches = await env.VECTORIZE.query(queryVector, {
-							topK: 3,
-							returnValues: true,
-							returnMetadata: "all",
-						});
-						response += " " + matches.count;
-
-						return new Response(response);
+							return new Response(response);
+						}
 					}
 				}
 				`,
@@ -573,10 +615,11 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort} --experimental-vectorize-bind-to-prod`
 		);
 		const { url } = await worker.waitForReady();
-		const res = await fetch(url);
+		await fetch(`${url}/insert`);
+		const res = await fetch(`${url}/query`);
 
 		await expect(res.text()).resolves.toBe(
-			`[{"id":"a44706aa-a366-48bc-8cc1-3feffd87d548","namespace":null,"metadata":{"text":"Peter Piper picked a peck of pickled peppers"},"values":[0.2321,0.8121,0.6315,0.6151,0.4121,0.1512,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}] 2`
+			`[{"id":"a44706aa-a366-48bc-8cc1-3feffd87d548","namespace":null,"metadata":{"text":"Peter Piper picked a peck of pickled peppers"},"values":[0.2321,0.8121,0.6315,0.6151,0.4121,0.1512,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}]`
 		);
 	});
 

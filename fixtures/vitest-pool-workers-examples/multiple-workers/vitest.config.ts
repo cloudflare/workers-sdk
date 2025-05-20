@@ -64,7 +64,7 @@ export default defineWorkersProject({
 				singleWorker: true,
 				// Configuration for the test runner and "API service" Worker
 				wrangler: {
-					configPath: "./api-service/wrangler.toml",
+					configPath: "./api-service/wrangler.jsonc",
 				},
 				miniflare: {
 					bindings: {

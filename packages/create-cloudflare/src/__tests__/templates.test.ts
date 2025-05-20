@@ -87,7 +87,7 @@ describe("addWranglerToGitIgnore", () => {
 
 			# wrangler files
 			.wrangler
-			.dev.vars
+			.dev.vars*
 			"
 		`);
 	});
@@ -202,7 +202,7 @@ describe("addWranglerToGitIgnore", () => {
 
 			# wrangler files
 			.wrangler
-			.dev.vars
+			.dev.vars*
 			"
 		`);
 	});
@@ -239,7 +239,7 @@ describe("addWranglerToGitIgnore", () => {
 		);
 		expect(appendFileResults.content).toMatchInlineSnapshot(`
 			"
-			.dev.vars
+			.dev.vars*
 			"
 		`);
 	});
@@ -278,6 +278,32 @@ describe("downloadRemoteTemplate", () => {
 		await downloadRemoteTemplate("cloudflare/workers-sdk");
 
 		expect(spinner).not.toBeCalled();
+	});
+
+	test("should call degit with a mode of undefined if not specified", async () => {
+		const mock = mockDegit();
+
+		await downloadRemoteTemplate("cloudflare/workers-sdk");
+
+		expect(mock).toBeCalledWith("cloudflare/workers-sdk", {
+			cache: false,
+			verbose: false,
+			force: true,
+			mode: undefined,
+		});
+	});
+
+	test("should call degit with a mode of 'git' if specified", async () => {
+		const mock = mockDegit();
+
+		await downloadRemoteTemplate("cloudflare/workers-sdk", "git");
+
+		expect(mock).toBeCalledWith("cloudflare/workers-sdk", {
+			cache: false,
+			verbose: false,
+			force: true,
+			mode: "git",
+		});
 	});
 });
 

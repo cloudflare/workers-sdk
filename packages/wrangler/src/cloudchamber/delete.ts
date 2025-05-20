@@ -1,5 +1,6 @@
-import { cancel, crash, endSection, startSection } from "@cloudflare/cli";
+import { cancel, endSection, startSection } from "@cloudflare/cli";
 import { inputPrompt } from "@cloudflare/cli/interactive";
+import { UserError } from "../errors";
 import { logDeployment, pickDeployment } from "./cli/deployments";
 import { DeploymentsService } from "./client";
 import { interactWithUser, loadAccountSpinner } from "./common";
@@ -63,10 +64,9 @@ async function handleDeleteCommand(
 		DeploymentsService.deleteDeploymentV2(deployment.id)
 	);
 	if (err) {
-		crash(
+		throw new UserError(
 			`There has been an internal error deleting your deployment.\n ${err.message}`
 		);
-		return;
 	}
 	endSection("Your container has been deleted");
 }

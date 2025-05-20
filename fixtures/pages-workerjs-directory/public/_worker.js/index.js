@@ -42,7 +42,7 @@ export default {
 		}
 
 		if (pathname === "/r2") {
-			await env.R2.put("key", "value");
+			await env.r2bucket.put("key", "value");
 
 			await env.R2_REF.put("key", "value");
 
@@ -50,7 +50,8 @@ export default {
 		}
 
 		if (pathname !== "/") {
-			return new Response((await import(`./${pathname.slice(1)}`)).default);
+			const file = "." + pathname;
+			return new Response((await import(file)).default);
 		}
 
 		return env.ASSETS.fetch(request);

@@ -1,9 +1,11 @@
 import assert from "node:assert";
 import crypto from "node:crypto";
+import { cp } from "node:fs/promises";
 import { onTestFinished } from "vitest";
 import { generateResourceName } from "./generate-resource-name";
 import { makeRoot, removeFiles, seed } from "./setup";
 import {
+	MINIFLARE_IMPORT,
 	runWrangler,
 	WRANGLER_IMPORT,
 	WranglerLongLivedCommand,
@@ -17,8 +19,16 @@ import type { WranglerCommandOptions } from "./wrangler";
 export class WranglerE2ETestHelper {
 	tmpPath = makeRoot();
 
-	async seed(files: Record<string, string | Uint8Array>) {
-		await seed(this.tmpPath, files);
+	async seed(files: Record<string, string | Uint8Array>): Promise<void>;
+	async seed(sourceDir: string): Promise<void>;
+	async seed(
+		filesOrSourceDir: Record<string, string | Uint8Array> | string
+	): Promise<void> {
+		if (typeof filesOrSourceDir === "string") {
+			await cp(filesOrSourceDir, this.tmpPath, { recursive: true });
+		} else {
+			await seed(this.tmpPath, filesOrSourceDir);
+		}
 	}
 
 	async removeFiles(files: string[]) {
@@ -28,6 +38,11 @@ export class WranglerE2ETestHelper {
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 	importWrangler(): Promise<typeof import("../../src/cli")> {
 		return import(WRANGLER_IMPORT.href);
+	}
+
+	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+	importMiniflare(): Promise<typeof import("miniflare")> {
+		return import(MINIFLARE_IMPORT.href);
 	}
 
 	runLongLived(
@@ -112,14 +127,18 @@ export class WranglerE2ETestHelper {
 		return { id, name };
 	}
 
-	async vectorize(dimensions: number, metric: string) {
+	async vectorize(dimensions: number, metric: string, resourceName?: string) {
 		// vectorize does not have a local dev mode yet, so we don't yet support the isLocal flag here
-		const name = generateResourceName("vectorize");
-		await this.run(
-			`wrangler vectorize create ${name} --dimensions ${dimensions} --metric ${metric}`
-		);
+		const name = resourceName ?? generateResourceName("vectorize");
+		if (!resourceName) {
+			await this.run(
+				`wrangler vectorize create ${name} --dimensions ${dimensions} --metric ${metric}`
+			);
+		}
 		onTestFinished(async () => {
-			await this.run(`wrangler vectorize delete ${name}`);
+			if (!resourceName) {
+				await this.run(`wrangler vectorize delete ${name}`);
+			}
 		});
 
 		return name;

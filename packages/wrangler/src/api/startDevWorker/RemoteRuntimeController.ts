@@ -64,7 +64,10 @@ export class RemoteRuntimeController extends RuntimeController {
 	async #previewToken(
 		props: Omit<CreateRemoteWorkerInitProps, "name"> &
 			Partial<Pick<CreateRemoteWorkerInitProps, "name">> &
-			Parameters<typeof getWorkerAccountAndContext>[0] & { bundleId: number }
+			Parameters<typeof getWorkerAccountAndContext>[0] & {
+				bundleId: number;
+				minimal_mode?: boolean;
+			}
 	): Promise<CfPreviewToken | undefined> {
 		if (!this.#session) {
 			return;
@@ -124,6 +127,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				bindings: props.bindings,
 				compatibilityDate: props.compatibilityDate,
 				compatibilityFlags: props.compatibilityFlags,
+				minimal_mode: props.minimal_mode,
 			});
 
 			// If we received a new `bundleComplete` event before we were able to
@@ -235,6 +239,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				sendMetrics: config.sendMetrics,
 				configPath: config.config,
 				bundleId: id,
+				minimal_mode: config.dev.remote === "minimal",
 			});
 
 			// If we received a new `bundleComplete` event before we were able to

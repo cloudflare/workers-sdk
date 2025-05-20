@@ -46,6 +46,7 @@ export type Service = {
 export interface ServiceDesignator {
 	name?: string;
 	entrypoint?: string;
+	props?: { json: string };
 }
 
 export type Worker = (
@@ -62,6 +63,7 @@ export type Worker = (
 	durableObjectUniqueKeyModifier?: string;
 	durableObjectStorage?: Worker_DurableObjectStorage;
 	moduleFallback?: string;
+	tails?: ServiceDesignator[];
 };
 
 export type Worker_DurableObjectStorage =
@@ -78,7 +80,6 @@ export type Worker_Module = {
 	| { data?: Uint8Array }
 	| { wasm?: Uint8Array }
 	| { json?: string }
-	| { nodeJsCompatModule?: string }
 	| { pythonModule?: string }
 	| { pythonRequirement?: string }
 );
@@ -204,6 +205,7 @@ export interface Network {
 export interface DiskDirectory {
 	path?: string;
 	writable?: boolean;
+	allowDotfiles?: boolean;
 }
 
 export interface HttpOptions {

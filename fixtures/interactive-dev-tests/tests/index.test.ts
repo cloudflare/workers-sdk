@@ -235,9 +235,9 @@ it.each(exitKeys)("multiworker cleanly exits with $name", async ({ key }) => {
 	const wrangler = await startWranglerDev([
 		"dev",
 		"-c",
-		"wrangler.a.toml",
+		"wrangler.a.jsonc",
 		"-c",
-		"wrangler.b.toml",
+		"wrangler.b.jsonc",
 	]);
 	const duringProcesses = getStartedWorkerdProcesses();
 

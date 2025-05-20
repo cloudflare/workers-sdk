@@ -14,6 +14,7 @@ import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
+import { checkTypesDiff } from "../../type-generation/helpers";
 import { requireApiToken, requireAuth } from "../../user";
 import {
 	DEFAULT_INSPECTOR_PORT,
@@ -29,7 +30,7 @@ import { getZoneIdForPreview } from "../../zones";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import {
-	convertCfWorkerInitBindingstoBindings,
+	convertCfWorkerInitBindingsToBindings,
 	extractBindingsOfType,
 	unwrapHook,
 } from "./utils";
@@ -167,6 +168,7 @@ async function resolveBindings(
 			...bindings,
 			vars: maskedVars,
 		},
+		input.tailConsumers ?? config.tail_consumers,
 		{
 			registry: input.dev?.registry,
 			local: !input.dev?.remote,
@@ -178,7 +180,7 @@ async function resolveBindings(
 	return {
 		bindings: {
 			...input.bindings,
-			...convertCfWorkerInitBindingstoBindings(bindings),
+			...convertCfWorkerInitBindingsToBindings(bindings),
 		},
 		unsafe: bindings.unsafe,
 	};
@@ -239,11 +241,8 @@ async function resolveConfig(
 	}
 	const legacySite = unwrapHook(input.legacy?.site, config);
 
-	const legacyAssets = unwrapHook(input.legacy?.legacyAssets, config);
-
 	const entry = await getEntry(
 		{
-			legacyAssets: Boolean(legacyAssets),
 			script: input.entrypoint,
 			moduleRoot: input.build?.moduleRoot,
 			// getEntry only needs to know if assets was specified.
@@ -291,6 +290,7 @@ async function resolveConfig(
 			moduleRules: input.build?.moduleRules ?? getRules(config),
 
 			minify: input.build?.minify ?? config.minify,
+			keepNames: input.build?.keepNames ?? config.keep_names,
 			define: { ...config.define, ...input.build?.define },
 			custom: {
 				command: input.build?.custom?.command ?? config.build?.command,
@@ -308,7 +308,6 @@ async function resolveConfig(
 		dev: await resolveDevConfig(config, input),
 		legacy: {
 			site: legacySite,
-			legacyAssets: legacyAssets,
 			enableServiceEnvironments:
 				input.legacy?.enableServiceEnvironments ?? !isLegacyEnv(config),
 		},
@@ -317,11 +316,16 @@ async function resolveConfig(
 			metadata: input.unsafe?.metadata ?? unsafe?.metadata,
 		},
 		assets: assetsOptions,
+		tailConsumers: config.tail_consumers ?? [],
 	} satisfies StartDevWorkerOptions;
 
-	if (resolved.legacy.legacyAssets && resolved.legacy.site) {
-		throw new UserError(
-			"Cannot use legacy assets and Workers Sites in the same Worker."
+	if (
+		extractBindingsOfType("analytics_engine", resolved.bindings).length &&
+		!resolved.dev.remote &&
+		resolved.build.format === "service-worker"
+	) {
+		logger.warn(
+			"Analytics Engine is not supported locally when using the service-worker format. Please migrate to the module worker format: https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/"
 		);
 	}
 
@@ -368,6 +372,14 @@ async function resolveConfig(
 		Array.from(classNamesWhichUseSQLite.values()).some((v) => v)
 	) {
 		logger.warn("SQLite in Durable Objects is only supported in local mode.");
+	}
+
+	// prompt user to update their types if we detect that it is out of date
+	const typesChanged = await checkTypesDiff(config, entry);
+	if (typesChanged) {
+		logger.log(
+			"❓ Your types might be out of date. Re-run `wrangler types` to ensure your types are correct."
+		);
 	}
 
 	return resolved;
@@ -426,7 +438,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 					env: input.env,
 					"dispatch-namespace": undefined,
 					"legacy-env": !input.legacy?.enableServiceEnvironments,
-					remote: input.dev?.remote,
+					remote: !!input.dev?.remote,
 					upstreamProtocol:
 						input.dev?.origin?.secure === undefined
 							? undefined

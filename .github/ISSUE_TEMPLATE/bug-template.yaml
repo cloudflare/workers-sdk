@@ -1,13 +1,12 @@
 name: "\U0001F41B Bug Report"
 description: Report an issue or possible bug
-title: "\U0001F41B BUG:"
 labels: ["bug"]
+type: Bug
 
 body:
   - type: markdown
     attributes:
       value: |
-        ## Quick Bug Form
         Thank you for taking the time to file a bug report! Please fill out this form as completely as possible.
   - type: dropdown
     id: products
@@ -35,14 +34,8 @@ body:
       required: true
   - type: input
     attributes:
-      label: What versions are you using?
-      placeholder: 0.0.0 [Wrangler], 0.0.0 [C3], 0.0.0 [Node.js], etc.
-    validations:
-      required: true
-  - type: input
-    attributes:
-      label: What operating system and version are you using?
-      placeholder: Mac Sonoma 14.2.1, Windows 11, Linux (or WSL) Debian Bookworm, etc.
+      label: What versions & operating system are you using?
+      placeholder: e.g. Wrangler v4.6, Node v20, Windows 11 etc...
     validations:
       required: true
   - type: input

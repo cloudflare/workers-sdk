@@ -1,12 +1,12 @@
 import { mkdir } from "fs/promises";
-import { exit } from "process";
-import { crash, logRaw, space, status, updateStatus } from "@cloudflare/cli";
+import { logRaw, space, status, updateStatus } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { version as wranglerVersion } from "../../package.json";
 import { readConfig } from "../config";
 import { getConfigCache, purgeConfigCaches } from "../config-cache";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
+import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import {
@@ -109,7 +109,7 @@ export function handleFailure<
 			await fillOpenAPIConfiguration(config, args.json);
 			await cb(args, config);
 		} catch (err) {
-			if (!args.json) {
+			if (!args.json || !isNonInteractiveOrCI()) {
 				throw err;
 			}
 
@@ -119,11 +119,11 @@ export function handleFailure<
 			}
 
 			if (err instanceof Error) {
-				logger.log(`${JSON.stringify({ error: err.message })}`);
+				logger.log(JSON.stringify({ error: err.message }));
 				return;
 			}
 
-			logger.log(JSON.stringify(err));
+			throw err;
 		}
 	};
 }
@@ -166,7 +166,7 @@ export async function promiseSpinner<T>(
 	return t;
 }
 
-async function fillOpenAPIConfiguration(config: Config, json: boolean) {
+export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 	const headers: Record<string, string> =
 		OpenAPI.HEADERS !== undefined ? { ...OpenAPI.HEADERS } : {};
 
@@ -217,22 +217,22 @@ async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 		// This will prompt the user for an accountId being chosen if they haven't configured the account id yet
 		const [, err] = await wrap(requireAuth(config));
 		if (err) {
-			crash("authenticating with the Cloudflare API:", err.message);
-			return;
+			throw new UserError(
+				`authenticating with the Cloudflare API: ${err.message}`
+			);
 		}
 	}
 
 	// Get the loaded API token
 	const token = getAPIToken();
 	if (!token) {
-		crash("unexpected apiToken not existing in credentials");
-		exit(1);
+		throw new UserError("unexpected apiToken not existing in credentials");
 	}
 
 	const val = "apiToken" in token ? token.apiToken : null;
 	// Don't try to support this method of authentication
 	if (!val) {
-		crash(
+		throw new UserError(
 			"we don't allow for authKey/email credentials, use `wrangler login` or CLOUDFLARE_API_TOKEN env variable to authenticate"
 		);
 	}
@@ -245,7 +245,7 @@ async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 	if (OpenAPI.BASE.length === 0) {
 		const [base, errApiURL] = await wrap(getAPIUrl(config));
 		if (errApiURL) {
-			crash("getting the API url:" + errApiURL.message);
+			throw new UserError("getting the API url: " + errApiURL.message);
 		}
 
 		OpenAPI.BASE = base;
@@ -260,7 +260,7 @@ async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 			message = JSON.stringify(err);
 		}
 
-		crash("loading Cloudchamber account failed:" + message);
+		throw new UserError("loading Cloudchamber account failed:" + message);
 	}
 }
 
@@ -368,24 +368,20 @@ export function renderDeploymentMutationError(
 	err: Error
 ) {
 	if (!(err instanceof ApiError)) {
-		crash(err.message);
-		return;
+		throw new UserError(err.message);
 	}
 
 	if (typeof err.body === "string") {
-		crash("There has been an internal error, please try again!");
-		return;
+		throw new UserError("There has been an internal error, please try again!");
 	}
 
 	if (!("error" in err.body)) {
-		crash(err.message);
-		return;
+		throw new UserError(err.message);
 	}
 
 	const errorMessage = err.body.error;
 	if (!(errorMessage in DeploymentMutationError)) {
-		crash(err.message);
-		return;
+		throw new UserError(err.message);
 	}
 
 	const details: Record<string, string> = err.body.details ?? {};
@@ -427,7 +423,9 @@ export function renderDeploymentMutationError(
 				"The image registry you are trying to use is not configured. Use the 'wrangler cloudchamber registries configure' command to configure the registry.\n",
 		};
 
-	crash(details["reason"] ?? errorEnumToErrorMessage[errorEnum]());
+	throw new UserError(
+		details["reason"] ?? errorEnumToErrorMessage[errorEnum]()
+	);
 }
 
 function sortEnvironmentVariables(environmentVariables: EnvironmentVariable[]) {

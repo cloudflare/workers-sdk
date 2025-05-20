@@ -32,53 +32,8 @@ type WorkerTestConfig = RunnerConfig & {
 
 function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 	if (opts.experimental) {
-		return [
-			{
-				template: "hello-world-with-assets",
-				variants: ["ts", "js"],
-				verifyDeploy: {
-					route: "/message",
-					expectedText: "Hello, World!",
-				},
-				// There is no preview script
-				verifyPreview: null,
-				verifyTest: true,
-				argv: ["--category", "hello-world"],
-			},
-			{
-				template: "hello-world-with-assets",
-				variants: ["python"],
-				verifyDeploy: {
-					route: "/message",
-					expectedText: "Hello, World!",
-				},
-				// There is no preview script
-				verifyPreview: null,
-				argv: ["--category", "hello-world"],
-			},
-			{
-				template: "hello-world-durable-object-with-assets",
-				variants: ["ts", "js"],
-				verifyDeploy: {
-					route: "/",
-					expectedText: "Hello, World!",
-				},
-				// There is no preview script
-				verifyPreview: null,
-				argv: ["--category", "hello-world"],
-			},
-			{
-				template: "hello-world-assets-only",
-				variants: [],
-				verifyDeploy: {
-					route: "/",
-					expectedText: "Hello, World!",
-				},
-				// There is no preview script
-				verifyPreview: null,
-				argv: ["--category", "hello-world"],
-			},
-		];
+		// none currently
+		return [];
 	} else {
 		return [
 			{
@@ -105,6 +60,84 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 					route: "/",
 					expectedText: "Hello World!",
 				},
+			},
+			{
+				template: "hello-world-with-assets",
+				variants: ["ts", "js"],
+				verifyDeploy: {
+					route: "/message",
+					expectedText: "Hello, World!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+				verifyTest: true,
+				argv: ["--category", "hello-world"],
+			},
+			{
+				template: "hello-world-with-assets",
+				variants: ["python"],
+				verifyDeploy: {
+					route: "/message",
+					expectedText: "Hello, World!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+				argv: ["--category", "hello-world"],
+			},
+			{
+				template: "hello-world-durable-object",
+				variants: ["ts", "js"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello, world!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+				argv: ["--category", "hello-world"],
+			},
+			{
+				template: "hello-world-durable-object",
+				variants: ["python"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello, world!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+				argv: ["--category", "hello-world"],
+			},
+			{
+				template: "hello-world-durable-object-with-assets",
+				variants: ["ts", "js"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello, World!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+				argv: ["--category", "hello-world"],
+			},
+			{
+				template: "hello-world-durable-object-with-assets",
+				variants: ["python"],
+				verifyDeploy: {
+					route: "/message",
+					expectedText: "Hello, world!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+				argv: ["--category", "hello-world"],
+			},
+			{
+				template: "hello-world-assets-only",
+				variants: [],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "Hello, World!",
+				},
+				// There is no preview script
+				verifyPreview: null,
+				argv: ["--category", "hello-world"],
 			},
 			{
 				template: "common",
@@ -155,6 +188,7 @@ describe
 	.skipIf(
 		getFrameworkToTest({ experimental }) ||
 			isQuarantineMode() ||
+			workerTests.length === 0 ||
 			process.platform === "win32",
 	)
 	.concurrent(`E2E: Workers templates`, () => {

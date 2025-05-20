@@ -1,5 +1,4 @@
 import {
-	crash,
 	endSection,
 	log,
 	logRaw,
@@ -9,6 +8,7 @@ import {
 } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import { UserError } from "../../errors";
 import {
 	DeploymentsService,
 	ImageRegistriesService,
@@ -214,7 +214,7 @@ async function waitForImagePull(deployment: DeploymentV2) {
 	);
 	s.stop();
 	if (err) {
-		crash(err.message);
+		throw new UserError(err.message);
 	}
 
 	if (
@@ -231,15 +231,15 @@ async function waitForImagePull(deployment: DeploymentV2) {
 		// For now, the cloudchamber API always returns a 404 in the message when the
 		// image is not found.
 		if (eventPlacement.event.message.includes("404")) {
-			crash(
-				"Your container image couldn't be pulled, (404 not found). Did you specify the correct URL?",
-				`Run ${brandColor(
-					process.argv0 + " cloudchamber modify " + deployment.id
-				)} to change the deployment image`
+			throw new UserError(
+				"Your container image couldn't be pulled, (404 not found). Did you specify the correct URL?\n\t" +
+					`Run ${brandColor(
+						process.argv0 + " cloudchamber modify " + deployment.id
+					)} to change the deployment image`
 			);
 		}
 
-		crash(capitalize(eventPlacement.event.message));
+		throw new UserError(capitalize(eventPlacement.event.message));
 	}
 
 	updateStatus("Pulled your image");
@@ -271,7 +271,7 @@ async function waitForVMToStart(deployment: DeploymentV2) {
 	);
 	s.stop();
 	if (err) {
-		crash(err.message);
+		throw new UserError(err.message);
 	}
 
 	if (!eventPlacement.event) {
@@ -338,7 +338,7 @@ async function waitForPlacementInstance(deployment: DeploymentV2) {
 	}
 
 	if (err) {
-		crash(err.message);
+		throw new UserError(err.message);
 	}
 
 	updateStatus(
@@ -378,7 +378,7 @@ export async function waitForPlacement(deployment: DeploymentV2) {
 					DeploymentsService.getDeploymentV2(deployment.id)
 				);
 				if (getDeploymentError) {
-					crash(
+					throw new UserError(
 						"Couldn't retrieve a new deployment: " + getDeploymentError.message
 					);
 				}

@@ -119,7 +119,7 @@ describe.sequential.each([{ cmd: "wrangler pages dev" }])(
 			);
 			await worker.waitForReady();
 			expect(normalizeOutput(worker.currentOutput)).toContain(
-				dedent`Your worker has access to the following bindings:
+				dedent`Your Worker has access to the following bindings:
 					- Durable Objects:
 					  - TEST_DO: TestDurableObject (defined in a [not connected])
 					- KV Namespaces:
@@ -325,7 +325,7 @@ describe.sequential.each([{ cmd: "wrangler pages dev" }])(
 
 			expect(text).toBe("⚡️ Pages ⚡️ supports wrangler.toml");
 			expect(normalizeOutput(worker.currentOutput)).toContain(
-				dedent`Your worker has access to the following bindings:
+				dedent`Your Worker has access to the following bindings:
 					- KV Namespaces:
 					  - KV_BINDING_TOML: KV_ID_TOML [simulated locally]
 					- Vars:
@@ -342,7 +342,7 @@ describe.sequential.each([{ cmd: "wrangler pages dev" }])(
 				` --kv KV_BINDING_1_TOML=NEW_KV_ID_1 KV_BINDING_3_ARGS=KV_ID_3_ARGS`,
 				` --do DO_BINDING_1_TOML=NEW_DO_1@NEW_DO_SCRIPT_1 DO_BINDING_3_ARGS=DO_3_ARGS@DO_SCRIPT_3_ARGS`,
 				` --d1 D1_BINDING_1_TOML=NEW_D1_NAME_1 D1_BINDING_3_ARGS=D1_NAME_3_ARGS`,
-				` --r2 R2_BINDING_1_TOML=NEW_R2_BUCKET_1 R2_BINDING_3_TOML=R2_BUCKET_3_ARGS`,
+				` --r2 R2_BINDING_1_TOML=new-r2-bucket-1 R2_BINDING_3_TOML=r2-bucket-3-args`,
 				` --service SERVICE_BINDING_1_TOML=NEW_SERVICE_NAME_1 SERVICE_BINDING_3_TOML=SERVICE_NAME_3_ARGS`,
 				` --ai AI_BINDING_2_TOML`,
 			];
@@ -402,12 +402,12 @@ describe.sequential.each([{ cmd: "wrangler pages dev" }])(
 				# to override
 				[[r2_buckets]]
 				binding = 'R2_BINDING_1_TOML'
-				bucket_name = 'R2_BUCKET_1_TOML'
+				bucket_name = 'r2-bucket-1-toml'
 
 				# to merge as is
 				[[r2_buckets]]
 				binding = 'R2_BINDING_2_TOML'
-				bucket_name = 'R2_BUCKET_2_TOML'
+				bucket_name = 'r2-bucket-2-toml'
 
 				# to override
 				[[services]]

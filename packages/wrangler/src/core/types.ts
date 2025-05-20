@@ -28,10 +28,17 @@ export type Metadata = {
 	deprecatedMessage?: string;
 	hidden?: boolean;
 	owner: Teams;
+	/** Prints something at the bottom of the help */
+	epilogue?: string;
+	examples?: {
+		command: string;
+		description: string;
+	}[];
+	hideGlobalFlags?: string[];
 };
 
-export type ArgDefinition = PositionalOptions &
-	Pick<Options, "hidden" | "requiresArg">;
+export type ArgDefinition = Omit<PositionalOptions, "type"> &
+	Pick<Options, "hidden" | "requiresArg" | "deprecated" | "type">;
 export type NamedArgDefinitions = { [key: string]: ArgDefinition };
 export type HandlerArgs<Args extends NamedArgDefinitions> = DeepFlatten<
 	OnlyCamelCase<
@@ -121,6 +128,13 @@ export type CommandDefinition<
 		 * If true, then look for a redirect file at `.wrangler/deploy/config.json` and use that to find the Wrangler configuration file.
 		 */
 		useConfigRedirectIfAvailable?: boolean;
+
+		/**
+		 * If true, print a message about whether the command is operating on a local or remote resource
+		 */
+		printResourceLocation?:
+			| ((args?: HandlerArgs<NamedArgDefs>) => boolean)
+			| boolean;
 	};
 
 	/**

@@ -7,6 +7,7 @@ export default defineWorkersProject({
 		"CONFIG_NESTED.DEFINED.THING": "[1,2,3]",
 	},
 	test: {
+		exclude: ["test/assets.test.ts"],
 		poolOptions: {
 			workers: {
 				singleWorker: true,
@@ -29,7 +30,7 @@ export default defineWorkersProject({
 					],
 				},
 				wrangler: {
-					configPath: "./wrangler.toml",
+					configPath: "./wrangler.jsonc",
 				},
 			},
 		},

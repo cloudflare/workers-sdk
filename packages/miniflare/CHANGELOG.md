@@ -1,5 +1,437 @@
 # miniflare
 
+## 4.20250508.2
+
+### Patch Changes
+
+- [#9256](https://github.com/cloudflare/workers-sdk/pull/9256) [`3b384e2`](https://github.com/cloudflare/workers-sdk/commit/3b384e28c7b2c2be1bf959831ad538c56f2a8c8a) Thanks [@penalosa](https://github.com/penalosa)! - Move the Analytics Engine simulator implementation from JSRPC to a Wrapped binding. This fixes a regression introduced in https://github.com/cloudflare/workers-sdk/pull/8935 that preventing Analytics Engine bindings working in local dev for Workers with a compatibility date prior to JSRPC being enabled.
+
+## 4.20250508.1
+
+### Patch Changes
+
+- [#9246](https://github.com/cloudflare/workers-sdk/pull/9246) [`d033a7d`](https://github.com/cloudflare/workers-sdk/commit/d033a7da1c5b918d4e3bd2ea53bc0f0d20817715) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: strip `CF-Connecting-IP` header within `fetch`
+
+  In v4.15.0, Miniflare began stripping the `CF-Connecting-IP` header via a global outbound service, which led to a TCP connection regression due to a bug in Workerd. This PR patches the `fetch` API to strip the header during local `wrangler dev` sessions as a temporary workaround until the underlying issue is resolved.
+
+## 4.20250508.0
+
+### Patch Changes
+
+- [#7914](https://github.com/cloudflare/workers-sdk/pull/7914) [`37af035`](https://github.com/cloudflare/workers-sdk/commit/37af03518e59a8af9c66c3b50fa380186d2c098b) Thanks [@andyjessop](https://github.com/andyjessop)! - fix(miniflare): strip CF-Connecting-IP header from all outbound requests
+
+- [#9174](https://github.com/cloudflare/workers-sdk/pull/9174) [`ceeb375`](https://github.com/cloudflare/workers-sdk/commit/ceeb375cac316a6508853511a1ad6ec15d120244) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250507.0  | 1.20250508.0  |
+  | @cloudflare/workers-types | ^4.20250507.0 | ^4.20250508.0 |
+
+- [#9181](https://github.com/cloudflare/workers-sdk/pull/9181) [`349cffc`](https://github.com/cloudflare/workers-sdk/commit/349cffcd547e602a4bf3fb708122cf00bb4ad8d2) Thanks [@penalosa](https://github.com/penalosa)! - Add a mixed-mode-only browser rendering plugin
+
+- [#9186](https://github.com/cloudflare/workers-sdk/pull/9186) [`362cb0b`](https://github.com/cloudflare/workers-sdk/commit/362cb0be3fa28bbf007491f7156ecb522bd7ee43) Thanks [@penalosa](https://github.com/penalosa)! - Support Mixed Mode Service Bindings in Miniflare
+
+- [#9198](https://github.com/cloudflare/workers-sdk/pull/9198) [`2cc8197`](https://github.com/cloudflare/workers-sdk/commit/2cc819782c2ebb0d7f852be719c4230d2a7db6ae) Thanks [@kylecarbs](https://github.com/kylecarbs)! - fix: ensure the fetch proxy message port is started
+
+  While Node.js will start the message port automatically when a `message` event listener is added,
+  this diverges from the standard Web API for message ports, which require you to explicitly start
+  listening on the port.
+
+- [#9168](https://github.com/cloudflare/workers-sdk/pull/9168) [`6b42c28`](https://github.com/cloudflare/workers-sdk/commit/6b42c28aa42457a64e9342b1cd1f92ad2228ff37) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add `mixedModeConnectionString` to the various binding configs
+
+## 4.20250507.0
+
+### Patch Changes
+
+- [#9092](https://github.com/cloudflare/workers-sdk/pull/9092) [`df5d1f6`](https://github.com/cloudflare/workers-sdk/commit/df5d1f6104df90e5b991c8d73d9847a64beb9cd2) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250428.0  | 1.20250506.0  |
+  | @cloudflare/workers-types | ^4.20250428.0 | ^4.20250506.0 |
+
+- [#9160](https://github.com/cloudflare/workers-sdk/pull/9160) [`4672bda`](https://github.com/cloudflare/workers-sdk/commit/4672bda9fe0d94a5eaea231fc46ca755092a81eb) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250506.0  | 1.20250507.0  |
+  | @cloudflare/workers-types | ^4.20250506.0 | ^4.20250507.0 |
+
+- [#9159](https://github.com/cloudflare/workers-sdk/pull/9159) [`c6b3f10`](https://github.com/cloudflare/workers-sdk/commit/c6b3f10f5adf4e6d62bcc9fe89574a2cbcce3870) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - bump esbuild version to fix regression in 0.25.0
+
+## 4.20250428.1
+
+### Patch Changes
+
+- [#9089](https://github.com/cloudflare/workers-sdk/pull/9089) [`357d42a`](https://github.com/cloudflare/workers-sdk/commit/357d42acfb16d21169d004961030cd4822526a96) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: skip comment lines when parsing `NODE_EXTRA_CA_CERTS`
+
+## 4.20250428.0
+
+### Minor Changes
+
+- [#9083](https://github.com/cloudflare/workers-sdk/pull/9083) [`137d2da`](https://github.com/cloudflare/workers-sdk/commit/137d2da0602db0f66a5c1b6f277624f6031d9dc5) Thanks [@penalosa](https://github.com/penalosa)! - Support Tail Workers in local dev
+
+### Patch Changes
+
+- [#9081](https://github.com/cloudflare/workers-sdk/pull/9081) [`d2ecc76`](https://github.com/cloudflare/workers-sdk/commit/d2ecc763e4d77620d6a9be71855e87893631ebc0) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250424.0  | 1.20250428.0  |
+  | @cloudflare/workers-types | ^4.20250424.0 | ^4.20250428.0 |
+
+## 4.20250424.1
+
+### Patch Changes
+
+- [#9033](https://github.com/cloudflare/workers-sdk/pull/9033) [`2c50115`](https://github.com/cloudflare/workers-sdk/commit/2c501151d3d1a563681cdb300a298b83862b60e2) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: convert wrangler.toml files into wrangler.jsonc ones
+
+## 4.20250424.0
+
+### Patch Changes
+
+- [#9041](https://github.com/cloudflare/workers-sdk/pull/9041) [`fc47c79`](https://github.com/cloudflare/workers-sdk/commit/fc47c79f7c5ab532e0437897c8d7ab06abd5298d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250422.0  | 1.20250424.0  |
+  | @cloudflare/workers-types | ^4.20250422.0 | ^4.20250424.0 |
+
+- [#8860](https://github.com/cloudflare/workers-sdk/pull/8860) [`0838f1b`](https://github.com/cloudflare/workers-sdk/commit/0838f1b4ccce347921f3a0746652fe379dd16faf) Thanks [@teresalves](https://github.com/teresalves)! - KV: update error messages for 400 errors
+
+## 4.20250422.0
+
+### Minor Changes
+
+- [#8640](https://github.com/cloudflare/workers-sdk/pull/8640) [`5ce70bd`](https://github.com/cloudflare/workers-sdk/commit/5ce70bdba8dc7e265447c997dc7c3af92469072b) Thanks [@kentonv](https://github.com/kentonv)! - Add support for defining `props` on a Service binding.
+
+  In your configuration file, you can define a service binding with props:
+
+  ```json
+  {
+  	"services": [
+  		{
+  			"binding": "MY_SERVICE",
+  			"service": "some-worker",
+  			"props": { "foo": 123, "bar": "value" }
+  		}
+  	]
+  }
+  ```
+
+  These can then be accessed by the callee:
+
+  ```ts
+  import { WorkerEntrypoint } from "cloudflare:workers";
+
+  export default class extends WorkerEntrypoint {
+  	fetch() {
+  		return new Response(JSON.stringify(this.ctx.props));
+  	}
+  }
+  ```
+
+### Patch Changes
+
+- [#9030](https://github.com/cloudflare/workers-sdk/pull/9030) [`3f0adf3`](https://github.com/cloudflare/workers-sdk/commit/3f0adf3c25e9cede1bd8c2ae873c059d1ab2ef38) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250417.0  | 1.20250422.0  |
+  | @cloudflare/workers-types | ^4.20250417.0 | ^4.20250422.0 |
+
+## 4.20250417.0
+
+### Minor Changes
+
+- [#8935](https://github.com/cloudflare/workers-sdk/pull/8935) [`41f095b`](https://github.com/cloudflare/workers-sdk/commit/41f095b0dd35411adbca3398966b5cfe8c39d433) Thanks [@penalosa](https://github.com/penalosa)! - Internal refactor to move local analytics engine support from Wrangler to Miniflare
+
+### Patch Changes
+
+- [#8993](https://github.com/cloudflare/workers-sdk/pull/8993) [`2a7749b`](https://github.com/cloudflare/workers-sdk/commit/2a7749bffb7fe5550c3192401ed6edd72c0eb510) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250416.0  | 1.20250417.0  |
+  | @cloudflare/workers-types | ^4.20250415.0 | ^4.20250417.0 |
+
+## 4.20250416.0
+
+### Patch Changes
+
+- [#8927](https://github.com/cloudflare/workers-sdk/pull/8927) [`62c40d7`](https://github.com/cloudflare/workers-sdk/commit/62c40d792b9555e6e25a5f99ae803e4943c4b56f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250410.0  | 1.20250416.0  |
+  | @cloudflare/workers-types | ^4.20250410.0 | ^4.20250415.0 |
+
+## 4.20250410.1
+
+### Minor Changes
+
+- [#8887](https://github.com/cloudflare/workers-sdk/pull/8887) [`511be3d`](https://github.com/cloudflare/workers-sdk/commit/511be3d17559e482fedf559cb61158e329c11d24) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Add log message when `Sec-Fetch-Mode: navigate` is responsible for assets routing decision in `wrangler dev`
+
+## 4.20250410.0
+
+### Patch Changes
+
+- [#8873](https://github.com/cloudflare/workers-sdk/pull/8873) [`f5413c5`](https://github.com/cloudflare/workers-sdk/commit/f5413c5269ab32522a70c3ebedba95bf6e7a4684) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250409.0  | 1.20250410.0  |
+  | @cloudflare/workers-types | ^4.20250409.0 | ^4.20250410.0 |
+
+## 4.20250409.0
+
+### Patch Changes
+
+- [#8859](https://github.com/cloudflare/workers-sdk/pull/8859) [`b7ac367`](https://github.com/cloudflare/workers-sdk/commit/b7ac367fe4c3d7a05525443cc30af10bc19ce014) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250408.0  | 1.20250409.0  |
+  | @cloudflare/workers-types | ^4.20250408.0 | ^4.20250409.0 |
+
+- [#8883](https://github.com/cloudflare/workers-sdk/pull/8883) [`5388447`](https://github.com/cloudflare/workers-sdk/commit/5388447d7ca5b00dbcc0970f52b76e20a17ebe30) Thanks [@penalosa](https://github.com/penalosa)! - fix: Only log requests to the Wrangler dev server once
+
+## 4.20250408.0
+
+### Patch Changes
+
+- [#8810](https://github.com/cloudflare/workers-sdk/pull/8810) [`d454ad9`](https://github.com/cloudflare/workers-sdk/commit/d454ad99a75985744e7c48c93be098a96120e763) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250405.0  | 1.20250408.0  |
+  | @cloudflare/workers-types | ^4.20250405.0 | ^4.20250408.0 |
+
+## 4.20250405.1
+
+### Minor Changes
+
+- [#8375](https://github.com/cloudflare/workers-sdk/pull/8375) [`930ebb2`](https://github.com/cloudflare/workers-sdk/commit/930ebb279e165c1a82a70e89431e0a5a09b06647) Thanks [@penalosa](https://github.com/penalosa)! - Add support for email local dev and send_email binding
+
+### Patch Changes
+
+- [#8808](https://github.com/cloudflare/workers-sdk/pull/8808) [`afd93b9`](https://github.com/cloudflare/workers-sdk/commit/afd93b98d8eb700ce51dc8ea30eb0c0d56deae8d) Thanks [@teresalves](https://github.com/teresalves)! - KV: improve error messages for bulk gets
+
+## 4.20250405.0
+
+### Minor Changes
+
+- [#8394](https://github.com/cloudflare/workers-sdk/pull/8394) [`93267cf`](https://github.com/cloudflare/workers-sdk/commit/93267cf3c59d57792fb10cc10b23255e33679c4d) Thanks [@edmundhung](https://github.com/edmundhung)! - Support Secrets Store Secret bindings
+
+### Patch Changes
+
+- [#8775](https://github.com/cloudflare/workers-sdk/pull/8775) [`ec7e621`](https://github.com/cloudflare/workers-sdk/commit/ec7e6212199272f9811a30a84922823c82d7d650) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250404.0  | 1.20250405.0  |
+  | @cloudflare/workers-types | ^4.20250404.0 | ^4.20250405.0 |
+
+## 4.20250404.0
+
+### Patch Changes
+
+- [#8712](https://github.com/cloudflare/workers-sdk/pull/8712) [`e0efb6f`](https://github.com/cloudflare/workers-sdk/commit/e0efb6f17e0c76aa504711b6ca25c025ee1d21e5) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250321.0  | 1.20250404.0  |
+  | @cloudflare/workers-types | ^4.20250321.0 | ^4.20250404.0 |
+
+- [#8747](https://github.com/cloudflare/workers-sdk/pull/8747) [`0a401d0`](https://github.com/cloudflare/workers-sdk/commit/0a401d07714dc4e383060a0bbf71843c13d13281) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure that `miniflare#setOptions` allows the update of inspector ports
+
+## 4.20250321.2
+
+### Patch Changes
+
+- [#8449](https://github.com/cloudflare/workers-sdk/pull/8449) [`007f322`](https://github.com/cloudflare/workers-sdk/commit/007f322f66dc1edc70840330166732d25dae9cb3) Thanks [@harryzcy](https://github.com/harryzcy)! - update youch dependency to avoid vulnerable version of cookie
+
+## 4.20250321.1
+
+### Minor Changes
+
+- [#8623](https://github.com/cloudflare/workers-sdk/pull/8623) [`cad99dc`](https://github.com/cloudflare/workers-sdk/commit/cad99dc78d76e35f846e85ac328effff8ba9477d) Thanks [@teresalves](https://github.com/teresalves)! - Add Miniflare Workers KV bulk get support
+
+### Patch Changes
+
+- [#8666](https://github.com/cloudflare/workers-sdk/pull/8666) [`f29f018`](https://github.com/cloudflare/workers-sdk/commit/f29f01813683ab3e42c53738be3d49a0f8cba512) Thanks [@penalosa](https://github.com/penalosa)! - Remove `NodeJSCompatModule`. This was never fully supported, and never worked for deploying Workers from Wrangler.
+
+## 4.20250321.0
+
+### Patch Changes
+
+- [#8655](https://github.com/cloudflare/workers-sdk/pull/8655) [`7682675`](https://github.com/cloudflare/workers-sdk/commit/768267567427cb54f39dc13860b09affd924267d) Thanks [@emily-shen](https://github.com/emily-shen)! - fix bug where assets in directories starting with . would crash the dev server
+
+- [#8650](https://github.com/cloudflare/workers-sdk/pull/8650) [`9c844f7`](https://github.com/cloudflare/workers-sdk/commit/9c844f771a5345e3ccf64f07ac1d476a50a80fb6) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250320.0  | 1.20250321.0  |
+  | @cloudflare/workers-types | ^4.20250320.0 | ^4.20250321.0 |
+
+## 4.20250320.0
+
+### Patch Changes
+
+- [#8618](https://github.com/cloudflare/workers-sdk/pull/8618) [`d8f1c49`](https://github.com/cloudflare/workers-sdk/commit/d8f1c49541229f4b41bd16bbebda3017a5d17d64) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250319.0  | 1.20250320.0  |
+  | @cloudflare/workers-types | ^4.20250319.0 | ^4.20250320.0 |
+
+- [#8556](https://github.com/cloudflare/workers-sdk/pull/8556) [`b7d6b7d`](https://github.com/cloudflare/workers-sdk/commit/b7d6b7dd1fbbaecd4f595d2d4249ab902b726538) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Add support for `assets_navigation_prefer_asset_serving` in Vite (`dev` and `preview`)
+
+- [#8597](https://github.com/cloudflare/workers-sdk/pull/8597) [`5d78760`](https://github.com/cloudflare/workers-sdk/commit/5d78760af7adbb57416d73f102123152d37bec53) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Graduate experimental RPC support for Workers with assets in local dev
+
+- [#8594](https://github.com/cloudflare/workers-sdk/pull/8594) [`c0d0cd0`](https://github.com/cloudflare/workers-sdk/commit/c0d0cd03a5eede7ec4f8a615f2c4b1f9a73dfcee) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Add support for property accessors in local dev RPC for Workers with assets
+
+## 4.20250319.0
+
+### Minor Changes
+
+- [#8258](https://github.com/cloudflare/workers-sdk/pull/8258) [`9adbd50`](https://github.com/cloudflare/workers-sdk/commit/9adbd50cf1cbe841f8885de1d1d22b084fcfd987) Thanks [@knickish](https://github.com/knickish)! - Enable the creation of MySQL Hypedrive configs via the Wrangler CLI.
+
+### Patch Changes
+
+- [#8591](https://github.com/cloudflare/workers-sdk/pull/8591) [`dae7bd4`](https://github.com/cloudflare/workers-sdk/commit/dae7bd4dd0b97956d868799e6a01fe8b47a7250a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250317.0  | 1.20250319.0  |
+  | @cloudflare/workers-types | ^4.20250317.0 | ^4.20250319.0 |
+
+- [#8376](https://github.com/cloudflare/workers-sdk/pull/8376) [`a25f060`](https://github.com/cloudflare/workers-sdk/commit/a25f060232bfbfb30aede6a891b665f0450770bf) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - feat: Make local dev RPC behaviour on par with production for Workers with assets
+
+## 4.20250317.1
+
+### Patch Changes
+
+- [#8357](https://github.com/cloudflare/workers-sdk/pull/8357) [`ff26dc2`](https://github.com/cloudflare/workers-sdk/commit/ff26dc20210c193b9e175f5567277d5584bdf657) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - feat: add new `unsafeInspectorProxy` option to miniflare
+
+  Add a new `unsafeInspectorProxy` option to the miniflare worker options, if
+  at least one worker has the option set then miniflare will establish a proxy
+  between itself and workerd for the v8 inspector APIs which exposes only the
+  requested workers to inspector clients. The inspector proxy communicates through
+  miniflare's `inspectorPort` and exposes each requested worker via a path comprised
+  of the worker's name
+
+  example:
+
+  ```js
+  import { Miniflare } from "miniflare";
+
+  const mf = new Miniflare({
+  	// the inspector proxy will be accessible through port 9229
+  	inspectorPort: 9229,
+  	workers: [
+  		{
+  			name: "worker-a",
+  			scriptPath: "./worker-a.js",
+  			// enable the inspector proxy for worker-a
+  			unsafeInspectorProxy: true,
+  		},
+  		{
+  			name: "worker-b",
+  			scriptPath: "./worker-b.js",
+  			// worker-b is not going to be proxied
+  		},
+  		{
+  			name: "worker-c",
+  			scriptPath: "./worker-c.js",
+  			// enable the inspector proxy for worker-c
+  			unsafeInspectorProxy: true,
+  		},
+  	],
+  });
+  ```
+
+  In the above example an inspector proxy gets set up which exposes `worker-a` and `worker-b`,
+  inspector clients can discover such workers via `http://localhost:9229` and communicate with
+  them respectively via `ws://localhost:9229/worker-a` and `ws://localhost:9229/worker-b`
+
+  Note: this API is experimental, thus it's not being added to the public documentation and
+  it's prefixed by `unsafe`
+
+## 4.20250317.0
+
+### Minor Changes
+
+- [#8445](https://github.com/cloudflare/workers-sdk/pull/8445) [`74b0c73`](https://github.com/cloudflare/workers-sdk/commit/74b0c7377a643241d4e3efa674cd644f8f5b8e10) Thanks [@lambrospetrou](https://github.com/lambrospetrou)! - D1 local developer experience supports sessions API bookmarks
+
+### Patch Changes
+
+- [#8538](https://github.com/cloudflare/workers-sdk/pull/8538) [`5ae180e`](https://github.com/cloudflare/workers-sdk/commit/5ae180ee8acfc03b46bc3e836f5ce3856c458af8) Thanks [@emily-shen](https://github.com/emily-shen)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250310.0  | 1.20250317.0  |
+  | @cloudflare/workers-types | ^4.20250310.0 | ^4.20250317.0 |
+
+## 4.20250310.0
+
+### Major Changes
+
+- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@penalosa](https://github.com/penalosa)! - The `--node-compat` flag and `node_compat` config properties are no longer supported as of Wrangler v4. Instead, use the `nodejs_compat` compatibility flag. This includes the functionality from legacy `node_compat` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.
+
+  If you need to replicate the behaviour of the legacy `node_compat` feature, refer to https://developers.cloudflare.com/workers/wrangler/migration/update-v3-to-v4/ for a detailed guide.
+
+- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@penalosa](https://github.com/penalosa)! - Packages in Workers SDK now support the versions of Node that Node itself supports (Current, Active, Maintenance). Currently, that includes Node v18, v20, and v22.
+
+## 3.20250310.0
+
+### Patch Changes
+
+- [#8423](https://github.com/cloudflare/workers-sdk/pull/8423) [`8242e07`](https://github.com/cloudflare/workers-sdk/commit/8242e07447f47ab764655e8ec9a046b1fe9ea279) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250224.0  | 1.20250310.0  |
+  | @cloudflare/workers-types | ^4.20250224.0 | ^4.20250310.0 |
+
+- [#8390](https://github.com/cloudflare/workers-sdk/pull/8390) [`53e6323`](https://github.com/cloudflare/workers-sdk/commit/53e63233c5b9bb786af3daea63c10ffe60a5d881) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Parse and apply metafiles (`_headers` and `_redirects`) in `wrangler dev` for Workers Assets
+
 ## 3.20250224.0
 
 ### Patch Changes

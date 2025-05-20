@@ -1,11 +1,7 @@
-import { readConfig } from "../config";
+import { createCommand } from "../core/create-command";
+import { UserError } from "../errors";
 import { logger } from "../logger";
 import { queryIndexByVector, queryIndexByVectorId } from "./client";
-import { vectorizeGABanner } from "./common";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type {
 	VectorizeMatches,
 	VectorizeMetadataFilterValue,
@@ -15,143 +11,142 @@ import type {
 	VectorizeVectorMetadataFilterOp,
 } from "./types";
 
-export function options(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("name", {
+export const vectorizeQueryCommand = createCommand({
+	metadata: {
+		description: "Query a Vectorize index",
+		status: "stable",
+		owner: "Product: Vectorize",
+		examples: [
+			{
+				command: `wrangler vectorize query --vector 1 2 3 0.5 1.25 6`,
+				description: "Query the Vectorize Index by vector",
+			},
+			{
+				command: `wrangler vectorize query --vector $(jq -r '.[]' data.json | xargs)`,
+				description:
+					"Query the Vectorize Index by vector from a json file that contains data in the format [1, 2, 3].",
+			},
+			{
+				command:
+					"wrangler vectorize query --filter '{ 'p1': 'abc', 'p2': { '$ne': true }, 'p3': 10, 'p4': false, 'nested.p5': 'abcd' }'",
+				description: "Filter the query results.",
+			},
+		],
+	},
+	args: {
+		name: {
 			type: "string",
 			demandOption: true,
 			description: "The name of the Vectorize index",
-		})
-		.options({
-			vector: {
-				type: "array",
-				describe: "Vector to query the Vectorize Index",
-				coerce: (arg: unknown[]) =>
-					arg
-						.map((value) =>
-							typeof value === "string" ? parseFloat(value) : value
-						)
-						.filter(
-							(value): value is number =>
-								typeof value === "number" && !isNaN(value)
-						),
+		},
+		vector: {
+			type: "number",
+			array: true,
+			description: "Vector to query the Vectorize Index",
+			coerce: (arg: unknown[]) =>
+				arg.filter(
+					(value): value is number => typeof value === "number" && !isNaN(value)
+				),
+		},
+		"vector-id": {
+			type: "string",
+			description:
+				"Identifier for a vector in the index against which the index should be queried",
+		},
+		"top-k": {
+			type: "number",
+			default: 5,
+			description: "The number of results (nearest neighbors) to return",
+		},
+		"return-values": {
+			type: "boolean",
+			default: false,
+			description:
+				"Specify if the vector values should be included in the results",
+		},
+		"return-metadata": {
+			type: "string",
+			choices: ["all", "indexed", "none"],
+			default: "none",
+			description:
+				"Specify if the vector metadata should be included in the results",
+		},
+		namespace: {
+			type: "string",
+			description: "Filter the query results based on this namespace",
+		},
+		filter: {
+			type: "string",
+			description: "Filter the query results based on this metadata filter.",
+			coerce: (jsonStr: string): VectorizeQueryOptions["filter"] => {
+				try {
+					return JSON.parse(jsonStr);
+				} catch (_) {
+					logger.warn(
+						"🚨 Invalid query filter. Please use the recommended format."
+					);
+				}
 			},
-			"vector-id": {
-				type: "string",
-				describe:
-					"Identifier for a vector in the index against which the index should be queried",
-			},
-			"top-k": {
-				type: "number",
-				default: 5,
-				describe: "The number of results (nearest neighbors) to return",
-			},
-			"return-values": {
-				type: "boolean",
-				default: false,
-				describe:
-					"Specify if the vector values should be included in the results",
-			},
-			"return-metadata": {
-				type: "string",
-				choices: ["all", "indexed", "none"],
-				default: "none",
-				describe:
-					"Specify if the vector metadata should be included in the results",
-			},
-			namespace: {
-				type: "string",
-				describe: "Filter the query results based on this namespace",
-			},
-			filter: {
-				type: "string",
-				describe: "Filter the query results based on this metadata filter.",
-				coerce: (jsonStr: string): VectorizeQueryOptions["filter"] => {
-					try {
-						return JSON.parse(jsonStr);
-					} catch (_) {
-						logger.warn(
-							"🚨 Invalid query filter. Please use the recommended format."
-						);
-					}
-				},
-			},
-		})
-		.example([
-			[
-				`❯❯ wrangler vectorize query --vector 1 2 3 0.5 1.25 6\n` +
-					"   Query the Vectorize Index by vector. To read from a json file that contains data in the format [1, 2, 3], you could use a command like\n" +
-					"   `wrangler vectorize query --vector $(jq -r '.[]' data.json | xargs)`\n",
-			],
-			[
-				"❯❯ wrangler vectorize query --filter '{ 'p1': 'abc', 'p2': { '$ne': true }, 'p3': 10, 'p4': false, 'nested.p5': 'abcd' }'\n" +
-					"   Filter the query results.",
-			],
-		])
-		.epilogue(vectorizeGABanner);
-}
+		},
+	},
+	positionalArgs: ["name"],
+	async handler(args, { config }) {
+		const queryOptions: VectorizeQueryOptions = {
+			topK: args.topK,
+			returnValues: args.returnValues,
+			returnMetadata: args.returnMetadata as VectorizeMetadataRetrievalLevel,
+		};
 
-export async function handler(
-	args: StrictYargsOptionsToInterface<typeof options>
-) {
-	const config = readConfig(args);
-
-	const queryOptions: VectorizeQueryOptions = {
-		topK: args.topK,
-		returnValues: args.returnValues,
-		returnMetadata: args.returnMetadata as VectorizeMetadataRetrievalLevel,
-	};
-
-	if (args.namespace) {
-		queryOptions.namespace = args.namespace;
-	}
-
-	if (args.filter) {
-		const parsedFilter = validateQueryFilter(args.filter);
-		if (!parsedFilter) {
-			logger.warn(
-				"🚨 Could not parse the provided query filter. Please use the recommended format."
-			);
-		} else {
-			queryOptions.filter = parsedFilter;
+		if (args.namespace) {
+			queryOptions.namespace = args.namespace;
 		}
-	}
 
-	if (
-		(args.vector === undefined && args.vectorId === undefined) ||
-		(args.vector !== undefined && args.vectorId !== undefined)
-	) {
-		logger.error(
-			"🚨 Either vector or vector-id parameter must be provided, but not both."
-		);
-		return;
-	}
+		if (args.filter) {
+			const parsedFilter = validateQueryFilter(args.filter);
+			if (!parsedFilter) {
+				logger.warn(
+					"🚨 Could not parse the provided query filter. Please use the recommended format."
+				);
+			} else {
+				queryOptions.filter = parsedFilter;
+			}
+		}
 
-	logger.log(`📋 Searching for relevant vectors...`);
-	let res: VectorizeMatches | undefined;
-	if (args.vector !== undefined) {
-		res = await queryIndexByVector(
-			config,
-			args.name,
-			args.vector,
-			queryOptions
-		);
-	} else if (args.vectorId !== undefined) {
-		res = await queryIndexByVectorId(
-			config,
-			args.name,
-			args.vectorId,
-			queryOptions
-		);
-	}
+		if (
+			(args.vector === undefined && args.vectorId === undefined) ||
+			(args.vector !== undefined && args.vectorId !== undefined)
+		) {
+			throw new UserError(
+				"🚨 Either vector or vector-id parameter must be provided, but not both."
+			);
+		}
 
-	if (res === undefined || res.count === 0) {
-		logger.warn(`Could not find any relevant vectors`);
-		return;
-	}
+		logger.log(`📋 Searching for relevant vectors...`);
+		let res: VectorizeMatches | undefined;
+		if (args.vector !== undefined) {
+			res = await queryIndexByVector(
+				config,
+				args.name,
+				args.vector,
+				queryOptions
+			);
+		} else if (args.vectorId !== undefined) {
+			res = await queryIndexByVectorId(
+				config,
+				args.name,
+				args.vectorId,
+				queryOptions
+			);
+		}
 
-	logger.log(JSON.stringify(res, null, 2));
-}
+		if (res === undefined || res.count === 0) {
+			logger.warn(`Could not find any relevant vectors`);
+			return;
+		}
+
+		logger.log(JSON.stringify(res, null, 2));
+	},
+});
 
 function validateQueryFilterInnerValue(
 	innerValue: VectorizeMetadataFilterValue

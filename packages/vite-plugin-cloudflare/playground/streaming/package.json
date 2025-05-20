@@ -1,0 +1,23 @@
+{
+	"name": "@playground/streaming",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "vite build",
+		"build:https": "vite build -c ./vite.config.https.ts",
+		"check:types": "tsc --build",
+		"dev": "vite dev",
+		"dev:https": "vite dev -c ./vite.config.https.ts",
+		"preview": "vite preview",
+		"preview:https": "vite preview -c ./vite.config.https.ts"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250508.0",
+		"@vitejs/plugin-basic-ssl": "^2.0.0",
+		"typescript": "catalog:default",
+		"vite": "catalog:vite-plugin",
+		"wrangler": "workspace:*"
+	}
+}

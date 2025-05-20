@@ -75,14 +75,14 @@ async function getBinaryFileContents(file: File<string | Uint8Array>) {
 	return readFile(file.path);
 }
 
-export function convertCfWorkerInitBindingstoBindings(
-	inputBindings: CfWorkerInit["bindings"]
+export function convertCfWorkerInitBindingsToBindings(
+	inputBindings: Partial<CfWorkerInit["bindings"]>
 ): StartDevWorkerOptions["bindings"] {
 	const output: StartDevWorkerOptions["bindings"] = {};
 
 	// required to retain type information
 	type Entries<T> = { [K in keyof T]: [K, T[K]] }[keyof T][];
-	type BindingsIterable = Entries<typeof inputBindings>;
+	type BindingsIterable = Entries<Required<typeof inputBindings>>;
 	const bindingsIterable = Object.entries(inputBindings) as BindingsIterable;
 
 	for (const [type, info] of bindingsIterable) {
@@ -247,6 +247,12 @@ export function convertCfWorkerInitBindingstoBindings(
 				}
 				break;
 			}
+			case "secrets_store_secrets": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "secrets_store_secret", ...x };
+				}
+				break;
+			}
 			default: {
 				assertNever(type);
 			}
@@ -280,6 +286,7 @@ export async function convertBindingsToCfWorkerInitBindings(
 		d1_databases: undefined,
 		vectorize: undefined,
 		hyperdrive: undefined,
+		secrets_store_secrets: undefined,
 		services: undefined,
 		analytics_engine_datasets: undefined,
 		dispatch_namespaces: undefined,
@@ -323,11 +330,11 @@ export async function convertBindingsToCfWorkerInitBindings(
 			bindings.data_blobs ??= {};
 			bindings.data_blobs[name] = await getBinaryFileContents(binding.source);
 		} else if (binding.type === "browser") {
-			bindings.browser = { binding: name };
+			bindings.browser = { ...binding, binding: name };
 		} else if (binding.type === "ai") {
-			bindings.ai = { binding: name };
+			bindings.ai = { ...binding, binding: name };
 		} else if (binding.type === "images") {
-			bindings.images = { binding: name };
+			bindings.images = { ...binding, binding: name };
 		} else if (binding.type === "version_metadata") {
 			bindings.version_metadata = { binding: name };
 		} else if (binding.type === "durable_object_namespace") {
@@ -371,6 +378,9 @@ export async function convertBindingsToCfWorkerInitBindings(
 		} else if (binding.type === "workflow") {
 			bindings.workflows ??= [];
 			bindings.workflows.push({ ...binding, binding: name });
+		} else if (binding.type === "secrets_store_secret") {
+			bindings.secrets_store_secrets ??= [];
+			bindings.secrets_store_secrets.push({ ...binding, binding: name });
 		} else if (isUnsafeBindingType(binding.type)) {
 			bindings.unsafe ??= {
 				bindings: [],

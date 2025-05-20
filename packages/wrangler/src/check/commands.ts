@@ -148,7 +148,15 @@ async function getEntryValue(
 
 function getModuleType(entry: FormDataEntryValue) {
 	if (entry instanceof Blob) {
-		return ModuleTypeToRuleType[mimeTypeModuleType[entry.type]];
+		const type = ModuleTypeToRuleType[mimeTypeModuleType[entry.type]];
+
+		if (!type) {
+			throw new Error(
+				`Unable to determine module type for ${entry.type} mime type`
+			);
+		}
+
+		return type;
 	} else {
 		return "Text";
 	}

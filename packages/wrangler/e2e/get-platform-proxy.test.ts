@@ -9,8 +9,7 @@ import { makeRoot, seed } from "./helpers/setup";
 import { WRANGLER_IMPORT } from "./helpers/wrangler";
 
 describe("getPlatformProxy()", () => {
-	// TODO(DEVX-1262): re-enable when we have set an API token with the proper AI permissions
-	describe.skip("Workers AI", () => {
+	describe("Workers AI", () => {
 		let root: string;
 		beforeEach(async () => {
 			root = makeRoot();

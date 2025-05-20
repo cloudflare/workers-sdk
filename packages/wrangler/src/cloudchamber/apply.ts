@@ -1,6 +1,5 @@
 import {
 	cancel,
-	crash,
 	endSection,
 	log,
 	logRaw,
@@ -12,15 +11,17 @@ import {
 import { processArgument } from "@cloudflare/cli/args";
 import { bold, brandColor, dim, green, red } from "@cloudflare/cli/colors";
 import { formatConfigSnippet } from "../config";
+import { UserError } from "../errors";
 import {
 	ApiError,
 	ApplicationsService,
+	CreateApplicationRolloutRequest,
 	DeploymentMutationError,
+	RolloutsService,
 	SchedulingPolicy,
 } from "./client";
 import { promiseSpinner } from "./common";
 import { diffLines } from "./helpers/diff";
-import { wrap } from "./helpers/wrap";
 import type { Config } from "../config";
 import type { ContainerApp } from "../config/environment";
 import type {
@@ -33,9 +34,39 @@ import type {
 	ApplicationName,
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
+	ModifyDeploymentV2RequestBody,
 	UserDeploymentConfiguration,
 } from "./client";
 import type { JsonMap } from "@iarna/toml";
+
+function mergeDeep<T>(target: T, source: Partial<T>): T {
+	if (typeof target !== "object" || target === null) {
+		return source as T;
+	}
+
+	if (typeof source !== "object" || source === null) {
+		return target;
+	}
+
+	const result: T = { ...target };
+
+	for (const key of Object.keys(source)) {
+		const srcVal = source[key as keyof T];
+		const tgtVal = target[key as keyof T];
+
+		if (isObject(tgtVal) && isObject(srcVal)) {
+			result[key as keyof T] = mergeDeep(tgtVal, srcVal as Partial<T[keyof T]>);
+		} else {
+			result[key as keyof T] = srcVal as T[keyof T];
+		}
+	}
+
+	return result;
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 export function applyCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 	return yargs.option("skip-defaults", {
@@ -51,7 +82,8 @@ function createApplicationToModifyApplication(
 ): ModifyApplicationRequestBody {
 	return {
 		configuration: req.configuration,
-		instances: req.instances,
+		instances: req.max_instances !== undefined ? 0 : req.instances,
+		max_instances: req.max_instances,
 		constraints: req.constraints,
 		affinities: req.affinities,
 		scheduling_policy: req.scheduling_policy,
@@ -61,15 +93,19 @@ function createApplicationToModifyApplication(
 function applicationToCreateApplication(
 	application: Application
 ): CreateApplicationRequest {
-	return {
+	const app: CreateApplicationRequest = {
 		configuration: application.configuration,
 		constraints: application.constraints,
+		max_instances: application.max_instances,
 		name: application.name,
 		scheduling_policy: application.scheduling_policy,
 		affinities: application.affinities,
-		instances: application.instances,
+		instances:
+			application.max_instances !== undefined ? 0 : application.instances,
 		jobs: application.jobs ? true : undefined,
+		durable_objects: application.durable_objects,
 	};
+	return app;
 }
 
 function containerAppToCreateApplication(
@@ -78,9 +114,10 @@ function containerAppToCreateApplication(
 ): CreateApplicationRequest {
 	const configuration =
 		containerApp.configuration as UserDeploymentConfiguration;
-	return {
+	const app: CreateApplicationRequest = {
 		...containerApp,
 		configuration,
+		instances: containerApp.instances ?? 0,
 		scheduling_policy:
 			(containerApp.scheduling_policy as SchedulingPolicy) ??
 			SchedulingPolicy.REGIONAL,
@@ -95,6 +132,16 @@ function containerAppToCreateApplication(
 			),
 		},
 	};
+
+	// delete the fields that should not be sent to API
+	delete (app as Record<string, unknown>)["class_name"];
+	delete (app as Record<string, unknown>)["image"];
+	delete (app as Record<string, unknown>)["image_build_context"];
+	delete (app as Record<string, unknown>)["image_vars"];
+	delete (app as Record<string, unknown>)["rollout_step_percentage"];
+	delete (app as Record<string, unknown>)["rollout_kind"];
+
+	return app;
 }
 
 function isNumber(c: string | number) {
@@ -266,12 +313,8 @@ function sortObjectRecursive<T = Record<string | number, unknown>>(
 	return sortObjectKeys(objectCopy) as T;
 }
 
-/**
- * applyCommand is able to take the wrangler.toml file and render the changes that it
- * detects.
- */
-export async function applyCommand(
-	args: StrictYargsOptionsToInterfaceJSON<typeof applyCommandOptionalYargs>,
+export async function apply(
+	args: { skipDefaults: boolean | undefined; json: boolean; env?: string },
 	config: Config
 ) {
 	startSection(
@@ -279,24 +322,24 @@ export async function applyCommand(
 		"deploy changes to your application"
 	);
 
-	if (config.containers.app.length === 0) {
+	config.containers ??= [];
+
+	if (config.containers.length === 0) {
 		endSection(
 			"You don't have any container applications defined in your wrangler.toml",
 			"You can set the following configuration in your wrangler.toml"
 		);
 		const configuration = {
-			configuration: {
-				image: "docker.io/cloudflare/hello-world:1.0",
-			},
+			image: "docker.io/cloudflare/hello-world:1.0",
 			instances: 2,
 			name: config.name ?? "my-containers-application",
 		};
 		const endConfig: JsonMap =
 			args.env !== undefined
 				? {
-						env: { [args.env]: { containers: { app: [configuration] } } },
+						env: { [args.env]: { containers: [configuration] } },
 					}
-				: { containers: { app: [configuration] } };
+				: { containers: [configuration] };
 		formatConfigSnippet(endConfig, config.configPath)
 			.split("\n")
 			.forEach((el) => {
@@ -323,6 +366,8 @@ export async function applyCommand(
 				application: ModifyApplicationRequestBody;
 				id: ApplicationID;
 				name: ApplicationName;
+				rollout_step_percentage?: number;
+				rollout_kind: CreateApplicationRolloutRequest.kind;
 		  }
 	)[] = [];
 
@@ -331,11 +376,12 @@ export async function applyCommand(
 
 	log(dim("Container application changes\n"));
 
-	for (const appConfigNoDefaults of config.containers.app) {
+	for (const appConfigNoDefaults of config.containers) {
 		const appConfig = containerAppToCreateApplication(
 			appConfigNoDefaults,
 			args.skipDefaults
 		);
+
 		const application = applicationByNames[appConfig.name];
 		if (application !== undefined && application !== null) {
 			// we need to sort the objects (by key) because the diff algorithm works with
@@ -344,19 +390,31 @@ export async function applyCommand(
 				stripUndefined(applicationToCreateApplication(application))
 			);
 
+			if (
+				prevApp.durable_objects !== undefined &&
+				appConfigNoDefaults.durable_objects !== undefined &&
+				prevApp.durable_objects.namespace_id !==
+					appConfigNoDefaults.durable_objects.namespace_id
+			) {
+				throw new UserError(
+					`Application "${prevApp.name}" is assigned to durable object ${prevApp.durable_objects.namespace_id}, but a new DO namespace is being assigned to the application,
+					you should delete the container application and deploy again`
+				);
+			}
+
 			const prev = formatConfigSnippet(
-				{ containers: { app: [prevApp as ContainerApp] } },
+				{ containers: [prevApp as ContainerApp] },
 				config.configPath
 			);
+
 			const now = formatConfigSnippet(
 				{
-					containers: {
-						app: [
-							sortObjectRecursive<CreateApplicationRequest>(
-								appConfig
-							) as ContainerApp,
-						],
-					},
+					containers: [
+						mergeDeep(
+							prevApp,
+							sortObjectRecursive<CreateApplicationRequest>(appConfig)
+						) as ContainerApp,
+					],
 				},
 				config.configPath
 			);
@@ -443,12 +501,24 @@ export async function applyCommand(
 				}
 			}
 
-			actions.push({
-				action: "modify",
-				application: createApplicationToModifyApplication(appConfig),
-				id: application.id,
-				name: application.name,
-			});
+			if (appConfigNoDefaults.rollout_kind !== "none") {
+				actions.push({
+					action: "modify",
+					application: createApplicationToModifyApplication(appConfig),
+					id: application.id,
+					name: application.name,
+					rollout_step_percentage:
+						application.durable_objects !== undefined
+							? appConfigNoDefaults.rollout_step_percentage ?? 25
+							: appConfigNoDefaults.rollout_step_percentage,
+					rollout_kind:
+						appConfigNoDefaults.rollout_kind == "full_manual"
+							? CreateApplicationRolloutRequest.kind.FULL_MANUAL
+							: CreateApplicationRolloutRequest.kind.FULL_AUTO,
+				});
+			} else {
+				log("Skipping application rollout");
+			}
 
 			printLine("");
 			continue;
@@ -458,7 +528,18 @@ export async function applyCommand(
 		updateStatus(bold.underline(green.underline("NEW")) + ` ${appConfig.name}`);
 
 		const s = formatConfigSnippet(
-			{ containers: { app: [appConfig as ContainerApp] } },
+			{
+				containers: [
+					{
+						...appConfig,
+						instances:
+							appConfig.max_instances !== undefined
+								? // trick until we allow setting instances to undefined in the API
+									undefined
+								: appConfig.instances,
+					} as ContainerApp,
+				],
+			},
 			config.configPath
 		);
 
@@ -469,10 +550,12 @@ export async function applyCommand(
 				printLine(el, "  ");
 			});
 
+		const configToPush = { ...appConfig };
+
 		// add to the actions array to create the app later
 		actions.push({
 			action: "create",
-			application: appConfig,
+			application: configToPush,
 		});
 	}
 
@@ -516,70 +599,141 @@ export async function applyCommand(
 
 	for (const action of actions) {
 		if (action.action === "create") {
-			const [_result, err] = await wrap(
-				promiseSpinner(
+			let application: Application;
+			try {
+				application = await promiseSpinner(
 					ApplicationsService.createApplication(action.application),
 					{ json: args.json, message: `creating ${action.application.name}` }
-				)
-			);
-			if (err !== null) {
+				);
+			} catch (err) {
+				if (!(err instanceof Error)) {
+					throw err;
+				}
+
 				if (!(err instanceof ApiError)) {
-					crash(`Unexpected error creating application: ${err.message}`);
+					throw new UserError(
+						`Unexpected error creating application: ${err.message}`
+					);
 				}
 
 				if (err.status === 400) {
-					crash(
+					throw new UserError(
 						`Error creating application due to a misconfiguration\n${formatError(err)}`
 					);
 				}
 
-				crash(
-					`Error creating application due to an internal error (request id: ${err.body.request_id}): ${formatError(err)}`
+				throw new UserError(
+					`Error creating application due to an internal error (request id: ${err.body.request_id}):\n${formatError(err)}`
 				);
 			}
 
-			success(`Created application ${brandColor(action.application.name)}`, {
-				shape: shapes.bar,
-			});
+			success(
+				`Created application ${brandColor(action.application.name)} (Application ID: ${application.id})`,
+				{
+					shape: shapes.bar,
+				}
+			);
+
 			printLine("");
 			continue;
 		}
 
 		if (action.action === "modify") {
-			const [_result, err] = await wrap(
-				promiseSpinner(
-					ApplicationsService.modifyApplication(action.id, action.application),
-					{
-						json: args.json,
-						message: `modifying application ${action.name}`,
-					}
-				)
-			);
-			if (err !== null) {
+			try {
+				await promiseSpinner(
+					ApplicationsService.modifyApplication(action.id, {
+						...action.application,
+						instances:
+							action.application.max_instances !== undefined
+								? undefined
+								: action.application.instances,
+						configuration: undefined,
+					})
+				);
+			} catch (err) {
+				if (!(err instanceof Error)) {
+					throw err;
+				}
+
 				if (!(err instanceof ApiError)) {
-					crash(
+					throw new UserError(
 						`Unexpected error modifying application ${action.name}: ${err.message}`
 					);
 				}
 
 				if (err.status === 400) {
-					crash(
-						`Error modifying application ${action.name} due to a ${brandColor.underline("misconfiguration")}\n\n\t${formatError(err)}`
+					throw new UserError(
+						`Error modifying application ${action.name} due to a misconfiguration:\n\n\t${formatError(err)}`
 					);
 				}
 
-				crash(
-					`Error modifying application ${action.name} due to an internal error (request id: ${err.body.request_id}): ${formatError(err)}`
+				throw new UserError(
+					`Error modifying application ${action.name} due to an internal error (request id: ${err.body.request_id}):\n${formatError(err)}`
 				);
+			}
+
+			if (action.rollout_step_percentage !== undefined) {
+				try {
+					await promiseSpinner(
+						RolloutsService.createApplicationRollout(action.id, {
+							description: "Progressive update",
+							strategy: CreateApplicationRolloutRequest.strategy.ROLLING,
+							target_configuration:
+								(action.application
+									.configuration as ModifyDeploymentV2RequestBody) ?? {},
+							step_percentage: action.rollout_step_percentage,
+							kind: action.rollout_kind,
+						}),
+						{
+							json: args.json,
+							message: `rolling out container version ${action.name}`,
+						}
+					);
+				} catch (err) {
+					if (!(err instanceof Error)) {
+						throw err;
+					}
+
+					if (!(err instanceof ApiError)) {
+						throw new UserError(
+							`Unexpected error rolling out application ${action.name}:\n${err.message}`
+						);
+					}
+
+					if (err.status === 400) {
+						throw new UserError(
+							`Error rolling out application ${action.name} due to a misconfiguration:\n\n\t${formatError(err)}`
+						);
+					}
+
+					throw new UserError(
+						`Error rolling out application ${action.name} due to an internal error (request id: ${err.body.request_id}): ${formatError(err)}`
+					);
+				}
 			}
 
 			success(`Modified application ${brandColor(action.name)}`, {
 				shape: shapes.bar,
 			});
+
 			printLine("");
 			continue;
 		}
 	}
 
 	endSection("Applied changes");
+}
+
+/**
+ * applyCommand is able to take the wrangler.toml file and render the changes that it
+ * detects.
+ */
+export async function applyCommand(
+	args: StrictYargsOptionsToInterfaceJSON<typeof applyCommandOptionalYargs>,
+	config: Config
+) {
+	return apply(
+		{ skipDefaults: args.skipDefaults, env: args.env, json: args.json },
+		config
+	);
 }

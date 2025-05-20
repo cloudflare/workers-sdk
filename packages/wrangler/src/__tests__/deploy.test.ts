@@ -1,8 +1,9 @@
 import { Buffer } from "node:buffer";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { Writable } from "node:stream";
 import * as TOML from "@iarna/toml";
 import { sync } from "command-exists";
 import * as esbuild from "esbuild";
@@ -10,12 +11,17 @@ import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { File } from "undici";
 import { vi } from "vitest";
+import { getDefaultRegistry } from "../cloudchamber/build";
+import { type ImageRegistryCredentialsConfiguration } from "../cloudchamber/client";
 import {
 	printBundleSize,
 	printOffendingDependencies,
 } from "../deployment-bundle/bundle-reporter";
+import { getDockerPath } from "../environment-variables/misc-variables";
 import { clearOutputFilePath } from "../output";
+import { sniffUserAgent } from "../package-manager";
 import { writeAuthConfigFile } from "../user";
+import { mockAccount as mockContainersAccount } from "./cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockAuthDomain } from "./helpers/mock-auth-domain";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -54,6 +60,7 @@ import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { AssetManifest } from "../assets";
+import type { AccountRegistryToken, Application } from "../cloudchamber/client";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
 import type {
@@ -61,10 +68,12 @@ import type {
 	PostTypedConsumerBody,
 	QueueResponse,
 } from "../queues/client";
+import type { ChildProcess } from "node:child_process";
 import type { FormData } from "undici";
 import type { Mock } from "vitest";
 
 vi.mock("command-exists");
+vi.mock("node:child_process");
 vi.mock("../check/commands", async (importOriginal) => {
 	return {
 		...(await importOriginal()),
@@ -73,6 +82,18 @@ vi.mock("../check/commands", async (importOriginal) => {
 		},
 	};
 });
+
+function mockGetApplications(applications: Application[]) {
+	msw.use(
+		http.get(
+			"*/applications",
+			async () => {
+				return HttpResponse.json(applications);
+			},
+			{ once: true }
+		)
+	);
+}
 
 describe("deploy", () => {
 	mockAccountId();
@@ -295,7 +316,7 @@ describe("deploy", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
+			Your Worker has access to the following bindings:
 			- Vars:
 			  - xyz: 123
 			Uploaded test-name (TIMINGS)
@@ -335,7 +356,7 @@ describe("deploy", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
+			Your Worker has access to the following bindings:
 			- Vars:
 			  - xyz: 123
 			Uploaded test-worker (TIMINGS)
@@ -409,7 +430,7 @@ describe("deploy", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
+			Your Worker has access to the following bindings:
 			- Vars:
 			  - xyz: 123
 			Uploaded test-worker-jsonc (TIMINGS)
@@ -452,29 +473,29 @@ describe("deploy", () => {
 			`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.]`
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-		"
-		[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.[0m
+			"
+			[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.[0m
 
-		  Authentication error [code: 10000]
+			  Authentication error [code: 10000]
 
 
-		📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
-		Please ensure it has the correct permissions for this operation.
+			📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.
+			Please ensure it has the correct permissions for this operation.
 
-		Getting User settings...
-		ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN in your environment.
-		👋 You are logged in with an API Token, associated with the email user@example.com.
-		┌───────────────┬────────────┐
-		│ Account Name  │ Account ID │
-		├───────────────┼────────────┤
-		│ Account One   │ account-1  │
-		├───────────────┼────────────┤
-		│ Account Two   │ account-2  │
-		├───────────────┼────────────┤
-		│ Account Three │ account-3  │
-		└───────────────┴────────────┘
-		🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens."
-	`);
+			Getting User settings...
+			ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN in your environment.
+			👋 You are logged in with an API Token, associated with the email user@example.com.
+			┌─┬─┐
+			│ Account Name │ Account ID │
+			├─┼─┤
+			│ Account One │ account-1 │
+			├─┼─┤
+			│ Account Two │ account-2 │
+			├─┼─┤
+			│ Account Three │ account-3 │
+			└─┴─┘
+			🔓 To see token permissions visit https://dash.cloudflare.com/profile/api-tokens."
+		`);
 	});
 
 	it("should error helpfully if pages_build_output_dir is set in wrangler.toml", async () => {
@@ -559,7 +580,7 @@ describe("deploy", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in.
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -601,7 +622,7 @@ describe("deploy", () => {
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"Attempting to login via OAuth...
-					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 					Successfully logged in.
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
@@ -983,19 +1004,17 @@ describe("deploy", () => {
 				`);
 			});
 
-			it("should throw an error w/ helpful message when using --env --name", async () => {
+			it("should allow --env and --name to be used together", async () => {
 				writeWranglerConfig({ env: { "some-env": {} } });
 				writeWorkerSource();
 				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					env: "some-env",
+					expectedScriptName: "voyager",
+					legacyEnv: true,
+				});
 				await runWrangler(
 					"deploy index.js --name voyager --env some-env --legacy-env true"
-				).catch((err) =>
-					expect(err).toMatchInlineSnapshot(`
-						[Error: In legacy environment mode you cannot use --name and --env together. If you want to specify a Worker name for a specific environment you can add the following to your wrangler.toml file:
-						[env.some-env]
-						name = "voyager"
-						]
-					`)
 				);
 			});
 		});
@@ -1090,7 +1109,7 @@ describe("deploy", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
+			Your Worker has access to the following bindings:
 			- Vars:
 			  - xyz: 123
 			Uploaded test-name (TIMINGS)
@@ -2050,6 +2069,43 @@ Update them to point to this script instead?`,
 		it.todo("should error if it's a workers.dev route");
 	});
 
+	describe("triggers", () => {
+		it("should deploy the worker with a scheduled trigger", async () => {
+			const crons = ["*/5 * * * *", "0 18 * * 6L"];
+			writeWranglerConfig({
+				triggers: { crons },
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockPublishSchedulesRequest({ crons });
+			await runWrangler("deploy ./index");
+		});
+
+		it("should deploy the worker with an empty array of scheduled triggers", async () => {
+			const crons: string[] = [];
+			writeWranglerConfig({
+				triggers: { crons },
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockPublishSchedulesRequest({ crons });
+			await runWrangler("deploy ./index");
+		});
+
+		it.each([{ triggers: { crons: undefined } }, { triggers: undefined }, {}])(
+			"should deploy the worker without updating the scheduled triggers",
+			async (config) => {
+				writeWranglerConfig(config);
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				await runWrangler("deploy ./index");
+			}
+		);
+	});
+
 	describe("entry-points", () => {
 		it("should be able to use `index` with no extension as the entry-point (esm)", async () => {
 			writeWranglerConfig();
@@ -2134,99 +2190,6 @@ Update them to point to this script instead?`,
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
-		});
-
-		it('should use `build.upload.main` as an entry point, where `build.upload.dir` defaults to "./dist", and log a deprecation warning', async () => {
-			writeWranglerConfig({ build: { upload: { main: "./index.js" } } });
-			writeWorkerSource({ basePath: "./dist" });
-			mockUploadWorkerRequest();
-			mockSubDomainRequest();
-
-			await runWrangler("deploy");
-
-			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				No bindings found.
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
-			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-				    - [1mDeprecation[0m: \\"build.upload.main\\":
-				      Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
-				      Then add the top level \`main\` field to your configuration file:
-				      \`\`\`
-				      main = \\"dist/index.js\\"
-				      \`\`\`
-
-				"
-			`);
-		});
-
-		it("should use `build.upload.main` relative to `build.upload.dir`", async () => {
-			writeWranglerConfig({
-				build: {
-					upload: {
-						main: "./index.js",
-						dir: "./foo",
-					},
-				},
-			});
-			writeWorkerSource({ basePath: "./foo" });
-			mockUploadWorkerRequest({ expectedEntry: "var foo = 100;" });
-			mockSubDomainRequest();
-			process.chdir("foo");
-			await runWrangler("deploy");
-
-			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				No bindings found.
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
-			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing ../wrangler.toml configuration:[0m
-
-				    - [1mDeprecation[0m: \\"build.upload.main\\":
-				      Delete the \`build.upload.main\` and \`build.upload.dir\` fields.
-				      Then add the top level \`main\` field to your configuration file:
-				      \`\`\`
-				      main = \\"foo/index.js\\"
-				      \`\`\`
-				    - [1mDeprecation[0m: \\"build.upload.dir\\":
-				      Use the top level \\"main\\" field or a command-line argument to specify the entry-point for the
-				  Worker.
-
-				"
-			`);
-		});
-
-		it("should error when both `main` and `build.upload.main` are used", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				build: {
-					upload: {
-						main: "./index.js",
-						dir: "./foo",
-					},
-				},
-			});
-			await expect(runWrangler("deploy")).rejects
-				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Processing wrangler.toml configuration:
-				  - Don't define both the \`main\` and \`build.upload.main\` fields in your configuration.
-				    They serve the same purpose: to point to the entry-point of your worker.
-				    Delete the \`build.upload.main\` and \`build.upload.dir\` field from your config.]
-			`);
 		});
 
 		it("should be able to transpile TypeScript (esm)", async () => {
@@ -2629,6 +2592,7 @@ addEventListener('fetch', event => {});`
 		});
 
 		it("should error if there is no entry-point specified", async () => {
+			vi.mocked(sniffUserAgent).mockReturnValue("npm");
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockUploadWorkerRequest();
@@ -2636,67 +2600,61 @@ addEventListener('fetch', event => {});`
 			await expect(
 				runWrangler("deploy")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Missing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler deploy path/to/script\`) or the \`main\` config field.]`
+				`
+				[Error: Missing entry-point to Worker script or to assets directory
+
+				If there is code to deploy, you can either:
+				- Specify an entry-point to your Worker script via the command line (ex: \`npx wrangler deploy src/index.ts\`)
+				- Or add the following to your "wrangler.toml" file:
+
+				\`\`\`
+				main = "src/index.ts"
+
+				\`\`\`
+
+
+				If are uploading a directory of assets, you can either:
+				- Specify the path to the directory of assets via the command line: (ex: \`npx wrangler deploy --assets=./dist\`)
+				- Or add the following to your "wrangler.toml" file:
+
+				\`\`\`
+				[assets]
+				directory = "./dist"
+
+				\`\`\`
+				]
+			`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(std.err).toMatchInlineSnapshot(`
-			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing entry-point: The entry-point should be specified via the command line (e.g. \`wrangler deploy path/to/script\`) or the \`main\` config field.[0m
-
-			        "
-		      `);
-		});
-
-		it("should not require an explicit entry point when using --legacy-assets", async () => {
-			const assets = [
-				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "file-2.txt", content: "Content of file-2" },
-			];
-			const kvNamespace = {
-				title: "__test-name-workers_sites_assets",
-				id: "__test-name-workers_sites_assets-id",
-			};
-			writeAssets(assets);
-			mockUploadWorkerRequest({
-				expectedMainModule: "no-op-worker.js",
-			});
-			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
-			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-
-			await runWrangler(
-				"deploy --legacy-assets assets --latest --name test-name"
-			);
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
-
-				  To learn more about Workers with assets, visit our documentation at
-				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mMissing entry-point to Worker script or to assets directory[0m
 
 
-				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mUsing the latest version of the Workers runtime. To silence this warning, please choose a specific version of the runtime with --compatibility-date, or add a compatibility_date to your Wrangler configuration file.[0m
+				  If there is code to deploy, you can either:
+				  - Specify an entry-point to your Worker script via the command line (ex: \`npx wrangler deploy
+				  src/index.ts\`)
+				  - Or add the following to your \\"wrangler.toml\\" file:
+
+				  \`\`\`
+				  main = \\"src/index.ts\\"
+
+				  \`\`\`
+
+
+				  If are uploading a directory of assets, you can either:
+				  - Specify the path to the directory of assets via the command line: (ex: \`npx wrangler deploy
+				  --assets=./dist\`)
+				  - Or add the following to your \\"wrangler.toml\\" file:
+
+				  \`\`\`
+				  [assets]
+				  directory = \\"./dist\\"
+
+				  \`\`\`
+
 
 				"
-			`);
-			expect(std.info).toMatchInlineSnapshot(`
-				"Fetching list of already uploaded assets...
-				Building list of assets to upload...
-				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-				 + file-2.5938485188.txt (uploading new version of file-2.txt)
-				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]"
-			`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"↗️  Done syncing assets
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				No bindings found.
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
 			`);
 		});
 
@@ -2858,284 +2816,6 @@ addEventListener('fetch', event => {});`
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
-		});
-
-		it("should upload all the files in the directory specified by `--legacy-assets`", async () => {
-			const assets = [
-				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "file-2.txt", content: "Content of file-2" },
-			];
-			const kvNamespace = {
-				title: "__test-name-workers_sites_assets",
-				id: "__test-name-workers_sites_assets-id",
-			};
-			writeWranglerConfig({
-				main: "./index.js",
-			});
-			writeWorkerSource();
-			writeAssets(assets);
-			mockUploadWorkerRequest({
-				expectedMainModule: "index.js",
-			});
-			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
-			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-			await runWrangler("deploy --legacy-assets assets");
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
-
-				  To learn more about Workers with assets, visit our documentation at
-				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
-
-				"
-			`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"↗️  Done syncing assets
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				No bindings found.
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
-
-			expect(std.info).toMatchInlineSnapshot(`
-				"Fetching list of already uploaded assets...
-				Building list of assets to upload...
-				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-				 + file-2.5938485188.txt (uploading new version of file-2.txt)
-				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]"
-			`);
-		});
-
-		it("should error when trying to use --legacy-assets with a service-worker Worker", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-			});
-			writeWorkerSource({ type: "sw" });
-			await expect(
-				runWrangler("deploy --legacy-assets abc")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: You cannot use the service-worker format with an \`assets\` directory yet. For information on how to migrate to the module-worker format, see: https://developers.cloudflare.com/workers/learning/migrating-to-module-workers/]`
-			);
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
-
-				  To learn more about Workers with assets, visit our documentation at
-				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
-
-				"
-			`);
-		});
-
-		it("should error if --legacy-assets and --site are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-			});
-			writeWorkerSource();
-			await expect(
-				runWrangler("deploy --legacy-assets abc --site xyz")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
-			);
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
-
-				  To learn more about Workers with assets, visit our documentation at
-				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
-
-				"
-			`);
-			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mCannot use legacy assets and Workers Sites in the same Worker.[0m
-
-				"
-			`);
-		});
-
-		it("should error if --legacy-assets and config.site are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				site: {
-					bucket: "xyz",
-				},
-			});
-			writeWorkerSource();
-			await expect(
-				runWrangler("deploy --legacy-assets abc")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
-			);
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
-
-				  To learn more about Workers with assets, visit our documentation at
-				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
-
-				"
-			`);
-		});
-
-		it("should error if config.legacy_assets and --site are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				legacy_assets: "abc",
-			});
-			writeWorkerSource();
-			await expect(
-				runWrangler("deploy --site xyz")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
-			);
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-				    - [1mDeprecation[0m: \\"legacy_assets\\":
-				      The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead.
-
-				"
-			`);
-		});
-
-		it("should error if config.legacy_assets and config.site are used together", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				legacy_assets: "abc",
-				site: {
-					bucket: "xyz",
-				},
-			});
-			writeWorkerSource();
-			await expect(
-				runWrangler("deploy")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot use legacy assets and Workers Sites in the same Worker.]`
-			);
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-				    - [1mDeprecation[0m: \\"legacy_assets\\":
-				      The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead.
-
-				"
-			`);
-		});
-
-		it("should warn if --legacy-assets is used", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-			});
-			const assets = [
-				{ filePath: "subdir/file-1.txt", content: "Content of file-1" },
-				{ filePath: "subdir/file-2.txt", content: "Content of file-2" },
-			];
-			const kvNamespace = {
-				title: "__test-name-workers_sites_assets",
-				id: "__test-name-workers_sites_assets-id",
-			};
-			fs.writeFileSync("index.js", `export default {};`);
-			writeWorkerSource();
-			writeAssets(assets);
-			mockUploadWorkerRequest({
-				expectedMainModule: "index.js",
-			});
-			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
-			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-
-			await runWrangler("deploy --legacy-assets ./assets");
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
-
-				  To learn more about Workers with assets, visit our documentation at
-				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
-
-				"
-			`);
-			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.info).toMatchInlineSnapshot(`
-				"Fetching list of already uploaded assets...
-				Building list of assets to upload...
-				 + subdir/file-1.2ca234f380.txt (uploading new version of subdir/file-1.txt)
-				 + subdir/file-2.5938485188.txt (uploading new version of subdir/file-2.txt)
-				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]"
-			`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"↗️  Done syncing assets
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				No bindings found.
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
-		});
-
-		it("should warn if config.legacy_assets is used", async () => {
-			writeWranglerConfig({
-				main: "./index.js",
-				legacy_assets: "./assets",
-			});
-			const assets = [
-				{ filePath: "subdir/file-1.txt", content: "Content of file-1" },
-				{ filePath: "subdir/file-2.txt", content: "Content of file-2" },
-			];
-			const kvNamespace = {
-				title: "__test-name-workers_sites_assets",
-				id: "__test-name-workers_sites_assets-id",
-			};
-			fs.writeFileSync("index.js", `export default {};`);
-			writeWorkerSource();
-			writeAssets(assets);
-			mockUploadWorkerRequest({
-				expectedMainModule: "index.js",
-			});
-			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
-			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-
-			await runWrangler("deploy");
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-				    - [1mDeprecation[0m: \\"legacy_assets\\":
-				      The \`legacy_assets\` feature has been deprecated. Please use \`assets\` instead.
-
-				"
-			`);
-			expect(std.info).toMatchInlineSnapshot(`
-				"Fetching list of already uploaded assets...
-				Building list of assets to upload...
-				 + subdir/file-1.2ca234f380.txt (uploading new version of subdir/file-1.txt)
-				 + subdir/file-2.5938485188.txt (uploading new version of subdir/file-2.txt)
-				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]"
-			`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"↗️  Done syncing assets
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				No bindings found.
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
 		});
 
 		it("should not contain backslash for assets with nested directories", async () => {
@@ -3351,19 +3031,19 @@ addEventListener('fetch', event => {});`
 			Uploaded 100% [2 out of 2]"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-				"┌───────────────────┬──────┬──────────┐
-				│ Name              │ Type │ Size     │
-				├───────────────────┼──────┼──────────┤
-				│ a/1.mjs           │ esm  │ xx KiB │
-				├───────────────────┼──────┼──────────┤
-				│ a/b/2.mjs         │ esm  │ xx KiB │
-				├───────────────────┼──────┼──────────┤
-				│ a/b/3.mjs         │ esm  │ xx KiB │
-				├───────────────────┼──────┼──────────┤
-				│ a/b/c/4.mjs       │ esm  │ xx KiB │
-				├───────────────────┼──────┼──────────┤
-				│ Total (4 modules) │      │ xx KiB │
-				└───────────────────┴──────┴──────────┘
+				"┌─┬─┬─┐
+				│ Name │ Type │ Size │
+				├─┼─┼─┤
+				│ a/1.mjs │ esm │ xx KiB │
+				├─┼─┼─┤
+				│ a/b/2.mjs │ esm │ xx KiB │
+				├─┼─┼─┤
+				│ a/b/3.mjs │ esm │ xx KiB │
+				├─┼─┼─┤
+				│ a/b/c/4.mjs │ esm │ xx KiB │
+				├─┼─┼─┤
+				│ Total (4 modules) │ │ xx KiB │
+				└─┴─┴─┘
 				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -4289,58 +3969,6 @@ addEventListener('fetch', event => {});`
 			`);
 		});
 
-		it("should use the relative path from current working directory to Worker directory when using `--legacy-assets`", async () => {
-			const assets = [
-				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "file-2.txt", content: "Content of file-2" },
-			];
-			const kvNamespace = {
-				title: "__test-name-workers_sites_assets",
-				id: "__test-name-workers_sites_assets-id",
-			};
-			writeWranglerConfig({
-				main: "./index.js",
-			});
-			writeWorkerSource();
-			writeAssets(assets, "my-assets");
-			mockUploadWorkerRequest({
-				expectedMainModule: "index.js",
-			});
-			mockSubDomainRequest();
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
-			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-			process.chdir("./my-assets");
-			await runWrangler("deploy --legacy-assets .");
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe --legacy-assets argument has been deprecated. Please use --assets instead.[0m
-
-				  To learn more about Workers with assets, visit our documentation at
-				  [4mhttps://developers.cloudflare.com/workers/frameworks/[0m.
-
-				"
-			`);
-			expect(std.info).toMatchInlineSnapshot(`
-				"Fetching list of already uploaded assets...
-				Building list of assets to upload...
-				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-				 + file-2.5938485188.txt (uploading new version of file-2.txt)
-				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]"
-			`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"↗️  Done syncing assets
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				No bindings found.
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
-		});
-
 		it("should abort other bucket uploads if one bucket upload fails", async () => {
 			// Write 9 20MiB files, should end up with 3 buckets
 			const content = "X".repeat(20 * 1024 * 1024);
@@ -4938,91 +4566,6 @@ addEventListener('fetch', event => {});`
 			`);
 		});
 
-		it("should warn if using experimental_serve_directly", async () => {
-			const assets = [
-				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
-				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "file-2.bak", content: "Content of file-2" },
-				{ filePath: "file-3.txt", content: "Content of file-3" },
-				{ filePath: "sub-dir/file-4.bak", content: "Content of file-4" },
-				{ filePath: "sub-dir/file-5.txt", content: "Content of file-5" },
-			];
-			writeAssets(assets, "assets");
-			writeWorkerSource({ format: "js" });
-			writeWranglerConfig({
-				main: "index.js",
-				assets: {
-					directory: "assets",
-					experimental_serve_directly: true,
-				},
-			});
-			const bodies: AssetManifest[] = [];
-			await mockAUSRequest(bodies);
-			mockSubDomainRequest();
-			mockUploadWorkerRequest({
-				expectedAssets: {
-					jwt: "<<aus-completion-token>>",
-					config: {
-						run_worker_first: false,
-					},
-				},
-				expectedMainModule: "index.js",
-			});
-
-			await runWrangler("deploy");
-
-			expect(std.warn).toMatchInlineSnapshot(
-				`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-				    - [1mDeprecation[0m: \\"assets.experimental_serve_directly\\":
-				      The \\"experimental_serve_directly\\" field is not longer supported. Please use run_worker_first.
-				      Read more: [4mhttps://developers.cloudflare.com/workers/static-assets/binding/#run_worker_first[0m
-
-				"
-			`
-			);
-		});
-
-		it("should error if using experimental_serve_directly and run_worker_first", async () => {
-			const assets = [
-				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
-				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "file-2.bak", content: "Content of file-2" },
-				{ filePath: "file-3.txt", content: "Content of file-3" },
-				{ filePath: "sub-dir/file-4.bak", content: "Content of file-4" },
-				{ filePath: "sub-dir/file-5.txt", content: "Content of file-5" },
-			];
-			writeAssets(assets, "assets");
-			writeWorkerSource({ format: "js" });
-			writeWranglerConfig({
-				main: "index.js",
-				assets: {
-					directory: "assets",
-					experimental_serve_directly: true,
-					run_worker_first: false,
-				},
-			});
-			const bodies: AssetManifest[] = [];
-			await mockAUSRequest(bodies);
-			mockSubDomainRequest();
-			mockUploadWorkerRequest({
-				expectedAssets: {
-					jwt: "<<aus-completion-token>>",
-					config: {
-						run_worker_first: true,
-					},
-				},
-				expectedMainModule: "index.js",
-			});
-
-			await expect(runWrangler("deploy")).rejects
-				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: run_worker_first and experimental_serve_directly specified.
-				Only one of these configuration options may be provided.]
-			`);
-		});
-
 		it("should error if run_worker_first is true and no user Worker is provided", async () => {
 			const assets = [
 				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
@@ -5089,15 +4632,11 @@ addEventListener('fetch', event => {});`
 			);
 			await expect(
 				flatBodies["80e40c1f2422528cb2fba3f9389ce315"]
-			).toBeAFileWhichMatches(
-				new File(
-					["c29tZXRoaW5nLWJpbmFyeQ=="],
-					"80e40c1f2422528cb2fba3f9389ce315",
-					{
-						type: "application/null",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["c29tZXRoaW5nLWJpbmFyeQ=="],
+				name: "80e40c1f2422528cb2fba3f9389ce315",
+				type: "application/null",
+			});
 		});
 
 		it("should be able to upload files with special characters in filepaths", async () => {
@@ -5161,38 +4700,25 @@ addEventListener('fetch', event => {});`
 			);
 			await expect(
 				flatBodies["ff5016e92f039aa743a4ff7abb3180fa"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTM="],
-					"ff5016e92f039aa743a4ff7abb3180fa",
-					{
-						// TODO: this should be "text/plain; charset=utf-8", but msw? is stripping the charset part
-						type: "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTM="],
+				name: "ff5016e92f039aa743a4ff7abb3180fa",
+				type: "text/plain",
+			});
 			await expect(
 				flatBodies["7574a8cd3094a050388ac9663af1c1d6"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTI="],
-					"7574a8cd3094a050388ac9663af1c1d6",
-					{
-						type: "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTI="],
+				name: "7574a8cd3094a050388ac9663af1c1d6",
+				type: "text/plain",
+			});
 			await expect(
 				flatBodies["0de3dd5df907418e9730fd2bd747bd5e"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTE="],
-					"0de3dd5df907418e9730fd2bd747bd5e",
-					{
-						type: "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTE="],
+				name: "0de3dd5df907418e9730fd2bd747bd5e",
+				type: "text/plain",
+			});
 		});
 
 		it("should resolve assets directory relative to wrangler.toml if using config", async () => {
@@ -5227,10 +4753,12 @@ addEventListener('fetch', event => {});`
 		});
 
 		it("should ignore assets that match patterns in an .assetsignore file in the root of the assets directory", async () => {
+			const redirectsContent = "/foo /bar";
+			const headersContent = "/some-path\nX-Header: Custom-Value";
 			const assets = [
 				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
-				{ filePath: "_redirects", content: "/foo /bar" },
-				{ filePath: "_headers", content: "/some-path\nX-Header: Custom-Value" },
+				{ filePath: "_redirects", content: redirectsContent },
+				{ filePath: "_headers", content: headersContent },
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.bak", content: "Content of file-2" },
 				{ filePath: "file-3.txt", content: "Content of file-3" },
@@ -5250,7 +4778,10 @@ addEventListener('fetch', event => {});`
 			mockUploadWorkerRequest({
 				expectedAssets: {
 					jwt: "<<aus-completion-token>>",
-					config: {},
+					config: {
+						_headers: headersContent,
+						_redirects: redirectsContent,
+					},
 				},
 				expectedType: "none",
 			});
@@ -5617,50 +5148,35 @@ addEventListener('fetch', event => {});`
 			const flatBodies = Object.fromEntries(
 				bodies.flatMap((b) => [...b.entries()])
 			);
+
 			await expect(
 				flatBodies["0de3dd5df907418e9730fd2bd747bd5e"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTE="],
-					"0de3dd5df907418e9730fd2bd747bd5e",
-					{
-						type: "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTE="],
+				name: "0de3dd5df907418e9730fd2bd747bd5e",
+				type: "text/plain",
+			});
 			await expect(
 				flatBodies["7574a8cd3094a050388ac9663af1c1d6"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTI="],
-					"7574a8cd3094a050388ac9663af1c1d6",
-					{
-						type: "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTI="],
+				name: "7574a8cd3094a050388ac9663af1c1d6",
+				type: "text/plain",
+			});
 			await expect(
 				flatBodies["ff5016e92f039aa743a4ff7abb3180fa"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTM="],
-					"ff5016e92f039aa743a4ff7abb3180fa",
-					{
-						type: "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTM="],
+				name: "ff5016e92f039aa743a4ff7abb3180fa",
+				type: "text/plain",
+			});
 			await expect(
 				flatBodies["f05e28a3d0bdb90d3cf4bdafe592488f"]
-			).toBeAFileWhichMatches(
-				new File(
-					["Q29udGVudCBvZiBmaWxlLTU="],
-					"f05e28a3d0bdb90d3cf4bdafe592488f",
-					{
-						type: "text/plain",
-					}
-				)
-			);
+			).toBeAFileWhichMatches({
+				fileBits: ["Q29udGVudCBvZiBmaWxlLTU="],
+				name: "f05e28a3d0bdb90d3cf4bdafe592488f",
+				type: "text/plain",
+			});
 		});
 
 		it("should be able to upload a user worker with ASSETS binding and config", async () => {
@@ -5724,82 +5240,6 @@ addEventListener('fetch', event => {});`
 						html_handling: "none",
 						not_found_handling: "404-page",
 						run_worker_first: true,
-					},
-				},
-				expectedBindings: [{ name: "ASSETS", type: "assets" }],
-				expectedMainModule: "index.js",
-				expectedCompatibilityDate: "2024-09-27",
-				expectedCompatibilityFlags: ["nodejs_compat"],
-			});
-			await runWrangler("deploy");
-		});
-
-		it("experimental_serve_directly=false maps run_worker_first=true", async () => {
-			const assets = [
-				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
-			];
-			writeAssets(assets);
-			writeWorkerSource({ format: "js" });
-			writeWranglerConfig({
-				main: "index.js",
-				compatibility_date: "2024-09-27",
-				compatibility_flags: ["nodejs_compat"],
-				assets: {
-					directory: "assets",
-					binding: "ASSETS",
-					html_handling: "none",
-					not_found_handling: "404-page",
-					experimental_serve_directly: false,
-				},
-			});
-			await mockAUSRequest();
-			mockSubDomainRequest();
-			mockUploadWorkerRequest({
-				expectedAssets: {
-					jwt: "<<aus-completion-token>>",
-					config: {
-						html_handling: "none",
-						not_found_handling: "404-page",
-						run_worker_first: true,
-					},
-				},
-				expectedBindings: [{ name: "ASSETS", type: "assets" }],
-				expectedMainModule: "index.js",
-				expectedCompatibilityDate: "2024-09-27",
-				expectedCompatibilityFlags: ["nodejs_compat"],
-			});
-			await runWrangler("deploy");
-		});
-
-		it("experimental_serve_directly=true maps run_worker_first=false", async () => {
-			const assets = [
-				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
-			];
-			writeAssets(assets);
-			writeWorkerSource({ format: "js" });
-			writeWranglerConfig({
-				main: "index.js",
-				compatibility_date: "2024-09-27",
-				compatibility_flags: ["nodejs_compat"],
-				assets: {
-					directory: "assets",
-					binding: "ASSETS",
-					html_handling: "none",
-					not_found_handling: "404-page",
-					experimental_serve_directly: true,
-				},
-			});
-			await mockAUSRequest();
-			mockSubDomainRequest();
-			mockUploadWorkerRequest({
-				expectedAssets: {
-					jwt: "<<aus-completion-token>>",
-					config: {
-						html_handling: "none",
-						not_found_handling: "404-page",
-						run_worker_first: false,
 					},
 				},
 				expectedBindings: [{ name: "ASSETS", type: "assets" }],
@@ -6957,7 +6397,7 @@ addEventListener('fetch', event => {});`
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Running custom build: node -e \\"4+4; require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\"
+				"[custom build] Running: node -e \\"4+4; require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\"
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
@@ -6985,7 +6425,7 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-					"Running custom build: echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js
+					"[custom build] Running: echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
 					No bindings found.
@@ -7013,9 +6453,9 @@ addEventListener('fetch', event => {});`
 				The \`main\` property in your wrangler.toml file should point to the file generated by the custom build.]
 			`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Running custom build: node -e \\"4+4;\\"
-			"
-		`);
+				"[custom build] Running: node -e \\"4+4;\\"
+				"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe expected output file at \\"index.js\\" was not found after running custom build: node -e \\"4+4;\\".[0m
 
@@ -7052,9 +6492,9 @@ addEventListener('fetch', event => {});`
 				\`\`\`]
 			`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"Running custom build: node -e \\"4+4;\\"
-			"
-		`);
+				"[custom build] Running: node -e \\"4+4;\\"
+				"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe expected output file at \\".\\" was not found after running custom build: node -e \\"4+4;\\".[0m
 
@@ -7147,6 +6587,84 @@ addEventListener('fetch', event => {});`
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
+
+		it("should apply esbuild's keep-names functionality by default", async () => {
+			writeWranglerConfig({
+				main: "./index.js",
+				legacy_env: false,
+				env: {
+					testEnv: {},
+				},
+			});
+			fs.writeFileSync(
+				"./index.js",
+				`
+				export
+					default {
+						fetch() {
+							function sayHello() {
+								return "Hello World with keep_names";
+							}
+							return new Response(sayHello());
+					}
+				}
+				`
+			);
+
+			const underscoreUnderscoreNameRegex = /__name\(.*?\)/;
+
+			mockUploadWorkerRequest({
+				env: "testEnv",
+				expectedType: "esm",
+				legacyEnv: false,
+				expectedEntry: (str) => {
+					expect(str).toMatch(underscoreUnderscoreNameRegex);
+				},
+			});
+
+			mockSubDomainRequest();
+			await runWrangler("deploy -e testEnv index.js");
+		});
+
+		it("should apply esbuild's keep-names functionality unless keep_names is set to false", async () => {
+			writeWranglerConfig({
+				main: "./index.js",
+				legacy_env: false,
+				env: {
+					testEnv: {
+						keep_names: false,
+					},
+				},
+			});
+			fs.writeFileSync(
+				"./index.js",
+				`
+				export
+					default {
+						fetch() {
+							function sayHello() {
+								return "Hello World without keep_names";
+							}
+							return new Response(sayHello());
+					}
+				}
+				`
+			);
+
+			const underscoreUnderscoreNameRegex = /__name\(.*?\)/;
+
+			mockUploadWorkerRequest({
+				env: "testEnv",
+				expectedType: "esm",
+				legacyEnv: false,
+				expectedEntry: (str) => {
+					expect(str).not.toMatch(underscoreUnderscoreNameRegex);
+				},
+			});
+
+			mockSubDomainRequest();
+			await runWrangler("deploy -e testEnv index.js");
+		});
 	});
 
 	describe("durable object migrations", () => {
@@ -7166,7 +6684,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Durable Objects:
 				  - SOMENAME: SomeClass
 				Uploaded test-name (TIMINGS)
@@ -7219,7 +6737,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Durable Objects:
 				  - SOMENAME: SomeClass (defined in some-script)
 				Uploaded test-name (TIMINGS)
@@ -7265,7 +6783,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Durable Objects:
 				  - SOMENAME: SomeClass
 				  - SOMEOTHERNAME: SomeOtherClass
@@ -7320,7 +6838,7 @@ addEventListener('fetch', event => {});`
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Durable Objects:
 				  - SOMENAME: SomeClass
 				  - SOMEOTHERNAME: SomeOtherClass
@@ -7367,7 +6885,7 @@ addEventListener('fetch', event => {});`
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Durable Objects:
 				  - SOMENAME: SomeClass
 				  - SOMEOTHERNAME: SomeOtherClass
@@ -7416,7 +6934,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Durable Objects:
 					  - SOMENAME: SomeClass
 					  - SOMEOTHERNAME: SomeOtherClass
@@ -7482,7 +7000,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Durable Objects:
 					  - SOMENAME: SomeClass
 					  - SOMEOTHERNAME: SomeOtherClass
@@ -7547,7 +7065,7 @@ addEventListener('fetch', event => {});`
 					  "info": "",
 					  "out": "Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Durable Objects:
 					  - SOMENAME: SomeClass
 					  - SOMEOTHERNAME: SomeOtherClass
@@ -7620,7 +7138,7 @@ addEventListener('fetch', event => {});`
 					  "info": "",
 					  "out": "Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Durable Objects:
 					  - SOMENAME: SomeClass
 					  - SOMEOTHERNAME: SomeOtherClass
@@ -7679,7 +7197,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Durable Objects:
 					  - SOMENAME: SomeClass
 					  - SOMEOTHERNAME: SomeOtherClass
@@ -7731,7 +7249,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Durable Objects:
 					  - SOMENAME: SomeClass
 					  - SOMEOTHERNAME: SomeOtherClass
@@ -7760,11 +7278,14 @@ addEventListener('fetch', event => {});`
 				],
 			});
 
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
+				Your Worker is sending Tail events to the following Workers:
+				- listener
+				- test-listener
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -7785,7 +7306,7 @@ addEventListener('fetch', event => {});`
 				expectedLimits: { cpu_ms: 15_000 },
 			});
 
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -8016,7 +7537,7 @@ addEventListener('fetch', event => {});`
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Data Blobs:
 				  - DATA_BLOB_ONE: some-data-blob.bin
 				  - DATA_BLOB_TWO: more-data-blob.bin
@@ -8467,7 +7988,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Wasm Modules:
 					  - TESTWASMNAME: path/to/test.wasm
 					Uploaded test-name (TIMINGS)
@@ -8537,7 +8058,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Wasm Modules:
 					  - TESTWASMNAME: path/to/and/the/path/to/test.wasm
 					Uploaded test-name (TIMINGS)
@@ -8614,7 +8135,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Text Blobs:
 					  - TESTTEXTBLOBNAME: path/to/text.file
 					Uploaded test-name (TIMINGS)
@@ -8688,7 +8209,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Text Blobs:
 					  - TESTTEXTBLOBNAME: path/to/and/the/path/to/text.file
 					Uploaded test-name (TIMINGS)
@@ -8728,7 +8249,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Data Blobs:
 					  - TESTDATABLOBNAME: path/to/data.bin
 					Uploaded test-name (TIMINGS)
@@ -8802,7 +8323,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Data Blobs:
 					  - TESTDATABLOBNAME: path/to/and/the/path/to/data.bin
 					Uploaded test-name (TIMINGS)
@@ -8842,7 +8363,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Vars:
 					  - text: \\"plain ol' string\\"
 					  - count: 1
@@ -8872,7 +8393,7 @@ addEventListener('fetch', event => {});`
 					  "info": "",
 					  "out": "Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Vars:
 					  - TEXT: \\"(hidden)\\"
 					  - COUNT: \\"(hidden)\\"
@@ -8903,7 +8424,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- R2 Buckets:
 					  - FOO: foo-bucket
 					Uploaded test-name (TIMINGS)
@@ -8953,7 +8474,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- logfwdr:
 					  - httplogs: httplogs
 					  - trace: trace
@@ -9027,7 +8548,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Durable Objects:
 					  - EXAMPLE_DO_BINDING: ExampleDurableObject
 					Uploaded test-name (TIMINGS)
@@ -9073,16 +8594,16 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - EXAMPLE_DO_BINDING: ExampleDurableObject
-			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your Worker has access to the following bindings:
+					- Durable Objects:
+					  - EXAMPLE_DO_BINDING: ExampleDurableObject
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
@@ -9118,7 +8639,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Durable Objects:
 					  - EXAMPLE_DO_BINDING: ExampleDurableObject (defined in example-do-binding-worker)
 					Uploaded test-name (TIMINGS)
@@ -9165,7 +8686,420 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
+					- Durable Objects:
+					  - EXAMPLE_DO_BINDING: ExampleDurableObject
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should support durable object bindings to SQLite classes with containers (docker flow)", async () => {
+				function mockGetVersion(versionId: string) {
+					msw.use(
+						http.get(
+							`*/accounts/:accountId/workers/scripts/:scriptName/versions/${versionId}`,
+							async () => {
+								return HttpResponse.json(
+									createFetchResult({
+										id: versionId,
+										metadata: {},
+										number: 2,
+										resources: {
+											bindings: [
+												{
+													type: "durable_object_namespace",
+													namespace_id: "1",
+													class_name: "ExampleDurableObject",
+												},
+											],
+										},
+									})
+								);
+							},
+							{ once: true }
+						)
+					);
+				}
+
+				mockGetVersion("Galaxy-Class");
+
+				function defaultChildProcess() {
+					return {
+						stderr: Buffer.from([]),
+						stdout: Buffer.from("i promise I am a successful process"),
+						on: function (reason: string, cbPassed: (code: number) => unknown) {
+							if (reason === "close") {
+								cbPassed(0);
+							}
+
+							return this;
+						},
+					} as unknown as ChildProcess;
+				}
+
+				vi.mocked(spawn).mockImplementation((cmd, args) => {
+					expect(cmd).toBe(getDockerPath());
+					if (args[0] === "image") {
+						expect(args).toEqual([
+							"image",
+							"push",
+							`${getDefaultRegistry()}/my-container:Galaxy`,
+						]);
+						return defaultChildProcess();
+					}
+
+					if (args[0] === "tag") {
+						expect(args).toEqual([
+							"tag",
+							"my-container:Galaxy",
+							`${getDefaultRegistry()}/my-container:Galaxy`,
+						]);
+						return defaultChildProcess();
+					}
+
+					if (args[0] === "login") {
+						let password = "";
+						const readable = new Writable({
+							write(chunk) {
+								password += chunk;
+							},
+							final() {},
+						});
+
+						return {
+							stdout: Buffer.from("i promise I am a successful docker login"),
+							stdin: readable,
+							on: function (
+								reason: string,
+								cbPassed: (code: number) => unknown
+							) {
+								if (reason === "close") {
+									expect(password).toEqual("mockpassword");
+									cbPassed(0);
+								}
+
+								return this;
+							},
+						} as unknown as ChildProcess;
+					}
+
+					expect(args).toEqual([
+						"build",
+						"-t",
+						getDefaultRegistry() + "/my-container:Galaxy",
+						"--platform",
+						"linux/amd64",
+						"-f",
+						"-",
+						".",
+					]);
+
+					let dockerfile = "";
+					const readable = new Writable({
+						write(chunk) {
+							dockerfile += chunk;
+						},
+						final() {},
+					});
+					return {
+						pid: -1,
+						error: undefined,
+						stderr: Buffer.from([]),
+						stdout: Buffer.from("i promise I am a successful docker build"),
+						stdin: readable,
+						status: 0,
+						signal: null,
+						output: [null],
+						on: (reason: string, cbPassed: (code: number) => unknown) => {
+							if (reason === "exit") {
+								expect(dockerfile).toEqual("FROM scratch");
+								cbPassed(0);
+							}
+						},
+					} as unknown as ChildProcess;
+				});
+
+				mockContainersAccount();
+
+				writeWranglerConfig({
+					durable_objects: {
+						bindings: [
+							{
+								name: "EXAMPLE_DO_BINDING",
+								class_name: "ExampleDurableObject",
+							},
+						],
+					},
+					containers: [
+						{
+							name: "my-container",
+							instances: 10,
+							class_name: "ExampleDurableObject",
+							configuration: { image: "./Dockerfile" },
+						},
+					],
+					migrations: [
+						{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+					],
+				});
+
+				fs.writeFileSync("Dockerfile", "FROM scratch");
+				mockGetApplications([]);
+				function mockCreateApplication(expected?: Partial<Application>) {
+					msw.use(
+						http.post(
+							"*/applications",
+							async ({ request }) => {
+								const json = await request.json();
+								if (expected !== undefined) {
+									expect(json).toMatchObject(expected);
+								}
+
+								return HttpResponse.json(json);
+							},
+							{ once: true }
+						)
+					);
+				}
+
+				function mockGenerateImageRegistryCredentials() {
+					msw.use(
+						http.post(
+							`*/registries/${getDefaultRegistry()}/credentials`,
+							async ({ request }) => {
+								const json =
+									(await request.json()) as ImageRegistryCredentialsConfiguration;
+								expect(json.permissions).toEqual(["push"]);
+
+								return HttpResponse.json({
+									account_id: "123",
+									registry_host: getDefaultRegistry(),
+									username: "v1",
+									password: "mockpassword",
+								} as AccountRegistryToken);
+							},
+							{ once: true }
+						)
+					);
+				}
+
+				mockGenerateImageRegistryCredentials();
+
+				mockCreateApplication({
+					name: "my-container",
+					instances: 10,
+					durable_objects: { namespace_id: "1" },
+					configuration: {
+						image: getDefaultRegistry() + "/my-container:Galaxy",
+					},
+				});
+
+				fs.writeFileSync(
+					"index.js",
+					`export class ExampleDurableObject {}; export default{};`
+				);
+
+				mockSubDomainRequest();
+				mockLegacyScriptData({
+					scripts: [{ id: "test-name", migration_tag: "v1" }],
+				});
+
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							class_name: "ExampleDurableObject",
+							name: "EXAMPLE_DO_BINDING",
+							type: "durable_object_namespace",
+						},
+					],
+					useOldUploadApi: true,
+					expectedContainers: [{ class_name: "ExampleDurableObject" }],
+				});
+
+				await runWrangler("deploy index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your Worker has access to the following bindings:
+					- Durable Objects:
+					  - EXAMPLE_DO_BINDING: ExampleDurableObject
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Building image my-container:Galaxy
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should support durable objects and D1", async () => {
+				writeWranglerConfig({
+					main: "index.js",
+					durable_objects: {
+						bindings: [
+							{
+								name: "EXAMPLE_DO_BINDING",
+								class_name: "ExampleDurableObject",
+							},
+						],
+					},
+					migrations: [{ tag: "v1", new_classes: ["ExampleDurableObject"] }],
+					d1_databases: [
+						{
+							binding: "DB",
+							database_name: "test-d1-db",
+							database_id: "UUID-1-2-3-4",
+							preview_database_id: "UUID-1-2-3-4",
+						},
+					],
+				});
+				const scriptContent = `export class ExampleDurableObject {}; export default{};`;
+				fs.writeFileSync("index.js", scriptContent);
+				mockSubDomainRequest();
+				mockLegacyScriptData({
+					scripts: [{ id: "test-name", migration_tag: "v1" }],
+				});
+				mockUploadWorkerRequest({
+					expectedType: "esm",
+					expectedBindings: [
+						{
+							name: "EXAMPLE_DO_BINDING",
+							class_name: "ExampleDurableObject",
+							type: "durable_object_namespace",
+						},
+						{ name: "DB", type: "d1_database" },
+					],
+				});
+
+				await runWrangler("deploy index.js --outdir tmp --dry-run");
+				expect(std.out).toMatchInlineSnapshot(`
+					"Total Upload: xx KiB / gzip: xx KiB
+					Your Worker has access to the following bindings:
+					- Durable Objects:
+					  - EXAMPLE_DO_BINDING: ExampleDurableObject
+					- D1 Databases:
+					  - DB: test-d1-db (UUID-1-2-3-4), Preview: (UUID-1-2-3-4)
+					--dry-run: exiting now."
+				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+				const output = fs.readFileSync("tmp/index.js", "utf-8");
+				// D1 no longer injects middleware, so we can pass through the user's code unchanged
+				expect(output).not.toContain(`ExampleDurableObject2`);
+				// ExampleDurableObject is exported directly
+				expect(output).toContain("export {\n  ExampleDurableObject,");
+			});
+
+			it("should support durable object bindings to SQLite classes with containers", async () => {
+				function mockGetVersion(versionId: string) {
+					msw.use(
+						http.get(
+							`*/accounts/:accountId/workers/scripts/:scriptName/versions/${versionId}`,
+							async () => {
+								return HttpResponse.json(
+									createFetchResult({
+										id: versionId,
+										metadata: {},
+										number: 2,
+										resources: {
+											bindings: [
+												{
+													type: "durable_object_namespace",
+													namespace_id: "1",
+													class_name: "ExampleDurableObject",
+												},
+											],
+										},
+									})
+								);
+							},
+							{ once: true }
+						)
+					);
+				}
+
+				mockGetVersion("Galaxy-Class");
+
+				mockContainersAccount();
+				writeWranglerConfig({
+					durable_objects: {
+						bindings: [
+							{
+								name: "EXAMPLE_DO_BINDING",
+								class_name: "ExampleDurableObject",
+							},
+						],
+					},
+					containers: [
+						{
+							name: "my-container",
+							instances: 10,
+							class_name: "ExampleDurableObject",
+							configuration: {
+								image: "docker.io/hello:world",
+							},
+						},
+					],
+					migrations: [
+						{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+					],
+				});
+
+				mockGetApplications([]);
+				function mockCreateApplication(expected?: Partial<Application>) {
+					msw.use(
+						http.post(
+							"*/applications",
+							async ({ request }) => {
+								const json = await request.json();
+								if (expected !== undefined) {
+									expect(json).toMatchObject(expected);
+								}
+
+								return HttpResponse.json(json);
+							},
+							{ once: true }
+						)
+					);
+				}
+
+				mockCreateApplication({
+					name: "my-container",
+					instances: 10,
+					durable_objects: { namespace_id: "1" },
+				});
+
+				fs.writeFileSync(
+					"index.js",
+					`export class ExampleDurableObject {}; export default{};`
+				);
+				mockSubDomainRequest();
+				mockLegacyScriptData({
+					scripts: [{ id: "test-name", migration_tag: "v1" }],
+				});
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							class_name: "ExampleDurableObject",
+							name: "EXAMPLE_DO_BINDING",
+							type: "durable_object_namespace",
+						},
+					],
+					useOldUploadApi: true,
+					expectedContainers: [{ class_name: "ExampleDurableObject" }],
+				});
+
+				await runWrangler("deploy index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your Worker has access to the following bindings:
 					- Durable Objects:
 					  - EXAMPLE_DO_BINDING: ExampleDurableObject
 					Uploaded test-name (TIMINGS)
@@ -9218,14 +9152,14 @@ addEventListener('fetch', event => {});`
 
 				await runWrangler("deploy index.js --outdir tmp --dry-run");
 				expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - EXAMPLE_DO_BINDING: ExampleDurableObject
-			- D1 Databases:
-			  - DB: test-d1-db (UUID-1-2-3-4), Preview: (UUID-1-2-3-4)
-			--dry-run: exiting now."
-		`);
+					"Total Upload: xx KiB / gzip: xx KiB
+					Your Worker has access to the following bindings:
+					- Durable Objects:
+					  - EXAMPLE_DO_BINDING: ExampleDurableObject
+					- D1 Databases:
+					  - DB: test-d1-db (UUID-1-2-3-4), Preview: (UUID-1-2-3-4)
+					--dry-run: exiting now."
+				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				const output = fs.readFileSync("tmp/index.js", "utf-8");
@@ -9288,7 +9222,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Services:
 					  - FOO: foo-service
 					Uploaded test-name (TIMINGS)
@@ -9329,9 +9263,48 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Services:
 					  - FOO: foo-service#MyHandler
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should support service bindings with props", async () => {
+				writeWranglerConfig({
+					services: [
+						{
+							binding: "FOO",
+							service: "foo-service",
+							props: { foo: 123, bar: { baz: "hello from props" } },
+						},
+					],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							type: "service",
+							name: "FOO",
+							service: "foo-service",
+							props: { foo: 123, bar: { baz: "hello from props" } },
+						},
+					],
+				});
+
+				await runWrangler("deploy index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+					"Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your Worker has access to the following bindings:
+					- Services:
+					  - FOO: foo-service
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
@@ -9361,7 +9334,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Analytics Engine Datasets:
 					  - FOO: foo-dataset
 					Uploaded test-name (TIMINGS)
@@ -9399,7 +9372,7 @@ addEventListener('fetch', event => {});`
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Dispatch Namespaces:
 					  - foo: Foo
 					Uploaded test-name (TIMINGS)
@@ -9453,11 +9426,11 @@ addEventListener('fetch', event => {});`
 						},
 					],
 				});
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Dispatch Namespaces:
 					  - foo: Foo (outbound -> foo_outbound)
 					  - bar: Bar (outbound -> bar_outbound)
@@ -9467,13 +9440,7 @@ addEventListener('fetch', event => {});`
 					Current Version ID: Galaxy-Class"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`wrangler publish\` is deprecated and will be removed in the next major version.[0m
-
-			  Please use \`wrangler deploy\` instead, which accepts exactly the same arguments.
-
-			"
-		`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
 			it("should support dispatch namespace bindings with parameterized outbounds", async () => {
@@ -9510,11 +9477,11 @@ addEventListener('fetch', event => {});`
 						},
 					],
 				});
-				await runWrangler("publish index.js");
+				await runWrangler("deploy index.js");
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
-					Your worker has access to the following bindings:
+					Your Worker has access to the following bindings:
 					- Dispatch Namespaces:
 					  - foo: Foo (outbound -> foo_outbound)
 					Uploaded test-name (TIMINGS)
@@ -9523,13 +9490,7 @@ addEventListener('fetch', event => {});`
 					Current Version ID: Galaxy-Class"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
-				expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`wrangler publish\` is deprecated and will be removed in the next major version.[0m
-
-			  Please use \`wrangler deploy\` instead, which accepts exactly the same arguments.
-
-			"
-		`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 		});
 
@@ -9564,7 +9525,7 @@ addEventListener('fetch', event => {});`
 					expect(std.out).toMatchInlineSnapshot(`
 						"Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
-						Your worker has access to the following bindings:
+						Your Worker has access to the following bindings:
 						- Unsafe Metadata:
 						  - stringify: true
 						  - something: \\"else\\"
@@ -9605,7 +9566,7 @@ addEventListener('fetch', event => {});`
 					expect(std.out).toMatchInlineSnapshot(`
 						"Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
-						Your worker has access to the following bindings:
+						Your Worker has access to the following bindings:
 						- Unsafe Metadata:
 						  - binding-type: my-binding
 						Uploaded test-name (TIMINGS)
@@ -9652,7 +9613,7 @@ addEventListener('fetch', event => {});`
 					expect(std.out).toMatchInlineSnapshot(`
 						"Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
-						Your worker has access to the following bindings:
+						Your Worker has access to the following bindings:
 						- Unsafe Metadata:
 						  - plain_text: my-binding
 						Uploaded test-name (TIMINGS)
@@ -9886,56 +9847,6 @@ addEventListener('fetch', event => {});`
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
-		});
-
-		it("should log a deprecation warning when using `build.upload.rules`", async () => {
-			writeWranglerConfig({
-				build: {
-					upload: {
-						rules: [{ type: "Text", globs: ["**/*.file"], fallthrough: true }],
-					},
-				},
-			});
-			fs.writeFileSync(
-				"./index.js",
-				`import TEXT from './text.file'; export default {};`
-			);
-			fs.writeFileSync("./text.file", "SOME TEXT CONTENT");
-			mockSubDomainRequest();
-			mockUploadWorkerRequest({
-				expectedType: "esm",
-				expectedBindings: [],
-				expectedModules: {
-					"./2d91d1c4dd6e57d4f5432187ab7c25f45a8973f0-text.file":
-						"SOME TEXT CONTENT",
-				},
-			});
-			await runWrangler("deploy index.js");
-			expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				No bindings found.
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
-			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
-
-				    - Deprecation: The \`build.upload.rules\` config field is no longer used, the rules should be
-				  specified via the \`rules\` config field. Delete the \`build.upload\` field from the configuration
-				  file, and add this:
-				      \`\`\`
-				      [[rules]]
-				      type = \\"Text\\"
-				      globs = [ \\"**/*.file\\" ]
-				      fallthrough = true
-				      \`\`\`
-
-				"
-			`);
 		});
 
 		it("should be able to use fallthrough:true for multiple rules", async () => {
@@ -10247,7 +10158,7 @@ addEventListener('fetch', event => {});`
 					)
 				)
 			).resolves.toMatchInlineSnapshot(`
-				"X [ERROR] Unexpected external import of \\"node:events\\", \\"node:net\\", \\"node:perf_hooks\\", \\"node:stream\\", and \\"node:tty\\".
+				"X [ERROR] Unexpected external import of \\"node:events\\", \\"node:perf_hooks\\", \\"node:stream\\", and \\"node:tty\\".
 				Your worker has no default export, which means it is assumed to be a Service Worker format Worker.
 				Did you mean to create a ES Module format Worker?
 				If so, try adding \`export default { ... }\` in your entry-point.
@@ -10510,48 +10421,6 @@ addEventListener('fetch', event => {});`
 			`);
 		});
 
-		it("should preserve the entry point file name, even when using a facade", async () => {
-			writeWranglerConfig();
-			writeWorkerSource();
-			mockSubDomainRequest();
-			mockUploadWorkerRequest();
-			const assets = [
-				{ filePath: "file-1.txt", content: "Content of file-1" },
-				{ filePath: "file-2.txt", content: "Content of file-2" },
-			];
-			const kvNamespace = {
-				title: "__test-name-workers_sites_assets",
-				id: "__test-name-workers_sites_assets-id",
-			};
-			writeAssets(assets);
-			mockListKVNamespacesRequest(kvNamespace);
-			mockKeyListRequest(kvNamespace.id, []);
-			mockUploadAssetsToKVRequest(kvNamespace.id, assets);
-			await runWrangler(
-				"deploy index.js --outdir some-dir --legacy-assets assets"
-			);
-			expect(fs.existsSync("some-dir/index.js")).toBe(true);
-			expect(fs.existsSync("some-dir/index.js.map")).toBe(true);
-			expect(std.info).toMatchInlineSnapshot(`
-				"Fetching list of already uploaded assets...
-				Building list of assets to upload...
-				 + file-1.2ca234f380.txt (uploading new version of file-1.txt)
-				 + file-2.5938485188.txt (uploading new version of file-2.txt)
-				Uploading 2 new assets...
-				Uploaded 100% [2 out of 2]"
-			`);
-			expect(std.out).toMatchInlineSnapshot(`
-				"↗️  Done syncing assets
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				No bindings found.
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
-		});
-
 		it("should copy any module imports related assets to --outdir if specified", async () => {
 			writeWranglerConfig();
 			fs.writeFileSync(
@@ -10685,14 +10554,14 @@ export default{
 				// index.js
 				import txt from \\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\";
 				import hello from \\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\";
-				var wrangler_default = {
+				var index_default = {
 				  async fetch() {
 				    const module = await WebAssembly.instantiate(hello);
 				    return new Response(txt + module.exports.hello);
 				  }
 				};
 				export {
-				  wrangler_default as default
+				  index_default as default
 				};
 				//# sourceMappingURL=index.js.map
 
@@ -10777,14 +10646,14 @@ export default{
 				// index.js
 				import txt from \\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\";
 				import hello from \\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\";
-				var wrangler_default = {
+				var index_default = {
 				  async fetch() {
 				    const module = await WebAssembly.instantiate(hello);
 				    return new Response(txt + module.exports.hello);
 				  }
 				};
 				export {
-				  wrangler_default as default
+				  index_default as default
 				};
 				//# sourceMappingURL=index.js.map
 
@@ -10808,7 +10677,7 @@ export default{
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- KV Namespaces:
 				  - KV: kv-namespace-id
 				Uploaded test-name (TIMINGS)
@@ -10895,14 +10764,14 @@ export default{
 				// index.js
 				import txt from \\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\";
 				import hello from \\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\";
-				var wrangler_default = {
+				var index_default = {
 				  async fetch() {
 				    const module = await WebAssembly.instantiate(hello);
 				    return new Response(txt + module.exports.hello);
 				  }
 				};
 				export {
-				  wrangler_default as default
+				  index_default as default
 				};
 				//# sourceMappingURL=index.js.map
 
@@ -10987,14 +10856,14 @@ export default{
 				// index.js
 				import txt from \\"./0a0a9f2a6772942557ab5355d76af442f8f65e01-textfile.txt\\";
 				import hello from \\"./d025a03cd31e98e96fb5bd5bce87f9bca4e8ce2c-hello.wasm\\";
-				var wrangler_default = {
+				var index_default = {
 				  async fetch() {
 				    const module = await WebAssembly.instantiate(hello);
 				    return new Response(txt + module.exports.hello);
 				  }
 				};
 				export {
-				  wrangler_default as default
+				  index_default as default
 				};
 				//# sourceMappingURL=index.js.map
 
@@ -11018,7 +10887,7 @@ export default{
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- KV Namespaces:
 				  - KV: kv-namespace-id
 				Uploaded test-name (TIMINGS)
@@ -11053,39 +10922,30 @@ export default{
 			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "");
 			await runWrangler("deploy index.js --dry-run");
 			expect(std).toMatchInlineSnapshot(`
-			Object {
-			  "debug": "",
-			  "err": "",
-			  "info": "",
-			  "out": "Total Upload: xx KiB / gzip: xx KiB
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - NAME: SomeClass
-			--dry-run: exiting now.",
-			  "warn": "",
-			}
-		`);
-		});
-	});
-
-	describe("--node-compat", () => {
-		it("should warn when using node compatibility mode", async () => {
-			writeWranglerConfig();
-			writeWorkerSource();
-			await runWrangler("deploy index.js --node-compat --dry-run");
-			expect(std).toMatchInlineSnapshot(`
 				Object {
 				  "debug": "",
 				  "err": "",
 				  "info": "",
 				  "out": "Total Upload: xx KiB / gzip: xx KiB
-				No bindings found.
+				Your Worker has access to the following bindings:
+				- Durable Objects:
+				  - NAME: SomeClass
 				--dry-run: exiting now.",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are using \`node_compat\`, which is a legacy Node.js compatibility option. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.[0m
-
-				",
+				  "warn": "",
 				}
 			`);
+		});
+	});
+
+	describe("--node-compat", () => {
+		it("should error when using node compatibility mode", async () => {
+			writeWranglerConfig();
+			writeWorkerSource();
+			await expect(
+				runWrangler("deploy index.js --node-compat --dry-run")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.]`
+			);
 		});
 
 		it("should recommend node compatibility flag when using node builtins and no node compat is enabled", async () => {
@@ -11137,33 +10997,6 @@ export default{
 
 				  The package \\"path\\" wasn't found on the file system but is built into node.
 				  - Add the \\"nodejs_compat\\" compatibility flag to your project."
-			`);
-		});
-
-		it("should recommend node compatibility flag when using node builtins and `node_compat` is true", async () => {
-			writeWranglerConfig({
-				node_compat: true,
-			});
-			fs.writeFileSync("index.js", "import fs from 'diagnostics_channel';");
-
-			await expect(
-				runWrangler("deploy index.js --dry-run").catch((e) =>
-					normalizeString(
-						esbuild
-							.formatMessagesSync(e?.errors ?? [], { kind: "error" })
-							.join()
-							.trim()
-					)
-				)
-			).resolves.toMatchInlineSnapshot(`
-				"X [ERROR] Could not resolve \\"diagnostics_channel\\"
-
-				    index.js:1:15:
-				      1 │ import fs from 'diagnostics_channel';
-				        ╵                ~~~~~~~~~~~~~~~~~~~~~
-
-				  The package \\"diagnostics_channel\\" wasn't found on the file system but is built into node.
-				  - Try removing the legacy \\"node_compat\\" setting and add the \\"nodejs_compat\\" compatibility flag in your project"
 			`);
 		});
 
@@ -11220,32 +11053,6 @@ export default{
 
 				  The package \\"path\\" wasn't found on the file system but is built into node.
 				  - Make sure to prefix the module name with \\"node:\\" or update your compatibility_date to 2024-09-23 or later."
-			`);
-		});
-
-		it("should polyfill node builtins when enabled", async () => {
-			writeWranglerConfig();
-			fs.writeFileSync(
-				"index.js",
-				`
-      import path from 'path';
-      console.log(path.join("some/path/to", "a/file.txt"));
-      export default {}
-      `
-			);
-			await runWrangler("deploy index.js --node-compat --dry-run"); // this would throw if node compatibility didn't exist
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "Total Upload: xx KiB / gzip: xx KiB
-				No bindings found.
-				--dry-run: exiting now.",
-				  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are using \`node_compat\`, which is a legacy Node.js compatibility option. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.[0m
-
-				",
-				}
 			`);
 		});
 	});
@@ -11336,26 +11143,6 @@ export default{
 			`);
 			expect(fs.readFileSync("dist/index.js", { encoding: "utf-8" })).toContain(
 				`import path from "node:path";`
-			);
-		});
-
-		it("should conflict with the --node-compat option", async () => {
-			writeWranglerConfig();
-			fs.writeFileSync(
-				"index.js",
-				`
-      import AsyncHooks from 'node:async_hooks';
-      console.log(AsyncHooks);
-      export default {}
-      `
-			);
-
-			await expect(
-				runWrangler(
-					"deploy index.js --dry-run --outdir=dist --compatibility-flag=nodejs_compat --node-compat"
-				)
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: The \`nodejs_compat\` compatibility flag cannot be used in conjunction with the legacy \`--node-compat\` flag. If you want to use the Workers \`nodejs_compat\` compatibility flag, please remove the \`--node-compat\` argument from your CLI command or \`node_compat = true\` from your config file.]`
 			);
 		});
 	});
@@ -11732,47 +11519,6 @@ export default{
 		});
 	});
 
-	describe("--no-bundle --node-compat", () => {
-		it("should warn that no-bundle and node-compat can't be used together", async () => {
-			writeWranglerConfig();
-			const scriptContent = `
-			const xyz = 123; // a statement that would otherwise be compiled out
-		`;
-			fs.writeFileSync("index.js", scriptContent);
-			await runWrangler(
-				"deploy index.js --no-bundle --node-compat --dry-run --outdir dist"
-			);
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--node-compat\` and \`--no-bundle\` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process.[0m
-
-
-				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are using \`node_compat\`, which is a legacy Node.js compatibility option. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.[0m
-
-				"
-			`);
-		});
-
-		it("should warn that no-bundle and node-compat can't be used together", async () => {
-			writeWranglerConfig({
-				no_bundle: true,
-				node_compat: true,
-			});
-			const scriptContent = `
-			const xyz = 123; // a statement that would otherwise be compiled out
-		`;
-			fs.writeFileSync("index.js", scriptContent);
-			await runWrangler("deploy index.js --dry-run --outdir dist");
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m\`--node-compat\` and \`--no-bundle\` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process.[0m
-
-
-				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are using \`node_compat\`, which is a legacy Node.js compatibility option. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.[0m
-
-				"
-			`);
-		});
-	});
-
 	describe("queues", () => {
 		const queueId = "queue-id";
 		const queueName = "queue1";
@@ -11813,7 +11559,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Queues:
 				  - QUEUE_ONE: queue1
 				Uploaded test-name (TIMINGS)
@@ -11860,7 +11606,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Queues:
 				  - MY_QUEUE: queue1
 				Uploaded test-name (TIMINGS)
@@ -12610,7 +12356,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Browser:
 				  - Name: MYBROWSER
 				- AI:
@@ -12643,7 +12389,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Images:
 				  - Name: IMAGES_BIND
 				Uploaded test-name (TIMINGS)
@@ -12660,30 +12406,20 @@ export default{
 				main: "index.py",
 				compatibility_flags: ["python_workers"],
 			});
-			await fs.promises.writeFile(
-				"index.py",
-				"from js import Response;\ndef fetch(request):\n return Response.new('hello')"
-			);
+			const expectedModules = {
+				"index.py":
+					"from js import Response;\ndef fetch(request):\n return Response.new('hello')",
+			};
+			await fs.promises.writeFile("index.py", expectedModules["index.py"]);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				expectedMainModule: "index.py",
+				expectedModules,
 			});
 
 			await runWrangler("deploy");
-			expect(
-				std.out.replace(
-					/.wrangler\/tmp\/deploy-(.+)\/index.py/,
-					".wrangler/tmp/deploy/index.py"
-				)
-			).toMatchInlineSnapshot(`
-				"┌──────────────────────────────────────┬────────┬──────────┐
-				│ Name                                 │ Type   │ Size     │
-				├──────────────────────────────────────┼────────┼──────────┤
-				│ .wrangler/tmp/deploy/index.py │ python │ xx KiB │
-				├──────────────────────────────────────┼────────┼──────────┤
-				│ Total (1 module)                     │        │ xx KiB │
-				└──────────────────────────────────────┴────────┴──────────┘
-				Total Upload: xx KiB / gzip: xx KiB
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -12697,30 +12433,20 @@ export default{
 			writeWranglerConfig({
 				compatibility_flags: ["python_workers"],
 			});
-			await fs.promises.writeFile(
-				"index.py",
-				"from js import Response;\ndef fetch(request):\n return Response.new('hello')"
-			);
+			const expectedModules = {
+				"index.py":
+					"from js import Response;\ndef fetch(request):\n return Response.new('hello')",
+			};
+			await fs.promises.writeFile("index.py", expectedModules["index.py"]);
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				expectedMainModule: "index.py",
+				expectedModules,
 			});
 
 			await runWrangler("deploy index.py");
-			expect(
-				std.out.replace(
-					/.wrangler\/tmp\/deploy-(.+)\/index.py/,
-					".wrangler/tmp/deploy/index.py"
-				)
-			).toMatchInlineSnapshot(`
-				"┌──────────────────────────────────────┬────────┬──────────┐
-				│ Name                                 │ Type   │ Size     │
-				├──────────────────────────────────────┼────────┼──────────┤
-				│ .wrangler/tmp/deploy/index.py │ python │ xx KiB │
-				├──────────────────────────────────────┼────────┼──────────┤
-				│ Total (1 module)                     │        │ xx KiB │
-				└──────────────────────────────────────┴────────┴──────────┘
-				Total Upload: xx KiB / gzip: xx KiB
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				No bindings found.
 				Uploaded test-name (TIMINGS)
@@ -12757,7 +12483,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Hyperdrive Configs:
 				  - HYPERDRIVE: 343cd4f1d58c42fbb5bd082592fd7143
 				Uploaded test-name (TIMINGS)
@@ -12789,7 +12515,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- mTLS Certificates:
 				  - CERT_ONE: 1234
 				Uploaded test-name (TIMINGS)
@@ -12824,16 +12550,55 @@ export default{
 
 			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your worker has access to the following bindings:
-			- Pipelines:
-			  - MY_PIPELINE: my-pipeline
-			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				- Pipelines:
+				  - MY_PIPELINE: my-pipeline
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+	});
+
+	describe("secrets_store_secrets", () => {
+		it("should upload secret store bindings", async () => {
+			writeWranglerConfig({
+				secrets_store_secrets: [
+					{
+						binding: "SECRET",
+						store_id: "store_id",
+						secret_name: "secret_name",
+					},
+				],
+			});
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						type: "secrets_store_secret",
+						name: "SECRET",
+						store_id: "store_id",
+						secret_name: "secret_name",
+					},
+				],
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				- Secrets Store Secrets:
+				  - SECRET: store_id/secret_name
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 		});
 	});
 
@@ -12916,6 +12681,34 @@ export default{
 		});
 	});
 
+	describe("--metafile", () => {
+		it("should output a metafile when --metafile is set", async () => {
+			writeWranglerConfig();
+			writeWorkerSource();
+			await runWrangler("deploy index.js --metafile --dry-run --outdir=dist");
+
+			// Check if file exists
+			const metafilePath = path.join(process.cwd(), "dist", "bundle-meta.json");
+			expect(fs.existsSync(metafilePath)).toBe(true);
+			const metafile = JSON.parse(fs.readFileSync(metafilePath, "utf8"));
+			expect(metafile.inputs).toBeDefined();
+			expect(metafile.outputs).toBeDefined();
+		});
+
+		it("should output a metafile when --metafile=./meta.json is set", async () => {
+			writeWranglerConfig();
+			writeWorkerSource();
+			await runWrangler("deploy index.js --metafile=./meta.json --dry-run");
+
+			// Check if file exists
+			const metafilePath = path.join(process.cwd(), "meta.json");
+			expect(fs.existsSync(metafilePath)).toBe(true);
+			const metafile = JSON.parse(fs.readFileSync(metafilePath, "utf8"));
+			expect(metafile.inputs).toBeDefined();
+			expect(metafile.outputs).toBeDefined();
+		});
+	});
+
 	describe("--dispatch-namespace", () => {
 		it("should upload to dispatch namespace", async () => {
 			writeWranglerConfig();
@@ -12963,7 +12756,7 @@ export default{
 				},
 			});
 
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -13001,7 +12794,7 @@ export default{
 				},
 			});
 
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -13025,7 +12818,7 @@ export default{
 				},
 			});
 
-			await runWrangler("publish index.js");
+			await runWrangler("deploy index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -13054,7 +12847,7 @@ export default{
 			msw.use(handler);
 		}
 
-		it("should log open-beta warning when deploying a workflow", async () => {
+		it("should deploy a workflow", async () => {
 			writeWranglerConfig({
 				main: "index.js",
 				workflows: [
@@ -13089,15 +12882,11 @@ export default{
 
 			await runWrangler("deploy");
 
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWorkflows is currently in open beta.[0m
-
-				"
-			`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Workflows:
 				  - WORKFLOW: MyWorkflow
 				Uploaded test-name (TIMINGS)
@@ -13158,7 +12947,7 @@ export default{
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- Workflows:
 				  - WORKFLOW: MyWorkflow (defined in another-script)
 				Uploaded this-script (TIMINGS)
@@ -13189,6 +12978,38 @@ function mockDeploymentsListRequest() {
 
 function mockLastDeploymentRequest() {
 	msw.use(...mswSuccessDeploymentScriptMetadata);
+}
+
+function mockPublishSchedulesRequest({
+	crons = [],
+	env = undefined,
+	legacyEnv = false,
+}: {
+	crons: Config["triggers"]["crons"];
+	env?: string | undefined;
+	legacyEnv?: boolean | undefined;
+}) {
+	const servicesOrScripts = env && !legacyEnv ? "services" : "scripts";
+	const environment = env && !legacyEnv ? "/environments/:envName" : "";
+
+	msw.use(
+		http.put(
+			`*/accounts/:accountId/workers/${servicesOrScripts}/:scriptName${environment}/schedules`,
+			async ({ request, params }) => {
+				expect(params.accountId).toEqual("some-account-id");
+				expect(params.scriptName).toEqual(
+					legacyEnv && env ? `test-name-${env}` : "test-name"
+				);
+				if (!legacyEnv) {
+					expect(params.envName).toEqual(env);
+				}
+				const body = (await request.json()) as [{ cron: string }];
+				expect(body).toEqual(crons.map((cron) => ({ cron })));
+				return HttpResponse.json(createFetchResult(null));
+			},
+			{ once: true }
+		)
+	);
 }
 
 function mockPublishRoutesRequest({
@@ -13921,9 +13742,15 @@ const mockAssetUploadRequest = async (
 	);
 };
 expect.extend({
-	async toBeAFileWhichMatches(received: File, expected: File) {
+	async toBeAFileWhichMatches(
+		received: File,
+		expected: {
+			fileBits: string[];
+			name: string;
+			type: string;
+		}
+	) {
 		const { equals } = this;
-
 		if (!equals(received.name, expected.name)) {
 			return {
 				pass: false,
@@ -13932,7 +13759,7 @@ expect.extend({
 			};
 		}
 
-		if (!equals(received.type, expected.type)) {
+		if (!equals(received.type, expect.stringMatching(expected.type))) {
 			return {
 				pass: false,
 				message: () =>
@@ -13941,7 +13768,9 @@ expect.extend({
 		}
 
 		const receviedText = await received.text();
-		const expectedText = await expected.text();
+		const expectedText = await new File(expected.fileBits, expected.name, {
+			type: expected.type,
+		}).text();
 		if (!equals(receviedText, expectedText)) {
 			return {
 				pass: false,
@@ -13958,7 +13787,11 @@ expect.extend({
 });
 
 interface CustomMatchers {
-	toBeAFileWhichMatches: (expected: File) => unknown;
+	toBeAFileWhichMatches: (expected: {
+		fileBits: string[];
+		name: string;
+		type: string;
+	}) => unknown;
 }
 
 declare module "vitest" {

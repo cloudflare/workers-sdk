@@ -1,8 +1,8 @@
 {
 	"name": "<TBD>",
-	"main": "api/index.ts",
+	"main": "worker/index.ts",
 	"compatibility_date": "<TBD>",
-	"assets": { "not_found_handling": "single-page-application", "binding": "ASSETS" },
+	"assets": { "not_found_handling": "single-page-application" },
 	"observability": {
 		"enabled": true
 	}

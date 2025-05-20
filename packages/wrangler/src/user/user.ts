@@ -354,6 +354,8 @@ const DefaultScopes = {
 	"queues:write": "See and change Cloudflare Queues settings and data",
 	"pipelines:write":
 		"See and change Cloudflare Pipelines configurations and data",
+	"secrets_store:write":
+		"See and change secrets + stores within the Secrets Store",
 } as const;
 
 const OptionalScopes = {
@@ -384,7 +386,9 @@ export function validateScopeKeys(
 	return scopes.every((scope) => scope in DefaultScopes);
 }
 
-const CALLBACK_URL = "http://localhost:8976/oauth/callback";
+function getCallbackUrl(host = "localhost", port = 8976) {
+	return `http://${host}:${port}/oauth/callback`;
+}
 
 let LocalState: State = {
 	...getAuthTokens(),
@@ -661,7 +665,12 @@ function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
 	return true;
 }
 
-async function getAuthURL(scopes: string[], clientId: string): Promise<string> {
+async function getAuthURL(
+	scopes: string[],
+	clientId: string,
+	callbackHost: string,
+	callbackPort: number
+): Promise<string> {
 	const { codeChallenge, codeVerifier } = await generatePKCECodes();
 	const stateQueryParam = generateRandomState(RECOMMENDED_STATE_LENGTH);
 
@@ -674,7 +683,7 @@ async function getAuthURL(scopes: string[], clientId: string): Promise<string> {
 	return generateAuthUrl({
 		authUrl: getAuthUrlFromEnv(),
 		clientId,
-		callbackUrl: CALLBACK_URL,
+		callbackUrl: getCallbackUrl(callbackHost, callbackPort),
 		scopes,
 		stateQueryParam,
 		codeChallenge,
@@ -788,7 +797,7 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 	const params = new URLSearchParams({
 		grant_type: `authorization_code`,
 		code: authorizationCode ?? "",
-		redirect_uri: CALLBACK_URL,
+		redirect_uri: getCallbackUrl(),
 		client_id: getClientIdFromEnv(),
 		code_verifier: codeVerifier,
 	});
@@ -912,6 +921,8 @@ export function readAuthConfigFile(): UserAuthConfig {
 type LoginProps = {
 	scopes?: Scope[];
 	browser: boolean;
+	callbackHost: string;
+	callbackPort: number;
 };
 
 export async function loginOrRefreshIfRequired(
@@ -950,8 +961,15 @@ export async function getOauthToken(options: {
 	granted: {
 		url: string;
 	};
+	callbackHost: string;
+	callbackPort: number;
 }): Promise<AccessContext> {
-	const urlToOpen = await getAuthURL(options.scopes, options.clientId);
+	const urlToOpen = await getAuthURL(
+		options.scopes,
+		options.clientId,
+		options.callbackHost,
+		options.callbackPort
+	);
 	let server: http.Server;
 	let loginTimeoutHandle: ReturnType<typeof setTimeout>;
 	const timerPromise = new Promise<AccessContext>((_, reject) => {
@@ -1026,7 +1044,12 @@ export async function getOauthToken(options: {
 			}
 		});
 
-		server.listen(8976, "localhost");
+		if (options.callbackHost !== "localhost" || options.callbackPort !== 8976) {
+			logger.log(
+				`Temporary login server listening on ${options.callbackHost}:${options.callbackPort}`
+			);
+		}
+		server.listen(options.callbackPort, options.callbackHost);
 	});
 	if (options.browser) {
 		logger.log(`Opening a link in your default browser: ${urlToOpen}`);
@@ -1039,7 +1062,11 @@ export async function getOauthToken(options: {
 }
 
 export async function login(
-	props: LoginProps = { browser: true }
+	props: LoginProps = {
+		browser: true,
+		callbackHost: "localhost",
+		callbackPort: 8976,
+	}
 ): Promise<boolean> {
 	const authFromEnv = getAuthFromEnv();
 	if (authFromEnv) {
@@ -1066,6 +1093,8 @@ export async function login(
 		granted: {
 			url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-granted",
 		},
+		callbackHost: props.callbackHost,
+		callbackPort: props.callbackPort,
 	});
 
 	writeAuthConfigFile({

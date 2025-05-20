@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { chdir } from "node:process";
+import TOML from "@iarna/toml";
 import { execa } from "execa";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
@@ -74,7 +75,7 @@ describe("pages deploy", () => {
 			      --commit-message      The commit message to attach to this deployment  [string]
 			      --commit-dirty        Whether or not the workspace should be considered dirty for this deployment  [boolean]
 			      --skip-caching        Skip asset caching which speeds up builds  [boolean]
-			      --no-bundle           Whether to run bundling on \`_worker.js\` before deploying  [boolean] [default: false]
+			      --no-bundle           Whether to run bundling on \`_worker.js\` before deploying  [boolean]
 			      --upload-source-maps  Whether to upload any server-side sourcemaps with this deployment  [boolean] [default: false]"
 		`);
 	});
@@ -3054,7 +3055,7 @@ and that at least one include rule is provided.
 
 			await expect(runWrangler("pages deploy public --project-name=foo"))
 				.rejects.toThrow(`Deployment failed!
-Failed to publish your Function. Got error: Uncaught TypeError: a is not a function
+	Failed to publish your Function. Got error: Uncaught TypeError: a is not a function
   at functionsWorker-0.11031665179307093.js:41:1`);
 		});
 	});
@@ -4710,7 +4711,7 @@ and that at least one include rule is provided.
 
 			await expect(runWrangler("pages deploy public --project-name=foo"))
 				.rejects.toThrow(`Deployment failed!
-Failed to publish your Function. Got error: Uncaught TypeError: a is not a function
+	Failed to publish your Function. Got error: Uncaught TypeError: a is not a function
   at functionsWorker-0.11031665179307093.js:41:1`);
 		});
 	});
@@ -5425,6 +5426,51 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 		});
 	});
 
+	describe("_worker.js directory bundling", () => {
+		const workerIsBundled = async (contents: FormDataEntryValue | null) =>
+			(await toString(contents)).includes("worker_default as default");
+
+		["wrangler.json", "wrangler.toml"].forEach((configPath) => {
+			it(
+				"should not bundle the _worker.js when `no_bundle = true` in Wrangler config: " +
+					configPath,
+				async () => {
+					mkdirSync("public/_worker.js", { recursive: true });
+					writeFileSync(
+						"public/_worker.js/index.js",
+						`
+					export default {
+						async fetch(request, env) {
+							return new Response('Ok');
+						}
+					};
+					`
+					);
+
+					const config = {
+						name: "foo",
+						no_bundle: true,
+						pages_build_output_dir: "public",
+					};
+					writeFileSync(
+						`${configPath}`,
+						configPath === "wrangler.json"
+							? JSON.stringify(config)
+							: TOML.stringify(config)
+					);
+
+					simulateServer((generatedWorkerJS) =>
+						expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy()
+					);
+
+					await runWrangler("pages deploy");
+
+					expect(std.out).toContain("✨ Uploading Worker bundle");
+				}
+			);
+		});
+	});
+
 	describe("source maps", () => {
 		const bundleString = (entry: FormDataEntryValue | null) =>
 			toString(entry).then((str) =>
@@ -5464,7 +5510,9 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 				expect(contents).toContain(
 					'Content-Disposition: form-data; name="functionsWorker-0.test.js.map"'
 				);
-				expect(contents).toContain('"sources":["[[path]].ts"');
+				expect(contents).toContain(
+					`"sources":["${encodeURIComponent("[[path]].ts")}"`
+				);
 			});
 
 			await runWrangler("pages deploy");
@@ -5601,6 +5649,84 @@ Failed to publish your Function. Got error: Uncaught TypeError: a is not a funct
 			`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+	});
+
+	describe("deploys using redirected configs", () => {
+		let fooProjectDetailsChecked = false;
+
+		beforeEach(() => {
+			fooProjectDetailsChecked = false;
+			mkdirSync("public");
+			mkdirSync("dist");
+			mkdirSync(".wrangler/deploy", { recursive: true });
+			writeFileSync(
+				".wrangler/deploy/config.json",
+				JSON.stringify({ configPath: "../../dist/wrangler.json" })
+			);
+			writeFileSync(
+				"dist/wrangler.json",
+				JSON.stringify({
+					compatibility_date: "2025-01-01",
+					name: "foo",
+					pages_build_output_dir: "../public",
+				})
+			);
+
+			simulateServer(async () => {});
+
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+
+						fooProjectDetailsChecked = true;
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									production_branch: "main",
+									deployment_configs: {
+										production: {},
+										preview: {},
+									},
+								} as Partial<Project>,
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+		});
+
+		afterEach(() => {
+			expect(fooProjectDetailsChecked).toBe(true);
+		});
+
+		const expectedInfo = dedent`
+			Using redirected Wrangler configuration.
+			 - Configuration being used: "dist/wrangler.json"
+			 - Original user's configuration: "<no user config found>"
+			 - Deploy configuration file: ".wrangler/deploy/config.json"
+		`;
+
+		it("should work without a branch specified (i.e. defaulting to the production environment)", async () => {
+			await runWrangler("pages deploy");
+			expect(std.info).toContain(expectedInfo);
+		});
+
+		it("should work with the main branch (i.e. the production environment)", async () => {
+			await runWrangler("pages deploy --branch main");
+			expect(std.info).toContain(expectedInfo);
+		});
+
+		it("should work with any branch (i.e. the preview environment)", async () => {
+			await runWrangler("pages deploy --branch my-branch");
+			expect(std.info).toContain(expectedInfo);
 		});
 	});
 });

@@ -1,4 +1,6 @@
-export default {
+import type { TemplateConfig } from "../../src/templates";
+
+const config: TemplateConfig = {
 	configVersion: 1,
 	id: "scheduled",
 	displayName: "Scheduled Worker (Cron Trigger)",
@@ -16,3 +18,5 @@ export default {
 		},
 	},
 };
+
+export default config;

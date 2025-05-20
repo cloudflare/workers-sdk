@@ -14,19 +14,43 @@ import { readdirSync } from "fs";
 // Get a list of e2e test files, each of which should have an associated script
 const e2eTests = readdirSync("packages/wrangler/e2e");
 
-const tasks = new Set<string>();
+const tasks = new Map<string, string>();
 
 for (const file of e2eTests) {
 	// Ignore other files in the e2e directory (the README, for instance)
 	if (file.endsWith(".test.ts")) {
-		tasks.add(
+		tasks.set(
+			file,
 			`pnpm test:e2e --log-order=stream --output-logs=new-only --summarize --filter wrangler --concurrency 1 -- run ./e2e/${file}`
 		);
 	}
 }
 
-for (const task of tasks.values()) {
-	execSync(task, {
-		stdio: "inherit",
-	});
+const failed: string[] = [];
+
+for (const [file, task] of tasks.entries()) {
+	console.log("::group::Testing: " + file);
+	try {
+		execSync(task, {
+			stdio: "inherit",
+		});
+	} catch {
+		console.error("Task failed - retrying");
+		try {
+			execSync(task, {
+				stdio: "inherit",
+			});
+		} catch (e) {
+			console.error("Still failed, moving on");
+			failed.push(file);
+		}
+	}
+	console.log("::endgroup::");
+}
+
+if (failed.length > 0) {
+	throw new Error(
+		"At least one task failed (even on retry):" +
+			failed.map((file) => `\n - ${file}`)
+	);
 }

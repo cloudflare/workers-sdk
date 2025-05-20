@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import * as vite from "vite";
-import { INIT_PATH, UNKNOWN_HOST } from "./shared";
+import { isNodeCompat } from "./node-js-compat";
+import { INIT_PATH, UNKNOWN_HOST, VITE_DEV_METADATA_HEADER } from "./shared";
 import { getOutputDirectory } from "./utils";
 import type { ResolvedPluginConfig, WorkerConfig } from "./plugin-config";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
@@ -85,13 +86,21 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		this.#webSocketContainer = webSocketContainer;
 	}
 
-	async initRunner(worker: ReplaceWorkersTypes<Fetcher>) {
+	async initRunner(
+		worker: ReplaceWorkersTypes<Fetcher>,
+		root: string,
+		workerConfig: WorkerConfig
+	) {
 		this.#worker = worker;
 
 		const response = await this.#worker.fetch(
 			new URL(INIT_PATH, UNKNOWN_HOST),
 			{
 				headers: {
+					[VITE_DEV_METADATA_HEADER]: JSON.stringify({
+						root,
+						entryPath: workerConfig.main,
+					}),
 					upgrade: "websocket",
 				},
 			}
@@ -111,7 +120,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 	}
 }
 
-const cloudflareBuiltInModules = [
+export const cloudflareBuiltInModules = [
 	"cloudflare:email",
 	"cloudflare:sockets",
 	"cloudflare:workers",
@@ -119,6 +128,7 @@ const cloudflareBuiltInModules = [
 ];
 
 const defaultConditions = ["workerd", "module", "browser"];
+const target = "es2022";
 
 export function createCloudflareEnvironmentOptions(
 	workerConfig: WorkerConfig,
@@ -144,7 +154,7 @@ export function createCloudflareEnvironmentOptions(
 			createEnvironment(name, config) {
 				return new vite.BuildEnvironment(name, config);
 			},
-			target: "es2022",
+			target,
 			// We need to enable `emitAssets` in order to support additional modules defined by `rules`
 			emitAssets: true,
 			outDir: getOutputDirectory(userConfig, environmentName),
@@ -165,6 +175,7 @@ export function createCloudflareEnvironmentOptions(
 			exclude: [...cloudflareBuiltInModules],
 			esbuildOptions: {
 				platform: "neutral",
+				target,
 				conditions: [...defaultConditions, "development"],
 				resolveExtensions: [
 					".mjs",
@@ -180,7 +191,8 @@ export function createCloudflareEnvironmentOptions(
 				],
 			},
 		},
-		keepProcessEnv: false,
+		// if nodeCompat is enabled then let's keep the real process.env so that workerd can manipulate it
+		keepProcessEnv: isNodeCompat(workerConfig),
 	};
 }
 
@@ -202,7 +214,7 @@ export function initRunners(
 					viteDevServer.environments[
 						environmentName
 					] as CloudflareDevEnvironment
-				).initRunner(worker);
+				).initRunner(worker, viteDevServer.config.root, workerConfig);
 			}
 		)
 	);

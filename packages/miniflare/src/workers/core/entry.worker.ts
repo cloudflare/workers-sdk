@@ -11,8 +11,10 @@ import {
 import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
 import { isCompressedByCloudflareFL } from "../../shared/mime-types";
 import { CoreBindings, CoreHeaders } from "./constants";
+import { handleEmail } from "./email";
 import { STATUS_CODES } from "./http";
 import { matchRoutes, WorkerRoute } from "./routing";
+import { handleScheduled } from "./scheduled";
 
 type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
@@ -25,6 +27,8 @@ type Env = {
 	[CoreBindings.DATA_LIVE_RELOAD_SCRIPT]?: ArrayBuffer;
 	[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY]: DurableObjectNamespace;
 	[CoreBindings.DATA_PROXY_SHARED_SECRET]?: ArrayBuffer;
+	[CoreBindings.TRIGGER_HANDLERS]: boolean;
+	[CoreBindings.LOG_REQUESTS]: boolean;
 } & {
 	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
 		| Fetcher
@@ -32,7 +36,6 @@ type Env = {
 };
 
 const encoder = new TextEncoder();
-
 function getUserRequest(
 	request: Request<unknown, IncomingRequestCfProperties>,
 	env: Env,
@@ -94,6 +97,14 @@ function getUserRequest(
 	// `Accept-Encoding` is always set to "br, gzip" in Workers:
 	// https://developers.cloudflare.com/fundamentals/reference/http-request-headers/#accept-encoding
 	request.headers.set("Accept-Encoding", "br, gzip");
+
+	// `miniflare.dispatchFetch(request)` strips any `sec-fetch-mode` header. This allows clients to
+	// send it over a `x-mf-sec-fetch-mode` header instead (currently required by `vite preview`)
+	const secFetchMode = request.headers.get("X-Mf-Sec-Fetch-Mode");
+	if (secFetchMode) {
+		request.headers.set("Sec-Fetch-Mode", secFetchMode);
+	}
+	request.headers.delete("X-Mf-Sec-Fetch-Mode");
 
 	if (rewriteHeadersFromOriginalUrl) {
 		request.headers.set("Host", url.host);
@@ -289,14 +300,22 @@ function colourFromHTTPStatus(status: number): Colorize {
 	return blue;
 }
 
+const ADDITIONAL_RESPONSE_LOG_HEADER_NAME = "X-Mf-Additional-Response-Log";
+
 function maybeLogRequest(
 	req: Request,
 	res: Response,
 	env: Env,
 	ctx: ExecutionContext,
 	startTime: number
-) {
-	if (env[CoreBindings.JSON_LOG_LEVEL] < LogLevel.INFO) return;
+): Response {
+	res = new Response(res.body, res); // Ensure mutable headers
+	const additionalResponseLog = res.headers.get(
+		ADDITIONAL_RESPONSE_LOG_HEADER_NAME
+	);
+	res.headers.delete(ADDITIONAL_RESPONSE_LOG_HEADER_NAME);
+
+	if (env[CoreBindings.JSON_LOG_LEVEL] < LogLevel.INFO) return res;
 
 	const url = new URL(req.url);
 	const statusText = (res.statusText.trim() || STATUS_CODES[res.status]) ?? "";
@@ -305,6 +324,9 @@ function maybeLogRequest(
 		colourFromHTTPStatus(res.status)(`${bold(res.status)} ${statusText} `),
 		grey(`(${Date.now() - startTime}ms)`),
 	];
+	if (additionalResponseLog) {
+		lines.push(` ${grey(additionalResponseLog)}`);
+	}
 	const message = reset(lines.join(""));
 
 	ctx.waitUntil(
@@ -314,6 +336,8 @@ function maybeLogRequest(
 			body: message,
 		})
 	);
+
+	return res;
 }
 
 function handleProxy(request: Request, env: Env) {
@@ -323,24 +347,6 @@ function handleProxy(request: Request, env: Env) {
 	const id = ns.idFromName("");
 	const stub = ns.get(id);
 	return stub.fetch(request);
-}
-
-async function handleScheduled(
-	params: URLSearchParams,
-	service: Fetcher
-): Promise<Response> {
-	const time = params.get("time");
-	const scheduledTime = time ? new Date(parseInt(time)) : undefined;
-	const cron = params.get("cron") ?? undefined;
-
-	const result = await service.scheduled({
-		scheduledTime,
-		cron,
-	});
-
-	return new Response(result.outcome, {
-		status: result.outcome === "ok" ? 200 : 500,
-	});
 }
 
 export default <ExportedHandler<Env>>{
@@ -390,8 +396,37 @@ export default <ExportedHandler<Env>>{
 		}
 
 		try {
-			if (url.pathname === "/cdn-cgi/mf/scheduled") {
-				return await handleScheduled(url.searchParams, service);
+			if (env[CoreBindings.TRIGGER_HANDLERS]) {
+				if (
+					url.pathname === "/cdn-cgi/handler/scheduled" ||
+					/* legacy URL path */ url.pathname === "/cdn-cgi/mf/scheduled"
+				) {
+					if (url.pathname === "/cdn-cgi/mf/scheduled") {
+						ctx.waitUntil(
+							env[CoreBindings.SERVICE_LOOPBACK].fetch(
+								"http://localhost/core/log",
+								{
+									method: "POST",
+									headers: {
+										[SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString(),
+									},
+									body: `Triggering scheduled handlers via a request to \`/cdn-cgi/mf/scheduled\` is deprecated, and will be removed in a future version of Miniflare. Instead, send a request to \`/cdn-cgi/handler/scheduled\``,
+								}
+							)
+						);
+					}
+					return await handleScheduled(url.searchParams, service);
+				}
+
+				if (url.pathname === "/cdn-cgi/handler/email") {
+					return await handleEmail(
+						url.searchParams,
+						request,
+						service,
+						env,
+						ctx
+					);
+				}
 			}
 
 			let response = await service.fetch(request);
@@ -400,7 +435,9 @@ export default <ExportedHandler<Env>>{
 			}
 			response = maybeInjectLiveReload(response, env, ctx);
 			response = ensureAcceptableEncoding(clientAcceptEncoding, response);
-			maybeLogRequest(request, response, env, ctx, startTime);
+			if (env[CoreBindings.LOG_REQUESTS]) {
+				response = maybeLogRequest(request, response, env, ctx, startTime);
+			}
 			return response;
 		} catch (e: any) {
 			return new Response(e?.stack ?? String(e), { status: 500 });

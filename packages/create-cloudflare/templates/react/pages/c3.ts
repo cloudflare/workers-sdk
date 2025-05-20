@@ -47,12 +47,15 @@ const config: TemplateConfig = {
 	frameworkCli: "create-vite",
 	displayName: "React",
 	platform: "pages",
+	hidden: true,
 	path: "templates/react/pages",
+	copyFiles: { path: "./templates" },
 	generate,
 	transformPackageJson: async () => ({
 		scripts: {
-			deploy: `${npm} run build && wrangler pages deploy ./dist`,
-			preview: `${npm} run build && wrangler pages dev ./dist`,
+			deploy: `${npm} run build && wrangler pages deploy`,
+			preview: `${npm} run build && wrangler pages dev`,
+			"cf-typegen": `wrangler types`,
 		},
 	}),
 	devScript: "dev",

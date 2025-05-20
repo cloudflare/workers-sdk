@@ -2,6 +2,7 @@ import { ParseError } from "../parse";
 
 export interface FetchError {
 	code: number;
+	documentation_url?: string;
 	message: string;
 	error_chain?: FetchError[];
 }

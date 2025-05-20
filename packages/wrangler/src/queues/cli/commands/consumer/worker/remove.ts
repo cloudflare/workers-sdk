@@ -1,31 +1,34 @@
-import { readConfig } from "../../../../../config";
+import { createCommand } from "../../../../../core/create-command";
 import { logger } from "../../../../../logger";
 import { deleteWorkerConsumer } from "../../../../client";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../../../../../yargs-types";
 
-export function options(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("queue-name", {
+export const queuesConsumerRemoveCommand = createCommand({
+	metadata: {
+		description: "Remove a Queue Worker Consumer",
+		owner: "Product: Queues",
+		status: "stable",
+	},
+	args: {
+		"queue-name": {
 			type: "string",
 			demandOption: true,
 			description: "Name of the queue to configure",
-		})
-		.positional("script-name", {
+		},
+		"script-name": {
 			type: "string",
 			demandOption: true,
 			description: "Name of the consumer script",
-		});
-}
-
-export async function handler(
-	args: StrictYargsOptionsToInterface<typeof options>
-) {
-	const config = readConfig(args);
-
-	logger.log(`Removing consumer from queue ${args.queueName}.`);
-	await deleteWorkerConsumer(config, args.queueName, args.scriptName, args.env);
-	logger.log(`Removed consumer from queue ${args.queueName}.`);
-}
+		},
+	},
+	positionalArgs: ["queue-name", "script-name"],
+	async handler(args, { config }) {
+		logger.log(`Removing consumer from queue ${args.queueName}.`);
+		await deleteWorkerConsumer(
+			config,
+			args.queueName,
+			args.scriptName,
+			args.env
+		);
+		logger.log(`Removed consumer from queue ${args.queueName}.`);
+	},
+});

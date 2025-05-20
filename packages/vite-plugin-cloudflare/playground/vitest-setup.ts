@@ -96,7 +96,8 @@ beforeAll(async (s) => {
 	}
 
 	browser = await chromium.connect(wsEndpoint);
-	page = await browser.newPage();
+	// `@vitejs/plugin-basic-ssl` requires a manual confirmation step in the browser so we enable `ignoreHTTPSErrors` to bypass this
+	page = await browser.newPage({ ignoreHTTPSErrors: true });
 
 	const globalConsole = console;
 	const warn = globalConsole.warn;
@@ -153,6 +154,7 @@ beforeAll(async (s) => {
 				if (serve) {
 					server = (await serve()) ?? server;
 					viteServer = mod.viteServer ?? viteServer;
+					viteTestUrl = mod.viteTestUrl ?? viteTestUrl;
 				}
 			} else {
 				await startDefaultServe();
@@ -184,7 +186,7 @@ beforeEach(async () => {
 	await page.goto(viteTestUrl);
 });
 
-async function loadConfig(configEnv: ConfigEnv) {
+export async function loadConfig(configEnv: ConfigEnv) {
 	let config: UserConfig | null = null;
 	let cacheDir = "node_modules/.vite";
 

@@ -10,7 +10,7 @@ export default defineWorkersProject({
 				// https://developers.cloudflare.com/workers/wrangler/bundling/#files-which-will-not-be-bundled
 				// for more information.
 				wrangler: {
-					configPath: "./wrangler.toml",
+					configPath: "./wrangler.jsonc",
 				},
 			},
 		},

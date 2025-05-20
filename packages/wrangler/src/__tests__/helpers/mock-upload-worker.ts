@@ -39,15 +39,13 @@ export function mockUploadWorkerRequest(
 		useOldUploadApi?: boolean;
 		expectedObservability?: CfWorkerInit["observability"];
 		expectedSettingsPatch?: Partial<NonVersionedScriptSettings>;
+		expectedContainers?: { class_name: string }[];
 	} = {}
 ) {
-	const expectedScriptName = (options.expectedScriptName ??= "test-name");
 	const handleUpload: HttpResponseResolver = async ({ params, request }) => {
 		const url = new URL(request.url);
 		expect(params.accountId).toEqual("some-account-id");
-		expect(params.scriptName).toEqual(
-			legacyEnv && env ? `${expectedScriptName}-${env}` : expectedScriptName
-		);
+		expect(params.scriptName).toEqual(expectedScriptName);
 		if (!legacyEnv) {
 			expect(params.envName).toEqual(env);
 		}
@@ -117,6 +115,10 @@ export function mockUploadWorkerRequest(
 		if ("expectedObservability" in options) {
 			expect(metadata.observability).toEqual(expectedObservability);
 		}
+		if ("expectedContainers" in options) {
+			expect(metadata.containers).toEqual(expectedContainers);
+		}
+
 		if (expectedUnsafeMetaData !== undefined) {
 			Object.keys(expectedUnsafeMetaData).forEach((key) => {
 				expect(metadata[key]).toEqual(expectedUnsafeMetaData[key]);
@@ -172,6 +174,7 @@ export function mockUploadWorkerRequest(
 		expectedUnsafeMetaData,
 		expectedCapnpSchema,
 		expectedLimits,
+		expectedContainers,
 		keepVars,
 		keepSecrets,
 		expectedDispatchNamespace,
@@ -179,6 +182,11 @@ export function mockUploadWorkerRequest(
 		expectedObservability,
 		expectedSettingsPatch,
 	} = options;
+
+	const expectedScriptName =
+		options.expectedScriptName ??
+		"test-name" + (legacyEnv && env ? `-${env}` : "");
+
 	if (env && !legacyEnv) {
 		msw.use(
 			http.put(

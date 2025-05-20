@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/unenv-preset",
-	"version": "2.0.0",
+	"version": "2.3.2",
 	"description": "cloudflare preset for unenv",
 	"keywords": [
 		"cloudflare",
@@ -45,7 +45,7 @@
 		"test:watch": "vitest"
 	},
 	"devDependencies": {
-		"@types/node-unenv": "npm:@types/node@^22.13.1",
+		"@types/node-unenv": "npm:@types/node@^22.14.0",
 		"typescript": "catalog:default",
 		"unbuild": "^3.2.0",
 		"undici": "catalog:default",
@@ -53,8 +53,8 @@
 		"wrangler": "workspace:*"
 	},
 	"peerDependencies": {
-		"unenv": "2.0.0-rc.8",
-		"workerd": "^1.20250124.0"
+		"unenv": "2.0.0-rc.17",
+		"workerd": "^1.20250508.0"
 	},
 	"peerDependenciesMeta": {
 		"workerd": {

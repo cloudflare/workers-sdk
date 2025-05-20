@@ -1,6 +1,6 @@
 import { SELF } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { applyConfigurationDefaults } from "../../packages/workers-shared/asset-worker/src/configuration";
+import { normalizeConfiguration } from "../../packages/workers-shared/asset-worker/src/configuration";
 import Worker from "../../packages/workers-shared/asset-worker/src/index";
 import { getAssetWithMetadataFromKV } from "../../packages/workers-shared/asset-worker/src/utils/kv";
 import type { AssetMetadata } from "../../packages/workers-shared/asset-worker/src/utils/kv";
@@ -15,6 +15,7 @@ const existsMock = (fileList: Set<string>) => {
 			if (fileList.has(pathname)) {
 				return pathname;
 			}
+			return null;
 		}
 	);
 };
@@ -41,8 +42,8 @@ describe("[Asset Worker] `test location rewrite`", () => {
 			await vi.importActual<
 				typeof import("../../packages/workers-shared/asset-worker/src/configuration")
 			>("../../packages/workers-shared/asset-worker/src/configuration")
-		).applyConfigurationDefaults;
-		vi.mocked(applyConfigurationDefaults).mockImplementation(() => ({
+		).normalizeConfiguration;
+		vi.mocked(normalizeConfiguration).mockImplementation(() => ({
 			...originalApplyConfigurationDefaults({}),
 			html_handling: "none",
 			not_found_handling: "none",

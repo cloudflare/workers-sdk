@@ -4,7 +4,7 @@ import { logger } from "./logger";
 export type ExperimentalFlags = {
 	MULTIWORKER: boolean;
 	RESOURCES_PROVISION: boolean;
-	ASSETS_RPC: boolean;
+	MIXED_MODE: boolean;
 };
 
 const flags = new AsyncLocalStorage<ExperimentalFlags>();

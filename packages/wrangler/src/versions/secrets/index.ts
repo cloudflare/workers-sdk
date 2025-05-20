@@ -232,7 +232,7 @@ async function parseModules(
 		// Workers Sites is not supported
 		if (formData.get("__STATIC_CONTENT_MANIFEST") !== null) {
 			throw new UserError(
-				"Workers Sites and legacy assets do not support updating secrets through `wrangler versions secret put`. You must use `wrangler secret put` instead."
+				"Workers Sites does not support updating secrets through `wrangler versions secret put`. You must use `wrangler secret put` instead."
 			);
 		}
 

@@ -11,7 +11,7 @@ import type {
 } from "../../utils/types";
 import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
 
-interface Env {
+export interface Env {
 	ASSET_WORKER: Service<AssetWorker>;
 	USER_WORKER: Fetcher;
 	CONFIG: RouterConfig;
@@ -129,7 +129,7 @@ export default {
 			if (userWorkerInvocation) {
 				// Don't send user Worker errors to sentry; we have no way to distinguish between
 				// CF errors and errors from the user's code.
-				return;
+				throw err;
 			} else if (err instanceof Error) {
 				analytics.setData({ error: err.message });
 			}

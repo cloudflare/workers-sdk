@@ -1,9 +1,11 @@
+import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { defaultWranglerConfig } from "../config/config";
 import { FatalError, UserError } from "../errors";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
+import { isLocal, printResourceLocation } from "../utils/is-local";
 import { printWranglerBanner } from "../wrangler-banner";
 import { demandSingleValue } from "./helpers";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
@@ -13,6 +15,7 @@ import type {
 	InternalDefinition,
 	NamedArgDefinitions,
 } from "./types";
+import type { PositionalOptions } from "yargs";
 
 /**
  * Creates a function for registering commands using Yargs.
@@ -33,20 +36,50 @@ export function createRegisterYargsCommand(
 				if (def.type === "command") {
 					const args = def.args ?? {};
 
-					yargs.options(args);
+					const positionalArgs = new Set(def.positionalArgs);
+
+					const nonPositional = Object.fromEntries(
+						Object.entries(args)
+							.filter(([key]) => !positionalArgs.has(key))
+							.map(([name, opts]) => [
+								name,
+								{
+									...opts,
+									group: "group" in opts ? chalk.bold(opts.group) : undefined,
+								},
+							])
+					);
+
+					subYargs
+						.options(nonPositional)
+						.epilogue(def.metadata?.epilogue ?? "")
+						.example(
+							def.metadata.examples?.map((ex) => [
+								ex.command,
+								ex.description,
+							]) ?? []
+						);
+
+					for (const hide of def.metadata.hideGlobalFlags ?? []) {
+						subYargs.hide(hide);
+					}
 
 					// Ensure non-array arguments receive a single value
 					for (const [key, opt] of Object.entries(args)) {
-						if (!opt.array) {
-							yargs.check(demandSingleValue(key));
+						if (!opt.array && opt.type !== "array") {
+							subYargs.check(demandSingleValue(key));
 						}
 					}
 
 					// Register positional arguments
 					for (const key of def.positionalArgs ?? []) {
-						yargs.positional(key, args[key]);
+						subYargs.positional(key, args[key] as PositionalOptions);
 					}
 				} else if (def.type === "namespace") {
+					for (const hide of def.metadata.hideGlobalFlags ?? []) {
+						subYargs.hide(hide);
+					}
+
 					// Hacky way to print --help for incomplete commands
 					// e.g. `wrangler kv namespace` runs `wrangler kv namespace --help`
 					subYargs.command(subHelp);
@@ -90,12 +123,38 @@ function createHandler(def: CommandDefinition) {
 			// TODO(telemetry): send command started event
 
 			await def.validateArgs?.(args);
+
+			const shouldPrintResourceLocation =
+				typeof def.behaviour?.printResourceLocation === "function"
+					? def.behaviour?.printResourceLocation(args)
+					: def.behaviour?.printResourceLocation;
+			if (shouldPrintResourceLocation) {
+				// we don't have the type of args here :(
+				const remote =
+					"remote" in args && typeof args.remote === "boolean"
+						? args.remote
+						: undefined;
+				const local =
+					"local" in args && typeof args.local === "boolean"
+						? args.local
+						: undefined;
+				const resourceIsLocal = isLocal({ remote, local });
+				if (resourceIsLocal) {
+					printResourceLocation("local");
+					logger.log(
+						`Use --remote if you want to access the remote instance.\n`
+					);
+				} else {
+					printResourceLocation("remote");
+				}
+			}
+
 			const experimentalFlags = def.behaviour?.overrideExperimentalFlags
 				? def.behaviour?.overrideExperimentalFlags(args)
 				: {
 						MULTIWORKER: false,
 						RESOURCES_PROVISION: args.experimentalProvision ?? false,
-						ASSETS_RPC: false,
+						MIXED_MODE: args.experimentalMixedMode ?? false,
 					};
 
 			await run(experimentalFlags, () =>

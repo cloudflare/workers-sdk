@@ -22,11 +22,9 @@ export interface Unstable_DevOptions {
 	httpsKeyPath?: string;
 	httpsCertPath?: string;
 	assets?: string; // Static assets to be served
-	legacyAssets?: string; // Static assets to be served
 	site?: string; // Root folder of static assets for Workers Sites
 	siteInclude?: string[]; // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.
 	siteExclude?: string[]; // Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.
-	nodeCompat?: boolean; // Enable Node.js compatibility
 	compatibilityDate?: string; // Date to use for compatibility checks
 	compatibilityFlags?: string[]; // Flags to use for compatibility checks
 	persist?: boolean; // Enable persistence for local mode, using default path: .wrangler/state
@@ -36,6 +34,7 @@ export interface Unstable_DevOptions {
 		binding: string;
 		id?: string;
 		preview_id?: string;
+		remote?: boolean;
 	}[];
 	durableObjects?: {
 		name: string;
@@ -48,11 +47,13 @@ export interface Unstable_DevOptions {
 		service: string;
 		environment?: string | undefined;
 		entrypoint?: string | undefined;
+		remote?: boolean;
 	}[];
 	r2?: {
 		binding: string;
 		bucket_name?: string;
 		preview_bucket_name?: string;
+		remote?: boolean;
 	}[];
 	ai?: {
 		binding: string;
@@ -164,7 +165,6 @@ export async function unstable_dev(
 		$0: "",
 		remote: !local,
 		local: undefined,
-		experimentalLocal: undefined,
 		d1Databases,
 		disableDevRegistry,
 		testScheduled: testScheduled ?? false,
@@ -190,21 +190,17 @@ export async function unstable_dev(
 		httpsKeyPath: options?.httpsKeyPath,
 		httpsCertPath: options?.httpsCertPath,
 		assets: undefined,
-		legacyAssets: options?.legacyAssets,
 		site: options?.site, // Root folder of static assets for Workers Sites
 		siteInclude: options?.siteInclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Only matched items will be uploaded.
 		siteExclude: options?.siteExclude, // Array of .gitignore-style patterns that match file or directory names from the sites directory. Matched items will not be uploaded.
-		nodeCompat: options?.nodeCompat, // Enable Node.js compatibility
 		persist: options?.persist, // Enable persistence for local mode, using default path: .wrangler/state
 		persistTo: options?.persistTo, // Specify directory to use for local persistence (implies --persist)
 		name: undefined,
 		noBundle: false,
-		format: undefined,
 		latest: false,
 		routes: undefined,
 		host: undefined,
 		localUpstream: undefined,
-		experimentalPublic: undefined,
 		upstreamProtocol: undefined,
 		var: undefined,
 		define: undefined,
@@ -213,17 +209,16 @@ export async function unstable_dev(
 		jsxFragment: undefined,
 		tsconfig: undefined,
 		minify: undefined,
-		experimentalEnableLocalPersistence: undefined,
 		legacyEnv: undefined,
-		public: undefined,
 		...options,
 		logLevel: options?.logLevel ?? defaultLogLevel,
 		port: options?.port ?? 0,
 		experimentalProvision: undefined,
+		experimentalMixedMode: false,
 		experimentalVectorizeBindToProd: vectorizeBindToProd ?? false,
 		experimentalImagesLocalMode: imagesLocalMode ?? false,
 		enableIpc: options?.experimental?.enableIpc,
-		experimentalAssetsRpc: false,
+		nodeCompat: undefined,
 	};
 
 	//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
@@ -232,7 +227,7 @@ export async function unstable_dev(
 			// TODO: can we make this work?
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: false,
-			ASSETS_RPC: false,
+			MIXED_MODE: false,
 		},
 		() => startDev(devOptions)
 	);

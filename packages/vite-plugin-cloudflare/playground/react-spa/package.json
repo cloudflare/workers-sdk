@@ -15,12 +15,12 @@
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250224.0",
+		"@cloudflare/workers-types": "^4.20250508.0",
 		"@types/react": "^19.0.0",
 		"@types/react-dom": "^19.0.0",
 		"@vitejs/plugin-react": "^4.3.4",
 		"typescript": "catalog:default",
 		"vite": "catalog:vite-plugin",
-		"wrangler": "catalog:vite-plugin"
+		"wrangler": "workspace:*"
 	}
 }

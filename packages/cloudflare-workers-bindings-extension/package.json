@@ -121,7 +121,7 @@
 		"@typescript-eslint/parser": "^7.11.0",
 		"@vscode/test-electron": "^2.4.1",
 		"concurrently": "^8.2.2",
-		"esbuild": "^0.21.5",
+		"esbuild": "catalog:default",
 		"eslint": "^8.57.1",
 		"glob": "^7.1.4",
 		"mocha": "^10.2.0",

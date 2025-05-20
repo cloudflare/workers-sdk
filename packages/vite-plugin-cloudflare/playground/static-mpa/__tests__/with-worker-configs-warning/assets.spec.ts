@@ -9,7 +9,7 @@ test("a worker configs warning is present in the terminal", async () => {
 	 */
 	expect(serverLogs.warns).toEqual([
 		expect.stringMatching(
-			/your worker config \(at `.*?wrangler.with-warning.toml`\) contains the following configuration options which are ignored since they are not applicable when using Vite:[\s\S]+preserve_file_names/
+			/your worker config \(at `.*?wrangler.with-warning.jsonc`\) contains the following configuration options which are ignored since they are not applicable when using Vite:[\s\S]+preserve_file_names/
 		),
 	]);
 });

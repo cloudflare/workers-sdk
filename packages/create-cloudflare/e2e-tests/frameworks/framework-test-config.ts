@@ -3,9 +3,25 @@ import { keys, LONG_TIMEOUT } from "../helpers";
 // These are ordered based on speed and reliability for ease of debugging
 export default function getFrameworkTestConfig(pm: string) {
 	return {
-		astro: {
+		"react-router": {
+			unsupportedOSs: ["win32"],
 			testCommitMessage: true,
-			quarantine: true,
+			timeout: LONG_TIMEOUT,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Hello from Cloudflare",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Hello from Cloudflare",
+				previewArgs: ["--host=127.0.0.1"],
+			},
+			nodeCompat: false,
+			flags: ["--no-install", "--no-git-init"],
+		},
+		"astro:pages": {
+			argv: ["--platform", "pages"],
+			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
 				route: "/",
@@ -21,6 +37,36 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
+			nodeCompat: true,
+			flags: [
+				"--skip-houston",
+				"--no-install",
+				"--no-git",
+				"--template",
+				"blog",
+				"--typescript",
+				"strict",
+			],
+		},
+		"astro:workers": {
+			argv: ["--platform", "workers"],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Hello, Astronaut!",
+			},
+			verifyPreview: {
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			verifyBuild: {
+				outputDir: "./dist",
+				script: "build",
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			nodeCompat: true,
 			flags: [
 				"--skip-houston",
 				"--no-install",
@@ -45,6 +91,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Dinosaurs are cool",
 			},
+			nodeCompat: false,
 			flags: [`--package-manager`, pm],
 			promptHandlers: [
 				// {
@@ -71,6 +118,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Dinosaurs are cool",
 			},
+			nodeCompat: false,
 			flags: [`--package-manager`, pm],
 			promptHandlers: [
 				{
@@ -95,19 +143,17 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/api/v1/test",
 				expectedText: "C3_TEST",
 			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
 			verifyBuild: {
 				outputDir: "./dist/analog/public",
 				script: "build",
 				route: "/api/v1/test",
 				expectedText: "C3_TEST",
 			},
+			nodeCompat: false,
 			flags: ["--skipTailwind"],
 		},
-		angular: {
+		"angular:pages": {
+			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
@@ -120,9 +166,28 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Congratulations! Your app is running.",
 			},
+			nodeCompat: false,
 			flags: ["--style", "sass"],
 		},
-		gatsby: {
+		"angular:workers": {
+			argv: ["--platform", "workers"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			unsupportedPms: ["bun"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Congratulations! Your app is running.",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Congratulations! Your app is running.",
+			},
+			nodeCompat: false,
+			flags: ["--style", "sass"],
+		},
+		"gatsby:pages": {
+			argv: ["--platform", "pages"],
 			unsupportedPms: ["bun", "pnpm"],
 			promptHandlers: [
 				{
@@ -140,18 +205,42 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Gatsby!",
 			},
+			nodeCompat: false,
 		},
-		hono: {
+		"gatsby:workers": {
+			argv: ["--platform", "workers"],
+			unsupportedPms: ["bun", "pnpm"],
+			promptHandlers: [
+				{
+					matcher: /Would you like to use a template\?/,
+					input: ["n"],
+				},
+			],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Gatsby!",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Gatsby!",
+			},
+			nodeCompat: false,
+		},
+		"hono:pages": {
+			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
 				route: "/",
-				expectedText: "Hello Hono!",
+				expectedText: "Hello!",
 			},
 			verifyPreview: {
 				route: "/",
-				expectedText: "Hello Hono!",
+				expectedText: "Hello!",
 			},
+			nodeCompat: false,
 			promptHandlers: [
 				{
 					matcher: /Do you want to install project dependencies\?/,
@@ -159,7 +248,28 @@ export default function getFrameworkTestConfig(pm: string) {
 				},
 			],
 		},
-		qwik: {
+		"hono:workers": {
+			argv: ["--platform", "workers"],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/message",
+				expectedText: "Hello Hono!",
+			},
+			verifyPreview: {
+				route: "/message",
+				expectedText: "Hello Hono!",
+			},
+			nodeCompat: false,
+			promptHandlers: [
+				{
+					matcher: /Do you want to install project dependencies\?/,
+					input: [keys.enter],
+				},
+			],
+		},
+		"qwik:pages": {
+			argv: ["--platform", "pages"],
 			promptHandlers: [
 				{
 					matcher: /Yes looks good, finish update/,
@@ -177,12 +287,32 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Welcome to Qwik",
 			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
+			nodeCompat: true,
 		},
-		remix: {
+		"qwik:workers": {
+			argv: ["--platform", "workers"],
+			promptHandlers: [
+				{
+					matcher: /Yes looks good, finish update/,
+					input: [keys.enter],
+				},
+			],
+			flags: [],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			unsupportedPms: ["yarn"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Welcome to Qwik",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Welcome to Qwik",
+			},
+			nodeCompat: true,
+		},
+		"remix:pages": {
+			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedPms: ["yarn"],
@@ -195,30 +325,36 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
 			verifyBuild: {
 				outputDir: "./build/client",
 				script: "build",
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
+			nodeCompat: false,
 			flags: ["--typescript", "--no-install", "--no-git-init"],
 		},
-		next: {
-			promptHandlers: [
-				{
-					matcher: /Do you want to use the next-on-pages eslint-plugin\?/,
-					input: ["y"],
-				},
-			],
+		"remix:workers": {
+			argv: ["--platform", "workers"],
 			testCommitMessage: true,
-			verifyBuildCfTypes: {
-				outputFile: "env.d.ts",
-				envInterfaceName: "CloudflareEnv",
+			timeout: LONG_TIMEOUT,
+			unsupportedPms: ["yarn"],
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Welcome to Remix",
 			},
+			verifyPreview: {
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			nodeCompat: false,
+			flags: ["--typescript", "--no-install", "--no-git-init"],
+		},
+		"next:pages": {
+			argv: ["--platform", "pages"],
+			timeout: LONG_TIMEOUT,
+			testCommitMessage: true,
 			verifyDeploy: {
 				route: "/",
 				expectedText: "Create Next App",
@@ -229,19 +365,68 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Create Next App",
 			},
-			flags: [
-				"--typescript",
-				"--no-install",
-				"--eslint",
-				"--tailwind",
-				"--src-dir",
-				"--app",
-				"--turbopack",
-				"--import-alias",
-				"@/*",
+			nodeCompat: true,
+			flags: ["--yes", "--no-install", "--import-alias", "@/*"],
+		},
+		"next:workers": {
+			argv: ["--platform", "workers"],
+			timeout: LONG_TIMEOUT,
+			testCommitMessage: true,
+			flags: ["--yes", "--import-alias", "@/*"],
+			verifyPreview: {
+				previewArgs: ["--"],
+				route: "/test",
+				expectedText: "Create Next App",
+			},
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Create Next App",
+			},
+			nodeCompat: true,
+			// see https://github.com/cloudflare/next-on-pages/blob/main/packages/next-on-pages/docs/supported.md#operating-systems
+			unsupportedOSs: ["win32"],
+			unsupportedPms: [
+				// bun and yarn are failing in CI
+				"bun",
+				"yarn",
 			],
 		},
-		nuxt: {
+		"nuxt:pages": {
+			promptHandlers: [
+				{
+					matcher: /Would you like to install any of the official modules\?/,
+					input: [keys.enter],
+				},
+			],
+			argv: ["--platform", "pages"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Welcome to Nuxt!",
+			},
+			nodeCompat: false,
+			verifyPreview: {
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			verifyBuild: {
+				outputDir: "./dist",
+				script: "build",
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+		},
+		"nuxt:workers": {
+			promptHandlers: [
+				{
+					matcher: /Would you like to install any of the official modules\?/,
+					input: [keys.enter],
+				},
+			],
+			argv: ["--platform", "workers"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedPms: ["yarn"], // Currently nitro requires youch which expects Node 20+, and yarn will fail hard since we run on Node 18
@@ -254,16 +439,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
-			verifyBuildCfTypes: {
-				outputFile: "worker-configuration.d.ts",
-				envInterfaceName: "Env",
-			},
-			verifyBuild: {
-				outputDir: "./dist",
-				script: "build",
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
+			nodeCompat: false,
 		},
 		"react:pages": {
 			argv: ["--platform", "pages"],
@@ -284,6 +460,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Vite + React",
 			},
+			nodeCompat: false,
 		},
 		"react:workers": {
 			argv: ["--platform", "workers"],
@@ -312,6 +489,7 @@ export default function getFrameworkTestConfig(pm: string) {
 				// not actually running the client side JS.
 				expectedText: "Vite + React + TS",
 			},
+			nodeCompat: false,
 		},
 		solid: {
 			promptHandlers: [
@@ -336,26 +514,17 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Hello world",
 			},
+			nodeCompat: true,
 		},
-		svelte: {
-			promptHandlers: [
-				{
-					matcher: /Which template would you like/,
-					input: [keys.enter],
-				},
-				{
-					matcher: /Add type checking with Typescript/,
-					input: [keys.down, keys.enter],
-				},
-				{
-					matcher: /What would you like to add to your project/,
-					input: [keys.enter],
-				},
-				{
-					matcher:
-						/Which package manager do you want to install dependencies with/,
-					input: [keys.enter],
-				},
+		"svelte:pages": {
+			argv: ["--platform", "pages"],
+			flags: [
+				"--no-install",
+				"--no-add-ons",
+				"--template",
+				"minimal",
+				"--types",
+				"ts",
 			],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
@@ -374,8 +543,33 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/test",
 				expectedText: "C3_TEST",
 			},
+			nodeCompat: false,
 		},
-		vue: {
+		"svelte:workers": {
+			argv: ["--platform", "workers"],
+			flags: [
+				"--no-install",
+				"--no-add-ons",
+				"--template",
+				"minimal",
+				"--types",
+				"ts",
+			],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			unsupportedPms: ["npm"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "SvelteKit app",
+			},
+			verifyPreview: {
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			nodeCompat: false,
+		},
+		"vue:pages": {
+			argv: ["--platform", "pages"],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
@@ -386,7 +580,23 @@ export default function getFrameworkTestConfig(pm: string) {
 				route: "/",
 				expectedText: "Vite App",
 			},
+			nodeCompat: false,
 			flags: ["--ts"],
+		},
+		"vue:workers": {
+			argv: ["--platform", "workers", "--ts"],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Vite App",
+			},
+			verifyPreview: {
+				previewArgs: ["--host=127.0.0.1"],
+				route: "/",
+				expectedText: "Vite App",
+			},
+			nodeCompat: false,
 		},
 	};
 }

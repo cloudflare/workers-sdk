@@ -1,78 +1,74 @@
 import { existsSync, lstatSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { createCommand } from "../core/create-command";
 import { FatalError } from "../errors";
 import { optimizeRoutesJSONSpec } from "./functions/routes-transformation";
 import { validateRoutes } from "./functions/routes-validation";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 
-type OptimizeRoutesArgs = StrictYargsOptionsToInterface<
-	typeof OptimizeRoutesOptions
->;
+export const pagesFunctionsOptimizeRoutesCommand = createCommand({
+	metadata: {
+		description:
+			"Consolidate and optimize route paths declared in _routes.json",
+		status: "stable",
+		owner: "Workers: Authoring and Testing",
+		hidden: true,
+	},
+	behaviour: {
+		provideConfig: false,
+	},
+	args: {
+		routesPath: {
+			type: "string",
+			demandOption: true,
+			description: "The location of the _routes.json file",
+		},
+		outputRoutesPath: {
+			type: "string",
+			demandOption: true,
+			description: "The location of the optimized output routes file",
+		},
+	},
+	async handler({ routesPath, outputRoutesPath }) {
+		let routesFileContents: string;
+		const routesOutputDirectory = path.dirname(outputRoutesPath);
 
-export function OptimizeRoutesOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.options({
-			"routes-path": {
-				type: "string",
-				demandOption: true,
-				description: "The location of the _routes.json file",
-			},
-		})
-		.options({
-			"output-routes-path": {
-				type: "string",
-				demandOption: true,
-				description: "The location of the optimized output routes file",
-			},
-		});
-}
+		if (!existsSync(routesPath)) {
+			throw new FatalError(
+				`Oops! File ${routesPath} does not exist. Please make sure --routes-path is a valid file path (for example "/public/_routes.json").`,
+				1
+			);
+		}
 
-export async function OptimizeRoutesHandler({
-	routesPath,
-	outputRoutesPath,
-}: OptimizeRoutesArgs) {
-	let routesFileContents: string;
-	const routesOutputDirectory = path.dirname(outputRoutesPath);
+		if (
+			!existsSync(routesOutputDirectory) ||
+			!lstatSync(routesOutputDirectory).isDirectory()
+		) {
+			throw new FatalError(
+				`Oops! Folder ${routesOutputDirectory} does not exist. Please make sure --output-routes-path is a valid file path (for example "/public/_routes.json").`,
+				1
+			);
+		}
 
-	if (!existsSync(routesPath)) {
-		throw new FatalError(
-			`Oops! File ${routesPath} does not exist. Please make sure --routes-path is a valid file path (for example "/public/_routes.json").`,
-			1
-		);
-	}
+		try {
+			routesFileContents = readFileSync(routesPath, "utf-8");
+		} catch (err) {
+			throw new FatalError(`Error while reading ${routesPath} file: ${err}`);
+		}
 
-	if (
-		!existsSync(routesOutputDirectory) ||
-		!lstatSync(routesOutputDirectory).isDirectory()
-	) {
-		throw new FatalError(
-			`Oops! Folder ${routesOutputDirectory} does not exist. Please make sure --output-routes-path is a valid file path (for example "/public/_routes.json").`,
-			1
-		);
-	}
+		const routes = JSON.parse(routesFileContents);
 
-	try {
-		routesFileContents = readFileSync(routesPath, "utf-8");
-	} catch (err) {
-		throw new FatalError(`Error while reading ${routesPath} file: ${err}`);
-	}
+		validateRoutes(routes, routesPath);
 
-	const routes = JSON.parse(routesFileContents);
+		const optimizedRoutes = optimizeRoutesJSONSpec(routes);
+		const optimizedRoutesContents = JSON.stringify(optimizedRoutes);
 
-	validateRoutes(routes, routesPath);
-
-	const optimizedRoutes = optimizeRoutesJSONSpec(routes);
-	const optimizedRoutesContents = JSON.stringify(optimizedRoutes);
-
-	try {
-		writeFileSync(outputRoutesPath, optimizedRoutesContents);
-	} catch (err) {
-		throw new FatalError(
-			`Error writing to ${outputRoutesPath} file: ${err}`,
-			1
-		);
-	}
-}
+		try {
+			writeFileSync(outputRoutesPath, optimizedRoutesContents);
+		} catch (err) {
+			throw new FatalError(
+				`Error writing to ${outputRoutesPath} file: ${err}`,
+				1
+			);
+		}
+	},
+});
