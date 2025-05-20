@@ -998,7 +998,7 @@ export class Miniflare {
 			} else if (url.pathname === "/browser/launch") {
 				// Version should be kept in sync with the supported version at https://github.com/cloudflare/puppeteer?tab=readme-ov-file#workers-version-of-puppeteer-core
 				const puppeteer = await npxImport(
-					"puppeteer@21.1.0",
+					"puppeteer@22.8.2",
 					this.#log.warn.bind(this.#log)
 				);
 

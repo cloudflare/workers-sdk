@@ -1,5 +1,6 @@
 import BROWSER_RENDERING_WORKER from "worker:browser-rendering/binding";
 import { z } from "zod";
+import { kVoid } from "../../runtime";
 import {
 	mixedModeClientWorker,
 	MixedModeConnectionString,
@@ -10,7 +11,7 @@ import {
 
 const BrowserRenderingSchema = z.object({
 	binding: z.string(),
-	mixedModeConnectionString: z.custom<MixedModeConnectionString>(),
+	mixedModeConnectionString: z.custom<MixedModeConnectionString>().optional(),
 });
 
 export const BrowserRenderingOptionsSchema = z.object({
@@ -28,24 +29,14 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 			return [];
 		}
 
-		return options.browserRendering.mixedModeConnectionString
-			? [
-					{
-						name: options.browserRendering.binding,
-						service: {
-							name: `${BROWSER_RENDERING_PLUGIN_NAME}:${options.browserRendering.binding}`,
-						},
-					},
-				]
-			: [
-					{
-						name: options.browserRendering.binding,
-						wrapped: {
-							moduleName: `browser:${workerIndex}`,
-							innerBindings: [WORKER_BINDING_SERVICE_LOOPBACK],
-						},
-					},
-				];
+		return [
+			{
+				name: options.browserRendering.binding,
+				service: {
+					name: `${BROWSER_RENDERING_PLUGIN_NAME}:${options.browserRendering.binding}`,
+				},
+			},
+		];
 	},
 	getNodeBindings(options: z.infer<typeof BrowserRenderingOptionsSchema>) {
 		if (!options.browserRendering) {
@@ -60,29 +51,39 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 			return [];
 		}
 
-		return options.browserRendering.mixedModeConnectionString
-			? [
-					{
-						name: `${BROWSER_RENDERING_PLUGIN_NAME}:${options.browserRendering.binding}`,
-						worker: mixedModeClientWorker(
+		return [
+			{
+				name: `${BROWSER_RENDERING_PLUGIN_NAME}:${options.browserRendering.binding}`,
+				worker: options.browserRendering.mixedModeConnectionString
+					? mixedModeClientWorker(
 							options.browserRendering.mixedModeConnectionString,
 							options.browserRendering.binding
-						),
-					},
-				]
-			: {
-					services: [],
-					extensions: [
-						{
+						)
+					: {
+							compatibilityDate: "2025-05-01",
 							modules: [
 								{
-									name: `browser:${workerIndex}`,
+									name: "index.worker.js",
 									esModule: BROWSER_RENDERING_WORKER(),
-									internal: true,
 								},
 							],
+							bindings: [
+								WORKER_BINDING_SERVICE_LOOPBACK,
+								{
+									name: "BrowserSession",
+									durableObjectNamespace: {
+										className: "BrowserSession",
+									},
+								},
+							],
+							durableObjectNamespaces: [
+								{
+									className: "BrowserSession",
+								},
+							],
+							durableObjectStorage: { inMemory: kVoid },
 						},
-					],
-				};
+			},
+		];
 	},
 };

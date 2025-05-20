@@ -22,7 +22,7 @@ test("it creates a browser session", async (t) => {
 		compatibilityDate: "2024-11-20",
 		modules: true,
 		script: BROWSER_WORKER_SCRIPT(),
-		browser: "MYBROWSER",
+		browserRendering: { binding: "MYBROWSER" },
 	};
 	const mf = new Miniflare(opts);
 	t.teardown(() => mf.dispose());
@@ -42,7 +42,7 @@ test("it opens a ws connection", async (t) => {
 		compatibilityDate: "2024-11-20",
 		modules: true,
 		script: BROWSER_WORKER_SCRIPT(),
-		browser: "MYBROWSER",
+		browserRendering: { binding: "MYBROWSER" },
 	};
 	const mf = new Miniflare(opts);
 	t.teardown(() => mf.dispose());

@@ -10,7 +10,7 @@
 		"test:ci": "vitest run"
 	},
 	"devDependencies": {
-		"@cloudflare/puppeteer": "^0.0.14",
+		"@cloudflare/puppeteer": "^1.0.2",
 		"@cloudflare/vitest-pool-workers": "^0.7.5",
 		"@types/node": "catalog:default",
 		"typescript": "^5.5.2",
