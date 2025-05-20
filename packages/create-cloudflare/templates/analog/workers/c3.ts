@@ -9,7 +9,7 @@ import * as recast from "recast";
 import type { TemplateConfig } from "../../../src/templates";
 import type { C3Context } from "types";
 
-const { npm } = detectPackageManager();
+const { npm, name: pm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [ctx.project.name, "--template", "latest"]);
@@ -18,7 +18,15 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	await installPackages(["nitro-cloudflare-dev"], {
+	const packages = ["nitro-cloudflare-dev"];
+
+	// When using pnpm, explicitly add h3 package so the H3Event type declaration can be updated.
+	// Package managers other than pnpm will hoist the dependency, as will pnpm with `--shamefully-hoist`
+	if (pm === "pnpm") {
+		packages.push("h3");
+	}
+
+	await installPackages(packages, {
 		dev: true,
 		cwd: ctx.project.path,
 		startText: "Installing nitro module `nitro-cloudflare-dev`",
@@ -59,10 +67,6 @@ const updateViteConfig = () => {
 									b.identifier("deployConfig"),
 									b.booleanLiteral(true),
 								),
-								b.objectProperty(
-									b.identifier("nodeCompat"),
-									b.booleanLiteral(true),
-								),
 							]),
 						),
 					]),
@@ -92,8 +96,8 @@ const config: TemplateConfig = {
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			preview: `DEBUG=vite:* ng build && wrangler dev`,
-			deploy: `DEBUG=vite:* ng build && wrangler deploy`,
+			preview: `ng build && wrangler dev`,
+			deploy: `ng build && wrangler deploy`,
 			"cf-typegen": `wrangler types`,
 		},
 	}),

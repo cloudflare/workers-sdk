@@ -18,10 +18,17 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	await installPackages(["nitro-cloudflare-dev"], {
+	const packages = [
+		"nitropack",
+		"h3",
+		"@ngtools/webpack",
+		"@angular-devkit/build-angular",
+	];
+
+	await installPackages(packages, {
 		dev: true,
 		cwd: ctx.project.path,
-		startText: "Installing nitro module `nitro-cloudflare-dev`",
+		startText: `Installing ${packages.join(", ")}`,
 		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
 		// Make sure npm installs all the peer dependencies of the package
 		legacyPeerDeps: false,
@@ -90,8 +97,8 @@ const config: TemplateConfig = {
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			preview: `DEBUG=vite:* ng build && wrangler pages dev`,
-			deploy: `DEBUG=vite:* ng build && wrangler pages deploy`,
+			preview: `ng build && wrangler pages dev`,
+			deploy: `ng build && wrangler pages deploy`,
 			"cf-typegen": `wrangler types`,
 		},
 	}),
