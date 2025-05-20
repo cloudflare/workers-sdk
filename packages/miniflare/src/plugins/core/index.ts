@@ -219,6 +219,10 @@ export const CoreSharedOptionsSchema = z.object({
 	// passed in a header to prove that the request came from the proxy and not
 	// some malicious attacker.
 	unsafeProxySharedSecret: z.string().optional(),
+	// Enable auto service / durable objects discovery with the dev registry
+	unsafeDevRegistryPath: z.string().optional(),
+	// Enable External Durable Objects Proxy / Internal DOs registration
+	unsafeDevRegistryDoProxy: z.boolean().default(false),
 	unsafeModuleFallbackService: ServiceFetchSchema.optional(),
 	// Keep blobs when deleting/overwriting keys, required for stacked storage
 	unsafeStickyBlobs: z.boolean().optional(),
