@@ -8,7 +8,7 @@ import { updateCheck } from "./update-check";
 const MIN_NODE_VERSION = "20.0.0";
 
 export async function printWranglerBanner(performUpdateCheck = true) {
-	let text = ` ⛅️ wrangler ${wranglerVersion}`;
+	let text = ` ⛅️ DARIO TESTING wrangler ${wranglerVersion}`;
 	let maybeNewVersion: string | undefined;
 	if (performUpdateCheck) {
 		maybeNewVersion = await updateCheck();
