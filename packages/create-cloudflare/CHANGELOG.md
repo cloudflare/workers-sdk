@@ -1,5 +1,43 @@
 # create-cloudflare
 
+## 2.47.2
+
+### Patch Changes
+
+- [#9291](https://github.com/cloudflare/workers-sdk/pull/9291) [`40040de`](https://github.com/cloudflare/workers-sdk/commit/40040de6dde0df3f182cdff31d1fed263f3721f7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.25.0 | 3.25.1 |
+
+- [#9292](https://github.com/cloudflare/workers-sdk/pull/9292) [`14c7d04`](https://github.com/cloudflare/workers-sdk/commit/14c7d04ff69ebae59bd58e7c57afc9f9eed5e4dc) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From    | To      |
+  | --------------- | ------- | ------- |
+  | @angular/create | 19.2.11 | 19.2.12 |
+
+- [#9293](https://github.com/cloudflare/workers-sdk/pull/9293) [`fa4dd47`](https://github.com/cloudflare/workers-sdk/commit/fa4dd479d02197d60d2cc2af5075470eaa7f6d7d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To    |
+  | ---------- | ----- | ----- |
+  | sv         | 0.8.3 | 0.8.6 |
+
+- [#9294](https://github.com/cloudflare/workers-sdk/pull/9294) [`625aeca`](https://github.com/cloudflare/workers-sdk/commit/625aeca3f47cdfadd06c16250920f45aa1a17e3a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-hono | 0.18.0 | 0.19.1 |
+
+- [#9274](https://github.com/cloudflare/workers-sdk/pull/9274) [`14dc393`](https://github.com/cloudflare/workers-sdk/commit/14dc3937b9bc1d5fe45cbc08b1a47c04b3e0f0a9) Thanks [@vicb](https://github.com/vicb)! - fix the env interface name in Next
+
 ## 2.47.1
 
 ### Patch Changes
