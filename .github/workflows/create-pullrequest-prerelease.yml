@@ -70,3 +70,15 @@ jobs:
           # Required by the `@actions/artifact` package
           ACTIONS_RUNTIME_TOKEN: ${{ env.GITHUB_ACTIONS_RUNTIME_TOKEN }}
           ACTIONS_RESULTS_URL: ${{ env.GITHUB_ACTIONS_RESULTS_URL }}
+
+  comment:
+    # if: ${{ github.event.pull_request.head.repo.fork }}
+    runs-on: ubuntu-22.04
+    name: Write comment to the PR
+    steps:
+      - name: "Comment on PR with E2E action link"
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: forks
+          message: |
+            As this PR is from a fork, maintainers should run E2E tests by visiting https://github.com/cloudflare/workers-sdk/actions/workflows/run-ci-for-external-forks.yml and entering the PR number.
