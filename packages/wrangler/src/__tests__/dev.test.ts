@@ -59,6 +59,7 @@ async function expectedHostAndZone(
 
 	const ctx = await getWorkerAccountAndContext({
 		accountId: "",
+		complianceConfig: undefined,
 		host: config.input.dev?.origin?.hostname,
 		routes: config.triggers
 			?.filter(

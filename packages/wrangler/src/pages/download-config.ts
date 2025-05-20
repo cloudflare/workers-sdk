@@ -124,6 +124,7 @@ async function toEnvironment(
 				class: string;
 				environment?: string;
 			}>(
+				undefined,
 				`/accounts/${accountId}/workers/durable_objects/namespaces/${ns.namespace_id}`
 			);
 			configObj.durable_objects.bindings.push({
@@ -259,6 +260,7 @@ function simplifyEnvironments(
 
 async function downloadProject(accountId: string, projectName: string) {
 	const project = await fetchResult<PagesProject>(
+		undefined,
 		`/accounts/${accountId}/pages/projects/${projectName}`
 	);
 	logger.debug(JSON.stringify(project, null, 2));

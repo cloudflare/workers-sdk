@@ -6,15 +6,18 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { LOCATION_CHOICES } from "./constants";
+import type { ComplianceConfig } from "../cfetch";
 import type { DatabaseCreationResult } from "./types";
 
 export async function createD1Database(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	name: string,
 	location?: string
 ) {
 	try {
 		return await fetchResult<DatabaseCreationResult>(
+			complianceConfig,
 			`/accounts/${accountId}/d1/database`,
 			{
 				method: "POST",
@@ -67,7 +70,7 @@ export const d1CreateCommand = createCommand({
 	async handler({ name, location }, { config }) {
 		const accountId = await requireAuth(config);
 
-		const db = await createD1Database(accountId, name, location);
+		const db = await createD1Database(config, accountId, name, location);
 
 		logger.log(
 			`✅ Successfully created DB '${db.name}'${

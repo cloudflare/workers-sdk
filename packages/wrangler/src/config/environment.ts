@@ -430,6 +430,11 @@ interface EnvironmentInheritable {
 	 * @inheritable
 	 */
 	observability: Observability | undefined;
+
+	/**
+	 * Specify the compliance region mode of the Worker.
+	 */
+	compliance_region: "public" | "fedramp_high" | undefined;
 }
 
 export type DurableObjectBindings = {

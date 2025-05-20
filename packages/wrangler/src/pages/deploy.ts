@@ -190,6 +190,7 @@ export const pagesDeployCommand = createCommand({
 		if (projectName) {
 			try {
 				await fetchResult<Project>(
+					undefined,
 					`/accounts/${accountId}/pages/projects/${projectName}`
 				);
 			} catch (err) {
@@ -298,13 +299,17 @@ export const pagesDeployCommand = createCommand({
 						throw new FatalError("Must specify a production branch.", 1);
 					}
 
-					await fetchResult<Project>(`/accounts/${accountId}/pages/projects`, {
-						method: "POST",
-						body: JSON.stringify({
-							name: projectName,
-							production_branch: productionBranch,
-						}),
-					});
+					await fetchResult<Project>(
+						undefined,
+						`/accounts/${accountId}/pages/projects`,
+						{
+							method: "POST",
+							body: JSON.stringify({
+								name: projectName,
+								production_branch: productionBranch,
+							}),
+						}
+					);
 
 					saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
 						account_id: accountId,
@@ -417,6 +422,7 @@ export const pagesDeployCommand = createCommand({
 				);
 
 				const deployment = await fetchResult<Deployment>(
+					undefined,
 					`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentResponse.id}`
 				);
 				latestDeploymentStage = deployment.latest_stage;
@@ -446,6 +452,7 @@ export const pagesDeployCommand = createCommand({
 		) {
 			// get persistent logs so we can show users the failure message
 			const logs = await fetchResult<UnifiedDeploymentLogMessages>(
+				undefined,
 				`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentResponse.id}/history/logs?size=10000000`
 			);
 			// last log entry will be the most relevant for Direct Uploads

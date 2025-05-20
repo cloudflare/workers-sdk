@@ -200,6 +200,15 @@ describe("User", () => {
 				scopes: ["account:read"],
 			});
 		});
+
+		it('should error if the compliance region is not "public"', async () => {
+			vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "fedramp_high");
+			await expect(runWrangler("login")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+			[Error: OAuth login is not supported in the \`fedramp_high\` compliance region.
+			Please use a Cloudflare API token (\`CLOUDFLARE_API_TOKEN\` environment variable) or remove the \`CLOUDFLARE_API_ENVIRONMENT\` environment variable.]
+		`);
+		});
 	});
 
 	it("should handle errors for failed token refresh in a non-interactive environment", async () => {
@@ -232,7 +241,7 @@ describe("User", () => {
 
 	it("should revert to non-interactive mode if in CI", async () => {
 		isCISpy.mockReturnValue(true);
-		await expect(loginOrRefreshIfRequired()).resolves.toEqual(false);
+		await expect(loginOrRefreshIfRequired(undefined)).resolves.toEqual(false);
 	});
 
 	it("should revert to non-interactive mode if isTTY throws an error", async () => {
@@ -242,7 +251,7 @@ describe("User", () => {
 			},
 			stdout: true,
 		});
-		await expect(loginOrRefreshIfRequired()).resolves.toEqual(false);
+		await expect(loginOrRefreshIfRequired(undefined)).resolves.toEqual(false);
 	});
 
 	it("should have auth per environment", async () => {

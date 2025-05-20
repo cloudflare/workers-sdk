@@ -2,6 +2,7 @@ import { fetchListResult } from "./cfetch";
 import { configFileName } from "./config";
 import { UserError } from "./errors";
 import { retryOnAPIFailure } from "./utils/retry";
+import type { ComplianceConfig } from "./cfetch";
 import type { Route } from "./config/environment";
 
 /**
@@ -52,6 +53,7 @@ export function getHostFromRoute(route: Route): string | undefined {
  * - We try to get a zone id from the host
  */
 export async function getZoneForRoute(
+	complianceConfig: ComplianceConfig,
 	from: {
 		route: Route;
 		accountId: string;
@@ -66,6 +68,7 @@ export async function getZoneForRoute(
 		id = route.zone_id;
 	} else if (typeof route === "object" && "zone_name" in route) {
 		id = await getZoneIdFromHost(
+			complianceConfig,
 			{
 				host: route.zone_name,
 				accountId,
@@ -73,7 +76,11 @@ export async function getZoneForRoute(
 			zoneIdCache
 		);
 	} else if (host) {
-		id = await getZoneIdFromHost({ host, accountId }, zoneIdCache);
+		id = await getZoneIdFromHost(
+			complianceConfig,
+			{ host, accountId },
+			zoneIdCache
+		);
 	}
 
 	return id && host ? { id, host } : undefined;
@@ -108,20 +115,28 @@ export function getHostFromUrl(urlLike: string): string | undefined {
 		return undefined;
 	}
 }
-export async function getZoneIdForPreview(from: {
-	host: string | undefined;
-	routes: Route[] | undefined;
-	accountId: string;
-}) {
+export async function getZoneIdForPreview(
+	complianceConfig: ComplianceConfig,
+	from: {
+		host: string | undefined;
+		routes: Route[] | undefined;
+		accountId: string;
+	}
+) {
 	const zoneIdCache: ZoneIdCache = new Map();
 	const { host, routes, accountId } = from;
 	let zoneId: string | undefined;
 	if (host) {
-		zoneId = await getZoneIdFromHost({ host, accountId }, zoneIdCache);
+		zoneId = await getZoneIdFromHost(
+			complianceConfig,
+			{ host, accountId },
+			zoneIdCache
+		);
 	}
 	if (!zoneId && routes) {
 		const firstRoute = routes[0];
 		const zone = await getZoneForRoute(
+			complianceConfig,
 			{
 				route: firstRoute,
 				accountId,
@@ -148,6 +163,7 @@ export type ZoneIdCache = Map<string, Promise<string | null>>;
  * lopping off subdomains until we get a hit from the API.
  */
 async function getZoneIdFromHost(
+	complianceConfig: ComplianceConfig,
 	from: {
 		host: string;
 		accountId: string;
@@ -163,6 +179,7 @@ async function getZoneIdFromHost(
 				cacheKey,
 				retryOnAPIFailure(() =>
 					fetchListResult<{ id: string }>(
+						complianceConfig,
 						`/zones`,
 						{},
 						new URLSearchParams({
@@ -199,8 +216,12 @@ interface WorkerRoute {
 /**
  * Given a zone within the user's account, return a list of all assigned worker routes
  */
-async function getRoutesForZone(zone: string): Promise<WorkerRoute[]> {
+async function getRoutesForZone(
+	complianceConfig: ComplianceConfig,
+	zone: string
+): Promise<WorkerRoute[]> {
 	const routes = await fetchListResult<WorkerRoute>(
+		complianceConfig,
 		`/zones/${zone}/workers/routes`
 	);
 	return routes;
@@ -251,6 +272,7 @@ function findClosestRoute(
  * Given a route (must be assigned and within the correct zone), return the name of the worker assigned to it
  */
 export async function getWorkerForZone(
+	complianceConfig: ComplianceConfig,
 	from: {
 		worker: string;
 		accountId: string;
@@ -258,13 +280,16 @@ export async function getWorkerForZone(
 	configPath: string | undefined
 ) {
 	const { worker, accountId } = from;
-	const zone = await getZoneForRoute({ route: worker, accountId });
+	const zone = await getZoneForRoute(complianceConfig, {
+		route: worker,
+		accountId,
+	});
 	if (!zone) {
 		throw new UserError(
 			`The route '${worker}' is not part of one of your zones. Either add this zone from the Cloudflare dashboard, or try using a route within one of your existing zones.`
 		);
 	}
-	const routes = await getRoutesForZone(zone.id);
+	const routes = await getRoutesForZone(complianceConfig, zone.id);
 
 	const scriptName = routes.find((route) => route.pattern === worker)?.script;
 

@@ -2,6 +2,7 @@ import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
+import type { ComplianceConfig } from "../cfetch";
 import type { Database } from "./types";
 
 export const d1ListCommand = createCommand({
@@ -22,7 +23,7 @@ export const d1ListCommand = createCommand({
 	},
 	async handler({ json }, { config }) {
 		const accountId = await requireAuth(config);
-		const dbs: Array<Database> = await listDatabases(accountId);
+		const dbs: Array<Database> = await listDatabases(config, accountId);
 
 		if (json) {
 			logger.log(JSON.stringify(dbs, null, 2));
@@ -39,6 +40,7 @@ export const d1ListCommand = createCommand({
 });
 
 export const listDatabases = async (
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	limitCalls: boolean = false,
 	pageSize: number = 10
@@ -47,6 +49,7 @@ export const listDatabases = async (
 	const results = [];
 	while (results.length % pageSize === 0) {
 		const json: Array<Database> = await fetchResult(
+			complianceConfig,
 			`/accounts/${accountId}/d1/database`,
 			{},
 			new URLSearchParams({

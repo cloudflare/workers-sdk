@@ -137,9 +137,9 @@ export async function loadAccountSpinner({ json }: { json?: boolean }) {
  *
  */
 async function getAPIUrl(config: Config) {
-	const api = getCloudflareApiBaseUrl();
+	const api = getCloudflareApiBaseUrl(config.compliance_region);
 	// This one will probably be cache'd already so it won't ask for the accountId again
-	const accountId = config.account_id || (await getAccountId());
+	const accountId = config.account_id || (await getAccountId(config));
 	return `${api}/accounts/${accountId}/cloudchamber`;
 }
 
@@ -202,7 +202,7 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 					" We need to re-authenticate to add a cloudchamber token..."
 			);
 			// cache account id
-			await getAccountId();
+			await getAccountId(config);
 			const account = getAccountFromCache();
 			config.account_id = account?.id ?? config.account_id;
 			await promiseSpinner(logout(), { json, message: "Revoking token" });

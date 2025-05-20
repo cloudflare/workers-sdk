@@ -6,9 +6,17 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import { APIError, parseJSON } from "../parse";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
+import type { Config } from "../config";
 import type { ApiCredentials } from "../user";
 import type { URLSearchParams } from "node:url";
 import type { HeadersInit, RequestInit } from "undici";
+
+/**
+ * The compliance region to use for the API requests.
+ */
+export type ComplianceConfig =
+	| Partial<Pick<Config, "compliance_region">>
+	| undefined;
 
 /*
  * performApiFetch does everything required to make a CF API request,
@@ -16,6 +24,7 @@ import type { HeadersInit, RequestInit } from "undici";
  * use `fetchInternal`
  * */
 export async function performApiFetch(
+	complianceConfig: ComplianceConfig,
 	resource: string,
 	init: RequestInit = {},
 	queryParams?: URLSearchParams,
@@ -26,7 +35,7 @@ export async function performApiFetch(
 		resource.startsWith("/"),
 		`CF API fetch - resource path must start with a "/" but got "${resource}"`
 	);
-	await requireLoggedIn();
+	await requireLoggedIn(complianceConfig);
 	const apiToken = requireApiToken();
 	const headers = cloneHeaders(init.headers);
 	addAuthorizationHeaderIfUnspecified(headers, apiToken);
@@ -34,7 +43,7 @@ export async function performApiFetch(
 
 	const queryString = queryParams ? `?${queryParams.toString()}` : "";
 	logger.debug(
-		`-- START CF API REQUEST: ${method} ${getCloudflareApiBaseUrl()}${resource}${queryString}`
+		`-- START CF API REQUEST: ${method} ${getCloudflareApiBaseUrl(complianceConfig?.compliance_region)}${resource}${queryString}`
 	);
 	const logHeaders = cloneHeaders(headers);
 	delete logHeaders["Authorization"];
@@ -50,12 +59,15 @@ export async function performApiFetch(
 		);
 	}
 	logger.debug("-- END CF API REQUEST");
-	return await fetch(`${getCloudflareApiBaseUrl()}${resource}${queryString}`, {
-		method,
-		...init,
-		headers,
-		signal: abortSignal,
-	});
+	return await fetch(
+		`${getCloudflareApiBaseUrl(complianceConfig?.compliance_region)}${resource}${queryString}`,
+		{
+			method,
+			...init,
+			headers,
+			signal: abortSignal,
+		}
+	);
 }
 
 /**
@@ -68,6 +80,7 @@ export async function performApiFetch(
  * This function should not be used directly, instead use the functions in `cfetch/index.ts`.
  */
 export async function fetchInternal<ResponseType>(
+	complianceConfig: ComplianceConfig,
 	resource: string,
 	init: RequestInit = {},
 	queryParams?: URLSearchParams,
@@ -75,6 +88,7 @@ export async function fetchInternal<ResponseType>(
 ): Promise<ResponseType> {
 	const method = init.method ?? "GET";
 	const response = await performApiFetch(
+		complianceConfig,
 		resource,
 		init,
 		queryParams,
@@ -135,8 +149,10 @@ function cloneHeaders(
 			: { ...headers };
 }
 
-async function requireLoggedIn(): Promise<void> {
-	const loggedIn = await loginOrRefreshIfRequired();
+async function requireLoggedIn(
+	complianceConfig: ComplianceConfig
+): Promise<void> {
+	const loggedIn = await loginOrRefreshIfRequired(complianceConfig);
 	if (!loggedIn) {
 		throw new UserError("Not logged in.");
 	}
@@ -171,15 +187,16 @@ function addUserAgent(headers: Record<string, string>): void {
  * before passing it
  */
 export async function fetchKVGetValue(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespaceId: string,
 	key: string
 ): Promise<ArrayBuffer> {
-	await requireLoggedIn();
+	await requireLoggedIn(complianceConfig);
 	const auth = requireApiToken();
 	const headers: Record<string, string> = {};
 	addAuthorizationHeaderIfUnspecified(headers, auth);
-	const resource = `${getCloudflareApiBaseUrl()}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
+	const resource = `${getCloudflareApiBaseUrl(complianceConfig?.compliance_region)}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
 	const response = await fetch(resource, {
 		method: "GET",
 		headers,
@@ -203,19 +220,23 @@ export async function fetchKVGetValue(
  */
 type ResponseWithBody = Response & { body: NonNullable<Response["body"]> };
 export async function fetchR2Objects(
+	complianceConfig: ComplianceConfig,
 	resource: string,
 	bodyInit: RequestInit = {}
 ): Promise<ResponseWithBody | null> {
-	await requireLoggedIn();
+	await requireLoggedIn(complianceConfig);
 	const auth = requireApiToken();
 	const headers = cloneHeaders(bodyInit.headers);
 	addAuthorizationHeaderIfUnspecified(headers, auth);
 	addUserAgent(headers);
 
-	const response = await fetch(`${getCloudflareApiBaseUrl()}${resource}`, {
-		...bodyInit,
-		headers,
-	});
+	const response = await fetch(
+		`${getCloudflareApiBaseUrl(complianceConfig?.compliance_region)}${resource}`,
+		{
+			...bodyInit,
+			headers,
+		}
+	);
 
 	if (response.ok && response.body) {
 		return response as ResponseWithBody;
@@ -235,16 +256,19 @@ export async function fetchWorker(
 	resource: string,
 	bodyInit: RequestInit = {}
 ): Promise<{ entrypoint: string; modules: File[] }> {
-	await requireLoggedIn();
+	await requireLoggedIn(undefined);
 	const auth = requireApiToken();
 	const headers = cloneHeaders(bodyInit.headers);
 	addAuthorizationHeaderIfUnspecified(headers, auth);
 	addUserAgent(headers);
 
-	let response = await fetch(`${getCloudflareApiBaseUrl()}${resource}`, {
-		...bodyInit,
-		headers,
-	});
+	let response = await fetch(
+		`${getCloudflareApiBaseUrl(undefined)}${resource}`,
+		{
+			...bodyInit,
+			headers,
+		}
+	);
 
 	if (!response.ok || !response.body) {
 		logger.error(response.ok, response.body);

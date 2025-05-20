@@ -1,6 +1,7 @@
 import { Headers, Response } from "miniflare";
 import { performApiFetch } from "../cfetch/internal";
 import { getAccountId } from "../user";
+import type { ComplianceConfig } from "../cfetch/internal";
 import type { Request } from "miniflare";
 
 export const EXTERNAL_VECTORIZE_WORKER_NAME =
@@ -33,9 +34,12 @@ const URL_SUBSTITUTIONS = new Map<string, string>([
 	["deleteByIds", "delete_by_ids"],
 ]);
 
-export function MakeVectorizeFetcher(indexId: string) {
+export function MakeVectorizeFetcher(
+	complianceConfig: ComplianceConfig,
+	indexId: string
+) {
 	return async function (request: Request): Promise<Response> {
-		const accountId = await getAccountId();
+		const accountId = await getAccountId(complianceConfig);
 
 		request.headers.delete("Host");
 		request.headers.delete("Content-Length");
@@ -46,7 +50,7 @@ export function MakeVectorizeFetcher(indexId: string) {
 
 		const url = base + op;
 
-		const res = await performApiFetch(url, {
+		const res = await performApiFetch(complianceConfig, url, {
 			method: request.method,
 			headers: Object.fromEntries(request.headers.entries()),
 			body: request.body,

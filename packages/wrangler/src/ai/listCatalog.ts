@@ -21,7 +21,7 @@ export const aiModelsCommand = createCommand({
 	},
 	async handler({ json }, { config }) {
 		const accountId = await requireAuth(config);
-		const entries = await listCatalogEntries(accountId);
+		const entries = await listCatalogEntries(config, accountId);
 
 		if (json) {
 			logger.log(JSON.stringify(entries, null, 2));

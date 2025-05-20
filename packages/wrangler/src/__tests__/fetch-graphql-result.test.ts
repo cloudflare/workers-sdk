@@ -24,7 +24,7 @@ describe("fetchGraphqlResult", () => {
 			})
 		);
 		expect(
-			await fetchGraphqlResult({
+			await fetchGraphqlResult(undefined, {
 				body: JSON.stringify({
 					query: `{
                     viewer {
@@ -57,7 +57,7 @@ describe("fetchGraphqlResult", () => {
 				);
 			})
 		);
-		expect(await fetchGraphqlResult()).toEqual({
+		expect(await fetchGraphqlResult(undefined)).toEqual({
 			data: null,
 			errors: [
 				{

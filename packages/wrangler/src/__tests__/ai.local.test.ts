@@ -1,10 +1,11 @@
 import { Request } from "miniflare";
 import { HttpResponse } from "msw";
 import { Headers } from "undici";
-import { AIFetcher } from "../ai/fetcher";
+import { getAIFetcher } from "../ai/fetcher";
 import * as internal from "../cfetch/internal";
 import * as user from "../user";
-import type { RequestInit } from "undici";
+
+const AIFetcher = getAIFetcher(undefined);
 
 describe("ai", () => {
 	describe("fetcher", () => {
@@ -16,7 +17,7 @@ describe("ai", () => {
 			it("should send x-forwarded header", async () => {
 				vi.spyOn(user, "getAccountId").mockImplementation(async () => "123");
 				vi.spyOn(internal, "performApiFetch").mockImplementation(
-					async (resource: string, init: RequestInit = {}) => {
+					async (config, resource, init = {}) => {
 						const headers = new Headers(init.headers);
 						return HttpResponse.json({
 							xForwarded: headers.get("X-Forwarded"),
@@ -44,7 +45,7 @@ describe("ai", () => {
 			it("account id should be set", async () => {
 				vi.spyOn(user, "getAccountId").mockImplementation(async () => "123");
 				vi.spyOn(internal, "performApiFetch").mockImplementation(
-					async (resource: string) => {
+					async (config, resource) => {
 						return HttpResponse.json({
 							resource: resource,
 						});

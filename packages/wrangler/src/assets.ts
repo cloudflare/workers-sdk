@@ -31,6 +31,7 @@ import { APIError } from "./parse";
 import { getBasePath } from "./paths";
 import { dedent } from "./utils/dedent";
 import type { StartDevWorkerOptions } from "./api";
+import type { ComplianceConfig } from "./cfetch";
 import type { Config } from "./config";
 import type { DeployArgs } from "./deploy";
 import type { StartDevOptions } from "./dev";
@@ -56,6 +57,7 @@ const MAX_UPLOAD_GATEWAY_ERRORS = 5;
 const MAX_DIFF_LINES = 100;
 
 export const syncAssets = async (
+	complianceConfig: ComplianceConfig,
 	accountId: string | undefined,
 	assetDirectory: string,
 	scriptName: string,
@@ -74,6 +76,7 @@ export const syncAssets = async (
 	// 2. fetch buckets w/ hashes
 	logger.info("🌀 Starting asset upload...");
 	const initializeAssetsResponse = await fetchResult<InitializeAssetsResponse>(
+		complianceConfig,
 		url,
 		{
 			headers: { "Content-Type": "application/json" },
@@ -166,6 +169,7 @@ export const syncAssets = async (
 
 			try {
 				const res = await fetchResult<UploadResponse>(
+					complianceConfig,
 					`/accounts/${accountId}/workers/assets/upload?base64=true`,
 					{
 						method: "POST",

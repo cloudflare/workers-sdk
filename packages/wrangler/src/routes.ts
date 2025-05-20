@@ -4,14 +4,17 @@ import { configFileName } from "./config";
 import { confirm, prompt } from "./dialogs";
 import { UserError } from "./errors";
 import { logger } from "./logger";
+import type { ComplianceConfig } from "./cfetch";
 
 export async function getWorkersDevSubdomain(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	configPath: string | undefined
 ): Promise<string> {
 	try {
 		// note: API docs say that this field is "name", but they're lying.
 		const { subdomain } = await fetchResult<{ subdomain: string }>(
+			complianceConfig,
 			`/accounts/${accountId}/workers/subdomain`
 		);
 		return subdomain;
@@ -36,7 +39,7 @@ export async function getWorkersDevSubdomain(
 				throw new UserError(`${solutionMessage}\n${onboardingLink}`);
 			}
 
-			return await registerSubdomain(accountId, configPath);
+			return await registerSubdomain(complianceConfig, accountId, configPath);
 		} else {
 			throw e;
 		}
@@ -44,6 +47,7 @@ export async function getWorkersDevSubdomain(
 }
 
 async function registerSubdomain(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	configPath: string | undefined
 ): Promise<string> {
@@ -63,6 +67,7 @@ async function registerSubdomain(
 
 		try {
 			await fetchResult<{ subdomain: string }>(
+				complianceConfig,
 				`/accounts/${accountId}/workers/subdomains/${potentialName}`
 			);
 		} catch (err) {
@@ -103,6 +108,7 @@ async function registerSubdomain(
 
 		try {
 			const result = await fetchResult<{ subdomain: string }>(
+				complianceConfig,
 				`/accounts/${accountId}/workers/subdomain`,
 				{
 					method: "PUT",

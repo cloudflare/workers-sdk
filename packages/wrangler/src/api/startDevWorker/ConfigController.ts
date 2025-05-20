@@ -91,7 +91,7 @@ async function resolveDevConfig(
 	if (input.dev?.remote) {
 		const { accountId } = await unwrapHook(auth, config);
 		assert(accountId, "Account ID must be provided for remote dev");
-		await getZoneIdForPreview({ host, routes, accountId });
+		await getZoneIdForPreview(config, { host, routes, accountId });
 	}
 
 	const initialIp = input.dev?.server?.hostname ?? config.dev.ip;
@@ -272,6 +272,7 @@ async function resolveConfig(
 		config: config.configPath,
 		compatibilityDate: getDevCompatibilityDate(config, input.compatibilityDate),
 		compatibilityFlags: input.compatibilityFlags ?? config.compatibility_flags,
+		complianceRegion: input.complianceRegion ?? config.compliance_region,
 		entrypoint: entry.file,
 		projectRoot: entry.projectRoot,
 		bindings,

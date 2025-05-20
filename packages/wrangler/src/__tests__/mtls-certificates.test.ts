@@ -168,7 +168,7 @@ describe("wrangler", () => {
 						expires_on: oneYearLater.toISOString(),
 					});
 
-					const cert = await uploadMTlsCertificate(accountId, {
+					const cert = await uploadMTlsCertificate(undefined, accountId, {
 						certificateChain: "BEGIN CERTIFICATE...",
 						privateKey: "BEGIN PRIVATE KEY...",
 						name: "my_cert",
@@ -185,7 +185,7 @@ describe("wrangler", () => {
 			describe("uploadMTlsCertificateFromFs", () => {
 				it("should fail to read cert and key files when missing", async () => {
 					await expect(
-						uploadMTlsCertificateFromFs(accountId, {
+						uploadMTlsCertificateFromFs(undefined, accountId, {
 							certificateChainFilename: "cert.pem",
 							privateKeyFilename: "key.pem",
 							name: "my_cert",
@@ -204,7 +204,7 @@ describe("wrangler", () => {
 					writeFileSync("cert.pem", "BEGIN CERTIFICATE...");
 					writeFileSync("key.pem", "BEGIN PRIVATE KEY...");
 
-					const cert = await uploadMTlsCertificateFromFs(accountId, {
+					const cert = await uploadMTlsCertificateFromFs(undefined, accountId, {
 						certificateChainFilename: "cert.pem",
 						privateKeyFilename: "key.pem",
 						name: "my_cert",
@@ -239,7 +239,7 @@ describe("wrangler", () => {
 						},
 					]);
 
-					const certs = await listMTlsCertificates(accountId, {});
+					const certs = await listMTlsCertificates(undefined, accountId, {});
 
 					expect(certs).toHaveLength(2);
 
@@ -264,7 +264,7 @@ describe("wrangler", () => {
 						expires_on: oneYearLater.toISOString(),
 					});
 
-					const cert = await getMTlsCertificate(accountId, "1234");
+					const cert = await getMTlsCertificate(undefined, accountId, "1234");
 
 					expect(cert.id).toEqual("1234");
 					expect(cert.issuer).toEqual("example.com...");
@@ -287,7 +287,11 @@ describe("wrangler", () => {
 						},
 					]);
 
-					const cert = await getMTlsCertificateByName(accountId, "cert one");
+					const cert = await getMTlsCertificateByName(
+						undefined,
+						accountId,
+						"cert one"
+					);
 
 					expect(cert.id).toEqual("1234");
 					expect(cert.issuer).toEqual("example.com...");
@@ -300,7 +304,7 @@ describe("wrangler", () => {
 					const mock = mockGetMTlsCertificates([]);
 
 					await expect(
-						getMTlsCertificateByName(accountId, "cert one")
+						getMTlsCertificateByName(undefined, accountId, "cert one")
 					).rejects.toMatchInlineSnapshot(
 						`[Error: certificate not found with name "cert one"]`
 					);
@@ -329,7 +333,7 @@ describe("wrangler", () => {
 					]);
 
 					await expect(
-						getMTlsCertificateByName(accountId, "cert one")
+						getMTlsCertificateByName(undefined, accountId, "cert one")
 					).rejects.toMatchInlineSnapshot(
 						`[Error: multiple certificates found with name "cert one"]`
 					);
@@ -342,7 +346,7 @@ describe("wrangler", () => {
 				test("calls delete mts_certificates endpoint", async () => {
 					const mock = mockDeleteMTlsCertificate();
 
-					await deleteMTlsCertificate(accountId, "1234");
+					await deleteMTlsCertificate(undefined, accountId, "1234");
 
 					expect(mock.calls).toEqual(1);
 				});

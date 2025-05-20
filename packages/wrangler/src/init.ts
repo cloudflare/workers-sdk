@@ -88,6 +88,7 @@ export const init = createCommand({
 			const accountId = await requireAuth({});
 			try {
 				await fetchResult<ServiceMetadataRes>(
+					undefined,
 					`/accounts/${accountId}/workers/services/${args.fromDash}`
 				);
 			} catch (err) {
@@ -233,23 +234,29 @@ async function getWorkerConfig(
 		cronTriggers,
 	] = await Promise.all([
 		fetchResult<WorkerMetadata["bindings"]>(
+			undefined,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}/bindings`
 		),
 		fetchResult<RoutesRes>(
+			undefined,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}/routes?show_zonename=true`
 		),
 		fetchResult<CustomDomainsRes>(
+			undefined,
 			`/accounts/${accountId}/workers/domains/records?page=0&per_page=5&service=${workerName}&environment=${serviceEnvironment}`
 		),
 
 		fetchResult<WorkersDevRes>(
+			undefined,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}/subdomain`
 		),
 
 		fetchResult<ServiceMetadataRes["default_environment"]>(
+			undefined,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}`
 		),
 		fetchResult<CronTriggersRes>(
+			undefined,
 			`/accounts/${accountId}/workers/scripts/${workerName}/schedules`
 		),
 	]).catch((e) => {
@@ -328,7 +335,11 @@ export async function mapBindings(
 		bindings
 			.filter((binding) => binding.type === "d1")
 			.map(async (binding) => {
-				const dbInfo = await getDatabaseInfoFromIdOrName(accountId, binding.id);
+				const dbInfo = await getDatabaseInfoFromIdOrName(
+					undefined,
+					accountId,
+					binding.id
+				);
 				d1BindingsWithInfo[binding.id] = dbInfo;
 			})
 	);
@@ -623,6 +634,7 @@ export async function mapBindings(
 
 export async function downloadWorker(accountId: string, workerName: string) {
 	const serviceMetadata = await fetchResult<ServiceMetadataRes>(
+		undefined,
 		`/accounts/${accountId}/workers/services/${workerName}`
 	);
 

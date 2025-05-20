@@ -62,6 +62,7 @@ export const listProjects = async ({
 	const results = [];
 	while (results.length % pageSize === 0) {
 		const json: Array<Project> = await fetchResult(
+			undefined,
 			`/accounts/${accountId}/pages/projects`,
 			{},
 			new URLSearchParams({
@@ -179,6 +180,7 @@ export const pagesProjectCreateCommand = createCommand({
 		};
 
 		const { subdomain } = await fetchResult<Project>(
+			undefined,
 			`/accounts/${accountId}/pages/projects`,
 			{
 				method: "POST",
@@ -240,6 +242,7 @@ export const pagesProjectDeleteCommand = createCommand({
 		if (confirmed) {
 			logger.log("Deleting", args.projectName);
 			await fetchResult(
+				undefined,
 				`/accounts/${accountId}/pages/projects/${args.projectName}`,
 				{ method: "DELETE" }
 			);

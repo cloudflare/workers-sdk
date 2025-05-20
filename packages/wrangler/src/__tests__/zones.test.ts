@@ -75,7 +75,7 @@ describe("Zones", () => {
 		test("string route", async () => {
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
-				await getZoneForRoute({
+				await getZoneForRoute(undefined, {
 					route: "example.com/*",
 					accountId: "some-account-id",
 				})
@@ -88,7 +88,10 @@ describe("Zones", () => {
 		test("string route (not a zone)", async () => {
 			mockGetZones("wrong.com", []);
 			await expect(
-				getZoneForRoute({ route: "wrong.com/*", accountId: "some-account-id" })
+				getZoneForRoute(undefined, {
+					route: "wrong.com/*",
+					accountId: "some-account-id",
+				})
 			).rejects.toMatchInlineSnapshot(`
 				[Error: Could not find zone for \`wrong.com\`. Make sure the domain is set up to be proxied by Cloudflare.
 				For more details, refer to https://developers.cloudflare.com/workers/configuration/routing/routes/#set-up-a-route]
@@ -99,7 +102,7 @@ describe("Zones", () => {
 			// when a zone_id is provided in the route
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
-				await getZoneForRoute({
+				await getZoneForRoute(undefined, {
 					route: { pattern: "example.com/*", zone_id: "other-id" },
 					accountId: "some-account-id",
 				})
@@ -113,7 +116,7 @@ describe("Zones", () => {
 			// when a zone_id is provided in the route
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
-				await getZoneForRoute({
+				await getZoneForRoute(undefined, {
 					route: {
 						pattern: "some.third-party.com/*",
 						zone_id: "other-id",
@@ -129,7 +132,7 @@ describe("Zones", () => {
 		test("zone_name route (apex)", async () => {
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
-				await getZoneForRoute({
+				await getZoneForRoute(undefined, {
 					route: {
 						pattern: "example.com/*",
 						zone_name: "example.com",
@@ -144,7 +147,7 @@ describe("Zones", () => {
 		test("zone_name route (subdomain)", async () => {
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
-				await getZoneForRoute({
+				await getZoneForRoute(undefined, {
 					route: {
 						pattern: "subdomain.example.com/*",
 						zone_name: "example.com",
@@ -159,7 +162,7 @@ describe("Zones", () => {
 		test("zone_name route (custom hostname)", async () => {
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
-				await getZoneForRoute({
+				await getZoneForRoute(undefined, {
 					route: {
 						pattern: "some.third-party.com/*",
 						zone_name: "example.com",
@@ -176,6 +179,7 @@ describe("Zones", () => {
 			const zoneIdCache = new Map();
 			expect(
 				await getZoneForRoute(
+					undefined,
 					{
 						route: {
 							pattern: "subdomain.example.com/*",
@@ -198,6 +202,7 @@ describe("Zones", () => {
 			// due to a "mock not found" error
 			expect(
 				await getZoneForRoute(
+					undefined,
 					{
 						route: {
 							pattern: "subdomain.example.com/*",

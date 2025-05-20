@@ -8,6 +8,7 @@ import { logger } from "../logger";
 import { ParseError, parseJSON } from "../parse";
 import { getAccessToken } from "../user/access";
 import { isAbortError } from "../utils/isAbortError";
+import type { ComplianceConfig } from "../cfetch";
 import type { CfWorkerContext } from "../deployment-bundle/worker";
 import type { ApiCredentials } from "../user";
 import type { CfWorkerInitWithName } from "./remote";
@@ -140,6 +141,7 @@ function switchHost(
  * Generates a preview session token.
  */
 export async function createPreviewSession(
+	complianceConfig: ComplianceConfig,
 	account: CfAccount,
 	ctx: CfWorkerContext,
 	abortSignal: AbortSignal
@@ -150,6 +152,7 @@ export async function createPreviewSession(
 		: `/accounts/${accountId}/workers/subdomain/edge-preview`;
 
 	const { exchange_url } = await fetchResult<{ exchange_url: string }>(
+		complianceConfig,
 		initUrl,
 		undefined,
 		undefined,
@@ -216,6 +219,7 @@ export async function createPreviewSession(
  * Creates a preview token.
  */
 async function createPreviewToken(
+	complianceConfig: ComplianceConfig,
 	account: CfAccount,
 	worker: CfWorkerInitWithName,
 	ctx: CfWorkerContext,
@@ -252,6 +256,7 @@ async function createPreviewToken(
 	formData.set("wrangler-session-config", JSON.stringify(mode));
 
 	const { preview_token } = await fetchResult<{ preview_token: string }>(
+		complianceConfig,
 		url,
 		{
 			method: "POST",
@@ -292,6 +297,7 @@ async function createPreviewToken(
  * const {value, host} = await createWorker(init, acct);
  */
 export async function createWorkerPreview(
+	complianceConfig: ComplianceConfig,
 	init: CfWorkerInitWithName,
 	account: CfAccount,
 	ctx: CfWorkerContext,
@@ -299,6 +305,7 @@ export async function createWorkerPreview(
 	abortSignal: AbortSignal
 ): Promise<CfPreviewToken> {
 	const token = await createPreviewToken(
+		complianceConfig,
 		account,
 		init,
 		ctx,

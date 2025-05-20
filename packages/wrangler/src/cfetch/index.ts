@@ -3,6 +3,7 @@ import { APIError } from "../parse";
 import { maybeThrowFriendlyError } from "./errors";
 import { fetchInternal } from "./internal";
 import type { FetchError } from "./errors";
+import type { ComplianceConfig } from "./internal";
 import type { RequestInit } from "undici";
 
 // Check out https://api.cloudflare.com/ for API docs.
@@ -15,18 +16,24 @@ export interface FetchResult<ResponseType = unknown> {
 	result_info?: unknown;
 }
 
-export { fetchKVGetValue } from "./internal";
+export {
+	type ComplianceConfig,
+	fetchKVGetValue,
+	performApiFetch,
+} from "./internal";
 
 /**
  * Make a fetch request, and extract the `result` from the JSON response.
  */
 export async function fetchResult<ResponseType>(
+	complianceConfig: ComplianceConfig,
 	resource: string,
 	init: RequestInit = {},
 	queryParams?: URLSearchParams,
 	abortSignal?: AbortSignal
 ): Promise<ResponseType> {
 	const json = await fetchInternal<FetchResult<ResponseType>>(
+		complianceConfig,
 		resource,
 		init,
 		queryParams,
@@ -43,10 +50,12 @@ export async function fetchResult<ResponseType>(
  * Make a fetch request to the GraphQL API, and return the JSON response.
  */
 export async function fetchGraphqlResult<ResponseType>(
+	complianceConfig: ComplianceConfig,
 	init: RequestInit = {},
 	abortSignal?: AbortSignal
 ): Promise<ResponseType> {
 	const json = await fetchInternal<ResponseType>(
+		complianceConfig,
 		"/graphql",
 		{ ...init, method: "POST" }, //Cloudflare API v4 doesn't allow GETs to /graphql
 		undefined,
@@ -65,6 +74,7 @@ export async function fetchGraphqlResult<ResponseType>(
  * and repeating the request if the results are paginated.
  */
 export async function fetchListResult<ResponseType>(
+	complianceConfig: ComplianceConfig,
 	resource: string,
 	init: RequestInit = {},
 	queryParams?: URLSearchParams
@@ -78,6 +88,7 @@ export async function fetchListResult<ResponseType>(
 			queryParams.set("cursor", cursor);
 		}
 		const json = await fetchInternal<FetchResult<ResponseType[]>>(
+			complianceConfig,
 			resource,
 			init,
 			queryParams
@@ -97,13 +108,14 @@ export async function fetchListResult<ResponseType>(
 }
 
 /**
- * Make a fetch request for a list of values using pages,
+ * Make a fetch request for a list of values,
  * extracting the `result` from the JSON response,
  * and repeating the request if the results are paginated.
  *
  * This is similar to fetchListResult, but it uses the `page` query parameter instead of `cursor`.
  */
 export async function fetchPagedListResult<ResponseType>(
+	complianceConfig: ComplianceConfig,
 	resource: string,
 	init: RequestInit = {},
 	queryParams?: URLSearchParams
@@ -116,6 +128,7 @@ export async function fetchPagedListResult<ResponseType>(
 		queryParams.set("page", String(page));
 
 		const json = await fetchInternal<FetchResult<ResponseType[]>>(
+			complianceConfig,
 			resource,
 			init,
 			queryParams

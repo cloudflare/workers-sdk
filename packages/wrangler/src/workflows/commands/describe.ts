@@ -24,10 +24,12 @@ export const workflowsDescribeCommand = createCommand({
 		const accountId = await requireAuth(config);
 
 		const workflow = await fetchResult<Workflow>(
+			config,
 			`/accounts/${accountId}/workflows/${args.name}`
 		);
 
 		const versions = await fetchResult<Version[]>(
+			config,
 			`/accounts/${accountId}/workflows/${args.name}/versions`
 		);
 

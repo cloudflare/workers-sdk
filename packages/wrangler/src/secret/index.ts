@@ -64,6 +64,7 @@ async function createDraftWorker({
 		logger.log(`🌀 Creating new Worker "${scriptName}"...`);
 	}
 	await fetchResult(
+		config,
 		!isLegacyEnv(config) && args.env
 			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}`
 			: `/accounts/${accountId}/workers/scripts/${scriptName}`,
@@ -194,7 +195,7 @@ export const secretPutCommand = createCommand({
 					: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
 			try {
-				return await fetchResult(url, {
+				return await fetchResult(config, url, {
 					method: "PUT",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
@@ -307,7 +308,7 @@ export const secretDeleteCommand = createCommand({
 					? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
 					: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
-			await fetchResult(`${url}/${args.key}`, { method: "DELETE" });
+			await fetchResult(config, `${url}/${args.key}`, { method: "DELETE" });
 			metrics.sendMetricsEvent("delete encrypted variable", {
 				sendMetrics: config.send_metrics,
 			});
@@ -364,7 +365,10 @@ export const secretListCommand = createCommand({
 				? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
 				: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
 
-		const secrets = await fetchResult<{ name: string; type: string }[]>(url);
+		const secrets = await fetchResult<{ name: string; type: string }[]>(
+			config,
+			url
+		);
 
 		if (args.format === "pretty") {
 			for (const workerSecret of secrets) {
@@ -441,7 +445,7 @@ export const secretBulkCommand = createCommand({
 
 			return fetchResult<{
 				bindings: Array<WorkerMetadataBinding | SecretBindingRedacted>;
-			}>(url);
+			}>(config, url);
 		}
 
 		function putBindingsSettings(
@@ -454,7 +458,7 @@ export const secretBulkCommand = createCommand({
 
 			const data = new FormData();
 			data.set("settings", JSON.stringify({ bindings }));
-			return fetchResult(url, {
+			return fetchResult(config, url, {
 				method: "PATCH",
 				body: data,
 			});

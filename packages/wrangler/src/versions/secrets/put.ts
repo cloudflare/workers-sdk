@@ -72,6 +72,7 @@ export const versionsSecretPutCommand = createCommand({
 		// Grab the latest version
 		const versions = (
 			await fetchResult<{ items: WorkerVersion[] }>(
+				config,
 				`/accounts/${accountId}/workers/scripts/${scriptName}/versions`
 			)
 		).items;
@@ -83,6 +84,7 @@ export const versionsSecretPutCommand = createCommand({
 		const latestVersion = versions[0];
 
 		const newVersion = await copyWorkerVersionWithNewSecrets({
+			config,
 			accountId,
 			scriptName,
 			versionId: latestVersion.id,

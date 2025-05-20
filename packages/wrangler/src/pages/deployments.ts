@@ -51,6 +51,7 @@ export const pagesDeploymentListCommand = createCommand({
 		}
 
 		const deployments: Array<Deployment> = await fetchResult(
+			undefined,
 			`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
 			{},
 			environment

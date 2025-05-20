@@ -7,6 +7,7 @@ import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/mis
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
+import type { ComplianceConfig } from "../cfetch";
 import type { R2BucketInfo } from "../r2/helpers";
 
 // ensure this is in sync with:
@@ -211,32 +212,41 @@ export async function generateR2ServiceToken(
 
 // Get R2 bucket information from v4 API
 export async function getR2Bucket(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	name: string
 ): Promise<R2BucketInfo> {
 	return await fetchResult<R2BucketInfo>(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${name}`
 	);
 }
 
 // v4 API to Create new Pipeline
 export async function createPipeline(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
-	config: PipelineUserConfig
+	pipelineConfig: PipelineUserConfig
 ): Promise<Pipeline> {
-	return await fetchResult<Pipeline>(`/accounts/${accountId}/pipelines`, {
-		method: "POST",
-		headers: API_HEADERS,
-		body: JSON.stringify(config),
-	});
+	return await fetchResult<Pipeline>(
+		complianceConfig,
+		`/accounts/${accountId}/pipelines`,
+		{
+			method: "POST",
+			headers: API_HEADERS,
+			body: JSON.stringify(pipelineConfig),
+		}
+	);
 }
 
 // v4 API to Get Pipeline Details
 export async function getPipeline(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	name: string
 ): Promise<Pipeline> {
 	return await fetchResult<Pipeline>(
+		complianceConfig,
 		`/accounts/${accountId}/pipelines/${name}`,
 		{
 			method: "GET",
@@ -246,25 +256,29 @@ export async function getPipeline(
 
 // v4 API to Update Pipeline Configuration
 export async function updatePipeline(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	name: string,
-	config: PartialExcept<PipelineUserConfig, "name">
+	pipelineConfig: PartialExcept<PipelineUserConfig, "name">
 ): Promise<Pipeline> {
 	return await fetchResult<Pipeline>(
+		complianceConfig,
 		`/accounts/${accountId}/pipelines/${name}`,
 		{
 			method: "PUT",
 			headers: API_HEADERS,
-			body: JSON.stringify(config),
+			body: JSON.stringify(pipelineConfig),
 		}
 	);
 }
 
 // v4 API to List Available Pipelines
 export async function listPipelines(
+	complianceConfig: ComplianceConfig,
 	accountId: string
 ): Promise<PipelineEntry[]> {
 	return await fetchResult<PipelineEntry[]>(
+		complianceConfig,
 		`/accounts/${accountId}/pipelines`,
 		{
 			method: "GET",
@@ -274,11 +288,16 @@ export async function listPipelines(
 
 // v4 API to Delete Pipeline
 export async function deletePipeline(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	name: string
 ): Promise<void> {
-	return await fetchResult<void>(`/accounts/${accountId}/pipelines/${name}`, {
-		method: "DELETE",
-		headers: API_HEADERS,
-	});
+	return await fetchResult<void>(
+		complianceConfig,
+		`/accounts/${accountId}/pipelines/${name}`,
+		{
+			method: "DELETE",
+			headers: API_HEADERS,
+		}
+	);
 }

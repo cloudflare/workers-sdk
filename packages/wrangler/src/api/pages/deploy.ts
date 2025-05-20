@@ -148,6 +148,7 @@ export async function deploy({
 
 	// Grab the bindings from the API, we need these for shims and other such hacky inserts
 	const project = await fetchResult<Project>(
+		undefined,
 		`/accounts/${accountId}/pages/projects/${projectName}`
 	);
 	let isProduction = true;
@@ -440,6 +441,7 @@ export async function deploy({
 	while (attempts < MAX_DEPLOYMENT_ATTEMPTS) {
 		try {
 			const deploymentResponse = await fetchResult<Deployment>(
+				undefined,
 				`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
 				{
 					method: "POST",

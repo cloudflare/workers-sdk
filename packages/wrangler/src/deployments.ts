@@ -12,6 +12,7 @@ import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName } from "./utils/getScriptName";
 import { printWranglerBanner } from "./wrangler-banner";
+import type { ComplianceConfig } from "./cfetch";
 import type { Config } from "./config";
 import type { WorkerMetadataBinding } from "./deployment-bundle/create-worker-upload-form";
 import type { ServiceMetadataRes } from "./init";
@@ -52,6 +53,7 @@ export type DeploymentListResult = {
 };
 
 export async function deployments(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string | undefined,
 	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {}
@@ -66,12 +68,14 @@ export async function deployments(
 
 	const scriptTag = (
 		await fetchResult<ServiceMetadataRes>(
+			complianceConfig,
 			`/accounts/${accountId}/workers/services/${scriptName}`
 		)
 	).default_environment.script.tag;
 
 	const params = new URLSearchParams({ order: "asc" });
 	const { items: deploys } = await fetchResult<DeploymentListResult>(
+		complianceConfig,
 		`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}`,
 		undefined,
 		params
@@ -135,6 +139,7 @@ function formatTrigger(trigger: string): string {
 }
 
 export async function rollbackDeployment(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string | undefined,
 	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {},
@@ -144,12 +149,14 @@ export async function rollbackDeployment(
 	if (deploymentId === undefined) {
 		const scriptTag = (
 			await fetchResult<ServiceMetadataRes>(
+				complianceConfig,
 				`/accounts/${accountId}/workers/services/${scriptName}`
 			)
 		).default_environment.script.tag;
 
 		const params = new URLSearchParams({ order: "asc" });
 		const { items: deploys } = await fetchResult<DeploymentListResult>(
+			complianceConfig,
 			`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}`,
 			undefined,
 			params
@@ -195,6 +202,7 @@ export async function rollbackDeployment(
 	}
 
 	let rollbackVersion = await rollbackRequest(
+		complianceConfig,
 		accountId,
 		scriptName,
 		deploymentId,
@@ -217,6 +225,7 @@ export async function rollbackDeployment(
 }
 
 async function rollbackRequest(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string | undefined,
 	deploymentId: string,
@@ -228,6 +237,7 @@ async function rollbackRequest(
 	const { deployment_id } = await fetchResult<{
 		deployment_id: string | null;
 	}>(
+		complianceConfig,
 		`/accounts/${accountId}/workers/scripts/${scriptName}?rollback_to=${deploymentId}`,
 		{
 			method: "PUT",
@@ -239,6 +249,7 @@ async function rollbackRequest(
 }
 
 export async function viewDeployment(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string | undefined,
 	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {},
@@ -254,6 +265,7 @@ export async function viewDeployment(
 
 	const scriptTag = (
 		await fetchResult<ServiceMetadataRes>(
+			complianceConfig,
 			`/accounts/${accountId}/workers/services/${scriptName}`
 		)
 	).default_environment.script.tag;
@@ -261,6 +273,7 @@ export async function viewDeployment(
 	if (deploymentId === undefined) {
 		const params = new URLSearchParams({ order: "asc" });
 		const { latest } = await fetchResult<DeploymentListResult>(
+			complianceConfig,
 			`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}`,
 			undefined,
 			params
@@ -275,6 +288,7 @@ export async function viewDeployment(
 	}
 
 	const deploymentDetails = await fetchResult<DeploymentListResult["latest"]>(
+		complianceConfig,
 		`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}/detail/${deploymentId}`
 	);
 

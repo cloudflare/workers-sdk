@@ -19,7 +19,7 @@ import {
 } from "./cert/cert";
 import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
-import { experimental_readRawConfig, loadDotEnv } from "./config";
+import { experimental_readRawConfig, loadDotEnv, readConfig } from "./config";
 import { containers } from "./containers";
 import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
@@ -308,6 +308,7 @@ import { workflowsListCommand } from "./workflows/commands/list";
 import { workflowsTriggerCommand } from "./workflows/commands/trigger";
 import { printWranglerBanner } from "./wrangler-banner";
 import { asJson } from "./yargs-types";
+import type { Config } from "./config";
 import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
 
@@ -1501,7 +1502,13 @@ export async function main(argv: string[]): Promise<void> {
 				logger.log(chalk.yellow(message));
 			}
 			const accountTag = (e as APIError)?.accountTag;
-			await whoami(accountTag);
+			let config: Config | undefined;
+			try {
+				config = await readConfig(wrangler.arguments, { hideWarnings: true });
+			} catch {
+				config = undefined;
+			}
+			await whoami(config, accountTag);
 		} else if (e instanceof ParseError) {
 			e.notes.push({
 				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",

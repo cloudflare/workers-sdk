@@ -1,6 +1,9 @@
 import path from "node:path";
+import { dedent } from "ts-dedent";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
+import { logger } from "../logger";
 import { getEnvironmentVariableFactory } from "./factory";
+import type { Config } from "../config";
 
 /**
  * `WRANGLER_C3_COMMAND` can override the command used by `wrangler init` when delegating to C3.
@@ -44,21 +47,55 @@ export const getWranglerSendMetricsFromEnv = getEnvironmentVariableFactory({
 export const getCloudflareApiEnvironmentFromEnv = getEnvironmentVariableFactory(
 	{
 		variableName: "WRANGLER_API_ENVIRONMENT",
-		defaultValue: () => "production",
+		defaultValue: () => "production" as const,
+		choices: ["production", "staging"] as const,
 	}
 );
 
+const getCloudflareComplianceRegionFromEnv = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_COMPLIANCE_REGION",
+	choices: ["public", "fedramp_high"] as const,
+});
+
 /**
- * `CLOUDFLARE_API_BASE_URL` specifies the URL to the Cloudflare API.
+ * Set `CLOUDFLARE_COMPLIANCE_REGION` environment variable to "fedramp_high"
+ * or set the `compliance_region` property in the Wrangler configuration
+ * to tell Wrangler to run in FedRAMP High compliance region mode, rather than "public" mode.
  */
-export const getCloudflareApiBaseUrl = getEnvironmentVariableFactory({
+export const getCloudflareComplianceRegion = (
+	complianceRegion: Config["compliance_region"] | undefined
+) => {
+	if (getCloudflareComplianceRegionFromEnv() && complianceRegion) {
+		logger.once.warn(dedent`
+			The compliance region has been set in two places:
+			 - \`CLOUDFLARE_COMPLIANCE_REGION\` environment variable: \`${getCloudflareComplianceRegionFromEnv()}\`
+			 - \`compliance_region\` configuration property: \`${complianceRegion}\`
+			Using the value from the environment variable: \`${getCloudflareComplianceRegionFromEnv()}\`
+			`);
+	}
+	return getCloudflareComplianceRegionFromEnv() ?? complianceRegion ?? "public";
+};
+
+const getCloudflareApiBaseUrlFromEnv = getEnvironmentVariableFactory({
 	variableName: "CLOUDFLARE_API_BASE_URL",
 	deprecatedName: "CF_API_BASE_URL",
-	defaultValue: () =>
-		getCloudflareApiEnvironmentFromEnv() === "staging"
-			? "https://api.staging.cloudflare.com/client/v4"
-			: "https://api.cloudflare.com/client/v4",
 });
+
+/**
+ * `CLOUDFLARE_API_BASE_URL` specifies the URL to the Cloudflare API.
+ *
+ * If this environment variable is not set, it will default to a URL computed from the
+ * Cloudflare compliance region and the API environment.
+ */
+export const getCloudflareApiBaseUrl = (
+	complianceRegion: Config["compliance_region"] | undefined
+) =>
+	getCloudflareApiBaseUrlFromEnv() ??
+	getCloudflareComplianceRegion(complianceRegion) === "fedramp_high"
+		? "https://api.fed.cloudflare.com/client/v4"
+		: getCloudflareApiEnvironmentFromEnv() === "staging"
+			? "https://api.staging.cloudflare.com/client/v4"
+			: "https://api.cloudflare.com/client/v4";
 
 /**
  * `WRANGLER_LOG_SANITIZE` specifies whether we sanitize debug logs.

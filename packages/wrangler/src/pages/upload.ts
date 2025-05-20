@@ -93,6 +93,7 @@ export const upload = async (
 		} else {
 			return (
 				await fetchResult<{ jwt: string }>(
+					undefined,
 					`/accounts/${args.accountId}/pages/projects/${args.projectName}/upload-token`
 				)
 			).jwt;
@@ -113,16 +114,20 @@ export const upload = async (
 		}
 
 		try {
-			return await fetchResult<string[]>(`/pages/assets/check-missing`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${jwt}`,
-				},
-				body: JSON.stringify({
-					hashes: files.map(({ hash }) => hash),
-				}),
-			});
+			return await fetchResult<string[]>(
+				undefined,
+				`/pages/assets/check-missing`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${jwt}`,
+					},
+					body: JSON.stringify({
+						hashes: files.map(({ hash }) => hash),
+					}),
+				}
+			);
 		} catch (e) {
 			if (attempts < MAX_CHECK_MISSING_ATTEMPTS) {
 				// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
@@ -216,7 +221,7 @@ export const upload = async (
 
 			try {
 				logger.debug("POST /pages/assets/upload");
-				const res = await fetchResult(`/pages/assets/upload`, {
+				const res = await fetchResult(undefined, `/pages/assets/upload`, {
 					method: "POST",
 					headers: {
 						"Content-Type": "application/json",
@@ -304,7 +309,7 @@ export const upload = async (
 
 	const doUpsertHashes = async (): Promise<void> => {
 		try {
-			return await fetchResult(`/pages/assets/upsert-hashes`, {
+			return await fetchResult(undefined, `/pages/assets/upsert-hashes`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -325,7 +330,7 @@ export const upload = async (
 				jwt = await fetchJwt();
 			}
 
-			return await fetchResult(`/pages/assets/upsert-hashes`, {
+			return await fetchResult(undefined, `/pages/assets/upsert-hashes`, {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",

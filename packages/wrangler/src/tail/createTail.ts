@@ -90,6 +90,7 @@ export async function createPagesTail({
 	debug = false,
 }: CreatePagesTailOptions) {
 	const tailRecord = await fetchResult<TailCreationApiResponse>(
+		undefined,
 		`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentId}/tails`,
 		{
 			method: "POST",
@@ -99,6 +100,7 @@ export async function createPagesTail({
 
 	const deleteTail = async () =>
 		fetchResult(
+			undefined,
 			`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentId}/tails/${tailRecord.id}`,
 			{ method: "DELETE" }
 		);
@@ -160,7 +162,7 @@ export async function createTail(
 		id: tailId,
 		url: websocketUrl,
 		expires_at: expiration,
-	} = await fetchResult<TailCreationApiResponse>(createTailUrl, {
+	} = await fetchResult<TailCreationApiResponse>(undefined, createTailUrl, {
 		method: "POST",
 		body: JSON.stringify(filters),
 	});
@@ -168,7 +170,7 @@ export async function createTail(
 	// delete the tail (not yet!)
 	const deleteUrl = makeDeleteTailUrl(accountId, workerName, tailId, env);
 	async function deleteTail() {
-		await fetchResult(deleteUrl, { method: "DELETE" });
+		await fetchResult(undefined, deleteUrl, { method: "DELETE" });
 	}
 
 	const p = proxy ? { agent: new HttpsProxyAgent(proxy) } : {};

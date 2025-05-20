@@ -5,9 +5,11 @@ import { FatalError } from "./errors";
 import { logger } from "./logger";
 import { APIError } from "./parse";
 import { getCloudflareAccountIdFromEnv } from "./user/auth-variables";
+import type { ComplianceConfig } from "./cfetch";
 import type { ServiceMetadataRes } from "./init";
 
 export async function verifyWorkerMatchesCITag(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	workerName: string,
 	configPath?: string
@@ -38,6 +40,7 @@ export async function verifyWorkerMatchesCITag(
 
 	try {
 		const worker = await fetchResult<ServiceMetadataRes>(
+			complianceConfig,
 			`/accounts/${accountId}/workers/services/${workerName}`
 		);
 		tag = worker.default_environment.script.tag;

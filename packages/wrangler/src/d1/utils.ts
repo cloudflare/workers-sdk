@@ -2,6 +2,7 @@ import { fetchResult } from "../cfetch";
 import { UserError } from "../errors";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "./constants";
 import { listDatabases } from "./list";
+import type { ComplianceConfig } from "../cfetch";
 import type { Config } from "../config";
 import type { Database, DatabaseInfo } from "./types";
 
@@ -46,7 +47,7 @@ export const getDatabaseByNameOrBinding = async (
 		return dbFromConfig;
 	}
 
-	const allDBs = await listDatabases(accountId);
+	const allDBs = await listDatabases(config, accountId);
 	const matchingDB = allDBs.find((db) => db.name === name);
 	if (!matchingDB) {
 		throw new UserError(`Couldn't find DB with name '${name}'`);
@@ -55,10 +56,12 @@ export const getDatabaseByNameOrBinding = async (
 };
 
 export const getDatabaseInfoFromIdOrName = async (
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	databaseIdOrName: string
 ): Promise<DatabaseInfo> => {
 	return await fetchResult<DatabaseInfo>(
+		complianceConfig,
 		`/accounts/${accountId}/d1/database/${databaseIdOrName}`,
 		{
 			headers: {

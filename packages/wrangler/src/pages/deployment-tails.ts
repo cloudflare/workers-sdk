@@ -169,6 +169,7 @@ export const pagesDeploymentTailCommand = createCommand({
 		}
 
 		const deployments: Array<Deployment> = await fetchResult(
+			undefined,
 			`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
 			{},
 			new URLSearchParams({ env: environment })

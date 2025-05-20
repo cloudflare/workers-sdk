@@ -119,7 +119,7 @@ export async function createQueue(
 	body: PostQueueBody
 ): Promise<QueueResponse> {
 	const accountId = await requireAuth(config);
-	return fetchResult(queuesUrl(accountId), {
+	return fetchResult(config, queuesUrl(accountId), {
 		method: "POST",
 		body: JSON.stringify(body),
 	});
@@ -131,7 +131,7 @@ export async function updateQueue(
 	queue_id: string
 ): Promise<QueueResponse> {
 	const accountId = await requireAuth(config);
-	return fetchResult(queuesUrl(accountId, queue_id), {
+	return fetchResult(config, queuesUrl(accountId, queue_id), {
 		method: "PATCH",
 		body: JSON.stringify(body),
 	});
@@ -147,7 +147,7 @@ export async function deleteQueue(
 
 async function deleteQueueById(config: Config, queueId: string): Promise<void> {
 	const accountId = await requireAuth(config);
-	return fetchResult(queuesUrl(accountId, queueId), {
+	return fetchResult(config, queuesUrl(accountId, queueId), {
 		method: "DELETE",
 	});
 }
@@ -166,7 +166,7 @@ export async function listQueues(
 		params.append("name", name);
 	}
 
-	return fetchResult(queuesUrl(accountId), {}, params);
+	return fetchResult(config, queuesUrl(accountId), {}, params);
 }
 
 async function listAllQueues(
@@ -180,7 +180,7 @@ async function listAllQueues(
 		params.append("name", e);
 	});
 
-	return fetchPagedListResult(queuesUrl(accountId), {}, params);
+	return fetchPagedListResult(config, queuesUrl(accountId), {}, params);
 }
 
 export async function getQueue(
@@ -229,10 +229,11 @@ async function ensureQueuesExist(config: Config, queueNames: string[]) {
 }
 
 export async function getQueueById(
+	config: Config,
 	accountId: string,
 	queueId: string
 ): Promise<QueueResponse> {
-	return fetchResult(queuesUrl(accountId, queueId), {});
+	return fetchResult(config, queuesUrl(accountId, queueId), {});
 }
 
 export async function putQueue(
@@ -250,7 +251,7 @@ async function putQueueById(
 	body: PostQueueBody
 ): Promise<PostQueueResponse> {
 	const accountId = await requireAuth(config);
-	return fetchResult(queuesUrl(accountId, queueId), {
+	return fetchResult(config, queuesUrl(accountId, queueId), {
 		method: "PUT",
 		body: JSON.stringify(body),
 	});
@@ -271,7 +272,7 @@ async function postConsumerById(
 	body: PostTypedConsumerBody
 ): Promise<TypedConsumerResponse> {
 	const accountId = await requireAuth(config);
-	return fetchResult(queueConsumersUrl(accountId, queueId), {
+	return fetchResult(config, queueConsumersUrl(accountId, queueId), {
 		method: "POST",
 		body: JSON.stringify(body),
 	});
@@ -284,10 +285,14 @@ export async function putConsumerById(
 	body: PostTypedConsumerBody
 ): Promise<TypedConsumerResponse> {
 	const accountId = await requireAuth(config);
-	return fetchResult(queueConsumersUrl(accountId, queueId, consumerId), {
-		method: "PUT",
-		body: JSON.stringify(body),
-	});
+	return fetchResult(
+		config,
+		queueConsumersUrl(accountId, queueId, consumerId),
+		{
+			method: "PUT",
+			body: JSON.stringify(body),
+		}
+	);
 }
 
 export async function putConsumer(
@@ -366,9 +371,13 @@ async function deleteConsumerById(
 	consumerId: string
 ): Promise<void> {
 	const accountId = await requireAuth(config);
-	return fetchResult(queueConsumersUrl(accountId, queueId, consumerId), {
-		method: "DELETE",
-	});
+	return fetchResult(
+		config,
+		queueConsumersUrl(accountId, queueId, consumerId),
+		{
+			method: "DELETE",
+		}
+	);
 }
 
 export async function deletePullConsumer(
@@ -389,6 +398,7 @@ async function getDefaultService(
 ): Promise<string> {
 	const accountId = await requireAuth(config);
 	const service = await fetchResult<WorkerService>(
+		config,
 		`/accounts/${accountId}/workers/services/${serviceName}`,
 		{
 			method: "GET",
@@ -424,7 +434,7 @@ export async function purgeQueue(
 	const queue = await getQueue(config, queueName);
 	const purgeURL = `${queuesUrl(accountId, queue.queue_id)}/purge`;
 	const body: PurgeQueueBody = { delete_messages_permanently: true };
-	return fetchResult(purgeURL, {
+	return fetchResult(config, purgeURL, {
 		method: "POST",
 		body: JSON.stringify(body),
 	});

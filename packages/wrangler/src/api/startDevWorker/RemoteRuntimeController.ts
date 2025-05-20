@@ -48,6 +48,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				await getWorkerAccountAndContext(props);
 
 			return await createPreviewSession(
+				props.complianceConfig,
 				workerAccount,
 				workerContext,
 				this.#abortController.signal
@@ -92,6 +93,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			}
 			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
 				{
+					complianceConfig: props.complianceConfig,
 					accountId: props.accountId,
 					env: props.env,
 					legacyEnv: props.legacyEnv,
@@ -114,6 +116,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				return;
 			}
 			const init = await createRemoteWorkerInit({
+				complianceConfig: props.complianceConfig,
 				bundle: props.bundle,
 				modules: props.modules,
 				accountId: props.accountId,
@@ -136,6 +139,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				return;
 			}
 			const workerPreviewToken = await createWorkerPreview(
+				props.complianceConfig,
 				init,
 				workerAccount,
 				workerContext,
@@ -193,6 +197,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			}
 
 			this.#session ??= await this.#previewSession({
+				complianceConfig: { compliance_region: config.complianceRegion },
 				accountId: auth.accountId,
 				env: config.env, // deprecated service environments -- just pass it through for now
 				legacyEnv: !config.legacy?.enableServiceEnvironments, // wrangler environment -- just pass it through for now
@@ -216,6 +221,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				bundle,
 				modules: bundle.modules,
 				accountId: auth.accountId,
+				complianceConfig: { compliance_region: config.complianceRegion },
 				name: config.name,
 				legacyEnv: !config.legacy?.enableServiceEnvironments,
 				env: config.env,

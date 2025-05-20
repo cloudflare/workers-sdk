@@ -12866,6 +12866,72 @@ export default{
 			`);
 		});
 	});
+
+	describe("compliance region support", () => {
+		it("should upload to the public region by default", async () => {
+			writeWranglerConfig({});
+			writeWorkerSource();
+			mockUploadWorkerRequest({
+				expectedBaseUrl: "api.cloudflare.com",
+			});
+			mockSubDomainRequest();
+			mockGetWorkerSubdomain({ enabled: true });
+
+			await runWrangler("deploy ./index.js");
+		});
+
+		it("should upload to the FedRAMP High region if set in config", async () => {
+			writeWranglerConfig({
+				compliance_region: "fedramp_high",
+			});
+			writeWorkerSource();
+			mockUploadWorkerRequest({
+				expectedBaseUrl: "api.fedramp.cloudflare.com",
+			});
+			mockSubDomainRequest();
+			mockGetWorkerSubdomain({ enabled: true });
+
+			await runWrangler("deploy ./index.js");
+		});
+
+		it("should upload to the FedRAMP High region if set in an env var", async () => {
+			vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "fedramp_high");
+			writeWranglerConfig({});
+			writeWorkerSource();
+			mockUploadWorkerRequest({
+				expectedBaseUrl: "api.fedramp.cloudflare.com",
+			});
+			mockSubDomainRequest();
+			mockGetWorkerSubdomain({ enabled: true });
+
+			await runWrangler("deploy ./index.js");
+		});
+
+		it("should upload to the region set in an env var, overriding any configured value", async () => {
+			vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "public");
+			writeWranglerConfig({
+				compliance_region: "fedramp_high",
+			});
+			writeWorkerSource();
+			mockUploadWorkerRequest({
+				expectedBaseUrl: "api.cloudflare.com",
+			});
+			mockSubDomainRequest();
+			mockGetWorkerSubdomain({ enabled: true });
+
+			await runWrangler("deploy ./index.js");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe compliance region has been set in two places:[0m
+
+				   - \`CLOUDFLARE_COMPLIANCE_REGION\` environment variable: \`public\`
+				   - \`compliance_region\` configuration property: \`fedramp_high\`
+				  Using the value from the environment variable: \`public\`
+
+				"
+			`);
+		});
+	});
 });
 
 /** Write mock assets to the file system so they can be uploaded. */

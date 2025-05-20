@@ -85,6 +85,7 @@ async function pagesProject(
 	if (projectName) {
 		try {
 			project = await fetchResult<PagesProject>(
+				undefined,
 				`/accounts/${accountId}/pages/projects/${projectName}`
 			);
 		} catch (err) {
@@ -149,6 +150,7 @@ export const pagesSecretPutCommand = createCommand({
 		);
 
 		await fetchResult<PagesProject>(
+			undefined,
 			`/accounts/${accountId}/pages/projects/${project.name}`,
 			{
 				method: "PATCH",
@@ -227,6 +229,7 @@ export const pagesSecretBulkCommand = createCommand({
 		);
 		try {
 			await fetchResult<PagesProject>(
+				undefined,
 				`/accounts/${accountId}/pages/projects/${project.name}`,
 				{
 					method: "PATCH",
@@ -294,6 +297,7 @@ export const pagesSecretDeleteCommand = createCommand({
 			);
 
 			await fetchResult<PagesProject>(
+				undefined,
 				`/accounts/${accountId}/pages/projects/${project.name}`,
 				{
 					method: "PATCH",

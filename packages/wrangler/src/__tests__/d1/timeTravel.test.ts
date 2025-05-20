@@ -71,7 +71,11 @@ describe("time-travel", () => {
 				})
 			);
 			await expect(
-				throwIfDatabaseIsAlpha("1701", "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06")
+				throwIfDatabaseIsAlpha(
+					undefined,
+					"1701",
+					"d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06"
+				)
 			).rejects.toThrowError(
 				"Time travel is not available for alpha D1 databases. You will need to migrate to a new database for access to this feature."
 			);
@@ -107,6 +111,7 @@ describe("time-travel", () => {
 				})
 			);
 			const result = await throwIfDatabaseIsAlpha(
+				undefined,
 				"1701",
 				"d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06"
 			);

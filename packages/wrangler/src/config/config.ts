@@ -346,6 +346,7 @@ export const defaultWranglerConfig: Config = {
 	upload_source_maps: undefined,
 	assets: undefined,
 	observability: { enabled: true },
+	compliance_region: undefined,
 
 	/** NON-INHERITABLE ENVIRONMENT FIELDS **/
 	define: {},

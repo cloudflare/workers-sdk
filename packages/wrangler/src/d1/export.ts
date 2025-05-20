@@ -14,6 +14,7 @@ import { APIError } from "../parse";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
+import type { ComplianceConfig } from "../cfetch";
 import type { Config } from "../config";
 import type { Database, ExportPollingResponse, PollingFailure } from "./types";
 
@@ -177,7 +178,7 @@ async function exportRemotely(
 	const s = spinner();
 	const finalResponse = await spinnerWhile<ExportPollingResponse>({
 		spinner: s,
-		promise: () => pollExport(s, accountId, db, dumpOptions, undefined),
+		promise: () => pollExport(s, config, accountId, db, dumpOptions, undefined),
 		startMessage: `Creating export`,
 	});
 
@@ -208,6 +209,7 @@ async function exportRemotely(
 
 async function pollExport(
 	s: ReturnType<typeof spinner>,
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	db: Database,
 	dumpOptions: {
@@ -219,6 +221,7 @@ async function pollExport(
 	num_parts_uploaded = 0
 ): Promise<ExportPollingResponse> {
 	const response = await fetchResult<ExportPollingResponse | PollingFailure>(
+		complianceConfig,
 		`/accounts/${accountId}/d1/database/${db.uuid}/export`,
 		{
 			method: "POST",
@@ -258,6 +261,7 @@ async function pollExport(
 	} else {
 		return await pollExport(
 			s,
+			complianceConfig,
 			accountId,
 			db,
 			dumpOptions,
