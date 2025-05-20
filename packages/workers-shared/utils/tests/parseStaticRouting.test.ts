@@ -101,7 +101,7 @@ test("should throw an error for redundant include rules", () => {
 		`
 		[Error: Invalid routes in _routes.json found
 		Invalid include rules:
-		Rule '/api/*' is invalid; rule '/api/some/route' makes it redundant]
+		Rule '/api/some/route' is invalid; rule '/api/*' makes it redundant]
 	`
 	);
 });
@@ -117,11 +117,11 @@ test("should report errors for include and exclude rules together", () => {
 		`
 		[Error: Invalid routes in _routes.json found
 		Invalid include rules:
-		Rule '/api/*' is invalid; rule '/api/some/route' makes it redundant
+		Rule '/api/some/route' is invalid; rule '/api/*' makes it redundant
 		Rule 'oauth/callback' is invalid; all rules must begin with '/'
 
 		Invalid exclude rules:
-		Rule '/bpi/*' is invalid; rule '/bpi/some/route' makes it redundant
+		Rule '/bpi/some/route' is invalid; rule '/bpi/*' makes it redundant
 		Rule 'bpi' is invalid; all rules must begin with '/']
 	`
 	);

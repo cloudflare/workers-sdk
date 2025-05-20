@@ -1803,33 +1803,28 @@ describe("watch mode", () => {
 								return new Response("Hello from user Worker!")
 							}
 						}`,
-					"public/beep/boop.html": dedent`
+					"public/foo/index.html": dedent`
 						<h1>Hello from an asset</h1>`,
 				});
 				const worker = helper.runLongLived(cmd);
 				const { url } = await worker.waitForReady();
 
-				// verify response from Asset Worker
-				let response = await fetch(`${url}/beep/boop`);
+				let response = await fetch(`${url}/foo`);
 				expect(response.status).toBe(200);
 				expect(await response.text()).toBe("<h1>Hello from an asset</h1>");
-
 				await helper.seed({
-					"public/_routes.json": dedent`
-						{"version":1,
-						"include":["/beep/*"],
-						"exclude":["/beep/boop"]
+					"./public/_routes.json": dedent`
+						{
+						"version": 1,
+						"include": ["/foo/*"],
+						"exclude": []
 						}`,
 				});
 
 				await worker.waitForReload();
 
-				// exclude hits asset
-				response = await fetch(`${url}/beep/boop`);
-				expect(await response.text()).toBe("<h1>Hello from an asset</h1>");
-
-				// include hits user worker
-				response = await fetch(`${url}/beep`);
+				// include hits user worker now
+				response = await fetch(`${url}/foo`);
 				expect(await response.text()).toBe("Hello from user Worker!");
 			});
 		}

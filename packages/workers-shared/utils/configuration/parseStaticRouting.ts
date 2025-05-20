@@ -64,7 +64,7 @@ function validateStaticRoutingRules(rules: string[]): string[] {
 			for (const otherRule of rules) {
 				if (otherRule !== rule && otherRule.startsWith(rule.slice(0, -1))) {
 					invalid.push(
-						`Rule '${rule}' is invalid; rule '${otherRule}' makes it redundant`
+						`Rule '${otherRule}' is invalid; rule '${rule}' makes it redundant`
 					);
 				}
 			}
