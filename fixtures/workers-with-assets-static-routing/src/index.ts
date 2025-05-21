@@ -4,6 +4,14 @@ export type Env = {
 
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
+		const { pathname } = new URL(request.url);
+
+		// api routes
+		if (pathname.startsWith("/api/")) {
+			return Response.json({ some: ["json", "response"] });
+		}
+
+		// asset middleware
 		const assetResp = await env.ASSETS.fetch(request);
 		if (assetResp.ok) {
 			let text = await assetResp.text();
@@ -16,6 +24,8 @@ export default {
 				status: assetResp.status,
 			});
 		}
-		return new Response("Hello from the User Worker");
+
+		// default handling
+		return new Response("404 from the User Worker", { status: 404 });
 	},
 } satisfies ExportedHandler<Env>;
