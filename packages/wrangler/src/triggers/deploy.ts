@@ -10,6 +10,7 @@ import {
 	updateQueueProducers,
 	validateRoutes,
 } from "../deploy/deploy";
+import { getCloudflareComplianceRegion } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { ensureQueuesExistByConfig } from "../queues/client";
@@ -107,10 +108,14 @@ export default async function triggersDeploy(
 			config.configPath
 		);
 
+		const complianceRegion =
+			getCloudflareComplianceRegion(config.compliance_region) === "fedramp_high"
+				? ".fed"
+				: "";
 		const deploymentURL =
 			props.legacyEnv || !props.env
-				? `${scriptName}.${userSubdomain}.workers.dev`
-				: `${envName}.${scriptName}.${userSubdomain}.workers.dev`;
+				? `${scriptName}.${userSubdomain}${complianceRegion}.workers.dev`
+				: `${envName}.${scriptName}.${userSubdomain}${complianceRegion}.workers.dev`;
 
 		if (deploymentInSync && previewsInSync) {
 			deployments.push(Promise.resolve([deploymentURL]));

@@ -12886,7 +12886,7 @@ export default{
 			});
 			writeWorkerSource();
 			mockUploadWorkerRequest({
-				expectedBaseUrl: "api.fedramp.cloudflare.com",
+				expectedBaseUrl: "api.fed.cloudflare.com",
 			});
 			mockSubDomainRequest();
 			mockGetWorkerSubdomain({ enabled: true });
@@ -12899,7 +12899,7 @@ export default{
 			writeWranglerConfig({});
 			writeWorkerSource();
 			mockUploadWorkerRequest({
-				expectedBaseUrl: "api.fedramp.cloudflare.com",
+				expectedBaseUrl: "api.fed.cloudflare.com",
 			});
 			mockSubDomainRequest();
 			mockGetWorkerSubdomain({ enabled: true });
