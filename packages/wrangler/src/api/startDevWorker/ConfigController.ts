@@ -13,7 +13,7 @@ import {
 import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { UserError } from "../../errors";
-import { logger } from "../../logger";
+import { logger, runWithLogLevel } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
 import { requireApiToken, requireAuth } from "../../user";
 import {
@@ -418,7 +418,9 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	}
 
 	public set(input: StartDevWorkerInput, throwErrors = false) {
-		return this.#updateConfig(input, throwErrors);
+		return runWithLogLevel(input.dev?.logLevel, () =>
+			this.#updateConfig(input, throwErrors)
+		);
 	}
 	public patch(input: Partial<StartDevWorkerInput>) {
 		assert(
@@ -431,7 +433,9 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 			...input,
 		};
 
-		return this.#updateConfig(config);
+		return runWithLogLevel(config.dev?.logLevel, () =>
+			this.#updateConfig(config)
+		);
 	}
 
 	async #updateConfig(input: StartDevWorkerInput, throwErrors = false) {
