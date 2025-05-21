@@ -30,6 +30,7 @@ import {
 	collectPlainTextVars,
 } from "./utils/collectKeyValues";
 import { mergeWithOverride } from "./utils/mergeWithOverride";
+import { printWranglerBanner } from "./wrangler-banner";
 import { getHostFromRoute } from "./zones";
 import type {
 	AsyncHook,
@@ -63,6 +64,7 @@ export const dev = createCommand({
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 			MIXED_MODE: args.experimentalMixedMode ?? false,
 		}),
+		printBanner: false,
 	},
 	metadata: {
 		description: "👂 Start a local server for developing your Worker",
@@ -288,6 +290,7 @@ export const dev = createCommand({
 		},
 	},
 	async validateArgs(args) {
+		await printWranglerBanner();
 		if (args.nodeCompat) {
 			throw new UserError(
 				`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`
@@ -318,6 +321,8 @@ export const dev = createCommand({
 		}
 	},
 	async handler(args) {
+		logger.console("clear");
+		await printWranglerBanner();
 		const devInstance = await startDev(args);
 		assert(devInstance.devEnv !== undefined);
 		await events.once(devInstance.devEnv, "teardown");
