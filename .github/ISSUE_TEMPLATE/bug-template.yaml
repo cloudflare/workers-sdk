@@ -8,30 +8,6 @@ body:
     attributes:
       value: |
         Thank you for taking the time to file a bug report! Please fill out this form as completely as possible.
-  - type: dropdown
-    id: products
-    attributes:
-      label: Which Cloudflare product(s) does this pertain to?
-      multiple: true
-      options:
-        - C3 (npm create cloudflare)
-        - D1
-        - KV
-        - Pages
-        - Pub/Sub
-        - Queues
-        - R2
-        - Workers for Platforms
-        - Workers AI
-        - Workers Runtime
-        - Wrangler
-        - Miniflare
-        - KV Asset Handler
-        - Workers Vitest Integration
-        - Vite Plugin
-        - Other
-    validations:
-      required: true
   - type: input
     attributes:
       label: What versions & operating system are you using?
