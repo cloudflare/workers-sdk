@@ -24,7 +24,7 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 	typeof BrowserRenderingOptionsSchema
 > = {
 	options: BrowserRenderingOptionsSchema,
-	async getBindings(options, workerIndex) {
+	async getBindings(options) {
 		if (!options.browserRendering) {
 			return [];
 		}
@@ -46,7 +46,7 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 			[options.browserRendering.binding]: new ProxyNodeBinding(),
 		};
 	},
-	async getServices({ options, workerIndex }) {
+	async getServices({ options }) {
 		if (!options.browserRendering) {
 			return [];
 		}

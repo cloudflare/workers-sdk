@@ -1,21 +1,25 @@
+import assert from "node:assert";
 import { DurableObject } from "cloudflare:workers";
 import { CoreBindings } from "../core/constants";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
 
 export class BrowserSession extends DurableObject {
 	endpoint: string | undefined;
-	async fetch(request: Request) {
+	async fetch(_request: Request) {
 		const webSocketPair = new WebSocketPair();
 		const [client, server] = Object.values(webSocketPair);
 
 		server.accept();
+		assert(this.endpoint !== undefined);
 
-		const response = await fetch(this.endpoint!, {
+		const response = await fetch(this.endpoint, {
 			headers: {
 				Upgrade: "websocket",
 			},
 		});
-		const ws = response.webSocket!;
+
+		assert(response.webSocket !== null);
+		const ws = response.webSocket;
 
 		ws.accept();
 
@@ -71,7 +75,8 @@ export default {
 			await env.BrowserSession.get(id).setEndpoint(wsEndpoint);
 			return Response.json({ sessionId });
 		} else if (url.pathname === "/v1/connectDevtools") {
-			const sessionId = url.searchParams.get("browser_session")!;
+			const sessionId = url.searchParams.get("browser_session");
+			assert(sessionId !== null);
 			const id = env.BrowserSession.idFromName(sessionId);
 			return env.BrowserSession.get(id).fetch(request);
 		}
