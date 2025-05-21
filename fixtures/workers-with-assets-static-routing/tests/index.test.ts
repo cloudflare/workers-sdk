@@ -48,7 +48,7 @@ describe("[Workers + Assets] static routing", () => {
 		expect(response.status).toBe(404);
 	});
 
-	it("should serve an asset when an exclude and an exclude rule matches", async ({
+	it("should serve an asset when an include and an exclude rule matches", async ({
 		expect,
 	}) => {
 		let response = await fetch(`http://${ip}:${port}/worker/asset`);
