@@ -429,7 +429,10 @@ function getExternalServiceEntrypoints(
 				} else if (
 					typeof service === "object" &&
 					"name" in service &&
-					service.name !== kCurrentWorker
+					// Skip if the service refers to the current worker
+					service.name !== kCurrentWorker &&
+					// Skip if it is a remote service
+					service.mixedModeConnectionString === undefined
 				) {
 					serviceName = service.name;
 					entrypoint = service.entrypoint;
@@ -464,6 +467,9 @@ function getExternalServiceEntrypoints(
 					workerName &&
 					typeof designator === "object" &&
 					typeof designator.scriptName !== "undefined" &&
+					// Skip if it is a remote durable object
+					designator.mixedModeConnectionString === undefined &&
+					// Skip if the durable object script name matches one of the workers
 					allWorkerOpts.every(
 						(opts) => opts.core.name !== designator.scriptName
 					)
@@ -500,7 +506,10 @@ function getExternalServiceEntrypoints(
 				} else if (
 					typeof tailService === "object" &&
 					"name" in tailService &&
-					tailService.name !== kCurrentWorker
+					// Skip if the tail service refers to the current worker
+					tailService.name !== kCurrentWorker &&
+					// Skip if the tail worker is a remote service
+					tailService.mixedModeConnectionString === undefined
 				) {
 					serviceName = tailService.name;
 					entrypoint = tailService.entrypoint;
@@ -2121,7 +2130,9 @@ export class Miniflare {
 									// If the scriptName matches one of the workers defined, it is internal as well
 									this.#workerOpts.some(
 										(opts) => opts.core.name === designator.scriptName
-									)
+									) ||
+									// If it is not a remote durable object
+									designator.mixedModeConnectionString === undefined
 								) {
 									internalObjects.push({
 										name: bindingName,
