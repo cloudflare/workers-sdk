@@ -407,7 +407,6 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 				persistent: true,
 				ignoreInitial: true,
 			}).on("change", async (_event) => {
-				logger.log(`${path.basename(configPath)} changed...`);
 				assert(
 					this.latestInput,
 					"Cannot be watching config without having first set an input"

@@ -766,7 +766,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			workerBundle = createWorkerUploadForm(worker);
 			printBindings(
 				{ ...withoutStaticAssets, vars: maskedVars },
-				config.tail_consumers
+				config.tail_consumers,
+				{ warnIfNoBindings: true }
 			);
 		} else {
 			assert(accountId, "Missing accountId");
