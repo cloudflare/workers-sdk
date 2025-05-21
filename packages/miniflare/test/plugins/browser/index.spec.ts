@@ -24,11 +24,6 @@ test("it creates a browser session", async (t) => {
 	const mf = new Miniflare(opts);
 	t.teardown(() => mf.dispose());
 
-	try {
-		const res = await mf.dispatchFetch("https://localhost/session");
-		t.assert((await res.text()).includes("sessionId"));
-	} catch (err) {
-		console.error(err);
-		t.is("true", "false");
-	}
+	const res = await mf.dispatchFetch("https://localhost/session");
+	t.assert((await res.text()).includes("sessionId"));
 });

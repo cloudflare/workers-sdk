@@ -61,6 +61,7 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 						)
 					: {
 							compatibilityDate: "2025-05-01",
+							compatibilityFlags: ["nodejs_compat"],
 							modules: [
 								{
 									name: "index.worker.js",
