@@ -8,6 +8,7 @@ import { updateCheck } from "./update-check";
 const MIN_NODE_VERSION = "20.0.0";
 
 export async function printWranglerBanner(performUpdateCheck = true) {
+	logger.console("clear");
 	let text = ` ⛅️ wrangler ${wranglerVersion}`;
 	let maybeNewVersion: string | undefined;
 	if (performUpdateCheck) {
@@ -22,9 +23,8 @@ export async function printWranglerBanner(performUpdateCheck = true) {
 			text +
 			"\n" +
 			(supportsColor.stdout
-				? chalk.hex("#FF8800")("-".repeat(text.length))
-				: "-".repeat(text.length)) +
-			"\n"
+				? chalk.hex("#FF8800")("─".repeat(text.length))
+				: "─".repeat(text.length))
 	);
 
 	if (semiver(process.versions.node, MIN_NODE_VERSION) < 0) {
