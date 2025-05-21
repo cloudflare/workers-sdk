@@ -26,5 +26,5 @@ export function matchAdditionalModule(source: string) {
 }
 
 export function createModuleReference(type: AdditionalModuleType, id: string) {
-	return `__CLOUDFLARE_MODULE__${type}__${id}__CLOUDFLARE_MODULE__`;
+	return `__CLOUDFLARE_MODULE__${type}__${id}__`;
 }
