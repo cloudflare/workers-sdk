@@ -3226,9 +3226,6 @@ importers:
       fsevents:
         specifier: ~2.3.2
         version: 2.3.3
-      sharp:
-        specifier: ^0.33.5
-        version: 0.33.5
     devDependencies:
       '@aws-sdk/client-s3':
         specifier: ^3.721.0
