@@ -1,5 +1,7 @@
 ---
 "@cloudflare/workers-shared": minor
+"wrangler": minor
+"miniflare": minor
 ---
 
 Adds support for static routing (i.e. \_routes.json) to Workers Assets
