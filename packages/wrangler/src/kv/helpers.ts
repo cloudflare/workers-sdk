@@ -4,7 +4,7 @@ import { Miniflare } from "miniflare";
 import { FormData } from "undici";
 import { fetchKVGetValue, fetchListResult, fetchResult } from "../cfetch";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
-import { buildPersistOptions } from "../dev/miniflare";
+import { getDefaultPersistRoot } from "../dev/miniflare";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import type { Config } from "../config";
@@ -467,11 +467,11 @@ export async function usingLocalNamespace<T>(
 	closure: (namespace: ReplaceWorkersTypes<KVNamespace>) => Promise<T>
 ): Promise<T> {
 	const persist = getLocalPersistencePath(persistTo, config);
-	const persistOptions = buildPersistOptions(persist);
+	const defaultPersistRoot = getDefaultPersistRoot(persist);
 	const mf = new Miniflare({
 		script:
 			'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
-		...persistOptions,
+		defaultPersistRoot,
 		kvNamespaces: { NAMESPACE: namespaceId },
 	});
 	const namespace = await mf.getKVNamespace("NAMESPACE");

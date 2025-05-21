@@ -1,7 +1,7 @@
 import { Miniflare } from "miniflare";
 import { createCommand } from "../core/create-command";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
-import { buildPersistOptions } from "../dev/miniflare";
+import { getDefaultPersistRoot } from "../dev/miniflare";
 import { confirm, prompt } from "../dialogs";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
@@ -33,11 +33,11 @@ export async function usingLocalSecretsStoreSecretAPI<T>(
 	) => Promise<T>
 ): Promise<T> {
 	const persist = getLocalPersistencePath(persistTo, config);
-	const persistOptions = buildPersistOptions(persist);
+	const defaultPersistRoot = getDefaultPersistRoot(persist);
 	const mf = new Miniflare({
 		script:
 			'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
-		...persistOptions,
+		defaultPersistRoot,
 		secretsStoreSecrets: {
 			SECRET: {
 				store_id: storeId,

@@ -949,25 +949,12 @@ export function buildMiniflareBindingOptions(
 	};
 }
 
-type PickTemplate<T, K extends string> = {
-	[P in keyof T & K]: T[P];
-};
-type PersistOptions = PickTemplate<MiniflareOptions, `${string}Persist`>;
-export function buildPersistOptions(
+export function getDefaultPersistRoot(
 	localPersistencePath: ConfigBundle["localPersistencePath"]
-): PersistOptions | undefined {
+): string | undefined {
 	if (localPersistencePath !== null) {
 		const v3Path = path.join(localPersistencePath, "v3");
-		return {
-			cachePersist: path.join(v3Path, "cache"),
-			durableObjectsPersist: path.join(v3Path, "do"),
-			kvPersist: path.join(v3Path, "kv"),
-			r2Persist: path.join(v3Path, "r2"),
-			d1Persist: path.join(v3Path, "d1"),
-			workflowsPersist: path.join(v3Path, "workflows"),
-			secretsStorePersist: path.join(v3Path, "secrets-store"),
-			analyticsEngineDatasetsPersist: path.join(v3Path, "analytics-engine"),
-		};
+		return v3Path;
 	}
 }
 
@@ -1188,7 +1175,7 @@ export async function buildMiniflareOptions(
 	const { bindingOptions, internalObjects, externalWorkers } =
 		buildMiniflareBindingOptions(config, mixedModeConnectionString);
 	const sitesOptions = buildSitesOptions(config);
-	const persistOptions = buildPersistOptions(config.localPersistencePath);
+	const defaultPersistRoot = getDefaultPersistRoot(config.localPersistencePath);
 	const assetOptions = buildAssetOptions(config);
 
 	const options: MiniflareOptions = {
@@ -1210,8 +1197,7 @@ export async function buildMiniflareOptions(
 		log,
 		verbose: logger.loggerLevel === "debug",
 		handleRuntimeStdio,
-
-		...persistOptions,
+		defaultPersistRoot,
 		workers: [
 			{
 				name: getName(config),
