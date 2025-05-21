@@ -1,5 +1,14 @@
 # @cloudflare/vite-plugin
 
+## 1.2.4
+
+### Patch Changes
+
+- [#9322](https://github.com/cloudflare/workers-sdk/pull/9322) [`1bae861`](https://github.com/cloudflare/workers-sdk/commit/1bae8618bc03042c950c3c5f0d259dda2f4bcbfe) Thanks [@justinvdm](https://github.com/justinvdm)! - Fix regex to correctly detect additional module imports with \_\_ in path
+
+- Updated dependencies [[`7344344`](https://github.com/cloudflare/workers-sdk/commit/734434418fa9a3826a3568e5890e396452afcefe)]:
+  - wrangler@4.16.1
+
 ## 1.2.3
 
 ### Patch Changes
