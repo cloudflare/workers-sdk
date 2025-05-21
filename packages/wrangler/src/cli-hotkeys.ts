@@ -1,7 +1,8 @@
 import readline from "readline";
-import { Log } from "miniflare";
+import { dim } from "@cloudflare/cli/colors";
+import stripAnsi from "strip-ansi";
 import { unwrapHook } from "./api/startDevWorker/utils";
-import { Logger, logger } from "./logger";
+import { logger } from "./logger";
 import { onKeyPress } from "./utils/onKeyPress";
 import type { Hook } from "./api";
 
@@ -33,14 +34,13 @@ export default function (
 	function formatInstructions() {
 		const instructions = options
 			.filter((option) => !unwrapHook(option.disabled))
-			.map(({ keys, label }) => `[${keys[0]}] ${unwrapHook(label)}`);
+			.map(({ keys, label }) => `[${keys[0]}] ${dim(unwrapHook(label))}`);
 
-		let stringifiedInstructions = instructions.join(", ");
+		let stringifiedInstructions = instructions.join(" ");
+		let length = stripAnsi(stringifiedInstructions).length;
 
 		const ADDITIONAL_CHARS = 6; // 3 chars on each side of the instructions for the box and spacing ("│  " and "  │")
-		const willWrap =
-			stringifiedInstructions.length + ADDITIONAL_CHARS >
-			process.stdout.columns;
+		const willWrap = length + ADDITIONAL_CHARS > process.stdout.columns;
 		if (willWrap) {
 			stringifiedInstructions = instructions.join("\n");
 		}
@@ -55,9 +55,9 @@ export default function (
 			.join("\n");
 
 		return (
-			`╭──${"─".repeat(maxLineLength)}──╮\n` +
+			`╭──${"─".repeat(length)}──╮\n` +
 			stringifiedInstructions +
-			`\n╰──${"─".repeat(maxLineLength)}──╯`
+			`\n╰──${"─".repeat(length)}──╯`
 		);
 	}
 
@@ -109,18 +109,18 @@ export default function (
 		}
 	}
 
-	Logger.registerBeforeLogHook(clearPreviousInstructions);
-	Logger.registerAfterLogHook(printInstructions);
-	Log.unstable_registerBeforeLogHook(clearPreviousInstructions);
-	Log.unstable_registerAfterLogHook(printInstructions);
+	// Logger.registerBeforeLogHook(clearPreviousInstructions);
+	// Logger.registerAfterLogHook(printInstructions);
+	// Log.unstable_registerBeforeLogHook(clearPreviousInstructions);
+	// Log.unstable_registerAfterLogHook(printInstructions);
 	printInstructions();
 
 	return () => {
 		unregisterKeyPress();
-		clearPreviousInstructions();
-		Logger.registerBeforeLogHook(undefined);
-		Logger.registerAfterLogHook(undefined);
-		Log.unstable_registerBeforeLogHook(undefined);
-		Log.unstable_registerAfterLogHook(undefined);
+		// clearPreviousInstructions();
+		// Logger.registerBeforeLogHook(undefined);
+		// Logger.registerAfterLogHook(undefined);
+		// Log.unstable_registerBeforeLogHook(undefined);
+		// Log.unstable_registerAfterLogHook(undefined);
 	};
 }
