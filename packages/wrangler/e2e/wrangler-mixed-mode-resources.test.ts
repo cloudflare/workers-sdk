@@ -188,7 +188,7 @@ const testCases: TestCase<any>[] = [
 ];
 
 describe("Wrangler Mixed Mode E2E Tests", () => {
-	describe.skip.each(testCases)("$name", (testCase) => {
+	describe.each(testCases)("$name", (testCase) => {
 		let helper: WranglerE2ETestHelper;
 
 		beforeEach(() => {
