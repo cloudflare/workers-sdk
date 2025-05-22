@@ -77,7 +77,7 @@ export const getCloudflareComplianceRegion = (
 			 - \`compliance_region\` configuration property: \`${complianceRegionFromConfig}\`
 			`);
 	}
-	return complianceRegionFromEnv ?? complianceRegionFromConfig ?? "public";
+	return complianceRegionFromEnv || complianceRegionFromConfig || "public";
 };
 
 const getCloudflareApiBaseUrlFromEnv = getEnvironmentVariableFactory({

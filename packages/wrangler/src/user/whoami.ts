@@ -1,6 +1,7 @@
 import chalk from "chalk";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { isAuthenticationError } from "../deploy/deploy";
+import { getCloudflareComplianceRegion } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { fetchMembershipRoles } from "./membership";
 import { getAPIToken, getAuthFromEnv, getScopes } from ".";
@@ -13,19 +14,33 @@ export async function whoami(
 	logger.log("Getting User settings...");
 	const user = await getUserInfo(complianceConfig);
 	if (!user) {
-		return void logger.log(
-			"You are not authenticated. Please run `wrangler login`."
-		);
+		logger.log("You are not authenticated. Please run `wrangler login`.");
+		return;
 	}
+	printUserEmail(user);
 	if (user.authType === "API Token") {
 		logger.log(
 			"ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN in your environment."
 		);
 	}
-	await printUserEmail(user);
-	await printAccountList(user);
-	await printTokenPermissions(user);
+	printComplianceRegion(complianceConfig);
+	printAccountList(user);
+	printTokenPermissions(user);
 	await printMembershipInfo(complianceConfig, user, accountFilter);
+}
+
+function printComplianceRegion(complianceConfig: ComplianceConfig) {
+	const complianceRegion = getCloudflareComplianceRegion(
+		complianceConfig?.compliance_region
+	);
+	if (complianceRegion !== "public") {
+		const complianceRegionSource = complianceConfig?.compliance_region
+			? "Wrangler configuration"
+			: "`CLOUDFLARE_COMPLIANCE_REGION` environment variable";
+		logger.log(
+			`🌍 The compliance region is set to "${chalk.blue(complianceRegion)}" via the ${complianceRegionSource}.`
+		);
+	}
 }
 
 function printUserEmail(user: UserInfo) {
