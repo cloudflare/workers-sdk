@@ -16,7 +16,19 @@ test("should throw an error for unsupported schema versions", () => {
 	}`;
 
 	expect(() => parseStaticRouting(input)).toThrowErrorMatchingInlineSnapshot(
-		`[Error: Unsupported schema version 5; valid schema versions: 1]`
+		`
+		[ZodError: [
+		  {
+		    "received": 5,
+		    "code": "invalid_literal",
+		    "expected": 1,
+		    "path": [
+		      "version"
+		    ],
+		    "message": "Invalid literal value, expected 1"
+		  }
+		]]
+	`
 	);
 });
 
@@ -57,6 +69,20 @@ test("should throw an error when too many rules are provided", () => {
 	);
 });
 
+test("should throw an error when too many rules are provided in combination", () => {
+	const rules = Array.from({ length: 60 }, (_, i) => `"/rule/${i}"`).join(",");
+
+	const input = `{
+		"version": 1,
+		"include": [${rules}],
+		"exclude": [${rules}]
+	}`;
+
+	expect(() => parseStaticRouting(input)).toThrowErrorMatchingInlineSnapshot(
+		`[Error: Too many rules were provided; 120 rules provided exceeds max of 100]`
+	);
+});
+
 test("should throw an error when a rule exceeds the maximum character length", () => {
 	const rule = `/api/${"a".repeat(130)}`;
 	const input = `{
@@ -71,6 +97,19 @@ test("should throw an error when a rule exceeds the maximum character length", (
 		Invalid include rules:
 		Rule '/api/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' is invalid; all rules must be less than 100 characters in length]
 	`
+	);
+});
+
+test("should throw an error when description exceeds the maximum character length", () => {
+	const input = `{
+		"version": 1,
+		"include": ["/api/*"],
+		"exclude": [],
+		"description": "${"a".repeat(130)}"
+	}`;
+
+	expect(() => parseStaticRouting(input)).toThrowErrorMatchingInlineSnapshot(
+		`[Error: Description is invalid; must be less than 100 characters]`
 	);
 });
 
@@ -143,4 +182,21 @@ test("should parse valid static routing configuration", () => {
 	};
 
 	expect(staticRouting).toEqual(expected);
+});
+
+test("should error when rules are not unique", () => {
+	const input = `{
+		"version": 1,
+		"include": ["/api/*", "/api/*", "/bpi/*", "/bpi/*"],
+		"exclude": []
+	}`;
+
+	expect(() => parseStaticRouting(input)).toThrowErrorMatchingInlineSnapshot(
+		`
+		[Error: Invalid routes in _routes.json found
+		Invalid include rules:
+		Rule '/api/*' is a duplicate; rules must be unique
+		Rule '/bpi/*' is a duplicate; rules must be unique]
+	`
+	);
 });

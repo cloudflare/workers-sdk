@@ -16,4 +16,6 @@ export const PLACEHOLDER_REGEX = /:[A-Za-z]\w*/g;
 export const MAX_ROUTES_RULES = 100;
 /** Max char length of each rule in _routes.json */
 export const MAX_ROUTES_RULE_LENGTH = 100;
+/** Max char length of description */
+export const MAX_ROUTES_DESCRIPTION_LENGTH = 100;
 export const ROUTES_SPEC_VERSION = 1;

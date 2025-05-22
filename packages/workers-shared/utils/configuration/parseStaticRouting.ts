@@ -1,5 +1,6 @@
 import { StaticRoutingSchema } from "../types";
 import {
+	MAX_ROUTES_DESCRIPTION_LENGTH,
 	MAX_ROUTES_RULE_LENGTH,
 	MAX_ROUTES_RULES,
 	ROUTES_SPEC_VERSION,
@@ -28,6 +29,15 @@ export function parseStaticRouting(input: string) {
 	}
 
 	if (
+		parsed.description &&
+		parsed.description.length > MAX_ROUTES_DESCRIPTION_LENGTH
+	) {
+		throw new Error(
+			`Description is invalid; must be less than ${MAX_ROUTES_DESCRIPTION_LENGTH} characters`
+		);
+	}
+
+	if (
 		parsed.include.length + (parsed.exclude?.length ?? 0) >
 		MAX_ROUTES_RULES
 	) {
@@ -50,6 +60,7 @@ export function parseStaticRouting(input: string) {
 
 function validateStaticRoutingRules(rules: string[]): string[] {
 	const invalid = [];
+	const seenRules = new Set<string>();
 	for (const rule of rules) {
 		if (!rule.startsWith("/")) {
 			invalid.push(`Rule '${rule}' is invalid; all rules must begin with '/'`);
@@ -59,7 +70,10 @@ function validateStaticRoutingRules(rules: string[]): string[] {
 				`Rule '${rule}' is invalid; all rules must be less than ${MAX_ROUTES_RULE_LENGTH} characters in length`
 			);
 		}
-		if (rule.endsWith("/*")) {
+		if (seenRules.has(rule)) {
+			invalid.push(`Rule '${rule}' is a duplicate; rules must be unique`);
+		}
+		if (rule.endsWith("*")) {
 			// Check for redundant rules due to a glob
 			for (const otherRule of rules) {
 				if (otherRule !== rule && otherRule.startsWith(rule.slice(0, -1))) {
@@ -69,6 +83,7 @@ function validateStaticRoutingRules(rules: string[]): string[] {
 				}
 			}
 		}
+		seenRules.add(rule);
 	}
 	return invalid;
 }
