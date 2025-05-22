@@ -232,6 +232,9 @@ describe("pages", () => {
 
 				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mSpecifying a \`-- <command>\` or \`--proxy\` is deprecated and will be removed in a future version of Wrangler.[0m
 
+				  Build your application to a directory and run the \`wrangler pages dev <directory>\` instead.
+				  This results in a more faithful emulation of production behavior.
+
 				"
 			`);
 		});
