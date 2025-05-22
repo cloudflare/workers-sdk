@@ -11,11 +11,11 @@ export default {
 		const prisma = new PrismaClient({ adapter });
 		if (!request.url.includes("/b")) {
 			return new Response(null, {
-				status: 301,
+				status: 302,
 				headers: {
-					Location: '/b'
-				}
-			})
+					Location: "/b",
+				},
+			});
 		} else {
 			const users = await prisma.user.findMany();
 			return Response.json(users);
