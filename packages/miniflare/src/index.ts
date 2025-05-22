@@ -2538,3 +2538,4 @@ export * from "./shared";
 export * from "./workers";
 export * from "./merge";
 export * from "./zod-format";
+export { getGlobalWranglerConfigPath as getDefaultDevRegistryPath } from "./shared/wrangler";
