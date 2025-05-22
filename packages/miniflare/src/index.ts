@@ -12,7 +12,7 @@ import { ReadableStream } from "stream/web";
 import util from "util";
 import zlib from "zlib";
 import exitHook from "exit-hook";
-import { $ as colors$ } from "kleur/colors";
+import { $ as colors$, green } from "kleur/colors";
 import stoppable from "stoppable";
 import {
 	Dispatcher,
@@ -1566,7 +1566,7 @@ export class Miniflare {
 			const urlSafeHost = getURLSafeHost(configuredHost);
 			if (this.#sharedOpts.core.logRequests) {
 				this.#log.info(
-					`${ready} on ${secure ? "https" : "http"}://${urlSafeHost}:${entryPort}`
+					`${ready} on ${green(`${secure ? "https" : "http"}://${urlSafeHost}:${entryPort}`)}`
 				);
 			}
 

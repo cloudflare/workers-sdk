@@ -71,8 +71,7 @@ describe("list", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x
-			------------------
-
+			──────────────────
 			┌─┬─┬─┐
 			│ uuid │ name │ binding │
 			├─┼─┼─┤

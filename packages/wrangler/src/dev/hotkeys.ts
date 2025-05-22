@@ -33,8 +33,6 @@ export default function registerDevHotKeys(
 		{
 			keys: ["l"],
 			disabled: () => args.forceLocal ?? false,
-			label: () =>
-				`turn ${devEnv.config.latestConfig?.dev?.remote ? "on" : "off"} local mode`,
 			handler: async () => {
 				await devEnv.config.patch({
 					dev: {

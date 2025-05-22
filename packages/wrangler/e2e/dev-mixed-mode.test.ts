@@ -136,14 +136,13 @@ describe("wrangler dev - mixed mode", () => {
 
 		// This should only include logs from the user Wrangler session (i.e. a single list of attached bindings, and only one ready message)
 		expect(normalizeOutput(worker.currentOutput)).toMatchInlineSnapshot(`
-			"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
-			Your Worker has access to the following bindings:
-			- AI:
-			  - Name: AI [connected to remote resource]
-			[wrangler:inf] Ready on http://localhost:<PORT>
+			"Your Worker has access to the following bindings:
+			Binding        Resource      Mode
+			env.AI         AI      remote
+			[wrangler:info] Ready on http://localhost:<PORT>
 			▲ [WARNING] Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development.
 			⎔ Starting local server...
-			[wrangler:inf] GET / 200 OK (TIMINGS)"
+			[wrangler:info] GET / 200 OK (TIMINGS)"
 		`);
 	});
 
