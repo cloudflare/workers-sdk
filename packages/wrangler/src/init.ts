@@ -15,6 +15,7 @@ import { getPackageManager } from "./package-manager";
 import { requireAuth } from "./user";
 import { createBatches } from "./utils/create-batches";
 import * as shellquote from "./utils/shell-quote";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { RawConfig } from "./config";
 import type {
 	CustomDomainRoute,
@@ -265,7 +266,7 @@ async function getWorkerConfig(
 		);
 	});
 
-	const mappedBindings = await mapBindings(accountId, bindings);
+	const mappedBindings = await mapBindings(undefined, accountId, bindings);
 
 	const durableObjectClassNames = bindings
 		.filter((binding) => binding.type === "durable_object_namespace")
@@ -325,6 +326,7 @@ async function getWorkerConfig(
 }
 
 export async function mapBindings(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bindings: WorkerMetadataBinding[]
 ): Promise<RawConfig> {
@@ -336,7 +338,7 @@ export async function mapBindings(
 			.filter((binding) => binding.type === "d1")
 			.map(async (binding) => {
 				const dbInfo = await getDatabaseInfoFromIdOrName(
-					undefined,
+					complianceConfig,
 					accountId,
 					binding.id
 				);

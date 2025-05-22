@@ -12,7 +12,7 @@ import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName } from "./utils/getScriptName";
 import { printWranglerBanner } from "./wrangler-banner";
-import type { ComplianceConfig } from "./cfetch";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { Config } from "./config";
 import type { WorkerMetadataBinding } from "./deployment-bundle/create-worker-upload-form";
 import type { ServiceMetadataRes } from "./init";
@@ -331,7 +331,13 @@ Handlers:            ${
 --------------------------bindings--------------------------
 ${
 	bindings.length > 0
-		? TOML.stringify((await mapBindings(accountId, bindings)) as TOML.JsonMap)
+		? TOML.stringify(
+				(await mapBindings(
+					complianceConfig,
+					accountId,
+					bindings
+				)) as TOML.JsonMap
+			)
 		: `None`
 }
 `;

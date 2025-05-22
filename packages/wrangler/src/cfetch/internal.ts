@@ -6,17 +6,10 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import { APIError, parseJSON } from "../parse";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
-import type { Config } from "../config";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ApiCredentials } from "../user";
 import type { URLSearchParams } from "node:url";
 import type { HeadersInit, RequestInit } from "undici";
-
-/**
- * The compliance region to use for the API requests.
- */
-export type ComplianceConfig =
-	| Partial<Pick<Config, "compliance_region">>
-	| undefined;
 
 /*
  * performApiFetch does everything required to make a CF API request,
@@ -43,7 +36,7 @@ export async function performApiFetch(
 
 	const queryString = queryParams ? `?${queryParams.toString()}` : "";
 	logger.debug(
-		`-- START CF API REQUEST: ${method} ${getCloudflareApiBaseUrl(complianceConfig?.compliance_region)}${resource}${queryString}`
+		`-- START CF API REQUEST: ${method} ${getCloudflareApiBaseUrl(complianceConfig)}${resource}${queryString}`
 	);
 	const logHeaders = cloneHeaders(headers);
 	delete logHeaders["Authorization"];
@@ -60,7 +53,7 @@ export async function performApiFetch(
 	}
 	logger.debug("-- END CF API REQUEST");
 	return await fetch(
-		`${getCloudflareApiBaseUrl(complianceConfig?.compliance_region)}${resource}${queryString}`,
+		`${getCloudflareApiBaseUrl(complianceConfig)}${resource}${queryString}`,
 		{
 			method,
 			...init,
@@ -196,7 +189,7 @@ export async function fetchKVGetValue(
 	const auth = requireApiToken();
 	const headers: Record<string, string> = {};
 	addAuthorizationHeaderIfUnspecified(headers, auth);
-	const resource = `${getCloudflareApiBaseUrl(complianceConfig?.compliance_region)}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
+	const resource = `${getCloudflareApiBaseUrl(complianceConfig)}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
 	const response = await fetch(resource, {
 		method: "GET",
 		headers,
@@ -231,7 +224,7 @@ export async function fetchR2Objects(
 	addUserAgent(headers);
 
 	const response = await fetch(
-		`${getCloudflareApiBaseUrl(complianceConfig?.compliance_region)}${resource}`,
+		`${getCloudflareApiBaseUrl(complianceConfig)}${resource}`,
 		{
 			...bodyInit,
 			headers,

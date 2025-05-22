@@ -1,4 +1,5 @@
 import { UserError } from "../errors";
+import { logger } from "../logger";
 
 type VariableNames =
 	| "CLOUDFLARE_ACCOUNT_ID"
@@ -43,7 +44,7 @@ type DeprecatedNames =
 type ElementType<A> = A extends readonly (infer T)[] ? T : never;
 
 /**
- * Create a function used to access an environment variable. It may return undefined is the variable is not set.
+ * Create a function used to access an environment variable. It may return undefined if the variable is not set.
  *
  * This is not memoized to allow us to change the value at runtime, such as in testing.
  * A warning is shown if the client is using a deprecated version - but only once.
@@ -85,35 +86,18 @@ export function getEnvironmentVariableFactory<
 	defaultValue?: () => ElementType<Choices>;
 	readonly choices?: Choices;
 }): () => ElementType<Choices> | undefined {
-	const deprecationWarning = once(() =>
-		console.warn(
-			`Using "${deprecatedName}" environment variable. This is deprecated. Please use "${variableName}", instead.`
-		)
-	);
-
 	return () => {
 		if (variableName in process.env) {
 			return getProcessEnv(variableName, choices);
 		}
 		if (deprecatedName && deprecatedName in process.env) {
-			deprecationWarning();
+			logger.once.warn(
+				`Using "${deprecatedName}" environment variable. This is deprecated. Please use "${variableName}", instead.`
+			);
 			return getProcessEnv(deprecatedName, choices);
 		}
 
 		return defaultValue?.();
-	};
-}
-
-/**
- * Run the callback only once.
- */
-function once(callback: () => void) {
-	let hasRun = false;
-	return () => {
-		if (!hasRun) {
-			hasRun = true;
-			callback();
-		}
 	};
 }
 

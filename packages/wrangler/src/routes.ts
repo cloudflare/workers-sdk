@@ -2,10 +2,14 @@ import chalk from "chalk";
 import { fetchResult } from "./cfetch";
 import { configFileName } from "./config";
 import { confirm, prompt } from "./dialogs";
+import { getComplianceRegionSubdomain } from "./environment-variables/misc-variables";
 import { UserError } from "./errors";
 import { logger } from "./logger";
-import type { ComplianceConfig } from "./cfetch";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 
+/**
+ * Gets the <user-subdomain>.(fed.)workers.dev URL for the given account.
+ */
 export async function getWorkersDevSubdomain(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
@@ -17,7 +21,7 @@ export async function getWorkersDevSubdomain(
 			complianceConfig,
 			`/accounts/${accountId}/workers/subdomain`
 		);
-		return subdomain;
+		return `${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`;
 	} catch (e) {
 		const error = e as { code?: number };
 		if (typeof error === "object" && !!error && error.code === 10007) {
@@ -96,7 +100,9 @@ async function registerSubdomain(
 
 		const ok = await confirm(
 			`Creating a workers.dev subdomain for your account at ${chalk.blue(
-				chalk.underline(`https://${potentialName}.workers.dev`)
+				chalk.underline(
+					`https://${potentialName}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`
+				)
 			)}. Ok to proceed?`
 		);
 		if (!ok) {
@@ -147,5 +153,5 @@ async function registerSubdomain(
 		)} to edit your workers.dev subdomain`
 	);
 
-	return subdomain;
+	return `${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`;
 }

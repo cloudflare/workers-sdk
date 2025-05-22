@@ -52,6 +52,13 @@ export const getCloudflareApiEnvironmentFromEnv = getEnvironmentVariableFactory(
 	}
 );
 
+/**
+ * The compliance region to use for the API requests.
+ */
+export type ComplianceConfig =
+	| Partial<Pick<Config, "compliance_region">>
+	| undefined;
+
 const getCloudflareComplianceRegionFromEnv = getEnvironmentVariableFactory({
 	variableName: "CLOUDFLARE_COMPLIANCE_REGION",
 	choices: ["public", "fedramp_high"] as const,
@@ -63,21 +70,23 @@ const getCloudflareComplianceRegionFromEnv = getEnvironmentVariableFactory({
  * to tell Wrangler to run in FedRAMP High compliance region mode, rather than "public" mode.
  */
 export const getCloudflareComplianceRegion = (
-	complianceRegionFromConfig: Config["compliance_region"] | undefined
+	complianceConfig: ComplianceConfig
 ) => {
 	const complianceRegionFromEnv = getCloudflareComplianceRegionFromEnv();
 	if (
 		complianceRegionFromEnv !== undefined &&
-		complianceRegionFromConfig !== undefined &&
-		complianceRegionFromEnv !== complianceRegionFromConfig
+		complianceConfig?.compliance_region !== undefined &&
+		complianceRegionFromEnv !== complianceConfig.compliance_region
 	) {
 		throw new UserError(dedent`
 			The compliance region has been set to different values in two places:
 			 - \`CLOUDFLARE_COMPLIANCE_REGION\` environment variable: \`${complianceRegionFromEnv}\`
-			 - \`compliance_region\` configuration property: \`${complianceRegionFromConfig}\`
+			 - \`compliance_region\` configuration property: \`${complianceConfig.compliance_region}\`
 			`);
 	}
-	return complianceRegionFromEnv || complianceRegionFromConfig || "public";
+	return (
+		complianceRegionFromEnv || complianceConfig?.compliance_region || "public"
+	);
 };
 
 const getCloudflareApiBaseUrlFromEnv = getEnvironmentVariableFactory({
@@ -91,15 +100,27 @@ const getCloudflareApiBaseUrlFromEnv = getEnvironmentVariableFactory({
  * If this environment variable is not set, it will default to a URL computed from the
  * Cloudflare compliance region and the API environment.
  */
-export const getCloudflareApiBaseUrl = (
-	complianceRegion: Config["compliance_region"] | undefined
-) =>
+export const getCloudflareApiBaseUrl = (complianceConfig: ComplianceConfig) =>
 	getCloudflareApiBaseUrlFromEnv() ??
-	getCloudflareComplianceRegion(complianceRegion) === "fedramp_high"
-		? "https://api.fed.cloudflare.com/client/v4"
-		: getCloudflareApiEnvironmentFromEnv() === "staging"
-			? "https://api.staging.cloudflare.com/client/v4"
-			: "https://api.cloudflare.com/client/v4";
+	`https://api${getComplianceRegionSubdomain(complianceConfig)}${getStagingSubdomain}.cloudflare.com/client/v4`;
+
+/**
+ * Compute the subdomain for the compliance region.
+ */
+export function getComplianceRegionSubdomain(
+	complianceConfig: ComplianceConfig
+): string {
+	return getCloudflareComplianceRegion(complianceConfig) === "fedramp_high"
+		? ".fed"
+		: "";
+}
+
+/**
+ * Compute the subdomain for the staging environment.
+ */
+function getStagingSubdomain(): string {
+	return getCloudflareApiEnvironmentFromEnv() === "staging" ? ".staging" : "";
+}
 
 /**
  * `WRANGLER_LOG_SANITIZE` specifies whether we sanitize debug logs.
