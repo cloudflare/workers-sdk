@@ -130,6 +130,10 @@ export const PLUGIN_ENTRIES = Object.entries(PLUGINS) as [
 	ValueOf<Plugins>,
 ][];
 
+export type PluginWorkerOptions = {
+	[Key in keyof Plugins]: z.infer<Plugins[Key]["options"]>;
+};
+
 export * from "./shared";
 
 // TODO: be more liberal on exports?

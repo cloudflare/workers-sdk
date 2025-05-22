@@ -1,5 +1,6 @@
+import { PluginWorkerOptions } from "miniflare";
 import { z } from "zod";
-import { Plugin } from "../shared";
+import { DurableObjectClassNames, Plugin } from "../shared";
 
 export const ContainersOptionsSchema = z.object({
 	containers: z
@@ -40,5 +41,13 @@ export const CONTAINER_PLUGIN: Plugin<
 };
 
 export class ContainerService {
-	constructor() {}
+	readonly durableObjectClassNames: DurableObjectClassNames;
+	readonly workerOpts: PluginWorkerOptions[];
+	constructor(
+		durableObjectClassNames: DurableObjectClassNames,
+		workerOpts: PluginWorkerOptions[]
+	) {
+		this.durableObjectClassNames = durableObjectClassNames;
+		this.workerOpts = workerOpts;
+	}
 }

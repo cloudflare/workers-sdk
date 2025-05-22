@@ -50,6 +50,7 @@ import {
 	PLUGIN_ENTRIES,
 	Plugins,
 	PluginServicesOptions,
+	PluginWorkerOptions,
 	ProxyClient,
 	ProxyNodeBinding,
 	QueueConsumers,
@@ -152,9 +153,9 @@ export type MiniflareOptions = SharedOptions &
 	(WorkerOptions | { workers: WorkerOptions[] });
 
 // ===== `Miniflare` Validated Options =====
-type PluginWorkerOptions = {
-	[Key in keyof Plugins]: z.infer<Plugins[Key]["options"]>;
-};
+// type PluginWorkerOptions = {
+// 	[Key in keyof Plugins]: z.infer<Plugins[Key]["options"]>;
+// };
 type PluginSharedOptions = {
 	[Key in keyof Plugins]: OptionalZodTypeOf<Plugins[Key]["sharedOptions"]>;
 };
@@ -1191,7 +1192,7 @@ export class Miniflare {
 			(workerOpts) => workerOpts.containers?.containers !== undefined
 		);
 		if (hasContainers) {
-			new ContainerService();
+			new ContainerService(durableObjectClassNames, allWorkerOpts);
 		}
 		for (let i = 0; i < allWorkerOpts.length; i++) {
 			const previousWorkerOpts = allPreviousWorkerOpts?.[i];
