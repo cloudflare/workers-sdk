@@ -2,9 +2,6 @@ import * as path from "node:path";
 import getPort, { portNumbers } from "get-port";
 import { Request as MiniflareRequest } from "miniflare";
 import * as vite from "vite";
-import { ROUTER_WORKER_NAME } from "./constants";
-import type { Miniflare } from "miniflare";
-import type { IncomingHttpHeaders } from "node:http";
 
 export function getOutputDirectory(
 	userConfig: vite.UserConfig,
@@ -16,10 +13,6 @@ export function getOutputDirectory(
 		userConfig.environments?.[environmentName]?.build?.outDir ??
 		path.join(rootOutputDirectory, environmentName)
 	);
-}
-
-export function getRouterWorker(miniflare: Miniflare) {
-	return miniflare.getWorker(ROUTER_WORKER_NAME);
 }
 
 export function toMiniflareRequest(request: Request): MiniflareRequest {

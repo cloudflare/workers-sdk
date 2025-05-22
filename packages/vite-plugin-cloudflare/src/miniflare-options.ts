@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import { toFetchResponse, toReqRes } from "fetch-to-node";
 import {
 	getDefaultDevRegistryPath,
 	kCurrentWorker,
@@ -23,6 +24,7 @@ import { getAssetsConfig } from "./asset-config";
 import {
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
+	kRequestType,
 	ROUTER_WORKER_NAME,
 } from "./constants";
 import { additionalModuleRE } from "./shared";
@@ -354,7 +356,13 @@ export async function getDevMiniflareOptions(
 											resolvedPluginConfig.entryWorkerEnvironmentName &&
 										workerConfig.assets?.binding
 											? {
-													[workerConfig.assets.binding]: ASSET_WORKER_NAME,
+													[workerConfig.assets.binding]: (request) => {
+														const { req, res } = toReqRes(request as any);
+														req[kRequestType] = "asset";
+														viteDevServer.middlewares(req, res);
+
+														return toFetchResponse(res);
+													},
 												}
 											: {}),
 										__VITE_INVOKE_MODULE__: async (request) => {
