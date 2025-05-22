@@ -60,9 +60,9 @@ const testCases: TestCase<Record<string, string>>[] = [
 			await vi.waitFor(
 				async () => {
 					const resp = await fetch(deployedUrl);
-					assert(resp.ok && resp.status === 200);
+					await expect(await resp.text()).toBe("Hello from target worker");
 				},
-				{ interval: 1_000, timeout: 20_000 }
+				{ interval: 1_000, timeout: 40_000 }
 			);
 
 			onTestFinished(async () => {
@@ -302,7 +302,7 @@ describe("Wrangler Mixed Mode E2E Tests", () => {
 					const response = await fetchText(url);
 					expect(response).toMatch(testCase.expectedResponseMatch);
 				},
-				{ interval: 1_000, timeout: 20_000 }
+				{ interval: 1_000, timeout: 40_000 }
 			);
 		});
 	});
