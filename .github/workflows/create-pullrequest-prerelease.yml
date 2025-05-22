@@ -1,88 +1,42 @@
-name: Create Pull Request Prerelease
+name: Write e2e tests for forks comment
 
 on:
-  workflow_run:
-    workflows: ["Pull Request Labeler"]
-    types:
-      - completed
+  pull_request:
 
 jobs:
-  build:
-    if: ${{ github.repository_owner == 'cloudflare' }}
-    name: Build & Publish a Prerelease to the Adhoc Registry
-    runs-on: ubuntu-22.04
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: true
-    timeout-minutes: 30
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Install Dependencies
-        uses: ./.github/actions/install-dependencies
-        with:
-          turbo-api: ${{ secrets.TURBO_API }}
-          turbo-team: ${{ secrets.TURBO_TEAM }}
-          turbo-token: ${{ secrets.TURBO_TOKEN }}
-          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
-          node-version: ${{ matrix.node_version }}
-
-      - name: Build Miniflare
-        # `extract-runtime-versions.mjs` needs to be able to resolve `miniflare`, but we want to have the correct
-        # `package.json` versions when we build packages for packing
-        run: pnpm run build --filter miniflare
-        env:
-          CI_OS: ${{ runner.os }}
-
-      - name: Expose ACTIONS_RUNTIME_TOKEN and ACTIONS_RESULTS_URL
-        # We use the `@actions/artifact` package in the prerelease scripts below.
-        # This is meant to be used from custom JavaScript actions, rather than
-        # workflow `run` steps. This means it expects `ACTIONS_RUNTIME_TOKEN`
-        # and `ACTIONS_RESULTS_URL` environment variables to be set. We'd like
-        # to retain separation between the different stages of pre-releasing,
-        # and easily pass environment variables to the build. Therefore, we use
-        # this stub action that exposes the `ACTIONS_RUNTIME_TOKEN` and
-        # `ACTIONS_RESULTS_URL` action-specific environment variables as
-        # `GITHUB_ACTIONS_RUNTIME_TOKEN` and `GITHUB_ACTIONS_RESULTS_URL` global
-        # environment variables. These can be passed via `env` to `run` steps
-        # that use `@actions/artifact`.
-        uses: ./.github/actions/expose-actions-variables
-
-      - name: Update versions and dependencies
-        run: node .github/prereleases/1-versions.mjs
-
-      - name: Build, pack, and upload packages
-        run: node .github/prereleases/2-build-pack-upload.mjs
-        env:
-          NODE_ENV: "production"
-          # this is the "test/staging" key for sparrow analytics
-          SPARROW_SOURCE_KEY: "5adf183f94b3436ba78d67f506965998"
-          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
-          ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
-          SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"
-          CI_OS: ${{ runner.os }}
-          # Required by the `@actions/artifact` package
-          ACTIONS_RUNTIME_TOKEN: ${{ env.GITHUB_ACTIONS_RUNTIME_TOKEN }}
-          ACTIONS_RESULTS_URL: ${{ env.GITHUB_ACTIONS_RESULTS_URL }}
-
-      - name: Build and upload prerelease comment
-        run: node .github/prereleases/3-comment.mjs
-        env:
-          # Required by the `@actions/artifact` package
-          ACTIONS_RUNTIME_TOKEN: ${{ env.GITHUB_ACTIONS_RUNTIME_TOKEN }}
-          ACTIONS_RESULTS_URL: ${{ env.GITHUB_ACTIONS_RESULTS_URL }}
-
   comment:
-    # if: ${{ github.event.pull_request.head.repo.fork }}
+    if: ${{ github.repository_owner == 'cloudflare' }}
     runs-on: ubuntu-22.04
     name: Write comment to the PR
     steps:
+      - name: "Put PR and workflow ID on the environment"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Copied from .github/extract-pr-and-workflow-id.js
+            const allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.payload.workflow_run.id,
+            });
+
+            for (const artifact of allArtifacts.data.artifacts) {
+              // Extract the PR number from the artifact name
+              const match = /^npm-package-(.+)-(\d+)$/.exec(artifact.name);
+              if (match) {
+                const packageName = match[1].toUpperCase();
+                require("fs").appendFileSync(
+                  process.env.GITHUB_ENV,
+                  `\nWORKFLOW_RUN_PR_FOR_${packageName}=${match[2]}` +
+                    `\nWORKFLOW_RUN_ID_FOR_${packageName}=${context.payload.workflow_run.id}`
+                );
+              }
+            }
+
       - name: "Comment on PR with E2E action link"
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: forks
+          number: ${{ env.WORKFLOW_RUN_PR_FOR_WRANGLER }}
           message: |
             As this PR is from a fork, maintainers should run E2E tests by visiting https://github.com/cloudflare/workers-sdk/actions/workflows/run-ci-for-external-forks.yml and entering the PR number.
