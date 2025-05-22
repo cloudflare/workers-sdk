@@ -31,5 +31,3 @@ export async function imagesRemoteFetcher(request: Request): Promise<Response> {
 
 	return new Response(res.body, { headers: res.headers });
 }
-
-export { imagesLocalFetcher } from "./local";
