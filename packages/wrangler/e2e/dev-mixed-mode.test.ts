@@ -3,6 +3,7 @@ import dedent from "ts-dedent";
 import { describe, expect, it } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
+import { normalizeOutput } from "./helpers/normalize";
 import { makeRoot, seed } from "./helpers/setup";
 
 describe("wrangler dev - mixed mode", () => {
@@ -89,6 +90,60 @@ describe("wrangler dev - mixed mode", () => {
 			"LOCAL<WORKER>: Hello from a local worker!
 			REMOTE<AI>: "This is a response from Workers AI."
 			"
+		`);
+	});
+
+	it("doesn't show any logs from startMixedModeSession()", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await spawnLocalWorker(helper);
+		await helper.seed({
+			"wrangler.json": JSON.stringify({
+				name: "mixed-mode-mixed-bindings-test",
+				main: "index.js",
+				compatibility_date: "2025-05-07",
+				ai: {
+					binding: "AI",
+				},
+			}),
+			"index.js": dedent`
+							export default {
+								async fetch(request, env) {
+									const messages = [
+										{
+											role: "user",
+											// Doing snapshot testing against AI responses can be flaky, but this prompt generates the same output relatively reliably
+											content: "Respond with the exact text 'This is a response from Workers AI.'. Do not include any other text",
+										},
+									];
+
+									const { response } = await env.AI.run("@hf/thebloke/zephyr-7b-beta-awq", {
+										messages,
+									});
+
+									return new Response(\`REMOTE<AI>: \${response}\n\`);
+								}
+							}`,
+		});
+
+		const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
+
+		const { url } = await worker.waitForReady();
+
+		await expect(fetchText(url)).resolves.toMatchInlineSnapshot(`
+			"REMOTE<AI>: "This is a response from Workers AI."
+			"
+		`);
+
+		// This should only include logs from the user Wrangler session (i.e. a single list of attached bindings, and only one ready message)
+		expect(normalizeOutput(worker.currentOutput)).toMatchInlineSnapshot(`
+			"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+			Your Worker has access to the following bindings:
+			- AI:
+			  - Name: AI [connected to remote resource]
+			[wrangler:inf] Ready on http://localhost:<PORT>
+			▲ [WARNING] Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development.
+			⎔ Starting local server...
+			[wrangler:inf] GET / 200 OK (TIMINGS)"
 		`);
 	});
 

@@ -43,7 +43,7 @@ function stripEmptyNewlines(stdout: string): string {
 }
 
 function stripDevTimings(stdout: string): string {
-	return stdout.replace(/\(\dms\)/g, "(TIMINGS)");
+	return stdout.replace(/\(\d+ms\)/g, "(TIMINGS)");
 }
 
 function removeWorkerPreviewUrl(str: string) {
