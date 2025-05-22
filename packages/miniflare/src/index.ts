@@ -1505,11 +1505,9 @@ export class Miniflare {
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
 		this.#cfObject = sharedOpts.core.cf;
 
-		const externalServices = getExternalServiceEntrypoints(
-			allWorkerOpts,
-			loopbackHost,
-			loopbackPort
-		);
+		const externalServices = this.#devRegistry.isEnabled()
+			? getExternalServiceEntrypoints(allWorkerOpts, loopbackHost, loopbackPort)
+			: null;
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const wrappedBindingNames = getWrappedBindingNames(
 			allWorkerOpts,
@@ -1752,22 +1750,20 @@ export class Miniflare {
 			}
 		}
 
-		if (externalServices && externalServices.size > 0) {
-			const isDevRegistryEnabled = this.#devRegistry.isEnabled();
+		if (
+			this.#devRegistry.isEnabled() &&
+			externalServices &&
+			externalServices.size > 0
+		) {
 			const isDurableObjectProxyEnabled =
 				this.#devRegistry.isDurableObjectProxyEnabled();
-			const mode = !isDevRegistryEnabled
-				? "no-proxy"
-				: isDurableObjectProxyEnabled
-					? "full-proxy"
-					: "service-proxy";
 			const proxyURL = `http://${loopbackHost}:${loopbackPort}`;
 			for (const [serviceName, entrypoints] of externalServices) {
 				const service = createExternalService({
 					serviceName,
 					entrypoints,
 					proxyURL,
-					mode,
+					isDurableObjectProxyEnabled,
 				});
 				assert(service.name !== undefined);
 

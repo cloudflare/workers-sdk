@@ -1,9 +1,20 @@
 import test from "ava";
-import { Miniflare, MiniflareOptions } from "miniflare";
+import { Miniflare } from "miniflare";
 import { useTmp, waitUntil } from "./test-shared";
 
 test("DevRegistry: fetch to service worker", async (t) => {
 	const unsafeDevRegistryPath = await useTmp(t);
+	const remote = new Miniflare({
+		name: "remote-worker",
+		unsafeDevRegistryPath,
+		compatibilityFlags: ["experimental"],
+		script: `addEventListener("fetch", (event) => {
+			event.respondWith(new Response("Hello from service worker!"));
+		})`,
+	});
+
+	await remote.ready;
+
 	const local = new Miniflare({
 		name: "local-worker",
 		unsafeDevRegistryPath,
@@ -26,28 +37,19 @@ test("DevRegistry: fetch to service worker", async (t) => {
 
 	const res = await local.dispatchFetch("http://placeholder");
 
-	t.is(
-		await res.text(),
-		`Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
-	);
-	t.is(res.status, 503);
+	t.is(await res.text(), "Hello from service worker!");
+	t.is(res.status, 200);
 
-	const remote = new Miniflare({
-		name: "remote-worker",
-		unsafeDevRegistryPath,
-		compatibilityFlags: ["experimental"],
-		script: `addEventListener("fetch", (event) => {
-			event.respondWith(new Response("Hello from service worker!"));
-		})`,
-	});
-	t.teardown(() => remote.dispose());
-
-	await remote.ready;
+	// Kill the remote worker to see if it fails gracefully
+	await remote.dispose();
 	await waitUntil(t, async (t) => {
 		const res = await local.dispatchFetch("http://placeholder");
 
-		t.is(await res.text(), "Hello from service worker!");
-		t.is(res.status, 200);
+		t.is(
+			await res.text(),
+			`Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+		);
+		t.is(res.status, 503);
 	});
 });
 
@@ -66,7 +68,12 @@ test("DevRegistry: fetch to module worker", async (t) => {
 		script: `
 			export default {
 				async fetch(request, env, ctx) {
-					return await env.SERVICE.fetch(request);
+					const response = await env.SERVICE.fetch(request);
+					const text = await response.text();
+
+					return new Response("Response from remote worker: " + text, {
+						status: response.status,
+					});
 				}
 			}
 		`,
@@ -76,7 +83,7 @@ test("DevRegistry: fetch to module worker", async (t) => {
 	const res = await local.dispatchFetch("http://example.com?name=World");
 	t.is(
 		await res.text(),
-		`Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+		`Response from remote worker: Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
 	);
 	t.is(res.status, 503);
 
@@ -95,7 +102,11 @@ test("DevRegistry: fetch to module worker", async (t) => {
 				}
 			}
 		`,
-		unsafeDirectSockets: [{}],
+		unsafeDirectSockets: [
+			{
+				entrypoint: undefined,
+			},
+		],
 	});
 	t.teardown(() => remote.dispose());
 
@@ -103,7 +114,7 @@ test("DevRegistry: fetch to module worker", async (t) => {
 	await waitUntil(t, async (t) => {
 		const res = await local.dispatchFetch("http://example.com?name=World");
 		const result = await res.text();
-		t.is(result, "Hello World");
+		t.is(result, "Response from remote worker: Hello World");
 		t.is(res.status, 200);
 	});
 });
@@ -125,7 +136,7 @@ test("DevRegistry: RPC to default entrypoint", async (t) => {
 				async fetch(request, env, ctx) {
 					try {
                         const result = await env.SERVICE.ping();
-                        return new Response(result);
+                        return new Response("Response from remote worker: " + result);
                     } catch (e) {
                         return new Response(e.message, { status: 500 });
                     }
@@ -153,14 +164,18 @@ test("DevRegistry: RPC to default entrypoint", async (t) => {
 				ping() { return "pong"; }
 			}
 		`,
-		unsafeDirectSockets: [{}],
+		unsafeDirectSockets: [
+			{
+				entrypoint: undefined,
+			},
+		],
 	});
 
 	await remote.ready;
 	await waitUntil(t, async (t) => {
 		const res = await local.dispatchFetch("http://placeholder");
 		const result = await res.text();
-		t.is(result, "pong");
+		t.is(result, "Response from remote worker: pong");
 	});
 
 	// Kill the remote worker to see if it fails gracefully
@@ -193,7 +208,7 @@ test("DevRegistry: RPC to custom entrypoint", async (t) => {
 				async fetch(request, env, ctx) {
                     try {
                         const result = await env.SERVICE.ping();
-                        return new Response(result);
+                        return new Response("Response from remote worker: " + result);
                     } catch (e) {
                         return new Response(e.message, { status: 500 });
                     }
@@ -232,7 +247,7 @@ test("DevRegistry: RPC to custom entrypoint", async (t) => {
 	await waitUntil(t, async (t) => {
 		const res = await local.dispatchFetch("http://placeholder");
 		const result = await res.text();
-		t.is(result, "pong");
+		t.is(result, "Response from remote worker: pong");
 	});
 
 	await remote.dispose();
@@ -244,208 +259,6 @@ test("DevRegistry: RPC to custom entrypoint", async (t) => {
 		);
 		t.is(res.status, 500);
 	});
-});
-
-test("DevRegistry: fetch to external worker with dev registry disabled", async (t) => {
-	const unsafeDevRegistryPath = await useTmp(t);
-	const remote = new Miniflare({
-		name: "remote-worker",
-		unsafeDevRegistryPath,
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
-			export default {
-				async fetch(request, env, ctx) {
-                    const url = new URL(request.url, 'http://placeholder');
-                    const name = url.searchParams.get("name") ?? 'anonymous';
-
-					return new Response("Hello " + name);
-				}
-			}
-		`,
-		unsafeDirectSockets: [{}],
-	});
-	t.teardown(() => remote.dispose());
-
-	// To make sure the remote worker is registered
-	await remote.ready;
-
-	const localWorkerOptions: MiniflareOptions = {
-		name: "local-worker",
-		serviceBindings: {
-			SERVICE: {
-				name: "remote-worker",
-			},
-		},
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
-			export default {
-				async fetch(request, env, ctx) {
-                    return await env.SERVICE.fetch(request);
-				}
-			}
-		`,
-	};
-	const local = new Miniflare(localWorkerOptions);
-	t.teardown(() => local.dispose());
-
-	const res = await local.dispatchFetch("http://placeholder");
-	const result = await res.text();
-	t.is(
-		result,
-		`Worker Entrypoint "default" of service "remote-worker" is not defined in the options. ` +
-			`Set the "unsafeDevRegistryPath" option if you would like Miniflare to lookup services from the Dev Registry.`
-	);
-	t.is(res.status, 503);
-
-	// Enable the dev registry
-	await local.setOptions({
-		...localWorkerOptions,
-		unsafeDevRegistryPath,
-	});
-	await waitUntil(t, async (t) => {
-		const res = await local.dispatchFetch("http://placeholder");
-		t.is(await res.text(), "Hello anonymous");
-		t.is(res.status, 200);
-	});
-});
-
-test("DevRegistry: RPC to external worker with dev registry disabled", async (t) => {
-	const unsafeDevRegistryPath = await useTmp(t);
-	const remote = new Miniflare({
-		name: "remote-worker",
-		unsafeDevRegistryPath,
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
-			import { WorkerEntrypoint } from "cloudflare:workers";
-			export default class TestEntrypoint extends WorkerEntrypoint {
-				ping() { return "pong"; }
-			}
-		`,
-		unsafeDirectSockets: [{}],
-	});
-	t.teardown(() => remote.dispose());
-
-	// To make sure the remote worker is registered
-	await remote.ready;
-
-	const localWorkerOptions: MiniflareOptions = {
-		name: "local-worker",
-		// The dev registry path is commented out
-		// unsafeDevRegistryPath,
-		serviceBindings: {
-			SERVICE: {
-				name: "remote-worker",
-			},
-		},
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
-			export default {
-				async fetch(request, env, ctx) {
-                    try {
-                        const result = await env.SERVICE.ping();
-                        return new Response(result);
-                    } catch (e) {
-                        return new Response(e.message, { status: 500 });
-                    }
-				}
-			}
-		`,
-	};
-
-	const local = new Miniflare(localWorkerOptions);
-	t.teardown(() => local.dispose());
-
-	const res = await local.dispatchFetch("http://placeholder");
-	t.is(
-		await res.text(),
-		`Worker Entrypoint "default" of service "remote-worker" is not defined in the options. ` +
-			`Set the "unsafeDevRegistryPath" option if you would like Miniflare to lookup services from the Dev Registry.`
-	);
-	t.is(res.status, 500);
-
-	// Enable the dev registry
-	await local.setOptions({
-		...localWorkerOptions,
-		unsafeDevRegistryPath,
-	});
-	await waitUntil(t, async (t) => {
-		const res = await local.dispatchFetch("http://placeholder");
-		const result = await res.text();
-		t.is(result, "pong");
-	});
-});
-
-test("DevRegistry: fetch to external durable object with dev registry disabled", async (t) => {
-	const mf = new Miniflare({
-		name: "local-worker",
-		durableObjects: {
-			DO: {
-				className: "MyDurableObject",
-				scriptName: "remote-worker",
-			},
-		},
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
-			export default {
-				async fetch(request, env, ctx) {
-                    const ns = env.DO;
-					const id = ns.newUniqueId();
-					const stub = ns.get(id);
-					return stub.fetch(request);
-				}
-			}
-		`,
-	});
-	t.teardown(() => mf.dispose());
-
-	const res = await mf.dispatchFetch("http://placeholder");
-	const result = await res.text();
-	t.is(res.status, 503);
-	t.is(result, "Service Unavailable");
-});
-
-test("DevRegistry: RPC to external durable object with dev registry disabled", async (t) => {
-	const mf = new Miniflare({
-		name: "local-worker",
-		durableObjects: {
-			DO: {
-				className: "MyDurableObject",
-				scriptName: "remote-worker",
-			},
-		},
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
-			export default {
-				async fetch(request, env, ctx) {
-					try {
-						const ns = env.DO;
-						const id = ns.newUniqueId();
-						const stub = ns.get(id);
-						const result = await stub.ping();
-						return new Response(result);
-					} catch (ex) {
-						return new Response(ex.message, { status: 500 });
-					}
-				}
-			}
-		`,
-	});
-	t.teardown(() => mf.dispose());
-
-	const res = await mf.dispatchFetch("http://placeholder");
-	const result = await res.text();
-	t.is(
-		result,
-		`Durable Object "MyDurableObject" of script "remote-worker" is not defined in the options. ` +
-			`Set the "unsafeDevRegistryDOProxy" option if you would like Miniflare to lookup services from the Dev Registry.`
-	);
-	t.is(res.status, 500);
 });
 
 test("DevRegistry: fetch to durable object with do proxy disabled", async (t) => {
@@ -572,8 +385,7 @@ test("DevRegistry: RPC to durable object with do proxy disabled", async (t) => {
 	const result = await res.text();
 	t.is(
 		result,
-		`Durable Object "MyDurableObject" of script "remote-worker" is not defined in the options. ` +
-			`Set the "unsafeDevRegistryDOProxy" option if you would like Miniflare to lookup services from the Dev Registry.`
+		`Couldn't find the durable Object "MyDurableObject" of script "remote-worker".`
 	);
 	t.is(res.status, 500);
 });
@@ -598,7 +410,9 @@ test("DevRegistry: fetch to durable object", async (t) => {
 	                const ns = env.DO;
 					const id = ns.newUniqueId();
 					const stub = ns.get(id);
-					return stub.fetch(request);
+					const response = await stub.fetch(request);
+
+					return response;
 				}
 			}
 		`,
@@ -668,7 +482,7 @@ test("DevRegistry: RPC to durable object", async (t) => {
 						const stub = ns.get(id);
 						const result = await stub.ping();
 
-						return new Response(result);
+						return new Response("Response from remote worker: " + result);
 					} catch (ex) {
 						return new Response(ex.message, { status: 500 });
 					}
@@ -748,7 +562,11 @@ test("DevRegistry: tail to default entrypoint", async (t) => {
 				}
 			};
 		`,
-		unsafeDirectSockets: [{}],
+		unsafeDirectSockets: [
+			{
+				entrypoint: undefined,
+			},
+		],
 	});
 	t.teardown(() => remote.dispose());
 
