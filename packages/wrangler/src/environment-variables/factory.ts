@@ -92,15 +92,12 @@ export function getEnvironmentVariableFactory<
 	);
 
 	return () => {
-		let value = getProcessEnv(choices, variableName);
-		if (value) {
-			return value;
+		if (variableName in process.env) {
+			return getProcessEnv(variableName, choices);
 		}
-
-		value = getProcessEnv(choices, deprecatedName);
-		if (value) {
+		if (deprecatedName && deprecatedName in process.env) {
 			deprecationWarning();
-			return value;
+			return getProcessEnv(deprecatedName, choices);
 		}
 
 		return defaultValue?.();
@@ -124,30 +121,23 @@ function once(callback: () => void) {
  * Get the value of an environment variable and check it is one of the choices.
  */
 function getProcessEnv<Choices extends readonly string[]>(
-	choices: Choices | undefined,
-	variableName: string | undefined
+	variableName: string,
+	choices: Choices | undefined
 ): ElementType<Choices> | undefined {
-	if (
-		variableName &&
-		variableName in process.env &&
-		process.env[variableName]
-	) {
-		assertOneOf(choices, process.env[variableName]);
-		return process.env[variableName];
-	}
-	return undefined;
+	assertOneOf(choices, process.env[variableName]);
+	return process.env[variableName];
 }
 
 /**
- * Assert value is one of a list of choices.
+ * Assert `value` is one of a list of `choices`.
  */
 function assertOneOf<Choices extends readonly string[]>(
 	choices: Choices | undefined,
-	value: string
+	value: string | undefined
 ): asserts value is ElementType<Choices> {
 	if (Array.isArray(choices) && !choices.includes(value)) {
 		throw new UserError(
-			`Expected ${value} to be one of ${JSON.stringify(choices)}`
+			`Expected ${JSON.stringify(value)} to be one of ${JSON.stringify(choices)}`
 		);
 	}
 }
