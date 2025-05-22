@@ -277,14 +277,14 @@ export async function getDevMiniflareOptions(
 			serviceBindings: {
 				__VITE_ASSET_EXISTS__: async (request) => {
 					const { pathname } = new URL(request.url);
-					const filePath = path.join(resolvedViteConfig.root, pathname);
+					let exists = false;
 
-					let exists: boolean;
-
-					try {
-						exists = fs.statSync(filePath).isFile();
-					} catch (error) {
-						exists = false;
+					if (pathname.endsWith(".html")) {
+						try {
+							const filePath = path.join(resolvedViteConfig.root, pathname);
+							const stats = await fsp.stat(filePath);
+							exists = stats.isFile();
+						} catch (error) {}
 					}
 
 					return MiniflareResponse.json(exists);
@@ -301,7 +301,7 @@ export async function getDevMiniflareOptions(
 							headers: { "Content-Type": "text/html" },
 						});
 					} catch (error) {
-						throw new Error(`Unexpected error. Failed to load ${pathname}`);
+						throw new Error(`Unexpected error. Failed to load "${pathname}".`);
 					}
 				},
 			},
