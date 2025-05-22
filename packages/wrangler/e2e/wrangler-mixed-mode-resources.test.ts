@@ -209,12 +209,7 @@ describe("Wrangler Mixed Mode E2E Tests", () => {
 				path.resolve(__dirname, "./seed-files/mixed-mode-workers")
 			);
 
-			const setupResult = (await testCase.setup?.(helper)) ?? {};
-
-			const wranglerConfig = testCase.generateWranglerConfig(setupResult);
-			await helper.seed({
-				"wrangler.json": JSON.stringify(wranglerConfig, null, 2),
-			});
+			await writeWranglerConfig(testCase, helper);
 
 			const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
 
@@ -231,12 +226,7 @@ describe("Wrangler Mixed Mode E2E Tests", () => {
 					path.resolve(__dirname, "./seed-files/mixed-mode-workers")
 				);
 
-				const setupResult = (await testCase.setup?.(helper)) ?? {};
-
-				const wranglerConfig = testCase.generateWranglerConfig(setupResult);
-				await helper.seed({
-					"wrangler.json": JSON.stringify(wranglerConfig, null, 2),
-				});
+				await writeWranglerConfig(testCase, helper);
 
 				const worker = helper.runLongLived("wrangler dev");
 
@@ -275,7 +265,7 @@ describe("Wrangler Mixed Mode E2E Tests", () => {
 			});
 
 			worker = helper.runLongLived("wrangler dev --x-mixed-mode", {
-				cleanup: false,
+				stopOnTestFinished: false,
 			});
 
 			const ready = await worker.waitForReady();
@@ -285,15 +275,8 @@ describe("Wrangler Mixed Mode E2E Tests", () => {
 			await worker.stop();
 		});
 
-		it.each(testCases)("$name", async (testCase) => {
-			console.log(`Testing ${testCase.name} with worker reload...`);
-
-			const setupResult = (await testCase.setup?.(helper)) ?? {};
-
-			const wranglerConfig = testCase.generateWranglerConfig(setupResult);
-			await helper.seed({
-				"wrangler.json": JSON.stringify(wranglerConfig, null, 2),
-			});
+		it.each(testCases)("$name with worker reload", async (testCase) => {
+			await writeWranglerConfig(testCase, helper);
 
 			await worker.waitForReload();
 
@@ -307,3 +290,15 @@ describe("Wrangler Mixed Mode E2E Tests", () => {
 		});
 	});
 });
+
+async function writeWranglerConfig(
+	testCase: TestCase<Record<string, string>>,
+	helper: WranglerE2ETestHelper
+) {
+	const setupResult = (await testCase.setup?.(helper)) ?? {};
+
+	const wranglerConfig = testCase.generateWranglerConfig(setupResult);
+	await helper.seed({
+		"wrangler.json": JSON.stringify(wranglerConfig, null, 2),
+	});
+}
