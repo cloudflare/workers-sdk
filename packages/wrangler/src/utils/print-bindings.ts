@@ -9,31 +9,31 @@ export const friendlyBindingNames: Record<
 	keyof CfWorkerInit["bindings"],
 	string
 > = {
-	data_blobs: "Data Blobs",
-	durable_objects: "Durable Objects",
-	kv_namespaces: "KV Namespaces",
+	data_blobs: "Data Blob",
+	durable_objects: "Durable Object",
+	kv_namespaces: "KV Namespace",
 	send_email: "Send Email",
-	queues: "Queues",
-	d1_databases: "D1 Databases",
-	vectorize: "Vectorize Indexes",
-	hyperdrive: "Hyperdrive Configs",
-	r2_buckets: "R2 Buckets",
+	queues: "Queue",
+	d1_databases: "D1 Database",
+	vectorize: "Vectorize Index",
+	hyperdrive: "Hyperdrive Config",
+	r2_buckets: "R2 Bucket",
 	logfwdr: "logfwdr",
-	services: "Services",
-	analytics_engine_datasets: "Analytics Engine Datasets",
-	text_blobs: "Text Blobs",
+	services: "Worker",
+	analytics_engine_datasets: "Analytics Engine Dataset",
+	text_blobs: "Text Blob",
 	browser: "Browser",
 	ai: "AI",
 	images: "Images",
 	version_metadata: "Worker Version Metadata",
 	unsafe: "Unsafe Metadata",
-	vars: "Vars",
-	wasm_modules: "Wasm Modules",
-	dispatch_namespaces: "Dispatch Namespaces",
-	mtls_certificates: "mTLS Certificates",
-	workflows: "Workflows",
-	pipelines: "Pipelines",
-	secrets_store_secrets: "Secrets Store Secrets",
+	vars: "Environment Variable",
+	wasm_modules: "Wasm Module",
+	dispatch_namespaces: "Dispatch Namespace",
+	mtls_certificates: "mTLS Certificate",
+	workflows: "Workflow",
+	pipelines: "Pipeline",
+	secrets_store_secrets: "Secrets Store Secret",
 	assets: "Assets",
 } as const;
 
@@ -70,7 +70,7 @@ export function printBindings(
 	const output: {
 		name: string;
 		type: string;
-		value: string | undefined;
+		value: string | undefined | symbol;
 		mode: string | undefined;
 	}[] = [];
 
@@ -130,15 +130,15 @@ export function printBindings(
 								(d) => d.className === class_name
 							)
 						) {
-							value += ` (defined in ${script_name} ${chalk.green("[connected]")})`;
+							value += `, defined in ${script_name}`;
 							mode = getMode({ isSimulatedLocally: true, connected: true });
 						} else {
-							value += ` (defined in ${script_name} ${chalk.red("[not connected]")})`;
+							value += `, defined in ${script_name}`;
 							mode = getMode({ isSimulatedLocally: true, connected: false });
 						}
 					} else {
-						value += ` (defined in ${script_name})`;
-						mode = getMode({ isSimulatedLocally: false });
+						value += `, defined in ${script_name}`;
+						mode = getMode({ isSimulatedLocally: true });
 					}
 				} else {
 					mode = getMode({ isSimulatedLocally: true });
@@ -148,7 +148,7 @@ export function printBindings(
 					name,
 					type: friendlyBindingNames.durable_objects,
 					value: value,
-					mode: undefined,
+					mode,
 				};
 			})
 		);
@@ -178,7 +178,7 @@ export function printBindings(
 				return {
 					name: binding,
 					type: friendlyBindingNames.kv_namespaces,
-					value: typeof id === "string" ? id : undefined,
+					value: id,
 					mode: getMode({
 						isSimulatedLocally: !remote,
 					}),
@@ -236,24 +236,18 @@ export function printBindings(
 					preview_database_id,
 					remote,
 				}) => {
-					const remoteDatabaseId =
-						typeof database_id === "string" ? database_id : null;
-					let databaseValue =
-						remoteDatabaseId && database_name
-							? `${database_name} (${remoteDatabaseId})`
-							: remoteDatabaseId ?? database_name;
+					const value =
+						typeof database_id == "symbol"
+							? database_id
+							: preview_database_id ?? database_name ?? database_id;
 
-					//database_id is local when running `wrangler dev --local`
-					if (preview_database_id && database_id !== "local") {
-						databaseValue = `${databaseValue ? `${databaseValue}, ` : ""}Preview: (${preview_database_id})`;
-					}
 					return {
 						name: binding,
 						type: friendlyBindingNames.d1_databases,
 						mode: getMode({
 							isSimulatedLocally: !remote,
 						}),
-						value: databaseValue,
+						value,
 					};
 				}
 			)
@@ -289,16 +283,17 @@ export function printBindings(
 	if (r2_buckets !== undefined && r2_buckets.length > 0) {
 		output.push(
 			...r2_buckets.map(({ binding, bucket_name, jurisdiction, remote }) => {
-				let name = typeof bucket_name === "string" ? bucket_name : "";
-
-				if (jurisdiction !== undefined) {
-					name += ` (${jurisdiction})`;
-				}
+				let value =
+					typeof bucket_name === "symbol"
+						? bucket_name
+						: bucket_name
+							? `${bucket_name}${jurisdiction ? ` (${jurisdiction})` : ""}`
+							: undefined;
 
 				return {
 					name: binding,
 					type: friendlyBindingNames.r2_buckets,
-					value: name,
+					value: value,
 					mode: getMode({
 						isSimulatedLocally: !remote,
 					}),
@@ -356,7 +351,7 @@ export function printBindings(
 					) {
 						mode = getMode({ isSimulatedLocally: true, connected: true });
 					} else {
-						value += " " + chalk.red("[not connected]");
+						mode = getMode({ isSimulatedLocally: true, connected: false });
 					}
 				}
 
@@ -471,7 +466,7 @@ export function printBindings(
 				if (typeof value === "string") {
 					parsedValue = `"${truncate(value)}"`;
 				} else if (typeof value === "object") {
-					parsedValue = JSON.stringify(value, null, 1);
+					parsedValue = truncate(JSON.stringify(value));
 				} else {
 					parsedValue = `${truncate(`${value}`)}`;
 				}
@@ -562,6 +557,11 @@ export function printBindings(
 				binding.value.length > maxValueLength
 			) {
 				maxValueLength = binding.value.length;
+			} else if (
+				typeof binding.value === "symbol" &&
+				"inherited".length > maxValueLength
+			) {
+				maxValueLength = "inherited".length;
 			}
 			if (binding.type.length > maxTypeLength) {
 				maxTypeLength = binding.type.length;
@@ -573,15 +573,19 @@ export function printBindings(
 		const hasMode = output.some((b) => b.mode);
 		logger.log(title);
 		logger.log(
-			`${dim("Binding") + " ".repeat(maxValueLength + maxNameLength + 3 + 4 - "Binding".length)}      ${dim("Resource") + " ".repeat(maxTypeLength - "Resource".length)}      ${hasMode ? dim("Mode") : ""}`
+			`${dim("Binding".padEnd(maxValueLength + maxNameLength + 3 + 4))}      ${dim("Resource".padEnd(maxTypeLength))}      ${hasMode ? dim("Mode") : ""}`
 		);
 		for (const binding of output) {
 			const nameValueLength =
 				4 +
 				binding.name.length +
-				(binding.value ? binding.value?.length + 3 : 0);
+				(typeof binding.value === "string"
+					? binding.value?.length + 3
+					: !binding.value
+						? 0
+						: "inherited".length + 3);
 			logger.log(
-				`${white(`env.${binding.name}`)}${binding.value ? ` (${dim(binding.value)})` : ""}${" ".repeat(maxNameLength + maxValueLength + 3 + 4 - nameValueLength)}      ${brandColor(binding.type)}${" ".repeat(maxTypeLength - binding.type.length)}      ${hasMode ? binding.mode : ""}`
+				`${white(`env.${binding.name}`)}${binding.value ? ` (${dim(typeof binding.value === "symbol" ? chalk.italic("inherited") : binding.value ?? "")})` : ""}${" ".repeat(Math.max(0, maxNameLength + maxValueLength + 3 + 4 - nameValueLength))}      ${brandColor(binding.type.padEnd(maxTypeLength))}      ${hasMode ? binding.mode : ""}`
 			);
 		}
 		logger.log();
@@ -615,17 +619,11 @@ export function printBindings(
 
 	if (hasConnectionStatus) {
 		logger.once.info(
-			`\nService bindings, Durable Object bindings, and Tail consumers connect to other \`wrangler dev\` processes running locally, with their connection status indicated by ${chalk.green("[connected]")} or ${chalk.red("[not connected]")}. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development\n`
+			dim(
+				`\nService bindings, Durable Object bindings, and Tail consumers connect to other \`wrangler dev\` processes running locally, with their connection status indicated by ${chalk.green("[connected]")} or ${chalk.red("[not connected]")}. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development\n`
+			)
 		);
 	}
-}
-
-function normalizeValue(value: string | symbol | undefined) {
-	if (!value || typeof value === "symbol") {
-		return "";
-	}
-
-	return value;
 }
 
 /**
@@ -652,20 +650,6 @@ function createGetMode({
 			return undefined;
 		}
 
-		if (isSimulatedLocally && connected === undefined) {
-			// Local resource binding
-			return chalk.blue("local");
-		} else if (!isSimulatedLocally && connected === undefined) {
-			// Remote resource binding
-			return chalk.yellow("remote");
-		} else if (isSimulatedLocally && connected) {
-			// Local service/tail binding
-			return chalk.green("connected to local resource");
-		} else if (!isSimulatedLocally && connected) {
-			// Remote service/tail binding
-			return chalk.green("connected to remote resource");
-		}
-		// Remote/local service/tail binding that isn't connected
-		return chalk.red("not connected");
+		return `${isSimulatedLocally ? chalk.blue("local") : chalk.yellow("remote")}${connected === undefined ? "" : connected ? chalk.green(" [connected]") : chalk.red(" [not connected]")}`;
 	};
 }

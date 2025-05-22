@@ -285,7 +285,6 @@ Uploaded 2 of 3 assets
 Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
-No bindings found.
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -374,8 +373,8 @@ Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Assets:
-  - Binding: ASSETS
+Binding            Resource
+env.ASSETS         Assets
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -541,8 +540,8 @@ Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Assets:
-  - Binding: ASSETS
+Binding            Resource
+env.ASSETS         Assets
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -651,7 +650,6 @@ Uploaded 2 of 3 assets
 Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
-No bindings found.
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
   Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
@@ -663,8 +661,8 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			normalizedStdout = normalize(output.stdout);
 			expect(normalizedStdout).toEqual(`Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Dispatch Namespaces:
-  - DISPATCH: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
+Binding                                                                   Resource
+env.DISPATCH (tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000)      Dispatch Namespace
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -763,8 +761,8 @@ Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Assets:
-  - Binding: ASSETS
+Binding            Resource
+env.ASSETS         Assets
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
   Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
@@ -776,8 +774,8 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			normalizedStdout = normalize(output.stdout);
 			expect(normalizedStdout).toEqual(`Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Dispatch Namespaces:
-  - DISPATCH: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
+Binding                                                                   Resource
+env.DISPATCH (tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000)      Dispatch Namespace
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -874,8 +872,8 @@ Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Assets:
-  - Binding: ASSETS
+Binding            Resource
+env.ASSETS         Assets
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
   Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
@@ -887,8 +885,8 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			normalizedStdout = normalize(output.stdout);
 			expect(normalizedStdout).toEqual(`Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Dispatch Namespaces:
-  - DISPATCH: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
+Binding                                                                   Resource
+env.DISPATCH (tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000)      Dispatch Namespace
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev

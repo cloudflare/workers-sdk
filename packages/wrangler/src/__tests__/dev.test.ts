@@ -888,7 +888,6 @@ describe.sequential("wrangler dev", () => {
 			expect(std.out).toMatchInlineSnapshot(
 				`
 				"[custom build] Running: node -e \\"4+4; require('fs').writeFileSync('index.js', 'export default { fetch(){ return new Response(123) } }')\\"
-				No bindings found.
 				"
 			`
 			);
@@ -913,7 +912,6 @@ describe.sequential("wrangler dev", () => {
 				expect(std.out).toMatchInlineSnapshot(
 					`
 					"[custom build] Running: echo \\"export default { fetch(){ return new Response(123) } }\\" > index.js
-					No bindings found.
 					"
 				`
 				);
@@ -1260,14 +1258,13 @@ describe.sequential("wrangler dev", () => {
 				process.platform === "win32" ? "127.0.0.1" : "localhost"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
-				"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+				"Your Worker has access to the following bindings:
+				Binding                                        Resource            Mode
+				env.NAME_1 (CLASS_1)                           Durable Object      local
+				env.NAME_2 (CLASS_2, defined in SCRIPT_A)      Durable Object      local [not connected]
+				env.NAME_3 (CLASS_3)                           Durable Object      local
+				env.NAME_4 (CLASS_4, defined in SCRIPT_B)      Durable Object      local [not connected]
 
-				Your Worker has access to the following bindings:
-				- Durable Objects:
-				  - NAME_1: CLASS_1
-				  - NAME_2: CLASS_2 (defined in SCRIPT_A [not connected])
-				  - NAME_3: CLASS_3
-				  - NAME_4: CLASS_4 (defined in SCRIPT_B [not connected])
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -1344,17 +1341,16 @@ describe.sequential("wrangler dev", () => {
 			});
 			expect(std.out).toMatchInlineSnapshot(`
 				"Using vars defined in .dev.vars
-				Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
-
 				Your Worker has access to the following bindings:
-				- Vars:
-				  - VAR_1: \\"(hidden)\\"
-				  - VAR_2: \\"original value 2\\"
-				  - VAR_3: \\"(hidden)\\"
-				  - VAR_MULTI_LINE_1: \\"(hidden)\\"
-				  - VAR_MULTI_LINE_2: \\"(hidden)\\"
-				  - EMPTY: \\"(hidden)\\"
-				  - UNQUOTED: \\"(hidden)\\"
+				Binding                                        Resource                  Mode
+				env.VAR_1 (\\"(hidden)\\")                         Environment Variable      local
+				env.VAR_2 (\\"original value 2\\")                 Environment Variable      local
+				env.VAR_3 (\\"(hidden)\\")                         Environment Variable      local
+				env.VAR_MULTI_LINE_1 (\\"(hidden)\\")              Environment Variable      local
+				env.VAR_MULTI_LINE_2 (\\"(hidden)\\")              Environment Variable      local
+				env.EMPTY (\\"(hidden)\\")                         Environment Variable      local
+				env.UNQUOTED (\\"(hidden)\\")                      Environment Variable      local
+
 				"
 			`);
 		});
@@ -1380,11 +1376,10 @@ describe.sequential("wrangler dev", () => {
 			expect(varBindings).toEqual({ CUSTOM_VAR: "custom" });
 			expect(std.out).toMatchInlineSnapshot(`
 				"Using vars defined in .dev.vars.custom
-				Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
-
 				Your Worker has access to the following bindings:
-				- Vars:
-				  - CUSTOM_VAR: \\"(hidden)\\"
+				Binding                          Resource                  Mode
+				env.CUSTOM_VAR (\\"(hidden)\\")      Environment Variable      local
+
 				"
 			`);
 		});
@@ -1586,12 +1581,11 @@ describe.sequential("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWranglerUntilConfig("dev index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+				"Your Worker has access to the following bindings:
+				Binding              Resource      Mode
+				env.WorkerA (A)      Worker      local [not connected]
+				env.WorkerB (B)      Worker      local [not connected]
 
-				Your Worker has access to the following bindings:
-				- Services:
-				  - WorkerA: A [not connected]
-				  - WorkerB: B [not connected]
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1609,12 +1603,11 @@ describe.sequential("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWranglerUntilConfig("dev index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+				"Your Worker has access to the following bindings:
+				Binding              Resource      Mode
+				env.WorkerA (A)      Worker      local [not connected]
+				env.WorkerB (B)      Worker      local [not connected]
 
-				Your Worker has access to the following bindings:
-				- Services:
-				  - WorkerA: A [not connected]
-				  - WorkerB: B [not connected]
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1638,13 +1631,12 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Using vars defined in .dev.vars
-				Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
-
 				Your Worker has access to the following bindings:
-				- Vars:
-				  - variable: 123
-				  - overriden: \\"(hidden)\\"
-				  - SECRET: \\"(hidden)\\"
+				Binding                         Resource                  Mode
+				env.variable (123)              Environment Variable      local
+				env.overriden (\\"(hidden)\\")      Environment Variable      local
+				env.SECRET (\\"(hidden)\\")         Environment Variable      local
+
 				"
 			`);
 		});
@@ -1662,7 +1654,7 @@ describe.sequential("wrangler dev", () => {
 			await expect(
 				runWrangler("dev index.js")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				"[Error: Browser Rendering is not supported locally. Please use `wrangler dev --remote` instead.]"
+				`[Error: Browser Rendering is not supported locally. Please use \`wrangler dev --remote\` instead.]`
 			);
 		});
 	});
@@ -1725,21 +1717,15 @@ describe.sequential("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWranglerUntilConfig("dev index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+				"Your Worker has access to the following bindings:
+				Binding                                          Resource          Mode
+				env.MY_WORKFLOW (myClass)                        Workflow          local
+				env.KV (xxxx-xxxx-xxxx-xxxx)                     KV Namespace      local
+				env.MY_QUEUE_PRODUCES (my-queue)                 Queue             local
+				env.MY_D1 (xxx)                                  D1 Database       local
+				env.MY_R2 (my-bucket)                            R2 Bucket         local
+				env.WorkerA (A)                                  Worker            local [not connected]
 
-				Your Worker has access to the following bindings:
-				- Workflows:
-				  - MY_WORKFLOW: myClass [simulated locally]
-				- KV Namespaces:
-				  - KV: xxxx-xxxx-xxxx-xxxx [simulated locally]
-				- Queues:
-				  - MY_QUEUE_PRODUCES: my-queue [simulated locally]
-				- D1 Databases:
-				  - MY_D1: xxx [simulated locally]
-				- R2 Buckets:
-				  - MY_R2: my-bucket [simulated locally]
-				- Services:
-				  - WorkerA: A [not connected]
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -1759,21 +1745,15 @@ describe.sequential("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWranglerUntilConfig("dev --x-mixed-mode index.js");
 			expect(std.out).toMatchInlineSnapshot(`
-				"Your Worker and resources are simulated locally via Miniflare. For more information, see: https://developers.cloudflare.com/workers/testing/local-development.
+				"Your Worker has access to the following bindings:
+				Binding                                          Resource          Mode
+				env.MY_WORKFLOW (myClass)                        Workflow          local
+				env.KV (xxxx-xxxx-xxxx-xxxx)                     KV Namespace      remote
+				env.MY_QUEUE_PRODUCES (my-queue)                 Queue             remote
+				env.MY_D1 (xxx)                                  D1 Database       remote
+				env.MY_R2 (my-bucket)                            R2 Bucket         remote
+				env.WorkerA (A)                                  Worker            remote [connected]
 
-				Your Worker has access to the following bindings:
-				- Workflows:
-				  - MY_WORKFLOW: myClass [connected to remote resource]
-				- KV Namespaces:
-				  - KV: xxxx-xxxx-xxxx-xxxx [connected to remote resource]
-				- Queues:
-				  - MY_QUEUE_PRODUCES: my-queue [connected to remote resource]
-				- D1 Databases:
-				  - MY_D1: xxx [connected to remote resource]
-				- R2 Buckets:
-				  - MY_R2: my-bucket [connected to remote resource]
-				- Services:
-				  - WorkerA: A [connected to remote resource]
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
