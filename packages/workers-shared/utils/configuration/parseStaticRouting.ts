@@ -5,10 +5,9 @@ import {
 	MAX_ROUTES_RULES,
 	ROUTES_SPEC_VERSION,
 } from "./constants";
-import type { StaticRouting } from "../types";
 
 export function parseStaticRouting(input: string) {
-	const parsed = StaticRoutingSchema.parse(JSON.parse(input)) as StaticRouting;
+	const parsed = StaticRoutingSchema.parse(JSON.parse(input));
 
 	if (parsed.version !== ROUTES_SPEC_VERSION) {
 		throw new Error(

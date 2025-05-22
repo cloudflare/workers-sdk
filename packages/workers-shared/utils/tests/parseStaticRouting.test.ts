@@ -200,3 +200,28 @@ test("should error when rules are not unique", () => {
 	`
 	);
 });
+
+test("should parse routes", () => {
+	const input = `{
+		"version": 1,
+		"include": ["/api/*", "/bpi*", "/oauth/callback"],
+		"exclude": ["/api/assets/*", "/blah"],
+		"description": "This is a test description"
+		}`;
+	const result = parseStaticRouting(input);
+	expect(result).toMatchInlineSnapshot(`
+		{
+		  "description": "This is a test description",
+		  "exclude": [
+		    "/api/assets/*",
+		    "/blah",
+		  ],
+		  "include": [
+		    "/api/*",
+		    "/bpi*",
+		    "/oauth/callback",
+		  ],
+		  "version": 1,
+		}
+	`);
+});
