@@ -248,65 +248,62 @@ describe("Wrangler Mixed Mode E2E Tests", () => {
 		);
 	});
 
-	describe.only.sequential(
-		"Sequential mixed mode tests with worker reloads",
-		() => {
-			let worker: WranglerLongLivedCommand;
-			let helper: WranglerE2ETestHelper;
+	describe.sequential("Sequential mixed mode tests with worker reloads", () => {
+		let worker: WranglerLongLivedCommand;
+		let helper: WranglerE2ETestHelper;
 
-			let url: string;
+		let url: string;
 
-			beforeAll(async () => {
-				helper = new WranglerE2ETestHelper();
-				await helper.seed(
-					path.resolve(__dirname, "./seed-files/mixed-mode-workers")
-				);
+		beforeAll(async () => {
+			helper = new WranglerE2ETestHelper();
+			await helper.seed(
+				path.resolve(__dirname, "./seed-files/mixed-mode-workers")
+			);
 
-				await helper.seed({
-					"wrangler.json": JSON.stringify(
-						{
-							name: "mixed-mode-sequential-test",
-							main: "placeholder.js",
-							compatibility_date: "2025-01-01",
-						},
-						null,
-						2
-					),
-					"placeholder.js":
-						"export default { fetch() { return new Response('Ready to start tests') } }",
-				});
-
-				worker = helper.runLongLived("wrangler dev --x-mixed-mode", {
-					cleanup: false,
-				});
-
-				const ready = await worker.waitForReady();
-				url = ready.url;
-			});
-			afterAll(async () => {
-				await worker.stop();
-			});
-
-			it.each(testCases)("$name", async (testCase) => {
-				console.log(`Testing ${testCase.name} with worker reload...`);
-
-				const setupResult = (await testCase.setup?.(helper)) ?? {};
-
-				const wranglerConfig = testCase.generateWranglerConfig(setupResult);
-				await helper.seed({
-					"wrangler.json": JSON.stringify(wranglerConfig, null, 2),
-				});
-
-				await worker.waitForReload();
-
-				await vi.waitFor(
-					async () => {
-						const response = await fetchText(url);
-						expect(response).toMatch(testCase.expectedResponseMatch);
+			await helper.seed({
+				"wrangler.json": JSON.stringify(
+					{
+						name: "mixed-mode-sequential-test",
+						main: "placeholder.js",
+						compatibility_date: "2025-01-01",
 					},
-					{ interval: 1_000, timeout: 20_000 }
-				);
+					null,
+					2
+				),
+				"placeholder.js":
+					"export default { fetch() { return new Response('Ready to start tests') } }",
 			});
-		}
-	);
+
+			worker = helper.runLongLived("wrangler dev --x-mixed-mode", {
+				cleanup: false,
+			});
+
+			const ready = await worker.waitForReady();
+			url = ready.url;
+		});
+		afterAll(async () => {
+			await worker.stop();
+		});
+
+		it.each(testCases)("$name", async (testCase) => {
+			console.log(`Testing ${testCase.name} with worker reload...`);
+
+			const setupResult = (await testCase.setup?.(helper)) ?? {};
+
+			const wranglerConfig = testCase.generateWranglerConfig(setupResult);
+			await helper.seed({
+				"wrangler.json": JSON.stringify(wranglerConfig, null, 2),
+			});
+
+			await worker.waitForReload();
+
+			await vi.waitFor(
+				async () => {
+					const response = await fetchText(url);
+					expect(response).toMatch(testCase.expectedResponseMatch);
+				},
+				{ interval: 1_000, timeout: 20_000 }
+			);
+		});
+	});
 });
