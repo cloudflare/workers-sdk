@@ -1,6 +1,10 @@
 name: Create Pull Request Prerelease
 
-on: pull_request
+on:
+  workflow_run:
+    workflows: ["Pull Request Labeler"]
+    types:
+      - completed
 
 jobs:
   build:
