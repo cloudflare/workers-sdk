@@ -72,7 +72,6 @@ import {
 	getUserServiceName,
 	handlePrettyErrorRequest,
 	JsonErrorSchema,
-	kCurrentWorker,
 	maybeWrappedModuleToWorkerName,
 	NameSourceOptions,
 	reviveError,
@@ -116,6 +115,7 @@ import {
 	getProtocol,
 	INTERNAL_DO_PROXY_SERVICE_NAME,
 	INTERNAL_DO_PROXY_SERVICE_PATH,
+	normaliseServiceDesignator,
 } from "./shared/external-service";
 import { isCompressedByCloudflareFL } from "./shared/mime-types";
 import {
@@ -401,6 +401,7 @@ function getExternalServiceEntrypoints(
 		string,
 		Map<string | undefined, "service" | "durableObject" | "tail">
 	>();
+	const allWorkerNames = allWorkerOpts.map((opts) => opts.core.name);
 	const getEntrypoints = (name: string) => {
 		let externalService = externalServices.get(name);
 
@@ -418,29 +419,21 @@ function getExternalServiceEntrypoints(
 	for (const workerOpts of allWorkerOpts) {
 		// Override service bindings if they point to a worker that doesn't exist
 		if (workerOpts.core.serviceBindings) {
-			for (const name of Object.keys(workerOpts.core.serviceBindings)) {
-				const service = workerOpts.core.serviceBindings[name];
-
-				let serviceName: string | undefined;
-				let entrypoint: string | undefined;
-
-				if (typeof service === "string") {
-					serviceName = service;
-				} else if (
-					typeof service === "object" &&
-					"name" in service &&
-					// Skip if the service refers to the current worker
-					service.name !== kCurrentWorker &&
-					// Skip if it is a remote service
-					service.mixedModeConnectionString === undefined
-				) {
-					serviceName = service.name;
-					entrypoint = service.entrypoint;
-				}
+			for (const [name, service] of Object.entries(
+				workerOpts.core.serviceBindings
+			)) {
+				const {
+					serviceName = workerOpts.core.name,
+					entrypoint,
+					mixedModeConnectionString,
+				} = normaliseServiceDesignator(service);
 
 				if (
+					// Skip if it is a remote service
+					mixedModeConnectionString === undefined &&
+					// Skip if the service is bound to the existing workers
 					serviceName &&
-					allWorkerOpts.every((options) => options.core.name !== serviceName)
+					!allWorkerNames.includes(serviceName)
 				) {
 					// This is a service binding to a worker that doesn't exist
 					// Override it to connect to the dev registry proxy
@@ -461,63 +454,55 @@ function getExternalServiceEntrypoints(
 			for (const [bindingName, designator] of Object.entries(
 				workerOpts.do.durableObjects
 			)) {
-				const workerName = workerOpts.core.name;
+				const {
+					className,
+					scriptName,
+					unsafePreventEviction,
+					enableSql: useSQLite,
+					mixedModeConnectionString,
+				} = normaliseDurableObject(designator);
 
 				if (
-					workerName &&
-					typeof designator === "object" &&
-					typeof designator.scriptName !== "undefined" &&
 					// Skip if it is a remote durable object
-					designator.mixedModeConnectionString === undefined &&
-					// Skip if the durable object script name matches one of the workers
-					allWorkerOpts.every(
-						(opts) => opts.core.name !== designator.scriptName
-					)
+					mixedModeConnectionString === undefined &&
+					// Skip if the durable object is bound to the existing workers
+					scriptName &&
+					!allWorkerNames.includes(scriptName)
 				) {
-					// If this is an external Durable Object, point it to the external service instead
+					// If this is an external Durable Object, point it to the proxy on the external service instead
 					workerOpts.do.durableObjects[bindingName] = {
-						className: designator.className,
-						scriptName: getExternalServiceName(designator.scriptName),
-						useSQLite: designator.useSQLite,
+						className,
+						scriptName: getExternalServiceName(scriptName),
+						useSQLite,
 						// Matches the unique key Miniflare will generate for this object in
 						// the target session. We need to do this so workerd generates the
 						// same IDs it would if this were part of the same process. workerd
 						// doesn't allow IDs from Durable Objects with different unique keys
 						// to be used with each other.
-						unsafeUniqueKey: `${designator.scriptName}-${designator.className}`,
-						unsafePreventEviction: designator.unsafePreventEviction,
+						unsafeUniqueKey: `${scriptName}-${className}`,
+						unsafePreventEviction,
 					};
 
-					const entrypoints = getEntrypoints(designator.scriptName);
-					entrypoints.set(designator.className, "durableObject");
+					const entrypoints = getEntrypoints(scriptName);
+					entrypoints.set(className, "durableObject");
 				}
 			}
 		}
 
 		if (workerOpts.core.tails) {
 			for (let i = 0; i < workerOpts.core.tails.length; i++) {
-				const tailService = workerOpts.core.tails[i];
-
-				let serviceName: string | undefined;
-				let entrypoint: string | undefined;
-
-				if (typeof tailService === "string") {
-					serviceName = tailService;
-				} else if (
-					typeof tailService === "object" &&
-					"name" in tailService &&
-					// Skip if the tail service refers to the current worker
-					tailService.name !== kCurrentWorker &&
-					// Skip if the tail worker is a remote service
-					tailService.mixedModeConnectionString === undefined
-				) {
-					serviceName = tailService.name;
-					entrypoint = tailService.entrypoint;
-				}
+				const {
+					serviceName = workerOpts.core.name,
+					entrypoint,
+					mixedModeConnectionString,
+				} = normaliseServiceDesignator(workerOpts.core.tails[i]);
 
 				if (
+					// Skip if it is a remote service
+					mixedModeConnectionString === undefined &&
+					// Skip if the service is bound to the existing workers
 					serviceName &&
-					allWorkerOpts.every((options) => options.core.name !== serviceName)
+					!allWorkerNames.includes(serviceName)
 				) {
 					// This is a tail worker that doesn't exist
 					// Override it to connect to the dev registry proxy
@@ -1135,7 +1120,7 @@ export class Miniflare {
 		return this.#workerOpts.map<NameSourceOptions>(({ core }) => core);
 	}
 
-	#getFallbackServiceAddress(service: string, entrypoint: string | undefined) {
+	#getFallbackServiceAddress(service: string, entrypoint: string) {
 		assert(
 			this.#socketPorts !== undefined && this.#runtimeEntryURL !== undefined,
 			"Cannot resolve address for fallback service before runtime is initialised"
@@ -1190,6 +1175,12 @@ export class Miniflare {
 				doProxyTarget.scriptName,
 				doProxyTarget.className
 			);
+
+			if (!address) {
+				res.writeHead(503);
+				res.end("Service Unavailable");
+				return;
+			}
 
 			this.#handleProxy(req, res, address);
 			return;
@@ -1417,14 +1408,8 @@ export class Miniflare {
 			host: string;
 			port: number;
 			path?: string;
-		} | null
-	) => {
-		if (!address) {
-			res.writeHead(503);
-			res.end("Service Unavailable");
-			return;
 		}
-
+	) => {
 		const options: http.RequestOptions = {
 			host: address.host,
 			port: address.port,
@@ -2090,6 +2075,9 @@ export class Miniflare {
 		}
 
 		const protocol = getProtocol(url);
+		const allWorkerNames = this.#workerOpts.map(
+			(workerOpt) => workerOpt.core.name
+		);
 		const entries = await Promise.all(
 			this.#workerOpts.map<Promise<[string, WorkerDefinition] | undefined>>(
 				async (workerOpts) => {
@@ -2122,24 +2110,20 @@ export class Miniflare {
 							workerOpts.do.durableObjects ?? {}
 						).reduce<WorkerDefinition["durableObjects"]>(
 							(internalObjects, [bindingName, designator]) => {
+								const { className, scriptName, mixedModeConnectionString } =
+									normaliseDurableObject(designator);
+
 								if (
-									// If the designator is a string, it must be internal
-									typeof designator !== "object" ||
 									// If the scriptName is undefined, it defaults to the current worker
-									typeof designator.scriptName === "undefined" ||
+									scriptName === undefined ||
 									// If the scriptName matches one of the workers defined, it is internal as well
-									this.#workerOpts.some(
-										(opts) => opts.core.name === designator.scriptName
-									) ||
+									allWorkerNames.includes(scriptName) ||
 									// If it is not a remote durable object
-									designator.mixedModeConnectionString === undefined
+									mixedModeConnectionString === undefined
 								) {
 									internalObjects.push({
 										name: bindingName,
-										className:
-											typeof designator === "object"
-												? designator.className
-												: designator,
+										className,
 									});
 								}
 

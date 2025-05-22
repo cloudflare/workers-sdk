@@ -1,6 +1,12 @@
 import assert from "node:assert";
 import http from "node:http";
-import { getUserServiceName } from "../plugins/core";
+import { z } from "zod";
+import {
+	getUserServiceName,
+	kCurrentWorker,
+	ServiceDesignatorSchema,
+} from "../plugins/core";
+import { MixedModeConnectionString } from "../plugins/shared";
 import {
 	HttpOptions,
 	kVoid,
@@ -8,6 +14,32 @@ import {
 	Worker_DurableObjectNamespace,
 } from "../runtime";
 import { CoreHeaders } from "../workers";
+
+export function normaliseServiceDesignator(
+	service: z.infer<typeof ServiceDesignatorSchema>
+): {
+	serviceName: string | undefined;
+	entrypoint: string | undefined;
+	mixedModeConnectionString: MixedModeConnectionString | undefined;
+} {
+	let serviceName: string | undefined;
+	let entrypoint: string | undefined;
+	let mixedModeConnectionString: MixedModeConnectionString | undefined;
+
+	if (typeof service === "string") {
+		serviceName = service;
+	} else if (typeof service === "object" && "name" in service) {
+		serviceName = service.name !== kCurrentWorker ? service.name : undefined;
+		entrypoint = service.entrypoint;
+		mixedModeConnectionString = service.mixedModeConnectionString;
+	}
+
+	return {
+		serviceName,
+		entrypoint,
+		mixedModeConnectionString,
+	};
+}
 
 export function getExternalServiceName(service: string) {
 	return `proxy:external:${service}`;
@@ -320,6 +352,8 @@ const PROXY_OBJECT_SCRIPT_HEADER = "X-Miniflare-Durable-Object-Script";
 // Theses headers are used to proxy fetch requests to external service bindings
 const PROXY_SERVICE_HEADER = "X-Miniflare-Proxy-Service";
 const PROXY_ENTRYPOINT_HEADER = "X-Miniflare-Proxy-Entrypoint";
+// Helper script to create a proxy class for the handler
+// Used in the fallback service script
 const CREATE_PROXY_PROTOTYPE_CLASS_HELPER_SCRIPT = `
     const HANDLER_RESERVED_KEYS = new Set([
         "alarm",
