@@ -336,7 +336,8 @@ export async function maybeStartOrUpdateMixedModeSession(
 			//       LocalRuntimeController)
 			const mixedModeModule = await import("../../api/mixedMode");
 			mixedModeSession = await mixedModeModule.startMixedModeSession(
-				convertedRemoteBindings
+				convertedRemoteBindings,
+				{ complianceRegion: configBundle.complianceRegion }
 			);
 		}
 	} else {
