@@ -9,32 +9,9 @@ jobs:
     runs-on: ubuntu-22.04
     name: Write comment to the PR
     steps:
-      - name: "Put PR and workflow ID on the environment"
-        uses: actions/github-script@v7
-        with:
-          script: |
-            // Copied from .github/extract-pr-and-workflow-id.js
-            const allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-            });
-
-            for (const artifact of allArtifacts.data.artifacts) {
-              // Extract the PR number from the artifact name
-              const match = /^npm-package-(.+)-(\d+)$/.exec(artifact.name);
-              if (match) {
-                const packageName = match[1].toUpperCase();
-                require("fs").appendFileSync(
-                  process.env.GITHUB_ENV,
-                  `\nWORKFLOW_RUN_PR_FOR_${packageName}=${match[2]}`
-                );
-              }
-            }
-
       - name: "Comment on PR with E2E action link"
         uses: marocchino/sticky-pull-request-comment@v2
         with:
           header: forks
-          number: ${{ env.WORKFLOW_RUN_PR_FOR_WRANGLER }}
           message: |
             As this PR is from a fork, maintainers should run E2E tests by visiting https://github.com/cloudflare/workers-sdk/actions/workflows/run-ci-for-external-forks.yml and entering the PR number.
