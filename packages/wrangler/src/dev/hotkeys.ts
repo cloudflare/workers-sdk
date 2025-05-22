@@ -4,10 +4,7 @@ import openInBrowser from "../open-in-browser";
 import { openInspector } from "./inspect";
 import type { DevEnv } from "../api";
 
-export default function registerDevHotKeys(
-	devEnv: DevEnv,
-	args: { forceLocal?: boolean }
-) {
+export default function registerDevHotKeys(devEnv: DevEnv) {
 	const unregisterHotKeys = registerHotKeys([
 		{
 			keys: ["b"],

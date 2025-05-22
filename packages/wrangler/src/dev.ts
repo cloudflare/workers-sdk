@@ -30,7 +30,6 @@ import {
 	collectPlainTextVars,
 } from "./utils/collectKeyValues";
 import { mergeWithOverride } from "./utils/mergeWithOverride";
-import { printWranglerBanner } from "./wrangler-banner";
 import { getHostFromRoute } from "./zones";
 import type {
 	AsyncHook,
@@ -615,8 +614,7 @@ export async function startDev(args: StartDevOptions) {
 				if (hotkeysDisplayed) {
 					assert(devEnv !== undefined);
 					unregisterHotKeys = registerDevHotKeys(
-						Array.isArray(devEnv) ? devEnv[0] : devEnv,
-						args
+						Array.isArray(devEnv) ? devEnv[0] : devEnv
 					);
 				}
 			}
@@ -632,7 +630,7 @@ export async function startDev(args: StartDevOptions) {
 			const primaryDevEnv = new DevEnv({ runtimes: [runtime] });
 
 			if (isInteractive() && args.showInteractiveDevSession !== false) {
-				unregisterHotKeys = registerDevHotKeys(primaryDevEnv, args);
+				unregisterHotKeys = registerDevHotKeys(primaryDevEnv);
 			}
 
 			// Set up the primary DevEnv (the one that the ProxyController will connect to)
@@ -714,7 +712,7 @@ export async function startDev(args: StartDevOptions) {
 			}
 
 			if (isInteractive() && args.showInteractiveDevSession !== false) {
-				unregisterHotKeys = registerDevHotKeys(devEnv, args);
+				unregisterHotKeys = registerDevHotKeys(devEnv);
 			}
 
 			await setupDevEnv(devEnv, args.config, authHook, args);

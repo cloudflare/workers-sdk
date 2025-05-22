@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import path from "node:path";
 import { watch } from "chokidar";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
 import { readConfig } from "../../config";

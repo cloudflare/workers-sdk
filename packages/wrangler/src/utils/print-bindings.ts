@@ -283,7 +283,7 @@ export function printBindings(
 	if (r2_buckets !== undefined && r2_buckets.length > 0) {
 		output.push(
 			...r2_buckets.map(({ binding, bucket_name, jurisdiction, remote }) => {
-				let value =
+				const value =
 					typeof bucket_name === "symbol"
 						? bucket_name
 						: bucket_name
