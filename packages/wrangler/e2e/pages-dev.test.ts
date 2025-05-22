@@ -329,7 +329,7 @@ describe.sequential("wrangler pages dev", () => {
 			env.PAGES ("⚡️ Pages ⚡️")                Environment Variable      local
 			⎔ Starting local server...
 			[wrangler:info] Ready on http://localhost:<PORT>
-			[wrangler:info] GET / 200 OK (24ms)"
+			[wrangler:info] GET / 200 OK (TIMINGS)"
 		`);
 	});
 
