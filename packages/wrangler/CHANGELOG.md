@@ -1,5 +1,34 @@
 # wrangler
 
+## 3.114.9
+
+### Patch Changes
+
+- [#9262](https://github.com/cloudflare/workers-sdk/pull/9262) [`2c3d8dd`](https://github.com/cloudflare/workers-sdk/commit/2c3d8dd3f0d0f1e83605daba9229a86315e6e521) Thanks [@workers-devprod](https://github.com/workers-devprod)! - fix: add no-op `props` to `ctx` in `getPlatformProxy` to fix type mismatch
+
+- [#8681](https://github.com/cloudflare/workers-sdk/pull/8681) [`7a57c14`](https://github.com/cloudflare/workers-sdk/commit/7a57c14cf2a21c81e622d1673979bf665b2fab04) Thanks [@workers-devprod](https://github.com/workers-devprod)! - fix(miniflare): strip CF-Connecting-IP header from all outbound requests
+
+- [#9128](https://github.com/cloudflare/workers-sdk/pull/9128) [`c535845`](https://github.com/cloudflare/workers-sdk/commit/c5358457c93bf6138386f829fd9be60c89ea9867) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: remove outdated js-doc comment for `unstable_startDevWorker`'s `entrypoint`
+
+- [#9259](https://github.com/cloudflare/workers-sdk/pull/9259) [`b742171`](https://github.com/cloudflare/workers-sdk/commit/b742171a2b4cceadba857c63af591e307e99d453) Thanks [@workers-devprod](https://github.com/workers-devprod)! - Relax R2 bucket validation for `pages dev` commands
+
+- [#9172](https://github.com/cloudflare/workers-sdk/pull/9172) [`4e943b1`](https://github.com/cloudflare/workers-sdk/commit/4e943b185a3bec8de67fd9695b048f61d90410d5) Thanks [@vicb](https://github.com/vicb)! - validate r2 bucket names
+
+- [#9250](https://github.com/cloudflare/workers-sdk/pull/9250) [`b2b5ee8`](https://github.com/cloudflare/workers-sdk/commit/b2b5ee8d510fd0c64474f92f932259330bbe4a7d) Thanks [@workers-devprod](https://github.com/workers-devprod)! - fix: strip `CF-Connecting-IP` header within `fetch`
+
+  In v4.15.0, Miniflare began stripping the `CF-Connecting-IP` header via a global outbound service, which led to a TCP connection regression due to a bug in Workerd. This PR patches the `fetch` API to strip the header during local `wrangler dev` sessions as a temporary workaround until the underlying issue is resolved.
+
+- [#9267](https://github.com/cloudflare/workers-sdk/pull/9267) [`8b4f24a`](https://github.com/cloudflare/workers-sdk/commit/8b4f24a6f235f8f654062b2a67fc3777773a3fcd) Thanks [@workers-devprod](https://github.com/workers-devprod)! - fix: setting triggers.crons:[] in Wrangler config should delete deployed cron schedules
+
+- [#9163](https://github.com/cloudflare/workers-sdk/pull/9163) [`d67cd0d`](https://github.com/cloudflare/workers-sdk/commit/d67cd0d8b4861ce9437e40a5e3d4de2b30f2da01) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Do not report "d1 execute" command file missing error to Sentry
+
+- [#8957](https://github.com/cloudflare/workers-sdk/pull/8957) [`9d4ff5b`](https://github.com/cloudflare/workers-sdk/commit/9d4ff5b8e078786f865115b4ac203e035b868b73) Thanks [@workers-devprod](https://github.com/workers-devprod)! - Make sure custom build logging output is more clearly signposted, and make sure it doesn't interfere with the interactive dev session output.
+
+- [#9166](https://github.com/cloudflare/workers-sdk/pull/9166) [`9b4c91d`](https://github.com/cloudflare/workers-sdk/commit/9b4c91dda738a6d6398780e73e455eacb89aa7ab) Thanks [@lambrospetrou](https://github.com/lambrospetrou)! - Fix d1 info command showing read_replication: [object Object]
+
+- Updated dependencies [[`7a57c14`](https://github.com/cloudflare/workers-sdk/commit/7a57c14cf2a21c81e622d1673979bf665b2fab04), [`b2b5ee8`](https://github.com/cloudflare/workers-sdk/commit/b2b5ee8d510fd0c64474f92f932259330bbe4a7d), [`56a0d6e`](https://github.com/cloudflare/workers-sdk/commit/56a0d6e854da5b9b6a0e78c4f49ed325ed75ed52)]:
+  - miniflare@3.20250408.2
+
 ## 3.114.8
 
 ### Patch Changes
