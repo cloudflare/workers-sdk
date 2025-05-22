@@ -13,6 +13,7 @@ import util from "util";
 import zlib from "zlib";
 import exitHook from "exit-hook";
 import { $ as colors$ } from "kleur/colors";
+import { npxImport } from "npx-import";
 import stoppable from "stoppable";
 import {
 	Dispatcher,
@@ -124,6 +125,7 @@ import type {
 	Queue,
 	R2Bucket,
 } from "@cloudflare/workers-types/experimental";
+import type { ChildProcess } from "child_process";
 
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
@@ -716,6 +718,11 @@ export class Miniflare {
 	#workerOpts: PluginWorkerOptions[];
 	#log: Log;
 
+	#browsers: Set<{
+		wsEndpoint: () => string;
+		process: () => ChildProcess;
+	}> = new Set();
+
 	readonly #runtime?: Runtime;
 	readonly #removeExitHook?: () => void;
 	#runtimeEntryURL?: URL;
@@ -988,6 +995,18 @@ export class Miniflare {
 				if (!colors$.enabled) message = stripAnsi(message);
 				this.#log.logWithLevel(logLevel, message);
 				response = new Response(null, { status: 204 });
+			} else if (url.pathname === "/browser/launch") {
+				// Version should be kept in sync with the supported version at https://github.com/cloudflare/puppeteer?tab=readme-ov-file#workers-version-of-puppeteer-core
+				const puppeteer = await npxImport(
+					"puppeteer@22.8.2",
+					this.#log.warn.bind(this.#log)
+				);
+
+				// @ts-expect-error Puppeteer is dynamically installed, and so doesn't have types available
+				const browser = await puppeteer.launch({ headless: "old" });
+				this.#browsers.add(browser);
+
+				response = new Response(browser.wsEndpoint());
 			} else if (url.pathname === "/core/store-temp-file") {
 				const prefix = url.searchParams.get("prefix");
 				const folder = prefix ? `files/${prefix}` : "files";
@@ -1432,6 +1451,10 @@ export class Miniflare {
 	}
 
 	async #assembleAndUpdateConfig() {
+		for (const browser of this.#browsers) {
+			// .close() isn't enough
+			await browser.process().kill("SIGKILL");
+		}
 		// This function must be run with `#runtimeMutex` held
 		const initial = !this.#runtimeEntryURL;
 		assert(this.#runtime !== undefined);
@@ -2005,6 +2028,11 @@ export class Miniflare {
 		try {
 			await this.#waitForReady(/* disposing */ true);
 		} finally {
+			for (const browser of this.#browsers) {
+				// .close() isn't enough
+				await browser.process().kill("SIGKILL");
+			}
+
 			// Remove exit hook, we're cleaning up what they would've cleaned up now
 			this.#removeExitHook?.();
 

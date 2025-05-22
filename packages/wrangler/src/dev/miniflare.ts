@@ -464,6 +464,7 @@ type WorkerOptionsBindings = Pick<
 	| "email"
 	| "analyticsEngineDatasets"
 	| "tails"
+	| "browserRendering"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -840,6 +841,9 @@ export function buildMiniflareBindingOptions(
 				kvNamespaceEntry(kv, mixedModeConnectionString)
 			) ?? []
 		),
+		browserRendering: bindings.browser?.binding
+			? { binding: bindings.browser.binding }
+			: undefined,
 		r2Buckets: Object.fromEntries(
 			bindings.r2_buckets?.map((r2) =>
 				r2BucketEntry(r2, mixedModeConnectionString)

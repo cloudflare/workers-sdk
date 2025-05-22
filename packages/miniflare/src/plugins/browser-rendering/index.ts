@@ -1,15 +1,17 @@
-import assert from "node:assert";
+import BROWSER_RENDERING_WORKER from "worker:browser-rendering/binding";
 import { z } from "zod";
+import { kVoid } from "../../runtime";
 import {
 	mixedModeClientWorker,
 	MixedModeConnectionString,
 	Plugin,
 	ProxyNodeBinding,
+	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
 
 const BrowserRenderingSchema = z.object({
 	binding: z.string(),
-	mixedModeConnectionString: z.custom<MixedModeConnectionString>(),
+	mixedModeConnectionString: z.custom<MixedModeConnectionString>().optional(),
 });
 
 export const BrowserRenderingOptionsSchema = z.object({
@@ -26,11 +28,6 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 		if (!options.browserRendering) {
 			return [];
 		}
-
-		assert(
-			options.browserRendering.mixedModeConnectionString,
-			"Workers Browser Rendering only supports Mixed Mode"
-		);
 
 		return [
 			{
@@ -57,10 +54,36 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 		return [
 			{
 				name: `${BROWSER_RENDERING_PLUGIN_NAME}:${options.browserRendering.binding}`,
-				worker: mixedModeClientWorker(
-					options.browserRendering.mixedModeConnectionString,
-					options.browserRendering.binding
-				),
+				worker: options.browserRendering.mixedModeConnectionString
+					? mixedModeClientWorker(
+							options.browserRendering.mixedModeConnectionString,
+							options.browserRendering.binding
+						)
+					: {
+							compatibilityDate: "2025-05-01",
+							compatibilityFlags: ["nodejs_compat"],
+							modules: [
+								{
+									name: "index.worker.js",
+									esModule: BROWSER_RENDERING_WORKER(),
+								},
+							],
+							bindings: [
+								WORKER_BINDING_SERVICE_LOOPBACK,
+								{
+									name: "BrowserSession",
+									durableObjectNamespace: {
+										className: "BrowserSession",
+									},
+								},
+							],
+							durableObjectNamespaces: [
+								{
+									className: "BrowserSession",
+								},
+							],
+							durableObjectStorage: { inMemory: kVoid },
+						},
 			},
 		];
 	},

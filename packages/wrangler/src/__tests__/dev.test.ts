@@ -1651,7 +1651,7 @@ describe.sequential("wrangler dev", () => {
 	});
 
 	describe("`browser rendering binding", () => {
-		it("should show error when running locally", async () => {
+		it("should not show error when running locally", async () => {
 			writeWranglerConfig({
 				browser: {
 					binding: "MYBROWSER",
@@ -1662,7 +1662,7 @@ describe.sequential("wrangler dev", () => {
 			await expect(
 				runWrangler("dev index.js")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				"[Error: Browser Rendering is not supported locally. Please use `wrangler dev --remote` instead.]"
+				"[Error: Bailing early in tests]"
 			);
 		});
 	});
