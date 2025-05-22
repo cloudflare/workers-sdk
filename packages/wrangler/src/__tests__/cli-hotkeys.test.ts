@@ -260,7 +260,7 @@ describe("Hot Keys", () => {
 				const unregisterHotKeys = registerHotKeys(options);
 
 				expect(std.out).toMatchInlineSnapshot(`
-					"╭───────────────────────────────────────────────────────╮
+					"╭─────────────────────╮
 					│  [a] first option │
 					│  [b] second option │
 					│  [c] third option │

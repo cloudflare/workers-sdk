@@ -4,7 +4,10 @@ import openInBrowser from "../open-in-browser";
 import { openInspector } from "./inspect";
 import type { DevEnv } from "../api";
 
-export default function registerDevHotKeys(devEnv: DevEnv) {
+export default function registerDevHotKeys(
+	devEnv: DevEnv,
+	args: { forceLocal?: boolean }
+) {
 	const unregisterHotKeys = registerHotKeys([
 		{
 			keys: ["b"],
@@ -25,6 +28,20 @@ export default function registerDevHotKeys(devEnv: DevEnv) {
 					parseInt(inspectorUrl.port),
 					devEnv.config.latestConfig?.name
 				);
+			},
+		},
+		{
+			keys: ["l"],
+			disabled: () => args.forceLocal ?? false,
+			label: () =>
+				`turn ${devEnv.config.latestConfig?.dev?.remote ? "on" : "off"} local mode`,
+			handler: async () => {
+				await devEnv.config.patch({
+					dev: {
+						...devEnv.config.latestConfig?.dev,
+						remote: !devEnv.config.latestConfig?.dev?.remote,
+					},
+				});
 			},
 		},
 		{

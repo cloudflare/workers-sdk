@@ -54,7 +54,7 @@ export default function (
 			.join("\n");
 
 		return (
-			`╭──${"─".repeat(length)}──╮\n` +
+			`╭──${"─".repeat(maxLineLength)}──╮\n` +
 			stringifiedInstructions +
 			`\n╰──${"─".repeat(length)}──╯`
 		);
