@@ -1,5 +1,4 @@
 import { UserError } from "../errors";
-import { logger } from "../logger";
 
 type VariableNames =
 	| "CLOUDFLARE_ACCOUNT_ID"
