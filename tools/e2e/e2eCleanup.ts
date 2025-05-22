@@ -1,9 +1,15 @@
 import {
+	deleteCertificate,
+	deleteContainerApplication,
 	deleteDatabase,
+	deleteHyperdriveConfig,
 	deleteKVNamespace,
 	deleteProject,
 	deleteWorker,
+	listCertificates,
+	listHyperdriveConfigs,
 	listTmpDatabases,
+	listTmpE2EContainerApplications,
 	listTmpE2EProjects,
 	listTmpE2EWorkers,
 	listTmpKVNamespaces,
@@ -31,53 +37,80 @@ async function run() {
 	const kvNamespacesToDelete = await listTmpKVNamespaces();
 	for (const kvNamespace of kvNamespacesToDelete) {
 		console.log("Deleting KV namespace: " + kvNamespace.title);
-		await deleteKVNamespace(kvNamespace.id);
+		(await deleteKVNamespace(kvNamespace.id))
+			? console.log(`Successfully deleted KV namespace ${kvNamespace.id}`)
+			: console.log(`Failed to delete KV namespace ${kvNamespace.id}`);
 	}
 
 	if (kvNamespacesToDelete.length === 0) {
 		console.log(`No KV namespaces to delete.`);
-	} else {
-		console.log(
-			`Successfully deleted ${kvNamespacesToDelete.length} KV namespaces`
-		);
 	}
 
 	const projectsToDelete = await listTmpE2EProjects();
 
 	for (const project of projectsToDelete) {
 		console.log("Deleting Pages project: " + project.name);
-		await deleteProject(project.name);
+		(await deleteProject(project.name))
+			? console.log(`Successfully deleted project ${project.name}`)
+			: console.log(`Failed to delete project ${project.name}`);
 	}
 
 	if (projectsToDelete.length === 0) {
 		console.log(`No projects to delete.`);
-	} else {
-		console.log(`Successfully deleted ${projectsToDelete.length} projects`);
 	}
 
 	const workersToDelete = await listTmpE2EWorkers();
 
 	for (const worker of workersToDelete) {
 		console.log("Deleting worker: " + worker.id);
-		await deleteWorker(worker.id);
+		(await deleteWorker(worker.id))
+			? console.log(`Successfully deleted Worker ${worker.id}`)
+			: console.log(`Failed to delete Worker ${worker.id}`);
 	}
 
 	if (workersToDelete.length === 0) {
 		console.log(`No workers to delete.`);
-	} else {
-		console.log(`Successfully deleted ${workersToDelete.length} workers`);
 	}
 
 	const d1DatabasesToDelete = await listTmpDatabases();
 	for (const db of d1DatabasesToDelete) {
 		console.log("Deleting D1 database: " + db.name);
-		await deleteDatabase(db.uuid);
+		(await deleteDatabase(db.uuid))
+			? console.log(`Successfully deleted D1 database ${db.uuid}`)
+			: console.log(`Failed to delete D1 database ${db.uuid}`);
 	}
 	if (d1DatabasesToDelete.length === 0) {
 		console.log(`No D1 databases to delete.`);
+	}
+
+	const hyperdriveConfigsToDelete = await listHyperdriveConfigs();
+	for (const config of hyperdriveConfigsToDelete) {
+		console.log("Deleting Hyperdrive configs: " + config.id);
+
+		(await deleteHyperdriveConfig(config.id))
+			? console.log(`Successfully deleted Hyperdrive config ${config.id}`)
+			: console.log(`Failed to delete Hyperdrive config ${config.id}`);
+	}
+	if (hyperdriveConfigsToDelete.length === 0) {
+		console.log(`No Hyperdrive configs to delete.`);
+	}
+
+	const mtlsCertificates = await listCertificates();
+	for (const certificate of mtlsCertificates) {
+		console.log("Deleting mTLS certificate: " + certificate.id);
+		await deleteCertificate(certificate.id);
+	}
+	if (mtlsCertificates.length === 0) {
+		console.log(`No mTLS certificates to delete.`);
 	} else {
 		console.log(
-			`Successfully deleted ${d1DatabasesToDelete.length} D1 databases`
+			`Successfully deleted ${mtlsCertificates.length} mTLS certificates`
 		);
+	}
+
+	const containers = await listTmpE2EContainerApplications();
+	for (const container of containers) {
+		await deleteContainerApplication(container);
+		console.log(`Deleted ${container.name} (${container.id})`);
 	}
 }

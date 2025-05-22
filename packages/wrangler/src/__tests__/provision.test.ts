@@ -89,20 +89,20 @@ describe("--x-provision", () => {
 
 		await runWrangler("deploy --x-provision --x-auto-create=false");
 		expect(std.out).toMatchInlineSnapshot(`
-				"Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
-				- KV Namespaces:
-				  - KV
-				- D1 Databases:
-				  - D1
-				- R2 Buckets:
-				  - R2
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Your Worker has access to the following bindings:
+			- KV Namespaces:
+			  - KV
+			- D1 Databases:
+			  - D1
+			- R2 Buckets:
+			  - R2
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class"
+		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 	});
@@ -196,7 +196,7 @@ describe("--x-provision", () => {
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- KV Namespaces:
 				  - KV: existing-kv-id
 				- D1 Databases:
@@ -315,7 +315,7 @@ describe("--x-provision", () => {
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- KV Namespaces:
 				  - KV: existing-kv-id-1
 				- D1 Databases:
@@ -447,7 +447,7 @@ describe("--x-provision", () => {
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- KV Namespaces:
 				  - KV: new-kv-id
 				- D1 Databases:
@@ -516,7 +516,7 @@ describe("--x-provision", () => {
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- D1 Databases:
 				  - D1: prefilled-d1-name (new-d1-id)
 				Uploaded test-name (TIMINGS)
@@ -558,7 +558,7 @@ describe("--x-provision", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- D1 Databases:
 				  - D1: prefilled-d1-name
 				Uploaded test-name (TIMINGS)
@@ -635,7 +635,7 @@ describe("--x-provision", () => {
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- D1 Databases:
 				  - D1: new-d1-name (new-d1-id)
 				Uploaded test-name (TIMINGS)
@@ -708,7 +708,7 @@ describe("--x-provision", () => {
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- R2 Buckets:
 				  - BUCKET: prefilled-r2-name (eu)
 				Uploaded test-name (TIMINGS)
@@ -762,7 +762,7 @@ describe("--x-provision", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- R2 Buckets:
 				  - BUCKET: existing-bucket-name (eu)
 				Uploaded test-name (TIMINGS)
@@ -806,7 +806,7 @@ describe("--x-provision", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- D1 Databases:
 				  - DB_NAME: existing-db-name (existing-d1-id)
 				Uploaded test-name (TIMINGS)
@@ -890,7 +890,7 @@ describe("--x-provision", () => {
 				🎉 All resources provisioned, continuing with deployment...
 
 				Worker Startup Time: 100 ms
-				Your worker has access to the following bindings:
+				Your Worker has access to the following bindings:
 				- R2 Buckets:
 				  - BUCKET: existing-bucket-name (eu)
 				Uploaded test-name (TIMINGS)

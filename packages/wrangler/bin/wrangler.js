@@ -2,15 +2,15 @@
 const { spawn } = require("child_process");
 const path = require("path");
 
-const MIN_NODE_VERSION = "16.13.0";
-
+const ERR_NODE_VERSION = "18.0.0";
+const MIN_NODE_VERSION = "20.0.0";
 let wranglerProcess;
 
 /**
  * Executes ../wrangler-dist/cli.js
  */
 function runWrangler() {
-	if (semiver(process.versions.node, MIN_NODE_VERSION) < 0) {
+	if (semiver(process.versions.node, ERR_NODE_VERSION) < 0) {
 		// Note Volta and nvm are also recommended in the official docs:
 		// https://developers.cloudflare.com/workers/get-started/guide#2-install-the-workers-cli
 		console.error(

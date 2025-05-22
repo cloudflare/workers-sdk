@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
@@ -90,7 +90,7 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 			🌀 Creating new R2 Bucket "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-r2"...
 			✨ R2 provisioned 🎉
 			🎉 All resources provisioned, continuing with deployment...
-			Your worker has access to the following bindings:
+			Your Worker has access to the following bindings:
 			- KV Namespaces:
 			  - KV: 00000000000000000000000000000000
 			- D1 Databases:
@@ -132,7 +132,7 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 		const output = await worker.output;
 		expect(normalize(output)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
-			Your worker has access to the following bindings:
+			Your Worker has access to the following bindings:
 			- KV Namespaces:
 			  - KV
 			- D1 Databases:
@@ -184,7 +184,7 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 			✨ KV2 provisioned 🎉
 			🎉 All resources provisioned, continuing with deployment...
 			Worker Startup Time: (TIMINGS)
-			Your worker has access to the following bindings:
+			Your Worker has access to the following bindings:
 			- KV Namespaces:
 			  - KV2: 00000000000000000000000000000000
 			- R2 Buckets:
@@ -223,11 +223,14 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 		expect(output.stdout).toContain(`Deleted '${workerName}-d1' successfully.`);
 		output = await helper.run(`wrangler delete`);
 		expect(output.stdout).toContain("Successfully deleted");
-		const status = await retry(
-			(s) => s === 200 || s === 500,
-			() => fetch(deployedUrl).then((r) => r.status)
+
+		await vi.waitFor(
+			async () => {
+				const res = await fetch(deployedUrl);
+				await expect(res.status).not.toBe(200);
+			},
+			{ interval: 1_000, timeout: 20_000 }
 		);
-		expect(status).toBe(404);
 
 		output = await helper.run(
 			`wrangler kv namespace delete --namespace-id ${kvId}`

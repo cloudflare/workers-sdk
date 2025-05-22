@@ -6,7 +6,6 @@ import posixPath from "node:path/posix";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import util from "node:util";
 import * as cjsModuleLexer from "cjs-module-lexer";
-import { buildSync } from "esbuild";
 import { ModuleRuleTypeSchema, Response } from "miniflare";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { isFileNotFoundError } from "./helpers";
@@ -67,10 +66,6 @@ function trimViteVersionHash(filePath: string) {
 const forceModuleTypeRegexp = new RegExp(
 	`\\?mf_vitest_force=(${ModuleRuleTypeSchema.options.join("|")})$`
 );
-
-// `chai` contains circular `require()`s which aren't supported by `workerd`
-// TODO(someday): support circular `require()` in `workerd`
-const bundleDependencies = ["chai"];
 
 function isFile(filePath: string): boolean {
 	try {
@@ -203,30 +198,6 @@ function withSourceUrl(contents: string, url: string | URL): string {
 function withImportMetaUrl(contents: string, url: string | URL): string {
 	// TODO(soon): this isn't perfect, ideally need `workerd` support
 	return contents.replaceAll("import.meta.url", JSON.stringify(url.toString()));
-}
-
-const bundleCache = new Map<string, string>();
-function bundleDependency(entryPath: string): string {
-	let output = bundleCache.get(entryPath);
-	if (output !== undefined) {
-		return output;
-	}
-	debuglog(`Bundling ${entryPath}...`);
-	const result = buildSync({
-		platform: "node",
-		target: "esnext",
-		format: "cjs",
-		bundle: true,
-		packages: "external",
-		sourcemap: "inline",
-		sourcesContent: false,
-		entryPoints: [entryPath],
-		write: false,
-	});
-	assert(result.outputFiles.length === 1);
-	output = result.outputFiles[0].text;
-	bundleCache.set(entryPath, output);
-	return output;
 }
 
 const jsExtensions = [".js", ".mjs", ".cjs"];
@@ -409,8 +380,6 @@ function maybeGetForceTypeModuleContents(
 			return { esModule: contents.toString() };
 		case "CommonJS":
 			return { commonJsModule: contents.toString() };
-		case "NodeJsCompatModule":
-			return { nodeJsCompatModule: contents.toString() };
 		case "Text":
 			return { text: contents.toString() };
 		case "Data":
@@ -485,18 +454,11 @@ async function load(
 		filePath = trimSuffix(disableCjsEsmShimSuffix, filePath);
 	}
 
-	let isEsm =
+	const isEsm =
 		filePath.endsWith(".mjs") ||
 		(filePath.endsWith(".js") && isWithinTypeModuleContext(filePath));
 
-	let contents: string;
-	const maybeBundled = bundleCache.get(filePath);
-	if (maybeBundled !== undefined) {
-		contents = maybeBundled;
-		isEsm = false;
-	} else {
-		contents = fs.readFileSync(filePath, "utf8");
-	}
+	let contents = fs.readFileSync(filePath, "utf8");
 	const targetUrl = pathToFileURL(target);
 	contents = withSourceUrl(contents, targetUrl);
 
@@ -510,8 +472,8 @@ async function load(
 	// Respond with CommonJS module
 
 	// If we're `import`ing a CommonJS module, or we're `require`ing a `node:*`
-	// module from a NodeJsCompatModule, return an ES module shim. Note
-	// NodeJsCompatModules can `require` ES modules, using the default export.
+	// module from a CommonJS, return an ES module shim. Note
+	// CommonJS can `require` ES modules, using the default export.
 	const insertCjsEsmShim = method === "import" || specifier.startsWith("node:");
 	if (insertCjsEsmShim && !disableCjsEsmShim) {
 		const fileName = posixPath.basename(filePath);
@@ -526,9 +488,9 @@ async function load(
 	}
 
 	// Otherwise, if we're `require`ing a non-`node:*` module, just return a
-	// NodeJsCompatModule
+	// CommonJS
 	debuglog(logBase, "cjs:", filePath);
-	return buildModuleResponse(target, { nodeJsCompatModule: contents });
+	return buildModuleResponse(target, { commonJsModule: contents });
 }
 
 export async function handleModuleFallbackRequest(
@@ -568,9 +530,7 @@ export async function handleModuleFallbackRequest(
 
 	try {
 		const filePath = await resolve(vite, method, target, specifier, referrer);
-		if (bundleDependencies.includes(specifier)) {
-			bundleDependency(filePath);
-		}
+
 		return await load(vite, logBase, method, target, specifier, filePath);
 	} catch (e) {
 		debuglog(logBase, "error:", e);

@@ -20,12 +20,26 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect(text).toMatchInlineSnapshot(`"Generated: true"`);
 	});
 
+	it("specifying an environment causes an error since they are not supported in redirected configs", async ({
+		expect,
+	}) => {
+		await expect(
+			runWranglerDev(basePath, [
+				"--port=0",
+				"--inspector-port=0",
+				"--env=staging",
+			])
+		).rejects.toThrowError(
+			/You have specified the environment ".*?", but are using a redirected configuration/
+		);
+	});
+
 	it("uses a custom config from command line rather than generated config", async ({
 		expect,
 		onTestFinished,
 	}) => {
 		const { ip, port, stop } = await runWranglerDev(basePath, [
-			"-c=wrangler.toml",
+			"-c=wrangler.jsonc",
 			"--port=0",
 			"--inspector-port=0",
 		]);

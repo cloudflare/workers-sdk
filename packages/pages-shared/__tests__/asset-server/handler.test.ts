@@ -7,7 +7,7 @@ import {
 import { createMetadataObject } from "../../metadata-generator/createMetadataObject";
 import type { HandlerContext } from "../../asset-server/handler";
 import type { Metadata } from "../../asset-server/metadata";
-import type { RedirectRule } from "../../metadata-generator/types";
+import type { RedirectRule } from "@cloudflare/workers-shared/utils/configuration/types";
 
 describe("asset-server handler", () => {
 	test("Returns appropriate status codes", async () => {

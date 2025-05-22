@@ -30,9 +30,9 @@ import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { MockInstance } from "vitest";
 
 vi.mock("../metrics/helpers");
-vi.unmock("../metrics/metrics-config");
 vi.mock("../metrics/send-event");
 vi.mock("../package-manager");
+vi.mocked(getMetricsConfig).mockReset();
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 declare module globalThis {
@@ -44,7 +44,7 @@ describe("metrics", () => {
 	let isCISpy: MockInstance;
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
-	runInTempDir();
+	runInTempDir({ homedir: "foo" });
 
 	beforeEach(async () => {
 		isCISpy = vi.spyOn(CI, "isCI").mockReturnValue(false);

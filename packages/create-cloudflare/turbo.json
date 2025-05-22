@@ -7,15 +7,18 @@
 				"TEST_PM",
 				"TEST_PM_VERSION",
 				"npm_config_user_agent",
-				"CI",
 				"CREATE_CLOUDFLARE_TELEMETRY_DISABLED",
 				"CREATE_CLOUDFLARE_TELEMETRY_DEBUG",
 				"SPARROW_SOURCE_KEY"
 			],
 			"outputs": ["dist/**"]
 		},
+		"test:ci": {
+			"dependsOn": ["build"]
+		},
 		"test:e2e": {
 			"env": [
+				"NODE_DEBUG",
 				"CLOUDFLARE_ACCOUNT_ID",
 				"CLOUDFLARE_API_TOKEN",
 				"FRAMEWORK_CLI_TO_TEST",
@@ -28,6 +31,7 @@
 				"TEST_PM_VERSION"
 			],
 			"dependsOn": ["build"],
+			"inputs": ["e2e-tests/**"],
 			"outputs": [".e2e-logs", ".e2e-logs-experimental"]
 		}
 	}

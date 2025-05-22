@@ -8,6 +8,15 @@ import {
 	MAX_ASSET_SIZE,
 	normalizeFilePath,
 } from "@cloudflare/workers-shared";
+import {
+	CF_ASSETS_IGNORE_FILENAME,
+	HEADERS_FILENAME,
+	REDIRECTS_FILENAME,
+} from "@cloudflare/workers-shared/utils/constants";
+import {
+	createAssetsIgnoreFunction,
+	maybeGetFile,
+} from "@cloudflare/workers-shared/utils/helpers";
 import chalk from "chalk";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";
@@ -21,12 +30,11 @@ import { isJwtExpired } from "./pages/upload";
 import { APIError } from "./parse";
 import { getBasePath } from "./paths";
 import { dedent } from "./utils/dedent";
-import { createPatternMatcher } from "./utils/filesystem";
 import type { StartDevWorkerOptions } from "./api";
 import type { Config } from "./config";
 import type { DeployArgs } from "./deploy";
 import type { StartDevOptions } from "./dev";
-import type { AssetConfig, RoutingConfig } from "@cloudflare/workers-shared";
+import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
 
@@ -44,6 +52,8 @@ type UploadResponse = {
 const BULK_UPLOAD_CONCURRENCY = 3;
 const MAX_UPLOAD_ATTEMPTS = 5;
 const MAX_UPLOAD_GATEWAY_ERRORS = 5;
+
+const MAX_DIFF_LINES = 100;
 
 export const syncAssets = async (
 	accountId: string | undefined,
@@ -81,7 +91,9 @@ export const syncAssets = async (
 				{ telemetryMessage: true }
 			);
 		}
-		logger.info(`No files to upload. Proceeding with deployment...`);
+		logger.info(
+			`No updated asset files to upload. Proceeding with deployment...`
+		);
 		return initializeAssetsResponse.jwt;
 	}
 
@@ -118,10 +130,11 @@ export const syncAssets = async (
 	});
 
 	const queue = new PQueue({ concurrency: BULK_UPLOAD_CONCURRENCY });
+	const queuePromises: Array<Promise<void>> = [];
 	let attempts = 0;
 	const start = Date.now();
 	let completionJwt = "";
-	let assetUploadCount = 0;
+	let uploadedAssetsCount = 0;
 
 	for (const [bucketIndex, bucket] of assetBuckets.entries()) {
 		attempts = 0;
@@ -130,8 +143,10 @@ export const syncAssets = async (
 			// Populate the payload only when actually uploading (this is limited to 3 concurrent uploads at 50 MiB per bucket meaning we'd only load in a max of ~150 MiB)
 			// This is so we don't run out of memory trying to upload the files.
 			const payload = new FormData();
+			const uploadedFiles: string[] = [];
 			for (const manifestEntry of bucket) {
 				const absFilePath = path.join(assetDirectory, manifestEntry[0]);
+				uploadedFiles.push(manifestEntry[0]);
 				payload.append(
 					manifestEntry[1].hash,
 					new File(
@@ -160,9 +175,11 @@ export const syncAssets = async (
 						body: payload,
 					}
 				);
-				assetUploadCount += bucket.length;
-				logger.info(
-					`Uploaded ${assetUploadCount} of ${numberFilesToUpload} assets`
+				uploadedAssetsCount += bucket.length;
+				logAssetsUploadStatus(
+					numberFilesToUpload,
+					uploadedAssetsCount,
+					uploadedFiles
 				);
 				return res;
 			} catch (e) {
@@ -201,17 +218,21 @@ export const syncAssets = async (
 			}
 		};
 		// add to queue and run it if we haven't reached concurrency limit
-		void queue.add(() =>
-			doUpload().then((res) => {
-				completionJwt = res.jwt || completionJwt;
-			})
+		queuePromises.push(
+			queue.add(() =>
+				doUpload().then((res) => {
+					completionJwt = res.jwt || completionJwt;
+				})
+			)
 		);
 	}
 	queue.on("error", (error) => {
 		logger.error(error.message);
 		throw error;
 	});
-	await queue.onIdle();
+	// using Promise.all() here instead of queue.onIdle() to ensure
+	// we actually throw errors that occur within queued promises.
+	await Promise.all(queuePromises);
 
 	// if queue finishes without receiving JWT from asset upload service (AUS)
 	// AUS only returns this in the final bucket upload response
@@ -236,14 +257,17 @@ export const syncAssets = async (
 
 const buildAssetManifest = async (dir: string) => {
 	const files = await readdir(dir, { recursive: true });
+	logReadFilesFromDirectory(dir, files);
+
 	const manifest: AssetManifest = {};
 	let counter = 0;
 
-	const ignoreFn = await createAssetIgnoreFunction(dir);
+	const { assetsIgnoreFunction, assetsIgnoreFilePresent } =
+		await createAssetsIgnoreFunction(dir);
 
 	await Promise.all(
 		files.map(async (relativeFilepath) => {
-			if (ignoreFn?.(relativeFilepath)) {
+			if (assetsIgnoreFunction(relativeFilepath)) {
 				logger.debug("Ignoring asset:", relativeFilepath);
 				// This file should not be included in the manifest.
 				return;
@@ -255,7 +279,10 @@ const buildAssetManifest = async (dir: string) => {
 			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
 				return;
 			} else {
-				errorOnLegacyPagesWorkerJSAsset(relativeFilepath, !!ignoreFn);
+				errorOnLegacyPagesWorkerJSAsset(
+					relativeFilepath,
+					assetsIgnoreFilePresent
+				);
 
 				if (counter >= MAX_ASSET_COUNT) {
 					throw new UserError(
@@ -295,8 +322,6 @@ const buildAssetManifest = async (dir: string) => {
 	return manifest;
 };
 
-const MAX_DIFF_LINES = 100;
-
 function logAssetUpload(line: string, diffCount: number) {
 	const level = logger.loggerLevel;
 	if (LOGGER_LEVELS[level] >= LOGGER_LEVELS.debug) {
@@ -316,6 +341,33 @@ function logAssetUpload(line: string, diffCount: number) {
 }
 
 /**
+ * Logs a summary of the assets upload status ("Uploaded <count> of <total> assets"),
+ * and the list of uploaded files if in debug log level.
+ */
+function logAssetsUploadStatus(
+	numberFilesToUpload: number,
+	uploadedAssetsCount: number,
+	uploadedAssetFiles: string[]
+) {
+	logger.info(
+		`Uploaded ${uploadedAssetsCount} of ${numberFilesToUpload} assets`
+	);
+	uploadedAssetFiles.forEach((file) => logger.debug(`✨ ${file}`));
+}
+
+/**
+ * Logs a summary of files read from a given directory ("Read <count>
+ * files from directory <dir>"), and the list of read files if in
+ * debug log level.
+ */
+function logReadFilesFromDirectory(directory: string, assetFiles: string[]) {
+	logger.info(
+		`✨ Read ${assetFiles.length} file${assetFiles.length === 1 ? "" : "s"} from the assets directory ${directory}`
+	);
+	assetFiles.forEach((file) => logger.debug(`/${file}`));
+}
+
+/**
  * Returns the base path of the assets to upload.
  *
  */
@@ -331,46 +383,51 @@ function getAssetsBasePath(
 export type AssetsOptions = {
 	directory: string;
 	binding?: string;
-	routingConfig: RoutingConfig;
+	routerConfig: RouterConfig;
 	assetConfig: AssetConfig;
+	_redirects?: string;
+	_headers?: string;
 };
 
 export function getAssetsOptions(
 	args: { assets: string | undefined; script?: string },
-	config: Config
+	config: Config,
+	overrides?: Partial<AssetsOptions>
 ): AssetsOptions | undefined {
-	const assets = args.assets ? { directory: args.assets } : config.assets;
-
-	if (!assets) {
+	if (!overrides && !config.assets && !args.assets) {
 		return;
 	}
 
-	const { directory, binding } = assets;
+	const assets = {
+		...config.assets,
+		...(args.assets && { directory: args.assets }),
+		...overrides,
+	};
 
-	if (directory === undefined) {
+	if (assets.directory === undefined) {
 		throw new UserError(
 			"The `assets` property in your configuration is missing the required `directory` property.",
 			{ telemetryMessage: true }
 		);
 	}
 
-	if (directory === "") {
+	if (assets.directory === "") {
 		throw new UserError("`The assets directory cannot be an empty string.", {
 			telemetryMessage: true,
 		});
 	}
 
 	const assetsBasePath = getAssetsBasePath(config, args.assets);
-	const resolvedAssetsPath = path.resolve(assetsBasePath, directory);
+	const directory = path.resolve(assetsBasePath, assets.directory);
 
-	if (!existsSync(resolvedAssetsPath)) {
+	if (!existsSync(directory)) {
 		const sourceOfTruthMessage = args.assets
 			? '"--assets" command line argument'
 			: '"assets.directory" field in your configuration file';
 
 		throw new UserError(
 			`The directory specified by the ${sourceOfTruthMessage} does not exist:\n` +
-				`${resolvedAssetsPath}`,
+				`${directory}`,
 
 			{
 				telemetryMessage: `The assets directory specified does not exist`,
@@ -378,25 +435,54 @@ export function getAssetsOptions(
 		);
 	}
 
-	const routingConfig = {
+	const routerConfig: RouterConfig = {
 		has_user_worker: Boolean(args.script || config.main),
-		invoke_user_worker_ahead_of_assets:
-			config.assets?.run_worker_first || false,
+		invoke_user_worker_ahead_of_assets: config.assets?.run_worker_first,
 	};
 
+	// User Worker ahead of assets, but no assets binding provided
+	if (
+		routerConfig.invoke_user_worker_ahead_of_assets &&
+		!config?.assets?.binding
+	) {
+		logger.warn(
+			"run_worker_first=true set without an assets binding\n" +
+				"Setting run_worker_first to true will always invoke your Worker script.\n" +
+				"To fetch your assets from your Worker, please set the [assets.binding] key in your configuration file.\n\n" +
+				"Read more: https://developers.cloudflare.com/workers/static-assets/binding/#binding"
+		);
+	}
+
+	// Using run_worker_first = true but didn't provide a Worker script
+	if (
+		!routerConfig.has_user_worker &&
+		routerConfig.invoke_user_worker_ahead_of_assets === true
+	) {
+		throw new UserError(
+			"Cannot set run_worker_first=true without a Worker script.\n" +
+				"Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (`main`)."
+		);
+	}
+
+	const _redirects = maybeGetFile(path.join(directory, REDIRECTS_FILENAME));
+	const _headers = maybeGetFile(path.join(directory, HEADERS_FILENAME));
+
 	// defaults are set in asset worker
-	const assetConfig = {
+	const assetConfig: AssetConfig = {
 		html_handling: config.assets?.html_handling,
 		not_found_handling: config.assets?.not_found_handling,
-		run_worker_first: config.assets?.run_worker_first,
-		serve_directly: config.assets?.experimental_serve_directly,
+		// The _redirects and _headers files are parsed in Miniflare in dev and parsing is not required for deploy
+		compatibility_date: config.compatibility_date,
+		compatibility_flags: config.compatibility_flags,
 	};
 
 	return {
-		directory: resolvedAssetsPath,
-		binding,
-		routingConfig,
+		directory,
+		binding: assets.binding,
+		routerConfig,
 		assetConfig,
+		_redirects,
+		_headers,
 	};
 }
 
@@ -412,37 +498,17 @@ export function validateAssetsArgsAndConfig(
 ): void;
 export function validateAssetsArgsAndConfig(
 	args:
-		| Pick<StartDevOptions, "legacyAssets" | "site" | "assets" | "script">
-		| Pick<DeployArgs, "legacyAssets" | "site" | "assets" | "script">,
+		| Pick<StartDevOptions, "site" | "assets" | "script">
+		| Pick<DeployArgs, "site" | "assets" | "script">,
 	config: Config
 ): void;
 export function validateAssetsArgsAndConfig(
 	args:
-		| Pick<StartDevOptions, "legacyAssets" | "site" | "assets" | "script">
-		| Pick<DeployArgs, "legacyAssets" | "site" | "assets" | "script">
+		| Pick<StartDevOptions, "site" | "assets" | "script">
+		| Pick<DeployArgs, "site" | "assets" | "script">
 		| Pick<StartDevWorkerOptions, "legacy" | "assets" | "entrypoint">,
 	config?: Config
 ): void {
-	/*
-	 * - `config.legacy_assets` conflates `legacy_assets` and `assets`
-	 * - `args.legacyAssets` conflates `legacy-assets` and `assets`
-	 */
-	if (
-		"legacy" in args
-			? args.assets && args.legacy.legacyAssets
-			: (args.assets || config?.assets) &&
-				(args?.legacyAssets || config?.legacy_assets)
-	) {
-		throw new UserError(
-			"Cannot use assets and legacy assets in the same Worker.\n" +
-				"Please remove either the `legacy_assets` or `assets` field from your configuration file.",
-			{
-				telemetryMessage:
-					"Cannot use assets and legacy assets in the same Worker",
-			}
-		);
-	}
-
 	if (
 		"legacy" in args
 			? args.assets && args.legacy.site
@@ -482,74 +548,9 @@ export function validateAssetsArgsAndConfig(
 				"Read more: https://developers.cloudflare.com/workers/static-assets/binding/#smart-placement"
 		);
 	}
-
-	// Provided both the run_worker_first and experimental_serve_directly options
-	if (
-		"legacy" in args
-			? args.assets?.assetConfig?.run_worker_first !== undefined &&
-				args.assets?.assetConfig.serve_directly !== undefined
-			: config?.assets?.run_worker_first !== undefined &&
-				config?.assets?.experimental_serve_directly !== undefined
-	) {
-		throw new UserError(
-			"run_worker_first and experimental_serve_directly specified.\n" +
-				"Only one of these configuration options may be provided."
-		);
-	}
-
-	// User Worker ahead of assets, but no assets binding provided
-	if (
-		"legacy" in args
-			? args.assets?.assetConfig?.run_worker_first === true &&
-				!args.assets?.binding
-			: config?.assets?.run_worker_first === true && !config?.assets?.binding
-	) {
-		logger.warn(
-			"run_worker_first=true set without an assets binding\n" +
-				"Setting run_worker_first to true will always invoke your Worker script.\n" +
-				"To fetch your assets from your Worker, please set the [assets.binding] key in your configuration file.\n\n" +
-				"Read more: https://developers.cloudflare.com/workers/static-assets/binding/#binding"
-		);
-	}
-
-	// Using run_worker_first=true, but didn't provide a Worker script
-	if (
-		"legacy" in args
-			? args.entrypoint === noOpEntrypoint &&
-				args.assets?.assetConfig?.run_worker_first === true
-			: !config?.main && config?.assets?.run_worker_first === true
-	) {
-		throw new UserError(
-			"Cannot set run_worker_first=true without a Worker script.\n" +
-				"Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (`main`)."
-		);
-	}
 }
 
-const CF_ASSETS_IGNORE_FILENAME = ".assetsignore";
-
-/**
- * Create a function for filtering out ignored assets.
- *
- * The generated function takes an asset path, relative to the asset directory,
- * and returns true if the asset should not be ignored.
- */
-async function createAssetIgnoreFunction(dir: string) {
-	const cfAssetIgnorePath = path.resolve(dir, CF_ASSETS_IGNORE_FILENAME);
-
-	if (!existsSync(cfAssetIgnorePath)) {
-		return null;
-	}
-
-	const ignorePatterns = (
-		await readFile(cfAssetIgnorePath, { encoding: "utf8" })
-	).split("\n");
-
-	// Always ignore the `.assetsignore` file.
-	ignorePatterns.push(CF_ASSETS_IGNORE_FILENAME);
-
-	return createPatternMatcher(ignorePatterns, true);
-}
+const WORKER_JS_FILENAME = "_worker.js";
 
 /**
  * Creates a function that logs a warning (only once) if the project has no `.assetsIgnore` file and is uploading _worker.js code as an asset.
@@ -560,17 +561,17 @@ function errorOnLegacyPagesWorkerJSAsset(
 ) {
 	if (!hasAssetsIgnoreFile) {
 		const workerJsType: "file" | "directory" | null =
-			file === "_worker.js"
+			file === WORKER_JS_FILENAME
 				? "file"
-				: file.startsWith("_worker.js")
+				: file.startsWith(WORKER_JS_FILENAME)
 					? "directory"
 					: null;
 		if (workerJsType !== null) {
 			throw new UserError(
 				dedent`
-			Uploading a Pages _worker.js ${workerJsType} as an asset.
+			Uploading a Pages ${WORKER_JS_FILENAME} ${workerJsType} as an asset.
 			This could expose your private server-side code to the public Internet. Is this intended?
-			If you do not want to upload this ${workerJsType}, either remove it or add an "${CF_ASSETS_IGNORE_FILENAME}" file, to the root of your asset directory, containing "_worker.js" to avoid uploading.
+			If you do not want to upload this ${workerJsType}, either remove it or add an "${CF_ASSETS_IGNORE_FILENAME}" file, to the root of your asset directory, containing "${WORKER_JS_FILENAME}" to avoid uploading.
 			If you do want to upload this ${workerJsType}, you can add an empty "${CF_ASSETS_IGNORE_FILENAME}" file, to the root of your asset directory, to hide this error.
 		`,
 				{ telemetryMessage: true }

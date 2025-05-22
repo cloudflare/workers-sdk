@@ -22,7 +22,7 @@ function writeAppConfiguration(...app: ContainerApp[]) {
 		"./wrangler.toml",
 		TOML.stringify({
 			name: "my-container",
-			containers: { app },
+			containers: app,
 		}),
 
 		"utf-8"
@@ -46,11 +46,9 @@ function mockCreateApplication(expected?: Application) {
 		http.post(
 			"*/applications",
 			async ({ request }) => {
-				const json = (await request.json()) as ModifyApplicationRequestBody;
-				if (expected !== undefined) {
-					expect(json).toEqual(expected);
-				}
-				return HttpResponse.json(json);
+				const body = await request.json();
+				expect(body).toHaveProperty("instances");
+				return HttpResponse.json(expected);
 			},
 			{ once: true }
 		)
@@ -73,7 +71,7 @@ function mockModifyApplication(
 				if (expected !== undefined) {
 					expect(json).toEqual(expected);
 				}
-				console.log(json);
+
 				expect((json as CreateApplicationRequest).name).toBeUndefined();
 				response(json as ModifyApplicationRequestBody);
 				return HttpResponse.json(json);
@@ -103,6 +101,7 @@ describe("cloudchamber apply", () => {
 		writeAppConfiguration({
 			name: "my-container-app",
 			instances: 3,
+			class_name: "DurableObjectClass",
 			configuration: {
 				image: "./Dockerfile",
 			},
@@ -111,7 +110,7 @@ describe("cloudchamber apply", () => {
 			},
 		});
 		mockGetApplications([]);
-		mockCreateApplication();
+		mockCreateApplication({ id: "abc" } as Application);
 		await runWrangler("cloudchamber apply --json");
 		/* eslint-disable */
 		expect(std.stderr).toMatchInlineSnapshot(`""`);
@@ -122,22 +121,22 @@ describe("cloudchamber apply", () => {
 			│
 			├ NEW my-container-app
 			│
-			│   [[containers.app]]
+			│   [[containers]]
 			│   name = \\"my-container-app\\"
 			│   instances = 3
 			│   scheduling_policy = \\"regional\\"
 			│
-			│   [containers.app.configuration]
+			│   [containers.configuration]
 			│   image = \\"./Dockerfile\\"
 			│
-			│   [containers.app.constraints]
+			│   [containers.constraints]
 			│   tier = 2
 			│
 			├ Do you want to apply these changes?
 			│ yes
 			│
 			│
-			│  SUCCESS  Created application my-container-app
+			│  SUCCESS  Created application my-container-app (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -150,6 +149,7 @@ describe("cloudchamber apply", () => {
 		setIsTTY(false);
 		writeAppConfiguration({
 			name: "my-container-app",
+			class_name: "DurableObjectClass",
 			instances: 4,
 			configuration: {
 				image: "./Dockerfile",
@@ -164,6 +164,7 @@ describe("cloudchamber apply", () => {
 				name: "my-container-app",
 				instances: 3,
 				created_at: new Date().toString(),
+				version: 1,
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.REGIONAL,
 				configuration: {
@@ -184,17 +185,19 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   [[containers.app]]
+			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
 			│   name = \\"my-container-app\\"
 			│
-			│   [containers.app.constraints]
+			│   [containers.constraints]
 			│ - tier = 3
 			│ + tier = 2
 			│
 			├ Do you want to apply these changes?
 			│ yes
+			│
+			├ Loading
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
@@ -210,19 +213,112 @@ describe("cloudchamber apply", () => {
 		/* eslint-enable */
 	});
 
-	test("can apply a simple existing application and create other", async () => {
+	test("can apply a simple existing application and create other (max_instances)", async () => {
 		setIsTTY(false);
 		writeAppConfiguration(
 			{
 				name: "my-container-app",
-				instances: 4,
+				class_name: "DurableObjectClass",
+				max_instances: 3,
 				configuration: {
 					image: "./Dockerfile",
 				},
 			},
 			{
 				name: "my-container-app-2",
+				max_instances: 3,
+				class_name: "DurableObjectClass2",
+				configuration: {
+					image: "other-app/Dockerfile",
+				},
+			}
+		);
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app",
+				max_instances: 3,
+				instances: 3,
+				created_at: new Date().toString(),
+				account_id: "1",
+				version: 1,
+				scheduling_policy: SchedulingPolicy.REGIONAL,
+				configuration: {
+					image: "./Dockerfile2",
+				},
+				constraints: {
+					tier: 1,
+				},
+			},
+		]);
+		const res = mockModifyApplication();
+		mockCreateApplication({ id: "abc" } as Application);
+		await runWrangler("cloudchamber apply --json");
+		const body = await res;
+		expect(body).not.toHaveProperty("instances");
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ EDIT my-container-app
+			│
+			│   [containers.configuration]
+			│ - image = \\"./Dockerfile2\\"
+			│ + image = \\"./Dockerfile\\"
+			│
+			│   [containers.constraints]
+			│   ...
+			│
+			├ NEW my-container-app-2
+			│
+			│   [[containers]]
+			│   name = \\"my-container-app-2\\"
+			│   max_instances = 3
+			│   scheduling_policy = \\"regional\\"
+			│
+			│   [containers.configuration]
+			│   image = \\"other-app/Dockerfile\\"
+			│
+			│   [containers.constraints]
+			│   tier = 1
+			│
+			├ Do you want to apply these changes?
+			│ yes
+			│
+			├ Loading
+			│
+			│
+			│  SUCCESS  Modified application my-container-app
+			│
+			│
+			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
+			│
+			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		/* eslint-enable */
+	});
+
+	test("can skip a simple existing application and create other", async () => {
+		setIsTTY(false);
+		writeAppConfiguration(
+			{
+				name: "my-container-app",
+				instances: 4,
+				class_name: "DurableObjectClass",
+				configuration: {
+					image: "./Dockerfile",
+				},
+				rollout_kind: "none",
+			},
+			{
+				name: "my-container-app-2",
 				instances: 1,
+				class_name: "DurableObjectClass2",
 				configuration: {
 					image: "other-app/Dockerfile",
 				},
@@ -235,6 +331,88 @@ describe("cloudchamber apply", () => {
 				instances: 3,
 				created_at: new Date().toString(),
 				account_id: "1",
+				version: 1,
+				scheduling_policy: SchedulingPolicy.REGIONAL,
+				configuration: {
+					image: "./Dockerfile",
+				},
+				constraints: {
+					tier: 1,
+				},
+			},
+		]);
+		mockCreateApplication({ id: "abc" } as Application);
+		await runWrangler("cloudchamber apply --json");
+
+		/* eslint-disable */
+		expect(std.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ EDIT my-container-app
+			│
+			│   [[containers]]
+			│ - instances = 3
+			│ + instances = 4
+			│   name = \\"my-container-app\\"
+			│ Skipping application rollout
+			│
+			├ NEW my-container-app-2
+			│
+			│   [[containers]]
+			│   name = \\"my-container-app-2\\"
+			│   instances = 1
+			│   scheduling_policy = \\"regional\\"
+			│
+			│   [containers.configuration]
+			│   image = \\"other-app/Dockerfile\\"
+			│
+			│   [containers.constraints]
+			│   tier = 1
+			│
+			├ Do you want to apply these changes?
+			│ yes
+			│
+			│
+			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
+			│
+			╰ Applied changes
+
+			"
+		`);
+		expect(std.stderr).toMatchInlineSnapshot(`""`);
+		/* eslint-enable */
+	});
+
+	test("can apply a simple existing application and create other", async () => {
+		setIsTTY(false);
+		writeAppConfiguration(
+			{
+				name: "my-container-app",
+				instances: 4,
+				class_name: "DurableObjectClass",
+				configuration: {
+					image: "./Dockerfile",
+				},
+			},
+			{
+				name: "my-container-app-2",
+				instances: 1,
+				class_name: "DurableObjectClass2",
+				configuration: {
+					image: "other-app/Dockerfile",
+				},
+			}
+		);
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container-app",
+				instances: 3,
+				created_at: new Date().toString(),
+				account_id: "1",
+				version: 1,
 				scheduling_policy: SchedulingPolicy.REGIONAL,
 				configuration: {
 					image: "./Dockerfile",
@@ -245,7 +423,7 @@ describe("cloudchamber apply", () => {
 			},
 		]);
 		const res = mockModifyApplication();
-		mockCreateApplication();
+		mockCreateApplication({ id: "abc" } as Application);
 		await runWrangler("cloudchamber apply --json");
 		await res;
 		/* eslint-disable */
@@ -256,32 +434,34 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   [[containers.app]]
+			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
 			│   name = \\"my-container-app\\"
 			│
 			├ NEW my-container-app-2
 			│
-			│   [[containers.app]]
+			│   [[containers]]
 			│   name = \\"my-container-app-2\\"
 			│   instances = 1
 			│   scheduling_policy = \\"regional\\"
 			│
-			│   [containers.app.configuration]
+			│   [containers.configuration]
 			│   image = \\"other-app/Dockerfile\\"
 			│
-			│   [containers.app.constraints]
+			│   [containers.constraints]
 			│   tier = 1
 			│
 			├ Do you want to apply these changes?
 			│ yes
 			│
+			├ Loading
+			│
 			│
 			│  SUCCESS  Modified application my-container-app
 			│
 			│
-			│  SUCCESS  Created application my-container-app-2
+			│  SUCCESS  Created application my-container-app-2 (Application ID: abc)
 			│
 			╰ Applied changes
 
@@ -296,6 +476,7 @@ describe("cloudchamber apply", () => {
 		writeAppConfiguration({
 			name: "my-container-app",
 			instances: 4,
+			class_name: "DurableObjectClass",
 			configuration: {
 				image: "./Dockerfile",
 				labels: [
@@ -331,6 +512,7 @@ describe("cloudchamber apply", () => {
 				id: "abc",
 				name: "my-container-app",
 				instances: 3,
+				version: 1,
 				created_at: new Date().toString(),
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.REGIONAL,
@@ -380,28 +562,30 @@ describe("cloudchamber apply", () => {
 			│
 			├ EDIT my-container-app
 			│
-			│   [[containers.app]]
+			│   [[containers]]
 			│ - instances = 3
 			│ + instances = 4
 			│   name = \\"my-container-app\\"
 			│
-			│   [[containers.app.configuration.labels]]
+			│   [[containers.configuration.labels]]
 			│ + name = \\"name-1\\"
 			│ + value = \\"value-1\\"
 			│
-			│ + [[containers.app.configuration.labels]]
+			│ + [[containers.configuration.labels]]
 			│   name = \\"name-2\\"
 			│
-			│   [[containers.app.configuration.secrets]]
+			│   [[containers.configuration.secrets]]
 			│ - name = \\"MY_SECRET_1\\"
 			│ - secret = \\"SECRET_NAME_1\\"
 			│ - type = \\"env\\"
 			│
-			│ - [[containers.app.configuration.secrets]]
+			│ - [[containers.configuration.secrets]]
 			│   name = \\"MY_SECRET_2\\"
 			│
 			├ Do you want to apply these changes?
 			│ yes
+			│
+			├ Loading
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
@@ -417,6 +601,7 @@ describe("cloudchamber apply", () => {
 	test("can apply an application, and there is no changes", async () => {
 		setIsTTY(false);
 		writeAppConfiguration({
+			class_name: "DurableObjectClass",
 			name: "my-container-app",
 			instances: 3,
 			configuration: {
@@ -455,6 +640,7 @@ describe("cloudchamber apply", () => {
 				id: "abc",
 				name: "my-container-app",
 				instances: 3,
+				version: 1,
 				created_at: new Date().toString(),
 				account_id: "1",
 				scheduling_policy: SchedulingPolicy.REGIONAL,
@@ -516,6 +702,7 @@ describe("cloudchamber apply", () => {
 		const app = {
 			name: "my-container-app",
 			instances: 3,
+			class_name: "DurableObjectClass",
 			configuration: {
 				image: "./Dockerfile",
 				labels: [
@@ -554,6 +741,7 @@ describe("cloudchamber apply", () => {
 			name: "my-container-app",
 			instances: 3,
 			created_at: new Date().toString(),
+			class_name: "DurableObjectClass",
 			account_id: "1",
 			scheduling_policy: SchedulingPolicy.REGIONAL,
 			configuration: {
@@ -593,8 +781,8 @@ describe("cloudchamber apply", () => {
 		};
 
 		mockGetApplications([
-			completeApp,
-			{ ...completeApp, name: "my-container-app-2", id: "abc2" },
+			{ ...completeApp, version: 1 },
+			{ ...completeApp, version: 1, name: "my-container-app-2", id: "abc2" },
 		]);
 		await runWrangler("cloudchamber apply --json");
 		/* eslint-disable */

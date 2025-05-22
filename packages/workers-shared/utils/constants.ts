@@ -27,3 +27,7 @@ export const ENTRY_SIZE = PATH_HASH_SIZE + CONTENT_HASH_SIZE + TAIL_SIZE;
 export const MAX_ASSET_COUNT = 20_000;
 /** Maximum size per asset that can be deployed with a worker */
 export const MAX_ASSET_SIZE = 25 * 1024 * 1024;
+
+export const CF_ASSETS_IGNORE_FILENAME = ".assetsignore";
+export const REDIRECTS_FILENAME = "_redirects";
+export const HEADERS_FILENAME = "_headers";

@@ -112,9 +112,6 @@ export type BundleOptions = {
 	additionalModules: CfModule[];
 	// A module collector enables you to observe what modules are in the Worker.
 	moduleCollector: ModuleCollector;
-	serveLegacyAssetsFromWorker: boolean;
-	legacyAssets: Config["legacy_assets"] | undefined;
-	bypassAssetCache: boolean | undefined;
 	doBindings: DurableObjectBindings;
 	workflowBindings: WorkflowBinding[];
 	jsxFactory: string | undefined;
@@ -123,11 +120,11 @@ export type BundleOptions = {
 	watch: boolean | undefined;
 	tsconfig: string | undefined;
 	minify: boolean | undefined;
+	keepNames: boolean;
 	nodejsCompatMode: NodeJSCompatMode | undefined;
 	define: Config["define"];
 	alias: Config["alias"];
 	checkFetch: boolean;
-	mockAnalyticsEngineDatasets: Config["analytics_engine_datasets"];
 	targetConsumer: "dev" | "deploy";
 	testScheduled: boolean | undefined;
 	inject: string[] | undefined;
@@ -138,6 +135,7 @@ export type BundleOptions = {
 	projectRoot: string | undefined;
 	defineNavigatorUserAgent: boolean;
 	external: string[] | undefined;
+	metafile: string | boolean | undefined;
 };
 
 /**
@@ -150,7 +148,6 @@ export async function bundleWorker(
 		bundle,
 		moduleCollector = noopModuleCollector,
 		additionalModules = [],
-		serveLegacyAssetsFromWorker,
 		doBindings,
 		workflowBindings,
 		jsxFactory,
@@ -159,13 +156,11 @@ export async function bundleWorker(
 		watch,
 		tsconfig,
 		minify,
+		keepNames,
 		nodejsCompatMode,
 		alias,
 		define,
 		checkFetch,
-		mockAnalyticsEngineDatasets,
-		legacyAssets,
-		bypassAssetCache,
 		targetConsumer,
 		testScheduled,
 		inject: injectOption,
@@ -176,6 +171,7 @@ export async function bundleWorker(
 		projectRoot,
 		defineNavigatorUserAgent,
 		external,
+		metafile,
 	}: BundleOptions
 ): Promise<BundleResult> {
 	// We create a temporary directory for any one-off files we
@@ -187,21 +183,6 @@ export async function bundleWorker(
 
 	// At this point, we take the opportunity to "wrap" the worker with middleware.
 	const middlewareToLoad: MiddlewareLoader[] = [];
-
-	if (
-		targetConsumer === "dev" &&
-		mockAnalyticsEngineDatasets &&
-		mockAnalyticsEngineDatasets.length > 0
-	) {
-		middlewareToLoad.push({
-			name: "mock-analytics-engine",
-			path: "templates/middleware/middleware-mock-analytics-engine.ts",
-			config: {
-				bindings: mockAnalyticsEngineDatasets.map(({ binding }) => binding),
-			},
-			supports: ["modules", "service-worker"],
-		});
-	}
 
 	if (
 		targetConsumer === "dev" &&
@@ -245,29 +226,6 @@ export async function bundleWorker(
 		});
 	}
 
-	if (serveLegacyAssetsFromWorker) {
-		middlewareToLoad.push({
-			name: "serve-static-assets",
-			path: "templates/middleware/middleware-serve-static-assets.ts",
-			config: {
-				spaMode:
-					typeof legacyAssets === "object"
-						? legacyAssets.serve_single_page_app
-						: false,
-				cacheControl:
-					typeof legacyAssets === "object"
-						? {
-								browserTTL:
-									legacyAssets.browser_TTL ||
-									172800 /* 2 days: 2* 60 * 60 * 24 */,
-								bypassCache: bypassAssetCache,
-							}
-						: {},
-			},
-			supports: ["modules", "service-worker"],
-		});
-	}
-
 	// If using watch, build result will not be returned.
 	// This plugin will retrieve the build result on the first build.
 	let initialBuildResult: (result: esbuild.BuildResult) => void;
@@ -302,6 +260,32 @@ export async function bundleWorker(
 		}
 
 		inject.push(checkedFetchFileToInject);
+	}
+
+	// We injected the `CF-Connecting-IP` header in the entry worker on Miniflare.
+	// It used to be stripped by Miniflare, but that caused TCP ingress failures
+	// because of the global outbound setup. This is a temporary workaround until
+	// a proper fix is landed in Workerd.
+	// See https://github.com/cloudflare/workers-sdk/issues/9238 for more details.
+	if (targetConsumer === "dev" && local) {
+		const stripCfConnectingIpHeaderFileToInject = path.join(
+			tmpDir.path,
+			"strip-cf-connecting-ip-header.js"
+		);
+
+		if (!fs.existsSync(stripCfConnectingIpHeaderFileToInject)) {
+			fs.writeFileSync(
+				stripCfConnectingIpHeaderFileToInject,
+				fs.readFileSync(
+					path.resolve(
+						getBasePath(),
+						"templates/strip-cf-connecting-ip-header.js"
+					)
+				)
+			);
+		}
+
+		inject.push(stripCfConnectingIpHeaderFileToInject);
 	}
 
 	// When multiple workers are running we need some way to disambiguate logs between them. Inject a patched version of `globalThis.console` that prefixes logs with the worker name
@@ -398,16 +382,18 @@ export async function bundleWorker(
 		entryPoints: [entry.file],
 		bundle,
 		absWorkingDir: entry.projectRoot,
-		outdir: destination,
-		keepNames: true,
-		entryNames: entryName || path.parse(entryFile).name,
+		keepNames,
 		...(isOutfile
 			? {
 					outdir: undefined,
 					outfile: destination,
 					entryNames: undefined,
 				}
-			: {}),
+			: {
+					outdir: destination,
+					outfile: undefined,
+					entryNames: entryName || path.parse(entryFile).name,
+				}),
 		inject,
 		external: bundle
 			? ["__STATIC_CONTENT_MANIFEST", ...(external ? external : [])]
@@ -430,7 +416,6 @@ export async function bundleWorker(
 				// use process.env["NODE_ENV" + ""] so that esbuild doesn't replace it
 				// when we do a build of wrangler. (re: https://github.com/cloudflare/workers-sdk/issues/1477)
 				"process.env.NODE_ENV": `"${process.env["NODE_ENV" + ""]}"`,
-				...(nodejsCompatMode === "legacy" ? { global: "globalThis" } : {}),
 				...define,
 			},
 		}),
@@ -438,10 +423,10 @@ export async function bundleWorker(
 		plugins: [
 			aliasPlugin,
 			moduleCollector.plugin,
-			...getNodeJSCompatPlugins({
+			...(await getNodeJSCompatPlugins({
 				mode: nodejsCompatMode ?? null,
 				unenvResolvePaths,
-			}),
+			})),
 			cloudflareInternalPlugin,
 			buildResultPlugin,
 			...(plugins || []),
@@ -483,6 +468,23 @@ export async function bundleWorker(
 			};
 		} else {
 			result = await esbuild.build(buildOptions);
+
+			// Write the bundle metafile to disk.
+			if (metafile && result.metafile) {
+				let metaFilePath: string;
+
+				if (typeof metafile === "string") {
+					metaFilePath = path.resolve(metafile);
+				} else if (isOutfile) {
+					metaFilePath = `${destination}.bundle-meta.json`;
+				} else {
+					metaFilePath = path.join(destination, "bundle-meta.json");
+				}
+
+				const metaJson = JSON.stringify(result.metafile, null, 2);
+				fs.writeFileSync(metaFilePath, metaJson);
+			}
+
 			// Even when we're not watching, we still want some way of cleaning up the
 			// temporary directory when we don't need it anymore
 			stop = async function () {

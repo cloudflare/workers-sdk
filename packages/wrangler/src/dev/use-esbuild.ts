@@ -40,16 +40,14 @@ export function runBuild(
 		processEntrypoint,
 		additionalModules,
 		rules,
-		legacyAssets,
-		serveLegacyAssetsFromWorker,
 		tsconfig,
 		minify,
+		keepNames,
 		nodejsCompatMode,
 		define,
 		alias,
 		noBundle,
 		findAdditionalModules,
-		mockAnalyticsEngineDatasets,
 		durableObjects,
 		workflows,
 		local,
@@ -67,18 +65,16 @@ export function runBuild(
 		processEntrypoint: boolean;
 		additionalModules: CfModule[];
 		rules: Config["rules"];
-		legacyAssets: Config["legacy_assets"];
 		define: Config["define"];
 		alias: Config["alias"];
-		serveLegacyAssetsFromWorker: boolean;
 		tsconfig: string | undefined;
 		minify: boolean | undefined;
+		keepNames: boolean;
 		nodejsCompatMode: NodeJSCompatMode | undefined;
 		noBundle: boolean;
 		findAdditionalModules: boolean | undefined;
 		durableObjects: Config["durable_objects"];
 		workflows: Config["workflows"];
-		mockAnalyticsEngineDatasets: Config["analytics_engine_datasets"];
 		local: boolean;
 		targetConsumer: "dev" | "deploy";
 		testScheduled: boolean;
@@ -149,21 +145,17 @@ export function runBuild(
 						bundle: !noBundle,
 						moduleCollector,
 						additionalModules: newAdditionalModules,
-						serveLegacyAssetsFromWorker,
 						jsxFactory,
 						jsxFragment,
 						watch: true,
 						tsconfig,
 						minify,
+						keepNames,
 						nodejsCompatMode,
 						doBindings: durableObjects.bindings,
 						workflowBindings: workflows,
 						alias,
 						define,
-						mockAnalyticsEngineDatasets,
-						legacyAssets,
-						// disable the cache in dev
-						bypassAssetCache: true,
 						targetConsumer,
 						testScheduled,
 						plugins: [logBuildOutput(nodejsCompatMode, onStart, updateBundle)],
@@ -180,6 +172,8 @@ export function runBuild(
 						// sourcemap defaults to true in dev
 						sourcemap: undefined,
 						checkFetch,
+
+						metafile: undefined,
 					})
 				: undefined;
 

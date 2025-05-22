@@ -1,8 +1,0 @@
-name = "worker"
-compatibility_date = "2023-01-01"
-main = "worker.mjs"
-
-[[ d1_databases ]]
-binding = "DB"
-database_name = "db"
-database_id = "00000000-0000-0000-0000-000000000000"

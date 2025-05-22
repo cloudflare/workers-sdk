@@ -129,12 +129,15 @@ export type PreviewHash = {
 	serialised: string;
 };
 
-async function compressWorker(worker: FormData) {
+export async function compressTextWorker(contentType: string, worker: string) {
+	return lzstring.compressToEncodedURIComponent(`${contentType}:${worker}`);
+}
+
+export async function compressWorker(worker: FormData) {
 	const serialisedWorker = new Response(worker);
-	return lzstring.compressToEncodedURIComponent(
-		`${serialisedWorker.headers.get(
-			"content-type"
-		)}:${await serialisedWorker.text()}`
+	return compressTextWorker(
+		serialisedWorker.headers.get("content-type") ?? "",
+		await serialisedWorker.text()
 	);
 }
 

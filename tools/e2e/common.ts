@@ -14,6 +14,12 @@ export type Project = {
 	created_on: string;
 };
 
+export type ContainerApplication = {
+	created_at: string;
+	id: string;
+	name: string;
+};
+
 export type Worker = {
 	id: string;
 	created_on: string;
@@ -28,6 +34,24 @@ export type Database = {
 	created_at: string;
 	uuid: string;
 	name: string;
+};
+
+export type HyperdriveConfig = {
+	id: string;
+	name: string;
+	created_on: string;
+};
+
+export type MTlsCertificateResponse = {
+	id: string;
+	name?: string;
+	ca: boolean;
+	certificates: string;
+	expires_on: string;
+	issuer: string;
+	serial_number: string;
+	signature: string;
+	uploaded_on: string;
 };
 
 class ApiError extends Error {
@@ -46,12 +70,12 @@ class FatalError extends Error {
 	}
 }
 
-const apiFetch = async (
+const apiFetchResponse = async (
 	path: string,
 	init = { method: "GET" },
 	failSilently = false,
 	queryParams = {}
-) => {
+): Promise<Response | false> => {
 	try {
 		const baseUrl = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}`;
 		let queryString = new URLSearchParams(queryParams).toString();
@@ -71,13 +95,12 @@ const apiFetch = async (
 			throw { url, init, response };
 		}
 
-		const json = (await response.json()) as ApiSuccessBody;
-
-		return json.result;
+		return response;
 	} catch (e) {
 		if (failSilently) {
-			return;
+			return false;
 		}
+
 		if (e instanceof ApiError) {
 			console.error(e.url, e.init);
 			console.error(`(${e.response.status}) ${e.response.statusText}`);
@@ -88,6 +111,27 @@ const apiFetch = async (
 		}
 		throw new FatalError(1);
 	}
+};
+
+const apiFetch = async (
+	path: string,
+	init = { method: "GET" },
+	failSilently = false,
+	queryParams = {}
+) => {
+	const response = await apiFetchResponse(
+		path,
+		init,
+		failSilently,
+		queryParams
+	);
+
+	if (!response) {
+		return response;
+	}
+
+	const json = (await response.json()) as ApiSuccessBody;
+	return json.result;
 };
 
 export const listTmpE2EProjects = async () => {
@@ -116,7 +160,7 @@ export const listTmpE2EProjects = async () => {
 };
 
 export const deleteProject = async (project: string) => {
-	await apiFetch(
+	return await apiFetch(
 		`/pages/projects/${project}`,
 		{
 			method: "DELETE",
@@ -137,8 +181,39 @@ export const listTmpE2EWorkers = async () => {
 	);
 };
 
+export const listTmpE2EContainerApplications = async () => {
+	const res = await apiFetchResponse(`/cloudchamber/applications`, {
+		method: "GET",
+	});
+	if (!res) {
+		// unreachable, but assert() is failing to pin down the type
+		throw res;
+	}
+
+	if (!res.ok) {
+		throw new Error(`${res.status}: ${await res.text()}`);
+	}
+
+	const apps = (await res.json()) as ContainerApplication[];
+	return apps.filter(
+		(app) =>
+			app.name.includes("e2e") &&
+			Date.now() - new Date(app.created_at).valueOf() > 1000 * 60 * 60
+	);
+};
+
+export const deleteContainerApplication = async (app: ContainerApplication) => {
+	return await apiFetchResponse(
+		`/cloudchamber/applications/${app.id}`,
+		{
+			method: "DELETE",
+		},
+		true
+	);
+};
+
 export const deleteWorker = async (id: string) => {
-	await apiFetch(
+	return await apiFetch(
 		`/workers/scripts/${id}`,
 		{
 			method: "DELETE",
@@ -175,7 +250,7 @@ export const listTmpKVNamespaces = async () => {
 };
 
 export const deleteKVNamespace = async (id: string) => {
-	await apiFetch(
+	return await apiFetch(
 		`/storage/kv/namespaces/${id}`,
 		{
 			method: "DELETE",
@@ -213,8 +288,68 @@ export const listTmpDatabases = async () => {
 };
 
 export const deleteDatabase = async (id: string) => {
-	await apiFetch(
+	return await apiFetch(
 		`/d1/database/${id}`,
+		{
+			method: "DELETE",
+		},
+		true
+	);
+};
+
+export const listHyperdriveConfigs = async () => {
+	const pageSize = 100;
+	let page = 1;
+	const results: HyperdriveConfig[] = [];
+	while (results.length % pageSize === 0) {
+		const res = (await apiFetch(
+			`/hyperdrive/configs`,
+			{ method: "GET" },
+			false,
+			new URLSearchParams({
+				per_page: pageSize.toString(),
+				page: page.toString(),
+			})
+		)) as HyperdriveConfig[];
+		page++;
+		results.push(...res);
+
+		if (res.length < pageSize || page > 5) {
+			break;
+		}
+	}
+	return results.filter(
+		(config) =>
+			config.name.includes("tmp-e2e") && // Databases are more than an hour old
+			Date.now() - new Date(config.created_on).valueOf() > 1000 * 60 * 60
+	);
+};
+
+export const deleteHyperdriveConfig = async (id: string) => {
+	return await apiFetch(
+		`/hyperdrive/configs/${id}`,
+		{
+			method: "DELETE",
+		},
+		true
+	);
+};
+
+export const listCertificates = async () => {
+	const results = (await apiFetch(`/mtls_certificates`, {
+		method: "GET",
+	})) as MTlsCertificateResponse[];
+
+	return results.filter(
+		(cert) =>
+			cert.name?.includes("tmp-e2e") && // Certs are more than an hour old
+			Date.now() - new Date(cert.uploaded_on).valueOf() > 1000 * 60 * 60
+	);
+};
+
+export const deleteCertificate = async (id: string) => {
+	await apiFetch(
+		`/mtls_certificates/${id}`,
 		{
 			method: "DELETE",
 		},

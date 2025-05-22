@@ -4,13 +4,15 @@ import {
 	DELETE,
 	GET,
 	HttpError,
+	KeyValueEntry,
 	KeyValueStorage,
 	maybeApply,
 	MiniflareDurableObject,
+	POST,
 	PUT,
 	RouteHandler,
 } from "miniflare:shared";
-import { KVHeaders, KVLimits, KVParams } from "./constants";
+import { KVHeaders, KVLimits, KVParams, MAX_BULK_GET_KEYS } from "./constants";
 import {
 	decodeKey,
 	decodeListOptions,
@@ -73,6 +75,46 @@ function secondsToMillis(seconds: number): number {
 	return seconds * 1000;
 }
 
+async function processKeyValue(
+	obj: KeyValueEntry<unknown> | null,
+	type: "text" | "json" = "text",
+	withMetadata = false
+) {
+	const decoder = new TextDecoder();
+	let decodedValue = "";
+	if (obj?.value) {
+		for await (const chunk of obj?.value) {
+			decodedValue += decoder.decode(chunk, { stream: true });
+		}
+		decodedValue += decoder.decode();
+	}
+
+	let val = null;
+	const size = decodedValue.length;
+	try {
+		val = !obj?.value
+			? null
+			: type === "json"
+				? JSON.parse(decodedValue)
+				: decodedValue;
+	} catch (err: any) {
+		throw new HttpError(
+			400,
+			`At least one of the requested keys corresponds to a non-${type} value`
+		);
+	}
+	if (val && withMetadata) {
+		return [
+			{
+				value: val,
+				metadata: obj?.metadata ?? null,
+			},
+			size,
+		];
+	}
+	return [val, size];
+}
+
 export class KVNamespaceObject extends MiniflareDurableObject {
 	#storage?: KeyValueStorage;
 	get storage() {
@@ -81,13 +123,61 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 	}
 
 	@GET("/:key")
+	@POST("/bulk/get")
 	get: RouteHandler<KVParams> = async (req, params, url) => {
+		if (req.method === "POST" && req.body != null) {
+			let decodedBody = "";
+			const decoder = new TextDecoder();
+			for await (const chunk of req.body) {
+				decodedBody += decoder.decode(chunk, { stream: true });
+			}
+			decodedBody += decoder.decode();
+			const parsedBody = JSON.parse(decodedBody);
+			const keys: string[] = parsedBody.keys;
+			const type = parsedBody?.type;
+			if (type && type !== "text" && type !== "json") {
+				const errorStr = `"${type}" is not a valid type. Use "json" or "text"`;
+				return new Response(errorStr, { status: 400, statusText: errorStr });
+			}
+			const obj: { [key: string]: any } = {};
+			if (keys.length > MAX_BULK_GET_KEYS) {
+				const errorStr = `You can request a maximum of ${MAX_BULK_GET_KEYS} keys`;
+				return new Response(errorStr, { status: 400, statusText: errorStr });
+			}
+			if (keys.length < 1) {
+				const errorStr = "You must request a minimum of 1 key";
+				return new Response(errorStr, { status: 400, statusText: errorStr });
+			}
+			let totalBytes = 0;
+			for (const key of keys) {
+				validateGetOptions(key, { cacheTtl: parsedBody?.cacheTtl });
+				const entry = await this.storage.get(key);
+				const [value, size] = await processKeyValue(
+					entry,
+					parsedBody?.type,
+					parsedBody?.withMetadata
+				);
+				totalBytes += size;
+				obj[key] = value;
+			}
+			const maxValueSize = this.beingTested
+				? KVLimits.MAX_VALUE_SIZE_TEST
+				: KVLimits.MAX_BULK_SIZE;
+			if (totalBytes > maxValueSize) {
+				throw new HttpError(
+					413,
+					`Total size of request exceeds the limit of ${maxValueSize / 1024 / 1024}MB`
+				);
+			}
+
+			return new Response(JSON.stringify(obj));
+		}
+
 		// Decode URL parameters
 		const key = decodeKey(params, url.searchParams);
 		const cacheTtlParam = url.searchParams.get(KVParams.CACHE_TTL);
 		const cacheTtl =
 			cacheTtlParam === null ? undefined : parseInt(cacheTtlParam);
-
 		// Get value from storage
 		validateGetOptions(key, { cacheTtl });
 		const entry = await this.storage.get(key);
@@ -114,7 +204,6 @@ export class KVNamespaceObject extends MiniflareDurableObject {
 		const rawExpiration = url.searchParams.get(KVParams.EXPIRATION);
 		const rawExpirationTtl = url.searchParams.get(KVParams.EXPIRATION_TTL);
 		const rawMetadata = req.headers.get(KVHeaders.METADATA);
-
 		// Validate key, expiration and metadata
 		const now = millisToSeconds(this.timers.now());
 		const { expiration, metadata } = validatePutOptions(key, {

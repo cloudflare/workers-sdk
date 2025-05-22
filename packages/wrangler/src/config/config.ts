@@ -30,7 +30,6 @@ export type Config = ComputedFields &
 export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
 	PagesConfigFields &
 	RawEnvironment &
-	DeprecatedConfigFields &
 	EnvironmentMap & { $schema?: string };
 
 export interface ComputedFields {
@@ -66,6 +65,8 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 
 	/**
 	 * Options to configure the development server that your worker will use.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#local-development-settings
 	 */
 	dev: Dev;
 
@@ -74,6 +75,8 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	 * static assets with your Worker.
 	 *
 	 * More details at https://developers.cloudflare.com/workers/platform/sites
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#workers-sites
 	 */
 	site:
 		| {
@@ -118,24 +121,6 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 		| undefined;
 
 	/**
-	 * Old behaviour of serving a folder of static assets with your Worker,
-	 * without any additional code.
-	 * This can either be a string, or an object with additional config
-	 * fields.
-	 * Will be deprecated in the near future in favor of `assets`.
-	 */
-	legacy_assets:
-		| {
-				bucket: string;
-				include: string[];
-				exclude: string[];
-				browser_TTL: number | undefined;
-				serve_single_page_app: boolean;
-		  }
-		| string
-		| undefined;
-
-	/**
 	 * A list of wasm modules that your worker should be bound to. This is
 	 * the "legacy" way of binding to a wasm module. ES module workers should
 	 * do proper module imports.
@@ -171,6 +156,8 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	/**
 	 * A map of module aliases. Lets you swap out a module for any others.
 	 * Corresponds with esbuild's `alias` config
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#module-aliasing
 	 */
 	alias: { [key: string]: string } | undefined;
 
@@ -246,32 +233,6 @@ export interface DevConfig {
 
 export type RawDevConfig = Partial<DevConfig>;
 
-interface DeprecatedConfigFields {
-	/**
-	 * The project "type". A holdover from Wrangler v1.x.
-	 * Valid values were "webpack", "javascript", and "rust".
-	 *
-	 * @deprecated DO NOT USE THIS. Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.
-	 * @breaking
-	 */
-	type?: "webpack" | "javascript" | "rust";
-
-	/**
-	 * Path to the webpack config to use when building your worker.
-	 * A holdover from Wrangler v1.x, used with `type: "webpack"`.
-	 *
-	 * @deprecated DO NOT USE THIS. Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.
-	 * @breaking
-	 */
-	webpack_config?: string;
-
-	/**
-	 * Configuration only used by a standalone use of the miniflare binary.
-	 * @deprecated
-	 */
-	miniflare?: unknown;
-}
-
 interface EnvironmentMap {
 	/**
 	 * The `env` section defines overrides for the configuration for different environments.
@@ -337,6 +298,7 @@ export const defaultWranglerConfig: Config = {
 	vectorize: [],
 	hyperdrive: [],
 	workflows: [],
+	secrets_store_secrets: [],
 	services: [],
 	analytics_engine_datasets: [],
 	ai: undefined,
@@ -349,7 +311,6 @@ export const defaultWranglerConfig: Config = {
 	/* TOP-LEVEL ONLY FIELDS */
 	legacy_env: true,
 	site: undefined,
-	legacy_assets: undefined,
 	wasm_modules: undefined,
 	text_blobs: undefined,
 	data_blobs: undefined,
@@ -371,17 +332,15 @@ export const defaultWranglerConfig: Config = {
 	jsx_fragment: "React.Fragment",
 	migrations: [],
 	triggers: {
-		crons: [],
+		crons: undefined,
 	},
-	usage_model: undefined,
 	rules: [],
 	build: { command: undefined, watch_dir: "./src", cwd: undefined },
 	no_bundle: undefined,
 	minify: undefined,
-	node_compat: undefined,
+	keep_names: undefined,
 	dispatch_namespaces: [],
 	first_party_worker: undefined,
-	zone_id: undefined,
 	logfwdr: { bindings: [] },
 	logpush: undefined,
 	upload_source_maps: undefined,
@@ -391,7 +350,7 @@ export const defaultWranglerConfig: Config = {
 	/** NON-INHERITABLE ENVIRONMENT FIELDS **/
 	define: {},
 	cloudchamber: {},
-	containers: { app: [] },
+	containers: undefined,
 	send_email: [],
 	browser: undefined,
 	unsafe: {},

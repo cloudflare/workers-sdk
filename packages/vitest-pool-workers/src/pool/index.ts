@@ -206,6 +206,21 @@ function isDurableObjectDesignatorToSelf(
 	);
 }
 
+function isWorkflowDesignatorToSelf(
+	value: unknown,
+	currentScriptName: string | undefined
+): value is { className: string } {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"className" in value &&
+		typeof value.className === "string" &&
+		(!("scriptName" in value) ||
+			value.scriptName === undefined ||
+			value.scriptName === currentScriptName)
+	);
+}
+
 interface DurableObjectDesignator {
 	className: string;
 	scriptName?: string;
@@ -313,6 +328,31 @@ function fixupDurableObjectBindingsToSelf(
 	return result;
 }
 
+function fixupWorkflowBindingsToSelf(
+	worker: SourcelessWorkerOptions
+): Set<string> {
+	// TODO(someday): may need to extend this to take into account other workers
+	//  if doing multi-worker tests across workspace projects
+	// TODO(someday): may want to validate class names are valid identifiers?
+	const result = new Set<string>();
+	if (worker.workflows === undefined) {
+		return result;
+	}
+	for (const key of Object.keys(worker.workflows)) {
+		const designator = worker.workflows[key];
+		// `designator` hasn't been validated at this point
+		if (isWorkflowDesignatorToSelf(designator, worker.name)) {
+			result.add(designator.className);
+			// Shallow clone to avoid mutating config
+			worker.workflows[key] = {
+				...designator,
+				className: USER_OBJECT_MODULE_NAME + designator.className,
+			};
+		}
+	}
+	return result;
+}
+
 type ProjectWorkers = [
 	runnerWorker: WorkerOptions,
 	...auxiliaryWorkers: WorkerOptions[],
@@ -372,11 +412,8 @@ function buildProjectWorkerOptions(
 		runnerWorker.compatibilityFlags
 	);
 
-	if (mode !== "v1" && mode !== "v2") {
-		runnerWorker.compatibilityFlags.push(
-			"nodejs_compat",
-			"no_nodejs_compat_v2"
-		);
+	if (mode !== "v2") {
+		runnerWorker.compatibilityFlags.push("nodejs_compat_v2");
 	}
 
 	// Required for `workerd:unsafe` module. We don't require this flag to be set
@@ -404,9 +441,23 @@ function buildProjectWorkerOptions(
 	const durableObjectClassNames = Array.from(
 		fixupDurableObjectBindingsToSelf(runnerWorker)
 	).sort();
+	const workflowClassNames = Array.from(
+		fixupWorkflowBindingsToSelf(runnerWorker)
+	).sort();
+
+	if (
+		workflowClassNames.length !== 0 &&
+		project.options.isolatedStorage === true
+	) {
+		throw new Error(`Project ${project.relativePath} has Workflows defined and \`isolatedStorage\` set to true.
+Please set \`isolatedStorage\` to false in order to run projects with Workflows.
+Workflows defined in project: ${workflowClassNames.join(", ")}`);
+	}
+
 	const wrappers = [
-		'import { createWorkerEntrypointWrapper, createDurableObjectWrapper } from "cloudflare:test-internal";',
+		'import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from "cloudflare:test-internal";',
 	];
+
 	for (const entrypointName of serviceBindingEntrypointNames) {
 		const quotedEntrypointName = JSON.stringify(entrypointName);
 		const wrapper = `export const ${USER_OBJECT_MODULE_NAME}${entrypointName} = createWorkerEntrypointWrapper(${quotedEntrypointName});`;
@@ -415,6 +466,12 @@ function buildProjectWorkerOptions(
 	for (const className of durableObjectClassNames) {
 		const quotedClassName = JSON.stringify(className);
 		const wrapper = `export const ${USER_OBJECT_MODULE_NAME}${className} = createDurableObjectWrapper(${quotedClassName});`;
+		wrappers.push(wrapper);
+	}
+
+	for (const className of workflowClassNames) {
+		const quotedClassName = JSON.stringify(className);
+		const wrapper = `export const ${USER_OBJECT_MODULE_NAME}${className} = createWorkflowEntrypointWrapper(${quotedClassName});`;
 		wrappers.push(wrapper);
 	}
 
@@ -556,6 +613,16 @@ function buildProjectMiniflareOptions(
 	assert(runnerWorker.name !== undefined);
 	assert(runnerWorker.name.startsWith(WORKER_NAME_PREFIX));
 
+	const inspectorPort = ctx.config.inspector.enabled
+		? ctx.config.inspector.port ?? 9229
+		: undefined;
+
+	if (inspectorPort !== undefined && !project.options.singleWorker) {
+		log.warn(`Tests run in singleWorker mode when the inspector is open.`);
+
+		project.options.singleWorker = true;
+	}
+
 	if (project.options.singleWorker || project.options.isolatedStorage) {
 		// Single Worker, Isolated or Shared Storage
 		//  --> single instance with single runner worker
@@ -563,6 +630,7 @@ function buildProjectMiniflareOptions(
 		//  --> multiple instances each with single runner worker
 		return {
 			...SHARED_MINIFLARE_OPTIONS,
+			inspectorPort,
 			unsafeModuleFallbackService: moduleFallbackService,
 			workers: [runnerWorker, ABORT_ALL_WORKER, ...auxiliaryWorkers],
 		};
@@ -610,7 +678,11 @@ async function getProjectMiniflare(
 	if (project.mf === undefined) {
 		// If `mf` is now `undefined`, create new instances
 		if (singleInstance) {
-			log.info(`Starting single runtime for ${project.relativePath}...`);
+			log.info(
+				`Starting single runtime for ${project.relativePath}` +
+					`${mfOptions.inspectorPort !== undefined ? ` with inspector on port ${mfOptions.inspectorPort}` : ""}` +
+					`...`
+			);
 			project.mf = new Miniflare(mfOptions);
 		} else {
 			log.info(`Starting isolated runtimes for ${project.relativePath}...`);
@@ -864,6 +936,31 @@ function assertCompatibleVitestVersion(ctx: Vitest) {
 		log.warn(message);
 	}
 }
+
+let warnedUnsupportedInspectorOptions = false;
+
+function validateInspectorConfig(config: SerializedConfig) {
+	if (config.inspector.host) {
+		throw new TypeError(
+			"Customizing inspector host is not supported with vitest-pool-workers."
+		);
+	}
+
+	if (config.inspector.enabled && !warnedUnsupportedInspectorOptions) {
+		if (config.inspectBrk) {
+			log.warn(
+				`The "--inspect-brk" flag is not supported. Use "--inspect" instead.`
+			);
+		} else if (config.inspector.waitForDebugger) {
+			log.warn(
+				`The "inspector.waitForDebugger" option is not supported. Insert a debugger statement if you need to pause execution.`
+			);
+		}
+
+		warnedUnsupportedInspectorOptions = true;
+	}
+}
+
 async function executeMethod(
 	ctx: Vitest,
 	specs: TestSpecification[],
@@ -931,6 +1028,13 @@ async function executeMethod(
 			(timerMethod) =>
 				timerMethod !== "setImmediate" && timerMethod !== "clearImmediate"
 		);
+
+		validateInspectorConfig(config);
+
+		// We don't want it to call `node:inspector` inside Workerd
+		config.inspector = {
+			enabled: false,
+		};
 
 		// We don't need all pool options from the config at runtime.
 		// Additionally, users may set symbols in the config which aren't

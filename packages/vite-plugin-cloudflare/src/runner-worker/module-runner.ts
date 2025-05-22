@@ -2,14 +2,17 @@ import {
 	createWebSocketModuleRunnerTransport,
 	ModuleRunner,
 } from "vite/module-runner";
-import { MODULE_PATTERN, UNKNOWN_HOST } from "../shared";
+import { additionalModuleRE, UNKNOWN_HOST } from "../shared";
+import { stripInternalEnv } from "./env";
 import type { WrapperEnv } from "./env";
+import type { EvaluatedModuleNode, ResolvedResult } from "vite/module-runner";
 
 let moduleRunner: ModuleRunner;
 
 export async function createModuleRunner(
 	env: WrapperEnv,
-	webSocket: WebSocket
+	webSocket: WebSocket,
+	viteRoot: string
 ) {
 	if (moduleRunner) {
 		throw new Error("Runner already initialized");
@@ -25,7 +28,7 @@ export async function createModuleRunner(
 
 	moduleRunner = new ModuleRunner(
 		{
-			root: env.__VITE_ROOT__,
+			root: viteRoot,
 			sourcemapInterceptor: "prepareStackTrace",
 			transport: {
 				...transport,
@@ -50,15 +53,6 @@ export async function createModuleRunner(
 		},
 		{
 			async runInlinedModule(context, transformed, module) {
-				if (
-					module.file.includes("/node_modules") &&
-					!module.file.includes("/node_modules/.vite")
-				) {
-					throw new Error(
-						`[Error] Trying to import non-prebundled module (only prebundled modules are allowed): ${module.id}` +
-							"\n\n(have you excluded the module via `optimizeDeps.exclude`?)"
-					);
-				}
 				const codeDefinition = `'use strict';async (${Object.keys(context).join(
 					","
 				)})=>{{`;
@@ -74,17 +68,16 @@ export async function createModuleRunner(
 				}
 			},
 			async runExternalModule(filepath) {
-				const moduleRE = new RegExp(MODULE_PATTERN);
-
-				if (
-					!moduleRE.test(filepath) &&
-					filepath.includes("/node_modules") &&
-					!filepath.includes("/node_modules/.vite")
-				) {
-					throw new Error(
-						`[Error] Trying to import non-prebundled module (only prebundled modules are allowed): ${filepath}` +
-							"\n\n(have you externalized the module via `resolve.external`?)"
+				if (filepath === "cloudflare:workers") {
+					const originalCloudflareWorkersModule = await import(
+						"cloudflare:workers"
 					);
+					return Object.seal({
+						...originalCloudflareWorkersModule,
+						env: stripInternalEnv(
+							originalCloudflareWorkersModule.env as WrapperEnv
+						),
+					});
 				}
 
 				filepath = filepath.replace(/^file:\/\//, "");

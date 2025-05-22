@@ -820,9 +820,10 @@ describe("wrangler secret", () => {
 					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
 					({ params }) => {
 						expect(params.accountId).toEqual("some-account-id");
-						return HttpResponse.json(
-							returnNetworkError ? null : createFetchResult(null)
-						);
+						if (returnNetworkError) {
+							return HttpResponse.error();
+						}
+						return HttpResponse.json(createFetchResult(null));
 					}
 				)
 			);
@@ -994,7 +995,7 @@ describe("wrangler secret", () => {
 			await expect(async () => {
 				await runWrangler("secret bulk ./secret.json --name script-name");
 			}).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: 🚨 7 secrets failed to upload]`
+				`[TypeError: Failed to fetch]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -1004,16 +1005,15 @@ describe("wrangler secret", () => {
 
 				🌀 Creating the secrets for the Worker \\"script-name\\"
 
-				Finished processing secrets JSON file:
-				✨ 0 secrets successfully uploaded
+				🚨 Secrets failed to upload
 
 				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 7 secrets failed to upload[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to fetch[0m
 
-			"
-		`);
+				"
+			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
@@ -1030,7 +1030,7 @@ describe("wrangler secret", () => {
 			await expect(async () => {
 				await runWrangler("secret bulk ./secret.json --name script-name");
 			}).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: 🚨 2 secrets failed to upload]`
+				`[TypeError: Failed to fetch]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -1040,17 +1040,76 @@ describe("wrangler secret", () => {
 
 				🌀 Creating the secrets for the Worker \\"script-name\\"
 
-				Finished processing secrets JSON file:
-				✨ 0 secrets successfully uploaded
+				🚨 Secrets failed to upload
 
 				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 2 secrets failed to upload[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to fetch[0m
 
-			"
-		`);
+				"
+			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("throws a meaningful error", async () => {
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-name-1": "secret_text",
+					"secret-name-2": "secret_text",
+				})
+			);
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+
+						return HttpResponse.json(createFetchResult({ bindings: [] }));
+					}
+				),
+				http.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						return HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									message: "This is a helpful error",
+									code: 1,
+								},
+							])
+						);
+					}
+				)
+			);
+
+			await expect(async () => {
+				await runWrangler("secret bulk ./secret.json --name script-name");
+			}).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/settings) failed.]`
+			);
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				------------------
+
+				🌀 Creating the secrets for the Worker \\"script-name\\"
+
+				🚨 Secrets failed to upload
+
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/settings) failed.[0m
+
+				  This is a helpful error [code: 1]
+
+				  If you think this is a bug, please open an issue at:
+				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+				"
+			`);
 		});
 
 		it("should merge existing bindings and secrets when patching", async () => {
@@ -1205,30 +1264,6 @@ describe("wrangler secret", () => {
 
 				Finished processing secrets file:
 				✨ 2 secrets successfully uploaded"
-			`);
-		});
-	});
-
-	describe("secret:bulk [DEPRECATED]", () => {
-		test("is still registered and usable", async () => {
-			const result = runWrangler("secret:bulk --help");
-
-			await expect(result).resolves.toBeUndefined();
-			expect(std.out).toMatchInlineSnapshot(`
-				"wrangler secret:bulk [json]
-
-				POSITIONALS
-				  json  The file of key-value pairs to upload, as JSON in form {\\"key\\": value, ...} or .dev.vars file in the form KEY=VALUE  [string]
-
-				GLOBAL FLAGS
-				  -c, --config   Path to Wrangler configuration file  [string]
-				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-				  -h, --help     Show help  [boolean]
-				  -v, --version  Show version number  [boolean]
-
-				OPTIONS
-				      --name  Name of the Worker  [string]"
 			`);
 		});
 	});

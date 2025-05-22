@@ -1,5 +1,64 @@
 # @cloudflare/unenv-preset
 
+## 2.3.2
+
+### Patch Changes
+
+- [#9220](https://github.com/cloudflare/workers-sdk/pull/9220) [`f61a08e`](https://github.com/cloudflare/workers-sdk/commit/f61a08e311a5aa6b24d56f1901d7fb17b16377b0) Thanks [@vicb](https://github.com/vicb)! - Sync unenv-preset with workerd
+
+- [#9219](https://github.com/cloudflare/workers-sdk/pull/9219) [`ea71df3`](https://github.com/cloudflare/workers-sdk/commit/ea71df3d485cfb37b4585b157ae6b95933b0335f) Thanks [@vicb](https://github.com/vicb)! - bump unenv to 2.0.0-rc.17
+
+## 2.3.1
+
+### Patch Changes
+
+- [#8638](https://github.com/cloudflare/workers-sdk/pull/8638) [`29cb306`](https://github.com/cloudflare/workers-sdk/commit/29cb3069c9bae79941247dc2fd71021f1c75887d) Thanks [@vicb](https://github.com/vicb)! - Use native APIs in `node:tls`
+
+  Uses `checkServerIdentity`, `createSecureContext`, and `SecureContext` from workerd rather than the unenv polyfill.
+
+## 2.3.0
+
+### Minor Changes
+
+- [#8568](https://github.com/cloudflare/workers-sdk/pull/8568) [`a7bd79b`](https://github.com/cloudflare/workers-sdk/commit/a7bd79bf40afe7079cd94557482bd909d825af09) Thanks [@vicb](https://github.com/vicb)! - Use the native implementation of crypto APIs
+
+## 2.2.0
+
+### Minor Changes
+
+- [#8514](https://github.com/cloudflare/workers-sdk/pull/8514) [`4ad78ea`](https://github.com/cloudflare/workers-sdk/commit/4ad78ea2c9b8fed7e3afe581e1c320b852969f6a) Thanks [@vicb](https://github.com/vicb)! - Use the native implementation for `connect` and `TLSSocket` from `node:tls`
+
+## 2.1.0
+
+### Minor Changes
+
+- [#8514](https://github.com/cloudflare/workers-sdk/pull/8514) [`4ad78ea`](https://github.com/cloudflare/workers-sdk/commit/4ad78ea2c9b8fed7e3afe581e1c320b852969f6a) Thanks [@vicb](https://github.com/vicb)! - Use the native implementation for `connect` and `TLSSocket` from `node:tls`
+
+### Patch Changes
+
+- [#8514](https://github.com/cloudflare/workers-sdk/pull/8514) [`4ad78ea`](https://github.com/cloudflare/workers-sdk/commit/4ad78ea2c9b8fed7e3afe581e1c320b852969f6a) Thanks [@vicb](https://github.com/vicb)! - sync with `unenv@2.0.0-rc.15`
+
+## 2.0.2
+
+### Patch Changes
+
+- Fixes outdated dist files in the 2.0.1 release
+
+## 2.0.1
+
+### Patch Changes
+
+- Sync with `unenv@2.0.0-rc.14`
+
+## 2.0.0
+
+### Major Changes
+
+- [#8322](https://github.com/cloudflare/workers-sdk/pull/8322) [`ff96a70`](https://github.com/cloudflare/workers-sdk/commit/ff96a7091439a4645772778295fd373f1a51718b) Thanks [@vicb](https://github.com/vicb)! - Sync the cloudflare preset with `unenv@2.0.0-rc.8`
+
+  - The preset is now delivered as ESM only
+  - A polyfill is added for perf_hooks
+
 ## 1.1.2
 
 ### Patch Changes

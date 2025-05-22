@@ -3,10 +3,16 @@
 	"extends": ["//"],
 	"tasks": {
 		"build": {
-			"inputs": ["src/**", "*.ts"],
 			"outputs": ["dist/**"]
 		},
 		"test:e2e": {
+			"env": [
+				"CLOUDFLARE_VITE_E2E_KEEP_TEMP_DIRS",
+				"NODE_DEBUG",
+				"CLOUDFLARE_ACCOUNT_ID",
+				"CLOUDFLARE_API_TOKEN"
+			],
+			"dependsOn": ["build"],
 			"inputs": ["e2e/**"]
 		}
 	}

@@ -6,6 +6,7 @@ import consumers from "stream/consumers";
 import { Macro, ThrowsExpectation } from "ava";
 import {
 	KV_PLUGIN_NAME,
+	MAX_BULK_GET_KEYS,
 	Miniflare,
 	MiniflareOptions,
 	ReplaceWorkersTypes,
@@ -122,6 +123,149 @@ test("get: returns value", async (t) => {
 	const result = await kv.get("key");
 	t.is(result, "value");
 });
+
+test("bulk get: returns value", async (t) => {
+	const { kv } = t.context;
+	await kv.put("key1", "value1");
+	const result: any = await kv.get(["key1", "key2"]);
+	const expectedResult = new Map([
+		["key1", "value1"],
+		["key2", null],
+	]);
+
+	t.deepEqual(result, expectedResult);
+});
+
+test("bulk get: check max keys", async (t) => {
+	const { kv } = t.context;
+	await kv.put("key1", "value1");
+	const keyArray = [];
+	for (let i = 0; i <= MAX_BULK_GET_KEYS; i++) {
+		keyArray.push(`key${i}`);
+	}
+	try {
+		await kv.get(keyArray);
+	} catch (error: any) {
+		t.is(
+			error.message,
+			"KV GET_BULK failed: 400 You can request a maximum of 100 keys"
+		);
+	}
+});
+
+test("bulk get: check minimum keys", async (t) => {
+	const { kv } = t.context;
+	try {
+		await kv.get([]);
+	} catch (error: any) {
+		t.is(
+			error.message,
+			"KV GET_BULK failed: 400 You must request a minimum of 1 key"
+		);
+	}
+});
+
+test("bulk get: invalid type", async (t) => {
+	const { kv } = t.context;
+	try {
+		await kv.get(["key"], { type: "invalid" as "json" });
+	} catch (error: any) {
+		t.is(
+			error.message,
+			'KV GET_BULK failed: 400 "invalid" is not a valid type. Use "json" or "text"'
+		);
+	}
+});
+
+test("bulk get: request json type", async (t) => {
+	const { kv } = t.context;
+	await kv.put("key1", '{"example": "ex"}');
+	await kv.put("key2", "example");
+	let result: any = await kv.get(["key1"]);
+	let expectedResult: any = new Map([["key1", '{"example": "ex"}']]);
+	expectedResult = new Map([["key1", '{"example": "ex"}']]);
+	t.deepEqual(result, expectedResult);
+
+	result = await kv.get(["key1"], "json");
+	expectedResult = new Map([["key1", { example: "ex" }]]);
+	t.deepEqual(result, expectedResult);
+
+	try {
+		await kv.get(["key1", "key2"], "json");
+	} catch (error: any) {
+		t.is(
+			error.message,
+			"KV GET_BULK failed: 400 At least one of the requested keys corresponds to a non-json value"
+		);
+	}
+});
+
+test("bulk get: check metadata", async (t) => {
+	const { kv } = t.context;
+	await kv.put("key1", "value1", {
+		expiration: TIME_FUTURE,
+		metadata: { testing: true },
+	});
+
+	await kv.put("key2", "value2");
+	const result: any = await kv.getWithMetadata(["key1", "key2"]);
+	const expectedResult: any = new Map([
+		["key1", { value: "value1", metadata: { testing: true } }],
+		["key2", { value: "value2", metadata: null }],
+	]);
+	t.deepEqual(result, expectedResult);
+});
+
+test("bulk get: check metadata with int", async (t) => {
+	const { kv } = t.context;
+	await kv.put("key1", "value1", {
+		expiration: TIME_FUTURE,
+		metadata: 123,
+	});
+
+	const result: any = await kv.getWithMetadata(["key1"]);
+	const expectedResult: any = new Map([
+		["key1", { value: "value1", metadata: 123 }],
+	]);
+	t.deepEqual(result, expectedResult);
+});
+
+test("bulk get: check metadata as string", async (t) => {
+	const { kv } = t.context;
+	await kv.put("key1", "value1", {
+		expiration: TIME_FUTURE,
+		metadata: "example",
+	});
+	const result: any = await kv.getWithMetadata(["key1"]);
+	const expectedResult: any = new Map([
+		["key1", { value: "value1", metadata: "example" }],
+	]);
+	t.deepEqual(result, expectedResult);
+});
+
+test("bulk get: get with metadata for 404", async (t) => {
+	const { kv } = t.context;
+
+	const result: any = await kv.getWithMetadata(["key1"]);
+	const expectedResult: any = new Map([["key1", null]]);
+	t.deepEqual(result, expectedResult);
+});
+
+test("bulk get: get over size limit", async (t) => {
+	const { kv } = t.context;
+	const bigValue = new Array(1024).fill("x").join("");
+	await kv.put("key1", bigValue);
+	await kv.put("key2", bigValue);
+	try {
+		await kv.getWithMetadata(["key1", "key2"]);
+	} catch (error: any) {
+		t.deepEqual(
+			error.message,
+			"KV GET_BULK failed: 413 Total size of request exceeds the limit of 0.0009765625MB" // 1024 Bytes for testing
+		);
+	}
+});
+
 test("get: returns null for non-existent keys", async (t) => {
 	const { kv } = t.context;
 	t.is(await kv.get("key"), null);

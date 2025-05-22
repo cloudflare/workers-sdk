@@ -9,8 +9,12 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
+// we want to include the banner to make sure it doesn't show up in the output when
+// when --json=true
+vi.unmock("../../wrangler-banner");
+
 describe("time-travel", () => {
-	mockConsoleMethods();
+	const std = mockConsoleMethods();
 	mockAccountId({ accountId: null });
 	mockApiToken();
 	runInTempDir();
@@ -108,6 +112,131 @@ describe("time-travel", () => {
 			);
 			//since the function throws if the db is alpha
 			expect(result).toBeUndefined();
+		});
+	});
+
+	describe("--json", () => {
+		beforeEach(() => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [
+					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+				],
+			});
+			mockGetMemberships([
+				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+			]);
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database/*", async () => {
+					return HttpResponse.json(
+						{
+							result: {
+								uuid: "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06",
+								name: "db",
+								created_at: "2023-05-23T08:33:54.590Z",
+								version: "beta",
+								num_tables: 13,
+								file_size: 33067008,
+								running_in_region: "WEUR",
+							},
+							success: true,
+							errors: [],
+							messages: [],
+						},
+						{ status: 200 }
+					);
+				}),
+				http.post(
+					"*/accounts/:accountId/d1/database/*/time_travel/restore",
+					async () => {
+						return HttpResponse.json(
+							{
+								result: {
+									bookmark: "a",
+								},
+								success: true,
+								errors: [],
+								messages: [],
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+			vi.useFakeTimers();
+			vi.setSystemTime(new Date("2011-10-05T14:48:00.000Z"));
+		});
+		afterEach(() => {
+			vi.useRealTimers();
+		});
+		describe("restore", () => {
+			it("should print as json, without wrangler banner", async () => {
+				await runWrangler(
+					`d1 time-travel restore db --timestamp=2011-09-05T14:48:00.000Z --json`
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+					"{
+					  \\"bookmark\\": \\"a\\"
+					}"
+				`);
+			});
+
+			it("should pretty print by default", async () => {
+				await runWrangler(
+					`d1 time-travel restore db --timestamp=2011-09-05T14:48:00.000Z"`
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					------------------
+
+					🚧 Restoring database db from bookmark undefined
+
+					⚠️ This will overwrite all data in database db.
+					In-flight queries and transactions will be cancelled.
+
+					? OK to proceed (y/N)
+					🤖 Using fallback value in non-interactive context: yes
+					⚡️ Time travel in progress...
+					✅ Database db restored back to bookmark a
+
+					↩️ To undo this operation, you can restore to the previous bookmark: undefined"
+				`);
+			});
+		});
+		describe("info", () => {
+			it("should print as json, without wrangler banner", async () => {
+				await runWrangler(
+					`d1 time-travel info db --timestamp=2011-09-05T14:48:00.000Z --json`
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+					"{
+					  \\"uuid\\": \\"d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06\\",
+					  \\"name\\": \\"db\\",
+					  \\"created_at\\": \\"2023-05-23T08:33:54.590Z\\",
+					  \\"version\\": \\"beta\\",
+					  \\"num_tables\\": 13,
+					  \\"file_size\\": 33067008,
+					  \\"running_in_region\\": \\"WEUR\\"
+					}"
+				`);
+			});
+			it("should pretty print by default", async () => {
+				await runWrangler(
+					`d1 time-travel info db --timestamp=2011-09-05T14:48:00.000Z"`
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					------------------
+
+					🚧 Time Traveling...
+					⚠️ Timestamp '2011-09-05T14:48:00.000Z' corresponds with bookmark 'undefined'
+					⚡️ To restore to this specific bookmark, run:
+					 \`wrangler d1 time-travel restore db --bookmark=undefined\`
+					      "
+				`);
+			});
 		});
 	});
 });

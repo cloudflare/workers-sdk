@@ -921,6 +921,58 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 	t.deepEqual(rpcTarget.id, "test-id");
 });
 
+test("Miniflare: tail consumer called", async (t) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				name: "a",
+				tails: ["b"],
+				compatibilityDate: "2025-04-28",
+				modules: true,
+				script: `
+
+				export default {
+					async fetch(request, env) {
+						if(request.url.includes("b")) { return env.B.fetch(request)}
+						console.log("log event")
+
+						return new Response("hello from a");
+					}
+				}
+				`,
+				serviceBindings: {
+					B: "b",
+				},
+			},
+			{
+				name: "b",
+				modules: true,
+				compatibilityDate: "2025-04-28",
+
+				script: `
+				let event;
+				export default {
+					fetch() {return Response.json(event)},
+					tail(e) {event = e }
+				};
+				`,
+			},
+		],
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch("http://placeholder");
+	t.deepEqual(await res.text(), "hello from a");
+	t.deepEqual(
+		(
+			(await (await mf.dispatchFetch("http://placeholder/b")).json()) as {
+				logs: { message: string[] }[];
+			}[]
+		)[0].logs[0].message,
+		["log event"]
+	);
+});
+
 test("Miniflare: custom outbound service", async (t) => {
 	const mf = new Miniflare({
 		workers: [
@@ -1349,24 +1401,20 @@ test("Miniflare: python modules", async (t) => {
 	t.is(await res.text(), "4");
 });
 
-if (process.env.CI) {
-	// This test seems to fail on developer machines locally.
-	// Possibly because our WARP setup requires self-signed root CA certificates?
-	test("Miniflare: HTTPS fetches using browser CA certificates", async (t) => {
-		const mf = new Miniflare({
-			modules: true,
-			script: `export default {
+test("Miniflare: HTTPS fetches using browser CA certificates", async (t) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `export default {
 			fetch() {
 				return fetch("https://workers.cloudflare.com/cf.json");
 			}
 		}`,
-		});
-		t.teardown(() => mf.dispose());
-		const res = await mf.dispatchFetch("http://localhost");
-		t.true(res.ok);
-		await res.arrayBuffer(); // (drain)
 	});
-}
+	t.teardown(() => mf.dispose());
+	const res = await mf.dispatchFetch("http://localhost");
+	t.true(res.ok);
+	await res.arrayBuffer(); // (drain)
+});
 
 test("Miniflare: accepts https requests", async (t) => {
 	const log = new TestLog(t);
@@ -1406,14 +1454,258 @@ test("Miniflare: manually triggered scheduled events", async (t) => {
 					scheduledRun = true;
 				}
 			}`,
+		unsafeTriggerHandlers: true,
 	});
 	t.teardown(() => mf.dispose());
 
 	let res = await mf.dispatchFetch("http://localhost");
 	t.is(await res.text(), "false");
 
-	res = await mf.dispatchFetch("http://localhost/cdn-cgi/mf/scheduled");
+	res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/scheduled");
 	t.is(await res.text(), "ok");
+
+	res = await mf.dispatchFetch("http://localhost");
+	t.is(await res.text(), "true");
+});
+
+test("Miniflare: manually triggered email handler - valid email", async (t) => {
+	const log = new TestLog(t);
+
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		script: `
+			let receivedEmail = false;
+			export default {
+				fetch() {
+					return new Response(receivedEmail);
+				},
+				email(emailMessage) {
+					receivedEmail = true;
+				}
+			}`,
+		unsafeTriggerHandlers: true,
+	});
+	t.teardown(() => mf.dispose());
+
+	let res = await mf.dispatchFetch("http://localhost");
+	t.is(await res.text(), "false");
+
+	res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		{
+			body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
+Message-ID: <im-a-random-message-id@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+This is a random email body.
+`,
+			method: "POST",
+		}
+	);
+	t.is(await res.text(), "Worker successfully processed email");
+	t.is(res.status, 200);
+
+	res = await mf.dispatchFetch("http://localhost");
+	t.is(await res.text(), "true");
+});
+
+test("Miniflare: manually triggered email handler - setReject does not throw", async (t) => {
+	const log = new TestLog(t);
+
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		script: `
+			let receivedEmail = false;
+			export default {
+				fetch() {
+					return new Response(receivedEmail);
+				},
+				async email(emailMessage) {
+					await emailMessage.setReject("I just don't like this email :(")
+					receivedEmail = true;
+				}
+			}`,
+		unsafeTriggerHandlers: true,
+	});
+	t.teardown(() => mf.dispose());
+
+	let res = await mf.dispatchFetch("http://localhost");
+	t.is(await res.text(), "false");
+
+	res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		{
+			body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
+Message-ID: <im-a-random-message-id@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+This is a random email body.
+`,
+			method: "POST",
+		}
+	);
+	t.is(
+		await res.text(),
+		"Worker rejected email with the following reason: I just don't like this email :("
+	);
+	t.is(res.status, 400);
+
+	res = await mf.dispatchFetch("http://localhost");
+	t.is(await res.text(), "true");
+});
+
+test("Miniflare: manually triggered email handler - forward does not throw", async (t) => {
+	const log = new TestLog(t);
+
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		script: `
+			let receivedEmail = false;
+			export default {
+				fetch() {
+					return new Response(receivedEmail);
+				},
+				async email(emailMessage) {
+					await emailMessage.forward("mark.s@example.com")
+					receivedEmail = true;
+				}
+			}`,
+		unsafeTriggerHandlers: true,
+	});
+	t.teardown(() => mf.dispose());
+
+	let res = await mf.dispatchFetch("http://localhost");
+	t.is(await res.text(), "false");
+
+	res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		{
+			body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
+Message-ID: <im-a-random-message-id@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+This is a random email body.
+`,
+			method: "POST",
+		}
+	);
+	t.is(await res.text(), "Worker successfully processed email");
+	t.is(res.status, 200);
+
+	res = await mf.dispatchFetch("http://localhost");
+	t.is(await res.text(), "true");
+});
+
+test("Miniflare: manually triggered email handler - invalid email, no message id", async (t) => {
+	const log = new TestLog(t);
+
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		script: `
+			let receivedEmail = false;
+			export default {
+				fetch() {
+					return new Response(receivedEmail);
+				},
+				email(emailMessage) {
+					receivedEmail = true;
+				}
+			}`,
+		unsafeTriggerHandlers: true,
+	});
+	t.teardown(() => mf.dispose());
+
+	let res = await mf.dispatchFetch("http://localhost");
+	t.is(await res.text(), "false");
+
+	res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		{
+			body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+This is a random email body.
+`,
+			method: "POST",
+		}
+	);
+	t.is(
+		await res.text(),
+		"Email could not be parsed: invalid or no message id provided"
+	);
+	t.is(res.status, 400);
+
+	res = await mf.dispatchFetch("http://localhost");
+	t.is(await res.text(), "false");
+});
+
+test("Miniflare: manually triggered email handler - reply handler works", async (t) => {
+	const log = new TestLog(t);
+
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		script: `
+			import {EmailMessage} from "cloudflare:email"
+			let receivedEmail = false;
+			export default {
+				fetch() {
+					return new Response(receivedEmail);
+				},
+				async email(emailMessage) {
+					await emailMessage.reply(new EmailMessage(
+						"someone-else@example.com",
+						"someone@example.com",
+						(new Response(
+\`From: someone else <someone-else@example.com>
+To: someone <someone@example.com>
+In-Reply-To: <im-a-random-message-id@example.com>
+Message-ID: <im-another-random-message-id@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+This is a random email body.
+\`)).body
+					));
+
+					receivedEmail = true;
+				}
+			}`,
+		unsafeTriggerHandlers: true,
+	});
+	t.teardown(() => mf.dispose());
+
+	let res = await mf.dispatchFetch("http://localhost");
+	t.is(await res.text(), "false");
+
+	res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
+		{
+			body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
+MIME-Version: 1.0
+Message-ID: <im-a-random-message-id@example.com>
+Content-Type: text/plain
+
+This is a random email body.
+`,
+			method: "POST",
+		}
+	);
+	t.is(await res.text(), "Worker successfully processed email");
+	t.is(res.status, 200);
 
 	res = await mf.dispatchFetch("http://localhost");
 	t.is(await res.text(), "true");
@@ -2701,6 +2993,51 @@ test("Miniflare: CF-Connecting-IP is preserved when present", async (t) => {
 		},
 	});
 	t.deepEqual(await ip.text(), "128.0.0.1");
+});
+
+// regression test for https://github.com/cloudflare/workers-sdk/issues/7924
+// The "server" service just returns the value of the CF-Connecting-IP header which would normally be added by Miniflare. If you send a request to with no such header, Miniflare will add one.
+// The "client" service makes an outbound request with a fake CF-Connecting-IP header to the "server" service. If the outbound stripping happens then this header will not make it to the "server" service
+// so its response will contain the header added by Miniflare. If the stripping is turned off then the response from the "server" service will contain the fake header.
+test("Miniflare: strips CF-Connecting-IP", async (t) => {
+	const server = new Miniflare({
+		script:
+			"export default { fetch(request) { return new Response(request.headers.get(`CF-Connecting-IP`)) } }",
+		modules: true,
+	});
+	const serverUrl = await server.ready;
+
+	const client = new Miniflare({
+		script: `export default { fetch(request) { return fetch('${serverUrl.href}', {headers: {"CF-Connecting-IP":"fake-value"}}) } }`,
+		modules: true,
+		stripCfConnectingIp: true,
+	});
+	t.teardown(() => client.dispose());
+	t.teardown(() => server.dispose());
+
+	const landingPage = await client.dispatchFetch("http://example.com/");
+	// The CF-Connecting-IP header value of "fake-value" should be stripped by Miniflare, and should be replaced with a generic 127.0.0.1
+	t.notDeepEqual(await landingPage.text(), "fake-value");
+});
+
+test("Miniflare: does not strip CF-Connecting-IP when configured", async (t) => {
+	const server = new Miniflare({
+		script:
+			"export default { fetch(request) { return new Response(request.headers.get(`CF-Connecting-IP`)) } }",
+		modules: true,
+	});
+	const serverUrl = await server.ready;
+
+	const client = new Miniflare({
+		script: `export default { fetch(request) { return fetch('${serverUrl.href}', {headers: {"CF-Connecting-IP":"fake-value"}}) } }`,
+		modules: true,
+		stripCfConnectingIp: false,
+	});
+	t.teardown(() => client.dispose());
+	t.teardown(() => server.dispose());
+
+	const landingPage = await client.dispatchFetch("http://example.com/");
+	t.deepEqual(await landingPage.text(), "fake-value");
 });
 
 test("Miniflare: can use module fallback service", async (t) => {

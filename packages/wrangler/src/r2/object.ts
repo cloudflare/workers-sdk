@@ -8,6 +8,7 @@ import { createCommand, createNamespace } from "../core/create-command";
 import { CommandLineArgsError, FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
+import { isLocal } from "../utils/is-local";
 import { MAX_UPLOAD_SIZE } from "./constants";
 import {
 	bucketAndKeyFromObjectPath,
@@ -57,6 +58,11 @@ export const r2ObjectGetCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -68,8 +74,14 @@ export const r2ObjectGetCommand = createCommand({
 			type: "string",
 		},
 	},
+	behaviour: {
+		printResourceLocation(args) {
+			return !args?.pipe;
+		},
+	},
 	positionalArgs: ["objectPath"],
 	async handler(objectGetYargs, { config }) {
+		const localMode = isLocal(objectGetYargs);
 		const { objectPath, pipe, jurisdiction } = objectGetYargs;
 		const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
 		let fullBucketName = bucket;
@@ -92,7 +104,7 @@ export const r2ObjectGetCommand = createCommand({
 		} else {
 			output = process.stdout;
 		}
-		if (objectGetYargs.local) {
+		if (localMode) {
 			await usingLocalBucket(
 				objectGetYargs.persistTo,
 				config,
@@ -188,6 +200,11 @@ export const r2ObjectPutCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -205,17 +222,22 @@ export const r2ObjectPutCommand = createCommand({
 			type: "string",
 		},
 	},
+	behaviour: {
+		printResourceLocation(args) {
+			return !args?.pipe;
+		},
+	},
 	async handler(objectPutYargs, { config }) {
 		const {
 			objectPath,
 			file,
 			pipe,
-			local,
 			persistTo,
 			jurisdiction,
 			storageClass,
 			...options
 		} = objectPutYargs;
+		const localMode = isLocal(objectPutYargs);
 		const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
 		if (!file && !pipe) {
 			throw new CommandLineArgsError(
@@ -245,7 +267,7 @@ export const r2ObjectPutCommand = createCommand({
 			objectSize = blob.size;
 		}
 
-		if (objectSize > MAX_UPLOAD_SIZE && !local) {
+		if (objectSize > MAX_UPLOAD_SIZE && !localMode) {
 			throw new FatalError(
 				`Error: Wrangler only supports uploading files up to ${prettyBytes(
 					MAX_UPLOAD_SIZE,
@@ -266,12 +288,11 @@ export const r2ObjectPutCommand = createCommand({
 		if (storageClass !== undefined) {
 			storageClassLog = ` with ${storageClass} storage class`;
 		}
-
 		logger.log(
 			`Creating object "${key}"${storageClassLog} in bucket "${fullBucketName}".`
 		);
 
-		if (local) {
+		if (localMode) {
 			await usingLocalBucket(
 				persistTo,
 				config,
@@ -353,6 +374,11 @@ export const r2ObjectDeleteCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with local storage",
 		},
+		remote: {
+			type: "boolean",
+			describe: "Interact with remote storage",
+			conflicts: "local",
+		},
 		"persist-to": {
 			type: "string",
 			describe: "Directory for local persistence",
@@ -364,7 +390,12 @@ export const r2ObjectDeleteCommand = createCommand({
 			type: "string",
 		},
 	},
+	behaviour: {
+		printResourceLocation: true,
+	},
 	async handler(args) {
+		const localMode = isLocal(args);
+
 		const { objectPath, jurisdiction } = args;
 		const config = readConfig(args);
 		const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
@@ -375,7 +406,7 @@ export const r2ObjectDeleteCommand = createCommand({
 
 		logger.log(`Deleting object "${key}" from bucket "${fullBucketName}".`);
 
-		if (args.local) {
+		if (localMode) {
 			await usingLocalBucket(args.persistTo, config, bucket, (r2Bucket) =>
 				r2Bucket.delete(key)
 			);

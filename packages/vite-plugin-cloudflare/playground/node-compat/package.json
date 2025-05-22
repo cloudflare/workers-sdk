@@ -22,6 +22,10 @@
 		"postgres:dev": "vite dev -c vite.config.worker-postgres.ts",
 		"postgres:preview": "vite preview -c vite.config.worker-postgres.ts",
 		"postgres:test": "vitest run -c ../vitest.config.e2e.ts worker-postgres",
+		"process-populated-env:build": "vite build --app -c vite.config.worker-process-populated-env.ts",
+		"process-populated-env:dev": "vite dev -c vite.config.worker-process-populated-env.ts",
+		"process-populated-env:preview": "vite preview -c vite.config.worker-process-populated-env.ts",
+		"process-populated-env:test": "vitest run -c ../vitest.config.e2e.ts worker-process-populated-env",
 		"process:build": "vite build --app -c vite.config.worker-process.ts",
 		"process:dev": "vite dev -c vite.config.worker-process.ts",
 		"process:preview": "vite preview -c vite.config.worker-process.ts",
@@ -29,12 +33,19 @@
 		"random:build": "vite build --app -c vite.config.worker-random.ts",
 		"random:dev": "vite dev -c vite.config.worker-random.ts",
 		"random:preview": "vite preview -c vite.config.worker-random.ts",
-		"random:test": "vitest run -c ../vitest.config.e2e.ts worker-random"
+		"random:test": "vitest run -c ../vitest.config.e2e.ts worker-random",
+		"resolve-externals:build": "vite build --app -c vite.config.worker-resolve-externals.ts",
+		"resolve-externals:dev": "vite dev -c vite.config.worker-resolve-externals.ts",
+		"resolve-externals:preview": "vite preview -c vite.config.worker-resolve-externals.ts",
+		"warnings:build": "vite build --app -c vite.config.worker-warnings.ts",
+		"warnings:dev": "vite dev -c vite.config.worker-warnings.ts",
+		"warnings:preview": "vite preview -c vite.config.worker-warnings.ts",
+		"warnings:test": "vitest run -c ../vitest.config.e2e.ts worker-warnings"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250214.0",
+		"@cloudflare/workers-types": "^4.20250508.0",
 		"@types/node": "catalog:vite-plugin",
 		"@types/pg": "^8.11.2",
 		"cross-fetch": "^4.0.0",
@@ -42,6 +53,6 @@
 		"pg-cloudflare": "^1.1.1",
 		"typescript": "catalog:default",
 		"vite": "catalog:vite-plugin",
-		"wrangler": "catalog:vite-plugin"
+		"wrangler": "workspace:*"
 	}
 }

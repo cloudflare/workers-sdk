@@ -3,13 +3,8 @@
 	"remoteCache": {
 		"signature": true
 	},
-	"globalEnv": [
-		"CI_OS",
-		"NODE_VERSION",
-		"VITEST",
-		"NODE_DEBUG",
-		"NODE_EXTRA_CA_CERTS"
-	],
+	"globalEnv": ["CI_OS", "NODE_VERSION"],
+	"globalPassThroughEnv": ["NODE_EXTRA_CA_CERTS", "CI"],
 	"tasks": {
 		"dev": {
 			"persistent": true,
@@ -43,7 +38,6 @@
 			"outputLogs": "new-only"
 		},
 		"test:e2e": {
-			"env": ["WRANGLER", "CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"],
 			"dependsOn": ["build"],
 			"outputLogs": "new-only"
 		},

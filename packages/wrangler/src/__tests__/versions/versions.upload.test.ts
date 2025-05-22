@@ -93,7 +93,7 @@ describe("versions upload", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 500 ms
-			Your worker has access to the following bindings:
+			Your Worker has access to the following bindings:
 			- KV Namespaces:
 			  - KV: xxxx-xxxx-xxxx-xxxx
 			- Vars:
@@ -131,7 +131,7 @@ describe("versions upload", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 500 ms
-			Your worker has access to the following bindings:
+			Your Worker has access to the following bindings:
 			- Vars:
 			  - TEST: \\"test-string\\"
 			Uploaded test-name (TIMINGS)
@@ -163,7 +163,7 @@ describe("versions upload", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 500 ms
-			Your worker has access to the following bindings:
+			Your Worker has access to the following bindings:
 			- Vars:
 			  - TEST: \\"test-string\\"
 			Uploaded test-name (TIMINGS)

@@ -1,0 +1,64 @@
+name: Publish @next pre-release
+
+on:
+  push:
+    branches:
+      - next
+jobs:
+  prerelease:
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+    if: ${{ github.repository_owner == 'cloudflare' }}
+    name: Build & Publish a next release to NPM
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: Modify package.json version
+        run: |
+          node .github/version-script.js wrangler
+          node .github/version-script.js miniflare
+
+      - name: Build
+        run: pnpm run build
+        env:
+          NODE_ENV: "production"
+          CI_OS: ${{ runner.os }}
+
+      - name: Check for errors
+        run: pnpm run check
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+
+      - name: Publish wrangler@next to NPM
+        run: pnpm --filter wrangler publish --tag next
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+          # this is the "test/staging" key for sparrow analytics
+          SPARROW_SOURCE_KEY: "5adf183f94b3436ba78d67f506965998"
+          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
+          SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"
+          ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
+
+      - name: Publish miniflare@next to NPM
+        run: pnpm --filter miniflare publish --tag next
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+
+      - name: Get Package Version
+        run: echo "WRANGLER_VERSION=$(npm view wrangler@next version)" >> $GITHUB_ENV
+        working-directory: packages/wrangler

@@ -44,17 +44,17 @@ describe("wrangler", () => {
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
 				  wrangler versions               🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
-				  wrangler triggers               🎯 Updates the triggers of your current deployment
+				  wrangler triggers               🎯 Updates the triggers of your current deployment [experimental]
 				  wrangler delete [script]        🗑  Delete a Worker from Cloudflare
 				  wrangler tail [worker]          🦚 Start a log tailing session for a Worker
 				  wrangler secret                 🤫 Generate a secret that can be referenced in a Worker
-				  wrangler types [path]           📝 Generate types from bindings and module rules in configuration
+				  wrangler types [path]           📝 Generate types from your Worker configuration
 
 				  wrangler kv                     🗂️  Manage Workers KV Namespaces
 				  wrangler queues                 🇶  Manage Workers Queues
 				  wrangler r2                     📦 Manage R2 buckets & objects
 				  wrangler d1                     🗄  Manage Workers D1 databases
-				  wrangler vectorize              🧮 Manage Vectorize indexes [open beta]
+				  wrangler vectorize              🧮 Manage Vectorize indexes
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
 				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open-beta]
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
@@ -62,7 +62,9 @@ describe("wrangler", () => {
 				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
 				  wrangler dispatch-namespace     🏗️  Manage dispatch namespaces
 				  wrangler ai                     🤖 Manage AI models
-				  wrangler workflows              🔁 Manage Workflows [open-beta]
+				  wrangler secrets-store          🔐 Manage the Secrets Store [alpha]
+				  wrangler workflows              🔁 Manage Workflows
+				  wrangler pipelines              🚰 Manage Cloudflare Pipelines [open-beta]
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
 				  wrangler whoami                 🕵️  Retrieve your user information
@@ -102,17 +104,17 @@ describe("wrangler", () => {
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
 				  wrangler versions               🫧  List, view, upload and deploy Versions of your Worker to Cloudflare
-				  wrangler triggers               🎯 Updates the triggers of your current deployment
+				  wrangler triggers               🎯 Updates the triggers of your current deployment [experimental]
 				  wrangler delete [script]        🗑  Delete a Worker from Cloudflare
 				  wrangler tail [worker]          🦚 Start a log tailing session for a Worker
 				  wrangler secret                 🤫 Generate a secret that can be referenced in a Worker
-				  wrangler types [path]           📝 Generate types from bindings and module rules in configuration
+				  wrangler types [path]           📝 Generate types from your Worker configuration
 
 				  wrangler kv                     🗂️  Manage Workers KV Namespaces
 				  wrangler queues                 🇶  Manage Workers Queues
 				  wrangler r2                     📦 Manage R2 buckets & objects
 				  wrangler d1                     🗄  Manage Workers D1 databases
-				  wrangler vectorize              🧮 Manage Vectorize indexes [open beta]
+				  wrangler vectorize              🧮 Manage Vectorize indexes
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
 				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open-beta]
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
@@ -120,7 +122,9 @@ describe("wrangler", () => {
 				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
 				  wrangler dispatch-namespace     🏗️  Manage dispatch namespaces
 				  wrangler ai                     🤖 Manage AI models
-				  wrangler workflows              🔁 Manage Workflows [open-beta]
+				  wrangler secrets-store          🔐 Manage the Secrets Store [alpha]
+				  wrangler workflows              🔁 Manage Workflows
+				  wrangler pipelines              🚰 Manage Cloudflare Pipelines [open-beta]
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
 				  wrangler whoami                 🕵️  Retrieve your user information
@@ -168,20 +172,16 @@ describe("wrangler", () => {
 
 	describe("preview", () => {
 		it("should throw an error if the deprecated command is used with positional arguments", async () => {
-			await expect(runWrangler("preview GET")).rejects
-				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Deprecation:
-				The \`wrangler preview\` command has been deprecated.
-				Try using \`wrangler dev\` to to try out a worker during development.
-				]
-			`);
-			await expect(runWrangler(`preview GET "SomeBody"`)).rejects
-				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Deprecation:
-				The \`wrangler preview\` command has been deprecated.
-				Try using \`wrangler dev\` to to try out a worker during development.
-				]
-			`);
+			await expect(
+				runWrangler("preview GET")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown arguments: preview, GET]`
+			);
+			await expect(
+				runWrangler(`preview GET "SomeBody"`)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown arguments: preview, GET, SomeBody]`
+			);
 		});
 	});
 
@@ -198,7 +198,7 @@ describe("wrangler", () => {
 				  wrangler secret put <key>     Create or update a secret variable for a Worker
 				  wrangler secret delete <key>  Delete a secret variable from a Worker
 				  wrangler secret list          List all secrets for a Worker
-				  wrangler secret bulk [json]   Bulk upload secrets for a Worker
+				  wrangler secret bulk [file]   Bulk upload secrets for a Worker
 
 				GLOBAL FLAGS
 				  -c, --config   Path to Wrangler configuration file  [string]
@@ -263,6 +263,7 @@ describe("wrangler", () => {
 				Interact with multiple Workers KV key-value pairs at once
 
 				COMMANDS
+				  wrangler kv bulk get <filename>     Gets multiple key-value pairs from a namespace [open-beta]
 				  wrangler kv bulk put <filename>     Upload multiple key-value pairs to a namespace
 				  wrangler kv bulk delete <filename>  Delete multiple key-value pairs from a namespace
 
@@ -297,7 +298,7 @@ describe("wrangler", () => {
 		});
 	});
 
-	it("should print a deprecation message for 'build' and then try to run `deploy --dry-run --outdir`", async () => {
+	it("build should run `deploy --dry-run --outdir`", async () => {
 		writeWranglerConfig({
 			main: "index.js",
 		});
@@ -305,14 +306,7 @@ describe("wrangler", () => {
 		await runWrangler("build");
 		await endEventLoop();
 		expect(std.out).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mDeprecation: \`wrangler build\` has been deprecated.[0m
-
-			  Please refer to [4mhttps://developers.cloudflare.com/workers/wrangler/migration/deprecations/#build[0m
-			  for more information.
-			  Attempting to run \`wrangler deploy --dry-run --outdir=dist\` for you instead:
-
-
-			Total Upload: xx KiB / gzip: xx KiB
+			"Total Upload: xx KiB / gzip: xx KiB
 			No bindings found.
 			--dry-run: exiting now."
 		`);
@@ -333,6 +327,18 @@ describe("wrangler", () => {
 			"[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 			Note that there is a newer version of Wrangler available (123.123.123). Consider checking whether upgrading resolves this error."
 		`);
+		});
+
+		it("should display a warning if Bun is in use", async () => {
+			const original = process.versions.bun;
+			process.versions.bun = "v1";
+			await logPossibleBugMessage();
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler does not support the Bun runtime. Please try this command again using Node.js via \`npm\` or \`pnpm\`. Alternatively, make sure you're not passing the \`--bun\` flag when running \`bun run wrangler ...\`[0m
+
+				"
+			`);
+			process.versions.bun = original;
 		});
 	});
 });

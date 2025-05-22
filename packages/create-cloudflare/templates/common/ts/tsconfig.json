@@ -16,9 +16,6 @@
 		/* Enable importing .json files */
 		"resolveJsonModule": true,
 
-		/* Specify type package names to be included without being referenced in a source file. */
-		"types": ["@cloudflare/workers-types"],
-
 		/* Allow JavaScript files to be a part of your program. Use the `checkJS` option to get errors from these files. */
 		"allowJs": true,
 		/* Enable error reporting in type-checked JavaScript files. */

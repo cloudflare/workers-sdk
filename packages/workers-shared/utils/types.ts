@@ -1,15 +1,59 @@
 import { z } from "zod";
 
-export const RoutingConfigSchema = z.object({
-	has_user_worker: z.boolean().optional(),
-	invoke_user_worker_ahead_of_assets: z.boolean().optional(),
-
-	// Used for analytics and reporting
+const InternalConfigSchema = z.object({
 	account_id: z.number().optional(),
 	script_id: z.number().optional(),
+	debug: z.boolean().optional(),
 });
 
+export const RouterConfigSchema = z.object({
+	invoke_user_worker_ahead_of_assets: z.boolean().optional(),
+	has_user_worker: z.boolean().optional(),
+	...InternalConfigSchema.shape,
+});
+
+const MetadataStaticRedirectEntry = z.object({
+	status: z.number(),
+	to: z.string(),
+	lineNumber: z.number(),
+});
+
+const MetadataRedirectEntry = z.object({
+	status: z.number(),
+	to: z.string(),
+});
+
+const MetadataStaticRedirects = z.record(MetadataStaticRedirectEntry);
+export type MetadataStaticRedirects = z.infer<typeof MetadataStaticRedirects>;
+const MetadataRedirects = z.record(MetadataRedirectEntry);
+export type MetadataRedirects = z.infer<typeof MetadataRedirects>;
+
+const MetadataHeaderEntry = z.object({
+	set: z.record(z.string()).optional(),
+	unset: z.array(z.string()).optional(),
+});
+
+const MetadataHeaders = z.record(MetadataHeaderEntry);
+export type MetadataHeaders = z.infer<typeof MetadataHeaders>;
+
+export const RedirectsSchema = z
+	.object({
+		version: z.literal(1),
+		staticRules: MetadataStaticRedirects,
+		rules: MetadataRedirects,
+	})
+	.optional();
+
+export const HeadersSchema = z
+	.object({
+		version: z.literal(2),
+		rules: MetadataHeaders,
+	})
+	.optional();
+
 export const AssetConfigSchema = z.object({
+	compatibility_date: z.string().optional(),
+	compatibility_flags: z.array(z.string()).optional(),
 	html_handling: z
 		.enum([
 			"auto-trailing-slash",
@@ -21,24 +65,13 @@ export const AssetConfigSchema = z.object({
 	not_found_handling: z
 		.enum(["single-page-application", "404-page", "none"])
 		.optional(),
-	serve_directly: z.boolean().optional(),
-	run_worker_first: z.boolean().optional(),
-});
-
-export const InternalConfigSchema = z.object({
-	// Used for analytics and reporting
-	account_id: z.number().optional(),
-	script_id: z.number().optional(),
-});
-
-export const AssetWorkerConfigShema = z.object({
-	...AssetConfigSchema.shape,
+	redirects: RedirectsSchema,
+	headers: HeadersSchema,
 	...InternalConfigSchema.shape,
 });
 
-export type RoutingConfig = z.infer<typeof RoutingConfigSchema>;
+export type RouterConfig = z.infer<typeof RouterConfigSchema>;
 export type AssetConfig = z.infer<typeof AssetConfigSchema>;
-export type AssetWorkerConfig = z.infer<typeof AssetWorkerConfigShema>;
 
 export interface UnsafePerformanceTimer {
 	readonly timeOrigin: number;

@@ -7,7 +7,7 @@ import { DevEnv } from "./api";
 import { MultiworkerRuntimeController } from "./api/startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "./api/startDevWorker/NoOpProxyController";
 import {
-	convertCfWorkerInitBindingstoBindings,
+	convertCfWorkerInitBindingsToBindings,
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
@@ -20,9 +20,10 @@ import { getVarsForDev } from "./dev/dev-vars";
 import registerDevHotKeys from "./dev/hotkeys";
 import { maybeRegisterLocalWorker } from "./dev/local";
 import { UserError } from "./errors";
+import { getFlag } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
-import { getLegacyAssetPaths, getSiteAssetPaths } from "./sites";
+import { getSiteAssetPaths } from "./sites";
 import { loginOrRefreshIfRequired, requireApiToken, requireAuth } from "./user";
 import {
 	collectKeyValues,
@@ -60,6 +61,7 @@ export const dev = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
+			MIXED_MODE: args.experimentalMixedMode ?? false,
 		}),
 	},
 	metadata: {
@@ -114,12 +116,6 @@ export const dev = createCommand({
 			type: "boolean",
 			default: false,
 		},
-		format: {
-			choices: ["modules", "service-worker"] as const,
-			describe: "Choose an entry type",
-			hidden: true,
-			deprecated: true,
-		},
 		ip: {
 			describe: "IP address to listen on",
 			type: "string",
@@ -162,27 +158,6 @@ export const dev = createCommand({
 			type: "string",
 			describe:
 				"Host to act as origin in local mode, defaults to dev.host or route",
-		},
-		"experimental-public": {
-			describe: "(Deprecated) Static assets to be served",
-			type: "string",
-			requiresArg: true,
-			deprecated: true,
-			hidden: true,
-		},
-		"legacy-assets": {
-			describe: "Static assets to be served",
-			type: "string",
-			requiresArg: true,
-			deprecated: true,
-			hidden: true,
-		},
-		public: {
-			describe: "(Deprecated) Static assets to be served",
-			type: "string",
-			requiresArg: true,
-			deprecated: true,
-			hidden: true,
 		},
 		site: {
 			describe: "Root folder of static assets for Workers Sites",
@@ -260,12 +235,6 @@ export const dev = createCommand({
 			deprecated: true,
 			hidden: true,
 		},
-		"experimental-local": {
-			describe: "Run on my machine using the Cloudflare Workers runtime",
-			type: "boolean",
-			deprecated: true,
-			hidden: true,
-		},
 		minify: {
 			describe: "Minify the script",
 			type: "boolean",
@@ -273,12 +242,8 @@ export const dev = createCommand({
 		"node-compat": {
 			describe: "Enable Node.js compatibility",
 			type: "boolean",
-		},
-		"experimental-enable-local-persistence": {
-			describe: "Enable persistence for local mode (deprecated, use --persist)",
-			type: "boolean",
-			deprecated: true,
 			hidden: true,
+			deprecated: true,
 		},
 		"persist-to": {
 			describe:
@@ -289,12 +254,6 @@ export const dev = createCommand({
 		"live-reload": {
 			describe: "Auto reload HTML pages when change is detected in local mode",
 			type: "boolean",
-		},
-		inspect: {
-			describe: "Enable dev tools",
-			type: "boolean",
-			deprecated: true,
-			hidden: true,
 		},
 		"legacy-env": {
 			type: "boolean",
@@ -329,6 +288,11 @@ export const dev = createCommand({
 		},
 	},
 	async validateArgs(args) {
+		if (args.nodeCompat) {
+			throw new UserError(
+				`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`
+			);
+		}
 		if (args.liveReload && args.remote) {
 			throw new UserError(
 				"--live-reload is only supported in local mode. Please just use one of either --remote or --live-reload."
@@ -351,13 +315,6 @@ export const dev = createCommand({
 					"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local."
 				);
 			}
-		}
-
-		if (args.legacyAssets) {
-			logger.warn(
-				`The --legacy-assets argument has been deprecated. Please use --assets instead.\n` +
-					`To learn more about Workers with assets, visit our documentation at https://developers.cloudflare.com/workers/frameworks/.`
-			);
 		}
 	},
 	async handler(args) {
@@ -452,6 +409,7 @@ async function updateDevEnvRegistry(
 					devEnv.config.latestConfig?.bindings
 				),
 			},
+			tailConsumers: devEnv.config.latestConfig?.tailConsumers,
 		},
 		registry
 	);
@@ -538,7 +496,6 @@ async function setupDevEnv(
 						args.compatibilityDate ?? parsedConfig.compatibility_date,
 						args.compatibilityFlags ?? parsedConfig.compatibility_flags ?? [],
 						{
-							nodeCompat: args.nodeCompat ?? parsedConfig.node_compat,
 							noBundle: args.noBundle ?? parsedConfig.no_bundle,
 						}
 					),
@@ -546,7 +503,7 @@ async function setupDevEnv(
 			bindings: {
 				...(await getPagesAssetsFetcher(args.enablePagesAssetsServiceBinding)),
 				...collectPlainTextVars(args.var),
-				...convertCfWorkerInitBindingstoBindings({
+				...convertCfWorkerInitBindingsToBindings({
 					kv_namespaces: args.kv,
 					vars: args.vars,
 					send_email: undefined,
@@ -564,6 +521,7 @@ async function setupDevEnv(
 					d1_databases: args.d1Databases,
 					vectorize: undefined,
 					hyperdrive: undefined,
+					secrets_store_secrets: undefined,
 					services: args.services,
 					analytics_engine_datasets: undefined,
 					dispatch_namespaces: undefined,
@@ -610,10 +568,7 @@ async function setupDevEnv(
 			},
 			legacy: {
 				site: (configParam) => {
-					const legacyAssetPaths = getResolvedLegacyAssetPaths(
-						args,
-						configParam
-					);
+					const legacyAssetPaths = getResolvedSiteAssetPaths(args, configParam);
 					return Boolean(args.site || configParam.site) && legacyAssetPaths
 						? {
 								bucket: path.join(
@@ -625,8 +580,6 @@ async function setupDevEnv(
 							}
 						: undefined;
 				},
-				legacyAssets: (configParam) =>
-					args.legacyAssets ?? configParam.legacy_assets,
 				enableServiceEnvironments: !(args.legacyEnv ?? true),
 			},
 			assets: args.assets,
@@ -648,39 +601,6 @@ export async function startDev(args: StartDevOptions) {
 	try {
 		if (args.logLevel) {
 			logger.loggerLevel = args.logLevel;
-		}
-
-		if (args.experimentalLocal) {
-			logger.warn(
-				"--experimental-local is no longer required and will be removed in a future version.\n`wrangler dev` now uses the local Cloudflare Workers runtime by default. 🎉"
-			);
-		}
-
-		if (args.inspect) {
-			//devtools are enabled by default, but we still need to disable them if the caller doesn't want them
-			logger.warn(
-				"Passing --inspect is unnecessary, now you can always connect to devtools."
-			);
-		}
-
-		if (args.experimentalPublic) {
-			throw new UserError(
-				"The --experimental-public field has been deprecated, try --legacy-assets instead."
-			);
-		}
-
-		if (args.public) {
-			throw new UserError(
-				"The --public field has been deprecated, try --legacy-assets instead."
-			);
-		}
-
-		if (args.experimentalEnableLocalPersistence) {
-			logger.warn(
-				`--experimental-enable-local-persistence is deprecated.\n` +
-					`Move any existing data to .wrangler/state and use --persist, or\n` +
-					`use --persist-to=./wrangler-local-state to keep using the old path.`
-			);
 		}
 
 		const authHook: AsyncHook<CfAccount, [Pick<Config, "account_id">]> = async (
@@ -911,20 +831,16 @@ export function getInferredHost(
 	}
 }
 
-function getResolvedLegacyAssetPaths(
+function getResolvedSiteAssetPaths(
 	args: Partial<StartDevOptions>,
 	configParam: Config
 ) {
-	const legacyAssetPaths =
-		args.legacyAssets || configParam.legacy_assets
-			? getLegacyAssetPaths(configParam, args.legacyAssets)
-			: getSiteAssetPaths(
-					configParam,
-					args.site,
-					args.siteInclude,
-					args.siteExclude
-				);
-	return legacyAssetPaths;
+	return getSiteAssetPaths(
+		configParam,
+		args.site,
+		args.siteInclude,
+		args.siteExclude
+	);
 }
 
 export function getBindings(
@@ -941,7 +857,7 @@ export function getBindings(
 	 */
 	// merge KV bindings
 	const kvConfig = (configParam.kv_namespaces || []).map<CfKvNamespace>(
-		({ binding, preview_id, id }) => {
+		({ binding, preview_id, id, remote }) => {
 			// In remote `dev`, we make folks use a separate kv namespace called
 			// `preview_id` instead of `id` so that they don't
 			// break production data. So here we check that a `preview_id`
@@ -952,12 +868,13 @@ export function getBindings(
 				// TODO: This error has to be a _lot_ better, ideally just asking
 				// to create a preview namespace for the user automatically
 				throw new UserError(
-					`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv:namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your ${configFileName(configParam.configPath)} file`
+					`In development, you should use a separate kv namespace than the one you'd use in production. Please create a new kv namespace with "wrangler kv namespace create <name> --preview" and add its id as preview_id to the kv_namespace "${binding}" in your ${configFileName(configParam.configPath)} file`
 				); // Ugh, I really don't like this message very much
 			}
 			return {
 				binding,
 				id: preview_id ?? id,
+				remote: getFlag("MIXED_MODE") && remote,
 			};
 		}
 	);
@@ -976,7 +893,11 @@ export function getBindings(
 			: d1Db.database_id;
 
 		if (local) {
-			return { ...d1Db, database_id };
+			return {
+				...d1Db,
+				remote: getFlag("MIXED_MODE") && d1Db.remote,
+				database_id,
+			};
 		}
 		// if you have a preview_database_id, we'll use it, but we shouldn't force people to use it.
 		if (!d1Db.preview_database_id && !process.env.NO_D1_WARNING) {
@@ -992,7 +913,7 @@ export function getBindings(
 	// merge R2 bindings
 	const r2Config: EnvironmentNonInheritable["r2_buckets"] =
 		configParam.r2_buckets?.map(
-			({ binding, preview_bucket_name, bucket_name, jurisdiction }) => {
+			({ binding, preview_bucket_name, bucket_name, jurisdiction, remote }) => {
 				// same idea as kv namespace preview id,
 				// same copy-on-write TODO
 				if (!preview_bucket_name && !local) {
@@ -1004,6 +925,7 @@ export function getBindings(
 					binding,
 					bucket_name: preview_bucket_name ?? bucket_name,
 					jurisdiction,
+					remote: getFlag("MIXED_MODE") && remote,
 				};
 			}
 		) || [];
@@ -1017,7 +939,10 @@ export function getBindings(
 		servicesConfig,
 		servicesArgs,
 		"binding"
-	);
+	).map((service) => ({
+		...service,
+		remote: getFlag("MIXED_MODE") && "remote" in service && !!service.remote,
+	}));
 
 	// Hyperdrive bindings
 	const hyperdriveBindings = configParam.hyperdrive.map((hyperdrive) => {
@@ -1048,16 +973,22 @@ export function getBindings(
 		return hyperdrive;
 	});
 
-	// Queues bindings ??
+	// Queues bindings
 	const queuesBindings = [
 		...(configParam.queues.producers || []).map((queue) => {
 			return {
 				binding: queue.binding,
 				queue_name: queue.queue,
 				delivery_delay: queue.delivery_delay,
+				remote: getFlag("MIXED_MODE") && queue.remote,
 			};
 		}),
 	];
+
+	const workflowsConfig = configParam.workflows.map((workflowConfig) => ({
+		...workflowConfig,
+		remote: getFlag("MIXED_MODE") && workflowConfig.remote,
+	}));
 
 	const bindings: CfWorkerInit["bindings"] = {
 		// top-level fields
@@ -1078,13 +1009,14 @@ export function getBindings(
 		durable_objects: {
 			bindings: mergedDOBindings,
 		},
-		workflows: configParam.workflows,
+		workflows: workflowsConfig,
 		kv_namespaces: mergedKVBindings,
 		queues: queuesBindings,
 		r2_buckets: mergedR2Bindings,
 		d1_databases: mergedD1Bindings,
 		vectorize: configParam.vectorize,
 		hyperdrive: hyperdriveBindings,
+		secrets_store_secrets: configParam.secrets_store_secrets,
 		services: mergedServiceBindings,
 		analytics_engine_datasets: configParam.analytics_engine_datasets,
 		browser: configParam.browser,

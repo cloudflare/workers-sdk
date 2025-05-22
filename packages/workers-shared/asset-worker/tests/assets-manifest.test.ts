@@ -1,5 +1,3 @@
-import { readFileSync } from "fs";
-import { join } from "path";
 import {
 	CONTENT_HASH_OFFSET,
 	CONTENT_HASH_SIZE,
@@ -8,6 +6,7 @@ import {
 	PATH_HASH_OFFSET,
 	PATH_HASH_SIZE,
 } from "../../utils/constants";
+import AssetManifestFixture from "../fixtures/AssetManifest.bin";
 import { binarySearch, compare, hashPath } from "../src/assets-manifest";
 
 const encoder = new TextEncoder();
@@ -60,9 +59,7 @@ const encode = async (
 
 describe("encode()", () => {
 	it("works", async () => {
-		const snapshotValue = readFileSync(
-			join(__dirname, "../fixtures/AssetManifest.bin")
-		);
+		const snapshotValue = new Uint8Array(AssetManifestFixture);
 
 		const computedValue = new Uint8Array(
 			await encode([

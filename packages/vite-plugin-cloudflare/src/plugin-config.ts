@@ -1,7 +1,11 @@
 import assert from "node:assert";
 import * as path from "node:path";
 import * as vite from "vite";
-import { findWranglerConfig, getWorkerConfig } from "./workers-configs";
+import {
+	getValidatedWranglerConfigPath,
+	getWorkerConfig,
+} from "./workers-configs";
+import type { Defined } from "./utils";
 import type {
 	AssetsOnlyWorkerResolvedConfig,
 	SanitizedWorkerConfig,
@@ -26,21 +30,20 @@ interface AuxiliaryWorkerConfig extends BaseWorkerConfig {
 export interface PluginConfig extends EntryWorkerConfig {
 	auxiliaryWorkers?: AuxiliaryWorkerConfig[];
 	persistState?: PersistState;
+	inspectorPort?: number | false;
+	experimental?: {
+		/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
+		headersAndRedirectsDevModeSupport?: boolean;
+	};
 }
 
-type Defined<T> = Exclude<T, undefined>;
-
-interface BaseConfig extends SanitizedWorkerConfig {
+export interface AssetsOnlyConfig extends SanitizedWorkerConfig {
 	topLevelName: Defined<SanitizedWorkerConfig["topLevelName"]>;
 	name: Defined<SanitizedWorkerConfig["name"]>;
 	compatibility_date: Defined<SanitizedWorkerConfig["compatibility_date"]>;
 }
 
-export interface AssetsOnlyConfig extends BaseConfig {
-	assets: Defined<SanitizedWorkerConfig["assets"]>;
-}
-
-export interface WorkerConfig extends BaseConfig {
+export interface WorkerConfig extends AssetsOnlyConfig {
 	main: Defined<SanitizedWorkerConfig["main"]>;
 }
 
@@ -48,6 +51,10 @@ interface BasePluginConfig {
 	configPaths: Set<string>;
 	persistState: PersistState;
 	cloudflareEnv: string | undefined;
+	experimental: {
+		/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
+		headersAndRedirectsDevModeSupport?: boolean;
+	};
 }
 
 interface AssetsOnlyPluginConfig extends BasePluginConfig {
@@ -58,7 +65,7 @@ interface AssetsOnlyPluginConfig extends BasePluginConfig {
 	};
 }
 
-interface WorkerPluginConfig extends BasePluginConfig {
+export interface WorkerPluginConfig extends BasePluginConfig {
 	type: "workers";
 	workers: Record<string, WorkerConfig>;
 	entryWorkerEnvironmentName: string;
@@ -82,6 +89,7 @@ export function resolvePluginConfig(
 ): ResolvedPluginConfig {
 	const configPaths = new Set<string>();
 	const persistState = pluginConfig.persistState ?? true;
+	const experimental = pluginConfig.experimental ?? {};
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
 	const { CLOUDFLARE_ENV: cloudflareEnv } = vite.loadEnv(
 		viteEnv.mode,
@@ -89,19 +97,19 @@ export function resolvePluginConfig(
 		/* prefixes */ ""
 	);
 
-	const configPath = pluginConfig.configPath
-		? path.resolve(root, pluginConfig.configPath)
-		: findWranglerConfig(root);
-
-	assert(
-		configPath,
-		`Config not found. Have you created a wrangler.json(c) or wrangler.toml file?`
+	const entryWorkerConfigPath = getValidatedWranglerConfigPath(
+		root,
+		pluginConfig.configPath
 	);
 
-	const entryWorkerResolvedConfig = getWorkerConfig(configPath, cloudflareEnv, {
-		visitedConfigPaths: configPaths,
-		isEntryWorker: true,
-	});
+	const entryWorkerResolvedConfig = getWorkerConfig(
+		entryWorkerConfigPath,
+		cloudflareEnv,
+		{
+			visitedConfigPaths: configPaths,
+			isEntryWorker: true,
+		}
+	);
 
 	if (entryWorkerResolvedConfig.type === "assets-only") {
 		return {
@@ -113,6 +121,7 @@ export function resolvePluginConfig(
 				entryWorker: entryWorkerResolvedConfig,
 			},
 			cloudflareEnv,
+			experimental,
 		};
 	}
 
@@ -129,8 +138,13 @@ export function resolvePluginConfig(
 	const auxiliaryWorkersResolvedConfigs: WorkerResolvedConfig[] = [];
 
 	for (const auxiliaryWorker of pluginConfig.auxiliaryWorkers ?? []) {
+		const workerConfigPath = getValidatedWranglerConfigPath(
+			root,
+			auxiliaryWorker.configPath,
+			true
+		);
 		const workerResolvedConfig = getWorkerConfig(
-			path.resolve(root, auxiliaryWorker.configPath),
+			workerConfigPath,
 			cloudflareEnv,
 			{
 				visitedConfigPaths: configPaths,
@@ -170,5 +184,6 @@ export function resolvePluginConfig(
 			auxiliaryWorkers: auxiliaryWorkersResolvedConfigs,
 		},
 		cloudflareEnv,
+		experimental,
 	};
 }

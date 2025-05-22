@@ -1,5 +1,35 @@
 # @cloudflare/workflows-shared
 
+## 0.3.3
+
+### Patch Changes
+
+- [#9033](https://github.com/cloudflare/workers-sdk/pull/9033) [`2c50115`](https://github.com/cloudflare/workers-sdk/commit/2c501151d3d1a563681cdb300a298b83862b60e2) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: convert wrangler.toml files into wrangler.jsonc ones
+
+## 0.3.2
+
+### Patch Changes
+
+- [#8775](https://github.com/cloudflare/workers-sdk/pull/8775) [`ec7e621`](https://github.com/cloudflare/workers-sdk/commit/ec7e6212199272f9811a30a84922823c82d7d650) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Add `waitForEvent` and `sendEvent` support for local dev
+
+## 0.3.1
+
+### Patch Changes
+
+- [#8606](https://github.com/cloudflare/workers-sdk/pull/8606) [`18edbc2`](https://github.com/cloudflare/workers-sdk/commit/18edbc2a6b02e6b7cd0a027e5b90ff043da6ee79) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Implement local dev for createBatch
+
+## 0.3.0
+
+### Minor Changes
+
+- [#7334](https://github.com/cloudflare/workers-sdk/pull/7334) [`869ec7b`](https://github.com/cloudflare/workers-sdk/commit/869ec7b916487ec43b958a27bdfea13588c5685f) Thanks [@penalosa](https://github.com/penalosa)! - Packages in Workers SDK now support the versions of Node that Node itself supports (Current, Active, Maintenance). Currently, that includes Node v18, v20, and v22.
+
+## 0.2.3
+
+### Patch Changes
+
+- [#8123](https://github.com/cloudflare/workers-sdk/pull/8123) [`7f565c5`](https://github.com/cloudflare/workers-sdk/commit/7f565c5c8844cd8c42137ed653e0665fa54950d1) Thanks [@LuisDuarte1](https://github.com/LuisDuarte1)! - Make NonRetryableError work and cache errored steps
+
 ## 0.2.2
 
 ### Patch Changes

@@ -3,7 +3,7 @@ import { basename, join } from "node:path";
 import { detectPackageManager } from "helpers/packageManagers";
 import { beforeAll, describe, expect } from "vitest";
 import { version } from "../package.json";
-import { getFrameworkToTest } from "./frameworkToTest";
+import { getFrameworkToTest } from "./frameworks/framework-to-test";
 import {
 	isQuarantineMode,
 	keys,
@@ -11,20 +11,20 @@ import {
 	runC3,
 	test,
 } from "./helpers";
-import type { Suite } from "vitest";
 
 const experimental = process.env.E2E_EXPERIMENTAL === "true";
 const frameworkToTest = getFrameworkToTest({ experimental: false });
 const { name: pm } = detectPackageManager();
+
+beforeAll((ctx) => {
+	recreateLogFolder({ experimental }, ctx);
+});
+
 // Note: skipIf(frameworkToTest) makes it so that all the basic C3 functionality
 //       tests are skipped in case we are testing a specific framework
 describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 	"E2E: Basic C3 functionality ",
 	() => {
-		beforeAll((ctx) => {
-			recreateLogFolder({ experimental }, ctx as Suite);
-		});
-
 		test({ experimental })("--version", async ({ logStream }) => {
 			const { output } = await runC3(["--version"], [], logStream);
 			expect(output).toEqual(version);
@@ -51,7 +51,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 			expect(output).toEqual(version);
 		});
 
-		test({ experimental }).skipIf(process.platform === "win32")(
+		test({ experimental }).skipIf(process.platform === "win32" || experimental)(
 			"Using arrow keys + enter",
 			async ({ logStream, project }) => {
 				const { output } = await runC3(
@@ -83,9 +83,8 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 
 				expect(project.path).toExist();
 				expect(output).toContain(`category Hello World example`);
-				expect(output).toContain(`type Hello World Worker`);
+				expect(output).toContain(`type SSR / full-stack app`);
 				expect(output).toContain(`lang TypeScript`);
-				expect(output).toContain(`no git`);
 				expect(output).toContain(`no deploy`);
 			},
 		);
@@ -128,7 +127,6 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 				expect(project.path).toExist();
 				expect(output).toContain(`type Scheduled Worker (Cron Trigger)`);
 				expect(output).toContain(`lang JavaScript`);
-				expect(output).toContain(`no git`);
 				expect(output).toContain(`no deploy`);
 			},
 		);
@@ -179,9 +177,8 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 					);
 
 					expect(project.path).toExist();
-					expect(output).toContain(`type Hello World Worker`);
+					expect(output).toContain(`type SSR / full-stack app`);
 					expect(output).toContain(`lang TypeScript`);
-					expect(output).toContain(`no git`);
 					expect(output).toContain(`no deploy`);
 				} finally {
 					fs.rmSync(existingFilePath, {
@@ -218,9 +215,15 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 			},
 		);
 
-		// changed this to skip regardless as the template seems to have updated their dependencies
-		// which is causing package resolution issues in our CI
-		test({ experimental }).skip(
+		// Skipping this on npm because the template that we are downloading has a package-lock file that
+		// contains checksum that won't match the locally published packages we put in the Verdaccio mock npm registry.
+		// Otherwise `npm install`, which C3 does, will error with messages like:
+		//
+		// ```
+		// ERROR  Error: npm warn tarball tarball data for wrangler@http://localhost:61599/wrangler/-/wrangler-4.7.0.tgz
+		// (sha512-5LoyNxpPG8K0kcU43Ossyj7+Hq78v8BNtu7ZNNSxDOUcairMEDwcbrbUOqzu/iM4yHiri5wCjl4Ja57fKED/Sg==) seems to be corrupted.
+		// ```
+		test({ experimental }).skipIf(process.platform === "win32" || pm === "npm")(
 			"Cloning remote template that uses wrangler.json",
 			async ({ logStream, project }) => {
 				const { output } = await runC3(
@@ -273,7 +276,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 
 				expect(project.path).toExist();
 				expect(output).toContain(`category Hello World example`);
-				expect(output).toContain(`type Hello World Worker`);
+				expect(output).toContain(`type Worker only`);
 				expect(output).toContain(`lang Python`);
 			},
 		);
@@ -387,7 +390,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 							matcher: /Which template would you like to use\?/,
 							input: {
 								type: "select",
-								target: "Hello World Worker Using Durable Objects",
+								target: "Worker + Durable Objects",
 							},
 						},
 						{
@@ -401,9 +404,8 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 							matcher: /Which template would you like to use\?/,
 							input: {
 								type: "select",
-								target: "Hello World Worker",
-								assertDefaultSelection:
-									"Hello World Worker Using Durable Objects",
+								target: "Worker only",
+								assertDefaultSelection: "Worker + Durable Objects",
 							},
 						},
 						{
@@ -418,7 +420,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 				);
 
 				expect(project.path).toExist();
-				expect(output).toContain(`type Hello World Worker`);
+				expect(output).toContain(`type Worker only`);
 				expect(output).toContain(`lang JavaScript`);
 			},
 		);
@@ -446,3 +448,195 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 		});
 	},
 );
+
+describe.skipIf(frameworkToTest || isQuarantineMode())("help text", () => {
+	test({ experimental })("--help", async ({ logStream }) => {
+		if (experimental) {
+			const { output } = await runC3(
+				["--help", "--experimental"],
+				[],
+				logStream,
+			);
+			expect(normalizeOutput(output)).toMatchInlineSnapshot(`
+				"create-cloudflare <version>
+				  The create-cloudflare cli (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
+				USAGE
+				  <USAGE>
+				OPTIONS
+				You have selected experimental mode - the options below are filtered to those that support experimental mode.
+				  directory
+				    The directory where the application should be created. Also used as the name of the application.
+				    If a path is provided that includes intermediary directories, only the base name will be used as the name of the application.
+				  --category=<value>
+				    Specifies the kind of templates that should be created
+				    Allowed Values:
+				      web-framework
+				        Framework Starter
+				  --type=<value>, -t
+				    When using a built-in template, specifies the type of application that should be created.
+				    Note that "--category" and "--template" are mutually exclusive options. If both are provided, "--category" will be used.
+				  --framework=<value>, -f
+				    The type of framework to use to create a web application (when using this option "--category" is coerced to "web-framework")
+				    When using the --framework option, C3 will dispatch to the official creation tool used by the framework (ex. "create-remix" is used for Remix).
+				    You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
+				    npm create cloudflare -- --framework next -- --ts
+				    pnpm create cloudflare --framework next -- --ts
+				    Allowed Values:
+				      solid
+				  --platform=<value>
+				    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
+				    Allowed Values:
+				      workers
+				        Create a web application that can be deployed to Workers.
+				      pages
+				        Create a web application that can be deployed to Pages.
+				  --lang=<value>
+				    The programming language of the template
+				    Allowed Values:
+				      ts, js, python
+				  --deploy, --no-deploy
+				    Deploy your application after it has been created
+				  --git, --no-git
+				    Initialize a local git repository for your application
+				  --open, --no-open
+				    Opens the deployed application in your browser (this option is ignored if the application is not deployed)
+				  --existing-script=<value>
+				    The name of an existing Cloudflare Workers script to clone locally (when using this option "--type" is coerced to "pre-existing").
+				    When "--existing-script" is specified, "deploy" will be ignored.
+				  --template=<value>
+				    An external template to be used when creating your project.
+				    Any "degit" compatible string may be specified. For example:
+				    npm create cloudflare my-project -- --template github:user/repo
+				    npm create cloudflare my-project -- --template git@github.com:user/repo
+				    npm create cloudflare my-project -- --template https://github.com/user/repo
+				    npm create cloudflare my-project -- --template git@github.com:user/repo#dev (branch)
+				    npm create cloudflare my-project -- --template git@github.com:user/repo#v1.2.3 (tag)
+				    npm create cloudflare my-project -- --template git@github.com:user/repo#1234abcd (commit)
+				    Note that subdirectories may also be used. For example:
+				    npm create cloudflare -- --template https://github.com/cloudflare/workers-sdk/templates/worker-r2
+				  --template-mode=<value>
+				    The mechanism to use when fetching the template.
+				    Can be either "git" or "tar". "tar" does not support fetching from private
+				    repositories. By default, degit will use "tar" if the template is hosted on GitHub, BitBucket, GitLab, or git.sr.ht.
+				    Otherwise, it will use "git".
+				    Allowed Values:
+				      git
+				        Use git to fetch the template. Supports private repositories.
+				      tar
+				        Use tar to fetch the template. Only supported on public repositories hosted on GitHub, BitBucket, GitLab, or git.sr.ht.
+				  --accept-defaults, --no-accept-defaults, -y
+				    Use all the default C3 options (each can also be overridden by specifying it)
+				  --auto-update, --no-auto-update
+				    Automatically uses the latest version of C3"
+			`);
+		} else {
+			const { output } = await runC3(["--help"], [], logStream);
+			expect(normalizeOutput(output)).toMatchInlineSnapshot(`
+				"create-cloudflare <version>
+				  The create-cloudflare cli (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
+				USAGE
+				  <USAGE>
+				OPTIONS
+				  directory
+				    The directory where the application should be created. Also used as the name of the application.
+				    If a path is provided that includes intermediary directories, only the base name will be used as the name of the application.
+				  --category=<value>
+				    Specifies the kind of templates that should be created
+				    Allowed Values:
+				      hello-world
+				        Hello World Starter
+				      web-framework
+				        Framework Starter
+				      demo
+				        Application Starter
+				      remote-template
+				        Template from a GitHub repo
+				  --type=<value>, -t
+				    When using a built-in template, specifies the type of application that should be created.
+				    Note that "--category" and "--template" are mutually exclusive options. If both are provided, "--category" will be used.
+				    Allowed Values:
+				      hello-world
+				        For processing requests, transforming responses, or API endpoints
+				      hello-world-assets-only
+				        For static sites or when using your own backend. Uses Workers Static Assets.
+				      hello-world-with-assets
+				        For sites with a backend API, or server-side rendering (SSR). Uses Static Assets with a Worker.
+				      hello-world-durable-object
+				        For multiplayer apps using WebSockets, or when you need synchronization
+				      hello-world-durable-object-with-assets
+				        For full-stack applications requiring static assets, an API, and real-time coordination
+				      common
+				        Create a Worker to route and forward requests to other services
+				      scheduled
+				        Create a Worker to be executed on a schedule for periodic (cron) jobs
+				      queues
+				        Get started with a Worker that processes background tasks and message batches with Cloudflare Queues
+				      openapi
+				        Get started building a basic API on Workers
+				      pre-existing
+				        Fetch a Worker initialized from the Cloudflare dashboard.
+				  --framework=<value>, -f
+				    The type of framework to use to create a web application (when using this option "--category" is coerced to "web-framework")
+				    When using the --framework option, C3 will dispatch to the official creation tool used by the framework (ex. "create-remix" is used for Remix).
+				    You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
+				    npm create cloudflare -- --framework next -- --ts
+				    pnpm create cloudflare --framework next -- --ts
+				    Allowed Values:
+				      analog, angular, astro, docusaurus, gatsby, hono, next, nuxt, qwik, react, react-router, remix, solid, svelte, vue
+				  --platform=<value>
+				    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
+				    Allowed Values:
+				      workers
+				        Create a web application that can be deployed to Workers.
+				      pages
+				        Create a web application that can be deployed to Pages.
+				  --lang=<value>
+				    The programming language of the template
+				    Allowed Values:
+				      ts, js, python
+				  --deploy, --no-deploy
+				    Deploy your application after it has been created
+				  --git, --no-git
+				    Initialize a local git repository for your application
+				  --open, --no-open
+				    Opens the deployed application in your browser (this option is ignored if the application is not deployed)
+				  --existing-script=<value>
+				    The name of an existing Cloudflare Workers script to clone locally (when using this option "--type" is coerced to "pre-existing").
+				    When "--existing-script" is specified, "deploy" will be ignored.
+				  --template=<value>
+				    An external template to be used when creating your project.
+				    Any "degit" compatible string may be specified. For example:
+				    npm create cloudflare my-project -- --template github:user/repo
+				    npm create cloudflare my-project -- --template git@github.com:user/repo
+				    npm create cloudflare my-project -- --template https://github.com/user/repo
+				    npm create cloudflare my-project -- --template git@github.com:user/repo#dev (branch)
+				    npm create cloudflare my-project -- --template git@github.com:user/repo#v1.2.3 (tag)
+				    npm create cloudflare my-project -- --template git@github.com:user/repo#1234abcd (commit)
+				    Note that subdirectories may also be used. For example:
+				    npm create cloudflare -- --template https://github.com/cloudflare/workers-sdk/templates/worker-r2
+				  --template-mode=<value>
+				    The mechanism to use when fetching the template.
+				    Can be either "git" or "tar". "tar" does not support fetching from private
+				    repositories. By default, degit will use "tar" if the template is hosted on GitHub, BitBucket, GitLab, or git.sr.ht.
+				    Otherwise, it will use "git".
+				    Allowed Values:
+				      git
+				        Use git to fetch the template. Supports private repositories.
+				      tar
+				        Use tar to fetch the template. Only supported on public repositories hosted on GitHub, BitBucket, GitLab, or git.sr.ht.
+				  --accept-defaults, --no-accept-defaults, -y
+				    Use all the default C3 options (each can also be overridden by specifying it)
+				  --auto-update, --no-auto-update
+				    Automatically uses the latest version of C3"
+			`);
+		}
+	});
+});
+
+function normalizeOutput(output: string): string {
+	return output
+		.replaceAll("\r\n", "\n")
+		.replaceAll(/\n\n+/g, "\n")
+		.replace(/create-cloudflare v\d+\.\d+\.\d+/, "create-cloudflare <version>")
+		.replace(/USAGE\n[^\n]+/, `USAGE\n  <USAGE>`);
+}

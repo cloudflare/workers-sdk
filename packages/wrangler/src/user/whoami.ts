@@ -86,7 +86,7 @@ async function printMembershipInfo(user: UserInfo, accountFilter?: string) {
 	} catch (e) {
 		if (isAuthenticationError(e)) {
 			logger.log(
-				`🎢 Unable to get membership roles. Make sure you have permissions to read the account.`
+				`🎢 Unable to get membership roles. Make sure you have permissions to read the account. Are you missing the \`User->Memberships->Read\` permission?`
 			);
 			return;
 		} else {

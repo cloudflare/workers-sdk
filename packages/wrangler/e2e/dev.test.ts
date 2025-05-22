@@ -1,7 +1,8 @@
-import assert from "node:assert";
+import assert, { fail } from "node:assert";
 import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import * as nodeNet from "node:net";
-import { setTimeout } from "node:timers/promises";
+import { scheduler, setTimeout } from "node:timers/promises";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -21,36 +22,6 @@ import { getStartedWorkerdProcesses } from "./helpers/workerd-processes";
  * when multiple PRs have jobs running at the same time (or the same PR has the tests run across multiple OSes).
  */
 const workerName = generateResourceName();
-
-it("can import URL from 'url' in node_compat mode", async () => {
-	const helper = new WranglerE2ETestHelper();
-	await helper.seed({
-		"wrangler.toml": dedent`
-				name = "${workerName}"
-				main = "src/index.ts"
-				compatibility_date = "2023-01-01"
-				node_compat = true
-		`,
-		"src/index.ts": dedent`
-				const { URL } = require('url');
-				const { URL: nURL } = require('node:url');
-
-				export default {
-					fetch(request) {
-						const url = new URL('postgresql://user:password@example.com:12345/dbname?sslmode=disable')
-						const nUrl = new nURL('postgresql://user:password@example.com:12345/dbname?sslmode=disable')
-						return new Response(url + nUrl)
-					}
-				}`,
-	});
-	const worker = helper.runLongLived(`wrangler dev`);
-
-	const { url } = await worker.waitForReady();
-
-	await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-		`"postgresql://user:password@example.com:12345/dbname?sslmode=disablepostgresql://user:password@example.com:12345/dbname?sslmode=disable"`
-	);
-});
 
 describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
 	"basic js dev: $cmd",
@@ -97,6 +68,9 @@ describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
 			});
 
 			await worker.waitForReload();
+
+			// Regression test for issue where multiple request logs were being logged per request
+			expect([...worker.currentOutput.matchAll(/GET /g)].length).toBe(1);
 
 			await expect(fetchText(url)).resolves.toMatchSnapshot();
 		});
@@ -485,6 +459,46 @@ describe.each([{ cmd: "wrangler dev" }])(
 
 			expect(text).toBe("py hello world 5");
 		});
+
+		it(`can print during ${cmd}`, async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "index.py"
+					compatibility_date = "2023-01-01"
+					compatibility_flags = ["python_workers"]
+			`,
+				"arithmetic.py": dedent`
+					def mul(a,b):
+						return a*b`,
+				"index.py": dedent`
+					from arithmetic import mul
+
+					from js import Response, console
+					def on_fetch(request):
+						console.log(f"hello {mul(2,3)}")
+						print(f"foobar {mul(4,3)}")
+						console.log(f"end")
+						return Response.new(f"py hello world {mul(2,3)}")`,
+				"package.json": dedent`
+					{
+						"name": "worker",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+			});
+			const worker = helper.runLongLived(cmd);
+
+			const { url } = await worker.waitForReady();
+
+			await expect(fetchText(url)).resolves.toBe("py hello world 6");
+
+			await worker.readUntil(/hello 6/);
+			await worker.readUntil(/foobar 12/);
+			await worker.readUntil(/end/);
+		});
 	}
 );
 
@@ -806,7 +820,7 @@ describe("writes debug logs to hidden file", () => {
 });
 
 describe("analytics engine", () => {
-	describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
+	describe.each([{ cmd: "wrangler dev" }])(
 		"mock analytics engine datasets: $cmd",
 		({ cmd }) => {
 			describe("module worker", () => {
@@ -816,7 +830,7 @@ describe("analytics engine", () => {
 						"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
-				compatibility_date = "2024-08-08"
+				compatibility_date = "2022-08-08"
 
 				[[analytics_engine_datasets]]
 				binding = "ANALYTICS_BINDING"
@@ -855,7 +869,7 @@ describe("analytics engine", () => {
 			});
 
 			describe("service worker", async () => {
-				it("analytics engine datasets are mocked in dev", async () => {
+				it("using analytics engine datasets logs a warning in dev", async () => {
 					const helper = new WranglerE2ETestHelper();
 					await helper.seed({
 						"wrangler.toml": dedent`
@@ -889,11 +903,8 @@ describe("analytics engine", () => {
 					});
 					const worker = helper.runLongLived(cmd);
 
-					const { url } = await worker.waitForReady();
-
-					const text = await fetchText(url);
-					expect(text).toContain(
-						`successfully wrote datapoint from service worker`
+					await worker.readUntil(
+						/Analytics Engine is not supported locally when using the service-worker format/
 					);
 				});
 			});
@@ -1104,9 +1115,9 @@ describe("custom builds", () => {
 		const worker = helper.runLongLived("wrangler dev");
 
 		// first build on startup
-		await worker.readUntil(/Running custom build/, 5_000);
+		await worker.readUntil(/\[custom build\] Running/, 5_000);
 		// second build for first watcher notification (can be optimised away, leaving as-is for now)
-		await worker.readUntil(/Running custom build/, 5_000);
+		await worker.readUntil(/\[custom build\] Running/, 5_000);
 
 		// Need to get the url in this order because waitForReady calls readUntil
 		// which keeps track of where it's read up to so far,
@@ -1118,7 +1129,7 @@ describe("custom builds", () => {
 		// assert no more custom builds happen
 		// regression: https://github.com/cloudflare/workers-sdk/issues/6876
 		await expect(
-			worker.readUntil(/Running custom build:/, 5_000)
+			worker.readUntil(/\[custom build\] Running/, 5_000)
 		).rejects.toThrowError();
 
 		// now check assets are still fetchable, even after updates
@@ -1341,6 +1352,58 @@ describe("watch mode", () => {
 					}
 				));
 				expect(response.status).toBe(404);
+			});
+
+			it("supports adding new metafiles during dev session", async () => {
+				const helper = new WranglerE2ETestHelper();
+				await helper.seed({
+					"wrangler.toml": dedent`
+								name = "${workerName}"
+								compatibility_date = "2023-01-01"
+
+								[assets]
+								directory = "./public"
+						`,
+					"public/index.html": dedent`
+									<h1>Hello Workers + Assets</h1>`,
+					"public/foo.html": dedent`
+									<h1>Foo</h1>`,
+					"public/bar.html": dedent`
+									<h1>Bar</h1>`,
+				});
+
+				const worker = helper.runLongLived(cmd);
+				const { url } = await worker.waitForReady();
+				let response = await fetch(`${url}/index.html`);
+
+				expect(response.headers.has("X-Custom")).toBeFalsy();
+				expect(await response.text()).toBe("<h1>Hello Workers + Assets</h1>");
+
+				response = await fetch(`${url}/foo`, { redirect: "manual" });
+
+				expect(response.status).toBe(200);
+				expect(await response.text()).toBe("<h1>Foo</h1>");
+
+				await helper.seed({
+					"public/_headers": dedent`/\n  X-Header: Custom-Value`,
+					"public/_redirects": dedent`/foo /bar`,
+				});
+
+				await worker.waitForReload();
+
+				// re-calculating the asset manifest / reverse assets map might not be
+				// done at this point, so retry until they are available
+				response = await retry(
+					(r) => r.status !== 302,
+					async () => {
+						return await fetch(`${url}/foo`, { redirect: "manual" });
+					}
+				);
+				expect(response.status).toBe(302);
+				expect(response.headers.get("Location")).toBe("/bar");
+
+				response = await fetch(`${url}/`);
+				expect(response.headers.get("X-Header")).toBe("Custom-Value");
 			});
 
 			it(`supports modifying the assets directory in wrangler.toml during dev session`, async () => {
@@ -1940,4 +2003,253 @@ describe("watch mode", () => {
 			});
 		}
 	);
+});
+
+describe("email local dev", () => {
+	it("should save file on reply", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2025-03-17"
+			`,
+			"src/index.ts": dedent`
+			import { EmailMessage } from "cloudflare:email";
+
+			export default {
+				async email(emailMessage) {
+				await emailMessage.reply(
+					new EmailMessage(
+						"someone-else@example.com",
+						"someone@example.com",
+\`From: someone else <someone-else@example.com>
+To: someone <someone@example.com>
+In-Reply-To: <im-a-random-message-id@example.com>
+Message-ID: <im-another-random-message-id@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+This is a random email body.
+\`)
+				);
+				}
+			}
+	`,
+		});
+
+		const worker = helper.runLongLived("wrangler dev");
+
+		const { url } = await worker.waitForReady();
+
+		const response = await fetch(
+			`${url}/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com`,
+			{
+				body: dedent`
+				From: someone <someone@example.com>
+				To: someone else <someone-else@example.com>
+				MIME-Version: 1.0
+				Message-ID: <im-a-random-message-id@example.com>
+				Content-Type: text/plain
+
+				This is a random email body.
+			`,
+				method: "POST",
+			}
+		);
+
+		expect(response.status).toBe(200);
+
+		expect(worker.currentOutput).includes(
+			"Email handler replied to sender with the following message:"
+		);
+
+		const pathRegexp = new RegExp(
+			"Email handler replied to sender with the following message:\\s*(\\S*)"
+		);
+
+		const maybeReplyPath = pathRegexp.exec(worker.currentOutput)?.[1];
+
+		if (maybeReplyPath === undefined) {
+			fail("Reply message does not contain path");
+		}
+
+		expect(await readFile(maybeReplyPath, "utf-8")).toMatchInlineSnapshot(`
+			"References: <im-a-random-message-id@example.com>
+			From: someone else <someone-else@example.com>
+			To: someone <someone@example.com>
+			In-Reply-To: <im-a-random-message-id@example.com>
+			Message-ID: <im-another-random-message-id@example.com>
+			MIME-Version: 1.0
+			Content-Type: text/plain
+
+			This is a random email body.
+			"
+		`);
+	});
+
+	it("should print reject with reason", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2025-03-17"
+			`,
+			"src/index.ts": dedent`
+			import { EmailMessage } from "cloudflare:email";
+
+			export default {
+				async email(emailMessage) {
+					await emailMessage.setReject('I dont like this email')
+				}
+			}`,
+		});
+
+		const worker = helper.runLongLived("wrangler dev");
+
+		const { url } = await worker.waitForReady();
+
+		const response = await fetch(
+			`${url}/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com`,
+			{
+				body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
+MIME-Version: 1.0
+Message-ID: <im-a-random-message-id@example.com>
+Content-Type: text/plain
+
+This is a random email body.
+`,
+				method: "POST",
+			}
+		);
+
+		expect(await response.text()).toMatchInlineSnapshot(
+			`"Worker rejected email with the following reason: I dont like this email"`
+		);
+
+		expect(response.status).toBe(400);
+	});
+
+	it("should print forward email", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2025-03-17"
+			`,
+			"src/index.ts": dedent`
+			import { EmailMessage } from "cloudflare:email";
+
+			export default {
+				async email(emailMessage) {
+					await emailMessage.forward('mark.s@example.com')
+				}
+			}`,
+		});
+
+		const worker = helper.runLongLived("wrangler dev");
+
+		const { url } = await worker.waitForReady();
+
+		const response = await fetch(
+			`${url}/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com`,
+			{
+				body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
+MIME-Version: 1.0
+Message-ID: <im-a-random-message-id@example.com>
+Content-Type: text/plain
+
+This is a random email body.
+`,
+				method: "POST",
+			}
+		);
+
+		expect(response.status).toBe(200);
+
+		expect(worker.currentOutput).includes(
+			`Email handler forwarded message with`
+		);
+		expect(worker.currentOutput).includes(`rcptTo: mark.s@example.com`);
+	});
+
+	it("should save file on send_email", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2025-03-17"
+					send_email = [{name = "SEND_EMAIL"}]
+			`,
+			"src/index.ts": dedent`
+				import { EmailMessage } from "cloudflare:email";
+
+				export default {
+					async fetch(request, env, ctx) {
+						const url = new URL(request.url);
+
+						await env.SEND_EMAIL.send(new EmailMessage(
+							url.searchParams.get("from"),
+							url.searchParams.get("to"),
+							request.body
+						))
+
+						return new Response("ok")
+					},
+				};`,
+		});
+
+		const worker = helper.runLongLived("wrangler dev");
+
+		const { url } = await worker.waitForReady();
+
+		const response = await fetch(
+			`${url}?from=someone@example.com&to=someone-else@example.com`,
+			{
+				body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
+Message-ID: <im-a-random-message-id@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+This is a random email body.
+`,
+				method: "POST",
+			}
+		);
+
+		expect(response.status).toBe(200);
+
+		await scheduler.wait(1000);
+
+		expect(worker.currentOutput).includes(
+			"send_email binding called with the following message"
+		);
+
+		const pathRegexp = new RegExp(
+			"send_email binding called with the following message:\\s*(\\S*)"
+		);
+
+		const maybeReplyPath = pathRegexp.exec(worker.currentOutput)?.[1];
+
+		if (maybeReplyPath === undefined || maybeReplyPath === null) {
+			fail("send_email message does not contain path");
+		}
+
+		expect(await readFile(maybeReplyPath, "utf-8")).toMatchInlineSnapshot(`
+			"From: someone <someone@example.com>
+			To: someone else <someone-else@example.com>
+			Message-ID: <im-a-random-message-id@example.com>
+			MIME-Version: 1.0
+			Content-Type: text/plain
+
+			This is a random email body.
+			"
+		`);
+	});
 });

@@ -52,6 +52,7 @@ export function getBindings(
 		d1_databases: config?.d1_databases,
 		vectorize: config?.vectorize,
 		hyperdrive: config?.hyperdrive,
+		secrets_store_secrets: config?.secrets_store_secrets,
 		services: config?.services,
 		analytics_engine_datasets: config?.analytics_engine_datasets,
 		dispatch_namespaces: options?.pages
@@ -404,7 +405,7 @@ export async function provisionBindings(
 			printable[resource.resourceType] ??= [];
 			printable[resource.resourceType].push({ binding: resource.binding });
 		}
-		printBindings(printable, { provisioning: true });
+		printBindings(printable, config.tail_consumers, { provisioning: true });
 		logger.log();
 
 		const existingResources: Record<string, NormalisedResourceInfo[]> = {};
@@ -473,7 +474,7 @@ async function runProvisioningFlow(
 		});
 	}
 
-	const defaultName = `${scriptName}-${item.binding.toLowerCase().replace("_", "-")}`;
+	const defaultName = `${scriptName}-${item.binding.toLowerCase().replaceAll("_", "-")}`;
 	logger.log("Provisioning", item.binding, `(${friendlyBindingName})...`);
 
 	if (item.handler.name) {

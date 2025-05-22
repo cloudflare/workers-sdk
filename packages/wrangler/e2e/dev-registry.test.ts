@@ -34,9 +34,12 @@ describe("unstable_dev()", () => {
 	let parent: string;
 	let child: string;
 	let workerName: string;
+	let registryPath: string;
 
 	beforeEach(async () => {
 		workerName = generateResourceName("worker");
+
+		registryPath = makeRoot();
 
 		parent = makeRoot();
 
@@ -95,6 +98,7 @@ describe("unstable_dev()", () => {
 			"index.mjs": dedent/*javascript*/ `
 					import { unstable_dev } from "${WRANGLER_IMPORT}"
 					import { setTimeout } from "node:timers/promises";
+					import { readdirSync } from "node:fs"
 
 					const childWorker = await unstable_dev(
 						"${child.replaceAll("\\", "/")}/src/index.ts",
@@ -105,9 +109,12 @@ describe("unstable_dev()", () => {
 						}
 					);
 
-					// Wait long enough for the child to register itself on the Worker Registry
-					// before we boot up the parent that needs to know about it.
-					await setTimeout(2000)
+					for (const timeout of [1000, 2000, 4000, 8000, 16000]) {
+						if(readdirSync(process.env.WRANGLER_REGISTRY_PATH).includes("${workerName}")) {
+							break
+						}
+						await setTimeout(timeout)
+					}
 
 					const parentWorker = await unstable_dev(
 						"src/index.ts",
@@ -126,6 +133,10 @@ describe("unstable_dev()", () => {
 		const stdout = execSync(`node index.mjs`, {
 			cwd: parent,
 			encoding: "utf-8",
+			env: {
+				...process.env,
+				WRANGLER_REGISTRY_PATH: registryPath,
+			},
 		});
 		return stdout;
 	}
@@ -291,7 +302,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 			);
 
 			expect(normalizeOutput(workerA.currentOutput)).toContain(
-				"bindings connect to other `wrangler dev` processes running locally"
+				"connect to other `wrangler dev` processes running locally"
 			);
 		});
 
@@ -362,6 +373,71 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 				);
 			}
 		);
+	});
+
+	describe("Tail consumers", () => {
+		beforeEach(async () => {
+			await baseSeed(a, {
+				"wrangler.toml": dedent`
+							name = "${workerName}"
+							main = "src/index.ts"
+							compatibility_date = "2025-04-28"
+
+							[[tail_consumers]]
+							service = "${workerName2}"
+					`,
+				"src/index.ts": dedent/* javascript */ `
+						export default {
+							async fetch(req, env) {
+								console.log("log something")
+								return new Response("hello from a")
+							},
+						};
+						`,
+			});
+
+			b = await makeRoot();
+			await baseSeed(b, {
+				"wrangler.toml": dedent`
+							name = "${workerName2}"
+							main = "src/index.ts"
+							compatibility_date = "2025-04-28"
+					`,
+				"src/index.ts": dedent/* javascript */ `
+						export default {
+							async tail(event) {
+								console.log("received tail event", event)
+							},
+						};
+					`,
+			});
+		});
+
+		it("can fetch a without b running", async () => {
+			const workerA = helper.runLongLived(cmd, { cwd: a });
+			const { url } = await workerA.waitForReady(5_000);
+
+			await expect(fetchText(`${url}`)).resolves.toBe("hello from a");
+		});
+
+		it("tail event sent to b", async () => {
+			const workerA = helper.runLongLived(cmd, { cwd: a });
+			const { url } = await workerA.waitForReady(5_000);
+
+			const workerB = helper.runLongLived(cmd, { cwd: b });
+
+			await workerA.readUntil(/connected/);
+
+			await expect(fetchText(`${url}`)).resolves.toBe("hello from a");
+
+			await vi.waitFor(
+				async () => {
+					await fetchText(`${url}`);
+					expect(workerB.currentOutput).includes("received tail event");
+				},
+				{ interval: 1000, timeout: 10_000 }
+			);
+		});
 	});
 
 	describe("durable objects", () => {
@@ -515,7 +591,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 			);
 
 			expect(normalizeOutput(workerA.currentOutput)).toContain(
-				"bindings connect to other `wrangler dev` processes running locally"
+				"connect to other `wrangler dev` processes running locally"
 			);
 		});
 

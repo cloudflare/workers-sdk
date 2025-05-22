@@ -23,6 +23,7 @@ export type Options = {
 	outfile?: string;
 	outdir?: string;
 	minify?: boolean;
+	keepNames?: boolean;
 	sourcemap?: boolean;
 	fallbackService?: string;
 	watch?: boolean;
@@ -34,6 +35,7 @@ export type Options = {
 	defineNavigatorUserAgent: boolean;
 	checkFetch: boolean;
 	external?: string[];
+	metafile?: string | boolean;
 };
 
 export function buildWorkerFromFunctions({
@@ -41,6 +43,7 @@ export function buildWorkerFromFunctions({
 	outfile = join(getPagesTmpDir(), `./functionsWorker-${Math.random()}.js`),
 	outdir,
 	minify = false,
+	keepNames = true,
 	sourcemap = false,
 	fallbackService = "ASSETS",
 	watch = false,
@@ -52,10 +55,12 @@ export function buildWorkerFromFunctions({
 	defineNavigatorUserAgent,
 	checkFetch,
 	external,
+	metafile,
 }: Options) {
 	const entry: Entry = {
 		file: resolve(getBasePath(), "templates/pages-template-worker.ts"),
 		projectRoot: functionsDirectory,
+		configPath: undefined,
 		format: "modules",
 		moduleRoot: functionsDirectory,
 		exports: [],
@@ -72,11 +77,10 @@ export function buildWorkerFromFunctions({
 		inject: [routesModule],
 		...(outdir ? { entryName: "index" } : { entryName: undefined }),
 		minify,
+		keepNames,
 		sourcemap,
 		watch,
 		nodejsCompatMode,
-		// TODO: mock AE datasets in Pages functions for dev
-		mockAnalyticsEngineDatasets: [],
 		define: {
 			__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
 		},
@@ -86,19 +90,17 @@ export function buildWorkerFromFunctions({
 		external,
 		plugins: [buildNotifierPlugin(onEnd), assetsPlugin(buildOutputDirectory)],
 		isOutfile: !outdir,
-		serveLegacyAssetsFromWorker: false,
 		checkFetch: local && checkFetch,
 		targetConsumer: local ? "dev" : "deploy",
 		local,
 		projectRoot: getPagesProjectRoot(),
 		defineNavigatorUserAgent,
 
-		legacyAssets: undefined,
-		bypassAssetCache: undefined,
 		jsxFactory: undefined,
 		jsxFragment: undefined,
 		tsconfig: undefined,
 		testScheduled: undefined,
+		metafile,
 	});
 }
 
@@ -110,6 +112,7 @@ export type RawOptions = {
 	bundle?: boolean;
 	externalModules?: string[];
 	minify?: boolean;
+	keepNames?: boolean;
 	sourcemap?: boolean;
 	watch?: boolean;
 	plugins?: Plugin[];
@@ -121,6 +124,7 @@ export type RawOptions = {
 	defineNavigatorUserAgent: boolean;
 	checkFetch: boolean;
 	external?: string[];
+	metafile?: string | boolean;
 };
 
 /**
@@ -138,6 +142,7 @@ export function buildRawWorker({
 	bundle = true,
 	externalModules,
 	minify = false,
+	keepNames = true,
 	sourcemap = false,
 	watch = false,
 	plugins = [],
@@ -148,10 +153,12 @@ export function buildRawWorker({
 	defineNavigatorUserAgent,
 	checkFetch,
 	external,
+	metafile,
 }: RawOptions) {
 	const entry: Entry = {
 		file: workerScriptPath,
 		projectRoot: resolve(directory),
+		configPath: undefined,
 		format: "modules",
 		moduleRoot: resolve(directory),
 		exports: [],
@@ -165,11 +172,10 @@ export function buildRawWorker({
 		moduleCollector,
 		additionalModules,
 		minify,
+		keepNames,
 		sourcemap,
 		watch,
 		nodejsCompatMode,
-		// TODO: mock AE datasets in Pages functions for dev
-		mockAnalyticsEngineDatasets: [],
 		define: {},
 		alias: {},
 		doBindings: [], // Pages functions don't support internal Durable Objects
@@ -200,15 +206,13 @@ export function buildRawWorker({
 				: []),
 		],
 		isOutfile: !outdir,
-		serveLegacyAssetsFromWorker: false,
 		checkFetch: local && checkFetch,
 		targetConsumer: local ? "dev" : "deploy",
 		local,
 		projectRoot: getPagesProjectRoot(),
 		defineNavigatorUserAgent,
+		metafile,
 
-		legacyAssets: undefined,
-		bypassAssetCache: undefined,
 		jsxFactory: undefined,
 		jsxFragment: undefined,
 		tsconfig: undefined,
@@ -241,6 +245,7 @@ export async function produceWorkerBundleForWorkerJSDirectory({
 		{
 			file: entrypoint,
 			projectRoot: resolve(workerJSDirectory),
+			configPath: undefined,
 			format: "modules",
 			moduleRoot: resolve(workerJSDirectory),
 			exports: [],
@@ -345,7 +350,7 @@ function blockWorkerJsImports(nodejsCompatMode: NodeJSCompatMode): Plugin {
 	return {
 		name: "block-worker-js-imports",
 		setup(build) {
-			build.onResolve({ filter: /.*/g }, (args) => {
+			build.onResolve({ filter: /.*/ }, (args) => {
 				// If it's the entrypoint, let it be as is
 				if (args.kind === "entry-point") {
 					return {

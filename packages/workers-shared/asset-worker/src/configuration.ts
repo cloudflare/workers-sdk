@@ -1,21 +1,27 @@
+import { resolveCompatibilityOptions } from "./compatibility-flags";
 import type { AssetConfig } from "../../utils/types";
 
-export const applyConfigurationDefaults = (
+export const normalizeConfiguration = (
 	configuration?: AssetConfig
 ): Required<AssetConfig> => {
-	let runWorkerFirst = undefined;
-	if (configuration?.run_worker_first !== undefined) {
-		runWorkerFirst = configuration?.run_worker_first;
-	} else if (configuration?.serve_directly !== undefined) {
-		runWorkerFirst = !configuration.serve_directly;
-	} else {
-		runWorkerFirst = false;
-	}
+	const compatibilityOptions = resolveCompatibilityOptions(configuration);
 
 	return {
+		compatibility_date: compatibilityOptions.compatibilityDate,
+		compatibility_flags: compatibilityOptions.compatibilityFlags,
 		html_handling: configuration?.html_handling ?? "auto-trailing-slash",
 		not_found_handling: configuration?.not_found_handling ?? "none",
-		run_worker_first: runWorkerFirst,
-		serve_directly: !runWorkerFirst,
+		redirects: configuration?.redirects ?? {
+			version: 1,
+			staticRules: {},
+			rules: {},
+		},
+		headers: configuration?.headers ?? {
+			version: 2,
+			rules: {},
+		},
+		account_id: configuration?.account_id ?? -1,
+		script_id: configuration?.script_id ?? -1,
+		debug: configuration?.debug ?? false,
 	};
 };

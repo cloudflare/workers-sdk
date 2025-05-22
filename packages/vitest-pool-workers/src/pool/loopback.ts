@@ -278,6 +278,7 @@ async function popStackedStorage(fromDepth: number, persistPath: string) {
 			}
 			const namePath = path.join(keyPath, name);
 			assert(name.endsWith(".sqlite"), `Expected .sqlite, got ${namePath}`);
+
 			await fs.unlink(namePath);
 		}
 	}

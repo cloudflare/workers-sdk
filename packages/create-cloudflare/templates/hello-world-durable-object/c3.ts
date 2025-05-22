@@ -1,9 +1,11 @@
-export default {
+import type { TemplateConfig } from "../../src/templates";
+
+const config: TemplateConfig = {
 	configVersion: 1,
 	id: "hello-world-durable-object",
-	displayName: "Hello World Worker Using Durable Objects",
+	displayName: "Worker + Durable Objects",
 	description:
-		"Get started with a basic stateful app to build projects like real-time chats, collaborative apps, and multiplayer games",
+		"For multiplayer apps using WebSockets, or when you need synchronization",
 	platform: "workers",
 	copyFiles: {
 		variants: {
@@ -13,6 +15,10 @@ export default {
 			ts: {
 				path: "./ts",
 			},
+			python: {
+				path: "./py",
+			},
 		},
 	},
 };
+export default config;

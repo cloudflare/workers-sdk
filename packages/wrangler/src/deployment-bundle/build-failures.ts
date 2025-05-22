@@ -29,8 +29,6 @@ export function rewriteNodeCompatBuildFailure(
 
 			if (compatMode === null || compatMode === "als") {
 				text += `- Add the "nodejs_compat" compatibility flag to your project.\n`;
-			} else if (compatMode === "legacy") {
-				text += `- Try removing the legacy "node_compat" setting and add the "nodejs_compat" compatibility flag in your project\n`;
 			} else if (compatMode === "v1" && !match[1].startsWith("node:")) {
 				text += `- Make sure to prefix the module name with "node:" or update your compatibility_date to 2024-09-23 or later.\n`;
 			}
