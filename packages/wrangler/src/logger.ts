@@ -54,6 +54,11 @@ const overrideLoggerLevel = new AsyncLocalStorage<{
 	logLevel: LoggerLevel | undefined;
 }>();
 
+/**
+ * This function runs a callback with a specified log level
+ * The provided log level is stored using AsyncLocalStorage, and will be used
+ * for all logger.* calls that happen within the callback.
+ */
 export const runWithLogLevel = <V>(
 	overrideLogLevel: LoggerLevel | undefined,
 	cb: () => V
