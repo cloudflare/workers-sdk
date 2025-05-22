@@ -31,10 +31,10 @@ import { APIError } from "./parse";
 import { getBasePath } from "./paths";
 import { dedent } from "./utils/dedent";
 import type { StartDevWorkerOptions } from "./api";
-import type { ComplianceConfig } from "./cfetch";
 import type { Config } from "./config";
 import type { DeployArgs } from "./deploy";
 import type { StartDevOptions } from "./dev";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };

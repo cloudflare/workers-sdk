@@ -14,8 +14,8 @@ import { APIError } from "../parse";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
-import type { ComplianceConfig } from "../cfetch";
 import type { Config } from "../config";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Database, ExportPollingResponse, PollingFailure } from "./types";
 
 export const d1ExportCommand = createCommand({

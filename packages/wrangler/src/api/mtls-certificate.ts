@@ -1,7 +1,7 @@
 import { fetchResult } from "../cfetch";
 import { UserError } from "../errors";
 import { readFileSync } from "../parse";
-import type { ComplianceConfig } from "../cfetch";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 
 /**
  * the representation of an mTLS certificate in the account certificate store

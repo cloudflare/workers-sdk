@@ -6,7 +6,7 @@ import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { getDatabaseByNameOrBinding } from "../utils";
 import { getBookmarkIdFromTimestamp, throwIfDatabaseIsAlpha } from "./utils";
-import type { ComplianceConfig } from "../../cfetch";
+import type { ComplianceConfig } from "../../environment-variables/misc-variables";
 import type { RestoreBookmarkResponse } from "./types";
 
 export const d1TimeTravelRestoreCommand = createCommand({

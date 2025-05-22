@@ -7,7 +7,7 @@ import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/mis
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
-import type { ComplianceConfig } from "../cfetch";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { R2BucketInfo } from "../r2/helpers";
 
 // ensure this is in sync with:

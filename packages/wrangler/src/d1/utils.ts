@@ -2,8 +2,8 @@ import { fetchResult } from "../cfetch";
 import { UserError } from "../errors";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "./constants";
 import { listDatabases } from "./list";
-import type { ComplianceConfig } from "../cfetch";
 import type { Config } from "../config";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Database, DatabaseInfo } from "./types";
 
 export function getDatabaseInfoFromConfig(

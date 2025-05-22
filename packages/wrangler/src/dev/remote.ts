@@ -12,7 +12,6 @@ import { requireApiToken } from "../user";
 import { isAbortError } from "../utils/isAbortError";
 import { getZoneIdForPreview } from "../zones";
 import type { AssetsOptions } from "../assets";
-import type { ComplianceConfig } from "../cfetch";
 import type { Route } from "../config/environment";
 import type {
 	CfModule,
@@ -20,6 +19,7 @@ import type {
 	CfWorkerContext,
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ParseError } from "../parse";
 import type { LegacyAssetPaths } from "../sites";
 import type { CfAccount } from "./create-worker-preview";

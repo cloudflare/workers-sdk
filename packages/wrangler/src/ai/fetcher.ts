@@ -1,7 +1,7 @@
 import { Headers, Response } from "miniflare";
 import { performApiFetch } from "../cfetch";
 import { getAccountId } from "../user";
-import type { ComplianceConfig } from "../cfetch";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Request } from "miniflare";
 
 export const EXTERNAL_AI_WORKER_NAME = "__WRANGLER_EXTERNAL_AI_WORKER";

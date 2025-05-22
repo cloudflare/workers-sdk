@@ -5,7 +5,7 @@ import { getCloudflareComplianceRegion } from "../environment-variables/misc-var
 import { logger } from "../logger";
 import { fetchMembershipRoles } from "./membership";
 import { getAPIToken, getAuthFromEnv, getScopes } from ".";
-import type { ComplianceConfig } from "../cfetch";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 
 export async function whoami(
 	complianceConfig: ComplianceConfig,
@@ -30,9 +30,7 @@ export async function whoami(
 }
 
 function printComplianceRegion(complianceConfig: ComplianceConfig) {
-	const complianceRegion = getCloudflareComplianceRegion(
-		complianceConfig?.compliance_region
-	);
+	const complianceRegion = getCloudflareComplianceRegion(complianceConfig);
 	if (complianceRegion !== "public") {
 		const complianceRegionSource = complianceConfig?.compliance_region
 			? "Wrangler configuration"

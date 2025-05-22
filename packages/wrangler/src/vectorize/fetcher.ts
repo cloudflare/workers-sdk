@@ -1,7 +1,7 @@
 import { Headers, Response } from "miniflare";
 import { performApiFetch } from "../cfetch/internal";
 import { getAccountId } from "../user";
-import type { ComplianceConfig } from "../cfetch/internal";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Request } from "miniflare";
 
 export const EXTERNAL_VECTORIZE_WORKER_NAME =

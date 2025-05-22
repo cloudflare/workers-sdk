@@ -1,5 +1,5 @@
 import { fetchResult } from "../cfetch";
-import type { ComplianceConfig } from "../cfetch";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Message } from "../parse";
 import type { Finetune, Model } from "./types";
 

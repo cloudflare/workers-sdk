@@ -1,5 +1,5 @@
 import { fetchPagedListResult } from "../cfetch";
-import type { ComplianceConfig } from "../cfetch";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 
 /**
  * Body for the list memberships endpoint.

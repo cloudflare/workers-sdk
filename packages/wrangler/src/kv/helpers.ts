@@ -8,8 +8,8 @@ import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { buildPersistOptions } from "../dev/miniflare";
 import { UserError } from "../errors";
 import { logger } from "../logger";
-import type { ComplianceConfig } from "../cfetch";
 import type { Config } from "../config";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ReplaceWorkersTypes } from "miniflare";
 
 /** The largest number of kv items we can pass to the API in a single request. */

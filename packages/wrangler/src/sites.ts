@@ -17,8 +17,8 @@ import {
 	putKVKeyValue,
 } from "./kv/helpers";
 import { logger, LOGGER_LEVELS } from "./logger";
-import type { ComplianceConfig } from "./cfetch";
 import type { Config } from "./config";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { KeyValue } from "./kv/helpers";
 import type { XXHashAPI } from "xxhash-wasm";
 

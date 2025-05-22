@@ -58,7 +58,6 @@ import {
 import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
 import type { AssetsOptions } from "../assets";
-import type { ComplianceConfig } from "../cfetch";
 import type { Config } from "../config";
 import type {
 	CustomDomainRoute,
@@ -73,6 +72,7 @@ import type {
 	CfPlacement,
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { PostQueueBody, PostTypedConsumerBody } from "../queues/client";
 import type { LegacyAssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";

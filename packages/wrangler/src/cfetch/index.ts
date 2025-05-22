@@ -2,8 +2,8 @@ import { URLSearchParams } from "node:url";
 import { APIError } from "../parse";
 import { maybeThrowFriendlyError } from "./errors";
 import { fetchInternal } from "./internal";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { FetchError } from "./errors";
-import type { ComplianceConfig } from "./internal";
 import type { RequestInit } from "undici";
 
 // Check out https://api.cloudflare.com/ for API docs.
@@ -16,11 +16,7 @@ export interface FetchResult<ResponseType = unknown> {
 	result_info?: unknown;
 }
 
-export {
-	type ComplianceConfig,
-	fetchKVGetValue,
-	performApiFetch,
-} from "./internal";
+export { fetchKVGetValue, performApiFetch } from "./internal";
 
 /**
  * Make a fetch request, and extract the `result` from the JSON response.

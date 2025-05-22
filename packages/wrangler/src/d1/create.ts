@@ -6,7 +6,7 @@ import { UserError } from "../errors";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { LOCATION_CHOICES } from "./constants";
-import type { ComplianceConfig } from "../cfetch";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { DatabaseCreationResult } from "./types";
 
 export async function createD1Database(

@@ -24,8 +24,8 @@ import {
 	fetchVersions,
 	patchNonVersionedScriptSettings,
 } from "./api";
-import type { ComplianceConfig } from "../cfetch";
 import type { Config } from "../config";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type {
 	ApiDeployment,
 	ApiVersion,

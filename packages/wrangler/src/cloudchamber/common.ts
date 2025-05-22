@@ -137,7 +137,7 @@ export async function loadAccountSpinner({ json }: { json?: boolean }) {
  *
  */
 async function getAPIUrl(config: Config) {
-	const api = getCloudflareApiBaseUrl(config.compliance_region);
+	const api = getCloudflareApiBaseUrl(config);
 	// This one will probably be cache'd already so it won't ask for the accountId again
 	const accountId = config.account_id || (await getAccountId(config));
 	return `${api}/accounts/${accountId}/cloudchamber`;

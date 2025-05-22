@@ -1,7 +1,7 @@
 import { fetchResult } from "../../cfetch";
 import { UserError } from "../../errors";
 import { getDatabaseInfoFromIdOrName } from "../utils";
-import type { ComplianceConfig } from "../../cfetch";
+import type { ComplianceConfig } from "../../environment-variables/misc-variables";
 import type { BookmarkResponse } from "./types";
 
 /**

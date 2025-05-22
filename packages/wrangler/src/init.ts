@@ -15,7 +15,6 @@ import { getPackageManager } from "./package-manager";
 import { requireAuth } from "./user";
 import { createBatches } from "./utils/create-batches";
 import * as shellquote from "./utils/shell-quote";
-import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { RawConfig } from "./config";
 import type {
 	CustomDomainRoute,
@@ -29,6 +28,7 @@ import type {
 	WorkerMetadata,
 	WorkerMetadataBinding,
 } from "./deployment-bundle/create-worker-upload-form";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { PackageManager } from "./package-manager";
 import type { ReadableStream } from "stream/web";
 

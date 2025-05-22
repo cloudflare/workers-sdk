@@ -248,7 +248,7 @@ import {
 import { getAccountChoices } from "./choose-account";
 import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
-import type { ComplianceConfig } from "../cfetch";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ChooseAccountItem } from "./choose-account";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
@@ -1085,9 +1085,7 @@ export async function login(
 		return false;
 	}
 
-	const complianceRegion = getCloudflareComplianceRegion(
-		complianceConfig?.compliance_region
-	);
+	const complianceRegion = getCloudflareComplianceRegion(complianceConfig);
 	if (complianceRegion === "fedramp_high") {
 		const configurationSource = complianceConfig?.compliance_region
 			? "`compliance_region` configuration property"

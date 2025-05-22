@@ -2,7 +2,7 @@ import { fetchPagedListResult } from "../cfetch";
 import { configFileName } from "../config";
 import { UserError } from "../errors";
 import { getCloudflareAccountIdFromEnv } from "./auth-variables";
-import type { ComplianceConfig } from "../cfetch";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 
 export type ChooseAccountItem = {
 	id: string;

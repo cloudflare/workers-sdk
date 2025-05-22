@@ -5,7 +5,7 @@ import { FatalError } from "./errors";
 import { logger } from "./logger";
 import { APIError } from "./parse";
 import { getCloudflareAccountIdFromEnv } from "./user/auth-variables";
-import type { ComplianceConfig } from "./cfetch";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { ServiceMetadataRes } from "./init";
 
 export async function verifyWorkerMatchesCITag(

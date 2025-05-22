@@ -9,7 +9,7 @@ import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName } from "./utils/getScriptName";
-import type { ComplianceConfig } from "./cfetch";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 
 // Types returned by the /script/{name}/references API
 type ServiceReference = {
