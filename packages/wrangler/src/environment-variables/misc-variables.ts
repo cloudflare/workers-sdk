@@ -102,7 +102,7 @@ const getCloudflareApiBaseUrlFromEnv = getEnvironmentVariableFactory({
  */
 export const getCloudflareApiBaseUrl = (complianceConfig: ComplianceConfig) =>
 	getCloudflareApiBaseUrlFromEnv() ??
-	`https://api${getComplianceRegionSubdomain(complianceConfig)}${getStagingSubdomain}.cloudflare.com/client/v4`;
+	`https://api${getComplianceRegionSubdomain(complianceConfig)}${getStagingSubdomain()}.cloudflare.com/client/v4`;
 
 /**
  * Compute the subdomain for the compliance region.

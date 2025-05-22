@@ -86,14 +86,19 @@ export function getEnvironmentVariableFactory<
 	defaultValue?: () => ElementType<Choices>;
 	readonly choices?: Choices;
 }): () => ElementType<Choices> | undefined {
+	let hasWarned = false;
 	return () => {
 		if (variableName in process.env) {
 			return getProcessEnv(variableName, choices);
 		}
 		if (deprecatedName && deprecatedName in process.env) {
-			logger.once.warn(
-				`Using "${deprecatedName}" environment variable. This is deprecated. Please use "${variableName}", instead.`
-			);
+			if (!hasWarned) {
+				hasWarned = true;
+				// Ideally we'd use `logger.warn` here, but that creates a circular dependency that Vitest is unable to resolve
+				console.warn(
+					`Using "${deprecatedName}" environment variable. This is deprecated. Please use "${variableName}", instead.`
+				);
+			}
 			return getProcessEnv(deprecatedName, choices);
 		}
 
