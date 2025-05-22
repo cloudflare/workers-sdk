@@ -10,7 +10,7 @@ jobs:
     name: Write comment to the PR
     steps:
       - name: "Comment on PR with E2E action link"
-        uses: marocchino/sticky-pull-request-comment@v2
+        uses: marocchino/sticky-pull-request-comment@daa4a82a0a3f6c162c02b83fa44b3ab83946f7cb
         with:
           header: forks
           message: |
