@@ -49,7 +49,7 @@ export function createExternalService(options: {
 	serviceName: string;
 	entrypoints: Map<string | undefined, "service" | "durableObject" | "tail">;
 	proxyURL: string;
-	mode: "full-proxy" | "service-proxy" | "no-proxy";
+	isDurableObjectProxyEnabled: boolean;
 }): Service {
 	return {
 		name: getUserServiceName(getExternalServiceName(options.serviceName)),
@@ -85,21 +85,13 @@ export function createExternalService(options: {
                             function createFallbackWorkerEntrypointClass({ service, entrypoint }) {
                                 const klass = createProxyPrototypeClass(WorkerEntrypoint, (key) => {
                                     throw new Error(
-                                        ${
-																					options.mode !== "no-proxy"
-																						? `\`Cannot access "\${key}" as we couldn't find a local dev session for the "\${entrypoint}" entrypoint of service "\${service}" to proxy to.\``
-																						: `\`Worker Entrypoint "\${entrypoint}" of service "\${service}" is not defined in the options. Set the "unsafeDevRegistryPath" option if you would like Miniflare to lookup services from the Dev Registry.\``
-																				}
+                                       \`Cannot access "\${key}" as we couldn't find a local dev session for the "\${entrypoint}" entrypoint of service "\${service}" to proxy to.\`
                                     );
                                 });
 
                                 // Return regular HTTP response for HTTP requests
                                 klass.prototype.fetch = function(request) {
-                                    const message = ${
-																			options.mode !== "no-proxy"
-																				? `\`Couldn't find a local dev session for the "\${entrypoint}" entrypoint of service "\${service}" to proxy to\``
-																				: `\`Worker Entrypoint "\${entrypoint}" of service "\${service}" is not defined in the options. Set the "unsafeDevRegistryPath" option if you would like Miniflare to lookup services from the Dev Registry.\``
-																		};
+                                    const message = \`Couldn't find a local dev session for the "\${entrypoint}" entrypoint of service "\${service}" to proxy to\`;
                                     return new Response(message, { status: 503 });
                                 };
 
@@ -109,9 +101,9 @@ export function createExternalService(options: {
                             function createProxyDurableObjectClass({ scriptName, className, proxyUrl }) {
                                 const klass = createProxyPrototypeClass(DurableObject, (key) => {
                                     throw new Error(${
-																			options.mode === "full-proxy"
+																			options.isDurableObjectProxyEnabled
 																				? `\`Cannot access "\${key}" as Durable Object RPC is not yet supported between multiple dev sessions.\``
-																				: `\`Durable Object "\${className}" of script "\${scriptName}" is not defined in the options. Set the "unsafeDevRegistryDOProxy" option if you would like Miniflare to lookup services from the Dev Registry.\``
+																				: `\`Couldn't find the durable Object "\${className}" of script "\${scriptName}".\``
 																		});
                                 });
 
@@ -132,11 +124,7 @@ export function createExternalService(options: {
                             function createFallbackTailHandler({ service, entrypoint }) {
                                 return {
                                     fetch() {
-                                        const message = ${
-																					options.mode !== "no-proxy"
-																						? `\`Couldn't find a local dev session for the "\${entrypoint}" entrypoint of service "\${service}" to proxy to\``
-																						: `\`Fetch Handler "\${entrypoint}" of service "\${service}" is not defined in the options. Set the "unsafeDevRegistryPath" option if you would like Miniflare to lookup services from the Dev Registry.\``
-																				};
+                                        const message = \`Couldn't find a local dev session for the "\${entrypoint}" entrypoint of service "\${service}" to proxy to\`;
                                         return new Response(message, { status: 503 });
                                     },
                                     tail(events) {
