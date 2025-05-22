@@ -398,7 +398,7 @@ export function printBindings(
 			name: browser.binding,
 			type: friendlyBindingNames.browser,
 			value: undefined,
-			mode: getMode({ isSimulatedLocally: false }),
+			mode: getMode({ isSimulatedLocally: undefined }),
 		});
 	}
 
@@ -636,14 +636,25 @@ function createGetMode({
 	isLocalDev?: boolean;
 }) {
 	return function bindingMode({
-		isSimulatedLocally = false,
+		isSimulatedLocally,
 		connected,
 	}: {
+		// Is this binding running locally?
+		//   local = offline simulator in Miniflare
+		//   remote = some sort of Mixed Mode
+		//   undefined = this binding is not supported in a dev session
 		isSimulatedLocally?: boolean;
+		// If this is an external service/tail/etc... binding, is it connected?
+		//   true = connected via the dev registry
+		//   false = trying to connect via the dev registry, but the target is not found
+		//   undefined =  dev registry is disabled or the binding is in remote mode (which always implies connection)
 		connected?: boolean;
 	} = {}): string | undefined {
 		if (isProvisioning || !isLocalDev) {
 			return undefined;
+		}
+		if (isSimulatedLocally === undefined) {
+			return dim("not supported");
 		}
 
 		return `${isSimulatedLocally ? chalk.blue("local") : chalk.yellow("remote")}${connected === undefined ? "" : connected ? chalk.green(" [connected]") : chalk.red(" [not connected]")}`;
