@@ -280,6 +280,7 @@ export class RemoteRuntimeController extends RuntimeController {
 					proxyLogsToController: true,
 					internalDurableObjects: [],
 					entrypointAddresses: {},
+					assetWorkerUrl: { protocol: "", hostname: "", port: "" },
 				},
 			});
 		} catch (error) {

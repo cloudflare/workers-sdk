@@ -11,6 +11,7 @@ import type {
 } from "../../utils/types";
 import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
 
+
 export interface Env {
 	ASSET_WORKER: Service<AssetWorker>;
 	USER_WORKER: Fetcher;
@@ -75,9 +76,17 @@ export default {
 
 			const maybeSecondRequest = request.clone();
 
+			// Check if this path should be handled by worker first
+			const shouldRunWorkerFirst =
+				config.invoke_user_worker_ahead_of_assets ||
+				(config.worker_first_paths?.some((path) =>
+					url.pathname.startsWith(path)
+				) ??
+					false);
+
 			// User's configuration indicates they want user-Worker to run ahead of any
-			// assets. Do not provide any fallback logic.
-			if (config.invoke_user_worker_ahead_of_assets) {
+			// assets or any assets for this path. Do not provide any fallback logic.
+			if (shouldRunWorkerFirst) {
 				if (!config.has_user_worker) {
 					throw new Error(
 						"Fetch for user worker without having a user worker binding"

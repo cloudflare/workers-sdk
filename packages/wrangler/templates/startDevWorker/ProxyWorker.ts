@@ -108,7 +108,7 @@ export class ProxyWorker implements DurableObject {
 		yield* this.requestQueue;
 	}
 
-	processQueue() {
+	async processQueue() {
 		const { proxyData } = this; // store proxyData at the moment this function was called
 		if (proxyData === undefined) return;
 
@@ -147,6 +147,30 @@ export class ProxyWorker implements DurableObject {
 					headers.set("cookie", `${existing};${value}`);
 				} else {
 					headers.set(key, value);
+				}
+			}
+
+			// Fetch from asset worker first if assetWorkerUrl is present
+			if (proxyData.assetWorkerUrl) {
+				const assetWorkerUrl = new URL(request.url);
+				Object.assign(assetWorkerUrl, proxyData.assetWorkerUrl);
+				const assetResponse = await fetch(assetWorkerUrl.toString(), {
+					headers,
+					method: request.method,
+					body: request.body,
+				});
+				if (assetResponse.headers.get("MF-Worker-First") === "true") {
+					// Forward to user worker
+					const userResponse = await fetch(userWorkerUrl.toString(), {
+						headers,
+						method: request.method,
+						body: request.body,
+					});
+					deferredResponse.resolve(userResponse);
+					continue;
+				} else {
+					deferredResponse.resolve(assetResponse);
+					continue;
 				}
 			}
 
