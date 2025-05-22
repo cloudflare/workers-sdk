@@ -38,6 +38,7 @@ import {
 	Response,
 } from "./http";
 import {
+	ContainerService,
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	DurableObjectClassNames,
@@ -1186,6 +1187,12 @@ export class Miniflare {
 			innerBindings: Worker_Binding[];
 		}[] = [];
 
+		const hasContainers = allWorkerOpts.some(
+			(workerOpts) => workerOpts.containers?.containers !== undefined
+		);
+		if (hasContainers) {
+			new ContainerService();
+		}
 		for (let i = 0; i < allWorkerOpts.length; i++) {
 			const previousWorkerOpts = allPreviousWorkerOpts?.[i];
 			const workerOpts = allWorkerOpts[i];
