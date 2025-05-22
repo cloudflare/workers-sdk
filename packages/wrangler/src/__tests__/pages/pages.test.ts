@@ -220,7 +220,11 @@ describe("pages", () => {
 			await expect(
 				runWrangler("pages dev --script-path=_worker.js -- echo 'hi'")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Could not automatically determine proxy port. Please specify the proxy port with --proxy.]`
+				`
+				[Error: Cannot find module './miniflare-cli/assets'
+				Require stack:
+				- /Users/penalosa/dev/wsdk/packages/wrangler/src/dev.ts]
+			`
 			);
 
 			expect(std.warn).toMatchInlineSnapshot(`
@@ -234,6 +238,14 @@ describe("pages", () => {
 
 				  Build your application to a directory and run the \`wrangler pages dev <directory>\` instead.
 				  This results in a more faithful emulation of production behavior.
+
+
+				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using today's date: 2025-05-22.[0m
+
+				  ❯❯ Add one to your Wrangler configuration file: compatibility_date = \\"2025-05-22\\", or
+				  ❯❯ Pass it in your terminal: wrangler pages dev [<DIRECTORY>] --compatibility-date=2025-05-22
+
+				  See [4mhttps://developers.cloudflare.com/workers/platform/compatibility-dates/[0m for more information.
 
 				"
 			`);

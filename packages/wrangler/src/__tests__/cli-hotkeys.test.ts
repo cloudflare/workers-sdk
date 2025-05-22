@@ -264,7 +264,7 @@ describe("Hot Keys", () => {
 					│  [a] first option │
 					│  [b] second option │
 					│  [c] third option │
-					╰───────────────────────────────────────────────────────╯"
+					╰─────────────────────╯"
 				`);
 				unregisterHotKeys();
 			} finally {

@@ -549,13 +549,13 @@ export function printBindings(
 			title = "Your Worker has access to the following bindings:";
 		}
 
-		let maxValueLength = Math.max(
+		const maxValueLength = Math.max(
 			...output.map((b) =>
 				typeof b.value === "symbol" ? "inherited".length : b.value?.length ?? 0
 			)
 		);
-		let maxNameLength = Math.max(...output.map((b) => b.name.length));
-		let maxTypeLength = Math.max(...output.map((b) => b.type.length));
+		const maxNameLength = Math.max(...output.map((b) => b.name.length));
+		const maxTypeLength = Math.max(...output.map((b) => b.type.length));
 
 		const hasMode = output.some((b) => b.mode);
 		const bindingPrefix = `env.`;
@@ -619,7 +619,7 @@ export function printBindings(
 
 // Exactly the same as String.padEnd, but doesn't miscount ANSI control characters
 function padEndAnsi(str: string, length: number) {
-	return str + " ".repeat(length - stripAnsi(str).length);
+	return str + " ".repeat(Math.max(0, length - stripAnsi(str).length));
 }
 
 /**
