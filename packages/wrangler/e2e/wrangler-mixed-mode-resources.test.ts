@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import path from "node:path";
 import dedent from "ts-dedent";
 import {
@@ -13,26 +14,20 @@ import {
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
-import { WranglerLongLivedCommand } from "./helpers/wrangler";
 import type { RawConfig } from "../src/config";
+import type { WranglerLongLivedCommand } from "./helpers/wrangler";
 
-/**
- * Type for defining test cases for mixed mode resources in Wrangler
- */
 type TestCase<T = void> = {
 	name: string;
 	scriptPath: string;
 	setup?: (helper: WranglerE2ETestHelper) => Promise<T> | T;
 	generateWranglerConfig: (setupResult: T) => RawConfig;
 	expectedResponseMatch: string | RegExp;
-	// Special flag for resources that can work without mixed mode
+	// Flag for resources that can work without mixed mode (just AI)
 	worksWithoutMixedMode?: boolean;
 };
 
-/**
- * Set of test cases for different binding types in mixed mode
- */
-const testCases: TestCase<any>[] = [
+const testCases: TestCase<Record<string, string>>[] = [
 	{
 		name: "Service Binding",
 		scriptPath: "service-binding.js",
@@ -53,15 +48,29 @@ const testCases: TestCase<any>[] = [
           }
         `,
 			});
-			await helper.run(
+			const { stdout } = await helper.run(
 				`wrangler deploy target-worker.js --name ${targetWorkerName} --compatibility-date 2025-01-01`
 			);
+			const match = stdout.match(
+				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+			);
+			assert(match?.groups);
+			const deployedUrl = match.groups.url;
+
+			await vi.waitFor(
+				async () => {
+					const resp = await fetch(deployedUrl);
+					assert(resp.ok && resp.status === 200);
+				},
+				{ interval: 1_000, timeout: 20_000 }
+			);
+
 			onTestFinished(async () => {
 				await helper.run(`wrangler delete --name ${targetWorkerName}`);
 			});
-			return targetWorkerName;
+			return { worker: targetWorkerName };
 		},
-		generateWranglerConfig: (targetWorkerName) => ({
+		generateWranglerConfig: ({ worker: targetWorkerName }) => ({
 			name: "mixed-mode-service-binding-test",
 			main: "service-binding.js",
 			compatibility_date: "2025-01-01",
@@ -108,9 +117,9 @@ const testCases: TestCase<any>[] = [
 			await helper.run(
 				`wrangler kv key put --remote --namespace-id=${ns} test-mixed-mode-key existing-value`
 			);
-			return ns;
+			return { id: ns };
 		},
-		generateWranglerConfig: (namespaceId) => ({
+		generateWranglerConfig: ({ id: namespaceId }) => ({
 			name: "mixed-mode-kv-test",
 			main: "kv.js",
 			compatibility_date: "2025-01-01",
@@ -138,9 +147,9 @@ const testCases: TestCase<any>[] = [
 					`wrangler r2 object delete --remote ${name}/test-mixed-mode-key`
 				);
 			});
-			return name;
+			return { name };
 		},
-		generateWranglerConfig: (bucketName) => ({
+		generateWranglerConfig: ({ name: bucketName }) => ({
 			name: "mixed-mode-r2-test",
 			main: "r2.js",
 			compatibility_date: "2025-01-01",
@@ -196,27 +205,21 @@ describe("Wrangler Mixed Mode E2E Tests", () => {
 		});
 
 		it("works with mixed mode enabled", async () => {
-			// Copy the test workers into the temp directory
 			await helper.seed(
 				path.resolve(__dirname, "./seed-files/mixed-mode-workers")
 			);
 
-			// Set up any resources needed for the test
-			const setupResult = await testCase.setup?.(helper);
+			const setupResult = (await testCase.setup?.(helper)) ?? {};
 
-			// Create the wrangler.json file
 			const wranglerConfig = testCase.generateWranglerConfig(setupResult);
 			await helper.seed({
 				"wrangler.json": JSON.stringify(wranglerConfig, null, 2),
 			});
 
-			// Start the worker with mixed mode enabled
 			const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
 
-			// Wait for the worker to be ready
 			const { url } = await worker.waitForReady();
 
-			// Test that the response contains the expected content
 			const response = await fetchText(url);
 			expect(response).toMatch(testCase.expectedResponseMatch);
 		});
@@ -224,96 +227,86 @@ describe("Wrangler Mixed Mode E2E Tests", () => {
 		it.skipIf(testCase.worksWithoutMixedMode)(
 			"fails when mixed mode is disabled",
 			async () => {
-				// Copy the test workers into the temp directory
 				await helper.seed(
 					path.resolve(__dirname, "./seed-files/mixed-mode-workers")
 				);
 
-				// Set up any resources needed for the test
-				const setupResult = await testCase.setup?.(helper);
+				const setupResult = (await testCase.setup?.(helper)) ?? {};
 
-				// Create the wrangler.json file with remote:true (to ensure it would need mixed mode)
 				const wranglerConfig = testCase.generateWranglerConfig(setupResult);
 				await helper.seed({
 					"wrangler.json": JSON.stringify(wranglerConfig, null, 2),
 				});
 
-				// Start the worker WITHOUT mixed mode flag
 				const worker = helper.runLongLived("wrangler dev");
 
-				// Wait for the worker to be ready
 				const { url } = await worker.waitForReady();
 
-				// Try fetching and validating the response - this should NOT match the expected output
-				// because mixed mode is required for remote:true bindings but not enabled
 				const response = await fetchText(url);
 				expect(response).not.toMatch(testCase.expectedResponseMatch);
 			}
 		);
 	});
 
-	describe.sequential("Sequential mixed mode tests with worker reloads", () => {
-		let worker: WranglerLongLivedCommand;
-		let helper: WranglerE2ETestHelper;
+	describe.only.sequential(
+		"Sequential mixed mode tests with worker reloads",
+		() => {
+			let worker: WranglerLongLivedCommand;
+			let helper: WranglerE2ETestHelper;
 
-		let url: string;
+			let url: string;
 
-		beforeAll(async () => {
-			helper = new WranglerE2ETestHelper();
-			// Copy all the test workers into the temp directory
-			await helper.seed(
-				path.resolve(__dirname, "./seed-files/mixed-mode-workers")
-			);
+			beforeAll(async () => {
+				helper = new WranglerE2ETestHelper();
+				await helper.seed(
+					path.resolve(__dirname, "./seed-files/mixed-mode-workers")
+				);
 
-			// Start with a placeholder wrangler config
-			await helper.seed({
-				"wrangler.json": JSON.stringify(
-					{
-						name: "mixed-mode-sequential-test",
-						main: "placeholder.js",
-						compatibility_date: "2025-01-01",
+				await helper.seed({
+					"wrangler.json": JSON.stringify(
+						{
+							name: "mixed-mode-sequential-test",
+							main: "placeholder.js",
+							compatibility_date: "2025-01-01",
+						},
+						null,
+						2
+					),
+					"placeholder.js":
+						"export default { fetch() { return new Response('Ready to start tests') } }",
+				});
+
+				worker = helper.runLongLived("wrangler dev --x-mixed-mode", {
+					cleanup: false,
+				});
+
+				const ready = await worker.waitForReady();
+				url = ready.url;
+			});
+			afterAll(async () => {
+				await worker.stop();
+			});
+
+			it.each(testCases)("$name", async (testCase) => {
+				console.log(`Testing ${testCase.name} with worker reload...`);
+
+				const setupResult = (await testCase.setup?.(helper)) ?? {};
+
+				const wranglerConfig = testCase.generateWranglerConfig(setupResult);
+				await helper.seed({
+					"wrangler.json": JSON.stringify(wranglerConfig, null, 2),
+				});
+
+				await worker.waitForReload();
+
+				await vi.waitFor(
+					async () => {
+						const response = await fetchText(url);
+						expect(response).toMatch(testCase.expectedResponseMatch);
 					},
-					null,
-					2
-				),
-				"placeholder.js":
-					"export default { fetch() { return new Response('Ready to start tests') } }",
+					{ interval: 1_000, timeout: 20_000 }
+				);
 			});
-
-			// Start the worker with mixed mode enabled
-			worker = helper.runLongLived("wrangler dev --x-mixed-mode", {
-				cleanup: false,
-			});
-
-			// Wait for the worker to be ready
-			const ready = await worker.waitForReady();
-			url = ready.url;
-		});
-		afterAll(async () => {
-			await worker.stop();
-		});
-
-		it.each(testCases)("$name", async (testCase) => {
-			// Run each test case sequentially
-			console.log(`Testing ${testCase.name} with worker reload...`);
-
-			// Get the setup result if it exists
-			const setupResult = await testCase.setup?.(helper);
-
-			// Update the wrangler config for this test case
-			const wranglerConfig = testCase.generateWranglerConfig(setupResult);
-			await helper.seed({
-				"wrangler.json": JSON.stringify(wranglerConfig, null, 2),
-			});
-
-			// Wait for the worker to reload
-			await worker.waitForReload();
-
-			await vi.waitFor(async () => {
-				const response = await fetchText(url);
-				expect(response).toMatch(testCase.expectedResponseMatch);
-			});
-			// Test that the response contains the expected content
-		});
-	});
+		}
+	);
 });
