@@ -11,7 +11,7 @@ import {
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
-import { configFileName, formatConfigSnippet, readConfig } from "./config";
+import { configFileName, formatConfigSnippet } from "./config";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deploy/deploy";
 import { validateNodeCompatMode } from "./deployment-bundle/node-compat";
@@ -24,7 +24,7 @@ import { getFlag } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
 import { getSiteAssetPaths } from "./sites";
-import { loginOrRefreshIfRequired, requireApiToken, requireAuth } from "./user";
+import { requireApiToken, requireAuth } from "./user";
 import {
 	collectKeyValues,
 	collectPlainTextVars,
@@ -309,16 +309,6 @@ export const dev = createCommand({
 		}
 	},
 	async handler(args) {
-		if (args.remote) {
-			const config = await readConfig(args, { hideWarnings: true });
-			const isLoggedIn = await loginOrRefreshIfRequired(config);
-			if (!isLoggedIn) {
-				throw new UserError(
-					"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local."
-				);
-			}
-		}
-
 		const devInstance = await startDev(args);
 		assert(devInstance.devEnv !== undefined);
 		await events.once(devInstance.devEnv, "teardown");

@@ -15,7 +15,11 @@ import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { UserError } from "../../errors";
 import { logger, runWithLogLevel } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
-import { requireApiToken, requireAuth } from "../../user";
+import {
+	loginOrRefreshIfRequired,
+	requireApiToken,
+	requireAuth,
+} from "../../user";
 import {
 	DEFAULT_INSPECTOR_PORT,
 	DEFAULT_LOCAL_PORT,
@@ -56,6 +60,15 @@ async function resolveDevConfig(
 	input: StartDevWorkerInput
 ): Promise<StartDevWorkerOptions["dev"]> {
 	const auth = async () => {
+		if (input.dev?.remote) {
+			const isLoggedIn = await loginOrRefreshIfRequired(config);
+			if (!isLoggedIn) {
+				throw new UserError(
+					"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local."
+				);
+			}
+		}
+
 		if (input.dev?.auth) {
 			return unwrapHook(input.dev.auth, config);
 		}
