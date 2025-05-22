@@ -12,6 +12,7 @@ import path from "node:path";
 import { FSWatcher, watch } from "chokidar";
 import { INBOUND_DO_PROXY_SERVICE_PATH } from "./external-service";
 import { Log } from "./log";
+import { getGlobalWranglerConfigPath } from "./wrangler";
 
 export type WorkerRegistry = Record<string, WorkerDefinition>;
 
@@ -94,7 +95,7 @@ export class DevRegistry {
 	}
 
 	public isEnabled(): boolean {
-		return this.registryPath !== undefined;
+		return this.registryPath !== undefined && this.registryPath !== "";
 	}
 
 	public isDurableObjectProxyEnabled(): boolean {
@@ -273,4 +274,8 @@ export class DevRegistry {
 			}
 		}
 	}
+}
+
+export function getDefaultDevRegistryPath() {
+	return process.env.MINIFLARE_REGISTRY_PATH ?? getGlobalWranglerConfigPath();
 }

@@ -1749,6 +1749,9 @@ importers:
       which:
         specifier: ^2.0.2
         version: 2.0.2
+      xdg-app-paths:
+        specifier: ^8.3.0
+        version: 8.3.0
 
   packages/mock-npm-registry:
     devDependencies:
