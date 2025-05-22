@@ -1,5 +1,11 @@
 # wrangler
 
+## 4.16.1
+
+### Patch Changes
+
+- [#9268](https://github.com/cloudflare/workers-sdk/pull/9268) [`7344344`](https://github.com/cloudflare/workers-sdk/commit/734434418fa9a3826a3568e5890e396452afcefe) Thanks [@gabivlj](https://github.com/gabivlj)! - `wrangler containers delete` handles API errors correctly
+
 ## 4.16.0
 
 ### Minor Changes
