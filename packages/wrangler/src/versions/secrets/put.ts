@@ -12,12 +12,14 @@ import type { WorkerVersion } from "./index";
 
 export const versionsSecretPutCommand = createCommand({
 	metadata: {
+		displayName: "versions secret put",
 		description: "Create or update a secret variable for a Worker",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},
 	behaviour: {
 		printConfigWarnings: false,
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
 	args: {
 		key: {

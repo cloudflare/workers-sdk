@@ -20,6 +20,7 @@ import deploy from "./deploy";
 
 export const deployCommand = createCommand({
 	metadata: {
+		displayName: "deploy",
 		description: "🆙 Deploy a Worker to Cloudflare",
 		owner: "Workers: Deploy and Config",
 		status: "stable",
@@ -222,6 +223,7 @@ export const deployCommand = createCommand({
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 			MIXED_MODE: false,
 		}),
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
 	validateArgs(args) {
 		if (args.nodeCompat) {

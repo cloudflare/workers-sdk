@@ -137,11 +137,15 @@ export const secretNamespace = createNamespace({
 });
 export const secretPutCommand = createCommand({
 	metadata: {
+		displayName: "secret put",
 		description: "Create or update a secret variable for a Worker",
 		status: "stable",
 		owner: "Workers: Deploy and Config",
 	},
 	positionalArgs: ["key"],
+	behaviour: {
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+	},
 	args: {
 		key: {
 			describe: "The variable name to be accessible in the Worker",
@@ -250,11 +254,15 @@ export const secretPutCommand = createCommand({
 
 export const secretDeleteCommand = createCommand({
 	metadata: {
+		displayName: "secret delete",
 		description: "Delete a secret variable from a Worker",
 		status: "stable",
 		owner: "Workers: Deploy and Config",
 	},
 	positionalArgs: ["key"],
+	behaviour: {
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+	},
 	args: {
 		key: {
 			describe: "The variable name to be accessible in the Worker",
@@ -386,11 +394,15 @@ export const secretListCommand = createCommand({
 
 export const secretBulkCommand = createCommand({
 	metadata: {
+		displayName: "secret bulk",
 		description: "Bulk upload secrets for a Worker",
 		status: "stable",
 		owner: "Workers: Deploy and Config",
 	},
 	positionalArgs: ["file"],
+	behaviour: {
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+	},
 	args: {
 		file: {
 			describe: `The file of key-value pairs to upload, as JSON in form {"key": value, ...} or .dev.vars file in the form KEY=VALUE`,

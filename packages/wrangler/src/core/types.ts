@@ -21,6 +21,8 @@ export type DeepFlatten<T> = T extends object
 
 export type Command = `wrangler${string}`;
 export type Metadata = {
+	/** The name of the command to be used for logs */
+	displayName?: string;
 	description: string;
 	status: "experimental" | "alpha" | "private-beta" | "open-beta" | "stable";
 	statusMessage?: string;
@@ -135,6 +137,12 @@ export type CommandDefinition<
 		printResourceLocation?:
 			| ((args?: HandlerArgs<NamedArgDefs>) => boolean)
 			| boolean;
+
+		/**
+		 * If true, check for environments in the wrangler config, if there are some and the user hasn't specified an environment
+		 * using the `-e|--env` cli flag, show a warning suggesting that one should instead be specified.
+		 */
+		warnIfMultipleEnvsConfiguredButNoneSpecified?: boolean;
 	};
 
 	/**

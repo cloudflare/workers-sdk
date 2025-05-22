@@ -11,12 +11,14 @@ import type { WorkerVersion } from "./index";
 
 export const versionsSecretBulkCommand = createCommand({
 	metadata: {
+		displayName: "versions secret bulk",
 		description: "Create or update a secret variable for a Worker",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},
 	behaviour: {
 		printConfigWarnings: false,
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
 	args: {
 		file: {

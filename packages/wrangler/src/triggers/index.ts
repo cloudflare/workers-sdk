@@ -15,6 +15,7 @@ export const triggersNamespace = createNamespace({
 });
 export const triggersDeployCommand = createCommand({
 	metadata: {
+		displayName: "triggers deploy",
 		description: "Updates the triggers of your current deployment",
 		status: "experimental",
 		owner: "Workers: Authoring and Testing",
@@ -48,6 +49,9 @@ export const triggersDeployCommand = createCommand({
 			describe: "Use legacy environments",
 			hidden: true,
 		},
+	},
+	behaviour: {
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
 	async handler(args, { config }) {
 		const assetsOptions = getAssetsOptions({ assets: undefined }, config);

@@ -101,6 +101,7 @@ type Props = {
 
 export const versionsUploadCommand = createCommand({
 	metadata: {
+		displayName: "versions upload",
 		description: "Uploads your Worker code and config as a new Version",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
@@ -266,6 +267,7 @@ export const versionsUploadCommand = createCommand({
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 			MIXED_MODE: false,
 		}),
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
 	handler: async function versionsUploadHandler(args, { config }) {
 		const entry = await getEntry(args, config, "versions upload");

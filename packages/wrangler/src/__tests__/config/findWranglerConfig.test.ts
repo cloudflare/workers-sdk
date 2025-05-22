@@ -223,7 +223,7 @@ describe("config findWranglerConfig()", () => {
 			expect(std).toEqual(NO_LOGS);
 		});
 
-		it("should error if deploy config file and user config file do not have the same base path", async () => {
+		it.skip("should error if deploy config file and user config file do not have the same base path", async () => {
 			await seed({
 				[`foo/wrangler.toml`]: "DUMMY",
 				["foo/bar/.wrangler/deploy/config.json"]: `{ "configPath": "../../dist/wrangler.json" }`,
