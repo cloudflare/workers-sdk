@@ -7,7 +7,7 @@ interface Env {
 
 class ElementHandler {
 	element(element: Element) {
-		element.setInnerContent("New content");
+		element.setInnerContent("Modified content");
 	}
 }
 
@@ -16,12 +16,15 @@ export default {
 		const { origin, pathname } = new URL(request.url);
 
 		switch (pathname) {
-			case "/public-asset": {
+			case "/public-directory-asset": {
 				const response = await env.ASSETS.fetch(
 					new URL("/public-image.svg", origin)
 				);
 				const modifiedResponse = new Response(response.body, response);
-				modifiedResponse.headers.append("additional-header", "public-asset");
+				modifiedResponse.headers.append(
+					"additional-header",
+					"public-directory-asset"
+				);
 
 				return modifiedResponse;
 			}
@@ -35,7 +38,7 @@ export default {
 			case "/imported-asset-url-suffix": {
 				const response = await env.ASSETS.fetch(new URL(importedText, origin));
 				const textContent = await response.text();
-				return new Response(`The text content is "${textContent}".`);
+				return new Response(`The text content is "${textContent}"`);
 			}
 			case "/transformed-html": {
 				const response = await env.ASSETS.fetch(new URL("/html-page", origin));
