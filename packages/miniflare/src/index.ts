@@ -1379,7 +1379,6 @@ export class Miniflare {
 			// Errors on either side
 			serverSocket.on("error", (err) => {
 				this.#log.error(err);
-				clientSocket.write("HTTP/1.1 502 Bad Gateway\r\n\r\n");
 				clientSocket.end();
 			});
 			clientSocket.on("error", () => serverSocket.end());
@@ -1390,12 +1389,10 @@ export class Miniflare {
 				this.#log.debug(
 					`Closing tunnel as service "${serviceName}" was updated`
 				);
-				clientSocket.write("HTTP/1.1 503 Service Unavailable\r\n\r\n");
 				clientSocket.end();
 			});
 		} catch (ex: any) {
 			this.#log.error(ex);
-			clientSocket.write("HTTP/1.1 502 Bad Gateway\r\n\r\n");
 			clientSocket.end();
 		}
 	};
