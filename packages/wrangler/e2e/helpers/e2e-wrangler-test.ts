@@ -49,15 +49,15 @@ export class WranglerE2ETestHelper {
 		wranglerCommand: string,
 		{
 			cwd = this.tmpPath,
-			cleanup = true,
+			stopOnTestFinished = true,
 			...options
-		}: WranglerCommandOptions & { cleanup?: boolean } = {}
+		}: WranglerCommandOptions & { stopOnTestFinished?: boolean } = {}
 	): WranglerLongLivedCommand {
 		const wrangler = new WranglerLongLivedCommand(wranglerCommand, {
 			cwd,
 			...options,
 		});
-		if (cleanup) {
+		if (stopOnTestFinished) {
 			onTestFinished(async () => {
 				await wrangler.stop();
 			});
