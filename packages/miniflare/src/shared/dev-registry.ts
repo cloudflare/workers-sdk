@@ -144,7 +144,7 @@ export class DevRegistry {
 
 	public getExternalServiceAddress(
 		service: string,
-		entrypoint: string | undefined = "default"
+		entrypoint: string
 	): {
 		protocol: "http" | "https";
 		host: string;
