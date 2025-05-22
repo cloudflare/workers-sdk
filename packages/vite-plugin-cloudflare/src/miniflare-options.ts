@@ -4,6 +4,7 @@ import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+	getDefaultDevRegistryPath,
 	kCurrentWorker,
 	Log,
 	LogLevel,
@@ -339,6 +340,12 @@ export function getDevMiniflareOptions(
 								unsafeInspectorProxy: inspectorPort !== false,
 								modulesRoot: miniflareModulesRoot,
 								unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
+								unsafeDirectSockets:
+									environmentName ===
+									resolvedPluginConfig.entryWorkerEnvironmentName
+										? // Expose the default entrypoint of the entry worker on the dev registry
+											[{ entrypoint: undefined }]
+										: [],
 								serviceBindings: {
 									...workerOptions.serviceBindings,
 									...(environmentName ===
@@ -409,6 +416,7 @@ export function getDevMiniflareOptions(
 		log: logger,
 		inspectorPort: inspectorPort === false ? undefined : inspectorPort,
 		unsafeInspectorProxy: inspectorPort !== false,
+		unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));
