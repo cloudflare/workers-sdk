@@ -1,7 +1,7 @@
 import path from "node:path";
 import { dedent } from "ts-dedent";
+import { UserError } from "../errors";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
-import { logger } from "../logger";
 import { getEnvironmentVariableFactory } from "./factory";
 import type { Config } from "../config";
 
@@ -63,17 +63,21 @@ const getCloudflareComplianceRegionFromEnv = getEnvironmentVariableFactory({
  * to tell Wrangler to run in FedRAMP High compliance region mode, rather than "public" mode.
  */
 export const getCloudflareComplianceRegion = (
-	complianceRegion: Config["compliance_region"] | undefined
+	complianceRegionFromConfig: Config["compliance_region"] | undefined
 ) => {
-	if (getCloudflareComplianceRegionFromEnv() && complianceRegion) {
-		logger.once.warn(dedent`
-			The compliance region has been set in two places:
-			 - \`CLOUDFLARE_COMPLIANCE_REGION\` environment variable: \`${getCloudflareComplianceRegionFromEnv()}\`
-			 - \`compliance_region\` configuration property: \`${complianceRegion}\`
-			Using the value from the environment variable: \`${getCloudflareComplianceRegionFromEnv()}\`
+	const complianceRegionFromEnv = getCloudflareComplianceRegionFromEnv();
+	if (
+		complianceRegionFromEnv !== undefined &&
+		complianceRegionFromConfig !== undefined &&
+		complianceRegionFromEnv !== complianceRegionFromConfig
+	) {
+		throw new UserError(dedent`
+			The compliance region has been set to different values in two places:
+			 - \`CLOUDFLARE_COMPLIANCE_REGION\` environment variable: \`${complianceRegionFromEnv}\`
+			 - \`compliance_region\` configuration property: \`${complianceRegionFromConfig}\`
 			`);
 	}
-	return getCloudflareComplianceRegionFromEnv() ?? complianceRegion ?? "public";
+	return complianceRegionFromEnv ?? complianceRegionFromConfig ?? "public";
 };
 
 const getCloudflareApiBaseUrlFromEnv = getEnvironmentVariableFactory({

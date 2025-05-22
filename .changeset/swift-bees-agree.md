@@ -10,7 +10,7 @@ There are two ways to signal to Wrangler to run in this mode:
 - set `"compliance_region": "fedramp_high"` in a Wrangler configuration
 - set `CLOUDFLARE_COMPLIANCE_REGION=fedramp_high` environment variable when running Wrangler
 
-If both are provided then the environment variable overrides the configured value.
+If both are provided and the values do not match then Wrangler will exit with an error.
 
 When in this mode OAuth authentication is not supported.
 It is necessary to authenticate using a Cloudflare API Token acquired from the Cloudflare FedRAMP High dashboard.

@@ -12907,29 +12907,30 @@ export default{
 			await runWrangler("deploy ./index.js");
 		});
 
-		it("should upload to the region set in an env var, overriding any configured value", async () => {
+		it("should error if the region is set in both env var and configured, and they conflict", async () => {
 			vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "public");
-			writeWranglerConfig({
-				compliance_region: "fedramp_high",
-			});
+			writeWranglerConfig({ compliance_region: "fedramp_high" });
+			writeWorkerSource();
+
+			await expect(runWrangler("deploy ./index.js")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The compliance region has been set to different values in two places:
+				 - \`CLOUDFLARE_COMPLIANCE_REGION\` environment variable: \`public\`
+				 - \`compliance_region\` configuration property: \`fedramp_high\`]
+			`);
+		});
+
+		it("should not error if the region is set in both env var and configured, and they are the same", async () => {
+			vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "fedramp_high");
+			writeWranglerConfig({ compliance_region: "fedramp_high" });
 			writeWorkerSource();
 			mockUploadWorkerRequest({
-				expectedBaseUrl: "api.cloudflare.com",
+				expectedBaseUrl: "api.fed.cloudflare.com",
 			});
 			mockSubDomainRequest();
 			mockGetWorkerSubdomain({ enabled: true });
 
 			await runWrangler("deploy ./index.js");
-
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe compliance region has been set in two places:[0m
-
-				   - \`CLOUDFLARE_COMPLIANCE_REGION\` environment variable: \`public\`
-				   - \`compliance_region\` configuration property: \`fedramp_high\`
-				  Using the value from the environment variable: \`public\`
-
-				"
-			`);
 		});
 	});
 });
