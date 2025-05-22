@@ -1,5 +1,6 @@
 import { brandColor, dim, white } from "@cloudflare/cli/colors";
 import chalk from "chalk";
+import stripAnsi from "strip-ansi";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import type { CfTailConsumer, CfWorkerInit } from "../deployment-bundle/worker";
@@ -548,44 +549,34 @@ export function printBindings(
 			title = "Your Worker has access to the following bindings:";
 		}
 
-		let maxNameLength = 0;
-		let maxValueLength = 0;
-		let maxTypeLength = 0;
-		for (const binding of output) {
-			if (
-				typeof binding.value === "string" &&
-				binding.value.length > maxValueLength
-			) {
-				maxValueLength = binding.value.length;
-			} else if (
-				typeof binding.value === "symbol" &&
-				"inherited".length > maxValueLength
-			) {
-				maxValueLength = "inherited".length;
-			}
-			if (binding.type.length > maxTypeLength) {
-				maxTypeLength = binding.type.length;
-			}
-			if (binding.name.length > maxNameLength) {
-				maxNameLength = binding.name.length;
-			}
-		}
+		let maxValueLength = Math.max(
+			...output.map((b) =>
+				typeof b.value === "symbol" ? "inherited".length : b.value?.length ?? 0
+			)
+		);
+		let maxNameLength = Math.max(...output.map((b) => b.name.length));
+		let maxTypeLength = Math.max(...output.map((b) => b.type.length));
+
 		const hasMode = output.some((b) => b.mode);
+		const bindingPrefix = `env.`;
+		const bindingLength =
+			bindingPrefix.length +
+			maxNameLength +
+			" (".length +
+			maxValueLength +
+			")".length;
 		logger.log(title);
 		logger.log(
-			`${dim("Binding".padEnd(maxValueLength + maxNameLength + 3 + 4))}      ${dim("Resource".padEnd(maxTypeLength))}      ${hasMode ? dim("Mode") : ""}`
+			`${padEndAnsi(dim("Binding"), bindingLength)}      ${padEndAnsi(dim("Resource"), maxTypeLength)}      ${hasMode ? dim("Mode") : ""}`
 		);
 		for (const binding of output) {
-			const nameValueLength =
-				4 +
-				binding.name.length +
-				(typeof binding.value === "string"
-					? binding.value?.length + 3
-					: !binding.value
-						? 0
-						: "inherited".length + 3);
+			const bindingString = padEndAnsi(
+				`${white(`env.${binding.name}`)}${binding.value ? ` (${dim(typeof binding.value === "symbol" ? chalk.italic("inherited") : binding.value ?? "")})` : ""}`,
+				bindingLength
+			);
+
 			logger.log(
-				`${white(`env.${binding.name}`)}${binding.value ? ` (${dim(typeof binding.value === "symbol" ? chalk.italic("inherited") : binding.value ?? "")})` : ""}${" ".repeat(Math.max(0, maxNameLength + maxValueLength + 3 + 4 - nameValueLength))}      ${brandColor(binding.type.padEnd(maxTypeLength))}      ${hasMode ? binding.mode : ""}`
+				`${bindingString}      ${brandColor(binding.type.padEnd(maxTypeLength))}      ${hasMode ? binding.mode : ""}`
 			);
 		}
 		logger.log();
@@ -624,6 +615,11 @@ export function printBindings(
 			)
 		);
 	}
+}
+
+// Exactly the same as String.padEnd, but doesn't miscount ANSI control characters
+function padEndAnsi(str: string, length: number) {
+	return str + " ".repeat(length - stripAnsi(str).length);
 }
 
 /**

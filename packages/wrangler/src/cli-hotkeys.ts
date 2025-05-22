@@ -9,7 +9,7 @@ export default function (
 	options: Array<{
 		keys: string[];
 		disabled?: Hook<boolean>;
-		label: Hook<string>;
+		label?: Hook<string>;
 		handler: () => void | Promise<void>;
 	}>
 ) {
@@ -32,7 +32,9 @@ export default function (
 	 */
 	function formatInstructions() {
 		const instructions = options
-			.filter((option) => !unwrapHook(option.disabled))
+			.filter(
+				(option) => !unwrapHook(option.disabled) && option.label !== undefined
+			)
 			.map(({ keys, label }) => `[${keys[0]}] ${dim(unwrapHook(label))}`);
 
 		let stringifiedInstructions = instructions.join(" ");
@@ -45,18 +47,23 @@ export default function (
 		}
 
 		const maxLineLength = Math.max(
-			...stringifiedInstructions.split("\n").map((line) => line.length)
+			...stringifiedInstructions
+				.split("\n")
+				.map((line) => stripAnsi(line).length)
 		);
 
 		stringifiedInstructions = stringifiedInstructions
 			.split("\n")
-			.map((line) => `│  ${line.padEnd(maxLineLength, " ")}  │`)
+			.map(
+				(line) =>
+					`│  ${line + " ".repeat(Math.max(0, maxLineLength - stripAnsi(line).length))}  │`
+			)
 			.join("\n");
 
 		return (
 			`╭──${"─".repeat(maxLineLength)}──╮\n` +
 			stringifiedInstructions +
-			`\n╰──${"─".repeat(length)}──╯`
+			`\n╰──${"─".repeat(maxLineLength)}──╯`
 		);
 	}
 
