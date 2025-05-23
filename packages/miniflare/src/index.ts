@@ -399,7 +399,7 @@ function getExternalServiceEntrypoints(
 ) {
 	const externalServices = new Map<
 		string,
-		Map<string | undefined, "service" | "durableObject" | "tail">
+		Map<string | undefined, "service" | "durableObject">
 	>();
 	const allWorkerNames = allWorkerOpts.map((opts) => opts.core.name);
 	const getEntrypoints = (name: string) => {
@@ -408,7 +408,7 @@ function getExternalServiceEntrypoints(
 		if (!externalService) {
 			externalService = new Map<
 				string | undefined,
-				"durableObject" | "service" | "tail"
+				"durableObject" | "service"
 			>();
 			externalServices.set(name, externalService);
 		}
@@ -514,7 +514,7 @@ function getExternalServiceEntrypoints(
 					};
 
 					const entrypoints = getEntrypoints(serviceName);
-					entrypoints.set(entrypoint, "tail");
+					entrypoints.set(entrypoint, "service");
 				}
 			}
 		}
@@ -1754,12 +1754,12 @@ export class Miniflare {
 		) {
 			const isDurableObjectProxyEnabled =
 				this.#devRegistry.isDurableObjectProxyEnabled();
-			const proxyURL = `http://${loopbackHost}:${loopbackPort}`;
+			const loopbackAddress = `http://${loopbackHost}:${loopbackPort}`;
 			for (const [serviceName, entrypoints] of externalServices) {
 				const service = createExternalService({
 					serviceName,
 					entrypoints,
-					proxyURL,
+					loopbackAddress,
 					isDurableObjectProxyEnabled,
 				});
 				assert(service.name !== undefined);
