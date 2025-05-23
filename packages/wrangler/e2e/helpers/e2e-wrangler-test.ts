@@ -47,15 +47,21 @@ export class WranglerE2ETestHelper {
 
 	runLongLived(
 		wranglerCommand: string,
-		{ cwd = this.tmpPath, ...options }: WranglerCommandOptions = {}
+		{
+			cwd = this.tmpPath,
+			stopOnTestFinished = true,
+			...options
+		}: WranglerCommandOptions & { stopOnTestFinished?: boolean } = {}
 	): WranglerLongLivedCommand {
 		const wrangler = new WranglerLongLivedCommand(wranglerCommand, {
 			cwd,
 			...options,
 		});
-		onTestFinished(async () => {
-			await wrangler.stop();
-		});
+		if (stopOnTestFinished) {
+			onTestFinished(async () => {
+				await wrangler.stop();
+			});
+		}
 		return wrangler;
 	}
 
