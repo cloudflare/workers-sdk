@@ -226,6 +226,10 @@ export const CoreSharedOptionsSchema = z.object({
 	unsafeTriggerHandlers: z.boolean().optional(),
 	// Enable logging requests
 	logRequests: z.boolean().default(true),
+
+	// Path to the root directory for persisting data
+	// Used as the default for all plugins with the plugin name as the subdirectory name
+	defaultPersistRoot: z.string().optional(),
 });
 
 export const CORE_PLUGIN_NAME = "core";

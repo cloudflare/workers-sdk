@@ -74,6 +74,7 @@ export const R2_PLUGIN: Plugin<
 		options,
 		sharedOptions,
 		tmpPath,
+		defaultPersistRoot,
 		log,
 		unsafeStickyBlobs,
 	}) {
@@ -90,7 +91,12 @@ export const R2_PLUGIN: Plugin<
 
 		if (buckets.length > 0) {
 			const uniqueKey = `miniflare-${R2_BUCKET_OBJECT_CLASS_NAME}`;
-			const persistPath = getPersistPath(R2_PLUGIN_NAME, tmpPath, persist);
+			const persistPath = getPersistPath(
+				R2_PLUGIN_NAME,
+				tmpPath,
+				defaultPersistRoot,
+				persist
+			);
 			await fs.mkdir(persistPath, { recursive: true });
 			const storageService: Service = {
 				name: R2_STORAGE_SERVICE_NAME,
@@ -139,6 +145,6 @@ export const R2_PLUGIN: Plugin<
 		return services;
 	},
 	getPersistPath({ r2Persist }, tmpPath) {
-		return getPersistPath(R2_PLUGIN_NAME, tmpPath, r2Persist);
+		return getPersistPath(R2_PLUGIN_NAME, tmpPath, undefined, r2Persist);
 	},
 };

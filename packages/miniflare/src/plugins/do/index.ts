@@ -103,6 +103,7 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 	async getServices({
 		sharedOptions,
 		tmpPath,
+		defaultPersistRoot,
 		durableObjectClassNames,
 		unsafeEphemeralDurableObjects,
 	}) {
@@ -125,6 +126,7 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 		const storagePath = getPersistPath(
 			DURABLE_OBJECTS_PLUGIN_NAME,
 			tmpPath,
+			defaultPersistRoot,
 			sharedOptions.durableObjectsPersist
 		);
 		// `workerd` requires the `disk.path` to exist. Setting `recursive: true`
@@ -145,6 +147,7 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 		return getPersistPath(
 			DURABLE_OBJECTS_PLUGIN_NAME,
 			tmpPath,
+			undefined,
 			durableObjectsPersist
 		);
 	},

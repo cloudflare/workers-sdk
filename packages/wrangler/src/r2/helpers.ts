@@ -5,7 +5,7 @@ import prettyBytes from "pretty-bytes";
 import { fetchGraphqlResult, fetchResult } from "../cfetch";
 import { fetchR2Objects } from "../cfetch/internal";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
-import { buildPersistOptions } from "../dev/miniflare";
+import { getDefaultPersistRoot } from "../dev/miniflare";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getQueue, getQueueById } from "../queues/client";
@@ -385,7 +385,7 @@ export async function usingLocalBucket<T>(
 	) => Promise<T>
 ): Promise<T> {
 	const persist = getLocalPersistencePath(persistTo, config);
-	const persistOptions = buildPersistOptions(persist);
+	const defaultPersistRoot = getDefaultPersistRoot(persist);
 	const mf = new Miniflare({
 		modules: true,
 		// TODO(soon): import `reduceError()` from `miniflare:shared`
@@ -417,7 +417,7 @@ export async function usingLocalBucket<T>(
 				}
 			}
 		}`,
-		...persistOptions,
+		defaultPersistRoot,
 		r2Buckets: { BUCKET: bucketName },
 	});
 	const bucket = await mf.getR2Bucket("BUCKET");

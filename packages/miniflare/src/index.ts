@@ -1293,6 +1293,7 @@ export class Miniflare {
 				workerIndex: i,
 				additionalModules,
 				tmpPath: this.#tmpPath,
+				defaultPersistRoot: sharedOpts.core.defaultPersistRoot,
 				workerNames,
 				loopbackPort,
 				unsafeStickyBlobs,

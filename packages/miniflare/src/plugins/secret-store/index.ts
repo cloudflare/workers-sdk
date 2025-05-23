@@ -67,7 +67,13 @@ export const SECRET_STORE_PLUGIN: Plugin<
 			])
 		);
 	},
-	async getServices({ options, sharedOptions, tmpPath, unsafeStickyBlobs }) {
+	async getServices({
+		options,
+		sharedOptions,
+		tmpPath,
+		defaultPersistRoot,
+		unsafeStickyBlobs,
+	}) {
 		const configs = options.secretsStoreSecrets
 			? Object.values(options.secretsStoreSecrets)
 			: [];
@@ -79,6 +85,7 @@ export const SECRET_STORE_PLUGIN: Plugin<
 		const persistPath = getPersistPath(
 			SECRET_STORE_PLUGIN_NAME,
 			tmpPath,
+			defaultPersistRoot,
 			sharedOptions.secretsStorePersist
 		);
 
@@ -161,5 +168,13 @@ export const SECRET_STORE_PLUGIN: Plugin<
 		});
 
 		return [...services, storageService, objectService];
+	},
+	getPersistPath({ secretsStorePersist }, tmpPath) {
+		return getPersistPath(
+			SECRET_STORE_PLUGIN_NAME,
+			tmpPath,
+			undefined,
+			secretsStorePersist
+		);
 	},
 };

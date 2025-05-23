@@ -99,6 +99,7 @@ export const D1_PLUGIN: Plugin<
 		options,
 		sharedOptions,
 		tmpPath,
+		defaultPersistRoot,
 		log,
 		unsafeStickyBlobs,
 	}) {
@@ -115,7 +116,12 @@ export const D1_PLUGIN: Plugin<
 
 		if (databases.length > 0) {
 			const uniqueKey = `miniflare-${D1_DATABASE_OBJECT_CLASS_NAME}`;
-			const persistPath = getPersistPath(D1_PLUGIN_NAME, tmpPath, persist);
+			const persistPath = getPersistPath(
+				D1_PLUGIN_NAME,
+				tmpPath,
+				defaultPersistRoot,
+				persist
+			);
 			await fs.mkdir(persistPath, { recursive: true });
 
 			const storageService: Service = {
@@ -165,6 +171,6 @@ export const D1_PLUGIN: Plugin<
 		return services;
 	},
 	getPersistPath({ d1Persist }, tmpPath) {
-		return getPersistPath(D1_PLUGIN_NAME, tmpPath, d1Persist);
+		return getPersistPath(D1_PLUGIN_NAME, tmpPath, undefined, d1Persist);
 	},
 };
