@@ -177,7 +177,7 @@ function normalizeDebugLogFilepath(stdout: string): string {
 function removeLocalPort(stdout: string): string {
 	return stdout.replace(
 		/\[wrangler:info\] Ready on (https?):\/\/(.+):\d{4,5}/,
-		"[wrangler:info] Ready on $1://$2:<PORT>"
+		"[wrangler:info] Ready on $1://<HOST>:<PORT>"
 	);
 }
 

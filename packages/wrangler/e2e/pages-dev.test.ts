@@ -127,7 +127,7 @@ describe.sequential("wrangler pages dev", () => {
 			env.TEST_SERVICE (test-worker)                          Worker              local [not connected]
 			Service bindings, Durable Object bindings, and Tail consumers connect to other \`wrangler dev\` processes running locally, with their connection status indicated by [connected] or [not connected]. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development
 			⎔ Starting local server...
-			[wrangler:info] Ready on http://localhost:<PORT>"
+			[wrangler:info] Ready on http://<HOST>:<PORT>"
 		`);
 	});
 
@@ -328,7 +328,7 @@ describe.sequential("wrangler pages dev", () => {
 			env.KV_BINDING_TOML (KV_ID_TOML)         KV Namespace              local
 			env.PAGES ("⚡️ Pages ⚡️")                Environment Variable      local
 			⎔ Starting local server...
-			[wrangler:info] Ready on http://localhost:<PORT>
+			[wrangler:info] Ready on http://<HOST>:<PORT>
 			[wrangler:info] GET / 200 OK (TIMINGS)"
 		`);
 	});
