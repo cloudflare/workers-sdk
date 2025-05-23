@@ -573,6 +573,8 @@ describe.skipIf(frameworkToTest || isQuarantineMode())("help text", () => {
 				        Get started with a Worker that processes background tasks and message batches with Cloudflare Queues
 				      openapi
 				        Get started building a basic API on Workers
+				      workflows-starter
+				        For multi-step applications, that automatically retry, persist state and run for minutes, hours, days or weeks
 				      pre-existing
 				        Fetch a Worker initialized from the Cloudflare dashboard.
 				  --framework=<value>, -f
