@@ -199,7 +199,7 @@ export function getPersistPath(
 
 	// If `persist` is undefined, use either the default path or fallback to the tmpPath
 	if (persist === undefined) {
-		return path.join(defaultPersistRoot ?? tmpPath, pluginName);
+		return defaultPersistRoot === undefined ? memoryishPath : path.join(defaultPersistRoot, pluginName);
 	}
 
 	// Try parse `persist` as a URL
