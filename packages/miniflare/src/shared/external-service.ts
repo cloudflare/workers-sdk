@@ -41,16 +41,12 @@ export function normaliseServiceDesignator(
 	};
 }
 
-export function getProxyFallbackServiceName(service: string) {
-	return `proxy:fallback:${service}`;
-}
-
 export function createProxyFallbackService(
 	serviceName: string,
 	entrypoints: Set<string | undefined>
 ): Service {
 	return {
-		name: getProxyFallbackServiceName(serviceName),
+		name: `proxy:fallback:${serviceName}`,
 		worker: {
 			compatibilityDate: "2025-05-01",
 			modules: [
@@ -185,6 +181,8 @@ export function createOutboundDoProxyService(
 	isProxyEnabled: boolean
 ): Service {
 	return {
+		// The DO plugin will prefix the script name with the user service name
+		// This makes sure it matches the result script name on the worker binding
 		name: getUserServiceName(OUTBOUND_DO_PROXY_SERVICE_NAME),
 		worker: {
 			compatibilityDate: "2025-05-01",
@@ -253,7 +251,7 @@ export function getHttpProxyOptions(
 		// To make sure `request.cf` is set correctly
 		cfBlobHeader: CoreHeaders.CF_BLOB,
 		// Use the service name and entrypoint as the host to proxy RPC calls
-		capnpConnectHost: `${service}:${entrypoint ?? "default"}`,
+		capnpConnectHost: `${encodeURIComponent(service)}:${encodeURIComponent(entrypoint ?? "default")}`,
 		// The headers are injected only for fetch and are used for proxying fetch requests
 		injectRequestHeaders: [
 			{
