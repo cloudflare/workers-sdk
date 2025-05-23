@@ -56,6 +56,7 @@ import {
 	dispatchNamespaceRenameCommand,
 } from "./dispatch-namespace";
 import { docs } from "./docs";
+import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "./environment-variables/misc-variables";
 import {
 	CommandLineArgsError,
 	JsonFriendlyFatalError,
@@ -308,7 +309,7 @@ import { workflowsListCommand } from "./workflows/commands/list";
 import { workflowsTriggerCommand } from "./workflows/commands/trigger";
 import { printWranglerBanner } from "./wrangler-banner";
 import { asJson } from "./yargs-types";
-import type { Config } from "./config";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
 
@@ -1502,13 +1503,15 @@ export async function main(argv: string[]): Promise<void> {
 				logger.log(chalk.yellow(message));
 			}
 			const accountTag = (e as APIError)?.accountTag;
-			let config: Config | undefined;
+			let complianceConfig: ComplianceConfig;
 			try {
-				config = await readConfig(wrangler.arguments, { hideWarnings: true });
+				complianceConfig = await readConfig(wrangler.arguments, {
+					hideWarnings: true,
+				});
 			} catch {
-				config = undefined;
+				complianceConfig = COMPLIANCE_REGION_CONFIG_UNKNOWN;
 			}
-			await whoami(config, accountTag);
+			await whoami(complianceConfig, accountTag);
 		} else if (e instanceof ParseError) {
 			e.notes.push({
 				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",

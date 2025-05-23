@@ -245,18 +245,19 @@ export async function fetchR2Objects(
 /**
  * This is a wrapper STOPGAP for getting the script which returns a raw text response.
  */
-export async function fetchWorker(
+export async function fetchWorkerDefinitionFromDash(
+	complianceConfig: ComplianceConfig,
 	resource: string,
 	bodyInit: RequestInit = {}
 ): Promise<{ entrypoint: string; modules: File[] }> {
-	await requireLoggedIn(undefined);
+	await requireLoggedIn(complianceConfig);
 	const auth = requireApiToken();
 	const headers = cloneHeaders(bodyInit.headers);
 	addAuthorizationHeaderIfUnspecified(headers, auth);
 	addUserAgent(headers);
 
 	let response = await fetch(
-		`${getCloudflareApiBaseUrl(undefined)}${resource}`,
+		`${getCloudflareApiBaseUrl(complianceConfig)}${resource}`,
 		{
 			...bodyInit,
 			headers,

@@ -55,9 +55,21 @@ export const getCloudflareApiEnvironmentFromEnv = getEnvironmentVariableFactory(
 /**
  * The compliance region to use for the API requests.
  */
-export type ComplianceConfig =
-	| Partial<Pick<Config, "compliance_region">>
-	| undefined;
+export type ComplianceConfig = Partial<Pick<Config, "compliance_region">>;
+
+/** Used for commands that explicitly do not support compliance regions other than "public" */
+export const COMPLIANCE_REGION_CONFIG_PUBLIC: ComplianceConfig = {
+	compliance_region: "public",
+};
+
+/**
+ * Used for commands where there is no configuration available and
+ * we rely upon the CLOUDFLARE_COMPLIANCE_REGION environment variable
+ * to determine the compliance region.
+ */
+export const COMPLIANCE_REGION_CONFIG_UNKNOWN: ComplianceConfig = {
+	compliance_region: undefined,
+};
 
 const getCloudflareComplianceRegionFromEnv = getEnvironmentVariableFactory({
 	variableName: "CLOUDFLARE_COMPLIANCE_REGION",

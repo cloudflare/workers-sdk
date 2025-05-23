@@ -433,6 +433,9 @@ interface EnvironmentInheritable {
 
 	/**
 	 * Specify the compliance region mode of the Worker.
+	 *
+	 * Although if the user does not specify a compliance region, the default is `public`,
+	 * it can be set to `undefined` in configuration to delegate to the CLOUDFLARE_COMPLIANCE_REGION environment variable.
 	 */
 	compliance_region: "public" | "fedramp_high" | undefined;
 }

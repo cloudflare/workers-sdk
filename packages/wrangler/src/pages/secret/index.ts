@@ -5,6 +5,7 @@ import { getConfigCache } from "../../config-cache";
 import { findWranglerConfig } from "../../config/config-helpers";
 import { createCommand, createNamespace } from "../../core/create-command";
 import { confirm, prompt } from "../../dialogs";
+import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../../environment-variables/misc-variables";
 import { FatalError } from "../../errors";
 import isInteractive from "../../is-interactive";
 import { logger } from "../../logger";
@@ -85,7 +86,7 @@ async function pagesProject(
 	if (projectName) {
 		try {
 			project = await fetchResult<PagesProject>(
-				undefined,
+				COMPLIANCE_REGION_CONFIG_PUBLIC,
 				`/accounts/${accountId}/pages/projects/${projectName}`
 			);
 		} catch (err) {
@@ -150,7 +151,7 @@ export const pagesSecretPutCommand = createCommand({
 		);
 
 		await fetchResult<PagesProject>(
-			undefined,
+			COMPLIANCE_REGION_CONFIG_PUBLIC,
 			`/accounts/${accountId}/pages/projects/${project.name}`,
 			{
 				method: "PATCH",
@@ -229,7 +230,7 @@ export const pagesSecretBulkCommand = createCommand({
 		);
 		try {
 			await fetchResult<PagesProject>(
-				undefined,
+				COMPLIANCE_REGION_CONFIG_PUBLIC,
 				`/accounts/${accountId}/pages/projects/${project.name}`,
 				{
 					method: "PATCH",
@@ -297,7 +298,7 @@ export const pagesSecretDeleteCommand = createCommand({
 			);
 
 			await fetchResult<PagesProject>(
-				undefined,
+				COMPLIANCE_REGION_CONFIG_PUBLIC,
 				`/accounts/${accountId}/pages/projects/${project.name}`,
 				{
 					method: "PATCH",

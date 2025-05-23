@@ -4,10 +4,13 @@ import TOML from "@iarna/toml";
 import { execa } from "execa";
 import { assertNever } from "./api/startDevWorker/utils";
 import { fetchResult } from "./cfetch";
-import { fetchWorker } from "./cfetch/internal";
+import { fetchWorkerDefinitionFromDash } from "./cfetch/internal";
 import { createCommand } from "./core/create-command";
 import { getDatabaseInfoFromIdOrName } from "./d1/utils";
-import { getC3CommandFromEnv } from "./environment-variables/misc-variables";
+import {
+	COMPLIANCE_REGION_CONFIG_UNKNOWN,
+	getC3CommandFromEnv,
+} from "./environment-variables/misc-variables";
 import { FatalError, UserError } from "./errors";
 import { logger } from "./logger";
 import { readMetricsConfig } from "./metrics/metrics-config";
@@ -89,7 +92,8 @@ export const init = createCommand({
 			const accountId = await requireAuth({});
 			try {
 				await fetchResult<ServiceMetadataRes>(
-					undefined,
+					// `wrangler init` is not run from within a Workers project, so there will be no config file to define the compliance region.
+					COMPLIANCE_REGION_CONFIG_UNKNOWN,
 					`/accounts/${accountId}/workers/services/${args.fromDash}`
 				);
 			} catch (err) {
@@ -235,29 +239,29 @@ async function getWorkerConfig(
 		cronTriggers,
 	] = await Promise.all([
 		fetchResult<WorkerMetadata["bindings"]>(
-			undefined,
+			COMPLIANCE_REGION_CONFIG_UNKNOWN,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}/bindings`
 		),
 		fetchResult<RoutesRes>(
-			undefined,
+			COMPLIANCE_REGION_CONFIG_UNKNOWN,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}/routes?show_zonename=true`
 		),
 		fetchResult<CustomDomainsRes>(
-			undefined,
+			COMPLIANCE_REGION_CONFIG_UNKNOWN,
 			`/accounts/${accountId}/workers/domains/records?page=0&per_page=5&service=${workerName}&environment=${serviceEnvironment}`
 		),
 
 		fetchResult<WorkersDevRes>(
-			undefined,
+			COMPLIANCE_REGION_CONFIG_UNKNOWN,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}/subdomain`
 		),
 
 		fetchResult<ServiceMetadataRes["default_environment"]>(
-			undefined,
+			COMPLIANCE_REGION_CONFIG_UNKNOWN,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${serviceEnvironment}`
 		),
 		fetchResult<CronTriggersRes>(
-			undefined,
+			COMPLIANCE_REGION_CONFIG_UNKNOWN,
 			`/accounts/${accountId}/workers/scripts/${workerName}/schedules`
 		),
 	]).catch((e) => {
@@ -266,7 +270,11 @@ async function getWorkerConfig(
 		);
 	});
 
-	const mappedBindings = await mapBindings(undefined, accountId, bindings);
+	const mappedBindings = await mapBindings(
+		COMPLIANCE_REGION_CONFIG_UNKNOWN,
+		accountId,
+		bindings
+	);
 
 	const durableObjectClassNames = bindings
 		.filter((binding) => binding.type === "durable_object_namespace")
@@ -636,14 +644,14 @@ export async function mapBindings(
 
 export async function downloadWorker(accountId: string, workerName: string) {
 	const serviceMetadata = await fetchResult<ServiceMetadataRes>(
-		undefined,
+		COMPLIANCE_REGION_CONFIG_UNKNOWN,
 		`/accounts/${accountId}/workers/services/${workerName}`
 	);
-
-	const defaultEnvironment = serviceMetadata?.default_environment.environment;
+	const defaultEnvironment = serviceMetadata.default_environment.environment;
 
 	// Use the default environment, assuming it's the most up to date code.
-	const { entrypoint, modules } = await fetchWorker(
+	const { entrypoint, modules } = await fetchWorkerDefinitionFromDash(
+		COMPLIANCE_REGION_CONFIG_UNKNOWN,
 		`/accounts/${accountId}/workers/services/${workerName}/environments/${defaultEnvironment}/content/v2`
 	);
 

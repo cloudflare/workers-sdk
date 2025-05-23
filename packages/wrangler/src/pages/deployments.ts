@@ -2,6 +2,7 @@ import { format as timeagoFormat } from "timeago.js";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
+import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -51,7 +52,7 @@ export const pagesDeploymentListCommand = createCommand({
 		}
 
 		const deployments: Array<Deployment> = await fetchResult(
-			undefined,
+			COMPLIANCE_REGION_CONFIG_PUBLIC,
 			`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
 			{},
 			environment

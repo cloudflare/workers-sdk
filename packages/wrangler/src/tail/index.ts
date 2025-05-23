@@ -146,6 +146,7 @@ export const tailCommand = createCommand({
 		const filters = translateCLICommandToFilterMessage(cliFilters);
 
 		const { tail, expiration, deleteTail } = await createTail(
+			config,
 			accountId,
 			scriptName,
 			filters,

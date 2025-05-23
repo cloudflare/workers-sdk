@@ -346,6 +346,7 @@ export const defaultWranglerConfig: Config = {
 	upload_source_maps: undefined,
 	assets: undefined,
 	observability: { enabled: true },
+	/** The default here is undefined so that we can delegate to the CLOUDFLARE_COMPLIANCE_REGION environment variable. */
 	compliance_region: undefined,
 
 	/** NON-INHERITABLE ENVIRONMENT FIELDS **/

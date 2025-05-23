@@ -8,6 +8,7 @@ import { fetchResult } from "../../cfetch";
 import { readPagesConfig } from "../../config";
 import { shouldCheckFetch } from "../../deployment-bundle/bundle";
 import { validateNodeCompatMode } from "../../deployment-bundle/node-compat";
+import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../../environment-variables/misc-variables";
 import { FatalError } from "../../errors";
 import { logger } from "../../logger";
 import { isNavigatorDefined } from "../../navigator-user-agent";
@@ -148,7 +149,7 @@ export async function deploy({
 
 	// Grab the bindings from the API, we need these for shims and other such hacky inserts
 	const project = await fetchResult<Project>(
-		undefined,
+		COMPLIANCE_REGION_CONFIG_PUBLIC,
 		`/accounts/${accountId}/pages/projects/${projectName}`
 	);
 	let isProduction = true;
@@ -441,7 +442,7 @@ export async function deploy({
 	while (attempts < MAX_DEPLOYMENT_ATTEMPTS) {
 		try {
 			const deploymentResponse = await fetchResult<Deployment>(
-				undefined,
+				COMPLIANCE_REGION_CONFIG_PUBLIC,
 				`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
 				{
 					method: "POST",

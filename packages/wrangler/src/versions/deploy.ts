@@ -234,7 +234,7 @@ export const versionsDeployCommand = createCommand({
  * Prompts the user for confirmation when overwriting the latest deployment, given that it's split.
  */
 export async function confirmLatestDeploymentOverwrite(
-	config: Config | undefined,
+	config: Config,
 	accountId: string,
 	scriptName: string
 ) {
@@ -277,7 +277,7 @@ export async function confirmLatestDeploymentOverwrite(
 }
 
 export async function printLatestDeployment(
-	config: Config | undefined,
+	config: Config,
 	accountId: string,
 	workerName: string,
 	versionCache: VersionCache
@@ -299,7 +299,7 @@ export async function printLatestDeployment(
 }
 
 async function printDeployment(
-	config: Config | undefined,
+	config: Config,
 	accountId: string,
 	workerName: string,
 	deployment: ApiDeployment | undefined,
