@@ -139,6 +139,38 @@ function parseWorkerOptions(
 
 const log = new Log(LogLevel.WARN, { prefix: "vpw" });
 
+function filterTails(
+	tails: WorkerOptions["tails"],
+	userWorkers?: { name?: string }[]
+) {
+	// Only connect the tail consumers that represent Workers that are defined in the Vitest config. Warn that a tail will be omitted otherwise
+	// This _differs from service bindings_ because tail consumers are "optional" in a sense, and shouldn't affect the runtime behaviour of a Worker
+	return tails?.filter((tailService) => {
+		let name: string;
+		if (typeof tailService === "string") {
+			name = tailService;
+		} else if (
+			typeof tailService === "object" &&
+			"name" in tailService &&
+			typeof tailService.name === "string"
+		) {
+			name = tailService.name;
+		} else {
+			// Don't interfere with network-based tail connections (e.g. via the dev registry), or kCurrentWorker
+			return true;
+		}
+		const found = userWorkers?.some((w) => w.name === name);
+
+		if (!found) {
+			log.warn(
+				`Tail consumer "${name}" was not found in your config. Make sure you add it if you'd like to simulate receiving tail events locally.`
+			);
+		}
+
+		return found;
+	});
+}
+
 async function parseCustomPoolOptions(
 	rootPath: string,
 	value: unknown,
@@ -242,6 +274,11 @@ async function parseCustomPoolOptions(
 			workerOptions,
 			options.miniflare as SourcelessWorkerOptions
 		);
+
+		options.miniflare = {
+			...options.miniflare,
+			tails: filterTails(workerOptions.tails, options.miniflare.workers),
+		};
 
 		// Record any Wrangler `define`s
 		options.defines = define;

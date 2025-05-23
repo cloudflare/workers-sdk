@@ -12,4 +12,8 @@
 			"service": "database-service",
 		},
 	],
+	"tail_consumers": [
+		{ "service": "this-tail-does-not-exist" },
+		{ "service": "tail-consumer" },
+	],
 }
