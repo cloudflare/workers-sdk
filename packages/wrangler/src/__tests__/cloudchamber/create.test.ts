@@ -20,6 +20,7 @@ const MOCK_DEPLOYMENTS_COMPLEX_RESPONSE = `
 			    \\"account_id\\": \\"123\\",
 			    \\"vcpu\\": 4,
 			    \\"memory\\": \\"400MB\\",
+			    \\"memory_mib\\": 400,
 			    \\"version\\": 1,
 			    \\"image\\": \\"hello\\",
 			    \\"location\\": {
@@ -39,9 +40,26 @@ function mockDeploymentPost() {
 		http.post(
 			"*/deployments/v2",
 			async ({ request }) => {
-				expect(await request.text()).toBe(
-					`{"image":"hello:world","location":"sfo06","ssh_public_key_ids":[],"environment_variables":[{"name":"HELLO","value":"WORLD"},{"name":"YOU","value":"CONQUERED"}],"vcpu":3,"memory":"400GB","network":{"assign_ipv4":"predefined"}}`
-				);
+				expect(await request.json()).toEqual({
+					image: "hello:world",
+					location: "sfo06",
+					ssh_public_key_ids: [],
+					environment_variables: [
+						{
+							name: "HELLO",
+							value: "WORLD",
+						},
+						{
+							name: "YOU",
+							value: "CONQUERED",
+						},
+					],
+					vcpu: 3,
+					memory_mib: 409600,
+					network: {
+						assign_ipv4: "predefined",
+					},
+				});
 				return HttpResponse.json(MOCK_DEPLOYMENTS_COMPLEX[0]);
 			},
 			{ once: true }
@@ -101,7 +119,7 @@ describe("cloudchamber create", () => {
 			      --all-ssh-keys  To add all SSH keys configured on your account to be added to this deployment, set this option to true  [boolean]
 			      --ssh-key-id    ID of the SSH key to add to the deployment  [array]
 			      --vcpu          Number of vCPUs to allocate to this deployment.  [number]
-			      --memory        Amount of memory (GB, MB...) to allocate to this deployment. Ex: 4GB.  [string]
+			      --memory        Amount of memory (GiB, MiB...) to allocate to this deployment. Ex: 4GiB.  [string]
 			      --ipv4          Include an IPv4 in the deployment  [boolean]"
 		`);
 	});
@@ -183,7 +201,7 @@ describe("cloudchamber create", () => {
 			image: "hello:world",
 			ipv4: true,
 			vcpu: 3,
-			memory: "400GB",
+			memory: "400GiB",
 			location: "sfo06",
 		});
 		// if values are not read by wrangler, this mock won't work
@@ -208,9 +226,26 @@ describe("cloudchamber create", () => {
 			http.post(
 				"*/deployments/v2",
 				async ({ request }) => {
-					expect(await request.text()).toMatchInlineSnapshot(
-						`"{\\"image\\":\\"hello:world\\",\\"location\\":\\"sfo06\\",\\"ssh_public_key_ids\\":[\\"1\\"],\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":40,\\"memory\\":\\"300MB\\",\\"network\\":{\\"assign_ipv4\\":\\"predefined\\"}}"`
-					);
+					expect(await request.json()).toEqual({
+						image: "hello:world",
+						location: "sfo06",
+						ssh_public_key_ids: ["1"],
+						environment_variables: [
+							{
+								name: "HELLO",
+								value: "WORLD",
+							},
+							{
+								name: "YOU",
+								value: "CONQUERED",
+							},
+						],
+						vcpu: 40,
+						memory_mib: 300,
+						network: {
+							assign_ipv4: "predefined",
+						},
+					});
 					return HttpResponse.json(MOCK_DEPLOYMENTS_COMPLEX[0]);
 				},
 				{ once: true }

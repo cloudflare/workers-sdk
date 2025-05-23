@@ -39,9 +39,14 @@ export type ModifyDeploymentV2RequestBody = {
 	 */
 	vcpu?: number;
 	/**
-	 * The new memory that the deployment will have from now on
+	 * Deprecated in favor of memory_mib
+	 * @deprecated
 	 */
 	memory?: MemorySizeWithUnit;
+	/**
+	 * The new memory that the deployment will have from now on
+	 */
+	memory_mib?: number;
 	/**
 	 * The disk configuration for this deployment
 	 */
@@ -54,6 +59,15 @@ export type ModifyDeploymentV2RequestBody = {
 	 * Deployment labels
 	 */
 	labels?: Array<Label>;
+	/**
+	 * Deprecated in favor of gpu_memory_mib
+	 * @deprecated
+	 */
+	gpu_memory?: MemorySizeWithUnit;
+	/**
+	 * Specify the GPU memory to be used for the deployment. (Mandatory for gVisor deployments)
+	 */
+	gpu_memory_mib?: number;
 	command?: Command;
 	entrypoint?: Entrypoint;
 	dns?: DNSConfiguration;
