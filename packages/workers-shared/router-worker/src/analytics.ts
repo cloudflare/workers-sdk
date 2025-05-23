@@ -33,6 +33,8 @@ type Data = {
 	userWorkerAhead?: boolean;
 	// double6 - Routing performed based on the _routes.json (if provided)
 	staticRoutingDecision?: STATIC_ROUTING_DECISION;
+	// double7 - User worker invocation denied due to free tier limiting
+	userWorkerFreeTierLimiting?: boolean;
 
 	// -- Blobs --
 	// blob1 - Hostname of the request
@@ -88,6 +90,7 @@ export class Analytics {
 					? -1
 					: Number(this.data.userWorkerAhead),
 				this.data.staticRoutingDecision ?? STATIC_ROUTING_DECISION.NOT_PROVIDED, // double6
+				this.data.userWorkerFreeTierLimiting ? 1 : 0, // double7
 			],
 			blobs: [
 				this.data.hostname?.substring(0, 256), // blob1 - trim to 256 bytes
