@@ -566,7 +566,7 @@ describe("metrics", () => {
 
 						To configure telemetry globally on this machine, you can run \`wrangler telemetry disable / enable\`.
 						You can override this for individual projects with the environment variable \`WRANGLER_SEND_METRICS=true/false\`.
-						Learn more at https://github.com/cloudflare/workers-sdk/tree/main/telemetry.md
+						Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
 						"
 					`);
 					expect(std.out).not.toContain(
