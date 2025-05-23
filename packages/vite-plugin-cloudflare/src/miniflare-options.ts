@@ -30,22 +30,12 @@ import type { MiniflareOptions, SharedOptions, WorkerOptions } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
 import type { SourcelessWorkerOptions, Unstable_Config } from "wrangler";
 
-type PersistOptions = Pick<
-	SharedOptions,
-	| "cachePersist"
-	| "d1Persist"
-	| "durableObjectsPersist"
-	| "kvPersist"
-	| "r2Persist"
-	| "workflowsPersist"
->;
-
-function getPersistence(
+function getPersistenceRoot(
 	root: string,
 	persistState: PersistState
-): PersistOptions {
+): string | undefined {
 	if (persistState === false) {
-		return {};
+		return;
 	}
 
 	const defaultPersistPath = ".wrangler/state";
@@ -55,14 +45,7 @@ function getPersistence(
 		"v3"
 	);
 
-	return {
-		cachePersist: path.join(persistPath, "cache"),
-		d1Persist: path.join(persistPath, "d1"),
-		durableObjectsPersist: path.join(persistPath, "do"),
-		kvPersist: path.join(persistPath, "kv"),
-		r2Persist: path.join(persistPath, "r2"),
-		workflowsPersist: path.join(persistPath, "workflows"),
-	};
+	return persistPath;
 }
 
 function missingWorkerErrorMessage(workerName: string) {
@@ -416,7 +399,7 @@ export function getDevMiniflareOptions(
 				logger.logWithLevel(LogLevel.ERROR, decoder.decode(error))
 			);
 		},
-		...getPersistence(
+		defaultPersistRoot: getPersistenceRoot(
 			resolvedViteConfig.root,
 			resolvedPluginConfig.persistState
 		),
@@ -614,7 +597,10 @@ export function getPreviewMiniflareOptions(
 				logger.logWithLevel(LogLevel.ERROR, decoder.decode(error))
 			);
 		},
-		...getPersistence(resolvedViteConfig.root, persistState),
+		defaultPersistRoot: getPersistenceRoot(
+			resolvedViteConfig.root,
+			persistState
+		),
 		workers,
 	};
 }

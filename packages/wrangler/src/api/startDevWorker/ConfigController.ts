@@ -15,7 +15,11 @@ import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { UserError } from "../../errors";
 import { logger, runWithLogLevel } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
-import { requireApiToken, requireAuth } from "../../user";
+import {
+	loginOrRefreshIfRequired,
+	requireApiToken,
+	requireAuth,
+} from "../../user";
 import {
 	DEFAULT_INSPECTOR_PORT,
 	DEFAULT_LOCAL_PORT,
@@ -56,6 +60,15 @@ async function resolveDevConfig(
 	input: StartDevWorkerInput
 ): Promise<StartDevWorkerOptions["dev"]> {
 	const auth = async () => {
+		if (input.dev?.remote) {
+			const isLoggedIn = await loginOrRefreshIfRequired(config);
+			if (!isLoggedIn) {
+				throw new UserError(
+					"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local."
+				);
+			}
+		}
+
 		if (input.dev?.auth) {
 			return unwrapHook(input.dev.auth, config);
 		}
@@ -91,7 +104,7 @@ async function resolveDevConfig(
 	if (input.dev?.remote) {
 		const { accountId } = await unwrapHook(auth, config);
 		assert(accountId, "Account ID must be provided for remote dev");
-		await getZoneIdForPreview({ host, routes, accountId });
+		await getZoneIdForPreview(config, { host, routes, accountId });
 	}
 
 	const initialIp = input.dev?.server?.hostname ?? config.dev.ip;
@@ -272,6 +285,7 @@ async function resolveConfig(
 		config: config.configPath,
 		compatibilityDate: getDevCompatibilityDate(config, input.compatibilityDate),
 		compatibilityFlags: input.compatibilityFlags ?? config.compatibility_flags,
+		complianceRegion: input.complianceRegion ?? config.compliance_region,
 		entrypoint: entry.file,
 		projectRoot: entry.projectRoot,
 		bindings,

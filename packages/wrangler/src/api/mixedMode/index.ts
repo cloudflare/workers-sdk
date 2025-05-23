@@ -2,6 +2,7 @@ import path from "node:path";
 import getPort from "get-port";
 import { getBasePath } from "../../paths";
 import { startWorker } from "../startDevWorker";
+import type { Config } from "../../config";
 import type { StartDevWorkerInput, Worker } from "../startDevWorker/types";
 import type { MixedModeConnectionString } from "miniflare";
 
@@ -15,7 +16,9 @@ export type MixedModeSession = Pick<Worker, "ready" | "dispose"> & {
 export async function startMixedModeSession(
 	bindings: BindingsOpt,
 	options?: {
-		auth: NonNullable<StartDevWorkerInput["dev"]>["auth"];
+		auth?: NonNullable<StartDevWorkerInput["dev"]>["auth"];
+		/** If running in a non-public compliance region, set this here. */
+		complianceRegion?: Config["compliance_region"];
 	}
 ): Promise<MixedModeSession> {
 	const proxyServerWorkerWranglerConfig = path.resolve(

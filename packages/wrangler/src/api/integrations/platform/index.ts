@@ -165,6 +165,7 @@ async function getMiniflareOptionsFromConfig(
 
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
 		name: rawConfig.name,
+		complianceRegion: rawConfig.compliance_region,
 		bindings,
 		workerDefinitions,
 		queueConsumers: undefined,
@@ -175,7 +176,7 @@ async function getMiniflareOptionsFromConfig(
 		tails: [],
 	});
 
-	const persistOptions = getMiniflarePersistOptions(options.persist);
+	const defaultPersistRoot = getMiniflarePersistRoot(options.persist);
 
 	const serviceBindings = await getServiceBindings(bindings.services);
 
@@ -193,7 +194,7 @@ async function getMiniflareOptionsFromConfig(
 			},
 			...externalWorkers,
 		],
-		...persistOptions,
+		defaultPersistRoot,
 	};
 
 	return miniflareOptions;
@@ -205,39 +206,19 @@ async function getMiniflareOptionsFromConfig(
  * @param persist The user provided persistence option
  * @returns an object containing the properties to pass to miniflare
  */
-function getMiniflarePersistOptions(
+function getMiniflarePersistRoot(
 	persist: GetPlatformProxyOptions["persist"]
-): Pick<
-	MiniflareOptions,
-	| "kvPersist"
-	| "durableObjectsPersist"
-	| "r2Persist"
-	| "d1Persist"
-	| "workflowsPersist"
-> {
+): string | undefined {
 	if (persist === false) {
 		// the user explicitly asked for no persistance
-		return {
-			kvPersist: false,
-			durableObjectsPersist: false,
-			r2Persist: false,
-			d1Persist: false,
-			workflowsPersist: false,
-		};
+		return;
 	}
 
 	const defaultPersistPath = ".wrangler/state/v3";
-
 	const persistPath =
 		typeof persist === "object" ? persist.path : defaultPersistPath;
 
-	return {
-		kvPersist: `${persistPath}/kv`,
-		durableObjectsPersist: `${persistPath}/do`,
-		r2Persist: `${persistPath}/r2`,
-		d1Persist: `${persistPath}/d1`,
-		workflowsPersist: `${persistPath}/workflows`,
-	};
+	return persistPath;
 }
 
 function deepFreeze<T extends Record<string | number | symbol, unknown>>(
@@ -309,6 +290,7 @@ export function unstable_getMiniflareWorkerOptions(
 	const bindings = getBindings(config, env, true, {});
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
 		name: config.name,
+		complianceRegion: config.compliance_region,
 		bindings,
 		workerDefinitions: null,
 		queueConsumers: config.queues.consumers,

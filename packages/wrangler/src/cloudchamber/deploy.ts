@@ -45,7 +45,12 @@ export async function deployContainers(
 	}
 
 	for (const container of config.containers) {
-		const version = await fetchVersion(accountId, scriptName, versionId);
+		const version = await fetchVersion(
+			config,
+			accountId,
+			scriptName,
+			versionId
+		);
 		const targetDurableObject = version.resources.bindings.find(
 			(durableObject) =>
 				durableObject.type === "durable_object_namespace" &&

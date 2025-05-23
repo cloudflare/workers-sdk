@@ -8,6 +8,7 @@ import { APIError } from "../../parse";
 import { requireAuth } from "../../user";
 import { createDeployment, fetchLatestDeployments, fetchVersion } from "../api";
 import { printLatestDeployment, printVersions } from "../deploy";
+import type { Config } from "../../config";
 import type { VersionId } from "../types";
 
 export const CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE = 10220;
@@ -53,12 +54,12 @@ export const versionsRollbackCommand = createCommand({
 			);
 		}
 
-		await printLatestDeployment(accountId, workerName, new Map());
+		await printLatestDeployment(config, accountId, workerName, new Map());
 
 		const versionId =
 			args.versionId ??
 			(await spinnerWhile({
-				promise: fetchDefaultRollbackVersionId(accountId, workerName),
+				promise: fetchDefaultRollbackVersionId(config, accountId, workerName),
 				startMessage: "Finding latest stable Worker Version to rollback to",
 				endMessage: "",
 			}));
@@ -70,7 +71,12 @@ export const versionsRollbackCommand = createCommand({
 			}
 		);
 
-		const version = await fetchVersion(accountId, workerName, versionId);
+		const version = await fetchVersion(
+			config,
+			accountId,
+			workerName,
+			versionId
+		);
 		cli.warn(
 			`You are about to rollback to Worker Version ${versionId}.\nThis will immediately replace the current deployment and become the active deployment across all your deployed triggers.\nHowever, your local development environment will not be affected by this rollback.\nRolling back to a previous deployment will not rollback any of the bound resources (Durable Object, D1, R2, KV, etc).`,
 			{ multiline: true, shape: cli.shapes.leftT }
@@ -89,7 +95,13 @@ export const versionsRollbackCommand = createCommand({
 
 		logger.log("Performing rollback...");
 		try {
-			await createDeployment(accountId, workerName, rollbackTraffic, message);
+			await createDeployment(
+				config,
+				accountId,
+				workerName,
+				rollbackTraffic,
+				message
+			);
 		} catch (e) {
 			if (
 				e instanceof APIError &&
@@ -113,6 +125,7 @@ export const versionsRollbackCommand = createCommand({
 
 				if (secretConfirmation) {
 					await createDeployment(
+						config,
 						accountId,
 						workerName,
 						rollbackTraffic,
@@ -136,10 +149,15 @@ export const versionsRollbackCommand = createCommand({
 });
 
 async function fetchDefaultRollbackVersionId(
+	config: Config,
 	accountId: string,
 	workerName: string
 ): Promise<VersionId> {
-	const deployments = await fetchLatestDeployments(accountId, workerName);
+	const deployments = await fetchLatestDeployments(
+		config,
+		accountId,
+		workerName
+	);
 
 	// sort by latest first
 	deployments.sort((a, b) => b.created_on.localeCompare(a.created_on));

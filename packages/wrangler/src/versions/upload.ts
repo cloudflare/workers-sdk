@@ -325,7 +325,12 @@ export const versionsUploadCommand = createCommand({
 
 		if (!args.dryRun) {
 			assert(accountId, "Missing account ID");
-			await verifyWorkerMatchesCITag(accountId, name, config.configPath);
+			await verifyWorkerMatchesCITag(
+				config,
+				accountId,
+				name,
+				config.configPath
+			);
 		}
 
 		const { versionId, workerTag, versionPreviewUrl } = await versionsUpload({
@@ -396,6 +401,7 @@ export default async function versionsUpload(props: Props): Promise<{
 					};
 				};
 			}>(
+				config,
 				`/accounts/${accountId}/workers/services/${name}` // TODO(consider): should this be a /versions endpoint?
 			);
 
@@ -627,7 +633,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		// Upload assets if assets is being used
 		const assetsJwt =
 			props.assetsOptions && !props.dryRun
-				? await syncAssets(accountId, props.assetsOptions.directory, scriptName)
+				? await syncAssets(
+						config,
+						accountId,
+						props.assetsOptions.directory,
+						scriptName
+					)
 				: undefined;
 
 		const bindings = getBindings({
@@ -728,7 +739,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						metadata: {
 							has_preview: boolean;
 						};
-					}>(`${workerUrl}/versions`, {
+					}>(config, `${workerUrl}/versions`, {
 						method: "POST",
 						body: workerBundle,
 						headers: await getMetricsUsageHeaders(config.send_metrics),
@@ -827,15 +838,16 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const { previews_enabled: previews_available_on_subdomain } =
 			await fetchResult<{
 				previews_enabled: boolean;
-			}>(`${workerUrl}/subdomain`);
+			}>(config, `${workerUrl}/subdomain`);
 
 		if (previews_available_on_subdomain) {
 			const userSubdomain = await getWorkersDevSubdomain(
+				config,
 				accountId,
 				config.configPath
 			);
 			const shortVersion = versionId.slice(0, 8);
-			versionPreviewUrl = `https://${shortVersion}-${workerName}.${userSubdomain}.workers.dev`;
+			versionPreviewUrl = `https://${shortVersion}-${workerName}.${userSubdomain}`;
 			logger.log(`Version Preview URL: ${versionPreviewUrl}`);
 		}
 	}

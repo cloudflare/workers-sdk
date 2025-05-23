@@ -17,6 +17,7 @@ import {
 	inheritableInLegacyEnvironments,
 	isBoolean,
 	isMutuallyExclusiveWith,
+	isOneOf,
 	isOptionalProperty,
 	isRequiredProperty,
 	isString,
@@ -1455,6 +1456,14 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			"observability",
 			validateObservability,
+			undefined
+		),
+		compliance_region: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"compliance_region",
+			isOneOf("public", "fedramp_high"),
 			undefined
 		),
 	};

@@ -8,6 +8,7 @@ import {
 	uploadMTlsCertificate,
 	uploadMTlsCertificateFromFs,
 } from "../api";
+import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
@@ -168,11 +169,15 @@ describe("wrangler", () => {
 						expires_on: oneYearLater.toISOString(),
 					});
 
-					const cert = await uploadMTlsCertificate(accountId, {
-						certificateChain: "BEGIN CERTIFICATE...",
-						privateKey: "BEGIN PRIVATE KEY...",
-						name: "my_cert",
-					});
+					const cert = await uploadMTlsCertificate(
+						COMPLIANCE_REGION_CONFIG_UNKNOWN,
+						accountId,
+						{
+							certificateChain: "BEGIN CERTIFICATE...",
+							privateKey: "BEGIN PRIVATE KEY...",
+							name: "my_cert",
+						}
+					);
 
 					expect(cert.id).toEqual("1234");
 					expect(cert.issuer).toEqual("example.com...");
@@ -185,11 +190,15 @@ describe("wrangler", () => {
 			describe("uploadMTlsCertificateFromFs", () => {
 				it("should fail to read cert and key files when missing", async () => {
 					await expect(
-						uploadMTlsCertificateFromFs(accountId, {
-							certificateChainFilename: "cert.pem",
-							privateKeyFilename: "key.pem",
-							name: "my_cert",
-						})
+						uploadMTlsCertificateFromFs(
+							COMPLIANCE_REGION_CONFIG_UNKNOWN,
+							accountId,
+							{
+								certificateChainFilename: "cert.pem",
+								privateKeyFilename: "key.pem",
+								name: "my_cert",
+							}
+						)
 					).rejects.toMatchInlineSnapshot(
 						`[ParseError: Could not read file: cert.pem]`
 					);
@@ -204,11 +213,15 @@ describe("wrangler", () => {
 					writeFileSync("cert.pem", "BEGIN CERTIFICATE...");
 					writeFileSync("key.pem", "BEGIN PRIVATE KEY...");
 
-					const cert = await uploadMTlsCertificateFromFs(accountId, {
-						certificateChainFilename: "cert.pem",
-						privateKeyFilename: "key.pem",
-						name: "my_cert",
-					});
+					const cert = await uploadMTlsCertificateFromFs(
+						COMPLIANCE_REGION_CONFIG_UNKNOWN,
+						accountId,
+						{
+							certificateChainFilename: "cert.pem",
+							privateKeyFilename: "key.pem",
+							name: "my_cert",
+						}
+					);
 
 					expect(cert.id).toEqual("1234");
 					expect(cert.issuer).toEqual("example.com...");
@@ -239,7 +252,11 @@ describe("wrangler", () => {
 						},
 					]);
 
-					const certs = await listMTlsCertificates(accountId, {});
+					const certs = await listMTlsCertificates(
+						COMPLIANCE_REGION_CONFIG_UNKNOWN,
+						accountId,
+						{}
+					);
 
 					expect(certs).toHaveLength(2);
 
@@ -264,7 +281,11 @@ describe("wrangler", () => {
 						expires_on: oneYearLater.toISOString(),
 					});
 
-					const cert = await getMTlsCertificate(accountId, "1234");
+					const cert = await getMTlsCertificate(
+						COMPLIANCE_REGION_CONFIG_UNKNOWN,
+						accountId,
+						"1234"
+					);
 
 					expect(cert.id).toEqual("1234");
 					expect(cert.issuer).toEqual("example.com...");
@@ -287,7 +308,11 @@ describe("wrangler", () => {
 						},
 					]);
 
-					const cert = await getMTlsCertificateByName(accountId, "cert one");
+					const cert = await getMTlsCertificateByName(
+						COMPLIANCE_REGION_CONFIG_UNKNOWN,
+						accountId,
+						"cert one"
+					);
 
 					expect(cert.id).toEqual("1234");
 					expect(cert.issuer).toEqual("example.com...");
@@ -300,7 +325,11 @@ describe("wrangler", () => {
 					const mock = mockGetMTlsCertificates([]);
 
 					await expect(
-						getMTlsCertificateByName(accountId, "cert one")
+						getMTlsCertificateByName(
+							COMPLIANCE_REGION_CONFIG_UNKNOWN,
+							accountId,
+							"cert one"
+						)
 					).rejects.toMatchInlineSnapshot(
 						`[Error: certificate not found with name "cert one"]`
 					);
@@ -329,7 +358,11 @@ describe("wrangler", () => {
 					]);
 
 					await expect(
-						getMTlsCertificateByName(accountId, "cert one")
+						getMTlsCertificateByName(
+							COMPLIANCE_REGION_CONFIG_UNKNOWN,
+							accountId,
+							"cert one"
+						)
 					).rejects.toMatchInlineSnapshot(
 						`[Error: multiple certificates found with name "cert one"]`
 					);
@@ -342,7 +375,11 @@ describe("wrangler", () => {
 				test("calls delete mts_certificates endpoint", async () => {
 					const mock = mockDeleteMTlsCertificate();
 
-					await deleteMTlsCertificate(accountId, "1234");
+					await deleteMTlsCertificate(
+						COMPLIANCE_REGION_CONFIG_UNKNOWN,
+						accountId,
+						"1234"
+					);
 
 					expect(mock.calls).toEqual(1);
 				});

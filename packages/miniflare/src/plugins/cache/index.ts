@@ -56,6 +56,7 @@ export const CACHE_PLUGIN: Plugin<
 		options,
 		workerIndex,
 		tmpPath,
+		defaultPersistRoot,
 		unsafeStickyBlobs,
 	}) {
 		const cache = options.cache ?? true;
@@ -100,7 +101,12 @@ export const CACHE_PLUGIN: Plugin<
 			const uniqueKey = `miniflare-${CACHE_OBJECT_CLASS_NAME}`;
 
 			const persist = sharedOptions.cachePersist;
-			const persistPath = getPersistPath(CACHE_PLUGIN_NAME, tmpPath, persist);
+			const persistPath = getPersistPath(
+				CACHE_PLUGIN_NAME,
+				tmpPath,
+				defaultPersistRoot,
+				persist
+			);
 			await fs.mkdir(persistPath, { recursive: true });
 			const storageService: Service = {
 				name: CACHE_STORAGE_SERVICE_NAME,
@@ -148,6 +154,6 @@ export const CACHE_PLUGIN: Plugin<
 		return services;
 	},
 	getPersistPath({ cachePersist }, tmpPath) {
-		return getPersistPath(CACHE_PLUGIN_NAME, tmpPath, cachePersist);
+		return getPersistPath(CACHE_PLUGIN_NAME, tmpPath, undefined, cachePersist);
 	},
 };

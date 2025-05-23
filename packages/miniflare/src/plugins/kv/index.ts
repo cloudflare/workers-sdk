@@ -106,6 +106,7 @@ export const KV_PLUGIN: Plugin<
 		options,
 		sharedOptions,
 		tmpPath,
+		defaultPersistRoot,
 		log,
 		unsafeStickyBlobs,
 	}) {
@@ -122,7 +123,12 @@ export const KV_PLUGIN: Plugin<
 
 		if (services.length > 0) {
 			const uniqueKey = `miniflare-${KV_NAMESPACE_OBJECT_CLASS_NAME}`;
-			const persistPath = getPersistPath(KV_PLUGIN_NAME, tmpPath, persist);
+			const persistPath = getPersistPath(
+				KV_PLUGIN_NAME,
+				tmpPath,
+				defaultPersistRoot,
+				persist
+			);
 			await fs.mkdir(persistPath, { recursive: true });
 			const storageService: Service = {
 				name: KV_STORAGE_SERVICE_NAME,
@@ -178,7 +184,7 @@ export const KV_PLUGIN: Plugin<
 	},
 
 	getPersistPath({ kvPersist }, tmpPath) {
-		return getPersistPath(KV_PLUGIN_NAME, tmpPath, kvPersist);
+		return getPersistPath(KV_PLUGIN_NAME, tmpPath, undefined, kvPersist);
 	},
 };
 

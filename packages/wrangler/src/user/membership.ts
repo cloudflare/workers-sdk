@@ -1,4 +1,5 @@
 import { fetchPagedListResult } from "../cfetch";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 
 /**
  * Body for the list memberships endpoint.
@@ -14,9 +15,14 @@ type MembershipAccountWithRoles = {
  * Checks the membership roles of the caller in the given account.
  * @param account the account to check membership for.
  */
-export async function fetchMembershipRoles(accountTag: string) {
-	const allMemberships =
-		await fetchPagedListResult<MembershipAccountWithRoles>("/memberships");
+export async function fetchMembershipRoles(
+	complianceConfig: ComplianceConfig,
+	accountTag: string
+) {
+	const allMemberships = await fetchPagedListResult<MembershipAccountWithRoles>(
+		complianceConfig,
+		"/memberships"
+	);
 	const membership = allMemberships.find((m) => m.account.id === accountTag);
 	return membership?.roles;
 }

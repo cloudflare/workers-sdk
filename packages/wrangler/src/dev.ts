@@ -24,7 +24,7 @@ import { getFlag } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
 import { getSiteAssetPaths } from "./sites";
-import { loginOrRefreshIfRequired, requireApiToken, requireAuth } from "./user";
+import { requireApiToken, requireAuth } from "./user";
 import {
 	collectKeyValues,
 	collectPlainTextVars,
@@ -306,15 +306,6 @@ export const dev = createCommand({
 			);
 			process.exitCode = 1;
 			return;
-		}
-
-		if (args.remote) {
-			const isLoggedIn = await loginOrRefreshIfRequired();
-			if (!isLoggedIn) {
-				throw new UserError(
-					"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local."
-				);
-			}
 		}
 	},
 	async handler(args) {

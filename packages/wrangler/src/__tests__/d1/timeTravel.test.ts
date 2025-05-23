@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { throwIfDatabaseIsAlpha } from "../../d1/timeTravel/utils";
+import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../../environment-variables/misc-variables";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -71,7 +72,11 @@ describe("time-travel", () => {
 				})
 			);
 			await expect(
-				throwIfDatabaseIsAlpha("1701", "d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06")
+				throwIfDatabaseIsAlpha(
+					COMPLIANCE_REGION_CONFIG_UNKNOWN,
+					"1701",
+					"d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06"
+				)
 			).rejects.toThrowError(
 				"Time travel is not available for alpha D1 databases. You will need to migrate to a new database for access to this feature."
 			);
@@ -107,6 +112,7 @@ describe("time-travel", () => {
 				})
 			);
 			const result = await throwIfDatabaseIsAlpha(
+				COMPLIANCE_REGION_CONFIG_UNKNOWN,
 				"1701",
 				"d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06"
 			);

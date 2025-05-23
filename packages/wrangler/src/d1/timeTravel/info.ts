@@ -36,8 +36,9 @@ export const d1TimeTravelInfoCommand = createCommand({
 		// bookmark
 		const accountId = await requireAuth(config);
 		const db = await getDatabaseByNameOrBinding(config, accountId, database);
-		await throwIfDatabaseIsAlpha(accountId, db.uuid);
+		await throwIfDatabaseIsAlpha(config, accountId, db.uuid);
 		const result = await getBookmarkIdFromTimestamp(
+			config,
 			accountId,
 			db.uuid,
 			timestamp

@@ -6,6 +6,7 @@ import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { getDatabaseByNameOrBinding } from "../utils";
 import { getBookmarkIdFromTimestamp, throwIfDatabaseIsAlpha } from "./utils";
+import type { ComplianceConfig } from "../../environment-variables/misc-variables";
 import type { RestoreBookmarkResponse } from "./types";
 
 export const d1TimeTravelRestoreCommand = createCommand({
@@ -52,11 +53,12 @@ export const d1TimeTravelRestoreCommand = createCommand({
 		// bookmark
 		const accountId = await requireAuth(config);
 		const db = await getDatabaseByNameOrBinding(config, accountId, database);
-		await throwIfDatabaseIsAlpha(accountId, db.uuid);
+		await throwIfDatabaseIsAlpha(config, accountId, db.uuid);
 		const searchParams = new URLSearchParams();
 
 		if (timestamp) {
 			const bookmarkResult = await getBookmarkIdFromTimestamp(
+				config,
 				accountId,
 				db.uuid,
 				timestamp
@@ -68,7 +70,12 @@ export const d1TimeTravelRestoreCommand = createCommand({
 		}
 
 		if (json) {
-			const result = await handleRestore(accountId, db.uuid, searchParams);
+			const result = await handleRestore(
+				config,
+				accountId,
+				db.uuid,
+				searchParams
+			);
 			logger.log(JSON.stringify(result, null, 2));
 		} else {
 			logger.log(`🚧 Restoring database ${database} from bookmark ${searchParams.get(
@@ -79,7 +86,12 @@ export const d1TimeTravelRestoreCommand = createCommand({
 			`);
 			if (await confirm("OK to proceed (y/N)", { defaultValue: false })) {
 				logger.log("⚡️ Time travel in progress...");
-				const result = await handleRestore(accountId, db.uuid, searchParams);
+				const result = await handleRestore(
+					config,
+					accountId,
+					db.uuid,
+					searchParams
+				);
 				logger.log(`✅ Database ${database} restored back to bookmark ${result.bookmark}
 				`);
 				logger.log(
@@ -91,11 +103,13 @@ export const d1TimeTravelRestoreCommand = createCommand({
 });
 
 const handleRestore = async (
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	databaseId: string,
 	searchParams: URLSearchParams
 ) => {
 	return await fetchResult<RestoreBookmarkResponse>(
+		complianceConfig,
 		`/accounts/${accountId}/d1/database/${databaseId}/time_travel/restore?${searchParams.toString()}`,
 		{
 			headers: {

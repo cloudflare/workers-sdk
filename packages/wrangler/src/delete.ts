@@ -9,6 +9,7 @@ import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName } from "./utils/getScriptName";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 
 // Types returned by the /script/{name}/references API
 type ServiceReference = {
@@ -133,19 +134,24 @@ export const deleteCommand = createCommand({
 		if (confirmed) {
 			const needsForceDelete =
 				args.force ||
-				(await checkAndConfirmForceDeleteIfNecessary(scriptName, accountId));
+				(await checkAndConfirmForceDeleteIfNecessary(
+					config,
+					scriptName,
+					accountId
+				));
 			if (needsForceDelete === null) {
 				// null means the user rejected the extra confirmation - return early
 				return;
 			}
 
 			await fetchResult(
+				config,
 				`/accounts/${accountId}/workers/services/${scriptName}`,
 				{ method: "DELETE" },
 				new URLSearchParams({ force: needsForceDelete.toString() })
 			);
 
-			await deleteSiteNamespaceIfExisting(scriptName, accountId);
+			await deleteSiteNamespaceIfExisting(config, scriptName, accountId);
 
 			logger.log("Successfully deleted", scriptName);
 		}
@@ -153,17 +159,18 @@ export const deleteCommand = createCommand({
 });
 
 async function deleteSiteNamespaceIfExisting(
+	complianceConfig: ComplianceConfig,
 	scriptName: string,
 	accountId: string
 ): Promise<void> {
 	const title = `__${scriptName}-workers_sites_assets`;
 	const previewTitle = `__${scriptName}-workers_sites_assets_preview`;
-	const allNamespaces = await listKVNamespaces(accountId);
+	const allNamespaces = await listKVNamespaces(complianceConfig, accountId);
 	const namespacesToDelete = allNamespaces.filter(
 		(ns) => ns.title === title || ns.title === previewTitle
 	);
 	for (const ns of namespacesToDelete) {
-		await deleteKVNamespace(accountId, ns.id);
+		await deleteKVNamespace(complianceConfig, accountId, ns.id);
 		logger.log(`🌀 Deleted asset namespace for Workers Site "${ns.title}"`);
 	}
 }
@@ -212,13 +219,16 @@ function isUsedAsTailConsumer(tailProducers: Tail[]) {
 }
 
 async function checkAndConfirmForceDeleteIfNecessary(
+	complianceConfig: ComplianceConfig,
 	scriptName: string,
 	accountId: string
 ): Promise<boolean | null> {
 	const references = await fetchResult<ServiceReferenceResponse>(
+		complianceConfig,
 		`/accounts/${accountId}/workers/scripts/${scriptName}/references`
 	);
 	const tailProducers = await fetchResult<Tail[]>(
+		complianceConfig,
 		`/accounts/${accountId}/workers/tails/by-consumer/${scriptName}`
 	);
 	const isDependentService =
