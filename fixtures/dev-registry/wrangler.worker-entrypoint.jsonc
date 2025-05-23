@@ -1,0 +1,20 @@
+{
+	"name": "worker-entrypoint",
+	"main": "./workers/worker-entrypoint.ts",
+	"compatibility_date": "2025-05-01",
+	"services": [
+		{
+			"binding": "SERVICE",
+			"service": "module-handlers",
+		},
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "DO",
+				"class_name": "TestObject",
+				"script_name": "durable-object",
+			},
+		],
+	},
+}
