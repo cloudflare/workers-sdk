@@ -1,4 +1,4 @@
-import childProcess, { ChildProcess } from "node:child_process";
+import childProcess from "node:child_process";
 import events from "node:events";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -221,7 +221,7 @@ export async function fetchJson(url: string, info?: RequestInit) {
 export async function waitForReady(proc: Process) {
 	const match = await vi.waitUntil(
 		() => proc.stdout.match(/Local:\s+(http:\/\/localhost:\d+)/),
-		{ interval: 100, timeout: 20_000 }
+		{ interval: 100, timeout: 30_000 }
 	);
 	return match[1];
 }

@@ -326,7 +326,7 @@ function kvNamespaceEntry(
 	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
 ] {
 	const id = getRemoteId(originalId) ?? binding;
-	if (!getFlag("MIXED_MODE") || !remote) {
+	if (!mixedModeConnectionString || !remote) {
 		return [binding, { id }];
 	}
 	return [binding, { id, mixedModeConnectionString }];
@@ -339,7 +339,7 @@ function r2BucketEntry(
 	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
 ] {
 	const id = getRemoteId(bucket_name) ?? binding;
-	if (!getFlag("MIXED_MODE") || !remote) {
+	if (!mixedModeConnectionString || !remote) {
 		return [binding, { id }];
 	}
 	return [binding, { id, mixedModeConnectionString }];
@@ -352,7 +352,7 @@ function d1DatabaseEntry(
 	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
 ] {
 	const id = getRemoteId(preview_database_id ?? database_id) ?? binding;
-	if (!getFlag("MIXED_MODE") || !remote) {
+	if (!mixedModeConnectionString || !remote) {
 		return [binding, { id }];
 	}
 	return [binding, { id, mixedModeConnectionString }];
@@ -373,7 +373,7 @@ function queueProducerEntry(
 		mixedModeConnectionString?: MixedModeConnectionString;
 	},
 ] {
-	if (!getFlag("MIXED_MODE") || !remote) {
+	if (!mixedModeConnectionString || !remote) {
 		return [binding, { queueName, deliveryDelay }];
 	}
 
@@ -403,7 +403,7 @@ function workflowEntry(
 		mixedModeConnectionString?: MixedModeConnectionString;
 	},
 ] {
-	if (!getFlag("MIXED_MODE") || !remote) {
+	if (!mixedModeConnectionString || !remote) {
 		return [
 			binding,
 			{
@@ -519,7 +519,7 @@ export function buildMiniflareBindingOptions(
 
 	const notFoundServices = new Set<string>();
 	for (const service of config.services ?? []) {
-		if (getFlag("MIXED_MODE") && service.remote) {
+		if (mixedModeConnectionString && service.remote) {
 			serviceBindings[service.binding] = {
 				name: service.service,
 				props: service.props,
@@ -743,7 +743,7 @@ export function buildMiniflareBindingOptions(
 
 	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
 	if (bindings.ai?.binding) {
-		if (!getFlag("MIXED_MODE")) {
+		if (!mixedModeConnectionString) {
 			externalWorkers.push({
 				name: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
 				modules: [
@@ -828,7 +828,7 @@ export function buildMiniflareBindingOptions(
 		wasmBindings,
 
 		ai:
-			bindings.ai && getFlag("MIXED_MODE") && mixedModeConnectionString
+			bindings.ai && mixedModeConnectionString && mixedModeConnectionString
 				? {
 						binding: bindings.ai.binding,
 						mixedModeConnectionString,

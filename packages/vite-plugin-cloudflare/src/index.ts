@@ -336,7 +336,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				if (!miniflare) {
 					miniflare = new Miniflare(
-						getDevMiniflareOptions(
+						await getDevMiniflareOptions(
 							resolvedPluginConfig,
 							viteDevServer,
 							inputInspectorPort
@@ -344,7 +344,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					);
 				} else {
 					await miniflare.setOptions(
-						getDevMiniflareOptions(
+						await getDevMiniflareOptions(
 							resolvedPluginConfig,
 							viteDevServer,
 							inputInspectorPort
@@ -400,10 +400,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				);
 
 				const miniflare = new Miniflare(
-					getPreviewMiniflareOptions(
+					await getPreviewMiniflareOptions(
 						vitePreviewServer,
 						workerConfigs,
 						pluginConfig.persistState ?? true,
+						!!pluginConfig.experimental?.mixedMode,
 						inputInspectorPort
 					)
 				);
