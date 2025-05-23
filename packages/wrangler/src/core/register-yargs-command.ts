@@ -1,10 +1,12 @@
 import chalk from "chalk";
 import { fetchResult } from "../cfetch";
-import { readConfig } from "../config";
+import { experimental_readRawConfig, readConfig } from "../config";
 import { defaultWranglerConfig } from "../config/config";
+import { findRedirectedWranglerConfig } from "../config/config-helpers";
 import { FatalError, UserError } from "../errors";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
+import { dedent } from "../utils/dedent";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import { printWranglerBanner } from "../wrangler-banner";
 import { demandSingleValue } from "./helpers";
@@ -149,6 +151,42 @@ function createHandler(def: CommandDefinition) {
 				}
 			}
 
+			const config =
+				def.behaviour?.provideConfig ?? true
+					? readConfig(args, {
+							hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
+							useRedirectIfAvailable:
+								def.behaviour?.useConfigRedirectIfAvailable,
+						})
+					: defaultWranglerConfig;
+
+			if (def.behaviour?.warnIfMultipleEnvsConfiguredButNoneSpecified) {
+				if (!args.env && config.configPath) {
+					const redirectedConfig = findRedirectedWranglerConfig(
+						process.cwd(),
+						config.configPath
+					);
+
+					if (!redirectedConfig || redirectedConfig === config.configPath) {
+						const { rawConfig } = experimental_readRawConfig(
+							{
+								config: config.configPath,
+							},
+							{ hideWarnings: true }
+						);
+						const availableEnvs = Object.keys(rawConfig.env ?? {});
+						if (availableEnvs.length > 0) {
+							logger.warn(
+								dedent`
+									Multiple environments are defined in the Wrangler configuration file, but no target environment was specified for the${def.metadata.displayName ? ` ${def.metadata.displayName}` : ""} command.
+									To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify the target environment using the \`-e|--env\` flag.
+								`
+							);
+						}
+					}
+				}
+			}
+
 			const experimentalFlags = def.behaviour?.overrideExperimentalFlags
 				? def.behaviour?.overrideExperimentalFlags(args)
 				: {
@@ -159,14 +197,7 @@ function createHandler(def: CommandDefinition) {
 
 			await run(experimentalFlags, () =>
 				def.handler(args, {
-					config:
-						def.behaviour?.provideConfig ?? true
-							? readConfig(args, {
-									hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
-									useRedirectIfAvailable:
-										def.behaviour?.useConfigRedirectIfAvailable,
-								})
-							: defaultWranglerConfig,
+					config,
 					errors: { UserError, FatalError },
 					logger,
 					fetchResult,

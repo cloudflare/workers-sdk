@@ -69,7 +69,7 @@ export function findWranglerConfig(
  * @param userConfigPath
  * @returns
  */
-function findRedirectedWranglerConfig(
+export function findRedirectedWranglerConfig(
 	cwd: string,
 	userConfigPath: string | undefined
 ) {

@@ -12,12 +12,14 @@ import type { VersionDetails, WorkerVersion } from "./index";
 
 export const versionsSecretDeleteCommand = createCommand({
 	metadata: {
+		displayName: "versions secret delete",
 		description: "Delete a secret variable from a Worker",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},
 	behaviour: {
 		printConfigWarnings: false,
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
 	args: {
 		key: {
