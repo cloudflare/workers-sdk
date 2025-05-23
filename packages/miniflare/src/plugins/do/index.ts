@@ -48,28 +48,36 @@ export function normaliseDurableObject(
 	>[string]
 ): {
 	className: string;
-	serviceName?: string;
-	enableSql?: boolean;
-	unsafeUniqueKey?: UnsafeUniqueKey;
-	unsafePreventEviction?: boolean;
+	scriptName: string | undefined;
+	serviceName: string | undefined;
+	enableSql: boolean | undefined;
+	unsafeUniqueKey: UnsafeUniqueKey | undefined;
+	unsafePreventEviction: boolean | undefined;
+	mixedModeConnectionString: MixedModeConnectionString | undefined;
 } {
 	const isObject = typeof designator === "object";
 	const className = isObject ? designator.className : designator;
-	const serviceName =
+	const scriptName =
 		isObject && designator.scriptName !== undefined
-			? getUserServiceName(designator.scriptName)
+			? designator.scriptName
 			: undefined;
+	const serviceName = scriptName ? getUserServiceName(scriptName) : undefined;
 	const enableSql = isObject ? designator.useSQLite : undefined;
 	const unsafeUniqueKey = isObject ? designator.unsafeUniqueKey : undefined;
 	const unsafePreventEviction = isObject
 		? designator.unsafePreventEviction
 		: undefined;
+	const mixedModeConnectionString = isObject
+		? designator.mixedModeConnectionString
+		: undefined;
 	return {
 		className,
+		scriptName,
 		serviceName,
 		enableSql,
 		unsafeUniqueKey,
 		unsafePreventEviction,
+		mixedModeConnectionString,
 	};
 }
 

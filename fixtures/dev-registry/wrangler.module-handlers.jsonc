@@ -1,0 +1,21 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "module-handlers",
+	"main": "./workers/module-handlers.ts",
+	"compatibility_date": "2025-05-01",
+	"services": [
+		{
+			"binding": "SERVICE",
+			"service": "worker-entrypoint",
+		},
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "DO",
+				"class_name": "TestObject",
+				"script_name": "durable-object",
+			},
+		],
+	},
+}

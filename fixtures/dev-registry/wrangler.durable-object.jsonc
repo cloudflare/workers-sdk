@@ -1,0 +1,6 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "durable-object",
+	"main": "./workers/durable-object.ts",
+	"compatibility_date": "2025-05-01",
+}
