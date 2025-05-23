@@ -6,6 +6,7 @@ import {
 	CF_ASSETS_IGNORE_FILENAME,
 	HEADERS_FILENAME,
 	REDIRECTS_FILENAME,
+	ROUTES_FILENAME,
 } from "./constants";
 import type { PathOrFileDescriptor } from "node:fs";
 
@@ -77,6 +78,7 @@ export async function createAssetsIgnoreFunction(dir: string) {
 		`/${CF_ASSETS_IGNORE_FILENAME}`,
 		`/${REDIRECTS_FILENAME}`,
 		`/${HEADERS_FILENAME}`,
+		`/${ROUTES_FILENAME}`,
 	];
 
 	let assetsIgnoreFilePresent = false;

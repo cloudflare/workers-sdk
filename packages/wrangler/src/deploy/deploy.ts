@@ -717,6 +717,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							assetConfig: props.assetsOptions.assetConfig,
 							_redirects: props.assetsOptions._redirects,
 							_headers: props.assetsOptions._headers,
+							"_routes.json": props.assetsOptions["_routes.json"],
 						}
 					: undefined,
 			observability: config.observability,

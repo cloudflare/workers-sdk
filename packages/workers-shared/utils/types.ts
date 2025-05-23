@@ -6,11 +6,14 @@ const InternalConfigSchema = z.object({
 	debug: z.boolean().optional(),
 });
 
-const StaticRoutingSchema = z.object({
+export const StaticRoutingSchema = z.object({
 	version: z.literal(1),
 	include: z.array(z.string()),
 	exclude: z.array(z.string()).optional(),
+	description: z.string().optional(),
 });
+
+export type StaticRouting = z.infer<typeof StaticRoutingSchema>;
 
 export const RouterConfigSchema = z.object({
 	invoke_user_worker_ahead_of_assets: z.boolean().optional(),

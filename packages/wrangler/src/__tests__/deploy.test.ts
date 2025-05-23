@@ -4701,10 +4701,16 @@ addEventListener('fetch', event => {});`
 		it("should ignore assets that match patterns in an .assetsignore file in the root of the assets directory", async () => {
 			const redirectsContent = "/foo /bar";
 			const headersContent = "/some-path\nX-Header: Custom-Value";
+			const routesContent = JSON.stringify({
+				version: 1,
+				include: ["/api/*"],
+				exclude: ["/api/asset"],
+			});
 			const assets = [
 				{ filePath: ".assetsignore", content: "*.bak\nsub-dir" },
 				{ filePath: "_redirects", content: redirectsContent },
 				{ filePath: "_headers", content: headersContent },
+				{ filePath: "_routes.json", content: routesContent },
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "file-2.bak", content: "Content of file-2" },
 				{ filePath: "file-3.txt", content: "Content of file-3" },
@@ -4727,6 +4733,7 @@ addEventListener('fetch', event => {});`
 					config: {
 						_headers: headersContent,
 						_redirects: redirectsContent,
+						"_routes.json": routesContent,
 					},
 				},
 				expectedType: "none",
@@ -4892,12 +4899,19 @@ addEventListener('fetch', event => {});`
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should upload _redirects and _headers", async () => {
+		it("should upload _redirects and _headers and _routes.json", async () => {
 			const redirectsContent = "/foo /bar";
 			const headersContent = "/some-path\nX-Header: Custom-Value";
+			const routesContent = JSON.stringify({
+				version: 1,
+				include: ["/api/*"],
+				exclude: ["/api/asset"],
+			});
+
 			const assets = [
 				{ filePath: "_redirects", content: redirectsContent },
 				{ filePath: "_headers", content: headersContent },
+				{ filePath: "_routes.json", content: routesContent },
 				{ filePath: "index.html", content: "<html></html>" },
 			];
 			writeAssets(assets);
@@ -4913,6 +4927,7 @@ addEventListener('fetch', event => {});`
 					config: {
 						_redirects: redirectsContent,
 						_headers: headersContent,
+						"_routes.json": routesContent,
 					},
 				},
 				expectedType: "none",
