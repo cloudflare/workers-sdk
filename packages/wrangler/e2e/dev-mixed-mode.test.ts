@@ -139,7 +139,7 @@ describe("wrangler dev - mixed mode", () => {
 			"Your Worker has access to the following bindings:
 			Binding        Resource      Mode
 			env.AI         AI      remote
-			[wrangler:info] Ready on http://localhost:<PORT>
+			[wrangler:info] Ready on http://<HOST>:<PORT>
 			▲ [WARNING] Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development.
 			⎔ Starting local server...
 			[wrangler:info] GET / 200 OK (TIMINGS)"
