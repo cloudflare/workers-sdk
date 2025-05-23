@@ -168,7 +168,6 @@ export async function patchNonVersionedScriptSettings(
 	const res = await fetchResult<typeof settings>(
 		complianceConfig,
 		`/accounts/${accountId}/workers/scripts/${workerName}/script-settings`,
-
 		{
 			method: "PATCH",
 			headers: { "Content-Type": "application/json" },
