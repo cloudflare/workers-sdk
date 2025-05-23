@@ -67,6 +67,15 @@ const getResponseOrAssetIntent = async (
 		exists
 	);
 
+	env.JAEGER.enterSpan("debug_after_intent", (span) => {
+		span.setTags({
+			pathname: pathname,
+			decodedPathname: decodedPathname,
+			intent: JSON.stringify(intent),
+			configuration: JSON.stringify(configuration),
+		});
+	});
+
 	if (!intent) {
 		const response = proxied ? new NotFoundResponse() : new NoIntentResponse();
 
@@ -96,6 +105,14 @@ const getResponseOrAssetIntent = async (
 
 	const decodedDestination = intent.redirect ?? decodedPathname;
 	const encodedDestination = encodePath(decodedDestination);
+
+	env.JAEGER.enterSpan("debug_after_encodePath", (span) => {
+		span.setTags({
+			pathName: pathname,
+			decodedDestination: decodedDestination,
+			encodedDestination: encodedDestination,
+		});
+	});
 
 	/**
 	 * The canonical path we serve an asset at is the decoded and re-encoded version.
