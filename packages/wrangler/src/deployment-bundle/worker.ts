@@ -407,6 +407,7 @@ export interface CfWorkerInit {
 				assetConfig: AssetConfig;
 				_redirects?: string;
 				_headers?: string;
+				"_routes.json"?: string;
 		  }
 		| undefined;
 	observability: Observability | undefined;

@@ -392,7 +392,7 @@ export type AssetsOptions = {
 	assetConfig: AssetConfig;
 	_redirects?: string;
 	_headers?: string;
-	_routes?: string;
+	"_routes.json"?: string;
 };
 
 export function getAssetsOptions(
@@ -481,6 +481,7 @@ export function getAssetsOptions(
 		// The _redirects, _headers and _routes.json files are parsed in Miniflare in dev and parsing is not required for deploy
 		compatibility_date: config.compatibility_date,
 		compatibility_flags: config.compatibility_flags,
+		has_static_routing: Boolean(_routes),
 	};
 
 	return {
@@ -490,7 +491,7 @@ export function getAssetsOptions(
 		assetConfig,
 		_redirects,
 		_headers,
-		_routes,
+		"_routes.json": _routes,
 	};
 }
 
