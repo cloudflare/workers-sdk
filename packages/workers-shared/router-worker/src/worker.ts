@@ -3,9 +3,13 @@ import { PerformanceTimer } from "../../utils/performance";
 import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics, DISPATCH_TYPE, STATIC_ROUTING_DECISION } from "./analytics";
-import { applyConfigurationDefaults } from "./configuration";
+import {
+	applyEyeballConfigDefaults,
+	applyRouterConfigDefaults,
+} from "./configuration";
 import type AssetWorker from "../../asset-worker";
 import type {
+	EyeballRouterConfig,
 	JaegerTracing,
 	RouterConfig,
 	UnsafePerformanceTimer,
@@ -16,6 +20,7 @@ export interface Env {
 	ASSET_WORKER: Service<AssetWorker>;
 	USER_WORKER: Fetcher;
 	CONFIG: RouterConfig;
+	EYEBALL_CONFIG: EyeballRouterConfig;
 
 	SENTRY_DSN: string;
 	ENVIRONMENT: Environment;
@@ -55,7 +60,8 @@ export default {
 			);
 
 			const hasStaticRouting = env.CONFIG.static_routing !== undefined;
-			const config = applyConfigurationDefaults(env.CONFIG);
+			const config = applyRouterConfigDefaults(env.CONFIG);
+			const eyeballConfig = applyEyeballConfigDefaults(env.EYEBALL_CONFIG);
 
 			const url = new URL(request.url);
 
@@ -77,7 +83,11 @@ export default {
 
 			const maybeSecondRequest = request.clone();
 
-			const routeToUserWorker = async ({ asset }: { asset: "static_routing" | "none" }) => {
+			const routeToUserWorker = async ({
+				asset,
+			}: {
+				asset: "static_routing" | "none";
+			}) => {
 				if (!config.has_user_worker) {
 					throw new Error(
 						"Fetch for user worker without having a user worker binding"
@@ -95,7 +105,11 @@ export default {
 				});
 			};
 
-			const routeToAssets = async ({ asset }: { asset: "static_routing" | "found" | "none" }) => {
+			const routeToAssets = async ({
+				asset,
+			}: {
+				asset: "static_routing" | "found" | "none";
+			}) => {
 				analytics.setData({ dispatchtype: DISPATCH_TYPE.ASSETS });
 				return await env.JAEGER.enterSpan("dispatch_assets", async (span) => {
 					span.setTags({
