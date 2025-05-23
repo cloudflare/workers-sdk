@@ -77,23 +77,74 @@ export default {
 
 			const maybeSecondRequest = request.clone();
 
-			let shouldBlockNonImageResponse = false;
-			if (url.pathname === "/_next/image") {
-				// is a next image
-				const queryURLParam = url.searchParams.get("url");
-				if (queryURLParam && !queryURLParam.startsWith("/")) {
-					// that's a remote resource
-					if (
-						maybeSecondRequest.method !== "GET" ||
-						maybeSecondRequest.headers.get("sec-fetch-dest") !== "image"
-					) {
-						// that was not loaded via a browser's <img> tag
-						shouldBlockNonImageResponse = true;
-						analytics.setData({ abuseMitigationURLHost: queryURLParam });
-					}
-					// otherwise, we're good
+			const routeToUserWorker = async ({
+				asset,
+			}: {
+				asset: "static_routing" | "none";
+			}) => {
+				if (!config.has_user_worker) {
+					throw new Error(
+						"Fetch for user worker without having a user worker binding"
+					);
 				}
-			}
+				analytics.setData({ dispatchtype: DISPATCH_TYPE.WORKER });
+				userWorkerInvocation = true;
+				return env.JAEGER.enterSpan("dispatch_worker", async (span) => {
+					span.setTags({
+						hasUserWorker: true,
+						asset: asset,
+						dispatchType: DISPATCH_TYPE.WORKER,
+					});
+
+					let shouldBlockNonImageResponse = false;
+					if (url.pathname === "/_next/image") {
+						// is a next image
+						const queryURLParam = url.searchParams.get("url");
+						if (queryURLParam && !queryURLParam.startsWith("/")) {
+							// that's a remote resource
+							if (
+								maybeSecondRequest.method !== "GET" ||
+								maybeSecondRequest.headers.get("sec-fetch-dest") !== "image"
+							) {
+								// that was not loaded via a browser's <img> tag
+								shouldBlockNonImageResponse = true;
+								analytics.setData({ abuseMitigationURLHost: queryURLParam });
+							}
+							// otherwise, we're good
+						}
+					}
+
+					if (shouldBlockNonImageResponse) {
+						const resp = await env.USER_WORKER.fetch(maybeSecondRequest);
+						if (
+							!resp.headers.get("content-type")?.startsWith("image/") &&
+							resp.status !== 304
+						) {
+							analytics.setData({ abuseMitigationBlocked: true });
+							return new Response("Blocked", { status: 403 });
+						}
+						return resp;
+					}
+					return env.USER_WORKER.fetch(maybeSecondRequest);
+				});
+			};
+
+			const routeToAssets = async ({
+				asset,
+			}: {
+				asset: "static_routing" | "found" | "none";
+			}) => {
+				analytics.setData({ dispatchtype: DISPATCH_TYPE.ASSETS });
+				return await env.JAEGER.enterSpan("dispatch_assets", async (span) => {
+					span.setTags({
+						hasUserWorker: config.has_user_worker,
+						asset: asset,
+						dispatchType: DISPATCH_TYPE.ASSETS,
+					});
+
+					return env.ASSET_WORKER.fetch(maybeSecondRequest);
+				});
+			};
 
 			if (config.static_routing) {
 				// evaluate "exclude" rules
@@ -107,18 +158,9 @@ export default {
 				) {
 					// direct to asset worker
 					analytics.setData({
-						dispatchtype: DISPATCH_TYPE.ASSETS,
 						staticRoutingDecision: STATIC_ROUTING_DECISION.ROUTED,
 					});
-					return await env.JAEGER.enterSpan("dispatch_assets", async (span) => {
-						span.setTags({
-							hasUserWorker: config.has_user_worker,
-							asset: "static_routing",
-							dispatchType: DISPATCH_TYPE.ASSETS,
-						});
-
-						return env.ASSET_WORKER.fetch(maybeSecondRequest);
-					});
+					return await routeToAssets({ asset: "static_routing" });
 				}
 				// evaluate "include" rules
 				const includeRulesMatcher = generateStaticRoutingRuleMatcher(
@@ -136,30 +178,9 @@ export default {
 					}
 					// direct to user worker
 					analytics.setData({
-						dispatchtype: DISPATCH_TYPE.WORKER,
 						staticRoutingDecision: STATIC_ROUTING_DECISION.ROUTED,
 					});
-					return await env.JAEGER.enterSpan("dispatch_worker", async (span) => {
-						span.setTags({
-							hasUserWorker: true,
-							asset: "static_routing",
-							dispatchType: DISPATCH_TYPE.WORKER,
-						});
-
-						userWorkerInvocation = true;
-						if (shouldBlockNonImageResponse) {
-							const resp = await env.USER_WORKER.fetch(maybeSecondRequest);
-							if (
-								!resp.headers.get("content-type")?.startsWith("image/") &&
-								resp.status !== 304
-							) {
-								analytics.setData({ abuseMitigationBlocked: true });
-								return new Response("Blocked", { status: 403 });
-							}
-							return resp;
-						}
-						return env.USER_WORKER.fetch(maybeSecondRequest);
-					});
+					return await routeToUserWorker({ asset: "static_routing" });
 				}
 
 				analytics.setData({
@@ -172,75 +193,17 @@ export default {
 			// User's configuration indicates they want user-Worker to run ahead of any
 			// assets. Do not provide any fallback logic.
 			if (config.invoke_user_worker_ahead_of_assets) {
-				if (!config.has_user_worker) {
-					throw new Error(
-						"Fetch for user worker without having a user worker binding"
-					);
-				}
-
-				analytics.setData({ dispatchtype: DISPATCH_TYPE.WORKER });
-				return await env.JAEGER.enterSpan("dispatch_worker", async (span) => {
-					span.setTags({
-						hasUserWorker: true,
-						asset: "ignored",
-						dispatchType: DISPATCH_TYPE.WORKER,
-					});
-
-					userWorkerInvocation = true;
-					if (shouldBlockNonImageResponse) {
-						const resp = await env.USER_WORKER.fetch(maybeSecondRequest);
-						if (
-							!resp.headers.get("content-type")?.startsWith("image/") &&
-							resp.status !== 304
-						) {
-							analytics.setData({ abuseMitigationBlocked: true });
-							return new Response("Blocked", { status: 403 });
-						}
-						return resp;
-					}
-					return env.USER_WORKER.fetch(maybeSecondRequest);
-				});
+				return await routeToUserWorker({ asset: "static_routing" });
 			}
 
 			// If we have a user-Worker, but no assets, dispatch to Worker script
 			const assetsExist = await env.ASSET_WORKER.unstable_canFetch(request);
 			if (config.has_user_worker && !assetsExist) {
-				analytics.setData({ dispatchtype: DISPATCH_TYPE.WORKER });
-
-				return await env.JAEGER.enterSpan("dispatch_worker", async (span) => {
-					span.setTags({
-						hasUserWorker: config.has_user_worker,
-						asset: assetsExist,
-						dispatchType: DISPATCH_TYPE.WORKER,
-					});
-
-					userWorkerInvocation = true;
-					if (shouldBlockNonImageResponse) {
-						const resp = await env.USER_WORKER.fetch(maybeSecondRequest);
-						if (
-							!resp.headers.get("content-type")?.startsWith("image/") &&
-							resp.status !== 304
-						) {
-							analytics.setData({ abuseMitigationBlocked: true });
-							return new Response("Blocked", { status: 403 });
-						}
-						return resp;
-					}
-					return env.USER_WORKER.fetch(maybeSecondRequest);
-				});
+				return await routeToUserWorker({ asset: "none" });
 			}
 
 			// Otherwise, we either don't have a user worker, OR we have matching assets and should fetch from the assets binding
-			analytics.setData({ dispatchtype: DISPATCH_TYPE.ASSETS });
-			return await env.JAEGER.enterSpan("dispatch_assets", async (span) => {
-				span.setTags({
-					hasUserWorker: config.has_user_worker,
-					asset: assetsExist,
-					dispatchType: DISPATCH_TYPE.ASSETS,
-				});
-
-				return env.ASSET_WORKER.fetch(maybeSecondRequest);
-			});
+			return await routeToAssets({ asset: assetsExist ? "found" : "none" });
 		} catch (err) {
 			if (userWorkerInvocation) {
 				// Don't send user Worker errors to sentry; we have no way to distinguish between
