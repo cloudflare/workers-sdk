@@ -10,7 +10,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { FSWatcher, watch } from "chokidar";
-import { INTERNAL_DO_PROXY_SERVICE_PATH } from "./external-service";
+import { INBOUND_DO_PROXY_SERVICE_PATH } from "./external-service";
 import { Log } from "./log";
 
 export type WorkerRegistry = Record<string, WorkerDefinition>;
@@ -199,7 +199,7 @@ export class DevRegistry {
 		) {
 			return {
 				...target,
-				path: `/${INTERNAL_DO_PROXY_SERVICE_PATH}`,
+				path: `/${INBOUND_DO_PROXY_SERVICE_PATH}`,
 			};
 		}
 
