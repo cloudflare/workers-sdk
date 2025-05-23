@@ -50,7 +50,7 @@
 		"sharp": "^0.33.5",
 		"stoppable": "1.1.0",
 		"undici": "catalog:default",
-		"workerd": "1.20250520.0",
+		"workerd": "1.20250523.0",
 		"ws": "catalog:default",
 		"youch": "3.3.4",
 		"zod": "3.22.3"
@@ -59,7 +59,7 @@
 		"@ava/typescript": "^4.1.0",
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250520.0",
+		"@cloudflare/workers-types": "^4.20250523.0",
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@microsoft/api-extractor": "7.49.1",
 		"@types/debug": "^4.1.7",
