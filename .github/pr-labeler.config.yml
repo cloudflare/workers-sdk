@@ -1,13 +1,48 @@
 e2e:
   - any:
       - changed-files:
-          - any-glob-to-any-file: "packages/wrangler/e2e/**/*"
+          - any-glob-to-any-file:
+              [
+                "packages/wrangler/**/*",
+                "packages/miniflare/**/*",
+                "packages/vite-plugin-cloudflare/**/*",
+                "packages/create-cloudflare/**/*",
+                "packages/vitest-pool-workers/**/*",
+              ]
       - head-branch: "changeset-release/main"
 
 c3-e2e:
   - any:
       - changed-files:
-          - any-glob-to-any-file: "packages/create-cloudflare/e2e-tests/**/*"
-          - any-glob-to-any-file: "packages/create-cloudflare/templates/**/*"
-          - any-glob-to-any-file: "packages/create-cloudflare/templates-experimental/**/*"
+          - any-glob-to-any-file:
+              [
+                "packages/wrangler/**/*",
+                "packages/miniflare/**/*",
+                "packages/create-cloudflare/**/*",
+              ]
+      - head-branch: "changeset-release/main"
+skip-v3-pr:
+  - any:
+      - changed-files:
+          - any-globs-to-all-files:
+              [
+                "packages/create-cloudflare/**/*",
+                "packages/vitest-pool-workers/**/*",
+                "packages/vite-plugin-cloudflare/**/*",
+                "packages/chrome-devtools-patches/**/*",
+                "packages/cloudflare-workers-bindings-extension/**/*",
+                "packages/devprod-status-bot/**/*",
+                "packages/edge-preview-authenticated-proxy/**/*",
+                "packages/format-errors/**/*",
+                "packages/playground-preview-worker/**/*",
+                "packages/prerelease-registry/**/*",
+                "packages/quick-edit/**/*",
+                "packages/quick-edit-extension/**/*",
+                "packages/solarflare-theme/**/*",
+                "packages/turbo-r2-archive/**/*",
+                "packages/workers-editor-shared/**/*",
+                "packages/workers-playground/**/*",
+                "packages/workers-tsconfig/**/*",
+                "packages/workers.new/**/*",
+              ]
       - head-branch: "changeset-release/main"
