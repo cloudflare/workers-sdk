@@ -19,6 +19,13 @@ export const RouterConfigSchema = z.object({
 	...InternalConfigSchema.shape,
 });
 
+export const EyeballRouterConfigSchema = z.union([
+	z.object({
+		limitedAssetsOnly: z.boolean().optional(),
+	}),
+	z.null(),
+]);
+
 const MetadataStaticRedirectEntry = z.object({
 	status: z.number(),
 	to: z.string(),
@@ -78,6 +85,7 @@ export const AssetConfigSchema = z.object({
 	...InternalConfigSchema.shape,
 });
 
+export type EyeballRouterConfig = z.infer<typeof EyeballRouterConfigSchema>;
 export type RouterConfig = z.infer<typeof RouterConfigSchema>;
 export type AssetConfig = z.infer<typeof AssetConfigSchema>;
 
