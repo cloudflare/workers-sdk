@@ -39,6 +39,7 @@ export type ModifyDeploymentV2RequestBody = {
 	 */
 	vcpu?: number;
 	/**
+	 * Deprecated in favor of memory_mib
 	 * @deprecated
 	 */
 	memory?: MemorySizeWithUnit;
@@ -59,6 +60,7 @@ export type ModifyDeploymentV2RequestBody = {
 	 */
 	labels?: Array<Label>;
 	/**
+	 * Deprecated in favor of gpu_memory_mib
 	 * @deprecated
 	 */
 	gpu_memory?: MemorySizeWithUnit;

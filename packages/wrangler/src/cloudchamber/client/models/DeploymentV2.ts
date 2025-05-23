@@ -63,6 +63,7 @@ export type DeploymentV2 = {
 	 */
 	vcpu: number;
 	/**
+	 * Deprecated in favor of memory_mib
 	 * @deprecated
 	 */
 	memory: MemorySizeWithUnit;
@@ -80,6 +81,7 @@ export type DeploymentV2 = {
 	disk?: Disk;
 	network?: Network;
 	/**
+	 * Deprecated in favor of gpu_memory_mib
 	 * @deprecated
 	 */
 	gpu_memory?: MemorySizeWithUnit;

@@ -36,6 +36,7 @@ export type UserDeploymentConfiguration = {
 	 */
 	vcpu?: number;
 	/**
+	 * Deprecated in favor of memory_mib
 	 * @deprecated
 	 */
 	memory?: MemorySizeWithUnit;
@@ -57,6 +58,7 @@ export type UserDeploymentConfiguration = {
 	labels?: Array<Label>;
 	network?: NetworkParameters;
 	/**
+	 * Deprecated in favor of gpu_memory_mib
 	 * @deprecated
 	 */
 	gpu_memory?: MemorySizeWithUnit;

@@ -42,6 +42,7 @@ export type ApplicationJob = {
 	 */
 	memory_mb: number;
 	/**
+	 * Deprecated in favor of memory_mib
 	 * @deprecated
 	 */
 	memory: MemorySizeWithUnit;

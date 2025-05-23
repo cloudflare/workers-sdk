@@ -28,6 +28,7 @@ export type CreateApplicationJobRequest = {
 	vcpu?: number;
 	/**
 	 * Allocate memory for this job. It defaults to the application configuration's vCPU setting, and if that is not specified, it uses the account defaults.
+	 * Deprecated in favor of memory_mib
 	 * @deprecated
 	 */
 	memory?: MemorySizeWithUnit;
