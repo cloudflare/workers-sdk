@@ -7,6 +7,7 @@ import {
 	applyEyeballConfigDefaults,
 	applyRouterConfigDefaults,
 } from "./configuration";
+import limitedResponse from "./limited-response.html";
 import type AssetWorker from "../../asset-worker";
 import type {
 	EyeballRouterConfig,
@@ -92,6 +93,15 @@ export default {
 					throw new Error(
 						"Fetch for user worker without having a user worker binding"
 					);
+				}
+				if (eyeballConfig.limitedAssetsOnly) {
+					analytics.setData({ userWorkerFreeTierLimiting: true });
+					return new Response(limitedResponse, {
+						status: 429,
+						headers: {
+							"Content-Type": "text/html",
+						},
+					});
 				}
 				analytics.setData({ dispatchtype: DISPATCH_TYPE.WORKER });
 				userWorkerInvocation = true;
