@@ -450,6 +450,7 @@ describe("parseByteSize", () => {
 		const cases: [string, number][] = [
 			["3", 3],
 			["3B", 3],
+			["3b", 3],
 			["1.3Kb", 1300],
 			["1.3kib", 1331],
 			["42MB", 42_000_000],
@@ -457,10 +458,10 @@ describe("parseByteSize", () => {
 			["0.8MB", 800_000],
 			["0.8MiB", 838_860],
 			["2 GB", 2_000_000_000],
+			["2 giB", 2_147_483_648],
 
 			// If the b/ib suffix is omitted, assume non-binary units
 			["2G", 2_000_000_000],
-			["2 giB", 2_147_483_648],
 			["2T", 2_000_000_000_000],
 			["2P", 2_000_000_000_000_000],
 		];
@@ -476,5 +477,7 @@ describe("parseByteSize", () => {
 		expect(parseByteSize("B")).toBeNaN();
 		expect(parseByteSize("iB")).toBeNaN();
 		expect(parseByteSize(".B")).toBeNaN();
+		expect(parseByteSize("3iB")).toBeNaN();
+		expect(parseByteSize("3ib")).toBeNaN();
 	});
 });

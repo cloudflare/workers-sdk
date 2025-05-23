@@ -389,6 +389,11 @@ export function parseByteSize(
 	}
 
 	const binary = match[3].toLowerCase() == "ib";
+	if (binary && unit.length === 0) {
+		// Plain "ib" without a size unit is invalid
+		return NaN;
+	}
+
 	const pow = sizeUnits[unit as keyof typeof sizeUnits] || 0;
 
 	return Math.floor(
