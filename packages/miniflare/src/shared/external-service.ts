@@ -47,8 +47,8 @@ export function getExternalServiceName(service: string) {
 
 export function createExternalService(options: {
 	serviceName: string;
-	entrypoints: Map<string | undefined, "service" | "durableObject" | "tail">;
-	proxyURL: string;
+	entrypoints: Map<string | undefined, "service" | "durableObject">;
+	loopbackAddress: string;
 	isDurableObjectProxyEnabled: boolean;
 }): Service {
 	return {
@@ -95,6 +95,11 @@ export function createExternalService(options: {
                                     return new Response(message, { status: 503 });
                                 };
 
+								// For tail handler support
+								klass.prototype.tail = function(events) {
+                                    // no-op
+                                };
+
                                 return klass;
                             }
 
@@ -120,31 +125,17 @@ export function createExternalService(options: {
 
                                 return klass;
                             }
-
-                            function createFallbackTailHandler({ service, entrypoint }) {
-                                return {
-                                    fetch() {
-                                        const message = \`Couldn't find a local dev session for the "\${entrypoint}" entrypoint of service "\${service}" to proxy to\`;
-                                        return new Response(message, { status: 503 });
-                                    },
-                                    tail(events) {
-                                        // No-op
-                                    }
-                                };
-                            }
                         `,
 						...Array.from(options.entrypoints).map(
 							([entrypoint = "default", type]) => {
 								const service = options.serviceName;
-								const proxyURL = options.proxyURL;
+								const proxyURL = options.loopbackAddress;
 
 								switch (type) {
 									case "service":
 										return `export ${entrypoint === "default" ? "default" : `const ${entrypoint} =`} createFallbackWorkerEntrypointClass({ service: "${service}", entrypoint: "${entrypoint}" });`;
 									case "durableObject":
 										return `export const ${entrypoint} = createProxyDurableObjectClass({ scriptName: "${service}", className: "${entrypoint}", proxyUrl: "${proxyURL}" });`;
-									case "tail":
-										return `export ${entrypoint === "default" ? "default" : `const ${entrypoint} =`} createFallbackTailHandler({ service: "${service}", entrypoint: "${entrypoint}" });`;
 									default:
 										throw new Error(
 											`Unsupported entrypoint type "${type}" for external service "${service}" `
