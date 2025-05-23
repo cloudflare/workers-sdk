@@ -321,6 +321,9 @@ describe.sequential("wrangler pages dev", () => {
 		const text = await fetchText(url);
 
 		expect(text).toBe("⚡️ Pages ⚡️ supports wrangler.toml");
+
+		await worker.readUntil(/GET \/ 200 OK/);
+
 		expect(normalizeOutput(worker.currentOutput)).toMatchInlineSnapshot(`
 			"✨ Compiled Worker successfully
 			Your Worker has access to the following bindings:
