@@ -113,7 +113,6 @@ import {
 	getHttpProxyOptions,
 	getOutboundDoProxyClassName,
 	getProtocol,
-	getProxyFallbackServiceName,
 	getProxyFallbackServiceSocketName,
 	INBOUND_DO_PROXY_SERVICE_NAME,
 	INBOUND_DO_PROXY_SERVICE_PATH,

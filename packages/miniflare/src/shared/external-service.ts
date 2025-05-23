@@ -41,16 +41,12 @@ export function normaliseServiceDesignator(
 	};
 }
 
-export function getProxyFallbackServiceName(service: string) {
-	return `proxy:fallback:${service}`;
-}
-
 export function createProxyFallbackService(
 	serviceName: string,
 	entrypoints: Set<string | undefined>
 ): Service {
 	return {
-		name: getProxyFallbackServiceName(serviceName),
+		name: `proxy:fallback:${serviceName}`,
 		worker: {
 			compatibilityDate: "2025-05-01",
 			modules: [
