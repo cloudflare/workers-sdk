@@ -25,7 +25,7 @@ export default class CustomAssetWorker extends AssetWorker {
 		).env.__VITE_FETCH_ASSET__.fetch(url);
 
 		if (!response.body) {
-			throw new Error(`Unexpected error. No HTML found for ${eTag}.`);
+			throw new Error(`Unexpected error. No HTML found for "${eTag}".`);
 		}
 
 		return { readableStream: response.body, contentType: "text/html" };

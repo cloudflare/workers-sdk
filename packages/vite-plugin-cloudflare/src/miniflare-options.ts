@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import { toFetchResponse, toReqRes } from "fetch-to-node";
 import {
 	kCurrentWorker,
 	Log,
@@ -17,6 +18,7 @@ import { getAssetsConfig } from "./asset-config";
 import {
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
+	kRequestType,
 	ROUTER_WORKER_NAME,
 } from "./constants";
 import { additionalModuleRE } from "./shared";
@@ -266,14 +268,14 @@ export function getDevMiniflareOptions(
 			serviceBindings: {
 				__VITE_ASSET_EXISTS__: async (request) => {
 					const { pathname } = new URL(request.url);
-					const filePath = path.join(resolvedViteConfig.root, pathname);
+					let exists = false;
 
-					let exists: boolean;
-
-					try {
-						exists = fs.statSync(filePath).isFile();
-					} catch (error) {
-						exists = false;
+					if (pathname.endsWith(".html")) {
+						try {
+							const filePath = path.join(resolvedViteConfig.root, pathname);
+							const stats = await fsp.stat(filePath);
+							exists = stats.isFile();
+						} catch (error) {}
 					}
 
 					return MiniflareResponse.json(exists);
@@ -290,7 +292,7 @@ export function getDevMiniflareOptions(
 							headers: { "Content-Type": "text/html" },
 						});
 					} catch (error) {
-						throw new Error(`Unexpected error. Failed to load ${pathname}`);
+						throw new Error(`Unexpected error. Failed to load "${pathname}".`);
 					}
 				},
 			},
@@ -328,7 +330,13 @@ export function getDevMiniflareOptions(
 										resolvedPluginConfig.entryWorkerEnvironmentName &&
 									workerConfig.assets?.binding
 										? {
-												[workerConfig.assets.binding]: ASSET_WORKER_NAME,
+												[workerConfig.assets.binding]: (request) => {
+													const { req, res } = toReqRes(request as any);
+													req[kRequestType] = "asset";
+													viteDevServer.middlewares(req, res);
+
+													return toFetchResponse(res);
+												},
 											}
 										: {}),
 									__VITE_INVOKE_MODULE__: async (request) => {
