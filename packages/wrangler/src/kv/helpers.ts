@@ -487,16 +487,13 @@ export function getKVNamespaceId(
 //  https://devblogs.microsoft.com/typescript/announcing-typescript-5-2/#using-declarations-and-explicit-resource-management
 export async function usingLocalNamespace<T>(
 	persistTo: string | undefined,
-	complianceConfig: ComplianceConfig,
+	config: Config,
 	namespaceId: string,
 	closure: (namespace: ReplaceWorkersTypes<KVNamespace>) => Promise<T>
 ): Promise<T> {
 	// We need to cast to Config for the getLocalPersistencePath function since
 	// it expects a full Config object, even though it only uses compliance_region
-	const persist = getLocalPersistencePath(
-		persistTo,
-		complianceConfig as unknown as Config
-	);
+	const persist = getLocalPersistencePath(persistTo, config);
 	const persistOptions = buildPersistOptions(persist);
 	const mf = new Miniflare({
 		script:
