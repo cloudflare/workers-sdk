@@ -169,4 +169,12 @@ export const SECRET_STORE_PLUGIN: Plugin<
 
 		return [...services, storageService, objectService];
 	},
+	getPersistPath({ secretsStorePersist }, tmpPath) {
+		return getPersistPath(
+			SECRET_STORE_PLUGIN_NAME,
+			tmpPath,
+			undefined,
+			secretsStorePersist
+		);
+	},
 };
