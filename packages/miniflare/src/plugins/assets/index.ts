@@ -156,6 +156,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			redirects: parsedRedirects,
 			headers: parsedHeaders,
 			debug: true,
+			has_static_routing: Boolean(staticRoutingContents),
 		};
 
 		const id = options.assets.workerName;

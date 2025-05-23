@@ -48,6 +48,7 @@ describe("[Workers + Assets] static routing", () => {
 		}) => {
 			let response = await fetch(`http://${ip}:${port}/missing-asset`);
 			expect(response.status).toBe(404);
+			expect(await response.text()).toEqual("");
 		});
 
 		it("should serve an asset when an include and an exclude rule matches", async ({
