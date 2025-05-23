@@ -9,6 +9,7 @@ import { ConfigController } from "../api/startDevWorker/ConfigController";
 import { unwrapHook } from "../api/startDevWorker/utils";
 import registerDevHotKeys from "../dev/hotkeys";
 import { getWorkerAccountAndContext } from "../dev/remote";
+import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import { FatalError } from "../errors";
 import { CI } from "../is-ci";
 import { logger } from "../logger";
@@ -59,7 +60,7 @@ async function expectedHostAndZone(
 
 	const ctx = await getWorkerAccountAndContext({
 		accountId: "",
-		complianceConfig: undefined,
+		complianceConfig: COMPLIANCE_REGION_CONFIG_UNKNOWN,
 		host: config.input.dev?.origin?.hostname,
 		routes: config.triggers
 			?.filter(

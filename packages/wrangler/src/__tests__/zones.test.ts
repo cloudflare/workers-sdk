@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import { getHostFromUrl, getZoneForRoute } from "../zones";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { msw } from "./helpers/msw";
@@ -75,7 +76,7 @@ describe("Zones", () => {
 		test("string route", async () => {
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
-				await getZoneForRoute(undefined, {
+				await getZoneForRoute(COMPLIANCE_REGION_CONFIG_UNKNOWN, {
 					route: "example.com/*",
 					accountId: "some-account-id",
 				})
@@ -88,7 +89,7 @@ describe("Zones", () => {
 		test("string route (not a zone)", async () => {
 			mockGetZones("wrong.com", []);
 			await expect(
-				getZoneForRoute(undefined, {
+				getZoneForRoute(COMPLIANCE_REGION_CONFIG_UNKNOWN, {
 					route: "wrong.com/*",
 					accountId: "some-account-id",
 				})
@@ -102,7 +103,7 @@ describe("Zones", () => {
 			// when a zone_id is provided in the route
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
-				await getZoneForRoute(undefined, {
+				await getZoneForRoute(COMPLIANCE_REGION_CONFIG_UNKNOWN, {
 					route: { pattern: "example.com/*", zone_id: "other-id" },
 					accountId: "some-account-id",
 				})
@@ -116,7 +117,7 @@ describe("Zones", () => {
 			// when a zone_id is provided in the route
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
-				await getZoneForRoute(undefined, {
+				await getZoneForRoute(COMPLIANCE_REGION_CONFIG_UNKNOWN, {
 					route: {
 						pattern: "some.third-party.com/*",
 						zone_id: "other-id",
@@ -132,7 +133,7 @@ describe("Zones", () => {
 		test("zone_name route (apex)", async () => {
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
-				await getZoneForRoute(undefined, {
+				await getZoneForRoute(COMPLIANCE_REGION_CONFIG_UNKNOWN, {
 					route: {
 						pattern: "example.com/*",
 						zone_name: "example.com",
@@ -147,7 +148,7 @@ describe("Zones", () => {
 		test("zone_name route (subdomain)", async () => {
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
-				await getZoneForRoute(undefined, {
+				await getZoneForRoute(COMPLIANCE_REGION_CONFIG_UNKNOWN, {
 					route: {
 						pattern: "subdomain.example.com/*",
 						zone_name: "example.com",
@@ -162,7 +163,7 @@ describe("Zones", () => {
 		test("zone_name route (custom hostname)", async () => {
 			mockGetZones("example.com", [{ id: "example-id" }]);
 			expect(
-				await getZoneForRoute(undefined, {
+				await getZoneForRoute(COMPLIANCE_REGION_CONFIG_UNKNOWN, {
 					route: {
 						pattern: "some.third-party.com/*",
 						zone_name: "example.com",
@@ -179,7 +180,7 @@ describe("Zones", () => {
 			const zoneIdCache = new Map();
 			expect(
 				await getZoneForRoute(
-					undefined,
+					COMPLIANCE_REGION_CONFIG_UNKNOWN,
 					{
 						route: {
 							pattern: "subdomain.example.com/*",
@@ -202,7 +203,7 @@ describe("Zones", () => {
 			// due to a "mock not found" error
 			expect(
 				await getZoneForRoute(
-					undefined,
+					COMPLIANCE_REGION_CONFIG_UNKNOWN,
 					{
 						route: {
 							pattern: "subdomain.example.com/*",

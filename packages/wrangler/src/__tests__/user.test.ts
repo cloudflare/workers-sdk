@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { vi } from "vitest";
+import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { CI } from "../is-ci";
 import {
@@ -241,7 +242,9 @@ describe("User", () => {
 
 	it("should revert to non-interactive mode if in CI", async () => {
 		isCISpy.mockReturnValue(true);
-		await expect(loginOrRefreshIfRequired(undefined)).resolves.toEqual(false);
+		await expect(
+			loginOrRefreshIfRequired(COMPLIANCE_REGION_CONFIG_UNKNOWN)
+		).resolves.toEqual(false);
 	});
 
 	it("should revert to non-interactive mode if isTTY throws an error", async () => {
@@ -251,7 +254,9 @@ describe("User", () => {
 			},
 			stdout: true,
 		});
-		await expect(loginOrRefreshIfRequired(undefined)).resolves.toEqual(false);
+		await expect(
+			loginOrRefreshIfRequired(COMPLIANCE_REGION_CONFIG_UNKNOWN)
+		).resolves.toEqual(false);
 	});
 
 	it("should have auth per environment", async () => {

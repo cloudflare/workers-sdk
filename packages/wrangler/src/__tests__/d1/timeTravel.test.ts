@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { throwIfDatabaseIsAlpha } from "../../d1/timeTravel/utils";
+import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../../environment-variables/misc-variables";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -72,7 +73,7 @@ describe("time-travel", () => {
 			);
 			await expect(
 				throwIfDatabaseIsAlpha(
-					undefined,
+					COMPLIANCE_REGION_CONFIG_UNKNOWN,
 					"1701",
 					"d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06"
 				)
@@ -111,7 +112,7 @@ describe("time-travel", () => {
 				})
 			);
 			const result = await throwIfDatabaseIsAlpha(
-				undefined,
+				COMPLIANCE_REGION_CONFIG_UNKNOWN,
 				"1701",
 				"d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06"
 			);

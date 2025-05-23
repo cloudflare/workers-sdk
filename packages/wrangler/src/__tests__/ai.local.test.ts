@@ -3,9 +3,10 @@ import { HttpResponse } from "msw";
 import { Headers } from "undici";
 import { getAIFetcher } from "../ai/fetcher";
 import * as internal from "../cfetch/internal";
+import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import * as user from "../user";
 
-const AIFetcher = getAIFetcher(undefined);
+const AIFetcher = getAIFetcher(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 
 describe("ai", () => {
 	describe("fetcher", () => {
