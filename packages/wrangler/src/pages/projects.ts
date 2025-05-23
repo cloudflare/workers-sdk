@@ -4,6 +4,7 @@ import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
 import { confirm, prompt } from "../dialogs";
+import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -62,6 +63,7 @@ export const listProjects = async ({
 	const results = [];
 	while (results.length % pageSize === 0) {
 		const json: Array<Project> = await fetchResult(
+			COMPLIANCE_REGION_CONFIG_PUBLIC,
 			`/accounts/${accountId}/pages/projects`,
 			{},
 			new URLSearchParams({
@@ -179,6 +181,7 @@ export const pagesProjectCreateCommand = createCommand({
 		};
 
 		const { subdomain } = await fetchResult<Project>(
+			COMPLIANCE_REGION_CONFIG_PUBLIC,
 			`/accounts/${accountId}/pages/projects`,
 			{
 				method: "POST",
@@ -240,6 +243,7 @@ export const pagesProjectDeleteCommand = createCommand({
 		if (confirmed) {
 			logger.log("Deleting", args.projectName);
 			await fetchResult(
+				COMPLIANCE_REGION_CONFIG_PUBLIC,
 				`/accounts/${accountId}/pages/projects/${args.projectName}`,
 				{ method: "DELETE" }
 			);

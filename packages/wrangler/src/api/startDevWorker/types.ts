@@ -75,6 +75,9 @@ export interface StartDevWorkerInput {
 	/** The compatibility flags for the workerd runtime. */
 	compatibilityFlags?: string[];
 
+	/** Specify the compliance region mode of the Worker. */
+	complianceRegion?: Config["compliance_region"];
+
 	env?: string;
 
 	/** The bindings available to the worker. The specified bindind type will be exposed to the worker on the `env` object under the same key. */
@@ -208,6 +211,7 @@ export type StartDevWorkerOptions = Omit<StartDevWorkerInput, "assets"> & {
 	entrypoint: string;
 	assets?: AssetsOptions;
 	name: string;
+	complianceRegion: Config["compliance_region"];
 };
 
 export type HookValues = string | number | boolean | object | undefined | null;

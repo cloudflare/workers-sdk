@@ -1,4 +1,5 @@
 import { fetchResult } from "../cfetch";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Message } from "../parse";
 import type { Finetune, Model } from "./types";
 
@@ -30,6 +31,7 @@ export function truncateDescription(
 }
 
 async function aiCatalogList<ResponseType>(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	partialUrl: string
 ): Promise<Array<ResponseType>> {
@@ -38,6 +40,7 @@ async function aiCatalogList<ResponseType>(
 	const results = [];
 	while (results.length % pageSize === 0) {
 		const json: Array<ResponseType> = await fetchResult(
+			complianceConfig,
 			`/accounts/${accountId}/ai/${partialUrl}`,
 			{},
 			new URLSearchParams({
@@ -55,9 +58,11 @@ async function aiCatalogList<ResponseType>(
 }
 
 async function aiFinetuneList<ResponseType>(
+	complianceConfig: ComplianceConfig,
 	accountId: string
 ): Promise<Array<ResponseType>> {
 	const results: Array<ResponseType> = await fetchResult(
+		complianceConfig,
 		`/accounts/${accountId}/ai/finetunes`,
 		{},
 		new URLSearchParams({})
@@ -66,13 +71,15 @@ async function aiFinetuneList<ResponseType>(
 }
 
 export const listCatalogEntries = async (
+	complianceConfig: ComplianceConfig,
 	accountId: string
 ): Promise<Array<Model>> => {
-	return await aiCatalogList(accountId, "models/search");
+	return await aiCatalogList(complianceConfig, accountId, "models/search");
 };
 
 export const listFinetuneEntries = async (
+	complianceConfig: ComplianceConfig,
 	accountId: string
 ): Promise<Array<Finetune>> => {
-	return await aiFinetuneList(accountId);
+	return await aiFinetuneList(complianceConfig, accountId);
 };

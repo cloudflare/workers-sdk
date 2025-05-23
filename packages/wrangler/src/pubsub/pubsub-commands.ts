@@ -49,7 +49,7 @@ export function pubSubCommands(
 							}
 
 							logger.log(`Creating Pub/Sub Namespace ${args.name}...`);
-							await pubsub.createPubSubNamespace(accountId, namespace);
+							await pubsub.createPubSubNamespace(config, accountId, namespace);
 							logger.log(`Success! Created Pub/Sub Namespace ${args.name}`);
 							metrics.sendMetricsEvent("create pubsub namespace", {
 								sendMetrics: config.send_metrics,
@@ -66,7 +66,7 @@ export function pubSubCommands(
 							const config = readConfig(args);
 							const accountId = await requireAuth(config);
 
-							logger.log(await pubsub.listPubSubNamespaces(accountId));
+							logger.log(await pubsub.listPubSubNamespaces(config, accountId));
 							metrics.sendMetricsEvent("list pubsub namespaces", {
 								sendMetrics: config.send_metrics,
 							});
@@ -94,7 +94,11 @@ export function pubSubCommands(
 								)
 							) {
 								logger.log(`Deleting namespace ${args.name}...`);
-								await pubsub.deletePubSubNamespace(accountId, args.name);
+								await pubsub.deletePubSubNamespace(
+									config,
+									accountId,
+									args.name
+								);
 								logger.log(`Deleted namespace ${args.name}.`);
 								metrics.sendMetricsEvent("delete pubsub namespace", {
 									sendMetrics: config.send_metrics,
@@ -119,7 +123,11 @@ export function pubSubCommands(
 							const accountId = await requireAuth(config);
 
 							logger.log(
-								await pubsub.describePubSubNamespace(accountId, args.name)
+								await pubsub.describePubSubNamespace(
+									config,
+									accountId,
+									args.name
+								)
 							);
 							metrics.sendMetricsEvent("view pubsub namespace", {
 								sendMetrics: config.send_metrics,
@@ -189,7 +197,12 @@ export function pubSubCommands(
 					}
 
 					logger.log(
-						await pubsub.createPubSubBroker(accountId, args.namespace, broker)
+						await pubsub.createPubSubBroker(
+							config,
+							accountId,
+							args.namespace,
+							broker
+						)
 					);
 					metrics.sendMetricsEvent("create pubsub broker", {
 						sendMetrics: config.send_metrics,
@@ -256,6 +269,7 @@ export function pubSubCommands(
 
 					logger.log(
 						await pubsub.updatePubSubBroker(
+							config,
 							accountId,
 							args.namespace,
 							args.name,
@@ -286,7 +300,9 @@ export function pubSubCommands(
 					const config = readConfig(args);
 					const accountId = await requireAuth(config);
 
-					logger.log(await pubsub.listPubSubBrokers(accountId, args.namespace));
+					logger.log(
+						await pubsub.listPubSubBrokers(config, accountId, args.namespace)
+					);
 					metrics.sendMetricsEvent("list pubsub brokers", {
 						sendMetrics: config.send_metrics,
 					});
@@ -323,6 +339,7 @@ export function pubSubCommands(
 						) {
 							logger.log(`Deleting Pub/Sub Broker ${args.name}.`);
 							await pubsub.deletePubSubBroker(
+								config,
 								accountId,
 								args.namespace,
 								args.name
@@ -358,6 +375,7 @@ export function pubSubCommands(
 
 						logger.log(
 							await pubsub.describePubSubBroker(
+								config,
 								accountId,
 								args.namespace,
 								args.name
@@ -432,6 +450,7 @@ export function pubSubCommands(
 
 					logger.log(
 						await pubsub.issuePubSubBrokerTokens(
+							config,
 							accountId,
 							args.namespace,
 							args.name,
@@ -482,6 +501,7 @@ export function pubSubCommands(
 					);
 
 					await pubsub.revokePubSubBrokerTokens(
+						config,
 						accountId,
 						args.namespace,
 						args.name,
@@ -529,6 +549,7 @@ export function pubSubCommands(
 					);
 
 					await pubsub.unrevokePubSubBrokerTokens(
+						config,
 						accountId,
 						args.namespace,
 						args.name,
@@ -567,6 +588,7 @@ export function pubSubCommands(
 					logger.log(`Listing previously revoked tokens for ${args.name}...`);
 					logger.log(
 						await pubsub.listRevokedPubSubBrokerTokens(
+							config,
 							accountId,
 							args.namespace,
 							args.name
@@ -602,6 +624,7 @@ export function pubSubCommands(
 
 					logger.log(
 						await pubsub.getPubSubBrokerPublicKeys(
+							config,
 							accountId,
 							args.namespace,
 							args.name

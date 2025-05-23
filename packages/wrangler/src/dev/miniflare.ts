@@ -3,9 +3,9 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { CoreHeaders, HttpOptions_Style, Log, LogLevel } from "miniflare";
 import {
-	AIFetcher,
 	EXTERNAL_AI_WORKER_NAME,
 	EXTERNAL_AI_WORKER_SCRIPT,
+	getAIFetcher,
 } from "../ai/fetcher";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
@@ -14,7 +14,7 @@ import { getFlag } from "../experimental-flags";
 import {
 	EXTERNAL_IMAGES_WORKER_NAME,
 	EXTERNAL_IMAGES_WORKER_SCRIPT,
-	imagesRemoteFetcher,
+	getImagesRemoteFetcher,
 } from "../images/fetcher";
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
@@ -177,6 +177,7 @@ export interface ConfigBundle {
 	format: CfScriptFormat | undefined;
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
+	complianceRegion: Config["compliance_region"] | undefined;
 	bindings: CfWorkerInit["bindings"];
 	migrations: Config["migrations"] | undefined;
 	workerDefinitions: WorkerRegistry | undefined | null;
@@ -477,6 +478,7 @@ type MiniflareBindingsConfig = Pick<
 	| "serviceBindings"
 	| "imagesLocalMode"
 	| "tails"
+	| "complianceRegion"
 > &
 	Partial<Pick<ConfigBundle, "format" | "bundle" | "assets">>;
 
@@ -754,7 +756,9 @@ export function buildMiniflareBindingOptions(
 					},
 				],
 				serviceBindings: {
-					FETCHER: AIFetcher,
+					FETCHER: getAIFetcher({
+						compliance_region: config.complianceRegion,
+					}),
 				},
 			});
 
@@ -776,7 +780,9 @@ export function buildMiniflareBindingOptions(
 				},
 			],
 			serviceBindings: {
-				FETCHER: imagesRemoteFetcher,
+				FETCHER: getImagesRemoteFetcher({
+					compliance_region: config.complianceRegion,
+				}),
 			},
 		});
 
@@ -801,7 +807,10 @@ export function buildMiniflareBindingOptions(
 					},
 				],
 				serviceBindings: {
-					FETCHER: MakeVectorizeFetcher(indexName),
+					FETCHER: MakeVectorizeFetcher(
+						{ compliance_region: config.complianceRegion },
+						indexName
+					),
 				},
 				bindings: {
 					INDEX_ID: indexName,

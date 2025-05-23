@@ -94,6 +94,7 @@ export async function convertToConfigBundle(
 		format: event.bundle.entry.format,
 		compatibilityDate: event.config.compatibilityDate,
 		compatibilityFlags: event.config.compatibilityFlags,
+		complianceRegion: event.config.complianceRegion,
 		bindings,
 		migrations: event.config.migrations,
 		workerDefinitions: event.config.dev?.registry,
@@ -335,7 +336,8 @@ export async function maybeStartOrUpdateMixedModeSession(
 			//       LocalRuntimeController)
 			const mixedModeModule = await import("../../api/mixedMode");
 			mixedModeSession = await mixedModeModule.startMixedModeSession(
-				convertedRemoteBindings
+				convertedRemoteBindings,
+				{ complianceRegion: configBundle.complianceRegion }
 			);
 		}
 	} else {

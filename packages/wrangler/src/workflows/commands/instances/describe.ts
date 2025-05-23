@@ -68,6 +68,7 @@ export const workflowsInstancesDescribeCommand = createCommand({
 		if (id == "latest") {
 			const instances = (
 				await fetchResult<Instance[]>(
+					config,
 					`/accounts/${accountId}/workflows/${args.name}/instances`
 				)
 			).sort((a, b) => b.created_on.localeCompare(a.created_on));
@@ -84,6 +85,7 @@ export const workflowsInstancesDescribeCommand = createCommand({
 		}
 
 		const instance = await fetchResult<InstanceStatusAndLogs>(
+			config,
 			`/accounts/${accountId}/workflows/${args.name}/instances/${id}`
 		);
 

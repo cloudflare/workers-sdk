@@ -19,6 +19,7 @@ import type {
 	CfWorkerContext,
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ParseError } from "../parse";
 import type { LegacyAssetPaths } from "../sites";
 import type { CfAccount } from "./create-worker-preview";
@@ -87,6 +88,7 @@ export type CfWorkerInitWithName = Required<Pick<CfWorkerInit, "name">> &
 export async function createRemoteWorkerInit(props: {
 	bundle: EsbuildBundle;
 	modules: CfModule[];
+	complianceConfig: ComplianceConfig;
 	accountId: string;
 	name: string;
 	legacyEnv: boolean | undefined;
@@ -116,6 +118,7 @@ export async function createRemoteWorkerInit(props: {
 	);
 
 	const workersSitesAssets = await syncWorkersSite(
+		props.complianceConfig,
 		props.accountId,
 		// When we're using the newer service environments, we wouldn't
 		// have added the env name on to the script name. However, we must
@@ -138,7 +141,12 @@ export async function createRemoteWorkerInit(props: {
 	}
 
 	const assetsJwt = props.assets
-		? await syncAssets(props.accountId, props.assets.directory, props.name)
+		? await syncAssets(
+				props.complianceConfig,
+				props.accountId,
+				props.assets.directory,
+				props.name
+			)
 		: undefined;
 
 	const init: CfWorkerInitWithName = {
@@ -193,6 +201,7 @@ export async function createRemoteWorkerInit(props: {
 }
 
 export async function getWorkerAccountAndContext(props: {
+	complianceConfig: ComplianceConfig;
 	accountId: string;
 	env: string | undefined;
 	legacyEnv: boolean | undefined;
@@ -207,7 +216,7 @@ export async function getWorkerAccountAndContext(props: {
 	};
 
 	// What zone should the realish preview for this Worker run on?
-	const zoneId = await getZoneIdForPreview({
+	const zoneId = await getZoneIdForPreview(props.complianceConfig, {
 		host: props.host,
 		routes: props.routes,
 		accountId: props.accountId,

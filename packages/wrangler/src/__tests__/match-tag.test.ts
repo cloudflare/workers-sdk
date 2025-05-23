@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import { verifyWorkerMatchesCITag } from "../match-tag";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -81,7 +82,11 @@ describe("match-tag", () => {
 			vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123");
 			mockWorker("my-worker", "abc123");
 			await expect(
-				verifyWorkerMatchesCITag("some-account-id", "my-worker")
+				verifyWorkerMatchesCITag(
+					COMPLIANCE_REGION_CONFIG_UNKNOWN,
+					"some-account-id",
+					"my-worker"
+				)
 			).resolves.toBeUndefined();
 		});
 
@@ -89,7 +94,11 @@ describe("match-tag", () => {
 			vi.stubEnv("WRANGLER_CI_MATCH_TAG", "");
 			mockWorker("network-error-worker", "abc123");
 			await expect(
-				verifyWorkerMatchesCITag("some-account-id", "my-worker")
+				verifyWorkerMatchesCITag(
+					COMPLIANCE_REGION_CONFIG_UNKNOWN,
+					"some-account-id",
+					"my-worker"
+				)
 			).resolves.toBeUndefined();
 		});
 	});
@@ -99,7 +108,11 @@ describe("match-tag", () => {
 			vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123");
 			mockWorker("a-worker", "abc123");
 			await expect(
-				verifyWorkerMatchesCITag("some-account-id", "b-worker")
+				verifyWorkerMatchesCITag(
+					COMPLIANCE_REGION_CONFIG_UNKNOWN,
+					"some-account-id",
+					"b-worker"
+				)
 			).rejects.toMatchInlineSnapshot(
 				`[Error: The name in your Wrangler configuration file (b-worker) must match the name of your Worker. Please update the name field in your Wrangler configuration file.]`
 			);
@@ -109,7 +122,11 @@ describe("match-tag", () => {
 			vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123");
 			mockWorker("a-worker", "abc123");
 			await expect(
-				verifyWorkerMatchesCITag("some-account-id", "auth-error-worker")
+				verifyWorkerMatchesCITag(
+					COMPLIANCE_REGION_CONFIG_UNKNOWN,
+					"some-account-id",
+					"auth-error-worker"
+				)
 			).rejects.toMatchInlineSnapshot(
 				`
 				[Error: An error occurred while trying to validate that the Worker name matches what is expected by the build system.
@@ -123,7 +140,11 @@ describe("match-tag", () => {
 			vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123");
 			mockWorker("a-worker", "abc123");
 			await expect(
-				verifyWorkerMatchesCITag("some-account-id", "network-error-worker")
+				verifyWorkerMatchesCITag(
+					COMPLIANCE_REGION_CONFIG_UNKNOWN,
+					"some-account-id",
+					"network-error-worker"
+				)
 			).rejects.toMatchInlineSnapshot(
 				`[Error: Wrangler cannot validate that your Worker name matches what is expected by the build system. Please retry the build. If the problem persists, please contact support.]`
 			);
@@ -133,7 +154,11 @@ describe("match-tag", () => {
 			vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123a");
 			mockWorker("my-worker", "abc123b");
 			await expect(
-				verifyWorkerMatchesCITag("some-account-id", "my-worker")
+				verifyWorkerMatchesCITag(
+					COMPLIANCE_REGION_CONFIG_UNKNOWN,
+					"some-account-id",
+					"my-worker"
+				)
 			).rejects.toMatchInlineSnapshot(
 				`[Error: The name in your Wrangler configuration file (my-worker) must match the name of your Worker. Please update the name field in your Wrangler configuration file.]`
 			);
@@ -144,7 +169,11 @@ describe("match-tag", () => {
 			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "some-other-account-id");
 			mockWorker("my-worker", "abc123b");
 			await expect(
-				verifyWorkerMatchesCITag("some-account-id", "my-worker")
+				verifyWorkerMatchesCITag(
+					COMPLIANCE_REGION_CONFIG_UNKNOWN,
+					"some-account-id",
+					"my-worker"
+				)
 			).rejects.toMatchInlineSnapshot(
 				`[Error: The \`account_id\` in your Wrangler configuration file must match the \`account_id\` for this account. Please update your Wrangler configuration file with \`{"account_id":"some-other-account-id"}\`]`
 			);

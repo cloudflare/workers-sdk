@@ -165,6 +165,7 @@ async function getMiniflareOptionsFromConfig(
 
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
 		name: rawConfig.name,
+		complianceRegion: rawConfig.compliance_region,
 		bindings,
 		workerDefinitions,
 		queueConsumers: undefined,
@@ -309,6 +310,7 @@ export function unstable_getMiniflareWorkerOptions(
 	const bindings = getBindings(config, env, true, {});
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
 		name: config.name,
+		complianceRegion: config.compliance_region,
 		bindings,
 		workerDefinitions: null,
 		queueConsumers: config.queues.consumers,

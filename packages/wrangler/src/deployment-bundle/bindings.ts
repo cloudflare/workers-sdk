@@ -13,6 +13,7 @@ import { createR2Bucket, getR2Bucket, listR2Buckets } from "../r2/helpers";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { printBindings } from "../utils/print-bindings";
 import type { Config } from "../config";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { WorkerMetadataBinding } from "./create-worker-upload-form";
 import type {
 	CfD1Database,
@@ -88,6 +89,7 @@ abstract class ProvisionResourceHandler<
 		public type: T,
 		public binding: B,
 		public idField: keyof B,
+		public complianceConfig: ComplianceConfig,
 		public accountId: string
 	) {}
 
@@ -160,6 +162,7 @@ class R2Handler extends ProvisionResourceHandler<"r2_bucket", CfR2Bucket> {
 	}
 	async create(name: string) {
 		await createR2Bucket(
+			this.complianceConfig,
 			this.accountId,
 			name,
 			undefined,
@@ -167,8 +170,12 @@ class R2Handler extends ProvisionResourceHandler<"r2_bucket", CfR2Bucket> {
 		);
 		return name;
 	}
-	constructor(binding: CfR2Bucket, accountId: string) {
-		super("r2_bucket", binding, "bucket_name", accountId);
+	constructor(
+		binding: CfR2Bucket,
+		complianceConfig: ComplianceConfig,
+		accountId: string
+	) {
+		super("r2_bucket", binding, "bucket_name", complianceConfig, accountId);
 	}
 	canInherit(settings: Settings | undefined): boolean {
 		return !!settings?.bindings.find(
@@ -187,6 +194,7 @@ class R2Handler extends ProvisionResourceHandler<"r2_bucket", CfR2Bucket> {
 		}
 		try {
 			await getR2Bucket(
+				this.complianceConfig,
 				this.accountId,
 				this.binding.bucket_name,
 				this.binding.jurisdiction
@@ -213,10 +221,14 @@ class KVHandler extends ProvisionResourceHandler<
 		return undefined;
 	}
 	async create(name: string) {
-		return await createKVNamespace(this.accountId, name);
+		return await createKVNamespace(this.complianceConfig, this.accountId, name);
 	}
-	constructor(binding: CfKvNamespace, accountId: string) {
-		super("kv_namespace", binding, "id", accountId);
+	constructor(
+		binding: CfKvNamespace,
+		complianceConfig: ComplianceConfig,
+		accountId: string
+	) {
+		super("kv_namespace", binding, "id", complianceConfig, accountId);
 	}
 	canInherit(settings: Settings | undefined): boolean {
 		return !!settings?.bindings.find(
@@ -234,11 +246,19 @@ class D1Handler extends ProvisionResourceHandler<"d1", CfD1Database> {
 		return this.binding.database_name as string;
 	}
 	async create(name: string) {
-		const db = await createD1Database(this.accountId, name);
+		const db = await createD1Database(
+			this.complianceConfig,
+			this.accountId,
+			name
+		);
 		return db.uuid;
 	}
-	constructor(binding: CfD1Database, accountId: string) {
-		super("d1", binding, "database_id", accountId);
+	constructor(
+		binding: CfD1Database,
+		complianceConfig: ComplianceConfig,
+		accountId: string
+	) {
+		super("d1", binding, "database_id", complianceConfig, accountId);
 	}
 	async canInherit(settings: Settings | undefined): Promise<boolean> {
 		const maybeInherited = settings?.bindings.find(
@@ -255,6 +275,7 @@ class D1Handler extends ProvisionResourceHandler<"d1", CfD1Database> {
 			// ...and the user HAS specified a name in their config, so we need to check if the database_name they provided
 			// matches the database_name of the existing binding (which isn't present in settings, so we'll need to make an API call to check)
 			const dbFromId = await getDatabaseInfoFromIdOrName(
+				this.complianceConfig,
 				this.accountId,
 				maybeInherited.id
 			);
@@ -273,6 +294,7 @@ class D1Handler extends ProvisionResourceHandler<"d1", CfD1Database> {
 		}
 		try {
 			const db = await getDatabaseInfoFromIdOrName(
+				this.complianceConfig,
 				this.accountId,
 				this.binding.database_name
 			);
@@ -317,16 +339,31 @@ const HANDLERS = {
 };
 
 const LOADERS = {
-	kv_namespaces: async (accountId: string) => {
-		const preExistingKV = await listKVNamespaces(accountId, true);
+	kv_namespaces: async (
+		complianceConfig: ComplianceConfig,
+		accountId: string
+	) => {
+		const preExistingKV = await listKVNamespaces(
+			complianceConfig,
+			accountId,
+			true
+		);
 		return preExistingKV.map((ns) => ({ title: ns.title, value: ns.id }));
 	},
-	d1_databases: async (accountId: string) => {
-		const preExisting = await listDatabases(accountId, true, 1000);
+	d1_databases: async (
+		complianceConfig: ComplianceConfig,
+		accountId: string
+	) => {
+		const preExisting = await listDatabases(
+			complianceConfig,
+			accountId,
+			true,
+			1000
+		);
 		return preExisting.map((db) => ({ title: db.name, value: db.uuid }));
 	},
-	r2_buckets: async (accountId: string) => {
-		const preExisting = await listR2Buckets(accountId);
+	r2_buckets: async (complianceConfig: ComplianceConfig, accountId: string) => {
+		const preExisting = await listR2Buckets(complianceConfig, accountId);
 		return preExisting.map((bucket) => ({
 			title: bucket.name,
 			value: bucket.name,
@@ -341,6 +378,7 @@ type PendingResource = {
 };
 
 async function collectPendingResources(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string,
 	bindings: CfWorkerInit["bindings"]
@@ -348,7 +386,7 @@ async function collectPendingResources(
 	let settings: Settings | undefined;
 
 	try {
-		settings = await getSettings(accountId, scriptName);
+		settings = await getSettings(complianceConfig, accountId, scriptName);
 	} catch (error) {
 		logger.debug("No settings found");
 	}
@@ -356,7 +394,7 @@ async function collectPendingResources(
 	const pendingResources: PendingResource[] = [];
 
 	try {
-		settings = await getSettings(accountId, scriptName);
+		settings = await getSettings(complianceConfig, accountId, scriptName);
 	} catch (error) {
 		logger.debug("No settings found");
 	}
@@ -364,7 +402,11 @@ async function collectPendingResources(
 		HANDLERS
 	) as (keyof typeof HANDLERS)[]) {
 		for (const resource of bindings[resourceType] ?? []) {
-			const h = new HANDLERS[resourceType].Handler(resource, accountId);
+			const h = new HANDLERS[resourceType].Handler(
+				resource,
+				complianceConfig,
+				accountId
+			);
 
 			if (await h.shouldProvision(settings)) {
 				pendingResources.push({
@@ -388,6 +430,7 @@ export async function provisionBindings(
 	config: Config
 ): Promise<void> {
 	const pendingResources = await collectPendingResources(
+		config,
 		accountId,
 		scriptName,
 		bindings
@@ -411,8 +454,9 @@ export async function provisionBindings(
 		const existingResources: Record<string, NormalisedResourceInfo[]> = {};
 
 		for (const resource of pendingResources) {
-			existingResources[resource.resourceType] ??=
-				await LOADERS[resource.resourceType](accountId);
+			existingResources[resource.resourceType] ??= await LOADERS[
+				resource.resourceType
+			](config, accountId);
 
 			await runProvisioningFlow(
 				resource,
@@ -438,8 +482,13 @@ export async function provisionBindings(
 	}
 }
 
-function getSettings(accountId: string, scriptName: string) {
+function getSettings(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	scriptName: string
+) {
 	return fetchResult<Settings>(
+		complianceConfig,
 		`/accounts/${accountId}/workers/scripts/${scriptName}/settings`
 	);
 }

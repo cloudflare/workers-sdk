@@ -482,8 +482,8 @@ describe("deploy", () => {
 			Please ensure it has the correct permissions for this operation.
 
 			Getting User settings...
-			ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN in your environment.
 			👋 You are logged in with an API Token, associated with the email user@example.com.
+			ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN in your environment.
 			┌─┬─┐
 			│ Account Name │ Account ID │
 			├─┼─┤
@@ -12864,6 +12864,73 @@ export default{
 				  https://this-script.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
+		});
+	});
+
+	describe("compliance region support", () => {
+		it("should upload to the public region by default", async () => {
+			writeWranglerConfig({});
+			writeWorkerSource();
+			mockUploadWorkerRequest({
+				expectedBaseUrl: "api.cloudflare.com",
+			});
+			mockSubDomainRequest();
+			mockGetWorkerSubdomain({ enabled: true });
+
+			await runWrangler("deploy ./index.js");
+		});
+
+		it("should upload to the FedRAMP High region if set in config", async () => {
+			writeWranglerConfig({
+				compliance_region: "fedramp_high",
+			});
+			writeWorkerSource();
+			mockUploadWorkerRequest({
+				expectedBaseUrl: "api.fed.cloudflare.com",
+			});
+			mockSubDomainRequest();
+			mockGetWorkerSubdomain({ enabled: true });
+
+			await runWrangler("deploy ./index.js");
+		});
+
+		it("should upload to the FedRAMP High region if set in an env var", async () => {
+			vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "fedramp_high");
+			writeWranglerConfig({});
+			writeWorkerSource();
+			mockUploadWorkerRequest({
+				expectedBaseUrl: "api.fed.cloudflare.com",
+			});
+			mockSubDomainRequest();
+			mockGetWorkerSubdomain({ enabled: true });
+
+			await runWrangler("deploy ./index.js");
+		});
+
+		it("should error if the region is set in both env var and configured, and they conflict", async () => {
+			vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "public");
+			writeWranglerConfig({ compliance_region: "fedramp_high" });
+			writeWorkerSource();
+
+			await expect(runWrangler("deploy ./index.js")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: The compliance region has been set to different values in two places:
+				 - \`CLOUDFLARE_COMPLIANCE_REGION\` environment variable: \`public\`
+				 - \`compliance_region\` configuration property: \`fedramp_high\`]
+			`);
+		});
+
+		it("should not error if the region is set in both env var and configured, and they are the same", async () => {
+			vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "fedramp_high");
+			writeWranglerConfig({ compliance_region: "fedramp_high" });
+			writeWorkerSource();
+			mockUploadWorkerRequest({
+				expectedBaseUrl: "api.fed.cloudflare.com",
+			});
+			mockSubDomainRequest();
+			mockGetWorkerSubdomain({ enabled: true });
+
+			await runWrangler("deploy ./index.js");
 		});
 	});
 });

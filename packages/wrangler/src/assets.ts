@@ -34,6 +34,7 @@ import type { StartDevWorkerOptions } from "./api";
 import type { Config } from "./config";
 import type { DeployArgs } from "./deploy";
 import type { StartDevOptions } from "./dev";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
@@ -56,6 +57,7 @@ const MAX_UPLOAD_GATEWAY_ERRORS = 5;
 const MAX_DIFF_LINES = 100;
 
 export const syncAssets = async (
+	complianceConfig: ComplianceConfig,
 	accountId: string | undefined,
 	assetDirectory: string,
 	scriptName: string,
@@ -74,6 +76,7 @@ export const syncAssets = async (
 	// 2. fetch buckets w/ hashes
 	logger.info("🌀 Starting asset upload...");
 	const initializeAssetsResponse = await fetchResult<InitializeAssetsResponse>(
+		complianceConfig,
 		url,
 		{
 			headers: { "Content-Type": "application/json" },
@@ -166,6 +169,7 @@ export const syncAssets = async (
 
 			try {
 				const res = await fetchResult<UploadResponse>(
+					complianceConfig,
 					`/accounts/${accountId}/workers/assets/upload?base64=true`,
 					{
 						method: "POST",
