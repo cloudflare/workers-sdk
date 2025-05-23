@@ -5,6 +5,7 @@ import * as vite from "vite";
 import { ROUTER_WORKER_NAME } from "./constants";
 import type { Miniflare } from "miniflare";
 import type { IncomingHttpHeaders } from "node:http";
+import type { ResolvedConfig } from "vite";
 
 export function getOutputDirectory(
 	userConfig: vite.UserConfig,
@@ -54,4 +55,32 @@ export type Defined<T> = Exclude<T, undefined>;
 
 export function getFirstAvailablePort(start: number) {
 	return getPort({ port: portNumbers(start, 65535) });
+}
+
+/**
+ * It's the same filter used by Vite.
+ * @see https://github.com/vitejs/vite/blob/main/packages/vite/src/node/utils.ts#L334
+ */
+export const isViteDevAsset = vite.createFilter([
+	/^\/(?:node_modules|src)\//,
+	/^\/@(?:vite\/(client|env)|react-refresh|id\/)/,
+	/[?&]import=?(?:&|$)/,
+	/[?&]direct=?(?:&|$)/,
+]);
+
+/**
+ * It's the same filter used by Vite.
+ * Plus, it also filters out files that SHOULD not be served by the dev server.
+ * @param config {ResolvedConfig}
+ * @param pathname {string}
+ */
+export function isFsServingSafe(config: ResolvedConfig, pathname: string) {
+	try {
+		return (
+			pathname.startsWith("/@fs/") &&
+			vite.isFileServingAllowed(config, pathname)
+		);
+	} catch (e) {
+		return false;
+	}
 }
