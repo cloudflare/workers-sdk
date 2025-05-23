@@ -393,7 +393,7 @@ function getDurableObjectClassNames(
 /**
  * This collects all external service bindings from all workers and overrides
  * it to point to a proxy in the loopback server. A fallback service will be created
- * for each of the external service in case the upstream service is not available.
+ * for each of the external service in case the external service is not available.
  */
 function getExternalServiceEntrypoints(
 	allWorkerOpts: PluginWorkerOptions[],
@@ -428,16 +428,13 @@ function getExternalServiceEntrypoints(
 			for (const [name, service] of Object.entries(
 				workerOpts.core.serviceBindings
 			)) {
-				const {
-					serviceName = workerOpts.core.name,
-					entrypoint,
-					mixedModeConnectionString,
-				} = normaliseServiceDesignator(service);
+				const { serviceName, entrypoint, mixedModeConnectionString } =
+					normaliseServiceDesignator(service);
 
 				if (
 					// Skip if it is a remote service
 					mixedModeConnectionString === undefined &&
-					// Skip if the service is bound to the existing workers
+					// Skip if the service is bound to another Worker defined in the Miniflare config
 					serviceName &&
 					!allWorkerNames.includes(serviceName)
 				) {
@@ -471,11 +468,11 @@ function getExternalServiceEntrypoints(
 				if (
 					// Skip if it is a remote durable object
 					mixedModeConnectionString === undefined &&
-					// Skip if the durable object is bound to the existing workers
+					// Skip if the durable object is bound to a Worker that exists in the current Miniflare config
 					scriptName &&
 					!allWorkerNames.includes(scriptName)
 				) {
-					// If this is an external Durable Object, point it to the proxy on the external service instead
+					// Point it to the outbound do proxy service instead
 					workerOpts.do.durableObjects[bindingName] = {
 						className: getOutboundDoProxyClassName(scriptName, className),
 						scriptName: OUTBOUND_DO_PROXY_SERVICE_NAME,
@@ -979,7 +976,7 @@ export class Miniflare {
 
 		this.#devRegistry = new DevRegistry(
 			this.#sharedOpts.core.unsafeDevRegistryPath,
-			this.#sharedOpts.core.unsafeDevRegistryDoProxy,
+			this.#sharedOpts.core.unsafeDevRegistryDurableObjectProxy,
 			this.#log
 		);
 
@@ -1095,7 +1092,7 @@ export class Miniflare {
 
 		return {
 			protocol: getProtocol(this.#runtimeEntryURL),
-			host: "127.0.0.1",
+			host: this.#runtimeEntryURL.hostname,
 			port,
 		};
 	}
@@ -2212,7 +2209,7 @@ export class Miniflare {
 
 		await this.#devRegistry.updateRegistryPath(
 			sharedOpts.core.unsafeDevRegistryPath,
-			sharedOpts.core.unsafeDevRegistryDoProxy
+			sharedOpts.core.unsafeDevRegistryDurableObjectProxy
 		);
 		// Send to runtime and wait for updates to process
 		await this.#assembleAndUpdateConfig();

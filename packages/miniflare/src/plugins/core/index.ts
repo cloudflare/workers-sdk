@@ -222,7 +222,7 @@ export const CoreSharedOptionsSchema = z.object({
 	// Enable auto service / durable objects discovery with the dev registry
 	unsafeDevRegistryPath: z.string().optional(),
 	// Enable External Durable Objects Proxy / Internal DOs registration
-	unsafeDevRegistryDoProxy: z.boolean().default(false),
+	unsafeDevRegistryDurableObjectProxy: z.boolean().default(false),
 	unsafeModuleFallbackService: ServiceFetchSchema.optional(),
 	// Keep blobs when deleting/overwriting keys, required for stacked storage
 	unsafeStickyBlobs: z.boolean().optional(),

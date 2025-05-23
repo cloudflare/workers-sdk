@@ -266,7 +266,7 @@ test("DevRegistry: fetch to durable object with do proxy disabled", async (t) =>
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
-		unsafeDevRegistryDoProxy: false,
+		unsafeDevRegistryDurableObjectProxy: false,
 		compatibilityFlags: ["experimental"],
 		durableObjects: {
 			DO: {
@@ -296,7 +296,7 @@ test("DevRegistry: fetch to durable object with do proxy disabled", async (t) =>
 	const local = new Miniflare({
 		name: "local-worker",
 		unsafeDevRegistryPath,
-		unsafeDevRegistryDoProxy: false,
+		unsafeDevRegistryDurableObjectProxy: false,
 		durableObjects: {
 			DO: {
 				className: "MyDurableObject",
@@ -329,7 +329,7 @@ test("DevRegistry: RPC to durable object with do proxy disabled", async (t) => {
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
-		unsafeDevRegistryDoProxy: false,
+		unsafeDevRegistryDurableObjectProxy: false,
 		compatibilityFlags: ["experimental"],
 		durableObjects: {
 			DO: {
@@ -353,7 +353,7 @@ test("DevRegistry: RPC to durable object with do proxy disabled", async (t) => {
 	const local = new Miniflare({
 		name: "local-worker",
 		unsafeDevRegistryPath,
-		unsafeDevRegistryDoProxy: false,
+		unsafeDevRegistryDurableObjectProxy: false,
 		durableObjects: {
 			DO: {
 				className: "MyDurableObject",
@@ -395,7 +395,7 @@ test("DevRegistry: fetch to durable object", async (t) => {
 	const local = new Miniflare({
 		name: "local-worker",
 		unsafeDevRegistryPath,
-		unsafeDevRegistryDoProxy: true,
+		unsafeDevRegistryDurableObjectProxy: true,
 		durableObjects: {
 			DO: {
 				className: "MyDurableObject",
@@ -426,7 +426,7 @@ test("DevRegistry: fetch to durable object", async (t) => {
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
-		unsafeDevRegistryDoProxy: true,
+		unsafeDevRegistryDurableObjectProxy: true,
 		compatibilityFlags: ["experimental"],
 		durableObjects: {
 			DO: {
@@ -464,7 +464,7 @@ test("DevRegistry: RPC to durable object", async (t) => {
 	const local = new Miniflare({
 		name: "local-worker",
 		unsafeDevRegistryPath,
-		unsafeDevRegistryDoProxy: true,
+		unsafeDevRegistryDurableObjectProxy: true,
 		durableObjects: {
 			DO: {
 				className: "MyDurableObject",
@@ -502,7 +502,7 @@ test("DevRegistry: RPC to durable object", async (t) => {
 	const remote = new Miniflare({
 		name: "remote-worker",
 		unsafeDevRegistryPath,
-		unsafeDevRegistryDoProxy: true,
+		unsafeDevRegistryDurableObjectProxy: true,
 		compatibilityFlags: ["experimental"],
 		durableObjects: {
 			DO: {
