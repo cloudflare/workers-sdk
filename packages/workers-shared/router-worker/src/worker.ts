@@ -4,7 +4,9 @@ import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics, DISPATCH_TYPE, STATIC_ROUTING_DECISION } from "./analytics";
 import { applyConfigurationDefaults } from "./configuration";
-import type AssetWorker from "../../asset-worker";
+/* @ts-expect-error importing an html file bundles this via esbuild */
+import limitedResponse from "./limited-response.html";
+import type AssetWorker from "../../asset-worker/src/worker";
 import type {
 	EyeballRouterConfig,
 	JaegerTracing,
@@ -89,6 +91,15 @@ export default {
 					throw new Error(
 						"Fetch for user worker without having a user worker binding"
 					);
+				}
+				if (eyeballConfig.limitedAssetsOnly) {
+					analytics.setData({ userWorkerFreeTierLimiting: true });
+					return new Response(limitedResponse, {
+						status: 429,
+						headers: {
+							"Content-Type": "text/html",
+						},
+					});
 				}
 				analytics.setData({ dispatchtype: DISPATCH_TYPE.WORKER });
 				userWorkerInvocation = true;
