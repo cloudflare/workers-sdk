@@ -174,6 +174,7 @@ async function resolveBindings(
 			local: !input.dev?.remote,
 			imagesLocalMode: input.dev?.imagesLocalMode,
 			name: config.name,
+			vectorizeBindToProd: input.dev?.bindVectorizeToProd,
 		}
 	);
 

@@ -51,6 +51,7 @@ export function printBindings(
 		name?: string;
 		provisioning?: boolean;
 		warnIfNoBindings?: boolean;
+		vectorizeBindToProd?: boolean;
 	} = {}
 ) {
 	let hasConnectionStatus = false;
@@ -58,9 +59,8 @@ export function printBindings(
 		isProvisioning: context.provisioning,
 		isLocalDev: context.local,
 	});
-	const truncate = (item: string | Record<string, unknown>) => {
+	const truncate = (item: string | Record<string, unknown>, maxLength = 40) => {
 		const s = typeof item === "string" ? item : JSON.stringify(item);
-		const maxLength = 40;
 		if (s.length < maxLength) {
 			return s;
 		}
@@ -262,7 +262,11 @@ export function printBindings(
 					name: binding,
 					type: friendlyBindingNames.vectorize,
 					value: index_name,
-					mode: getMode(),
+					mode: getMode({
+						isSimulatedLocally: context.vectorizeBindToProd
+							? false
+							: /* Vectorize doesn't support local mode */ undefined,
+					}),
 				};
 			})
 		);
@@ -556,6 +560,9 @@ export function printBindings(
 		);
 		const maxNameLength = Math.max(...output.map((b) => b.name.length));
 		const maxTypeLength = Math.max(...output.map((b) => b.type.length));
+		const maxModeLength = Math.max(
+			...output.map((b) => (b.mode ? stripAnsi(b.mode).length : "Mode".length))
+		);
 
 		const hasMode = output.some((b) => b.mode);
 		const bindingPrefix = `env.`;
@@ -565,19 +572,42 @@ export function printBindings(
 			" (".length +
 			maxValueLength +
 			")".length;
-		logger.log(title);
-		logger.log(
-			`${padEndAnsi(dim("Binding"), bindingLength)}      ${padEndAnsi(dim("Resource"), maxTypeLength)}      ${hasMode ? dim("Mode") : ""}`
-		);
-		for (const binding of output) {
-			const bindingString = padEndAnsi(
-				`${white(`env.${binding.name}`)}${binding.value ? ` (${dim(typeof binding.value === "symbol" ? chalk.italic("inherited") : binding.value ?? "")})` : ""}`,
-				bindingLength
-			);
 
+		const shouldWrap =
+			bindingLength + 6 + maxTypeLength + 6 + maxModeLength >=
+			process.stdout.columns;
+
+		logger.log(title);
+		if (shouldWrap) {
 			logger.log(
-				`${bindingString}      ${brandColor(binding.type.padEnd(maxTypeLength))}      ${hasMode ? binding.mode : ""}`
+				`${padEndAnsi(
+					dim("Binding"),
+					bindingPrefix.length + maxNameLength
+				)}    ${padEndAnsi(dim("Resource"), maxTypeLength)}    ${hasMode ? dim("Mode") : ""}`
 			);
+		} else {
+			logger.log(
+				`${padEndAnsi(dim("Binding"), bindingLength)}      ${padEndAnsi(dim("Resource"), maxTypeLength)}      ${hasMode ? dim("Mode") : ""}`
+			);
+		}
+		for (const binding of output) {
+			if (shouldWrap) {
+				const bindingString = padEndAnsi(
+					`${white(`env.${binding.name}`)}`,
+					bindingPrefix.length + maxNameLength
+				);
+				logger.log(
+					`${bindingString}    ${brandColor(binding.type.padEnd(maxTypeLength))}    ${hasMode ? binding.mode : ""}${binding.value ? `\n  ${dim(truncate(typeof binding.value === "symbol" ? chalk.italic("inherited") : binding.value ?? "", process.stdout.columns - 2))}` : ""}`
+				);
+			} else {
+				const bindingString = padEndAnsi(
+					`${white(`env.${binding.name}`)}${binding.value ? ` (${dim(typeof binding.value === "symbol" ? chalk.italic("inherited") : binding.value ?? "")})` : ""}`,
+					bindingLength
+				);
+				logger.log(
+					`${bindingString}      ${brandColor(binding.type.padEnd(maxTypeLength))}      ${hasMode ? binding.mode : ""}`
+				);
+			}
 		}
 		logger.log();
 	}
