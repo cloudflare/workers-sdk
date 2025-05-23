@@ -6,6 +6,7 @@ import { Analytics, DISPATCH_TYPE, STATIC_ROUTING_DECISION } from "./analytics";
 import { applyConfigurationDefaults } from "./configuration";
 import type AssetWorker from "../../asset-worker";
 import type {
+	EyeballRouterConfig,
 	JaegerTracing,
 	RouterConfig,
 	UnsafePerformanceTimer,
@@ -16,6 +17,7 @@ export interface Env {
 	ASSET_WORKER: Service<AssetWorker>;
 	USER_WORKER: Fetcher;
 	CONFIG: RouterConfig;
+	EYEBALL_CONFIG: EyeballRouterConfig;
 
 	SENTRY_DSN: string;
 	ENVIRONMENT: Environment;
@@ -55,7 +57,10 @@ export default {
 			);
 
 			const hasStaticRouting = env.CONFIG.static_routing !== undefined;
-			const config = applyConfigurationDefaults(env.CONFIG);
+			const [config, eyeballConfig] = applyConfigurationDefaults(
+				env.CONFIG,
+				env.EYEBALL_CONFIG
+			);
 
 			const url = new URL(request.url);
 
