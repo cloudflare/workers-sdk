@@ -1,7 +1,6 @@
 import { cancel, startSection } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
-import { parseByteSize } from "../parse";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { pickDeployment } from "./cli/deployments";
 import { getLocation } from "./cli/locations";
@@ -16,6 +15,7 @@ import {
 	promptForLabels,
 	renderDeploymentConfiguration,
 	renderDeploymentMutationError,
+	resolveMemory,
 } from "./common";
 import { wrap } from "./helpers/wrap";
 import { loadAccount } from "./locations";
@@ -104,11 +104,7 @@ export async function modifyCommand(
 		);
 		const labels = collectLabels(modifyArgs.label);
 
-		const memory = modifyArgs.memory ?? config.cloudchamber.memory;
-		const memoryMib =
-			memory !== undefined
-				? Math.round(parseByteSize(memory, 1024) / (1024 * 1024))
-				: undefined;
+		const memoryMib = resolveMemory(modifyArgs, config.cloudchamber);
 
 		const deployment = await DeploymentsService.modifyDeploymentV2(
 			modifyArgs.deploymentId,
@@ -236,11 +232,7 @@ async function handleModifyCommand(
 		true
 	);
 
-	const memory = args.memory ?? config.cloudchamber.memory;
-	const memoryMib =
-		memory !== undefined
-			? Math.round(parseByteSize(memory, 1024) / (1024 * 1024))
-			: undefined;
+	const memoryMib = resolveMemory(args, config.cloudchamber);
 
 	renderDeploymentConfiguration("modify", {
 		image,

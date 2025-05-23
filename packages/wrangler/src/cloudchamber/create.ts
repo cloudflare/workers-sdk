@@ -23,6 +23,7 @@ import {
 	promptForLabels,
 	renderDeploymentConfiguration,
 	renderDeploymentMutationError,
+	resolveMemory,
 } from "./common";
 import { wrap } from "./helpers/wrap";
 import { loadAccount } from "./locations";
@@ -141,11 +142,7 @@ export async function createCommand(
 			useIpv4 === true
 				? { assign_ipv4: AssignIPv4.PREDEFINED }
 				: { assign_ipv6: AssignIPv6.PREDEFINED };
-		const memory = args.memory ?? config.cloudchamber.memory;
-		const memoryMib =
-			memory !== undefined
-				? Math.round(parseByteSize(memory, 1024) / (1024 * 1024))
-				: undefined;
+		const memoryMib = resolveMemory(args, config.cloudchamber);
 		const deployment = await DeploymentsService.createDeploymentV2({
 			image: body.image,
 			location: body.location,
@@ -290,14 +287,10 @@ async function handleCreateCommand(
 
 	const account = await loadAccount();
 
-	const memory = args.memory ?? config.cloudchamber.memory;
 	const memoryMib =
-		memory !== undefined
-			? Math.round(parseByteSize(memory, 1024) / (1024 * 1024))
-			: account.defaults.memory_mib ??
-				Math.round(
-					parseByteSize(account.defaults.memory, 1024) / (1024 * 1024)
-				);
+		resolveMemory(args, config.cloudchamber) ??
+		account.defaults.memory_mib ??
+		Math.round(parseByteSize(account.defaults.memory, 1024) / (1024 * 1024));
 
 	renderDeploymentConfiguration("create", {
 		image,

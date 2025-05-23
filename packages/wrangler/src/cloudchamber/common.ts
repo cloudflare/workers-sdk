@@ -21,10 +21,12 @@ import {
 	requireAuth,
 	setLoginScopeKeys,
 } from "../user";
+import { parseByteSize } from "./../parse";
 import { ApiError, DeploymentMutationError, OpenAPI } from "./client";
 import { wrap } from "./helpers/wrap";
 import { idToLocationName, loadAccount } from "./locations";
 import type { Config } from "../config";
+import type { CloudchamberConfig } from "../config/environment";
 import type { Scope } from "../user";
 import type {
 	CommonYargsOptions,
@@ -630,4 +632,20 @@ export async function promptForLabels(
 	}
 
 	return [];
+}
+
+// Return the amount of memory to use (in MiB) for a deployment given the
+// provided arguments and configuration.
+export function resolveMemory(
+	args: { memory: string | undefined },
+	config: CloudchamberConfig
+): number | undefined {
+	const MiB = 1024 * 1024;
+
+	const memory = args.memory ?? config.memory;
+	if (memory !== undefined) {
+		return Math.round(parseByteSize(memory, 1024) / MiB);
+	}
+
+	return undefined;
 }
