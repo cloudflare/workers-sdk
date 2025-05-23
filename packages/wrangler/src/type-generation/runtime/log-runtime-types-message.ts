@@ -56,7 +56,7 @@ export function logRuntimeTypesMessage(
 		logAction("Install @types/node");
 		logger.log(
 			chalk.dim(
-				`Since you have the \`nodejs_compat\` flag, you should install Node.js types by running "npm i --save-dev @types/node".`
+				"Since you have the `nodejs_compat` flag, you should install Node.js types (`@types/node`)"
 			)
 		);
 		logger.log("");
