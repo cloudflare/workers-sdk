@@ -41,44 +41,24 @@ export function normaliseServiceDesignator(
 	};
 }
 
-export function getExternalServiceName(service: string) {
-	return `proxy:external:${service}`;
+export function getProxyFallbackServiceName(service: string) {
+	return `proxy:fallback:${service}`;
 }
 
-export function createExternalService(options: {
-	serviceName: string;
-	entrypoints: Map<string | undefined, "service" | "durableObject">;
-	loopbackAddress: string;
-	isDurableObjectProxyEnabled: boolean;
-}): Service {
+export function createProxyFallbackService(
+	serviceName: string,
+	entrypoints: Set<string | undefined>
+): Service {
 	return {
-		name: getUserServiceName(getExternalServiceName(options.serviceName)),
+		name: getProxyFallbackServiceName(serviceName),
 		worker: {
 			compatibilityDate: "2025-05-01",
-			// Use in-memory storage for the stub object classes *declared* by this
-			// script. They don't need to persist anything, and would end up using the
-			// incorrect unsafe unique key.
-			durableObjectStorage: { inMemory: kVoid },
-			durableObjectNamespaces: Array.from(
-				options.entrypoints
-			).flatMap<Worker_DurableObjectNamespace>(([className, type]) => {
-				if (type === "durableObject") {
-					return [
-						{
-							className,
-							uniqueKey: `${options.serviceName}-${className}`,
-						} satisfies Worker_DurableObjectNamespace,
-					];
-				}
-
-				return [];
-			}),
 			modules: [
 				{
 					name: "fallback-service.mjs",
 					esModule: [
 						`
-                            import { WorkerEntrypoint, DurableObject } from "cloudflare:workers";
+                            import { WorkerEntrypoint } from "cloudflare:workers";
 
                             ${CREATE_PROXY_PROTOTYPE_CLASS_HELPER_SCRIPT}
 
@@ -102,46 +82,10 @@ export function createExternalService(options: {
 
                                 return klass;
                             }
-
-                            function createProxyDurableObjectClass({ scriptName, className, proxyUrl }) {
-                                const klass = createProxyPrototypeClass(DurableObject, (key) => {
-                                    throw new Error(${
-																			options.isDurableObjectProxyEnabled
-																				? `\`Cannot access "\${key}" as Durable Object RPC is not yet supported between multiple dev sessions.\``
-																				: `\`Couldn't find the durable Object "\${className}" of script "\${scriptName}".\``
-																		});
-                                });
-
-                                // Forward regular HTTP requests to the other dev session
-                                klass.prototype.fetch = function(request) {
-                                    const proxyRequest = new Request(proxyUrl, request);
-                                    proxyRequest.headers.set("${PROXY_OBJECT_URL_HEADER}", request.url);
-                                    proxyRequest.headers.set("${PROXY_OBJECT_NAME_HEADER}", className);
-                                    proxyRequest.headers.set("${PROXY_OBJECT_SCRIPT_HEADER}", scriptName);
-                                    proxyRequest.headers.set("${PROXY_OBJECT_ID_HEADER}", this.ctx.id.toString());
-                                    proxyRequest.headers.set("${PROXY_OBJECT_CF_BLOB_HEADER}", JSON.stringify(request.cf ?? {}));
-                                    return fetch(proxyRequest);
-                                };
-
-                                return klass;
-                            }
                         `,
-						...Array.from(options.entrypoints).map(
-							([entrypoint = "default", type]) => {
-								const service = options.serviceName;
-								const proxyURL = options.loopbackAddress;
-
-								switch (type) {
-									case "service":
-										return `export ${entrypoint === "default" ? "default" : `const ${entrypoint} =`} createFallbackWorkerEntrypointClass({ service: "${service}", entrypoint: "${entrypoint}" });`;
-									case "durableObject":
-										return `export const ${entrypoint} = createProxyDurableObjectClass({ scriptName: "${service}", className: "${entrypoint}", proxyUrl: "${proxyURL}" });`;
-									default:
-										throw new Error(
-											`Unsupported entrypoint type "${type}" for external service "${service}" `
-										);
-								}
-							}
+						...Array.from(entrypoints).map(
+							(entrypoint = "default") =>
+								`export ${entrypoint === "default" ? "default" : `const ${entrypoint} =`} createFallbackWorkerEntrypointClass({ service: "${serviceName}", entrypoint: "${entrypoint}" });`
 						),
 					].join("\n"),
 				},
@@ -150,15 +94,16 @@ export function createExternalService(options: {
 	};
 }
 
-export const INTERNAL_DO_PROXY_SERVICE_NAME = "proxy:internal:do";
+export const INBOUND_DO_PROXY_SERVICE_NAME = "proxy:do:inbound";
+export const OUTBOUND_DO_PROXY_SERVICE_NAME = "proxy:do:outbound";
 
 /**
- * A well known URL to the proxy worker
+ * A well known URL to the inbound do proxy worker
  * This should match the Wrangler implementation for backwards compatibility
  *
  * @see https://github.com/cloudflare/workers-sdk/blob/362cb0be3fa28bbf007491f7156ecb522bd7ee43/packages/wrangler/src/dev/miniflare.ts#L52-L59
  */
-export const INTERNAL_DO_PROXY_SERVICE_PATH =
+export const INBOUND_DO_PROXY_SERVICE_PATH =
 	"__WRANGLER_EXTERNAL_DURABLE_OBJECTS_WORKER";
 
 /*
@@ -167,12 +112,12 @@ export const INTERNAL_DO_PROXY_SERVICE_PATH =
  * The a proxy durable object is created and will forward requests to a well known
  * URL of the other workerd process
  */
-export function createInternalDoProxyService(
+export function createInboundDoProxyService(
 	internalObjects: Array<[string, string]>
 ): Service {
 	return {
 		// This is treated as a user service to support custom routes
-		name: getUserServiceName(INTERNAL_DO_PROXY_SERVICE_NAME),
+		name: getUserServiceName(INBOUND_DO_PROXY_SERVICE_NAME),
 		worker: {
 			compatibilityDate: "2025-05-01",
 			// Define bindings for each internal durable objects
@@ -225,7 +170,82 @@ export function createInternalDoProxyService(
 	};
 }
 
-export function getExternalServiceHttpOptions(
+const unsafeVariableCharRegex = /[^0-9a-zA-Z_\$]/g;
+
+export function getOutboundDoProxyClassName(
+	scriptName: string,
+	className: string
+) {
+	return `${scriptName.replace(unsafeVariableCharRegex, "_")}_${className}`;
+}
+
+export function createOutboundDoProxyService(
+	externalObjects: Array<[string, string]>,
+	loopbackAddress: string,
+	isProxyEnabled: boolean
+): Service {
+	return {
+		name: getUserServiceName(OUTBOUND_DO_PROXY_SERVICE_NAME),
+		worker: {
+			compatibilityDate: "2025-05-01",
+			// Use in-memory storage for the stub object classes *declared* by this
+			// script. They don't need to persist anything, and would end up using the
+			// incorrect unsafe unique key.
+			durableObjectStorage: { inMemory: kVoid },
+			durableObjectNamespaces:
+				externalObjects.map<Worker_DurableObjectNamespace>(
+					([scriptName, className]) =>
+						({
+							className: getOutboundDoProxyClassName(scriptName, className),
+							uniqueKey: `${scriptName}-${className}`,
+						}) satisfies Worker_DurableObjectNamespace
+				),
+			modules: [
+				{
+					name: "proxy.mjs",
+					esModule: [
+						`
+                            import { DurableObject } from "cloudflare:workers";
+
+                            ${CREATE_PROXY_PROTOTYPE_CLASS_HELPER_SCRIPT}
+
+                            function createProxyDurableObjectClass({ scriptName, className, proxyUrl }) {
+                                const klass = createProxyPrototypeClass(DurableObject, (key) => {
+									const message = ${
+										isProxyEnabled
+											? `\`Cannot access "\${key}" as Durable Object RPC is not yet supported between multiple dev sessions.\``
+											: `\`Couldn't find the durable Object "\${className}" of script "\${scriptName}".\``
+									};
+
+                                    throw new Error(message);
+                                });
+
+                                // Forward regular HTTP requests to the other dev session
+                                klass.prototype.fetch = function(request) {
+                                    const proxyRequest = new Request(proxyUrl, request);
+                                    proxyRequest.headers.set("${PROXY_OBJECT_URL_HEADER}", request.url);
+                                    proxyRequest.headers.set("${PROXY_OBJECT_NAME_HEADER}", className);
+                                    proxyRequest.headers.set("${PROXY_OBJECT_SCRIPT_HEADER}", scriptName);
+                                    proxyRequest.headers.set("${PROXY_OBJECT_ID_HEADER}", this.ctx.id.toString());
+                                    proxyRequest.headers.set("${PROXY_OBJECT_CF_BLOB_HEADER}", JSON.stringify(request.cf ?? {}));
+                                    return fetch(proxyRequest);
+                                };
+
+                                return klass;
+                            }
+                        `,
+						...Array.from(externalObjects).map(
+							([scriptName, className]) =>
+								`export const ${getOutboundDoProxyClassName(scriptName, className)} = createProxyDurableObjectClass({ scriptName: "${scriptName}", className: "${className}", proxyUrl: "${loopbackAddress}" });`
+						),
+					].join("\n"),
+				},
+			],
+		},
+	};
+}
+
+export function getHttpProxyOptions(
 	service: string,
 	entrypoint: string | undefined
 ): HttpOptions {
@@ -248,11 +268,11 @@ export function getExternalServiceHttpOptions(
 	};
 }
 
-export function getExternalServiceSocketName(
+export function getProxyFallbackServiceSocketName(
 	service: string,
 	entrypoint: string | undefined
 ): string {
-	return `external-fallback-${service}-${entrypoint ?? "default"}`;
+	return `proxy-fallback-${service}-${entrypoint ?? "default"}`;
 }
 
 export function getProtocol(url: URL): "http" | "https" {
@@ -266,9 +286,7 @@ export function getProtocol(url: URL): "http" | "https" {
 	return protocol;
 }
 
-export function extractExternalServiceFetchProxyTarget(
-	req: http.IncomingMessage
-): {
+export function extractServiceFetchProxyTarget(req: http.IncomingMessage): {
 	service: string;
 	entrypoint: string;
 } | null {
@@ -292,7 +310,7 @@ export function extractExternalServiceFetchProxyTarget(
 	};
 }
 
-export function extractExternalDoFetchProxyTarget(req: http.IncomingMessage): {
+export function extractDoFetchProxyTarget(req: http.IncomingMessage): {
 	scriptName: string;
 	className: string;
 } | null {

@@ -105,17 +105,20 @@ import {
 } from "./shared";
 import { DevRegistry, WorkerDefinition } from "./shared/dev-registry";
 import {
-	createExternalService,
-	createInternalDoProxyService,
-	extractExternalDoFetchProxyTarget,
-	extractExternalServiceFetchProxyTarget,
-	getExternalServiceHttpOptions,
-	getExternalServiceName,
-	getExternalServiceSocketName,
+	createInboundDoProxyService,
+	createOutboundDoProxyService,
+	createProxyFallbackService,
+	extractDoFetchProxyTarget,
+	extractServiceFetchProxyTarget,
+	getHttpProxyOptions,
+	getOutboundDoProxyClassName,
 	getProtocol,
-	INTERNAL_DO_PROXY_SERVICE_NAME,
-	INTERNAL_DO_PROXY_SERVICE_PATH,
+	getProxyFallbackServiceName,
+	getProxyFallbackServiceSocketName,
+	INBOUND_DO_PROXY_SERVICE_NAME,
+	INBOUND_DO_PROXY_SERVICE_PATH,
 	normaliseServiceDesignator,
+	OUTBOUND_DO_PROXY_SERVICE_NAME,
 } from "./shared/external-service";
 import { isCompressedByCloudflareFL } from "./shared/mime-types";
 import {
@@ -399,17 +402,20 @@ function getExternalServiceEntrypoints(
 ) {
 	const externalServices = new Map<
 		string,
-		Map<string | undefined, "service" | "durableObject">
+		{
+			classNames: Set<string>;
+			entrypoints: Set<string | undefined>;
+		}
 	>();
 	const allWorkerNames = allWorkerOpts.map((opts) => opts.core.name);
 	const getEntrypoints = (name: string) => {
 		let externalService = externalServices.get(name);
 
 		if (!externalService) {
-			externalService = new Map<
-				string | undefined,
-				"durableObject" | "service"
-			>();
+			externalService = {
+				classNames: new Set(),
+				entrypoints: new Set(),
+			};
 			externalServices.set(name, externalService);
 		}
 
@@ -440,12 +446,12 @@ function getExternalServiceEntrypoints(
 					workerOpts.core.serviceBindings[name] = {
 						external: {
 							address: `${loopbackHost}:${loopbackPort}`,
-							http: getExternalServiceHttpOptions(serviceName, entrypoint),
+							http: getHttpProxyOptions(serviceName, entrypoint),
 						},
 					};
 
 					const entrypoints = getEntrypoints(serviceName);
-					entrypoints.set(entrypoint, "service");
+					entrypoints.entrypoints.add(entrypoint);
 				}
 			}
 		}
@@ -471,8 +477,8 @@ function getExternalServiceEntrypoints(
 				) {
 					// If this is an external Durable Object, point it to the proxy on the external service instead
 					workerOpts.do.durableObjects[bindingName] = {
-						className,
-						scriptName: getExternalServiceName(scriptName),
+						className: getOutboundDoProxyClassName(scriptName, className),
+						scriptName: OUTBOUND_DO_PROXY_SERVICE_NAME,
 						useSQLite,
 						// Matches the unique key Miniflare will generate for this object in
 						// the target session. We need to do this so workerd generates the
@@ -484,7 +490,7 @@ function getExternalServiceEntrypoints(
 					};
 
 					const entrypoints = getEntrypoints(scriptName);
-					entrypoints.set(className, "durableObject");
+					entrypoints.classNames.add(className);
 				}
 			}
 		}
@@ -509,12 +515,12 @@ function getExternalServiceEntrypoints(
 					workerOpts.core.tails[i] = {
 						external: {
 							address: `${loopbackHost}:${loopbackPort}`,
-							http: getExternalServiceHttpOptions(serviceName, entrypoint),
+							http: getHttpProxyOptions(serviceName, entrypoint),
 						},
 					};
 
 					const entrypoints = getEntrypoints(serviceName);
-					entrypoints.set(entrypoint, "service");
+					entrypoints.entrypoints.add(entrypoint);
 				}
 			}
 		}
@@ -1127,7 +1133,7 @@ export class Miniflare {
 		);
 
 		const port = this.#socketPorts.get(
-			getExternalServiceSocketName(service, entrypoint)
+			getProxyFallbackServiceSocketName(service, entrypoint)
 		);
 
 		if (!port) {
@@ -1147,7 +1153,7 @@ export class Miniflare {
 		req: http.IncomingMessage,
 		res?: http.ServerResponse
 	): Promise<Response | undefined> => {
-		const serviceProxyTarget = extractExternalServiceFetchProxyTarget(req);
+		const serviceProxyTarget = extractServiceFetchProxyTarget(req);
 
 		if (serviceProxyTarget) {
 			assert(res !== undefined, "No response object provided");
@@ -1166,7 +1172,7 @@ export class Miniflare {
 			return;
 		}
 
-		const doProxyTarget = extractExternalDoFetchProxyTarget(req);
+		const doProxyTarget = extractDoFetchProxyTarget(req);
 
 		if (doProxyTarget) {
 			assert(res !== undefined, "No response object provided");
@@ -1752,42 +1758,51 @@ export class Miniflare {
 			externalServices &&
 			externalServices.size > 0
 		) {
-			const isDurableObjectProxyEnabled =
-				this.#devRegistry.isDurableObjectProxyEnabled();
-			const loopbackAddress = `http://${loopbackHost}:${loopbackPort}`;
-			for (const [serviceName, entrypoints] of externalServices) {
-				const service = createExternalService({
+			for (const [serviceName, { entrypoints }] of externalServices) {
+				const proxyFallbackService = createProxyFallbackService(
 					serviceName,
-					entrypoints,
-					loopbackAddress,
-					isDurableObjectProxyEnabled,
-				});
-				assert(service.name !== undefined);
+					entrypoints
+				);
+				assert(proxyFallbackService.name !== undefined);
 
-				services.set(service.name, service);
+				services.set(proxyFallbackService.name, proxyFallbackService);
 
-				for (const [entrypoint, type] of entrypoints) {
-					if (type !== "durableObject") {
-						const socketName = getExternalServiceSocketName(
-							serviceName,
-							entrypoint
-						);
-						sockets.push({
-							name: socketName,
-							// Reuse the socket address from the previous direct socket if exists
-							address: this.#getSocketAddress(socketName, 0, DEFAULT_HOST, 0),
-							service: {
-								name: service.name,
-								entrypoint,
-							},
-							http: {
-								cfBlobHeader: CoreHeaders.CF_BLOB,
-								capnpConnectHost: HOST_CAPNP_CONNECT,
-							},
-						});
-					}
+				for (const entrypoint of entrypoints) {
+					const socketName = getProxyFallbackServiceSocketName(
+						serviceName,
+						entrypoint
+					);
+					sockets.push({
+						name: socketName,
+						// Reuse the socket address from the previous direct socket if exists
+						address: this.#getSocketAddress(socketName, 0, DEFAULT_HOST, 0),
+						service: {
+							name: proxyFallbackService.name,
+							entrypoint,
+						},
+						http: {
+							cfBlobHeader: CoreHeaders.CF_BLOB,
+							capnpConnectHost: HOST_CAPNP_CONNECT,
+						},
+					});
 				}
 			}
+
+			const externalObjects = Array.from(externalServices).flatMap(
+				([scriptName, { classNames }]) =>
+					Array.from(classNames).map<[string, string]>((className) => [
+						scriptName,
+						className,
+					])
+			);
+			const outboundDoProxyService = createOutboundDoProxyService(
+				externalObjects,
+				`http://${loopbackHost}:${loopbackPort}`,
+				this.#devRegistry.isDurableObjectProxyEnabled()
+			);
+
+			assert(outboundDoProxyService.name !== undefined);
+			services.set(outboundDoProxyService.name, outboundDoProxyService);
 		}
 
 		// Expose all internal durable object with a proxy service
@@ -1807,13 +1822,13 @@ export class Miniflare {
 			});
 
 			if (internalObjects.length > 0) {
-				const service = createInternalDoProxyService(internalObjects);
+				const service = createInboundDoProxyService(internalObjects);
 				assert(service.name !== undefined);
 				services.set(service.name, service);
 				// Set up a custom route for the internal durable object proxy service
 				// This is needed for compatibility with the Wrangler Dev Registry implementation
-				allWorkerRoutes.set(INTERNAL_DO_PROXY_SERVICE_NAME, [
-					`*/${INTERNAL_DO_PROXY_SERVICE_PATH}`,
+				allWorkerRoutes.set(INBOUND_DO_PROXY_SERVICE_NAME, [
+					`*/${INBOUND_DO_PROXY_SERVICE_PATH}`,
 				]);
 			}
 		}
