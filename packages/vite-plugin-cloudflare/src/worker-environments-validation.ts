@@ -70,7 +70,12 @@ export function validateWorkerEnvironmentsResolvedConfigs(
 				disallowedOptimizeDepsExcludeEntries;
 		}
 
-		if (resolve.external === true || resolve.external.length > 0) {
+		// It seems like resolve.external can be undefined, as it can be seen in schema.
+		// And checking if it's undefined resolve.external === true will be false and resolve.external.length will fail
+		if (
+			resolve.external === true ||
+			(Array.isArray(resolve.external) && resolve.external.length > 0)
+		) {
 			disallowedConfig.resolveExternal = resolve.external;
 		}
 
