@@ -122,5 +122,6 @@ export function buildPluginFromFunctions({
 		testScheduled: undefined,
 		isOutfile: undefined,
 		metafile: undefined,
+		splitting: undefined,
 	});
 }
