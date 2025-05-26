@@ -711,6 +711,22 @@ function extractCustomService(customService: string) {
 	return { workerIndex, serviceKind, serviceName };
 }
 
+function getErrorMessage(error: unknown): string {
+	if (error instanceof Error) {
+		return error.stack || error.message;
+	}
+
+	if (typeof error === "string") {
+		return error;
+	}
+
+	try {
+		return JSON.stringify(error);
+	} catch {
+		return "Unknown error";
+	}
+}
+
 // Maps `Miniflare` instances to stack traces for their construction. Used to identify un-`dispose()`d instances.
 let maybeInstanceRegistry:
 	| Map<Miniflare, string /* constructionStack */>
@@ -908,10 +924,10 @@ export class Miniflare {
 			// Validate return type as `service` is a user defined function
 			// TODO: should we validate outside this try/catch?
 			return z.instanceof(Response).parse(response);
-		} catch (e: any) {
+		} catch (error) {
 			// TODO: do we need to add `CF-Exception` header or something here?
 			//  check what runtime does
-			return new Response(e?.stack ?? e, { status: 500 });
+			return new Response(getErrorMessage(error), { status: 500 });
 		}
 	}
 
@@ -931,7 +947,14 @@ export class Miniflare {
 		}
 		assert(typeof service === "object" && "node" in service);
 
-		await service.node(req, res, this);
+		try {
+			await service.node(req, res, this);
+		} catch (error) {
+			if (!res.headersSent) {
+				res.writeHead(500);
+			}
+			res.end(getErrorMessage(error));
+		}
 	}
 
 	get #workerSrcOpts(): NameSourceOptions[] {
