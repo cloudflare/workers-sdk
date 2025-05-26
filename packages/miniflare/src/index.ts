@@ -700,6 +700,17 @@ function safeReadableStreamFrom(iterable: AsyncIterable<Uint8Array>) {
 	});
 }
 
+function extractCustomService(customService: string) {
+	const slashIndex = customService.indexOf("/");
+	// TODO: technically may want to keep old versions around so can always
+	//  recover this in case of setOptions()?
+	const workerIndex = parseInt(customService.substring(0, slashIndex));
+	const serviceKind = customService[slashIndex + 1] as CustomServiceKind;
+	const serviceName = customService.substring(slashIndex + 2);
+
+	return { workerIndex, serviceKind, serviceName };
+}
+
 // Maps `Miniflare` instances to stack traces for their construction. Used to identify un-`dispose()`d instances.
 let maybeInstanceRegistry:
 	| Map<Miniflare, string /* constructionStack */>
@@ -868,7 +879,7 @@ export class Miniflare {
 		}
 	}
 
-	async #handleLoopbackCustomService(
+	async #handleLoopbackCustomFetchService(
 		request: Request,
 		customService: string
 	): Promise<Response> {
@@ -876,12 +887,8 @@ export class Miniflare {
 		if (customService === CoreBindings.IMAGES_SERVICE) {
 			service = imagesLocalFetcher;
 		} else {
-			const slashIndex = customService.indexOf("/");
-			// TODO: technically may want to keep old versions around so can always
-			//  recover this in case of setOptions()?
-			const workerIndex = parseInt(customService.substring(0, slashIndex));
-			const serviceKind = customService[slashIndex + 1] as CustomServiceKind;
-			const serviceName = customService.substring(slashIndex + 2);
+			const { workerIndex, serviceKind, serviceName } =
+				extractCustomService(customService);
 			if (serviceKind === CustomServiceKind.UNKNOWN) {
 				service =
 					this.#workerOpts[workerIndex]?.core.serviceBindings?.[serviceName];
@@ -908,6 +915,25 @@ export class Miniflare {
 		}
 	}
 
+	async #handleLoopbackCustomNodeService(
+		req: http.IncomingMessage,
+		res: http.ServerResponse,
+		customService: string
+	) {
+		let service: z.infer<typeof ServiceDesignatorSchema> | undefined;
+		const { workerIndex, serviceKind, serviceName } =
+			extractCustomService(customService);
+		if (serviceKind === CustomServiceKind.UNKNOWN) {
+			service =
+				this.#workerOpts[workerIndex]?.core.serviceBindings?.[serviceName];
+		} else if (serviceName === CUSTOM_SERVICE_KNOWN_OUTBOUND) {
+			service = this.#workerOpts[workerIndex]?.core.outboundService;
+		}
+		assert(typeof service === "object" && "node" in service);
+
+		await service.node(req, res, this);
+	}
+
 	get #workerSrcOpts(): NameSourceOptions[] {
 		return this.#workerOpts.map<NameSourceOptions>(({ core }) => core);
 	}
@@ -916,6 +942,13 @@ export class Miniflare {
 		req: http.IncomingMessage,
 		res?: http.ServerResponse
 	): Promise<Response | undefined> => {
+		const customNodeService =
+			req.headers[CoreHeaders.CUSTOM_NODE_SERVICE.toLowerCase()];
+		if (typeof customNodeService === "string") {
+			assert(res);
+			this.#handleLoopbackCustomNodeService(req, res, customNodeService);
+			return;
+		}
 		// Extract headers from request
 		const headers = new Headers();
 		for (const [name, values] of Object.entries(req.headers)) {
@@ -953,12 +986,14 @@ export class Miniflare {
 
 		let response: Response | undefined;
 		try {
-			const customService = request.headers.get(CoreHeaders.CUSTOM_SERVICE);
-			if (customService !== null) {
-				request.headers.delete(CoreHeaders.CUSTOM_SERVICE);
-				response = await this.#handleLoopbackCustomService(
+			const customFetchService = request.headers.get(
+				CoreHeaders.CUSTOM_FETCH_SERVICE
+			);
+			if (customFetchService !== null) {
+				request.headers.delete(CoreHeaders.CUSTOM_FETCH_SERVICE);
+				response = await this.#handleLoopbackCustomFetchService(
 					request,
-					customService
+					customFetchService
 				);
 			} else if (
 				this.#sharedOpts.core.unsafeModuleFallbackService !== undefined &&
