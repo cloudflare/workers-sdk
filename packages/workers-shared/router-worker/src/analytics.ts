@@ -3,13 +3,6 @@ import type { ReadyAnalytics } from "./types";
 // This will allow us to make breaking changes to the analytic schema
 const VERSION = 1;
 
-export enum STATIC_ROUTING_DECISION {
-	NOT_PROVIDED = 0,
-	NOT_ROUTED = 1,
-	EXCLUDE = 2,
-	INCLUDE = 3,
-}
-
 export enum DISPATCH_TYPE {
 	ASSETS = "asset",
 	WORKER = "worker",
@@ -32,8 +25,6 @@ type Data = {
 	coloTier?: number;
 	// double5 - Run user worker ahead of assets
 	userWorkerAhead?: boolean;
-	// double6 - Routing performed based on the _routes.json (if provided)
-	staticRoutingDecision?: STATIC_ROUTING_DECISION;
 
 	// -- Blobs --
 	// blob1 - Hostname of the request
@@ -88,7 +79,6 @@ export class Analytics {
 				this.data.userWorkerAhead === undefined // double5
 					? -1
 					: Number(this.data.userWorkerAhead),
-				this.data.staticRoutingDecision ?? STATIC_ROUTING_DECISION.NOT_PROVIDED, // double6
 			],
 			blobs: [
 				this.data.hostname?.substring(0, 256), // blob1 - trim to 256 bytes
