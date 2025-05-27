@@ -1,5 +1,57 @@
 # miniflare
 
+## 4.20250523.0
+
+### Minor Changes
+
+- [#9330](https://github.com/cloudflare/workers-sdk/pull/9330) [`34c71ce`](https://github.com/cloudflare/workers-sdk/commit/34c71ce9208ffceefe718fc9ae7282ef95e2f2be) Thanks [@edmundhung](https://github.com/edmundhung)! - Add a new `defaultPersistRoot` option to control where plugins persist data when no path is provided.
+
+  ```js
+  // Before this change / No `defaultPersistRoot`
+  new Miniflare({
+  	kvPersist: undefined, // → "/(tmp)/kv"
+  	d1Persist: true, // → "$PWD/.mf/d1"
+  	r2Persist: false, // → "/(tmp)/r2"
+  	cachePersist: "/my-cache", // → "/my-cache"
+  });
+
+  // With `defaultPersistRoot`
+  new Miniflare({
+  	defaultPersistRoot: "/storage",
+  	kvPersist: undefined, // → "/storage/kv"
+  	d1Persist: true, // → "/storage/d1"
+  	r2Persist: false, // → "/(tmp)/r2"
+  	cachePersist: "/my-cache", // → "/my-cache"
+  });
+  ```
+
+### Patch Changes
+
+- [#9184](https://github.com/cloudflare/workers-sdk/pull/9184) [`f7c82a4`](https://github.com/cloudflare/workers-sdk/commit/f7c82a4a9f1cb1c9abf6d309327a72b5423e44b1) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250508.0  | 1.20250520.0  |
+  | @cloudflare/workers-types | ^4.20250508.0 | ^4.20250520.0 |
+
+- [#9346](https://github.com/cloudflare/workers-sdk/pull/9346) [`7ddd865`](https://github.com/cloudflare/workers-sdk/commit/7ddd865fa61b65851149e3d1ac8753002b648e65) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250520.0  | 1.20250523.0  |
+  | @cloudflare/workers-types | ^4.20250520.0 | ^4.20250523.0 |
+
+- [#9335](https://github.com/cloudflare/workers-sdk/pull/9335) [`6479fc5`](https://github.com/cloudflare/workers-sdk/commit/6479fc5228d1249e87c7f668e8efbf88ec5a8f5f) Thanks [@penalosa](https://github.com/penalosa)! - Redesign `wrangler dev` to more clearly present information and have a bit of a glow up ✨
+  ![Screenshot 2025-05-22 at 01 11 43](https://github.com/user-attachments/assets/26cc6209-37a1-4ecb-8e91-daac2f79a095)
+
+- [#9106](https://github.com/cloudflare/workers-sdk/pull/9106) [`e5ae13a`](https://github.com/cloudflare/workers-sdk/commit/e5ae13adebe5ee139cf2c91f0a3bd5992cfd3923) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: decouple KV plugin from secrets store plugin
+
+  The KV plugin previously configured both KV namespace and secrets store bindings with the same service name but different persistence paths, causing conflicts when both were defined. This change copies the KV binding implementation into the secrets store plugin and customizes its service name to prevent collisions.
+
 ## 4.20250508.3
 
 ### Patch Changes
