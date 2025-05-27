@@ -328,7 +328,7 @@ parameter in module format Workers.
   Record mapping binding name to paths containing arbitrary binary data to
   inject as `ArrayBuffer` bindings into this Worker.
 
-- `serviceBindings?: Record<string, string | typeof kCurrentWorker | { name: string | typeof kCurrentWorker, entrypoint?: string } | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | (request: Request, instance: Miniflare) => Awaitable<Response>>`
+- `serviceBindings?: Record<string, string | typeof kCurrentWorker | { name: string | typeof kCurrentWorker, entrypoint?: string } | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | { node: (req: http.IncomingMessage, res: http.ServerResponse, miniflare: Miniflare) => Awaitable<void> } | (request: Request, miniflare: Miniflare) => Awaitable<Response>>`
 
   Record mapping binding name to service designators to inject as
   `{ fetch: typeof fetch }`
@@ -358,9 +358,10 @@ parameter in module format Workers.
     [`workerd` `DiskDirectory` struct](https://github.com/cloudflare/workerd/blob/bdbd6075c7c53948050c52d22f2dfa37bf376253/src/workerd/server/workerd.capnp#L600-L643),
     requests will be dispatched to an HTTP service backed by an on-disk
     directory.
-  - If the designator is a function, requests will be dispatched to your custom
-    handler. This allows you to access data and functions defined in Node.js
-    from your Worker. Note `instance` will be the `Miniflare` instance
+  - If the designator is an object of the form `{ node: (req: http.IncomingMessage, res: http.ServerResponse, miniflare: Miniflare) => Awaitable<void> }`, requests will be dispatched to your custom Node handler. This allows you to access data and functions defined in Node.js from your Worker using Node.js `req` and `res` objects. Note, `miniflare` will be the `Miniflare` instance dispatching the request.
+  - If the designator is a function with the signature `(request: Request, miniflare: Miniflare) => Response`, requests will be dispatched to your custom
+    fetch handler. This allows you to access data and functions defined in Node.js
+    from your Worker using fetch `Request` and `Response` objects. Note, `miniflare` will be the `Miniflare` instance
     dispatching the request.
 
 <!--prettier-ignore-start-->
@@ -471,7 +472,7 @@ parameter in module format Workers.
 
 <!--prettier-ignore-end-->
 
-- `outboundService?: string | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | (request: Request) => Awaitable<Response>`
+- `outboundService?: string | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | { node: (req: http.IncomingMessage, res: http.ServerResponse, miniflare: Miniflare) => Awaitable<void> } | (request: Request, miniflare: Miniflare) => Awaitable<Response>`
 
   Dispatch this Worker's global `fetch()` and `connect()` requests to the
   configured service. Service designators follow the same rules above for
