@@ -1,5 +1,5 @@
 {
-	"name": "@cloudflare/vitest-pool-workers-examples",
+	"name": "fixture-vitest-pool-workers",
 	"private": true,
 	"type": "module",
 	"scripts": {

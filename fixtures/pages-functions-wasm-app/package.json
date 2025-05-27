@@ -1,5 +1,5 @@
 {
-	"name": "pages-functions-wasm-app",
+	"name": "fixture-pages-functions-wasm",
 	"private": true,
 	"sideEffects": false,
 	"scripts": {

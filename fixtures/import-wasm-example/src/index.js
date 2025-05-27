@@ -1,7 +1,7 @@
 // this is from the `import-wasm-static` fixture defined above
 // and setup inside package.json to mimic an npm package
-import multiply from "import-wasm-static/multiply.wasm";
-import otherMultiple from "import-wasm-static/wasm/not-exported.wasm";
+import multiply from "fixture-import-wasm-static/multiply.wasm";
+import otherMultiple from "fixture-import-wasm-static/wasm/not-exported.wasm";
 
 export default {
 	async fetch(request) {

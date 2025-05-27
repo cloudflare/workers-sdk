@@ -1,5 +1,5 @@
 {
-	"name": "email-worker",
+	"name": "fixture-worker-email",
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",

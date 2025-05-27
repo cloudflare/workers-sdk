@@ -1,5 +1,5 @@
 {
-	"name": "fixtures-shared",
+	"name": "fixture-shared",
 	"private": true,
 	"description": "Shared fixtures for testing",
 	"devDependencies": {

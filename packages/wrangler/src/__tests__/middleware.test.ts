@@ -840,7 +840,7 @@ describe("middleware", () => {
 				}
 			`,
 				"wrangler.toml": dedent/*toml*/ `
-				name = "worker-app"
+				name = "fixture-worker-basic"
 				main = "src/index.js"
 				compatibility_date = "2022-03-31"
 

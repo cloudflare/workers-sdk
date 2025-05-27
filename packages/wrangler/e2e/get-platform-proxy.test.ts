@@ -16,7 +16,7 @@ describe("getPlatformProxy()", () => {
 
 			await seed(root, {
 				"wrangler.toml": dedent`
-						name = "ai-app"
+						name = "fixture-worker-ai"
 						account_id = "${CLOUDFLARE_ACCOUNT_ID}"
 						compatibility_date = "2023-01-01"
 						compatibility_flags = ["nodejs_compat"]
@@ -46,7 +46,7 @@ describe("getPlatformProxy()", () => {
 						`,
 				"package.json": dedent`
 						{
-							"name": "ai-app",
+							"name": "fixture-worker-ai",
 							"version": "0.0.0",
 							"private": true
 						}

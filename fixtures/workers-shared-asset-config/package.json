@@ -1,5 +1,5 @@
 {
-	"name": "workers-assets-config-test",
+	"name": "fixture-workers-shared-assets-config",
 	"private": true,
 	"scripts": {
 		"dev": "wrangler dev",

@@ -1,5 +1,5 @@
 {
-	"name": "additional-modules",
+	"name": "fixture-additional-modules",
 	"private": true,
 	"scripts": {
 		"build": "wrangler deploy --dry-run --outdir=dist",

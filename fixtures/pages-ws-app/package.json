@@ -1,5 +1,5 @@
 {
-	"name": "pages-ws-app",
+	"name": "fixture-pages-websocket",
 	"private": true,
 	"sideEffects": false,
 	"main": "server/index.js",

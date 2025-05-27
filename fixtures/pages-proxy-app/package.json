@@ -1,5 +1,5 @@
 {
-	"name": "pages-proxy-app",
+	"name": "fixture-pages-proxy",
 	"private": true,
 	"sideEffects": false,
 	"main": "server/index.js",

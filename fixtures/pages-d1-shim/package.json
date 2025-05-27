@@ -1,5 +1,5 @@
 {
-	"name": "pages-d1-shim",
+	"name": "fixture-pages-d1-shim",
 	"private": true,
 	"sideEffects": false,
 	"scripts": {

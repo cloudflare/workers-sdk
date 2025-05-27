@@ -1,5 +1,5 @@
 {
-	"name": "pages-functions-unenv-alias",
+	"name": "fixture-pages-functions-unenv",
 	"private": true,
 	"sideEffects": false,
 	"scripts": {

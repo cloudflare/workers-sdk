@@ -1,5 +1,5 @@
 {
-	"name": "workers-assets-with-user-worker-run-worker-first",
+	"name": "fixture-workers-assets-run-first",
 	"private": true,
 	"scripts": {
 		"check:type": "tsc",

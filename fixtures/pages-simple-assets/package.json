@@ -1,5 +1,5 @@
 {
-	"name": "pages-simple-assets",
+	"name": "fixture-pages-simple-assets",
 	"private": true,
 	"sideEffects": false,
 	"main": "dist/worker.js",

@@ -1,5 +1,5 @@
 {
-	"name": "d1-worker-app",
+	"name": "fixture-d1-basic",
 	"private": true,
 	"scripts": {
 		"check:type": "tsc",
