@@ -19,7 +19,7 @@ import {
 	DeploymentMutationError,
 	RolloutsService,
 	SchedulingPolicy,
-} from "./client";
+} from "@cloudflare/containers-shared";
 import { promiseSpinner } from "./common";
 import { diffLines } from "./helpers/diff";
 import type { Config } from "../config";
@@ -36,7 +36,7 @@ import type {
 	ModifyApplicationRequestBody,
 	ModifyDeploymentV2RequestBody,
 	UserDeploymentConfiguration,
-} from "./client";
+} from "@cloudflare/containers-shared";
 import type { JsonMap } from "@iarna/toml";
 
 function mergeDeep<T>(target: T, source: Partial<T>): T {

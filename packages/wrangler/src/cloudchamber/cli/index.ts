@@ -14,7 +14,7 @@ import {
 	ImageRegistriesService,
 	PlacementsService,
 	SshPublicKeysService,
-} from "../client";
+} from "@cloudflare/containers-shared";
 import { wrap } from "../helpers/wrap";
 import { idToLocationName } from "../locations";
 import { capitalize } from "./util";
@@ -25,7 +25,7 @@ import type {
 	PlacementEvent,
 	PlacementStatusHealth,
 	PlacementWithEvents,
-} from "../client";
+} from "@cloudflare/containers-shared";
 import type { EventName } from "../enums";
 
 export function pollRegistriesUntilCondition(

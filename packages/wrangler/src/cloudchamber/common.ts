@@ -21,7 +21,7 @@ import {
 	requireAuth,
 	setLoginScopeKeys,
 } from "../user";
-import { ApiError, DeploymentMutationError, OpenAPI } from "./client";
+import { ApiError, DeploymentMutationError, OpenAPI } from "@cloudflare/containers-shared";
 import { wrap } from "./helpers/wrap";
 import { idToLocationName, loadAccount } from "./locations";
 import type { Config } from "../config";
@@ -35,7 +35,7 @@ import type {
 	EnvironmentVariable,
 	Label,
 	NetworkParameters,
-} from "./client";
+} from "@cloudflare/containers-shared";
 import type { Arg } from "@cloudflare/cli/interactive";
 
 export type CommonCloudchamberConfiguration = { json: boolean };

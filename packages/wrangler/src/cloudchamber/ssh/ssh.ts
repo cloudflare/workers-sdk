@@ -15,7 +15,7 @@ import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { pollSSHKeysUntilCondition } from "../cli";
-import { SshPublicKeysService } from "../client";
+import { SshPublicKeysService } from "@cloudflare/containers-shared";
 import {
 	checkEverythingIsSet,
 	handleFailure,
@@ -33,7 +33,7 @@ import type {
 	ListSSHPublicKeys,
 	SSHPublicKeyID,
 	SSHPublicKeyItem,
-} from "../client";
+} from "@cloudflare/containers-shared";
 
 function createSSHPublicKeyOptionalYargs(yargs: CommonYargsArgvJSON) {
 	return yargs

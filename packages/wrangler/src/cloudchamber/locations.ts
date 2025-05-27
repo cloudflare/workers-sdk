@@ -1,5 +1,5 @@
-import { AccountService } from "./client";
-import type { CompleteAccountCustomer, Location } from "./client";
+import { AccountService } from "@cloudflare/containers-shared";
+import type { CompleteAccountCustomer, Location } from "@cloudflare/containers-shared";
 
 let cachedAccount: CompleteAccountCustomer | undefined;
 

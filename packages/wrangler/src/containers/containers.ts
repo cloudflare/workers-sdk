@@ -8,13 +8,13 @@ import {
 import { processArgument } from "@cloudflare/cli/args";
 import { dim, gray } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
-import { ApiError, ApplicationsService } from "../cloudchamber/client";
+import { ApiError, ApplicationsService } from "@cloudflare/containers-shared";
 import { loadAccountSpinner } from "../cloudchamber/common";
 import { wrap } from "../cloudchamber/helpers/wrap";
 import { UserError } from "../errors";
 import isInteractive from "../is-interactive";
-import type { Application } from "../cloudchamber/client/models/Application";
-import type { ListApplications } from "../cloudchamber/client/models/ListApplications";
+import type { Application } from "@cloudflare/containers-shared";
+import type { ListApplications } from "@cloudflare/containers-shared";
 import type { Config } from "../config";
 import type {
 	CommonYargsArgvJSON,

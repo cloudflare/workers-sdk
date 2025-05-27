@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as TOML from "@iarna/toml";
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
-import { SchedulingPolicy, SecretAccessType } from "../../cloudchamber/client";
+import { SchedulingPolicy, SecretAccessType } from "@cloudflare/containers-shared";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockCLIOutput } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -14,7 +14,7 @@ import type {
 	Application,
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
-} from "../../cloudchamber/client";
+} from "@cloudflare/containers-shared";
 import type { ContainerApp } from "../../config/environment";
 
 function writeAppConfiguration(...app: ContainerApp[]) {

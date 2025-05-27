@@ -10,7 +10,7 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { getLocation } from "./cli/locations";
-import { AssignIPv4, AssignIPv6, DeploymentsService } from "./client";
+import { AssignIPv4, AssignIPv6, DeploymentsService } from "@cloudflare/containers-shared";
 import {
 	checkEverythingIsSet,
 	collectEnvironmentVariables,
@@ -32,7 +32,7 @@ import type {
 	CommonYargsArgvJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../yargs-types";
-import type { EnvironmentVariable, Label, SSHPublicKeyID } from "./client";
+import type { EnvironmentVariable, Label, SSHPublicKeyID } from "@cloudflare/containers-shared";
 import type { Arg } from "@cloudflare/cli/interactive";
 
 const defaultContainerImage = "docker.io/cloudflare/hello-world:1.0";

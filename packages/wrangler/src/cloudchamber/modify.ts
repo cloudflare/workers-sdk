@@ -4,7 +4,7 @@ import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { pickDeployment } from "./cli/deployments";
 import { getLocation } from "./cli/locations";
-import { DeploymentsService } from "./client";
+import { DeploymentsService } from "@cloudflare/containers-shared";
 import {
 	collectEnvironmentVariables,
 	collectLabels,
@@ -24,7 +24,7 @@ import type {
 	CommonYargsArgvJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../yargs-types";
-import type { DeploymentV2, SSHPublicKeyID } from "./client";
+import type { DeploymentV2, SSHPublicKeyID } from "@cloudflare/containers-shared";
 
 export function modifyCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 	return yargs

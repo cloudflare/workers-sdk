@@ -80,6 +80,7 @@
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
 		"@cloudflare/cli": "workspace:*",
+		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/pages-shared": "workspace:^",
 		"@cloudflare/types": "6.18.4",
@@ -93,6 +94,7 @@
 		"@sentry/types": "^7.86.0",
 		"@sentry/utils": "^7.86.0",
 		"@types/command-exists": "^1.2.0",
+		"@types/dockerode": "^3.3.39",
 		"@types/glob-to-regexp": "^0.4.1",
 		"@types/is-ci": "^3.0.0",
 		"@types/javascript-time-ago": "^2.0.3",
@@ -117,6 +119,7 @@
 		"concurrently": "^8.2.2",
 		"date-fns": "^4.1.0",
 		"devtools-protocol": "^0.0.1182435",
+		"dockerode": "^4.0.2",
 		"dotenv": "^16.3.1",
 		"execa": "^6.1.0",
 		"find-up": "^6.3.0",

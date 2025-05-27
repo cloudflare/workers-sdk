@@ -13,7 +13,7 @@ import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import isInteractive from "../is-interactive";
 import { listDeploymentsAndChoose, loadDeployments } from "./cli/deployments";
 import { capitalize, statusToColored } from "./cli/util";
-import { DeploymentsService, PlacementsService } from "./client";
+import { DeploymentsService, PlacementsService } from "@cloudflare/containers-shared";
 import { loadAccountSpinner, promiseSpinner } from "./common";
 import type { Config } from "../config";
 import type {
@@ -24,7 +24,7 @@ import type {
 	DeploymentPlacementState,
 	PlacementEvent,
 	PlacementWithEvents,
-} from "./client";
+} from "@cloudflare/containers-shared";
 import type { EventName } from "./enums";
 
 export function listDeploymentsYargs(args: CommonYargsArgvJSON) {

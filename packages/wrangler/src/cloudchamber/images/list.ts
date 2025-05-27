@@ -1,5 +1,5 @@
 import { logger } from "../../logger";
-import { ImageRegistriesService } from "../client";
+import { ImageRegistriesService } from "@cloudflare/containers-shared";
 import { handleFailure, promiseSpinner } from "../common";
 import type { Config } from "../../config";
 import type {
@@ -7,7 +7,7 @@ import type {
 	CommonYargsArgvSanitizedJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../../yargs-types";
-import type { ImageRegistryPermissions } from "../client";
+import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 
 // cloudflare managed registry
 const domain = "registry.cloudchamber.cfdata.org";

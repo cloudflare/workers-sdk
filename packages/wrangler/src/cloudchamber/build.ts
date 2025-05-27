@@ -1,13 +1,13 @@
 import { spawn } from "child_process";
 import { stat } from "fs/promises";
 import { UserError } from "../errors";
-import { ImageRegistriesService } from "./client";
+import { ImageRegistriesService } from "@cloudflare/containers-shared";
 import type { Config } from "../config";
 import type {
 	CommonYargsArgvJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../yargs-types";
-import type { ImageRegistryPermissions } from "./client";
+import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 
 // default cloudflare managed registry
 const domain = "registry.cloudchamber.cfdata.org";

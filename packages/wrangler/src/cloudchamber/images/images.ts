@@ -13,7 +13,7 @@ import {
 	ImageRegistriesService,
 	ImageRegistryAlreadyExistsError,
 	ImageRegistryNotAllowedError,
-} from "../client";
+} from "@cloudflare/containers-shared";
 import {
 	checkEverythingIsSet,
 	handleFailure,
@@ -27,7 +27,7 @@ import type {
 	CommonYargsArgvSanitizedJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../../yargs-types";
-import type { ImageRegistryPermissions } from "../client";
+import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 
 function configureImageRegistryOptionalYargs(yargs: CommonYargsArgvJSON) {
 	return yargs

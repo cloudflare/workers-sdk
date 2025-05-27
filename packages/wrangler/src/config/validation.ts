@@ -35,7 +35,7 @@ import { configFileName, formatConfigSnippet } from ".";
 import type {
 	CreateApplicationRequest,
 	UserDeploymentConfiguration,
-} from "../cloudchamber/client";
+} from "@cloudflare/containers-shared";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
