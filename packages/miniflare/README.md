@@ -107,11 +107,13 @@ modules.
 
 Represents where data should be persisted, if anywhere.
 
-- If this is `undefined` or `false`, data will be stored in-memory and only
+- If this is `undefined`, it defaults to `true` if `defaultPersistRoot` is set
+  or otherwise defaults to `false`.
+- If this is`false`, data will be stored in-memory and only
   persist between `Miniflare#setOptions()` calls, not restarts nor
   `new Miniflare` instances.
-- If this is `true`, data will be stored on the file-system, in the `$PWD/.mf`
-  directory.
+- If this is `true`, data will be stored in a subdirectory of the `defaultPersistRoot` path if `defaultPersistRoot` is set
+  or otherwise will be stored in a subdirectory of `$PWD/.mf`.
 - If this looks like a URL, then:
   - If the protocol is `memory:`, data will be stored in-memory as above.
   - If the protocol is `file:`, data will be stored on the file-system, in the
@@ -489,6 +491,29 @@ parameter in module format Workers.
   [routing rules](https://developers.cloudflare.com/workers/platform/triggers/routes/#matching-behavior)
   as deployed Workers. If no routes match, Miniflare will fallback to the Worker
   defined first.
+
+- `defaultPersistRoot?: string`
+
+  Specifies the default directory where Miniflare will write persisted data when persistence is enabled.
+
+  ```js
+  // Without `defaultPersistRoot`
+  new Miniflare({
+  	kvPersist: undefined, // → "/(tmp)/kv"
+  	d1Persist: true, // → "$PWD/.mf/d1"
+  	r2Persist: false, // → "/(tmp)/r2"
+  	cachePersist: "/my-cache", // → "/my-cache"
+  });
+
+  // With `defaultPersistRoot`
+  new Miniflare({
+  	defaultPersistRoot: "/storage",
+  	kvPersist: undefined, // → "/storage/kv"
+  	d1Persist: true, // → "/storage/d1"
+  	r2Persist: false, // → "/(tmp)/r2"
+  	cachePersist: "/my-cache", // → "/my-cache"
+  });
+  ```
 
 #### Cache
 
