@@ -159,6 +159,7 @@ export type AssetConfigMetadata = {
 	run_worker_first?: boolean;
 	_redirects?: string;
 	_headers?: string;
+	"_routes.json"?: string;
 };
 
 // for PUT /accounts/:accountId/workers/scripts/:scriptName
@@ -231,6 +232,7 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		run_worker_first: assets?.routerConfig.invoke_user_worker_ahead_of_assets,
 		_redirects: assets?._redirects,
 		_headers: assets?._headers,
+		"_routes.json": assets?.["_routes.json"],
 	};
 
 	// short circuit if static assets upload only

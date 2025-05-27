@@ -1,0 +1,10 @@
+{
+	"name": "workers-with-assets-static-routing",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-05-20",
+	"assets": {
+		"binding": "ASSETS",
+		"directory": "./spa-assets",
+		"not_found_handling": "single-page-application",
+	},
+}
