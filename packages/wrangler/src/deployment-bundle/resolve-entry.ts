@@ -29,7 +29,7 @@ export function resolveEntryWithMain(
 	return { absolutePath, relativePath, projectRoot };
 }
 
-export function resolveEntryWithEntryPoint(
+export function resolveEntryWithSiteEntryPoint(
 	entryPoint: string,
 	config: Config
 ): {

@@ -454,7 +454,7 @@ export async function generateEnvTypes(
 				: undefined;
 
 			const exportExists = serviceEntry?.exports?.some(
-				(e) => e === service.entrypoint
+				(e) => e === (service.entrypoint ?? "default")
 			);
 
 			let typeName: string;
