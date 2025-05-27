@@ -112,8 +112,8 @@ Represents where data should be persisted, if anywhere.
 - If this is`false`, data will be stored in-memory and only
   persist between `Miniflare#setOptions()` calls, not restarts nor
   `new Miniflare` instances.
-- If this is `true`, data will be stored in a subdirectory of the `defaultPersistRoot` path or `$PWD/.mf`
-  directory if `defaultPersistRoot` is not set.
+- If this is `true`, data will be stored in a subdirectory of the `defaultPersistRoot` path if `defaultPersistRoot` is set
+  or otherwise will be stored in a subdirectory of `$PWD/.mf`.
 - If this looks like a URL, then:
   - If the protocol is `memory:`, data will be stored in-memory as above.
   - If the protocol is `file:`, data will be stored on the file-system, in the
