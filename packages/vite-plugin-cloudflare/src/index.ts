@@ -371,7 +371,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							const routerWorker = await getRouterWorker(miniflare);
 
 							const abortController = new AbortController();
-							req.on("closed", () => {
+							req.on("close", () => {
+								console.log("Request closed", req.url);
 								abortController.abort();
 							});
 
@@ -430,7 +431,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				vitePreviewServer.middlewares.use(async (req, res, next) => {
 					try {
 						const abortController = new AbortController();
-						req.on("closed", () => {
+						req.on("close", () => {
 							abortController.abort();
 						});
 
