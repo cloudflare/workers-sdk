@@ -11,7 +11,7 @@ import {
 	TlsOptions_Version,
 } from "../../runtime";
 import type { Awaitable } from "../../workers";
-import type { IncomingMessage, ServerResponse } from "node:http";
+import type * as http from "node:http";
 
 // Zod validators for types in runtime/config/workerd.ts.
 // All options should be optional except where specifically stated.
@@ -86,11 +86,15 @@ const DiskDirectorySchema = z.object({
 });
 
 const CustomNodeServiceSchema = z.custom<
-	(req: IncomingMessage, res: ServerResponse, mf: Miniflare) => Awaitable<void>
+	(
+		req: http.IncomingMessage,
+		res: http.ServerResponse,
+		miniflare: Miniflare
+	) => Awaitable<void>
 >((v) => typeof v === "function");
 
 export const CustomFetchServiceSchema = z.custom<
-	(request: Request, mf: Miniflare) => Awaitable<Response>
+	(request: Request, miniflare: Miniflare) => Awaitable<Response>
 >((v) => typeof v === "function");
 
 export const ServiceDesignatorSchema = z.union([
