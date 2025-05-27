@@ -21,9 +21,21 @@ export function mockAccount() {
 		http.get(
 			"*/me",
 			async () => {
-				return HttpResponse.json({});
-			},
-			{ once: true }
+				return HttpResponse.json({
+					external_account_id: "some-account-id",
+					legacy_identity: { legacy_identity: true },
+					limits: {},
+					locations: [
+						{
+							name: "test-location",
+							location_id: "test-location-id",
+						},
+					],
+					defaults: {
+						location: "test-location-id",
+					},
+				});
+			}
 		)
 	);
 }

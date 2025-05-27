@@ -1,7 +1,13 @@
 import { spawn } from "child_process";
 import { stat } from "fs/promises";
+import {
+	constructBuildCommand,
+	dockerBuild,
+	ImageRegistriesService,
+	REGISTRY_DOMAIN,
+	tagImage,
+} from "@cloudflare/containers-shared";
 import { UserError } from "../errors";
-import { ImageRegistriesService } from "@cloudflare/containers-shared";
 import type { Config } from "../config";
 import type {
 	CommonYargsArgvJSON,
@@ -9,26 +15,22 @@ import type {
 } from "../yargs-types";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 
-// default cloudflare managed registry
-const domain = "registry.cloudchamber.cfdata.org";
-
-export function getDefaultRegistry() {
-	return domain;
-}
-
 export async function dockerLoginManagedRegistry(options: {
 	pathToDocker?: string;
 }) {
 	const dockerPath = options.pathToDocker ?? "docker";
 	const expirationMinutes = 15;
 
-	await ImageRegistriesService.generateImageRegistryCredentials(domain, {
-		expiration_minutes: expirationMinutes,
-		permissions: ["push"] as ImageRegistryPermissions[],
-	}).then(async (credentials) => {
+	await ImageRegistriesService.generateImageRegistryCredentials(
+		REGISTRY_DOMAIN,
+		{
+			expiration_minutes: expirationMinutes,
+			permissions: ["push"] as ImageRegistryPermissions[],
+		}
+	).then(async (credentials) => {
 		const child = spawn(
 			dockerPath,
-			["login", "--password-stdin", "--username", "v1", domain],
+			["login", "--password-stdin", "--username", "v1", REGISTRY_DOMAIN],
 			{ stdio: ["pipe", "inherit", "inherit"] }
 		).on("error", (err) => {
 			throw err;
@@ -42,91 +44,6 @@ export async function dockerLoginManagedRegistry(options: {
 	});
 }
 
-export async function constructBuildCommand(options: {
-	imageTag?: string;
-	pathToDocker?: string;
-	pathToDockerfile?: string;
-	platform?: string;
-	dockerfile?: string;
-	args?: Record<string, string>;
-}) {
-	// require a tag if we provide dockerfile
-	if (
-		typeof options.pathToDockerfile !== "undefined" &&
-		options.pathToDockerfile !== "" &&
-		(typeof options.imageTag === "undefined" || options.imageTag === "")
-	) {
-		throw new Error("must provide an image tag if providing a docker file");
-	}
-	const dockerFilePath = options.pathToDockerfile;
-	const dockerPath = options.pathToDocker ?? "docker";
-	const imageTag = domain + "/" + options.imageTag;
-	const platform = options.platform ? options.platform : "linux/amd64";
-	const defaultBuildCommand = [
-		dockerPath,
-		"build",
-		"-t",
-		imageTag,
-		"--platform",
-		platform,
-	];
-
-	if (options.args !== undefined) {
-		for (const arg in options.args) {
-			defaultBuildCommand.push("--build-arg", `${arg}=${options.args[arg]}`);
-		}
-	}
-
-	if (options.dockerfile !== undefined) {
-		defaultBuildCommand.push("-f", "-");
-	}
-
-	defaultBuildCommand.push(dockerFilePath ?? ".");
-	return defaultBuildCommand.join(" ");
-}
-
-// Function for building
-export function dockerBuild(options: {
-	buildCmd: string;
-	dockerfile?: string;
-}): Promise<void> {
-	return new Promise((resolve, reject) => {
-		const buildCmd = options.buildCmd.split(" ").slice(1);
-		const buildExec = options.buildCmd.split(" ").shift();
-		const child = spawn(String(buildExec), buildCmd, {
-			stdio: [
-				options.dockerfile !== undefined ? "pipe" : undefined,
-				"inherit",
-				"inherit",
-			],
-		});
-		if (child.stdin !== null) {
-			child.stdin.write(options.dockerfile);
-			child.stdin.end();
-		}
-
-		child.on("exit", (code) => {
-			if (code === 0) {
-				resolve();
-			} else {
-				reject(new Error(`Build exited with code: ${code}`));
-			}
-		});
-	});
-}
-
-async function tagImage(original: string, newTag: string, dockerPath: string) {
-	const child = spawn(dockerPath, ["tag", original, newTag]).on(
-		"error",
-		(err) => {
-			throw err;
-		}
-	);
-	await new Promise((resolve) => {
-		child.on("close", resolve);
-	});
-}
-
 export async function push(options: {
 	imageTag?: string;
 	pathToDocker?: string;
@@ -135,7 +52,7 @@ export async function push(options: {
 		throw new Error("Must provide an image tag when pushing");
 	}
 	// TODO: handle non-managed registry?
-	const imageTag = domain + "/" + options.imageTag;
+	const imageTag = REGISTRY_DOMAIN + "/" + options.imageTag;
 	const dockerPath = options.pathToDocker ?? "docker";
 	await tagImage(options.imageTag, imageTag, dockerPath);
 	const child = spawn(dockerPath, ["image", "push", imageTag], {
@@ -277,7 +194,6 @@ export async function pushCommand(
 		if (error instanceof Error) {
 			throw new UserError(error.message);
 		}
-
 		throw new UserError("An unknown error occurred");
 	}
 }

@@ -4,7 +4,7 @@ import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { Writable } from "node:stream";
-import { type ImageRegistryCredentialsConfiguration } from "@cloudflare/containers-shared";
+import { getDefaultRegistry } from "@cloudflare/containers-shared";
 import * as TOML from "@iarna/toml";
 import { sync } from "command-exists";
 import * as esbuild from "esbuild";
@@ -12,7 +12,6 @@ import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { File } from "undici";
 import { vi } from "vitest";
-import { getDefaultRegistry } from "../cloudchamber/build";
 import {
 	printBundleSize,
 	printOffendingDependencies,
@@ -60,7 +59,6 @@ import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { AssetManifest } from "../assets";
-import type { AccountRegistryToken, Application } from "@cloudflare/containers-shared";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
 import type {
@@ -68,6 +66,11 @@ import type {
 	PostTypedConsumerBody,
 	QueueResponse,
 } from "../queues/client";
+import type {
+	AccountRegistryToken,
+	Application,
+	ImageRegistryCredentialsConfiguration,
+} from "@cloudflare/containers-shared";
 import type { ChildProcess } from "node:child_process";
 import type { FormData } from "undici";
 import type { Mock } from "vitest";

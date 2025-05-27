@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import { dirname } from "node:path";
-import { constructBuildCommand } from "../../cloudchamber/build";
+import { constructBuildCommand } from "@cloudflare/containers-shared";
 import { getBuildArguments } from "../../cloudchamber/deploy";
 import { type ContainerApp } from "../../config/environment";
 

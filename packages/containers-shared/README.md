@@ -1,16 +1,9 @@
 # @cloudflare/containers-shared
 
-Shared container functionality for Cloudflare Workers SDK.
+Utils for interacting with containers.
 
-This package contains common utilities for building and managing Docker containers that are used across the Workers SDK ecosystem.
+Contains:
 
-## Features
-
-- Docker build command construction
-- Container image building and pushing
-- Docker registry authentication
-- Directory validation utilities
-
-## Usage
-
-This package is primarily intended for internal use within the Workers SDK ecosystem.
+- Container API client
+- Image registry auth
+- utils for buildling and pulling containers
