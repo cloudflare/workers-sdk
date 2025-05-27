@@ -9,7 +9,7 @@ Add a new `defaultPersistRoot` option to control where plugins persist data when
 new Miniflare({
 	kvPersist: undefined, // → "/(tmp)/kv"
 	d1Persist: true, // → "/.mf/d1"
-	r2Persist: false, // → "/(tmp)/d1"
+	r2Persist: false, // → "/(tmp)/r2"
 	cachePersist: "/my-cache", // → "/my-cache"
 });
 
@@ -18,7 +18,7 @@ new Miniflare({
 	defaultPersistRoot: "/storage",
 	kvPersist: undefined, // → "/storage/kv"
 	d1Persist: true, // → "/storage/d1"
-	r2Persist: false, // → "/(tmp)/d1"
+	r2Persist: false, // → "/(tmp)/r2"
 	cachePersist: "/my-cache", // → "/my-cache"
 });
 ```
