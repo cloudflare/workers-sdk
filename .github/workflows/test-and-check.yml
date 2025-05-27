@@ -44,13 +44,8 @@ jobs:
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
-      - name: Build
-        run: pnpm run build
-        env:
-          CI_OS: ${{ runner.os }}
-
       - name: Check for errors
-        run: pnpm run check
+        run: pnpm run check --summarize
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
 
@@ -78,11 +73,6 @@ jobs:
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
-
-      - name: Build
-        run: pnpm run build --summarize
-        env:
-          CI_OS: ${{ runner.os }}
 
       - name: Check for errors
         run: pnpm run check --summarize
