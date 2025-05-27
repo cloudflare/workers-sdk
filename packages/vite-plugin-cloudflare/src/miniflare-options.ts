@@ -3,7 +3,6 @@ import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { toFetchResponse, toReqRes } from "fetch-to-node";
 import {
 	getDefaultDevRegistryPath,
 	kCurrentWorker,
@@ -356,12 +355,11 @@ export async function getDevMiniflareOptions(
 											resolvedPluginConfig.entryWorkerEnvironmentName &&
 										workerConfig.assets?.binding
 											? {
-													[workerConfig.assets.binding]: (request) => {
-														const { req, res } = toReqRes(request as any);
-														req[kRequestType] = "asset";
-														viteDevServer.middlewares(req, res);
-
-														return toFetchResponse(res);
+													[workerConfig.assets.binding]: {
+														node: (req, res) => {
+															req[kRequestType] = "asset";
+															viteDevServer.middlewares(req, res);
+														},
 													},
 												}
 											: {}),

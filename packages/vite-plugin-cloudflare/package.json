@@ -60,12 +60,10 @@
 		"@cloudflare/workers-types": "^4.20250525.0",
 		"@types/node": "catalog:vite-plugin",
 		"@types/ws": "^8.5.13",
-		"fetch-to-node": "^2.1.0",
 		"magic-string": "^0.30.12",
 		"mlly": "^1.7.4",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
-		"undici": "catalog:default",
 		"vite": "catalog:vite-plugin",
 		"vitest": "catalog:default"
 	},

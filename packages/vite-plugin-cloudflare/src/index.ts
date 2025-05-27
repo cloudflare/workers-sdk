@@ -372,7 +372,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 								const assetWorker =
 									await miniflare.getWorker(ASSET_WORKER_NAME);
 								// Need to set `protocol` because `socket` is `null` when using `fetch-to-node`
-								const request = createRequest(req, res, { protocol: "http:" });
+								const request = createRequest(req, res);
 								response = await assetWorker.fetch(
 									toMiniflareRequest(request),
 									{ redirect: "manual" }
@@ -383,9 +383,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 								const request = createRequest(req, res);
 								response = await routerWorker.fetch(
 									toMiniflareRequest(request),
-									{
-										redirect: "manual",
-									}
+									{ redirect: "manual" }
 								);
 							}
 
