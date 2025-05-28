@@ -9,7 +9,7 @@
 	},
 	"workflows": [
 		{
-			"name": "workflows-starter",
+			"name": "<TBD>",
 			"binding": "MY_WORKFLOW",
 			"class_name": "MyWorkflow",
 		},
