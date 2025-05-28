@@ -10,7 +10,6 @@ type Params = {
 	metadata: Record<string, string>;
 };
 
-// <docs-tag name="workflow-entrypoint">
 export class MyWorkflow extends WorkflowEntrypoint<Env, Params> {
 	async run(event: WorkflowEvent<Params>, step: WorkflowStep) {
 		// Can access bindings on `this.env`
@@ -68,9 +67,7 @@ export class MyWorkflow extends WorkflowEntrypoint<Env, Params> {
 		);
 	}
 }
-// </docs-tag name="workflow-entrypoint">
 
-// <docs-tag name="workflows-fetch-handler">
 export default {
 	async fetch(req: Request, env: Env): Promise<Response> {
 		let url = new URL(req.url);
@@ -103,5 +100,3 @@ export default {
 		});
 	},
 };
-// </docs-tag name="workflows-fetch-handler">
-// </docs-tag name="full-workflow-example">
