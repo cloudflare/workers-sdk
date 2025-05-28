@@ -1,4 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import dedent from "ts-dedent";
@@ -15,6 +16,8 @@ describe("wrangler dev - mixed mode", () => {
 	const helper = new WranglerE2ETestHelper();
 
 	beforeAll(async () => {
+		await helper.seed(resolve(__dirname, "./seed-files/mixed-mode-workers"));
+
 		await helper.seed({
 			"remote-worker.js": dedent/* javascript */ `
 					export default {
@@ -50,7 +53,7 @@ describe("wrangler dev - mixed mode", () => {
 		await helper.seed({
 			"wrangler.json": JSON.stringify({
 				name: "mixed-mode-mixed-bindings-test",
-				main: "index.js",
+				main: "local-and-remote-service-bindings.js",
 				compatibility_date: "2025-05-07",
 				services: [
 					{ binding: "LOCAL_WORKER", service: "local-worker", remote: false },
@@ -61,14 +64,6 @@ describe("wrangler dev - mixed mode", () => {
 					},
 				],
 			}),
-			"index.js": dedent`
-							export default {
-								async fetch(request, env) {
-									const localWorkerText = await (await env.LOCAL_WORKER.fetch(request)).text();
-									const remoteWorkerText = await (await env.REMOTE_WORKER.fetch(request)).text();
-									return new Response(\`LOCAL<WORKER>: \${localWorkerText}\\nREMOTE<WORKER>: \${remoteWorkerText}\n\`);
-								}
-							}`,
 		});
 
 		const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
@@ -87,7 +82,7 @@ describe("wrangler dev - mixed mode", () => {
 		const path = await helper.seed({
 			"wrangler.json": JSON.stringify({
 				name: "mixed-mode-mixed-bindings-test",
-				main: "index.js",
+				main: "simple-service-binding.js",
 				compatibility_date: "2025-05-07",
 				services: [
 					{
@@ -97,13 +92,6 @@ describe("wrangler dev - mixed mode", () => {
 					},
 				],
 			}),
-			"index.js": dedent`
-						export default {
-							async fetch(request, env) {
-								const remoteWorkerText = await (await env.REMOTE_WORKER.fetch(request)).text();
-								return new Response(\`REMOTE<WORKER>: \${remoteWorkerText}\`);
-							}
-						}`,
 		});
 
 		const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
@@ -114,9 +102,12 @@ describe("wrangler dev - mixed mode", () => {
 			`"REMOTE<WORKER>: Hello from a remote worker (wrangler dev mixed-mode)"`
 		);
 
-		const indexContent = await readFile(`${path}/index.js`, "utf8");
+		const indexContent = await readFile(
+			`${path}/simple-service-binding.js`,
+			"utf8"
+		);
 		await writeFile(
-			`${path}/index.js`,
+			`${path}/simple-service-binding.js`,
 			indexContent.replace(
 				"REMOTE<WORKER>:",
 				"The remote worker responded with:"
@@ -129,6 +120,14 @@ describe("wrangler dev - mixed mode", () => {
 		await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
 			`"The remote worker responded with: Hello from a remote worker (wrangler dev mixed-mode)"`
 		);
+
+		await writeFile(`${path}/simple-service-binding.js`, indexContent, "utf8");
+
+		await setTimeout(500);
+
+		await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
+			`"REMOTE<WORKER>: Hello from a remote worker (wrangler dev mixed-mode)"`
+		);
 	});
 
 	it("handles workers AI alongside a local service binding", async () => {
@@ -136,7 +135,7 @@ describe("wrangler dev - mixed mode", () => {
 		await helper.seed({
 			"wrangler.json": JSON.stringify({
 				name: "mixed-mode-mixed-bindings-test",
-				main: "index.js",
+				main: "local-service-binding-and-remote-ai.js",
 				compatibility_date: "2025-05-07",
 				ai: {
 					binding: "AI",
@@ -145,26 +144,6 @@ describe("wrangler dev - mixed mode", () => {
 					{ binding: "LOCAL_WORKER", service: "local-worker", remote: false },
 				],
 			}),
-			"index.js": dedent`
-							export default {
-								async fetch(request, env) {
-									const localWorkerText = await (await env.LOCAL_WORKER.fetch(request)).text();
-
-									const messages = [
-										{
-											role: "user",
-											// Doing snapshot testing against AI responses can be flaky, but this prompt generates the same output relatively reliably
-											content: "Respond with the exact text 'This is a response from Workers AI.'. Do not include any other text",
-										},
-									];
-
-									const { response } = await env.AI.run("@hf/thebloke/zephyr-7b-beta-awq", {
-										messages,
-									});
-
-									return new Response(\`LOCAL<WORKER>: \${localWorkerText}\\nREMOTE<AI>: \${response}\n\`);
-								}
-							}`,
 		});
 
 		const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
@@ -183,40 +162,21 @@ describe("wrangler dev - mixed mode", () => {
 		await helper.seed({
 			"wrangler.json": JSON.stringify({
 				name: "mixed-mode-mixed-bindings-test",
-				main: "index.js",
+				main: "ai.js",
 				compatibility_date: "2025-05-07",
 				ai: {
 					binding: "AI",
 				},
 			}),
-			"index.js": dedent`
-							export default {
-								async fetch(request, env) {
-									const messages = [
-										{
-											role: "user",
-											// Doing snapshot testing against AI responses can be flaky, but this prompt generates the same output relatively reliably
-											content: "Respond with the exact text 'This is a response from Workers AI.'. Do not include any other text",
-										},
-									];
-
-									const { response } = await env.AI.run("@hf/thebloke/zephyr-7b-beta-awq", {
-										messages,
-									});
-
-									return new Response(\`REMOTE<AI>: \${response}\n\`);
-								}
-							}`,
 		});
 
 		const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
 
 		const { url } = await worker.waitForReady();
 
-		await expect(fetchText(url)).resolves.toMatchInlineSnapshot(`
-			"REMOTE<AI>: "This is a response from Workers AI."
-			"
-		`);
+		await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
+			`""This is a response from Workers AI.""`
+		);
 
 		// This should only include logs from the user Wrangler session (i.e. a single list of attached bindings, and only one ready message)
 		expect(normalizeOutput(worker.currentOutput)).toMatchInlineSnapshot(`
@@ -235,11 +195,11 @@ describe("wrangler dev - mixed mode", () => {
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
 					name: "mixed-mode-mixed-bindings-multi-worker-test",
-					main: "index.js",
+					main: "local-and-remote-service-bindings.js",
 					compatibility_date: "2025-05-07",
 					services: [
 						{
-							binding: "LOCAL_TEST_WORKER",
+							binding: "LOCAL_WORKER",
 							service: "local-test-worker",
 							remote: false,
 						},
@@ -250,14 +210,6 @@ describe("wrangler dev - mixed mode", () => {
 						},
 					],
 				}),
-				"index.js": dedent`
-								export default {
-									async fetch(request, env) {
-										const remoteWorkerText = await (await env.REMOTE_WORKER.fetch(request)).text();
-										const localTestWorkerText = await (await env.LOCAL_TEST_WORKER.fetch(request)).text();
-										return new Response(\`[main-test-worker]REMOTE<WORKER>: \${remoteWorkerText}\\n\${localTestWorkerText}\\n\`);
-									}
-								}`,
 			});
 			const localTest = makeRoot();
 			await seed(localTest, {
@@ -289,13 +241,11 @@ describe("wrangler dev - mixed mode", () => {
 
 			const { url } = await worker.waitForReady();
 
-			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-				`
-				"[main-test-worker]REMOTE<WORKER>: Hello from a remote worker (wrangler dev mixed-mode)
-				[local-test-worker]REMOTE<WORKER>: Hello from an alternative remote worker (wrangler dev mixed-mode)
+			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(`
+				"LOCAL<WORKER>: [local-test-worker]REMOTE<WORKER>: Hello from an alternative remote worker (wrangler dev mixed-mode)
+				REMOTE<WORKER>: Hello from a remote worker (wrangler dev mixed-mode)
 				"
-			`
-			);
+			`);
 		});
 	});
 });
