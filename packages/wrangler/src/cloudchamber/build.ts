@@ -1,5 +1,5 @@
-import { spawn } from "child_process";
 import { stat } from "fs/promises";
+<<<<<<< Updated upstream
 import {
 	constructBuildCommand,
 	dockerBuild,
@@ -7,6 +7,9 @@ import {
 	REGISTRY_DOMAIN,
 	tagImage,
 } from "@cloudflare/containers-shared";
+=======
+import Docker from "dockerode";
+>>>>>>> Stashed changes
 import { UserError } from "../errors";
 import type { Config } from "../config";
 import type {
@@ -15,12 +18,11 @@ import type {
 } from "../yargs-types";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 
-export async function dockerLoginManagedRegistry(options: {
-	pathToDocker?: string;
-}) {
-	const dockerPath = options.pathToDocker ?? "docker";
+export async function dockerLoginManagedRegistry() {
+	const docker = new Docker({});
 	const expirationMinutes = 15;
 
+<<<<<<< Updated upstream
 	await ImageRegistriesService.generateImageRegistryCredentials(
 		REGISTRY_DOMAIN,
 		{
@@ -34,16 +36,151 @@ export async function dockerLoginManagedRegistry(options: {
 			{ stdio: ["pipe", "inherit", "inherit"] }
 		).on("error", (err) => {
 			throw err;
+=======
+	const credentials =
+		await ImageRegistriesService.generateImageRegistryCredentials(domain, {
+			expiration_minutes: expirationMinutes,
+			permissions: ["push"] as ImageRegistryPermissions[],
+>>>>>>> Stashed changes
 		});
 
-		child.stdin.write(credentials.password);
-		child.stdin.end();
-		await new Promise((resolve) => {
-			child.on("close", resolve);
-		});
+	// Use dockerode's auth method
+	await docker.checkAuth({
+		username: "v1",
+		password: credentials.password,
+		serveraddress: domain,
 	});
 }
 
+<<<<<<< Updated upstream
+=======
+export async function constructBuildCommand(options: {
+	imageTag?: string;
+	pathToDocker?: string;
+	pathToDockerfile?: string;
+	platform?: string;
+	dockerfile?: string;
+	args?: Record<string, string>;
+}) {
+	// require a tag if we provide dockerfile
+	if (
+		typeof options.pathToDockerfile !== "undefined" &&
+		options.pathToDockerfile !== "" &&
+		(typeof options.imageTag === "undefined" || options.imageTag === "")
+	) {
+		throw new Error("must provide an image tag if providing a docker file");
+	}
+	const dockerFilePath = options.pathToDockerfile;
+	const dockerPath = options.pathToDocker ?? "docker";
+	const imageTag = domain + "/" + options.imageTag;
+	const platform = options.platform ? options.platform : "linux/amd64";
+	const defaultBuildCommand = [
+		dockerPath,
+		"build",
+		"-t",
+		imageTag,
+		"--platform",
+		platform,
+	];
+
+	if (options.args !== undefined) {
+		for (const arg in options.args) {
+			defaultBuildCommand.push("--build-arg", `${arg}=${options.args[arg]}`);
+		}
+	}
+
+	if (options.dockerfile !== undefined) {
+		defaultBuildCommand.push("-f", "-");
+	}
+
+	defaultBuildCommand.push(dockerFilePath ?? ".");
+	return defaultBuildCommand.join(" ");
+}
+
+// Function for building
+export async function dockerBuild(options: {
+	buildCmd: string;
+	dockerfile?: string;
+}): Promise<void> {
+	const docker = new Docker();
+
+	// Parse the build command to extract options
+	const buildArgs = options.buildCmd.split(" ");
+	let imageTag: string | undefined;
+	let platform = "linux/amd64";
+	let contextPath = ".";
+	const buildArguments: Record<string, string> = {};
+
+	// Extract build options from the command
+	for (let i = 0; i < buildArgs.length; i++) {
+		const arg = buildArgs[i];
+		if (arg === "-t" && i + 1 < buildArgs.length) {
+			imageTag = buildArgs[i + 1];
+			i++;
+		} else if (arg === "--platform" && i + 1 < buildArgs.length) {
+			platform = buildArgs[i + 1];
+			i++;
+		} else if (arg === "--build-arg" && i + 1 < buildArgs.length) {
+			const [key, value] = buildArgs[i + 1].split("=");
+			if (key && value) {
+				buildArguments[key] = value;
+			}
+			i++;
+		} else if (arg && !arg.startsWith("-") && i === buildArgs.length - 1) {
+			contextPath = arg;
+		}
+	}
+
+	const buildOptions: Docker.ImageBuildOptions = {
+		t: imageTag,
+		platform,
+	};
+
+	if (Object.keys(buildArguments).length > 0) {
+		buildOptions.buildargs = buildArguments;
+	}
+
+	if (options.dockerfile) {
+		buildOptions.dockerfile = "Dockerfile";
+	}
+
+	let stream: NodeJS.ReadableStream;
+
+	if (options.dockerfile) {
+		// For inline dockerfile, we need to create a tar stream
+		// This is a simplified approach - in production you might want to use a proper tar library
+		stream = await docker.buildImage(options.dockerfile, buildOptions);
+	} else {
+		// Build from context directory
+		stream = await docker.buildImage(contextPath, buildOptions);
+	}
+
+	return new Promise((resolve, reject) => {
+		docker.modem.followProgress(
+			stream,
+			(err: Error | null, res: any[]) => {
+				if (err) {
+					reject(err);
+				} else {
+					resolve();
+				}
+			},
+			(event: any) => {
+				if (event.stream) {
+					process.stdout.write(event.stream);
+				}
+			}
+		);
+	});
+}
+
+async function tagImage(original: string, newTag: string, dockerPath: string) {
+	const docker = new Docker();
+	const image = docker.getImage(original);
+	await image.tag({ repo: newTag });
+}
+
+>>>>>>> Stashed changes
 export async function push(options: {
 	imageTag?: string;
 	pathToDocker?: string;
@@ -151,9 +288,7 @@ export async function build(args: BuildArgs): Promise<string> {
 		await dockerBuild({ buildCmd: bc, dockerfile: args.dockerfileContents });
 
 		if (args.push) {
-			await dockerLoginManagedRegistry({
-				pathToDocker: args.pathToDocker,
-			});
+			await dockerLoginManagedRegistry();
 
 			return await push({ imageTag: args.tag });
 		}
