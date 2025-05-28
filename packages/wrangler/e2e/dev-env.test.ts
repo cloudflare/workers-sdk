@@ -88,7 +88,7 @@ describe("switching runtimes", () => {
             `,
 			"package.json": dedent`
                 {
-                    "name": "@fixture/worker-ai",
+                    "name": "dev-env-app",
                     "version": "0.0.0",
                     "private": true
                 }
