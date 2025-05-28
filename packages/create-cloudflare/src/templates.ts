@@ -29,6 +29,7 @@ import assetsOnlyTemplate from "templates/hello-world-assets-only/c3";
 import helloWorldWithDurableObjectAssetsTemplate from "templates/hello-world-durable-object-with-assets/c3";
 import helloWorldDurableObjectTemplate from "templates/hello-world-durable-object/c3";
 import helloWorldWithAssetsTemplate from "templates/hello-world-with-assets/c3";
+import workflowsTemplate from "templates/hello-world-workflows/c3";
 import helloWorldWorkerTemplate from "templates/hello-world/c3";
 import honoTemplate from "templates/hono/c3";
 import nextTemplate from "templates/next/c3";
@@ -44,7 +45,6 @@ import scheduledTemplate from "templates/scheduled/c3";
 import solidTemplate from "templates/solid/c3";
 import svelteTemplate from "templates/svelte/c3";
 import vueTemplate from "templates/vue/c3";
-import workflowsTemplate from "templates/workflows-starter/c3";
 import { isInsideGitRepo } from "./git";
 import { validateProjectDirectory, validateTemplateUrl } from "./validators";
 import type { Option } from "@cloudflare/cli/interactive";
@@ -240,11 +240,11 @@ export function getHelloWorldTemplateMap({
 			"hello-world-durable-object": helloWorldDurableObjectTemplate,
 			"hello-world-durable-object-with-assets":
 				helloWorldWithDurableObjectAssetsTemplate,
+			"hello-world-workflows": workflowsTemplate,
 			common: commonTemplate,
 			scheduled: scheduledTemplate,
 			queues: queuesTemplate,
 			openapi: openapiTemplate,
-			"workflows-starter": workflowsTemplate,
 			"pre-existing": preExistingTemplate,
 		} as Record<string, TemplateConfig>;
 	}
@@ -272,6 +272,7 @@ export const deriveCorrelatedArgs = (args: Partial<C3Args>) => {
 	switch (args.type) {
 		case "hello-world":
 		case "hello-world-durable-object":
+		case "hello-world-workflows":
 			args.category ??= "hello-world";
 			break;
 		case "hello-world-python":
@@ -295,7 +296,6 @@ export const deriveCorrelatedArgs = (args: Partial<C3Args>) => {
 		case "common":
 		case "scheduled":
 		case "queues":
-		case "workflows-starter":
 		case "openapi":
 			args.category ??= "demo";
 			break;
