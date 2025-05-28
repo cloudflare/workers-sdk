@@ -176,33 +176,6 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
-  fixtures/asset-config:
-    devDependencies:
-      '@cloudflare/vitest-pool-workers':
-        specifier: workspace:*
-        version: link:../../packages/vitest-pool-workers
-      '@cloudflare/workers-tsconfig':
-        specifier: workspace:*
-        version: link:../../packages/workers-tsconfig
-      '@cloudflare/workers-types':
-        specifier: ^4.20250525.0
-        version: 4.20250525.0
-      run-script-os:
-        specifier: ^1.1.6
-        version: 1.1.6
-      typescript:
-        specifier: catalog:default
-        version: 5.7.3
-      undici:
-        specifier: catalog:default
-        version: 5.28.5
-      vitest:
-        specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
-      wrangler:
-        specifier: workspace:*
-        version: link:../../packages/wrangler
-
   fixtures/d1-read-replication-app:
     devDependencies:
       '@cloudflare/workers-tsconfig':
@@ -318,7 +291,7 @@ importers:
 
   fixtures/import-wasm-example:
     dependencies:
-      import-wasm-static:
+      '@fixture/import-wasm-static':
         specifier: workspace:^
         version: link:../import-wasm-static
     devDependencies:
@@ -346,7 +319,7 @@ importers:
         specifier: 0.10.1-pre.11
         version: 0.10.1-pre.11
     devDependencies:
-      fixtures-shared:
+      '@fixture/shared':
         specifier: workspace:*
         version: link:../shared
       strip-ansi:
@@ -541,7 +514,7 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20250525.0
         version: 4.20250525.0
-      pages-plugin-example:
+      '@fixture/pages-plugin':
         specifier: workspace:*
         version: link:../pages-plugin-example
       typescript:
@@ -671,7 +644,7 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20250525.0
         version: 4.20250525.0
-      pages-plugin-example:
+      '@fixture/pages-plugin':
         specifier: workspace:*
         version: link:../pages-plugin-example
       typescript:
@@ -1040,12 +1013,12 @@ importers:
 
   fixtures/worker-app:
     dependencies:
+      '@fixture/isomorphic-random':
+        specifier: workspace:^
+        version: link:../isomorphic-random-example
       cookie:
         specifier: ^0.6.0
         version: 0.6.0
-      isomorphic-random-example:
-        specifier: workspace:^
-        version: link:../isomorphic-random-example
     devDependencies:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
@@ -1068,6 +1041,33 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20250525.0
         version: 4.20250525.0
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
+  fixtures/workers-shared-asset-config:
+    devDependencies:
+      '@cloudflare/vitest-pool-workers':
+        specifier: workspace:*
+        version: link:../../packages/vitest-pool-workers
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250525.0
+        version: 4.20250525.0
+      run-script-os:
+        specifier: ^1.1.6
+        version: 1.1.6
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      undici:
+        specifier: catalog:default
+        version: 5.28.5
+      vitest:
+        specifier: catalog:default
+        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler

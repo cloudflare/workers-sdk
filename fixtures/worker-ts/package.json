@@ -1,5 +1,5 @@
 {
-	"name": "worker-ts",
+	"name": "@fixture/worker-typescript",
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",

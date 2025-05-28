@@ -11,7 +11,7 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"dependencies": {
-		"import-wasm-static": "../../../../fixtures/import-wasm-static"
+		"@fixture/import-wasm-static": "../../../../fixtures/import-wasm-static"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "../../../../packages/workers-tsconfig",

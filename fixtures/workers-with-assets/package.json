@@ -1,5 +1,5 @@
 {
-	"name": "workers-assets-with-user-worker",
+	"name": "@fixture/workers-assets",
 	"private": true,
 	"scripts": {
 		"check:type": "tsc",

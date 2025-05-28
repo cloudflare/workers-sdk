@@ -1,12 +1,12 @@
 {
-	"name": "interactive-dev-tests",
+	"name": "@fixture/interactive-dev",
 	"private": true,
 	"scripts": {
 		"test:ci": "vitest run",
 		"test:watch": "vitest"
 	},
 	"devDependencies": {
-		"fixtures-shared": "workspace:*",
+		"@fixture/shared": "workspace:*",
 		"strip-ansi": "^7.1.0",
 		"undici": "catalog:default",
 		"vitest": "catalog:default"

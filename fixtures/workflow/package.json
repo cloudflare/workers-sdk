@@ -1,5 +1,5 @@
 {
-	"name": "my-workflow",
+	"name": "@fixture/workflow-single",
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",

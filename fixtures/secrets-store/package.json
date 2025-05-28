@@ -1,5 +1,5 @@
 {
-	"name": "secret-store",
+	"name": "@fixture/secrets-store",
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",
