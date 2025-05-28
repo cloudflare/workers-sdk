@@ -573,41 +573,46 @@ export function printBindings(
 			maxValueLength +
 			")".length;
 
+		const columnGapSpaces = 6;
+		const columnGapSpacesWrapped = 4;
+
 		const shouldWrap =
-			bindingLength + 6 + maxTypeLength + 6 + maxModeLength >=
+			bindingLength +
+				columnGapSpaces +
+				maxTypeLength +
+				columnGapSpaces +
+				maxModeLength >=
 			process.stdout.columns;
 
 		logger.log(title);
-		if (shouldWrap) {
-			logger.log(
-				`${padEndAnsi(
-					dim("Binding"),
-					bindingPrefix.length + maxNameLength
-				)}    ${padEndAnsi(dim("Resource"), maxTypeLength)}    ${hasMode ? dim("Mode") : ""}`
-			);
-		} else {
-			logger.log(
-				`${padEndAnsi(dim("Binding"), bindingLength)}      ${padEndAnsi(dim("Resource"), maxTypeLength)}      ${hasMode ? dim("Mode") : ""}`
-			);
-		}
+		const columnGap = shouldWrap
+			? " ".repeat(columnGapSpacesWrapped)
+			: " ".repeat(columnGapSpaces);
+
+		logger.log(
+			`${padEndAnsi(dim("Binding"), shouldWrap ? bindingPrefix.length + maxNameLength : bindingLength)}${columnGap}${padEndAnsi(dim("Resource"), maxTypeLength)}${columnGap}${hasMode ? dim("Mode") : ""}`
+		);
+
 		for (const binding of output) {
-			if (shouldWrap) {
-				const bindingString = padEndAnsi(
-					`${white(`env.${binding.name}`)}`,
-					bindingPrefix.length + maxNameLength
-				);
-				logger.log(
-					`${bindingString}    ${brandColor(binding.type.padEnd(maxTypeLength))}    ${hasMode ? binding.mode : ""}${binding.value ? `\n  ${dim(truncate(typeof binding.value === "symbol" ? chalk.italic("inherited") : binding.value ?? "", process.stdout.columns - 2))}` : ""}`
-				);
-			} else {
-				const bindingString = padEndAnsi(
-					`${white(`env.${binding.name}`)}${binding.value ? ` (${dim(typeof binding.value === "symbol" ? chalk.italic("inherited") : binding.value ?? "")})` : ""}`,
-					bindingLength
-				);
-				logger.log(
-					`${bindingString}      ${brandColor(binding.type.padEnd(maxTypeLength))}      ${hasMode ? binding.mode : ""}`
-				);
-			}
+			const bindingValue = dim(
+				typeof binding.value === "symbol"
+					? chalk.italic("inherited")
+					: binding.value ?? ""
+			);
+			const bindingString = padEndAnsi(
+				`${white(`env.${binding.name}`)}${binding.value && !shouldWrap ? ` (${bindingValue})` : ""}`,
+				shouldWrap ? bindingPrefix.length + maxNameLength : bindingLength
+			);
+
+			const suffix = shouldWrap
+				? binding.value
+					? `\n  ${bindingValue}`
+					: ""
+				: "";
+
+			logger.log(
+				`${bindingString}${columnGap}${brandColor(binding.type.padEnd(maxTypeLength))}${columnGap}${hasMode ? binding.mode : ""}${suffix}`
+			);
 		}
 		logger.log();
 	}
