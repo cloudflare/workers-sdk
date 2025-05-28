@@ -1,3 +1,5 @@
+import { readFile, writeFile } from "node:fs/promises";
+import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import { describe, expect, it } from "vitest";
@@ -43,6 +45,56 @@ describe("wrangler dev - mixed mode", () => {
 			REMOTE<WORKER>: Hello World!
 			"
 		`);
+	});
+
+	it("allows code changes during development", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await spawnLocalWorker(helper);
+		const path = await helper.seed({
+			"wrangler.json": JSON.stringify({
+				name: "mixed-mode-mixed-bindings-test",
+				main: "index.js",
+				compatibility_date: "2025-05-07",
+				services: [
+					{
+						binding: "REMOTE_WORKER",
+						service: "mixed-mode-test-target",
+						remote: true,
+					},
+				],
+			}),
+			"index.js": dedent`
+						export default {
+							async fetch(request, env) {
+								const remoteWorkerText = await (await env.REMOTE_WORKER.fetch(request)).text();
+								return new Response(\`REMOTE<WORKER>: \${remoteWorkerText}\`);
+							}
+						}`,
+		});
+
+		const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
+
+		const { url } = await worker.waitForReady();
+
+		await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
+			`"REMOTE<WORKER>: Hello World!"`
+		);
+
+		const indexContent = await readFile(`${path}/index.js`, "utf8");
+		await writeFile(
+			`${path}/index.js`,
+			indexContent.replace(
+				"REMOTE<WORKER>:",
+				"The remote worker responded with:"
+			),
+			"utf8"
+		);
+
+		await setTimeout(500);
+
+		await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
+			`"The remote worker responded with: Hello World!"`
+		);
 	});
 
 	it("handles workers AI alongside a local service binding", async () => {

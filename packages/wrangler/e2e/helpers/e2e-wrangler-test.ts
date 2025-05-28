@@ -19,16 +19,18 @@ import type { WranglerCommandOptions } from "./wrangler";
 export class WranglerE2ETestHelper {
 	tmpPath = makeRoot();
 
-	async seed(files: Record<string, string | Uint8Array>): Promise<void>;
-	async seed(sourceDir: string): Promise<void>;
+	async seed(files: Record<string, string | Uint8Array>): Promise<string>;
+	async seed(sourceDir: string): Promise<string>;
 	async seed(
 		filesOrSourceDir: Record<string, string | Uint8Array> | string
-	): Promise<void> {
+	): Promise<string> {
 		if (typeof filesOrSourceDir === "string") {
 			await cp(filesOrSourceDir, this.tmpPath, { recursive: true });
 		} else {
 			await seed(this.tmpPath, filesOrSourceDir);
 		}
+
+		return this.tmpPath;
 	}
 
 	async removeFiles(files: string[]) {
