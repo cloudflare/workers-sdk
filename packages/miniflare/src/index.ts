@@ -1624,7 +1624,7 @@ export class Miniflare {
 
 			const urlSafeHost = getURLSafeHost(configuredHost);
 			if (this.#sharedOpts.core.logRequests) {
-				this.#log.info(
+				this.#log.logReady(
 					`${ready} on ${green(`${secure ? "https" : "http"}://${urlSafeHost}:${entryPort}`)}`
 				);
 			}
@@ -1644,7 +1644,9 @@ export class Miniflare {
 				}
 
 				for (const h of hosts) {
-					this.#log.info(`- ${secure ? "https" : "http"}://${h}:${entryPort}`);
+					this.#log.logReady(
+						`- ${secure ? "https" : "http"}://${h}:${entryPort}`
+					);
 				}
 			}
 
