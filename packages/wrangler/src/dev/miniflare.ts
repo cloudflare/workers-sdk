@@ -434,7 +434,7 @@ function dispatchNamespaceEntry(
 	string,
 	{ namespace: string; mixedModeConnectionString?: MixedModeConnectionString },
 ] {
-	if (!getFlag("MIXED_MODE") || !remote) {
+	if (!mixedModeConnectionString || !remote) {
 		return [binding, { namespace }];
 	}
 	return [binding, { namespace, mixedModeConnectionString }];
@@ -783,11 +783,11 @@ export function buildMiniflareBindingOptions(
 		};
 	}
 
-	if (bindings.ai && mixedModeConnectionString) {
+	if (bindings.ai && getFlag("MIXED_MODE")) {
 		warnOrError("ai", bindings.ai.remote, "always-remote");
 	}
 
-	if (bindings.browser && mixedModeConnectionString) {
+	if (bindings.browser && getFlag("MIXED_MODE")) {
 		warnOrError("browser", bindings.browser.remote, "remote");
 	}
 
@@ -929,7 +929,7 @@ export function buildMiniflareBindingOptions(
 					}
 				: undefined,
 		browserRendering:
-			bindings.browser && mixedModeConnectionString
+			mixedModeConnectionString && bindings.browser?.remote
 				? {
 						binding: bindings.browser.binding,
 						mixedModeConnectionString: bindings.browser.remote
