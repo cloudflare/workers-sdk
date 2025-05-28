@@ -1,5 +1,5 @@
 {
-	"name": "fixture-workflow-multiple",
+	"name": "@fixture/workflow-multiple",
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",

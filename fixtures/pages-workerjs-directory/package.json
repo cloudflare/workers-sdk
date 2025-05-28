@@ -1,5 +1,5 @@
 {
-	"name": "fixture-pages-workerjs-directory",
+	"name": "@fixture/pages-workerjs-directory",
 	"private": true,
 	"sideEffects": false,
 	"scripts": {

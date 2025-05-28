@@ -1,5 +1,5 @@
 {
-	"name": "fixture-wildcard-modules",
+	"name": "@fixture/wildcard-modules",
 	"private": true,
 	"scripts": {
 		"build": "wrangler deploy --dry-run --outdir=dist",

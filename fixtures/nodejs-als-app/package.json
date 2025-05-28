@@ -1,5 +1,5 @@
 {
-	"name": "fixture-nodejs-als",
+	"name": "@fixture/nodejs-als",
 	"private": true,
 	"scripts": {
 		"build": "wrangler deploy --dry-run --outdir=./dist",

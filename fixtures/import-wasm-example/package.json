@@ -1,5 +1,5 @@
 {
-	"name": "fixture-import-wasm",
+	"name": "@fixture/import-wasm",
 	"private": true,
 	"description": "",
 	"author": "",
@@ -11,7 +11,7 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"dependencies": {
-		"fixture-import-wasm-static": "workspace:^"
+		"@fixture/import-wasm-static": "workspace:^"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:^",

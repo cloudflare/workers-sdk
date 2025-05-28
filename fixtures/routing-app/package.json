@@ -1,5 +1,5 @@
 {
-	"name": "fixture-routing-basic",
+	"name": "@fixture/routing-basic",
 	"private": true,
 	"description": "routing-app for testing",
 	"scripts": {

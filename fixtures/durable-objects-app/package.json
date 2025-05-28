@@ -1,5 +1,5 @@
 {
-	"name": "fixture-worker-durable-objects",
+	"name": "@fixture/worker-durable-objects",
 	"private": true,
 	"description": "",
 	"license": "ISC",

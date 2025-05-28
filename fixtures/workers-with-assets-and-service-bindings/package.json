@@ -1,5 +1,5 @@
 {
-	"name": "fixture-workers-assets-service-bindings",
+	"name": "@fixture/workers-assets-service-bindings",
 	"private": true,
 	"scripts": {
 		"dev": "wrangler dev",

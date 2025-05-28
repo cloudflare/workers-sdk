@@ -1,5 +1,5 @@
 {
-	"name": "fixture-no-bundle-import",
+	"name": "@fixture/no-bundle-import",
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",

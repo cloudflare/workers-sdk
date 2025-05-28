@@ -291,7 +291,7 @@ importers:
 
   fixtures/import-wasm-example:
     dependencies:
-      fixture-import-wasm-static:
+      '@fixture/import-wasm-static':
         specifier: workspace:^
         version: link:../import-wasm-static
     devDependencies:
@@ -319,7 +319,7 @@ importers:
         specifier: 0.10.1-pre.11
         version: 0.10.1-pre.11
     devDependencies:
-      fixture-shared:
+      '@fixture/shared':
         specifier: workspace:*
         version: link:../shared
       strip-ansi:
@@ -514,7 +514,7 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20250525.0
         version: 4.20250525.0
-      fixture-pages-plugin:
+      '@fixture/pages-plugin':
         specifier: workspace:*
         version: link:../pages-plugin-example
       typescript:
@@ -644,7 +644,7 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^4.20250525.0
         version: 4.20250525.0
-      fixture-pages-plugin:
+      '@fixture/pages-plugin':
         specifier: workspace:*
         version: link:../pages-plugin-example
       typescript:
@@ -1013,12 +1013,12 @@ importers:
 
   fixtures/worker-app:
     dependencies:
+      '@fixture/isomorphic-random':
+        specifier: workspace:^
+        version: link:../isomorphic-random-example
       cookie:
         specifier: ^0.6.0
         version: 0.6.0
-      fixture-isomorphic-random:
-        specifier: workspace:^
-        version: link:../isomorphic-random-example
     devDependencies:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^

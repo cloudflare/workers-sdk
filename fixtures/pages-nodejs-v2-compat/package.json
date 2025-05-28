@@ -1,5 +1,5 @@
 {
-	"name": "fixture-pages-nodejs-v2",
+	"name": "@fixture/pages-nodejs-v2",
 	"private": true,
 	"sideEffects": false,
 	"scripts": {

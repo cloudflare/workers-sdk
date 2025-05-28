@@ -1,5 +1,5 @@
 {
-	"name": "fixture-pages-node-app",
+	"name": "@fixture/pages-node-app",
 	"private": true,
 	"sideEffects": false,
 	"main": "dist/worker.js",

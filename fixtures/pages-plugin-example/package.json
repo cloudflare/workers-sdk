@@ -1,5 +1,5 @@
 {
-	"name": "fixture-pages-plugin",
+	"name": "@fixture/pages-plugin",
 	"private": true,
 	"main": "dist/index.js",
 	"types": "index.d.ts",

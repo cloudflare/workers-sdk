@@ -1,5 +1,5 @@
 {
-	"name": "fixture-d1-read-replication",
+	"name": "@fixture/d1-read-replication",
 	"private": true,
 	"scripts": {
 		"check:type": "tsc",

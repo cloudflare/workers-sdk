@@ -1,5 +1,5 @@
 {
-	"name": "fixture-vitest-pool-workers",
+	"name": "@fixture/vitest-pool-workers",
 	"private": true,
 	"type": "module",
 	"scripts": {

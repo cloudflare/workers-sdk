@@ -1,5 +1,5 @@
 {
-	"name": "fixture-worker-basic",
+	"name": "@fixture/worker-basic",
 	"private": true,
 	"description": "",
 	"license": "ISC",
@@ -12,8 +12,8 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"dependencies": {
-		"cookie": "^0.6.0",
-		"fixture-isomorphic-random": "workspace:^"
+		"@fixture/isomorphic-random": "workspace:^",
+		"cookie": "^0.6.0"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:^",

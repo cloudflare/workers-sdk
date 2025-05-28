@@ -1,5 +1,5 @@
 {
-	"name": "fixture-pages-workerjs-config",
+	"name": "@fixture/pages-workerjs-config",
 	"private": true,
 	"sideEffects": false,
 	"scripts": {

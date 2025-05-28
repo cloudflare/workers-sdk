@@ -1,5 +1,5 @@
 {
-	"name": "fixture-get-platform-proxy",
+	"name": "@fixture/get-platform-proxy",
 	"private": true,
 	"description": "A test for the getPlatformProxy utility",
 	"scripts": {

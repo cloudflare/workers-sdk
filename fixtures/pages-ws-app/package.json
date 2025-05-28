@@ -1,5 +1,5 @@
 {
-	"name": "fixture-pages-websocket",
+	"name": "@fixture/pages-websocket",
 	"private": true,
 	"sideEffects": false,
 	"main": "server/index.js",

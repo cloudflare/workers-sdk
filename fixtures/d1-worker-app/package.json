@@ -1,5 +1,5 @@
 {
-	"name": "fixture-d1-basic",
+	"name": "@fixture/d1-basic",
 	"private": true,
 	"scripts": {
 		"check:type": "tsc",

@@ -1,5 +1,5 @@
 {
-	"name": "fixture-nodejs-hybrid",
+	"name": "@fixture/nodejs-hybrid",
 	"private": true,
 	"scripts": {
 		"build": "wrangler deploy --dry-run --outdir=./dist",

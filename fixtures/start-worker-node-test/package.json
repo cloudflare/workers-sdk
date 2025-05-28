@@ -1,5 +1,5 @@
 {
-	"name": "fixture-start-worker-node",
+	"name": "@fixture/start-worker-node",
 	"private": true,
 	"description": "",
 	"license": "ISC",

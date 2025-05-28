@@ -1,5 +1,5 @@
 {
-	"name": "fixture-pages-functions",
+	"name": "@fixture/pages-functions",
 	"private": true,
 	"sideEffects": false,
 	"main": "dist/worker.js",
@@ -16,7 +16,7 @@
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20250525.0",
-		"fixture-pages-plugin": "workspace:*",
+		"@fixture/pages-plugin": "workspace:*",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
 		"vitest": "catalog:default",

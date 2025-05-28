@@ -1,5 +1,5 @@
 {
-	"name": "fixture-pages-functions-config",
+	"name": "@fixture/pages-functions-config",
 	"private": true,
 	"sideEffects": false,
 	"scripts": {

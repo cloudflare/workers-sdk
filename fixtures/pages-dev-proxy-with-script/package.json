@@ -1,5 +1,5 @@
 {
-	"name": "fixture-pages-dev-proxy",
+	"name": "@fixture/pages-dev-proxy",
 	"private": true,
 	"sideEffects": false,
 	"scripts": {
