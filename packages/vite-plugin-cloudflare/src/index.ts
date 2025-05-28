@@ -334,22 +334,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					viteDevServer
 				);
 
+				const miniflareDevOptions = await getDevMiniflareOptions(
+					resolvedPluginConfig,
+					viteDevServer,
+					inputInspectorPort
+				);
+
 				if (!miniflare) {
-					miniflare = new Miniflare(
-						getDevMiniflareOptions(
-							resolvedPluginConfig,
-							viteDevServer,
-							inputInspectorPort
-						)
-					);
+					miniflare = new Miniflare(miniflareDevOptions);
 				} else {
-					await miniflare.setOptions(
-						getDevMiniflareOptions(
-							resolvedPluginConfig,
-							viteDevServer,
-							inputInspectorPort
-						)
-					);
+					await miniflare.setOptions(miniflareDevOptions);
 				}
 
 				await initRunners(resolvedPluginConfig, viteDevServer, miniflare);
@@ -400,10 +394,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				);
 
 				const miniflare = new Miniflare(
-					getPreviewMiniflareOptions(
+					await getPreviewMiniflareOptions(
 						vitePreviewServer,
 						workerConfigs,
 						pluginConfig.persistState ?? true,
+						!!pluginConfig.experimental?.mixedMode,
 						inputInspectorPort
 					)
 				);

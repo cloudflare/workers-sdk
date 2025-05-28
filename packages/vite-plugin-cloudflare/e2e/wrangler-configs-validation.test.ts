@@ -1,11 +1,11 @@
 import { describe, test } from "vitest";
-import { runLongLived, seed } from "./helpers";
+import { runLongLived, testSeed } from "./helpers";
 
 // Note: the tests here just make sure that the validation does take place, for more fine grained
 //       testing regarding the validation there are unit tests in src/__tests__/get-validated-wrangler-config-path.spec.ts
 
 describe("during development wrangler config files are validated", () => {
-	const noWranglerConfigProjectPath = seed("no-wrangler-config", "pnpm");
+	const noWranglerConfigProjectPath = testSeed("no-wrangler-config", "pnpm");
 	test("for the entry worker", async ({ expect }) => {
 		const proc = await runLongLived("pnpm", "dev", noWranglerConfigProjectPath);
 		expect(await proc.exitCode).not.toBe(0);
@@ -14,7 +14,7 @@ describe("during development wrangler config files are validated", () => {
 		);
 	});
 
-	const noWranglerConfigAuxProjectPath = seed(
+	const noWranglerConfigAuxProjectPath = testSeed(
 		"no-wrangler-config-for-auxiliary-worker",
 		"pnpm"
 	);
