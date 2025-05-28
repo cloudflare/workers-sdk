@@ -390,6 +390,7 @@ export function getDevMiniflareOptions(
 
 	return {
 		log: logger,
+		logRequests: false,
 		inspectorPort: inspectorPort === false ? undefined : inspectorPort,
 		unsafeInspectorProxy: inspectorPort !== false,
 		handleRuntimeStdio(stdout, stderr) {
@@ -605,8 +606,6 @@ export function getPreviewMiniflareOptions(
 	};
 }
 
-const removedMessages = [/^Ready on http/, /^Updated and ready on http/];
-
 /**
  * A Miniflare logger that forwards messages onto a Vite logger.
  */
@@ -618,12 +617,6 @@ class ViteMiniflareLogger extends Log {
 	}
 
 	override logWithLevel(level: LogLevel, message: string) {
-		for (const removedMessage of removedMessages) {
-			if (removedMessage.test(message)) {
-				return;
-			}
-		}
-
 		switch (level) {
 			case LogLevel.ERROR:
 				return this.logger.error(message);
@@ -632,6 +625,10 @@ class ViteMiniflareLogger extends Log {
 			case LogLevel.INFO:
 				return this.logger.info(message);
 		}
+	}
+
+	override logReady() {
+		// Noop so that Miniflare server start messages are not logged
 	}
 }
 
