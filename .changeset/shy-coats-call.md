@@ -12,4 +12,4 @@ Specifically the exports have been added:
 
 - `experimental_pickRemoteBindings`: utility for picking only the remote bindings from a record of start-worker bindings.
 
-- `unstable_convertConfigBindingsToStartWorkerBindings`: utility for concerting config-bindings into start-worker bindings (that can be passed to `startMixedModeSession`)
+- `unstable_convertConfigBindingsToStartWorkerBindings`: utility for converting config-bindings into start-worker bindings (that can be passed to `startMixedModeSession`)
