@@ -837,7 +837,7 @@ export function buildMiniflareBindingOptions(
 		wasmBindings,
 
 		ai:
-			bindings.ai && mixedModeConnectionString && mixedModeConnectionString
+			bindings.ai && mixedModeConnectionString
 				? {
 						binding: bindings.ai.binding,
 						mixedModeConnectionString,
