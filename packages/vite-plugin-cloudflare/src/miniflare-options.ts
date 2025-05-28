@@ -585,7 +585,7 @@ export function getPreviewMiniflareOptions(
 		];
 	});
 
-	const logger = new ViteMiniflareLogger(resolvedViteConfig, true);
+	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
 	return {
 		log: logger,
@@ -611,19 +611,12 @@ export function getPreviewMiniflareOptions(
  */
 class ViteMiniflareLogger extends Log {
 	private logger: vite.Logger;
-	constructor(
-		config: vite.ResolvedConfig,
-		private isPreview = false
-	) {
+	constructor(config: vite.ResolvedConfig) {
 		super(miniflareLogLevelFromViteLogLevel(config.logLevel));
 		this.logger = config.logger;
 	}
 
 	override logWithLevel(level: LogLevel, message: string) {
-		if (this.isPreview && /^Ready on/.test(message)) {
-			return;
-		}
-
 		switch (level) {
 			case LogLevel.ERROR:
 				return this.logger.error(message);
@@ -632,6 +625,10 @@ class ViteMiniflareLogger extends Log {
 			case LogLevel.INFO:
 				return this.logger.info(message);
 		}
+	}
+
+	override logReady() {
+		// Noop so that Miniflare server start messages are not logged
 	}
 }
 
