@@ -1,10 +1,8 @@
-import { mkdtemp, readFile, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { readFile, writeFile } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { runCommand } from "./helpers/command";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -14,37 +12,40 @@ import { makeRoot, seed } from "./helpers/setup";
 describe("wrangler dev - mixed mode", () => {
 	const remoteWorkerName = generateResourceName();
 	const alternativeRemoteWorkerName = generateResourceName();
+	const helper = new WranglerE2ETestHelper();
 
 	beforeAll(async () => {
-		const tmp = await mkdtemp(`${tmpdir()}/wrangler-dev-mixed-mode-tmp`);
-		for (const worker of [
-			{
-				name: remoteWorkerName,
-				content:
-					"export default { fetch() { return new Response('Hello from a remote worker (wrangler dev mixed-mode)'); } };",
-			},
-			{
-				name: alternativeRemoteWorkerName,
-				content:
-					"export default { fetch() { return new Response('Hello from an alternative remote worker (wrangler dev mixed-mode)'); } };",
-			},
-		]) {
-			await writeFile(`${tmp}/index.js`, worker.content);
-			runCommand(
-				`pnpm dlx wrangler deploy index.js --name ${worker.name} --compatibility-date 2025-01-01`,
-				{ cwd: tmp }
-			);
-		}
+		await helper.seed({
+			"remote-worker.js": dedent/* javascript */ `
+					export default {
+						fetch() {
+							return new Response('Hello from a remote worker (wrangler dev mixed-mode)');
+						}
+					};
+			`,
+		});
+		await helper.run(
+			`wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-01-01`
+		);
+		await helper.seed({
+			"alt-remote-worker.js": dedent/* javascript */ `
+				export default {
+					fetch() {
+						return new Response('Hello from an alternative remote worker (wrangler dev mixed-mode)');
+					}
+				};`,
+		});
+		await helper.run(
+			`wrangler deploy alt-remote-worker.js --name ${alternativeRemoteWorkerName} --compatibility-date 2025-01-01`
+		);
 	}, 35_000);
 
-	afterAll(() => {
-		[remoteWorkerName, alternativeRemoteWorkerName].forEach((worker) => {
-			runCommand(`pnpm dlx wrangler delete --name ${worker}`);
-		});
+	afterAll(async () => {
+		await helper.run(`wrangler delete --name ${remoteWorkerName}`);
+		await helper.run(`wrangler delete --name ${alternativeRemoteWorkerName}`);
 	});
 
 	it("handles both remote and local service bindings at the same time", async () => {
-		const helper = new WranglerE2ETestHelper();
 		await spawnLocalWorker(helper);
 		await helper.seed({
 			"wrangler.json": JSON.stringify({
@@ -82,7 +83,6 @@ describe("wrangler dev - mixed mode", () => {
 	});
 
 	it("allows code changes during development", async () => {
-		const helper = new WranglerE2ETestHelper();
 		await spawnLocalWorker(helper);
 		const path = await helper.seed({
 			"wrangler.json": JSON.stringify({
@@ -132,7 +132,6 @@ describe("wrangler dev - mixed mode", () => {
 	});
 
 	it("handles workers AI alongside a local service binding", async () => {
-		const helper = new WranglerE2ETestHelper();
 		await spawnLocalWorker(helper);
 		await helper.seed({
 			"wrangler.json": JSON.stringify({
@@ -180,7 +179,6 @@ describe("wrangler dev - mixed mode", () => {
 	});
 
 	it("doesn't show any logs from startMixedModeSession()", async () => {
-		const helper = new WranglerE2ETestHelper();
 		await spawnLocalWorker(helper);
 		await helper.seed({
 			"wrangler.json": JSON.stringify({
@@ -234,7 +232,6 @@ describe("wrangler dev - mixed mode", () => {
 
 	describe("multi-worker", () => {
 		it("handles both remote and local service bindings at the same time in all workers", async () => {
-			const helper = new WranglerE2ETestHelper();
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
 					name: "mixed-mode-mixed-bindings-multi-worker-test",
