@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import * as util from "node:util";
 import {
 	kCurrentWorker,
 	Log,
@@ -618,8 +619,10 @@ class ViteMiniflareLogger extends Log {
 	}
 
 	override logWithLevel(level: LogLevel, message: string) {
+		const strippedMessage = util.stripVTControlCharacters(message);
+
 		for (const removedMessage of removedMessages) {
-			if (removedMessage.test(message)) {
+			if (removedMessage.test(strippedMessage)) {
 				return;
 			}
 		}
