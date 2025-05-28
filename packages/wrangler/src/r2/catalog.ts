@@ -33,7 +33,7 @@ export const r2BucketCatalogEnableCommand = createCommand({
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		const response = await enableR2Catalog(accountId, args.bucket);
+		const response = await enableR2Catalog(config, accountId, args.bucket);
 
 		let catalogHost: string;
 		const env = getCloudflareApiEnvironmentFromEnv();
@@ -83,7 +83,7 @@ export const r2BucketCatalogDisableCommand = createCommand({
 		}
 
 		try {
-			await disableR2Catalog(accountId, args.bucket);
+			await disableR2Catalog(config, accountId, args.bucket);
 
 			logger.log(
 				`Successfully disabled the data catalog on bucket '${args.bucket}'.`
@@ -122,7 +122,7 @@ export const r2BucketCatalogGetCommand = createCommand({
 		logger.log(`Getting data catalog status for '${args.bucket}'...\n`);
 
 		try {
-			const catalog = await getR2Catalog(accountId, args.bucket);
+			const catalog = await getR2Catalog(config, accountId, args.bucket);
 
 			const env = getCloudflareApiEnvironmentFromEnv();
 			let catalogHost: string;

@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { format } from "node:util";
 import chalk from "chalk";
 import CLITable from "cli-table3";
@@ -49,6 +50,22 @@ function getLoggerLevel(): LoggerLevel {
 	return "log";
 }
 
+const overrideLoggerLevel = new AsyncLocalStorage<{
+	logLevel: LoggerLevel | undefined;
+}>();
+
+/**
+ * This function runs a callback with a specified log level
+ * The provided log level is stored using AsyncLocalStorage, and will be used
+ * for all logger.* calls that happen within the callback.
+ */
+export const runWithLogLevel = <V>(
+	overrideLogLevel: LoggerLevel | undefined,
+	cb: () => V
+) => overrideLoggerLevel.run({ logLevel: overrideLogLevel }, cb);
+
+overrideLoggerLevel.getStore;
+
 export type TableRow<Keys extends string> = Record<Keys, string>;
 
 export class Logger {
@@ -58,7 +75,11 @@ export class Logger {
 	private onceHistory = new Set<string>();
 
 	get loggerLevel() {
-		return this.overrideLoggerLevel ?? getLoggerLevel();
+		return (
+			overrideLoggerLevel.getStore()?.logLevel ??
+			this.overrideLoggerLevel ??
+			getLoggerLevel()
+		);
 	}
 
 	set loggerLevel(val) {
@@ -106,10 +127,11 @@ export class Logger {
 		if (typeof console[method] !== "function") {
 			throw new Error(`console.${method}() is not a function`);
 		}
-
-		Logger.#beforeLogHook?.();
-		(console[method] as (...args: unknown[]) => unknown).apply(console, args);
-		Logger.#afterLogHook?.();
+		if (LOGGER_LEVELS[this.loggerLevel] !== LOGGER_LEVELS.none) {
+			Logger.#beforeLogHook?.();
+			(console[method] as (...args: unknown[]) => unknown).apply(console, args);
+			Logger.#afterLogHook?.();
+		}
 	}
 
 	get once() {

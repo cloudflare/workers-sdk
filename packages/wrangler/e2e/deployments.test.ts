@@ -285,7 +285,6 @@ Uploaded 2 of 3 assets
 Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
-No bindings found.
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -374,8 +373,8 @@ Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Assets:
-  - Binding: ASSETS
+Binding            Resource
+env.ASSETS         Assets
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -541,8 +540,8 @@ Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Assets:
-  - Binding: ASSETS
+Binding            Resource
+env.ASSETS         Assets
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -651,7 +650,6 @@ Uploaded 2 of 3 assets
 Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
-No bindings found.
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
   Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
@@ -663,8 +661,8 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			normalizedStdout = normalize(output.stdout);
 			expect(normalizedStdout).toEqual(`Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Dispatch Namespaces:
-  - DISPATCH: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
+Binding                                                                   Resource
+env.DISPATCH (tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000)      Dispatch Namespace
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -763,8 +761,8 @@ Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Assets:
-  - Binding: ASSETS
+Binding            Resource
+env.ASSETS         Assets
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
   Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
@@ -776,8 +774,8 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			normalizedStdout = normalize(output.stdout);
 			expect(normalizedStdout).toEqual(`Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Dispatch Namespaces:
-  - DISPATCH: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
+Binding                                                                   Resource
+env.DISPATCH (tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000)      Dispatch Namespace
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -874,8 +872,8 @@ Uploaded 3 of 3 assets
 ✨ Success! Uploaded 3 files (TIMINGS)
 Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Assets:
-  - Binding: ASSETS
+Binding            Resource
+env.ASSETS         Assets
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
   Dispatch Namespace: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
 Current Version ID: 00000000-0000-0000-0000-000000000000`);
@@ -887,8 +885,8 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			normalizedStdout = normalize(output.stdout);
 			expect(normalizedStdout).toEqual(`Total Upload: xx KiB / gzip: xx KiB
 Your Worker has access to the following bindings:
-- Dispatch Namespaces:
-  - DISPATCH: tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000
+Binding                                                                   Resource
+env.DISPATCH (tmp-e2e-dispatch-00000000-0000-0000-0000-000000000000)      Dispatch Namespace
 Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
   https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -916,5 +914,108 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			];
 			await checkAssets(testCases, deployedUrl);
 		});
+	});
+	describe("durable objects [containers]", () => {
+		const workerName = generateResourceName();
+		beforeEach(async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
+						name = "${workerName}"
+						main = "src/index.ts"
+						compatibility_date = "2023-01-01"
+
+						[durable_objects]
+						bindings = [
+							{ name = "MY_DO", class_name = "MyDurableObject" }
+						]
+
+						[[containers]]
+						name = "e2e-test-${workerName}"
+						class_name = "MyDurableObject"
+						image = "registry.cloudchamber.cfdata.org/e2e-test:1.0"
+						max_instances = 1
+
+						[[migrations]]
+						tag = "v1"
+						new_sqlite_classes = ["MyDurableObject"]
+				`,
+				"src/index.ts": dedent`
+              export default {
+                async fetch(req, env) {
+                  const url = new URL(req.url)
+                  if (url.pathname === "/do") {
+                      const id = env.MY_DO.idFromName(url.pathname);
+                      const stub = env.MY_DO.get(id);
+                      try {
+                      	return await stub.fetch(req);
+                      } catch (err) {
+                        return new Response("Error fetching from stub: " + err.message, { status: 400 });
+                      }
+                  }
+
+                  return new Response("not found", { status: 404 });
+								},
+							};
+
+              export class MyDurableObject implements DurableObject {
+                constructor(ctx) {
+                  this.ctx = ctx;
+                }
+
+                async fetch(_: Request) {
+                  if (!this.ctx.container) {
+                    return new Response('this.ctx.container not defined', { status: 500 });
+                  }
+
+                  if (!this.ctx.container.running) {
+                    this.ctx.container.start();
+                    this.monitor = this.ctx.container.monitor();
+                  }
+
+                  return this.ctx.container.getTcpPort(80).fetch(new Request("http://foo"));
+                }
+              }`,
+			});
+		});
+
+		it(
+			"can fetch DO container",
+			{ timeout: 60 * 3 * 1000, retry: 3 },
+			async () => {
+				const output = await helper.run(`wrangler deploy`);
+
+				const match = output.stdout.match(
+					/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+				);
+				assert(match?.groups);
+				const matchApplicationId = output.stdout.match(
+					/([(]Application ID: (?<applicationId>.+?)[)])/
+				);
+				assert(matchApplicationId?.groups);
+				const url = match.groups.url;
+				try {
+					await vi.waitFor(
+						async () => {
+							const response = await fetch(`${url}/do`);
+							if (!response.ok) {
+								throw new Error(
+									"Durable object transient error: " + (await response.text())
+								);
+							}
+
+							expect(await response.text()).toEqual("hello from container");
+						},
+
+						// big timeout for containers
+						// (3m)
+						{ timeout: 60 * 3 * 1000, interval: 1000 }
+					);
+				} finally {
+					await helper.run(
+						`wrangler containers delete ${matchApplicationId.groups.applicationId}`
+					);
+				}
+			}
+		);
 	});
 });

@@ -3,6 +3,7 @@ import path from "node:path";
 import { dedent } from "ts-dedent";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
+import { bucketFormatMessage, isValidR2BucketName } from "../r2/helpers";
 import { friendlyBindingNames } from "../utils/print-bindings";
 import { Diagnostics } from "./diagnostics";
 import {
@@ -16,7 +17,7 @@ import {
 	inheritableInLegacyEnvironments,
 	isBoolean,
 	isMutuallyExclusiveWith,
-	isObjectWith,
+	isOneOf,
 	isOptionalProperty,
 	isRequiredProperty,
 	isString,
@@ -1121,8 +1122,8 @@ function normalizeAndValidateEnvironment(
 			topLevelEnv,
 			rawEnv,
 			"triggers",
-			isObjectWith("crons"),
-			{ crons: [] }
+			validateTriggers,
+			{ crons: undefined }
 		),
 		assets: normalizeAndValidateAssets(diagnostics, topLevelEnv, rawEnv),
 		limits: normalizeAndValidateLimits(diagnostics, topLevelEnv, rawEnv),
@@ -1457,6 +1458,14 @@ function normalizeAndValidateEnvironment(
 			validateObservability,
 			undefined
 		),
+		compliance_region: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"compliance_region",
+			isOneOf("public", "fedramp_high"),
+			undefined
+		),
 	};
 
 	warnIfDurableObjectsHaveNoMigrations(
@@ -1506,6 +1515,44 @@ const validateAndNormalizeRules = (
 		validateRules(envName),
 		[]
 	);
+};
+
+const validateTriggers: ValidatorFn = (
+	diagnostics,
+	triggersFieldName,
+	triggersValue
+) => {
+	if (triggersValue === undefined || triggersValue === null) {
+		return true;
+	}
+
+	if (typeof triggersValue !== "object") {
+		diagnostics.errors.push(
+			`Expected "${triggersFieldName}" to be of type object but got ${JSON.stringify(
+				triggersValue
+			)}.`
+		);
+		return false;
+	}
+
+	let isValid = true;
+
+	if ("crons" in triggersValue && !Array.isArray(triggersValue.crons)) {
+		diagnostics.errors.push(
+			`Expected "${triggersFieldName}.crons" to be of type array, but got ${JSON.stringify(triggersValue)}.`
+		);
+		isValid = false;
+	}
+
+	isValid =
+		validateAdditionalProperties(
+			diagnostics,
+			triggersFieldName,
+			Object.keys(triggersValue),
+			["crons"]
+		) && isValid;
+
+	return isValid;
 };
 
 const validateRules =
@@ -1887,6 +1934,10 @@ const validateDurableObjectBinding: ValidatorFn = (
 		diagnostics.errors.push(
 			`binding should have a "script_name" field if "environment" is present.`
 		);
+		isValid = false;
+	}
+
+	if (!isRemoteValid(value, field, diagnostics)) {
 		isValid = false;
 	}
 
@@ -2275,6 +2326,37 @@ const validateContainerAppConfig: ValidatorFn = (
 		}
 
 		if (
+			"rollout_step_percentage" in containerAppOptional &&
+			containerAppOptional.rollout_step_percentage !== undefined
+		) {
+			if (
+				typeof containerAppOptional.rollout_step_percentage !== "number" ||
+				containerAppOptional.rollout_step_percentage > 100 ||
+				containerAppOptional.rollout_step_percentage < 25
+			) {
+				diagnostics.errors.push(
+					`"containers.rollout_step_percentage" should be a number between 25 and 100, but got ${containerAppOptional.rollout_step_percentage}`
+				);
+			}
+		}
+
+		if (
+			"rollout_kind" in containerAppOptional &&
+			containerAppOptional.rollout_kind !== undefined
+		) {
+			if (
+				typeof containerAppOptional.rollout_kind !== "string" ||
+				!["full_auto", "full_manual", "none"].includes(
+					containerAppOptional.rollout_kind
+				)
+			) {
+				diagnostics.errors.push(
+					`"containers.rollout_kind" should be either 'full_auto', 'full_manual' or 'none', but got ${containerAppOptional.rollout_kind}`
+				);
+			}
+		}
+
+		if (
 			"image" in containerAppOptional &&
 			containerAppOptional.image !== undefined
 		) {
@@ -2389,11 +2471,15 @@ const validateKVBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
 
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"id",
 		"preview_id",
+		...(getFlag("MIXED_MODE") ? ["remote"] : []),
 	]);
 
 	return isValid;
@@ -2467,6 +2553,7 @@ const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
 			"binding",
 			"queue",
 			"delivery_delay",
+			...(getFlag("MIXED_MODE") ? ["remote"] : []),
 		])
 	) {
 		return false;
@@ -2510,6 +2597,10 @@ const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
 		}
 	}
 
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
 	return isValid;
 };
 
@@ -2546,6 +2637,17 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+	if (
+		isValid &&
+		hasProperty(value, "bucket_name") &&
+		!isValidR2BucketName(value.bucket_name)
+	) {
+		diagnostics.errors.push(
+			`${field}.bucket_name=${JSON.stringify(value.bucket_name)} is invalid. ${bucketFormatMessage}`
+		);
+		isValid = false;
+	}
+
 	if (!isOptionalProperty(value, "preview_bucket_name", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should, optionally, have a string "preview_bucket_name" field but got ${JSON.stringify(
@@ -2554,6 +2656,17 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
+	if (
+		isValid &&
+		hasProperty(value, "preview_bucket_name") &&
+		!isValidR2BucketName(value.preview_bucket_name)
+	) {
+		diagnostics.errors.push(
+			`${field}.preview_bucket_name= ${JSON.stringify(value.preview_bucket_name)} is invalid. ${bucketFormatMessage}`
+		);
+		isValid = false;
+	}
+
 	if (!isOptionalProperty(value, "jurisdiction", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should, optionally, have a string "jurisdiction" field but got ${JSON.stringify(
@@ -2563,11 +2676,16 @@ const validateR2Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"bucket_name",
 		"preview_bucket_name",
 		"jurisdiction",
+		...(getFlag("MIXED_MODE") ? ["remote"] : []),
 	]);
 
 	return isValid;
@@ -2616,6 +2734,10 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"database_id",
@@ -2624,6 +2746,7 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		"migrations_dir",
 		"migrations_table",
 		"preview_database_id",
+		...(getFlag("MIXED_MODE") ? ["remote"] : []),
 	]);
 
 	return isValid;
@@ -2839,6 +2962,9 @@ const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 				value
 			)}.`
 		);
+		isValid = false;
+	}
+	if (!isRemoteValid(value, field, diagnostics)) {
 		isValid = false;
 	}
 	return isValid;
@@ -3527,4 +3653,27 @@ function warnIfDurableObjectsHaveNoMigrations(
 			}
 		}
 	}
+}
+
+function isRemoteValid(
+	targetObject: object,
+	fieldPath: string,
+	diagnostics: Diagnostics
+) {
+	if (!getFlag("MIXED_MODE")) {
+		// the remote config only applies to mixed mode, if mixed mode
+		// is not enabled just return true and skip this validation
+		return true;
+	}
+
+	if (!isOptionalProperty(targetObject, "remote", "boolean")) {
+		diagnostics.errors.push(
+			`"${fieldPath}" should, optionally, have a boolean "remote" field but got ${JSON.stringify(
+				targetObject
+			)}.`
+		);
+		return false;
+	}
+
+	return true;
 }

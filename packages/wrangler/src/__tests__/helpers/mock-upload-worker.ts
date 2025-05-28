@@ -13,6 +13,7 @@ import type { HttpResponseResolver } from "msw";
 /** Create a mock handler for the request to upload a worker script. */
 export function mockUploadWorkerRequest(
 	options: {
+		expectedBaseUrl?: string;
 		expectedEntry?: string | RegExp | ((entry: string | null) => void);
 		expectedMainModule?: string;
 		expectedType?: "esm" | "sw" | "none";
@@ -42,13 +43,13 @@ export function mockUploadWorkerRequest(
 		expectedContainers?: { class_name: string }[];
 	} = {}
 ) {
-	const expectedScriptName = (options.expectedScriptName ??= "test-name");
 	const handleUpload: HttpResponseResolver = async ({ params, request }) => {
 		const url = new URL(request.url);
-		expect(params.accountId).toEqual("some-account-id");
-		expect(params.scriptName).toEqual(
-			legacyEnv && env ? `${expectedScriptName}-${env}` : expectedScriptName
+		expect(url.hostname).toMatch(
+			options.expectedBaseUrl ?? "api.cloudflare.com"
 		);
+		expect(params.accountId).toEqual("some-account-id");
+		expect(params.scriptName).toEqual(expectedScriptName);
 		if (!legacyEnv) {
 			expect(params.envName).toEqual(env);
 		}
@@ -185,6 +186,11 @@ export function mockUploadWorkerRequest(
 		expectedObservability,
 		expectedSettingsPatch,
 	} = options;
+
+	const expectedScriptName =
+		options.expectedScriptName ??
+		"test-name" + (legacyEnv && env ? `-${env}` : "");
+
 	if (env && !legacyEnv) {
 		msw.use(
 			http.put(

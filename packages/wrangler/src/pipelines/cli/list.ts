@@ -14,7 +14,7 @@ export const pipelinesListCommand = createCommand({
 		const accountId = await requireAuth(config);
 
 		// TODO: we should show bindings & transforms if they exist for given ids
-		const list = await listPipelines(accountId);
+		const list = await listPipelines(config, accountId);
 
 		logger.table(
 			list.map((pipeline) => ({

@@ -7,6 +7,7 @@ import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
+import { buildContainers, deployContainers } from "../cloudchamber/deploy";
 import { configFileName, formatConfigSnippet } from "../config";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -71,6 +72,7 @@ import type {
 	CfPlacement,
 	CfWorkerInit,
 } from "../deployment-bundle/worker";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { PostQueueBody, PostTypedConsumerBody } from "../queues/client";
 import type { LegacyAssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
@@ -110,6 +112,7 @@ type Props = {
 	projectRoot: string | undefined;
 	dispatchNamespace: string | undefined;
 	experimentalAutoCreate: boolean;
+	metafile: string | boolean | undefined;
 };
 
 export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -240,11 +243,12 @@ export function renderRoute(route: Route): string {
 // to these custom domains, but continue on through the rest of the
 // deploy stage
 export async function publishCustomDomains(
+	complianceConfig: ComplianceConfig,
 	workerUrl: string,
 	accountId: string,
 	domains: Array<RouteObject>
 ): Promise<string[]> {
-	const config = {
+	const options = {
 		override_scope: true,
 		override_existing_origin: false,
 		override_existing_dns_record: false,
@@ -269,11 +273,12 @@ export async function publishCustomDomains(
 		// running in non-interactive mode.
 		// existing origins / dns records are not indicative of errors,
 		// so we aggressively update rather than aggressively fail
-		config.override_existing_origin = true;
-		config.override_existing_dns_record = true;
+		options.override_existing_origin = true;
+		options.override_existing_dns_record = true;
 	} else {
 		// get a changeset for operations required to achieve a state with the requested domains
 		const changeset = await fetchResult<CustomDomainChangeset>(
+			complianceConfig,
 			`${workerUrl}/domains/changeset?replace_state=true`,
 			{
 				method: "POST",
@@ -293,6 +298,7 @@ export async function publishCustomDomains(
 			const existing = await Promise.all(
 				updatesRequired.map((domain) =>
 					fetchResult<CustomDomain>(
+						complianceConfig,
 						`/accounts/${accountId}/workers/domains/records/${domain.id}`
 					)
 				)
@@ -309,7 +315,7 @@ Update them to point to this script instead?`;
 			if (!(await confirm(message))) {
 				return fail();
 			}
-			config.override_existing_origin = true;
+			options.override_existing_origin = true;
 		}
 
 		if (changeset.conflicting.length > 0) {
@@ -322,14 +328,14 @@ Update them to point to this script instead?`;
 			if (!(await confirm(message))) {
 				return fail();
 			}
-			config.override_existing_dns_record = true;
+			options.override_existing_dns_record = true;
 		}
 	}
 
 	// deploy to domains
-	await fetchResult(`${workerUrl}/domains/records`, {
+	await fetchResult(complianceConfig, `${workerUrl}/domains/records`, {
 		method: "PUT",
-		body: JSON.stringify({ ...config, origins }),
+		body: JSON.stringify({ ...options, origins }),
 		headers: {
 			"Content-Type": "application/json",
 		},
@@ -360,7 +366,7 @@ export default async function deploy(props: Props): Promise<{
 						last_deployed_from: "dash" | "wrangler" | "api";
 					};
 				};
-			}>(`/accounts/${accountId}/workers/services/${name}`);
+			}>(config, `/accounts/${accountId}/workers/services/${name}`);
 			const {
 				default_environment: { script },
 			} = serviceMetaData;
@@ -472,7 +478,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	const { format } = props.entry;
 
 	if (!props.dispatchNamespace && prod && accountId && scriptName) {
-		const yes = await confirmLatestDeploymentOverwrite(accountId, scriptName);
+		const yes = await confirmLatestDeploymentOverwrite(
+			config,
+			accountId,
+			scriptName
+		);
 		if (!yes) {
 			cancel("Aborting deploy...");
 			return { versionId, workerTag };
@@ -549,6 +559,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					props.entry,
 					typeof destination === "string" ? destination : destination.path,
 					{
+						metafile: props.metafile,
 						bundle: true,
 						additionalModules: [],
 						moduleCollector,
@@ -619,6 +630,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const assetsJwt =
 			props.assetsOptions && !props.dryRun
 				? await syncAssets(
+						config,
 						accountId,
 						props.assetsOptions.directory,
 						scriptName,
@@ -627,6 +639,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				: undefined;
 
 		const workersSitesAssets = await syncWorkersSite(
+			config,
 			accountId,
 			// When we're using the newer service environments, we wouldn't
 			// have added the env name on to the script name. However, we must
@@ -756,10 +769,15 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		let workerBundle: FormData;
 
 		if (props.dryRun) {
+			if (config.containers) {
+				await buildContainers(config, workerTag ?? "worker-tag");
+			}
+
 			workerBundle = createWorkerUploadForm(worker);
 			printBindings(
 				{ ...withoutStaticAssets, vars: maskedVars },
-				config.tail_consumers
+				config.tail_consumers,
+				{ warnIfNoBindings: true }
 			);
 		} else {
 			assert(accountId, "Missing accountId");
@@ -794,6 +812,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					// Upload new version
 					const versionResult = await retryOnAPIFailure(async () =>
 						fetchResult<ApiVersion>(
+							config,
 							`/accounts/${accountId}/workers/scripts/${scriptName}/versions`,
 							{
 								method: "POST",
@@ -806,17 +825,28 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					// Deploy new version to 100%
 					const versionMap = new Map<VersionId, Percentage>();
 					versionMap.set(versionResult.id, 100);
-					await createDeployment(accountId, scriptName, versionMap, undefined);
+					await createDeployment(
+						props.config,
+						accountId,
+						scriptName,
+						versionMap,
+						undefined
+					);
 
 					// Update tail consumers, logpush, and observability settings
-					await patchNonVersionedScriptSettings(accountId, scriptName, {
-						tail_consumers: worker.tail_consumers,
-						logpush: worker.logpush,
-						// If the user hasn't specified observability assume that they want it disabled if they have it on.
-						// This is a no-op in the event that they don't have observability enabled, but will remove observability
-						// if it has been removed from their Wrangler configuration file
-						observability: worker.observability ?? { enabled: false },
-					});
+					await patchNonVersionedScriptSettings(
+						props.config,
+						accountId,
+						scriptName,
+						{
+							tail_consumers: worker.tail_consumers,
+							logpush: worker.logpush,
+							// If the user hasn't specified observability assume that they want it disabled if they have it on.
+							// This is a no-op in the event that they don't have observability enabled, but will remove observability
+							// if it has been removed from their Wrangler configuration file
+							observability: worker.observability ?? { enabled: false },
+						}
+					);
 
 					result = {
 						id: null, // fpw - ignore
@@ -836,6 +866,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 							deployment_id: string | null;
 							startup_time_ms: number;
 						}>(
+							config,
 							workerUrl,
 							{
 								method: "PUT",
@@ -979,6 +1010,17 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	// deploy triggers
 	const targets = await triggersDeploy(props);
 
+	if (config.containers) {
+		assert(versionId && accountId);
+		await deployContainers(config, {
+			versionId,
+			accountId,
+			scriptName,
+			dryRun: props.dryRun,
+			env: props.env,
+		});
+	}
+
 	logger.log("Current Version ID:", versionId);
 
 	return {
@@ -1006,6 +1048,7 @@ export function formatTime(duration: number) {
  * Associate the newly deployed Worker with the given routes.
  */
 export async function publishRoutes(
+	complianceConfig: ComplianceConfig,
 	routes: Route[],
 	{
 		workerUrl,
@@ -1020,7 +1063,7 @@ export async function publishRoutes(
 	}
 ): Promise<string[]> {
 	try {
-		return await fetchResult(`${workerUrl}/routes`, {
+		return await fetchResult(complianceConfig, `${workerUrl}/routes`, {
 			// Note: PUT will delete previous routes on this script.
 			method: "PUT",
 			body: JSON.stringify(
@@ -1036,7 +1079,7 @@ export async function publishRoutes(
 		if (isAuthenticationError(e)) {
 			// An authentication error is probably due to a known issue,
 			// where the user is logged in via an API token that does not have "All Zones".
-			return await publishRoutesFallback(routes, {
+			return await publishRoutesFallback(complianceConfig, routes, {
 				scriptName,
 				notProd,
 				accountId,
@@ -1053,6 +1096,7 @@ export async function publishRoutes(
  * Compute match zones to the routes, then for each route attempt to connect it to the Worker via the zone.
  */
 async function publishRoutesFallback(
+	complianceConfig: ComplianceConfig,
 	routes: Route[],
 	{
 		scriptName,
@@ -1085,7 +1129,11 @@ async function publishRoutesFallback(
 	for (const route of routes) {
 		queuePromises.push(
 			queue.add(async () => {
-				const zone = await getZoneForRoute({ route, accountId }, zoneIdCache);
+				const zone = await getZoneForRoute(
+					complianceConfig,
+					{ route, accountId },
+					zoneIdCache
+				);
 				if (zone) {
 					activeZones.set(zone.id, zone.host);
 					routesToDeploy.set(
@@ -1108,7 +1156,7 @@ async function publishRoutesFallback(
 					for (const { pattern, script } of await fetchListResult<{
 						pattern: string;
 						script: string;
-					}>(`/zones/${zone}/workers/routes`)) {
+					}>(complianceConfig, `/zones/${zone}/workers/routes`)) {
 						allRoutes.set(pattern, script);
 						if (script === scriptName) {
 							alreadyDeployedRoutes.add(pattern);
@@ -1145,6 +1193,7 @@ async function publishRoutesFallback(
 		}
 
 		const { pattern } = await fetchResult<{ pattern: string }>(
+			complianceConfig,
 			`/zones/${zoneId}/workers/routes`,
 			{
 				method: "POST",

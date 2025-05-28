@@ -1,6 +1,7 @@
 name: CI
 
 on:
+  merge_group:
   pull_request:
     types: [synchronize, opened, reopened, labeled, unlabeled]
 
@@ -43,14 +44,10 @@ jobs:
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
-      - name: Build
-        run: pnpm run build
+      - name: Check for errors
+        run: pnpm run check --summarize
         env:
           CI_OS: ${{ runner.os }}
-
-      - name: Check for errors
-        run: pnpm run check
-        env:
           NODE_OPTIONS: "--max_old_space_size=8192"
 
       - name: Check the changesets
@@ -78,11 +75,6 @@ jobs:
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
-      - name: Build
-        run: pnpm run build --summarize
-        env:
-          CI_OS: ${{ runner.os }}
-
       - name: Check for errors
         run: pnpm run check --summarize
         env:
@@ -99,6 +91,23 @@ jobs:
           name: turbo-runs-${{ matrix.os }}-${{ matrix.node }}
           path: .turbo/runs
 
+      # Check for old Node.js version warnings and errors
+      - name: Use Node.js v16
+        uses: actions/setup-node@v4
+        with:
+          node-version: 16
+
+      - name: Check for error message on Node.js < v18
+        run: node packages/wrangler/src/__tests__/test-old-node-version.js error
+
+      - name: Use Node.js v18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Check for warning message on Node.js < v20
+        run: node packages/wrangler/src/__tests__/test-old-node-version.js warn
+
   test-vp:
     if: github.head_ref == 'changeset-release/main' || contains(github.event.*.labels.*.name, 'every-os' )
     timeout-minutes: 30
@@ -113,16 +122,12 @@ jobs:
         include:
           - os: ubuntu-24.04-arm
             os_name: Linux
-            node_version: 18.20.6
+            node_version: 20.19.1
             filter: '--filter="./tools" --filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
           - os: windows-latest
             os_name: Windows
-            node_version: 18.20.6
+            node_version: 20.19.1
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
-          - os: ubuntu-24.04-arm
-            os_name: v20, Linux
-            node_version: 20
-            filter: '--filter="./packages/*"'
           - os: ubuntu-24.04-arm
             os_name: v22, Linux
             node_version: 22
@@ -153,10 +158,10 @@ jobs:
 
       - name: Run tests
         if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm run test:ci --concurrency 1 ${{ matrix.filter }}
+        run: pnpm run test:ci --concurrency 1 ${{ matrix.filter }} --log-order=stream
         env:
-          TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TEST_CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
+          TEST_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
@@ -182,7 +187,7 @@ jobs:
         include:
           - os: macos-latest
             os_name: macOS
-            node_version: 18.20.6
+            node_version: 20.19.1
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --summarize'
     runs-on: ${{ matrix.os }}
     steps:
@@ -212,8 +217,8 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         run: pnpm run test:ci --concurrency 1 ${{ matrix.filter }}
         env:
-          TMP_CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          TMP_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          TEST_CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
+          TEST_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html

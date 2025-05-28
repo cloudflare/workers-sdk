@@ -30,22 +30,12 @@ import type { MiniflareOptions, SharedOptions, WorkerOptions } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
 import type { SourcelessWorkerOptions, Unstable_Config } from "wrangler";
 
-type PersistOptions = Pick<
-	SharedOptions,
-	| "cachePersist"
-	| "d1Persist"
-	| "durableObjectsPersist"
-	| "kvPersist"
-	| "r2Persist"
-	| "workflowsPersist"
->;
-
-function getPersistence(
+function getPersistenceRoot(
 	root: string,
 	persistState: PersistState
-): PersistOptions {
+): string | undefined {
 	if (persistState === false) {
-		return {};
+		return;
 	}
 
 	const defaultPersistPath = ".wrangler/state";
@@ -55,14 +45,7 @@ function getPersistence(
 		"v3"
 	);
 
-	return {
-		cachePersist: path.join(persistPath, "cache"),
-		d1Persist: path.join(persistPath, "d1"),
-		durableObjectsPersist: path.join(persistPath, "do"),
-		kvPersist: path.join(persistPath, "kv"),
-		r2Persist: path.join(persistPath, "r2"),
-		workflowsPersist: path.join(persistPath, "workflows"),
-	};
+	return persistPath;
 }
 
 function missingWorkerErrorMessage(workerName: string) {
@@ -407,6 +390,7 @@ export function getDevMiniflareOptions(
 
 	return {
 		log: logger,
+		logRequests: false,
 		inspectorPort: inspectorPort === false ? undefined : inspectorPort,
 		unsafeInspectorProxy: inspectorPort !== false,
 		handleRuntimeStdio(stdout, stderr) {
@@ -416,7 +400,7 @@ export function getDevMiniflareOptions(
 				logger.logWithLevel(LogLevel.ERROR, decoder.decode(error))
 			);
 		},
-		...getPersistence(
+		defaultPersistRoot: getPersistenceRoot(
 			resolvedViteConfig.root,
 			resolvedPluginConfig.persistState
 		),
@@ -614,12 +598,13 @@ export function getPreviewMiniflareOptions(
 				logger.logWithLevel(LogLevel.ERROR, decoder.decode(error))
 			);
 		},
-		...getPersistence(resolvedViteConfig.root, persistState),
+		defaultPersistRoot: getPersistenceRoot(
+			resolvedViteConfig.root,
+			persistState
+		),
 		workers,
 	};
 }
-
-const removedMessages = [/^Ready on http/, /^Updated and ready on http/];
 
 /**
  * A Miniflare logger that forwards messages onto a Vite logger.
@@ -632,12 +617,6 @@ class ViteMiniflareLogger extends Log {
 	}
 
 	override logWithLevel(level: LogLevel, message: string) {
-		for (const removedMessage of removedMessages) {
-			if (removedMessage.test(message)) {
-				return;
-			}
-		}
-
 		switch (level) {
 			case LogLevel.ERROR:
 				return this.logger.error(message);
@@ -646,6 +625,10 @@ class ViteMiniflareLogger extends Log {
 			case LogLevel.INFO:
 				return this.logger.info(message);
 		}
+	}
+
+	override logReady() {
+		// Noop so that Miniflare server start messages are not logged
 	}
 }
 

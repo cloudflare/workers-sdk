@@ -23,8 +23,8 @@ describe("Pages _worker.js/ directory", () => {
 				"--d1=PUT=elsewhere",
 				"--kv=KV",
 				"--kv=KV_REF=other_kv",
-				"--r2=R2",
-				"--r2=R2_REF=other_r2",
+				"--r2=r2bucket",
+				"--r2=R2_REF=other-r2",
 			]
 		);
 		try {

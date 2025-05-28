@@ -107,11 +107,13 @@ modules.
 
 Represents where data should be persisted, if anywhere.
 
-- If this is `undefined` or `false`, data will be stored in-memory and only
+- If this is `undefined`, it defaults to `true` if `defaultPersistRoot` is set
+  or otherwise defaults to `false`.
+- If this is`false`, data will be stored in-memory and only
   persist between `Miniflare#setOptions()` calls, not restarts nor
   `new Miniflare` instances.
-- If this is `true`, data will be stored on the file-system, in the `$PWD/.mf`
-  directory.
+- If this is `true`, data will be stored in a subdirectory of the `defaultPersistRoot` path if `defaultPersistRoot` is set
+  or otherwise will be stored in a subdirectory of `$PWD/.mf`.
 - If this looks like a URL, then:
   - If the protocol is `memory:`, data will be stored in-memory as above.
   - If the protocol is `file:`, data will be stored on the file-system, in the
@@ -326,7 +328,7 @@ parameter in module format Workers.
   Record mapping binding name to paths containing arbitrary binary data to
   inject as `ArrayBuffer` bindings into this Worker.
 
-- `serviceBindings?: Record<string, string | typeof kCurrentWorker | { name: string | typeof kCurrentWorker, entrypoint?: string } | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | (request: Request, instance: Miniflare) => Awaitable<Response>>`
+- `serviceBindings?: Record<string, string | typeof kCurrentWorker | { name: string | typeof kCurrentWorker, entrypoint?: string } | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | { node: (req: http.IncomingMessage, res: http.ServerResponse, miniflare: Miniflare) => Awaitable<void> } | (request: Request, miniflare: Miniflare) => Awaitable<Response>>`
 
   Record mapping binding name to service designators to inject as
   `{ fetch: typeof fetch }`
@@ -356,9 +358,10 @@ parameter in module format Workers.
     [`workerd` `DiskDirectory` struct](https://github.com/cloudflare/workerd/blob/bdbd6075c7c53948050c52d22f2dfa37bf376253/src/workerd/server/workerd.capnp#L600-L643),
     requests will be dispatched to an HTTP service backed by an on-disk
     directory.
-  - If the designator is a function, requests will be dispatched to your custom
-    handler. This allows you to access data and functions defined in Node.js
-    from your Worker. Note `instance` will be the `Miniflare` instance
+  - If the designator is an object of the form `{ node: (req: http.IncomingMessage, res: http.ServerResponse, miniflare: Miniflare) => Awaitable<void> }`, requests will be dispatched to your custom Node handler. This allows you to access data and functions defined in Node.js from your Worker using Node.js `req` and `res` objects. Note, `miniflare` will be the `Miniflare` instance dispatching the request.
+  - If the designator is a function with the signature `(request: Request, miniflare: Miniflare) => Response`, requests will be dispatched to your custom
+    fetch handler. This allows you to access data and functions defined in Node.js
+    from your Worker using fetch `Request` and `Response` objects. Note, `miniflare` will be the `Miniflare` instance
     dispatching the request.
 
 <!--prettier-ignore-start-->
@@ -469,7 +472,7 @@ parameter in module format Workers.
 
 <!--prettier-ignore-end-->
 
-- `outboundService?: string | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | (request: Request) => Awaitable<Response>`
+- `outboundService?: string | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | { node: (req: http.IncomingMessage, res: http.ServerResponse, miniflare: Miniflare) => Awaitable<void> } | (request: Request, miniflare: Miniflare) => Awaitable<Response>`
 
   Dispatch this Worker's global `fetch()` and `connect()` requests to the
   configured service. Service designators follow the same rules above for
@@ -489,6 +492,29 @@ parameter in module format Workers.
   [routing rules](https://developers.cloudflare.com/workers/platform/triggers/routes/#matching-behavior)
   as deployed Workers. If no routes match, Miniflare will fallback to the Worker
   defined first.
+
+- `defaultPersistRoot?: string`
+
+  Specifies the default directory where Miniflare will write persisted data when persistence is enabled.
+
+  ```js
+  // Without `defaultPersistRoot`
+  new Miniflare({
+  	kvPersist: undefined, // → "/(tmp)/kv"
+  	d1Persist: true, // → "$PWD/.mf/d1"
+  	r2Persist: false, // → "/(tmp)/r2"
+  	cachePersist: "/my-cache", // → "/my-cache"
+  });
+
+  // With `defaultPersistRoot`
+  new Miniflare({
+  	defaultPersistRoot: "/storage",
+  	kvPersist: undefined, // → "/storage/kv"
+  	d1Persist: true, // → "/storage/d1"
+  	r2Persist: false, // → "/(tmp)/r2"
+  	cachePersist: "/my-cache", // → "/my-cache"
+  });
+  ```
 
 #### Cache
 

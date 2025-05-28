@@ -87,7 +87,7 @@ describe("normalizeAndValidateConfig()", () => {
 						r2_buckets: [
 							{
 								binding: "TEST_R2_BINDING",
-								bucket_name: "TEST_R2_BUCKET_NAME",
+								bucket_name: "test-r2-bucket-name",
 							},
 						],
 						d1_databases: [
@@ -188,7 +188,7 @@ describe("normalizeAndValidateConfig()", () => {
 						r2_buckets: [
 							{
 								binding: "TEST_R2_BINDING",
-								bucket_name: "TEST_R2_BUCKET_NAME_preview",
+								bucket_name: "test-r2-bucket-name-preview",
 							},
 						],
 						d1_databases: [
@@ -289,7 +289,7 @@ describe("normalizeAndValidateConfig()", () => {
 						r2_buckets: [
 							{
 								binding: "TEST_R2_BINDING",
-								bucket_name: "TEST_R2_BUCKET_NAME_production",
+								bucket_name: "test-r2-bucket-name-production",
 							},
 						],
 						d1_databases: [
@@ -409,7 +409,7 @@ describe("normalizeAndValidateConfig()", () => {
 						r2_buckets: [
 							{
 								binding: "TEST_R2_BINDING",
-								bucket_name: "TEST_R2_BUCKET_NAME_unsupported-env-name",
+								bucket_name: "test-r2-bucket-name-unsupported-env-name",
 							},
 						],
 						d1_databases: [
@@ -518,7 +518,7 @@ describe("normalizeAndValidateConfig()", () => {
 						r2_buckets: [
 							{
 								binding: "TEST_R2_BINDING",
-								bucket_name: "TEST_R2_BUCKET_NAME",
+								bucket_name: "test-r2-bucket-name",
 							},
 						],
 						d1_databases: [
@@ -627,7 +627,7 @@ describe("normalizeAndValidateConfig()", () => {
 						r2_buckets: [
 							{
 								binding: "TEST_R2_BINDING",
-								bucket_name: "TEST_R2_BUCKET_NAME",
+								bucket_name: "test-r2-bucket-name",
 							},
 						],
 						d1_databases: [
@@ -734,7 +734,7 @@ describe("normalizeAndValidateConfig()", () => {
 						r2_buckets: [
 							{
 								binding: "TEST_R2_BINDING",
-								bucket_name: "TEST_R2_BUCKET_NAME",
+								bucket_name: "test-r2-bucket-name",
 							},
 						],
 						d1_databases: [
@@ -792,7 +792,7 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 
 			expect(diagnostics.errors).toEqual([
-				"The name 'ASSETS' is reserved in Pages projects. Please use a different name for your KV Namespaces binding.",
+				"The name 'ASSETS' is reserved in Pages projects. Please use a different name for your KV Namespace binding.",
 			]);
 		});
 
@@ -815,7 +815,7 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 
 			expect(diagnostics.errors).toEqual([
-				"The name 'ASSETS' is reserved in Pages projects. Please use a different name for your Vars binding.",
+				"The name 'ASSETS' is reserved in Pages projects. Please use a different name for your Environment Variable binding.",
 			]);
 		});
 	});

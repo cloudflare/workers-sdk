@@ -1,5 +1,5 @@
 {
-	"name": "redirected-config-worker-with-environments",
+	"name": "@fixture/config-redirected-envs",
 	"private": true,
 	"description": "",
 	"license": "ISC",

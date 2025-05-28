@@ -58,7 +58,7 @@ export const loginCommand = createCommand({
 					`One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --scopes-list" to see the valid scopes.`
 				);
 			}
-			await login({
+			await login(config, {
 				scopes: args.scopes,
 				browser: args.browser,
 				callbackHost: args.callbackHost,
@@ -66,7 +66,7 @@ export const loginCommand = createCommand({
 			});
 			return;
 		}
-		await login({
+		await login(config, {
 			browser: args.browser,
 			callbackHost: args.callbackHost,
 			callbackPort: args.callbackPort,
@@ -115,7 +115,7 @@ export const whoamiCommand = createCommand({
 		},
 	},
 	async handler(args, { config }) {
-		await whoami(args.account);
+		await whoami(config, args.account);
 		metrics.sendMetricsEvent("view accounts", {
 			sendMetrics: config.send_metrics,
 		});

@@ -1,5 +1,5 @@
+import { randomBytes } from "@fixture/isomorphic-random";
 import cookie from "cookie";
-import { randomBytes } from "isomorphic-random-example";
 import { now } from "./dep";
 import { testExplicitResourceManagement } from "./explicit-resource-management";
 import { logErrors } from "./log";

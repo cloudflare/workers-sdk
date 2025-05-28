@@ -2,6 +2,7 @@ import { formatConfigSnippet } from "../../config";
 import { createCommand } from "../../core/create-command";
 import { FatalError, UserError } from "../../errors";
 import { logger } from "../../logger";
+import { bucketFormatMessage, isValidR2BucketName } from "../../r2/helpers";
 import { requireAuth } from "../../user";
 import { getValidBindingName } from "../../utils/getValidBindingName";
 import { createPipeline } from "../client";
@@ -157,6 +158,11 @@ export const pipelinesCreateCommand = createCommand({
 
 	async handler(args, { config }) {
 		const bucket = args.r2Bucket;
+		if (!isValidR2BucketName(bucket)) {
+			throw new UserError(
+				`The bucket name "${bucket}" is invalid. ${bucketFormatMessage}`
+			);
+		}
 		const name = args.pipeline;
 		const compression = args.compression;
 
@@ -182,7 +188,7 @@ export const pipelinesCreateCommand = createCommand({
 				},
 				batch: batch,
 				path: {
-					bucket: bucket,
+					bucket,
 				},
 				credentials: {
 					endpoint: getAccountR2Endpoint(accountId),
@@ -198,6 +204,7 @@ export const pipelinesCreateCommand = createCommand({
 		) {
 			// auto-generate a service token
 			const auth = await authorizeR2Bucket(
+				config,
 				name,
 				accountId,
 				pipelineConfig.destination.path.bucket
@@ -261,7 +268,7 @@ export const pipelinesCreateCommand = createCommand({
 		}
 
 		logger.log(`🌀 Creating pipeline named "${name}"`);
-		const pipeline = await createPipeline(accountId, pipelineConfig);
+		const pipeline = await createPipeline(config, accountId, pipelineConfig);
 
 		logger.log(
 			`✅ Successfully created pipeline "${pipeline.name}" with ID ${pipeline.id}\n`

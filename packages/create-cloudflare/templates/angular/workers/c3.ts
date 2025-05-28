@@ -106,6 +106,7 @@ const config: TemplateConfig = {
 			start: `${npm} run build && wrangler dev`,
 			build: `ng build`,
 			deploy: `${npm} run build && wrangler deploy`,
+			"cf-typegen": `wrangler types`,
 		},
 	}),
 };

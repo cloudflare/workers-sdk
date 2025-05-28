@@ -18,6 +18,7 @@ import {
 } from "./kv/helpers";
 import { logger, LOGGER_LEVELS } from "./logger";
 import type { Config } from "./config";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { KeyValue } from "./kv/helpers";
 import type { XXHashAPI } from "xxhash-wasm";
 
@@ -77,19 +78,20 @@ function hashAsset(
 }
 
 async function createKVNamespaceIfNotAlreadyExisting(
+	complianceConfig: ComplianceConfig,
 	title: string,
 	accountId: string
 ) {
 	// check if it already exists
 	// TODO: this is super inefficient, should be made better
-	const namespaces = await listKVNamespaces(accountId);
+	const namespaces = await listKVNamespaces(complianceConfig, accountId);
 	const found = namespaces.find((ns) => ns.title === title);
 	if (found) {
 		return { created: false, id: found.id };
 	}
 
 	// else we make the namespace
-	const id = await createKVNamespace(accountId, title);
+	const id = await createKVNamespace(complianceConfig, accountId, title);
 	logger.log(`🌀 Created namespace for Workers Site "${title}"`);
 
 	return {
@@ -119,6 +121,7 @@ function pluralise(count: number) {
  * asset in the KV namespace.
  */
 export async function syncWorkersSite(
+	complianceConfig: ComplianceConfig,
 	accountId: string | undefined,
 	scriptName: string,
 	siteAssets: LegacyAssetPaths | undefined,
@@ -144,12 +147,17 @@ export async function syncWorkersSite(
 	}`;
 
 	const { id: namespace } = await createKVNamespaceIfNotAlreadyExisting(
+		complianceConfig,
 		title,
 		accountId
 	);
 	// Get all existing keys in asset namespace
 	logger.info("Fetching list of already uploaded assets...");
-	const namespaceKeysResponse = await listKVNamespaceKeys(accountId, namespace);
+	const namespaceKeysResponse = await listKVNamespaceKeys(
+		complianceConfig,
+		accountId,
+		namespace
+	);
 	const namespaceKeyInfoMap = new Map<
 		string,
 		(typeof namespaceKeysResponse)[0]
@@ -304,6 +312,7 @@ export async function syncWorkersSite(
 			// Upload the bucket to the KV namespace, suppressing logs, we do our own
 			try {
 				await putKVBulkKeyValue(
+					complianceConfig,
 					accountId,
 					namespace,
 					bucket,
@@ -358,6 +367,7 @@ export async function syncWorkersSite(
 
 		if (!oldAssetTTL) {
 			await deleteKVBulkKeyValue(
+				complianceConfig,
 				accountId,
 				namespace,
 				Array.from(namespaceKeys)
@@ -377,11 +387,12 @@ export async function syncWorkersSite(
 				}
 
 				const currentValue = await getKVKeyValue(
+					complianceConfig,
 					accountId,
 					namespace,
 					namespaceKey
 				);
-				await putKVKeyValue(accountId, namespace, {
+				await putKVKeyValue(complianceConfig, accountId, namespace, {
 					key: namespaceKey,
 					value: Buffer.from(currentValue),
 					expiration_ttl: oldAssetTTL,

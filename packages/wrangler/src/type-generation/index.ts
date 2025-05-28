@@ -4,7 +4,11 @@ import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import chalk from "chalk";
 import { findUpSync } from "find-up";
 import { getNodeCompat } from "miniflare";
-import { configFileName, experimental_readRawConfig } from "../config";
+import {
+	configFileName,
+	experimental_readRawConfig,
+	readConfig,
+} from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
 import { getVarsForDev } from "../dev/dev-vars";
@@ -24,6 +28,9 @@ export const typesCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		epilogue:
 			"📖 Learn more at https://developers.cloudflare.com/workers/languages/typescript/#generate-types",
+	},
+	behaviour: {
+		provideConfig: false,
 	},
 	positionalArgs: ["path"],
 	args: {
@@ -108,7 +115,18 @@ export const typesCommand = createCommand({
 			);
 		}
 	},
-	async handler(args, { config }) {
+	async handler(args) {
+		let config: Config;
+		const secondaryConfigs: Config[] = [];
+		if (Array.isArray(args.config)) {
+			config = readConfig({ ...args, config: args.config[0] });
+			for (const configPath of args.config.slice(1)) {
+				secondaryConfigs.push(readConfig({ config: configPath }));
+			}
+		} else {
+			config = readConfig(args);
+		}
+
 		const { envInterface, path: outputPath } = args;
 
 		if (
@@ -121,6 +139,34 @@ export const typesCommand = createCommand({
 				{ telemetryMessage: "No config file detected" }
 			);
 		}
+
+		const secondaryEntries: Map<string, Entry> = new Map();
+
+		if (secondaryConfigs.length > 0) {
+			for (const secondaryConfig of secondaryConfigs) {
+				const serviceEntry = await getEntry({}, secondaryConfig, "types");
+
+				if (serviceEntry.name) {
+					const key = serviceEntry.name;
+					if (secondaryEntries.has(key)) {
+						logger.warn(
+							`Configuration file for Worker '${key}' has been passed in more than once using \`--config\`. To remove this warning, only pass each unique Worker config file once.`
+						);
+					}
+					secondaryEntries.set(key, serviceEntry);
+					logger.log(
+						chalk.dim(
+							`- Found Worker '${key}' at '${relative(process.cwd(), serviceEntry.file)}' (${secondaryConfig.configPath})`
+						)
+					);
+				} else {
+					throw new UserError(
+						`Could not resolve entry point for service config '${secondaryConfig}'.`
+					);
+				}
+			}
+		}
+
 		const configContainsEntrypoint =
 			config.main !== undefined || !!config.site?.["entry-point"];
 
@@ -147,7 +193,8 @@ export const typesCommand = createCommand({
 				args,
 				envInterface,
 				outputPath,
-				entrypoint
+				entrypoint,
+				secondaryEntries
 			);
 			if (envHeader && envTypes) {
 				header.push(envHeader);
@@ -253,6 +300,7 @@ export async function generateEnvTypes(
 	envInterface: string,
 	outputPath: string,
 	entrypoint?: Entry,
+	serviceEntries?: Map<string, Entry>,
 	log = true
 ): Promise<{ envHeader?: string; envTypes?: string }> {
 	const stringKeys: string[] = [];
@@ -267,7 +315,7 @@ export async function generateEnvTypes(
 
 	const configToDTS: ConfigToDTS = {
 		kv_namespaces: config.kv_namespaces ?? [],
-		vars: collectAllVars(args),
+		vars: collectAllVars({ ...args, config: config.configPath }),
 		wasm_modules: config.wasm_modules,
 		text_blobs: {
 			...config.text_blobs,
@@ -346,18 +394,22 @@ export async function generateEnvTypes(
 	}
 
 	if (configToDTS.durable_objects?.bindings) {
-		const importPath = entrypoint?.file
-			? generateImportSpecifier(fullOutputPath, entrypoint.file)
-			: undefined;
-
 		for (const durableObject of configToDTS.durable_objects.bindings) {
-			const exportExists = entrypoint?.exports?.some(
+			const doEntrypoint = durableObject.script_name
+				? serviceEntries?.get(durableObject.script_name)
+				: entrypoint;
+
+			const importPath = doEntrypoint
+				? generateImportSpecifier(fullOutputPath, doEntrypoint.file)
+				: undefined;
+
+			const exportExists = doEntrypoint?.exports?.some(
 				(e) => e === durableObject.class_name
 			);
 
 			let typeName: string;
-			// Import the type if it's exported and it's not an external worker
-			if (importPath && exportExists && !durableObject.script_name) {
+
+			if (importPath && exportExists) {
 				typeName = `DurableObjectNamespace<import("${importPath}").${durableObject.class_name}>`;
 			} else if (durableObject.script_name) {
 				typeName = `DurableObjectNamespace /* ${durableObject.class_name} from ${durableObject.script_name} */`;
@@ -392,7 +444,30 @@ export async function generateEnvTypes(
 
 	if (configToDTS.services) {
 		for (const service of configToDTS.services) {
-			envTypeStructure.push([constructTypeKey(service.binding), "Fetcher"]);
+			const serviceEntry =
+				service.service !== entrypoint?.name
+					? serviceEntries?.get(service.service)
+					: entrypoint;
+
+			const importPath = serviceEntry
+				? generateImportSpecifier(fullOutputPath, serviceEntry.file)
+				: undefined;
+
+			const exportExists = serviceEntry?.exports?.some(
+				(e) => e === service.entrypoint
+			);
+
+			let typeName: string;
+
+			if (importPath && exportExists) {
+				typeName = `Service<import("${importPath}").${service.entrypoint ?? "default"}>`;
+			} else if (service.entrypoint) {
+				typeName = `Service /* entrypoint ${service.entrypoint} from ${service.service} */`;
+			} else {
+				typeName = `Fetcher /* ${service.service} */`;
+			}
+
+			envTypeStructure.push([constructTypeKey(service.binding), typeName]);
 		}
 	}
 

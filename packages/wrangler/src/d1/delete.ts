@@ -49,7 +49,7 @@ export const d1DeleteCommand = createCommand({
 
 		logger.log("Deleting...");
 
-		await fetchResult(`/accounts/${accountId}/d1/database/${db.uuid}`, {
+		await fetchResult(config, `/accounts/${accountId}/d1/database/${db.uuid}`, {
 			method: "DELETE",
 		});
 

@@ -114,7 +114,7 @@ describe("normalizeAndValidateConfig()", () => {
 			ai: undefined,
 			version_metadata: undefined,
 			triggers: {
-				crons: [],
+				crons: undefined,
 			},
 			unsafe: {
 				bindings: undefined,
@@ -973,11 +973,11 @@ describe("normalizeAndValidateConfig()", () => {
 					},
 				],
 				r2_buckets: [
-					{ binding: "R2_BINDING_1", bucket_name: "R2_BUCKET_1" },
+					{ binding: "R2_BINDING_1", bucket_name: "r2-bucket-1" },
 					{
 						binding: "R2_BINDING_2",
-						bucket_name: "R2_BUCKET_2",
-						preview_bucket_name: "R2_PREVIEW_2",
+						bucket_name: "r2-bucket-2",
+						preview_bucket_name: "r2-preview-2",
 					},
 				],
 				services: [
@@ -2858,10 +2858,16 @@ describe("normalizeAndValidateConfig()", () => {
 							{ binding: 2333, bucket_name: 2444 },
 							{
 								binding: "R2_BINDING_2",
-								bucket_name: "R2_BUCKET_2",
+								bucket_name: "r2-bucket-2",
 								preview_bucket_name: 2555,
 							},
-							{ binding: "R2_BINDING_1", bucket_name: "" },
+							{ binding: "R2_BINDING_3", bucket_name: "INVALID-NAME" },
+							{
+								binding: "R2_BINDING_4",
+								bucket_name: "bucket",
+								preview_bucket_name: "INVALID-NAME",
+							},
+							{ binding: "R2_BINDING_5", bucket_name: "" },
 						],
 					} as unknown as RawConfig,
 					undefined,
@@ -2871,15 +2877,17 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - \\"r2_buckets[0]\\" bindings should have a string \\"binding\\" field but got {}.
-			            - \\"r2_buckets[0]\\" bindings should have a string \\"bucket_name\\" field but got {}.
-			            - \\"r2_buckets[1]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\"}.
-			            - \\"r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
-			            - \\"r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
-			            - \\"r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}.
-			            - \\"r2_buckets[4]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\",\\"bucket_name\\":\\"\\"}."
-		        `);
+					"Processing wrangler configuration:
+					  - \\"r2_buckets[0]\\" bindings should have a string \\"binding\\" field but got {}.
+					  - \\"r2_buckets[0]\\" bindings should have a string \\"bucket_name\\" field but got {}.
+					  - \\"r2_buckets[1]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\"}.
+					  - \\"r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
+					  - \\"r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
+					  - \\"r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"r2-bucket-2\\",\\"preview_bucket_name\\":2555}.
+					  - r2_buckets[4].bucket_name=\\"INVALID-NAME\\" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.
+					  - r2_buckets[5].preview_bucket_name= \\"INVALID-NAME\\" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.
+					  - \\"r2_buckets[6]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_5\\",\\"bucket_name\\":\\"\\"}."
+				`);
 			});
 
 			it("should allow the bucket_name field to be omitted when the RESOURCES_PROVISION experimental flag is enabled", () => {
@@ -5237,16 +5245,17 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"env.ENV1.r2_buckets[0]\\" bindings should have a string \\"binding\\" field but got {}.
-			              - \\"env.ENV1.r2_buckets[0]\\" bindings should have a string \\"bucket_name\\" field but got {}.
-			              - \\"env.ENV1.r2_buckets[1]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\"}.
-			              - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
-			              - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
-			              - \\"env.ENV1.r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}."
-		        `);
+					  - \\"env.ENV1\\" environment configuration
+					    - \\"env.ENV1.r2_buckets[0]\\" bindings should have a string \\"binding\\" field but got {}.
+					    - \\"env.ENV1.r2_buckets[0]\\" bindings should have a string \\"bucket_name\\" field but got {}.
+					    - \\"env.ENV1.r2_buckets[1]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\"}.
+					    - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
+					    - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
+					    - env.ENV1.r2_buckets[3].bucket_name=\\"R2_BUCKET_2\\" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.
+					    - \\"env.ENV1.r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"R2_BUCKET_2\\",\\"preview_bucket_name\\":2555}."
+				`);
 			});
 		});
 
@@ -6262,6 +6271,82 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(false);
 			});
+		});
+	});
+
+	describe("mixed mode", () => {
+		it("should ignore remote configs when specified without MIXED_MODE enabled", () => {
+			const rawConfig: RawConfig = {
+				name: "my-worker",
+				kv_namespaces: [
+					{
+						binding: "KV",
+						id: "xxxx-xxxx-xxxx-xxxx",
+						remote: true,
+					},
+				],
+				r2_buckets: [
+					{
+						binding: "R2",
+						bucket_name: "my-r2",
+						remote: 5 as unknown as boolean,
+					},
+				],
+			};
+			const { diagnostics } = run(
+				{
+					RESOURCES_PROVISION: false,
+					MULTIWORKER: false,
+					MIXED_MODE: false,
+				},
+				() =>
+					normalizeAndValidateConfig(rawConfig, undefined, undefined, {
+						env: undefined,
+					})
+			);
+
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - Unexpected fields found in kv_namespaces[0] field: \\"remote\\"
+				  - Unexpected fields found in r2_buckets[0] field: \\"remote\\""
+			`);
+		});
+
+		it("should error on non boolean remote values", () => {
+			const rawConfig: RawConfig = {
+				name: "my-worker",
+				kv_namespaces: [
+					{
+						binding: "KV",
+						id: "xxxx-xxxx-xxxx-xxxx",
+						remote: "hello" as unknown as boolean,
+					},
+				],
+				r2_buckets: [
+					{
+						binding: "R2",
+						bucket_name: "my-r2",
+						remote: 5 as unknown as boolean,
+					},
+				],
+			};
+			const { diagnostics } = run(
+				{
+					RESOURCES_PROVISION: false,
+					MULTIWORKER: false,
+					MIXED_MODE: true,
+				},
+				() =>
+					normalizeAndValidateConfig(rawConfig, undefined, undefined, {
+						env: undefined,
+					})
+			);
+
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - \\"kv_namespaces[0]\\" should, optionally, have a boolean \\"remote\\" field but got {\\"binding\\":\\"KV\\",\\"id\\":\\"xxxx-xxxx-xxxx-xxxx\\",\\"remote\\":\\"hello\\"}.
+				  - \\"r2_buckets[0]\\" should, optionally, have a boolean \\"remote\\" field but got {\\"binding\\":\\"R2\\",\\"bucket_name\\":\\"my-r2\\",\\"remote\\":5}."
+			`);
 		});
 	});
 });

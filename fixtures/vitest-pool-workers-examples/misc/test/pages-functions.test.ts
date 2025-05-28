@@ -94,7 +94,7 @@ it("requires ASSETS service binding", async () => {
 	onTestFinished(() => {
 		env.ASSETS = originalASSETS;
 	});
-	delete env.ASSETS;
+	delete (env as Partial<ProvidedEnv>).ASSETS;
 
 	const request = new IncomingRequest("https://example.com", {
 		method: "POST",

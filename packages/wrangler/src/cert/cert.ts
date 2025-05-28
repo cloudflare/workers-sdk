@@ -62,7 +62,7 @@ export const certUploadMtlsCommand = createCommand({
 				? `Uploading mTLS Certificate ${name}...`
 				: `Uploading mTLS Certificate...`
 		);
-		const certResponse = await uploadMTlsCertificateFromFs(accountId, {
+		const certResponse = await uploadMTlsCertificateFromFs(config, accountId, {
 			certificateChainFilename: cert,
 			privateKeyFilename: key,
 			name,
@@ -105,7 +105,7 @@ export const certUploadCaCertCommand = createCommand({
 				? `Uploading CA Certificate ${name}...`
 				: `Uploading CA Certificate...`
 		);
-		const certResponse = await uploadCaCertificateFromFs(accountId, {
+		const certResponse = await uploadCaCertificateFromFs(config, accountId, {
 			certificates: caCert,
 			ca: true,
 			name,
@@ -131,7 +131,12 @@ export const certListCommand = createCommand({
 	},
 	async handler(_, { config }) {
 		const accountId = await requireAuth(config);
-		const certificates = await listMTlsCertificates(accountId, {}, true);
+		const certificates = await listMTlsCertificates(
+			config,
+			accountId,
+			{},
+			true
+		);
 		for (const certificate of certificates) {
 			logger.log(`ID: ${certificate.id}`);
 			if (certificate.name) {
@@ -178,9 +183,10 @@ export const certDeleteCommand = createCommand({
 		}
 		let certificate: MTlsCertificateResponse;
 		if (id) {
-			certificate = await getMTlsCertificate(accountId, id);
+			certificate = await getMTlsCertificate(config, accountId, id);
 		} else {
 			certificate = await getMTlsCertificateByName(
+				config,
 				accountId,
 				name as string,
 				true
@@ -195,7 +201,7 @@ export const certDeleteCommand = createCommand({
 			return;
 		}
 
-		await deleteMTlsCertificate(accountId, certificate.id);
+		await deleteMTlsCertificate(config, accountId, certificate.id);
 
 		logger.log(
 			`Deleted certificate ${certificate.id} ${certificate.name ? `(${certificate.name})` : ""} successfully`

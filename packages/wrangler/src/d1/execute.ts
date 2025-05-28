@@ -19,6 +19,7 @@ import { requireAuth } from "../user";
 import splitSqlQuery from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
 import type { Config } from "../config";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type {
 	Database,
 	ImportInitResponse,
@@ -396,7 +397,7 @@ async function executeRemotely({
 		const initResponse = await spinnerWhile({
 			promise: d1ApiPost<
 				ImportInitResponse | ImportPollingResponse | PollingFailure
-			>(accountId, db, "import", { action: "init", etag }),
+			>(config, accountId, db, "import", { action: "init", etag }),
 			startMessage: "Checking if file needs uploading",
 		});
 
@@ -411,6 +412,7 @@ async function executeRemotely({
 			? // Upload the file to R2, then inform D1 to start processing it. The server delays before responding
 				// in case the file is quite small and can be processed without a second round-trip.
 				await uploadAndBeginIngestion(
+					config,
 					accountId,
 					db,
 					input.file,
@@ -423,6 +425,7 @@ async function executeRemotely({
 		// until it's complete. If it's already finished, this call will early-exit.
 		const finalResponse = await pollUntilComplete(
 			firstPollResponse,
+			config,
 			accountId,
 			db
 		);
@@ -459,15 +462,22 @@ async function executeRemotely({
 			},
 		];
 	} else {
-		const result = await d1ApiPost<QueryResult[]>(accountId, db, "query", {
-			sql: input.command,
-		});
+		const result = await d1ApiPost<QueryResult[]>(
+			config,
+			accountId,
+			db,
+			"query",
+			{
+				sql: input.command,
+			}
+		);
 		logResult(result);
 		return result;
 	}
 }
 
 async function uploadAndBeginIngestion(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	db: Database,
 	file: string,
@@ -508,6 +518,7 @@ async function uploadAndBeginIngestion(
 	}
 
 	return await d1ApiPost<ImportPollingResponse | PollingFailure>(
+		complianceConfig,
 		accountId,
 		db,
 		"import",
@@ -517,6 +528,7 @@ async function uploadAndBeginIngestion(
 
 async function pollUntilComplete(
 	response: ImportPollingResponse | PollingFailure,
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	db: Database
 ): Promise<ImportPollingResponse> {
@@ -537,6 +549,7 @@ async function pollUntilComplete(
 		});
 	} else {
 		const newResponse = await d1ApiPost<ImportPollingResponse | PollingFailure>(
+			complianceConfig,
 			accountId,
 			db,
 			"import",
@@ -545,11 +558,17 @@ async function pollUntilComplete(
 				current_bookmark: response.at_bookmark,
 			}
 		);
-		return await pollUntilComplete(newResponse, accountId, db);
+		return await pollUntilComplete(
+			newResponse,
+			complianceConfig,
+			accountId,
+			db
+		);
 	}
 }
 
 async function d1ApiPost<T>(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	db: Database,
 	action: string,
@@ -557,6 +576,7 @@ async function d1ApiPost<T>(
 ) {
 	try {
 		return await fetchResult<T>(
+			complianceConfig,
 			`/accounts/${accountId}/d1/database/${db.uuid}/${action}`,
 			{
 				method: "POST",
@@ -598,9 +618,17 @@ function shorten(query: string | undefined, length: number) {
 }
 
 async function checkForSQLiteBinary(filename: string) {
-	const fd = await fs.open(filename, "r");
 	const buffer = Buffer.alloc(15);
-	await fd.read(buffer, 0, 15);
+
+	try {
+		const fd = await fs.open(filename, "r");
+		await fd.read(buffer, 0, 15);
+	} catch (e) {
+		throw new UserError(
+			`Unable to read SQL text file "${filename}". Please check the file path and try again.`
+		);
+	}
+
 	if (buffer.toString("utf8") === "SQLite format 3") {
 		throw new UserError(
 			"Provided file is a binary SQLite database file instead of an SQL text file. The execute command can only process SQL text files. Please export an SQL file from your SQLite database and try again."

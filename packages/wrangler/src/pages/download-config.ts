@@ -7,6 +7,7 @@ import { fetchResult } from "../cfetch";
 import { getConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
 import { confirm } from "../dialogs";
+import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -124,6 +125,7 @@ async function toEnvironment(
 				class: string;
 				environment?: string;
 			}>(
+				COMPLIANCE_REGION_CONFIG_PUBLIC,
 				`/accounts/${accountId}/workers/durable_objects/namespaces/${ns.namespace_id}`
 			);
 			configObj.durable_objects.bindings.push({
@@ -259,6 +261,7 @@ function simplifyEnvironments(
 
 async function downloadProject(accountId: string, projectName: string) {
 	const project = await fetchResult<PagesProject>(
+		COMPLIANCE_REGION_CONFIG_PUBLIC,
 		`/accounts/${accountId}/pages/projects/${projectName}`
 	);
 	logger.debug(JSON.stringify(project, null, 2));

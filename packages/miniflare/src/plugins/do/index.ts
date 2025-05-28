@@ -5,6 +5,7 @@ import { getUserServiceName } from "../core";
 import {
 	getPersistPath,
 	kUnsafeEphemeralUniqueKey,
+	MixedModeConnectionString,
 	PersistenceSchema,
 	Plugin,
 	ProxyNodeBinding,
@@ -29,6 +30,9 @@ export const DurableObjectsOptionsSchema = z.object({
 						.optional(),
 					// Prevents the Durable Object being evicted.
 					unsafePreventEviction: z.boolean().optional(),
+					mixedModeConnectionString: z
+						.custom<MixedModeConnectionString>()
+						.optional(),
 				}),
 			])
 		)
@@ -99,6 +103,7 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 	async getServices({
 		sharedOptions,
 		tmpPath,
+		defaultPersistRoot,
 		durableObjectClassNames,
 		unsafeEphemeralDurableObjects,
 	}) {
@@ -121,6 +126,7 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 		const storagePath = getPersistPath(
 			DURABLE_OBJECTS_PLUGIN_NAME,
 			tmpPath,
+			defaultPersistRoot,
 			sharedOptions.durableObjectsPersist
 		);
 		// `workerd` requires the `disk.path` to exist. Setting `recursive: true`
@@ -141,6 +147,7 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 		return getPersistPath(
 			DURABLE_OBJECTS_PLUGIN_NAME,
 			tmpPath,
+			undefined,
 			durableObjectsPersist
 		);
 	},

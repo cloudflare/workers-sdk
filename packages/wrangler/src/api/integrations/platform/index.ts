@@ -18,6 +18,7 @@ import { dedent } from "../../../utils/dedent";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import { getServiceBindings } from "./services";
+import type { AssetsOptions } from "../../../assets";
 import type { Config, RawConfig, RawEnvironment } from "../../../config";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, ModuleRule, WorkerOptions } from "miniflare";
@@ -164,6 +165,7 @@ async function getMiniflareOptionsFromConfig(
 
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
 		name: rawConfig.name,
+		complianceRegion: rawConfig.compliance_region,
 		bindings,
 		workerDefinitions,
 		queueConsumers: undefined,
@@ -174,7 +176,7 @@ async function getMiniflareOptionsFromConfig(
 		tails: [],
 	});
 
-	const persistOptions = getMiniflarePersistOptions(options.persist);
+	const defaultPersistRoot = getMiniflarePersistRoot(options.persist);
 
 	const serviceBindings = await getServiceBindings(bindings.services);
 
@@ -192,7 +194,7 @@ async function getMiniflareOptionsFromConfig(
 			},
 			...externalWorkers,
 		],
-		...persistOptions,
+		defaultPersistRoot,
 	};
 
 	return miniflareOptions;
@@ -204,39 +206,19 @@ async function getMiniflareOptionsFromConfig(
  * @param persist The user provided persistence option
  * @returns an object containing the properties to pass to miniflare
  */
-function getMiniflarePersistOptions(
+function getMiniflarePersistRoot(
 	persist: GetPlatformProxyOptions["persist"]
-): Pick<
-	MiniflareOptions,
-	| "kvPersist"
-	| "durableObjectsPersist"
-	| "r2Persist"
-	| "d1Persist"
-	| "workflowsPersist"
-> {
+): string | undefined {
 	if (persist === false) {
 		// the user explicitly asked for no persistance
-		return {
-			kvPersist: false,
-			durableObjectsPersist: false,
-			r2Persist: false,
-			d1Persist: false,
-			workflowsPersist: false,
-		};
+		return;
 	}
 
 	const defaultPersistPath = ".wrangler/state/v3";
-
 	const persistPath =
 		typeof persist === "object" ? persist.path : defaultPersistPath;
 
-	return {
-		kvPersist: `${persistPath}/kv`,
-		durableObjectsPersist: `${persistPath}/do`,
-		r2Persist: `${persistPath}/r2`,
-		d1Persist: `${persistPath}/d1`,
-		workflowsPersist: `${persistPath}/workflows`,
-	};
+	return persistPath;
 }
 
 function deepFreeze<T extends Record<string | number | symbol, unknown>>(
@@ -265,17 +247,32 @@ export interface Unstable_MiniflareWorkerOptions {
 export function unstable_getMiniflareWorkerOptions(
 	configPath: string,
 	env?: string,
-	options?: { imagesLocalMode: boolean }
+	options?: {
+		imagesLocalMode?: boolean;
+		overrides?: {
+			assets?: Partial<AssetsOptions>;
+		};
+	}
 ): Unstable_MiniflareWorkerOptions;
 export function unstable_getMiniflareWorkerOptions(
 	config: Config,
 	env?: string,
-	options?: { imagesLocalMode: boolean }
+	options?: {
+		imagesLocalMode?: boolean;
+		overrides?: {
+			assets?: Partial<AssetsOptions>;
+		};
+	}
 ): Unstable_MiniflareWorkerOptions;
 export function unstable_getMiniflareWorkerOptions(
 	configOrConfigPath: string | Config,
 	env?: string,
-	options?: { imagesLocalMode: boolean }
+	options?: {
+		imagesLocalMode?: boolean;
+		overrides?: {
+			assets?: Partial<AssetsOptions>;
+		};
+	}
 ): Unstable_MiniflareWorkerOptions {
 	const config =
 		typeof configOrConfigPath === "string"
@@ -293,6 +290,7 @@ export function unstable_getMiniflareWorkerOptions(
 	const bindings = getBindings(config, env, true, {});
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
 		name: config.name,
+		complianceRegion: config.compliance_region,
 		bindings,
 		workerDefinitions: null,
 		queueConsumers: config.queues.consumers,
@@ -342,7 +340,11 @@ export function unstable_getMiniflareWorkerOptions(
 
 	const sitesAssetPaths = getSiteAssetPaths(config);
 	const sitesOptions = buildSitesOptions({ legacyAssetPaths: sitesAssetPaths });
-	const processedAssetOptions = getAssetsOptions({ assets: undefined }, config);
+	const processedAssetOptions = getAssetsOptions(
+		{ assets: undefined },
+		config,
+		options?.overrides?.assets
+	);
 	const assetOptions = processedAssetOptions
 		? buildAssetOptions({ assets: processedAssetOptions })
 		: {};

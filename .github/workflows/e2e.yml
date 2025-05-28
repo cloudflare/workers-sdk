@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-2022, ubuntu-22.04]
-        node: ["18"]
+        node: ["20.19.1"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -53,6 +53,7 @@ jobs:
           HYPERDRIVE_DATABASE_URL: ${{ secrets.TEST_HYPERDRIVE_DATABASE_URL}}
           WRANGLER: node --no-warnings ${{ github.workspace}}/packages/wrangler/bin/wrangler.js
           WRANGLER_IMPORT: ${{ github.workspace}}/packages/wrangler/wrangler-dist/cli.js
+          MINIFLARE_IMPORT: ${{ github.workspace}}/packages/miniflare/dist/src/index.js
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
@@ -76,7 +77,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-13]
-        node: ["18"]
+        node: ["20.19.1"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
@@ -112,6 +113,7 @@ jobs:
           HYPERDRIVE_DATABASE_URL: ${{ secrets.TEST_HYPERDRIVE_DATABASE_URL}}
           WRANGLER: node --no-warnings ${{ github.workspace}}/packages/wrangler/bin/wrangler.js
           WRANGLER_IMPORT: ${{ github.workspace}}/packages/wrangler/wrangler-dist/cli.js
+          MINIFLARE_IMPORT: ${{ github.workspace}}/packages/miniflare/dist/src/index.js
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html

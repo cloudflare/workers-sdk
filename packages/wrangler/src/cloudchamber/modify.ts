@@ -15,6 +15,7 @@ import {
 	promptForLabels,
 	renderDeploymentConfiguration,
 	renderDeploymentMutationError,
+	resolveMemory,
 } from "./common";
 import { wrap } from "./helpers/wrap";
 import { loadAccount } from "./locations";
@@ -103,6 +104,8 @@ export async function modifyCommand(
 		);
 		const labels = collectLabels(modifyArgs.label);
 
+		const memoryMib = resolveMemory(modifyArgs, config.cloudchamber);
+
 		const deployment = await DeploymentsService.modifyDeploymentV2(
 			modifyArgs.deploymentId,
 			{
@@ -112,7 +115,7 @@ export async function modifyCommand(
 				labels: labels,
 				ssh_public_key_ids: modifyArgs.sshPublicKeyId,
 				vcpu: modifyArgs.vcpu ?? config.cloudchamber.vcpu,
-				memory: modifyArgs.memory ?? config.cloudchamber.memory,
+				memory_mib: memoryMib,
 			}
 		);
 		console.log(JSON.stringify(deployment, null, 4));
@@ -195,6 +198,7 @@ async function handleModifyCommand(
 			if (typeof value !== "string") {
 				return "Unknown error";
 			}
+
 			const { err } = parseImageName(value);
 			return err;
 		},
@@ -228,11 +232,13 @@ async function handleModifyCommand(
 		true
 	);
 
+	const memoryMib = resolveMemory(args, config.cloudchamber);
+
 	renderDeploymentConfiguration("modify", {
 		image,
 		location: location ?? deployment.location.name,
 		vcpu: args.vcpu ?? config.cloudchamber.vcpu ?? deployment.vcpu,
-		memory: args.memory ?? config.cloudchamber.memory ?? deployment.memory,
+		memoryMib: memoryMib ?? deployment.memory_mib,
 		env: args.env,
 		environmentVariables:
 			selectedEnvironmentVariables !== undefined
@@ -264,7 +270,7 @@ async function handleModifyCommand(
 			environment_variables: selectedEnvironmentVariables,
 			labels: selectedLabels,
 			vcpu: args.vcpu ?? config.cloudchamber.vcpu,
-			memory: args.memory ?? config.cloudchamber.memory,
+			memory_mib: memoryMib,
 		})
 	);
 	stop();

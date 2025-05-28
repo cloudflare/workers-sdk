@@ -12,3 +12,4 @@ export {
 } from "./mtls-certificate";
 export * from "./startDevWorker";
 export * from "./integrations";
+export * from "./mixedMode";

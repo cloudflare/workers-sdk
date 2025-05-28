@@ -53,6 +53,7 @@ export const r2BucketDomainGetCommand = createCommand({
 		);
 
 		const domainResponse = await getCustomDomain(
+			config,
 			accountId,
 			bucket,
 			domain,
@@ -93,6 +94,7 @@ export const r2BucketDomainListCommand = createCommand({
 		logger.log(`Listing custom domains connected to bucket '${bucket}'...`);
 
 		const domains = await listCustomDomainsOfBucket(
+			config,
 			accountId,
 			bucket,
 			jurisdiction
@@ -175,6 +177,7 @@ export const r2BucketDomainAddCommand = createCommand({
 		logger.log(`Connecting custom domain '${domain}' to bucket '${bucket}'...`);
 
 		await attachCustomDomainToBucket(
+			config,
 			accountId,
 			bucket,
 			{
@@ -237,7 +240,13 @@ export const r2BucketDomainRemoveCommand = createCommand({
 		}
 		logger.log(`Removing custom domain '${domain}' from bucket '${bucket}'...`);
 
-		await removeCustomDomainFromBucket(accountId, bucket, domain, jurisdiction);
+		await removeCustomDomainFromBucket(
+			config,
+			accountId,
+			bucket,
+			domain,
+			jurisdiction
+		);
 
 		logger.log(`Custom domain '${domain}' removed successfully.`);
 	},
@@ -283,6 +292,7 @@ export const r2BucketDomainUpdateCommand = createCommand({
 		logger.log(`Updating custom domain '${domain}' for bucket '${bucket}'...`);
 
 		await configureCustomDomainSettings(
+			config,
 			accountId,
 			bucket,
 			domain,

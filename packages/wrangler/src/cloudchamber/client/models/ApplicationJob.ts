@@ -32,15 +32,24 @@ export type ApplicationJob = {
 	/**
 	 * Allocated vCPUs for this job
 	 */
+	vcpu: number;
+	/**
+	 * Allocated vCPUs for this job
+	 */
 	vcpus: number;
 	/**
 	 * Allocated memory for this job
 	 */
 	memory_mb: number;
 	/**
-	 * Specify the memory to be used for the deployment. The default will be the one configured for the account.
+	 * Deprecated in favor of memory_mib
+	 * @deprecated
 	 */
 	memory: MemorySizeWithUnit;
+	/**
+	 * Specify the memory to be used for the deployment, in MiB. The default will be the one configured for the account.
+	 */
+	memory_mib?: number;
 	/**
 	 * The disk configuration for this job expressed in string
 	 */

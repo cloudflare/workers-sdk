@@ -1,5 +1,6 @@
 import {
 	deleteCertificate,
+	deleteContainerApplication,
 	deleteDatabase,
 	deleteHyperdriveConfig,
 	deleteKVNamespace,
@@ -8,6 +9,7 @@ import {
 	listCertificates,
 	listHyperdriveConfigs,
 	listTmpDatabases,
+	listTmpE2EContainerApplications,
 	listTmpE2EProjects,
 	listTmpE2EWorkers,
 	listTmpKVNamespaces,
@@ -104,5 +106,11 @@ async function run() {
 		console.log(
 			`Successfully deleted ${mtlsCertificates.length} mTLS certificates`
 		);
+	}
+
+	const containers = await listTmpE2EContainerApplications();
+	for (const container of containers) {
+		await deleteContainerApplication(container);
+		console.log(`Deleted ${container.name} (${container.id})`);
 	}
 }

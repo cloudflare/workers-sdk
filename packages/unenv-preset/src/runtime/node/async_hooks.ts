@@ -27,7 +27,6 @@ export default {
 	/**
 	 * manually unroll unenv-polyfilled-symbols to make it tree-shakeable
 	 */
-	// @ts-expect-error @types/node is missing this one - this is a bug in typings
 	asyncWrapProviders,
 	createHook,
 	executionAsyncId,

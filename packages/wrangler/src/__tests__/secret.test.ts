@@ -167,8 +167,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 					🌀 Creating the secret for the Worker \\"script-name\\"
 					✨ Success! Uploaded secret secret-name"
 				`);
@@ -187,8 +186,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 					🌀 Creating the secret for the Worker \\"script-name\\"
 					✨ Success! Uploaded secret the-key"
 				`);
@@ -214,8 +212,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 					🌀 Creating the secret for the Worker \\"script-name-some-env\\"
 					✨ Success! Uploaded secret the-key"
 				`);
@@ -241,8 +238,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 					🌀 Creating the secret for the Worker \\"script-name\\" (some-env)
 					✨ Success! Uploaded secret the-key"
 				`);
@@ -259,8 +255,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 					"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -290,8 +285,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 					🌀 Creating the secret for the Worker \\"non-existent-worker\\"
 					Aborting. No secrets added."
 				`);
@@ -318,8 +312,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 					🌀 Creating the secret for the Worker \\"script-name\\"
 					✨ Success! Uploaded secret the-key"
 				`);
@@ -336,8 +329,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 					🌀 Creating the secret for the Worker \\"script-name\\"
 					✨ Success! Uploaded secret the-key"
 				`);
@@ -357,8 +349,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 
 					[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 				`);
@@ -391,8 +382,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 					🌀 Creating the secret for the Worker \\"non-existent-worker\\"
 					✨ Success! Uploaded secret the-key"
 				`);
@@ -433,8 +423,7 @@ describe("wrangler secret", () => {
 					expect(std.out).toMatchInlineSnapshot(`
 						"
 						 ⛅️ wrangler x.x.x
-						------------------
-
+						──────────────────
 						🌀 Creating the secret for the Worker \\"script-name\\"
 						✨ Success! Uploaded secret the-key"
 					`);
@@ -576,8 +565,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Deleting the secret the-key on the Worker script-name
 				✨ Success! Deleted secret the-key"
 			`);
@@ -600,8 +588,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Deleting the secret the-key on the Worker script-name-some-env
 				✨ Success! Deleted secret the-key"
 			`);
@@ -623,8 +610,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Deleting the secret the-key on the Worker script-name (some-env)
 				✨ Success! Deleted secret the-key"
 			`);
@@ -642,8 +628,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
@@ -784,8 +769,7 @@ describe("wrangler secret", () => {
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
-					------------------
-
+					──────────────────
 					Secret Name: the-secret-name
 					"
 				`);
@@ -856,8 +840,7 @@ describe("wrangler secret", () => {
 				`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Creating the secrets for the Worker \\"script-name\\" "
 			`
 			);
@@ -884,8 +867,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Creating the secrets for the Worker \\"script-name\\"
 				✨ Successfully created secret for key: secret1
 				✨ Successfully created secret for key: password
@@ -913,8 +895,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Creating the secrets for the Worker \\"script-name\\"
 				✨ Successfully created secret for key: secret-name-1
 				✨ Successfully created secret for key: secret-name-2
@@ -939,8 +920,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Creating the secrets for the Worker \\"script-name\\"
 				✨ Successfully created secret for key: SECRET_NAME_1
 				✨ Successfully created secret for key: SECRET_NAME_2
@@ -1001,8 +981,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Creating the secrets for the Worker \\"script-name\\"
 
 				🚨 Secrets failed to upload
@@ -1036,8 +1015,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Creating the secrets for the Worker \\"script-name\\"
 
 				🚨 Secrets failed to upload
@@ -1095,8 +1073,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Creating the secrets for the Worker \\"script-name\\"
 
 				🚨 Secrets failed to upload
@@ -1191,8 +1168,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Creating the secrets for the Worker \\"script-name\\"
 				✨ Successfully created secret for key: secret-name-2
 				✨ Successfully created secret for key: secret-name-3
@@ -1224,8 +1200,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Creating the secrets for the Worker \\"non-existent-worker\\"
 				Aborting. No secrets added."
 			`);
@@ -1256,8 +1231,7 @@ describe("wrangler secret", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				🌀 Creating the secrets for the Worker \\"script-name\\"
 				✨ Successfully created secret for key: secret-name-1
 				✨ Successfully created secret for key: secret-name-2

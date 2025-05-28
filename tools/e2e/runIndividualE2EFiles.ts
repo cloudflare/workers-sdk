@@ -26,10 +26,31 @@ for (const file of e2eTests) {
 	}
 }
 
+const failed: string[] = [];
+
 for (const [file, task] of tasks.entries()) {
 	console.log("::group::Testing: " + file);
-	execSync(task, {
-		stdio: "inherit",
-	});
+	try {
+		execSync(task, {
+			stdio: "inherit",
+		});
+	} catch {
+		console.error("Task failed - retrying");
+		try {
+			execSync(task, {
+				stdio: "inherit",
+			});
+		} catch (e) {
+			console.error("Still failed, moving on");
+			failed.push(file);
+		}
+	}
 	console.log("::endgroup::");
+}
+
+if (failed.length > 0) {
+	throw new Error(
+		"At least one task failed (even on retry):" +
+			failed.map((file) => `\n - ${file}`)
+	);
 }

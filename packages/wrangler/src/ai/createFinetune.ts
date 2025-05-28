@@ -54,6 +54,7 @@ export const aiFineTuneCreateCommand = createCommand({
 			) {
 				try {
 					const finetune = await fetchResult<Finetune>(
+						config,
 						`/accounts/${accountId}/ai/finetunes`,
 						{
 							method: "POST",
@@ -77,6 +78,7 @@ export const aiFineTuneCreateCommand = createCommand({
 								formdata.set("file_name", file.name);
 								formdata.set("file", new Blob([fs.readFileSync(filePath)]));
 								await fetchResult<void>(
+									config,
 									`/accounts/${accountId}/ai/finetunes/${finetune.id}/finetune-assets`,
 									{
 										method: "POST",

@@ -15,6 +15,7 @@ import {
 import { getUserServiceName } from "../core";
 import {
 	getMiniflareObjectBindings,
+	MixedModeConnectionString,
 	objectEntryWorker,
 	Plugin,
 	ProxyNodeBinding,
@@ -24,7 +25,15 @@ import {
 export const QueuesOptionsSchema = z.object({
 	queueProducers: z
 		.union([
-			z.record(QueueProducerOptionsSchema),
+			z.record(
+				QueueProducerOptionsSchema.merge(
+					z.object({
+						mixedModeConnectionString: z
+							.custom<MixedModeConnectionString>()
+							.optional(),
+					})
+				)
+			),
 			z.string().array(),
 			z.record(z.string()),
 		])

@@ -168,6 +168,29 @@ describe("pages functions build", () => {
 	`);
 	});
 
+	it("should output a metafile when --metafile is set", async () => {
+		// Setup a basic pages function
+		mkdirSync("functions");
+		writeFileSync(
+			"functions/hello.js",
+			`export function onRequest() { return new Response("Hello from Pages Functions"); }`
+		);
+
+		// Run the build command
+		await runWrangler(`pages functions build --outdir=dist --metafile`);
+
+		// Check if file exists
+		expect(existsSync("dist/bundle-meta.json")).toBe(true);
+
+		// Structure checks for the metafile
+		const meta = JSON.parse(
+			readFileSync("dist/bundle-meta.json", { encoding: "utf8" })
+		);
+
+		expect(meta.inputs).toBeDefined();
+		expect(meta.outputs).toBeDefined();
+	});
+
 	it("should build _worker.js", async () => {
 		/* ---------------------------- */
 		/*       Set up js files        */
@@ -473,15 +496,15 @@ export const cat = "dog";`
 
 		expect(existsSync("public/_worker.bundle")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
-			"┌───────────────────┬──────┬──────────┐
-			│ Name              │ Type │ Size     │
-			├───────────────────┼──────┼──────────┤
-			│ cat.js            │ esm  │ xx KiB │
-			├───────────────────┼──────┼──────────┤
-			│ dog.mjs           │ esm  │ xx KiB │
-			├───────────────────┼──────┼──────────┤
-			│ Total (2 modules) │      │ xx KiB │
-			└───────────────────┴──────┴──────────┘
+			"┌─┬─┬─┐
+			│ Name │ Type │ Size │
+			├─┼─┼─┤
+			│ cat.js │ esm │ xx KiB │
+			├─┼─┼─┤
+			│ dog.mjs │ esm │ xx KiB │
+			├─┼─┼─┤
+			│ Total (2 modules) │ │ xx KiB │
+			└─┴─┴─┘
 			✨ Compiled Worker successfully"
 		`);
 

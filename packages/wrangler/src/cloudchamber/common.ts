@@ -1,12 +1,12 @@
 import { mkdir } from "fs/promises";
-import { exit } from "process";
-import { crash, logRaw, space, status, updateStatus } from "@cloudflare/cli";
+import { logRaw, space, status, updateStatus } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { version as wranglerVersion } from "../../package.json";
 import { readConfig } from "../config";
 import { getConfigCache, purgeConfigCaches } from "../config-cache";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
+import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import {
@@ -21,10 +21,12 @@ import {
 	requireAuth,
 	setLoginScopeKeys,
 } from "../user";
+import { parseByteSize } from "./../parse";
 import { ApiError, DeploymentMutationError, OpenAPI } from "./client";
 import { wrap } from "./helpers/wrap";
 import { idToLocationName, loadAccount } from "./locations";
 import type { Config } from "../config";
+import type { CloudchamberConfig } from "../config/environment";
 import type { Scope } from "../user";
 import type {
 	CommonYargsOptions,
@@ -119,11 +121,11 @@ export function handleFailure<
 			}
 
 			if (err instanceof Error) {
-				logger.log(`${JSON.stringify({ error: err.message })}`);
+				logger.log(JSON.stringify({ error: err.message }));
 				return;
 			}
 
-			logger.log(JSON.stringify(err));
+			throw err;
 		}
 	};
 }
@@ -137,9 +139,9 @@ export async function loadAccountSpinner({ json }: { json?: boolean }) {
  *
  */
 async function getAPIUrl(config: Config) {
-	const api = getCloudflareApiBaseUrl();
+	const api = getCloudflareApiBaseUrl(config);
 	// This one will probably be cache'd already so it won't ask for the accountId again
-	const accountId = config.account_id || (await getAccountId());
+	const accountId = config.account_id || (await getAccountId(config));
 	return `${api}/accounts/${accountId}/cloudchamber`;
 }
 
@@ -166,7 +168,7 @@ export async function promiseSpinner<T>(
 	return t;
 }
 
-async function fillOpenAPIConfiguration(config: Config, json: boolean) {
+export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 	const headers: Record<string, string> =
 		OpenAPI.HEADERS !== undefined ? { ...OpenAPI.HEADERS } : {};
 
@@ -202,7 +204,7 @@ async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 					" We need to re-authenticate to add a cloudchamber token..."
 			);
 			// cache account id
-			await getAccountId();
+			await getAccountId(config);
 			const account = getAccountFromCache();
 			config.account_id = account?.id ?? config.account_id;
 			await promiseSpinner(logout(), { json, message: "Revoking token" });
@@ -217,22 +219,22 @@ async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 		// This will prompt the user for an accountId being chosen if they haven't configured the account id yet
 		const [, err] = await wrap(requireAuth(config));
 		if (err) {
-			crash("authenticating with the Cloudflare API:", err.message);
-			return;
+			throw new UserError(
+				`authenticating with the Cloudflare API: ${err.message}`
+			);
 		}
 	}
 
 	// Get the loaded API token
 	const token = getAPIToken();
 	if (!token) {
-		crash("unexpected apiToken not existing in credentials");
-		exit(1);
+		throw new UserError("unexpected apiToken not existing in credentials");
 	}
 
 	const val = "apiToken" in token ? token.apiToken : null;
 	// Don't try to support this method of authentication
 	if (!val) {
-		crash(
+		throw new UserError(
 			"we don't allow for authKey/email credentials, use `wrangler login` or CLOUDFLARE_API_TOKEN env variable to authenticate"
 		);
 	}
@@ -245,7 +247,7 @@ async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 	if (OpenAPI.BASE.length === 0) {
 		const [base, errApiURL] = await wrap(getAPIUrl(config));
 		if (errApiURL) {
-			crash("getting the API url:" + errApiURL.message);
+			throw new UserError("getting the API url: " + errApiURL.message);
 		}
 
 		OpenAPI.BASE = base;
@@ -260,7 +262,7 @@ async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 			message = JSON.stringify(err);
 		}
 
-		crash("loading Cloudchamber account failed:" + message);
+		throw new UserError("loading Cloudchamber account failed:" + message);
 	}
 }
 
@@ -301,7 +303,7 @@ export function renderDeploymentConfiguration(
 		image,
 		location,
 		vcpu,
-		memory,
+		memoryMib,
 		environmentVariables,
 		labels,
 		env,
@@ -310,7 +312,7 @@ export function renderDeploymentConfiguration(
 		image: string;
 		location: string;
 		vcpu: number;
-		memory: string;
+		memoryMib: number;
 		environmentVariables: EnvironmentVariable[] | undefined;
 		labels: Label[] | undefined;
 		env?: string;
@@ -347,7 +349,7 @@ export function renderDeploymentConfiguration(
 		["image", image],
 		["location", idToLocationName(location)],
 		["vCPU", `${vcpu}`],
-		["memory", memory],
+		["memory", `${memoryMib} MiB`],
 		["environment variables", environmentVariablesText],
 		["labels", labelsText],
 		...(network === undefined
@@ -368,37 +370,30 @@ export function renderDeploymentMutationError(
 	err: Error
 ) {
 	if (!(err instanceof ApiError)) {
-		crash(err.message);
-		return;
+		throw new UserError(err.message);
 	}
 
 	if (typeof err.body === "string") {
-		crash("There has been an internal error, please try again!");
-		return;
+		throw new UserError("There has been an internal error, please try again!");
 	}
 
 	if (!("error" in err.body)) {
-		crash(err.message);
-		return;
+		throw new UserError(err.message);
 	}
 
 	const errorMessage = err.body.error;
 	if (!(errorMessage in DeploymentMutationError)) {
-		crash(err.message);
-		return;
+		throw new UserError(err.message);
 	}
 
 	const details: Record<string, string> = err.body.details ?? {};
 	function renderAccountLimits() {
-		return `${space(2)}${brandColor("Maximum VCPU per deployment")} ${
-			account.limits.vcpu_per_deployment
-		}\n${space(2)}${brandColor("Maximum total VCPU in your account")} ${
-			account.limits.total_vcpu
-		}\n${space(2)}${brandColor("Maximum memory per deployment")} ${
-			account.limits.memory_per_deployment
-		}\n${space(2)}${brandColor("Maximum total memory in your account")} ${
-			account.limits.total_memory
-		}`;
+		return [
+			`${space(2)}${brandColor("Maximum VCPU per deployment")} ${account.limits.vcpu_per_deployment}`,
+			`${space(2)}${brandColor("Maximum total VCPU in your account")} ${account.limits.total_vcpu}`,
+			`${space(2)}${brandColor("Maximum memory per deployment")} ${account.limits.memory_mib_per_deployment} MiB`,
+			`${space(2)}${brandColor("Maximum total memory in your account")} ${account.limits.total_memory_mib} MiB`,
+		].join("\n");
 	}
 
 	function renderInvalidInputDetails(inputDetails: Record<string, string>) {
@@ -427,7 +422,9 @@ export function renderDeploymentMutationError(
 				"The image registry you are trying to use is not configured. Use the 'wrangler cloudchamber registries configure' command to configure the registry.\n",
 		};
 
-	crash(details["reason"] ?? errorEnumToErrorMessage[errorEnum]());
+	throw new UserError(
+		details["reason"] ?? errorEnumToErrorMessage[errorEnum]()
+	);
 }
 
 function sortEnvironmentVariables(environmentVariables: EnvironmentVariable[]) {
@@ -635,4 +632,20 @@ export async function promptForLabels(
 	}
 
 	return [];
+}
+
+// Return the amount of memory to use (in MiB) for a deployment given the
+// provided arguments and configuration.
+export function resolveMemory(
+	args: { memory: string | undefined },
+	config: CloudchamberConfig
+): number | undefined {
+	const MiB = 1024 * 1024;
+
+	const memory = args.memory ?? config.memory;
+	if (memory !== undefined) {
+		return Math.round(parseByteSize(memory, 1024) / MiB);
+	}
+
+	return undefined;
 }

@@ -34,6 +34,7 @@ import type { StartDevWorkerOptions } from "./api";
 import type { Config } from "./config";
 import type { DeployArgs } from "./deploy";
 import type { StartDevOptions } from "./dev";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
@@ -56,6 +57,7 @@ const MAX_UPLOAD_GATEWAY_ERRORS = 5;
 const MAX_DIFF_LINES = 100;
 
 export const syncAssets = async (
+	complianceConfig: ComplianceConfig,
 	accountId: string | undefined,
 	assetDirectory: string,
 	scriptName: string,
@@ -74,6 +76,7 @@ export const syncAssets = async (
 	// 2. fetch buckets w/ hashes
 	logger.info("🌀 Starting asset upload...");
 	const initializeAssetsResponse = await fetchResult<InitializeAssetsResponse>(
+		complianceConfig,
 		url,
 		{
 			headers: { "Content-Type": "application/json" },
@@ -166,6 +169,7 @@ export const syncAssets = async (
 
 			try {
 				const res = await fetchResult<UploadResponse>(
+					complianceConfig,
 					`/accounts/${accountId}/workers/assets/upload?base64=true`,
 					{
 						method: "POST",
@@ -391,40 +395,43 @@ export type AssetsOptions = {
 
 export function getAssetsOptions(
 	args: { assets: string | undefined; script?: string },
-	config: Config
+	config: Config,
+	overrides?: Partial<AssetsOptions>
 ): AssetsOptions | undefined {
-	const assets = args.assets ? { directory: args.assets } : config.assets;
-
-	if (!assets) {
+	if (!overrides && !config.assets && !args.assets) {
 		return;
 	}
 
-	const { directory, binding } = assets;
+	const assets = {
+		...config.assets,
+		...(args.assets && { directory: args.assets }),
+		...overrides,
+	};
 
-	if (directory === undefined) {
+	if (assets.directory === undefined) {
 		throw new UserError(
 			"The `assets` property in your configuration is missing the required `directory` property.",
 			{ telemetryMessage: true }
 		);
 	}
 
-	if (directory === "") {
+	if (assets.directory === "") {
 		throw new UserError("`The assets directory cannot be an empty string.", {
 			telemetryMessage: true,
 		});
 	}
 
 	const assetsBasePath = getAssetsBasePath(config, args.assets);
-	const resolvedAssetsPath = path.resolve(assetsBasePath, directory);
+	const directory = path.resolve(assetsBasePath, assets.directory);
 
-	if (!existsSync(resolvedAssetsPath)) {
+	if (!existsSync(directory)) {
 		const sourceOfTruthMessage = args.assets
 			? '"--assets" command line argument'
 			: '"assets.directory" field in your configuration file';
 
 		throw new UserError(
 			`The directory specified by the ${sourceOfTruthMessage} does not exist:\n` +
-				`${resolvedAssetsPath}`,
+				`${directory}`,
 
 			{
 				telemetryMessage: `The assets directory specified does not exist`,
@@ -461,10 +468,8 @@ export function getAssetsOptions(
 		);
 	}
 
-	const redirects = maybeGetFile(
-		path.join(resolvedAssetsPath, REDIRECTS_FILENAME)
-	);
-	const headers = maybeGetFile(path.join(resolvedAssetsPath, HEADERS_FILENAME));
+	const _redirects = maybeGetFile(path.join(directory, REDIRECTS_FILENAME));
+	const _headers = maybeGetFile(path.join(directory, HEADERS_FILENAME));
 
 	// defaults are set in asset worker
 	const assetConfig: AssetConfig = {
@@ -476,12 +481,12 @@ export function getAssetsOptions(
 	};
 
 	return {
-		directory: resolvedAssetsPath,
-		binding,
+		directory,
+		binding: assets.binding,
 		routerConfig,
 		assetConfig,
-		_redirects: redirects,
-		_headers: headers,
+		_redirects,
+		_headers,
 	};
 }
 

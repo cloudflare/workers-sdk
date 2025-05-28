@@ -71,6 +71,7 @@ export interface PluginServicesOptions<
 	workerIndex: number;
 	additionalModules: Worker_Module[];
 	tmpPath: string;
+	defaultPersistRoot: string | undefined;
 	workerNames: string[];
 	loopbackPort: number;
 	unsafeStickyBlobs: boolean;
@@ -125,7 +126,7 @@ export class ProxyNodeBinding {
 }
 
 export function namespaceKeys(
-	namespaces?: Record<string, string> | string[]
+	namespaces?: Record<string, string | { id: string }> | string[]
 ): string[] {
 	if (Array.isArray(namespaces)) {
 		return namespaces;
@@ -136,13 +137,37 @@ export function namespaceKeys(
 	}
 }
 
+export type MixedModeConnectionString = URL & {
+	__brand: "MixedModeConnectionString";
+};
+
 export function namespaceEntries(
-	namespaces?: Record<string, string> | string[]
-): [bindingName: string, id: string][] {
+	namespaces?:
+		| Record<
+				string,
+				| string
+				| { id: string; mixedModeConnectionString?: MixedModeConnectionString }
+		  >
+		| string[]
+): [
+	bindingName: string,
+	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
+][] {
 	if (Array.isArray(namespaces)) {
-		return namespaces.map((bindingName) => [bindingName, bindingName]);
+		return namespaces.map((bindingName) => [bindingName, { id: bindingName }]);
 	} else if (namespaces !== undefined) {
-		return Object.entries(namespaces);
+		return Object.entries(namespaces).map(([key, value]) => {
+			if (typeof value === "string") {
+				return [key, { id: value }];
+			}
+			return [
+				key,
+				{
+					id: value.id,
+					mixedModeConnectionString: value.mixedModeConnectionString,
+				},
+			];
+		});
 	} else {
 		return [];
 	}
@@ -158,6 +183,7 @@ export function maybeParseURL(url: Persistence): URL | undefined {
 export function getPersistPath(
 	pluginName: string,
 	tmpPath: string,
+	defaultPersistRoot: string | undefined,
 	persist: Persistence
 ): string {
 	// If persistence is disabled, use "memory" storage. Note we're still
@@ -167,8 +193,15 @@ export function getPersistPath(
 	// keep Miniflare 2's behaviour, so persist to a temporary path which we
 	// destroy on `dispose()`.
 	const memoryishPath = path.join(tmpPath, pluginName);
-	if (persist === undefined || persist === false) {
+	if (persist === false) {
 		return memoryishPath;
+	}
+
+	// If `persist` is undefined, use either the default path or fallback to the tmpPath
+	if (persist === undefined) {
+		return defaultPersistRoot === undefined
+			? memoryishPath
+			: path.join(defaultPersistRoot, pluginName);
 	}
 
 	// Try parse `persist` as a URL
@@ -187,7 +220,7 @@ export function getPersistPath(
 
 	// Otherwise, fallback to file storage
 	return persist === true
-		? path.join(DEFAULT_PERSIST_ROOT, pluginName)
+		? path.join(defaultPersistRoot ?? DEFAULT_PERSIST_ROOT, pluginName)
 		: persist;
 }
 

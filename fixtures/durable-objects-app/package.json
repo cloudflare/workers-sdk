@@ -1,5 +1,5 @@
 {
-	"name": "do-worker-app",
+	"name": "@fixture/worker-durable-objects",
 	"private": true,
 	"description": "",
 	"license": "ISC",

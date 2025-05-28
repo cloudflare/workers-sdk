@@ -1,5 +1,5 @@
 {
-	"name": "my-workflow-multiple",
+	"name": "@fixture/workflow-multiple",
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",
@@ -7,7 +7,7 @@
 		"test:ci": "vitest run"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20250428.0",
+		"@cloudflare/workers-types": "^4.20250525.0",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
 		"vitest": "catalog:default",

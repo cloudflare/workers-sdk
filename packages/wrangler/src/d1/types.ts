@@ -18,10 +18,13 @@ export type DatabaseCreationResult = {
 export type DatabaseInfo = {
 	uuid: string;
 	name: string;
-	version: "alpha" | "beta";
+	version: "alpha" | "beta" | "production";
 	num_tables: number;
 	file_size: number;
 	running_in_region?: string;
+	read_replication?: {
+		mode: "auto" | "disabled";
+	};
 };
 
 export type Backup = {

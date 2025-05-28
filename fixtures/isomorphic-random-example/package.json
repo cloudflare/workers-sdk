@@ -1,5 +1,5 @@
 {
-	"name": "isomorphic-random-example",
+	"name": "@fixture/isomorphic-random",
 	"private": true,
 	"description": "Isomorphic secure-random library, demonstrating `exports` use with Workers",
 	"exports": {

@@ -74,12 +74,10 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 		expect(normalize(output)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			The following bindings need to be provisioned:
-			- KV Namespaces:
-			  - KV
-			- D1 Databases:
-			  - D1
-			- R2 Buckets:
-			  - R2
+			Binding        Resource
+			env.KV         KV Namespace
+			env.D1         D1 Database
+			env.R2         R2 Bucket
 			Provisioning KV (KV Namespace)...
 			🌀 Creating new KV Namespace "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-kv"...
 			✨ KV provisioned 🎉
@@ -91,12 +89,10 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 			✨ R2 provisioned 🎉
 			🎉 All resources provisioned, continuing with deployment...
 			Your Worker has access to the following bindings:
-			- KV Namespaces:
-			  - KV: 00000000000000000000000000000000
-			- D1 Databases:
-			  - D1: 00000000-0000-0000-0000-000000000000
-			- R2 Buckets:
-			  - R2: tmp-e2e-worker-00000000-0000-0000-0000-000000000000-r2
+			Binding                                                              Resource
+			env.KV (00000000000000000000000000000000)                            KV Namespace
+			env.D1 (00000000-0000-0000-0000-000000000000)                        D1 Database
+			env.R2 (tmp-e2e-worker-00000000-0000-0000-0000-000000000000-r2)      R2 Bucket
 			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 			Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
 			  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -108,11 +104,13 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 		assert(urlMatch?.groups);
 		deployedUrl = urlMatch.groups.url;
 
-		const kvMatch = output.match(/- KV: (?<kv>[0-9a-f]{32})/);
+		const kvMatch = output.match(/env.KV \((?<kv>[0-9a-f]{32})/);
 		assert(kvMatch?.groups);
 		kvId = kvMatch.groups.kv;
 
-		const d1Match = output.match(/- D1: (?<d1>\w{8}-\w{4}-\w{4}-\w{4}-\w{12})/);
+		const d1Match = output.match(
+			/env.D1 \((?<d1>\w{8}-\w{4}-\w{4}-\w{4}-\w{12})/
+		);
 		assert(d1Match?.groups);
 		d1Id = d1Match.groups.d1;
 
@@ -133,12 +131,10 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 		expect(normalize(output)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Your Worker has access to the following bindings:
-			- KV Namespaces:
-			  - KV
-			- D1 Databases:
-			  - D1
-			- R2 Buckets:
-			  - R2
+			Binding                 Resource
+			env.KV (inherited)      KV Namespace
+			env.D1 (inherited)      D1 Database
+			env.R2 (inherited)      R2 Bucket
 			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 			Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
 			  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
@@ -177,18 +173,17 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 		expect(normalize(output)).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			The following bindings need to be provisioned:
-			- KV Namespaces:
-			  - KV2
+			Binding         Resource
+			env.KV2         KV Namespace
 			Provisioning KV2 (KV Namespace)...
 			🌀 Creating new KV Namespace "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-kv2"...
 			✨ KV2 provisioned 🎉
 			🎉 All resources provisioned, continuing with deployment...
 			Worker Startup Time: (TIMINGS)
 			Your Worker has access to the following bindings:
-			- KV Namespaces:
-			  - KV2: 00000000000000000000000000000000
-			- R2 Buckets:
-			  - R2
+			Binding                                         Resource
+			env.KV2 (00000000000000000000000000000000)      KV Namespace
+			env.R2 (inherited)                              R2 Bucket
 			Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
 			Worker Version ID: 00000000-0000-0000-0000-000000000000
 			Version Preview URL: https://tmp-e2e-worker-PREVIEW-URL.SUBDOMAIN.workers.dev
@@ -196,7 +191,7 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 			Changes to non-versioned settings (config properties 'logpush' or 'tail_consumers') take effect after your next deployment using the command wrangler versions deploy
 			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
 		`);
-		const kvMatch = output.match(/- KV2: (?<kv>[0-9a-f]{32})/);
+		const kvMatch = output.match(/env.KV2 \((?<kv>[0-9a-f]{32})/);
 		assert(kvMatch?.groups);
 		kvId2 = kvMatch.groups.kv;
 	});

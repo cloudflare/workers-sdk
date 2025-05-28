@@ -13,7 +13,9 @@ import type { Image } from "./Image";
 import type { Label } from "./Label";
 import type { MemorySizeWithUnit } from "./MemorySizeWithUnit";
 import type { NetworkParameters } from "./NetworkParameters";
+import type { Observability } from "./Observability";
 import type { Port } from "./Port";
+import type { ProvisionerConfiguration } from "./ProvisionerConfiguration";
 import type { SSHPublicKeyID } from "./SSHPublicKeyID";
 
 /**
@@ -34,9 +36,14 @@ export type UserDeploymentConfiguration = {
 	 */
 	vcpu?: number;
 	/**
-	 * Specify the memory to be used for the deployment. The default will be the one configured for the account.
+	 * Deprecated in favor of memory_mib
+	 * @deprecated
 	 */
 	memory?: MemorySizeWithUnit;
+	/**
+	 * Specify the memory to be used for the deployment, in MiB. The default will be the one configured for the account.
+	 */
+	memory_mib?: number;
 	/**
 	 * The disk configuration for this deployment
 	 */
@@ -50,6 +57,15 @@ export type UserDeploymentConfiguration = {
 	 */
 	labels?: Array<Label>;
 	network?: NetworkParameters;
+	/**
+	 * Deprecated in favor of gpu_memory_mib
+	 * @deprecated
+	 */
+	gpu_memory?: MemorySizeWithUnit;
+	/**
+	 * Specify the GPU memory to be used for the deployment, in MiB. (Mandatory for gVisor deployments)
+	 */
+	gpu_memory_mib?: number;
 	command?: Command;
 	entrypoint?: Entrypoint;
 	dns?: DNSConfiguration;
@@ -58,4 +74,6 @@ export type UserDeploymentConfiguration = {
 	 * Health and readiness checks for this deployment.
 	 */
 	checks?: Array<DeploymentCheckRequestBody>;
+	provisioner?: ProvisionerConfiguration;
+	observability?: Observability;
 };

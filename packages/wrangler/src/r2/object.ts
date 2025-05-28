@@ -120,7 +120,13 @@ export const r2ObjectGetCommand = createCommand({
 			);
 		} else {
 			const accountId = await requireAuth(config);
-			const input = await getR2Object(accountId, bucket, key, jurisdiction);
+			const input = await getR2Object(
+				config,
+				accountId,
+				bucket,
+				key,
+				jurisdiction
+			);
 			if (input === null) {
 				throw new UserError("The specified key does not exist.");
 			}
@@ -340,6 +346,7 @@ export const r2ObjectPutCommand = createCommand({
 		} else {
 			const accountId = await requireAuth(config);
 			await putR2Object(
+				config,
 				accountId,
 				bucket,
 				key,
@@ -412,7 +419,7 @@ export const r2ObjectDeleteCommand = createCommand({
 			);
 		} else {
 			const accountId = await requireAuth(config);
-			await deleteR2Object(accountId, bucket, key, jurisdiction);
+			await deleteR2Object(config, accountId, bucket, key, jurisdiction);
 		}
 
 		logger.log("Delete complete.");
