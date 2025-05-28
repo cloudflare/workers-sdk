@@ -1,7 +1,6 @@
 // <docs-tag name="simple-workflow-example">
 import { WorkflowEntrypoint, WorkflowEvent, WorkflowStep } from 'cloudflare:workers';
 
-interface Env {}
 type Params = {};
 
 // Create your own class that implements a Workflow
