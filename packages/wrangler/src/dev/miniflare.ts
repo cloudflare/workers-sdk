@@ -1218,6 +1218,13 @@ export async function buildMiniflareOptions(
 		logger.warn(
 			"Vectorize local bindings are not supported yet. You may use the `--experimental-vectorize-bind-to-prod` flag to bind to your production index in local dev mode."
 		);
+		if (!getFlag("MIXED_MODE")) {
+			config.bindings.vectorize = [];
+		} else {
+			config.bindings.vectorize = config.bindings.vectorize.filter(
+				(v) => v.remote
+			);
+		}
 	}
 
 	if (config.bindings.vectorize?.length) {
