@@ -927,22 +927,22 @@ export function buildMiniflareBindingOptions(
 					}
 				: undefined,
 
-		vectorize: Object.fromEntries(
-			bindings.vectorize?.map((vectorize) => {
-				return [
-					vectorize.binding,
-					{
-						index_name: vectorize.index_name,
-						mixedModeConnectionString:
-							getFlag("MIXED_MODE") &&
-							mixedModeConnectionString &&
-							vectorize.remote
-								? mixedModeConnectionString
-								: undefined,
-					},
-				];
-			}) ?? []
-		),
+		vectorize:
+			getFlag("MIXED_MODE") && mixedModeConnectionString
+				? Object.fromEntries(
+						bindings.vectorize?.map((vectorize) => {
+							return [
+								vectorize.binding,
+								{
+									index_name: vectorize.index_name,
+									mixedModeConnectionString: vectorize.remote
+										? mixedModeConnectionString
+										: undefined,
+								},
+							];
+						}) ?? []
+					)
+				: undefined,
 
 		dispatchNamespaces:
 			getFlag("MIXED_MODE") && mixedModeConnectionString
