@@ -335,7 +335,8 @@ export async function getDevMiniflareOptions(
 								},
 								resolvedPluginConfig.cloudflareEnv,
 								{
-									resolveRemotesTo: mixedModeSession?.mixedModeConnectionString,
+									mixedModeConnectionString:
+										mixedModeSession?.mixedModeConnectionString,
 								}
 							);
 
@@ -610,7 +611,8 @@ export async function getPreviewMiniflareOptions(
 					workerConfig,
 					undefined,
 					{
-						resolveRemotesTo: mixedModeSession?.mixedModeConnectionString,
+						mixedModeConnectionString:
+							mixedModeSession?.mixedModeConnectionString,
 					}
 				);
 

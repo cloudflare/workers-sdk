@@ -254,7 +254,7 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		imagesLocalMode?: boolean;
-		resolveRemotesTo?: MixedModeConnectionString;
+		mixedModeConnectionString?: MixedModeConnectionString;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
@@ -265,7 +265,7 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		imagesLocalMode?: boolean;
-		resolveRemotesTo?: MixedModeConnectionString;
+		mixedModeConnectionString?: MixedModeConnectionString;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
@@ -276,7 +276,7 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		imagesLocalMode?: boolean;
-		resolveRemotesTo?: MixedModeConnectionString;
+		mixedModeConnectionString?: MixedModeConnectionString;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
@@ -309,7 +309,7 @@ export function unstable_getMiniflareWorkerOptions(
 			imagesLocalMode: !!options?.imagesLocalMode,
 			tails: config.tail_consumers,
 		},
-		options?.resolveRemotesTo
+		options?.mixedModeConnectionString
 	);
 
 	// This function is currently only exported for the Workers Vitest pool.
@@ -323,13 +323,13 @@ export function unstable_getMiniflareWorkerOptions(
 			bindings.services.map((binding) => {
 				const name =
 					binding.service === config.name ? kCurrentWorker : binding.service;
-				if (options?.resolveRemotesTo && binding.remote) {
+				if (options?.mixedModeConnectionString && binding.remote) {
 					return [
 						binding.binding,
 						{
 							name,
 							entrypoint: binding.entrypoint,
-							mixedModeConnectionString: options.resolveRemotesTo,
+							mixedModeConnectionString: options.mixedModeConnectionString,
 						},
 					];
 				}
