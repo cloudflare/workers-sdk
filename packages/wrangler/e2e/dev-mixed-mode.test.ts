@@ -7,13 +7,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runCommand } from "./helpers/command";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
+import { generateResourceName } from "./helpers/generate-resource-name";
 import { normalizeOutput } from "./helpers/normalize";
 import { makeRoot, seed } from "./helpers/setup";
 
 describe("wrangler dev - mixed mode", () => {
-	const remoteWorkerName = "tmp-wrangler-dev-mixed-mode-remote-worker";
-	const alternativeRemoteWorkerName =
-		"tmp-wrangler-dev-mixed-mode-remote-worker-alt";
+	const remoteWorkerName = generateResourceName();
+	const alternativeRemoteWorkerName = generateResourceName();
 
 	beforeAll(async () => {
 		const tmp = await mkdtemp(`${tmpdir()}/wrangler-dev-mixed-mode-tmp`);
