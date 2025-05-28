@@ -1325,41 +1325,29 @@ describe("[Asset Worker] `canFetch`", () => {
 			[{ "Sec-Fetch-Mode": "cors" }, false],
 		] as const;
 
-		const staticRoutingModes = [
-			[false, true],
-			[true, false],
-		] as const;
-
 		const matrix = [];
 		for (const compatibilityOptions of compatibilityOptionsModes) {
 			for (const notFoundHandling of notFoundHandlingModes) {
 				for (const headers of headersModes) {
-					for (const hasStaticRouting of staticRoutingModes) {
-						matrix.push({
-							compatibilityDate: compatibilityOptions[0].compatibilityDate,
-							compatibilityFlags: compatibilityOptions[0].compatibilityFlags,
-							notFoundHandling: notFoundHandling[0],
-							headers: headers[0],
-							hasStaticRouting: hasStaticRouting[0],
-							expected:
-								compatibilityOptions[1] &&
-								notFoundHandling[1] &&
-								headers[1] &&
-								hasStaticRouting[1],
-						});
-					}
+					matrix.push({
+						compatibilityDate: compatibilityOptions[0].compatibilityDate,
+						compatibilityFlags: compatibilityOptions[0].compatibilityFlags,
+						notFoundHandling: notFoundHandling[0],
+						headers: headers[0],
+						expected:
+							compatibilityOptions[1] && notFoundHandling[1] && headers[1],
+					});
 				}
 			}
 		}
 
 		it.each(matrix)(
-			"compatibility_date $compatibilityDate, compatibility_flags $compatibilityFlags, not_found_handling $notFoundHandling, headers: $headers, hasStaticRouting $hasStaticRouting -> $expected",
+			"compatibility_date $compatibilityDate, compatibility_flags $compatibilityFlags, not_found_handling $notFoundHandling, headers: $headers -> $expected",
 			async ({
 				compatibilityDate,
 				compatibilityFlags,
 				notFoundHandling,
 				headers,
-				hasStaticRouting,
 				expected,
 			}) => {
 				expect(
@@ -1367,14 +1355,11 @@ describe("[Asset Worker] `canFetch`", () => {
 						new Request("https://example.com/foo", { headers }),
 						// @ts-expect-error Empty config default to using mocked jaeger
 						mockEnv,
-						{
-							...normalizeConfiguration({
-								compatibility_date: compatibilityDate,
-								compatibility_flags: compatibilityFlags,
-								not_found_handling: notFoundHandling,
-								has_static_routing: hasStaticRouting,
-							}),
-						},
+						normalizeConfiguration({
+							compatibility_date: compatibilityDate,
+							compatibility_flags: compatibilityFlags,
+							not_found_handling: notFoundHandling,
+						}),
 						exists
 					)
 				).toBeTruthy();
@@ -1384,14 +1369,11 @@ describe("[Asset Worker] `canFetch`", () => {
 						new Request("https://example.com/bar", { headers }),
 						// @ts-expect-error Empty config default to using mocked jaeger
 						mockEnv,
-						{
-							...normalizeConfiguration({
-								compatibility_date: compatibilityDate,
-								compatibility_flags: compatibilityFlags,
-								not_found_handling: notFoundHandling,
-								has_static_routing: hasStaticRouting,
-							}),
-						},
+						normalizeConfiguration({
+							compatibility_date: compatibilityDate,
+							compatibility_flags: compatibilityFlags,
+							not_found_handling: notFoundHandling,
+						}),
 						exists
 					)
 				).toBe(expected);
@@ -1401,14 +1383,11 @@ describe("[Asset Worker] `canFetch`", () => {
 						new Request("https://example.com/", { headers }),
 						// @ts-expect-error Empty config default to using mocked jaeger
 						mockEnv,
-						{
-							...normalizeConfiguration({
-								compatibility_date: compatibilityDate,
-								compatibility_flags: compatibilityFlags,
-								not_found_handling: notFoundHandling,
-								has_static_routing: hasStaticRouting,
-							}),
-						},
+						normalizeConfiguration({
+							compatibility_date: compatibilityDate,
+							compatibility_flags: compatibilityFlags,
+							not_found_handling: notFoundHandling,
+						}),
 						exists
 					)
 				).toBeTruthy();
@@ -1418,14 +1397,11 @@ describe("[Asset Worker] `canFetch`", () => {
 						new Request("https://example.com/404", { headers }),
 						// @ts-expect-error Empty config default to using mocked jaeger
 						mockEnv,
-						{
-							...normalizeConfiguration({
-								compatibility_date: compatibilityDate,
-								compatibility_flags: compatibilityFlags,
-								not_found_handling: notFoundHandling,
-								has_static_routing: hasStaticRouting,
-							}),
-						},
+						normalizeConfiguration({
+							compatibility_date: compatibilityDate,
+							compatibility_flags: compatibilityFlags,
+							not_found_handling: notFoundHandling,
+						}),
 						exists
 					)
 				).toBeTruthy();

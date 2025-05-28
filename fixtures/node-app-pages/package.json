@@ -1,5 +1,5 @@
 {
-	"name": "node-app-pages",
+	"name": "@fixture/pages-node-app",
 	"private": true,
 	"sideEffects": false,
 	"main": "dist/worker.js",
@@ -15,7 +15,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250523.0",
+		"@cloudflare/workers-types": "^4.20250525.0",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
 		"vitest": "catalog:default",

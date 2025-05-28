@@ -12,7 +12,7 @@ const IMAGES_LOCAL_FETCHER = /* javascript */ `
 	export default {
 		fetch(req, env) {
 			const request = new Request(req);
-			request.headers.set("${CoreHeaders.CUSTOM_SERVICE}", "${CoreBindings.IMAGES_SERVICE}");
+			request.headers.set("${CoreHeaders.CUSTOM_FETCH_SERVICE}", "${CoreBindings.IMAGES_SERVICE}");
 			request.headers.set("${CoreHeaders.ORIGINAL_URL}", request.url);
 			return env.${CoreBindings.SERVICE_LOOPBACK}.fetch(request)
 		}
