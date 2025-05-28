@@ -10,8 +10,6 @@ import {
 } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { bold, brandColor, dim, green, red } from "@cloudflare/cli/colors";
-import { formatConfigSnippet } from "../config";
-import { UserError } from "../errors";
 import {
 	ApiError,
 	ApplicationsService,
@@ -20,7 +18,9 @@ import {
 	RolloutsService,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
-import { promiseSpinner } from "./common";
+import { formatConfigSnippet } from "../config";
+import { UserError } from "../errors";
+import { fillOpenAPIConfiguration, promiseSpinner } from "./common";
 import { diffLines } from "./helpers/diff";
 import type { Config } from "../config";
 import type { ContainerApp } from "../config/environment";

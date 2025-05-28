@@ -1,8 +1,13 @@
 import * as fs from "node:fs";
+import {
+	OpenAPI,
+	SchedulingPolicy,
+	SecretAccessType,
+} from "@cloudflare/containers-shared";
 import * as TOML from "@iarna/toml";
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
-import { SchedulingPolicy, SecretAccessType } from "@cloudflare/containers-shared";
+import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockCLIOutput } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -10,12 +15,12 @@ import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccount } from "./utils";
+import type { ContainerApp } from "../../config/environment";
 import type {
 	Application,
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
 } from "@cloudflare/containers-shared";
-import type { ContainerApp } from "../../config/environment";
 
 function writeAppConfiguration(...app: ContainerApp[]) {
 	fs.writeFileSync(
@@ -89,7 +94,11 @@ describe("cloudchamber apply", () => {
 
 	mockAccountId();
 	mockApiToken();
-	beforeEach(mockAccount);
+	beforeEach(() => {
+		OpenAPI.BASE =
+			"https://api.cloudflare.com/client/v4/accounts/some-account-id/cloudchamber";
+		mockAccount();
+	});
 	runInTempDir();
 	afterEach(() => {
 		patchConsole(() => {});
