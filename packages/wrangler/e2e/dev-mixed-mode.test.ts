@@ -79,7 +79,7 @@ describe("wrangler dev - mixed mode", () => {
 
 	it("allows code changes during development", async () => {
 		await spawnLocalWorker(helper);
-		const path = await helper.seed({
+		await helper.seed({
 			"wrangler.json": JSON.stringify({
 				name: "mixed-mode-mixed-bindings-test",
 				main: "simple-service-binding.js",
@@ -103,11 +103,11 @@ describe("wrangler dev - mixed mode", () => {
 		);
 
 		const indexContent = await readFile(
-			`${path}/simple-service-binding.js`,
+			`${helper.tmpPath}/simple-service-binding.js`,
 			"utf8"
 		);
 		await writeFile(
-			`${path}/simple-service-binding.js`,
+			`${helper.tmpPath}/simple-service-binding.js`,
 			indexContent.replace(
 				"REMOTE<WORKER>:",
 				"The remote worker responded with:"
@@ -121,7 +121,11 @@ describe("wrangler dev - mixed mode", () => {
 			`"The remote worker responded with: Hello from a remote worker (wrangler dev mixed-mode)"`
 		);
 
-		await writeFile(`${path}/simple-service-binding.js`, indexContent, "utf8");
+		await writeFile(
+			`${helper.tmpPath}/simple-service-binding.js`,
+			indexContent,
+			"utf8"
+		);
 
 		await setTimeout(500);
 
