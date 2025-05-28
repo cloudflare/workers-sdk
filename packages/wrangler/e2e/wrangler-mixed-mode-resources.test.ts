@@ -60,7 +60,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 			await vi.waitFor(
 				async () => {
 					const resp = await fetch(deployedUrl);
-					await expect(await resp.text()).toBe("Hello from target worker");
+					expect(await resp.text()).toBe("Hello from target worker");
 				},
 				{ interval: 1_000, timeout: 40_000 }
 			);
