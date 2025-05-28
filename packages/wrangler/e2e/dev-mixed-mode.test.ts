@@ -1,14 +1,48 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import dedent from "ts-dedent";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { runCommand } from "./helpers/command";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { normalizeOutput } from "./helpers/normalize";
 import { makeRoot, seed } from "./helpers/setup";
 
 describe("wrangler dev - mixed mode", () => {
+	const remoteWorkerName = "tmp-wrangler-dev-mixed-mode-remote-worker";
+	const alternativeRemoteWorkerName =
+		"tmp-wrangler-dev-mixed-mode-remote-worker-alt";
+
+	beforeAll(async () => {
+		const tmp = await mkdtemp(`${tmpdir()}/wrangler-dev-mixed-mode-tmp`);
+		for (const worker of [
+			{
+				name: remoteWorkerName,
+				content:
+					"export default { fetch() { return new Response('Hello from a remote worker (wrangler dev mixed-mode)'); } };",
+			},
+			{
+				name: alternativeRemoteWorkerName,
+				content:
+					"export default { fetch() { return new Response('Hello from an alternative remote worker (wrangler dev mixed-mode)'); } };",
+			},
+		]) {
+			await writeFile(`${tmp}/index.js`, worker.content);
+			runCommand(
+				`pnpm dlx wrangler deploy index.js --name ${worker.name} --compatibility-date 2025-01-01`,
+				{ cwd: tmp }
+			);
+		}
+	}, 35_000);
+
+	afterAll(() => {
+		[remoteWorkerName, alternativeRemoteWorkerName].forEach((worker) => {
+			runCommand(`pnpm dlx wrangler delete --name ${worker}`);
+		});
+	});
+
 	it("handles both remote and local service bindings at the same time", async () => {
 		const helper = new WranglerE2ETestHelper();
 		await spawnLocalWorker(helper);
@@ -21,7 +55,7 @@ describe("wrangler dev - mixed mode", () => {
 					{ binding: "LOCAL_WORKER", service: "local-worker", remote: false },
 					{
 						binding: "REMOTE_WORKER",
-						service: "mixed-mode-test-target",
+						service: remoteWorkerName,
 						remote: true,
 					},
 				],
@@ -42,7 +76,7 @@ describe("wrangler dev - mixed mode", () => {
 
 		await expect(fetchText(url)).resolves.toMatchInlineSnapshot(`
 			"LOCAL<WORKER>: Hello from a local worker!
-			REMOTE<WORKER>: Hello World!
+			REMOTE<WORKER>: Hello from a remote worker (wrangler dev mixed-mode)
 			"
 		`);
 	});
@@ -58,7 +92,7 @@ describe("wrangler dev - mixed mode", () => {
 				services: [
 					{
 						binding: "REMOTE_WORKER",
-						service: "mixed-mode-test-target",
+						service: remoteWorkerName,
 						remote: true,
 					},
 				],
@@ -77,7 +111,7 @@ describe("wrangler dev - mixed mode", () => {
 		const { url } = await worker.waitForReady();
 
 		await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-			`"REMOTE<WORKER>: Hello World!"`
+			`"REMOTE<WORKER>: Hello from a remote worker (wrangler dev mixed-mode)"`
 		);
 
 		const indexContent = await readFile(`${path}/index.js`, "utf8");
@@ -93,7 +127,7 @@ describe("wrangler dev - mixed mode", () => {
 		await setTimeout(500);
 
 		await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-			`"The remote worker responded with: Hello World!"`
+			`"The remote worker responded with: Hello from a remote worker (wrangler dev mixed-mode)"`
 		);
 	});
 
@@ -214,7 +248,7 @@ describe("wrangler dev - mixed mode", () => {
 						},
 						{
 							binding: "REMOTE_WORKER",
-							service: "mixed-mode-test-target",
+							service: remoteWorkerName,
 							remote: true,
 						},
 					],
@@ -238,7 +272,7 @@ describe("wrangler dev - mixed mode", () => {
 						{
 							// Note: we use the same binding name but bound to a difference service
 							binding: "REMOTE_WORKER",
-							service: "mixed-mode-test-target-alt",
+							service: alternativeRemoteWorkerName,
 							remote: true,
 						},
 					],
@@ -260,8 +294,8 @@ describe("wrangler dev - mixed mode", () => {
 
 			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
 				`
-				"[main-test-worker]REMOTE<WORKER>: Hello World!
-				[local-test-worker]REMOTE<WORKER>: Hello World! (alternative)
+				"[main-test-worker]REMOTE<WORKER>: Hello from a remote worker (wrangler dev mixed-mode)
+				[local-test-worker]REMOTE<WORKER>: Hello from an alternative remote worker (wrangler dev mixed-mode)
 				"
 			`
 			);
