@@ -83,12 +83,7 @@ export function convertConfigBindingsToStartWorkerBindings(
 
 	return convertCfWorkerInitBindingsToBindings({
 		...bindings,
-		queues: queues.producers?.map((q) => ({
-			binding: q.binding,
-			queue_name: q.queue,
-			delivery_delay: q.delivery_delay,
-			remote: q.remote,
-		})),
+		queues: queues.producers?.map((q) => ({ ...q, queue_name: q.queue })),
 	});
 }
 
