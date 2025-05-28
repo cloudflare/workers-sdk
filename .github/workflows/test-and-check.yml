@@ -47,6 +47,7 @@ jobs:
       - name: Check for errors
         run: pnpm run check --summarize
         env:
+          CI_OS: ${{ runner.os }}
           NODE_OPTIONS: "--max_old_space_size=8192"
 
       - name: Check the changesets
