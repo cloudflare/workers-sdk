@@ -4,7 +4,8 @@
 	"scripts": {
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev",
-		"dev": "wrangler dev"
+		"dev": "wrangler dev",
+		"cf-typegen": "wrangler types"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20250417.0",
