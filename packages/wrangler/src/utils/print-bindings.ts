@@ -1,6 +1,7 @@
 import { brandColor, dim, white } from "@cloudflare/cli/colors";
 import chalk from "chalk";
 import stripAnsi from "strip-ansi";
+import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import type { CfTailConsumer, CfWorkerInit } from "../deployment-bundle/worker";
@@ -719,4 +720,31 @@ function createGetMode({
 
 		return `${isSimulatedLocally ? chalk.blue("local") : chalk.yellow("remote")}${connected === undefined ? "" : connected ? chalk.green(" [connected]") : chalk.red(" [not connected]")}`;
 	};
+}
+
+export function warnOrError(
+	type: keyof typeof friendlyBindingNames,
+	remote: boolean | undefined,
+	supports: "remote-and-local" | "local" | "remote" | "always-remote"
+) {
+	if (remote === true && supports === "local") {
+		throw new UserError(
+			`${friendlyBindingNames[type]} bindings do not support accessing remote resources.`
+		);
+	}
+	if (remote === false && supports === "remote") {
+		throw new UserError(
+			`${friendlyBindingNames[type]} bindings do not support local development. You may be able to set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
+		);
+	}
+	if (remote === undefined && supports === "remote") {
+		logger.warn(
+			`${friendlyBindingNames[type]} bindings do not support local development, and so parts of your Worker may not worker correctly. You may be able to set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
+		);
+	}
+	if (remote === undefined && supports === "always-remote") {
+		logger.warn(
+			`${friendlyBindingNames[type]} bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.`
+		);
+	}
 }

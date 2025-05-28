@@ -19,6 +19,7 @@ import {
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
+import { warnOrError } from "../utils/print-bindings";
 import {
 	EXTERNAL_VECTORIZE_WORKER_NAME,
 	EXTERNAL_VECTORIZE_WORKER_SCRIPT,
@@ -760,32 +761,42 @@ export function buildMiniflareBindingOptions(
 	}
 
 	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
-	if (bindings.ai?.binding) {
-		if (!mixedModeConnectionString) {
-			externalWorkers.push({
-				name: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
-				modules: [
-					{
-						type: "ESModule",
-						path: "index.mjs",
-						contents: EXTERNAL_AI_WORKER_SCRIPT,
-					},
-				],
-				serviceBindings: {
-					FETCHER: getAIFetcher({
-						compliance_region: config.complianceRegion,
-					}),
+	if (bindings.ai?.binding && !mixedModeConnectionString) {
+		externalWorkers.push({
+			name: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
+			modules: [
+				{
+					type: "ESModule",
+					path: "index.mjs",
+					contents: EXTERNAL_AI_WORKER_SCRIPT,
 				},
-			});
+			],
+			serviceBindings: {
+				FETCHER: getAIFetcher({
+					compliance_region: config.complianceRegion,
+				}),
+			},
+		});
 
-			wrappedBindings[bindings.ai.binding] = {
-				scriptName: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
-			};
-		}
+		wrappedBindings[bindings.ai.binding] = {
+			scriptName: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
+		};
+	}
+
+	if (bindings.ai && mixedModeConnectionString) {
+		warnOrError("ai", bindings.ai.remote, "always-remote");
+	}
+
+	if (bindings.browser && mixedModeConnectionString) {
+		warnOrError("browser", bindings.browser.remote, "remote");
 	}
 
 	// Uses the implementation in miniflare instead if the users enable local mode
-	if (bindings.images?.binding && !config.imagesLocalMode) {
+	if (
+		bindings.images?.binding &&
+		!config.imagesLocalMode &&
+		!mixedModeConnectionString
+	) {
 		externalWorkers.push({
 			name: `${EXTERNAL_IMAGES_WORKER_NAME}:${config.name}`,
 			modules: [
@@ -807,7 +818,7 @@ export function buildMiniflareBindingOptions(
 		};
 	}
 
-	if (bindings.vectorize) {
+	if (bindings.vectorize && !mixedModeConnectionString) {
 		for (const vectorizeBinding of bindings.vectorize) {
 			const bindingName = vectorizeBinding.binding;
 			const indexName = vectorizeBinding.index_name;
@@ -908,17 +919,17 @@ export function buildMiniflareBindingOptions(
 			send_email: bindings.send_email,
 		},
 		images:
-			bindings.images && (config.imagesLocalMode || getFlag("MIXED_MODE"))
+			bindings.images && (config.imagesLocalMode || mixedModeConnectionString)
 				? {
 						binding: bindings.images.binding,
 						mixedModeConnectionString:
-							bindings.images.remote && getFlag("MIXED_MODE")
+							bindings.images.remote && mixedModeConnectionString
 								? mixedModeConnectionString
 								: undefined,
 					}
 				: undefined,
 		browserRendering:
-			bindings.browser && getFlag("MIXED_MODE") && mixedModeConnectionString
+			bindings.browser && mixedModeConnectionString
 				? {
 						binding: bindings.browser.binding,
 						mixedModeConnectionString: bindings.browser.remote
@@ -927,10 +938,14 @@ export function buildMiniflareBindingOptions(
 					}
 				: undefined,
 
-		vectorize:
-			getFlag("MIXED_MODE") && mixedModeConnectionString
-				? Object.fromEntries(
-						bindings.vectorize?.map((vectorize) => {
+		vectorize: mixedModeConnectionString
+			? Object.fromEntries(
+					bindings.vectorize
+						?.filter((v) => {
+							warnOrError("vectorize", v.remote, "remote");
+							return v.remote;
+						})
+						.map((vectorize) => {
 							return [
 								vectorize.binding,
 								{
@@ -941,20 +956,24 @@ export function buildMiniflareBindingOptions(
 								},
 							];
 						}) ?? []
-					)
-				: undefined,
+				)
+			: undefined,
 
-		dispatchNamespaces:
-			getFlag("MIXED_MODE") && mixedModeConnectionString
-				? Object.fromEntries(
-						bindings.dispatch_namespaces?.map((dispatchNamespace) =>
+		dispatchNamespaces: mixedModeConnectionString
+			? Object.fromEntries(
+					bindings.dispatch_namespaces
+						?.filter((d) => {
+							warnOrError("dispatch_namespaces", d.remote, "remote");
+							return d.remote;
+						})
+						.map((dispatchNamespace) =>
 							dispatchNamespaceEntry(
 								dispatchNamespace,
-								mixedModeConnectionString
+								dispatchNamespace.remote ? mixedModeConnectionString : undefined
 							)
 						) ?? []
-					)
-				: undefined,
+				)
+			: undefined,
 
 		durableObjects: Object.fromEntries([
 			...internalObjects.map(({ name, class_name }) => {
@@ -1205,34 +1224,30 @@ export async function buildMiniflareOptions(
 		}
 	}
 
-	if (config.bindings.ai) {
-		if (!didWarnAiAccountUsage) {
-			didWarnAiAccountUsage = true;
-			logger.warn(
-				"Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development."
-			);
+	if (!getFlag("MIXED_MODE")) {
+		if (config.bindings.ai) {
+			if (!didWarnAiAccountUsage) {
+				didWarnAiAccountUsage = true;
+				logger.warn(
+					"Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development."
+				);
+			}
 		}
-	}
 
-	if (!config.bindVectorizeToProd && config.bindings.vectorize?.length) {
-		logger.warn(
-			"Vectorize local bindings are not supported yet. You may use the `--experimental-vectorize-bind-to-prod` flag to bind to your production index in local dev mode."
-		);
-		if (!getFlag("MIXED_MODE")) {
+		if (!config.bindVectorizeToProd && config.bindings.vectorize?.length) {
+			logger.warn(
+				"Vectorize local bindings are not supported yet. You may use the `--experimental-vectorize-bind-to-prod` flag to bind to your production index in local dev mode."
+			);
 			config.bindings.vectorize = [];
-		} else {
-			config.bindings.vectorize = config.bindings.vectorize.filter(
-				(v) => v.remote
-			);
 		}
-	}
 
-	if (config.bindings.vectorize?.length) {
-		if (!didWarnMiniflareVectorizeSupport) {
-			didWarnMiniflareVectorizeSupport = true;
-			logger.warn(
-				"You are using a mixed-mode binding for Vectorize (through `--experimental-vectorize-bind-to-prod`). It may incur usage charges and modify your databases even in local development. "
-			);
+		if (config.bindings.vectorize?.length) {
+			if (!didWarnMiniflareVectorizeSupport) {
+				didWarnMiniflareVectorizeSupport = true;
+				logger.warn(
+					"You are using a mixed-mode binding for Vectorize (through `--experimental-vectorize-bind-to-prod`). It may incur usage charges and modify your databases even in local development. "
+				);
+			}
 		}
 	}
 
