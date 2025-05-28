@@ -105,8 +105,8 @@ jobs:
         with:
           node-version: 18
 
-      - name: Check for warning message on Node.js < v20
-        run: node packages/wrangler/src/__tests__/test-old-node-version.js warn
+      - name: Check for error message on Node.js < v20
+        run: node packages/wrangler/src/__tests__/test-old-node-version.js error
 
   test-vp:
     if: github.head_ref == 'changeset-release/main' || contains(github.event.*.labels.*.name, 'every-os' )
