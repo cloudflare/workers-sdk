@@ -3,7 +3,6 @@ import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import * as util from "node:util";
 import {
 	kCurrentWorker,
 	Log,
@@ -391,6 +390,7 @@ export function getDevMiniflareOptions(
 
 	return {
 		log: logger,
+		logRequests: false,
 		inspectorPort: inspectorPort === false ? undefined : inspectorPort,
 		unsafeInspectorProxy: inspectorPort !== false,
 		handleRuntimeStdio(stdout, stderr) {
@@ -606,8 +606,6 @@ export function getPreviewMiniflareOptions(
 	};
 }
 
-const removedMessages = [/^Ready on http/, /^Updated and ready on http/];
-
 /**
  * A Miniflare logger that forwards messages onto a Vite logger.
  */
@@ -619,12 +617,8 @@ class ViteMiniflareLogger extends Log {
 	}
 
 	override logWithLevel(level: LogLevel, message: string) {
-		const strippedMessage = util.stripVTControlCharacters(message);
-
-		for (const removedMessage of removedMessages) {
-			if (removedMessage.test(strippedMessage)) {
-				return;
-			}
+		if (/^Ready on/.test(message)) {
+			return;
 		}
 
 		switch (level) {
