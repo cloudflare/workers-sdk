@@ -56,10 +56,10 @@ export function checkFixtures(): string[] {
 				);
 			}
 
-			// Check the package has a name starting with "fixture-".
-			if (!fixturePackage.name.startsWith("fixture-")) {
+			// Check the package has a name starting with "@fixture/".
+			if (!fixturePackage.name.startsWith("@fixture/")) {
 				errors.push(
-					`Fixture in directory "fixtures/${dir}" has a name that does not start with "fixture-". Please rename it to start with "fixture-".`
+					`Fixture in directory "fixtures/${dir}" has a name that does not start with "@fixture/". Please rename it to start with "@fixture/".`
 				);
 			}
 		} catch {
