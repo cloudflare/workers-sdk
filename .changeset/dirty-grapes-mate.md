@@ -2,6 +2,6 @@
 "create-cloudflare": minor
 ---
 
-Add workflows-starter
+Add hello-world-workflows
 
-Hello workflows-starter can now be created from a default template
+Hello hello-world-workflows should be the default hello-world/entry point example for anyone building workflows.
