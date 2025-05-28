@@ -9,7 +9,7 @@ import {
 
 const VectorizeSchema = z.object({
 	index_name: z.string(),
-	mixedModeConnectionString: z.custom<MixedModeConnectionString>(),
+	mixedModeConnectionString: z.custom<MixedModeConnectionString>().optional(),
 });
 
 export const VectorizeOptionsSchema = z.object({
@@ -73,10 +73,14 @@ export const VECTORIZE_PLUGIN: Plugin<typeof VectorizeOptionsSchema> = {
 		}
 
 		return Object.entries(options.vectorize).map(
-			([name, { mixedModeConnectionString }]) => ({
-				name: `${VECTORIZE_PLUGIN_NAME}:${name}`,
-				worker: mixedModeClientWorker(mixedModeConnectionString, name),
-			})
+			([name, { mixedModeConnectionString }]) => {
+				assert(mixedModeConnectionString, "Vectorize only supports Mixed Mode");
+
+				return {
+					name: `${VECTORIZE_PLUGIN_NAME}:${name}`,
+					worker: mixedModeClientWorker(mixedModeConnectionString, name),
+				};
+			}
 		);
 	},
 };

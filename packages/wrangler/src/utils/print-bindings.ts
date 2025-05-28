@@ -257,15 +257,19 @@ export function printBindings(
 
 	if (vectorize !== undefined && vectorize.length > 0) {
 		output.push(
-			...vectorize.map(({ binding, index_name }) => {
+			...vectorize.map(({ binding, index_name, remote }) => {
 				return {
 					name: binding,
 					type: friendlyBindingNames.vectorize,
 					value: index_name,
 					mode: getMode({
-						isSimulatedLocally: context.vectorizeBindToProd
-							? false
-							: /* Vectorize doesn't support local mode */ undefined,
+						isSimulatedLocally: getFlag("MIXED_MODE")
+							? remote
+								? false
+								: undefined
+							: context.vectorizeBindToProd
+								? false
+								: /* Vectorize doesn't support local mode */ undefined,
 					}),
 				};
 			})
@@ -402,7 +406,10 @@ export function printBindings(
 			name: browser.binding,
 			type: friendlyBindingNames.browser,
 			value: undefined,
-			mode: getMode({ isSimulatedLocally: undefined }),
+			mode: getMode({
+				isSimulatedLocally:
+					getFlag("MIXED_MODE") && browser.remote ? false : undefined,
+			}),
 		});
 	}
 
@@ -411,7 +418,13 @@ export function printBindings(
 			name: images.binding,
 			type: friendlyBindingNames.images,
 			value: undefined,
-			mode: getMode({ isSimulatedLocally: !!context.imagesLocalMode }),
+			mode: getMode({
+				isSimulatedLocally: getFlag("MIXED_MODE")
+					? images.remote === true || images.remote === undefined
+						? false
+						: undefined
+					: !!context.imagesLocalMode,
+			}),
 		});
 	}
 
@@ -420,7 +433,13 @@ export function printBindings(
 			name: ai.binding,
 			type: friendlyBindingNames.ai,
 			value: ai.staging ? `staging` : undefined,
-			mode: getMode({ isSimulatedLocally: false }),
+			mode: getMode({
+				isSimulatedLocally: getFlag("MIXED_MODE")
+					? ai.remote === true || ai.remote === undefined
+						? false
+						: undefined
+					: false,
+			}),
 		});
 	}
 
@@ -498,14 +517,20 @@ export function printBindings(
 
 	if (dispatch_namespaces !== undefined && dispatch_namespaces.length > 0) {
 		output.push(
-			...dispatch_namespaces.map(({ binding, namespace, outbound }) => {
+			...dispatch_namespaces.map(({ binding, namespace, outbound, remote }) => {
 				return {
 					name: binding,
 					type: friendlyBindingNames.dispatch_namespaces,
 					value: outbound
 						? `${namespace} (outbound -> ${outbound.service})`
 						: namespace,
-					mode: getMode(),
+					mode: getMode({
+						isSimulatedLocally: getFlag("MIXED_MODE")
+							? remote
+								? false
+								: undefined
+							: undefined,
+					}),
 				};
 			})
 		);

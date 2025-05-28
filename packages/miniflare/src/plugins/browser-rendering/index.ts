@@ -9,7 +9,7 @@ import {
 
 const BrowserRenderingSchema = z.object({
 	binding: z.string(),
-	mixedModeConnectionString: z.custom<MixedModeConnectionString>(),
+	mixedModeConnectionString: z.custom<MixedModeConnectionString>().optional(),
 });
 
 export const BrowserRenderingOptionsSchema = z.object({
@@ -53,6 +53,11 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 		if (!options.browserRendering) {
 			return [];
 		}
+
+		assert(
+			options.browserRendering.mixedModeConnectionString,
+			"Workers Browser Rendering only supports Mixed Mode"
+		);
 
 		return [
 			{

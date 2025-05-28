@@ -30,6 +30,7 @@ import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type {
 	CfD1Database,
+	CfDispatchNamespace,
 	CfDurableObject,
 	CfHyperdrive,
 	CfKvNamespace,
@@ -425,6 +426,18 @@ function workflowEntry(
 		},
 	];
 }
+function dispatchNamespaceEntry(
+	{ binding, namespace, remote }: CfDispatchNamespace,
+	mixedModeConnectionString?: MixedModeConnectionString
+): [
+	string,
+	{ namespace: string; mixedModeConnectionString?: MixedModeConnectionString },
+] {
+	if (!getFlag("MIXED_MODE") || !remote) {
+		return [binding, { namespace }];
+	}
+	return [binding, { namespace, mixedModeConnectionString }];
+}
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ratelimitEntry(ratelimit: CfUnsafeBinding): [string, any] {
 	return [ratelimit.name, ratelimit];
@@ -465,6 +478,9 @@ type WorkerOptionsBindings = Pick<
 	| "email"
 	| "analyticsEngineDatasets"
 	| "tails"
+	| "browserRendering"
+	| "vectorize"
+	| "dispatchNamespaces"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -892,13 +908,52 @@ export function buildMiniflareBindingOptions(
 			send_email: bindings.send_email,
 		},
 		images:
-			bindings.images && config.imagesLocalMode
+			bindings.images && (config.imagesLocalMode || getFlag("MIXED_MODE"))
 				? {
 						binding: bindings.images.binding,
-						mixedModeConnectionString: getFlag("MIXED_MODE")
+						mixedModeConnectionString:
+							bindings.images.remote && getFlag("MIXED_MODE")
+								? mixedModeConnectionString
+								: undefined,
+					}
+				: undefined,
+		browserRendering:
+			bindings.browser && getFlag("MIXED_MODE") && mixedModeConnectionString
+				? {
+						binding: bindings.browser.binding,
+						mixedModeConnectionString: bindings.browser.remote
 							? mixedModeConnectionString
 							: undefined,
 					}
+				: undefined,
+
+		vectorize: Object.fromEntries(
+			bindings.vectorize?.map((vectorize) => {
+				return [
+					vectorize.binding,
+					{
+						index_name: vectorize.index_name,
+						mixedModeConnectionString:
+							getFlag("MIXED_MODE") &&
+							mixedModeConnectionString &&
+							vectorize.remote
+								? mixedModeConnectionString
+								: undefined,
+					},
+				];
+			}) ?? []
+		),
+
+		dispatchNamespaces:
+			getFlag("MIXED_MODE") && mixedModeConnectionString
+				? Object.fromEntries(
+						bindings.dispatch_namespaces?.map((dispatchNamespace) =>
+							dispatchNamespaceEntry(
+								dispatchNamespace,
+								mixedModeConnectionString
+							)
+						) ?? []
+					)
 				: undefined,
 
 		durableObjects: Object.fromEntries([
@@ -1163,7 +1218,6 @@ export async function buildMiniflareOptions(
 		logger.warn(
 			"Vectorize local bindings are not supported yet. You may use the `--experimental-vectorize-bind-to-prod` flag to bind to your production index in local dev mode."
 		);
-		config.bindings.vectorize = [];
 	}
 
 	if (config.bindings.vectorize?.length) {

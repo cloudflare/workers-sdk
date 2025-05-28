@@ -717,6 +717,8 @@ export interface EnvironmentNonInheritable {
 		binding: string;
 		/** The name of the index. */
 		index_name: string;
+		/** Whether the Vectorize index should be remote or not (only available under `--x-mixed-mode`) */
+		remote?: boolean;
 	}[];
 
 	/**
@@ -799,6 +801,8 @@ export interface EnvironmentNonInheritable {
 	browser:
 		| {
 				binding: string;
+				/** Whether the Browser binding should be remote or not (only available under `--x-mixed-mode`) */
+				remote?: boolean;
 		  }
 		| undefined;
 
@@ -817,6 +821,8 @@ export interface EnvironmentNonInheritable {
 		| {
 				binding: string;
 				staging?: boolean;
+				/** Whether the AI binding should be remote or not (only available under `--x-mixed-mode`) */
+				remote?: boolean;
 		  }
 		| undefined;
 
@@ -834,6 +840,8 @@ export interface EnvironmentNonInheritable {
 	images:
 		| {
 				binding: string;
+				/** Whether the Images binding should be remote or not (only available under `--x-mixed-mode`) */
+				remote?: boolean;
 		  }
 		| undefined;
 
@@ -938,6 +946,8 @@ export interface EnvironmentNonInheritable {
 		namespace: string;
 		/** Details about the outbound Worker which will handle outbound requests from your namespace */
 		outbound?: DispatchNamespaceOutbound;
+		/** Whether the Dispatch Namespace should be remote or not (only available under `--x-mixed-mode`) */
+		remote?: boolean;
 	}[];
 
 	/**
