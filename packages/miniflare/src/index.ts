@@ -2273,13 +2273,6 @@ export class Miniflare {
 		);
 		// Send to runtime and wait for updates to process
 		await this.#assembleAndUpdateConfig();
-
-		assert(
-			this.#runtimeEntryURL !== undefined,
-			"The runtime entry URL should be defined at this point"
-		);
-		// Register all workers with the dev registry
-		await this.#registerWorkers(this.#runtimeEntryURL);
 	}
 
 	setOptions(opts: MiniflareOptions): Promise<void> {
@@ -2289,7 +2282,17 @@ export class Miniflare {
 		this.#proxyClient?.poisonProxies();
 		// Wait for initial initialisation and other setOptions to complete before
 		// changing options
-		return this.#runtimeMutex.runWith(() => this.#setOptions(opts));
+		return this.#runtimeMutex
+			.runWith(() => this.#setOptions(opts))
+			.then(() => {
+				assert(
+					this.#runtimeEntryURL !== undefined,
+					"The runtime entry URL should be defined at this point"
+				);
+
+				// Register all workers with the dev registry
+				return this.#registerWorkers(this.#runtimeEntryURL);
+			});
 	}
 
 	dispatchFetch: DispatchFetch = async (input, init) => {
