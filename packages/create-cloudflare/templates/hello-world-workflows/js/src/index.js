@@ -1,8 +1,4 @@
-import {
-	WorkflowEntrypoint,
-	WorkflowEvent,
-	WorkflowStep,
-} from "cloudflare:workers";
+import { WorkflowEntrypoint } from "cloudflare:workers";
 
 /**
  * @typedef {Object} Env
