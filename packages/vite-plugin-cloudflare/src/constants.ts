@@ -14,6 +14,6 @@ export const kRequestType = Symbol("kRequestType");
 
 declare module "http" {
 	interface IncomingMessage {
-		[kRequestType]?: string;
+		[kRequestType]?: "asset";
 	}
 }
