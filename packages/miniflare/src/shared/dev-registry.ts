@@ -177,7 +177,7 @@ export class DevRegistry {
 		return null;
 	}
 
-	public getExtneralDurableObjectAddress(
+	public getExternalDurableObjectAddress(
 		scriptName: string,
 		className: string
 	): {

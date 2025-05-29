@@ -1173,7 +1173,7 @@ export class Miniflare {
 		if (doProxyTarget) {
 			assert(res !== undefined, "No response object provided");
 
-			const address = this.#devRegistry.getExtneralDurableObjectAddress(
+			const address = this.#devRegistry.getExternalDurableObjectAddress(
 				doProxyTarget.scriptName,
 				doProxyTarget.className
 			);
