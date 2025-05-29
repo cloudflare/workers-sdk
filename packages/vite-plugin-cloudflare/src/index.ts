@@ -366,12 +366,12 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					viteDevServer.middlewares.use(async (req, res, next) => {
 						try {
 							assert(miniflare, `Miniflare not defined`);
+							const request = createRequest(req, res);
 							let response: MiniflareResponse;
 
 							if (req[kRequestType] === "asset") {
 								const assetWorker =
 									await miniflare.getWorker(ASSET_WORKER_NAME);
-								const request = createRequest(req, res);
 								response = await assetWorker.fetch(
 									toMiniflareRequest(request),
 									{ redirect: "manual" }
@@ -379,7 +379,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							} else {
 								const routerWorker =
 									await miniflare.getWorker(ROUTER_WORKER_NAME);
-								const request = createRequest(req, res);
 								response = await routerWorker.fetch(
 									toMiniflareRequest(request),
 									{ redirect: "manual" }
