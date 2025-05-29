@@ -61,20 +61,7 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 		return {};
 	},
 	async getServices(args) {
-		const extensions: Extension[] = [];
 		const services: Service[] = [];
-		// we only want to insert on the first worker as it will be shared between them
-		if (args.workerIndex === 0) {
-			extensions.push({
-				modules: [
-					{
-						name: "cloudflare-internal:email",
-						esModule: EMAIL_MESSAGE(),
-						internal: true,
-					},
-				],
-			});
-		}
 
 		for (const { name, ...config } of args.options.email?.send_email ?? []) {
 			services.push({
@@ -95,9 +82,23 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			});
 		}
 
-		return {
-			services,
-			extensions,
-		};
+		return services;
+	},
+
+	getExtensions({ options }) {
+		if (!options.some((o) => o.email)) {
+			return [];
+		}
+		return [
+			{
+				modules: [
+					{
+						name: "cloudflare-internal:email",
+						esModule: EMAIL_MESSAGE(),
+						internal: true,
+					},
+				],
+			},
+		];
 	},
 };

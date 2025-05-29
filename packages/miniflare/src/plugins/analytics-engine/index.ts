@@ -60,13 +60,14 @@ export const ANALYTICS_ENGINE_PLUGIN: Plugin<
 		);
 	},
 	async getServices({ options, workerIndex }) {
-		if (!options.analyticsEngineDatasets) {
+		return [];
+	},
+	getExtensions({ options }) {
+		if (!options.some((o) => o.analyticsEngineDatasets)) {
 			return [];
 		}
-		const extensions: Extension[] = [];
-
-		if (workerIndex === 0) {
-			extensions.push({
+		return [
+			{
 				modules: [
 					{
 						name: `${ANALYTICS_ENGINE_PLUGIN_NAME}:local-simulator`,
@@ -74,12 +75,7 @@ export const ANALYTICS_ENGINE_PLUGIN: Plugin<
 						internal: true,
 					},
 				],
-			});
-		}
-
-		return {
-			extensions,
-			services: [],
-		};
+			},
+		];
 	},
 };
