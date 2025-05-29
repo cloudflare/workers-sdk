@@ -1,11 +1,11 @@
 import { describe, test } from "vitest";
-import { fetchJson, runLongLived, testSeed, waitForReady } from "./helpers.js";
+import { fetchJson, runLongLived, seed, waitForReady } from "./helpers.js";
 
 const packageManagers = ["pnpm", "npm", "yarn"] as const;
 
 describe("prebundling Node.js compatibility", () => {
 	describe.each(packageManagers)('with "%s" package manager', (pm) => {
-		const projectPath = testSeed("dynamic", pm);
+		const projectPath = seed("dynamic", pm);
 
 		test("will not cause a reload on a dynamic import of a Node.js module", async ({
 			expect,
