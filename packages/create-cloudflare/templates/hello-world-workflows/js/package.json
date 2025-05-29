@@ -1,0 +1,14 @@
+{
+	"name": "<TBD>",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"start": "wrangler dev",
+		"dev": "wrangler dev",
+		"cf-typegen": "wrangler types"
+	},
+	"devDependencies": {
+		"wrangler": "^4.6.0"
+	}
+}
