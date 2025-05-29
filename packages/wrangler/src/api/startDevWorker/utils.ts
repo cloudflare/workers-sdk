@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { readFile } from "node:fs/promises";
+import type { ConfigBindingOptions } from "../../config";
 import type { CfWorkerInit } from "../../deployment-bundle/worker";
 import type {
 	AsyncHook,
@@ -73,6 +74,17 @@ async function getBinaryFileContents(file: File<string | Uint8Array>) {
 		return Buffer.from(file.contents);
 	}
 	return readFile(file.path);
+}
+
+export function convertConfigBindingsToStartWorkerBindings(
+	configBindings: ConfigBindingOptions
+): StartDevWorkerOptions["bindings"] {
+	const { queues, ...bindings } = configBindings;
+
+	return convertCfWorkerInitBindingsToBindings({
+		...bindings,
+		queues: queues.producers?.map((q) => ({ ...q, queue_name: q.queue })),
+	});
 }
 
 export function convertCfWorkerInitBindingsToBindings(
