@@ -65,7 +65,6 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 		);
 	},
 	async getServices({ options }) {
-		console.log(options.dispatchNamespaces);
 		if (!options.dispatchNamespaces) {
 			return [];
 		}
