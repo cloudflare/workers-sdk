@@ -1,5 +1,27 @@
 # wrangler
 
+## 4.18.0
+
+### Minor Changes
+
+- [#9393](https://github.com/cloudflare/workers-sdk/pull/9393) [`34b6174`](https://github.com/cloudflare/workers-sdk/commit/34b61746f26be5b4521eaf10bd29ac8792adcf08) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Hard fail on Node.js < 20. Wrangler no longer supports Node.js 18.x as it reached end-of-life on 2025-04-30. See https://github.com/nodejs/release?tab=readme-ov-file#end-of-life-releases.
+
+### Patch Changes
+
+- [#9308](https://github.com/cloudflare/workers-sdk/pull/9308) [`d3a6eb3`](https://github.com/cloudflare/workers-sdk/commit/d3a6eb30e58de2b8f12fc899a70a31518968b910) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - expose new utilities and types to aid consumers of the programmatic mixed-mode API
+
+  Specifically the exports have been added:
+
+  - `Experimental_MixedModeSession`: type representing a mixed-mode session
+  - `Experimental_ConfigBindingsOptions`: type representing config-bindings
+  - `experimental_pickRemoteBindings`: utility for picking only the remote bindings from a record of start-worker bindings.
+  - `unstable_convertConfigBindingsToStartWorkerBindings`: utility for converting config-bindings into start-worker bindings (that can be passed to `startMixedModeSession`)
+
+- [#9347](https://github.com/cloudflare/workers-sdk/pull/9347) [`b8f058c`](https://github.com/cloudflare/workers-sdk/commit/b8f058c81ecf122c80069b655d92232eb1302fd1) Thanks [@penalosa](https://github.com/penalosa)! - Improve binding display on narrower terminals
+
+- Updated dependencies [[`d9d937a`](https://github.com/cloudflare/workers-sdk/commit/d9d937ab6f2868271dde5a8da625773085eaec85), [`e39a45f`](https://github.com/cloudflare/workers-sdk/commit/e39a45ffa0d783cc99107f8ab02d6b3dd27d4c9f), [`fdae3f7`](https://github.com/cloudflare/workers-sdk/commit/fdae3f7665a5cd3b5e25c9de19156ecd54618a7c)]:
+  - miniflare@4.20250525.0
+
 ## 4.17.0
 
 ### Minor Changes
