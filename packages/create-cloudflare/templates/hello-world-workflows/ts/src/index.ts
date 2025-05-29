@@ -67,7 +67,6 @@ export class MyWorkflow extends WorkflowEntrypoint<Env, Params> {
 		);
 	}
 }
-
 export default {
 	async fetch(req: Request, env: Env): Promise<Response> {
 		let url = new URL(req.url);
