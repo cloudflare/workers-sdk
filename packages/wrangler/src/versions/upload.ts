@@ -29,7 +29,10 @@ import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
-import { getCIOverrideName } from "../environment-variables/misc-variables";
+import {
+	getCIOverrideName,
+	getCIOverridePreviewAlias,
+} from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
@@ -92,6 +95,7 @@ type Props = {
 
 	tag: string | undefined;
 	message: string | undefined;
+	previewAlias: string | undefined;
 };
 
 export const versionsUploadCommand = createCommand({
@@ -241,6 +245,11 @@ export const versionsUploadCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
+		"preview-alias": {
+			describe: "Name of an alias for this worker version",
+			type: "string",
+			requiresArg: true,
+		},
 		"experimental-auto-create": {
 			describe: "Automatically provision draft bindings with new resources",
 			type: "boolean",
@@ -383,6 +392,7 @@ export default async function versionsUpload(props: Props): Promise<{
 	versionId: string | null;
 	workerTag: string | null;
 	versionPreviewUrl?: string | undefined;
+	versionPreviewAliasUrl?: string | undefined;
 }> {
 	// TODO: warn if git/hg has uncommitted changes
 	const { config, accountId, name } = props;
@@ -678,6 +688,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			annotations: {
 				"workers/message": props.message,
 				"workers/tag": props.tag,
+				"workers/alias": props.previewAlias,
 			},
 			assets:
 				props.assetsOptions && assetsJwt
@@ -833,6 +844,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	logger.log("Worker Version ID:", versionId);
 
 	let versionPreviewUrl: string | undefined = undefined;
+	let versionPreviewAliasUrl: string | undefined = undefined;
 
 	if (versionId && hasPreview) {
 		const { previews_enabled: previews_available_on_subdomain } =
@@ -849,6 +861,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			const shortVersion = versionId.slice(0, 8);
 			versionPreviewUrl = `https://${shortVersion}-${workerName}.${userSubdomain}`;
 			logger.log(`Version Preview URL: ${versionPreviewUrl}`);
+
+			if (props.previewAlias) {
+				versionPreviewAliasUrl = `https://${props.previewAlias}-${workerName}.${userSubdomain}.workers.dev`;
+				logger.log(`Version Preview Alias URL: ${versionPreviewAliasUrl}`);
+			}
 		}
 	}
 
@@ -864,7 +881,7 @@ Changes to triggers (routes, custom domains, cron schedules, etc) must be applie
 `)
 	);
 
-	return { versionId, workerTag, versionPreviewUrl };
+	return { versionId, workerTag, versionPreviewUrl, versionPreviewAliasUrl };
 }
 
 function formatTime(duration: number) {

@@ -138,6 +138,40 @@ describe("versions upload", () => {
 		`);
 	});
 
+	test("should allow specifying --preview-alias", async () => {
+		mockGetScript();
+		mockUploadVersion(true);
+		mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
+		mockSubDomainRequest();
+
+		// Setup
+		writeWranglerConfig({
+			name: "test-name",
+			main: "./index.js",
+			vars: {
+				TEST: "test-string",
+			},
+		});
+		writeWorkerSource();
+		setIsTTY(false);
+
+		const result = runWrangler("versions upload --preview-alias abcd1234");
+
+		await expect(result).resolves.toBeUndefined();
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 500 ms
+			Your Worker has access to the following bindings:
+			- Vars:
+			  - TEST: \\"test-string\\"
+			Uploaded test-name (TIMINGS)
+			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993
+			Version Preview URL: https://51e4886e-test-name.test-sub-domain.workers.dev
+			Version Preview Alias URL: https://abcd1234-test-name.test-sub-domain.workers.dev"
+		`);
+	});
+
 	it("should not print preview url when preview_urls is false", async () => {
 		mockGetScript();
 		mockUploadVersion(true);
