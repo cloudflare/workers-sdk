@@ -63,7 +63,7 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 			])
 		);
 	},
-	async getServices({ options }) {
+	async getServices() {
 		return [];
 	},
 	getExtensions({ options }) {

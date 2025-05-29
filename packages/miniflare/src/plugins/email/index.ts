@@ -1,7 +1,7 @@
 import EMAIL_MESSAGE from "worker:email/email";
 import SEND_EMAIL_BINDING from "worker:email/send_email";
 import { z } from "zod";
-import { Extension, Service, Worker_Binding } from "../../runtime";
+import { Service, Worker_Binding } from "../../runtime";
 import { Plugin, WORKER_BINDING_SERVICE_LOOPBACK } from "../shared";
 
 // Define the mutually exclusive schema

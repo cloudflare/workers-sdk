@@ -1,6 +1,6 @@
 import ANALYTICS_ENGINE from "worker:analytics-engine/analytics-engine";
 import { z } from "zod";
-import { Extension, Worker_Binding } from "../../runtime";
+import { Worker_Binding } from "../../runtime";
 import { PersistenceSchema, Plugin, ProxyNodeBinding } from "../shared";
 
 const AnalyticsEngineSchema = z.record(
@@ -59,7 +59,7 @@ export const ANALYTICS_ENGINE_PLUGIN: Plugin<
 			])
 		);
 	},
-	async getServices({ options, workerIndex }) {
+	async getServices() {
 		return [];
 	},
 	getExtensions({ options }) {
