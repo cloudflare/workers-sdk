@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Move the `minimal_mode` to `wrangler-session-config`
+Internal change to support Mixed Mode dev: move the `minimal_mode` flag to `wrangler-session-config`.

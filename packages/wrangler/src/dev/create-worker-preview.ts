@@ -72,14 +72,24 @@ export interface CfPreviewSession {
 }
 
 /**
- * A preview mode.
+ * Session configuration for realish preview. This is sent to the API as the
+ * `wrangler-session-config` form data part.
  *
- * * If true, then using a `workers.dev` subdomain.
- * * Otherwise, a list of routes under a single zone.
+ * Only one of `workers_dev` and `routes` can be specified:
+ * * If `workers_dev` is set, the preview will run using a `workers.dev` subdomain.
+ * * If `routes` is set, the preview will run using the list of routes provided, which must be under a single zone
+ *
+ * `minimal_mode` is a flag to tell the API to enable "raw" mode bindings in this session
  */
-type CfPreviewMode = ({ workers_dev: boolean } | { routes: string[] }) & {
-	minimal_mode?: boolean;
-};
+type CfPreviewMode =
+	| {
+			workers_dev: true;
+			minimal_mode?: boolean;
+	  }
+	| {
+			routes: string[];
+			minimal_mode?: boolean;
+	  };
 
 /**
  * A preview token.
