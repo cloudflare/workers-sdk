@@ -1,12 +1,12 @@
 {
-	"name": "email-worker",
+	"name": "@fixture/worker-email",
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20250523.0",
+		"@cloudflare/workers-types": "^4.20250525.0",
 		"@types/mimetext": "^2.0.4",
 		"mimetext": "^3.0.27",
 		"wrangler": "workspace:*"

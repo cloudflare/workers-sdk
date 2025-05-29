@@ -1,5 +1,5 @@
 {
-	"name": "local-mode-tests",
+	"name": "@fixture/local-mode",
 	"private": true,
 	"description": "",
 	"keywords": [],
@@ -14,7 +14,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250523.0",
+		"@cloudflare/workers-types": "^4.20250525.0",
 		"@types/node": "catalog:default",
 		"buffer": "^6.0.3",
 		"typescript": "catalog:default",

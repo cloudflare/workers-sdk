@@ -1,5 +1,5 @@
 {
-	"name": "miniflare-node-test",
+	"name": "@fixture/miniflare-node",
 	"private": true,
 	"description": "",
 	"license": "ISC",
@@ -10,7 +10,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250523.0",
+		"@cloudflare/workers-types": "^4.20250525.0",
 		"@types/is-even": "^1.0.2",
 		"is-even": "^1.0.0",
 		"miniflare": "workspace:*",

@@ -1,5 +1,67 @@
 # wrangler
 
+## 4.18.0
+
+### Minor Changes
+
+- [#9393](https://github.com/cloudflare/workers-sdk/pull/9393) [`34b6174`](https://github.com/cloudflare/workers-sdk/commit/34b61746f26be5b4521eaf10bd29ac8792adcf08) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Hard fail on Node.js < 20. Wrangler no longer supports Node.js 18.x as it reached end-of-life on 2025-04-30. See https://github.com/nodejs/release?tab=readme-ov-file#end-of-life-releases.
+
+### Patch Changes
+
+- [#9308](https://github.com/cloudflare/workers-sdk/pull/9308) [`d3a6eb3`](https://github.com/cloudflare/workers-sdk/commit/d3a6eb30e58de2b8f12fc899a70a31518968b910) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - expose new utilities and types to aid consumers of the programmatic mixed-mode API
+
+  Specifically the exports have been added:
+
+  - `Experimental_MixedModeSession`: type representing a mixed-mode session
+  - `Experimental_ConfigBindingsOptions`: type representing config-bindings
+  - `experimental_pickRemoteBindings`: utility for picking only the remote bindings from a record of start-worker bindings.
+  - `unstable_convertConfigBindingsToStartWorkerBindings`: utility for converting config-bindings into start-worker bindings (that can be passed to `startMixedModeSession`)
+
+- [#9347](https://github.com/cloudflare/workers-sdk/pull/9347) [`b8f058c`](https://github.com/cloudflare/workers-sdk/commit/b8f058c81ecf122c80069b655d92232eb1302fd1) Thanks [@penalosa](https://github.com/penalosa)! - Improve binding display on narrower terminals
+
+- Updated dependencies [[`d9d937a`](https://github.com/cloudflare/workers-sdk/commit/d9d937ab6f2868271dde5a8da625773085eaec85), [`e39a45f`](https://github.com/cloudflare/workers-sdk/commit/e39a45ffa0d783cc99107f8ab02d6b3dd27d4c9f), [`fdae3f7`](https://github.com/cloudflare/workers-sdk/commit/fdae3f7665a5cd3b5e25c9de19156ecd54618a7c)]:
+  - miniflare@4.20250525.0
+
+## 4.17.0
+
+### Minor Changes
+
+- [#9321](https://github.com/cloudflare/workers-sdk/pull/9321) [`6c03bde`](https://github.com/cloudflare/workers-sdk/commit/6c03bde33ffc9607577e5e7540f7178396d9e32d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for FedRAMP High compliance region
+
+  Now it is possible to target Wrangler at the FedRAMP High compliance region.
+  There are two ways to signal to Wrangler to run in this mode:
+
+  - set `"compliance_region": "fedramp_high"` in a Wrangler configuration
+  - set `CLOUDFLARE_COMPLIANCE_REGION=fedramp_high` environment variable when running Wrangler
+
+  If both are provided and the values do not match then Wrangler will exit with an error.
+
+  When in this mode OAuth authentication is not supported.
+  It is necessary to authenticate using a Cloudflare API Token acquired from the Cloudflare FedRAMP High dashboard.
+
+  Most bindings and commands are supported in this mode.
+
+  - Unsupported commands may result in API requests that are not supported - possibly 422 Unprocessable Entity responses.
+  - Unsupported bindings may work in local dev, as there is no local validation, but will fail at Worker deployment time.
+
+  Resolves DEVX-1921.
+
+- [#9330](https://github.com/cloudflare/workers-sdk/pull/9330) [`34c71ce`](https://github.com/cloudflare/workers-sdk/commit/34c71ce9208ffceefe718fc9ae7282ef95e2f2be) Thanks [@edmundhung](https://github.com/edmundhung)! - Updated internal configuration to use Miniflare’s new `defaultPersistRoot` instead of per-plugin `persist` flags
+
+- [#8973](https://github.com/cloudflare/workers-sdk/pull/8973) [`cc7fae4`](https://github.com/cloudflare/workers-sdk/commit/cc7fae4cb9a2b69afd1c850a4562f819d0abf4e7) Thanks [@Caio-Nogueira](https://github.com/Caio-Nogueira)! - Show latest instance by default on `workflows instances describe` command
+
+### Patch Changes
+
+- [#9335](https://github.com/cloudflare/workers-sdk/pull/9335) [`6479fc5`](https://github.com/cloudflare/workers-sdk/commit/6479fc5228d1249e87c7f668e8efbf88ec5a8f5f) Thanks [@penalosa](https://github.com/penalosa)! - Redesign `wrangler dev` to more clearly present information and have a bit of a glow up ✨
+  ![Screenshot 2025-05-22 at 01 11 43](https://github.com/user-attachments/assets/26cc6209-37a1-4ecb-8e91-daac2f79a095)
+
+- [#9329](https://github.com/cloudflare/workers-sdk/pull/9329) [`410d985`](https://github.com/cloudflare/workers-sdk/commit/410d9852508f94e33fbe30095fe0c421636f033e) Thanks [@penalosa](https://github.com/penalosa)! - Hide logs in the `startMixedModeSession()` API
+
+- [#9325](https://github.com/cloudflare/workers-sdk/pull/9325) [`c2678d1`](https://github.com/cloudflare/workers-sdk/commit/c2678d168185bc75ed724edc4ee7615f6f1e0f87) Thanks [@edmundhung](https://github.com/edmundhung)! - refactor: fallbacks to local image binding from miniflare when local mode is enabled
+
+- Updated dependencies [[`34c71ce`](https://github.com/cloudflare/workers-sdk/commit/34c71ce9208ffceefe718fc9ae7282ef95e2f2be), [`f7c82a4`](https://github.com/cloudflare/workers-sdk/commit/f7c82a4a9f1cb1c9abf6d309327a72b5423e44b1), [`7ddd865`](https://github.com/cloudflare/workers-sdk/commit/7ddd865fa61b65851149e3d1ac8753002b648e65), [`6479fc5`](https://github.com/cloudflare/workers-sdk/commit/6479fc5228d1249e87c7f668e8efbf88ec5a8f5f), [`e5ae13a`](https://github.com/cloudflare/workers-sdk/commit/e5ae13adebe5ee139cf2c91f0a3bd5992cfd3923)]:
+  - miniflare@4.20250523.0
+
 ## 4.16.1
 
 ### Patch Changes

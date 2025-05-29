@@ -44,14 +44,10 @@ jobs:
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
-      - name: Build
-        run: pnpm run build
+      - name: Check for errors
+        run: pnpm run check --summarize
         env:
           CI_OS: ${{ runner.os }}
-
-      - name: Check for errors
-        run: pnpm run check
-        env:
           NODE_OPTIONS: "--max_old_space_size=8192"
 
       - name: Check the changesets
@@ -78,11 +74,6 @@ jobs:
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
-
-      - name: Build
-        run: pnpm run build --summarize
-        env:
-          CI_OS: ${{ runner.os }}
 
       - name: Check for errors
         run: pnpm run check --summarize
@@ -114,8 +105,8 @@ jobs:
         with:
           node-version: 18
 
-      - name: Check for warning message on Node.js < v20
-        run: node packages/wrangler/src/__tests__/test-old-node-version.js warn
+      - name: Check for error message on Node.js < v20
+        run: node packages/wrangler/src/__tests__/test-old-node-version.js error
 
   test-vp:
     if: github.head_ref == 'changeset-release/main' || contains(github.event.*.labels.*.name, 'every-os' )

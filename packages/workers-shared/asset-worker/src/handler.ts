@@ -203,9 +203,7 @@ export const canFetch = async (
 			flagIsEnabled(
 				configuration,
 				SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING
-			) &&
-			request.headers.get("Sec-Fetch-Mode") === "navigate" &&
-			!configuration.has_static_routing
+			) && request.headers.get("Sec-Fetch-Mode") === "navigate"
 		)
 	) {
 		configuration = {

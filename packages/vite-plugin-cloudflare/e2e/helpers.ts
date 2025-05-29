@@ -1,4 +1,4 @@
-import childProcess, { ChildProcess } from "node:child_process";
+import childProcess from "node:child_process";
 import events from "node:events";
 import fs from "node:fs/promises";
 import path from "node:path";

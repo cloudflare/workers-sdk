@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.47.3
+
+### Patch Changes
+
+- [#9332](https://github.com/cloudflare/workers-sdk/pull/9332) [`a3496bf`](https://github.com/cloudflare/workers-sdk/commit/a3496bf33a57035d7a5fe54d90589049cc36a3e1) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - add extra information about asset serving to hello-world templates
+
 ## 2.47.2
 
 ### Patch Changes

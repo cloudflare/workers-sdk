@@ -410,7 +410,6 @@ export interface CfWorkerInit {
 		  }
 		| undefined;
 	observability: Observability | undefined;
-	minimal_mode?: boolean;
 }
 
 export interface CfWorkerContext {

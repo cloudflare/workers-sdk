@@ -1,5 +1,29 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.8.34
+
+### Patch Changes
+
+- Updated dependencies [[`34b6174`](https://github.com/cloudflare/workers-sdk/commit/34b61746f26be5b4521eaf10bd29ac8792adcf08), [`d9d937a`](https://github.com/cloudflare/workers-sdk/commit/d9d937ab6f2868271dde5a8da625773085eaec85), [`e39a45f`](https://github.com/cloudflare/workers-sdk/commit/e39a45ffa0d783cc99107f8ab02d6b3dd27d4c9f), [`d3a6eb3`](https://github.com/cloudflare/workers-sdk/commit/d3a6eb30e58de2b8f12fc899a70a31518968b910), [`b8f058c`](https://github.com/cloudflare/workers-sdk/commit/b8f058c81ecf122c80069b655d92232eb1302fd1), [`fdae3f7`](https://github.com/cloudflare/workers-sdk/commit/fdae3f7665a5cd3b5e25c9de19156ecd54618a7c)]:
+  - wrangler@4.18.0
+  - miniflare@4.20250525.0
+
+## 0.8.33
+
+### Patch Changes
+
+- [#9331](https://github.com/cloudflare/workers-sdk/pull/9331) [`3c770ec`](https://github.com/cloudflare/workers-sdk/commit/3c770ecc9f4d1e517c7872410da8c8dcb8e12cca) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix the Vitest integration to support Workers that want Node.js compatibility is only v1 in production
+
+  It does this by adding the `nodejs_compat_v2` flag (if missing) and removing `no_nodejs_compat_v2` flag (if found).
+
+  This does mean that the Vitest tests are running with a slightly different environment to production, but this has always been the case in other ways.
+
+- [#9350](https://github.com/cloudflare/workers-sdk/pull/9350) [`68a9008`](https://github.com/cloudflare/workers-sdk/commit/68a900871f0cf5585ff6d452813421e1d81b70e1) Thanks [@penalosa](https://github.com/penalosa)! - Don't crash Vitest when started with a non-existent tail consumer
+
+- Updated dependencies [[`34c71ce`](https://github.com/cloudflare/workers-sdk/commit/34c71ce9208ffceefe718fc9ae7282ef95e2f2be), [`f7c82a4`](https://github.com/cloudflare/workers-sdk/commit/f7c82a4a9f1cb1c9abf6d309327a72b5423e44b1), [`7ddd865`](https://github.com/cloudflare/workers-sdk/commit/7ddd865fa61b65851149e3d1ac8753002b648e65), [`6479fc5`](https://github.com/cloudflare/workers-sdk/commit/6479fc5228d1249e87c7f668e8efbf88ec5a8f5f), [`410d985`](https://github.com/cloudflare/workers-sdk/commit/410d9852508f94e33fbe30095fe0c421636f033e), [`e5ae13a`](https://github.com/cloudflare/workers-sdk/commit/e5ae13adebe5ee139cf2c91f0a3bd5992cfd3923), [`6c03bde`](https://github.com/cloudflare/workers-sdk/commit/6c03bde33ffc9607577e5e7540f7178396d9e32d), [`c2678d1`](https://github.com/cloudflare/workers-sdk/commit/c2678d168185bc75ed724edc4ee7615f6f1e0f87), [`34c71ce`](https://github.com/cloudflare/workers-sdk/commit/34c71ce9208ffceefe718fc9ae7282ef95e2f2be), [`cc7fae4`](https://github.com/cloudflare/workers-sdk/commit/cc7fae4cb9a2b69afd1c850a4562f819d0abf4e7)]:
+  - miniflare@4.20250523.0
+  - wrangler@4.17.0
+
 ## 0.8.32
 
 ### Patch Changes

@@ -3239,3 +3239,67 @@ test.serial(
 		t.is(await res.text(), "one text");
 	}
 );
+
+test("Miniflare: custom Node service binding", async (t) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `
+		export default {
+			fetch(request, env) {
+				return env.CUSTOM.fetch(request, {
+					headers: {
+						"custom-header": "foo"
+					}
+				});
+			}
+		}`,
+		serviceBindings: {
+			CUSTOM: {
+				node: (req, res) => {
+					res.end(
+						`Response from custom Node service binding. The value of "custom-header" is "${req.headers["custom-header"]}".`
+					);
+				},
+			},
+		},
+	});
+	t.teardown(() => mf.dispose());
+
+	const response = await mf.dispatchFetch("http://localhost");
+	const text = await response.text();
+	t.is(
+		text,
+		`Response from custom Node service binding. The value of "custom-header" is "foo".`
+	);
+});
+
+test("Miniflare: custom Node outbound service", async (t) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `
+		export default {
+			fetch(request, env) {
+				return fetch(request, {
+					headers: {
+						"custom-header": "foo"
+					}
+				});
+			}
+		}`,
+		outboundService: {
+			node: (req, res) => {
+				res.end(
+					`Response from custom Node outbound service. The value of "custom-header" is "foo".`
+				);
+			},
+		},
+	});
+	t.teardown(() => mf.dispose());
+
+	const response = await mf.dispatchFetch("http://localhost");
+	const text = await response.text();
+	t.is(
+		text,
+		`Response from custom Node outbound service. The value of "custom-header" is "foo".`
+	);
+});
