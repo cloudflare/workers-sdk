@@ -140,7 +140,7 @@ describe("wrangler dev - mixed mode", () => {
 			Binding        Resource      Mode
 			env.AI         AI      remote
 			[wrangler:info] Ready on http://<HOST>:<PORT>
-			▲ [WARNING] Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development.
+			▲ [WARNING] AI bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.
 			⎔ Starting local server...
 			[wrangler:info] GET / 200 OK (TIMINGS)"
 		`);
