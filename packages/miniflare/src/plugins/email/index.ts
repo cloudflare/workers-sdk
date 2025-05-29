@@ -85,10 +85,7 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 		return services;
 	},
 
-	getExtensions({ options }) {
-		if (!options.some((o) => o.email)) {
-			return [];
-		}
+	getExtensions() {
 		return [
 			{
 				modules: [
