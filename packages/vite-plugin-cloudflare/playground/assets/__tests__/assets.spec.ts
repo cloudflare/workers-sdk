@@ -31,7 +31,7 @@ test.skipIf(isBuild)("fetches imported asset with url suffix", async () => {
 });
 
 test("fetches transformed HTML asset", async () => {
-	await page.goto(`${viteTestUrl}/transformed-html`);
+	await page.goto(`${viteTestUrl}/transformed-html-asset`);
 	const content = await page.textContent("h1");
 	expect(content).toBe("Modified content");
 });

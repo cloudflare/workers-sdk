@@ -1,3 +1,4 @@
+import html from "./index.html?raw";
 import importedImage from "./imported-image.svg";
 import importedText from "./imported-text.txt?url";
 
@@ -38,9 +39,10 @@ export default {
 			case "/imported-asset-url-suffix": {
 				const response = await env.ASSETS.fetch(new URL(importedText, origin));
 				const textContent = await response.text();
+
 				return new Response(`The text content is "${textContent}"`);
 			}
-			case "/transformed-html": {
+			case "/transformed-html-asset": {
 				const response = await env.ASSETS.fetch(new URL("/html-page", origin));
 
 				return new HTMLRewriter()
@@ -48,7 +50,7 @@ export default {
 					.transform(response);
 			}
 			default: {
-				return new Response(null, { status: 404 });
+				return new Response(html, { headers: { "content-type": "text/html" } });
 			}
 		}
 	},
