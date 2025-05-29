@@ -3,7 +3,8 @@
 	"compilerOptions": {
 		"module": "CommonJS",
 		"types": ["node"],
-		"jsx": "react-jsx"
+		"jsx": "react-jsx",
+		"tsBuildInfoFile": ".tsbuildinfo"
 	},
 	"include": ["**/*.ts", "**/*.tsx", "**/*.js"],
 	"exclude": [

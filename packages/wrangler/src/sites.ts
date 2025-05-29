@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
-import { createPatternMatcher } from "@cloudflare/workers-shared/utils/helpers";
+import { createPatternMatcher } from "@cloudflare/workers-shared";
 import chalk from "chalk";
 import xxhash from "xxhash-wasm";
 import { UserError } from "./errors";

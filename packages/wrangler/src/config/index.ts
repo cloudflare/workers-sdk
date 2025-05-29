@@ -1,11 +1,11 @@
 import path from "node:path";
+import { maybeGetFile } from "@cloudflare/workers-shared";
 import TOML from "@iarna/toml";
 import dotenv from "dotenv";
 import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
-import { maybeGetFile } from "../utils/filesystem";
 import { resolveWranglerConfigPath } from "./config-helpers";
 import { isPagesConfig, normalizeAndValidateConfig } from "./validation";
 import { validatePagesConfig } from "./validation-pages";

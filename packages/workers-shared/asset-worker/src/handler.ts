@@ -23,8 +23,8 @@ import {
 } from "./utils/rules-engine";
 import type { AssetConfig } from "../../utils/types";
 import type { Analytics } from "./analytics";
-import type EntrypointType from "./index";
-import type { Env } from "./index";
+import type EntrypointType from "./worker";
+import type { Env } from "./worker";
 
 export const REDIRECTS_VERSION = 1;
 export const HEADERS_VERSION = 2;

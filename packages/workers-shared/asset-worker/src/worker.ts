@@ -51,14 +51,14 @@ export type Env = {
  * that it is able to accept RPC calls to any of its public methods. There
  * are currently four such public methods defined on this Worker:
  * `canFetch`, `getByETag`, `getByPathname` and `exists`. While we are
- * stabilising the implementation details of these methods, we would like
+ * stabilizing the implementation details of these methods, we would like
  * to prevent developers from having their Workers call these methods
  * directly. To that end, we are adopting the `unstable_<method_name>`
  * naming convention for all of the aforementioned methods, to indicate that
  * they are still in flux and that they are not an established API contract.
  */
 export default class extends WorkerEntrypoint<Env> {
-	async fetch(request: Request): Promise<Response> {
+	override async fetch(request: Request): Promise<Response> {
 		let sentry: ReturnType<typeof setupSentry> | undefined;
 		const analytics = new Analytics(this.env.ANALYTICS);
 		const performance = new PerformanceTimer(this.env.UNSAFE_PERFORMANCE);
