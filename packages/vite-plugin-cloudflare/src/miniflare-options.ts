@@ -24,6 +24,8 @@ import {
 	ASSET_WORKERS_COMPATIBILITY_DATE,
 	ROUTER_WORKER_NAME,
 } from "./constants";
+import { PluginAssetRequest } from "./plugin-asset-request";
+import { PluginAssetStream } from "./plugin-asset-stream";
 import { additionalModuleRE } from "./shared";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
@@ -233,6 +235,8 @@ export async function getDevMiniflareOptions(
 		resolvedViteConfig
 	);
 
+	const assetDirs = [resolvedViteConfig.publicDir, resolvedViteConfig.root];
+
 	const assetWorkers: Array<WorkerOptions> = [
 		{
 			name: ROUTER_WORKER_NAME,
@@ -250,6 +254,8 @@ export async function getDevMiniflareOptions(
 			bindings: {
 				CONFIG: {
 					has_user_worker: resolvedPluginConfig.type === "workers",
+					invoke_user_worker_ahead_of_assets:
+						assetsConfig?.run_worker_first ?? false,
 				},
 			},
 			serviceBindings: {
@@ -276,30 +282,35 @@ export async function getDevMiniflareOptions(
 			serviceBindings: {
 				__VITE_ASSET_EXISTS__: async (request) => {
 					const { pathname } = new URL(request.url);
-					const filePath = path.join(resolvedViteConfig.root, pathname);
-
-					let exists: boolean;
-
-					try {
-						exists = fs.statSync(filePath).isFile();
-					} catch (error) {
-						exists = false;
+					let exists = false;
+					for (let i = 0; i < assetDirs.length && !exists; i++) {
+						const base = assetDirs[i]!;
+						const fullPath = path.join(base, pathname);
+						try {
+							exists = fs.statSync(fullPath).isFile();
+						} catch (e) {}
 					}
 
 					return MiniflareResponse.json(exists);
 				},
 				__VITE_FETCH_ASSET__: async (request) => {
 					const { pathname } = new URL(request.url);
-					const filePath = path.join(resolvedViteConfig.root, pathname);
-
 					try {
-						let html = await fsp.readFile(filePath, "utf-8");
-						html = await viteDevServer.transformIndexHtml(pathname, html);
+						const req = new PluginAssetRequest(request);
+						const res = new PluginAssetStream(request.signal);
+						viteDevServer.middlewares(req, res as any);
+						await res.ready;
 
-						return new MiniflareResponse(html, {
-							headers: { "Content-Type": "text/html" },
+						return new MiniflareResponse(res, {
+							status: res.statusCode,
+							headers: {
+								"content-type": res.getHeader("content-type") ?? "",
+							},
 						});
 					} catch (error) {
+						if (error instanceof Error) {
+							logger.error(error);
+						}
 						throw new Error(`Unexpected error. Failed to load ${pathname}`);
 					}
 				},
@@ -648,6 +659,7 @@ export async function getPreviewMiniflareOptions(
  */
 class ViteMiniflareLogger extends Log {
 	private logger: vite.Logger;
+
 	constructor(config: vite.ResolvedConfig) {
 		super(miniflareLogLevelFromViteLogLevel(config.logLevel));
 		this.logger = config.logger;
