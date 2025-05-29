@@ -176,6 +176,27 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/container-app:
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../packages/workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250525.0
+        version: 4.20250525.0
+      ts-dedent:
+        specifier: ^2.2.0
+        version: 2.2.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vitest:
+        specifier: catalog:default
+        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/d1-read-replication-app:
     devDependencies:
       '@cloudflare/workers-tsconfig':
