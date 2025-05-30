@@ -80,7 +80,7 @@ export default {
 			if (config.static_routing) {
 				// evaluate "exclude" rules
 				const excludeRulesMatcher = generateStaticRoutingRuleMatcher(
-					config.static_routing.exclude ?? []
+					config.static_routing.asset_worker ?? []
 				);
 				if (
 					excludeRulesMatcher({
@@ -90,7 +90,7 @@ export default {
 					// direct to asset worker
 					analytics.setData({
 						dispatchtype: DISPATCH_TYPE.ASSETS,
-						staticRoutingDecision: STATIC_ROUTING_DECISION.EXCLUDE,
+						staticRoutingDecision: STATIC_ROUTING_DECISION.ROUTED,
 					});
 					return await env.JAEGER.enterSpan("dispatch_assets", async (span) => {
 						span.setTags({
@@ -104,7 +104,7 @@ export default {
 				}
 				// evaluate "include" rules
 				const includeRulesMatcher = generateStaticRoutingRuleMatcher(
-					config.static_routing.include
+					config.static_routing.user_worker
 				);
 				if (
 					includeRulesMatcher({
@@ -119,7 +119,7 @@ export default {
 					// direct to user worker
 					analytics.setData({
 						dispatchtype: DISPATCH_TYPE.WORKER,
-						staticRoutingDecision: STATIC_ROUTING_DECISION.INCLUDE,
+						staticRoutingDecision: STATIC_ROUTING_DECISION.ROUTED,
 					});
 					return await env.JAEGER.enterSpan("dispatch_worker", async (span) => {
 						span.setTags({
