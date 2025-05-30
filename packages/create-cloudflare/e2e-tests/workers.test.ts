@@ -140,6 +140,19 @@ function getWorkerTests(opts: { experimental: boolean }): WorkerTestConfig[] {
 				argv: ["--category", "hello-world"],
 			},
 			{
+				template: "hello-world-workflows",
+				argv: ["--category", "hello-world"],
+				variants: ["ts", "js"],
+				verifyDeploy: {
+					route: "/",
+					expectedText: "details",
+				},
+				verifyPreview: {
+					route: "/",
+					expectedText: "details",
+				},
+			},
+			{
 				template: "common",
 				variants: ["ts", "js"],
 				verifyDeploy: {
