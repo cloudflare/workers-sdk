@@ -1,5 +1,5 @@
 {
-	"name": "worker-with-assets-run-worker-first",
+	"name": "alias-env-demo",
 	"main": "src/index.ts",
 	"compatibility_date": "2024-01-01",
 	"assets": {

@@ -185,6 +185,18 @@ export const getCIOverrideName = getEnvironmentVariableFactory({
 });
 
 /**
+ * `WRANGLER_CI_OVERRIDE_VERSION_ALIAS` allows specifying an alias for a version during upload
+ *
+ * This is intended to be a way for users to set the version alias dynamically in CI environments.
+ * The CLI arg should always take precedence over the envvar.
+ */
+export const getCIGeneratePreviewAlias = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_CI_GENERATE_PREVIEW_ALIAS",
+	defaultValue: () => "false" as const,
+	choices: ["true", "false"] as const,
+});
+
+/**
  * `WRANGLER_BUILD_CONDITIONS` specifies the "build conditions" to use when importing packages at build time.
  *
  * See https://nodejs.org/api/packages.html#conditional-exports
