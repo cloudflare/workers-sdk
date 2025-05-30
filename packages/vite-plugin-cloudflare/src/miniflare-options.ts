@@ -210,7 +210,7 @@ function logUnknownTails(
 			log(
 				colors.dim(
 					colors.yellow(
-						`Tail consumer "${name}" was not found in your config. Make sure you add it to the config or run it on another dev session if you'd like to simulate receiving tail events locally.`
+						`Tail consumer "${name}" was not found in your config. Make sure you add it to the config or run it in another dev session if you'd like to simulate receiving tail events locally.`
 					)
 				)
 			);
