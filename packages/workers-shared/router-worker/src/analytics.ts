@@ -6,8 +6,7 @@ const VERSION = 1;
 export enum STATIC_ROUTING_DECISION {
 	NOT_PROVIDED = 0,
 	NOT_ROUTED = 1,
-	EXCLUDE = 2,
-	INCLUDE = 3,
+	ROUTED = 2,
 }
 
 export enum DISPATCH_TYPE {
