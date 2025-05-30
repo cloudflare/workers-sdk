@@ -1,6 +1,7 @@
 import { brandColor, dim, white } from "@cloudflare/cli/colors";
 import chalk from "chalk";
 import stripAnsi from "strip-ansi";
+import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import type { CfTailConsumer, CfWorkerInit } from "../deployment-bundle/worker";
@@ -257,15 +258,19 @@ export function printBindings(
 
 	if (vectorize !== undefined && vectorize.length > 0) {
 		output.push(
-			...vectorize.map(({ binding, index_name }) => {
+			...vectorize.map(({ binding, index_name, remote }) => {
 				return {
 					name: binding,
 					type: friendlyBindingNames.vectorize,
 					value: index_name,
 					mode: getMode({
-						isSimulatedLocally: context.vectorizeBindToProd
-							? false
-							: /* Vectorize doesn't support local mode */ undefined,
+						isSimulatedLocally: getFlag("MIXED_MODE")
+							? remote
+								? false
+								: undefined
+							: context.vectorizeBindToProd
+								? false
+								: /* Vectorize doesn't support local mode */ undefined,
 					}),
 				};
 			})
@@ -402,7 +407,10 @@ export function printBindings(
 			name: browser.binding,
 			type: friendlyBindingNames.browser,
 			value: undefined,
-			mode: getMode({ isSimulatedLocally: undefined }),
+			mode: getMode({
+				isSimulatedLocally:
+					getFlag("MIXED_MODE") && browser.remote ? false : undefined,
+			}),
 		});
 	}
 
@@ -411,7 +419,13 @@ export function printBindings(
 			name: images.binding,
 			type: friendlyBindingNames.images,
 			value: undefined,
-			mode: getMode({ isSimulatedLocally: !!context.imagesLocalMode }),
+			mode: getMode({
+				isSimulatedLocally: getFlag("MIXED_MODE")
+					? images.remote === true || images.remote === undefined
+						? false
+						: undefined
+					: !!context.imagesLocalMode,
+			}),
 		});
 	}
 
@@ -420,7 +434,13 @@ export function printBindings(
 			name: ai.binding,
 			type: friendlyBindingNames.ai,
 			value: ai.staging ? `staging` : undefined,
-			mode: getMode({ isSimulatedLocally: false }),
+			mode: getMode({
+				isSimulatedLocally: getFlag("MIXED_MODE")
+					? ai.remote === true || ai.remote === undefined
+						? false
+						: undefined
+					: false,
+			}),
 		});
 	}
 
@@ -498,14 +518,20 @@ export function printBindings(
 
 	if (dispatch_namespaces !== undefined && dispatch_namespaces.length > 0) {
 		output.push(
-			...dispatch_namespaces.map(({ binding, namespace, outbound }) => {
+			...dispatch_namespaces.map(({ binding, namespace, outbound, remote }) => {
 				return {
 					name: binding,
 					type: friendlyBindingNames.dispatch_namespaces,
 					value: outbound
 						? `${namespace} (outbound -> ${outbound.service})`
 						: namespace,
-					mode: getMode(),
+					mode: getMode({
+						isSimulatedLocally: getFlag("MIXED_MODE")
+							? remote
+								? false
+								: undefined
+							: undefined,
+					}),
 				};
 			})
 		);
@@ -694,4 +720,31 @@ function createGetMode({
 
 		return `${isSimulatedLocally ? chalk.blue("local") : chalk.yellow("remote")}${connected === undefined ? "" : connected ? chalk.green(" [connected]") : chalk.red(" [not connected]")}`;
 	};
+}
+
+export function warnOrError(
+	type: keyof typeof friendlyBindingNames,
+	remote: boolean | undefined,
+	supports: "remote-and-local" | "local" | "remote" | "always-remote"
+) {
+	if (remote === true && supports === "local") {
+		throw new UserError(
+			`${friendlyBindingNames[type]} bindings do not support accessing remote resources.`
+		);
+	}
+	if (remote === false && supports === "remote") {
+		throw new UserError(
+			`${friendlyBindingNames[type]} bindings do not support local development. You may be able to set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
+		);
+	}
+	if (remote === undefined && supports === "remote") {
+		logger.warn(
+			`${friendlyBindingNames[type]} bindings do not support local development, and so parts of your Worker may not work correctly. You may be able to set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
+		);
+	}
+	if (remote === undefined && supports === "always-remote") {
+		logger.warn(
+			`${friendlyBindingNames[type]} bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.`
+		);
+	}
 }

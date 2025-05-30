@@ -1556,6 +1556,17 @@ export class Miniflare {
 			innerBindings: Worker_Binding[];
 		}[] = [];
 
+		for (const [key, plugin] of PLUGIN_ENTRIES) {
+			const pluginExtensions = await plugin.getExtensions?.({
+				// @ts-expect-error `CoreOptionsSchema` has required options which are
+				//  missing in other plugins' options.
+				options: allWorkerOpts.map((o) => o[key]),
+			});
+			if (pluginExtensions) {
+				extensions.push(...pluginExtensions);
+			}
+		}
+
 		for (let i = 0; i < allWorkerOpts.length; i++) {
 			const previousWorkerOpts = allPreviousWorkerOpts?.[i];
 			const workerOpts = allWorkerOpts[i];
