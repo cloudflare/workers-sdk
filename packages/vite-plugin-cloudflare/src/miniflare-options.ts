@@ -343,7 +343,7 @@ export async function getDevMiniflareOptions(
 										environmentName ===
 										resolvedPluginConfig.entryWorkerEnvironmentName
 											? // Expose the default entrypoint of the entry worker on the dev registry
-												[{ entrypoint: undefined }]
+												[{ entrypoint: undefined, proxy: true }]
 											: [],
 									modulesRoot: miniflareModulesRoot,
 									unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
@@ -590,7 +590,7 @@ export async function getPreviewMiniflareOptions(
 	const resolvedViteConfig = vitePreviewServer.config;
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
-			workerConfigs.map(async (workerConfig) => {
+			workerConfigs.map(async (workerConfig, i) => {
 				const mixedModeSession = mixedModeEnabled
 					? await maybeStartOrUpdateMixedModeSession(workerConfig)
 					: undefined;
@@ -620,6 +620,10 @@ export async function getPreviewMiniflareOptions(
 						...workerOptions,
 						name: workerOptions.name ?? workerConfig.name,
 						unsafeInspectorProxy: inspectorPort !== false,
+						unsafeDirectSockets:
+							// This exposes the default entrypoint of the entry worker on the dev registry
+							// Assuming that the first worker config to be the entry worker.
+							i === 0 ? [{ entrypoint: undefined, proxy: true }] : [],
 						...(miniflareWorkerOptions.main
 							? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
 							: { modules: true, script: "" }),

@@ -147,6 +147,7 @@ export class DevRegistry {
 		service: string,
 		entrypoint: string
 	): {
+		httpStyle?: "host" | "proxy";
 		protocol: "http" | "https";
 		host: string;
 		port: number;
@@ -160,6 +161,7 @@ export class DevRegistry {
 
 		if (entrypointAddress !== undefined) {
 			return {
+				httpStyle: "proxy",
 				protocol: target.protocol,
 				host: entrypointAddress.host,
 				port: entrypointAddress.port,
@@ -169,6 +171,7 @@ export class DevRegistry {
 		if (target && target.protocol !== "https" && entrypoint === "default") {
 			// Fallback to sending requests directly to the entry worker
 			return {
+				httpStyle: "host",
 				protocol: target.protocol,
 				host: target.host,
 				port: target.port,
@@ -182,6 +185,7 @@ export class DevRegistry {
 		scriptName: string,
 		className: string
 	): {
+		httpStyle?: "host" | "proxy";
 		protocol: "http" | "https";
 		host: string;
 		port: number;
