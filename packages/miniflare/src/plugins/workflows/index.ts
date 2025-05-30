@@ -1,10 +1,12 @@
 import fs from "fs/promises";
 import SCRIPT_WORKFLOWS_BINDING from "worker:workflows/binding";
+import LOCAL_WORKFLOW from "worker:workflows/workflow";
 import { z } from "zod";
 import { Service } from "../../runtime";
 import { getUserServiceName } from "../core";
 import {
 	getPersistPath,
+	mixedModeClientWorker,
 	MixedModeConnectionString,
 	PersistenceSchema,
 	Plugin,
@@ -40,13 +42,32 @@ export const WORKFLOWS_PLUGIN: Plugin<
 	sharedOptions: WorkflowsSharedOptionsSchema,
 	async getBindings(options: z.infer<typeof WorkflowsOptionsSchema>) {
 		return Object.entries(options.workflows ?? {}).map(
-			([bindingName, workflow]) => ({
-				name: bindingName,
-				service: {
-					name: `${WORKFLOWS_PLUGIN_NAME}:${workflow.name}`,
-					entrypoint: "WorkflowBinding",
-				},
-			})
+			([bindingName, workflow]) => {
+				if (workflow.mixedModeConnectionString) {
+					return {
+						name: bindingName,
+						wrapped: {
+							moduleName: `${WORKFLOWS_PLUGIN_NAME}:local-workflow`,
+							innerBindings: [
+								{
+									name: "fetcher",
+									service: {
+										name: `${WORKFLOWS_PLUGIN_NAME}:${workflow.name}`,
+									},
+								},
+							],
+						},
+					};
+				}
+
+				return {
+					name: bindingName,
+					service: {
+						name: `${WORKFLOWS_PLUGIN_NAME}:${workflow.name}`,
+						entrypoint: "WorkflowBinding",
+					},
+				};
+			}
 		);
 	},
 
@@ -77,46 +98,52 @@ export const WORKFLOWS_PLUGIN: Plugin<
 
 		// this creates one miniflare service per workflow that the user's script has. we should dedupe engine definition later
 		const services = Object.entries(options.workflows ?? {}).map<Service>(
-			([_bindingName, workflow]) => {
+			([bindingName, workflow]) => {
 				// NOTE(lduarte): the engine unique namespace key must be unique per workflow definition
 				// otherwise workerd will crash because there's two equal DO namespaces
 				const uniqueKey = `miniflare-workflows-${workflow.name}`;
 
 				const workflowsBinding: Service = {
 					name: `${WORKFLOWS_PLUGIN_NAME}:${workflow.name}`,
-					worker: {
-						compatibilityDate: "2024-10-22",
-						modules: [
-							{
-								name: "workflows.mjs",
-								esModule: SCRIPT_WORKFLOWS_BINDING(),
-							},
-						],
-						durableObjectNamespaces: [
-							{
-								className: "Engine",
-								enableSql: true,
-								uniqueKey,
-								preventEviction: true,
-							},
-						],
-						durableObjectStorage: {
-							localDisk: `${WORKFLOWS_STORAGE_SERVICE_NAME}-${workflow.name}`,
-						},
-						bindings: [
-							{
-								name: "ENGINE",
-								durableObjectNamespace: { className: "Engine" },
-							},
-							{
-								name: "USER_WORKFLOW",
-								service: {
-									name: getUserServiceName(workflow.scriptName),
-									entrypoint: workflow.className,
+					worker:
+						workflow.mixedModeConnectionString !== undefined
+							? mixedModeClientWorker(
+									workflow.mixedModeConnectionString,
+									bindingName
+								)
+							: {
+									compatibilityDate: "2024-10-22",
+									modules: [
+										{
+											name: "workflows.mjs",
+											esModule: SCRIPT_WORKFLOWS_BINDING(),
+										},
+									],
+									durableObjectNamespaces: [
+										{
+											className: "Engine",
+											enableSql: true,
+											uniqueKey,
+											preventEviction: true,
+										},
+									],
+									durableObjectStorage: {
+										localDisk: `${WORKFLOWS_STORAGE_SERVICE_NAME}-${workflow.name}`,
+									},
+									bindings: [
+										{
+											name: "ENGINE",
+											durableObjectNamespace: { className: "Engine" },
+										},
+										{
+											name: "USER_WORKFLOW",
+											service: {
+												name: getUserServiceName(workflow.scriptName),
+												entrypoint: workflow.className,
+											},
+										},
+									],
 								},
-							},
-						],
-					},
 				};
 
 				return workflowsBinding;
@@ -127,7 +154,20 @@ export const WORKFLOWS_PLUGIN: Plugin<
 			return [];
 		}
 
-		return [...storageServices, ...services];
+		return {
+			services: [...storageServices, ...services],
+			extensions: [
+				{
+					modules: [
+						{
+							name: `${WORKFLOWS_PLUGIN_NAME}:local-workflow`,
+							esModule: LOCAL_WORKFLOW(),
+							internal: true,
+						},
+					],
+				},
+			],
+		};
 	},
 
 	getPersistPath({ workflowsPersist }, tmpPath) {

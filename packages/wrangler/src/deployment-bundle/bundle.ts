@@ -512,7 +512,12 @@ export async function bundleWorker(
 	}
 
 	const notExportedWorkflows = workflowBindings
-		.filter((x) => !x.script_name && !entryPoint.exports.includes(x.class_name))
+		.filter(
+			(x) =>
+				!x.remote &&
+				!x.script_name &&
+				!entryPoint.exports.includes(x.class_name)
+		)
 		.map((x) => x.class_name);
 	if (notExportedWorkflows.length) {
 		const relativePath = path.relative(process.cwd(), entryFile);
