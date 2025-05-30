@@ -54,6 +54,11 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 			return [];
 		}
 
+		assert(
+			options.browserRendering.mixedModeConnectionString,
+			"Workers Browser Rendering only supports Mixed Mode"
+		);
+
 		return [
 			{
 				name: `${BROWSER_RENDERING_PLUGIN_NAME}:${options.browserRendering.binding}`,
