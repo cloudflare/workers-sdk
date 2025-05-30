@@ -64,7 +64,6 @@
 		"mlly": "^1.7.4",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
-		"undici": "catalog:default",
 		"vite": "catalog:vite-plugin",
 		"vitest": "catalog:default"
 	},
