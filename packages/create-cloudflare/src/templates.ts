@@ -1,4 +1,4 @@
-import { existsSync } from "fs";
+import { existsSync, mkdirSync } from "fs";
 import { cp, mkdtemp, rename } from "fs/promises";
 import { tmpdir } from "os";
 import { basename, dirname, join, resolve } from "path";
@@ -682,6 +682,39 @@ export async function copyTemplateFiles(ctx: C3Context) {
 
 	s.stop(`${brandColor("files")} ${dim("copied to project directory")}`);
 }
+
+/**
+ * AI driven editors like Cursor can use a system prompt to guide the AI
+ * in writing code. This function adds a system prompt to the project directory
+ * if it doesn't already exist. We use the cursor standard path, other editors
+ * expect the user to explicitly specify the path to the system prompt (for now)
+ *
+ */
+export const addCloudflareSystemPrompt = async (ctx: C3Context) => {
+	// if it doesn't already exist in the template,
+	// download the system prompt from the cloudflare docs
+	// and save it to .cursor/rules/cloudflare.mdc
+	const path = ctx.project.path;
+	const systemPromptPath = path + "/.cursor/rules/cloudflare.mdc";
+
+	// recursive: true might not be available in the version of node we are using
+	mkdirSync(path + "/.cursor");
+	mkdirSync(path + "/.cursor/rules");
+	if (!existsSync(systemPromptPath)) {
+		try {
+			const systemPromptResponse = await fetch(
+				"https://developers.cloudflare.com/workers/prompt.txt",
+			);
+			const systemPrompt = await systemPromptResponse.text();
+			writeFile(systemPromptPath, systemPrompt);
+		} catch (error) {
+			console.warn(
+				"Could not download system prompt from cloudflare docs",
+				error,
+			);
+		}
+	}
+};
 
 export const processRemoteTemplate = async (args: Partial<C3Args>) => {
 	const templateUrl = await processArgument(args, "template", {
