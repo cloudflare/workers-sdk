@@ -43,7 +43,7 @@ describe
 					{ cwd: tmp }
 				);
 			});
-		}, 35_000);
+		}, 55_000);
 
 		afterAll(() => {
 			[remoteWorkerName, alternativeRemoteWorkerName].forEach((worker) => {
