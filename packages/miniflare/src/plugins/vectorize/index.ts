@@ -9,7 +9,7 @@ import {
 
 const VectorizeSchema = z.object({
 	index_name: z.string(),
-	mixedModeConnectionString: z.custom<MixedModeConnectionString>().optional(),
+	mixedModeConnectionString: z.custom<MixedModeConnectionString>(),
 });
 
 export const VectorizeOptionsSchema = z.object({

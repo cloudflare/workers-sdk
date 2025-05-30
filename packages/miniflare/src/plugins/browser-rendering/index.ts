@@ -9,7 +9,7 @@ import {
 
 const BrowserRenderingSchema = z.object({
 	binding: z.string(),
-	mixedModeConnectionString: z.custom<MixedModeConnectionString>().optional(),
+	mixedModeConnectionString: z.custom<MixedModeConnectionString>(),
 });
 
 export const BrowserRenderingOptionsSchema = z.object({

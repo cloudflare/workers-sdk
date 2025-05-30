@@ -14,9 +14,7 @@ export const DispatchNamespaceOptionsSchema = z.object({
 		.record(
 			z.object({
 				namespace: z.string(),
-				mixedModeConnectionString: z
-					.custom<MixedModeConnectionString>()
-					.optional(),
+				mixedModeConnectionString: z.custom<MixedModeConnectionString>(),
 			})
 		)
 		.optional(),

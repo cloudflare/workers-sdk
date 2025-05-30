@@ -426,6 +426,18 @@ function workflowEntry(
 		},
 	];
 }
+function dispatchNamespaceEntry({
+	binding,
+	namespace,
+	remote,
+}: CfDispatchNamespace): [string, { namespace: string }];
+function dispatchNamespaceEntry(
+	{ binding, namespace, remote }: CfDispatchNamespace,
+	mixedModeConnectionString: MixedModeConnectionString
+): [
+	string,
+	{ namespace: string; mixedModeConnectionString: MixedModeConnectionString },
+];
 function dispatchNamespaceEntry(
 	{ binding, namespace, remote }: CfDispatchNamespace,
 	mixedModeConnectionString?: MixedModeConnectionString
@@ -929,51 +941,49 @@ export function buildMiniflareBindingOptions(
 					}
 				: undefined,
 		browserRendering:
-			mixedModeConnectionString && bindings.browser?.remote
+			mixedModeEnabled && mixedModeConnectionString && bindings.browser?.remote
 				? {
 						binding: bindings.browser.binding,
-						mixedModeConnectionString: bindings.browser.remote
-							? mixedModeConnectionString
-							: undefined,
+						mixedModeConnectionString,
 					}
 				: undefined,
 
-		vectorize: mixedModeEnabled
-			? Object.fromEntries(
-					bindings.vectorize
-						?.filter((v) => {
-							warnOrError("vectorize", v.remote, "remote");
-							return v.remote;
-						})
-						.map((vectorize) => {
-							return [
-								vectorize.binding,
-								{
-									index_name: vectorize.index_name,
-									mixedModeConnectionString: vectorize.remote
-										? mixedModeConnectionString
-										: undefined,
-								},
-							];
-						}) ?? []
-				)
-			: undefined,
+		vectorize:
+			mixedModeEnabled && mixedModeConnectionString
+				? Object.fromEntries(
+						bindings.vectorize
+							?.filter((v) => {
+								warnOrError("vectorize", v.remote, "remote");
+								return v.remote;
+							})
+							.map((vectorize) => {
+								return [
+									vectorize.binding,
+									{
+										index_name: vectorize.index_name,
+										mixedModeConnectionString,
+									},
+								];
+							}) ?? []
+					)
+				: undefined,
 
-		dispatchNamespaces: mixedModeEnabled
-			? Object.fromEntries(
-					bindings.dispatch_namespaces
-						?.filter((d) => {
-							warnOrError("dispatch_namespaces", d.remote, "remote");
-							return d.remote;
-						})
-						.map((dispatchNamespace) =>
-							dispatchNamespaceEntry(
-								dispatchNamespace,
-								dispatchNamespace.remote ? mixedModeConnectionString : undefined
-							)
-						) ?? []
-				)
-			: undefined,
+		dispatchNamespaces:
+			mixedModeEnabled && mixedModeConnectionString
+				? Object.fromEntries(
+						bindings.dispatch_namespaces
+							?.filter((d) => {
+								warnOrError("dispatch_namespaces", d.remote, "remote");
+								return d.remote;
+							})
+							.map((dispatchNamespace) =>
+								dispatchNamespaceEntry(
+									dispatchNamespace,
+									mixedModeConnectionString
+								)
+							) ?? []
+					)
+				: undefined,
 
 		durableObjects: Object.fromEntries([
 			...internalObjects.map(({ name, class_name }) => {
