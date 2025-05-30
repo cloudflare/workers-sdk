@@ -6,9 +6,9 @@ import { sniffUserAgent } from "../package-manager";
 import guessWorkerFormat from "./guess-worker-format";
 import {
 	resolveEntryWithAssets,
-	resolveEntryWithEntryPoint,
 	resolveEntryWithMain,
 	resolveEntryWithScript,
+	resolveEntryWithSiteEntryPoint,
 } from "./resolve-entry";
 import { runCustomBuild } from "./run-custom-build";
 import type { Config, RawConfig } from "../config";
@@ -52,8 +52,7 @@ export async function getEntry(
 	config: Config,
 	command: "dev" | "deploy" | "versions upload" | "types"
 ): Promise<Entry> {
-	const entryPoint = config.site?.["entry-point"];
-
+	const site_entrypoint = config.site?.["entry-point"];
 	let paths:
 		| { absolutePath: string; relativePath: string; projectRoot?: string }
 		| undefined;
@@ -62,8 +61,8 @@ export async function getEntry(
 		paths = resolveEntryWithScript(args.script);
 	} else if (config.main !== undefined) {
 		paths = resolveEntryWithMain(config.main, config);
-	} else if (entryPoint) {
-		paths = resolveEntryWithEntryPoint(entryPoint, config);
+	} else if (site_entrypoint) {
+		paths = resolveEntryWithSiteEntryPoint(site_entrypoint, config);
 	} else if (args.assets || config.assets) {
 		paths = resolveEntryWithAssets();
 	} else {

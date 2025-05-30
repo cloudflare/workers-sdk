@@ -692,7 +692,7 @@ describe("generate types", () => {
 					R2_BUCKET_BINDING: R2Bucket;
 					D1_TESTING_SOMETHING: D1Database;
 					SECRET: SecretsStoreSecret;
-					SERVICE_BINDING: Fetcher /* service_name */;
+					SERVICE_BINDING: Service<import(\\"../b/index\\").default>;
 					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
 					OTHER_SERVICE_BINDING_ENTRYPOINT: Service<import(\\"../c/index\\").RealEntrypoint>;
 					AE_DATASET_BINDING: AnalyticsEngineDataset;
