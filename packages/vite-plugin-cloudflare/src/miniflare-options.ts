@@ -325,6 +325,7 @@ export async function getDevMiniflareOptions(
 								{
 									mixedModeConnectionString:
 										mixedModeSession?.mixedModeConnectionString,
+									mixedModeEnabled: resolvedPluginConfig.experimental.mixedMode,
 								}
 							);
 
@@ -601,6 +602,7 @@ export async function getPreviewMiniflareOptions(
 					{
 						mixedModeConnectionString:
 							mixedModeSession?.mixedModeConnectionString,
+						mixedModeEnabled,
 					}
 				);
 

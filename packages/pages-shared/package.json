@@ -19,11 +19,11 @@
 		"test:ci": "vitest run"
 	},
 	"dependencies": {
-		"@cloudflare/workers-shared": "workspace:*",
 		"miniflare": "workspace:*"
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.8.19",
+		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "^4.20250525.0",
 		"concurrently": "^8.2.2",

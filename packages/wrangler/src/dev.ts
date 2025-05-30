@@ -977,11 +977,6 @@ export function getBindings(
 		}),
 	];
 
-	const workflowsConfig = configParam.workflows.map((workflowConfig) => ({
-		...workflowConfig,
-		remote: mixedModeEnabled && workflowConfig.remote,
-	}));
-
 	const bindings: CfWorkerInit["bindings"] = {
 		// top-level fields
 		wasm_modules: configParam.wasm_modules,
@@ -1001,7 +996,7 @@ export function getBindings(
 		durable_objects: {
 			bindings: mergedDOBindings,
 		},
-		workflows: workflowsConfig,
+		workflows: configParam.workflows,
 		kv_namespaces: mergedKVBindings,
 		queues: queuesBindings,
 		r2_buckets: mergedR2Bindings,

@@ -14,9 +14,7 @@ export const DispatchNamespaceOptionsSchema = z.object({
 		.record(
 			z.object({
 				namespace: z.string(),
-				mixedModeConnectionString: z
-					.custom<MixedModeConnectionString>()
-					.optional(),
+				mixedModeConnectionString: z.custom<MixedModeConnectionString>(),
 			})
 		)
 		.optional(),
@@ -69,33 +67,32 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 			return [];
 		}
 
-		return {
-			services: Object.entries(options.dispatchNamespaces).map(
-				([name, config]) => {
-					assert(
-						config.mixedModeConnectionString,
-						"Dispatch Namespace bindings only support Mixed Mode"
-					);
-					return {
-						name: `${DISPATCH_NAMESPACE_PLUGIN_NAME}:ns:${config.namespace}`,
-						worker: mixedModeClientWorker(
-							config.mixedModeConnectionString,
-							name
-						),
-					};
-				}
-			),
-			extensions: [
-				{
-					modules: [
-						{
-							name: `${DISPATCH_NAMESPACE_PLUGIN_NAME}:local-dispatch-namespace`,
-							esModule: LOCAL_DISPATCH_NAMESPACE(),
-							internal: true,
-						},
-					],
-				},
-			],
-		};
+		return Object.entries(options.dispatchNamespaces).map(([name, config]) => {
+			assert(
+				config.mixedModeConnectionString,
+				"Dispatch Namespace bindings only support Mixed Mode"
+			);
+			return {
+				name: `${DISPATCH_NAMESPACE_PLUGIN_NAME}:ns:${config.namespace}`,
+				worker: mixedModeClientWorker(config.mixedModeConnectionString, name),
+			};
+		});
+	},
+	getExtensions({ options }) {
+		if (!options.some((o) => o.dispatchNamespaces)) {
+			return [];
+		}
+
+		return [
+			{
+				modules: [
+					{
+						name: `${DISPATCH_NAMESPACE_PLUGIN_NAME}:local-dispatch-namespace`,
+						esModule: LOCAL_DISPATCH_NAMESPACE(),
+						internal: true,
+					},
+				],
+			},
+		];
 	},
 };

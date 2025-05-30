@@ -171,7 +171,8 @@ export class LocalRuntimeController extends RuntimeController {
 					this.#log,
 					configBundle,
 					this.#proxyToUserWorkerAuthenticationSecret,
-					this.#mixedModeSession?.mixedModeConnectionString
+					this.#mixedModeSession?.mixedModeConnectionString,
+					!!getFlag("MIXED_MODE")
 				);
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
 			if (this.#mf === undefined) {

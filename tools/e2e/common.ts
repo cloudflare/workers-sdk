@@ -126,8 +126,8 @@ const apiFetch = async (
 		queryParams
 	);
 
-	if (!response) {
-		return response;
+	if (!response || response.ok === false) {
+		return false;
 	}
 
 	const json = (await response.json()) as ApiSuccessBody;
@@ -288,12 +288,14 @@ export const listTmpDatabases = async () => {
 };
 
 export const deleteDatabase = async (id: string) => {
-	return await apiFetch(
-		`/d1/database/${id}`,
-		{
-			method: "DELETE",
-		},
-		true
+	return (
+		(await apiFetch(
+			`/d1/database/${id}`,
+			{
+				method: "DELETE",
+			},
+			true
+		)) !== false
 	);
 };
 

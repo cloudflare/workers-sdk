@@ -13,6 +13,7 @@ import {
 import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { UserError } from "../../errors";
+import { getFlag } from "../../experimental-flags";
 import { logger, runWithLogLevel } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
 import {
@@ -336,9 +337,10 @@ async function resolveConfig(
 
 	if (
 		extractBindingsOfType("browser", resolved.bindings).length &&
-		!resolved.dev.remote
+		!resolved.dev.remote &&
+		!getFlag("MIXED_MODE")
 	) {
-		throw new UserError(
+		logger.warn(
 			"Browser Rendering is not supported locally. Please use `wrangler dev --remote` instead."
 		);
 	}
