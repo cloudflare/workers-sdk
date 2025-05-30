@@ -7,9 +7,8 @@ const InternalConfigSchema = z.object({
 });
 
 const StaticRoutingSchema = z.object({
-	version: z.literal(1),
-	include: z.array(z.string()),
-	exclude: z.array(z.string()).optional(),
+	user_worker: z.array(z.string()),
+	asset_worker: z.array(z.string()).optional(),
 });
 
 export const RouterConfigSchema = z.object({

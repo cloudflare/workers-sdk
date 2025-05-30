@@ -95,7 +95,7 @@ describe("unit tests", async () => {
 		expect(await response.text()).toEqual("hello from asset worker");
 	});
 
-	it("it returns fetch from user worker when static_routing include rule matches", async () => {
+	it("it returns fetch from user worker when static_routing user_worker rule matches", async () => {
 		const request = new Request("https://example.com/api/includeme");
 		const ctx = createExecutionContext();
 
@@ -103,8 +103,7 @@ describe("unit tests", async () => {
 			CONFIG: {
 				has_user_worker: true,
 				static_routing: {
-					version: 1,
-					include: ["/api/*"],
+					user_worker: ["/api/*"],
 				},
 			},
 			USER_WORKER: {
@@ -126,7 +125,7 @@ describe("unit tests", async () => {
 		expect(await response.text()).toEqual("hello from user worker");
 	});
 
-	it("it returns fetch from asset worker when static_routing exclude rule matches", async () => {
+	it("it returns fetch from asset worker when static_routing asset_worker rule matches", async () => {
 		const request = new Request("https://example.com/api/excludeme");
 		const ctx = createExecutionContext();
 
@@ -134,9 +133,8 @@ describe("unit tests", async () => {
 			CONFIG: {
 				has_user_worker: true,
 				static_routing: {
-					version: 1,
-					include: ["/api/includeme"],
-					exclude: ["/api/excludeme"],
+					user_worker: ["/api/includeme"],
+					asset_worker: ["/api/excludeme"],
 				},
 			},
 			USER_WORKER: {
@@ -158,7 +156,7 @@ describe("unit tests", async () => {
 		expect(await response.text()).toEqual("hello from asset worker");
 	});
 
-	it("it returns fetch from asset worker when static_routing exclude and include rule matches", async () => {
+	it("it returns fetch from asset worker when static_routing asset_worker and user_worker rule matches", async () => {
 		const request = new Request("https://example.com/api/excludeme");
 		const ctx = createExecutionContext();
 
@@ -166,9 +164,8 @@ describe("unit tests", async () => {
 			CONFIG: {
 				has_user_worker: true,
 				static_routing: {
-					version: 1,
-					include: ["/api/*"],
-					exclude: ["/api/excludeme"],
+					user_worker: ["/api/*"],
+					asset_worker: ["/api/excludeme"],
 				},
 			},
 			USER_WORKER: {
@@ -198,8 +195,7 @@ describe("unit tests", async () => {
 			CONFIG: {
 				has_user_worker: true,
 				static_routing: {
-					version: 1,
-					include: ["/api/*"],
+					user_worker: ["/api/*"],
 				},
 			},
 			USER_WORKER: {
@@ -229,8 +225,7 @@ describe("unit tests", async () => {
 			CONFIG: {
 				has_user_worker: true,
 				static_routing: {
-					version: 1,
-					include: ["/api/*"],
+					user_worker: ["/api/*"],
 				},
 			},
 			USER_WORKER: {
