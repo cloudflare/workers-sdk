@@ -150,6 +150,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 						// sourcemap defaults to true in dev
 						sourcemap: undefined,
 
+						splitting: undefined,
 						metafile: undefined,
 					});
 			if (buildAborter.signal.aborted) {
