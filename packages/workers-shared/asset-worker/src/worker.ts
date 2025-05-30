@@ -57,7 +57,7 @@ export type Env = {
  * naming convention for all of the aforementioned methods, to indicate that
  * they are still in flux and that they are not an established API contract.
  */
-export default class extends WorkerEntrypoint<Env> {
+export default class<TEnv extends Env = Env> extends WorkerEntrypoint<TEnv> {
 	override async fetch(request: Request): Promise<Response> {
 		let sentry: ReturnType<typeof setupSentry> | undefined;
 		const analytics = new Analytics(this.env.ANALYTICS);
