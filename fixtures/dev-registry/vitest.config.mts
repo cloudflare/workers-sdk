@@ -1,9 +1,9 @@
-import { defineConfig } from "vitest/config";
+import { defineProject, mergeConfig } from "vitest/config";
+import configShared from "../../vitest.shared";
 
-// import config from "../../vitest.shared";
-
-export default defineConfig({
-	test: {
-		testTimeout: 100_000,
-	},
-});
+export default mergeConfig(
+	configShared,
+	defineProject({
+		test: {},
+	})
+);
