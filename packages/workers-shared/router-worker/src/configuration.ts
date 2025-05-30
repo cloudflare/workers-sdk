@@ -11,8 +11,7 @@ export const applyConfigurationDefaults = (
 		script_id: configuration?.script_id ?? -1,
 		debug: configuration?.debug ?? false,
 		static_routing: configuration?.static_routing ?? {
-			version: 1,
-			include: [],
+			user_worker: [],
 		},
 	};
 };
