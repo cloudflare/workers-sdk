@@ -1122,7 +1122,15 @@ export class Miniflare {
 		return this.#workerOpts.map<NameSourceOptions>(({ core }) => core);
 	}
 
-	#getFallbackServiceAddress(service: string, entrypoint: string) {
+	#getFallbackServiceAddress(
+		service: string,
+		entrypoint: string
+	): {
+		httpStyle: "host" | "proxy";
+		protocol: "http" | "https";
+		host: string;
+		port: number;
+	} {
 		assert(
 			this.#socketPorts !== undefined && this.#runtimeEntryURL !== undefined,
 			"Cannot resolve address for fallback service before runtime is initialised"
@@ -1139,6 +1147,7 @@ export class Miniflare {
 		}
 
 		return {
+			httpStyle: "proxy",
 			protocol: getProtocol(this.#runtimeEntryURL),
 			host: this.#runtimeEntryURL.hostname,
 			port,
@@ -1402,19 +1411,40 @@ export class Miniflare {
 	#handleProxy = (
 		req: http.IncomingMessage,
 		res: http.ServerResponse,
-		address: {
+		target: {
 			protocol: "http" | "https";
 			host: string;
 			port: number;
+			httpStyle?: "host" | "proxy";
 			path?: string;
 		}
 	) => {
+		const headers = { ...req.headers };
+		let path = target.path;
+
+		if (!path) {
+			switch (target.httpStyle) {
+				case "host": {
+					const url = new URL(req.url ?? `http://${req.headers.host}`);
+					// If the target is a host, use the path from the request URL
+					path = url.pathname + url.search + url.hash;
+					headers.host = url.host;
+					break;
+				}
+				case "proxy": {
+					// If the target is a proxy, use the full request URL
+					path = req.url;
+					break;
+				}
+			}
+		}
+
 		const options: http.RequestOptions = {
-			host: address.host,
-			port: address.port,
+			host: target.host,
+			port: target.port,
 			method: req.method,
-			path: address.path ?? req.url,
-			headers: req.headers,
+			path,
+			headers,
 		};
 
 		// Res is optional only on websocket upgrade requests
@@ -1788,6 +1818,7 @@ export class Miniflare {
 							entrypoint,
 						},
 						http: {
+							style: HttpOptions_Style.PROXY,
 							cfBlobHeader: CoreHeaders.CF_BLOB,
 							capnpConnectHost: HOST_CAPNP_CONNECT,
 						},
@@ -2612,3 +2643,4 @@ export * from "./shared";
 export * from "./workers";
 export * from "./merge";
 export * from "./zod-format";
+export { getDefaultDevRegistryPath } from "./shared/dev-registry";
