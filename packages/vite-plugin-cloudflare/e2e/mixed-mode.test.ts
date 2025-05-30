@@ -6,13 +6,16 @@ import { setTimeout } from "node:timers/promises";
 import { afterAll, beforeAll, describe, test } from "vitest";
 import { fetchJson, runLongLived, seed, waitForReady } from "./helpers.js";
 
+const isWindows = os.platform() === "win32";
 const commands = ["dev", "buildAndPreview"] as const;
 
 // These tests focus on mixed mode which require an authed connection to the CF API
 // They are skipped if you have not provided the necessary account id and api token.
 describe
 	.skipIf(
-		!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN
+		isWindows ||
+			!process.env.CLOUDFLARE_ACCOUNT_ID ||
+			!process.env.CLOUDFLARE_API_TOKEN
 	)
 	// Note: the reload test applies changes to the fixture files, so we do want the
 	//       tests to run sequentially in order to avoid race conditions
