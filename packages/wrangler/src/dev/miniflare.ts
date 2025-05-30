@@ -10,7 +10,6 @@ import {
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { UserError } from "../errors";
-import { getFlag } from "../experimental-flags";
 import {
 	EXTERNAL_IMAGES_WORKER_NAME,
 	EXTERNAL_IMAGES_WORKER_SCRIPT,
@@ -503,7 +502,8 @@ type MiniflareBindingsConfig = Pick<
 //  each plugin options schema and use those
 export function buildMiniflareBindingOptions(
 	config: MiniflareBindingsConfig,
-	mixedModeConnectionString?: MixedModeConnectionString
+	mixedModeConnectionString: MixedModeConnectionString | undefined,
+	mixedModeEnabled: boolean
 ): {
 	bindingOptions: WorkerOptionsBindings;
 	internalObjects: CfDurableObject[];
@@ -761,7 +761,7 @@ export function buildMiniflareBindingOptions(
 	}
 
 	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
-	if (bindings.ai?.binding && !mixedModeConnectionString) {
+	if (bindings.ai?.binding && !mixedModeEnabled) {
 		externalWorkers.push({
 			name: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
 			modules: [
@@ -783,11 +783,11 @@ export function buildMiniflareBindingOptions(
 		};
 	}
 
-	if (bindings.ai && getFlag("MIXED_MODE")) {
+	if (bindings.ai && mixedModeEnabled) {
 		warnOrError("ai", bindings.ai.remote, "always-remote");
 	}
 
-	if (bindings.browser && getFlag("MIXED_MODE")) {
+	if (bindings.browser && mixedModeEnabled) {
 		warnOrError("browser", bindings.browser.remote, "remote");
 	}
 
@@ -795,7 +795,7 @@ export function buildMiniflareBindingOptions(
 	if (
 		bindings.images?.binding &&
 		!config.imagesLocalMode &&
-		!mixedModeConnectionString
+		!mixedModeEnabled
 	) {
 		externalWorkers.push({
 			name: `${EXTERNAL_IMAGES_WORKER_NAME}:${config.name}`,
@@ -818,7 +818,7 @@ export function buildMiniflareBindingOptions(
 		};
 	}
 
-	if (bindings.vectorize && !mixedModeConnectionString) {
+	if (bindings.vectorize && !mixedModeEnabled) {
 		for (const vectorizeBinding of bindings.vectorize) {
 			const bindingName = vectorizeBinding.binding;
 			const indexName = vectorizeBinding.index_name;
@@ -919,7 +919,7 @@ export function buildMiniflareBindingOptions(
 			send_email: bindings.send_email,
 		},
 		images:
-			bindings.images && (config.imagesLocalMode || mixedModeConnectionString)
+			bindings.images && (config.imagesLocalMode || mixedModeEnabled)
 				? {
 						binding: bindings.images.binding,
 						mixedModeConnectionString:
@@ -938,7 +938,7 @@ export function buildMiniflareBindingOptions(
 					}
 				: undefined,
 
-		vectorize: mixedModeConnectionString
+		vectorize: mixedModeEnabled
 			? Object.fromEntries(
 					bindings.vectorize
 						?.filter((v) => {
@@ -959,7 +959,7 @@ export function buildMiniflareBindingOptions(
 				)
 			: undefined,
 
-		dispatchNamespaces: mixedModeConnectionString
+		dispatchNamespaces: mixedModeEnabled
 			? Object.fromEntries(
 					bindings.dispatch_namespaces
 						?.filter((d) => {
@@ -1209,7 +1209,8 @@ export async function buildMiniflareOptions(
 	log: Log,
 	config: Omit<ConfigBundle, "rules">,
 	proxyToUserWorkerAuthenticationSecret: UUID,
-	mixedModeConnectionString?: MixedModeConnectionString
+	mixedModeConnectionString: MixedModeConnectionString | undefined,
+	mixedModeEnabled: boolean
 ): Promise<{
 	options: Options;
 	internalObjects: CfDurableObject[];
@@ -1224,7 +1225,7 @@ export async function buildMiniflareOptions(
 		}
 	}
 
-	if (!getFlag("MIXED_MODE")) {
+	if (!mixedModeEnabled) {
 		if (config.bindings.ai) {
 			if (!didWarnAiAccountUsage) {
 				didWarnAiAccountUsage = true;
@@ -1258,7 +1259,11 @@ export async function buildMiniflareOptions(
 
 	const { sourceOptions, entrypointNames } = await buildSourceOptions(config);
 	const { bindingOptions, internalObjects, externalWorkers } =
-		buildMiniflareBindingOptions(config, mixedModeConnectionString);
+		buildMiniflareBindingOptions(
+			config,
+			mixedModeConnectionString,
+			mixedModeEnabled
+		);
 	const sitesOptions = buildSitesOptions(config);
 	const defaultPersistRoot = getDefaultPersistRoot(config.localPersistencePath);
 	const assetOptions = buildAssetOptions(config);

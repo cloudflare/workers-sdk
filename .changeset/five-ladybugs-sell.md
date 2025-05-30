@@ -3,4 +3,10 @@
 "wrangler": patch
 ---
 
-Support additional Mixed Mode resources in Wrangler
+Support additional Mixed Mode resources in Wrangler:
+
+- AI
+- Browser
+- Images
+- Vectorize
+- Dispatch Namespaces

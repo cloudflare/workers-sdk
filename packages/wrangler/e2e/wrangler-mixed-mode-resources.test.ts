@@ -23,7 +23,7 @@ type TestCase<T = void> = {
 	setup?: (helper: WranglerE2ETestHelper) => Promise<T> | T;
 	generateWranglerConfig: (setupResult: T) => RawConfig;
 	expectedResponseMatch: string | RegExp;
-	// Flag for resources that can work without mixed mode (just AI)
+	// Flag for resources that can work without mixed mode
 	worksWithoutMixedMode?: boolean;
 };
 

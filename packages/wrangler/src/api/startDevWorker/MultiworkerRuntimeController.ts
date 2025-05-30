@@ -111,7 +111,9 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				this.#log,
 				await convertToConfigBundle(data),
 				this.#proxyToUserWorkerAuthenticationSecret,
-				this.#mixedModeSessions.get(data.config.name)?.mixedModeConnectionString
+				this.#mixedModeSessions.get(data.config.name)
+					?.mixedModeConnectionString,
+				!!getFlag("MIXED_MODE")
 			);
 
 			this.#options.set(data.config.name, {
