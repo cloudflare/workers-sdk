@@ -1,7 +1,7 @@
 import EMAIL_MESSAGE from "worker:email/email";
 import SEND_EMAIL_BINDING from "worker:email/send_email";
 import { z } from "zod";
-import { Extension, Service, Worker_Binding } from "../../runtime";
+import { Service, Worker_Binding } from "../../runtime";
 import { Plugin, WORKER_BINDING_SERVICE_LOOPBACK } from "../shared";
 
 // Define the mutually exclusive schema
@@ -61,20 +61,7 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 		return {};
 	},
 	async getServices(args) {
-		const extensions: Extension[] = [];
 		const services: Service[] = [];
-		// we only want to insert on the first worker as it will be shared between them
-		if (args.workerIndex === 0) {
-			extensions.push({
-				modules: [
-					{
-						name: "cloudflare-internal:email",
-						esModule: EMAIL_MESSAGE(),
-						internal: true,
-					},
-				],
-			});
-		}
 
 		for (const { name, ...config } of args.options.email?.send_email ?? []) {
 			services.push({
@@ -95,9 +82,20 @@ export const EMAIL_PLUGIN: Plugin<typeof EmailOptionsSchema> = {
 			});
 		}
 
-		return {
-			services,
-			extensions,
-		};
+		return services;
+	},
+
+	getExtensions() {
+		return [
+			{
+				modules: [
+					{
+						name: "cloudflare-internal:email",
+						esModule: EMAIL_MESSAGE(),
+						internal: true,
+					},
+				],
+			},
+		];
 	},
 };

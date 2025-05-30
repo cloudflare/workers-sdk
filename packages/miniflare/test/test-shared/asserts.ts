@@ -62,3 +62,34 @@ export async function waitFor<T>(
 		await sleep(100);
 	}
 }
+
+export function waitUntil(
+	t: ExecutionContext,
+	impl: (t: ExecutionContext) => Awaitable<void>,
+	timeout: number = 5000,
+	delay: number = 200
+): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const start = Date.now();
+		const interval = setInterval(async () => {
+			try {
+				const result = await t.try(impl);
+
+				if (result.passed || Date.now() - start > timeout) {
+					clearInterval(interval);
+					try {
+						result.commit();
+						resolve();
+					} catch (ex) {
+						reject(ex);
+					}
+					return;
+				}
+
+				result.discard();
+			} catch {
+				// Ignore errors and keep waiting
+			}
+		}, delay);
+	});
+}

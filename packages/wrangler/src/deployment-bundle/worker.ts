@@ -124,6 +124,7 @@ export interface CfTextBlobBindings {
 export interface CfBrowserBinding {
 	binding: string;
 	raw?: boolean;
+	remote?: boolean;
 }
 
 /**
@@ -133,7 +134,7 @@ export interface CfBrowserBinding {
 export interface CfAIBinding {
 	binding: string;
 	staging?: boolean;
-	remote?: true;
+	remote?: boolean;
 	raw?: boolean;
 }
 
@@ -143,6 +144,7 @@ export interface CfAIBinding {
 export interface CfImagesBinding {
 	binding: string;
 	raw?: boolean;
+	remote?: boolean;
 }
 
 /**
@@ -213,6 +215,7 @@ export interface CfVectorize {
 	binding: string;
 	index_name: string;
 	raw?: boolean;
+	remote?: boolean;
 }
 
 export interface CfSecretsStoreSecrets {
@@ -249,6 +252,7 @@ export interface CfDispatchNamespace {
 		environment?: string;
 		parameters?: string[];
 	};
+	remote?: boolean;
 }
 
 export interface CfMTlsCertificate {
@@ -410,7 +414,6 @@ export interface CfWorkerInit {
 		  }
 		| undefined;
 	observability: Observability | undefined;
-	minimal_mode?: boolean;
 }
 
 export interface CfWorkerContext {
