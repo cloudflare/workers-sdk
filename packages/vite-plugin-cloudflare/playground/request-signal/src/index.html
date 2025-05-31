@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	</head>
+	<body>
+		<main>
+			<h1>Request signal playground</h1>
+			<button id="open" aria-label="Open WebSocket">Open</button>
+			<button id="close" aria-label="Close WebSocket">Close</button>
+			<ul id="messages"></ul>
+		</main>
+	</body>
+	<script type="module">
+		let evtSource;
+		const openButton = document.querySelector("#open");
+		const closeButton = document.querySelector("#close");
+		const messages = document.querySelector("#messages");
+		let controller; // Declare controller here to make it accessible in close()
+
+		openButton.addEventListener("click", () => open());
+		closeButton.addEventListener("click", () => close());
+
+		async function open() {
+			if (evtSource) {
+				console.log("evtSource already open");
+				return;
+			}
+			messages.innerHTML = ""; // Clear previous messages
+			controller = new AbortController();
+
+			try {
+				const response = await fetch("/stream", {
+					signal: controller.signal,
+				});
+
+				if (!response.ok) {
+					throw new Error(`HTTP error! status: ${response.status}`);
+				}
+
+				const reader = response.body
+					.pipeThrough(new TextDecoderStream())
+					.getReader();
+
+				evtSource = reader;
+
+				while (true) {
+					const { value, done } = await reader.read();
+
+					if (done) {
+						const li = document.createElement("li");
+						li.textContent = "Stream finished.";
+						messages.appendChild(li);
+						evtSource = null; // Reset evtSource
+						controller = null;
+						break;
+					}
+
+					const li = document.createElement("li");
+					li.textContent = value;
+					messages.appendChild(li);
+				}
+			} catch (error) {
+				if (error.name === "AbortError") {
+					console.log("Fetch aborted by client.");
+					const li = document.createElement("li");
+					li.textContent = "Fetch aborted by client.";
+					messages.appendChild(li);
+				} else {
+					console.error("Fetch error:", error);
+					const li = document.createElement("li");
+					li.textContent = `Error: ${error.message}`;
+					messages.appendChild(li);
+				}
+
+				evtSource = null; // Reset evtSource
+				controller = null;
+			}
+		}
+
+		function close() {
+			if (controller) {
+				console.log("Aborting fetch request...");
+				controller.abort();
+				controller = null;
+				evtSource = null;
+			} else {
+				console.log("No active fetch request to abort.");
+			}
+		}
+	</script>
+</html>

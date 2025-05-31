@@ -364,11 +364,20 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							assert(miniflare, `Miniflare not defined`);
 							const routerWorker = await getRouterWorker(miniflare);
 
+							const abortController = new AbortController();
+							req.on("close", () => {
+								console.log("Request closed", req.url);
+								abortController.abort();
+							});
+
 							const request = createRequest(req, res);
 							const response = await routerWorker.fetch(
 								toMiniflareRequest(request),
 								{
 									redirect: "manual",
+									// connect the client http request abort hook to the worker fetch request
+									// so that the worker implementation can hook into client abort behaviors
+									signal: abortController.signal,
 								}
 							);
 
@@ -380,6 +389,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 							await sendResponse(res, response as any);
 						} catch (error) {
+							// Do not bubble client abort errors up to the Vite server
+							if (error instanceof Error && error.name === "AbortError") {
+								return;
+							}
+
 							next(error);
 						}
 					});
@@ -414,10 +428,15 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
 				vitePreviewServer.middlewares.use(async (req, res, next) => {
 					try {
+						const abortController = new AbortController();
+						req.on("close", () => {
+							abortController.abort();
+						});
+
 						const request = createRequest(req, res);
 						const response = await miniflare.dispatchFetch(
 							toMiniflareRequest(request),
-							{ redirect: "manual" }
+							{ redirect: "manual", signal: abortController.signal }
 						);
 
 						// Vite uses HTTP/2 when `preview.https` is enabled
@@ -428,6 +447,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 						await sendResponse(res, response as any);
 					} catch (error) {
+						// Do not bubble client abort errors up to the Vite server
+						if (error instanceof Error && error.name === "AbortError") {
+							return;
+						}
+
 						next(error);
 					}
 				});
