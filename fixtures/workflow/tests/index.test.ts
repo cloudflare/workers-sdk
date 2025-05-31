@@ -94,7 +94,7 @@ describe("Workflows", () => {
 		});
 	});
 
-	test("batchCreate should create multiple instances and run them seperatly", async ({
+	test("batchCreate should create multiple instances and run them separately", async ({
 		expect,
 	}) => {
 		await expect(fetchJson(`http://${ip}:${port}/createBatch`)).resolves

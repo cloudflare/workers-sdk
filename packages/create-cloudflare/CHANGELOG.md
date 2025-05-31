@@ -2326,7 +2326,7 @@
 
   Along with this change, projects will use the default vite-based dev command from `create-remix` instead of using `wrangler pages dev` on build output.
 
-  A new `build-cf-types` script has also been added to re-generate the `Env` type defined in `load-context.ts` based on the contents of `wrangler.toml`. A default `wrangler.toml` will be added to new Remix projects to accomodate this workflow.
+  A new `build-cf-types` script has also been added to re-generate the `Env` type defined in `load-context.ts` based on the contents of `wrangler.toml`. A default `wrangler.toml` will be added to new Remix projects to accommodate this workflow.
 
 - [#5072](https://github.com/cloudflare/workers-sdk/pull/5072) [`cab7e1c`](https://github.com/cloudflare/workers-sdk/commit/cab7e1c7f24ff0097e15d90030c805fe2785d173) Thanks [@jculvey](https://github.com/jculvey)! - feature: Improve bindings support in Astro template.
 

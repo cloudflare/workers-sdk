@@ -2,7 +2,7 @@
  * When tailing logs from a worker, oftentimes you don't want to see _every
  * single event_. That's where filters come in. We can send a set of filters
  * to the tail worker, and it will pre-filter any logs for us so that we
- * only recieve the ones we care about.
+ * only receive the ones we care about.
  */
 
 import { UserError } from "../errors";

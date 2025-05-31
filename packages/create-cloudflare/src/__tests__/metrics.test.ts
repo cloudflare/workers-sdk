@@ -385,7 +385,7 @@ describe("createReporter", () => {
 		expect(sendEvent).toBeCalledTimes(2);
 	});
 
-	test("sends cancelled event if a SIGINT signal is recieved", async () => {
+	test("sends cancelled event if a SIGINT signal is received", async () => {
 		const deferred = promiseWithResolvers<string>();
 		const reporter = createReporter();
 
@@ -451,7 +451,7 @@ describe("createReporter", () => {
 		expect(sendEvent).toBeCalledTimes(2);
 	});
 
-	test("sends cancelled event if a SIGTERM signal is recieved", async () => {
+	test("sends cancelled event if a SIGTERM signal is received", async () => {
 		const deferred = promiseWithResolvers<string>();
 		const reporter = createReporter();
 		const run = reporter.collectAsyncMetrics({
