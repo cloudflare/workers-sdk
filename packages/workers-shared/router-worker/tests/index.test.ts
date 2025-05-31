@@ -15,7 +15,7 @@ describe("unit tests", async () => {
 			},
 		} as Env;
 
-		void expect(
+		await expect(
 			async () => await worker.fetch(request, env, ctx)
 		).rejects.toThrowError(
 			"Fetch for user worker without having a user worker binding"
@@ -93,5 +93,318 @@ describe("unit tests", async () => {
 
 		const response = await worker.fetch(request, env, ctx);
 		expect(await response.text()).toEqual("hello from asset worker");
+	});
+
+	it("it returns fetch from user worker when static_routing user_worker rule matches", async () => {
+		const request = new Request("https://example.com/api/includeme");
+		const ctx = createExecutionContext();
+
+		const env = {
+			CONFIG: {
+				has_user_worker: true,
+				static_routing: {
+					user_worker: ["/api/*"],
+				},
+			},
+			USER_WORKER: {
+				async fetch(_: Request): Promise<Response> {
+					return new Response("hello from user worker");
+				},
+			},
+			ASSET_WORKER: {
+				async fetch(_: Request): Promise<Response> {
+					return new Response("hello from asset worker");
+				},
+				async unstable_canFetch(_: Request): Promise<boolean> {
+					return true;
+				},
+			},
+		} as Env;
+
+		const response = await worker.fetch(request, env, ctx);
+		expect(await response.text()).toEqual("hello from user worker");
+	});
+
+	it("it returns fetch from asset worker when static_routing asset rule matches", async () => {
+		const request = new Request("https://example.com/api/excludeme");
+		const ctx = createExecutionContext();
+
+		const env = {
+			CONFIG: {
+				has_user_worker: true,
+				static_routing: {
+					user_worker: ["/api/includeme"],
+					asset: ["/api/excludeme"],
+				},
+			},
+			USER_WORKER: {
+				async fetch(_: Request): Promise<Response> {
+					return new Response("hello from user worker");
+				},
+			},
+			ASSET_WORKER: {
+				async fetch(_: Request): Promise<Response> {
+					return new Response("hello from asset worker");
+				},
+				async unstable_canFetch(_: Request): Promise<boolean> {
+					return true;
+				},
+			},
+		} as Env;
+
+		const response = await worker.fetch(request, env, ctx);
+		expect(await response.text()).toEqual("hello from asset worker");
+	});
+
+	it("it returns fetch from asset worker when static_routing asset and user_worker rule matches", async () => {
+		const request = new Request("https://example.com/api/excludeme");
+		const ctx = createExecutionContext();
+
+		const env = {
+			CONFIG: {
+				has_user_worker: true,
+				static_routing: {
+					user_worker: ["/api/*"],
+					asset: ["/api/excludeme"],
+				},
+			},
+			USER_WORKER: {
+				async fetch(_: Request): Promise<Response> {
+					return new Response("hello from user worker");
+				},
+			},
+			ASSET_WORKER: {
+				async fetch(_: Request): Promise<Response> {
+					return new Response("hello from asset worker");
+				},
+				async unstable_canFetch(_: Request): Promise<boolean> {
+					return true;
+				},
+			},
+		} as Env;
+
+		const response = await worker.fetch(request, env, ctx);
+		expect(await response.text()).toEqual("hello from asset worker");
+	});
+
+	it("it returns fetch from asset worker when no static_routing rule matches but asset exists", async () => {
+		const request = new Request("https://example.com/someasset");
+		const ctx = createExecutionContext();
+
+		const env = {
+			CONFIG: {
+				has_user_worker: true,
+				static_routing: {
+					user_worker: ["/api/*"],
+				},
+			},
+			USER_WORKER: {
+				async fetch(_: Request): Promise<Response> {
+					return new Response("hello from user worker");
+				},
+			},
+			ASSET_WORKER: {
+				async fetch(_: Request): Promise<Response> {
+					return new Response("hello from asset worker");
+				},
+				async unstable_canFetch(_: Request): Promise<boolean> {
+					return true;
+				},
+			},
+		} as Env;
+
+		const response = await worker.fetch(request, env, ctx);
+		expect(await response.text()).toEqual("hello from asset worker");
+	});
+
+	it("it returns fetch from user worker when no static_routing rule matches and no asset exists", async () => {
+		const request = new Request("https://example.com/somemissingasset");
+		const ctx = createExecutionContext();
+
+		const env = {
+			CONFIG: {
+				has_user_worker: true,
+				static_routing: {
+					user_worker: ["/api/*"],
+				},
+			},
+			USER_WORKER: {
+				async fetch(_: Request): Promise<Response> {
+					return new Response("hello from user worker");
+				},
+			},
+			ASSET_WORKER: {
+				async fetch(_: Request): Promise<Response> {
+					return new Response("hello from asset worker");
+				},
+				async unstable_canFetch(_: Request): Promise<boolean> {
+					return false;
+				},
+			},
+		} as Env;
+
+		const response = await worker.fetch(request, env, ctx);
+		expect(await response.text()).toEqual("hello from user worker");
+	});
+
+	describe("free tier limiting", () => {
+		it("returns fetch from asset worker for assets", async () => {
+			const request = new Request("https://example.com/asset");
+			const ctx = createExecutionContext();
+
+			const env = {
+				CONFIG: {
+					has_user_worker: true,
+				},
+				EYEBALL_CONFIG: { limitedAssetsOnly: true },
+				USER_WORKER: {
+					async fetch(_: Request): Promise<Response> {
+						return new Response("hello from user worker");
+					},
+				},
+				ASSET_WORKER: {
+					async fetch(_: Request): Promise<Response> {
+						return new Response("hello from asset worker");
+					},
+					async unstable_canFetch(_: Request): Promise<boolean> {
+						return true;
+					},
+				},
+			} as Env;
+
+			const response = await worker.fetch(request, env, ctx);
+			expect(await response.text()).toEqual("hello from asset worker");
+		});
+
+		it("returns error page instead of user worker when no asset found", async () => {
+			const request = new Request("https://example.com/asset");
+			const ctx = createExecutionContext();
+
+			const env = {
+				CONFIG: {
+					has_user_worker: true,
+				},
+				EYEBALL_CONFIG: { limitedAssetsOnly: true },
+				USER_WORKER: {
+					async fetch(_: Request): Promise<Response> {
+						return new Response("hello from user worker");
+					},
+				},
+				ASSET_WORKER: {
+					async fetch(_: Request): Promise<Response> {
+						return new Response("hello from asset worker");
+					},
+					async unstable_canFetch(_: Request): Promise<boolean> {
+						return false;
+					},
+				},
+			} as Env;
+
+			const response = await worker.fetch(request, env, ctx);
+			expect(response.status).toEqual(429);
+			const text = await response.text();
+			expect(text).not.toEqual("hello from user worker");
+			expect(text).toContain("This website has been temporarily rate limited");
+		});
+
+		it("returns error page instead of user worker for invoke_user_worker_ahead_of_assets", async () => {
+			const request = new Request("https://example.com/asset");
+			const ctx = createExecutionContext();
+
+			const env = {
+				CONFIG: {
+					has_user_worker: true,
+					invoke_user_worker_ahead_of_assets: true,
+				},
+				EYEBALL_CONFIG: { limitedAssetsOnly: true },
+				USER_WORKER: {
+					async fetch(_: Request): Promise<Response> {
+						return new Response("hello from user worker");
+					},
+				},
+				ASSET_WORKER: {
+					async fetch(_: Request): Promise<Response> {
+						return new Response("hello from asset worker");
+					},
+					async unstable_canFetch(_: Request): Promise<boolean> {
+						return true;
+					},
+				},
+			} as Env;
+
+			const response = await worker.fetch(request, env, ctx);
+			expect(response.status).toEqual(429);
+			const text = await response.text();
+			expect(text).not.toEqual("hello from user worker");
+			expect(text).toContain("This website has been temporarily rate limited");
+		});
+
+		it("returns error page instead of user worker for include rules", async () => {
+			const request = new Request("https://example.com/api/asset");
+			const ctx = createExecutionContext();
+
+			const env = {
+				CONFIG: {
+					has_user_worker: true,
+					static_routing: {
+						version: 1,
+						include: ["/api/*"],
+					},
+				},
+				EYEBALL_CONFIG: { limitedAssetsOnly: true },
+				USER_WORKER: {
+					async fetch(_: Request): Promise<Response> {
+						return new Response("hello from user worker");
+					},
+				},
+				ASSET_WORKER: {
+					async fetch(_: Request): Promise<Response> {
+						return new Response("hello from asset worker");
+					},
+					async unstable_canFetch(_: Request): Promise<boolean> {
+						return true;
+					},
+				},
+			} as Env;
+
+			const response = await worker.fetch(request, env, ctx);
+			expect(response.status).toEqual(429);
+			const text = await response.text();
+			expect(text).not.toEqual("hello from user worker");
+			expect(text).toContain("This website has been temporarily rate limited");
+		});
+
+		it("returns fetch from asset worker for exclude rules", async () => {
+			const request = new Request("https://example.com/api/asset");
+			const ctx = createExecutionContext();
+
+			const env = {
+				CONFIG: {
+					has_user_worker: true,
+					static_routing: {
+						version: 1,
+						include: ["/api/*"],
+						exclude: ["/api/asset"],
+					},
+				},
+				EYEBALL_CONFIG: { limitedAssetsOnly: true },
+				USER_WORKER: {
+					async fetch(_: Request): Promise<Response> {
+						return new Response("hello from user worker");
+					},
+				},
+				ASSET_WORKER: {
+					async fetch(_: Request): Promise<Response> {
+						return new Response("hello from asset worker");
+					},
+					async unstable_canFetch(_: Request): Promise<boolean> {
+						return true;
+					},
+				},
+			} as Env;
+
+			const response = await worker.fetch(request, env, ctx);
+			expect(await response.text()).toEqual("hello from asset worker");
+		});
 	});
 });
