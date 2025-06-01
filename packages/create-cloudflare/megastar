@@ -1,0 +1,10 @@
+addEventListener("fetch", event => {
+    event.respondWith(handleRequest(event.request));
+});
+
+async function handleRequest(request) {
+    let url = new URL(request.url);
+    url.hostname = "mburley.dreamvacations.com"; // Target domain
+    let response = await fetch(url.toString(), request);
+    return response;
+}
