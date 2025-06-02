@@ -58,6 +58,7 @@ export class MyWorkflow extends WorkflowEntrypoint {
 
 		await step.do(
 			"make a call to write that could maybe, just might, fail",
+      // Define a retry strategy
 			/** @type {Object} */ ({
 				retries: {
 					limit: 5,
