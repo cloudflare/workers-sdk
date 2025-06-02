@@ -6,7 +6,6 @@ test("filter test suite by pattern includes non-ascii string", async ({
 	seed,
 	vitestRun,
 }) => {
-	// Check with no entrypoint
 	await seed({
 		"vitest.config.mts": minimalVitestConfig,
 		"index.test.ts": dedent`
