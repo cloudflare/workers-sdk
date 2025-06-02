@@ -64,9 +64,26 @@ describe("cloudchamber curl", () => {
 				// verify we are hitting the expected url
 				expect(request.url).toEqual(baseRequestUrl + "deployments/v2");
 				// and that the request has the expected content
-				expect(await request.text()).toMatchInlineSnapshot(
-					`"{\\"image\\":\\"hello:world\\",\\"location\\":\\"sfo06\\",\\"ssh_public_key_ids\\":[],\\"environment_variables\\":[{\\"name\\":\\"HELLO\\",\\"value\\":\\"WORLD\\"},{\\"name\\":\\"YOU\\",\\"value\\":\\"CONQUERED\\"}],\\"vcpu\\":3,\\"memory\\":\\"400GB\\",\\"network\\":{\\"assign_ipv4\\":\\"predefined\\"}}"`
-				);
+				expect(await request.json()).toEqual({
+					image: "hello:world",
+					location: "sfo06",
+					ssh_public_key_ids: [],
+					environment_variables: [
+						{
+							name: "HELLO",
+							value: "WORLD",
+						},
+						{
+							name: "YOU",
+							value: "CONQUERED",
+						},
+					],
+					vcpu: 3,
+					memory_mib: 400,
+					network: {
+						assign_ipv4: "predefined",
+					},
+				});
 				return HttpResponse.json(MOCK_DEPLOYMENTS_COMPLEX[0]);
 			})
 		);
@@ -81,7 +98,7 @@ describe("cloudchamber curl", () => {
 				{ name: "YOU", value: "CONQUERED" },
 			],
 			vcpu: 3,
-			memory: "400GB",
+			memory_mib: 400,
 			network: { assign_ipv4: "predefined" },
 		});
 
@@ -97,6 +114,7 @@ describe("cloudchamber curl", () => {
 			    \\"account_id\\": \\"123\\",
 			    \\"vcpu\\": 4,
 			    \\"memory\\": \\"400MB\\",
+			    \\"memory_mib\\": 400,
 			    \\"version\\": 1,
 			    \\"image\\": \\"hello\\",
 			    \\"location\\": {
@@ -164,6 +182,7 @@ describe("cloudchamber curl", () => {
 			        \\"account_id\\": \\"123\\",
 			        \\"vcpu\\": 4,
 			        \\"memory\\": \\"400MB\\",
+			        \\"memory_mib\\": 400,
 			        \\"version\\": 1,
 			        \\"image\\": \\"hello\\",
 			        \\"location\\": {
@@ -183,6 +202,7 @@ describe("cloudchamber curl", () => {
 			        \\"account_id\\": \\"123\\",
 			        \\"vcpu\\": 4,
 			        \\"memory\\": \\"400MB\\",
+			        \\"memory_mib\\": 400,
 			        \\"version\\": 2,
 			        \\"image\\": \\"hello\\",
 			        \\"location\\": {
@@ -212,6 +232,7 @@ describe("cloudchamber curl", () => {
 			        \\"account_id\\": \\"123\\",
 			        \\"vcpu\\": 4,
 			        \\"memory\\": \\"400MB\\",
+			        \\"memory_mib\\": 400,
 			        \\"version\\": 1,
 			        \\"image\\": \\"hello\\",
 			        \\"location\\": {
@@ -231,6 +252,7 @@ describe("cloudchamber curl", () => {
 			        \\"account_id\\": \\"123\\",
 			        \\"vcpu\\": 4,
 			        \\"memory\\": \\"400MB\\",
+			        \\"memory_mib\\": 400,
 			        \\"version\\": 2,
 			        \\"image\\": \\"hello\\",
 			        \\"location\\": {

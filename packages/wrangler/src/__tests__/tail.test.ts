@@ -535,8 +535,7 @@ describe("tail", () => {
 			).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				Successfully created tail, expires at [mock expiration date]
 				Connected to test-worker, waiting for logs...
 				GET https://example.org/ - Ok @ [mock event timestamp]"
@@ -566,8 +565,7 @@ describe("tail", () => {
 			).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				Successfully created tail, expires at [mock expiration date]
 				Connected to test-worker, waiting for logs...
 				MyDurableObject.foo - Ok @ [mock event timestamp]"
@@ -594,8 +592,7 @@ describe("tail", () => {
 			).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				Successfully created tail, expires at [mock expiration date]
 				Connected to test-worker, waiting for logs...
 				\\"* * * * *\\" @ [mock timestamp string] - Ok"
@@ -622,8 +619,7 @@ describe("tail", () => {
 			).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				Successfully created tail, expires at [mock expiration date]
 				Connected to test-worker, waiting for logs...
 				Alarm @ [mock scheduled time] - Ok"
@@ -650,8 +646,7 @@ describe("tail", () => {
 			).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				Successfully created tail, expires at [mock expiration date]
 				Connected to test-worker, waiting for logs...
 				Email from:from@example.com to:to@example.com size:45416 @ [mock event timestamp] - Ok"
@@ -681,8 +676,7 @@ describe("tail", () => {
 			).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				Successfully created tail, expires at [mock expiration date]
 				Connected to test-worker, waiting for logs...
 				Tailing some-worker,other-worker - Ok @ [mock event timestamp]"
@@ -711,8 +705,7 @@ describe("tail", () => {
 			).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				Successfully created tail, expires at [mock expiration date]
 				Connected to test-worker, waiting for logs...
 				Tail is currently in sampling mode due to the high volume of messages. To prevent messages from being dropped consider adding filters.
@@ -740,8 +733,7 @@ describe("tail", () => {
 			).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				Successfully created tail, expires at [mock expiration date]
 				Connected to test-worker, waiting for logs...
 				Queue my-queue123 (7 messages) - Ok @ [mock timestamp string]"
@@ -767,8 +759,7 @@ describe("tail", () => {
 			).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				Successfully created tail, expires at [mock expiration date]
 				Connected to test-worker, waiting for logs...
 				Unknown Event - Ok @ [mock timestamp string]"
@@ -796,8 +787,7 @@ describe("tail", () => {
 			).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				Successfully created tail, expires at [mock expiration date]
 				Connected to test-worker, waiting for logs...
 				GET https://example.org/ - Ok @ [mock event timestamp]"
@@ -855,8 +845,7 @@ describe("tail", () => {
 			).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
-				------------------
-
+				──────────────────
 				Successfully created tail, expires at [mock expiration date]
 				Connected to test-worker, waiting for logs...
 				GET https://example.org/ - Ok @ [mock event timestamp]

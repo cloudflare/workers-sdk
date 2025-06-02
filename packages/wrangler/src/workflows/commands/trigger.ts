@@ -46,6 +46,7 @@ export const workflowsTriggerCommand = createCommand({
 		}
 
 		const response = await fetchResult<InstanceWithoutDates>(
+			config,
 			`/accounts/${accountId}/workflows/${args.name}/instances`,
 			{
 				method: "POST",

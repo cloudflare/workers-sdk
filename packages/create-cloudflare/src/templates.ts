@@ -132,7 +132,7 @@ export type TemplateConfig = {
 		ctx: C3Context,
 	) => Promise<Record<string, string | object>>;
 
-	/** An array of compatibility flags to be specified when deploying to pages or workers.*/
+	/** An array of compatibility flags to be specified when deploying to pages (unused for workers) */
 	compatibilityFlags?: string[];
 
 	/** The key of the package.json "scripts" entry for deploying the project. Defaults to `pages:deploy` */
@@ -572,7 +572,7 @@ export const createContext = async (
 
 	template = {
 		workersTypes: "generated",
-		typesPath: "worker-configuration.d.ts",
+		typesPath: "./worker-configuration.d.ts",
 		envInterfaceName: "Env",
 		...template,
 	};

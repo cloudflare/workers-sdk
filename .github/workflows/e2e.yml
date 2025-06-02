@@ -7,16 +7,16 @@ on:
 
 jobs:
   e2e-test-vp:
+    name: "E2E tests"
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}
       cancel-in-progress: true
-    timeout-minutes: 50
+    timeout-minutes: 60
     if: github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'e2e' ) && github.event.pull_request.head.repo.owner.login == 'cloudflare' && (github.head_ref == 'changeset-release/main' || contains(github.event.*.labels.*.name, 'every-os' ))
-    name: "E2E Test"
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2022, ubuntu-22.04]
+        os: [macos-13, windows-2022]
         node: ["20.19.1"]
     runs-on: ${{ matrix.os }}
     steps:
@@ -53,6 +53,7 @@ jobs:
           HYPERDRIVE_DATABASE_URL: ${{ secrets.TEST_HYPERDRIVE_DATABASE_URL}}
           WRANGLER: node --no-warnings ${{ github.workspace}}/packages/wrangler/bin/wrangler.js
           WRANGLER_IMPORT: ${{ github.workspace}}/packages/wrangler/wrangler-dist/cli.js
+          MINIFLARE_IMPORT: ${{ github.workspace}}/packages/miniflare/dist/src/index.js
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
@@ -66,16 +67,16 @@ jobs:
           path: .turbo/runs
 
   e2e-test:
+    name: "E2E tests"
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}
       cancel-in-progress: true
-    timeout-minutes: 50
+    timeout-minutes: 60
     if: github.event_name == 'pull_request' && contains(github.event.*.labels.*.name, 'e2e' ) && github.event.pull_request.head.repo.owner.login == 'cloudflare'
-    name: "E2E Test"
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-13]
+        os: [ubuntu-22.04-arm]
         node: ["20.19.1"]
     runs-on: ${{ matrix.os }}
     steps:
@@ -112,6 +113,7 @@ jobs:
           HYPERDRIVE_DATABASE_URL: ${{ secrets.TEST_HYPERDRIVE_DATABASE_URL}}
           WRANGLER: node --no-warnings ${{ github.workspace}}/packages/wrangler/bin/wrangler.js
           WRANGLER_IMPORT: ${{ github.workspace}}/packages/wrangler/wrangler-dist/cli.js
+          MINIFLARE_IMPORT: ${{ github.workspace}}/packages/miniflare/dist/src/index.js
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html

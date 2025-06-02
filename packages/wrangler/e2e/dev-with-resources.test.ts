@@ -370,6 +370,10 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2025-01-01"
+				# Regression test for https://github.com/cloudflare/workers-sdk/issues/9006
+				kv_namespaces = [
+					${isLocal ? `{ binding = "KV", id = "LOCAL_ONLY" }` : ""}
+				]
 				secrets_store_secrets = [
 					{ binding = "SECRET", store_id = "${storeId}", secret_name = "${secret_name}" }
 				]

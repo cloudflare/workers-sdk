@@ -7,11 +7,11 @@ const cwdNodeModules = path.join(cwd, "node_modules");
 
 const LEVEL_PREFIX: { [key in LogLevel]: string } = {
 	[LogLevel.NONE]: "",
-	[LogLevel.ERROR]: "err",
-	[LogLevel.WARN]: "wrn",
-	[LogLevel.INFO]: "inf",
-	[LogLevel.DEBUG]: "dbg",
-	[LogLevel.VERBOSE]: "vrb",
+	[LogLevel.ERROR]: "error",
+	[LogLevel.WARN]: "warn",
+	[LogLevel.INFO]: "info",
+	[LogLevel.DEBUG]: "debug",
+	[LogLevel.VERBOSE]: "verbose",
 };
 
 const LEVEL_COLOUR: { [key in LogLevel]: Colorize } = {
@@ -83,8 +83,12 @@ export class Log {
 	logWithLevel(level: LogLevel, message: string): void {
 		if (level <= this.level) {
 			const prefix = `[${this.#prefix}${LEVEL_PREFIX[level]}${this.#suffix}]`;
-			this.log(LEVEL_COLOUR[level](`${prefix} ${message}`));
+			this.log(`${LEVEL_COLOUR[level](prefix)} ${message}`);
 		}
+	}
+
+	logReady(message: string): void {
+		this.info(message);
 	}
 
 	error(message: Error): void {

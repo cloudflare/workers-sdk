@@ -3,6 +3,7 @@ import { createCommand, createNamespace } from "./core/create-command";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 
 type Namespace = {
 	namespace_id: string;
@@ -19,8 +20,13 @@ type Namespace = {
 /**
  * Create a dynamic dispatch namespace.
  */
-async function createWorkerNamespace(accountId: string, name: string) {
+async function createWorkerNamespace(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	name: string
+) {
 	const namespace = await fetchResult<Namespace>(
+		complianceConfig,
 		`/accounts/${accountId}/workers/dispatch/namespaces`,
 		{
 			method: "POST",
@@ -38,8 +44,13 @@ async function createWorkerNamespace(accountId: string, name: string) {
 /**
  * Delete a dynamic dispatch namespace.
  */
-async function deleteWorkerNamespace(accountId: string, name: string) {
+async function deleteWorkerNamespace(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	name: string
+) {
 	await fetchResult(
+		complianceConfig,
 		`/accounts/${accountId}/workers/dispatch/namespaces/${name}`,
 		{ method: "DELETE" }
 	);
@@ -49,9 +60,13 @@ async function deleteWorkerNamespace(accountId: string, name: string) {
 /**
  * List all created dynamic dispatch namespaces for an account
  */
-async function listWorkerNamespaces(accountId: string) {
+async function listWorkerNamespaces(
+	complianceConfig: ComplianceConfig,
+	accountId: string
+) {
 	logger.log(
 		await fetchResult<Namespace>(
+			complianceConfig,
 			`/accounts/${accountId}/workers/dispatch/namespaces`,
 			{
 				headers: {
@@ -65,9 +80,14 @@ async function listWorkerNamespaces(accountId: string) {
 /**
  * Get info for a specific dynamic dispatch namespace
  */
-async function getWorkerNamespaceInfo(accountId: string, name: string) {
+async function getWorkerNamespaceInfo(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	name: string
+) {
 	logger.log(
 		await fetchResult<Namespace>(
+			complianceConfig,
 			`/accounts/${accountId}/workers/dispatch/namespaces/${name}`,
 			{
 				headers: {
@@ -82,11 +102,13 @@ async function getWorkerNamespaceInfo(accountId: string, name: string) {
  * Rename a dynamic dispatch namespace
  */
 async function renameWorkerNamespace(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	oldName: string,
 	newName: string
 ) {
 	await fetchResult(
+		complianceConfig,
 		`/accounts/${accountId}/workers/dispatch/namespaces/${oldName}`,
 		{
 			method: "PUT",
@@ -115,7 +137,7 @@ export const dispatchNamespaceListCommand = createCommand({
 	},
 	async handler(_, { config }) {
 		const accountId = await requireAuth(config);
-		await listWorkerNamespaces(accountId);
+		await listWorkerNamespaces(config, accountId);
 		metrics.sendMetricsEvent("list dispatch namespaces", {
 			sendMetrics: config.send_metrics,
 		});
@@ -137,7 +159,7 @@ export const dispatchNamespaceGetCommand = createCommand({
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
-		await getWorkerNamespaceInfo(accountId, args.name);
+		await getWorkerNamespaceInfo(config, accountId, args.name);
 		metrics.sendMetricsEvent("view dispatch namespace", {
 			sendMetrics: config.send_metrics,
 		});
@@ -160,7 +182,7 @@ export const dispatchNamespaceCreateCommand = createCommand({
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
-		await createWorkerNamespace(accountId, args.name);
+		await createWorkerNamespace(config, accountId, args.name);
 		metrics.sendMetricsEvent("create dispatch namespace", {
 			sendMetrics: config.send_metrics,
 		});
@@ -183,7 +205,7 @@ export const dispatchNamespaceDeleteCommand = createCommand({
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
-		await deleteWorkerNamespace(accountId, args.name);
+		await deleteWorkerNamespace(config, accountId, args.name);
 		metrics.sendMetricsEvent("delete dispatch namespace", {
 			sendMetrics: config.send_metrics,
 		});
@@ -211,7 +233,7 @@ export const dispatchNamespaceRenameCommand = createCommand({
 	positionalArgs: ["oldName", "newName"],
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
-		await renameWorkerNamespace(accountId, args.oldName, args.newName);
+		await renameWorkerNamespace(config, accountId, args.oldName, args.newName);
 		metrics.sendMetricsEvent("rename dispatch namespace", {
 			sendMetrics: config.send_metrics,
 		});

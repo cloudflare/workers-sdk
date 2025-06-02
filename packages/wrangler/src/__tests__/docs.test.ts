@@ -1,25 +1,20 @@
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, test } from "vitest";
+import { beforeEach, describe, test, vi } from "vitest";
 import openInBrowser from "../open-in-browser";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
+import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-
-// NOTE: in production builds we "esbuild define" Algolia constants as globals
-// but in tests we have to attach mocks values to the globalThis object.
-
-// eslint-disable-next-line @typescript-eslint/no-namespace
-declare module globalThis {
-	let ALGOLIA_APP_ID: string | undefined;
-	let ALGOLIA_PUBLIC_KEY: string | undefined;
-}
 
 describe("wrangler docs", () => {
 	const std = mockConsoleMethods();
+	runInTempDir({ homedir: "./home" });
 
 	beforeEach(() => {
-		globalThis.ALGOLIA_APP_ID = "FAKE-ID";
-		globalThis.ALGOLIA_PUBLIC_KEY = "FAKE-KEY";
+		// NOTE: in production builds we "esbuild define" Algolia constants as globals
+		// but in tests we have to attach mocks values to the globalThis object.
+		vi.stubGlobal("ALGOLIA_APP_ID", "FAKE-ID");
+		vi.stubGlobal("ALGOLIA_PUBLIC_KEY", "FAKE-KEY");
 
 		msw.use(
 			http.post<Record<string, never>, { params: string | undefined }>(
@@ -36,11 +31,6 @@ describe("wrangler docs", () => {
 				{ once: true }
 			)
 		);
-	});
-
-	afterEach(() => {
-		delete globalThis.ALGOLIA_APP_ID;
-		delete globalThis.ALGOLIA_PUBLIC_KEY;
 	});
 
 	test("--help", async ({ expect }) => {

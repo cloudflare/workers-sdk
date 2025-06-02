@@ -10,6 +10,9 @@ export default defineWorkersProject({
 					// Configuration for the test runner Worker
 					compatibilityDate: "2024-01-01",
 					compatibilityFlags: [
+						// This illustrates a Worker that in production only wants v1 of Node.js compatibility.
+						// The Vitest pool integration will need to remove this flag since the `MockAgent` requires v2.
+						"no_nodejs_compat_v2",
 						"nodejs_compat",
 						// Required to use `WORKER.scheduled()`. This is an experimental
 						// compatibility flag, and cannot be enabled in production.

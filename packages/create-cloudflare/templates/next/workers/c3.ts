@@ -11,7 +11,7 @@ const generate = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	await installPackages(["@opennextjs/cloudflare@~1.0.0-beta.0 || ^1.0.0"], {
+	await installPackages(["@opennextjs/cloudflare@^1.0.2"], {
 		startText: "Adding the Cloudflare adapter",
 		doneText: `${brandColor(`installed`)} @opennextjs/cloudflare)}`,
 	});
@@ -42,13 +42,12 @@ const updateNextConfig = (usesTs: boolean) => {
 	s.stop(`${brandColor(`updated`)} ${dim(`\`${configFile}\``)}`);
 };
 
-const envInterfaceName = "CloudflareBindings";
+const envInterfaceName = "CloudflareEnv";
 const typesPath = "./cloudflare-env.d.ts";
 export default {
 	configVersion: 1,
 	id: "next",
 	frameworkCli: "create-next-app",
-	frameworkCliPinnedVersion: "~15.3.0",
 	platform: "workers",
 	displayName: "Next.js",
 	path: "templates/next/workers",
@@ -69,5 +68,4 @@ export default {
 	deployScript: "deploy",
 	typesPath,
 	envInterfaceName,
-	compatibilityFlags: ["nodejs_compat"],
 } as TemplateConfig;

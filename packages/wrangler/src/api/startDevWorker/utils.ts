@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { readFile } from "node:fs/promises";
+import type { ConfigBindingOptions } from "../../config";
 import type { CfWorkerInit } from "../../deployment-bundle/worker";
 import type {
 	AsyncHook,
@@ -75,14 +76,25 @@ async function getBinaryFileContents(file: File<string | Uint8Array>) {
 	return readFile(file.path);
 }
 
-export function convertCfWorkerInitBindingstoBindings(
-	inputBindings: CfWorkerInit["bindings"]
+export function convertConfigBindingsToStartWorkerBindings(
+	configBindings: ConfigBindingOptions
+): StartDevWorkerOptions["bindings"] {
+	const { queues, ...bindings } = configBindings;
+
+	return convertCfWorkerInitBindingsToBindings({
+		...bindings,
+		queues: queues.producers?.map((q) => ({ ...q, queue_name: q.queue })),
+	});
+}
+
+export function convertCfWorkerInitBindingsToBindings(
+	inputBindings: Partial<CfWorkerInit["bindings"]>
 ): StartDevWorkerOptions["bindings"] {
 	const output: StartDevWorkerOptions["bindings"] = {};
 
 	// required to retain type information
 	type Entries<T> = { [K in keyof T]: [K, T[K]] }[keyof T][];
-	type BindingsIterable = Entries<typeof inputBindings>;
+	type BindingsIterable = Entries<Required<typeof inputBindings>>;
 	const bindingsIterable = Object.entries(inputBindings) as BindingsIterable;
 
 	for (const [type, info] of bindingsIterable) {
@@ -330,11 +342,11 @@ export async function convertBindingsToCfWorkerInitBindings(
 			bindings.data_blobs ??= {};
 			bindings.data_blobs[name] = await getBinaryFileContents(binding.source);
 		} else if (binding.type === "browser") {
-			bindings.browser = { binding: name };
+			bindings.browser = { ...binding, binding: name };
 		} else if (binding.type === "ai") {
-			bindings.ai = { binding: name };
+			bindings.ai = { ...binding, binding: name };
 		} else if (binding.type === "images") {
-			bindings.images = { binding: name };
+			bindings.images = { ...binding, binding: name };
 		} else if (binding.type === "version_metadata") {
 			bindings.version_metadata = { binding: name };
 		} else if (binding.type === "durable_object_namespace") {

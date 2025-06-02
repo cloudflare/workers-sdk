@@ -23,7 +23,7 @@ export const workflowsDeleteCommand = createCommand({
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		await fetchResult(`/accounts/${accountId}/workflows/${args.name}`, {
+		await fetchResult(config, `/accounts/${accountId}/workflows/${args.name}`, {
 			method: "DELETE",
 		});
 

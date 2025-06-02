@@ -57,7 +57,12 @@ export const versionsViewCommand = createCommand({
 			);
 		}
 
-		const version = await fetchVersion(accountId, workerName, args.versionId);
+		const version = await fetchVersion(
+			config,
+			accountId,
+			workerName,
+			args.versionId
+		);
 
 		if (args.json) {
 			logRaw(JSON.stringify(version, null, 2));

@@ -28,6 +28,7 @@ export async function createIndex(
 	const versionParam = deprecatedV1 ? `` : `/v2`;
 
 	return await fetchResult<VectorizeIndex>(
+		config,
 		`/accounts/${accountId}/vectorize${versionParam}/indexes`,
 		{
 			method: "POST",
@@ -47,6 +48,7 @@ export async function deleteIndex(
 	const accountId = await requireAuth(config);
 	const versionParam = deprecatedV1 ? `` : `/v2`;
 	return await fetchResult<void>(
+		config,
 		`/accounts/${accountId}/vectorize${versionParam}/indexes/${indexName}`,
 		{
 			method: "DELETE",
@@ -62,6 +64,7 @@ export async function getIndex(
 	const accountId = await requireAuth(config);
 	const versionParam = deprecatedV1 ? `` : `/v2`;
 	return await fetchResult(
+		config,
 		`/accounts/${accountId}/vectorize${versionParam}/indexes/${indexName}`,
 		{
 			method: "GET",
@@ -76,6 +79,7 @@ export async function listIndexes(
 	const accountId = await requireAuth(config);
 	const versionParam = deprecatedV1 ? `` : `/v2`;
 	return await fetchListResult<VectorizeIndex>(
+		config,
 		`/accounts/${accountId}/vectorize${versionParam}/indexes`,
 		{
 			method: "GET",
@@ -91,6 +95,7 @@ export async function insertIntoIndexV1(
 	const accountId = await requireAuth(config);
 
 	return await fetchResult(
+		config,
 		`/accounts/${accountId}/vectorize/indexes/${indexName}/insert`,
 		{
 			method: "POST",
@@ -107,6 +112,7 @@ export async function insertIntoIndex(
 	const accountId = await requireAuth(config);
 
 	return await fetchResult(
+		config,
 		`/accounts/${accountId}/vectorize/v2/indexes/${indexName}/insert`,
 		{
 			method: "POST",
@@ -123,6 +129,7 @@ export async function upsertIntoIndex(
 	const accountId = await requireAuth(config);
 
 	return await fetchResult(
+		config,
 		`/accounts/${accountId}/vectorize/v2/indexes/${indexName}/upsert`,
 		{
 			method: "POST",
@@ -139,6 +146,7 @@ export async function queryIndexByVector(
 ): Promise<VectorizeMatches> {
 	const accountId = await requireAuth(config);
 	return await fetchResult(
+		config,
 		`/accounts/${accountId}/vectorize/v2/indexes/${indexName}/query`,
 		{
 			method: "POST",
@@ -161,6 +169,7 @@ export async function queryIndexByVectorId(
 ): Promise<VectorizeMatches> {
 	const accountId = await requireAuth(config);
 	return await fetchResult(
+		config,
 		`/accounts/${accountId}/vectorize/v2/indexes/${indexName}/query`,
 		{
 			method: "POST",
@@ -183,6 +192,7 @@ export async function getByIds(
 	const accountId = await requireAuth(config);
 
 	return await fetchResult(
+		config,
 		`/accounts/${accountId}/vectorize/v2/indexes/${indexName}/get_by_ids`,
 		{
 			method: "POST",
@@ -202,6 +212,7 @@ export async function deleteByIds(
 	const accountId = await requireAuth(config);
 
 	return await fetchResult(
+		config,
 		`/accounts/${accountId}/vectorize/v2/indexes/${indexName}/delete_by_ids`,
 		{
 			method: "POST",
@@ -220,6 +231,7 @@ export async function indexInfo(
 	const accountId = await requireAuth(config);
 
 	return await fetchResult(
+		config,
 		`/accounts/${accountId}/vectorize/v2/indexes/${indexName}/info`,
 		{
 			method: "GET",
@@ -235,6 +247,7 @@ export async function createMetadataIndex(
 	const accountId = await requireAuth(config);
 
 	return await fetchResult(
+		config,
 		`/accounts/${accountId}/vectorize/v2/indexes/${indexName}/metadata_index/create`,
 		{
 			method: "POST",
@@ -253,6 +266,7 @@ export async function listMetadataIndex(
 	const accountId = await requireAuth(config);
 
 	return await fetchResult(
+		config,
 		`/accounts/${accountId}/vectorize/v2/indexes/${indexName}/metadata_index/list`,
 		{
 			method: "GET",
@@ -268,6 +282,7 @@ export async function deleteMetadataIndex(
 	const accountId = await requireAuth(config);
 
 	return await fetchResult(
+		config,
 		`/accounts/${accountId}/vectorize/v2/indexes/${indexName}/metadata_index/delete`,
 		{
 			method: "POST",

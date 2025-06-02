@@ -7,12 +7,17 @@ You can also run these tests locally, but you'll need access to the `8d783f274e1
 You can then run the e2e test suite with the following commands (run them in root of the repo):
 
 ```zsh
-pnpm i
-pnpm build
-CLOUDFLARE_ACCOUNT_ID=8d783f274e1f82dc46744c297b015a2f CLOUDFLARE_API_TOKEN=<cloudflare-testing-api-token> WRANGLER="node --no-warnings $PWD/packages/wrangler/bin/wrangler.js" WRANGLER_IMPORT="$PWD/packages/wrangler/wrangler-dist/cli.js" pnpm --filter wrangler run test:e2e
+CLOUDFLARE_ACCOUNT_ID=8d783f274e1f82dc46744c297b015a2f CLOUDFLARE_API_TOKEN=<cloudflare-testing-api-token> WRANGLER="node --no-warnings $PWD/packages/wrangler/bin/wrangler.js" WRANGLER_IMPORT="$PWD/packages/wrangler/wrangler-dist/cli.js" pnpm test:e2e -F wrangler
 ```
 
-> Make sure to replace `<cloudflare-testing-api-token>` with the actual API token you generated.
+> Make sure you have run `pnpm i` since any changes to package dependencies - common when switching git branches or pulling updates from GitHub.
+> Also, remember to replace `<cloudflare-testing-api-token>` with the actual API token you generated.
+
+If you want to run a subset of tests (e.g. just one) while retaining the turborepo cache for the builds of the dependencies, you can provide the list of test files via the `WRANGLER_E2E_TEST_FILE` environment variable. For example (eliding the other env vars for clarity):
+
+```zsh
+CLOUDFLARE_ACCOUNT_ID=... CLOUDFLARE_API_TOKEN=... WRANGLER=... WRANGLER_IMPORT=... WRANGLER_E2E_TEST_FILE=c3-integration.test pnpm test:e2e -F wrangler
+```
 
 ## How tests are written
 

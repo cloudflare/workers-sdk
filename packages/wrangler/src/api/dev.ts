@@ -34,6 +34,7 @@ export interface Unstable_DevOptions {
 		binding: string;
 		id?: string;
 		preview_id?: string;
+		remote?: boolean;
 	}[];
 	durableObjects?: {
 		name: string;
@@ -46,11 +47,13 @@ export interface Unstable_DevOptions {
 		service: string;
 		environment?: string | undefined;
 		entrypoint?: string | undefined;
+		remote?: boolean;
 	}[];
 	r2?: {
 		binding: string;
 		bucket_name?: string;
 		preview_bucket_name?: string;
+		remote?: boolean;
 	}[];
 	ai?: {
 		binding: string;

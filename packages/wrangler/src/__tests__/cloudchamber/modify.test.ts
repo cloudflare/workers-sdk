@@ -15,7 +15,7 @@ function mockDeployment() {
 			"*/deployments/1234/v2",
 			async ({ request }) => {
 				expect(await request.text()).toBe(
-					`{"image":"hello:modify","location":"sfo06","environment_variables":[{"name":"HELLO","value":"WORLD"},{"name":"YOU","value":"CONQUERED"}],"labels":[{"name":"appname","value":"helloworld"},{"name":"region","value":"wnam"}],"vcpu":3,"memory":"40MB"}`
+					`{"image":"hello:modify","location":"sfo06","environment_variables":[{"name":"HELLO","value":"WORLD"},{"name":"YOU","value":"CONQUERED"}],"labels":[{"name":"appname","value":"helloworld"},{"name":"region","value":"wnam"}],"vcpu":3,"memory_mib":40}`
 				);
 				return HttpResponse.json(MOCK_DEPLOYMENTS_COMPLEX[0]);
 			},
@@ -32,6 +32,7 @@ const EXPECTED_RESULT = `
 		    \\"account_id\\": \\"123\\",
 		    \\"vcpu\\": 4,
 		    \\"memory\\": \\"400MB\\",
+		    \\"memory_mib\\": 400,
 		    \\"version\\": 1,
 		    \\"image\\": \\"hello\\",
 		    \\"location\\": {

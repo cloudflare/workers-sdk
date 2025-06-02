@@ -30,7 +30,7 @@ export const pipelinesGetCommand = createCommand({
 
 		validateName("pipeline name", name);
 
-		const pipeline = await getPipeline(accountId, name);
+		const pipeline = await getPipeline(config, accountId, name);
 
 		switch (args.format) {
 			case "json":

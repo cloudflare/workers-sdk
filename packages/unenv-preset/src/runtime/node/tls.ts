@@ -1,7 +1,6 @@
 import {
 	CLIENT_RENEG_LIMIT,
 	CLIENT_RENEG_WINDOW,
-	convertALPNProtocols,
 	createSecurePair,
 	createServer,
 	DEFAULT_CIPHERS,
@@ -17,7 +16,6 @@ import type nodeTls from "node:tls";
 export {
 	CLIENT_RENEG_LIMIT,
 	CLIENT_RENEG_WINDOW,
-	convertALPNProtocols,
 	createSecurePair,
 	createServer,
 	DEFAULT_CIPHERS,
@@ -36,6 +34,8 @@ export const {
 	checkServerIdentity,
 	connect,
 	createSecureContext,
+	// @ts-expect-error @types/node does not provide this function
+	convertALPNProtocols,
 	// @ts-expect-error Node typings wrongly declare `SecureContext` as an interface
 	SecureContext,
 	TLSSocket,

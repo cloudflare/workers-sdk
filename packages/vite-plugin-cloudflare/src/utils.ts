@@ -41,24 +41,6 @@ export function toMiniflareRequest(request: Request): MiniflareRequest {
 	});
 }
 
-export function nodeHeadersToWebHeaders(
-	nodeHeaders: IncomingHttpHeaders
-): Headers {
-	const headers = new Headers();
-
-	for (const [key, value] of Object.entries(nodeHeaders)) {
-		if (typeof value === "string") {
-			headers.append(key, value);
-		} else if (Array.isArray(value)) {
-			for (const item of value) {
-				headers.append(key, item);
-			}
-		}
-	}
-
-	return headers;
-}
-
 const postfixRE = /[?#].*$/;
 export function cleanUrl(url: string): string {
 	return url.replace(postfixRE, "");

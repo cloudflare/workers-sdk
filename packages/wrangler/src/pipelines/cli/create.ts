@@ -204,6 +204,7 @@ export const pipelinesCreateCommand = createCommand({
 		) {
 			// auto-generate a service token
 			const auth = await authorizeR2Bucket(
+				config,
 				name,
 				accountId,
 				pipelineConfig.destination.path.bucket
@@ -267,7 +268,7 @@ export const pipelinesCreateCommand = createCommand({
 		}
 
 		logger.log(`🌀 Creating pipeline named "${name}"`);
-		const pipeline = await createPipeline(accountId, pipelineConfig);
+		const pipeline = await createPipeline(config, accountId, pipelineConfig);
 
 		logger.log(
 			`✅ Successfully created pipeline "${pipeline.name}" with ID ${pipeline.id}\n`

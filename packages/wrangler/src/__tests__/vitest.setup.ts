@@ -162,18 +162,16 @@ vi.mock("xdg-app-paths", () => {
 vi.mock("../metrics/metrics-config", async (importOriginal) => {
 	const realModule =
 		await importOriginal<typeof import("../metrics/metrics-config")>();
-	const fakeModule = {
-		...realModule,
-		getMetricsConfig: () => async () => {
-			return {
-				enabled: false,
-				deviceId: "mock-device",
-				userId: undefined,
-			};
-		},
-	};
-	return fakeModule;
+	vi.spyOn(realModule, "getMetricsConfig").mockImplementation(() => {
+		return {
+			enabled: false,
+			deviceId: "mock-device",
+			userId: undefined,
+		};
+	});
+	return realModule;
 });
+
 vi.mock("prompts", () => {
 	return {
 		__esModule: true,

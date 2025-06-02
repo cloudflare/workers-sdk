@@ -8,6 +8,7 @@ import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { findWranglerConfig } from "../config/config-helpers";
 import { createAlias, createCommand } from "../core/create-command";
 import { prompt, select } from "../dialogs";
+import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
 import { FatalError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -190,6 +191,7 @@ export const pagesDeployCommand = createCommand({
 		if (projectName) {
 			try {
 				await fetchResult<Project>(
+					COMPLIANCE_REGION_CONFIG_PUBLIC,
 					`/accounts/${accountId}/pages/projects/${projectName}`
 				);
 			} catch (err) {
@@ -298,13 +300,17 @@ export const pagesDeployCommand = createCommand({
 						throw new FatalError("Must specify a production branch.", 1);
 					}
 
-					await fetchResult<Project>(`/accounts/${accountId}/pages/projects`, {
-						method: "POST",
-						body: JSON.stringify({
-							name: projectName,
-							production_branch: productionBranch,
-						}),
-					});
+					await fetchResult<Project>(
+						COMPLIANCE_REGION_CONFIG_PUBLIC,
+						`/accounts/${accountId}/pages/projects`,
+						{
+							method: "POST",
+							body: JSON.stringify({
+								name: projectName,
+								production_branch: productionBranch,
+							}),
+						}
+					);
 
 					saveToConfigCache<PagesConfigCache>(PAGES_CONFIG_CACHE_FILENAME, {
 						account_id: accountId,
@@ -417,6 +423,7 @@ export const pagesDeployCommand = createCommand({
 				);
 
 				const deployment = await fetchResult<Deployment>(
+					COMPLIANCE_REGION_CONFIG_PUBLIC,
 					`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentResponse.id}`
 				);
 				latestDeploymentStage = deployment.latest_stage;
@@ -446,6 +453,7 @@ export const pagesDeployCommand = createCommand({
 		) {
 			// get persistent logs so we can show users the failure message
 			const logs = await fetchResult<UnifiedDeploymentLogMessages>(
+				COMPLIANCE_REGION_CONFIG_PUBLIC,
 				`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentResponse.id}/history/logs?size=10000000`
 			);
 			// last log entry will be the most relevant for Direct Uploads
