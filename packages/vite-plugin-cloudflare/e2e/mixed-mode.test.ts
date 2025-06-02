@@ -53,7 +53,7 @@ describe
 
 		afterAll(() => {
 			[remoteWorkerName, alternativeRemoteWorkerName].forEach((worker) => {
-				execSync(`npx wrangler delete --name ${worker}`);
+				runWrangler(`wrangler delete --name ${worker}`);
 			});
 		});
 

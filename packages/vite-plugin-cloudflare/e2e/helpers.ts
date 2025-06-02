@@ -181,7 +181,7 @@ async function updateVitePluginVersion(projectPath: string) {
 
 export function runCommand(
 	command: string,
-	cwd: string,
+	cwd?: string,
 	{ attempts = 1 } = {}
 ) {
 	while (attempts > 0) {
@@ -217,7 +217,7 @@ function getWranglerCommand(command: string) {
 
 export async function runWrangler(
 	wranglerCommand: string,
-	{ cwd }: { cwd: string }
+	{ cwd }: { cwd?: string } = {}
 ) {
 	return runCommand(getWranglerCommand(wranglerCommand), cwd);
 }
