@@ -539,12 +539,18 @@ export function printBindings(
 
 	if (mtls_certificates !== undefined && mtls_certificates.length > 0) {
 		output.push(
-			...mtls_certificates.map(({ binding, certificate_id }) => {
+			...mtls_certificates.map(({ binding, certificate_id, remote }) => {
 				return {
 					name: binding,
 					type: friendlyBindingNames.mtls_certificates,
 					value: certificate_id,
-					mode: getMode(),
+					mode: getMode({
+						isSimulatedLocally: getFlag("MIXED_MODE")
+							? remote === true || remote === undefined
+								? false
+								: undefined
+							: false,
+					}),
 				};
 			})
 		);

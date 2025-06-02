@@ -334,6 +334,7 @@ export async function maybeStartOrUpdateMixedModeSession(
 		const numOfRemoteBindings = Object.keys(remoteBindings ?? {}).length;
 		if (numOfRemoteBindings > 0) {
 			mixedModeSession = await startMixedModeSession(remoteBindings, {
+				workerName: configBundle.name,
 				complianceRegion: configBundle.complianceRegion,
 			});
 		}
