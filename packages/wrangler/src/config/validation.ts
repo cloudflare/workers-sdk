@@ -3158,7 +3158,12 @@ const validateMTlsCertificateBinding: ValidatorFn = (
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"certificate_id",
+		...(getFlag("MIXED_MODE") ? ["remote"] : []),
 	]);
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
 
 	return isValid;
 };
