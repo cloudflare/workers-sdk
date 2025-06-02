@@ -9,8 +9,10 @@ import {
 import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
+import { toString } from "../helpers/serialize-form-data-entry";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
+import type { WorkerMetadata } from "../../deployment-bundle/create-worker-upload-form";
 
 describe("versions upload", () => {
 	runInTempDir();
@@ -40,11 +42,24 @@ describe("versions upload", () => {
 			)
 		);
 	}
-	function mockUploadVersion(has_preview: boolean, flakeCount = 1) {
+	function mockUploadVersion(
+		has_preview: boolean,
+		flakeCount = 1,
+		expectedAnnotations?: Record<string, string>
+	) {
 		msw.use(
 			http.post(
 				`*/accounts/:accountId/workers/scripts/:scriptName/versions`,
-				({ params }) => {
+				async ({ params, request }) => {
+					const formBody = await request.formData();
+					const metadata = JSON.parse(
+						await toString(formBody.get("metadata"))
+					) as WorkerMetadata;
+
+					if (expectedAnnotations) {
+						expect(metadata.annotations).toEqual(expectedAnnotations);
+					}
+
 					if (flakeCount > 0) {
 						flakeCount--;
 						return HttpResponse.error();
@@ -140,31 +155,20 @@ describe("versions upload", () => {
 
 	test("should allow specifying --preview-alias", async () => {
 		mockGetScript();
-		mockUploadVersion(true);
+		mockUploadVersion(true, 1, { "workers/alias": "abcd1234" });
 		mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
 		mockSubDomainRequest();
-
-		// Setup
 		writeWranglerConfig({
 			name: "test-name",
 			main: "./index.js",
-			vars: {
-				TEST: "test-string",
-			},
 		});
 		writeWorkerSource();
-		setIsTTY(false);
 
-		const result = runWrangler("versions upload --preview-alias abcd1234");
-
-		await expect(result).resolves.toBeUndefined();
+		await runWrangler("versions upload --preview-alias abcd1234");
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"Total Upload: xx KiB / gzip: xx KiB
 			Worker Startup Time: 500 ms
-			Your Worker has access to the following bindings:
-			- Vars:
-			  - TEST: \\"test-string\\"
 			Uploaded test-name (TIMINGS)
 			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993
 			Version Preview URL: https://51e4886e-test-name.test-sub-domain.workers.dev

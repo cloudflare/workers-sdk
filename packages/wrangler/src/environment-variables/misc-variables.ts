@@ -194,13 +194,15 @@ export const getCIOverrideNetworkModeHost = getEnvironmentVariableFactory({
 });
 
 /**
- * `WRANGLER_CI_OVERRIDE_VERSION_ALIAS` allows specifying an alias for a version during upload
+ * `WRANGLER_CI_GENERATE_PREVIEW_ALIAS` specifies whether to generate a preview alias during version upload
  *
- * This is intended to be a way for users to set the version alias dynamically in CI environments.
- * The CLI arg should always take precedence over the envvar.
+ * If this is set to true, Wrangler will attempt to autogenerate the preview alias by using the branch
+ * name. If the branch name is too long and an alias cannot be created, a warning will be printed to the console.
  */
-export const getCIOverridePreviewAlias = getEnvironmentVariableFactory({
-	variableName: "WRANGLER_CI_OVERRIDE_PREVIEW_ALIAS",
+export const getCIGeneratePreviewAlias = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_CI_GENERATE_PREVIEW_ALIAS",
+	defaultValue: () => "false" as const,
+	choices: ["true", "false"] as const,
 });
 
 /**
