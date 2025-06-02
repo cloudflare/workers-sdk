@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import childProcess from "node:child_process";
 import events from "node:events";
 import fs from "node:fs/promises";
@@ -180,7 +181,7 @@ async function updateVitePluginVersion(projectPath: string) {
 
 export function runCommand(
 	command: string,
-	cwd: string,
+	cwd?: string,
 	{ attempts = 1 } = {}
 ) {
 	while (attempts > 0) {
@@ -189,7 +190,7 @@ export function runCommand(
 			childProcess.execSync(command, {
 				cwd,
 				stdio: debuglog.enabled ? "inherit" : "ignore",
-				env: testEnv,
+				env: { ...process.env, ...testEnv },
 			});
 			break;
 		} catch (e) {
@@ -201,6 +202,24 @@ export function runCommand(
 			}
 		}
 	}
+}
+
+function getWranglerCommand(command: string) {
+	// Enforce a `wrangler` prefix to make commands clearer to read
+	assert(
+		command.startsWith("wrangler "),
+		"Commands must start with `wrangler` (e.g. `wrangler dev`) but got " +
+			command
+	);
+	const wranglerBin = `${__dirname}/../../../packages/wrangler/bin/wrangler.js`;
+	return `${wranglerBin} ${command.slice("wrangler ".length)}`;
+}
+
+export async function runWrangler(
+	wranglerCommand: string,
+	{ cwd }: { cwd?: string } = {}
+) {
+	return runCommand(getWranglerCommand(wranglerCommand), cwd);
 }
 
 export async function fetchJson(url: string, info?: RequestInit) {
