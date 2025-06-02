@@ -1438,6 +1438,31 @@ test("Miniflare: accepts https requests", async (t) => {
 	t.assert(log.logs[0][1].startsWith("Ready on https://"));
 });
 
+// Regression test for https://github.com/cloudflare/workers-sdk/issues/9357
+test("Miniflare: throws error messages that reflect the actual issue", async (t) => {
+	const log = new TestLog(t);
+
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		https: true,
+		script: `export default {
+			async fetch(request, env, ctx) {
+				Object.defineProperty("not an object", "node", "");
+
+				return new Response('Hello World!');
+			},
+		}`,
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch("https://localhost");
+	t.regex(
+		await res.text(),
+		/TypeError: Object\.defineProperty called on non-object/
+	);
+});
+
 test("Miniflare: manually triggered scheduled events", async (t) => {
 	const log = new TestLog(t);
 
