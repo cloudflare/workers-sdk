@@ -2,7 +2,6 @@ import { WorkflowEntrypoint } from "cloudflare:workers";
 
 /**
  * @typedef {Object} Env
- * // Define your environment variables here
  * @property {Worfklow} MY_WORKFLOW
  */
 
