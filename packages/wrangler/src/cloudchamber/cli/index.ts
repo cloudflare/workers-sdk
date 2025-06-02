@@ -8,16 +8,17 @@ import {
 } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
-import { UserError } from "../../errors";
 import {
 	DeploymentsService,
 	ImageRegistriesService,
 	PlacementsService,
 	SshPublicKeysService,
-} from "../client";
+} from "@cloudflare/containers-shared";
+import { UserError } from "../../errors";
 import { wrap } from "../helpers/wrap";
 import { idToLocationName } from "../locations";
 import { capitalize } from "./util";
+import type { EventName } from "../enums";
 import type {
 	CustomerImageRegistry,
 	DeploymentV2,
@@ -25,8 +26,7 @@ import type {
 	PlacementEvent,
 	PlacementStatusHealth,
 	PlacementWithEvents,
-} from "../client";
-import type { EventName } from "../enums";
+} from "@cloudflare/containers-shared";
 
 export function pollRegistriesUntilCondition(
 	onRegistries: (registries: Array<CustomerImageRegistry>) => boolean

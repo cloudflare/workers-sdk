@@ -33,10 +33,6 @@ import {
 	validateTypedArray,
 } from "./validation-helpers";
 import { configFileName, formatConfigSnippet } from ".";
-import type {
-	CreateApplicationRequest,
-	UserDeploymentConfiguration,
-} from "../cloudchamber/client";
 import type { CfWorkerInit } from "../deployment-bundle/worker";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -49,6 +45,10 @@ import type {
 	TailConsumer,
 } from "./environment";
 import type { TypeofType, ValidatorFn } from "./validation-helpers";
+import type {
+	CreateApplicationRequest,
+	UserDeploymentConfiguration,
+} from "@cloudflare/containers-shared";
 
 export type NormalizeAndValidateConfigArgs = {
 	name?: string;

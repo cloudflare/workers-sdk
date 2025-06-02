@@ -1,8 +1,11 @@
 import * as fs from "node:fs";
+import {
+	SchedulingPolicy,
+	SecretAccessType,
+} from "@cloudflare/containers-shared";
 import * as TOML from "@iarna/toml";
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
-import { SchedulingPolicy, SecretAccessType } from "../../cloudchamber/client";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockCLIOutput } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -10,12 +13,12 @@ import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccount } from "./utils";
+import type { ContainerApp } from "../../config/environment";
 import type {
 	Application,
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
-} from "../../cloudchamber/client";
-import type { ContainerApp } from "../../config/environment";
+} from "@cloudflare/containers-shared";
 
 function writeAppConfiguration(...app: ContainerApp[]) {
 	fs.writeFileSync(

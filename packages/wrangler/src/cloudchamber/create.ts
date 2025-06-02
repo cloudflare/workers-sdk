@@ -8,10 +8,14 @@ import {
 import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+import {
+	AssignIPv4,
+	AssignIPv6,
+	DeploymentsService,
+} from "@cloudflare/containers-shared";
 import { parseByteSize } from "./../parse";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { getLocation } from "./cli/locations";
-import { AssignIPv4, AssignIPv6, DeploymentsService } from "./client";
 import {
 	checkEverythingIsSet,
 	collectEnvironmentVariables,
@@ -34,8 +38,12 @@ import type {
 	CommonYargsArgvJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../yargs-types";
-import type { EnvironmentVariable, Label, SSHPublicKeyID } from "./client";
 import type { Arg } from "@cloudflare/cli/interactive";
+import type {
+	EnvironmentVariable,
+	Label,
+	SSHPublicKeyID,
+} from "@cloudflare/containers-shared";
 
 const defaultContainerImage = "docker.io/cloudflare/hello-world:1.0";
 
