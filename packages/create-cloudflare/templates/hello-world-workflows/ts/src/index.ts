@@ -4,7 +4,7 @@ import {
 	WorkflowStep,
 } from "cloudflare:workers";
 
-// User-defined params passed to your workflow
+// User-defined params passed to your Workflow
 type Params = {
 	email: string;
 	metadata: Record<string, string>;
