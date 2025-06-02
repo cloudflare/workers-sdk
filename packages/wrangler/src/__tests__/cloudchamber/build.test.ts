@@ -10,7 +10,6 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccount } from "./utils";
 
-// // Mock only specific functions, keep the rest
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
 	const actual = await importOriginal();
 	return Object.assign({}, actual, {
