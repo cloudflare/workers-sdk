@@ -38,6 +38,8 @@ import {
 	Response,
 } from "./http";
 import {
+	ContainerOptions,
+	ContainerService,
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	DurableObjectClassNames,
@@ -901,6 +903,7 @@ export class Miniflare {
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
 	#proxyClient?: ProxyClient;
+	#containerService?: ContainerService;
 
 	#cfObject?: Record<string, any> = {};
 
@@ -1586,6 +1589,8 @@ export class Miniflare {
 			innerBindings: Worker_Binding[];
 		}[] = [];
 
+		let containerOptions: NonNullable<ContainerOptions> = {};
+
 		for (const [key, plugin] of PLUGIN_ENTRIES) {
 			const pluginExtensions = await plugin.getExtensions?.({
 				// @ts-expect-error `CoreOptionsSchema` has required options which are
@@ -1615,6 +1620,14 @@ export class Miniflare {
 				// This will be the UserWorker, or the vitest pool worker wrapping the UserWorker
 				// The asset plugin needs this so that it can set the binding between the RouterWorker and the UserWorker
 				workerOpts.assets.assets.workerName = workerOpts.core.name;
+			}
+
+			if (workerOpts.containers.containers) {
+				// we don't care which worker this container belongs to, as they are id'd already by the DO classname
+				containerOptions = {
+					...containerOptions,
+					...workerOpts.containers.containers,
+				};
 			}
 
 			// Collect all bindings from this worker
@@ -1868,6 +1881,17 @@ export class Miniflare {
 				allWorkerRoutes.set(INBOUND_DO_PROXY_SERVICE_NAME, [
 					`*/${INBOUND_DO_PROXY_SERVICE_PATH}`,
 				]);
+			}
+		}
+
+		if (
+			Object.keys(containerOptions).length &&
+			!sharedOpts.containers.ignore_containers
+		) {
+			if (this.#containerService === undefined) {
+				this.#containerService = new ContainerService(containerOptions);
+			} else {
+				this.#containerService.updateConfig(containerOptions);
 			}
 		}
 
