@@ -1,6 +1,16 @@
 import { WorkflowEntrypoint } from "cloudflare:workers";
 
 /**
+ * Welcome to Cloudflare Workers! This is your first Workflows application.
+ *
+ * - Run `npm run dev` in your terminal to start a development server
+ * - Open a browser tab at http://localhost:8787/ to see your Workflow in action
+ * - Run `npm run deploy` to publish your application
+ *
+ * Learn more at https://developers.cloudflare.com/workflows
+ */
+ 
+/**
  * @typedef {Object} Env
  * @property {Workflow} MY_WORKFLOW
  */
