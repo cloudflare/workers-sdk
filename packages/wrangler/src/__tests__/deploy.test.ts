@@ -12,7 +12,6 @@ import dedent from "ts-dedent";
 import { File } from "undici";
 import { vi } from "vitest";
 import { getDefaultRegistry } from "../cloudchamber/build";
-import { type ImageRegistryCredentialsConfiguration } from "../cloudchamber/client";
 import {
 	printBundleSize,
 	printOffendingDependencies,
@@ -60,7 +59,6 @@ import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { AssetManifest } from "../assets";
-import type { AccountRegistryToken, Application } from "../cloudchamber/client";
 import type { Config } from "../config";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
 import type {
@@ -69,6 +67,11 @@ import type {
 	QueueResponse,
 } from "../queues/client";
 import type { ChildProcess } from "node:child_process";
+import type {
+	AccountRegistryToken,
+	Application,
+	ImageRegistryCredentialsConfiguration,
+} from "@cloudflare/containers-shared";
 import type { FormData } from "undici";
 import type { Mock } from "vitest";
 
