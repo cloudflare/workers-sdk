@@ -1,0 +1,30 @@
+import dedent from "ts-dedent";
+import { minimalVitestConfig, test } from "./helpers";
+
+test("filter test suite by pattern includes non-ascii string", async ({
+	expect,
+	seed,
+	vitestRun,
+}) => {
+	// Check with no entrypoint
+	await seed({
+		"vitest.config.mts": minimalVitestConfig,
+		"index.test.ts": dedent`
+            import { it, expect } from "vitest";
+
+            it("test includes 日本語", async () => {
+                expect(1).toBe(1)
+            });
+
+            it("test not includes 日本語", async () => {
+                expect(1).toBe(2)
+            });
+        `,
+	});
+
+	const result = await vitestRun({
+		flags: ["--testNamePattern='test includes 日本語'"],
+	});
+
+	expect(await result.exitCode).toBe(0);
+});
