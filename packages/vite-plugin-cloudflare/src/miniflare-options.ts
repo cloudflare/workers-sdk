@@ -4,6 +4,7 @@ import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+	getDefaultDevRegistryPath,
 	kCurrentWorker,
 	Log,
 	LogLevel,
@@ -182,14 +183,14 @@ function getEntryWorkerConfig(
 	];
 }
 
-function filterTails(
+function logUnknownTails(
 	tails: WorkerOptions["tails"],
 	userWorkers: { name?: string }[],
 	log: (msg: string) => void
 ) {
-	// Only connect the tail consumers that represent Workers that are defined in the Vite config. Warn that a tail will be omitted otherwise
+	// Only connect the tail consumers that represent Workers that are defined in the Vite config. Warn that a tail might be omitted otherwise
 	// This _differs from service bindings_ because tail consumers are "optional" in a sense, and shouldn't affect the runtime behaviour of a Worker
-	return tails?.filter((tailService) => {
+	for (const tailService of tails ?? []) {
 		let name: string;
 		if (typeof tailService === "string") {
 			name = tailService;
@@ -201,7 +202,7 @@ function filterTails(
 			name = tailService.name;
 		} else {
 			// Don't interfere with network-based tail connections (e.g. via the dev registry), or kCurrentWorker
-			return true;
+			continue;
 		}
 		const found = userWorkers.some((w) => w.name === name);
 
@@ -209,14 +210,12 @@ function filterTails(
 			log(
 				colors.dim(
 					colors.yellow(
-						`Tail consumer "${name}" was not found in your config. Make sure you add it if you'd like to simulate receiving tail events locally.`
+						`Tail consumer "${name}" was not found in your config. Make sure you add it to the config or run it in another dev session if you'd like to simulate receiving tail events locally.`
 					)
 				)
 			);
 		}
-
-		return found;
-	});
+	}
 }
 
 export async function getDevMiniflareOptions(
@@ -326,6 +325,7 @@ export async function getDevMiniflareOptions(
 								{
 									mixedModeConnectionString:
 										mixedModeSession?.mixedModeConnectionString,
+									mixedModeEnabled: resolvedPluginConfig.experimental.mixedMode,
 								}
 							);
 
@@ -340,6 +340,12 @@ export async function getDevMiniflareOptions(
 									...workerOptions,
 									name: workerOptions.name ?? workerConfig.name,
 									unsafeInspectorProxy: inspectorPort !== false,
+									unsafeDirectSockets:
+										environmentName ===
+										resolvedPluginConfig.entryWorkerEnvironmentName
+											? // Expose the default entrypoint of the entry worker on the dev registry
+												[{ entrypoint: undefined, proxy: true }]
+											: [],
 									modulesRoot: miniflareModulesRoot,
 									unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
 									serviceBindings: {
@@ -414,6 +420,7 @@ export async function getDevMiniflareOptions(
 		logRequests: false,
 		inspectorPort: inspectorPort === false ? undefined : inspectorPort,
 		unsafeInspectorProxy: inspectorPort !== false,
+		unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));
@@ -475,13 +482,14 @@ export async function getDevMiniflareOptions(
 					);
 				}
 
+				logUnknownTails(
+					workerOptions.tails,
+					userWorkers,
+					viteDevServer.config.logger.warn
+				);
+
 				return {
 					...workerOptions,
-					tails: filterTails(
-						workerOptions.tails,
-						userWorkers,
-						viteDevServer.config.logger.warn
-					),
 					modules: [
 						{
 							type: "ESModule",
@@ -583,7 +591,7 @@ export async function getPreviewMiniflareOptions(
 	const resolvedViteConfig = vitePreviewServer.config;
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
-			workerConfigs.map(async (workerConfig) => {
+			workerConfigs.map(async (workerConfig, i) => {
 				const mixedModeSession = mixedModeEnabled
 					? await maybeStartOrUpdateMixedModeSession(workerConfig)
 					: undefined;
@@ -594,6 +602,7 @@ export async function getPreviewMiniflareOptions(
 					{
 						mixedModeConnectionString:
 							mixedModeSession?.mixedModeConnectionString,
+						mixedModeEnabled,
 					}
 				);
 
@@ -602,16 +611,21 @@ export async function getPreviewMiniflareOptions(
 				const { ratelimits, modulesRules, ...workerOptions } =
 					miniflareWorkerOptions.workerOptions;
 
+				logUnknownTails(
+					workerOptions.tails,
+					workerConfigs,
+					vitePreviewServer.config.logger.warn
+				);
+
 				return [
 					{
 						...workerOptions,
-						tails: filterTails(
-							workerOptions.tails,
-							workerConfigs,
-							vitePreviewServer.config.logger.warn
-						),
 						name: workerOptions.name ?? workerConfig.name,
 						unsafeInspectorProxy: inspectorPort !== false,
+						unsafeDirectSockets:
+							// This exposes the default entrypoint of the entry worker on the dev registry
+							// Assuming that the first worker config to be the entry worker.
+							i === 0 ? [{ entrypoint: undefined, proxy: true }] : [],
 						...(miniflareWorkerOptions.main
 							? getPreviewModules(miniflareWorkerOptions.main, modulesRules)
 							: { modules: true, script: "" }),
@@ -628,6 +642,7 @@ export async function getPreviewMiniflareOptions(
 		log: logger,
 		inspectorPort: inspectorPort === false ? undefined : inspectorPort,
 		unsafeInspectorProxy: inspectorPort !== false,
+		unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));

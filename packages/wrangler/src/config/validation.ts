@@ -2119,8 +2119,13 @@ const validateNamedSimpleBinding =
 			isValid = false;
 		}
 
+		if (!isRemoteValid(value, field, diagnostics)) {
+			isValid = false;
+		}
+
 		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 			"binding",
+			...(getFlag("MIXED_MODE") ? ["remote"] : []),
 		]);
 
 		return isValid;
@@ -2144,6 +2149,10 @@ const validateAIBinding =
 		let isValid = true;
 		if (!isRequiredProperty(value, "binding", "string")) {
 			diagnostics.errors.push(`binding should have a string "binding" field.`);
+			isValid = false;
+		}
+
+		if (!isRemoteValid(value, field, diagnostics)) {
 			isValid = false;
 		}
 
@@ -2778,9 +2787,14 @@ const validateVectorizeBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"index_name",
+		...(getFlag("MIXED_MODE") ? ["remote"] : []),
 	]);
 
 	return isValid;
@@ -3054,6 +3068,11 @@ const validateWorkerNamespaceBinding: ValidatorFn = (
 			isValid = false;
 		}
 	}
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
 	return isValid;
 };
 

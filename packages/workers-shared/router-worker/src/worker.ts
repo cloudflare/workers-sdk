@@ -3,7 +3,7 @@ import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics, DISPATCH_TYPE } from "./analytics";
 import { applyConfigurationDefaults } from "./configuration";
-import type AssetWorker from "../../asset-worker/src/index";
+import type AssetWorker from "../../asset-worker";
 import type {
 	JaegerTracing,
 	RouterConfig,

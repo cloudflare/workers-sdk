@@ -1,5 +1,34 @@
 # @cloudflare/vite-plugin
 
+## 1.3.1
+
+### Patch Changes
+
+- [#9387](https://github.com/cloudflare/workers-sdk/pull/9387) [`e39a45f`](https://github.com/cloudflare/workers-sdk/commit/e39a45ffa0d783cc99107f8ab02d6b3dd27d4c9f) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Prevent leaking Miniflare server logs. Logs that were previously filtered were leaking as they were changed to include colors. We now override the new Miniflare `Log.logReady` method with a noop rather than filtering the logs.
+
+- [#9308](https://github.com/cloudflare/workers-sdk/pull/9308) [`d3a6eb3`](https://github.com/cloudflare/workers-sdk/commit/d3a6eb30e58de2b8f12fc899a70a31518968b910) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add new `mixedMode` experimental option
+
+  Add a new `mixedMode` experimental option that allows uses to have their worker access remote resources during development (and preview)
+
+  To enabled mixed mode set the corresponding option to the cloudflare plugin instantiation:
+
+  ```js
+  export default defineConfig({
+  	plugins: [
+  		cloudflare({
+  			// ...
+  			experimental: { mixedMode: true },
+  		}),
+  	],
+  });
+  ```
+
+  Thereafter bindings configured with the `remote` flags will be accessible by workers' code when run via `vite dev` and `vite preview`
+
+- Updated dependencies [[`34b6174`](https://github.com/cloudflare/workers-sdk/commit/34b61746f26be5b4521eaf10bd29ac8792adcf08), [`d9d937a`](https://github.com/cloudflare/workers-sdk/commit/d9d937ab6f2868271dde5a8da625773085eaec85), [`e39a45f`](https://github.com/cloudflare/workers-sdk/commit/e39a45ffa0d783cc99107f8ab02d6b3dd27d4c9f), [`d3a6eb3`](https://github.com/cloudflare/workers-sdk/commit/d3a6eb30e58de2b8f12fc899a70a31518968b910), [`b8f058c`](https://github.com/cloudflare/workers-sdk/commit/b8f058c81ecf122c80069b655d92232eb1302fd1), [`fdae3f7`](https://github.com/cloudflare/workers-sdk/commit/fdae3f7665a5cd3b5e25c9de19156ecd54618a7c)]:
+  - wrangler@4.18.0
+  - miniflare@4.20250525.0
+
 ## 1.3.0
 
 ### Minor Changes

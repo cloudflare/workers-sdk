@@ -6,7 +6,8 @@ describe("getWorkerConfig", () => {
 	test("should return a simple raw config", () => {
 		const { raw } = getWorkerConfig(
 			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
-			undefined
+			undefined,
+			false
 		);
 		expect(typeof raw).toEqual("object");
 
@@ -34,7 +35,8 @@ describe("getWorkerConfig", () => {
 	test("should return a simple config without non-applicable fields", () => {
 		const { config } = getWorkerConfig(
 			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
-			undefined
+			undefined,
+			false
 		);
 		expect(typeof config).toEqual("object");
 
@@ -44,7 +46,8 @@ describe("getWorkerConfig", () => {
 	test("should not return any non-applicable config when there isn't any", () => {
 		const { nonApplicable } = getWorkerConfig(
 			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
-			undefined
+			undefined,
+			false
 		);
 		expect(nonApplicable).toEqual({
 			replacedByVite: new Set(),
@@ -55,7 +58,8 @@ describe("getWorkerConfig", () => {
 	test("should read a simple wrangler.toml file", () => {
 		const { config, raw, nonApplicable } = getWorkerConfig(
 			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
-			undefined
+			undefined,
+			false
 		);
 		expect(typeof config).toEqual("object");
 
@@ -89,7 +93,8 @@ describe("getWorkerConfig", () => {
 					import.meta.url
 				)
 			),
-			undefined
+			undefined,
+			false
 		);
 
 		expect(typeof config).toEqual("object");
@@ -164,7 +169,8 @@ describe("getWorkerConfig", () => {
 							import.meta.url
 						)
 					),
-					undefined
+					undefined,
+					false
 				)
 			).toThrowError(
 				/The provided Wrangler config main field \(.*?index\.ts\) doesn't point to an existing file/
@@ -180,7 +186,8 @@ describe("getWorkerConfig", () => {
 							import.meta.url
 						)
 					),
-					undefined
+					undefined,
+					false
 				)
 			).toThrowError(
 				/The provided Wrangler config main field \(.*?fixtures\) points to a directory, it needs to point to a file instead/

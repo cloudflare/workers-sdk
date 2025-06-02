@@ -14,7 +14,7 @@ function getDeployConfigPath(root: string) {
 	return path.resolve(root, ".wrangler", "deploy", "config.json");
 }
 
-export function getWorkerConfigs(root: string) {
+export function getWorkerConfigs(root: string, mixedModeEnabled: boolean) {
 	const deployConfigPath = getDeployConfigPath(root);
 	const deployConfig = JSON.parse(
 		fs.readFileSync(deployConfigPath, "utf-8")
@@ -28,7 +28,10 @@ export function getWorkerConfigs(root: string) {
 			path.dirname(deployConfigPath),
 			configPath
 		);
-		return unstable_readConfig({ config: resolvedConfigPath });
+		return unstable_readConfig(
+			{ config: resolvedConfigPath },
+			{ experimental: { mixedModeEnabled } }
+		);
 	});
 }
 
