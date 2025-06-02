@@ -334,11 +334,8 @@ export const versionsUploadCommand = createCommand({
 		}
 
 		const previewAlias =
-			args.previewAlias !== undefined
-				? args.previewAlias
-				: getCIGeneratePreviewAlias()
-					? generatePreviewAlias(name)
-					: undefined;
+			args.previewAlias ??
+			(getCIGeneratePreviewAlias() ? generatePreviewAlias(name) : undefined);
 
 		if (!args.dryRun) {
 			assert(accountId, "Missing account ID");

@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { generatePreviewAlias } from "../../versions/upload";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -208,5 +209,66 @@ describe("versions upload", () => {
 		`);
 
 		expect(std.info).toContain("Retrying API call after error...");
+	});
+});
+
+const mockExecSync = vi.fn();
+
+describe("generatePreviewAlias", () => {
+	vi.mock("child_process", () => ({
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		execSync: (...args: any[]) => mockExecSync(...args),
+	}));
+
+	beforeEach(() => {
+		mockExecSync.mockReset();
+	});
+
+	it("returns undefined if not in a git directory", () => {
+		mockExecSync.mockImplementationOnce(() => {
+			throw new Error("not a git repo");
+		});
+
+		const result = generatePreviewAlias("worker");
+		expect(result).toBeUndefined();
+	});
+
+	it("returns undefined if git branch name cannot be retrieved", () => {
+		mockExecSync
+			.mockImplementationOnce(() => {}) // is-inside-work-tree
+			.mockImplementationOnce(() => {
+				throw new Error("failed to get branch");
+			});
+
+		const result = generatePreviewAlias("worker");
+		expect(result).toBeUndefined();
+	});
+
+	it("sanitizes branch names correctly", () => {
+		mockExecSync
+			.mockImplementationOnce(() => {}) // is-inside-work-tree
+			.mockImplementationOnce(() => Buffer.from("feat/awesome-feature"));
+
+		const result = generatePreviewAlias("worker");
+		expect(result).toBe("feat-awesome-feature");
+	});
+
+	it("returns undefined for long branch names which don't fit within DNS label constraints", () => {
+		const longBranch = "a".repeat(70);
+		mockExecSync
+			.mockImplementationOnce(() => {}) // is-inside-work-tree
+			.mockImplementationOnce(() => Buffer.from(longBranch));
+
+		const result = generatePreviewAlias("worker");
+		expect(result).toBeUndefined();
+	});
+
+	it("handles multiple, leading, and trailing dashes", () => {
+		mockExecSync
+			.mockImplementationOnce(() => {}) // is-inside-work-tree
+			.mockImplementationOnce(() => Buffer.from("--some--branch--name--"));
+
+		const result = generatePreviewAlias("testscript");
+		expect(result).toBe("some-branch-name");
 	});
 });
