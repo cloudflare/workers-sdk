@@ -1,9 +1,9 @@
 import { Buffer } from "node:buffer";
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { Writable } from "node:stream";
+import { DOMAIN, runDockerCmd } from "@cloudflare/containers-shared";
 import * as TOML from "@iarna/toml";
 import { sync } from "command-exists";
 import * as esbuild from "esbuild";
@@ -11,12 +11,10 @@ import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { File } from "undici";
 import { vi } from "vitest";
-import { getDefaultRegistry } from "../cloudchamber/build";
 import {
 	printBundleSize,
 	printOffendingDependencies,
 } from "../deployment-bundle/bundle-reporter";
-import { getDockerPath } from "../environment-variables/misc-variables";
 import { clearOutputFilePath } from "../output";
 import { sniffUserAgent } from "../package-manager";
 import { writeAuthConfigFile } from "../user";
@@ -66,7 +64,6 @@ import type {
 	PostTypedConsumerBody,
 	QueueResponse,
 } from "../queues/client";
-import type { ChildProcess } from "node:child_process";
 import type {
 	AccountRegistryToken,
 	Application,
@@ -77,6 +74,13 @@ import type { Mock } from "vitest";
 
 vi.mock("command-exists");
 vi.mock("node:child_process");
+vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
+	const actual = await importOriginal();
+	return Object.assign({}, actual, {
+		runDockerCmd: vi.fn(),
+		dockerLoginManagedRegistry: vi.fn(),
+	});
+});
 vi.mock("../check/commands", async (importOriginal) => {
 	return {
 		...(await importOriginal()),
@@ -8628,6 +8632,7 @@ addEventListener('fetch', event => {});`
 			});
 
 			it("should support durable object bindings to SQLite classes with containers (docker flow)", async () => {
+				vi.stubEnv("WRANGLER_CONTAINERS_DOCKER_PATH", "/usr/bin/docker");
 				function mockGetVersion(versionId: string) {
 					msw.use(
 						http.get(
@@ -8656,102 +8661,6 @@ addEventListener('fetch', event => {});`
 				}
 
 				mockGetVersion("Galaxy-Class");
-
-				function defaultChildProcess() {
-					return {
-						stderr: Buffer.from([]),
-						stdout: Buffer.from("i promise I am a successful process"),
-						on: function (reason: string, cbPassed: (code: number) => unknown) {
-							if (reason === "close") {
-								cbPassed(0);
-							}
-
-							return this;
-						},
-					} as unknown as ChildProcess;
-				}
-
-				vi.mocked(spawn).mockImplementation((cmd, args) => {
-					expect(cmd).toBe(getDockerPath());
-					if (args[0] === "image") {
-						expect(args).toEqual([
-							"image",
-							"push",
-							`${getDefaultRegistry()}/my-container:Galaxy`,
-						]);
-						return defaultChildProcess();
-					}
-
-					if (args[0] === "tag") {
-						expect(args).toEqual([
-							"tag",
-							"my-container:Galaxy",
-							`${getDefaultRegistry()}/my-container:Galaxy`,
-						]);
-						return defaultChildProcess();
-					}
-
-					if (args[0] === "login") {
-						let password = "";
-						const readable = new Writable({
-							write(chunk) {
-								password += chunk;
-							},
-							final() {},
-						});
-
-						return {
-							stdout: Buffer.from("i promise I am a successful docker login"),
-							stdin: readable,
-							on: function (
-								reason: string,
-								cbPassed: (code: number) => unknown
-							) {
-								if (reason === "close") {
-									expect(password).toEqual("mockpassword");
-									cbPassed(0);
-								}
-
-								return this;
-							},
-						} as unknown as ChildProcess;
-					}
-
-					expect(args).toEqual([
-						"build",
-						"-t",
-						getDefaultRegistry() + "/my-container:Galaxy",
-						"--platform",
-						"linux/amd64",
-						"-f",
-						"-",
-						".",
-					]);
-
-					let dockerfile = "";
-					const readable = new Writable({
-						write(chunk) {
-							dockerfile += chunk;
-						},
-						final() {},
-					});
-					return {
-						pid: -1,
-						error: undefined,
-						stderr: Buffer.from([]),
-						stdout: Buffer.from("i promise I am a successful docker build"),
-						stdin: readable,
-						status: 0,
-						signal: null,
-						output: [null],
-						on: (reason: string, cbPassed: (code: number) => unknown) => {
-							if (reason === "exit") {
-								expect(dockerfile).toEqual("FROM scratch");
-								cbPassed(0);
-							}
-						},
-					} as unknown as ChildProcess;
-				});
 
 				mockContainersAccount();
 
@@ -8799,7 +8708,7 @@ addEventListener('fetch', event => {});`
 				function mockGenerateImageRegistryCredentials() {
 					msw.use(
 						http.post(
-							`*/registries/${getDefaultRegistry()}/credentials`,
+							`*/registries/${DOMAIN}/credentials`,
 							async ({ request }) => {
 								const json =
 									(await request.json()) as ImageRegistryCredentialsConfiguration;
@@ -8807,7 +8716,7 @@ addEventListener('fetch', event => {});`
 
 								return HttpResponse.json({
 									account_id: "123",
-									registry_host: getDefaultRegistry(),
+									registry_host: DOMAIN,
 									username: "v1",
 									password: "mockpassword",
 								} as AccountRegistryToken);
@@ -8824,7 +8733,7 @@ addEventListener('fetch', event => {});`
 					instances: 10,
 					durable_objects: { namespace_id: "1" },
 					configuration: {
-						image: getDefaultRegistry() + "/my-container:Galaxy",
+						image: DOMAIN + "/my-container:Galaxy",
 					},
 				});
 
@@ -8851,6 +8760,23 @@ addEventListener('fetch', event => {});`
 				});
 
 				await runWrangler("deploy index.js");
+				expect(runDockerCmd).toHaveBeenCalledTimes(2);
+				expect(runDockerCmd).toHaveBeenCalledWith("/usr/bin/docker", [
+					"build",
+					"-t",
+					`${DOMAIN}/my-container:Galaxy`,
+					"--platform",
+					"linux/amd64",
+					"-f",
+					"./Dockerfile",
+					".",
+				]);
+
+				expect(runDockerCmd).toHaveBeenCalledWith("/usr/bin/docker", [
+					"push",
+					`${DOMAIN}/my-container:Galaxy`,
+				]);
+
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
@@ -9026,6 +8952,8 @@ addEventListener('fetch', event => {});`
 				});
 
 				await runWrangler("deploy index.js");
+				// should not have tried to build or push container image
+				expect(runDockerCmd).toHaveBeenCalledTimes(0);
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
