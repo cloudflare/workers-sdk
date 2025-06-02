@@ -180,6 +180,7 @@ async function getMiniflareOptionsFromConfig(
 			migrations: rawConfig.migrations,
 			imagesLocalMode: false,
 			tails: [],
+			containers: {},
 		},
 		undefined,
 		false
@@ -315,6 +316,7 @@ export function unstable_getMiniflareWorkerOptions(
 			migrations: config.migrations,
 			imagesLocalMode: !!options?.imagesLocalMode,
 			tails: config.tail_consumers,
+			containers: {},
 		},
 		options?.mixedModeConnectionString,
 		options?.mixedModeEnabled ?? false

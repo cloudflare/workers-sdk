@@ -204,6 +204,7 @@ export interface ConfigBundle {
 	bindVectorizeToProd: boolean;
 	imagesLocalMode: boolean;
 	testScheduled: boolean;
+	containers: WorkerOptions["containers"];
 }
 
 export class WranglerLog extends Log {
@@ -507,6 +508,7 @@ type MiniflareBindingsConfig = Pick<
 	| "imagesLocalMode"
 	| "tails"
 	| "complianceRegion"
+	| "containers"
 > &
 	Partial<Pick<ConfigBundle, "format" | "bundle" | "assets">>;
 
@@ -1029,7 +1031,6 @@ export function buildMiniflareBindingOptions(
 				?.filter((b) => b.type == "ratelimit")
 				.map(ratelimitEntry) ?? []
 		),
-
 		serviceBindings,
 		wrappedBindings: wrappedBindings,
 		tails,
@@ -1308,6 +1309,7 @@ export async function buildMiniflareOptions(
 				...bindingOptions,
 				...sitesOptions,
 				...assetOptions,
+				containers: config.containers,
 				// Allow each entrypoint to be accessed directly over `127.0.0.1:0`
 				unsafeDirectSockets: entrypointNames.map((name) => ({
 					host: "127.0.0.1",

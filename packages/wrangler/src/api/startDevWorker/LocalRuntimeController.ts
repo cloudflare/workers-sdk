@@ -127,6 +127,7 @@ export async function convertToConfigBundle(
 		imagesLocalMode: event.config.dev?.imagesLocalMode ?? false,
 		testScheduled: !!event.config.dev.testScheduled,
 		tails: event.config.tailConsumers,
+		containers: event.config.containers ?? {},
 	};
 }
 
