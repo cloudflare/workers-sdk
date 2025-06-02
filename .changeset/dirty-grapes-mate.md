@@ -2,6 +2,6 @@
 "create-cloudflare": minor
 ---
 
-Add hello-world-workflows
+Add Hello World Workflows template.
 
-Hello hello-world-workflows should be the default hello-world/entry point example for anyone building workflows.
+For multi-step applications that automatically retry, persist state, and run for minutes, hours, days or weeks.
