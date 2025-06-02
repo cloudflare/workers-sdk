@@ -58,6 +58,7 @@ export const workflowsInstancesListCommand = createCommand({
 		URLParams.set("page", args.page.toString());
 
 		const instances = await fetchResult<Instance[]>(
+			config,
 			`/accounts/${accountId}/workflows/${args.name}/instances`,
 			undefined,
 			URLParams

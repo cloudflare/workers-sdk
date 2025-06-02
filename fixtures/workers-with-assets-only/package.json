@@ -1,5 +1,5 @@
 {
-	"name": "workers-assets-only",
+	"name": "@fixture/workers-assets-only",
 	"private": true,
 	"scripts": {
 		"dev": "wrangler dev",
@@ -9,7 +9,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250508.0",
+		"@cloudflare/workers-types": "^4.20250525.0",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
 		"vitest": "catalog:default",

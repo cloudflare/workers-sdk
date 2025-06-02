@@ -1,9 +1,0 @@
-{
-	"$schema": "http://turbo.build/schema.json",
-	"extends": ["//"],
-	"tasks": {
-		"test:ci": {
-			"env": ["TEST_CLOUDFLARE_ACCOUNT_ID", "TEST_CLOUDFLARE_API_TOKEN"]
-		}
-	}
-}

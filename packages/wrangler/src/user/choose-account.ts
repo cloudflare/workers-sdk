@@ -2,6 +2,7 @@ import { fetchPagedListResult } from "../cfetch";
 import { configFileName } from "../config";
 import { UserError } from "../errors";
 import { getCloudflareAccountIdFromEnv } from "./auth-variables";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 
 export type ChooseAccountItem = {
 	id: string;
@@ -11,7 +12,9 @@ export type ChooseAccountItem = {
 /**
  * Infer a list of available accounts for the current user.
  */
-export async function getAccountChoices(): Promise<ChooseAccountItem[]> {
+export async function getAccountChoices(
+	complianceConfig: ComplianceConfig
+): Promise<ChooseAccountItem[]> {
 	const accountIdFromEnv = getCloudflareAccountIdFromEnv();
 	if (accountIdFromEnv) {
 		return [{ id: accountIdFromEnv, name: "" }];
@@ -19,7 +22,7 @@ export async function getAccountChoices(): Promise<ChooseAccountItem[]> {
 		try {
 			const response = await fetchPagedListResult<{
 				account: ChooseAccountItem;
-			}>(`/memberships`);
+			}>(complianceConfig, `/memberships`);
 			const accounts = response.map((r) => r.account);
 			if (accounts.length === 0) {
 				throw new UserError(

@@ -83,7 +83,14 @@ export const r2BucketCreateCommand = createCommand({
 		}
 
 		logger.log(`Creating bucket '${fullBucketName}'...`);
-		await createR2Bucket(accountId, name, location, jurisdiction, storageClass);
+		await createR2Bucket(
+			config,
+			accountId,
+			name,
+			location,
+			jurisdiction,
+			storageClass
+		);
 		logger.log(dedent`
 			✅ Created bucket '${fullBucketName}' with${
 				location ? ` location hint ${location} and` : ``
@@ -145,6 +152,7 @@ export const r2BucketUpdateStorageClassCommand = createCommand({
 			`Updating bucket ${fullBucketName} to ${args.storageClass} default storage class.`
 		);
 		await updateR2BucketStorageClass(
+			config,
 			accountId,
 			args.name,
 			args.storageClass,
@@ -175,7 +183,7 @@ export const r2BucketListCommand = createCommand({
 
 		logger.log(`Listing buckets...`);
 
-		const buckets = await listR2Buckets(accountId, args.jurisdiction);
+		const buckets = await listR2Buckets(config, accountId, args.jurisdiction);
 		const tableOutput = tablefromR2BucketsListResponse(buckets);
 		logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
 	},
@@ -207,11 +215,13 @@ export const r2BucketInfoCommand = createCommand({
 		logger.log(`Getting info for '${args.bucket}'...`);
 
 		const bucketInfo = await getR2Bucket(
+			config,
 			accountId,
 			args.bucket,
 			args.jurisdiction
 		);
 		const bucketMetrics = await getR2BucketMetrics(
+			config,
 			accountId,
 			args.bucket,
 			args.jurisdiction
@@ -258,7 +268,7 @@ export const r2BucketDeleteCommand = createCommand({
 			fullBucketName += ` (${args.jurisdiction})`;
 		}
 		logger.log(`Deleting bucket ${fullBucketName}.`);
-		await deleteR2Bucket(accountId, args.bucket, args.jurisdiction);
+		await deleteR2Bucket(config, accountId, args.bucket, args.jurisdiction);
 		logger.log(`Deleted bucket ${fullBucketName}.`);
 		metrics.sendMetricsEvent("delete r2 bucket", {
 			sendMetrics: config.send_metrics,

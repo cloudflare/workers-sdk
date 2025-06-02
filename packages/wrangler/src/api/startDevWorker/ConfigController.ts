@@ -13,9 +13,14 @@ import {
 import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { UserError } from "../../errors";
-import { logger } from "../../logger";
+import { getFlag } from "../../experimental-flags";
+import { logger, runWithLogLevel } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
-import { requireApiToken, requireAuth } from "../../user";
+import {
+	loginOrRefreshIfRequired,
+	requireApiToken,
+	requireAuth,
+} from "../../user";
 import {
 	DEFAULT_INSPECTOR_PORT,
 	DEFAULT_LOCAL_PORT,
@@ -30,7 +35,7 @@ import { getZoneIdForPreview } from "../../zones";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import {
-	convertCfWorkerInitBindingstoBindings,
+	convertCfWorkerInitBindingsToBindings,
 	extractBindingsOfType,
 	unwrapHook,
 } from "./utils";
@@ -56,6 +61,15 @@ async function resolveDevConfig(
 	input: StartDevWorkerInput
 ): Promise<StartDevWorkerOptions["dev"]> {
 	const auth = async () => {
+		if (input.dev?.remote) {
+			const isLoggedIn = await loginOrRefreshIfRequired(config);
+			if (!isLoggedIn) {
+				throw new UserError(
+					"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local."
+				);
+			}
+		}
+
 		if (input.dev?.auth) {
 			return unwrapHook(input.dev.auth, config);
 		}
@@ -91,7 +105,7 @@ async function resolveDevConfig(
 	if (input.dev?.remote) {
 		const { accountId } = await unwrapHook(auth, config);
 		assert(accountId, "Account ID must be provided for remote dev");
-		await getZoneIdForPreview({ host, routes, accountId });
+		await getZoneIdForPreview(config, { host, routes, accountId });
 	}
 
 	const initialIp = input.dev?.server?.hostname ?? config.dev.ip;
@@ -174,13 +188,14 @@ async function resolveBindings(
 			local: !input.dev?.remote,
 			imagesLocalMode: input.dev?.imagesLocalMode,
 			name: config.name,
+			vectorizeBindToProd: input.dev?.bindVectorizeToProd,
 		}
 	);
 
 	return {
 		bindings: {
 			...input.bindings,
-			...convertCfWorkerInitBindingstoBindings(bindings),
+			...convertCfWorkerInitBindingsToBindings(bindings),
 		},
 		unsafe: bindings.unsafe,
 	};
@@ -272,6 +287,7 @@ async function resolveConfig(
 		config: config.configPath,
 		compatibilityDate: getDevCompatibilityDate(config, input.compatibilityDate),
 		compatibilityFlags: input.compatibilityFlags ?? config.compatibility_flags,
+		complianceRegion: input.complianceRegion ?? config.compliance_region,
 		entrypoint: entry.file,
 		projectRoot: entry.projectRoot,
 		bindings,
@@ -321,10 +337,21 @@ async function resolveConfig(
 
 	if (
 		extractBindingsOfType("browser", resolved.bindings).length &&
-		!resolved.dev.remote
+		!resolved.dev.remote &&
+		!getFlag("MIXED_MODE")
 	) {
-		throw new UserError(
+		logger.warn(
 			"Browser Rendering is not supported locally. Please use `wrangler dev --remote` instead."
+		);
+	}
+
+	if (
+		extractBindingsOfType("analytics_engine", resolved.bindings).length &&
+		!resolved.dev.remote &&
+		resolved.build.format === "service-worker"
+	) {
+		logger.warn(
+			"Analytics Engine is not supported locally when using the service-worker format. Please migrate to the module worker format: https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/"
 		);
 	}
 
@@ -397,7 +424,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 				persistent: true,
 				ignoreInitial: true,
 			}).on("change", async (_event) => {
-				logger.log(`${path.basename(configPath)} changed...`);
+				logger.debug(`${path.basename(configPath)} changed...`);
 				assert(
 					this.latestInput,
 					"Cannot be watching config without having first set an input"
@@ -408,7 +435,9 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	}
 
 	public set(input: StartDevWorkerInput, throwErrors = false) {
-		return this.#updateConfig(input, throwErrors);
+		return runWithLogLevel(input.dev?.logLevel, () =>
+			this.#updateConfig(input, throwErrors)
+		);
 	}
 	public patch(input: Partial<StartDevWorkerInput>) {
 		assert(
@@ -421,7 +450,9 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 			...input,
 		};
 
-		return this.#updateConfig(config);
+		return runWithLogLevel(config.dev?.logLevel, () =>
+			this.#updateConfig(config)
+		);
 	}
 
 	async #updateConfig(input: StartDevWorkerInput, throwErrors = false) {
@@ -437,7 +468,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 					env: input.env,
 					"dispatch-namespace": undefined,
 					"legacy-env": !input.legacy?.enableServiceEnvironments,
-					remote: input.dev?.remote,
+					remote: !!input.dev?.remote,
 					upstreamProtocol:
 						input.dev?.origin?.secure === undefined
 							? undefined

@@ -214,34 +214,28 @@ describe("Hot Keys", () => {
 			const unregisterHotKeys = registerHotKeys(options);
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"╭─────────────────────────────────────────────────────────╮
-				│  [a] first option, [b] second option, [c] third option │
-				╰─────────────────────────────────────────────────────────╯"
+				"╭───────────────────────────────────────────────────────╮
+				│  [a] first option [b] second option [c] third option │
+				╰───────────────────────────────────────────────────────╯"
 			`);
 
 			logger.log("something 1");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"╭─────────────────────────────────────────────────────────╮
-				│  [a] first option, [b] second option, [c] third option │
-				╰─────────────────────────────────────────────────────────╯
-				something 1
-				╭─────────────────────────────────────────────────────────╮
-				│  [a] first option, [b] second option, [c] third option │
-				╰─────────────────────────────────────────────────────────╯"
+				"╭───────────────────────────────────────────────────────╮
+				│  [a] first option [b] second option [c] third option │
+				╰───────────────────────────────────────────────────────╯
+				something 1"
 			`);
 
 			unregisterHotKeys();
 			logger.log("something 2");
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"╭─────────────────────────────────────────────────────────╮
-				│  [a] first option, [b] second option, [c] third option │
-				╰─────────────────────────────────────────────────────────╯
+				"╭───────────────────────────────────────────────────────╮
+				│  [a] first option [b] second option [c] third option │
+				╰───────────────────────────────────────────────────────╯
 				something 1
-				╭─────────────────────────────────────────────────────────╮
-				│  [a] first option, [b] second option, [c] third option │
-				╰─────────────────────────────────────────────────────────╯
 				something 2"
 			`);
 		});

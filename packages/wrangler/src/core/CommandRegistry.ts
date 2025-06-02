@@ -88,6 +88,8 @@ export class CommandRegistry {
 
 	/**
 	 * Registers a specific namespace if not already registered.
+	 * TODO: Remove this once all commands use the command registry.
+	 * See https://github.com/cloudflare/workers-sdk/pull/7357#discussion_r1862138470 for more details.
 	 */
 	registerNamespace(namespace: string) {
 		if (this.#registeredNamespaces.has(namespace)) {

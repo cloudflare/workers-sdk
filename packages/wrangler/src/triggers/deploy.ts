@@ -38,7 +38,7 @@ export default async function triggersDeploy(
 ): Promise<string[] | void> {
 	const { config, accountId, name: scriptName } = props;
 
-	const triggers = props.triggers || config.triggers?.crons;
+	const schedules = props.triggers || config.triggers?.crons;
 	const routes =
 		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
 	const routesOnly: Array<Route> = [];
@@ -77,7 +77,7 @@ export default async function triggersDeploy(
 	} = await fetchResult<{
 		enabled: boolean;
 		previews_enabled: boolean;
-	}>(`${workerUrl}/subdomain`);
+	}>(config, `${workerUrl}/subdomain`);
 
 	if (!props.dryRun) {
 		await ensureQueuesExistByConfig(config);
@@ -102,21 +102,22 @@ export default async function triggersDeploy(
 	if (deployToWorkersDev) {
 		// Deploy to a subdomain of `workers.dev`
 		const userSubdomain = await getWorkersDevSubdomain(
+			config,
 			accountId,
 			config.configPath
 		);
 
 		const deploymentURL =
 			props.legacyEnv || !props.env
-				? `${scriptName}.${userSubdomain}.workers.dev`
-				: `${envName}.${scriptName}.${userSubdomain}.workers.dev`;
+				? `${scriptName}.${userSubdomain}`
+				: `${envName}.${scriptName}.${userSubdomain}`;
 
 		if (deploymentInSync && previewsInSync) {
 			deployments.push(Promise.resolve([deploymentURL]));
 		} else {
 			// Enable the `workers.dev` subdomain.
 			deployments.push(
-				fetchResult(`${workerUrl}/subdomain`, {
+				fetchResult(config, `${workerUrl}/subdomain`, {
 					method: "POST",
 					body: JSON.stringify({
 						enabled: true,
@@ -131,7 +132,7 @@ export default async function triggersDeploy(
 	}
 	if (!deployToWorkersDev && (!deploymentInSync || !previewsInSync)) {
 		// Disable the workers.dev deployment
-		await fetchResult(`${workerUrl}/subdomain`, {
+		await fetchResult(config, `${workerUrl}/subdomain`, {
 			method: "POST",
 			body: JSON.stringify({
 				enabled: false,
@@ -173,7 +174,11 @@ export default async function triggersDeploy(
 		for (const route of routes) {
 			queuePromises.push(
 				queue.add(async () => {
-					const zone = await getZoneForRoute({ route, accountId }, zoneIdCache);
+					const zone = await getZoneForRoute(
+						config,
+						{ route, accountId },
+						zoneIdCache
+					);
 					if (!zone) {
 						return;
 					}
@@ -187,7 +192,7 @@ export default async function triggersDeploy(
 							fetchListResult<{
 								pattern: string;
 								script: string;
-							}>(`/zones/${zone.id}/workers/routes`)
+							}>(config, `/zones/${zone.id}/workers/routes`)
 						);
 						zoneRoutesCache.set(zone.id, routesInZone);
 					}
@@ -233,7 +238,7 @@ export default async function triggersDeploy(
 	// Update routing table for the script.
 	if (routesOnly.length > 0) {
 		deployments.push(
-			publishRoutes(routesOnly, {
+			publishRoutes(config, routesOnly, {
 				workerUrl,
 				scriptName,
 				notProd,
@@ -253,22 +258,23 @@ export default async function triggersDeploy(
 	// Update custom domains for the script
 	if (customDomainsOnly.length > 0) {
 		deployments.push(
-			publishCustomDomains(workerUrl, accountId, customDomainsOnly)
+			publishCustomDomains(config, workerUrl, accountId, customDomainsOnly)
 		);
 	}
 
 	// Configure any schedules for the script.
-	// TODO: rename this to `schedules`?
-	if (triggers && triggers.length) {
+	// If schedules is not defined then we just leave whatever is previously deployed alone.
+	// If it is an empty array we will remove all schedules.
+	if (schedules) {
 		deployments.push(
-			fetchResult(`${workerUrl}/schedules`, {
+			fetchResult(config, `${workerUrl}/schedules`, {
 				// Note: PUT will override previous schedules on this script.
 				method: "PUT",
-				body: JSON.stringify(triggers.map((cron) => ({ cron }))),
+				body: JSON.stringify(schedules.map((cron) => ({ cron }))),
 				headers: {
 					"Content-Type": "application/json",
 				},
-			}).then(() => triggers.map((trigger) => `schedule: ${trigger}`))
+			}).then(() => schedules.map((trigger) => `schedule: ${trigger}`))
 		);
 	}
 
@@ -295,16 +301,20 @@ export default async function triggersDeploy(
 			}
 
 			deployments.push(
-				fetchResult(`/accounts/${accountId}/workflows/${workflow.name}`, {
-					method: "PUT",
-					body: JSON.stringify({
-						script_name: scriptName,
-						class_name: workflow.class_name,
-					}),
-					headers: {
-						"Content-Type": "application/json",
-					},
-				}).then(() => [`workflow: ${workflow.name}`])
+				fetchResult(
+					config,
+					`/accounts/${accountId}/workflows/${workflow.name}`,
+					{
+						method: "PUT",
+						body: JSON.stringify({
+							script_name: scriptName,
+							class_name: workflow.class_name,
+						}),
+						headers: {
+							"Content-Type": "application/json",
+						},
+					}
+				).then(() => [`workflow: ${workflow.name}`])
 			);
 		}
 	}

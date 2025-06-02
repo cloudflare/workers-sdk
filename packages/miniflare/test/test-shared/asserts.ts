@@ -1,4 +1,5 @@
-import assert from "assert";
+import assert from "node:assert";
+import { setTimeout as sleep } from "node:timers/promises";
 import { ExecutionContext } from "ava";
 import { Awaitable } from "miniflare";
 
@@ -40,4 +41,55 @@ export function flaky(
 			}
 		}
 	};
+}
+
+/**
+ * Wait for the callback to execute successfully. If the callback throws an error or returns a rejected promise it will continue to wait until it succeeds or times out.
+ */
+export async function waitFor<T>(
+	callback: () => T | Promise<T>,
+	timeout = 5000
+): Promise<T> {
+	const start = Date.now();
+	while (true) {
+		try {
+			return callback();
+		} catch (error) {
+			if (Date.now() < start + timeout) {
+				throw error;
+			}
+		}
+		await sleep(100);
+	}
+}
+
+export function waitUntil(
+	t: ExecutionContext,
+	impl: (t: ExecutionContext) => Awaitable<void>,
+	timeout: number = 5000,
+	delay: number = 200
+): Promise<void> {
+	return new Promise((resolve, reject) => {
+		const start = Date.now();
+		const interval = setInterval(async () => {
+			try {
+				const result = await t.try(impl);
+
+				if (result.passed || Date.now() - start > timeout) {
+					clearInterval(interval);
+					try {
+						result.commit();
+						resolve();
+					} catch (ex) {
+						reject(ex);
+					}
+					return;
+				}
+
+				result.discard();
+			} catch {
+				// Ignore errors and keep waiting
+			}
+		}, delay);
+	});
 }

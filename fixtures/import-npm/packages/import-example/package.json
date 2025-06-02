@@ -11,11 +11,11 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"dependencies": {
-		"import-wasm-static": "../../../../fixtures/import-wasm-static"
+		"@fixture/import-wasm-static": "../../../../fixtures/import-wasm-static"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "../../../../packages/workers-tsconfig",
-		"undici": "^5.28.5",
+		"undici": "^5.29.0",
 		"wrangler": "../../../../packages/wrangler"
 	}
 }

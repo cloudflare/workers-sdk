@@ -11,6 +11,7 @@ import {
 	getMiniflareObjectBindings,
 	getPersistPath,
 	migrateDatabase,
+	mixedModeClientWorker,
 	MixedModeConnectionString,
 	namespaceEntries,
 	namespaceKeys,
@@ -58,7 +59,7 @@ export const R2_PLUGIN: Plugin<
 	sharedOptions: R2SharedOptionsSchema,
 	getBindings(options) {
 		const buckets = namespaceEntries(options.r2Buckets);
-		return buckets.map<Worker_Binding>(([name, id]) => ({
+		return buckets.map<Worker_Binding>(([name, { id }]) => ({
 			name,
 			r2Bucket: { name: `${R2_BUCKET_SERVICE_PREFIX}:${id}` },
 		}));
@@ -73,19 +74,29 @@ export const R2_PLUGIN: Plugin<
 		options,
 		sharedOptions,
 		tmpPath,
+		defaultPersistRoot,
 		log,
 		unsafeStickyBlobs,
 	}) {
 		const persist = sharedOptions.r2Persist;
 		const buckets = namespaceEntries(options.r2Buckets);
-		const services = buckets.map<Service>(([_, id]) => ({
-			name: `${R2_BUCKET_SERVICE_PREFIX}:${id}`,
-			worker: objectEntryWorker(R2_BUCKET_OBJECT, id),
-		}));
+		const services = buckets.map<Service>(
+			([name, { id, mixedModeConnectionString }]) => ({
+				name: `${R2_BUCKET_SERVICE_PREFIX}:${id}`,
+				worker: mixedModeConnectionString
+					? mixedModeClientWorker(mixedModeConnectionString, name)
+					: objectEntryWorker(R2_BUCKET_OBJECT, id),
+			})
+		);
 
 		if (buckets.length > 0) {
 			const uniqueKey = `miniflare-${R2_BUCKET_OBJECT_CLASS_NAME}`;
-			const persistPath = getPersistPath(R2_PLUGIN_NAME, tmpPath, persist);
+			const persistPath = getPersistPath(
+				R2_PLUGIN_NAME,
+				tmpPath,
+				defaultPersistRoot,
+				persist
+			);
 			await fs.mkdir(persistPath, { recursive: true });
 			const storageService: Service = {
 				name: R2_STORAGE_SERVICE_NAME,
@@ -127,13 +138,13 @@ export const R2_PLUGIN: Plugin<
 			services.push(storageService, objectService);
 
 			for (const bucket of buckets) {
-				await migrateDatabase(log, uniqueKey, persistPath, bucket[1]);
+				await migrateDatabase(log, uniqueKey, persistPath, bucket[1].id);
 			}
 		}
 
 		return services;
 	},
 	getPersistPath({ r2Persist }, tmpPath) {
-		return getPersistPath(R2_PLUGIN_NAME, tmpPath, r2Persist);
+		return getPersistPath(R2_PLUGIN_NAME, tmpPath, undefined, r2Persist);
 	},
 };

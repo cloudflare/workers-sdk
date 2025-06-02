@@ -82,6 +82,8 @@ port.addEventListener("message", async (event) => {
   Atomics.store(notifyHandle, /* index */ 0, /* value */ 1);
   Atomics.notify(notifyHandle, /* index */ 0);
 });
+
+port.start();
 `;
 
 // Ideally we would just have a single, shared `unref()`ed `Worker`, and an

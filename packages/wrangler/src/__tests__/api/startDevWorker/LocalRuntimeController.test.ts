@@ -128,6 +128,7 @@ function configDefaults(
 ): StartDevWorkerOptions {
 	return {
 		name: "test-worker",
+		complianceRegion: undefined,
 		entrypoint: "NOT_REAL",
 		projectRoot: "NOT_REAL",
 		build: unusable<StartDevWorkerOptions["build"]>(),

@@ -65,6 +65,8 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 
 	/**
 	 * Options to configure the development server that your worker will use.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#local-development-settings
 	 */
 	dev: Dev;
 
@@ -73,6 +75,8 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	 * static assets with your Worker.
 	 *
 	 * More details at https://developers.cloudflare.com/workers/platform/sites
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#workers-sites
 	 */
 	site:
 		| {
@@ -152,6 +156,8 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	/**
 	 * A map of module aliases. Lets you swap out a module for any others.
 	 * Corresponds with esbuild's `alias` config
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#module-aliasing
 	 */
 	alias: { [key: string]: string } | undefined;
 
@@ -326,7 +332,7 @@ export const defaultWranglerConfig: Config = {
 	jsx_fragment: "React.Fragment",
 	migrations: [],
 	triggers: {
-		crons: [],
+		crons: undefined,
 	},
 	rules: [],
 	build: { command: undefined, watch_dir: "./src", cwd: undefined },
@@ -340,6 +346,8 @@ export const defaultWranglerConfig: Config = {
 	upload_source_maps: undefined,
 	assets: undefined,
 	observability: { enabled: true },
+	/** The default here is undefined so that we can delegate to the CLOUDFLARE_COMPLIANCE_REGION environment variable. */
+	compliance_region: undefined,
 
 	/** NON-INHERITABLE ENVIRONMENT FIELDS **/
 	define: {},

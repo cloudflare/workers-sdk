@@ -1,5 +1,5 @@
 {
-	"name": "pages-plugin-mounted-on-root-app",
+	"name": "@fixture/pages-plugin-root",
 	"private": true,
 	"sideEffects": false,
 	"main": "dist/worker.js",
@@ -15,8 +15,8 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250508.0",
-		"pages-plugin-example": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250525.0",
+		"@fixture/pages-plugin": "workspace:*",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
 		"vitest": "catalog:default",

@@ -382,7 +382,12 @@ async function sendUpcomingReleaseMessage(pat: string, webhookUrl: string) {
 								widgets: [
 									{
 										textParagraph: {
-											text: "There's an upcoming workers-sdk release today. The `main` branch will be locked shortly before to allow the release to be checked. Review the release PR linked below for the full details, and let the ANT team know (by responding in this thread) if for any reason you'd like us to delay this release.",
+											text:
+												"A new workers-sdk release is scheduled for tomorrow." +
+												" The `main` branch will be locked shortly to allow the release to be checked beforehand." +
+												" Review the release PR linked below for the full details, and let the ANT team know" +
+												" (by responding in this thread) if for any reason you'd like us to delay this release." +
+												"\n\nThe `main` branch will be unlocked tomorrow after the release is completed.",
 										},
 									},
 									{
@@ -641,7 +646,7 @@ export default {
 		if (controller.cron === "0 10 * * MON-FRI") {
 			await sendStartThreadMessage(env.GITHUB_PAT, env.PROD_WEBHOOK, env.AI);
 		}
-		if (controller.cron === "0 10 * * TUE,THU") {
+		if (controller.cron === "0 17 * * MON,WED") {
 			await sendUpcomingReleaseMessage(
 				env.GITHUB_PAT,
 				env.PROD_WRANGLER_CONTRIBUTORS_WEBHOOK

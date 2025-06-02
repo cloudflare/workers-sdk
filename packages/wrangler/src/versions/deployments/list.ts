@@ -53,7 +53,7 @@ export const deploymentsListCommand = createCommand({
 		}
 
 		const deployments = (
-			await fetchLatestDeployments(accountId, workerName)
+			await fetchLatestDeployments(config, accountId, workerName)
 		).sort((a, b) => a.created_on.localeCompare(b.created_on));
 
 		if (args.json) {
@@ -65,7 +65,13 @@ export const deploymentsListCommand = createCommand({
 		const versionIds = deployments.flatMap((d) =>
 			d.versions.map((v) => v.version_id)
 		);
-		await fetchVersions(accountId, workerName, versionCache, ...versionIds);
+		await fetchVersions(
+			config,
+			accountId,
+			workerName,
+			versionCache,
+			...versionIds
+		);
 
 		const formattedDeployments = deployments.map((deployment) => {
 			const formattedVersions = deployment.versions.map((traffic) => {

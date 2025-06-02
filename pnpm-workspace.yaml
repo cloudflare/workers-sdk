@@ -5,6 +5,16 @@ packages:
   - "fixtures/*"
   - "tools"
 
+# We update various dependencies on an infrequent recurring basis.
+# This table describes what is updated and how often.
+#
+# Process             | Frequency     | Notes
+# --------------------|---------------|---------------------------------------
+# DevTools update     | Every quarter | Update our fork of Chrome DevTools
+# Esbuild update      | Every quarter | Bump esbuild dependency in workers-sdk
+# Node update         | Every 2 years | Bump node dependency in workers-sdk
+# Quick Editor update | Every quarter | Update VSCode dependency and patches
+
 catalog:
   "@types/node": "^20.17.32"
   "@vitest/runner": ~3.1.1

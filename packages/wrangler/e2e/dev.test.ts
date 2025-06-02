@@ -820,7 +820,7 @@ describe("writes debug logs to hidden file", () => {
 });
 
 describe("analytics engine", () => {
-	describe.each([{ cmd: "wrangler dev" }, { cmd: "wrangler dev --remote" }])(
+	describe.each([{ cmd: "wrangler dev" }])(
 		"mock analytics engine datasets: $cmd",
 		({ cmd }) => {
 			describe("module worker", () => {
@@ -830,7 +830,7 @@ describe("analytics engine", () => {
 						"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
-				compatibility_date = "2024-08-08"
+				compatibility_date = "2022-08-08"
 
 				[[analytics_engine_datasets]]
 				binding = "ANALYTICS_BINDING"
@@ -869,7 +869,7 @@ describe("analytics engine", () => {
 			});
 
 			describe("service worker", async () => {
-				it("analytics engine datasets are mocked in dev", async () => {
+				it("using analytics engine datasets logs a warning in dev", async () => {
 					const helper = new WranglerE2ETestHelper();
 					await helper.seed({
 						"wrangler.toml": dedent`
@@ -903,11 +903,8 @@ describe("analytics engine", () => {
 					});
 					const worker = helper.runLongLived(cmd);
 
-					const { url } = await worker.waitForReady();
-
-					const text = await fetchText(url);
-					expect(text).toContain(
-						`successfully wrote datapoint from service worker`
+					await worker.readUntil(
+						/Analytics Engine is not supported locally when using the service-worker format/
 					);
 				});
 			});

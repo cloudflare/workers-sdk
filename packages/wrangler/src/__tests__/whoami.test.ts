@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import { writeAuthConfigFile } from "../user";
 import { getUserInfo } from "../user/whoami";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -12,7 +13,7 @@ import {
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 
-describe("getUserInfo()", () => {
+describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
@@ -23,13 +24,13 @@ describe("getUserInfo()", () => {
 	});
 
 	it("should return undefined if there is no config file", async () => {
-		const userInfo = await getUserInfo();
+		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 		expect(userInfo).toBeUndefined();
 	});
 
 	it("should return undefined if there is an empty config file", async () => {
 		writeAuthConfigFile({});
-		const userInfo = await getUserInfo();
+		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 		expect(userInfo).toBeUndefined();
 	});
 
@@ -66,13 +67,13 @@ describe("getUserInfo()", () => {
 				{ once: true }
 			)
 		);
-		const userInfo = await getUserInfo();
+		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 		expect(userInfo?.email).toBeUndefined();
 	});
 	it("should say it's using an API token when one is set", async () => {
 		vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
 
-		const userInfo = await getUserInfo();
+		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 		expect(userInfo).toEqual({
 			authType: "API Token",
 			apiToken: "123456789",
@@ -89,7 +90,7 @@ describe("getUserInfo()", () => {
 		vi.stubEnv("CLOUDFLARE_API_KEY", "123456789");
 		vi.stubEnv("CLOUDFLARE_EMAIL", "user@example.com");
 
-		const userInfo = await getUserInfo();
+		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 		expect(userInfo).toEqual({
 			authType: "Global API Key",
 			apiToken: "123456789",
@@ -107,7 +108,7 @@ describe("getUserInfo()", () => {
 		vi.stubEnv("CLOUDFLARE_EMAIL", "user@example.com");
 		vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
 
-		const userInfo = await getUserInfo();
+		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 		expect(userInfo).toEqual({
 			authType: "Global API Key",
 			apiToken: "123456789",
@@ -122,13 +123,13 @@ describe("getUserInfo()", () => {
 
 	it("should return undefined only a Global API Key, but not Email, is set", async () => {
 		vi.stubEnv("CLOUDFLARE_API_KEY", "123456789");
-		const userInfo = await getUserInfo();
+		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 		expect(userInfo).toEqual(undefined);
 	});
 
 	it("should return the user's email and accounts if authenticated via config token", async () => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
-		const userInfo = await getUserInfo();
+		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 
 		expect(userInfo).toEqual({
 			authType: "OAuth Token",
@@ -144,7 +145,7 @@ describe("getUserInfo()", () => {
 
 	it("should display a warning message if the config file contains a legacy api_token field", async () => {
 		writeAuthConfigFile({ api_token: "API_TOKEN" });
-		await getUserInfo();
+		await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 
 		expect(std.warn).toMatchInlineSnapshot(`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler v1's \`config\` command to login with an API token.[0m

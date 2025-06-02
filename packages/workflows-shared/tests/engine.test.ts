@@ -5,7 +5,7 @@ import {
 } from "cloudflare:test";
 import { NonRetryableError } from "cloudflare:workflows";
 import { describe, expect, it, vi } from "vitest";
-import { InstanceEvent } from "../src";
+import { InstanceEvent, InstanceStatus } from "../src";
 import type {
 	DatabaseInstance,
 	DatabaseVersion,
@@ -138,7 +138,6 @@ describe("Engine", () => {
 		const engineStub = await runWorkflowDefer(
 			"MOCK-INSTANCE-ID",
 			async (_, step) => {
-				// @ts-expect-error not in worker types, yet
 				return await step.waitForEvent("i'm a event!", {
 					type: "event-type-1",
 					timeout: "10 seconds",
@@ -169,7 +168,6 @@ describe("Engine", () => {
 		const engineStub = await runWorkflowDefer(
 			"MOCK-INSTANCE-ID",
 			async (_, step) => {
-				// @ts-expect-error not in worker types, yet
 				return await step.waitForEvent("i'm a event!", {
 					type: "event-type-1",
 					timeout: "10 seconds",
@@ -202,5 +200,66 @@ describe("Engine", () => {
 				(val) => val.event == InstanceEvent.WORKFLOW_SUCCESS
 			);
 		}, 500);
+	});
+
+	it("should restore state from storage when accountId is undefined", async () => {
+		const instanceId = "RESTORE-TEST-INSTANCE";
+		const accountId = 12345;
+		const workflow: DatabaseWorkflow = {
+			name: "test-workflow",
+			id: "workflow-123",
+			created_on: new Date().toISOString(),
+			modified_on: new Date().toISOString(),
+			script_name: "test-script",
+			class_name: "TestWorkflow",
+			triggered_on: null,
+		};
+		const version: DatabaseVersion = {
+			id: "version-123",
+			class_name: "TestWorkflow",
+			created_on: new Date().toISOString(),
+			modified_on: new Date().toISOString(),
+			workflow_id: workflow.id,
+			mutable_pipeline_id: "pipeline-123",
+		};
+		const instance: DatabaseInstance = {
+			id: instanceId,
+			created_on: new Date().toISOString(),
+			modified_on: new Date().toISOString(),
+			workflow_id: workflow.id,
+			version_id: version.id,
+			status: InstanceStatus.Running,
+			started_on: new Date().toISOString(),
+			ended_on: null,
+		};
+		const event = {
+			payload: {},
+			timestamp: new Date(),
+			instanceId: instanceId,
+		};
+
+		const engineStub = await runWorkflow(instanceId, async () => {
+			return "test";
+		});
+
+		await runInDurableObject(engineStub, async (engine) => {
+			await engine.init(accountId, workflow, version, instance, event);
+			await engine.setStatus(accountId, instanceId, InstanceStatus.Running);
+			await engine.abort("kaboom");
+		});
+
+		const engineId = env.ENGINE.idFromName(instanceId);
+		const restartedStub = env.ENGINE.get(engineId);
+
+		const status = await runInDurableObject(restartedStub, (engine) => {
+			return engine.getStatus(accountId, instanceId);
+		});
+
+		expect(status).toBe(InstanceStatus.Running);
+
+		const logs = (await restartedStub.readLogs()) as EngineLogs;
+		expect(
+			logs.logs.some((log) => log.event === InstanceEvent.WORKFLOW_START)
+		).toBe(true);
 	});
 });

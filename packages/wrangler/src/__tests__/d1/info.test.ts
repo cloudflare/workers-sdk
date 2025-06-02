@@ -174,8 +174,7 @@ describe("info", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"
 			 ⛅️ wrangler x.x.x
-			------------------
-
+			──────────────────
 			┌─┬─┐
 			│ DB │ d5b1d127-xxxx-xxxx-xxxx-cbc69f0a9e06 │
 			├─┼─┤

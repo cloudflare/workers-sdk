@@ -2995,6 +2995,51 @@ test("Miniflare: CF-Connecting-IP is preserved when present", async (t) => {
 	t.deepEqual(await ip.text(), "128.0.0.1");
 });
 
+// regression test for https://github.com/cloudflare/workers-sdk/issues/7924
+// The "server" service just returns the value of the CF-Connecting-IP header which would normally be added by Miniflare. If you send a request to with no such header, Miniflare will add one.
+// The "client" service makes an outbound request with a fake CF-Connecting-IP header to the "server" service. If the outbound stripping happens then this header will not make it to the "server" service
+// so its response will contain the header added by Miniflare. If the stripping is turned off then the response from the "server" service will contain the fake header.
+test("Miniflare: strips CF-Connecting-IP", async (t) => {
+	const server = new Miniflare({
+		script:
+			"export default { fetch(request) { return new Response(request.headers.get(`CF-Connecting-IP`)) } }",
+		modules: true,
+	});
+	const serverUrl = await server.ready;
+
+	const client = new Miniflare({
+		script: `export default { fetch(request) { return fetch('${serverUrl.href}', {headers: {"CF-Connecting-IP":"fake-value"}}) } }`,
+		modules: true,
+		stripCfConnectingIp: true,
+	});
+	t.teardown(() => client.dispose());
+	t.teardown(() => server.dispose());
+
+	const landingPage = await client.dispatchFetch("http://example.com/");
+	// The CF-Connecting-IP header value of "fake-value" should be stripped by Miniflare, and should be replaced with a generic 127.0.0.1
+	t.notDeepEqual(await landingPage.text(), "fake-value");
+});
+
+test("Miniflare: does not strip CF-Connecting-IP when configured", async (t) => {
+	const server = new Miniflare({
+		script:
+			"export default { fetch(request) { return new Response(request.headers.get(`CF-Connecting-IP`)) } }",
+		modules: true,
+	});
+	const serverUrl = await server.ready;
+
+	const client = new Miniflare({
+		script: `export default { fetch(request) { return fetch('${serverUrl.href}', {headers: {"CF-Connecting-IP":"fake-value"}}) } }`,
+		modules: true,
+		stripCfConnectingIp: false,
+	});
+	t.teardown(() => client.dispose());
+	t.teardown(() => server.dispose());
+
+	const landingPage = await client.dispatchFetch("http://example.com/");
+	t.deepEqual(await landingPage.text(), "fake-value");
+});
+
 test("Miniflare: can use module fallback service", async (t) => {
 	const modulesRoot = "/";
 	const modules: Record<string, Omit<Worker_Module, "name">> = {
@@ -3194,3 +3239,67 @@ test.serial(
 		t.is(await res.text(), "one text");
 	}
 );
+
+test("Miniflare: custom Node service binding", async (t) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `
+		export default {
+			fetch(request, env) {
+				return env.CUSTOM.fetch(request, {
+					headers: {
+						"custom-header": "foo"
+					}
+				});
+			}
+		}`,
+		serviceBindings: {
+			CUSTOM: {
+				node: (req, res) => {
+					res.end(
+						`Response from custom Node service binding. The value of "custom-header" is "${req.headers["custom-header"]}".`
+					);
+				},
+			},
+		},
+	});
+	t.teardown(() => mf.dispose());
+
+	const response = await mf.dispatchFetch("http://localhost");
+	const text = await response.text();
+	t.is(
+		text,
+		`Response from custom Node service binding. The value of "custom-header" is "foo".`
+	);
+});
+
+test("Miniflare: custom Node outbound service", async (t) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `
+		export default {
+			fetch(request, env) {
+				return fetch(request, {
+					headers: {
+						"custom-header": "foo"
+					}
+				});
+			}
+		}`,
+		outboundService: {
+			node: (req, res) => {
+				res.end(
+					`Response from custom Node outbound service. The value of "custom-header" is "foo".`
+				);
+			},
+		},
+	});
+	t.teardown(() => mf.dispose());
+
+	const response = await mf.dispatchFetch("http://localhost");
+	const text = await response.text();
+	t.is(
+		text,
+		`Response from custom Node outbound service. The value of "custom-header" is "foo".`
+	);
+});
