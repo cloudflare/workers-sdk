@@ -3,20 +3,16 @@ import { existsSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
 import {
+	CF_ASSETS_IGNORE_FILENAME,
+	createAssetsIgnoreFunction,
 	getContentType,
+	HEADERS_FILENAME,
 	MAX_ASSET_COUNT,
 	MAX_ASSET_SIZE,
-	normalizeFilePath,
-} from "@cloudflare/workers-shared";
-import {
-	CF_ASSETS_IGNORE_FILENAME,
-	HEADERS_FILENAME,
-	REDIRECTS_FILENAME,
-} from "@cloudflare/workers-shared/utils/constants";
-import {
-	createAssetsIgnoreFunction,
 	maybeGetFile,
-} from "@cloudflare/workers-shared/utils/helpers";
+	normalizeFilePath,
+	REDIRECTS_FILENAME,
+} from "@cloudflare/workers-shared";
 import chalk from "chalk";
 import PQueue from "p-queue";
 import prettyBytes from "pretty-bytes";

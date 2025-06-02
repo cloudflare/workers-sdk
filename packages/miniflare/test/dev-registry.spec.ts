@@ -11,6 +11,12 @@ test("DevRegistry: fetch to service worker", async (t) => {
 		script: `addEventListener("fetch", (event) => {
 			event.respondWith(new Response("Hello from service worker!"));
 		})`,
+		unsafeDirectSockets: [
+			{
+				entrypoint: undefined,
+				proxy: true,
+			},
+		],
 	});
 
 	await remote.ready;
@@ -105,6 +111,7 @@ test("DevRegistry: fetch to module worker", async (t) => {
 		unsafeDirectSockets: [
 			{
 				entrypoint: undefined,
+				proxy: true,
 			},
 		],
 	});
@@ -167,6 +174,7 @@ test("DevRegistry: RPC to default entrypoint", async (t) => {
 		unsafeDirectSockets: [
 			{
 				entrypoint: undefined,
+				proxy: true,
 			},
 		],
 	});
@@ -239,6 +247,7 @@ test("DevRegistry: RPC to custom entrypoint", async (t) => {
 		unsafeDirectSockets: [
 			{
 				entrypoint: "TestEntrypoint",
+				proxy: true,
 			},
 		],
 	});
@@ -565,6 +574,7 @@ test("DevRegistry: tail to default entrypoint", async (t) => {
 		unsafeDirectSockets: [
 			{
 				entrypoint: undefined,
+				proxy: true,
 			},
 		],
 	});

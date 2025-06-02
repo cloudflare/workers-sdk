@@ -386,7 +386,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				};
 			},
 			async configurePreviewServer(vitePreviewServer) {
-				const workerConfigs = getWorkerConfigs(vitePreviewServer.config.root);
+				const workerConfigs = getWorkerConfigs(
+					vitePreviewServer.config.root,
+					pluginConfig.experimental?.mixedMode ?? false
+				);
 
 				const inputInspectorPort = await getInputInspectorPortOption(
 					pluginConfig,
@@ -716,7 +719,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				});
 			},
 			async configurePreviewServer(vitePreviewServer) {
-				const workerConfigs = getWorkerConfigs(vitePreviewServer.config.root);
+				const workerConfigs = getWorkerConfigs(
+					vitePreviewServer.config.root,
+					pluginConfig.experimental?.mixedMode ?? false
+				);
 
 				if (workerConfigs.length >= 1 && pluginConfig.inspectorPort !== false) {
 					addDebugToVitePrintUrls(vitePreviewServer);

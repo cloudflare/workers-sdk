@@ -9,6 +9,7 @@ import {
 import { MixedModeConnectionString } from "../plugins/shared";
 import {
 	HttpOptions,
+	HttpOptions_Style,
 	kVoid,
 	Service,
 	Worker_DurableObjectNamespace,
@@ -248,6 +249,7 @@ export function getHttpProxyOptions(
 	entrypoint: string | undefined
 ): HttpOptions {
 	return {
+		style: HttpOptions_Style.PROXY,
 		// To make sure `request.cf` is set correctly
 		cfBlobHeader: CoreHeaders.CF_BLOB,
 		// Use the service name and entrypoint as the host to proxy RPC calls
