@@ -566,7 +566,7 @@ describe.skipIf(frameworkToTest || isQuarantineMode())("help text", () => {
 				      hello-world-durable-object-with-assets
 				        For full-stack applications requiring static assets, an API, and real-time coordination
 				      hello-world-workflows
-				        For multi-step applications, that automatically retry, persist state and run for minutes, hours, days or weeks
+				        For multi-step applications that automatically retry, persist state, and run for minutes, hours, days or weeks
 				      common
 				        Create a Worker to route and forward requests to other services
 				      scheduled
