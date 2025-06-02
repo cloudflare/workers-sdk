@@ -4,7 +4,13 @@ import { readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import { setTimeout } from "node:timers/promises";
 import { afterAll, beforeAll, describe, test } from "vitest";
-import { fetchJson, runLongLived, seed, waitForReady } from "./helpers.js";
+import {
+	fetchJson,
+	runLongLived,
+	runWrangler,
+	seed,
+	waitForReady,
+} from "./helpers.js";
 
 const commands = ["dev", "buildAndPreview"] as const;
 
@@ -38,8 +44,8 @@ describe
 				},
 			].forEach((worker) => {
 				fs.writeFileSync(`${tmp}/index.js`, worker.content);
-				execSync(
-					`npx wrangler deploy index.js --name ${worker.name} --compatibility-date 2025-01-01`,
+				runWrangler(
+					`wrangler deploy index.js --name ${worker.name} --compatibility-date 2025-01-01`,
 					{ cwd: tmp }
 				);
 			});
