@@ -142,6 +142,8 @@ interface OutputEntryVersionUpload extends OutputEntryBase<"version-upload"> {
 	version_id: string | null;
 	/** The preview URL associated with this version upload */
 	preview_url: string | undefined;
+	/** The ephemeral aliased preview URL associated with this version upload */
+	preview_alias_url: string | undefined;
 	/** set if the worker's name was overridden */
 	worker_name_overridden: boolean;
 	/** wrangler environment used */
