@@ -1,6 +1,6 @@
 ---
-"miniflare": patch
-"wrangler": patch
+"miniflare": minor
+"wrangler": minor
 ---
 
 Support additional Mixed Mode resources in Wrangler:
