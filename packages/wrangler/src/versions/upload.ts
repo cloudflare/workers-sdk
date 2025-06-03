@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { execSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { blue, gray } from "@cloudflare/cli/colors";
@@ -29,7 +30,10 @@ import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
-import { getCIOverrideName } from "../environment-variables/misc-variables";
+import {
+	getCIGeneratePreviewAlias,
+	getCIOverrideName,
+} from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
@@ -92,6 +96,7 @@ type Props = {
 
 	tag: string | undefined;
 	message: string | undefined;
+	previewAlias: string | undefined;
 };
 
 export const versionsUploadCommand = createCommand({
@@ -241,6 +246,11 @@ export const versionsUploadCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
+		"preview-alias": {
+			describe: "Name of an alias for this Worker version",
+			type: "string",
+			requiresArg: true,
+		},
 		"experimental-auto-create": {
 			describe: "Automatically provision draft bindings with new resources",
 			type: "boolean",
@@ -323,6 +333,10 @@ export const versionsUploadCommand = createCommand({
 			);
 		}
 
+		const previewAlias =
+			args.previewAlias ??
+			(getCIGeneratePreviewAlias() ? generatePreviewAlias(name) : undefined);
+
 		if (!args.dryRun) {
 			assert(accountId, "Missing account ID");
 			await verifyWorkerMatchesCITag(
@@ -333,38 +347,40 @@ export const versionsUploadCommand = createCommand({
 			);
 		}
 
-		const { versionId, workerTag, versionPreviewUrl } = await versionsUpload({
-			config,
-			accountId,
-			name,
-			rules: getRules(config),
-			entry,
-			legacyEnv: isLegacyEnv(config),
-			env: args.env,
-			compatibilityDate: args.latest
-				? new Date().toISOString().substring(0, 10)
-				: args.compatibilityDate,
-			compatibilityFlags: args.compatibilityFlags,
-			vars: cliVars,
-			defines: cliDefines,
-			alias: cliAlias,
-			jsxFactory: args.jsxFactory,
-			jsxFragment: args.jsxFragment,
-			tsconfig: args.tsconfig,
-			assetsOptions,
-			minify: args.minify,
-			uploadSourceMaps: args.uploadSourceMaps,
-			isWorkersSite: Boolean(args.site || config.site),
-			outDir: args.outdir,
-			dryRun: args.dryRun,
-			noBundle: !(args.bundle ?? !config.no_bundle),
-			keepVars: false,
-			projectRoot: entry.projectRoot,
-			tag: args.tag,
-			message: args.message,
-			experimentalAutoCreate: args.experimentalAutoCreate,
-			outFile: args.outfile,
-		});
+		const { versionId, workerTag, versionPreviewUrl, versionPreviewAliasUrl } =
+			await versionsUpload({
+				config,
+				accountId,
+				name,
+				rules: getRules(config),
+				entry,
+				legacyEnv: isLegacyEnv(config),
+				env: args.env,
+				compatibilityDate: args.latest
+					? new Date().toISOString().substring(0, 10)
+					: args.compatibilityDate,
+				compatibilityFlags: args.compatibilityFlags,
+				vars: cliVars,
+				defines: cliDefines,
+				alias: cliAlias,
+				jsxFactory: args.jsxFactory,
+				jsxFragment: args.jsxFragment,
+				tsconfig: args.tsconfig,
+				assetsOptions,
+				minify: args.minify,
+				uploadSourceMaps: args.uploadSourceMaps,
+				isWorkersSite: Boolean(args.site || config.site),
+				outDir: args.outdir,
+				dryRun: args.dryRun,
+				noBundle: !(args.bundle ?? !config.no_bundle),
+				keepVars: false,
+				projectRoot: entry.projectRoot,
+				tag: args.tag,
+				message: args.message,
+				previewAlias: previewAlias,
+				experimentalAutoCreate: args.experimentalAutoCreate,
+				outFile: args.outfile,
+			});
 
 		writeOutput({
 			type: "version-upload",
@@ -373,6 +389,7 @@ export const versionsUploadCommand = createCommand({
 			worker_tag: workerTag,
 			version_id: versionId,
 			preview_url: versionPreviewUrl,
+			preview_alias_url: versionPreviewAliasUrl,
 			wrangler_environment: args.env,
 			worker_name_overridden: workerNameOverridden,
 		});
@@ -383,6 +400,7 @@ export default async function versionsUpload(props: Props): Promise<{
 	versionId: string | null;
 	workerTag: string | null;
 	versionPreviewUrl?: string | undefined;
+	versionPreviewAliasUrl?: string | undefined;
 }> {
 	// TODO: warn if git/hg has uncommitted changes
 	const { config, accountId, name } = props;
@@ -678,6 +696,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			annotations: {
 				"workers/message": props.message,
 				"workers/tag": props.tag,
+				"workers/alias": props.previewAlias,
 			},
 			assets:
 				props.assetsOptions && assetsJwt
@@ -833,6 +852,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 	logger.log("Worker Version ID:", versionId);
 
 	let versionPreviewUrl: string | undefined = undefined;
+	let versionPreviewAliasUrl: string | undefined = undefined;
 
 	if (versionId && hasPreview) {
 		const { previews_enabled: previews_available_on_subdomain } =
@@ -849,6 +869,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			const shortVersion = versionId.slice(0, 8);
 			versionPreviewUrl = `https://${shortVersion}-${workerName}.${userSubdomain}`;
 			logger.log(`Version Preview URL: ${versionPreviewUrl}`);
+
+			if (props.previewAlias) {
+				versionPreviewAliasUrl = `https://${props.previewAlias}-${workerName}.${userSubdomain}`;
+				logger.log(`Version Preview Alias URL: ${versionPreviewAliasUrl}`);
+			}
 		}
 	}
 
@@ -864,7 +889,7 @@ Changes to triggers (routes, custom domains, cron schedules, etc) must be applie
 `)
 	);
 
-	return { versionId, workerTag, versionPreviewUrl };
+	return { versionId, workerTag, versionPreviewUrl, versionPreviewAliasUrl };
 }
 
 function formatTime(duration: number) {
@@ -887,4 +912,49 @@ async function noBundleWorker(
 		resolvedEntryPointPath: entry.file,
 		bundleType: getBundleType(entry.format),
 	};
+}
+
+/**
+ * Generates a preview alias based on the current git branch.
+ * Alias must be <= 63 characters, alphanumeric + dashes only.
+ * Returns undefined if not in a git directory or requirements cannot be met.
+ */
+export function generatePreviewAlias(scriptName: string): string | undefined {
+	try {
+		execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
+	} catch (err) {
+		// not in a git directory so exit
+		logger.warn(
+			`Preview alias generation requested, but could not be autogenerated.`
+		);
+		return undefined;
+	}
+
+	let branchName: string;
+	try {
+		branchName = execSync(`git rev-parse --abbrev-ref HEAD`).toString().trim();
+	} catch (err) {
+		logger.warn(
+			`Preview alias generation requested, but could not be autogenerated.`
+		);
+		return undefined;
+	}
+
+	const sanitizedAlias = branchName
+		.replace(/[^a-zA-Z0-9-]/g, "-") // Replace all non-alphanumeric characters
+		.replace(/-+/g, "-") // replace multiple dashes
+		.replace(/^-+|-+$/g, ""); // trim dashes
+
+	// Dns labels can only have a max of 63 chars. We use preview urls in the form of <alias>-<workerName>
+	// which means our alias must be shorter than 63-scriptNameLen-1
+	const maxDnsLabelLength = 63;
+	const available = maxDnsLabelLength - scriptName.length - 1;
+	if (sanitizedAlias.length > available) {
+		logger.warn(
+			`Preview alias generation requested, but could not be autogenerated.`
+		);
+		return undefined;
+	}
+
+	return sanitizedAlias;
 }
