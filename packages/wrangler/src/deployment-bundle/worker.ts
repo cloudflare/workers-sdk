@@ -222,6 +222,7 @@ export interface CfSecretsStoreSecrets {
 	binding: string;
 	store_id: string;
 	secret_name: string;
+	staging?: boolean;
 }
 
 export interface CfHyperdrive {
