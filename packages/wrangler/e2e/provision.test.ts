@@ -194,6 +194,7 @@ describe.skip("provisioning", { timeout: TIMEOUT }, () => {
 		const kvMatch = output.match(/env.KV2 \((?<kv>[0-9a-f]{32})/);
 		assert(kvMatch?.groups);
 		kvId2 = kvMatch.groups.kv;
+		console.dir("KV2 ID: " + kvId2);
 	});
 
 	afterAll(async () => {
@@ -230,6 +231,7 @@ describe.skip("provisioning", { timeout: TIMEOUT }, () => {
 		output = await helper.run(
 			`wrangler kv namespace delete --namespace-id ${kvId}`
 		);
+		console.dir("KV2 ID (now we're trying to delete it): " + kvId2);
 		output = await helper.run(
 			`wrangler kv namespace delete --namespace-id ${kvId2}`
 		);

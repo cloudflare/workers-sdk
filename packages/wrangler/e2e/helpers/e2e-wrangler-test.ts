@@ -127,6 +127,7 @@ export class WranglerE2ETestHelper {
 		assert(match !== null, `Cannot find ID in ${JSON.stringify(result)}`);
 		const id = match[1];
 		onTestFinished(async () => {
+			console.dir(`Deleting D1 database with ID: ${id}`);
 			await this.run(`wrangler d1 delete -y ${id}`);
 		});
 
