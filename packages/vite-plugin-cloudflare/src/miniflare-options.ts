@@ -23,6 +23,7 @@ import { getAssetsConfig } from "./asset-config";
 import {
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
+	kRequestType,
 	ROUTER_WORKER_NAME,
 } from "./constants";
 import { additionalModuleRE } from "./shared";
@@ -275,14 +276,14 @@ export async function getDevMiniflareOptions(
 			serviceBindings: {
 				__VITE_ASSET_EXISTS__: async (request) => {
 					const { pathname } = new URL(request.url);
-					const filePath = path.join(resolvedViteConfig.root, pathname);
+					let exists = false;
 
-					let exists: boolean;
-
-					try {
-						exists = fs.statSync(filePath).isFile();
-					} catch (error) {
-						exists = false;
+					if (pathname.endsWith(".html")) {
+						try {
+							const filePath = path.join(resolvedViteConfig.root, pathname);
+							const stats = await fsp.stat(filePath);
+							exists = stats.isFile();
+						} catch (error) {}
 					}
 
 					return MiniflareResponse.json(exists);
@@ -299,7 +300,7 @@ export async function getDevMiniflareOptions(
 							headers: { "Content-Type": "text/html" },
 						});
 					} catch (error) {
-						throw new Error(`Unexpected error. Failed to load ${pathname}`);
+						throw new Error(`Unexpected error. Failed to load "${pathname}".`);
 					}
 				},
 			},
@@ -354,7 +355,12 @@ export async function getDevMiniflareOptions(
 											resolvedPluginConfig.entryWorkerEnvironmentName &&
 										workerConfig.assets?.binding
 											? {
-													[workerConfig.assets.binding]: ASSET_WORKER_NAME,
+													[workerConfig.assets.binding]: {
+														node: (req, res) => {
+															req[kRequestType] = "asset";
+															viteDevServer.middlewares(req, res);
+														},
+													},
 												}
 											: {}),
 										__VITE_INVOKE_MODULE__: async (request) => {
