@@ -192,6 +192,7 @@ describe("provisioning", { timeout: TIMEOUT }, () => {
 			Changes to triggers (routes, custom domains, cron schedules, etc) must be applied with the command wrangler triggers deploy"
 		`);
 		const kvMatch = output.match(/env.KV2 \((?<kv>[0-9a-f]{32})/);
+		console.dir("KV2 match: " + JSON.stringify(kvMatch));
 		assert(kvMatch?.groups);
 		kvId2 = kvMatch.groups.kv;
 		console.dir("KV2 ID: " + kvId2);
