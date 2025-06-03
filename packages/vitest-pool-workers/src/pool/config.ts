@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import path from "node:path";
 import {
 	formatZodError,
@@ -13,6 +14,7 @@ import { getProjectPath, getRelativeProjectPath } from "./helpers";
 import type { ModuleRule, WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
 import type { WorkspaceProject } from "vitest/node";
+import type { Experimental_MixedModeSession, Unstable_Config } from "wrangler";
 import type { ParseParams, ZodError } from "zod";
 
 export interface WorkersConfigPluginAPI {
@@ -43,6 +45,11 @@ const WorkersPoolOptionsSchema = z.object({
 	 * the same storage.
 	 */
 	isolatedStorage: z.boolean().default(true),
+	/**
+	 * Enables experimental mixed mode to access remote resources configured
+	 * with `remote: true` in the wrangler configuration file.
+	 */
+	experimental_mixedMode: z.boolean().optional(),
 	/**
 	 * Runs all tests in this project serially in the same worker, using the same
 	 * module cache. This can significantly speed up tests if you've got lots of
@@ -235,6 +242,10 @@ async function parseCustomPoolOptions(
 		// Lazily import `wrangler` if and when we need it
 		const wrangler = await import("wrangler");
 
+		const mixedModeSession = options.experimental_mixedMode
+			? await maybeStartOrUpdateMixedModeSession(configPath)
+			: undefined;
+
 		const { workerOptions, externalWorkers, define, main } =
 			wrangler.unstable_getMiniflareWorkerOptions(
 				configPath,
@@ -242,6 +253,8 @@ async function parseCustomPoolOptions(
 				{
 					imagesLocalMode: true,
 					overrides: { assets: options.miniflare.assets },
+					mixedModeConnectionString:
+						mixedModeSession?.mixedModeConnectionString,
 				}
 			);
 
@@ -358,4 +371,52 @@ export async function parseProjectOptions(
 			`Unexpected pool options in project ${relativePath}:\n${formatted}`
 		);
 	}
+}
+
+/** Map containing all the potential worker mixed mode existing sessions, it maps a worker name to its mixed mode session */
+const mixedModeSessionsMap = new Map<string, Experimental_MixedModeSession>();
+
+async function maybeStartOrUpdateMixedModeSession(
+	configOrConfigPath: Unstable_Config | string
+): Promise<Experimental_MixedModeSession | undefined> {
+	// Lazily import `wrangler` if and when we need it
+	const {
+		unstable_readConfig,
+		experimental_pickRemoteBindings,
+		unstable_convertConfigBindingsToStartWorkerBindings,
+		experimental_startMixedModeSession,
+	} = await import("wrangler");
+
+	const workerConfig =
+		typeof configOrConfigPath === "string"
+			? unstable_readConfig({ config: configOrConfigPath })
+			: configOrConfigPath;
+
+	const workerRemoteBindings = experimental_pickRemoteBindings(
+		unstable_convertConfigBindingsToStartWorkerBindings(workerConfig) ?? {}
+	);
+
+	assert(workerConfig.name, "Found workerConfig without a name");
+
+	let mixedModeSession = mixedModeSessionsMap.get(workerConfig.name);
+
+	// TODO(DEVX-1893): here we can save the converted remote bindings
+	//             and on new iterations we can diff the old and new
+	//             converted remote bindings, if they are all the
+	//             same we can just leave the mixedModeSession untouched
+	if (mixedModeSession === undefined) {
+		if (Object.keys(workerRemoteBindings).length > 0) {
+			mixedModeSession =
+				await experimental_startMixedModeSession(workerRemoteBindings);
+			mixedModeSessionsMap.set(workerConfig.name, mixedModeSession);
+		}
+	} else {
+		// Note: we always call updateBindings even when there are zero remote bindings, in these
+		//       cases we could terminate the remote session if we wanted, that's probably
+		//       something to consider down the line
+		await mixedModeSession.updateBindings(workerRemoteBindings);
+	}
+
+	await mixedModeSession?.ready;
+	return mixedModeSession;
 }
