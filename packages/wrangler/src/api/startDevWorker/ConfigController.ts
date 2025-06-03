@@ -13,6 +13,7 @@ import {
 import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { UserError } from "../../errors";
+import { getFlag } from "../../experimental-flags";
 import { logger, runWithLogLevel } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
 import {
@@ -47,6 +48,7 @@ import type {
 	StartDevWorkerOptions,
 	Trigger,
 } from "./types";
+import type { WorkerOptions } from "miniflare";
 
 type ConfigControllerEventMap = ControllerEventMap & {
 	configUpdate: [ConfigUpdateEvent];
@@ -320,6 +322,7 @@ async function resolveConfig(
 			tsconfig: input.build?.tsconfig ?? config.tsconfig,
 			exports: entry.exports,
 		},
+		containers: resolveContainerConfig(config),
 		dev: await resolveDevConfig(config, input),
 		legacy: {
 			site: legacySite,
@@ -336,9 +339,10 @@ async function resolveConfig(
 
 	if (
 		extractBindingsOfType("browser", resolved.bindings).length &&
-		!resolved.dev.remote
+		!resolved.dev.remote &&
+		!getFlag("MIXED_MODE")
 	) {
-		throw new UserError(
+		logger.warn(
 			"Browser Rendering is not supported locally. Please use `wrangler dev --remote` instead."
 		);
 	}
@@ -408,6 +412,23 @@ async function resolveConfig(
 
 	return resolved;
 }
+
+// TODO: move to containers-shared and use to merge config and args for container commands too
+function resolveContainerConfig(
+	config: Config
+): StartDevWorkerOptions["containers"] {
+	const containers: WorkerOptions["containers"] = {};
+	for (const container of config.containers ?? []) {
+		containers[container.class_name] = {
+			image: container.image ?? container.configuration.image,
+			maxInstances: container.max_instances,
+			imageBuildContext: container.image_build_context,
+			exposedPorts: container.dev_exposed_ports,
+		};
+	}
+	return containers;
+}
+
 export class ConfigController extends Controller<ConfigControllerEventMap> {
 	latestInput?: StartDevWorkerInput;
 	latestConfig?: StartDevWorkerOptions;

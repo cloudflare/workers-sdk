@@ -108,6 +108,9 @@ export interface PluginBase<
 		sharedOptions: OptionalZodTypeOf<SharedOptions>,
 		tmpPath: string
 	): string;
+	getExtensions?(options: {
+		options: z.infer<Options>[];
+	}): Awaitable<Extension[]>;
 }
 
 export type Plugin<

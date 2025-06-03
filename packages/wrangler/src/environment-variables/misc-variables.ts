@@ -185,6 +185,27 @@ export const getCIOverrideName = getEnvironmentVariableFactory({
 });
 
 /**
+ * `WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST` specifies whether --network=host should be set
+ *
+ * If this is set to true, Wrangler will use the --network=host flag when calling out to docker to build container images
+ */
+export const getCIOverrideNetworkModeHost = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST",
+});
+
+/**
+ * `WRANGLER_CI_GENERATE_PREVIEW_ALIAS` specifies whether to generate a preview alias during version upload
+ *
+ * If this is set to true, Wrangler will attempt to autogenerate the preview alias by using the branch
+ * name. If the branch name is too long and an alias cannot be created, a warning will be printed to the console.
+ */
+export const getCIGeneratePreviewAlias = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_CI_GENERATE_PREVIEW_ALIAS",
+	defaultValue: () => "false" as const,
+	choices: ["true", "false"] as const,
+});
+
+/**
  * `WRANGLER_BUILD_CONDITIONS` specifies the "build conditions" to use when importing packages at build time.
  *
  * See https://nodejs.org/api/packages.html#conditional-exports

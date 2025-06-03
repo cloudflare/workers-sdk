@@ -59,6 +59,17 @@ describe("cloudchamber build", () => {
 				"docker build -t registry.cloudchamber.cfdata.org/test-registry/no-bc:v1 --platform linux/arm64 bogus/path"
 			);
 		});
+
+		it("should add --network=host flag if WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST is set", async () => {
+			vi.stubEnv("WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST", "true");
+			const bc = await constructBuildCommand({
+				imageTag: "test-registry/no-bc:v1",
+				pathToDockerfile: "bogus/path",
+			});
+			expect(bc).toEqual(
+				"docker build -t registry.cloudchamber.cfdata.org/test-registry/no-bc:v1 --platform linux/amd64 --network=host bogus/path"
+			);
+		});
 	});
 
 	describe("get build arguments", () => {

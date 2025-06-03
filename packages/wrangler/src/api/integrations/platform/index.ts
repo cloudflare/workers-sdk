@@ -168,18 +168,23 @@ async function getMiniflareOptionsFromConfig(
 		tailConsumers: [],
 	});
 
-	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions({
-		name: rawConfig.name,
-		complianceRegion: rawConfig.compliance_region,
-		bindings,
-		workerDefinitions,
-		queueConsumers: undefined,
-		services: rawConfig.services,
-		serviceBindings: {},
-		migrations: rawConfig.migrations,
-		imagesLocalMode: false,
-		tails: [],
-	});
+	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
+		{
+			name: rawConfig.name,
+			complianceRegion: rawConfig.compliance_region,
+			bindings,
+			workerDefinitions,
+			queueConsumers: undefined,
+			services: rawConfig.services,
+			serviceBindings: {},
+			migrations: rawConfig.migrations,
+			imagesLocalMode: false,
+			tails: [],
+			containers: {},
+		},
+		undefined,
+		false
+	);
 
 	const defaultPersistRoot = getMiniflarePersistRoot(options.persist);
 
@@ -255,6 +260,7 @@ export function unstable_getMiniflareWorkerOptions(
 	options?: {
 		imagesLocalMode?: boolean;
 		mixedModeConnectionString?: MixedModeConnectionString;
+		mixedModeEnabled?: boolean;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
@@ -266,6 +272,7 @@ export function unstable_getMiniflareWorkerOptions(
 	options?: {
 		imagesLocalMode?: boolean;
 		mixedModeConnectionString?: MixedModeConnectionString;
+		mixedModeEnabled?: boolean;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
@@ -277,6 +284,7 @@ export function unstable_getMiniflareWorkerOptions(
 	options?: {
 		imagesLocalMode?: boolean;
 		mixedModeConnectionString?: MixedModeConnectionString;
+		mixedModeEnabled?: boolean;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
@@ -308,8 +316,10 @@ export function unstable_getMiniflareWorkerOptions(
 			migrations: config.migrations,
 			imagesLocalMode: !!options?.imagesLocalMode,
 			tails: config.tail_consumers,
+			containers: {},
 		},
-		options?.mixedModeConnectionString
+		options?.mixedModeConnectionString,
+		options?.mixedModeEnabled ?? false
 	);
 
 	// This function is currently only exported for the Workers Vitest pool.

@@ -108,6 +108,7 @@ export function resolvePluginConfig(
 	const entryWorkerResolvedConfig = getWorkerConfig(
 		entryWorkerConfigPath,
 		cloudflareEnv,
+		pluginConfig.experimental?.mixedMode ?? false,
 		{
 			visitedConfigPaths: configPaths,
 			isEntryWorker: true,
@@ -149,6 +150,7 @@ export function resolvePluginConfig(
 		const workerResolvedConfig = getWorkerConfig(
 			workerConfigPath,
 			cloudflareEnv,
+			pluginConfig.experimental?.mixedMode ?? false,
 			{
 				visitedConfigPaths: configPaths,
 			}

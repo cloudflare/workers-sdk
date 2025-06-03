@@ -19,6 +19,10 @@ export default defineConfig([
 		outDir: "dist/asset-workers",
 		external: ["cloudflare:workers"],
 		tsconfig: "tsconfig.worker.json",
+		// We want just a single output file for each asset worker.
+		// If we split then we end up with a shared module that is not so easy to load into Miniflare,
+		// since we must specify all the modules for each service.
+		splitting: false,
 	},
 	{
 		entry: ["src/runner-worker/index.ts"],
