@@ -1,5 +1,63 @@
 # create-cloudflare
 
+## 2.48.0
+
+### Minor Changes
+
+- [#9104](https://github.com/cloudflare/workers-sdk/pull/9104) [`8096b5f`](https://github.com/cloudflare/workers-sdk/commit/8096b5f3e1121119646d897adc48510146d51c1d) Thanks [@avenceslau](https://github.com/avenceslau)! - Add Hello World Workflows template.
+
+  For multi-step applications that automatically retry, persist state, and run for minutes, hours, days or weeks.
+
+### Patch Changes
+
+- [#9424](https://github.com/cloudflare/workers-sdk/pull/9424) [`52398c7`](https://github.com/cloudflare/workers-sdk/commit/52398c77cd5edc7d0d11cbbfb502bda7ad95f0b7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 7.6.0 | 7.6.1 |
+
+- [#9425](https://github.com/cloudflare/workers-sdk/pull/9425) [`678170f`](https://github.com/cloudflare/workers-sdk/commit/678170fe3cc93d8cd32a8e062ad1c2b80195264b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To    |
+  | ---------- | ----- | ----- |
+  | sv         | 0.8.6 | 0.8.7 |
+
+- [#9427](https://github.com/cloudflare/workers-sdk/pull/9427) [`5231b0e`](https://github.com/cloudflare/workers-sdk/commit/5231b0ed3ae9bd38229414342f328babaf2e902c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-astro | 4.11.4 | 4.12.1 |
+
+- [#9428](https://github.com/cloudflare/workers-sdk/pull/9428) [`f312396`](https://github.com/cloudflare/workers-sdk/commit/f3123962361640aaf6fa6ff77dfc0dea968be63a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-docusaurus | 3.7.0 | 3.8.0 |
+
+- [#9429](https://github.com/cloudflare/workers-sdk/pull/9429) [`4e7345e`](https://github.com/cloudflare/workers-sdk/commit/4e7345e132a45acbf8759e447552785dc1234903) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.3.2 | 15.3.3 |
+
+- [#9430](https://github.com/cloudflare/workers-sdk/pull/9430) [`00ebdd9`](https://github.com/cloudflare/workers-sdk/commit/00ebdd9dc4402a2a1d1193d0d7be4d345adcd875) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.13.0 | 1.14.1 |
+
 ## 2.47.3
 
 ### Patch Changes
