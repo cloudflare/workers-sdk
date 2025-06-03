@@ -140,7 +140,13 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 													createCloudflareEnvironmentOptions(
 														workerConfig,
 														userConfig,
-														environmentName
+														{
+															name: environmentName,
+															isEntry:
+																resolvedPluginConfig.type === "workers" &&
+																environmentName ===
+																	resolvedPluginConfig.entryWorkerEnvironmentName,
+														}
 													),
 												];
 											}
