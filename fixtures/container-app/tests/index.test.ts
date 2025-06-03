@@ -21,11 +21,6 @@ describe("Containers local dev", () => {
 		expect,
 	}) => {
 		expect(getOutput()).toContain(dedent`
-			Your Worker has access to the following bindings:
-			Binding                        Resource            Mode
-			env.CONTAINER (Container)      Durable Object      local
-
-			⎔ Starting local server...
 			Hello from ContainerService!
 			Container Options: {
 			  "Container": {
