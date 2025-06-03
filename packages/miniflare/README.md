@@ -1,11 +1,8 @@
 # 🔥 Miniflare
 
-**Miniflare 3** is a simulator for developing and testing
+**Miniflare** is a simulator for developing and testing
 [**Cloudflare Workers**](https://workers.cloudflare.com/), powered by
 [`workerd`](https://github.com/cloudflare/workerd).
-
-> :warning: Miniflare 3 is API-only, and does not expose a CLI. Use Wrangler
-> with `wrangler dev` to develop your Workers locally with Miniflare 3.
 
 ## Quick Start
 
@@ -799,10 +796,8 @@ defined at the top-level.
 
 - `constructor(opts: MiniflareOptions)`
 
-  Creates a Miniflare instance and starts a new `workerd` server. Note unlike
-  Miniflare 2, Miniflare 3 _always_ starts a HTTP server listening on the
-  configured `host` and `port`: there are no `createServer`/`startServer`
-  functions.
+  Creates a Miniflare instance and starts a new `workerd` HTTP server
+  listening on the configured `host` and `port`.
 
 - `setOptions(opts: MiniflareOptions)`
 
