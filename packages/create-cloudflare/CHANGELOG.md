@@ -1,5 +1,21 @@
 # create-cloudflare
 
+## 2.49.0
+
+### Minor Changes
+
+- [#9442](https://github.com/cloudflare/workers-sdk/pull/9442) [`4996b88`](https://github.com/cloudflare/workers-sdk/commit/4996b88e7cac5cdb43418a8fcf8455f36a070a37) Thanks [@vicb](https://github.com/vicb)! - add \_headers file for immutable asset caching in nextjs template
+
+### Patch Changes
+
+- [#9426](https://github.com/cloudflare/workers-sdk/pull/9426) [`0dc5992`](https://github.com/cloudflare/workers-sdk/commit/0dc599216648ed66a1418cb897b7592228a12fe9) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-solid | 0.6.2 | 0.6.5 |
+
 ## 2.48.0
 
 ### Minor Changes

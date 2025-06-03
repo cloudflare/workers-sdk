@@ -1,5 +1,16 @@
 # @cloudflare/vite-plugin
 
+## 1.5.0
+
+### Minor Changes
+
+- [#9341](https://github.com/cloudflare/workers-sdk/pull/9341) [`2cef3ab`](https://github.com/cloudflare/workers-sdk/commit/2cef3ab4f9c3c24c3e85d61967ce7dd9a4423ea4) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Support loading all asset types via assets binding. Previously only HTML assets could be loaded via the assets binding. The binding now integrates with Vite's internal middleware to load all asset types.
+
+### Patch Changes
+
+- Updated dependencies [[`db2cdc6`](https://github.com/cloudflare/workers-sdk/commit/db2cdc6b1e77473762d0b4fcbad8e50ae2fe712c)]:
+  - wrangler@4.19.1
+
 ## 1.4.0
 
 ### Minor Changes
