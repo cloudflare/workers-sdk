@@ -1,5 +1,28 @@
 # wrangler
 
+## 4.19.0
+
+### Minor Changes
+
+- [#9401](https://github.com/cloudflare/workers-sdk/pull/9401) [`03b8c1c`](https://github.com/cloudflare/workers-sdk/commit/03b8c1ca535a5198ee69001243f6ff3e7b6dac13) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Provide ability for Wrangler to upload preview aliases during version upload.
+
+### Patch Changes
+
+- [#9390](https://github.com/cloudflare/workers-sdk/pull/9390) [`80e75f4`](https://github.com/cloudflare/workers-sdk/commit/80e75f4a67b4e4b7a1bc92e0a93659e5d6f141dc) Thanks [@penalosa](https://github.com/penalosa)! - Support additional Mixed Mode resources in Wrangler:
+
+  - AI
+  - Browser
+  - Images
+  - Vectorize
+  - Dispatch Namespaces
+
+- [#9395](https://github.com/cloudflare/workers-sdk/pull/9395) [`b3be057`](https://github.com/cloudflare/workers-sdk/commit/b3be05734456852eb06dc573634b358569e65876) Thanks [@Maximo-Guk](https://github.com/Maximo-Guk)! - Add WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST for Workers CI
+
+- [#9410](https://github.com/cloudflare/workers-sdk/pull/9410) [`87f3843`](https://github.com/cloudflare/workers-sdk/commit/87f38432ee25aa57efce394baed5712484e3202e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - enable consumers of `unstable_readConfig` to silence `remote` warnings
+
+- Updated dependencies [[`8c7ce77`](https://github.com/cloudflare/workers-sdk/commit/8c7ce7728ccc467aa19b60c8f32c90e6f06442d1), [`80e75f4`](https://github.com/cloudflare/workers-sdk/commit/80e75f4a67b4e4b7a1bc92e0a93659e5d6f141dc), [`80e75f4`](https://github.com/cloudflare/workers-sdk/commit/80e75f4a67b4e4b7a1bc92e0a93659e5d6f141dc), [`fac2f9d`](https://github.com/cloudflare/workers-sdk/commit/fac2f9dfa67b9c9b3ab0979acbb79f8e020a9cfb), [`92719a5`](https://github.com/cloudflare/workers-sdk/commit/92719a535bf6bae9d660a05d5c8f8823004929c5)]:
+  - miniflare@4.20250525.1
+
 ## 4.18.0
 
 ### Minor Changes
