@@ -1,0 +1,16 @@
+{
+	"name": "@fixture/vitest-pool-workers-mixed-mode",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"test": "vitest run --config vitest.workers.config.ts",
+		"test:ci": "node run-tests.mjs",
+		"test:vitest": "vitest run"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "/Users/dario/Repos/workers-sdk/packages/vitest-pool-workers",
+		"typescript": "^5.5.2",
+		"vitest": "~3.0.7",
+		"wrangler": "/Users/dario/Repos/workers-sdk/packages/wrangler"
+	}
+}
