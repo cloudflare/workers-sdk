@@ -168,12 +168,12 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 									builder.config.root,
 									"index.html"
 								);
-
-								if (
+								const hasClientEntry =
 									clientEnvironment &&
 									(clientEnvironment.config.build.rollupOptions.input ||
-										fs.existsSync(defaultHtmlPath))
-								) {
+										fs.existsSync(defaultHtmlPath));
+
+								if (hasClientEntry) {
 									await builder.build(clientEnvironment);
 								}
 
@@ -196,6 +196,32 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 											builder.build(environment)
 										)
 									);
+
+									// 	if (!hasClientEntry) {
+									// 		const entryWorkerEnvironment =
+									// 			builder.environments[
+									// 				resolvedPluginConfig.entryWorkerEnvironmentName
+									// 			];
+
+									// 		assert(entryWorkerEnvironment);
+
+									// 		const entryWorkerConfigPath = path.resolve(
+									// 			builder.config.root,
+									// 			entryWorkerEnvironment.config.build.outDir,
+									// 			"wrangler.json"
+									// 		);
+
+									// 		const workerConfig = JSON.parse(
+									// 			fs.readFileSync(entryWorkerConfigPath, "utf-8")
+									// 		);
+
+									// 		workerConfig.assets = undefined;
+
+									// 		fs.writeFileSync(
+									// 			entryWorkerConfigPath,
+									// 			JSON.stringify(workerConfig)
+									// 		);
+									// 	}
 								}
 							}),
 					},
