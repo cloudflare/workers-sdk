@@ -197,31 +197,31 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 										)
 									);
 
-									// 	if (!hasClientEntry) {
-									// 		const entryWorkerEnvironment =
-									// 			builder.environments[
-									// 				resolvedPluginConfig.entryWorkerEnvironmentName
-									// 			];
+									if (!hasClientEntry) {
+										const entryWorkerEnvironment =
+											builder.environments[
+												resolvedPluginConfig.entryWorkerEnvironmentName
+											];
 
-									// 		assert(entryWorkerEnvironment);
+										assert(entryWorkerEnvironment);
 
-									// 		const entryWorkerConfigPath = path.resolve(
-									// 			builder.config.root,
-									// 			entryWorkerEnvironment.config.build.outDir,
-									// 			"wrangler.json"
-									// 		);
+										const entryWorkerConfigPath = path.resolve(
+											builder.config.root,
+											entryWorkerEnvironment.config.build.outDir,
+											"wrangler.json"
+										);
 
-									// 		const workerConfig = JSON.parse(
-									// 			fs.readFileSync(entryWorkerConfigPath, "utf-8")
-									// 		);
+										const workerConfig = JSON.parse(
+											fs.readFileSync(entryWorkerConfigPath, "utf-8")
+										);
 
-									// 		workerConfig.assets = undefined;
+										workerConfig.assets = undefined;
 
-									// 		fs.writeFileSync(
-									// 			entryWorkerConfigPath,
-									// 			JSON.stringify(workerConfig)
-									// 		);
-									// 	}
+										fs.writeFileSync(
+											entryWorkerConfigPath,
+											JSON.stringify(workerConfig)
+										);
+									}
 								}
 							}),
 					},
@@ -269,7 +269,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						this.environment.name ===
 						resolvedPluginConfig.entryWorkerEnvironmentName;
 
-					if (isEntryWorker && hasClientBuild) {
+					if (isEntryWorker) {
 						const workerOutputDirectory = this.environment.config.build.outDir;
 						const clientOutputDirectory =
 							resolvedViteConfig.environments.client?.build.outDir;
