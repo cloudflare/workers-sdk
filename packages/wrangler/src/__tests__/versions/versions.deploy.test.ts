@@ -1,18 +1,19 @@
-import yargs from "yargs";
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import {
 	assignAndDistributePercentages,
 	parseVersionSpecs,
 	summariseVersionTraffic,
 	validateTrafficSubtotal,
-	versionsDeployOptions,
 } from "../../versions/deploy";
 import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockUploadWorkerRequest } from "../helpers/mock-upload-worker";
-import { mockSubDomainRequest } from "../helpers/mock-workers-subdomain";
+import {
+	mockGetWorkerSubdomain,
+	mockSubDomainRequest,
+} from "../helpers/mock-workers-subdomain";
 import {
 	msw,
 	mswGetVersion,
@@ -26,8 +27,7 @@ import { mswListNewDeploymentsLatestFiftyFifty } from "../helpers/msw/handlers/v
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
-import writeWranglerToml from "../helpers/write-wrangler-toml";
-import type { VersionsDeployArgs } from "../../versions/deploy";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("versions deploy", () => {
 	mockAccountId();
@@ -44,7 +44,8 @@ describe("versions deploy", () => {
 			mswListVersions,
 			mswGetVersion(),
 			mswPostNewDeployment,
-			mswPatchNonVersionedScriptSettings
+			mswPatchNonVersionedScriptSettings,
+			...mswSuccessDeploymentScriptMetadata
 		);
 	});
 
@@ -54,10 +55,11 @@ describe("versions deploy", () => {
 				...mswSuccessDeploymentScriptMetadata,
 				...mswListNewDeploymentsLatestFiftyFifty
 			);
-			writeWranglerToml();
+			writeWranglerConfig();
 			writeWorkerSource();
-			mockSubDomainRequest();
 			mockUploadWorkerRequest();
+			mockGetWorkerSubdomain({ enabled: true });
+			mockSubDomainRequest();
 
 			await runWrangler("deploy ./index");
 
@@ -87,7 +89,7 @@ describe("versions deploy", () => {
 	describe("without wrangler.toml", () => {
 		test("succeeds with --name arg", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --name named-worker --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --name named-worker --yes"
 			);
 
 			await expect(result).resolves.toMatchInlineSnapshot(`undefined`);
@@ -138,7 +140,7 @@ describe("versions deploy", () => {
 
 		test("fails without --name arg", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -148,12 +150,10 @@ describe("versions deploy", () => {
 	});
 
 	describe("with wrangler.toml", () => {
-		beforeEach(() => writeWranglerToml());
+		beforeEach(() => writeWranglerConfig());
 
 		test("no args", async () => {
-			const result = runWrangler(
-				"versions deploy --yes --experimental-gradual-rollouts"
-			);
+			const result = runWrangler("versions deploy --yes");
 
 			await expect(result).rejects.toMatchInlineSnapshot(
 				`[Error: You must select at least 1 version to deploy.]`
@@ -186,7 +186,7 @@ describe("versions deploy", () => {
 
 		test("1 version @ (implicit) 100%", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -233,7 +233,7 @@ describe("versions deploy", () => {
 
 		test("1 version @ (explicit) 100%", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000@100% --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000@100% --yes"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -280,7 +280,7 @@ describe("versions deploy", () => {
 
 		test("2 versions @ (implicit) 50% each", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 20000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 20000000-0000-0000-0000-000000000000 --yes"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -335,7 +335,7 @@ describe("versions deploy", () => {
 
 		test("1 version @ (explicit) 100%", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000@100% --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000@100% --yes"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -382,7 +382,7 @@ describe("versions deploy", () => {
 
 		test("2 versions @ (explicit) 30% + (implicit) 70%", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000@30% 20000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000@30% 20000000-0000-0000-0000-000000000000 --yes"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -437,7 +437,7 @@ describe("versions deploy", () => {
 
 		test("2 versions @ (explicit) 40% + (explicit) 60%", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000@40% 20000000-0000-0000-0000-000000000000@60% --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000@40% 20000000-0000-0000-0000-000000000000@60% --yes"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -493,7 +493,7 @@ describe("versions deploy", () => {
 		describe("max versions restrictions (temp)", () => {
 			test("2+ versions fails", async () => {
 				const result = runWrangler(
-					"versions deploy 10000000-0000-0000-0000-000000000000 20000000-0000-0000-0000-000000000000 30000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+					"versions deploy 10000000-0000-0000-0000-000000000000 20000000-0000-0000-0000-000000000000 30000000-0000-0000-0000-000000000000 --yes"
 				);
 
 				await expect(result).rejects.toMatchInlineSnapshot(
@@ -542,7 +542,7 @@ describe("versions deploy", () => {
 
 			test("--max-versions allows > 2 versions", async () => {
 				const result = runWrangler(
-					"versions deploy 10000000-0000-0000-0000-000000000000 20000000-0000-0000-0000-000000000000 30000000-0000-0000-0000-000000000000 --max-versions=3 --yes --experimental-gradual-rollouts"
+					"versions deploy 10000000-0000-0000-0000-000000000000 20000000-0000-0000-0000-000000000000 30000000-0000-0000-0000-000000000000 --max-versions=3 --yes"
 				);
 
 				await expect(result).resolves.toBeUndefined();
@@ -608,7 +608,7 @@ describe("versions deploy", () => {
 
 		test("with a message", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --message 'My versioned deployment message' --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --message 'My versioned deployment message' --yes"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -655,12 +655,12 @@ describe("versions deploy", () => {
 		});
 
 		test("with logpush in wrangler.toml", async () => {
-			writeWranglerToml({
+			writeWranglerConfig({
 				logpush: true,
 			});
 
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -703,17 +703,78 @@ describe("versions deploy", () => {
 				│
 				│ Synced non-versioned settings:
 				│            logpush:  true
+				│      observability:  <skipped>
 				│     tail_consumers:  <skipped>
 				│
 				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
 			`);
-
-			expect(normalizeOutput(std.out)).toContain("logpush:  true");
 		});
 
-		test("with logpush and tail_consumers in wrangler.toml", async () => {
-			writeWranglerToml({
+		test("with observability disabled in wrangler.toml", async () => {
+			writeWranglerConfig({
+				observability: {
+					enabled: false,
+				},
+			});
+
+			const result = runWrangler(
+				"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
+			);
+
+			await expect(result).resolves.toBeUndefined();
+
+			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
+				"╭ Deploy Worker Versions by splitting traffic between multiple versions
+				│
+				├ Fetching latest deployment
+				│
+				├ Your current deployment has 2 version(s):
+				│
+				│ (10%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				│ (90%) 00000000-0000-0000-0000-000000000000
+				│       Created:  TIMESTAMP
+				│           Tag:  -
+				│       Message:  -
+				│
+				├ Fetching deployable versions
+				│
+				├ Which version(s) do you want to deploy?
+				├ 1 Worker Version(s) selected
+				│
+				├     Worker Version 1:  00000000-0000-0000-0000-000000000000
+				│              Created:  TIMESTAMP
+				│                  Tag:  -
+				│              Message:  -
+				│
+				├ What percentage of traffic should Worker Version 1 receive?
+				├ 100% of traffic
+				├
+				├ Add a deployment message (skipped)
+				│
+				├ Deploying 1 version(s)
+				│
+				├ Syncing non-versioned settings
+				│
+				│ Synced non-versioned settings:
+				│            logpush:  <skipped>
+				│      observability:  enabled:  false
+				│     tail_consumers:  <skipped>
+				│
+				╰  SUCCESS  Deployed test-name version 00000000-0000-0000-0000-000000000000 at 100% (TIMINGS)"
+			`);
+		});
+
+		test("with logpush, tail_consumers, and observability in wrangler.toml", async () => {
+			writeWranglerConfig({
 				logpush: false,
+				observability: {
+					enabled: true,
+					head_sampling_rate: 0.5,
+				},
 				tail_consumers: [
 					{ service: "worker-1" },
 					{ service: "worker-2", environment: "preview" },
@@ -722,7 +783,7 @@ describe("versions deploy", () => {
 			});
 
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --yes"
 			);
 
 			await expect(result).resolves.toBeUndefined();
@@ -765,6 +826,8 @@ describe("versions deploy", () => {
 				│
 				│ Synced non-versioned settings:
 				│            logpush:  false
+				│      observability:  enabled:             true
+				│                      head_sampling_rate:  0.5
 				│     tail_consumers:  worker-1
 				│                      worker-2 (preview)
 				│                      worker-3 (staging)
@@ -775,7 +838,7 @@ describe("versions deploy", () => {
 
 		test("fails for non-existent versionId", async () => {
 			const result = runWrangler(
-				"versions deploy ffffffff-ffff-ffff-ffff-ffffffffffff --yes --experimental-gradual-rollouts"
+				"versions deploy ffffffff-ffff-ffff-ffff-ffffffffffff --yes"
 			);
 
 			// TODO: could do with a better error message but this will suffice for now (this error isn't possible in the interactive flow)
@@ -807,7 +870,7 @@ describe("versions deploy", () => {
 
 		test("fails if --percentage > 100", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage 101 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage 101 --yes"
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -819,7 +882,7 @@ describe("versions deploy", () => {
 
 		test("fails if --percentage < 0", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage -1 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage -1 --yes"
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -831,7 +894,7 @@ describe("versions deploy", () => {
 
 		test("fails if version-spec percentage > 100", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage 101 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage 101 --yes"
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -843,7 +906,7 @@ describe("versions deploy", () => {
 
 		test("fails if version-spec percentage < 0", async () => {
 			const result = runWrangler(
-				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage -1 --yes --experimental-gradual-rollouts"
+				"versions deploy 10000000-0000-0000-0000-000000000000 --percentage -1 --yes"
 			);
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -857,39 +920,28 @@ describe("versions deploy", () => {
 
 describe("units", () => {
 	describe("parseVersionSpecs", () => {
-		const options = yargs().command(
-			"versions deploy [version-specs..]",
-			"",
-			// @ts-expect-error creating the command using a fresh yargs() but it expects one preconfigured with global options
-			versionsDeployOptions,
-			() => {}
-		);
-
 		test("no args", () => {
-			const input = "versions deploy";
-
-			const args = options.parse(input) as VersionsDeployArgs;
-			const result = parseVersionSpecs(args);
+			const result = parseVersionSpecs({});
 
 			expect(result).toMatchObject(new Map());
 		});
 
 		test("1 positional arg", () => {
-			const input = "versions deploy 10000000-0000-0000-0000-000000000000@10%";
-
-			const args = options.parse(input) as VersionsDeployArgs;
-			const result = parseVersionSpecs(args);
+			const result = parseVersionSpecs({
+				versionSpecs: ["10000000-0000-0000-0000-000000000000@10%"],
+			});
 
 			expect(Object.fromEntries(result)).toMatchObject({
 				"10000000-0000-0000-0000-000000000000": 10,
 			});
 		});
 		test("2 positional args", () => {
-			const input =
-				"versions deploy 10000000-0000-0000-0000-000000000000@10% 20000000-0000-0000-0000-000000000000@90%";
-
-			const args = options.parse(input) as VersionsDeployArgs;
-			const result = parseVersionSpecs(args);
+			const result = parseVersionSpecs({
+				versionSpecs: [
+					"10000000-0000-0000-0000-000000000000@10%",
+					"20000000-0000-0000-0000-000000000000@90%",
+				],
+			});
 
 			expect(Object.fromEntries(result)).toMatchObject({
 				"10000000-0000-0000-0000-000000000000": 10,
@@ -898,34 +950,23 @@ describe("units", () => {
 		});
 
 		test("1 pair of named args", () => {
-			const input =
-				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --percentage 10";
-
-			const args = options.parse(input) as VersionsDeployArgs;
-			const result = parseVersionSpecs(args);
+			const result = parseVersionSpecs({
+				percentage: [10],
+				versionId: ["10000000-0000-0000-0000-000000000000"],
+			});
 
 			expect(Object.fromEntries(result)).toMatchObject({
 				"10000000-0000-0000-0000-000000000000": 10,
 			});
 		});
 		test("2 pairs of named args", () => {
-			const input =
-				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --percentage 10 --version-id 20000000-0000-0000-0000-000000000000 --percentage 90";
-
-			const args = options.parse(input) as VersionsDeployArgs;
-			const result = parseVersionSpecs(args);
-
-			expect(Object.fromEntries(result)).toMatchObject({
-				"10000000-0000-0000-0000-000000000000": 10,
-				"20000000-0000-0000-0000-000000000000": 90,
+			const result = parseVersionSpecs({
+				percentage: [10, 90],
+				versionId: [
+					"10000000-0000-0000-0000-000000000000",
+					"20000000-0000-0000-0000-000000000000",
+				],
 			});
-		});
-		test("unordered named args", () => {
-			const input =
-				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --version-id 20000000-0000-0000-0000-000000000000 --percentage 10 --percentage 90";
-
-			const args = options.parse(input) as VersionsDeployArgs;
-			const result = parseVersionSpecs(args);
 
 			expect(Object.fromEntries(result)).toMatchObject({
 				"10000000-0000-0000-0000-000000000000": 10,
@@ -933,23 +974,13 @@ describe("units", () => {
 			});
 		});
 		test("unpaired named args", () => {
-			const input =
-				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --percentage 10 --version-id 20000000-0000-0000-0000-000000000000";
-
-			const args = options.parse(input) as VersionsDeployArgs;
-			const result = parseVersionSpecs(args);
-
-			expect(Object.fromEntries(result)).toMatchObject({
-				"10000000-0000-0000-0000-000000000000": 10,
-				"20000000-0000-0000-0000-000000000000": null,
+			const result = parseVersionSpecs({
+				percentage: [10],
+				versionId: [
+					"10000000-0000-0000-0000-000000000000",
+					"20000000-0000-0000-0000-000000000000",
+				],
 			});
-		});
-		test("unpaired, unordered named args", () => {
-			const input =
-				"versions deploy --version-id 10000000-0000-0000-0000-000000000000 --version-id 20000000-0000-0000-0000-000000000000 --percentage 10";
-
-			const args = options.parse(input) as VersionsDeployArgs;
-			const result = parseVersionSpecs(args);
 
 			expect(Object.fromEntries(result)).toMatchObject({
 				"10000000-0000-0000-0000-000000000000": 10,

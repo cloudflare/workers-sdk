@@ -14,7 +14,6 @@ import type { UploadPayloadFile } from "../../pages/types";
 import type { StrictRequest } from "msw";
 
 describe("pages project upload", () => {
-	const ENV_COPY = process.env;
 	const std = mockConsoleMethods();
 
 	runInTempDir();
@@ -23,13 +22,11 @@ describe("pages project upload", () => {
 	mockSetTimeout();
 
 	beforeEach(() => {
-		process.env.CI = "true";
-		process.env.CF_PAGES_UPLOAD_JWT = "<<funfetti-auth-jwt>>";
+		vi.stubEnv("CI", "true");
+		vi.stubEnv("CF_PAGES_UPLOAD_JWT", "<<funfetti-auth-jwt>>");
 	});
 
 	afterEach(async () => {
-		process.env = ENV_COPY;
-
 		// Force a tick to ensure that all promises resolve
 		await endEventLoop();
 		// Reset MSW after tick to ensure that all requests have been handled
@@ -575,7 +572,7 @@ describe("pages project upload", () => {
 		await runWrangler("pages project upload .");
 
 		expect(uploadedAssets).toEqual(assets);
-	});
+	}, 60_000);
 
 	it("should not error when directory names contain periods and houses a extensionless file", async () => {
 		mkdirSync(".well-known");

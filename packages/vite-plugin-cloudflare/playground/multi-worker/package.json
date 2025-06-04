@@ -1,0 +1,26 @@
+{
+	"name": "@playground/multi-worker",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "vite build --app",
+		"build:custom-output-directories": "vite build --app -c ./vite.config.custom-output-directories.ts",
+		"build:with-worker-configs-warning": "vite build --app -c vite.config.with-worker-configs-warning.ts",
+		"check:types": "tsc --build",
+		"deploy-a": "wrangler deploy -c ./dist/worker_a/wrangler.json",
+		"deploy-b": "wrangler deploy -c ./dist/worker_b/wrangler.json",
+		"dev": "vite dev",
+		"dev:with-worker-configs-warning": "vite dev -c vite.config.with-worker-configs-warning.ts",
+		"preview": "vite preview",
+		"preview:custom-output-directories": "vite preview -c ./vite.config.custom-output-directories.ts",
+		"preview:with-worker-configs-warning": "vite preview -c vite.config.with-worker-configs-warning.ts"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250525.0",
+		"typescript": "catalog:default",
+		"vite": "catalog:vite-plugin",
+		"wrangler": "workspace:*"
+	}
+}

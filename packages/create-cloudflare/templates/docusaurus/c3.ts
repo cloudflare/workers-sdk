@@ -1,26 +1,9 @@
-import { runFrameworkGenerator } from "frameworks/index";
-import { detectPackageManager } from "helpers/packageManagers";
-import type { TemplateConfig } from "../../src/templates";
-import type { C3Context } from "types";
+import pages from "./pages/c3";
+import workers from "./workers/c3";
+import type { MultiPlatformTemplateConfig } from "../../src/templates";
 
-const { npm } = detectPackageManager();
-
-const generate = async (ctx: C3Context) => {
-	await runFrameworkGenerator(ctx, [ctx.project.name, "classic"]);
-};
-
-const config: TemplateConfig = {
-	configVersion: 1,
-	id: "docusaurus",
-	platform: "pages",
+const config: MultiPlatformTemplateConfig = {
 	displayName: "Docusaurus",
-	generate,
-	transformPackageJson: async () => ({
-		scripts: {
-			deploy: `${npm} run build && wrangler pages deploy ./build`,
-		},
-	}),
-	devScript: "start",
-	deployScript: "deploy",
+	platformVariants: { pages, workers },
 };
 export default config;

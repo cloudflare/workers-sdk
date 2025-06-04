@@ -1,8 +1,8 @@
 import assert from "node:assert";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
+import { createPatternMatcher } from "@cloudflare/workers-shared";
 import chalk from "chalk";
-import ignore from "ignore";
 import xxhash from "xxhash-wasm";
 import { UserError } from "./errors";
 import {
@@ -18,6 +18,7 @@ import {
 } from "./kv/helpers";
 import { logger, LOGGER_LEVELS } from "./logger";
 import type { Config } from "./config";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { KeyValue } from "./kv/helpers";
 import type { XXHashAPI } from "xxhash-wasm";
 
@@ -77,19 +78,20 @@ function hashAsset(
 }
 
 async function createKVNamespaceIfNotAlreadyExisting(
+	complianceConfig: ComplianceConfig,
 	title: string,
 	accountId: string
 ) {
 	// check if it already exists
 	// TODO: this is super inefficient, should be made better
-	const namespaces = await listKVNamespaces(accountId);
+	const namespaces = await listKVNamespaces(complianceConfig, accountId);
 	const found = namespaces.find((ns) => ns.title === title);
 	if (found) {
 		return { created: false, id: found.id };
 	}
 
 	// else we make the namespace
-	const id = await createKVNamespace(accountId, title);
+	const id = await createKVNamespace(complianceConfig, accountId, title);
 	logger.log(`🌀 Created namespace for Workers Site "${title}"`);
 
 	return {
@@ -118,10 +120,11 @@ function pluralise(count: number) {
  * @returns a promise for an object mapping the relative paths of the assets to the key of that
  * asset in the KV namespace.
  */
-export async function syncAssets(
+export async function syncWorkersSite(
+	complianceConfig: ComplianceConfig,
 	accountId: string | undefined,
 	scriptName: string,
-	siteAssets: AssetPaths | undefined,
+	siteAssets: LegacyAssetPaths | undefined,
 	preview: boolean,
 	dryRun: boolean | undefined,
 	oldAssetTTL: number | undefined
@@ -144,12 +147,17 @@ export async function syncAssets(
 	}`;
 
 	const { id: namespace } = await createKVNamespaceIfNotAlreadyExisting(
+		complianceConfig,
 		title,
 		accountId
 	);
 	// Get all existing keys in asset namespace
 	logger.info("Fetching list of already uploaded assets...");
-	const namespaceKeysResponse = await listKVNamespaceKeys(accountId, namespace);
+	const namespaceKeysResponse = await listKVNamespaceKeys(
+		complianceConfig,
+		accountId,
+		namespace
+	);
 	const namespaceKeyInfoMap = new Map<
 		string,
 		(typeof namespaceKeysResponse)[0]
@@ -304,6 +312,7 @@ export async function syncAssets(
 			// Upload the bucket to the KV namespace, suppressing logs, we do our own
 			try {
 				await putKVBulkKeyValue(
+					complianceConfig,
 					accountId,
 					namespace,
 					bucket,
@@ -322,6 +331,9 @@ export async function syncAssets(
 					break;
 				}
 				throw e;
+			}
+			if (controller.signal.aborted) {
+				break;
 			}
 			uploadedCount += nextBucket.length;
 			const percent = Math.floor((100 * uploadedCount) / uploadCount);
@@ -355,6 +367,7 @@ export async function syncAssets(
 
 		if (!oldAssetTTL) {
 			await deleteKVBulkKeyValue(
+				complianceConfig,
 				accountId,
 				namespace,
 				Array.from(namespaceKeys)
@@ -374,11 +387,12 @@ export async function syncAssets(
 				}
 
 				const currentValue = await getKVKeyValue(
+					complianceConfig,
 					accountId,
 					namespace,
 					namespaceKey
 				);
-				await putKVKeyValue(accountId, namespace, {
+				await putKVKeyValue(complianceConfig, accountId, namespace, {
 					key: namespaceKey,
 					value: Buffer.from(currentValue),
 					expiration_ttl: oldAssetTTL,
@@ -389,18 +403,6 @@ export async function syncAssets(
 	logger.log("↗️  Done syncing assets");
 
 	return { manifest, namespace };
-}
-
-function createPatternMatcher(
-	patterns: string[],
-	exclude: boolean
-): (filePath: string) => boolean {
-	if (patterns.length === 0) {
-		return (_filePath) => !exclude;
-	} else {
-		const ignorer = ignore().add(patterns);
-		return (filePath) => ignorer.test(filePath).ignored;
-	}
 }
 
 /**
@@ -441,7 +443,7 @@ function urlSafe(filePath: string): string {
 /**
  * Information about the assets that should be uploaded
  */
-export interface AssetPaths {
+export interface LegacyAssetPaths {
 	/**
 	 * Absolute path to the root of the project.
 	 *
@@ -463,46 +465,6 @@ export interface AssetPaths {
 }
 
 /**
- * Get an object that describes what assets to upload, if any.
- *
- * Uses the args (passed from the command line) if available,
- * falling back to those defined in the config.
- *
- * (This function corresponds to --assets/config.assets)
- *
- */
-export function getAssetPaths(
-	config: Config,
-	assetDirectory: string | undefined
-): AssetPaths | undefined {
-	const baseDirectory = assetDirectory
-		? process.cwd()
-		: path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));
-
-	assetDirectory ??=
-		typeof config.assets === "string"
-			? config.assets
-			: config.assets !== undefined
-				? config.assets.bucket
-				: undefined;
-
-	const includePatterns =
-		(typeof config.assets !== "string" && config.assets?.include) || [];
-
-	const excludePatterns =
-		(typeof config.assets !== "string" && config.assets?.exclude) || [];
-
-	return assetDirectory
-		? {
-				baseDirectory,
-				assetDirectory,
-				includePatterns,
-				excludePatterns,
-			}
-		: undefined;
-}
-
-/**
  * Get an object that describes what site assets to upload, if any.
  *
  * Uses the args (passed from the command line) if available,
@@ -516,7 +478,7 @@ export function getSiteAssetPaths(
 	assetDirectory?: string,
 	includePatterns = config.site?.include ?? [],
 	excludePatterns = config.site?.exclude ?? []
-): AssetPaths | undefined {
+): LegacyAssetPaths | undefined {
 	const baseDirectory = assetDirectory
 		? process.cwd()
 		: path.resolve(path.dirname(config.configPath ?? "wrangler.toml"));

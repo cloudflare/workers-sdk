@@ -8,11 +8,12 @@ import WebSocket from "ws";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 
+const port = await getPort();
+const inspectorPort = await getPort();
+
 const RUNTIMES = [
 	{ flags: "", runtime: "local" },
 	{ flags: "--remote", runtime: "remote" },
-	{ flags: "--x-dev-env", runtime: "local" },
-	{ flags: "--remote --x-dev-env", runtime: "remote" },
 ] as const;
 
 // WebAssembly module containing single `func add(i32, i32): i32` export.
@@ -22,7 +23,17 @@ const WASM_ADD_MODULE = Buffer.from(
 	"base64"
 );
 
-describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
+/**
+ * We use the same workerName for all of the tests in this suite in hopes of reducing flakes.
+ * When creating a new worker, a <workerName>.devprod-testing7928.workers.dev subdomain is created.
+ * The platform API locks a database table for the zone (devprod-testing7928.workers.dev) while doing this.
+ * Creating many workers in the same account/zone in quick succession can run up against the lock.
+ * This test suite runs sequentially so does not cause lock issues for itself, but we run into lock issues
+ * when multiple PRs have jobs running at the same time (or the same PR has the tests run across multiple OSes).
+ */
+const workerName = generateResourceName();
+
+describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 	const isLocal = runtime === "local";
 
 	let helper: WranglerE2ETestHelper;
@@ -31,7 +42,6 @@ describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 	});
 
 	it("works with basic modules format worker", async () => {
-		const workerName = generateResourceName();
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -53,7 +63,9 @@ describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 				}
 			`,
 		});
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		let res = await fetch(url);
 
@@ -72,7 +84,6 @@ describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 	});
 
 	it("works with basic service worker", async () => {
-		const workerName = generateResourceName();
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -92,7 +103,9 @@ describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 				});
 			`,
 		});
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		let res = await fetch(url);
 		expect(await res.text()).toBe("service worker");
@@ -113,7 +126,6 @@ describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 	it.todo("workers with find additional modules");
 
 	it("respects compatibility settings", async () => {
-		const workerName = generateResourceName();
 		// `global_navigator` enabled on `2022-03-21`: https://developers.cloudflare.com/workers/configuration/compatibility-dates/#global-navigator
 		// `http_headers_getsetcookie` enabled on `2023-03-01`: https://developers.cloudflare.com/workers/configuration/compatibility-dates/#headers-supports-getsetcookie
 		// `2022-03-22` should enable `global_navigator` but disable `http_headers_getsetcookie`
@@ -142,7 +154,9 @@ describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 				}
 			`,
 		});
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 		expect(await res.json()).toEqual({
@@ -153,8 +167,6 @@ describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 	});
 
 	it("starts inspector and allows debugging", async () => {
-		const inspectorPort = await getPort();
-		const workerName = generateResourceName();
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -168,7 +180,7 @@ describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 			`,
 		});
 		const worker = helper.runLongLived(
-			`wrangler dev ${flags} --inspector-port=${inspectorPort}`
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
 		);
 		await worker.waitForReady();
 		const inspectorUrl = new URL(`ws://127.0.0.1:${inspectorPort}`);
@@ -180,7 +192,6 @@ describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 	});
 
 	it("starts https server", async () => {
-		const workerName = generateResourceName();
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -194,7 +205,7 @@ describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 			`,
 		});
 		const worker = helper.runLongLived(
-			`wrangler dev ${flags} --local-protocol=https`
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort} --local-protocol=https`
 		);
 		const { url } = await worker.waitForReady();
 		const parsedURL = new URL(url);
@@ -206,7 +217,6 @@ describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 	});
 
 	it.skipIf(!isLocal)("uses configured upstream inside worker", async () => {
-		const workerName = generateResourceName();
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -221,7 +231,7 @@ describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 		});
 		// TODO(soon): explore using `--host` for remote mode in this test
 		const worker = helper.runLongLived(
-			`wrangler dev ${flags} --local-upstream=example.com`
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort} --local-upstream=example.com`
 		);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
@@ -229,10 +239,9 @@ describe.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 	});
 });
 
-describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
+describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 	const isLocal = runtime === "local";
-	const resourceFlags = isLocal ? "--local" : "";
-	const d1ResourceFlags = isLocal ? "" : "--remote";
+	const resourceFlags = isLocal ? "" : "--remote";
 
 	let helper: WranglerE2ETestHelper;
 	beforeEach(() => {
@@ -240,7 +249,6 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 	});
 
 	it("exposes basic bindings in service workers", async () => {
-		const workerName = generateResourceName();
 		await helper.seed({
 			"data/text.txt": "👋",
 			"data/binary.bin": "🌊",
@@ -268,7 +276,9 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				});
 			`,
 		});
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 		expect(await res.json()).toEqual({
@@ -280,7 +290,6 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 	});
 
 	it("exposes WebAssembly module bindings in service workers", async () => {
-		const workerName = generateResourceName();
 		await helper.seed({
 			"add.wasm": WASM_ADD_MODULE,
 			"wrangler.toml": dedent`
@@ -297,7 +306,9 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				});
 			`,
 		});
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 		expect(await res.text()).toBe("3");
@@ -309,7 +320,6 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 			`wrangler kv key put ${resourceFlags} --namespace-id=${ns} existing-key existing-value`
 		);
 
-		const workerName = generateResourceName();
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -330,7 +340,9 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				}
 			`,
 		});
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 		expect(await res.text()).toBe("existing-value");
@@ -341,8 +353,73 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 		expect(result.stdout).toBe("new-value");
 	});
 
-	it("supports Workers Sites bindings", async () => {
-		const workerName = generateResourceName();
+	it("exposes Secrets Store bindings", async () => {
+		// if remote, secrets store and secret will already be created
+		const storeId = "37009502100840c0a9800b4990ed0449";
+		const secret_name = "well-known-secret";
+
+		// but we need to create the secret each time when running locally
+		if (isLocal) {
+			await helper.run(
+				`wrangler secrets-store secret create ${storeId} ${resourceFlags} --name ${secret_name} --value my-secret-value --scopes workers`
+			);
+		}
+
+		await helper.seed({
+			"wrangler.toml": dedent`
+				name = "${workerName}"
+				main = "src/index.ts"
+				compatibility_date = "2025-01-01"
+				# Regression test for https://github.com/cloudflare/workers-sdk/issues/9006
+				kv_namespaces = [
+					${isLocal ? `{ binding = "KV", id = "LOCAL_ONLY" }` : ""}
+				]
+				secrets_store_secrets = [
+					{ binding = "SECRET", store_id = "${storeId}", secret_name = "${secret_name}" }
+				]
+			`,
+			"src/index.ts": dedent`
+				export default {
+					async fetch(request, env, ctx) {
+						return new Response(await env.SECRET.get());
+					}
+				}
+			`,
+		});
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
+		const { url } = await worker.waitForReady();
+		const res = await fetch(url, {
+			headers: { "MF-Disable-Pretty-Error": "true" },
+		});
+		expect(await res.text()).toBe("my-secret-value");
+	});
+
+	it("supports Workers Sites bindings", async ({ onTestFinished }) => {
+		if (!isLocal) {
+			onTestFinished(async () => {
+				// Try to clean up created remote Workers Sites namespace
+				const listResult = await helper.run(`wrangler kv namespace list`);
+				const list = JSON.parse(
+					// Ignore extra debug output
+					listResult.stdout.substring(
+						listResult.stdout.indexOf("["),
+						listResult.stdout.lastIndexOf("]") + 1
+					)
+				);
+				assert(Array.isArray(list));
+				const ns = list.find(({ title }) => title.includes(workerName));
+				if (ns === undefined) {
+					console.warn("Couldn't find Workers Sites namespace to delete");
+				} else {
+					await helper.run(
+						`wrangler kv namespace delete --namespace-id ${ns.id}`
+					);
+				}
+			});
+		}
+
 		const kvAssetHandler = require.resolve("@cloudflare/kv-asset-handler");
 		await helper.seed({
 			"public/index.html": "<h1>👋</h1>",
@@ -377,31 +454,12 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 			`,
 		});
 
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 		expect(await res.text()).toBe("<h1>👋</h1>");
-
-		// Try to clean up created remote Workers Sites namespace
-		if (!isLocal) {
-			const listResult = await helper.run(`wrangler kv namespace list`);
-			const list = JSON.parse(
-				// Ignore extra debug output
-				listResult.stdout.substring(
-					listResult.stdout.indexOf("["),
-					listResult.stdout.lastIndexOf("]") + 1
-				)
-			);
-			assert(Array.isArray(list));
-			const ns = list.find(({ title }) => title.includes(workerName));
-			if (ns === undefined) {
-				console.warn("Couldn't find Workers Sites namespace to delete");
-			} else {
-				await helper.run(
-					`wrangler kv namespace delete --namespace-id ${ns.id}`
-				);
-			}
-		}
 	});
 
 	it("exposes R2 bucket bindings", async () => {
@@ -412,7 +470,6 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 			`wrangler r2 object put ${resourceFlags} ${name}/existing-key --file test.txt`
 		);
 
-		const workerName = generateResourceName();
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -432,7 +489,9 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				}
 			`,
 		});
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 		expect(await res.text()).toBe("existing-value");
@@ -453,7 +512,7 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 
 	it("exposes D1 database bindings", async () => {
 		const { id, name } = await helper.d1(isLocal);
-		const workerName = generateResourceName();
+
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -479,25 +538,163 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 			`,
 		});
 
-		// D1 defaults to `--local`, so we deliberately use `flags`, not `resourceFlags`
-		await helper.run(
-			`wrangler d1 execute ${d1ResourceFlags} DB --file schema.sql`
+		const result = await helper.run(
+			`wrangler d1 execute ${resourceFlags} DB --file schema.sql`
 		);
-
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		// D1 defaults to `--local`, so we deliberately use `flags`, not `resourceFlags`
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
 		expect(await res.json()).toEqual([{ key: "key1", value: "value1" }]);
+		if (isLocal) {
+			expect(result.stdout).toContain("🚣 2 commands executed successfully.");
+		}
 
-		const result = await helper.run(
-			`wrangler d1 execute ${d1ResourceFlags} DB --command "SELECT * FROM entries WHERE key = 'key2'"`
+		const result2 = await helper.run(
+			`wrangler d1 execute ${resourceFlags} DB --command "SELECT * FROM entries WHERE key = 'key2'"`
 		);
-		expect(result.stdout).toContain("value2");
+		expect(result2.stdout).toContain("value2");
+		if (isLocal) {
+			expect(result2.stdout).toContain("🚣 1 command executed successfully.");
+		}
+	});
+
+	// Refer to https://github.com/cloudflare/workers-sdk/pull/8492 for full context on why this test does different things to the others.
+	// In particular, it uses a shared resource across test runs
+	it("exposes Vectorize bindings", async () => {
+		const name = await helper.vectorize(
+			32,
+			"euclidean",
+			"well-known-vectorize"
+		);
+
+		await helper.seed({
+			"wrangler.toml": dedent`
+				name = "${workerName}"
+				main = "src/index.ts"
+				compatibility_date = "2024-08-01"
+				[[vectorize]]
+				binding = "VECTORIZE"
+				index_name = "${name}"
+				`,
+			"src/index.ts": dedent/*javascript*/ `
+				export interface Env {
+					VECTORIZE: Vectorize;
+				}
+
+				export default {
+					async fetch(request: Request, env: Env, ctx: any) {
+						const url = new URL(request.url)
+						if(url.pathname === "/insert") {
+							await env.VECTORIZE.insert([{"id":"a44706aa-a366-48bc-8cc1-3feffd87d548","values":[0.2321,0.8121,0.6315,0.6151,0.4121,0.1512,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"metadata":{"text":"Peter Piper picked a peck of pickled peppers"}}]);
+							await env.VECTORIZE.insert([{"id":"b0daca4a-ffd8-4865-926b-e24800af2a2d","values":[0.2331,1.0125,0.6131,0.9421,0.9661,0.8121,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"metadata":{"text":"She sells seashells by the sea"}}]);
+							await env.VECTORIZE.upsert([{"id":"b0daca4a-ffd8-4865-926b-e24800af2a2d","values":[0.2331,1.0125,0.6131,0.9421,0.9661,0.8121,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"metadata":{"text":"She sells seashells by the seashore"}}]);
+							return new Response("inserted")
+						}
+						if(url.pathname === "/query") {
+							let response = "";
+							response += JSON.stringify(await env.VECTORIZE.getByIds(["a44706aa-a366-48bc-8cc1-3feffd87d548"]));
+
+							const queryVector: Array<number> = [
+								0.13, 0.25, 0.44, 0.53, 0.62, 0.41, 0.59, 0.68, 0.29, 0.82, 0.37, 0.5,
+								0.74, 0.46, 0.57, 0.64, 0.28, 0.61, 0.73, 0.35, 0.78, 0.58, 0.42, 0.32,
+								0.77, 0.65, 0.49, 0.54, 0.31, 0.29, 0.71, 0.57,
+							]; // vector of dimension 32
+							const matches = await env.VECTORIZE.query(queryVector, {
+								topK: 3,
+								returnValues: true,
+								returnMetadata: "all",
+							});
+
+							return new Response(response);
+						}
+					}
+				}
+				`,
+		});
+
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort} --experimental-vectorize-bind-to-prod`
+		);
+		const { url } = await worker.waitForReady();
+		await fetch(`${url}/insert`);
+		const res = await fetch(`${url}/query`);
+
+		await expect(res.text()).resolves.toBe(
+			`[{"id":"a44706aa-a366-48bc-8cc1-3feffd87d548","namespace":null,"metadata":{"text":"Peter Piper picked a peck of pickled peppers"},"values":[0.2321,0.8121,0.6315,0.6151,0.4121,0.1512,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}]`
+		);
+	});
+
+	it.skipIf(isLocal)("exposes Hyperdrive bindings", async () => {
+		const { id } = await helper.hyperdrive(isLocal);
+
+		await helper.seed({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-10-25"
+
+					[[hyperdrive]]
+					binding = "HYPERDRIVE"
+					id = "${id}"
+			`,
+			"src/index.ts": dedent`
+					export default {
+						async fetch(request, env) {
+							if (request.url.includes("connect")) {
+								const conn = env.HYPERDRIVE.connect();
+							}
+							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
+						}
+					}`,
+		});
+
+		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const { url } = await worker.waitForReady();
+		await fetch(`${url}/connect`);
+	});
+
+	it.skipIf(!isLocal)("exposes Pipelines bindings", async () => {
+		await helper.seed({
+			"wrangler.toml": dedent`
+				name = "${workerName}"
+				main = "src/index.ts"
+				compatibility_date = "2024-10-20"
+
+				[[pipelines]]
+				binding = "PIPELINE"
+				pipeline = "my-pipeline"
+			`,
+			"src/index.ts": dedent`
+				export default {
+					async fetch(request, env, ctx) {
+						if (env.PIPELINE === undefined) {
+							return new Response("env.PIPELINE is undefined");
+						}
+						env.PIPELINE.send([{hello: "world"}]);
+						return new Response("env.PIPELINE is available");
+					}
+				}
+			`,
+		});
+
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
+		const { url } = await worker.waitForReady();
+		const res = await fetch(url);
+
+		await expect(res.text()).resolves.toBe("env.PIPELINE is available");
+		// worker.currentOutput is sometimes racey, worker.output will hang
+		const match = await worker.readUntil(/Request received/);
+		expect(match[0]).not.toBeNull();
 	});
 
 	it.skipIf(!isLocal)("exposes queue producer/consumer bindings", async () => {
 		const queueName = generateResourceName("queue");
-		const workerName = generateResourceName();
+
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -522,18 +719,95 @@ describe.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				}
 			`,
 		});
-		const worker = helper.runLongLived(`wrangler dev ${flags}`);
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 		await fetch(url);
 		await worker.readUntil(/✉️/);
 	});
 
+	// TODO: enable for remove dev once realish preview supports it
+	// TODO: enable for local dev once implemented
+	it.skip("exposes Workflow bindings", async () => {
+		await helper.seed({
+			"wrangler.toml": dedent`
+                name = "my-workflow-demo"
+                main = "src/index.ts"
+                compatibility_date = "2024-10-11"
+
+                [[workflows]]
+                binding = "WORKFLOW"
+                name = "my-workflow"
+                class_name = "Demo"
+            `,
+			"src/index.ts": dedent`
+                import { WorkflowEntrypoint } from "cloudflare:workers";
+
+                export default {
+                    async fetch(request, env, ctx) {
+                        if (env.WORKFLOW === undefined) {
+                            return new Response("env.WORKFLOW is undefined");
+                        }
+
+                        return new Response("env.WORKFLOW is available");
+                    }
+                }
+
+                export class Demo extends WorkflowEntrypoint {
+                    run() {
+                        // blank
+                    }
+                }
+            `,
+		});
+		const worker = helper.runLongLived(
+			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+		);
+		const { url } = await worker.waitForReady();
+		const res = await fetch(url);
+
+		await expect(res.text()).resolves.toBe("env.WORKFLOW is available");
+	});
+
+	describe.sequential.each([
+		{ imagesMode: "remote", extraFlags: "" },
+		{ imagesMode: "local", extraFlags: "--experimental-images-local-mode" },
+	] as const)("Images Binding Mode: $imagesMode", async ({ extraFlags }) => {
+		it("exposes Images bindings", async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
+					name = "my-images-demo"
+					main = "src/index.ts"
+					compatibility_date = "2024-12-27"
+
+					[images]
+					binding = "IMAGES"
+				`,
+				"src/index.ts": dedent`
+					export default {
+						async fetch(request, env, ctx) {
+							if (env.IMAGES === undefined) {
+								return new Response("env.IMAGES is undefined");
+							}
+
+							return new Response("env.IMAGES is available");
+						}
+					}
+				`,
+			});
+			const worker = helper.runLongLived(`wrangler dev ${flags} ${extraFlags}`);
+			const { url } = await worker.waitForReady();
+			const res = await fetch(url);
+
+			await expect(res.text()).resolves.toBe("env.IMAGES is available");
+		});
+	});
+
 	// TODO(soon): implement E2E tests for other bindings
-	it.todo("exposes hyperdrive bindings");
 	it.skipIf(isLocal).todo("exposes send email bindings");
 	it.skipIf(isLocal).todo("exposes browser bindings");
 	it.skipIf(isLocal).todo("exposes Workers AI bindings");
-	it.skipIf(isLocal).todo("exposes Vectorize bindings");
 	it.skipIf(isLocal).todo("exposes Analytics Engine bindings");
 	it.skipIf(isLocal).todo("exposes dispatch namespace bindings");
 	it.skipIf(isLocal).todo("exposes mTLS bindings");

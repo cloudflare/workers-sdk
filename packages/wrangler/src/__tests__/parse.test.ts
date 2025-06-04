@@ -1,6 +1,7 @@
 import {
 	formatMessage,
 	indexLocation,
+	parseByteSize,
 	parseJSON,
 	parseJSONC,
 	parseTOML,
@@ -142,6 +143,7 @@ describe("parseTOML", () => {
 					lineText: "name = 'fail\"",
 				},
 				notes: [],
+				telemetryMessage: "TOML parse error",
 			});
 		}
 	});
@@ -163,6 +165,7 @@ describe("parseTOML", () => {
 					fileText: "\n[name",
 				},
 				notes: [],
+				telemetryMessage: "TOML parse error",
 			});
 		}
 	});
@@ -225,17 +228,16 @@ describe("parseJSON", () => {
 				kind: "error",
 				location: {
 					line: 3,
-					column: 9,
+					column: 10,
+					length: 2,
 					lineText: '"version" "1',
 					file: undefined,
 					fileText: `\n{\n"version" "1\n}\n`,
 				},
 				notes: [],
+				telemetryMessage: "JSON(C) parse error",
 			});
-			expect(text).oneOf([
-				/* Node.js v16/v18 */ "Unexpected string",
-				/* Node.js v20+ */ "Expected ':' after property name",
-			]);
+			expect(text).toEqual("UnexpectedEndOfString");
 		}
 	});
 
@@ -248,16 +250,18 @@ describe("parseJSON", () => {
 		} catch (err) {
 			expect({ ...(err as Error) }).toStrictEqual({
 				name: "ParseError",
-				text: "Unexpected number",
+				text: "CommaExpected",
 				kind: "error",
 				location: {
 					file,
 					fileText,
 					line: 4,
-					column: 8,
+					column: 9,
+					length: 5,
 					lineText: `\t\t\t"c":[012345]`,
 				},
 				notes: [],
+				telemetryMessage: "JSON(C) parse error",
 			});
 		}
 	});
@@ -340,6 +344,7 @@ describe("parseJSONC", () => {
 					fileText: `\n{\n"version" "1\n}\n`,
 				},
 				notes: [],
+				telemetryMessage: "JSON(C) parse error",
 			});
 		}
 	});
@@ -364,6 +369,7 @@ describe("parseJSONC", () => {
 					lineText: `\t\t\t"c":[012345]`,
 				},
 				notes: [],
+				telemetryMessage: "JSON(C) parse error",
 			});
 		}
 	});
@@ -436,5 +442,42 @@ describe("searchLocation", () => {
 			length: undefined,
 			lineText: undefined,
 		});
+	});
+});
+
+describe("parseByteSize", () => {
+	it("should calculate valid byte sizes", () => {
+		const cases: [string, number][] = [
+			["3", 3],
+			["3B", 3],
+			["3b", 3],
+			["1.3Kb", 1300],
+			["1.3kib", 1331],
+			["42MB", 42_000_000],
+			["42mib", 44_040_192],
+			["0.8MB", 800_000],
+			["0.8MiB", 838_860],
+			["2 GB", 2_000_000_000],
+			["2 giB", 2_147_483_648],
+
+			// If the b/ib suffix is omitted, assume non-binary units
+			["2G", 2_000_000_000],
+			["2T", 2_000_000_000_000],
+			["2P", 2_000_000_000_000_000],
+		];
+
+		for (const [input, result] of cases) {
+			expect(parseByteSize(input)).toEqual(result);
+		}
+	});
+
+	it("should return NaN for invalid input", () => {
+		expect(parseByteSize("")).toBeNaN();
+		expect(parseByteSize("foo")).toBeNaN();
+		expect(parseByteSize("B")).toBeNaN();
+		expect(parseByteSize("iB")).toBeNaN();
+		expect(parseByteSize(".B")).toBeNaN();
+		expect(parseByteSize("3iB")).toBeNaN();
+		expect(parseByteSize("3ib")).toBeNaN();
 	});
 });

@@ -1,12 +1,23 @@
-import { crash, startSection, updateStatus } from "@cloudflare/cli";
-import { processArgument } from "@cloudflare/cli/args";
+import { mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { startSection, updateStatus } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
-import { C3_DEFAULTS } from "helpers/cli";
+import TOML from "@iarna/toml";
+import { processArgument } from "helpers/args";
+import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
 import { quoteShellArgs, runCommand } from "helpers/command";
+import { readFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
+import { poll } from "helpers/poll";
+import { parse as jsoncParse } from "jsonc-parser";
 import { isInsideGitRepo } from "./git";
 import { chooseAccount, wranglerLogin } from "./wrangler/accounts";
-import { readWranglerToml } from "./wrangler/config";
+import {
+	readWranglerJson,
+	readWranglerToml,
+	wranglerJsonExists,
+} from "./wrangler/config";
 import type { C3Context } from "types";
 
 export const offerToDeploy = async (ctx: C3Context) => {
@@ -44,7 +55,8 @@ export const offerToDeploy = async (ctx: C3Context) => {
 	// initialize a deployment object in context
 	ctx.deployment = {};
 
-	const loginSuccess = await wranglerLogin();
+	const loginSuccess = await wranglerLogin(ctx);
+
 	if (!loginSuccess) {
 		return false;
 	}
@@ -65,21 +77,24 @@ const isDeployable = async (ctx: C3Context) => {
 	if (ctx.template.platform === "pages") {
 		return true;
 	}
+	const wranglerConfig = readWranglerConfig(ctx);
+	return !hasBinding(wranglerConfig);
+};
 
-	const wranglerToml = readWranglerToml(ctx);
-	if (wranglerToml.match(/(?<!#\s*)bindings?\s*=.*/m)) {
-		return false;
+const readWranglerConfig = (ctx: C3Context) => {
+	if (wranglerJsonExists(ctx)) {
+		const wranglerJsonStr = readWranglerJson(ctx);
+		return jsoncParse(wranglerJsonStr, undefined, { allowTrailingComma: true });
 	}
-
-	return true;
+	const wranglerTomlStr = readWranglerToml(ctx);
+	return TOML.parse(wranglerTomlStr.replace(/\r\n/g, "\n"));
 };
 
 export const runDeploy = async (ctx: C3Context) => {
 	const { npm, name: pm } = detectPackageManager();
 
 	if (!ctx.account?.id) {
-		crash("Failed to read Cloudflare account.");
-		return;
+		throw new Error("Failed to read Cloudflare account.");
 	}
 
 	const baseDeployCmd = [npm, "run", ctx.template.deployScript ?? "deploy"];
@@ -98,12 +113,17 @@ export const runDeploy = async (ctx: C3Context) => {
 			: []),
 	];
 
-	const result = await runCommand(deployCmd, {
-		silent: true,
+	const outputFile = join(
+		await mkdtemp(join(tmpdir(), "c3-wrangler-deploy-")),
+		"output.json",
+	);
+
+	await runCommand(deployCmd, {
 		cwd: ctx.project.path,
 		env: {
 			CLOUDFLARE_ACCOUNT_ID: ctx.account.id,
 			NODE_ENV: "production",
+			WRANGLER_OUTPUT_FILE_PATH: outputFile,
 		},
 		startText: "Deploying your application",
 		doneText: `${brandColor("deployed")} ${dim(
@@ -111,12 +131,25 @@ export const runDeploy = async (ctx: C3Context) => {
 		)}`,
 	});
 
-	const deployedUrlRegex = /https:\/\/.+\.(pages|workers)\.dev/;
-	const deployedUrlMatch = result.match(deployedUrlRegex);
-	if (deployedUrlMatch) {
-		ctx.deployment.url = deployedUrlMatch[0];
-	} else {
-		crash("Failed to find deployment url.");
+	try {
+		const contents = readFile(outputFile);
+
+		const entries = contents
+			.split("\n")
+			.filter(Boolean)
+			.map((entry) => JSON.parse(entry));
+		const url: string | undefined =
+			entries.find((entry) => entry.type === "deploy")?.targets?.[0] ??
+			entries.find((entry) => entry.type === "pages-deploy")?.url;
+		const deployedUrlRegex = /https:\/\/.+\.(pages|workers)\.dev/;
+		const deployedUrlMatch = url?.match(deployedUrlRegex);
+		if (deployedUrlMatch) {
+			ctx.deployment.url = deployedUrlMatch[0];
+		} else {
+			throw new Error("Failed to find deployment url.");
+		}
+	} catch {
+		throw new Error("Failed to find deployment url.");
 	}
 
 	// if a pages url (<sha1>.<project>.pages.dev), remove the sha1
@@ -126,4 +159,35 @@ export const runDeploy = async (ctx: C3Context) => {
 
 		ctx.deployment.url = `${proto}://${hostnameWithoutSHA1}`;
 	}
+};
+
+export const maybeOpenBrowser = async (ctx: C3Context) => {
+	if (ctx.deployment.url) {
+		const success = await poll(ctx.deployment.url);
+		if (success) {
+			if (ctx.args.open) {
+				await openInBrowser(ctx.deployment.url);
+			}
+		}
+	}
+};
+
+/**
+ * Recursively search the properties of node for a binding.
+ */
+export const hasBinding = (node: unknown): boolean => {
+	if (typeof node !== "object" || node === null) {
+		return false;
+	}
+	for (const key of Object.keys(node)) {
+		if (key === "assets") {
+			// Properties called "binding" within "assets" do not count as bindings.
+			continue;
+		}
+		if (key === "binding" || key === "bindings") {
+			return true;
+		}
+		return hasBinding(node[key as keyof typeof node]);
+	}
+	return false;
 };

@@ -383,6 +383,75 @@ test("prevent Durable Object eviction", async (t) => {
 	t.is(await res.text(), original);
 });
 
+const MINIFLARE_WITH_SQLITE = (useSQLite: boolean) =>
+	new Miniflare({
+		verbose: true,
+		modules: true,
+		script: `export class SQLiteDurableObject {
+			constructor(ctx) { this.ctx = ctx; }
+			fetch() {
+				try {
+					return new Response(this.ctx.storage.sql.databaseSize);
+				} catch (error) {
+					if (error instanceof Error) {
+						return new Response(error.message);
+					}
+					throw error;
+				}
+			}
+		}
+		export default {
+			fetch(req, env, ctx) {
+				const id = env.SQLITE_DURABLE_OBJECT.idFromName("foo");
+				console.log({id})
+				const stub = env.SQLITE_DURABLE_OBJECT.get(id);
+				return stub.fetch(req);
+			}
+		}`,
+		durableObjects: {
+			SQLITE_DURABLE_OBJECT: {
+				className: "SQLiteDurableObject",
+				useSQLite,
+			},
+		},
+	});
+
+test("SQLite is available in SQLite backed Durable Objects", async (t) => {
+	const mf = MINIFLARE_WITH_SQLITE(true);
+	t.teardown(() => mf.dispose());
+
+	let res = await mf.dispatchFetch("http://localhost");
+	t.is(await res.text(), "4096");
+
+	const ns = await mf.getDurableObjectNamespace("SQLITE_DURABLE_OBJECT");
+	const id = ns.newUniqueId();
+	const stub = ns.get(id);
+	res = await stub.fetch("http://localhost");
+	t.is(await res.text(), "4096");
+});
+
+test("SQLite is not available in default Durable Objects", async (t) => {
+	const mf = MINIFLARE_WITH_SQLITE(false);
+	t.teardown(() => mf.dispose());
+
+	let res = await mf.dispatchFetch("http://localhost");
+	t.assert(
+		(await res.text()).startsWith(
+			"SQL is not enabled for this Durable Object class."
+		)
+	);
+
+	const ns = await mf.getDurableObjectNamespace("SQLITE_DURABLE_OBJECT");
+	const id = ns.newUniqueId();
+	const stub = ns.get(id);
+	res = await stub.fetch("http://localhost");
+	t.assert(
+		(await res.text()).startsWith(
+			"SQL is not enabled for this Durable Object class."
+		)
+	);
+});
+
 test("colo-local actors", async (t) => {
 	const mf = new Miniflare({
 		modules: true,

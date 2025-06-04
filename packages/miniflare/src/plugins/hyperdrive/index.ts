@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { z } from "zod";
 import { Service, Worker_Binding } from "../../runtime";
-import { Plugin } from "../shared";
+import { Plugin, ProxyNodeBinding } from "../shared";
 
 export const HYPERDRIVE_PLUGIN_NAME = "hyperdrive";
 
@@ -9,9 +9,14 @@ function hasPostgresProtocol(url: URL) {
 	return url.protocol === "postgresql:" || url.protocol === "postgres:";
 }
 
+function hasMysqlProtocol(url: URL) {
+	return url.protocol === "mysql:";
+}
+
 function getPort(url: URL) {
 	if (url.port !== "") return url.port;
 	if (hasPostgresProtocol(url)) return "5432";
+	if (hasMysqlProtocol(url)) return "3306";
 	// Validated in `HyperdriveSchema`
 	assert.fail(`Expected known protocol, got ${url.protocol}`);
 }
@@ -23,13 +28,14 @@ export const HyperdriveSchema = z
 		if (url.protocol === "") {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
-				message: "You must specify the database protocol - e.g. 'postgresql'.",
+				message:
+					"You must specify the database protocol - e.g. 'postgresql'/'mysql'.",
 			});
-		} else if (!hasPostgresProtocol(url)) {
+		} else if (!hasPostgresProtocol(url) && !hasMysqlProtocol(url)) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				message:
-					"Only PostgreSQL or PostgreSQL compatible databases are currently supported.",
+					"Only PostgreSQL-compatible or MySQL-compatible databases are currently supported.",
 			});
 		}
 		if (url.host === "") {
@@ -90,8 +96,24 @@ export const HYPERDRIVE_PLUGIN: Plugin<typeof HyperdriveInputOptionsSchema> = {
 			}
 		);
 	},
-	getNodeBindings() {
-		return {};
+	getNodeBindings(options) {
+		return Object.fromEntries(
+			Object.entries(options.hyperdrives ?? {}).map(([name, url]) => {
+				const connectionOverrides: Record<string | symbol, string | number> = {
+					connectionString: `${url}`,
+					port: Number.parseInt(url.port),
+					host: url.hostname,
+				};
+				const proxyNodeBinding = new ProxyNodeBinding({
+					get(target, prop) {
+						return prop in connectionOverrides
+							? connectionOverrides[prop]
+							: target[prop];
+					},
+				});
+				return [name, proxyNodeBinding];
+			})
+		);
 	},
 	async getServices({ options }) {
 		return Object.entries(options.hyperdrives ?? {}).map<Service>(

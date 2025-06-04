@@ -12,7 +12,7 @@ import {
 	SiteMatcherRegExps,
 	testSiteRegExps,
 } from "../../workers";
-import { kProxyNodeBinding } from "../shared";
+import { ProxyNodeBinding } from "../shared";
 import { KV_PLUGIN_NAME } from "./constants";
 
 async function* listKeysInDirectoryInner(
@@ -97,7 +97,7 @@ export async function getSitesNodeBindings(
 		siteRegExps
 	);
 	return {
-		[SiteBindings.KV_NAMESPACE_SITE]: kProxyNodeBinding,
+		[SiteBindings.KV_NAMESPACE_SITE]: new ProxyNodeBinding(),
 		[SiteBindings.JSON_SITE_MANIFEST]: __STATIC_CONTENT_MANIFEST,
 	};
 }

@@ -1,6 +1,6 @@
 import { logger } from "../../logger";
 
-export class NotImplementedError extends Error {
+class NotImplementedError extends Error {
 	constructor(func: string, namespace?: string) {
 		if (namespace) {
 			func = `${namespace}#${func}`;

@@ -2,7 +2,9 @@ import { HttpsProxyAgent } from "https-proxy-agent";
 import WebSocket from "ws";
 import { version as packageVersion } from "../../package.json";
 import { fetchResult } from "../cfetch";
-import { proxy } from "../index";
+import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
+import { proxy } from "../utils/constants";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Outcome, TailFilterMessage } from "./filters";
 import type { Request } from "undici";
 
@@ -90,6 +92,7 @@ export async function createPagesTail({
 	debug = false,
 }: CreatePagesTailOptions) {
 	const tailRecord = await fetchResult<TailCreationApiResponse>(
+		COMPLIANCE_REGION_CONFIG_PUBLIC,
 		`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentId}/tails`,
 		{
 			method: "POST",
@@ -99,6 +102,7 @@ export async function createPagesTail({
 
 	const deleteTail = async () =>
 		fetchResult(
+			COMPLIANCE_REGION_CONFIG_PUBLIC,
 			`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentId}/tails/${tailRecord.id}`,
 			{ method: "DELETE" }
 		);
@@ -144,6 +148,7 @@ export async function createPagesTail({
  * @returns a websocket connection, an expiration, and a function to call to delete the tail
  */
 export async function createTail(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	workerName: string,
 	filters: TailFilterMessage,
@@ -160,15 +165,19 @@ export async function createTail(
 		id: tailId,
 		url: websocketUrl,
 		expires_at: expiration,
-	} = await fetchResult<TailCreationApiResponse>(createTailUrl, {
-		method: "POST",
-		body: JSON.stringify(filters),
-	});
+	} = await fetchResult<TailCreationApiResponse>(
+		complianceConfig,
+		createTailUrl,
+		{
+			method: "POST",
+			body: JSON.stringify(filters),
+		}
+	);
 
 	// delete the tail (not yet!)
 	const deleteUrl = makeDeleteTailUrl(accountId, workerName, tailId, env);
 	async function deleteTail() {
-		await fetchResult(deleteUrl, { method: "DELETE" });
+		await fetchResult(complianceConfig, deleteUrl, { method: "DELETE" });
 	}
 
 	const p = proxy ? { agent: new HttpsProxyAgent(proxy) } : {};
@@ -198,6 +207,18 @@ export async function createTail(
 	return { tail, expiration, deleteTail };
 }
 
+export type TailEventMessageType =
+	| RequestEvent
+	| ScheduledEvent
+	| AlarmEvent
+	| EmailEvent
+	| TailEvent
+	| TailInfo
+	| QueueEvent
+	| RpcEvent
+	| undefined
+	| null;
+
 /**
  * Everything captured by the trace worker and sent to us via
  * `wrangler tail` is structured JSON that deserializes to this type.
@@ -212,6 +233,11 @@ export type TailEventMessage = {
 	 * The name of the script we're tailing
 	 */
 	scriptName?: string;
+
+	/**
+	 * The name of the entrypoint invoked by the Worker
+	 */
+	entrypoint?: string;
 
 	/**
 	 * Any exceptions raised by the worker
@@ -250,29 +276,19 @@ export type TailEventMessage = {
 	/**
 	 * The event that triggered the worker. In the case of an HTTP request,
 	 * this will be a RequestEvent. If it's a cron trigger, it'll be a
-	 * ScheduledEvent. If it's a durable object alarm, it's an AlarmEvent.
+	 * ScheduledEvent. If it's a Durable Object alarm, it's an AlarmEvent.
 	 * If it's a email, it'a an EmailEvent. If it's a Queue consumer event,
 	 * it's a QueueEvent.
 	 *
 	 * Until workers-types exposes individual types for export, we'll have
 	 * to just re-define these types ourselves.
 	 */
-	event:
-		| RequestEvent
-		| ScheduledEvent
-		| AlarmEvent
-		| EmailEvent
-		| TailEvent
-		| TailInfo
-		| QueueEvent
-		| undefined
-		| null;
+	event: TailEventMessageType;
 };
 
 /**
  * A request that triggered worker execution
  */
-
 export type RequestEvent = {
 	request: Pick<Request, "url" | "method" | "headers"> & {
 		/**
@@ -386,7 +402,7 @@ export type ScheduledEvent = {
 };
 
 /**
- * A event that was triggered from a durable object alarm
+ * An event that was triggered from a Durable Object alarm
  */
 export type AlarmEvent = {
 	/**
@@ -442,8 +458,8 @@ export type TailInfo = {
 	type: string;
 };
 
-/*
- * A event that was triggered by receiving a batch of messages from a Queue for consumption.
+/**
+ * An event that was triggered by receiving a batch of messages from a Queue for consumption.
  */
 export type QueueEvent = {
 	/**
@@ -455,4 +471,14 @@ export type QueueEvent = {
 	 * The number of messages in the batch.
 	 */
 	batchSize: number;
+};
+
+/**
+ * An RPC method that was invoked
+ */
+export type RpcEvent = {
+	/**
+	 * The name of the RPC method that was invoked
+	 */
+	rpcMethod: string;
 };

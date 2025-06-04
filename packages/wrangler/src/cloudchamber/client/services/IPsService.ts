@@ -31,10 +31,10 @@ export class IPsService {
 			method: "GET",
 			url: "/ips",
 			query: {
-				placementId: placementId,
+				placement_id: placementId,
 				allocated: allocated,
 				ipType: ipType,
-				deploymentId: deploymentId,
+				deployment_id: deploymentId,
 			},
 			errors: {
 				400: `Unknown account`,

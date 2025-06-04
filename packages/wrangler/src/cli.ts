@@ -8,7 +8,7 @@ import {
 } from "./api";
 import { FatalError } from "./errors";
 import { main } from ".";
-import type { UnstableDevOptions, UnstableDevWorker } from "./api";
+import type { Unstable_DevOptions, Unstable_DevWorker } from "./api";
 import type { Logger } from "./logger";
 import type { Request, Response } from "miniflare";
 
@@ -32,13 +32,12 @@ if (typeof vitest === "undefined" && require.main === module) {
  * and call wrangler.unstable_dev().
  */
 export { unstable_dev, unstable_pages, unstable_DevEnv, unstable_startWorker };
-export type { UnstableDevWorker, UnstableDevOptions };
+export type { Unstable_DevWorker, Unstable_DevOptions };
 
 export * from "./api/integrations";
 
 // Export internal APIs required by the Vitest integration as `unstable_`
 export { default as unstable_splitSqlQuery } from "./d1/splitter";
-export { startWorkerRegistryServer as unstable_startWorkerRegistryServer } from "./dev-registry";
 
 // `miniflare-cli/assets` dynamically imports`@cloudflare/pages-shared/environment-polyfills`.
 // `@cloudflare/pages-shared/environment-polyfills/types.ts` defines `global`
@@ -47,14 +46,27 @@ export { startWorkerRegistryServer as unstable_startWorkerRegistryServer } from 
 // We `require` instead of `import`ing here to avoid polluting the main
 // `wrangler` TypeScript project with the `global` augmentations. This
 // relies on the fact that `require` is untyped.
-export interface UnstableASSETSBindingsOptions {
+export interface Unstable_ASSETSBindingsOptions {
 	log: Logger;
 	proxyPort?: number;
 	directory?: string;
 }
 const generateASSETSBinding: (
-	opts: UnstableASSETSBindingsOptions
+	opts: Unstable_ASSETSBindingsOptions
 ) => (request: Request) => Promise<Response> =
 	// eslint-disable-next-line @typescript-eslint/no-var-requires
 	require("./miniflare-cli/assets").default;
 export { generateASSETSBinding as unstable_generateASSETSBinding };
+
+export {
+	experimental_readRawConfig,
+	type ConfigBindingOptions as Experimental_ConfigBindingOptions,
+} from "./config";
+export { experimental_patchConfig } from "./config/patch-config";
+
+export {
+	startMixedModeSession as experimental_startMixedModeSession,
+	pickRemoteBindings as experimental_pickRemoteBindings,
+	type MixedModeSession as Experimental_MixedModeSession,
+	convertConfigBindingsToStartWorkerBindings as unstable_convertConfigBindingsToStartWorkerBindings,
+} from "./api";

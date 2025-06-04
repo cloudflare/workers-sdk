@@ -20,10 +20,11 @@ export default <ExportedHandler<{ ASSETS: Fetcher }>>{
 
 		for (const include of routes.include) {
 			if (isRoutingRuleMatch(pathname, include)) {
-				if (worker.fetch === undefined) {
+				const workerAsHandler = worker as ExportedHandler;
+				if (workerAsHandler.fetch === undefined) {
 					throw new TypeError("Entry point missing `fetch` handler");
 				}
-				return worker.fetch(request, env, context);
+				return workerAsHandler.fetch(request, env, context);
 			}
 		}
 

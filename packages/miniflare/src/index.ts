@@ -2,6 +2,7 @@ import assert from "assert";
 import crypto from "crypto";
 import { Abortable } from "events";
 import fs from "fs";
+import { mkdir, writeFile } from "fs/promises";
 import http from "http";
 import net from "net";
 import os from "os";
@@ -11,9 +12,14 @@ import { ReadableStream } from "stream/web";
 import util from "util";
 import zlib from "zlib";
 import exitHook from "exit-hook";
-import { $ as colors$ } from "kleur/colors";
+import { $ as colors$, green } from "kleur/colors";
 import stoppable from "stoppable";
-import { Dispatcher, getGlobalDispatcher, Pool } from "undici";
+import {
+	Dispatcher,
+	getGlobalDispatcher,
+	Pool,
+	Response as UndiciResponse,
+} from "undici";
 import SCRIPT_MINIFLARE_SHARED from "worker:shared/index";
 import SCRIPT_MINIFLARE_ZOD from "worker:shared/zod";
 import { WebSocketServer } from "ws";
@@ -23,7 +29,6 @@ import {
 	coupleWebSocket,
 	DispatchFetch,
 	DispatchFetchDispatcher,
-	ENTRY_SOCKET_HTTP_OPTIONS,
 	fetch,
 	getAccessibleHosts,
 	getEntrySocketHttpOptions,
@@ -33,25 +38,28 @@ import {
 	Response,
 } from "./http";
 import {
+	ContainerOptions,
+	ContainerService,
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	DurableObjectClassNames,
 	getDirectSocketName,
 	getGlobalServices,
 	HOST_CAPNP_CONNECT,
-	kProxyNodeBinding,
 	KV_PLUGIN_NAME,
 	normaliseDurableObject,
 	PLUGIN_ENTRIES,
 	Plugins,
 	PluginServicesOptions,
 	ProxyClient,
+	ProxyNodeBinding,
 	QueueConsumers,
 	QueueProducers,
 	QUEUES_PLUGIN_NAME,
 	QueuesError,
 	R2_PLUGIN_NAME,
 	ReplaceWorkersTypes,
+	SECRET_STORE_PLUGIN_NAME,
 	SERVICE_ENTRY,
 	SharedOptions,
 	SOCKET_ENTRY,
@@ -59,6 +67,7 @@ import {
 	WorkerOptions,
 	WrappedBindingNames,
 } from "./plugins";
+import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
 import {
 	CUSTOM_SERVICE_KNOWN_OUTBOUND,
 	CustomServiceKind,
@@ -70,6 +79,8 @@ import {
 	reviveError,
 	ServiceDesignatorSchema,
 } from "./plugins/core";
+import { InspectorProxyController } from "./plugins/core/inspector-proxy";
+import { imagesLocalFetcher } from "./plugins/images/fetcher";
 import {
 	Config,
 	Extension,
@@ -94,6 +105,22 @@ import {
 	parseWithRootPath,
 	stripAnsi,
 } from "./shared";
+import { DevRegistry, WorkerDefinition } from "./shared/dev-registry";
+import {
+	createInboundDoProxyService,
+	createOutboundDoProxyService,
+	createProxyFallbackService,
+	extractDoFetchProxyTarget,
+	extractServiceFetchProxyTarget,
+	getHttpProxyOptions,
+	getOutboundDoProxyClassName,
+	getProtocol,
+	getProxyFallbackServiceSocketName,
+	INBOUND_DO_PROXY_SERVICE_NAME,
+	INBOUND_DO_PROXY_SERVICE_PATH,
+	normaliseServiceDesignator,
+	OUTBOUND_DO_PROXY_SERVICE_NAME,
+} from "./shared/external-service";
 import { isCompressedByCloudflareFL } from "./shared/mime-types";
 import {
 	CoreBindings,
@@ -103,6 +130,7 @@ import {
 	SharedHeaders,
 	SiteBindings,
 } from "./workers";
+import { ADMIN_API } from "./workers/secrets-store/constants";
 import { formatZodError } from "./zod-format";
 import type {
 	CacheStorage,
@@ -110,6 +138,7 @@ import type {
 	DurableObjectNamespace,
 	Fetcher,
 	KVNamespace,
+	KVNamespaceListKey,
 	Queue,
 	R2Bucket,
 } from "@cloudflare/workers-types/experimental";
@@ -311,6 +340,7 @@ function getDurableObjectClassNames(
 				className,
 				// Fallback to current worker service if name not defined
 				serviceName = workerServiceName,
+				enableSql,
 				unsafeUniqueKey,
 				unsafePreventEviction,
 			} = normaliseDurableObject(designator);
@@ -324,6 +354,14 @@ function getDurableObjectClassNames(
 				// If we've already seen this class in this service, make sure the
 				// unsafe unique keys and unsafe prevent eviction values match
 				const existingInfo = classNames.get(className);
+				if (existingInfo?.enableSql !== enableSql) {
+					throw new MiniflareCoreError(
+						"ERR_DIFFERENT_STORAGE_BACKEND",
+						`Different storage backends defined for Durable Object "${className}" in "${serviceName}": ${JSON.stringify(
+							enableSql
+						)} and ${JSON.stringify(existingInfo?.enableSql)}`
+					);
+				}
 				if (existingInfo?.unsafeUniqueKey !== unsafeUniqueKey) {
 					throw new MiniflareCoreError(
 						"ERR_DIFFERENT_UNIQUE_KEYS",
@@ -342,11 +380,151 @@ function getDurableObjectClassNames(
 				}
 			} else {
 				// Otherwise, just add it
-				classNames.set(className, { unsafeUniqueKey, unsafePreventEviction });
+				classNames.set(className, {
+					enableSql,
+					unsafeUniqueKey,
+					unsafePreventEviction,
+				});
 			}
 		}
 	}
 	return serviceClassNames;
+}
+
+/**
+ * This collects all external service bindings from all workers and overrides
+ * it to point to a proxy in the loopback server. A fallback service will be created
+ * for each of the external service in case the external service is not available.
+ */
+function getExternalServiceEntrypoints(
+	allWorkerOpts: PluginWorkerOptions[],
+	loopbackHost: string,
+	loopbackPort: number
+) {
+	const externalServices = new Map<
+		string,
+		{
+			classNames: Set<string>;
+			entrypoints: Set<string | undefined>;
+		}
+	>();
+	const allWorkerNames = allWorkerOpts.map((opts) => opts.core.name);
+	const getEntrypoints = (name: string) => {
+		let externalService = externalServices.get(name);
+
+		if (!externalService) {
+			externalService = {
+				classNames: new Set(),
+				entrypoints: new Set(),
+			};
+			externalServices.set(name, externalService);
+		}
+
+		return externalService;
+	};
+
+	for (const workerOpts of allWorkerOpts) {
+		// Override service bindings if they point to a worker that doesn't exist
+		if (workerOpts.core.serviceBindings) {
+			for (const [name, service] of Object.entries(
+				workerOpts.core.serviceBindings
+			)) {
+				const { serviceName, entrypoint, mixedModeConnectionString } =
+					normaliseServiceDesignator(service);
+
+				if (
+					// Skip if it is a remote service
+					mixedModeConnectionString === undefined &&
+					// Skip if the service is bound to another Worker defined in the Miniflare config
+					serviceName &&
+					!allWorkerNames.includes(serviceName)
+				) {
+					// This is a service binding to a worker that doesn't exist
+					// Override it to connect to the dev registry proxy
+					workerOpts.core.serviceBindings[name] = {
+						external: {
+							address: `${loopbackHost}:${loopbackPort}`,
+							http: getHttpProxyOptions(serviceName, entrypoint),
+						},
+					};
+
+					const entrypoints = getEntrypoints(serviceName);
+					entrypoints.entrypoints.add(entrypoint);
+				}
+			}
+		}
+
+		if (workerOpts.do.durableObjects) {
+			for (const [bindingName, designator] of Object.entries(
+				workerOpts.do.durableObjects
+			)) {
+				const {
+					className,
+					scriptName,
+					unsafePreventEviction,
+					enableSql: useSQLite,
+					mixedModeConnectionString,
+				} = normaliseDurableObject(designator);
+
+				if (
+					// Skip if it is a remote durable object
+					mixedModeConnectionString === undefined &&
+					// Skip if the durable object is bound to a Worker that exists in the current Miniflare config
+					scriptName &&
+					!allWorkerNames.includes(scriptName)
+				) {
+					// Point it to the outbound do proxy service instead
+					workerOpts.do.durableObjects[bindingName] = {
+						className: getOutboundDoProxyClassName(scriptName, className),
+						scriptName: OUTBOUND_DO_PROXY_SERVICE_NAME,
+						useSQLite,
+						// Matches the unique key Miniflare will generate for this object in
+						// the target session. We need to do this so workerd generates the
+						// same IDs it would if this were part of the same process. workerd
+						// doesn't allow IDs from Durable Objects with different unique keys
+						// to be used with each other.
+						unsafeUniqueKey: `${scriptName}-${className}`,
+						unsafePreventEviction,
+					};
+
+					const entrypoints = getEntrypoints(scriptName);
+					entrypoints.classNames.add(className);
+				}
+			}
+		}
+
+		if (workerOpts.core.tails) {
+			for (let i = 0; i < workerOpts.core.tails.length; i++) {
+				const {
+					serviceName = workerOpts.core.name,
+					entrypoint,
+					mixedModeConnectionString,
+				} = normaliseServiceDesignator(workerOpts.core.tails[i]);
+
+				if (
+					// Skip if it is a remote service
+					mixedModeConnectionString === undefined &&
+					// Skip if the service is bound to the existing workers
+					serviceName &&
+					!allWorkerNames.includes(serviceName)
+				) {
+					// This is a tail worker that doesn't exist
+					// Override it to connect to the dev registry proxy
+					workerOpts.core.tails[i] = {
+						external: {
+							address: `${loopbackHost}:${loopbackPort}`,
+							http: getHttpProxyOptions(serviceName, entrypoint),
+						},
+					};
+
+					const entrypoints = getEntrypoints(serviceName);
+					entrypoints.entrypoints.add(entrypoint);
+				}
+			}
+		}
+	}
+
+	return externalServices;
 }
 
 function invalidWrappedAsBound(name: string, bindingType: string): never {
@@ -401,6 +579,7 @@ function getQueueProducers(
 		if (workerProducers !== undefined) {
 			// De-sugar array consumer options to record mapping to empty options
 			if (Array.isArray(workerProducers)) {
+				// queueProducers: ["MY_QUEUE"]
 				workerProducers = Object.fromEntries(
 					workerProducers.map((bindingName) => [
 						bindingName,
@@ -409,8 +588,20 @@ function getQueueProducers(
 				);
 			}
 
-			for (const [bindingName, opts] of Object.entries(workerProducers)) {
-				queueProducers.set(bindingName, { workerName, ...opts });
+			type Entries<T> = { [K in keyof T]: [K, T[K]] }[keyof T][];
+			type ProducersIterable = Entries<typeof workerProducers>;
+			const producersIterable = Object.entries(
+				workerProducers
+			) as ProducersIterable;
+
+			for (const [bindingName, opts] of producersIterable) {
+				if (typeof opts === "string") {
+					// queueProducers: { "MY_QUEUE": "my-queue" }
+					queueProducers.set(bindingName, { workerName, queueName: opts });
+				} else {
+					// queueProducers: { QUEUE: { queueName: "QUEUE", ... } }
+					queueProducers.set(bindingName, { workerName, ...opts });
+				}
 			}
 		}
 	}
@@ -663,6 +854,33 @@ function safeReadableStreamFrom(iterable: AsyncIterable<Uint8Array>) {
 	});
 }
 
+function extractCustomService(customService: string) {
+	const slashIndex = customService.indexOf("/");
+	// TODO: technically may want to keep old versions around so can always
+	//  recover this in case of setOptions()?
+	const workerIndex = parseInt(customService.substring(0, slashIndex));
+	const serviceKind = customService[slashIndex + 1] as CustomServiceKind;
+	const serviceName = customService.substring(slashIndex + 2);
+
+	return { workerIndex, serviceKind, serviceName };
+}
+
+function getErrorMessage(error: unknown): string {
+	if (error instanceof Error) {
+		return error.stack || error.message;
+	}
+
+	if (typeof error === "string") {
+		return error;
+	}
+
+	try {
+		return JSON.stringify(error);
+	} catch {
+		return "Unknown error";
+	}
+}
+
 // Maps `Miniflare` instances to stack traces for their construction. Used to identify un-`dispose()`d instances.
 let maybeInstanceRegistry:
 	| Map<Miniflare, string /* constructionStack */>
@@ -685,6 +903,7 @@ export class Miniflare {
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
 	#proxyClient?: ProxyClient;
+	#containerService?: ContainerService;
 
 	#cfObject?: Record<string, any> = {};
 
@@ -709,12 +928,33 @@ export class Miniflare {
 	readonly #liveReloadServer: WebSocketServer;
 	readonly #webSocketServer: WebSocketServer;
 	readonly #webSocketExtraHeaders: WeakMap<http.IncomingMessage, Headers>;
+	readonly #devRegistry: DevRegistry;
+
+	#maybeInspectorProxyController?: InspectorProxyController;
+	#previousRuntimeInspectorPort?: number;
 
 	constructor(opts: MiniflareOptions) {
 		// Split and validate options
 		const [sharedOpts, workerOpts] = validateOptions(opts);
 		this.#sharedOpts = sharedOpts;
 		this.#workerOpts = workerOpts;
+
+		const workerNamesToProxy = new Set(
+			this.#workerOpts
+				.filter(({ core: { unsafeInspectorProxy } }) => !!unsafeInspectorProxy)
+				.map((w) => w.core.name ?? "")
+		);
+
+		const enableInspectorProxy = workerNamesToProxy.size > 0;
+
+		if (enableInspectorProxy) {
+			if (this.#sharedOpts.core.inspectorPort === undefined) {
+				throw new MiniflareCoreError(
+					"ERR_MISSING_INSPECTOR_PROXY_PORT",
+					"inspector proxy requested but without an inspectorPort specified"
+				);
+			}
+		}
 
 		// Add to registry after initial options validation, before any servers/
 		// child processes are started
@@ -725,6 +965,21 @@ export class Miniflare {
 		}
 
 		this.#log = this.#sharedOpts.core.log ?? new NoOpLog();
+
+		if (enableInspectorProxy) {
+			if (this.#sharedOpts.core.inspectorPort === undefined) {
+				throw new MiniflareCoreError(
+					"ERR_MISSING_INSPECTOR_PROXY_PORT",
+					"inspector proxy requested but without an inspectorPort specified"
+				);
+			}
+
+			this.#maybeInspectorProxyController = new InspectorProxyController(
+				this.#sharedOpts.core.inspectorPort,
+				this.#log,
+				workerNamesToProxy
+			);
+		}
 
 		this.#liveReloadServer = new WebSocketServer({ noServer: true });
 		this.#webSocketServer = new WebSocketServer({
@@ -748,6 +1003,12 @@ export class Miniflare {
 			}
 		});
 
+		this.#devRegistry = new DevRegistry(
+			this.#sharedOpts.core.unsafeDevRegistryPath,
+			this.#sharedOpts.core.unsafeDevRegistryDurableObjectProxy,
+			this.#log
+		);
+
 		// Build path for temporary directory. We don't actually want to create this
 		// unless it's needed (i.e. we have Durable Objects enabled). This means we
 		// can't use `fs.mkdtemp()`, as that always creates the directory.
@@ -769,6 +1030,8 @@ export class Miniflare {
 				// effort basis.
 				this.#log.debug(`Unable to remove temporary directory: ${String(e)}`);
 			}
+			// Unregister all workers from the dev registry
+			void this.#devRegistry.dispose();
 		});
 
 		this.#disposeController = new AbortController();
@@ -796,34 +1059,65 @@ export class Miniflare {
 		}
 	}
 
-	async #handleLoopbackCustomService(
+	async #handleLoopbackCustomFetchService(
 		request: Request,
 		customService: string
 	): Promise<Response> {
-		const slashIndex = customService.indexOf("/");
-		// TODO: technically may want to keep old versions around so can always
-		//  recover this in case of setOptions()?
-		const workerIndex = parseInt(customService.substring(0, slashIndex));
-		const serviceKind = customService[slashIndex + 1] as CustomServiceKind;
-		const serviceName = customService.substring(slashIndex + 2);
 		let service: z.infer<typeof ServiceDesignatorSchema> | undefined;
+		if (customService === CoreBindings.IMAGES_SERVICE) {
+			service = imagesLocalFetcher;
+		} else {
+			const { workerIndex, serviceKind, serviceName } =
+				extractCustomService(customService);
+			if (serviceKind === CustomServiceKind.UNKNOWN) {
+				service =
+					this.#workerOpts[workerIndex]?.core.serviceBindings?.[serviceName];
+			} else if (serviceName === CUSTOM_SERVICE_KNOWN_OUTBOUND) {
+				service = this.#workerOpts[workerIndex]?.core.outboundService;
+			}
+		}
+		// Should only define custom service bindings if `service` is a function
+		assert(typeof service === "function");
+		try {
+			let response: UndiciResponse | Response = await service(request, this);
+
+			if (!(response instanceof Response)) {
+				response = new Response(response.body, response);
+			}
+
+			// Validate return type as `service` is a user defined function
+			// TODO: should we validate outside this try/catch?
+			return z.instanceof(Response).parse(response);
+		} catch (error) {
+			// TODO: do we need to add `CF-Exception` header or something here?
+			//  check what runtime does
+			return new Response(getErrorMessage(error), { status: 500 });
+		}
+	}
+
+	async #handleLoopbackCustomNodeService(
+		req: http.IncomingMessage,
+		res: http.ServerResponse,
+		customService: string
+	) {
+		let service: z.infer<typeof ServiceDesignatorSchema> | undefined;
+		const { workerIndex, serviceKind, serviceName } =
+			extractCustomService(customService);
 		if (serviceKind === CustomServiceKind.UNKNOWN) {
 			service =
 				this.#workerOpts[workerIndex]?.core.serviceBindings?.[serviceName];
 		} else if (serviceName === CUSTOM_SERVICE_KNOWN_OUTBOUND) {
 			service = this.#workerOpts[workerIndex]?.core.outboundService;
 		}
-		// Should only define custom service bindings if `service` is a function
-		assert(typeof service === "function");
+		assert(typeof service === "object" && "node" in service);
+
 		try {
-			const response = await service(request, this);
-			// Validate return type as `service` is a user defined function
-			// TODO: should we validate outside this try/catch?
-			return z.instanceof(Response).parse(response);
-		} catch (e: any) {
-			// TODO: do we need to add `CF-Exception` header or something here?
-			//  check what runtime does
-			return new Response(e?.stack ?? e, { status: 500 });
+			await service.node(req, res, this);
+		} catch (error) {
+			if (!res.headersSent) {
+				res.writeHead(500);
+			}
+			res.end(getErrorMessage(error));
 		}
 	}
 
@@ -831,10 +1125,88 @@ export class Miniflare {
 		return this.#workerOpts.map<NameSourceOptions>(({ core }) => core);
 	}
 
+	#getFallbackServiceAddress(
+		service: string,
+		entrypoint: string
+	): {
+		httpStyle: "host" | "proxy";
+		protocol: "http" | "https";
+		host: string;
+		port: number;
+	} {
+		assert(
+			this.#socketPorts !== undefined && this.#runtimeEntryURL !== undefined,
+			"Cannot resolve address for fallback service before runtime is initialised"
+		);
+
+		const port = this.#socketPorts.get(
+			getProxyFallbackServiceSocketName(service, entrypoint)
+		);
+
+		if (!port) {
+			throw new Error(
+				`There is no socket opened for "${service}" with the "${entrypoint}" entrypoint`
+			);
+		}
+
+		return {
+			httpStyle: "proxy",
+			protocol: getProtocol(this.#runtimeEntryURL),
+			host: this.#runtimeEntryURL.hostname,
+			port,
+		};
+	}
+
 	#handleLoopback = async (
 		req: http.IncomingMessage,
 		res?: http.ServerResponse
 	): Promise<Response | undefined> => {
+		const serviceProxyTarget = extractServiceFetchProxyTarget(req);
+
+		if (serviceProxyTarget) {
+			assert(res !== undefined, "No response object provided");
+
+			const address =
+				this.#devRegistry.getExternalServiceAddress(
+					serviceProxyTarget.service,
+					serviceProxyTarget.entrypoint
+				) ??
+				this.#getFallbackServiceAddress(
+					serviceProxyTarget.service,
+					serviceProxyTarget.entrypoint
+				);
+
+			this.#handleProxy(req, res, address);
+			return;
+		}
+
+		const doProxyTarget = extractDoFetchProxyTarget(req);
+
+		if (doProxyTarget) {
+			assert(res !== undefined, "No response object provided");
+
+			const address = this.#devRegistry.getExternalDurableObjectAddress(
+				doProxyTarget.scriptName,
+				doProxyTarget.className
+			);
+
+			if (!address) {
+				res.writeHead(503);
+				res.end("Service Unavailable");
+				return;
+			}
+
+			this.#handleProxy(req, res, address);
+			return;
+		}
+
+		const customNodeService =
+			req.headers[CoreHeaders.CUSTOM_NODE_SERVICE.toLowerCase()];
+		if (typeof customNodeService === "string") {
+			assert(res);
+			this.#handleLoopbackCustomNodeService(req, res, customNodeService);
+			return;
+		}
 		// Extract headers from request
 		const headers = new Headers();
 		for (const [name, values] of Object.entries(req.headers)) {
@@ -872,12 +1244,14 @@ export class Miniflare {
 
 		let response: Response | undefined;
 		try {
-			const customService = request.headers.get(CoreHeaders.CUSTOM_SERVICE);
-			if (customService !== null) {
-				request.headers.delete(CoreHeaders.CUSTOM_SERVICE);
-				response = await this.#handleLoopbackCustomService(
+			const customFetchService = request.headers.get(
+				CoreHeaders.CUSTOM_FETCH_SERVICE
+			);
+			if (customFetchService !== null) {
+				request.headers.delete(CoreHeaders.CUSTOM_FETCH_SERVICE);
+				response = await this.#handleLoopbackCustomFetchService(
 					request,
-					customService
+					customFetchService
 				);
 			} else if (
 				this.#sharedOpts.core.unsafeModuleFallbackService !== undefined &&
@@ -907,6 +1281,17 @@ export class Miniflare {
 				if (!colors$.enabled) message = stripAnsi(message);
 				this.#log.logWithLevel(logLevel, message);
 				response = new Response(null, { status: 204 });
+			} else if (url.pathname === "/core/store-temp-file") {
+				const prefix = url.searchParams.get("prefix");
+				const folder = prefix ? `files/${prefix}` : "files";
+				await mkdir(path.join(this.#tmpPath, folder), { recursive: true });
+				const filePath = path.join(
+					this.#tmpPath,
+					folder,
+					`${crypto.randomUUID()}.${url.searchParams.get("extension") ?? "txt"}`
+				);
+				await writeFile(filePath, await request.text());
+				response = new Response(filePath, { status: 200 });
 			}
 		} catch (e: any) {
 			this.#log.error(e);
@@ -981,6 +1366,109 @@ export class Miniflare {
 		await writeResponse(response, res);
 	};
 
+	#handleLoopbackConnect = async (
+		req: http.IncomingMessage,
+		clientSocket: Duplex,
+		head: Buffer
+	) => {
+		try {
+			const connectHost = req.url;
+			const [serviceName, entrypoint] = connectHost?.split(":") ?? [];
+			const address =
+				this.#devRegistry.getExternalServiceAddress(serviceName, entrypoint) ??
+				this.#getFallbackServiceAddress(serviceName, entrypoint);
+
+			const serverSocket = net.connect(address.port, address.host, () => {
+				serverSocket.write(`CONNECT ${HOST_CAPNP_CONNECT} HTTP/1.1\r\n\r\n`);
+
+				// Push along any buffered bytes
+				if (head && head.length) {
+					serverSocket.write(head);
+				}
+
+				serverSocket.pipe(clientSocket);
+				clientSocket.pipe(serverSocket);
+			});
+
+			// Errors on either side
+			serverSocket.on("error", (err) => {
+				this.#log.error(err);
+				clientSocket.end();
+			});
+			clientSocket.on("error", () => serverSocket.end());
+
+			// Close the tunnel if the service is updated
+			// This make sure workerd will re-connect to the latest address
+			this.#devRegistry.subscribe(serviceName, () => {
+				this.#log.debug(
+					`Closing tunnel as service "${serviceName}" was updated`
+				);
+				clientSocket.end();
+			});
+		} catch (ex: any) {
+			this.#log.error(ex);
+			clientSocket.end();
+		}
+	};
+
+	#handleProxy = (
+		req: http.IncomingMessage,
+		res: http.ServerResponse,
+		target: {
+			protocol: "http" | "https";
+			host: string;
+			port: number;
+			httpStyle?: "host" | "proxy";
+			path?: string;
+		}
+	) => {
+		const headers = { ...req.headers };
+		let path = target.path;
+
+		if (!path) {
+			switch (target.httpStyle) {
+				case "host": {
+					const url = new URL(req.url ?? `http://${req.headers.host}`);
+					// If the target is a host, use the path from the request URL
+					path = url.pathname + url.search + url.hash;
+					headers.host = url.host;
+					break;
+				}
+				case "proxy": {
+					// If the target is a proxy, use the full request URL
+					path = req.url;
+					break;
+				}
+			}
+		}
+
+		const options: http.RequestOptions = {
+			host: target.host,
+			port: target.port,
+			method: req.method,
+			path,
+			headers,
+		};
+
+		// Res is optional only on websocket upgrade requests
+		assert(res !== undefined, "No response object provided");
+		const upstream = http.request(options, (upRes) => {
+			// Relay status and headers back to the original client
+			res.writeHead(upRes.statusCode ?? 500, upRes.headers);
+			// Pipe the response body
+			upRes.pipe(res);
+		});
+
+		// Pipe the client request body to the upstream
+		req.pipe(upstream);
+
+		upstream.on("error", (err) => {
+			this.#log.error(err);
+			if (!res.headersSent) res.writeHead(502);
+			res.end("Bad Gateway");
+		});
+	};
+
 	async #getLoopbackPort(): Promise<number> {
 		// This function must be run with `#runtimeMutex` held
 
@@ -1010,6 +1498,7 @@ export class Miniflare {
 				http.createServer(this.#handleLoopback),
 				/* grace */ 0
 			);
+			server.on("connect", this.#handleLoopbackConnect);
 			server.on("upgrade", this.#handleLoopbackUpgrade);
 			server.listen(0, hostname, () => resolve(server));
 		});
@@ -1037,7 +1526,10 @@ export class Miniflare {
 		return `${getURLSafeHost(host)}:${requestedPort ?? 0}`;
 	}
 
-	async #assembleConfig(loopbackPort: number): Promise<Config> {
+	async #assembleConfig(
+		loopbackHost: string,
+		loopbackPort: number
+	): Promise<Config> {
 		const allPreviousWorkerOpts = this.#previousWorkerOpts;
 		const allWorkerOpts = this.#workerOpts;
 		const sharedOpts = this.#sharedOpts;
@@ -1045,6 +1537,9 @@ export class Miniflare {
 		sharedOpts.core.cf = await setupCf(this.#log, sharedOpts.core.cf);
 		this.#cfObject = sharedOpts.core.cf;
 
+		const externalServices = this.#devRegistry.isEnabled()
+			? getExternalServiceEntrypoints(allWorkerOpts, loopbackHost, loopbackPort)
+			: null;
 		const durableObjectClassNames = getDurableObjectClassNames(allWorkerOpts);
 		const wrappedBindingNames = getWrappedBindingNames(
 			allWorkerOpts,
@@ -1080,7 +1575,7 @@ export class Miniflare {
 			sockets.push({
 				name: SOCKET_ENTRY_LOCAL,
 				service: { name: SERVICE_ENTRY },
-				http: ENTRY_SOCKET_HTTP_OPTIONS,
+				http: {},
 				address: "127.0.0.1:0",
 			});
 		}
@@ -1094,11 +1589,46 @@ export class Miniflare {
 			innerBindings: Worker_Binding[];
 		}[] = [];
 
+		let containerOptions: NonNullable<ContainerOptions> = {};
+
+		for (const [key, plugin] of PLUGIN_ENTRIES) {
+			const pluginExtensions = await plugin.getExtensions?.({
+				// @ts-expect-error `CoreOptionsSchema` has required options which are
+				//  missing in other plugins' options.
+				options: allWorkerOpts.map((o) => o[key]),
+			});
+			if (pluginExtensions) {
+				extensions.push(...pluginExtensions);
+			}
+		}
+
 		for (let i = 0; i < allWorkerOpts.length; i++) {
 			const previousWorkerOpts = allPreviousWorkerOpts?.[i];
 			const workerOpts = allWorkerOpts[i];
 			const workerName = workerOpts.core.name ?? "";
 			const isModulesWorker = Boolean(workerOpts.core.modules);
+
+			if (workerOpts.workflows.workflows) {
+				for (const workflow of Object.values(workerOpts.workflows.workflows)) {
+					// This will be the UserWorker, or the vitest pool worker wrapping the UserWorker
+					// The workflows plugin needs this so that it can set the binding between the Engine and the UserWorker
+					workflow.scriptName ??= workerOpts.core.name;
+				}
+			}
+
+			if (workerOpts.assets.assets) {
+				// This will be the UserWorker, or the vitest pool worker wrapping the UserWorker
+				// The asset plugin needs this so that it can set the binding between the RouterWorker and the UserWorker
+				workerOpts.assets.assets.workerName = workerOpts.core.name;
+			}
+
+			if (workerOpts.containers.containers) {
+				// we don't care which worker this container belongs to, as they are id'd already by the DO classname
+				containerOptions = {
+					...containerOptions,
+					...workerOpts.containers.containers,
+				};
+			}
 
 			// Collect all bindings from this worker
 			const workerBindings: Worker_Binding[] = [];
@@ -1150,6 +1680,26 @@ export class Miniflare {
 								});
 							}
 						}
+						if ("service" in binding) {
+							const targetWorkerName = binding.service?.name?.replace(
+								"core:user:",
+								""
+							);
+
+							/*
+							 * If we are running multiple Workers in a single dev session,
+							 * and this is a binding to a Worker with assets, we want that
+							 * binding to point to the (assets) RPC Proxy Worker
+							 */
+							const maybeAssetTargetService = allWorkerOpts.find(
+								(worker) =>
+									worker.core.name === targetWorkerName && worker.assets.assets
+							);
+							if (maybeAssetTargetService && !binding.service?.entrypoint) {
+								assert(binding.service?.name);
+								binding.service.name = `${RPC_PROXY_SERVICE_NAME}:${targetWorkerName}`;
+							}
+						}
 					}
 				}
 			}
@@ -1167,6 +1717,7 @@ export class Miniflare {
 				workerIndex: i,
 				additionalModules,
 				tmpPath: this.#tmpPath,
+				defaultPersistRoot: sharedOpts.core.defaultPersistRoot,
 				workerNames,
 				loopbackPort,
 				unsafeStickyBlobs,
@@ -1227,13 +1778,22 @@ export class Miniflare {
 					directSocket.host,
 					directSocket.port
 				);
+				// check if Worker with assets with default export
+				// (class or non-class based)
+				const service =
+					workerOpts.assets.assets && entrypoint === "default"
+						? {
+								name: `${RPC_PROXY_SERVICE_NAME}:${workerOpts.core.name}`,
+							}
+						: {
+								name: getUserServiceName(workerName),
+								entrypoint: entrypoint === "default" ? undefined : entrypoint,
+							};
+
 				sockets.push({
 					name,
 					address,
-					service: {
-						name: getUserServiceName(workerName),
-						entrypoint: entrypoint === "default" ? undefined : entrypoint,
-					},
+					service,
 					http: {
 						style: directSocket.proxy ? HttpOptions_Style.PROXY : undefined,
 						cfBlobHeader: CoreHeaders.CF_BLOB,
@@ -1243,10 +1803,115 @@ export class Miniflare {
 			}
 		}
 
+		if (
+			this.#devRegistry.isEnabled() &&
+			externalServices &&
+			externalServices.size > 0
+		) {
+			for (const [serviceName, { entrypoints }] of externalServices) {
+				const proxyFallbackService = createProxyFallbackService(
+					serviceName,
+					entrypoints
+				);
+				assert(proxyFallbackService.name !== undefined);
+
+				services.set(proxyFallbackService.name, proxyFallbackService);
+
+				for (const entrypoint of entrypoints) {
+					const socketName = getProxyFallbackServiceSocketName(
+						serviceName,
+						entrypoint
+					);
+					sockets.push({
+						name: socketName,
+						// Reuse the socket address from the previous direct socket if exists
+						address: this.#getSocketAddress(socketName, 0, DEFAULT_HOST, 0),
+						service: {
+							name: proxyFallbackService.name,
+							entrypoint,
+						},
+						http: {
+							style: HttpOptions_Style.PROXY,
+							cfBlobHeader: CoreHeaders.CF_BLOB,
+							capnpConnectHost: HOST_CAPNP_CONNECT,
+						},
+					});
+				}
+			}
+
+			const externalObjects = Array.from(externalServices).flatMap(
+				([scriptName, { classNames }]) =>
+					Array.from(classNames).map<[string, string]>((className) => [
+						scriptName,
+						className,
+					])
+			);
+			const outboundDoProxyService = createOutboundDoProxyService(
+				externalObjects,
+				`http://${loopbackHost}:${loopbackPort}`,
+				this.#devRegistry.isDurableObjectProxyEnabled()
+			);
+
+			assert(outboundDoProxyService.name !== undefined);
+			services.set(outboundDoProxyService.name, outboundDoProxyService);
+		}
+
+		// Expose all internal durable object with a proxy service
+		if (this.#devRegistry.isDurableObjectProxyEnabled()) {
+			const internalObjects = allWorkerOpts.flatMap((workerOpts) => {
+				const scriptName = workerOpts.core.name;
+				const serviceName = getUserServiceName(scriptName);
+				const classNames = durableObjectClassNames.get(serviceName);
+
+				if (!classNames || !scriptName) {
+					return [];
+				}
+
+				return Array.from(classNames.keys()).map<[string, string]>(
+					(className) => [scriptName, className]
+				);
+			});
+
+			if (internalObjects.length > 0) {
+				const service = createInboundDoProxyService(internalObjects);
+				assert(service.name !== undefined);
+				services.set(service.name, service);
+				// Set up a custom route for the internal durable object proxy service
+				// This is needed for compatibility with the Wrangler Dev Registry implementation
+				allWorkerRoutes.set(INBOUND_DO_PROXY_SERVICE_NAME, [
+					`*/${INBOUND_DO_PROXY_SERVICE_PATH}`,
+				]);
+			}
+		}
+
+		if (
+			Object.keys(containerOptions).length &&
+			!sharedOpts.containers.ignore_containers
+		) {
+			if (this.#containerService === undefined) {
+				this.#containerService = new ContainerService(containerOptions);
+			} else {
+				this.#containerService.updateConfig(containerOptions);
+			}
+		}
+
 		const globalServices = getGlobalServices({
 			sharedOptions: sharedOpts.core,
 			allWorkerRoutes,
-			fallbackWorkerName: this.#workerOpts[0].core.name,
+			/*
+			 * - if Workers + Assets project but NOT Vitest, the fallback Worker (see
+			 *   `MINIFLARE_USER_FALLBACK`) should point to the (assets) RPC Proxy Worker
+			 * - if Vitest with assets, the fallback Worker should point to the Vitest
+			 *   runner Worker, while the SELF binding on the test runner will point to
+			 *   the (assets) RPC Proxy Worker
+			 */
+			fallbackWorkerName:
+				this.#workerOpts[0].assets.assets &&
+				!this.#workerOpts[0].core.name?.startsWith(
+					"vitest-pool-workers-runner-"
+				)
+					? `${RPC_PROXY_SERVICE_NAME}:${this.#workerOpts[0].core.name}`
+					: getUserServiceName(this.#workerOpts[0].core.name),
 			loopbackPort,
 			log: this.#log,
 			proxyBindings,
@@ -1280,7 +1945,6 @@ export class Miniflare {
 					"Ensure wrapped bindings don't have bindings to themselves."
 			);
 		}
-
 		return { services: servicesArray, sockets, extensions };
 	}
 
@@ -1288,8 +1952,12 @@ export class Miniflare {
 		// This function must be run with `#runtimeMutex` held
 		const initial = !this.#runtimeEntryURL;
 		assert(this.#runtime !== undefined);
+		const configuredHost = this.#sharedOpts.core.host ?? DEFAULT_HOST;
+		const loopbackHost =
+			maybeGetLocallyAccessibleHost(configuredHost) ??
+			getURLSafeHost(configuredHost);
 		const loopbackPort = await this.#getLoopbackPort();
-		const config = await this.#assembleConfig(loopbackPort);
+		const config = await this.#assembleConfig(loopbackHost, loopbackPort);
 		const configBuffer = serializeConfig(config);
 
 		// Get all socket names we expect to get ports for
@@ -1305,32 +1973,35 @@ export class Miniflare {
 		}
 
 		// Reload runtime
-		const configuredHost = this.#sharedOpts.core.host ?? DEFAULT_HOST;
 		const entryAddress = this.#getSocketAddress(
 			SOCKET_ENTRY,
 			this.#previousSharedOpts?.core.port,
 			configuredHost,
 			this.#sharedOpts.core.port
 		);
-		let inspectorAddress: string | undefined;
+		let runtimeInspectorAddress: string | undefined;
 		if (this.#sharedOpts.core.inspectorPort !== undefined) {
-			inspectorAddress = this.#getSocketAddress(
+			let runtimeInspectorPort = this.#sharedOpts.core.inspectorPort;
+			if (this.#maybeInspectorProxyController !== undefined) {
+				// if we have an inspector proxy let's use a
+				// random port for the actual runtime inspector
+				runtimeInspectorPort = 0;
+			}
+			runtimeInspectorAddress = this.#getSocketAddress(
 				kInspectorSocket,
-				this.#previousSharedOpts?.core.inspectorPort,
+				this.#previousRuntimeInspectorPort,
 				"localhost",
-				this.#sharedOpts.core.inspectorPort
+				runtimeInspectorPort
 			);
+			this.#previousRuntimeInspectorPort = runtimeInspectorPort;
 		}
-		const loopbackAddress = `${
-			maybeGetLocallyAccessibleHost(configuredHost) ??
-			getURLSafeHost(configuredHost)
-		}:${loopbackPort}`;
+		const loopbackAddress = `${loopbackHost}:${loopbackPort}`;
 		const runtimeOpts: Abortable & RuntimeOptions = {
 			signal: this.#disposeController.signal,
 			entryAddress,
 			loopbackAddress,
 			requiredSockets,
-			inspectorAddress,
+			inspectorAddress: runtimeInspectorAddress,
 			verbose: this.#sharedOpts.core.verbose,
 			handleRuntimeStdio: this.#sharedOpts.core.handleRuntimeStdio,
 		};
@@ -1350,6 +2021,25 @@ export class Miniflare {
 		// sockets have been recorded. At this point, `maybeSocketPorts` contains
 		// all of `requiredSockets` as keys.
 		this.#socketPorts = maybeSocketPorts;
+
+		if (
+			this.#maybeInspectorProxyController !== undefined &&
+			this.#sharedOpts.core.inspectorPort !== undefined
+		) {
+			// Try to get inspector port for the workers
+			const maybePort = this.#socketPorts.get(kInspectorSocket);
+			if (maybePort === undefined) {
+				throw new MiniflareCoreError(
+					"ERR_RUNTIME_FAILURE",
+					"Unable to access the runtime inspector socket."
+				);
+			} else {
+				await this.#maybeInspectorProxyController.updateConnection(
+					this.#sharedOpts.core.inspectorPort,
+					maybePort
+				);
+			}
+		}
 
 		const entrySocket = config.sockets?.[0];
 		const secure = entrySocket !== undefined && "https" in entrySocket;
@@ -1391,11 +2081,13 @@ export class Miniflare {
 			const ready = initial ? "Ready" : "Updated and ready";
 
 			const urlSafeHost = getURLSafeHost(configuredHost);
-			this.#log.info(
-				`${ready} on ${secure ? "https" : "http"}://${urlSafeHost}:${entryPort}`
-			);
+			if (this.#sharedOpts.core.logRequests) {
+				this.#log.logReady(
+					`${ready} on ${green(`${secure ? "https" : "http"}://${urlSafeHost}:${entryPort}`)}`
+				);
+			}
 
-			if (initial) {
+			if (initial && this.#sharedOpts.core.logRequests) {
 				const hosts: string[] = [];
 				if (configuredHost === "::" || configuredHost === "*") {
 					hosts.push("localhost");
@@ -1410,7 +2102,9 @@ export class Miniflare {
 				}
 
 				for (const h of hosts) {
-					this.#log.info(`- ${secure ? "https" : "http"}://${h}:${entryPort}`);
+					this.#log.logReady(
+						`- ${secure ? "https" : "http"}://${h}:${entryPort}`
+					);
 				}
 			}
 
@@ -1433,6 +2127,8 @@ export class Miniflare {
 		// `dispose()`d synchronously, immediately after constructing a `Miniflare`
 		// instance. In this case, return a discard URL which we'll ignore.
 		if (disposing) return new URL("http://[100::]/");
+		// if there is an inspector proxy let's wait for it to be ready
+		await this.#maybeInspectorProxyController?.ready;
 		// Make sure `dispose()` wasn't called in the time we've been waiting
 		this.#checkDisposed();
 		// `#runtimeEntryURL` is assigned in `#assembleAndUpdateConfig()`, which is
@@ -1442,8 +2138,108 @@ export class Miniflare {
 		// Return a copy so external mutations don't propagate to `#runtimeEntryURL`
 		return new URL(this.#runtimeEntryURL.toString());
 	}
+
+	async #registerWorkers(url: URL): Promise<void> {
+		if (!this.#devRegistry.isEnabled()) {
+			return;
+		}
+
+		const protocol = getProtocol(url);
+		const allWorkerNames = this.#workerOpts.map(
+			(workerOpt) => workerOpt.core.name
+		);
+		const entries = await Promise.all(
+			this.#workerOpts.map<Promise<[string, WorkerDefinition] | undefined>>(
+				async (workerOpts) => {
+					if (!workerOpts.core.name) {
+						return;
+					}
+
+					try {
+						const entrypointAddressesEntries = await Promise.all(
+							workerOpts.core.unsafeDirectSockets?.map<
+								Promise<
+									[string, WorkerDefinition["entrypointAddresses"][string]]
+								>
+							>(async (directSocket) => {
+								const directUrl = await this.unsafeGetDirectURL(
+									workerOpts.core.name,
+									directSocket.entrypoint
+								);
+
+								return [
+									directSocket.entrypoint ?? "default",
+									{
+										host: directUrl.hostname,
+										port: parseInt(directUrl.port),
+									},
+								];
+							}) ?? []
+						);
+						const internalObjects = Object.entries(
+							workerOpts.do.durableObjects ?? {}
+						).reduce<WorkerDefinition["durableObjects"]>(
+							(internalObjects, [bindingName, designator]) => {
+								const { className, scriptName, mixedModeConnectionString } =
+									normaliseDurableObject(designator);
+
+								if (
+									// If the scriptName is undefined, it defaults to the current worker
+									scriptName === undefined ||
+									// If the scriptName matches one of the workers defined, it is internal as well
+									allWorkerNames.includes(scriptName) ||
+									// If it is not a remote durable object
+									mixedModeConnectionString === undefined
+								) {
+									internalObjects.push({
+										name: bindingName,
+										className,
+									});
+								}
+
+								return internalObjects;
+							},
+							[]
+						);
+
+						return [
+							workerOpts.core.name,
+							{
+								protocol,
+								// These host and port values are used only when the registered definition
+								// does not include direct entrypoint (i.e. old wrangler version) or uses service-worker syntax.
+								// See https://github.com/cloudflare/workers-sdk/blob/8cdabe23fcc2813f970db02928b016bbf3b155e5/packages/wrangler/src/dev/miniflare.ts#L506-L507
+								host: url.hostname,
+								port: parseInt(url.port),
+								entrypointAddresses: Object.fromEntries(
+									entrypointAddressesEntries
+								),
+								durableObjects: internalObjects,
+							},
+						];
+					} catch (e: any) {
+						// If unsafeGetDirectURL fails to find a socket port, we just log the error and skip this entry.
+						this.#log.error(e);
+						return;
+					}
+				}
+			)
+		);
+
+		this.#devRegistry.register(
+			Object.fromEntries(entries.filter((entry) => entry !== undefined))
+		);
+	}
+
 	get ready(): Promise<URL> {
-		return this.#waitForReady();
+		return this.#waitForReady().then(async (url) => {
+			// Register all workers with the dev registry
+			await this.#registerWorkers(url);
+			// Watch for changes to the dev registry
+			await this.#devRegistry.watch();
+
+			return url;
+		});
 	}
 
 	async getCf(): Promise<Record<string, any>> {
@@ -1456,6 +2252,10 @@ export class Miniflare {
 	async getInspectorURL(): Promise<URL> {
 		this.#checkDisposed();
 		await this.ready;
+
+		if (this.#maybeInspectorProxyController !== undefined) {
+			return this.#maybeInspectorProxyController.getInspectorURL();
+		}
 
 		// `#socketPorts` is assigned in `#assembleAndUpdateConfig()`, which is
 		// called by `#init()`, and `ready` doesn't resolve until `#init()` returns
@@ -1478,7 +2278,7 @@ export class Miniflare {
 		entrypoint = "default"
 	): Promise<URL> {
 		this.#checkDisposed();
-		await this.ready;
+		await this.#waitForReady();
 
 		// Get worker index and options from name, defaulting to entrypoint
 		const workerIndex = this.#findAndAssertWorkerIndex(workerName);
@@ -1533,6 +2333,10 @@ export class Miniflare {
 		this.#workerOpts = workerOpts;
 		this.#log = this.#sharedOpts.core.log ?? this.#log;
 
+		await this.#devRegistry.updateRegistryPath(
+			sharedOpts.core.unsafeDevRegistryPath,
+			sharedOpts.core.unsafeDevRegistryDurableObjectProxy
+		);
 		// Send to runtime and wait for updates to process
 		await this.#assembleAndUpdateConfig();
 	}
@@ -1544,7 +2348,17 @@ export class Miniflare {
 		this.#proxyClient?.poisonProxies();
 		// Wait for initial initialisation and other setOptions to complete before
 		// changing options
-		return this.#runtimeMutex.runWith(() => this.#setOptions(opts));
+		return this.#runtimeMutex
+			.runWith(() => this.#setOptions(opts))
+			.then(() => {
+				assert(
+					this.#runtimeEntryURL !== undefined,
+					"The runtime entry URL should be defined at this point"
+				);
+
+				// Register all workers with the dev registry
+				return this.#registerWorkers(this.#runtimeEntryURL);
+			});
 	}
 
 	dispatchFetch: DispatchFetch = async (input, init) => {
@@ -1664,13 +2478,16 @@ export class Miniflare {
 			//  missing in other plugins' options.
 			const pluginBindings = await plugin.getNodeBindings(workerOpts[key]);
 			for (const [name, binding] of Object.entries(pluginBindings)) {
-				if (binding === kProxyNodeBinding) {
+				if (binding instanceof ProxyNodeBinding) {
 					const proxyBindingName = getProxyBindingName(key, workerName, name);
-					const proxy = proxyClient.env[proxyBindingName];
+					let proxy = proxyClient.env[proxyBindingName];
 					assert(
 						proxy !== undefined,
 						`Expected ${proxyBindingName} to be bound`
 					);
+					if (binding.proxyOverrideHandler) {
+						proxy = new Proxy(proxy, binding.proxyOverrideHandler);
+					}
 					bindings[name] = proxy;
 				} else {
 					bindings[name] = binding;
@@ -1750,6 +2567,34 @@ export class Miniflare {
 	): Promise<ReplaceWorkersTypes<KVNamespace>> {
 		return this.#getProxy(KV_PLUGIN_NAME, bindingName, workerName);
 	}
+	getSecretsStoreSecretAPI(
+		bindingName: string,
+		workerName?: string
+	): Promise<
+		() => {
+			create: (value: string) => Promise<string>;
+			update: (value: string, id: string) => Promise<string>;
+			duplicate: (id: string, newName: string) => Promise<string>;
+			delete: (id: string) => Promise<void>;
+			list: () => Promise<KVNamespaceListKey<{ uuid: string }, string>[]>;
+			get: (id: string) => Promise<string>;
+		}
+	> {
+		return this.#getProxy(
+			SECRET_STORE_PLUGIN_NAME,
+			bindingName,
+			workerName
+		).then((binding) => {
+			// @ts-expect-error We exposed an admin API on this key
+			return binding[ADMIN_API];
+		});
+	}
+	getSecretsStoreSecret(
+		bindingName: string,
+		workerName?: string
+	): Promise<ReplaceWorkersTypes<KVNamespace>> {
+		return this.#getProxy(SECRET_STORE_PLUGIN_NAME, bindingName, workerName);
+	}
 	getQueueProducer<Body = unknown>(
 		bindingName: string,
 		workerName?: string
@@ -1803,6 +2648,11 @@ export class Miniflare {
 			// `rm -rf ${#tmpPath}`, this won't throw if `#tmpPath` doesn't exist
 			await fs.promises.rm(this.#tmpPath, { force: true, recursive: true });
 
+			// Close the inspector proxy server if there is one
+			await this.#maybeInspectorProxyController?.dispose();
+			// Unregister workers from dev registry and stop the file watcher
+			await this.#devRegistry.dispose();
+
 			// Remove from instance registry as last step in `finally`, to make sure
 			// all dispose steps complete
 			maybeInstanceRegistry?.delete(this);
@@ -1817,3 +2667,4 @@ export * from "./shared";
 export * from "./workers";
 export * from "./merge";
 export * from "./zod-format";
+export { getDefaultDevRegistryPath } from "./shared/dev-registry";

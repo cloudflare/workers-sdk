@@ -11,16 +11,16 @@
 	"author": "wrangler@cloudflare.com",
 	"scripts": {
 		"build": "dotenv -- turbo build",
-		"check": "pnpm check:fixtures && node lint-turbo.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
-		"check:fixtures": "node -r esbuild-register tools/deployments/ensure-fixtures-are-not-deployable.ts",
+		"check": "pnpm check:fixtures && pnpm check:deployments && node lint-turbo.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
+		"check:deployments": "node -r esbuild-register tools/deployments/deploy-non-npm-packages.ts check",
+		"check:fixtures": "node -r esbuild-register tools/deployments/validate-fixtures.ts",
 		"check:format": "prettier . --check --ignore-unknown",
 		"check:lint": "dotenv -- turbo check:lint",
 		"check:type": "dotenv -- turbo check:type type:tests",
 		"dev": "dotenv -- turbo dev",
 		"fix": "dotenv -- turbo check:lint -- --fix && pnpm run prettify",
-		"gen:package": "turbo gen package",
 		"prettify": "prettier . --write --ignore-unknown",
-		"test": "vitest run --no-file-parallelism && dotenv -- turbo test --filter=wrangler --filter=miniflare --filter=kv-asset-handler --filter=@cloudflare/vitest-pool-workers --filter=@cloudflare/vitest-pool-workers-examples",
+		"test": "dotenv -- turbo test",
 		"test:ci": "dotenv -- turbo test:ci",
 		"test:e2e": "dotenv -- turbo test:e2e",
 		"test:e2e:wrangler": "node -r esbuild-register tools/e2e/runIndividualE2EFiles.ts",
@@ -28,36 +28,36 @@
 		"type:tests": "dotenv -- turbo type:tests"
 	},
 	"dependencies": {
-		"@actions/artifact": "^2.0.1",
+		"@actions/artifact": "^2.2.1",
 		"@changesets/changelog-github": "^0.5.0",
-		"@changesets/cli": "^2.27.1",
+		"@changesets/cli": "^2.28.0",
 		"@changesets/parse": "^0.4.0",
-		"@cloudflare/workers-types": "^4.20240620.0",
+		"@cloudflare/workers-types": "^4.20250525.0",
 		"@ianvs/prettier-plugin-sort-imports": "4.2.1",
-		"@manypkg/cli": "^0.21.4",
-		"@turbo/gen": "^1.10.13",
-		"@types/node": "20.8.3",
+		"@manypkg/cli": "^0.23.0",
+		"@types/node": "catalog:default",
 		"@vue/compiler-sfc": "^3.3.4",
 		"cross-env": "^7.0.3",
 		"dotenv-cli": "^7.3.0",
-		"esbuild": "0.17.19",
+		"esbuild": "catalog:default",
 		"esbuild-register": "^3.5.0",
 		"jsonc-parser": "^3.2.0",
 		"prettier": "^3.2.5",
 		"prettier-plugin-packagejson": "^2.2.18",
-		"rimraf": "^5.0.1",
-		"turbo": "^1.10.14",
-		"typescript": "^5.5.2",
-		"vite": "^5.0.12",
-		"vitest": "^1.2.2"
+		"tree-kill": "^1.2.2",
+		"turbo": "^2.2.3",
+		"typescript": "catalog:default",
+		"vite": "catalog:default",
+		"vitest": "catalog:default"
 	},
-	"packageManager": "pnpm@9.1.3",
+	"packageManager": "pnpm@9.12.0",
 	"engines": {
 		"node": ">=18.20.0",
-		"pnpm": "^9.1.3"
+		"pnpm": "^9.12.0"
 	},
 	"volta": {
-		"node": "18.20.2"
+		"node": "18.20.2",
+		"pnpm": "9.12.0"
 	},
 	"pnpm": {
 		"peerDependencyRules": {
@@ -73,13 +73,15 @@
 			"@types/react-tabs>@types/react": "^18",
 			"@types/react-transition-group>@types/react": "^18",
 			"@cloudflare/elements>@types/react": "^18",
-			"capnpc-ts>typescript": "5.5.2"
+			"@types/node": "$@types/node",
+			"vitest>vite": "^5.0.0"
 		},
 		"patchedDependencies": {
-			"ink@3.2.0": "patches/ink@3.2.0.patch",
 			"@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch",
-			"capnp-ts@0.7.0": "patches/capnp-ts@0.7.0.patch",
-			"pg@8.11.3": "patches/pg@8.11.3.patch"
+			"pg@8.11.3": "patches/pg@8.11.3.patch",
+			"toucan-js@3.3.1": "patches/toucan-js@3.3.1.patch",
+			"toucan-js@4.0.0": "patches/toucan-js@4.0.0.patch",
+			"postal-mime": "patches/postal-mime.patch"
 		}
 	}
 }

@@ -1,0 +1,25 @@
+{
+	"name": "@playground/react-dom-server",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "vite build --app",
+		"check:types": "tsc --build",
+		"dev": "vite dev",
+		"preview": "vite preview"
+	},
+	"dependencies": {
+		"react": "^19.1.0",
+		"react-dom": "^19.1.0"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250525.0",
+		"@types/react": "^19.1.0",
+		"@types/react-dom": "^19.1.1",
+		"typescript": "catalog:default",
+		"vite": "catalog:vite-plugin",
+		"wrangler": "workspace:*"
+	}
+}

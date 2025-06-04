@@ -1,50 +1,58 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import * as esmLexer from "es-module-lexer";
+import { CoreHeaders, HttpOptions_Style, Log, LogLevel } from "miniflare";
 import {
-	CoreHeaders,
-	HttpOptions_Style,
-	Log,
-	LogLevel,
-	Miniflare,
-	Mutex,
-	TypedEventTarget,
-} from "miniflare";
-import {
-	AIFetcher,
 	EXTERNAL_AI_WORKER_NAME,
 	EXTERNAL_AI_WORKER_SCRIPT,
+	getAIFetcher,
 } from "../ai/fetcher";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { UserError } from "../errors";
+import {
+	EXTERNAL_IMAGES_WORKER_NAME,
+	EXTERNAL_IMAGES_WORKER_SCRIPT,
+	getImagesRemoteFetcher,
+} from "../images/fetcher";
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
+import { warnOrError } from "../utils/print-bindings";
+import {
+	EXTERNAL_VECTORIZE_WORKER_NAME,
+	EXTERNAL_VECTORIZE_WORKER_SCRIPT,
+	MakeVectorizeFetcher,
+} from "../vectorize/fetcher";
+import { getClassNamesWhichUseSQLite } from "./class-names-sqlite";
 import type { ServiceFetch } from "../api";
+import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type {
 	CfD1Database,
+	CfDispatchNamespace,
 	CfDurableObject,
 	CfHyperdrive,
 	CfKvNamespace,
+	CfPipeline,
 	CfQueue,
 	CfR2Bucket,
 	CfScriptFormat,
 	CfUnsafeBinding,
 	CfWorkerInit,
+	CfWorkflow,
 } from "../deployment-bundle/worker";
-import type {
-	WorkerEntrypointsDefinition,
-	WorkerRegistry,
-} from "../dev-registry";
+import type { WorkerRegistry } from "../dev-registry";
 import type { LoggerLevel } from "../logger";
-import type { AssetPaths } from "../sites";
+import type { LegacyAssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
-import type { MiniflareOptions, SourceOptions, WorkerOptions } from "miniflare";
+import type {
+	MiniflareOptions,
+	MixedModeConnectionString,
+	SourceOptions,
+	WorkerOptions,
+} from "miniflare";
 import type { UUID } from "node:crypto";
-import type { Abortable } from "node:events";
 import type { Readable } from "node:stream";
 
 // This worker proxies all external Durable Objects to the Wrangler session
@@ -64,15 +72,16 @@ const HEADER_ID = "X-Miniflare-Durable-Object-Id";
 const HEADER_CF_BLOB = "X-Miniflare-Durable-Object-Cf-Blob";
 
 const HANDLER_RESERVED_KEYS = new Set([
-	"tail",
-	"trace",
-	"scheduled",
 	"alarm",
+	"scheduled",
+	"self",
+	"tail",
+	"tailStream",
 	"test",
-	"webSocketMessage",
+	"trace",
 	"webSocketClose",
 	"webSocketError",
-	"self",
+	"webSocketMessage",
 ]);
 
 function createProxyPrototypeClass(handlerSuperKlass, getUnknownPrototypeKey) {
@@ -169,9 +178,12 @@ export interface ConfigBundle {
 	format: CfScriptFormat | undefined;
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
+	complianceRegion: Config["compliance_region"] | undefined;
 	bindings: CfWorkerInit["bindings"];
-	workerDefinitions: WorkerRegistry | undefined;
-	assetPaths: AssetPaths | undefined;
+	migrations: Config["migrations"] | undefined;
+	workerDefinitions: WorkerRegistry | undefined | null;
+	legacyAssetPaths: LegacyAssetPaths | undefined;
+	assets: AssetsOptions | undefined;
 	initialPort: Port;
 	initialIp: string;
 	rules: Config["rules"];
@@ -187,7 +199,12 @@ export interface ConfigBundle {
 	upstreamProtocol: "http" | "https";
 	inspect: boolean;
 	services: Config["services"] | undefined;
+	tails: Config["tail_consumers"] | undefined;
 	serviceBindings: Record<string, ServiceFetch>;
+	bindVectorizeToProd: boolean;
+	imagesLocalMode: boolean;
+	testScheduled: boolean;
+	containers: WorkerOptions["containers"];
 }
 
 export class WranglerLog extends Log {
@@ -225,7 +242,7 @@ export class WranglerLog extends Log {
 	}
 }
 
-export const DEFAULT_WORKER_NAME = "worker";
+const DEFAULT_WORKER_NAME = "worker";
 function getName(config: Pick<ConfigBundle, "name">) {
 	return config.name ?? DEFAULT_WORKER_NAME;
 }
@@ -244,22 +261,11 @@ export function castLogLevel(level: LoggerLevel): LogLevel {
 }
 
 export function buildLog(): Log {
-	let level = castLogLevel(logger.loggerLevel);
+	const level = castLogLevel(logger.loggerLevel);
 
-	// if we're in DEBUG or VERBOSE mode, clamp logLevel to WARN -- ie. don't show request logs for user worker
-	if (level <= LogLevel.DEBUG) {
-		level = Math.min(level, LogLevel.WARN);
-	}
-
-	return new WranglerLog(level, { prefix: "wrangler-UserWorker" });
-}
-
-async function getEntrypointNames(entrypointSource: string) {
-	await esmLexer.init;
-	const [_imports, exports] = esmLexer.parse(entrypointSource);
-	// TODO(soon): support `export * from "...";` with `--no-bundle`. Without
-	//  `--no-bundle`, `esbuild` will bundle these, so they'll be picked up here.
-	return exports.map(({ n }) => n);
+	return new WranglerLog(level, {
+		prefix: level === LogLevel.DEBUG ? "wrangler-UserWorker" : "wrangler",
+	});
 }
 
 async function buildSourceOptions(
@@ -280,9 +286,7 @@ async function buildSourceOptions(
 					config.bundle.modules
 				);
 
-		const entrypointNames = isPython
-			? []
-			: await getEntrypointNames(entrypointSource);
+		const entrypointNames = isPython ? [] : config.bundle.entry.exports;
 
 		const modulesRoot = path.dirname(scriptPath);
 		const sourceOptions: SourceOptions = {
@@ -313,27 +317,142 @@ async function buildSourceOptions(
 	}
 }
 
-function kvNamespaceEntry({ binding, id }: CfKvNamespace): [string, string] {
-	return [binding, id];
+function getRemoteId(id: string | symbol | undefined): string | null {
+	return typeof id === "string" ? id : null;
 }
-function r2BucketEntry({ binding, bucket_name }: CfR2Bucket): [string, string] {
-	return [binding, bucket_name];
+
+function kvNamespaceEntry(
+	{ binding, id: originalId, remote }: CfKvNamespace,
+	mixedModeConnectionString?: MixedModeConnectionString
+): [
+	string,
+	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
+] {
+	const id = getRemoteId(originalId) ?? binding;
+	if (!mixedModeConnectionString || !remote) {
+		return [binding, { id }];
+	}
+	return [binding, { id, mixedModeConnectionString }];
 }
-function d1DatabaseEntry(db: CfD1Database): [string, string] {
-	return [db.binding, db.preview_database_id ?? db.database_id];
+function r2BucketEntry(
+	{ binding, bucket_name, remote }: CfR2Bucket,
+	mixedModeConnectionString?: MixedModeConnectionString
+): [
+	string,
+	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
+] {
+	const id = getRemoteId(bucket_name) ?? binding;
+	if (!mixedModeConnectionString || !remote) {
+		return [binding, { id }];
+	}
+	return [binding, { id, mixedModeConnectionString }];
+}
+function d1DatabaseEntry(
+	{ binding, database_id, preview_database_id, remote }: CfD1Database,
+	mixedModeConnectionString?: MixedModeConnectionString
+): [
+	string,
+	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
+] {
+	const id = getRemoteId(preview_database_id ?? database_id) ?? binding;
+	if (!mixedModeConnectionString || !remote) {
+		return [binding, { id }];
+	}
+	return [binding, { id, mixedModeConnectionString }];
 }
 function queueProducerEntry(
-	queue: CfQueue
-): [string, { queueName: string; deliveryDelay: number | undefined }] {
-	return [
-		queue.binding,
-		{ queueName: queue.queue_name, deliveryDelay: queue.delivery_delay },
-	];
+	{
+		binding,
+		queue_name: queueName,
+		delivery_delay: deliveryDelay,
+		remote,
+	}: CfQueue,
+	mixedModeConnectionString?: MixedModeConnectionString
+): [
+	string,
+	{
+		queueName: string;
+		deliveryDelay: number | undefined;
+		mixedModeConnectionString?: MixedModeConnectionString;
+	},
+] {
+	if (!mixedModeConnectionString || !remote) {
+		return [binding, { queueName, deliveryDelay }];
+	}
+
+	return [binding, { queueName, deliveryDelay, mixedModeConnectionString }];
+}
+function pipelineEntry(pipeline: CfPipeline): [string, string] {
+	return [pipeline.binding, pipeline.pipeline];
 }
 function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
 }
-function ratelimitEntry(ratelimit: CfUnsafeBinding): [string, object] {
+function workflowEntry(
+	{
+		binding,
+		name,
+		class_name: className,
+		script_name: scriptName,
+		remote,
+	}: CfWorkflow,
+	mixedModeConnectionString?: MixedModeConnectionString
+): [
+	string,
+	{
+		name: string;
+		className: string;
+		scriptName?: string;
+		mixedModeConnectionString?: MixedModeConnectionString;
+	},
+] {
+	if (!mixedModeConnectionString || !remote) {
+		return [
+			binding,
+			{
+				name,
+				className,
+				scriptName,
+			},
+		];
+	}
+
+	return [
+		binding,
+		{
+			name,
+			className,
+			scriptName,
+			mixedModeConnectionString,
+		},
+	];
+}
+function dispatchNamespaceEntry({
+	binding,
+	namespace,
+	remote,
+}: CfDispatchNamespace): [string, { namespace: string }];
+function dispatchNamespaceEntry(
+	{ binding, namespace, remote }: CfDispatchNamespace,
+	mixedModeConnectionString: MixedModeConnectionString
+): [
+	string,
+	{ namespace: string; mixedModeConnectionString: MixedModeConnectionString },
+];
+function dispatchNamespaceEntry(
+	{ binding, namespace, remote }: CfDispatchNamespace,
+	mixedModeConnectionString?: MixedModeConnectionString
+): [
+	string,
+	{ namespace: string; mixedModeConnectionString?: MixedModeConnectionString },
+] {
+	if (!mixedModeConnectionString || !remote) {
+		return [binding, { namespace }];
+	}
+	return [binding, { namespace, mixedModeConnectionString }];
+}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function ratelimitEntry(ratelimit: CfUnsafeBinding): [string, any] {
 	return [ratelimit.name, ratelimit];
 }
 type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
@@ -341,7 +460,7 @@ function queueConsumerEntry(consumer: QueueConsumer) {
 	const options = {
 		maxBatchSize: consumer.max_batch_size,
 		maxBatchTimeout: consumer.max_batch_timeout,
-		maxRetires: consumer.max_retries,
+		maxRetries: consumer.max_retries,
 		deadLetterQueue: consumer.dead_letter_queue,
 		retryDelay: consumer.retry_delay,
 	};
@@ -351,6 +470,7 @@ function queueConsumerEntry(consumer: QueueConsumer) {
 type WorkerOptionsBindings = Pick<
 	WorkerOptions,
 	| "bindings"
+	| "ai"
 	| "textBlobBindings"
 	| "dataBlobBindings"
 	| "wasmBindings"
@@ -359,26 +479,46 @@ type WorkerOptionsBindings = Pick<
 	| "d1Databases"
 	| "queueProducers"
 	| "queueConsumers"
+	| "pipelines"
 	| "hyperdrives"
 	| "durableObjects"
 	| "serviceBindings"
+	| "ratelimits"
+	| "workflows"
 	| "wrappedBindings"
+	| "secretsStoreSecrets"
+	| "images"
+	| "email"
+	| "analyticsEngineDatasets"
+	| "tails"
+	| "browserRendering"
+	| "vectorize"
+	| "dispatchNamespaces"
 >;
 
 type MiniflareBindingsConfig = Pick<
 	ConfigBundle,
 	| "bindings"
+	| "migrations"
 	| "workerDefinitions"
 	| "queueConsumers"
 	| "name"
 	| "services"
 	| "serviceBindings"
+	| "imagesLocalMode"
+	| "tails"
+	| "complianceRegion"
+	| "containers"
 > &
-	Partial<Pick<ConfigBundle, "format" | "bundle">>;
+	Partial<Pick<ConfigBundle, "format" | "bundle" | "assets">>;
 
 // TODO(someday): would be nice to type these methods more, can we export types for
 //  each plugin options schema and use those
-export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
+export function buildMiniflareBindingOptions(
+	config: MiniflareBindingsConfig,
+	mixedModeConnectionString: MixedModeConnectionString | undefined,
+	mixedModeEnabled: boolean
+): {
 	bindingOptions: WorkerOptionsBindings;
 	internalObjects: CfDurableObject[];
 	externalWorkers: WorkerOptions[];
@@ -409,19 +549,32 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	const serviceBindings: NonNullable<WorkerOptions["serviceBindings"]> = {
 		...config.serviceBindings,
 	};
+
 	const notFoundServices = new Set<string>();
 	for (const service of config.services ?? []) {
-		if (service.service === config.name) {
-			// If this is a service binding to the current worker, don't bother using
-			// the dev registry to look up the address, just bind to it directly.
+		if (mixedModeConnectionString && service.remote) {
 			serviceBindings[service.binding] = {
-				name: getName(config),
+				name: service.service,
+				props: service.props,
 				entrypoint: service.entrypoint,
+				mixedModeConnectionString,
+			};
+			continue;
+		}
+
+		if (service.service === config.name || config.workerDefinitions === null) {
+			// If this is a service binding to the current worker or the registry is disabled,
+			// don't bother using the dev registry to look up the address, just bind to it directly.
+			serviceBindings[service.binding] = {
+				name: service.service,
+				entrypoint: service.entrypoint,
+				props: service.props,
 			};
 			continue;
 		}
 
 		const target = config.workerDefinitions?.[service.service];
+
 		if (target?.host === undefined || target.port === undefined) {
 			// If the target isn't in the registry, always return an error response
 			notFoundServices.add(service.service);
@@ -434,7 +587,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			// services support JSRPC over HTTP CONNECT using a special hostname.
 			// Refer to https://github.com/cloudflare/workerd/pull/1757 for details.
 			let address: `${string}:${number}`;
-			let style = HttpOptions_Style.PROXY;
+			let style: HttpOptions_Style = HttpOptions_Style.PROXY;
 			if (service.entrypoint !== undefined) {
 				// If the user has requested a named entrypoint...
 				if (target.entrypointAddresses === undefined) {
@@ -479,6 +632,9 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 				}
 			}
 
+			// BUG: We have no way to pass `props` across an external socket, so we
+			// drop them. We are planning to move away from the multi-process model
+			// anyway, which will solve the problem.
 			serviceBindings[service.binding] = {
 				external: {
 					address,
@@ -491,6 +647,52 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		}
 	}
 
+	const tails: NonNullable<WorkerOptions["tails"]> = [];
+	const notFoundTails = new Set<string>();
+	for (const tail of config.tails ?? []) {
+		if (tail.service === config.name || config.workerDefinitions === null) {
+			// If this is a tail binding to the current Worker or the registry is disabled,
+			// don't bother using the dev registry to look up the address, just bind to it directly.
+			tails.push({ name: tail.service });
+
+			continue;
+		}
+
+		const target = config.workerDefinitions?.[tail.service];
+
+		// Tail consumers are always on the default entrypoint
+		const defaultEntrypoint = target?.entrypointAddresses?.["default"];
+		if (
+			target?.host === undefined ||
+			target.port === undefined ||
+			defaultEntrypoint === undefined
+		) {
+			notFoundTails.add(tail.service);
+		} else {
+			const style = HttpOptions_Style.PROXY;
+			const address = `${defaultEntrypoint.host}:${defaultEntrypoint.port}`;
+
+			tails.push({
+				external: {
+					address,
+					http: {
+						style,
+						cfBlobHeader: CoreHeaders.CF_BLOB,
+					},
+				},
+			});
+		}
+	}
+
+	if (notFoundTails.size > 0) {
+		logger.debug(
+			"Couldn't connect to the following configured `tail_consumers`: ",
+			[...notFoundTails.values()].join(", ")
+		);
+	}
+
+	const classNameToUseSQLite = getClassNamesWhichUseSQLite(config.migrations);
+
 	// Partition Durable Objects based on whether they're internal (defined by
 	// this session's worker), or external (defined by another session's worker
 	// registered in the dev registry)
@@ -502,74 +704,80 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 			binding.script_name === undefined || binding.script_name === config.name;
 		(internal ? internalObjects : externalObjects).push(binding);
 	}
-	// Setup Durable Object bindings and proxy worker
-	externalWorkers.push({
-		name: EXTERNAL_SERVICE_WORKER_NAME,
-		// Bind all internal objects, so they're accessible by all other sessions
-		// that proxy requests for our objects to this worker
-		durableObjects: Object.fromEntries(
-			internalObjects.map(({ class_name }) => [
-				class_name,
-				{ className: class_name, scriptName: getName(config) },
-			])
-		),
-		// Use this worker instead of the user worker if the pathname is
-		// `/${EXTERNAL_SERVICE_WORKER_NAME}`
-		routes: [`*/${EXTERNAL_SERVICE_WORKER_NAME}`],
-		// Use in-memory storage for the stub object classes *declared* by this
-		// script. They don't need to persist anything, and would end up using the
-		// incorrect unsafe unique key.
-		unsafeEphemeralDurableObjects: true,
-		compatibilityDate: "2024-01-01",
-		modules: true,
-		script:
-			EXTERNAL_SERVICE_WORKER_SCRIPT +
-			// Add stub object classes that proxy requests to the correct session
-			externalObjects
-				.map(({ class_name, script_name }) => {
-					assert(script_name !== undefined);
-					const target = config.workerDefinitions?.[script_name];
-					const targetHasClass = target?.durableObjects.some(
-						({ className }) => className === class_name
-					);
 
-					const identifier = getIdentifier(`do_${script_name}_${class_name}`);
-					const classNameJson = JSON.stringify(class_name);
-
-					if (
-						target?.host === undefined ||
-						target.port === undefined ||
-						!targetHasClass
-					) {
-						// If we couldn't find the target or the class, create a stub object
-						// that just returns `503 Service Unavailable` responses.
-						return `export const ${identifier} = createDurableObjectClass({ className: ${classNameJson} });`;
-					} else if (target.protocol === "https") {
-						throw new UserError(
-							`Cannot proxy to \`wrangler dev\` session for class ${classNameJson} because it uses HTTPS. Please remove the \`--local-protocol\`/\`dev.local_protocol\` option.`
+	if (config.workerDefinitions !== null) {
+		// Setup Durable Object bindings and proxy worker
+		externalWorkers.push({
+			name: EXTERNAL_SERVICE_WORKER_NAME,
+			// Bind all internal objects, so they're accessible by all other sessions
+			// that proxy requests for our objects to this worker
+			durableObjects: Object.fromEntries(
+				internalObjects.map(({ class_name }) => {
+					const useSQLite = classNameToUseSQLite.get(class_name);
+					return [
+						class_name,
+						{ className: class_name, scriptName: getName(config), useSQLite },
+					];
+				})
+			),
+			// Use this worker instead of the user worker if the pathname is
+			// `/${EXTERNAL_SERVICE_WORKER_NAME}`
+			routes: [`*/${EXTERNAL_SERVICE_WORKER_NAME}`],
+			// Use in-memory storage for the stub object classes *declared* by this
+			// script. They don't need to persist anything, and would end up using the
+			// incorrect unsafe unique key.
+			unsafeEphemeralDurableObjects: true,
+			compatibilityDate: "2024-01-01",
+			modules: true,
+			script:
+				EXTERNAL_SERVICE_WORKER_SCRIPT +
+				// Add stub object classes that proxy requests to the correct session
+				externalObjects
+					.map(({ class_name, script_name }) => {
+						assert(script_name !== undefined);
+						const target = config.workerDefinitions?.[script_name];
+						const targetHasClass = target?.durableObjects.some(
+							({ className }) => className === class_name
 						);
-					} else {
-						// Otherwise, create a stub object that proxies request to the
-						// target session at `${hostname}:${port}`.
-						const proxyUrl = `http://${target.host}:${target.port}/${EXTERNAL_SERVICE_WORKER_NAME}`;
-						const proxyUrlJson = JSON.stringify(proxyUrl);
-						return `export const ${identifier} = createDurableObjectClass({ className: ${classNameJson}, proxyUrl: ${proxyUrlJson} });`;
-					}
-				})
-				.join("\n") +
-			Array.from(notFoundServices)
-				.map((service) => {
-					const identifier = getIdentifier(`service_${service}`);
-					const serviceJson = JSON.stringify(service);
-					return `export const ${identifier} = createNotFoundWorkerEntrypointClass({ service: ${serviceJson} });`;
-				})
-				.join("\n"),
-	});
+
+						const identifier = getIdentifier(`do_${script_name}_${class_name}`);
+						const classNameJson = JSON.stringify(class_name);
+
+						if (
+							target?.host === undefined ||
+							target.port === undefined ||
+							!targetHasClass
+						) {
+							// If we couldn't find the target or the class, create a stub object
+							// that just returns `503 Service Unavailable` responses.
+							return `export const ${identifier} = createDurableObjectClass({ className: ${classNameJson} });`;
+						} else if (target.protocol === "https") {
+							throw new UserError(
+								`Cannot proxy to \`wrangler dev\` session for class ${classNameJson} because it uses HTTPS. Please remove the \`--local-protocol\`/\`dev.local_protocol\` option.`
+							);
+						} else {
+							// Otherwise, create a stub object that proxies request to the
+							// target session at `${hostname}:${port}`.
+							const proxyUrl = `http://${target.host}:${target.port}/${EXTERNAL_SERVICE_WORKER_NAME}`;
+							const proxyUrlJson = JSON.stringify(proxyUrl);
+							return `export const ${identifier} = createDurableObjectClass({ className: ${classNameJson}, proxyUrl: ${proxyUrlJson} });`;
+						}
+					})
+					.join("\n") +
+				Array.from(notFoundServices)
+					.map((service) => {
+						const identifier = getIdentifier(`service_${service}`);
+						const serviceJson = JSON.stringify(service);
+						return `export const ${identifier} = createNotFoundWorkerEntrypointClass({ service: ${serviceJson} });`;
+					})
+					.join("\n"),
+		});
+	}
 
 	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
-	if (bindings.ai?.binding) {
+	if (bindings.ai?.binding && !mixedModeEnabled) {
 		externalWorkers.push({
-			name: EXTERNAL_AI_WORKER_NAME,
+			name: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
 			modules: [
 				{
 					type: "ESModule",
@@ -578,16 +786,86 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 				},
 			],
 			serviceBindings: {
-				FETCHER: AIFetcher,
+				FETCHER: getAIFetcher({
+					compliance_region: config.complianceRegion,
+				}),
 			},
 		});
 
 		wrappedBindings[bindings.ai.binding] = {
-			scriptName: EXTERNAL_AI_WORKER_NAME,
+			scriptName: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
 		};
 	}
 
-	const bindingOptions = {
+	if (bindings.ai && mixedModeEnabled) {
+		warnOrError("ai", bindings.ai.remote, "always-remote");
+	}
+
+	if (bindings.browser && mixedModeEnabled) {
+		warnOrError("browser", bindings.browser.remote, "remote");
+	}
+
+	// Uses the implementation in miniflare instead if the users enable local mode
+	if (
+		bindings.images?.binding &&
+		!config.imagesLocalMode &&
+		!mixedModeEnabled
+	) {
+		externalWorkers.push({
+			name: `${EXTERNAL_IMAGES_WORKER_NAME}:${config.name}`,
+			modules: [
+				{
+					type: "ESModule",
+					path: "index.mjs",
+					contents: EXTERNAL_IMAGES_WORKER_SCRIPT,
+				},
+			],
+			serviceBindings: {
+				FETCHER: getImagesRemoteFetcher({
+					compliance_region: config.complianceRegion,
+				}),
+			},
+		});
+
+		wrappedBindings[bindings.images?.binding] = {
+			scriptName: `${EXTERNAL_IMAGES_WORKER_NAME}:${config.name}`,
+		};
+	}
+
+	if (bindings.vectorize && !mixedModeEnabled) {
+		for (const vectorizeBinding of bindings.vectorize) {
+			const bindingName = vectorizeBinding.binding;
+			const indexName = vectorizeBinding.index_name;
+			const indexVersion = "v2";
+
+			externalWorkers.push({
+				name: `${EXTERNAL_VECTORIZE_WORKER_NAME}:${config.name}:${bindingName}`,
+				modules: [
+					{
+						type: "ESModule",
+						path: "index.mjs",
+						contents: EXTERNAL_VECTORIZE_WORKER_SCRIPT,
+					},
+				],
+				serviceBindings: {
+					FETCHER: MakeVectorizeFetcher(
+						{ compliance_region: config.complianceRegion },
+						indexName
+					),
+				},
+				bindings: {
+					INDEX_ID: indexName,
+					INDEX_VERSION: indexVersion,
+				},
+			});
+
+			wrappedBindings[bindingName] = {
+				scriptName: `${EXTERNAL_VECTORIZE_WORKER_NAME}:${config.name}:${bindingName}`,
+			};
+		}
+	}
+
+	const bindingOptions: WorkerOptionsBindings = {
 		bindings: {
 			...bindings.vars,
 			// emulate version_metadata binding via a JSON var
@@ -599,42 +877,152 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		dataBlobBindings,
 		wasmBindings,
 
+		ai:
+			bindings.ai && mixedModeConnectionString
+				? {
+						binding: bindings.ai.binding,
+						mixedModeConnectionString,
+					}
+				: undefined,
+
 		kvNamespaces: Object.fromEntries(
-			bindings.kv_namespaces?.map(kvNamespaceEntry) ?? []
+			bindings.kv_namespaces?.map((kv) =>
+				kvNamespaceEntry(kv, mixedModeConnectionString)
+			) ?? []
 		),
 		r2Buckets: Object.fromEntries(
-			bindings.r2_buckets?.map(r2BucketEntry) ?? []
+			bindings.r2_buckets?.map((r2) =>
+				r2BucketEntry(r2, mixedModeConnectionString)
+			) ?? []
 		),
 		d1Databases: Object.fromEntries(
-			bindings.d1_databases?.map(d1DatabaseEntry) ?? []
+			bindings.d1_databases?.map((d1) =>
+				d1DatabaseEntry(d1, mixedModeConnectionString)
+			) ?? []
 		),
 		queueProducers: Object.fromEntries(
-			bindings.queues?.map(queueProducerEntry) ?? []
+			bindings.queues?.map((queue) =>
+				queueProducerEntry(queue, mixedModeConnectionString)
+			) ?? []
 		),
 		queueConsumers: Object.fromEntries(
 			config.queueConsumers?.map(queueConsumerEntry) ?? []
 		),
+		pipelines: Object.fromEntries(bindings.pipelines?.map(pipelineEntry) ?? []),
 		hyperdrives: Object.fromEntries(
 			bindings.hyperdrive?.map(hyperdriveEntry) ?? []
 		),
+		analyticsEngineDatasets: Object.fromEntries(
+			bindings.analytics_engine_datasets?.map((binding) => [
+				binding.binding,
+				{ dataset: binding.dataset ?? "dataset" },
+			]) ?? []
+		),
+		workflows: Object.fromEntries(
+			bindings.workflows?.map((workflow) =>
+				workflowEntry(workflow, mixedModeConnectionString)
+			) ?? []
+		),
+		secretsStoreSecrets: Object.fromEntries(
+			bindings.secrets_store_secrets?.map((binding) => [
+				binding.binding,
+				binding,
+			]) ?? []
+		),
+		email: {
+			send_email: bindings.send_email,
+		},
+		images:
+			bindings.images && (config.imagesLocalMode || mixedModeEnabled)
+				? {
+						binding: bindings.images.binding,
+						mixedModeConnectionString:
+							bindings.images.remote && mixedModeConnectionString
+								? mixedModeConnectionString
+								: undefined,
+					}
+				: undefined,
+		browserRendering:
+			mixedModeEnabled && mixedModeConnectionString && bindings.browser?.remote
+				? {
+						binding: bindings.browser.binding,
+						mixedModeConnectionString,
+					}
+				: undefined,
+
+		vectorize:
+			mixedModeEnabled && mixedModeConnectionString
+				? Object.fromEntries(
+						bindings.vectorize
+							?.filter((v) => {
+								warnOrError("vectorize", v.remote, "remote");
+								return v.remote;
+							})
+							.map((vectorize) => {
+								return [
+									vectorize.binding,
+									{
+										index_name: vectorize.index_name,
+										mixedModeConnectionString,
+									},
+								];
+							}) ?? []
+					)
+				: undefined,
+
+		dispatchNamespaces:
+			mixedModeEnabled && mixedModeConnectionString
+				? Object.fromEntries(
+						bindings.dispatch_namespaces
+							?.filter((d) => {
+								warnOrError("dispatch_namespaces", d.remote, "remote");
+								return d.remote;
+							})
+							.map((dispatchNamespace) =>
+								dispatchNamespaceEntry(
+									dispatchNamespace,
+									mixedModeConnectionString
+								)
+							) ?? []
+					)
+				: undefined,
 
 		durableObjects: Object.fromEntries([
-			...internalObjects.map(({ name, class_name }) => [name, class_name]),
-			...externalObjects.map(({ name, class_name, script_name }) => {
-				const identifier = getIdentifier(`do_${script_name}_${class_name}`);
+			...internalObjects.map(({ name, class_name }) => {
+				const useSQLite = classNameToUseSQLite.get(class_name);
 				return [
 					name,
 					{
-						className: identifier,
-						scriptName: EXTERNAL_SERVICE_WORKER_NAME,
-						// Matches the unique key Miniflare will generate for this object in
-						// the target session. We need to do this so workerd generates the
-						// same IDs it would if this were part of the same process. workerd
-						// doesn't allow IDs from Durable Objects with different unique keys
-						// to be used with each other.
-						unsafeUniqueKey: `${script_name}-${class_name}`,
+						className: class_name,
+						useSQLite,
 					},
 				];
+			}),
+			...externalObjects.map(({ name, class_name, script_name }) => {
+				const identifier = getIdentifier(`do_${script_name}_${class_name}`);
+				const useSQLite = classNameToUseSQLite.get(class_name);
+				return config.workerDefinitions === null
+					? [
+							name,
+							{
+								className: class_name,
+								scriptName: script_name,
+							},
+						]
+					: [
+							name,
+							{
+								className: identifier,
+								scriptName: EXTERNAL_SERVICE_WORKER_NAME,
+								useSQLite,
+								// Matches the unique key Miniflare will generate for this object in
+								// the target session. We need to do this so workerd generates the
+								// same IDs it would if this were part of the same process. workerd
+								// doesn't allow IDs from Durable Objects with different unique keys
+								// to be used with each other.
+								unsafeUniqueKey: `${script_name}-${class_name}`,
+							},
+						];
 			}),
 		]),
 
@@ -643,9 +1031,9 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 				?.filter((b) => b.type == "ratelimit")
 				.map(ratelimitEntry) ?? []
 		),
-
 		serviceBindings,
 		wrappedBindings: wrappedBindings,
+		tails,
 	};
 
 	return {
@@ -655,31 +1043,34 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	};
 }
 
-type PickTemplate<T, K extends string> = {
-	[P in keyof T & K]: T[P];
-};
-type PersistOptions = PickTemplate<MiniflareOptions, `${string}Persist`>;
-export function buildPersistOptions(
+export function getDefaultPersistRoot(
 	localPersistencePath: ConfigBundle["localPersistencePath"]
-): PersistOptions | undefined {
+): string | undefined {
 	if (localPersistencePath !== null) {
 		const v3Path = path.join(localPersistencePath, "v3");
+		return v3Path;
+	}
+}
+
+export function buildAssetOptions(config: Pick<ConfigBundle, "assets">) {
+	if (config.assets) {
 		return {
-			cachePersist: path.join(v3Path, "cache"),
-			durableObjectsPersist: path.join(v3Path, "do"),
-			kvPersist: path.join(v3Path, "kv"),
-			r2Persist: path.join(v3Path, "r2"),
-			d1Persist: path.join(v3Path, "d1"),
+			assets: {
+				directory: config.assets.directory,
+				binding: config.assets.binding,
+				routerConfig: config.assets.routerConfig,
+				assetConfig: config.assets.assetConfig,
+			},
 		};
 	}
 }
 
 export function buildSitesOptions({
-	assetPaths,
-}: Pick<ConfigBundle, "assetPaths">) {
-	if (assetPaths !== undefined) {
+	legacyAssetPaths,
+}: Pick<ConfigBundle, "legacyAssetPaths">) {
+	if (legacyAssetPaths !== undefined) {
 		const { baseDirectory, assetDirectory, includePatterns, excludePatterns } =
-			assetPaths;
+			legacyAssetPaths;
 		return {
 			sitePath: path.join(baseDirectory, assetDirectory),
 			siteInclude: includePatterns.length > 0 ? includePatterns : undefined,
@@ -723,6 +1114,9 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 		isCodeMovedWarning(chunk: string) {
 			return /CODE_MOVED for unknown code block/.test(chunk);
 		},
+		isAccessViolation(chunk: string) {
+			return chunk.includes("access violation;");
+		},
 	};
 
 	stdout.on("data", (chunk: Buffer | string) => {
@@ -747,7 +1141,7 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 			logger.warn(chunk);
 		}
 
-		// anything not exlicitly handled above should be logged as info (via stdout)
+		// anything not explicitly handled above should be logged as info (via stdout)
 		else {
 			logger.info(getSourceMappedString(chunk));
 		}
@@ -770,15 +1164,33 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 					`Address already in use (${address}). Please check that you are not already running a server on this address or specify a different port with --port.`
 				);
 
-				// even though we've intercepted the chunk and logged a better error to stderr
-				// fallthrough to log the original chunk to the debug log file for observability
+				// Log the original error to the debug logs.
+				logger.debug(chunk);
+			}
+			// In the past we have seen Access Violation errors on Windows, which may be caused by an outdated
+			// version of the Windows OS or the Microsoft Visual C++ Redistributable.
+			// See https://github.com/cloudflare/workers-sdk/issues/6170#issuecomment-2245209918
+			else if (classifiers.isAccessViolation(chunk)) {
+				let error = "There was an access violation in the runtime.";
+				if (process.platform === "win32") {
+					error +=
+						"\nOn Windows, this may be caused by an outdated Microsoft Visual C++ Redistributable library.\n" +
+						"Check that you have the latest version installed.\n" +
+						"See https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist.";
+				}
+				logger.error(error);
+
+				// Log the original error to the debug logs.
+				logger.debug(chunk);
 			}
 
 			// IGNORABLE:
 			// anything else not handled above is considered ignorable
 			// so send it to the debug logs which are discarded unless
 			// the user explicitly sets a logLevel indicating they care
-			logger.debug(chunk);
+			else {
+				logger.debug(chunk);
+			}
 		}
 
 		// known case: warnings are not errors, log them as such
@@ -791,37 +1203,64 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 			// ignore entirely, don't even send it to the debug log file
 		}
 
-		// anything not exlicitly handled above should be logged as an error (via stderr)
+		// anything not explicitly handled above should be logged as an error (via stderr)
 		else {
 			logger.error(getSourceMappedString(chunk));
 		}
 	});
 }
 
+let didWarnMiniflareCronSupport = false;
+let didWarnMiniflareVectorizeSupport = false;
+let didWarnAiAccountUsage = false;
+
+export type Options = Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
+
 export async function buildMiniflareOptions(
 	log: Log,
 	config: Omit<ConfigBundle, "rules">,
-	proxyToUserWorkerAuthenticationSecret: UUID
+	proxyToUserWorkerAuthenticationSecret: UUID,
+	mixedModeConnectionString: MixedModeConnectionString | undefined,
+	mixedModeEnabled: boolean
 ): Promise<{
-	options: MiniflareOptions;
+	options: Options;
 	internalObjects: CfDurableObject[];
 	entrypointNames: string[];
 }> {
-	if (config.crons.length > 0) {
-		logger.warn("Miniflare 3 does not support CRON triggers yet, ignoring...");
+	if (config.crons?.length && !config.testScheduled) {
+		if (!didWarnMiniflareCronSupport) {
+			didWarnMiniflareCronSupport = true;
+			logger.warn(
+				"Miniflare does not currently trigger scheduled Workers automatically.\nRefer to https://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers for more details "
+			);
+		}
 	}
 
-	if (config.bindings.ai) {
-		logger.warn(
-			"Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development."
-		);
-	}
+	if (!mixedModeEnabled) {
+		if (config.bindings.ai) {
+			if (!didWarnAiAccountUsage) {
+				didWarnAiAccountUsage = true;
+				logger.warn(
+					"Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development."
+				);
+			}
+		}
 
-	if (config.bindings.vectorize?.length) {
-		// TODO: add local support for Vectorize bindings (https://github.com/cloudflare/workers-sdk/issues/4360)
-		logger.warn(
-			"Vectorize bindings are not currently supported in local mode. Please use --remote if you are working with them."
-		);
+		if (!config.bindVectorizeToProd && config.bindings.vectorize?.length) {
+			logger.warn(
+				"Vectorize local bindings are not supported yet. You may use the `--experimental-vectorize-bind-to-prod` flag to bind to your production index in local dev mode."
+			);
+			config.bindings.vectorize = [];
+		}
+
+		if (config.bindings.vectorize?.length) {
+			if (!didWarnMiniflareVectorizeSupport) {
+				didWarnMiniflareVectorizeSupport = true;
+				logger.warn(
+					"You are using a mixed-mode binding for Vectorize (through `--experimental-vectorize-bind-to-prod`). It may incur usage charges and modify your databases even in local development. "
+				);
+			}
+		}
 	}
 
 	const upstream =
@@ -831,9 +1270,14 @@ export async function buildMiniflareOptions(
 
 	const { sourceOptions, entrypointNames } = await buildSourceOptions(config);
 	const { bindingOptions, internalObjects, externalWorkers } =
-		buildMiniflareBindingOptions(config);
+		buildMiniflareBindingOptions(
+			config,
+			mixedModeConnectionString,
+			mixedModeEnabled
+		);
 	const sitesOptions = buildSitesOptions(config);
-	const persistOptions = buildPersistOptions(config.localPersistencePath);
+	const defaultPersistRoot = getDefaultPersistRoot(config.localPersistencePath);
+	const assetOptions = buildAssetOptions(config);
 
 	const options: MiniflareOptions = {
 		host: config.initialIp,
@@ -842,12 +1286,19 @@ export async function buildMiniflareOptions(
 		liveReload: config.liveReload,
 		upstream,
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
+		unsafeTriggerHandlers: true,
+		// The way we run Miniflare instances with wrangler dev is that there are two:
+		//  - one holding the proxy worker,
+		//  - and one holding the user worker.
+		// The issue with that setup is that end users would see two sets of request logs from Miniflare!
+		// Instead of hiding all logs from this Miniflare instance, we specifically hide the request logs,
+		// allowing other logs to be shown to the user (such as details about emails being triggered)
+		logRequests: false,
 
 		log,
 		verbose: logger.loggerLevel === "debug",
 		handleRuntimeStdio,
-
-		...persistOptions,
+		defaultPersistRoot,
 		workers: [
 			{
 				name: getName(config),
@@ -857,7 +1308,8 @@ export async function buildMiniflareOptions(
 				...sourceOptions,
 				...bindingOptions,
 				...sitesOptions,
-
+				...assetOptions,
+				containers: config.containers,
 				// Allow each entrypoint to be accessed directly over `127.0.0.1:0`
 				unsafeDirectSockets: entrypointNames.map((name) => ({
 					host: "127.0.0.1",
@@ -870,113 +1322,4 @@ export async function buildMiniflareOptions(
 		],
 	};
 	return { options, internalObjects, entrypointNames };
-}
-
-export interface ReloadedEventOptions {
-	url: URL;
-	internalDurableObjects: CfDurableObject[];
-	entrypointAddresses: WorkerEntrypointsDefinition;
-	proxyToUserWorkerAuthenticationSecret: UUID;
-}
-export class ReloadedEvent extends Event implements ReloadedEventOptions {
-	readonly url: URL;
-	readonly internalDurableObjects: CfDurableObject[];
-	readonly entrypointAddresses: WorkerEntrypointsDefinition;
-	readonly proxyToUserWorkerAuthenticationSecret: UUID;
-
-	constructor(type: "reloaded", options: ReloadedEventOptions) {
-		super(type);
-		this.url = options.url;
-		this.internalDurableObjects = options.internalDurableObjects;
-		this.entrypointAddresses = options.entrypointAddresses;
-		this.proxyToUserWorkerAuthenticationSecret =
-			options.proxyToUserWorkerAuthenticationSecret;
-	}
-}
-
-export interface ErrorEventOptions {
-	error: unknown;
-}
-export class ErrorEvent extends Event implements ErrorEventOptions {
-	readonly error: unknown;
-
-	constructor(type: "error", options: ErrorEventOptions) {
-		super(type);
-		this.error = options.error;
-	}
-}
-
-export type MiniflareServerEventMap = {
-	reloaded: ReloadedEvent;
-	error: ErrorEvent;
-};
-export class MiniflareServer extends TypedEventTarget<MiniflareServerEventMap> {
-	#log = buildLog();
-	#mf?: Miniflare;
-	// This is given as a shared secret to the Proxy and User workers
-	// so that the User Worker can trust aspects of HTTP requests from the Proxy Worker
-	// if it provides the secret in a `MF-Proxy-Shared-Secret` header.
-	#proxyToUserWorkerAuthenticationSecret = randomUUID();
-
-	// `buildMiniflareOptions()` is asynchronous, meaning if multiple bundle
-	// updates were submitted, the second may apply before the first. Therefore,
-	// wrap updates in a mutex, so they're always applied in invocation order.
-	#mutex = new Mutex();
-
-	async #onBundleUpdate(config: ConfigBundle, opts?: Abortable): Promise<void> {
-		if (opts?.signal?.aborted) {
-			return;
-		}
-		try {
-			const { options, internalObjects, entrypointNames } =
-				await buildMiniflareOptions(
-					this.#log,
-					config,
-					this.#proxyToUserWorkerAuthenticationSecret
-				);
-			if (opts?.signal?.aborted) {
-				return;
-			}
-			if (this.#mf === undefined) {
-				this.#mf = new Miniflare(options);
-			} else {
-				await this.#mf.setOptions(options);
-			}
-			const url = await this.#mf.ready;
-
-			// Get entrypoint addresses
-			const entrypointAddresses: WorkerEntrypointsDefinition = {};
-			for (const name of entrypointNames) {
-				const directUrl = await this.#mf.unsafeGetDirectURL(undefined, name);
-				const port = parseInt(directUrl.port);
-				entrypointAddresses[name] = { host: directUrl.hostname, port };
-			}
-
-			if (opts?.signal?.aborted) {
-				return;
-			}
-
-			const event = new ReloadedEvent("reloaded", {
-				url,
-				internalDurableObjects: internalObjects,
-				proxyToUserWorkerAuthenticationSecret:
-					this.#proxyToUserWorkerAuthenticationSecret,
-				entrypointAddresses,
-			});
-			this.dispatchEvent(event);
-		} catch (error: unknown) {
-			this.dispatchEvent(new ErrorEvent("error", { error }));
-		}
-	}
-	onBundleUpdate(config: ConfigBundle, opts?: Abortable): Promise<void> {
-		return this.#mutex.runWith(() => this.#onBundleUpdate(config, opts));
-	}
-
-	#onDispose = async (): Promise<void> => {
-		await this.#mf?.dispose();
-		this.#mf = undefined;
-	};
-	onDispose(): Promise<void> {
-		return this.#mutex.runWith(this.#onDispose);
-	}
 }

@@ -12,6 +12,7 @@ interface WorkerLoaded {
 		path: string;
 		contents: Uint8Array;
 	}[];
+	readOnly?: boolean;
 }
 
 // Sent when a user updates a file

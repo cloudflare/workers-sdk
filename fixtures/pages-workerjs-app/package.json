@@ -1,21 +1,23 @@
 {
-	"name": "pages-workerjs-app",
+	"name": "@fixture/pages-workerjs",
 	"private": true,
 	"sideEffects": false,
 	"scripts": {
 		"check:type": "tsc",
-		"dev": "npx wrangler pages dev ./workerjs-test --port 8792",
+		"dev": "wrangler pages dev ./workerjs-test --port 8792",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:^",
-		"undici": "^5.28.4",
+		"typescript": "catalog:default",
+		"undici": "catalog:default",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"engines": {
-		"node": ">=16.13"
+		"node": ">=18.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

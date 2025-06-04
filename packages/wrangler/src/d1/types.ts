@@ -18,10 +18,13 @@ export type DatabaseCreationResult = {
 export type DatabaseInfo = {
 	uuid: string;
 	name: string;
-	version: "alpha" | "beta";
+	version: "alpha" | "beta" | "production";
 	num_tables: number;
 	file_size: number;
 	running_in_region?: string;
+	read_replication?: {
+		mode: "auto" | "disabled";
+	};
 };
 
 export type Backup = {
@@ -78,11 +81,13 @@ export interface D1Queries {
 		queryDurationMs?: number;
 		rowsRead?: number;
 		rowsWritten?: number;
+		rowsReturned?: number;
 	};
 	sum?: {
 		queryDurationMs?: number;
 		rowsRead?: number;
 		rowsWritten?: number;
+		rowsReturned?: number;
 	};
 	count?: number;
 	dimensions: {
@@ -106,9 +111,8 @@ export interface D1QueriesGraphQLResponse {
 }
 
 export type ImportInitResponse = {
-	success: true;
 	filename: string;
-	uploadUrl: string;
+	upload_url: string;
 };
 export type ImportPollingResponse = {
 	success: true;
@@ -123,9 +127,8 @@ export type ImportPollingResponse = {
 	| {
 			status: "complete";
 			result: {
-				success: boolean;
-				finalBookmark: string;
-				numQueries: number;
+				final_bookmark: string;
+				num_queries: number;
 				meta: {
 					served_by: string;
 					duration: number;
@@ -145,14 +148,14 @@ export type ExportPollingResponse = {
 	type: "export";
 	at_bookmark: string;
 	messages: string[];
-	errors: string[];
+	error: string;
 } & (
 	| {
 			status: "active" | "error";
 	  }
 	| {
 			status: "complete";
-			result: { filename: string; signedUrl: string };
+			result: { filename: string; signed_url: string };
 	  }
 );
 

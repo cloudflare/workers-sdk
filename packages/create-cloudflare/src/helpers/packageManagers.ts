@@ -25,7 +25,7 @@ export const detectPackageManager = () => {
 	if (process.env.TEST_PM && process.env.TEST_PM_VERSION) {
 		name = process.env.TEST_PM as PmName;
 		version = process.env.TEST_PM_VERSION;
-		process.env.npm_config_user_agent = name;
+		process.env.npm_config_user_agent = `${name}/${version}`;
 	}
 
 	switch (name) {
@@ -119,7 +119,7 @@ export const rectifyPmMismatch = async (ctx: C3Context) => {
 	});
 };
 
-const detectPmMismatch = (ctx: C3Context) => {
+export const detectPmMismatch = (ctx: C3Context) => {
 	const { npm } = detectPackageManager();
 	const projectPath = ctx.project.path;
 
@@ -131,6 +131,9 @@ const detectPmMismatch = (ctx: C3Context) => {
 		case "pnpm":
 			return !existsSync(path.join(projectPath, "pnpm-lock.yaml"));
 		case "bun":
-			return !existsSync(path.join(projectPath, "bun.lockb"));
+			return (
+				!existsSync(path.join(projectPath, "bun.lockb")) &&
+				!existsSync(path.join(projectPath, "bun.lock"))
+			);
 	}
 };

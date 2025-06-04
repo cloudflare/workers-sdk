@@ -1,0 +1,16 @@
+{
+	"name": "@fixture/import-npm",
+	"private": true,
+	"description": "",
+	"author": "",
+	"workspaces": [
+		"packages/*"
+	],
+	"scripts": {
+		"_clean_install": "rm -rf node_modules && npm install --no-package-lock",
+		"check:type": "npm run check:type --workspaces",
+		"test:ci": "npm run test:ci --workspaces",
+		"test:watch": "npm run test:watch --workspaces",
+		"type:tests": "npm run type:tests --workspaces"
+	}
+}

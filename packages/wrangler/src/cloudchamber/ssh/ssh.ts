@@ -1,8 +1,6 @@
 import { readdir, readFile, stat } from "fs/promises";
 import { homedir, userInfo } from "os";
-import { exit } from "process";
 import {
-	crash,
 	endSection,
 	log,
 	logRaw,
@@ -14,6 +12,7 @@ import {
 } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { pollSSHKeysUntilCondition } from "../cli";
 import { SshPublicKeysService } from "../client";
@@ -206,7 +205,7 @@ function clipPublicSSHKey(value: string): string {
 /**
  * Does a really simple check to see if the SSH key exist prompt in wrangler cloudchamber create should appear
  */
-export async function shouldPromptForNewSSHKeyAppear(
+async function shouldPromptForNewSSHKeyAppear(
 	keys: ListSSHPublicKeys | undefined = undefined
 ): Promise<[SSHPublicKeyID | undefined, boolean]> {
 	try {
@@ -260,10 +259,7 @@ export async function shouldPromptForNewSSHKeyAppear(
 	}
 }
 
-export async function handleListSSHKeysCommand(
-	_args: unknown,
-	_config: Config
-) {
+async function handleListSSHKeysCommand(_args: unknown, _config: Config) {
 	startSection("SSH Keys", "", false);
 	const { start, stop } = spinner();
 	start("Loading your ssh keys");
@@ -300,7 +296,7 @@ export async function handleListSSHKeysCommand(
  * Will try to assume defaults to showcase to the user so they can add it faster.
  *
  */
-export async function handleCreateSSHPublicKeyCommand(
+async function handleCreateSSHPublicKeyCommand(
 	args: StrictYargsOptionsToInterfaceJSON<
 		typeof createSSHPublicKeyOptionalYargs
 	>
@@ -321,7 +317,7 @@ export async function handleCreateSSHPublicKeyCommand(
 	);
 }
 
-export async function promptForSSHKey(
+async function promptForSSHKey(
 	args: StrictYargsOptionsToInterfaceJSON<
 		typeof createSSHPublicKeyOptionalYargs
 	>
@@ -385,8 +381,7 @@ export async function promptForSSHKey(
 	);
 	stop();
 	if (err != null) {
-		crash("Error adding your public ssh key: " + err.message);
-		exit(1);
+		throw new UserError("Error adding your public ssh key: " + err.message);
 	}
 
 	return res;

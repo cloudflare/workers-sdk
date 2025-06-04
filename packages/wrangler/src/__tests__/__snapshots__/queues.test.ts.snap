@@ -1,0 +1,93 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`wrangler > queues > create > wrangler.json > should create a queue 1`] = `
+"🌀 Creating queue 'testQueue'
+✅ Created queue 'testQueue'
+
+Configure your Worker to send messages to this queue:
+
+{
+  \\"queues\\": {
+    \\"producers\\": [
+      {
+        \\"queue\\": \\"testQueue\\",
+        \\"binding\\": \\"testQueue\\"
+      }
+    ]
+  }
+}
+Configure your Worker to consume messages from this queue:
+
+{
+  \\"queues\\": {
+    \\"consumers\\": [
+      {
+        \\"queue\\": \\"testQueue\\"
+      }
+    ]
+  }
+}"
+`;
+
+exports[`wrangler > queues > create > wrangler.json > should send queue settings with delivery delay 1`] = `
+"🌀 Creating queue 'testQueue'
+✅ Created queue 'testQueue'
+
+Configure your Worker to send messages to this queue:
+
+{
+  \\"queues\\": {
+    \\"producers\\": [
+      {
+        \\"queue\\": \\"testQueue\\",
+        \\"binding\\": \\"testQueue\\"
+      }
+    ]
+  }
+}
+Configure your Worker to consume messages from this queue:
+
+{
+  \\"queues\\": {
+    \\"consumers\\": [
+      {
+        \\"queue\\": \\"testQueue\\"
+      }
+    ]
+  }
+}"
+`;
+
+exports[`wrangler > queues > create > wrangler.toml > should create a queue 1`] = `
+"🌀 Creating queue 'testQueue'
+✅ Created queue 'testQueue'
+
+Configure your Worker to send messages to this queue:
+
+[[queues.producers]]
+queue = \\"testQueue\\"
+binding = \\"testQueue\\"
+
+Configure your Worker to consume messages from this queue:
+
+[[queues.consumers]]
+queue = \\"testQueue\\"
+"
+`;
+
+exports[`wrangler > queues > create > wrangler.toml > should send queue settings with delivery delay 1`] = `
+"🌀 Creating queue 'testQueue'
+✅ Created queue 'testQueue'
+
+Configure your Worker to send messages to this queue:
+
+[[queues.producers]]
+queue = \\"testQueue\\"
+binding = \\"testQueue\\"
+
+Configure your Worker to consume messages from this queue:
+
+[[queues.consumers]]
+queue = \\"testQueue\\"
+"
+`;

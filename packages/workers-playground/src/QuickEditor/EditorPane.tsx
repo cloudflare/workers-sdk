@@ -22,7 +22,7 @@ export default function EditorPane() {
 							: undefined
 					}
 					onChange={({ entrypoint, files }) =>
-						draftWorker.preview({ entrypoint, modules: files })
+						draftWorker.updateDraft({ entrypoint, modules: files })
 					}
 				/>
 			</FrameErrorBoundary>

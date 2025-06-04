@@ -4,7 +4,7 @@ import { createFetchResult, msw } from "../../helpers/msw";
 import type { WorkerMetadata } from "../../../deployment-bundle/create-worker-upload-form";
 import type { VersionDetails, WorkerVersion } from "../../../versions/secrets";
 
-export function mockGetVersions() {
+function mockGetVersions() {
 	msw.use(
 		http.get(
 			`*/accounts/:accountId/workers/scripts/:scriptName/versions`,
@@ -59,6 +59,11 @@ export function mockGetVersion(versionInfo?: VersionDetails) {
 										name: "YET_ANOTHER_SECRET",
 										text: "Yet another secret shhhhh",
 									},
+									{
+										name: "do-binding",
+										type: "durable_object_namespace",
+										namespace_id: "some-namespace-id",
+									},
 								],
 								script: {
 									etag: "etag",
@@ -79,11 +84,15 @@ export function mockGetVersion(versionInfo?: VersionDetails) {
 	);
 }
 
-export function mockGetVersionContent() {
+function mockGetVersionContent() {
 	msw.use(
 		http.get(
-			`*/accounts/:accountId/workers/scripts/:scriptName/content/v2?version=ce15c78b-cc43-4f60-b5a9-15ce4f298c2a`,
-			async ({ params }) => {
+			`*/accounts/:accountId/workers/scripts/:scriptName/content/v2`,
+			async ({ params, request }) => {
+				const url = new URL(request.url);
+				expect(url.searchParams.get("version")).toEqual(
+					"ce15c78b-cc43-4f60-b5a9-15ce4f298c2a"
+				);
 				expect(params.accountId).toEqual("some-account-id");
 				expect(params.scriptName).toEqual("script-name");
 
@@ -105,7 +114,7 @@ export function mockGetVersionContent() {
 	);
 }
 
-export function mockGetWorkerSettings() {
+function mockGetWorkerSettings() {
 	msw.use(
 		http.get(
 			`*/accounts/:accountId/workers/scripts/:scriptName/script-settings`,
@@ -125,7 +134,9 @@ export function mockGetWorkerSettings() {
 	);
 }
 
-export function mockPostVersion(validate?: (metadata: WorkerMetadata) => void) {
+export function mockPostVersion(
+	validate?: (metadata: WorkerMetadata, formData: FormData) => void
+) {
 	msw.use(
 		http.post(
 			`*/accounts/:accountId/workers/scripts/:scriptName/versions`,
@@ -138,7 +149,7 @@ export function mockPostVersion(validate?: (metadata: WorkerMetadata) => void) {
 					formData.get("metadata") as string
 				) as WorkerMetadata;
 
-				validate && validate(metadata);
+				validate && validate(metadata, formData);
 
 				return HttpResponse.json(
 					createFetchResult({

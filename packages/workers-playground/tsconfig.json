@@ -8,7 +8,7 @@
 		"module": "ESNext",
 		"skipLibCheck": true,
 		// "preserveSymlinks": true,
-		"moduleResolution": "Node",
+		"moduleResolution": "Bundler",
 		"resolveJsonModule": true,
 		"isolatedModules": true,
 		"noEmit": true,

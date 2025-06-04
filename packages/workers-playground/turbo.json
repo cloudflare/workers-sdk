@@ -1,10 +1,15 @@
 {
 	"$schema": "http://turbo.build/schema.json",
 	"extends": ["//"],
-	"pipeline": {
+	"tasks": {
 		"build": {
 			"outputs": ["dist/**"],
-			"env": ["NODE_ENV", "VITE_PLAYGROUND_PREVIEW", "VITE_PLAYGROUND_ROOT"]
+			"env": [
+				"NODE_ENV",
+				"VITE_PLAYGROUND_PREVIEW",
+				"VITE_PLAYGROUND_ROOT",
+				"VITE_DEVTOOLS_PREVIEW_URL"
+			]
 		}
 	}
 }

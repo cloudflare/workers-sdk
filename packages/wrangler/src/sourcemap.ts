@@ -1,21 +1,9 @@
 import assert from "node:assert";
-import fs from "node:fs";
 import url from "node:url";
+import { maybeGetFile } from "@cloudflare/workers-shared";
 import { getFreshSourceMapSupport } from "miniflare";
 import type { Options } from "@cspotcode/source-map-support";
 import type Protocol from "devtools-protocol";
-
-function maybeGetFile(filePath: string | URL) {
-	try {
-		return fs.readFileSync(filePath, "utf8");
-	} catch (e: unknown) {
-		const notFound =
-			typeof e === "object" && e !== null && "code" in e && e.code === "ENOENT";
-		if (!notFound) {
-			throw e;
-		}
-	}
-}
 
 export type RetrieveSourceMapFunction = NonNullable<
 	Options["retrieveSourceMap"]
@@ -243,18 +231,18 @@ function lineMatchToCallSite(lineMatch: RegExpMatchArray): CallSite {
 		typeName,
 		functionName,
 		methodName,
-		fileName: lineMatch[2] || null,
+		fileName: lineMatch[2],
 		lineNumber: parseInt(lineMatch[3]) || null,
 		columnNumber: parseInt(lineMatch[4]) || null,
 		native: isNative,
 	});
 }
 
-export interface CallSiteOptions {
+interface CallSiteOptions {
 	typeName: string | null;
 	functionName: string | null;
 	methodName: string | null;
-	fileName: string | null;
+	fileName: string;
 	lineNumber: number | null;
 	columnNumber: number | null;
 	native: boolean;
@@ -263,9 +251,20 @@ export interface CallSiteOptions {
 // https://v8.dev/docs/stack-trace-api#customizing-stack-traces
 // This class supports the subset of options implemented by `node-stack-trace`:
 // https://github.com/felixge/node-stack-trace/blob/4c41a4526e74470179b3b6dd5d75191ca8c56c17/index.js
-export class CallSite implements NodeJS.CallSite {
+class CallSite implements NodeJS.CallSite {
 	constructor(private readonly opts: CallSiteOptions) {}
-
+	getScriptHash(): string {
+		throw new Error("Method not implemented.");
+	}
+	getEnclosingColumnNumber(): number {
+		throw new Error("Method not implemented.");
+	}
+	getEnclosingLineNumber(): number {
+		throw new Error("Method not implemented.");
+	}
+	getPosition(): number {
+		throw new Error("Method not implemented.");
+	}
 	getThis(): unknown {
 		return null;
 	}
@@ -285,7 +284,7 @@ export class CallSite implements NodeJS.CallSite {
 	getFileName(): string | undefined {
 		return this.opts.fileName ?? undefined;
 	}
-	getScriptNameOrSourceURL(): string | null {
+	getScriptNameOrSourceURL(): string {
 		return this.opts.fileName;
 	}
 	getLineNumber(): number | null {

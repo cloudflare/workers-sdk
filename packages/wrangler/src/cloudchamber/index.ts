@@ -1,7 +1,11 @@
+import { applyCommand, applyCommandOptionalYargs } from "./apply";
+import { buildCommand, buildYargs, pushCommand, pushYargs } from "./build";
 import { handleFailure } from "./common";
 import { createCommand, createCommandOptionalYargs } from "./create";
+import { curlCommand, yargsCurl } from "./curl";
 import { deleteCommand, deleteCommandOptionalYargs } from "./delete";
 import { registriesCommand } from "./images/images";
+import { imagesCommand } from "./images/list";
 import { listCommand, listDeploymentsYargs } from "./list";
 import { modifyCommand, modifyCommandOptionalYargs } from "./modify";
 import { sshCommand } from "./ssh/ssh";
@@ -54,5 +58,34 @@ export const cloudchamber = (
 		)
 		.command("registries", "Configure registries via Cloudchamber", (args) =>
 			registriesCommand(args).command(subHelp)
+		)
+		.command(
+			"curl <path>",
+			"send a request to an arbitrary cloudchamber endpoint",
+			(args) => yargsCurl(args),
+			(args) => handleFailure(curlCommand)(args)
+		)
+		.command(
+			"apply",
+			"apply the changes in the container applications to deploy",
+			(args) => applyCommandOptionalYargs(args),
+			(args) => handleFailure(applyCommand)(args)
+		)
+		.command(
+			"build [PATH]",
+			"build a dockerfile",
+			(args) => buildYargs(args),
+			(args) => handleFailure(buildCommand)(args)
+		)
+		.command(
+			"push [TAG]",
+			"push a tagged image to a Cloudflare managed registry, which is automatically integrated with your account",
+			(args) => pushYargs(args),
+			(args) => handleFailure(pushCommand)(args)
+		)
+		.command(
+			"images",
+			"perform operations on images in your clouchamber registry",
+			(args) => imagesCommand(args).command(subHelp)
 		);
 };

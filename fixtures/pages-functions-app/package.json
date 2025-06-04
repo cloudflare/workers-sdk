@@ -1,11 +1,11 @@
 {
-	"name": "pages-functions-app",
+	"name": "@fixture/pages-functions",
 	"private": true,
 	"sideEffects": false,
 	"main": "dist/worker.js",
 	"scripts": {
 		"check:type": "tsc",
-		"dev": "wrangler pages dev public --binding=NAME=VALUE --binding=OTHER_NAME=THING=WITH=EQUALS --r2=BUCKET --port 8789",
+		"dev": "wrangler pages dev public --binding=NAME=VALUE --binding=OTHER_NAME=THING=WITH=EQUALS --r2=bucket --port 8789",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
@@ -15,13 +15,15 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240620.0",
-		"pages-plugin-example": "workspace:*",
-		"undici": "^5.28.4",
+		"@cloudflare/workers-types": "^4.20250525.0",
+		"@fixture/pages-plugin": "workspace:*",
+		"typescript": "catalog:default",
+		"undici": "catalog:default",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"engines": {
-		"node": ">=16.13"
+		"node": ">=18.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

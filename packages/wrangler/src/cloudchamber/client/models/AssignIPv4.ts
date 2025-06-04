@@ -5,4 +5,5 @@
 export enum AssignIPv4 {
 	NONE = "none",
 	PREDEFINED = "predefined",
+	ACCOUNT = "account",
 }

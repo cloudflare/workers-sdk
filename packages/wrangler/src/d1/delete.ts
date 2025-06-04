@@ -1,29 +1,35 @@
-import { printWranglerBanner } from "..";
 import { fetchResult } from "../cfetch";
-import { withConfig } from "../config";
+import { createCommand } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { Name } from "./options";
 import { getDatabaseByNameOrBinding } from "./utils";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
 import type { Database } from "./types";
 
-export function Options(d1ListYargs: CommonYargsArgv) {
-	return Name(d1ListYargs).option("skip-confirmation", {
-		describe: "Skip confirmation",
-		type: "boolean",
-		alias: "y",
-		default: false,
-	});
-}
-type HandlerOptions = StrictYargsOptionsToInterface<typeof Options>;
-export const Handler = withConfig<HandlerOptions>(
-	async ({ name, skipConfirmation, config }): Promise<void> => {
-		await printWranglerBanner();
+export const d1DeleteCommand = createCommand({
+	metadata: {
+		description: "Delete D1 database",
+		status: "stable",
+		owner: "Product: D1",
+	},
+	behaviour: {
+		printBanner: true,
+	},
+	args: {
+		name: {
+			type: "string",
+			demandOption: true,
+			description: "The name or binding of the DB",
+		},
+		"skip-confirmation": {
+			type: "boolean",
+			description: "Skip confirmation",
+			alias: "y",
+			default: false,
+		},
+	},
+	positionalArgs: ["name"],
+	async handler({ name, skipConfirmation }, { config }) {
 		const accountId = await requireAuth(config);
 
 		const db: Database = await getDatabaseByNameOrBinding(
@@ -43,10 +49,10 @@ export const Handler = withConfig<HandlerOptions>(
 
 		logger.log("Deleting...");
 
-		await fetchResult(`/accounts/${accountId}/d1/database/${db.uuid}`, {
+		await fetchResult(config, `/accounts/${accountId}/d1/database/${db.uuid}`, {
 			method: "DELETE",
 		});
 
 		logger.log(`Deleted '${name}' successfully.`);
-	}
-);
+	},
+});

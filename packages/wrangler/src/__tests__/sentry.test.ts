@@ -42,7 +42,7 @@ describe("sentry", () => {
 	describe("non interactive", () => {
 		beforeEach(() => setIsTTY(false));
 		it("should not hit sentry in normal usage", async () => {
-			await runWrangler("version");
+			await runWrangler("--version");
 			expect(sentryRequests?.length).toEqual(0);
 		});
 
@@ -64,7 +64,7 @@ describe("sentry", () => {
 				"Getting User settings...
 
 				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-				? Would you like to report this error to Cloudflare?
+				? Would you like to report this error to Cloudflare? Wrangler's output and the error details will be shared with the Wrangler team to help us diagnose and fix the issue.
 				🤖 Using fallback value in non-interactive context: no"
 			`);
 			expect(sentryRequests?.length).toEqual(0);
@@ -79,13 +79,13 @@ describe("sentry", () => {
 		});
 
 		it("should not hit sentry in normal usage", async () => {
-			await runWrangler("version");
+			await runWrangler("--version");
 			expect(sentryRequests?.length).toEqual(0);
 		});
 
 		it("should not hit sentry with user error", async () => {
 			await expect(runWrangler("delete")).rejects.toMatchInlineSnapshot(
-				`[Error: A worker name must be defined, either via --name, or in wrangler.toml]`
+				`[Error: A worker name must be defined, either via --name, or in your Wrangler configuration file]`
 			);
 			expect(std.out).toMatchInlineSnapshot(`""`);
 			expect(sentryRequests?.length).toEqual(0);
@@ -103,7 +103,7 @@ describe("sentry", () => {
 				)
 			);
 			mockConfirm({
-				text: "Would you like to report this error to Cloudflare?",
+				text: "Would you like to report this error to Cloudflare? Wrangler's output and the error details will be shared with the Wrangler team to help us diagnose and fix the issue.",
 				result: false,
 			});
 			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(
@@ -129,7 +129,7 @@ describe("sentry", () => {
 				)
 			);
 			mockConfirm({
-				text: "Would you like to report this error to Cloudflare?",
+				text: "Would you like to report this error to Cloudflare? Wrangler's output and the error details will be shared with the Wrangler team to help us diagnose and fix the issue.",
 				result: true,
 			});
 			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(
@@ -259,18 +259,29 @@ describe("sentry", () => {
 				              Object {
 				                "colno": 0,
 				                "context_line": "",
-				                "filename": "/wrangler/packages/wrangler/src/index.ts",
+				                "filename": "/wrangler/packages/wrangler/src/core/register-yargs-command.ts",
 				                "function": "",
 				                "in_app": false,
 				                "lineno": 0,
-				                "module": "index.ts",
+				                "module": "register-yargs-command.ts",
 				                "post_context": Array [],
 				                "pre_context": Array [],
 				              },
 				              Object {
 				                "colno": 0,
 				                "context_line": "",
-				                "filename": "/wrangler/packages/wrangler/src/whoami.ts",
+				                "filename": "/wrangler/packages/wrangler/src/user/commands.ts",
+				                "function": "",
+				                "in_app": false,
+				                "lineno": 0,
+				                "module": "commands.ts",
+				                "post_context": Array [],
+				                "pre_context": Array [],
+				              },
+				              Object {
+				                "colno": 0,
+				                "context_line": "",
+				                "filename": "/wrangler/packages/wrangler/src/user/whoami.ts",
 				                "function": "",
 				                "in_app": false,
 				                "lineno": 0,
@@ -281,7 +292,7 @@ describe("sentry", () => {
 				              Object {
 				                "colno": 0,
 				                "context_line": "",
-				                "filename": "/wrangler/packages/wrangler/src/whoami.ts",
+				                "filename": "/wrangler/packages/wrangler/src/user/whoami.ts",
 				                "function": "",
 				                "in_app": false,
 				                "lineno": 0,
@@ -292,7 +303,7 @@ describe("sentry", () => {
 				              Object {
 				                "colno": 0,
 				                "context_line": "",
-				                "filename": "/wrangler/packages/wrangler/src/whoami.ts",
+				                "filename": "/wrangler/packages/wrangler/src/user/whoami.ts",
 				                "function": "",
 				                "in_app": false,
 				                "lineno": 0,
@@ -370,6 +381,7 @@ describe("sentry", () => {
 				        "InboundFilters",
 				        "FunctionToString",
 				        "LinkedErrors",
+				        "Console",
 				        "OnUncaughtException",
 				        "OnUnhandledRejection",
 				        "ContextLines",

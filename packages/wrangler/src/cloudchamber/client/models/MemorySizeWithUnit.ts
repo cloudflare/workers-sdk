@@ -3,6 +3,6 @@
 /* eslint-disable */
 
 /**
- * A memory size that specifies its unit at the end. E.g '123Mb', '1Gb'...
+ * A memory size that specifies its unit at the end.
  */
 export type MemorySizeWithUnit = string;

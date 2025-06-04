@@ -6,7 +6,7 @@ import { Toast } from "@cloudflare/component-toast";
 import { Div, Form, Label, Output } from "@cloudflare/elements";
 import { isDarkMode, theme } from "@cloudflare/style-const";
 import { createStyledComponent } from "@cloudflare/style-container";
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { FrameError } from "../FrameErrorBoundary";
 import { InputField } from "../InputField";
 import { ServiceContext } from "../QuickEditor";
@@ -57,22 +57,26 @@ export function HTTPTab() {
 		setPreviewUrl,
 		isPreviewUpdating,
 		previewError,
+		preview,
 	} = useContext(ServiceContext);
 	const [method, setMethod] = useState<HTTPMethod>("GET");
 	const [headers, setHeaders] = useState<HeaderEntry[]>([]);
 	const [body, setBody] = useState("");
 	const [response, setResponse] = useState<Response | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
+	const [url, setUrl] = useState(previewUrl);
+	const [refreshTimestamp, setRefreshTimestamp] = useState<string>();
+
+	useEffect(() => {
+		setUrl(previewUrl);
+	}, [previewUrl]);
 
 	const hasBody = method !== "HEAD" && method !== "GET" && method !== "OPTIONS";
 
-	const onSendRequest = useCallback(
-		async (e?: React.FormEvent<HTMLFormElement>) => {
-			e?.preventDefault();
-
+	useEffect(() => {
+		async function sendRequest() {
 			if (previewHash !== undefined && previewUrl !== undefined) {
 				try {
-					setPreviewUrl(previewUrl);
 					setIsLoading(true);
 					setResponse(
 						await fetchWorker(
@@ -89,22 +93,33 @@ export function HTTPTab() {
 					setIsLoading(false);
 				}
 			}
-		},
-		[previewHash, setPreviewUrl, previewUrl, method, headers, hasBody, body]
-	);
-	const ensureDevtoolsConnected = useRef(false);
-	useEffect(() => {
-		if (!ensureDevtoolsConnected.current && previewHash && !isLoading) {
-			void onSendRequest();
-			ensureDevtoolsConnected.current = true;
 		}
-	}, [previewHash, isLoading, onSendRequest]);
+
+		void sendRequest();
+	}, [
+		refreshTimestamp,
+		previewHash,
+		previewUrl,
+		method,
+		headers,
+		hasBody,
+		body,
+	]);
 
 	return (
 		<Div display="flex" flexDirection="column" width="100%">
 			<Form
 				display="flex"
-				onSubmit={(e) => void onSendRequest(e)}
+				onSubmit={(e) => {
+					e.preventDefault();
+					preview();
+
+					if (url === previewUrl) {
+						setRefreshTimestamp(new Date().toISOString());
+					} else {
+						setPreviewUrl(url);
+					}
+				}}
 				p={2}
 				gap={2}
 				borderBottom="1px solid"
@@ -124,10 +139,10 @@ export function HTTPTab() {
 				/>
 				<InputField
 					name="http_request_url"
-					value={previewUrl}
+					value={url}
 					autoComplete="off"
 					spellCheck={false}
-					onChange={(e) => setPreviewUrl(e.target.value)}
+					onChange={(e) => setUrl(e.target.value)}
 					mb={0}
 				/>
 				<Button
@@ -138,8 +153,8 @@ export function HTTPTab() {
 					disabled={
 						!previewHash ||
 						Boolean(previewError) ||
-						!previewUrl ||
-						!previewUrl.startsWith("/")
+						!url ||
+						!url.startsWith("/")
 					}
 					data-tracking-name="send http tab request"
 				>

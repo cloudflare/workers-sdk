@@ -2,25 +2,22 @@ import assert from "node:assert";
 import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { watch } from "chokidar";
-import { useApp } from "ink";
-import { useEffect, useState } from "react";
-import { rewriteNodeCompatBuildFailure } from "../deployment-bundle/build-failures";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
+import { logBuildOutput } from "../deployment-bundle/esbuild-plugins/log-build-output";
 import { findAdditionalModules as doFindAdditionalModules } from "../deployment-bundle/find-additional-modules";
 import {
 	createModuleCollector,
 	getWrangler1xLegacyModuleReferences,
 	noopModuleCollector,
 } from "../deployment-bundle/module-collection";
-import { logBuildFailure, logBuildWarnings } from "../logger";
 import type { Config } from "../config";
 import type { SourceMapMetadata } from "../deployment-bundle/bundle";
 import type { Entry } from "../deployment-bundle/entry";
-import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
 import type { CfModule, CfModuleType } from "../deployment-bundle/worker";
-import type { BuildResult, Metafile, PluginBuild } from "esbuild";
+import type { Metafile } from "esbuild";
+import type { NodeJSCompatMode } from "miniflare";
 
 export type EsbuildBundle = {
 	id: number;
@@ -34,33 +31,6 @@ export type EsbuildBundle = {
 	sourceMapMetadata: SourceMapMetadata | undefined;
 };
 
-export type EsbuildBundleProps = {
-	entry: Entry;
-	destination: string | undefined;
-	jsxFactory: string | undefined;
-	jsxFragment: string | undefined;
-	processEntrypoint: boolean;
-	additionalModules: CfModule[];
-	rules: Config["rules"];
-	assets: Config["assets"];
-	define: Config["define"];
-	alias: Config["alias"];
-	serveAssetsFromWorker: boolean;
-	tsconfig: string | undefined;
-	minify: boolean | undefined;
-	nodejsCompatMode: NodeJSCompatMode | undefined;
-	noBundle: boolean;
-	findAdditionalModules: boolean | undefined;
-	durableObjects: Config["durable_objects"];
-	local: boolean;
-	targetConsumer: "dev" | "deploy";
-	testScheduled: boolean;
-	projectRoot: string | undefined;
-	onStart: () => void;
-	onComplete: (bundle: EsbuildBundle) => void;
-	defineNavigatorUserAgent: boolean;
-};
-
 export function runBuild(
 	{
 		entry,
@@ -70,22 +40,23 @@ export function runBuild(
 		processEntrypoint,
 		additionalModules,
 		rules,
-		assets,
-		serveAssetsFromWorker,
 		tsconfig,
 		minify,
+		keepNames,
 		nodejsCompatMode,
 		define,
 		alias,
 		noBundle,
 		findAdditionalModules,
 		durableObjects,
+		workflows,
 		local,
 		targetConsumer,
 		testScheduled,
 		projectRoot,
 		onStart,
 		defineNavigatorUserAgent,
+		checkFetch,
 	}: {
 		entry: Entry;
 		destination: string | undefined;
@@ -94,22 +65,23 @@ export function runBuild(
 		processEntrypoint: boolean;
 		additionalModules: CfModule[];
 		rules: Config["rules"];
-		assets: Config["assets"];
 		define: Config["define"];
 		alias: Config["alias"];
-		serveAssetsFromWorker: boolean;
 		tsconfig: string | undefined;
 		minify: boolean | undefined;
+		keepNames: boolean;
 		nodejsCompatMode: NodeJSCompatMode | undefined;
 		noBundle: boolean;
 		findAdditionalModules: boolean | undefined;
 		durableObjects: Config["durable_objects"];
+		workflows: Config["workflows"];
 		local: boolean;
 		targetConsumer: "dev" | "deploy";
 		testScheduled: boolean;
 		projectRoot: string | undefined;
 		onStart: () => void;
 		defineNavigatorUserAgent: boolean;
+		checkFetch: boolean;
 	},
 	setBundle: (
 		cb: (previous: EsbuildBundle | undefined) => EsbuildBundle
@@ -161,38 +133,6 @@ export function runBuild(
 		});
 	}
 
-	let bundled = false;
-	const onEnd = {
-		name: "on-end",
-		setup(b: PluginBuild) {
-			b.onStart(() => {
-				onStart();
-			});
-			b.onEnd(async (result: BuildResult) => {
-				const errors = result.errors;
-				const warnings = result.warnings;
-				if (errors.length > 0) {
-					if (nodejsCompatMode !== "legacy") {
-						rewriteNodeCompatBuildFailure(result.errors);
-					}
-					logBuildFailure(errors, warnings);
-					return;
-				}
-
-				if (warnings.length > 0) {
-					logBuildWarnings(warnings);
-				}
-
-				if (!bundled) {
-					// First bundle, no need to update bundle
-					bundled = true;
-				} else {
-					await updateBundle();
-				}
-			});
-		},
-	};
-
 	async function build() {
 		if (!destination) {
 			return;
@@ -205,26 +145,35 @@ export function runBuild(
 						bundle: !noBundle,
 						moduleCollector,
 						additionalModules: newAdditionalModules,
-						serveAssetsFromWorker,
 						jsxFactory,
 						jsxFragment,
 						watch: true,
 						tsconfig,
 						minify,
+						keepNames,
 						nodejsCompatMode,
 						doBindings: durableObjects.bindings,
+						workflowBindings: workflows,
 						alias,
 						define,
-						checkFetch: true,
-						assets,
-						// disable the cache in dev
-						bypassAssetCache: true,
 						targetConsumer,
 						testScheduled,
-						plugins: [onEnd],
+						plugins: [logBuildOutput(nodejsCompatMode, onStart, updateBundle)],
 						local,
 						projectRoot,
 						defineNavigatorUserAgent,
+
+						// Pages specific options used by wrangler pages commands
+						entryName: undefined,
+						inject: undefined,
+						isOutfile: undefined,
+						external: undefined,
+
+						// sourcemap defaults to true in dev
+						sourcemap: undefined,
+						checkFetch,
+
+						metafile: undefined,
 					})
 				: undefined;
 
@@ -238,7 +187,7 @@ export function runBuild(
 			// Check whether we need to watch a Python requirements.txt file.
 			const watchPythonRequirements =
 				getBundleType(entry.format, entry.file) === "python"
-					? path.resolve(entry.directory, "requirements.txt")
+					? path.resolve(entry.projectRoot, "requirements.txt")
 					: undefined;
 
 			if (watchPythonRequirements) {
@@ -278,102 +227,4 @@ export function runBuild(
 	});
 
 	return () => stopWatching?.();
-}
-
-export function useEsbuild({
-	entry,
-	destination,
-	jsxFactory,
-	jsxFragment,
-	processEntrypoint,
-	additionalModules,
-	rules,
-	assets,
-	serveAssetsFromWorker,
-	tsconfig,
-	minify,
-	nodejsCompatMode,
-	alias,
-	define,
-	noBundle,
-	findAdditionalModules,
-	durableObjects,
-	local,
-	targetConsumer,
-	testScheduled,
-	projectRoot,
-	onStart,
-	onComplete,
-	defineNavigatorUserAgent,
-}: EsbuildBundleProps): EsbuildBundle | undefined {
-	const [bundle, setBundle] = useState<EsbuildBundle>();
-	const { exit } = useApp();
-	useEffect(() => {
-		const stopWatching = runBuild(
-			{
-				entry,
-				destination,
-				jsxFactory,
-				jsxFragment,
-				processEntrypoint,
-				additionalModules,
-				rules,
-				assets,
-				serveAssetsFromWorker,
-				tsconfig,
-				minify,
-				nodejsCompatMode,
-				alias,
-				define,
-				noBundle,
-				findAdditionalModules,
-				durableObjects,
-				local,
-				targetConsumer,
-				testScheduled,
-				projectRoot,
-				onStart,
-				defineNavigatorUserAgent,
-			},
-			setBundle,
-			(err) => exit(err)
-		);
-
-		return () => {
-			void stopWatching();
-		};
-	}, [
-		entry,
-		destination,
-		jsxFactory,
-		jsxFragment,
-		serveAssetsFromWorker,
-		processEntrypoint,
-		additionalModules,
-		rules,
-		tsconfig,
-		exit,
-		noBundle,
-		findAdditionalModules,
-		minify,
-		nodejsCompatMode,
-		alias,
-		define,
-		assets,
-		durableObjects,
-		local,
-		targetConsumer,
-		testScheduled,
-		projectRoot,
-		onStart,
-		defineNavigatorUserAgent,
-	]);
-
-	useEffect(() => {
-		if (bundle) {
-			onComplete(bundle);
-		}
-	}, [onComplete, bundle]);
-
-	return bundle;
 }

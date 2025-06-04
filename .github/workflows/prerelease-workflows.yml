@@ -1,0 +1,38 @@
+name: Prerelease Workflows
+on:
+  push:
+    branches:
+      - workflows
+
+jobs:
+  release:
+    if: ${{ github.repository_owner == 'cloudflare' }}
+    name: Release
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Check for errors
+        run: pnpm run check
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+
+      - name: Modify package.json version
+        run: node .github/version-script.js
+
+      - name: Publish to NPM
+        run: pnpm publish --tag workflows
+        env:
+          NODE_ENV: "production"
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
+        working-directory: packages/wrangler

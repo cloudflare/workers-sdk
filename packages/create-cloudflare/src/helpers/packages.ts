@@ -45,10 +45,22 @@ export const installPackages = async (
 			break;
 	}
 
-	await runCommand([npm, cmd, ...(saveFlag ? [saveFlag] : []), ...packages], {
-		...config,
-		silent: true,
-	});
+	await runCommand(
+		[
+			npm,
+			cmd,
+			...(saveFlag ? [saveFlag] : []),
+			...packages,
+			// Add --legacy-peer-deps so that installing Wrangler v4 doesn't case issues with
+			// frameworks that haven't updated their peer dependency for Wrangler v4
+			// TODO: Remove this once Wrangler v4 has been released and framework templates are updated
+			...(npm === "npm" ? ["--legacy-peer-deps"] : []),
+		],
+		{
+			...config,
+			silent: true,
+		},
+	);
 };
 
 /**
@@ -63,11 +75,17 @@ export const npmInstall = async (ctx: C3Context) => {
 
 	const { npm } = detectPackageManager();
 
-	await runCommand([npm, "install"], {
-		silent: true,
-		startText: "Installing dependencies",
-		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
-	});
+	await runCommand(
+		// Add --legacy-peer-deps so that installing Wrangler v4 doesn't case issues with
+		// frameworks that haven't updated their peer dependency for Wrangler v4
+		// TODO: Remove this once Wrangler v4 has been released and framework templates are updated
+		[npm, "install", ...(npm === "npm" ? ["--legacy-peer-deps"] : [])],
+		{
+			silent: true,
+			startText: "Installing dependencies",
+			doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
+		},
+	);
 };
 
 type NpmInfoResponse = {
@@ -89,12 +107,8 @@ export async function getLatestPackageVersion(packageSpecifier: string) {
 export const installWrangler = async () => {
 	const { npm } = detectPackageManager();
 
-	// Exit early if already installed
-	if (existsSync(path.resolve("node_modules", "wrangler"))) {
-		return;
-	}
-
-	await installPackages([`wrangler`], {
+	// Even if Wrangler is already installed, make sure we install the latest version, as some framework CLIs are pinned to an older version
+	await installPackages([`wrangler@latest`], {
 		dev: true,
 		startText: `Installing wrangler ${dim(
 			"A command line tool for building Cloudflare Workers",

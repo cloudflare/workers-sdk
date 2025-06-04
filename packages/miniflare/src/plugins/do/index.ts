@@ -4,10 +4,11 @@ import { Worker_Binding } from "../../runtime";
 import { getUserServiceName } from "../core";
 import {
 	getPersistPath,
-	kProxyNodeBinding,
 	kUnsafeEphemeralUniqueKey,
+	MixedModeConnectionString,
 	PersistenceSchema,
 	Plugin,
+	ProxyNodeBinding,
 	UnsafeUniqueKey,
 } from "../shared";
 
@@ -19,6 +20,7 @@ export const DurableObjectsOptionsSchema = z.object({
 				z.object({
 					className: z.string(),
 					scriptName: z.string().optional(),
+					useSQLite: z.boolean().optional(),
 					// Allow `uniqueKey` to be customised. We use in Wrangler when setting
 					// up stub Durable Objects that proxy requests to Durable Objects in
 					// another `workerd` process, to ensure the IDs created by the stub
@@ -28,6 +30,9 @@ export const DurableObjectsOptionsSchema = z.object({
 						.optional(),
 					// Prevents the Durable Object being evicted.
 					unsafePreventEviction: z.boolean().optional(),
+					mixedModeConnectionString: z
+						.custom<MixedModeConnectionString>()
+						.optional(),
 				}),
 			])
 		)
@@ -43,21 +48,37 @@ export function normaliseDurableObject(
 	>[string]
 ): {
 	className: string;
-	serviceName?: string;
-	unsafeUniqueKey?: UnsafeUniqueKey;
-	unsafePreventEviction?: boolean;
+	scriptName: string | undefined;
+	serviceName: string | undefined;
+	enableSql: boolean | undefined;
+	unsafeUniqueKey: UnsafeUniqueKey | undefined;
+	unsafePreventEviction: boolean | undefined;
+	mixedModeConnectionString: MixedModeConnectionString | undefined;
 } {
 	const isObject = typeof designator === "object";
 	const className = isObject ? designator.className : designator;
-	const serviceName =
+	const scriptName =
 		isObject && designator.scriptName !== undefined
-			? getUserServiceName(designator.scriptName)
+			? designator.scriptName
 			: undefined;
+	const serviceName = scriptName ? getUserServiceName(scriptName) : undefined;
+	const enableSql = isObject ? designator.useSQLite : undefined;
 	const unsafeUniqueKey = isObject ? designator.unsafeUniqueKey : undefined;
 	const unsafePreventEviction = isObject
 		? designator.unsafePreventEviction
 		: undefined;
-	return { className, serviceName, unsafeUniqueKey, unsafePreventEviction };
+	const mixedModeConnectionString = isObject
+		? designator.mixedModeConnectionString
+		: undefined;
+	return {
+		className,
+		scriptName,
+		serviceName,
+		enableSql,
+		unsafeUniqueKey,
+		unsafePreventEviction,
+		mixedModeConnectionString,
+	};
 }
 
 export const DURABLE_OBJECTS_PLUGIN_NAME = "do";
@@ -83,11 +104,14 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 	},
 	getNodeBindings(options) {
 		const objects = Object.keys(options.durableObjects ?? {});
-		return Object.fromEntries(objects.map((name) => [name, kProxyNodeBinding]));
+		return Object.fromEntries(
+			objects.map((name) => [name, new ProxyNodeBinding()])
+		);
 	},
 	async getServices({
 		sharedOptions,
 		tmpPath,
+		defaultPersistRoot,
 		durableObjectClassNames,
 		unsafeEphemeralDurableObjects,
 	}) {
@@ -110,6 +134,7 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 		const storagePath = getPersistPath(
 			DURABLE_OBJECTS_PLUGIN_NAME,
 			tmpPath,
+			defaultPersistRoot,
 			sharedOptions.durableObjectsPersist
 		);
 		// `workerd` requires the `disk.path` to exist. Setting `recursive: true`
@@ -130,6 +155,7 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 		return getPersistPath(
 			DURABLE_OBJECTS_PLUGIN_NAME,
 			tmpPath,
+			undefined,
 			durableObjectsPersist
 		);
 	},

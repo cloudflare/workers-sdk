@@ -3,6 +3,7 @@ import { UserError } from "../errors";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "./constants";
 import { listDatabases } from "./list";
 import type { Config } from "../config";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Database, DatabaseInfo } from "./types";
 
 export function getDatabaseInfoFromConfig(
@@ -14,6 +15,12 @@ export function getDatabaseInfoFromConfig(
 			d1Database.database_id &&
 			(name === d1Database.database_name || name === d1Database.binding)
 		) {
+			if (!d1Database.database_name) {
+				throw new UserError(
+					`${name} bindings must have a "database_name" field`
+				);
+			}
+
 			return {
 				uuid: d1Database.database_id,
 				previewDatabaseUuid: d1Database.preview_database_id,
@@ -40,7 +47,7 @@ export const getDatabaseByNameOrBinding = async (
 		return dbFromConfig;
 	}
 
-	const allDBs = await listDatabases(accountId);
+	const allDBs = await listDatabases(config, accountId);
 	const matchingDB = allDBs.find((db) => db.name === name);
 	if (!matchingDB) {
 		throw new UserError(`Couldn't find DB with name '${name}'`);
@@ -48,12 +55,14 @@ export const getDatabaseByNameOrBinding = async (
 	return matchingDB;
 };
 
-export const getDatabaseInfoFromId = async (
+export const getDatabaseInfoFromIdOrName = async (
+	complianceConfig: ComplianceConfig,
 	accountId: string,
-	databaseId: string
+	databaseIdOrName: string
 ): Promise<DatabaseInfo> => {
 	return await fetchResult<DatabaseInfo>(
-		`/accounts/${accountId}/d1/database/${databaseId}`,
+		complianceConfig,
+		`/accounts/${accountId}/d1/database/${databaseIdOrName}`,
 		{
 			headers: {
 				"Content-Type": "application/json",

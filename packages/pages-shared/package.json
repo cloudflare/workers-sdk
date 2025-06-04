@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/pages-shared",
-	"version": "0.11.46",
+	"version": "0.13.43",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cloudflare/workers-sdk.git",
@@ -22,14 +22,14 @@
 		"miniflare": "workspace:*"
 	},
 	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.8.19",
+		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240620.0",
-		"@miniflare/cache": "^2.14.2",
-		"@miniflare/core": "^2.14.2",
-		"@miniflare/html-rewriter": "^2.14.2",
-		"@miniflare/storage-memory": "^2.14.2",
+		"@cloudflare/workers-types": "^4.20250525.0",
 		"concurrently": "^8.2.2",
-		"glob": "^10.3.3"
+		"glob": "^10.4.5",
+		"html-rewriter-wasm": "^0.4.1",
+		"vitest": "catalog:default"
 	},
 	"volta": {
 		"extends": "../../package.json"

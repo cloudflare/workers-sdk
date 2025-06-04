@@ -64,7 +64,7 @@ export default defineWorkersProject({
 				singleWorker: true,
 				// Configuration for the test runner and "API service" Worker
 				wrangler: {
-					configPath: "./api-service/wrangler.toml",
+					configPath: "./api-service/wrangler.jsonc",
 				},
 				miniflare: {
 					bindings: {
@@ -93,6 +93,23 @@ export default defineWorkersProject({
 							compatibilityDate: "2024-01-01",
 							compatibilityFlags: ["nodejs_compat"],
 							kvNamespaces: ["KV_NAMESPACE"],
+						},
+						{
+							name: "tail-consumer",
+							modules: [
+								{
+									path: "index.js",
+									type: "ESModule",
+									contents: /* javascript */ `
+										export default {
+											tail(event) {
+											console.log("tail event received")
+											}
+										}
+										`,
+								},
+							],
+							compatibilityDate: "2024-01-01",
 						},
 					],
 				},

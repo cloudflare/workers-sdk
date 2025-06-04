@@ -11,6 +11,7 @@ This directory contains example projects tested with `@cloudflare/vitest-pool-wo
 | [📚 d1](d1)                                                                        | Isolated tests using D1 with migrations                   |
 | [📌 durable-objects](durable-objects)                                              | Isolated tests using Durable Objects with direct access   |
 | [🚥 queues](queues)                                                                | Tests using Queue producers and consumers                 |
+| [🚰 pipelines](pipelines)                                                          | Tests using Pipelines                                     |
 | [🚀 hyperdrive](hyperdrive)                                                        | Tests using Hyperdrive with a Vitest managed TCP server   |
 | [🤹 request-mocking](request-mocking)                                              | Tests using declarative/imperative outbound request mocks |
 | [🔌 multiple-workers](multiple-workers)                                            | Tests using multiple auxiliary workers and request mocks  |

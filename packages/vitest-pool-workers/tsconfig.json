@@ -9,6 +9,7 @@
 			"@cloudflare/vitest-pool-workers/config": ["./src/config"]
 		}
 	},
+	"exclude": ["./scripts/**/rtti.ts"],
 	"include": [
 		"./scripts/**/*.ts",
 		"./src/config/**/*.ts",

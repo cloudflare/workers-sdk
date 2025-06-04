@@ -1,0 +1,28 @@
+name: Deploy Workers Shared Production
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-workers:
+    name: Deploy Workers Shared Production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Deploy
+        run: pnpm run deploy
+        working-directory: packages/workers-shared
+        env:
+          WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN: ${{ secrets.WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN }}
+          WORKERS_SHARED_SENTRY_ACCESS_ID: ${{ secrets.WORKERS_SHARED_SENTRY_ACCESS_ID }}
+          WORKERS_SHARED_SENTRY_ACCESS_SECRET: ${{ secrets.WORKERS_SHARED_SENTRY_ACCESS_SECRET }}
+          WORKERS_SHARED_SENTRY_AUTH_TOKEN: ${{ secrets.WORKERS_SHARED_SENTRY_AUTH_TOKEN }}
+
+      - name: Publish deployment summary
+        run: echo -e "# Deployment summary\n\n| Service | Version | Release link |\n| --- | --- | --- |\n| Asset Worker | \`aw-$(node -r esbuild-register ./scripts/get-version-tag.ts)\` | https://cflare.co/release-asset-worker |\n| Router Worker | \`rw-$(node -r esbuild-register ./scripts/get-version-tag.ts)\` | https://cflare.co/release-router-worker |\n" >> $GITHUB_STEP_SUMMARY
+        working-directory: packages/workers-shared

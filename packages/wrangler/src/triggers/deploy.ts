@@ -1,19 +1,22 @@
 import chalk from "chalk";
+import PQueue from "p-queue";
 import { fetchListResult, fetchResult } from "../cfetch";
 import {
 	formatTime,
 	publishCustomDomains,
 	publishRoutes,
 	renderRoute,
-	sleep,
 	updateQueueConsumers,
 	updateQueueProducers,
+	validateRoutes,
 } from "../deploy/deploy";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
+import { retryOnAPIFailure } from "../utils/retry";
 import { getZoneForRoute } from "../zones";
+import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type { Route } from "../config/environment";
 import type { RouteObject } from "../deploy/deploy";
@@ -27,29 +30,22 @@ type Props = {
 	routes: string[] | undefined;
 	legacyEnv: boolean | undefined;
 	dryRun: boolean | undefined;
-	experimentalVersions: boolean | undefined;
+	assetsOptions: AssetsOptions | undefined;
 };
 
-export default async function triggersDeploy(props: Props): Promise<void> {
+export default async function triggersDeploy(
+	props: Props
+): Promise<string[] | void> {
 	const { config, accountId, name: scriptName } = props;
 
-	const triggers = props.triggers || config.triggers?.crons;
+	const schedules = props.triggers || config.triggers?.crons;
 	const routes =
 		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
 	const routesOnly: Array<Route> = [];
 	const customDomainsOnly: Array<RouteObject> = [];
+	validateRoutes(routes, props.assetsOptions);
 	for (const route of routes) {
 		if (typeof route !== "string" && route.custom_domain) {
-			if (route.pattern.includes("*")) {
-				throw new UserError(
-					`Cannot use "${route.pattern}" as a Custom Domain; wildcard operators (*) are not allowed`
-				);
-			}
-			if (route.pattern.includes("/")) {
-				throw new UserError(
-					`Cannot use "${route.pattern}" as a Custom Domain; paths are not allowed`
-				);
-			}
 			customDomainsOnly.push(route);
 		} else {
 			routesOnly.push(route);
@@ -61,7 +57,8 @@ export default async function triggersDeploy(props: Props): Promise<void> {
 
 	if (!scriptName) {
 		throw new UserError(
-			'You need to provide a name when uploading a Worker Version. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`'
+			'You need to provide a name when uploading a Worker Version. Either pass it as a cli arg with `--name <name>` or in your config file as `name = "<name>"`',
+			{ telemetryMessage: true }
 		);
 	}
 
@@ -74,9 +71,13 @@ export default async function triggersDeploy(props: Props): Promise<void> {
 		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
 		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
-	const { enabled: available_on_subdomain } = await fetchResult<{
+	const {
+		enabled: available_on_subdomain,
+		previews_enabled: previews_available_on_subdomain,
+	} = await fetchResult<{
 		enabled: boolean;
-	}>(`${workerUrl}/subdomain`);
+		previews_enabled: boolean;
+	}>(config, `${workerUrl}/subdomain`);
 
 	if (!props.dryRun) {
 		await ensureQueuesExistByConfig(config);
@@ -88,113 +89,156 @@ export default async function triggersDeploy(props: Props): Promise<void> {
 	}
 
 	if (!accountId) {
-		throw new UserError("Missing accountId");
+		throw new UserError("Missing accountId", { telemetryMessage: true });
 	}
 
 	const uploadMs = Date.now() - start;
 	const deployments: Promise<string[]>[] = [];
 
+	const deploymentInSync = deployToWorkersDev === available_on_subdomain;
+	const previewsInSync =
+		config.preview_urls === previews_available_on_subdomain;
+
 	if (deployToWorkersDev) {
 		// Deploy to a subdomain of `workers.dev`
-		const userSubdomain = await getWorkersDevSubdomain(accountId);
-		const scriptURL =
+		const userSubdomain = await getWorkersDevSubdomain(
+			config,
+			accountId,
+			config.configPath
+		);
+
+		const deploymentURL =
 			props.legacyEnv || !props.env
-				? `${scriptName}.${userSubdomain}.workers.dev`
-				: `${envName}.${scriptName}.${userSubdomain}.workers.dev`;
-		if (!available_on_subdomain) {
+				? `${scriptName}.${userSubdomain}`
+				: `${envName}.${scriptName}.${userSubdomain}`;
+
+		if (deploymentInSync && previewsInSync) {
+			deployments.push(Promise.resolve([deploymentURL]));
+		} else {
 			// Enable the `workers.dev` subdomain.
 			deployments.push(
-				fetchResult(`${workerUrl}/subdomain`, {
+				fetchResult(config, `${workerUrl}/subdomain`, {
 					method: "POST",
-					body: JSON.stringify({ enabled: true }),
+					body: JSON.stringify({
+						enabled: true,
+						previews_enabled: config.preview_urls,
+					}),
 					headers: {
 						"Content-Type": "application/json",
 					},
-				})
-					.then(() => [scriptURL])
-					// Add a delay when the subdomain is first created.
-					// This is to prevent an issue where a negative cache-hit
-					// causes the subdomain to be unavailable for 30 seconds.
-					// This is a temporary measure until we fix this on the edge.
-					.then(async (url) => {
-						await sleep(3000);
-						return url;
-					})
+				}).then(() => [deploymentURL])
 			);
-		} else {
-			deployments.push(Promise.resolve([scriptURL]));
 		}
-	} else {
-		if (available_on_subdomain) {
-			// Disable the workers.dev deployment
-			await fetchResult(`${workerUrl}/subdomain`, {
-				method: "POST",
-				body: JSON.stringify({ enabled: false }),
-				headers: {
-					"Content-Type": "application/json",
-				},
-			});
-		} else if (routes.length !== 0) {
-			// if you get to this point it's because
-			// you're trying to deploy a worker to a custom
-			// domain that's already bound to another worker.
-			// so this thing is about finding workers that have
-			// bindings to the routes you're trying to deploy to.
-			//
-			// the logic is kinda similar (read: duplicated) from publishRoutesFallback,
-			// except here we know we have a good API token or whatever so we don't need
-			// to bother with all the error handling tomfoolery.
-			const routesWithOtherBindings: Record<string, string[]> = {};
-			for (const route of routes) {
-				const zone = await getZoneForRoute({ route, accountId });
-				if (!zone) {
-					continue;
-				}
+	}
+	if (!deployToWorkersDev && (!deploymentInSync || !previewsInSync)) {
+		// Disable the workers.dev deployment
+		await fetchResult(config, `${workerUrl}/subdomain`, {
+			method: "POST",
+			body: JSON.stringify({
+				enabled: false,
+				previews_enabled: config.preview_urls,
+			}),
+			headers: {
+				"Content-Type": "application/json",
+			},
+		});
+	}
+	if (!deployToWorkersDev && deploymentInSync && routes.length !== 0) {
+		// TODO is this true? How does last subdomain status affect route confict??
+		// Why would we only need to validate route conflicts if didn't need to
+		// disable the subdomain deployment?
 
-				const routePattern = typeof route === "string" ? route : route.pattern;
-				const routesInZone = await fetchListResult<{
-					pattern: string;
-					script: string;
-				}>(`/zones/${zone.id}/workers/routes`);
+		// if you get to this point it's because
+		// you're trying to deploy a worker to a route
+		// that's already bound to another worker.
+		// so this thing is about finding workers that have
+		// bindings to the routes you're trying to deploy to.
+		//
+		// the logic is kinda similar (read: duplicated) from publishRoutesFallback,
+		// except here we know we have a good API token or whatever so we don't need
+		// to bother with all the error handling tomfoolery.
+		const routesWithOtherBindings: Record<string, string[]> = {};
 
-				routesInZone.forEach(({ script, pattern }) => {
-					if (pattern === routePattern && script !== scriptName) {
-						if (!(script in routesWithOtherBindings)) {
-							routesWithOtherBindings[script] = [];
-						}
+		/**
+		 * This queue ensures we limit how many concurrent fetch
+		 * requests we're making to the Zones API.
+		 */
+		const queue = new PQueue({ concurrency: 10 });
+		const queuePromises: Array<Promise<void>> = [];
+		const zoneRoutesCache = new Map<
+			string,
+			Promise<Array<{ pattern: string; script: string }>>
+		>();
 
-						routesWithOtherBindings[script].push(pattern);
+		const zoneIdCache = new Map();
+		for (const route of routes) {
+			queuePromises.push(
+				queue.add(async () => {
+					const zone = await getZoneForRoute(
+						config,
+						{ route, accountId },
+						zoneIdCache
+					);
+					if (!zone) {
+						return;
 					}
-				});
+
+					const routePattern =
+						typeof route === "string" ? route : route.pattern;
+
+					let routesInZone = zoneRoutesCache.get(zone.id);
+					if (!routesInZone) {
+						routesInZone = retryOnAPIFailure(() =>
+							fetchListResult<{
+								pattern: string;
+								script: string;
+							}>(config, `/zones/${zone.id}/workers/routes`)
+						);
+						zoneRoutesCache.set(zone.id, routesInZone);
+					}
+
+					(await routesInZone).forEach(({ script, pattern }) => {
+						if (pattern === routePattern && script !== scriptName) {
+							if (!(script in routesWithOtherBindings)) {
+								routesWithOtherBindings[script] = [];
+							}
+
+							routesWithOtherBindings[script].push(pattern);
+						}
+					});
+				})
+			);
+		}
+		// using Promise.all() here instead of queue.onIdle() to ensure
+		// we actually throw errors that occur within queued promises.
+		await Promise.all(queuePromises);
+
+		if (Object.keys(routesWithOtherBindings).length > 0) {
+			let errorMessage =
+				"Can't deploy routes that are assigned to another worker.\n";
+
+			for (const worker in routesWithOtherBindings) {
+				const assignedRoutes = routesWithOtherBindings[worker];
+				errorMessage += `"${worker}" is already assigned to routes:\n${assignedRoutes.map(
+					(r) => `  - ${chalk.underline(r)}\n`
+				)}`;
 			}
 
-			if (Object.keys(routesWithOtherBindings).length > 0) {
-				let errorMessage =
-					"Can't deploy routes that are assigned to another worker.\n";
+			const resolution =
+				"Unassign other workers from the routes you want to deploy to, and then try again.";
+			const dashHref = chalk.blue.underline(
+				`https://dash.cloudflare.com/${accountId}/workers/overview`
+			);
+			const dashLink = `Visit ${dashHref} to unassign a worker from a route.`;
 
-				for (const worker in routesWithOtherBindings) {
-					const assignedRoutes = routesWithOtherBindings[worker];
-					errorMessage += `"${worker}" is already assigned to routes:\n${assignedRoutes.map(
-						(r) => `  - ${chalk.underline(r)}\n`
-					)}`;
-				}
-
-				const resolution =
-					"Unassign other workers from the routes you want to deploy to, and then try again.";
-				const dashHref = chalk.blue.underline(
-					`https://dash.cloudflare.com/${accountId}/workers/overview`
-				);
-				const dashLink = `Visit ${dashHref} to unassign a worker from a route.`;
-
-				throw new UserError(`${errorMessage}\n${resolution}\n${dashLink}`);
-			}
+			throw new UserError(`${errorMessage}\n${resolution}\n${dashLink}`);
 		}
 	}
 
 	// Update routing table for the script.
 	if (routesOnly.length > 0) {
 		deployments.push(
-			publishRoutes(routesOnly, {
+			publishRoutes(config, routesOnly, {
 				workerUrl,
 				scriptName,
 				notProd,
@@ -214,22 +258,23 @@ export default async function triggersDeploy(props: Props): Promise<void> {
 	// Update custom domains for the script
 	if (customDomainsOnly.length > 0) {
 		deployments.push(
-			publishCustomDomains(workerUrl, accountId, customDomainsOnly)
+			publishCustomDomains(config, workerUrl, accountId, customDomainsOnly)
 		);
 	}
 
 	// Configure any schedules for the script.
-	// TODO: rename this to `schedules`?
-	if (triggers && triggers.length) {
+	// If schedules is not defined then we just leave whatever is previously deployed alone.
+	// If it is an empty array we will remove all schedules.
+	if (schedules) {
 		deployments.push(
-			fetchResult(`${workerUrl}/schedules`, {
+			fetchResult(config, `${workerUrl}/schedules`, {
 				// Note: PUT will override previous schedules on this script.
 				method: "PUT",
-				body: JSON.stringify(triggers.map((cron) => ({ cron }))),
+				body: JSON.stringify(schedules.map((cron) => ({ cron }))),
 				headers: {
 					"Content-Type": "application/json",
 				},
-			}).then(() => triggers.map((trigger) => `schedule: ${trigger}`))
+			}).then(() => schedules.map((trigger) => `schedule: ${trigger}`))
 		);
 	}
 
@@ -244,22 +289,51 @@ export default async function triggersDeploy(props: Props): Promise<void> {
 		deployments.push(...updateConsumers);
 	}
 
+	if (config.workflows?.length) {
+		for (const workflow of config.workflows) {
+			// NOTE: if the user provides a script_name thats not this script (aka bounds to another worker)
+			// we don't want to send this worker's config.
+			if (
+				workflow.script_name !== undefined &&
+				workflow.script_name !== scriptName
+			) {
+				continue;
+			}
+
+			deployments.push(
+				fetchResult(
+					config,
+					`/accounts/${accountId}/workflows/${workflow.name}`,
+					{
+						method: "PUT",
+						body: JSON.stringify({
+							script_name: scriptName,
+							class_name: workflow.class_name,
+						}),
+						headers: {
+							"Content-Type": "application/json",
+						},
+					}
+				).then(() => [`workflow: ${workflow.name}`])
+			);
+		}
+	}
+
 	const targets = await Promise.all(deployments);
 	const deployMs = Date.now() - start - uploadMs;
 
 	if (deployments.length > 0) {
-		const msg = props.experimentalVersions
-			? `Deployed ${workerName} triggers`
-			: `Published ${workerName}`;
-		logger.log(msg, formatTime(deployMs));
+		logger.log(`Deployed ${workerName} triggers`, formatTime(deployMs));
 
-		for (const target of targets.flat()) {
+		const flatTargets = targets.flat().map(
 			// Append protocol only on workers.dev domains
-			logger.log(
-				" ",
-				(target.endsWith("workers.dev") ? "https://" : "") + target
-			);
+			(target) => (target.endsWith("workers.dev") ? "https://" : "") + target
+		);
+
+		for (const target of flatTargets) {
+			logger.log(" ", target);
 		}
+		return flatTargets;
 	} else {
 		logger.log("No deploy targets for", workerName, formatTime(deployMs));
 	}

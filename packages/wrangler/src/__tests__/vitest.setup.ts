@@ -2,9 +2,7 @@
 import { resolve } from "path";
 import { PassThrough } from "stream";
 import chalk from "chalk";
-import { useApp } from "ink";
 import { passthrough } from "msw";
-import { useEffect } from "react";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
 import { msw } from "./helpers/msw";
 
@@ -23,9 +21,6 @@ chalk.level = 0;
 (
 	global as unknown as { __RELATIVE_PACKAGE_PATH__: string }
 ).__RELATIVE_PACKAGE_PATH__ = "..";
-
-// Set `LC_ALL` to fix the language as English for the messages thrown by Yargs.
-process.env.LC_ALL = "en";
 
 vi.mock("ansi-escapes", () => {
 	return {
@@ -76,10 +71,10 @@ vi.mock("undici", async (importOriginal) => {
 		 * - MSW makes it difficult to use custom interceptors, and _really_ wants you to use globalThis.fetch. In particular, it doesn't support intercepting undici.fetch
 		 * Because Wrangler supports Node v16, we have to use undici's fetch directly rather than using globalThis.fetch. We'd also like to intercept requests with MSW
 		 * Therefore, we mock undici in tests to replace the imported fetch with globalThis.fetch (which MSW will replace with a mocked version—hence the getter, so that we always get the up to date mocked version)
-		 * We're able to delegate to globalThis.fetch in our tests because we run our test in Node v16
+		 * We're able to delegate to globalThis.fetch in our tests because we run our test in Node v18
 		 */
 		get fetch() {
-			// @ts-expect-error Here be dragons (see above)
+			// Here be dragons (see above)
 			return globalThis.fetch;
 		},
 	};
@@ -88,6 +83,7 @@ vi.mock("undici", async (importOriginal) => {
 vi.mock("../package-manager");
 
 vi.mock("../update-check");
+vi.mock("../wrangler-banner");
 
 beforeAll(() => {
 	msw.listen({
@@ -110,18 +106,6 @@ afterEach(() => {
 	msw.resetHandlers();
 });
 afterAll(() => msw.close());
-
-vi.mock("../dev/dev", () => {
-	return {
-		default: vi.fn().mockImplementation(() => {
-			const { exit } = useApp();
-			useEffect(() => {
-				exit();
-			});
-			return null;
-		}),
-	};
-});
 
 // Make sure that we don't accidentally try to open a browser window when running tests.
 // We will actually provide a mock implementation for `openInBrowser()` within relevant tests.
@@ -151,8 +135,9 @@ vi.mock("../user/generate-auth-url", () => {
 	};
 });
 
-vi.mock("../is-ci", () => {
-	return { CI: { isCI: vi.fn().mockImplementation(() => false) } };
+vi.mock("../is-ci", async (importOriginal) => {
+	const original = await importOriginal<typeof import("../is-ci")>();
+	return { ...original, CI: { isCI: vi.fn().mockImplementation(() => false) } };
 });
 
 vi.mock("../user/generate-random-state", () => {
@@ -177,18 +162,16 @@ vi.mock("xdg-app-paths", () => {
 vi.mock("../metrics/metrics-config", async (importOriginal) => {
 	const realModule =
 		await importOriginal<typeof import("../metrics/metrics-config")>();
-	const fakeModule = {
-		...realModule,
-		getMetricsConfig: () => async () => {
-			return {
-				enabled: false,
-				deviceId: "mock-device",
-				userId: undefined,
-			};
-		},
-	};
-	return fakeModule;
+	vi.spyOn(realModule, "getMetricsConfig").mockImplementation(() => {
+		return {
+			enabled: false,
+			deviceId: "mock-device",
+			userId: undefined,
+		};
+	});
+	return realModule;
 });
+
 vi.mock("prompts", () => {
 	return {
 		__esModule: true,
@@ -206,7 +189,7 @@ vi.mock("execa", async (importOriginal) => {
 	const realModule = await importOriginal<typeof import("execa")>();
 	return {
 		...realModule,
-		execa: vi.fn<Parameters<typeof realModule.execa>>((...args) => {
+		execa: vi.fn((...args: Parameters<typeof realModule.execa>) => {
 			return args[0] === "mockpm"
 				? Promise.resolve()
 				: realModule.execa(...args);
@@ -227,5 +210,11 @@ vi.mock("@cloudflare/cli/streams", async () => {
 		__esModule: true,
 		stdout,
 		stderr,
+	};
+});
+
+vi.mock("../../package.json", () => {
+	return {
+		version: "x.x.x",
 	};
 });

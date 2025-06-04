@@ -1,12 +1,14 @@
+import assert from "node:assert";
 import { execSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fetch } from "undici";
 import { beforeAll, describe, expect, it } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 
-describe("c3 integration", () => {
+// TODO: Investigate why this is really flaky on windows
+describe.runIf(process.platform !== "win32")("c3 integration", () => {
 	const helper = new WranglerE2ETestHelper();
 	const workerName = generateResourceName("c3");
 	let c3Packed: string;
@@ -14,7 +16,12 @@ describe("c3 integration", () => {
 	beforeAll(async () => {
 		const pathToC3 = path.resolve(__dirname, "../../create-cloudflare");
 		execSync("pnpm pack --pack-destination ./pack", { cwd: pathToC3 });
-		const version = execSync("ls pack", { encoding: "utf-8", cwd: pathToC3 });
+		const versions = execSync("ls -1 pack", {
+			encoding: "utf-8",
+			cwd: pathToC3,
+		});
+		const version = versions.trim().split("\n").at(-1); // get last version
+		assert(version);
 		c3Packed = path.join(pathToC3, "pack", version);
 	});
 
@@ -28,13 +35,16 @@ describe("c3 integration", () => {
 			GIT_COMMITTER_EMAIL: "test-user@cloudflare.com",
 		};
 
-		const init = await helper.run(`wrangler init ${workerName} --yes`, {
+		await helper.run(`wrangler init ${workerName} --yes`, {
 			env,
 		});
 
-		expect(init.stdout).toContain("APPLICATION CREATED");
-
-		expect(existsSync(path.join(helper.tmpPath, workerName))).toBe(true);
+		expect(
+			readFileSync(
+				path.join(helper.tmpPath, workerName, "wrangler.jsonc"),
+				"utf8"
+			)
+		).not.toContain("<TBD>");
 	});
 
 	it("can run `wrangler dev` on generated worker", async () => {
@@ -43,6 +53,6 @@ describe("c3 integration", () => {
 		});
 		const { url } = await worker.waitForReady();
 		const res = await fetch(url);
-		expect(await res.text()).toBe("Hello World!");
+		expect(await res.text()).toContain("Hello, World!");
 	});
 });

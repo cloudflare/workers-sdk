@@ -1,22 +1,24 @@
 {
-	"name": "pages-functions-with-routes-app",
+	"name": "@fixture/pages-functions-routes",
 	"private": true,
 	"sideEffects": false,
 	"scripts": {
 		"check:type": "tsc",
-		"dev": "npx wrangler pages dev public --port 8776",
+		"dev": "wrangler pages dev public --port 8776",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240620.0",
-		"undici": "^5.28.4",
+		"@cloudflare/workers-types": "^4.20250525.0",
+		"typescript": "catalog:default",
+		"undici": "catalog:default",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"engines": {
-		"node": ">=16.13"
+		"node": ">=18.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

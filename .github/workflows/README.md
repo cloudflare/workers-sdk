@@ -1,4 +1,4 @@
-# Github Actions
+# GitHub Actions
 
 See below for a summary of this repo's Actions
 
@@ -14,7 +14,7 @@ See below for a summary of this repo's Actions
   - Builds all the packages.
   - Runs formatting, linting and type checks.
   - Runs fixture tests, Wrangler unit tests, C3 unit tests, Miniflare unit tests, and ESLint + Prettier checks.
-  - Adds the PR to a Github project
+  - Adds the PR to a GitHub project
 
 ### E2E tests (e2e.yml)
 
@@ -62,7 +62,7 @@ See below for a summary of this repo's Actions
 - Triggers
   - Updates to issues.
 - Actions
-  - Add the issue to a Github project.
+  - Add the issue to a GitHub project.
 
 ### Generate changesets for dependabot PRs (c3-dependabot-versioning-prs.yml and miniflare-dependabot-versioning-prs.yml)
 
@@ -114,16 +114,15 @@ See below for a summary of this repo's Actions
 ### C3 E2E Tests (c3-e2e.yml)
 
 - Triggers
-  - Commits merged to the `main` branch, on the Cloudflare fork, which touch files in the `packages/create-cloudflare` directory.
-  - Updates to PRs, on the Cloudflare fork, which touch files in the `packages/create-cloudflare` directory.
+  - Commits merged to the `changeset-release/main` branch (i.e. on "Version Packages" PRs).
+  - Updates to PRs, on the Cloudflare fork, with the `c3-e2e` label applied.
 - Actions
   - Runs the E2E tests for C3.
 
 ### C3 E2E (Quarantine) (c3-e2e-quarantine.yml) ⚠️
 
 - Triggers
-  - Commits merged to the `main` branch, on the Cloudflare fork, which touch files in the `packages/create-cloudflare` directory.
-  - Updates to PRs, on the Cloudflare fork, which touch files in the `packages/create-cloudflare` directory.
+  - 3AM every day
 - Actions
   - Runs the _quarantined_ E2E tests for C3. It is expected to sometimes fail.
 

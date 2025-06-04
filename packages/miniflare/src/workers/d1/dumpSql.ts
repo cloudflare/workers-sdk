@@ -71,7 +71,7 @@ export function* dumpSql(
 					return outputQuotedEscapedString(cell);
 				} else if (cell instanceof ArrayBuffer) {
 					return `X'${Array.prototype.map
-						.call(new Uint8Array(cell), (b) => b.toString(16))
+						.call(new Uint8Array(cell), (b) => b.toString(16).padStart(2, "0"))
 						.join("")}'`;
 				} else {
 					console.log({ colType, cellType, cell, column: columns[i] });

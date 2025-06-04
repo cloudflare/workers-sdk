@@ -1,0 +1,11 @@
+{
+  "name": "<TBD>",
+  "compatibility_date": "<TBD>",
+  "assets": {
+    // The path to the directory containing the `index.html` file to be served at `/`
+    "directory": "./public"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

@@ -1,20 +1,19 @@
 import { cp, mkdtemp } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
-import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim } from "@cloudflare/cli/colors";
+import { processArgument } from "helpers/args";
 import { runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
-import { chooseAccount } from "../../src/wrangler/accounts";
+import { chooseAccount, wranglerLogin } from "../../src/wrangler/accounts";
+import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
 export async function copyExistingWorkerFiles(ctx: C3Context) {
 	const { dlx } = detectPackageManager();
 
-	await chooseAccount(ctx);
-
 	if (ctx.args.existingScript === undefined) {
-		ctx.args.existingScript = await processArgument<string>(
+		ctx.args.existingScript = await processArgument(
 			ctx.args,
 			"existingScript",
 			{
@@ -33,7 +32,7 @@ export async function copyExistingWorkerFiles(ctx: C3Context) {
 	await runCommand(
 		[
 			...dlx,
-			"wrangler@3",
+			"wrangler@latest",
 			"init",
 			"--from-dash",
 			ctx.args.existingScript,
@@ -51,33 +50,57 @@ export async function copyExistingWorkerFiles(ctx: C3Context) {
 		},
 	);
 
-	// copy src/* files from the downloaded worker
+	// copy src/* files from the downloaded Worker
 	await cp(
 		join(tempdir, ctx.args.existingScript, "src"),
 		join(ctx.project.path, "src"),
 		{ recursive: true },
 	);
 
-	// copy wrangler.toml from the downloaded worker
+	// copy ./wrangler.toml from the downloaded Worker
 	await cp(
 		join(tempdir, ctx.args.existingScript, "wrangler.toml"),
 		join(ctx.project.path, "wrangler.toml"),
 	);
 }
 
-export default {
+const config: TemplateConfig = {
 	configVersion: 1,
 	id: "pre-existing",
 	displayName: "Pre-existing Worker (from Dashboard)",
+	description: "Fetch a Worker initialized from the Cloudflare dashboard.",
 	platform: "workers",
 	hidden: true,
 	copyFiles: {
 		path: "./js",
 	},
-	configure: async (ctx: C3Context) => {
-		await copyExistingWorkerFiles(ctx);
-
-		// Force no-deploy since the worker is already deployed
-		ctx.args.deploy = false;
-	},
+	configure: buildConfigure({
+		login: wranglerLogin,
+		chooseAccount,
+		copyFiles: copyExistingWorkerFiles,
+	}),
 };
+
+export default config;
+
+export interface ConfigureParams {
+	login: (ctx: C3Context) => Promise<boolean>;
+	chooseAccount: (ctx: C3Context) => Promise<void>;
+	copyFiles: (ctx: C3Context) => Promise<void>;
+}
+
+export function buildConfigure(params: ConfigureParams) {
+	return async function configure(ctx: C3Context) {
+		const loginSuccess = await params.login(ctx);
+
+		if (!loginSuccess) {
+			throw new Error("Failed to login to Cloudflare");
+		}
+
+		await params.chooseAccount(ctx);
+		await params.copyFiles(ctx);
+
+		// Force no-deploy since the Worker is already deployed
+		ctx.args.deploy = false;
+	};
+}

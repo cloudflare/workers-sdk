@@ -68,8 +68,15 @@ function isPlainObject(value: unknown) {
 		Object.getOwnPropertyNames(proto).sort().join("\0") === objectProtoNames
 	);
 }
-function objectContainsFunctions(obj: Record<string, unknown>): boolean {
-	for (const [, entry] of Object.entries(obj)) {
+function objectContainsFunctions(
+	obj: Record<string | symbol, unknown>
+): boolean {
+	const propertyNames = Object.getOwnPropertyNames(obj);
+	const propertySymbols = Object.getOwnPropertySymbols(obj);
+	const properties = [...propertyNames, ...propertySymbols];
+
+	for (const property of properties) {
+		const entry = obj[property];
 		if (typeof entry === "function") {
 			return true;
 		}
@@ -84,12 +91,18 @@ function objectContainsFunctions(obj: Record<string, unknown>): boolean {
 	return false;
 }
 
-function isObject(value: unknown) {
-	return value && typeof value === "object";
+function isObject(
+	value: unknown
+): value is Record<string | number | symbol, unknown> {
+	return !!value && typeof value === "object";
 }
 
 function getType(value: unknown) {
 	return Object.prototype.toString.call(value).slice(8, -1); // `[object <type>]`
+}
+
+function isInternal(value: unknown) {
+	return isObject(value) && value[Symbol.for("cloudflare:internal-class")];
 }
 
 type Env = Record<string, unknown> & {
@@ -112,7 +125,10 @@ export class ProxyServer implements DurableObject {
 			// should only ever return `Object`, as none override `Symbol.toStringTag`
 			// https://tc39.es/ecma262/multipage/fundamental-objects.html#sec-object.prototype.tostring
 			const type = getType(value);
-			if ((type === "Object" && !isPlainObject(value)) || type === "Promise") {
+			if (
+				((type === "Object" || isInternal(value)) && !isPlainObject(value)) ||
+				type === "Promise"
+			) {
 				const address = this.nextHeapAddress++;
 				this.heap.set(address, value);
 				assert(value !== null);

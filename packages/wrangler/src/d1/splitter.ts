@@ -67,21 +67,25 @@ function splitSqlIntoStatements(sql: string): string[] {
 				break;
 			}
 			case `-`:
-				str += char;
 				next = iterator.next();
 				if (!next.done && next.value === "-") {
-					str += next.value + consumeUntilMarker(iterator, "\n");
+					// Skip to the end of the comment
+					consumeUntilMarker(iterator, "\n");
+					// Maintain the newline character
+					str += "\n";
 					break;
 				} else {
+					str += char;
 					continue;
 				}
 			case `/`:
-				str += char;
 				next = iterator.next();
 				if (!next.done && next.value === "*") {
-					str += next.value + consumeUntilMarker(iterator, "*/");
+					// Skip to the end of the comment
+					consumeUntilMarker(iterator, "*/");
 					break;
 				} else {
+					str += char;
 					continue;
 				}
 			case `;`:

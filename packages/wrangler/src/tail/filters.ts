@@ -10,7 +10,7 @@ import { UserError } from "../errors";
 /**
  * These are the filters we accept in the CLI. They
  * were copied directly from Wrangler v1 in order to
- * maintain compatability, so they aren't actually the exact
+ * maintain compatibility, so they aren't actually the exact
  * filters we need to send up to the tail worker. They generally map 1:1,
  * but often require some transformation or
  * renaming to match what it expects.

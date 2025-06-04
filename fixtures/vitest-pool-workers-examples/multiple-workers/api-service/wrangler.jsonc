@@ -1,0 +1,19 @@
+{
+	"name": "api-service",
+	"main": "src/index.ts",
+	"compatibility_date": "2024-01-01",
+	"services": [
+		{
+			"binding": "AUTH_SERVICE",
+			"service": "auth-service",
+		},
+		{
+			"binding": "DATABASE_SERVICE",
+			"service": "database-service",
+		},
+	],
+	"tail_consumers": [
+		{ "service": "this-tail-does-not-exist" },
+		{ "service": "tail-consumer" },
+	],
+}

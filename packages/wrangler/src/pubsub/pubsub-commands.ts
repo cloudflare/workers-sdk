@@ -1,6 +1,6 @@
 import { readConfig } from "../config";
 import { confirm } from "../dialogs";
-import { CommandLineArgsError } from "../index";
+import { CommandLineArgsError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { parseHumanDuration } from "../parse";
@@ -38,7 +38,7 @@ export function pubSubCommands(
 								.epilogue(pubsub.pubSubBetaWarning);
 						},
 						async (args) => {
-							const config = readConfig(args.config, args);
+							const config = readConfig(args);
 							const accountId = await requireAuth(config);
 
 							const namespace: pubsub.PubSubNamespace = {
@@ -49,9 +49,9 @@ export function pubSubCommands(
 							}
 
 							logger.log(`Creating Pub/Sub Namespace ${args.name}...`);
-							await pubsub.createPubSubNamespace(accountId, namespace);
+							await pubsub.createPubSubNamespace(config, accountId, namespace);
 							logger.log(`Success! Created Pub/Sub Namespace ${args.name}`);
-							await metrics.sendMetricsEvent("create pubsub namespace", {
+							metrics.sendMetricsEvent("create pubsub namespace", {
 								sendMetrics: config.send_metrics,
 							});
 						}
@@ -63,11 +63,11 @@ export function pubSubCommands(
 							return yargs.epilogue(pubsub.pubSubBetaWarning);
 						},
 						async (args) => {
-							const config = readConfig(args.config, args);
+							const config = readConfig(args);
 							const accountId = await requireAuth(config);
 
-							logger.log(await pubsub.listPubSubNamespaces(accountId));
-							await metrics.sendMetricsEvent("list pubsub namespaces", {
+							logger.log(await pubsub.listPubSubNamespaces(config, accountId));
+							metrics.sendMetricsEvent("list pubsub namespaces", {
 								sendMetrics: config.send_metrics,
 							});
 						}
@@ -85,7 +85,7 @@ export function pubSubCommands(
 								.epilogue(pubsub.pubSubBetaWarning);
 						},
 						async (args) => {
-							const config = readConfig(args.config, args);
+							const config = readConfig(args);
 							const accountId = await requireAuth(config);
 
 							if (
@@ -94,9 +94,13 @@ export function pubSubCommands(
 								)
 							) {
 								logger.log(`Deleting namespace ${args.name}...`);
-								await pubsub.deletePubSubNamespace(accountId, args.name);
+								await pubsub.deletePubSubNamespace(
+									config,
+									accountId,
+									args.name
+								);
 								logger.log(`Deleted namespace ${args.name}.`);
-								await metrics.sendMetricsEvent("delete pubsub namespace", {
+								metrics.sendMetricsEvent("delete pubsub namespace", {
 									sendMetrics: config.send_metrics,
 								});
 							}
@@ -115,13 +119,17 @@ export function pubSubCommands(
 								.epilogue(pubsub.pubSubBetaWarning);
 						},
 						async (args) => {
-							const config = readConfig(args.config, args);
+							const config = readConfig(args);
 							const accountId = await requireAuth(config);
 
 							logger.log(
-								await pubsub.describePubSubNamespace(accountId, args.name)
+								await pubsub.describePubSubNamespace(
+									config,
+									accountId,
+									args.name
+								)
 							);
-							await metrics.sendMetricsEvent("view pubsub namespace", {
+							metrics.sendMetricsEvent("view pubsub namespace", {
 								sendMetrics: config.send_metrics,
 							});
 						}
@@ -164,7 +172,7 @@ export function pubSubCommands(
 						})
 						.epilogue(pubsub.pubSubBetaWarning),
 				async (args) => {
-					const config = readConfig(args.config, args);
+					const config = readConfig(args);
 					const accountId = await requireAuth(config);
 
 					const broker: pubsub.PubSubBroker = {
@@ -189,9 +197,14 @@ export function pubSubCommands(
 					}
 
 					logger.log(
-						await pubsub.createPubSubBroker(accountId, args.namespace, broker)
+						await pubsub.createPubSubBroker(
+							config,
+							accountId,
+							args.namespace,
+							broker
+						)
 					);
-					await metrics.sendMetricsEvent("create pubsub broker", {
+					metrics.sendMetricsEvent("create pubsub broker", {
 						sendMetrics: config.send_metrics,
 					});
 				}
@@ -229,7 +242,7 @@ export function pubSubCommands(
 						})
 						.epilogue(pubsub.pubSubBetaWarning),
 				async (args) => {
-					const config = readConfig(args.config, args);
+					const config = readConfig(args);
 					const accountId = await requireAuth(config);
 
 					const broker: pubsub.PubSubBrokerUpdate = {};
@@ -256,6 +269,7 @@ export function pubSubCommands(
 
 					logger.log(
 						await pubsub.updatePubSubBroker(
+							config,
 							accountId,
 							args.namespace,
 							args.name,
@@ -263,7 +277,7 @@ export function pubSubCommands(
 						)
 					);
 					logger.log(`Successfully updated Pub/Sub Broker ${args.name}`);
-					await metrics.sendMetricsEvent("update pubsub broker", {
+					metrics.sendMetricsEvent("update pubsub broker", {
 						sendMetrics: config.send_metrics,
 					});
 				}
@@ -283,11 +297,13 @@ export function pubSubCommands(
 						.epilogue(pubsub.pubSubBetaWarning);
 				},
 				async (args) => {
-					const config = readConfig(args.config, args);
+					const config = readConfig(args);
 					const accountId = await requireAuth(config);
 
-					logger.log(await pubsub.listPubSubBrokers(accountId, args.namespace));
-					await metrics.sendMetricsEvent("list pubsub brokers", {
+					logger.log(
+						await pubsub.listPubSubBrokers(config, accountId, args.namespace)
+					);
+					metrics.sendMetricsEvent("list pubsub brokers", {
 						sendMetrics: config.send_metrics,
 					});
 				}
@@ -313,7 +329,7 @@ export function pubSubCommands(
 							.epilogue(pubsub.pubSubBetaWarning);
 					},
 					async (args) => {
-						const config = readConfig(args.config, args);
+						const config = readConfig(args);
 						const accountId = await requireAuth(config);
 
 						if (
@@ -323,12 +339,13 @@ export function pubSubCommands(
 						) {
 							logger.log(`Deleting Pub/Sub Broker ${args.name}.`);
 							await pubsub.deletePubSubBroker(
+								config,
 								accountId,
 								args.namespace,
 								args.name
 							);
 							logger.log(`Deleted Pub/Sub Broker ${args.name}.`);
-							await metrics.sendMetricsEvent("delete pubsub broker", {
+							metrics.sendMetricsEvent("delete pubsub broker", {
 								sendMetrics: config.send_metrics,
 							});
 						}
@@ -353,17 +370,18 @@ export function pubSubCommands(
 							.epilogue(pubsub.pubSubBetaWarning);
 					},
 					async (args) => {
-						const config = readConfig(args.config, args);
+						const config = readConfig(args);
 						const accountId = await requireAuth(config);
 
 						logger.log(
 							await pubsub.describePubSubBroker(
+								config,
 								accountId,
 								args.namespace,
 								args.name
 							)
 						);
-						await metrics.sendMetricsEvent("view pubsub broker", {
+						metrics.sendMetricsEvent("view pubsub broker", {
 							sendMetrics: config.send_metrics,
 						});
 					}
@@ -412,7 +430,7 @@ export function pubSubCommands(
 						.epilogue(pubsub.pubSubBetaWarning);
 				},
 				async (args) => {
-					const config = readConfig(args.config, args);
+					const config = readConfig(args);
 					const accountId = await requireAuth(config);
 
 					let parsedExpiration: number | undefined;
@@ -432,6 +450,7 @@ export function pubSubCommands(
 
 					logger.log(
 						await pubsub.issuePubSubBrokerTokens(
+							config,
 							accountId,
 							args.namespace,
 							args.name,
@@ -441,7 +460,7 @@ export function pubSubCommands(
 							parsedExpiration
 						)
 					);
-					await metrics.sendMetricsEvent("issue pubsub broker credentials", {
+					metrics.sendMetricsEvent("issue pubsub broker credentials", {
 						sendMetrics: config.send_metrics,
 					});
 				}
@@ -472,7 +491,7 @@ export function pubSubCommands(
 						.epilogue(pubsub.pubSubBetaWarning);
 				},
 				async (args) => {
-					const config = readConfig(args.config, args);
+					const config = readConfig(args);
 					const accountId = await requireAuth(config);
 
 					const numTokens = args.jti.length;
@@ -482,6 +501,7 @@ export function pubSubCommands(
 					);
 
 					await pubsub.revokePubSubBrokerTokens(
+						config,
 						accountId,
 						args.namespace,
 						args.name,
@@ -489,7 +509,7 @@ export function pubSubCommands(
 					);
 
 					logger.log(`Revoked ${args.jti.length} credential(s).`);
-					await metrics.sendMetricsEvent("revoke pubsub broker credentials", {
+					metrics.sendMetricsEvent("revoke pubsub broker credentials", {
 						sendMetrics: config.send_metrics,
 					});
 				}
@@ -520,7 +540,7 @@ export function pubSubCommands(
 						.epilogue(pubsub.pubSubBetaWarning);
 				},
 				async (args) => {
-					const config = readConfig(args.config, args);
+					const config = readConfig(args);
 					const accountId = await requireAuth(config);
 
 					const numTokens = args.jti.length;
@@ -529,6 +549,7 @@ export function pubSubCommands(
 					);
 
 					await pubsub.unrevokePubSubBrokerTokens(
+						config,
 						accountId,
 						args.namespace,
 						args.name,
@@ -536,7 +557,7 @@ export function pubSubCommands(
 					);
 
 					logger.log(`Unrevoked ${numTokens} credential(s)`);
-					await metrics.sendMetricsEvent("unrevoke pubsub broker credentials", {
+					metrics.sendMetricsEvent("unrevoke pubsub broker credentials", {
 						sendMetrics: config.send_metrics,
 					});
 				}
@@ -561,23 +582,21 @@ export function pubSubCommands(
 						.epilogue(pubsub.pubSubBetaWarning);
 				},
 				async (args) => {
-					const config = readConfig(args.config, args);
+					const config = readConfig(args);
 					const accountId = await requireAuth(config);
 
 					logger.log(`Listing previously revoked tokens for ${args.name}...`);
 					logger.log(
 						await pubsub.listRevokedPubSubBrokerTokens(
+							config,
 							accountId,
 							args.namespace,
 							args.name
 						)
 					);
-					await metrics.sendMetricsEvent(
-						"list pubsub broker revoked credentials",
-						{
-							sendMetrics: config.send_metrics,
-						}
-					);
+					metrics.sendMetricsEvent("list pubsub broker revoked credentials", {
+						sendMetrics: config.send_metrics,
+					});
 				}
 			);
 
@@ -600,17 +619,18 @@ export function pubSubCommands(
 						.epilogue(pubsub.pubSubBetaWarning);
 				},
 				async (args) => {
-					const config = readConfig(args.config, args);
+					const config = readConfig(args);
 					const accountId = await requireAuth(config);
 
 					logger.log(
 						await pubsub.getPubSubBrokerPublicKeys(
+							config,
 							accountId,
 							args.namespace,
 							args.name
 						)
 					);
-					await metrics.sendMetricsEvent("list pubsub broker public-keys", {
+					metrics.sendMetricsEvent("list pubsub broker public-keys", {
 						sendMetrics: config.send_metrics,
 					});
 				}

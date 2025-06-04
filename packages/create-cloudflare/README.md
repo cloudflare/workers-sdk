@@ -7,4 +7,4 @@ For more details on how to use the create-cloudflare CLI (C3) please visit the [
 ### Community
 
 - Join us [on Discord](https://discord.cloudflare.com)
-- File an issue [on Github](https://github.com/cloudflare/workers-sdk/issues/new/choose)
+- File an issue [on GitHub](https://github.com/cloudflare/workers-sdk/issues/new/choose)

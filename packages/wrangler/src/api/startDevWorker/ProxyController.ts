@@ -43,7 +43,7 @@ import type { StartDevWorkerOptions } from "./types";
 import type { DeferredPromise } from "./utils";
 import type { MiniflareOptions } from "miniflare";
 
-export type ProxyControllerEventMap = ControllerEventMap & {
+type ProxyControllerEventMap = ControllerEventMap & {
 	ready: [ReadyEvent];
 	previewTokenExpired: [PreviewTokenExpiredEvent];
 };
@@ -94,6 +94,9 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 							unsafePreventEviction: true,
 						},
 					},
+					// Miniflare will strip CF-Connecting-IP from outgoing fetches from a Worker (to fix https://github.com/cloudflare/workers-sdk/issues/7924)
+					// However, the proxy worker only makes outgoing requests to the user Worker Miniflare instance, which _should_ receive CF-Connecting-IP
+					stripCfConnectingIp: false,
 					serviceBindings: {
 						PROXY_CONTROLLER: async (req): Promise<Response> => {
 							const message =
@@ -115,7 +118,10 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 				{
 					name: "InspectorProxyWorker",
 					compatibilityDate: "2023-12-18",
-					compatibilityFlags: ["nodejs_compat"],
+					compatibilityFlags: [
+						"nodejs_compat",
+						"increase_websocket_message_size",
+					],
 					modulesRoot: path.dirname(inspectorProxyWorkerPath),
 					modules: [{ type: "ESModule", path: inspectorProxyWorkerPath }],
 					durableObjects: {
@@ -158,6 +164,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 					logger.loggerLevel === "debug" ? "wrangler-ProxyWorker" : "wrangler",
 			}),
 			handleRuntimeStdio,
+			liveReload: false,
 		};
 
 		const proxyWorkerOptionsChanged = didMiniflareOptionsChange(
@@ -173,7 +180,9 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 		if (proxyWorkerOptionsChanged) {
 			logger.debug("ProxyWorker miniflare options changed, reinstantiating...");
 
-			void this.proxyWorker.setOptions(proxyWorkerOptions);
+			void this.proxyWorker.setOptions(proxyWorkerOptions).catch((error) => {
+				this.emitErrorEvent("Failed to start ProxyWorker", error);
+			});
 
 			// this creates a new .ready promise that will be resolved when both ProxyWorkers are ready
 			// it also respects any await-ers of the existing .ready promise
@@ -187,12 +196,24 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 			void Promise.all([
 				proxyWorker.ready,
 				proxyWorker.unsafeGetDirectURL("InspectorProxyWorker"),
-				this.reconnectInspectorProxyWorker(),
 			])
+				.then(([url, inspectorUrl]) => {
+					// Don't connect the inspector proxy worker until we have a valid ready Miniflare instance.
+					// Otherwise, tearing down the ProxyController immediately after setting it up
+					// will result in proxyWorker.ready throwing, but reconnectInspectorProxyWorker hanging for ever,
+					// preventing teardown
+					return this.reconnectInspectorProxyWorker().then(() => [
+						url,
+						inspectorUrl,
+					]);
+				})
 				.then(([url, inspectorUrl]) => {
 					this.emitReadyEvent(proxyWorker, url, inspectorUrl);
 				})
 				.catch((error) => {
+					if (this._torndown) {
+						return;
+					}
 					this.emitErrorEvent(
 						"Failed to start ProxyWorker or InspectorProxyWorker",
 						error
@@ -282,14 +303,14 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 
 		try {
 			await this.runtimeMessageMutex.runWith(async () => {
-				assert(this.proxyWorker, "proxyWorker should already be instantiated");
+				const { proxyWorker } = await this.ready.promise;
 
-				const ready = await this.proxyWorker.ready.catch(() => undefined);
+				const ready = await proxyWorker.ready.catch(() => undefined);
 				if (!ready) {
 					return;
 				}
 
-				return this.proxyWorker.dispatchFetch(
+				return proxyWorker.dispatchFetch(
 					`http://dummy/cdn-cgi/ProxyWorker/${message.type}`,
 					{
 						headers: { Authorization: this.secret },
@@ -312,8 +333,6 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 				`Failed to send message to ProxyWorker: ${JSON.stringify(message)}`,
 				error
 			);
-
-			throw error;
 		}
 	}
 	async sendMessageToInspectorProxyWorker(
@@ -347,8 +366,6 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 				)}`,
 				error
 			);
-
-			throw error;
 		}
 	}
 
@@ -544,7 +561,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 	}
 }
 
-export class ProxyControllerLogger extends WranglerLog {
+class ProxyControllerLogger extends WranglerLog {
 	log(message: string) {
 		// filter out request logs being handled by the ProxyWorker
 		// the requests log remaining are handled by the UserWorker

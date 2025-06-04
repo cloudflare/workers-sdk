@@ -66,7 +66,7 @@ describe("Pages Advanced Mode with wrangler.toml", () => {
 	it("has version_metadata binding", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/version_metadata`);
 
-		expect(response.json()).resolves.toMatchObject({
+		await expect(response.json()).resolves.toMatchObject({
 			id: expect.any(String),
 			tag: expect.any(String),
 		});

@@ -63,7 +63,7 @@ export function generateRawConfigForPages(
 		r2_buckets: [
 			{
 				binding: "TEST_R2_BINDING",
-				bucket_name: "TEST_R2_BUCKET_NAME",
+				bucket_name: "test-r2-bucket-name",
 			},
 		],
 		d1_databases: [
@@ -167,7 +167,7 @@ export function generateRawEnvConfigForPages(
 		r2_buckets: [
 			{
 				binding: `TEST_R2_BINDING`,
-				bucket_name: `TEST_R2_BUCKET_NAME_${envName}`,
+				bucket_name: `test-r2-bucket-name-${envName}`,
 			},
 		],
 		d1_databases: [

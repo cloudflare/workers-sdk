@@ -1,22 +1,24 @@
 {
-	"name": "pages-functions-wasm-app",
+	"name": "@fixture/pages-functions-wasm",
 	"private": true,
 	"sideEffects": false,
 	"scripts": {
 		"check:type": "tsc",
-		"dev": "npx wrangler pages dev public --port 8776",
-		"publish": "npx wrangler pages deploy public",
+		"dev": "wrangler pages dev public --port 8776",
+		"publish": "wrangler pages deploy public",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"undici": "^5.28.4",
+		"typescript": "catalog:default",
+		"undici": "catalog:default",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"engines": {
-		"node": ">=16.13"
+		"node": ">=18.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

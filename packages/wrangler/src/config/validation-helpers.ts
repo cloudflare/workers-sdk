@@ -69,7 +69,11 @@ export function inheritable<K extends keyof Environment>(
 ): Environment[K] {
 	validate(diagnostics, field, rawEnv[field], topLevelEnv);
 	return (
-		(rawEnv[field] as Environment[K]) ??
+		// `rawEnv === topLevelEnv` is a special case where the user has provided an environment name
+		// but that named environment is not actually defined in the configuration.
+		// In that case we have reused the topLevelEnv as the rawEnv,
+		// and so we need to process the `transformFn()` anyway rather than just using the field in the `rawEnv`.
+		(rawEnv !== topLevelEnv ? (rawEnv[field] as Environment[K]) : undefined) ??
 		transformFn(topLevelEnv?.[field]) ??
 		defaultValue
 	);
@@ -236,7 +240,7 @@ export const isString: ValidatorFn = (diagnostics, field, value) => {
  */
 export const isValidName: ValidatorFn = (diagnostics, field, value) => {
 	if (
-		(typeof value === "string" && /^$|^[a-z0-9_ ][a-z0-9-_ ]*$/.test(value)) ||
+		(typeof value === "string" && /^$|^[a-z0-9_][a-z0-9-_]*$/.test(value)) ||
 		value === undefined
 	) {
 		return true;
@@ -248,6 +252,47 @@ export const isValidName: ValidatorFn = (diagnostics, field, value) => {
 		);
 		return false;
 	}
+};
+
+/**
+ * Validate that the field is a valid ISO-8601 date time string
+ * see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date#date_time_string_format
+ * or https://tc39.es/ecma262/multipage/numbers-and-dates.html#sec-date-time-string-format
+ */
+export const isValidDateTimeStringFormat = (
+	diagnostics: Diagnostics,
+	field: string,
+	value: string
+): boolean => {
+	let isValid = true;
+
+	// en/em dashes are not valid characters in the JS date time string format.
+	// While they would be caught by the `isNaN(data.getTime())` check below,
+	// we want to single these use cases out, and throw a more specific error
+	if (
+		value.includes("–") || // en-dash
+		value.includes("—") // em-dash
+	) {
+		diagnostics.errors.push(
+			`"${field}" field should use ISO-8601 accepted hyphens (-) rather than en-dashes (–) or em-dashes (—).`
+		);
+		isValid = false;
+	}
+
+	// en/em dashes were already handled above. Let's replace them with hyphens,
+	// which is a valid date time string format character, and evaluate the
+	// resulting date time string further. This ensures we validate for hyphens
+	// only once!
+	const data = new Date(value.replaceAll(/–|—/g, "-"));
+
+	if (isNaN(data.getTime())) {
+		diagnostics.errors.push(
+			`"${field}" field should be a valid ISO-8601 date (YYYY-MM-DD), but got ${JSON.stringify(value)}.`
+		);
+		isValid = false;
+	}
+
+	return isValid;
 };
 
 /**
@@ -414,6 +459,43 @@ export const validateRequiredProperty = (
 };
 
 /**
+ * Validate that at least one of the properties in the list is required.
+ */
+export const validateAtLeastOnePropertyRequired = (
+	diagnostics: Diagnostics,
+	container: string,
+	properties: {
+		key: string;
+		value: unknown;
+		type: TypeofType;
+	}[]
+): boolean => {
+	const containerPath = container ? `${container}.` : "";
+
+	if (properties.every((property) => property.value === undefined)) {
+		diagnostics.errors.push(
+			`${properties.map(({ key }) => `"${containerPath}${key}"`).join(" or ")} is required.`
+		);
+		return false;
+	}
+
+	const errors = [];
+	for (const prop of properties) {
+		if (typeof prop.value === prop.type) {
+			return true;
+		}
+		errors.push(
+			`Expected "${containerPath}${prop.key}" to be of type ${prop.type} but got ${JSON.stringify(
+				prop.value
+			)}.`
+		);
+	}
+
+	diagnostics.errors.push(...errors);
+	return false;
+};
+
+/**
  * Validate that, if the optional field exists, then it has the expected type.
  */
 export const validateOptionalProperty = (
@@ -548,7 +630,6 @@ export const getBindingNames = (value: unknown): string[] => {
 	if (typeof value !== "object" || value === null) {
 		return [];
 	}
-
 	if (isBindingList(value)) {
 		return value.bindings.map(({ name }) => name);
 	} else if (isNamespaceList(value)) {
@@ -559,7 +640,6 @@ export const getBindingNames = (value: unknown): string[] => {
 		if (value["binding"] !== undefined) {
 			return [value["binding"] as string];
 		}
-
 		return Object.keys(value).filter((k) => value[k] !== undefined);
 	} else {
 		return [];
@@ -596,7 +676,7 @@ const isRecord = (
 /**
  * JavaScript `typeof` operator return values.
  */
-type TypeofType =
+export type TypeofType =
 	| "string"
 	| "number"
 	| "bigint"

@@ -1,6 +1,7 @@
 import { fetchResult } from "../../cfetch";
 import { UserError } from "../../errors";
-import { getDatabaseInfoFromId } from "../utils";
+import { getDatabaseInfoFromIdOrName } from "../utils";
+import type { ComplianceConfig } from "../../environment-variables/misc-variables";
 import type { BookmarkResponse } from "./types";
 
 /**
@@ -11,6 +12,7 @@ import type { BookmarkResponse } from "./types";
  * @returns Promise<BookmarkResponse>
  */
 export const getBookmarkIdFromTimestamp = async (
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	databaseId: string,
 	timestamp?: string
@@ -22,6 +24,7 @@ export const getBookmarkIdFromTimestamp = async (
 	}
 
 	const bookmarkResult = await fetchResult<BookmarkResponse>(
+		complianceConfig,
 		`/accounts/${accountId}/d1/database/${databaseId}/time_travel/bookmark?${searchParams.toString()}`,
 		{
 			headers: {
@@ -33,10 +36,15 @@ export const getBookmarkIdFromTimestamp = async (
 };
 
 export const throwIfDatabaseIsAlpha = async (
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	databaseId: string
 ): Promise<void> => {
-	const dbInfo = await getDatabaseInfoFromId(accountId, databaseId);
+	const dbInfo = await getDatabaseInfoFromIdOrName(
+		complianceConfig,
+		accountId,
+		databaseId
+	);
 	if (dbInfo.version === "alpha") {
 		throw new UserError(
 			"Time travel is not available for alpha D1 databases. You will need to migrate to a new database for access to this feature."

@@ -12,6 +12,6 @@ They're otherwise identical.
 
 You can run the module worker with `npx wrangler dev worker/module/index.js` (or from the `wrangler` package directory with `npm start -- dev ../../examples/wasm-app/worker/module/index.js`).
 
-You can run the service-worker worker with `npx wrangler dev worker/service-worker/index.js --config worker/service-worker/wrangler.toml` (or from the `wrangler` package directory with `npm start -- dev ../../examples/wasm-app/worker/service-worker/index.js --config ../../examples/wasm-app/worker/service-worker/wrangler.toml`).
+You can run the service-worker worker with `npx wrangler dev worker/service-worker/index.js --config worker/service-worker/wrangler.jsonc` (or from the `wrangler` package directory with `npm start -- dev ../../examples/wasm-app/worker/service-worker/index.js --config ../../examples/wasm-app/worker/service-worker/wrangler.jsonc`).
 
 You can run the service-worker-module worker with `npx wrangler dev worker/service-worker-module/index.js` (or from the `wrangler` package directory with `npm start -- dev ../../examples/wasm-app/worker/service-worker-module/index.js`).

@@ -20,22 +20,10 @@ function buildWranglerArtifactReport(pkg) {
 	assert.strictEqual(name, "wrangler");
 	const url = getPrereleaseArtifactUrl(name);
 	const prUrl = getPrereleasePRArtifactUrl(name);
-	return `A wrangler prerelease is available for testing. You can install this latest build in your project with:
+	return `A Wrangler prerelease is available for testing. You can install this latest build in your project with:
 
 \`\`\`sh
 npm install --save-dev ${url}
-\`\`\`
-
-You can reference the automatically updated head of this PR with:
-
-\`\`\`sh
-npm install --save-dev ${prUrl}
-\`\`\`
-
-Or you can use \`npx\` with this latest build directly:
-
-\`\`\`sh
-npx ${url} dev path/to/script.js
 \`\`\``;
 }
 
@@ -45,12 +33,27 @@ npx ${url} dev path/to/script.js
  */
 function buildAdditionalArtifactReport(pkg) {
 	const name = pkg.json.name;
+	const type = pkg.json["workers-sdk"].type;
 	const url = getPrereleaseArtifactUrl(name);
-	if (name === "create-cloudflare") {
-		return `\`\`\`sh\nnpx ${url} --no-auto-update\n\`\`\``;
-	} else {
-		return `\`\`\`sh\nnpm install ${url}\n\`\`\``;
+	let command;
+
+	switch (type) {
+		case "cli":
+			command = `npx ${url} --no-auto-update`;
+			break;
+		case "extension":
+			command = `wget ${url} -O ./${name}.${pkg.json.version}.vsix && code --install-extension ./${name}.${pkg.json.version}.vsix`;
+			break;
+		default:
+			command = `npm install ${url}`;
 	}
+
+	return `
+\`${name}\`:
+\`\`\`sh
+${command}
+\`\`\`
+`;
 }
 
 /**
@@ -68,8 +71,8 @@ function buildReport(pkgs) {
 	const additionalReports = pkgs.map(buildAdditionalArtifactReport);
 
 	return `${wranglerReport}
-	
-<details><summary>Additional artifacts:</summary>
+
+<details><summary>Prereleases for other packages:</summary>
 
 ${additionalReports.join("\n\n")}
 

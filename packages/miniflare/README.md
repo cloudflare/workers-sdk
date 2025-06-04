@@ -107,11 +107,13 @@ modules.
 
 Represents where data should be persisted, if anywhere.
 
-- If this is `undefined` or `false`, data will be stored in-memory and only
+- If this is `undefined`, it defaults to `true` if `defaultPersistRoot` is set
+  or otherwise defaults to `false`.
+- If this is`false`, data will be stored in-memory and only
   persist between `Miniflare#setOptions()` calls, not restarts nor
   `new Miniflare` instances.
-- If this is `true`, data will be stored on the file-system, in the `$PWD/.mf`
-  directory.
+- If this is `true`, data will be stored in a subdirectory of the `defaultPersistRoot` path if `defaultPersistRoot` is set
+  or otherwise will be stored in a subdirectory of `$PWD/.mf`.
 - If this looks like a URL, then:
   - If the protocol is `memory:`, data will be stored in-memory as above.
   - If the protocol is `file:`, data will be stored on the file-system, in the
@@ -214,6 +216,20 @@ Options for an individual Worker/"nanoservice". All bindings are accessible on
 the global scope in service-worker format Workers, or via the 2nd `env`
 parameter in module format Workers.
 
+### `interface WorkflowOptions`
+
+- `name: string`
+
+  The name of the Workflow.
+
+- `className: string`
+
+  The name of the class exported from the Worker that implements the `WorkflowEntrypoint`.
+
+- `scriptName?`: string
+
+  The name of the script that includes the `WorkflowEntrypoint`. This is optional because it defaults to the current script if not set.
+
 #### Core
 
 - `name?: string`
@@ -312,7 +328,7 @@ parameter in module format Workers.
   Record mapping binding name to paths containing arbitrary binary data to
   inject as `ArrayBuffer` bindings into this Worker.
 
-- `serviceBindings?: Record<string, string | typeof kCurrentWorker | { name: string | typeof kCurrentWorker, entrypoint?: string } | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | (request: Request, instance: Miniflare) => Awaitable<Response>>`
+- `serviceBindings?: Record<string, string | typeof kCurrentWorker | { name: string | typeof kCurrentWorker, entrypoint?: string } | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | { node: (req: http.IncomingMessage, res: http.ServerResponse, miniflare: Miniflare) => Awaitable<void> } | (request: Request, miniflare: Miniflare) => Awaitable<Response>>`
 
   Record mapping binding name to service designators to inject as
   `{ fetch: typeof fetch }`
@@ -342,9 +358,10 @@ parameter in module format Workers.
     [`workerd` `DiskDirectory` struct](https://github.com/cloudflare/workerd/blob/bdbd6075c7c53948050c52d22f2dfa37bf376253/src/workerd/server/workerd.capnp#L600-L643),
     requests will be dispatched to an HTTP service backed by an on-disk
     directory.
-  - If the designator is a function, requests will be dispatched to your custom
-    handler. This allows you to access data and functions defined in Node.js
-    from your Worker. Note `instance` will be the `Miniflare` instance
+  - If the designator is an object of the form `{ node: (req: http.IncomingMessage, res: http.ServerResponse, miniflare: Miniflare) => Awaitable<void> }`, requests will be dispatched to your custom Node handler. This allows you to access data and functions defined in Node.js from your Worker using Node.js `req` and `res` objects. Note, `miniflare` will be the `Miniflare` instance dispatching the request.
+  - If the designator is a function with the signature `(request: Request, miniflare: Miniflare) => Response`, requests will be dispatched to your custom
+    fetch handler. This allows you to access data and functions defined in Node.js
+    from your Worker using fetch `Request` and `Response` objects. Note, `miniflare` will be the `Miniflare` instance
     dispatching the request.
 
 <!--prettier-ignore-start-->
@@ -455,7 +472,7 @@ parameter in module format Workers.
 
 <!--prettier-ignore-end-->
 
-- `outboundService?: string | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | (request: Request) => Awaitable<Response>`
+- `outboundService?: string | { network: Network } | { external: ExternalServer } | { disk: DiskDirectory } | { node: (req: http.IncomingMessage, res: http.ServerResponse, miniflare: Miniflare) => Awaitable<void> } | (request: Request, miniflare: Miniflare) => Awaitable<Response>`
 
   Dispatch this Worker's global `fetch()` and `connect()` requests to the
   configured service. Service designators follow the same rules above for
@@ -475,6 +492,29 @@ parameter in module format Workers.
   [routing rules](https://developers.cloudflare.com/workers/platform/triggers/routes/#matching-behavior)
   as deployed Workers. If no routes match, Miniflare will fallback to the Worker
   defined first.
+
+- `defaultPersistRoot?: string`
+
+  Specifies the default directory where Miniflare will write persisted data when persistence is enabled.
+
+  ```js
+  // Without `defaultPersistRoot`
+  new Miniflare({
+  	kvPersist: undefined, // → "/(tmp)/kv"
+  	d1Persist: true, // → "$PWD/.mf/d1"
+  	r2Persist: false, // → "/(tmp)/r2"
+  	cachePersist: "/my-cache", // → "/my-cache"
+  });
+
+  // With `defaultPersistRoot`
+  new Miniflare({
+  	defaultPersistRoot: "/storage",
+  	kvPersist: undefined, // → "/storage/kv"
+  	d1Persist: true, // → "/storage/d1"
+  	r2Persist: false, // → "/(tmp)/r2"
+  	cachePersist: "/my-cache", // → "/my-cache"
+  });
+  ```
 
 #### Cache
 
@@ -528,6 +568,16 @@ parameter in module format Workers.
   If set, only files with paths _not_ matching these glob patterns will be
   served.
 
+  - `assetsPath?: string`
+
+  Path to serve Workers assets from.
+
+  - `assetsKVBindingName?: string`
+    Name of the binding to the KV namespace that the assets are in. If `assetsPath` is set, this binding will be injected into this Worker.
+
+  - `assetsManifestBindingName?: string`
+    Name of the binding to an `ArrayBuffer` containing the binary-encoded assets manifest. If `assetsPath` is set, this binding will be injected into this Worker.
+
 #### R2
 
 - `r2Buckets?: Record<string, string> | string[]`
@@ -563,6 +613,29 @@ parameter in module format Workers.
   corresponding queues will be dispatched to this Worker. Note each queue can
   have at most one consumer. If a `string[]` of queue names is specified,
   default consumer options will be used.
+
+#### Assets
+
+- `directory?: string`
+  Path to serve Workers static asset files from.
+
+- `binding?: string`
+  Binding name to inject as a `Fetcher` binding to allow access to static assets from within the Worker.
+
+- `assetOptions?: { html_handling?: HTMLHandlingOptions, not_found_handling?: NotFoundHandlingOptions}`
+  Configuration for file-based asset routing - see [docs](https://developers.cloudflare.com/workers/static-assets/routing/#routing-configuration) for options
+
+#### Pipelines
+
+- `pipelines?: Record<string, PipelineOptions> | string[]`
+
+  Record mapping binding name to a Pipeline. Different workers may bind to the same Pipeline with different bindings
+  names. If a `string[]` of pipeline names, the binding and Pipeline name are assumed to be the same.
+
+#### Workflows
+
+- `workflows?: WorkflowOptions[]`
+  Configuration for one or more Workflows in your project.
 
 #### Analytics Engine, Sending Email, Vectorize and Workers for Platforms
 
@@ -703,6 +776,10 @@ Options shared between all Workers/"nanoservices".
 - `d1Persist?: Persistence`
 
   Where to persist data stored in D1 databases. See docs for `Persistence`.
+
+- `workflowsPersist?: Persistence`
+
+Where to persist data stored in Workflows. See docs for `Persistence`.
 
 #### Analytics Engine, Browser Rendering, Sending Email, Vectorize, Workers AI and Workers for Platforms
 

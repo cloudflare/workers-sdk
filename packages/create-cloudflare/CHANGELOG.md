@@ -1,5 +1,1891 @@
 # create-cloudflare
 
+## 2.49.0
+
+### Minor Changes
+
+- [#9442](https://github.com/cloudflare/workers-sdk/pull/9442) [`4996b88`](https://github.com/cloudflare/workers-sdk/commit/4996b88e7cac5cdb43418a8fcf8455f36a070a37) Thanks [@vicb](https://github.com/vicb)! - add \_headers file for immutable asset caching in nextjs template
+
+### Patch Changes
+
+- [#9426](https://github.com/cloudflare/workers-sdk/pull/9426) [`0dc5992`](https://github.com/cloudflare/workers-sdk/commit/0dc599216648ed66a1418cb897b7592228a12fe9) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-solid | 0.6.2 | 0.6.5 |
+
+## 2.48.0
+
+### Minor Changes
+
+- [#9104](https://github.com/cloudflare/workers-sdk/pull/9104) [`8096b5f`](https://github.com/cloudflare/workers-sdk/commit/8096b5f3e1121119646d897adc48510146d51c1d) Thanks [@avenceslau](https://github.com/avenceslau)! - Add Hello World Workflows template.
+
+  For multi-step applications that automatically retry, persist state, and run for minutes, hours, days or weeks.
+
+### Patch Changes
+
+- [#9424](https://github.com/cloudflare/workers-sdk/pull/9424) [`52398c7`](https://github.com/cloudflare/workers-sdk/commit/52398c77cd5edc7d0d11cbbfb502bda7ad95f0b7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 7.6.0 | 7.6.1 |
+
+- [#9425](https://github.com/cloudflare/workers-sdk/pull/9425) [`678170f`](https://github.com/cloudflare/workers-sdk/commit/678170fe3cc93d8cd32a8e062ad1c2b80195264b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To    |
+  | ---------- | ----- | ----- |
+  | sv         | 0.8.6 | 0.8.7 |
+
+- [#9427](https://github.com/cloudflare/workers-sdk/pull/9427) [`5231b0e`](https://github.com/cloudflare/workers-sdk/commit/5231b0ed3ae9bd38229414342f328babaf2e902c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-astro | 4.11.4 | 4.12.1 |
+
+- [#9428](https://github.com/cloudflare/workers-sdk/pull/9428) [`f312396`](https://github.com/cloudflare/workers-sdk/commit/f3123962361640aaf6fa6ff77dfc0dea968be63a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-docusaurus | 3.7.0 | 3.8.0 |
+
+- [#9429](https://github.com/cloudflare/workers-sdk/pull/9429) [`4e7345e`](https://github.com/cloudflare/workers-sdk/commit/4e7345e132a45acbf8759e447552785dc1234903) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.3.2 | 15.3.3 |
+
+- [#9430](https://github.com/cloudflare/workers-sdk/pull/9430) [`00ebdd9`](https://github.com/cloudflare/workers-sdk/commit/00ebdd9dc4402a2a1d1193d0d7be4d345adcd875) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.13.0 | 1.14.1 |
+
+## 2.47.3
+
+### Patch Changes
+
+- [#9332](https://github.com/cloudflare/workers-sdk/pull/9332) [`a3496bf`](https://github.com/cloudflare/workers-sdk/commit/a3496bf33a57035d7a5fe54d90589049cc36a3e1) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - add extra information about asset serving to hello-world templates
+
+## 2.47.2
+
+### Patch Changes
+
+- [#9291](https://github.com/cloudflare/workers-sdk/pull/9291) [`40040de`](https://github.com/cloudflare/workers-sdk/commit/40040de6dde0df3f182cdff31d1fed263f3721f7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.25.0 | 3.25.1 |
+
+- [#9292](https://github.com/cloudflare/workers-sdk/pull/9292) [`14c7d04`](https://github.com/cloudflare/workers-sdk/commit/14c7d04ff69ebae59bd58e7c57afc9f9eed5e4dc) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From    | To      |
+  | --------------- | ------- | ------- |
+  | @angular/create | 19.2.11 | 19.2.12 |
+
+- [#9293](https://github.com/cloudflare/workers-sdk/pull/9293) [`fa4dd47`](https://github.com/cloudflare/workers-sdk/commit/fa4dd479d02197d60d2cc2af5075470eaa7f6d7d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To    |
+  | ---------- | ----- | ----- |
+  | sv         | 0.8.3 | 0.8.6 |
+
+- [#9294](https://github.com/cloudflare/workers-sdk/pull/9294) [`625aeca`](https://github.com/cloudflare/workers-sdk/commit/625aeca3f47cdfadd06c16250920f45aa1a17e3a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-hono | 0.18.0 | 0.19.1 |
+
+- [#9274](https://github.com/cloudflare/workers-sdk/pull/9274) [`14dc393`](https://github.com/cloudflare/workers-sdk/commit/14dc3937b9bc1d5fe45cbc08b1a47c04b3e0f0a9) Thanks [@vicb](https://github.com/vicb)! - fix the env interface name in Next
+
+## 2.47.1
+
+### Patch Changes
+
+- [#9244](https://github.com/cloudflare/workers-sdk/pull/9244) [`f0f1055`](https://github.com/cloudflare/workers-sdk/commit/f0f10559ca7126c8fb8f902d2865cc91adf11872) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: set `compilerOptions.types` to `./worker-configuration.d.ts` instead of `worker-configuration.d.ts` in tsconfig.json
+
+## 2.47.0
+
+### Minor Changes
+
+- [#8886](https://github.com/cloudflare/workers-sdk/pull/8886) [`e1df3d8`](https://github.com/cloudflare/workers-sdk/commit/e1df3d831466e38f3db019dbecc4067dc60fe4ea) Thanks [@emily-shen](https://github.com/emily-shen)! - use `wrangler types` to generate types instead of using the `@cloudflare/workers-types` package
+
+### Patch Changes
+
+- [#9201](https://github.com/cloudflare/workers-sdk/pull/9201) [`6d8a346`](https://github.com/cloudflare/workers-sdk/commit/6d8a34677439a31d21859fe59170fe1b0a677f88) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.3.1 | 15.3.2 |
+
+- [#9202](https://github.com/cloudflare/workers-sdk/pull/9202) [`da7a0a6`](https://github.com/cloudflare/workers-sdk/commit/da7a0a60921f236d1add767fbde2d95b2cfa9812) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 7.5.3 | 7.6.0 |
+
+- [#9203](https://github.com/cloudflare/workers-sdk/pull/9203) [`0e215b0`](https://github.com/cloudflare/workers-sdk/commit/0e215b0cb4a960e8a4f50dbff3d53e4fe9e87086) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 6.4.1 | 6.5.0 |
+
+- [#9204](https://github.com/cloudflare/workers-sdk/pull/9204) [`85b3458`](https://github.com/cloudflare/workers-sdk/commit/85b3458276af6873506f9aa33cfd1f0e2b3f61fc) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.16.5 | 2.16.6 |
+
+- [#9205](https://github.com/cloudflare/workers-sdk/pull/9205) [`b7ce2bb`](https://github.com/cloudflare/workers-sdk/commit/b7ce2bbc6506e134f365d8ce0fad89e977e89bee) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From    | To      |
+  | --------------- | ------- | ------- |
+  | @angular/create | 19.2.10 | 19.2.11 |
+
+- [#9147](https://github.com/cloudflare/workers-sdk/pull/9147) [`822e103`](https://github.com/cloudflare/workers-sdk/commit/822e103f2e5ef7b36c469d46596778b25f9e7679) Thanks [@vicb](https://github.com/vicb)! - Add the `global_fetch_strictly_public` flag to workers template
+
+- [#9190](https://github.com/cloudflare/workers-sdk/pull/9190) [`616adf1`](https://github.com/cloudflare/workers-sdk/commit/616adf1b9a467e8adefaa4abcd285e3248552547) Thanks [@vicb](https://github.com/vicb)! - Bump `@opennextjs/cloudflare` to `^1.0.2`
+
+- [#9209](https://github.com/cloudflare/workers-sdk/pull/9209) [`22177c8`](https://github.com/cloudflare/workers-sdk/commit/22177c8d8077f81700d07e11add05b859bba693e) Thanks [@vicb](https://github.com/vicb)! - Use the latest release of create-next-app for Next on Workers
+
+## 2.46.2
+
+### Patch Changes
+
+- [#9136](https://github.com/cloudflare/workers-sdk/pull/9136) [`5b0c9c9`](https://github.com/cloudflare/workers-sdk/commit/5b0c9c9485e6801241f4bedcf2bca026c8baa585) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-astro | 4.11.3 | 4.11.4 |
+
+- [#9137](https://github.com/cloudflare/workers-sdk/pull/9137) [`81163a3`](https://github.com/cloudflare/workers-sdk/commit/81163a399f05260711a804a40fd1a022e315b391) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To      |
+  | --------------- | ------ | ------- |
+  | @angular/create | 19.2.9 | 19.2.10 |
+
+- [#9138](https://github.com/cloudflare/workers-sdk/pull/9138) [`c2d249d`](https://github.com/cloudflare/workers-sdk/commit/c2d249d698fabc6249d2b400d175f7549e2c4e92) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 7.5.2 | 7.5.3 |
+
+## 2.46.1
+
+### Patch Changes
+
+- [#9159](https://github.com/cloudflare/workers-sdk/pull/9159) [`c6b3f10`](https://github.com/cloudflare/workers-sdk/commit/c6b3f10f5adf4e6d62bcc9fe89574a2cbcce3870) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - bump esbuild version to fix regression in 0.25.0
+
+## 2.46.0
+
+### Minor Changes
+
+- [#9035](https://github.com/cloudflare/workers-sdk/pull/9035) [`3f8f1a1`](https://github.com/cloudflare/workers-sdk/commit/3f8f1a1487931a5cea95b4914638d37718d2cf34) Thanks [@dom96](https://github.com/dom96)! - Add DO templates for Python Workers and update to use SDK
+
+### Patch Changes
+
+- [#9070](https://github.com/cloudflare/workers-sdk/pull/9070) [`c8a5a60`](https://github.com/cloudflare/workers-sdk/commit/c8a5a602b2cc1296b67f7d40a4b43bc71d863569) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To    |
+  | ---------- | ----- | ----- |
+  | sv         | 0.8.1 | 0.8.3 |
+
+- [#9071](https://github.com/cloudflare/workers-sdk/pull/9071) [`db300ef`](https://github.com/cloudflare/workers-sdk/commit/db300ef98609b1d868b26d61b00e05689f587de3) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.2.8 | 19.2.9 |
+
+- [#9072](https://github.com/cloudflare/workers-sdk/pull/9072) [`b0da6e9`](https://github.com/cloudflare/workers-sdk/commit/b0da6e9b2714f5e622fea19c1b9ce7166c9f124c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-hono | 0.17.0 | 0.18.0 |
+
+- [#9073](https://github.com/cloudflare/workers-sdk/pull/9073) [`be558ba`](https://github.com/cloudflare/workers-sdk/commit/be558ba5fa135b4df23c0aefccbb7cf024b1b163) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 7.5.1 | 7.5.2 |
+
+- [#9074](https://github.com/cloudflare/workers-sdk/pull/9074) [`8fc3418`](https://github.com/cloudflare/workers-sdk/commit/8fc3418028f9c5e80f2e854c836e450f1b4362db) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-astro | 4.11.2 | 4.11.3 |
+
+- [#8994](https://github.com/cloudflare/workers-sdk/pull/8994) [`478d79d`](https://github.com/cloudflare/workers-sdk/commit/478d79d5bc2192c58567a2329e9c565b432d6617) Thanks [@vicb](https://github.com/vicb)! - Install `@opennextjs/cloudflare` as regular dependency
+
+- [#9087](https://github.com/cloudflare/workers-sdk/pull/9087) [`79593e6`](https://github.com/cloudflare/workers-sdk/commit/79593e603d7e1f73f5c76e8d2d22df0f4b11d167) Thanks [@vicb](https://github.com/vicb)! - Add the `global_fetch_strictly_public` flag to the Next template for workers
+
+## 2.45.3
+
+### Patch Changes
+
+- [#9033](https://github.com/cloudflare/workers-sdk/pull/9033) [`2c50115`](https://github.com/cloudflare/workers-sdk/commit/2c501151d3d1a563681cdb300a298b83862b60e2) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: convert wrangler.toml files into wrangler.jsonc ones
+
+## 2.45.2
+
+### Patch Changes
+
+- [#9031](https://github.com/cloudflare/workers-sdk/pull/9031) [`38ee9e4`](https://github.com/cloudflare/workers-sdk/commit/38ee9e43b682e72eb65ce0c1fc912403a6468d93) Thanks [@jsparkdev](https://github.com/jsparkdev)! - update react template to fix type errors
+
+- [#9032](https://github.com/cloudflare/workers-sdk/pull/9032) [`7749f42`](https://github.com/cloudflare/workers-sdk/commit/7749f42c3cf41ddd3fc2efee9acff69cea6b9e97) Thanks [@jsparkdev](https://github.com/jsparkdev)! - Removed `await` keyword used in non asynchronous function calls
+
+## 2.45.1
+
+### Patch Changes
+
+- [#7796](https://github.com/cloudflare/workers-sdk/pull/7796) [`d16f1c6`](https://github.com/cloudflare/workers-sdk/commit/d16f1c6a11a5c52c8efe91513e17264becb62142) Thanks [@G4brym](https://github.com/G4brym)! - Update openapi C3 template to include better ts types and lint command
+
+## 2.45.0
+
+### Minor Changes
+
+- [#8978](https://github.com/cloudflare/workers-sdk/pull/8978) [`0afae8f`](https://github.com/cloudflare/workers-sdk/commit/0afae8f8c3e8fc1984523f2bb9355aec81f52e8a) Thanks [@edmundhung](https://github.com/edmundhung)! - updated the qwik cloudflare workers template to keep the default \_headers and \_redirects files
+
+### Patch Changes
+
+- [#9012](https://github.com/cloudflare/workers-sdk/pull/9012) [`cd542df`](https://github.com/cloudflare/workers-sdk/commit/cd542dfb242d8bac48abb3c1cc37859942fc968a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.2.7 | 19.2.8 |
+
+- [#9013](https://github.com/cloudflare/workers-sdk/pull/9013) [`27de5a0`](https://github.com/cloudflare/workers-sdk/commit/27de5a0aae4f836905dbf846ffe5f18eea9b5cbc) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 6.3.1 | 6.4.1 |
+
+- [#9014](https://github.com/cloudflare/workers-sdk/pull/9014) [`4969932`](https://github.com/cloudflare/workers-sdk/commit/49699320964d7ae32f165a839a3bea20a96bf84d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.24.1 | 3.25.0 |
+
+- [#9015](https://github.com/cloudflare/workers-sdk/pull/9015) [`fd6ac07`](https://github.com/cloudflare/workers-sdk/commit/fd6ac07ef1821bdf8497319a18712e8dcb27a044) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.3.0 | 15.3.1 |
+
+- [#9016](https://github.com/cloudflare/workers-sdk/pull/9016) [`729732c`](https://github.com/cloudflare/workers-sdk/commit/729732cb7b214914d63359292faaa1ef6107aa9d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-astro | 4.11.1 | 4.11.2 |
+
+- [#9017](https://github.com/cloudflare/workers-sdk/pull/9017) [`c49e8a4`](https://github.com/cloudflare/workers-sdk/commit/c49e8a4edb543f85186970def52e1632cf6ece3b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 7.5.0 | 7.5.1 |
+
+## 2.44.1
+
+### Patch Changes
+
+- [#8919](https://github.com/cloudflare/workers-sdk/pull/8919) [`3a83ff1`](https://github.com/cloudflare/workers-sdk/commit/3a83ff196886b68417c9412953cd86272c5235f0) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.2.1 | 15.3.0 |
+
+- [#8946](https://github.com/cloudflare/workers-sdk/pull/8946) [`5cffdec`](https://github.com/cloudflare/workers-sdk/commit/5cffdec307f214bb952ad2c4a35a1710d105f1bb) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To    |
+  | ---------- | ----- | ----- |
+  | sv         | 0.8.0 | 0.8.1 |
+
+- [#8947](https://github.com/cloudflare/workers-sdk/pull/8947) [`b0c1179`](https://github.com/cloudflare/workers-sdk/commit/b0c11793a9ace0bb49264161559043e697d0d6c5) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.2.6 | 19.2.7 |
+
+- [#8948](https://github.com/cloudflare/workers-sdk/pull/8948) [`cba4713`](https://github.com/cloudflare/workers-sdk/commit/cba4713e8b1b711c3954192dfb8188fe7101870c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | gatsby     | 5.14.1 | 5.14.3 |
+
+- [#8949](https://github.com/cloudflare/workers-sdk/pull/8949) [`5777b33`](https://github.com/cloudflare/workers-sdk/commit/5777b33c8598d8fd394e6a50661ed0bcc7918334) Thanks [@vicb](https://github.com/vicb)! - bump create-next-app to 15.3.0 for the Workers template
+
+## 2.44.0
+
+### Minor Changes
+
+- [#8708](https://github.com/cloudflare/workers-sdk/pull/8708) [`f4c37bb`](https://github.com/cloudflare/workers-sdk/commit/f4c37bb0e4bf6664dd946a7acf1e26b5780b832d) Thanks [@royvandewater](https://github.com/royvandewater)! - Add --template-mode argument to create-cloudflare to support templating from private repositories
+
+  create-cloudflare uses degit under the hood to clone template git repositories. degit will attempt to download a tar file of the HEAD of a repository if it is served up on one of several allow listed repository hosting services including GitHub. However, the tar support does not support templating from private repositories. To support that, we needed to create the ability to tell degit to use "git" mode to download the template using the user's git credentials.
+
+### Patch Changes
+
+- [#8950](https://github.com/cloudflare/workers-sdk/pull/8950) [`bab1724`](https://github.com/cloudflare/workers-sdk/commit/bab1724229974c545084c31df3731e7c2271ee49) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: include telemetry-related environment variables in release builds
+
+## 2.43.8
+
+### Patch Changes
+
+- [#8814](https://github.com/cloudflare/workers-sdk/pull/8814) [`de209c2`](https://github.com/cloudflare/workers-sdk/commit/de209c2355f8f6840dd7e11e4609150b8ba430e1) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.15.3 | 2.16.5 |
+
+- [#8815](https://github.com/cloudflare/workers-sdk/pull/8815) [`2fddcc8`](https://github.com/cloudflare/workers-sdk/commit/2fddcc86a081c3b4ea7c65f4d467ff5fd61a5315) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-hono | 0.15.3 | 0.17.0 |
+
+- [#8816](https://github.com/cloudflare/workers-sdk/pull/8816) [`06ffd1a`](https://github.com/cloudflare/workers-sdk/commit/06ffd1ae009c69fb276a25db6f3c937d9c45b16f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.12.0 | 1.13.0 |
+
+- [#8818](https://github.com/cloudflare/workers-sdk/pull/8818) [`618d052`](https://github.com/cloudflare/workers-sdk/commit/618d052090f84b4d52f349bc770d41b8a2238e54) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 7.4.1 | 7.5.0 |
+
+- [#8820](https://github.com/cloudflare/workers-sdk/pull/8820) [`2053392`](https://github.com/cloudflare/workers-sdk/commit/2053392c48e2e5832425788a2afc8c904ff90c3b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To    |
+  | ---------- | ------ | ----- |
+  | sv         | 0.6.23 | 0.8.0 |
+
+- [#8834](https://github.com/cloudflare/workers-sdk/pull/8834) [`f984ca3`](https://github.com/cloudflare/workers-sdk/commit/f984ca305c8f9719716fb8c814d0b4f66059e268) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.15.1 | 3.16.4 |
+
+- [#8835](https://github.com/cloudflare/workers-sdk/pull/8835) [`34168b3`](https://github.com/cloudflare/workers-sdk/commit/34168b39f185f37f447794f342bba53b1a05436d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.2.5 | 19.2.6 |
+
+## 2.43.7
+
+### Patch Changes
+
+- [#8874](https://github.com/cloudflare/workers-sdk/pull/8874) [`5ace43b`](https://github.com/cloudflare/workers-sdk/commit/5ace43b2d4426b08030eae5fc790e51711224861) Thanks [@emily-shen](https://github.com/emily-shen)! - rename hello world templates with assets
+
+  Worker + Assets -> SSR / full-stack app
+  Assets only -> Static site
+
+## 2.43.6
+
+### Patch Changes
+
+- [#8846](https://github.com/cloudflare/workers-sdk/pull/8846) [`22b51e3`](https://github.com/cloudflare/workers-sdk/commit/22b51e3e21419650e66db0e06af363a8eba744df) Thanks [@emily-shen](https://github.com/emily-shen)! - Use the latest version of Wrangler when using c3 to init from dash
+
+## 2.43.5
+
+### Patch Changes
+
+- [#8822](https://github.com/cloudflare/workers-sdk/pull/8822) [`22b8a80`](https://github.com/cloudflare/workers-sdk/commit/22b8a807f2703ef7586093645fa3f9e7a750056c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.23.1 | 3.24.1 |
+
+- [#8844](https://github.com/cloudflare/workers-sdk/pull/8844) [`0a9a260`](https://github.com/cloudflare/workers-sdk/commit/0a9a260993079e10883122e5560461a06064f0ff) Thanks [@vicb](https://github.com/vicb)! - Disable incremental cache in the c3 Next.js template
+
+## 2.43.4
+
+### Patch Changes
+
+- [#8698](https://github.com/cloudflare/workers-sdk/pull/8698) [`1ba9e97`](https://github.com/cloudflare/workers-sdk/commit/1ba9e9787effd2012b65500eb78b39d46243c5b0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - remove BETA label from Workers+Assets templates and hide Pages templates
+
+## 2.43.3
+
+### Patch Changes
+
+- [#8070](https://github.com/cloudflare/workers-sdk/pull/8070) [`9b469e2`](https://github.com/cloudflare/workers-sdk/commit/9b469e213e9139eb883e298f46cb018e1a679477) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 6.1.1 | 6.3.1 |
+
+- [#8733](https://github.com/cloudflare/workers-sdk/pull/8733) [`857a550`](https://github.com/cloudflare/workers-sdk/commit/857a55000d4175d314acac7b56e09c8a0188bc50) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.21.1 | 3.23.1 |
+
+- [#8769](https://github.com/cloudflare/workers-sdk/pull/8769) [`efda570`](https://github.com/cloudflare/workers-sdk/commit/efda570d7d98dce8bdbc6e8eff0ff920b6bbe985) Thanks [@emily-shen](https://github.com/emily-shen)! - remove unnecessary ASSETS binding call in SPA templates
+
+  With SPA mode now enabled by default for compat dates since 2025-04-01, the Workers in the React and Vue templates no longer need this fallback ASSETS binding.
+
+- [#7894](https://github.com/cloudflare/workers-sdk/pull/7894) [`15a7618`](https://github.com/cloudflare/workers-sdk/commit/15a761893c32f3a1c7df4c0f41c21b4fad594547) Thanks [@juanmirocks](https://github.com/juanmirocks)! - fix scheduled TS template to include a fetch handler like the JS one
+
+- [#8765](https://github.com/cloudflare/workers-sdk/pull/8765) [`95fc93f`](https://github.com/cloudflare/workers-sdk/commit/95fc93f266a80c6aa82f3bf053937e1ac639d564) Thanks [@vicb](https://github.com/vicb)! - Update the Next on Workers template to use `@opennextjs/cloudflare` 1.0.0-beta releases
+
+## 2.43.2
+
+### Patch Changes
+
+- [#8731](https://github.com/cloudflare/workers-sdk/pull/8731) [`5eb6e1b`](https://github.com/cloudflare/workers-sdk/commit/5eb6e1bd9908835d11a800bfe59f631b6cc866ae) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.1.6 | 19.2.5 |
+
+- [#8732](https://github.com/cloudflare/workers-sdk/pull/8732) [`5fc7fe6`](https://github.com/cloudflare/workers-sdk/commit/5fc7fe6c7092fa089111d4a5e5b4a6c667b49463) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 7.4.0 | 7.4.1 |
+
+- [#8734](https://github.com/cloudflare/workers-sdk/pull/8734) [`e4e7296`](https://github.com/cloudflare/workers-sdk/commit/e4e7296fd2bcb00b511f9d48fb199c71540916ef) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-solid | 0.6.1 | 0.6.2 |
+
+- [#8741](https://github.com/cloudflare/workers-sdk/pull/8741) [`56637e3`](https://github.com/cloudflare/workers-sdk/commit/56637e3b2ca2c4aa86e07863a5b903503ee1c25a) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate Next.js + Workers Assets template from experimental
+
+  You no longer need the `--experimental` flag to access this template.
+
+- [#8738](https://github.com/cloudflare/workers-sdk/pull/8738) [`da1ec13`](https://github.com/cloudflare/workers-sdk/commit/da1ec13e730065169dfbcf24103728e5c04dd9a1) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: remove `main` field in wrangler.jsonc of Hono Pages template
+
+## 2.43.1
+
+### Patch Changes
+
+- [#8395](https://github.com/cloudflare/workers-sdk/pull/8395) [`3f41730`](https://github.com/cloudflare/workers-sdk/commit/3f41730ca62890dd19804e65da78ad82af54126c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Remove categories in C3 that have no templates
+
+  The `Application Starter` category doesn't contain any entries in experimental mode so we shouldn't show it.
+
+  This change updates C3 to automatically exclude categories that have no templates.
+
+## 2.43.0
+
+### Minor Changes
+
+- [#8553](https://github.com/cloudflare/workers-sdk/pull/8553) [`dfbf03f`](https://github.com/cloudflare/workers-sdk/commit/dfbf03f87e491a57a9ad3d2fa9de1816d9553a75) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: add React Router + Workers assets template
+
+  Also hide the Remix template in the interactive menu, although it is still accessible via CLI with `--framework=remix`.
+
+### Patch Changes
+
+- [#8516](https://github.com/cloudflare/workers-sdk/pull/8516) [`82f35b8`](https://github.com/cloudflare/workers-sdk/commit/82f35b8796ce9fbd1a87a0a49cb84fe63e24a4de) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.14.2 | 3.15.1 |
+
+- [#8518](https://github.com/cloudflare/workers-sdk/pull/8518) [`8b71224`](https://github.com/cloudflare/workers-sdk/commit/8b7122440f334289187238361c4d976c17e953ee) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-astro | 4.11.0 | 4.11.1 |
+
+- [#8656](https://github.com/cloudflare/workers-sdk/pull/8656) [`1f27e26`](https://github.com/cloudflare/workers-sdk/commit/1f27e267ff2cd389e6fce9041f52ff40ff4cefd8) Thanks [@Cherry](https://github.com/Cherry)! - Improves minor HTML semantics of the default index.html included in various templates with Workers Assets
+
+- [#8610](https://github.com/cloudflare/workers-sdk/pull/8610) [`6a958df`](https://github.com/cloudflare/workers-sdk/commit/6a958df17944eaf340796ebf0310ed3564423e37) Thanks [@emily-shen](https://github.com/emily-shen)! - The Hello World DO templates were previously updated to use SQLite - this just also updates the DO + Assets template.
+
+- [#8651](https://github.com/cloudflare/workers-sdk/pull/8651) [`fc66a2b`](https://github.com/cloudflare/workers-sdk/commit/fc66a2b6b591a245e4c30e2731e7573f179e1b54) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: provide type for `env` in c3 when vitest is included in template
+
+## 2.42.1
+
+### Patch Changes
+
+- [#8598](https://github.com/cloudflare/workers-sdk/pull/8598) [`e5dbedd`](https://github.com/cloudflare/workers-sdk/commit/e5dbedd78297d25cb8c8b1bd7c6cb70e2e9a626a) Thanks [@emily-shen](https://github.com/emily-shen)! - graduate Qwik + Workers Assets templates from experimental
+
+  You no longer need to include the `--experimental` flag to access this template.
+
+## 2.42.0
+
+### Minor Changes
+
+- [#8460](https://github.com/cloudflare/workers-sdk/pull/8460) [`31332ca`](https://github.com/cloudflare/workers-sdk/commit/31332ca461cea5fbbe8a6c56fe598962c94eae65) Thanks [@joshthoward](https://github.com/joshthoward)! - Update the C3 Durable Objects example to use SQLite
+
+### Patch Changes
+
+- [#8593](https://github.com/cloudflare/workers-sdk/pull/8593) [`36ae02c`](https://github.com/cloudflare/workers-sdk/commit/36ae02c575a6a2e806565a17cf16a5a80f3e45ad) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate Hono + Workers assets template from experimental.
+
+  You will no longer need to include the --experimental flag to access this template.
+  Also creates a hono template that uses the cloudflare-pages adapter.
+
+- [#8402](https://github.com/cloudflare/workers-sdk/pull/8402) [`03ec951`](https://github.com/cloudflare/workers-sdk/commit/03ec9510c5ebb0fceed7df64d90383cdac861b3e) Thanks [@emily-shen](https://github.com/emily-shen)! - graduate Astro Workers + Assets template from experimental
+
+  You no longer need to pass in --experimental to access the Workers + Assets version of the template.
+
+- [#8552](https://github.com/cloudflare/workers-sdk/pull/8552) [`0fe3260`](https://github.com/cloudflare/workers-sdk/commit/0fe32607199c9fa3b68e4cacab9522379b6704e0) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate remix Workers + Assets template from experimental
+
+  You will no longer need to pass in the `--experimental` flag to access this template.
+
+- [#8574](https://github.com/cloudflare/workers-sdk/pull/8574) [`9b86dba`](https://github.com/cloudflare/workers-sdk/commit/9b86dba81929db3c8216fdfc8aea62ccf69ef32f) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate sveltekit + workers assets template from experimental
+
+  You no longer need to pass in the --experimental flag to access this template.
+
+## 2.41.2
+
+### Patch Changes
+
+- [#8379](https://github.com/cloudflare/workers-sdk/pull/8379) [`2b37abe`](https://github.com/cloudflare/workers-sdk/commit/2b37abe10dac9df6c0cc91114ea68b40b6c0991d) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate Workers + Assets hello world templates from experimental status
+
+- [#8541](https://github.com/cloudflare/workers-sdk/pull/8541) [`cfa525d`](https://github.com/cloudflare/workers-sdk/commit/cfa525dba45a6d678270216e1679e1ce32f62163) Thanks [@GregBrimble](https://github.com/GregBrimble)! - fix: Fixes the Cloudflare logo in the Vite React starter to support both dark and light mode
+
+## 2.41.1
+
+### Patch Changes
+
+- [#8418](https://github.com/cloudflare/workers-sdk/pull/8418) [`736bd4f`](https://github.com/cloudflare/workers-sdk/commit/736bd4fd87ec41c05b080996cd9ebd8e0951e08d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.1.6 | 15.2.1 |
+
+- [#8420](https://github.com/cloudflare/workers-sdk/pull/8420) [`db987de`](https://github.com/cloudflare/workers-sdk/commit/db987dec97284ce05e9e5d382c26a2a5bad35b73) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To    |
+  | ------------ | ------ | ----- |
+  | create-solid | 0.5.14 | 0.6.1 |
+
+- [#8451](https://github.com/cloudflare/workers-sdk/pull/8451) [`fd2cb21`](https://github.com/cloudflare/workers-sdk/commit/fd2cb2112739d322e49fcec8b00343e68d62e141) Thanks [@vicb](https://github.com/vicb)! - Update the Next experimental template to use version ~15.2.2
+
+## 2.41.0
+
+### Minor Changes
+
+- [#8372](https://github.com/cloudflare/workers-sdk/pull/8372) [`3536670`](https://github.com/cloudflare/workers-sdk/commit/35366708d36f82b3c51e3e5cc153a2c14b0d35c3) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: update nitro config in nuxt templates to use generated wrangler config
+
+### Patch Changes
+
+- [#8440](https://github.com/cloudflare/workers-sdk/pull/8440) [`af1c5c3`](https://github.com/cloudflare/workers-sdk/commit/af1c5c36e751dc452055f75fc30f28fa3e68beab) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - tighten up .gitignore processing
+
+- [#8372](https://github.com/cloudflare/workers-sdk/pull/8372) [`3536670`](https://github.com/cloudflare/workers-sdk/commit/35366708d36f82b3c51e3e5cc153a2c14b0d35c3) Thanks [@emily-shen](https://github.com/emily-shen)! - Graduate Angular, Gatsby, Vue and Nuxt templates (Workers + Assets) from experimental
+
+  You no longer need to pass in the --experimental flag to access these templates.
+
+## 2.40.3
+
+### Patch Changes
+
+- [#8358](https://github.com/cloudflare/workers-sdk/pull/8358) [`5875adb`](https://github.com/cloudflare/workers-sdk/commit/5875adb87317184122075c5ba3dce1c302dc2f80) Thanks [@emily-shen](https://github.com/emily-shen)! - feat: add Worker + Vite plugin to Vue experimental template
+
+- [#8291](https://github.com/cloudflare/workers-sdk/pull/8291) [`8461f9b`](https://github.com/cloudflare/workers-sdk/commit/8461f9b6ab582b75d752c860d412fa75849b3746) Thanks [@edmundhung](https://github.com/edmundhung)! - update vitest packages version on hello-world template
+
+## 2.40.2
+
+### Patch Changes
+
+- [#8371](https://github.com/cloudflare/workers-sdk/pull/8371) [`b24497d`](https://github.com/cloudflare/workers-sdk/commit/b24497daf70fc9f32f14060223dbef338f7d2ec0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - graduate C3 React (Workers) template
+
+- [#8349](https://github.com/cloudflare/workers-sdk/pull/8349) [`ca60010`](https://github.com/cloudflare/workers-sdk/commit/ca6001066586e0c549e63016aed0b18f0c546220) Thanks [@emily-shen](https://github.com/emily-shen)! - Add type generation command to React + Vite + Workers with Assets template and use `wrangler.jsonc` instead of `.json`.
+
+## 2.40.1
+
+### Patch Changes
+
+- [#8311](https://github.com/cloudflare/workers-sdk/pull/8311) [`f379635`](https://github.com/cloudflare/workers-sdk/commit/f379635a338f546f72fe8208df00cb7801b1263f) Thanks [@p-glynn](https://github.com/p-glynn)! - use tabs for indentation in generated wrangler.json
+
+- [#7752](https://github.com/cloudflare/workers-sdk/pull/7752) [`595f170`](https://github.com/cloudflare/workers-sdk/commit/595f17092e332bfee92ac888556dc3e3d4232273) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: graduate Docusaurus Workers + Assets template from experimental
+
+## 2.40.0
+
+### Minor Changes
+
+- [#8197](https://github.com/cloudflare/workers-sdk/pull/8197) [`acd42a8`](https://github.com/cloudflare/workers-sdk/commit/acd42a849b31b0d2ef30b0443678e775ebe69fa2) Thanks [@dom96](https://github.com/dom96)! - Python Workers template now includes package for autocomplete and type hints
+
+### Patch Changes
+
+- [#8324](https://github.com/cloudflare/workers-sdk/pull/8324) [`94729a6`](https://github.com/cloudflare/workers-sdk/commit/94729a6916e2a8b2bb8177d322cd8c8916f57d10) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.6.16 | 0.6.23 |
+
+- [#8290](https://github.com/cloudflare/workers-sdk/pull/8290) [`5b047e4`](https://github.com/cloudflare/workers-sdk/commit/5b047e4af0ffaab65b9fb0a491982727cd1232bd) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - ensure that git commits are generated
+
+- [#8013](https://github.com/cloudflare/workers-sdk/pull/8013) [`bc62d24`](https://github.com/cloudflare/workers-sdk/commit/bc62d2405c42bf41666983f13dfac2f75506b82c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - add experimental React templates using the Cloudflare Vite plugin
+
+- [#8232](https://github.com/cloudflare/workers-sdk/pull/8232) [`59cb914`](https://github.com/cloudflare/workers-sdk/commit/59cb914ee4c0939d1b29421e857e16b8e4599300) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: stop c3 adding a duplicate `./wrangler.jsonc` when using --existing-script
+
+  This should mean dev and deploy on projects initialised using `create-cloudflare --existing-script` start working again. Note there will still be an extraneous `./src/wrangler.toml`, which will require a separate fix in the dashboard. This file can be manually deleted in the meantime.
+
+## 2.39.0
+
+### Minor Changes
+
+- [#8264](https://github.com/cloudflare/workers-sdk/pull/8264) [`1f3af77`](https://github.com/cloudflare/workers-sdk/commit/1f3af77c7920189b9360357bf3dc054b2cebdf00) Thanks [@dcartertwo](https://github.com/dcartertwo)! - Create Cloudflare will no longer ask if the developer would like to use git if already in a git repository.
+
+## 2.38.2
+
+### Patch Changes
+
+- [#8233](https://github.com/cloudflare/workers-sdk/pull/8233) [`74a808f`](https://github.com/cloudflare/workers-sdk/commit/74a808f0a7bdd2af7526b3c73d1c7c27c03b85a3) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.14.0 | 3.14.2 |
+
+- [#8241](https://github.com/cloudflare/workers-sdk/pull/8241) [`708de7f`](https://github.com/cloudflare/workers-sdk/commit/708de7f0cb1cd6bd2488922f129ca26b6690b962) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - update experimental Next.js template to work on `@opennextjs/cloudflare@0.5.x`
+
+- [#8240](https://github.com/cloudflare/workers-sdk/pull/8240) [`47f56a2`](https://github.com/cloudflare/workers-sdk/commit/47f56a2a4dcfa216d768fec974c2fa8c5bb3c21c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: remove unnecessary flags passed to `create-next-app` when creating Next.js apps in experimental mode
+
+  This change removes a set of flags that get passed to `create-next-app` that force the generated Next.js
+  application to have specific settings (e.g. typescript, tailwind, src directory, etc...) which are not
+  actually mandatory/recommended for the use of the open-next Cloudflare adapter
+
+- [#8215](https://github.com/cloudflare/workers-sdk/pull/8215) [`eb0912d`](https://github.com/cloudflare/workers-sdk/commit/eb0912d54abe7c7dd192ccc5b5de738dfb2bfadf) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - This change makes the user facing message C3 displays while waiting for DNS propagation, more friendly/informative. The idea is to inform users that DNS propagation might sometimes take even up to 2 minutes. This will hopefully prevent confusion around whether how long the process will take, or whether the process is stuck, etc.
+
+- [#8243](https://github.com/cloudflare/workers-sdk/pull/8243) [`c62973b`](https://github.com/cloudflare/workers-sdk/commit/c62973b4cc148a8bf9616008f9c0f8176db9408f) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - fix: Ensure we exit the process on "SIGINT" and "SIGTERM"
+
+  Currently C3 does not explicitly exit the process if an error is thrown, or if a "SIGINT" or "SIGTERM" signal is received. This leads to situations when, if `ctrl+C` is pressed while there are still tasks in the stack/microtask queues (think in flight async xhr calls, or polling, or long running
+  `while` loops), the current process will continue running until all those tasks are run to completion, and the queues are empty.
+
+  This commit fixes this by explicitly calling `process.exit()` when an error is thrown (our internal "SIGINT"/"SIGTERM" handlers will throw a `CancelError`), thus ensuring we always exit the process.
+
+## 2.38.1
+
+### Patch Changes
+
+- [#8152](https://github.com/cloudflare/workers-sdk/pull/8152) [`ed3bc2f`](https://github.com/cloudflare/workers-sdk/commit/ed3bc2f3be45be55d20299ed3f481e75c63ba285) Thanks [@Cherry](https://github.com/Cherry)! - fix: generated wrangler.json and wrangler.jsonc files will now be formatted with tabs, to match the rest of the generated files
+
+## 2.38.0
+
+### Minor Changes
+
+- [#8024](https://github.com/cloudflare/workers-sdk/pull/8024) [`e8272b0`](https://github.com/cloudflare/workers-sdk/commit/e8272b08ee54894af3e5e33fb86380908d3ff68a) Thanks [@emily-shen](https://github.com/emily-shen)! - Output wrangler.jsonc instead of wrangler.json
+
+  The JSONC format allows comments, but otherwise uses standard JSON syntax.
+
+  Note that Wrangler is still happy to parse `.json` files with comments (along the lines of `tsconfig.json`), but to prevent confusion and for default compatibility with all IDEs, create-cloudflare will now output `wrangler.jsonc`.
+
+- [#8024](https://github.com/cloudflare/workers-sdk/pull/8024) [`e8272b0`](https://github.com/cloudflare/workers-sdk/commit/e8272b08ee54894af3e5e33fb86380908d3ff68a) Thanks [@emily-shen](https://github.com/emily-shen)! - Include a .vscode/settings.json file with a 'jsonc' file association for templates that use `wrangler.json`
+
+## 2.37.6
+
+### Patch Changes
+
+- [#7917](https://github.com/cloudflare/workers-sdk/pull/7917) [`6a500d6`](https://github.com/cloudflare/workers-sdk/commit/6a500d6bb81a8d1355dcc91ca73bbd19a5cd6769) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.1.2 | 19.1.5 |
+  | create-hono     | 0.15.2 | 0.15.3 |
+  | create-remix    | 2.15.2 | 2.15.3 |
+  | nuxi            | 3.20.0 | 3.21.1 |
+
+- [#7918](https://github.com/cloudflare/workers-sdk/pull/7918) [`88ea196`](https://github.com/cloudflare/workers-sdk/commit/88ea196b274ce2ec72a05a30385f303e8ca30a6c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.13.0 | 3.14.0 |
+
+- [#7919](https://github.com/cloudflare/workers-sdk/pull/7919) [`5ed2744`](https://github.com/cloudflare/workers-sdk/commit/5ed27444da2de4614856c29dd4e1e1d595e43ea2) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.1.2 | 19.1.5 |
+  | create-hono     | 0.15.2 | 0.15.3 |
+  | create-remix    | 2.15.2 | 2.15.3 |
+  | nuxi            | 3.20.0 | 3.21.1 |
+
+- [#7978](https://github.com/cloudflare/workers-sdk/pull/7978) [`5bcb204`](https://github.com/cloudflare/workers-sdk/commit/5bcb20463e359ed86cd9eeee3ad9c1b3f3958098) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.1.2 | 19.1.5 |
+
+- [#8076](https://github.com/cloudflare/workers-sdk/pull/8076) [`9cfe0d8`](https://github.com/cloudflare/workers-sdk/commit/9cfe0d8ed883eb1df275f9bd0137b96e1263c43b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.1.5 | 19.1.6 |
+
+- [#7854](https://github.com/cloudflare/workers-sdk/pull/7854) [`bff209d`](https://github.com/cloudflare/workers-sdk/commit/bff209d853ae081ec692c41a080071956bf4ae2d) Thanks [@beratbayram](https://github.com/beratbayram)! - Update the Next.js template
+
+  - Removed top-level `await` in `next.config.ts` as it is not allowed there and not required.
+  - Improved `setupDevPlatform()` comment
+
+- [#8033](https://github.com/cloudflare/workers-sdk/pull/8033) [`e62b097`](https://github.com/cloudflare/workers-sdk/commit/e62b097bb202e91452c2f87b1cec2bd84bd56400) Thanks [@edmundhung](https://github.com/edmundhung)! - update vitest version in templates to ~2.1.9
+
+## 2.37.5
+
+### Patch Changes
+
+- [#8005](https://github.com/cloudflare/workers-sdk/pull/8005) [`b889b16`](https://github.com/cloudflare/workers-sdk/commit/b889b1655bdcc1888e0558307bee3f7490827edc) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.20.0 | 3.21.1 |
+
+- [#8006](https://github.com/cloudflare/workers-sdk/pull/8006) [`4ecabf1`](https://github.com/cloudflare/workers-sdk/commit/4ecabf17784ea696662cbe1c0821ca21abe70e05) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-hono | 0.15.2 | 0.15.3 |
+
+- [#8007](https://github.com/cloudflare/workers-sdk/pull/8007) [`76156a4`](https://github.com/cloudflare/workers-sdk/commit/76156a4950ed6ac71f6b745a9deeb09e919a09fb) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.15.2 | 2.15.3 |
+
+## 2.37.4
+
+### Patch Changes
+
+- [#7903](https://github.com/cloudflare/workers-sdk/pull/7903) [`ce8bfbd`](https://github.com/cloudflare/workers-sdk/commit/ce8bfbdada90d1eac99f3a35dfdf1707e88eb73f) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - update experimental Next.js template to work on `@opennextjs/cloudflare@0.4.x`
+
+- [#7972](https://github.com/cloudflare/workers-sdk/pull/7972) [`7112347`](https://github.com/cloudflare/workers-sdk/commit/7112347e7de80857d2515892e9620700486b7a84) Thanks [@andyjessop](https://github.com/andyjessop)! - chore: bumps create-hono version to ensure correct Wrangler config file. Fixes the issue where C3 was generating both a `wrangler.toml` and a `wrangler.json` file.
+
+## 2.37.3
+
+### Patch Changes
+
+- [#7891](https://github.com/cloudflare/workers-sdk/pull/7891) [`a7965c7`](https://github.com/cloudflare/workers-sdk/commit/a7965c7c1c4b74a9e7415bbb3b086e8849ed2f3b) Thanks [@jahands](https://github.com/jahands)! - fix: Use today's date for compat date when the latest workerd release date is in the future
+
+  Fixes an issue where deployments would fail when there is a workerd release on the same day due to workerd releases having a date in the future because Workers does not allow using a compat date in the future.
+
+## 2.37.2
+
+### Patch Changes
+
+- [#7822](https://github.com/cloudflare/workers-sdk/pull/7822) [`c6e8a1c`](https://github.com/cloudflare/workers-sdk/commit/c6e8a1cccd6355fc2c4864fb1bc7b6da1c97704d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.6.11 | 0.6.13 |
+
+- [#7823](https://github.com/cloudflare/workers-sdk/pull/7823) [`4f84172`](https://github.com/cloudflare/workers-sdk/commit/4f84172314d217cce94f1e071bb0a300f8d787c1) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.1.4 | 15.1.5 |
+
+- [#7824](https://github.com/cloudflare/workers-sdk/pull/7824) [`794b446`](https://github.com/cloudflare/workers-sdk/commit/794b44606dc1e157ad2447a9e580578b79567678) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.0.7 | 19.1.2 |
+
+- [#7827](https://github.com/cloudflare/workers-sdk/pull/7827) [`6c2e943`](https://github.com/cloudflare/workers-sdk/commit/6c2e94318dd079f9cba3f763e67ba6698ef597f6) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: bump `vitest-pool-workers` version range in templates
+
+  This resolves [#7815](https://github.com/cloudflare/workers-sdk/issues/7815), where users encountered an error about missing `nodejs_compat` or `nodejs_compat_v2` compatibility flags when running Vitest on a fresh Hello World project created with `create-cloudflare`.
+
+## 2.37.1
+
+### Patch Changes
+
+- [#7774](https://github.com/cloudflare/workers-sdk/pull/7774) [`f9344a0`](https://github.com/cloudflare/workers-sdk/commit/f9344a076de5904ac073a3bee33c582c53a2dadc) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Fix regression in C3's `next` template
+
+  [#7676](https://github.com/cloudflare/workers-sdk/pull/7676) switched C3 templates to default to `wrangler.json` instead of `wrangler.toml`. Unfortunately, this unintendedly broke the `next` template, which was still attempting to read `wrangler.toml` specifically. This commit fixes the regression.
+
+  Fixes #7770
+
+## 2.37.0
+
+### Minor Changes
+
+- [#7676](https://github.com/cloudflare/workers-sdk/pull/7676) [`ab92f83`](https://github.com/cloudflare/workers-sdk/commit/ab92f837a995b2d3229609ba798dfc322a8ed171) Thanks [@penalosa](https://github.com/penalosa)! - Output the `wrangler.json` config format when running `create-cloudflare`
+
+### Patch Changes
+
+- [#7746](https://github.com/cloudflare/workers-sdk/pull/7746) [`836b316`](https://github.com/cloudflare/workers-sdk/commit/836b3165e416312d246e67c28a43345339da9485) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.1.3 | 15.1.4 |
+
+- [#7747](https://github.com/cloudflare/workers-sdk/pull/7747) [`e747ddf`](https://github.com/cloudflare/workers-sdk/commit/e747ddf6a47319dbb6d361e6d0046749759949c0) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.0.6 | 19.0.7 |
+
+- [#7748](https://github.com/cloudflare/workers-sdk/pull/7748) [`d13e288`](https://github.com/cloudflare/workers-sdk/commit/d13e288428c675ffb27860502749adb12664cb48) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.6.10 | 0.6.11 |
+
+- [#7749](https://github.com/cloudflare/workers-sdk/pull/7749) [`7f94b9d`](https://github.com/cloudflare/workers-sdk/commit/7f94b9dc1b36d782b8853a4b8e9170cc15689a3e) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.17.2 | 3.20.0 |
+
+- [#7743](https://github.com/cloudflare/workers-sdk/pull/7743) [`5955dac`](https://github.com/cloudflare/workers-sdk/commit/5955dac5ef2c6a0b6eea6dc28d11491966c07c2b) Thanks [@vicb](https://github.com/vicb)! - Update the Next.js experimental template
+
+  - Use create-next-app@^14.2.23
+  - Rename wrangler types output to cloudflare-env.d.ts
+
+- [#7742](https://github.com/cloudflare/workers-sdk/pull/7742) [`8fb0f25`](https://github.com/cloudflare/workers-sdk/commit/8fb0f25e70cd43ffc947ded9a0d7c0ce88e7b359) Thanks [@threepointone](https://github.com/threepointone)! - chore: update wrangler versions in templates
+
+## 2.36.0
+
+### Minor Changes
+
+- [#7388](https://github.com/cloudflare/workers-sdk/pull/7388) [`78c1649`](https://github.com/cloudflare/workers-sdk/commit/78c1649a1e072d5db101c8939890a98c4533b4c0) Thanks [@andyjessop](https://github.com/andyjessop)! - chore: remove nodejs_compat flag from basic C3 templates
+
+## 2.35.2
+
+### Patch Changes
+
+- [#7617](https://github.com/cloudflare/workers-sdk/pull/7617) [`75393d6`](https://github.com/cloudflare/workers-sdk/commit/75393d67d04fae1d674b7b2fc0b751384b02103b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 6.0.1 | 6.1.0 |
+
+- [#7618](https://github.com/cloudflare/workers-sdk/pull/7618) [`e5b9a9a`](https://github.com/cloudflare/workers-sdk/commit/e5b9a9a9d7363acf8ac7fa45f88294d879a3e996) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To    |
+  | ---------- | ----- | ----- |
+  | sv         | 0.6.7 | 0.6.9 |
+
+- [#7619](https://github.com/cloudflare/workers-sdk/pull/7619) [`9989022`](https://github.com/cloudflare/workers-sdk/commit/998902238552c860cf9dd9f629e8f351352ae3c4) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | gatsby     | 5.14.0 | 5.14.1 |
+
+- [#7620](https://github.com/cloudflare/workers-sdk/pull/7620) [`4a38b9b`](https://github.com/cloudflare/workers-sdk/commit/4a38b9b1f9d4249f0d6756c22593a168ab4149bc) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.16.0 | 3.17.1 |
+
+- [#7621](https://github.com/cloudflare/workers-sdk/pull/7621) [`05cc188`](https://github.com/cloudflare/workers-sdk/commit/05cc18889d604145d68ff0a306926ebb9380ea3b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.0.5 | 19.0.6 |
+
+- [#7622](https://github.com/cloudflare/workers-sdk/pull/7622) [`a29b1c2`](https://github.com/cloudflare/workers-sdk/commit/a29b1c2c58f59a0e9891f1d30eb1c2c0fd68e42d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.15.1 | 2.15.2 |
+
+- [#7623](https://github.com/cloudflare/workers-sdk/pull/7623) [`c448a57`](https://github.com/cloudflare/workers-sdk/commit/c448a57a23052d0fb75f06a282b735f452ddb8c5) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.11.0 | 1.12.0 |
+
+- [#7624](https://github.com/cloudflare/workers-sdk/pull/7624) [`d4d8df1`](https://github.com/cloudflare/workers-sdk/commit/d4d8df1356df66b09f18abff09b201537373b839) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.1.0 | 15.1.2 |
+
+- [#7643](https://github.com/cloudflare/workers-sdk/pull/7643) [`ab7204a`](https://github.com/cloudflare/workers-sdk/commit/ab7204a6eb8f5bab00172a6a2623251ba2d757ba) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.12.2 | 3.13.0 |
+
+- [#7644](https://github.com/cloudflare/workers-sdk/pull/7644) [`42e8ba1`](https://github.com/cloudflare/workers-sdk/commit/42e8ba1d5a130742d7d94ee9b0b42e0cba78a352) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 6.1.0 | 6.1.1 |
+
+- [#7645](https://github.com/cloudflare/workers-sdk/pull/7645) [`8b6f6e6`](https://github.com/cloudflare/workers-sdk/commit/8b6f6e633eda4c85f7e84144846bb83f0450d955) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.1.2 | 15.1.3 |
+
+- [#7646](https://github.com/cloudflare/workers-sdk/pull/7646) [`b9533a3`](https://github.com/cloudflare/workers-sdk/commit/b9533a375e25407251145dd94a0496faf5a16a4a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.17.1 | 3.17.2 |
+
+- [#7647](https://github.com/cloudflare/workers-sdk/pull/7647) [`df06a95`](https://github.com/cloudflare/workers-sdk/commit/df06a9592e8ce721da9b9b048f1db759826a6983) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To     |
+  | ---------- | ----- | ------ |
+  | sv         | 0.6.9 | 0.6.10 |
+
+- [#7673](https://github.com/cloudflare/workers-sdk/pull/7673) [`8ab13b2`](https://github.com/cloudflare/workers-sdk/commit/8ab13b2d7b397010532939bb9ba804c7dc84ea37) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-docusaurus | 3.6.3 | 3.7.0 |
+
+- [#7638](https://github.com/cloudflare/workers-sdk/pull/7638) [`acbea32`](https://github.com/cloudflare/workers-sdk/commit/acbea32c6df82269b435e34d8c51fe8a26c973f1) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix and update experimental Next.js template to work on `@opennextjs/cloudflare@0.3.x`
+
+- [#7664](https://github.com/cloudflare/workers-sdk/pull/7664) [`5cc3bb1`](https://github.com/cloudflare/workers-sdk/commit/5cc3bb10ae3027fa40c77f42e94e6fb0eae710ce) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Consistently use full official full stack framework names
+
+  Rename the `Solid` framework entry to `SolidStart` and `Next` to `Next.js` so that these alongside `SvelteKit` present the full official unshortened names of full stack frameworks
+
+## 2.35.1
+
+### Patch Changes
+
+- [#7511](https://github.com/cloudflare/workers-sdk/pull/7511) [`5addedf`](https://github.com/cloudflare/workers-sdk/commit/5addedf5d85aba56c16978700b7bf16929568d60) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.0.3 | 15.1.0 |
+
+- [#7557](https://github.com/cloudflare/workers-sdk/pull/7557) [`01b5451`](https://github.com/cloudflare/workers-sdk/commit/01b54518471ae4602dbdc3c3da6eedd991cc10a8) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.0.4 | 19.0.5 |
+
+- [#7497](https://github.com/cloudflare/workers-sdk/pull/7497) [`fb30983`](https://github.com/cloudflare/workers-sdk/commit/fb30983134ed767bb0ba43de84ce493d0353aa20) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure C3 works with the latest Astro versions
+
+- [#7390](https://github.com/cloudflare/workers-sdk/pull/7390) [`0e9499e`](https://github.com/cloudflare/workers-sdk/commit/0e9499e7388fda6d212c341fe21a1fcb1797d8aa) Thanks [@penalosa](https://github.com/penalosa)! - Bump Nuxt C3 template to Node 18
+
+- [#7565](https://github.com/cloudflare/workers-sdk/pull/7565) [`8ad5be9`](https://github.com/cloudflare/workers-sdk/commit/8ad5be9452b018ce2ab7ca33f6aded4df4e15786) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - update the astro experimental template not to unnecessarily specify `v2` for `nodejs_compat`
+
+## 2.35.0
+
+### Minor Changes
+
+- [#7484](https://github.com/cloudflare/workers-sdk/pull/7484) [`4fe93de`](https://github.com/cloudflare/workers-sdk/commit/4fe93de10b58d0202b1cc825d458ab0f79518d3d) Thanks [@maxwellpeterson](https://github.com/maxwellpeterson)! - feature: Add support for wrangler.json(c) in templates
+
+### Patch Changes
+
+- [#7504](https://github.com/cloudflare/workers-sdk/pull/7504) [`8371748`](https://github.com/cloudflare/workers-sdk/commit/83717482eca2ac8167f9e58da1ccdad1156edb9c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 19.0.0 | 19.0.4 |
+
+- [#7512](https://github.com/cloudflare/workers-sdk/pull/7512) [`21ceca4`](https://github.com/cloudflare/workers-sdk/commit/21ceca425417b782e7bce45f9efd0b7d2cc0a678) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-hono | 0.14.2 | 0.14.3 |
+
+- [#7513](https://github.com/cloudflare/workers-sdk/pull/7513) [`0808c9a`](https://github.com/cloudflare/workers-sdk/commit/0808c9a49cc023e2914ef560659479f05df3b82d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-astro | 4.10.0 | 4.11.0 |
+
+- [#7530](https://github.com/cloudflare/workers-sdk/pull/7530) [`14ddd30`](https://github.com/cloudflare/workers-sdk/commit/14ddd30f8a6bab5f4f6d64edc3cf942ff18f541f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.12.1 | 3.12.2 |
+
+- [#7531](https://github.com/cloudflare/workers-sdk/pull/7531) [`ee98fd4`](https://github.com/cloudflare/workers-sdk/commit/ee98fd444f39ab68a422ed209833ae1b2f24a8d7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To    |
+  | ---------- | ----- | ----- |
+  | sv         | 0.6.2 | 0.6.7 |
+
+- [#7526](https://github.com/cloudflare/workers-sdk/pull/7526) [`0117820`](https://github.com/cloudflare/workers-sdk/commit/01178200cac928292488b77942b43c7b19966414) Thanks [@WalshyDev](https://github.com/WalshyDev)! - fix: update create-remix to fix creating a Remix project failing with "Cannot find module 'fs-extra'"
+
+- [#7241](https://github.com/cloudflare/workers-sdk/pull/7241) [`d8e96b2`](https://github.com/cloudflare/workers-sdk/commit/d8e96b24f32cf5461e702d597f445f06da7946b1) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - update Next.js template to use Next.js v.15
+
+## 2.34.0
+
+### Minor Changes
+
+- [#7506](https://github.com/cloudflare/workers-sdk/pull/7506) [`8ca9533`](https://github.com/cloudflare/workers-sdk/commit/8ca9533f85b5cd1ca72eeab211c3cf6a62a84660) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Notify users when they are running C3 in experimental mode
+
+### Patch Changes
+
+- [#7248](https://github.com/cloudflare/workers-sdk/pull/7248) [`6d29319`](https://github.com/cloudflare/workers-sdk/commit/6d293192204996dc03005501e3ca06054221453a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From    | To     |
+  | --------------- | ------- | ------ |
+  | @angular/create | 18.2.11 | 19.0.0 |
+  | create-qwik     | 1.9.1   | 1.11.0 |
+  | create-remix    | 2.14.0  | 2.15.0 |
+  | create-solid    | 0.5.13  | 0.5.14 |
+  | nuxi            | 3.15.0  | 3.16.0 |
+  | sv              | 0.6.2   | 0.6.2  |
+
+- [#7503](https://github.com/cloudflare/workers-sdk/pull/7503) [`5f6e9c1`](https://github.com/cloudflare/workers-sdk/commit/5f6e9c1d1c16cf25ac54c3f98789d95e12123da6) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-docusaurus | 3.6.1 | 3.6.3 |
+
+- [#7505](https://github.com/cloudflare/workers-sdk/pull/7505) [`5f80241`](https://github.com/cloudflare/workers-sdk/commit/5f80241320c1705d1f67c097f2ecf2b8ccf495f2) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 5.5.5 | 6.0.1 |
+
+- [#7457](https://github.com/cloudflare/workers-sdk/pull/7457) [`75be0d5`](https://github.com/cloudflare/workers-sdk/commit/75be0d54abdd3593b98ac4064f1ca50bde61f7a6) Thanks [@syumai](https://github.com/syumai)! - fix(create-cloudflare): add a newline character to the line prepended to wrangler.toml
+
+## 2.33.4
+
+### Patch Changes
+
+- [#7257](https://github.com/cloudflare/workers-sdk/pull/7257) [`0920d13`](https://github.com/cloudflare/workers-sdk/commit/0920d132b3a9b900ed27999542c5d603198a7a97) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From    | To     |
+  | --------------- | ------- | ------ |
+  | @angular/create | 18.2.11 | 19.0.0 |
+  | create-qwik     | 1.9.1   | 1.11.0 |
+  | create-remix    | 2.14.0  | 2.15.0 |
+
+- [#7419](https://github.com/cloudflare/workers-sdk/pull/7419) [`51fb982`](https://github.com/cloudflare/workers-sdk/commit/51fb9824c760420aaa193ff9bf72269efe968586) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.15.0 | 3.16.0 |
+
+- [#7489](https://github.com/cloudflare/workers-sdk/pull/7489) [`90fa58b`](https://github.com/cloudflare/workers-sdk/commit/90fa58b5b838b3a7e7befd529dc2b6368d887bb7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.14.0 | 2.15.0 |
+
+- [#7480](https://github.com/cloudflare/workers-sdk/pull/7480) [`9ea45b4`](https://github.com/cloudflare/workers-sdk/commit/9ea45b491e0ba94ddbb7966023d34dc385285be0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - update Vue C3 experimental template to work with Worker Assets
+
+## 2.33.3
+
+### Patch Changes
+
+- [#7384](https://github.com/cloudflare/workers-sdk/pull/7384) [`55ec38a`](https://github.com/cloudflare/workers-sdk/commit/55ec38ae32ea28c080ca053274742240a06c44e8) Thanks [@Cherry](https://github.com/Cherry)! - chore: bump vitest in templates
+
+- [#7428](https://github.com/cloudflare/workers-sdk/pull/7428) [`f463dd2`](https://github.com/cloudflare/workers-sdk/commit/f463dd299dc6f28d348b8c782304c65f2c569d4b) Thanks [@Oreoezi](https://github.com/Oreoezi)! - Use correct port in playwright config file for generated SvelteKit apps
+
+- [#7343](https://github.com/cloudflare/workers-sdk/pull/7343) [`a3d5aad`](https://github.com/cloudflare/workers-sdk/commit/a3d5aad66aaa8f72bc371aeba7ea9cb5c6688042) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: C3 experimental template for Solid now uses correct preset
+
+- [#7332](https://github.com/cloudflare/workers-sdk/pull/7332) [`a068672`](https://github.com/cloudflare/workers-sdk/commit/a068672bc9264794d5b22b717db5fe53345ee174) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: C3 experimental template for Nuxt now uses correct preset
+
+## 2.33.2
+
+### Patch Changes
+
+- [#7359](https://github.com/cloudflare/workers-sdk/pull/7359) [`515174e`](https://github.com/cloudflare/workers-sdk/commit/515174e7e9059d3bc19bedb9a2444dad4db57f0c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.10.0 | 1.11.0 |
+
+- [#7409](https://github.com/cloudflare/workers-sdk/pull/7409) [`5739015`](https://github.com/cloudflare/workers-sdk/commit/57390152300517f339eb910cf561430316a33622) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: update Angular experimental Workers + Assets template
+
+- [#7342](https://github.com/cloudflare/workers-sdk/pull/7342) [`499e12d`](https://github.com/cloudflare/workers-sdk/commit/499e12d17ca349d3fdeea977c5cceeed062c8b06) Thanks [@neomax7](https://github.com/neomax7)! - fix: Angular template should call `handle()` method on `AngularAppEngine` not 'render()'
+
+  Fixes #7341
+
+## 2.33.1
+
+### Patch Changes
+
+- [#7235](https://github.com/cloudflare/workers-sdk/pull/7235) [`8246c45`](https://github.com/cloudflare/workers-sdk/commit/8246c45883cfc8092bef68a05fadf7376d1f5b5f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To     |
+  | ----------- | ----- | ------ |
+  | create-qwik | 1.9.1 | 1.10.0 |
+
+- [#6410](https://github.com/cloudflare/workers-sdk/pull/6410) [`c808590`](https://github.com/cloudflare/workers-sdk/commit/c8085903678099335e91fd3d7e5d555d9f911a5b) Thanks [@stof](https://github.com/stof)! - Fix the test tsconfig file in the hello-world typescript template
+
+## 2.33.0
+
+### Minor Changes
+
+- [#6960](https://github.com/cloudflare/workers-sdk/pull/6960) [`3e52c7c`](https://github.com/cloudflare/workers-sdk/commit/3e52c7c609a1aee13830bb42e4439bf80ea30bf3) Thanks [@alan-agius4](https://github.com/alan-agius4)! - Update Angular template to version 19
+
+## 2.32.2
+
+### Patch Changes
+
+- [#6831](https://github.com/cloudflare/workers-sdk/pull/6831) [`0fe018c`](https://github.com/cloudflare/workers-sdk/commit/0fe018c7b85d767de60e9cc88f256f99f17046e3) Thanks [@Cherry](https://github.com/Cherry)! - Adds support for new upcoming bun.lock lockfile
+
+## 2.32.1
+
+### Patch Changes
+
+- [#7217](https://github.com/cloudflare/workers-sdk/pull/7217) [`f76da8d`](https://github.com/cloudflare/workers-sdk/commit/f76da8d61f0d4fa02c3de132363b95699c0a80c9) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-docusaurus | 3.6.0 | 3.6.1 |
+
+- [#7218](https://github.com/cloudflare/workers-sdk/pull/7218) [`39675b5`](https://github.com/cloudflare/workers-sdk/commit/39675b517c9f8ad35023137ca3f52fe486e25107) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.13.1 | 2.14.0 |
+
+- [#7219](https://github.com/cloudflare/workers-sdk/pull/7219) [`287a5d0`](https://github.com/cloudflare/workers-sdk/commit/287a5d0e4d73fd1fc4e17aed5596436dbca1aae0) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.12.0 | 3.12.1 |
+
+- [#6569](https://github.com/cloudflare/workers-sdk/pull/6569) [`7be8f76`](https://github.com/cloudflare/workers-sdk/commit/7be8f763967d0f50a2cced0520db8f7a7b691fe4) Thanks [@penalosa](https://github.com/penalosa)! - Make sure `wrangler deploy` and `wrangler pages deploy` are run in an interactive context in C3, so that users are able to respond to interactive prompts
+
+## 2.32.0
+
+### Minor Changes
+
+- [#7170](https://github.com/cloudflare/workers-sdk/pull/7170) [`f292294`](https://github.com/cloudflare/workers-sdk/commit/f292294ba2e545742d8801f2f3060763547b7ccb) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: update experimental remix template to be based on its worker template
+
+### Patch Changes
+
+- [#7179](https://github.com/cloudflare/workers-sdk/pull/7179) [`a4f5647`](https://github.com/cloudflare/workers-sdk/commit/a4f5647a368c3d6857fa425bee2827493eda2dd1) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-docusaurus | 3.5.2 | 3.6.0 |
+
+- [#7188](https://github.com/cloudflare/workers-sdk/pull/7188) [`28edf9b`](https://github.com/cloudflare/workers-sdk/commit/28edf9b2eb08a978e016bc1d320459f33d5590b8) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | gatsby     | 5.13.7 | 5.14.0 |
+
+- [#7109](https://github.com/cloudflare/workers-sdk/pull/7109) [`492533f`](https://github.com/cloudflare/workers-sdk/commit/492533f19e4840b8f93d9e29c0c267ce742f2fc5) Thanks [@jsparkdev](https://github.com/jsparkdev)! - Rename the framework name
+
+  The name currently displayed in the CLI is `Svelte`. However, all of the options actually create a `SvelteKit` app, and the name `SvelteKit` is also used in the [documentation](https://developers.cloudflare.com/pages/framework-guides/deploy-a-svelte-site/).
+
+## 2.31.2
+
+### Patch Changes
+
+- [#6973](https://github.com/cloudflare/workers-sdk/pull/6973) [`afe9850`](https://github.com/cloudflare/workers-sdk/commit/afe9850931b7730989e005a612ea74887f5d5e72) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To     |
+  | ------------ | ----- | ------ |
+  | create-astro | 4.8.0 | 4.10.0 |
+
+- [#7146](https://github.com/cloudflare/workers-sdk/pull/7146) [`d31a902`](https://github.com/cloudflare/workers-sdk/commit/d31a9021681b0d053bd441826849510dc97c5321) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.11.1 | 3.11.2 |
+
+- [#7148](https://github.com/cloudflare/workers-sdk/pull/7148) [`f46330a`](https://github.com/cloudflare/workers-sdk/commit/f46330a4dc8b6a21b0dc629682148e0ed399e8ae) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.12.0 | 3.15.0 |
+
+- [#7161](https://github.com/cloudflare/workers-sdk/pull/7161) [`6948b70`](https://github.com/cloudflare/workers-sdk/commit/6948b7045d40dcd40ad0bc88d480056f2a9c9732) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To    |
+  | ---------- | ------ | ----- |
+  | sv         | 0.5.11 | 0.6.1 |
+
+- [#7167](https://github.com/cloudflare/workers-sdk/pull/7167) [`251e49a`](https://github.com/cloudflare/workers-sdk/commit/251e49a7a325e8d4fad8e01f693391e9cb101e37) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.11.2 | 3.12.0 |
+
+- [#7177](https://github.com/cloudflare/workers-sdk/pull/7177) [`f992c90`](https://github.com/cloudflare/workers-sdk/commit/f992c90311d400669f5c451b24fd732d77c1667d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To      |
+  | --------------- | ------ | ------- |
+  | @angular/create | 18.2.8 | 18.2.11 |
+
+- [#7171](https://github.com/cloudflare/workers-sdk/pull/7171) [`5a712e7`](https://github.com/cloudflare/workers-sdk/commit/5a712e70ffa7aac02ae0765d4b2c2b0b38621b11) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: missing nodejs_compact flag on astro template
+
+- [#7155](https://github.com/cloudflare/workers-sdk/pull/7155) [`edef523`](https://github.com/cloudflare/workers-sdk/commit/edef523b71d1efd123d7b3e9743cd30f4e396855) Thanks [@flashblaze](https://github.com/flashblaze)! - fix invalid preset config on the experimental solid template
+
+## 2.31.1
+
+### Patch Changes
+
+- [#7139](https://github.com/cloudflare/workers-sdk/pull/7139) [`2222578`](https://github.com/cloudflare/workers-sdk/commit/222257826073360a403e6026c472c716985785f1) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 5.5.4 | 5.5.5 |
+
+## 2.31.0
+
+### Minor Changes
+
+- [#7031](https://github.com/cloudflare/workers-sdk/pull/7031) [`eec2a70`](https://github.com/cloudflare/workers-sdk/commit/eec2a707492d563df62f0b126c1e7ddf354d46b3) Thanks [@codenoid](https://github.com/codenoid)! - create-svelte is soon be deprecated, use the new official replacement npx sv instead.
+
+- [#7055](https://github.com/cloudflare/workers-sdk/pull/7055) [`a034aa1`](https://github.com/cloudflare/workers-sdk/commit/a034aa1f60c62c30be7ee878b222899b67d2935c) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: prompt user to correct the answer if the arg value is invalid
+
+### Patch Changes
+
+- [#7085](https://github.com/cloudflare/workers-sdk/pull/7085) [`3e7cafc`](https://github.com/cloudflare/workers-sdk/commit/3e7cafc743c03faf7c219e789ef54fea22efacf1) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 5.5.3 | 5.5.4 |
+
+- [#7126](https://github.com/cloudflare/workers-sdk/pull/7126) [`07b5b25`](https://github.com/cloudflare/workers-sdk/commit/07b5b25f9564d73d14e706243e400cbbd5306ac4) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To     |
+  | ---------- | ----- | ------ |
+  | sv         | 0.5.7 | 0.5.11 |
+
+- [#7093](https://github.com/cloudflare/workers-sdk/pull/7093) [`6cf64de`](https://github.com/cloudflare/workers-sdk/commit/6cf64de0c72f15acc4f4a8c001666aed4db0c55a) Thanks [@lrapoport-cf](https://github.com/lrapoport-cf)! - Added link to where to file issues
+
+## 2.30.1
+
+### Patch Changes
+
+- [#7016](https://github.com/cloudflare/workers-sdk/pull/7016) [`381d04f`](https://github.com/cloudflare/workers-sdk/commit/381d04f8c2f1e56c686e36d86c1fce7cdc4046dd) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.10.4 | 3.11.1 |
+
+- [#7052](https://github.com/cloudflare/workers-sdk/pull/7052) [`7874ed2`](https://github.com/cloudflare/workers-sdk/commit/7874ed2cdffe52548f5d139bcae8255e8942406d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-hono | 0.14.1 | 0.14.2 |
+
+- [#7034](https://github.com/cloudflare/workers-sdk/pull/7034) [`0e91d42`](https://github.com/cloudflare/workers-sdk/commit/0e91d420ab2f2c2bf0cb629737a6cc2ec68ebbe0) Thanks [@andyjessop](https://github.com/andyjessop)! - fix: ensure that user is logged in before trying to choose account during pre-existing Worker C3 flow
+
+## 2.30.0
+
+### Minor Changes
+
+- [#6846](https://github.com/cloudflare/workers-sdk/pull/6846) [`ae4bfea`](https://github.com/cloudflare/workers-sdk/commit/ae4bfead3ad9911823ec154476cb1c49ea3a02bf) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: allow users going back to the project name prompt
+
+### Patch Changes
+
+- [#6993](https://github.com/cloudflare/workers-sdk/pull/6993) [`616801c`](https://github.com/cloudflare/workers-sdk/commit/616801cc387e2e6a0a20c752a3c420767140442e) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-vite | 5.2.3 | 5.5.3 |
+
+- [#6994](https://github.com/cloudflare/workers-sdk/pull/6994) [`ef3af25`](https://github.com/cloudflare/workers-sdk/commit/ef3af253dfde6c0b1bb34e572a5c0f41cb44ddbf) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-qwik | 1.9.0 | 1.9.1 |
+
+- [#7006](https://github.com/cloudflare/workers-sdk/pull/7006) [`284c962`](https://github.com/cloudflare/workers-sdk/commit/284c962fdbd92d3a9f05ac9c5727ae9067948476) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-hono | 0.12.0 | 0.14.1 |
+
+- [#7007](https://github.com/cloudflare/workers-sdk/pull/7007) [`cebc9ea`](https://github.com/cloudflare/workers-sdk/commit/cebc9ea58bc4b4b1a7e56de92e9d08100c0da27b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.12.0 | 2.13.1 |
+
+- [#6982](https://github.com/cloudflare/workers-sdk/pull/6982) [`59c66a4`](https://github.com/cloudflare/workers-sdk/commit/59c66a49b845c8734ed11cd17351ac2531e2bf7e) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: astro + Workers static assets template now has the correct `main` file in wrangler.toml
+
+## 2.29.3
+
+### Patch Changes
+
+- [#6880](https://github.com/cloudflare/workers-sdk/pull/6880) [`be88a62`](https://github.com/cloudflare/workers-sdk/commit/be88a62ad147c5e33da5a295d35693a62eef7943) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-solid | 0.5.12 | 0.5.13 |
+
+- [#6977](https://github.com/cloudflare/workers-sdk/pull/6977) [`3555cdb`](https://github.com/cloudflare/workers-sdk/commit/3555cdb8122912955f2cc71a37a9de4f88eb26aa) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-svelte | 6.3.8 | 6.4.0 |
+
+- [#6978](https://github.com/cloudflare/workers-sdk/pull/6978) [`26b32fa`](https://github.com/cloudflare/workers-sdk/commit/26b32fa8d5cd6f47527298427e50cad3c8c03abe) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 18.2.0 | 18.2.8 |
+
+- [#6957](https://github.com/cloudflare/workers-sdk/pull/6957) [`f996409`](https://github.com/cloudflare/workers-sdk/commit/f99640948bb8d37224ab934da70ac973f2d7e5cf) Thanks [@vicb](https://github.com/vicb)! - refactor: simplify tsconfig.json templates
+
+## 2.29.2
+
+### Patch Changes
+
+- [#6848](https://github.com/cloudflare/workers-sdk/pull/6848) [`291e5f3`](https://github.com/cloudflare/workers-sdk/commit/291e5f33584e73ceb90a9b7b74e08454b7b55fda) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 1.3.1 | 1.8.1 |
+
+- [#6839](https://github.com/cloudflare/workers-sdk/pull/6839) [`b0d514e`](https://github.com/cloudflare/workers-sdk/commit/b0d514ea5c43ad2325709a6576c6b39b67e81ca4) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: remove invalid `ctx` import from hello-world experimental templates
+
+- [#6882](https://github.com/cloudflare/workers-sdk/pull/6882) [`20a1750`](https://github.com/cloudflare/workers-sdk/commit/20a17502b2b091b24189e9b32d309c088487fcf6) Thanks [@andyjessop](https://github.com/andyjessop)! - chore: Capitalises GitHub correctly
+
+## 2.29.1
+
+### Patch Changes
+
+- [#6836](https://github.com/cloudflare/workers-sdk/pull/6836) [`a67cdbf`](https://github.com/cloudflare/workers-sdk/commit/a67cdbfc4db2e9f94dd159481fc900b4d2e7d2cb) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: prevent the cli from crashing by silently ignoring network errors during telemetry collection
+
+## 2.29.0
+
+### Minor Changes
+
+- [#6820](https://github.com/cloudflare/workers-sdk/pull/6820) [`b098256`](https://github.com/cloudflare/workers-sdk/commit/b098256e9ed315aa265d52ab10c208049c16a8ca) Thanks [@zebp](https://github.com/zebp)! - chore: enable observability by default for Workers templates
+
+  Workers created with `create-cloudflare` will now have [Workers Observability](https://developers.cloudflare.com/workers/observability/logs/workers-logs) enabled by default.
+
+### Patch Changes
+
+- [#6827](https://github.com/cloudflare/workers-sdk/pull/6827) [`66ad6df`](https://github.com/cloudflare/workers-sdk/commit/66ad6dfdc110384cfab5a1b6923b7bfd621c3f97) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: add missing hono with assets experimental template
+
+- [#6830](https://github.com/cloudflare/workers-sdk/pull/6830) [`0195621`](https://github.com/cloudflare/workers-sdk/commit/01956212410d6cd43419754028b018cfa5039add) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add experimental Next.js, with Workers assets, template
+
+## 2.28.1
+
+### Patch Changes
+
+- [#6815](https://github.com/cloudflare/workers-sdk/pull/6815) [`ffe8d10`](https://github.com/cloudflare/workers-sdk/commit/ffe8d10cb30c749616d61341501b8096ec0b99fe) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: experimental Angular template using Workers with Assets was broken
+
+## 2.28.0
+
+### Minor Changes
+
+- [#6484](https://github.com/cloudflare/workers-sdk/pull/6484) [`5632968`](https://github.com/cloudflare/workers-sdk/commit/5632968383d9079bb1ae4dba5c83c10d43e72341) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: telemetry collection
+
+  Cloudflare will collect telemetry about your usage of `create-cloudflare` to improve the experience.
+
+  If you would like to disable telemetry, you can run:
+
+  ```sh
+  npm create cloudflare telemetry disable
+  ```
+
+  Alternatively, you can set an environment variable:
+
+  ```sh
+  export CREATE_CLOUDFLARE_TELEMETRY_DISABLED=1
+  ```
+
+  Read more about our data policy at https://github.com/cloudflare/workers-sdk/blob/main/packages/create-cloudflare/telemetry.md.
+
+### Patch Changes
+
+- [#6760](https://github.com/cloudflare/workers-sdk/pull/6760) [`ba4ac82`](https://github.com/cloudflare/workers-sdk/commit/ba4ac8239589543372c53352c4c90db6071ca3d7) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: add missing experimental templates to C3 for asset Workers
+
+- [#6790](https://github.com/cloudflare/workers-sdk/pull/6790) [`9e44d88`](https://github.com/cloudflare/workers-sdk/commit/9e44d88ac047a021f86db851e926a14a5a01781c) Thanks [@penalosa](https://github.com/penalosa)! - fix: Remove `Env` from index.ts in the Hello World Durable Objects & Hello World Durable Objects w/ assets templates
+
+## 2.27.3
+
+### Patch Changes
+
+- [#6536](https://github.com/cloudflare/workers-sdk/pull/6536) [`baa29db`](https://github.com/cloudflare/workers-sdk/commit/baa29dbd365c33c0740339caff7bd07a9fb161b5) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 18.1.4 | 18.2.0 |
+
+- [#6766](https://github.com/cloudflare/workers-sdk/pull/6766) [`fe0253d`](https://github.com/cloudflare/workers-sdk/commit/fe0253d34c69de72baf634b97abd5ab2ab075375) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.11.1 | 2.12.0 |
+
+- [#6755](https://github.com/cloudflare/workers-sdk/pull/6755) [`a602de0`](https://github.com/cloudflare/workers-sdk/commit/a602de088c1b450ea62e84d48df7189f2443f127) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: add missing `nodejs_compat` flag to c3 qwik template
+
+  The c3 qwik template doesn't include the `nodejs_compat` but qwik seems to be using
+  AsyncLocalStorage, so newly created applications do display a warning regarding it
+  missing, fix the above issue by adding the missing compat flag
+
+- [#6755](https://github.com/cloudflare/workers-sdk/pull/6755) [`a602de0`](https://github.com/cloudflare/workers-sdk/commit/a602de088c1b450ea62e84d48df7189f2443f127) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To    |
+  | ----------- | ----- | ----- |
+  | create-qwik | 1.5.7 | 1.9.0 |
+
+## 2.27.2
+
+### Patch Changes
+
+- [#6732](https://github.com/cloudflare/workers-sdk/pull/6732) [`e4fe35c`](https://github.com/cloudflare/workers-sdk/commit/e4fe35cc52c3eb01dfb81fd44c83397f06db4597) Thanks [@penalosa](https://github.com/penalosa)! - chore: trigger re-release
+
+## 2.27.1
+
+### Patch Changes
+
+- [#6626](https://github.com/cloudflare/workers-sdk/pull/6626) [`3628814`](https://github.com/cloudflare/workers-sdk/commit/3628814d001a349a6576a02bee4a65f043f156f4) Thanks [@elithrar](https://github.com/elithrar)! - fix: Changes the default for "Do you want to deploy your application" in create cloudflare (C3) to a resounding "No".
+
+## 2.27.0
+
+### Minor Changes
+
+- [#6678](https://github.com/cloudflare/workers-sdk/pull/6678) [`40ecf47`](https://github.com/cloudflare/workers-sdk/commit/40ecf4796860fd45ec593c1d143406a90a92c793) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - feat: add experimental mode and associated workers + assets templates
+
+### Patch Changes
+
+- [#6678](https://github.com/cloudflare/workers-sdk/pull/6678) [`40ecf47`](https://github.com/cloudflare/workers-sdk/commit/40ecf4796860fd45ec593c1d143406a90a92c793) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: do not crash if the chosen framework does not exist
+
+## 2.26.0
+
+### Minor Changes
+
+- [#6573](https://github.com/cloudflare/workers-sdk/pull/6573) [`3ff6506`](https://github.com/cloudflare/workers-sdk/commit/3ff6506cc5f1d79e5df6530673cb600507c7da1b) Thanks [@santraez](https://github.com/penalosa)! - feature: Use `create-vite` instead of `create-react-app` for React projects.
+
+  [React's documentation](https://react.dev/learn/start-a-new-react-project#can-i-use-react-without-a-framework) now recommends using `create-vite` over `create-react-app`, as the latter has been deprecated. To align with these best practices, React projects created with C3 will now use [Vite](https://vitejs.dev/).
+
+  With this change, the default development command will switch from using `create-react-app` to `create-vite`, providing a more modern and efficient development experience.
+
+  Additionally, selection of variants for React projects created by Vite has been added, allowing users to choose different configurations based on their needs. The test suite has also been adapted to accommodate the new configuration, ensuring all tests run without errors.
+
+## 2.25.2
+
+### Patch Changes
+
+- [#6557](https://github.com/cloudflare/workers-sdk/pull/6557) [`2e9aa53`](https://github.com/cloudflare/workers-sdk/commit/2e9aa53751c575128dc513dabc3878426a6f4c5a) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: renamed the "Demo Application" category to "Application Starter"
+
+## 2.25.1
+
+### Patch Changes
+
+- [#6496](https://github.com/cloudflare/workers-sdk/pull/6496) [`3f229ce`](https://github.com/cloudflare/workers-sdk/commit/3f229ceb45e16d4d2b7ba611c12d0e8b4b7c9984) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 18.1.3 | 18.1.4 |
+
+- [#6501](https://github.com/cloudflare/workers-sdk/pull/6501) [`87c8f2d`](https://github.com/cloudflare/workers-sdk/commit/87c8f2dc702035106622628c5585c6c9d8166f67) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-docusaurus | 3.5.1 | 3.5.2 |
+
+- [#6523](https://github.com/cloudflare/workers-sdk/pull/6523) [`0c4d10a`](https://github.com/cloudflare/workers-sdk/commit/0c4d10a5f1b63c6b6a565e2f87a44b40fea503e0) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-svelte | 6.3.5 | 6.3.8 |
+
+## 2.25.0
+
+### Minor Changes
+
+- [#6428](https://github.com/cloudflare/workers-sdk/pull/6428) [`37dc86f`](https://github.com/cloudflare/workers-sdk/commit/37dc86ff436aacadd7c0bab6a76293408f4c417f) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: allow users to change prompt answer
+
+  It is now possible to change the answer for category and type while the project has not been created locally.
+
+### Patch Changes
+
+- [#6475](https://github.com/cloudflare/workers-sdk/pull/6475) [`dfe8c0d`](https://github.com/cloudflare/workers-sdk/commit/dfe8c0d5134407ac6a6539eefcb17fba0ec2c6ce) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-hono | 0.10.1 | 0.12.0 |
+
+- [#6476](https://github.com/cloudflare/workers-sdk/pull/6476) [`1d4a36f`](https://github.com/cloudflare/workers-sdk/commit/1d4a36f179cadf14a00458a1d5c4e489bbf1b75b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-docusaurus | 3.4.0 | 3.5.1 |
+
+- [#6495](https://github.com/cloudflare/workers-sdk/pull/6495) [`3516faa`](https://github.com/cloudflare/workers-sdk/commit/3516faaed25ed60903272af18d7c5d4c8da8c208) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-remix | 2.10.3 | 2.11.1 |
+
+- [#6481](https://github.com/cloudflare/workers-sdk/pull/6481) [`83083d7`](https://github.com/cloudflare/workers-sdk/commit/83083d7f3e672bc0726d0c65d72a4a1b032eb516) Thanks [@roottool](https://github.com/roottool)! - fix: Update `hono` template to remove binding type snippet.
+
+## 2.24.0
+
+### Minor Changes
+
+- [#6418](https://github.com/cloudflare/workers-sdk/pull/6418) [`5d771c2`](https://github.com/cloudflare/workers-sdk/commit/5d771c287e6edd077d7be8edabdf17629163b4e6) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: guiding user template selection with description for each options
+
+- [#6412](https://github.com/cloudflare/workers-sdk/pull/6412) [`71882ee`](https://github.com/cloudflare/workers-sdk/commit/71882ee9a58eccb8332dd34c0f7dd96ec55bdcdd) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: update welcome and summary message
+
+### Patch Changes
+
+- [#6395](https://github.com/cloudflare/workers-sdk/pull/6395) [`3aa7463`](https://github.com/cloudflare/workers-sdk/commit/3aa7463dffe62651dce3a7dca261d4ebe6fb5a39) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 18.1.2 | 18.1.3 |
+
+- [#6396](https://github.com/cloudflare/workers-sdk/pull/6396) [`7dcaa3e`](https://github.com/cloudflare/workers-sdk/commit/7dcaa3e834a58b9baff649229b6db3c401c7a8e9) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-svelte | 6.3.4 | 6.3.5 |
+
+## 2.23.0
+
+### Minor Changes
+
+- [#6320](https://github.com/cloudflare/workers-sdk/pull/6320) [`5aa4753`](https://github.com/cloudflare/workers-sdk/commit/5aa4753a12dde28e91e85a2f9e4eae17ead62fb0) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: update submenu userflow
+
+  Now, we will first prompt for the kind of templates that should be created and show a different set of templates depending on the category. If the template selected supports different languages, we will also ask for the language user preferred.
+
+  Two new arguments are also added to support the new structure: `--category` and `--lang`. For more details, please refer to our [docs](https://developers.cloudflare.com/pages/get-started/c3#cli-arguments).
+
+### Patch Changes
+
+- [#6307](https://github.com/cloudflare/workers-sdk/pull/6307) [`4998c54`](https://github.com/cloudflare/workers-sdk/commit/4998c54371109e87feaa8cd1800ea2cb3f49fdd4) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 14.1.0 | 14.2.5 |
+
+- [#6334](https://github.com/cloudflare/workers-sdk/pull/6334) [`6968d91`](https://github.com/cloudflare/workers-sdk/commit/6968d91065d0de2e2a3f542f17223aaacf90c687) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-svelte | 6.3.3 | 6.3.4 |
+
+- [#6335](https://github.com/cloudflare/workers-sdk/pull/6335) [`5e4fd26`](https://github.com/cloudflare/workers-sdk/commit/5e4fd26fe5da1ff768d95d438d10e046e9a9de33) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 18.1.1 | 18.1.2 |
+
+- [#6373](https://github.com/cloudflare/workers-sdk/pull/6373) [`0ffe17d`](https://github.com/cloudflare/workers-sdk/commit/0ffe17d0f734cb2e43528f3d2ac491670d6173fe) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure to always warn developers trying to use git when their git instance is not properly configured
+
+## 2.22.3
+
+### Patch Changes
+
+- [#6333](https://github.com/cloudflare/workers-sdk/pull/6333) [`affdc56`](https://github.com/cloudflare/workers-sdk/commit/affdc56d77b86357fc474c6b729bcaa8edd8237d) Thanks [@penalosa](https://github.com/penalosa)! - fix: Prevent `@types/node` from being erroneously included in the Hello World Worker typing environment.
+
+## 2.22.2
+
+### Patch Changes
+
+- [#6308](https://github.com/cloudflare/workers-sdk/pull/6308) [`d947d72`](https://github.com/cloudflare/workers-sdk/commit/d947d72ea518358bb11df94ede76c9aef7646ea4) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | gatsby     | 5.13.6 | 5.13.7 |
+
+- [#6309](https://github.com/cloudflare/workers-sdk/pull/6309) [`a04796d`](https://github.com/cloudflare/workers-sdk/commit/a04796db7f618999c04c9a7b5ddc30d310ea3644) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-solid | 0.5.11 | 0.5.12 |
+
+- [#6316](https://github.com/cloudflare/workers-sdk/pull/6316) [`7e421fb`](https://github.com/cloudflare/workers-sdk/commit/7e421fb75ddd4f21786c479da1beaf85ba3cdb56) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-hono | 0.10.0 | 0.10.1 |
+
+- [#6306](https://github.com/cloudflare/workers-sdk/pull/6306) [`819eed9`](https://github.com/cloudflare/workers-sdk/commit/819eed9cc577517c8289f49916929996a069a85b) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: creating an application from a non-existent or private repository will now be prompted for the username/password if required
+
+- [#6310](https://github.com/cloudflare/workers-sdk/pull/6310) [`20c0bf1`](https://github.com/cloudflare/workers-sdk/commit/20c0bf1cae81fdcc188aee4e87130bfdb8151543) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: support GitHub URL with subdirectory
+
+  You can now copy+paste the URL directly from your address bar when you find a template within a (mono)repo on github.com.
+
+## 2.22.1
+
+### Patch Changes
+
+- [#6283](https://github.com/cloudflare/workers-sdk/pull/6283) [`30a1e9c`](https://github.com/cloudflare/workers-sdk/commit/30a1e9cac2c7204c6172208105ba4a4452333a8f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To     |
+  | ------------ | ----- | ------ |
+  | create-remix | 2.9.2 | 2.10.3 |
+
+- [#6284](https://github.com/cloudflare/workers-sdk/pull/6284) [`f1596d7`](https://github.com/cloudflare/workers-sdk/commit/f1596d7d7e720a3f37116894de30f99d1128542d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 18.0.4 | 18.1.1 |
+
+- [#6292](https://github.com/cloudflare/workers-sdk/pull/6292) [`5d2e0f7`](https://github.com/cloudflare/workers-sdk/commit/5d2e0f75f80ca084d90d30dc766d4b46281181f2) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-svelte | 6.3.2 | 6.3.3 |
+
+- [#6293](https://github.com/cloudflare/workers-sdk/pull/6293) [`821f020`](https://github.com/cloudflare/workers-sdk/commit/821f0201e89d1052125db0601055c038019022da) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From  | To     |
+  | ----------- | ----- | ------ |
+  | create-hono | 0.9.0 | 0.10.0 |
+
 ## 2.22.0
 
 ### Minor Changes

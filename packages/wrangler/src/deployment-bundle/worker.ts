@@ -1,8 +1,10 @@
-import type { Route } from "../config/environment";
+import type { Observability, Route } from "../config/environment";
+import type { INHERIT_SYMBOL } from "./bindings";
 import type {
 	WorkerMetadata,
 	WorkerMetadataBinding,
 } from "./create-worker-upload-form";
+import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 import type { Json } from "miniflare";
 
 /**
@@ -20,8 +22,7 @@ export type CfModuleType =
 	| "text"
 	| "buffer"
 	| "python"
-	| "python-requirement"
-	| "nodejs-compat-module";
+	| "python-requirement";
 
 /**
  * An imported module.
@@ -53,7 +54,7 @@ export interface CfModule {
 	 *   }
 	 * }
 	 */
-	content: string | Buffer;
+	content: string | Buffer<ArrayBuffer>;
 	/**
 	 * An optional sourcemap for this module if it's of a ESM or CJS type, this will only be present
 	 * if we're deploying with sourcemaps enabled. Since we copy extra modules that aren't bundled
@@ -80,24 +81,32 @@ export interface CfVars {
  */
 export interface CfKvNamespace {
 	binding: string;
-	id: string;
+	id?: string | typeof INHERIT_SYMBOL;
+	remote?: boolean;
+	raw?: boolean;
 }
 
 /**
  * A binding to send email.
  */
-export interface CfSendEmailBindings {
+export type CfSendEmailBindings = {
 	name: string;
-	destination_address?: string;
-	allowed_destination_addresses?: string[];
-}
+} & (
+	| { destination_address?: string }
+	| { allowed_destination_addresses?: string[] }
+);
+// export interface CfSendEmailBindings {
+// 	name: string;
+// 	destination_address?: string | undefined;
+// 	allowed_destination_addresses?: string[] | undefined;
+// }
 
 /**
  * A binding to a wasm module (in service-worker format)
  */
 
 export interface CfWasmModuleBindings {
-	[key: string]: string | Uint8Array;
+	[key: string]: string | Uint8Array<ArrayBuffer>;
 }
 
 /**
@@ -114,6 +123,8 @@ export interface CfTextBlobBindings {
 
 export interface CfBrowserBinding {
 	binding: string;
+	raw?: boolean;
+	remote?: boolean;
 }
 
 /**
@@ -123,6 +134,17 @@ export interface CfBrowserBinding {
 export interface CfAIBinding {
 	binding: string;
 	staging?: boolean;
+	remote?: boolean;
+	raw?: boolean;
+}
+
+/**
+ * A binding to Cloudflare Images
+ */
+export interface CfImagesBinding {
+	binding: string;
+	raw?: boolean;
+	remote?: boolean;
 }
 
 /**
@@ -138,7 +160,7 @@ export interface CfVersionMetadataBinding {
  */
 
 export interface CfDataBlobBindings {
-	[key: string]: string | Uint8Array;
+	[key: string]: string | Uint8Array<ArrayBuffer>;
 }
 
 /**
@@ -151,37 +173,55 @@ export interface CfDurableObject {
 	environment?: string;
 }
 
+export interface CfWorkflow {
+	name: string;
+	class_name: string;
+	binding: string;
+	script_name?: string;
+	remote?: boolean;
+	raw?: boolean;
+}
+
 export interface CfQueue {
 	binding: string;
 	queue_name: string;
 	delivery_delay?: number;
+	remote?: boolean;
+	raw?: boolean;
 }
 
 export interface CfR2Bucket {
 	binding: string;
-	bucket_name: string;
+	bucket_name?: string | typeof INHERIT_SYMBOL;
 	jurisdiction?: string;
+	remote?: boolean;
+	raw?: boolean;
 }
 
 // TODO: figure out if this is duplicated in packages/wrangler/src/config/environment.ts
 export interface CfD1Database {
 	binding: string;
-	database_id: string;
-	database_name: string;
+	database_id?: string | typeof INHERIT_SYMBOL;
+	database_name?: string;
 	preview_database_id?: string;
 	database_internal_env?: string;
 	migrations_table?: string;
 	migrations_dir?: string;
+	remote?: boolean;
+	raw?: boolean;
 }
 
 export interface CfVectorize {
 	binding: string;
 	index_name: string;
+	raw?: boolean;
+	remote?: boolean;
 }
 
-export interface CfConstellation {
+export interface CfSecretsStoreSecrets {
 	binding: string;
-	project_id: string;
+	store_id: string;
+	secret_name: string;
 }
 
 export interface CfHyperdrive {
@@ -195,6 +235,8 @@ export interface CfService {
 	service: string;
 	environment?: string;
 	entrypoint?: string;
+	props?: Record<string, unknown>;
+	remote?: boolean;
 }
 
 export interface CfAnalyticsEngineDataset {
@@ -210,6 +252,7 @@ export interface CfDispatchNamespace {
 		environment?: string;
 		parameters?: string[];
 	};
+	remote?: boolean;
 }
 
 export interface CfMTlsCertificate {
@@ -224,6 +267,15 @@ export interface CfLogfwdr {
 export interface CfLogfwdrBinding {
 	name: string;
 	destination: string;
+}
+
+export interface CfAssetsBinding {
+	binding: string;
+}
+
+export interface CfPipeline {
+	binding: string;
+	pipeline: string;
 }
 
 export interface CfUnsafeBinding {
@@ -256,6 +308,7 @@ export interface CfDurableObjectMigrations {
 	new_tag: string;
 	steps: {
 		new_classes?: string[];
+		new_sqlite_classes?: string[];
 		renamed_classes?: {
 			from: string;
 			to: string;
@@ -266,6 +319,7 @@ export interface CfDurableObjectMigrations {
 
 export interface CfPlacement {
 	mode: "smart";
+	hint?: string;
 }
 
 export interface CfTailConsumer {
@@ -308,22 +362,29 @@ export interface CfWorkerInit {
 		text_blobs: CfTextBlobBindings | undefined;
 		browser: CfBrowserBinding | undefined;
 		ai: CfAIBinding | undefined;
+		images: CfImagesBinding | undefined;
 		version_metadata: CfVersionMetadataBinding | undefined;
 		data_blobs: CfDataBlobBindings | undefined;
 		durable_objects: { bindings: CfDurableObject[] } | undefined;
+		workflows: CfWorkflow[] | undefined;
 		queues: CfQueue[] | undefined;
 		r2_buckets: CfR2Bucket[] | undefined;
 		d1_databases: CfD1Database[] | undefined;
 		vectorize: CfVectorize[] | undefined;
-		constellation: CfConstellation[] | undefined;
 		hyperdrive: CfHyperdrive[] | undefined;
+		secrets_store_secrets: CfSecretsStoreSecrets[] | undefined;
 		services: CfService[] | undefined;
 		analytics_engine_datasets: CfAnalyticsEngineDataset[] | undefined;
 		dispatch_namespaces: CfDispatchNamespace[] | undefined;
 		mtls_certificates: CfMTlsCertificate[] | undefined;
 		logfwdr: CfLogfwdr | undefined;
+		pipelines: CfPipeline[] | undefined;
 		unsafe: CfUnsafe | undefined;
+		assets: CfAssetsBinding | undefined;
 	};
+
+	containers?: { class_name: string }[];
+
 	/**
 	 * The raw bindings - this is basically never provided and it'll be the bindings above
 	 * but if we're just taking from the api and re-putting then this is how we can do that
@@ -342,6 +403,17 @@ export interface CfWorkerInit {
 	tail_consumers: CfTailConsumer[] | undefined;
 	limits: CfUserLimits | undefined;
 	annotations?: Record<string, string | undefined>;
+	keep_assets?: boolean | undefined;
+	assets:
+		| {
+				jwt: string;
+				routerConfig: RouterConfig;
+				assetConfig: AssetConfig;
+				_redirects?: string;
+				_headers?: string;
+		  }
+		| undefined;
+	observability: Observability | undefined;
 }
 
 export interface CfWorkerContext {

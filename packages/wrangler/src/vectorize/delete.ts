@@ -1,45 +1,51 @@
-import { readConfig } from "../config";
+import { createCommand } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { deleteIndex } from "./client";
-import { vectorizeBetaWarning } from "./common";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
+import { deprecatedV1DefaultFlag } from "./common";
 
-export function options(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("name", {
+export const vectorizeDeleteCommand = createCommand({
+	metadata: {
+		description: "Delete a Vectorize index",
+		status: "stable",
+		owner: "Product: Vectorize",
+	},
+	behaviour: {
+		printBanner: true,
+		provideConfig: true,
+	},
+	args: {
+		name: {
 			type: "string",
 			demandOption: true,
 			description: "The name of the Vectorize index",
-		})
-		.option("force", {
-			describe: "Skip confirmation",
+		},
+		force: {
 			type: "boolean",
 			alias: "y",
 			default: false,
-		})
-		.epilogue(vectorizeBetaWarning);
-}
-
-export async function handler(
-	args: StrictYargsOptionsToInterface<typeof options>
-) {
-	const config = readConfig(args.config, args);
-
-	logger.log(`Deleting Vectorize index ${args.name}`);
-	if (!args.force) {
-		const confirmedDeletion = await confirm(
-			`OK to delete the index '${args.name}'?`
-		);
-		if (!confirmedDeletion) {
-			logger.log("Deletion cancelled.");
-			return;
+			description: "Skip confirmation",
+		},
+		"deprecated-v1": {
+			type: "boolean",
+			default: deprecatedV1DefaultFlag,
+			description: "Delete a deprecated Vectorize V1 index.",
+		},
+	},
+	positionalArgs: ["name"],
+	async handler({ name, force, deprecatedV1 }, { config }) {
+		logger.log(`Deleting Vectorize index ${name}`);
+		if (!force) {
+			const confirmedDeletion = await confirm(
+				`OK to delete the index '${name}'?`
+			);
+			if (!confirmedDeletion) {
+				logger.log("Deletion cancelled.");
+				return;
+			}
 		}
-	}
 
-	await deleteIndex(config, args.name);
-	logger.log(`✅ Deleted index ${args.name}`);
-}
+		await deleteIndex(config, name, deprecatedV1);
+		logger.log(`✅ Deleted index ${name}`);
+	},
+});

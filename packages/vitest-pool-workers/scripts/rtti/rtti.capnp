@@ -7,6 +7,7 @@
 
 using Cxx = import "/capnp/c++.capnp";
 $Cxx.namespace("workerd::jsg::rtti");
+$Cxx.allowCancellation;
 # TODO: I can't figure out how to make both capnpc-ts and capnpc-cpp generators to see this import
 # without code changes. capnpc-ts code is weird:
 # https://github.com/jdiaz5513/capnp-ts/blob/master/packages/capnpc-ts/src/generators.ts#L92
@@ -210,6 +211,16 @@ struct Structure {
   # true if the structure is async iterable
   asyncIterator @7 :Method;
   # Method returning async iterator if the structure is async iterable
+
+  disposable @13 :Bool;
+  # true if the structure is disposable
+  dispose @14 :Method;
+  # dispose method
+
+  asyncDisposable @15 :Bool;
+  # true if the structure is async disposable
+  asyncDispose @16 :Method;
+  # asyncDispose method
 
   tsRoot @8 :Bool;
   # See `JSG_TS_ROOT`'s documentation in the `## TypeScript` section of the JSG README.md.

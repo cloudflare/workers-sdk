@@ -8,10 +8,13 @@ import path, {
 	resolve as resolvePath,
 } from "node:path";
 import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
-import { readConfig } from "../config";
+import { readPagesConfig } from "../config";
+import { findWranglerConfig } from "../config/config-helpers";
+import { createCommand } from "../core/create-command";
+import { shouldCheckFetch } from "../deployment-bundle/bundle";
 import { writeAdditionalModules } from "../deployment-bundle/find-additional-modules";
-import { validateNodeCompat } from "../deployment-bundle/node-compat";
-import { FatalError } from "../errors";
+import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
+import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -29,233 +32,142 @@ import {
 } from "./functions/buildWorker";
 import type { Config } from "../config";
 import type { BundleResult } from "../deployment-bundle/bundle";
-import type { NodeJSCompatMode } from "../deployment-bundle/node-compat";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
+import type { NodeJSCompatMode } from "miniflare";
 
-export type PagesBuildArgs = StrictYargsOptionsToInterface<typeof Options>;
-
-export function Options(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("directory", {
+export const pagesFunctionsBuildCommand = createCommand({
+	metadata: {
+		description: "Compile a folder of Pages Functions into a single Worker",
+		status: "stable",
+		owner: "Workers: Authoring and Testing",
+		hideGlobalFlags: ["config", "env"],
+	},
+	behaviour: {
+		provideConfig: false,
+	},
+	args: {
+		directory: {
 			type: "string",
 			default: "functions",
 			description: "The directory of Pages Functions",
-		})
-		.options({
-			outfile: {
-				type: "string",
-				description: "The location of the output Worker script",
-			},
-			outdir: {
-				type: "string",
-				description: "Output directory for the bundled Worker",
-			},
-			"output-config-path": {
-				type: "string",
-				description: "The location for the output config file",
-			},
-			"build-metadata-path": {
-				type: "string",
-				description: "The location for the build metadata file",
-			},
-			"project-directory": {
-				type: "string",
-				description: "The location of the Pages project",
-			},
-			"output-routes-path": {
-				type: "string",
-				description: "The location for the output _routes.json file",
-			},
-			minify: {
-				type: "boolean",
-				default: false,
-				description: "Minify the output Worker script",
-			},
-			sourcemap: {
-				type: "boolean",
-				default: false,
-				description: "Generate a sourcemap for the output Worker script",
-			},
-			"fallback-service": {
-				type: "string",
-				default: "ASSETS",
-				description:
-					"The service to fallback to at the end of the `next` chain. Setting to '' will fallback to the global `fetch`.",
-			},
-			watch: {
-				type: "boolean",
-				default: false,
-				description:
-					"Watch for changes to the functions and automatically rebuild the Worker script",
-			},
-			plugin: {
-				type: "boolean",
-				default: false,
-				description: "Build a plugin rather than a Worker script",
-			},
-			"build-output-directory": {
-				type: "string",
-				description: "The directory to output static assets to",
-			},
-			"node-compat": {
-				describe: "Enable Node.js compatibility",
-				default: false,
-				type: "boolean",
-				hidden: true,
-			},
-			"compatibility-date": {
-				describe: "Date to use for compatibility checks",
-				type: "string",
-				requiresArg: true,
-			},
-			"compatibility-flags": {
-				describe: "Flags to use for compatibility checks",
-				alias: "compatibility-flag",
-				type: "string",
-				requiresArg: true,
-				array: true,
-			},
-			bindings: {
-				type: "string",
-				describe:
-					"Bindings used in Functions (used to register beta product shims)",
-				deprecated: true,
-				hidden: true,
-			},
-			external: {
-				describe: "A list of module imports to exclude from bundling",
-				type: "string",
-				array: true,
-			},
-		});
-}
+		},
+		outfile: {
+			type: "string",
+			description: "The location of the output Worker script",
+			deprecated: true,
+		},
+		outdir: {
+			type: "string",
+			description: "Output directory for the bundled Worker",
+		},
+		"output-config-path": {
+			type: "string",
+			description: "The location for the output config file",
+		},
+		"build-metadata-path": {
+			type: "string",
+			description: "The location for the build metadata file",
+		},
+		"project-directory": {
+			type: "string",
+			description: "The location of the Pages project",
+		},
+		"output-routes-path": {
+			type: "string",
+			description: "The location for the output _routes.json file",
+		},
+		minify: {
+			type: "boolean",
+			default: false,
+			description: "Minify the output Worker script",
+		},
+		sourcemap: {
+			type: "boolean",
+			default: false,
+			description: "Generate a sourcemap for the output Worker script",
+		},
+		"fallback-service": {
+			type: "string",
+			default: "ASSETS",
+			description:
+				"The service to fallback to at the end of the `next` chain. Setting to '' will fallback to the global `fetch`.",
+		},
+		watch: {
+			type: "boolean",
+			default: false,
+			description:
+				"Watch for changes to the functions and automatically rebuild the Worker script",
+		},
+		plugin: {
+			type: "boolean",
+			default: false,
+			description: "Build a plugin rather than a Worker script",
+		},
+		"build-output-directory": {
+			type: "string",
+			description: "The directory to output static assets to",
+		},
+		"node-compat": {
+			type: "boolean",
+			default: false,
+			description: "Enable Node.js compatibility",
+			hidden: true,
+			deprecated: true,
+		},
+		"compatibility-date": {
+			type: "string",
+			description: "Date to use for compatibility checks",
+		},
+		"compatibility-flags": {
+			description: "Flags to use for compatibility checks",
+			alias: "compatibility-flag",
+			type: "string",
+			requiresArg: true,
+			array: true,
+		},
+		bindings: {
+			type: "string",
+			description:
+				"Bindings used in Functions (used to register beta product shims)",
+			deprecated: true,
+			hidden: true,
+		},
+		external: {
+			description: "A list of module imports to exclude from bundling",
+			type: "string",
+			array: true,
+		},
+		metafile: {
+			describe:
+				"Path to output build metadata from esbuild. If flag is used without a path, defaults to 'bundle-meta.json' inside the directory specified by --outdir.",
+			type: "string",
+			coerce: (v: string) => (!v ? true : v),
+		},
+	},
+	positionalArgs: ["directory"],
+	async handler(args) {
+		const validatedArgs = await validateArgs(args);
 
-export const Handler = async (args: PagesBuildArgs) => {
-	const validatedArgs = await validateArgs(args);
+		let bundle: BundleResult | undefined = undefined;
 
-	let bundle: BundleResult | undefined = undefined;
-
-	if (validatedArgs.plugin) {
-		const {
-			directory,
-			outfile,
-			outdir,
-			outputConfigPath,
-			outputRoutesPath: routesOutputPath,
-			minify,
-			sourcemap,
-			fallbackService,
-			watch,
-			plugin,
-			nodejsCompatMode,
-			defineNavigatorUserAgent,
-			external,
-		} = validatedArgs;
-
-		try {
-			/**
-			 * `buildFunctions` builds `/functions`, but doesn't give us the bundle
-			 * we want to return, which includes the external dependencies (like wasm,
-			 * binary, text). Let's output that build result to memory and only write
-			 * to disk once we have the final bundle
-			 */
-			bundle = await buildFunctions({
+		if (validatedArgs.plugin) {
+			const {
+				directory,
 				outfile,
 				outdir,
 				outputConfigPath,
-				functionsDirectory: directory,
+				outputRoutesPath: routesOutputPath,
 				minify,
 				sourcemap,
 				fallbackService,
-				// This only watches already existing files using the esbuild watching mechanism
-				// it will not watch new files that are added to the functions directory!
 				watch,
 				plugin,
 				nodejsCompatMode,
-				routesOutputPath,
-				local: false,
 				defineNavigatorUserAgent,
+				checkFetch,
 				external,
-			});
-		} catch (e) {
-			if (e instanceof FunctionsNoRoutesError) {
-				throw new FatalError(
-					getFunctionsNoRoutesWarning(directory),
-					EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR
-				);
-			} else {
-				throw e;
-			}
-		}
+				metafile,
+			} = validatedArgs;
 
-		if (outfile && outfile !== bundle.resolvedEntryPointPath) {
-			writeFileSync(
-				outfile,
-				`export { default } from './${relative(
-					dirname(outfile),
-					bundle.resolvedEntryPointPath
-				)}'`
-			);
-		}
-	} else {
-		const {
-			config,
-			buildMetadataPath,
-			buildMetadata,
-			directory,
-			outfile,
-			outdir,
-			outputConfigPath,
-			outputRoutesPath: routesOutputPath,
-			minify,
-			sourcemap,
-			fallbackService,
-			watch,
-			plugin,
-			buildOutputDirectory,
-			nodejsCompatMode,
-			workerScriptPath,
-			defineNavigatorUserAgent,
-			external,
-		} = validatedArgs;
-
-		/**
-		 * prioritize building `_worker.js` over Pages Functions, if both exist
-		 * and if we were able to resolve _worker.js
-		 */
-		if (workerScriptPath) {
-			if (lstatSync(workerScriptPath).isDirectory()) {
-				bundle = await produceWorkerBundleForWorkerJSDirectory({
-					workerJSDirectory: workerScriptPath,
-					bundle: true,
-					buildOutputDirectory,
-					nodejsCompatMode,
-					defineNavigatorUserAgent,
-					sourceMaps: config?.upload_source_maps ?? sourcemap,
-				});
-			} else {
-				/**
-				 * `buildRawWorker` builds `_worker.js`, but doesn't give us the bundle
-				 * we want to return, which includes the external dependencies (like wasm,
-				 * binary, text). Let's output that build result to memory and only write
-				 * to disk once we have the final bundle
-				 */
-				bundle = await buildRawWorker({
-					workerScriptPath,
-					outdir,
-					directory: buildOutputDirectory,
-					local: false,
-					sourcemap: config?.upload_source_maps ?? sourcemap,
-					watch,
-					nodejsCompatMode,
-					defineNavigatorUserAgent,
-					externalModules: external,
-				});
-			}
-		} else {
 			try {
 				/**
 				 * `buildFunctions` builds `/functions`, but doesn't give us the bundle
@@ -264,20 +176,24 @@ export const Handler = async (args: PagesBuildArgs) => {
 				 * to disk once we have the final bundle
 				 */
 				bundle = await buildFunctions({
+					outfile,
 					outdir,
 					outputConfigPath,
 					functionsDirectory: directory,
 					minify,
-					sourcemap: config?.upload_source_maps ?? sourcemap,
+					sourcemap,
 					fallbackService,
+					// This only watches already existing files using the esbuild watching mechanism
+					// it will not watch new files that are added to the functions directory!
 					watch,
 					plugin,
-					buildOutputDirectory,
 					nodejsCompatMode,
 					routesOutputPath,
 					local: false,
 					defineNavigatorUserAgent,
+					checkFetch,
 					external,
+					metafile,
 				});
 			} catch (e) {
 				if (e instanceof FunctionsNoRoutesError) {
@@ -289,37 +205,147 @@ export const Handler = async (args: PagesBuildArgs) => {
 					throw e;
 				}
 			}
-		}
 
-		if (outdir) {
-			await writeAdditionalModules(bundle.modules, outdir);
-		}
-
-		if (outfile) {
-			const workerBundleContents = await createUploadWorkerBundleContents(
-				bundle as BundleResult,
-				config
-			);
-
-			mkdirSync(dirname(outfile), { recursive: true });
-			writeFileSync(
+			if (outfile && outfile !== bundle.resolvedEntryPointPath) {
+				writeFileSync(
+					outfile,
+					`export { default } from './${relative(
+						dirname(outfile),
+						bundle.resolvedEntryPointPath
+					)}'`
+				);
+			}
+		} else {
+			const {
+				config,
+				buildMetadataPath,
+				buildMetadata,
+				directory,
 				outfile,
-				Buffer.from(await workerBundleContents.arrayBuffer())
-			);
-		}
-		if (buildMetadataPath && buildMetadata) {
-			writeFileSync(buildMetadataPath, JSON.stringify(buildMetadata));
-		}
-	}
+				outdir,
+				outputConfigPath,
+				outputRoutesPath: routesOutputPath,
+				minify,
+				sourcemap,
+				fallbackService,
+				watch,
+				plugin,
+				buildOutputDirectory,
+				nodejsCompatMode,
+				workerScriptPath,
+				defineNavigatorUserAgent,
+				checkFetch,
+				external,
+				metafile,
+			} = validatedArgs;
 
-	await metrics.sendMetricsEvent("build pages functions");
-};
+			/**
+			 * prioritize building `_worker.js` over Pages Functions, if both exist
+			 * and if we were able to resolve _worker.js
+			 */
+			if (workerScriptPath) {
+				if (lstatSync(workerScriptPath).isDirectory()) {
+					bundle = await produceWorkerBundleForWorkerJSDirectory({
+						workerJSDirectory: workerScriptPath,
+						bundle: true,
+						buildOutputDirectory,
+						nodejsCompatMode,
+						defineNavigatorUserAgent,
+						checkFetch,
+						sourceMaps: config?.upload_source_maps ?? sourcemap,
+					});
+				} else {
+					/**
+					 * `buildRawWorker` builds `_worker.js`, but doesn't give us the bundle
+					 * we want to return, which includes the external dependencies (like wasm,
+					 * binary, text). Let's output that build result to memory and only write
+					 * to disk once we have the final bundle
+					 */
+					bundle = await buildRawWorker({
+						workerScriptPath,
+						outdir,
+						directory: buildOutputDirectory,
+						local: false,
+						sourcemap: config?.upload_source_maps ?? sourcemap,
+						watch,
+						nodejsCompatMode,
+						defineNavigatorUserAgent,
+						checkFetch,
+						externalModules: external,
+					});
+				}
+			} else {
+				try {
+					/**
+					 * `buildFunctions` builds `/functions`, but doesn't give us the bundle
+					 * we want to return, which includes the external dependencies (like wasm,
+					 * binary, text). Let's output that build result to memory and only write
+					 * to disk once we have the final bundle
+					 */
+					bundle = await buildFunctions({
+						outdir,
+						outputConfigPath,
+						functionsDirectory: directory,
+						minify,
+						sourcemap: config?.upload_source_maps ?? sourcemap,
+						fallbackService,
+						watch,
+						plugin,
+						buildOutputDirectory,
+						nodejsCompatMode,
+						routesOutputPath,
+						local: false,
+						defineNavigatorUserAgent,
+						checkFetch,
+						external,
+						metafile,
+					});
+				} catch (e) {
+					if (e instanceof FunctionsNoRoutesError) {
+						throw new FatalError(
+							getFunctionsNoRoutesWarning(directory),
+							EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR
+						);
+					} else {
+						throw e;
+					}
+				}
+			}
 
-type WorkerBundleArgs = Omit<PagesBuildArgs, "nodeCompat"> & {
+			if (outdir) {
+				await writeAdditionalModules(bundle.modules, outdir);
+			}
+
+			if (outfile) {
+				const workerBundleContents = await createUploadWorkerBundleContents(
+					bundle as BundleResult,
+					config
+				);
+
+				mkdirSync(dirname(outfile), { recursive: true });
+				writeFileSync(
+					outfile,
+					Buffer.from(await workerBundleContents.arrayBuffer())
+				);
+			}
+			if (buildMetadataPath && buildMetadata) {
+				writeFileSync(buildMetadataPath, JSON.stringify(buildMetadata));
+			}
+		}
+
+		metrics.sendMetricsEvent("build pages functions");
+	},
+});
+
+type WorkerBundleArgs = Omit<
+	typeof pagesFunctionsBuildCommand.args,
+	"nodeCompat"
+> & {
 	plugin: false;
 	buildOutputDirectory: string;
 	nodejsCompatMode: NodeJSCompatMode;
 	defineNavigatorUserAgent: boolean;
+	checkFetch: boolean;
 	workerScriptPath: string;
 	config: Config | undefined;
 	buildMetadata:
@@ -330,35 +356,35 @@ type WorkerBundleArgs = Omit<PagesBuildArgs, "nodeCompat"> & {
 		| undefined;
 };
 type PluginArgs = Omit<
-	PagesBuildArgs,
+	typeof pagesFunctionsBuildCommand.args,
 	"buildOutputDirectory" | "bindings" | "nodeCompat"
 > & {
 	plugin: true;
 	outdir: string;
 	nodejsCompatMode: NodeJSCompatMode;
 	defineNavigatorUserAgent: boolean;
+	checkFetch: boolean;
 };
 async function maybeReadPagesConfig(
-	args: PagesBuildArgs
+	args: typeof pagesFunctionsBuildCommand.args
 ): Promise<(Config & { hash: string }) | undefined> {
 	if (!args.projectDirectory || !args.buildMetadataPath) {
 		return;
 	}
-	const configPath = path.resolve(args.projectDirectory, "wrangler.toml");
+	const { configPath } = findWranglerConfig(args.projectDirectory, {
+		useRedirectIfAvailable: true,
+	});
 	// Fail early if the config file doesn't exist
-	if (!existsSync(configPath)) {
+	if (!configPath || !existsSync(configPath)) {
 		return undefined;
 	}
 	try {
-		const config = readConfig(
-			configPath,
-			{
-				...args,
-				// eslint-disable-next-line turbo/no-undeclared-env-vars
-				env: process.env.PAGES_ENVIRONMENT,
-			},
-			true
-		);
+		const config = readPagesConfig({
+			...args,
+			config: configPath,
+			// eslint-disable-next-line turbo/no-undeclared-env-vars
+			env: process.env.PAGES_ENVIRONMENT,
+		});
 
 		return {
 			...config,
@@ -375,8 +401,16 @@ async function maybeReadPagesConfig(
 }
 type ValidatedArgs = WorkerBundleArgs | PluginArgs;
 
-const validateArgs = async (args: PagesBuildArgs): Promise<ValidatedArgs> => {
+const validateArgs = async (
+	args: typeof pagesFunctionsBuildCommand.args
+): Promise<ValidatedArgs> => {
 	const config = await maybeReadPagesConfig(args);
+
+	if (args.nodeCompat) {
+		throw new UserError(
+			`The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the \`nodejs_compat\` compatibility flag. This includes the functionality from legacy \`node_compat\` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.`
+		);
+	}
 
 	if (args.outdir && args.outfile) {
 		throw new FatalError(
@@ -437,14 +471,20 @@ const validateArgs = async (args: PagesBuildArgs): Promise<ValidatedArgs> => {
 		args.outfile = resolvePath(args.outfile);
 	}
 
-	const { nodeCompat: legacyNodeCompat, ...argsExceptNodeCompat } = args;
-	const nodejsCompatMode = validateNodeCompat({
-		legacyNodeCompat: legacyNodeCompat,
-		compatibilityFlags: args.compatibilityFlags ?? [],
-		noBundle: config?.no_bundle ?? false,
-	});
+	const nodejsCompatMode = validateNodeCompatMode(
+		args.compatibilityDate ?? config?.compatibility_date,
+		args.compatibilityFlags ?? config?.compatibility_flags ?? [],
+		{
+			noBundle: config?.no_bundle,
+		}
+	);
 
 	const defineNavigatorUserAgent = isNavigatorDefined(
+		args.compatibilityDate,
+		args.compatibilityFlags
+	);
+
+	const checkFetch = shouldCheckFetch(
 		args.compatibilityDate,
 		args.compatibilityFlags
 	);
@@ -486,10 +526,11 @@ We looked for the Functions directory (${basename(
 	}
 
 	return {
-		...argsExceptNodeCompat,
+		...args,
 		workerScriptPath,
 		nodejsCompatMode,
 		defineNavigatorUserAgent,
+		checkFetch,
 		config,
 		buildMetadata:
 			config && args.projectDirectory && config.pages_build_output_dir

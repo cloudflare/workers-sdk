@@ -1,16 +1,16 @@
 import { mkdir } from "fs/promises";
-import { exit } from "process";
-import { crash, logRaw, space, status, updateStatus } from "@cloudflare/cli";
+import { logRaw, space, status, updateStatus } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { version as wranglerVersion } from "../../package.json";
 import { readConfig } from "../config";
 import { getConfigCache, purgeConfigCaches } from "../config-cache";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
-import { CI } from "../is-ci";
-import isInteractive from "../is-interactive";
+import { UserError } from "../errors";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import {
+	DefaultScopeKeys,
 	getAccountFromCache,
 	getAccountId,
 	getAPIToken,
@@ -21,10 +21,13 @@ import {
 	requireAuth,
 	setLoginScopeKeys,
 } from "../user";
+import { parseByteSize } from "./../parse";
 import { ApiError, DeploymentMutationError, OpenAPI } from "./client";
 import { wrap } from "./helpers/wrap";
 import { idToLocationName, loadAccount } from "./locations";
 import type { Config } from "../config";
+import type { CloudchamberConfig } from "../config/environment";
+import type { Scope } from "../user";
 import type {
 	CommonYargsOptions,
 	StrictYargsOptionsToInterfaceJSON,
@@ -38,8 +41,50 @@ import type {
 import type { Arg } from "@cloudflare/cli/interactive";
 
 export type CommonCloudchamberConfiguration = { json: boolean };
-export type CloudchamberCommandConfiguration = CommonCloudchamberConfiguration &
-	CommonYargsOptions & { wranglerConfig: Config };
+
+/**
+ * Regular expression for matching an image name.
+ *
+ * See: https://github.com/opencontainers/distribution-spec/blob/v1.1.0/spec.md#pulling-manifests
+ */
+const imageRe = (() => {
+	const alphaNumeric = "[a-z0-9]+";
+	const separator = "(?:\\.|_|__|-+)";
+	const port = ":[0-9]+";
+	const domain = `${alphaNumeric}(?:${separator}${alphaNumeric})*`;
+	const name = `(?:${domain}(?:${port})?/)?(?:${domain}/)*(?:${domain})`;
+	const tag = ":([a-zA-Z0-9_][a-zA-Z0-9._-]{0,127})";
+	const digest = "@(sha256:[A-Fa-f0-9]+)";
+	const reference = `(?:${tag}(?:${digest})?|${digest})`;
+	return new RegExp(`^(${name})${reference}$`);
+})();
+
+/**
+ * Parse a container image name.
+ */
+export function parseImageName(value: string): {
+	name?: string;
+	tag?: string;
+	digest?: string;
+	err?: string;
+} {
+	const matches = value.match(imageRe);
+	if (matches === null) {
+		return {
+			err: "Invalid image format: expected NAME:TAG[@DIGEST] or NAME@DIGEST",
+		};
+	}
+
+	const name = matches[1];
+	const tag = matches[2];
+	const digest = matches[3] ?? matches[4];
+
+	if (tag === "latest") {
+		return { err: '"latest" tag is not allowed' };
+	}
+
+	return { name, tag, digest };
+}
 
 /**
  * Wrapper that parses wrangler configuration and authentication.
@@ -54,22 +99,19 @@ export function handleFailure<
 		? K
 		: never,
 >(
-	cb: (t: CommandArgumentsObject, config: Config) => Promise<void>
+	cb: (args: CommandArgumentsObject, config: Config) => Promise<void>
 ): (
-	t: CommonYargsOptions &
+	args: CommonYargsOptions &
 		CommandArgumentsObject &
 		CommonCloudchamberConfiguration
 ) => Promise<void> {
-	return async (t) => {
+	return async (args) => {
 		try {
-			const config = readConfig(
-				t.config,
-				t as unknown as Parameters<typeof readConfig>[1]
-			);
-			await fillOpenAPIConfiguration(config, t.json);
-			await cb(t, config);
+			const config = readConfig(args);
+			await fillOpenAPIConfiguration(config, args.json);
+			await cb(args, config);
 		} catch (err) {
-			if (!t.json) {
+			if (!args.json || !isNonInteractiveOrCI()) {
 				throw err;
 			}
 
@@ -79,13 +121,11 @@ export function handleFailure<
 			}
 
 			if (err instanceof Error) {
-				logger.log(
-					`${{ error: err.message, name: err.name, stack: err.stack }}`
-				);
+				logger.log(JSON.stringify({ error: err.message }));
 				return;
 			}
 
-			logger.log(JSON.stringify(err));
+			throw err;
 		}
 	};
 }
@@ -99,9 +139,9 @@ export async function loadAccountSpinner({ json }: { json?: boolean }) {
  *
  */
 async function getAPIUrl(config: Config) {
-	const api = getCloudflareApiBaseUrl();
+	const api = getCloudflareApiBaseUrl(config);
 	// This one will probably be cache'd already so it won't ask for the accountId again
-	const accountId = config.account_id || (await getAccountId());
+	const accountId = config.account_id || (await getAccountId(config));
 	return `${api}/accounts/${accountId}/cloudchamber`;
 }
 
@@ -142,9 +182,14 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 	const needsCloudchamberToken = !scopes?.find(
 		(scope) => scope === "cloudchamber:write"
 	);
+	const cloudchamberScope: Scope[] = ["cloudchamber:write"];
+	const scopesToSet: Scope[] =
+		scopes == undefined
+			? cloudchamberScope.concat(DefaultScopeKeys)
+			: cloudchamberScope.concat(scopes);
 
-	if (getAuthFromEnv()) {
-		setLoginScopeKeys(["cloudchamber:write", "user:read", "account:read"]);
+	if (getAuthFromEnv() && needsCloudchamberToken) {
+		setLoginScopeKeys(scopesToSet);
 		// Wrangler will try to retrieve the oauth token and refresh it
 		// for its internal fetch call even if we have AuthFromEnv.
 		// Let's mock it
@@ -156,10 +201,10 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 		if (needsCloudchamberToken && scopes) {
 			logRaw(
 				status.warning +
-					" We need to re-authenticate with a cloudchamber token..."
+					" We need to re-authenticate to add a cloudchamber token..."
 			);
 			// cache account id
-			await getAccountId();
+			await getAccountId(config);
 			const account = getAccountFromCache();
 			config.account_id = account?.id ?? config.account_id;
 			await promiseSpinner(logout(), { json, message: "Revoking token" });
@@ -167,29 +212,29 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 			reinitialiseAuthTokens({});
 		}
 
-		setLoginScopeKeys(["cloudchamber:write", "user:read", "account:read"]);
+		setLoginScopeKeys(scopesToSet);
 
 		// Require either login, or environment variables being set to authenticate
 		//
 		// This will prompt the user for an accountId being chosen if they haven't configured the account id yet
 		const [, err] = await wrap(requireAuth(config));
 		if (err) {
-			crash("authenticating with the Cloudflare API:", err.message);
-			return;
+			throw new UserError(
+				`authenticating with the Cloudflare API: ${err.message}`
+			);
 		}
 	}
 
 	// Get the loaded API token
 	const token = getAPIToken();
 	if (!token) {
-		crash("unexpected apiToken not existing in credentials");
-		exit(1);
+		throw new UserError("unexpected apiToken not existing in credentials");
 	}
 
 	const val = "apiToken" in token ? token.apiToken : null;
 	// Don't try to support this method of authentication
 	if (!val) {
-		crash(
+		throw new UserError(
 			"we don't allow for authKey/email credentials, use `wrangler login` or CLOUDFLARE_API_TOKEN env variable to authenticate"
 		);
 	}
@@ -202,7 +247,7 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 	if (OpenAPI.BASE.length === 0) {
 		const [base, errApiURL] = await wrap(getAPIUrl(config));
 		if (errApiURL) {
-			crash("getting the API url:" + errApiURL.message);
+			throw new UserError("getting the API url: " + errApiURL.message);
 		}
 
 		OpenAPI.BASE = base;
@@ -217,12 +262,12 @@ export async function fillOpenAPIConfiguration(config: Config, json: boolean) {
 			message = JSON.stringify(err);
 		}
 
-		crash("loading Cloudchamber account failed:" + message);
+		throw new UserError("loading Cloudchamber account failed:" + message);
 	}
 }
 
 export function interactWithUser(config: { json?: boolean }): boolean {
-	return !config.json && isInteractive() && !CI.isCI();
+	return !config.json && !isNonInteractiveOrCI();
 }
 
 type NonObject = undefined | null | boolean | string | number;
@@ -258,7 +303,7 @@ export function renderDeploymentConfiguration(
 		image,
 		location,
 		vcpu,
-		memory,
+		memoryMib,
 		environmentVariables,
 		labels,
 		env,
@@ -267,7 +312,7 @@ export function renderDeploymentConfiguration(
 		image: string;
 		location: string;
 		vcpu: number;
-		memory: string;
+		memoryMib: number;
 		environmentVariables: EnvironmentVariable[] | undefined;
 		labels: Label[] | undefined;
 		env?: string;
@@ -301,17 +346,15 @@ export function renderDeploymentConfiguration(
 	}
 
 	const containerInformation = [
-		["Image", image],
-		["Location", idToLocationName(location)],
-		["VCPU", `${vcpu}`],
-		["Memory", memory],
-		["Environment variables", environmentVariablesText],
-		["Labels", labelsText],
+		["image", image],
+		["location", idToLocationName(location)],
+		["vCPU", `${vcpu}`],
+		["memory", `${memoryMib} MiB`],
+		["environment variables", environmentVariablesText],
+		["labels", labelsText],
 		...(network === undefined
 			? []
-			: [
-					["Include IPv4", network.assign_ipv4 === "predefined" ? "yes" : "no"],
-				]),
+			: [["IPv4", network.assign_ipv4 === "predefined" ? "yes" : "no"]]),
 	] as const;
 
 	updateStatus(
@@ -327,37 +370,30 @@ export function renderDeploymentMutationError(
 	err: Error
 ) {
 	if (!(err instanceof ApiError)) {
-		crash(err.message);
-		return;
+		throw new UserError(err.message);
 	}
 
 	if (typeof err.body === "string") {
-		crash("There has been an internal error, please try again!");
-		return;
+		throw new UserError("There has been an internal error, please try again!");
 	}
 
 	if (!("error" in err.body)) {
-		crash(err.message);
-		return;
+		throw new UserError(err.message);
 	}
 
 	const errorMessage = err.body.error;
 	if (!(errorMessage in DeploymentMutationError)) {
-		crash(err.message);
-		return;
+		throw new UserError(err.message);
 	}
 
 	const details: Record<string, string> = err.body.details ?? {};
 	function renderAccountLimits() {
-		return `${space(2)}${brandColor("Maximum VCPU per deployment")} ${
-			account.limits.vcpu_per_deployment
-		}\n${space(2)}${brandColor("Maximum total VCPU in your account")} ${
-			account.limits.total_vcpu
-		}\n${space(2)}${brandColor("Maximum memory per deployment")} ${
-			account.limits.memory_per_deployment
-		}\n${space(2)}${brandColor("Maximum total memory in your account")} ${
-			account.limits.total_memory
-		}`;
+		return [
+			`${space(2)}${brandColor("Maximum VCPU per deployment")} ${account.limits.vcpu_per_deployment}`,
+			`${space(2)}${brandColor("Maximum total VCPU in your account")} ${account.limits.total_vcpu}`,
+			`${space(2)}${brandColor("Maximum memory per deployment")} ${account.limits.memory_mib_per_deployment} MiB`,
+			`${space(2)}${brandColor("Maximum total memory in your account")} ${account.limits.total_memory_mib} MiB`,
+		].join("\n");
 	}
 
 	function renderInvalidInputDetails(inputDetails: Record<string, string>) {
@@ -386,12 +422,12 @@ export function renderDeploymentMutationError(
 				"The image registry you are trying to use is not configured. Use the 'wrangler cloudchamber registries configure' command to configure the registry.\n",
 		};
 
-	crash(details["reason"] ?? errorEnumToErrorMessage[errorEnum]());
+	throw new UserError(
+		details["reason"] ?? errorEnumToErrorMessage[errorEnum]()
+	);
 }
 
-export function sortEnvironmentVariables(
-	environmentVariables: EnvironmentVariable[]
-) {
+function sortEnvironmentVariables(environmentVariables: EnvironmentVariable[]) {
 	environmentVariables.sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -500,7 +536,7 @@ export async function promptForEnvironmentVariables(
 	return [];
 }
 
-export function sortLabels(labels: Label[]) {
+function sortLabels(labels: Label[]) {
 	labels.sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -596,4 +632,20 @@ export async function promptForLabels(
 	}
 
 	return [];
+}
+
+// Return the amount of memory to use (in MiB) for a deployment given the
+// provided arguments and configuration.
+export function resolveMemory(
+	args: { memory: string | undefined },
+	config: CloudchamberConfig
+): number | undefined {
+	const MiB = 1024 * 1024;
+
+	const memory = args.memory ?? config.memory;
+	if (memory !== undefined) {
+		return Math.round(parseByteSize(memory, 1024) / MiB);
+	}
+
+	return undefined;
 }

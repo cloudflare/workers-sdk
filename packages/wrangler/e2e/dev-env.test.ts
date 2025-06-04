@@ -27,72 +27,72 @@ describe("switching runtimes", () => {
 			`,
 			"index.mjs": dedent/*javascript*/ `
 				import { setTimeout } from "timers/promises";
-				import { unstable_DevEnv as DevEnv } from "${WRANGLER_IMPORT}";
+				import { unstable_startWorker as startWorker } from "${WRANGLER_IMPORT}";
 
 				const firstRemote = process.argv[2] === "remote";
 
-				const devEnv = new DevEnv();
+                let worker;
+                try {
+                    worker = await startWorker({
+                        name: "worker",
+                        entrypoint: "index.ts",
+                        compatibilityFlags: ["nodejs_compat"],
+                        compatibilityDate: "2023-10-01",
+                        bindings: {
+                            REMOTE: {
+                                type: "json",
+                                value: firstRemote,
+                            },
+                            ORDER: {
+                                type: "plain_text",
+                                value: "1",
+                            },
+                        },
+                        dev: {
+                            remote: firstRemote,
+                            auth: {
+                                accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
+                                apiToken: process.env.CLOUDFLARE_API_TOKEN,
+                            },
+                        },
+                    });
 
-				let config = {
-					name: "worker",
-					entrypoint: "index.ts",
-					compatibilityFlags: ["nodejs_compat"],
-					compatibilityDate: "2023-10-01",
-					bindings: {
-						REMOTE: {
-							type: "json",
-							value: firstRemote,
-						},
-						ORDER: {
-							type: "plain_text",
-							value: "1",
-						},
-					},
-					dev: {
-						remote: firstRemote,
-						auth: {
-							accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
-							apiToken: process.env.CLOUDFLARE_API_TOKEN,
-						},
-					},
-				};
-				void devEnv.config.set(config);
+                    const url = await worker.url;
+                    console.log(await fetch(url).then((r) => r.text()));
 
-				const { url } = await devEnv.proxy.ready.promise;
-				console.log(await fetch(url).then((r) => r.text()));
+                    await worker.patchConfig({
+                        bindings: {
+                            REMOTE: {
+                                type: "json",
+                                value: !firstRemote,
+                            },
+                            ORDER: {
+                                type: "plain_text",
+                                value: "2",
+                            },
+                        },
+                        dev: {
+                            ...worker.config.dev,
+                            remote: !firstRemote,
+                        },
+                    });
 
-				void devEnv.config.patch({
-					bindings: {
-						REMOTE: {
-							type: "json",
-							value: !firstRemote,
-						},
-						ORDER: {
-							type: "plain_text",
-							value: "2",
-						},
-					},
-					dev: {
-						...config.dev,
-						remote: !firstRemote,
-					},
-				});
+                    // Give the config some time to propagate
+                    await setTimeout(500);
 
-				// Give the config some time to propagate
-				await setTimeout(500);
-
-				console.log(await fetch(url).then((r) => r.text()));
-
-				await devEnv.teardown();
-				process.exit(0);
-					`,
+                    console.log(await fetch(url).then((r) => r.text()));
+                } finally {
+                    await worker?.dispose();
+                    process.exit(0);
+                }
+            `,
 			"package.json": dedent`
-					{
-						"name": "ai-app",
-						"version": "0.0.0",
-						"private": true
-					}
-					`,
+                {
+                    "name": "dev-env-app",
+                    "version": "0.0.0",
+                    "private": true
+                }
+            `,
 		});
 	});
 	it("can switch from local to remote", async () => {

@@ -3,6 +3,7 @@ import path from "path";
 import dedent from "ts-dedent";
 import { test as base, describe } from "vitest";
 import { BundlerController } from "../../../api/startDevWorker/BundlerController";
+import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { seed } from "../../helpers/seed";
 import { unusable } from "../../helpers/unusable";
@@ -38,19 +39,25 @@ function configDefaults(
 ): StartDevWorkerOptions {
 	const persist = path.join(process.cwd(), ".wrangler/persist");
 	return {
+		name: "test-worker",
+		complianceRegion: undefined,
 		entrypoint: "NOT_REAL",
-		directory: "NOT_REAL",
+		projectRoot: "NOT_REAL",
 		build: unusable<StartDevWorkerOptions["build"]>(),
 		legacy: {},
 		dev: { persist },
 		...config,
 	};
 }
-describe("happy path bundle + watch", () => {
+
+describe("BundleController", () => {
+	mockConsoleMethods();
 	runInTempDir();
-	test("single ts source file", async ({ controller }) => {
-		await seed({
-			"src/index.ts": dedent/* javascript */ `
+
+	describe("happy path bundle + watch", () => {
+		test("single ts source file", async ({ controller }) => {
+			await seed({
+				"src/index.ts": dedent/* javascript */ `
 				export default {
 					fetch(request, env, ctx) {
 						//comment
@@ -58,43 +65,48 @@ describe("happy path bundle + watch", () => {
 					}
 				} satisfies ExportedHandler
 			`,
-		});
-		const config: Partial<StartDevWorkerOptions> = {
-			legacy: {},
-			name: "worker",
-			entrypoint: path.resolve("src/index.ts"),
-			directory: path.resolve("src"),
-			build: {
-				additionalModules: [],
-				processEntrypoint: false,
-				nodejsCompatMode: null,
-				bundle: true,
-				moduleRules: [],
-				custom: {},
-				define: {},
-				format: "modules",
-				moduleRoot: path.resolve("src"),
-			},
-		};
+			});
+			const config: Partial<StartDevWorkerOptions> = {
+				legacy: {},
+				name: "worker",
+				entrypoint: path.resolve("src/index.ts"),
+				projectRoot: path.resolve("src"),
+				build: {
+					additionalModules: [],
+					processEntrypoint: false,
+					nodejsCompatMode: null,
+					bundle: true,
+					moduleRules: [],
+					custom: {},
+					define: {},
+					format: "modules",
+					moduleRoot: path.resolve("src"),
+					exports: [],
+				},
+			};
 
-		await controller.onConfigUpdate({
-			type: "configUpdate",
-			config: configDefaults(config),
-		});
+			await controller.onConfigUpdate({
+				type: "configUpdate",
+				config: configDefaults(config),
+			});
 
-		let ev = await waitForBundleComplete(controller);
-		expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
-			.toMatchInlineSnapshot(`
-				"// index.ts
-				var src_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello world\\");
-				  }
-				};
-				"
-			`);
-		await seed({
-			"src/index.ts": dedent/* javascript */ `
+			let ev = await waitForBundleComplete(controller);
+			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
+				.toMatchInlineSnapshot(`
+					"// index.ts
+					var index_exports = {};
+					__export(index_exports, {
+					  default: () => index_default
+					});
+					var index_default = {
+					  fetch(request, env, ctx) {
+					    return new Response(\\"hello world\\");
+					  }
+					};
+					"
+				`);
+			await seed({
+				"src/index.ts": dedent/* javascript */ `
 					export default {
 						fetch(request, env, ctx) {
 							//comment
@@ -102,22 +114,27 @@ describe("happy path bundle + watch", () => {
 						}
 					} satisfies ExportedHandler
 				`,
+			});
+			ev = await waitForBundleComplete(controller);
+			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
+				.toMatchInlineSnapshot(`
+					"// index.ts
+					var index_exports = {};
+					__export(index_exports, {
+					  default: () => index_default
+					});
+					var index_default = {
+					  fetch(request, env, ctx) {
+					    return new Response(\\"hello world 2\\");
+					  }
+					};
+					"
+				`);
 		});
-		ev = await waitForBundleComplete(controller);
-		expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
-			.toMatchInlineSnapshot(`
-				"// index.ts
-				var src_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello world 2\\");
-				  }
-				};
-				"
-			`);
-	});
-	test("multiple ts source files", async ({ controller }) => {
-		await seed({
-			"src/index.ts": dedent/* javascript */ `
+
+		test("multiple ts source files", async ({ controller }) => {
+			await seed({
+				"src/index.ts": dedent/* javascript */ `
 				import name from "./other"
 				export default {
 					fetch(request, env, ctx) {
@@ -126,67 +143,67 @@ describe("happy path bundle + watch", () => {
 					}
 				} satisfies ExportedHandler
 			`,
-			"src/other.ts": dedent/* javascript */ `
+				"src/other.ts": dedent/* javascript */ `
 				export default "someone"
 			`,
-		});
-		const config: Partial<StartDevWorkerOptions> = {
-			legacy: {},
-			name: "worker",
-			entrypoint: path.resolve("src/index.ts"),
-			directory: path.resolve("src"),
-			build: {
-				additionalModules: [],
-				processEntrypoint: false,
-				nodejsCompatMode: null,
-				bundle: true,
-				moduleRules: [],
-				custom: {},
-				define: {},
-				format: "modules",
-				moduleRoot: path.resolve("src"),
-			},
-		};
+			});
+			const config: Partial<StartDevWorkerOptions> = {
+				legacy: {},
+				name: "worker",
+				entrypoint: path.resolve("src/index.ts"),
+				projectRoot: path.resolve("src"),
+				build: {
+					additionalModules: [],
+					processEntrypoint: false,
+					nodejsCompatMode: null,
+					bundle: true,
+					moduleRules: [],
+					custom: {},
+					define: {},
+					format: "modules",
+					moduleRoot: path.resolve("src"),
+					exports: [],
+				},
+			};
 
-		await controller.onConfigUpdate({
-			type: "configUpdate",
-			config: configDefaults(config),
-		});
+			await controller.onConfigUpdate({
+				type: "configUpdate",
+				config: configDefaults(config),
+			});
 
-		let ev = await waitForBundleComplete(controller);
-		expect(findSourceFile(ev.bundle.entrypointSource, "other.ts"))
-			.toMatchInlineSnapshot(`
+			let ev = await waitForBundleComplete(controller);
+			expect(findSourceFile(ev.bundle.entrypointSource, "other.ts"))
+				.toMatchInlineSnapshot(`
 				"// other.ts
 				var other_default = \\"someone\\";
 				"
 			`);
-		expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
-			.toMatchInlineSnapshot(`
-				"// index.ts
-				var src_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello world\\" + other_default);
-				  }
-				};
-				"
-			`);
-		await seed({
-			"src/other.ts": dedent/* javascript */ `
+			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
+				.toMatchInlineSnapshot(`
+					"// index.ts
+					var index_exports = {};
+					__export(index_exports, {
+					  default: () => index_default
+					});
+					"
+				`);
+			await seed({
+				"src/other.ts": dedent/* javascript */ `
 					export default "someone else"
 				`,
-		});
-		ev = await waitForBundleComplete(controller);
-		expect(findSourceFile(ev.bundle.entrypointSource, "other.ts"))
-			.toMatchInlineSnapshot(`
+			});
+			ev = await waitForBundleComplete(controller);
+			expect(findSourceFile(ev.bundle.entrypointSource, "other.ts"))
+				.toMatchInlineSnapshot(`
 				"// other.ts
 				var other_default = \\"someone else\\";
 				"
 			`);
-	});
+		});
 
-	test("custom build", async ({ controller }) => {
-		await seed({
-			"random_dir/index.ts": dedent/* javascript */ `
+		test("custom build", async ({ controller }) => {
+			await seed({
+				"random_dir/index.ts": dedent/* javascript */ `
 				export default {
 					fetch(request, env, ctx) {
 						//comment
@@ -194,46 +211,55 @@ describe("happy path bundle + watch", () => {
 					}
 				} satisfies ExportedHandler
 			`,
-		});
-		const config: Partial<StartDevWorkerOptions> = {
-			legacy: {},
-			name: "worker",
-			entrypoint: path.resolve("out.ts"),
-			directory: path.resolve("."),
-			build: {
-				additionalModules: [],
-				processEntrypoint: false,
-				nodejsCompatMode: null,
-				bundle: true,
-				moduleRules: [],
-				custom: {
-					command: "cp random_dir/index.ts out.ts",
-					watch: "random_dir",
+			});
+			const config: Partial<StartDevWorkerOptions> = {
+				legacy: {},
+				name: "worker",
+				entrypoint: path.resolve("out.ts"),
+				projectRoot: path.resolve("."),
+				build: {
+					additionalModules: [],
+					processEntrypoint: false,
+					nodejsCompatMode: null,
+					bundle: true,
+					moduleRules: [],
+					custom: {
+						command: "cp random_dir/index.ts out.ts",
+						watch: "random_dir",
+					},
+					define: {},
+					format: "modules",
+					moduleRoot: path.resolve("."),
+					exports: [],
 				},
-				define: {},
-				format: "modules",
-				moduleRoot: path.resolve("."),
-			},
-		};
+			};
 
-		await controller.onConfigUpdate({
-			type: "configUpdate",
-			config: configDefaults(config),
-		});
+			await controller.onConfigUpdate({
+				type: "configUpdate",
+				config: configDefaults(config),
+			});
 
-		let ev = await waitForBundleComplete(controller);
-		expect(findSourceFile(ev.bundle.entrypointSource, "out.ts"))
-			.toMatchInlineSnapshot(`
-				"// out.ts
-				var out_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello custom build\\");
-				  }
-				};
-				"
-			`);
-		await seed({
-			"random_dir/index.ts": dedent/* javascript */ `
+			let ev = await waitForBundleComplete(controller);
+			expect(findSourceFile(ev.bundle.entrypointSource, "out.ts"))
+				.toMatchInlineSnapshot(`
+					"// out.ts
+					var out_exports = {};
+					__export(out_exports, {
+					  default: () => out_default
+					});
+					var out_default = {
+					  fetch(request, env, ctx) {
+					    return new Response(\\"hello custom build\\");
+					  }
+					};
+					"
+				`);
+
+			// Wait for a bit before we make a new change to the watched file
+			await sleep(500);
+
+			await seed({
+				"random_dir/index.ts": dedent/* javascript */ `
 					export default {
 						fetch(request, env, ctx) {
 							//comment
@@ -241,26 +267,93 @@ describe("happy path bundle + watch", () => {
 						}
 					}
 				`,
+			});
+			ev = await waitForBundleComplete(controller);
+			expect(findSourceFile(ev.bundle.entrypointSource, "out.ts"))
+				.toMatchInlineSnapshot(`
+					"// out.ts
+					var out_exports = {};
+					__export(out_exports, {
+					  default: () => out_default
+					});
+					var out_default = {
+					  fetch(request, env, ctx) {
+					    return new Response(\\"hello custom build 2\\");
+					  }
+					};
+					"
+				`);
 		});
-		ev = await waitForBundleComplete(controller);
-		expect(findSourceFile(ev.bundle.entrypointSource, "out.ts"))
-			.toMatchInlineSnapshot(`
-				"// out.ts
-				var out_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello custom build 2\\");
-				  }
-				};
-				"
-			`);
 	});
-});
 
-describe("switching", () => {
-	runInTempDir();
-	test("esbuild -> custom builds", async ({ controller }) => {
+	test("module aliasing", async ({ controller }) => {
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
+				import name from "foo"
+				export default {
+					fetch(request, env, ctx) {
+						//comment
+						return new Response("hello world" + name)
+					}
+				} satisfies ExportedHandler
+			`,
+			"node_modules/foo": dedent/* javascript */ `
+				export default "foo"
+			`,
+			"node_modules/bar": dedent/* javascript */ `
+				export default "bar"
+			`,
+		});
+		const config = configDefaults({
+			legacy: {},
+			name: "worker",
+			entrypoint: path.resolve("src/index.ts"),
+			projectRoot: path.resolve("src"),
+			build: {
+				additionalModules: [],
+				processEntrypoint: false,
+				nodejsCompatMode: null,
+				bundle: true,
+				moduleRules: [],
+				custom: {},
+				define: {},
+				format: "modules",
+				moduleRoot: path.resolve("src"),
+				exports: [],
+			},
+		});
+
+		await controller.onConfigUpdate({ type: "configUpdate", config });
+
+		let ev = await waitForBundleComplete(controller);
+		expect(ev.bundle.entrypointSource).toContain(dedent/* javascript */ `
+            // ../node_modules/foo
+            var foo_default = "foo"
+        `);
+
+		await controller.onConfigUpdate({
+			type: "configUpdate",
+			config: {
+				...config,
+				build: {
+					...config.build,
+					alias: {
+						foo: "bar",
+					},
+				},
+			},
+		});
+		ev = await waitForBundleComplete(controller);
+		expect(ev.bundle.entrypointSource).toContain(dedent/* javascript */ `
+            // ../node_modules/bar
+            var bar_default = "bar"
+        `);
+	});
+
+	describe("switching", () => {
+		test("esbuild -> custom builds", async ({ controller }) => {
+			await seed({
+				"src/index.ts": dedent/* javascript */ `
 				export default {
 					fetch(request, env, ctx) {
 						//comment
@@ -268,45 +361,50 @@ describe("switching", () => {
 					}
 				} satisfies ExportedHandler
 			`,
-		});
-		const config: Partial<StartDevWorkerOptions> = {
-			legacy: {},
-			name: "worker",
-			entrypoint: path.resolve("src/index.ts"),
-			directory: path.resolve("src"),
+			});
+			const config: Partial<StartDevWorkerOptions> = {
+				legacy: {},
+				name: "worker",
+				entrypoint: path.resolve("src/index.ts"),
+				projectRoot: path.resolve("src"),
 
-			build: {
-				additionalModules: [],
-				processEntrypoint: false,
-				nodejsCompatMode: null,
-				bundle: true,
-				moduleRules: [],
-				custom: {},
-				define: {},
-				format: "modules",
-				moduleRoot: path.resolve("src"),
-			},
-		};
+				build: {
+					additionalModules: [],
+					processEntrypoint: false,
+					nodejsCompatMode: null,
+					bundle: true,
+					moduleRules: [],
+					custom: {},
+					define: {},
+					format: "modules",
+					moduleRoot: path.resolve("src"),
+					exports: [],
+				},
+			};
 
-		await controller.onConfigUpdate({
-			type: "configUpdate",
-			config: configDefaults(config),
-		});
+			await controller.onConfigUpdate({
+				type: "configUpdate",
+				config: configDefaults(config),
+			});
 
-		const ev = await waitForBundleComplete(controller);
-		expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
-			.toMatchInlineSnapshot(`
-				"// index.ts
-				var src_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello world\\");
-				  }
-				};
-				"
-			`);
+			const ev = await waitForBundleComplete(controller);
+			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
+				.toMatchInlineSnapshot(`
+					"// index.ts
+					var index_exports = {};
+					__export(index_exports, {
+					  default: () => index_default
+					});
+					var index_default = {
+					  fetch(request, env, ctx) {
+					    return new Response(\\"hello world\\");
+					  }
+					};
+					"
+				`);
 
-		await seed({
-			"random_dir/index.ts": dedent/* javascript */ `
+			await seed({
+				"random_dir/index.ts": dedent/* javascript */ `
 					export default {
 						fetch(request, env, ctx) {
 							//comment
@@ -314,47 +412,52 @@ describe("switching", () => {
 						}
 					} satisfies ExportedHandler
 				`,
-		});
-		const configCustom: Partial<StartDevWorkerOptions> = {
-			name: "worker",
-			entrypoint: path.resolve("out.ts"),
-			directory: process.cwd(),
-			build: {
-				additionalModules: [],
-				processEntrypoint: false,
-				nodejsCompatMode: null,
-				bundle: true,
-				moduleRules: [],
-				custom: {
-					command: "cp random_dir/index.ts out.ts",
-					watch: "random_dir",
+			});
+			const configCustom: Partial<StartDevWorkerOptions> = {
+				name: "worker",
+				entrypoint: path.resolve("out.ts"),
+				projectRoot: process.cwd(),
+				build: {
+					additionalModules: [],
+					processEntrypoint: false,
+					nodejsCompatMode: null,
+					bundle: true,
+					moduleRules: [],
+					custom: {
+						command: "cp random_dir/index.ts out.ts",
+						watch: "random_dir",
+					},
+					define: {},
+					format: "modules",
+					moduleRoot: process.cwd(),
+					exports: [],
 				},
-				define: {},
-				format: "modules",
-				moduleRoot: process.cwd(),
-			},
-			legacy: {},
-		};
+				legacy: {},
+			};
 
-		await controller.onConfigUpdate({
-			type: "configUpdate",
-			config: configDefaults(configCustom),
-		});
+			await controller.onConfigUpdate({
+				type: "configUpdate",
+				config: configDefaults(configCustom),
+			});
 
-		let evCustom = await waitForBundleComplete(controller);
-		expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
-			.toMatchInlineSnapshot(`
-				"// out.ts
-				var out_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello custom build\\");
-				  }
-				};
-				"
-			`);
-		// Make sure custom builds can reload after switching to them
-		await seed({
-			"random_dir/index.ts": dedent/* javascript */ `
+			let evCustom = await waitForBundleComplete(controller);
+			expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
+				.toMatchInlineSnapshot(`
+					"// out.ts
+					var out_exports = {};
+					__export(out_exports, {
+					  default: () => out_default
+					});
+					var out_default = {
+					  fetch(request, env, ctx) {
+					    return new Response(\\"hello custom build\\");
+					  }
+					};
+					"
+				`);
+			// Make sure custom builds can reload after switching to them
+			await seed({
+				"random_dir/index.ts": dedent/* javascript */ `
 						export default {
 							fetch(request, env, ctx) {
 								//comment
@@ -362,23 +465,27 @@ describe("switching", () => {
 							}
 						}
 					`,
+			});
+			evCustom = await waitForBundleComplete(controller);
+			expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
+				.toMatchInlineSnapshot(`
+					"// out.ts
+					var out_exports = {};
+					__export(out_exports, {
+					  default: () => out_default
+					});
+					var out_default = {
+					  fetch(request, env, ctx) {
+					    return new Response(\\"hello custom build 2\\");
+					  }
+					};
+					"
+				`);
 		});
-		evCustom = await waitForBundleComplete(controller);
-		expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
-			.toMatchInlineSnapshot(`
-				"// out.ts
-				var out_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello custom build 2\\");
-				  }
-				};
-				"
-			`);
-	});
 
-	test("custom builds -> esbuild", async ({ controller }) => {
-		await seed({
-			"random_dir/index.ts": dedent/* javascript */ `
+		test("custom builds -> esbuild", async ({ controller }) => {
+			await seed({
+				"random_dir/index.ts": dedent/* javascript */ `
 					export default {
 						fetch(request, env, ctx) {
 							//comment
@@ -386,46 +493,51 @@ describe("switching", () => {
 						}
 					} satisfies ExportedHandler
 				`,
-		});
-		const configCustom: Partial<StartDevWorkerOptions> = {
-			name: "worker",
-			entrypoint: path.resolve("out.ts"),
-			directory: process.cwd(),
+			});
+			const configCustom: Partial<StartDevWorkerOptions> = {
+				name: "worker",
+				entrypoint: path.resolve("out.ts"),
+				projectRoot: process.cwd(),
 
-			build: {
-				additionalModules: [],
-				processEntrypoint: false,
-				nodejsCompatMode: null,
-				bundle: true,
-				moduleRules: [],
-				custom: {
-					command: "cp random_dir/index.ts out.ts",
-					watch: "random_dir",
+				build: {
+					additionalModules: [],
+					processEntrypoint: false,
+					nodejsCompatMode: null,
+					bundle: true,
+					moduleRules: [],
+					custom: {
+						command: "cp random_dir/index.ts out.ts",
+						watch: "random_dir",
+					},
+					define: {},
+					format: "modules",
+					moduleRoot: process.cwd(),
+					exports: [],
 				},
-				define: {},
-				format: "modules",
-				moduleRoot: process.cwd(),
-			},
-		};
+			};
 
-		await controller.onConfigUpdate({
-			type: "configUpdate",
-			config: configDefaults(configCustom),
-		});
+			await controller.onConfigUpdate({
+				type: "configUpdate",
+				config: configDefaults(configCustom),
+			});
 
-		const evCustom = await waitForBundleComplete(controller);
-		expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
-			.toMatchInlineSnapshot(`
-				"// out.ts
-				var out_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello custom build\\");
-				  }
-				};
-				"
-			`);
-		await seed({
-			"src/index.ts": dedent/* javascript */ `
+			const evCustom = await waitForBundleComplete(controller);
+			expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
+				.toMatchInlineSnapshot(`
+					"// out.ts
+					var out_exports = {};
+					__export(out_exports, {
+					  default: () => out_default
+					});
+					var out_default = {
+					  fetch(request, env, ctx) {
+					    return new Response(\\"hello custom build\\");
+					  }
+					};
+					"
+				`);
+			await seed({
+				"src/index.ts": dedent/* javascript */ `
 						export default {
 							fetch(request, env, ctx) {
 								//comment
@@ -433,44 +545,49 @@ describe("switching", () => {
 							}
 						} satisfies ExportedHandler
 					`,
-		});
-		const config: Partial<StartDevWorkerOptions> = {
-			legacy: {},
-			name: "worker",
-			entrypoint: path.resolve("src/index.ts"),
-			directory: path.resolve("src"),
+			});
+			const config: Partial<StartDevWorkerOptions> = {
+				legacy: {},
+				name: "worker",
+				entrypoint: path.resolve("src/index.ts"),
+				projectRoot: path.resolve("src"),
 
-			build: {
-				additionalModules: [],
-				processEntrypoint: false,
-				nodejsCompatMode: null,
-				bundle: true,
-				moduleRules: [],
-				custom: {},
-				define: {},
-				format: "modules",
-				moduleRoot: path.resolve("src"),
-			},
-		};
+				build: {
+					additionalModules: [],
+					processEntrypoint: false,
+					nodejsCompatMode: null,
+					bundle: true,
+					moduleRules: [],
+					custom: {},
+					define: {},
+					format: "modules",
+					moduleRoot: path.resolve("src"),
+					exports: [],
+				},
+			};
 
-		await controller.onConfigUpdate({
-			type: "configUpdate",
-			config: configDefaults(config),
-		});
+			await controller.onConfigUpdate({
+				type: "configUpdate",
+				config: configDefaults(config),
+			});
 
-		let ev = await waitForBundleComplete(controller);
-		expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
-			.toMatchInlineSnapshot(`
-				"// index.ts
-				var src_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello world\\");
-				  }
-				};
-				"
-			`);
-		await seed({
-			"src/index.ts": dedent/* javascript */ `
+			let ev = await waitForBundleComplete(controller);
+			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
+				.toMatchInlineSnapshot(`
+					"// index.ts
+					var index_exports = {};
+					__export(index_exports, {
+					  default: () => index_default
+					});
+					var index_default = {
+					  fetch(request, env, ctx) {
+					    return new Response(\\"hello world\\");
+					  }
+					};
+					"
+				`);
+			await seed({
+				"src/index.ts": dedent/* javascript */ `
 						export default {
 							fetch(request, env, ctx) {
 								//comment
@@ -478,17 +595,26 @@ describe("switching", () => {
 							}
 						} satisfies ExportedHandler
 					`,
+			});
+			ev = await waitForBundleComplete(controller);
+			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
+				.toMatchInlineSnapshot(`
+					"// index.ts
+					var index_exports = {};
+					__export(index_exports, {
+					  default: () => index_default
+					});
+					var index_default = {
+					  fetch(request, env, ctx) {
+					    return new Response(\\"hello world 2\\");
+					  }
+					};
+					"
+				`);
 		});
-		ev = await waitForBundleComplete(controller);
-		expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
-			.toMatchInlineSnapshot(`
-				"// index.ts
-				var src_default = {
-				  fetch(request, env, ctx) {
-				    return new Response(\\"hello world 2\\");
-				  }
-				};
-				"
-			`);
 	});
 });
+
+function sleep(ms: number) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}

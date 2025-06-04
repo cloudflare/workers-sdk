@@ -1,15 +1,16 @@
-// TODO: auto-generate this file
 import type {
 	HttpOptions_Style,
 	TlsOptions_Version,
 	Worker_Binding_CryptoKey_Usage,
-} from "./workerd.capnp.js";
+} from "./generated";
+
+// TODO: auto-generate this file
 
 export {
 	HttpOptions_Style,
 	TlsOptions_Version,
 	Worker_Binding_CryptoKey_Usage,
-} from "./workerd.capnp.js";
+} from "./generated";
 
 export const kVoid = Symbol("kVoid");
 export type Void = typeof kVoid;
@@ -45,6 +46,7 @@ export type Service = {
 export interface ServiceDesignator {
 	name?: string;
 	entrypoint?: string;
+	props?: { json: string };
 }
 
 export type Worker = (
@@ -61,6 +63,7 @@ export type Worker = (
 	durableObjectUniqueKeyModifier?: string;
 	durableObjectStorage?: Worker_DurableObjectStorage;
 	moduleFallback?: string;
+	tails?: ServiceDesignator[];
 };
 
 export type Worker_DurableObjectStorage =
@@ -77,7 +80,6 @@ export type Worker_Module = {
 	| { data?: Uint8Array }
 	| { wasm?: Uint8Array }
 	| { json?: string }
-	| { nodeJsCompatModule?: string }
 	| { pythonModule?: string }
 	| { pythonRequirement?: string }
 );
@@ -174,6 +176,7 @@ export interface Worker_Binding_MemoryCacheLimits {
 export type Worker_DurableObjectNamespace = {
 	className?: string;
 	preventEviction?: boolean;
+	enableSql?: boolean;
 } & ({ uniqueKey?: string } | { ephemeralLocal?: Void });
 
 export type ExternalServer = { address?: string } & (
@@ -202,6 +205,7 @@ export interface Network {
 export interface DiskDirectory {
 	path?: string;
 	writable?: boolean;
+	allowDotfiles?: boolean;
 }
 
 export interface HttpOptions {

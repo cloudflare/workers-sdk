@@ -1,4 +1,3 @@
-import { crash } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { quoteShellArgs, runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
@@ -19,8 +18,7 @@ export const createProject = async (ctx: C3Context) => {
 		return;
 	}
 	if (!ctx.account?.id) {
-		crash("Failed to read Cloudflare account.");
-		return;
+		throw new Error("Failed to read Cloudflare account.");
 	}
 	const CLOUDFLARE_ACCOUNT_ID = ctx.account.id;
 
@@ -68,7 +66,7 @@ export const createProject = async (ctx: C3Context) => {
 				}),
 		);
 	} catch (error) {
-		crash("Failed to create pages project. See output above.");
+		throw new Error("Failed to create pages project. See output above.");
 	}
 
 	// Wait until the pages project is available for deployment
@@ -95,6 +93,8 @@ export const createProject = async (ctx: C3Context) => {
 			}),
 		);
 	} catch (error) {
-		crash("Pages project isn't ready yet. Please try deploying again later.");
+		throw new Error(
+			"Pages project isn't ready yet. Please try deploying again later.",
+		);
 	}
 };

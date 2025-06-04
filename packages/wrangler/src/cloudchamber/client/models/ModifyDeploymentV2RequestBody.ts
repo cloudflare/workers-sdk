@@ -3,11 +3,15 @@
 /* eslint-disable */
 
 import type { Command } from "./Command";
+import type { DeploymentCheckRequestBody } from "./DeploymentCheckRequestBody";
+import type { DeploymentSecretMap } from "./DeploymentSecretMap";
+import type { Disk } from "./Disk";
 import type { DNSConfiguration } from "./DNSConfiguration";
 import type { Entrypoint } from "./Entrypoint";
 import type { EnvironmentVariable } from "./EnvironmentVariable";
 import type { Label } from "./Label";
 import type { MemorySizeWithUnit } from "./MemorySizeWithUnit";
+import type { Observability } from "./Observability";
 import type { SSHPublicKeyID } from "./SSHPublicKeyID";
 
 /**
@@ -27,13 +31,26 @@ export type ModifyDeploymentV2RequestBody = {
 	 */
 	ssh_public_key_ids?: Array<SSHPublicKeyID>;
 	/**
+	 * A list of objects with secret names and the their access types from the account
+	 */
+	secrets?: Array<DeploymentSecretMap>;
+	/**
 	 * The new vcpu that the deployment will have from now on
 	 */
 	vcpu?: number;
 	/**
-	 * The new memory that the deployment will have from now on
+	 * Deprecated in favor of memory_mib
+	 * @deprecated
 	 */
 	memory?: MemorySizeWithUnit;
+	/**
+	 * The new memory that the deployment will have from now on
+	 */
+	memory_mib?: number;
+	/**
+	 * The disk configuration for this deployment
+	 */
+	disk?: Disk;
 	/**
 	 * Container environment variables
 	 */
@@ -42,7 +59,21 @@ export type ModifyDeploymentV2RequestBody = {
 	 * Deployment labels
 	 */
 	labels?: Array<Label>;
+	/**
+	 * Deprecated in favor of gpu_memory_mib
+	 * @deprecated
+	 */
+	gpu_memory?: MemorySizeWithUnit;
+	/**
+	 * Specify the GPU memory to be used for the deployment. (Mandatory for gVisor deployments)
+	 */
+	gpu_memory_mib?: number;
 	command?: Command;
 	entrypoint?: Entrypoint;
 	dns?: DNSConfiguration;
+	/**
+	 * Health and readiness checks for this deployment.
+	 */
+	checks?: Array<DeploymentCheckRequestBody>;
+	observability?: Observability;
 };

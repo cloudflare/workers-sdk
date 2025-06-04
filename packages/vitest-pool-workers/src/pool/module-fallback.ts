@@ -6,8 +6,8 @@ import posixPath from "node:path/posix";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import util from "node:util";
 import * as cjsModuleLexer from "cjs-module-lexer";
-import { buildSync } from "esbuild";
 import { ModuleRuleTypeSchema, Response } from "miniflare";
+import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { isFileNotFoundError } from "./helpers";
 import type { ModuleRuleType, Request, Worker_Module } from "miniflare";
 import type { ViteDevServer } from "vite";
@@ -41,6 +41,19 @@ function trimSuffix(suffix: string, value: string) {
 	return value.substring(0, value.length - suffix.length);
 }
 
+/**
+ * When pre-bundling is enabled, Vite will add a hash to the end of the file path
+ * e.g. `/node_modules/.vite/deps/my-dep.js?v=f3sf2ebd`
+ *
+ * @see https://vite.dev/guide/features.html#npm-dependency-resolving-and-pre-bundling
+ * @see https://github.com/cloudflare/workers-sdk/pull/5673
+ */
+const versionHashRegExp = /\?v=[0-9a-f]+$/;
+
+function trimViteVersionHash(filePath: string) {
+	return filePath.replace(versionHashRegExp, "");
+}
+
 // RegExp for path suffix to force loading module as specific type.
 // (e.g. `/path/to/module.wasm?mf_vitest_force=CompiledWasm`)
 // This suffix will be added by the pool when fetching a module that matches a
@@ -54,19 +67,20 @@ const forceModuleTypeRegexp = new RegExp(
 	`\\?mf_vitest_force=(${ModuleRuleTypeSchema.options.join("|")})$`
 );
 
-// Node.js built-in modules provided by `workerd`
-export const workerdBuiltinModules = new Set([
-	...VITEST_POOL_WORKERS_DEFINE_BUILTIN_MODULES,
-	"__STATIC_CONTENT_MANIFEST",
-]);
-
-// `chai` contains circular `require()`s which aren't supported by `workerd`
-// TODO(someday): support circular `require()` in `workerd`
-const bundleDependencies = ["chai"];
-
 function isFile(filePath: string): boolean {
 	try {
 		return fs.statSync(filePath).isFile();
+	} catch (e) {
+		if (isFileNotFoundError(e)) {
+			return false;
+		}
+		throw e;
+	}
+}
+
+function isDirectory(filePath: string): boolean {
+	try {
+		return fs.statSync(filePath).isDirectory();
 	} catch (e) {
 		if (isFileNotFoundError(e)) {
 			return false;
@@ -186,30 +200,6 @@ function withImportMetaUrl(contents: string, url: string | URL): string {
 	return contents.replaceAll("import.meta.url", JSON.stringify(url.toString()));
 }
 
-const bundleCache = new Map<string, string>();
-function bundleDependency(entryPath: string): string {
-	let output = bundleCache.get(entryPath);
-	if (output !== undefined) {
-		return output;
-	}
-	debuglog(`Bundling ${entryPath}...`);
-	const result = buildSync({
-		platform: "node",
-		target: "esnext",
-		format: "cjs",
-		bundle: true,
-		packages: "external",
-		sourcemap: "inline",
-		sourcesContent: false,
-		entryPoints: [entryPath],
-		write: false,
-	});
-	assert(result.outputFiles.length === 1);
-	output = result.outputFiles[0].text;
-	bundleCache.set(entryPath, output);
-	return output;
-}
-
 const jsExtensions = [".js", ".mjs", ".cjs"];
 function maybeGetTargetFilePath(target: string): string | undefined {
 	// Can't use `fs.existsSync()` here as `target` could be a directory
@@ -225,6 +215,9 @@ function maybeGetTargetFilePath(target: string): string | undefined {
 	}
 	if (target.endsWith(disableCjsEsmShimSuffix)) {
 		return target;
+	}
+	if (isDirectory(target)) {
+		return maybeGetTargetFilePath(target + "/index");
 	}
 }
 
@@ -291,13 +284,26 @@ async function viteResolve(
 		if (workerdBuiltinModules.has(id)) {
 			return `/${id}`;
 		}
+		if (id.startsWith("node:")) {
+			throw new Error("Not found");
+		}
+
 		id = `node:${id}`;
 		if (workerdBuiltinModules.has(id)) {
 			return `/${id}`;
 		}
-		throw new Error("Not found");
+
+		// If we get this far, we have something that:
+		//  - looks like a built-in node module but wasn't imported with a `node:` prefix
+		//  - and isn't provided by workerd natively
+		// In that case, _try_ and load the identifier with a `node:` prefix.
+		// This will potentially load one of the Node.js polyfills provided by `vitest-pool-workers`
+		// Note: User imports should never get here! This is only meant to cater for Vitest internals
+		//       (Specifically, the "tinyrainbow" module imports `node:tty` as `tty`)
+		return id;
 	}
-	return resolved.id;
+
+	return trimViteVersionHash(resolved.id);
 }
 
 type ResolveMethod = "import" | "require";
@@ -374,8 +380,6 @@ function maybeGetForceTypeModuleContents(
 			return { esModule: contents.toString() };
 		case "CommonJS":
 			return { commonJsModule: contents.toString() };
-		case "NodeJsCompatModule":
-			return { nodeJsCompatModule: contents.toString() };
 		case "Text":
 			return { text: contents.toString() };
 		case "Data":
@@ -450,18 +454,11 @@ async function load(
 		filePath = trimSuffix(disableCjsEsmShimSuffix, filePath);
 	}
 
-	let isEsm =
+	const isEsm =
 		filePath.endsWith(".mjs") ||
 		(filePath.endsWith(".js") && isWithinTypeModuleContext(filePath));
 
-	let contents: string;
-	const maybeBundled = bundleCache.get(filePath);
-	if (maybeBundled !== undefined) {
-		contents = maybeBundled;
-		isEsm = false;
-	} else {
-		contents = fs.readFileSync(filePath, "utf8");
-	}
+	let contents = fs.readFileSync(filePath, "utf8");
 	const targetUrl = pathToFileURL(target);
 	contents = withSourceUrl(contents, targetUrl);
 
@@ -475,8 +472,8 @@ async function load(
 	// Respond with CommonJS module
 
 	// If we're `import`ing a CommonJS module, or we're `require`ing a `node:*`
-	// module from a NodeJsCompatModule, return an ES module shim. Note
-	// NodeJsCompatModules can `require` ES modules, using the default export.
+	// module from a CommonJS, return an ES module shim. Note
+	// CommonJS can `require` ES modules, using the default export.
 	const insertCjsEsmShim = method === "import" || specifier.startsWith("node:");
 	if (insertCjsEsmShim && !disableCjsEsmShim) {
 		const fileName = posixPath.basename(filePath);
@@ -491,9 +488,9 @@ async function load(
 	}
 
 	// Otherwise, if we're `require`ing a non-`node:*` module, just return a
-	// NodeJsCompatModule
+	// CommonJS
 	debuglog(logBase, "cjs:", filePath);
-	return buildModuleResponse(target, { nodeJsCompatModule: contents });
+	return buildModuleResponse(target, { commonJsModule: contents });
 }
 
 export async function handleModuleFallbackRequest(
@@ -514,7 +511,7 @@ export async function handleModuleFallbackRequest(
 	// currently passes `import("file:///a/index.mjs")` through like this.
 	// TODO(soon): remove this code once the new modules refactor lands
 	if (specifier.startsWith("file:")) {
-		specifier = specifier.substring(5);
+		specifier = fileURLToPath(specifier);
 	}
 
 	if (isWindows) {
@@ -533,12 +530,15 @@ export async function handleModuleFallbackRequest(
 
 	try {
 		const filePath = await resolve(vite, method, target, specifier, referrer);
-		if (bundleDependencies.includes(specifier)) {
-			bundleDependency(filePath);
-		}
+
 		return await load(vite, logBase, method, target, specifier, filePath);
 	} catch (e) {
 		debuglog(logBase, "error:", e);
+		console.error(
+			`[vitest-pool-workers] Failed to ${method} ${JSON.stringify(target)} from ${JSON.stringify(referrer)}.`,
+			"To resolve this, try bundling the relevant dependency with Vite.",
+			"For more details, refer to https://developers.cloudflare.com/workers/testing/vitest-integration/known-issues/#module-resolution"
+		);
 	}
 
 	return new Response(null, { status: 404 });

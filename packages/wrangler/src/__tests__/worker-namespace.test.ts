@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { printWranglerBanner } from "../update-check";
+import { printWranglerBanner } from "../wrangler-banner";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import {
@@ -35,18 +35,18 @@ describe("dispatch-namespace", () => {
 			🏗️  Manage dispatch namespaces
 
 			COMMANDS
-			  wrangler dispatch-namespace list                          List all dispatch namespaces
-			  wrangler dispatch-namespace get <name>                    Get information about a dispatch namespace
-			  wrangler dispatch-namespace create <name>                 Create a dispatch namespace
-			  wrangler dispatch-namespace delete <name>                 Delete a dispatch namespace
-			  wrangler dispatch-namespace rename <old-name> <new-name>  Rename a dispatch namespace
+			  wrangler dispatch-namespace list                        List all dispatch namespaces
+			  wrangler dispatch-namespace get <name>                  Get information about a dispatch namespace
+			  wrangler dispatch-namespace create <name>               Create a dispatch namespace
+			  wrangler dispatch-namespace delete <name>               Delete a dispatch namespace
+			  wrangler dispatch-namespace rename <oldName> <newName>  Rename a dispatch namespace
 
 			GLOBAL FLAGS
-			  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-			  -c, --config                    Path to .toml configuration file  [string]
-			  -e, --env                       Environment to use for operations and .env files  [string]
-			  -h, --help                      Show help  [boolean]
-			  -v, --version                   Show version number  [boolean]",
+			  -c, --config   Path to Wrangler configuration file  [string]
+			      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			  -h, --help     Show help  [boolean]
+			  -v, --version  Show version number  [boolean]",
 			  "warn": "",
 			}
 		`);
@@ -95,11 +95,11 @@ describe("dispatch-namespace", () => {
 				  name  Name of the dispatch namespace  [string] [required]
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]"
+				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
 			`);
 		});
 
@@ -146,11 +146,11 @@ describe("dispatch-namespace", () => {
 				  name  Name of the dispatch namespace  [string] [required]
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]"
+				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
 			`);
 		});
 
@@ -206,11 +206,11 @@ describe("dispatch-namespace", () => {
 				  name  Name of the dispatch namespace  [string] [required]
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]"
+				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
 			`);
 		});
 
@@ -308,20 +308,20 @@ describe("dispatch-namespace", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				wrangler dispatch-namespace rename <old-name> <new-name>
+				wrangler dispatch-namespace rename <oldName> <newName>
 
 				Rename a dispatch namespace
 
 				POSITIONALS
-				  old-name  Name of the dispatch namespace  [string] [required]
-				  new-name  New name of the dispatch namespace  [string] [required]
+				  oldName  Name of the dispatch namespace  [string] [required]
+				  newName  New name of the dispatch namespace  [string] [required]
 
 				GLOBAL FLAGS
-				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
-				  -c, --config                    Path to .toml configuration file  [string]
-				  -e, --env                       Environment to use for operations and .env files  [string]
-				  -h, --help                      Show help  [boolean]
-				  -v, --version                   Show version number  [boolean]"
+				  -c, --config   Path to Wrangler configuration file  [string]
+				      --cwd      Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env      Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				  -h, --help     Show help  [boolean]
+				  -v, --version  Show version number  [boolean]"
 			`);
 		});
 

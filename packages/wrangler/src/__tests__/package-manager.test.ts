@@ -1,4 +1,3 @@
-import { writeFileSync } from "node:fs";
 import { vi } from "vitest";
 import { getPackageManager, getPackageManagerName } from "../package-manager";
 import { mockBinary } from "./helpers/mock-bin";
@@ -7,25 +6,14 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 
 vi.unmock("../package-manager");
 function mockUserAgent(userAgent = "npm") {
-	let original: string | undefined;
 	beforeEach(() => {
-		// eslint-disable-next-line turbo/no-undeclared-env-vars
-		original = process.env.npm_config_user_agent;
-		// eslint-disable-next-line turbo/no-undeclared-env-vars
-		process.env.npm_config_user_agent = userAgent;
-	});
-	afterEach(() => {
-		// eslint-disable-next-line turbo/no-undeclared-env-vars
-		process.env.npm_config_user_agent = original;
+		vi.stubEnv("npm_config_user_agent", userAgent);
 	});
 }
 interface TestCase {
 	npm: boolean;
 	pnpm: boolean;
 	yarn: boolean;
-	npmLockFile: boolean;
-	yarnLockFile: boolean;
-	pnpmLockFile: boolean;
 	expectedPackageManager: string;
 }
 
@@ -35,36 +23,7 @@ const testCases: TestCase[] = [
 		npm: true,
 		yarn: false,
 		pnpm: false,
-		npmLockFile: false,
-		yarnLockFile: false,
-		pnpmLockFile: false,
-		expectedPackageManager: "npm",
-	},
-	{
-		npm: true,
-		yarn: false,
-		pnpm: false,
-		npmLockFile: true,
-		yarnLockFile: false,
-		pnpmLockFile: false,
-		expectedPackageManager: "npm",
-	},
-	{
-		npm: true,
-		yarn: false,
-		pnpm: false,
-		npmLockFile: false,
-		yarnLockFile: true,
-		pnpmLockFile: false,
-		expectedPackageManager: "npm",
-	},
-	{
-		npm: true,
-		yarn: false,
-		pnpm: false,
-		npmLockFile: true,
-		yarnLockFile: true,
-		pnpmLockFile: false,
+
 		expectedPackageManager: "npm",
 	},
 
@@ -73,36 +32,7 @@ const testCases: TestCase[] = [
 		npm: false,
 		yarn: true,
 		pnpm: false,
-		npmLockFile: false,
-		yarnLockFile: false,
-		pnpmLockFile: false,
-		expectedPackageManager: "yarn",
-	},
-	{
-		npm: false,
-		yarn: true,
-		pnpm: false,
-		npmLockFile: true,
-		yarnLockFile: false,
-		pnpmLockFile: false,
-		expectedPackageManager: "yarn",
-	},
-	{
-		npm: false,
-		yarn: true,
-		pnpm: false,
-		npmLockFile: false,
-		yarnLockFile: true,
-		pnpmLockFile: false,
-		expectedPackageManager: "yarn",
-	},
-	{
-		npm: false,
-		yarn: true,
-		pnpm: false,
-		npmLockFile: true,
-		yarnLockFile: true,
-		pnpmLockFile: false,
+
 		expectedPackageManager: "yarn",
 	},
 
@@ -111,36 +41,7 @@ const testCases: TestCase[] = [
 		npm: false,
 		yarn: false,
 		pnpm: true,
-		npmLockFile: false,
-		yarnLockFile: false,
-		pnpmLockFile: true,
-		expectedPackageManager: "pnpm",
-	},
-	{
-		npm: false,
-		yarn: false,
-		pnpm: true,
-		npmLockFile: true,
-		yarnLockFile: false,
-		pnpmLockFile: false,
-		expectedPackageManager: "pnpm",
-	},
-	{
-		npm: false,
-		yarn: false,
-		pnpm: true,
-		npmLockFile: false,
-		yarnLockFile: true,
-		pnpmLockFile: false,
-		expectedPackageManager: "pnpm",
-	},
-	{
-		npm: false,
-		yarn: false,
-		pnpm: true,
-		npmLockFile: true,
-		yarnLockFile: true,
-		pnpmLockFile: true,
+
 		expectedPackageManager: "pnpm",
 	},
 
@@ -149,82 +50,16 @@ const testCases: TestCase[] = [
 		npm: true,
 		yarn: true,
 		pnpm: false,
-		npmLockFile: false,
-		yarnLockFile: false,
-		pnpmLockFile: false,
+
 		expectedPackageManager: "npm",
 	},
-	{
-		npm: true,
-		yarn: true,
-		pnpm: false,
-		npmLockFile: true,
-		yarnLockFile: false,
-		pnpmLockFile: false,
-		expectedPackageManager: "npm",
-	},
-	{
-		npm: true,
-		yarn: true,
-		pnpm: false,
-		npmLockFile: false,
-		yarnLockFile: true,
-		pnpmLockFile: false,
-		expectedPackageManager: "yarn",
-	},
-	{
-		npm: true,
-		yarn: true,
-		pnpm: false,
-		npmLockFile: true,
-		yarnLockFile: true,
-		pnpmLockFile: false,
-		expectedPackageManager: "npm",
-	},
+
 	// npm, yarn and pnpm binaries
 	{
 		npm: true,
 		yarn: true,
 		pnpm: true,
-		npmLockFile: false,
-		yarnLockFile: false,
-		pnpmLockFile: false,
-		expectedPackageManager: "npm",
-	},
-	{
-		npm: true,
-		yarn: true,
-		pnpm: true,
-		npmLockFile: true,
-		yarnLockFile: false,
-		pnpmLockFile: false,
-		expectedPackageManager: "npm",
-	},
-	{
-		npm: true,
-		yarn: true,
-		pnpm: true,
-		npmLockFile: false,
-		yarnLockFile: true,
-		pnpmLockFile: false,
-		expectedPackageManager: "yarn",
-	},
-	{
-		npm: true,
-		yarn: true,
-		pnpm: true,
-		npmLockFile: false,
-		yarnLockFile: false,
-		pnpmLockFile: true,
-		expectedPackageManager: "pnpm",
-	},
-	{
-		npm: true,
-		yarn: true,
-		pnpm: true,
-		npmLockFile: true,
-		yarnLockFile: true,
-		pnpmLockFile: true,
+
 		expectedPackageManager: "npm",
 	},
 ];
@@ -241,45 +76,26 @@ describe("getPackageManager()", () => {
 
 		it("should throw an error", async () => {
 			await expect(() =>
-				getPackageManager(process.cwd())
+				getPackageManager()
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: Unable to find a package manager. Supported managers are: npm, yarn, and pnpm.]`
 			);
 		});
 	});
 
-	for (const {
-		npm,
-		yarn,
-		pnpm,
-		npmLockFile,
-		yarnLockFile,
-		pnpmLockFile,
-		expectedPackageManager,
-	} of testCases) {
-		describe(
-			getTestCaseDescription(
-				npm,
-				yarn,
-				pnpm,
-				npmLockFile,
-				yarnLockFile,
-				pnpmLockFile
-			),
-			() => {
-				mockYarn(yarn);
-				mockNpm(npm);
-				mockPnpm(pnpm);
-				mockLockFiles(npmLockFile, yarnLockFile, pnpmLockFile);
+	for (const { npm, yarn, pnpm, expectedPackageManager } of testCases) {
+		describe(getTestCaseDescription(npm, yarn, pnpm), () => {
+			mockYarn(yarn);
+			mockNpm(npm);
+			mockPnpm(pnpm);
 
-				it(`should return the ${expectedPackageManager} package manager`, async () => {
-					const actualPackageManager = await getPackageManager(process.cwd());
-					expect(getPackageManagerName(actualPackageManager)).toEqual(
-						expectedPackageManager
-					);
-				});
-			}
-		);
+			it(`should return the ${expectedPackageManager} package manager`, async () => {
+				const actualPackageManager = await getPackageManager();
+				expect(getPackageManagerName(actualPackageManager)).toEqual(
+					expectedPackageManager
+				);
+			});
+		});
 	}
 });
 
@@ -316,53 +132,23 @@ function mockPnpm(succeed: boolean): void {
 	afterEach(() => unMock());
 }
 
-/**
- * Create a fake lock files.
- */
-function mockLockFiles(
-	npmLockFile: boolean,
-	yarnLockFile: boolean,
-	pnpmLockFile: boolean
-) {
-	beforeEach(() => {
-		if (npmLockFile) {
-			writeFileSync("package-lock.json", "");
-		}
-		if (yarnLockFile) {
-			writeFileSync("yarn.lock", "");
-		}
-		if (pnpmLockFile) {
-			writeFileSync("pnpm-lock.yaml", "");
-		}
-	});
-}
-
 function getTestCaseDescription(
 	npm: boolean,
 	yarn: boolean,
-	pnpm: boolean,
-	npmLockFile: boolean,
-	yarnLockFile: boolean,
-	pnpmLockFile: boolean
+	pnpm: boolean
 ): string {
 	const criteria: string[] = [];
 	if (npm) {
 		criteria.push("npm");
 	}
-	if (npmLockFile) {
-		criteria.push("package-lock.json");
-	}
+
 	if (yarn) {
 		criteria.push("yarn");
 	}
-	if (yarnLockFile) {
-		criteria.push("yarn.lock");
-	}
+
 	if (pnpm) {
 		criteria.push("pnpm");
 	}
-	if (pnpmLockFile) {
-		criteria.push("pnpm-lock.yaml");
-	}
+
 	return "using " + criteria.join("; ");
 }

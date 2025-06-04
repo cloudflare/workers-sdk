@@ -1,21 +1,14 @@
 import { fetchResult } from "../../cfetch";
 import { performApiFetch } from "../../cfetch/internal";
+import { createNamespace } from "../../core/create-command";
 import {
 	createWorkerUploadForm,
 	fromMimeType,
 } from "../../deployment-bundle/create-worker-upload-form";
 import { FatalError, UserError } from "../../errors";
 import { getMetricsUsageHeaders } from "../../metrics";
-import {
-	versionsSecretPutBulkHandler,
-	versionsSecretsPutBulkOptions,
-} from "./bulk";
-import {
-	versionsSecretDeleteHandler,
-	versionsSecretsDeleteOptions,
-} from "./delete";
-import { versionsSecretListHandler, versionsSecretsListOptions } from "./list";
-import { versionsSecretPutHandler, versionsSecretsPutOptions } from "./put";
+import type { Config } from "../../config";
+import type { Observability } from "../../config/environment";
 import type {
 	WorkerMetadata as CfWorkerMetadata,
 	WorkerMetadataBinding,
@@ -27,36 +20,15 @@ import type {
 	CfWorkerInit,
 	CfWorkerSourceMap,
 } from "../../deployment-bundle/worker";
-import type { CommonYargsArgv } from "../../yargs-types";
 import type { File, SpecIterableIterator } from "undici";
 
-export function registerVersionsSecretsSubcommands(yargs: CommonYargsArgv) {
-	return yargs
-		.command(
-			"put <key>",
-			"Create or update a secret variable for a Worker",
-			versionsSecretsPutOptions,
-			versionsSecretPutHandler
-		)
-		.command(
-			"bulk [json]",
-			"Create or update a secret variable for a Worker",
-			versionsSecretsPutBulkOptions,
-			versionsSecretPutBulkHandler
-		)
-		.command(
-			"delete <key>",
-			"Delete a secret variable from a Worker",
-			versionsSecretsDeleteOptions,
-			versionsSecretDeleteHandler
-		)
-		.command(
-			"list",
-			"List the secrets currently deployed",
-			versionsSecretsListOptions,
-			versionsSecretListHandler
-		);
-}
+export const versionsSecretNamespace = createNamespace({
+	metadata: {
+		description: "Generate a secret that can be referenced in a Worker",
+		status: "stable",
+		owner: "Workers: Authoring and Testing",
+	},
+});
 
 // Shared code
 export interface WorkerVersion {
@@ -104,9 +76,13 @@ export interface VersionDetails {
 interface ScriptSettings {
 	logpush: boolean;
 	tail_consumers: CfTailConsumer[] | null;
+	observability: Observability;
 }
 
+type CfUnsafeMetadata = Record<string, unknown>;
+
 interface CopyLatestWorkerVersionArgs {
+	config: Config;
 	accountId: string;
 	scriptName: string;
 	versionId: string;
@@ -115,10 +91,12 @@ interface CopyLatestWorkerVersionArgs {
 	versionTag?: string;
 	sendMetrics?: boolean;
 	overrideAllSecrets?: boolean; // Used for delete - this will make sure we do not inherit any
+	unsafeMetadata?: CfUnsafeMetadata | undefined;
 }
 
 // TODO: This is a naive implementation, replace later
 export async function copyWorkerVersionWithNewSecrets({
+	config,
 	accountId,
 	scriptName,
 	versionId,
@@ -126,15 +104,18 @@ export async function copyWorkerVersionWithNewSecrets({
 	versionMessage,
 	versionTag,
 	sendMetrics,
+	unsafeMetadata,
 	overrideAllSecrets,
 }: CopyLatestWorkerVersionArgs) {
 	// Grab the specific version info
 	const versionInfo = await fetchResult<VersionDetails>(
+		config,
 		`/accounts/${accountId}/workers/scripts/${scriptName}/versions/${versionId}`
 	);
 
 	// Naive implementation ahead, don't worry too much about it -- we will replace it
 	const { mainModule, modules, sourceMaps } = await parseModules(
+		config,
 		accountId,
 		scriptName,
 		versionId
@@ -142,22 +123,20 @@ export async function copyWorkerVersionWithNewSecrets({
 
 	// Grab the script settings
 	const scriptSettings = await fetchResult<ScriptSettings>(
+		config,
 		`/accounts/${accountId}/workers/scripts/${scriptName}/script-settings`
 	);
 
 	// Filter out secrets because we're gonna inherit them
-	const bindings: WorkerMetadataBinding[] =
-		versionInfo.resources.bindings.filter(
-			(binding) => binding.type !== "secret_text"
-		);
-
-	// We cannot upload a DO with a namespace_id so remove it
-	for (const binding of bindings) {
-		if (binding.type === "durable_object_namespace") {
-			// @ts-expect-error - it doesn't exist within wrangler but does in the API
-			delete binding.namespace_id;
-		}
-	}
+	const bindings: WorkerMetadataBinding[] = versionInfo.resources.bindings
+		.filter((binding) => binding.type !== "secret_text")
+		.map((binding) => {
+			// Inherit all of the existing bindings
+			return {
+				name: binding.name,
+				type: "inherit",
+			};
+		});
 
 	// Add the new secrets
 	for (const secret of secrets) {
@@ -185,7 +164,9 @@ export async function copyWorkerVersionWithNewSecrets({
 	const worker: CfWorkerInit = {
 		name: scriptName,
 		main: mainModule,
-		bindings: {} as CfWorkerInit["bindings"], // handled in rawBindings
+		bindings: {
+			unsafe: { metadata: unsafeMetadata }, // pass along unsafe metadata
+		} as CfWorkerInit["bindings"], // handled in rawBindings
 		rawBindings: bindings,
 		modules,
 		sourceMaps: sourceMaps,
@@ -207,6 +188,9 @@ export async function copyWorkerVersionWithNewSecrets({
 			"workers/message": versionMessage,
 			"workers/tag": versionTag,
 		},
+		keep_assets: true,
+		assets: undefined,
+		observability: scriptSettings.observability,
 	};
 
 	const body = createWorkerUploadForm(worker);
@@ -216,6 +200,7 @@ export async function copyWorkerVersionWithNewSecrets({
 		etag: string | null;
 		deployment_id: string | null;
 	}>(
+		config,
 		`/accounts/${accountId}/workers/scripts/${scriptName}/versions`,
 		{
 			method: "POST",
@@ -234,6 +219,7 @@ export async function copyWorkerVersionWithNewSecrets({
 }
 
 async function parseModules(
+	config: Config,
 	accountId: string,
 	scriptName: string,
 	versionId: string
@@ -244,6 +230,7 @@ async function parseModules(
 }> {
 	// Pull the Worker content - https://developers.cloudflare.com/api/operations/worker-script-get-content
 	const contentRes = await performApiFetch(
+		config,
 		`/accounts/${accountId}/workers/scripts/${scriptName}/content/v2?version=${versionId}`
 	);
 	if (
@@ -254,7 +241,7 @@ async function parseModules(
 		// Workers Sites is not supported
 		if (formData.get("__STATIC_CONTENT_MANIFEST") !== null) {
 			throw new UserError(
-				"Workers Sites is not supported for `versions secret put` today."
+				"Workers Sites does not support updating secrets through `wrangler versions secret put`. You must use `wrangler secret put` instead."
 			);
 		}
 
@@ -272,7 +259,7 @@ async function parseModules(
 		const mainModule: CfModule = {
 			name: entrypointPart.name,
 			filePath: "",
-			content: await entrypointPart.text(),
+			content: Buffer.from<ArrayBuffer>(await entrypointPart.arrayBuffer()),
 			type: fromMimeType(entrypointPart.type),
 		};
 
@@ -288,7 +275,7 @@ async function parseModules(
 						({
 							name,
 							filePath: "",
-							content: await file.text(),
+							content: Buffer.from(await file.arrayBuffer()),
 							type: fromMimeType(file.type),
 						}) as CfModule
 				)

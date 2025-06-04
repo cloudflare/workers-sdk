@@ -18,10 +18,14 @@ export async function readUntil(
 		while (true) {
 			const result = await Promise.race([reader.read(), timeoutPromise]);
 			if (result === TIMEOUT) {
-				throw new Error(`Timed out matching ${regExp}:\n${read()}`);
+				throw new Error(
+					`readUntil() timed out matching ${regExp} in output:\n${read()}`
+				);
 			}
 			if (result.done) {
-				throw new Error(`Exhausted matching ${regExp}:\n${read()}`);
+				throw new Error(
+					`readUntil() reached the end of the stream without matching ${regExp} in output:\n${read()}`
+				);
 			}
 			const match = result.value.match(regExp);
 			if (match !== null) {

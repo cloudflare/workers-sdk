@@ -5,7 +5,7 @@ import { mockConsoleMethods } from "../../helpers/mock-console";
 import { msw, mswGetVersion, mswListNewDeployments } from "../../helpers/msw";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
-import writeWranglerToml from "../../helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "../../helpers/write-wrangler-config";
 
 describe("deployments list", () => {
 	mockAccountId();
@@ -20,12 +20,10 @@ describe("deployments list", () => {
 
 	describe("without wrangler.toml", () => {
 		test("fails with no args", async () => {
-			const result = runWrangler(
-				"deployments status  --experimental-gradual-rollouts"
-			);
+			const result = runWrangler("deployments status");
 
 			await expect(result).rejects.toMatchInlineSnapshot(
-				`[Error: You need to provide a name of your worker. Either pass it as a cli arg with \`--name <name>\` or in your config file as \`name = "<name>"\`]`
+				`[Error: You need to provide a name for your Worker. Either pass it as a cli arg with \`--name <name>\` or in your configuration file as \`name = "<name>"\`]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`""`);
@@ -34,9 +32,7 @@ describe("deployments list", () => {
 		});
 
 		test("prints latest deployment to stdout", async () => {
-			const result = runWrangler(
-				"deployments status --name test-name  --experimental-gradual-rollouts"
-			);
+			const result = runWrangler("deployments status --name test-name");
 
 			await expect(result).resolves.toBeUndefined();
 
@@ -61,9 +57,7 @@ describe("deployments list", () => {
 		});
 
 		test("prints latest deployment to stdout as --json", async () => {
-			const result = runWrangler(
-				"deployments status --name test-name --json  --experimental-versions"
-			);
+			const result = runWrangler("deployments status --name test-name --json");
 
 			await expect(result).resolves.toBeUndefined();
 
@@ -95,12 +89,10 @@ describe("deployments list", () => {
 	});
 
 	describe("with wrangler.toml", () => {
-		beforeEach(() => writeWranglerToml());
+		beforeEach(() => writeWranglerConfig());
 
 		test("prints latest deployment to stdout", async () => {
-			const result = runWrangler(
-				"deployments status  --experimental-gradual-rollouts"
-			);
+			const result = runWrangler("deployments status");
 
 			await expect(result).resolves.toBeUndefined();
 
@@ -125,9 +117,7 @@ describe("deployments list", () => {
 		});
 
 		test("prints latest deployment to stdout as --json", async () => {
-			const result = runWrangler(
-				"deployments status --json  --experimental-versions"
-			);
+			const result = runWrangler("deployments status --json");
 
 			await expect(result).resolves.toBeUndefined();
 

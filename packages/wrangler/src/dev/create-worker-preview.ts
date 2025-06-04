@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { URL } from "node:url";
 import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
@@ -7,11 +8,10 @@ import { logger } from "../logger";
 import { ParseError, parseJSON } from "../parse";
 import { getAccessToken } from "../user/access";
 import { isAbortError } from "../utils/isAbortError";
-import type {
-	CfWorkerContext,
-	CfWorkerInit,
-} from "../deployment-bundle/worker";
+import type { CfWorkerContext } from "../deployment-bundle/worker";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ApiCredentials } from "../user";
+import type { CfWorkerInitWithName } from "./remote";
 import type { HeadersInit } from "undici";
 
 /**
@@ -72,12 +72,24 @@ export interface CfPreviewSession {
 }
 
 /**
- * A preview mode.
+ * Session configuration for realish preview. This is sent to the API as the
+ * `wrangler-session-config` form data part.
  *
- * * If true, then using a `workers.dev` subdomain.
- * * Otherwise, a list of routes under a single zone.
+ * Only one of `workers_dev` and `routes` can be specified:
+ * * If `workers_dev` is set, the preview will run using a `workers.dev` subdomain.
+ * * If `routes` is set, the preview will run using the list of routes provided, which must be under a single zone
+ *
+ * `minimal_mode` is a flag to tell the API to enable "raw" mode bindings in this session
  */
-type CfPreviewMode = { workers_dev: boolean } | { routes: string[] };
+type CfPreviewMode =
+	| {
+			workers_dev: true;
+			minimal_mode?: boolean;
+	  }
+	| {
+			routes: string[];
+			minimal_mode?: boolean;
+	  };
 
 /**
  * A preview token.
@@ -123,15 +135,6 @@ export interface CfPreviewToken {
 	prewarmUrl: URL;
 }
 
-// Credit: https://stackoverflow.com/a/2117523
-function randomId(): string {
-	return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
-		const r = (Math.random() * 16) | 0,
-			v = c == "x" ? r : (r & 0x3) | 0x8;
-		return v.toString(16);
-	});
-}
-
 // URLs are often relative to the zone. Sometimes the base zone
 // will be grey-clouded, and so the host must be swapped out for
 // the worker route host, which is more likely to be orange-clouded.
@@ -150,6 +153,7 @@ function switchHost(
  * Generates a preview session token.
  */
 export async function createPreviewSession(
+	complianceConfig: ComplianceConfig,
 	account: CfAccount,
 	ctx: CfWorkerContext,
 	abortSignal: AbortSignal
@@ -160,6 +164,7 @@ export async function createPreviewSession(
 		: `/accounts/${accountId}/workers/subdomain/edge-preview`;
 
 	const { exchange_url } = await fetchResult<{ exchange_url: string }>(
+		complianceConfig,
 		initUrl,
 		undefined,
 		undefined,
@@ -192,16 +197,16 @@ export async function createPreviewSession(
 
 	logger.debug("-- END EXCHANGE API RESPONSE");
 	try {
-		const { inspector_websocket, prewarm, token } = parseJSON<{
+		const { inspector_websocket, prewarm, token } = parseJSON(bodyText) as {
 			inspector_websocket: string;
 			token: string;
 			prewarm: string;
-		}>(bodyText);
+		};
 		const inspector = new URL(inspector_websocket);
 		inspector.searchParams.append("cf_workers_preview_token", token);
 
 		return {
-			id: randomId(),
+			id: crypto.randomUUID(),
 			value: token,
 			host: ctx.host ?? inspector.host,
 			inspectorUrl: switchHost(inspector.href, ctx.host, !!ctx.zone),
@@ -226,42 +231,46 @@ export async function createPreviewSession(
  * Creates a preview token.
  */
 async function createPreviewToken(
+	complianceConfig: ComplianceConfig,
 	account: CfAccount,
-	worker: CfWorkerInit,
+	worker: CfWorkerInitWithName,
 	ctx: CfWorkerContext,
 	session: CfPreviewSession,
-	abortSignal: AbortSignal
+	abortSignal: AbortSignal,
+	minimal_mode?: boolean
 ): Promise<CfPreviewToken> {
 	const { value, host, inspectorUrl, prewarmUrl } = session;
 	const { accountId } = account;
-	const scriptId = worker.name || (ctx.zone ? session.id : host.split(".")[0]);
 	const url =
 		ctx.env && !ctx.legacyEnv
-			? `/accounts/${accountId}/workers/services/${scriptId}/environments/${ctx.env}/edge-preview`
-			: `/accounts/${accountId}/workers/scripts/${scriptId}/edge-preview`;
+			? `/accounts/${accountId}/workers/services/${worker.name}/environments/${ctx.env}/edge-preview`
+			: `/accounts/${accountId}/workers/scripts/${worker.name}/edge-preview`;
 
 	const mode: CfPreviewMode = ctx.zone
 		? {
-				routes: ctx.routes
-					? // extract all the route patterns
-						ctx.routes.map((route) => {
-							if (typeof route === "string") {
-								return route;
-							}
-							if (route.custom_domain) {
-								return `${route.pattern}/*`;
-							}
-							return route.pattern;
-						})
-					: // if there aren't any patterns, then just match on all routes
-						["*/*"],
+				routes:
+					ctx.routes && ctx.routes.length > 0
+						? // extract all the route patterns
+							ctx.routes.map((route) => {
+								if (typeof route === "string") {
+									return route;
+								}
+								if (route.custom_domain) {
+									return `${route.pattern}/*`;
+								}
+								return route.pattern;
+							})
+						: // if there aren't any patterns, then just match on all routes
+							["*/*"],
+				minimal_mode,
 			}
-		: { workers_dev: true };
+		: { workers_dev: true, minimal_mode };
 
 	const formData = createWorkerUploadForm(worker);
 	formData.set("wrangler-session-config", JSON.stringify(mode));
 
 	const { preview_token } = await fetchResult<{ preview_token: string }>(
+		complianceConfig,
 		url,
 		{
 			method: "POST",
@@ -302,18 +311,22 @@ async function createPreviewToken(
  * const {value, host} = await createWorker(init, acct);
  */
 export async function createWorkerPreview(
-	init: CfWorkerInit,
+	complianceConfig: ComplianceConfig,
+	init: CfWorkerInitWithName,
 	account: CfAccount,
 	ctx: CfWorkerContext,
 	session: CfPreviewSession,
-	abortSignal: AbortSignal
+	abortSignal: AbortSignal,
+	minimal_mode?: boolean
 ): Promise<CfPreviewToken> {
 	const token = await createPreviewToken(
+		complianceConfig,
 		account,
 		init,
 		ctx,
 		session,
-		abortSignal
+		abortSignal,
+		minimal_mode
 	);
 	const accessToken = await getAccessToken(token.prewarmUrl.hostname);
 

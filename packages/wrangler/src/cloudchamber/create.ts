@@ -3,24 +3,27 @@ import {
 	endSection,
 	log,
 	startSection,
-	status,
 	updateStatus,
 } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
+import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+import { parseByteSize } from "./../parse";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { getLocation } from "./cli/locations";
-import { AssignIPv4, DeploymentsService } from "./client";
+import { AssignIPv4, AssignIPv6, DeploymentsService } from "./client";
 import {
 	checkEverythingIsSet,
 	collectEnvironmentVariables,
 	collectLabels,
 	interactWithUser,
 	loadAccountSpinner,
+	parseImageName,
 	promptForEnvironmentVariables,
 	promptForLabels,
 	renderDeploymentConfiguration,
 	renderDeploymentMutationError,
+	resolveMemory,
 } from "./common";
 import { wrap } from "./helpers/wrap";
 import { loadAccount } from "./locations";
@@ -33,6 +36,8 @@ import type {
 } from "../yargs-types";
 import type { EnvironmentVariable, Label, SSHPublicKeyID } from "./client";
 import type { Arg } from "@cloudflare/cli/interactive";
+
+const defaultContainerImage = "docker.io/cloudflare/hello-world:1.0";
 
 export function createCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 	return yargs
@@ -89,7 +94,7 @@ export function createCommandOptionalYargs(yargs: CommonYargsArgvJSON) {
 			type: "string",
 			demandOption: false,
 			describe:
-				"Amount of memory (GB, MB...) to allocate to this deployment. Ex: 4GB.",
+				"Amount of memory (GiB, MiB...) to allocate to this deployment. Ex: 4GiB.",
 		})
 		.option("ipv4", {
 			requiresArg: false,
@@ -111,14 +116,33 @@ export async function createCommand(
 		args.var
 	);
 	const labels = collectLabels(args.label);
-
 	if (!interactWithUser(args)) {
+		if (config.cloudchamber.image != undefined && args.image == undefined) {
+			args.image = config.cloudchamber.image;
+		}
+		if (
+			config.cloudchamber.location != undefined &&
+			args.location == undefined
+		) {
+			args.location = config.cloudchamber.location;
+		}
+
 		const body = checkEverythingIsSet(args, ["image", "location"]);
+
+		const { err } = parseImageName(body.image);
+		if (err !== undefined) {
+			throw new Error(err);
+		}
+
 		const keysToAdd = args.allSshKeys
 			? (await pollSSHKeysUntilCondition(() => true)).map((key) => key.id)
 			: [];
+		const useIpv4 = args.ipv4 ?? config.cloudchamber.ipv4;
 		const network =
-			args.ipv4 === true ? { assign_ipv4: AssignIPv4.PREDEFINED } : undefined;
+			useIpv4 === true
+				? { assign_ipv4: AssignIPv4.PREDEFINED }
+				: { assign_ipv6: AssignIPv6.PREDEFINED };
+		const memoryMib = resolveMemory(args, config.cloudchamber);
 		const deployment = await DeploymentsService.createDeploymentV2({
 			image: body.image,
 			location: body.location,
@@ -126,8 +150,8 @@ export async function createCommand(
 			environment_variables: environmentVariables,
 			labels: labels,
 			vcpu: args.vcpu ?? config.cloudchamber.vcpu,
-			memory: args.memory ?? config.cloudchamber.memory,
 			network: network,
+			memory_mib: memoryMib,
 		});
 		console.log(JSON.stringify(deployment, null, 4));
 		return;
@@ -152,9 +176,9 @@ async function askWhichSSHKeysDoTheyWantToAdd(
 
 	if (keys.length === 1) {
 		const yes = await inputPrompt({
-			question: `Do you want to add the ssh key ${keyItems[0].name}?`,
+			question: `Do you want to add the SSH key ${keyItems[0].name}?`,
 			type: "confirm",
-			helpText: "You need this to ssh into the VM",
+			helpText: "You need this to SSH into the VM",
 			defaultValue: false,
 			label: "",
 		});
@@ -171,15 +195,15 @@ async function askWhichSSHKeysDoTheyWantToAdd(
 
 	const res = await inputPrompt({
 		question:
-			"You have multiple ssh keys in your account, what do you want to do for this new deployment?",
-		label: "",
+			"You have multiple SSH keys in your account, what do you want to do for this new deployment?",
+		label: "ssh",
 		defaultValue: false,
 		helpText: "",
 		type: "select",
 		options: [
 			{ label: "Add all of them", value: "all" },
 			{ label: "Select the keys", value: "select" },
-			{ label: "Don't add any ssh keys", value: "none" },
+			{ label: "Don't add any SSH keys", value: "none" },
 		],
 	});
 	if (res === "all") {
@@ -215,7 +239,7 @@ async function askWhichSSHKeysDoTheyWantToAdd(
 	return [];
 }
 
-export async function handleCreateCommand(
+async function handleCreateCommand(
 	args: StrictYargsOptionsToInterfaceJSON<typeof createCommandOptionalYargs>,
 	config: Config,
 	environmentVariables: EnvironmentVariable[] | undefined,
@@ -223,29 +247,36 @@ export async function handleCreateCommand(
 ) {
 	startSection("Create a Cloudflare container", "Step 1 of 2");
 	const sshKeyID = await promptForSSHKeyAndGetAddedSSHKey(args);
-	const image = await processArgument<string>({ image: args.image }, "image", {
+	const givenImage = args.image ?? config.cloudchamber.image;
+	const image = await processArgument<string>({ image: givenImage }, "image", {
 		question: whichImageQuestion,
 		label: "image",
 		validate: (value) => {
 			if (typeof value !== "string") {
-				return "unknown error";
+				return "Unknown error";
 			}
+
 			if (value.length === 0) {
-				return "you should fill this input";
+				// validate is called before defaultValue is
+				// applied, so we must set it ourselves
+				value = defaultContainerImage;
 			}
-			if (value.endsWith(":latest")) {
-				return "we don't allow :latest tags";
-			}
+
+			const { err } = parseImageName(value);
+			return err;
 		},
-		defaultValue: args.image ?? "",
-		initialValue: args.image ?? "",
-		helpText: 'i.e. "docker.io/org/app:1.2", :latest tags are not allowed!',
+		defaultValue: givenImage ?? defaultContainerImage,
+		helpText: 'NAME:TAG ("latest" tag is not allowed)',
 		type: "text",
 	});
 
-	const location = await getLocation(args);
+	const location = await getLocation({
+		location: args.location ?? config.cloudchamber.location,
+	});
 	const keys = await askWhichSSHKeysDoTheyWantToAdd(args, sshKeyID);
-	const network = await getNetworkInput(args);
+	const network = await getNetworkInput({
+		ipv4: args.ipv4 ?? config.cloudchamber.ipv4,
+	});
 
 	const selectedEnvironmentVariables = await promptForEnvironmentVariables(
 		environmentVariables,
@@ -255,13 +286,18 @@ export async function handleCreateCommand(
 	const selectedLabels = await promptForLabels(labels, [], false);
 
 	const account = await loadAccount();
+
+	const memoryMib =
+		resolveMemory(args, config.cloudchamber) ??
+		account.defaults.memory_mib ??
+		Math.round(parseByteSize(account.defaults.memory, 1024) / (1024 * 1024));
+
 	renderDeploymentConfiguration("create", {
 		image,
 		location,
 		network,
 		vcpu: args.vcpu ?? config.cloudchamber.vcpu ?? account.defaults.vcpus,
-		memory:
-			args.memory ?? config.cloudchamber.memory ?? account.defaults.memory,
+		memoryMib,
 		environmentVariables: selectedEnvironmentVariables,
 		labels: selectedLabels,
 		env: args.env,
@@ -269,7 +305,7 @@ export async function handleCreateCommand(
 
 	const yes = await inputPrompt({
 		type: "confirm",
-		question: "Do you want to go ahead and create your container?",
+		question: "Proceed?",
 		label: "",
 	});
 	if (!yes) {
@@ -278,7 +314,7 @@ export async function handleCreateCommand(
 	}
 
 	const { start, stop } = spinner();
-	start("Creating your container", "shortly your container will be created");
+	start("Creating your container", "your container will be created shortly");
 	const [deployment, err] = await wrap(
 		DeploymentsService.createDeploymentV2({
 			image,
@@ -287,7 +323,7 @@ export async function handleCreateCommand(
 			environment_variables: environmentVariables,
 			labels: labels,
 			vcpu: args.vcpu ?? config.cloudchamber.vcpu,
-			memory: args.memory ?? config.cloudchamber.memory,
+			memory_mib: memoryMib,
 			network,
 		})
 	);
@@ -298,14 +334,12 @@ export async function handleCreateCommand(
 	}
 
 	stop();
-	updateStatus(`${status.success} Created deployment!`);
-	if (deployment.network?.ipv4) {
-		log(`${deployment.id}\nIP: ${deployment.network.ipv4}`);
-	}
+	updateStatus("Created deployment", false);
+	log(`${brandColor("id")} ${dim(deployment.id)}\n`);
 
 	endSection("Creating a placement for your container");
 	startSection("Create a Cloudflare container", "Step 2 of 2");
 	await waitForPlacement(deployment);
 }
 
-const whichImageQuestion = "Which image url should we use for your container?";
+const whichImageQuestion = "Which image should we use for your container?";

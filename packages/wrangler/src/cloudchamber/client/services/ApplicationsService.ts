@@ -8,12 +8,22 @@ import type { Application } from "../models/Application";
 import type { ApplicationID } from "../models/ApplicationID";
 import type { ApplicationJob } from "../models/ApplicationJob";
 import type { ApplicationName } from "../models/ApplicationName";
+import type { ApplicationRollout } from "../models/ApplicationRollout";
+import type { ApplicationStatus } from "../models/ApplicationStatus";
 import type { CreateApplicationJobRequest } from "../models/CreateApplicationJobRequest";
 import type { CreateApplicationRequest } from "../models/CreateApplicationRequest";
+import type { CreateApplicationRolloutRequest } from "../models/CreateApplicationRolloutRequest";
 import type { EmptyResponse } from "../models/EmptyResponse";
+import type { GenericMessageResponse } from "../models/GenericMessageResponse";
 import type { Image } from "../models/Image";
+import type { JobID } from "../models/JobID";
 import type { ListApplications } from "../models/ListApplications";
+import type { ListDeploymentsV2 } from "../models/ListDeploymentsV2";
+import type { ModifyApplicationJobRequest } from "../models/ModifyApplicationJobRequest";
 import type { ModifyApplicationRequestBody } from "../models/ModifyApplicationRequestBody";
+import type { RolloutID } from "../models/RolloutID";
+import type { UpdateApplicationRolloutRequest } from "../models/UpdateApplicationRolloutRequest";
+import type { UpdateRolloutResponse } from "../models/UpdateRolloutResponse";
 
 export class ApplicationsService {
 	/**
@@ -32,7 +42,7 @@ export class ApplicationsService {
 			body: requestBody,
 			mediaType: "application/json",
 			errors: {
-				400: `Bad Request that contains a specific constant code and details object about the error.`,
+				400: `Could not create the application because of input/limits reasons, more details in the error code`,
 				401: `Unauthorized`,
 				500: `There has been an internal error`,
 			},
@@ -71,22 +81,22 @@ export class ApplicationsService {
 	/**
 	 * Get a single application by id
 	 * Returns a single application by id
-	 * @param id
+	 * @param applicationId
 	 * @returns Application A single application
 	 * @throws ApiError
 	 */
 	public static getApplication(
-		id: ApplicationID
+		applicationId: ApplicationID
 	): CancelablePromise<Application> {
 		return __request(OpenAPI, {
 			method: "GET",
-			url: "/applications/{id}",
+			url: "/applications/{application_id}",
 			path: {
-				id: id,
+				application_id: applicationId,
 			},
 			errors: {
 				401: `Unauthorized`,
-				404: `Response body when an account/location is not found`,
+				404: `Response body when an Application is not found`,
 				500: `There has been an internal error`,
 			},
 		});
@@ -94,27 +104,28 @@ export class ApplicationsService {
 
 	/**
 	 * Modify an application
-	 * Modifies a single application by id
-	 * @param id
+	 * Modifies a single application by id.
+	 * @param applicationId
 	 * @param requestBody
 	 * @returns Application Modify application response
 	 * @throws ApiError
 	 */
 	public static modifyApplication(
-		id: ApplicationID,
+		applicationId: ApplicationID,
 		requestBody: ModifyApplicationRequestBody
 	): CancelablePromise<Application> {
 		return __request(OpenAPI, {
 			method: "PATCH",
-			url: "/applications/{id}",
+			url: "/applications/{application_id}",
 			path: {
-				id: id,
+				application_id: applicationId,
 			},
 			body: requestBody,
 			mediaType: "application/json",
 			errors: {
+				400: `Could not modify the application because of input/limits reasons, more details in the error code`,
 				401: `Unauthorized`,
-				404: `Response body when an account/location is not found`,
+				404: `Response body when an Application is not found`,
 				500: `There has been an internal error`,
 			},
 		});
@@ -123,22 +134,46 @@ export class ApplicationsService {
 	/**
 	 * Delete a single application by id
 	 * Deletes a single application by id
-	 * @param id
+	 * @param applicationId
 	 * @returns EmptyResponse Delete application response
 	 * @throws ApiError
 	 */
 	public static deleteApplication(
-		id: ApplicationID
+		applicationId: ApplicationID
 	): CancelablePromise<EmptyResponse> {
 		return __request(OpenAPI, {
 			method: "DELETE",
-			url: "/applications/{id}",
+			url: "/applications/{application_id}",
 			path: {
-				id: id,
+				application_id: applicationId,
 			},
 			errors: {
 				401: `Unauthorized`,
-				404: `Response body when an account/location is not found`,
+				404: `Response body when an Application is not found`,
+				500: `There has been an internal error`,
+			},
+		});
+	}
+
+	/**
+	 * Application queue status
+	 * Get an application's queue status. Only works under an application with type jobs.
+	 * @param applicationId
+	 * @returns ApplicationStatus Application status with details about the job queue, instances and other metadata for introspection.
+	 * @throws ApiError
+	 */
+	public static getApplicationStatus(
+		applicationId: ApplicationID
+	): CancelablePromise<ApplicationStatus> {
+		return __request(OpenAPI, {
+			method: "GET",
+			url: "/applications/{application_id}/status",
+			path: {
+				application_id: applicationId,
+			},
+			errors: {
+				401: `Unauthorized`,
+				404: `Response body when an Application is not found`,
 				500: `There has been an internal error`,
 			},
 		});
@@ -147,27 +182,276 @@ export class ApplicationsService {
 	/**
 	 * Create a new job within an application
 	 * Returns the created job
-	 * @param id
+	 * @param applicationId
 	 * @param requestBody
 	 * @returns ApplicationJob A single job within an application
 	 * @throws ApiError
 	 */
 	public static createApplicationJob(
-		id: ApplicationID,
+		applicationId: ApplicationID,
 		requestBody: CreateApplicationJobRequest
 	): CancelablePromise<ApplicationJob> {
 		return __request(OpenAPI, {
 			method: "POST",
-			url: "/applications/{id}/jobs",
+			url: "/applications/{application_id}/jobs",
 			path: {
-				id: id,
+				application_id: applicationId,
 			},
 			body: requestBody,
 			mediaType: "application/json",
 			errors: {
 				400: `Can't create the application job because it has bad inputs`,
 				401: `Unauthorized`,
-				404: `Response body when an account/location is not found`,
+				404: `Response body when an Application is not found`,
+				500: `There has been an internal error`,
+			},
+		});
+	}
+
+	/**
+	 * Get an application job by application and job id
+	 * Returns a single application job by id with its current status
+	 * @param applicationId
+	 * @param jobId
+	 * @returns ApplicationJob A single application
+	 * @throws ApiError
+	 */
+	public static getApplicationJob(
+		applicationId: ApplicationID,
+		jobId: JobID
+	): CancelablePromise<ApplicationJob> {
+		return __request(OpenAPI, {
+			method: "GET",
+			url: "/applications/{application_id}/jobs/{job_id}",
+			path: {
+				application_id: applicationId,
+				job_id: jobId,
+			},
+			errors: {
+				401: `Unauthorized`,
+				404: `Response body when an Application/Job is not found`,
+				500: `There has been an internal error`,
+			},
+		});
+	}
+
+	/**
+	 * Delete an application job by application and job id
+	 * Cleans up the specific job from the Application and all its assoicated resources
+	 * @param applicationId
+	 * @param jobId
+	 * @returns GenericMessageResponse Generic OK response
+	 * @throws ApiError
+	 */
+	public static deleteApplicationJob(
+		applicationId: ApplicationID,
+		jobId: JobID
+	): CancelablePromise<GenericMessageResponse> {
+		return __request(OpenAPI, {
+			method: "DELETE",
+			url: "/applications/{application_id}/jobs/{job_id}",
+			path: {
+				application_id: applicationId,
+				job_id: jobId,
+			},
+			errors: {
+				401: `Unauthorized`,
+				404: `Response body when an Application/Job is not found`,
+				500: `There has been an internal error`,
+			},
+		});
+	}
+
+	/**
+	 * Modify an existing application job
+	 * Modify an application job state
+	 * @param applicationId
+	 * @param jobId
+	 * @param requestBody
+	 * @returns ApplicationJob A modified job within an application
+	 * @throws ApiError
+	 */
+	public static modifyApplicationJob(
+		applicationId: ApplicationID,
+		jobId: JobID,
+		requestBody: ModifyApplicationJobRequest
+	): CancelablePromise<ApplicationJob> {
+		return __request(OpenAPI, {
+			method: "PATCH",
+			url: "/applications/{application_id}/jobs/{job_id}",
+			path: {
+				application_id: applicationId,
+				job_id: jobId,
+			},
+			body: requestBody,
+			mediaType: "application/json",
+			errors: {
+				400: `Can't modify the application job because it has bad inputs`,
+				401: `Unauthorized`,
+				404: `Response body when an Application/Job is not found`,
+				500: `There has been an internal error`,
+			},
+		});
+	}
+
+	/**
+	 * Create a new rollout for an application
+	 * A rollout can be used to update the application's configuration across instances with minimal downtime.
+	 * @param applicationId
+	 * @param requestBody
+	 * @returns ApplicationRollout
+	 * @throws ApiError
+	 */
+	public static createApplicationRollout(
+		applicationId: ApplicationID,
+		requestBody: CreateApplicationRolloutRequest
+	): CancelablePromise<ApplicationRollout> {
+		return __request(OpenAPI, {
+			method: "POST",
+			url: "/applications/{application_id}/rollouts",
+			path: {
+				application_id: applicationId,
+			},
+			body: requestBody,
+			mediaType: "application/json",
+			errors: {
+				400: `Can't update the application rollout because it has bad inputs`,
+				401: `Unauthorized`,
+				404: `Response body when an Application is not found`,
+				500: `There has been an internal error`,
+			},
+		});
+	}
+
+	/**
+	 * List rollouts
+	 * List all rollouts within an application
+	 * @param applicationId
+	 * @returns ApplicationRollout
+	 * @throws ApiError
+	 */
+	public static listApplicationRollouts(
+		applicationId: ApplicationID
+	): CancelablePromise<Array<ApplicationRollout>> {
+		return __request(OpenAPI, {
+			method: "GET",
+			url: "/applications/{application_id}/rollouts",
+			path: {
+				application_id: applicationId,
+			},
+			errors: {
+				401: `Unauthorized`,
+				404: `Response body when an Application is not found`,
+				500: `There has been an internal error`,
+			},
+		});
+	}
+
+	/**
+	 * Get a rollout by id within an application
+	 * View rollout configurations and state for a specific rollout
+	 * @param applicationId
+	 * @param rolloutId
+	 * @returns ApplicationRollout
+	 * @throws ApiError
+	 */
+	public static getApplicationRollout(
+		applicationId: ApplicationID,
+		rolloutId: RolloutID
+	): CancelablePromise<ApplicationRollout> {
+		return __request(OpenAPI, {
+			method: "GET",
+			url: "/applications/{application_id}/rollouts/{rollout_id}",
+			path: {
+				application_id: applicationId,
+				rollout_id: rolloutId,
+			},
+			errors: {
+				401: `Unauthorized`,
+				404: `Response body when an Application is not found`,
+				500: `There has been an internal error`,
+			},
+		});
+	}
+
+	/**
+	 * Update a rollout within an application
+	 * A rollout can be updated to modify its current state. Actions include - next, previous, rollback
+	 * @param applicationId
+	 * @param rolloutId
+	 * @param requestBody
+	 * @returns UpdateRolloutResponse
+	 * @throws ApiError
+	 */
+	public static updateApplicationRollout(
+		applicationId: ApplicationID,
+		rolloutId: RolloutID,
+		requestBody: UpdateApplicationRolloutRequest
+	): CancelablePromise<UpdateRolloutResponse> {
+		return __request(OpenAPI, {
+			method: "POST",
+			url: "/applications/{application_id}/rollouts/{rollout_id}",
+			path: {
+				application_id: applicationId,
+				rollout_id: rolloutId,
+			},
+			body: requestBody,
+			mediaType: "application/json",
+			errors: {
+				400: `Can't create the application rollout because it has bad inputs`,
+				401: `Unauthorized`,
+				404: `Response body when an Application is not found`,
+				500: `There has been an internal error`,
+			},
+		});
+	}
+
+	/**
+	 * Delete a rollout within an application by its rollout id
+	 * Cleans up the specific rollout from the Application if it is not in use
+	 * @param applicationId
+	 * @param rolloutId
+	 * @returns EmptyResponse
+	 * @throws ApiError
+	 */
+	public static deleteApplicationRollout(
+		applicationId: ApplicationID,
+		rolloutId: RolloutID
+	): CancelablePromise<EmptyResponse> {
+		return __request(OpenAPI, {
+			method: "DELETE",
+			url: "/applications/{application_id}/rollouts/{rollout_id}",
+			path: {
+				application_id: applicationId,
+				rollout_id: rolloutId,
+			},
+			errors: {
+				401: `Unauthorized`,
+				404: `Response body when an Application is not found`,
+				500: `There has been an internal error`,
+			},
+		});
+	}
+
+	/**
+	 * Get a single applications deployments
+	 * Returns a single applications deployments
+	 * @param applicationId
+	 * @returns ListDeploymentsV2 List of deployments with their corresponding placements
+	 * @throws ApiError
+	 */
+	public static listDeploymentsByApplication(
+		applicationId: ApplicationID
+	): CancelablePromise<ListDeploymentsV2> {
+		return __request(OpenAPI, {
+			method: "GET",
+			url: "/applications/{application_id}/deployments",
+			path: {
+				application_id: applicationId,
+			},
+			errors: {
+				401: `Unauthorized`,
+				404: `Response body when an Application is not found`,
 				500: `There has been an internal error`,
 			},
 		});

@@ -1,6 +1,6 @@
 declare module "stream/web" {
 	interface ReadableStreamBYOBRequest {
-		readonly view: Uint8Array | null;
+		readonly view: ArrayBufferView | null;
 		respond(bytesWritten: number): void;
 		respondWithNewView(view: ArrayBufferView): void;
 	}
@@ -15,7 +15,7 @@ declare module "stream/web" {
 		cancel(reason?: any): Promise<void>;
 		read<T extends ArrayBufferView>(
 			view: T
-		): Promise<ReadableStreamDefaultReadResult<T>>;
+		): Promise<ReadableStreamDefaultReader<T>>;
 		releaseLock(): void;
 	}
 }

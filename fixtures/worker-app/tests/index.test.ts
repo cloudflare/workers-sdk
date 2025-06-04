@@ -44,6 +44,13 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect(output).toContain("startup log");
 		expect(output).toContain("request log");
 
+		if (process.platform === "win32") {
+			// Check that the Windows warning is shown for the fake access violation error
+			expect(output).toContain(
+				"On Windows, this may be caused by an outdated Microsoft Visual C++ Redistributable library."
+			);
+		}
+
 		// check host on request in the Worker is as expected
 		expect(output).toContain(`host' => 'prod.example.org`);
 
@@ -174,5 +181,21 @@ describe("'wrangler dev' correctly renders pages", () => {
 			headers: { "Accept-Encoding": "gzip" },
 		});
 		expect(await response.text()).toEqual("x".repeat(100));
+	});
+
+	it("uses explicit resource management", async ({ expect }) => {
+		const response = await fetch(
+			`http://${ip}:${port}/explicit-resource-management`
+		);
+		expect(await response.json()).toMatchInlineSnapshot(`
+			[
+			  "Connected",
+			  "Connected",
+			  "Sent hello",
+			  "Sent goodbye",
+			  "Disconnected asynchronously",
+			  "Disconnected synchronously",
+			]
+		`);
 	});
 });

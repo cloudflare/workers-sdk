@@ -8,20 +8,11 @@ import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { mockGetMembershipsFail } from "../helpers/mock-oauth-flow";
 import { useMockStdin } from "../helpers/mock-stdin";
-import { msw } from "../helpers/msw";
+import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { PagesProject } from "../../pages/download-config";
 import type { Interface } from "node:readline";
-
-function createFetchResult(result: unknown, success = true) {
-	return {
-		success,
-		errors: [],
-		messages: [],
-		result,
-	};
-}
 
 export function mockGetMemberships(
 	accounts: { id: string; account: { id: string; name: string } }[]
@@ -250,7 +241,7 @@ describe("wrangler pages secret", () => {
 						runWrangler("pages secret put the-key --project some-project-name")
 					).rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: Failed to automatically retrieve account IDs for the logged in user.
-						In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your \`wrangler.toml\` file.]
+						In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your Wrangler configuration file.]
 					`);
 				});
 
@@ -274,7 +265,7 @@ describe("wrangler pages secret", () => {
 						runWrangler("pages secret put the-key --project some-project-name")
 					).rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: More than one account available but unable to select one in non-interactive mode.
-						Please set the appropriate \`account_id\` in your \`wrangler.toml\` file.
+						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
 						  \`account-name-1\`: \`account-id-1\`
 						  \`account-name-2\`: \`account-id-2\`
@@ -513,7 +504,7 @@ describe("wrangler pages secret", () => {
 			await expect(
 				runWrangler(`pages secret bulk --project some-project-name`)
 			).rejects.toMatchInlineSnapshot(
-				`[Error: 🚨 Please provide a JSON file or valid JSON pipe]`
+				`[Error: 🚨 No content found in file or piped input.]`
 			);
 		});
 
@@ -540,10 +531,10 @@ describe("wrangler pages secret", () => {
 
 			await runWrangler(`pages secret bulk --project some-project-name`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
-			Finished processing secrets JSON file:
-			✨ 2 secrets successfully uploaded"
-		`);
+				"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
+				Finished processing secrets file:
+				✨ 2 secrets successfully uploaded"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -566,16 +557,45 @@ describe("wrangler pages secret", () => {
 					text: "secret_text",
 				},
 			]);
-
 			await runWrangler(
 				"pages secret bulk ./secret.json --project some-project-name"
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
-			Finished processing secrets JSON file:
-			✨ 2 secrets successfully uploaded"
-		`);
+				"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
+				Finished processing secrets file:
+				✨ 2 secrets successfully uploaded"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should create secret bulk w/ env file", async () => {
+			writeFileSync(
+				".env",
+				`SECRET_1=secret-1\nSECRET_2=secret-2\nSECRET_3=secret-3`
+			);
+
+			mockProjectRequests([
+				{
+					name: "SECRET_1",
+					text: "secret-1",
+				},
+				{
+					name: "SECRET_2",
+					text: "secret-2",
+				},
+				{
+					name: "SECRET_3",
+					text: "secret-3",
+				},
+			]);
+			await runWrangler("pages secret bulk .env --project some-project-name");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
+				Finished processing secrets file:
+				✨ 3 secrets successfully uploaded"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -607,10 +627,10 @@ describe("wrangler pages secret", () => {
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (preview)
-			Finished processing secrets JSON file:
-			✨ 2 secrets successfully uploaded"
-		`);
+				"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (preview)
+				Finished processing secrets file:
+				✨ 2 secrets successfully uploaded"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -651,7 +671,7 @@ describe("wrangler pages secret", () => {
 				http.patch(
 					"*/accounts/:accountId/pages/projects/:project",
 					async () => {
-						return HttpResponse.json(null);
+						return HttpResponse.error();
 					}
 				)
 			);
@@ -661,20 +681,76 @@ describe("wrangler pages secret", () => {
 					"pages secret bulk ./secret.json --project some-project-name"
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: 🚨 7 secrets failed to upload]`
+				`[TypeError: Failed to fetch]`
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
-			"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
-			Finished processing secrets JSON file:
-			✨ 0 secrets successfully uploaded
-			"
-		`);
-			expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 7 secrets failed to upload[0m
+				"🌀 Creating the secrets for the Pages project \\"some-project-name\\" (production)
+				🚨 Secrets failed to upload
 
-			"
-		`);
+				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mFailed to fetch[0m
+
+				"
+			`);
+		});
+
+		it("throws a meaningful error", async () => {
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-name-1": "secret_text",
+					"secret-name-2": "secret_text",
+				})
+			);
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+
+						return HttpResponse.json(createFetchResult({ bindings: [] }));
+					}
+				),
+				http.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/settings`,
+					({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						return HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									message: "This is a helpful error",
+									code: 1,
+								},
+							])
+						);
+					}
+				)
+			);
+
+			await expect(async () => {
+				await runWrangler("secret bulk ./secret.json --name script-name");
+			}).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/settings) failed.]`
+			);
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"🌀 Creating the secrets for the Worker \\"script-name\\"
+
+				🚨 Secrets failed to upload
+
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/some-account-id/workers/scripts/script-name/settings) failed.[0m
+
+				  This is a helpful error [code: 1]
+
+				  If you think this is a bug, please open an issue at:
+				  [4mhttps://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+
+				"
+			`);
 		});
 	});
 });

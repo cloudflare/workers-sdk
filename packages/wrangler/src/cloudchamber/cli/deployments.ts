@@ -1,15 +1,19 @@
 import { exit } from "process";
-import { cancel, crash, endSection, log } from "@cloudflare/cli";
+import { cancel, endSection, log, newline } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim, yellow } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import { UserError } from "../../errors";
 import { DeploymentsService } from "../client";
 import { wrap } from "../helpers/wrap";
 import { idToLocationName } from "../locations";
 import { statusToColored } from "./util";
-import type { Placement, State } from "../client";
+import type {
+	DeploymentPlacementState,
+	Placement,
+	PlacementStatusHealth,
+} from "../client";
 import type { DeploymentV2 } from "../client/models/DeploymentV2";
-import type { Status } from "../enums";
 
 function ipv6(placement: Placement | undefined) {
 	if (!placement) {
@@ -52,12 +56,14 @@ function version(deployment: DeploymentV2) {
 
 function health(placement?: Placement) {
 	if (!placement) {
-		return statusToColored("placing");
+		return statusToColored();
 	}
+
 	if (!placement.status["health"]) {
-		return statusToColored("placing");
+		return statusToColored();
 	}
-	return statusToColored(placement.status["health"] as Status);
+
+	return statusToColored(placement.status["health"] as PlacementStatusHealth);
 }
 
 /**
@@ -72,6 +78,7 @@ export async function loadDeployments(
 		image?: string;
 		state?: string;
 		ipv4?: string;
+		labels?: string[];
 	}
 ): Promise<DeploymentV2[]> {
 	const { start, stop } = spinner();
@@ -81,18 +88,18 @@ export async function loadDeployments(
 			undefined,
 			deploymentsParams?.location,
 			deploymentsParams?.image,
-			deploymentsParams?.state as State,
-			deploymentsParams?.state
+			deploymentsParams?.state as DeploymentPlacementState | undefined,
+			deploymentsParams?.state,
+			deploymentsParams?.labels
 		)
 	);
 
 	stop();
 	if (err) {
-		crash(
+		throw new UserError(
 			"There has been an error while loading your deployments: \n " +
 				err.message
 		);
-		return [];
 	}
 
 	const deployments = deploymentsResponse.filter((d) =>
@@ -167,11 +174,10 @@ export async function pickDeployment(deploymentIdPrefix?: string) {
 }
 
 export function logDeployment(deployment: DeploymentV2) {
+	log(`${brandColor("image")} ${dim(deployment.image)}`);
 	log(
-		`${brandColor("Image")} ${dim(deployment.image)}\n${brandColor(
-			"Location"
-		)} ${dim(idToLocationName(deployment.location.name))}\n${brandColor(
-			"Version"
-		)} ${dim(`${deployment.version}`)}\n`
+		`${brandColor("location")} ${dim(idToLocationName(deployment.location.name))}`
 	);
+	log(`${brandColor("version")} ${dim(`${deployment.version}`)}`);
+	newline();
 }

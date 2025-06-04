@@ -1,18 +1,20 @@
+import * as fs from "node:fs";
+import { ReadableStream } from "node:stream/web";
 import { Miniflare } from "miniflare";
-import { fetchResult } from "../cfetch";
+import prettyBytes from "pretty-bytes";
+import { fetchGraphqlResult, fetchResult } from "../cfetch";
 import { fetchR2Objects } from "../cfetch/internal";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
-import { buildPersistOptions } from "../dev/miniflare";
+import { getDefaultPersistRoot } from "../dev/miniflare";
 import { UserError } from "../errors";
 import { logger } from "../logger";
-import { getQueue } from "../queues/client";
+import { getQueue, getQueueById } from "../queues/client";
 import type { Config } from "../config";
-import type { getQueueById } from "../queues/client";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ApiCredentials } from "../user";
 import type { R2Bucket } from "@cloudflare/workers-types/experimental";
 import type { ReplaceWorkersTypes } from "miniflare";
 import type { Readable } from "node:stream";
-import type { ReadableStream } from "node:stream/web";
 import type { HeadersInit } from "undici";
 
 /**
@@ -21,12 +23,36 @@ import type { HeadersInit } from "undici";
 export interface R2BucketInfo {
 	name: string;
 	creation_date: string;
+	location?: string;
+	storage_class?: string;
+}
+
+export interface R2BucketMetrics {
+	max?: {
+		objectCount?: number;
+		payloadSize?: number;
+		metadataSize?: number;
+	};
+	dimensions: {
+		datetime?: string;
+	};
+}
+
+export interface R2BucketMetricsGraphQLResponse {
+	data: {
+		viewer: {
+			accounts: {
+				r2StorageAdaptiveGroups?: R2BucketMetrics[];
+			}[];
+		};
+	};
 }
 
 /**
  * Fetch a list of all the buckets under the given `accountId`.
  */
 export async function listR2Buckets(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	jurisdiction?: string
 ): Promise<R2BucketInfo[]> {
@@ -36,8 +62,119 @@ export async function listR2Buckets(
 	}
 	const results = await fetchResult<{
 		buckets: R2BucketInfo[];
-	}>(`/accounts/${accountId}/r2/buckets`, { headers });
+	}>(complianceConfig, `/accounts/${accountId}/r2/buckets`, { headers });
 	return results.buckets;
+}
+
+export function tablefromR2BucketsListResponse(buckets: R2BucketInfo[]): {
+	name: string;
+	creation_date: string;
+}[] {
+	const rows = [];
+	for (const bucket of buckets) {
+		rows.push({
+			name: bucket.name,
+			creation_date: bucket.creation_date,
+		});
+	}
+	return rows;
+}
+
+export async function getR2Bucket(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<R2BucketInfo> {
+	const headers: HeadersInit = {};
+	if (jurisdiction !== undefined) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+	const result = await fetchResult<R2BucketInfo>(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucketName}`,
+		{
+			method: "GET",
+			headers,
+		}
+	);
+	return result;
+}
+
+export async function getR2BucketMetrics(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<{ objectCount: number; totalSize: string }> {
+	const today = new Date();
+	const yesterday = new Date(new Date(today).setDate(today.getDate() - 1));
+
+	let fullBucketName = bucketName;
+	if (jurisdiction) {
+		fullBucketName = `${jurisdiction}_${bucketName}`;
+	}
+
+	const storageMetricsQuery = `
+    query getR2StorageMetrics($accountTag: String, $filter: R2StorageAdaptiveGroupsFilter_InputObject) {
+      viewer {
+        accounts(filter: { accountTag: $accountTag }) {
+          r2StorageAdaptiveGroups(
+            limit: 1
+            filter: $filter
+            orderBy: [datetime_DESC]
+          ) {
+            max {
+              objectCount
+              payloadSize
+              metadataSize
+            }
+            dimensions {
+              datetime
+            }
+          }
+        }
+      }
+    }
+    `;
+
+	const variables = {
+		accountTag: accountId,
+		filter: {
+			datetime_geq: yesterday.toISOString(),
+			datetime_leq: today.toISOString(),
+			bucketName: fullBucketName,
+		},
+	};
+	const storageMetricsResult =
+		await fetchGraphqlResult<R2BucketMetricsGraphQLResponse>(complianceConfig, {
+			method: "POST",
+			body: JSON.stringify({
+				query: storageMetricsQuery,
+				operationName: "getR2StorageMetrics",
+				variables,
+			}),
+			headers: {
+				"Content-Type": "application/json",
+			},
+		});
+
+	if (storageMetricsResult) {
+		const metricsData =
+			storageMetricsResult.data?.viewer?.accounts[0]
+				?.r2StorageAdaptiveGroups?.[0];
+		if (metricsData && metricsData.max) {
+			const objectCount = metricsData.max.objectCount || 0;
+			const totalSize =
+				(metricsData.max.payloadSize || 0) +
+				(metricsData.max.metadataSize || 0);
+			return {
+				objectCount,
+				totalSize: prettyBytes(totalSize),
+			};
+		}
+	}
+	return { objectCount: 0, totalSize: "0 B" };
 }
 
 /**
@@ -47,8 +184,10 @@ export async function listR2Buckets(
  * A bucket must be explicitly deleted to be replaced.
  */
 export async function createR2Bucket(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
+	location?: string,
 	jurisdiction?: string,
 	storageClass?: string
 ): Promise<void> {
@@ -56,14 +195,19 @@ export async function createR2Bucket(
 	if (jurisdiction !== undefined) {
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
-	return await fetchResult<void>(`/accounts/${accountId}/r2/buckets`, {
-		method: "POST",
-		body: JSON.stringify({
-			name: bucketName,
-			...(storageClass !== undefined && { storageClass }),
-		}),
-		headers,
-	});
+	return await fetchResult<void>(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets`,
+		{
+			method: "POST",
+			body: JSON.stringify({
+				name: bucketName,
+				...(storageClass !== undefined && { storageClass }),
+				...(location !== undefined && { locationHint: location }),
+			}),
+			headers,
+		}
+	);
 }
 
 /**
@@ -71,6 +215,7 @@ export async function createR2Bucket(
  * within the account given by `accountId`.
  */
 export async function updateR2BucketStorageClass(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	storageClass: string,
@@ -82,6 +227,7 @@ export async function updateR2BucketStorageClass(
 	}
 	headers["cf-r2-storage-class"] = storageClass;
 	return await fetchResult<void>(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}`,
 		{
 			method: "PATCH",
@@ -94,6 +240,7 @@ export async function updateR2BucketStorageClass(
  * Delete a bucket with the given name
  */
 export async function deleteR2Bucket(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	jurisdiction?: string
@@ -103,6 +250,7 @@ export async function deleteR2Bucket(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 	return await fetchResult<void>(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}`,
 		{ method: "DELETE", headers }
 	);
@@ -112,20 +260,28 @@ export function bucketAndKeyFromObjectPath(objectPath = ""): {
 	bucket: string;
 	key: string;
 } {
-	const match = /^([^/]+)\/(.*)/.exec(objectPath);
-	if (match === null) {
+	// Path format is `<bucket>/<key>`
+	const match = /^(?<bucket>[^/]+)\/(?<key>.*)/.exec(objectPath);
+	if (match === null || !match.groups) {
 		throw new UserError(
 			`The object path must be in the form of {bucket}/{key} you provided ${objectPath}`
 		);
 	}
+	const { bucket, key } = match.groups;
+	if (!isValidR2BucketName(bucket)) {
+		throw new UserError(
+			`The bucket name "${bucket}" is invalid. ${bucketFormatMessage}`
+		);
+	}
 
-	return { bucket: match[1], key: match[2] };
+	return { bucket, key };
 }
 
 /**
  * Downloads an object
  */
 export async function getR2Object(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	objectName: string,
@@ -136,6 +292,7 @@ export async function getR2Object(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 	const response = await fetchR2Objects(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}/objects/${objectName}`,
 		{
 			method: "GET",
@@ -150,6 +307,7 @@ export async function getR2Object(
  * Uploads an object
  */
 export async function putR2Object(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	objectName: string,
@@ -183,6 +341,7 @@ export async function putR2Object(
 	}
 
 	const result = await fetchR2Objects(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}/objects/${objectName}`,
 		{
 			body: object,
@@ -199,6 +358,7 @@ export async function putR2Object(
  * Delete an Object
  */
 export async function deleteR2Object(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	objectName: string,
@@ -209,6 +369,7 @@ export async function deleteR2Object(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 	await fetchR2Objects(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}/objects/${objectName}`,
 		{ method: "DELETE", headers }
 	);
@@ -216,15 +377,15 @@ export async function deleteR2Object(
 
 export async function usingLocalBucket<T>(
 	persistTo: string | undefined,
-	configPath: string | undefined,
+	config: Config,
 	bucketName: string,
 	closure: (
 		namespace: ReplaceWorkersTypes<R2Bucket>,
 		mf: Miniflare
 	) => Promise<T>
 ): Promise<T> {
-	const persist = getLocalPersistencePath(persistTo, configPath);
-	const persistOptions = buildPersistOptions(persist);
+	const persist = getLocalPersistencePath(persistTo, config);
+	const defaultPersistRoot = getDefaultPersistRoot(persist);
 	const mf = new Miniflare({
 		modules: true,
 		// TODO(soon): import `reduceError()` from `miniflare:shared`
@@ -256,7 +417,7 @@ export async function usingLocalBucket<T>(
 				}
 			}
 		}`,
-		...persistOptions,
+		defaultPersistRoot,
 		r2Buckets: { BUCKET: bucketName },
 	});
 	const bucket = await mf.getR2Bucket("BUCKET");
@@ -283,6 +444,7 @@ type SippyConfig = {
  * Retreive the sippy upstream bucket for the bucket with the given name
  */
 export async function getR2Sippy(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	jurisdiction?: string
@@ -292,6 +454,7 @@ export async function getR2Sippy(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 	return await fetchResult(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}/sippy`,
 		{ method: "GET", headers }
 	);
@@ -301,6 +464,7 @@ export async function getR2Sippy(
  * Disable sippy on the bucket with the given name
  */
 export async function deleteR2Sippy(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	jurisdiction?: string
@@ -310,6 +474,7 @@ export async function deleteR2Sippy(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 	return await fetchResult(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}/sippy`,
 		{ method: "DELETE", headers }
 	);
@@ -341,6 +506,7 @@ export type SippyPutParams = {
  * Enable sippy on the bucket with the given name
  */
 export async function putR2Sippy(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	bucketName: string,
 	params: SippyPutParams,
@@ -353,16 +519,82 @@ export async function putR2Sippy(
 		headers["cf-r2-jurisdiction"] = jurisdiction;
 	}
 	return await fetchResult(
+		complianceConfig,
 		`/accounts/${accountId}/r2/buckets/${bucketName}/sippy`,
 		{ method: "PUT", body: JSON.stringify(params), headers }
 	);
 }
 
-export const R2EventableOperations = [
+type R2Warehouse = {
+	id: string;
+	name: string;
+	bucket: string;
+	status: "active" | "inactive";
+};
+
+/**
+ * Retreive the warehouse for the bucket with the given name
+ */
+export async function getR2Catalog(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string
+): Promise<R2Warehouse> {
+	return await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2-catalog/${bucketName}`,
+		{
+			method: "GET",
+		}
+	);
+}
+
+type R2WarehouseEnableResponse = {
+	id: string;
+	name: string;
+};
+
+/**
+ * Activate the R2 bucket as an Iceberg warehouse
+ */
+export async function enableR2Catalog(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string
+): Promise<R2WarehouseEnableResponse> {
+	return await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2-catalog/${bucketName}/enable`,
+		{
+			method: "POST",
+		}
+	);
+}
+
+/**
+ * Deactivate the R2 bucket as an Iceberg warehouse
+ */
+export async function disableR2Catalog(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string
+): Promise<R2WarehouseEnableResponse> {
+	return await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2-catalog/${bucketName}/disable`,
+		{
+			method: "POST",
+		}
+	);
+}
+
+const R2EventableOperations = [
 	"PutObject",
 	"DeleteObject",
 	"CompleteMultipartUpload",
+	"AbortMultipartUpload",
 	"CopyObject",
+	"LifecycleDeletion",
 ] as const;
 export type R2EventableOperation = (typeof R2EventableOperations)[number];
 
@@ -371,29 +603,40 @@ export const actionsForEventCategories: Record<
 	R2EventableOperation[]
 > = {
 	"object-create": ["PutObject", "CompleteMultipartUpload", "CopyObject"],
-	"object-delete": ["DeleteObject"],
+	"object-delete": ["DeleteObject", "LifecycleDeletion"],
 };
 export type R2EventType = keyof typeof actionsForEventCategories;
-export const eventCategoryByAction: Record<R2EventableOperation, R2EventType> =
-	{
-		PutObject: "object-create",
-		CompleteMultipartUpload: "object-create",
-		CopyObject: "object-create",
-		DeleteObject: "object-delete",
-	};
 type NotificationRule = {
 	prefix?: string;
 	suffix?: string;
 	actions: R2EventableOperation[];
+	description?: string;
 };
-export type DetailID = string;
+type GetNotificationRule = {
+	ruleId: string;
+	createdAt?: string;
+	prefix?: string;
+	suffix?: string;
+	actions: R2EventableOperation[];
+};
+export type GetQueueDetail = {
+	queueId: string;
+	queueName: string;
+	rules: GetNotificationRule[];
+};
+export type GetNotificationConfigResponse = {
+	bucketName: string;
+	queues: GetQueueDetail[];
+};
+type DetailID = string;
 type QueueID = string;
 type BucketName = string;
-export type NotificationDetail = Record<
+type NotificationDetail = Record<
 	DetailID, // This is the detail ID that identifies this config
 	{ queue: QueueID; rules: NotificationRule[] }
 >;
-export type GetNotificationConfigResponse = Record<
+// Event Notifications API Backwards Compatibility
+export type GetNotificationConfigResponseOld = Record<
 	BucketName,
 	NotificationDetail
 >;
@@ -406,8 +649,14 @@ export type PutNotificationRequestBody = {
 	rules: NotificationRule[];
 };
 
+// This type captures the shape of the data expected by EWC API.
+export type DeleteNotificationRequestBody = {
+	ruleIds?: string[];
+};
+
 export function eventNotificationHeaders(
-	apiCredentials: ApiCredentials
+	apiCredentials: ApiCredentials,
+	jurisdiction: string
 ): HeadersInit {
 	const headers: HeadersInit = {
 		"Content-Type": "application/json",
@@ -419,77 +668,94 @@ export function eventNotificationHeaders(
 		headers["X-Auth-Key"] = apiCredentials.authKey;
 		headers["X-Auth-Email"] = apiCredentials.authEmail;
 	}
+	if (jurisdiction !== "") {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
 	return headers;
 }
 
-// Reformat the per-bucket get-notification response into a format
-// suitable for `logger.table()`
-export async function tableFromNotificationGetResponse(
-	config: Pick<Config, "account_id">,
-	response: GetNotificationConfigResponse[BucketName],
-	// We're injecting this parameter because it makes testing easier,
-	// relative to mocking.
-	queueIdentifier: typeof getQueueById
-): Promise<
-	{
-		queue_name: string;
-		prefix: string;
-		suffix: string;
-		event_type: string;
-	}[]
-> {
-	const reducer = async ([_, { queue, rules }]: [
-		DetailID,
-		NotificationDetail[DetailID],
-	]) => {
-		const queueResp = await queueIdentifier(config, queue);
-		const rows = [];
-		for (const { prefix = "", suffix = "", actions } of rules) {
+export function tableFromNotificationGetResponse(
+	response: GetNotificationConfigResponse
+): {
+	rule_id: string;
+	created_at: string;
+	queue_name: string;
+	prefix: string;
+	suffix: string;
+	event_type: string;
+}[] {
+	const rows = [];
+	for (const entry of response.queues) {
+		for (const {
+			prefix = "",
+			suffix = "",
+			actions,
+			ruleId,
+			createdAt = "",
+		} of entry.rules) {
 			rows.push({
-				queue_name: queueResp.queue_name,
-				prefix,
-				suffix,
-				event_type: Array.from(
-					actions.reduce((acc, action) => {
-						acc.add(eventCategoryByAction[action]);
-						return acc;
-					}, new Set<R2EventType>())
-				).join(","),
+				rule_id: ruleId,
+				created_at: createdAt,
+				queue_name: entry.queueName,
+				prefix: prefix || "(all prefixes)",
+				suffix: suffix || "(all suffixes)",
+				event_type: actions.join(","),
 			});
 		}
-		return rows;
-	};
-
-	let tableOutput: {
-		queue_name: string;
-		prefix: string;
-		suffix: string;
-		event_type: string;
-	}[] = [];
-	for (const entry of Object.entries(response)) {
-		const result = await reducer(entry);
-		tableOutput = tableOutput.concat(...result);
 	}
-	return tableOutput;
+	return rows;
 }
 
-export async function getEventNotificationConfig(
+export async function listEventNotificationConfig(
+	config: Config,
 	apiCredentials: ApiCredentials,
 	accountId: string,
-	bucketName: string
+	bucketName: string,
+	jurisdiction: string
 ): Promise<GetNotificationConfigResponse> {
-	const headers = eventNotificationHeaders(apiCredentials);
-	logger.log(`Fetching notification configuration for bucket ${bucketName}...`);
-	return await fetchResult<GetNotificationConfigResponse>(
+	const headers = eventNotificationHeaders(apiCredentials, jurisdiction);
+	logger.log(`Fetching notification rules for bucket ${bucketName}...`);
+	const res = await fetchResult<GetNotificationConfigResponse>(
+		config,
 		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration`,
 		{ method: "GET", headers }
 	);
+	if ("bucketName" in res && "queues" in res) {
+		return res;
+	}
+	// API response doesn't match new format. Trying the old format.
+	// Convert the old style payload to the new
+	// We can assume that the old payload has a single bucket entry
+	const oldResult = res as GetNotificationConfigResponseOld;
+	const [oldBucketName, oldDetail] = Object.entries(oldResult)[0];
+	const newResult: GetNotificationConfigResponse = {
+		bucketName: oldBucketName,
+		queues: await Promise.all(
+			Object.values(oldDetail).map(async (oldQueue) => {
+				const newQueue: GetQueueDetail = {
+					queueId: oldQueue.queue,
+					queueName: (await getQueueById(config, accountId, oldQueue.queue))
+						.queue_name,
+					rules: oldQueue.rules.map((oldRule) => {
+						const newRule: GetNotificationRule = {
+							ruleId: "",
+							prefix: oldRule.prefix,
+							suffix: oldRule.suffix,
+							actions: oldRule.actions,
+						};
+						return newRule;
+					}),
+				};
+				return newQueue;
+			})
+		),
+	};
+	return newResult;
 }
 
 /** Construct & transmit notification configuration to EWC.
  *
- * On success, receive HTTP 200 response with a body like:
- * { event_notification_detail_id: string }
+ * On success, receive HTTP 200 response with no body
  *
  * Possible status codes on failure:
  * - 400 Bad Request - Either:
@@ -502,22 +768,29 @@ export async function putEventNotificationConfig(
 	apiCredentials: ApiCredentials,
 	accountId: string,
 	bucketName: string,
+	jurisdiction: string,
 	queueName: string,
 	eventTypes: R2EventType[],
 	prefix?: string,
-	suffix?: string
-): Promise<{ event_notification_detail_id: string }> {
+	suffix?: string,
+	description?: string
+): Promise<void> {
 	const queue = await getQueue(config, queueName);
-	const headers = eventNotificationHeaders(apiCredentials);
+	const headers = eventNotificationHeaders(apiCredentials, jurisdiction);
 	let actions: R2EventableOperation[] = [];
 
 	for (const et of eventTypes) {
 		actions = actions.concat(actionsForEventCategories[et]);
 	}
 
-	const body: PutNotificationRequestBody = {
-		rules: [{ prefix, suffix, actions }],
-	};
+	const body: PutNotificationRequestBody =
+		description === undefined
+			? {
+					rules: [{ prefix, suffix, actions }],
+				}
+			: {
+					rules: [{ prefix, suffix, actions, description }],
+				};
 	const ruleFor = eventTypes.map((et) =>
 		et === "object-create" ? "creation" : "deletion"
 	);
@@ -526,7 +799,8 @@ export async function putEventNotificationConfig(
 			" and "
 		)} (${actions.join(",")})`
 	);
-	return await fetchResult<{ event_notification_detail_id: string }>(
+	return await fetchResult<void>(
+		config,
 		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
 		{ method: "PUT", body: JSON.stringify(body), headers }
 	);
@@ -537,22 +811,660 @@ export async function deleteEventNotificationConfig(
 	apiCredentials: ApiCredentials,
 	accountId: string,
 	bucketName: string,
-	queueName: string
+	jurisdiction: string,
+	queueName: string,
+	ruleId: string | undefined
 ): Promise<null> {
 	const queue = await getQueue(config, queueName);
-	const headers = eventNotificationHeaders(apiCredentials);
-	logger.log(
-		`Disabling event notifications for "${bucketName}" to queue ${queueName}...`
+	const headers = eventNotificationHeaders(apiCredentials, jurisdiction);
+	if (ruleId !== undefined) {
+		logger.log(`Deleting event notifications rule "${ruleId}"...`);
+		const body: DeleteNotificationRequestBody =
+			ruleId !== undefined
+				? {
+						ruleIds: [ruleId],
+					}
+				: {};
+
+		return await fetchResult<null>(
+			config,
+			`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
+			{ method: "DELETE", body: JSON.stringify(body), headers }
+		);
+	} else {
+		logger.log(
+			`Deleting event notification rules associated with queue ${queueName}...`
+		);
+		return await fetchResult<null>(
+			config,
+			`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
+			{ method: "DELETE", headers }
+		);
+	}
+}
+
+export interface CustomDomainConfig {
+	domain: string;
+	minTLS?: string;
+	zoneId?: string;
+}
+
+export interface CustomDomainInfo {
+	domain: string;
+	enabled: boolean;
+	status: {
+		ownership: string;
+		ssl: string;
+	};
+	minTLS: string;
+	zoneId: string;
+	zoneName: string;
+}
+
+export async function getCustomDomain(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	domainName: string,
+	jurisdiction?: string
+): Promise<CustomDomainInfo> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	const result = await fetchResult<CustomDomainInfo>(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/custom/${domainName}`,
+		{
+			method: "GET",
+			headers,
+		}
 	);
-	return await fetchResult<null>(
-		`/accounts/${accountId}/event_notifications/r2/${bucketName}/configuration/queues/${queue.queue_id}`,
-		{ method: "DELETE", headers }
+
+	return result;
+}
+
+export async function attachCustomDomainToBucket(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	domainConfig: CustomDomainConfig,
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/custom`,
+		{
+			method: "POST",
+			headers,
+			body: JSON.stringify({
+				...domainConfig,
+				enabled: true,
+			}),
+		}
+	);
+}
+
+export async function removeCustomDomainFromBucket(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	domainName: string,
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/custom/${domainName}`,
+		{
+			method: "DELETE",
+			headers,
+		}
+	);
+}
+
+export function tableFromCustomDomainListResponse(
+	domains: CustomDomainInfo[]
+): {
+	domain: string;
+	enabled: string;
+	ownership_status: string;
+	ssl_status: string;
+	min_tls_version: string;
+	zone_id: string;
+	zone_name: string;
+}[] {
+	const rows = [];
+	for (const domainInfo of domains) {
+		rows.push({
+			domain: domainInfo.domain,
+			enabled: domainInfo.enabled ? "Yes" : "No",
+			ownership_status: domainInfo.status.ownership || "(unknown)",
+			ssl_status: domainInfo.status.ssl || "(unknown)",
+			min_tls_version: domainInfo.minTLS || "1.0",
+			zone_id: domainInfo.zoneId || "(none)",
+			zone_name: domainInfo.zoneName || "(none)",
+		});
+	}
+	return rows;
+}
+
+export async function listCustomDomainsOfBucket(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<CustomDomainInfo[]> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	const result = await fetchResult<{
+		domains: CustomDomainInfo[];
+	}>(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/custom`,
+		{
+			method: "GET",
+			headers,
+		}
+	);
+
+	return result.domains;
+}
+
+export async function configureCustomDomainSettings(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	domainName: string,
+	domainConfig: CustomDomainConfig,
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/custom/${domainName}`,
+		{
+			method: "PUT",
+			headers,
+			body: JSON.stringify(domainConfig),
+		}
+	);
+}
+
+export interface R2DevDomainInfo {
+	bucketId: string;
+	domain: string;
+	enabled: boolean;
+}
+
+export async function getR2DevDomain(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<R2DevDomainInfo> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	const result = await fetchResult<R2DevDomainInfo>(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/managed`,
+		{
+			method: "GET",
+			headers,
+		}
+	);
+	return result;
+}
+
+export async function updateR2DevDomain(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	enabled: boolean,
+	jurisdiction?: string
+): Promise<R2DevDomainInfo> {
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	const result = await fetchResult<R2DevDomainInfo>(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucketName}/domains/managed`,
+		{
+			method: "PUT",
+			headers,
+			body: JSON.stringify({ enabled }),
+		}
+	);
+	return result;
+}
+
+export interface LifecycleCondition {
+	type: "Age" | "Date";
+	maxAge?: number;
+	date?: string;
+}
+
+export interface LifecycleRule {
+	id: string;
+	enabled: boolean;
+	conditions: {
+		prefix?: string;
+	};
+	deleteObjectsTransition?: {
+		condition: LifecycleCondition;
+	};
+	storageClassTransitions?: Array<{
+		condition: LifecycleCondition;
+		storageClass: "InfrequentAccess";
+	}>;
+	abortMultipartUploadsTransition?: {
+		condition: LifecycleCondition;
+	};
+}
+
+function formatCondition(condition: LifecycleCondition): string {
+	if (condition.type === "Age" && typeof condition.maxAge === "number") {
+		const days = condition.maxAge / 86400; // Convert seconds to days
+		return `after ${days} days`;
+	} else if (condition.type === "Date" && condition.date) {
+		const date = new Date(condition.date);
+		const displayDate = date.toISOString().split("T")[0];
+		return `on ${displayDate}`;
+	}
+
+	return "";
+}
+
+export function tableFromLifecycleRulesResponse(rules: LifecycleRule[]): {
+	name: string;
+	enabled: string;
+	prefix: string;
+	action: string;
+}[] {
+	const rows = [];
+	for (const rule of rules) {
+		const actions = [];
+
+		if (rule.deleteObjectsTransition) {
+			const action = "Expire objects";
+			const condition = formatCondition(rule.deleteObjectsTransition.condition);
+			actions.push(`${action} ${condition}`);
+		}
+		if (
+			rule.storageClassTransitions &&
+			rule.storageClassTransitions.length > 0
+		) {
+			for (const transition of rule.storageClassTransitions) {
+				const action = "Transition to Infrequent Access";
+				const condition = formatCondition(transition.condition);
+				actions.push(`${action} ${condition}`);
+			}
+		}
+		if (rule.abortMultipartUploadsTransition) {
+			const action = "Abort incomplete multipart uploads";
+			const condition = formatCondition(
+				rule.abortMultipartUploadsTransition.condition
+			);
+			actions.push(`${action} ${condition}`);
+		}
+
+		rows.push({
+			name: rule.id,
+			enabled: rule.enabled ? "Yes" : "No",
+			prefix: rule.conditions.prefix || "(all prefixes)",
+			action: actions.join(", ") || "(none)",
+		});
+	}
+	return rows;
+}
+
+export async function getLifecycleRules(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucket: string,
+	jurisdiction?: string
+): Promise<LifecycleRule[]> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	const result = await fetchResult<{ rules: LifecycleRule[] }>(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucket}/lifecycle`,
+		{
+			method: "GET",
+			headers,
+		}
+	);
+	return result.rules;
+}
+
+export async function putLifecycleRules(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucket: string,
+	rules: LifecycleRule[],
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucket}/lifecycle`,
+		{
+			method: "PUT",
+			headers,
+			body: JSON.stringify({ rules: rules }),
+		}
+	);
+}
+
+// bucket lock rules
+
+export interface BucketLockRule {
+	id: string;
+	enabled: boolean;
+	prefix?: string;
+	condition: BucketLockRuleCondition;
+}
+
+export interface BucketLockRuleCondition {
+	type: "Age" | "Date" | "Indefinite";
+	maxAgeSeconds?: number;
+	date?: string;
+}
+
+export function tableFromBucketLockRulesResponse(rules: BucketLockRule[]): {
+	name: string;
+	enabled: string;
+	prefix: string;
+	condition: string;
+}[] {
+	const rows = [];
+	for (const rule of rules) {
+		const conditionString = formatLockCondition(rule.condition);
+		rows.push({
+			name: rule.id,
+			enabled: rule.enabled ? "Yes" : "No",
+			prefix: rule.prefix || "(all prefixes)",
+			condition: conditionString,
+		});
+	}
+	return rows;
+}
+
+function formatLockCondition(condition: BucketLockRuleCondition): string {
+	if (condition.type === "Age" && typeof condition.maxAgeSeconds === "number") {
+		const days = condition.maxAgeSeconds / 86400; // Convert seconds to days
+		if (days == 1) {
+			return `after ${days} day`;
+		} else {
+			return `after ${days} days`;
+		}
+	} else if (condition.type === "Date" && condition.date) {
+		const date = new Date(condition.date);
+		const displayDate = date.toISOString().split("T")[0];
+		return `on ${displayDate}`;
+	}
+
+	return `indefinitely`;
+}
+
+export async function getBucketLockRules(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucket: string,
+	jurisdiction?: string
+): Promise<BucketLockRule[]> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	const result = await fetchResult<{ rules: BucketLockRule[] }>(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucket}/lock`,
+		{
+			method: "GET",
+			headers,
+		}
+	);
+	return result.rules;
+}
+
+export async function putBucketLockRules(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucket: string,
+	rules: BucketLockRule[],
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucket}/lock`,
+		{
+			method: "PUT",
+			headers,
+			body: JSON.stringify({ rules: rules }),
+		}
+	);
+}
+
+// bucket lock rules
+
+export function formatActionDescription(action: string): string {
+	switch (action) {
+		case "expire":
+			return "expire objects";
+		case "transition":
+			return "transition to Infrequent Access storage class";
+		case "abort-multipart":
+			return "abort incomplete multipart uploads";
+		default:
+			return action;
+	}
+}
+
+export function isValidDate(dateString: string): boolean {
+	const regex = /^\d{4}-\d{2}-\d{2}$/;
+	if (!regex.test(dateString)) {
+		return false;
+	}
+	const date = new Date(`${dateString}T00:00:00.000Z`);
+	const timestamp = date.getTime();
+	if (isNaN(timestamp)) {
+		return false;
+	}
+	const [year, month, day] = dateString.split("-").map(Number);
+	return (
+		date.getUTCFullYear() === year &&
+		date.getUTCMonth() + 1 === month &&
+		date.getUTCDate() === day
+	);
+}
+
+export function isNonNegativeNumber(str: string): boolean {
+	if (str === "") {
+		return false;
+	}
+	const num = Number(str);
+	return num >= 0;
+}
+
+export interface CORSRule {
+	allowed?: {
+		origins?: string[];
+		methods?: string[];
+		headers?: string[];
+	};
+	exposeHeaders?: string[];
+	maxAgeSeconds?: number;
+}
+
+export async function getCORSPolicy(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<CORSRule[]> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	const result = await fetchResult<{ rules: CORSRule[] }>(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucketName}/cors`,
+		{
+			method: "GET",
+			headers,
+		}
+	);
+	return result.rules;
+}
+
+export function tableFromCORSPolicyResponse(rules: CORSRule[]): {
+	allowed_origins: string;
+	allowed_methods: string;
+	allowed_headers: string;
+	exposed_headers: string;
+	max_age_seconds: string;
+}[] {
+	const rows = [];
+	for (const rule of rules) {
+		rows.push({
+			allowed_origins: rule.allowed?.origins?.join(", ") || "(no origins)",
+			allowed_methods: rule.allowed?.methods?.join(", ") || "(no methods)",
+			allowed_headers: rule.allowed?.headers?.join(", ") || "(no headers)",
+			exposed_headers: rule.exposeHeaders?.join(", ") || "(no exposed headers)",
+			max_age_seconds: rule.maxAgeSeconds?.toString() || "(0 seconds)",
+		});
+	}
+	return rows;
+}
+
+export async function putCORSPolicy(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	rules: CORSRule[],
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {
+		"Content-Type": "application/json",
+	};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucketName}/cors`,
+		{
+			method: "PUT",
+			headers,
+			body: JSON.stringify({ rules: rules }),
+		}
+	);
+}
+
+export async function deleteCORSPolicy(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	jurisdiction?: string
+): Promise<void> {
+	const headers: HeadersInit = {};
+	if (jurisdiction) {
+		headers["cf-r2-jurisdiction"] = jurisdiction;
+	}
+
+	await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2/buckets/${bucketName}/cors`,
+		{
+			method: "DELETE",
+			headers,
+		}
 	);
 }
 
 /**
- * R2 bucket names must only contain alphanumeric and - characters.
+ * R2 bucket names must:
+ * - contain lower case letters, numbers, and `-`
+ * - start and end with with a lower case letter or number
+ * - be between 6 and 63 characters long
+ *
+ * See https://developers.cloudflare.com/r2/buckets/create-buckets/#bucket-level-operations
  */
 export function isValidR2BucketName(name: string | undefined): name is string {
-	return typeof name === "string" && /^[a-zA-Z][a-zA-Z0-9-]*$/.test(name);
+	return (
+		typeof name === "string" && /^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(name)
+	);
+}
+
+export const bucketFormatMessage = `Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.`;
+
+const CHUNK_SIZE = 1024;
+export async function createFileReadableStream(filePath: string) {
+	// Based off https://streams.spec.whatwg.org/#example-rs-pull
+	const handle = await fs.promises.open(filePath, "r");
+	let position = 0;
+	return new ReadableStream({
+		async pull(controller) {
+			const buffer = new Uint8Array(CHUNK_SIZE);
+			const { bytesRead } = await handle.read(buffer, 0, CHUNK_SIZE, position);
+			if (bytesRead === 0) {
+				await handle.close();
+				controller.close();
+			} else {
+				position += bytesRead;
+				controller.enqueue(buffer.subarray(0, bytesRead));
+			}
+		},
+		cancel() {
+			return handle.close();
+		},
+	});
 }

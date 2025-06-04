@@ -1,5 +1,6 @@
 import test from "ava";
 import { Miniflare, MiniflareOptions } from "miniflare";
+import type { Hyperdrive } from "@cloudflare/workers-types/experimental";
 
 test("fields match expected", async (t) => {
 	const connectionString = `postgresql://user:password@localhost:5432/database`;
@@ -34,6 +35,30 @@ test("fields match expected", async (t) => {
 	t.is(hyperdrive.port, 5432);
 });
 
+test("fields in binding proxy match expected", async (t) => {
+	const connectionString = "postgresql://user:password@localhost:5432/database";
+	const mf = new Miniflare({
+		modules: true,
+		script: "export default { fetch() {} }",
+		hyperdrives: {
+			HYPERDRIVE: connectionString,
+		},
+	});
+	t.teardown(() => mf.dispose());
+	const { HYPERDRIVE } = await mf.getBindings<{ HYPERDRIVE: Hyperdrive }>();
+	t.is(HYPERDRIVE.user, "user");
+	t.is(HYPERDRIVE.password, "password");
+	t.is(HYPERDRIVE.database, "database");
+	t.is(HYPERDRIVE.port, 5432);
+
+	// Important: the checks below differ from what the worker code would get inside workerd, this is necessary since getting the binding via `getBindings` implies that
+	//            the binding is going to be used inside node.js and not within workerd where the hyperdrive connection is actually set, so the values need need to remain
+	//            the exact same making the hyperdrive binding work as a simple no-op/passthrough (returning the workerd hyperdrive values wouldn't work as those would not
+	//            work/have any meaning in a node.js process)
+	t.is(HYPERDRIVE.connectionString, connectionString);
+	t.is(HYPERDRIVE.host, "localhost");
+});
+
 test("validates config", async (t) => {
 	const opts: MiniflareOptions = { modules: true, script: "" };
 	const mf = new Miniflare(opts);
@@ -49,7 +74,7 @@ test("validates config", async (t) => {
 		}),
 		{
 			message:
-				/Only PostgreSQL or PostgreSQL compatible databases are currently supported/,
+				/Only PostgreSQL-compatible or MySQL-compatible databases are currently supported./,
 		}
 	);
 

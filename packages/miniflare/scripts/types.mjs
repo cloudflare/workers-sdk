@@ -148,18 +148,6 @@ function bundleTypes() {
 
 	fs.copyFileSync(indexTsPath, indexDtsPath);
 	try {
-		fs.copyFileSync(
-			path.join(pkgRoot, "src", "runtime", "config", "workerd.capnp.d.ts"),
-			path.join(
-				pkgRoot,
-				"dist-types",
-				"src",
-				"runtime",
-				"config",
-				"workerd.capnp.d.ts"
-			)
-		);
-
 		const extractorCfg = ExtractorConfig.prepare({
 			projectFolderLookupToken: pkgRoot,
 			packageJsonFullPath: path.join(pkgRoot, "package.json"),

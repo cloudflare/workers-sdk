@@ -1,0 +1,25 @@
+name: Deploy Workers Shared Staging
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/workers-shared/**"
+
+jobs:
+  deploy-workers:
+    name: "Deploy Workers Shared Staging"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout repo"
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Deploy
+        run: pnpm deploy:staging
+        working-directory: packages/workers-shared
+        env:
+          WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN: ${{ secrets.WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN }}

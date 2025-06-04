@@ -1,31 +1,9 @@
-import { logRaw } from "@cloudflare/cli";
-import { runFrameworkGenerator } from "frameworks/index";
-import { detectPackageManager } from "helpers/packageManagers";
-import type { TemplateConfig } from "../../src/templates";
-import type { C3Context } from "types";
+import pages from "./pages/c3";
+import workers from "./workers/c3";
+import type { MultiPlatformTemplateConfig } from "../../src/templates";
 
-const { npm } = detectPackageManager();
-
-const generate = async (ctx: C3Context) => {
-	await runFrameworkGenerator(ctx, [ctx.project.name]);
-
-	logRaw("");
-};
-
-const config: TemplateConfig = {
-	configVersion: 1,
-	id: "react",
+const config: MultiPlatformTemplateConfig = {
 	displayName: "React",
-	platform: "pages",
-	generate,
-	transformPackageJson: async () => ({
-		scripts: {
-			deploy: `${npm} run build && wrangler pages deploy ./build`,
-			preview: `${npm} run build && wrangler pages dev ./build`,
-		},
-	}),
-	devScript: "dev",
-	deployScript: "deploy",
-	previewScript: "preview",
+	platformVariants: { pages, workers },
 };
 export default config;

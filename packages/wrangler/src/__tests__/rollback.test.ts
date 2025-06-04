@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE } from "../versions/rollback";
 import { collectCLIOutput } from "./helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
+import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw } from "./helpers/msw";
@@ -10,6 +11,7 @@ import { runWrangler } from "./helpers/run-wrangler";
 import type { ApiDeployment } from "../versions/types";
 
 describe("rollback", () => {
+	mockConsoleMethods();
 	const std = collectCLIOutput();
 	const { setIsTTY } = useMockIsTTY();
 	mockAccountId();
@@ -129,7 +131,7 @@ describe("rollback", () => {
 		});
 
 		await runWrangler(
-			"rollback --name script-name --version-id rollback-version --x-versions"
+			"rollback --name script-name --version-id rollback-version"
 		);
 
 		// Unable to test stdout as the output has weird whitespace. Causing lint to fail with "no-irregular-whitespace"
@@ -180,13 +182,13 @@ describe("rollback", () => {
 		// We will have an additional confirmation
 		mockConfirm({
 			text:
-				"The following secrets have changed since the target version was deployed. Please confirm you wish to continue with the rollback" +
+				`The following secrets have changed since version rollback-version was deployed. Please confirm you wish to continue with the rollback` +
 				"\n  * SECRET\n  * SECRET_TWO",
 			result: true,
 		});
 
 		await runWrangler(
-			"rollback --name script-name --version-id rollback-version --x-versions"
+			"rollback --name script-name --version-id rollback-version"
 		);
 
 		// Unable to test stdout as the output has weird whitespace. Causing lint to fail with "no-irregular-whitespace"
@@ -226,7 +228,7 @@ describe("rollback", () => {
 		mockPostDeployment(true);
 
 		await runWrangler(
-			"rollback --name script-name --version-id rollback-version --x-versions"
+			"rollback --name script-name --version-id rollback-version"
 		);
 
 		// Unable to test stdout as the output has weird whitespace. Causing lint to fail with "no-irregular-whitespace"

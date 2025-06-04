@@ -1,8 +1,16 @@
+import { inputPrompt } from "@cloudflare/cli/interactive";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
 import { version } from "../../package.json";
-import { showHelp } from "../help";
+import { reporter } from "../metrics";
+import {
+	getFrameworkMap,
+	getHelloWorldTemplateMap,
+	getNamesAndDescriptions,
+	getOtherTemplateMap,
+} from "../templates";
 import { C3_DEFAULTS, WRANGLER_DEFAULTS } from "./cli";
+import type { PromptConfig } from "@cloudflare/cli/interactive";
 import type { C3Args } from "types";
 import type { Argv } from "yargs";
 
@@ -18,7 +26,9 @@ export type ArgDefinition = {
 export type OptionDefinition = {
 	alias?: string;
 	footer?: string;
-	values?: AllowedValueDefinition[];
+	values?:
+		| AllowedValueDefinition[]
+		| ((args: Partial<C3Args> | null) => AllowedValueDefinition[]);
 } & ArgDefinition;
 
 export type AllowedValueDefinition = {
@@ -32,7 +42,7 @@ export type ArgumentsDefinition = {
 	options: OptionDefinition[];
 };
 
-const cliDefinition: ArgumentsDefinition = {
+export const cliDefinition: ArgumentsDefinition = {
 	intro: `
     The create-cloudflare cli (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
   `,
@@ -47,6 +57,34 @@ const cliDefinition: ArgumentsDefinition = {
 	],
 	options: [
 		{
+			name: "experimental",
+			hidden: true,
+			type: "boolean",
+			description: "Select from experimental frameworks.",
+			default: false,
+		},
+		{
+			name: "category",
+			type: "string",
+			description: `Specifies the kind of templates that should be created`,
+			values(args) {
+				const experimental = Boolean(args?.["experimental"]);
+				if (experimental) {
+					return [{ name: "web-framework", description: "Framework Starter" }];
+				} else {
+					return [
+						{ name: "hello-world", description: "Hello World Starter" },
+						{ name: "web-framework", description: "Framework Starter" },
+						{ name: "demo", description: "Application Starter" },
+						{
+							name: "remote-template",
+							description: "Template from a GitHub repo",
+						},
+					];
+				}
+			},
+		},
+		{
 			name: "type",
 			alias: "t",
 			type: "string",
@@ -54,78 +92,60 @@ const cliDefinition: ArgumentsDefinition = {
 			description: `
         When using a built-in template, specifies the type of application that should be created.
 
-        Note that "--type" and "--template" are mutually exclusive options. If both are provided, "--type" will be used.
+        Note that "--category" and "--template" are mutually exclusive options. If both are provided, "--category" will be used.
         `,
-			values: [
-				{
-					name: "web-framework",
-					description: "A website or web application.",
-				},
-				{
-					name: "hello-world",
-					description: "A basic “Hello World” Cloudflare Worker.",
-				},
-				{
-					name: "hello-world-durable-object",
-					description:
-						"A basic “Hello World” Cloudflare Worker with a Durable Worker.",
-				},
-				{
-					name: "common",
-					description:
-						"A Cloudflare Worker which implements a common example of routing/proxying functionalities.",
-				},
-				{
-					name: "scheduled",
-					description:
-						"A scheduled Cloudflare Worker (triggered via Cron Triggers).",
-				},
-				{
-					name: "queues",
-					description:
-						"A Cloudflare Worker which is both a consumer and produced of Queues.",
-				},
-				{
-					name: "openapi",
-					description: "A Worker implementing an OpenAPI REST endpoint.",
-				},
-				{
-					name: "pre-existing",
-					description:
-						"Fetch a Worker initialized from the Cloudflare dashboard.",
-				},
-			],
+			values(args) {
+				const experimental = Boolean(args?.["experimental"]);
+				return getNamesAndDescriptions({
+					...getHelloWorldTemplateMap({ experimental }),
+					...getOtherTemplateMap({ experimental }),
+				});
+			},
 		},
 		{
 			name: "framework",
 			alias: "f",
 			type: "string",
 			requiresArg: true,
-			description: `The type of framework to use to create a web application (when using this option "--type" is coerced to "web-framework")
+			description: `The type of framework to use to create a web application (when using this option "--category" is coerced to "web-framework")
 
       When using the --framework option, C3 will dispatch to the official creation tool used by the framework (ex. "create-remix" is used for Remix).
 
       You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
 
       npm create cloudflare -- --framework next -- --ts
-      pnpm create clouldfare --framework next -- --ts
+      pnpm create cloudflare --framework next -- --ts
       `,
+			values: (args) =>
+				getNamesAndDescriptions(
+					getFrameworkMap({
+						experimental: Boolean(args?.["experimental"]),
+					}),
+				),
+		},
+		{
+			name: "platform",
+			type: "string",
+			description: `Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.`,
 			values: [
-				{ name: "analog" },
-				{ name: "angular" },
-				{ name: "astro" },
-				{ name: "docusaurus" },
-				{ name: "gatsby" },
-				{ name: "hono" },
-				{ name: "next" },
-				{ name: "nuxt" },
-				{ name: "qwik" },
-				{ name: "react" },
-				{ name: "remix" },
-				{ name: "solid" },
-				{ name: "svelte" },
-				{ name: "vue" },
+				{
+					name: "workers",
+					description:
+						"Create a web application that can be deployed to Workers.",
+				},
+				{
+					name: "pages",
+					description:
+						"Create a web application that can be deployed to Pages.",
+				},
 			],
+			requiresArg: true,
+		},
+		{
+			name: "lang",
+			type: "string",
+			description: `The programming language of the template`,
+			values: [{ name: "ts" }, { name: "js" }, { name: "python" }],
 		},
 		{
 			name: "deploy",
@@ -136,6 +156,7 @@ const cliDefinition: ArgumentsDefinition = {
 			name: "ts",
 			type: "boolean",
 			description: "Use TypeScript in your application",
+			hidden: true,
 		},
 		{
 			name: "git",
@@ -179,6 +200,29 @@ const cliDefinition: ArgumentsDefinition = {
         `,
 		},
 		{
+			name: "template-mode",
+			type: "string",
+			requiresArg: true,
+			description: `The mechanism to use when fetching the template.
+				
+        Can be either "git" or "tar". "tar" does not support fetching from private 
+				repositories. By default, degit will use "tar" if the template is hosted on GitHub, BitBucket, GitLab, or git.sr.ht. 
+				Otherwise, it will use "git".
+        `,
+			values: [
+				{
+					name: "git",
+					description:
+						"Use git to fetch the template. Supports private repositories.",
+				},
+				{
+					name: "tar",
+					description:
+						"Use tar to fetch the template. Only supported on public repositories hosted on GitHub, BitBucket, GitLab, or git.sr.ht.",
+				},
+			],
+		},
+		{
 			name: "accept-defaults",
 			alias: "y",
 			type: "boolean",
@@ -207,7 +251,24 @@ const cliDefinition: ArgumentsDefinition = {
 	],
 };
 
-export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
+export const parseArgs = async (
+	argv: string[],
+): Promise<
+	| {
+			type: "default";
+			args: Partial<C3Args>;
+	  }
+	| {
+			type: "telemetry";
+			action: "enable" | "disable" | "status";
+	  }
+	| {
+			type: "unknown";
+			args: Partial<C3Args> | null;
+			showHelpMessage?: boolean;
+			errorMessage?: string;
+	  }
+> => {
 	const doubleDashesIdx = argv.indexOf("--");
 	const c3Args = argv.slice(
 		0,
@@ -216,12 +277,33 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 	const additionalArgs =
 		doubleDashesIdx < 0 ? [] : argv.slice(doubleDashesIdx + 1);
 
+	const c3positionalArgs = c3Args.filter((arg) => !arg.startsWith("-"));
+
+	if (
+		c3positionalArgs[2] === "telemetry" &&
+		c3positionalArgs[3] !== undefined
+	) {
+		const action = c3positionalArgs[3];
+
+		switch (action) {
+			case "enable":
+			case "disable":
+			case "status":
+				return {
+					type: "telemetry",
+					action,
+				};
+			default:
+				throw new Error(`Unknown subcommand "telemetry ${action}"`);
+		}
+	}
+
 	const yargsObj = yargs(hideBin(c3Args))
 		.scriptName("create-cloudflare")
 		.usage("$0 [args]")
 		.version(version)
 		.alias("v", "version")
-		.help(false) as unknown as Argv<C3Args>;
+		.help(false) as unknown as Argv<Partial<C3Args>>;
 
 	const { positionals, options } = cliDefinition;
 	if (positionals) {
@@ -246,42 +328,52 @@ export const parseArgs = async (argv: string[]): Promise<Partial<C3Args>> => {
 	} catch {}
 
 	if (args === null) {
-		showHelp(cliDefinition);
-		process.exit(1);
+		return {
+			type: "unknown",
+			args,
+		};
 	}
 
-	if (args.version) {
-		process.exit(0);
-	}
-
-	if (args.help) {
-		showHelp(cliDefinition);
-		process.exit(0);
+	if (args.version || args.help) {
+		return {
+			type: "unknown",
+			showHelpMessage: args.help,
+			args,
+		};
 	}
 
 	const positionalArgs = args._;
 
 	for (const opt in args) {
 		if (!validOption(opt)) {
-			showHelp(cliDefinition);
-			console.error(`\nUnrecognized option: ${opt}`);
-			process.exit(1);
+			return {
+				type: "unknown",
+				showHelpMessage: true,
+				args,
+				errorMessage: `Unrecognized option: ${opt}`,
+			};
 		}
 	}
 
 	// since `yargs.strict()` can't check the `positional`s for us we need to do it manually ourselves
 	if (positionalArgs.length > 1) {
-		showHelp(cliDefinition);
-		console.error("\nToo many positional arguments provided");
-		process.exit(1);
+		return {
+			type: "unknown",
+			showHelpMessage: true,
+			args,
+			errorMessage: "Too many positional arguments provided",
+		};
 	}
 
 	return {
-		...(args.wranglerDefaults && WRANGLER_DEFAULTS),
-		...(args.acceptDefaults && C3_DEFAULTS),
-		...args,
-		additionalArgs,
-		projectName: positionalArgs[0] as string | undefined,
+		type: "default",
+		args: {
+			...(args.wranglerDefaults && WRANGLER_DEFAULTS),
+			...(args.acceptDefaults && C3_DEFAULTS),
+			...args,
+			additionalArgs,
+			projectName: positionalArgs[0] as string | undefined,
+		},
 	};
 };
 
@@ -309,3 +401,43 @@ const validOption = (opt: string) => {
 };
 
 const camelize = (str: string) => str.replace(/-./g, (x) => x[1].toUpperCase());
+
+export const processArgument = async <Key extends keyof C3Args>(
+	args: Partial<C3Args>,
+	key: Key,
+	promptConfig: PromptConfig,
+) => {
+	return await reporter.collectAsyncMetrics({
+		eventPrefix: "c3 prompt",
+		props: {
+			args,
+			key,
+			promptConfig,
+		},
+		// Skip metrics collection if the arg value is already set
+		// This can happen when the arg is set via the CLI or if the user has already answered the prompt previously
+		disableTelemetry: args[key] !== undefined,
+		async promise() {
+			const value = args[key];
+			const error = promptConfig.validate?.(value) ?? null;
+			const result = await inputPrompt<Required<C3Args>[Key]>({
+				...promptConfig,
+				// Accept the default value if the arg is already set
+				acceptDefault:
+					promptConfig.acceptDefault ?? (value !== undefined && !error),
+				defaultValue: value ?? promptConfig.defaultValue,
+				initialErrorMessage: error,
+				throwOnError: true,
+			});
+
+			// Update value in args before returning the result
+			args[key] = result;
+
+			// Set properties for prompt completed event
+			reporter.setEventProperty("answer", result);
+			reporter.setEventProperty("isDefaultValue", result === C3_DEFAULTS[key]);
+
+			return result;
+		},
+	});
+};

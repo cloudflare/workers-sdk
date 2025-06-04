@@ -1,0 +1,4 @@
+{
+	"extends": ["@cloudflare/workers-tsconfig/react.json"],
+	"include": ["src"]
+}

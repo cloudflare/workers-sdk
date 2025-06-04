@@ -1,4 +1,4 @@
-import { fetchResult } from "../cfetch";
+import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { requireAuth } from "../user";
 import type { Config } from "../config";
 
@@ -6,23 +6,63 @@ export type HyperdriveConfig = {
 	id: string;
 	name: string;
 	origin: PublicOrigin;
-	caching: CachingOptions;
+	caching?: CachingOptions;
+	mtls?: Mtls;
 };
 
-export type Origin = {
-	host?: string;
-	port?: number;
+export type OriginDatabase = {
+	scheme: string;
+	database: string;
+	user: string;
+
+	// ensure password not set, must use OriginCommonWithSecrets
+	password?: never;
 };
 
-export type PublicOrigin = Origin & {
-	scheme?: string;
-	database?: string;
-	user?: string;
+export type OriginDatabaseWithSecrets = Omit<OriginDatabase, "password"> & {
+	password: string;
 };
 
-export type OriginWithPassword = PublicOrigin & {
-	password?: string;
+export type NetworkOriginHoA = {
+	host: string;
+	access_client_id: string;
+
+	// Ensure post is not set, and secrets are not set
+	port?: never;
+	access_client_secret?: never;
 };
+
+export type NetworkOriginHoAWithSecrets = Omit<
+	NetworkOriginHoA,
+	"access_client_secret"
+> & {
+	access_client_secret: string;
+};
+
+export type NetworkOriginHostAndPort = {
+	host: string;
+	port: number;
+
+	// Ensure HoA fields are not set
+	access_client_id?: never;
+	access_client_secret?: never;
+};
+
+// NetworkOrigin is never partial in the API, it must be submitted in it's entirety
+export type NetworkOrigin = NetworkOriginHoA | NetworkOriginHostAndPort;
+export type NetworkOriginWithSecrets =
+	| NetworkOriginHoAWithSecrets
+	| NetworkOriginHostAndPort;
+
+// Public responses of the full PublicOrigin type are never partial in the API
+export type PublicOrigin = OriginDatabase & NetworkOrigin;
+
+// But the OriginWithSecrets has a partial variant for updates, that is only partial for fields in OriginDatabaseWithSecrets -- we always require a full NetworkOriginWithSecrets
+export type OriginWithSecrets = OriginDatabaseWithSecrets &
+	NetworkOriginWithSecrets;
+export type OriginWithSecretsPartial =
+	| (Partial<OriginDatabaseWithSecrets> & NetworkOriginWithSecrets)
+	| Partial<OriginDatabaseWithSecrets>;
 
 export type CachingOptions = {
 	disabled?: boolean;
@@ -32,32 +72,50 @@ export type CachingOptions = {
 
 export type CreateUpdateHyperdriveBody = {
 	name: string;
-	origin: OriginWithPassword;
-	caching: CachingOptions;
+	origin: OriginWithSecrets;
+	caching?: CachingOptions;
+	mtls?: Mtls;
 };
 
 export type PatchHyperdriveBody = {
 	name?: string;
-	origin?: OriginWithPassword;
+	origin?: OriginWithSecretsPartial;
 	caching?: CachingOptions;
+	mtls?: Mtls;
 };
+
+export type Mtls = {
+	ca_certificate_id?: string;
+	mtls_certificate_id?: string;
+	sslmode?: string;
+};
+
+export const Sslmode = ["require", "verify-ca", "verify-full"];
 
 export async function createConfig(
 	config: Config,
 	body: CreateUpdateHyperdriveBody
 ): Promise<HyperdriveConfig> {
 	const accountId = await requireAuth(config);
-	return await fetchResult(`/accounts/${accountId}/hyperdrive/configs`, {
-		method: "POST",
-		body: JSON.stringify(body),
-	});
+	return await fetchResult(
+		config,
+		`/accounts/${accountId}/hyperdrive/configs`,
+		{
+			method: "POST",
+			body: JSON.stringify(body),
+		}
+	);
 }
 
 export async function deleteConfig(config: Config, id: string): Promise<void> {
 	const accountId = await requireAuth(config);
-	return await fetchResult(`/accounts/${accountId}/hyperdrive/configs/${id}`, {
-		method: "DELETE",
-	});
+	return await fetchResult(
+		config,
+		`/accounts/${accountId}/hyperdrive/configs/${id}`,
+		{
+			method: "DELETE",
+		}
+	);
 }
 
 export async function getConfig(
@@ -65,28 +123,24 @@ export async function getConfig(
 	id: string
 ): Promise<HyperdriveConfig> {
 	const accountId = await requireAuth(config);
-	return await fetchResult(`/accounts/${accountId}/hyperdrive/configs/${id}`, {
-		method: "GET",
-	});
+	return await fetchResult(
+		config,
+		`/accounts/${accountId}/hyperdrive/configs/${id}`,
+		{
+			method: "GET",
+		}
+	);
 }
 
 export async function listConfigs(config: Config): Promise<HyperdriveConfig[]> {
 	const accountId = await requireAuth(config);
-	return await fetchResult(`/accounts/${accountId}/hyperdrive/configs`, {
-		method: "GET",
-	});
-}
-
-export async function updateConfig(
-	config: Config,
-	id: string,
-	body: CreateUpdateHyperdriveBody
-): Promise<HyperdriveConfig> {
-	const accountId = await requireAuth(config);
-	return await fetchResult(`/accounts/${accountId}/hyperdrive/configs/${id}`, {
-		method: "PUT",
-		body: JSON.stringify(body),
-	});
+	return await fetchPagedListResult(
+		config,
+		`/accounts/${accountId}/hyperdrive/configs`,
+		{
+			method: "GET",
+		}
+	);
 }
 
 export async function patchConfig(
@@ -95,8 +149,12 @@ export async function patchConfig(
 	body: PatchHyperdriveBody
 ): Promise<HyperdriveConfig> {
 	const accountId = await requireAuth(config);
-	return await fetchResult(`/accounts/${accountId}/hyperdrive/configs/${id}`, {
-		method: "PATCH",
-		body: JSON.stringify(body),
-	});
+	return await fetchResult(
+		config,
+		`/accounts/${accountId}/hyperdrive/configs/${id}`,
+		{
+			method: "PATCH",
+			body: JSON.stringify(body),
+		}
+	);
 }

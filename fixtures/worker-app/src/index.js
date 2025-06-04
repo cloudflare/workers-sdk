@@ -1,9 +1,15 @@
+import { randomBytes } from "@fixture/isomorphic-random";
 import cookie from "cookie";
-import { randomBytes } from "isomorphic-random-example";
 import { now } from "./dep";
+import { testExplicitResourceManagement } from "./explicit-resource-management";
 import { logErrors } from "./log";
 
 console.log("startup log");
+
+console.log("The following error is a fake for testing");
+console.error(
+	"*** Received structured exception #0xc0000005: access violation; stack: 7ffe71872f57 7ff7834b643b 7ff7834b643b"
+);
 
 /** @param {Uint8Array} array */
 function hexEncode(array) {
@@ -17,6 +23,8 @@ export default {
 		console.log("request log");
 
 		const { pathname, origin, hostname, host } = new URL(request.url);
+		if (pathname.startsWith("/fav"))
+			return new Response("Not found", { status: 404 });
 		if (pathname === "/version_metadata") return Response.json(env.METADATA);
 		if (pathname === "/random") return new Response(hexEncode(randomBytes(8)));
 		if (pathname === "/error") throw new Error("Oops!");
@@ -50,6 +58,12 @@ export default {
 			return new Response("x".repeat(100), {
 				headers: { "Content-Encoding": "gzip" },
 			});
+		}
+
+		if (pathname === "/explicit-resource-management") {
+			const logs = [];
+			await testExplicitResourceManagement(logs);
+			return Response.json(logs);
 		}
 
 		if (request.headers.get("X-Test-URL") !== null) {
@@ -87,14 +101,7 @@ export default {
 		ctx.waitUntil(Promise.resolve(event.scheduledTime));
 		ctx.waitUntil(Promise.resolve(event.cron));
 	},
+	tail(events) {
+		console.log("tails", { events });
+	},
 };
-
-// addEventListener("fetch", (event) => {
-//   event.respondWith(handleRequest(event.request));
-// });
-
-// async function handleRequest(request) {
-//   return new Response("Hello worker!", {
-//     headers: { "content-type": "text/plain" },
-//   });
-// }

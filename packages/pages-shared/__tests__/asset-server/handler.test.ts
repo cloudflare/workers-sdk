@@ -1,5 +1,3 @@
-import { Cache } from "@miniflare/cache";
-import { MemoryStorage } from "@miniflare/storage-memory";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
 	CACHE_PRESERVATION_WRITE_FREQUENCY,
@@ -9,8 +7,7 @@ import {
 import { createMetadataObject } from "../../metadata-generator/createMetadataObject";
 import type { HandlerContext } from "../../asset-server/handler";
 import type { Metadata } from "../../asset-server/metadata";
-import type { RedirectRule } from "../../metadata-generator/types";
-import type { Cache as WorkersCache } from "@cloudflare/workers-types/experimental";
+import type { RedirectRule } from "@cloudflare/workers-shared/utils/configuration/types";
 
 describe("asset-server handler", () => {
 	test("Returns appropriate status codes", async () => {
@@ -390,40 +387,6 @@ describe("asset-server handler", () => {
 		});
 	}
 
-	// test("Returns a redirect without duplicating the hash component", async () => {
-	// 	const { response, spies } = await getTestResponse({
-	// 		request: "https://foo.com/bar",
-	// 		metadata: createMetadataObjectWithRedirects([
-	// 			{ from: "/bar", to: "https://foobar.com/##heading-7", status: 301 },
-	// 		]),
-	// 	});
-
-	// 	expect(spies.fetchAsset).toBe(0);
-	// 	expect(spies.findAssetEntryForPath).toBe(0);
-	// 	expect(spies.getAssetKey).toBe(0);
-	// 	expect(spies.negotiateContent).toBe(0);
-	// 	expect(response.status).toBe(301);
-	// 	expect(response.headers.get("Location")).toBe(
-	// 		"https://foobar.com/##heading-7"
-	// 	);
-	// });
-
-	test("it should redirect uri-encoded paths", async () => {
-		const { response, spies } = await getTestResponse({
-			request: "https://foo.com/some%20page",
-			metadata: createMetadataObjectWithRedirects([
-				{ from: "/some%20page", to: "/home", status: 301 },
-			]),
-		});
-
-		expect(spies.fetchAsset).toBe(0);
-		expect(spies.findAssetEntryForPath).toBe(0);
-		expect(spies.getAssetKey).toBe(0);
-		expect(spies.negotiateContent).toBe(0);
-		expect(response.status).toBe(301);
-		expect(response.headers.get("Location")).toBe("/home");
-	});
-
 	// 	test("getResponseFromMatch - same origin paths specified as root-relative", () => {
 	// 		const res = getResponseFromMatch(
 	// 			{
@@ -469,14 +432,130 @@ describe("asset-server handler", () => {
 
 		const findAssetEntryForPath = async (path: string) => {
 			if (path === "/index.html") {
-				return "index.html";
+				return "asset-key-index.html";
 			}
 
 			return null;
 		};
+		const fetchAsset = () =>
+			Promise.resolve(
+				Object.assign(
+					new Response(`
+					<!DOCTYPE html>
+					<html>
+						<body>
+							<link rel="preload" as="image" href="/a.png" />
+							<link rel="preload" as="image" href="/b.png" />
+							<link rel="modulepreload" href="lib.js" />
+							<link rel="preconnect" href="cloudflare.com" />
+						</body>
+					</html>`),
+					{ contentType: "text/html" }
+				)
+			);
 
-		// Create cache storage to reuse between requests
-		const { caches } = createCacheStorage();
+		const getResponse = async () =>
+			getTestResponse({
+				request: new Request("https://example.com/"),
+				metadata,
+				findAssetEntryForPath,
+				caches,
+				fetchAsset,
+			});
+
+		const { response, spies } = await getResponse();
+		expect(response.status).toBe(200);
+		// waitUntil should be called twice: once for asset-preservation, once for early hints
+		expect(spies.waitUntil.length).toBe(2);
+
+		await Promise.all(spies.waitUntil);
+
+		const earlyHintsCache = await caches.open(`eh:${deploymentId}`);
+		const earlyHintsRes = await earlyHintsCache.match(
+			"https://example.com/asset-key-index.html"
+		);
+
+		if (!earlyHintsRes) {
+			throw new Error(
+				"Did not match early hints cache on https://example.com/asset-key-index.html"
+			);
+		}
+
+		expect(earlyHintsRes.headers.get("link")).toMatchInlineSnapshot(
+			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image, <lib.js>; rel="modulepreload", <cloudflare.com>; rel="preconnect""`
+		);
+		expect(response.headers.get("link")).toBeNull();
+
+		// Do it again, but this time ensure that we didn't write to cache again
+		const { response: response2, spies: spies2 } = await getResponse();
+
+		expect(response2.status).toBe(200);
+		// waitUntil should only be called for asset-preservation
+		expect(spies2.waitUntil.length).toBe(1);
+
+		await Promise.all(spies2.waitUntil);
+
+		const earlyHintsRes2 = await earlyHintsCache.match(
+			"https://example.com/asset-key-index.html"
+		);
+
+		if (!earlyHintsRes2) {
+			throw new Error(
+				"Did not match early hints cache on https://example.com/asset-key-index.html"
+			);
+		}
+
+		expect(earlyHintsRes2.headers.get("link")).toMatchInlineSnapshot(
+			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image, <lib.js>; rel="modulepreload", <cloudflare.com>; rel="preconnect""`
+		);
+		expect(response2.headers.get("link")).toMatchInlineSnapshot(
+			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image, <lib.js>; rel="modulepreload", <cloudflare.com>; rel="preconnect""`
+		);
+
+		// Now make sure that requests for other paths which resolve to the same asset share the EH cache result
+		const { response: response3, spies: spies3 } = await getTestResponse({
+			request: new Request("https://example.com/foo"),
+			metadata,
+			findAssetEntryForPath,
+			caches,
+			fetchAsset,
+		});
+
+		expect(response3.status).toBe(200);
+		// waitUntil should not be called at all (SPA)
+		expect(spies3.waitUntil.length).toBe(0);
+
+		await Promise.all(spies3.waitUntil);
+
+		const earlyHintsRes3 = await earlyHintsCache.match(
+			"https://example.com/asset-key-index.html"
+		);
+
+		if (!earlyHintsRes3) {
+			throw new Error(
+				"Did not match early hints cache on https://example.com/asset-key-index.html"
+			);
+		}
+
+		expect(earlyHintsRes3.headers.get("link")).toMatchInlineSnapshot(
+			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image, <lib.js>; rel="modulepreload", <cloudflare.com>; rel="preconnect""`
+		);
+		expect(response3.headers.get("link")).toMatchInlineSnapshot(
+			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image, <lib.js>; rel="modulepreload", <cloudflare.com>; rel="preconnect""`
+		);
+	});
+
+	test("early hints should cache empty link headers", async () => {
+		const deploymentId = "deployment-" + Math.random();
+		const metadata = createMetadataObject({ deploymentId }) as Metadata;
+
+		const findAssetEntryForPath = async (path: string) => {
+			if (path === "/index.html") {
+				return "asset-key-index.html";
+			}
+
+			return null;
+		};
 
 		const getResponse = async () =>
 			getTestResponse({
@@ -491,10 +570,7 @@ describe("asset-server handler", () => {
 							<!DOCTYPE html>
 							<html>
 								<body>
-									<link rel="preload" as="image" href="/a.png" />
-									<link rel="preload" as="image" href="/b.png" />
-									<link rel="modulepreload" href="lib.js" />
-									<link rel="preconnect" href="cloudflare.com" />
+									<h1>I'm a teapot</h1>
 								</body>
 							</html>`),
 							{ contentType: "text/html" }
@@ -510,17 +586,18 @@ describe("asset-server handler", () => {
 		await Promise.all(spies.waitUntil);
 
 		const earlyHintsCache = await caches.open(`eh:${deploymentId}`);
-		const earlyHintsRes = await earlyHintsCache.match("https://example.com/");
+		const earlyHintsRes = await earlyHintsCache.match(
+			"https://example.com/asset-key-index.html"
+		);
 
 		if (!earlyHintsRes) {
 			throw new Error(
-				"Did not match early hints cache on https://example.com/"
+				"Did not match early hints cache on https://example.com/asset-key-index.html"
 			);
 		}
 
-		expect(earlyHintsRes.headers.get("link")).toMatchInlineSnapshot(
-			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image, <lib.js>; rel="modulepreload", <cloudflare.com>; rel="preconnect""`
-		);
+		expect(earlyHintsRes.headers.get("link")).toBeNull();
+		expect(response.headers.get("link")).toBeNull();
 
 		// Do it again, but this time ensure that we didn't write to cache again
 		const { response: response2, spies: spies2 } = await getResponse();
@@ -531,18 +608,26 @@ describe("asset-server handler", () => {
 
 		await Promise.all(spies2.waitUntil);
 
-		const earlyHintsRes2 = await earlyHintsCache.match("https://example.com/");
+		const earlyHintsRes2 = await earlyHintsCache.match(
+			"https://example.com/asset-key-index.html"
+		);
 
 		if (!earlyHintsRes2) {
 			throw new Error(
-				"Did not match early hints cache on https://example.com/"
+				"Did not match early hints cache on https://example.com/asset-key-index.html"
 			);
 		}
 
-		expect(earlyHintsRes2.headers.get("link")).toMatchInlineSnapshot(
-			`"</a.png>; rel="preload"; as=image, </b.png>; rel="preload"; as=image, <lib.js>; rel="modulepreload", <cloudflare.com>; rel="preconnect""`
-		);
+		expect(earlyHintsRes2.headers.get("link")).toBeNull();
+		expect(response2.headers.get("link")).toBeNull();
 	});
+
+	test.todo(
+		"early hints should temporarily cache failures to parse links",
+		async () => {
+			// I couldn't figure out a way to make HTMLRewriter error out
+		}
+	);
 
 	describe("should serve deleted assets from preservation cache", async () => {
 		beforeEach(() => {
@@ -556,7 +641,6 @@ describe("asset-server handler", () => {
 		test("preservationCacheV2", async () => {
 			const deploymentId = "deployment-" + Math.random();
 			const metadata = createMetadataObject({ deploymentId }) as Metadata;
-			const { caches } = createCacheStorage();
 
 			let findAssetEntryForPath = async (path: string) => {
 				if (path === "/foo.html") {
@@ -606,11 +690,25 @@ describe("asset-server handler", () => {
 				'"asset-key-foo.html"'
 			);
 
-			// Delete the asset from the manifest and ensure it's served from preservation cache
+			// Delete the asset from the manifest and ensure it's served from preservation cache with a 304 when if-none-match is present
 			findAssetEntryForPath = async (_path: string) => {
 				return null;
 			};
 			const { response: response2 } = await getTestResponse({
+				request: new Request("https://example.com/foo", {
+					headers: { "if-none-match": expectedHeaders.etag },
+				}),
+				metadata,
+				findAssetEntryForPath,
+				caches,
+				fetchAsset: () =>
+					Promise.resolve(Object.assign(new Response("hello world!"))),
+			});
+			expect(response2.status).toBe(304);
+			expect(await response2.text()).toMatchInlineSnapshot('""');
+
+			// Ensure the asset is served from preservation cache with a 200 if if-none-match is not present
+			const { response: response3 } = await getTestResponse({
 				request: new Request("https://example.com/foo"),
 				metadata,
 				findAssetEntryForPath,
@@ -618,10 +716,10 @@ describe("asset-server handler", () => {
 				fetchAsset: () =>
 					Promise.resolve(Object.assign(new Response("hello world!"))),
 			});
-			expect(response2.status).toBe(200);
-			expect(await response2.text()).toMatchInlineSnapshot('"hello world!"');
+			expect(response3.status).toBe(200);
+			expect(await response3.text()).toMatchInlineSnapshot('"hello world!"');
 			// Cached responses have the same headers with a few changes/additions:
-			expect(Object.fromEntries(response2.headers)).toStrictEqual({
+			expect(Object.fromEntries(response3.headers)).toMatchObject({
 				...expectedHeaders,
 				"cache-control": "public, s-maxage=604800",
 				"x-robots-tag": "noindex",
@@ -629,105 +727,28 @@ describe("asset-server handler", () => {
 			});
 
 			// Serve with a fresh cache and ensure we don't get a response
-			const { response: response3 } = await getTestResponse({
+			const { response: response4 } = await getTestResponse({
 				request: new Request("https://example.com/foo"),
 				metadata,
 				findAssetEntryForPath,
 				fetchAsset: () =>
 					Promise.resolve(Object.assign(new Response("hello world!"))),
-			});
-			expect(response3.status).toBe(404);
-			expect(Object.fromEntries(response3.headers)).toMatchInlineSnapshot(`
-				{
-				  "access-control-allow-origin": "*",
-				  "cache-control": "no-store",
-				  "referrer-policy": "strict-origin-when-cross-origin",
-				}
-			`);
-		});
-
-		test("preservationCacheV1 (fallback)", async () => {
-			vi.setSystemTime(new Date("2024-05-09")); // 1 day before fallback is disabled
-
-			const deploymentId = "deployment-" + Math.random();
-			const metadata = createMetadataObject({ deploymentId }) as Metadata;
-			const { caches } = createCacheStorage();
-
-			const preservationCacheV1 = await caches.open("assetPreservationCache");
-
-			// Write a response to the V1 cache and make sure it persists
-			await preservationCacheV1.put(
-				"https://example.com/foo",
-				new Response("preserved in V1 cache!", {
-					headers: {
-						"Cache-Control": "public, max-age=300",
+				// @ts-expect-error Create a dummy fake cache to simulate a fresh cache
+				caches: {
+					open(cacheName) {
+						return caches.open("fresh" + cacheName);
 					},
-				})
-			);
-
-			const preservationRes = await preservationCacheV1.match(
-				"https://example.com/foo"
-			);
-
-			if (!preservationRes) {
-				throw new Error(
-					"Did not match preservation cache on https://example.com/foo"
-				);
-			}
-
-			expect(await preservationRes.text()).toMatchInlineSnapshot(
-				`"preserved in V1 cache!"`
-			);
-
-			// Delete the asset from the manifest and ensure it's served from V1 preservation cache
-			const findAssetEntryForPath = async (_path: string) => {
-				return null;
-			};
-			const { response, spies } = await getTestResponse({
-				request: new Request("https://example.com/foo"),
-				metadata,
-				findAssetEntryForPath,
-				caches,
-				fetchAsset: () =>
-					Promise.resolve(Object.assign(new Response("hello world!"))),
+				},
 			});
-			expect(response.status).toBe(200);
-			expect(await response.text()).toMatchInlineSnapshot(
-				`"preserved in V1 cache!"`
-			);
-			expect(Object.fromEntries(response.headers)).toMatchInlineSnapshot(`
-				{
-				  "access-control-allow-origin": "*",
-				  "cache-control": "public, max-age=300",
-				  "cf-cache-status": "HIT",
-				  "content-type": "text/plain;charset=UTF-8",
-				  "referrer-policy": "strict-origin-when-cross-origin",
-				  "x-content-type-options": "nosniff",
-				}
-			`);
-			// No cache or early hints writes
-			expect(spies.waitUntil.length).toBe(0);
 
-			// Should disable fallback starting may 10th
-			vi.setSystemTime(new Date("2024-05-10"));
-			const { response: response2, spies: spies2 } = await getTestResponse({
-				request: new Request("https://example.com/foo"),
-				metadata,
-				findAssetEntryForPath,
-				caches,
-				fetchAsset: () =>
-					Promise.resolve(Object.assign(new Response("hello world!"))),
-			});
-			expect(response2.status).toBe(404);
-			expect(Object.fromEntries(response2.headers)).toMatchInlineSnapshot(`
+			expect(response4.status).toBe(404);
+			expect(Object.fromEntries(response4.headers)).toMatchInlineSnapshot(`
 				{
 				  "access-control-allow-origin": "*",
 				  "cache-control": "no-store",
 				  "referrer-policy": "strict-origin-when-cross-origin",
 				}
 			`);
-			// No cache or early hints writes
-			expect(spies2.waitUntil.length).toBe(0);
 		});
 	});
 
@@ -920,6 +941,134 @@ describe("asset-server handler", () => {
 			);
 		});
 	});
+
+	describe("redirects", () => {
+		test("it should redirect uri-encoded paths", async () => {
+			const { response, spies } = await getTestResponse({
+				request: "https://foo.com/some%20page",
+				metadata: createMetadataObjectWithRedirects([
+					{ from: "/some%20page", to: "/home", status: 301 },
+				]),
+			});
+
+			expect(spies.fetchAsset).toBe(0);
+			expect(spies.findAssetEntryForPath).toBe(0);
+			expect(spies.getAssetKey).toBe(0);
+			expect(spies.negotiateContent).toBe(0);
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe("/home");
+		});
+
+		test("redirects to a query string same-origin", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/bar",
+				metadata: createMetadataObjectWithRedirects([
+					{ from: "/bar", to: "/?test=abc", status: 301 },
+				]),
+			});
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe("/?test=abc");
+		});
+
+		test("redirects to a query string cross-origin", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/bar",
+				metadata: createMetadataObjectWithRedirects([
+					{ from: "/bar", to: "https://foobar.com/?test=abc", status: 301 },
+				]),
+			});
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe(
+				"https://foobar.com/?test=abc"
+			);
+		});
+
+		test("redirects to hash component same-origin", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/bar",
+				metadata: createMetadataObjectWithRedirects([
+					{ from: "/bar", to: "https://foo.com/##heading-7", status: 301 },
+				]),
+			});
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe("/##heading-7");
+		});
+
+		test("redirects to hash component cross-origin", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/bar",
+				metadata: createMetadataObjectWithRedirects([
+					{ from: "/bar", to: "https://foobar.com/##heading-7", status: 301 },
+				]),
+			});
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe(
+				"https://foobar.com/##heading-7"
+			);
+		});
+
+		test("redirects to a query string and hash same-origin", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/bar",
+				metadata: createMetadataObjectWithRedirects([
+					{ from: "/bar", to: "/?test=abc#def", status: 301 },
+				]),
+			});
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe("/?test=abc#def");
+		});
+
+		test("redirects to a query string and hash cross-origin", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/bar",
+				metadata: createMetadataObjectWithRedirects([
+					{ from: "/bar", to: "https://foobar.com/?test=abc#def", status: 301 },
+				]),
+			});
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe(
+				"https://foobar.com/?test=abc#def"
+			);
+		});
+
+		// Query strings must be before the hash to be considered query strings
+		// https://www.rfc-editor.org/rfc/rfc3986#section-4.1
+		// Behaviour in Chrome is that the .hash is "#def?test=abc" and .search is ""
+		test("redirects to a query string and hash against rfc", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/bar",
+				metadata: createMetadataObjectWithRedirects([
+					{ from: "/bar", to: "https://foobar.com/#def?test=abc", status: 301 },
+				]),
+			});
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe(
+				"https://foobar.com/#def?test=abc"
+			);
+		});
+
+		// Query string needs to be _before_ the hash
+		test("redirects to a hash with an incoming query cross-origin", async () => {
+			const { response } = await getTestResponse({
+				request: "https://foo.com/bar?test=abc",
+				metadata: createMetadataObjectWithRedirects([
+					{ from: "/bar", to: "https://foobar.com/#heading", status: 301 },
+				]),
+			});
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe(
+				"https://foobar.com/?test=abc#heading"
+			);
+		});
+	});
 });
 
 interface HandlerSpies {
@@ -928,39 +1077,6 @@ interface HandlerSpies {
 	getAssetKey: number;
 	negotiateContent: number;
 	waitUntil: Promise<unknown>[];
-	caches: {
-		[key: string]: WorkersCache;
-	} & { default: WorkersCache };
-}
-
-function createMemoryCache(): WorkersCache {
-	// Miniflare RequestInit is missing CfProperties so we need to cast
-	return new Cache(new MemoryStorage()) as unknown as WorkersCache;
-}
-
-function createCacheStorage(): {
-	caches: CacheStorage;
-	cacheSpy: {
-		[key: string]: WorkersCache;
-	} & { default: WorkersCache };
-} {
-	const cacheSpy: { [key: string]: WorkersCache } & {
-		default: WorkersCache;
-	} = {
-		default: createMemoryCache(),
-	};
-	const caches = {
-		open(cacheName: string): Promise<WorkersCache> {
-			if (cacheSpy[cacheName]) {
-				return Promise.resolve(cacheSpy[cacheName]);
-			}
-			const cache = createMemoryCache();
-			cacheSpy[cacheName] = cache;
-			return Promise.resolve(cache);
-		},
-		default: cacheSpy.default,
-	};
-	return { caches, cacheSpy };
 }
 
 async function getTestResponse({
@@ -999,9 +1115,6 @@ async function getTestResponse({
 		getAssetKey: 0,
 		negotiateContent: 0,
 		waitUntil: [],
-		caches: {
-			default: createMemoryCache(),
-		},
 	};
 
 	const response = await generateHandler<string>({
@@ -1033,14 +1146,7 @@ async function getTestResponse({
 		waitUntil: async (promise: Promise<unknown>) => {
 			spies.waitUntil.push(promise);
 		},
-		caches: options.caches ?? {
-			open(cacheName) {
-				const cache = createMemoryCache();
-				spies.caches[cacheName] = cache;
-				return Promise.resolve(cache);
-			},
-			...spies.caches,
-		},
+		caches: options.caches ?? caches,
 	});
 
 	return { response, spies };

@@ -1,5 +1,5 @@
 import { logRaw } from "@cloudflare/cli";
-import { bold, brandColor, dim } from "@cloudflare/cli/colors";
+import { blue, bold, brandColor, dim } from "@cloudflare/cli/colors";
 import { detectPackageManager } from "helpers/packageManagers";
 import indentString from "indent-string";
 import wrap from "wrap-ansi";
@@ -10,15 +10,15 @@ import type {
 	ArgumentsDefinition,
 	OptionDefinition,
 } from "helpers/args";
+import type { C3Args } from "types";
 
 const MAX_WIDTH = 100;
 const PADDING_RIGHT = 5;
 
-export const showHelp = ({
-	positionals,
-	options,
-	intro,
-}: ArgumentsDefinition) => {
+export const showHelp = (
+	args: Partial<C3Args> | null,
+	{ positionals, options, intro }: ArgumentsDefinition,
+) => {
 	const { name: pm } = detectPackageManager();
 
 	logRaw(`${brandColor("create-cloudflare")} ${dim("v" + version)}\n`);
@@ -31,8 +31,16 @@ export const showHelp = ({
 
 	logRaw(bold("OPTIONS\n"));
 
+	if (args?.experimental) {
+		logRaw(
+			blue(
+				"You have selected experimental mode - the options below are filtered to those that support experimental mode.\n",
+			),
+		);
+	}
+
 	renderPositionals(positionals);
-	renderOptions(options);
+	renderOptions(args, options);
 };
 
 /**
@@ -61,7 +69,10 @@ const renderPositionals = (positionals?: ArgDefinition[]) => {
 	}
 };
 
-const renderOptions = (options?: OptionDefinition[]) => {
+const renderOptions = (
+	args: Partial<C3Args> | null,
+	options?: OptionDefinition[],
+) => {
 	if (!options) {
 		return;
 	}
@@ -82,7 +93,7 @@ const renderOptions = (options?: OptionDefinition[]) => {
 		indent(heading, 1);
 		indent(`${description.trim()}\n`, 2);
 
-		renderValues(values);
+		renderValues(typeof values === "function" ? values(args) : values);
 	}
 };
 

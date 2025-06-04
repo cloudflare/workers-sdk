@@ -1,5 +1,61 @@
 # workers-playground
 
+## 0.2.4
+
+### Patch Changes
+
+- [#8205](https://github.com/cloudflare/workers-sdk/pull/8205) [`6f26beb`](https://github.com/cloudflare/workers-sdk/commit/6f26bebb0d41786cdc10320a0f1558467c563a67) Thanks [@penalosa](https://github.com/penalosa)! - Use today's date as the default starter playground compat date
+
+## 0.2.3
+
+### Patch Changes
+
+- [#7936](https://github.com/cloudflare/workers-sdk/pull/7936) [`2a59eae`](https://github.com/cloudflare/workers-sdk/commit/2a59eaeaf93d92d56cad33d91713d0e49339b1bd) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: sends raw request method through the X-CF-HTTP-Method header
+
+## 0.2.2
+
+### Patch Changes
+
+- [#7791](https://github.com/cloudflare/workers-sdk/pull/7791) [`f8c11d7`](https://github.com/cloudflare/workers-sdk/commit/f8c11d7418c6feeac673c7bad909050f1b56b476) Thanks [@CarmenPopoviciu](https://github.com/CarmenPopoviciu)! - Reverts #7639
+
+  Seems like our prev release of the workers-playground broke things. We are seeing a spike of related errors. We are therefore reverting the changes
+
+## 0.2.1
+
+### Patch Changes
+
+- [#7639](https://github.com/cloudflare/workers-sdk/pull/7639) [`99f27df`](https://github.com/cloudflare/workers-sdk/commit/99f27df059c211428d4cf3cc07bb99c164d22369) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: sends raw request method through the X-CF-HTTP-Method header
+
+## 0.2.0
+
+### Minor Changes
+
+- [#6962](https://github.com/cloudflare/workers-sdk/pull/6962) [`a204747`](https://github.com/cloudflare/workers-sdk/commit/a204747e04afa7592d0cbb5d9fb35d9cd0b2cd49) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: delay preview environment setup until user interaction
+
+  The preview environment will now be set up after the user clicks the send or go button.
+
+## 0.1.1
+
+### Patch Changes
+
+- Updated dependencies [[`7c95836`](https://github.com/cloudflare/workers-sdk/commit/7c9583695c61903838d62023402df3f9fc36f7cb)]:
+  - @cloudflare/workers-editor-shared@0.1.1
+
+## 0.1.0
+
+### Minor Changes
+
+- [#6528](https://github.com/cloudflare/workers-sdk/pull/6528) [`c3441c5`](https://github.com/cloudflare/workers-sdk/commit/c3441c544ea664badb34bbbdeda10a3fe6916085) Thanks [@penalosa](https://github.com/penalosa)! - feat: Prefix HTTP headers sent by the playground with `cf-ew-raw-`
+
+- [#6532](https://github.com/cloudflare/workers-sdk/pull/6532) [`d80fccb`](https://github.com/cloudflare/workers-sdk/commit/d80fccbb41aec8e620194479e12d167685124f56) Thanks [@penalosa](https://github.com/penalosa)! - feat: Add Wrangler CTA to the playground
+
+## 0.0.7
+
+### Patch Changes
+
+- Updated dependencies [[`d2b7482`](https://github.com/cloudflare/workers-sdk/commit/d2b7482cb87606b4bfa068fed9204cebc0cb7213)]:
+  - @cloudflare/workers-editor-shared@0.1.0
+
 ## 0.0.6
 
 ### Patch Changes

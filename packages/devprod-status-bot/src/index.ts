@@ -189,13 +189,15 @@ async function sendStartThreadMessage(pat: string, webhookUrl: string, ai: Ai) {
 				pr.user &&
 				[
 					"penalosa",
-					"RamIdeas",
 					"lrapoport-cf",
 					"petebacondarwin",
 					"CarmenPopoviciu",
-					"andyjessop",
 					"edmundhung",
 					"emily-shen",
+					"dario-piotrowicz",
+					"jculvey",
+					"vicb",
+					"jamesopstad",
 				].includes(pr.user.login)
 		)
 		.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
@@ -380,7 +382,12 @@ async function sendUpcomingReleaseMessage(pat: string, webhookUrl: string) {
 								widgets: [
 									{
 										textParagraph: {
-											text: "There's an upcoming workers-sdk release today. The `main` branch will be locked shortly before to allow the release to be checked. Review the release PR linked below for the full details, and let the ANT team know (by responding in this thread) if for any reason you'd like us to delay this release.",
+											text:
+												"A new workers-sdk release is scheduled for tomorrow." +
+												" The `main` branch will be locked shortly to allow the release to be checked beforehand." +
+												" Review the release PR linked below for the full details, and let the ANT team know" +
+												" (by responding in this thread) if for any reason you'd like us to delay this release." +
+												"\n\nThe `main` branch will be unlocked tomorrow after the release is completed.",
 										},
 									},
 									{
@@ -446,7 +453,7 @@ async function sendUpcomingReleaseMessage(pat: string, webhookUrl: string) {
 	await sendMessage(
 		webhookUrl,
 		{
-			text: "cc <users/103802752659756021218> <users/111710439474343081424>",
+			text: "cc <users/103802752659756021218>",
 		},
 		"release-notification"
 	);
@@ -523,18 +530,103 @@ async function sendUpcomingMeetingMessage(webhookUrl: string, ai: Ai) {
 
 export default {
 	async fetch(request, env): Promise<Response> {
-		console.log(env.AI);
 		const url = new URL(request.url);
+		if (url.pathname === "/release-failure") {
+			if (request.headers.get("X-Auth-Header") !== env.PRESHARED_SECRET) {
+				return new Response("Not allowed", { status: 401 });
+			}
+			const body = await request.json<{
+				status: { label: string; details: string }[];
+				url: string;
+			}>();
+			await sendMessage(
+				env.PROD_TEAM_ONLY_WEBHOOK,
+				{
+					cardsV2: [
+						{
+							cardId: "unique-card-id",
+							card: {
+								header: {
+									title: "🚨 A workers-sdk release failed!",
+								},
+								sections: [
+									{
+										widgets: [
+											{
+												columns: {
+													columnItems: [
+														{
+															horizontalSizeStyle: "FILL_MINIMUM_SPACE",
+															horizontalAlignment: "START",
+															verticalAlignment: "TOP",
+															widgets: [
+																{
+																	buttonList: {
+																		buttons: [
+																			{
+																				text: "Open Workflow run",
+																				onClick: {
+																					openLink: {
+																						url: body.url,
+																					},
+																				},
+																			},
+																		],
+																	},
+																},
+															],
+														},
+													],
+												},
+											},
+										],
+									},
+									{
+										collapsible: true,
+										uncollapsibleWidgetsCount: 3,
+										widgets: body.status.map(({ label, details }) => {
+											const emoji = "🔴";
+
+											return [
+												{
+													columns: {
+														columnItems: [
+															{
+																horizontalSizeStyle: "FILL_AVAILABLE_SPACE",
+																horizontalAlignment: "START",
+																verticalAlignment: "CENTER",
+																widgets: [
+																	{
+																		textParagraph: {
+																			text: `${emoji} <b>${label}:</b> ${details}`,
+																		},
+																	},
+																],
+															},
+														],
+													},
+												},
+											];
+										}),
+									},
+								],
+							},
+						},
+					],
+				},
+				crypto.randomUUID()
+			);
+		}
 		if (url.pathname === "/github") {
 			const body = await request.json<WebhookEvent>();
 			await sendReviewMessage(env.PROD_WEBHOOK, body);
 		}
 
 		if (url.pathname.startsWith("/pr-project") && request.method === "POST") {
-			const [_, _prefix, repo, prNumber] = url.pathname.split("/");
+			const [_, _prefix, _repo, prNumber] = url.pathname.split("/");
 			return await addPRToProject(
 				env.GITHUB_PAT,
-				repo.replaceAll(/[^a-z-]/g, "-"),
+				"workers-sdk",
 				prNumber.replaceAll(/[^0-9]/g, "-")
 			);
 		}
@@ -554,7 +646,7 @@ export default {
 		if (controller.cron === "0 10 * * MON-FRI") {
 			await sendStartThreadMessage(env.GITHUB_PAT, env.PROD_WEBHOOK, env.AI);
 		}
-		if (controller.cron === "0 10 * * TUE,THU") {
+		if (controller.cron === "0 17 * * MON,WED") {
 			await sendUpcomingReleaseMessage(
 				env.GITHUB_PAT,
 				env.PROD_WRANGLER_CONTRIBUTORS_WEBHOOK

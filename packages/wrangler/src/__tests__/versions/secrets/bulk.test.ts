@@ -6,10 +6,11 @@ import { mockConsoleMethods } from "../../helpers/mock-console";
 import { clearDialogs } from "../../helpers/mock-dialogs";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
+import { writeWranglerConfig } from "../../helpers/write-wrangler-config";
 import { mockPostVersion, mockSetupApiCalls } from "./utils";
 import type { Interface } from "node:readline";
 
-describe("versions secret put", () => {
+describe("versions secret bulk", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 	mockAccountId();
@@ -22,12 +23,12 @@ describe("versions secret put", () => {
 		vi.spyOn(readline, "createInterface").mockImplementation(
 			() => null as unknown as Interface
 		);
-		await runWrangler(`versions secret bulk --name script-name --x-versions`);
+		await runWrangler(`versions secret bulk --name script-name`);
 		expect(std.out).toMatchInlineSnapshot(
 			`"🌀 Creating the secrets for the Worker \\"script-name\\" "`
 		);
 		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnable to parse JSON from the input, please ensure you're passing valid JSON[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo content found in file or piped input.[0m
 
 			"
 		`);
@@ -48,6 +49,7 @@ describe("versions secret put", () => {
 		mockSetupApiCalls();
 		mockPostVersion((metadata) => {
 			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
 				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
 				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
@@ -56,11 +58,10 @@ describe("versions secret put", () => {
 				"secret_key",
 				"secret_text",
 			]);
+			expect(metadata.keep_assets).toBeTruthy();
 		});
 
-		await runWrangler(
-			`versions secret bulk secrets.json --name script-name --x-versions`
-		);
+		await runWrangler(`versions secret bulk secrets.json --name script-name`);
 		expect(std.out).toMatchInlineSnapshot(
 			`
 			"🌀 Creating the secrets for the Worker \\"script-name\\"
@@ -68,9 +69,40 @@ describe("versions secret put", () => {
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
 			✨ Success! Created version id with 3 secrets.
-			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy --x-versions\\"."
+			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy\\"."
 		`
 		);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	test("uploading secrets from env file", async () => {
+		await writeFile(
+			".env",
+			"SECRET_1=secret-1\nSECRET_2=secret-2\nSECRET_3=secret-3"
+		);
+		mockSetupApiCalls();
+		mockPostVersion();
+		await runWrangler(`versions secret bulk .env --name script-name`);
+		expect(std.out).toMatchInlineSnapshot(
+			`
+			"🌀 Creating the secrets for the Worker \\"script-name\\"
+			✨ Successfully created secret for key: SECRET_1
+			✨ Successfully created secret for key: SECRET_2
+			✨ Successfully created secret for key: SECRET_3
+			✨ Success! Created version id with 3 secrets.
+			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy\\"."
+		`
+		);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	test("no wrangler configuration warnings shown", async () => {
+		await writeFile("secrets.json", JSON.stringify({ SECRET_1: "secret-1" }));
+		await writeFile("wrangler.json", JSON.stringify({ invalid_field: true }));
+		mockSetupApiCalls();
+		mockPostVersion();
+		await runWrangler(`versions secret bulk secrets.json --name script-name`);
+		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
@@ -88,6 +120,7 @@ describe("versions secret put", () => {
 		mockSetupApiCalls();
 		mockPostVersion((metadata) => {
 			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
 				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
 				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
@@ -96,9 +129,10 @@ describe("versions secret put", () => {
 				"secret_key",
 				"secret_text",
 			]);
+			expect(metadata.keep_assets).toBeTruthy();
 		});
 
-		await runWrangler(`versions secret bulk --name script-name --x-versions`);
+		await runWrangler(`versions secret bulk --name script-name`);
 		expect(std.out).toMatchInlineSnapshot(
 			`
 			"🌀 Creating the secrets for the Worker \\"script-name\\"
@@ -106,7 +140,7 @@ describe("versions secret put", () => {
 			✨ Successfully created secret for key: SECRET_2
 			✨ Successfully created secret for key: SECRET_3
 			✨ Success! Created version id with 3 secrets.
-			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy --x-versions\\"."
+			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy\\"."
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -115,17 +149,11 @@ describe("versions secret put", () => {
 	test("should error on invalid json file", async () => {
 		await writeFile("secrets.json", "not valid json :(", { encoding: "utf8" });
 
-		await runWrangler(
-			`versions secret bulk secrets.json --name script-name --x-versions`
+		await expect(
+			runWrangler(`versions secret bulk secrets.json --name script-name`)
+		).rejects.toThrowError(
+			`The contents of "secrets.json" is not valid JSON: "ParseError: InvalidSymbol"`
 		);
-		expect(std.out).toMatchInlineSnapshot(
-			`"🌀 Creating the secrets for the Worker \\"script-name\\" "`
-		);
-		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnable to parse JSON file, please ensure the file passed is valid JSON.[0m
-
-			"
-		`);
 	});
 
 	test("should error on invalid json stdin", async () => {
@@ -138,6 +166,7 @@ describe("versions secret put", () => {
 		mockSetupApiCalls();
 		mockPostVersion((metadata) => {
 			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
 				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
 				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
 				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
@@ -146,16 +175,108 @@ describe("versions secret put", () => {
 				"secret_key",
 				"secret_text",
 			]);
+			expect(metadata.keep_assets).toBeTruthy();
 		});
 
-		await runWrangler(`versions secret bulk --name script-name --x-versions`);
+		await runWrangler(`versions secret bulk --name script-name`);
 		expect(std.out).toMatchInlineSnapshot(
 			`"🌀 Creating the secrets for the Worker \\"script-name\\" "`
 		);
 		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnable to parse JSON from the input, please ensure you're passing valid JSON[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo content found in file or piped input.[0m
 
 			"
 		`);
+	});
+
+	test("unsafe metadata is provided", async () => {
+		writeWranglerConfig({
+			name: "script-name",
+			unsafe: { metadata: { build_options: { stable_id: "foo/bar" } } },
+		});
+
+		await writeFile(
+			"secrets.json",
+			JSON.stringify({
+				SECRET_1: "secret-1",
+				SECRET_2: "secret-2",
+				SECRET_3: "secret-3",
+			}),
+			{ encoding: "utf8" }
+		);
+
+		mockSetupApiCalls();
+		mockPostVersion((metadata) => {
+			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
+				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
+				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
+				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
+			]);
+			expect(metadata.keep_bindings).toStrictEqual([
+				"secret_key",
+				"secret_text",
+			]);
+			expect(metadata.keep_assets).toBeTruthy();
+			expect(metadata["build_options"]).toStrictEqual({ stable_id: "foo/bar" });
+		});
+
+		await runWrangler(`versions secret bulk secrets.json --name script-name`);
+		expect(std.out).toMatchInlineSnapshot(
+			`
+			"🌀 Creating the secrets for the Worker \\"script-name\\"
+			✨ Successfully created secret for key: SECRET_1
+			✨ Successfully created secret for key: SECRET_2
+			✨ Successfully created secret for key: SECRET_3
+			✨ Success! Created version id with 3 secrets.
+			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy\\"."
+		`
+		);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	test("unsafe metadata not included if not in wrangler.toml", async () => {
+		writeWranglerConfig({
+			name: "script-name",
+		});
+
+		await writeFile(
+			"secrets.json",
+			JSON.stringify({
+				SECRET_1: "secret-1",
+				SECRET_2: "secret-2",
+				SECRET_3: "secret-3",
+			}),
+			{ encoding: "utf8" }
+		);
+
+		mockSetupApiCalls();
+		mockPostVersion((metadata) => {
+			expect(metadata.bindings).toStrictEqual([
+				{ type: "inherit", name: "do-binding" },
+				{ type: "secret_text", name: "SECRET_1", text: "secret-1" },
+				{ type: "secret_text", name: "SECRET_2", text: "secret-2" },
+				{ type: "secret_text", name: "SECRET_3", text: "secret-3" },
+			]);
+			expect(metadata.keep_bindings).toStrictEqual([
+				"secret_key",
+				"secret_text",
+			]);
+			expect(metadata.keep_assets).toBeTruthy();
+			expect(metadata["build_options"]).toBeUndefined();
+		});
+
+		await runWrangler(`versions secret bulk secrets.json --name script-name`);
+		expect(std.out).toMatchInlineSnapshot(
+			`
+			"🌀 Creating the secrets for the Worker \\"script-name\\"
+			✨ Successfully created secret for key: SECRET_1
+			✨ Successfully created secret for key: SECRET_2
+			✨ Successfully created secret for key: SECRET_3
+			✨ Success! Created version id with 3 secrets.
+			➡️  To deploy this version to production traffic use the command \\"wrangler versions deploy\\"."
+		`
+		);
+		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 });

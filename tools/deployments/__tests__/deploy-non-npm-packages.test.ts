@@ -97,6 +97,8 @@ describe("findDeployablePackageNames()", () => {
 	}) => {
 		expect(findDeployablePackageNames()).toMatchInlineSnapshot(`
 			Set {
+			  "@cloudflare/chrome-devtools-patches",
+			  "cloudflare-workers-bindings-extension",
 			  "devprod-status-bot",
 			  "edge-preview-authenticated-proxy",
 			  "format-errors",
@@ -105,8 +107,9 @@ describe("findDeployablePackageNames()", () => {
 			  "@cloudflare/quick-edit",
 			  "turbo-r2-archive",
 			  "workers-playground",
+			  "@cloudflare/workers-shared",
 			  "workers.new",
-			  "@cloudflare/wrangler-devtools",
+			  "@cloudflare/workflows-shared",
 			}
 		`);
 	});
@@ -116,7 +119,7 @@ describe("deployPackage", () => {
 	it("should run `pnpm deploy` for the given package via `execSync`", ({
 		expect,
 	}) => {
-		deployPackage("foo");
+		deployPackage("foo", new Map());
 		expect(execSync).toHaveBeenCalledWith(
 			"pnpm -F foo run deploy",
 			expect.any(Object)
@@ -129,7 +132,7 @@ describe("deployPackage", () => {
 		});
 		const logs: string[] = [];
 		vitest.spyOn(console, "error").mockImplementation((v) => logs.push(v));
-		deployPackage("foo");
+		deployPackage("foo", new Map());
 		expect(logs[0]).toMatchInlineSnapshot(`"::error::Failed to deploy "foo"."`);
 	});
 });

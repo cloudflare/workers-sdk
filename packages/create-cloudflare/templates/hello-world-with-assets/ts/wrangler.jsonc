@@ -1,0 +1,15 @@
+{
+  "name": "<TBD>",
+  "main": "src/index.ts",
+  "compatibility_date": "<TBD>",
+  "compatibility_flags": [
+    "global_fetch_strictly_public"
+  ],
+  "assets": {
+    // The path to the directory containing the `index.html` file to be served at `/`
+    "directory": "./public"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

@@ -1,5 +1,5 @@
 {
-	"name": "import-wasm-example",
+	"name": "@fixture/import-wasm",
 	"private": true,
 	"description": "",
 	"author": "",
@@ -11,11 +11,13 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"dependencies": {
-		"import-wasm-static": "workspace:^"
+		"@fixture/import-wasm-static": "workspace:^"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:^",
-		"undici": "^5.28.4",
+		"typescript": "catalog:default",
+		"undici": "catalog:default",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

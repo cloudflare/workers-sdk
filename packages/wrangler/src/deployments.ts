@@ -3,17 +3,18 @@ import TOML from "@iarna/toml";
 import chalk from "chalk";
 import { FormData } from "undici";
 import { fetchResult } from "./cfetch";
-import { readConfig } from "./config";
+import { configFileName, readConfig } from "./config";
 import { confirm, prompt } from "./dialogs";
 import { UserError } from "./errors";
 import { mapBindings } from "./init";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
-import { logVersionIdChange } from "./utils/deployment-id-version-id-change";
-import { getScriptName, printWranglerBanner } from ".";
+import { getScriptName } from "./utils/getScriptName";
+import { printWranglerBanner } from "./wrangler-banner";
 import type { Config } from "./config";
 import type { WorkerMetadataBinding } from "./deployment-bundle/create-worker-upload-form";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { ServiceMetadataRes } from "./init";
 import type { CommonYargsOptions } from "./yargs-types";
 import type { ArgumentsCamelCase } from "yargs";
@@ -52,11 +53,12 @@ export type DeploymentListResult = {
 };
 
 export async function deployments(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string | undefined,
 	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {}
 ) {
-	await metrics.sendMetricsEvent(
+	metrics.sendMetricsEvent(
 		"view deployments",
 		{ view: scriptName ? "single" : "all" },
 		{
@@ -66,12 +68,14 @@ export async function deployments(
 
 	const scriptTag = (
 		await fetchResult<ServiceMetadataRes>(
+			complianceConfig,
 			`/accounts/${accountId}/workers/services/${scriptName}`
 		)
 	).default_environment.script.tag;
 
 	const params = new URLSearchParams({ order: "asc" });
 	const { items: deploys } = await fetchResult<DeploymentListResult>(
+		complianceConfig,
 		`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}`,
 		undefined,
 		params
@@ -85,7 +89,6 @@ export async function deployments(
 			: `${formatSource(versions.metadata.source)}`;
 
 		let version = `
-Deployment ID: ${versions.id}
 Version ID:    ${versions.id}
 Created on:    ${versions.metadata.created_on}
 Author:        ${versions.metadata.author_email}
@@ -104,8 +107,6 @@ Source:        ${triggerStr}`;
 
 	versionMessages[versionMessages.length - 1] += "🟩 Active";
 	logger.log(...versionMessages);
-
-	logVersionIdChange();
 }
 
 function formatSource(source: string): string {
@@ -138,6 +139,7 @@ function formatTrigger(trigger: string): string {
 }
 
 export async function rollbackDeployment(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string | undefined,
 	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {},
@@ -147,12 +149,14 @@ export async function rollbackDeployment(
 	if (deploymentId === undefined) {
 		const scriptTag = (
 			await fetchResult<ServiceMetadataRes>(
+				complianceConfig,
 				`/accounts/${accountId}/workers/services/${scriptName}`
 			)
 		).default_environment.script.tag;
 
 		const params = new URLSearchParams({ order: "asc" });
 		const { items: deploys } = await fetchResult<DeploymentListResult>(
+			complianceConfig,
 			`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}`,
 			undefined,
 			params
@@ -160,13 +164,16 @@ export async function rollbackDeployment(
 
 		if (deploys.length < 2) {
 			throw new UserError(
-				"Cannot rollback to previous deployment since there are less than 2 deployments"
+				"Cannot rollback to previous deployment since there are less than 2 deployments",
+				{ telemetryMessage: true }
 			);
 		}
 
 		deploymentId = deploys.at(-2)?.id;
 		if (deploymentId === undefined) {
-			throw new UserError("Cannot find previous deployment");
+			throw new UserError("Cannot find previous deployment", {
+				telemetryMessage: true,
+			});
 		}
 	}
 
@@ -195,13 +202,14 @@ export async function rollbackDeployment(
 	}
 
 	let rollbackVersion = await rollbackRequest(
+		complianceConfig,
 		accountId,
 		scriptName,
 		deploymentId,
 		rollbackMessage
 	);
 
-	await metrics.sendMetricsEvent(
+	metrics.sendMetricsEvent(
 		"rollback deployments",
 		{ view: scriptName ? "single" : "all" },
 		{
@@ -213,13 +221,11 @@ export async function rollbackDeployment(
 	rollbackVersion = addHyphens(rollbackVersion) ?? rollbackVersion;
 
 	logger.log(`\nSuccessfully rolled back to Deployment ID: ${deploymentId}`);
-	logger.log("Current Deployment ID:", rollbackVersion);
 	logger.log("Current Version ID:", rollbackVersion);
-
-	logVersionIdChange();
 }
 
 async function rollbackRequest(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string | undefined,
 	deploymentId: string,
@@ -231,6 +237,7 @@ async function rollbackRequest(
 	const { deployment_id } = await fetchResult<{
 		deployment_id: string | null;
 	}>(
+		complianceConfig,
 		`/accounts/${accountId}/workers/scripts/${scriptName}?rollback_to=${deploymentId}`,
 		{
 			method: "PUT",
@@ -242,12 +249,13 @@ async function rollbackRequest(
 }
 
 export async function viewDeployment(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string | undefined,
 	{ send_metrics: sendMetrics }: { send_metrics?: Config["send_metrics"] } = {},
 	deploymentId: string | undefined
 ) {
-	await metrics.sendMetricsEvent(
+	metrics.sendMetricsEvent(
 		"view deployments",
 		{ view: scriptName ? "single" : "all" },
 		{
@@ -257,6 +265,7 @@ export async function viewDeployment(
 
 	const scriptTag = (
 		await fetchResult<ServiceMetadataRes>(
+			complianceConfig,
 			`/accounts/${accountId}/workers/services/${scriptName}`
 		)
 	).default_environment.script.tag;
@@ -264,6 +273,7 @@ export async function viewDeployment(
 	if (deploymentId === undefined) {
 		const params = new URLSearchParams({ order: "asc" });
 		const { latest } = await fetchResult<DeploymentListResult>(
+			complianceConfig,
 			`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}`,
 			undefined,
 			params
@@ -271,11 +281,14 @@ export async function viewDeployment(
 
 		deploymentId = latest.id;
 		if (deploymentId === undefined) {
-			throw new UserError("Cannot find previous deployment");
+			throw new UserError("Cannot find previous deployment", {
+				telemetryMessage: true,
+			});
 		}
 	}
 
 	const deploymentDetails = await fetchResult<DeploymentListResult["latest"]>(
+		complianceConfig,
 		`/accounts/${accountId}/workers/deployments/by-script/${scriptTag}/detail/${deploymentId}`
 	);
 
@@ -305,7 +318,6 @@ export async function viewDeployment(
 	const bindings = deploymentDetails.resources.bindings;
 
 	const version = `
-Deployment ID:       ${deploymentDetails.id}
 Version ID:          ${deploymentDetails.id}
 Created on:          ${deploymentDetails.metadata.created_on}
 Author:              ${deploymentDetails.metadata.author_email}
@@ -319,39 +331,44 @@ Handlers:            ${
 --------------------------bindings--------------------------
 ${
 	bindings.length > 0
-		? TOML.stringify(mapBindings(bindings) as TOML.JsonMap)
+		? TOML.stringify(
+				(await mapBindings(
+					complianceConfig,
+					accountId,
+					bindings
+				)) as TOML.JsonMap
+			)
 		: `None`
 }
 `;
 
 	logger.log(version);
-
-	logVersionIdChange();
 }
 
 export async function commonDeploymentCMDSetup(
-	yargs: ArgumentsCamelCase<CommonYargsOptions>,
-	deploymentsWarning: string
+	yargs: ArgumentsCamelCase<CommonYargsOptions>
 ) {
 	await printWranglerBanner();
-	const config = readConfig(yargs.config, yargs);
+	const config = readConfig(yargs);
 	const accountId = await requireAuth(config);
 	const scriptName = getScriptName(
 		{ name: yargs.name as string, env: undefined },
 		config
 	);
 
-	logger.log(`${deploymentsWarning}\n`);
 	if (!scriptName) {
 		throw new UserError(
-			"Required Worker name missing. Please specify the Worker name in wrangler.toml, or pass it as an argument with `--name`"
+			`Required Worker name missing. Please specify the Worker name in your ${configFileName(config.configPath)} file, or pass it as an argument with \`--name\``,
+			{
+				telemetryMessage: `Required Worker name missing. Please specify the Worker name in your config file, or pass it as an argument with \`--name\``,
+			}
 		);
 	}
 
 	return { accountId, scriptName, config };
 }
 
-export function addHyphens(uuid: string | null): string | null {
+function addHyphens(uuid: string | null): string | null {
 	if (uuid == null) {
 		return uuid;
 	}

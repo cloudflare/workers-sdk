@@ -1,0 +1,8 @@
+{
+	"name": "<TBD>",
+	"main": "src/index.ts",
+	"compatibility_date": "<TBD>",
+	"observability": {
+		"enabled": true,
+	},
+}

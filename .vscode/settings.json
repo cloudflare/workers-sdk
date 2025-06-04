@@ -2,6 +2,9 @@
 	"editor.defaultFormatter": "esbenp.prettier-vscode",
 	"cSpell.words": [
 		"Abortable",
+		"assetsignore",
+		"astro",
+		"cf-typegen",
 		"cfetch",
 		"chatgpt",
 		"clipboardy",
@@ -11,8 +14,11 @@
 		"esbuild",
 		"eslintcache",
 		"execa",
+		"fedramp",
+		"filestat",
 		"haikunate",
 		"haikunator",
+		"Hono",
 		"httplogs",
 		"iarna",
 		"isolinear",
@@ -24,12 +30,15 @@
 		"mockpm",
 		"mrbbot",
 		"mtls",
+		"nodeless",
+		"Nuxt",
 		"outdir",
 		"outfile",
 		"pgrep",
 		"PKCE",
 		"Positionals",
 		"qwik",
+		"Redistributable",
 		"reinitialise",
 		"scandir",
 		"selfsigned",
@@ -37,8 +46,10 @@
 		"tsbuildinfo",
 		"turborepo",
 		"undici",
+		"unenv",
 		"unrevoke",
 		"Untriaged",
+		"userconfig",
 		"versionless",
 		"wasmvalue",
 		"weakmap",
@@ -78,5 +89,6 @@
 		{
 			"mode": "auto"
 		}
-	]
+	],
+	"editor.formatOnSave": true
 }

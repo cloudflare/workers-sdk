@@ -4,7 +4,7 @@ import os from "os";
 import path from "path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { unstable_dev } from "wrangler";
-import type { UnstableDevWorker } from "wrangler";
+import type { Unstable_DevWorker } from "wrangler";
 
 function removeUUID(str: string) {
 	return str.replace(
@@ -14,13 +14,13 @@ function removeUUID(str: string) {
 }
 
 describe("Preview Worker", () => {
-	let worker: UnstableDevWorker;
-	let remote: UnstableDevWorker;
+	let worker: Unstable_DevWorker;
+	let remote: Unstable_DevWorker;
 	let tmpDir: string;
 
 	beforeAll(async () => {
 		worker = await unstable_dev(path.join(__dirname, "../src/index.ts"), {
-			config: path.join(__dirname, "../wrangler.toml"),
+			config: path.join(__dirname, "../wrangler.jsonc"),
 			ip: "127.0.0.1",
 			experimental: {
 				disableExperimentalWarning: true,
@@ -301,8 +301,8 @@ compatibility_date = "2023-01-01"
 });
 
 describe("Raw HTTP preview", () => {
-	let worker: UnstableDevWorker;
-	let remote: UnstableDevWorker;
+	let worker: Unstable_DevWorker;
+	let remote: Unstable_DevWorker;
 	let tmpDir: string;
 
 	beforeAll(async () => {
@@ -335,7 +335,9 @@ describe("Raw HTTP preview", () => {
 							return Response.redirect("https://example.com", 302)
 						}
 						if(url.pathname === "/method") {
-							return new Response(request.method)
+							return new Response(request.method, {
+								headers: { "Test-Http-Method": request.method },
+							})
 						}
 						if(url.pathname === "/status") {
 							return new Response(407)
@@ -356,7 +358,7 @@ describe("Raw HTTP preview", () => {
 						return Response.json({
 							url: request.url,
 							headers: [...request.headers.entries()]
-						})
+						}, { headers: { "Content-Encoding": "identity" } })
 					}
 				}
 			`.trim()
@@ -429,5 +431,143 @@ compatibility_date = "2023-01-01"
 		expect(resp.headers.get("cf-ew-raw-set-cookie")).toMatchInlineSnapshot(
 			`"foo=1, bar=2"`
 		);
+	});
+
+	it("should pass headers to the user-worker", async () => {
+		const token = randomBytes(4096).toString("hex");
+		const resp = await worker.fetch(
+			`https://0000.rawhttp.devprod.cloudflare.dev/`,
+			{
+				method: "GET",
+				headers: {
+					"Access-Control-Request-Method": "GET",
+					origin: "https://cloudflare.dev",
+					"X-CF-Token": token,
+					"X-CF-Remote": `http://127.0.0.1:${remote.port}`,
+					"Some-Custom-Header": "custom",
+					Accept: "application/json",
+				},
+			}
+		);
+
+		const body = (await resp.json()) as Record<string, unknown>;
+
+		const headers = (body.headers as [string, string][]).filter(
+			(h) => h[0] === "some-custom-header" || h[0] === "accept"
+		);
+
+		// This contains some-custom-header & accept, as expected
+		expect(headers).toMatchInlineSnapshot(`
+			[
+			  [
+			    "accept",
+			    "application/json",
+			  ],
+			  [
+			    "some-custom-header",
+			    "custom",
+			  ],
+			]
+		`);
+	});
+
+	it("should use the method specified on the X-CF-Http-Method header", async () => {
+		const token = randomBytes(4096).toString("hex");
+		const resp = await worker.fetch(
+			`https://0000.rawhttp.devprod.cloudflare.dev/method`,
+			{
+				method: "POST",
+				headers: {
+					origin: "https://cloudflare.dev",
+					"X-CF-Token": token,
+					"X-CF-Remote": `http://127.0.0.1:${remote.port}`,
+					"X-CF-Http-Method": "PUT",
+				},
+			}
+		);
+
+		expect(await resp.text()).toEqual("PUT");
+	});
+
+	it.each(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])(
+		"should support %s method specified on the X-CF-Http-Method header",
+		async (method) => {
+			const token = randomBytes(4096).toString("hex");
+			const resp = await worker.fetch(
+				`https://0000.rawhttp.devprod.cloudflare.dev/method`,
+				{
+					method: "POST",
+					headers: {
+						origin: "https://cloudflare.dev",
+						"X-CF-Token": token,
+						"X-CF-Remote": `http://127.0.0.1:${remote.port}`,
+						"X-CF-Http-Method": method,
+					},
+				}
+			);
+
+			// HEAD request does not return any body. So we will confirm by asserting the response header
+			expect(await resp.text()).toEqual(method === "HEAD" ? "" : method);
+			// Header from the client response will be prefixed with "cf-ew-raw-"
+			expect(resp.headers.get("cf-ew-raw-Test-Http-Method")).toEqual(method);
+		}
+	);
+
+	it("should fallback to the request method if the X-CF-Http-Method header is missing", async () => {
+		const token = randomBytes(4096).toString("hex");
+		const resp = await worker.fetch(
+			`https://0000.rawhttp.devprod.cloudflare.dev/method`,
+			{
+				method: "PUT",
+				headers: {
+					origin: "https://cloudflare.dev",
+					"X-CF-Token": token,
+					"X-CF-Remote": `http://127.0.0.1:${remote.port}`,
+				},
+			}
+		);
+
+		expect(await resp.text()).toEqual("PUT");
+	});
+
+	it("should strip cf-ew-raw- prefix from headers which have it before hitting the user-worker", async () => {
+		const token = randomBytes(4096).toString("hex");
+		const resp = await worker.fetch(
+			`https://0000.rawhttp.devprod.cloudflare.dev/`,
+			{
+				method: "GET",
+				headers: {
+					"Access-Control-Request-Method": "GET",
+					origin: "https://cloudflare.dev",
+					"X-CF-Token": token,
+					"X-CF-Remote": `http://127.0.0.1:${remote.port}`,
+					"cf-ew-raw-Some-Custom-Header": "custom",
+					"cf-ew-raw-Accept": "application/json",
+				},
+			}
+		);
+
+		const body = (await resp.json()) as Record<string, unknown>;
+
+		const headers = (body.headers as [string, string][]).filter(
+			(h) =>
+				h[0] === "some-custom-header" ||
+				h[0] === "accept" ||
+				h[0].startsWith("cf-ew-raw-")
+		);
+
+		// This contains some-custom-header & accept, as expected, and does not contain cf-ew-raw-some-custom-header or cf-ew-raw-accept
+		expect(headers).toMatchInlineSnapshot(`
+			[
+			  [
+			    "accept",
+			    "application/json",
+			  ],
+			  [
+			    "some-custom-header",
+			    "custom",
+			  ],
+			]
+		`);
 	});
 });

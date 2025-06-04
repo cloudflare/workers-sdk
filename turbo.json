@@ -3,14 +3,16 @@
 	"remoteCache": {
 		"signature": true
 	},
-	"globalEnv": ["CI_OS", "NODE_VERSION", "VITEST"],
-	"pipeline": {
+	"globalEnv": ["CI_OS", "NODE_VERSION"],
+	"globalPassThroughEnv": ["NODE_EXTRA_CA_CERTS", "CI"],
+	"tasks": {
 		"dev": {
 			"persistent": true,
 			"cache": false
 		},
 		"build": {
-			"dependsOn": ["^build"]
+			"dependsOn": ["^build"],
+			"outputLogs": "new-only"
 		},
 		"test": {
 			"dependsOn": ["build"]
@@ -19,22 +21,23 @@
 			"persistent": true,
 			"cache": false
 		},
-		"topological": {
-			"dependsOn": ["^topological"]
-		},
 		"check:lint": {
-			"dependsOn": ["topological"]
+			"dependsOn": ["^check:lint"]
 		},
 		"check:type": {
-			"dependsOn": ["topological"]
-		},
-		"type:tests": {
-			"dependsOn": ["topological"]
-		},
-		"test:ci": {
 			"dependsOn": ["build"]
 		},
-		"test:e2e": {},
+		"type:tests": {
+			"dependsOn": ["build"]
+		},
+		"test:ci": {
+			"dependsOn": ["build"],
+			"outputLogs": "new-only"
+		},
+		"test:e2e": {
+			"dependsOn": ["build"],
+			"outputLogs": "new-only"
+		},
 		"//#check:format": {
 			"cache": true
 		}

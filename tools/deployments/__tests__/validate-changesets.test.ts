@@ -19,27 +19,33 @@ describe("findPackageNames()", () => {
 	it("should return all the private packages which contain deploy scripts", ({
 		expect,
 	}) => {
-		expect(findPackageNames()).toMatchInlineSnapshot(`
-			Set {
-			  "create-cloudflare",
-			  "devprod-status-bot",
-			  "edge-preview-authenticated-proxy",
-			  "format-errors",
-			  "@cloudflare/kv-asset-handler",
-			  "miniflare",
-			  "@cloudflare/pages-shared",
-			  "playground-preview-worker",
-			  "@cloudflare/prerelease-registry",
-			  "@cloudflare/quick-edit",
-			  "solarflare-theme",
-			  "turbo-r2-archive",
-			  "@cloudflare/vitest-pool-workers",
-			  "workers-playground",
-			  "workers.new",
-			  "wrangler",
-			  "@cloudflare/wrangler-devtools",
-			}
-		`);
+		expect(findPackageNames()).toEqual(
+			new Set([
+				"@cloudflare/chrome-devtools-patches",
+				"@cloudflare/kv-asset-handler",
+				"@cloudflare/pages-shared",
+				"@cloudflare/prerelease-registry",
+				"@cloudflare/quick-edit",
+				"@cloudflare/unenv-preset",
+				"@cloudflare/vitest-pool-workers",
+				"@cloudflare/workers-editor-shared",
+				"@cloudflare/workers-shared",
+				"@cloudflare/workflows-shared",
+				"@cloudflare/vite-plugin",
+				"cloudflare-workers-bindings-extension",
+				"create-cloudflare",
+				"devprod-status-bot",
+				"edge-preview-authenticated-proxy",
+				"format-errors",
+				"miniflare",
+				"playground-preview-worker",
+				"solarflare-theme",
+				"turbo-r2-archive",
+				"workers-playground",
+				"workers.new",
+				"wrangler",
+			])
+		);
 	});
 });
 
@@ -93,21 +99,36 @@ describe("validateChangesets()", () => {
 					contents: dedent`
           ---
           "package-a": patch
-          ---`,
+          ---
+
+		  refactor: test`,
 				},
 				{
 					file: "valid-two.md",
 					contents: dedent`
           ---
           "package-b": minor
-          ---`,
+          ---
+
+		  feature: test`,
 				},
 				{
 					file: "valid-three.md",
 					contents: dedent`
           ---
           "package-c": major
-          ---`,
+          ---
+
+		  chore: test`,
+				},
+				{
+					file: "valid-three.md",
+					contents: dedent`
+          ---
+          "package-c": major
+          ---
+
+		  fix: test`,
 				},
 				{ file: "invalid-frontmatter.md", contents: "" },
 				{
@@ -115,14 +136,18 @@ describe("validateChangesets()", () => {
 					contents: dedent`
           ---
           "package-invalid": major
-          ---`,
+          ---
+
+		  feat: test`,
 				},
 				{
 					file: "invalid-type.md",
 					contents: dedent`
           ---
           "package-a": foo
-          ---`,
+          ---
+
+		  docs: test`,
 				},
 			]
 		);

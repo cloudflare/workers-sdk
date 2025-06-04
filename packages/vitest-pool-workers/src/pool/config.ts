@@ -2,6 +2,8 @@ import path from "node:path";
 import {
 	formatZodError,
 	getRootPath,
+	Log,
+	LogLevel,
 	mergeWorkerOptions,
 	parseWithRootPath,
 	PLUGINS,
@@ -135,6 +137,40 @@ function parseWorkerOptions(
 	return result;
 }
 
+const log = new Log(LogLevel.WARN, { prefix: "vpw" });
+
+function filterTails(
+	tails: WorkerOptions["tails"],
+	userWorkers?: { name?: string }[]
+) {
+	// Only connect the tail consumers that represent Workers that are defined in the Vitest config. Warn that a tail will be omitted otherwise
+	// This _differs from service bindings_ because tail consumers are "optional" in a sense, and shouldn't affect the runtime behaviour of a Worker
+	return tails?.filter((tailService) => {
+		let name: string;
+		if (typeof tailService === "string") {
+			name = tailService;
+		} else if (
+			typeof tailService === "object" &&
+			"name" in tailService &&
+			typeof tailService.name === "string"
+		) {
+			name = tailService.name;
+		} else {
+			// Don't interfere with network-based tail connections (e.g. via the dev registry), or kCurrentWorker
+			return true;
+		}
+		const found = userWorkers?.some((w) => w.name === name);
+
+		if (!found) {
+			log.warn(
+				`Tail consumer "${name}" was not found in your config. Make sure you add it if you'd like to simulate receiving tail events locally.`
+			);
+		}
+
+		return found;
+	});
+}
+
 async function parseCustomPoolOptions(
 	rootPath: string,
 	value: unknown,
@@ -163,6 +199,7 @@ async function parseCustomPoolOptions(
 		coalesceZodErrors(errorRef, e);
 	}
 
+	options.miniflare.workers = [];
 	// Try to parse auxiliary worker options
 	if (workers !== undefined) {
 		options.miniflare.workers = workers.map((worker, i) => {
@@ -197,21 +234,64 @@ async function parseCustomPoolOptions(
 
 		// Lazily import `wrangler` if and when we need it
 		const wrangler = await import("wrangler");
-		const { workerOptions, define, main } =
+
+		const { workerOptions, externalWorkers, define, main } =
 			wrangler.unstable_getMiniflareWorkerOptions(
 				configPath,
-				options.wrangler.environment
+				options.wrangler.environment,
+				{
+					imagesLocalMode: true,
+					overrides: { assets: options.miniflare.assets },
+				}
 			);
+
+		const wrappedBindings = Object.values(workerOptions.wrappedBindings ?? {});
+
+		const hasAIOrVectorizeBindings = wrappedBindings.some((binding) => {
+			return (
+				typeof binding === "object" &&
+				(binding.scriptName.includes("__WRANGLER_EXTERNAL_VECTORIZE_WORKER") ||
+					binding.scriptName.includes("__WRANGLER_EXTERNAL_AI_WORKER"))
+			);
+		});
+
+		if (hasAIOrVectorizeBindings) {
+			log.warn(
+				"Workers AI and Vectorize bindings will access your Cloudflare account and incur usage charges even in testing. We recommend mocking any usage of these bindings in your tests."
+			);
+		}
 
 		// If `main` wasn't explicitly configured, fall back to Wrangler config's
 		options.main ??= main;
+
+		options.miniflare.workers = [
+			...options.miniflare.workers,
+			...externalWorkers,
+		];
+
 		// Merge generated Miniflare options from Wrangler with specified overrides
 		options.miniflare = mergeWorkerOptions(
 			workerOptions,
 			options.miniflare as SourcelessWorkerOptions
 		);
+
+		options.miniflare = {
+			...options.miniflare,
+			tails: filterTails(workerOptions.tails, options.miniflare.workers),
+		};
+
 		// Record any Wrangler `define`s
 		options.defines = define;
+	}
+
+	// Some assets plumbing that should be hidden from the end user
+	if (options.miniflare?.assets) {
+		// (Used to set the SELF binding to point to the router worker instead)
+		options.miniflare.hasAssetsAndIsVitest = true;
+		options.miniflare.assets.routerConfig ??= {};
+		options.miniflare.assets.routerConfig.has_user_worker = Boolean(
+			options.main
+		);
 	}
 
 	return options;
@@ -250,7 +330,7 @@ export async function parseProjectOptions(
 	let workersPoolOptions = poolOptions?.workers ?? {};
 	try {
 		if (typeof workersPoolOptions === "function") {
-			// https://github.com/vitest-dev/vitest/blob/v1.5.0/packages/vitest/src/integrations/inject.ts
+			// https://github.com/vitest-dev/vitest/blob/v2.1.1/packages/vitest/src/integrations/inject.ts
 			const inject = <K extends keyof ProvidedContext>(
 				key: K
 			): ProvidedContext[K] => {

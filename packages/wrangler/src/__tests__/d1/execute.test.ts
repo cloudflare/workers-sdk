@@ -4,7 +4,11 @@ import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import writeWranglerToml from "../helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
+
+// we want to include the banner to make sure it doesn't show up in the output
+// when --json=true
+vi.unmock("../../wrangler-banner");
 
 describe("execute", () => {
 	const std = mockConsoleMethods();
@@ -16,7 +20,7 @@ describe("execute", () => {
 
 	it("should require login when running against prod", async () => {
 		setIsTTY(false);
-		writeWranglerToml({
+		writeWranglerConfig({
 			d1_databases: [
 				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 			],
@@ -31,7 +35,7 @@ describe("execute", () => {
 
 	it("should expect either --command or --file", async () => {
 		setIsTTY(false);
-		writeWranglerToml({
+		writeWranglerConfig({
 			d1_databases: [
 				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 			],
@@ -44,7 +48,7 @@ describe("execute", () => {
 
 	it("should reject use of both --command and --file", async () => {
 		setIsTTY(false);
-		writeWranglerToml({
+		writeWranglerConfig({
 			d1_databases: [
 				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 			],
@@ -64,7 +68,7 @@ describe("execute", () => {
 
 	it("should reject the use of --remote with --local", async () => {
 		setIsTTY(false);
-		writeWranglerToml({
+		writeWranglerConfig({
 			d1_databases: [
 				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 			],
@@ -79,7 +83,7 @@ describe("execute", () => {
 
 	it("should reject the use of --preview with --local", async () => {
 		setIsTTY(false);
-		writeWranglerToml({
+		writeWranglerConfig({
 			d1_databases: [
 				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 			],
@@ -92,7 +96,7 @@ describe("execute", () => {
 
 	it("should reject the use of --preview with --local with --json", async () => {
 		setIsTTY(false);
-		writeWranglerToml({
+		writeWranglerConfig({
 			d1_databases: [
 				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 			],
@@ -115,7 +119,7 @@ describe("execute", () => {
 
 	it("should reject a binary SQLite DB", async () => {
 		setIsTTY(false);
-		writeWranglerToml({
+		writeWranglerConfig({
 			d1_databases: [
 				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 			],
@@ -136,6 +140,47 @@ describe("execute", () => {
 				2
 			)
 		);
+	});
+
+	it("should throw a UserError if file does not exist", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+
+		await expect(runWrangler(`d1 execute db --file missing.sql --local --json`))
+			.rejects.toThrowErrorMatchingInlineSnapshot(`
+			[Error: {
+			  "error": {
+			    "text": "Unable to read SQL text file /"missing.sql/". Please check the file path and try again."
+			  }
+			}]
+		`);
+	});
+
+	it("should show banner by default", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+
+		await runWrangler("d1 execute db --command 'select 1;'");
+		expect(std.out).toContain("⛅️ wrangler x.x.x");
+	});
+	it("should not show banner if --json=true", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+
+		await runWrangler("d1 execute db --command 'select 1;' --json");
+		expect(std.out).not.toContain("⛅️ wrangler x.x.x");
 	});
 });
 

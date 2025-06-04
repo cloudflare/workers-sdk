@@ -1,6 +1,6 @@
 {
 	"name": "workers-playground",
-	"version": "0.0.6",
+	"version": "0.2.4",
 	"private": true,
 	"type": "module",
 	"scripts": {
@@ -16,6 +16,7 @@
 	"dependencies": {
 		"@cloudflare/component-button": "^7.0.11",
 		"@cloudflare/component-code-block": "^4.1.2",
+		"@cloudflare/component-heading": "^4.0.6",
 		"@cloudflare/component-icon": "^11.5.1",
 		"@cloudflare/component-input": "^8.1.1",
 		"@cloudflare/component-listbox": "^1.10.6",
@@ -28,45 +29,37 @@
 		"@cloudflare/elements": "^3.0.1",
 		"@cloudflare/intl-react": "^1.12.2",
 		"@cloudflare/style-const": "^5.7.2",
-		"@cloudflare/style-container": "^7.12.1",
+		"@cloudflare/style-container": "7.12.2",
 		"@cloudflare/style-provider": "^3.1.0",
 		"@cloudflare/util-en-garde": "^8.0.10",
-		"@cloudflare/util-hooks": "^1.2.0",
+		"@cloudflare/workers-editor-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"csstype": "^3.1.2",
-		"es-module-lexer": "^1.3.0",
 		"glob-to-regexp": "^0.4.1",
-		"hono": "^3.12.11",
 		"lz-string": "^1.5.0",
-		"react": "^18.2.0",
-		"react-dom": "^18.2.0",
-		"react-router-dom": "^6.15.0",
-		"react-split-pane": "^0.1.92",
-		"react-spring": "^8.0.27",
-		"react-tabs": "^6.0.2",
-		"react-use-websocket": "^3.0.0",
+		"react": "^18.3.1",
+		"react-dom": "^18.3.1",
+		"react-tabs": "^4.1.0",
 		"swr": "^2.2.0",
 		"uuid": "^9.0.0"
 	},
 	"devDependencies": {
-		"@cloudflare/cloudflare-brand-assets": "^4.7.7",
 		"@types/glob-to-regexp": "^0.4.1",
-		"@types/react": "^18.2.21",
-		"@types/react-dom": "^18.2.7",
-		"@types/react-tabs": "^2.3.4",
+		"@types/react": "^18.3.3",
+		"@types/react-dom": "^18.2.0",
 		"@types/uuid": "^9.0.2",
 		"@typescript-eslint/eslint-plugin": "^6.9.0",
 		"@typescript-eslint/parser": "^6.9.0",
-		"@vitejs/plugin-react": "^4.0.1",
-		"eslint": "^8.49.0",
-		"eslint-plugin-react-hooks": "^4.6.0",
-		"eslint-plugin-react-refresh": "^0.4.1",
+		"@vitejs/plugin-react": "^4.3.3",
+		"eslint": "^8.57.1",
 		"tsx": "^3.12.8",
-		"undici": "^5.28.4",
-		"vite-plugin-rewrite-all": "^1.0.1",
+		"undici": "catalog:default",
+		"vite": "catalog:default",
 		"wrangler": "workspace:^"
 	},
 	"volta": {
 		"extends": "../../package.json"
+	},
+	"workers-sdk": {
+		"deploy": true
 	}
 }

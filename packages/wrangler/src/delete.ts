@@ -1,18 +1,15 @@
 import assert from "assert";
-import path from "path";
 import { fetchResult } from "./cfetch";
-import { findWranglerToml, readConfig } from "./config";
+import { configFileName } from "./config";
+import { createCommand } from "./core/create-command";
 import { confirm } from "./dialogs";
 import { UserError } from "./errors";
 import { deleteKVNamespace, listKVNamespaces } from "./kv/helpers";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
-import { getScriptName, printWranglerBanner } from "./index";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "./yargs-types";
+import { getScriptName } from "./utils/getScriptName";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 
 // Types returned by the /script/{name}/references API
 type ServiceReference = {
@@ -61,103 +58,119 @@ export type Tail = {
 	modified_on: string;
 };
 
-export function deleteOptions(yargs: CommonYargsArgv) {
-	return yargs
-		.positional("script", {
+export const deleteCommand = createCommand({
+	metadata: {
+		description: "🗑  Delete a Worker from Cloudflare",
+		owner: "Workers: Authoring and Testing",
+		status: "stable",
+	},
+	args: {
+		script: {
 			describe: "The path to an entry point for your worker",
 			type: "string",
 			requiresArg: true,
-		})
-		.option("name", {
+		},
+		name: {
 			describe: "Name of the worker",
 			type: "string",
 			requiresArg: true,
-		})
-		.option("dry-run", {
+		},
+		"dry-run": {
 			describe: "Don't actually delete",
 			type: "boolean",
-		})
-		.option("force", {
+		},
+		force: {
 			describe:
 				"Delete even if doing so will break other Workers that depend on this one",
 			type: "boolean",
-		})
-		.option("legacy-env", {
+		},
+		"legacy-env": {
 			type: "boolean",
 			describe: "Use legacy environments",
 			hidden: true,
-		});
-}
-
-type DeleteArgs = StrictYargsOptionsToInterface<typeof deleteOptions>;
-
-export async function deleteHandler(args: DeleteArgs) {
-	await printWranglerBanner();
-
-	const configPath =
-		args.config || (args.script && findWranglerToml(path.dirname(args.script)));
-	const config = readConfig(configPath, args);
-	await metrics.sendMetricsEvent(
-		"delete worker script",
-		{},
-		{ sendMetrics: config.send_metrics }
-	);
-
-	const accountId = args.dryRun ? undefined : await requireAuth(config);
-
-	const scriptName = getScriptName(args, config);
-	if (!scriptName) {
-		throw new UserError(
-			"A worker name must be defined, either via --name, or in wrangler.toml"
+		},
+	},
+	positionalArgs: ["script"],
+	async handler(args, { config }) {
+		if (config.pages_build_output_dir) {
+			throw new UserError(
+				"It looks like you've run a Workers-specific command in a Pages project.\n" +
+					"For Pages, please run `wrangler pages project delete` instead.",
+				{ telemetryMessage: true }
+			);
+		}
+		metrics.sendMetricsEvent(
+			"delete worker script",
+			{},
+			{ sendMetrics: config.send_metrics }
 		);
-	}
 
-	if (args.dryRun) {
-		logger.log(`--dry-run: exiting now.`);
-		return;
-	}
+		const accountId = args.dryRun ? undefined : await requireAuth(config);
 
-	assert(accountId, "Missing accountId");
+		const scriptName = getScriptName(args, config);
+		if (!scriptName) {
+			throw new UserError(
+				`A worker name must be defined, either via --name, or in your ${configFileName(config.configPath)} file`,
+				{
+					telemetryMessage:
+						"`A worker name must be defined, either via --name, or in your config file",
+				}
+			);
+		}
 
-	const confirmed =
-		args.force ||
-		(await confirm(
-			`Are you sure you want to delete ${scriptName}? This action cannot be undone.`
-		));
-
-	if (confirmed) {
-		const needsForceDelete =
-			args.force ||
-			(await checkAndConfirmForceDeleteIfNecessary(scriptName, accountId));
-		if (needsForceDelete === null) {
-			// null means the user rejected the extra confirmation - return early
+		if (args.dryRun) {
+			logger.log(`--dry-run: exiting now.`);
 			return;
 		}
 
-		await fetchResult(
-			`/accounts/${accountId}/workers/services/${scriptName}`,
-			{ method: "DELETE" },
-			new URLSearchParams({ force: needsForceDelete.toString() })
-		);
+		assert(accountId, "Missing accountId");
 
-		await deleteSiteNamespaceIfExisting(scriptName, accountId);
+		const confirmed =
+			args.force ||
+			(await confirm(
+				`Are you sure you want to delete ${scriptName}? This action cannot be undone.`
+			));
 
-		logger.log("Successfully deleted", scriptName);
-	}
-}
+		if (confirmed) {
+			const needsForceDelete =
+				args.force ||
+				(await checkAndConfirmForceDeleteIfNecessary(
+					config,
+					scriptName,
+					accountId
+				));
+			if (needsForceDelete === null) {
+				// null means the user rejected the extra confirmation - return early
+				return;
+			}
+
+			await fetchResult(
+				config,
+				`/accounts/${accountId}/workers/services/${scriptName}`,
+				{ method: "DELETE" },
+				new URLSearchParams({ force: needsForceDelete.toString() })
+			);
+
+			await deleteSiteNamespaceIfExisting(config, scriptName, accountId);
+
+			logger.log("Successfully deleted", scriptName);
+		}
+	},
+});
 
 async function deleteSiteNamespaceIfExisting(
+	complianceConfig: ComplianceConfig,
 	scriptName: string,
 	accountId: string
 ): Promise<void> {
 	const title = `__${scriptName}-workers_sites_assets`;
 	const previewTitle = `__${scriptName}-workers_sites_assets_preview`;
-	const allNamespaces = await listKVNamespaces(accountId);
+	const allNamespaces = await listKVNamespaces(complianceConfig, accountId);
 	const namespacesToDelete = allNamespaces.filter(
 		(ns) => ns.title === title || ns.title === previewTitle
 	);
 	for (const ns of namespacesToDelete) {
-		await deleteKVNamespace(accountId, ns.id);
+		await deleteKVNamespace(complianceConfig, accountId, ns.id);
 		logger.log(`🌀 Deleted asset namespace for Workers Site "${ns.title}"`);
 	}
 }
@@ -206,13 +219,16 @@ function isUsedAsTailConsumer(tailProducers: Tail[]) {
 }
 
 async function checkAndConfirmForceDeleteIfNecessary(
+	complianceConfig: ComplianceConfig,
 	scriptName: string,
 	accountId: string
 ): Promise<boolean | null> {
 	const references = await fetchResult<ServiceReferenceResponse>(
+		complianceConfig,
 		`/accounts/${accountId}/workers/scripts/${scriptName}/references`
 	);
 	const tailProducers = await fetchResult<Tail[]>(
+		complianceConfig,
 		`/accounts/${accountId}/workers/tails/by-consumer/${scriptName}`
 	);
 	const isDependentService =

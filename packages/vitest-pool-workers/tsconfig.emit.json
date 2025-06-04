@@ -8,5 +8,5 @@
 		"incremental": false
 	},
 	// Only want to emit `.d.ts` for `/config` sub-export
-	"include": ["./src/config/**/*.ts"]
+	"include": ["./src/shared/types-global.d.ts", "./src/config/**/*.ts"]
 }

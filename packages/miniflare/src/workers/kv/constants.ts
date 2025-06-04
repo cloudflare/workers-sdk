@@ -7,6 +7,7 @@ export const KVLimits = {
 	MAX_VALUE_SIZE: 25 * 1024 * 1024 /* 25MiB */,
 	MAX_VALUE_SIZE_TEST: 1024 /* 1KiB */,
 	MAX_METADATA_SIZE: 1024 /* 1KiB */,
+	MAX_BULK_SIZE: 25 * 1024 * 1024 /* 25MiB */,
 } as const;
 
 export const KVParams = {
@@ -34,6 +35,7 @@ export const SiteBindings = {
 // This ensures edge caching of Workers Sites files is disabled, and the latest
 // local version is always served.
 export const SITES_NO_CACHE_PREFIX = "$__MINIFLARE_SITES__$/";
+export const MAX_BULK_GET_KEYS = 100;
 
 export function encodeSitesKey(key: string): string {
 	// `encodeURIComponent()` ensures `ETag`s used by `@cloudflare/kv-asset-handler`
@@ -45,6 +47,7 @@ export function decodeSitesKey(key: string): string {
 		? decodeURIComponent(key.substring(SITES_NO_CACHE_PREFIX.length))
 		: key;
 }
+
 export function isSitesRequest(request: { url: string }) {
 	const url = new URL(request.url);
 	return url.pathname.startsWith(`/${SITES_NO_CACHE_PREFIX}`);
@@ -115,4 +118,18 @@ export function testSiteRegExps(
 	// Either exclude globs undefined, or name doesn't match them
 	if (regExps.exclude !== undefined) return !testRegExps(regExps.exclude, key);
 	return true;
+}
+
+export function getAssetsBindingsNames(
+	// __STATIC_CONTENT and __STATIC_CONTENT_MANIFEST binding names are
+	// reserved for Workers Sites. Since we want to allow both sites and
+	// assets to work side by side, we cannot use the same binding name
+	// for assets. Therefore deferring to a different default naming here.
+	assetsKVBindingName = "__STATIC_ASSETS_CONTENT",
+	assetsManifestBindingName = "__STATIC_ASSETS_CONTENT_MANIFEST"
+) {
+	return {
+		ASSETS_KV_NAMESPACE: assetsKVBindingName,
+		ASSETS_MANIFEST: assetsManifestBindingName,
+	} as const;
 }

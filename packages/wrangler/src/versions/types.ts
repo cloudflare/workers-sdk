@@ -2,7 +2,7 @@ import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-u
 import type { CfUserLimits } from "../deployment-bundle/worker";
 
 export type Percentage = number;
-export type UUID = string;
+type UUID = string;
 export type VersionId = UUID;
 
 export type ApiDeployment = {
@@ -47,6 +47,7 @@ export type ApiVersion = {
 			limits: CfUserLimits;
 		};
 	};
+	startup_time_ms?: number;
 };
 
 export type VersionCache = Map<VersionId, ApiVersion>;

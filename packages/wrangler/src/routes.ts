@@ -1,18 +1,27 @@
 import chalk from "chalk";
 import { fetchResult } from "./cfetch";
+import { configFileName } from "./config";
 import { confirm, prompt } from "./dialogs";
+import { getComplianceRegionSubdomain } from "./environment-variables/misc-variables";
 import { UserError } from "./errors";
 import { logger } from "./logger";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
 
+/**
+ * Gets the <user-subdomain>.(fed.)workers.dev URL for the given account.
+ */
 export async function getWorkersDevSubdomain(
-	accountId: string
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	configPath: string | undefined
 ): Promise<string> {
 	try {
 		// note: API docs say that this field is "name", but they're lying.
 		const { subdomain } = await fetchResult<{ subdomain: string }>(
+			complianceConfig,
 			`/accounts/${accountId}/workers/subdomain`
 		);
-		return subdomain;
+		return `${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`;
 	} catch (e) {
 		const error = e as { code?: number };
 		if (typeof error === "object" && !!error && error.code === 10007) {
@@ -28,21 +37,24 @@ export async function getWorkersDevSubdomain(
 				{ fallbackValue: false }
 			);
 			if (!wantsToRegister) {
-				const solutionMessage =
-					"You can either deploy your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:";
+				const solutionMessage = `You can either deploy your worker to one or more routes by specifying them in your ${configFileName(configPath)} file, or register a workers.dev subdomain here:`;
 				const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
 
 				throw new UserError(`${solutionMessage}\n${onboardingLink}`);
 			}
 
-			return await registerSubdomain(accountId);
+			return await registerSubdomain(complianceConfig, accountId, configPath);
 		} else {
 			throw e;
 		}
 	}
 }
 
-async function registerSubdomain(accountId: string): Promise<string> {
+async function registerSubdomain(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	configPath: string | undefined
+): Promise<string> {
 	let subdomain: string | undefined;
 
 	while (subdomain === undefined) {
@@ -59,6 +71,7 @@ async function registerSubdomain(accountId: string): Promise<string> {
 
 		try {
 			await fetchResult<{ subdomain: string }>(
+				complianceConfig,
 				`/accounts/${accountId}/workers/subdomains/${potentialName}`
 			);
 		} catch (err) {
@@ -87,12 +100,13 @@ async function registerSubdomain(accountId: string): Promise<string> {
 
 		const ok = await confirm(
 			`Creating a workers.dev subdomain for your account at ${chalk.blue(
-				chalk.underline(`https://${potentialName}.workers.dev`)
+				chalk.underline(
+					`https://${potentialName}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`
+				)
 			)}. Ok to proceed?`
 		);
 		if (!ok) {
-			const solutionMessage =
-				"You can either deploy your worker to one or more routes by specifying them in wrangler.toml, or register a workers.dev subdomain here:";
+			const solutionMessage = `You can either deploy your worker to one or more routes by specifying them in your ${configFileName(configPath)} file, or register a workers.dev subdomain here:`;
 			const onboardingLink = `https://dash.cloudflare.com/${accountId}/workers/onboarding`;
 
 			throw new UserError(`${solutionMessage}\n${onboardingLink}`);
@@ -100,6 +114,7 @@ async function registerSubdomain(accountId: string): Promise<string> {
 
 		try {
 			const result = await fetchResult<{ subdomain: string }>(
+				complianceConfig,
 				`/accounts/${accountId}/workers/subdomain`,
 				{
 					method: "PUT",
@@ -138,5 +153,5 @@ async function registerSubdomain(accountId: string): Promise<string> {
 		)} to edit your workers.dev subdomain`
 	);
 
-	return subdomain;
+	return `${subdomain}${getComplianceRegionSubdomain(complianceConfig)}.workers.dev`;
 }

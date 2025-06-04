@@ -1,27 +1,66 @@
 import {
-	crash,
 	endSection,
 	log,
 	logRaw,
+	newline,
 	status,
 	updateStatus,
 } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import { UserError } from "../../errors";
 import {
 	DeploymentsService,
+	ImageRegistriesService,
 	PlacementsService,
 	SshPublicKeysService,
 } from "../client";
 import { wrap } from "../helpers/wrap";
 import { idToLocationName } from "../locations";
+import { capitalize } from "./util";
 import type {
+	CustomerImageRegistry,
 	DeploymentV2,
 	ListSSHPublicKeys,
 	PlacementEvent,
+	PlacementStatusHealth,
 	PlacementWithEvents,
 } from "../client";
-import type { EventName, Status } from "../enums";
+import type { EventName } from "../enums";
+
+export function pollRegistriesUntilCondition(
+	onRegistries: (registries: Array<CustomerImageRegistry>) => boolean
+): Promise<Array<CustomerImageRegistry>> {
+	return new Promise<Array<CustomerImageRegistry>>((res, rej) => {
+		let errCount = 0;
+		const poll = () => {
+			ImageRegistriesService.listImageRegistries()
+				.then((registries) => {
+					try {
+						if (!onRegistries(registries)) {
+							setTimeout(() => poll(), 500);
+						} else {
+							res(registries);
+						}
+					} catch (err) {
+						rej(err);
+					}
+				})
+				.catch((err) => {
+					errCount++;
+					// if there are too many errors, throw it
+					if (errCount > 3) {
+						rej(err);
+						return;
+					}
+
+					poll();
+				});
+		};
+
+		poll();
+	});
+}
 
 export function pollSSHKeysUntilCondition(
 	onSSHKeys: (sshKeys: ListSSHPublicKeys) => boolean
@@ -127,7 +166,7 @@ function unexpectedLastEvent(placement: PlacementWithEvents) {
 	);
 }
 
-export class WaitForAnotherPlacement extends Error {
+class WaitForAnotherPlacement extends Error {
 	constructor(message: string) {
 		super(message);
 	}
@@ -148,11 +187,11 @@ async function waitForEvent(
 				eventName.includes(e.name as EventName)
 			);
 			if (!event) {
-				if ((p.status["health"] as Status) === "failed") {
+				if ((p.status["health"] as PlacementStatusHealth) === "failed") {
 					return true;
 				}
 
-				if ((p.status["health"] as Status) == "stopped") {
+				if ((p.status["health"] as PlacementStatusHealth) == "stopped") {
 					return true;
 				}
 
@@ -175,8 +214,7 @@ async function waitForImagePull(deployment: DeploymentV2) {
 	);
 	s.stop();
 	if (err) {
-		crash(err.message);
-		return;
+		throw new UserError(err.message);
 	}
 
 	if (
@@ -189,13 +227,19 @@ async function waitForImagePull(deployment: DeploymentV2) {
 	}
 
 	if (eventPlacement.event.name == "ImagePullError") {
-		crash(
-			"Your container image couldn't be pulled, (404 not found). Did you specify the correct URL?",
-			`Run ${brandColor(
-				process.argv0 + " cloudchamber modify " + deployment.id
-			)} to change the deployment image`
-		);
-		return;
+		// TODO: We should really report here something more specific when it's not found.
+		// For now, the cloudchamber API always returns a 404 in the message when the
+		// image is not found.
+		if (eventPlacement.event.message.includes("404")) {
+			throw new UserError(
+				"Your container image couldn't be pulled, (404 not found). Did you specify the correct URL?\n\t" +
+					`Run ${brandColor(
+						process.argv0 + " cloudchamber modify " + deployment.id
+					)} to change the deployment image`
+			);
+		}
+
+		throw new UserError(capitalize(eventPlacement.event.message));
 	}
 
 	updateStatus("Pulled your image");
@@ -227,21 +271,27 @@ async function waitForVMToStart(deployment: DeploymentV2) {
 	);
 	s.stop();
 	if (err) {
-		crash(err.message);
-		return;
+		throw new UserError(err.message);
 	}
 
 	if (!eventPlacement.event) {
 		checkPlacementStatus(eventPlacement.placement);
 	}
 
-	updateStatus(status.success + " Created your container");
-	log(
-		`${brandColor("assigned ipv6 address")} ${dim(
-			eventPlacement.placement.status["ipv6Address"]
-		)}\n`
-	);
-	endSection("Your container is up and running");
+	const ipv4 = eventPlacement.placement.status["ipv4Address"];
+	if (ipv4) {
+		log(`${brandColor("assigned IPv4 address")} ${dim(ipv4)}\n`);
+	}
+
+	const ipv6 = eventPlacement.placement.status["ipv6Address"];
+	if (ipv6) {
+		log(`${brandColor("assigned IPv6 address")} ${dim(ipv6)}\n`);
+	}
+
+	endSection("Done");
+
+	logRaw(status.success + " Created your container\n");
+
 	logRaw(
 		`Run ${brandColor(
 			`wrangler cloudchamber list ${deployment.id.slice(0, 6)}`
@@ -288,20 +338,22 @@ async function waitForPlacementInstance(deployment: DeploymentV2) {
 	}
 
 	if (err) {
-		crash(err.message);
-		return;
+		throw new UserError(err.message);
 	}
 
 	updateStatus(
-		"Assigned placement in " + idToLocationName(deployment.location.name)
+		"Assigned placement in " + idToLocationName(deployment.location.name),
+		false
 	);
-	if (d.current_placement?.deployment_version) {
+
+	if (d.current_placement !== undefined) {
 		log(
-			`${brandColor("assigned placement")} ${dim(
-				`version ${d.current_placement.deployment_version}`
-			)}\n`
+			`${brandColor("version")} ${dim(d.current_placement.deployment_version)}`
 		);
+		log(`${brandColor("id")} ${dim(d.current_placement?.id)}`);
+		newline();
 	}
+
 	deployment.current_placement = d.current_placement;
 }
 
@@ -326,10 +378,9 @@ export async function waitForPlacement(deployment: DeploymentV2) {
 					DeploymentsService.getDeploymentV2(deployment.id)
 				);
 				if (getDeploymentError) {
-					crash(
+					throw new UserError(
 						"Couldn't retrieve a new deployment: " + getDeploymentError.message
 					);
-					return;
 				}
 
 				currentDeployment = newDeployment;

@@ -1,5 +1,0 @@
-name = "module-worker-b"
-
-services = [
-  { binding = "SERVICE", service = "module-worker-a" }
-]

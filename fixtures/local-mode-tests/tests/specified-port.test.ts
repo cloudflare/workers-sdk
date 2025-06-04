@@ -3,7 +3,7 @@ import nodeNet from "node:net";
 import path from "path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { unstable_dev } from "wrangler";
-import type { UnstableDevWorker } from "wrangler";
+import type { Unstable_DevWorker } from "wrangler";
 
 function getPort() {
 	return new Promise<number>((resolve, reject) => {
@@ -20,18 +20,19 @@ function getPort() {
 }
 
 describe("specific port", () => {
-	let worker: UnstableDevWorker;
+	let worker: Unstable_DevWorker;
 
 	beforeAll(async () => {
 		worker = await unstable_dev(
 			path.resolve(__dirname, "..", "src", "module.ts"),
 			{
-				config: path.resolve(__dirname, "..", "wrangler.module.toml"),
+				config: path.resolve(__dirname, "..", "wrangler.module.jsonc"),
 				port: await getPort(),
 				ip: "127.0.0.1",
 				experimental: {
 					disableExperimentalWarning: true,
 					disableDevRegistry: true,
+					devEnv: true,
 				},
 			}
 		);

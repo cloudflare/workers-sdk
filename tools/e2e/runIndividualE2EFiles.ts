@@ -19,14 +19,39 @@ const tasks = new Set<string>();
 for (const file of e2eTests) {
 	// Ignore other files in the e2e directory (the README, for instance)
 	if (file.endsWith(".test.ts")) {
-		tasks.add(
-			`pnpm test:e2e --log-order=stream --output-logs=new-only --summarize --filter wrangler --concurrency 1 -- run ./e2e/${file}`
-		);
+		tasks.add(`e2e/${file}`);
 	}
 }
 
-for (const task of tasks.values()) {
-	execSync(task, {
-		stdio: "inherit",
-	});
+const failed: string[] = [];
+
+const command = `pnpm test:e2e --log-order=stream --output-logs=new-only --summarize --filter wrangler`;
+
+for (const file of tasks) {
+	console.log("::group::Testing: " + file);
+	try {
+		execSync(command, {
+			stdio: "inherit",
+			env: { ...process.env, WRANGLER_E2E_TEST_FILE: file },
+		});
+	} catch {
+		console.error("Task failed - retrying");
+		try {
+			execSync(command, {
+				stdio: "inherit",
+				env: { ...process.env, WRANGLER_E2E_TEST_FILE: file },
+			});
+		} catch (e) {
+			console.error("Still failed, moving on");
+			failed.push(file);
+		}
+	}
+	console.log("::endgroup::");
+}
+
+if (failed.length > 0) {
+	throw new Error(
+		"At least one task failed (even on retry):" +
+			failed.map((file) => `\n - ${file}`)
+	);
 }

@@ -42,6 +42,10 @@
 		}
 	],
 
+	"observability": {
+		"enabled": true
+	},
+
 	"env": {
 		"testing": {
 			"vars": {

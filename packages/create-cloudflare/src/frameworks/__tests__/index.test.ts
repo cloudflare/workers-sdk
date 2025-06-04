@@ -31,7 +31,7 @@ describe("frameworks", () => {
 				pm: "yarn",
 				pmCmd: "npx",
 				env: {
-					npm_config_user_agent: "yarn",
+					npm_config_user_agent: "yarn/1.22.22",
 				},
 			},
 			{

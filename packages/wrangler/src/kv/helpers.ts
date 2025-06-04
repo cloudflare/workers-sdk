@@ -1,21 +1,22 @@
 import { Blob } from "node:buffer";
 import { URLSearchParams } from "node:url";
+import { type KVNamespace } from "@cloudflare/workers-types/experimental";
 import { Miniflare } from "miniflare";
 import { FormData } from "undici";
 import { fetchKVGetValue, fetchListResult, fetchResult } from "../cfetch";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
-import { buildPersistOptions } from "../dev/miniflare";
+import { getDefaultPersistRoot } from "../dev/miniflare";
 import { UserError } from "../errors";
 import { logger } from "../logger";
 import type { Config } from "../config";
-import type { KVNamespace } from "@cloudflare/workers-types/experimental";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ReplaceWorkersTypes } from "miniflare";
 
 /** The largest number of kv items we can pass to the API in a single request. */
 const API_MAX = 10000;
-// The const below are halved from the API's true capacity to help avoid
+// The const below are lowered from the API's true capacity to help avoid
 // hammering it with large requests.
-export const BATCH_KEY_MAX = API_MAX / 2;
+export const BATCH_KEY_MAX = API_MAX / 10;
 
 type KvArgs = {
 	binding?: string;
@@ -29,10 +30,12 @@ type KvArgs = {
  * @returns the generated id of the created namespace.
  */
 export async function createKVNamespace(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	title: string
 ): Promise<string> {
 	const response = await fetchResult<{ id: string }>(
+		complianceConfig,
 		`/accounts/${accountId}/storage/kv/namespaces`,
 		{
 			method: "POST",
@@ -61,13 +64,16 @@ export interface KVNamespaceInfo {
  * Fetch a list of all the namespaces under the given `accountId`.
  */
 export async function listKVNamespaces(
-	accountId: string
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	limitCalls: boolean = false
 ): Promise<KVNamespaceInfo[]> {
 	const pageSize = 100;
 	let page = 1;
 	const results: KVNamespaceInfo[] = [];
 	while (results.length % pageSize === 0) {
 		const json = await fetchResult<KVNamespaceInfo[]>(
+			complianceConfig,
 			`/accounts/${accountId}/storage/kv/namespaces`,
 			{},
 			new URLSearchParams({
@@ -79,6 +85,9 @@ export async function listKVNamespaces(
 		);
 		page++;
 		results.push(...json);
+		if (limitCalls) {
+			break;
+		}
 		if (json.length < pageSize) {
 			break;
 		}
@@ -93,11 +102,13 @@ export interface NamespaceKeyInfo {
 }
 
 export async function listKVNamespaceKeys(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespaceId: string,
 	prefix = ""
 ) {
 	return await fetchListResult<NamespaceKeyInfo>(
+		complianceConfig,
 		`/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/keys`,
 		{},
 		new URLSearchParams({ prefix })
@@ -105,10 +116,12 @@ export async function listKVNamespaceKeys(
 }
 
 export async function deleteKVNamespace(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespaceId: string
 ) {
 	return await fetchResult<{ id: string }>(
+		complianceConfig,
 		`/accounts/${accountId}/storage/kv/namespaces/${namespaceId}`,
 		{ method: "DELETE" }
 	);
@@ -208,6 +221,7 @@ function asFormData(fields: Record<string, unknown>): FormData {
 }
 
 export async function putKVKeyValue(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespaceId: string,
 	keyValue: KeyValue
@@ -223,6 +237,7 @@ export async function putKVKeyValue(
 		}
 	}
 	return await fetchResult(
+		complianceConfig,
 		`/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${encodeURIComponent(
 			keyValue.key
 		)}`,
@@ -240,19 +255,27 @@ export async function putKVKeyValue(
 }
 
 export async function getKVKeyValue(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespaceId: string,
 	key: string
 ): Promise<ArrayBuffer> {
-	return await fetchKVGetValue(accountId, namespaceId, encodeURIComponent(key));
+	return await fetchKVGetValue(
+		complianceConfig,
+		accountId,
+		namespaceId,
+		encodeURIComponent(key)
+	);
 }
 
 export async function deleteKVKeyValue(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespaceId: string,
 	key: string
 ) {
 	return await fetchResult(
+		complianceConfig,
 		`/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${encodeURIComponent(
 			key
 		)}`,
@@ -282,7 +305,36 @@ function logBulkProgress(
 	);
 }
 
+type BulkGetResponse = {
+	values: {
+		[key: string]: {
+			value: string | object | null;
+			metadata?: object;
+		};
+	};
+};
+
+export async function getKVBulkKeyValue(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	namespaceId: string,
+	keys: string[]
+) {
+	const requestPayload = { keys };
+	const result = await fetchResult<BulkGetResponse>(
+		complianceConfig,
+		`/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk/get`,
+		{
+			method: "POST",
+			body: JSON.stringify(requestPayload),
+			headers: { "Content-Type": "application/json" },
+		}
+	);
+	return result.values;
+}
+
 export async function putKVBulkKeyValue(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespaceId: string,
 	keyValues: KeyValue[],
@@ -295,6 +347,7 @@ export async function putKVBulkKeyValue(
 		}
 
 		await fetchResult(
+			complianceConfig,
 			`/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
 			{
 				method: "PUT",
@@ -312,6 +365,7 @@ export async function putKVBulkKeyValue(
 }
 
 export async function deleteKVBulkKeyValue(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	namespaceId: string,
 	keys: string[],
@@ -323,6 +377,7 @@ export async function deleteKVBulkKeyValue(
 		}
 
 		await fetchResult(
+			complianceConfig,
 			`/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/bulk`,
 			{
 				method: "DELETE",
@@ -432,16 +487,18 @@ export function getKVNamespaceId(
 //  https://devblogs.microsoft.com/typescript/announcing-typescript-5-2/#using-declarations-and-explicit-resource-management
 export async function usingLocalNamespace<T>(
 	persistTo: string | undefined,
-	configPath: string | undefined,
+	config: Config,
 	namespaceId: string,
 	closure: (namespace: ReplaceWorkersTypes<KVNamespace>) => Promise<T>
 ): Promise<T> {
-	const persist = getLocalPersistencePath(persistTo, configPath);
-	const persistOptions = buildPersistOptions(persist);
+	// We need to cast to Config for the getLocalPersistencePath function since
+	// it expects a full Config object, even though it only uses compliance_region
+	const persist = getLocalPersistencePath(persistTo, config);
+	const defaultPersistRoot = getDefaultPersistRoot(persist);
 	const mf = new Miniflare({
 		script:
 			'addEventListener("fetch", (e) => e.respondWith(new Response(null, { status: 404 })))',
-		...persistOptions,
+		defaultPersistRoot,
 		kvNamespaces: { NAMESPACE: namespaceId },
 	});
 	const namespace = await mf.getKVNamespace("NAMESPACE");

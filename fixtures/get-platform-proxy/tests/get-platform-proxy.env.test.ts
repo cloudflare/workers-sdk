@@ -1,64 +1,44 @@
-import { readdir } from "fs/promises";
 import path from "path";
+import { D1Database, R2Bucket } from "@cloudflare/workers-types";
 import {
-	D1Database,
-	DurableObjectNamespace,
-	Fetcher,
-	R2Bucket,
-} from "@cloudflare/workers-types";
-import {
-	afterAll,
-	beforeAll,
+	afterEach,
 	beforeEach,
 	describe,
 	expect,
 	it,
+	MockInstance,
 	vi,
 } from "vitest";
-import { unstable_dev } from "wrangler";
 import { getPlatformProxy } from "./shared";
-import type { NamedEntrypoint } from "../workers/rpc-worker";
-import type { KVNamespace, Rpc, Service } from "@cloudflare/workers-types";
-import type { UnstableDevWorker } from "wrangler";
+import type { Hyperdrive, KVNamespace } from "@cloudflare/workers-types";
+import type { Unstable_DevWorker } from "wrangler";
 
 type Env = {
 	MY_VAR: string;
 	MY_VAR_A: string;
 	MY_JSON_VAR: Object;
 	MY_DEV_VAR: string;
-	MY_SERVICE_A: Fetcher;
-	MY_SERVICE_B: Fetcher;
-	MY_RPC: Service;
 	MY_KV: KVNamespace;
 	MY_KV_PROD: KVNamespace;
-	MY_DO_A: DurableObjectNamespace;
-	MY_DO_B: DurableObjectNamespace;
 	MY_BUCKET: R2Bucket;
 	MY_D1: D1Database;
+	MY_HYPERDRIVE: Hyperdrive;
 };
 
-const wranglerTomlFilePath = path.join(__dirname, "..", "wrangler.toml");
+const wranglerConfigFilePath = path.join(__dirname, "..", "wrangler.jsonc");
 
 describe("getPlatformProxy - env", () => {
-	let devWorkers: UnstableDevWorker[];
+	let devWorkers: Unstable_DevWorker[];
 
 	beforeEach(() => {
 		// Hide stdout messages from the test logs
 		vi.spyOn(console, "log").mockImplementation(() => {});
 	});
 
-	beforeAll(async () => {
-		devWorkers = await startWorkers();
-	});
-
-	afterAll(async () => {
-		await Promise.allSettled(devWorkers.map((i) => i.stop()));
-	});
-
 	describe("var bindings", () => {
-		it("correctly obtains var bindings from both wrangler.toml and .dev.vars", async () => {
+		it("correctly obtains var bindings from both wrangler config and .dev.vars", async () => {
 			const { env, dispose } = await getPlatformProxy<Env>({
-				configPath: wranglerTomlFilePath,
+				configPath: wranglerConfigFilePath,
 			});
 			try {
 				const { MY_VAR, MY_JSON_VAR, MY_DEV_VAR } = env;
@@ -72,22 +52,22 @@ describe("getPlatformProxy - env", () => {
 			}
 		});
 
-		it("correctly makes vars from .dev.vars override the ones in wrangler.toml", async () => {
+		it("correctly makes vars from .dev.vars override the ones in wrangler config", async () => {
 			const { env, dispose } = await getPlatformProxy<Env>({
-				configPath: wranglerTomlFilePath,
+				configPath: wranglerConfigFilePath,
 			});
 			try {
 				const { MY_VAR_A } = env;
-				expect(MY_VAR_A).not.toEqual("my-var-a"); // if this fails, the value was read from wrangler.toml – not .dev.vars
+				expect(MY_VAR_A).not.toEqual("my-var-a"); // if this fails, the value was read from wrangler config – not .dev.vars
 				expect(MY_VAR_A).toEqual("my-dev-var-a");
 			} finally {
 				await dispose();
 			}
 		});
 
-		it("correctly makes vars from .dev.vars not override bindings of the same name from wrangler.toml", async () => {
+		it("correctly makes vars from .dev.vars not override bindings of the same name from wrangler config", async () => {
 			const { env, dispose } = await getPlatformProxy<Env>({
-				configPath: wranglerTomlFilePath,
+				configPath: wranglerConfigFilePath,
 			});
 			try {
 				const { MY_KV } = env;
@@ -143,89 +123,9 @@ describe("getPlatformProxy - env", () => {
 		}
 	});
 
-	it("provides service bindings to external local workers", async () => {
-		const { env, dispose } = await getPlatformProxy<Env>({
-			configPath: wranglerTomlFilePath,
-		});
-		try {
-			const { MY_SERVICE_A, MY_SERVICE_B } = env;
-			await testServiceBinding(MY_SERVICE_A, "Hello World from hello-worker-a");
-			await testServiceBinding(MY_SERVICE_B, "Hello World from hello-worker-b");
-		} finally {
-			await dispose();
-		}
-	});
-
-	type EntrypointService = Service<
-		Omit<NamedEntrypoint, "getCounter" | "getHelloWorldFn" | "getHelloFn"> &
-			Rpc.WorkerEntrypointBranded
-	> & {
-		getCounter: () => Promise<
-			Promise<{
-				value: Promise<number>;
-				increment: (amount: number) => Promise<number>;
-			}>
-		>;
-		getHelloWorldFn: () => Promise<() => Promise<string>>;
-		getHelloFn: () => Promise<
-			(
-				greet: string,
-				name: string,
-				options?: {
-					suffix?: string;
-					capitalize?: boolean;
-				}
-			) => Promise<string>
-		>;
-	};
-
-	describe("provides rpc service bindings to external local workers", () => {
-		let rpc: EntrypointService;
-		beforeEach(async () => {
-			const { env, dispose } = await getPlatformProxy<Env>({
-				configPath: wranglerTomlFilePath,
-			});
-			rpc = env.MY_RPC as unknown as EntrypointService;
-			return dispose;
-		});
-		it("can call RPC methods directly", async () => {
-			expect(await rpc.sum([1, 2, 3])).toMatchInlineSnapshot(`6`);
-		});
-		it("can call RPC methods returning a Response", async () => {
-			const resp = await rpc.asJsonResponse([1, 2, 3]);
-			expect(resp.status).toMatchInlineSnapshot(`200`);
-			expect(await resp.text()).toMatchInlineSnapshot(`"[1,2,3]"`);
-		});
-		it("can obtain and interact with RpcStubs", async () => {
-			const counter = await rpc.getCounter();
-			expect(await counter.value).toMatchInlineSnapshot(`0`);
-			expect(await counter.increment(4)).toMatchInlineSnapshot(`4`);
-			expect(await counter.increment(8)).toMatchInlineSnapshot(`12`);
-			expect(await counter.value).toMatchInlineSnapshot(`12`);
-		});
-		it("can obtain and interact with returned functions", async () => {
-			const helloWorldFn = await rpc.getHelloWorldFn();
-			expect(helloWorldFn()).toEqual("Hello World!");
-
-			const helloFn = await rpc.getHelloFn();
-			expect(await helloFn("hi", "world")).toEqual("hi world");
-			expect(
-				await helloFn("hi", "world", {
-					capitalize: true,
-				})
-			).toEqual("HI WORLD");
-			expect(
-				await helloFn("Sup", "world", {
-					capitalize: true,
-					suffix: "?!",
-				})
-			).toEqual("SUP WORLD?!");
-		});
-	});
-
 	it("correctly obtains functioning KV bindings", async () => {
 		const { env, dispose } = await getPlatformProxy<Env>({
-			configPath: wranglerTomlFilePath,
+			configPath: wranglerConfigFilePath,
 		});
 		const { MY_KV } = env;
 		let numOfKeys = (await MY_KV.list()).keys.length;
@@ -238,22 +138,9 @@ describe("getPlatformProxy - env", () => {
 		await dispose();
 	});
 
-	it("correctly obtains functioning DO bindings (provided by external local workers)", async () => {
-		const { env, dispose } = await getPlatformProxy<Env>({
-			configPath: wranglerTomlFilePath,
-		});
-		try {
-			const { MY_DO_A, MY_DO_B } = env;
-			await testDoBinding(MY_DO_A, "Hello from DurableObject A");
-			await testDoBinding(MY_DO_B, "Hello from DurableObject B");
-		} finally {
-			await dispose();
-		}
-	});
-
 	it("correctly obtains functioning R2 bindings", async () => {
 		const { env, dispose } = await getPlatformProxy<Env>({
-			configPath: wranglerTomlFilePath,
+			configPath: wranglerConfigFilePath,
 		});
 		try {
 			const { MY_BUCKET } = env;
@@ -271,7 +158,7 @@ describe("getPlatformProxy - env", () => {
 
 	it("correctly obtains functioning D1 bindings", async () => {
 		const { env, dispose } = await getPlatformProxy<Env>({
-			configPath: wranglerTomlFilePath,
+			configPath: wranglerConfigFilePath,
 		});
 		try {
 			const { MY_D1 } = env;
@@ -297,10 +184,77 @@ describe("getPlatformProxy - env", () => {
 		}
 	});
 
+	// Important: the hyperdrive values are passthrough ones since the workerd specific hyperdrive values only make sense inside
+	//            workerd itself and would simply not work in a node.js process
+	it("correctly obtains passthrough Hyperdrive bindings", async () => {
+		const { env, dispose } = await getPlatformProxy<Env>({
+			configPath: wranglerConfigFilePath,
+		});
+		try {
+			const { MY_HYPERDRIVE } = env;
+			expect(MY_HYPERDRIVE.connectionString).toEqual(
+				"postgres://user:pass@127.0.0.1:1234/db"
+			);
+			expect(MY_HYPERDRIVE.database).toEqual("db");
+			expect(MY_HYPERDRIVE.host).toEqual("127.0.0.1");
+			expect(MY_HYPERDRIVE.user).toEqual("user");
+			expect(MY_HYPERDRIVE.password).toEqual("pass");
+			expect(MY_HYPERDRIVE.port).toEqual(1234);
+		} finally {
+			await dispose();
+		}
+	});
+
+	describe("DO warnings", () => {
+		let warn = {} as MockInstance<typeof console.warn>;
+		beforeEach(() => {
+			warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		});
+		afterEach(() => {
+			warn.mockRestore();
+		});
+
+		it("warns about internal DOs and doesn't crash", async () => {
+			await getPlatformProxy<Env>({
+				configPath: path.join(__dirname, "..", "wrangler_internal_do.jsonc"),
+			});
+			expect(warn).toMatchInlineSnapshot(`
+				[MockFunction warn] {
+				  "calls": [
+				    [
+				      "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m				You have defined bindings to the following internal Durable Objects:[0m
+
+				  				- {"class_name":"MyDurableObject","name":"MY_DURABLE_OBJECT"}
+				  				These will not work in local development, but they should work in production.
+				  
+				  				If you want to develop these locally, you can define your DO in a separate Worker, with a separate configuration file.
+				  				For detailed instructions, refer to the Durable Objects section here: [4mhttps://developers.cloudflare.com/workers/wrangler/api#supported-bindings[0m
+
+				",
+				    ],
+				  ],
+				  "results": [
+				    {
+				      "type": "return",
+				      "value": undefined,
+				    },
+				  ],
+				}
+			`);
+		});
+
+		it("doesn't warn about external DOs and doesn't crash", async () => {
+			await getPlatformProxy<Env>({
+				configPath: path.join(__dirname, "..", "wrangler_external_do.jsonc"),
+			});
+			expect(warn).not.toHaveBeenCalled();
+		});
+	});
+
 	describe("with a target environment", () => {
 		it("should provide bindings targeting a specified environment and also inherit top-level ones", async () => {
 			const { env, dispose } = await getPlatformProxy<Env>({
-				configPath: wranglerTomlFilePath,
+				configPath: wranglerConfigFilePath,
 				environment: "production",
 			});
 			try {
@@ -317,7 +271,7 @@ describe("getPlatformProxy - env", () => {
 
 		it("should not provide bindings targeting an environment when none was specified", async () => {
 			const { env, dispose } = await getPlatformProxy<Env>({
-				configPath: wranglerTomlFilePath,
+				configPath: wranglerConfigFilePath,
 			});
 			try {
 				expect(env.MY_VAR).not.toBe("my-PRODUCTION-var-value");
@@ -333,7 +287,7 @@ describe("getPlatformProxy - env", () => {
 
 		it("should provide secrets targeting a specified environment", async () => {
 			const { env, dispose } = await getPlatformProxy<Env>({
-				configPath: wranglerTomlFilePath,
+				configPath: wranglerConfigFilePath,
 				environment: "production",
 			});
 			try {
@@ -348,7 +302,7 @@ describe("getPlatformProxy - env", () => {
 		it("should error if a non-existent environment is provided", async () => {
 			await expect(
 				getPlatformProxy({
-					configPath: wranglerTomlFilePath,
+					configPath: wranglerConfigFilePath,
 					environment: "non-existent-environment",
 				})
 			).rejects.toThrow(
@@ -357,39 +311,3 @@ describe("getPlatformProxy - env", () => {
 		});
 	});
 });
-
-/**
- * Starts all the workers present in the `workers` directory using `unstable_dev`
- *
- * @returns the workers' UnstableDevWorker instances
- */
-async function startWorkers(): Promise<UnstableDevWorker[]> {
-	const workersDirPath = path.join(__dirname, "..", "workers");
-	const workers = await readdir(workersDirPath);
-	return await Promise.all(
-		workers.map((workerName) => {
-			const workerPath = path.join(workersDirPath, workerName);
-			return unstable_dev(path.join(workerPath, "index.ts"), {
-				config: path.join(workerPath, "wrangler.toml"),
-				ip: "127.0.0.1",
-			});
-		})
-	);
-}
-
-async function testServiceBinding(binding: Fetcher, expectedResponse: string) {
-	const resp = await binding.fetch("http://0.0.0.0");
-	const respText = await resp.text();
-	expect(respText).toBe(expectedResponse);
-}
-
-async function testDoBinding(
-	binding: DurableObjectNamespace,
-	expectedResponse: string
-) {
-	const durableObjectId = binding.idFromName("__my-do__");
-	const doStub = binding.get(durableObjectId);
-	const doResp = await doStub.fetch("http://0.0.0.0");
-	const doRespText = await doResp.text();
-	expect(doRespText).toBe(expectedResponse);
-}

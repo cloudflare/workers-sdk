@@ -1,0 +1,80 @@
+{
+	"name": "@cloudflare/vite-plugin",
+	"version": "1.5.0",
+	"description": "Cloudflare plugin for Vite",
+	"keywords": [
+		"cloudflare",
+		"workers",
+		"cloudflare-workers",
+		"vite",
+		"vite-plugin"
+	],
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/vite-plugin-cloudflare#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/vite-plugin-cloudflare"
+	},
+	"license": "MIT",
+	"sideEffects": false,
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "tsup",
+		"check:type": "tsc --build",
+		"dev": "tsup --watch",
+		"test": "vitest run",
+		"test:ci": "pnpm test",
+		"test:e2e": "vitest run -c e2e/vitest.config.ts",
+		"test:watch": "vitest"
+	},
+	"dependencies": {
+		"@cloudflare/unenv-preset": "2.3.2",
+		"@mjackson/node-fetch-server": "^0.6.1",
+		"@rollup/plugin-replace": "^6.0.1",
+		"get-port": "^7.1.0",
+		"miniflare": "workspace:*",
+		"picocolors": "^1.1.1",
+		"tinyglobby": "^0.2.12",
+		"unenv": "2.0.0-rc.17",
+		"wrangler": "workspace:*",
+		"ws": "catalog:default"
+	},
+	"devDependencies": {
+		"@cloudflare/mock-npm-registry": "workspace:*",
+		"@cloudflare/workers-shared": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250525.0",
+		"@types/node": "catalog:vite-plugin",
+		"@types/ws": "^8.5.13",
+		"magic-string": "^0.30.12",
+		"mlly": "^1.7.4",
+		"tsup": "8.3.0",
+		"typescript": "catalog:default",
+		"vite": "catalog:vite-plugin",
+		"vitest": "catalog:default"
+	},
+	"peerDependencies": {
+		"vite": "catalog:vite-plugin",
+		"wrangler": "^3.101.0 || ^4.0.0"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"workers-sdk": {
+		"prerelease": true
+	}
+}

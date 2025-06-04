@@ -4,7 +4,7 @@ import type { CamelCaseKey } from "yargs";
 /**
  * This is the static type definition for the configuration object.
  *
- * It reflects a normalized and validated version of the configuration that you can write in wrangler.toml,
+ * It reflects a normalized and validated version of the configuration that you can write in a Wrangler configuration file,
  * and optionally augment with arguments passed directly to wrangler.
  *
  * For more information about the configuration object, see the
@@ -15,36 +15,38 @@ import type { CamelCaseKey } from "yargs";
  * - Fields that are only specified in `ConfigFields` and not `Environment` can only appear
  * in the top level config and should not appear in any environments.
  * - Fields that are specified in `PagesConfigFields` are only relevant for Pages projects
- * - All top level fields in config and environments are optional in the wrangler.toml file.
+ * - All top level fields in config and environments are optional in the Wrangler configuration file.
  *
  * Legend for the annotations:
  *
  * - `@breaking`: the deprecation/optionality is a breaking change from Wrangler v1.
  * - `@todo`: there's more work to be done (with details attached).
  */
-export type Config = ConfigFields<DevConfig> & PagesConfigFields & Environment;
+export type Config = ComputedFields &
+	ConfigFields<DevConfig> &
+	PagesConfigFields &
+	Environment;
 
 export type RawConfig = Partial<ConfigFields<RawDevConfig>> &
 	PagesConfigFields &
 	RawEnvironment &
-	DeprecatedConfigFields &
 	EnvironmentMap & { $schema?: string };
 
-// Pages-specific configuration fields
-export interface PagesConfigFields {
+export interface ComputedFields {
+	/** The path to the Wrangler configuration file (if any, and possibly redirected from the user Wrangler configuration) used to create this configuration. */
+	configPath: string | undefined;
+	/** The path to the user's Wrangler configuration file (if any), which may have been redirected to another file that used to create this configuration. */
+	userConfigPath: string | undefined;
 	/**
-	 * The directory of static assets to serve.
+	 * The original top level name for the Worker in the raw configuration.
 	 *
-	 * The presence of this field in `wrangler.toml` indicates a Pages project,
-	 * and will prompt the handling of the configuration file according to the
-	 * Pages-specific validation rules.
+	 * When a raw configuration has been flattened to a single environment the worker name may have been replaced or transformed.
+	 * It can be useful to know what the top-level name was before the flattening.
 	 */
-	pages_build_output_dir?: string;
+	topLevelName: string | undefined;
 }
 
 export interface ConfigFields<Dev extends RawDevConfig> {
-	configPath: string | undefined;
-
 	/**
 	 * A boolean to enable "legacy" style wrangler environments (from Wrangler v1).
 	 * These have been superseded by Services, but there may be projects that won't
@@ -63,6 +65,8 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 
 	/**
 	 * Options to configure the development server that your worker will use.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#local-development-settings
 	 */
 	dev: Dev;
 
@@ -71,13 +75,15 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	 * static assets with your Worker.
 	 *
 	 * More details at https://developers.cloudflare.com/workers/platform/sites
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#workers-sites
 	 */
 	site:
 		| {
 				/**
 				 * The directory containing your static assets.
 				 *
-				 * It must be a path relative to your wrangler.toml file.
+				 * It must be a path relative to your Wrangler configuration file.
 				 * Example: bucket = "./public"
 				 *
 				 * If there is a `site` field then it must contain this `bucket` field.
@@ -112,21 +118,6 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 				 */
 				exclude?: string[];
 		  }
-		| undefined;
-
-	/**
-	 * Serve a folder of static assets with your Worker, without any additional code.
-	 * This can either be a string, or an object with additional config fields.
-	 */
-	assets:
-		| {
-				bucket: string;
-				include: string[];
-				exclude: string[];
-				browser_TTL: number | undefined;
-				serve_single_page_app: boolean;
-		  }
-		| string
 		| undefined;
 
 	/**
@@ -165,11 +156,13 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 	/**
 	 * A map of module aliases. Lets you swap out a module for any others.
 	 * Corresponds with esbuild's `alias` config
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#module-aliasing
 	 */
 	alias: { [key: string]: string } | undefined;
 
 	/**
-	 * By default, wrangler.toml is the source of truth for your environment configuration, like a terraform file.
+	 * By default, the Wrangler configuration file is the source of truth for your environment configuration, like a terraform file.
 	 *
 	 * If you change your vars in the dashboard, wrangler *will* override/delete them on its next deploy.
 	 *
@@ -182,11 +175,11 @@ export interface ConfigFields<Dev extends RawDevConfig> {
 }
 
 // Pages-specific configuration fields
-export interface PagesConfigFields {
+interface PagesConfigFields {
 	/**
 	 * The directory of static assets to serve.
 	 *
-	 * The presence of this field in `wrangler.toml` indicates a Pages project,
+	 * The presence of this field in a Wrangler configuration file indicates a Pages project,
 	 * and will prompt the handling of the configuration file according to the
 	 * Pages-specific validation rules.
 	 */
@@ -240,32 +233,6 @@ export interface DevConfig {
 
 export type RawDevConfig = Partial<DevConfig>;
 
-export interface DeprecatedConfigFields {
-	/**
-	 * The project "type". A holdover from Wrangler v1.x.
-	 * Valid values were "webpack", "javascript", and "rust".
-	 *
-	 * @deprecated DO NOT USE THIS. Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.
-	 * @breaking
-	 */
-	type?: "webpack" | "javascript" | "rust";
-
-	/**
-	 * Path to the webpack config to use when building your worker.
-	 * A holdover from Wrangler v1.x, used with `type: "webpack"`.
-	 *
-	 * @deprecated DO NOT USE THIS. Most common features now work out of the box with wrangler, including modules, jsx, typescript, etc. If you need anything more, use a custom build.
-	 * @breaking
-	 */
-	webpack_config?: string;
-
-	/**
-	 * Configuration only used by a standalone use of the miniflare binary.
-	 * @deprecated
-	 */
-	miniflare?: unknown;
-}
-
 interface EnvironmentMap {
 	/**
 	 * The `env` section defines overrides for the configuration for different environments.
@@ -291,6 +258,11 @@ export type OnlyCamelCase<T = Record<string, never>> = {
 };
 
 export const defaultWranglerConfig: Config = {
+	/* COMPUTED_FIELDS */
+	configPath: undefined,
+	userConfigPath: undefined,
+	topLevelName: undefined,
+
 	/*====================================================*/
 	/*      Fields supported by both Workers & Pages      */
 	/*====================================================*/
@@ -325,19 +297,20 @@ export const defaultWranglerConfig: Config = {
 	d1_databases: [],
 	vectorize: [],
 	hyperdrive: [],
+	workflows: [],
+	secrets_store_secrets: [],
 	services: [],
 	analytics_engine_datasets: [],
 	ai: undefined,
+	images: undefined,
 	version_metadata: undefined,
 
 	/*====================================================*/
 	/*           Fields supported by Workers only         */
 	/*====================================================*/
 	/* TOP-LEVEL ONLY FIELDS */
-	configPath: undefined,
 	legacy_env: true,
 	site: undefined,
-	assets: undefined,
 	wasm_modules: undefined,
 	text_blobs: undefined,
 	data_blobs: undefined,
@@ -351,6 +324,7 @@ export const defaultWranglerConfig: Config = {
 	preserve_file_names: undefined,
 	base_dir: undefined,
 	workers_dev: undefined,
+	preview_urls: true,
 	route: undefined,
 	routes: undefined,
 	tsconfig: undefined,
@@ -358,31 +332,31 @@ export const defaultWranglerConfig: Config = {
 	jsx_fragment: "React.Fragment",
 	migrations: [],
 	triggers: {
-		crons: [],
+		crons: undefined,
 	},
-	usage_model: undefined,
 	rules: [],
 	build: { command: undefined, watch_dir: "./src", cwd: undefined },
 	no_bundle: undefined,
 	minify: undefined,
-	node_compat: undefined,
+	keep_names: undefined,
 	dispatch_namespaces: [],
 	first_party_worker: undefined,
-	zone_id: undefined,
 	logfwdr: { bindings: [] },
 	logpush: undefined,
 	upload_source_maps: undefined,
+	assets: undefined,
+	observability: { enabled: true },
+	/** The default here is undefined so that we can delegate to the CLOUDFLARE_COMPLIANCE_REGION environment variable. */
+	compliance_region: undefined,
 
 	/** NON-INHERITABLE ENVIRONMENT FIELDS **/
 	define: {},
 	cloudchamber: {},
+	containers: undefined,
 	send_email: [],
-	constellation: [],
 	browser: undefined,
-	unsafe: {
-		bindings: undefined,
-		metadata: undefined,
-	},
+	unsafe: {},
 	mtls_certificates: [],
 	tail_consumers: undefined,
+	pipelines: [],
 };

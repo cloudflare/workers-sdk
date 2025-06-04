@@ -1,0 +1,92 @@
+import type { ReadyAnalytics } from "./types";
+
+// This will allow us to make breaking changes to the analytic schema
+const VERSION = 1;
+
+export enum DISPATCH_TYPE {
+	ASSETS = "asset",
+	WORKER = "worker",
+}
+
+// When adding new columns please update the schema
+type Data = {
+	// -- Indexes --
+	accountId?: number;
+	scriptId?: number;
+
+	// -- Doubles --
+	// double1 - The time it takes for the whole request to complete in milliseconds
+	requestTime?: number;
+	// double2 - Colo ID
+	coloId?: number;
+	// double3 - Metal ID
+	metalId?: number;
+	// double4 - Colo tier (e.g. tier 1, tier 2, tier 3)
+	coloTier?: number;
+	// double5 - Run user worker ahead of assets
+	userWorkerAhead?: boolean;
+
+	// -- Blobs --
+	// blob1 - Hostname of the request
+	hostname?: string;
+	// blob2 - Dispatch type - what kind of thing did we dispatch
+	dispatchtype?: DISPATCH_TYPE;
+	// blob3 - Error message
+	error?: string;
+	// blob4 - The current version UUID of router-server
+	version?: string;
+	// blob5 - Region of the colo (e.g. WEUR)
+	coloRegion?: string;
+};
+
+export class Analytics {
+	private data: Data = {};
+	private readyAnalytics?: ReadyAnalytics;
+	private hasWritten: boolean = false;
+
+	constructor(readyAnalytics?: ReadyAnalytics) {
+		this.readyAnalytics = readyAnalytics;
+	}
+
+	setData(newData: Partial<Data>) {
+		this.data = { ...this.data, ...newData };
+	}
+
+	getData(key: keyof Data) {
+		return this.data[key];
+	}
+
+	write() {
+		if (this.hasWritten) {
+			// We've already written analytics, don't double send
+			return;
+		} else if (!this.readyAnalytics) {
+			// Local environment, no-op
+			return;
+		}
+
+		this.hasWritten = true;
+
+		this.readyAnalytics.logEvent({
+			version: VERSION,
+			accountId: this.data.accountId,
+			indexId: this.data.scriptId?.toString(),
+			doubles: [
+				this.data.requestTime ?? -1, // double1
+				this.data.coloId ?? -1, // double2
+				this.data.metalId ?? -1, // double3
+				this.data.coloTier ?? -1, // double4
+				this.data.userWorkerAhead === undefined // double5
+					? -1
+					: Number(this.data.userWorkerAhead),
+			],
+			blobs: [
+				this.data.hostname?.substring(0, 256), // blob1 - trim to 256 bytes
+				this.data.dispatchtype, // blob2
+				this.data.error?.substring(0, 256), // blob3 - trim to 256 bytes
+				this.data.version, // blob4
+				this.data.coloRegion, // blob5
+			],
+		});
+	}
+}

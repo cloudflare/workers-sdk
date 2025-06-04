@@ -15,13 +15,14 @@ import type {
 	QueueEvent,
 	RequestEvent,
 	ScheduledEvent,
-	TailEvent,
 	TailEventMessage,
-	TailInfo,
+	TailEventMessageType,
 } from "../../tail/createTail";
 import type { RequestInit } from "undici";
 import type WebSocket from "ws";
 
+// we want to include the banner to make sure it doesn't show up in the output when --format=json
+vi.unmock("../../wrangler-banner");
 vi.mock("ws", async (importOriginal) => {
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 	const realModule = await importOriginal<typeof import("ws")>();
@@ -50,6 +51,7 @@ vi.mock("ws", async (importOriginal) => {
 
 describe("pages deployment tail", () => {
 	runInTempDir();
+	const { setIsTTY } = useMockIsTTY();
 
 	let api: MockAPI;
 	afterEach(async () => {
@@ -62,15 +64,6 @@ describe("pages deployment tail", () => {
 	mockAccountId();
 	mockApiToken();
 	const std = mockConsoleMethods();
-
-	beforeAll(() => {
-		// Force the CLI to be "non-interactive" in test env
-		process.env.CF_PAGES = "1";
-	});
-
-	afterAll(() => {
-		delete process.env.CF_PAGES;
-	});
 
 	/**
 	 * Interaction with the tailing API, including tail creation,
@@ -168,6 +161,63 @@ describe("pages deployment tail", () => {
 				"debug",
 				true
 			);
+			await api.closeHelper();
+		});
+
+		it("passes default environment to deployments list", async () => {
+			api = mockTailAPIs();
+			expect(api.requests.creation.length).toStrictEqual(0);
+
+			await runWrangler(
+				"pages deployment tail --project-name mock-project mock-deployment-id"
+			);
+
+			await expect(api.ws.connected).resolves.toBeTruthy();
+			console.log(api.requests.deployments.queryParams[0]);
+			expect(api.requests.deployments.count).toStrictEqual(1);
+			expect(
+				api.requests.deployments.queryParams[0].find(([key, _]) => {
+					return key === "env";
+				})
+			).toStrictEqual(["env", "production"]);
+			await api.closeHelper();
+		});
+
+		it("passes production environment to deployments list", async () => {
+			api = mockTailAPIs();
+			expect(api.requests.creation.length).toStrictEqual(0);
+
+			await runWrangler(
+				"pages deployment tail --project-name mock-project mock-deployment-id --environment production"
+			);
+
+			await expect(api.ws.connected).resolves.toBeTruthy();
+			console.log(api.requests.deployments.queryParams[0]);
+			expect(api.requests.deployments.count).toStrictEqual(1);
+			expect(
+				api.requests.deployments.queryParams[0].find(([key, _]) => {
+					return key === "env";
+				})
+			).toStrictEqual(["env", "production"]);
+			await api.closeHelper();
+		});
+
+		it("passes preview environment to deployments list", async () => {
+			api = mockTailAPIs();
+			expect(api.requests.creation.length).toStrictEqual(0);
+
+			await runWrangler(
+				"pages deployment tail --project-name mock-project mock-deployment-id --environment preview"
+			);
+
+			await expect(api.ws.connected).resolves.toBeTruthy();
+			console.log(api.requests.deployments.queryParams[0]);
+			expect(api.requests.deployments.count).toStrictEqual(1);
+			expect(
+				api.requests.deployments.queryParams[0].find(([key, _]) => {
+					return key === "env";
+				})
+			).toStrictEqual(["env", "preview"]);
 			await api.closeHelper();
 		});
 	});
@@ -362,8 +412,6 @@ describe("pages deployment tail", () => {
 	});
 
 	describe("printing", () => {
-		const { setIsTTY } = useMockIsTTY();
-
 		it("logs request messages in JSON format", async () => {
 			api = mockTailAPIs();
 			await runWrangler(
@@ -461,8 +509,11 @@ describe("pages deployment tail", () => {
 						"[mock expiration date]"
 					)
 			).toMatchInlineSnapshot(`
-					"Connected to deployment mock-deployment-id, waiting for logs...
-					GET https://example.org/ - Ok @ [mock event timestamp]"
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Connected to deployment mock-deployment-id, waiting for logs...
+				GET https://example.org/ - Ok @ [mock event timestamp]"
 			`);
 			await api.closeHelper();
 		});
@@ -489,8 +540,11 @@ describe("pages deployment tail", () => {
 						"[mock expiration date]"
 					)
 			).toMatchInlineSnapshot(`
-					"Connected to deployment mock-deployment-id, waiting for logs...
-					\\"* * * * *\\" @ [mock timestamp string] - Ok"
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Connected to deployment mock-deployment-id, waiting for logs...
+				\\"* * * * *\\" @ [mock timestamp string] - Ok"
 			`);
 			await api.closeHelper();
 		});
@@ -517,8 +571,11 @@ describe("pages deployment tail", () => {
 						"[mock expiration date]"
 					)
 			).toMatchInlineSnapshot(`
-					"Connected to deployment mock-deployment-id, waiting for logs...
-					Alarm @ [mock scheduled time] - Ok"
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Connected to deployment mock-deployment-id, waiting for logs...
+				Alarm @ [mock scheduled time] - Ok"
 			`);
 			await api.closeHelper();
 		});
@@ -545,8 +602,11 @@ describe("pages deployment tail", () => {
 						"[mock expiration date]"
 					)
 			).toMatchInlineSnapshot(`
-					"Connected to deployment mock-deployment-id, waiting for logs...
-					Email from:${mockEmailEventFrom} to:${mockEmailEventTo} size:${mockEmailEventSize} @ [mock event timestamp] - Ok"
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Connected to deployment mock-deployment-id, waiting for logs...
+				Email from:from@example.com to:to@example.com size:45416 @ [mock event timestamp] - Ok"
 			`);
 			await api.closeHelper();
 		});
@@ -573,8 +633,11 @@ describe("pages deployment tail", () => {
 						"[mock expiration date]"
 					)
 			).toMatchInlineSnapshot(`
-					"Connected to deployment mock-deployment-id, waiting for logs...
-					Queue my-queue123 (7 messages) - Ok @ [mock timestamp string]"
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Connected to deployment mock-deployment-id, waiting for logs...
+				Queue my-queue123 (7 messages) - Ok @ [mock timestamp string]"
 			`);
 			await api.closeHelper();
 		});
@@ -600,9 +663,12 @@ describe("pages deployment tail", () => {
 						"[mock timestamp string]"
 					)
 			).toMatchInlineSnapshot(`
-			"Connected to deployment mock-deployment-id, waiting for logs...
-			Unknown Event - Ok @ [mock timestamp string]"
-		`);
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Connected to deployment mock-deployment-id, waiting for logs...
+				Unknown Event - Ok @ [mock timestamp string]"
+			`);
 			await api.closeHelper();
 		});
 
@@ -629,9 +695,12 @@ describe("pages deployment tail", () => {
 						"[mock expiration date]"
 					)
 			).toMatchInlineSnapshot(`
-			        "Connected to deployment mock-deployment-id, waiting for logs...
-			        GET https://example.org/ - Ok @ [mock event timestamp]"
-		      `);
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Connected to deployment mock-deployment-id, waiting for logs...
+				GET https://example.org/ - Ok @ [mock event timestamp]"
+			`);
 			await api.closeHelper();
 		});
 
@@ -687,12 +756,15 @@ describe("pages deployment tail", () => {
 					"[mock event timestamp]"
 				)
 			).toMatchInlineSnapshot(`
-						"Connected to deployment mock-deployment-id, waiting for logs...
-						GET https://example.org/ - Ok @ [mock event timestamp]
-						  (log) some string
-						  (log) { complex: 'object' }
-						  (error) 1234"
-				`);
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Connected to deployment mock-deployment-id, waiting for logs...
+				GET https://example.org/ - Ok @ [mock event timestamp]
+				  (log) some string
+				  (log) { complex: 'object' }
+				  (error) 1234"
+			`);
 			expect(std.err).toMatchInlineSnapshot(`
 					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m  Error: some error[0m
 
@@ -754,18 +826,7 @@ function serialize(message: TailEventMessage): WebSocket.RawData {
  * @param event A TailEvent
  * @returns true if `event` is a RequestEvent
  */
-function isRequest(
-	event:
-		| ScheduledEvent
-		| RequestEvent
-		| AlarmEvent
-		| EmailEvent
-		| TailEvent
-		| TailInfo
-		| QueueEvent
-		| undefined
-		| null
-): event is RequestEvent {
+function isRequest(event: TailEventMessageType): event is RequestEvent {
 	return Boolean(event && "request" in event);
 }
 
@@ -787,7 +848,7 @@ function deserializeToJson(message: WebSocket.RawData): string {
  */
 type MockAPI = {
 	requests: {
-		deployments: RequestCounter;
+		deployments: RequestLogger;
 		creation: RequestInit[];
 		deletion: RequestCounter;
 	};
@@ -797,16 +858,28 @@ type MockAPI = {
 };
 
 /**
+ * A logger used to check how many times a mock API has been hit.
+ * Useful as a helper in our testing to check if wrangler is making
+ * the correct API calls without actually sending any web traffic.
+ */
+type RequestLogger = {
+	count: number;
+	queryParams: [string, string][][];
+};
+
+/**
  * Mock out the API hit during Tail creation
  *
  * @returns a `RequestCounter` for counting how many times the API is hit
  */
-function mockListDeployments(): RequestCounter {
-	const requests: RequestCounter = { count: 0 };
+function mockListDeployments(): RequestLogger {
+	const requests: RequestLogger = { count: 0, queryParams: [] };
 	msw.use(
 		http.get(
 			`*/accounts/:accountId/pages/projects/:projectName/deployments`,
-			() => {
+			({ request }) => {
+				const url = new URL(request.url);
+				requests.queryParams.push(Array.from(url.searchParams.entries()));
 				requests.count++;
 				return HttpResponse.json(
 					{
@@ -842,15 +915,6 @@ function mockListDeployments(): RequestCounter {
 
 	return requests;
 }
-
-/**
- * A counter used to check how many times a mock API has been hit.
- * Useful as a helper in our testing to check if wrangler is making
- * the correct API calls without actually sending any web traffic
- */
-type RequestCounter = {
-	count: number;
-};
 
 /**
  * Mock out the API hit during Tail creation
@@ -916,6 +980,15 @@ const mockEmailEventTo = "to@example.com";
 const mockEmailEventSize = 45416;
 
 /**
+ * A counter used to check how many times a mock API has been hit.
+ * Useful as a helper in our testing to check if wrangler is making
+ * the correct API calls without actually sending any web traffic
+ */
+type RequestCounter = {
+	count: number;
+};
+
+/**
  * Mock out the API hit during Tail deletion
  *
  * @returns a `RequestCounter` for counting how many times the API is hit
@@ -954,7 +1027,7 @@ function mockTailAPIs(): MockAPI {
 		requests: {
 			deletion: { count: 0 },
 			creation: [],
-			deployments: { count: 0 },
+			deployments: { count: 0, queryParams: [] },
 		},
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		ws: null!, // will be set in the `beforeEach()`.

@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vitest-pool-workers",
-	"version": "0.4.11",
+	"version": "0.8.36",
 	"description": "Workers Vitest integration for writing Vitest unit and integration tests that run inside the Workers runtime",
 	"keywords": [
 		"cloudflare",
@@ -27,13 +27,13 @@
 	"license": "MIT",
 	"exports": {
 		".": {
-			"import": "./dist/pool/index.mjs",
-			"types": "./types/cloudflare-test.d.ts"
+			"types": "./types/cloudflare-test.d.ts",
+			"import": "./dist/pool/index.mjs"
 		},
 		"./config": {
+			"types": "./dist/config/index.d.ts",
 			"import": "./dist/config/index.cjs",
-			"require": "./dist/config/index.cjs",
-			"types": "./dist/config/index.d.ts"
+			"require": "./dist/config/index.cjs"
 		}
 	},
 	"main": "dist/pool/index.mjs",
@@ -44,7 +44,7 @@
 	],
 	"scripts": {
 		"build": "node scripts/bundle.mjs && tsc -p tsconfig.emit.json",
-		"capnp:rtti": "capnpc -o ts scripts/rtti/rtti.capnp",
+		"capnp:rtti": "node scripts/build-capnp.mjs",
 		"check:lint": "eslint .  --max-warnings=0",
 		"check:type": "tsc && tsc -p src/worker/tsconfig.json && tsc -p types/tsconfig.json",
 		"dev": "node scripts/bundle.mjs watch",
@@ -55,31 +55,30 @@
 		"birpc": "0.2.14",
 		"cjs-module-lexer": "^1.2.3",
 		"devalue": "^4.3.0",
-		"esbuild": "0.17.19",
 		"miniflare": "workspace:*",
-		"semver": "^7.5.1",
+		"semver": "^7.7.1",
 		"wrangler": "workspace:*",
 		"zod": "^3.22.3"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
+		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20240620.0",
-		"@types/node": "20.8.3",
+		"@cloudflare/workers-types": "^4.20250525.0",
+		"@types/node": "catalog:default",
 		"@types/semver": "^7.5.1",
-		"@vitest/runner": "1.3.x - 1.5.x",
-		"@vitest/snapshot": "1.3.x - 1.5.x",
-		"capnp-ts": "^0.7.0",
-		"capnpc-ts": "^0.7.0",
+		"@vitest/runner": "catalog:default",
+		"@vitest/snapshot": "catalog:default",
+		"capnp-es": "^0.0.7",
 		"ts-dedent": "^2.2.0",
-		"typescript": "^5.5.2",
-		"undici": "^5.28.4",
-		"vitest": "1.5.0"
+		"typescript": "catalog:default",
+		"undici": "catalog:default",
+		"vitest": "catalog:default"
 	},
 	"peerDependencies": {
-		"@vitest/runner": "1.3.x - 1.5.x",
-		"@vitest/snapshot": "1.3.x - 1.5.x",
-		"vitest": "1.3.x - 1.5.x"
+		"@vitest/runner": "2.0.x - 3.1.x",
+		"@vitest/snapshot": "2.0.x - 3.1.x",
+		"vitest": "2.0.x - 3.1.x"
 	},
 	"volta": {
 		"extends": "../../package.json"

@@ -8,10 +8,11 @@ import {
 	registerHandlerAndGlobalWaitUntil,
 	waitForGlobalWaitUntil,
 } from "cloudflare:test-internal";
+import { vi } from "vitest";
 import { VitestTestRunner } from "vitest/runners";
 import workerdUnsafe from "workerd:unsafe";
 import type { CancelReason, Suite, Test } from "@vitest/runner";
-import type { ResolvedConfig, WorkerGlobalState, WorkerRPC } from "vitest";
+import type { SerializedConfig, WorkerGlobalState, WorkerRPC } from "vitest";
 
 // When `DEBUG` is `true`, runner operations will be logged and slowed down
 // TODO(soon): remove this
@@ -114,7 +115,7 @@ export default class WorkersTestRunner extends VitestTestRunner {
 	readonly state: WorkerGlobalState;
 	readonly isolatedStorage: boolean;
 
-	constructor(config: ResolvedConfig) {
+	constructor(config: SerializedConfig) {
 		super(config);
 
 		// @ts-expect-error `this.workerState` has "private" access, how quaint :D
@@ -216,13 +217,23 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		}
 
 		resetMockAgent(fetchMock);
-		return super.onBeforeRunFiles();
+		// @ts-expect-error Support Vitest v2
+		if (super.onBeforeRunFiles) {
+			// @ts-expect-error Support Vitest v2
+			return super.onBeforeRunFiles();
+		}
 	}
+
 	async onAfterRunFiles() {
 		if (DEBUG) {
 			__console.log("onAfterRunFiles");
 			await scheduler.wait(100);
 		}
+
+		// Unlike the official threads and forks pool, we do not recycle the miniflare instances to maintain the module cache.
+		// However, this creates a side effect where the module mock will not be re-evaluated on watch mode.
+		// This fixes https://github.com/cloudflare/workers-sdk/issues/6844 by resetting the module graph.
+		vi.resetModules();
 
 		// Ensure all `ctx.waitUntil()` calls complete before disposing the runtime
 		// (if using `vitest run`) and aborting all objects. `ctx.waitUntil()`s may

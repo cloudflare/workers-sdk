@@ -10,10 +10,12 @@ import {
 	collectLabels,
 	interactWithUser,
 	loadAccountSpinner,
+	parseImageName,
 	promptForEnvironmentVariables,
 	promptForLabels,
 	renderDeploymentConfiguration,
 	renderDeploymentMutationError,
+	resolveMemory,
 } from "./common";
 import { wrap } from "./helpers/wrap";
 import { loadAccount } from "./locations";
@@ -102,16 +104,18 @@ export async function modifyCommand(
 		);
 		const labels = collectLabels(modifyArgs.label);
 
+		const memoryMib = resolveMemory(modifyArgs, config.cloudchamber);
+
 		const deployment = await DeploymentsService.modifyDeploymentV2(
 			modifyArgs.deploymentId,
 			{
-				image: modifyArgs.image,
-				location: modifyArgs.location,
+				image: modifyArgs.image ?? config.cloudchamber.image,
+				location: modifyArgs.location ?? config.cloudchamber.location,
 				environment_variables: environmentVariables,
 				labels: labels,
 				ssh_public_key_ids: modifyArgs.sshPublicKeyId,
 				vcpu: modifyArgs.vcpu ?? config.cloudchamber.vcpu,
-				memory: modifyArgs.memory ?? config.cloudchamber.memory,
+				memory_mib: memoryMib,
 			}
 		);
 		console.log(JSON.stringify(deployment, null, 4));
@@ -186,29 +190,28 @@ async function handleModifyCommand(
 	const deployment = await pickDeployment(args.deploymentId);
 
 	const keys = await handleSSH(args, config, deployment);
-	const imagePrompt = await processArgument<string>(
-		{ image: args.image },
-		"image",
-		{
-			question: modifyImageQuestion,
-			label: "",
-			validate: (value) => {
-				if (typeof value !== "string") {
-					return "unknown error";
-				}
-				if (value.endsWith(":latest")) {
-					return "we don't allow :latest tags";
-				}
-			},
-			defaultValue: args.image ?? "",
-			initialValue: args.image ?? "",
-			helpText: "if you don't want to modify the image, press return",
-			type: "text",
-		}
-	);
-	const image = !imagePrompt ? undefined : imagePrompt;
+	const givenImage = args.image ?? config.cloudchamber.image;
+	const image = await processArgument<string>({ image: givenImage }, "image", {
+		question: modifyImageQuestion,
+		label: "",
+		validate: (value) => {
+			if (typeof value !== "string") {
+				return "Unknown error";
+			}
 
-	const locationPick = await getLocation(args, { skipLocation: true });
+			const { err } = parseImageName(value);
+			return err;
+		},
+		defaultValue: givenImage ?? deployment.image,
+		initialValue: givenImage ?? deployment.image,
+		helpText: "press Return to leave unchanged",
+		type: "text",
+	});
+
+	const locationPick = await getLocation(
+		{ location: args.location ?? config.cloudchamber.location },
+		{ skipLocation: true }
+	);
 	const location = locationPick === "Skip" ? undefined : locationPick;
 
 	const environmentVariables = collectEnvironmentVariables(
@@ -229,11 +232,13 @@ async function handleModifyCommand(
 		true
 	);
 
+	const memoryMib = resolveMemory(args, config.cloudchamber);
+
 	renderDeploymentConfiguration("modify", {
-		image: image ?? deployment.image,
+		image,
 		location: location ?? deployment.location.name,
 		vcpu: args.vcpu ?? config.cloudchamber.vcpu ?? deployment.vcpu,
-		memory: args.memory ?? config.cloudchamber.memory ?? deployment.memory,
+		memoryMib: memoryMib ?? deployment.memory_mib,
 		env: args.env,
 		environmentVariables:
 			selectedEnvironmentVariables !== undefined
@@ -243,7 +248,7 @@ async function handleModifyCommand(
 	});
 
 	const yesOrNo = await inputPrompt({
-		question: "Want to go ahead and modify the deployment?",
+		question: "Modify the deployment?",
 		label: "",
 		type: "confirm",
 	});
@@ -263,8 +268,9 @@ async function handleModifyCommand(
 			location,
 			ssh_public_key_ids: keys,
 			environment_variables: selectedEnvironmentVariables,
+			labels: selectedLabels,
 			vcpu: args.vcpu ?? config.cloudchamber.vcpu,
-			memory: args.memory ?? config.cloudchamber.memory,
+			memory_mib: memoryMib,
 		})
 	);
 	stop();
@@ -276,5 +282,4 @@ async function handleModifyCommand(
 	await waitForPlacement(newDeployment);
 }
 
-const modifyImageQuestion =
-	"Insert the image url you want to change your deployment to";
+const modifyImageQuestion = "URL of the image to use in your deployment";

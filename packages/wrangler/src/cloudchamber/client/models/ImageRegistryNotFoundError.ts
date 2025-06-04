@@ -3,7 +3,7 @@
 /* eslint-disable */
 
 /**
- * The registry does not exst
+ * The image registry does not exist
  */
 export type ImageRegistryNotFoundError = {
 	error: ImageRegistryNotFoundError.error;

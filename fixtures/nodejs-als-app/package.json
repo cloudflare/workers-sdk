@@ -1,0 +1,17 @@
+{
+	"name": "@fixture/nodejs-als",
+	"private": true,
+	"scripts": {
+		"build": "wrangler deploy --dry-run --outdir=./dist",
+		"dev": "wrangler dev",
+		"test:ci": "vitest run",
+		"test:watch": "vitest"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "^4.20250525.0",
+		"undici": "catalog:default",
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	}
+}

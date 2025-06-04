@@ -209,9 +209,7 @@ export class UserSession {
 		let entrypoint = uploadedMetadata.main_module;
 		let additionalModules = new FormData();
 
-		const entrypointModule = worker.get(
-			uploadedMetadata.main_module
-		) as unknown;
+		const entrypointModule = worker.get(uploadedMetadata.main_module);
 
 		// Only apply middleware if the entrypoint is an ES6 module
 		if (
@@ -226,7 +224,7 @@ export class UserSession {
 		metadata.main_module = entrypoint;
 
 		for (const [path, additionalModule] of additionalModules.entries()) {
-			assert((additionalModule as unknown) instanceof File);
+			assert(additionalModule instanceof File);
 			worker.set(path, additionalModule);
 		}
 

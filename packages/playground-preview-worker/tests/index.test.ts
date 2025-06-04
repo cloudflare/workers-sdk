@@ -24,7 +24,9 @@ export default {
 			return Response.redirect("https://example.com", 302)
 		}
 		if(url.pathname === "/method") {
-			return new Response(request.method)
+			return new Response(request.method, {
+				headers: { "Test-Http-Method": request.method },
+			})
 		}
 		if(url.pathname === "/status") {
 			return new Response(407)
@@ -243,6 +245,50 @@ describe("Preview Worker", () => {
 			'"6"'
 		);
 		expect(await resp.text()).toMatchInlineSnapshot('"custom"');
+	});
+	it("should return method specified on the X-CF-Http-Method header", async () => {
+		const resp = await fetch(`${PREVIEW_REMOTE}/method`, {
+			method: "POST",
+			headers: {
+				"X-CF-Token": defaultUserToken,
+				"X-CF-Http-Method": "PUT",
+				"CF-Raw-HTTP": "true",
+			},
+			redirect: "manual",
+		});
+
+		expect(await resp.text()).toEqual("PUT");
+	});
+	it.each(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])(
+		"should handle %s method specified on the X-CF-Http-Method header",
+		async (method) => {
+			const resp = await fetch(`${PREVIEW_REMOTE}/method`, {
+				method: "POST",
+				headers: {
+					"X-CF-Token": defaultUserToken,
+					"X-CF-Http-Method": method,
+					"CF-Raw-HTTP": "true",
+				},
+				redirect: "manual",
+			});
+
+			// HEAD request does not return any body. So we will confirm by asserting the response header
+			expect(await resp.text()).toEqual(method === "HEAD" ? "" : method);
+			// Header from the client response will be prefixed with "cf-ew-raw-"
+			expect(resp.headers.get("cf-ew-raw-Test-Http-Method")).toEqual(method);
+		}
+	);
+	it("should fallback to the request method if the X-CF-Http-Method header is missing", async () => {
+		const resp = await fetch(`${PREVIEW_REMOTE}/method`, {
+			method: "PUT",
+			headers: {
+				"X-CF-Token": defaultUserToken,
+				"CF-Raw-HTTP": "true",
+			},
+			redirect: "manual",
+		});
+
+		expect(await resp.text()).toEqual("PUT");
 	});
 	it("should reject no token for raw HTTP response", async () => {
 		const resp = await fetch(`${PREVIEW_REMOTE}/header`, {
@@ -607,5 +653,74 @@ describe("Raw HTTP preview", () => {
 		expect(resp.headers.get("cf-ew-raw-set-cookie")).toMatchInlineSnapshot(
 			`"foo=1, bar=2"`
 		);
+	});
+
+	it("should pass headers to the user-worker", async () => {
+		const resp = await fetch(`${PREVIEW_REMOTE}`, {
+			method: "GET",
+			headers: {
+				origin: "https://cloudflare.dev",
+				"cf-raw-http": "true",
+				"X-CF-Token": defaultUserToken,
+				"Some-Custom-Header": "custom",
+				Accept: "application/json",
+			},
+		});
+
+		const body = (await resp.json()) as Record<string, unknown>;
+
+		const headers = (body.headers as [string, string][]).filter(
+			(h) => h[0] === "some-custom-header" || h[0] === "accept"
+		);
+
+		// This contains some-custom-header & accept, as expected
+		expect(headers).toMatchInlineSnapshot(`
+			[
+			  [
+			    "accept",
+			    "application/json",
+			  ],
+			  [
+			    "some-custom-header",
+			    "custom",
+			  ],
+			]
+		`);
+	});
+
+	it("should strip cf-ew-raw- prefix from headers which have it before hitting the user-worker", async () => {
+		const resp = await fetch(`${PREVIEW_REMOTE}`, {
+			method: "GET",
+			headers: {
+				origin: "https://cloudflare.dev",
+				"cf-raw-http": "true",
+				"X-CF-Token": defaultUserToken,
+				"Some-Custom-Header": "custom",
+				Accept: "application/json",
+			},
+		});
+
+		const body = (await resp.json()) as Record<string, unknown>;
+
+		const headers = (body.headers as [string, string][]).filter(
+			(h) =>
+				h[0] === "some-custom-header" ||
+				h[0] === "accept" ||
+				h[0].startsWith("cf-ew-raw-")
+		);
+
+		// This contains some-custom-header & accept, as expected, and does not contain cf-ew-raw-some-custom-header or cf-ew-raw-accept
+		expect(headers).toMatchInlineSnapshot(`
+			[
+			  [
+			    "accept",
+			    "application/json",
+			  ],
+			  [
+			    "some-custom-header",
+			    "custom",
+			  ],
+			]
+		`);
 	});
 });

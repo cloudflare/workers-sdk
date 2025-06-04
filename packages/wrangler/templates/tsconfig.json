@@ -4,5 +4,12 @@
 		"types": ["@cloudflare/workers-types"]
 	},
 	"include": ["**/*.ts"],
-	"exclude": ["__tests__", "./init-tests/**"]
+	"exclude": [
+		"__tests__",
+		"./init-tests/**",
+		// Note: `startDevWorker` and `middleware` should also be included but some work is needed
+		//       for that first (see: https://github.com/cloudflare/workers-sdk/issues/8303)
+		"startDevWorker",
+		"middleware"
+	]
 }

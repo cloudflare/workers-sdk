@@ -1,16 +1,15 @@
 {
 	"root": true,
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
-	"include": ["**/*.ts", "templates/*/c3.ts", "**/*.mts"],
+	"include": ["**/*.ts", "**/*.mts"],
 	"exclude": [
 		"node_modules",
 		"dist",
 		"scripts/snippets/*",
 		"e2e-tests/fixtures/*",
-		// exclude all template files other than the top level ones so
-		// that we can catch `c3.ts`. For example, any top level files in
-		// templates/angular/ will be included, but any directories will not
-		"templates/*/*/**"
+		// exclude all template files other than those are directly imported into the program,
+		// e.g. the c3.ts files.
+		"templates*"
 	],
 	"compilerOptions": {
 		"target": "ESNext",
@@ -25,6 +24,7 @@
 		"paths": {
 			"helpers/*": ["./src/helpers/*"],
 			"templates/*": ["./templates/*"],
+			"templates-experimental/*": ["./templates-experimental/*"],
 			"frameworks/*": ["./src/frameworks/*"],
 			"types": ["./src/types.ts"]
 		}

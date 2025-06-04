@@ -18,4 +18,9 @@ export type Placement = {
 	deployment_version: DeploymentVersion;
 	terminate: boolean;
 	status: PlacementStatus;
+	last_update?: ISO8601Timestamp;
+	/**
+	 * Set if it backed or is currently backing a durable object actor.
+	 */
+	durable_object_actor_id?: string;
 };

@@ -24,9 +24,9 @@ export class PlacementsService {
 	): CancelablePromise<ListPlacements> {
 		return __request(OpenAPI, {
 			method: "GET",
-			url: "/deployments/{deploymentID}/placements",
+			url: "/deployments/{deployment_id}/placements",
 			path: {
-				deploymentID: deploymentId,
+				deployment_id: deploymentId,
 			},
 			errors: {
 				400: `Unknown account`,
@@ -49,9 +49,9 @@ export class PlacementsService {
 	): CancelablePromise<PlacementWithEvents> {
 		return __request(OpenAPI, {
 			method: "GET",
-			url: "/placements/{placementID}",
+			url: "/placements/{placement_id}",
 			path: {
-				placementID: placementId,
+				placement_id: placementId,
 			},
 			errors: {
 				400: `Unknown account`,
@@ -76,9 +76,9 @@ export class PlacementsService {
 	): CancelablePromise<DeploymentV2> {
 		return __request(OpenAPI, {
 			method: "POST",
-			url: "/placements/{placementID}",
+			url: "/placements/{placement_id}",
 			path: {
-				placementID: placementId,
+				placement_id: placementId,
 			},
 			body: requestBody,
 			mediaType: "application/json",

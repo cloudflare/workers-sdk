@@ -18,6 +18,9 @@ export const shapes = {
 	radioInactive: "○",
 	radioActive: "●",
 
+	backActive: "◀",
+	backInactive: "◁",
+
 	bar: "│",
 	leftT: "├",
 	rigthT: "┤",
@@ -58,7 +61,9 @@ export const logRaw = (msg: string) => {
 
 // A simple stylized log for use within a prompt
 export const log = (msg: string) => {
-	const lines = msg.split("\n").map((ln) => `${gray(shapes.bar)} ${white(ln)}`);
+	const lines = msg
+		.split("\n")
+		.map((ln) => `${gray(shapes.bar)}${ln.length > 0 ? " " + white(ln) : ""}`);
 
 	logRaw(lines.join("\n"));
 };
@@ -207,7 +212,19 @@ export const stripAnsi = (str: string) => {
 	].join("|");
 	const regex = RegExp(pattern, "g");
 
-	return str.replace(regex, "");
+	return str.replace(linkRegex, "$2").replace(regex, "");
+};
+
+// Regular Expression that matches a hyperlink
+// e.g. `\u001B]8;;http://example.com/\u001B\\This is a link\u001B]8;;\u001B\`
+export const linkRegex =
+	// eslint-disable-next-line no-control-regex
+	/\u001B\]8;;(?<url>.+)\u001B\\(?<label>.+)\u001B\]8;;\u001B\\/g;
+
+// Create a hyperlink in terminal
+// It works in iTerm2 and VSCode's terminal, but not macOS built-in terminal app
+export const hyperlink = (url: string, label = url) => {
+	return `\u001B]8;;${url}\u001B\\${label}\u001B]8;;\u001B\\`;
 };
 
 export const crash: (msg?: string, extra?: string) => never = (msg, extra) => {

@@ -1,4 +1,5 @@
 import fs from "fs";
+import { setTimeout } from "node:timers/promises";
 import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -7,9 +8,9 @@ import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import writeWranglerToml from "../helpers/write-wrangler-toml";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
-describe("execute", () => {
+describe("export", () => {
 	mockAccountId({ accountId: null });
 	mockApiToken();
 	mockConsoleMethods();
@@ -17,21 +18,27 @@ describe("execute", () => {
 	const { setIsTTY } = useMockIsTTY();
 
 	it("should throw if output is missing", async () => {
-		await expect(runWrangler("d1 export db --local")).rejects.toThrowError(
+		await expect(runWrangler("d1 export db")).rejects.toThrowError(
 			`Missing required argument: output`
 		);
 	});
 
+	it("should throw if local and remote are both set", async () => {
+		await expect(
+			runWrangler("d1 export db --local --remote --output test-local.sql")
+		).rejects.toThrowError("Arguments local and remote are mutually exclusive");
+	});
+
 	it("should handle local", async () => {
 		setIsTTY(false);
-		writeWranglerToml({
+		writeWranglerConfig({
 			d1_databases: [
 				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 			],
 		});
 
 		// Verify the basic command works with an empty DB
-		await runWrangler("d1 export db --local --output test-local.sql");
+		await runWrangler("d1 export db --output test-local.sql");
 		expect(fs.readFileSync("test-local.sql", "utf8")).toBe(
 			"PRAGMA defer_foreign_keys=TRUE;"
 		);
@@ -46,7 +53,7 @@ describe("execute", () => {
 				INSERT INTO bar (value) VALUES ('aaa'),('bbb'),('ccc');
 			`
 		);
-		await runWrangler("d1 execute db --local --file data.sql");
+		await runWrangler("d1 execute db --file data.sql");
 
 		// SQL output expectations
 		const create_foo = "CREATE TABLE foo(id INTEGER PRIMARY KEY, value TEXT);";
@@ -63,7 +70,7 @@ describe("execute", () => {
 		];
 
 		// Full export
-		await runWrangler("d1 export db --local --output test-full.sql");
+		await runWrangler("d1 export db --output test-full.sql");
 		expect(fs.readFileSync("test-full.sql", "utf8")).toBe(
 			[
 				"PRAGMA defer_foreign_keys=TRUE;",
@@ -75,17 +82,13 @@ describe("execute", () => {
 		);
 
 		// Schema only
-		await runWrangler(
-			"d1 export db --local --output test-schema.sql --no-data"
-		);
+		await runWrangler("d1 export db --output test-schema.sql --no-data");
 		expect(fs.readFileSync("test-schema.sql", "utf8")).toBe(
 			["PRAGMA defer_foreign_keys=TRUE;", create_foo, create_bar].join("\n")
 		);
 
 		// Data only
-		await runWrangler(
-			"d1 export db --local --output test-data.sql --no-schema"
-		);
+		await runWrangler("d1 export db --output test-data.sql --no-schema");
 		expect(fs.readFileSync("test-data.sql", "utf8")).toBe(
 			["PRAGMA defer_foreign_keys=TRUE;", ...insert_foo, ...insert_bar].join(
 				"\n"
@@ -93,9 +96,7 @@ describe("execute", () => {
 		);
 
 		// Foo only
-		await runWrangler(
-			"d1 export db --local --output test-data.sql --table foo"
-		);
+		await runWrangler("d1 export db --output test-data.sql --table foo");
 		expect(fs.readFileSync("test-data.sql", "utf8")).toBe(
 			["PRAGMA defer_foreign_keys=TRUE;", create_foo, ...insert_foo].join("\n")
 		);
@@ -103,7 +104,7 @@ describe("execute", () => {
 
 	it("should handle remote", async () => {
 		setIsTTY(false);
-		writeWranglerToml({
+		writeWranglerConfig({
 			d1_databases: [
 				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
 			],
@@ -113,59 +114,8 @@ describe("execute", () => {
 		]);
 		const mockSqlContent = "PRAGMA defer_foreign_keys=TRUE;";
 
-		msw.use(
-			http.post(
-				"*/accounts/:accountId/d1/database/:databaseId/export",
-				async ({ request }) => {
-					const body = (await request.json()) as Record<string, unknown>;
+		mockResponses();
 
-					// First request, initiates a new task
-					if (!body.currentBookmark) {
-						return HttpResponse.json(
-							{
-								success: true,
-								result: {
-									success: true,
-									type: "export",
-									at_bookmark: "yyyy",
-									status: "active",
-									messages: [
-										"Generating xxxx-yyyy.sql",
-										"Uploaded part 2", // out-of-order uploads ok
-										"Uploaded part 1",
-									],
-								},
-							},
-							{ status: 202 }
-						);
-					}
-					// Subsequent request, sees that it is complete
-					else {
-						return HttpResponse.json(
-							{
-								success: true,
-								result: {
-									success: true,
-									type: "export",
-									at_bookmark: "yyyy",
-									status: "complete",
-									result: {
-										filename: "xxxx-yyyy.sql",
-										signedUrl: "https://example.com/xxxx-yyyy.sql",
-									},
-									messages: [
-										"Uploaded part 3",
-										"Uploaded part 4",
-										"Finished uploading xxxx-yyyy.sql in 4 parts.",
-									],
-								},
-							},
-							{ status: 200 }
-						);
-					}
-				}
-			)
-		);
 		msw.use(
 			http.get("https://example.com/xxxx-yyyy.sql", async () => {
 				return HttpResponse.text(mockSqlContent, { status: 200 });
@@ -175,4 +125,95 @@ describe("execute", () => {
 		await runWrangler("d1 export db --remote --output test-remote.sql");
 		expect(fs.readFileSync("test-remote.sql", "utf8")).toBe(mockSqlContent);
 	});
+
+	it("should handle remote presigned URL errors", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+		mockGetMemberships([
+			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+		]);
+
+		mockResponses();
+
+		msw.use(
+			http.get("https://example.com/xxxx-yyyy.sql", async () => {
+				return HttpResponse.text(
+					`<?xml version="1.0" encoding="UTF-8"?><Error><Code>AccessDenied</Code><Message>Access Denied</Message></Error>`,
+					{ status: 403 }
+				);
+			})
+		);
+
+		await expect(
+			runWrangler("d1 export db --remote --output test-remote.sql")
+		).rejects.toThrowError(
+			/There was an error while downloading from the presigned URL with status code: 403/
+		);
+	});
 });
+
+function mockResponses() {
+	msw.use(
+		http.post(
+			"*/accounts/:accountId/d1/database/:databaseId/export",
+			async ({ request }) => {
+				// This endpoint is polled recursively. If we respond immediately,
+				// the callstack builds up quickly leading to a hard-to-debug OOM error.
+				// This timeout ensures that if the endpoint is accidently polled infinitely
+				// the test will timeout before breaching available memory
+				await setTimeout(10);
+
+				const body = (await request.json()) as Record<string, unknown>;
+
+				// First request, initiates a new task
+				if (!body.current_bookmark) {
+					return HttpResponse.json(
+						{
+							success: true,
+							result: {
+								success: true,
+								type: "export",
+								at_bookmark: "yyyy",
+								status: "active",
+								messages: [
+									"Generating xxxx-yyyy.sql",
+									"Uploaded part 2", // out-of-order uploads ok
+									"Uploaded part 1",
+								],
+							},
+						},
+						{ status: 202 }
+					);
+				}
+				// Subsequent request, sees that it is complete
+				else {
+					return HttpResponse.json(
+						{
+							success: true,
+							result: {
+								success: true,
+								type: "export",
+								at_bookmark: "yyyy",
+								status: "complete",
+								result: {
+									filename: "xxxx-yyyy.sql",
+									signed_url: "https://example.com/xxxx-yyyy.sql",
+								},
+								messages: [
+									"Uploaded part 3",
+									"Uploaded part 4",
+									"Finished uploading xxxx-yyyy.sql in 4 parts.",
+								],
+							},
+						},
+						{ status: 200 }
+					);
+				}
+			}
+		)
+	);
+}

@@ -1,0 +1,69 @@
+name: Run CI on behalf of External Forks
+on:
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: "The PR number to run CI on behalf of"
+        required: true
+      commit-sha:
+        description: "The specific commit SHA from the PR branch to run CI on"
+        required: true
+      reviewed:
+        description: "Confirm that the PR has been reviewed for use/leakage of secrets"
+        type: boolean
+        required: true
+jobs:
+  create-draft-pr:
+    name: Create Draft PR
+    if: ${{ inputs.reviewed == true }}
+    runs-on: ubuntu-latest
+    permissions:
+      # We use the default token to create the draft PR only
+      pull-requests: write
+      contents: write
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check user for team affiliation
+        uses: tspascoal/get-user-teams-membership@ba78054988f58bea69b7c6136d563236f8ed2fc0
+        id: teamAffiliation
+        with:
+          GITHUB_TOKEN: ${{ secrets.READ_ONLY_ORG_GITHUB_TOKEN }}
+          username: ${{ github.actor }}
+          team: wrangler
+
+      - name: Stop workflow if user is not a team member
+        if: ${{ steps.teamAffiliation.outputs.isTeamMember != 'true' }}
+        run: |
+          echo "You must be on the \"wrangler\" team to trigger this job."
+          exit 1
+
+      - name: "Checkout PR"
+        run: |
+          gh pr checkout "$PR_NUM" --branch "run-ci-on-behalf-of-$PR_NUM"
+          git reset --hard "$COMMIT_SHA"
+        env:
+          # We need a PAT to checkout the fork
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          PR_NUM: ${{ inputs.pr-number }}
+          COMMIT_SHA: ${{ inputs.commit-sha }}
+
+      - name: Push Branch
+        run: git push origin HEAD --force
+
+      - name: "Create Draft PR"
+        run: |
+          gh pr create \
+            --head "run-ci-on-behalf-of-$PR_NUM" \
+            --draft \
+            --label "e2e" \
+            --title "$TITLE" \
+            --body "$BODY"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUM: ${{ inputs.pr-number }}
+          TITLE: "Run CI on behalf of #${{ inputs.pr-number }} @${{ inputs.commit-sha }}"
+          BODY: "This PR runs CI on behalf of #${{ inputs.pr-number }} at commit ${{ inputs.commit-sha }}. It can be closed after the CI run is complete."

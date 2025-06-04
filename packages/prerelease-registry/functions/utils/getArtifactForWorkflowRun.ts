@@ -130,13 +130,15 @@ export const getArtifactForWorkflowRun = async ({
 
 		const files = zip.files;
 		const fileNames = Object.keys(files);
-		const tgzFileName = fileNames.find((fileName) => fileName.endsWith(".tgz"));
-		if (tgzFileName === undefined) {
+		const downloadableFileName = fileNames.find(
+			(fileName) => fileName.endsWith(".tgz") || fileName.endsWith(".vsix")
+		);
+		if (downloadableFileName === undefined) {
 			return Response.json({ fileNames }, { status: 404 });
 		}
 
-		const tgzBlob = await files[tgzFileName].async("blob");
-		const response = new Response(tgzBlob, {
+		const downloadableBlob = await files[downloadableFileName].async("blob");
+		const response = new Response(downloadableBlob, {
 			headers: { "Cache-Control": `public, s-maxage=${ONE_WEEK}` },
 		});
 

@@ -7,14 +7,9 @@ on:
 
 jobs:
   release:
-    timeout-minutes: 30
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: true
-
     if: ${{ github.repository_owner == 'cloudflare' }}
     name: Handle Changesets
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -38,6 +33,14 @@ jobs:
         run: pnpm run build
         env:
           CI_OS: ${{ runner.os }}
+          SOURCEMAPS: "false"
+          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
+          ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
+          SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"
+          NODE_ENV: "production"
+          # This is the "production" key for sparrow analytics.
+          # Include this here because this step will rebuild Wrangler and needs to have this available
+          SPARROW_SOURCE_KEY: "50598e014ed44c739ec8074fdc16057c"
 
       - name: Create Version PR or Publish to NPM
         id: changesets
@@ -48,28 +51,28 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
-          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
-          ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
-          SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"
-
-          NODE_ENV: "production"
-          # This is the "production" key for sparrow analytics.
-          # Include this here because this step will rebuild Wrangler and needs to have this available
-          SPARROW_SOURCE_KEY: "50598e014ed44c739ec8074fdc16057c"
 
       - name: Deploy non-NPM Packages
-        run: node -r esbuild-register tools/deployments/deploy-non-npm-packages.ts
+        id: deploy
+        run: |
+          node -r esbuild-register tools/deployments/deploy-non-npm-packages.ts
+          echo "status=$(cat deployment-status.json)" >> $GITHUB_OUTPUT;
         env:
           PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           WORKERS_NEW_CLOUDFLARE_ACCOUNT_ID: ${{ secrets.WORKERS_NEW_CLOUDFLARE_ACCOUNT_ID }}
           WORKERS_NEW_CLOUDFLARE_API_TOKEN: ${{ secrets.WORKERS_NEW_CLOUDFLARE_API_TOKEN }}
+          WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN: ${{ secrets.WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN }}
+          WORKERS_SHARED_SENTRY_ACCESS_ID: ${{ secrets.WORKERS_SHARED_SENTRY_ACCESS_ID }}
+          WORKERS_SHARED_SENTRY_ACCESS_SECRET: ${{ secrets.WORKERS_SHARED_SENTRY_ACCESS_SECRET }}
+          WORKERS_SHARED_SENTRY_AUTH_TOKEN: ${{ secrets.WORKERS_SHARED_SENTRY_AUTH_TOKEN }}
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
-      - name: Create C3 Diffs PR
-        if: steps.changesets.outputs.published == 'true'
-        uses: ./.github/actions/create-c3-docs-pr
-        with:
-          token: ${{ secrets.C3_DIFF_TOOL_GH_TOKEN }}
-          releaseBranch: "changeset-release/main"
-          targetHeadBranch: c3-diffs-${{ github.sha }}
-          targetBaseBranch: production
+      - name: Send Alert
+        if: always()
+        run: node -r esbuild-register tools/deployments/alert-on-error.ts
+        env:
+          PUBLISH_STATUS: ${{ steps.changesets.outcome }}
+          DEPLOYMENT_STATUS: ${{ steps.deploy.outputs.status }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TOKEN: ${{ secrets.STATUS_BOT_SECRET }}

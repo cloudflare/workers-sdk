@@ -19,7 +19,11 @@ export const onRequest = async ({
 				"files.exclude": {
 					"*.d.ts": true,
 					"jsconfig.json": true,
+					"package.json": true,
+					"wrangler.toml": true,
 				},
+				"files.autoSave": "afterDelay",
+				"files.autoSaveDelay": 200,
 				"telemetry.telemetryLevel": "off",
 				"window.menuBarVisibility": "hidden",
 			},

@@ -9,7 +9,7 @@ on:
 jobs:
   comment:
     if: ${{ github.repository_owner == 'cloudflare' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: Write comment to the PR
     steps:
       - name: "Put PR and workflow ID on the environment"
@@ -36,25 +36,8 @@ jobs:
               }
             }
 
-      - name: "Download runtime versions"
-        # Regular `actions/download-artifact` doesn't support downloading
-        # artifacts from another workflow
-        uses: dawidd6/action-download-artifact@v2
-        with:
-          run_id: ${{ github.event.workflow_run.id }}
-          name: runtime-versions.md
-
-      - name: "Put runtime versions on the environment"
-        id: runtime_versions
-        run: |
-          {
-            echo 'RUNTIME_VERSIONS<<EOF'
-            cat runtime-versions.md
-            echo EOF
-          } >> "$GITHUB_ENV"
-
       - name: "Download pre-release report"
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v6
         with:
           run_id: ${{ github.event.workflow_run.id }}
           name: prerelease-report.md
@@ -71,10 +54,7 @@ jobs:
       - name: "Comment on PR with Wrangler link"
         uses: marocchino/sticky-pull-request-comment@v2
         with:
+          header: prerelease
           number: ${{ env.WORKFLOW_RUN_PR_FOR_WRANGLER }}
           message: |
             ${{ env.PRERELEASE_REPORT }}
-
-            ---
-
-            ${{ env.RUNTIME_VERSIONS }}

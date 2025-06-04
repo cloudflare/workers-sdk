@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { readFile } from "node:fs/promises";
+import type { ConfigBindingOptions } from "../../config";
 import type { CfWorkerInit } from "../../deployment-bundle/worker";
 import type {
 	AsyncHook,
@@ -8,7 +9,6 @@ import type {
 	Hook,
 	HookValues,
 	ServiceFetch,
-	StartDevWorkerInput,
 	StartDevWorkerOptions,
 } from "./types";
 
@@ -66,7 +66,7 @@ export function unwrapHook<
 	return typeof hook === "function" ? hook(...args) : hook;
 }
 
-export async function getBinaryFileContents(file: File<string | Uint8Array>) {
+async function getBinaryFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
 		if (file.contents instanceof Buffer) {
 			return file.contents;
@@ -76,27 +76,25 @@ export async function getBinaryFileContents(file: File<string | Uint8Array>) {
 	return readFile(file.path);
 }
 
-export async function getTextFileContents(file: File<string | Uint8Array>) {
-	if ("contents" in file) {
-		if (typeof file.contents === "string") {
-			return file.contents;
-		}
-		if (file.contents instanceof Buffer) {
-			return file.contents.toString();
-		}
-		return Buffer.from(file.contents).toString();
-	}
-	return readFile(file.path, "utf8");
+export function convertConfigBindingsToStartWorkerBindings(
+	configBindings: ConfigBindingOptions
+): StartDevWorkerOptions["bindings"] {
+	const { queues, ...bindings } = configBindings;
+
+	return convertCfWorkerInitBindingsToBindings({
+		...bindings,
+		queues: queues.producers?.map((q) => ({ ...q, queue_name: q.queue })),
+	});
 }
 
-export function convertCfWorkerInitBindingstoBindings(
-	inputBindings: CfWorkerInit["bindings"]
+export function convertCfWorkerInitBindingsToBindings(
+	inputBindings: Partial<CfWorkerInit["bindings"]>
 ): StartDevWorkerOptions["bindings"] {
 	const output: StartDevWorkerOptions["bindings"] = {};
 
 	// required to retain type information
 	type Entries<T> = { [K in keyof T]: [K, T[K]] }[keyof T][];
-	type BindingsIterable = Entries<typeof inputBindings>;
+	type BindingsIterable = Entries<Required<typeof inputBindings>>;
 	const bindingsIterable = Object.entries(inputBindings) as BindingsIterable;
 
 	for (const [type, info] of bindingsIterable) {
@@ -164,6 +162,12 @@ export function convertCfWorkerInitBindingstoBindings(
 				}
 				break;
 			}
+			case "workflows": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "workflow", ...x };
+				}
+				break;
+			}
 			case "queues": {
 				for (const { binding, ...x } of info) {
 					output[binding] = { type: "queue", ...x };
@@ -179,12 +183,6 @@ export function convertCfWorkerInitBindingstoBindings(
 			case "d1_databases": {
 				for (const { binding, ...x } of info) {
 					output[binding] = { type: "d1", ...x };
-				}
-				break;
-			}
-			case "constellation": {
-				for (const { binding, ...x } of info) {
-					output[binding] = { type: "constellation", ...x };
 				}
 				break;
 			}
@@ -223,6 +221,11 @@ export function convertCfWorkerInitBindingstoBindings(
 				output[binding] = { type: "ai", ...x };
 				break;
 			}
+			case "images": {
+				const { binding, ...x } = info;
+				output[binding] = { type: "images", ...x };
+				break;
+			}
 			case "version_metadata": {
 				const { binding, ...x } = info;
 				output[binding] = { type: "version_metadata", ...x };
@@ -241,8 +244,24 @@ export function convertCfWorkerInitBindingstoBindings(
 				break;
 			}
 			case "unsafe": {
-				for (const { type: unsafeType, name } of info.bindings ?? []) {
-					output[name] = { type: `unsafe_${unsafeType}` };
+				for (const { type: unsafeType, name, ...data } of info.bindings ?? []) {
+					output[name] = { type: `unsafe_${unsafeType}`, ...data };
+				}
+				break;
+			}
+			case "assets": {
+				output[info["binding"]] = { type: "assets" };
+				break;
+			}
+			case "pipelines": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "pipeline", ...x };
+				}
+				break;
+			}
+			case "secrets_store_secrets": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "secrets_store_secret", ...x };
 				}
 				break;
 			}
@@ -269,21 +288,25 @@ export async function convertBindingsToCfWorkerInitBindings(
 		text_blobs: undefined,
 		browser: undefined,
 		ai: undefined,
+		images: undefined,
 		version_metadata: undefined,
 		data_blobs: undefined,
 		durable_objects: undefined,
 		queues: undefined,
 		r2_buckets: undefined,
+		workflows: undefined,
 		d1_databases: undefined,
 		vectorize: undefined,
-		constellation: undefined,
 		hyperdrive: undefined,
+		secrets_store_secrets: undefined,
 		services: undefined,
 		analytics_engine_datasets: undefined,
 		dispatch_namespaces: undefined,
 		mtls_certificates: undefined,
 		logfwdr: undefined,
 		unsafe: undefined,
+		assets: undefined,
+		pipelines: undefined,
 	};
 
 	const fetchers: Record<string, ServiceFetch> = {};
@@ -319,9 +342,11 @@ export async function convertBindingsToCfWorkerInitBindings(
 			bindings.data_blobs ??= {};
 			bindings.data_blobs[name] = await getBinaryFileContents(binding.source);
 		} else if (binding.type === "browser") {
-			bindings.browser = { binding: name };
+			bindings.browser = { ...binding, binding: name };
 		} else if (binding.type === "ai") {
-			bindings.ai = { binding: name };
+			bindings.ai = { ...binding, binding: name };
+		} else if (binding.type === "images") {
+			bindings.images = { ...binding, binding: name };
 		} else if (binding.type === "version_metadata") {
 			bindings.version_metadata = { binding: name };
 		} else if (binding.type === "durable_object_namespace") {
@@ -339,9 +364,6 @@ export async function convertBindingsToCfWorkerInitBindings(
 		} else if (binding.type === "vectorize") {
 			bindings.vectorize ??= [];
 			bindings.vectorize.push({ ...binding, binding: name });
-		} else if (binding.type === "constellation") {
-			bindings.constellation ??= [];
-			bindings.constellation.push({ ...binding, binding: name });
 		} else if (binding.type === "hyperdrive") {
 			bindings.hyperdrive ??= [];
 			bindings.hyperdrive.push({ ...binding, binding: name });
@@ -359,18 +381,30 @@ export async function convertBindingsToCfWorkerInitBindings(
 		} else if (binding.type === "mtls_certificate") {
 			bindings.mtls_certificates ??= [];
 			bindings.mtls_certificates.push({ ...binding, binding: name });
+		} else if (binding.type === "pipeline") {
+			bindings.pipelines ??= [];
+			bindings.pipelines.push({ ...binding, binding: name });
 		} else if (binding.type === "logfwdr") {
 			bindings.logfwdr ??= { bindings: [] };
 			bindings.logfwdr.bindings.push({ ...binding, name: name });
+		} else if (binding.type === "workflow") {
+			bindings.workflows ??= [];
+			bindings.workflows.push({ ...binding, binding: name });
+		} else if (binding.type === "secrets_store_secret") {
+			bindings.secrets_store_secrets ??= [];
+			bindings.secrets_store_secrets.push({ ...binding, binding: name });
 		} else if (isUnsafeBindingType(binding.type)) {
 			bindings.unsafe ??= {
 				bindings: [],
 				metadata: undefined,
 				capnp: undefined,
 			};
+
+			const { type, ...data } = binding;
 			bindings.unsafe.bindings?.push({
-				type: binding.type.slice("unsafe_".length),
+				type: type.slice("unsafe_".length),
 				name: name,
+				...data,
 			});
 		}
 	}
@@ -404,13 +438,4 @@ export function extractBindingsOfType<
 		binding: string;
 		/* ugh why durable objects :( */ name: string;
 	})[];
-}
-
-// DO NOT USE!
-// StartDevWorkerInput and StartDevWorkerOptions are not generally assignable to each other, but they're assignable _enough_ to make the faking of events work when --x-dev-env is turned off
-// Typescript needs some help to figure this out though
-export function fakeResolvedInput(
-	input: StartDevWorkerInput
-): StartDevWorkerOptions {
-	return input as StartDevWorkerOptions;
 }

@@ -1,5 +1,12 @@
-import { DeploymentType, NodeGroup } from "../../cloudchamber/client";
+import {
+	ContainerNetworkMode,
+	DeploymentType,
+	NodeGroup,
+	PlacementStatusHealth,
+	SchedulingPolicy,
+} from "../../cloudchamber/client";
 import type {
+	Application,
 	DeploymentV2,
 	PlacementWithEvents,
 } from "../../cloudchamber/client";
@@ -12,6 +19,7 @@ export const MOCK_DEPLOYMENTS: DeploymentV2[] = [
 		account_id: "123",
 		vcpu: 4,
 		memory: "400MB",
+		memory_mib: 400,
 		version: 1,
 		image: "hello",
 		location: {
@@ -31,6 +39,7 @@ export const MOCK_DEPLOYMENTS: DeploymentV2[] = [
 		account_id: "123",
 		vcpu: 4,
 		memory: "400MB",
+		memory_mib: 400,
 		version: 2,
 		image: "hello",
 		location: {
@@ -42,7 +51,7 @@ export const MOCK_DEPLOYMENTS: DeploymentV2[] = [
 		},
 		current_placement: {
 			deployment_version: 2,
-			status: { health: "running" },
+			status: { health: PlacementStatusHealth.RUNNING },
 			deployment_id: "2",
 			terminate: false,
 			created_at: "123",
@@ -61,6 +70,7 @@ export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 		account_id: "123",
 		vcpu: 4,
 		memory: "400MB",
+		memory_mib: 400,
 		version: 1,
 		image: "hello",
 		location: {
@@ -80,6 +90,7 @@ export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 		account_id: "123",
 		vcpu: 4,
 		memory: "400MB",
+		memory_mib: 400,
 		version: 2,
 		image: "hello",
 		location: {
@@ -91,7 +102,7 @@ export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 		},
 		current_placement: {
 			deployment_version: 2,
-			status: { health: "running" },
+			status: { health: PlacementStatusHealth.RUNNING },
 			deployment_id: "2",
 			terminate: false,
 			created_at: "123",
@@ -107,6 +118,7 @@ export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 		account_id: "123",
 		vcpu: 4,
 		memory: "400MB",
+		memory_mib: 400,
 		version: 1,
 		image: "hello",
 		location: {
@@ -126,6 +138,7 @@ export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 		account_id: "123",
 		vcpu: 4,
 		memory: "400MB",
+		memory_mib: 400,
 		version: 2,
 		image: "hello",
 		location: {
@@ -137,7 +150,7 @@ export const MOCK_DEPLOYMENTS_COMPLEX: DeploymentV2[] = [
 		},
 		current_placement: {
 			deployment_version: 2,
-			status: { health: "running" },
+			status: { health: PlacementStatusHealth.RUNNING },
 			deployment_id: "2",
 			terminate: false,
 			created_at: "123",
@@ -156,7 +169,7 @@ export const MOCK_PLACEMENTS: PlacementWithEvents[] = [
 		deployment_version: 2,
 		terminate: false,
 		events: [],
-		status: { health: "stopped" },
+		status: { health: PlacementStatusHealth.STOPPED },
 	},
 	{
 		id: "3",
@@ -165,7 +178,7 @@ export const MOCK_PLACEMENTS: PlacementWithEvents[] = [
 		deployment_version: 3,
 		terminate: false,
 		events: [],
-		status: { health: "failed" },
+		status: { health: PlacementStatusHealth.FAILED },
 	},
 	{
 		id: "1",
@@ -174,6 +187,60 @@ export const MOCK_PLACEMENTS: PlacementWithEvents[] = [
 		deployment_version: 4,
 		terminate: false,
 		events: [],
-		status: { health: "running" },
+		status: { health: PlacementStatusHealth.RUNNING },
+	},
+];
+
+export const MOCK_APPLICATIONS: Application[] = [
+	{
+		id: "asdf-2",
+		created_at: "123",
+		account_id: "test-account",
+		name: "Test-app",
+		version: 1,
+		configuration: {
+			image: "test-registry.cfdata.org/test-app:v1",
+			network: {
+				mode: ContainerNetworkMode.PRIVATE,
+			},
+		},
+		scheduling_policy: SchedulingPolicy.REGIONAL,
+		instances: 2,
+		jobs: false,
+		constraints: { region: "WNAM" },
+	},
+	{
+		id: "asdf-1",
+		created_at: "123",
+		account_id: "test-account",
+		name: "Test-app",
+		version: 1,
+		configuration: {
+			image: "test-registry.cfdata.org/test-app:v10",
+			network: {
+				mode: ContainerNetworkMode.PRIVATE,
+			},
+		},
+		scheduling_policy: SchedulingPolicy.REGIONAL,
+		instances: 10,
+		jobs: false,
+		constraints: { region: "WNAM" },
+	},
+	{
+		id: "asdf-3",
+		created_at: "123",
+		account_id: "test-account",
+		name: "Test-app",
+		version: 1,
+		configuration: {
+			image: "test-registry.cfdata.org/test-app:v2",
+			network: {
+				mode: ContainerNetworkMode.PRIVATE,
+			},
+		},
+		scheduling_policy: SchedulingPolicy.REGIONAL,
+		instances: 2,
+		jobs: false,
+		constraints: { region: "WNAM" },
 	},
 ];

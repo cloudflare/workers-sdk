@@ -1,5 +1,8 @@
+import { sleep } from "./sleep";
+
 type RetryConfig = {
 	times: number;
+	sleepMs?: number;
 	exitCondition?: (e: unknown) => boolean;
 };
 
@@ -10,6 +13,7 @@ type RetryConfig = {
  * user experience and reduce flakiness in e2e tests.
  *
  * @param config.times - The number of times to retry the function
+ * @param config.sleepMs - How many ms to sleep between retries
  * @param config.exitCondition - The retry loop will be prematurely exited if this function returns true
  * @param fn - The function to retry
  *
@@ -33,6 +37,7 @@ export const retry = async <T>(config: RetryConfig, fn: () => Promise<T>) => {
 			if (config.exitCondition?.(e)) {
 				break;
 			}
+			await sleep(config.sleepMs ?? 1000);
 		}
 	}
 	throw error;

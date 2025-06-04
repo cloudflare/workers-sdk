@@ -3,8 +3,8 @@ import { Icon } from "@cloudflare/component-icon";
 import { Input } from "@cloudflare/component-input";
 import { A, Div, Form, Span, Strong } from "@cloudflare/elements";
 import { createComponent } from "@cloudflare/style-container";
+import { BAR_HEIGHT } from "@cloudflare/workers-editor-shared";
 import { useContext, useEffect, useState } from "react";
-import { BAR_HEIGHT } from "./constants";
 import { ServiceContext } from "./QuickEditor";
 import { WorkersLogo } from "./WorkersLogo";
 

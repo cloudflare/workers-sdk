@@ -20,8 +20,17 @@ describe("r2", () => {
 		const output = await helper.run(`wrangler r2 bucket create ${bucketName}`);
 
 		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
-			"Creating bucket tmp-e2e-r2-00000000-0000-0000-0000-000000000000 with default storage class set to Standard.
-			Created bucket tmp-e2e-r2-00000000-0000-0000-0000-000000000000 with default storage class set to Standard."
+			"Creating bucket 'tmp-e2e-r2-00000000-0000-0000-0000-000000000000'...
+			✅ Created bucket 'tmp-e2e-r2-00000000-0000-0000-0000-000000000000' with default storage class of Standard.
+			Configure your Worker to write objects to this bucket:
+			{
+			  "r2_buckets": [
+			    {
+			      "bucket_name": "tmp-e2e-r2-00000000-0000-0000-0000-000000000000",
+			      "binding": "tmp_e2e_r2_00000000_0000_0000_0000_000000000000"
+			    }
+			  ]
+			}"
 		`);
 	});
 
@@ -30,20 +39,22 @@ describe("r2", () => {
 			"test-r2.txt": fileContents,
 		});
 		const output = await helper.run(
-			`wrangler r2 object put ${bucketName}/testr2 --file test-r2.txt --content-type text/html`
+			`wrangler r2 object put ${bucketName}/testr2 --file test-r2.txt --content-type text/html --remote`
 		);
 		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
-			"Creating object "testr2" in bucket "tmp-e2e-r2-00000000-0000-0000-0000-000000000000".
+			"Resource location: remote
+			Creating object "testr2" in bucket "tmp-e2e-r2-00000000-0000-0000-0000-000000000000".
 			Upload complete."
 		`);
 	});
 
 	it("download object", async () => {
 		const output = await helper.run(
-			`wrangler r2 object get ${bucketName}/testr2 --file test-r2o.txt`
+			`wrangler r2 object get ${bucketName}/testr2 --file test-r2o.txt --remote`
 		);
 		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
-			"Downloading "testr2" from "tmp-e2e-r2-00000000-0000-0000-0000-000000000000".
+			"Resource location: remote
+			Downloading "testr2" from "tmp-e2e-r2-00000000-0000-0000-0000-000000000000".
 			Download complete."
 		`);
 		const file = await readFile(
@@ -55,17 +66,18 @@ describe("r2", () => {
 
 	it("delete object", async () => {
 		const output = await helper.run(
-			`wrangler r2 object delete ${bucketName}/testr2`
+			`wrangler r2 object delete ${bucketName}/testr2 --remote`
 		);
 		expect(normalize(output.stdout)).toMatchInlineSnapshot(`
-			"Deleting object "testr2" from bucket "tmp-e2e-r2-00000000-0000-0000-0000-000000000000".
+			"Resource location: remote
+			Deleting object "testr2" from bucket "tmp-e2e-r2-00000000-0000-0000-0000-000000000000".
 			Delete complete."
 		`);
 	});
 
 	it("check object deleted", async () => {
 		const output = await helper.run(
-			`wrangler r2 object get ${bucketName}/testr2 --file test-r2o.txt`
+			`wrangler r2 object get ${bucketName}/testr2 --file test-r2o.txt --remote`
 		);
 		expect(output.stderr).toContain("The specified key does not exist");
 	});
@@ -83,7 +95,7 @@ describe("r2", () => {
 			"test-r2.txt": fileContents,
 		});
 		const output = await helper.run(
-			`wrangler r2 object put ${bucketName}/testr2 --file test-r2.txt --content-type text/html`
+			`wrangler r2 object put ${bucketName}/testr2 --file test-r2.txt --content-type text/html --remote`
 		);
 		expect(output.stderr).toContain("The specified bucket does not exist");
 	});

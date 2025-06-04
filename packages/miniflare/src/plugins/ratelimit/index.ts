@@ -1,7 +1,7 @@
 import SCRIPT_RATELIMIT_OBJECT from "worker:ratelimit/ratelimit";
 import { z } from "zod";
 import { Worker_Binding } from "../../runtime";
-import { kProxyNodeBinding, Plugin } from "../shared";
+import { Plugin, ProxyNodeBinding } from "../shared";
 
 export enum PeriodType {
 	TENSECONDS = 10,
@@ -57,27 +57,29 @@ export const RATELIMIT_PLUGIN: Plugin<typeof RatelimitOptionsSchema> = {
 			return {};
 		}
 		return Object.fromEntries(
-			Object.keys(options.ratelimits).map((name) => [name, kProxyNodeBinding])
+			Object.keys(options.ratelimits).map((name) => [
+				name,
+				new ProxyNodeBinding(),
+			])
 		);
 	},
-	async getServices({ options }) {
-		if (!options.ratelimits) {
+	async getServices() {
+		return [];
+	},
+	getExtensions({ options }) {
+		if (!options.some((o) => o.ratelimits)) {
 			return [];
 		}
-
-		return {
-			services: [],
-			extensions: [
-				{
-					modules: [
-						{
-							name: SERVICE_RATELIMIT_MODULE,
-							esModule: SCRIPT_RATELIMIT_OBJECT(),
-							internal: true,
-						},
-					],
-				},
-			],
-		};
+		return [
+			{
+				modules: [
+					{
+						name: SERVICE_RATELIMIT_MODULE,
+						esModule: SCRIPT_RATELIMIT_OBJECT(),
+						internal: true,
+					},
+				],
+			},
+		];
 	},
 };

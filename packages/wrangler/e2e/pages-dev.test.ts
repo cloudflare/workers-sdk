@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import dedent from "ts-dedent";
@@ -7,7 +9,10 @@ import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { normalizeOutput } from "./helpers/normalize";
 
-describe("pages dev", () => {
+const port = await getPort();
+const inspectorPort = await getPort();
+const cmd = "wrangler pages dev";
+describe.sequential("wrangler pages dev", () => {
 	it("should warn if no [--compatibility_date] command line arg was specified", async () => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed({
@@ -18,8 +23,9 @@ describe("pages dev", () => {
 						}
 					}`,
 		});
-		const port = await getPort();
-		const worker = helper.runLongLived(`wrangler pages dev --port ${port} .`);
+		const worker = helper.runLongLived(
+			`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
+		);
 		const { url } = await worker.waitForReady();
 
 		const currentDate = new Date().toISOString().substring(0, 10);
@@ -31,21 +37,20 @@ describe("pages dev", () => {
 			`No compatibility_date was specified. Using today's date: <current-date>.`
 		);
 		expect(output).toContain(
-			`❯❯ Add one to your wrangler.toml file: compatibility_date = "<current-date>", or`
+			`❯❯ Add one to your Wrangler configuration file: compatibility_date = "<current-date>", or`
 		);
 		expect(output).toContain(
 			`❯❯ Pass it in your terminal: wrangler pages dev [<DIRECTORY>] --compatibility-date=<current-date>`
 		);
 
 		const text = await fetchText(url);
-		expect(text).toMatchInlineSnapshot('"Testing [--compatibility_date]"');
+		expect(text).toBe("Testing [--compatibility_date]");
 	});
 
 	it("should warn that [--experimental-local] is no longer required, if specified", async () => {
 		const helper = new WranglerE2ETestHelper();
-		const port = await getPort();
 		const worker = helper.runLongLived(
-			`wrangler pages dev --port ${port} . --experimental-local`
+			`${cmd} --port ${port} --inspector-port ${inspectorPort} . --experimental-local`
 		);
 		await helper.seed({
 			"_worker.js": dedent`
@@ -57,7 +62,7 @@ describe("pages dev", () => {
 		});
 		const { url } = await worker.waitForReady();
 		const text = await fetchText(url);
-		expect(text).toMatchInlineSnapshot(`"Testing [--experimental-local]"`);
+		expect(text).toBe("Testing [--experimental-local]");
 		expect(await worker.currentOutput).toContain(
 			`--experimental-local is no longer required and will be removed in a future version`
 		);
@@ -65,24 +70,19 @@ describe("pages dev", () => {
 
 	it("should show [--service] related warnings if specified as arg in the command line", async () => {
 		const helper = new WranglerE2ETestHelper();
-		const port = await getPort();
 		const worker = helper.runLongLived(
-			`wrangler pages dev --port ${port} . --service STAGING_SERVICE=test-worker@staging`
+			`${cmd} --port ${port} --inspector-port ${inspectorPort} . --service STAGING_SERVICE=test-worker@staging`
 		);
 
 		await worker.readUntil(
 			/Support for service binding environments is experimental/
 		);
-		await worker.readUntil(
-			/Support for service bindings in local mode is experimental and may change/
-		);
 	});
 
 	it("should warn if bindings specified as args in the command line are invalid", async () => {
 		const helper = new WranglerE2ETestHelper();
-		const port = await getPort();
 		const worker = helper.runLongLived(
-			`wrangler pages dev . --port ${port} --service test --kv = --do test --d1 = --r2 =`
+			`${cmd} --inspector-port ${inspectorPort} . --port ${port} --service test --kv = --do test --d1 = --r2 =`
 		);
 		await worker.waitForReady();
 		expect(await worker.currentOutput).toContain(
@@ -112,26 +112,23 @@ describe("pages dev", () => {
 						}
 					}`,
 		});
-		const port = await getPort();
 		const worker = helper.runLongLived(
-			`wrangler pages dev . --port ${port} --service TEST_SERVICE=test-worker --kv TEST_KV --do TEST_DO=TestDurableObject@a --d1 TEST_D1 --r2 TEST_R2`
+			`${cmd} --inspector-port ${inspectorPort} . --port ${port} --service TEST_SERVICE=test-worker --kv TEST_KV --do TEST_DO=TestDurableObject@a --d1 TEST_D1 --r2 TEST_R2 --compatibility-date=2025-05-21`
 		);
 		await worker.waitForReady();
-		expect(normalizeOutput(worker.currentOutput).replace(/\s/g, "")).toContain(
-			`
-			Your worker has access to the following bindings:
-			- Durable Objects:
-			  - TEST_DO: TestDurableObject (defined in a)
-			- KV Namespaces:
-			  - TEST_KV: TEST_KV
-			- D1 Databases:
-			  - TEST_D1: local-TEST_D1 (TEST_D1)
-			- R2 Buckets:
-			  - TEST_R2: TEST_R2
-			- Services:
-			  - TEST_SERVICE: test-worker
-		`.replace(/\s/g, "")
-		);
+		expect(normalizeOutput(worker.currentOutput)).toMatchInlineSnapshot(`
+			"✨ Compiled Worker successfully
+			Your Worker has access to the following bindings:
+			Binding                                                 Resource            Mode
+			env.TEST_DO (TestDurableObject, defined in a)           Durable Object      local [not connected]
+			env.TEST_KV (TEST_KV)                                   KV Namespace        local
+			env.TEST_D1 (local-TEST_D1)                             D1 Database         local
+			env.TEST_R2 (TEST_R2)                                   R2 Bucket           local
+			env.TEST_SERVICE (test-worker)                          Worker              local [not connected]
+			Service bindings, Durable Object bindings, and Tail consumers connect to other \`wrangler dev\` processes running locally, with their connection status indicated by [connected] or [not connected]. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development
+			⎔ Starting local server...
+			[wrangler:info] Ready on http://<HOST>:<PORT>"
+		`);
 	});
 
 	it("should support wrangler.toml", async () => {
@@ -149,17 +146,18 @@ describe("pages dev", () => {
 					compatibility_date = "2023-01-01"
 				`,
 		});
-		const port = await getPort();
-		const worker = helper.runLongLived(`wrangler pages dev --port ${port}`);
+		const worker = helper.runLongLived(
+			`${cmd} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		const { url } = await worker.waitForReady();
 
 		const text = await fetchText(url);
-		expect(text).toMatchInlineSnapshot('"Pages supports wrangler.toml ⚡️⚡️"');
+		expect(text).toBe("Pages supports wrangler.toml ⚡️⚡️");
 	});
 
 	it("should recover from syntax error during dev session (_worker)", async () => {
 		const helper = new WranglerE2ETestHelper();
-		const worker = helper.runLongLived("wrangler pages dev .");
+		const worker = helper.runLongLived(`${cmd} .`);
 
 		await helper.seed({
 			"_worker.js": dedent`
@@ -172,9 +170,9 @@ describe("pages dev", () => {
 
 		const { url } = await worker.waitForReady();
 
-		await expect(
-			fetch(url).then((r) => r.text())
-		).resolves.toMatchInlineSnapshot('"Hello World!"');
+		await expect(fetch(url).then((r) => r.text())).resolves.toBe(
+			"Hello World!"
+		);
 
 		await helper.seed({
 			"_worker.js": dedent`
@@ -201,15 +199,16 @@ describe("pages dev", () => {
 		});
 		await worker.waitForReload();
 
-		await expect(
-			fetch(url).then((r) => r.text())
-		).resolves.toMatchInlineSnapshot('"Updated Worker!"');
+		await expect(fetch(url).then((r) => r.text())).resolves.toBe(
+			"Updated Worker!"
+		);
 	});
 
 	it("should recover from syntax error during dev session (Functions)", async () => {
 		const helper = new WranglerE2ETestHelper();
-		const port = await getPort();
-		const worker = helper.runLongLived(`wrangler pages dev --port ${port} .`);
+		const worker = helper.runLongLived(
+			`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
+		);
 
 		await helper.seed({
 			"functions/_middleware.js": dedent`
@@ -220,9 +219,9 @@ describe("pages dev", () => {
 
 		const { url } = await worker.waitForReady();
 
-		await expect(
-			fetch(url).then((r) => r.text())
-		).resolves.toMatchInlineSnapshot('"Hello World!"');
+		await expect(fetch(url).then((r) => r.text())).resolves.toBe(
+			"Hello World!"
+		);
 
 		await helper.seed({
 			"functions/_middleware.js": dedent`
@@ -245,9 +244,9 @@ describe("pages dev", () => {
 		});
 		await worker.waitForReload();
 
-		await expect(
-			fetch(url).then((r) => r.text())
-		).resolves.toMatchInlineSnapshot('"Updated Worker!"');
+		await expect(fetch(url).then((r) => r.text())).resolves.toBe(
+			"Updated Worker!"
+		);
 	});
 
 	it("should validate _routes.json during dev session, and fallback to default value", async () => {
@@ -265,14 +264,15 @@ describe("pages dev", () => {
 					}
 				`,
 		});
-		const port = await getPort();
-		const worker = helper.runLongLived(`wrangler pages dev --port ${port} .`);
+		const worker = helper.runLongLived(
+			`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
+		);
 
 		const { url } = await worker.waitForReady();
 
 		const foo = await fetchText(`${url}/foo`);
 
-		expect(foo).toMatchInlineSnapshot('"FOO"');
+		expect(foo).toBe("FOO");
 
 		// invalid _routes.json because include rule does not start with `/`
 		await helper.seed({
@@ -291,8 +291,9 @@ describe("pages dev", () => {
 
 	it("should use top-level configuration specified in `wrangler.toml`", async () => {
 		const helper = new WranglerE2ETestHelper();
-		const port = await getPort();
-		const worker = helper.runLongLived(`wrangler pages dev --port ${port}`);
+		const worker = helper.runLongLived(
+			`${cmd} --port ${port} --inspector-port ${inspectorPort}`
+		);
 		await helper.seed({
 			"public/_worker.js": dedent`
 						export default {
@@ -319,35 +320,37 @@ describe("pages dev", () => {
 
 		const text = await fetchText(url);
 
-		expect(text).toMatchInlineSnapshot(
-			'"⚡️ Pages ⚡️ supports wrangler.toml"'
-		);
-		expect(normalizeOutput(worker.currentOutput).replace(/\s/g, "")).toContain(
-			`
-					Your worker has access to the following bindings:
-					- KV Namespaces:
-						- KV_BINDING_TOML: KV_ID_TOML
-					- Vars:
-						- PAGES: "⚡️ Pages ⚡️"
-				`.replace(/\s/g, "")
-		);
+		expect(text).toBe("⚡️ Pages ⚡️ supports wrangler.toml");
+
+		await worker.readUntil(/GET \/ 200 OK/);
+
+		expect(normalizeOutput(worker.currentOutput)).toMatchInlineSnapshot(`
+			"✨ Compiled Worker successfully
+			Your Worker has access to the following bindings:
+			Binding                                  Resource                  Mode
+			env.KV_BINDING_TOML (KV_ID_TOML)         KV Namespace              local
+			env.PAGES ("⚡️ Pages ⚡️")                Environment Variable      local
+			⎔ Starting local server...
+			[wrangler:info] Ready on http://<HOST>:<PORT>
+			[wrangler:info] GET / 200 OK (TIMINGS)"
+		`);
 	});
 
 	it("should merge (with override) `wrangler.toml` configuration with configuration provided via the command line, with command line args taking precedence", async () => {
 		const helper = new WranglerE2ETestHelper();
-		const port = await getPort();
 
 		const flags = [
 			` --binding VAR1=NEW_VAR_1 VAR3=VAR_3_ARGS`,
 			` --kv KV_BINDING_1_TOML=NEW_KV_ID_1 KV_BINDING_3_ARGS=KV_ID_3_ARGS`,
 			` --do DO_BINDING_1_TOML=NEW_DO_1@NEW_DO_SCRIPT_1 DO_BINDING_3_ARGS=DO_3_ARGS@DO_SCRIPT_3_ARGS`,
 			` --d1 D1_BINDING_1_TOML=NEW_D1_NAME_1 D1_BINDING_3_ARGS=D1_NAME_3_ARGS`,
-			` --r2 R2_BINDING_1_TOML=NEW_R2_BUCKET_1 R2_BINDING_3_TOML=R2_BUCKET_3_ARGS`,
+			` --r2 R2_BINDING_1_TOML=new-r2-bucket-1 R2_BINDING_3_TOML=r2-bucket-3-args`,
 			` --service SERVICE_BINDING_1_TOML=NEW_SERVICE_NAME_1 SERVICE_BINDING_3_TOML=SERVICE_NAME_3_ARGS`,
 			` --ai AI_BINDING_2_TOML`,
-			` --port ${port}`,
 		];
-		const worker = helper.runLongLived(`wrangler pages dev ${flags.join("")}`);
+		const worker = helper.runLongLived(
+			`${cmd} --port ${port} --inspector-port ${inspectorPort} ${flags.join("")}`
+		);
 		await helper.seed({
 			"public/_worker.js": dedent`
 					export default {
@@ -401,12 +404,12 @@ describe("pages dev", () => {
 				# to override
 				[[r2_buckets]]
 				binding = 'R2_BINDING_1_TOML'
-				bucket_name = 'R2_BUCKET_1_TOML'
+				bucket_name = 'r2-bucket-1-toml'
 
 				# to merge as is
 				[[r2_buckets]]
 				binding = 'R2_BINDING_2_TOML'
-				bucket_name = 'R2_BUCKET_2_TOML'
+				bucket_name = 'r2-bucket-2-toml'
 
 				# to override
 				[[services]]
@@ -430,45 +433,7 @@ describe("pages dev", () => {
 			"⎔ Starting local server..."
 		);
 
-		expect(prestartOutput).toMatchInlineSnapshot(`
-				"✨ Compiled Worker successfully
-				▲ [WARNING] WARNING: You have Durable Object bindings that are not defined locally in the worker being developed.
-				  Be aware that changes to the data stored in these Durable Objects will be permanent and affect the live instances.
-				  Remote Durable Objects that are affected:
-				  - {"name":"DO_BINDING_1_TOML","class_name":"DO_1_TOML","script_name":"DO_SCRIPT_1_TOML"}
-				  - {"name":"DO_BINDING_2_TOML","class_name":"DO_2_TOML","script_name":"DO_SCRIPT_2_TOML"}
-				▲ [WARNING] This worker is bound to live services: SERVICE_BINDING_1_TOML (SERVICE_NAME_1_TOML), SERVICE_BINDING_2_TOML (SERVICE_NAME_2_TOML)
-				Your worker has access to the following bindings:
-				- Durable Objects:
-				  - DO_BINDING_1_TOML: NEW_DO_1 (defined in NEW_DO_SCRIPT_1)
-				  - DO_BINDING_2_TOML: DO_2_TOML (defined in DO_SCRIPT_2_TOML)
-				  - DO_BINDING_3_ARGS: DO_3_ARGS (defined in DO_SCRIPT_3_ARGS)
-				- KV Namespaces:
-				  - KV_BINDING_1_TOML: NEW_KV_ID_1
-				  - KV_BINDING_2_TOML: KV_ID_2_TOML
-				  - KV_BINDING_3_ARGS: KV_ID_3_ARGS
-				- D1 Databases:
-				  - D1_BINDING_1_TOML: local-D1_BINDING_1_TOML=NEW_D1_NAME_1 (NEW_D1_NAME_1)
-				  - D1_BINDING_2_TOML: D1_NAME_2_TOML (D1_ID_2_TOML)
-				  - D1_BINDING_3_ARGS: local-D1_BINDING_3_ARGS=D1_NAME_3_ARGS (D1_NAME_3_ARGS)
-				- R2 Buckets:
-				  - R2_BINDING_1_TOML: NEW_R2_BUCKET_1
-				  - R2_BINDING_2_TOML: R2_BUCKET_2_TOML
-				  - R2_BINDING_3_TOML: R2_BUCKET_3_ARGS
-				- Services:
-				  - SERVICE_BINDING_1_TOML: NEW_SERVICE_NAME_1
-				  - SERVICE_BINDING_2_TOML: SERVICE_NAME_2_TOML
-				  - SERVICE_BINDING_3_TOML: SERVICE_NAME_3_ARGS
-				- AI:
-				  - Name: AI_BINDING_2_TOML
-				- Vars:
-				  - VAR1: "(hidden)"
-				  - VAR2: "VAR_2_TOML"
-				  - VAR3: "(hidden)"
-				▲ [WARNING] ⎔ Support for service bindings in local mode is experimental and may change.
-				▲ [WARNING] ⎔ Support for external Durable Objects in local mode is experimental and may change.
-				"
-			`);
+		expect(prestartOutput).toMatchSnapshot();
 	});
 
 	it("should pick up wrangler.toml configuration even in cases when `pages_build_output_dir` was not specified, but the <directory> command argument was", async () => {
@@ -490,14 +455,12 @@ describe("pages dev", () => {
 			`,
 		});
 
-		const port = await getPort();
 		const worker = helper.runLongLived(
-			`wrangler pages dev --port ${port} public`
+			`${cmd} --port ${port} --inspector-port ${inspectorPort} public`
 		);
 		const { url } = await worker.waitForReady();
-
-		await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-			`"⚡️ Pages supports wrangler.toml ⚡️"`
+		await expect(fetchText(url)).resolves.toBe(
+			"⚡️ Pages supports wrangler.toml ⚡️"
 		);
 	});
 
@@ -512,12 +475,13 @@ describe("pages dev", () => {
 						}`,
 			});
 
-			const port = await getPort();
-			const worker = helper.runLongLived(`wrangler pages dev --port ${port} .`);
+			const worker = helper.runLongLived(
+				`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
+			);
 			const { url } = await worker.waitForReady();
 
 			let text = await fetchText(url);
-			expect(text).toMatchInlineSnapshot('"Hello World!"');
+			expect(text).toBe("Hello World!");
 
 			await helper.seed({
 				"functions/_middleware.js": dedent`
@@ -529,7 +493,12 @@ describe("pages dev", () => {
 			await worker.waitForReload();
 
 			text = await fetchText(url);
-			expect(text).toMatchInlineSnapshot('"Updated Worker!"');
+			expect(text).toBe("Updated Worker!");
+
+			// Ensure Wrangler doesn't write tmp files in the functions directory—regression test for https://github.com/cloudflare/workers-sdk/issues/7440
+			expect(
+				existsSync(path.join(helper.tmpPath, "functions/.wrangler"))
+			).toBeFalsy();
 		});
 
 		it("should support modifying dependencies during dev session (Functions)", async () => {
@@ -552,15 +521,16 @@ describe("pages dev", () => {
 						}`,
 			});
 
-			const port = await getPort();
-			const worker = helper.runLongLived(`wrangler pages dev --port ${port} .`);
+			const worker = helper.runLongLived(
+				`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
+			);
 			const { url } = await worker.waitForReady();
 
 			let hello = await fetchText(`${url}/greetings/hello`);
-			expect(hello).toMatchInlineSnapshot('"Hello World!"');
+			expect(hello).toBe("Hello World!");
 
 			let hi = await fetchText(`${url}/hi`);
-			expect(hi).toMatchInlineSnapshot('"Hi there!"');
+			expect(hi).toBe("Hi there!");
 
 			await helper.seed({
 				"utils/greetings.js": dedent`
@@ -572,10 +542,10 @@ describe("pages dev", () => {
 			await worker.waitForReload();
 
 			hello = await fetchText(`${url}/greetings/hello`);
-			expect(hello).toMatchInlineSnapshot('"Hey World!"');
+			expect(hello).toBe("Hey World!");
 
 			hi = await fetchText(`${url}/hi`);
-			expect(hi).toMatchInlineSnapshot('"Hey there!"');
+			expect(hi).toBe("Hey there!");
 		});
 
 		it("should support modifying external modules during dev session (Functions)", async () => {
@@ -592,12 +562,13 @@ describe("pages dev", () => {
 						}`,
 			});
 
-			const port = await getPort();
-			const worker = helper.runLongLived(`wrangler pages dev --port ${port} .`);
+			const worker = helper.runLongLived(
+				`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
+			);
 			const { url } = await worker.waitForReady();
 
 			let hello = await fetchText(`${url}/hello`);
-			expect(hello).toMatchInlineSnapshot('"<h1>Hello HTML World!</h1>"');
+			expect(hello).toBe("<h1>Hello HTML World!</h1>");
 
 			await helper.seed({
 				"modules/my-html.html": dedent`
@@ -608,7 +579,7 @@ describe("pages dev", () => {
 			await worker.waitForReload();
 
 			hello = await fetchText(`${url}/hello`);
-			expect(hello).toMatchInlineSnapshot('"<h1>Updated HTML!</h1>"');
+			expect(hello).toBe("<h1>Updated HTML!</h1>");
 		});
 
 		it("should modify worker during dev session (_worker)", async () => {
@@ -623,12 +594,13 @@ describe("pages dev", () => {
 						}`,
 			});
 
-			const port = await getPort();
-			const worker = helper.runLongLived(`wrangler pages dev --port ${port} .`);
+			const worker = helper.runLongLived(
+				`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
+			);
 			const { url } = await worker.waitForReady();
 
 			let hello = await fetchText(url);
-			expect(hello).toMatchInlineSnapshot('"Hello World!"');
+			expect(hello).toBe("Hello World!");
 
 			await helper.seed({
 				"_worker.js": dedent`
@@ -642,7 +614,7 @@ describe("pages dev", () => {
 			await worker.waitForReload();
 
 			hello = await fetchText(url);
-			expect(hello).toMatchInlineSnapshot('"Updated Worker!"');
+			expect(hello).toBe("Updated Worker!");
 		});
 
 		it("should support modifying dependencies during dev session (_worker)", async () => {
@@ -661,12 +633,13 @@ describe("pages dev", () => {
 						}`,
 			});
 
-			const port = await getPort();
-			const worker = helper.runLongLived(`wrangler pages dev --port ${port} .`);
+			const worker = helper.runLongLived(
+				`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
+			);
 			const { url } = await worker.waitForReady();
 
 			let bear = await fetchText(url);
-			expect(bear).toMatchInlineSnapshot('"BEAR!"');
+			expect(bear).toBe("BEAR!");
 
 			await helper.seed({
 				"pets/bear.js": dedent`
@@ -677,7 +650,7 @@ describe("pages dev", () => {
 			await worker.waitForReload();
 
 			bear = await fetchText(url);
-			expect(bear).toMatchInlineSnapshot('"We love BEAR!"');
+			expect(bear).toBe("We love BEAR!");
 		});
 
 		it("should support modifying external modules during dev session (_worker)", async () => {
@@ -696,12 +669,13 @@ describe("pages dev", () => {
 						}`,
 			});
 
-			const port = await getPort();
-			const worker = helper.runLongLived(`wrangler pages dev --port ${port} .`);
+			const worker = helper.runLongLived(
+				`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
+			);
 			const { url } = await worker.waitForReady();
 
 			let graham = await fetchText(url);
-			expect(graham).toMatchInlineSnapshot('"<h1>Graham the dog</h1>"');
+			expect(graham).toBe("<h1>Graham the dog</h1>");
 
 			await helper.seed({
 				"graham.html": dedent`
@@ -712,9 +686,7 @@ describe("pages dev", () => {
 			await worker.waitForReload();
 
 			graham = await fetchText(url);
-			expect(graham).toMatchInlineSnapshot(
-				'"<h1>Graham is the bestest doggo</h1>"'
-			);
+			expect(graham).toBe("<h1>Graham is the bestest doggo</h1>");
 		});
 
 		it("should support modifying _routes.json during dev session", async () => {
@@ -745,15 +717,16 @@ describe("pages dev", () => {
 					hello world
 				`,
 			});
-			const port = await getPort();
-			const worker = helper.runLongLived(`wrangler pages dev --port ${port} .`);
+			const worker = helper.runLongLived(
+				`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
+			);
 			const { url } = await worker.waitForReady();
 
 			const foo = await fetchText(`${url}/foo`);
-			expect(foo).toMatchInlineSnapshot('"foo"');
+			expect(foo).toBe("foo");
 
 			const bar = await fetchText(`${url}/bar`);
-			expect(bar).toMatchInlineSnapshot('"bar"');
+			expect(bar).toBe("bar");
 
 			await helper.seed({
 				"_routes.json": dedent`
@@ -767,10 +740,10 @@ describe("pages dev", () => {
 			await worker.waitForReload();
 
 			const foo2 = await fetchText(`${url}/foo`);
-			expect(foo2).toMatchInlineSnapshot('"foo"');
+			expect(foo2).toBe("foo");
 
 			const bar2 = await fetchText(`${url}/bar`);
-			expect(bar2).toMatchInlineSnapshot('"hello world"');
+			expect(bar2).toBe("hello world");
 		});
 	});
 });

@@ -14,6 +14,11 @@ const run = async () => {
 		// This is required to support jsonc-parser. See https://github.com/microsoft/node-jsonc-parser/issues/57
 		mainFields: ["module", "main"],
 		format: "cjs",
+		define: {
+			"process.env.SPARROW_SOURCE_KEY": JSON.stringify(
+				process.env.SPARROW_SOURCE_KEY ?? "",
+			),
+		},
 	};
 
 	const runBuild = async () => {
@@ -23,7 +28,7 @@ const run = async () => {
 		// The latter has been added to the project's .gitignore file
 		// This renaming will be reversed when each template is used
 		// We can continue to author ".gitignore" files in each template
-		for (const filepath of glob.sync("templates/**/.gitignore")) {
+		for (const filepath of glob.sync("templates*/**/.gitignore")) {
 			await cp(filepath, filepath.replace(".gitignore", "__dot__gitignore"));
 		}
 	};

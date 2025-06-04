@@ -65,7 +65,8 @@ const configure = async (ctx: C3Context) => {
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "solid",
-	displayName: "Solid",
+	frameworkCli: "create-solid",
+	displayName: "SolidStart",
 	platform: "pages",
 	copyFiles: {
 		path: "./templates",
@@ -76,6 +77,7 @@ const config: TemplateConfig = {
 		scripts: {
 			preview: `${npm} run build && npx wrangler pages dev`,
 			deploy: `${npm} run build && wrangler pages deploy`,
+			"cf-typegen": `wrangler types`,
 		},
 	}),
 	compatibilityFlags: ["nodejs_compat"],

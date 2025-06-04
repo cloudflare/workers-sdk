@@ -39,8 +39,8 @@ test("WebSocket: sends message to pair", async (t) => {
 	webSocket1.accept();
 	webSocket2.accept();
 
-	const messages1: (string | ArrayBuffer)[] = [];
-	const messages2: (string | ArrayBuffer)[] = [];
+	const messages1: MessageEvent["data"][] = [];
+	const messages2: MessageEvent["data"][] = [];
 	webSocket1.addEventListener("message", (e) => messages1.push(e.data));
 	webSocket2.addEventListener("message", (e) => messages2.push(e.data));
 
@@ -64,8 +64,8 @@ test("WebSocket: must accept before sending", (t) => {
 test("WebSocket: queues messages if pair not accepted", async (t) => {
 	const [webSocket1, webSocket2] = Object.values(new WebSocketPair());
 
-	const messages1: (string | ArrayBuffer)[] = [];
-	const messages2: (string | ArrayBuffer)[] = [];
+	const messages1: MessageEvent["data"][] = [];
+	const messages2: MessageEvent["data"][] = [];
 	webSocket1.addEventListener("message", (e) => messages1.push(e.data));
 	webSocket2.addEventListener("message", (e) => messages2.push(e.data));
 
@@ -112,8 +112,8 @@ test("WebSocket: queues closes if pair not accepted", async (t) => {
 test("WebSocket: discards sent message to pair if other side closed", async (t) => {
 	const [webSocket1, webSocket2] = Object.values(new WebSocketPair());
 
-	const messages1: (string | ArrayBuffer)[] = [];
-	const messages2: (string | ArrayBuffer)[] = [];
+	const messages1: MessageEvent["data"][] = [];
+	const messages2: MessageEvent["data"][] = [];
 	webSocket1.addEventListener("message", (e) => messages1.push(e.data));
 	webSocket2.addEventListener("message", (e) => messages2.push(e.data));
 

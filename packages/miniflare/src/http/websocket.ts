@@ -5,9 +5,12 @@ import { TypedEventTarget } from "../shared";
 import { ValueOf, viewToBuffer } from "../workers";
 
 export class MessageEvent extends Event {
-	readonly data: ArrayBuffer | string;
+	readonly data: string | ArrayBuffer | Uint8Array<ArrayBuffer>;
 
-	constructor(type: "message", init: { data: ArrayBuffer | string }) {
+	constructor(
+		type: "message",
+		init: { data: string | ArrayBuffer | Uint8Array<ArrayBuffer> }
+	) {
 		super(type);
 		this.data = init.data;
 	}
@@ -115,7 +118,7 @@ export class WebSocket extends TypedEventTarget<WebSocketEventMap> {
 		}
 	}
 
-	send(message: ArrayBuffer | string): void {
+	send(message: string | ArrayBuffer | Uint8Array<ArrayBuffer>): void {
 		if (!this[kAccepted]) {
 			throw new TypeError(
 				"You must call accept() on this WebSocket before sending messages."
@@ -124,7 +127,7 @@ export class WebSocket extends TypedEventTarget<WebSocketEventMap> {
 		this[kSend](message);
 	}
 
-	[kSend](message: ArrayBuffer | string): void {
+	[kSend](message: string | ArrayBuffer | Uint8Array<ArrayBuffer>): void {
 		// Split from send() so we can queue messages before accept() is called when
 		// forwarding message events from the client
 		if (this[kClosedOutgoing]) {

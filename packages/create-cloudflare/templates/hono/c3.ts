@@ -1,78 +1,9 @@
-import { logRaw } from "@cloudflare/cli";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
-import { runFrameworkGenerator } from "frameworks/index";
-import { loadTemplateSnippets, transformFile } from "helpers/codemod";
-import { detectPackageManager } from "helpers/packageManagers";
-import type { TemplateConfig } from "../../src/templates";
-import type * as recast from "recast";
-import type { C3Context } from "types";
+import pages from "./pages/c3";
+import workers from "./workers/c3";
+import type { MultiPlatformTemplateConfig } from "../../src/templates";
 
-const generate = async (ctx: C3Context) => {
-	const { name: pm } = detectPackageManager();
-
-	await runFrameworkGenerator(ctx, [
-		ctx.project.name,
-		"--template",
-		"cloudflare-workers",
-		"--install",
-		"--pm",
-		pm,
-	]);
-
-	logRaw(""); // newline
-};
-
-const configure = async (ctx: C3Context) => {
-	const indexFile = "src/index.ts";
-
-	const s = spinner();
-	s.start(`Updating \`${indexFile}\``);
-
-	const snippets = loadTemplateSnippets(ctx);
-
-	transformFile(indexFile, {
-		// Insert the env declaration after the last import (but before the rest of the body)
-		visitProgram: function (n) {
-			const lastImportIndex = n.node.body.findLastIndex(
-				(t) => t.type === "ImportDeclaration",
-			);
-			const lastImport = n.get("body", lastImportIndex);
-			lastImport.insertAfter(...snippets.bindingsTypeTs);
-
-			return this.traverse(n);
-		},
-		visitVariableDeclarator(n) {
-			if (n.node.id.type === "Identifier" && n.node.id.name === "app") {
-				n.node.init = snippets
-					.appDeclarationTs[0] as recast.types.namedTypes.NewExpression;
-
-				return false;
-			}
-		},
-	});
-
-	s.stop(`${brandColor("updated")} \`${dim(indexFile)}\``);
-};
-
-const config: TemplateConfig = {
-	configVersion: 1,
-	id: "hono",
+const config: MultiPlatformTemplateConfig = {
 	displayName: "Hono",
-	copyFiles: {
-		path: "./templates",
-	},
-	platform: "workers",
-	generate,
-	configure,
-	transformPackageJson: async () => ({
-		scripts: {
-			dev: "wrangler dev",
-			deploy: "wrangler deploy --minify",
-			"cf-typegen": "wrangler types --env-interface CloudflareBindings",
-		},
-	}),
-	devScript: "dev",
-	deployScript: "deploy",
+	platformVariants: { pages, workers },
 };
 export default config;

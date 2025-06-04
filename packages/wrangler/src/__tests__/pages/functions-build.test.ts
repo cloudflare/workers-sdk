@@ -168,6 +168,29 @@ describe("pages functions build", () => {
 	`);
 	});
 
+	it("should output a metafile when --metafile is set", async () => {
+		// Setup a basic pages function
+		mkdirSync("functions");
+		writeFileSync(
+			"functions/hello.js",
+			`export function onRequest() { return new Response("Hello from Pages Functions"); }`
+		);
+
+		// Run the build command
+		await runWrangler(`pages functions build --outdir=dist --metafile`);
+
+		// Check if file exists
+		expect(existsSync("dist/bundle-meta.json")).toBe(true);
+
+		// Structure checks for the metafile
+		const meta = JSON.parse(
+			readFileSync("dist/bundle-meta.json", { encoding: "utf8" })
+		);
+
+		expect(meta.inputs).toBeDefined();
+		expect(meta.outputs).toBeDefined();
+	});
+
 	it("should build _worker.js", async () => {
 		/* ---------------------------- */
 		/*       Set up js files        */
@@ -473,15 +496,17 @@ export const cat = "dog";`
 
 		expect(existsSync("public/_worker.bundle")).toBe(true);
 		expect(std.out).toMatchInlineSnapshot(`
-		"┌─────────┬──────┬──────────┐
-		│ Name    │ Type │ Size     │
-		├─────────┼──────┼──────────┤
-		│ cat.js  │ esm  │ xx KiB │
-		├─────────┼──────┼──────────┤
-		│ dog.mjs │ esm  │ xx KiB │
-		└─────────┴──────┴──────────┘
-		✨ Compiled Worker successfully"
-	`);
+			"┌─┬─┬─┐
+			│ Name │ Type │ Size │
+			├─┼─┼─┤
+			│ cat.js │ esm │ xx KiB │
+			├─┼─┼─┤
+			│ dog.mjs │ esm │ xx KiB │
+			├─┼─┼─┤
+			│ Total (2 modules) │ │ xx KiB │
+			└─┴─┴─┘
+			✨ Compiled Worker successfully"
+		`);
 
 		const workerBundleContents = readFileSync("public/_worker.bundle", "utf-8");
 		const workerBundleWithConstantData = replaceRandomWithConstantData(
@@ -494,41 +519,41 @@ export const cat = "dog";`
 		);
 
 		expect(workerBundleWithConstantData).toMatchInlineSnapshot(`
-		"------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"metadata\\"
+			"------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"metadata\\"
 
-		{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
-		------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
-		Content-Type: application/javascript+module
+			{\\"main_module\\":\\"bundledWorker-0.test.mjs\\"}
+			------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"bundledWorker-0.test.mjs\\"; filename=\\"bundledWorker-0.test.mjs\\"
+			Content-Type: application/javascript+module
 
-		// _worker.js/index.js
-		import { cat } from \\"./cat.js\\";
-		import { dog } from \\"./dog.mjs\\";
-		var worker_default = {
-		  async fetch(request, env) {
-		    return new Response(\\"Hello from _worker.js/index.js\\" + cat + dog);
-		  }
-		};
-		export {
-		  worker_default as default
-		};
-		//# sourceMappingURL=bundledWorker-0.test.mjs.map
+			// _worker.js/index.js
+			import { cat } from \\"./cat.js\\";
+			import { dog } from \\"./dog.mjs\\";
+			var index_default = {
+			  async fetch(request, env) {
+			    return new Response(\\"Hello from _worker.js/index.js\\" + cat + dog);
+			  }
+			};
+			export {
+			  index_default as default
+			};
+			//# sourceMappingURL=bundledWorker-0.test.mjs.map
 
-		------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"cat.js\\"; filename=\\"cat.js\\"
-		Content-Type: application/javascript+module
-
-
-		export const cat = \\"cat\\";
-		------formdata-undici-0.test
-		Content-Disposition: form-data; name=\\"dog.mjs\\"; filename=\\"dog.mjs\\"
-		Content-Type: application/javascript+module
+			------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"cat.js\\"; filename=\\"cat.js\\"
+			Content-Type: application/javascript+module
 
 
-		export const cat = \\"dog\\";
-		------formdata-undici-0.test--"
-	`);
+			export const cat = \\"cat\\";
+			------formdata-undici-0.test
+			Content-Disposition: form-data; name=\\"dog.mjs\\"; filename=\\"dog.mjs\\"
+			Content-Type: application/javascript+module
+
+
+			export const cat = \\"dog\\";
+			------formdata-undici-0.test--"
+		`);
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -538,17 +563,13 @@ describe("functions build w/ config", () => {
 	const std = mockConsoleMethods();
 
 	runInTempDir();
-	const originalEnv = process.env;
-
 	afterEach(async () => {
-		process.env = originalEnv;
 		// Force a tick to ensure that all promises resolve
 		await endEventLoop();
 	});
 
 	beforeEach(() => {
-		// eslint-disable-next-line turbo/no-undeclared-env-vars
-		process.env.PAGES_ENVIRONMENT = "production";
+		vi.stubEnv("PAGES_ENVIRONMENT", "production");
 	});
 
 	it("should include all config in the _worker.bundle metadata", async () => {
