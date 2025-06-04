@@ -271,4 +271,13 @@ describe("generatePreviewAlias", () => {
 		const result = generatePreviewAlias("testscript");
 		expect(result).toBe("some-branch-name");
 	});
+
+	it("lowercases branch names", () => {
+		mockExecSync
+			.mockImplementationOnce(() => {}) // is-inside-work-tree
+			.mockImplementationOnce(() => Buffer.from("HEAD/feature/work"));
+
+		const result = generatePreviewAlias("testscript");
+		expect(result).toBe("head-feature-work");
+	});
 });

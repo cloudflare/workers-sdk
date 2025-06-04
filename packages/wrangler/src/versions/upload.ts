@@ -945,7 +945,8 @@ export function generatePreviewAlias(scriptName: string): string | undefined {
 	const sanitizedAlias = branchName
 		.replace(/[^a-zA-Z0-9-]/g, "-") // Replace all non-alphanumeric characters
 		.replace(/-+/g, "-") // replace multiple dashes
-		.replace(/^-+|-+$/g, ""); // trim dashes
+		.replace(/^-+|-+$/g, "") // trim dashes
+		.toLowerCase(); // lowercase the name
 
 	// Dns labels can only have a max of 63 chars. We use preview urls in the form of <alias>-<workerName>
 	// which means our alias must be shorter than 63-scriptNameLen-1
