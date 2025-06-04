@@ -276,6 +276,8 @@ it.runIf(RUN_IF && nodePtySupported)(
 			...wrangler.stdout.matchAll(/\[\dA\[0J/g),
 		];
 
+		console.dir(wrangler.stdout);
+		console.dir(hotkeysRenderCount.length + clearHotkeysCount.length);
 		// The hotkeys should be rendered the same number of times as the control sequence for clearing them from the screen
 		expect(hotkeysRenderCount.length).toBe(clearHotkeysCount.length);
 	}
