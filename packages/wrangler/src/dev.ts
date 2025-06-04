@@ -525,7 +525,7 @@ async function setupDevEnv(
 			},
 			dev: {
 				auth,
-				remote: !args.forceLocal && args.remote,
+				remote: "minimal",
 				server: {
 					hostname: args.ip,
 					port: args.port,
