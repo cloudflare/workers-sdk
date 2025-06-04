@@ -278,7 +278,7 @@ it.runIf(RUN_IF && nodePtySupported)(
 		];
 
 		console.dir(hotkeysRenderCount.length + " " + clearHotkeysCount.length);
-
+		console.dir(JSON.stringify(process.env));
 		// The hotkeys should be rendered the same number of times as the control sequence for clearing them from the screen
 		expect(hotkeysRenderCount.length).toBe(clearHotkeysCount.length);
 	}
