@@ -210,7 +210,7 @@ export class DevRegistry {
 		return null;
 	}
 
-	public subscribe(workerName: string, callback: () => void = () => {}): void {
+	public subscribe(workerName: string, callback?: () => void): void {
 		let callbacks = this.subscribers.get(workerName);
 
 		if (!callbacks) {
@@ -218,7 +218,9 @@ export class DevRegistry {
 			this.subscribers.set(workerName, callbacks);
 		}
 
-		callbacks.push(callback);
+		if (callback !== undefined) {
+			callbacks.push(callback);
+		}
 	}
 
 	private notifySubscribers(workerName: string): void {
