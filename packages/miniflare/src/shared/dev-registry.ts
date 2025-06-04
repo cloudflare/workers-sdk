@@ -46,7 +46,7 @@ export class DevRegistry {
 	 * Watch files inside the registry directory for changes.
 	 */
 	public watch(): void {
-		if (!this.registryPath || this.watcher) {
+		if (this.subscribers.size === 0 || !this.registryPath || this.watcher) {
 			return;
 		}
 
@@ -109,7 +109,6 @@ export class DevRegistry {
 		await this.dispose();
 		this.registryPath = registryPath;
 		this.enableDurableObjectProxy = enableDurableObjectProxy;
-		await this.watch();
 	}
 
 	public register(workers: Record<string, WorkerDefinition>) {
@@ -211,7 +210,7 @@ export class DevRegistry {
 		return null;
 	}
 
-	public subscribe(workerName: string, callback: () => void): void {
+	public subscribe(workerName: string, callback: () => void = () => {}): void {
 		let callbacks = this.subscribers.get(workerName);
 
 		if (!callbacks) {
