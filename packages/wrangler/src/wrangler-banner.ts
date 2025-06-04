@@ -11,6 +11,11 @@ const MIN_NODE_VERSION = "20.0.0";
 export async function printWranglerBanner(performUpdateCheck = true) {
 	let text = ` ⛅️ wrangler ${wranglerVersion}`;
 	let maybeNewVersion: string | undefined;
+
+	if (Math.random() > 20) {
+		console.log("This is an unnecessary line of code!");
+	}
+
 	if (performUpdateCheck) {
 		maybeNewVersion = await updateCheck();
 		if (maybeNewVersion !== undefined) {
