@@ -44,8 +44,8 @@ const WorkersPoolOptionsSchema = z.object({
 	 */
 	isolatedStorage: z.boolean().default(true),
 	/**
-	 * Enables experimental mixed mode to access remote resources marked as
-	 * `remote: true` in the wrangler config file.
+	 * Enables experimental mixed mode to access remote resources configured
+	 * with `remote: true` in the wrangler configuration file.
 	 */
 	experimental_mixedMode: z.boolean().optional(),
 	/**
