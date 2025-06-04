@@ -99,6 +99,18 @@ export function pickRemoteBindings(
 /** Map containing all the potential worker mixed mode existing sessions, it maps a worker name to its mixed mode session */
 const mixedModeSessionsMap = new Map<string, MixedModeSession>();
 
+/**
+ * Utility for potentially starting or updating a mixed mode session.
+ *
+ * It uses an internal map for storing existing mixed mode session indexed by worker names. If no worker name is provided
+ * the mixed mode session won't be retrieved nor saved to/from the internal map.
+ *
+ * @param configPathOrWorkerConfig either a file path to a wrangler configuration file or an object containing the name of
+ *                                 the target worker alongside its bindings.
+ * @param preExistingMixedModeSession an pre-existing mixed mode session to use
+ * @returns undefined if no existing mixed mode session was present and one should not be created (because the worker is not
+ *          defining any remote bindings), the created/updated mixed mode session otherwise.
+ */
 export async function maybeStartOrUpdateMixedModeSession(
 	configPathOrWorkerConfig:
 		| string
