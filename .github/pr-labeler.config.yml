@@ -18,7 +18,7 @@ c3-e2e:
               [
                 "packages/wrangler/**/*",
                 "packages/miniflare/**/*",
-                "packages/create-cloudflare/**/*",
+                "packages/create-cloudflare/src/**/*",
               ]
       - head-branch: "changeset-release/main"
 skip-v3-pr:
