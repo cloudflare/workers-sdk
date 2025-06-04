@@ -615,7 +615,7 @@ export async function startDev(args: StartDevOptions) {
 				apiToken: requireApiToken(),
 			};
 		};
-
+		logger.debug("hello");
 		if (Array.isArray(args.config)) {
 			const runtime = new MultiworkerRuntimeController(args.config.length);
 
