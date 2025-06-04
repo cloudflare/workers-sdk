@@ -165,8 +165,19 @@ export class LocalRuntimeController extends RuntimeController {
 				data.config.dev.experimentalMixedMode ?? false;
 
 			if (experimentalMixedMode && !data.config.dev?.remote) {
+				// note: mixedMode uses (transitively) LocalRuntimeController, so we need to import
+				// from the module lazily in order to avoid circular dependency issues
+				const { maybeStartOrUpdateMixedModeSession } = await import(
+					"../mixedMode"
+				);
+
 				this.#mixedModeSession = await maybeStartOrUpdateMixedModeSession(
-					configBundle,
+					{
+						name: configBundle.name,
+						bindings:
+							convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
+							{},
+					},
 					this.#mixedModeSession
 				);
 			}
@@ -301,50 +312,4 @@ export class LocalRuntimeController extends RuntimeController {
 	emitReloadCompleteEvent(data: ReloadCompleteEvent) {
 		this.emit("reloadComplete", data);
 	}
-}
-
-/**
- * Based on a provided config if necessary starts a new mixed mode session or updates an existing
- *
- * @param configBundle the config for the potential mixed mode session
- * @param mixedModeSession the possible pre-existing mixed mode session
- * @returns the mixed mode session ready to use if one is needed, undefined otherwise
- */
-export async function maybeStartOrUpdateMixedModeSession(
-	configBundle: MF.ConfigBundle,
-	mixedModeSession: MixedModeSession | undefined
-): Promise<MixedModeSession | undefined> {
-	// Note: we import the mixedMode module dynamically to avoid circular
-	//       import issues (since mixed mode uses startWorker which uses
-	//       LocalRuntimeController)
-	const { startMixedModeSession, pickRemoteBindings } = await import(
-		"../../api/mixedMode"
-	);
-
-	const convertedBindings = convertCfWorkerInitBindingsToBindings(
-		configBundle.bindings
-	);
-	const remoteBindings = pickRemoteBindings(convertedBindings ?? {});
-
-	// TODO(DEVX-1893): here we can save the converted remote bindings
-	//             and on new iterations we can diff the old and new
-	//             converted remote bindings, if they are all the
-	//             same we can just leave the mixedModeSession untouched
-	if (mixedModeSession === undefined) {
-		const numOfRemoteBindings = Object.keys(remoteBindings ?? {}).length;
-		if (numOfRemoteBindings > 0) {
-			mixedModeSession = await startMixedModeSession(remoteBindings, {
-				workerName: configBundle.name,
-				complianceRegion: configBundle.complianceRegion,
-			});
-		}
-	} else {
-		// Note: we always call updateBindings even when there are zero remote bindings, in these
-		//       cases we could terminate the remote session if we wanted, that's probably
-		//       something to consider down the line
-		await mixedModeSession.updateBindings(remoteBindings);
-	}
-
-	await mixedModeSession?.ready;
-	return mixedModeSession;
 }
