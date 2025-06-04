@@ -88,6 +88,15 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	// This is set when the client environment is built to determine if the entry Worker should include assets
 	let hasClientBuild = false;
 
+	// This is needed so that we can tell the difference between the Vite http server closing and restarting.
+	let previousServer: unknown;
+	let restartingServer = false;
+	function updateRestartingServerFlag(viteDevServer: unknown) {
+		restartingServer =
+			previousServer !== undefined && viteDevServer !== previousServer;
+		previousServer = viteDevServer;
+	}
+
 	return [
 		{
 			name: "vite-plugin-cloudflare",
@@ -332,7 +341,20 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					return [];
 				}
 			},
+			buildEnd() {
+				if (!restartingServer) {
+					miniflare?.dispose().catch((error) => {
+						console.error("Error disposing Miniflare instance:", error);
+					});
+					miniflare = undefined;
+				}
+				// Reset the flag so that if a `buildEnd` hook is called again before the next
+				// configureServer hook then we do dispose of miniflare correctly.
+				restartingServer = false;
+			},
 			async configureServer(viteDevServer) {
+				updateRestartingServerFlag(viteDevServer);
+
 				const inputInspectorPort = await getInputInspectorPortOption(
 					pluginConfig,
 					viteDevServer
@@ -399,6 +421,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				};
 			},
 			async configurePreviewServer(vitePreviewServer) {
+				updateRestartingServerFlag(vitePreviewServer);
+
 				const workerConfigs = getWorkerConfigs(
 					vitePreviewServer.config.root,
 					pluginConfig.experimental?.mixedMode ?? false
@@ -409,7 +433,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					vitePreviewServer
 				);
 
-				const miniflare = new Miniflare(
+				miniflare = new Miniflare(
 					await getPreviewMiniflareOptions(
 						vitePreviewServer,
 						workerConfigs,
@@ -419,19 +443,17 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					)
 				);
 
-				handleWebSocket(
-					vitePreviewServer.httpServer,
-					() => miniflare.dispatchFetch
-				);
+				const dispatchFetch = miniflare.dispatchFetch;
+
+				handleWebSocket(vitePreviewServer.httpServer, () => dispatchFetch);
 
 				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
 				vitePreviewServer.middlewares.use(async (req, res, next) => {
 					try {
 						const request = createRequest(req, res);
-						const response = await miniflare.dispatchFetch(
-							toMiniflareRequest(request),
-							{ redirect: "manual" }
-						);
+						const response = await dispatchFetch(toMiniflareRequest(request), {
+							redirect: "manual",
+						});
 
 						// Vite uses HTTP/2 when `preview.https` is enabled
 						if (req.httpVersionMajor === 2) {
