@@ -4,12 +4,13 @@ import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
+import { maybeStartOrUpdateMixedModeSession } from "../mixedMode";
 import { castErrorCause } from "./events";
 import {
 	convertToConfigBundle,
 	LocalRuntimeController,
-	maybeStartOrUpdateMixedModeSession,
 } from "./LocalRuntimeController";
+import { convertCfWorkerInitBindingsToBindings } from "./utils";
 import type { MixedModeSession } from "../mixedMode";
 import type { BundleCompleteEvent } from "./events";
 
@@ -102,7 +103,12 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 			if (experimentalMixedMode && !data.config.dev?.remote) {
 				const mixedModeSession = await maybeStartOrUpdateMixedModeSession(
-					configBundle,
+					{
+						name: configBundle.name,
+						bindings:
+							convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
+							{},
+					},
 					this.#mixedModeSessions.get(data.config.name)
 				);
 				this.#mixedModeSessions.set(data.config.name, mixedModeSession);
