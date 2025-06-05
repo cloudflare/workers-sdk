@@ -13,6 +13,7 @@ import {
 	matchAdditionalModule,
 } from "./additional-modules";
 import { hasAssetsConfigChanged } from "./asset-config";
+import { checkPublicDir } from "./build";
 import {
 	createCloudflareEnvironmentOptions,
 	initRunners,
@@ -164,65 +165,124 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							userConfig.builder?.buildApp ??
 							(async (builder) => {
 								const clientEnvironment = builder.environments.client;
+								assert(clientEnvironment);
 								const defaultHtmlPath = path.resolve(
 									builder.config.root,
 									"index.html"
 								);
 								const hasClientEntry =
-									clientEnvironment &&
-									(clientEnvironment.config.build.rollupOptions.input ||
-										fs.existsSync(defaultHtmlPath));
+									clientEnvironment.config.build.rollupOptions.input ||
+									fs.existsSync(defaultHtmlPath);
+
+								if (resolvedPluginConfig.type === "assets-only") {
+									if (hasClientEntry) {
+										await builder.build(clientEnvironment);
+									} else {
+										const hasPublicAssets = checkPublicDir(builder.config);
+
+										if (hasPublicAssets) {
+											const tempEntryName = "__cloudflare_temp_entry__";
+											clientEnvironment.config.build.rollupOptions = {
+												input: "virtual:__cloudflare_temp_entry__",
+												logLevel: "silent",
+												output: {
+													entryFileNames: tempEntryName,
+												},
+											};
+
+											await builder.build(clientEnvironment);
+
+											const tempEntryPath = path.resolve(
+												builder.config.root,
+												clientEnvironment.config.build.outDir,
+												tempEntryName
+											);
+											fs.unlinkSync(tempEntryPath);
+										}
+									}
+
+									return;
+								}
+
+								const workerEnvironments = Object.keys(
+									resolvedPluginConfig.workers
+								).map((environmentName) => {
+									const environment = builder.environments[environmentName];
+
+									assert(
+										environment,
+										`${environmentName} environment not found`
+									);
+
+									return environment;
+								});
+
+								await Promise.all(
+									workerEnvironments.map((environment) =>
+										builder.build(environment)
+									)
+								);
+
+								const entryWorkerEnvironment =
+									builder.environments[
+										resolvedPluginConfig.entryWorkerEnvironmentName
+									];
+								assert(entryWorkerEnvironment);
+								const entryWorkerBuildDirectory = path.resolve(
+									builder.config.root,
+									entryWorkerEnvironment.config.build.outDir
+								);
 
 								if (hasClientEntry) {
 									await builder.build(clientEnvironment);
-								}
+								} else {
+									const hasAssets = checkPublicDir(builder.config);
 
-								if (resolvedPluginConfig.type === "workers") {
-									const workerEnvironments = Object.keys(
-										resolvedPluginConfig.workers
-									).map((environmentName) => {
-										const environment = builder.environments[environmentName];
+									if (hasAssets) {
+										const tempEntryName = "__cloudflare_temp_entry__";
+										clientEnvironment.config.build.rollupOptions = {
+											input: "virtual:__cloudflare_temp_entry__",
+											logLevel: "silent",
+											preserveEntrySignatures: "strict",
+											output: {
+												entryFileNames: tempEntryName,
+											},
+										};
 
-										assert(
-											environment,
-											`${environmentName} environment not found`
-										);
+										await builder.build(clientEnvironment);
 
-										return environment;
-									});
-
-									await Promise.all(
-										workerEnvironments.map((environment) =>
-											builder.build(environment)
-										)
-									);
-
-									if (!hasClientEntry) {
-										const entryWorkerEnvironment =
-											builder.environments[
-												resolvedPluginConfig.entryWorkerEnvironmentName
-											];
-
-										assert(entryWorkerEnvironment);
-
-										const entryWorkerConfigPath = path.resolve(
+										const tempEntryPath = path.resolve(
 											builder.config.root,
-											entryWorkerEnvironment.config.build.outDir,
+											clientEnvironment.config.build.outDir,
+											tempEntryName
+										);
+										fs.unlinkSync(tempEntryPath);
+									} else {
+										const entryWorkerConfigPath = path.join(
+											entryWorkerBuildDirectory,
 											"wrangler.json"
 										);
-
 										const workerConfig = JSON.parse(
 											fs.readFileSync(entryWorkerConfigPath, "utf-8")
 										);
-
 										workerConfig.assets = undefined;
-
 										fs.writeFileSync(
 											entryWorkerConfigPath,
 											JSON.stringify(workerConfig)
 										);
 									}
 								}
+
+								// const buildManifest = JSON.parse(
+								// 	fs.readFileSync(
+								// 		path.join(
+								// 			entryWorkerBuildDirectory,
+								// 			".vite",
+								// 			"manifest.json"
+								// 		),
+								// 		"utf-8"
+								// 	)
+								// );
 							}),
 					},
 				};
@@ -488,6 +548,23 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						next(error);
 					}
 				});
+			},
+		},
+		// Plugin to provide a dummy client entry file
+		{
+			name: "vite-plugin-cloudflare:temp-client-entry",
+			applyToEnvironment(environment) {
+				return environment.name === "client";
+			},
+			resolveId(source) {
+				if (source === "virtual:__cloudflare_temp_entry__") {
+					return `\0virtual:__cloudflare_temp_entry__`;
+				}
+			},
+			load(id) {
+				if (id === "\0virtual:__cloudflare_temp_entry__") {
+					return ``;
+				}
 			},
 		},
 		// Plugin to support `.wasm?init` extension
