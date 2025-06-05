@@ -19,7 +19,7 @@
 		"wrangler": "workspace:*"
 	},
 	"volta": {
-		"extends": "../../package.json",
-		"node": "20.19.2"
+		"node": "20.19.2",
+		"extends": "../../package.json"
 	}
 }
