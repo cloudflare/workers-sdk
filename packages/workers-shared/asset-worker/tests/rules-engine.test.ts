@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { generateRulesMatcher, replacer } from "../src/utils/rules-engine";
+import {
+	generateRulesMatcher,
+	generateStaticRoutingRuleMatcher,
+	replacer,
+} from "../src/utils/rules-engine";
 
 describe("rules engine", () => {
 	test("it should match simple pathname hosts", () => {
@@ -113,5 +117,265 @@ describe("replacer", () => {
 		).toEqual(
 			"Link: </assets/js/main.js>; rel=preload; as=script, </assets/js/lang.js>; rel=preload; as=script"
 		);
+	});
+});
+
+describe("static routing rules", () => {
+	test("should return true for a request that matches", () => {
+		expect(
+			generateStaticRoutingRuleMatcher(["/some/path"])({
+				request: new Request("https://site.com/some/path"),
+			})
+		).toEqual(true);
+
+		expect(
+			generateStaticRoutingRuleMatcher(["/some/*"])({
+				request: new Request("https://site.com/some/path"),
+			})
+		).toEqual(true);
+
+		expect(
+			generateStaticRoutingRuleMatcher(["/no/match", "/some/*"])({
+				request: new Request("https://site.com/some/path"),
+			})
+		).toEqual(true);
+	});
+
+	test("should return false for a request that does not match", () => {
+		expect(
+			generateStaticRoutingRuleMatcher(["/some/path"])({
+				request: new Request("https://site.com"),
+			})
+		).toEqual(false);
+
+		expect(
+			generateStaticRoutingRuleMatcher(["/some/*"])({
+				request: new Request("https://site.com/path"),
+			})
+		).toEqual(false);
+
+		expect(
+			generateStaticRoutingRuleMatcher(["/some/path", "/other/path"])({
+				request: new Request("https://site.com/path"),
+			})
+		).toEqual(false);
+
+		expect(
+			generateStaticRoutingRuleMatcher([])({
+				request: new Request("https://site.com/some/path"),
+			})
+		).toEqual(false);
+	});
+
+	test("should ignore regex characters other than a glob", () => {
+		{
+			const matcher = generateStaticRoutingRuleMatcher(["/"]);
+			expect(matcher({ request: new Request("http://example.com/") })).toEqual(
+				true
+			);
+			expect(matcher({ request: new Request("http://example.com") })).toEqual(
+				true
+			);
+			expect(
+				matcher({ request: new Request("http://example.com/?foo=bar") })
+			).toEqual(true);
+			expect(matcher({ request: new Request("https://example.com/") })).toEqual(
+				true
+			);
+			expect(
+				matcher({ request: new Request("http://example.com/foo") })
+			).toEqual(false);
+		}
+
+		{
+			const matcher = generateStaticRoutingRuleMatcher(["/foo"]);
+			expect(
+				matcher({ request: new Request("http://example.com/foo") })
+			).toEqual(true);
+			expect(matcher({ request: new Request("https://example.com/") })).toEqual(
+				false
+			);
+			expect(
+				matcher({ request: new Request("https://example.com/foo/") })
+			).toEqual(false);
+			expect(
+				matcher({ request: new Request("https://example.com/foo/bar") })
+			).toEqual(false);
+			expect(
+				matcher({ request: new Request("https://example.com/baz") })
+			).toEqual(false);
+			expect(
+				matcher({ request: new Request("https://example.com/baz/foo") })
+			).toEqual(false);
+			expect(
+				matcher({ request: new Request("https://example.com/foobar") })
+			).toEqual(false);
+		}
+
+		{
+			const matcher = generateStaticRoutingRuleMatcher(["/:placeholder"]);
+			expect(
+				matcher({ request: new Request("http://example.com/foo") })
+			).toEqual(false);
+			expect(
+				matcher({ request: new Request("https://example.com/:placeholder") })
+			).toEqual(true);
+		}
+
+		{
+			const matcher = generateStaticRoutingRuleMatcher(["/foo*"]);
+			expect(
+				matcher({ request: new Request("http://example.com/foo") })
+			).toEqual(true);
+			expect(
+				matcher({ request: new Request("https://example.com/foo/") })
+			).toEqual(true);
+			expect(
+				matcher({ request: new Request("https://example.com/foo/bar") })
+			).toEqual(true);
+			expect(
+				matcher({ request: new Request("https://example.com/foobar") })
+			).toEqual(true);
+			expect(matcher({ request: new Request("https://example.com/") })).toEqual(
+				false
+			);
+			expect(
+				matcher({ request: new Request("https://example.com/baz") })
+			).toEqual(false);
+			expect(
+				matcher({ request: new Request("https://example.com/baz/foo") })
+			).toEqual(false);
+		}
+
+		{
+			const matcher = generateStaticRoutingRuleMatcher(["/*.html"]);
+			expect(
+				matcher({ request: new Request("http://example.com/foo.html") })
+			).toEqual(true);
+			expect(
+				matcher({ request: new Request("http://example.com/foo/bar.html") })
+			).toEqual(true);
+			expect(matcher({ request: new Request("http://example.com/") })).toEqual(
+				false
+			);
+			expect(
+				matcher({ request: new Request("http://example.com/foo") })
+			).toEqual(false);
+			expect(
+				matcher({ request: new Request("http://example.com/foo/bar") })
+			).toEqual(false);
+		}
+
+		{
+			const matcher = generateStaticRoutingRuleMatcher(["/login/*"]);
+			expect(
+				matcher({ request: new Request("http://example.com/login/foo") })
+			).toEqual(true);
+			expect(
+				matcher({ request: new Request("http://example2.com/login/foo") })
+			).toEqual(true);
+			expect(
+				matcher({ request: new Request("http://example.com/foo/login/foo") })
+			).toEqual(false);
+			expect(
+				matcher({
+					request: new Request("http://example.com/foo?bar=baz/login/foo"),
+				})
+			).toEqual(false);
+		}
+
+		{
+			const matcher = generateStaticRoutingRuleMatcher(["/*"]);
+			expect(
+				matcher({ request: new Request("http://foo.example.com/bar") })
+			).toEqual(true);
+			expect(
+				matcher({
+					request: new Request("http://example2.com/foo.example.com/baz"),
+				})
+			).toEqual(true);
+			expect(
+				matcher({
+					request: new Request("http://example2.com/?q=foo.example.com/baz"),
+				})
+			).toEqual(true);
+			expect(
+				matcher({ request: new Request("https://example.com/foo.html") })
+			).toEqual(true);
+			expect(
+				matcher({ request: new Request("https://example.com/foo/bar.html") })
+			).toEqual(true);
+			expect(
+				matcher({ request: new Request("http://example.com/foo") })
+			).toEqual(true);
+			expect(
+				matcher({ request: new Request("https://example.com/foo/") })
+			).toEqual(true);
+			expect(
+				matcher({ request: new Request("https://example.com/foo/bar") })
+			).toEqual(true);
+			expect(
+				matcher({ request: new Request("https://example.com/foobar") })
+			).toEqual(true);
+			expect(matcher({ request: new Request("http://example.com/") })).toEqual(
+				true
+			);
+			expect(matcher({ request: new Request("https://example.com/") })).toEqual(
+				true
+			);
+			expect(matcher({ request: new Request("http://example.com") })).toEqual(
+				true
+			);
+			expect(matcher({ request: new Request("https://example.com") })).toEqual(
+				true
+			);
+		}
+
+		{
+			const matcher = generateStaticRoutingRuleMatcher(["*/*"]);
+			expect(
+				matcher({ request: new Request("http://foo.example.com/bar") })
+			).toEqual(true);
+			expect(
+				matcher({
+					request: new Request("http://example2.com/foo.example.com/baz"),
+				})
+			).toEqual(true);
+			expect(
+				matcher({
+					request: new Request("http://example2.com/?q=foo.example.com/baz"),
+				})
+			).toEqual(true);
+			expect(
+				matcher({ request: new Request("https://example.com/foo.html") })
+			).toEqual(true);
+			expect(
+				matcher({ request: new Request("https://example.com/foo/bar.html") })
+			).toEqual(true);
+			expect(
+				matcher({ request: new Request("http://example.com/foo") })
+			).toEqual(true);
+			expect(
+				matcher({ request: new Request("https://example.com/foo/") })
+			).toEqual(true);
+			expect(
+				matcher({ request: new Request("https://example.com/foo/bar") })
+			).toEqual(true);
+			expect(
+				matcher({ request: new Request("https://example.com/foobar") })
+			).toEqual(true);
+			expect(matcher({ request: new Request("http://example.com/") })).toEqual(
+				true
+			);
+			expect(matcher({ request: new Request("https://example.com/") })).toEqual(
+				true
+			);
+			expect(matcher({ request: new Request("http://example.com") })).toEqual(
+				true
+			);
+			expect(matcher({ request: new Request("https://example.com") })).toEqual(
+				true
+			);
+		}
 	});
 });
