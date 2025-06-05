@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { execSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 import path from "node:path";
 import { DefaultArtifactClient } from "@actions/artifact";
 import {
@@ -73,5 +73,7 @@ async function uploadPackageArtifact(pkg, artifactPath) {
 			await uploadPackageArtifact(pkg, tarballPath);
 		}
 	}
-	execSync(["pnpm", "dlx", "pkg-pr-new", "publish", ...npmPackages]);
+	spawnSync("pnpm", ["dlx", "pkg-pr-new", "publish", ...npmPackages], {
+		stdio: "inherit",
+	});
 }
