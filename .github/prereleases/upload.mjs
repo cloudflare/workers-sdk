@@ -31,22 +31,20 @@ export function getPackagesForPrerelease() {
 	return getPackages().filter((pkg) => pkg.json["workers-sdk"]?.prerelease);
 }
 
-{
-	const pkgs = getPackagesForPrerelease();
+const pkgs = getPackagesForPrerelease();
 
-	spawnSync(
-		"pnpm",
-		[
-			"dlx",
-			"pkg-pr-new",
-			"publish",
-			"--pnpm",
-			"--compact",
-			"--no-template",
-			...pkgs.map((pkg) => pkg.path),
-		],
-		{
-			stdio: "inherit",
-		}
-	);
-}
+spawnSync(
+	"pnpm",
+	[
+		"dlx",
+		"pkg-pr-new",
+		"publish",
+		"--pnpm",
+		"--compact",
+		"--no-template",
+		...pkgs.map((pkg) => pkg.path),
+	],
+	{
+		stdio: "inherit",
+	}
+);
