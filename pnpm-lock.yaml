@@ -1729,8 +1729,8 @@ importers:
         specifier: ^6.0.1
         version: 6.1.1(@ava/typescript@4.1.0)(encoding@0.1.13)
       capnp-es:
-        specifier: ^0.0.7
-        version: 0.0.7(typescript@5.7.3)
+        specifier: ^0.0.10
+        version: 0.0.10(typescript@5.7.3)
       chokidar:
         specifier: ^4.0.1
         version: 4.0.1
@@ -7713,6 +7713,15 @@ packages:
 
   caniuse-lite@1.0.30001669:
     resolution: {integrity: sha512-DlWzFDJqstqtIVx1zeSpIMLjunf5SmwOw0N2Ck/QSQdS8PLS4+9HrLaYei4w8BIAL7IB/UEDu889d8vhCTPA0w==}
+
+  capnp-es@0.0.10:
+    resolution: {integrity: sha512-Nx15ntYVrAEWluZJzHb+c36S5ds9/vIUP0Oi8NH44EBOOZRJE7Xl5qEqsFXbItRwLYsQ3HVGUDLmlePZoAf9UA==}
+    hasBin: true
+    peerDependencies:
+      typescript: ^5.7.3
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   capnp-es@0.0.7:
     resolution: {integrity: sha512-gjDJBgNbdPA2PilGjAixf5op2HTI7jaBGc5Gs0zrAjfG9/6hqPwjTIC7dGPxrU4Y0a3WnzX1I5r/XUa9jVRSWw==}
@@ -17811,6 +17820,10 @@ snapshots:
       lodash.uniq: 4.5.0
 
   caniuse-lite@1.0.30001669: {}
+
+  capnp-es@0.0.10(typescript@5.7.3):
+    optionalDependencies:
+      typescript: 5.7.3
 
   capnp-es@0.0.7(typescript@5.7.3):
     optionalDependencies:
