@@ -1,5 +1,5 @@
 {
-	"name": "pages-workerjs-with-routes-app",
+	"name": "@fixture/pages-workerjs-routes",
 	"private": true,
 	"sideEffects": false,
 	"scripts": {

@@ -122,7 +122,11 @@ export const d1InsightsCommand = createCommand({
 			name
 		);
 
-		const result = await getDatabaseInfoFromIdOrName(accountId, db.uuid);
+		const result = await getDatabaseInfoFromIdOrName(
+			config,
+			accountId,
+			db.uuid
+		);
 
 		const output: Record<string, string | number>[] = [];
 
@@ -134,7 +138,7 @@ export const d1InsightsCommand = createCommand({
 					? `${parsedSortBy}_${sortDirection}`
 					: `${sortType}_${parsedSortBy}_${sortDirection}`;
 			const graphqlQueriesResult =
-				await fetchGraphqlResult<D1QueriesGraphQLResponse>({
+				await fetchGraphqlResult<D1QueriesGraphQLResponse>(config, {
 					method: "POST",
 					body: JSON.stringify({
 						query: `query getD1QueriesOverviewQuery($accountTag: string, $filter: ZoneWorkersRequestsFilter_InputObject) {

@@ -8,6 +8,7 @@ import { logger } from "../logger";
 import { APIError } from "../parse";
 import formatLabelledValues from "../utils/render-labelled-values";
 import { generateR2ServiceToken, getR2Bucket } from "./client";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Pipeline } from "./client";
 
 export const BYTES_PER_MB = 1000 * 1000;
@@ -48,12 +49,13 @@ async function verifyBucketAccess(r2: S3Client, bucketName: string) {
 }
 
 export async function authorizeR2Bucket(
+	complianceConfig: ComplianceConfig,
 	pipelineName: string,
 	accountId: string,
 	bucketName: string
 ) {
 	try {
-		await getR2Bucket(accountId, bucketName);
+		await getR2Bucket(complianceConfig, accountId, bucketName);
 	} catch (err) {
 		if (err instanceof APIError) {
 			if (err.code == 10006) {

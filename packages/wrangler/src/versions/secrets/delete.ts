@@ -76,6 +76,7 @@ export const versionsSecretDeleteCommand = createCommand({
 			// Grab the latest version
 			const versions = (
 				await fetchResult<{ items: WorkerVersion[] }>(
+					config,
 					`/accounts/${accountId}/workers/scripts/${scriptName}/versions`
 				)
 			).items;
@@ -87,6 +88,7 @@ export const versionsSecretDeleteCommand = createCommand({
 			const latestVersion = versions[0];
 
 			const versionInfo = await fetchResult<VersionDetails>(
+				config,
 				`/accounts/${accountId}/workers/scripts/${scriptName}/versions/${latestVersion.id}`
 			);
 
@@ -103,6 +105,7 @@ export const versionsSecretDeleteCommand = createCommand({
 				}));
 
 			const newVersion = await copyWorkerVersionWithNewSecrets({
+				config,
 				accountId,
 				scriptName,
 				versionId: latestVersion.id,

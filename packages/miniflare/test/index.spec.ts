@@ -1438,6 +1438,31 @@ test("Miniflare: accepts https requests", async (t) => {
 	t.assert(log.logs[0][1].startsWith("Ready on https://"));
 });
 
+// Regression test for https://github.com/cloudflare/workers-sdk/issues/9357
+test("Miniflare: throws error messages that reflect the actual issue", async (t) => {
+	const log = new TestLog(t);
+
+	const mf = new Miniflare({
+		log,
+		modules: true,
+		https: true,
+		script: `export default {
+			async fetch(request, env, ctx) {
+				Object.defineProperty("not an object", "node", "");
+
+				return new Response('Hello World!');
+			},
+		}`,
+	});
+	t.teardown(() => mf.dispose());
+
+	const res = await mf.dispatchFetch("https://localhost");
+	t.regex(
+		await res.text(),
+		/TypeError: Object\.defineProperty called on non-object/
+	);
+});
+
 test("Miniflare: manually triggered scheduled events", async (t) => {
 	const log = new TestLog(t);
 
@@ -3010,6 +3035,7 @@ test("Miniflare: strips CF-Connecting-IP", async (t) => {
 	const client = new Miniflare({
 		script: `export default { fetch(request) { return fetch('${serverUrl.href}', {headers: {"CF-Connecting-IP":"fake-value"}}) } }`,
 		modules: true,
+		stripCfConnectingIp: true,
 	});
 	t.teardown(() => client.dispose());
 	t.teardown(() => server.dispose());
@@ -3238,3 +3264,67 @@ test.serial(
 		t.is(await res.text(), "one text");
 	}
 );
+
+test("Miniflare: custom Node service binding", async (t) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `
+		export default {
+			fetch(request, env) {
+				return env.CUSTOM.fetch(request, {
+					headers: {
+						"custom-header": "foo"
+					}
+				});
+			}
+		}`,
+		serviceBindings: {
+			CUSTOM: {
+				node: (req, res) => {
+					res.end(
+						`Response from custom Node service binding. The value of "custom-header" is "${req.headers["custom-header"]}".`
+					);
+				},
+			},
+		},
+	});
+	t.teardown(() => mf.dispose());
+
+	const response = await mf.dispatchFetch("http://localhost");
+	const text = await response.text();
+	t.is(
+		text,
+		`Response from custom Node service binding. The value of "custom-header" is "foo".`
+	);
+});
+
+test("Miniflare: custom Node outbound service", async (t) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `
+		export default {
+			fetch(request, env) {
+				return fetch(request, {
+					headers: {
+						"custom-header": "foo"
+					}
+				});
+			}
+		}`,
+		outboundService: {
+			node: (req, res) => {
+				res.end(
+					`Response from custom Node outbound service. The value of "custom-header" is "foo".`
+				);
+			},
+		},
+	});
+	t.teardown(() => mf.dispose());
+
+	const response = await mf.dispatchFetch("http://localhost");
+	const text = await response.text();
+	t.is(
+		text,
+		`Response from custom Node outbound service. The value of "custom-header" is "foo".`
+	);
+});

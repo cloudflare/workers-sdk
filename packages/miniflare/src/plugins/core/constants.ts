@@ -7,7 +7,9 @@ const SERVICE_USER_PREFIX = `${CORE_PLUGIN_NAME}:user`;
 // Service prefix for `workerd`'s builtin services (network, external, disk)
 const SERVICE_BUILTIN_PREFIX = `${CORE_PLUGIN_NAME}:builtin`;
 // Service prefix for custom fetch functions defined in `serviceBindings` option
-const SERVICE_CUSTOM_PREFIX = `${CORE_PLUGIN_NAME}:custom`;
+const SERVICE_CUSTOM_FETCH_PREFIX = `${CORE_PLUGIN_NAME}:custom-fetch`;
+// Service prefix for custom Node functions defined in `serviceBindings` option
+const SERVICE_CUSTOM_NODE_PREFIX = `${CORE_PLUGIN_NAME}:custom-node`;
 
 export function getUserServiceName(workerName = "") {
 	return `${SERVICE_USER_PREFIX}:${workerName}`;
@@ -30,10 +32,18 @@ export function getBuiltinServiceName(
 	return `${SERVICE_BUILTIN_PREFIX}:${workerIndex}:${kind}${bindingName}`;
 }
 
-export function getCustomServiceName(
+export function getCustomFetchServiceName(
 	workerIndex: number,
 	kind: CustomServiceKind,
 	bindingName: string
 ) {
-	return `${SERVICE_CUSTOM_PREFIX}:${workerIndex}:${kind}${bindingName}`;
+	return `${SERVICE_CUSTOM_FETCH_PREFIX}:${workerIndex}:${kind}${bindingName}`;
+}
+
+export function getCustomNodeServiceName(
+	workerIndex: number,
+	kind: CustomServiceKind,
+	bindingName: string
+) {
+	return `${SERVICE_CUSTOM_NODE_PREFIX}:${workerIndex}:${kind}${bindingName}`;
 }

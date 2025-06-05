@@ -407,12 +407,18 @@ function buildProjectWorkerOptions(
 		}
 	}
 
-	const { mode } = getNodeCompat(
+	const { hasNoNodejsCompatV2Flag, mode } = getNodeCompat(
 		runnerWorker.compatibilityDate,
 		runnerWorker.compatibilityFlags
 	);
 
 	if (mode !== "v2") {
+		if (hasNoNodejsCompatV2Flag) {
+			runnerWorker.compatibilityFlags.splice(
+				runnerWorker.compatibilityFlags.indexOf("no_nodejs_compat_v2"),
+				1
+			);
+		}
 		runnerWorker.compatibilityFlags.push("nodejs_compat_v2");
 	}
 

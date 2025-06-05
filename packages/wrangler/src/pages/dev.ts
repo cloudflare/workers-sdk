@@ -17,7 +17,6 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { getBasePath } from "../paths";
-import { bucketFormatMessage, isValidR2BucketName } from "../r2/helpers";
 import * as shellquote from "../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
 import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
@@ -1270,15 +1269,8 @@ function getBindingsFromArgs(args: typeof pagesDevCommand.args): Partial<
 					return;
 				}
 
-				const bucketName = ref || binding.toString();
-
-				if (!isValidR2BucketName(bucketName)) {
-					logger.error(
-						`The bucket name "${bucketName}" is invalid. ${bucketFormatMessage}`
-					);
-					return;
-				}
-
+				// The generated `bucket_name` might be invalid as per https://developers.cloudflare.com/r2/buckets/create-buckets/#bucket-level-operations
+				// However this name only applies to the dev environment and is not validated by miniflare.
 				return { binding, bucket_name: ref || binding.toString() };
 			})
 			.filter(Boolean) as EnvironmentNonInheritable["r2_buckets"];

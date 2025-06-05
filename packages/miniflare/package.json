@@ -1,6 +1,6 @@
 {
 	"name": "miniflare",
-	"version": "4.20250507.0",
+	"version": "4.20250525.1",
 	"description": "Fun, full-featured, fully-local simulator for Cloudflare Workers",
 	"keywords": [
 		"cloudflare",
@@ -37,7 +37,8 @@
 		"clean": "rimraf ./dist ./dist-types",
 		"dev": "concurrently -n esbuild,typechk,typewrk -c yellow,blue,blue.dim \"node scripts/build.mjs watch\" \"node scripts/types.mjs tsconfig.json watch\" \"node scripts/types.mjs src/workers/tsconfig.json watch\"",
 		"lint:fix": "pnpm run check:lint --fix",
-		"test": "ava && rimraf ./.tmp",
+		"test": "ava",
+		"posttest": "rimraf ./.tmp",
 		"test:ci": "pnpm run test",
 		"types:build": "node scripts/types.mjs tsconfig.json && node scripts/types.mjs src/workers/tsconfig.json"
 	},
@@ -47,9 +48,10 @@
 		"acorn-walk": "8.3.2",
 		"exit-hook": "2.2.1",
 		"glob-to-regexp": "0.4.1",
+		"sharp": "^0.33.5",
 		"stoppable": "1.1.0",
 		"undici": "catalog:default",
-		"workerd": "1.20250508.0",
+		"workerd": "1.20250604.0",
 		"ws": "catalog:default",
 		"youch": "3.3.4",
 		"zod": "3.22.3"
@@ -58,9 +60,9 @@
 		"@ava/typescript": "^4.1.0",
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250508.0",
+		"@cloudflare/workers-types": "^4.20250604.0",
 		"@cloudflare/workflows-shared": "workspace:*",
-		"@microsoft/api-extractor": "7.49.1",
+		"@microsoft/api-extractor": "^7.52.8",
 		"@types/debug": "^4.1.7",
 		"@types/estree": "^1.0.0",
 		"@types/glob-to-regexp": "^0.4.1",
@@ -74,6 +76,7 @@
 		"@typescript-eslint/parser": "^6.9.0",
 		"ava": "^6.0.1",
 		"capnp-es": "^0.0.7",
+		"chokidar": "^4.0.1",
 		"concurrently": "^8.2.2",
 		"devalue": "^4.3.0",
 		"devtools-protocol": "^0.0.1182435",
@@ -94,7 +97,8 @@
 		"source-map": "^0.6.1",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
-		"which": "^2.0.2"
+		"which": "^2.0.2",
+		"xdg-app-paths": "^8.3.0"
 	},
 	"engines": {
 		"node": ">=18.0.0"

@@ -1,20 +1,26 @@
 import path from "node:path";
+import getPort from "get-port";
 import { getBasePath } from "../../paths";
 import { startWorker } from "../startDevWorker";
-import type { StartDevWorkerInput, Worker } from "../startDevWorker/types";
+import type { Config } from "../../config";
+import type {
+	Binding,
+	StartDevWorkerInput,
+	Worker,
+} from "../startDevWorker/types";
 import type { MixedModeConnectionString } from "miniflare";
 
-type BindingsOpt = StartDevWorkerInput["bindings"];
-
-type MixedModeSession = Pick<Worker, "ready" | "dispose"> & {
-	["setConfig"]: (bindings: BindingsOpt) => Promise<void>;
-	["mixedModeConnectionString"]: MixedModeConnectionString;
+export type MixedModeSession = Pick<Worker, "ready" | "dispose"> & {
+	updateBindings: (bindings: StartDevWorkerInput["bindings"]) => Promise<void>;
+	mixedModeConnectionString: MixedModeConnectionString;
 };
 
 export async function startMixedModeSession(
-	bindings: BindingsOpt,
+	bindings: StartDevWorkerInput["bindings"],
 	options?: {
-		auth: NonNullable<StartDevWorkerInput["dev"]>["auth"];
+		auth?: NonNullable<StartDevWorkerInput["dev"]>["auth"];
+		/** If running in a non-public compliance region, set this here. */
+		complianceRegion?: Config["compliance_region"];
 	}
 ): Promise<MixedModeSession> {
 	const proxyServerWorkerWranglerConfig = path.resolve(
@@ -22,26 +28,68 @@ export async function startMixedModeSession(
 		"templates/mixedMode/proxyServerWorker/wrangler.jsonc"
 	);
 
+	// Transform all bindings to use "raw" mode
+	const rawBindings = Object.fromEntries(
+		Object.entries(bindings ?? {}).map(([key, binding]) => [
+			key,
+			{ ...binding, raw: true },
+		])
+	);
+
 	const worker = await startWorker({
 		config: proxyServerWorkerWranglerConfig,
 		dev: {
-			remote: true,
+			remote: "minimal",
 			auth: options?.auth,
+			server: {
+				port: await getPort(),
+			},
+			// TODO(DEVX-1861): we set this to a random port so that it doesn't conflict with the
+			//                  default one, we should ideally add an option to actually disable
+			//                  the inspector
+			inspector: {
+				port: await getPort(),
+			},
+			logLevel: "none",
 		},
-		bindings,
+		bindings: rawBindings,
 	});
 
 	const mixedModeConnectionString =
 		(await worker.url) as MixedModeConnectionString;
 
-	const setConfig = async (newBindings: BindingsOpt) => {
-		await worker.setConfig({ bindings: newBindings });
+	const updateBindings = async (
+		newBindings: StartDevWorkerInput["bindings"]
+	) => {
+		// Transform all new bindings to use "raw" mode
+		const rawNewBindings = Object.fromEntries(
+			Object.entries(newBindings ?? {}).map(([key, binding]) => [
+				key,
+				{ ...binding, raw: true },
+			])
+		);
+		await worker.patchConfig({ bindings: rawNewBindings });
 	};
 
 	return {
 		ready: worker.ready,
 		mixedModeConnectionString,
-		setConfig,
+		updateBindings,
 		dispose: worker.dispose,
 	};
+}
+
+export function pickRemoteBindings(
+	bindings: Record<string, Binding>
+): Record<string, Binding> {
+	return Object.fromEntries(
+		Object.entries(bindings ?? {}).filter(([, binding]) => {
+			if (binding.type === "ai") {
+				// AI is always remote
+				return true;
+			}
+
+			return "remote" in binding && binding["remote"];
+		})
+	);
 }

@@ -29,6 +29,7 @@ import assetsOnlyTemplate from "templates/hello-world-assets-only/c3";
 import helloWorldWithDurableObjectAssetsTemplate from "templates/hello-world-durable-object-with-assets/c3";
 import helloWorldDurableObjectTemplate from "templates/hello-world-durable-object/c3";
 import helloWorldWithAssetsTemplate from "templates/hello-world-with-assets/c3";
+import workflowsTemplate from "templates/hello-world-workflows/c3";
 import helloWorldWorkerTemplate from "templates/hello-world/c3";
 import honoTemplate from "templates/hono/c3";
 import nextTemplate from "templates/next/c3";
@@ -239,6 +240,7 @@ export function getHelloWorldTemplateMap({
 			"hello-world-durable-object": helloWorldDurableObjectTemplate,
 			"hello-world-durable-object-with-assets":
 				helloWorldWithDurableObjectAssetsTemplate,
+			"hello-world-workflows": workflowsTemplate,
 			common: commonTemplate,
 			scheduled: scheduledTemplate,
 			queues: queuesTemplate,
@@ -270,6 +272,7 @@ export const deriveCorrelatedArgs = (args: Partial<C3Args>) => {
 	switch (args.type) {
 		case "hello-world":
 		case "hello-world-durable-object":
+		case "hello-world-workflows":
 			args.category ??= "hello-world";
 			break;
 		case "hello-world-python":
@@ -572,7 +575,7 @@ export const createContext = async (
 
 	template = {
 		workersTypes: "generated",
-		typesPath: "worker-configuration.d.ts",
+		typesPath: "./worker-configuration.d.ts",
 		envInterfaceName: "Env",
 		...template,
 	};

@@ -53,6 +53,7 @@ export const workflowsInstancesTerminateAllCommand = createCommand({
 				: undefined;
 
 		const result = await fetchResult<{ status: "ok" | "already_running" }>(
+			config,
 			`/accounts/${accountId}/workflows/${args.name}/instances/terminate`,
 			{
 				method: "PUT",

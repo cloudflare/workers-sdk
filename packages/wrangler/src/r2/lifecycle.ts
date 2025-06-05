@@ -52,6 +52,7 @@ export const r2BucketLifecycleListCommand = createCommand({
 		logger.log(`Listing lifecycle rules for bucket '${bucket}'...`);
 
 		const lifecycleRules = await getLifecycleRules(
+			config,
 			accountId,
 			bucket,
 			jurisdiction
@@ -151,6 +152,7 @@ export const r2BucketLifecycleAddCommand = createCommand({
 		const accountId = await requireAuth(config);
 
 		const lifecycleRules = await getLifecycleRules(
+			config,
 			accountId,
 			bucket,
 			jurisdiction
@@ -310,7 +312,13 @@ export const r2BucketLifecycleAddCommand = createCommand({
 
 		lifecycleRules.push(newRule);
 		logger.log(`Adding lifecycle rule '${name}' to bucket '${bucket}'...`);
-		await putLifecycleRules(accountId, bucket, lifecycleRules, jurisdiction);
+		await putLifecycleRules(
+			config,
+			accountId,
+			bucket,
+			lifecycleRules,
+			jurisdiction
+		);
 		logger.log(`✨ Added lifecycle rule '${name}' to bucket '${bucket}'.`);
 	},
 });
@@ -348,6 +356,7 @@ export const r2BucketLifecycleRemoveCommand = createCommand({
 		const { bucket, name, jurisdiction } = args;
 
 		const lifecycleRules = await getLifecycleRules(
+			config,
 			accountId,
 			bucket,
 			jurisdiction
@@ -364,7 +373,13 @@ export const r2BucketLifecycleRemoveCommand = createCommand({
 		lifecycleRules.splice(index, 1);
 
 		logger.log(`Removing lifecycle rule '${name}' from bucket '${bucket}'...`);
-		await putLifecycleRules(accountId, bucket, lifecycleRules, jurisdiction);
+		await putLifecycleRules(
+			config,
+			accountId,
+			bucket,
+			lifecycleRules,
+			jurisdiction
+		);
 		logger.log(`Lifecycle rule '${name}' removed from bucket '${bucket}'.`);
 	},
 });
@@ -438,6 +453,7 @@ export const r2BucketLifecycleSetCommand = createCommand({
 			`Setting lifecycle configuration (${lifecyclePolicy.rules.length} rules) for bucket '${bucket}'...`
 		);
 		await putLifecycleRules(
+			config,
 			accountId,
 			bucket,
 			lifecyclePolicy.rules,

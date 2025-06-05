@@ -792,7 +792,7 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 
 			expect(diagnostics.errors).toEqual([
-				"The name 'ASSETS' is reserved in Pages projects. Please use a different name for your KV Namespaces binding.",
+				"The name 'ASSETS' is reserved in Pages projects. Please use a different name for your KV Namespace binding.",
 			]);
 		});
 
@@ -815,7 +815,7 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 
 			expect(diagnostics.errors).toEqual([
-				"The name 'ASSETS' is reserved in Pages projects. Please use a different name for your Vars binding.",
+				"The name 'ASSETS' is reserved in Pages projects. Please use a different name for your Environment Variable binding.",
 			]);
 		});
 	});

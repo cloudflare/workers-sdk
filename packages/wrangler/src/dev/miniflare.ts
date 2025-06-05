@@ -3,22 +3,22 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { CoreHeaders, HttpOptions_Style, Log, LogLevel } from "miniflare";
 import {
-	AIFetcher,
 	EXTERNAL_AI_WORKER_NAME,
 	EXTERNAL_AI_WORKER_SCRIPT,
+	getAIFetcher,
 } from "../ai/fetcher";
 import { ModuleTypeToRuleType } from "../deployment-bundle/module-collection";
 import { withSourceURLs } from "../deployment-bundle/source-url";
-import { createFatalError, UserError } from "../errors";
+import { UserError } from "../errors";
 import {
 	EXTERNAL_IMAGES_WORKER_NAME,
 	EXTERNAL_IMAGES_WORKER_SCRIPT,
-	imagesLocalFetcher,
-	imagesRemoteFetcher,
+	getImagesRemoteFetcher,
 } from "../images/fetcher";
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
 import { updateCheck } from "../update-check";
+import { warnOrError } from "../utils/print-bindings";
 import {
 	EXTERNAL_VECTORIZE_WORKER_NAME,
 	EXTERNAL_VECTORIZE_WORKER_SCRIPT,
@@ -30,6 +30,7 @@ import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type {
 	CfD1Database,
+	CfDispatchNamespace,
 	CfDurableObject,
 	CfHyperdrive,
 	CfKvNamespace,
@@ -45,7 +46,12 @@ import type { WorkerRegistry } from "../dev-registry";
 import type { LoggerLevel } from "../logger";
 import type { LegacyAssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
-import type { MiniflareOptions, SourceOptions, WorkerOptions } from "miniflare";
+import type {
+	MiniflareOptions,
+	MixedModeConnectionString,
+	SourceOptions,
+	WorkerOptions,
+} from "miniflare";
 import type { UUID } from "node:crypto";
 import type { Readable } from "node:stream";
 
@@ -172,6 +178,7 @@ export interface ConfigBundle {
 	format: CfScriptFormat | undefined;
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
+	complianceRegion: Config["compliance_region"] | undefined;
 	bindings: CfWorkerInit["bindings"];
 	migrations: Config["migrations"] | undefined;
 	workerDefinitions: WorkerRegistry | undefined | null;
@@ -197,6 +204,7 @@ export interface ConfigBundle {
 	bindVectorizeToProd: boolean;
 	imagesLocalMode: boolean;
 	testScheduled: boolean;
+	containers: WorkerOptions["containers"];
 }
 
 export class WranglerLog extends Log {
@@ -313,25 +321,66 @@ function getRemoteId(id: string | symbol | undefined): string | null {
 	return typeof id === "string" ? id : null;
 }
 
-function kvNamespaceEntry({ binding, id }: CfKvNamespace): [string, string] {
-	return [binding, getRemoteId(id) ?? binding];
+function kvNamespaceEntry(
+	{ binding, id: originalId, remote }: CfKvNamespace,
+	mixedModeConnectionString?: MixedModeConnectionString
+): [
+	string,
+	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
+] {
+	const id = getRemoteId(originalId) ?? binding;
+	if (!mixedModeConnectionString || !remote) {
+		return [binding, { id }];
+	}
+	return [binding, { id, mixedModeConnectionString }];
 }
-function r2BucketEntry({ binding, bucket_name }: CfR2Bucket): [string, string] {
-	return [binding, getRemoteId(bucket_name) ?? binding];
+function r2BucketEntry(
+	{ binding, bucket_name, remote }: CfR2Bucket,
+	mixedModeConnectionString?: MixedModeConnectionString
+): [
+	string,
+	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
+] {
+	const id = getRemoteId(bucket_name) ?? binding;
+	if (!mixedModeConnectionString || !remote) {
+		return [binding, { id }];
+	}
+	return [binding, { id, mixedModeConnectionString }];
 }
-function d1DatabaseEntry(db: CfD1Database): [string, string] {
-	return [
-		db.binding,
-		getRemoteId(db.preview_database_id ?? db.database_id) ?? db.binding,
-	];
+function d1DatabaseEntry(
+	{ binding, database_id, preview_database_id, remote }: CfD1Database,
+	mixedModeConnectionString?: MixedModeConnectionString
+): [
+	string,
+	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
+] {
+	const id = getRemoteId(preview_database_id ?? database_id) ?? binding;
+	if (!mixedModeConnectionString || !remote) {
+		return [binding, { id }];
+	}
+	return [binding, { id, mixedModeConnectionString }];
 }
 function queueProducerEntry(
-	queue: CfQueue
-): [string, { queueName: string; deliveryDelay: number | undefined }] {
-	return [
-		queue.binding,
-		{ queueName: queue.queue_name, deliveryDelay: queue.delivery_delay },
-	];
+	{
+		binding,
+		queue_name: queueName,
+		delivery_delay: deliveryDelay,
+		remote,
+	}: CfQueue,
+	mixedModeConnectionString?: MixedModeConnectionString
+): [
+	string,
+	{
+		queueName: string;
+		deliveryDelay: number | undefined;
+		mixedModeConnectionString?: MixedModeConnectionString;
+	},
+] {
+	if (!mixedModeConnectionString || !remote) {
+		return [binding, { queueName, deliveryDelay }];
+	}
+
+	return [binding, { queueName, deliveryDelay, mixedModeConnectionString }];
 }
 function pipelineEntry(pipeline: CfPipeline): [string, string] {
 	return [pipeline.binding, pipeline.pipeline];
@@ -340,16 +389,67 @@ function hyperdriveEntry(hyperdrive: CfHyperdrive): [string, string] {
 	return [hyperdrive.binding, hyperdrive.localConnectionString ?? ""];
 }
 function workflowEntry(
-	workflow: CfWorkflow
-): [string, { name: string; className: string; scriptName?: string }] {
+	{
+		binding,
+		name,
+		class_name: className,
+		script_name: scriptName,
+		remote,
+	}: CfWorkflow,
+	mixedModeConnectionString?: MixedModeConnectionString
+): [
+	string,
+	{
+		name: string;
+		className: string;
+		scriptName?: string;
+		mixedModeConnectionString?: MixedModeConnectionString;
+	},
+] {
+	if (!mixedModeConnectionString || !remote) {
+		return [
+			binding,
+			{
+				name,
+				className,
+				scriptName,
+			},
+		];
+	}
+
 	return [
-		workflow.binding,
+		binding,
 		{
-			name: workflow.name,
-			className: workflow.class_name,
-			scriptName: workflow.script_name,
+			name,
+			className,
+			scriptName,
+			mixedModeConnectionString,
 		},
 	];
+}
+function dispatchNamespaceEntry({
+	binding,
+	namespace,
+	remote,
+}: CfDispatchNamespace): [string, { namespace: string }];
+function dispatchNamespaceEntry(
+	{ binding, namespace, remote }: CfDispatchNamespace,
+	mixedModeConnectionString: MixedModeConnectionString
+): [
+	string,
+	{ namespace: string; mixedModeConnectionString: MixedModeConnectionString },
+];
+function dispatchNamespaceEntry(
+	{ binding, namespace, remote }: CfDispatchNamespace,
+	mixedModeConnectionString?: MixedModeConnectionString
+): [
+	string,
+	{ namespace: string; mixedModeConnectionString?: MixedModeConnectionString },
+] {
+	if (!mixedModeConnectionString || !remote) {
+		return [binding, { namespace }];
+	}
+	return [binding, { namespace, mixedModeConnectionString }];
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ratelimitEntry(ratelimit: CfUnsafeBinding): [string, any] {
@@ -370,6 +470,7 @@ function queueConsumerEntry(consumer: QueueConsumer) {
 type WorkerOptionsBindings = Pick<
 	WorkerOptions,
 	| "bindings"
+	| "ai"
 	| "textBlobBindings"
 	| "dataBlobBindings"
 	| "wasmBindings"
@@ -386,9 +487,13 @@ type WorkerOptionsBindings = Pick<
 	| "workflows"
 	| "wrappedBindings"
 	| "secretsStoreSecrets"
+	| "images"
 	| "email"
 	| "analyticsEngineDatasets"
 	| "tails"
+	| "browserRendering"
+	| "vectorize"
+	| "dispatchNamespaces"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -402,12 +507,18 @@ type MiniflareBindingsConfig = Pick<
 	| "serviceBindings"
 	| "imagesLocalMode"
 	| "tails"
+	| "complianceRegion"
+	| "containers"
 > &
 	Partial<Pick<ConfigBundle, "format" | "bundle" | "assets">>;
 
 // TODO(someday): would be nice to type these methods more, can we export types for
 //  each plugin options schema and use those
-export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
+export function buildMiniflareBindingOptions(
+	config: MiniflareBindingsConfig,
+	mixedModeConnectionString: MixedModeConnectionString | undefined,
+	mixedModeEnabled: boolean
+): {
 	bindingOptions: WorkerOptionsBindings;
 	internalObjects: CfDurableObject[];
 	externalWorkers: WorkerOptions[];
@@ -441,6 +552,16 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 
 	const notFoundServices = new Set<string>();
 	for (const service of config.services ?? []) {
+		if (mixedModeConnectionString && service.remote) {
+			serviceBindings[service.binding] = {
+				name: service.service,
+				props: service.props,
+				entrypoint: service.entrypoint,
+				mixedModeConnectionString,
+			};
+			continue;
+		}
+
 		if (service.service === config.name || config.workerDefinitions === null) {
 			// If this is a service binding to the current worker or the registry is disabled,
 			// don't bother using the dev registry to look up the address, just bind to it directly.
@@ -654,7 +775,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	}
 
 	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
-	if (bindings.ai?.binding) {
+	if (bindings.ai?.binding && !mixedModeEnabled) {
 		externalWorkers.push({
 			name: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
 			modules: [
@@ -665,7 +786,9 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 				},
 			],
 			serviceBindings: {
-				FETCHER: AIFetcher,
+				FETCHER: getAIFetcher({
+					compliance_region: config.complianceRegion,
+				}),
 			},
 		});
 
@@ -674,7 +797,20 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		};
 	}
 
-	if (bindings.images?.binding) {
+	if (bindings.ai && mixedModeEnabled) {
+		warnOrError("ai", bindings.ai.remote, "always-remote");
+	}
+
+	if (bindings.browser && mixedModeEnabled) {
+		warnOrError("browser", bindings.browser.remote, "remote");
+	}
+
+	// Uses the implementation in miniflare instead if the users enable local mode
+	if (
+		bindings.images?.binding &&
+		!config.imagesLocalMode &&
+		!mixedModeEnabled
+	) {
 		externalWorkers.push({
 			name: `${EXTERNAL_IMAGES_WORKER_NAME}:${config.name}`,
 			modules: [
@@ -685,9 +821,9 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 				},
 			],
 			serviceBindings: {
-				FETCHER: config.imagesLocalMode
-					? imagesLocalFetcher
-					: imagesRemoteFetcher,
+				FETCHER: getImagesRemoteFetcher({
+					compliance_region: config.complianceRegion,
+				}),
 			},
 		});
 
@@ -696,7 +832,7 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		};
 	}
 
-	if (bindings.vectorize) {
+	if (bindings.vectorize && !mixedModeEnabled) {
 		for (const vectorizeBinding of bindings.vectorize) {
 			const bindingName = vectorizeBinding.binding;
 			const indexName = vectorizeBinding.index_name;
@@ -712,7 +848,10 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 					},
 				],
 				serviceBindings: {
-					FETCHER: MakeVectorizeFetcher(indexName),
+					FETCHER: MakeVectorizeFetcher(
+						{ compliance_region: config.complianceRegion },
+						indexName
+					),
 				},
 				bindings: {
 					INDEX_ID: indexName,
@@ -738,17 +877,33 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		dataBlobBindings,
 		wasmBindings,
 
+		ai:
+			bindings.ai && mixedModeConnectionString
+				? {
+						binding: bindings.ai.binding,
+						mixedModeConnectionString,
+					}
+				: undefined,
+
 		kvNamespaces: Object.fromEntries(
-			bindings.kv_namespaces?.map(kvNamespaceEntry) ?? []
+			bindings.kv_namespaces?.map((kv) =>
+				kvNamespaceEntry(kv, mixedModeConnectionString)
+			) ?? []
 		),
 		r2Buckets: Object.fromEntries(
-			bindings.r2_buckets?.map(r2BucketEntry) ?? []
+			bindings.r2_buckets?.map((r2) =>
+				r2BucketEntry(r2, mixedModeConnectionString)
+			) ?? []
 		),
 		d1Databases: Object.fromEntries(
-			bindings.d1_databases?.map(d1DatabaseEntry) ?? []
+			bindings.d1_databases?.map((d1) =>
+				d1DatabaseEntry(d1, mixedModeConnectionString)
+			) ?? []
 		),
 		queueProducers: Object.fromEntries(
-			bindings.queues?.map(queueProducerEntry) ?? []
+			bindings.queues?.map((queue) =>
+				queueProducerEntry(queue, mixedModeConnectionString)
+			) ?? []
 		),
 		queueConsumers: Object.fromEntries(
 			config.queueConsumers?.map(queueConsumerEntry) ?? []
@@ -763,7 +918,11 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 				{ dataset: binding.dataset ?? "dataset" },
 			]) ?? []
 		),
-		workflows: Object.fromEntries(bindings.workflows?.map(workflowEntry) ?? []),
+		workflows: Object.fromEntries(
+			bindings.workflows?.map((workflow) =>
+				workflowEntry(workflow, mixedModeConnectionString)
+			) ?? []
+		),
 		secretsStoreSecrets: Object.fromEntries(
 			bindings.secrets_store_secrets?.map((binding) => [
 				binding.binding,
@@ -773,6 +932,60 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 		email: {
 			send_email: bindings.send_email,
 		},
+		images:
+			bindings.images && (config.imagesLocalMode || mixedModeEnabled)
+				? {
+						binding: bindings.images.binding,
+						mixedModeConnectionString:
+							bindings.images.remote && mixedModeConnectionString
+								? mixedModeConnectionString
+								: undefined,
+					}
+				: undefined,
+		browserRendering:
+			mixedModeEnabled && mixedModeConnectionString && bindings.browser?.remote
+				? {
+						binding: bindings.browser.binding,
+						mixedModeConnectionString,
+					}
+				: undefined,
+
+		vectorize:
+			mixedModeEnabled && mixedModeConnectionString
+				? Object.fromEntries(
+						bindings.vectorize
+							?.filter((v) => {
+								warnOrError("vectorize", v.remote, "remote");
+								return v.remote;
+							})
+							.map((vectorize) => {
+								return [
+									vectorize.binding,
+									{
+										index_name: vectorize.index_name,
+										mixedModeConnectionString,
+									},
+								];
+							}) ?? []
+					)
+				: undefined,
+
+		dispatchNamespaces:
+			mixedModeEnabled && mixedModeConnectionString
+				? Object.fromEntries(
+						bindings.dispatch_namespaces
+							?.filter((d) => {
+								warnOrError("dispatch_namespaces", d.remote, "remote");
+								return d.remote;
+							})
+							.map((dispatchNamespace) =>
+								dispatchNamespaceEntry(
+									dispatchNamespace,
+									mixedModeConnectionString
+								)
+							) ?? []
+					)
+				: undefined,
 
 		durableObjects: Object.fromEntries([
 			...internalObjects.map(({ name, class_name }) => {
@@ -818,7 +1031,6 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 				?.filter((b) => b.type == "ratelimit")
 				.map(ratelimitEntry) ?? []
 		),
-
 		serviceBindings,
 		wrappedBindings: wrappedBindings,
 		tails,
@@ -831,25 +1043,12 @@ export function buildMiniflareBindingOptions(config: MiniflareBindingsConfig): {
 	};
 }
 
-type PickTemplate<T, K extends string> = {
-	[P in keyof T & K]: T[P];
-};
-type PersistOptions = PickTemplate<MiniflareOptions, `${string}Persist`>;
-export function buildPersistOptions(
+export function getDefaultPersistRoot(
 	localPersistencePath: ConfigBundle["localPersistencePath"]
-): PersistOptions | undefined {
+): string | undefined {
 	if (localPersistencePath !== null) {
 		const v3Path = path.join(localPersistencePath, "v3");
-		return {
-			cachePersist: path.join(v3Path, "cache"),
-			durableObjectsPersist: path.join(v3Path, "do"),
-			kvPersist: path.join(v3Path, "kv"),
-			r2Persist: path.join(v3Path, "r2"),
-			d1Persist: path.join(v3Path, "d1"),
-			workflowsPersist: path.join(v3Path, "workflows"),
-			secretsStorePersist: path.join(v3Path, "secrets-store"),
-			analyticsEngineDatasetsPersist: path.join(v3Path, "analytics-engine"),
-		};
+		return v3Path;
 	}
 }
 
@@ -1014,20 +1213,21 @@ export function handleRuntimeStdio(stdout: Readable, stderr: Readable) {
 let didWarnMiniflareCronSupport = false;
 let didWarnMiniflareVectorizeSupport = false;
 let didWarnAiAccountUsage = false;
-let didWarnImagesLocalModeUsage = false;
 
 export type Options = Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
 
 export async function buildMiniflareOptions(
 	log: Log,
 	config: Omit<ConfigBundle, "rules">,
-	proxyToUserWorkerAuthenticationSecret: UUID
+	proxyToUserWorkerAuthenticationSecret: UUID,
+	mixedModeConnectionString: MixedModeConnectionString | undefined,
+	mixedModeEnabled: boolean
 ): Promise<{
 	options: Options;
 	internalObjects: CfDurableObject[];
 	entrypointNames: string[];
 }> {
-	if (config.crons.length > 0 && !config.testScheduled) {
+	if (config.crons?.length && !config.testScheduled) {
 		if (!didWarnMiniflareCronSupport) {
 			didWarnMiniflareCronSupport = true;
 			logger.warn(
@@ -1036,45 +1236,30 @@ export async function buildMiniflareOptions(
 		}
 	}
 
-	if (config.bindings.ai) {
-		if (!didWarnAiAccountUsage) {
-			didWarnAiAccountUsage = true;
-			logger.warn(
-				"Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development."
-			);
-		}
-	}
-
-	if (!config.bindVectorizeToProd && config.bindings.vectorize?.length) {
-		logger.warn(
-			"Vectorize local bindings are not supported yet. You may use the `--experimental-vectorize-bind-to-prod` flag to bind to your production index in local dev mode."
-		);
-		config.bindings.vectorize = [];
-	}
-
-	if (config.bindings.vectorize?.length) {
-		if (!didWarnMiniflareVectorizeSupport) {
-			didWarnMiniflareVectorizeSupport = true;
-			logger.warn(
-				"You are using a mixed-mode binding for Vectorize (through `--experimental-vectorize-bind-to-prod`). It may incur usage charges and modify your databases even in local development. "
-			);
-		}
-	}
-
-	if (config.bindings.images && config.imagesLocalMode) {
-		if (!didWarnImagesLocalModeUsage) {
-			try {
-				await import("sharp");
-			} catch {
-				const msg =
-					"Sharp must be installed to use the Images binding local mode; check your version of Node is compatible";
-				throw createFatalError(msg, false);
+	if (!mixedModeEnabled) {
+		if (config.bindings.ai) {
+			if (!didWarnAiAccountUsage) {
+				didWarnAiAccountUsage = true;
+				logger.warn(
+					"Using Workers AI always accesses your Cloudflare account in order to run AI models, and so will incur usage charges even in local development."
+				);
 			}
+		}
 
-			didWarnImagesLocalModeUsage = true;
-			logger.info(
-				"You are using Images local mode. This only supports resizing, rotating and transcoding."
+		if (!config.bindVectorizeToProd && config.bindings.vectorize?.length) {
+			logger.warn(
+				"Vectorize local bindings are not supported yet. You may use the `--experimental-vectorize-bind-to-prod` flag to bind to your production index in local dev mode."
 			);
+			config.bindings.vectorize = [];
+		}
+
+		if (config.bindings.vectorize?.length) {
+			if (!didWarnMiniflareVectorizeSupport) {
+				didWarnMiniflareVectorizeSupport = true;
+				logger.warn(
+					"You are using a mixed-mode binding for Vectorize (through `--experimental-vectorize-bind-to-prod`). It may incur usage charges and modify your databases even in local development. "
+				);
+			}
 		}
 	}
 
@@ -1085,9 +1270,13 @@ export async function buildMiniflareOptions(
 
 	const { sourceOptions, entrypointNames } = await buildSourceOptions(config);
 	const { bindingOptions, internalObjects, externalWorkers } =
-		buildMiniflareBindingOptions(config);
+		buildMiniflareBindingOptions(
+			config,
+			mixedModeConnectionString,
+			mixedModeEnabled
+		);
 	const sitesOptions = buildSitesOptions(config);
-	const persistOptions = buildPersistOptions(config.localPersistencePath);
+	const defaultPersistRoot = getDefaultPersistRoot(config.localPersistencePath);
 	const assetOptions = buildAssetOptions(config);
 
 	const options: MiniflareOptions = {
@@ -1109,8 +1298,7 @@ export async function buildMiniflareOptions(
 		log,
 		verbose: logger.loggerLevel === "debug",
 		handleRuntimeStdio,
-
-		...persistOptions,
+		defaultPersistRoot,
 		workers: [
 			{
 				name: getName(config),
@@ -1121,6 +1309,7 @@ export async function buildMiniflareOptions(
 				...bindingOptions,
 				...sitesOptions,
 				...assetOptions,
+				containers: config.containers,
 				// Allow each entrypoint to be accessed directly over `127.0.0.1:0`
 				unsafeDirectSockets: entrypointNames.map((name) => ({
 					host: "127.0.0.1",

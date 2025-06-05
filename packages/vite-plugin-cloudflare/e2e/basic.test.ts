@@ -11,7 +11,7 @@ describe("basic e2e tests", () => {
 
 		describe.each(commands)('with "%s" command', (command) => {
 			describe("node compatibility", () => {
-				test.skipIf(isWindows && command === "buildAndPreview")(
+				test.skipIf(command === "buildAndPreview")(
 					"can serve a Worker request",
 					async ({ expect }) => {
 						const proc = await runLongLived(pm, command, projectPath);
@@ -28,7 +28,7 @@ describe("basic e2e tests", () => {
 			describe.skipIf(
 				!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN
 			)("Workers AI", () => {
-				test.skipIf(isWindows && command === "buildAndPreview")(
+				test.skipIf(command === "buildAndPreview")(
 					"can serve a Worker request",
 					async ({ expect }) => {
 						const proc = await runLongLived(pm, command, projectPath);

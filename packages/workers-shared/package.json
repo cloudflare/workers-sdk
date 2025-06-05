@@ -1,6 +1,7 @@
 {
 	"name": "@cloudflare/workers-shared",
 	"version": "0.17.5",
+	"private": true,
 	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workers.",
 	"keywords": [
 		"cloudflare",
@@ -18,27 +19,16 @@
 	},
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
-	"types": "./dist",
-	"files": [
-		"dist"
-	],
 	"scripts": {
-		"build": "pnpm run clean && pnpm run bundle:asset-worker:prod && pnpm run bundle:router-worker:prod && pnpm run types:emit",
-		"bundle:asset-worker": "esbuild asset-worker/src/index.ts --format=esm --bundle --outfile=dist/asset-worker.mjs --sourcemap=external --external:cloudflare:*",
-		"bundle:asset-worker:prod": "pnpm run bundle:asset-worker --minify && node -r esbuild-register scripts/copy-config-file.ts",
-		"bundle:router-worker": "esbuild router-worker/src/index.ts --format=esm --bundle --outfile=dist/router-worker.mjs --sourcemap=external",
-		"bundle:router-worker:prod": "pnpm run bundle:router-worker --minify",
 		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "pnpm run check:type:tests && tsc",
 		"check:type:tests": "tsc -p ./asset-worker/tests/tsconfig.json && tsc -p ./router-worker/tests/tsconfig.json",
-		"clean": "rimraf dist",
 		"deploy": "pnpm run generate-sourcemaps && pnpm run deploy:router-worker && pnpm run deploy:asset-worker && pnpm run upload-sourcemaps",
 		"deploy:asset-worker": "CLOUDFLARE_API_TOKEN=$WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN pnpx wrangler versions upload -c asset-worker/wrangler.jsonc --tag aw-$(node -r esbuild-register ./scripts/get-version-tag.ts)",
 		"deploy:asset-worker-staging": "CLOUDFLARE_API_TOKEN=$WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN pnpx wrangler deploy -c asset-worker/wrangler.jsonc -e staging",
 		"deploy:router-worker": "CLOUDFLARE_API_TOKEN=$WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN pnpx wrangler versions upload -c router-worker/wrangler.jsonc --tag rw-$(node -r esbuild-register ./scripts/get-version-tag.ts)",
 		"deploy:router-worker-staging": "CLOUDFLARE_API_TOKEN=$WORKERS_DEPLOY_AND_CONFIG_CLOUDFLARE_API_TOKEN pnpx wrangler deploy -c router-worker/wrangler.jsonc -e staging",
 		"deploy:staging": "pnpm run deploy:router-worker-staging && pnpm run deploy:asset-worker-staging",
-		"dev": "pnpm run clean && concurrently -n bundle:asset-worker,bundle:router-worker -c blue,magenta \"pnpm run bundle:asset-worker --watch\" \"pnpm run bundle:router-worker --watch\"",
 		"generate-sourcemaps": "pnpm run generate-sourcemaps:asset-worker && pnpm generate-sourcemaps:router-worker",
 		"generate-sourcemaps:asset-worker": "pnpx wrangler versions upload -c asset-worker/wrangler.jsonc --dry-run --outdir=./dist",
 		"generate-sourcemaps:router-worker": "pnpx wrangler versions upload -c router-worker/wrangler.jsonc --dry-run --outdir=./dist",
@@ -47,29 +37,26 @@
 		"test:ci": "concurrently --group -n router-worker,asset-worker,utils \"pnpm run test:router-worker --run\" \"pnpm run test:asset-worker --run\" \"pnpm run test:utils --run\"",
 		"test:router-worker": "vitest -c router-worker/vitest.config.mts --dir router-worker",
 		"test:utils": "vitest --dir utils",
-		"types:emit": "tsc index.ts --declaration --emitDeclarationOnly --declarationDir ./dist",
 		"upload-sourcemaps": "pnpm run upload-sourcemaps:asset-worker && pnpm run upload-sourcemaps:router-worker",
 		"upload-sourcemaps:asset-worker": "node -r esbuild-register ./scripts/upload-sourcemaps.ts --worker asset-worker --tag aw-$(node -r esbuild-register ./scripts/get-version-tag.ts)",
 		"upload-sourcemaps:router-worker": "node -r esbuild-register ./scripts/upload-sourcemaps.ts --worker router-worker --tag rw-$(node -r esbuild-register ./scripts/get-version-tag.ts)"
-	},
-	"dependencies": {
-		"mime": "^3.0.0",
-		"zod": "^3.22.3"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/vitest-pool-workers": "^0.7.0",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250508.0",
+		"@cloudflare/workers-types": "^4.20250604.0",
 		"@sentry/cli": "^2.37.0",
 		"@types/mime": "^3.0.4",
 		"concurrently": "^8.2.2",
 		"esbuild": "catalog:default",
 		"ignore": "^5.2.0",
+		"mime": "^3.0.0",
 		"rimraf": "catalog:default",
 		"toucan-js": "4.0.0",
 		"typescript": "catalog:default",
-		"vitest": "~2.1.0"
+		"vitest": "~2.1.0",
+		"zod": "^3.22.3"
 	},
 	"engines": {
 		"node": ">=18.0.0"

@@ -134,7 +134,7 @@ export const pipelinesUpdateCommand = createCommand({
 		// only the fields set will be updated - other fields will use the existing config
 		const accountId = await requireAuth(config);
 
-		const pipelineConfig = await getPipeline(accountId, name);
+		const pipelineConfig = await getPipeline(config, accountId, name);
 
 		if (args.compression) {
 			pipelineConfig.destination.compression.type = args.compression;
@@ -165,6 +165,7 @@ export const pipelinesUpdateCommand = createCommand({
 			};
 			if (!accessKeyId && !secretAccessKey) {
 				const auth = await authorizeR2Bucket(
+					config,
 					name,
 					accountId,
 					destination.path.bucket
@@ -259,7 +260,12 @@ export const pipelinesUpdateCommand = createCommand({
 		}
 
 		logger.log(`🌀 Updating pipeline "${name}"`);
-		const pipeline = await updatePipeline(accountId, name, pipelineConfig);
+		const pipeline = await updatePipeline(
+			config,
+			accountId,
+			name,
+			pipelineConfig
+		);
 
 		logger.log(
 			`✅ Successfully updated pipeline "${pipeline.name}" with ID ${pipeline.id}\n`

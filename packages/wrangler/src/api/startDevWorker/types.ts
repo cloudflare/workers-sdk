@@ -41,6 +41,7 @@ import type {
 	NodeJSCompatMode,
 	Request,
 	Response,
+	WorkerOptions,
 } from "miniflare";
 import type * as undici from "undici";
 
@@ -75,11 +76,15 @@ export interface StartDevWorkerInput {
 	/** The compatibility flags for the workerd runtime. */
 	compatibilityFlags?: string[];
 
+	/** Specify the compliance region mode of the Worker. */
+	complianceRegion?: Config["compliance_region"];
+
 	env?: string;
 
 	/** The bindings available to the worker. The specified bindind type will be exposed to the worker on the `env` object under the same key. */
 	bindings?: Record<string, Binding>; // Type level constraint for bindings not sharing names
 	migrations?: DurableObjectMigration[];
+	containers?: WorkerOptions["containers"];
 	/** The triggers which will cause the worker's exported default handlers to be called. */
 	triggers?: Trigger[];
 
@@ -134,8 +139,8 @@ export interface StartDevWorkerInput {
 	dev?: {
 		/** Options applying to the worker's inspector server. */
 		inspector?: { hostname?: string; port?: number; secure?: boolean };
-		/** Whether the worker runs on the edge or locally. */
-		remote?: boolean;
+		/** Whether the worker runs on the edge or locally. Can also be set to "minimal" for minimal mode. */
+		remote?: boolean | "minimal";
 		/** Cloudflare Account credentials. Can be provided upfront or as a function which will be called only when required. */
 		auth?: AsyncHook<CfAccount, [Pick<Config, "account_id">]>; // provide config.account_id as a hook param
 		/** Whether local storage (KV, Durable Objects, R2, D1, etc) is persisted. You can also specify the directory to persist data to. */
@@ -208,6 +213,7 @@ export type StartDevWorkerOptions = Omit<StartDevWorkerInput, "assets"> & {
 	entrypoint: string;
 	assets?: AssetsOptions;
 	name: string;
+	complianceRegion: Config["compliance_region"];
 };
 
 export type HookValues = string | number | boolean | object | undefined | null;

@@ -1,0 +1,17 @@
+{
+	"name": "<TBD>",
+	"main": "src/index.ts",
+	"compatibility_date": "<TBD>",
+
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1,
+	},
+	"workflows": [
+		{
+			"name": "workflows-hello-world",
+			"binding": "MY_WORKFLOW",
+			"class_name": "MyWorkflow",
+		},
+	],
+}

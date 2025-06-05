@@ -7,7 +7,7 @@ import { DevEnv } from "./api";
 import { MultiworkerRuntimeController } from "./api/startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "./api/startDevWorker/NoOpProxyController";
 import {
-	convertCfWorkerInitBindingstoBindings,
+	convertCfWorkerInitBindingsToBindings,
 	extractBindingsOfType,
 } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
@@ -24,7 +24,7 @@ import { getFlag } from "./experimental-flags";
 import isInteractive from "./is-interactive";
 import { logger } from "./logger";
 import { getSiteAssetPaths } from "./sites";
-import { loginOrRefreshIfRequired, requireApiToken, requireAuth } from "./user";
+import { requireApiToken, requireAuth } from "./user";
 import {
 	collectKeyValues,
 	collectPlainTextVars,
@@ -307,15 +307,6 @@ export const dev = createCommand({
 			process.exitCode = 1;
 			return;
 		}
-
-		if (args.remote) {
-			const isLoggedIn = await loginOrRefreshIfRequired();
-			if (!isLoggedIn) {
-				throw new UserError(
-					"You must be logged in to use wrangler dev in remote mode. Try logging in, or run wrangler dev --local."
-				);
-			}
-		}
 	},
 	async handler(args) {
 		const devInstance = await startDev(args);
@@ -503,7 +494,7 @@ async function setupDevEnv(
 			bindings: {
 				...(await getPagesAssetsFetcher(args.enablePagesAssetsServiceBinding)),
 				...collectPlainTextVars(args.var),
-				...convertCfWorkerInitBindingstoBindings({
+				...convertCfWorkerInitBindingsToBindings({
 					kv_namespaces: args.kv,
 					vars: args.vars,
 					send_email: undefined,
@@ -847,7 +838,8 @@ export function getBindings(
 	configParam: Config,
 	env: string | undefined,
 	local: boolean,
-	args: AdditionalDevProps
+	args: AdditionalDevProps,
+	mixedModeEnabled = getFlag("MIXED_MODE")
 ): CfWorkerInit["bindings"] {
 	/**
 	 * In Pages, KV, DO, D1, R2, AI and service bindings can be specified as
@@ -874,7 +866,7 @@ export function getBindings(
 			return {
 				binding,
 				id: preview_id ?? id,
-				remote: getFlag("MIXED_MODE") && remote,
+				remote: mixedModeEnabled && remote,
 			};
 		}
 	);
@@ -895,7 +887,7 @@ export function getBindings(
 		if (local) {
 			return {
 				...d1Db,
-				remote: getFlag("MIXED_MODE") && d1Db.remote,
+				remote: mixedModeEnabled && d1Db.remote,
 				database_id,
 			};
 		}
@@ -925,7 +917,7 @@ export function getBindings(
 					binding,
 					bucket_name: preview_bucket_name ?? bucket_name,
 					jurisdiction,
-					remote: getFlag("MIXED_MODE") && remote,
+					remote: mixedModeEnabled && remote,
 				};
 			}
 		) || [];
@@ -941,7 +933,7 @@ export function getBindings(
 		"binding"
 	).map((service) => ({
 		...service,
-		remote: getFlag("MIXED_MODE") && "remote" in service && !!service.remote,
+		remote: mixedModeEnabled && "remote" in service && !!service.remote,
 	}));
 
 	// Hyperdrive bindings
@@ -980,15 +972,10 @@ export function getBindings(
 				binding: queue.binding,
 				queue_name: queue.queue,
 				delivery_delay: queue.delivery_delay,
-				remote: getFlag("MIXED_MODE") && queue.remote,
+				remote: mixedModeEnabled && queue.remote,
 			};
 		}),
 	];
-
-	const workflowsConfig = configParam.workflows.map((workflowConfig) => ({
-		...workflowConfig,
-		remote: getFlag("MIXED_MODE") && workflowConfig.remote,
-	}));
 
 	const bindings: CfWorkerInit["bindings"] = {
 		// top-level fields
@@ -1009,7 +996,7 @@ export function getBindings(
 		durable_objects: {
 			bindings: mergedDOBindings,
 		},
-		workflows: workflowsConfig,
+		workflows: configParam.workflows,
 		kv_namespaces: mergedKVBindings,
 		queues: queuesBindings,
 		r2_buckets: mergedR2Bindings,

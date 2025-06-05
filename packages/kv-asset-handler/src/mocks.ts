@@ -89,7 +89,7 @@ export const mockCaches = () => {
 						}
 					}
 				}
-				// TODO: write test to accomodate for rare scenarios with where range requests accomodate etags
+				// TODO: write test to accommodate for rare scenarios with where range requests accommodate etags
 				if (response && !key.headers.has("if-none-match")) {
 					// this appears overly verbose, but is necessary to document edge cache behavior
 					// The Range request header triggers the response header Content-Range ...

@@ -40,6 +40,7 @@ function configDefaults(
 	const persist = path.join(process.cwd(), ".wrangler/persist");
 	return {
 		name: "test-worker",
+		complianceRegion: undefined,
 		entrypoint: "NOT_REAL",
 		projectRoot: "NOT_REAL",
 		build: unusable<StartDevWorkerOptions["build"]>(),

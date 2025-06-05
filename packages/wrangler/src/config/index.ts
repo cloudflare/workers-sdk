@@ -1,11 +1,12 @@
 import path from "node:path";
+import { maybeGetFile } from "@cloudflare/workers-shared";
 import TOML from "@iarna/toml";
 import dotenv from "dotenv";
 import { FatalError, UserError } from "../errors";
+import { getFlag, run } from "../experimental-flags";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
-import { maybeGetFile } from "../utils/filesystem";
 import { resolveWranglerConfigPath } from "./config-helpers";
 import { isPagesConfig, normalizeAndValidateConfig } from "./validation";
 import { validatePagesConfig } from "./validation-pages";
@@ -71,7 +72,26 @@ export type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
 
 export type ReadConfigOptions = ResolveConfigPathOptions & {
 	hideWarnings?: boolean;
+	experimental?: {
+		mixedModeEnabled?: boolean;
+	};
 };
+
+export type ConfigBindingOptions = Pick<
+	Config,
+	| "ai"
+	| "browser"
+	| "d1_databases"
+	| "dispatch_namespaces"
+	| "durable_objects"
+	| "queues"
+	| "r2_buckets"
+	| "services"
+	| "kv_namespaces"
+	| "mtls_certificates"
+	| "vectorize"
+	| "workflows"
+>;
 
 /**
  * Get the Wrangler configuration; read it from the give `configPath` if available.
@@ -85,11 +105,25 @@ export function readConfig(
 		options
 	);
 
-	const { config, diagnostics } = normalizeAndValidateConfig(
-		rawConfig,
-		configPath,
-		userConfigPath,
-		args
+	// TODO: here we're overriding the MIXED_MODE flag based on options.experimental?.mixedModeEnabled,
+	//       once the MIXED_MODE flag is removed we should just normally call normalizeAndValidateConfig
+	const { diagnostics, config } = run(
+		{
+			RESOURCES_PROVISION: getFlag("RESOURCES_PROVISION") ?? false,
+			MULTIWORKER: getFlag("MULTIWORKER") ?? false,
+			MIXED_MODE:
+				options.experimental?.mixedModeEnabled ??
+				getFlag("MIXED_MODE") ??
+				false,
+		},
+		() => {
+			return normalizeAndValidateConfig(
+				rawConfig,
+				configPath,
+				userConfigPath,
+				args
+			);
+		}
 	);
 
 	if (diagnostics.hasWarnings() && !options?.hideWarnings) {

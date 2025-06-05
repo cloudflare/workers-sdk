@@ -43,7 +43,7 @@ function stripEmptyNewlines(stdout: string): string {
 }
 
 function stripDevTimings(stdout: string): string {
-	return stdout.replace(/\(\dms\)/g, "(TIMINGS)");
+	return stdout.replace(/\(\d+ms\)/g, "(TIMINGS)");
 }
 
 function removeWorkerPreviewUrl(str: string) {
@@ -86,7 +86,7 @@ function removeKVId(str: string) {
  * Remove the Wrangler version/update check header
  */
 function removeVersionHeader(str: string): string {
-	const header = str.match(/⛅️ wrangler .*\n----+\n/);
+	const header = str.match(/⛅️ wrangler .*\n───+\n/);
 	if (header !== null && header.index) {
 		return str.slice(header.index + header[0].length);
 	} else {
@@ -176,8 +176,8 @@ function normalizeDebugLogFilepath(stdout: string): string {
  */
 function removeLocalPort(stdout: string): string {
 	return stdout.replace(
-		/\[wrangler:inf\] Ready on (https?):\/\/(.+):\d{4,5}/,
-		"[wrangler:inf] Ready on $1://$2:<PORT>"
+		/\[wrangler:info\] Ready on (https?):\/\/(.+):\d{4,5}/,
+		"[wrangler:info] Ready on $1://<HOST>:<PORT>"
 	);
 }
 

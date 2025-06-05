@@ -9,7 +9,12 @@ import type { MemorySizeWithUnit } from "./MemorySizeWithUnit";
  */
 export type ModifyMeRequestBody = {
 	defaults?: {
+		/**
+		 * Deprecated in favor of memory_mib
+		 * @deprecated
+		 */
 		memory?: MemorySizeWithUnit;
+		memory_mib?: number;
 		vcpus?: number;
 	};
 };

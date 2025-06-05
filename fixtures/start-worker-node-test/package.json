@@ -1,5 +1,5 @@
 {
-	"name": "start-worker-node-test",
+	"name": "@fixture/start-worker-node",
 	"private": true,
 	"description": "",
 	"license": "ISC",
@@ -10,7 +10,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250508.0",
+		"@cloudflare/workers-types": "^4.20250604.0",
 		"@types/is-even": "^1.0.2",
 		"get-port": "^7.1.0",
 		"is-even": "^1.0.0",

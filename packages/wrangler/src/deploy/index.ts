@@ -290,7 +290,12 @@ export const deployCommand = createCommand({
 
 		if (!args.dryRun) {
 			assert(accountId, "Missing account ID");
-			await verifyWorkerMatchesCITag(accountId, name, config.configPath);
+			await verifyWorkerMatchesCITag(
+				config,
+				accountId,
+				name,
+				config.configPath
+			);
 		}
 		const { sourceMapSize, versionId, workerTag, targets } = await deploy({
 			config,

@@ -31,6 +31,7 @@ export async function getMigrationsToUpload(
 		if (props.dispatchNamespace) {
 			try {
 				const scriptData = await fetchResult<{ script: ScriptData }>(
+					config,
 					`/accounts/${accountId}/workers/dispatch/namespaces/${props.dispatchNamespace}/scripts/${scriptName}`
 				);
 				script = scriptData.script;
@@ -44,6 +45,7 @@ export async function getMigrationsToUpload(
 						const scriptData = await fetchResult<{
 							script: ScriptData;
 						}>(
+							config,
 							`/accounts/${accountId}/workers/services/${scriptName}/environments/${props.env}`
 						);
 						script = scriptData.script;
@@ -52,7 +54,7 @@ export async function getMigrationsToUpload(
 							default_environment: {
 								script: ScriptData;
 							};
-						}>(`/accounts/${accountId}/workers/services/${scriptName}`);
+						}>(config, `/accounts/${accountId}/workers/services/${scriptName}`);
 						script = scriptData.default_environment.script;
 					}
 				} catch (err) {
@@ -60,6 +62,7 @@ export async function getMigrationsToUpload(
 				}
 			} else {
 				const scripts = await fetchResult<ScriptData[]>(
+					config,
 					`/accounts/${accountId}/workers/scripts`
 				);
 				script = scripts.find(({ id }) => id === scriptName);

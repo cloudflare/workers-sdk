@@ -83,6 +83,7 @@ export interface CfKvNamespace {
 	binding: string;
 	id?: string | typeof INHERIT_SYMBOL;
 	remote?: boolean;
+	raw?: boolean;
 }
 
 /**
@@ -122,6 +123,8 @@ export interface CfTextBlobBindings {
 
 export interface CfBrowserBinding {
 	binding: string;
+	raw?: boolean;
+	remote?: boolean;
 }
 
 /**
@@ -131,7 +134,8 @@ export interface CfBrowserBinding {
 export interface CfAIBinding {
 	binding: string;
 	staging?: boolean;
-	remote?: true;
+	remote?: boolean;
+	raw?: boolean;
 }
 
 /**
@@ -139,6 +143,8 @@ export interface CfAIBinding {
  */
 export interface CfImagesBinding {
 	binding: string;
+	raw?: boolean;
+	remote?: boolean;
 }
 
 /**
@@ -173,6 +179,7 @@ export interface CfWorkflow {
 	binding: string;
 	script_name?: string;
 	remote?: boolean;
+	raw?: boolean;
 }
 
 export interface CfQueue {
@@ -180,6 +187,7 @@ export interface CfQueue {
 	queue_name: string;
 	delivery_delay?: number;
 	remote?: boolean;
+	raw?: boolean;
 }
 
 export interface CfR2Bucket {
@@ -187,6 +195,7 @@ export interface CfR2Bucket {
 	bucket_name?: string | typeof INHERIT_SYMBOL;
 	jurisdiction?: string;
 	remote?: boolean;
+	raw?: boolean;
 }
 
 // TODO: figure out if this is duplicated in packages/wrangler/src/config/environment.ts
@@ -199,11 +208,14 @@ export interface CfD1Database {
 	migrations_table?: string;
 	migrations_dir?: string;
 	remote?: boolean;
+	raw?: boolean;
 }
 
 export interface CfVectorize {
 	binding: string;
 	index_name: string;
+	raw?: boolean;
+	remote?: boolean;
 }
 
 export interface CfSecretsStoreSecrets {
@@ -240,6 +252,7 @@ export interface CfDispatchNamespace {
 		environment?: string;
 		parameters?: string[];
 	};
+	remote?: boolean;
 }
 
 export interface CfMTlsCertificate {

@@ -359,3 +359,44 @@ export function parseNonHyphenedUuid(uuid: string | null): string | null {
 
 	return hyphenated.slice(0, 36);
 }
+
+export function parseByteSize(
+	s: string,
+	base: number | undefined = undefined
+): number {
+	const match = s.match(
+		/^(\d*\.*\d*)\s*([kKmMgGtTpP]{0,1})([i]{0,1}[bB]{0,1})$/
+	);
+	if (!match) {
+		return NaN;
+	}
+
+	const size = match[1];
+	if (size.length === 0 || isNaN(Number(size))) {
+		return NaN;
+	}
+
+	const unit = match[2].toLowerCase();
+	const sizeUnits = {
+		k: 1,
+		m: 2,
+		g: 3,
+		t: 4,
+		p: 5,
+	} as const;
+	if (unit.length !== 0 && !(unit in sizeUnits)) {
+		return NaN;
+	}
+
+	const binary = match[3].toLowerCase() == "ib";
+	if (binary && unit.length === 0) {
+		// Plain "ib" without a size unit is invalid
+		return NaN;
+	}
+
+	const pow = sizeUnits[unit as keyof typeof sizeUnits] || 0;
+
+	return Math.floor(
+		Number(size) * Math.pow(base ?? (binary ? 1024 : 1000), pow)
+	);
+}

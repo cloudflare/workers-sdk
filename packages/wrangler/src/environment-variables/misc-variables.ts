@@ -1,6 +1,9 @@
 import path from "node:path";
+import { dedent } from "ts-dedent";
+import { UserError } from "../errors";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { getEnvironmentVariableFactory } from "./factory";
+import type { Config } from "../config";
 
 /**
  * `WRANGLER_C3_COMMAND` can override the command used by `wrangler init` when delegating to C3.
@@ -44,21 +47,92 @@ export const getWranglerSendMetricsFromEnv = getEnvironmentVariableFactory({
 export const getCloudflareApiEnvironmentFromEnv = getEnvironmentVariableFactory(
 	{
 		variableName: "WRANGLER_API_ENVIRONMENT",
-		defaultValue: () => "production",
+		defaultValue: () => "production" as const,
+		choices: ["production", "staging"] as const,
 	}
 );
 
 /**
- * `CLOUDFLARE_API_BASE_URL` specifies the URL to the Cloudflare API.
+ * The compliance region to use for the API requests.
  */
-export const getCloudflareApiBaseUrl = getEnvironmentVariableFactory({
+export type ComplianceConfig = Partial<Pick<Config, "compliance_region">>;
+
+/** Used for commands that explicitly do not support compliance regions other than "public" */
+export const COMPLIANCE_REGION_CONFIG_PUBLIC: ComplianceConfig = {
+	compliance_region: "public",
+};
+
+/**
+ * Used for commands where there is no configuration available and
+ * we rely upon the CLOUDFLARE_COMPLIANCE_REGION environment variable
+ * to determine the compliance region.
+ */
+export const COMPLIANCE_REGION_CONFIG_UNKNOWN: ComplianceConfig = {
+	compliance_region: undefined,
+};
+
+const getCloudflareComplianceRegionFromEnv = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_COMPLIANCE_REGION",
+	choices: ["public", "fedramp_high"] as const,
+});
+
+/**
+ * Set `CLOUDFLARE_COMPLIANCE_REGION` environment variable to "fedramp_high"
+ * or set the `compliance_region` property in the Wrangler configuration
+ * to tell Wrangler to run in FedRAMP High compliance region mode, rather than "public" mode.
+ */
+export const getCloudflareComplianceRegion = (
+	complianceConfig: ComplianceConfig
+) => {
+	const complianceRegionFromEnv = getCloudflareComplianceRegionFromEnv();
+	if (
+		complianceRegionFromEnv !== undefined &&
+		complianceConfig?.compliance_region !== undefined &&
+		complianceRegionFromEnv !== complianceConfig.compliance_region
+	) {
+		throw new UserError(dedent`
+			The compliance region has been set to different values in two places:
+			 - \`CLOUDFLARE_COMPLIANCE_REGION\` environment variable: \`${complianceRegionFromEnv}\`
+			 - \`compliance_region\` configuration property: \`${complianceConfig.compliance_region}\`
+			`);
+	}
+	return (
+		complianceRegionFromEnv || complianceConfig?.compliance_region || "public"
+	);
+};
+
+const getCloudflareApiBaseUrlFromEnv = getEnvironmentVariableFactory({
 	variableName: "CLOUDFLARE_API_BASE_URL",
 	deprecatedName: "CF_API_BASE_URL",
-	defaultValue: () =>
-		getCloudflareApiEnvironmentFromEnv() === "staging"
-			? "https://api.staging.cloudflare.com/client/v4"
-			: "https://api.cloudflare.com/client/v4",
 });
+
+/**
+ * `CLOUDFLARE_API_BASE_URL` specifies the URL to the Cloudflare API.
+ *
+ * If this environment variable is not set, it will default to a URL computed from the
+ * Cloudflare compliance region and the API environment.
+ */
+export const getCloudflareApiBaseUrl = (complianceConfig: ComplianceConfig) =>
+	getCloudflareApiBaseUrlFromEnv() ??
+	`https://api${getComplianceRegionSubdomain(complianceConfig)}${getStagingSubdomain()}.cloudflare.com/client/v4`;
+
+/**
+ * Compute the subdomain for the compliance region.
+ */
+export function getComplianceRegionSubdomain(
+	complianceConfig: ComplianceConfig
+): string {
+	return getCloudflareComplianceRegion(complianceConfig) === "fedramp_high"
+		? ".fed"
+		: "";
+}
+
+/**
+ * Compute the subdomain for the staging environment.
+ */
+function getStagingSubdomain(): string {
+	return getCloudflareApiEnvironmentFromEnv() === "staging" ? ".staging" : "";
+}
 
 /**
  * `WRANGLER_LOG_SANITIZE` specifies whether we sanitize debug logs.
@@ -108,6 +182,27 @@ export const getCIMatchTag = getEnvironmentVariableFactory({
  */
 export const getCIOverrideName = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_CI_OVERRIDE_NAME",
+});
+
+/**
+ * `WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST` specifies whether --network=host should be set
+ *
+ * If this is set to true, Wrangler will use the --network=host flag when calling out to docker to build container images
+ */
+export const getCIOverrideNetworkModeHost = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST",
+});
+
+/**
+ * `WRANGLER_CI_GENERATE_PREVIEW_ALIAS` specifies whether to generate a preview alias during version upload
+ *
+ * If this is set to true, Wrangler will attempt to autogenerate the preview alias by using the branch
+ * name. If the branch name is too long and an alias cannot be created, a warning will be printed to the console.
+ */
+export const getCIGeneratePreviewAlias = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_CI_GENERATE_PREVIEW_ALIAS",
+	defaultValue: () => "false" as const,
+	choices: ["true", "false"] as const,
 });
 
 /**

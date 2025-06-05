@@ -94,6 +94,23 @@ export default defineWorkersProject({
 							compatibilityFlags: ["nodejs_compat"],
 							kvNamespaces: ["KV_NAMESPACE"],
 						},
+						{
+							name: "tail-consumer",
+							modules: [
+								{
+									path: "index.js",
+									type: "ESModule",
+									contents: /* javascript */ `
+										export default {
+											tail(event) {
+											console.log("tail event received")
+											}
+										}
+										`,
+								},
+							],
+							compatibilityDate: "2024-01-01",
+						},
 					],
 				},
 			},

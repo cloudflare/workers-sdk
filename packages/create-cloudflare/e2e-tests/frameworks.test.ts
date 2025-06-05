@@ -80,7 +80,7 @@ describe.concurrent(
 		Object.entries(frameworkTests).forEach(([frameworkKey, testConfig]) => {
 			const frameworkConfig = {
 				workersTypes: "generated" as const,
-				typesPath: "worker-configuration.d.ts",
+				typesPath: "./worker-configuration.d.ts",
 				envInterfaceName: "Env",
 				...getFrameworkConfig(frameworkKey),
 			};

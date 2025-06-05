@@ -112,7 +112,8 @@ const nullableNonApplicable = [
 
 function readWorkerConfig(
 	configPath: string,
-	env: string | undefined
+	env: string | undefined,
+	mixedModeEnabled: boolean
 ): {
 	raw: RawWorkerConfig;
 	config: SanitizedWorkerConfig;
@@ -123,7 +124,10 @@ function readWorkerConfig(
 		notRelevant: new Set(),
 	};
 	const config: Optional<RawWorkerConfig, "build" | "define"> =
-		unstable_readConfig({ config: configPath, env }, {});
+		unstable_readConfig(
+			{ config: configPath, env },
+			{ experimental: { mixedModeEnabled } }
+		);
 	const raw = structuredClone(config) as RawWorkerConfig;
 
 	nullableNonApplicable.forEach((prop) => {
@@ -275,6 +279,7 @@ function missingFieldErrorMessage(
 export function getWorkerConfig(
 	configPath: string,
 	env: string | undefined,
+	mixedModeEnabled: boolean,
 	opts?: {
 		visitedConfigPaths?: Set<string>;
 		isEntryWorker?: boolean;
@@ -284,7 +289,11 @@ export function getWorkerConfig(
 		throw new Error(`Duplicate Wrangler config path found: ${configPath}`);
 	}
 
-	const { raw, config, nonApplicable } = readWorkerConfig(configPath, env);
+	const { raw, config, nonApplicable } = readWorkerConfig(
+		configPath,
+		env,
+		mixedModeEnabled
+	);
 
 	opts?.visitedConfigPaths?.add(configPath);
 

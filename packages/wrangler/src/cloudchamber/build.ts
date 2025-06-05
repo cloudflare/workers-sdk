@@ -1,5 +1,6 @@
 import { spawn } from "child_process";
 import { stat } from "fs/promises";
+import { getCIOverrideNetworkModeHost } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { ImageRegistriesService } from "./client";
 import type { Config } from "../config";
@@ -79,6 +80,11 @@ export async function constructBuildCommand(options: {
 
 	if (options.dockerfile !== undefined) {
 		defaultBuildCommand.push("-f", "-");
+	}
+
+	// This is primarily used by Workers Builds to ensure we build images in Workers Builds with host networking flag
+	if (getCIOverrideNetworkModeHost() === "true") {
+		defaultBuildCommand.push("--network=host");
 	}
 
 	defaultBuildCommand.push(dockerFilePath ?? ".");

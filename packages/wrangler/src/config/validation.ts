@@ -17,7 +17,7 @@ import {
 	inheritableInLegacyEnvironments,
 	isBoolean,
 	isMutuallyExclusiveWith,
-	isObjectWith,
+	isOneOf,
 	isOptionalProperty,
 	isRequiredProperty,
 	isString,
@@ -1122,8 +1122,8 @@ function normalizeAndValidateEnvironment(
 			topLevelEnv,
 			rawEnv,
 			"triggers",
-			isObjectWith("crons"),
-			{ crons: [] }
+			validateTriggers,
+			{ crons: undefined }
 		),
 		assets: normalizeAndValidateAssets(diagnostics, topLevelEnv, rawEnv),
 		limits: normalizeAndValidateLimits(diagnostics, topLevelEnv, rawEnv),
@@ -1458,6 +1458,14 @@ function normalizeAndValidateEnvironment(
 			validateObservability,
 			undefined
 		),
+		compliance_region: inheritable(
+			diagnostics,
+			topLevelEnv,
+			rawEnv,
+			"compliance_region",
+			isOneOf("public", "fedramp_high"),
+			undefined
+		),
 	};
 
 	warnIfDurableObjectsHaveNoMigrations(
@@ -1507,6 +1515,44 @@ const validateAndNormalizeRules = (
 		validateRules(envName),
 		[]
 	);
+};
+
+const validateTriggers: ValidatorFn = (
+	diagnostics,
+	triggersFieldName,
+	triggersValue
+) => {
+	if (triggersValue === undefined || triggersValue === null) {
+		return true;
+	}
+
+	if (typeof triggersValue !== "object") {
+		diagnostics.errors.push(
+			`Expected "${triggersFieldName}" to be of type object but got ${JSON.stringify(
+				triggersValue
+			)}.`
+		);
+		return false;
+	}
+
+	let isValid = true;
+
+	if ("crons" in triggersValue && !Array.isArray(triggersValue.crons)) {
+		diagnostics.errors.push(
+			`Expected "${triggersFieldName}.crons" to be of type array, but got ${JSON.stringify(triggersValue)}.`
+		);
+		isValid = false;
+	}
+
+	isValid =
+		validateAdditionalProperties(
+			diagnostics,
+			triggersFieldName,
+			Object.keys(triggersValue),
+			["crons"]
+		) && isValid;
+
+	return isValid;
 };
 
 const validateRules =
@@ -2073,8 +2119,13 @@ const validateNamedSimpleBinding =
 			isValid = false;
 		}
 
+		if (!isRemoteValid(value, field, diagnostics)) {
+			isValid = false;
+		}
+
 		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 			"binding",
+			...(getFlag("MIXED_MODE") ? ["remote"] : []),
 		]);
 
 		return isValid;
@@ -2098,6 +2149,10 @@ const validateAIBinding =
 		let isValid = true;
 		if (!isRequiredProperty(value, "binding", "string")) {
 			diagnostics.errors.push(`binding should have a string "binding" field.`);
+			isValid = false;
+		}
+
+		if (!isRemoteValid(value, field, diagnostics)) {
 			isValid = false;
 		}
 
@@ -2290,6 +2345,22 @@ const validateContainerAppConfig: ValidatorFn = (
 			) {
 				diagnostics.errors.push(
 					`"containers.rollout_step_percentage" should be a number between 25 and 100, but got ${containerAppOptional.rollout_step_percentage}`
+				);
+			}
+		}
+
+		if (
+			"rollout_kind" in containerAppOptional &&
+			containerAppOptional.rollout_kind !== undefined
+		) {
+			if (
+				typeof containerAppOptional.rollout_kind !== "string" ||
+				!["full_auto", "full_manual", "none"].includes(
+					containerAppOptional.rollout_kind
+				)
+			) {
+				diagnostics.errors.push(
+					`"containers.rollout_kind" should be either 'full_auto', 'full_manual' or 'none', but got ${containerAppOptional.rollout_kind}`
 				);
 			}
 		}
@@ -2716,9 +2787,14 @@ const validateVectorizeBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"index_name",
+		...(getFlag("MIXED_MODE") ? ["remote"] : []),
 	]);
 
 	return isValid;
@@ -2992,6 +3068,11 @@ const validateWorkerNamespaceBinding: ValidatorFn = (
 			isValid = false;
 		}
 	}
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
 	return isValid;
 };
 

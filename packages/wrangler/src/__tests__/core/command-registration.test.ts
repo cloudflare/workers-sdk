@@ -225,10 +225,11 @@ describe("CommandRegistry", () => {
 		registry.define([
 			{
 				command: "wrangler original-command",
-				// @ts-expect-error missing definition
 				definition: {
 					metadata: {
 						status: "stable",
+						description: "Original command",
+						owner: "Workers: Authoring and Testing",
 					},
 				},
 			},

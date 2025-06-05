@@ -497,11 +497,8 @@ export default function getFrameworkTestConfig(pm: string) {
 					matcher: /Which template would you like to use/,
 					input: [keys.enter],
 				},
-				{
-					matcher: /Use Typescript/,
-					input: [keys.enter],
-				},
 			],
+			flags: ["--ts"],
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedPms: ["npm", "yarn"],
