@@ -4,7 +4,6 @@ import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
-import { maybeStartOrUpdateMixedModeSession } from "../mixedMode";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import {
@@ -164,6 +163,12 @@ export class LocalRuntimeController extends RuntimeController {
 				data.config.dev.experimentalMixedMode ?? false;
 
 			if (experimentalMixedMode && !data.config.dev?.remote) {
+				// note: mixedMode uses (transitively) LocalRuntimeController, so we need to import
+				// from the module lazily in order to avoid circular dependency issues
+				const { maybeStartOrUpdateMixedModeSession } = await import(
+					"../mixedMode"
+				);
+
 				this.#mixedModeSession = await maybeStartOrUpdateMixedModeSession(
 					{
 						name: configBundle.name,

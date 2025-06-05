@@ -3,7 +3,10 @@ import path from "node:path";
 import getPort from "get-port";
 import { readConfig } from "../../config";
 import { getBasePath } from "../../paths";
-import { startWorker } from "../startDevWorker";
+import {
+	convertConfigBindingsToStartWorkerBindings,
+	startWorker,
+} from "../startDevWorker";
 import type { Config } from "../../config";
 import type {
 	Binding,
@@ -120,10 +123,6 @@ export async function maybeStartOrUpdateMixedModeSession(
 	if (typeof configPathOrWorkerConfig === "string") {
 		const configPath = configPathOrWorkerConfig;
 		const config = readConfig({ config: configPath });
-
-		const { convertConfigBindingsToStartWorkerBindings } = await import(
-			"../startDevWorker"
-		);
 
 		assert(config.name);
 
