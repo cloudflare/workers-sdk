@@ -2,13 +2,20 @@ import { spawn } from "child_process";
 import { stat } from "fs/promises";
 import { getCIOverrideNetworkModeHost } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
+import { logger } from "../logger";
 import { ImageRegistriesService } from "./client";
+import { resolveAppDiskSize } from "./common";
+import { loadAccount } from "./locations";
 import type { Config } from "../config";
+import type { ContainerApp } from "../config/environment";
 import type {
 	CommonYargsArgvJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../yargs-types";
-import type { ImageRegistryPermissions } from "./client";
+import type {
+	CompleteAccountCustomer,
+	ImageRegistryPermissions,
+} from "./client";
 
 // default cloudflare managed registry
 const domain = "registry.cloudchamber.cfdata.org";
@@ -101,7 +108,7 @@ export function dockerBuild(options: {
 		const buildExec = options.buildCmd.split(" ").shift();
 		const child = spawn(String(buildExec), buildCmd, {
 			stdio: [
-				options.dockerfile !== undefined ? "pipe" : undefined,
+				options.dockerfile !== undefined ? "pipe" : "inherit",
 				"inherit",
 				"inherit",
 			],
@@ -212,6 +219,8 @@ export type BuildArgs = {
 	push: boolean;
 	// specify the contents of the dockerfile if not wanting to use the dockerfile directory
 	dockerfileContents?: string;
+	// sometimes the container config is not set, and we can use this to run other subcommands in the current context
+	container?: ContainerApp;
 	args?: Record<string, string>;
 };
 
@@ -239,6 +248,22 @@ export async function build(args: BuildArgs): Promise<string> {
 		});
 		await dockerBuild({ buildCmd: bc, dockerfile: args.dockerfileContents });
 
+		// ensure the account is not allowed to build anything that exceeds the current
+		// account's disk size limits
+		const account = await loadAccount();
+		const { size, layers } = await runDockerInspect(
+			getDefaultRegistry() + "/" + args.tag,
+			args.pathToDocker ?? "docker"
+		);
+		// 16MiB is the layer size adjustments we use in devmapper
+		const MiB = 1024 * 1024;
+		const requiredSize = Math.ceil(size * 1.1 + layers * 16 * MiB);
+		await ensureDiskLimits({
+			requiredSize,
+			account: account,
+			containerApp: args.container,
+		});
+
 		if (args.push) {
 			await dockerLoginManagedRegistry({
 				pathToDocker: args.pathToDocker,
@@ -259,14 +284,19 @@ export async function build(args: BuildArgs): Promise<string> {
 
 export async function buildCommand(
 	args: StrictYargsOptionsToInterfaceJSON<typeof buildYargs>,
-	_: Config
+	config: Config
 ) {
-	await build({
-		tag: args.tag,
-		pathToDockerfileDirectory: args.PATH,
-		pathToDocker: args.pathToDocker,
-		push: args.push,
-	});
+	// if containers are not defined, the build should still work.
+	const containers = config.containers ?? [undefined];
+	for (const container of containers.length > 0 ? containers : [undefined]) {
+		await build({
+			container,
+			tag: args.tag,
+			pathToDockerfileDirectory: args.PATH,
+			pathToDocker: args.pathToDocker,
+			push: args.push,
+		});
+	}
 }
 
 export async function pushCommand(
@@ -286,4 +316,71 @@ export async function pushCommand(
 
 		throw new UserError("An unknown error occurred");
 	}
+}
+
+export async function ensureDiskLimits(options: {
+	requiredSize: number;
+	account: CompleteAccountCustomer;
+	containerApp: ContainerApp | undefined;
+}): Promise<void> {
+	const MB = 1000 * 1000;
+	const MiB = 1024 * 1024;
+	const appDiskSize = resolveAppDiskSize(options.account, options.containerApp);
+	const accountDiskSize =
+		(options.account.limits.disk_mb_per_deployment ?? 2000) * MB;
+	// if appDiskSize is defined and configured to be more than the accountDiskSize, error
+	if (appDiskSize && appDiskSize > accountDiskSize) {
+		throw new UserError(
+			`Exceeded account limits: Your container is configured to use a disk size of ${appDiskSize / MB} MB. However, that exceeds the account limit of ${accountDiskSize / MB}`
+		);
+	}
+	const maxAllowedImageSizeBytes = appDiskSize ?? accountDiskSize;
+
+	logger.debug(
+		`Disk size limits when building the container: appDiskSize:${appDiskSize}, accountDiskSize:${accountDiskSize}, maxAllowedImageSizeBytes=${maxAllowedImageSizeBytes}(${maxAllowedImageSizeBytes / MB} MB), requiredSized=${options.requiredSize}(${Math.ceil(options.requiredSize / MiB)}MiB)`
+	);
+	if (maxAllowedImageSizeBytes < options.requiredSize) {
+		throw new UserError(
+			`Image too large: needs ${Math.ceil(options.requiredSize / MB)} MB, but your app is limited to images with size ${maxAllowedImageSizeBytes / MB} MB. Your account needs more disk size per instance to run this container. The default disk size is 2GB.`
+		);
+	}
+}
+
+export async function runDockerInspect(
+	image: string,
+	dockerPath: string
+): Promise<{ size: number; layers: number }> {
+	return new Promise((resolve, reject) => {
+		const proc = spawn(
+			dockerPath,
+			[
+				"image",
+				"inspect",
+				image,
+				"--format",
+				"{{ .Size }} {{ len .RootFS.Layers }}",
+			],
+			{
+				stdio: ["ignore", "pipe", "pipe"],
+			}
+		);
+
+		let stdout = "";
+		let stderr = "";
+
+		proc.stdout.on("data", (chunk) => (stdout += chunk));
+		proc.stderr.on("data", (chunk) => (stderr += chunk));
+
+		proc.on("close", (code) => {
+			if (code !== 0) {
+				return reject(
+					new Error(`failed inspecting image locally: ${stderr.trim()}`)
+				);
+			}
+			const [sizeStr, layerStr] = stdout.trim().split(" ");
+			resolve({ size: parseInt(sizeStr, 10), layers: parseInt(layerStr, 10) });
+		});
+
+		proc.on("error", (err) => reject(err));
+	});
 }
