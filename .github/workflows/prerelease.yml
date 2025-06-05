@@ -37,4 +37,4 @@ jobs:
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
 
       - name: Upload packages
-        run: node -r esbuild-register tools/deployments/upload.ts
+        run: node -r esbuild-register .github/prereleases/upload.mjs

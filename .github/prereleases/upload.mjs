@@ -7,19 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "../..");
 
-type PackageJson = {
-	name: string;
-	"workers-sdk": {
-		prerelease: boolean;
-	};
-};
-
-type Package = {
-	path: string;
-	json: PackageJson;
-};
-
-function getPackagePaths(): string[] {
+function getPackagePaths() {
 	const stdout = execSync(
 		'pnpm list --filter="./packages/*" --recursive --depth=-1 --parseable',
 		{ cwd: projectRoot, encoding: "utf8" }
@@ -27,7 +15,7 @@ function getPackagePaths(): string[] {
 	return stdout.split("\n").filter((pkgPath) => path.isAbsolute(pkgPath));
 }
 
-function getPackage(pkgPath: string): Package {
+function getPackage(pkgPath) {
 	const json = fs.readFileSync(path.join(pkgPath, "package.json"), "utf8");
 	return {
 		path: pkgPath,
