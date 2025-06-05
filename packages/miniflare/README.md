@@ -4,6 +4,10 @@
 [**Cloudflare Workers**](https://workers.cloudflare.com/), powered by
 [`workerd`](https://github.com/cloudflare/workerd).
 
+> :warning: Miniflare is a lower level API designed for tools creators, for
+> locally developing Workers use tools built on top of Miniflare such
+> as [Wrangler](../wrangler//README.md) or the [Cloudflare Vite plugin](../vite-plugin-cloudflare/README.md).
+
 ## Quick Start
 
 ```shell
