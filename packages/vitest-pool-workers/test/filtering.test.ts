@@ -22,8 +22,9 @@ test("filter test suite by pattern includes non-ascii string", async ({
 	});
 
 	const result = await vitestRun({
-		flags: ["--testNamePattern='test includes 日本語'"],
+		flags: ['--testNamePattern="test includes 日本語"'],
 	});
 
+	expect(result.stdout).toContain("index.test.ts (2 tests | 1 skipped)");
 	expect(await result.exitCode).toBe(0);
 });
