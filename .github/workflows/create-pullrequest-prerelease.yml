@@ -47,8 +47,8 @@ jobs:
         # that use `@actions/artifact`.
         uses: ./.github/actions/expose-actions-variables
 
-      - name: Update versions and dependencies
-        run: node .github/prereleases/1-versions.mjs
+      # - name: Update versions and dependencies
+      #   run: node .github/prereleases/1-versions.mjs
 
       - name: Build, pack, and upload packages
         run: node .github/prereleases/2-build-pack-upload.mjs

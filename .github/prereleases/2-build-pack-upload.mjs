@@ -56,7 +56,7 @@ async function uploadPackageArtifact(pkg, artifactPath) {
 
 	// Update dependency versions *after* the build, so Turborepo knows to build
 	// dependent packages first
-	updateDependencyVersions(pkgs);
+	// updateDependencyVersions(pkgs);
 	pkgs.forEach(setPackage);
 	let npmPackages = [];
 
@@ -75,7 +75,7 @@ async function uploadPackageArtifact(pkg, artifactPath) {
 	}
 	spawnSync(
 		"pnpm",
-		["dlx", "pkg-pr-new", "publish", "--compact", ...npmPackages],
+		["dlx", "pkg-pr-new", "publish", "--pnpm", "--compact", ...npmPackages],
 		{
 			stdio: "inherit",
 		}
