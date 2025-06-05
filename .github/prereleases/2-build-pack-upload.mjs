@@ -58,6 +58,7 @@ async function uploadPackageArtifact(pkg, artifactPath) {
 	// dependent packages first
 	updateDependencyVersions(pkgs);
 	pkgs.forEach(setPackage);
+	let npmPackages = [];
 
 	for (const pkg of pkgs) {
 		if (pkg.json["workers-sdk"].type === "extension") {
@@ -67,8 +68,10 @@ async function uploadPackageArtifact(pkg, artifactPath) {
 			);
 			await uploadPackageArtifact(pkg, filePath);
 		} else {
+			npmPackages.push(pkg.path);
 			const tarballPath = packPackage(pkg);
 			await uploadPackageArtifact(pkg, tarballPath);
 		}
 	}
+	execSync(["pnpm", "dlx", "pkg-pr-new", "publish", ...npmPackages]);
 }
