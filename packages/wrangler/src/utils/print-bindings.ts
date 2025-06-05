@@ -37,6 +37,7 @@ export const friendlyBindingNames: Record<
 	pipelines: "Pipeline",
 	secrets_store_secrets: "Secrets Store Secret",
 	assets: "Assets",
+	unsafe_hello_world: "Hello World",
 } as const;
 
 /**
@@ -103,6 +104,7 @@ export function printBindings(
 		mtls_certificates,
 		pipelines,
 		assets,
+		unsafe_hello_world,
 	} = bindings;
 
 	if (data_blobs !== undefined && Object.keys(data_blobs).length > 0) {
@@ -332,6 +334,19 @@ export function printBindings(
 					name: binding,
 					type: friendlyBindingNames.secrets_store_secrets,
 					value: `${store_id}/${secret_name}`,
+					mode: getMode({ isSimulatedLocally: true }),
+				};
+			})
+		);
+	}
+
+	if (unsafe_hello_world !== undefined && unsafe_hello_world.length > 0) {
+		output.push(
+			...unsafe_hello_world.map(({ binding, enable_timer }) => {
+				return {
+					name: binding,
+					type: friendlyBindingNames.unsafe_hello_world,
+					value: enable_timer ? `Timer enabled` : `Timer disabled`,
 					mode: getMode({ isSimulatedLocally: true }),
 				};
 			})

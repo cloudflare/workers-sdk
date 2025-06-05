@@ -147,6 +147,11 @@ export type WorkerMetadataBinding =
 			secret_name: string;
 	  }
 	| {
+			type: "unsafe_hello_world";
+			name: string;
+			enable_timer?: boolean;
+	  }
+	| {
 			type: "logfwdr";
 			name: string;
 			destination: string;
@@ -409,6 +414,14 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			});
 		}
 	);
+
+	bindings.unsafe_hello_world?.forEach(({ binding, enable_timer }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "unsafe_hello_world",
+			enable_timer,
+		});
+	});
 
 	bindings.services?.forEach(
 		({ binding, service, environment, entrypoint, props }) => {

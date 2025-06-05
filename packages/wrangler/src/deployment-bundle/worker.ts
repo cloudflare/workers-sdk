@@ -224,6 +224,11 @@ export interface CfSecretsStoreSecrets {
 	secret_name: string;
 }
 
+export interface CfHelloWorld {
+	binding: string;
+	enable_timer?: boolean;
+}
+
 export interface CfHyperdrive {
 	binding: string;
 	id: string;
@@ -382,6 +387,7 @@ export interface CfWorkerInit {
 		pipelines: CfPipeline[] | undefined;
 		unsafe: CfUnsafe | undefined;
 		assets: CfAssetsBinding | undefined;
+		unsafe_hello_world: CfHelloWorld[] | undefined;
 	};
 
 	containers?: { class_name: string }[];
