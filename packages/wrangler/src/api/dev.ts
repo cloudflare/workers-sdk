@@ -265,7 +265,7 @@ export function parseRequestInput(
 	if (typeof input === "string") {
 		input = new URL(input, "http://placeholder");
 	}
-	// Adapted from Miniflare 3's `dispatchFetch()` function
+	// Adapted from Miniflare's `dispatchFetch()` function
 	const forward = new Request(input, init);
 	const url = new URL(forward.url);
 	forward.headers.set("MF-Original-URL", url.toString());
