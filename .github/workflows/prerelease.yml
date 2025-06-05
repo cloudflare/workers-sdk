@@ -25,6 +25,8 @@ jobs:
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
           node-version: 22
 
+      - run: echo ${{ github.head_ref }}
+
       - name: Build
         run: pnpm run build
         env:
@@ -35,6 +37,7 @@ jobs:
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
           SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
+          WRANGLER_PRERELEASE_LABEL: ${{ github.head_ref }}
 
       - name: Upload packages
         run: node -r esbuild-register .github/prereleases/upload.mjs
