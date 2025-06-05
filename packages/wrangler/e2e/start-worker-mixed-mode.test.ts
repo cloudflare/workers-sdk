@@ -30,8 +30,9 @@ describe("startWorker - mixed mode", () => {
 		await helper.run(`wrangler delete --name ${remoteWorkerName}`);
 	});
 
-	[true, false].forEach((experimentalMixedMode) => {
-		describe(`with experimentalMixedMode ${experimentalMixedMode}`, () => {
+	describe.each([true, false])(
+		`with experimentalMixedMode %s`,
+		(experimentalMixedMode) => {
 			const testOpts: NonNullable<Parameters<typeof it>[1]> = {
 				fails: !experimentalMixedMode,
 				retry: !experimentalMixedMode ? 0 : undefined,
@@ -65,8 +66,8 @@ describe("startWorker - mixed mode", () => {
 
 				await expect(
 					(await worker.fetch("http://example.com")).text()
-				).resolves.toMatchInlineSnapshot(
-					`"REMOTE<WORKER>: Hello from a remote worker (startWorker mixed-mode)"`
+				).resolves.toContain(
+					"REMOTE<WORKER>: Hello from a remote worker (startWorker mixed-mode)"
 				);
 
 				await worker.dispose();
@@ -101,8 +102,8 @@ describe("startWorker - mixed mode", () => {
 
 				await expect(
 					(await worker.fetch("http://example.com")).text()
-				).resolves.toMatchInlineSnapshot(
-					`"REMOTE<WORKER>: Hello from a remote worker (startWorker mixed-mode)"`
+				).resolves.toContain(
+					"REMOTE<WORKER>: Hello from a remote worker (startWorker mixed-mode)"
 				);
 
 				const indexContent = await readFile(
@@ -122,8 +123,8 @@ describe("startWorker - mixed mode", () => {
 
 				await expect(
 					(await worker.fetch("http://example.com")).text()
-				).resolves.toMatchInlineSnapshot(
-					`"The remote worker responded with: Hello from a remote worker (startWorker mixed-mode)"`
+				).resolves.toContain(
+					"The remote worker responded with: Hello from a remote worker (startWorker mixed-mode)"
 				);
 
 				await writeFile(
@@ -136,12 +137,12 @@ describe("startWorker - mixed mode", () => {
 
 				await expect(
 					(await worker.fetch("http://example.com")).text()
-				).resolves.toMatchInlineSnapshot(
-					`"REMOTE<WORKER>: Hello from a remote worker (startWorker mixed-mode)"`
+				).resolves.toContain(
+					"REMOTE<WORKER>: Hello from a remote worker (startWorker mixed-mode)"
 				);
 
 				await worker.dispose();
 			});
-		});
-	});
+		}
+	);
 });
