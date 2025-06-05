@@ -62,6 +62,11 @@ import {
 	JsonFriendlyFatalError,
 	UserError,
 } from "./errors";
+import {
+	helloWorldGetCommand,
+	helloWorldNamespace,
+	helloWorldSetCommand,
+} from "./hello-world";
 import { hyperdriveCreateCommand } from "./hyperdrive/create";
 import { hyperdriveDeleteCommand } from "./hyperdrive/delete";
 import { hyperdriveGetCommand } from "./hyperdrive/get";
@@ -1330,6 +1335,19 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("pipelines");
+
+	registry.define([
+		{ command: "wrangler hello-world", definition: helloWorldNamespace },
+		{
+			command: "wrangler hello-world get",
+			definition: helloWorldGetCommand,
+		},
+		{
+			command: "wrangler hello-world set",
+			definition: helloWorldSetCommand,
+		},
+	]);
+	registry.registerNamespace("hello-world");
 
 	/******************** CMD GROUP ***********************/
 
