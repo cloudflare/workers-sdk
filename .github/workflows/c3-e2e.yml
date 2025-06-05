@@ -16,8 +16,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-13, windows-2022]
-        pm: [{ name: pnpm, version: "9.12.0" }]
+        os: [ubuntu-latest, macos-13]
+        pm: [{ name: npm, version: "0.0.0" }, { name: yarn, version: "1.0.0" }]
+        # include a single windows test with pnpm
+        include:
+          - os: windows-latest
+            pm: { name: pnpm, version: "9.12.0" }
 
     runs-on: ${{ matrix.os }}
     steps:
