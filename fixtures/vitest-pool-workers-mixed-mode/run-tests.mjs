@@ -2,12 +2,12 @@ import { execSync } from "child_process";
 import { randomUUID } from "crypto";
 import { cpSync, readFileSync, rmSync, writeFileSync } from "fs";
 
-if (!process.env.CLOUDFLARE_API_TOKEN) {
+if (!process.env.TEST_CLOUDFLARE_API_TOKEN) {
 	console.error("CLOUDFLARE_API_TOKEN must be set");
 	process.exit(1);
 }
 
-if (!process.env.CLOUDFLARE_ACCOUNT_ID) {
+if (!process.env.TEST_CLOUDFLARE_ACCOUNT_ID) {
 	console.error("CLOUDFLARE_ACCOUNT_ID must be set");
 	process.exit(1);
 }
@@ -29,9 +29,18 @@ writeFileSync(
 	"utf8"
 );
 
+const env = {
+	...process.env,
+	CLOUDFLARE_API_TOKEN: process.env.TEST_CLOUDFLARE_API_TOKEN,
+	TEST_CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
+};
+
 const deployOut = execSync(
 	`pnpm dlx wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-01-01`,
-	{ stdio: "pipe" }
+	{
+		stdio: "pipe",
+		env,
+	}
 );
 
 if (!new RegExp(`Deployed\\s+${remoteWorkerName}\\b`).test(`${deployOut}`)) {
@@ -40,12 +49,12 @@ if (!new RegExp(`Deployed\\s+${remoteWorkerName}\\b`).test(`${deployOut}`)) {
 
 let errored = false;
 try {
-	execSync("pnpm test:vitest --config ./tmp/vitest.workers.config.ts");
+	execSync("pnpm test:vitest --config ./tmp/vitest.workers.config.ts", { env });
 } catch {
 	errored = true;
 }
 
-execSync(`pnpm dlx wrangler delete --name ${remoteWorkerName}`);
+execSync(`pnpm dlx wrangler delete --name ${remoteWorkerName}`, { env });
 
 rmSync("./tmp", { recursive: true, force: true });
 
