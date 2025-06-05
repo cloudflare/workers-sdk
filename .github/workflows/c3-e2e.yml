@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        pm: [{ name: npm, version: "0.0.0" }, { name: yarn, version: "1.0.0" }]
+        pm: [{ name: npm, version: "0.0.0" }, { name: yarn, version: "1.22.22" }]
         # include a single windows test with pnpm
         include:
           - os: windows-latest
