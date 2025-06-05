@@ -1,6 +1,14 @@
 name: Prerelease
 
-on: [push, pull_request]
+on: 
+ pull_request:
+ push:
+    branches:
+      - main
+      - d1
+      - workflows
+      - next
+      - v3-maintenance
 
 jobs:
   build:
