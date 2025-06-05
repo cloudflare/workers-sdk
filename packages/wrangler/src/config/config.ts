@@ -229,6 +229,15 @@ export interface DevConfig {
 	 * Host to forward requests to, defaults to the host of the first route of project
 	 */
 	host: string | undefined;
+
+	/**
+	 * When developing, whether to ignore any configured containers. Otherwise, we will error early if the docker daemon is not running.
+	 * Defaults to `false`.
+	 *
+	 * @inheritable
+	 * @default false
+	 */
+	ignore_containers: boolean;
 }
 
 export type RawDevConfig = Partial<DevConfig>;
@@ -276,6 +285,8 @@ export const defaultWranglerConfig: Config = {
 		local_protocol: "http",
 		upstream_protocol: "http",
 		host: undefined,
+		// Note this one is also workers only
+		ignore_containers: false, // default to false so we can error early if the docker daemon is not running
 	},
 
 	/** INHERITABLE ENVIRONMENT FIELDS **/
