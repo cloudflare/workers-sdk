@@ -10,9 +10,9 @@ import { SharedBindings } from "../../workers";
 import {
 	getMiniflareObjectBindings,
 	getPersistPath,
+	hybridClientWorker,
+	HybridConnectionString,
 	migrateDatabase,
-	mixedModeClientWorker,
-	MixedModeConnectionString,
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
@@ -29,9 +29,7 @@ export const R2OptionsSchema = z.object({
 			z.record(
 				z.object({
 					id: z.string(),
-					mixedModeConnectionString: z
-						.custom<MixedModeConnectionString>()
-						.optional(),
+					hybridConnectionString: z.custom<HybridConnectionString>().optional(),
 				})
 			),
 			z.string().array(),
@@ -81,10 +79,10 @@ export const R2_PLUGIN: Plugin<
 		const persist = sharedOptions.r2Persist;
 		const buckets = namespaceEntries(options.r2Buckets);
 		const services = buckets.map<Service>(
-			([name, { id, mixedModeConnectionString }]) => ({
+			([name, { id, hybridConnectionString }]) => ({
 				name: `${R2_BUCKET_SERVICE_PREFIX}:${id}`,
-				worker: mixedModeConnectionString
-					? mixedModeClientWorker(mixedModeConnectionString, name)
+				worker: hybridConnectionString
+					? hybridClientWorker(hybridConnectionString, name)
 					: objectEntryWorker(R2_BUCKET_OBJECT, id),
 			})
 		);

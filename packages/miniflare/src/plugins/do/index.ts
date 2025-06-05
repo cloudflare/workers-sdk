@@ -4,8 +4,8 @@ import { Worker_Binding } from "../../runtime";
 import { getUserServiceName } from "../core";
 import {
 	getPersistPath,
+	HybridConnectionString,
 	kUnsafeEphemeralUniqueKey,
-	MixedModeConnectionString,
 	PersistenceSchema,
 	Plugin,
 	ProxyNodeBinding,
@@ -30,9 +30,7 @@ export const DurableObjectsOptionsSchema = z.object({
 						.optional(),
 					// Prevents the Durable Object being evicted.
 					unsafePreventEviction: z.boolean().optional(),
-					mixedModeConnectionString: z
-						.custom<MixedModeConnectionString>()
-						.optional(),
+					hybridConnectionString: z.custom<HybridConnectionString>().optional(),
 				}),
 			])
 		)
@@ -53,7 +51,7 @@ export function normaliseDurableObject(
 	enableSql: boolean | undefined;
 	unsafeUniqueKey: UnsafeUniqueKey | undefined;
 	unsafePreventEviction: boolean | undefined;
-	mixedModeConnectionString: MixedModeConnectionString | undefined;
+	hybridConnectionString: HybridConnectionString | undefined;
 } {
 	const isObject = typeof designator === "object";
 	const className = isObject ? designator.className : designator;
@@ -67,8 +65,8 @@ export function normaliseDurableObject(
 	const unsafePreventEviction = isObject
 		? designator.unsafePreventEviction
 		: undefined;
-	const mixedModeConnectionString = isObject
-		? designator.mixedModeConnectionString
+	const hybridConnectionString = isObject
+		? designator.hybridConnectionString
 		: undefined;
 	return {
 		className,
@@ -77,7 +75,7 @@ export function normaliseDurableObject(
 		enableSql,
 		unsafeUniqueKey,
 		unsafePreventEviction,
-		mixedModeConnectionString,
+		hybridConnectionString,
 	};
 }
 

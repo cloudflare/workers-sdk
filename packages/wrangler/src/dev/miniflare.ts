@@ -47,8 +47,8 @@ import type { LoggerLevel } from "../logger";
 import type { LegacyAssetPaths } from "../sites";
 import type { EsbuildBundle } from "./use-esbuild";
 import type {
+	HybridConnectionString,
 	MiniflareOptions,
-	MixedModeConnectionString,
 	SourceOptions,
 	WorkerOptions,
 } from "miniflare";
@@ -323,42 +323,33 @@ function getRemoteId(id: string | symbol | undefined): string | null {
 
 function kvNamespaceEntry(
 	{ binding, id: originalId, remote }: CfKvNamespace,
-	mixedModeConnectionString?: MixedModeConnectionString
-): [
-	string,
-	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
-] {
+	hybridConnectionString?: HybridConnectionString
+): [string, { id: string; hybridConnectionString?: HybridConnectionString }] {
 	const id = getRemoteId(originalId) ?? binding;
-	if (!mixedModeConnectionString || !remote) {
+	if (!hybridConnectionString || !remote) {
 		return [binding, { id }];
 	}
-	return [binding, { id, mixedModeConnectionString }];
+	return [binding, { id, hybridConnectionString }];
 }
 function r2BucketEntry(
 	{ binding, bucket_name, remote }: CfR2Bucket,
-	mixedModeConnectionString?: MixedModeConnectionString
-): [
-	string,
-	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
-] {
+	hybridConnectionString?: HybridConnectionString
+): [string, { id: string; hybridConnectionString?: HybridConnectionString }] {
 	const id = getRemoteId(bucket_name) ?? binding;
-	if (!mixedModeConnectionString || !remote) {
+	if (!hybridConnectionString || !remote) {
 		return [binding, { id }];
 	}
-	return [binding, { id, mixedModeConnectionString }];
+	return [binding, { id, hybridConnectionString }];
 }
 function d1DatabaseEntry(
 	{ binding, database_id, preview_database_id, remote }: CfD1Database,
-	mixedModeConnectionString?: MixedModeConnectionString
-): [
-	string,
-	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
-] {
+	hybridConnectionString?: HybridConnectionString
+): [string, { id: string; hybridConnectionString?: HybridConnectionString }] {
 	const id = getRemoteId(preview_database_id ?? database_id) ?? binding;
-	if (!mixedModeConnectionString || !remote) {
+	if (!hybridConnectionString || !remote) {
 		return [binding, { id }];
 	}
-	return [binding, { id, mixedModeConnectionString }];
+	return [binding, { id, hybridConnectionString }];
 }
 function queueProducerEntry(
 	{
@@ -367,20 +358,20 @@ function queueProducerEntry(
 		delivery_delay: deliveryDelay,
 		remote,
 	}: CfQueue,
-	mixedModeConnectionString?: MixedModeConnectionString
+	hybridConnectionString?: HybridConnectionString
 ): [
 	string,
 	{
 		queueName: string;
 		deliveryDelay: number | undefined;
-		mixedModeConnectionString?: MixedModeConnectionString;
+		hybridConnectionString?: HybridConnectionString;
 	},
 ] {
-	if (!mixedModeConnectionString || !remote) {
+	if (!hybridConnectionString || !remote) {
 		return [binding, { queueName, deliveryDelay }];
 	}
 
-	return [binding, { queueName, deliveryDelay, mixedModeConnectionString }];
+	return [binding, { queueName, deliveryDelay, hybridConnectionString }];
 }
 function pipelineEntry(pipeline: CfPipeline): [string, string] {
 	return [pipeline.binding, pipeline.pipeline];
@@ -396,17 +387,17 @@ function workflowEntry(
 		script_name: scriptName,
 		remote,
 	}: CfWorkflow,
-	mixedModeConnectionString?: MixedModeConnectionString
+	hybridConnectionString?: HybridConnectionString
 ): [
 	string,
 	{
 		name: string;
 		className: string;
 		scriptName?: string;
-		mixedModeConnectionString?: MixedModeConnectionString;
+		hybridConnectionString?: HybridConnectionString;
 	},
 ] {
-	if (!mixedModeConnectionString || !remote) {
+	if (!hybridConnectionString || !remote) {
 		return [
 			binding,
 			{
@@ -423,7 +414,7 @@ function workflowEntry(
 			name,
 			className,
 			scriptName,
-			mixedModeConnectionString,
+			hybridConnectionString,
 		},
 	];
 }
@@ -434,22 +425,22 @@ function dispatchNamespaceEntry({
 }: CfDispatchNamespace): [string, { namespace: string }];
 function dispatchNamespaceEntry(
 	{ binding, namespace, remote }: CfDispatchNamespace,
-	mixedModeConnectionString: MixedModeConnectionString
+	hybridConnectionString: HybridConnectionString
 ): [
 	string,
-	{ namespace: string; mixedModeConnectionString: MixedModeConnectionString },
+	{ namespace: string; hybridConnectionString: HybridConnectionString },
 ];
 function dispatchNamespaceEntry(
 	{ binding, namespace, remote }: CfDispatchNamespace,
-	mixedModeConnectionString?: MixedModeConnectionString
+	hybridConnectionString?: HybridConnectionString
 ): [
 	string,
-	{ namespace: string; mixedModeConnectionString?: MixedModeConnectionString },
+	{ namespace: string; hybridConnectionString?: HybridConnectionString },
 ] {
-	if (!mixedModeConnectionString || !remote) {
+	if (!hybridConnectionString || !remote) {
 		return [binding, { namespace }];
 	}
-	return [binding, { namespace, mixedModeConnectionString }];
+	return [binding, { namespace, hybridConnectionString }];
 }
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function ratelimitEntry(ratelimit: CfUnsafeBinding): [string, any] {
@@ -516,8 +507,8 @@ type MiniflareBindingsConfig = Pick<
 //  each plugin options schema and use those
 export function buildMiniflareBindingOptions(
 	config: MiniflareBindingsConfig,
-	mixedModeConnectionString: MixedModeConnectionString | undefined,
-	mixedModeEnabled: boolean
+	hybridConnectionString: HybridConnectionString | undefined,
+	hybridEnabled: boolean
 ): {
 	bindingOptions: WorkerOptionsBindings;
 	internalObjects: CfDurableObject[];
@@ -552,12 +543,12 @@ export function buildMiniflareBindingOptions(
 
 	const notFoundServices = new Set<string>();
 	for (const service of config.services ?? []) {
-		if (mixedModeConnectionString && service.remote) {
+		if (hybridConnectionString && service.remote) {
 			serviceBindings[service.binding] = {
 				name: service.service,
 				props: service.props,
 				entrypoint: service.entrypoint,
-				mixedModeConnectionString,
+				hybridConnectionString,
 			};
 			continue;
 		}
@@ -775,7 +766,7 @@ export function buildMiniflareBindingOptions(
 	}
 
 	const wrappedBindings: WorkerOptions["wrappedBindings"] = {};
-	if (bindings.ai?.binding && !mixedModeEnabled) {
+	if (bindings.ai?.binding && !hybridEnabled) {
 		externalWorkers.push({
 			name: `${EXTERNAL_AI_WORKER_NAME}:${config.name}`,
 			modules: [
@@ -797,20 +788,16 @@ export function buildMiniflareBindingOptions(
 		};
 	}
 
-	if (bindings.ai && mixedModeEnabled) {
+	if (bindings.ai && hybridEnabled) {
 		warnOrError("ai", bindings.ai.remote, "always-remote");
 	}
 
-	if (bindings.browser && mixedModeEnabled) {
+	if (bindings.browser && hybridEnabled) {
 		warnOrError("browser", bindings.browser.remote, "remote");
 	}
 
 	// Uses the implementation in miniflare instead if the users enable local mode
-	if (
-		bindings.images?.binding &&
-		!config.imagesLocalMode &&
-		!mixedModeEnabled
-	) {
+	if (bindings.images?.binding && !config.imagesLocalMode && !hybridEnabled) {
 		externalWorkers.push({
 			name: `${EXTERNAL_IMAGES_WORKER_NAME}:${config.name}`,
 			modules: [
@@ -832,7 +819,7 @@ export function buildMiniflareBindingOptions(
 		};
 	}
 
-	if (bindings.vectorize && !mixedModeEnabled) {
+	if (bindings.vectorize && !hybridEnabled) {
 		for (const vectorizeBinding of bindings.vectorize) {
 			const bindingName = vectorizeBinding.binding;
 			const indexName = vectorizeBinding.index_name;
@@ -878,31 +865,31 @@ export function buildMiniflareBindingOptions(
 		wasmBindings,
 
 		ai:
-			bindings.ai && mixedModeConnectionString
+			bindings.ai && hybridConnectionString
 				? {
 						binding: bindings.ai.binding,
-						mixedModeConnectionString,
+						hybridConnectionString,
 					}
 				: undefined,
 
 		kvNamespaces: Object.fromEntries(
 			bindings.kv_namespaces?.map((kv) =>
-				kvNamespaceEntry(kv, mixedModeConnectionString)
+				kvNamespaceEntry(kv, hybridConnectionString)
 			) ?? []
 		),
 		r2Buckets: Object.fromEntries(
 			bindings.r2_buckets?.map((r2) =>
-				r2BucketEntry(r2, mixedModeConnectionString)
+				r2BucketEntry(r2, hybridConnectionString)
 			) ?? []
 		),
 		d1Databases: Object.fromEntries(
 			bindings.d1_databases?.map((d1) =>
-				d1DatabaseEntry(d1, mixedModeConnectionString)
+				d1DatabaseEntry(d1, hybridConnectionString)
 			) ?? []
 		),
 		queueProducers: Object.fromEntries(
 			bindings.queues?.map((queue) =>
-				queueProducerEntry(queue, mixedModeConnectionString)
+				queueProducerEntry(queue, hybridConnectionString)
 			) ?? []
 		),
 		queueConsumers: Object.fromEntries(
@@ -920,7 +907,7 @@ export function buildMiniflareBindingOptions(
 		),
 		workflows: Object.fromEntries(
 			bindings.workflows?.map((workflow) =>
-				workflowEntry(workflow, mixedModeConnectionString)
+				workflowEntry(workflow, hybridConnectionString)
 			) ?? []
 		),
 		secretsStoreSecrets: Object.fromEntries(
@@ -933,25 +920,25 @@ export function buildMiniflareBindingOptions(
 			send_email: bindings.send_email,
 		},
 		images:
-			bindings.images && (config.imagesLocalMode || mixedModeEnabled)
+			bindings.images && (config.imagesLocalMode || hybridEnabled)
 				? {
 						binding: bindings.images.binding,
-						mixedModeConnectionString:
-							bindings.images.remote && mixedModeConnectionString
-								? mixedModeConnectionString
+						hybridConnectionString:
+							bindings.images.remote && hybridConnectionString
+								? hybridConnectionString
 								: undefined,
 					}
 				: undefined,
 		browserRendering:
-			mixedModeEnabled && mixedModeConnectionString && bindings.browser?.remote
+			hybridEnabled && hybridConnectionString && bindings.browser?.remote
 				? {
 						binding: bindings.browser.binding,
-						mixedModeConnectionString,
+						hybridConnectionString,
 					}
 				: undefined,
 
 		vectorize:
-			mixedModeEnabled && mixedModeConnectionString
+			hybridEnabled && hybridConnectionString
 				? Object.fromEntries(
 						bindings.vectorize
 							?.filter((v) => {
@@ -963,7 +950,7 @@ export function buildMiniflareBindingOptions(
 									vectorize.binding,
 									{
 										index_name: vectorize.index_name,
-										mixedModeConnectionString,
+										hybridConnectionString,
 									},
 								];
 							}) ?? []
@@ -971,7 +958,7 @@ export function buildMiniflareBindingOptions(
 				: undefined,
 
 		dispatchNamespaces:
-			mixedModeEnabled && mixedModeConnectionString
+			hybridEnabled && hybridConnectionString
 				? Object.fromEntries(
 						bindings.dispatch_namespaces
 							?.filter((d) => {
@@ -981,7 +968,7 @@ export function buildMiniflareBindingOptions(
 							.map((dispatchNamespace) =>
 								dispatchNamespaceEntry(
 									dispatchNamespace,
-									mixedModeConnectionString
+									hybridConnectionString
 								)
 							) ?? []
 					)
@@ -1220,8 +1207,8 @@ export async function buildMiniflareOptions(
 	log: Log,
 	config: Omit<ConfigBundle, "rules">,
 	proxyToUserWorkerAuthenticationSecret: UUID,
-	mixedModeConnectionString: MixedModeConnectionString | undefined,
-	mixedModeEnabled: boolean
+	hybridConnectionString: HybridConnectionString | undefined,
+	hybridEnabled: boolean
 ): Promise<{
 	options: Options;
 	internalObjects: CfDurableObject[];
@@ -1236,7 +1223,7 @@ export async function buildMiniflareOptions(
 		}
 	}
 
-	if (!mixedModeEnabled) {
+	if (!hybridEnabled) {
 		if (config.bindings.ai) {
 			if (!didWarnAiAccountUsage) {
 				didWarnAiAccountUsage = true;
@@ -1257,7 +1244,7 @@ export async function buildMiniflareOptions(
 			if (!didWarnMiniflareVectorizeSupport) {
 				didWarnMiniflareVectorizeSupport = true;
 				logger.warn(
-					"You are using a mixed-mode binding for Vectorize (through `--experimental-vectorize-bind-to-prod`). It may incur usage charges and modify your databases even in local development. "
+					"You are using a hybrid binding for Vectorize (through `--experimental-vectorize-bind-to-prod`). It may incur usage charges and modify your databases even in local development. "
 				);
 			}
 		}
@@ -1270,11 +1257,7 @@ export async function buildMiniflareOptions(
 
 	const { sourceOptions, entrypointNames } = await buildSourceOptions(config);
 	const { bindingOptions, internalObjects, externalWorkers } =
-		buildMiniflareBindingOptions(
-			config,
-			mixedModeConnectionString,
-			mixedModeEnabled
-		);
+		buildMiniflareBindingOptions(config, hybridConnectionString, hybridEnabled);
 	const sitesOptions = buildSitesOptions(config);
 	const defaultPersistRoot = getDefaultPersistRoot(config.localPersistencePath);
 	const assetOptions = buildAssetOptions(config);

@@ -22,8 +22,8 @@ import type { AssetsOptions } from "../../../assets";
 import type { Config, RawConfig, RawEnvironment } from "../../../config";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
+	HybridConnectionString,
 	MiniflareOptions,
-	MixedModeConnectionString,
 	ModuleRule,
 	WorkerOptions,
 } from "miniflare";
@@ -259,8 +259,8 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		imagesLocalMode?: boolean;
-		mixedModeConnectionString?: MixedModeConnectionString;
-		mixedModeEnabled?: boolean;
+		hybridConnectionString?: HybridConnectionString;
+		hybridEnabled?: boolean;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
@@ -271,8 +271,8 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		imagesLocalMode?: boolean;
-		mixedModeConnectionString?: MixedModeConnectionString;
-		mixedModeEnabled?: boolean;
+		hybridConnectionString?: HybridConnectionString;
+		hybridEnabled?: boolean;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
@@ -283,8 +283,8 @@ export function unstable_getMiniflareWorkerOptions(
 	env?: string,
 	options?: {
 		imagesLocalMode?: boolean;
-		mixedModeConnectionString?: MixedModeConnectionString;
-		mixedModeEnabled?: boolean;
+		hybridConnectionString?: HybridConnectionString;
+		hybridEnabled?: boolean;
 		overrides?: {
 			assets?: Partial<AssetsOptions>;
 		};
@@ -318,8 +318,8 @@ export function unstable_getMiniflareWorkerOptions(
 			tails: config.tail_consumers,
 			containers: {},
 		},
-		options?.mixedModeConnectionString,
-		options?.mixedModeEnabled ?? false
+		options?.hybridConnectionString,
+		options?.hybridEnabled ?? false
 	);
 
 	// This function is currently only exported for the Workers Vitest pool.
@@ -333,13 +333,13 @@ export function unstable_getMiniflareWorkerOptions(
 			bindings.services.map((binding) => {
 				const name =
 					binding.service === config.name ? kCurrentWorker : binding.service;
-				if (options?.mixedModeConnectionString && binding.remote) {
+				if (options?.hybridConnectionString && binding.remote) {
 					return [
 						binding.binding,
 						{
 							name,
 							entrypoint: binding.entrypoint,
-							mixedModeConnectionString: options.mixedModeConnectionString,
+							hybridConnectionString: options.hybridConnectionString,
 						},
 					];
 				}

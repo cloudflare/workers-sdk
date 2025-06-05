@@ -214,7 +214,7 @@ export async function unstable_dev(
 		logLevel: options?.logLevel ?? defaultLogLevel,
 		port: options?.port ?? 0,
 		experimentalProvision: undefined,
-		experimentalMixedMode: false,
+		experimentalHybrid: false,
 		experimentalVectorizeBindToProd: vectorizeBindToProd ?? false,
 		experimentalImagesLocalMode: imagesLocalMode ?? false,
 		enableIpc: options?.experimental?.enableIpc,

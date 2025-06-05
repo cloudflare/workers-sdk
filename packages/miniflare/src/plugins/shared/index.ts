@@ -140,21 +140,20 @@ export function namespaceKeys(
 	}
 }
 
-export type MixedModeConnectionString = URL & {
-	__brand: "MixedModeConnectionString";
+export type HybridConnectionString = URL & {
+	__brand: "HybridConnectionString";
 };
 
 export function namespaceEntries(
 	namespaces?:
 		| Record<
 				string,
-				| string
-				| { id: string; mixedModeConnectionString?: MixedModeConnectionString }
+				string | { id: string; hybridConnectionString?: HybridConnectionString }
 		  >
 		| string[]
 ): [
 	bindingName: string,
-	{ id: string; mixedModeConnectionString?: MixedModeConnectionString },
+	{ id: string; hybridConnectionString?: HybridConnectionString },
 ][] {
 	if (Array.isArray(namespaces)) {
 		return namespaces.map((bindingName) => [bindingName, { id: bindingName }]);
@@ -167,7 +166,7 @@ export function namespaceEntries(
 				key,
 				{
 					id: value.id,
-					mixedModeConnectionString: value.mixedModeConnectionString,
+					hybridConnectionString: value.hybridConnectionString,
 				},
 			];
 		});

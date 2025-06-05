@@ -15,7 +15,7 @@ import { globSync } from "tinyglobby";
 import * as vite from "vite";
 import {
 	experimental_pickRemoteBindings,
-	experimental_startMixedModeSession,
+	experimental_startHybridSession,
 	unstable_convertConfigBindingsToStartWorkerBindings,
 	unstable_getMiniflareWorkerOptions,
 } from "wrangler";
@@ -36,7 +36,7 @@ import type {
 import type { MiniflareOptions, WorkerOptions } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
 import type {
-	Experimental_MixedModeSession,
+	Experimental_HybridSession,
 	SourcelessWorkerOptions,
 	Unstable_Config,
 } from "wrangler";
@@ -312,9 +312,8 @@ export async function getDevMiniflareOptions(
 			? await Promise.all(
 					Object.entries(resolvedPluginConfig.workers).map(
 						async ([environmentName, workerConfig]) => {
-							const mixedModeSession = resolvedPluginConfig.experimental
-								.mixedMode
-								? await maybeStartOrUpdateMixedModeSession(workerConfig)
+							const hybridSession = resolvedPluginConfig.experimental.hybrid
+								? await maybeStartOrUpdateHybridSession(workerConfig)
 								: undefined;
 
 							const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
@@ -324,9 +323,8 @@ export async function getDevMiniflareOptions(
 								},
 								resolvedPluginConfig.cloudflareEnv,
 								{
-									mixedModeConnectionString:
-										mixedModeSession?.mixedModeConnectionString,
-									mixedModeEnabled: resolvedPluginConfig.experimental.mixedMode,
+									hybridConnectionString: hybridSession?.hybridConnectionString,
+									hybridEnabled: resolvedPluginConfig.experimental.hybrid,
 								}
 							);
 
@@ -591,24 +589,23 @@ export async function getPreviewMiniflareOptions(
 	vitePreviewServer: vite.PreviewServer,
 	workerConfigs: Unstable_Config[],
 	persistState: PersistState,
-	mixedModeEnabled: boolean,
+	hybridEnabled: boolean,
 	inspectorPort: number | false
 ): Promise<MiniflareOptions> {
 	const resolvedViteConfig = vitePreviewServer.config;
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
 			workerConfigs.map(async (workerConfig, i) => {
-				const mixedModeSession = mixedModeEnabled
-					? await maybeStartOrUpdateMixedModeSession(workerConfig)
+				const hybridSession = hybridEnabled
+					? await maybeStartOrUpdateHybridSession(workerConfig)
 					: undefined;
 
 				const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
 					workerConfig,
 					undefined,
 					{
-						mixedModeConnectionString:
-							mixedModeSession?.mixedModeConnectionString,
-						mixedModeEnabled,
+						hybridConnectionString: hybridSession?.hybridConnectionString,
+						hybridEnabled,
 					}
 				);
 
@@ -706,36 +703,36 @@ function miniflareLogLevelFromViteLogLevel(
 }
 
 /** Map containing all the potential worker mixed mode existing sessions, it maps a worker name to its mixed mode session */
-const mixedModeSessionsMap = new Map<string, Experimental_MixedModeSession>();
+const hybridSessionsMap = new Map<string, Experimental_HybridSession>();
 
-async function maybeStartOrUpdateMixedModeSession(
+async function maybeStartOrUpdateHybridSession(
 	workerConfig: WorkerConfig | Unstable_Config
-): Promise<Experimental_MixedModeSession | undefined> {
+): Promise<Experimental_HybridSession | undefined> {
 	const workerRemoteBindings = experimental_pickRemoteBindings(
 		unstable_convertConfigBindingsToStartWorkerBindings(workerConfig) ?? {}
 	);
 
 	assert(workerConfig.name, "Found workerConfig without a name");
 
-	let mixedModeSession = mixedModeSessionsMap.get(workerConfig.name);
+	let hybridSession = hybridSessionsMap.get(workerConfig.name);
 
 	// TODO(DEVX-1893): here we can save the converted remote bindings
 	//             and on new iterations we can diff the old and new
 	//             converted remote bindings, if they are all the
-	//             same we can just leave the mixedModeSession untouched
-	if (mixedModeSession === undefined) {
+	//             same we can just leave the hybridSession untouched
+	if (hybridSession === undefined) {
 		if (Object.keys(workerRemoteBindings).length > 0) {
-			mixedModeSession =
-				await experimental_startMixedModeSession(workerRemoteBindings);
-			mixedModeSessionsMap.set(workerConfig.name, mixedModeSession);
+			hybridSession =
+				await experimental_startHybridSession(workerRemoteBindings);
+			hybridSessionsMap.set(workerConfig.name, hybridSession);
 		}
 	} else {
 		// Note: we always call updateBindings even when there are zero remote bindings, in these
 		//       cases we could terminate the remote session if we wanted, that's probably
 		//       something to consider down the line
-		await mixedModeSession.updateBindings(workerRemoteBindings);
+		await hybridSession.updateBindings(workerRemoteBindings);
 	}
 
-	await mixedModeSession?.ready;
-	return mixedModeSession;
+	await hybridSession?.ready;
+	return hybridSession;
 }

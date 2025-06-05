@@ -16,13 +16,13 @@ describe("wrangler dev - mixed mode", () => {
 	const helper = new WranglerE2ETestHelper();
 
 	beforeAll(async () => {
-		await helper.seed(resolve(__dirname, "./seed-files/mixed-mode-workers"));
+		await helper.seed(resolve(__dirname, "./seed-files/hybrid-workers"));
 
 		await helper.seed({
 			"remote-worker.js": dedent/* javascript */ `
 					export default {
 						fetch() {
-							return new Response('Hello from a remote worker (wrangler dev mixed-mode)');
+							return new Response('Hello from a remote worker (wrangler dev hybrid)');
 						}
 					};
 			`,
@@ -34,7 +34,7 @@ describe("wrangler dev - mixed mode", () => {
 			"alt-remote-worker.js": dedent/* javascript */ `
 				export default {
 					fetch() {
-						return new Response('Hello from an alternative remote worker (wrangler dev mixed-mode)');
+						return new Response('Hello from an alternative remote worker (wrangler dev hybrid)');
 					}
 				};`,
 		});
@@ -52,7 +52,7 @@ describe("wrangler dev - mixed mode", () => {
 		await spawnLocalWorker(helper);
 		await helper.seed({
 			"wrangler.json": JSON.stringify({
-				name: "mixed-mode-mixed-bindings-test",
+				name: "hybrid-mixed-bindings-test",
 				main: "local-and-remote-service-bindings.js",
 				compatibility_date: "2025-05-07",
 				services: [
@@ -66,13 +66,13 @@ describe("wrangler dev - mixed mode", () => {
 			}),
 		});
 
-		const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
+		const worker = helper.runLongLived("wrangler dev --x-hybrid");
 
 		const { url } = await worker.waitForReady();
 
 		await expect(fetchText(url)).resolves.toMatchInlineSnapshot(`
 			"LOCAL<WORKER>: Hello from a local worker!
-			REMOTE<WORKER>: Hello from a remote worker (wrangler dev mixed-mode)
+			REMOTE<WORKER>: Hello from a remote worker (wrangler dev hybrid)
 			"
 		`);
 	});
@@ -81,7 +81,7 @@ describe("wrangler dev - mixed mode", () => {
 		await spawnLocalWorker(helper);
 		await helper.seed({
 			"wrangler.json": JSON.stringify({
-				name: "mixed-mode-mixed-bindings-test",
+				name: "hybrid-mixed-bindings-test",
 				main: "simple-service-binding.js",
 				compatibility_date: "2025-05-07",
 				services: [
@@ -94,12 +94,12 @@ describe("wrangler dev - mixed mode", () => {
 			}),
 		});
 
-		const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
+		const worker = helper.runLongLived("wrangler dev --x-hybrid");
 
 		const { url } = await worker.waitForReady();
 
 		await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-			`"REMOTE<WORKER>: Hello from a remote worker (wrangler dev mixed-mode)"`
+			`"REMOTE<WORKER>: Hello from a remote worker (wrangler dev hybrid)"`
 		);
 
 		const indexContent = await readFile(
@@ -118,7 +118,7 @@ describe("wrangler dev - mixed mode", () => {
 		await setTimeout(500);
 
 		await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-			`"The remote worker responded with: Hello from a remote worker (wrangler dev mixed-mode)"`
+			`"The remote worker responded with: Hello from a remote worker (wrangler dev hybrid)"`
 		);
 
 		await writeFile(
@@ -130,7 +130,7 @@ describe("wrangler dev - mixed mode", () => {
 		await setTimeout(500);
 
 		await expect(fetchText(url)).resolves.toMatchInlineSnapshot(
-			`"REMOTE<WORKER>: Hello from a remote worker (wrangler dev mixed-mode)"`
+			`"REMOTE<WORKER>: Hello from a remote worker (wrangler dev hybrid)"`
 		);
 	});
 
@@ -138,7 +138,7 @@ describe("wrangler dev - mixed mode", () => {
 		await spawnLocalWorker(helper);
 		await helper.seed({
 			"wrangler.json": JSON.stringify({
-				name: "mixed-mode-mixed-bindings-test",
+				name: "hybrid-mixed-bindings-test",
 				main: "local-service-binding-and-remote-ai.js",
 				compatibility_date: "2025-05-07",
 				ai: {
@@ -150,7 +150,7 @@ describe("wrangler dev - mixed mode", () => {
 			}),
 		});
 
-		const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
+		const worker = helper.runLongLived("wrangler dev --x-hybrid");
 
 		const { url } = await worker.waitForReady();
 
@@ -161,11 +161,11 @@ describe("wrangler dev - mixed mode", () => {
 		`);
 	});
 
-	it("doesn't show any logs from startMixedModeSession()", async () => {
+	it("doesn't show any logs from startHybridSession()", async () => {
 		await spawnLocalWorker(helper);
 		await helper.seed({
 			"wrangler.json": JSON.stringify({
-				name: "mixed-mode-mixed-bindings-test",
+				name: "hybrid-mixed-bindings-test",
 				main: "ai.js",
 				compatibility_date: "2025-05-07",
 				ai: {
@@ -174,7 +174,7 @@ describe("wrangler dev - mixed mode", () => {
 			}),
 		});
 
-		const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
+		const worker = helper.runLongLived("wrangler dev --x-hybrid");
 
 		const { url } = await worker.waitForReady();
 
@@ -198,7 +198,7 @@ describe("wrangler dev - mixed mode", () => {
 		it("handles both remote and local service bindings at the same time in all workers", async () => {
 			await helper.seed({
 				"wrangler.json": JSON.stringify({
-					name: "mixed-mode-mixed-bindings-multi-worker-test",
+					name: "hybrid-mixed-bindings-multi-worker-test",
 					main: "local-and-remote-service-bindings.js",
 					compatibility_date: "2025-05-07",
 					services: [
@@ -240,14 +240,14 @@ describe("wrangler dev - mixed mode", () => {
 			});
 
 			const worker = helper.runLongLived(
-				`wrangler dev --x-mixed-mode -c wrangler.json -c ${localTest}/wrangler.json`
+				`wrangler dev --x-hybrid -c wrangler.json -c ${localTest}/wrangler.json`
 			);
 
 			const { url } = await worker.waitForReady();
 
 			await expect(fetchText(url)).resolves.toMatchInlineSnapshot(`
-				"LOCAL<WORKER>: [local-test-worker]REMOTE<WORKER>: Hello from an alternative remote worker (wrangler dev mixed-mode)
-				REMOTE<WORKER>: Hello from a remote worker (wrangler dev mixed-mode)
+				"LOCAL<WORKER>: [local-test-worker]REMOTE<WORKER>: Hello from an alternative remote worker (wrangler dev hybrid)
+				REMOTE<WORKER>: Hello from a remote worker (wrangler dev hybrid)
 				"
 			`);
 		});

@@ -61,7 +61,7 @@ export const dev = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			MIXED_MODE: args.experimentalMixedMode ?? false,
+			MIXED_MODE: args.experimentalHybrid ?? false,
 		}),
 	},
 	metadata: {
@@ -839,7 +839,7 @@ export function getBindings(
 	env: string | undefined,
 	local: boolean,
 	args: AdditionalDevProps,
-	mixedModeEnabled = getFlag("MIXED_MODE")
+	hybridEnabled = getFlag("MIXED_MODE")
 ): CfWorkerInit["bindings"] {
 	/**
 	 * In Pages, KV, DO, D1, R2, AI and service bindings can be specified as
@@ -866,7 +866,7 @@ export function getBindings(
 			return {
 				binding,
 				id: preview_id ?? id,
-				remote: mixedModeEnabled && remote,
+				remote: hybridEnabled && remote,
 			};
 		}
 	);
@@ -887,7 +887,7 @@ export function getBindings(
 		if (local) {
 			return {
 				...d1Db,
-				remote: mixedModeEnabled && d1Db.remote,
+				remote: hybridEnabled && d1Db.remote,
 				database_id,
 			};
 		}
@@ -917,7 +917,7 @@ export function getBindings(
 					binding,
 					bucket_name: preview_bucket_name ?? bucket_name,
 					jurisdiction,
-					remote: mixedModeEnabled && remote,
+					remote: hybridEnabled && remote,
 				};
 			}
 		) || [];
@@ -933,7 +933,7 @@ export function getBindings(
 		"binding"
 	).map((service) => ({
 		...service,
-		remote: mixedModeEnabled && "remote" in service && !!service.remote,
+		remote: hybridEnabled && "remote" in service && !!service.remote,
 	}));
 
 	// Hyperdrive bindings
@@ -972,7 +972,7 @@ export function getBindings(
 				binding: queue.binding,
 				queue_name: queue.queue,
 				delivery_delay: queue.delivery_delay,
-				remote: mixedModeEnabled && queue.remote,
+				remote: hybridEnabled && queue.remote,
 			};
 		}),
 	];

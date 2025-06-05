@@ -38,8 +38,8 @@ import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
 import {
+	hybridClientWorker,
 	kUnsafeEphemeralUniqueKey,
-	mixedModeClientWorker,
 	parseRoutes,
 	Plugin,
 	ProxyNodeBinding,
@@ -289,9 +289,9 @@ function getCustomServiceDesignator(
 	} else if (typeof service === "object") {
 		if ("node" in service) {
 			serviceName = getCustomNodeServiceName(workerIndex, kind, name);
-		} else if ("mixedModeConnectionString" in service) {
+		} else if ("hybridConnectionString" in service) {
 			assert("name" in service && typeof service.name === "string");
-			serviceName = `${CORE_PLUGIN_NAME}:mixed-mode-service:${workerIndex}:${name}`;
+			serviceName = `${CORE_PLUGIN_NAME}:hybrid-service:${workerIndex}:${name}`;
 		}
 		// Worker with entrypoint
 		else if ("name" in service) {
@@ -368,17 +368,17 @@ function maybeGetCustomServiceService(
 		};
 	} else if (
 		typeof service === "object" &&
-		service.mixedModeConnectionString !== undefined
+		service.hybridConnectionString !== undefined
 	) {
 		assert(
-			service.mixedModeConnectionString &&
+			service.hybridConnectionString &&
 				service.name &&
 				typeof service.name === "string"
 		);
 
 		return {
-			name: `${CORE_PLUGIN_NAME}:mixed-mode-service:${workerIndex}:${name}`,
-			worker: mixedModeClientWorker(service.mixedModeConnectionString, name),
+			name: `${CORE_PLUGIN_NAME}:hybrid-service:${workerIndex}:${name}`,
+			worker: hybridClientWorker(service.hybridConnectionString, name),
 		};
 	}
 }

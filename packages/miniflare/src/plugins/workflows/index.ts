@@ -5,7 +5,7 @@ import { Service } from "../../runtime";
 import { getUserServiceName } from "../core";
 import {
 	getPersistPath,
-	MixedModeConnectionString,
+	HybridConnectionString,
 	PersistenceSchema,
 	Plugin,
 	ProxyNodeBinding,
@@ -18,9 +18,7 @@ export const WorkflowsOptionsSchema = z.object({
 				name: z.string(),
 				className: z.string(),
 				scriptName: z.string().optional(),
-				mixedModeConnectionString: z
-					.custom<MixedModeConnectionString>()
-					.optional(),
+				hybridConnectionString: z.custom<HybridConnectionString>().optional(),
 			})
 		)
 		.optional(),

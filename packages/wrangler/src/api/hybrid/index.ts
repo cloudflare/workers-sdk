@@ -8,24 +8,24 @@ import type {
 	StartDevWorkerInput,
 	Worker,
 } from "../startDevWorker/types";
-import type { MixedModeConnectionString } from "miniflare";
+import type { HybridConnectionString } from "miniflare";
 
-export type MixedModeSession = Pick<Worker, "ready" | "dispose"> & {
+export type HybridSession = Pick<Worker, "ready" | "dispose"> & {
 	updateBindings: (bindings: StartDevWorkerInput["bindings"]) => Promise<void>;
-	mixedModeConnectionString: MixedModeConnectionString;
+	hybridConnectionString: HybridConnectionString;
 };
 
-export async function startMixedModeSession(
+export async function startHybridSession(
 	bindings: StartDevWorkerInput["bindings"],
 	options?: {
 		auth?: NonNullable<StartDevWorkerInput["dev"]>["auth"];
 		/** If running in a non-public compliance region, set this here. */
 		complianceRegion?: Config["compliance_region"];
 	}
-): Promise<MixedModeSession> {
+): Promise<HybridSession> {
 	const proxyServerWorkerWranglerConfig = path.resolve(
 		getBasePath(),
-		"templates/mixedMode/proxyServerWorker/wrangler.jsonc"
+		"templates/hybrid/proxyServerWorker/wrangler.jsonc"
 	);
 
 	// Transform all bindings to use "raw" mode
@@ -55,8 +55,7 @@ export async function startMixedModeSession(
 		bindings: rawBindings,
 	});
 
-	const mixedModeConnectionString =
-		(await worker.url) as MixedModeConnectionString;
+	const hybridConnectionString = (await worker.url) as HybridConnectionString;
 
 	const updateBindings = async (
 		newBindings: StartDevWorkerInput["bindings"]
@@ -73,7 +72,7 @@ export async function startMixedModeSession(
 
 	return {
 		ready: worker.ready,
-		mixedModeConnectionString,
+		hybridConnectionString,
 		updateBindings,
 		dispose: worker.dispose,
 	};

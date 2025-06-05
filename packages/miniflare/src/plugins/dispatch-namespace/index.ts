@@ -3,8 +3,8 @@ import LOCAL_DISPATCH_NAMESPACE from "worker:dispatch-namespace/dispatch-namespa
 import { z } from "zod";
 import { Worker_Binding } from "../../runtime";
 import {
-	mixedModeClientWorker,
-	MixedModeConnectionString,
+	hybridClientWorker,
+	HybridConnectionString,
 	Plugin,
 	ProxyNodeBinding,
 } from "../shared";
@@ -14,7 +14,7 @@ export const DispatchNamespaceOptionsSchema = z.object({
 		.record(
 			z.object({
 				namespace: z.string(),
-				mixedModeConnectionString: z.custom<MixedModeConnectionString>(),
+				hybridConnectionString: z.custom<HybridConnectionString>(),
 			})
 		)
 		.optional(),
@@ -69,12 +69,12 @@ export const DISPATCH_NAMESPACE_PLUGIN: Plugin<
 
 		return Object.entries(options.dispatchNamespaces).map(([name, config]) => {
 			assert(
-				config.mixedModeConnectionString,
+				config.hybridConnectionString,
 				"Dispatch Namespace bindings only support Mixed Mode"
 			);
 			return {
 				name: `${DISPATCH_NAMESPACE_PLUGIN_NAME}:ns:${config.namespace}`,
-				worker: mixedModeClientWorker(config.mixedModeConnectionString, name),
+				worker: hybridClientWorker(config.hybridConnectionString, name),
 			};
 		});
 	},

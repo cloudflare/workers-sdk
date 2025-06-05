@@ -12,7 +12,7 @@ import {
 	convertCfWorkerInitBindingsToBindings,
 } from "./utils";
 import type { WorkerEntrypointsDefinition } from "../../dev-registry";
-import type { MixedModeSession } from "../mixedMode";
+import type { HybridSession } from "../hybrid";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
@@ -150,7 +150,7 @@ export class LocalRuntimeController extends RuntimeController {
 	#mutex = new Mutex();
 	#mf?: Miniflare;
 
-	#mixedModeSession?: MixedModeSession;
+	#hybridSession?: HybridSession;
 
 	onBundleStart(_: BundleStartEvent) {
 		// Ignored in local runtime
@@ -161,9 +161,9 @@ export class LocalRuntimeController extends RuntimeController {
 			const configBundle = await convertToConfigBundle(data);
 
 			if (getFlag("MIXED_MODE") && !data.config.dev?.remote) {
-				this.#mixedModeSession = await maybeStartOrUpdateMixedModeSession(
+				this.#hybridSession = await maybeStartOrUpdateHybridSession(
 					configBundle,
-					this.#mixedModeSession
+					this.#hybridSession
 				);
 			}
 
@@ -172,7 +172,7 @@ export class LocalRuntimeController extends RuntimeController {
 					this.#log,
 					configBundle,
 					this.#proxyToUserWorkerAuthenticationSecret,
-					this.#mixedModeSession?.mixedModeConnectionString,
+					this.#hybridSession?.hybridConnectionString,
 					!!getFlag("MIXED_MODE")
 				);
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
@@ -274,12 +274,12 @@ export class LocalRuntimeController extends RuntimeController {
 		await this.#mf?.dispose();
 		this.#mf = undefined;
 
-		if (this.#mixedModeSession) {
+		if (this.#hybridSession) {
 			logger.log(chalk.dim("⎔ Shutting down remote connection..."));
 		}
 
-		await this.#mixedModeSession?.dispose();
-		this.#mixedModeSession = undefined;
+		await this.#hybridSession?.dispose();
+		this.#hybridSession = undefined;
 
 		logger.debug("LocalRuntimeController teardown complete");
 	};
@@ -303,18 +303,18 @@ export class LocalRuntimeController extends RuntimeController {
  * Based on a provided config if necessary starts a new mixed mode session or updates an existing
  *
  * @param configBundle the config for the potential mixed mode session
- * @param mixedModeSession the possible pre-existing mixed mode session
+ * @param hybridSession the possible pre-existing mixed mode session
  * @returns the mixed mode session ready to use if one is needed, undefined otherwise
  */
-export async function maybeStartOrUpdateMixedModeSession(
+export async function maybeStartOrUpdateHybridSession(
 	configBundle: MF.ConfigBundle,
-	mixedModeSession: MixedModeSession | undefined
-): Promise<MixedModeSession | undefined> {
-	// Note: we import the mixedMode module dynamically to avoid circular
+	hybridSession: HybridSession | undefined
+): Promise<HybridSession | undefined> {
+	// Note: we import the hybrid module dynamically to avoid circular
 	//       import issues (since mixed mode uses startWorker which uses
 	//       LocalRuntimeController)
-	const { startMixedModeSession, pickRemoteBindings } = await import(
-		"../../api/mixedMode"
+	const { startHybridSession, pickRemoteBindings } = await import(
+		"../../api/hybrid"
 	);
 
 	const convertedBindings = convertCfWorkerInitBindingsToBindings(
@@ -325,11 +325,11 @@ export async function maybeStartOrUpdateMixedModeSession(
 	// TODO(DEVX-1893): here we can save the converted remote bindings
 	//             and on new iterations we can diff the old and new
 	//             converted remote bindings, if they are all the
-	//             same we can just leave the mixedModeSession untouched
-	if (mixedModeSession === undefined) {
+	//             same we can just leave the hybridSession untouched
+	if (hybridSession === undefined) {
 		const numOfRemoteBindings = Object.keys(remoteBindings ?? {}).length;
 		if (numOfRemoteBindings > 0) {
-			mixedModeSession = await startMixedModeSession(remoteBindings, {
+			hybridSession = await startHybridSession(remoteBindings, {
 				complianceRegion: configBundle.complianceRegion,
 			});
 		}
@@ -337,9 +337,9 @@ export async function maybeStartOrUpdateMixedModeSession(
 		// Note: we always call updateBindings even when there are zero remote bindings, in these
 		//       cases we could terminate the remote session if we wanted, that's probably
 		//       something to consider down the line
-		await mixedModeSession.updateBindings(remoteBindings);
+		await hybridSession.updateBindings(remoteBindings);
 	}
 
-	await mixedModeSession?.ready;
-	return mixedModeSession;
+	await hybridSession?.ready;
+	return hybridSession;
 }

@@ -1,17 +1,17 @@
 {
-	"name": "cloudflare-vite-e2e-mixed-mode-entry-worker",
+	"name": "cloudflare-vite-e2e-hybrid-entry-worker",
 	"main": "./src/index.ts",
 	"compatibility_date": "2024-12-30",
 	"compatibility_flags": ["nodejs_compat"],
 	"services": [
 		{
 			"binding": "LOCAL_WORKER",
-			"service": "cloudflare-vite-e2e-mixed-mode-auxiliary-worker",
+			"service": "cloudflare-vite-e2e-hybrid-auxiliary-worker",
 			"remote": false,
 		},
 		{
 			"binding": "REMOTE_WORKER",
-			"service": "tmp-e2e-vite-plugin-mixed-mode-remote-worker",
+			"service": "tmp-e2e-vite-plugin-hybrid-remote-worker",
 			"remote": true,
 		},
 	],

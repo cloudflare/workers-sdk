@@ -4,17 +4,17 @@ import { beforeEach, describe, expect, it, onTestFinished } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import type { Binding } from "../src/api";
-import type { MixedModeConnectionString, WorkerOptions } from "miniflare";
+import type { HybridConnectionString, WorkerOptions } from "miniflare";
 import type { ExpectStatic } from "vitest";
 
 type TestCase<T = void> = {
 	name: string;
 	scriptPath: string;
-	mixedModeSessionConfig:
+	hybridSessionConfig:
 		| Record<string, Binding>
 		| ((setup: T) => Record<string, Binding>);
 	miniflareConfig: (
-		connection: MixedModeConnectionString,
+		connection: HybridConnectionString,
 		setup: T
 	) => Partial<WorkerOptions>;
 	setup?: (helper: WranglerE2ETestHelper) => Promise<T> | T;
@@ -24,7 +24,7 @@ const testCases: TestCase<string>[] = [
 	{
 		name: "AI",
 		scriptPath: "ai.js",
-		mixedModeSessionConfig: {
+		hybridSessionConfig: {
 			AI: {
 				type: "ai",
 			},
@@ -32,7 +32,7 @@ const testCases: TestCase<string>[] = [
 		miniflareConfig: (connection) => ({
 			ai: {
 				binding: "AI",
-				mixedModeConnectionString: connection,
+				hybridConnectionString: connection,
 			},
 		}),
 		match: expect.stringMatching(/This is a response from Workers AI/),
@@ -40,7 +40,7 @@ const testCases: TestCase<string>[] = [
 	{
 		name: "Browser",
 		scriptPath: "browser.js",
-		mixedModeSessionConfig: {
+		hybridSessionConfig: {
 			BROWSER: {
 				type: "browser",
 			},
@@ -48,7 +48,7 @@ const testCases: TestCase<string>[] = [
 		miniflareConfig: (connection) => ({
 			browserRendering: {
 				binding: "BROWSER",
-				mixedModeConnectionString: connection,
+				hybridConnectionString: connection,
 			},
 		}),
 		match: expect.stringMatching(/sessionId/),
@@ -81,7 +81,7 @@ const testCases: TestCase<string>[] = [
 			});
 			return targetWorkerName;
 		},
-		mixedModeSessionConfig: (target) => ({
+		hybridSessionConfig: (target) => ({
 			SERVICE: {
 				type: "service",
 				service: target,
@@ -96,12 +96,12 @@ const testCases: TestCase<string>[] = [
 			serviceBindings: {
 				SERVICE: {
 					name: target,
-					mixedModeConnectionString: connection,
+					hybridConnectionString: connection,
 				},
 				SERVICE_WITH_ENTRYPOINT: {
 					name: target,
 					entrypoint: "CustomEntrypoint",
-					mixedModeConnectionString: connection,
+					hybridConnectionString: connection,
 				},
 			},
 		}),
@@ -118,11 +118,11 @@ const testCases: TestCase<string>[] = [
 		setup: async (helper) => {
 			const ns = await helper.kv(false);
 			await helper.run(
-				`wrangler kv key put --remote --namespace-id=${ns} test-mixed-mode-key existing-value`
+				`wrangler kv key put --remote --namespace-id=${ns} test-hybrid-key existing-value`
 			);
 			return ns;
 		},
-		mixedModeSessionConfig: (ns) => ({
+		hybridSessionConfig: (ns) => ({
 			KV_BINDING: {
 				type: "kv_namespace",
 				id: ns,
@@ -132,7 +132,7 @@ const testCases: TestCase<string>[] = [
 			kvNamespaces: {
 				KV_BINDING: {
 					id: ns,
-					mixedModeConnectionString: connection,
+					hybridConnectionString: connection,
 				},
 			},
 		}),
@@ -145,16 +145,16 @@ const testCases: TestCase<string>[] = [
 			await helper.seed({ "test.txt": "existing-value" });
 			const name = await helper.r2(false);
 			await helper.run(
-				`wrangler r2 object put --remote ${name}/test-mixed-mode-key --file test.txt`
+				`wrangler r2 object put --remote ${name}/test-hybrid-key --file test.txt`
 			);
 			onTestFinished(async () => {
 				await helper.run(
-					`wrangler r2 object delete --remote ${name}/test-mixed-mode-key`
+					`wrangler r2 object delete --remote ${name}/test-hybrid-key`
 				);
 			});
 			return name;
 		},
-		mixedModeSessionConfig: (name) => ({
+		hybridSessionConfig: (name) => ({
 			R2_BINDING: {
 				type: "r2_bucket",
 				bucket_name: name,
@@ -164,7 +164,7 @@ const testCases: TestCase<string>[] = [
 			r2Buckets: {
 				R2_BINDING: {
 					id: name,
-					mixedModeConnectionString: connection,
+					hybridConnectionString: connection,
 				},
 			},
 		}),
@@ -177,7 +177,7 @@ const testCases: TestCase<string>[] = [
 			await helper.seed({
 				"schema.sql": dedent`
 					CREATE TABLE entries (key TEXT PRIMARY KEY, value TEXT);
-					INSERT INTO entries (key, value) VALUES ('test-mixed-mode-key', 'existing-value');
+					INSERT INTO entries (key, value) VALUES ('test-hybrid-key', 'existing-value');
 				`,
 			});
 			const { id, name } = await helper.d1(false);
@@ -186,7 +186,7 @@ const testCases: TestCase<string>[] = [
 			);
 			return id;
 		},
-		mixedModeSessionConfig: (id) => ({
+		hybridSessionConfig: (id) => ({
 			DB: {
 				type: "d1",
 				database_id: id,
@@ -196,7 +196,7 @@ const testCases: TestCase<string>[] = [
 			d1Databases: {
 				DB: {
 					id: id,
-					mixedModeConnectionString: connection,
+					hybridConnectionString: connection,
 				},
 			},
 		}),
@@ -213,7 +213,7 @@ const testCases: TestCase<string>[] = [
 			);
 			return name;
 		},
-		mixedModeSessionConfig: (name) => ({
+		hybridSessionConfig: (name) => ({
 			VECTORIZE_BINDING: {
 				type: "vectorize",
 				index_name: name,
@@ -223,7 +223,7 @@ const testCases: TestCase<string>[] = [
 			vectorize: {
 				VECTORIZE_BINDING: {
 					index_name: name,
-					mixedModeConnectionString: connection,
+					hybridConnectionString: connection,
 				},
 			},
 		}),
@@ -234,7 +234,7 @@ const testCases: TestCase<string>[] = [
 	{
 		name: "Images",
 		scriptPath: "images.js",
-		mixedModeSessionConfig: {
+		hybridSessionConfig: {
 			IMAGES: {
 				type: "images",
 			},
@@ -242,7 +242,7 @@ const testCases: TestCase<string>[] = [
 		miniflareConfig: (connection) => ({
 			images: {
 				binding: "IMAGES",
-				mixedModeConnectionString: connection,
+				hybridConnectionString: connection,
 			},
 		}),
 		match: expect.stringContaining(`image/avif`),
@@ -253,7 +253,7 @@ const testCases: TestCase<string>[] = [
 		setup: async (helper) => {
 			const namespace = await helper.dispatchNamespace(false);
 
-			const customerWorkerName = "mixed-mode-test-customer-worker";
+			const customerWorkerName = "hybrid-test-customer-worker";
 			await helper.seed({
 				"customer-worker.js": dedent/* javascript */ `
 					export default {
@@ -269,7 +269,7 @@ const testCases: TestCase<string>[] = [
 
 			return namespace;
 		},
-		mixedModeSessionConfig: (namespace) => ({
+		hybridSessionConfig: (namespace) => ({
 			DISPATCH: {
 				type: "dispatch_namespace",
 				namespace: namespace,
@@ -279,7 +279,7 @@ const testCases: TestCase<string>[] = [
 			dispatchNamespaces: {
 				DISPATCH: {
 					namespace: namespace,
-					mixedModeConnectionString: connection,
+					hybridConnectionString: connection,
 				},
 			},
 		}),
@@ -292,19 +292,16 @@ describe.each(testCases)("Mixed Mode for $name", (testCase) => {
 		helper = new WranglerE2ETestHelper();
 	});
 	it("enabled", async () => {
-		const { experimental_startMixedModeSession } =
-			await helper.importWrangler();
+		const { experimental_startHybridSession } = await helper.importWrangler();
 		const { Miniflare } = await helper.importMiniflare();
-		await helper.seed(
-			path.resolve(__dirname, "./seed-files/mixed-mode-workers")
-		);
+		await helper.seed(path.resolve(__dirname, "./seed-files/hybrid-workers"));
 		const setupResult = await testCase.setup?.(helper);
 
-		const mixedModeSession = await experimental_startMixedModeSession(
-			typeof testCase.mixedModeSessionConfig === "function"
+		const hybridSession = await experimental_startHybridSession(
+			typeof testCase.hybridSessionConfig === "function"
 				? /* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */
-					testCase.mixedModeSessionConfig(setupResult!)
-				: testCase.mixedModeSessionConfig
+					testCase.hybridSessionConfig(setupResult!)
+				: testCase.hybridSessionConfig
 		);
 
 		const mf = new Miniflare({
@@ -314,7 +311,7 @@ describe.each(testCases)("Mixed Mode for $name", (testCase) => {
 			scriptPath: path.resolve(helper.tmpPath, testCase.scriptPath),
 			modulesRoot: helper.tmpPath,
 			...testCase.miniflareConfig(
-				mixedModeSession.mixedModeConnectionString,
+				hybridSession.hybridConnectionString,
 				/* eslint-disable-next-line @typescript-eslint/no-non-null-assertion */
 				setupResult!
 			),
@@ -330,7 +327,7 @@ describe.each(testCases)("Mixed Mode for $name", (testCase) => {
 		{ retry: 0, fails: true },
 		async () => {
 			const { Miniflare } = await helper.importMiniflare();
-			await helper.seed(path.resolve(__dirname, "./mixed-mode-test-workers"));
+			await helper.seed(path.resolve(__dirname, "./hybrid-test-workers"));
 
 			const mf = new Miniflare({
 				compatibilityDate: "2025-01-01",

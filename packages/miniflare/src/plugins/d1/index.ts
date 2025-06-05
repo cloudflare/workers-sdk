@@ -11,9 +11,9 @@ import { SharedBindings } from "../../workers";
 import {
 	getMiniflareObjectBindings,
 	getPersistPath,
+	hybridClientWorker,
+	HybridConnectionString,
 	migrateDatabase,
-	mixedModeClientWorker,
-	MixedModeConnectionString,
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
@@ -30,9 +30,7 @@ export const D1OptionsSchema = z.object({
 			z.record(
 				z.object({
 					id: z.string(),
-					mixedModeConnectionString: z
-						.custom<MixedModeConnectionString>()
-						.optional(),
+					hybridConnectionString: z.custom<HybridConnectionString>().optional(),
 				})
 			),
 			z.string().array(),
@@ -61,9 +59,9 @@ export const D1_PLUGIN: Plugin<
 	getBindings(options) {
 		const databases = namespaceEntries(options.d1Databases);
 		return databases.map<Worker_Binding>(
-			([name, { id, mixedModeConnectionString }]) => {
+			([name, { id, hybridConnectionString }]) => {
 				assert(
-					!(name.startsWith("__D1_BETA__") && mixedModeConnectionString),
+					!(name.startsWith("__D1_BETA__") && hybridConnectionString),
 					"Mixed Mode cannot be used with Alpha D1 Databases"
 				);
 
@@ -106,10 +104,10 @@ export const D1_PLUGIN: Plugin<
 		const persist = sharedOptions.d1Persist;
 		const databases = namespaceEntries(options.d1Databases);
 		const services = databases.map<Service>(
-			([name, { id, mixedModeConnectionString }]) => ({
+			([name, { id, hybridConnectionString }]) => ({
 				name: `${D1_DATABASE_SERVICE_PREFIX}:${id}`,
-				worker: mixedModeConnectionString
-					? mixedModeClientWorker(mixedModeConnectionString, name)
+				worker: hybridConnectionString
+					? hybridClientWorker(hybridConnectionString, name)
 					: objectEntryWorker(D1_DATABASE_OBJECT, id),
 			})
 		);

@@ -19,12 +19,12 @@ describe
 	)
 	// Note: the reload test applies changes to the fixture files, so we do want the
 	//       tests to run sequentially in order to avoid race conditions
-	.sequential("mixed-mode tests", () => {
-		const remoteWorkerName = "tmp-e2e-vite-plugin-mixed-mode-remote-worker";
+	.sequential("hybrid tests", () => {
+		const remoteWorkerName = "tmp-e2e-vite-plugin-hybrid-remote-worker";
 		const alternativeRemoteWorkerName =
-			"tmp-e2e-vite-plugin-mixed-mode-remote-worker-alt";
+			"tmp-e2e-vite-plugin-hybrid-remote-worker-alt";
 
-		const projectPath = seed("mixed-mode", "pnpm");
+		const projectPath = seed("hybrid", "pnpm");
 
 		beforeAll(() => {
 			const tmp = fs.mkdtempSync(`${os.tmpdir()}/vite-plugin-e2e-tmp`);

@@ -65,8 +65,8 @@ export {
 export { experimental_patchConfig } from "./config/patch-config";
 
 export {
-	startMixedModeSession as experimental_startMixedModeSession,
+	startHybridSession as experimental_startHybridSession,
 	pickRemoteBindings as experimental_pickRemoteBindings,
-	type MixedModeSession as Experimental_MixedModeSession,
+	type HybridSession as Experimental_HybridSession,
 	convertConfigBindingsToStartWorkerBindings as unstable_convertConfigBindingsToStartWorkerBindings,
 } from "./api";

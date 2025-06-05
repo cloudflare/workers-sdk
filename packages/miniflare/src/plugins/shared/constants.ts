@@ -1,4 +1,4 @@
-import SCRIPT_MIXED_MODE_CLIENT from "worker:shared/mixed-mode-client";
+import SCRIPT_MIXED_MODE_CLIENT from "worker:shared/hybrid-client";
 import SCRIPT_OBJECT_ENTRY from "worker:shared/object-entry";
 import {
 	Worker,
@@ -6,7 +6,7 @@ import {
 	Worker_Binding_DurableObjectNamespaceDesignator,
 } from "../../runtime";
 import { CoreBindings, SharedBindings } from "../../workers";
-import { MixedModeConnectionString } from ".";
+import { HybridConnectionString } from ".";
 
 export const SOCKET_ENTRY = "entry";
 export const SOCKET_ENTRY_LOCAL = "entry:local";
@@ -73,8 +73,8 @@ export function objectEntryWorker(
 	};
 }
 
-export function mixedModeClientWorker(
-	mixedModeConnectionString: MixedModeConnectionString,
+export function hybridClientWorker(
+	hybridConnectionString: HybridConnectionString,
 	binding: string
 ) {
 	return {
@@ -87,8 +87,8 @@ export function mixedModeClientWorker(
 		],
 		bindings: [
 			{
-				name: "mixedModeConnectionString",
-				text: mixedModeConnectionString.href,
+				name: "hybridConnectionString",
+				text: hybridConnectionString.href,
 			},
 			{
 				name: "binding",

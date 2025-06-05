@@ -1,12 +1,12 @@
 {
-	"name": "cloudflare-vite-e2e-mixed-mode-auxiliary-worker",
+	"name": "cloudflare-vite-e2e-hybrid-auxiliary-worker",
 	"main": "./src/index.ts",
 	"compatibility_date": "2024-12-30",
 	"compatibility_flags": ["nodejs_compat"],
 	"services": [
 		{
 			"binding": "REMOTE_WORKER",
-			"service": "tmp-e2e-vite-plugin-mixed-mode-remote-worker-alt",
+			"service": "tmp-e2e-vite-plugin-hybrid-remote-worker-alt",
 			"remote": true,
 		},
 	],

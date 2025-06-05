@@ -162,7 +162,7 @@
   | workerd                   | 1.20250507.0  | 1.20250508.0  |
   | @cloudflare/workers-types | ^4.20250507.0 | ^4.20250508.0 |
 
-- [#9181](https://github.com/cloudflare/workers-sdk/pull/9181) [`349cffc`](https://github.com/cloudflare/workers-sdk/commit/349cffcd547e602a4bf3fb708122cf00bb4ad8d2) Thanks [@penalosa](https://github.com/penalosa)! - Add a mixed-mode-only browser rendering plugin
+- [#9181](https://github.com/cloudflare/workers-sdk/pull/9181) [`349cffc`](https://github.com/cloudflare/workers-sdk/commit/349cffcd547e602a4bf3fb708122cf00bb4ad8d2) Thanks [@penalosa](https://github.com/penalosa)! - Add a hybrid-only browser rendering plugin
 
 - [#9186](https://github.com/cloudflare/workers-sdk/pull/9186) [`362cb0b`](https://github.com/cloudflare/workers-sdk/commit/362cb0be3fa28bbf007491f7156ecb522bd7ee43) Thanks [@penalosa](https://github.com/penalosa)! - Support Mixed Mode Service Bindings in Miniflare
 
@@ -172,7 +172,7 @@
   this diverges from the standard Web API for message ports, which require you to explicitly start
   listening on the port.
 
-- [#9168](https://github.com/cloudflare/workers-sdk/pull/9168) [`6b42c28`](https://github.com/cloudflare/workers-sdk/commit/6b42c28aa42457a64e9342b1cd1f92ad2228ff37) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add `mixedModeConnectionString` to the various binding configs
+- [#9168](https://github.com/cloudflare/workers-sdk/pull/9168) [`6b42c28`](https://github.com/cloudflare/workers-sdk/commit/6b42c28aa42457a64e9342b1cd1f92ad2228ff37) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add `hybridConnectionString` to the various binding configs
 
 ## 4.20250507.0
 
@@ -1203,7 +1203,7 @@
   						return "Hello " + name;
   					}
   				}
-  
+
   				export default function (env) {
   					return new Greeter();
   				}
@@ -1245,9 +1245,9 @@
   			name: "sum-worker",
   			script: `
   				import { WorkerEntrypoint } from 'cloudflare:workers';
-  
+
   				export default { fetch() { return new Response(''); } }
-  
+
   				export class SumEntrypoint extends WorkerEntrypoint {
   					sum(args) {
   						return args.reduce((a, b) => a + b);
@@ -1333,15 +1333,15 @@
   			modules: true,
   			script: `
   			import { WorkerEntrypoint } from "cloudflare:workers";
-  
+
   			export class RpcEntrypoint extends WorkerEntrypoint {
   				ping() { return "a:rpc:pong"; }
   			}
-  
+
   			export const namedEntrypoint = {
   				fetch(request, env, ctx) { return new Response("a:named:pong"); }
   			};
-  
+
   			...
   			`,
   		},

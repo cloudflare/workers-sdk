@@ -9,9 +9,9 @@ import { castErrorCause } from "./events";
 import {
 	convertToConfigBundle,
 	LocalRuntimeController,
-	maybeStartOrUpdateMixedModeSession,
+	maybeStartOrUpdateHybridSession,
 } from "./LocalRuntimeController";
-import type { MixedModeSession } from "../mixedMode";
+import type { HybridSession } from "../hybrid";
 import type { BundleCompleteEvent } from "./events";
 
 // Ensure DO references from other workers have the same SQL setting as the DO definition in it's original Worker
@@ -65,7 +65,7 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 	#options = new Map<string, { options: MF.Options; primary: boolean }>();
 
-	#mixedModeSessions = new Map<string, MixedModeSession | undefined>();
+	#hybridSessions = new Map<string, HybridSession | undefined>();
 
 	#canStartMiniflare() {
 		return (
@@ -100,19 +100,18 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 			const configBundle = await convertToConfigBundle(data);
 
 			if (getFlag("MIXED_MODE") && !data.config.dev?.remote) {
-				const mixedModeSession = await maybeStartOrUpdateMixedModeSession(
+				const hybridSession = await maybeStartOrUpdateHybridSession(
 					configBundle,
-					this.#mixedModeSessions.get(data.config.name)
+					this.#hybridSessions.get(data.config.name)
 				);
-				this.#mixedModeSessions.set(data.config.name, mixedModeSession);
+				this.#hybridSessions.set(data.config.name, hybridSession);
 			}
 
 			const { options } = await MF.buildMiniflareOptions(
 				this.#log,
 				await convertToConfigBundle(data),
 				this.#proxyToUserWorkerAuthenticationSecret,
-				this.#mixedModeSessions.get(data.config.name)
-					?.mixedModeConnectionString,
+				this.#hybridSessions.get(data.config.name)?.hybridConnectionString,
 				!!getFlag("MIXED_MODE")
 			);
 
@@ -226,17 +225,17 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 		await this.#mf?.dispose();
 		this.#mf = undefined;
 
-		if (this.#mixedModeSessions.size > 0) {
+		if (this.#hybridSessions.size > 0) {
 			logger.log(chalk.dim("⎔ Shutting down remote connections..."));
 		}
 
 		await Promise.all(
-			[...this.#mixedModeSessions.values()].map((mixedModeSession) =>
-				mixedModeSession?.dispose()
+			[...this.#hybridSessions.values()].map((hybridSession) =>
+				hybridSession?.dispose()
 			)
 		);
 
-		this.#mixedModeSessions.clear();
+		this.#hybridSessions.clear();
 
 		logger.debug("MultiworkerRuntimeController teardown complete");
 	};
