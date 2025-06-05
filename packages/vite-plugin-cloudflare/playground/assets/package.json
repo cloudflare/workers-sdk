@@ -3,9 +3,13 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "vite build --app",
+		"build": "vite build",
+		"build:no-client": "vite build -c vite.config.no-client.ts",
+		"build:public-only": "vite build -c vite.config.public-only.ts",
 		"check:types": "tsc --build",
 		"dev": "vite dev",
+		"dev:no-client": "vite dev -c vite.config.no-client.ts",
+		"dev:public-only": "vite dev -c vite.config.public-only.ts",
 		"preview": "vite preview"
 	},
 	"devDependencies": {
