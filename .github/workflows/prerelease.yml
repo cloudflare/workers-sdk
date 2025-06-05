@@ -37,7 +37,7 @@ jobs:
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
           SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
-          WRANGLER_PRERELEASE_LABEL: ${{ github.head_ref }}
+          WRANGLER_PRERELEASE_LABEL: ${{ github.head_ref || github.ref_name }}
 
       - name: Upload packages
         run: node -r esbuild-register .github/prereleases/upload.mjs
