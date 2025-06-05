@@ -204,6 +204,8 @@ export interface ConfigBundle {
 	bindVectorizeToProd: boolean;
 	imagesLocalMode: boolean;
 	testScheduled: boolean;
+	ignoreContainers: boolean | undefined;
+	dockerPath: string | undefined;
 	containers: WorkerOptions["containers"];
 }
 
@@ -1294,7 +1296,8 @@ export async function buildMiniflareOptions(
 		// Instead of hiding all logs from this Miniflare instance, we specifically hide the request logs,
 		// allowing other logs to be shown to the user (such as details about emails being triggered)
 		logRequests: false,
-
+		dockerPath: config.dockerPath,
+		ignoreContainers: config.ignoreContainers,
 		log,
 		verbose: logger.loggerLevel === "debug",
 		handleRuntimeStdio,

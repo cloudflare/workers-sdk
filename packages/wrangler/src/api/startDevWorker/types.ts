@@ -183,6 +183,11 @@ export interface StartDevWorkerInput {
 
 		/** Whether the experimental mixed mode feature should be enabled */
 		experimentalMixedMode?: boolean;
+
+		/** If false, won't fast-fail if containers are configured and docker is not installed. Defaults to false */
+		ignoreContainers?: boolean;
+		/** Path to the docker executable. Defaults to 'docker' */
+		dockerPath?: string;
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;
