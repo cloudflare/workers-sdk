@@ -1,8 +1,8 @@
 import { cancel, endSection, startSection } from "@cloudflare/cli";
 import { inputPrompt } from "@cloudflare/cli/interactive";
+import { DeploymentsService } from "@cloudflare/containers-shared";
 import { UserError } from "../errors";
 import { logDeployment, pickDeployment } from "./cli/deployments";
-import { DeploymentsService } from "./client";
 import { interactWithUser, loadAccountSpinner } from "./common";
 import { wrap } from "./helpers/wrap";
 import type { Config } from "../config";

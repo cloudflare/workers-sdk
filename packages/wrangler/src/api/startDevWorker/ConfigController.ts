@@ -12,6 +12,7 @@ import {
 } from "../../dev";
 import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
+import { getDockerPath } from "../../environment-variables/misc-variables";
 import { UserError } from "../../errors";
 import { getFlag } from "../../experimental-flags";
 import { logger, runWithLogLevel } from "../../logger";
@@ -146,6 +147,8 @@ async function resolveDevConfig(
 		bindVectorizeToProd: input.dev?.bindVectorizeToProd ?? false,
 		multiworkerPrimary: input.dev?.multiworkerPrimary,
 		imagesLocalMode: input.dev?.imagesLocalMode ?? false,
+		ignoreContainers: input.dev?.ignoreContainers ?? false,
+		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
 	} satisfies StartDevWorkerOptions["dev"];
 }
 

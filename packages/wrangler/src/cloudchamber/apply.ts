@@ -10,8 +10,6 @@ import {
 } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { bold, brandColor, dim, green, red } from "@cloudflare/cli/colors";
-import { formatConfigSnippet } from "../config";
-import { UserError } from "../errors";
 import {
 	ApiError,
 	ApplicationsService,
@@ -19,7 +17,9 @@ import {
 	DeploymentMutationError,
 	RolloutsService,
 	SchedulingPolicy,
-} from "./client";
+} from "@cloudflare/containers-shared";
+import { formatConfigSnippet } from "../config";
+import { UserError } from "../errors";
 import { promiseSpinner } from "./common";
 import { diffLines } from "./helpers/diff";
 import type { Config } from "../config";
@@ -36,7 +36,7 @@ import type {
 	ModifyApplicationRequestBody,
 	ModifyDeploymentV2RequestBody,
 	UserDeploymentConfiguration,
-} from "./client";
+} from "@cloudflare/containers-shared";
 import type { JsonMap } from "@iarna/toml";
 
 function mergeDeep<T>(target: T, source: Partial<T>): T {
