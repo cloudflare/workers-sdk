@@ -154,6 +154,12 @@ const bindingsConfigMock: Omit<
 			secret_name: "secret_name",
 		},
 	],
+	unsafe_hello_world: [
+		{
+			binding: "HELLO_WORLD",
+			enable_timer: true,
+		},
+	],
 	services: [
 		{ binding: "SERVICE_BINDING", service: "service_name" },
 		{
@@ -442,6 +448,7 @@ describe("generate types", () => {
 					R2_BUCKET_BINDING: R2Bucket;
 					D1_TESTING_SOMETHING: D1Database;
 					SECRET: SecretsStoreSecret;
+					HELLO_WORLD: HelloWorldBinding;
 					SERVICE_BINDING: Fetcher /* service_name */;
 					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
 					OTHER_SERVICE_BINDING_ENTRYPOINT: Service /* entrypoint RealEntrypoint from service_name_2 */;
@@ -535,6 +542,7 @@ describe("generate types", () => {
 					R2_BUCKET_BINDING: R2Bucket;
 					D1_TESTING_SOMETHING: D1Database;
 					SECRET: SecretsStoreSecret;
+					HELLO_WORLD: HelloWorldBinding;
 					SERVICE_BINDING: Fetcher /* service_name */;
 					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
 					OTHER_SERVICE_BINDING_ENTRYPOINT: Service /* entrypoint RealEntrypoint from service_name_2 */;
@@ -692,6 +700,7 @@ describe("generate types", () => {
 					R2_BUCKET_BINDING: R2Bucket;
 					D1_TESTING_SOMETHING: D1Database;
 					SECRET: SecretsStoreSecret;
+					HELLO_WORLD: HelloWorldBinding;
 					SERVICE_BINDING: Fetcher /* service_name */;
 					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
 					OTHER_SERVICE_BINDING_ENTRYPOINT: Service<import(\\"../c/index\\").RealEntrypoint>;
