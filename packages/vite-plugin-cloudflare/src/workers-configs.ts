@@ -113,7 +113,7 @@ const nullableNonApplicable = [
 function readWorkerConfig(
 	configPath: string,
 	env: string | undefined,
-	mixedModeEnabled: boolean
+	hybridEnabled: boolean
 ): {
 	raw: RawWorkerConfig;
 	config: SanitizedWorkerConfig;
@@ -126,7 +126,7 @@ function readWorkerConfig(
 	const config: Optional<RawWorkerConfig, "build" | "define"> =
 		unstable_readConfig(
 			{ config: configPath, env },
-			{ experimental: { mixedModeEnabled } }
+			{ experimental: { hybridEnabled } }
 		);
 	const raw = structuredClone(config) as RawWorkerConfig;
 
@@ -279,7 +279,7 @@ function missingFieldErrorMessage(
 export function getWorkerConfig(
 	configPath: string,
 	env: string | undefined,
-	mixedModeEnabled: boolean,
+	hybridEnabled: boolean,
 	opts?: {
 		visitedConfigPaths?: Set<string>;
 		isEntryWorker?: boolean;
@@ -292,7 +292,7 @@ export function getWorkerConfig(
 	const { raw, config, nonApplicable } = readWorkerConfig(
 		configPath,
 		env,
-		mixedModeEnabled
+		hybridEnabled
 	);
 
 	opts?.visitedConfigPaths?.add(configPath);

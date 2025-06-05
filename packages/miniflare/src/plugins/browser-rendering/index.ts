@@ -1,15 +1,15 @@
 import assert from "node:assert";
 import { z } from "zod";
 import {
-	mixedModeClientWorker,
-	MixedModeConnectionString,
+	hybridClientWorker,
+	HybridConnectionString,
 	Plugin,
 	ProxyNodeBinding,
 } from "../shared";
 
 const BrowserRenderingSchema = z.object({
 	binding: z.string(),
-	mixedModeConnectionString: z.custom<MixedModeConnectionString>(),
+	hybridConnectionString: z.custom<HybridConnectionString>(),
 });
 
 export const BrowserRenderingOptionsSchema = z.object({
@@ -28,7 +28,7 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 		}
 
 		assert(
-			options.browserRendering.mixedModeConnectionString,
+			options.browserRendering.hybridConnectionString,
 			"Workers Browser Rendering only supports Mixed Mode"
 		);
 
@@ -55,15 +55,15 @@ export const BROWSER_RENDERING_PLUGIN: Plugin<
 		}
 
 		assert(
-			options.browserRendering.mixedModeConnectionString,
+			options.browserRendering.hybridConnectionString,
 			"Workers Browser Rendering only supports Mixed Mode"
 		);
 
 		return [
 			{
 				name: `${BROWSER_RENDERING_PLUGIN_NAME}:${options.browserRendering.binding}`,
-				worker: mixedModeClientWorker(
-					options.browserRendering.mixedModeConnectionString,
+				worker: hybridClientWorker(
+					options.browserRendering.hybridConnectionString,
 					options.browserRendering.binding
 				),
 			},

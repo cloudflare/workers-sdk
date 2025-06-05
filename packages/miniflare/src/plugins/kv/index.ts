@@ -11,9 +11,9 @@ import { SharedBindings } from "../../workers";
 import {
 	getMiniflareObjectBindings,
 	getPersistPath,
+	hybridClientWorker,
+	HybridConnectionString,
 	migrateDatabase,
-	mixedModeClientWorker,
-	MixedModeConnectionString,
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
@@ -37,9 +37,7 @@ export const KVOptionsSchema = z.object({
 			z.record(
 				z.object({
 					id: z.string(),
-					mixedModeConnectionString: z
-						.custom<MixedModeConnectionString>()
-						.optional(),
+					hybridConnectionString: z.custom<HybridConnectionString>().optional(),
 				})
 			),
 			z.string().array(),
@@ -113,10 +111,10 @@ export const KV_PLUGIN: Plugin<
 		const persist = sharedOptions.kvPersist;
 		const namespaces = namespaceEntries(options.kvNamespaces);
 		const services = namespaces.map<Service>(
-			([name, { id, mixedModeConnectionString }]) => ({
+			([name, { id, hybridConnectionString }]) => ({
 				name: `${SERVICE_NAMESPACE_PREFIX}:${id}`,
-				worker: mixedModeConnectionString
-					? mixedModeClientWorker(mixedModeConnectionString, name)
+				worker: hybridConnectionString
+					? hybridClientWorker(hybridConnectionString, name)
 					: objectEntryWorker(KV_NAMESPACE_OBJECT, id),
 			})
 		);

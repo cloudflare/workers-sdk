@@ -1716,7 +1716,7 @@ describe.sequential("wrangler dev", () => {
 			],
 		};
 
-		it("should ignore remote true settings without the --x-mixed-mode flag (initial logs only test)", async () => {
+		it("should ignore remote true settings without the --x-hybrid flag (initial logs only test)", async () => {
 			writeWranglerConfig(wranglerConfigWithRemoteBindings);
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWranglerUntilConfig("dev index.js");
@@ -1744,10 +1744,10 @@ describe.sequential("wrangler dev", () => {
 			`);
 		});
 
-		it("should honor the remote true settings with the --x-mixed-mode flag (initial logs only test)", async () => {
+		it("should honor the remote true settings with the --x-hybrid flag (initial logs only test)", async () => {
 			writeWranglerConfig(wranglerConfigWithRemoteBindings);
 			fs.writeFileSync("index.js", `export default {};`);
-			await runWranglerUntilConfig("dev --x-mixed-mode index.js");
+			await runWranglerUntilConfig("dev --x-hybrid index.js");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Your Worker has access to the following bindings:
 				Binding                                          Resource          Mode

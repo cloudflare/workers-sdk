@@ -1,15 +1,15 @@
 import assert from "node:assert";
 import { z } from "zod";
 import {
-	mixedModeClientWorker,
-	MixedModeConnectionString,
+	hybridClientWorker,
+	HybridConnectionString,
 	Plugin,
 	ProxyNodeBinding,
 } from "../shared";
 
 const VectorizeSchema = z.object({
 	index_name: z.string(),
-	mixedModeConnectionString: z.custom<MixedModeConnectionString>(),
+	hybridConnectionString: z.custom<HybridConnectionString>(),
 });
 
 export const VectorizeOptionsSchema = z.object({
@@ -26,8 +26,8 @@ export const VECTORIZE_PLUGIN: Plugin<typeof VectorizeOptionsSchema> = {
 		}
 
 		return Object.entries(options.vectorize).map(
-			([name, { index_name, mixedModeConnectionString }]) => {
-				assert(mixedModeConnectionString, "Vectorize only supports Mixed Mode");
+			([name, { index_name, hybridConnectionString }]) => {
+				assert(hybridConnectionString, "Vectorize only supports Mixed Mode");
 
 				return {
 					name,
@@ -73,12 +73,12 @@ export const VECTORIZE_PLUGIN: Plugin<typeof VectorizeOptionsSchema> = {
 		}
 
 		return Object.entries(options.vectorize).map(
-			([name, { mixedModeConnectionString }]) => {
-				assert(mixedModeConnectionString, "Vectorize only supports Mixed Mode");
+			([name, { hybridConnectionString }]) => {
+				assert(hybridConnectionString, "Vectorize only supports Mixed Mode");
 
 				return {
 					name: `${VECTORIZE_PLUGIN_NAME}:${name}`,
-					worker: mixedModeClientWorker(mixedModeConnectionString, name),
+					worker: hybridClientWorker(hybridConnectionString, name),
 				};
 			}
 		);

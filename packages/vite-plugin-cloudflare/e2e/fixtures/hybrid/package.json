@@ -1,5 +1,5 @@
 {
-	"name": "cloudflare-vite-e2e-mixed-mode",
+	"name": "cloudflare-vite-e2e-hybrid",
 	"version": "0.0.0",
 	"private": true,
 	"type": "module",

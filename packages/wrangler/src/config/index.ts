@@ -73,7 +73,7 @@ export type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
 export type ReadConfigOptions = ResolveConfigPathOptions & {
 	hideWarnings?: boolean;
 	experimental?: {
-		mixedModeEnabled?: boolean;
+		hybridEnabled?: boolean;
 	};
 };
 
@@ -105,16 +105,14 @@ export function readConfig(
 		options
 	);
 
-	// TODO: here we're overriding the MIXED_MODE flag based on options.experimental?.mixedModeEnabled,
+	// TODO: here we're overriding the MIXED_MODE flag based on options.experimental?.hybridEnabled,
 	//       once the MIXED_MODE flag is removed we should just normally call normalizeAndValidateConfig
 	const { diagnostics, config } = run(
 		{
 			RESOURCES_PROVISION: getFlag("RESOURCES_PROVISION") ?? false,
 			MULTIWORKER: getFlag("MULTIWORKER") ?? false,
 			MIXED_MODE:
-				options.experimental?.mixedModeEnabled ??
-				getFlag("MIXED_MODE") ??
-				false,
+				options.experimental?.hybridEnabled ?? getFlag("MIXED_MODE") ?? false,
 		},
 		() => {
 			return normalizeAndValidateConfig(

@@ -428,11 +428,11 @@ export function createCLIParser(argv: string[]) {
 			hidden: true,
 			alias: ["x-provision"],
 		})
-		.option("experimental-mixed-mode", {
+		.option("experimental-hybrid", {
 			describe: `Experimental: Enable Mixed Mode`,
 			type: "boolean",
 			hidden: true,
-			alias: ["x-mixed-mode"],
+			alias: ["x-hybrid"],
 		})
 		.epilogue(
 			`Please report any issues to ${chalk.hex("#3B818D")(

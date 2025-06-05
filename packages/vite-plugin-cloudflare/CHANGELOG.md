@@ -79,9 +79,9 @@
 
 - [#9387](https://github.com/cloudflare/workers-sdk/pull/9387) [`e39a45f`](https://github.com/cloudflare/workers-sdk/commit/e39a45ffa0d783cc99107f8ab02d6b3dd27d4c9f) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Prevent leaking Miniflare server logs. Logs that were previously filtered were leaking as they were changed to include colors. We now override the new Miniflare `Log.logReady` method with a noop rather than filtering the logs.
 
-- [#9308](https://github.com/cloudflare/workers-sdk/pull/9308) [`d3a6eb3`](https://github.com/cloudflare/workers-sdk/commit/d3a6eb30e58de2b8f12fc899a70a31518968b910) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add new `mixedMode` experimental option
+- [#9308](https://github.com/cloudflare/workers-sdk/pull/9308) [`d3a6eb3`](https://github.com/cloudflare/workers-sdk/commit/d3a6eb30e58de2b8f12fc899a70a31518968b910) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add new `hybrid` experimental option
 
-  Add a new `mixedMode` experimental option that allows uses to have their worker access remote resources during development (and preview)
+  Add a new `hybrid` experimental option that allows uses to have their worker access remote resources during development (and preview)
 
   To enabled mixed mode set the corresponding option to the cloudflare plugin instantiation:
 
@@ -90,7 +90,7 @@
   	plugins: [
   		cloudflare({
   			// ...
-  			experimental: { mixedMode: true },
+  			experimental: { hybrid: true },
   		}),
   	],
   });

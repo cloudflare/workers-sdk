@@ -1,15 +1,15 @@
 import assert from "node:assert";
 import { z } from "zod";
 import {
-	mixedModeClientWorker,
-	MixedModeConnectionString,
+	hybridClientWorker,
+	HybridConnectionString,
 	Plugin,
 	ProxyNodeBinding,
 } from "../shared";
 
 const AISchema = z.object({
 	binding: z.string(),
-	mixedModeConnectionString: z.custom<MixedModeConnectionString>(),
+	hybridConnectionString: z.custom<HybridConnectionString>(),
 });
 
 export const AIOptionsSchema = z.object({
@@ -26,7 +26,7 @@ export const AI_PLUGIN: Plugin<typeof AIOptionsSchema> = {
 		}
 
 		assert(
-			options.ai.mixedModeConnectionString,
+			options.ai.hybridConnectionString,
 			"Workers AI only supports Mixed Mode"
 		);
 
@@ -61,8 +61,8 @@ export const AI_PLUGIN: Plugin<typeof AIOptionsSchema> = {
 		return [
 			{
 				name: `${AI_PLUGIN_NAME}:${options.ai.binding}`,
-				worker: mixedModeClientWorker(
-					options.ai.mixedModeConnectionString,
+				worker: hybridClientWorker(
+					options.ai.hybridConnectionString,
 					options.ai.binding
 				),
 			},

@@ -35,7 +35,7 @@ export interface PluginConfig extends EntryWorkerConfig {
 		/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
 		headersAndRedirectsDevModeSupport?: boolean;
 		/** Experimental support for mixed mode (where bindings configured with `remote: true` access remote resources). */
-		mixedMode?: boolean;
+		hybrid?: boolean;
 	};
 }
 
@@ -56,7 +56,7 @@ interface BasePluginConfig {
 	experimental: {
 		/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
 		headersAndRedirectsDevModeSupport?: boolean;
-		mixedMode?: boolean;
+		hybrid?: boolean;
 	};
 }
 
@@ -108,7 +108,7 @@ export function resolvePluginConfig(
 	const entryWorkerResolvedConfig = getWorkerConfig(
 		entryWorkerConfigPath,
 		cloudflareEnv,
-		pluginConfig.experimental?.mixedMode ?? false,
+		pluginConfig.experimental?.hybrid ?? false,
 		{
 			visitedConfigPaths: configPaths,
 			isEntryWorker: true,
@@ -150,7 +150,7 @@ export function resolvePluginConfig(
 		const workerResolvedConfig = getWorkerConfig(
 			workerConfigPath,
 			cloudflareEnv,
-			pluginConfig.experimental?.mixedMode ?? false,
+			pluginConfig.experimental?.hybrid ?? false,
 			{
 				visitedConfigPaths: configPaths,
 			}

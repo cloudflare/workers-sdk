@@ -154,7 +154,7 @@ function createHandler(def: CommandDefinition) {
 				: {
 						MULTIWORKER: false,
 						RESOURCES_PROVISION: args.experimentalProvision ?? false,
-						MIXED_MODE: args.experimentalMixedMode ?? false,
+						MIXED_MODE: args.experimentalHybrid ?? false,
 					};
 
 			await run(experimentalFlags, () =>

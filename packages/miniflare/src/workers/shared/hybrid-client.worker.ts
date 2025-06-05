@@ -1,7 +1,7 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 
 export default class Client extends WorkerEntrypoint<{
-	mixedModeConnectionString: string;
+	hybridConnectionString: string;
 	binding: string;
 }> {
 	async fetch(request: Request) {
@@ -21,6 +21,6 @@ export default class Client extends WorkerEntrypoint<{
 			headers: proxiedHeaders,
 		});
 
-		return fetch(this.env.mixedModeConnectionString, req);
+		return fetch(this.env.hybridConnectionString, req);
 	}
 }

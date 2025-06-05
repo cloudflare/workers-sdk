@@ -24,7 +24,7 @@ type TestCase<T = void> = {
 	generateWranglerConfig: (setupResult: T) => RawConfig;
 	expectedResponseMatch: string | RegExp;
 	// Flag for resources that can work without mixed mode
-	worksWithoutMixedMode?: boolean;
+	worksWithoutHybrid?: boolean;
 };
 
 const testCases: TestCase<Record<string, string>>[] = [
@@ -71,7 +71,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 			return { worker: targetWorkerName };
 		},
 		generateWranglerConfig: ({ worker: targetWorkerName }) => ({
-			name: "mixed-mode-service-binding-test",
+			name: "hybrid-service-binding-test",
 			main: "service-binding.js",
 			compatibility_date: "2025-01-01",
 			services: [
@@ -97,7 +97,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 		name: "AI",
 		scriptPath: "ai.js",
 		generateWranglerConfig: () => ({
-			name: "mixed-mode-ai-test",
+			name: "hybrid-ai-test",
 			main: "ai.js",
 			compatibility_date: "2025-01-01",
 			ai: {
@@ -107,13 +107,13 @@ const testCases: TestCase<Record<string, string>>[] = [
 		}),
 		expectedResponseMatch: "This is a response from Workers AI",
 		// AI bindings work without mixed mode flag
-		worksWithoutMixedMode: true,
+		worksWithoutHybrid: true,
 	},
 	{
 		name: "Browser",
 		scriptPath: "browser.js",
 		generateWranglerConfig: () => ({
-			name: "mixed-mode-browser-test",
+			name: "hybrid-browser-test",
 			main: "browser.js",
 			compatibility_date: "2025-01-01",
 			browser: {
@@ -127,7 +127,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 		name: "Images",
 		scriptPath: "images.js",
 		generateWranglerConfig: () => ({
-			name: "mixed-mode-images-test",
+			name: "hybrid-images-test",
 			main: "images.js",
 			compatibility_date: "2025-01-01",
 			images: {
@@ -136,8 +136,8 @@ const testCases: TestCase<Record<string, string>>[] = [
 			},
 		}),
 		expectedResponseMatch: "image/avif",
-		// The Images binding "works" without mixed mode because the current default is an older mixed-mode-style implementation
-		worksWithoutMixedMode: true,
+		// The Images binding "works" without mixed mode because the current default is an older hybrid-style implementation
+		worksWithoutHybrid: true,
 	},
 	{
 		name: "Vectorize",
@@ -151,7 +151,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 			return { name };
 		},
 		generateWranglerConfig: ({ name }) => ({
-			name: "mixed-mode-vectorize-test",
+			name: "hybrid-vectorize-test",
 			main: "vectorize.js",
 			compatibility_date: "2025-01-01",
 			vectorize: [
@@ -170,7 +170,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 		setup: async (helper) => {
 			const namespace = await helper.dispatchNamespace(false);
 
-			const customerWorkerName = "mixed-mode-test-customer-worker";
+			const customerWorkerName = "hybrid-test-customer-worker";
 			await helper.seed({
 				"customer-worker.js": dedent/* javascript */ `
 					export default {
@@ -187,7 +187,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 			return { namespace };
 		},
 		generateWranglerConfig: ({ namespace }) => ({
-			name: "mixed-mode-dispatch-namespace-test",
+			name: "hybrid-dispatch-namespace-test",
 			main: "dispatch-namespace.js",
 			compatibility_date: "2025-01-01",
 			dispatch_namespaces: [
@@ -206,12 +206,12 @@ const testCases: TestCase<Record<string, string>>[] = [
 		setup: async (helper) => {
 			const ns = await helper.kv(false);
 			await helper.run(
-				`wrangler kv key put --remote --namespace-id=${ns} test-mixed-mode-key existing-value`
+				`wrangler kv key put --remote --namespace-id=${ns} test-hybrid-key existing-value`
 			);
 			return { id: ns };
 		},
 		generateWranglerConfig: ({ id: namespaceId }) => ({
-			name: "mixed-mode-kv-test",
+			name: "hybrid-kv-test",
 			main: "kv.js",
 			compatibility_date: "2025-01-01",
 			kv_namespaces: [
@@ -231,17 +231,17 @@ const testCases: TestCase<Record<string, string>>[] = [
 			await helper.seed({ "test.txt": "existing-value" });
 			const name = await helper.r2(false);
 			await helper.run(
-				`wrangler r2 object put --remote ${name}/test-mixed-mode-key --file test.txt`
+				`wrangler r2 object put --remote ${name}/test-hybrid-key --file test.txt`
 			);
 			onTestFinished(async () => {
 				await helper.run(
-					`wrangler r2 object delete --remote ${name}/test-mixed-mode-key`
+					`wrangler r2 object delete --remote ${name}/test-hybrid-key`
 				);
 			});
 			return { name };
 		},
 		generateWranglerConfig: ({ name: bucketName }) => ({
-			name: "mixed-mode-r2-test",
+			name: "hybrid-r2-test",
 			main: "r2.js",
 			compatibility_date: "2025-01-01",
 			r2_buckets: [
@@ -261,7 +261,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 			await helper.seed({
 				"schema.sql": dedent`
 					CREATE TABLE entries (key TEXT PRIMARY KEY, value TEXT);
-					INSERT INTO entries (key, value) VALUES ('test-mixed-mode-key', 'existing-value');
+					INSERT INTO entries (key, value) VALUES ('test-hybrid-key', 'existing-value');
 				`,
 			});
 			const { id, name } = await helper.d1(false);
@@ -271,7 +271,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 			return { id, name };
 		},
 		generateWranglerConfig: ({ id, name }) => ({
-			name: "mixed-mode-d1-test",
+			name: "hybrid-d1-test",
 			main: "d1.js",
 			compatibility_date: "2025-01-01",
 			d1_databases: [
@@ -296,13 +296,11 @@ describe.skip("Wrangler Mixed Mode E2E Tests", () => {
 		});
 
 		it("works with mixed mode enabled", async () => {
-			await helper.seed(
-				path.resolve(__dirname, "./seed-files/mixed-mode-workers")
-			);
+			await helper.seed(path.resolve(__dirname, "./seed-files/hybrid-workers"));
 
 			await writeWranglerConfig(testCase, helper);
 
-			const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
+			const worker = helper.runLongLived("wrangler dev --x-hybrid");
 
 			const { url } = await worker.waitForReady();
 
@@ -310,13 +308,13 @@ describe.skip("Wrangler Mixed Mode E2E Tests", () => {
 			expect(response).toMatch(testCase.expectedResponseMatch);
 		});
 
-		it.skipIf(testCase.worksWithoutMixedMode)(
+		it.skipIf(testCase.worksWithoutHybrid)(
 			"fails when mixed mode is disabled",
 			// Turn off retries because this test is expected to fail
 			{ retry: 0, fails: true },
 			async () => {
 				await helper.seed(
-					path.resolve(__dirname, "./seed-files/mixed-mode-workers")
+					path.resolve(__dirname, "./seed-files/hybrid-workers")
 				);
 
 				await writeWranglerConfig(testCase, helper);
@@ -339,14 +337,12 @@ describe.skip("Wrangler Mixed Mode E2E Tests", () => {
 
 		beforeAll(async () => {
 			helper = new WranglerE2ETestHelper();
-			await helper.seed(
-				path.resolve(__dirname, "./seed-files/mixed-mode-workers")
-			);
+			await helper.seed(path.resolve(__dirname, "./seed-files/hybrid-workers"));
 
 			await helper.seed({
 				"wrangler.json": JSON.stringify(
 					{
-						name: "mixed-mode-sequential-test",
+						name: "hybrid-sequential-test",
 						main: "placeholder.js",
 						compatibility_date: "2025-01-01",
 					},
@@ -357,7 +353,7 @@ describe.skip("Wrangler Mixed Mode E2E Tests", () => {
 					"export default { fetch() { return new Response('Ready to start tests') } }",
 			});
 
-			worker = helper.runLongLived("wrangler dev --x-mixed-mode", {
+			worker = helper.runLongLived("wrangler dev --x-hybrid", {
 				stopOnTestFinished: false,
 			});
 

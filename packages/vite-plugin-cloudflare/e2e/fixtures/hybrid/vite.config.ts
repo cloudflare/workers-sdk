@@ -12,7 +12,7 @@ export default defineConfig({
 			],
 			inspectorPort: false,
 			persistState: false,
-			experimental: { mixedMode: true },
+			experimental: { hybrid: true },
 		}),
 	],
 });
