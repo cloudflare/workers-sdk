@@ -16,7 +16,8 @@
 				"NODE_ENV",
 				"SOURCEMAPS",
 				"SPARROW_SOURCE_KEY",
-				"SENTRY_DSN"
+				"SENTRY_DSN",
+				"WRANGLER_PRERELEASE_LABEL"
 			],
 			"passThroughEnv": [
 				"CF_PAGES_UPLOAD_JWT",

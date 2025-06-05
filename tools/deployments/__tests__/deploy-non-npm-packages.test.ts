@@ -103,7 +103,6 @@ describe("findDeployablePackageNames()", () => {
 			  "edge-preview-authenticated-proxy",
 			  "format-errors",
 			  "playground-preview-worker",
-			  "@cloudflare/prerelease-registry",
 			  "@cloudflare/quick-edit",
 			  "turbo-r2-archive",
 			  "workers-playground",

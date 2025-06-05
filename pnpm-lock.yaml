@@ -1890,25 +1890,6 @@ importers:
         specifier: workspace:*
         version: link:../wrangler
 
-  packages/prerelease-registry:
-    dependencies:
-      jszip:
-        specifier: ^3.7.1
-        version: 3.10.1
-    devDependencies:
-      '@cloudflare/eslint-config-worker':
-        specifier: workspace:*
-        version: link:../eslint-config-worker
-      '@cloudflare/workers-tsconfig':
-        specifier: workspace:*
-        version: link:../workers-tsconfig
-      '@cloudflare/workers-types':
-        specifier: ^4.20250604.0
-        version: 4.20250604.0
-      wrangler:
-        specifier: workspace:*
-        version: link:../wrangler
-
   packages/quick-edit:
     dependencies:
       yarn:

@@ -100,6 +100,11 @@ export default defineConfig((options) => [
 			...(process.env.SENTRY_DSN
 				? { SENTRY_DSN: `"${process.env.SENTRY_DSN}"` }
 				: {}),
+			...(process.env.WRANGLER_PRERELEASE_LABEL
+				? {
+						WRANGLER_PRERELEASE_LABEL: `"${process.env.WRANGLER_PRERELEASE_LABEL}"`,
+					}
+				: {}),
 		},
 		esbuildPlugins: [embedWorkersPlugin({ isWatch: !!options.watch })],
 	},
