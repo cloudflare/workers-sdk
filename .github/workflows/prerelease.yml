@@ -1,4 +1,4 @@
-name: Prerelease for PRs and branches
+name: Prerelease
 
 on: [push, pull_request]
 
