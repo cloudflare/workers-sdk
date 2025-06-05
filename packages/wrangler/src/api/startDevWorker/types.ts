@@ -180,6 +180,9 @@ export interface StartDevWorkerInput {
 
 		/** Treat this as the primary worker in a multiworker setup (i.e. the first Worker in Miniflare's options) */
 		multiworkerPrimary?: boolean;
+
+		/** Whether the experimental mixed mode feature should be enabled */
+		experimentalMixedMode?: boolean;
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;

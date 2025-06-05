@@ -146,6 +146,8 @@ async function resolveDevConfig(
 		bindVectorizeToProd: input.dev?.bindVectorizeToProd ?? false,
 		multiworkerPrimary: input.dev?.multiworkerPrimary,
 		imagesLocalMode: input.dev?.imagesLocalMode ?? false,
+		experimentalMixedMode:
+			input.dev?.experimentalMixedMode ?? getFlag("MIXED_MODE"),
 	} satisfies StartDevWorkerOptions["dev"];
 }
 
@@ -153,27 +155,33 @@ async function resolveBindings(
 	config: Config,
 	input: StartDevWorkerInput
 ): Promise<{ bindings: StartDevWorkerOptions["bindings"]; unsafe?: CfUnsafe }> {
-	const bindings = getBindings(config, input.env, !input.dev?.remote, {
-		kv: extractBindingsOfType("kv_namespace", input.bindings),
-		vars: Object.fromEntries(
-			extractBindingsOfType("plain_text", input.bindings).map((b) => [
-				b.binding,
-				b.value,
-			])
-		),
-		durableObjects: extractBindingsOfType(
-			"durable_object_namespace",
-			input.bindings
-		),
-		r2: extractBindingsOfType("r2_bucket", input.bindings),
-		services: extractBindingsOfType("service", input.bindings),
-		d1Databases: extractBindingsOfType("d1", input.bindings),
-		ai: extractBindingsOfType("ai", input.bindings)?.[0],
-		version_metadata: extractBindingsOfType(
-			"version_metadata",
-			input.bindings
-		)?.[0],
-	});
+	const bindings = getBindings(
+		config,
+		input.env,
+		!input.dev?.remote,
+		{
+			kv: extractBindingsOfType("kv_namespace", input.bindings),
+			vars: Object.fromEntries(
+				extractBindingsOfType("plain_text", input.bindings).map((b) => [
+					b.binding,
+					b.value,
+				])
+			),
+			durableObjects: extractBindingsOfType(
+				"durable_object_namespace",
+				input.bindings
+			),
+			r2: extractBindingsOfType("r2_bucket", input.bindings),
+			services: extractBindingsOfType("service", input.bindings),
+			d1Databases: extractBindingsOfType("d1", input.bindings),
+			ai: extractBindingsOfType("ai", input.bindings)?.[0],
+			version_metadata: extractBindingsOfType(
+				"version_metadata",
+				input.bindings
+			)?.[0],
+		},
+		input.dev?.experimentalMixedMode
+	);
 
 	const maskedVars = maskVars(bindings, config);
 
