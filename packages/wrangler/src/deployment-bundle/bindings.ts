@@ -74,6 +74,7 @@ export function getBindings(
 					metadata: config?.unsafe.metadata,
 					capnp: config?.unsafe.capnp,
 				},
+		unsafe_hello_world: options?.pages ? undefined : config?.unsafe_hello_world,
 	};
 }
 

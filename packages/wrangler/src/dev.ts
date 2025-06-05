@@ -513,6 +513,7 @@ async function setupDevEnv(
 					vectorize: undefined,
 					hyperdrive: undefined,
 					secrets_store_secrets: undefined,
+					unsafe_hello_world: undefined,
 					services: args.services,
 					analytics_engine_datasets: undefined,
 					dispatch_namespaces: undefined,
@@ -1021,6 +1022,7 @@ export function getBindings(
 		assets: configParam.assets?.binding
 			? { binding: configParam.assets?.binding }
 			: undefined,
+		unsafe_hello_world: configParam.unsafe_hello_world,
 	};
 
 	return bindings;
