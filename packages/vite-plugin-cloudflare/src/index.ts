@@ -13,7 +13,11 @@ import {
 	matchAdditionalModule,
 } from "./additional-modules";
 import { hasAssetsConfigChanged } from "./asset-config";
-import { checkPublicDir } from "./build";
+import {
+	checkPublicDir,
+	getImportedAssetPaths,
+	loadViteManifest,
+} from "./build";
 import {
 	createCloudflareEnvironmentOptions,
 	initRunners,
@@ -166,6 +170,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							(async (builder) => {
 								const clientEnvironment = builder.environments.client;
 								assert(clientEnvironment);
+								const clientBuildDirectory = path.resolve(
+									builder.config.root,
+									clientEnvironment.config.build.outDir
+								);
 								const defaultHtmlPath = path.resolve(
 									builder.config.root,
 									"index.html"
@@ -192,9 +200,8 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 											await builder.build(clientEnvironment);
 
-											const tempEntryPath = path.resolve(
-												builder.config.root,
-												clientEnvironment.config.build.outDir,
+											const tempEntryPath = path.join(
+												clientBuildDirectory,
 												tempEntryName
 											);
 											fs.unlinkSync(tempEntryPath);
@@ -223,20 +230,25 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 									)
 								);
 
+								const { entryWorkerEnvironmentName } = resolvedPluginConfig;
 								const entryWorkerEnvironment =
-									builder.environments[
-										resolvedPluginConfig.entryWorkerEnvironmentName
-									];
+									builder.environments[entryWorkerEnvironmentName];
 								assert(entryWorkerEnvironment);
 								const entryWorkerBuildDirectory = path.resolve(
 									builder.config.root,
 									entryWorkerEnvironment.config.build.outDir
 								);
+								const entryWorkerManifest = loadViteManifest(
+									entryWorkerBuildDirectory
+								);
+								const importedAssetPaths =
+									getImportedAssetPaths(entryWorkerManifest);
 
 								if (hasClientEntry) {
 									await builder.build(clientEnvironment);
 								} else {
-									const hasAssets = checkPublicDir(builder.config);
+									const hasAssets =
+										importedAssetPaths.size || checkPublicDir(builder.config);
 
 									if (hasAssets) {
 										const tempEntryName = "__cloudflare_temp_entry__";
@@ -273,16 +285,38 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 									}
 								}
 
-								// const buildManifest = JSON.parse(
-								// 	fs.readFileSync(
-								// 		path.join(
-								// 			entryWorkerBuildDirectory,
-								// 			".vite",
-								// 			"manifest.json"
-								// 		),
-								// 		"utf-8"
-								// 	)
-								// );
+								const movedAssetPaths: string[] = [];
+
+								for (const assetPath of importedAssetPaths) {
+									const src = path.join(entryWorkerBuildDirectory, assetPath);
+									const dest = path.join(clientBuildDirectory, assetPath);
+
+									if (fs.existsSync(dest)) {
+										fs.unlinkSync(src);
+									} else {
+										const destDir = path.dirname(dest);
+
+										if (!fs.existsSync(destDir)) {
+											fs.mkdirSync(destDir, { recursive: true });
+										}
+
+										fs.renameSync(src, dest);
+										movedAssetPaths.push(dest);
+									}
+								}
+
+								if (movedAssetPaths.length) {
+									builder.config.logger.info(
+										[
+											`${colors.green("✓")} ${movedAssetPaths.length} asset${movedAssetPaths.length > 1 ? "s" : ""} moved from ${entryWorkerEnvironmentName} to client build output.`,
+											...movedAssetPaths.map((assetPath) =>
+												colors.dim(
+													path.relative(builder.config.root, assetPath)
+												)
+											),
+										].join("\n")
+									);
+								}
 							}),
 					},
 				};

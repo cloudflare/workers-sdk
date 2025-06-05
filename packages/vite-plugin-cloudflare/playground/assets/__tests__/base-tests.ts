@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { getResponse, getTextResponse, isBuild } from "../../__test-utils__";
+import { getResponse, getTextResponse } from "../../__test-utils__";
 
 test("fetches public directory asset", async () => {
 	const response = await getResponse("/public-directory-asset");
@@ -9,8 +9,7 @@ test("fetches public directory asset", async () => {
 	expect(additionalHeader).toBe("public-directory-asset");
 });
 
-// TODO: enable build test when assets are copied to client output directory
-test.skipIf(isBuild)("fetches imported asset", async () => {
+test("fetches imported asset", async () => {
 	const response = await getResponse("/imported-asset");
 	const contentType = await response.headerValue("content-type");
 	const additionalHeader = await response.headerValue("additional-header");
@@ -18,8 +17,7 @@ test.skipIf(isBuild)("fetches imported asset", async () => {
 	expect(additionalHeader).toBe("imported-asset");
 });
 
-// TODO: enable build test when assets are copied to client output directory
-test.skipIf(isBuild)("fetches imported asset with url suffix", async () => {
+test("fetches imported asset with url suffix", async () => {
 	const text = await getTextResponse("/imported-asset-url-suffix");
 	expect(text).toBe(`The text content is "Text content"`);
 });
