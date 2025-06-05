@@ -1695,6 +1695,9 @@ importers:
       '@ava/typescript':
         specifier: ^4.1.0
         version: 4.1.0
+      '@cloudflare/containers-shared':
+        specifier: workspace:*
+        version: link:../containers-shared
       '@cloudflare/kv-asset-handler':
         specifier: workspace:*
         version: link:../kv-asset-handler

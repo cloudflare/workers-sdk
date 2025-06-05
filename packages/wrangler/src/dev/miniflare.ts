@@ -204,6 +204,8 @@ export interface ConfigBundle {
 	bindVectorizeToProd: boolean;
 	imagesLocalMode: boolean;
 	testScheduled: boolean;
+	ignoreContainers: boolean | undefined;
+	dockerPath: string | undefined;
 	containers: WorkerOptions["containers"];
 }
 
@@ -1287,6 +1289,7 @@ export async function buildMiniflareOptions(
 		upstream,
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 		unsafeTriggerHandlers: true,
+		ignoreContainers: config.ignoreContainers,
 		// The way we run Miniflare instances with wrangler dev is that there are two:
 		//  - one holding the proxy worker,
 		//  - and one holding the user worker.
@@ -1294,7 +1297,8 @@ export async function buildMiniflareOptions(
 		// Instead of hiding all logs from this Miniflare instance, we specifically hide the request logs,
 		// allowing other logs to be shown to the user (such as details about emails being triggered)
 		logRequests: false,
-
+		dockerPath: config.dockerPath,
+		// ignoreContainers: config.
 		log,
 		verbose: logger.loggerLevel === "debug",
 		handleRuntimeStdio,

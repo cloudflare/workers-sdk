@@ -1589,7 +1589,9 @@ export class Miniflare {
 			innerBindings: Worker_Binding[];
 		}[] = [];
 
-		let containerOptions: NonNullable<ContainerOptions> = {};
+		let containerOptions: {
+			[className: string]: ContainerOptions;
+		} = {};
 
 		for (const [key, plugin] of PLUGIN_ENTRIES) {
 			const pluginExtensions = await plugin.getExtensions?.({
@@ -1889,12 +1891,18 @@ export class Miniflare {
 
 		if (
 			Object.keys(containerOptions).length &&
-			!sharedOpts.containers.ignore_containers
+			!sharedOpts.containers.ignoreContainers
 		) {
 			if (this.#containerService === undefined) {
-				this.#containerService = new ContainerService(containerOptions);
+				this.#containerService = new ContainerService(
+					containerOptions,
+					this.#sharedOpts.containers
+				);
 			} else {
-				this.#containerService.updateConfig(containerOptions);
+				this.#containerService.updateConfig(
+					containerOptions,
+					this.#sharedOpts.containers
+				);
 			}
 		}
 

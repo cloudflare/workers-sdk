@@ -180,6 +180,9 @@ export interface StartDevWorkerInput {
 
 		/** Treat this as the primary worker in a multiworker setup (i.e. the first Worker in Miniflare's options) */
 		multiworkerPrimary?: boolean;
+
+		ignoreContainers?: boolean; // whether to ignore containers in the dev environment, defaults to false
+		dockerPath?: string; // path to the Docker executable, defaults to "docker"
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;

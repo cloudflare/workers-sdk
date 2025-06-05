@@ -58,6 +58,7 @@
 	},
 	"devDependencies": {
 		"@ava/typescript": "^4.1.0",
+		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/kv-asset-handler": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-types": "^4.20250604.0",
