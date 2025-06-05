@@ -7,9 +7,9 @@
 		"test:vitest": "vitest run"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "/Users/dario/Repos/workers-sdk/packages/vitest-pool-workers",
+		"@cloudflare/vitest-pool-workers": "workspace:*",
 		"typescript": "^5.5.2",
 		"vitest": "~3.0.7",
-		"wrangler": "/Users/dario/Repos/workers-sdk/packages/wrangler"
+		"wrangler": "workspace:*"
 	}
 }
