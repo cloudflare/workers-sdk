@@ -994,6 +994,23 @@ export interface EnvironmentNonInheritable {
 		/** Name of the secret */
 		secret_name: string;
 	}[];
+
+	/**
+	 * **DO NOT USE**. Hello World Binding Config to serve as an explanatory example.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	unsafe_hello_world: {
+		/** The binding name used to refer to the bound service. */
+		binding: string;
+
+		/** Whether the timer is enabled */
+		enable_timer?: boolean;
+	}[];
 }
 
 /**

@@ -1405,6 +1405,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateSecretsStoreSecretBinding),
 			[]
 		),
+		unsafe_hello_world: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"unsafe_hello_world",
+			validateBindingArray(envName, validateHelloWorldBinding),
+			[]
+		),
 		version_metadata: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -3406,6 +3416,39 @@ const validateSecretsStoreSecretBinding: ValidatorFn = (
 		"binding",
 		"store_id",
 		"secret_name",
+	]);
+
+	return isValid;
+};
+
+const validateHelloWorldBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"unsafe_hello_world" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isOptionalProperty(value, "enable_timer", "boolean")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a boolean "enable_timer" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"enable_timer",
 	]);
 
 	return isValid;

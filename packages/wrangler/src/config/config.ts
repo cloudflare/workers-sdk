@@ -315,6 +315,7 @@ export const defaultWranglerConfig: Config = {
 	ai: undefined,
 	images: undefined,
 	version_metadata: undefined,
+	unsafe_hello_world: [],
 
 	/*====================================================*/
 	/*           Fields supported by Workers only         */
