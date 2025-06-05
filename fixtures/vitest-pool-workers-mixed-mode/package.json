@@ -1,6 +1,5 @@
 {
 	"name": "@fixture/vitest-pool-workers-mixed-mode",
-	"version": "0.0.0",
 	"private": true,
 	"scripts": {
 		"test": "vitest run --config vitest.workers.config.ts",
