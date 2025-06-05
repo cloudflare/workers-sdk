@@ -250,6 +250,14 @@ async function testCrypto() {
 	data += decipher.final();
 	assert.strictEqual(data, "Hello World");
 
+	assert.strictEqual(crypto.constants.DH_UNABLE_TO_CHECK_GENERATOR, 4);
+	assert.strictEqual(crypto.constants.RSA_PSS_SALTLEN_DIGEST, -1);
+	assert.strictEqual(
+		crypto.constants.SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION,
+		262144
+	);
+	assert.strictEqual(crypto.constants.SSL_OP_NO_TICKET, 16384);
+
 	return new Response("OK");
 }
 
