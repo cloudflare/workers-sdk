@@ -73,7 +73,11 @@ async function uploadPackageArtifact(pkg, artifactPath) {
 			await uploadPackageArtifact(pkg, tarballPath);
 		}
 	}
-	spawnSync("pnpm", ["dlx", "pkg-pr-new", "publish", ...npmPackages], {
-		stdio: "inherit",
-	});
+	spawnSync(
+		"pnpm",
+		["dlx", "pkg-pr-new", "publish", "--compact", ...npmPackages],
+		{
+			stdio: "inherit",
+		}
+	);
 }
