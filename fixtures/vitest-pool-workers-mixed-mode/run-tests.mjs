@@ -3,12 +3,12 @@ import { randomUUID } from "crypto";
 import { cpSync, readFileSync, rmSync, writeFileSync } from "fs";
 
 if (!process.env.TEST_CLOUDFLARE_API_TOKEN) {
-	console.error("CLOUDFLARE_API_TOKEN must be set");
+	console.error("TEST_CLOUDFLARE_API_TOKEN must be set");
 	process.exit(1);
 }
 
 if (!process.env.TEST_CLOUDFLARE_ACCOUNT_ID) {
-	console.error("CLOUDFLARE_ACCOUNT_ID must be set");
+	console.error("TEST_CLOUDFLARE_ACCOUNT_ID must be set");
 	process.exit(1);
 }
 
@@ -29,19 +29,31 @@ writeFileSync(
 	"utf8"
 );
 
+writeFileSync(
+	"./tmp/remote-wrangler.json",
+	JSON.stringify(
+		{
+			name: remoteWorkerName,
+			main: "../remote-worker.js",
+			compatibility_date: "2025-06-01",
+		},
+		undefined,
+		2
+	),
+	"utf8"
+);
+
 const env = {
 	...process.env,
 	CLOUDFLARE_API_TOKEN: process.env.TEST_CLOUDFLARE_API_TOKEN,
-	TEST_CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
+	CLOUDFLARE_ACCOUNT_ID: process.env.TEST_CLOUDFLARE_ACCOUNT_ID,
 };
 
-const deployOut = execSync(
-	`pnpm dlx wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-01-01`,
-	{
-		stdio: "pipe",
-		env,
-	}
-);
+const deployOut = execSync("pnpm dlx wrangler deploy -c remote-wrangler.json", {
+	stdio: "pipe",
+	cwd: "./tmp",
+	env,
+});
 
 if (!new RegExp(`Deployed\\s+${remoteWorkerName}\\b`).test(`${deployOut}`)) {
 	throw new Error(`Failed to deploy ${remoteWorkerName}`);
