@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 // TODO: we'll want to run this on all OSes but that will require some setup because docker is not installed by default on macos and windows
@@ -45,6 +45,17 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				["--port=0", "--inspector-port=0", "--ignore-containers"]
 			);
 			expect(getOutput()).not.toContain(`Hello from ContainerService!`);
+			await stop?.();
+		});
+
+		// TODO: not entirely sure how to make this test work without logging random stuff
+		it("gets docker path from env var", async () => {
+			vi.stubEnv("WRANGLER_CONTAINERS_DOCKER_PATH", "blah/docker");
+			const { stop, getOutput } = await runWranglerDev(
+				resolve(__dirname, ".."),
+				["--port=0", "--inspector-port=0"]
+			);
+			expect(getOutput()).toContain("blah/docker");
 			await stop?.();
 		});
 	}
