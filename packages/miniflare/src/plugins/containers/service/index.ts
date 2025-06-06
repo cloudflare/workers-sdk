@@ -1,5 +1,9 @@
 import { ContainerOptions, ContainersSharedOptions } from "../index";
 
+/**
+ * ContainerService manages container configuration, building or pulling
+ * containers, and cleaning up containers at the end of the dev session.
+ */
 export class ContainerService {
 	#containerOptions: { [className: string]: ContainerOptions };
 	#sharedOptions: ContainersSharedOptions;

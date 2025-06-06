@@ -161,8 +161,7 @@ export const dev = createCommand({
 		},
 		"ignore-containers": {
 			type: "boolean",
-			describe:
-				"Allow dev without building containers or requiring Docker, and only error when a container instance is actually requested.",
+			describe: "Whether to build and enable containers during development",
 			hidden: true,
 		},
 		site: {

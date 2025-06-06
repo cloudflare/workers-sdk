@@ -2,12 +2,6 @@
 	"name": "container-app",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-04-03",
-	"migrations": [
-		{
-			"new_sqlite_classes": ["Container"],
-			"tag": "v1",
-		},
-	],
 	"dev": { "ignore_containers": true },
 	"containers": [
 		{
@@ -26,8 +20,5 @@
 				"name": "CONTAINER",
 			},
 		],
-	},
-	"observability": {
-		"enabled": true,
 	},
 }
