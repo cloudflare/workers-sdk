@@ -44,6 +44,11 @@ const WorkersPoolOptionsSchema = z.object({
 	 */
 	isolatedStorage: z.boolean().default(true),
 	/**
+	 * Enables experimental mixed mode to access remote resources configured
+	 * with `remote: true` in the wrangler configuration file.
+	 */
+	experimental_mixedMode: z.boolean().optional(),
+	/**
 	 * Runs all tests in this project serially in the same worker, using the same
 	 * module cache. This can significantly speed up tests if you've got lots of
 	 * small test files.
@@ -235,6 +240,12 @@ async function parseCustomPoolOptions(
 		// Lazily import `wrangler` if and when we need it
 		const wrangler = await import("wrangler");
 
+		const mixedModeSession = options.experimental_mixedMode
+			? await wrangler.experimental_maybeStartOrUpdateMixedModeSession(
+					configPath
+				)
+			: undefined;
+
 		const { workerOptions, externalWorkers, define, main } =
 			wrangler.unstable_getMiniflareWorkerOptions(
 				configPath,
@@ -242,6 +253,8 @@ async function parseCustomPoolOptions(
 				{
 					imagesLocalMode: true,
 					overrides: { assets: options.miniflare.assets },
+					mixedModeConnectionString:
+						mixedModeSession?.mixedModeConnectionString,
 				}
 			);
 

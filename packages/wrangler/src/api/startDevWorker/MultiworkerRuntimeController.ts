@@ -8,8 +8,8 @@ import { castErrorCause } from "./events";
 import {
 	convertToConfigBundle,
 	LocalRuntimeController,
-	maybeStartOrUpdateMixedModeSession,
 } from "./LocalRuntimeController";
+import { convertCfWorkerInitBindingsToBindings } from "./utils";
 import type { MixedModeSession } from "../mixedMode";
 import type { BundleCompleteEvent } from "./events";
 
@@ -101,8 +101,18 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 			const experimentalMixedMode = data.config.dev.experimentalMixedMode;
 
 			if (experimentalMixedMode && !data.config.dev?.remote) {
+				// note: mixedMode uses (transitively) LocalRuntimeController, so we need to import
+				// from the module lazily in order to avoid circular dependency issues
+				const { maybeStartOrUpdateMixedModeSession } = await import(
+					"../mixedMode"
+				);
 				const mixedModeSession = await maybeStartOrUpdateMixedModeSession(
-					configBundle,
+					{
+						name: configBundle.name,
+						bindings:
+							convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
+							{},
+					},
 					this.#mixedModeSessions.get(data.config.name)
 				);
 				this.#mixedModeSessions.set(data.config.name, mixedModeSession);
