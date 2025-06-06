@@ -1,6 +1,7 @@
 import html from "./index.html?raw";
 import importedImage from "./imported-image.svg";
 import importedText from "./imported-text.txt?url";
+import inlineImage from "./inline-image.svg?inline";
 
 interface Env {
 	ASSETS: Fetcher;
@@ -41,6 +42,13 @@ export default {
 				const textContent = await response.text();
 
 				return new Response(`The text content is "${textContent}"`);
+			}
+			case "/inline-asset": {
+				const response = await env.ASSETS.fetch(new URL(inlineImage, origin));
+				const modifiedResponse = new Response(response.body, response);
+				modifiedResponse.headers.append("additional-header", "inline-asset");
+
+				return modifiedResponse;
 			}
 			case "/transformed-html-asset": {
 				const response = await env.ASSETS.fetch(new URL("/html-page", origin));

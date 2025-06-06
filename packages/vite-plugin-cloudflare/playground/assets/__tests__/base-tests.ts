@@ -21,3 +21,11 @@ test("fetches imported asset with url suffix", async () => {
 	const text = await getTextResponse("/imported-asset-url-suffix");
 	expect(text).toBe(`The text content is "Text content"`);
 });
+
+test("fetches inline asset", async () => {
+	const response = await getResponse("/inline-asset");
+	const contentType = await response.headerValue("content-type");
+	const additionalHeader = await response.headerValue("additional-header");
+	expect(contentType).toBe("image/svg+xml");
+	expect(additionalHeader).toBe("inline-asset");
+});
