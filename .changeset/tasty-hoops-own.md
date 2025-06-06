@@ -1,8 +1,10 @@
 ---
 "@cloudflare/workers-shared": minor
+"wrangler": minor
+"miniflare": minor
 ---
 
-Adds support for static routing to Workers Assets
+Adds support for static routing to Workers Assets to Wrangler
 
 Implements the proposal noted here https://github.com/cloudflare/workers-sdk/discussions/9143
 
