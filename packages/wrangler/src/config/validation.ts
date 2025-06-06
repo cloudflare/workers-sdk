@@ -3,7 +3,6 @@ import path from "node:path";
 import { dedent } from "ts-dedent";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
-import { logger } from "../logger";
 import { bucketFormatMessage, isValidR2BucketName } from "../r2/helpers";
 import { friendlyBindingNames } from "../utils/print-bindings";
 import { Diagnostics } from "./diagnostics";

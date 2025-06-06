@@ -4531,7 +4531,7 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Cannot set run_worker_first=true without a Worker script.
+				[Error: Cannot set run_worker_first without a Worker script.
 				Please remove run_worker_first from your configuration file, or provide a Worker script in your configuration file (\`main\`).]
 			`);
 		});
@@ -5196,7 +5196,7 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy");
 		});
 
-		it("run_worker_first provided when in config", async () => {
+		it("uploads run_worker_first=true when provided when in config", async () => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
@@ -5224,6 +5224,44 @@ addEventListener('fetch', event => {});`
 						html_handling: "none",
 						not_found_handling: "404-page",
 						run_worker_first: true,
+					},
+				},
+				expectedBindings: [{ name: "ASSETS", type: "assets" }],
+				expectedMainModule: "index.js",
+				expectedCompatibilityDate: "2024-09-27",
+				expectedCompatibilityFlags: ["nodejs_compat"],
+			});
+			await runWrangler("deploy");
+		});
+
+		it("uploads run_worker_first=[rules] when provided when in config", async () => {
+			const assets = [
+				{ filePath: "file-1.txt", content: "Content of file-1" },
+				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
+			];
+			writeAssets(assets);
+			writeWorkerSource({ format: "js" });
+			writeWranglerConfig({
+				main: "index.js",
+				compatibility_date: "2024-09-27",
+				compatibility_flags: ["nodejs_compat"],
+				assets: {
+					directory: "assets",
+					binding: "ASSETS",
+					html_handling: "none",
+					not_found_handling: "404-page",
+					run_worker_first: ["/api", "!/api/asset"],
+				},
+			});
+			await mockAUSRequest();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedAssets: {
+					jwt: "<<aus-completion-token>>",
+					config: {
+						html_handling: "none",
+						not_found_handling: "404-page",
+						run_worker_first: ["/api", "!/api/asset"],
 					},
 				},
 				expectedBindings: [{ name: "ASSETS", type: "assets" }],
