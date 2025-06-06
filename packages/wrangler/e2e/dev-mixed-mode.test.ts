@@ -186,7 +186,7 @@ describe("wrangler dev - mixed mode", () => {
 		expect(normalizeOutput(worker.currentOutput)).toMatchInlineSnapshot(`
 			"Your Worker has access to the following bindings:
 			Binding        Resource      Mode
-			env.AI         AI      remote
+			env.AI         AI            remote
 			[wrangler:info] Ready on http://<HOST>:<PORT>
 			▲ [WARNING] AI bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.
 			⎔ Starting local server...
