@@ -258,6 +258,7 @@ export interface CfDispatchNamespace {
 export interface CfMTlsCertificate {
 	binding: string;
 	certificate_id: string;
+	remote?: boolean;
 }
 
 export interface CfLogfwdr {

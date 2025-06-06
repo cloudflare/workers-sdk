@@ -725,8 +725,12 @@ async function maybeStartOrUpdateMixedModeSession(
 	//             same we can just leave the mixedModeSession untouched
 	if (mixedModeSession === undefined) {
 		if (Object.keys(workerRemoteBindings).length > 0) {
-			mixedModeSession =
-				await experimental_startMixedModeSession(workerRemoteBindings);
+			mixedModeSession = await experimental_startMixedModeSession(
+				workerRemoteBindings,
+				{
+					workerName: workerConfig.name,
+				}
+			);
 			mixedModeSessionsMap.set(workerConfig.name, mixedModeSession);
 		}
 	} else {

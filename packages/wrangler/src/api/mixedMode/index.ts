@@ -15,13 +15,16 @@ export type MixedModeSession = Pick<Worker, "ready" | "dispose"> & {
 	mixedModeConnectionString: MixedModeConnectionString;
 };
 
+export type StartMixedModeSessionOptions = {
+	workerName?: string;
+	auth?: NonNullable<StartDevWorkerInput["dev"]>["auth"];
+	/** If running in a non-public compliance region, set this here. */
+	complianceRegion?: Config["compliance_region"];
+};
+
 export async function startMixedModeSession(
 	bindings: StartDevWorkerInput["bindings"],
-	options?: {
-		auth?: NonNullable<StartDevWorkerInput["dev"]>["auth"];
-		/** If running in a non-public compliance region, set this here. */
-		complianceRegion?: Config["compliance_region"];
-	}
+	options?: StartMixedModeSessionOptions
 ): Promise<MixedModeSession> {
 	const proxyServerWorkerWranglerConfig = path.resolve(
 		getBasePath(),
@@ -37,6 +40,7 @@ export async function startMixedModeSession(
 	);
 
 	const worker = await startWorker({
+		name: options?.workerName,
 		config: proxyServerWorkerWranglerConfig,
 		dev: {
 			remote: "minimal",
