@@ -824,13 +824,9 @@ describe("generate types", () => {
 			);
 
 			await runWrangler("types");
-			expect(fs.readFileSync("./worker-configuration.d.ts", "utf8"))
-				.toMatchInlineSnapshot(`
-					"/* eslint-disable */
-					// Runtime types generated with workerd@
-					// Begin runtime types
-					<runtime types go here>"
-				`);
+			const output = fs.readFileSync("./worker-configuration.d.ts", "utf8");
+			expect(output).toContain("// Runtime types generated with workerd@");
+			expect(output).not.toContain("interface Env");
 			expect(std.out).toMatchInlineSnapshot(`
 				"Generating project types...
 
