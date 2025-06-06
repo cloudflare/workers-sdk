@@ -1,5 +1,15 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.8.37
+
+### Patch Changes
+
+- [#9454](https://github.com/cloudflare/workers-sdk/pull/9454) [`9c30aec`](https://github.com/cloudflare/workers-sdk/commit/9c30aecaa2e6422ef83d9d6d82d8ea10cdf28dfe) Thanks [@Enchan1207](https://github.com/Enchan1207)! - fix test filtering by pattern that contains non-ascii characters.
+
+- Updated dependencies [[`4ab5a40`](https://github.com/cloudflare/workers-sdk/commit/4ab5a4027d8a180e8ed300bc63d4d4d41848bcd5), [`485cd08`](https://github.com/cloudflare/workers-sdk/commit/485cd08679eaa3a47e9951c708b80f5c33a0a097), [`66edd2f`](https://github.com/cloudflare/workers-sdk/commit/66edd2f3bdae3a5fa437311a038a47aba366a64c), [`d1a1787`](https://github.com/cloudflare/workers-sdk/commit/d1a1787b27467417830f5d5c7bb8e7a14d346e9c), [`e3b3ef5`](https://github.com/cloudflare/workers-sdk/commit/e3b3ef51cfbdb5ffa15ebe81656460c340a2bba4), [`1f84092`](https://github.com/cloudflare/workers-sdk/commit/1f84092851e7a71681e99417cfd63c982bfa1d58)]:
+  - miniflare@4.20250604.0
+  - wrangler@4.19.2
+
 ## 0.8.36
 
 ### Patch Changes
