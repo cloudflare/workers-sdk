@@ -1,5 +1,5 @@
 {
-	"name": "workers-with-assets-static-routing",
+	"name": "@fixture/workers-with-assets-static-routing",
 	"private": true,
 	"scripts": {
 		"check:type": "tsc",
@@ -7,7 +7,7 @@
 		"pretest:ci": "pnpm playwright install chromium",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
+		"type:tests": "tsc -p ./test/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
@@ -19,7 +19,7 @@
 		"wrangler": "workspace:*"
 	},
 	"volta": {
-		"extends": "../../package.json",
-		"node": "20.19.2"
+		"node": "20.19.2",
+		"extends": "../../package.json"
 	}
 }
