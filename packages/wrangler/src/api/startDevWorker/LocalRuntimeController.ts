@@ -3,7 +3,6 @@ import { readFile } from "node:fs/promises";
 import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
-import { getFlag } from "../../experimental-flags";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
@@ -160,7 +159,10 @@ export class LocalRuntimeController extends RuntimeController {
 		try {
 			const configBundle = await convertToConfigBundle(data);
 
-			if (getFlag("MIXED_MODE") && !data.config.dev?.remote) {
+			const experimentalMixedMode =
+				data.config.dev.experimentalMixedMode ?? false;
+
+			if (experimentalMixedMode && !data.config.dev?.remote) {
 				this.#mixedModeSession = await maybeStartOrUpdateMixedModeSession(
 					configBundle,
 					this.#mixedModeSession
@@ -173,7 +175,7 @@ export class LocalRuntimeController extends RuntimeController {
 					configBundle,
 					this.#proxyToUserWorkerAuthenticationSecret,
 					this.#mixedModeSession?.mixedModeConnectionString,
-					!!getFlag("MIXED_MODE")
+					!!experimentalMixedMode
 				);
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
 			if (this.#mf === undefined) {

@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto";
 import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
-import { getFlag } from "../../experimental-flags";
 import { logger } from "../../logger";
 import { castErrorCause } from "./events";
 import {
@@ -99,7 +98,9 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 		try {
 			const configBundle = await convertToConfigBundle(data);
 
-			if (getFlag("MIXED_MODE") && !data.config.dev?.remote) {
+			const experimentalMixedMode = data.config.dev.experimentalMixedMode;
+
+			if (experimentalMixedMode && !data.config.dev?.remote) {
 				const mixedModeSession = await maybeStartOrUpdateMixedModeSession(
 					configBundle,
 					this.#mixedModeSessions.get(data.config.name)
@@ -113,7 +114,7 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 				this.#proxyToUserWorkerAuthenticationSecret,
 				this.#mixedModeSessions.get(data.config.name)
 					?.mixedModeConnectionString,
-				!!getFlag("MIXED_MODE")
+				!!experimentalMixedMode
 			);
 
 			this.#options.set(data.config.name, {

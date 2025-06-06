@@ -1,9 +1,15 @@
 import * as fs from "node:fs";
 import { dirname } from "node:path";
-import { constructBuildCommand } from "../../cloudchamber/build";
+import {
+	constructBuildCommand,
+	ensureDiskLimits,
+} from "../../cloudchamber/build";
+import { resolveAppDiskSize } from "../../cloudchamber/common";
 import { getBuildArguments } from "../../cloudchamber/deploy";
 import { type ContainerApp } from "../../config/environment";
+import type { CompleteAccountCustomer } from "../../cloudchamber/client";
 
+const MiB = 1024 * 1024;
 const defaultConfiguration: ContainerApp = {
 	name: "abc",
 	class_name: "",
@@ -85,6 +91,7 @@ describe("cloudchamber build", () => {
 				pathToDockerfileDirectory: ".",
 				push: true,
 				tag: "abc:1234",
+				container: { image: writeDockerfile(), ...defaultConfiguration },
 			});
 		});
 
@@ -126,6 +133,73 @@ describe("cloudchamber build", () => {
 					"The image http://docker.io could not be found, and the image is not a valid reference: image needs to include atleast a tag ':' (e.g: docker.io/httpd:1)"
 				);
 			}
+		});
+	});
+
+	describe("ensureDiskLimits", () => {
+		const accountBase = {
+			limits: { disk_mb_per_deployment: 2000 },
+		} as CompleteAccountCustomer;
+
+		it("should throw error if app configured disk exceeds account limit", async () => {
+			await expect(() =>
+				ensureDiskLimits({
+					requiredSize: 333 * MiB, // 333MiB
+					account: accountBase,
+					containerApp: {
+						...defaultConfiguration,
+						configuration: {
+							image: "",
+							disk: { size: "3GB" }, // This exceeds the account limit of 2GB
+						},
+					},
+				})
+			).rejects.toThrow("Exceeded account limits");
+		});
+
+		it("should throw error if image size exceeds allowed size", async () => {
+			await expect(() =>
+				ensureDiskLimits({
+					requiredSize: 3000 * MiB, // 3GiB
+					account: accountBase,
+					containerApp: undefined,
+				})
+			).rejects.toThrow("Image too large");
+		});
+
+		it("should not throw when disk size is within limits", async () => {
+			const result = await ensureDiskLimits({
+				requiredSize: 256 * MiB, // 256MiB
+				account: accountBase,
+				containerApp: undefined,
+			});
+
+			expect(result).toEqual(undefined);
+		});
+	});
+
+	describe("resolveAppDiskSize", () => {
+		const accountBase = {
+			limits: { disk_mb_per_deployment: 2000 },
+		} as CompleteAccountCustomer;
+		it("should return parsed app disk size", () => {
+			const result = resolveAppDiskSize(accountBase, {
+				...defaultConfiguration,
+				configuration: { image: "", disk: { size: "500MB" } },
+			});
+			expect(result).toBeCloseTo(500 * 1000 * 1000, -5);
+		});
+
+		it("should return default size when disk size not set", () => {
+			const result = resolveAppDiskSize(accountBase, {
+				...defaultConfiguration,
+				configuration: { image: "" },
+			});
+			expect(result).toBeCloseTo(2 * 1000 * 1000 * 1000, -5);
+		});
+
+		it("should return undefined if app is not passed", () => {
+			expect(resolveAppDiskSize(accountBase, undefined)).toBeUndefined();
 		});
 	});
 });

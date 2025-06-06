@@ -3,7 +3,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { Writable } from "node:stream";
+import { PassThrough, Writable } from "node:stream";
 import * as TOML from "@iarna/toml";
 import { sync } from "command-exists";
 import * as esbuild from "esbuild";
@@ -8668,27 +8668,82 @@ addEventListener('fetch', event => {});`
 					} as unknown as ChildProcess;
 				}
 
-				vi.mocked(spawn).mockImplementation((cmd, args) => {
-					expect(cmd).toBe(getDockerPath());
-					if (args[0] === "image") {
+				vi.mocked(spawn)
+					// 1. docker build
+					.mockImplementationOnce((cmd, args) => {
+						expect(cmd).toBe(getDockerPath());
+						expect(args).toEqual([
+							"build",
+							"-t",
+							getDefaultRegistry() + "/my-container:Galaxy",
+							"--platform",
+							"linux/amd64",
+							"-f",
+							"-",
+							".",
+						]);
+
+						let dockerfile = "";
+						const readable = new Writable({
+							write(chunk) {
+								dockerfile += chunk;
+							},
+							final() {},
+						});
+						return {
+							pid: -1,
+							error: undefined,
+							stderr: Buffer.from([]),
+							stdout: Buffer.from("i promise I am a successful docker build"),
+							stdin: readable,
+							status: 0,
+							signal: null,
+							output: [null],
+							on: (reason: string, cbPassed: (code: number) => unknown) => {
+								if (reason === "exit") {
+									expect(dockerfile).toEqual("FROM scratch");
+									cbPassed(0);
+								}
+							},
+						} as unknown as ChildProcess;
+					})
+					// 2. docker image inspect
+					.mockImplementationOnce((cmd, args) => {
+						expect(cmd).toBe(getDockerPath());
 						expect(args).toEqual([
 							"image",
-							"push",
+							"inspect",
 							`${getDefaultRegistry()}/my-container:Galaxy`,
+							"--format",
+							"{{ .Size }} {{ len .RootFS.Layers }}",
 						]);
-						return defaultChildProcess();
-					}
 
-					if (args[0] === "tag") {
-						expect(args).toEqual([
-							"tag",
-							"my-container:Galaxy",
-							`${getDefaultRegistry()}/my-container:Galaxy`,
-						]);
-						return defaultChildProcess();
-					}
+						const stdout = new PassThrough();
+						const stderr = new PassThrough();
 
-					if (args[0] === "login") {
+						const child = {
+							stdout,
+							stderr,
+							on(event: string, cb: (code: number) => void) {
+								if (event === "close") {
+									// Simulate async close after output
+									setImmediate(() => cb(0));
+								}
+								return this;
+							},
+						};
+
+						// Simulate docker output
+						setImmediate(() => {
+							stdout.emit("data", "123456 4\n");
+						});
+
+						return child as unknown as ChildProcess;
+					})
+
+					// 3. docker login
+					.mockImplementationOnce((cmd, _args) => {
+						expect(cmd).toBe(getDockerPath());
 						let password = "";
 						const readable = new Writable({
 							write(chunk) {
@@ -8696,7 +8751,6 @@ addEventListener('fetch', event => {});`
 							},
 							final() {},
 						});
-
 						return {
 							stdout: Buffer.from("i promise I am a successful docker login"),
 							stdin: readable,
@@ -8708,47 +8762,30 @@ addEventListener('fetch', event => {});`
 									expect(password).toEqual("mockpassword");
 									cbPassed(0);
 								}
-
 								return this;
 							},
 						} as unknown as ChildProcess;
-					}
-
-					expect(args).toEqual([
-						"build",
-						"-t",
-						getDefaultRegistry() + "/my-container:Galaxy",
-						"--platform",
-						"linux/amd64",
-						"-f",
-						"-",
-						".",
-					]);
-
-					let dockerfile = "";
-					const readable = new Writable({
-						write(chunk) {
-							dockerfile += chunk;
-						},
-						final() {},
+					})
+					// 4. docker tag
+					.mockImplementationOnce((cmd, args) => {
+						expect(cmd).toBe(getDockerPath());
+						expect(args).toEqual([
+							"tag",
+							"my-container:Galaxy",
+							`${getDefaultRegistry()}/my-container:Galaxy`,
+						]);
+						return defaultChildProcess();
+					})
+					// 5. docker push
+					.mockImplementationOnce((cmd, args) => {
+						expect(cmd).toBe(getDockerPath());
+						expect(args).toEqual([
+							"image",
+							"push",
+							`${getDefaultRegistry()}/my-container:Galaxy`,
+						]);
+						return defaultChildProcess();
 					});
-					return {
-						pid: -1,
-						error: undefined,
-						stderr: Buffer.from([]),
-						stdout: Buffer.from("i promise I am a successful docker build"),
-						stdin: readable,
-						status: 0,
-						signal: null,
-						output: [null],
-						on: (reason: string, cbPassed: (code: number) => unknown) => {
-							if (reason === "exit") {
-								expect(dockerfile).toEqual("FROM scratch");
-								cbPassed(0);
-							}
-						},
-					} as unknown as ChildProcess;
-				});
 
 				mockContainersAccount();
 
