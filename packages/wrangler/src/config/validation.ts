@@ -3,6 +3,7 @@ import path from "node:path";
 import { dedent } from "ts-dedent";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
+import { logger } from "../logger";
 import { bucketFormatMessage, isValidR2BucketName } from "../r2/helpers";
 import { friendlyBindingNames } from "../utils/print-bindings";
 import { Diagnostics } from "./diagnostics";
@@ -2100,15 +2101,33 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			["single-page-application", "404-page", "none"]
 		) && isValid;
 
-	isValid =
-		validateOptionalProperty(
-			diagnostics,
-			field,
-			"run_worker_first",
-			(value as Assets).run_worker_first,
-			"boolean"
-		) && isValid;
-
+	if ((value as Assets).run_worker_first !== undefined) {
+		if (typeof (value as Assets).run_worker_first === "boolean") {
+			isValid =
+				validateOptionalProperty(
+					diagnostics,
+					field,
+					"run_worker_first",
+					(value as Assets).run_worker_first,
+					"boolean"
+				) && isValid;
+		} else if (Array.isArray((value as Assets).run_worker_first)) {
+			isValid =
+				validateOptionalTypedArray(
+					diagnostics,
+					"assets.run_worker_first",
+					(value as Assets).run_worker_first,
+					"string"
+				) && isValid;
+		} else {
+			diagnostics.errors.push(
+				`The field "${field}.run_worker_first" should be a boolean or an array of strings, but got ${JSON.stringify(
+					(value as Assets).run_worker_first
+				)}.`
+			);
+			isValid = false;
+		}
+	}
 	isValid =
 		validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 			"directory",

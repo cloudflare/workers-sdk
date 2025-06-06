@@ -446,7 +446,7 @@ export function getAssetsOptions(
 	if (typeof config.assets?.run_worker_first === "boolean") {
 		routerConfig.invoke_user_worker_ahead_of_assets =
 			config.assets.run_worker_first;
-	} else if (typeof config.assets?.run_worker_first === "string") {
+	} else if (Array.isArray(config.assets?.run_worker_first)) {
 		const { parsed, errorMessage } = parseStaticRouting(
 			config.assets.run_worker_first
 		);

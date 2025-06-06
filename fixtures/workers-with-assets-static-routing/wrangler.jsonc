@@ -1,0 +1,15 @@
+{
+	"name": "workers-with-assets-static-routing",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-05-20",
+	"assets": {
+		"binding": "ASSETS",
+		"directory": "./public",
+		"run_worker_first": [
+			"/worker/*",
+			"/oauth/callback",
+			"!/missing-asset",
+			"!/worker/asset",
+		],
+	},
+}
