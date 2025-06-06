@@ -2,44 +2,40 @@ import fs, { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { detectPackageManager } from "helpers/packageManagers";
 import { beforeAll, describe, expect } from "vitest";
-import { version } from "../package.json";
-import { getFrameworkToTest } from "./frameworks/framework-to-test";
+import { version } from "../../../package.json";
 import {
-	isQuarantineMode,
+	CLOUDFLARE_API_TOKEN,
+	isExperimental,
+	isWindows,
 	keys,
-	recreateLogFolder,
-	runC3,
-	test,
-} from "./helpers";
+} from "../../helpers/constants";
+import { test } from "../../helpers/index";
+import "../../helpers/to-exist";
+import { recreateLogFolder } from "../../helpers/log-stream";
+import { runC3 } from "../../helpers/run-c3";
 
-const experimental = process.env.E2E_EXPERIMENTAL === "true";
-const frameworkToTest = getFrameworkToTest({ experimental: false });
 const { name: pm } = detectPackageManager();
 
-beforeAll((ctx) => {
-	recreateLogFolder({ experimental }, ctx);
-});
+describe("Create Cloudflare CLI", () => {
+	beforeAll((ctx) => {
+		recreateLogFolder(ctx);
+	});
 
-// Note: skipIf(frameworkToTest) makes it so that all the basic C3 functionality
-//       tests are skipped in case we are testing a specific framework
-describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
-	"E2E: Basic C3 functionality ",
-	() => {
-		test({ experimental })("--version", async ({ logStream }) => {
+	// Note: skipIf(frameworkToTest) makes it so that all the basic C3 functionality
+	//       tests are skipped in case we are testing a specific framework
+	describe.skipIf(isExperimental)("E2E: Basic C3 functionality ", () => {
+		test("--version", async ({ logStream }) => {
 			const { output } = await runC3(["--version"], [], logStream);
 			expect(output).toEqual(version);
 		});
 
-		test({ experimental })(
-			"--version with positionals",
-			async ({ logStream }) => {
-				const argv = ["foo", "bar", "baz", "--version"];
-				const { output } = await runC3(argv, [], logStream);
-				expect(output).toEqual(version);
-			},
-		);
+		test("--version with positionals", async ({ logStream }) => {
+			const argv = ["foo", "bar", "baz", "--version"];
+			const { output } = await runC3(argv, [], logStream);
+			expect(output).toEqual(version);
+		});
 
-		test({ experimental })("--version with flags", async ({ logStream }) => {
+		test("--version with flags", async ({ logStream }) => {
 			const argv = [
 				"foo",
 				"--type",
@@ -51,7 +47,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 			expect(output).toEqual(version);
 		});
 
-		test({ experimental }).skipIf(process.platform === "win32" || experimental)(
+		test.skipIf(isWindows || isExperimental)(
 			"Using arrow keys + enter",
 			async ({ logStream, project }) => {
 				const { output } = await runC3(
@@ -89,7 +85,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 			},
 		);
 
-		test({ experimental }).skipIf(process.platform === "win32")(
+		test.skipIf(isWindows)(
 			"Typing custom responses",
 			async ({ logStream, project }) => {
 				const { output } = await runC3(
@@ -131,7 +127,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 			},
 		);
 
-		test({ experimental }).skipIf(process.platform === "win32")(
+		test.skipIf(isWindows)(
 			"Mixed args and interactive",
 			async ({ logStream, project }) => {
 				const projectName = basename(project.path);
@@ -191,7 +187,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 			},
 		);
 
-		test({ experimental }).skipIf(process.platform === "win32")(
+		test.skipIf(isWindows)(
 			"Cloning remote template with full GitHub URL",
 			async ({ logStream, project }) => {
 				const { output } = await runC3(
@@ -223,7 +219,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 		// ERROR  Error: npm warn tarball tarball data for wrangler@http://localhost:61599/wrangler/-/wrangler-4.7.0.tgz
 		// (sha512-5LoyNxpPG8K0kcU43Ossyj7+Hq78v8BNtu7ZNNSxDOUcairMEDwcbrbUOqzu/iM4yHiri5wCjl4Ja57fKED/Sg==) seems to be corrupted.
 		// ```
-		test({ experimental }).skipIf(process.platform === "win32" || pm === "npm")(
+		test.skipIf(isWindows || pm === "npm")(
 			"Cloning remote template that uses wrangler.json",
 			async ({ logStream, project }) => {
 				const { output } = await runC3(
@@ -259,7 +255,7 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 			},
 		);
 
-		test({ experimental }).skipIf(process.platform === "win32")(
+		test.skipIf(isWindows)(
 			"Inferring the category, type and language if the type is `hello-world-python`",
 			async ({ logStream, project }) => {
 				// The `hello-world-python` template is now the python variant of the `hello-world` template
@@ -285,45 +281,46 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 		 * Skipping in yarn due to node version resolution conflict
 		 * The Openapi C3 template depends on `chanfana`, which has a dependency
 		 * on `yargs-parser`. The latest chanfana version(`2.8.1` at the time
-		 * of this writting) has a dep on `yargs-parser@22` which requires a
+		 * of this writing) has a dep on `yargs-parser@22` which requires a
 		 * node version of `20.19.0` or higher. Our CI is currently using node
 		 * version `20.11.1`. We currently can't bump the CI node version as other
 		 * tests will fail, therefore skipping for now until we can properly fix
 		 */
-		test({ experimental }).skipIf(
-			process.platform === "win32" || pm === "yarn",
-		)("Selecting template by description", async ({ logStream, project }) => {
-			const { output } = await runC3(
-				[project.path, "--no-deploy", "--git=false"],
-				[
-					{
-						matcher: /What would you like to start with\?/,
-						input: {
-							type: "select",
-							target: "Application Starter",
-							assertDescriptionText:
-								"Select from a range of starter applications using various Cloudflare products",
+		test.skipIf(isWindows || pm === "yarn")(
+			"Selecting template by description",
+			async ({ logStream, project }) => {
+				const { output } = await runC3(
+					[project.path, "--no-deploy", "--git=false"],
+					[
+						{
+							matcher: /What would you like to start with\?/,
+							input: {
+								type: "select",
+								target: "Application Starter",
+								assertDescriptionText:
+									"Select from a range of starter applications using various Cloudflare products",
+							},
 						},
-					},
-					{
-						matcher: /Which template would you like to use\?/,
-						input: {
-							type: "select",
-							target: "API starter (OpenAPI compliant)",
-							assertDescriptionText:
-								"Get started building a basic API on Workers",
+						{
+							matcher: /Which template would you like to use\?/,
+							input: {
+								type: "select",
+								target: "API starter (OpenAPI compliant)",
+								assertDescriptionText:
+									"Get started building a basic API on Workers",
+							},
 						},
-					},
-				],
-				logStream,
-			);
+					],
+					logStream,
+				);
 
-			expect(project.path).toExist();
-			expect(output).toContain(`category Application Starter`);
-			expect(output).toContain(`type API starter (OpenAPI compliant)`);
-		});
+				expect(project.path).toExist();
+				expect(output).toContain(`category Application Starter`);
+				expect(output).toContain(`type API starter (OpenAPI compliant)`);
+			},
+		);
 
-		test({ experimental }).skipIf(process.platform === "win32")(
+		test.skipIf(isWindows)(
 			"Going back and forth between the category, type, framework and lang prompts",
 			async ({ logStream, project }) => {
 				const testProjectPath = "/test-project-path";
@@ -433,8 +430,8 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 			},
 		);
 
-		test({ experimental }).skipIf(
-			process.platform === "win32" || pm === "yarn",
+		test.skipIf(
+			isWindows || pm === "yarn" || CLOUDFLARE_API_TOKEN === undefined,
 		)("--existing-script", async ({ logStream, project }) => {
 			const { output } = await runC3(
 				[
@@ -454,18 +451,17 @@ describe.skipIf(experimental || frameworkToTest || isQuarantineMode())(
 				fs.readFileSync(join(project.path, "wrangler.toml"), "utf8"),
 			).toContain('FOO = "bar"');
 		});
-	},
-);
+	});
 
-describe.skipIf(frameworkToTest || isQuarantineMode())("help text", () => {
-	test({ experimental })("--help", async ({ logStream }) => {
-		if (experimental) {
-			const { output } = await runC3(
-				["--help", "--experimental"],
-				[],
-				logStream,
-			);
-			expect(normalizeOutput(output)).toMatchInlineSnapshot(`
+	describe("help text", () => {
+		test("--help", async ({ logStream }) => {
+			if (isExperimental) {
+				const { output } = await runC3(
+					["--help", "--experimental"],
+					[],
+					logStream,
+				);
+				expect(normalizeOutput(output)).toMatchInlineSnapshot(`
 				"create-cloudflare <version>
 				  The create-cloudflare cli (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
 				USAGE
@@ -489,8 +485,6 @@ describe.skipIf(frameworkToTest || isQuarantineMode())("help text", () => {
 				    You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
 				    npm create cloudflare -- --framework next -- --ts
 				    pnpm create cloudflare --framework next -- --ts
-				    Allowed Values:
-				      solid
 				  --platform=<value>
 				    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 				    Allowed Values:
@@ -537,9 +531,9 @@ describe.skipIf(frameworkToTest || isQuarantineMode())("help text", () => {
 				  --auto-update, --no-auto-update
 				    Automatically uses the latest version of C3"
 			`);
-		} else {
-			const { output } = await runC3(["--help"], [], logStream);
-			expect(normalizeOutput(output)).toMatchInlineSnapshot(`
+			} else {
+				const { output } = await runC3(["--help"], [], logStream);
+				expect(normalizeOutput(output)).toMatchInlineSnapshot(`
 				"create-cloudflare <version>
 				  The create-cloudflare cli (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
 				USAGE
@@ -639,7 +633,8 @@ describe.skipIf(frameworkToTest || isQuarantineMode())("help text", () => {
 				  --auto-update, --no-auto-update
 				    Automatically uses the latest version of C3"
 			`);
-		}
+			}
+		});
 	});
 });
 
