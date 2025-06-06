@@ -102,6 +102,8 @@ export function pickRemoteBindings(
 /** Map containing all the potential worker mixed mode existing sessions, it maps a worker name to its mixed mode session */
 const mixedModeSessionsMap = new Map<string, MixedModeSession>();
 
+const kPatchedDispose = Symbol.for("patched mixed mode session dispose key");
+
 /**
  * Utility for potentially starting or updating a mixed mode session.
  *
@@ -158,7 +160,23 @@ export async function maybeStartOrUpdateMixedModeSession(
 
 	if (workerConfigs.name && mixedModeSession) {
 		mixedModeSessionsMap.set(workerConfigs.name, mixedModeSession);
+
+		const maybePatchedSession = mixedModeSession as MixedModeSession & {
+			[kPatchedDispose]: boolean;
+		};
+		if (!maybePatchedSession[kPatchedDispose]) {
+			maybePatchedSession[kPatchedDispose] = true;
+			const workerName = workerConfigs.name;
+			const originalDispose = maybePatchedSession.dispose;
+			// Note: we make sure to patch the dispose method so that it
+			//       also clears the entry from the mixedModeSessionsMap
+			maybePatchedSession.dispose = () => {
+				mixedModeSessionsMap.delete(workerName);
+				return originalDispose();
+			};
+		}
 	}
+
 	await mixedModeSession?.ready;
 	return mixedModeSession;
 }
