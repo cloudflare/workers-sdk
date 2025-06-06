@@ -6,7 +6,7 @@
 		"node_modules",
 		"dist",
 		"scripts/snippets/*",
-		"e2e-tests/fixtures/*",
+		"frameworks-test/fixtures/*",
 		// exclude all template files other than those are directly imported into the program,
 		// e.g. the c3.ts files.
 		"templates*"

@@ -22,9 +22,9 @@ export const detectPackageManager = () => {
 
 	let { name, version } = pmInfo ?? { name: "npm", version: "0.0.0" };
 
-	if (process.env.TEST_PM && process.env.TEST_PM_VERSION) {
-		name = process.env.TEST_PM as PmName;
-		version = process.env.TEST_PM_VERSION;
+	if (process.env.E2E_TEST_PM && process.env.E2E_TEST_PM_VERSION) {
+		name = process.env.E2E_TEST_PM as PmName;
+		version = process.env.E2E_TEST_PM_VERSION;
 		process.env.npm_config_user_agent = `${name}/${version}`;
 	}
 

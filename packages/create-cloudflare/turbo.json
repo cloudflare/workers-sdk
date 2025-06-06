@@ -4,13 +4,12 @@
 	"tasks": {
 		"build": {
 			"env": [
-				"TEST_PM",
-				"TEST_PM_VERSION",
 				"npm_config_user_agent",
 				"CREATE_CLOUDFLARE_TELEMETRY_DISABLED",
 				"CREATE_CLOUDFLARE_TELEMETRY_DEBUG",
 				"SPARROW_SOURCE_KEY"
 			],
+			"inputs": ["$TURBO_DEFAULT$", "!e2e/**", "!vitest-e2e.config.ts"],
 			"outputs": ["dist/**"]
 		},
 		"test:ci": {
@@ -21,17 +20,17 @@
 				"NODE_DEBUG",
 				"CLOUDFLARE_ACCOUNT_ID",
 				"CLOUDFLARE_API_TOKEN",
-				"FRAMEWORK_CLI_TO_TEST",
-				"E2E_QUARANTINE",
-				"E2E_PROJECT_PATH",
-				"E2E_RETRIES",
-				"E2E_NO_DEPLOY",
 				"E2E_EXPERIMENTAL",
-				"TEST_PM",
-				"TEST_PM_VERSION"
+				"E2E_TEST_PM",
+				"E2E_TEST_PM_VERSION",
+				"E2E_WORKER_TEST_FILTER",
+				"E2E_FRAMEWORK_TEST_FILTER",
+				"E2E_PROJECT_PATH",
+				"E2E_TEST_RETRIES",
+				"E2E_NO_DEPLOY"
 			],
 			"dependsOn": ["build"],
-			"inputs": ["e2e-tests/**"],
+			"inputs": ["e2e/**", "vitest-e2e.config.ts", "!e2e/README.md"],
 			"outputs": [".e2e-logs", ".e2e-logs-experimental"]
 		}
 	}

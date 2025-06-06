@@ -22,8 +22,9 @@
 		"prettify": "prettier . --write --ignore-unknown",
 		"test": "dotenv -- turbo test",
 		"test:ci": "dotenv -- turbo test:ci",
-		"test:e2e": "dotenv -- turbo test:e2e",
-		"test:e2e:wrangler": "node -r esbuild-register tools/e2e/runIndividualE2EFiles.ts",
+		"test:e2e": "dotenv -- turbo test:e2e --log-order=stream --output-logs=new-only --summarize",
+		"test:e2e:c3": "node -r esbuild-register packages/create-cloudflare/scripts/e2e/run-tests.ts",
+		"test:e2e:wrangler": "node -r esbuild-register tools/e2e/run-tests.ts",
 		"test:watch": "turbo test:watch",
 		"type:tests": "dotenv -- turbo type:tests"
 	},
