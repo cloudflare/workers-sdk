@@ -1007,9 +1007,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		return { versionId, workerTag };
 	}
 
-	// deploy triggers
-	const targets = await triggersDeploy(props);
-
 	if (config.containers) {
 		assert(versionId && accountId);
 		await deployContainers(config, {
@@ -1020,6 +1017,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			env: props.env,
 		});
 	}
+
+	// deploy triggers
+	const targets = await triggersDeploy(props);
 
 	logger.log("Current Version ID:", versionId);
 

@@ -8893,9 +8893,9 @@ addEventListener('fetch', event => {});`
 					env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
 
 					Uploaded test-name (TIMINGS)
+					Building image my-container:Galaxy
 					Deployed test-name triggers (TIMINGS)
 					  https://test-name.test-sub-domain.workers.dev
-					Building image my-container:Galaxy
 					Current Version ID: Galaxy-Class"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
