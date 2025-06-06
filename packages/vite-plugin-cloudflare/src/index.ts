@@ -115,8 +115,20 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					}
 				}
 
+				const defaultDeniedFiles = [
+					".env",
+					".env.*",
+					"*.{crt,pem}",
+					"**/.git/**",
+				];
+
 				return {
 					appType: "custom",
+					server: {
+						fs: {
+							deny: [...defaultDeniedFiles, ".dev.vars", ".dev.vars.*"],
+						},
+					},
 					environments:
 						resolvedPluginConfig.type === "workers"
 							? {
