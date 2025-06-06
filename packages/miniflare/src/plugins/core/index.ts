@@ -757,6 +757,7 @@ export const CORE_PLUGIN: Plugin<
 						},
 					],
 					compatibilityDate: "2025-01-01",
+					compatibilityFlags: ["connect_pass_through"],
 					globalOutbound: getGlobalOutbound(workerIndex, options),
 				},
 			});
