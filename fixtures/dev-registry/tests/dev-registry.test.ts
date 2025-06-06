@@ -24,7 +24,7 @@ const it = test.extend<{
 
 async function runViteDev(
 	config: string,
-	devRegistryPath: string
+	devRegistryPath?: string
 ): Promise<string> {
 	const proc = await runLongLived("pnpm", `vite --config ${config}`, cwd, {
 		MINIFLARE_REGISTRY_PATH: devRegistryPath,
@@ -36,7 +36,7 @@ async function runViteDev(
 
 async function runWranglerDev(
 	config: string,
-	devRegistryPath: string
+	devRegistryPath?: string
 ): Promise<string> {
 	const session = await baseRunWranglerDev(
 		cwd,
@@ -207,6 +207,35 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 });
 
 describe("Dev Registry: vite dev <-> wrangler dev", () => {
+	it("uses the same dev registry path by default", async () => {
+		const workerEntrypointA = await runViteDev(
+			"vite.worker-entrypoint-a.config.ts"
+		);
+		const moduleWorker = await runWranglerDev("wrangler.module-worker.jsonc");
+
+		// Test wrangler dev -> vite dev yet
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "worker-entrypoint-a",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${moduleWorker}?${searchParams}`);
+			expect(await response.text()).toBe("Hello from Worker Entrypoint!");
+			expect(response.status).toBe(200);
+		});
+
+		// Test vite dev -> wrangler dev
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "module-worker",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${workerEntrypointA}?${searchParams}`);
+			expect(await response.text()).toBe("Hello from Module Worker!");
+			expect(response.status).toBe(200);
+		});
+	});
+
 	it("supports module worker fetch over service binding", async ({
 		devRegistryPath,
 	}) => {
