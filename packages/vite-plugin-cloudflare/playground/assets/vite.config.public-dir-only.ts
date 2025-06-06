@@ -11,7 +11,7 @@ export default defineConfig({
 	},
 	plugins: [
 		cloudflare({
-			configPath: "./wrangler.public-only.jsonc",
+			configPath: "./wrangler.public-dir-only.jsonc",
 			inspectorPort: false,
 			persistState: false,
 		}),
