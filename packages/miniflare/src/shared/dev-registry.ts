@@ -282,8 +282,5 @@ export class DevRegistry {
 }
 
 export function getDefaultDevRegistryPath() {
-	return (
-		process.env.MINIFLARE_REGISTRY_PATH ??
-		path.join(getGlobalWranglerConfigPath(), "registry")
-	);
+	return process.env.MINIFLARE_REGISTRY_PATH ?? getGlobalWranglerConfigPath();
 }
