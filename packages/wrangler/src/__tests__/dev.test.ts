@@ -1585,8 +1585,8 @@ describe.sequential("wrangler dev", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Your Worker has access to the following bindings:
 				Binding              Resource      Mode
-				env.WorkerA (A)      Worker      local [not connected]
-				env.WorkerB (B)      Worker      local [not connected]
+				env.WorkerA (A)      Worker        local [not connected]
+				env.WorkerB (B)      Worker        local [not connected]
 
 				"
 			`);
@@ -1607,8 +1607,8 @@ describe.sequential("wrangler dev", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"Your Worker has access to the following bindings:
 				Binding              Resource      Mode
-				env.WorkerA (A)      Worker      local [not connected]
-				env.WorkerB (B)      Worker      local [not connected]
+				env.WorkerA (A)      Worker        local [not connected]
+				env.WorkerB (B)      Worker        local [not connected]
 
 				"
 			`);
@@ -1756,7 +1756,7 @@ describe.sequential("wrangler dev", () => {
 				env.MY_QUEUE_PRODUCES (my-queue)                 Queue             remote
 				env.MY_D1 (xxx)                                  D1 Database       remote
 				env.MY_R2 (my-bucket)                            R2 Bucket         remote
-				env.WorkerA (A)                                  Worker            remote [connected]
+				env.WorkerA (A)                                  Worker            remote
 
 				"
 			`);
