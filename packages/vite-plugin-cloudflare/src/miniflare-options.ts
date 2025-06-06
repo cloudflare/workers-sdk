@@ -648,7 +648,7 @@ export async function getPreviewMiniflareOptions(
 		log: logger,
 		inspectorPort: inspectorPort === false ? undefined : inspectorPort,
 		unsafeInspectorProxy: inspectorPort !== false,
-		// unsafeDevRegistryPath: getDefaultDevRegistryPath(),
+		unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 		handleRuntimeStdio(stdout, stderr) {
 			const decoder = new TextDecoder();
 			stdout.forEach((data) => logger.info(decoder.decode(data)));
