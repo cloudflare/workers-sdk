@@ -2389,16 +2389,22 @@ const validateContainerAppConfig: ValidatorFn = (
 			diagnostics.errors.push(
 				`"containers.configuration" is defined as an array, it should be an object`
 			);
-		} else if (
-			!isRequiredProperty(
-				containerAppOptional.configuration as UserDeploymentConfiguration,
-				"image",
-				"string"
-			)
-		) {
-			diagnostics.errors.push(
-				`"containers.image" should be defined and a string`
-			);
+		} else {
+			const userDeploymentConfig =
+				containerAppOptional.configuration as UserDeploymentConfiguration;
+			if (!isRequiredProperty(userDeploymentConfig, "image", "string")) {
+				diagnostics.errors.push(
+					`"containers.image" should be defined and a string`
+				);
+			}
+			if (
+				hasProperty(userDeploymentConfig, "disk") &&
+				hasProperty(userDeploymentConfig.disk, "size")
+			) {
+				diagnostics.errors.push(
+					`"containers.disk.size" is deprecated and should not be used. Use "containers.disk.size_mb" instead`
+				);
+			}
 		}
 	}
 
