@@ -86,9 +86,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 	const nodeJsCompatWarningsMap = new Map<WorkerConfig, NodeJsCompatWarnings>();
 
-	// This is set when the client environment is built to determine if the entry Worker should include assets
-	let hasClientBuild = false;
-
 	return [
 		{
 			name: "vite-plugin-cloudflare",
@@ -282,11 +279,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				});
 			},
 			writeBundle() {
-				// This relies on the assumption that the client environment is built first
-				// Composable `buildApp` hooks could provide a more robust alternative in future
-				if (this.environment.name === "client") {
-					hasClientBuild = true;
-				}
 				// These conditions ensure the deploy config is emitted once per application build as `writeBundle` is called for each environment.
 				// If Vite introduces an additional hook that runs after the application has built then we could use that instead.
 				if (
