@@ -6,8 +6,14 @@ const InternalConfigSchema = z.object({
 	debug: z.boolean().optional(),
 });
 
+const StaticRoutingSchema = z.object({
+	user_worker: z.array(z.string()),
+	asset_worker: z.array(z.string()).optional(),
+});
+
 export const RouterConfigSchema = z.object({
 	invoke_user_worker_ahead_of_assets: z.boolean().optional(),
+	static_routing: StaticRoutingSchema.optional(),
 	has_user_worker: z.boolean().optional(),
 	...InternalConfigSchema.shape,
 });
@@ -67,6 +73,7 @@ export const AssetConfigSchema = z.object({
 		.optional(),
 	redirects: RedirectsSchema,
 	headers: HeadersSchema,
+	has_static_routing: z.boolean().optional(),
 	...InternalConfigSchema.shape,
 });
 
