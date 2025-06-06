@@ -1,5 +1,11 @@
 # @cloudflare/unenv-preset
 
+## 2.3.3
+
+### Patch Changes
+
+- [#9483](https://github.com/cloudflare/workers-sdk/pull/9483) [`3261957`](https://github.com/cloudflare/workers-sdk/commit/3261957aba6bd8c02014206ad6fa219badde4a35) Thanks [@vicb](https://github.com/vicb)! - Use crypto.constants from workerd
+
 ## 2.3.2
 
 ### Patch Changes
