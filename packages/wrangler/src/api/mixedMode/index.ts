@@ -50,7 +50,7 @@ export async function startMixedModeSession(
 			inspector: {
 				port: await getPort(),
 			},
-			logLevel: "none",
+			logLevel: "error",
 		},
 		bindings: rawBindings,
 	});
