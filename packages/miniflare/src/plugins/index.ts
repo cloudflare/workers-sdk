@@ -182,4 +182,4 @@ export * from "./dispatch-namespace";
 export * from "./images";
 export * from "./vectorize";
 export * from "./containers";
-export { ContainerService } from "./containers/service";
+export { ContainerController } from "./containers/service";

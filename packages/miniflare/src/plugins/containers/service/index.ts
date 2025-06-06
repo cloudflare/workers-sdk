@@ -1,10 +1,10 @@
 import { ContainerOptions, ContainersSharedOptions } from "../index";
 
 /**
- * ContainerService manages container configuration, building or pulling
+ * ContainerController manages container configuration, building or pulling
  * containers, and cleaning up containers at the end of the dev session.
  */
-export class ContainerService {
+export class ContainerController {
 	#containerOptions: { [className: string]: ContainerOptions };
 	#sharedOptions: ContainersSharedOptions;
 	constructor(
@@ -28,7 +28,7 @@ export class ContainerService {
 	}
 
 	help() {
-		console.log("Hello from ContainerService!");
+		console.log("Hello from ContainerController!");
 		console.log(
 			`Container Options: ${JSON.stringify(this.#containerOptions, null, 2)}`
 		);

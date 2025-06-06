@@ -11,7 +11,7 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				resolve(__dirname, ".."),
 				["--port=0", "--inspector-port=0"]
 			);
-			expect(getOutput()).toContain(`Hello from ContainerService!`);
+			expect(getOutput()).toContain(`Hello from ContainerController!`);
 			await stop?.();
 		});
 
@@ -21,7 +21,7 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				["--port=0", "--inspector-port=0", "-c=wrangler.no-containers.jsonc"]
 			);
 			const output = getOutput();
-			expect(output).not.toContain("Hello from ContainerService!");
+			expect(output).not.toContain("Hello from ContainerController!");
 			await stop?.();
 		});
 
@@ -35,7 +35,7 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				]
 			);
 			const output = getOutput();
-			expect(output).not.toContain("Hello from ContainerService!");
+			expect(output).not.toContain("Hello from ContainerController!");
 			await stop?.();
 		});
 
@@ -44,7 +44,7 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				resolve(__dirname, ".."),
 				["--port=0", "--inspector-port=0", "--ignore-containers"]
 			);
-			expect(getOutput()).not.toContain(`Hello from ContainerService!`);
+			expect(getOutput()).not.toContain(`Hello from ContainerController!`);
 			await stop?.();
 		});
 
