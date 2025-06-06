@@ -69,7 +69,7 @@
 		"@types/semver": "^7.5.1",
 		"@vitest/runner": "catalog:default",
 		"@vitest/snapshot": "catalog:default",
-		"capnp-es": "^0.0.10",
+		"capnp-es": "^0.0.11",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
