@@ -1319,7 +1319,2569 @@ importers:
         version: 0.4.1
       vitest:
         specifier: catalog:default
+<<<<<<< HEAD
         version: 3.0.5(@types/node@18.19.76)(@vitest/ui@3.0.5)(jiti@2.4.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+||||||| parent of 6f60d077a (human fixups)
+        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+
+  packages/playground-preview-worker:
+    dependencies:
+      hono:
+        specifier: ^4.7.0
+        version: 4.7.1
+      zod:
+        specifier: ^3.22.3
+        version: 3.22.3
+    devDependencies:
+      '@cloudflare/eslint-config-worker':
+        specifier: workspace:*
+        version: link:../eslint-config-worker
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@types/cookie':
+        specifier: ^0.6.0
+        version: 0.6.0
+      cookie:
+        specifier: ^0.7.2
+        version: 0.7.2
+      itty-router:
+        specifier: ^4.0.13
+        version: 4.0.17
+      promjs:
+        specifier: ^0.4.2
+        version: 0.4.2
+      toucan-js:
+        specifier: ^3.3.1
+        version: 3.3.1(patch_hash=b5gffumfuckaq3c77sda2gdfuq)
+      undici:
+        specifier: catalog:default
+        version: 5.28.5
+      wrangler:
+        specifier: workspace:*
+        version: link:../wrangler
+
+  packages/quick-edit:
+    dependencies:
+      yarn:
+        specifier: ^1.22.19
+        version: 1.22.19
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      concurrently:
+        specifier: ^8.2.2
+        version: 8.2.2
+      tsx:
+        specifier: ^3.12.8
+        version: 3.12.10
+      wrangler:
+        specifier: workspace:*
+        version: link:../wrangler
+
+  packages/quick-edit-extension:
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:^
+        version: link:../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      esbuild:
+        specifier: catalog:default
+        version: 0.25.4
+      esbuild-register:
+        specifier: ^3.5.0
+        version: 3.5.0(esbuild@0.25.4)
+
+  packages/solarflare-theme: {}
+
+  packages/turbo-r2-archive:
+    dependencies:
+      '@hono/zod-validator':
+        specifier: ^0.4.2
+        version: 0.4.2(hono@4.7.1)(zod@3.22.3)
+      hono:
+        specifier: ^4.7.0
+        version: 4.7.1
+      zod:
+        specifier: ^3.22.3
+        version: 3.22.3
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      wrangler:
+        specifier: workspace:*
+        version: link:../wrangler
+
+  packages/unenv-preset:
+    dependencies:
+      unenv:
+        specifier: 2.0.0-rc.17
+        version: 2.0.0-rc.17
+      workerd:
+        specifier: ^1.20250508.0
+        version: 1.20250508.0
+    devDependencies:
+      '@types/node-unenv':
+        specifier: npm:@types/node@^22.14.0
+        version: '@types/node@22.15.17'
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      unbuild:
+        specifier: ^3.2.0
+        version: 3.3.1(typescript@5.7.3)(vue-tsc@2.0.29(typescript@5.7.3))
+      undici:
+        specifier: catalog:default
+        version: 5.28.5
+      vitest:
+        specifier: catalog:default
+        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../wrangler
+
+  packages/vite-plugin-cloudflare:
+    dependencies:
+      '@cloudflare/unenv-preset':
+        specifier: 2.3.2
+        version: 2.3.2(unenv@2.0.0-rc.17)(workerd@1.20250604.0)
+      '@mjackson/node-fetch-server':
+        specifier: ^0.6.1
+        version: 0.6.1
+      '@rollup/plugin-replace':
+        specifier: ^6.0.1
+        version: 6.0.2(rollup@4.30.1)
+      get-port:
+        specifier: ^7.1.0
+        version: 7.1.0
+      miniflare:
+        specifier: workspace:*
+        version: link:../miniflare
+      picocolors:
+        specifier: ^1.1.1
+        version: 1.1.1
+      tinyglobby:
+        specifier: ^0.2.12
+        version: 0.2.12
+      unenv:
+        specifier: 2.0.0-rc.17
+        version: 2.0.0-rc.17
+      wrangler:
+        specifier: workspace:*
+        version: link:../wrangler
+      ws:
+        specifier: catalog:default
+        version: 8.18.0
+    devDependencies:
+      '@cloudflare/mock-npm-registry':
+        specifier: workspace:*
+        version: link:../mock-npm-registry
+      '@cloudflare/workers-shared':
+        specifier: workspace:*
+        version: link:../workers-shared
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@types/node':
+        specifier: ^20.17.32
+        version: 20.17.32
+      '@types/ws':
+        specifier: ^8.5.13
+        version: 8.5.13
+      magic-string:
+        specifier: ^0.30.12
+        version: 0.30.17
+      mlly:
+        specifier: ^1.7.4
+        version: 1.7.4
+      tsup:
+        specifier: 8.3.0
+        version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@20.17.32))(jiti@2.4.2)(postcss@8.5.1)(supports-color@9.2.2)(typescript@5.7.3)
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      vitest:
+        specifier: catalog:default
+        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+
+  packages/vite-plugin-cloudflare/playground:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../workers-tsconfig
+      playwright-chromium:
+        specifier: catalog:default
+        version: 1.49.1
+      ts-dedent:
+        specifier: ^2.2.0
+        version: 2.2.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+
+  packages/vite-plugin-cloudflare/playground/additional-modules:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/assets:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/block-concurrency-while:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/cloudflare-env:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/config-changes:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/custom-build-app:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/deps-assets-importing:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/dev-vars:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/durable-objects:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/dynamic-import-paths:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/external-durable-objects:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/external-workers:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/external-workflows:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/hot-channel:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/importable-env:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/middleware-mode:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@types/express':
+        specifier: ^5.0.1
+        version: 5.0.1
+      express:
+        specifier: ^5.1.0
+        version: 5.1.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/module-resolution:
+    devDependencies:
+      '@cloudflare-dev-module-resolution/imports':
+        specifier: file:./packages/imports
+        version: '@playground/module-resolution-imports@file:packages/vite-plugin-cloudflare/playground/module-resolution/packages/imports'
+      '@cloudflare-dev-module-resolution/requires':
+        specifier: file:./packages/requires
+        version: '@playground/module-resolution-requires@file:packages/vite-plugin-cloudflare/playground/module-resolution/packages/requires'
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@remix-run/cloudflare':
+        specifier: 2.12.0
+        version: 2.12.0(@cloudflare/workers-types@4.20250604.0)(typescript@5.7.3)
+      '@types/react':
+        specifier: ^18.3.11
+        version: 18.3.18
+      discord-api-types:
+        specifier: 0.37.98
+        version: 0.37.98
+      react:
+        specifier: 18.3.1
+        version: 18.3.1
+      slash-create:
+        specifier: 6.2.1
+        version: 6.2.1(express@4.21.2)
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/multi-worker:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/node-compat:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@types/node':
+        specifier: ^20.17.32
+        version: 20.17.32
+      '@types/pg':
+        specifier: ^8.11.2
+        version: 8.11.6
+      cross-fetch:
+        specifier: ^4.0.0
+        version: 4.1.0(encoding@0.1.13)
+      pg:
+        specifier: ^8.13.0
+        version: 8.13.1
+      pg-cloudflare:
+        specifier: ^1.1.1
+        version: 1.1.1
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/partyserver:
+    dependencies:
+      partyserver:
+        specifier: ^0.0.64
+        version: 0.0.64(@cloudflare/workers-types@4.20250604.0)
+      partysocket:
+        specifier: ^1.0.3
+        version: 1.0.3
+      react:
+        specifier: ^19.0.0
+        version: 19.0.0
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.0.0(react@19.0.0)
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@tailwindcss/vite':
+        specifier: ^4.0.15
+        version: 4.0.15(vite@6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2))
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.0.7
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.0.3(@types/react@19.0.7)
+      '@vitejs/plugin-react':
+        specifier: ^4.3.4
+        version: 4.3.4(vite@6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2))
+      tailwindcss:
+        specifier: ^4.0.15
+        version: 4.0.15
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/prisma:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@prisma/adapter-d1':
+        specifier: ^6.3.0
+        version: 6.3.1
+      '@prisma/client':
+        specifier: ^6.3.0
+        version: 6.3.1(prisma@6.3.1(typescript@5.7.3))(typescript@5.7.3)
+      prisma:
+        specifier: ^6.3.0
+        version: 6.3.1(typescript@5.7.3)
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/react-dom-server:
+    dependencies:
+      react:
+        specifier: ^19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: ^19.1.0
+        version: 19.1.0(react@19.1.0)
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@types/react':
+        specifier: ^19.1.0
+        version: 19.1.0
+      '@types/react-dom':
+        specifier: ^19.1.1
+        version: 19.1.1(@types/react@19.1.0)
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/react-spa:
+    dependencies:
+      react:
+        specifier: ^19.0.0
+        version: 19.0.0
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.0.0(react@19.0.0)
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.0.7
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.0.3(@types/react@19.0.7)
+      '@vitejs/plugin-react':
+        specifier: ^4.3.4
+        version: 4.3.4(vite@6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2))
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/run-worker-first:
+    dependencies:
+      react:
+        specifier: ^19.0.0
+        version: 19.0.0
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.0.0(react@19.0.0)
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.0.7
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.0.3(@types/react@19.0.7)
+      '@vitejs/plugin-react':
+        specifier: ^4.3.4
+        version: 4.3.4(vite@6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2))
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/same-worker-service-bindings:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/spa-with-api:
+    dependencies:
+      react:
+        specifier: ^19.0.0
+        version: 19.0.0
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.0.0(react@19.0.0)
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.0.7
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.0.3(@types/react@19.0.7)
+      '@vitejs/plugin-basic-ssl':
+        specifier: ^2.0.0
+        version: 2.0.0(vite@6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2))
+      '@vitejs/plugin-react':
+        specifier: ^4.3.4
+        version: 4.3.4(vite@6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2))
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/static:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/static-mpa:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/streaming:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@vitejs/plugin-basic-ssl':
+        specifier: ^2.0.0
+        version: 2.0.0(vite@6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2))
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/virtual-modules:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/websockets:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/worker:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/workflows:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vitest-pool-workers:
+    dependencies:
+      birpc:
+        specifier: 0.2.14
+        version: 0.2.14
+      cjs-module-lexer:
+        specifier: ^1.2.3
+        version: 1.2.3
+      devalue:
+        specifier: ^4.3.0
+        version: 4.3.2
+      miniflare:
+        specifier: workspace:*
+        version: link:../miniflare
+      semver:
+        specifier: ^7.7.1
+        version: 7.7.1
+      wrangler:
+        specifier: workspace:*
+        version: link:../wrangler
+      zod:
+        specifier: ^3.22.3
+        version: 3.22.3
+    devDependencies:
+      '@cloudflare/eslint-config-worker':
+        specifier: workspace:*
+        version: link:../eslint-config-worker
+      '@cloudflare/mock-npm-registry':
+        specifier: workspace:*
+        version: link:../mock-npm-registry
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@types/node':
+        specifier: ^20.17.32
+        version: 20.17.32
+      '@types/semver':
+        specifier: ^7.5.1
+        version: 7.5.1
+      '@vitest/runner':
+        specifier: catalog:default
+        version: 3.1.1
+      '@vitest/snapshot':
+        specifier: catalog:default
+        version: 3.1.1
+      capnp-es:
+        specifier: ^0.0.7
+        version: 0.0.7(typescript@5.7.3)
+      ts-dedent:
+        specifier: ^2.2.0
+        version: 2.2.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      undici:
+        specifier: catalog:default
+        version: 5.28.5
+      vitest:
+        specifier: catalog:default
+        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+
+  packages/workers-editor-shared:
+    dependencies:
+      react-split-pane:
+        specifier: ^0.1.92
+        version: 0.1.92(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+    devDependencies:
+      '@cloudflare/eslint-config-worker':
+        specifier: workspace:*
+        version: link:../eslint-config-worker
+      '@cloudflare/style-const':
+        specifier: ^5.7.2
+        version: 5.7.3(react@18.3.1)
+      '@cloudflare/style-container':
+        specifier: 7.12.2
+        version: 7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1)
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@types/react':
+        specifier: ^18.3.3
+        version: 18.3.3
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^6.9.0
+        version: 6.10.0(@typescript-eslint/parser@6.10.0(eslint@8.57.1)(typescript@5.8.2))(eslint@8.57.1)(typescript@5.8.2)
+      '@typescript-eslint/parser':
+        specifier: ^6.9.0
+        version: 6.10.0(eslint@8.57.1)(typescript@5.8.2)
+      '@vitejs/plugin-react':
+        specifier: ^4.3.3
+        version: 4.3.3(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2))
+      eslint:
+        specifier: ^8.57.1
+        version: 8.57.1
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
+      vite:
+        specifier: catalog:default
+        version: 5.4.14(@types/node@20.17.32)(lightningcss@1.29.2)
+      vite-plugin-dts:
+        specifier: ^4.0.1
+        version: 4.0.1(@types/node@20.17.32)(rollup@4.30.1)(typescript@5.8.2)(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2))
+
+  packages/workers-playground:
+    dependencies:
+      '@cloudflare/component-button':
+        specifier: ^7.0.11
+        version: 7.0.17(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      '@cloudflare/component-code-block':
+        specifier: ^4.1.2
+        version: 4.2.8(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(@types/react-dom@18.2.0)(@types/react@18.3.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)
+      '@cloudflare/component-heading':
+        specifier: ^4.0.6
+        version: 4.0.6(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      '@cloudflare/component-icon':
+        specifier: ^11.5.1
+        version: 11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      '@cloudflare/component-input':
+        specifier: ^8.1.1
+        version: 8.1.2(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      '@cloudflare/component-listbox':
+        specifier: ^1.10.6
+        version: 1.10.6(patch_hash=r2d7tqjujhdts7e7zxsa3stjki)(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(@cloudflare/style-provider@3.1.1(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)
+      '@cloudflare/component-loading':
+        specifier: ^6.1.1
+        version: 6.1.1(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)
+      '@cloudflare/component-textarea':
+        specifier: ^4.1.1
+        version: 4.1.2(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      '@cloudflare/component-toast':
+        specifier: ^5.1.0
+        version: 5.1.2(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      '@cloudflare/component-toggle':
+        specifier: ^9.0.13
+        version: 9.0.16(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)
+      '@cloudflare/component-tooltip':
+        specifier: ^4.3.1
+        version: 4.3.2(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@cloudflare/component-visually-hidden':
+        specifier: ^1.0.85
+        version: 1.0.86(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)
+      '@cloudflare/elements':
+        specifier: ^3.0.1
+        version: 3.0.3(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      '@cloudflare/intl-react':
+        specifier: ^1.12.2
+        version: 1.12.5(react@18.3.1)(regenerator-runtime@0.14.1)
+      '@cloudflare/style-const':
+        specifier: ^5.7.2
+        version: 5.7.3(react@18.3.1)
+      '@cloudflare/style-container':
+        specifier: 7.12.2
+        version: 7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1)
+      '@cloudflare/style-provider':
+        specifier: ^3.1.0
+        version: 3.1.1(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      '@cloudflare/util-en-garde':
+        specifier: ^8.0.10
+        version: 8.0.10
+      '@cloudflare/workers-editor-shared':
+        specifier: workspace:*
+        version: link:../workers-editor-shared
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      glob-to-regexp:
+        specifier: ^0.4.1
+        version: 0.4.1
+      lz-string:
+        specifier: ^1.5.0
+        version: 1.5.0
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
+      react-tabs:
+        specifier: ^4.1.0
+        version: 4.3.0(react@18.3.1)
+      swr:
+        specifier: ^2.2.0
+        version: 2.2.2(react@18.3.1)
+      uuid:
+        specifier: ^9.0.0
+        version: 9.0.1
+    devDependencies:
+      '@types/glob-to-regexp':
+        specifier: ^0.4.1
+        version: 0.4.1
+      '@types/react':
+        specifier: ^18.3.3
+        version: 18.3.3
+      '@types/react-dom':
+        specifier: ^18.2.0
+        version: 18.2.0
+      '@types/uuid':
+        specifier: ^9.0.2
+        version: 9.0.4
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^6.9.0
+        version: 6.10.0(@typescript-eslint/parser@6.10.0(eslint@8.57.1)(typescript@5.8.2))(eslint@8.57.1)(typescript@5.8.2)
+      '@typescript-eslint/parser':
+        specifier: ^6.9.0
+        version: 6.10.0(eslint@8.57.1)(typescript@5.8.2)
+      '@vitejs/plugin-react':
+        specifier: ^4.3.3
+        version: 4.3.3(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2))
+      eslint:
+        specifier: ^8.57.1
+        version: 8.57.1
+      tsx:
+        specifier: ^3.12.8
+        version: 3.12.10
+      undici:
+        specifier: catalog:default
+        version: 5.28.5
+      vite:
+        specifier: catalog:default
+        version: 5.4.14(@types/node@20.17.32)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:^
+        version: link:../wrangler
+=======
+        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+
+  packages/playground-preview-worker:
+    dependencies:
+      hono:
+        specifier: ^4.7.0
+        version: 4.7.1
+      zod:
+        specifier: ^3.22.3
+        version: 3.22.3
+    devDependencies:
+      '@cloudflare/eslint-config-worker':
+        specifier: workspace:*
+        version: link:../eslint-config-worker
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@types/cookie':
+        specifier: ^0.6.0
+        version: 0.6.0
+      cookie:
+        specifier: ^0.7.2
+        version: 0.7.2
+      itty-router:
+        specifier: ^4.0.13
+        version: 4.0.17
+      promjs:
+        specifier: ^0.4.2
+        version: 0.4.2
+      toucan-js:
+        specifier: ^3.3.1
+        version: 3.3.1(patch_hash=b5gffumfuckaq3c77sda2gdfuq)
+      undici:
+        specifier: catalog:default
+        version: 5.28.5
+      wrangler:
+        specifier: workspace:*
+        version: link:../wrangler
+
+  packages/quick-edit:
+    dependencies:
+      yarn:
+        specifier: ^1.22.19
+        version: 1.22.19
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      concurrently:
+        specifier: ^8.2.2
+        version: 8.2.2
+      tsx:
+        specifier: ^3.12.8
+        version: 3.12.10
+      wrangler:
+        specifier: workspace:*
+        version: link:../wrangler
+
+  packages/quick-edit-extension:
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:^
+        version: link:../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      esbuild:
+        specifier: catalog:default
+        version: 0.25.4
+      esbuild-register:
+        specifier: ^3.5.0
+        version: 3.5.0(esbuild@0.25.4)
+
+  packages/solarflare-theme: {}
+
+  packages/turbo-r2-archive:
+    dependencies:
+      '@hono/zod-validator':
+        specifier: ^0.4.2
+        version: 0.4.2(hono@4.7.1)(zod@3.22.3)
+      hono:
+        specifier: ^4.7.0
+        version: 4.7.1
+      zod:
+        specifier: ^3.22.3
+        version: 3.22.3
+    devDependencies:
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      wrangler:
+        specifier: workspace:*
+        version: link:../wrangler
+
+  packages/unenv-preset:
+    dependencies:
+      unenv:
+        specifier: 2.0.0-rc.17
+        version: 2.0.0-rc.17
+      workerd:
+        specifier: ^1.20250521.0
+        version: 1.20250604.0
+    devDependencies:
+      '@types/node-unenv':
+        specifier: npm:@types/node@^22.14.0
+        version: '@types/node@22.15.17'
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      unbuild:
+        specifier: ^3.2.0
+        version: 3.3.1(typescript@5.7.3)(vue-tsc@2.0.29(typescript@5.7.3))
+      undici:
+        specifier: catalog:default
+        version: 5.28.5
+      vitest:
+        specifier: catalog:default
+        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../wrangler
+
+  packages/vite-plugin-cloudflare:
+    dependencies:
+      '@cloudflare/unenv-preset':
+        specifier: 2.3.2
+        version: 2.3.2(unenv@2.0.0-rc.17)(workerd@1.20250604.0)
+      '@mjackson/node-fetch-server':
+        specifier: ^0.6.1
+        version: 0.6.1
+      '@rollup/plugin-replace':
+        specifier: ^6.0.1
+        version: 6.0.2(rollup@4.30.1)
+      get-port:
+        specifier: ^7.1.0
+        version: 7.1.0
+      miniflare:
+        specifier: workspace:*
+        version: link:../miniflare
+      picocolors:
+        specifier: ^1.1.1
+        version: 1.1.1
+      tinyglobby:
+        specifier: ^0.2.12
+        version: 0.2.12
+      unenv:
+        specifier: 2.0.0-rc.17
+        version: 2.0.0-rc.17
+      wrangler:
+        specifier: workspace:*
+        version: link:../wrangler
+      ws:
+        specifier: catalog:default
+        version: 8.18.0
+    devDependencies:
+      '@cloudflare/mock-npm-registry':
+        specifier: workspace:*
+        version: link:../mock-npm-registry
+      '@cloudflare/workers-shared':
+        specifier: workspace:*
+        version: link:../workers-shared
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@types/node':
+        specifier: ^20.17.32
+        version: 20.17.32
+      '@types/ws':
+        specifier: ^8.5.13
+        version: 8.5.13
+      magic-string:
+        specifier: ^0.30.12
+        version: 0.30.17
+      mlly:
+        specifier: ^1.7.4
+        version: 1.7.4
+      tsup:
+        specifier: 8.3.0
+        version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@20.17.32))(jiti@2.4.2)(postcss@8.5.1)(supports-color@9.2.2)(typescript@5.7.3)
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      vitest:
+        specifier: catalog:default
+        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+
+  packages/vite-plugin-cloudflare/playground:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../workers-tsconfig
+      playwright-chromium:
+        specifier: catalog:default
+        version: 1.49.1
+      ts-dedent:
+        specifier: ^2.2.0
+        version: 2.2.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+
+  packages/vite-plugin-cloudflare/playground/additional-modules:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/assets:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/block-concurrency-while:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/cloudflare-env:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/config-changes:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/custom-build-app:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/deps-assets-importing:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/dev-vars:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/durable-objects:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/dynamic-import-paths:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/external-durable-objects:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/external-workers:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/external-workflows:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/hot-channel:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/importable-env:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/middleware-mode:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@types/express':
+        specifier: ^5.0.1
+        version: 5.0.1
+      express:
+        specifier: ^5.1.0
+        version: 5.1.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/module-resolution:
+    devDependencies:
+      '@cloudflare-dev-module-resolution/imports':
+        specifier: file:./packages/imports
+        version: '@playground/module-resolution-imports@file:packages/vite-plugin-cloudflare/playground/module-resolution/packages/imports'
+      '@cloudflare-dev-module-resolution/requires':
+        specifier: file:./packages/requires
+        version: '@playground/module-resolution-requires@file:packages/vite-plugin-cloudflare/playground/module-resolution/packages/requires'
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@remix-run/cloudflare':
+        specifier: 2.12.0
+        version: 2.12.0(@cloudflare/workers-types@4.20250604.0)(typescript@5.7.3)
+      '@types/react':
+        specifier: ^18.3.11
+        version: 18.3.18
+      discord-api-types:
+        specifier: 0.37.98
+        version: 0.37.98
+      react:
+        specifier: 18.3.1
+        version: 18.3.1
+      slash-create:
+        specifier: 6.2.1
+        version: 6.2.1(express@4.21.2)
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/multi-worker:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/node-compat:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@types/node':
+        specifier: ^20.17.32
+        version: 20.17.32
+      '@types/pg':
+        specifier: ^8.11.2
+        version: 8.11.6
+      cross-fetch:
+        specifier: ^4.0.0
+        version: 4.1.0(encoding@0.1.13)
+      pg:
+        specifier: ^8.13.0
+        version: 8.13.1
+      pg-cloudflare:
+        specifier: ^1.1.1
+        version: 1.1.1
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/partyserver:
+    dependencies:
+      partyserver:
+        specifier: ^0.0.64
+        version: 0.0.64(@cloudflare/workers-types@4.20250604.0)
+      partysocket:
+        specifier: ^1.0.3
+        version: 1.0.3
+      react:
+        specifier: ^19.0.0
+        version: 19.0.0
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.0.0(react@19.0.0)
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@tailwindcss/vite':
+        specifier: ^4.0.15
+        version: 4.0.15(vite@6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2))
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.0.7
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.0.3(@types/react@19.0.7)
+      '@vitejs/plugin-react':
+        specifier: ^4.3.4
+        version: 4.3.4(vite@6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2))
+      tailwindcss:
+        specifier: ^4.0.15
+        version: 4.0.15
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/prisma:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@prisma/adapter-d1':
+        specifier: ^6.3.0
+        version: 6.3.1
+      '@prisma/client':
+        specifier: ^6.3.0
+        version: 6.3.1(prisma@6.3.1(typescript@5.7.3))(typescript@5.7.3)
+      prisma:
+        specifier: ^6.3.0
+        version: 6.3.1(typescript@5.7.3)
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/react-dom-server:
+    dependencies:
+      react:
+        specifier: ^19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: ^19.1.0
+        version: 19.1.0(react@19.1.0)
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@types/react':
+        specifier: ^19.1.0
+        version: 19.1.0
+      '@types/react-dom':
+        specifier: ^19.1.1
+        version: 19.1.1(@types/react@19.1.0)
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/react-spa:
+    dependencies:
+      react:
+        specifier: ^19.0.0
+        version: 19.0.0
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.0.0(react@19.0.0)
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.0.7
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.0.3(@types/react@19.0.7)
+      '@vitejs/plugin-react':
+        specifier: ^4.3.4
+        version: 4.3.4(vite@6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2))
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/run-worker-first:
+    dependencies:
+      react:
+        specifier: ^19.0.0
+        version: 19.0.0
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.0.0(react@19.0.0)
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.0.7
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.0.3(@types/react@19.0.7)
+      '@vitejs/plugin-react':
+        specifier: ^4.3.4
+        version: 4.3.4(vite@6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2))
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/same-worker-service-bindings:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/spa-with-api:
+    dependencies:
+      react:
+        specifier: ^19.0.0
+        version: 19.0.0
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.0.0(react@19.0.0)
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.0.7
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.0.3(@types/react@19.0.7)
+      '@vitejs/plugin-basic-ssl':
+        specifier: ^2.0.0
+        version: 2.0.0(vite@6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2))
+      '@vitejs/plugin-react':
+        specifier: ^4.3.4
+        version: 4.3.4(vite@6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2))
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/static:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/static-mpa:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/streaming:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@vitejs/plugin-basic-ssl':
+        specifier: ^2.0.0
+        version: 2.0.0(vite@6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2))
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/virtual-modules:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/websockets:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/worker:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/workflows:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vitest-pool-workers:
+    dependencies:
+      birpc:
+        specifier: 0.2.14
+        version: 0.2.14
+      cjs-module-lexer:
+        specifier: ^1.2.3
+        version: 1.2.3
+      devalue:
+        specifier: ^4.3.0
+        version: 4.3.2
+      miniflare:
+        specifier: workspace:*
+        version: link:../miniflare
+      semver:
+        specifier: ^7.7.1
+        version: 7.7.1
+      wrangler:
+        specifier: workspace:*
+        version: link:../wrangler
+      zod:
+        specifier: ^3.22.3
+        version: 3.22.3
+    devDependencies:
+      '@cloudflare/eslint-config-worker':
+        specifier: workspace:*
+        version: link:../eslint-config-worker
+      '@cloudflare/mock-npm-registry':
+        specifier: workspace:*
+        version: link:../mock-npm-registry
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: ^4.20250604.0
+        version: 4.20250604.0
+      '@types/node':
+        specifier: ^20.17.32
+        version: 20.17.32
+      '@types/semver':
+        specifier: ^7.5.1
+        version: 7.5.1
+      '@vitest/runner':
+        specifier: catalog:default
+        version: 3.1.1
+      '@vitest/snapshot':
+        specifier: catalog:default
+        version: 3.1.1
+      capnp-es:
+        specifier: ^0.0.7
+        version: 0.0.7(typescript@5.7.3)
+      ts-dedent:
+        specifier: ^2.2.0
+        version: 2.2.0
+      typescript:
+        specifier: catalog:default
+        version: 5.7.3
+      undici:
+        specifier: catalog:default
+        version: 5.28.5
+      vitest:
+        specifier: catalog:default
+        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+
+  packages/workers-editor-shared:
+    dependencies:
+      react-split-pane:
+        specifier: ^0.1.92
+        version: 0.1.92(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+    devDependencies:
+      '@cloudflare/eslint-config-worker':
+        specifier: workspace:*
+        version: link:../eslint-config-worker
+      '@cloudflare/style-const':
+        specifier: ^5.7.2
+        version: 5.7.3(react@18.3.1)
+      '@cloudflare/style-container':
+        specifier: 7.12.2
+        version: 7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1)
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@types/react':
+        specifier: ^18.3.3
+        version: 18.3.3
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^6.9.0
+        version: 6.10.0(@typescript-eslint/parser@6.10.0(eslint@8.57.1)(typescript@5.8.2))(eslint@8.57.1)(typescript@5.8.2)
+      '@typescript-eslint/parser':
+        specifier: ^6.9.0
+        version: 6.10.0(eslint@8.57.1)(typescript@5.8.2)
+      '@vitejs/plugin-react':
+        specifier: ^4.3.3
+        version: 4.3.3(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2))
+      eslint:
+        specifier: ^8.57.1
+        version: 8.57.1
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
+      vite:
+        specifier: catalog:default
+        version: 5.4.14(@types/node@20.17.32)(lightningcss@1.29.2)
+      vite-plugin-dts:
+        specifier: ^4.0.1
+        version: 4.0.1(@types/node@20.17.32)(rollup@4.30.1)(typescript@5.8.2)(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2))
+
+  packages/workers-playground:
+    dependencies:
+      '@cloudflare/component-button':
+        specifier: ^7.0.11
+        version: 7.0.17(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      '@cloudflare/component-code-block':
+        specifier: ^4.1.2
+        version: 4.2.8(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(@types/react-dom@18.2.0)(@types/react@18.3.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)
+      '@cloudflare/component-heading':
+        specifier: ^4.0.6
+        version: 4.0.6(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      '@cloudflare/component-icon':
+        specifier: ^11.5.1
+        version: 11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      '@cloudflare/component-input':
+        specifier: ^8.1.1
+        version: 8.1.2(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      '@cloudflare/component-listbox':
+        specifier: ^1.10.6
+        version: 1.10.6(patch_hash=r2d7tqjujhdts7e7zxsa3stjki)(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(@cloudflare/style-provider@3.1.1(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)
+      '@cloudflare/component-loading':
+        specifier: ^6.1.1
+        version: 6.1.1(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)
+      '@cloudflare/component-textarea':
+        specifier: ^4.1.1
+        version: 4.1.2(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      '@cloudflare/component-toast':
+        specifier: ^5.1.0
+        version: 5.1.2(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      '@cloudflare/component-toggle':
+        specifier: ^9.0.13
+        version: 9.0.16(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)
+      '@cloudflare/component-tooltip':
+        specifier: ^4.3.1
+        version: 4.3.2(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@cloudflare/component-visually-hidden':
+        specifier: ^1.0.85
+        version: 1.0.86(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)
+      '@cloudflare/elements':
+        specifier: ^3.0.1
+        version: 3.0.3(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      '@cloudflare/intl-react':
+        specifier: ^1.12.2
+        version: 1.12.5(react@18.3.1)(regenerator-runtime@0.14.1)
+      '@cloudflare/style-const':
+        specifier: ^5.7.2
+        version: 5.7.3(react@18.3.1)
+      '@cloudflare/style-container':
+        specifier: 7.12.2
+        version: 7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1)
+      '@cloudflare/style-provider':
+        specifier: ^3.1.0
+        version: 3.1.1(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      '@cloudflare/util-en-garde':
+        specifier: ^8.0.10
+        version: 8.0.10
+      '@cloudflare/workers-editor-shared':
+        specifier: workspace:*
+        version: link:../workers-editor-shared
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      glob-to-regexp:
+        specifier: ^0.4.1
+        version: 0.4.1
+      lz-string:
+        specifier: ^1.5.0
+        version: 1.5.0
+      react:
+        specifier: ^18.3.1
+        version: 18.3.1
+      react-dom:
+        specifier: ^18.3.1
+        version: 18.3.1(react@18.3.1)
+      react-tabs:
+        specifier: ^4.1.0
+        version: 4.3.0(react@18.3.1)
+      swr:
+        specifier: ^2.2.0
+        version: 2.2.2(react@18.3.1)
+      uuid:
+        specifier: ^9.0.0
+        version: 9.0.1
+    devDependencies:
+      '@types/glob-to-regexp':
+        specifier: ^0.4.1
+        version: 0.4.1
+      '@types/react':
+        specifier: ^18.3.3
+        version: 18.3.3
+      '@types/react-dom':
+        specifier: ^18.2.0
+        version: 18.2.0
+      '@types/uuid':
+        specifier: ^9.0.2
+        version: 9.0.4
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^6.9.0
+        version: 6.10.0(@typescript-eslint/parser@6.10.0(eslint@8.57.1)(typescript@5.8.2))(eslint@8.57.1)(typescript@5.8.2)
+      '@typescript-eslint/parser':
+        specifier: ^6.9.0
+        version: 6.10.0(eslint@8.57.1)(typescript@5.8.2)
+      '@vitejs/plugin-react':
+        specifier: ^4.3.3
+        version: 4.3.3(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2))
+      eslint:
+        specifier: ^8.57.1
+        version: 8.57.1
+      tsx:
+        specifier: ^3.12.8
+        version: 3.12.10
+      undici:
+        specifier: catalog:default
+        version: 5.28.5
+      vite:
+        specifier: catalog:default
+        version: 5.4.14(@types/node@20.17.32)(lightningcss@1.29.2)
+      wrangler:
+        specifier: workspace:^
+        version: link:../wrangler
+>>>>>>> 6f60d077a (human fixups)
 
   packages/workers-shared:
     dependencies:
@@ -2159,6 +4721,7 @@ packages:
     cpu: [x64]
     os: [darwin]
 
+<<<<<<< HEAD
   '@cloudflare/workerd-darwin-64@1.20250408.0':
     resolution: {integrity: sha512-bxhIwBWxaNItZLXDNOKY2dCv0FHjDiDkfJFpwv4HvtvU5MKcrivZHVmmfDzLW85rqzfcDOmKbZeMPVfiKxdBZw==}
     engines: {node: '>=16'}
@@ -2167,6 +4730,31 @@ packages:
 
   '@cloudflare/workerd-darwin-arm64@1.20250214.0':
     resolution: {integrity: sha512-NytCvRveVzu0mRKo+tvZo3d/gCUway3B2ZVqSi/TS6NXDGBYIJo7g6s3BnTLS74kgyzeDOjhu9j/RBJBS809qw==}
+||||||| parent of 6f60d077a (human fixups)
+  '@cloudflare/workerd-darwin-64@1.20250508.0':
+    resolution: {integrity: sha512-9x09MrA9Y5RQs3zqWvWns8xHgM2pVNXWpeJ+3hQYu4PrwPFZXtTD6b/iMmOnlYKzINlREq1RGeEybMFyWEUlUg==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@cloudflare/workerd-darwin-64@1.20250604.0':
+    resolution: {integrity: sha512-PI6AWAzhHg75KVhYkSWFBf3HKCHstpaKg4nrx6LYZaEvz0TaTz+JQpYU2fNAgGFmVsK5xEzwFTGh3DAVAKONPw==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@cloudflare/workerd-darwin-arm64@1.20250310.0':
+    resolution: {integrity: sha512-WythDJQbsU3Ii1hhA7pJZLBQlHezeYWAnaMnv3gS2Exj45oF8G4chFvrO7zCzjlcJXwSeBTtQRJqxw9AiUDhyA==}
+=======
+  '@cloudflare/workerd-darwin-64@1.20250604.0':
+    resolution: {integrity: sha512-PI6AWAzhHg75KVhYkSWFBf3HKCHstpaKg4nrx6LYZaEvz0TaTz+JQpYU2fNAgGFmVsK5xEzwFTGh3DAVAKONPw==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@cloudflare/workerd-darwin-arm64@1.20250310.0':
+    resolution: {integrity: sha512-WythDJQbsU3Ii1hhA7pJZLBQlHezeYWAnaMnv3gS2Exj45oF8G4chFvrO7zCzjlcJXwSeBTtQRJqxw9AiUDhyA==}
+>>>>>>> 6f60d077a (human fixups)
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [darwin]
@@ -2177,6 +4765,7 @@ packages:
     cpu: [arm64]
     os: [darwin]
 
+<<<<<<< HEAD
   '@cloudflare/workerd-darwin-arm64@1.20250408.0':
     resolution: {integrity: sha512-5XZ2Oykr8bSo7zBmERtHh18h5BZYC/6H1YFWVxEj3PtalF3+6SHsO4KZsbGvDml9Pu7sHV277jiZE5eny8Hlyw==}
     engines: {node: '>=16'}
@@ -2185,6 +4774,31 @@ packages:
 
   '@cloudflare/workerd-linux-64@1.20250214.0':
     resolution: {integrity: sha512-pQ7+aHNHj8SiYEs4d/6cNoimE5xGeCMfgU1yfDFtA9YGN9Aj2BITZgOWPec+HW7ZkOy9oWlNrO6EvVjGgB4tbQ==}
+||||||| parent of 6f60d077a (human fixups)
+  '@cloudflare/workerd-darwin-arm64@1.20250508.0':
+    resolution: {integrity: sha512-0Ili+nE2LLRzYue/yPc1pepSyNNg6LxR3/ng/rlQzVQUxPXIXldHFkJ/ynsYwQnAcf6OxasSi/kbTm6yvDoSAQ==}
+    engines: {node: '>=16'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@cloudflare/workerd-darwin-arm64@1.20250604.0':
+    resolution: {integrity: sha512-hOiZZSop7QRQgGERtTIy9eU5GvPpIsgE2/BDsUdHMl7OBZ7QLniqvgDzLNDzj0aTkCldm9Yl/Z+C7aUgRdOccw==}
+    engines: {node: '>=16'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@cloudflare/workerd-linux-64@1.20250310.0':
+    resolution: {integrity: sha512-LbP769tT4/5QBHSj4lCt99QIKTi6cU+wYhLfF7rEtYHBnZS2+nIw9xttAzxeERx/aFrU+mxLcYPFV8fUeVxGng==}
+=======
+  '@cloudflare/workerd-darwin-arm64@1.20250604.0':
+    resolution: {integrity: sha512-hOiZZSop7QRQgGERtTIy9eU5GvPpIsgE2/BDsUdHMl7OBZ7QLniqvgDzLNDzj0aTkCldm9Yl/Z+C7aUgRdOccw==}
+    engines: {node: '>=16'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@cloudflare/workerd-linux-64@1.20250310.0':
+    resolution: {integrity: sha512-LbP769tT4/5QBHSj4lCt99QIKTi6cU+wYhLfF7rEtYHBnZS2+nIw9xttAzxeERx/aFrU+mxLcYPFV8fUeVxGng==}
+>>>>>>> 6f60d077a (human fixups)
     engines: {node: '>=16'}
     cpu: [x64]
     os: [linux]
@@ -2195,6 +4809,7 @@ packages:
     cpu: [x64]
     os: [linux]
 
+<<<<<<< HEAD
   '@cloudflare/workerd-linux-64@1.20250408.0':
     resolution: {integrity: sha512-WbgItXWln6G5d7GvYLWcuOzAVwafysZaWunH3UEfsm95wPuRofpYnlDD861gdWJX10IHSVgMStGESUcs7FLerQ==}
     engines: {node: '>=16'}
@@ -2203,6 +4818,31 @@ packages:
 
   '@cloudflare/workerd-linux-arm64@1.20250214.0':
     resolution: {integrity: sha512-Vhlfah6Yd9ny1npNQjNgElLIjR6OFdEbuR3LCfbLDCwzWEBFhIf7yC+Tpp/a0Hq7kLz3sLdktaP7xl3PJhyOjA==}
+||||||| parent of 6f60d077a (human fixups)
+  '@cloudflare/workerd-linux-64@1.20250508.0':
+    resolution: {integrity: sha512-5saVrZ3uVwYxvBa7BaonXjeqB6X0YF3ak05qvBaWcmZ3FNmnarMm2W8842cnbhnckDVBpB/iDo51Sy6Y7y1jcw==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [linux]
+
+  '@cloudflare/workerd-linux-64@1.20250604.0':
+    resolution: {integrity: sha512-S0R9r7U4nv9qejYygQj01hArC4KUbQQ4u29rvegR0MGoXZY8AHIEuJxon0kE7r7aWFJxvl4W3tOH+5hwW51LYw==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [linux]
+
+  '@cloudflare/workerd-linux-arm64@1.20250310.0':
+    resolution: {integrity: sha512-FzWeKM6id20EMZACaDg0Kkvg1C4lvXZgLBXVI6h6xaXTNFReoyEp4v4eMrRTuja5ec5k+m5iGKjP4/bMWJp9ew==}
+=======
+  '@cloudflare/workerd-linux-64@1.20250604.0':
+    resolution: {integrity: sha512-S0R9r7U4nv9qejYygQj01hArC4KUbQQ4u29rvegR0MGoXZY8AHIEuJxon0kE7r7aWFJxvl4W3tOH+5hwW51LYw==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [linux]
+
+  '@cloudflare/workerd-linux-arm64@1.20250310.0':
+    resolution: {integrity: sha512-FzWeKM6id20EMZACaDg0Kkvg1C4lvXZgLBXVI6h6xaXTNFReoyEp4v4eMrRTuja5ec5k+m5iGKjP4/bMWJp9ew==}
+>>>>>>> 6f60d077a (human fixups)
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [linux]
@@ -2213,6 +4853,7 @@ packages:
     cpu: [arm64]
     os: [linux]
 
+<<<<<<< HEAD
   '@cloudflare/workerd-linux-arm64@1.20250408.0':
     resolution: {integrity: sha512-pAhEywPPvr92SLylnQfZEPgXz+9pOG9G9haAPLpEatncZwYiYd9yiR6HYWhKp2erzCoNrOqKg9IlQwU3z1IDiw==}
     engines: {node: '>=16'}
@@ -2221,6 +4862,31 @@ packages:
 
   '@cloudflare/workerd-windows-64@1.20250214.0':
     resolution: {integrity: sha512-GMwMyFbkjBKjYJoKDhGX8nuL4Gqe3IbVnVWf2Q6086CValyIknupk5J6uQWGw2EBU3RGO3x4trDXT5WphQJZDQ==}
+||||||| parent of 6f60d077a (human fixups)
+  '@cloudflare/workerd-linux-arm64@1.20250508.0':
+    resolution: {integrity: sha512-muQe1pkxRi3eaq1Q417xvfGd2SlktbLTzNhT5Yftsx8OecWrYuB8i4ttR6Nr5ER06bfEj0FqQjqJJhcp6wLLUQ==}
+    engines: {node: '>=16'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@cloudflare/workerd-linux-arm64@1.20250604.0':
+    resolution: {integrity: sha512-BTFU/rXpNy03wpeueI2P7q1vVjbg2V6mCyyFGqDqMn2gSVYXH1G0zFNolV13PQXa0HgaqM6oYnqtAxluqbA+kQ==}
+    engines: {node: '>=16'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@cloudflare/workerd-windows-64@1.20250310.0':
+    resolution: {integrity: sha512-04OgaDzm8/8nkjF3tovB+WywZLjSdAHCQT2omXKCwH3EDd1kpd8vvzE1pErtdIyKCOf9/sArY4BhPdxRj7ijlg==}
+=======
+  '@cloudflare/workerd-linux-arm64@1.20250604.0':
+    resolution: {integrity: sha512-BTFU/rXpNy03wpeueI2P7q1vVjbg2V6mCyyFGqDqMn2gSVYXH1G0zFNolV13PQXa0HgaqM6oYnqtAxluqbA+kQ==}
+    engines: {node: '>=16'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@cloudflare/workerd-windows-64@1.20250310.0':
+    resolution: {integrity: sha512-04OgaDzm8/8nkjF3tovB+WywZLjSdAHCQT2omXKCwH3EDd1kpd8vvzE1pErtdIyKCOf9/sArY4BhPdxRj7ijlg==}
+>>>>>>> 6f60d077a (human fixups)
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
@@ -2231,6 +4897,7 @@ packages:
     cpu: [x64]
     os: [win32]
 
+<<<<<<< HEAD
   '@cloudflare/workerd-windows-64@1.20250408.0':
     resolution: {integrity: sha512-nJ3RjMKGae2aF2rZ/CNeBvQPM+W5V1SUK0FYWG/uomyr7uQ2l4IayHna1ODg/OHHTEgIjwom0Mbn58iXb0WOcQ==}
     engines: {node: '>=16'}
@@ -2239,6 +4906,37 @@ packages:
 
   '@cloudflare/workers-types@4.20250408.0':
     resolution: {integrity: sha512-79CyK8MnG535COiacxkCc9IvK5kz7IFASoMsRfK0HY9kyCjOHU2/nRichbSmvxRPXkMVJeG5L8ZT/jocR5O9kw==}
+||||||| parent of 6f60d077a (human fixups)
+  '@cloudflare/workerd-windows-64@1.20250508.0':
+    resolution: {integrity: sha512-EJj8iTWFMqjgvZUxxNvzK7frA1JMFi3y/9eDIdZPL/OaQh3cmk5Lai5DCXsKYUxfooMBZWYTp53zOLrvuJI8VQ==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [win32]
+
+  '@cloudflare/workerd-windows-64@1.20250604.0':
+    resolution: {integrity: sha512-tW/U9/qDmDZBeoEVcK5skb2uouVAMXMzt7o/uGvaIFLeZsQkOp4NBmvoQQd+nbOc7nVCJIwFoSMokd89AhzCkA==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [win32]
+
+  '@cloudflare/workers-types@4.20240614.0':
+    resolution: {integrity: sha512-fnV3uXD1Hpq5EWnY7XYb+smPcjzIoUFiZpTSV/Tk8qKL3H+w6IqcngZwXQBZ/2U/DwYkDilXHW3FfPhnyD7FZA==}
+
+  '@cloudflare/workers-types@4.20250604.0':
+    resolution: {integrity: sha512-//sQvI1x8wfd23o41QLF3z1Kj2ULAoUJ59zhIOCNjRRyaVoed/vtSVGo3porvTHXWz7C6E5f3duquCfElIqzKQ==}
+=======
+  '@cloudflare/workerd-windows-64@1.20250604.0':
+    resolution: {integrity: sha512-tW/U9/qDmDZBeoEVcK5skb2uouVAMXMzt7o/uGvaIFLeZsQkOp4NBmvoQQd+nbOc7nVCJIwFoSMokd89AhzCkA==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [win32]
+
+  '@cloudflare/workers-types@4.20240614.0':
+    resolution: {integrity: sha512-fnV3uXD1Hpq5EWnY7XYb+smPcjzIoUFiZpTSV/Tk8qKL3H+w6IqcngZwXQBZ/2U/DwYkDilXHW3FfPhnyD7FZA==}
+
+  '@cloudflare/workers-types@4.20250604.0':
+    resolution: {integrity: sha512-//sQvI1x8wfd23o41QLF3z1Kj2ULAoUJ59zhIOCNjRRyaVoed/vtSVGo3porvTHXWz7C6E5f3duquCfElIqzKQ==}
+>>>>>>> 6f60d077a (human fixups)
 
   '@colors/colors@1.5.0':
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
@@ -7702,6 +10400,7 @@ packages:
     engines: {node: '>=16'}
     hasBin: true
 
+<<<<<<< HEAD
   workerd@1.20250408.0:
     resolution: {integrity: sha512-bBUX+UsvpzAqiWFNeZrlZmDGddiGZdBBbftZJz2wE6iUg/cIAJeVQYTtS/3ahaicguoLBz4nJiDo8luqM9fx1A==}
     engines: {node: '>=16'}
@@ -7709,6 +10408,34 @@ packages:
 
   wrangler@3.109.2:
     resolution: {integrity: sha512-CT8izugPBth5o1o4gLNcQrDkHKSX2Jthy6gkyhaWiy2pFrx+536NMn/atWilLA1t1uhIgddEI5BXDNudIkPPHA==}
+||||||| parent of 6f60d077a (human fixups)
+  workerd@1.20250508.0:
+    resolution: {integrity: sha512-ffLxe7dXSuGoA6jb3Qx2SClIV1aLHfJQ6RhGhzYHjQgv7dL6fdUOSIIGgzmu2mRKs+WFSujp6c8WgKquco6w3w==}
+    engines: {node: '>=16'}
+    hasBin: true
+
+  workerd@1.20250604.0:
+    resolution: {integrity: sha512-sHz9R1sxPpnyq3ptrI/5I96sYTMA2+Ljm75oJDbmEcZQwNyezpu9Emerzt3kzzjCJQqtdscGOidWv4RKGZXzAA==}
+    engines: {node: '>=16'}
+    hasBin: true
+
+  workerpool@6.5.1:
+    resolution: {integrity: sha512-Fs4dNYcsdpYSAfVxhnl1L5zTksjvOJxtC5hzMNl+1t9B8hTJTdKDyZ5ju7ztgPy+ft9tBFXoOlDNiOT9WUXZlA==}
+
+  wrangler@3.114.1:
+    resolution: {integrity: sha512-GuS6SrnAZZDiNb20Vf2Ww0KCfnctHUEzi5GyML1i2brfQPI6BikgI/W/u6XDtYtah0OkbIWIiNJ+SdhWT7KEcw==}
+=======
+  workerd@1.20250604.0:
+    resolution: {integrity: sha512-sHz9R1sxPpnyq3ptrI/5I96sYTMA2+Ljm75oJDbmEcZQwNyezpu9Emerzt3kzzjCJQqtdscGOidWv4RKGZXzAA==}
+    engines: {node: '>=16'}
+    hasBin: true
+
+  workerpool@6.5.1:
+    resolution: {integrity: sha512-Fs4dNYcsdpYSAfVxhnl1L5zTksjvOJxtC5hzMNl+1t9B8hTJTdKDyZ5ju7ztgPy+ft9tBFXoOlDNiOT9WUXZlA==}
+
+  wrangler@3.114.1:
+    resolution: {integrity: sha512-GuS6SrnAZZDiNb20Vf2Ww0KCfnctHUEzi5GyML1i2brfQPI6BikgI/W/u6XDtYtah0OkbIWIiNJ+SdhWT7KEcw==}
+>>>>>>> 6f60d077a (human fixups)
     engines: {node: '>=16.17.0'}
     hasBin: true
     peerDependencies:
@@ -8861,10 +11588,19 @@ snapshots:
   '@cloudflare/workerd-darwin-64@1.20250317.0':
     optional: true
 
+<<<<<<< HEAD
   '@cloudflare/workerd-darwin-64@1.20250408.0':
     optional: true
 
   '@cloudflare/workerd-darwin-arm64@1.20250214.0':
+||||||| parent of 6f60d077a (human fixups)
+  '@cloudflare/workerd-darwin-64@1.20250508.0':
+    optional: true
+
+  '@cloudflare/workerd-darwin-64@1.20250604.0':
+=======
+  '@cloudflare/workerd-darwin-64@1.20250604.0':
+>>>>>>> 6f60d077a (human fixups)
     optional: true
 
   '@cloudflare/workerd-darwin-arm64@1.20250317.0':
@@ -8873,10 +11609,19 @@ snapshots:
   '@cloudflare/workerd-darwin-arm64@1.20250408.0':
     optional: true
 
+<<<<<<< HEAD
   '@cloudflare/workerd-linux-64@1.20250214.0':
     optional: true
 
   '@cloudflare/workerd-linux-64@1.20250317.0':
+||||||| parent of 6f60d077a (human fixups)
+  '@cloudflare/workerd-darwin-arm64@1.20250508.0':
+    optional: true
+
+  '@cloudflare/workerd-darwin-arm64@1.20250604.0':
+=======
+  '@cloudflare/workerd-darwin-arm64@1.20250604.0':
+>>>>>>> 6f60d077a (human fixups)
     optional: true
 
   '@cloudflare/workerd-linux-64@1.20250408.0':
@@ -8885,10 +11630,19 @@ snapshots:
   '@cloudflare/workerd-linux-arm64@1.20250214.0':
     optional: true
 
+<<<<<<< HEAD
   '@cloudflare/workerd-linux-arm64@1.20250317.0':
     optional: true
 
   '@cloudflare/workerd-linux-arm64@1.20250408.0':
+||||||| parent of 6f60d077a (human fixups)
+  '@cloudflare/workerd-linux-64@1.20250508.0':
+    optional: true
+
+  '@cloudflare/workerd-linux-64@1.20250604.0':
+=======
+  '@cloudflare/workerd-linux-64@1.20250604.0':
+>>>>>>> 6f60d077a (human fixups)
     optional: true
 
   '@cloudflare/workerd-windows-64@1.20250214.0':
@@ -8897,10 +11651,50 @@ snapshots:
   '@cloudflare/workerd-windows-64@1.20250317.0':
     optional: true
 
+<<<<<<< HEAD
   '@cloudflare/workerd-windows-64@1.20250408.0':
     optional: true
 
   '@cloudflare/workers-types@4.20250408.0': {}
+||||||| parent of 6f60d077a (human fixups)
+  '@cloudflare/workerd-linux-arm64@1.20250508.0':
+    optional: true
+
+  '@cloudflare/workerd-linux-arm64@1.20250604.0':
+    optional: true
+
+  '@cloudflare/workerd-windows-64@1.20250310.0':
+    optional: true
+
+  '@cloudflare/workerd-windows-64@1.20250417.0':
+    optional: true
+
+  '@cloudflare/workerd-windows-64@1.20250508.0':
+    optional: true
+
+  '@cloudflare/workerd-windows-64@1.20250604.0':
+    optional: true
+
+  '@cloudflare/workers-types@4.20240614.0': {}
+
+  '@cloudflare/workers-types@4.20250604.0': {}
+=======
+  '@cloudflare/workerd-linux-arm64@1.20250604.0':
+    optional: true
+
+  '@cloudflare/workerd-windows-64@1.20250310.0':
+    optional: true
+
+  '@cloudflare/workerd-windows-64@1.20250417.0':
+    optional: true
+
+  '@cloudflare/workerd-windows-64@1.20250604.0':
+    optional: true
+
+  '@cloudflare/workers-types@4.20240614.0': {}
+
+  '@cloudflare/workers-types@4.20250604.0': {}
+>>>>>>> 6f60d077a (human fixups)
 
   '@colors/colors@1.5.0':
     optional: true
@@ -14854,6 +17648,7 @@ snapshots:
       '@cloudflare/workerd-linux-arm64': 1.20250317.0
       '@cloudflare/workerd-windows-64': 1.20250317.0
 
+<<<<<<< HEAD
   workerd@1.20250408.0:
     optionalDependencies:
       '@cloudflare/workerd-darwin-64': 1.20250408.0
@@ -14863,6 +17658,39 @@ snapshots:
       '@cloudflare/workerd-windows-64': 1.20250408.0
 
   wrangler@3.109.2(@cloudflare/workers-types@4.20250408.0):
+||||||| parent of 6f60d077a (human fixups)
+  workerd@1.20250508.0:
+    optionalDependencies:
+      '@cloudflare/workerd-darwin-64': 1.20250508.0
+      '@cloudflare/workerd-darwin-arm64': 1.20250508.0
+      '@cloudflare/workerd-linux-64': 1.20250508.0
+      '@cloudflare/workerd-linux-arm64': 1.20250508.0
+      '@cloudflare/workerd-windows-64': 1.20250508.0
+
+  workerd@1.20250604.0:
+    optionalDependencies:
+      '@cloudflare/workerd-darwin-64': 1.20250604.0
+      '@cloudflare/workerd-darwin-arm64': 1.20250604.0
+      '@cloudflare/workerd-linux-64': 1.20250604.0
+      '@cloudflare/workerd-linux-arm64': 1.20250604.0
+      '@cloudflare/workerd-windows-64': 1.20250604.0
+
+  workerpool@6.5.1: {}
+
+  wrangler@3.114.1(@cloudflare/workers-types@4.20250604.0):
+=======
+  workerd@1.20250604.0:
+    optionalDependencies:
+      '@cloudflare/workerd-darwin-64': 1.20250604.0
+      '@cloudflare/workerd-darwin-arm64': 1.20250604.0
+      '@cloudflare/workerd-linux-64': 1.20250604.0
+      '@cloudflare/workerd-linux-arm64': 1.20250604.0
+      '@cloudflare/workerd-windows-64': 1.20250604.0
+
+  workerpool@6.5.1: {}
+
+  wrangler@3.114.1(@cloudflare/workers-types@4.20250604.0):
+>>>>>>> 6f60d077a (human fixups)
     dependencies:
       '@cloudflare/kv-asset-handler': 0.3.4
       '@esbuild-plugins/node-globals-polyfill': 0.2.3(esbuild@0.17.19)
