@@ -424,10 +424,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		},
 		// Plugin to provide a fallback entry file
 		{
-			name: "vite-plugin-cloudflare:fallback-client-entry",
-			// applyToEnvironment(environment) {
-			// 	return environment.name === "client";
-			// },
+			name: "vite-plugin-cloudflare:fallback-entry",
 			resolveId(source) {
 				if (source === "virtual:__cloudflare_fallback_entry__") {
 					return `\0virtual:__cloudflare_fallback_entry__`;
