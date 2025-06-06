@@ -265,6 +265,12 @@ export function convertCfWorkerInitBindingsToBindings(
 				}
 				break;
 			}
+			case "unsafe_hello_world": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "unsafe_hello_world", ...x };
+				}
+				break;
+			}
 			default: {
 				assertNever(type);
 			}
@@ -307,6 +313,7 @@ export async function convertBindingsToCfWorkerInitBindings(
 		unsafe: undefined,
 		assets: undefined,
 		pipelines: undefined,
+		unsafe_hello_world: undefined,
 	};
 
 	const fetchers: Record<string, ServiceFetch> = {};
@@ -393,6 +400,9 @@ export async function convertBindingsToCfWorkerInitBindings(
 		} else if (binding.type === "secrets_store_secret") {
 			bindings.secrets_store_secrets ??= [];
 			bindings.secrets_store_secrets.push({ ...binding, binding: name });
+		} else if (binding.type === "unsafe_hello_world") {
+			bindings.unsafe_hello_world ??= [];
+			bindings.unsafe_hello_world.push({ ...binding, binding: name });
 		} else if (isUnsafeBindingType(binding.type)) {
 			bindings.unsafe ??= {
 				bindings: [],
