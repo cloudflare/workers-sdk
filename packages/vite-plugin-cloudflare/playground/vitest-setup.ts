@@ -9,7 +9,7 @@ import {
 	preview,
 	Rollup,
 } from "vite";
-import { beforeAll, beforeEach, inject } from "vitest";
+import { afterAll, beforeAll, beforeEach, inject } from "vitest";
 import type * as http from "node:http";
 import type { Browser, Page } from "playwright-chromium";
 import type {
@@ -17,6 +17,7 @@ import type {
 	InlineConfig,
 	Logger,
 	PluginOption,
+	PreviewServer,
 	ResolvedConfig,
 	UserConfig,
 	ViteDevServer,
@@ -28,7 +29,7 @@ export const workspaceRoot = path.resolve(__dirname, "../");
 export const isBuild = !!process.env.VITE_TEST_BUILD;
 export const isWindows = process.platform === "win32";
 
-let server: ViteDevServer | http.Server;
+let server: ViteDevServer | http.Server | PreviewServer;
 
 /**
  * Vite Dev Server when testing serve
@@ -157,7 +158,7 @@ beforeAll(async (s) => {
 					viteTestUrl = mod.viteTestUrl ?? viteTestUrl;
 				}
 			} else {
-				await startDefaultServe();
+				server = await startDefaultServe();
 			}
 		}
 	} catch (e) {
@@ -166,9 +167,12 @@ beforeAll(async (s) => {
 		// If the page remains open, a command like `await page.click(...)` produces
 		// a timeout with an exception that hides the real error in the console.
 		await page.close();
-		await server?.close();
 		throw e;
 	}
+
+	afterAll(async () => {
+		await server.close();
+	});
 
 	return async () => {
 		resetServerLogs();
@@ -249,7 +253,7 @@ export async function loadConfig(configEnv: ConfigEnv) {
 }
 
 export async function startDefaultServe(): Promise<
-	ViteDevServer | http.Server
+	ViteDevServer | http.Server | PreviewServer
 > {
 	setupConsoleWarnCollector(serverLogs.warns);
 
@@ -299,6 +303,7 @@ export async function startDefaultServe(): Promise<
 		if (previewServer.config.base === "/") {
 			viteTestUrl = viteTestUrl.replace(/\/$/, "");
 		}
+		server = previewServer;
 		await page.goto(viteTestUrl);
 	}
 	return server;
