@@ -358,9 +358,11 @@ interface EnvironmentInheritable {
 	minify: boolean | undefined;
 
 	/**
-	 * Keep function names after javascript transpilations.
+	 * Set the `name` property to the original name for functions and classes renamed during minification.
 	 *
-	 * @default {true}
+	 * See https://esbuild.github.io/api/#keep-names
+	 *
+	 * @default true
 	 * @inheritable
 	 */
 	keep_names: boolean | undefined;
