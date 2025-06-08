@@ -159,7 +159,7 @@ export const dev = createCommand({
 			describe:
 				"Host to act as origin in local mode, defaults to dev.host or route",
 		},
-		"ignore-containers": {
+		"enable-containers": {
 			type: "boolean",
 			describe: "Whether to build and enable containers during development",
 			hidden: true,
@@ -562,7 +562,7 @@ async function setupDevEnv(
 				bindVectorizeToProd: args.experimentalVectorizeBindToProd,
 				imagesLocalMode: args.experimentalImagesLocalMode,
 				multiworkerPrimary: args.multiworkerPrimary,
-				ignoreContainers: args.ignoreContainers,
+				enableContainers: args.enableContainers,
 				dockerPath: args.dockerPath,
 			},
 			legacy: {

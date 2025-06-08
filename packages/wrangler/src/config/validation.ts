@@ -60,7 +60,7 @@ export type NormalizeAndValidateConfigArgs = {
 	localProtocol?: string;
 	upstreamProtocol?: string;
 	script?: string;
-	ignoreContainers?: boolean;
+	enableContainers?: boolean;
 };
 
 const ENGLISH = new Intl.ListFormat("en-US");
@@ -463,7 +463,7 @@ function normalizeAndValidateDev(
 		localProtocol: localProtocolArg,
 		upstreamProtocol: upstreamProtocolArg,
 		remote: remoteArg,
-		ignoreContainers: ignoreContainersArg,
+		enableContainers: enableContainersArg,
 	} = args;
 	assert(
 		localProtocolArg === undefined ||
@@ -477,8 +477,8 @@ function normalizeAndValidateDev(
 	);
 	assert(remoteArg === undefined || typeof remoteArg === "boolean");
 	assert(
-		ignoreContainersArg === undefined ||
-			typeof ignoreContainersArg === "boolean"
+		enableContainersArg === undefined ||
+			typeof enableContainersArg === "boolean"
 	);
 	const {
 		// On Windows, when specifying `localhost` as the socket hostname, `workerd`
@@ -497,7 +497,7 @@ function normalizeAndValidateDev(
 			? "https"
 			: local_protocol,
 		host,
-		ignore_containers = ignoreContainersArg ?? false,
+		enable_containers = enableContainersArg ?? true,
 		...rest
 	} = rawDev;
 	validateAdditionalProperties(diagnostics, "dev", Object.keys(rest), []);
@@ -531,8 +531,8 @@ function normalizeAndValidateDev(
 	validateOptionalProperty(
 		diagnostics,
 		"dev",
-		"ignore_containers",
-		ignore_containers,
+		"enable_containers",
+		enable_containers,
 		"boolean"
 	);
 
@@ -543,7 +543,7 @@ function normalizeAndValidateDev(
 		local_protocol,
 		upstream_protocol,
 		host,
-		ignore_containers,
+		enable_containers,
 	};
 }
 

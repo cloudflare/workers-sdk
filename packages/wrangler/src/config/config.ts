@@ -231,13 +231,13 @@ export interface DevConfig {
 	host: string | undefined;
 
 	/**
-	 * When developing, whether to ignore any configured containers. Otherwise, we will error early if the docker daemon is not running.
-	 * Defaults to `false`.
+	 * When developing, whether to build and connect to containers. This requires a Docker daemon to be running.
+	 * Defaults to `true`.
 	 *
 	 * @inheritable
-	 * @default false
+	 * @default true
 	 */
-	ignore_containers: boolean;
+	enable_containers: boolean;
 }
 
 export type RawDevConfig = Partial<DevConfig>;
@@ -286,7 +286,7 @@ export const defaultWranglerConfig: Config = {
 		upstream_protocol: "http",
 		host: undefined,
 		// Note this one is also workers only
-		ignore_containers: false, // default to false so we can error early if the docker daemon is not running
+		enable_containers: true,
 	},
 
 	/** INHERITABLE ENVIRONMENT FIELDS **/

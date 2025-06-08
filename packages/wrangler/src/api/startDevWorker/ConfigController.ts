@@ -149,8 +149,8 @@ async function resolveDevConfig(
 		imagesLocalMode: input.dev?.imagesLocalMode ?? false,
 		experimentalMixedMode:
 			input.dev?.experimentalMixedMode ?? getFlag("MIXED_MODE"),
-		ignoreContainers:
-			input.dev?.ignoreContainers ?? config.dev.ignore_containers,
+		enableContainers:
+			input.dev?.enableContainers ?? config.dev.enable_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
 	} satisfies StartDevWorkerOptions["dev"];
 }

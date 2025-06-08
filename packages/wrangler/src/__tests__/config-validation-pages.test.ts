@@ -180,7 +180,7 @@ describe("validatePagesConfig()", () => {
 						local_protocol: "https",
 						upstream_protocol: "https",
 						host: "test-host",
-						ignore_containers: false,
+						enable_containers: false,
 					},
 				},
 			};

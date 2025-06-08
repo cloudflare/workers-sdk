@@ -49,7 +49,7 @@ describe("normalizeAndValidateConfig()", () => {
 							local_protocol: "https",
 							upstream_protocol: "https",
 							host: "127.0.0.0",
-							ignore_containers: false,
+							enable_containers: true,
 						},
 						send_metrics: true,
 
@@ -151,7 +151,7 @@ describe("normalizeAndValidateConfig()", () => {
 							local_protocol: "https",
 							upstream_protocol: "https",
 							host: "127.0.0.0",
-							ignore_containers: false,
+							enable_containers: true,
 						},
 						send_metrics: true,
 
@@ -253,7 +253,7 @@ describe("normalizeAndValidateConfig()", () => {
 							local_protocol: "https",
 							upstream_protocol: "https",
 							host: "127.0.0.0",
-							ignore_containers: false,
+							enable_containers: true,
 						},
 						send_metrics: true,
 
@@ -374,7 +374,7 @@ describe("normalizeAndValidateConfig()", () => {
 							local_protocol: "https",
 							upstream_protocol: "https",
 							host: "127.0.0.0",
-							ignore_containers: false,
+							enable_containers: true,
 						},
 						send_metrics: true,
 
@@ -484,7 +484,7 @@ describe("normalizeAndValidateConfig()", () => {
 							local_protocol: "https",
 							upstream_protocol: "https",
 							host: "127.0.0.0",
-							ignore_containers: false,
+							enable_containers: true,
 						},
 						send_metrics: true,
 
@@ -594,7 +594,7 @@ describe("normalizeAndValidateConfig()", () => {
 							local_protocol: "https",
 							upstream_protocol: "https",
 							host: "127.0.0.0",
-							ignore_containers: false,
+							enable_containers: true,
 						},
 						send_metrics: true,
 
@@ -702,7 +702,7 @@ describe("normalizeAndValidateConfig()", () => {
 							local_protocol: "https",
 							upstream_protocol: "https",
 							host: "127.0.0.0",
-							ignore_containers: false,
+							enable_containers: true,
 						},
 						send_metrics: true,
 

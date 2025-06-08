@@ -86,7 +86,7 @@ export interface Unstable_DevOptions {
 		vectorizeBindToProd?: boolean;
 		imagesLocalMode?: boolean;
 		enableIpc?: boolean;
-		ignoreContainers?: boolean; // Ignore containers in dev mode, useful for testing
+		enableContainers?: boolean; // Whether to build and connect to containers in dev mode. Defaults to true.
 		dockerPath?: string; // Path to the docker binary, if not on $PATH
 	};
 }
@@ -222,7 +222,7 @@ export async function unstable_dev(
 		experimentalImagesLocalMode: imagesLocalMode ?? false,
 		enableIpc: options?.experimental?.enableIpc,
 		nodeCompat: undefined,
-		ignoreContainers: options?.experimental?.ignoreContainers ?? false,
+		enableContainers: options?.experimental?.enableContainers ?? false,
 		dockerPath: options?.experimental?.dockerPath ?? getDockerPath(),
 	};
 

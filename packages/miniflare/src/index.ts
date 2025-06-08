@@ -1891,7 +1891,7 @@ export class Miniflare {
 
 		if (
 			Object.keys(containerOptions).length &&
-			!sharedOpts.containers.ignoreContainers
+			sharedOpts.containers.enableContainers
 		) {
 			if (this.#containerController === undefined) {
 				this.#containerController = new ContainerController(

@@ -184,8 +184,8 @@ export interface StartDevWorkerInput {
 		/** Whether the experimental mixed mode feature should be enabled */
 		experimentalMixedMode?: boolean;
 
-		/** If false, won't fast-fail if containers are configured and docker is not installed. Defaults to false */
-		ignoreContainers?: boolean;
+		/** Whether to build and connect to containers during local dev. Requires Docker daemon to be running. Defaults to true. */
+		enableContainers?: boolean;
 
 		/** Path to the docker executable. Defaults to 'docker' */
 		dockerPath?: string;

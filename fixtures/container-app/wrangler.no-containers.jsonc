@@ -11,4 +11,10 @@
 			},
 		],
 	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": ["Container"],
+		},
+	],
 }

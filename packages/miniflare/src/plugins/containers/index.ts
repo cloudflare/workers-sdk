@@ -17,7 +17,7 @@ export const ContainersOptionsSchema = z.object({
 export type ContainerOptions = z.infer<typeof ContainerSchema>;
 
 export const ContainersSharedSchema = z.object({
-	ignoreContainers: z.boolean().default(false),
+	enableContainers: z.boolean().default(true),
 	dockerPath: z.string().default("docker"),
 });
 
