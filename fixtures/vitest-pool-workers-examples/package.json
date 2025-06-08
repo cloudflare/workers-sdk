@@ -1,5 +1,5 @@
 {
-	"name": "@cloudflare/vitest-pool-workers-examples",
+	"name": "@fixture/vitest-pool-workers",
 	"private": true,
 	"type": "module",
 	"scripts": {
@@ -12,7 +12,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250525.0",
+		"@cloudflare/workers-types": "^4.20250604.0",
 		"@microlabs/otel-cf-workers": "1.0.0-rc.45",
 		"@types/node": "catalog:default",
 		"discord-api-types": "0.37.98",

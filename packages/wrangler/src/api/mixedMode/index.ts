@@ -3,18 +3,20 @@ import getPort from "get-port";
 import { getBasePath } from "../../paths";
 import { startWorker } from "../startDevWorker";
 import type { Config } from "../../config";
-import type { StartDevWorkerInput, Worker } from "../startDevWorker/types";
+import type {
+	Binding,
+	StartDevWorkerInput,
+	Worker,
+} from "../startDevWorker/types";
 import type { MixedModeConnectionString } from "miniflare";
 
-type BindingsOpt = NonNullable<StartDevWorkerInput["bindings"]>;
-
 export type MixedModeSession = Pick<Worker, "ready" | "dispose"> & {
-	updateBindings: (bindings: BindingsOpt) => Promise<void>;
+	updateBindings: (bindings: StartDevWorkerInput["bindings"]) => Promise<void>;
 	mixedModeConnectionString: MixedModeConnectionString;
 };
 
 export async function startMixedModeSession(
-	bindings: BindingsOpt,
+	bindings: StartDevWorkerInput["bindings"],
 	options?: {
 		auth?: NonNullable<StartDevWorkerInput["dev"]>["auth"];
 		/** If running in a non-public compliance region, set this here. */
@@ -28,7 +30,7 @@ export async function startMixedModeSession(
 
 	// Transform all bindings to use "raw" mode
 	const rawBindings = Object.fromEntries(
-		Object.entries(bindings).map(([key, binding]) => [
+		Object.entries(bindings ?? {}).map(([key, binding]) => [
 			key,
 			{ ...binding, raw: true },
 		])
@@ -56,10 +58,12 @@ export async function startMixedModeSession(
 	const mixedModeConnectionString =
 		(await worker.url) as MixedModeConnectionString;
 
-	const updateBindings = async (newBindings: BindingsOpt) => {
+	const updateBindings = async (
+		newBindings: StartDevWorkerInput["bindings"]
+	) => {
 		// Transform all new bindings to use "raw" mode
 		const rawNewBindings = Object.fromEntries(
-			Object.entries(newBindings).map(([key, binding]) => [
+			Object.entries(newBindings ?? {}).map(([key, binding]) => [
 				key,
 				{ ...binding, raw: true },
 			])
@@ -73,4 +77,19 @@ export async function startMixedModeSession(
 		updateBindings,
 		dispose: worker.dispose,
 	};
+}
+
+export function pickRemoteBindings(
+	bindings: Record<string, Binding>
+): Record<string, Binding> {
+	return Object.fromEntries(
+		Object.entries(bindings ?? {}).filter(([, binding]) => {
+			if (binding.type === "ai") {
+				// AI is always remote
+				return true;
+			}
+
+			return "remote" in binding && binding["remote"];
+		})
+	);
 }

@@ -1,5 +1,5 @@
 {
-	"name": "d1-worker-app",
+	"name": "@fixture/d1-basic",
 	"private": true,
 	"scripts": {
 		"check:type": "tsc",
@@ -13,7 +13,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250525.0",
+		"@cloudflare/workers-types": "^4.20250604.0",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
 		"vitest": "catalog:default",

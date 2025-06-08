@@ -8,8 +8,15 @@ import { updateCheck } from "./update-check";
 
 const MIN_NODE_VERSION = "20.0.0";
 
+// The WRANGLER_PRERELEASE_LABEL is provided at esbuild time as a `define` for beta releases.
+// Otherwise it is left undefined, which signals that this isn't a prerelease
+declare const WRANGLER_PRERELEASE_LABEL: string;
+
 export async function printWranglerBanner(performUpdateCheck = true) {
-	let text = ` ⛅️ wrangler ${wranglerVersion}`;
+	let text =
+		typeof WRANGLER_PRERELEASE_LABEL === "undefined"
+			? ` ⛅️ wrangler ${wranglerVersion}`
+			: ` ⛅️ wrangler ${wranglerVersion} (${chalk.blue(WRANGLER_PRERELEASE_LABEL)})`;
 	let maybeNewVersion: string | undefined;
 	if (performUpdateCheck) {
 		maybeNewVersion = await updateCheck();

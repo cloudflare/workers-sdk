@@ -1,5 +1,78 @@
 # miniflare
 
+## 4.20250525.1
+
+### Minor Changes
+
+- [#9173](https://github.com/cloudflare/workers-sdk/pull/9173) [`fac2f9d`](https://github.com/cloudflare/workers-sdk/commit/fac2f9dfa67b9c9b3ab0979acbb79f8e020a9cfb) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: export `getDefaultDevRegistryPath()` utility
+
+  This provides a default XDG app-path for the Dev Registry, which can be used to set the `unsafeDevRegistryPath` option in Miniflare and will be used by both Wrangler and @cloudflare/vite-plugin.
+
+- [#9313](https://github.com/cloudflare/workers-sdk/pull/9313) [`92719a5`](https://github.com/cloudflare/workers-sdk/commit/92719a535bf6bae9d660a05d5c8f8823004929c5) Thanks [@edmundhung](https://github.com/edmundhung)! - feat: add Dev Registry support
+
+  This change introduces two new options to support cross-process service bindings, durable objects and tail consumers via a file-system based registry, with backward compatibility to Wrangler’s implementation:
+
+  - **`unsafeDevRegistryPath`** (`string`): Filesystem path to the Dev Registry directory.
+  - **`unsafeDevRegistryDurableObjectProxy`** (`boolean`): When enabled, exposes internal Durable Objects to other local dev sessions and allows Workers to connect to external Durable Objects.
+
+  Example usage:
+
+  ```ts
+  import { Miniflare } from "miniflare";
+
+  const mf = new Miniflare({
+  	scriptPath: "./dist/worker.js",
+  	unsafeDevRegistryPath: "/registry",
+  	unsafeDevRegistryDurableObjectProxy: true,
+  	// ...other options
+  });
+  ```
+
+### Patch Changes
+
+- [#9440](https://github.com/cloudflare/workers-sdk/pull/9440) [`8c7ce77`](https://github.com/cloudflare/workers-sdk/commit/8c7ce7728ccc467aa19b60c8f32c90e6f06442d1) Thanks [@penalosa](https://github.com/penalosa)! - Preserve original error messages
+
+- [#9390](https://github.com/cloudflare/workers-sdk/pull/9390) [`80e75f4`](https://github.com/cloudflare/workers-sdk/commit/80e75f4a67b4e4b7a1bc92e0a93659e5d6f141dc) Thanks [@penalosa](https://github.com/penalosa)! - Support additional Mixed Mode resources in Wrangler:
+
+  - AI
+  - Browser
+  - Images
+  - Vectorize
+  - Dispatch Namespaces
+
+- [#9390](https://github.com/cloudflare/workers-sdk/pull/9390) [`80e75f4`](https://github.com/cloudflare/workers-sdk/commit/80e75f4a67b4e4b7a1bc92e0a93659e5d6f141dc) Thanks [@penalosa](https://github.com/penalosa)! - Additional option for the Miniflare plugin interface to allow defining workerd extensions without having to include deduplication logic.
+
+## 4.20250525.0
+
+### Minor Changes
+
+- [#9387](https://github.com/cloudflare/workers-sdk/pull/9387) [`e39a45f`](https://github.com/cloudflare/workers-sdk/commit/e39a45ffa0d783cc99107f8ab02d6b3dd27d4c9f) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add `logReady` method to Miniflare `Log` class. This makes it possible to override the messages printed on server start.
+
+- [#9376](https://github.com/cloudflare/workers-sdk/pull/9376) [`fdae3f7`](https://github.com/cloudflare/workers-sdk/commit/fdae3f7665a5cd3b5e25c9de19156ecd54618a7c) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add support for Node.js style custom handlers for service bindings and outbound services. This makes it easier to integrate Miniflare with existing Node.js middleware and libraries as `req` and `res` objects can be used directly.
+
+  ```js
+  new Miniflare({
+  	serviceBindings: {
+  		CUSTOM: {
+  			node: (req, res) => {
+  				res.end(`Hello world`);
+  			},
+  		},
+  	},
+  });
+  ```
+
+### Patch Changes
+
+- [#9366](https://github.com/cloudflare/workers-sdk/pull/9366) [`d9d937a`](https://github.com/cloudflare/workers-sdk/commit/d9d937ab6f2868271dde5a8da625773085eaec85) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | workerd                   | 1.20250523.0  | 1.20250525.0  |
+  | @cloudflare/workers-types | ^4.20250523.0 | ^4.20250525.0 |
+
 ## 4.20250523.0
 
 ### Minor Changes

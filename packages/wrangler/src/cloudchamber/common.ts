@@ -21,10 +21,12 @@ import {
 	requireAuth,
 	setLoginScopeKeys,
 } from "../user";
+import { parseByteSize } from "./../parse";
 import { ApiError, DeploymentMutationError, OpenAPI } from "./client";
 import { wrap } from "./helpers/wrap";
 import { idToLocationName, loadAccount } from "./locations";
 import type { Config } from "../config";
+import type { CloudchamberConfig, ContainerApp } from "../config/environment";
 import type { Scope } from "../user";
 import type {
 	CommonYargsOptions,
@@ -301,7 +303,7 @@ export function renderDeploymentConfiguration(
 		image,
 		location,
 		vcpu,
-		memory,
+		memoryMib,
 		environmentVariables,
 		labels,
 		env,
@@ -310,7 +312,7 @@ export function renderDeploymentConfiguration(
 		image: string;
 		location: string;
 		vcpu: number;
-		memory: string;
+		memoryMib: number;
 		environmentVariables: EnvironmentVariable[] | undefined;
 		labels: Label[] | undefined;
 		env?: string;
@@ -347,7 +349,7 @@ export function renderDeploymentConfiguration(
 		["image", image],
 		["location", idToLocationName(location)],
 		["vCPU", `${vcpu}`],
-		["memory", memory],
+		["memory", `${memoryMib} MiB`],
 		["environment variables", environmentVariablesText],
 		["labels", labelsText],
 		...(network === undefined
@@ -386,15 +388,12 @@ export function renderDeploymentMutationError(
 
 	const details: Record<string, string> = err.body.details ?? {};
 	function renderAccountLimits() {
-		return `${space(2)}${brandColor("Maximum VCPU per deployment")} ${
-			account.limits.vcpu_per_deployment
-		}\n${space(2)}${brandColor("Maximum total VCPU in your account")} ${
-			account.limits.total_vcpu
-		}\n${space(2)}${brandColor("Maximum memory per deployment")} ${
-			account.limits.memory_per_deployment
-		}\n${space(2)}${brandColor("Maximum total memory in your account")} ${
-			account.limits.total_memory
-		}`;
+		return [
+			`${space(2)}${brandColor("Maximum VCPU per deployment")} ${account.limits.vcpu_per_deployment}`,
+			`${space(2)}${brandColor("Maximum total VCPU in your account")} ${account.limits.total_vcpu}`,
+			`${space(2)}${brandColor("Maximum memory per deployment")} ${account.limits.memory_mib_per_deployment} MiB`,
+			`${space(2)}${brandColor("Maximum total memory in your account")} ${account.limits.total_memory_mib} MiB`,
+		].join("\n");
 	}
 
 	function renderInvalidInputDetails(inputDetails: Record<string, string>) {
@@ -633,4 +632,35 @@ export async function promptForLabels(
 	}
 
 	return [];
+}
+
+// Return the amount of memory to use (in MiB) for a deployment given the
+// provided arguments and configuration.
+export function resolveMemory(
+	args: { memory: string | undefined },
+	config: CloudchamberConfig
+): number | undefined {
+	const MiB = 1024 * 1024;
+
+	const memory = args.memory ?? config.memory;
+	if (memory !== undefined) {
+		return Math.round(parseByteSize(memory, 1024) / MiB);
+	}
+
+	return undefined;
+}
+
+// Return the amount of disk size in (MB) for an application, falls back to the account limits if the app config doesn't exist
+// sometimes the user wants to just build a container here, we should allow checking those based on the account limits if
+// app.configuration is not set
+// ordering: app.configuration.disk.size -> account.limits.disk_mb_per_deployment -> default fallback to 2GB in bytes
+export function resolveAppDiskSize(
+	account: CompleteAccountCustomer,
+	app: ContainerApp | undefined
+): number | undefined {
+	if (app === undefined) {
+		return undefined;
+	}
+	const disk = app.configuration.disk?.size ?? "2GB";
+	return Math.round(parseByteSize(disk));
 }

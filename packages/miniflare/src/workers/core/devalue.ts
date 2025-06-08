@@ -60,6 +60,13 @@ export const structuredSerializableReducers: ReducersRevivers = {
 			];
 		}
 	},
+	RegExp(value) {
+		if (value instanceof RegExp) {
+			const { source, flags } = value;
+			const encoded = Buffer.from(source).toString("base64");
+			return flags ? ["RegExp", encoded, flags] : ["RegExp", encoded];
+		}
+	},
 	Error(value) {
 		for (const ctor of ALLOWED_ERROR_CONSTRUCTORS) {
 			if (value instanceof ctor && value.name === ctor.name) {
@@ -96,6 +103,14 @@ export const structuredSerializableRevivers: ReducersRevivers = {
 		let length = byteLength;
 		if ("BYTES_PER_ELEMENT" in ctor) length /= ctor.BYTES_PER_ELEMENT;
 		return new ctor(buffer as ArrayBuffer, byteOffset, length);
+	},
+	RegExp(value) {
+		assert(Array.isArray(value));
+		const [name, encoded, flags] = value;
+		assert(typeof name === "string");
+		assert(typeof encoded === "string");
+		const source = Buffer.from(encoded, "base64").toString("utf-8");
+		return new RegExp(source, flags);
 	},
 	Error(value) {
 		assert(Array.isArray(value));

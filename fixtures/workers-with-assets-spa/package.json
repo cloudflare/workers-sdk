@@ -1,5 +1,5 @@
 {
-	"name": "workers-assets-spa",
+	"name": "@fixture/workers-assets-spa",
 	"private": true,
 	"scripts": {
 		"check:type": "tsc",
@@ -11,7 +11,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@cloudflare/workers-types": "^4.20250525.0",
+		"@cloudflare/workers-types": "^4.20250604.0",
 		"@types/jest-image-snapshot": "^6.4.0",
 		"@types/node": "catalog:default",
 		"jest-image-snapshot": "^6.4.0",

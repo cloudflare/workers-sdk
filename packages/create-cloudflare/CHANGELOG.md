@@ -1,5 +1,79 @@
 # create-cloudflare
 
+## 2.49.0
+
+### Minor Changes
+
+- [#9442](https://github.com/cloudflare/workers-sdk/pull/9442) [`4996b88`](https://github.com/cloudflare/workers-sdk/commit/4996b88e7cac5cdb43418a8fcf8455f36a070a37) Thanks [@vicb](https://github.com/vicb)! - add \_headers file for immutable asset caching in nextjs template
+
+### Patch Changes
+
+- [#9426](https://github.com/cloudflare/workers-sdk/pull/9426) [`0dc5992`](https://github.com/cloudflare/workers-sdk/commit/0dc599216648ed66a1418cb897b7592228a12fe9) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-solid | 0.6.2 | 0.6.5 |
+
+## 2.48.0
+
+### Minor Changes
+
+- [#9104](https://github.com/cloudflare/workers-sdk/pull/9104) [`8096b5f`](https://github.com/cloudflare/workers-sdk/commit/8096b5f3e1121119646d897adc48510146d51c1d) Thanks [@avenceslau](https://github.com/avenceslau)! - Add Hello World Workflows template.
+
+  For multi-step applications that automatically retry, persist state, and run for minutes, hours, days or weeks.
+
+### Patch Changes
+
+- [#9424](https://github.com/cloudflare/workers-sdk/pull/9424) [`52398c7`](https://github.com/cloudflare/workers-sdk/commit/52398c77cd5edc7d0d11cbbfb502bda7ad95f0b7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To    |
+  | ------------------- | ----- | ----- |
+  | create-react-router | 7.6.0 | 7.6.1 |
+
+- [#9425](https://github.com/cloudflare/workers-sdk/pull/9425) [`678170f`](https://github.com/cloudflare/workers-sdk/commit/678170fe3cc93d8cd32a8e062ad1c2b80195264b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To    |
+  | ---------- | ----- | ----- |
+  | sv         | 0.8.6 | 0.8.7 |
+
+- [#9427](https://github.com/cloudflare/workers-sdk/pull/9427) [`5231b0e`](https://github.com/cloudflare/workers-sdk/commit/5231b0ed3ae9bd38229414342f328babaf2e902c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-astro | 4.11.4 | 4.12.1 |
+
+- [#9428](https://github.com/cloudflare/workers-sdk/pull/9428) [`f312396`](https://github.com/cloudflare/workers-sdk/commit/f3123962361640aaf6fa6ff77dfc0dea968be63a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-docusaurus | 3.7.0 | 3.8.0 |
+
+- [#9429](https://github.com/cloudflare/workers-sdk/pull/9429) [`4e7345e`](https://github.com/cloudflare/workers-sdk/commit/4e7345e132a45acbf8759e447552785dc1234903) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.3.2 | 15.3.3 |
+
+- [#9430](https://github.com/cloudflare/workers-sdk/pull/9430) [`00ebdd9`](https://github.com/cloudflare/workers-sdk/commit/00ebdd9dc4402a2a1d1193d0d7be4d345adcd875) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.13.0 | 1.14.1 |
+
 ## 2.47.3
 
 ### Patch Changes
@@ -2326,7 +2400,7 @@
 
   Along with this change, projects will use the default vite-based dev command from `create-remix` instead of using `wrangler pages dev` on build output.
 
-  A new `build-cf-types` script has also been added to re-generate the `Env` type defined in `load-context.ts` based on the contents of `wrangler.toml`. A default `wrangler.toml` will be added to new Remix projects to accomodate this workflow.
+  A new `build-cf-types` script has also been added to re-generate the `Env` type defined in `load-context.ts` based on the contents of `wrangler.toml`. A default `wrangler.toml` will be added to new Remix projects to accommodate this workflow.
 
 - [#5072](https://github.com/cloudflare/workers-sdk/pull/5072) [`cab7e1c`](https://github.com/cloudflare/workers-sdk/commit/cab7e1c7f24ff0097e15d90030c805fe2785d173) Thanks [@jculvey](https://github.com/jculvey)! - feature: Improve bindings support in Astro template.
 

@@ -19,7 +19,7 @@
 		"rootDir": ".",
 		"checkJs": true,
 		"allowJs": true,
-		"skipLibCheck": false,
+		"skipLibCheck": true,
 		"paths": {
 			"miniflare": ["./src"],
 			"miniflare:shared": ["./src/workers/shared/index.ts"],

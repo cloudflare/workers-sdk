@@ -1,6 +1,7 @@
 import { brandColor, dim, white } from "@cloudflare/cli/colors";
 import chalk from "chalk";
 import stripAnsi from "strip-ansi";
+import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import type { CfTailConsumer, CfWorkerInit } from "../deployment-bundle/worker";
@@ -51,6 +52,7 @@ export function printBindings(
 		name?: string;
 		provisioning?: boolean;
 		warnIfNoBindings?: boolean;
+		vectorizeBindToProd?: boolean;
 	} = {}
 ) {
 	let hasConnectionStatus = false;
@@ -58,9 +60,8 @@ export function printBindings(
 		isProvisioning: context.provisioning,
 		isLocalDev: context.local,
 	});
-	const truncate = (item: string | Record<string, unknown>) => {
+	const truncate = (item: string | Record<string, unknown>, maxLength = 40) => {
 		const s = typeof item === "string" ? item : JSON.stringify(item);
-		const maxLength = 40;
 		if (s.length < maxLength) {
 			return s;
 		}
@@ -257,12 +258,20 @@ export function printBindings(
 
 	if (vectorize !== undefined && vectorize.length > 0) {
 		output.push(
-			...vectorize.map(({ binding, index_name }) => {
+			...vectorize.map(({ binding, index_name, remote }) => {
 				return {
 					name: binding,
 					type: friendlyBindingNames.vectorize,
 					value: index_name,
-					mode: getMode(),
+					mode: getMode({
+						isSimulatedLocally: getFlag("MIXED_MODE")
+							? remote
+								? false
+								: undefined
+							: context.vectorizeBindToProd
+								? false
+								: /* Vectorize doesn't support local mode */ undefined,
+					}),
 				};
 			})
 		);
@@ -398,7 +407,10 @@ export function printBindings(
 			name: browser.binding,
 			type: friendlyBindingNames.browser,
 			value: undefined,
-			mode: getMode({ isSimulatedLocally: undefined }),
+			mode: getMode({
+				isSimulatedLocally:
+					getFlag("MIXED_MODE") && browser.remote ? false : undefined,
+			}),
 		});
 	}
 
@@ -407,7 +419,13 @@ export function printBindings(
 			name: images.binding,
 			type: friendlyBindingNames.images,
 			value: undefined,
-			mode: getMode({ isSimulatedLocally: !!context.imagesLocalMode }),
+			mode: getMode({
+				isSimulatedLocally: getFlag("MIXED_MODE")
+					? images.remote === true || images.remote === undefined
+						? false
+						: undefined
+					: !!context.imagesLocalMode,
+			}),
 		});
 	}
 
@@ -416,7 +434,13 @@ export function printBindings(
 			name: ai.binding,
 			type: friendlyBindingNames.ai,
 			value: ai.staging ? `staging` : undefined,
-			mode: getMode({ isSimulatedLocally: false }),
+			mode: getMode({
+				isSimulatedLocally: getFlag("MIXED_MODE")
+					? ai.remote === true || ai.remote === undefined
+						? false
+						: undefined
+					: false,
+			}),
 		});
 	}
 
@@ -494,14 +518,20 @@ export function printBindings(
 
 	if (dispatch_namespaces !== undefined && dispatch_namespaces.length > 0) {
 		output.push(
-			...dispatch_namespaces.map(({ binding, namespace, outbound }) => {
+			...dispatch_namespaces.map(({ binding, namespace, outbound, remote }) => {
 				return {
 					name: binding,
 					type: friendlyBindingNames.dispatch_namespaces,
 					value: outbound
 						? `${namespace} (outbound -> ${outbound.service})`
 						: namespace,
-					mode: getMode(),
+					mode: getMode({
+						isSimulatedLocally: getFlag("MIXED_MODE")
+							? remote
+								? false
+								: undefined
+							: undefined,
+					}),
 				};
 			})
 		);
@@ -556,6 +586,9 @@ export function printBindings(
 		);
 		const maxNameLength = Math.max(...output.map((b) => b.name.length));
 		const maxTypeLength = Math.max(...output.map((b) => b.type.length));
+		const maxModeLength = Math.max(
+			...output.map((b) => (b.mode ? stripAnsi(b.mode).length : "Mode".length))
+		);
 
 		const hasMode = output.some((b) => b.mode);
 		const bindingPrefix = `env.`;
@@ -565,18 +598,46 @@ export function printBindings(
 			" (".length +
 			maxValueLength +
 			")".length;
+
+		const columnGapSpaces = 6;
+		const columnGapSpacesWrapped = 4;
+
+		const shouldWrap =
+			bindingLength +
+				columnGapSpaces +
+				maxTypeLength +
+				columnGapSpaces +
+				maxModeLength >=
+			process.stdout.columns;
+
 		logger.log(title);
+		const columnGap = shouldWrap
+			? " ".repeat(columnGapSpacesWrapped)
+			: " ".repeat(columnGapSpaces);
+
 		logger.log(
-			`${padEndAnsi(dim("Binding"), bindingLength)}      ${padEndAnsi(dim("Resource"), maxTypeLength)}      ${hasMode ? dim("Mode") : ""}`
+			`${padEndAnsi(dim("Binding"), shouldWrap ? bindingPrefix.length + maxNameLength : bindingLength)}${columnGap}${padEndAnsi(dim("Resource"), maxTypeLength)}${columnGap}${hasMode ? dim("Mode") : ""}`
 		);
+
 		for (const binding of output) {
+			const bindingValue = dim(
+				typeof binding.value === "symbol"
+					? chalk.italic("inherited")
+					: binding.value ?? ""
+			);
 			const bindingString = padEndAnsi(
-				`${white(`env.${binding.name}`)}${binding.value ? ` (${dim(typeof binding.value === "symbol" ? chalk.italic("inherited") : binding.value ?? "")})` : ""}`,
-				bindingLength
+				`${white(`env.${binding.name}`)}${binding.value && !shouldWrap ? ` (${bindingValue})` : ""}`,
+				shouldWrap ? bindingPrefix.length + maxNameLength : bindingLength
 			);
 
+			const suffix = shouldWrap
+				? binding.value
+					? `\n  ${bindingValue}`
+					: ""
+				: "";
+
 			logger.log(
-				`${bindingString}      ${brandColor(binding.type.padEnd(maxTypeLength))}      ${hasMode ? binding.mode : ""}`
+				`${bindingString}${columnGap}${brandColor(binding.type.padEnd(maxTypeLength))}${columnGap}${hasMode ? binding.mode : ""}${suffix}`
 			);
 		}
 		logger.log();
@@ -659,4 +720,31 @@ function createGetMode({
 
 		return `${isSimulatedLocally ? chalk.blue("local") : chalk.yellow("remote")}${connected === undefined ? "" : connected ? chalk.green(" [connected]") : chalk.red(" [not connected]")}`;
 	};
+}
+
+export function warnOrError(
+	type: keyof typeof friendlyBindingNames,
+	remote: boolean | undefined,
+	supports: "remote-and-local" | "local" | "remote" | "always-remote"
+) {
+	if (remote === true && supports === "local") {
+		throw new UserError(
+			`${friendlyBindingNames[type]} bindings do not support accessing remote resources.`
+		);
+	}
+	if (remote === false && supports === "remote") {
+		throw new UserError(
+			`${friendlyBindingNames[type]} bindings do not support local development. You may be able to set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
+		);
+	}
+	if (remote === undefined && supports === "remote") {
+		logger.warn(
+			`${friendlyBindingNames[type]} bindings do not support local development, and so parts of your Worker may not work correctly. You may be able to set \`remote: true\` for the binding definition in your configuration file to access a remote version of the resource.`
+		);
+	}
+	if (remote === undefined && supports === "always-remote") {
+		logger.warn(
+			`${friendlyBindingNames[type]} bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.`
+		);
+	}
 }

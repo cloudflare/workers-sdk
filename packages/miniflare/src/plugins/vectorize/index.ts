@@ -73,10 +73,14 @@ export const VECTORIZE_PLUGIN: Plugin<typeof VectorizeOptionsSchema> = {
 		}
 
 		return Object.entries(options.vectorize).map(
-			([name, { mixedModeConnectionString }]) => ({
-				name: `${VECTORIZE_PLUGIN_NAME}:${name}`,
-				worker: mixedModeClientWorker(mixedModeConnectionString, name),
-			})
+			([name, { mixedModeConnectionString }]) => {
+				assert(mixedModeConnectionString, "Vectorize only supports Mixed Mode");
+
+				return {
+					name: `${VECTORIZE_PLUGIN_NAME}:${name}`,
+					worker: mixedModeClientWorker(mixedModeConnectionString, name),
+				};
+			}
 		);
 	},
 };

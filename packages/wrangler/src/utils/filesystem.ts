@@ -13,8 +13,3 @@ export function ensureDirectoryExistsSync(filepath: string) {
 
 	mkdirSync(dirpath, { recursive: true });
 }
-
-export {
-	maybeGetFile,
-	thrownIsDoesNotExistError,
-} from "@cloudflare/workers-shared/utils/helpers";

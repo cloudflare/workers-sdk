@@ -130,7 +130,6 @@ export class RemoteRuntimeController extends RuntimeController {
 				bindings: props.bindings,
 				compatibilityDate: props.compatibilityDate,
 				compatibilityFlags: props.compatibilityFlags,
-				minimal_mode: props.minimal_mode,
 			});
 
 			// If we received a new `bundleComplete` event before we were able to
@@ -144,7 +143,8 @@ export class RemoteRuntimeController extends RuntimeController {
 				workerAccount,
 				workerContext,
 				this.#session,
-				this.#abortController.signal
+				this.#abortController.signal,
+				props.minimal_mode
 			);
 
 			return workerPreviewToken;

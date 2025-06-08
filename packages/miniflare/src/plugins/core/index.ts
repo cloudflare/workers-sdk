@@ -216,6 +216,10 @@ export const CoreSharedOptionsSchema = z.object({
 
 	liveReload: z.boolean().optional(),
 
+	// Enable auto service / durable objects discovery with the dev registry
+	unsafeDevRegistryPath: z.string().optional(),
+	// Enable External Durable Objects Proxy / Internal DOs registration
+	unsafeDevRegistryDurableObjectProxy: z.boolean().default(false),
 	// This is a shared secret between a proxy server and miniflare that can be
 	// passed in a header to prove that the request came from the proxy and not
 	// some malicious attacker.
@@ -265,7 +269,6 @@ export const SCRIPT_CUSTOM_FETCH_SERVICE = `addEventListener("fetch", (event) =>
 export const SCRIPT_CUSTOM_NODE_SERVICE = `addEventListener("fetch", (event) => {
   const request = new Request(event.request);
   request.headers.set("${CoreHeaders.CUSTOM_NODE_SERVICE}", ${CoreBindings.TEXT_CUSTOM_SERVICE});
-  request.headers.set("${CoreHeaders.ORIGINAL_URL}", request.url);
   event.respondWith(${CoreBindings.SERVICE_LOOPBACK}.fetch(request));
 })`;
 

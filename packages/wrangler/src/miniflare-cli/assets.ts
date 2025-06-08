@@ -2,8 +2,7 @@ import assert from "node:assert";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createMetadataObject } from "@cloudflare/pages-shared/metadata-generator/createMetadataObject";
-import { parseHeaders } from "@cloudflare/workers-shared/utils/configuration/parseHeaders";
-import { parseRedirects } from "@cloudflare/workers-shared/utils/configuration/parseRedirects";
+import { parseHeaders, parseRedirects } from "@cloudflare/workers-shared";
 import { watch } from "chokidar";
 import { getType } from "mime";
 import { fetch, Request, Response } from "miniflare";
@@ -14,7 +13,7 @@ import type { Metadata } from "@cloudflare/pages-shared/asset-server/metadata";
 import type {
 	ParsedHeaders,
 	ParsedRedirects,
-} from "@cloudflare/workers-shared/utils/configuration/types";
+} from "@cloudflare/workers-shared";
 import type { Request as WorkersRequest } from "@cloudflare/workers-types/experimental";
 import type { RequestInit } from "miniflare";
 import type { IncomingHttpHeaders } from "undici/types/header";

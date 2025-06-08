@@ -1,5 +1,5 @@
 {
-	"name": "ratelimit-app",
+	"name": "@fixture/worker-ratelimit",
 	"private": true,
 	"description": "",
 	"license": "ISC",

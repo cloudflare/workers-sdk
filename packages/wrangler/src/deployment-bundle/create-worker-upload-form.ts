@@ -727,7 +727,6 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			},
 		}),
 		...(observability && { observability }),
-		minimal_mode: worker.minimal_mode,
 	};
 
 	if (bindings.unsafe?.metadata !== undefined) {

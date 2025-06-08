@@ -194,7 +194,6 @@ export async function createRemoteWorkerInit(props: {
 		tail_consumers: undefined, // no tail consumers in dev - TODO revisit?
 		limits: undefined, // no limits in preview - not supported yet but can be added
 		observability: undefined, // no observability in dev,
-		minimal_mode: props.minimal_mode,
 	};
 
 	return init;

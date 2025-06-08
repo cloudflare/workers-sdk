@@ -23,7 +23,7 @@ type TestCase<T = void> = {
 	setup?: (helper: WranglerE2ETestHelper) => Promise<T> | T;
 	generateWranglerConfig: (setupResult: T) => RawConfig;
 	expectedResponseMatch: string | RegExp;
-	// Flag for resources that can work without mixed mode (just AI)
+	// Flag for resources that can work without mixed mode
 	worksWithoutMixedMode?: boolean;
 };
 
@@ -35,18 +35,18 @@ const testCases: TestCase<Record<string, string>>[] = [
 			const targetWorkerName = generateResourceName();
 			await helper.seed({
 				"target-worker.js": dedent/* javascript */ `
-          import { WorkerEntrypoint } from "cloudflare:workers"
-          export default {
-            fetch(request) {
-              return new Response("Hello from target worker")
-            }
-          }
-          export class CustomEntrypoint extends WorkerEntrypoint {
-            fetch(request) {
-              return new Response("Hello from target worker entrypoint")
-            }
-          }
-        `,
+					import { WorkerEntrypoint } from "cloudflare:workers"
+					export default {
+						fetch(request) {
+						return new Response("Hello from target worker")
+						}
+					}
+					export class CustomEntrypoint extends WorkerEntrypoint {
+						fetch(request) {
+						return new Response("Hello from target worker entrypoint")
+						}
+					}
+					`,
 			});
 			const { stdout } = await helper.run(
 				`wrangler deploy target-worker.js --name ${targetWorkerName} --compatibility-date 2025-01-01`
@@ -60,7 +60,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 			await vi.waitFor(
 				async () => {
 					const resp = await fetch(deployedUrl);
-					await expect(await resp.text()).toBe("Hello from target worker");
+					expect(await resp.text()).toBe("Hello from target worker");
 				},
 				{ interval: 1_000, timeout: 40_000 }
 			);
@@ -108,6 +108,97 @@ const testCases: TestCase<Record<string, string>>[] = [
 		expectedResponseMatch: "This is a response from Workers AI",
 		// AI bindings work without mixed mode flag
 		worksWithoutMixedMode: true,
+	},
+	{
+		name: "Browser",
+		scriptPath: "browser.js",
+		generateWranglerConfig: () => ({
+			name: "mixed-mode-browser-test",
+			main: "browser.js",
+			compatibility_date: "2025-01-01",
+			browser: {
+				binding: "BROWSER",
+				remote: true,
+			},
+		}),
+		expectedResponseMatch: /sessionId/,
+	},
+	{
+		name: "Images",
+		scriptPath: "images.js",
+		generateWranglerConfig: () => ({
+			name: "mixed-mode-images-test",
+			main: "images.js",
+			compatibility_date: "2025-01-01",
+			images: {
+				binding: "IMAGES",
+				remote: true,
+			},
+		}),
+		expectedResponseMatch: "image/avif",
+		// The Images binding "works" without mixed mode because the current default is an older mixed-mode-style implementation
+		worksWithoutMixedMode: true,
+	},
+	{
+		name: "Vectorize",
+		scriptPath: "vectorize.js",
+		setup: async (helper) => {
+			const name = await helper.vectorize(
+				32,
+				"euclidean",
+				"well-known-vectorize"
+			);
+			return { name };
+		},
+		generateWranglerConfig: ({ name }) => ({
+			name: "mixed-mode-vectorize-test",
+			main: "vectorize.js",
+			compatibility_date: "2025-01-01",
+			vectorize: [
+				{
+					binding: "VECTORIZE_BINDING",
+					index_name: name,
+					remote: true,
+				},
+			],
+		}),
+		expectedResponseMatch: /a44706aa-a366-48bc-8cc1-3feffd87d548/,
+	},
+	{
+		name: "Dispatch Namespace",
+		scriptPath: "dispatch-namespace.js",
+		setup: async (helper) => {
+			const namespace = await helper.dispatchNamespace(false);
+
+			const customerWorkerName = "mixed-mode-test-customer-worker";
+			await helper.seed({
+				"customer-worker.js": dedent/* javascript */ `
+					export default {
+						fetch(request) {
+							return new Response("Hello from customer worker")
+						}
+					}
+				`,
+			});
+			await helper.run(
+				`wrangler deploy customer-worker.js --name ${customerWorkerName} --compatibility-date 2025-01-01 --dispatch-namespace ${namespace}`
+			);
+
+			return { namespace };
+		},
+		generateWranglerConfig: ({ namespace }) => ({
+			name: "mixed-mode-dispatch-namespace-test",
+			main: "dispatch-namespace.js",
+			compatibility_date: "2025-01-01",
+			dispatch_namespaces: [
+				{
+					binding: "DISPATCH",
+					namespace: namespace,
+					remote: true,
+				},
+			],
+		}),
+		expectedResponseMatch: /Hello from customer worker/,
 	},
 	{
 		name: "KV",
@@ -169,9 +260,9 @@ const testCases: TestCase<Record<string, string>>[] = [
 		setup: async (helper) => {
 			await helper.seed({
 				"schema.sql": dedent`
-          CREATE TABLE entries (key TEXT PRIMARY KEY, value TEXT);
-          INSERT INTO entries (key, value) VALUES ('test-mixed-mode-key', 'existing-value');
-        `,
+					CREATE TABLE entries (key TEXT PRIMARY KEY, value TEXT);
+					INSERT INTO entries (key, value) VALUES ('test-mixed-mode-key', 'existing-value');
+				`,
 			});
 			const { id, name } = await helper.d1(false);
 			await helper.run(
@@ -196,7 +287,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 	},
 ];
 
-describe("Wrangler Mixed Mode E2E Tests", () => {
+describe.skip("Wrangler Mixed Mode E2E Tests", () => {
 	describe.each(testCases)("$name", (testCase) => {
 		let helper: WranglerE2ETestHelper;
 
@@ -221,6 +312,8 @@ describe("Wrangler Mixed Mode E2E Tests", () => {
 
 		it.skipIf(testCase.worksWithoutMixedMode)(
 			"fails when mixed mode is disabled",
+			// Turn off retries because this test is expected to fail
+			{ retry: 0, fails: true },
 			async () => {
 				await helper.seed(
 					path.resolve(__dirname, "./seed-files/mixed-mode-workers")
@@ -233,7 +326,7 @@ describe("Wrangler Mixed Mode E2E Tests", () => {
 				const { url } = await worker.waitForReady();
 
 				const response = await fetchText(url);
-				expect(response).not.toMatch(testCase.expectedResponseMatch);
+				expect(response).toMatch(testCase.expectedResponseMatch);
 			}
 		);
 	});

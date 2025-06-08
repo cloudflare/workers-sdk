@@ -23,8 +23,8 @@ import {
 } from "./utils/rules-engine";
 import type { AssetConfig } from "../../utils/types";
 import type { Analytics } from "./analytics";
-import type EntrypointType from "./index";
-import type { Env } from "./index";
+import type EntrypointType from "./worker";
+import type { Env } from "./worker";
 
 export const REDIRECTS_VERSION = 1;
 export const HEADERS_VERSION = 2;
@@ -198,14 +198,14 @@ export const canFetch = async (
 	configuration: Required<AssetConfig>,
 	exists: typeof EntrypointType.prototype.unstable_exists
 ): Promise<boolean> => {
-	if (
-		!(
-			flagIsEnabled(
-				configuration,
-				SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING
-			) && request.headers.get("Sec-Fetch-Mode") === "navigate"
-		)
-	) {
+	const shouldKeepNotFoundHandling =
+		configuration.has_static_routing ||
+		(flagIsEnabled(
+			configuration,
+			SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING
+		) &&
+			request.headers.get("Sec-Fetch-Mode") === "navigate");
+	if (!shouldKeepNotFoundHandling) {
 		configuration = {
 			...configuration,
 			not_found_handling: "none",

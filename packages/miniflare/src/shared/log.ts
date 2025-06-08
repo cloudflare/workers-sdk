@@ -87,6 +87,10 @@ export class Log {
 		}
 	}
 
+	logReady(message: string): void {
+		this.info(message);
+	}
+
 	error(message: Error): void {
 		if (this.level < LogLevel.ERROR) {
 			// Ignore message if it won't get logged

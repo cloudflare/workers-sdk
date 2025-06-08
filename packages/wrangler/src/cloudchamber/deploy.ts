@@ -175,6 +175,7 @@ export function getBuildArguments(
 		dockerfileContents: dockerfile,
 		isDockerImage: true,
 		args: container.image_vars,
+		container,
 	} as const;
 	return buildOptions;
 }

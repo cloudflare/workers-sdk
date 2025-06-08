@@ -1,5 +1,5 @@
 {
-	"name": "import-wasm-static",
+	"name": "@fixture/import-wasm-static",
 	"private": true,
 	"sideEffects": false,
 	"exports": {

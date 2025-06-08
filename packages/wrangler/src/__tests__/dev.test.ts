@@ -1653,11 +1653,13 @@ describe.sequential("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 
-			await expect(
-				runWrangler("dev index.js")
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Browser Rendering is not supported locally. Please use \`wrangler dev --remote\` instead.]`
-			);
+			await runWranglerUntilConfig("dev index.js");
+
+			expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBrowser Rendering is not supported locally. Please use \`wrangler dev --remote\` instead.[0m
+
+				"
+			`);
 		});
 	});
 

@@ -3,7 +3,6 @@ import { readFile } from "node:fs/promises";
 import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
-import { getFlag } from "../../experimental-flags";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
@@ -127,6 +126,7 @@ export async function convertToConfigBundle(
 		imagesLocalMode: event.config.dev?.imagesLocalMode ?? false,
 		testScheduled: !!event.config.dev.testScheduled,
 		tails: event.config.tailConsumers,
+		containers: event.config.containers ?? {},
 	};
 }
 
@@ -159,7 +159,10 @@ export class LocalRuntimeController extends RuntimeController {
 		try {
 			const configBundle = await convertToConfigBundle(data);
 
-			if (getFlag("MIXED_MODE") && !data.config.dev?.remote) {
+			const experimentalMixedMode =
+				data.config.dev.experimentalMixedMode ?? false;
+
+			if (experimentalMixedMode && !data.config.dev?.remote) {
 				this.#mixedModeSession = await maybeStartOrUpdateMixedModeSession(
 					configBundle,
 					this.#mixedModeSession
@@ -171,7 +174,8 @@ export class LocalRuntimeController extends RuntimeController {
 					this.#log,
 					configBundle,
 					this.#proxyToUserWorkerAuthenticationSecret,
-					this.#mixedModeSession?.mixedModeConnectionString
+					this.#mixedModeSession?.mixedModeConnectionString,
+					!!experimentalMixedMode
 				);
 			options.liveReload = false; // TODO: set in buildMiniflareOptions once old code path is removed
 			if (this.#mf === undefined) {
@@ -308,43 +312,34 @@ export async function maybeStartOrUpdateMixedModeSession(
 	configBundle: MF.ConfigBundle,
 	mixedModeSession: MixedModeSession | undefined
 ): Promise<MixedModeSession | undefined> {
-	const remoteBindings = convertCfWorkerInitBindingsToBindings(
+	// Note: we import the mixedMode module dynamically to avoid circular
+	//       import issues (since mixed mode uses startWorker which uses
+	//       LocalRuntimeController)
+	const { startMixedModeSession, pickRemoteBindings } = await import(
+		"../../api/mixedMode"
+	);
+
+	const convertedBindings = convertCfWorkerInitBindingsToBindings(
 		configBundle.bindings
 	);
-	const convertedRemoteBindings = Object.fromEntries(
-		Object.entries(remoteBindings ?? []).filter(([, binding]) => {
-			if (binding.type === "ai") {
-				// AI is always remote
-				return true;
-			}
-
-			return "remote" in binding && binding["remote"];
-		})
-	);
+	const remoteBindings = pickRemoteBindings(convertedBindings ?? {});
 
 	// TODO(DEVX-1893): here we can save the converted remote bindings
 	//             and on new iterations we can diff the old and new
 	//             converted remote bindings, if they are all the
 	//             same we can just leave the mixedModeSession untouched
 	if (mixedModeSession === undefined) {
-		const numOfRemoteBindings = Object.keys(
-			convertedRemoteBindings ?? {}
-		).length;
+		const numOfRemoteBindings = Object.keys(remoteBindings ?? {}).length;
 		if (numOfRemoteBindings > 0) {
-			// Note: we import the mixedMode module dynamically to avoid circular
-			//       import issues (since mixed mode uses startWorker which uses
-			//       LocalRuntimeController)
-			const mixedModeModule = await import("../../api/mixedMode");
-			mixedModeSession = await mixedModeModule.startMixedModeSession(
-				convertedRemoteBindings,
-				{ complianceRegion: configBundle.complianceRegion }
-			);
+			mixedModeSession = await startMixedModeSession(remoteBindings, {
+				complianceRegion: configBundle.complianceRegion,
+			});
 		}
 	} else {
 		// Note: we always call updateBindings even when there are zero remote bindings, in these
 		//       cases we could terminate the remote session if we wanted, that's probably
 		//       something to consider down the line
-		await mixedModeSession.updateBindings(convertedRemoteBindings);
+		await mixedModeSession.updateBindings(remoteBindings);
 	}
 
 	await mixedModeSession?.ready;

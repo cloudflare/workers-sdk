@@ -1,6 +1,6 @@
 import ANALYTICS_ENGINE from "worker:analytics-engine/analytics-engine";
 import { z } from "zod";
-import { Extension, Worker_Binding } from "../../runtime";
+import { Worker_Binding } from "../../runtime";
 import { PersistenceSchema, Plugin, ProxyNodeBinding } from "../shared";
 
 const AnalyticsEngineSchema = z.record(
@@ -59,14 +59,15 @@ export const ANALYTICS_ENGINE_PLUGIN: Plugin<
 			])
 		);
 	},
-	async getServices({ options, workerIndex }) {
-		if (!options.analyticsEngineDatasets) {
+	async getServices() {
+		return [];
+	},
+	getExtensions({ options }) {
+		if (!options.some((o) => o.analyticsEngineDatasets)) {
 			return [];
 		}
-		const extensions: Extension[] = [];
-
-		if (workerIndex === 0) {
-			extensions.push({
+		return [
+			{
 				modules: [
 					{
 						name: `${ANALYTICS_ENGINE_PLUGIN_NAME}:local-simulator`,
@@ -74,12 +75,7 @@ export const ANALYTICS_ENGINE_PLUGIN: Plugin<
 						internal: true,
 					},
 				],
-			});
-		}
-
-		return {
-			extensions,
-			services: [],
-		};
+			},
+		];
 	},
 };

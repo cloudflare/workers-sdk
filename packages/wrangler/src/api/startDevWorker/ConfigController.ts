@@ -13,6 +13,7 @@ import {
 import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { UserError } from "../../errors";
+import { getFlag } from "../../experimental-flags";
 import { logger, runWithLogLevel } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
 import {
@@ -47,6 +48,7 @@ import type {
 	StartDevWorkerOptions,
 	Trigger,
 } from "./types";
+import type { WorkerOptions } from "miniflare";
 
 type ConfigControllerEventMap = ControllerEventMap & {
 	configUpdate: [ConfigUpdateEvent];
@@ -144,6 +146,8 @@ async function resolveDevConfig(
 		bindVectorizeToProd: input.dev?.bindVectorizeToProd ?? false,
 		multiworkerPrimary: input.dev?.multiworkerPrimary,
 		imagesLocalMode: input.dev?.imagesLocalMode ?? false,
+		experimentalMixedMode:
+			input.dev?.experimentalMixedMode ?? getFlag("MIXED_MODE"),
 	} satisfies StartDevWorkerOptions["dev"];
 }
 
@@ -151,27 +155,33 @@ async function resolveBindings(
 	config: Config,
 	input: StartDevWorkerInput
 ): Promise<{ bindings: StartDevWorkerOptions["bindings"]; unsafe?: CfUnsafe }> {
-	const bindings = getBindings(config, input.env, !input.dev?.remote, {
-		kv: extractBindingsOfType("kv_namespace", input.bindings),
-		vars: Object.fromEntries(
-			extractBindingsOfType("plain_text", input.bindings).map((b) => [
-				b.binding,
-				b.value,
-			])
-		),
-		durableObjects: extractBindingsOfType(
-			"durable_object_namespace",
-			input.bindings
-		),
-		r2: extractBindingsOfType("r2_bucket", input.bindings),
-		services: extractBindingsOfType("service", input.bindings),
-		d1Databases: extractBindingsOfType("d1", input.bindings),
-		ai: extractBindingsOfType("ai", input.bindings)?.[0],
-		version_metadata: extractBindingsOfType(
-			"version_metadata",
-			input.bindings
-		)?.[0],
-	});
+	const bindings = getBindings(
+		config,
+		input.env,
+		!input.dev?.remote,
+		{
+			kv: extractBindingsOfType("kv_namespace", input.bindings),
+			vars: Object.fromEntries(
+				extractBindingsOfType("plain_text", input.bindings).map((b) => [
+					b.binding,
+					b.value,
+				])
+			),
+			durableObjects: extractBindingsOfType(
+				"durable_object_namespace",
+				input.bindings
+			),
+			r2: extractBindingsOfType("r2_bucket", input.bindings),
+			services: extractBindingsOfType("service", input.bindings),
+			d1Databases: extractBindingsOfType("d1", input.bindings),
+			ai: extractBindingsOfType("ai", input.bindings)?.[0],
+			version_metadata: extractBindingsOfType(
+				"version_metadata",
+				input.bindings
+			)?.[0],
+		},
+		input.dev?.experimentalMixedMode
+	);
 
 	const maskedVars = maskVars(bindings, config);
 
@@ -187,6 +197,7 @@ async function resolveBindings(
 			local: !input.dev?.remote,
 			imagesLocalMode: input.dev?.imagesLocalMode,
 			name: config.name,
+			vectorizeBindToProd: input.dev?.bindVectorizeToProd,
 		}
 	);
 
@@ -319,6 +330,7 @@ async function resolveConfig(
 			tsconfig: input.build?.tsconfig ?? config.tsconfig,
 			exports: entry.exports,
 		},
+		containers: resolveContainerConfig(config),
 		dev: await resolveDevConfig(config, input),
 		legacy: {
 			site: legacySite,
@@ -335,9 +347,10 @@ async function resolveConfig(
 
 	if (
 		extractBindingsOfType("browser", resolved.bindings).length &&
-		!resolved.dev.remote
+		!resolved.dev.remote &&
+		!getFlag("MIXED_MODE")
 	) {
-		throw new UserError(
+		logger.warn(
 			"Browser Rendering is not supported locally. Please use `wrangler dev --remote` instead."
 		);
 	}
@@ -407,6 +420,23 @@ async function resolveConfig(
 
 	return resolved;
 }
+
+// TODO: move to containers-shared and use to merge config and args for container commands too
+function resolveContainerConfig(
+	config: Config
+): StartDevWorkerOptions["containers"] {
+	const containers: WorkerOptions["containers"] = {};
+	for (const container of config.containers ?? []) {
+		containers[container.class_name] = {
+			image: container.image ?? container.configuration.image,
+			maxInstances: container.max_instances,
+			imageBuildContext: container.image_build_context,
+			exposedPorts: container.dev_exposed_ports,
+		};
+	}
+	return containers;
+}
+
 export class ConfigController extends Controller<ConfigControllerEventMap> {
 	latestInput?: StartDevWorkerInput;
 	latestConfig?: StartDevWorkerOptions;

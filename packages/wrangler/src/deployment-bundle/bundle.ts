@@ -204,7 +204,7 @@ export async function bundleWorker(
 	}
 
 	if (targetConsumer === "dev" && local) {
-		// In Miniflare 3, we bind the user's worker as a service binding in a
+		// In Miniflare, we bind the user's worker as a service binding in a
 		// special entry worker that handles things like injecting `Request.cf`,
 		// live-reload, and the pretty-error page.
 		//

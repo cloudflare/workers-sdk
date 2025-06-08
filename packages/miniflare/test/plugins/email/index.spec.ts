@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import test from "ava";
 import { LogLevel, Miniflare } from "miniflare";
 import dedent from "ts-dedent";
-import { TestLog } from "../../test-shared";
+import { TestLog, waitFor } from "../../test-shared";
 
 const SEND_EMAIL_WORKER = dedent/* javascript */ `
 	import { EmailMessage } from "cloudflare:email";
@@ -158,13 +158,23 @@ test("Single allowed destination send_email binding works", async (t) => {
 
 	t.is(await res.text(), "ok");
 	t.is(res.status, 200);
-	t.is(log.logs[1][0], LogLevel.INFO);
-	t.is(
-		log.logs[1][1].split("\n")[0],
-		"send_email binding called with the following message:"
-	);
 
-	const file = log.logs[1][1].split("\n")[1].trim();
+	const bindingLog = await waitFor(async () => {
+		const entry = log.logs.find(
+			([type, message]) =>
+				type === LogLevel.INFO &&
+				message.match(/send_email binding called with the following message:\n/)
+		);
+		if (!entry) {
+			throw new Error(
+				"send_email binding log not found in " +
+					JSON.stringify(log.logs, null, 2)
+			);
+		}
+		return entry[/* message */ 1];
+	});
+
+	const file = bindingLog.split("\n")[1].trim();
 	t.is(await readFile(file, "utf-8"), email);
 });
 
