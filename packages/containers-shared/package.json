@@ -22,7 +22,6 @@
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@types/node": "catalog:node18",
-		"rimraf": "catalog:default",
 		"typescript": "catalog:default",
 		"undici": "catalog:default"
 	},

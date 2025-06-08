@@ -7,7 +7,7 @@ import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
-import { buildContainers, deployContainers } from "../cloudchamber/deploy";
+import { deployContainers, maybeBuildContainer } from "../cloudchamber/deploy";
 import { configFileName, formatConfigSnippet } from "../config";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -27,6 +27,7 @@ import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
+import { getDockerPath } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
@@ -769,8 +770,16 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		let workerBundle: FormData;
 
 		if (props.dryRun) {
+			const dockerPath = getDockerPath();
 			if (config.containers) {
-				await buildContainers(config, workerTag ?? "worker-tag");
+				for (const container of config.containers) {
+					await maybeBuildContainer(
+						container,
+						workerTag ?? "worker-tag",
+						props.dryRun,
+						dockerPath
+					);
+				}
 			}
 
 			workerBundle = createWorkerUploadForm(worker);
@@ -1016,7 +1025,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			versionId,
 			accountId,
 			scriptName,
-			dryRun: props.dryRun,
+			dryRun: props.dryRun ?? false,
 			env: props.env,
 		});
 	}
