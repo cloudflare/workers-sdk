@@ -1898,6 +1898,8 @@ export class Miniflare {
 					containerOptions,
 					this.#sharedOpts.containers
 				);
+				// TODO: figure out why this is not blocking :(
+				await this.#containerController.buildAllContainers();
 			} else {
 				this.#containerController.updateConfig(
 					containerOptions,
