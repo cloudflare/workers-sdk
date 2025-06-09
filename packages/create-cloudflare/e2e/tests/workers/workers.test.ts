@@ -4,11 +4,7 @@ import { join } from "path";
 import { readJSON, readToml } from "helpers/files";
 import { beforeAll, describe, expect } from "vitest";
 import { deleteWorker } from "../../../scripts/common";
-import {
-	E2E_EXPERIMENTAL,
-	E2E_WORKER_TEST_FILTER,
-	TEST_TIMEOUT,
-} from "../../helpers/constants";
+import { E2E_WORKER_TEST_FILTER, TEST_TIMEOUT } from "../../helpers/constants";
 import { debuglog } from "../../helpers/debuglog";
 import { test } from "../../helpers/index";
 import { recreateLogFolder } from "../../helpers/log-stream";
@@ -20,10 +16,7 @@ import {
 } from "../../helpers/workers-helpers";
 import { getWorkerTests } from "./test-config";
 
-const workerTests = getWorkerTests({
-	isExperimentalMode: E2E_EXPERIMENTAL,
-	workerTestFilter: E2E_WORKER_TEST_FILTER,
-});
+const workerTests = getWorkerTests();
 
 describe
 	.skipIf(
@@ -32,7 +25,7 @@ describe
 	)
 	.concurrent(`E2E: Workers templates`, () => {
 		beforeAll((ctx) => {
-			recreateLogFolder({ isExperimentalMode: E2E_EXPERIMENTAL }, ctx);
+			recreateLogFolder(ctx);
 
 			if (E2E_WORKER_TEST_FILTER) {
 				debuglog("Running worker tests with filter:", E2E_WORKER_TEST_FILTER);
@@ -44,7 +37,7 @@ describe
 
 		workerTests.forEach((testConfig) => {
 			const name = testConfig.name ?? testConfig.template;
-			test({ isExperimentalMode: E2E_EXPERIMENTAL })(
+			test(
 				name,
 				{ retry: 1, timeout: testConfig.timeout || TEST_TIMEOUT },
 				async ({ project, logStream }) => {
@@ -53,7 +46,6 @@ describe
 							testConfig,
 							project.path,
 							logStream,
-							E2E_EXPERIMENTAL,
 						);
 
 						// Relevant project files should have been created

@@ -1,17 +1,14 @@
 import assert from "node:assert";
 import { createWriteStream, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
-import { E2E_TEST_PM } from "./constants";
+import { E2E_EXPERIMENTAL, E2E_TEST_PM } from "./constants";
 import type { RunnerTask, RunnerTestSuite } from "vitest";
 
-export function createTestLogStream(
-	opts: { isExperimentalMode: boolean },
-	task: RunnerTask,
-) {
+export function createTestLogStream(task: RunnerTask) {
 	// The .ansi extension allows for editor extensions that format ansi terminal codes
 	const fileName = `${normalizeTestName(task)}.ansi`;
 	assert(task.suite, "Expected task.suite to be defined");
-	const logPath = path.join(getLogPath(opts, task.suite), fileName);
+	const logPath = path.join(getLogPath(task.suite), fileName);
 	const logStream = createWriteStream(logPath, {
 		flags: "a",
 	});
@@ -21,17 +18,14 @@ export function createTestLogStream(
 	};
 }
 
-export function recreateLogFolder(
-	opts: { isExperimentalMode: boolean },
-	suite: RunnerTestSuite,
-) {
+export function recreateLogFolder(suite: RunnerTestSuite) {
 	// Clean the old folder if exists (useful for dev)
-	rmSync(getLogPath(opts, suite), {
+	rmSync(getLogPath(suite), {
 		recursive: true,
 		force: true,
 	});
 
-	mkdirSync(getLogPath(opts, suite), { recursive: true });
+	mkdirSync(getLogPath(suite), { recursive: true });
 }
 
 function normalizeTestName(task: RunnerTask) {
@@ -46,10 +40,7 @@ function normalizeTestName(task: RunnerTask) {
 	return baseName + suffix;
 }
 
-function getLogPath(
-	opts: { isExperimentalMode: boolean },
-	suite: RunnerTestSuite,
-) {
+function getLogPath(suite: RunnerTestSuite) {
 	const { file } = suite;
 
 	const suiteFilename = file
@@ -57,8 +48,8 @@ function getLogPath(
 		: "unknown";
 
 	return path.join(
-		"./.e2e-logs" + (opts.isExperimentalMode ? "-experimental" : ""),
-		E2E_TEST_PM as string,
+		"./.e2e-logs" + (E2E_EXPERIMENTAL === "true" ? "-experimental" : ""),
+		E2E_TEST_PM,
 		suiteFilename,
 	);
 }

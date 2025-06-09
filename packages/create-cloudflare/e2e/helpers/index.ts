@@ -61,39 +61,36 @@ const testProjectDir = (suite: string, test: string) => {
 /**
  * A custom Vitest `test` that is extended to provide a project path and name, and a logStream.
  */
-export const test = (opts: { isExperimentalMode: boolean }) =>
-	originalTest.extend<{
-		project: { path: string; name: string };
-		logStream: Writable;
-	}>({
-		async project({ task }, use) {
-			assert(task.suite, "Expected task.suite to be defined");
-			const suite = task.suite.name
-				.toLowerCase()
-				.replaceAll(/[^a-z0-9-]/g, "-");
-			const suffix = task.name
-				.toLowerCase()
-				.replaceAll(/[^a-z0-9-]/g, "-")
-				.replaceAll(/^-|-$/g, "");
-			const { getPath, getName, clean } = testProjectDir(suite, suffix);
-			await use({ path: getPath(), name: getName() });
-			clean();
-		},
-		async logStream({ task, onTestFailed }, use) {
-			const { logPath, logStream } = createTestLogStream(opts, task);
+export const test = originalTest.extend<{
+	project: { path: string; name: string };
+	logStream: Writable;
+}>({
+	async project({ task }, use) {
+		assert(task.suite, "Expected task.suite to be defined");
+		const suite = task.suite.name.toLowerCase().replaceAll(/[^a-z0-9-]/g, "-");
+		const suffix = task.name
+			.toLowerCase()
+			.replaceAll(/[^a-z0-9-]/g, "-")
+			.replaceAll(/^-|-$/g, "");
+		const { getPath, getName, clean } = testProjectDir(suite, suffix);
+		await use({ path: getPath(), name: getName() });
+		clean();
+	},
+	async logStream({ task, onTestFailed }, use) {
+		const { logPath, logStream } = createTestLogStream(task);
 
-			onTestFailed(() => {
-				console.error("##[group]Logs from failed test:", logPath);
-				try {
-					console.error(readFileSync(logPath, "utf8"));
-				} catch {
-					console.error("Unable to read log file");
-				}
-				console.error("##[endgroup]");
-			});
+		onTestFailed(() => {
+			console.error("##[group]Logs from failed test:", logPath);
+			try {
+				console.error(readFileSync(logPath, "utf8"));
+			} catch {
+				console.error("Unable to read log file");
+			}
+			console.error("##[endgroup]");
+		});
 
-			await use(logStream);
+		await use(logStream);
 
-			logStream.close();
-		},
-	});
+		logStream.close();
+	},
+});

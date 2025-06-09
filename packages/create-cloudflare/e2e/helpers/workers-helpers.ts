@@ -4,6 +4,7 @@ import { retry } from "helpers/retry";
 import { sleep } from "helpers/sleep";
 import { fetch } from "undici";
 import { expect } from "vitest";
+import { E2E_EXPERIMENTAL } from "./constants";
 import { runC3 } from "./run-c3";
 import { kill, spawnWithLogging, waitForExit } from "./spawn";
 import type { WorkerTestConfig } from "../tests/workers/test-config";
@@ -16,13 +17,12 @@ export async function runC3ForWorkerTest(
 	{ argv, promptHandlers, template }: WorkerTestConfig,
 	projectPath: string,
 	logStream: Writable,
-	experimental: boolean,
 ) {
 	const args = [
 		projectPath,
 		"--type",
 		template,
-		...(experimental ? ["--experimental"] : []),
+		...(E2E_EXPERIMENTAL === "true" ? ["--experimental"] : []),
 		"--no-open",
 		"--no-git",
 		NO_DEPLOY ? "--no-deploy" : "--deploy",

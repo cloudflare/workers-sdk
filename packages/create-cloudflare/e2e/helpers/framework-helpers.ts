@@ -339,7 +339,9 @@ export function shouldRunTest(
  * `<frameworkId>:<"pages"|"workers">`.
  */
 export function getFrameworkConfig(frameworkKey: string) {
-	const frameworkMap = getFrameworkMap({ experimental: E2E_EXPERIMENTAL });
+	const frameworkMap = getFrameworkMap({
+		experimental: E2E_EXPERIMENTAL === "true",
+	});
 	const [frameworkId, platformVariant] = frameworkKey.split(":");
 	if ("platformVariants" in frameworkMap[frameworkId]) {
 		assert(

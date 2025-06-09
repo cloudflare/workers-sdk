@@ -14,7 +14,7 @@ export default defineConfig({
 		globalSetup: ["e2e/helpers/global-setup.ts"],
 		reporters: ["json", "verbose", "hanging-process"],
 		outputFile: {
-			json: `./.e2e-logs${process.env.E2E_EXPERIMENTAL ? "-experimental" : ""}/${process.env.E2E_TEST_PM}/results.json`,
+			json: `./.e2e-logs${process.env.E2E_EXPERIMENTAL === "true" ? "-experimental" : ""}/${process.env.E2E_TEST_PM}/results.json`,
 		},
 	},
 });

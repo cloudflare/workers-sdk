@@ -7,11 +7,12 @@ export const LONG_TIMEOUT = 1000 * 60 * 10;
 export const CLOUDFLARE_ACCOUNT_ID =
 	process.env.CLOUDFLARE_ACCOUNT_ID ?? "8d783f274e1f82dc46744c297b015a2f";
 export const CLOUDFLARE_API_TOKEN = process.env.CLOUDFLARE_API_TOKEN;
-export const E2E_EXPERIMENTAL = process.env.E2E_EXPERIMENTAL === "true";
+export const E2E_EXPERIMENTAL = process.env.E2E_EXPERIMENTAL ?? "false";
 export const E2E_WORKER_TEST_FILTER = process.env.E2E_WORKER_TEST_FILTER ?? "";
 export const E2E_FRAMEWORK_TEST_FILTER =
 	process.env.E2E_FRAMEWORK_TEST_FILTER ?? "";
 export const E2E_TEST_PM = process.env.E2E_TEST_PM ?? "";
+export const E2E_TEST_PM_VERSION = process.env.E2E_TEST_PM_VERSION ?? "";
 export const NO_DEPLOY = process.env.E2E_NO_DEPLOY ?? true;
 export const E2E_PROJECT_PATH = process.env.E2E_PROJECT_PATH;
 export const E2E_TEST_RETRIES = process.env.E2E_TEST_RETRIES

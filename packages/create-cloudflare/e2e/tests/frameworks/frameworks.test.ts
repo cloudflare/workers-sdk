@@ -26,10 +26,7 @@ import { test } from "../../helpers/index";
 import { recreateLogFolder } from "../../helpers/log-stream";
 import { getFrameworksTests } from "./test-config";
 
-const frameworkTests = getFrameworksTests({
-	isExperimentalMode: E2E_EXPERIMENTAL,
-	frameworkTestFilter: E2E_FRAMEWORK_TEST_FILTER,
-});
+const frameworkTests = getFrameworksTests();
 
 describe
 	.skipIf(frameworkTests.length === 0)
@@ -45,7 +42,7 @@ describe
 				});
 			}
 
-			recreateLogFolder({ isExperimentalMode: E2E_EXPERIMENTAL }, ctx);
+			recreateLogFolder(ctx);
 		});
 
 		frameworkTests.forEach((testConfig) => {
@@ -55,9 +52,7 @@ describe
 				envInterfaceName: "Env",
 				...getFrameworkConfig(testConfig.name),
 			};
-			test({ isExperimentalMode: E2E_EXPERIMENTAL }).runIf(
-				shouldRunTest(frameworkConfig.id, testConfig),
-			)(
+			test.runIf(shouldRunTest(frameworkConfig.id, testConfig))(
 				`${frameworkConfig.id} (${frameworkConfig.platform ?? "pages"})`,
 				{
 					retry: E2E_TEST_RETRIES,

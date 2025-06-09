@@ -18,82 +18,74 @@ const { name: pm } = detectPackageManager();
 
 describe("Create Cloudflare CLI", () => {
 	beforeAll((ctx) => {
-		recreateLogFolder({ isExperimentalMode: E2E_EXPERIMENTAL }, ctx);
+		recreateLogFolder(ctx);
 	});
 
 	// Note: skipIf(frameworkToTest) makes it so that all the basic C3 functionality
 	//       tests are skipped in case we are testing a specific framework
 	describe.skipIf(E2E_EXPERIMENTAL)("E2E: Basic C3 functionality ", () => {
-		test({ isExperimentalMode: E2E_EXPERIMENTAL })(
-			"--version",
-			async ({ logStream }) => {
-				const { output } = await runC3(["--version"], [], logStream);
-				expect(output).toEqual(version);
-			},
-		);
-
-		test({ isExperimentalMode: E2E_EXPERIMENTAL })(
-			"--version with positionals",
-			async ({ logStream }) => {
-				const argv = ["foo", "bar", "baz", "--version"];
-				const { output } = await runC3(argv, [], logStream);
-				expect(output).toEqual(version);
-			},
-		);
-
-		test({ isExperimentalMode: E2E_EXPERIMENTAL })(
-			"--version with flags",
-			async ({ logStream }) => {
-				const argv = [
-					"foo",
-					"--type",
-					"web-framework",
-					"--no-deploy",
-					"--version",
-				];
-				const { output } = await runC3(argv, [], logStream);
-				expect(output).toEqual(version);
-			},
-		);
-
-		test({ isExperimentalMode: E2E_EXPERIMENTAL }).skipIf(
-			isWindows || E2E_EXPERIMENTAL,
-		)("Using arrow keys + enter", async ({ logStream, project }) => {
-			const { output } = await runC3(
-				[project.path],
-				[
-					{
-						matcher: /What would you like to start with\?/,
-						input: [keys.enter],
-					},
-					{
-						matcher: /Which template would you like to use\?/,
-						input: [keys.enter],
-					},
-					{
-						matcher: /Which language do you want to use\?/,
-						input: [keys.enter],
-					},
-					{
-						matcher: /Do you want to use git for version control/,
-						input: [keys.right, keys.enter],
-					},
-					{
-						matcher: /Do you want to deploy your application/,
-						input: [keys.enter],
-					},
-				],
-				logStream,
-			);
-
-			expect(project.path).toExist();
-			expect(output).toContain(`category Hello World example`);
-			expect(output).toContain(`type SSR / full-stack app`);
-			expect(output).toContain(`lang TypeScript`);
-			expect(output).toContain(`no deploy`);
+		test("--version", async ({ logStream }) => {
+			const { output } = await runC3(["--version"], [], logStream);
+			expect(output).toEqual(version);
 		});
 
-		test({ isExperimentalMode: E2E_EXPERIMENTAL }).skipIf(isWindows)(
+		test("--version with positionals", async ({ logStream }) => {
+			const argv = ["foo", "bar", "baz", "--version"];
+			const { output } = await runC3(argv, [], logStream);
+			expect(output).toEqual(version);
+		});
+
+		test("--version with flags", async ({ logStream }) => {
+			const argv = [
+				"foo",
+				"--type",
+				"web-framework",
+				"--no-deploy",
+				"--version",
+			];
+			const { output } = await runC3(argv, [], logStream);
+			expect(output).toEqual(version);
+		});
+
+		test.skipIf(isWindows || E2E_EXPERIMENTAL)(
+			"Using arrow keys + enter",
+			async ({ logStream, project }) => {
+				const { output } = await runC3(
+					[project.path],
+					[
+						{
+							matcher: /What would you like to start with\?/,
+							input: [keys.enter],
+						},
+						{
+							matcher: /Which template would you like to use\?/,
+							input: [keys.enter],
+						},
+						{
+							matcher: /Which language do you want to use\?/,
+							input: [keys.enter],
+						},
+						{
+							matcher: /Do you want to use git for version control/,
+							input: [keys.right, keys.enter],
+						},
+						{
+							matcher: /Do you want to deploy your application/,
+							input: [keys.enter],
+						},
+					],
+					logStream,
+				);
+
+				expect(project.path).toExist();
+				expect(output).toContain(`category Hello World example`);
+				expect(output).toContain(`type SSR / full-stack app`);
+				expect(output).toContain(`lang TypeScript`);
+				expect(output).toContain(`no deploy`);
+			},
+		);
+
+		test.skipIf(isWindows)(
 			"Typing custom responses",
 			async ({ logStream, project }) => {
 				const { output } = await runC3(
@@ -135,7 +127,7 @@ describe("Create Cloudflare CLI", () => {
 			},
 		);
 
-		test({ isExperimentalMode: E2E_EXPERIMENTAL }).skipIf(isWindows)(
+		test.skipIf(isWindows)(
 			"Mixed args and interactive",
 			async ({ logStream, project }) => {
 				const projectName = basename(project.path);
@@ -195,7 +187,7 @@ describe("Create Cloudflare CLI", () => {
 			},
 		);
 
-		test({ isExperimentalMode: E2E_EXPERIMENTAL }).skipIf(isWindows)(
+		test.skipIf(isWindows)(
 			"Cloning remote template with full GitHub URL",
 			async ({ logStream, project }) => {
 				const { output } = await runC3(
@@ -227,9 +219,7 @@ describe("Create Cloudflare CLI", () => {
 		// ERROR  Error: npm warn tarball tarball data for wrangler@http://localhost:61599/wrangler/-/wrangler-4.7.0.tgz
 		// (sha512-5LoyNxpPG8K0kcU43Ossyj7+Hq78v8BNtu7ZNNSxDOUcairMEDwcbrbUOqzu/iM4yHiri5wCjl4Ja57fKED/Sg==) seems to be corrupted.
 		// ```
-		test({ isExperimentalMode: E2E_EXPERIMENTAL }).skipIf(
-			isWindows || pm === "npm",
-		)(
+		test.skipIf(isWindows || pm === "npm")(
 			"Cloning remote template that uses wrangler.json",
 			async ({ logStream, project }) => {
 				const { output } = await runC3(
@@ -265,7 +255,7 @@ describe("Create Cloudflare CLI", () => {
 			},
 		);
 
-		test({ isExperimentalMode: E2E_EXPERIMENTAL }).skipIf(isWindows)(
+		test.skipIf(isWindows)(
 			"Inferring the category, type and language if the type is `hello-world-python`",
 			async ({ logStream, project }) => {
 				// The `hello-world-python` template is now the python variant of the `hello-world` template
@@ -287,7 +277,7 @@ describe("Create Cloudflare CLI", () => {
 			},
 		);
 
-		test({ isExperimentalMode: E2E_EXPERIMENTAL }).skipIf(isWindows)(
+		test.skipIf(isWindows)(
 			"Selecting template by description",
 			async ({ logStream, project }) => {
 				const { output } = await runC3(
@@ -321,7 +311,7 @@ describe("Create Cloudflare CLI", () => {
 			},
 		);
 
-		test({ isExperimentalMode: E2E_EXPERIMENTAL }).skipIf(isWindows)(
+		test.skipIf(isWindows)(
 			"Going back and forth between the category, type, framework and lang prompts",
 			async ({ logStream, project }) => {
 				const testProjectPath = "/test-project-path";
@@ -431,7 +421,7 @@ describe("Create Cloudflare CLI", () => {
 			},
 		);
 
-		test({ isExperimentalMode: E2E_EXPERIMENTAL }).skipIf(
+		test.skipIf(
 			isWindows || pm === "yarn" || CLOUDFLARE_API_TOKEN === undefined,
 		)("--existing-script", async ({ logStream, project }) => {
 			const { output } = await runC3(
@@ -455,16 +445,14 @@ describe("Create Cloudflare CLI", () => {
 	});
 
 	describe("help text", () => {
-		test({ isExperimentalMode: E2E_EXPERIMENTAL })(
-			"--help",
-			async ({ logStream }) => {
-				if (E2E_EXPERIMENTAL) {
-					const { output } = await runC3(
-						["--help", "--experimental"],
-						[],
-						logStream,
-					);
-					expect(normalizeOutput(output)).toMatchInlineSnapshot(`
+		test("--help", async ({ logStream }) => {
+			if (E2E_EXPERIMENTAL) {
+				const { output } = await runC3(
+					["--help", "--experimental"],
+					[],
+					logStream,
+				);
+				expect(normalizeOutput(output)).toMatchInlineSnapshot(`
 				"create-cloudflare <version>
 				  The create-cloudflare cli (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
 				USAGE
@@ -536,9 +524,9 @@ describe("Create Cloudflare CLI", () => {
 				  --auto-update, --no-auto-update
 				    Automatically uses the latest version of C3"
 			`);
-				} else {
-					const { output } = await runC3(["--help"], [], logStream);
-					expect(normalizeOutput(output)).toMatchInlineSnapshot(`
+			} else {
+				const { output } = await runC3(["--help"], [], logStream);
+				expect(normalizeOutput(output)).toMatchInlineSnapshot(`
 				"create-cloudflare <version>
 				  The create-cloudflare cli (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
 				USAGE
@@ -638,9 +626,8 @@ describe("Create Cloudflare CLI", () => {
 				  --auto-update, --no-auto-update
 				    Automatically uses the latest version of C3"
 			`);
-				}
-			},
-		);
+			}
+		});
 	});
 });
 

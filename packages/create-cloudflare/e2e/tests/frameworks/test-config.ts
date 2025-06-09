@@ -1,5 +1,10 @@
 import { detectPackageManager } from "../../../src/helpers/packageManagers";
-import { keys, LONG_TIMEOUT } from "../../helpers/constants";
+import {
+	E2E_EXPERIMENTAL,
+	E2E_FRAMEWORK_TEST_FILTER,
+	keys,
+	LONG_TIMEOUT,
+} from "../../helpers/constants";
 import type { FrameworkTestConfig } from "../../helpers/framework-helpers";
 
 export type NamedFrameworkTestConfig = FrameworkTestConfig & {
@@ -671,21 +676,19 @@ function getExperimentalFrameworkTestConfig() {
  *   - isExperimentalMode: A boolean indicating if experimental mode is enabled.
  *   - FrameworkTestFilter: A string that can be used to filter the tests by "name" or "name:(pages|workers)".
  */
-export function getFrameworksTests(options: {
-	isExperimentalMode: boolean;
-	frameworkTestFilter?: string;
-}): NamedFrameworkTestConfig[] {
+export function getFrameworksTests(): NamedFrameworkTestConfig[] {
 	const packageManager = detectPackageManager();
-	const frameworkTests = options.isExperimentalMode
-		? getExperimentalFrameworkTestConfig()
-		: getFrameworkTestConfig(packageManager.name);
+	const frameworkTests =
+		E2E_EXPERIMENTAL === "true"
+			? getExperimentalFrameworkTestConfig()
+			: getFrameworkTestConfig(packageManager.name);
 	return frameworkTests.filter((testConfig) => {
-		if (!options.frameworkTestFilter) {
+		if (!E2E_FRAMEWORK_TEST_FILTER) {
 			return true;
 		}
-		if (options.frameworkTestFilter.includes(":")) {
-			return testConfig.name === options.frameworkTestFilter;
+		if (E2E_FRAMEWORK_TEST_FILTER.includes(":")) {
+			return testConfig.name === E2E_FRAMEWORK_TEST_FILTER;
 		}
-		return testConfig.name.split(":")[0] === options.frameworkTestFilter;
+		return testConfig.name.split(":")[0] === E2E_FRAMEWORK_TEST_FILTER;
 	});
 }
