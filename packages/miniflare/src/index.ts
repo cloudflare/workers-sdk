@@ -1837,6 +1837,9 @@ export class Miniflare {
 						},
 					});
 				}
+
+				// Ask the dev registry to watch for this service
+				this.#devRegistry.subscribe(serviceName);
 			}
 
 			const externalObjects = Array.from(externalServices).flatMap(

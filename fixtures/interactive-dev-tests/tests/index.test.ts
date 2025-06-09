@@ -256,27 +256,3 @@ it.each(exitKeys)("multiworker cleanly exits with $name", async ({ key }) => {
 		expect(duringProcesses.length).toBeGreaterThan(beginProcesses.length);
 	}
 });
-
-it.runIf(RUN_IF && nodePtySupported)(
-	"hotkeys should be unregistered when the initial build fails",
-	async () => {
-		const wrangler = await startWranglerDev(
-			["dev", "src/startup-error.ts"],
-			true
-		);
-
-		expect(await wrangler.exitPromise).toBe(1);
-
-		const hotkeysRenderCount = [
-			...wrangler.stdout.matchAll(/\[b\] open a browser/g),
-		];
-
-		const clearHotkeysCount = [
-			// This is the control sequence for moving the cursor up and then clearing from the cursor to the end
-			...wrangler.stdout.matchAll(/\[\dA\[0J/g),
-		];
-
-		// The hotkeys should be rendered the same number of times as the control sequence for clearing them from the screen
-		expect(hotkeysRenderCount.length).toBe(clearHotkeysCount.length);
-	}
-);

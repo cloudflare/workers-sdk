@@ -9,3 +9,11 @@ export const ADDITIONAL_MODULE_TYPES = [
 ] as const;
 
 export const DEFAULT_INSPECTOR_PORT = 9229;
+
+export const kRequestType = Symbol("kRequestType");
+
+declare module "http" {
+	interface IncomingMessage {
+		[kRequestType]?: "asset";
+	}
+}

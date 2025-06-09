@@ -76,7 +76,7 @@ export async function runLongLived(
 	pm: "pnpm" | "yarn" | "npm",
 	command: "dev" | "buildAndPreview" | AnyString,
 	projectPath: string,
-	customEnv: Record<string, string> = {}
+	customEnv: Record<string, string | undefined> = {}
 ) {
 	debuglog(`starting \`${command}\` for ${projectPath}`);
 	const process = childProcess.exec(`${pm} run ${command}`, {

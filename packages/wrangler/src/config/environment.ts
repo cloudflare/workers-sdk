@@ -80,6 +80,7 @@ export type ContainerApp = {
 		image: string;
 		labels?: { name: string; value: string }[];
 		secrets?: { name: string; type: "env"; secret: string }[];
+		disk?: { size: string };
 	};
 
 	/** Scheduling constraints */

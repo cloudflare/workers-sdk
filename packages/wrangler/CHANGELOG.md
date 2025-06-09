@@ -1,5 +1,11 @@
 # wrangler
 
+## 4.19.1
+
+### Patch Changes
+
+- [#9456](https://github.com/cloudflare/workers-sdk/pull/9456) [`db2cdc6`](https://github.com/cloudflare/workers-sdk/commit/db2cdc6b1e77473762d0b4fcbad8e50ae2fe712c) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Fix bug causing preview alias to always be generated.
+
 ## 4.19.0
 
 ### Minor Changes

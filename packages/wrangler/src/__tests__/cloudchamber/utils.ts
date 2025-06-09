@@ -21,7 +21,11 @@ export function mockAccount() {
 		http.get(
 			"*/me",
 			async () => {
-				return HttpResponse.json({});
+				return HttpResponse.json({
+					limits: {
+						disk_mb_per_deployment: 2000,
+					},
+				});
 			},
 			{ once: true }
 		)

@@ -26,7 +26,7 @@ import { ApiError, DeploymentMutationError, OpenAPI } from "./client";
 import { wrap } from "./helpers/wrap";
 import { idToLocationName, loadAccount } from "./locations";
 import type { Config } from "../config";
-import type { CloudchamberConfig } from "../config/environment";
+import type { CloudchamberConfig, ContainerApp } from "../config/environment";
 import type { Scope } from "../user";
 import type {
 	CommonYargsOptions,
@@ -648,4 +648,19 @@ export function resolveMemory(
 	}
 
 	return undefined;
+}
+
+// Return the amount of disk size in (MB) for an application, falls back to the account limits if the app config doesn't exist
+// sometimes the user wants to just build a container here, we should allow checking those based on the account limits if
+// app.configuration is not set
+// ordering: app.configuration.disk.size -> account.limits.disk_mb_per_deployment -> default fallback to 2GB in bytes
+export function resolveAppDiskSize(
+	account: CompleteAccountCustomer,
+	app: ContainerApp | undefined
+): number | undefined {
+	if (app === undefined) {
+		return undefined;
+	}
+	const disk = app.configuration.disk?.size ?? "2GB";
+	return Math.round(parseByteSize(disk));
 }

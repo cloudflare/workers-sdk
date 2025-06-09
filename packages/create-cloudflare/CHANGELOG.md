@@ -1,5 +1,21 @@
 # create-cloudflare
 
+## 2.49.0
+
+### Minor Changes
+
+- [#9442](https://github.com/cloudflare/workers-sdk/pull/9442) [`4996b88`](https://github.com/cloudflare/workers-sdk/commit/4996b88e7cac5cdb43418a8fcf8455f36a070a37) Thanks [@vicb](https://github.com/vicb)! - add \_headers file for immutable asset caching in nextjs template
+
+### Patch Changes
+
+- [#9426](https://github.com/cloudflare/workers-sdk/pull/9426) [`0dc5992`](https://github.com/cloudflare/workers-sdk/commit/0dc599216648ed66a1418cb897b7592228a12fe9) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-solid | 0.6.2 | 0.6.5 |
+
 ## 2.48.0
 
 ### Minor Changes
@@ -2384,7 +2400,7 @@
 
   Along with this change, projects will use the default vite-based dev command from `create-remix` instead of using `wrangler pages dev` on build output.
 
-  A new `build-cf-types` script has also been added to re-generate the `Env` type defined in `load-context.ts` based on the contents of `wrangler.toml`. A default `wrangler.toml` will be added to new Remix projects to accomodate this workflow.
+  A new `build-cf-types` script has also been added to re-generate the `Env` type defined in `load-context.ts` based on the contents of `wrangler.toml`. A default `wrangler.toml` will be added to new Remix projects to accommodate this workflow.
 
 - [#5072](https://github.com/cloudflare/workers-sdk/pull/5072) [`cab7e1c`](https://github.com/cloudflare/workers-sdk/commit/cab7e1c7f24ff0097e15d90030c805fe2785d173) Thanks [@jculvey](https://github.com/jculvey)! - feature: Improve bindings support in Astro template.
 
