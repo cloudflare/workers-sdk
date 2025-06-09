@@ -1,10 +1,5 @@
 import { expect, test } from "vitest";
-import {
-	getJsonResponse,
-	getTextResponse,
-	isBuild,
-	viteTestUrl,
-} from "../../../__test-utils__";
+import { getJsonResponse, isBuild, viteTestUrl } from "../../../__test-utils__";
 import "../base-tests";
 
 test("returns the API response for API route on navigation request ('sec-fetch-mode: navigate' header included) if route included in `run_worker_first`", async () => {
