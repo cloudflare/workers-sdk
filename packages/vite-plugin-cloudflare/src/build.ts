@@ -4,13 +4,14 @@ import * as path from "node:path";
 import colors from "picocolors";
 import type { ResolvedPluginConfig } from "./plugin-config";
 import type * as vite from "vite";
+import type { Unstable_Config } from "wrangler";
 
 export function createBuildApp(
 	resolvedPluginConfig: ResolvedPluginConfig
 ): (builder: vite.ViteBuilder) => Promise<void> {
 	return async (builder) => {
 		const clientEnvironment = builder.environments.client;
-		assert(clientEnvironment);
+		assert(clientEnvironment, `No "client" environment`);
 		const defaultHtmlPath = path.resolve(builder.config.root, "index.html");
 		const hasClientEntry =
 			clientEnvironment.config.build.rollupOptions.input ||
@@ -43,7 +44,10 @@ export function createBuildApp(
 		const { entryWorkerEnvironmentName } = resolvedPluginConfig;
 		const entryWorkerEnvironment =
 			builder.environments[entryWorkerEnvironmentName];
-		assert(entryWorkerEnvironment);
+		assert(
+			entryWorkerEnvironment,
+			`No "${entryWorkerEnvironmentName}" environment`
+		);
 		const entryWorkerBuildDirectory = path.resolve(
 			builder.config.root,
 			entryWorkerEnvironment.config.build.outDir
@@ -62,7 +66,8 @@ export function createBuildApp(
 			);
 			const workerConfig = JSON.parse(
 				fs.readFileSync(entryWorkerConfigPath, "utf-8")
-			);
+			) as Unstable_Config;
+			// Remove `assets` field as there are no assets
 			workerConfig.assets = undefined;
 			fs.writeFileSync(entryWorkerConfigPath, JSON.stringify(workerConfig));
 

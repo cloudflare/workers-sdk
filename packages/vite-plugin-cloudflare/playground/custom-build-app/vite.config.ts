@@ -8,8 +8,8 @@ export default defineConfig({
 			const workerEnvironment = builder.environments.worker;
 			const clientEnvironment = builder.environments.client;
 
-			assert(workerEnvironment);
-			assert(clientEnvironment);
+			assert(workerEnvironment, `No "worker" environment`);
+			assert(clientEnvironment, `No "client" environment`);
 
 			builder.config.logger.info("__before-build__");
 			await builder.build(workerEnvironment);
