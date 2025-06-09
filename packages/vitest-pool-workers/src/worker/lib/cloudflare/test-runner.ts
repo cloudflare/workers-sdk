@@ -11,7 +11,7 @@ import {
 import { vi } from "vitest";
 import { VitestTestRunner } from "vitest/runners";
 import workerdUnsafe from "workerd:unsafe";
-import type { CancelReason, Suite, Test } from "@vitest/runner";
+import type { Suite, Test } from "@vitest/runner";
 import type { SerializedConfig, WorkerGlobalState, WorkerRPC } from "vitest";
 
 // When `DEBUG` is `true`, runner operations will be logged and slowed down
@@ -354,13 +354,5 @@ export default class WorkersTestRunner extends VitestTestRunner {
 		assert(await this.ensurePoppedActiveTryStorage(test));
 
 		return super.onAfterTryTask(test);
-	}
-
-	async onCancel(reason: CancelReason) {
-		if (DEBUG) {
-			__console.log(`onCancel: ${reason}`);
-			await scheduler.wait(100);
-		}
-		return super.onCancel(reason);
 	}
 }
