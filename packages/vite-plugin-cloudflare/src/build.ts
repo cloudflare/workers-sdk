@@ -94,11 +94,7 @@ export function createBuildApp(
 				fs.unlinkSync(src);
 			} else {
 				const destDir = path.dirname(dest);
-
-				if (!fs.existsSync(destDir)) {
-					fs.mkdirSync(destDir, { recursive: true });
-				}
-
+				fs.mkdirSync(destDir, { recursive: true });
 				fs.renameSync(src, dest);
 				movedAssetPaths.push(dest);
 			}
