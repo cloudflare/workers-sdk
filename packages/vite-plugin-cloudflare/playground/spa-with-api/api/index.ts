@@ -12,6 +12,6 @@ export default {
 			});
 		}
 
-		return new Response("nothing here", { status: 404 });
+		return new Response("Worker fallback response", { status: 404 });
 	},
 } satisfies ExportedHandler<Env>;

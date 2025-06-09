@@ -1,16 +1,15 @@
 import { expect, test } from "vitest";
 import {
+	getJsonResponse,
 	getTextResponse,
 	isBuild,
-	page,
 	viteTestUrl,
-} from "../../__test-utils__";
-import "./base-tests";
+} from "../../../__test-utils__";
+import "../base-tests";
 
-test("returns the home page for API route on navigation request ('sec-fetch-mode: navigate' header included)", async () => {
-	await page.goto(`${viteTestUrl}/api/`);
-	const content = await page.textContent("h1");
-	expect(content).toBe("Vite + React");
+test("returns the API response for API route on navigation request ('sec-fetch-mode: navigate' header included) if route included in `run_worker_first`", async () => {
+	const json = await getJsonResponse("/api/");
+	expect(json).toEqual({ name: "Cloudflare" });
 });
 
 test("returns the API response for API route on non-navigation request ('sec-fetch-mode: navigate' header not included)", async () => {
@@ -28,9 +27,9 @@ test("returns the API fallback response for not found route on non-navigation re
 });
 
 test.runIf(!isBuild)(
-	"returns file in `/api/` if requested directly",
+	"returns the API response for API route when the route matches a file",
 	async () => {
-		const text = await getTextResponse("/api/some-file.txt");
-		expect(text).toBe(`File content.\n`);
+		const json = await getJsonResponse("/api/some-file.txt");
+		expect(json).toEqual({ name: "Cloudflare" });
 	}
 );
