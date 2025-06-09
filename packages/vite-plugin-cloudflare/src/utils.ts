@@ -1,7 +1,12 @@
 import * as path from "node:path";
+import { createRequest, sendResponse } from "@mjackson/node-fetch-server";
 import getPort, { portNumbers } from "get-port";
-import { Request as MiniflareRequest } from "miniflare";
-import * as vite from "vite";
+import {
+	Request as MiniflareRequest,
+	Response as MiniflareResponse,
+} from "miniflare";
+import type * as http from "node:http";
+import type * as vite from "vite";
 
 export function getOutputDirectory(
 	userConfig: vite.UserConfig,
@@ -13,25 +18,6 @@ export function getOutputDirectory(
 		userConfig.environments?.[environmentName]?.build?.outDir ??
 		path.join(rootOutputDirectory, environmentName)
 	);
-}
-
-export function toMiniflareRequest(request: Request): MiniflareRequest {
-	// We set the X-Forwarded-Host header to the original host as the `Host` header inside a Worker will contain the workerd host
-	const host = request.headers.get("Host");
-	if (host) {
-		request.headers.set("X-Forwarded-Host", host);
-	}
-	// Undici sets the `Sec-Fetch-Mode` header to `cors` so we capture it in a custom header to be converted back later.
-	const secFetchMode = request.headers.get("Sec-Fetch-Mode");
-	if (secFetchMode) {
-		request.headers.set("X-Mf-Sec-Fetch-Mode", secFetchMode);
-	}
-	return new MiniflareRequest(request.url, {
-		method: request.method,
-		headers: [["accept-encoding", "identity"], ...request.headers],
-		body: request.body,
-		duplex: "half",
-	});
 }
 
 const postfixRE = /[?#].*$/;
@@ -51,4 +37,55 @@ export function getFirstAvailablePort(start: number) {
 
 export function withTrailingSlash(path: string): string {
 	return path.endsWith("/") ? path : `${path}/`;
+}
+
+export function createMiddleware(
+	handler: (
+		request: MiniflareRequest,
+		req: vite.Connect.IncomingMessage
+	) => Promise<MiniflareResponse>
+): (
+	req: vite.Connect.IncomingMessage,
+	res: http.ServerResponse,
+	next: vite.Connect.NextFunction
+) => Promise<void> {
+	return async (req, res, next) => {
+		try {
+			const request = createRequest(req, res);
+			let response = (await handler(
+				toMiniflareRequest(request),
+				req
+			)) as unknown as Response;
+
+			// Vite uses HTTP/2 when `server.https` or `preview.https` is enabled
+			if (req.httpVersionMajor === 2) {
+				response = new Response(response.body, response);
+				// HTTP/2 disallows use of the `transfer-encoding` header
+				response.headers.delete("transfer-encoding");
+			}
+
+			await sendResponse(res, response);
+		} catch (error) {
+			next(error);
+		}
+	};
+}
+
+function toMiniflareRequest(request: Request): MiniflareRequest {
+	// We set the X-Forwarded-Host header to the original host as the `Host` header inside a Worker will contain the workerd host
+	const host = request.headers.get("Host");
+	if (host) {
+		request.headers.set("X-Forwarded-Host", host);
+	}
+	// Undici sets the `Sec-Fetch-Mode` header to `cors` so we capture it in a custom header to be converted back later.
+	const secFetchMode = request.headers.get("Sec-Fetch-Mode");
+	if (secFetchMode) {
+		request.headers.set("X-Mf-Sec-Fetch-Mode", secFetchMode);
+	}
+	return new MiniflareRequest(request.url, {
+		method: request.method,
+		headers: [["accept-encoding", "identity"], ...request.headers],
+		body: request.body,
+		duplex: "half",
+	});
 }
