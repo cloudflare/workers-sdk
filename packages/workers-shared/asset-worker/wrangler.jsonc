@@ -89,5 +89,45 @@
 				"binding": "VERSION_METADATA",
 			},
 		},
+		"fed-prod": {
+			"name": "asset-worker-fed-prod",
+			"account_id": "fca6c231dc1d1780777997c5bce5a5e3", // workers assets
+			"vars": {
+				"ENVIRONMENT": "fed-prod",
+			},
+			"version_metadata": {
+				"binding": "VERSION_METADATA",
+			},
+			"compliance_region": "fedramp_high",
+			"unsafe": {
+				"metadata": {
+					"build_options": {
+						"stable_id": "cloudflare/cf_asset_worker",
+						"networks": ["cf"],
+					},
+				},
+				"bindings": [
+					{
+						"name": "CONFIG",
+						"type": "param",
+						"param": "assetConfig",
+					},
+					{
+						"name": "ASSETS_MANIFEST",
+						"type": "param",
+						"param": "assetManifest",
+						"data_ref": true,
+					},
+					{
+						"name": "ASSETS_KV_NAMESPACE",
+						"type": "internal_assets",
+					},
+					{
+						"name": "workers-asset-worker",
+						"type": "internal_capability_grants",
+					},
+				],
+			},
+		},
 	},
 }
