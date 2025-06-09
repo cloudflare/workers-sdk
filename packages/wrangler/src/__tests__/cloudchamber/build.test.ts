@@ -45,12 +45,7 @@ describe("buildAndMaybePush", () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
-		// vi.mocked(dockerBuild).mockResolvedValue(undefined);
-		// vi.mocked(dockerLoginManagedRegistry).mockResolvedValue(undefined);
-		vi.mocked(dockerImageInspect).mockResolvedValue({
-			size: 100 * MiB,
-			layers: 1,
-		});
+		vi.mocked(dockerImageInspect).mockResolvedValue("53387881 2");
 		mkdirSync("./container-context");
 
 		writeFileSync("./container-context/Dockerfile", dockerfile);
@@ -77,10 +72,10 @@ describe("buildAndMaybePush", () => {
 			],
 			dockerfile,
 		});
-		expect(dockerImageInspect).toHaveBeenCalledWith(
-			"/custom/docker/path",
-			`${DOMAIN}/test-app:tag`
-		);
+		expect(dockerImageInspect).toHaveBeenCalledWith("/custom/docker/path", {
+			imageTag: `${DOMAIN}/test-app:tag`,
+			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
+		});
 		expect(runDockerCmd).toHaveBeenCalledWith("/custom/docker/path", [
 			"push",
 			`${DOMAIN}/test-app:tag`,
@@ -113,10 +108,10 @@ describe("buildAndMaybePush", () => {
 			`${DOMAIN}/test-app:tag`,
 		]);
 		expect(dockerImageInspect).toHaveBeenCalledOnce();
-		expect(dockerImageInspect).toHaveBeenCalledWith(
-			"docker",
-			`${DOMAIN}/test-app:tag`
-		);
+		expect(dockerImageInspect).toHaveBeenCalledWith("docker", {
+			imageTag: `${DOMAIN}/test-app:tag`,
+			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
+		});
 		expect(dockerLoginManagedRegistry).toHaveBeenCalledOnce();
 	});
 

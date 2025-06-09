@@ -104,7 +104,16 @@ export async function buildAndMaybePush(
 		// account's disk size limits
 		const account = await loadAccount();
 
-		const { size, layers } = await dockerImageInspect(pathToDocker, imageTag);
+		const inspectOutput = await dockerImageInspect(pathToDocker, {
+			imageTag,
+			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
+		});
+		console.dir("hi" + JSON.stringify(inspectOutput));
+
+		const [sizeStr, layerStr] = inspectOutput.split(" ");
+		const size = parseInt(sizeStr, 10);
+		const layers = parseInt(layerStr, 10);
+
 		// 16MiB is the layer size adjustments we use in devmapper
 		const MiB = 1024 * 1024;
 		const requiredSize = Math.ceil(size * 1.1 + layers * 16 * MiB);

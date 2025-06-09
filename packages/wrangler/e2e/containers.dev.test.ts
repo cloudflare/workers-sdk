@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { dedent } from "../src/utils/dedent";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 
@@ -32,7 +32,9 @@ const wranglerConfig = {
 	],
 };
 
-// TODO: we'll want to run this on all OSes but that will require some setup because docker is not installed by default on macos and windows
+// TODO: docker is not installed by default on macOS runners in github actions.
+// And windows is being difficult.
+// So we skip these tests in CI, and test this locally for now :/
 describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 	"containers local dev tests",
 	{ timeout: 90_000 },
@@ -61,6 +63,7 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				Dockerfile: dedent`
 					FROM alpine:latest
 					CMD ["echo", "hello world"]
+					EXPOSE 8080
 					`,
 			});
 		});
@@ -68,7 +71,7 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			const worker = helper.runLongLived("wrangler dev");
 			// from docker build output:
 			await worker.waitForReady();
-			expect(worker.currentOutput).toContain("Building container(s)...");
+			await worker.readUntil(/Building container/);
 			await worker.readUntil(/DONE/);
 			// from miniflare output:
 			await worker.readUntil(/Container\(s\) built and ready/);
@@ -105,6 +108,30 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			await worker.waitForReady();
 			expect(worker.output).not.toContain("Building container(s)...");
 		});
+
+		it("errors in windows/macos if no ports are exposed, but not on linux", async () => {
+			await helper.seed({
+				Dockerfile: dedent`
+					FROM alpine:latest
+					CMD ["echo", "hello world"]
+					`,
+			});
+			// this needs to be tested manually
+			if (process.platform === "win32" || process.platform === "darwin") {
+				const worker = helper.runLongLived("wrangler dev");
+				expect(await worker.exitCode).toBe(1);
+				expect(await worker.output).toContain(
+					'The container "http2" does not expose any ports.'
+				);
+			}
+			// only this is tested in CI
+			if (process.platform === "linux") {
+				const worker = helper.runLongLived("wrangler dev");
+				await worker.waitForReady();
+				expect(await worker.output).toContain("Container(s) built and ready");
+			}
+		});
+
 		it("errors if docker is not installed", async () => {
 			vi.stubEnv("WRANGLER_CONTAINERS_DOCKER_PATH", "not-a-real-docker-binary");
 			const worker = helper.runLongLived("wrangler dev");

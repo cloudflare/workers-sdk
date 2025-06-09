@@ -2,6 +2,7 @@ import path from "path";
 import {
 	constructBuildCommand,
 	dockerBuild,
+	dockerImageInspect,
 	verifyDockerInstalled,
 } from "@cloudflare/containers-shared";
 import { Log } from "../../../shared";
@@ -15,7 +16,7 @@ const MF_CONTAINER_PREFIX = "cloudflare-dev";
 export class ContainerController {
 	#containerOptions: { [className: string]: ContainerOptions };
 	#sharedOptions: ContainersSharedOptions;
-	#logger;
+	#logger: Log;
 	#dockerInstalled: boolean = false;
 	constructor(
 		containerOptions: { [className: string]: ContainerOptions },
@@ -53,14 +54,29 @@ export class ContainerController {
 	}
 
 	async buildContainer(options: ContainerOptions) {
+		// just let the tag default to latest
+		const tag = `${MF_CONTAINER_PREFIX}/${options.name}`;
 		const { buildCmd, dockerfile } = await constructBuildCommand({
-			// just let the tag default to latest?
-			tag: `${MF_CONTAINER_PREFIX}/${options.name}`,
+			tag,
 			pathToDockerfile: options.image,
 			buildContext: options.imageBuildContext ?? path.dirname(options.image),
 			args: options.args,
 			platform: "linux/amd64",
 		});
 		await dockerBuild(this.#sharedOptions.dockerPath, { buildCmd, dockerfile });
+		await this.checkExposedPorts(tag);
+	}
+
+	async checkExposedPorts(imageTag: string) {
+		const output = await dockerImageInspect(this.#sharedOptions.dockerPath, {
+			imageTag,
+			formatString: "{{ len .Config.ExposedPorts }}",
+		});
+		if (output === "0" && process.platform !== "linux") {
+			throw new Error(
+				`The container "${imageTag.replace(MF_CONTAINER_PREFIX + "/", "")}" does not expose any ports.\n` +
+					"To develop containers locally on non-Linux platforms, you must expose any ports that you call with `getTCPPort() in your Dockerfile."
+			);
+		}
 	}
 }
