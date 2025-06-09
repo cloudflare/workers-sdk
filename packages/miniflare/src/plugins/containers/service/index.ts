@@ -2,6 +2,7 @@ import path from "path";
 import {
 	constructBuildCommand,
 	dockerBuild,
+	verifyDockerInstalled,
 } from "@cloudflare/containers-shared";
 import { Log } from "../../../shared";
 import { ContainerOptions, ContainersSharedOptions } from "../index";
@@ -15,6 +16,7 @@ export class ContainerController {
 	#containerOptions: { [className: string]: ContainerOptions };
 	#sharedOptions: ContainersSharedOptions;
 	#logger;
+	#dockerInstalled: boolean = false;
 	constructor(
 		containerOptions: { [className: string]: ContainerOptions },
 		sharedOptions: ContainersSharedOptions,
@@ -37,6 +39,10 @@ export class ContainerController {
 	}
 
 	async buildAllContainers() {
+		if (!this.#dockerInstalled) {
+			await verifyDockerInstalled(this.#sharedOptions.dockerPath);
+			this.#dockerInstalled = true;
+		}
 		this.#logger.info("Building container(s)...");
 		for (const options of Object.values(this.#containerOptions)) {
 			await this.buildContainer(options);
