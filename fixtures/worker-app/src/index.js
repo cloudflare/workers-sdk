@@ -20,7 +20,7 @@ function hexEncode(array) {
 
 export default {
 	async fetch(request, env) {
-		console.log("request log");
+		console.log("request log 5");
 
 		const { pathname, origin, hostname, host } = new URL(request.url);
 		if (pathname.startsWith("/fav"))
