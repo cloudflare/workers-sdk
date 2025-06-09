@@ -21,7 +21,7 @@
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
-		"@types/node": "catalog:node18",
+		"@types/node": "catalog:default",
 		"typescript": "catalog:default",
 		"undici": "catalog:default"
 	},

@@ -4,7 +4,7 @@ import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { PassThrough, Writable } from "node:stream";
-import { DOMAIN, runDockerCmd } from "@cloudflare/containers-shared";
+import { DOMAIN } from "@cloudflare/containers-shared";
 import * as TOML from "@iarna/toml";
 import { sync } from "command-exists";
 import * as esbuild from "esbuild";
@@ -8874,12 +8874,6 @@ addEventListener('fetch', event => {});`
 				});
 
 				await runWrangler("deploy index.js");
-
-				// expect(runDockerCmd).toHaveBeenCalledTimes(1);
-				// expect(runDockerCmd).toHaveBeenCalledWith("/usr/bin/docker", [
-				// 	"push",
-				// 	`${DOMAIN}/my-container:Galaxy`,
-				// ]);
 
 				expect(std.out).toMatchInlineSnapshot(`
 					"Total Upload: xx KiB / gzip: xx KiB
