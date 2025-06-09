@@ -3,6 +3,7 @@ import {
 	constructBuildCommand,
 	dockerBuild,
 } from "@cloudflare/containers-shared";
+import { Log } from "../../../shared";
 import { ContainerOptions, ContainersSharedOptions } from "../index";
 
 const MF_CONTAINER_PREFIX = "cloudflare-dev";
@@ -13,13 +14,15 @@ const MF_CONTAINER_PREFIX = "cloudflare-dev";
 export class ContainerController {
 	#containerOptions: { [className: string]: ContainerOptions };
 	#sharedOptions: ContainersSharedOptions;
+	#logger;
 	constructor(
 		containerOptions: { [className: string]: ContainerOptions },
-		sharedOptions: ContainersSharedOptions
+		sharedOptions: ContainersSharedOptions,
+		logger: Log
 	) {
 		this.#containerOptions = containerOptions;
 		this.#sharedOptions = sharedOptions;
-		this.help();
+		this.#logger = logger;
 	}
 
 	updateConfig(
@@ -30,14 +33,17 @@ export class ContainerController {
 	): void {
 		this.#containerOptions = containerOptions;
 		this.#sharedOptions = sharedOptions;
-		this.help();
 		// TODO: rebuild containers (only) if the configuration has changed
 	}
 
 	async buildAllContainers() {
+		this.#logger.info("Building container(s)...");
 		for (const options of Object.values(this.#containerOptions)) {
 			await this.buildContainer(options);
 		}
+		// Miniflare will log 'Ready on...' before the containers are built, but that is actually the proxy server.
+		// The actual user worker's miniflare instance is blocked until the containers are built
+		this.#logger.info("Container(s) built and ready");
 	}
 
 	async buildContainer(options: ContainerOptions) {
@@ -50,15 +56,5 @@ export class ContainerController {
 			platform: "linux/amd64",
 		});
 		await dockerBuild(this.#sharedOptions.dockerPath, { buildCmd, dockerfile });
-	}
-
-	help() {
-		console.log("Hello from ContainerController!");
-		console.log(
-			`Container Options: ${JSON.stringify(this.#containerOptions, null, 2)}`
-		);
-		console.log(
-			`Shared Options: ${JSON.stringify(this.#sharedOptions, null, 2)}`
-		);
 	}
 }
