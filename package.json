@@ -25,7 +25,8 @@
 		"test:e2e": "dotenv -- turbo test:e2e",
 		"test:e2e:wrangler": "node -r esbuild-register tools/e2e/runIndividualE2EFiles.ts",
 		"test:watch": "turbo test:watch",
-		"type:tests": "dotenv -- turbo type:tests"
+		"type:tests": "dotenv -- turbo type:tests",
+		"vitest-ecosystem-ci": "pnpm test:ci -F @fixture/vitest-pool-workers"
 	},
 	"dependencies": {
 		"@actions/artifact": "^2.2.1",
