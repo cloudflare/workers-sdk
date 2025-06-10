@@ -225,27 +225,10 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		observability,
 	} = worker;
 
-	const getRunWorkerFirst = () => {
-		if (assets?.routerConfig?.static_routing) {
-			const rawAssetConfig =
-				assets.routerConfig.static_routing.asset_worker?.map(
-					// unparse this for upload :(
-					(rule) => `!${rule}`
-				) ?? [];
-			return [
-				...assets.routerConfig.static_routing.user_worker,
-				...rawAssetConfig,
-			];
-		} else if (
-			assets?.routerConfig.invoke_user_worker_ahead_of_assets !== undefined
-		) {
-			return assets.routerConfig.invoke_user_worker_ahead_of_assets;
-		}
-	};
 	const assetConfig: AssetConfigMetadata = {
 		html_handling: assets?.assetConfig?.html_handling,
 		not_found_handling: assets?.assetConfig?.not_found_handling,
-		run_worker_first: getRunWorkerFirst(),
+		run_worker_first: assets?.run_worker_first,
 		_redirects: assets?._redirects,
 		_headers: assets?._headers,
 	};

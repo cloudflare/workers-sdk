@@ -391,6 +391,7 @@ export type AssetsOptions = {
 	_redirects?: string;
 	_headers?: string;
 	_routes?: string;
+	run_worker_first?: boolean | string[];
 };
 
 export function getAssetsOptions(
@@ -502,6 +503,8 @@ export function getAssetsOptions(
 		assetConfig,
 		_redirects,
 		_headers,
+		// unsplit static routing rules for upload
+		run_worker_first: config.assets?.run_worker_first,
 	};
 }
 

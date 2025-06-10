@@ -412,6 +412,7 @@ export interface CfWorkerInit {
 				assetConfig: AssetConfig;
 				_redirects?: string;
 				_headers?: string;
+				run_worker_first?: boolean | string[];
 		  }
 		| undefined;
 	observability: Observability | undefined;
