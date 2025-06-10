@@ -14,7 +14,7 @@ describe("startWorker - configuration errors", () => {
 				assert(err instanceof Error);
 				assert.match(
 					err.message,
-					/the entry-point file at "not a real entrypoint" was not found./
+					/The entry-point file at "not a real entrypoint" was not found./
 				);
 				return true;
 			}
