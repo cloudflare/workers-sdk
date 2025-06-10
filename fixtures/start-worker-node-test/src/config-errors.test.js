@@ -12,8 +12,14 @@ describe("startWorker - configuration errors", () => {
 			}),
 			(err) => {
 				assert(err instanceof Error);
-				assert.match(
+				assert.strictEqual(
 					err.message,
+					"An error occurred when starting the server"
+				);
+				const cause = err.cause;
+				assert(cause instanceof Error);
+				assert.match(
+					cause.message,
 					/The entry-point file at "not a real entrypoint" was not found./
 				);
 				return true;
@@ -26,8 +32,14 @@ describe("startWorker - configuration errors", () => {
 			unstable_startWorker({ config: "non-existing-config" }),
 			(err) => {
 				assert(err instanceof Error);
-				assert.match(
+				assert.strictEqual(
 					err.message,
+					"An error occurred when starting the server"
+				);
+				const cause = err.cause;
+				assert(cause instanceof Error);
+				assert.match(
+					cause.message,
 					/Missing entry-point to Worker script or to assets directory/
 				);
 				return true;
