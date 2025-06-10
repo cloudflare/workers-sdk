@@ -298,7 +298,9 @@ async function handleCreateCommand(
 	const memoryMib =
 		resolveMemory(args, config.cloudchamber) ??
 		account.defaults.memory_mib ??
-		Math.round(parseByteSize(account.defaults.memory, 1024) / (1024 * 1024));
+		Math.round(
+			parseByteSize(account.defaults.memory ?? "0MiB", 1024) / (1024 * 1024)
+		);
 
 	renderDeploymentConfiguration("create", {
 		image,

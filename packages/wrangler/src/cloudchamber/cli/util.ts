@@ -15,7 +15,6 @@ export function statusToColored(status?: PlacementStatusHealth): string {
 	const mappings: Record<PlacementStatusHealth, (_: string) => string> = {
 		placed: bgYellow,
 		running: bgGreen,
-		do_connected: bgGreen,
 		stopped: bgYellow,
 		stopping: bgYellow,
 		failed: bgRed,

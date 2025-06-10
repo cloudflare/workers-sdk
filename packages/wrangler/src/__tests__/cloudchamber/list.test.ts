@@ -86,6 +86,7 @@ describe("cloudchamber list", () => {
 		            \\"enabled\\": true
 		        },
 		        \\"network\\": {
+		            \\"mode\\": \\"public\\",
 		            \\"ipv4\\": \\"1.1.1.1\\"
 		        },
 		        \\"placements_ref\\": \\"http://ref\\",
@@ -106,6 +107,7 @@ describe("cloudchamber list", () => {
 		            \\"enabled\\": true
 		        },
 		        \\"network\\": {
+		            \\"mode\\": \\"public\\",
 		            \\"ipv4\\": \\"1.1.1.2\\"
 		        },
 		        \\"current_placement\\": {
@@ -136,6 +138,7 @@ describe("cloudchamber list", () => {
 		            \\"enabled\\": true
 		        },
 		        \\"network\\": {
+		            \\"mode\\": \\"public\\",
 		            \\"ipv4\\": \\"1.1.1.1\\"
 		        },
 		        \\"placements_ref\\": \\"http://ref\\",
@@ -156,6 +159,7 @@ describe("cloudchamber list", () => {
 		            \\"enabled\\": true
 		        },
 		        \\"network\\": {
+		            \\"mode\\": \\"public\\",
 		            \\"ipv4\\": \\"1.1.1.2\\"
 		        },
 		        \\"current_placement\\": {
