@@ -57,5 +57,4 @@ updates:
     labels:
       - "dependencies"
       - "skip-pr-description-validation"
-      - "e2e"
-      - "every-os"
+
