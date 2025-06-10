@@ -9,4 +9,6 @@ export enum SchedulingPolicy {
 	MOON = "moon",
 	GPU = "gpu",
 	REGIONAL = "regional",
+	FILL_METALS = "fill_metals",
+	DEFAULT = "default",
 }

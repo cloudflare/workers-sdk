@@ -40,6 +40,7 @@ const EXPECTED_RESULT = `
 		        \\"enabled\\": true
 		    },
 		    \\"network\\": {
+		        \\"mode\\": \\"public\\",
 		        \\"ipv4\\": \\"1.1.1.1\\"
 		    },
 		    \\"placements_ref\\": \\"http://ref\\",

@@ -1,6 +1,5 @@
 /* istanbul ignore file */
 /* tslint:disable */
-/* eslint-disable */
 import { Agent } from "undici";
 import type { ApiRequestOptions } from "./ApiRequestOptions";
 

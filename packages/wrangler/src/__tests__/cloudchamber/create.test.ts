@@ -28,6 +28,7 @@ const MOCK_DEPLOYMENTS_COMPLEX_RESPONSE = `
 			        \\"enabled\\": true
 			    },
 			    \\"network\\": {
+			        \\"mode\\": \\"public\\",
 			        \\"ipv4\\": \\"1.1.1.1\\"
 			    },
 			    \\"placements_ref\\": \\"http://ref\\",

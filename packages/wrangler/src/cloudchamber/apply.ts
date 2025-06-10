@@ -23,7 +23,7 @@ import { UserError } from "../errors";
 import { promiseSpinner } from "./common";
 import { diffLines } from "./helpers/diff";
 import type { Config } from "../config";
-import type { ContainerApp } from "../config/environment";
+import type { ContainerApp, Observability } from "../config/environment";
 import type {
 	CommonYargsArgvJSON,
 	StrictYargsOptionsToInterfaceJSON,
@@ -35,6 +35,7 @@ import type {
 	CreateApplicationRequest,
 	ModifyApplicationRequestBody,
 	ModifyDeploymentV2RequestBody,
+	Observability as ObservabilityConfiguration,
 	UserDeploymentConfiguration,
 } from "@cloudflare/containers-shared";
 import type { JsonMap } from "@iarna/toml";
@@ -108,12 +109,46 @@ function applicationToCreateApplication(
 	return app;
 }
 
+function observabilityToConfiguration(
+	observability: Observability | undefined,
+	existingObservabilityConfig: ObservabilityConfiguration | undefined
+): ObservabilityConfiguration | undefined {
+	const observabilityLogsEnabled =
+		observability?.logs?.enabled === true ||
+		(observability?.enabled === true && observability?.logs?.enabled !== false);
+	if (observabilityLogsEnabled) {
+		return { logs: { enabled: true } };
+	}
+
+	const observabilityLogsDisabled =
+		observability?.logs?.enabled === false ||
+		(observability?.enabled === false && observability?.logs?.enabled !== true);
+	if (observabilityLogsDisabled) {
+		return { logs: { enabled: false } };
+	}
+
+	if (existingObservabilityConfig !== undefined) {
+		return { logs: { enabled: false } };
+	}
+
+	return undefined;
+}
+
 function containerAppToCreateApplication(
 	containerApp: ContainerApp,
+	observability: Observability | undefined,
+	existingApp: Application | undefined,
 	skipDefaults = false
 ): CreateApplicationRequest {
-	const configuration =
-		containerApp.configuration as UserDeploymentConfiguration;
+	const observabilityConfiguration = observabilityToConfiguration(
+		observability,
+		existingApp?.configuration.observability
+	);
+	const configuration: UserDeploymentConfiguration = {
+		...(containerApp.configuration as UserDeploymentConfiguration),
+		observability: observabilityConfiguration,
+	};
+
 	const app: CreateApplicationRequest = {
 		...containerApp,
 		configuration,
@@ -377,12 +412,15 @@ export async function apply(
 	log(dim("Container application changes\n"));
 
 	for (const appConfigNoDefaults of config.containers) {
+		const application = applicationByNames[appConfigNoDefaults.name];
+
 		const appConfig = containerAppToCreateApplication(
 			appConfigNoDefaults,
+			config.observability,
+			application,
 			args.skipDefaults
 		);
 
-		const application = applicationByNames[appConfig.name];
 		if (application !== undefined && application !== null) {
 			// we need to sort the objects (by key) because the diff algorithm works with
 			// lines

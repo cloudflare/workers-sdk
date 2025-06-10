@@ -46,17 +46,25 @@ export class RolloutsService {
 	 * List rollouts
 	 * List all rollouts within an application
 	 * @param applicationId
+	 * @param limit The amount of rollouts to return. By default it is all of them.
+	 * @param last The last rollout that was used to paginate
 	 * @returns ApplicationRollout
 	 * @throws ApiError
 	 */
 	public static listApplicationRollouts(
-		applicationId: ApplicationID
+		applicationId: ApplicationID,
+		limit?: number,
+		last?: string
 	): CancelablePromise<Array<ApplicationRollout>> {
 		return __request(OpenAPI, {
 			method: "GET",
 			url: "/applications/{application_id}/rollouts",
 			path: {
 				application_id: applicationId,
+			},
+			query: {
+				limit: limit,
+				last: last,
 			},
 			errors: {
 				401: `Unauthorized`,
