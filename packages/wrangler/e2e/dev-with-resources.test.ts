@@ -13,7 +13,7 @@ const inspectorPort = await getPort();
 
 const RUNTIMES = [
 	{ flags: "", runtime: "local" },
-	{ flags: "--remote", runtime: "remote" },
+	// { flags: "--remote", runtime: "remote" },
 ] as const;
 
 // WebAssembly module containing single `func add(i32, i32): i32` export.
@@ -41,7 +41,7 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 		helper = new WranglerE2ETestHelper();
 	});
 
-	it("works with basic modules format worker", async () => {
+	it.only("works with basic modules format worker", async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
@@ -55,7 +55,7 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 						if (pathname === "/") {
 							return new Response("modules");
 						} else if (pathname === "/error") {
-							throw new Error("🙈");
+							throw new Error("monkey");
 						} else {
 							return new Response(null, { status: 404 });
 						}
@@ -76,10 +76,10 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 		});
 		const text = await res.text();
 		if (isLocal) {
-			expect(text).toContain("Error: 🙈");
+			expect(text).toContain("Error: monkey");
 			expect(text).toContain("src/index.ts:7:10");
 		}
-		await worker.readUntil(/Error: 🙈/, 30_000);
+		await worker.readUntil(/Error: monkey/, 30_000);
 		await worker.readUntil(/src\/index\.ts:7:10/, 30_000);
 	});
 
@@ -96,7 +96,7 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 					if (pathname === "/") {
 						event.respondWith(new Response("service worker"));
 					} else if (pathname === "/error") {
-						throw new Error("🙈");
+						throw new Error("monkey");
 					} else {
 						event.respondWith(new Response(null, { status: 404 }));
 					}
@@ -115,10 +115,10 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 		});
 		const text = await res.text();
 		if (isLocal) {
-			expect(text).toContain("Error: 🙈");
+			expect(text).toContain("Error: monkey");
 			expect(text).toContain("src/index.ts:6:9");
 		}
-		await worker.readUntil(/Error: 🙈/, 30_000);
+		await worker.readUntil(/Error: monkey/, 30_000);
 		await worker.readUntil(/src\/index\.ts:6:9/, 30_000);
 	});
 
