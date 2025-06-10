@@ -1,4 +1,4 @@
-From 25c22c6909222b58a576a04c29c2baf517ecf69c Mon Sep 17 00:00:00 2001
+From 641e6a0eb3f7cf138168185f8a51cd93b1d0db74 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Oct 2024 16:11:10 +0100
 Subject: [PATCH 8/8] Use the worker name as the title for the Javascript
@@ -9,7 +9,7 @@ Subject: [PATCH 8/8] Use the worker name as the title for the Javascript
  1 file changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/front_end/panels/timeline/IsolateSelector.ts b/front_end/panels/timeline/IsolateSelector.ts
-index 11cba9dc15..145a526353 100644
+index eea81e20dd..9d19e75d79 100644
 --- a/front_end/panels/timeline/IsolateSelector.ts
 +++ b/front_end/panels/timeline/IsolateSelector.ts
 @@ -52,8 +52,12 @@ export class IsolateSelector extends UI.Toolbar.ToolbarItem implements SDK.Isola

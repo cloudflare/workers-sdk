@@ -1,7 +1,7 @@
 ROOT = $(realpath .)
 PATH_WITH_DEPOT = $(PATH):$(ROOT)/depot/
 # The upstream devtools commit upon which our patches are based
-HEAD = 538f92a49ba5cbc615bcaa063214fca38ab87813
+HEAD = b66ecf5bef3ae6c769dbc6d904ce1c54d3771227
 PATCHES = $(shell ls ${PWD}/patches/*.patch)
 depot:
 	git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git depot

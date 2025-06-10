@@ -1,4 +1,4 @@
-From 202a5226a8f850a955b07c7abc301f3031d9a72d Mon Sep 17 00:00:00 2001
+From bcba740e8dd373acf74a8d7f82d93107e2bf4a08 Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Oct 2024 15:04:17 +0100
 Subject: [PATCH 3/8] Add ping to improve connection stability. Without this,
@@ -10,18 +10,18 @@ Subject: [PATCH 3/8] Add ping to improve connection stability. Without this,
  1 file changed, 8 insertions(+)
 
 diff --git a/front_end/core/protocol_client/InspectorBackend.ts b/front_end/core/protocol_client/InspectorBackend.ts
-index ad2d1fe357..d7af79ede5 100644
+index 32948c2dbd..27dfa1abe3 100644
 --- a/front_end/core/protocol_client/InspectorBackend.ts
 +++ b/front_end/core/protocol_client/InspectorBackend.ts
-@@ -259,6 +259,7 @@ export class SessionRouter {
+@@ -256,6 +256,7 @@ export class SessionRouter {
      proxyConnection: ((Connection | undefined)|null),
-   }>;
-   #pendingScripts: (() => void)[];
+   }>();
+   #pendingScripts: Array<() => void> = [];
 +  #pingInterval: ReturnType<typeof setInterval>;
  
    constructor(connection: Connection) {
      this.#connectionInternal = connection;
-@@ -276,11 +277,18 @@ export class SessionRouter {
+@@ -266,11 +267,18 @@ export class SessionRouter {
      this.#connectionInternal.setOnMessage(this.onMessage.bind(this));
  
      this.#connectionInternal.setOnDisconnect(reason => {
