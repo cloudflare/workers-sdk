@@ -13,7 +13,7 @@ const inspectorPort = await getPort();
 
 const RUNTIMES = [
 	{ flags: "", runtime: "local" },
-	// { flags: "--remote", runtime: "remote" },
+	{ flags: "--remote", runtime: "remote" },
 ] as const;
 
 // WebAssembly module containing single `func add(i32, i32): i32` export.
@@ -41,7 +41,7 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 		helper = new WranglerE2ETestHelper();
 	});
 
-	it.only("works with basic modules format worker", async () => {
+	it("works with basic modules format worker", async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${workerName}"
