@@ -63,7 +63,7 @@
 		"@cloudflare/workers-types": "^4.20250604.0",
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@microsoft/api-extractor": "^7.52.8",
-		"@types/debug": "^4.1.7",
+		"@types/debug": "^4.1.12",
 		"@types/estree": "^1.0.0",
 		"@types/glob-to-regexp": "^0.4.1",
 		"@types/http-cache-semantics": "^4.0.1",

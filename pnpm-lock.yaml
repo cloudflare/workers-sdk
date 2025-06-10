@@ -135,7 +135,7 @@ importers:
         version: 5.4.14(@types/node@20.17.32)(lightningcss@1.29.2)
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
 
   fixtures/additional-modules:
     devDependencies:
@@ -153,7 +153,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -171,7 +171,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -192,7 +192,7 @@ importers:
         version: 5.7.3
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -213,7 +213,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -234,7 +234,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -258,7 +258,7 @@ importers:
         version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -273,7 +273,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -306,7 +306,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -327,7 +327,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -351,7 +351,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -375,7 +375,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
 
   fixtures/isomorphic-random-example: {}
 
@@ -400,7 +400,7 @@ importers:
         version: 5.7.3
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -433,7 +433,7 @@ importers:
         version: 7.0.0
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -458,7 +458,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -476,7 +476,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -503,7 +503,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -521,7 +521,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -542,7 +542,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -570,7 +570,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -588,7 +588,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -606,7 +606,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -624,7 +624,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -645,7 +645,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -663,7 +663,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -700,7 +700,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -721,7 +721,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -736,7 +736,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -757,7 +757,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -775,7 +775,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -793,7 +793,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -811,7 +811,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -829,7 +829,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -847,7 +847,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -865,7 +865,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -883,7 +883,7 @@ importers:
         version: 5.7.3
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -904,7 +904,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -919,7 +919,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -934,7 +934,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1034,7 +1034,7 @@ importers:
         version: 5.4.14(@types/node@20.17.32)(lightningcss@1.29.2)
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1076,7 +1076,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1115,7 +1115,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1136,7 +1136,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1157,7 +1157,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1178,7 +1178,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1199,7 +1199,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1232,7 +1232,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1253,7 +1253,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1271,7 +1271,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1496,7 +1496,7 @@ importers:
         version: 4.2.0(typescript@5.7.3)(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2))
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       which-pm-runs:
         specifier: ^1.1.0
         version: 1.1.0
@@ -1693,8 +1693,8 @@ importers:
         specifier: ^7.52.8
         version: 7.52.8(@types/node@20.17.32)
       '@types/debug':
-        specifier: ^4.1.7
-        version: 4.1.7
+        specifier: ^4.1.12
+        version: 4.1.12
       '@types/estree':
         specifier: ^1.0.0
         version: 1.0.5
@@ -1851,7 +1851,7 @@ importers:
         version: 0.4.1
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
 
   packages/playground-preview-worker:
     dependencies:
@@ -1968,7 +1968,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -2041,7 +2041,7 @@ importers:
         version: 6.1.0(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
 
   packages/vite-plugin-cloudflare/playground:
     devDependencies:
@@ -2962,7 +2962,7 @@ importers:
         version: 5.28.5
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
 
   packages/workers-editor-shared:
     dependencies:
@@ -3200,7 +3200,7 @@ importers:
         version: 5.7.3
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -3246,7 +3246,7 @@ importers:
         version: 5.7.3
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
 
   packages/wrangler:
     dependencies:
@@ -3503,7 +3503,7 @@ importers:
         version: 1.5.4
       vitest:
         specifier: catalog:default
-        version: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+        version: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       vitest-websocket-mock:
         specifier: ^0.4.0
         version: 0.4.0(vitest@3.1.1)
@@ -6665,8 +6665,8 @@ packages:
   '@types/cross-spawn@6.0.2':
     resolution: {integrity: sha512-KuwNhp3eza+Rhu8IFI5HUXRP0LIhqH5cAjubUvGXXthh4YYBuP2ntwEX+Cz8GJoZUHlKo247wPWOfA9LYEq4cw==}
 
-  '@types/debug@4.1.7':
-    resolution: {integrity: sha512-9AonUzyTjXXhEOa0DnqpzZi6VHlqKMswga9EXjpXnnqxwLtdvPPtlO8evrI5D9S6asFRCQ6v+wpiUKbw+vKqyg==}
+  '@types/debug@4.1.12':
+    resolution: {integrity: sha512-vIChWdVG3LG1SMxEvI/AK+FWJthlrqlTu7fbrlywTkkaONwk/UAGaULXRlf8vkzFBLVm0zkMdCquhL5aOjhXPQ==}
 
   '@types/deepmerge@2.2.0':
     resolution: {integrity: sha512-FEQYDHh6+Q+QXKSrIY46m+/lAmAj/bk4KpLaam+hArmzaVpMBHLcfwOH2Q2UOkWM7XsdY9PmZpGyPAjh/JRGhQ==}
@@ -6753,8 +6753,8 @@ packages:
   '@types/mocha@10.0.10':
     resolution: {integrity: sha512-xPyYSz1cMPnJQhl0CLMH68j3gprKZaTjG3s5Vi+fDgx+uhG9NOXwbVt52eFS8ECyXhyKcjDLCBEqBExKuiZb7Q==}
 
-  '@types/ms@0.7.31':
-    resolution: {integrity: sha512-iiUgKzV9AuaEkZqkOLDIvlQiL6ltuZd9tGcW3gwpnX8JbuiuhFlEGmmFXEXkN50Cvq7Os88IY2v0dkDqXYWVgA==}
+  '@types/ms@2.1.0':
+    resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
 
   '@types/mute-stream@0.0.4':
     resolution: {integrity: sha512-CPM9nzrCPPJHQNA9keH9CVkVI+WR5kMa+7XEs5jcGQ0VoAGnLv242w8lIVgwAEfmE4oufJRaTc9PNLQl0ioAow==}
@@ -14161,7 +14161,7 @@ snapshots:
       devalue: 4.3.2
       miniflare: 4.20250417.0
       semver: 7.7.1
-      vitest: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+      vitest: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
       wrangler: 4.12.1(@cloudflare/workers-types@4.20250604.0)
       zod: 3.22.3
     transitivePeerDependencies:
@@ -16355,9 +16355,9 @@ snapshots:
     dependencies:
       '@types/node': 20.17.32
 
-  '@types/debug@4.1.7':
+  '@types/debug@4.1.12':
     dependencies:
-      '@types/ms': 0.7.31
+      '@types/ms': 2.1.0
 
   '@types/deepmerge@2.2.0':
     dependencies:
@@ -16446,7 +16446,7 @@ snapshots:
 
   '@types/mocha@10.0.10': {}
 
-  '@types/ms@0.7.31': {}
+  '@types/ms@2.1.0': {}
 
   '@types/mute-stream@0.0.4':
     dependencies:
@@ -17148,7 +17148,7 @@ snapshots:
       sirv: 3.0.1
       tinyglobby: 0.2.14
       tinyrainbow: 2.0.0
-      vitest: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+      vitest: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
 
   '@vitest/utils@2.1.8':
     dependencies:
@@ -23141,7 +23141,7 @@ snapshots:
     dependencies:
       '@vitest/utils': 2.1.8
       mock-socket: 9.3.1
-      vitest: 3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
+      vitest: 3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2)
 
   vitest@2.1.9(@types/node@20.17.32)(@vitest/ui@2.1.9)(lightningcss@1.29.2):
     dependencies:
@@ -23179,7 +23179,7 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@3.1.1(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2):
+  vitest@3.1.1(@types/debug@4.1.12)(@types/node@20.17.32)(@vitest/ui@3.1.1)(jiti@2.4.2)(lightningcss@1.29.2)(msw@2.4.3(typescript@5.7.3))(supports-color@9.2.2):
     dependencies:
       '@vitest/expect': 3.1.1
       '@vitest/mocker': 3.1.1(msw@2.4.3(typescript@5.7.3))(vite@5.4.14(@types/node@20.17.32)(lightningcss@1.29.2))
@@ -23202,6 +23202,7 @@ snapshots:
       vite-node: 3.1.1(@types/node@20.17.32)(jiti@2.4.2)(lightningcss@1.29.2)(supports-color@9.2.2)
       why-is-node-running: 2.3.0
     optionalDependencies:
+      '@types/debug': 4.1.12
       '@types/node': 20.17.32
       '@vitest/ui': 3.1.1(vitest@3.1.1)
     transitivePeerDependencies:
