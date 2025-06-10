@@ -54,7 +54,7 @@ describe("startWorker - configuration errors", () => {
 				server: {
 					port: await getPort(),
 				},
-				inspector: { port: await getPort() },
+				inspector: false,
 			},
 		});
 
@@ -80,7 +80,7 @@ describe("startWorker - configuration errors", () => {
 				server: {
 					port: await getPort(),
 				},
-				inspector: { port: await getPort() },
+				inspector: false,
 			},
 		});
 

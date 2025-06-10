@@ -48,12 +48,7 @@ export async function startMixedModeSession(
 			server: {
 				port: await getPort(),
 			},
-			// TODO(DEVX-1861): we set this to a random port so that it doesn't conflict with the
-			//                  default one, we should ideally add an option to actually disable
-			//                  the inspector
-			inspector: {
-				port: await getPort(),
-			},
+			inspector: false,
 			logLevel: "error",
 		},
 		bindings: rawBindings,

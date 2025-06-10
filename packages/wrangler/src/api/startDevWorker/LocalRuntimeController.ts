@@ -109,7 +109,15 @@ export async function convertToConfigBundle(
 		initialPort: undefined,
 		initialIp: "127.0.0.1",
 		rules: [],
-		inspectorPort: 0,
+		...(event.config.dev.inspector === false
+			? {
+					inspect: false,
+					inspectorPort: undefined,
+				}
+			: {
+					inspect: true,
+					inspectorPort: 0,
+				}),
 		localPersistencePath: event.config.dev.persist,
 		liveReload: event.config.dev?.liveReload ?? false,
 		crons,
@@ -119,7 +127,6 @@ export async function convertToConfigBundle(
 		httpsKeyPath: event.config.dev?.server?.httpsKeyPath,
 		localUpstream: event.config.dev?.origin?.hostname,
 		upstreamProtocol: event.config.dev?.origin?.secure ? "https" : "http",
-		inspect: true,
 		services: bindings.services,
 		serviceBindings: fetchers,
 		bindVectorizeToProd: event.config.dev?.bindVectorizeToProd ?? false,
@@ -193,7 +200,13 @@ export class LocalRuntimeController extends RuntimeController {
 			// `inspectorUrl` for this set of `options`, we protect `#mf` with a mutex,
 			// so only one update can happen at a time.
 			const userWorkerUrl = await this.#mf.ready;
-			const userWorkerInspectorUrl = await this.#mf.getInspectorURL();
+			// TODO: Miniflare should itself return undefined on
+			//       `getInspectorURL` when no inspector is in use
+			//       (currently the function just hangs)
+			const userWorkerInspectorUrl =
+				options.inspectorPort === undefined
+					? undefined
+					: await this.#mf.getInspectorURL();
 			// If we received a new `bundleComplete` event before we were able to
 			// dispatch a `reloadComplete` for this bundle, ignore this bundle.
 			if (id !== this.#currentBundleId) {
@@ -217,12 +230,16 @@ export class LocalRuntimeController extends RuntimeController {
 						hostname: userWorkerUrl.hostname,
 						port: userWorkerUrl.port,
 					},
-					userWorkerInspectorUrl: {
-						protocol: userWorkerInspectorUrl.protocol,
-						hostname: userWorkerInspectorUrl.hostname,
-						port: userWorkerInspectorUrl.port,
-						pathname: `/core:user:${getName(data.config)}`,
-					},
+					...(userWorkerInspectorUrl
+						? {
+								userWorkerInspectorUrl: {
+									protocol: userWorkerInspectorUrl.protocol,
+									hostname: userWorkerInspectorUrl.hostname,
+									port: userWorkerInspectorUrl.port,
+									pathname: `/core:user:${getName(data.config)}`,
+								},
+							}
+						: {}),
 					userWorkerInnerUrlOverrides: {
 						protocol: data.config?.dev?.origin?.secure ? "https:" : "http:",
 						hostname: data.config?.dev?.origin?.hostname,
