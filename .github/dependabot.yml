@@ -39,22 +39,7 @@ updates:
     reviewers:
       - "@cloudflare/wrangler"
     labels:
-      - "miniflare"
       - "dependencies"
       - "skip-pr-description-validation"
       - "e2e"
       - "every-os"
-    allow:
-      - dependency-name: "workerd"
-      - dependency-name: "@cloudflare/workers-types"
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "daily"
-      time: "06:00" 
-    reviewers:
-      - "@cloudflare/wrangler"
-    labels:
-      - "dependencies"
-      - "skip-pr-description-validation"
-
