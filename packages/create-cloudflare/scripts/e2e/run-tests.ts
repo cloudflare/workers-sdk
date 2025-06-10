@@ -1,15 +1,15 @@
 import { execSync } from "child_process";
 import {
-	E2E_EXPERIMENTAL,
-	E2E_TEST_PM,
-	E2E_TEST_PM_VERSION,
+	isExperimental,
+	testPackageManager,
+	testPackageManagerVersion,
 } from "../../e2e/helpers/constants";
 import { getFrameworksTests } from "../../e2e/tests/frameworks/test-config";
 
 async function main() {
 	const failed: string[] = [];
 
-	const description = `${E2E_TEST_PM}@${E2E_TEST_PM_VERSION}${E2E_EXPERIMENTAL === "true" ? " (experimental)" : ""}`;
+	const description = `${testPackageManager}@${testPackageManagerVersion}${isExperimental ? " (experimental)" : ""}`;
 	try {
 		// Test the CLI features
 		console.log(`::group::Testing CLI: ${description}`);
@@ -58,9 +58,9 @@ function execTests(
 			stdio: "inherit",
 			env: {
 				...process.env,
-				E2E_EXPERIMENTAL,
-				E2E_TEST_PM,
-				E2E_TEST_PM_VERSION,
+				E2E_EXPERIMENTAL: `${isExperimental}`,
+				E2E_TEST_PM: testPackageManager,
+				E2E_TEST_PM_VERSION: testPackageManagerVersion,
 				...extraEnv,
 			},
 		},

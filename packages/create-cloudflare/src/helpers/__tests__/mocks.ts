@@ -3,9 +3,8 @@ import { spinner } from "@cloudflare/cli/interactive";
 import { expect, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import type { Dirent } from "fs";
-import type { PmName } from "helpers/packageManagers";
 
-export const mockPackageManager = (name: PmName, version = "1.0.0") => {
+export const mockPackageManager = (name: string, version = "1.0.0") => {
 	if (!vi.isMockFunction(whichPMRuns)) {
 		expect.fail(
 			"When using `mockPackageManager` you must first call: vi.mock('which-pm-runs');",

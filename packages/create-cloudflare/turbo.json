@@ -27,7 +27,7 @@
 				"E2E_FRAMEWORK_TEST_FILTER",
 				"E2E_PROJECT_PATH",
 				"E2E_TEST_RETRIES",
-				"E2E_NO_DEPLOY"
+				"E2E_RUN_DEPLOY_TESTS"
 			],
 			"dependsOn": ["build"],
 			"inputs": ["e2e/**", "vitest-e2e.config.ts", "!e2e/README.md"],

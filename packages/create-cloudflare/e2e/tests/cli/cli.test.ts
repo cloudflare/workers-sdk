@@ -5,7 +5,7 @@ import { beforeAll, describe, expect } from "vitest";
 import { version } from "../../../package.json";
 import {
 	CLOUDFLARE_API_TOKEN,
-	E2E_EXPERIMENTAL,
+	isExperimental,
 	isWindows,
 	keys,
 } from "../../helpers/constants";
@@ -23,7 +23,7 @@ describe("Create Cloudflare CLI", () => {
 
 	// Note: skipIf(frameworkToTest) makes it so that all the basic C3 functionality
 	//       tests are skipped in case we are testing a specific framework
-	describe.skipIf(E2E_EXPERIMENTAL)("E2E: Basic C3 functionality ", () => {
+	describe.skipIf(isExperimental)("E2E: Basic C3 functionality ", () => {
 		test("--version", async ({ logStream }) => {
 			const { output } = await runC3(["--version"], [], logStream);
 			expect(output).toEqual(version);
@@ -47,7 +47,7 @@ describe("Create Cloudflare CLI", () => {
 			expect(output).toEqual(version);
 		});
 
-		test.skipIf(isWindows || E2E_EXPERIMENTAL)(
+		test.skipIf(isWindows || isExperimental)(
 			"Using arrow keys + enter",
 			async ({ logStream, project }) => {
 				const { output } = await runC3(
@@ -446,7 +446,7 @@ describe("Create Cloudflare CLI", () => {
 
 	describe("help text", () => {
 		test("--help", async ({ logStream }) => {
-			if (E2E_EXPERIMENTAL) {
+			if (isExperimental) {
 				const { output } = await runC3(
 					["--help", "--experimental"],
 					[],

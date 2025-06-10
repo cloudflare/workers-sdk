@@ -4,7 +4,7 @@ import { join } from "path";
 import { readJSON, readToml } from "helpers/files";
 import { beforeAll, describe, expect } from "vitest";
 import { deleteWorker } from "../../../scripts/common";
-import { E2E_WORKER_TEST_FILTER, TEST_TIMEOUT } from "../../helpers/constants";
+import { TEST_TIMEOUT, workerToTestFilter } from "../../helpers/constants";
 import { debuglog } from "../../helpers/debuglog";
 import { test } from "../../helpers/index";
 import { recreateLogFolder } from "../../helpers/log-stream";
@@ -27,8 +27,8 @@ describe
 		beforeAll((ctx) => {
 			recreateLogFolder(ctx);
 
-			if (E2E_WORKER_TEST_FILTER) {
-				debuglog("Running worker tests with filter:", E2E_WORKER_TEST_FILTER);
+			if (workerToTestFilter) {
+				debuglog("Running worker tests with filter:", workerToTestFilter);
 				workerTests.forEach((testConfig) => {
 					debuglog(` - ${testConfig.name ?? testConfig.template}`);
 				});

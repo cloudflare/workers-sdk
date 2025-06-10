@@ -3,10 +3,12 @@ import path from "path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import semver from "semver";
 import whichPmRuns from "which-pm-runs";
+import {
+	testPackageManager,
+	testPackageManagerVersion,
+} from "../../e2e/helpers/constants";
 import { runCommand } from "./command";
 import type { C3Context } from "types";
-
-export type PmName = "pnpm" | "npm" | "yarn" | "bun";
 
 /**
  * Detects the package manager which was used to invoke C3 and provides a map of its associated commands.
@@ -18,13 +20,13 @@ export type PmName = "pnpm" | "npm" | "yarn" | "bun";
  * - dlx: executing packages that are not installed locally (ex. `pnpm dlx create-solid`)
  */
 export const detectPackageManager = () => {
-	const pmInfo = whichPmRuns() as { name: PmName; version: string } | undefined;
+	const pmInfo = whichPmRuns();
 
 	let { name, version } = pmInfo ?? { name: "npm", version: "0.0.0" };
 
-	if (process.env.E2E_TEST_PM && process.env.E2E_TEST_PM_VERSION) {
-		name = process.env.E2E_TEST_PM as PmName;
-		version = process.env.E2E_TEST_PM_VERSION;
+	if (testPackageManager && testPackageManagerVersion) {
+		name = testPackageManager;
+		version = testPackageManagerVersion;
 		process.env.npm_config_user_agent = `${name}/${version}`;
 	}
 

@@ -30,7 +30,7 @@ The tests that run can be controlled by combining any of the following environme
 
 - `E2E_EXPERIMENTAL` - whether to run the tests in experimental mode - without this variable only non-experimental tests are run.
 - `E2E_TEST_PM` + `E2E_TEST_PM_VERSION` - which package manager to simulate in the tests - without these variables the tests simulate `pnpm`.
-- `E2E_NO_DEPLOY` - whether to ask C3 to deploy generated projects and run tests against the deployed version - if this is not set to `"false"`, generated projects are only tested locally.
+- `E2E_RUN_DEPLOY_TESTS` - whether to ask C3 to deploy generated projects and run tests against the deployed version - if this is not set to `"true"`, generated projects are only tested locally.
 - `CLOUDFLARE_API_TOKEN` - the API token to use in tests that connect to Cloudflare - without this variable tests that require Cloudflare access are skipped.
 
 ### Running in experimental mode

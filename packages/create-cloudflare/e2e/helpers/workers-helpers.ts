@@ -4,13 +4,12 @@ import { retry } from "helpers/retry";
 import { sleep } from "helpers/sleep";
 import { fetch } from "undici";
 import { expect } from "vitest";
-import { E2E_EXPERIMENTAL } from "./constants";
+import { isExperimental, runDeployTests } from "./constants";
 import { runC3 } from "./run-c3";
 import { kill, spawnWithLogging, waitForExit } from "./spawn";
 import type { WorkerTestConfig } from "../tests/workers/test-config";
 import type { Writable } from "stream";
 
-const NO_DEPLOY = process.env.E2E_NO_DEPLOY;
 const { name: pm } = detectPackageManager();
 
 export async function runC3ForWorkerTest(
@@ -22,15 +21,17 @@ export async function runC3ForWorkerTest(
 		projectPath,
 		"--type",
 		template,
-		...(E2E_EXPERIMENTAL === "true" ? ["--experimental"] : []),
+		"--experimental",
+		`${isExperimental}`,
 		"--no-open",
 		"--no-git",
-		NO_DEPLOY ? "--no-deploy" : "--deploy",
+		"--deploy",
+		`${runDeployTests}`,
 		...(argv ?? []),
 	];
 
 	const { output } = await runC3(args, promptHandlers, logStream);
-	if (NO_DEPLOY) {
+	if (!runDeployTests) {
 		return null;
 	}
 

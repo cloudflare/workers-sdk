@@ -5,10 +5,10 @@ import { join } from "path";
 import { beforeAll, describe, expect } from "vitest";
 import { deleteProject, deleteWorker } from "../../../scripts/common";
 import {
-	E2E_EXPERIMENTAL,
-	E2E_FRAMEWORK_TEST_FILTER,
-	E2E_TEST_RETRIES,
+	frameworkToTestFilter,
+	isExperimental,
 	TEST_TIMEOUT,
+	testRetries,
 } from "../../helpers/constants";
 import { debuglog } from "../../helpers/debuglog";
 import {
@@ -32,11 +32,8 @@ describe
 	.skipIf(frameworkTests.length === 0)
 	.concurrent(`E2E: Web frameworks`, () => {
 		beforeAll((ctx) => {
-			if (E2E_FRAMEWORK_TEST_FILTER) {
-				debuglog(
-					"Running framework tests with filter:",
-					E2E_FRAMEWORK_TEST_FILTER,
-				);
+			if (frameworkToTestFilter) {
+				debuglog("Running framework tests with filter:", frameworkToTestFilter);
 				frameworkTests.forEach((testConfig) => {
 					debuglog(` - ${testConfig.name}`);
 				});
@@ -55,7 +52,7 @@ describe
 			test.runIf(shouldRunTest(frameworkConfig.id, testConfig))(
 				`${frameworkConfig.id} (${frameworkConfig.platform ?? "pages"})`,
 				{
-					retry: E2E_TEST_RETRIES,
+					retry: testRetries,
 					timeout: testConfig.timeout || TEST_TIMEOUT,
 				},
 				async ({ logStream, project }) => {
@@ -74,7 +71,7 @@ describe
 							logStream,
 							{
 								argv: [
-									...(E2E_EXPERIMENTAL ? ["--experimental"] : []),
+									...(isExperimental ? ["--experimental"] : []),
 									...(testConfig.testCommitMessage ? ["--git"] : ["--no-git"]),
 									...(testConfig.argv ?? []),
 									...(testConfig.flags ? ["--", ...testConfig.flags] : []),

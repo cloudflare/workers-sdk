@@ -4,14 +4,14 @@ import { mkdtempSync, readFileSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test as originalTest } from "vitest";
-import { E2E_PROJECT_PATH } from "./constants";
+import { customTempProjectPath } from "./constants";
 import { createTestLogStream } from "./log-stream";
 import type { Writable } from "node:stream";
 
 const C3_E2E_PREFIX = "tmp-e2e-c3";
 const testProjectDir = (suite: string, test: string) => {
 	const tmpDirPath =
-		E2E_PROJECT_PATH ??
+		customTempProjectPath ??
 		realpathSync(mkdtempSync(path.join(tmpdir(), `c3-tests-${suite}`)));
 
 	const randomSuffix = crypto.randomBytes(4).toString("hex");
@@ -32,7 +32,7 @@ const testProjectDir = (suite: string, test: string) => {
 	const getPath = () => path.join(tmpDirPath, getName());
 	const clean = () => {
 		try {
-			if (E2E_PROJECT_PATH) {
+			if (customTempProjectPath) {
 				return;
 			}
 

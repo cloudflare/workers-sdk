@@ -22,9 +22,9 @@ import { getFrameworkMap } from "../../src/templates";
 import {
 	CLOUDFLARE_ACCOUNT_ID,
 	CLOUDFLARE_API_TOKEN,
-	E2E_EXPERIMENTAL,
-	E2E_TEST_PM,
-	NO_DEPLOY,
+	isExperimental,
+	runDeployTests,
+	testPackageManager,
 } from "./constants";
 import { runC3 } from "./run-c3";
 import { kill, spawnWithLogging, waitForExit } from "./spawn";
@@ -64,7 +64,8 @@ export async function runC3ForFrameworkTest(
 		"web-framework",
 		"--framework",
 		framework,
-		NO_DEPLOY ? "--no-deploy" : "--deploy",
+		"--deploy",
+		`${runDeployTests}`,
 		"--no-open",
 		"--no-auto-update",
 	];
@@ -72,7 +73,7 @@ export async function runC3ForFrameworkTest(
 	args.push(...argv);
 
 	const { output } = await runC3(args, promptHandlers, logStream);
-	if (NO_DEPLOY) {
+	if (!runDeployTests) {
 		return null;
 	}
 
@@ -123,7 +124,7 @@ export async function verifyDeployment(
 	deploymentUrl: string,
 	expectedText: string,
 ) {
-	if (NO_DEPLOY) {
+	if (!runDeployTests) {
 		return;
 	}
 
@@ -325,7 +326,7 @@ export function shouldRunTest(
 		// Skip if the test is quarantined
 		testConfig.quarantine !== true &&
 		// Skip if the package manager is unsupported
-		!testConfig.unsupportedPms?.includes(E2E_TEST_PM) &&
+		!testConfig.unsupportedPms?.includes(testPackageManager) &&
 		// Skip if the OS is unsupported
 		!testConfig.unsupportedOSs?.includes(process.platform)
 	);
@@ -340,7 +341,7 @@ export function shouldRunTest(
  */
 export function getFrameworkConfig(frameworkKey: string) {
 	const frameworkMap = getFrameworkMap({
-		experimental: E2E_EXPERIMENTAL === "true",
+		experimental: isExperimental,
 	});
 	const [frameworkId, platformVariant] = frameworkKey.split(":");
 	if ("platformVariants" in frameworkMap[frameworkId]) {

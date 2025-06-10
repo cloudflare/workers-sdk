@@ -1,7 +1,7 @@
 import { detectPackageManager } from "../../../src/helpers/packageManagers";
 import {
-	E2E_EXPERIMENTAL,
-	E2E_FRAMEWORK_TEST_FILTER,
+	frameworkToTestFilter,
+	isExperimental,
 	keys,
 	LONG_TIMEOUT,
 } from "../../helpers/constants";
@@ -678,17 +678,16 @@ function getExperimentalFrameworkTestConfig() {
  */
 export function getFrameworksTests(): NamedFrameworkTestConfig[] {
 	const packageManager = detectPackageManager();
-	const frameworkTests =
-		E2E_EXPERIMENTAL === "true"
-			? getExperimentalFrameworkTestConfig()
-			: getFrameworkTestConfig(packageManager.name);
+	const frameworkTests = isExperimental
+		? getExperimentalFrameworkTestConfig()
+		: getFrameworkTestConfig(packageManager.name);
 	return frameworkTests.filter((testConfig) => {
-		if (!E2E_FRAMEWORK_TEST_FILTER) {
+		if (!frameworkToTestFilter) {
 			return true;
 		}
-		if (E2E_FRAMEWORK_TEST_FILTER.includes(":")) {
-			return testConfig.name === E2E_FRAMEWORK_TEST_FILTER;
+		if (frameworkToTestFilter.includes(":")) {
+			return testConfig.name === frameworkToTestFilter;
 		}
-		return testConfig.name.split(":")[0] === E2E_FRAMEWORK_TEST_FILTER;
+		return testConfig.name.split(":")[0] === frameworkToTestFilter;
 	});
 }

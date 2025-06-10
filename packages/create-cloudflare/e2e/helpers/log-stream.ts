@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { createWriteStream, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
-import { E2E_EXPERIMENTAL, E2E_TEST_PM } from "./constants";
+import { isExperimental, testPackageManager } from "./constants";
 import type { RunnerTask, RunnerTestSuite } from "vitest";
 
 export function createTestLogStream(task: RunnerTask) {
@@ -48,8 +48,8 @@ function getLogPath(suite: RunnerTestSuite) {
 		: "unknown";
 
 	return path.join(
-		"./.e2e-logs" + (E2E_EXPERIMENTAL === "true" ? "-experimental" : ""),
-		E2E_TEST_PM,
+		"./.e2e-logs" + (isExperimental ? "-experimental" : ""),
+		testPackageManager,
 		suiteFilename,
 	);
 }

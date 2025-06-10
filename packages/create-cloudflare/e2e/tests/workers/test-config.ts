@@ -1,7 +1,4 @@
-import {
-	E2E_EXPERIMENTAL,
-	E2E_WORKER_TEST_FILTER,
-} from "../../helpers/constants";
+import { isExperimental, workerToTestFilter } from "../../helpers/constants";
 import type { RunnerConfig } from "../../helpers/run-c3";
 
 export type WorkerTestConfig = RunnerConfig & {
@@ -182,10 +179,9 @@ function getNonExperimentalWorkerTests(): WorkerTestConfig[] {
  *   - workerTestFilter: A string that can be used to filter the tests by "name" or "name:variant".
  */
 export function getWorkerTests(): WorkerTestConfig[] {
-	const workerTests =
-		E2E_EXPERIMENTAL === "true"
-			? getExperimentalWorkerTests()
-			: getNonExperimentalWorkerTests();
+	const workerTests = isExperimental
+		? getExperimentalWorkerTests()
+		: getNonExperimentalWorkerTests();
 	return workerTests
 		.flatMap((testConfig) =>
 			testConfig.variants.length > 0
@@ -199,12 +195,12 @@ export function getWorkerTests(): WorkerTestConfig[] {
 				: [{ ...testConfig, name: testConfig.name ?? testConfig.template }],
 		)
 		.filter((testConfig) => {
-			if (!E2E_WORKER_TEST_FILTER) {
+			if (!workerToTestFilter) {
 				return true;
 			}
-			if (E2E_WORKER_TEST_FILTER.includes(":")) {
-				return testConfig.name === E2E_WORKER_TEST_FILTER;
+			if (workerToTestFilter.includes(":")) {
+				return testConfig.name === workerToTestFilter;
 			}
-			return testConfig.name.split(":")[0] === E2E_WORKER_TEST_FILTER;
+			return testConfig.name.split(":")[0] === workerToTestFilter;
 		});
 }
