@@ -8,6 +8,8 @@ export const ADDITIONAL_MODULE_TYPES = [
 	"Text",
 ] as const;
 
+export const PUBLIC_DIR_PREFIX = "/__vite_public_dir__";
+
 export const DEFAULT_INSPECTOR_PORT = 9229;
 
 export const kRequestType = Symbol("kRequestType");

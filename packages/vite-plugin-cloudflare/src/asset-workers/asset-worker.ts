@@ -3,7 +3,7 @@ import { UNKNOWN_HOST } from "../shared";
 import type { Env as _Env } from "@cloudflare/workers-shared/asset-worker";
 
 interface Env extends _Env {
-	__VITE_GET_RESOLVED_HTML_PATH__: Fetcher;
+	__VITE_HTML_EXISTS__: Fetcher;
 	__VITE_FETCH_HTML__: Fetcher;
 }
 
@@ -33,7 +33,7 @@ export default class CustomAssetWorker extends AssetWorker<Env> {
 	override async unstable_exists(pathname: string) {
 		// We need this regex to avoid getting `//` as a pathname, which results in an invalid URL. Should this be fixed upstream?
 		const url = new URL(pathname.replace(/^\/{2,}/, "/"), UNKNOWN_HOST);
-		const response = await this.env.__VITE_GET_RESOLVED_HTML_PATH__.fetch(url);
+		const response = await this.env.__VITE_HTML_EXISTS__.fetch(url);
 
 		return response.json() as Promise<string | null>;
 	}
@@ -41,9 +41,11 @@ export default class CustomAssetWorker extends AssetWorker<Env> {
 		// the 'sec-fetch-mode: navigate' header is stripped by something on its way into this worker
 		// so we restore it from 'x-mf-sec-fetch-mode'
 		const secFetchMode = request.headers.get("X-Mf-Sec-Fetch-Mode");
+
 		if (secFetchMode) {
 			request.headers.set("Sec-Fetch-Mode", secFetchMode);
 		}
+
 		return await super.unstable_canFetch(request);
 	}
 }

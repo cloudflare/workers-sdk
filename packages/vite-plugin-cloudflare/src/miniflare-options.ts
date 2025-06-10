@@ -23,6 +23,7 @@ import {
 	ASSET_WORKER_NAME,
 	ASSET_WORKERS_COMPATIBILITY_DATE,
 	kRequestType,
+	PUBLIC_DIR_PREFIX,
 	ROUTER_WORKER_NAME,
 } from "./constants";
 import { additionalModuleRE } from "./shared";
@@ -284,7 +285,7 @@ export async function getDevMiniflareOptions(
 				CONFIG: assetsConfig,
 			},
 			serviceBindings: {
-				__VITE_GET_RESOLVED_HTML_PATH__: async (request) => {
+				__VITE_HTML_EXISTS__: async (request) => {
 					const { pathname } = new URL(request.url);
 
 					if (pathname.endsWith(".html")) {
@@ -307,7 +308,11 @@ export async function getDevMiniflareOptions(
 								const stats = await fsp.stat(resolvedPath);
 
 								if (stats.isFile()) {
-									return MiniflareResponse.json(resolvedPath);
+									return MiniflareResponse.json(
+										resolvedPath === publicDirFilePath
+											? `${PUBLIC_DIR_PREFIX}${pathname}`
+											: pathname
+									);
 								}
 							} catch (error) {}
 						}
@@ -317,13 +322,18 @@ export async function getDevMiniflareOptions(
 				},
 				__VITE_FETCH_HTML__: async (request) => {
 					const { pathname } = new URL(request.url);
+					const { root, publicDir } = resolvedViteConfig;
+					const isInPublicDir = pathname.startsWith(PUBLIC_DIR_PREFIX);
+					const resolvedPath = isInPublicDir
+						? path.join(publicDir, pathname.slice(PUBLIC_DIR_PREFIX.length))
+						: path.join(root, pathname);
 
 					try {
-						let html = await fsp.readFile(pathname, "utf-8");
+						let html = await fsp.readFile(resolvedPath, "utf-8");
 
 						// HTML files in the public directory should not be transformed
-						if (!pathname.startsWith(resolvedViteConfig.publicDir)) {
-							html = await viteDevServer.transformIndexHtml(pathname, html);
+						if (!isInPublicDir) {
+							html = await viteDevServer.transformIndexHtml(resolvedPath, html);
 						}
 
 						return new MiniflareResponse(html, {
