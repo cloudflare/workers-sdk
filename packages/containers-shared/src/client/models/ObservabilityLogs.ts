@@ -4,8 +4,7 @@
 
 /**
  * Observability logging settings.
- * @deprecated
  */
-export type ObservabilityLogging = {
+export type ObservabilityLogs = {
 	enabled?: boolean;
 };
