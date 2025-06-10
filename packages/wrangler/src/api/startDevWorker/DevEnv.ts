@@ -23,14 +23,7 @@ export class DevEnv extends EventEmitter {
 		try {
 			await this.config.set(options, true);
 		} catch (e) {
-			const error =
-				e instanceof Error
-					? e
-					: new Error(
-							typeof e === "string"
-								? e
-								: "An unknown error occurred when starting the worker"
-						);
+const error = new Error("An error occurred when starting the server", { cause: e });
 			this.proxy.ready.reject(error);
 			await worker.dispose();
 			throw e;
