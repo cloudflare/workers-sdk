@@ -283,27 +283,39 @@ export async function getDevMiniflareOptions(
 				CONFIG: assetsConfig,
 			},
 			serviceBindings: {
-				__VITE_ASSET_EXISTS__: async (request) => {
+				__VITE_GET_RESOLVED_HTML_PATH__: async (request) => {
 					const { pathname } = new URL(request.url);
-					let exists = false;
 
 					if (pathname.endsWith(".html")) {
-						try {
-							const filePath = path.join(resolvedViteConfig.root, pathname);
-							const stats = await fsp.stat(filePath);
-							exists = stats.isFile();
-						} catch (error) {}
+						const publicFilePath = path.join(
+							resolvedViteConfig.publicDir,
+							pathname
+						);
+						const rootFilePath = path.join(resolvedViteConfig.root, pathname);
+
+						for (const resolvedPath of [publicFilePath, rootFilePath]) {
+							try {
+								const stats = await fsp.stat(resolvedPath);
+
+								if (stats.isFile()) {
+									return MiniflareResponse.json(resolvedPath);
+								}
+							} catch (error) {}
+						}
 					}
 
-					return MiniflareResponse.json(exists);
+					return MiniflareResponse.json(null);
 				},
-				__VITE_FETCH_ASSET__: async (request) => {
+				__VITE_FETCH_HTML__: async (request) => {
 					const { pathname } = new URL(request.url);
-					const filePath = path.join(resolvedViteConfig.root, pathname);
 
 					try {
-						let html = await fsp.readFile(filePath, "utf-8");
-						html = await viteDevServer.transformIndexHtml(pathname, html);
+						let html = await fsp.readFile(pathname, "utf-8");
+
+						// HTML files in the public directory should not be transformed
+						if (!pathname.startsWith(resolvedViteConfig.publicDir)) {
+							html = await viteDevServer.transformIndexHtml(pathname, html);
+						}
 
 						return new MiniflareResponse(html, {
 							headers: { "Content-Type": "text/html" },
