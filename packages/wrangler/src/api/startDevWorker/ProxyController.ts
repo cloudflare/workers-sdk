@@ -48,7 +48,7 @@ type ProxyControllerEventMap = ControllerEventMap & {
 	previewTokenExpired: [PreviewTokenExpiredEvent];
 };
 export class ProxyController extends Controller<ProxyControllerEventMap> {
-	public ready = createDeferred<ReadyEvent | null>();
+	public ready = createDeferred<ReadyEvent>();
 
 	public proxyWorker?: Miniflare;
 	proxyWorkerOptions?: MiniflareOptions;
@@ -186,7 +186,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 
 			// this creates a new .ready promise that will be resolved when both ProxyWorkers are ready
 			// it also respects any await-ers of the existing .ready promise
-			this.ready = createDeferred<ReadyEvent | null>(this.ready);
+			this.ready = createDeferred<ReadyEvent>(this.ready);
 		}
 
 		// store the non-null versions for callbacks
@@ -303,9 +303,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 
 		try {
 			await this.runtimeMessageMutex.runWith(async () => {
-				const readyEvent = await this.ready.promise;
-				assert(readyEvent);
-				const { proxyWorker } = readyEvent;
+				const { proxyWorker } = await this.ready.promise;
 
 				const ready = await proxyWorker.ready.catch(() => undefined);
 				if (!ready) {

@@ -23,8 +23,6 @@ export class DevEnv extends EventEmitter {
 		try {
 			await this.config.set(options, true);
 		} catch (e) {
-			// Note: we need to resolve the ready promise since worker.dispose awaits it
-			this.proxy.ready.resolve(null);
 			await worker.dispose();
 			throw e;
 		}
@@ -148,16 +146,10 @@ function createWorkerObject(devEnv: DevEnv): Worker {
 			return devEnv.proxy.ready.promise.then(() => undefined);
 		},
 		get url() {
-			return devEnv.proxy.ready.promise.then((ev) => {
-				assert(ev);
-				return ev.url;
-			});
+			return devEnv.proxy.ready.promise.then((ev) => ev.url);
 		},
 		get inspectorUrl() {
-			return devEnv.proxy.ready.promise.then((ev) => {
-				assert(ev);
-				return ev.inspectorUrl;
-			});
+			return devEnv.proxy.ready.promise.then((ev) => ev.inspectorUrl);
 		},
 		get config() {
 			assert(devEnv.config.latestConfig);
@@ -170,9 +162,7 @@ function createWorkerObject(devEnv: DevEnv): Worker {
 			return devEnv.config.patch(config);
 		},
 		async fetch(...args) {
-			const ev = await devEnv.proxy.ready.promise;
-			assert(ev);
-			const { proxyWorker } = ev;
+			const { proxyWorker } = await devEnv.proxy.ready.promise;
 			await devEnv.proxy.runtimeMessageMutex.drained();
 
 			return proxyWorker.dispatchFetch(...args);
@@ -182,9 +172,7 @@ function createWorkerObject(devEnv: DevEnv): Worker {
 				this.config.name,
 				"Worker name must be defined to use `Worker.queue()`"
 			);
-			const ev = await devEnv.proxy.ready.promise;
-			assert(ev);
-			const { proxyWorker } = ev;
+			const { proxyWorker } = await devEnv.proxy.ready.promise;
 			const w = await proxyWorker.getWorker(this.config.name);
 			return w.queue(...args);
 		},
@@ -193,14 +181,11 @@ function createWorkerObject(devEnv: DevEnv): Worker {
 				this.config.name,
 				"Worker name must be defined to use `Worker.scheduled()`"
 			);
-			const ev = await devEnv.proxy.ready.promise;
-			assert(ev);
-			const { proxyWorker } = ev;
+			const { proxyWorker } = await devEnv.proxy.ready.promise;
 			const w = await proxyWorker.getWorker(this.config.name);
 			return w.scheduled(...args);
 		},
 		async dispose() {
-			await devEnv.proxy.ready.promise;
 			await devEnv.teardown();
 		},
 		raw: devEnv,
