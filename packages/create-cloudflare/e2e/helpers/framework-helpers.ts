@@ -160,8 +160,9 @@ export async function verifyPreviewScript(
 			projectPath,
 	);
 
-	// Run the dev-server on a random port to avoid colliding with other tests
-	const TEST_PORT = Math.ceil(Math.random() * 1000) + 20000;
+	// Run the dev-server on random ports to avoid colliding with other tests
+	const port = await getPort();
+	const inspectorPort = await getPort();
 
 	const proc = spawnWithLogging(
 		[
@@ -171,7 +172,9 @@ export async function verifyPreviewScript(
 			...(packageManager.name === "npm" ? ["--"] : []),
 			...(verifyPreview.previewArgs ?? []),
 			"--port",
-			`${TEST_PORT}`,
+			`${port}`,
+			"--inspector-port",
+			`${inspectorPort}`,
 		],
 		{
 			cwd: projectPath,
@@ -187,14 +190,11 @@ export async function verifyPreviewScript(
 		// so wait up to 5 mins for the dev-server to be ready.
 		await retry(
 			{ times: 300, sleepMs: 5000 },
-			async () =>
-				await fetch(`http://127.0.0.1:${TEST_PORT}${verifyPreview.route}`),
+			async () => await fetch(`http://127.0.0.1:${port}${verifyPreview.route}`),
 		);
 
 		// Make a request to the specified test route
-		const res = await fetch(
-			`http://127.0.0.1:${TEST_PORT}${verifyPreview.route}`,
-		);
+		const res = await fetch(`http://127.0.0.1:${port}${verifyPreview.route}`);
 		expect(await res.text()).toContain(verifyPreview.expectedText);
 	} finally {
 		// Kill the process gracefully so ports can be cleaned up

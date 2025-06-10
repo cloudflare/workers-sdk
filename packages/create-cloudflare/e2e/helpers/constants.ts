@@ -1,3 +1,5 @@
+import assert from "node:assert";
+
 export const isWindows = process.platform === "win32";
 export const TEST_TIMEOUT = 1000 * 60 * 5;
 export const LONG_TIMEOUT = 1000 * 60 * 10;
@@ -11,7 +13,7 @@ export const isExperimental = process.env.E2E_EXPERIMENTAL === "true";
 export const workerToTestFilter = process.env.E2E_WORKER_TEST_FILTER;
 export const frameworkToTestFilter = process.env.E2E_FRAMEWORK_TEST_FILTER;
 export const testPackageManager = isOneOf(
-	process.env.E2E_TEST_PM,
+	"E2E_TEST_PM",
 	["pnpm", "npm", "yarn", "bun"] as const,
 	"pnpm",
 );
@@ -34,12 +36,14 @@ export const keys = {
 };
 
 function isOneOf<Options extends readonly string[]>(
-	value: string | undefined,
+	key: string,
 	possibleValues: Options,
 	defaultValue: Options[number],
 ): Options[number] {
-	if (value && possibleValues.includes(value)) {
-		return value;
-	}
-	return defaultValue;
+	const value = process.env[key] ?? defaultValue;
+	assert(
+		possibleValues.includes(value),
+		`Invalid environment variable "${key}". Expected one of: ${possibleValues.join(", ")}`,
+	);
+	return value;
 }

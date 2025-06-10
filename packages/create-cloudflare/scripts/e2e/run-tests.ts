@@ -6,65 +6,50 @@ import {
 } from "../../e2e/helpers/constants";
 import { getFrameworksTests } from "../../e2e/tests/frameworks/test-config";
 
-async function main() {
-	const failed: string[] = [];
+class TestRunner {
+	#failed: string[] = [];
 
-	const description = `${testPackageManager}@${testPackageManagerVersion}${isExperimental ? " (experimental)" : ""}`;
-	try {
-		// Test the CLI features
-		console.log(`::group::Testing CLI: ${description}`);
-		execTests("cli");
-		console.log("::endgroup::");
-
-		// Test the Workers templates
-		console.log(`::group::Testing Workers: ${description}`);
-		execTests("workers");
-		console.log("::endgroup::");
-
-		// Test the Frameworks templates
-		const frameworkGroups = getFrameworksGroups();
-		for (const frameworkGroup of frameworkGroups) {
+	/** Runs the tests for a given testGroup and other options */
+	execTests(
+		description: string,
+		testFilter: "cli" | "workers" | "frameworks",
+		extraEnv: Record<string, string> = {},
+	) {
+		try {
 			console.log(
-				`::group::Testing Frameworks: ${description} - ${frameworkGroup}`,
+				`::group::${description} (${testPackageManager}${testPackageManagerVersion ? `@${testPackageManagerVersion}` : ""}${isExperimental ? " / experimental" : ""})`,
 			);
-			execTests("frameworks", {
-				E2E_FRAMEWORK_TEST_FILTER: frameworkGroup,
-			});
+			execSync(
+				`pnpm turbo test:e2e --log-order=stream --output-logs=new-only --summarize --filter=create-cloudflare -- ${testFilter}`,
+				{
+					stdio: "inherit",
+					env: {
+						...process.env,
+						E2E_EXPERIMENTAL: `${isExperimental}`,
+						E2E_TEST_PM: testPackageManager,
+						E2E_TEST_PM_VERSION: testPackageManagerVersion,
+						...extraEnv,
+					},
+				},
+			);
 			console.log("::endgroup::");
+		} catch (e) {
+			if (e instanceof Error && "signal" in e && e.signal === "SIGINT") {
+				process.exit(1);
+			}
+			console.error("Failed, moving on");
+			this.#failed.push(description);
 		}
-	} catch (e) {
-		if (e instanceof Error && "signal" in e && e.signal === "SIGINT") {
-			return;
-		}
-		console.error("Failed, moving on");
-		failed.push(description);
 	}
 
-	if (failed.length > 0) {
-		throw new Error(
-			"At least one task failed:" + failed.map((file) => `\n - ${file}`),
-		);
+	assertNoFailures() {
+		if (this.#failed.length > 0) {
+			throw new Error(
+				"At least one task failed:" +
+					this.#failed.map((file) => `\n - ${file}`),
+			);
+		}
 	}
-}
-
-/** Runs the tests for a given testGroup and other options */
-function execTests(
-	testGroup: "cli" | "workers" | "frameworks",
-	extraEnv: Record<string, string> = {},
-) {
-	execSync(
-		`pnpm turbo test:e2e --log-order=stream --output-logs=new-only --summarize --filter=create-cloudflare -- ${testGroup}`,
-		{
-			stdio: "inherit",
-			env: {
-				...process.env,
-				E2E_EXPERIMENTAL: `${isExperimental}`,
-				E2E_TEST_PM: testPackageManager,
-				E2E_TEST_PM_VERSION: testPackageManagerVersion,
-				...extraEnv,
-			},
-		},
-	);
 }
 
 /**
@@ -77,7 +62,20 @@ function getFrameworksGroups() {
 	);
 }
 
-main().catch((error) => {
-	console.error("Error during tests:", error);
-	process.exit(1);
-});
+function main() {
+	const testRunner = new TestRunner();
+	testRunner.execTests(`Testing CLI`, "cli");
+	testRunner.execTests(`Testing Workers`, "workers");
+	for (const frameworkGroup of getFrameworksGroups()) {
+		testRunner.execTests(
+			`Testing Framework "${frameworkGroup}"`,
+			"frameworks",
+			{
+				E2E_FRAMEWORK_TEST_FILTER: frameworkGroup,
+			},
+		);
+	}
+	testRunner.assertNoFailures();
+}
+
+main();
