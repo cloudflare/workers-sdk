@@ -956,6 +956,7 @@ export const pagesDevCommand = createCommand({
 					site: undefined,
 					siteInclude: undefined,
 					siteExclude: undefined,
+					enableContainers: false,
 				})
 		);
 

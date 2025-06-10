@@ -38,8 +38,8 @@ import {
 	Response,
 } from "./http";
 import {
+	ContainerController,
 	ContainerOptions,
-	ContainerService,
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	DurableObjectClassNames,
@@ -903,7 +903,7 @@ export class Miniflare {
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
 	#proxyClient?: ProxyClient;
-	#containerService?: ContainerService;
+	#containerController?: ContainerController;
 
 	#cfObject?: Record<string, any> = {};
 
@@ -1589,7 +1589,9 @@ export class Miniflare {
 			innerBindings: Worker_Binding[];
 		}[] = [];
 
-		let containerOptions: NonNullable<ContainerOptions> = {};
+		let containerOptions: {
+			[className: string]: ContainerOptions;
+		} = {};
 
 		for (const [key, plugin] of PLUGIN_ENTRIES) {
 			const pluginExtensions = await plugin.getExtensions?.({
@@ -1889,12 +1891,18 @@ export class Miniflare {
 
 		if (
 			Object.keys(containerOptions).length &&
-			!sharedOpts.containers.ignore_containers
+			sharedOpts.containers.enableContainers
 		) {
-			if (this.#containerService === undefined) {
-				this.#containerService = new ContainerService(containerOptions);
+			if (this.#containerController === undefined) {
+				this.#containerController = new ContainerController(
+					containerOptions,
+					this.#sharedOpts.containers
+				);
 			} else {
-				this.#containerService.updateConfig(containerOptions);
+				this.#containerController.updateConfig(
+					containerOptions,
+					this.#sharedOpts.containers
+				);
 			}
 		}
 

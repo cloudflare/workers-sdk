@@ -2,35 +2,35 @@ import { z } from "zod";
 import { Plugin } from "../shared";
 
 const className = z.string();
+
+export const ContainerSchema = z.object({
+	image: z.string(),
+	maxInstances: z.number().optional(),
+	imageBuildContext: z.string().optional(),
+	args: z.record(z.string(), z.string()).default({}),
+	exposedPorts: z.number().array().optional(),
+});
 export const ContainersOptionsSchema = z.object({
-	containers: z
-		.record(
-			className,
-			z.object({
-				image: z.string(),
-				maxInstances: z.number().optional(),
-				imageBuildContext: z.string().optional(),
-				exposedPorts: z.number().array().optional(),
-			})
-		)
-		.optional(),
+	containers: z.record(className, ContainerSchema).optional(),
 });
 
-export type ContainerOptions = z.infer<typeof ContainersOptionsSchema>;
+export type ContainerOptions = z.infer<typeof ContainerSchema>;
 
-// TODO: Doesn't exist in wrangler yet
-export const ContainersSharedOptions = z.object({
-	ignore_containers: z.string().optional(),
+export const ContainersSharedSchema = z.object({
+	enableContainers: z.boolean().default(true),
+	dockerPath: z.string().default("docker"),
 });
+
+export type ContainersSharedOptions = z.infer<typeof ContainersSharedSchema>;
 
 export const CONTAINER_PLUGIN_NAME = "containers";
 
 export const CONTAINER_PLUGIN: Plugin<
 	typeof ContainersOptionsSchema,
-	typeof ContainersSharedOptions
+	typeof ContainersSharedSchema
 > = {
 	options: ContainersOptionsSchema,
-	sharedOptions: ContainersSharedOptions,
+	sharedOptions: ContainersSharedSchema,
 	async getBindings() {
 		return;
 	},

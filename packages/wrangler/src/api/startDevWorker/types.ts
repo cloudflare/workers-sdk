@@ -183,6 +183,12 @@ export interface StartDevWorkerInput {
 
 		/** Whether the experimental mixed mode feature should be enabled */
 		experimentalMixedMode?: boolean;
+
+		/** Whether to build and connect to containers during local dev. Requires Docker daemon to be running. Defaults to true. */
+		enableContainers?: boolean;
+
+		/** Path to the docker executable. Defaults to 'docker' */
+		dockerPath?: string;
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;
