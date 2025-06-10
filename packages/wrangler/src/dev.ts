@@ -665,7 +665,9 @@ export async function startDev(args: StartDevOptions) {
 			devEnv = new DevEnv();
 
 			// The ProxyWorker will have a stable host and port, so only listen for the first update
-			void devEnv.proxy.ready.promise.then(({ url }) => {
+			void devEnv.proxy.ready.promise.then((ev) => {
+				assert(ev);
+				const { url } = ev;
 				if (args.onReady) {
 					args.onReady(url.hostname, parseInt(url.port));
 				}
@@ -697,7 +699,9 @@ export async function startDev(args: StartDevOptions) {
 						async (reloadEvent: ReloadCompleteEvent) => {
 							if (!reloadEvent.config.dev?.remote) {
 								assert(devEnv !== undefined && !Array.isArray(devEnv));
-								const { url } = await devEnv.proxy.ready.promise;
+								const ev = await devEnv.proxy.ready.promise;
+								assert(ev);
+								const { url } = ev;
 
 								await maybeRegisterLocalWorker(
 									url,
