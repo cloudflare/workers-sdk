@@ -42,6 +42,12 @@ test("returns the correct nested 404 page", async () => {
 	expect(content).toBe("About 404");
 });
 
+test("returns HTML files in the public directory and prioritizes them over root level HTML files", async () => {
+	await page.goto(`${viteTestUrl}/public-html`);
+	const content = await page.textContent("h1");
+	expect(content).toBe("Public Directory HTML");
+});
+
 test("worker configs warnings are not present in the terminal", async () => {
 	expect(serverLogs.warns).toEqual([]);
 });
