@@ -48,3 +48,7 @@ export type Defined<T> = Exclude<T, undefined>;
 export function getFirstAvailablePort(start: number) {
 	return getPort({ port: portNumbers(start, 65535) });
 }
+
+export function withTrailingSlash(path: string): string {
+	return path[path.length - 1] !== "/" ? `${path}/` : path;
+}

@@ -26,6 +26,7 @@ import {
 	ROUTER_WORKER_NAME,
 } from "./constants";
 import { additionalModuleRE } from "./shared";
+import { withTrailingSlash } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type {
 	PersistState,
@@ -287,13 +288,21 @@ export async function getDevMiniflareOptions(
 					const { pathname } = new URL(request.url);
 
 					if (pathname.endsWith(".html")) {
-						const publicFilePath = path.join(
-							resolvedViteConfig.publicDir,
-							pathname
+						const { root, publicDir } = resolvedViteConfig;
+						const publicDirInRoot = publicDir.startsWith(
+							withTrailingSlash(root)
 						);
-						const rootFilePath = path.join(resolvedViteConfig.root, pathname);
+						const publicPath = withTrailingSlash(publicDir.slice(root.length));
 
-						for (const resolvedPath of [publicFilePath, rootFilePath]) {
+						// Assets in the public directory should be served at the root path
+						if (publicDirInRoot && pathname.startsWith(publicPath)) {
+							return MiniflareResponse.json(null);
+						}
+
+						const publicDirFilePath = path.join(publicDir, pathname);
+						const rootDirFilePath = path.join(root, pathname);
+
+						for (const resolvedPath of [publicDirFilePath, rootDirFilePath]) {
 							try {
 								const stats = await fsp.stat(resolvedPath);
 
