@@ -109,27 +109,36 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 			expect(worker.output).not.toContain("Building container(s)...");
 		});
 
-		it("errors in windows/macos if no ports are exposed, but not on linux", async () => {
-			await helper.seed({
-				Dockerfile: dedent`
+		describe("make sure ports are exposed if necessary", () => {
+			beforeEach(async () => {
+				await helper.seed({
+					Dockerfile: dedent`
 					FROM alpine:latest
 					CMD ["echo", "hello world"]
 					`,
+				});
 			});
-			// this needs to be tested manually
-			if (process.platform === "win32" || process.platform === "darwin") {
-				const worker = helper.runLongLived("wrangler dev");
-				expect(await worker.exitCode).toBe(1);
-				expect(await worker.output).toContain(
-					'The container "http2" does not expose any ports.'
-				);
-			}
-			// only this is tested in CI
-			if (process.platform === "linux") {
-				const worker = helper.runLongLived("wrangler dev");
-				await worker.waitForReady();
-				expect(await worker.output).toContain("Container(s) built and ready");
-			}
+			it.skipIf(process.platform === "linux")(
+				"errors in windows/macos if no ports are exposed, but not on linux",
+				async () => {
+					const worker = helper.runLongLived("wrangler dev");
+					expect(await worker.exitCode).toBe(1);
+					expect(await worker.output).toContain(
+						'The container "http2" does not expose any ports.'
+					);
+				}
+			);
+
+			it.skipIf(process.platform !== "linux")(
+				"doesn't error in linux if no ports are exposed",
+				async () => {
+					const worker = helper.runLongLived("wrangler dev");
+					await worker.waitForReady();
+					await worker.readUntil(/Building container/);
+					await worker.readUntil(/DONE/);
+					await worker.readUntil(/Container\(s\) built and ready/);
+				}
+			);
 		});
 
 		it("errors if docker is not installed", async () => {
