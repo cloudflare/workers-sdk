@@ -58,8 +58,6 @@ describe("startWorker - configuration errors", () => {
 			}
 		);
 
-		// TODO: worker.dispose() should itself await worker.ready
-		await worker.ready;
 		await worker.dispose();
 	});
 
@@ -86,8 +84,6 @@ describe("startWorker - configuration errors", () => {
 			}
 		);
 
-		// TODO: worker.dispose() should itself await worker.ready
-		await worker.ready;
 		await worker.dispose();
 	});
 });

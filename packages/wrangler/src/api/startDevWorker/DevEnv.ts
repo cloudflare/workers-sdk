@@ -23,6 +23,15 @@ export class DevEnv extends EventEmitter {
 		try {
 			await this.config.set(options, true);
 		} catch (e) {
+			const error =
+				e instanceof Error
+					? e
+					: new Error(
+							typeof e === "string"
+								? e
+								: "An unknown error occurred when starting the worker"
+						);
+			this.proxy.ready.reject(error);
 			await worker.dispose();
 			throw e;
 		}
@@ -186,7 +195,7 @@ function createWorkerObject(devEnv: DevEnv): Worker {
 			return w.scheduled(...args);
 		},
 		async dispose() {
-			await devEnv.teardown();
+			await devEnv.proxy.ready.promise.finally(() => devEnv.teardown());
 		},
 		raw: devEnv,
 	};
