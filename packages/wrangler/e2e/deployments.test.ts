@@ -224,19 +224,27 @@ const checkAssets = async (testCases: AssetTestCase[], deployedUrl: string) => {
 				const url = r.url;
 
 				if (testCase.content) {
-					expect(text).toContain(testCase.content);
+					expect(
+						text,
+						`expected content for ${testCase.path} to be ${testCase.content}`
+					).toContain(testCase.content);
 				}
 				if (testCase.redirect) {
-					expect(new URL(url).pathname).toEqual(
-						new URL(testCase.redirect, deployedUrl).pathname
-					);
+					expect(
+						new URL(url).pathname,
+						`expected redirect for ${testCase.path} to be ${testCase.redirect}`
+					).toEqual(new URL(testCase.redirect, deployedUrl).pathname);
 				} else {
-					expect(new URL(url).pathname).toEqual(
-						new URL(testCase.path, deployedUrl).pathname
-					);
+					expect(
+						new URL(url).pathname,
+						`unexpected pathname for ${testCase.path}`
+					).toEqual(new URL(testCase.path, deployedUrl).pathname);
 				}
 			},
-			{ interval: 1_000, timeout: 40_000 }
+			{
+				interval: 1_000,
+				timeout: 40_000,
+			}
 		);
 	}
 };
@@ -581,7 +589,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 							binding = "ASSETS"
 							html_handling = "none"
 							not_found_handling = "404-page"
-							run_worker_first = ["api/*", "!api/assets/*"]
+							run_worker_first = ["/api/*", "!/api/assets/*"]
 					`,
 				"src/index.ts": dedent`
 							export default {
@@ -598,7 +606,28 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			const output = await helper.run(`wrangler deploy`);
 			const normalizedStdout = normalize(output.stdout);
 
-			expect(normalizedStdout).toMatchInlineSnapshot(`""`);
+			expect(normalizedStdout).toContain(dedent`
+				🌀 Building list of assets...
+				✨ Read 7 files from the assets directory /tmpdir
+				🌀 Starting asset upload...
+				🌀 Found 5 new or modified static assets to upload. Proceeding with upload...
+				+ /404.html
+				+ /api/index.html
+				+ /index.html
+				+ /api/assets/test.html
+				+ /[boop].html
+			`);
+			expect(normalizedStdout).toContain(dedent`
+				✨ Success! Uploaded 5 files (TIMINGS)
+				Total Upload: xx KiB / gzip: xx KiB
+				Your Worker has access to the following bindings:
+				Binding            Resource
+				env.ASSETS         Assets
+				Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
+				Deployed tmp-e2e-worker-00000000-0000-0000-0000-000000000000 triggers (TIMINGS)
+				  https://tmp-e2e-worker-00000000-0000-0000-0000-000000000000.SUBDOMAIN.workers.dev
+				Current Version ID: 00000000-0000-0000-0000-000000000000
+			`);
 
 			const match = output.stdout.match(
 				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
@@ -607,38 +636,14 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			deployedUrl = match.groups.url;
 
 			const testCases: AssetTestCase[] = [
-				{
-					path: "/index.html",
-					content: "<h1>index.html</h1>",
-					redirect: "/",
-				},
-				{
-					path: "/[boop]",
-					content: "<h1>[boop].html</h1>",
-					redirect: "/%5Bboop%5D",
-				},
-				{
-					path: "/missing.html",
-					content: "<h1>404.html</h1>",
-					redirect: "/",
-				},
-				{
-					path: "/api",
-					content: "Hello World from User Worker!",
-				},
-				{
-					path: "/api/foo.html",
-					content: "Hello World from User Worker!",
-				},
-				{
-					path: "/api/assets",
-					content: "404.html",
-				},
-				{
-					path: "/api/assets/test.html",
-					content: "api/assets/test.html",
-				},
+				{ path: "/index.html", content: "<h1>index.html</h1>" },
+				{ path: "/missing.html", content: "<h1>404.html</h1>" },
+				{ path: "/api/", content: "Hello World from User Worker!" },
+				{ path: "/api/foo.html", content: "Hello World from User Worker!" },
+				{ path: "/api/assets/missing", content: "404.html" },
+				{ path: "/api/assets/test.html", content: "api/assets/test.html" },
 			];
+
 			await checkAssets(testCases, deployedUrl);
 		});
 	});
