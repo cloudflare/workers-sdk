@@ -421,7 +421,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			testCommitMessage: true,
 			flags: ["--yes", "--import-alias", "@/*"],
 			verifyPreview: {
-				previewArgs: ["--inspector-port=0", "--"],
+				previewArgs: ["--", "--inspector-port=0"],
 				route: "/test",
 				expectedText: "Create Next App",
 			},
