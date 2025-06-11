@@ -497,6 +497,7 @@ type WorkerOptionsBindings = Pick<
 	| "vectorize"
 	| "dispatchNamespaces"
 	| "mtlsCertificates"
+	| "helloWorld"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -934,6 +935,12 @@ export function buildMiniflareBindingOptions(
 		),
 		secretsStoreSecrets: Object.fromEntries(
 			bindings.secrets_store_secrets?.map((binding) => [
+				binding.binding,
+				binding,
+			]) ?? []
+		),
+		helloWorld: Object.fromEntries(
+			bindings.unsafe_hello_world?.map((binding) => [
 				binding.binding,
 				binding,
 			]) ?? []
