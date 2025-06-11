@@ -10,22 +10,25 @@ import {
 	yellow,
 } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+import {
+	DeploymentsService,
+	PlacementsService,
+} from "@cloudflare/containers-shared";
 import isInteractive from "../is-interactive";
 import { listDeploymentsAndChoose, loadDeployments } from "./cli/deployments";
 import { capitalize, statusToColored } from "./cli/util";
-import { DeploymentsService, PlacementsService } from "./client";
 import { loadAccountSpinner, promiseSpinner } from "./common";
 import type { Config } from "../config";
 import type {
 	CommonYargsArgvJSON,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../yargs-types";
+import type { EventName } from "./enums";
 import type {
 	DeploymentPlacementState,
 	PlacementEvent,
 	PlacementWithEvents,
-} from "./client";
-import type { EventName } from "./enums";
+} from "@cloudflare/containers-shared";
 
 export function listDeploymentsYargs(args: CommonYargsArgvJSON) {
 	return args

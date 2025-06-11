@@ -1896,8 +1896,10 @@ export class Miniflare {
 			if (this.#containerController === undefined) {
 				this.#containerController = new ContainerController(
 					containerOptions,
-					this.#sharedOpts.containers
+					this.#sharedOpts.containers,
+					this.#log
 				);
+				await this.#containerController.buildAllContainers();
 			} else {
 				this.#containerController.updateConfig(
 					containerOptions,

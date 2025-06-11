@@ -9,6 +9,7 @@ export const ContainerSchema = z.object({
 	imageBuildContext: z.string().optional(),
 	args: z.record(z.string(), z.string()).default({}),
 	exposedPorts: z.number().array().optional(),
+	name: z.string(),
 });
 export const ContainersOptionsSchema = z.object({
 	containers: z.record(className, ContainerSchema).optional(),

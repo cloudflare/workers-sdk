@@ -2,6 +2,11 @@ import { mkdir } from "fs/promises";
 import { logRaw, space, status, updateStatus } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+import {
+	ApiError,
+	DeploymentMutationError,
+	OpenAPI,
+} from "@cloudflare/containers-shared";
 import { version as wranglerVersion } from "../../package.json";
 import { readConfig } from "../config";
 import { getConfigCache, purgeConfigCaches } from "../config-cache";
@@ -22,7 +27,6 @@ import {
 	setLoginScopeKeys,
 } from "../user";
 import { parseByteSize } from "./../parse";
-import { ApiError, DeploymentMutationError, OpenAPI } from "./client";
 import { wrap } from "./helpers/wrap";
 import { idToLocationName, loadAccount } from "./locations";
 import type { Config } from "../config";
@@ -32,13 +36,13 @@ import type {
 	CommonYargsOptions,
 	StrictYargsOptionsToInterfaceJSON,
 } from "../yargs-types";
+import type { Arg } from "@cloudflare/cli/interactive";
 import type {
 	CompleteAccountCustomer,
 	EnvironmentVariable,
 	Label,
 	NetworkParameters,
-} from "./client";
-import type { Arg } from "@cloudflare/cli/interactive";
+} from "@cloudflare/containers-shared";
 
 export type CommonCloudchamberConfiguration = { json: boolean };
 

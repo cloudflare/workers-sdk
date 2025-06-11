@@ -1,13 +1,21 @@
-import * as fs from "node:fs";
-import { dirname } from "node:path";
+import { mkdirSync, writeFileSync } from "fs";
 import {
-	constructBuildCommand,
-	ensureDiskLimits,
-} from "../../cloudchamber/build";
+	dockerBuild,
+	dockerImageInspect,
+	dockerLoginManagedRegistry,
+	DOMAIN,
+	runDockerCmd,
+} from "@cloudflare/containers-shared";
+import { ensureDiskLimits } from "../../cloudchamber/build";
 import { resolveAppDiskSize } from "../../cloudchamber/common";
-import { getBuildArguments } from "../../cloudchamber/deploy";
+import { isDockerfile } from "../../cloudchamber/deploy";
 import { type ContainerApp } from "../../config/environment";
-import type { CompleteAccountCustomer } from "../../cloudchamber/client";
+import { UserError } from "../../errors";
+import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
+import { runInTempDir } from "../helpers/run-in-tmp";
+import { runWrangler } from "../helpers/run-wrangler";
+import { mockAccount } from "./utils";
+import type { CompleteAccountCustomer } from "@cloudflare/containers-shared";
 
 const MiB = 1024 * 1024;
 const defaultConfiguration: ContainerApp = {
@@ -16,123 +24,191 @@ const defaultConfiguration: ContainerApp = {
 	instances: 0,
 	configuration: { image: "" },
 };
+vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
+	const actual = await importOriginal();
+	return Object.assign({}, actual, {
+		dockerLoginManagedRegistry: vi.fn(),
+		runDockerCmd: vi.fn(),
+		dockerBuild: vi.fn(),
+		dockerImageInspect: vi.fn(),
+	});
+});
 
-function writeDockerfile(dockerfile = "FROM scratch\n"): string {
-	const path = "./Dockerfile";
-	fs.mkdirSync(dirname(path), { recursive: true });
-	fs.writeFileSync(path, dockerfile, "utf-8");
-	return path;
-}
+const dockerfile =
+	'FROM node:18\nWORKDIR /app\nCOPY . .\nRUN npm install\nCMD ["node", "index.js"]';
 
-describe("cloudchamber build", () => {
-	describe("build command generation", () => {
-		it("should work with no build command set", async () => {
-			const bc = await constructBuildCommand({
-				imageTag: "test-registry/no-bc:v1",
-				pathToDockerfile: "bogus/path",
-			});
-			expect(bc).toEqual(
-				"docker build -t registry.cloudchamber.cfdata.org/test-registry/no-bc:v1 --platform linux/amd64 bogus/path"
-			);
+describe("buildAndMaybePush", () => {
+	runInTempDir();
+	mockApiToken();
+	mockAccountId();
+	mockAccount();
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(dockerImageInspect).mockResolvedValue("53387881 2");
+		mkdirSync("./container-context");
+
+		writeFileSync("./container-context/Dockerfile", dockerfile);
+	});
+	afterEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("should use a custom docker path if provided", async () => {
+		vi.stubEnv("WRANGLER_CONTAINERS_DOCKER_PATH", "/custom/docker/path");
+		await runWrangler(
+			"containers build ./container-context -t test-app:tag -p"
+		);
+		expect(dockerBuild).toHaveBeenCalledWith("/custom/docker/path", {
+			buildCmd: [
+				"build",
+				"-t",
+				`${DOMAIN}/test-app:tag`,
+				"--platform",
+				"linux/amd64",
+				"-f",
+				"-",
+				"./container-context",
+			],
+			dockerfile,
 		});
-
-		it("should error if dockerfile provided without a tag", async () => {
-			await expect(
-				constructBuildCommand({
-					pathToDockerfile: "bogus/path",
-				})
-			).rejects.toThrowError();
+		expect(dockerImageInspect).toHaveBeenCalledWith("/custom/docker/path", {
+			imageTag: `${DOMAIN}/test-app:tag`,
+			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
 		});
+		expect(runDockerCmd).toHaveBeenCalledWith("/custom/docker/path", [
+			"push",
+			`${DOMAIN}/test-app:tag`,
+		]);
+		expect(dockerLoginManagedRegistry).toHaveBeenCalledWith(
+			"/custom/docker/path"
+		);
+	});
 
-		it("should respect a custom path to docker", async () => {
-			const bc = await constructBuildCommand({
-				pathToDocker: "/my/special/path/docker",
-				imageTag: "test-registry/no-bc:v1",
-				pathToDockerfile: "bogus/path",
-			});
-			expect(bc).toEqual(
-				"/my/special/path/docker build -t registry.cloudchamber.cfdata.org/test-registry/no-bc:v1 --platform linux/amd64 bogus/path"
-			);
+	it("should be able to build image and push", async () => {
+		await runWrangler(
+			"containers build ./container-context -t test-app:tag -p"
+		);
+		expect(dockerBuild).toHaveBeenCalledWith("docker", {
+			buildCmd: [
+				"build",
+				"-t",
+				`${DOMAIN}/test-app:tag`,
+				"--platform",
+				"linux/amd64",
+				"-f",
+				"-",
+				"./container-context",
+			],
+			dockerfile,
 		});
-
-		it("should respect passed in platform", async () => {
-			const bc = await constructBuildCommand({
-				imageTag: "test-registry/no-bc:v1",
-				pathToDockerfile: "bogus/path",
-				platform: "linux/arm64",
-			});
-			expect(bc).toEqual(
-				"docker build -t registry.cloudchamber.cfdata.org/test-registry/no-bc:v1 --platform linux/arm64 bogus/path"
-			);
+		expect(runDockerCmd).toHaveBeenCalledTimes(1);
+		expect(runDockerCmd).toHaveBeenCalledWith("docker", [
+			"push",
+			`${DOMAIN}/test-app:tag`,
+		]);
+		expect(dockerImageInspect).toHaveBeenCalledOnce();
+		expect(dockerImageInspect).toHaveBeenCalledWith("docker", {
+			imageTag: `${DOMAIN}/test-app:tag`,
+			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
 		});
+		expect(dockerLoginManagedRegistry).toHaveBeenCalledOnce();
+	});
 
-		it("should add --network=host flag if WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST is set", async () => {
-			vi.stubEnv("WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST", "true");
-			const bc = await constructBuildCommand({
-				imageTag: "test-registry/no-bc:v1",
-				pathToDockerfile: "bogus/path",
-			});
-			expect(bc).toEqual(
-				"docker build -t registry.cloudchamber.cfdata.org/test-registry/no-bc:v1 --platform linux/amd64 --network=host bogus/path"
-			);
+	it("should be able to build image and not push", async () => {
+		await runWrangler("containers build ./container-context -t test-app");
+		expect(dockerBuild).toHaveBeenCalledTimes(1);
+		expect(dockerBuild).toHaveBeenCalledWith("docker", {
+			buildCmd: [
+				"build",
+				"-t",
+				`${DOMAIN}/test-app`,
+				"--platform",
+				"linux/amd64",
+				"-f",
+				"-",
+				"./container-context",
+			],
+			dockerfile,
+		});
+		expect(dockerImageInspect).toHaveBeenCalledOnce();
+		expect(dockerLoginManagedRegistry).not.toHaveBeenCalled();
+	});
+
+	it("should add --network=host flag if WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST is set", async () => {
+		vi.stubEnv("WRANGLER_CI_OVERRIDE_NETWORK_MODE_HOST", "true");
+		await runWrangler("containers build ./container-context -t test-app");
+		expect(dockerBuild).toHaveBeenCalledTimes(1);
+		expect(dockerBuild).toHaveBeenCalledWith("docker", {
+			buildCmd: [
+				"build",
+				"-t",
+				`${DOMAIN}/test-app`,
+				"--platform",
+				"linux/amd64",
+				"--network",
+				"host",
+				"-f",
+				"-",
+				"./container-context",
+			],
+			dockerfile,
 		});
 	});
 
-	describe("get build arguments", () => {
-		it("should get build arguments", () => {
-			const buildArguments = getBuildArguments(
-				{ image: writeDockerfile(), ...defaultConfiguration },
-				"1234"
-			);
-			expect(buildArguments).toEqual({
-				dockerfileContents: "FROM scratch\n",
-				isDockerImage: true,
-				pathToDocker: "docker",
-				pathToDockerfileDirectory: ".",
-				push: true,
-				tag: "abc:1234",
-				container: { image: writeDockerfile(), ...defaultConfiguration },
-			});
+	it("should throw UserError when docker build fails", async () => {
+		const errorMessage = "Docker build failed";
+		vi.mocked(dockerBuild).mockRejectedValue(new Error(errorMessage));
+		await expect(
+			runWrangler("containers build ./container-context -t test-app:tag")
+		).rejects.toThrow(new UserError(errorMessage));
+	});
+
+	it("should throw UserError when docker login fails", async () => {
+		const errorMessage = "Docker login failed";
+		vi.mocked(dockerBuild).mockRejectedValue(new Error(errorMessage));
+		vi.mocked(dockerLoginManagedRegistry).mockRejectedValue(
+			new Error(errorMessage)
+		);
+		await expect(
+			runWrangler("containers build ./container-context -t test-app:tag -p")
+		).rejects.toThrow(new UserError(errorMessage));
+	});
+
+	describe("isDockerfile", () => {
+		it("should return true if given a valid dockerfile path", async () => {
+			expect(isDockerfile("./container-context/Dockerfile")).toBe(true);
+		});
+		it("should return false if given a valid image registry path", async () => {
+			expect(isDockerfile("docker.io/httpd:1")).toBe(false);
 		});
 
-		it("should get build arguments with an image ref", () => {
-			const buildArguments = getBuildArguments(
-				{ image: "docker.io/httpd:1", ...defaultConfiguration },
-				"1234"
-			);
-			expect(buildArguments).toEqual({
-				isDockerImage: false,
-			});
+		it("should error if given a non existant dockerfile", async () => {
+			expect(() => isDockerfile("./FakeDockerfile"))
+				.toThrowErrorMatchingInlineSnapshot(`
+					[Error: The image "./FakeDockerfile" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
+					If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)]
+				`);
 		});
-
-		it("should fail to get build arguments with non existant dockerfile", () => {
-			try {
-				getBuildArguments(
-					{ image: "./Dockerfile2", ...defaultConfiguration },
-					"1234"
-				);
-				throw new Error("expected to throw an error");
-			} catch (err) {
-				expect(err).toHaveProperty(
-					"message",
-					"The image ./Dockerfile2 could not be found, and the image is not a valid reference: image needs to include atleast a tag ':' (e.g: docker.io/httpd:1)"
-				);
-			}
+		it("should error if given a directory instead of a dockerfile", async () => {
+			expect(() => isDockerfile("./container-context"))
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: ./container-context is a directory, you should specify a path to the Dockerfile]
+			`);
 		});
-
-		it("should fail to get build arguments with invalid image ref", () => {
-			try {
-				getBuildArguments(
-					{ image: "http://docker.io", ...defaultConfiguration },
-					"1234"
-				);
-				throw new Error("expected to throw an error");
-			} catch (err) {
-				expect(err).toHaveProperty(
-					"message",
-					"The image http://docker.io could not be found, and the image is not a valid reference: image needs to include atleast a tag ':' (e.g: docker.io/httpd:1)"
-				);
-			}
+		it("should error if image registry reference contains the protocol part", async () => {
+			expect(() => isDockerfile("http://example.com/image:tag"))
+				.toThrowErrorMatchingInlineSnapshot(`
+					[Error: The image "http://example.com/image:tag" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
+					Image reference should not include the protocol part (e.g: docker.io/httpd:1, not https://docker.io/httpd:1)]
+				`);
+		});
+		it("should error if image registry reference does not contain a tag", async () => {
+			expect(() => isDockerfile("docker.io/httpd"))
+				.toThrowErrorMatchingInlineSnapshot(`
+					[Error: The image "docker.io/httpd" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
+					If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)]
+				`);
 		});
 	});
 
