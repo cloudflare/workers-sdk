@@ -77,6 +77,7 @@ describe
 									...(testConfig.flags ? ["--", ...testConfig.flags] : []),
 								],
 								promptHandlers: testConfig.promptHandlers,
+								extraEnv: testConfig.extraEnv,
 							},
 						);
 

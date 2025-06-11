@@ -476,8 +476,6 @@ describe("Create Cloudflare CLI", () => {
 				    You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
 				    npm create cloudflare -- --framework next -- --ts
 				    pnpm create cloudflare --framework next -- --ts
-				    Allowed Values:
-				      solid
 				  --platform=<value>
 				    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 				    Allowed Values:

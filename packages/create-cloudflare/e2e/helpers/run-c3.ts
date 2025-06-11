@@ -52,6 +52,7 @@ export const runC3 = async (
 	argv: string[] = [],
 	promptHandlers: PromptHandler[] = [],
 	logStream: Writable,
+	extraEnv: Record<string, string | undefined> = {},
 ) => {
 	// We don't use the "test" package manager here (i.e. E2E_TEST_PM and E2E_TEST_PM_VERSION) because yarn 1.x doesn't actually provide a `dlx` version.
 	// And in any case, this first step just installs a temp copy of create-cloudflare and executes it.
@@ -59,7 +60,7 @@ export const runC3 = async (
 	const cmd = ["pnpx", `create-cloudflare@${version}`, ...argv];
 	const proc = spawnWithLogging(
 		cmd,
-		{ env: testEnv, cwd: tmpdir() },
+		{ env: { ...testEnv, ...extraEnv }, cwd: tmpdir() },
 		logStream,
 	);
 
