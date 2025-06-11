@@ -1,5 +1,5 @@
 ---
-"@cloudflare/workers-shared": minor
+"@cloudflare/workers-shared": patch
 ---
 
 Adds support for static routing to Workers Assets
