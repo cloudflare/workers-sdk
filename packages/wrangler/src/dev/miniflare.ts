@@ -496,6 +496,7 @@ type WorkerOptionsBindings = Pick<
 	| "browserRendering"
 	| "vectorize"
 	| "dispatchNamespaces"
+	| "mtlsCertificates"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -807,6 +808,12 @@ export function buildMiniflareBindingOptions(
 		warnOrError("browser", bindings.browser.remote, "remote");
 	}
 
+	if (bindings.mtls_certificates && mixedModeEnabled) {
+		for (const mtls of bindings.mtls_certificates) {
+			warnOrError("ai", mtls.remote, "always-remote");
+		}
+	}
+
 	// Uses the implementation in miniflare instead if the users enable local mode
 	if (
 		bindings.images?.binding &&
@@ -1033,6 +1040,25 @@ export function buildMiniflareBindingOptions(
 				?.filter((b) => b.type == "ratelimit")
 				.map(ratelimitEntry) ?? []
 		),
+
+		mtlsCertificates:
+			mixedModeEnabled && mixedModeConnectionString
+				? Object.fromEntries(
+						bindings.mtls_certificates
+							?.filter((d) => {
+								warnOrError("mtls_certificates", d.remote, "remote");
+								return d.remote;
+							})
+							.map((mtlsCertificate) => [
+								mtlsCertificate.binding,
+								{
+									mixedModeConnectionString,
+									certificate_id: mtlsCertificate.certificate_id,
+								},
+							]) ?? []
+					)
+				: undefined,
+
 		serviceBindings,
 		wrappedBindings: wrappedBindings,
 		tails,

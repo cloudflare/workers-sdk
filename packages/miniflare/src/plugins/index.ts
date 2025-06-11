@@ -24,6 +24,7 @@ import { EMAIL_PLUGIN, EMAIL_PLUGIN_NAME } from "./email";
 import { HYPERDRIVE_PLUGIN, HYPERDRIVE_PLUGIN_NAME } from "./hyperdrive";
 import { IMAGES_PLUGIN, IMAGES_PLUGIN_NAME } from "./images";
 import { KV_PLUGIN, KV_PLUGIN_NAME } from "./kv";
+import { MTLS_PLUGIN, MTLS_PLUGIN_NAME } from "./mtls";
 import { PIPELINE_PLUGIN, PIPELINES_PLUGIN_NAME } from "./pipelines";
 import { QUEUES_PLUGIN, QUEUES_PLUGIN_NAME } from "./queues";
 import { R2_PLUGIN, R2_PLUGIN_NAME } from "./r2";
@@ -54,6 +55,7 @@ export const PLUGINS = {
 	[IMAGES_PLUGIN_NAME]: IMAGES_PLUGIN,
 	[VECTORIZE_PLUGIN_NAME]: VECTORIZE_PLUGIN,
 	[CONTAINER_PLUGIN_NAME]: CONTAINER_PLUGIN,
+	[MTLS_PLUGIN_NAME]: MTLS_PLUGIN,
 };
 export type Plugins = typeof PLUGINS;
 
@@ -112,7 +114,8 @@ export type WorkerOptions = z.input<typeof CORE_PLUGIN.options> &
 	z.input<typeof DISPATCH_NAMESPACE_PLUGIN.options> &
 	z.input<typeof IMAGES_PLUGIN.options> &
 	z.input<typeof VECTORIZE_PLUGIN.options> &
-	z.input<typeof CONTAINER_PLUGIN.options>;
+	z.input<typeof CONTAINER_PLUGIN.options> &
+	z.input<typeof MTLS_PLUGIN.options>;
 
 export type SharedOptions = z.input<typeof CORE_PLUGIN.sharedOptions> &
 	z.input<typeof CACHE_PLUGIN.sharedOptions> &
@@ -183,3 +186,4 @@ export * from "./images";
 export * from "./vectorize";
 export * from "./containers";
 export { ContainerController } from "./containers/service";
+export * from "./mtls";

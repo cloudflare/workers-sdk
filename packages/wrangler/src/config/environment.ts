@@ -921,6 +921,8 @@ export interface EnvironmentNonInheritable {
 		binding: string;
 		/** The uuid of the uploaded mTLS certificate */
 		certificate_id: string;
+		/** Whether the mtls fetcher should be remote or not (only available under `--x-mixed-mode`) */
+		remote?: boolean;
 	}[];
 
 	/**
