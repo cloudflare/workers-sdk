@@ -12,11 +12,11 @@ if (!process.env.TEST_CLOUDFLARE_ACCOUNT_ID) {
 	process.exit(1);
 }
 
-rmSync("./tmp", { recursive: true, force: true });
+rmSync("./.tmp", { recursive: true, force: true });
 
-cpSync("./src", "./tmp/src", { recursive: true });
-cpSync("./test", "./tmp/test", { recursive: true });
-cpSync("./vitest.workers.config.ts", "./tmp/vitest.workers.config.ts");
+cpSync("./src", "./.tmp/src", { recursive: true });
+cpSync("./test", "./.tmp/test", { recursive: true });
+cpSync("./vitest.workers.config.ts", "./.tmp/vitest.workers.config.ts");
 
 const remoteWorkerName = `vitest-pool-workers-remote-worker-test-${randomUUID().split("-")[0]}`;
 
@@ -24,13 +24,13 @@ const wranglerJson = JSON.parse(readFileSync("./wrangler.json", "utf8"));
 wranglerJson.services[0].service = remoteWorkerName;
 
 writeFileSync(
-	"./tmp/wrangler.json",
+	"./.tmp/wrangler.json",
 	JSON.stringify(wranglerJson, undefined, 2),
 	"utf8"
 );
 
 writeFileSync(
-	"./tmp/remote-wrangler.json",
+	"./.tmp/remote-wrangler.json",
 	JSON.stringify(
 		{
 			name: remoteWorkerName,
@@ -51,7 +51,7 @@ const env = {
 
 const deployOut = execSync("pnpm dlx wrangler deploy -c remote-wrangler.json", {
 	stdio: "pipe",
-	cwd: "./tmp",
+	cwd: "./.tmp",
 	env,
 });
 
@@ -61,14 +61,16 @@ if (!new RegExp(`Deployed\\s+${remoteWorkerName}\\b`).test(`${deployOut}`)) {
 
 let errored = false;
 try {
-	execSync("pnpm test:vitest --config ./tmp/vitest.workers.config.ts", { env });
+	execSync("pnpm test:vitest --config ./.tmp/vitest.workers.config.ts", {
+		env,
+	});
 } catch {
 	errored = true;
 }
 
 execSync(`pnpm dlx wrangler delete --name ${remoteWorkerName}`, { env });
 
-rmSync("./tmp", { recursive: true, force: true });
+rmSync("./.tmp", { recursive: true, force: true });
 
 if (errored) {
 	process.exit(1);
