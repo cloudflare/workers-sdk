@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import dedent from "ts-dedent";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -192,6 +192,66 @@ describe("wrangler dev - mixed mode", () => {
 			⎔ Starting local server...
 			[wrangler:info] GET / 200 OK (TIMINGS)"
 		`);
+	});
+
+	describe("shows helpful error logs", () => {
+		it("when a remote service binding is not properly configured", async () => {
+			await helper.seed({
+				"wrangler.json": JSON.stringify({
+					name: "mixed-mode-mixed-bindings-test",
+					main: "simple-service-binding.js",
+					compatibility_date: "2025-05-07",
+					services: [
+						{
+							binding: "REMOTE_WORKER",
+							service: "non-existent-service-binding",
+							remote: true,
+						},
+					],
+				}),
+			});
+
+			const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
+
+			await worker.waitForReady();
+
+			await vi.waitFor(
+				() =>
+					expect(worker.currentOutput).toContain(
+						"Could not resolve service binding 'REMOTE_WORKER'. Target script 'non-existent-service-binding' not found."
+					),
+				5_000
+			);
+		});
+
+		it("when a remote KV binding is not properly configured", async () => {
+			await helper.seed({
+				"wrangler.json": JSON.stringify({
+					name: "mixed-mode-mixed-bindings-test",
+					main: "kv.js",
+					compatibility_date: "2025-05-07",
+					kv_namespaces: [
+						{
+							binding: "KV_BINDING",
+							id: "non-existent-kv",
+							remote: true,
+						},
+					],
+				}),
+			});
+
+			const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
+
+			await worker.waitForReady();
+
+			await vi.waitFor(
+				() =>
+					expect(worker.currentOutput).toContain(
+						"KV namespace 'non-existent-kv' is not valid."
+					),
+				5_000
+			);
+		});
 	});
 
 	describe("multi-worker", () => {
