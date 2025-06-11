@@ -410,6 +410,7 @@ export interface CfWorkerInit {
 				jwt: string;
 				routerConfig: RouterConfig;
 				assetConfig: AssetConfig;
+				run_worker_first?: string[] | boolean;
 				_redirects?: string;
 				_headers?: string;
 				run_worker_first?: boolean | string[];

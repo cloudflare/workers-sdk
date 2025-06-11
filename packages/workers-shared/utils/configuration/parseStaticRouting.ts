@@ -16,15 +16,15 @@ export function parseStaticRouting(input: string[]): {
 		);
 	}
 
-	const rawAssetRules = [];
-	const assetRules = [];
+	const rawAssetWorkerRules = [];
+	const assetWorkerRules = [];
 	const userWorkerRules = [];
 	const invalidRules = [];
 
 	for (const rule of input) {
 		if (rule.startsWith("!/")) {
-			assetRules.push(rule.slice(1)); // Remove leading !
-			rawAssetRules.push(rule);
+			assetWorkerRules.push(rule.slice(1)); // Remove leading !
+			rawAssetWorkerRules.push(rule);
 		} else if (rule.startsWith("/")) {
 			userWorkerRules.push(rule);
 		} else {
@@ -36,22 +36,23 @@ export function parseStaticRouting(input: string[]): {
 		}
 	}
 
-	if (assetRules.length > 0 && userWorkerRules.length === 0) {
+	if (assetWorkerRules.length > 0 && userWorkerRules.length === 0) {
 		throw new Error(
-			`Only negative rulews were provided; must provide at least 1 non-negative rule`
+			`Only negative rules were provided; must provide at least 1 non-negative rule`
 		);
 	}
 
-	const invalidAssetRules = validateStaticRoutingRules(rawAssetRules);
+	const invalidAssetWorkerRules =
+		validateStaticRoutingRules(rawAssetWorkerRules);
 	const invalidUserWorkerRules = validateStaticRoutingRules(userWorkerRules);
 
 	const errorMessage = formatInvalidRoutes([
 		...invalidRules,
 		...invalidUserWorkerRules,
-		...invalidAssetRules,
+		...invalidAssetWorkerRules,
 	]);
 	return {
-		parsed: { asset_worker: assetRules, user_worker: userWorkerRules },
+		parsed: { asset_worker: assetWorkerRules, user_worker: userWorkerRules },
 		errorMessage,
 	};
 }

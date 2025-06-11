@@ -1060,13 +1060,11 @@ export type Assets = {
 	/** How to handle requests that do not match an asset. */
 	not_found_handling?: "single-page-application" | "404-page" | "none";
 	/**
-	 * If true, route every request to the User Worker, whether or not it matches an asset.
-	 * If false, then respond to requests that match an asset with that asset directly.
-	 *
-	 * Can also be a list of paths to match against.
 	 * Matches will be routed to the User Worker, and matches to negative rules will go to the Asset Worker.
+	 *
+	 * Can also be `true`, indicating that every request should be routed to the User Worker.
 	 */
-	run_worker_first?: boolean | string[];
+	run_worker_first?: string[] | boolean;
 };
 
 export interface Observability {

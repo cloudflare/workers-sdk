@@ -2120,7 +2120,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 				) && isValid;
 		} else {
 			diagnostics.errors.push(
-				`The field "${field}.run_worker_first" should be a boolean or an array of strings, but got ${JSON.stringify(
+				`The field "${field}.run_worker_first" should be an array of strings or a boolean, but got ${JSON.stringify(
 					(value as Assets).run_worker_first
 				)}.`
 			);

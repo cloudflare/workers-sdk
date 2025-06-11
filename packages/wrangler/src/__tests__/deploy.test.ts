@@ -5196,7 +5196,7 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy");
 		});
 
-		it("uploads run_worker_first=true when provided when in config", async () => {
+		it("uploads run_worker_first=true when provided in config", async () => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
@@ -5234,7 +5234,7 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy");
 		});
 
-		it("uploads run_worker_first=[rules] when provided when in config", async () => {
+		it("uploads run_worker_first=[rules] when provided in config", async () => {
 			const assets = [
 				{ filePath: "file-1.txt", content: "Content of file-1" },
 				{ filePath: "boop/file-2.txt", content: "Content of file-2" },
