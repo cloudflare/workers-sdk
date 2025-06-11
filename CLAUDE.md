@@ -75,6 +75,7 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 
 - Clean commit history required before first review
 - Never commit without changesets for user-facing changes
+- PR template requirements: Remove "Fixes #..." line when no relevant issue exists, keep all checkboxes (don't delete unchecked ones)
 
 ## Key Locations
 
