@@ -3,13 +3,6 @@
 	"name": "no-container-app",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-04-03",
-	"migrations": [
-		{
-			"new_sqlite_classes": ["Container"],
-			"tag": "v1",
-		},
-	],
-
 	"durable_objects": {
 		"bindings": [
 			{
@@ -18,7 +11,10 @@
 			},
 		],
 	},
-	"observability": {
-		"enabled": true,
-	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": ["Container"],
+		},
+	],
 }

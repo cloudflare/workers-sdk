@@ -77,6 +77,7 @@ describe("normalizeAndValidateConfig()", () => {
 				port: undefined, // the default of 8787 is set at runtime
 				upstream_protocol: "http",
 				host: undefined,
+				enable_containers: true,
 			},
 			containers: undefined,
 			cloudchamber: {},
@@ -155,6 +156,7 @@ describe("normalizeAndValidateConfig()", () => {
 					port: 9999,
 					local_protocol: "https",
 					upstream_protocol: "http",
+					enable_containers: false,
 				},
 			};
 
@@ -180,6 +182,7 @@ describe("normalizeAndValidateConfig()", () => {
 					port: "FOO",
 					local_protocol: "wss",
 					upstream_protocol: "ws",
+					enable_containers: true,
 				},
 			};
 

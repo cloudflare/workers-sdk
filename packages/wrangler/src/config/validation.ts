@@ -60,6 +60,7 @@ export type NormalizeAndValidateConfigArgs = {
 	localProtocol?: string;
 	upstreamProtocol?: string;
 	script?: string;
+	enableContainers?: boolean;
 };
 
 const ENGLISH = new Intl.ListFormat("en-US");
@@ -462,6 +463,7 @@ function normalizeAndValidateDev(
 		localProtocol: localProtocolArg,
 		upstreamProtocol: upstreamProtocolArg,
 		remote: remoteArg,
+		enableContainers: enableContainersArg,
 	} = args;
 	assert(
 		localProtocolArg === undefined ||
@@ -474,6 +476,10 @@ function normalizeAndValidateDev(
 			upstreamProtocolArg === "https"
 	);
 	assert(remoteArg === undefined || typeof remoteArg === "boolean");
+	assert(
+		enableContainersArg === undefined ||
+			typeof enableContainersArg === "boolean"
+	);
 	const {
 		// On Windows, when specifying `localhost` as the socket hostname, `workerd`
 		// will only listen on the IPv4 loopback `127.0.0.1`, not the IPv6 `::1`:
@@ -491,6 +497,7 @@ function normalizeAndValidateDev(
 			? "https"
 			: local_protocol,
 		host,
+		enable_containers = enableContainersArg ?? true,
 		...rest
 	} = rawDev;
 	validateAdditionalProperties(diagnostics, "dev", Object.keys(rest), []);
@@ -521,7 +528,23 @@ function normalizeAndValidateDev(
 		["http", "https"]
 	);
 	validateOptionalProperty(diagnostics, "dev", "host", host, "string");
-	return { ip, port, inspector_port, local_protocol, upstream_protocol, host };
+	validateOptionalProperty(
+		diagnostics,
+		"dev",
+		"enable_containers",
+		enable_containers,
+		"boolean"
+	);
+
+	return {
+		ip,
+		port,
+		inspector_port,
+		local_protocol,
+		upstream_protocol,
+		host,
+		enable_containers,
+	};
 }
 
 function normalizeAndValidateAssets(

@@ -127,6 +127,8 @@ export async function convertToConfigBundle(
 		testScheduled: !!event.config.dev.testScheduled,
 		tails: event.config.tailConsumers,
 		containers: event.config.containers ?? {},
+		enableContainers: event.config.dev.enableContainers ?? true,
+		dockerPath: event.config.dev.dockerPath ?? "docker",
 	};
 }
 
