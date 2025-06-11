@@ -66,15 +66,7 @@ function main() {
 	const testRunner = new TestRunner();
 	testRunner.execTests(`Testing CLI`, "cli");
 	testRunner.execTests(`Testing Workers`, "workers");
-	for (const frameworkGroup of getFrameworksGroups()) {
-		testRunner.execTests(
-			`Testing Framework "${frameworkGroup}"`,
-			"frameworks",
-			{
-				E2E_FRAMEWORK_TEST_FILTER: frameworkGroup,
-			},
-		);
-	}
+	testRunner.execTests(`Testing Framework`, "frameworks");
 	testRunner.assertNoFailures();
 }
 
