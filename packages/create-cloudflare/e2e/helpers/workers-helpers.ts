@@ -78,19 +78,9 @@ export async function verifyLocalDev(
 
 	// Run the dev-server on random ports to avoid colliding with other tests
 	const port = await getPort();
-	const inspectorPort = await getPort();
 
 	const proc = spawnWithLogging(
-		[
-			pm,
-			"run",
-			"dev",
-			...(pm === "npm" ? ["--"] : []),
-			"--port",
-			`${port}`,
-			"--inspector-port",
-			`${inspectorPort}`,
-		],
+		[pm, "run", "dev", ...(pm === "npm" ? ["--"] : []), "--port", `${port}`],
 		{
 			cwd: projectPath,
 			env: {
