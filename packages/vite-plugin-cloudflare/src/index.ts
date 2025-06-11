@@ -64,6 +64,7 @@ import type {
 	ResolvedPluginConfig,
 	WorkerConfig,
 } from "./plugin-config";
+import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type { Unstable_RawConfig } from "wrangler";
 
 export type { PluginConfig } from "./plugin-config";
@@ -347,7 +348,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						});
 					}
 
-					const { staticRouting } = resolvedPluginConfig;
+					const staticRouting: StaticRouting | undefined =
+						entryWorkerConfig.assets?.run_worker_first === true
+							? { user_worker: ["/*"] }
+							: resolvedPluginConfig.staticRouting;
 
 					if (staticRouting) {
 						const excludeRulesMatcher = generateStaticRoutingRuleMatcher(
@@ -367,7 +371,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						viteDevServer.middlewares.use(async (req, res, next) => {
 							const request = new Request(new URL(req.url!, UNKNOWN_HOST));
 
-							if (excludeRulesMatcher({ request })) {
+							if (req[kRequestType] === "asset") {
+								next();
+							} else if (excludeRulesMatcher({ request })) {
 								req[kRequestType] === "asset";
 								next();
 							} else if (includeRulesMatcher({ request })) {
