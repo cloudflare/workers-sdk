@@ -569,6 +569,78 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 			];
 			await checkAssets(testCases, deployedUrl);
 		});
+
+		it("runs the user Worker ahead of matching assets for matching run_worker_first routes", async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
+							name = "${workerName}"
+							main = "src/index.ts"
+							compatibility_date = "2023-01-01"
+							[assets]
+							directory = "public"
+							binding = "ASSETS"
+							html_handling = "none"
+							not_found_handling = "404-page"
+							run_worker_first = ["api/*", "!api/assets/*"]
+					`,
+				"src/index.ts": dedent`
+							export default {
+								async fetch(request, env) {
+									return new Response("Hello World from User Worker!")
+								}
+							}`,
+				...generateInitialAssets(workerName),
+				"public/api/index.html": "<h1>api/index.html</h1>",
+				"public/api/assets/test.html": "<h1>api/assets/index.html</h1>",
+			});
+
+			// deploy user Worker && verify output
+			const output = await helper.run(`wrangler deploy`);
+			const normalizedStdout = normalize(output.stdout);
+
+			expect(normalizedStdout).toMatchInlineSnapshot(`""`);
+
+			const match = output.stdout.match(
+				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
+			);
+			assert(match?.groups);
+			deployedUrl = match.groups.url;
+
+			const testCases: AssetTestCase[] = [
+				{
+					path: "/index.html",
+					content: "<h1>index.html</h1>",
+					redirect: "/",
+				},
+				{
+					path: "/[boop]",
+					content: "<h1>[boop].html</h1>",
+					redirect: "/%5Bboop%5D",
+				},
+				{
+					path: "/missing.html",
+					content: "<h1>404.html</h1>",
+					redirect: "/",
+				},
+				{
+					path: "/api",
+					content: "Hello World from User Worker!",
+				},
+				{
+					path: "/api/foo.html",
+					content: "Hello World from User Worker!",
+				},
+				{
+					path: "/api/assets",
+					content: "404.html",
+				},
+				{
+					path: "/api/assets/test.html",
+					content: "api/assets/index.html",
+				},
+			];
+			await checkAssets(testCases, deployedUrl);
+		});
 	});
 
 	describe("Workers for Platforms", () => {
