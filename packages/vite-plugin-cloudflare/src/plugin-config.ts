@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import * as path from "node:path";
+import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import * as vite from "vite";
 import {
 	getValidatedWranglerConfigPath,
@@ -12,6 +13,7 @@ import type {
 	WorkerResolvedConfig,
 	WorkerWithServerLogicResolvedConfig,
 } from "./workers-configs";
+import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 
 export type PersistState = boolean | { path: string };
 
@@ -72,6 +74,7 @@ export interface WorkerPluginConfig extends BasePluginConfig {
 	type: "workers";
 	workers: Record<string, WorkerConfig>;
 	entryWorkerEnvironmentName: string;
+	staticRouting: StaticRouting | undefined;
 	rawConfigs: {
 		entryWorker: WorkerWithServerLogicResolvedConfig;
 		auxiliaryWorkers: WorkerResolvedConfig[];
@@ -135,6 +138,20 @@ export function resolvePluginConfig(
 		pluginConfig.viteEnvironment?.name ??
 		workerNameToEnvironmentName(entryWorkerConfig.topLevelName);
 
+	let staticRouting: StaticRouting | undefined;
+
+	if (Array.isArray(entryWorkerConfig.assets?.run_worker_first)) {
+		const { parsed, errorMessage } = parseStaticRouting(
+			entryWorkerConfig.assets.run_worker_first
+		);
+
+		if (errorMessage) {
+			throw new Error(errorMessage);
+		}
+
+		staticRouting = parsed;
+	}
+
 	const workers = {
 		[entryWorkerEnvironmentName]: entryWorkerConfig,
 	};
@@ -184,6 +201,7 @@ export function resolvePluginConfig(
 		persistState,
 		workers,
 		entryWorkerEnvironmentName,
+		staticRouting,
 		rawConfigs: {
 			entryWorker: entryWorkerResolvedConfig,
 			auxiliaryWorkers: auxiliaryWorkersResolvedConfigs,
