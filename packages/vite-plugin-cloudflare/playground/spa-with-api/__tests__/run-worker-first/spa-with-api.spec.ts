@@ -14,11 +14,10 @@ test("returns the API response for API route on non-navigation request ('sec-fet
 	expect(json).toEqual({ name: "Cloudflare" });
 });
 
-test("returns the API fallback response for not found route on non-navigation request ('sec-fetch-mode: navigate' header not included)", async () => {
+test("returns the home page for not found route on non-navigation request ('sec-fetch-mode: navigate' header not included)", async () => {
 	const response = await fetch(`${viteTestUrl}/foo`);
-	expect(response.status).toBe(404);
-	const json = await response.text();
-	expect(json).toBe("Worker fallback response");
+	expect(response.status).toBe(200);
+	expect(response.headers.get("content-type")).toContain("text/html");
 });
 
 test.runIf(!isBuild)(

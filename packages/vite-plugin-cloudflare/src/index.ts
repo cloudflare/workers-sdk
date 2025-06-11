@@ -2,10 +2,10 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import { createRequest, sendResponse } from "@mjackson/node-fetch-server";
+import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import replace from "@rollup/plugin-replace";
 import MagicString from "magic-string";
-import { Miniflare, Response as MiniflareResponse } from "miniflare";
+import { Miniflare } from "miniflare";
 import colors from "picocolors";
 import * as vite from "vite";
 import {
@@ -49,10 +49,10 @@ import {
 	resolveNodeJSImport,
 } from "./node-js-compat";
 import { resolvePluginConfig } from "./plugin-config";
-import { additionalModuleGlobalRE } from "./shared";
+import { additionalModuleGlobalRE, UNKNOWN_HOST } from "./shared";
 import {
 	cleanUrl,
-	createMiddleware,
+	createRequestHandler,
 	getFirstAvailablePort,
 	getOutputDirectory,
 } from "./utils";
@@ -346,11 +346,43 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							return entryWorker.fetch;
 						});
 					}
+
+					const { staticRouting } = resolvedPluginConfig;
+
+					if (staticRouting) {
+						const excludeRulesMatcher = generateStaticRoutingRuleMatcher(
+							staticRouting.asset_worker ?? []
+						);
+						const includeRulesMatcher = generateStaticRoutingRuleMatcher(
+							staticRouting.user_worker
+						);
+						const userWorkerHandler = createRequestHandler(async (request) => {
+							assert(miniflare, `Miniflare not defined`);
+							const userWorker = await miniflare.getWorker(entryWorkerName);
+
+							return userWorker.fetch(request, { redirect: "manual" });
+						});
+
+						// pre middleware
+						viteDevServer.middlewares.use(async (req, res, next) => {
+							const request = new Request(new URL(req.url!, UNKNOWN_HOST));
+
+							if (excludeRulesMatcher({ request })) {
+								req[kRequestType] === "asset";
+								next();
+							} else if (includeRulesMatcher({ request })) {
+								userWorkerHandler(req, res, next);
+							} else {
+								next();
+							}
+						});
+					}
 				}
 
 				return () => {
+					// post middleware
 					viteDevServer.middlewares.use(
-						createMiddleware(async (request, req) => {
+						createRequestHandler(async (request, req) => {
 							assert(miniflare, `Miniflare not defined`);
 
 							if (req[kRequestType] === "asset") {
@@ -398,7 +430,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
 				vitePreviewServer.middlewares.use(
-					createMiddleware((request) => {
+					createRequestHandler((request) => {
 						return miniflare.dispatchFetch(request, { redirect: "manual" });
 					})
 				);

@@ -39,7 +39,7 @@ export function withTrailingSlash(path: string): string {
 	return path.endsWith("/") ? path : `${path}/`;
 }
 
-export function createMiddleware(
+export function createRequestHandler(
 	handler: (
 		request: MiniflareRequest,
 		req: vite.Connect.IncomingMessage
@@ -52,19 +52,16 @@ export function createMiddleware(
 	return async (req, res, next) => {
 		try {
 			const request = createRequest(req, res);
-			let response = (await handler(
-				toMiniflareRequest(request),
-				req
-			)) as unknown as Response;
+			let response = await handler(toMiniflareRequest(request), req);
 
 			// Vite uses HTTP/2 when `server.https` or `preview.https` is enabled
 			if (req.httpVersionMajor === 2) {
-				response = new Response(response.body, response);
+				response = new MiniflareResponse(response.body, response);
 				// HTTP/2 disallows use of the `transfer-encoding` header
 				response.headers.delete("transfer-encoding");
 			}
 
-			await sendResponse(res, response);
+			await sendResponse(res, response as unknown as Response);
 		} catch (error) {
 			next(error);
 		}

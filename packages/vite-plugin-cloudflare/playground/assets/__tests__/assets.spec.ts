@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { page, viteTestUrl } from "../../__test-utils__";
+import { getResponse, page, viteTestUrl } from "../../__test-utils__";
 import "./base-tests";
 
 test("fetches transformed HTML asset", async () => {
