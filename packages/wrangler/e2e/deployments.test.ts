@@ -591,7 +591,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 							}`,
 				...generateInitialAssets(workerName),
 				"public/api/index.html": "<h1>api/index.html</h1>",
-				"public/api/assets/test.html": "<h1>api/assets/index.html</h1>",
+				"public/api/assets/test.html": "<h1>api/assets/test.html</h1>",
 			});
 
 			// deploy user Worker && verify output
@@ -636,7 +636,7 @@ Current Version ID: 00000000-0000-0000-0000-000000000000`);
 				},
 				{
 					path: "/api/assets/test.html",
-					content: "api/assets/index.html",
+					content: "api/assets/test.html",
 				},
 			];
 			await checkAssets(testCases, deployedUrl);
