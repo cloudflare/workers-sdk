@@ -22,6 +22,7 @@ function getNonExperimentalWorkerTests(): WorkerTestConfig[] {
 				expectedText: "Hello World!",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/",
 				expectedText: "Hello World!",
 			},
@@ -35,6 +36,7 @@ function getNonExperimentalWorkerTests(): WorkerTestConfig[] {
 				expectedText: "Hello World!",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/",
 				expectedText: "Hello World!",
 			},
@@ -126,6 +128,7 @@ function getNonExperimentalWorkerTests(): WorkerTestConfig[] {
 				expectedText: "details",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/",
 				expectedText: "details",
 			},
@@ -138,6 +141,7 @@ function getNonExperimentalWorkerTests(): WorkerTestConfig[] {
 				expectedText: "Try making requests to:",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/",
 				expectedText: "Try making requests to:",
 			},
@@ -164,6 +168,7 @@ function getNonExperimentalWorkerTests(): WorkerTestConfig[] {
 				expectedText: "SwaggerUI",
 			},
 			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
 				route: "/",
 				expectedText: "SwaggerUI",
 			},
