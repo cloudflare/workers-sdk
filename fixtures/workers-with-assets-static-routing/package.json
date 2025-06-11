@@ -4,6 +4,7 @@
 	"scripts": {
 		"check:type": "tsc",
 		"dev": "wrangler dev",
+		"dev:spa": "wrangler dev -c spa.wrangler.jsonc",
 		"pretest:ci": "pnpm playwright install chromium",
 		"test:ci": "vitest run",
 		"test:watch": "vitest",

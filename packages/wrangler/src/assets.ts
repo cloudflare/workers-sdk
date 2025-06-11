@@ -502,7 +502,7 @@ export function getAssetsOptions(
 		assetConfig,
 		_redirects,
 		_headers,
-		// unsplit static routing rules for upload
+		// raw static routing rules for upload. routerConfig.static_routing contains the rules processed for dev.
 		run_worker_first: config.assets?.run_worker_first,
 	};
 }

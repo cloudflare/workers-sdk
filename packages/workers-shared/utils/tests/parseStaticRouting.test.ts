@@ -12,7 +12,7 @@ describe("parseStaticRouting", () => {
 		expect(() =>
 			parseStaticRouting(["!/assets"])
 		).toThrowErrorMatchingInlineSnapshot(
-			`[Error: Only negative rulews were provided; must provide at least 1 non-negative rule]`
+			`[Error: Only negative rules were provided; must provide at least 1 non-negative rule]`
 		);
 	});
 
@@ -61,7 +61,7 @@ describe("parseStaticRouting", () => {
 		expect(errorMessage).toMatchInlineSnapshot(
 			`
 			"Invalid routes in run_worker_first:
-			'/api/*': rule '/api/some/route' makes it redundant"
+			'/api/some/route': rule '/api/*' makes it redundant"
 		`
 		);
 	});
@@ -76,7 +76,7 @@ describe("parseStaticRouting", () => {
 		expect(errorMessage).toMatchInlineSnapshot(
 			`
 			"Invalid routes in run_worker_first:
-			'/api/some/route': rule is redundant"
+			'/api/some/route': rule is a duplicate; rules must be unique"
 		`
 		);
 	});

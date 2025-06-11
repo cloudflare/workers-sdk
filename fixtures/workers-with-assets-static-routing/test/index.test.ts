@@ -38,7 +38,7 @@ describe("[Workers + Assets] static routing", () => {
 			let response = await fetch(`http://${ip}:${port}/worker/worker-runs`);
 			expect(response.status).toBe(200);
 			expect(await response.text()).toContain(
-				`<h1>Hello, I'm an asset (and was intercepted by the User Worker)!</h1>`
+				`<h1>Hello, I'm an asset (and was intercepted by the User Worker) at /worker/worker-runs.html!</h1>`
 			);
 		});
 

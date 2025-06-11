@@ -1,6 +1,10 @@
 import { MAX_ROUTES_RULE_LENGTH, MAX_ROUTES_RULES } from "./constants";
 import type { StaticRouting } from "../types";
 
+// copy of what EWC does. Wrangler uploads the rules in one array (so the API is consistent with Wrangler config),
+// but router Worker expects the rules to be split into two arrays, which we do here.
+// This logic is translated from assets/staticrouting.go.
+
 export function parseStaticRouting(input: string[]): {
 	parsed: StaticRouting;
 	errorMessage: string | undefined;
@@ -27,12 +31,10 @@ export function parseStaticRouting(input: string[]): {
 			rawAssetWorkerRules.push(rule);
 		} else if (rule.startsWith("/")) {
 			userWorkerRules.push(rule);
+		} else if (rule.startsWith("!")) {
+			invalidRules.push(`'${rule}': negative rules must start with '!/'`);
 		} else {
-			if (rule.startsWith("!")) {
-				invalidRules.push(`'${rule}': negative rules must start with '!/'`);
-			} else {
-				invalidRules.push(`'${rule}': rules must start with '/' or '!/'`);
-			}
+			invalidRules.push(`'${rule}': rules must start with '/' or '!/'`);
 		}
 	}
 
@@ -66,16 +68,16 @@ function validateStaticRoutingRules(rules: string[]): string[] {
 				`'${rule}': all rules must be less than ${MAX_ROUTES_RULE_LENGTH} characters in length`
 			);
 		}
-		if (rule.endsWith("/*")) {
+		if (seen.has(rule)) {
+			invalid.push(`'${rule}': rule is a duplicate; rules must be unique`);
+		}
+		if (rule.endsWith("*")) {
 			// Check for redundant rules due to a glob
 			for (const otherRule of rules) {
 				if (otherRule !== rule && otherRule.startsWith(rule.slice(0, -1))) {
-					invalid.push(`'${rule}': rule '${otherRule}' makes it redundant`);
+					invalid.push(`'${otherRule}': rule '${rule}' makes it redundant`);
 				}
 			}
-		}
-		if (seen.has(rule)) {
-			invalid.push(`'${rule}': rule is redundant`);
 		}
 		seen.add(rule);
 	}
