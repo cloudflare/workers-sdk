@@ -413,7 +413,6 @@ export interface CfWorkerInit {
 				run_worker_first?: string[] | boolean;
 				_redirects?: string;
 				_headers?: string;
-				run_worker_first?: boolean | string[];
 		  }
 		| undefined;
 	observability: Observability | undefined;
