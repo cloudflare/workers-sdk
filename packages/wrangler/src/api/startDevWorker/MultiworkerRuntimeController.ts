@@ -64,7 +64,7 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 
 	#options = new Map<string, { options: MF.Options; primary: boolean }>();
 
-	#mixedModeSessions = new Map<string, MixedModeSession | undefined>();
+	#mixedModeSessions = new Map<string, MixedModeSession | null>();
 
 	#canStartMiniflare() {
 		return (
@@ -113,9 +113,9 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 							convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
 							{},
 					},
-					this.#mixedModeSessions.get(data.config.name)
+					this.#mixedModeSessions.get(data.config.name) ?? null
 				);
-				this.#mixedModeSessions.set(data.config.name, mixedModeSession);
+				this.#mixedModeSessions.set(data.config.name, mixedModeSession ?? null);
 			}
 
 			const { options } = await MF.buildMiniflareOptions(

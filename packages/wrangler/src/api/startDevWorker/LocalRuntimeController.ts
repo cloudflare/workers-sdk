@@ -151,7 +151,7 @@ export class LocalRuntimeController extends RuntimeController {
 	#mutex = new Mutex();
 	#mf?: Miniflare;
 
-	#mixedModeSession?: MixedModeSession;
+	#mixedModeSession: MixedModeSession | null = null;
 
 	onBundleStart(_: BundleStartEvent) {
 		// Ignored in local runtime
@@ -178,7 +178,7 @@ export class LocalRuntimeController extends RuntimeController {
 							convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
 							{},
 					},
-					this.#mixedModeSession
+					this.#mixedModeSession ?? null
 				);
 			}
 
@@ -294,7 +294,7 @@ export class LocalRuntimeController extends RuntimeController {
 		}
 
 		await this.#mixedModeSession?.dispose();
-		this.#mixedModeSession = undefined;
+		this.#mixedModeSession = null;
 
 		logger.debug("LocalRuntimeController teardown complete");
 	};

@@ -103,11 +103,6 @@ export function pickRemoteBindings(
 	);
 }
 
-/** Map containing all the potential worker mixed mode existing sessions, it maps a worker name to its mixed mode session */
-const mixedModeSessionsMap = new Map<string, MixedModeSession>();
-
-const kPatchedDispose = Symbol.for("patched mixed mode session dispose key");
-
 /**
  * Utility for potentially starting or updating a mixed mode session.
  *
@@ -116,16 +111,16 @@ const kPatchedDispose = Symbol.for("patched mixed mode session dispose key");
  *
  * @param configPathOrWorkerConfig either a file path to a wrangler configuration file or an object containing the name of
  *                                 the target worker alongside its bindings.
- * @param preExistingMixedModeSession an pre-existing mixed mode session to use
- * @returns undefined if no existing mixed mode session was present and one should not be created (because the worker is not
+ * @param preExistingMixedModeSession an pre-existing mixed mode session to use or null if there is no such session
+ * @returns null if no existing mixed mode session was provided and one should not be created (because the worker is not
  *          defining any remote bindings), the created/updated mixed mode session otherwise.
  */
 export async function maybeStartOrUpdateMixedModeSession(
 	configPathOrWorkerConfig:
 		| string
 		| { name?: string; bindings: NonNullable<StartDevWorkerInput["bindings"]> },
-	preExistingMixedModeSession?: MixedModeSession
-): Promise<MixedModeSession | undefined> {
+	preExistingMixedModeSession: MixedModeSession | null
+): Promise<MixedModeSession | null> {
 	if (typeof configPathOrWorkerConfig === "string") {
 		const configPath = configPathOrWorkerConfig;
 		const config = readConfig({ config: configPath });
@@ -141,11 +136,7 @@ export async function maybeStartOrUpdateMixedModeSession(
 
 	const workerRemoteBindings = pickRemoteBindings(workerConfigs.bindings);
 
-	let mixedModeSession =
-		preExistingMixedModeSession ??
-		(workerConfigs.name
-			? mixedModeSessionsMap.get(workerConfigs.name)
-			: undefined);
+	let mixedModeSession = preExistingMixedModeSession;
 
 	// TODO(DEVX-1893): here we can save the converted remote bindings
 	//             and on new iterations we can diff the old and new
@@ -160,25 +151,6 @@ export async function maybeStartOrUpdateMixedModeSession(
 		//       cases we could terminate the remote session if we wanted, that's probably
 		//       something to consider down the line
 		await mixedModeSession.updateBindings(workerRemoteBindings);
-	}
-
-	if (workerConfigs.name && mixedModeSession) {
-		mixedModeSessionsMap.set(workerConfigs.name, mixedModeSession);
-
-		const maybePatchedSession = mixedModeSession as MixedModeSession & {
-			[kPatchedDispose]: boolean;
-		};
-		if (!maybePatchedSession[kPatchedDispose]) {
-			maybePatchedSession[kPatchedDispose] = true;
-			const workerName = workerConfigs.name;
-			const originalDispose = maybePatchedSession.dispose;
-			// Note: we make sure to patch the dispose method so that it
-			//       also clears the entry from the mixedModeSessionsMap
-			maybePatchedSession.dispose = () => {
-				mixedModeSessionsMap.delete(workerName);
-				return originalDispose();
-			};
-		}
 	}
 
 	await mixedModeSession?.ready;

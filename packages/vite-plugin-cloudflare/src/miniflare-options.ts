@@ -34,7 +34,11 @@ import type {
 } from "./plugin-config";
 import type { MiniflareOptions, WorkerOptions } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
-import type { SourcelessWorkerOptions, Unstable_Config } from "wrangler";
+import type {
+	Experimental_MixedModeSession,
+	SourcelessWorkerOptions,
+	Unstable_Config,
+} from "wrangler";
 
 function getPersistenceRoot(
 	root: string,
@@ -214,6 +218,12 @@ function logUnknownTails(
 	}
 }
 
+/** Map that maps worker configPaths to their existing mixed mode session (if any) */
+const mixedModeSessionsMap = new Map<
+	string,
+	Experimental_MixedModeSession | null
+>();
+
 export async function getDevMiniflareOptions(
 	resolvedPluginConfig: ResolvedPluginConfig,
 	viteDevServer: vite.ViteDevServer,
@@ -312,13 +322,27 @@ export async function getDevMiniflareOptions(
 									workerConfig
 								);
 
+							const preExistingMixedModeSession = workerConfig.configPath
+								? mixedModeSessionsMap.get(workerConfig.configPath)
+								: undefined;
+
 							const mixedModeSession = resolvedPluginConfig.experimental
 								.mixedMode
-								? await experimental_maybeStartOrUpdateMixedModeSession({
-										name: workerConfig.name,
-										bindings: bindings ?? {},
-									})
+								? await experimental_maybeStartOrUpdateMixedModeSession(
+										{
+											name: workerConfig.name,
+											bindings: bindings ?? {},
+										},
+										preExistingMixedModeSession ?? null
+									)
 								: undefined;
+
+							if (workerConfig.configPath && mixedModeSession) {
+								mixedModeSessionsMap.set(
+									workerConfig.configPath,
+									mixedModeSession
+								);
+							}
 
 							const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
 								{
@@ -604,12 +628,23 @@ export async function getPreviewMiniflareOptions(
 				const bindings =
 					unstable_convertConfigBindingsToStartWorkerBindings(workerConfig);
 
-				const mixedModeSession = mixedModeEnabled
-					? await experimental_maybeStartOrUpdateMixedModeSession({
-							name: workerConfig.name,
-							bindings: bindings ?? {},
-						})
+				const preExistingMixedModeSession = workerConfig.configPath
+					? mixedModeSessionsMap.get(workerConfig.configPath)
 					: undefined;
+
+				const mixedModeSession = mixedModeEnabled
+					? await experimental_maybeStartOrUpdateMixedModeSession(
+							{
+								name: workerConfig.name,
+								bindings: bindings ?? {},
+							},
+							preExistingMixedModeSession ?? null
+						)
+					: undefined;
+
+				if (workerConfig.configPath && mixedModeSession) {
+					mixedModeSessionsMap.set(workerConfig.configPath, mixedModeSession);
+				}
 
 				const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
 					workerConfig,
