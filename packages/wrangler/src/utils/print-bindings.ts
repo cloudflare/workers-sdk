@@ -349,7 +349,7 @@ export function printBindings(
 				}
 
 				if (remote) {
-					mode = getMode({ isSimulatedLocally: false, connected: true });
+					mode = getMode({ isSimulatedLocally: false });
 				} else if (context.local && context.registry !== null) {
 					const registryDefinition = context.registry?.[service];
 					hasConnectionStatus = true;
@@ -585,15 +585,26 @@ export function printBindings(
 			title = "Your Worker has access to the following bindings:";
 		}
 
+		const headings = {
+			binding: "Binding",
+			resource: "Resource",
+			mode: "Mode",
+		} as const;
+
 		const maxValueLength = Math.max(
 			...output.map((b) =>
 				typeof b.value === "symbol" ? "inherited".length : b.value?.length ?? 0
 			)
 		);
 		const maxNameLength = Math.max(...output.map((b) => b.name.length));
-		const maxTypeLength = Math.max(...output.map((b) => b.type.length));
+		const maxTypeLength = Math.max(
+			...output.map((b) => b.type.length),
+			headings.resource.length
+		);
 		const maxModeLength = Math.max(
-			...output.map((b) => (b.mode ? stripAnsi(b.mode).length : "Mode".length))
+			...output.map((b) =>
+				b.mode ? stripAnsi(b.mode).length : headings.mode.length
+			)
 		);
 
 		const hasMode = output.some((b) => b.mode);
@@ -622,7 +633,7 @@ export function printBindings(
 			: " ".repeat(columnGapSpaces);
 
 		logger.log(
-			`${padEndAnsi(dim("Binding"), shouldWrap ? bindingPrefix.length + maxNameLength : bindingLength)}${columnGap}${padEndAnsi(dim("Resource"), maxTypeLength)}${columnGap}${hasMode ? dim("Mode") : ""}`
+			`${padEndAnsi(dim(headings.binding), shouldWrap ? bindingPrefix.length + maxNameLength : bindingLength)}${columnGap}${padEndAnsi(dim(headings.resource), maxTypeLength)}${columnGap}${hasMode ? dim(headings.mode) : ""}`
 		);
 
 		for (const binding of output) {
