@@ -1,6 +1,7 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import fs from "fs/promises";
+import { platform } from "node:os";
 import path from "path";
 import { Readable } from "stream";
 import tls from "tls";
@@ -18,6 +19,7 @@ import {
 	ServiceDesignator,
 	supportedCompatibilityDate,
 	Worker_Binding,
+	Worker_ContainerEngine,
 	Worker_DurableObjectNamespace,
 	Worker_Module,
 } from "../../runtime";
@@ -166,6 +168,16 @@ const CoreOptionsSchemaInput = z.intersection(
 
 		// Strip the CF-Connecting-IP header from outbound fetches
 		stripCfConnectingIp: z.boolean().default(true),
+
+		/** Configuration used to connect to the container engine */
+		containerEngine: z
+			.union([
+				z.object({
+					localDocker: z.object({ socketPath: z.string() }),
+				}),
+				z.string(),
+			])
+			.optional(),
 	})
 );
 export const CoreOptionsSchema = CoreOptionsSchemaInput.transform((value) => {
@@ -736,28 +748,32 @@ export const CORE_PLUGIN: Plugin<
 						classNamesEntries.map<Worker_DurableObjectNamespace>(
 							([
 								className,
-								{ enableSql, unsafeUniqueKey, unsafePreventEviction },
-							]) => {
-								if (unsafeUniqueKey === kUnsafeEphemeralUniqueKey) {
-									return {
-										className,
-										enableSql,
-										ephemeralLocal: kVoid,
-										preventEviction: unsafePreventEviction,
-									};
-								} else {
-									return {
-										className,
-										enableSql,
-										// This `uniqueKey` will (among other things) be used as part of the
-										// path when persisting to the file-system. `-` is invalid in
-										// JavaScript class names, but safe on filesystems (incl. Windows).
-										uniqueKey:
-											unsafeUniqueKey ?? `${options.name ?? ""}-${className}`,
-										preventEviction: unsafePreventEviction,
-									};
-								}
-							}
+								{
+									enableSql,
+									unsafeUniqueKey,
+									unsafePreventEviction: preventEviction,
+									container,
+								},
+							]) =>
+								unsafeUniqueKey === kUnsafeEphemeralUniqueKey
+									? {
+											className,
+											enableSql,
+											ephemeralLocal: kVoid,
+											preventEviction,
+											container,
+										}
+									: {
+											className,
+											enableSql,
+											// This `uniqueKey` will (among other things) be used as part of the
+											// path when persisting to the file-system. `-` is invalid in
+											// JavaScript class names, but safe on filesystems (incl. Windows).
+											uniqueKey:
+												unsafeUniqueKey ?? `${options.name ?? ""}-${className}`,
+											preventEviction,
+											container,
+										}
 						),
 					durableObjectStorage:
 						classNamesEntries.length === 0
@@ -787,6 +803,7 @@ export const CORE_PLUGIN: Plugin<
 										options.hasAssetsAndIsVitest
 									);
 								}),
+					containerEngine: getContainerEngine(options.containerEngine),
 				},
 			});
 		}
@@ -1020,6 +1037,29 @@ function getWorkerScript(
 		code = withSourceURL(code, scriptPath);
 		return { serviceWorkerScript: code };
 	}
+}
+
+/**
+ * Returns the Container engine configuration
+ * @param engineOrSocketPath Either a full engine config or a unix socket
+ * @returns The container engine, default to local Docker at `unix:/var/run/docker.sock`
+ */
+function getContainerEngine(
+	engineOrSocketPath: Worker_ContainerEngine | string | undefined
+): Worker_ContainerEngine {
+	if (!engineOrSocketPath) {
+		// TODO: workerd does not support win named pipes
+		engineOrSocketPath =
+			platform() === "win32"
+				? "//./pipe/docker_engine"
+				: "unix:/var/run/docker.sock";
+	}
+
+	if (typeof engineOrSocketPath === "string") {
+		return { localDocker: { socketPath: engineOrSocketPath } };
+	}
+
+	return engineOrSocketPath;
 }
 
 export * from "./errors";
