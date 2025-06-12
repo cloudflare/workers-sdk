@@ -1,3 +1,12 @@
+/**
+ * This fixture is particular since it needs to communicate with remote resources, namely
+ * a remote worker.
+ *
+ * This script is used to deploy a remote worker and run the fixture using said worker.
+ *
+ * Alternatively you can simply deploy, using your account, the `./remote-worker.js` file as
+ * a worker named `my-worker-test` and directly run the fixture using vitest.
+ */
 import { execSync } from "child_process";
 import { randomUUID } from "crypto";
 import { cpSync, readFileSync, rmSync, writeFileSync } from "fs";
