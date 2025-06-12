@@ -18,11 +18,22 @@ export async function maybeBuildContainer(
 	dryRun: boolean,
 	pathToDocker: string
 ) {
-	if (
-		!isDockerfile(containerConfig.image ?? containerConfig.configuration.image)
-	) {
-		return containerConfig.image ?? containerConfig.configuration.image;
+	try {
+		if (
+			!isDockerfile(
+				containerConfig.image ?? containerConfig.configuration.image
+			)
+		) {
+			return containerConfig.image ?? containerConfig.configuration.image;
+		}
+	} catch (err) {
+		if (err instanceof Error) {
+			throw new UserError(err.message);
+		}
+
+		throw err;
 	}
+
 	const options = getBuildArguments(containerConfig, imageTag);
 	logger.log("Building image", options.tag);
 	const tag = await buildAndMaybePush(

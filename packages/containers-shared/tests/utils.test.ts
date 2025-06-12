@@ -1,17 +1,16 @@
 import { mkdirSync, rmSync, writeFileSync } from "fs";
 import { isDockerfile } from "./../src/utils";
+import { runInTempDir } from "./helpers/run-in-tmp-dir";
 
 describe("isDockerfile", () => {
 	const dockerfile =
 		'FROM node:18\nWORKDIR /app\nCOPY . .\nRUN npm install\nCMD ["node", "index.js"]';
 
+	runInTempDir();
+
 	beforeEach(() => {
 		mkdirSync("./container-context");
 		writeFileSync("./container-context/Dockerfile", dockerfile);
-	});
-
-	afterEach(() => {
-		rmSync("./container-context", { recursive: true });
 	});
 
 	it("should return true if given a valid dockerfile path", async () => {
