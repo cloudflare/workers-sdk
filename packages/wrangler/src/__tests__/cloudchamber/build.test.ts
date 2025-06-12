@@ -3,7 +3,7 @@ import {
 	dockerBuild,
 	dockerImageInspect,
 	dockerLoginManagedRegistry,
-	DOMAIN,
+	getCloudflareContainerRegistry,
 	runDockerCmd,
 } from "@cloudflare/containers-shared";
 import { ensureDiskLimits } from "../../cloudchamber/build";
@@ -62,7 +62,7 @@ describe("buildAndMaybePush", () => {
 			buildCmd: [
 				"build",
 				"-t",
-				`${DOMAIN}/test-app:tag`,
+				`${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
 				"--platform",
 				"linux/amd64",
 				"-f",
@@ -72,12 +72,12 @@ describe("buildAndMaybePush", () => {
 			dockerfile,
 		});
 		expect(dockerImageInspect).toHaveBeenCalledWith("/custom/docker/path", {
-			imageTag: `${DOMAIN}/test-app:tag`,
+			imageTag: `${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
 			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
 		});
 		expect(runDockerCmd).toHaveBeenCalledWith("/custom/docker/path", [
 			"push",
-			`${DOMAIN}/test-app:tag`,
+			`${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
 		]);
 		expect(dockerLoginManagedRegistry).toHaveBeenCalledWith(
 			"/custom/docker/path"
@@ -92,7 +92,7 @@ describe("buildAndMaybePush", () => {
 			buildCmd: [
 				"build",
 				"-t",
-				`${DOMAIN}/test-app:tag`,
+				`${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
 				"--platform",
 				"linux/amd64",
 				"-f",
@@ -104,11 +104,11 @@ describe("buildAndMaybePush", () => {
 		expect(runDockerCmd).toHaveBeenCalledTimes(1);
 		expect(runDockerCmd).toHaveBeenCalledWith("docker", [
 			"push",
-			`${DOMAIN}/test-app:tag`,
+			`${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
 		]);
 		expect(dockerImageInspect).toHaveBeenCalledOnce();
 		expect(dockerImageInspect).toHaveBeenCalledWith("docker", {
-			imageTag: `${DOMAIN}/test-app:tag`,
+			imageTag: `${getCloudflareContainerRegistry()}/test_account_id/test-app:tag`,
 			formatString: "{{ .Size }} {{ len .RootFS.Layers }}",
 		});
 		expect(dockerLoginManagedRegistry).toHaveBeenCalledOnce();
@@ -121,7 +121,7 @@ describe("buildAndMaybePush", () => {
 			buildCmd: [
 				"build",
 				"-t",
-				`${DOMAIN}/test-app`,
+				`${getCloudflareContainerRegistry()}/test_account_id/test-app`,
 				"--platform",
 				"linux/amd64",
 				"-f",
@@ -142,7 +142,7 @@ describe("buildAndMaybePush", () => {
 			buildCmd: [
 				"build",
 				"-t",
-				`${DOMAIN}/test-app`,
+				`${getCloudflareContainerRegistry()}/test_account_id/test-app`,
 				"--platform",
 				"linux/amd64",
 				"--network",
