@@ -37,7 +37,7 @@ const wranglerConfig = {
 // So we skip these tests in CI, and test this locally for now :/
 describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 	"containers local dev tests",
-	{ timeout: 90_000 },
+	{ timeout: 10_000 },
 	() => {
 		let helper: WranglerE2ETestHelper;
 
@@ -119,24 +119,23 @@ describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 				});
 			});
 			it.skipIf(process.platform === "linux")(
-				"errors in windows/macos if no ports are exposed, but not on linux",
+				"warns in windows/macos if no ports are exposed, but not on linux",
 				async () => {
 					const worker = helper.runLongLived("wrangler dev");
-					expect(await worker.exitCode).toBe(1);
-					expect(await worker.output).toContain(
-						'The container "http2" does not expose any ports.'
-					);
+					await worker.readUntil(/does not expose any ports/);
+					await worker.readUntil(/Container\(s\) built and ready/);
 				}
 			);
 
 			it.skipIf(process.platform !== "linux")(
-				"doesn't error in linux if no ports are exposed",
+				"doesn't warn in linux if no ports are exposed",
 				async () => {
 					const worker = helper.runLongLived("wrangler dev");
 					await worker.waitForReady();
 					await worker.readUntil(/Building container/);
 					await worker.readUntil(/DONE/);
 					await worker.readUntil(/Container\(s\) built and ready/);
+					expect(worker.output).not.toContain("does not expose any ports");
 				}
 			);
 		});
