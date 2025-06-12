@@ -460,6 +460,16 @@ export async function mapBindings(
 							];
 						}
 						break;
+					case "unsafe_hello_world": {
+						configObj.unsafe_hello_world = [
+							...(configObj.unsafe_hello_world ?? []),
+							{
+								binding: binding.name,
+								enable_timer: binding.enable_timer,
+							},
+						];
+						break;
+					}
 					case "service":
 						{
 							configObj.services = [

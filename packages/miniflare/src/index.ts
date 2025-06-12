@@ -38,13 +38,14 @@ import {
 	Response,
 } from "./http";
 import {
+	ContainerController,
 	ContainerOptions,
-	ContainerService,
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	DurableObjectClassNames,
 	getDirectSocketName,
 	getGlobalServices,
+	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
 	KV_PLUGIN_NAME,
 	normaliseDurableObject,
@@ -903,7 +904,7 @@ export class Miniflare {
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
 	#proxyClient?: ProxyClient;
-	#containerService?: ContainerService;
+	#containerController?: ContainerController;
 
 	#cfObject?: Record<string, any> = {};
 
@@ -1589,7 +1590,9 @@ export class Miniflare {
 			innerBindings: Worker_Binding[];
 		}[] = [];
 
-		let containerOptions: NonNullable<ContainerOptions> = {};
+		let containerOptions: {
+			[className: string]: ContainerOptions;
+		} = {};
 
 		for (const [key, plugin] of PLUGIN_ENTRIES) {
 			const pluginExtensions = await plugin.getExtensions?.({
@@ -1889,12 +1892,20 @@ export class Miniflare {
 
 		if (
 			Object.keys(containerOptions).length &&
-			!sharedOpts.containers.ignore_containers
+			sharedOpts.containers.enableContainers
 		) {
-			if (this.#containerService === undefined) {
-				this.#containerService = new ContainerService(containerOptions);
+			if (this.#containerController === undefined) {
+				this.#containerController = new ContainerController(
+					containerOptions,
+					this.#sharedOpts.containers,
+					this.#log
+				);
+				await this.#containerController.buildAllContainers();
 			} else {
-				this.#containerService.updateConfig(containerOptions);
+				this.#containerController.updateConfig(
+					containerOptions,
+					this.#sharedOpts.containers
+				);
 			}
 		}
 
@@ -2609,6 +2620,15 @@ export class Miniflare {
 		workerName?: string
 	): Promise<ReplaceWorkersTypes<R2Bucket>> {
 		return this.#getProxy(R2_PLUGIN_NAME, bindingName, workerName);
+	}
+	getHelloWorldBinding(
+		bindingName: string,
+		workerName?: string
+	): Promise<{
+		get: () => Promise<{ value: string; ms?: number }>;
+		set: (value: string) => Promise<void>;
+	}> {
+		return this.#getProxy(HELLO_WORLD_PLUGIN_NAME, bindingName, workerName);
 	}
 
 	/** @internal */

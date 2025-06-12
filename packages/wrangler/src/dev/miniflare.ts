@@ -204,6 +204,8 @@ export interface ConfigBundle {
 	bindVectorizeToProd: boolean;
 	imagesLocalMode: boolean;
 	testScheduled: boolean;
+	enableContainers: boolean | undefined;
+	dockerPath: string | undefined;
 	containers: WorkerOptions["containers"];
 }
 
@@ -494,6 +496,8 @@ type WorkerOptionsBindings = Pick<
 	| "browserRendering"
 	| "vectorize"
 	| "dispatchNamespaces"
+	| "mtlsCertificates"
+	| "helloWorld"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -805,6 +809,12 @@ export function buildMiniflareBindingOptions(
 		warnOrError("browser", bindings.browser.remote, "remote");
 	}
 
+	if (bindings.mtls_certificates && mixedModeEnabled) {
+		for (const mtls of bindings.mtls_certificates) {
+			warnOrError("ai", mtls.remote, "always-remote");
+		}
+	}
+
 	// Uses the implementation in miniflare instead if the users enable local mode
 	if (
 		bindings.images?.binding &&
@@ -929,6 +939,12 @@ export function buildMiniflareBindingOptions(
 				binding,
 			]) ?? []
 		),
+		helloWorld: Object.fromEntries(
+			bindings.unsafe_hello_world?.map((binding) => [
+				binding.binding,
+				binding,
+			]) ?? []
+		),
 		email: {
 			send_email: bindings.send_email,
 		},
@@ -1031,6 +1047,25 @@ export function buildMiniflareBindingOptions(
 				?.filter((b) => b.type == "ratelimit")
 				.map(ratelimitEntry) ?? []
 		),
+
+		mtlsCertificates:
+			mixedModeEnabled && mixedModeConnectionString
+				? Object.fromEntries(
+						bindings.mtls_certificates
+							?.filter((d) => {
+								warnOrError("mtls_certificates", d.remote, "remote");
+								return d.remote;
+							})
+							.map((mtlsCertificate) => [
+								mtlsCertificate.binding,
+								{
+									mixedModeConnectionString,
+									certificate_id: mtlsCertificate.certificate_id,
+								},
+							]) ?? []
+					)
+				: undefined,
+
 		serviceBindings,
 		wrappedBindings: wrappedBindings,
 		tails,
@@ -1294,7 +1329,8 @@ export async function buildMiniflareOptions(
 		// Instead of hiding all logs from this Miniflare instance, we specifically hide the request logs,
 		// allowing other logs to be shown to the user (such as details about emails being triggered)
 		logRequests: false,
-
+		dockerPath: config.dockerPath,
+		enableContainers: config.enableContainers,
 		log,
 		verbose: logger.loggerLevel === "debug",
 		handleRuntimeStdio,

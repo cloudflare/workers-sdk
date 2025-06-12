@@ -921,6 +921,8 @@ export interface EnvironmentNonInheritable {
 		binding: string;
 		/** The uuid of the uploaded mTLS certificate */
 		certificate_id: string;
+		/** Whether the mtls fetcher should be remote or not (only available under `--x-mixed-mode`) */
+		remote?: boolean;
 	}[];
 
 	/**
@@ -992,6 +994,23 @@ export interface EnvironmentNonInheritable {
 		/** Name of the secret */
 		secret_name: string;
 	}[];
+
+	/**
+	 * **DO NOT USE**. Hello World Binding Config to serve as an explanatory example.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	unsafe_hello_world: {
+		/** The binding name used to refer to the bound service. */
+		binding: string;
+
+		/** Whether the timer is enabled */
+		enable_timer?: boolean;
+	}[];
 }
 
 /**
@@ -1058,10 +1077,11 @@ export type Assets = {
 	/** How to handle requests that do not match an asset. */
 	not_found_handling?: "single-page-application" | "404-page" | "none";
 	/**
-	 * If true, route every request to the User Worker, whether or not it matches an asset.
-	 * If false, then respond to requests that match an asset with that asset directly.
-	 * */
-	run_worker_first?: boolean;
+	 * Matches will be routed to the User Worker, and matches to negative rules will go to the Asset Worker.
+	 *
+	 * Can also be `true`, indicating that every request should be routed to the User Worker.
+	 */
+	run_worker_first?: string[] | boolean;
 };
 
 export interface Observability {

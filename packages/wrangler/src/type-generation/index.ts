@@ -344,6 +344,7 @@ export async function generateEnvTypes(
 		workflows: config.workflows,
 		pipelines: config.pipelines,
 		secrets_store_secrets: config.secrets_store_secrets,
+		unsafe_hello_world: config.unsafe_hello_world,
 	};
 
 	const entrypointFormat = entrypoint?.format ?? "modules";
@@ -438,6 +439,15 @@ export async function generateEnvTypes(
 			envTypeStructure.push([
 				constructTypeKey(secretsStoreSecret.binding),
 				"SecretsStoreSecret",
+			]);
+		}
+	}
+
+	if (configToDTS.unsafe_hello_world) {
+		for (const helloWorld of configToDTS.unsafe_hello_world) {
+			envTypeStructure.push([
+				constructTypeKey(helloWorld.binding),
+				"HelloWorldBinding",
 			]);
 		}
 	}
