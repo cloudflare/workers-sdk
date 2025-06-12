@@ -377,12 +377,20 @@ export async function apply(
 	log(dim("Container application changes\n"));
 
 	for (const appConfigNoDefaults of config.containers) {
+		const application = applicationByNames[appConfigNoDefaults.name];
+		if (
+			(!appConfigNoDefaults.configuration.image ||
+				appConfigNoDefaults.configuration.image === "") &&
+			application !== undefined &&
+			application !== null
+		) {
+			appConfigNoDefaults.configuration.image = application.configuration.image;
+		}
 		const appConfig = containerAppToCreateApplication(
 			appConfigNoDefaults,
 			args.skipDefaults
 		);
 
-		const application = applicationByNames[appConfig.name];
 		if (application !== undefined && application !== null) {
 			// we need to sort the objects (by key) because the diff algorithm works with
 			// lines
