@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { stderr } from "./early-process-access";
 
 export default {
 	async fetch() {
@@ -7,6 +8,7 @@ export default {
 } satisfies ExportedHandler;
 
 function testProcessBehaviour() {
+	assert(stderr, "stderr is undefined!");
 	const originalProcess = process;
 	try {
 		assert(process !== undefined, "process is missing");
