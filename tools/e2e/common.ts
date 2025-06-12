@@ -121,6 +121,7 @@ async function apiFetch(
 ) {
 	let page = 1;
 	let result: unknown[] = [];
+	// eslint-disable-next-line no-constant-condition
 	while (true) {
 		const response = await apiFetchResponse(path, init, failSilently, {
 			...queryParams,
