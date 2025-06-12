@@ -37,6 +37,7 @@ import type { FetchFunctionOptions } from "vite/module-runner";
 import type {
 	Experimental_MixedModeSession,
 	SourcelessWorkerOptions,
+	Unstable_Binding,
 	Unstable_Config,
 } from "wrangler";
 
@@ -218,10 +219,13 @@ function logUnknownTails(
 	}
 }
 
-/** Map that maps worker configPaths to their existing mixed mode session (if any) */
-const mixedModeSessionsMap = new Map<
+/** Map that maps worker configPaths to their existing mixed mode session data (if any) */
+const mixedModeSessionsDataMap = new Map<
 	string,
-	Experimental_MixedModeSession | null
+	{
+		session: Experimental_MixedModeSession;
+		remoteBindings: Record<string, Unstable_Binding>;
+	} | null
 >();
 
 export async function getDevMiniflareOptions(
@@ -323,10 +327,10 @@ export async function getDevMiniflareOptions(
 								);
 
 							const preExistingMixedModeSession = workerConfig.configPath
-								? mixedModeSessionsMap.get(workerConfig.configPath)
+								? mixedModeSessionsDataMap.get(workerConfig.configPath)
 								: undefined;
 
-							const mixedModeSession = resolvedPluginConfig.experimental
+							const mixedModeSessionData = resolvedPluginConfig.experimental
 								.mixedMode
 								? await experimental_maybeStartOrUpdateMixedModeSession(
 										{
@@ -337,10 +341,10 @@ export async function getDevMiniflareOptions(
 									)
 								: undefined;
 
-							if (workerConfig.configPath && mixedModeSession) {
-								mixedModeSessionsMap.set(
+							if (workerConfig.configPath && mixedModeSessionData) {
+								mixedModeSessionsDataMap.set(
 									workerConfig.configPath,
-									mixedModeSession
+									mixedModeSessionData
 								);
 							}
 
@@ -352,7 +356,7 @@ export async function getDevMiniflareOptions(
 								resolvedPluginConfig.cloudflareEnv,
 								{
 									mixedModeConnectionString:
-										mixedModeSession?.mixedModeConnectionString,
+										mixedModeSessionData?.session?.mixedModeConnectionString,
 									mixedModeEnabled: resolvedPluginConfig.experimental.mixedMode,
 								}
 							);
@@ -628,22 +632,25 @@ export async function getPreviewMiniflareOptions(
 				const bindings =
 					unstable_convertConfigBindingsToStartWorkerBindings(workerConfig);
 
-				const preExistingMixedModeSession = workerConfig.configPath
-					? mixedModeSessionsMap.get(workerConfig.configPath)
+				const preExistingMixedModeSessionData = workerConfig.configPath
+					? mixedModeSessionsDataMap.get(workerConfig.configPath)
 					: undefined;
 
-				const mixedModeSession = mixedModeEnabled
+				const mixedModeSessionData = mixedModeEnabled
 					? await experimental_maybeStartOrUpdateMixedModeSession(
 							{
 								name: workerConfig.name,
 								bindings: bindings ?? {},
 							},
-							preExistingMixedModeSession ?? null
+							preExistingMixedModeSessionData ?? null
 						)
 					: undefined;
 
-				if (workerConfig.configPath && mixedModeSession) {
-					mixedModeSessionsMap.set(workerConfig.configPath, mixedModeSession);
+				if (workerConfig.configPath && mixedModeSessionData) {
+					mixedModeSessionsDataMap.set(
+						workerConfig.configPath,
+						mixedModeSessionData
+					);
 				}
 
 				const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
@@ -651,7 +658,7 @@ export async function getPreviewMiniflareOptions(
 					undefined,
 					{
 						mixedModeConnectionString:
-							mixedModeSession?.mixedModeConnectionString,
+							mixedModeSessionData?.session?.mixedModeConnectionString,
 						mixedModeEnabled,
 					}
 				);

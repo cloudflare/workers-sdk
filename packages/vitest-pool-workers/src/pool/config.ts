@@ -13,7 +13,7 @@ import { getProjectPath, getRelativeProjectPath } from "./helpers";
 import type { ModuleRule, WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
 import type { WorkspaceProject } from "vitest/node";
-import type { Experimental_MixedModeSession } from "wrangler";
+import type { Experimental_MixedModeSession, Unstable_Binding } from "wrangler";
 import type { ParseParams, ZodError } from "zod";
 
 export interface WorkersConfigPluginAPI {
@@ -177,10 +177,13 @@ function filterTails(
 	});
 }
 
-/** Map that maps worker configPaths to their existing mixed mode session (if any) */
-const mixedModeSessionsMap = new Map<
+/** Map that maps worker configPaths to their existing mixed mode session data (if any) */
+const mixedModeSessionsDataMap = new Map<
 	string,
-	Experimental_MixedModeSession | null
+	{
+		session: Experimental_MixedModeSession;
+		remoteBindings: Record<string, Unstable_Binding>;
+	} | null
 >();
 
 async function parseCustomPoolOptions(
@@ -247,19 +250,22 @@ async function parseCustomPoolOptions(
 		// Lazily import `wrangler` if and when we need it
 		const wrangler = await import("wrangler");
 
-		const preExistingMixedModeSession = options.wrangler?.configPath
-			? mixedModeSessionsMap.get(options.wrangler.configPath)
+		const preExistingMixedModeSessionData = options.wrangler?.configPath
+			? mixedModeSessionsDataMap.get(options.wrangler.configPath)
 			: undefined;
 
-		const mixedModeSession = options.experimental_mixedMode
+		const mixedModeSessionData = options.experimental_mixedMode
 			? await wrangler.experimental_maybeStartOrUpdateMixedModeSession(
 					configPath,
-					preExistingMixedModeSession ?? null
+					preExistingMixedModeSessionData ?? null
 				)
-			: undefined;
+			: null;
 
-		if (options.wrangler?.configPath && mixedModeSession) {
-			mixedModeSessionsMap.set(options.wrangler.configPath, mixedModeSession);
+		if (options.wrangler?.configPath && mixedModeSessionData) {
+			mixedModeSessionsDataMap.set(
+				options.wrangler.configPath,
+				mixedModeSessionData
+			);
 		}
 
 		const { workerOptions, externalWorkers, define, main } =
@@ -270,7 +276,7 @@ async function parseCustomPoolOptions(
 					imagesLocalMode: true,
 					overrides: { assets: options.miniflare.assets },
 					mixedModeConnectionString:
-						mixedModeSession?.mixedModeConnectionString,
+						mixedModeSessionData?.session?.mixedModeConnectionString,
 				}
 			);
 

@@ -69,6 +69,7 @@ export {
 	type StartMixedModeSessionOptions as experimental_StartMixedModeSessionOptions,
 	maybeStartOrUpdateMixedModeSession as experimental_maybeStartOrUpdateMixedModeSession,
 	pickRemoteBindings as experimental_pickRemoteBindings,
+	type Binding as Unstable_Binding,
 	type MixedModeSession as Experimental_MixedModeSession,
 	convertConfigBindingsToStartWorkerBindings as unstable_convertConfigBindingsToStartWorkerBindings,
 } from "./api";

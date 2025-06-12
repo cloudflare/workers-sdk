@@ -111,16 +111,25 @@ export function pickRemoteBindings(
  *
  * @param configPathOrWorkerConfig either a file path to a wrangler configuration file or an object containing the name of
  *                                 the target worker alongside its bindings.
- * @param preExistingMixedModeSession an pre-existing mixed mode session to use or null if there is no such session
+ * @param preExistingMixedModeSessionData the data of a pre-existing mixed mode session if there was one null otherwise
  * @returns null if no existing mixed mode session was provided and one should not be created (because the worker is not
- *          defining any remote bindings), the created/updated mixed mode session otherwise.
+ *          defining any remote bindings), the data associated to the created/updated mixed mode session otherwise.
  */
 export async function maybeStartOrUpdateMixedModeSession(
 	configPathOrWorkerConfig:
 		| string
-		| { name?: string; bindings: NonNullable<StartDevWorkerInput["bindings"]> },
-	preExistingMixedModeSession: MixedModeSession | null
-): Promise<MixedModeSession | null> {
+		| {
+				name?: string;
+				bindings: NonNullable<StartDevWorkerInput["bindings"]>;
+		  },
+	preExistingMixedModeSessionData: {
+		session: MixedModeSession;
+		remoteBindings: Record<string, Binding>;
+	} | null
+): Promise<{
+	session: MixedModeSession;
+	remoteBindings: Record<string, Binding>;
+} | null> {
 	if (typeof configPathOrWorkerConfig === "string") {
 		const configPath = configPathOrWorkerConfig;
 		const config = readConfig({ config: configPath });
@@ -134,25 +143,44 @@ export async function maybeStartOrUpdateMixedModeSession(
 	}
 	const workerConfigs = configPathOrWorkerConfig;
 
-	const workerRemoteBindings = pickRemoteBindings(workerConfigs.bindings);
+	const remoteBindings = pickRemoteBindings(workerConfigs.bindings);
 
-	let mixedModeSession = preExistingMixedModeSession;
+	let mixedModeSession = preExistingMixedModeSessionData?.session;
 
-	// TODO(DEVX-1893): here we can save the converted remote bindings
-	//             and on new iterations we can diff the old and new
-	//             converted remote bindings, if they are all the
-	//             same we can just leave the mixedModeSession untouched
-	if (!mixedModeSession) {
-		if (Object.keys(workerRemoteBindings).length > 0) {
-			mixedModeSession = await startMixedModeSession(workerRemoteBindings);
+	const remoteBindingsAreSameAsBefore = deepStrictEqual(
+		remoteBindings,
+		preExistingMixedModeSessionData?.remoteBindings
+	);
+
+	// We only want to perform updates on the mixed mode session if the session's remote bindings have changed
+	if (!remoteBindingsAreSameAsBefore) {
+		if (!mixedModeSession) {
+			if (Object.keys(remoteBindings).length > 0) {
+				mixedModeSession = await startMixedModeSession(remoteBindings);
+			}
+		} else {
+			// Note: we always call updateBindings even when there are zero remote bindings, in these
+			//       cases we could terminate the remote session if we wanted, that's probably
+			//       something to consider down the line
+			await mixedModeSession.updateBindings(remoteBindings);
 		}
-	} else {
-		// Note: we always call updateBindings even when there are zero remote bindings, in these
-		//       cases we could terminate the remote session if we wanted, that's probably
-		//       something to consider down the line
-		await mixedModeSession.updateBindings(workerRemoteBindings);
 	}
 
 	await mixedModeSession?.ready;
-	return mixedModeSession;
+	if (!mixedModeSession) {
+		return null;
+	}
+	return {
+		session: mixedModeSession,
+		remoteBindings,
+	};
+}
+
+function deepStrictEqual(source: unknown, target: unknown): boolean {
+	try {
+		assert.deepStrictEqual(source, target);
+		return true;
+	} catch {
+		return false;
+	}
 }
