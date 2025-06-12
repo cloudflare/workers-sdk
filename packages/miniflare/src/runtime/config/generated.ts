@@ -2325,6 +2325,27 @@ export class Worker_Binding extends $.Struct {
 		return $.utils.getUint16(0, this) as Worker_Binding_Which;
 	}
 }
+export class Worker_DurableObjectNamespace_ContainerOptions extends $.Struct {
+	static readonly _capnp = {
+		displayName: "ContainerOptions",
+		id: "a609621a4d236cd7",
+		size: new $.ObjectSize(0, 1),
+	};
+	/**
+	 * Image name to be used to create the container using supported provider.
+	 * By default, we pull the "latest" tag of this image.
+	 *
+	 */
+	get imageName(): string {
+		return $.utils.getText(0, this);
+	}
+	set imageName(value: string) {
+		$.utils.setText(0, value, this);
+	}
+	toString(): string {
+		return "Worker_DurableObjectNamespace_ContainerOptions_" + super.toString();
+	}
+}
 export const Worker_DurableObjectNamespace_Which = {
 	/**
 	 * Exported class name that implements the Durable Object.
@@ -2356,10 +2377,12 @@ export class Worker_DurableObjectNamespace extends $.Struct {
 	static readonly UNIQUE_KEY = Worker_DurableObjectNamespace_Which.UNIQUE_KEY;
 	static readonly EPHEMERAL_LOCAL =
 		Worker_DurableObjectNamespace_Which.EPHEMERAL_LOCAL;
+	static readonly ContainerOptions =
+		Worker_DurableObjectNamespace_ContainerOptions;
 	static readonly _capnp = {
 		displayName: "DurableObjectNamespace",
 		id: "b429dd547d15747d",
-		size: new $.ObjectSize(8, 2),
+		size: new $.ObjectSize(8, 3),
 	};
 	/**
 	 * Exported class name that implements the Durable Object.
@@ -2434,11 +2457,66 @@ export class Worker_DurableObjectNamespace extends $.Struct {
 	set enableSql(value: boolean) {
 		$.utils.setBit(17, value, this);
 	}
+	_adoptContainer(
+		value: $.Orphan<Worker_DurableObjectNamespace_ContainerOptions>
+	): void {
+		$.utils.adopt(value, $.utils.getPointer(2, this));
+	}
+	_disownContainer(): $.Orphan<Worker_DurableObjectNamespace_ContainerOptions> {
+		return $.utils.disown(this.container);
+	}
+	/**
+	 * If present, Durable Objects in this namespace have attached containers.
+	 * workerd will talk to the configured container engine to start containers for each
+	 * Durable Object based on the given image. The Durable Object can access the container via the
+	 * ctx.container API. TODO(CloudChamber): add link to docs.
+	 *
+	 */
+	get container(): Worker_DurableObjectNamespace_ContainerOptions {
+		return $.utils.getStruct(
+			2,
+			Worker_DurableObjectNamespace_ContainerOptions,
+			this
+		);
+	}
+	_hasContainer(): boolean {
+		return !$.utils.isNull($.utils.getPointer(2, this));
+	}
+	_initContainer(): Worker_DurableObjectNamespace_ContainerOptions {
+		return $.utils.initStructAt(
+			2,
+			Worker_DurableObjectNamespace_ContainerOptions,
+			this
+		);
+	}
+	set container(value: Worker_DurableObjectNamespace_ContainerOptions) {
+		$.utils.copyFrom(value, $.utils.getPointer(2, this));
+	}
 	toString(): string {
 		return "Worker_DurableObjectNamespace_" + super.toString();
 	}
 	which(): Worker_DurableObjectNamespace_Which {
 		return $.utils.getUint16(0, this) as Worker_DurableObjectNamespace_Which;
+	}
+}
+export class Worker_DockerConfiguration extends $.Struct {
+	static readonly _capnp = {
+		displayName: "DockerConfiguration",
+		id: "e62f96c20d9fb872",
+		size: new $.ObjectSize(0, 1),
+	};
+	/**
+	 * Path to the Docker socket.
+	 *
+	 */
+	get socketPath(): string {
+		return $.utils.getText(0, this);
+	}
+	set socketPath(value: string) {
+		$.utils.setText(0, value, this);
+	}
+	toString(): string {
+		return "Worker_DockerConfiguration_" + super.toString();
 	}
 }
 export const Worker_DurableObjectStorage_Which = {
@@ -2487,7 +2565,7 @@ export class Worker_DurableObjectStorage extends $.Struct {
 	static readonly _capnp = {
 		displayName: "durableObjectStorage",
 		id: "cc72b3faa57827d4",
-		size: new $.ObjectSize(8, 12),
+		size: new $.ObjectSize(8, 13),
 	};
 	get _isNone(): boolean {
 		return $.utils.getUint16(2, this) === 0;
@@ -2529,6 +2607,72 @@ export class Worker_DurableObjectStorage extends $.Struct {
 	}
 	which(): Worker_DurableObjectStorage_Which {
 		return $.utils.getUint16(2, this) as Worker_DurableObjectStorage_Which;
+	}
+}
+export const Worker_ContainerEngine_Which = {
+	/**
+	 * No container engine configured. Container operations will not be available.
+	 *
+	 */
+	NONE: 0,
+	/**
+	 * Use local Docker daemon for container operations.
+	 * Only used for local development and testing purposes.
+	 *
+	 */
+	LOCAL_DOCKER: 1,
+} as const;
+export type Worker_ContainerEngine_Which =
+	(typeof Worker_ContainerEngine_Which)[keyof typeof Worker_ContainerEngine_Which];
+export class Worker_ContainerEngine extends $.Struct {
+	static readonly NONE = Worker_ContainerEngine_Which.NONE;
+	static readonly LOCAL_DOCKER = Worker_ContainerEngine_Which.LOCAL_DOCKER;
+	static readonly _capnp = {
+		displayName: "containerEngine",
+		id: "82de68f58dc2eb24",
+		size: new $.ObjectSize(8, 13),
+	};
+	get _isNone(): boolean {
+		return $.utils.getUint16(4, this) === 0;
+	}
+	set none(_: true) {
+		$.utils.setUint16(4, 0, this);
+	}
+	_adoptLocalDocker(value: $.Orphan<Worker_DockerConfiguration>): void {
+		$.utils.setUint16(4, 1, this);
+		$.utils.adopt(value, $.utils.getPointer(12, this));
+	}
+	_disownLocalDocker(): $.Orphan<Worker_DockerConfiguration> {
+		return $.utils.disown(this.localDocker);
+	}
+	/**
+	 * Use local Docker daemon for container operations.
+	 * Only used for local development and testing purposes.
+	 *
+	 */
+	get localDocker(): Worker_DockerConfiguration {
+		$.utils.testWhich("localDocker", $.utils.getUint16(4, this), 1, this);
+		return $.utils.getStruct(12, Worker_DockerConfiguration, this);
+	}
+	_hasLocalDocker(): boolean {
+		return !$.utils.isNull($.utils.getPointer(12, this));
+	}
+	_initLocalDocker(): Worker_DockerConfiguration {
+		$.utils.setUint16(4, 1, this);
+		return $.utils.initStructAt(12, Worker_DockerConfiguration, this);
+	}
+	get _isLocalDocker(): boolean {
+		return $.utils.getUint16(4, this) === 1;
+	}
+	set localDocker(value: Worker_DockerConfiguration) {
+		$.utils.setUint16(4, 1, this);
+		$.utils.copyFrom(value, $.utils.getPointer(12, this));
+	}
+	toString(): string {
+		return "Worker_ContainerEngine_" + super.toString();
+	}
+	which(): Worker_ContainerEngine_Which {
+		return $.utils.getUint16(4, this) as Worker_ContainerEngine_Which;
 	}
 }
 export const Worker_Which = {
@@ -2579,10 +2723,11 @@ export class Worker extends $.Struct {
 	static readonly Module = Worker_Module;
 	static readonly Binding = Worker_Binding;
 	static readonly DurableObjectNamespace = Worker_DurableObjectNamespace;
+	static readonly DockerConfiguration = Worker_DockerConfiguration;
 	static readonly _capnp = {
 		displayName: "Worker",
 		id: "acfa77e88fd97d1c",
-		size: new $.ObjectSize(8, 12),
+		size: new $.ObjectSize(8, 13),
 		defaultGlobalOutbound: $.readRawPointer(
 			new Uint8Array([
 				16, 7, 80, 1, 3, 0, 0, 17, 9, 74, 0, 1, 255, 105, 110, 116, 101, 114,
@@ -2893,6 +3038,12 @@ export class Worker extends $.Struct {
 	}
 	set streamingTails(value: $.List<ServiceDesignator>) {
 		$.utils.copyFrom(value, $.utils.getPointer(11, this));
+	}
+	get containerEngine(): Worker_ContainerEngine {
+		return $.utils.getAs(Worker_ContainerEngine, this);
+	}
+	_initContainerEngine(): Worker_ContainerEngine {
+		return $.utils.getAs(Worker_ContainerEngine, this);
 	}
 	toString(): string {
 		return "Worker_" + super.toString();
