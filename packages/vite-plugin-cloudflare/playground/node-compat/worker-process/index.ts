@@ -8,6 +8,7 @@ export default {
 } satisfies ExportedHandler;
 
 function testProcessBehaviour() {
+	// workerd does not implement `process.stderr`, it comes from unenv.
 	assert(stderr, "process.stderr was not polyfilled early enough!");
 	const originalProcess = process;
 	try {

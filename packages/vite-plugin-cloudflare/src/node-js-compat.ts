@@ -78,7 +78,7 @@ const injectsByModule = new Map<
 	{ injectedName: string; exportName: string; importName: string }[]
 >();
 /**
- * Map of virtual module (prefixed by `\0_nodejs_global_inject-`) to injectable module id,
+ * Map of virtual module (prefixed by `virtualModulePrefix`) to injectable module id,
  * which then maps via `injectsByModule` to the global code to be injected.
  */
 const virtualModulePathToSpecifier = new Map<string, string>();
