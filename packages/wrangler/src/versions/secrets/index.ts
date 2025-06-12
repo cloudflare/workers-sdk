@@ -20,7 +20,7 @@ import type {
 	CfWorkerInit,
 	CfWorkerSourceMap,
 } from "../../deployment-bundle/worker";
-import type { File, SpecIterableIterator } from "undici";
+import type { SpecIterableIterator } from "undici";
 
 export const versionsSecretNamespace = createNamespace({
 	metadata: {

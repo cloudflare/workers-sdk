@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { fetch, File, FormData, Headers, Response } from "undici";
+import { fetch, FormData, Headers, Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
@@ -135,11 +135,7 @@ function truncate(text: string, maxLength: number): string {
 function cloneHeaders(
 	headers: HeadersInit | undefined
 ): Record<string, string> {
-	return headers instanceof Headers
-		? Object.fromEntries(headers.entries())
-		: Array.isArray(headers)
-			? Object.fromEntries(headers)
-			: { ...headers };
+	return Object.fromEntries(new Headers(headers).entries());
 }
 
 export async function requireLoggedIn(

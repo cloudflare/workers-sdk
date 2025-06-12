@@ -5,7 +5,7 @@ export * from "./websocket";
 export * from "./server";
 export * from "./helpers";
 
-export { File, FormData, Headers } from "undici";
+export { FormData, Headers } from "undici";
 export type {
 	BodyInit,
 	HeadersInit,

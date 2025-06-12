@@ -3,7 +3,7 @@ import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path, { join, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
-import { File, FormData } from "undici";
+import { FormData } from "undici";
 import { fetchResult } from "../../cfetch";
 import { readPagesConfig } from "../../config";
 import { shouldCheckFetch } from "../../deployment-bundle/bundle";
