@@ -10,7 +10,7 @@ import { generateResourceName } from "./helpers/generate-resource-name";
 import { normalizeOutput } from "./helpers/normalize";
 import { makeRoot, seed } from "./helpers/setup";
 
-describe("wrangler dev - mixed mode", () => {
+describe("wrangler dev - remote bindings", () => {
 	const remoteWorkerName = generateResourceName();
 	const alternativeRemoteWorkerName = generateResourceName();
 	const helper = new WranglerE2ETestHelper();
@@ -60,13 +60,13 @@ describe("wrangler dev - mixed mode", () => {
 					{
 						binding: "REMOTE_WORKER",
 						service: remoteWorkerName,
-						remote: true,
+						experimental_remote: true,
 					},
 				],
 			}),
 		});
 
-		const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
+		const worker = helper.runLongLived("wrangler dev --x-remote-bindings");
 
 		const { url } = await worker.waitForReady();
 
@@ -88,13 +88,13 @@ describe("wrangler dev - mixed mode", () => {
 					{
 						binding: "REMOTE_WORKER",
 						service: remoteWorkerName,
-						remote: true,
+						experimental_remote: true,
 					},
 				],
 			}),
 		});
 
-		const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
+		const worker = helper.runLongLived("wrangler dev --x-remote-bindings");
 
 		const { url } = await worker.waitForReady();
 
@@ -150,7 +150,7 @@ describe("wrangler dev - mixed mode", () => {
 			}),
 		});
 
-		const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
+		const worker = helper.runLongLived("wrangler dev --x-remote-bindings");
 
 		const { url } = await worker.waitForReady();
 
@@ -174,7 +174,7 @@ describe("wrangler dev - mixed mode", () => {
 			}),
 		});
 
-		const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
+		const worker = helper.runLongLived("wrangler dev --x-remote-bindings");
 
 		const { url } = await worker.waitForReady();
 
@@ -188,7 +188,7 @@ describe("wrangler dev - mixed mode", () => {
 			Binding        Resource      Mode
 			env.AI         AI            remote
 			[wrangler:info] Ready on http://<HOST>:<PORT>
-			▲ [WARNING] AI bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`remote: true\` for the binding definition in your configuration file.
+			▲ [WARNING] AI bindings always access remote resources, and so may incur usage charges even in local dev. To suppress this warning, set \`experimental_remote: true\` for the binding definition in your configuration file.
 			⎔ Starting local server...
 			[wrangler:info] GET / 200 OK (TIMINGS)"
 		`);
@@ -205,13 +205,13 @@ describe("wrangler dev - mixed mode", () => {
 						{
 							binding: "REMOTE_WORKER",
 							service: "non-existent-service-binding",
-							remote: true,
+							experimental_remote: true,
 						},
 					],
 				}),
 			});
 
-			const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
+			const worker = helper.runLongLived("wrangler dev --x-remote-bindings");
 
 			await worker.waitForReady();
 
@@ -234,13 +234,13 @@ describe("wrangler dev - mixed mode", () => {
 						{
 							binding: "KV_BINDING",
 							id: "non-existent-kv",
-							remote: true,
+							experimental_remote: true,
 						},
 					],
 				}),
 			});
 
-			const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
+			const worker = helper.runLongLived("wrangler dev --x-remote-bindings");
 
 			await worker.waitForReady();
 
@@ -270,7 +270,7 @@ describe("wrangler dev - mixed mode", () => {
 						{
 							binding: "REMOTE_WORKER",
 							service: remoteWorkerName,
-							remote: true,
+							experimental_remote: true,
 						},
 					],
 				}),
@@ -286,7 +286,7 @@ describe("wrangler dev - mixed mode", () => {
 							// Note: we use the same binding name but bound to a difference service
 							binding: "REMOTE_WORKER",
 							service: alternativeRemoteWorkerName,
-							remote: true,
+							experimental_remote: true,
 						},
 					],
 				}),
@@ -300,7 +300,7 @@ describe("wrangler dev - mixed mode", () => {
 			});
 
 			const worker = helper.runLongLived(
-				`wrangler dev --x-mixed-mode -c wrangler.json -c ${localTest}/wrangler.json`
+				`wrangler dev --x-remote-bindings -c wrangler.json -c ${localTest}/wrangler.json`
 			);
 
 			const { url } = await worker.waitForReady();

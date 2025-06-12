@@ -7,7 +7,7 @@
 		{
 			"binding": "REMOTE_WORKER",
 			"service": "tmp-e2e-vite-plugin-mixed-mode-remote-worker-alt",
-			"remote": true,
+			"experimental_remote": true,
 		},
 	],
 }

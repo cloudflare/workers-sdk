@@ -61,7 +61,7 @@ export const dev = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			MIXED_MODE: args.experimentalMixedMode ?? false,
+			REMOTE_BINDINGS: args.experimentalRemoteBindings ?? false,
 		}),
 	},
 	metadata: {
@@ -849,7 +849,7 @@ export function getBindings(
 	env: string | undefined,
 	local: boolean,
 	args: AdditionalDevProps,
-	mixedModeEnabled = getFlag("MIXED_MODE")
+	remoteBindingsEnabled = getFlag("REMOTE_BINDINGS")
 ): CfWorkerInit["bindings"] {
 	/**
 	 * In Pages, KV, DO, D1, R2, AI and service bindings can be specified as
@@ -859,7 +859,7 @@ export function getBindings(
 	 */
 	// merge KV bindings
 	const kvConfig = (configParam.kv_namespaces || []).map<CfKvNamespace>(
-		({ binding, preview_id, id, remote }) => {
+		({ binding, preview_id, id, experimental_remote }) => {
 			// In remote `dev`, we make folks use a separate kv namespace called
 			// `preview_id` instead of `id` so that they don't
 			// break production data. So here we check that a `preview_id`
@@ -876,7 +876,7 @@ export function getBindings(
 			return {
 				binding,
 				id: preview_id ?? id,
-				remote: mixedModeEnabled && remote,
+				remote: remoteBindingsEnabled && experimental_remote,
 			};
 		}
 	);
@@ -897,7 +897,7 @@ export function getBindings(
 		if (local) {
 			return {
 				...d1Db,
-				remote: mixedModeEnabled && d1Db.remote,
+				remote: remoteBindingsEnabled && d1Db.experimental_remote,
 				database_id,
 			};
 		}
@@ -915,7 +915,13 @@ export function getBindings(
 	// merge R2 bindings
 	const r2Config: EnvironmentNonInheritable["r2_buckets"] =
 		configParam.r2_buckets?.map(
-			({ binding, preview_bucket_name, bucket_name, jurisdiction, remote }) => {
+			({
+				binding,
+				preview_bucket_name,
+				bucket_name,
+				jurisdiction,
+				experimental_remote,
+			}) => {
 				// same idea as kv namespace preview id,
 				// same copy-on-write TODO
 				if (!preview_bucket_name && !local) {
@@ -927,7 +933,7 @@ export function getBindings(
 					binding,
 					bucket_name: preview_bucket_name ?? bucket_name,
 					jurisdiction,
-					remote: mixedModeEnabled && remote,
+					remote: remoteBindingsEnabled && experimental_remote,
 				};
 			}
 		) || [];
@@ -943,7 +949,10 @@ export function getBindings(
 		"binding"
 	).map((service) => ({
 		...service,
-		remote: mixedModeEnabled && "remote" in service && !!service.remote,
+		remote:
+			remoteBindingsEnabled &&
+			"experimental_remote" in service &&
+			!!service.experimental_remote,
 	}));
 
 	// Hyperdrive bindings
@@ -982,7 +991,7 @@ export function getBindings(
 				binding: queue.binding,
 				queue_name: queue.queue,
 				delivery_delay: queue.delivery_delay,
-				remote: mixedModeEnabled && queue.remote,
+				remote: remoteBindingsEnabled && queue.experimental_remote,
 			};
 		}),
 	];

@@ -2405,7 +2405,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						MIXED_MODE: false,
+						REMOTE_BINDINGS: false,
 					},
 					() =>
 						normalizeAndValidateConfig(
@@ -2561,7 +2561,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						MIXED_MODE: false,
+						REMOTE_BINDINGS: false,
 					},
 					() =>
 						normalizeAndValidateConfig(
@@ -2899,7 +2899,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						MIXED_MODE: false,
+						REMOTE_BINDINGS: false,
 					},
 					() =>
 						normalizeAndValidateConfig(
@@ -6368,22 +6368,22 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 	});
 
-	describe("mixed mode", () => {
-		it("should ignore remote configs when specified without MIXED_MODE enabled", () => {
+	describe("remote bindings", () => {
+		it("should ignore remote configs when specified without REMOTE_BINDINGS enabled", () => {
 			const rawConfig: RawConfig = {
 				name: "my-worker",
 				kv_namespaces: [
 					{
 						binding: "KV",
 						id: "xxxx-xxxx-xxxx-xxxx",
-						remote: true,
+						experimental_remote: true,
 					},
 				],
 				r2_buckets: [
 					{
 						binding: "R2",
 						bucket_name: "my-r2",
-						remote: 5 as unknown as boolean,
+						experimental_remote: 5 as unknown as boolean,
 					},
 				],
 			};
@@ -6391,7 +6391,7 @@ describe("normalizeAndValidateConfig()", () => {
 				{
 					RESOURCES_PROVISION: false,
 					MULTIWORKER: false,
-					MIXED_MODE: false,
+					REMOTE_BINDINGS: false,
 				},
 				() =>
 					normalizeAndValidateConfig(rawConfig, undefined, undefined, {
@@ -6413,14 +6413,14 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						binding: "KV",
 						id: "xxxx-xxxx-xxxx-xxxx",
-						remote: "hello" as unknown as boolean,
+						experimental_remote: "hello" as unknown as boolean,
 					},
 				],
 				r2_buckets: [
 					{
 						binding: "R2",
 						bucket_name: "my-r2",
-						remote: 5 as unknown as boolean,
+						experimental_remote: 5 as unknown as boolean,
 					},
 				],
 			};
@@ -6428,7 +6428,7 @@ describe("normalizeAndValidateConfig()", () => {
 				{
 					RESOURCES_PROVISION: false,
 					MULTIWORKER: false,
-					MIXED_MODE: true,
+					REMOTE_BINDINGS: true,
 				},
 				() =>
 					normalizeAndValidateConfig(rawConfig, undefined, undefined, {

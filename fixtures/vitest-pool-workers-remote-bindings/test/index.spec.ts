@@ -18,7 +18,7 @@ describe("Hello World worker", () => {
 			const response = await env.MY_WORKER.fetch(request, env, ctx);
 			await waitOnExecutionContext(ctx);
 			expect(await response.text()).toMatchInlineSnapshot(
-				`"Hello from a remote worker part of the vitest-pool-workers mixed mode fixture!"`
+				`"Hello from a remote worker part of the vitest-pool-workers remote bindings fixture!"`
 			);
 		}
 	);
@@ -26,7 +26,7 @@ describe("Hello World worker", () => {
 	it("responds with Hello World! (integration style)", async () => {
 		const response = await SELF.fetch("https://example.com");
 		expect(await response.text()).toMatchInlineSnapshot(
-			`"Response from remote worker: Hello from a remote worker part of the vitest-pool-workers mixed mode fixture!"`
+			`"Response from remote worker: Hello from a remote worker part of the vitest-pool-workers remote bindings fixture!"`
 		);
 	});
 });

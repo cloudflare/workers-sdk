@@ -882,7 +882,7 @@ export const pagesDevCommand = createCommand({
 			{
 				MULTIWORKER: Array.isArray(args.config),
 				RESOURCES_PROVISION: false,
-				MIXED_MODE: false,
+				REMOTE_BINDINGS: false,
 			},
 			() =>
 				startDev({
@@ -948,7 +948,7 @@ export const pagesDevCommand = createCommand({
 					persistTo: args.persistTo,
 					logLevel: args.logLevel ?? "log",
 					experimentalProvision: undefined,
-					experimentalMixedMode: false,
+					experimentalRemoteBindings: false,
 					experimentalVectorizeBindToProd: false,
 					experimentalImagesLocalMode: false,
 					enableIpc: true,

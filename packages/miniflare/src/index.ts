@@ -432,12 +432,12 @@ function getExternalServiceEntrypoints(
 			for (const [name, service] of Object.entries(
 				workerOpts.core.serviceBindings
 			)) {
-				const { serviceName, entrypoint, mixedModeConnectionString } =
+				const { serviceName, entrypoint, remoteProxyConnectionString } =
 					normaliseServiceDesignator(service);
 
 				if (
 					// Skip if it is a remote service
-					mixedModeConnectionString === undefined &&
+					remoteProxyConnectionString === undefined &&
 					// Skip if the service is bound to another Worker defined in the Miniflare config
 					serviceName &&
 					!allWorkerNames.includes(serviceName)
@@ -466,12 +466,12 @@ function getExternalServiceEntrypoints(
 					scriptName,
 					unsafePreventEviction,
 					enableSql: useSQLite,
-					mixedModeConnectionString,
+					remoteProxyConnectionString,
 				} = normaliseDurableObject(designator);
 
 				if (
 					// Skip if it is a remote durable object
-					mixedModeConnectionString === undefined &&
+					remoteProxyConnectionString === undefined &&
 					// Skip if the durable object is bound to a Worker that exists in the current Miniflare config
 					scriptName &&
 					!allWorkerNames.includes(scriptName)
@@ -501,12 +501,12 @@ function getExternalServiceEntrypoints(
 				const {
 					serviceName = workerOpts.core.name,
 					entrypoint,
-					mixedModeConnectionString,
+					remoteProxyConnectionString,
 				} = normaliseServiceDesignator(workerOpts.core.tails[i]);
 
 				if (
 					// Skip if it is a remote service
-					mixedModeConnectionString === undefined &&
+					remoteProxyConnectionString === undefined &&
 					// Skip if the service is bound to the existing workers
 					serviceName &&
 					!allWorkerNames.includes(serviceName)
@@ -2196,7 +2196,7 @@ export class Miniflare {
 							workerOpts.do.durableObjects ?? {}
 						).reduce<WorkerDefinition["durableObjects"]>(
 							(internalObjects, [bindingName, designator]) => {
-								const { className, scriptName, mixedModeConnectionString } =
+								const { className, scriptName, remoteProxyConnectionString } =
 									normaliseDurableObject(designator);
 
 								if (
@@ -2205,7 +2205,7 @@ export class Miniflare {
 									// If the scriptName matches one of the workers defined, it is internal as well
 									allWorkerNames.includes(scriptName) ||
 									// If it is not a remote durable object
-									mixedModeConnectionString === undefined
+									remoteProxyConnectionString === undefined
 								) {
 									internalObjects.push({
 										name: bindingName,

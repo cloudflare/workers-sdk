@@ -221,7 +221,7 @@ export async function unstable_dev(
 		logLevel: options?.logLevel ?? defaultLogLevel,
 		port: options?.port ?? 0,
 		experimentalProvision: undefined,
-		experimentalMixedMode: false,
+		experimentalRemoteBindings: false,
 		experimentalVectorizeBindToProd: vectorizeBindToProd ?? false,
 		experimentalImagesLocalMode: imagesLocalMode ?? false,
 		enableIpc: options?.experimental?.enableIpc,
@@ -237,7 +237,7 @@ export async function unstable_dev(
 			// TODO: can we make this work?
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: false,
-			MIXED_MODE: false,
+			REMOTE_BINDINGS: false,
 		},
 		() => startDev(devOptions)
 	);

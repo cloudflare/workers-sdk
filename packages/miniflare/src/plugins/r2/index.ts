@@ -11,14 +11,14 @@ import {
 	getMiniflareObjectBindings,
 	getPersistPath,
 	migrateDatabase,
-	mixedModeClientWorker,
-	MixedModeConnectionString,
 	namespaceEntries,
 	namespaceKeys,
 	objectEntryWorker,
 	PersistenceSchema,
 	Plugin,
 	ProxyNodeBinding,
+	remoteProxyClientWorker,
+	RemoteProxyConnectionString,
 	SERVICE_LOOPBACK,
 } from "../shared";
 
@@ -29,8 +29,8 @@ export const R2OptionsSchema = z.object({
 			z.record(
 				z.object({
 					id: z.string(),
-					mixedModeConnectionString: z
-						.custom<MixedModeConnectionString>()
+					remoteProxyConnectionString: z
+						.custom<RemoteProxyConnectionString>()
 						.optional(),
 				})
 			),
@@ -81,10 +81,10 @@ export const R2_PLUGIN: Plugin<
 		const persist = sharedOptions.r2Persist;
 		const buckets = namespaceEntries(options.r2Buckets);
 		const services = buckets.map<Service>(
-			([name, { id, mixedModeConnectionString }]) => ({
+			([name, { id, remoteProxyConnectionString }]) => ({
 				name: `${R2_BUCKET_SERVICE_PREFIX}:${id}`,
-				worker: mixedModeConnectionString
-					? mixedModeClientWorker(mixedModeConnectionString, name)
+				worker: remoteProxyConnectionString
+					? remoteProxyClientWorker(remoteProxyConnectionString, name)
 					: objectEntryWorker(R2_BUCKET_OBJECT, id),
 			})
 		);

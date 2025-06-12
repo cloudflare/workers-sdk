@@ -23,7 +23,7 @@ type TestCase<T = void> = {
 	setup?: (helper: WranglerE2ETestHelper) => Promise<T> | T;
 	generateWranglerConfig: (setupResult: T) => RawConfig;
 	expectedResponseMatch: string | RegExp;
-	// Flag for resources that can work without mixed mode
+	// Flag for resources that can work without remote bindings opt-in
 	worksWithoutMixedMode?: boolean;
 };
 
@@ -78,13 +78,13 @@ const testCases: TestCase<Record<string, string>>[] = [
 				{
 					binding: "SERVICE",
 					service: targetWorkerName,
-					remote: true,
+					experimental_remote: true,
 				},
 				{
 					binding: "SERVICE_WITH_ENTRYPOINT",
 					service: targetWorkerName,
 					entrypoint: "CustomEntrypoint",
-					remote: true,
+					experimental_remote: true,
 				},
 			],
 		}),
@@ -102,11 +102,11 @@ const testCases: TestCase<Record<string, string>>[] = [
 			compatibility_date: "2025-01-01",
 			ai: {
 				binding: "AI",
-				remote: true,
+				experimental_remote: true,
 			},
 		}),
 		expectedResponseMatch: "This is a response from Workers AI",
-		// AI bindings work without mixed mode flag
+		// AI bindings work without opt in flag flag
 		worksWithoutMixedMode: true,
 	},
 	{
@@ -118,7 +118,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 			compatibility_date: "2025-01-01",
 			browser: {
 				binding: "BROWSER",
-				remote: true,
+				experimental_remote: true,
 			},
 		}),
 		expectedResponseMatch: /sessionId/,
@@ -132,11 +132,11 @@ const testCases: TestCase<Record<string, string>>[] = [
 			compatibility_date: "2025-01-01",
 			images: {
 				binding: "IMAGES",
-				remote: true,
+				experimental_remote: true,
 			},
 		}),
 		expectedResponseMatch: "image/avif",
-		// The Images binding "works" without mixed mode because the current default is an older mixed-mode-style implementation
+		// The Images binding "works" without opt in flag because the current default is an older mixed-mode-style implementation
 		worksWithoutMixedMode: true,
 	},
 	{
@@ -158,7 +158,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 				{
 					binding: "VECTORIZE_BINDING",
 					index_name: name,
-					remote: true,
+					experimental_remote: true,
 				},
 			],
 		}),
@@ -194,7 +194,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 				{
 					binding: "DISPATCH",
 					namespace: namespace,
-					remote: true,
+					experimental_remote: true,
 				},
 			],
 		}),
@@ -218,7 +218,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 				{
 					binding: "KV_BINDING",
 					id: namespaceId,
-					remote: true,
+					experimental_remote: true,
 				},
 			],
 		}),
@@ -248,7 +248,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 				{
 					binding: "R2_BINDING",
 					bucket_name: bucketName,
-					remote: true,
+					experimental_remote: true,
 				},
 			],
 		}),
@@ -279,7 +279,7 @@ const testCases: TestCase<Record<string, string>>[] = [
 					binding: "DB",
 					database_id: id,
 					database_name: name,
-					remote: true,
+					experimental_remote: true,
 				},
 			],
 		}),
@@ -295,14 +295,14 @@ describe("Wrangler Mixed Mode E2E Tests", () => {
 			helper = new WranglerE2ETestHelper();
 		});
 
-		it("works with mixed mode enabled", async () => {
+		it("works with remote bindings enabled", async () => {
 			await helper.seed(
 				path.resolve(__dirname, "./seed-files/mixed-mode-workers")
 			);
 
 			await writeWranglerConfig(testCase, helper);
 
-			const worker = helper.runLongLived("wrangler dev --x-mixed-mode");
+			const worker = helper.runLongLived("wrangler dev --x-remote-bindings");
 
 			const { url } = await worker.waitForReady();
 
@@ -311,7 +311,7 @@ describe("Wrangler Mixed Mode E2E Tests", () => {
 		});
 
 		it.skipIf(testCase.worksWithoutMixedMode)(
-			"fails when mixed mode is disabled",
+			"fails when remote bindings is disabled",
 			// Turn off retries because this test is expected to fail
 			{ retry: 0, fails: true },
 			async () => {
@@ -331,57 +331,60 @@ describe("Wrangler Mixed Mode E2E Tests", () => {
 		);
 	});
 
-	describe.sequential("Sequential mixed mode tests with worker reloads", () => {
-		let worker: WranglerLongLivedCommand;
-		let helper: WranglerE2ETestHelper;
+	describe.sequential(
+		"Sequential remote bindings tests with worker reloads",
+		() => {
+			let worker: WranglerLongLivedCommand;
+			let helper: WranglerE2ETestHelper;
 
-		let url: string;
+			let url: string;
 
-		beforeAll(async () => {
-			helper = new WranglerE2ETestHelper();
-			await helper.seed(
-				path.resolve(__dirname, "./seed-files/mixed-mode-workers")
-			);
+			beforeAll(async () => {
+				helper = new WranglerE2ETestHelper();
+				await helper.seed(
+					path.resolve(__dirname, "./seed-files/mixed-mode-workers")
+				);
 
-			await helper.seed({
-				"wrangler.json": JSON.stringify(
-					{
-						name: "mixed-mode-sequential-test",
-						main: "placeholder.js",
-						compatibility_date: "2025-01-01",
+				await helper.seed({
+					"wrangler.json": JSON.stringify(
+						{
+							name: "mixed-mode-sequential-test",
+							main: "placeholder.js",
+							compatibility_date: "2025-01-01",
+						},
+						null,
+						2
+					),
+					"placeholder.js":
+						"export default { fetch() { return new Response('Ready to start tests') } }",
+				});
+
+				worker = helper.runLongLived("wrangler dev --x-remote-bindings", {
+					stopOnTestFinished: false,
+				});
+
+				const ready = await worker.waitForReady();
+				url = ready.url;
+			});
+			afterAll(async () => {
+				await worker.stop();
+			});
+
+			it.each(testCases)("$name with worker reload", async (testCase) => {
+				await writeWranglerConfig(testCase, helper);
+
+				await worker.waitForReload();
+
+				await vi.waitFor(
+					async () => {
+						const response = await fetchText(url);
+						expect(response).toMatch(testCase.expectedResponseMatch);
 					},
-					null,
-					2
-				),
-				"placeholder.js":
-					"export default { fetch() { return new Response('Ready to start tests') } }",
+					{ interval: 1_000, timeout: 40_000 }
+				);
 			});
-
-			worker = helper.runLongLived("wrangler dev --x-mixed-mode", {
-				stopOnTestFinished: false,
-			});
-
-			const ready = await worker.waitForReady();
-			url = ready.url;
-		});
-		afterAll(async () => {
-			await worker.stop();
-		});
-
-		it.each(testCases)("$name with worker reload", async (testCase) => {
-			await writeWranglerConfig(testCase, helper);
-
-			await worker.waitForReload();
-
-			await vi.waitFor(
-				async () => {
-					const response = await fetchText(url);
-					expect(response).toMatch(testCase.expectedResponseMatch);
-				},
-				{ interval: 1_000, timeout: 40_000 }
-			);
-		});
-	});
+		}
+	);
 });
 
 async function writeWranglerConfig(

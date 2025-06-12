@@ -9,7 +9,7 @@ import { fetchJson, runLongLived, seed, waitForReady } from "./helpers.js";
 const isWindows = os.platform() === "win32";
 const commands = ["dev", "buildAndPreview"] as const;
 
-// These tests focus on mixed mode which require an authed connection to the CF API
+// These tests focus on remote bindings which require an authed connection to the CF API
 // They are skipped if you have not provided the necessary account id and api token.
 describe
 	.skipIf(
@@ -19,7 +19,7 @@ describe
 	)
 	// Note: the reload test applies changes to the fixture files, so we do want the
 	//       tests to run sequentially in order to avoid race conditions
-	.sequential("mixed-mode tests", () => {
+	.sequential("remote binding tests", () => {
 		const remoteWorkerName = "tmp-e2e-vite-plugin-mixed-mode-remote-worker";
 		const alternativeRemoteWorkerName =
 			"tmp-e2e-vite-plugin-mixed-mode-remote-worker-alt";
