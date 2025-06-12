@@ -104,11 +104,10 @@ export const DURABLE_OBJECTS_PLUGIN: Plugin<
 	getBindings(options) {
 		return Object.entries(options.durableObjects ?? {}).map<Worker_Binding>(
 			([name, klass]) => {
-				const { className, serviceName, container } =
-					normaliseDurableObject(klass);
+				const { className, serviceName } = normaliseDurableObject(klass);
 				return {
 					name,
-					durableObjectNamespace: { className, serviceName, container },
+					durableObjectNamespace: { className, serviceName },
 				};
 			}
 		);
