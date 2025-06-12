@@ -8,7 +8,7 @@ export default {
 } satisfies ExportedHandler;
 
 function testProcessBehaviour() {
-	assert(stderr, "stderr is undefined!");
+	assert(stderr, "process.stderr was not polyfilled early enough!");
 	const originalProcess = process;
 	try {
 		assert(process !== undefined, "process is missing");
