@@ -535,6 +535,7 @@ describe("LocalRuntimeController", () => {
 			});
 			const event = await waitForReloadComplete(controller);
 			const url = urlFromParts(event.proxyData.userWorkerUrl);
+			assert(event.proxyData.userWorkerInspectorUrl);
 			const inspectorUrl = urlFromParts(event.proxyData.userWorkerInspectorUrl);
 
 			// Connect inspector WebSocket

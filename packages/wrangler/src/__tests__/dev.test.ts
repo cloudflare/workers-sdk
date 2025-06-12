@@ -1122,6 +1122,7 @@ describe.sequential("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			const config = await runWranglerUntilConfig("dev");
+			assert(typeof config.dev.inspector === "object");
 			expect(config.dev.inspector?.port).toEqual(9229);
 		});
 
@@ -1132,6 +1133,7 @@ describe.sequential("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			const config = await runWranglerUntilConfig("dev --inspector-port=9999");
+			assert(typeof config.dev.inspector === "object");
 			expect(config.dev.inspector?.port).toEqual(9999);
 		});
 
@@ -1144,6 +1146,7 @@ describe.sequential("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			const config = await runWranglerUntilConfig("dev");
+			assert(typeof config.dev.inspector === "object");
 			expect(config.dev.inspector?.port).toEqual(9999);
 		});
 

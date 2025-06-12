@@ -128,12 +128,15 @@ async function resolveDevConfig(
 			httpsKeyPath: input.dev?.server?.httpsKeyPath,
 			httpsCertPath: input.dev?.server?.httpsCertPath,
 		},
-		inspector: {
-			port:
-				input.dev?.inspector?.port ??
-				config.dev.inspector_port ??
-				(await getInspectorPort()),
-		},
+		inspector:
+			input.dev?.inspector === false
+				? false
+				: {
+						port:
+							input.dev?.inspector?.port ??
+							config.dev.inspector_port ??
+							(await getInspectorPort()),
+					},
 		origin: {
 			secure:
 				input.dev?.origin?.secure ?? config.dev.upstream_protocol === "https",
