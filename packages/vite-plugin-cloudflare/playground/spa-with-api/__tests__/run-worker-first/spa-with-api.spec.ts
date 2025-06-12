@@ -31,6 +31,13 @@ test("returns the Worker asset response for matching request", async () => {
 	expect(text).toBe("Modified: Asset content.\n");
 });
 
+test("returns the Worker fallback response for not found route on navigation request ('sec-fetch-mode: navigate' header included)", async () => {
+	const response = await getResponse("/foo");
+	expect(response.status()).toBe(200);
+	expect(await response.headerValue("content-type")).toContain("text/html");
+	expect(await response.headerValue("is-worker-response")).toBe("true");
+});
+
 test("returns the Worker fallback response for not found route on non-navigation request ('sec-fetch-mode: navigate' header not included)", async () => {
 	const response = await fetch(`${viteTestUrl}/foo`);
 	expect(response.status).toBe(200);
@@ -41,7 +48,7 @@ test("returns the Worker fallback response for not found route on non-navigation
 test.skipIf(isBuild)(
 	"returns the Worker API response when the route matches a file in dev",
 	async () => {
-		const json = await getJsonResponse("/api/");
+		const json = await getJsonResponse("/api/some-file.txt");
 		expect(json).toEqual({ name: "Cloudflare" });
 	}
 );
