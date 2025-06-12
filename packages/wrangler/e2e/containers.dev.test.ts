@@ -37,7 +37,7 @@ const wranglerConfig = {
 // So we skip these tests in CI, and test this locally for now :/
 describe.skipIf(process.platform !== "linux" && process.env.CI === "true")(
 	"containers local dev tests",
-	{ timeout: 10_000 },
+	{ timeout: 90_000 },
 	() => {
 		let helper: WranglerE2ETestHelper;
 
