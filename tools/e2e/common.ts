@@ -113,7 +113,7 @@ const apiFetchResponse = async (
 	}
 };
 
-async function apiFetch<T>(
+async function apiFetch(
 	path: string,
 	init = { method: "GET" },
 	failSilently = false,
