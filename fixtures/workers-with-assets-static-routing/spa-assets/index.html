@@ -1,0 +1,14 @@
+<!doctype html>
+<html>
+	<head>
+		<title>I'm an index.html for a SPA</title>
+	</head>
+	<body>
+		<h1>Here I am, at <span id="client-rendered">/</span>!</h1>
+	</body>
+	<script>
+		const path = window.location.pathname;
+		const updateme = document.getElementById("client-rendered");
+		updateme.innerText = path;
+	</script>
+</html>

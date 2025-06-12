@@ -12,6 +12,7 @@ import type {
 	CfD1Database,
 	CfDispatchNamespace,
 	CfDurableObject,
+	CfHelloWorld,
 	CfHyperdrive,
 	CfKvNamespace,
 	CfLogfwdrBinding,
@@ -282,6 +283,7 @@ export type Binding =
 	| ({ type: "pipeline" } & BindingOmit<CfPipeline>)
 	| ({ type: "secrets_store_secret" } & BindingOmit<CfSecretsStoreSecrets>)
 	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
+	| ({ type: "unsafe_hello_world" } & BindingOmit<CfHelloWorld>)
 	| { type: `unsafe_${string}` }
 	| { type: "assets" };
 

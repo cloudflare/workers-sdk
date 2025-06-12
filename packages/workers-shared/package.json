@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-shared",
-	"version": "0.17.5",
+	"version": "0.17.6",
 	"private": true,
 	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workers.",
 	"keywords": [
@@ -59,7 +59,7 @@
 		"zod": "^3.22.3"
 	},
 	"engines": {
-		"node": ">=18.0.0"
+		"node": ">=20.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

@@ -4,12 +4,12 @@ import {
 	NodeGroup,
 	PlacementStatusHealth,
 	SchedulingPolicy,
-} from "../../cloudchamber/client";
+} from "@cloudflare/containers-shared";
 import type {
 	Application,
 	DeploymentV2,
 	PlacementWithEvents,
-} from "../../cloudchamber/client";
+} from "@cloudflare/containers-shared";
 
 export const MOCK_DEPLOYMENTS: DeploymentV2[] = [
 	{

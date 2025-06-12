@@ -104,6 +104,7 @@ describe("normalizeAndValidateConfig()", () => {
 			},
 			r2_buckets: [],
 			secrets_store_secrets: [],
+			unsafe_hello_world: [],
 			services: [],
 			analytics_engine_datasets: [],
 			route: undefined,
@@ -3609,6 +3610,96 @@ describe("normalizeAndValidateConfig()", () => {
 					  - \\"secrets_store_secrets[2]\\" bindings must have a string \\"binding\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"secret_name\\":null}.
 					  - \\"secrets_store_secrets[2]\\" bindings must have a string \\"store_id\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"secret_name\\":null}.
 					  - \\"secrets_store_secrets[2]\\" bindings must have a string \\"secret_name\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"store_id\\":123,\\"secret_name\\":null}."
+				`);
+			});
+		});
+
+		describe("[unsafe_hello_world]", () => {
+			it("should error if unsafe_hello_world is an object", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ unsafe_hello_world: {} },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"unsafe_hello_world\\" should be an array but got {}."
+		`);
+			});
+
+			it("should error if unsafe_hello_world is null", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					// @ts-expect-error purposely using an invalid value
+					{ unsafe_hello_world: null },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - The field \\"unsafe_hello_world\\" should be an array but got null."
+		`);
+			});
+
+			it("should accept valid bindings", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						unsafe_hello_world: [
+							{
+								binding: "VALID",
+								enable_timer: true,
+							},
+						],
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it("should error if hello_world.bindings are not valid", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						unsafe_hello_world: [
+							// @ts-expect-error Test if empty object is caught
+							{},
+							{
+								binding: "VALID",
+								// @ts-expect-error Test if enable_timer is not a boolean
+								enable_timer: "yes",
+							},
+							{
+								// @ts-expect-error Test if binding is not a string
+								binding: null,
+								invalid: true,
+								enable_timer: false,
+							},
+						],
+					},
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(true);
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Unexpected fields found in unsafe_hello_world[2] field: \\"invalid\\""
+				`);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"unsafe_hello_world[0]\\" bindings must have a string \\"binding\\" field but got {}.
+					  - \\"unsafe_hello_world[1]\\" bindings must have a boolean \\"enable_timer\\" field but got {\\"binding\\":\\"VALID\\",\\"enable_timer\\":\\"yes\\"}.
+					  - \\"unsafe_hello_world[2]\\" bindings must have a string \\"binding\\" field but got {\\"binding\\":null,\\"invalid\\":true,\\"enable_timer\\":false}."
 				`);
 			});
 		});

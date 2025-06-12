@@ -52,11 +52,11 @@
 	},
 	"packageManager": "pnpm@9.12.0",
 	"engines": {
-		"node": ">=18.20.0",
+		"node": ">=20",
 		"pnpm": "^9.12.0"
 	},
 	"volta": {
-		"node": "18.20.2",
+		"node": "20.19.2",
 		"pnpm": "9.12.0"
 	},
 	"pnpm": {

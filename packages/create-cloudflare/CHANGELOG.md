@@ -1,5 +1,13 @@
 # create-cloudflare
 
+## 2.49.1
+
+### Patch Changes
+
+- [#9499](https://github.com/cloudflare/workers-sdk/pull/9499) [`7bde13c`](https://github.com/cloudflare/workers-sdk/commit/7bde13c97287cb9d1de2ad0959ee5a6cf1db58ed) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - configure images processing to use "cloudflare" strategy in Astro projects
+
+- [#9478](https://github.com/cloudflare/workers-sdk/pull/9478) [`9b66c33`](https://github.com/cloudflare/workers-sdk/commit/9b66c33e4d20245fca4e0652e557347e916846bd) Thanks [@avenceslau](https://github.com/avenceslau)! - fix: replace placeholder workflow name with valid name
+
 ## 2.49.0
 
 ### Minor Changes

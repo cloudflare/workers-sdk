@@ -45,6 +45,7 @@ import {
 	DurableObjectClassNames,
 	getDirectSocketName,
 	getGlobalServices,
+	HELLO_WORLD_PLUGIN_NAME,
 	HOST_CAPNP_CONNECT,
 	KV_PLUGIN_NAME,
 	normaliseDurableObject,
@@ -1896,8 +1897,10 @@ export class Miniflare {
 			if (this.#containerController === undefined) {
 				this.#containerController = new ContainerController(
 					containerOptions,
-					this.#sharedOpts.containers
+					this.#sharedOpts.containers,
+					this.#log
 				);
+				await this.#containerController.buildAllContainers();
 			} else {
 				this.#containerController.updateConfig(
 					containerOptions,
@@ -2617,6 +2620,15 @@ export class Miniflare {
 		workerName?: string
 	): Promise<ReplaceWorkersTypes<R2Bucket>> {
 		return this.#getProxy(R2_PLUGIN_NAME, bindingName, workerName);
+	}
+	getHelloWorldBinding(
+		bindingName: string,
+		workerName?: string
+	): Promise<{
+		get: () => Promise<{ value: string; ms?: number }>;
+		set: (value: string) => Promise<void>;
+	}> {
+		return this.#getProxy(HELLO_WORLD_PLUGIN_NAME, bindingName, workerName);
 	}
 
 	/** @internal */

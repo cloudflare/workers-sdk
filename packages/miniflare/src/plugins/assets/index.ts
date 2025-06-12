@@ -142,6 +142,7 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 			redirects: parsedRedirects,
 			headers: parsedHeaders,
 			debug: true,
+			has_static_routing: Boolean(options.assets.routerConfig?.static_routing),
 		};
 
 		const id = options.assets.workerName;
