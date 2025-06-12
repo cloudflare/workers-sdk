@@ -28,7 +28,9 @@ export default {
 		ctx: ExecutionContext
 	): Promise<Response> {
 		const url = new URL(request.url);
+		const a = 29;
+		console.log(url.hash);
 		if (url.pathname === "/error") throw new Error("Hello Error");
-		return new Response("Hello World!");
+		return env.APP.fetch(request);
 	},
 };

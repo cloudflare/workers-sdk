@@ -1,6 +1,8 @@
 import assert from "assert";
-import childProcess from "child_process";
+import childProcess, { spawn } from "child_process";
+import { randomBytes } from "crypto";
 import { Abortable, once } from "events";
+import path from "path";
 import rl from "readline";
 import { Readable } from "stream";
 import { $ as $colors, red } from "kleur/colors";
@@ -119,13 +121,35 @@ function getRuntimeArgs(options: RuntimeOptions) {
 	return args;
 }
 
+function getInspectorOptions() {
+	const value = process.env.VSCODE_INSPECTOR_OPTIONS;
+	if (!value) {
+		return undefined;
+	}
+
+	const ownOptions = value
+		.split(":::")
+		.reverse()
+		.find((v) => !!v);
+	if (!ownOptions) {
+		return;
+	}
+
+	try {
+		return JSON.parse(ownOptions);
+	} catch {
+		return undefined;
+	}
+}
+
 export class Runtime {
 	#process?: childProcess.ChildProcess;
 	#processExitPromise?: Promise<void>;
 
 	async updateConfig(
 		configBuffer: Buffer,
-		options: Abortable & RuntimeOptions
+		options: Abortable & RuntimeOptions,
+		workers: string[] | undefined
 	): Promise<SocketPorts | undefined> {
 		// 1. Stop existing process (if any) and wait for exit
 		await this.dispose();
@@ -156,7 +180,44 @@ export class Runtime {
 		await once(runtimeProcess.stdin, "finish");
 
 		// 4. Wait for sockets to start listening
-		return waitForPorts(controlPipe, options);
+		const ports = await waitForPorts(controlPipe, options);
+		if (ports?.has(kInspectorSocket) && process.env.VSCODE_INSPECTOR_OPTIONS) {
+			// We have an inspector socket and we're in a VSCode Debug Terminal.
+			// Let's startup a watchdog service to register ourselves as a debuggable target
+
+			// First, we need to _find_ the watchdog script. It's located next to bootloader.js, which should be injected as a require hook
+			const bootloaderPath =
+				process.env.NODE_OPTIONS?.match(/--require "(.*?)"/)?.[1];
+
+			if (!bootloaderPath) {
+				return ports;
+			}
+			const watchdogPath = path.resolve(bootloaderPath, "../watchdog.js");
+
+			const info = getInspectorOptions();
+
+			for (const worker of workers ?? []) {
+				const p = spawn(process.execPath, [watchdogPath], {
+					env: {
+						NODE_INSPECTOR_INFO: JSON.stringify({
+							ipcAddress: info.inspectorIpc || "",
+							pid: String(this.#process.pid),
+							scriptName: worker,
+							inspectorURL: `ws://127.0.0.1:${ports?.get(kInspectorSocket)}/core:user:${worker}`,
+							waitForDebugger: true,
+							ownId: randomBytes(12).toString("hex"),
+							openerId: info.openerId,
+						}),
+						NODE_SKIP_PLATFORM_CHECK: process.env.NODE_SKIP_PLATFORM_CHECK,
+						ELECTRON_RUN_AS_NODE: "1",
+					},
+					stdio: "ignore",
+					detached: true,
+				});
+				p.unref();
+			}
+		}
+		return ports;
 	}
 
 	dispose(): Awaitable<void> {

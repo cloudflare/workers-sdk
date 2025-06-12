@@ -87,7 +87,7 @@ export type ReadyEvent = {
 	type: "ready";
 	proxyWorker: Miniflare;
 	url: URL;
-	inspectorUrl: URL;
+	inspectorUrl: URL | undefined;
 };
 
 // ProxyWorker
